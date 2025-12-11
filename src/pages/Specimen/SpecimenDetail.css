@@ -1,0 +1,19 @@
+.specimen-detail {
+  padding: 24px;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+.specimen-detail .ant-descriptions-item-label {
+  font-weight: 500;
+  background-color: #fafafa;
+}
+
+.specimen-detail .ant-descriptions-item-content {
+  background-color: #ffffff;
+}
