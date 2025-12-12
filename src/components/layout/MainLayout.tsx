@@ -11,6 +11,10 @@ import {
   SettingOutlined,
   UserOutlined,
   HistoryOutlined,
+  TeamOutlined,
+  ScheduleOutlined,
+  DatabaseOutlined,
+  AuditOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { Outlet, useNavigate } from 'react-router-dom';
@@ -79,6 +83,33 @@ const MainLayout: React.FC = () => {
       icon: <BarChartOutlined />,
       label: t('menu.statistics'),
       onClick: () => navigate('/statistics'),
+    },
+    {
+      type: 'divider',
+    },
+    {
+      key: 'tasks',
+      icon: <ScheduleOutlined />,
+      label: t('menu.tasks'),
+      onClick: () => navigate('/tasks'),
+    },
+    {
+      key: 'subcontractors',
+      icon: <TeamOutlined />,
+      label: t('menu.subcontractors'),
+      onClick: () => navigate('/subcontractors'),
+    },
+    {
+      key: 'masterData',
+      icon: <DatabaseOutlined />,
+      label: t('menu.masterData'),
+      onClick: () => navigate('/master-data'),
+    },
+    {
+      key: 'auditLog',
+      icon: <AuditOutlined />,
+      label: t('menu.auditLog'),
+      onClick: () => navigate('/audit-log'),
     },
     {
       type: 'divider',

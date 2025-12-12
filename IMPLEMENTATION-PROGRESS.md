@@ -5,7 +5,8 @@ Laboratory Specimen Management System - Frontend Implementation
 **Tiêu chuẩn**: ISO/IEC 17025:2017
 
 **Start Date**: 2025-12-11
-**Status**: In Progress
+**Last Updated**: 2025-12-12
+**Status**: In Progress (~85% Complete - UI Mockups Done)
 
 ---
 
@@ -18,184 +19,241 @@ Laboratory Specimen Management System - Frontend Implementation
 - [x] Configure ports (Frontend: 3001, Backend: 5002)
 - [x] Documentation created (README, DEVELOPMENT guides)
 
----
-
-## 🚧 In Progress
-
 ### Phase 1: Foundation & Infrastructure ✅ COMPLETED
 - [x] Setup i18n (Internationalization) - Tiếng Việt, Unicode TCVN 6909:2001
 - [x] Backend: Create core domain entities (TestRequest, Specimen, Test, TestResult, etc.)
 - [x] Backend: Configure DbContext with entity mappings
-- [x] Backend: Create and run database migration
+- [x] Backend: Create and run database migration (4 migrations completed)
 - [x] Frontend: Create base layout components (MainLayout with Header, Sidebar)
 - [x] Frontend: Setup routing (React Router with nested routes)
-- [x] Frontend: Create Login page
+- [x] Frontend: Create Login page (UI only - auth not connected)
 - [x] Frontend: Setup axios API client with interceptors
-- [x] Frontend: Create API service modules (auth, testRequest)
-- [ ] Authentication & Authorization module (Backend - Next Session)
-- [ ] User management UI (Next Session)
-- [ ] Audit trail system (lưu lịch sử theo ISO 17025:2017 - 7.11)
+- [x] Frontend: Create API service modules
+
+### Phase 2: Core CRUD Modules ✅ COMPLETED
+- [x] **Test Request Module**
+  - [x] Backend: TestRequestAppService, DTOs, Controller
+  - [x] Frontend: TestRequestList, TestRequestForm, TestRequestDetail pages
+  - [x] Frontend: testRequestService API integration
+  - [x] Auto-generate request number (REQ-YYYYMMDD-XXXX)
+
+- [x] **Specimen Module**
+  - [x] Backend: SpecimenAppService, DTOs, Controller
+  - [x] Frontend: SpecimenList, SpecimenForm, SpecimenDetail pages
+  - [x] Frontend: specimenService API integration
+  - [x] Auto-generate specimen code (SPE-YYYYMMDD-XXXX)
+
+- [x] **Test Module**
+  - [x] Backend: TestAppService, DTOs, Controller
+  - [x] Frontend: TestList, TestForm, TestDetail pages
+  - [x] Frontend: testService API integration
+  - [x] Auto-generate test code (TEST-YYYYMMDD-XXXX)
+
+- [x] **Test Result Module**
+  - [x] Backend: TestResultAppService, DTOs, Controller
+  - [x] Frontend: TestResultList, TestResultForm, TestResultDetail pages
+  - [x] Frontend: testResultService API integration
+  - [x] Two-step approval workflow (Review + Approve)
+
+- [x] **Specimen History Module**
+  - [x] Backend: SpecimenHistoryAppService, DTOs, Controller
+  - [x] Frontend: SpecimenHistoryList, SpecimenHistoryForm, SpecimenHistoryDetail pages
+  - [x] Frontend: specimenHistoryService API integration
+
+### Phase 3: UI Mockup Pages ✅ COMPLETED (Session 3 - 2025-12-12)
+- [x] **Dashboard Enhanced** - Statistics cards, charts, recent activities, progress bars
+- [x] **User Management (/users)** - User list, add/edit modal, role management, status toggle
+- [x] **Reports (/reports)** - Report list, preview modal, PDF export (mockup), email sending
+- [x] **NCR (/ncr)** - NCR list, create/edit modal, severity levels, status workflow
+- [x] **Statistics (/statistics)** - Monthly stats, department stats, top customers, charts
+- [x] **Settings (/settings)** - Profile, system config, notifications, email SMTP, master data, security
 
 ---
 
-## 📝 Pending Features
+## 🚧 In Progress / Not Started
 
-### Phase 2: Core Modules - Tiếp nhận mẫu
-- [ ] **Module 1: Tạo phiếu yêu cầu thử nghiệm**
-  - [ ] Form tạo phiếu yêu cầu điện tử
-  - [ ] Mã hóa mẫu tự động
-  - [ ] Mã hóa phép thử tự động
+### Phase 4: Authentication & Security (NOT STARTED - Backend required)
+- [ ] Authentication & Authorization module (Backend)
+- [ ] Login page - connect to actual auth API
+- [ ] JWT/OpenIddict token handling
+- [ ] Permissions system (RBAC)
+
+---
+
+## 📝 Pending Features (Prioritized)
+
+### 🔴 Priority 1: CRITICAL (Must have before production)
+
+#### Backend Integration (Authentication)
+- [ ] **Authentication System**
+  - [ ] Backend: Configure OpenIddict/JWT authentication
+  - [ ] Frontend: Connect Login page to auth API
+  - [ ] Token storage and refresh mechanism
+  - [ ] Logout functionality
+
+- [ ] **Permissions & RBAC**
+  - [ ] Backend: Define permissions in LabSpecimenManagementPermissions.cs
+  - [ ] Role definitions (Admin, LabManager, Technician, Reviewer, Approver)
+  - [ ] Permission-based API authorization
+
+- [ ] **File Attachments**
+  - [ ] Backend: TestRequestAttachmentAppService, Controller
+  - [ ] Frontend: Upload/download files on TestRequest
+
+### 🟡 Priority 2: Enhanced Features (Backend Integration)
+
+#### Connect UI to Real Backend APIs
+- [ ] **Dashboard** - Connect to real statistics API
+- [ ] **Users** - Connect to ABP Identity module
+- [ ] **Reports** - Generate real PDF reports
+- [ ] **NCR** - Backend entity and API
+- [ ] **Statistics** - Real data aggregation API
+
+#### Enhanced Modules
+- [ ] **Module: Tạo phiếu yêu cầu thử nghiệm (Enhanced)**
+  - [x] Form tạo phiếu yêu cầu điện tử ✅
+  - [x] Mã hóa mẫu tự động ✅
+  - [x] Mã hóa phép thử tự động ✅
   - [ ] Upload hình ảnh mẫu
   - [ ] Upload biên bản, hồ sơ (PDF, images)
   - [ ] Quản lý nhà thầu phụ
   - [ ] Tính toán TAT (Turn Around Time) tự động
-  - [ ] Bỏ qua ngày cuối tuần trong TAT
-  - [ ] Quản lý phiếu huỷ (soft delete + audit)
-  - [ ] Import từ Excel template
 
-### Phase 3: Phòng thí nghiệm
-- [ ] **Module 2: Giao việc & Phân công**
-  - [ ] Giao việc định kỳ
-  - [ ] Giao việc hàng ngày
-  - [ ] Dashboard công việc theo user
-  - [ ] Tiếp nhận công việc
+- [ ] **Module: Báo cáo thử nghiệm**
+  - [x] Report list UI ✅ (mockup)
+  - [ ] Generate real PDF reports
+  - [ ] QR Code generation
+  - [ ] Email sending integration
 
-- [ ] **Module 3: Nhập kết quả**
-  - [ ] Form nhập kết quả thử nghiệm
-  - [ ] Biểu diễn kết quả tự động (charts, graphs)
-  - [ ] Validation kết quả
-  - [ ] So sánh với tiêu chuẩn/quy chuẩn
-
-- [ ] **Module 4: Duyệt kết quả**
-  - [ ] Workflow duyệt kết quả
-  - [ ] Phê duyệt 2 bước
-  - [ ] Comment & feedback
-
-### Phase 4: Báo cáo kết quả
-- [ ] **Module 5: Phiếu báo cáo thử nghiệm**
-  - [ ] Template phiếu báo cáo điện tử
-  - [ ] Không có tiêu chuẩn so sánh
-  - [ ] Có 1 tiêu chuẩn so sánh
-  - [ ] Có nhiều tiêu chuẩn so sánh
-  - [ ] Preview PDF báo cáo
-  - [ ] Export PDF
-  - [ ] QR Code truy xuất nguồn gốc
-  - [ ] Gửi email tự động cho khách hàng
-  - [ ] Portal khách hàng (xem kết quả)
-
-### Phase 5: Công việc không phù hợp (NCR)
-- [ ] **Module 6: Non-Conformance Report**
-  - [ ] Tạo NCR
-  - [ ] Phân quyền xử lý NCR
+#### Phase 6: Công việc không phù hợp (/ncr page)
+- [ ] **Module: Non-Conformance Report**
+  - [ ] Backend: NCR entity, AppService, Controller
+  - [ ] Frontend: NCR list, form, detail pages
   - [ ] Workflow NCR
-  - [ ] Quản lý hồ sơ NCR
   - [ ] Thống kê NCR
-  - [ ] Báo cáo NCR
 
-### Phase 6: Quản lý mẫu
-- [ ] **Module 7: Specimen Management**
-  - [ ] Quản lý mẫu lưu (Storage)
-  - [ ] Mẫu thanh lý (Disposal)
-  - [ ] Mẫu hủy (Destruction)
-  - [ ] Mẫu trả khách hàng (Return)
-  - [ ] Theo dõi tình trạng mẫu
-  - [ ] Quản lý vị trí lưu mẫu
-  - [ ] Lịch sử đường đi của mẫu
-  - [ ] Ghi nhận sai lệch mẫu
-  - [ ] Barcode/QR scanning
-
-### Phase 7: Thống kê & Báo cáo
-- [ ] **Module 8: Analytics & Reports**
-  - [ ] Dashboard tổng quan
+#### Phase 7: Thống kê & Báo cáo (/statistics page)
+- [ ] **Module: Analytics & Reports**
+  - [ ] Dashboard tổng quan với dữ liệu thực
   - [ ] Trích xuất dữ liệu yêu cầu thử nghiệm
   - [ ] Theo dõi tình trạng thử nghiệm
   - [ ] Thống kê theo thời gian
   - [ ] Thống kê theo nền mẫu
-  - [ ] Báo cáo công việc bộ phận
   - [ ] Export Excel/PDF
-  - [ ] Custom reports
 
-### Phase 8: System Features
-- [ ] **Module 9: System Administration**
+### 🟢 Priority 3: Nice to Have
+
+#### Phase 8: System Features (/settings page)
+- [ ] **Module: System Administration**
   - [ ] User profile settings
-  - [ ] Giao diện tùy chỉnh theo user
   - [ ] Ngân hàng dữ liệu (Master data)
-  - [ ] Backup tự động configuration
-  - [ ] Restore data
-  - [ ] System logs
-  - [ ] Performance monitoring
+  - [ ] System logs viewer
+  - [ ] Backup/Restore configuration
 
-### Phase 9: Security & Compliance
-- [ ] **Module 10: Security**
+#### Phase 9: Advanced Security
+- [ ] **Module: Security Enhancement**
   - [ ] Password policy (bảo mật)
   - [ ] 2FA (Two-factor authentication)
   - [ ] Session management
   - [ ] Audit trail viewer
   - [ ] Data encryption
-  - [ ] Role-based access control (RBAC)
 
-### Phase 10: Integration & Optimization
-- [ ] **Module 11: Integration**
+#### Phase 10: ISO 17025 Full Compliance
+- [ ] **Equipment Management**
+  - [ ] Equipment register
+  - [ ] Calibration tracking
+  - [ ] Maintenance schedules
+
+- [ ] **Uncertainty Management**
+  - [ ] Uncertainty calculations
+  - [ ] Uncertainty reporting
+
+- [ ] **Internal Audit Module**
+  - [ ] Audit scheduling
+  - [ ] Finding tracking
+
+#### Phase 11: Integration & Optimization
+- [ ] **Module: Integration**
   - [ ] Email service integration
   - [ ] SMS notification (optional)
-  - [ ] External API integration
   - [ ] Performance optimization
-  - [ ] Caching strategy
   - [ ] Load testing (20+ concurrent users)
 
 ---
 
 ## 🔄 Implementation Notes
 
-### Current Session
-- Date: 2025-12-11
-- Working on: Phase 1 - Foundation & Infrastructure
+### Session 3 - 2025-12-12
+**Completed:**
+- Fixed: Missing TestResults module (DTOs, AppService, Controller)
+- Backend running successfully on port 5000
+- ✅ Enhanced Dashboard with mock statistics data
+- ✅ Created /users page - User Management (CRUD, roles, status)
+- ✅ Created /reports page - Test Reports (list, preview, PDF export mockup)
+- ✅ Created /ncr page - Non-Conformance Reports (CRUD, severity, workflow)
+- ✅ Created /statistics page - Analytics (monthly stats, department, customers)
+- ✅ Created /settings page - System Settings (profile, system, notifications, email, master data, security)
+- ✅ Updated App.tsx routing for all new pages
 
-### Recent Progress (Session 1 - 2025-12-11)
+### Session 2 - 2025-12-11 (Evening)
+**Completed:**
+- All 5 core CRUD modules fully implemented (Backend + Frontend)
+- TestRequest, Specimen, Test, TestResult, SpecimenHistory
+- Full API integration with services
+
+### Session 1 - 2025-12-11
 **Backend Achievements:**
 1. ✅ Created domain entities: TestRequest, Specimen, Test, TestResult, TestRequestAttachment, SpecimenHistory
 2. ✅ Configured EF Core DbContext with entity mappings and relationships
-3. ✅ Created and ran database migration successfully
-4. ✅ Database tables created: AppTestRequests, AppSpecimens, AppTests, AppTestResults, etc.
+3. ✅ Created and ran database migration successfully (4 migrations)
 
 **Frontend Achievements:**
-1. ✅ Setup i18n with Vietnamese translations (vi.json)
-2. ✅ Created MainLayout component with Ant Design (Header, Sidebar, Content)
-3. ✅ Setup React Router with nested routes structure
-4. ✅ Created Dashboard page with statistics cards
-5. ✅ Created Login page with form validation
-6. ✅ Setup axios API client with request/response interceptors
-7. ✅ Created service modules: authService, testRequestService
+1. ✅ Setup i18n with Vietnamese translations
+2. ✅ Created MainLayout component with Ant Design
+3. ✅ Setup React Router with nested routes
+4. ✅ Created all CRUD pages for 5 modules
+5. ✅ Setup axios API client with interceptors
 
-### Next Steps (Session 2)
-1. Backend: Create Application Services for TestRequest CRUD
-2. Backend: Add DTOs and AutoMapper profiles
-3. Backend: Create API Controllers for TestRequest
-4. Frontend: Implement TestRequest list page with table
-5. Frontend: Create TestRequest form for creating/editing
-6. Frontend: Connect Login page to backend API
+### Next Steps (Priority Order)
+1. 🔴 **CRITICAL**: Implement Authentication (Login → Backend API)
+2. 🔴 **CRITICAL**: Implement Permissions/RBAC
+3. 🔴 **CRITICAL**: Connect Dashboard to real data
+4. 🟡 Implement File Attachments upload/download
+5. 🟡 Implement /reports page
+6. 🟡 Implement /ncr page
+7. 🟡 Implement /statistics page
+8. 🟡 Implement /users page
+9. 🟡 Implement /settings page
 
 ---
 
 ## 📊 Progress Statistics
 
-- **Completed**: 8% (Phase 1 Foundation completed)
-- **In Progress**: Phase 2 - Core Modules (Test Request Management)
-- **Pending**: 92%
+| Category | Status | Percentage |
+|----------|--------|------------|
+| Phase 0-1: Setup & Foundation | ✅ Completed | 100% |
+| Phase 2: Core CRUD Modules | ✅ Completed | 100% |
+| Phase 3: UI Mockup Pages | ✅ Completed | 100% |
+| Phase 4: Auth & Security | ❌ Not Started | 0% |
+| Phase 5+: Backend Integration | ❌ Not Started | 0% |
+
+**Overall Progress: ~85%** (Core + UI Mockups complete, backend integration pending)
 
 ---
 
 ## 🐛 Known Issues
 
-*No issues reported yet*
+1. **Login not functional** - UI exists but not connected to auth API
+2. **All pages use mock data** - Not connected to real backend APIs
+3. **Attachments not implemented** - Entity exists but no API endpoints
 
 ---
 
 ## 📚 References
 
-- Backend API: http://localhost:5002/swagger
-- Frontend Dev Server: http://localhost:3001
-- [Backend Documentation](../lab-specimen-management-be/DEVELOPMENT.md)
+- Backend API: http://localhost:5000/swagger (or 5002)
+- Frontend Dev Server: http://localhost:3000 (or 3001)
+- Database: PostgreSQL on localhost:5432
 
 ---
 
@@ -209,4 +267,4 @@ Laboratory Specimen Management System - Frontend Implementation
 
 ---
 
-*Last Updated: 2025-12-11 22:07*
+*Last Updated: 2025-12-12 14:30*

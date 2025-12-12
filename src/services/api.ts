@@ -3,10 +3,10 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 // API Base URL from environment variable
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5002';
 
-// Create axios instance
+// Create axios instance with shorter timeout for faster fallback to mock data
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000,
+  timeout: 5000, // 5 seconds timeout for faster fallback
   headers: {
     'Content-Type': 'application/json',
   },

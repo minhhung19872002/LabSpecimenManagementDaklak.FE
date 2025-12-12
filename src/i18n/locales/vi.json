@@ -64,10 +64,12 @@
     "reports": "Báo cáo",
     "ncr": "Công việc không phù hợp",
     "statistics": "Thống kê",
+    "tasks": "Giao việc",
+    "subcontractors": "Nhà thầu phụ",
+    "masterData": "Ngân hàng dữ liệu",
+    "auditLog": "Lịch sử thay đổi",
     "settings": "Cài đặt",
-    "users": "Người dùng",
-    "masterData": "Dữ liệu nền",
-    "audit": "Nhật ký hệ thống"
+    "users": "Người dùng"
   },
   "request": {
     "title": "Phiếu Yêu Cầu Thử Nghiệm",
