@@ -38,6 +38,7 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
+import { mockSubcontractors as centralizedSubcontractors } from '../../mocks/mockData';
 
 const { Text } = Typography;
 
@@ -70,60 +71,32 @@ interface Certification {
   status: 'valid' | 'expired' | 'expiring';
 }
 
-// Mock data - Viện Vệ sinh Dịch tễ Tây Nguyên
+// Convert centralized mock data to Subcontractor format
 const generateMockData = (): Subcontractor[] => {
-  const names = [
-    'Viện Pasteur TP. Hồ Chí Minh',
-    'Viện Vệ sinh Dịch tễ Trung ương',
-    'Bệnh viện Nhiệt đới Trung ương',
-    'Trung tâm Kiểm nghiệm Dược phẩm và Sinh phẩm Quốc gia',
-    'Viện Kiểm định Quốc gia Vắc xin và Sinh phẩm Y tế',
-    'Viện Y học biển Việt Nam',
-  ];
-
-  const capabilities = [
-    ['Xét nghiệm COVID-19 khẳng định', 'Giải trình tự gen virus', 'Xét nghiệm bệnh nhiệt đới'],
-    ['Xét nghiệm HIV khẳng định', 'Xét nghiệm Viêm gan B/C', 'Nuôi cấy vi khuẩn đặc biệt'],
-    ['Điều trị bệnh truyền nhiễm', 'Xét nghiệm chuyên sâu', 'Nghiên cứu lâm sàng'],
-    ['Kiểm nghiệm vắc xin', 'Kiểm nghiệm sinh phẩm', 'Kiểm nghiệm thuốc'],
-    ['Kiểm định vắc xin', 'Thử nghiệm sinh học', 'Đánh giá an toàn sinh phẩm'],
-    ['Xét nghiệm độc tố biển', 'Phân tích vi sinh môi trường', 'Xét nghiệm bệnh lây từ động vật biển'],
-  ];
-
-  return Array.from({ length: 6 }, (_, i) => ({
-    id: `sub-${String(i + 1).padStart(3, '0')}`,
-    code: `NTP-${String(i + 1).padStart(3, '0')}`,
-    name: names[i],
-    address: `Địa chỉ ${i + 1}, TP. Hồ Chí Minh`,
-    phone: `028 ${3800 + i} ${1000 + i * 111}`,
-    email: `contact@subcontractor${i + 1}.com.vn`,
-    contactPerson: `Nguyễn Văn ${String.fromCharCode(65 + i)}`,
-    taxCode: `0301${String(i + 1).padStart(6, '0')}`,
-    status: i % 3 === 0 ? 'active' : i % 3 === 1 ? 'pending' : 'active',
-    capabilities: capabilities[i],
-    certifications: [
-      {
-        id: `cert-${i}-1`,
-        name: 'ISO/IEC 17025:2017',
-        issuedBy: 'BoA',
-        issuedDate: dayjs().subtract(2, 'year').toISOString(),
-        expiryDate: dayjs().add(1, 'year').toISOString(),
-        status: 'valid' as const,
-      },
-      {
-        id: `cert-${i}-2`,
-        name: 'VILAS',
-        issuedBy: 'Bộ KH&CN',
-        issuedDate: dayjs().subtract(1, 'year').toISOString(),
-        expiryDate: dayjs().add(2, 'year').toISOString(),
-        status: 'valid' as const,
-      },
-    ],
-    evaluationScore: 3.5 + Math.random() * 1.5,
-    contractStartDate: dayjs().subtract(1, 'year').toISOString(),
-    contractEndDate: dayjs().add(1, 'year').toISOString(),
-    notes: i % 2 === 0 ? `Ghi chú nhà thầu phụ ${i + 1}` : undefined,
-    createdAt: dayjs().subtract(i * 30, 'day').toISOString(),
+  return centralizedSubcontractors.map(sub => ({
+    id: sub.id,
+    code: sub.code,
+    name: sub.name,
+    address: sub.address,
+    phone: sub.phone,
+    email: sub.email,
+    contactPerson: sub.contactPerson,
+    taxCode: sub.taxCode,
+    status: sub.status as 'active' | 'inactive' | 'pending',
+    capabilities: sub.capabilities,
+    certifications: sub.certifications.map(cert => ({
+      id: cert.id,
+      name: cert.name,
+      issuedBy: cert.issuedBy,
+      issuedDate: cert.issuedDate,
+      expiryDate: cert.expiryDate,
+      status: cert.status as 'valid' | 'expired' | 'expiring',
+    })),
+    evaluationScore: sub.evaluationScore,
+    contractStartDate: sub.contractStartDate,
+    contractEndDate: sub.contractEndDate,
+    notes: sub.notes || undefined,
+    createdAt: sub.createdAt,
   }));
 };
 

@@ -7,21 +7,46 @@ import { testRequestService } from '../../services/testRequestService';
 import { TestRequestDto, TestRequestStatus } from '../../types/testRequest';
 import dayjs from 'dayjs';
 import './TestRequestDetail.css';
+import { getTestRequestById, TestRequestStatus as MockTestRequestStatus } from '../../mocks/mockData';
 
-// Mock data fallback
-const getMockTestRequest = (id: string): TestRequestDto => ({
-  id,
-  requestNumber: `REQ-${dayjs().format('YYYYMMDD')}-${id.replace(/\D/g, '').padStart(4, '0')}`,
-  requestDate: dayjs().subtract(2, 'day').toISOString(),
-  customerName: 'Bệnh viện Đa khoa tỉnh Đắk Lắk',
-  customerEmail: 'bvdaklak@syt.daklak.gov.vn',
-  customerPhone: '0262 3852 115',
-  customerAddress: '1 Lê Duẩn, TP. Buôn Ma Thuột, Đắk Lắk',
-  status: TestRequestStatus.InProgress,
-  expectedCompletionDate: dayjs().add(5, 'day').toISOString(),
-  notes: 'Yêu cầu xét nghiệm COVID-19 và Sốt xuất huyết cho 10 mẫu',
-  creationTime: dayjs().subtract(2, 'day').toISOString(),
-});
+// Get mock test request from centralized data
+const getMockTestRequest = (id: string): TestRequestDto | null => {
+  const mockData = getTestRequestById(id);
+  if (!mockData) return null;
+
+  // Map mock status to TestRequestStatus
+  let status: TestRequestStatus;
+  switch (mockData.status) {
+    case MockTestRequestStatus.Pending:
+      status = TestRequestStatus.Pending;
+      break;
+    case MockTestRequestStatus.InProgress:
+      status = TestRequestStatus.InProgress;
+      break;
+    case MockTestRequestStatus.Completed:
+      status = TestRequestStatus.Completed;
+      break;
+    case MockTestRequestStatus.Cancelled:
+      status = TestRequestStatus.Cancelled;
+      break;
+    default:
+      status = TestRequestStatus.Pending;
+  }
+
+  return {
+    id: mockData.id,
+    requestNumber: mockData.requestNumber,
+    requestDate: mockData.requestDate,
+    customerName: mockData.customerName,
+    customerEmail: mockData.customerEmail,
+    customerPhone: mockData.customerPhone,
+    customerAddress: mockData.customerAddress,
+    status,
+    expectedCompletionDate: mockData.expectedCompletionDate,
+    notes: mockData.notes,
+    creationTime: mockData.createdAt,
+  };
+};
 
 const TestRequestDetail: React.FC = () => {
   const { t } = useTranslation();

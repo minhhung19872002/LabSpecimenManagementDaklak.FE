@@ -31,82 +31,49 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import QRCodeGenerator, { MiniQRCode } from '../../components/common/QRCodeGenerator';
+import { mockReports as centralizedReports, ReportStatus, getUserById } from '../../mocks/mockData';
 
 const { RangePicker } = DatePicker;
 
-// Mock data for reports - Viện Vệ sinh Dịch tễ Tây Nguyên
-const mockReports = [
-  {
-    id: '1',
-    reportNumber: 'RPT-20251212-0001',
-    requestNumber: 'REQ-20251210-0005',
-    customerName: 'Bệnh viện Đa khoa tỉnh Đắk Lắk',
-    specimenCode: 'SP-2025-001',
-    specimenName: 'Mẫu huyết thanh - XN COVID-19',
-    testCount: 5,
-    status: 'Approved',
-    createdAt: '2025-12-12',
-    approvedAt: '2025-12-12 10:30',
-    approvedBy: 'PGS.TS. Nguyễn Văn A',
-    emailSent: true,
-  },
-  {
-    id: '2',
-    reportNumber: 'RPT-20251211-0015',
-    requestNumber: 'REQ-20251208-0012',
-    customerName: 'Trung tâm Kiểm soát bệnh tật Đắk Nông',
-    specimenCode: 'SP-2025-015',
-    specimenName: 'Mẫu máu - XN Sốt xuất huyết Dengue',
-    testCount: 8,
-    status: 'Approved',
-    createdAt: '2025-12-11',
-    approvedAt: '2025-12-11 16:00',
-    approvedBy: 'ThS. Trần Thị B',
-    emailSent: true,
-  },
-  {
-    id: '3',
-    reportNumber: 'RPT-20251211-0014',
-    requestNumber: 'REQ-20251207-0010',
-    customerName: 'Trung tâm Y tế TP. Buôn Ma Thuột',
-    specimenCode: 'SP-2025-014',
-    specimenName: 'Mẫu đờm - XN Lao (AFB)',
-    testCount: 12,
-    status: 'PendingApproval',
-    createdAt: '2025-12-11',
-    approvedAt: null,
-    approvedBy: null,
-    emailSent: false,
-  },
-  {
-    id: '4',
-    reportNumber: 'RPT-20251210-0010',
-    requestNumber: 'REQ-20251205-0008',
-    customerName: 'Bệnh viện Đa khoa Vùng Tây Nguyên',
-    specimenCode: 'SP-2025-010',
-    specimenName: 'Mẫu huyết thanh - XN HIV/Viêm gan',
-    testCount: 15,
-    status: 'Approved',
-    createdAt: '2025-12-10',
-    approvedAt: '2025-12-10 14:30',
-    approvedBy: 'PGS.TS. Nguyễn Văn A',
-    emailSent: false,
-  },
-  {
-    id: '5',
-    reportNumber: 'RPT-20251209-0008',
-    requestNumber: 'REQ-20251204-0006',
-    customerName: 'Trung tâm Kiểm soát bệnh tật Gia Lai',
-    specimenCode: 'SP-2025-008',
-    specimenName: 'Mẫu dịch ngoáy họng - PCR Cúm A/B',
-    testCount: 6,
-    status: 'Draft',
-    createdAt: '2025-12-09',
-    approvedAt: null,
-    approvedBy: null,
-    emailSent: false,
-  },
-];
+// Convert centralized mock data to local format
+const mockReports = centralizedReports.map(report => {
+  const approvedByUser = report.approvedBy ? getUserById(report.approvedBy) : null;
+
+  // Map ReportStatus enum to string status
+  let status: string;
+  switch (report.status) {
+    case ReportStatus.Draft:
+      status = 'Draft';
+      break;
+    case ReportStatus.PendingApproval:
+      status = 'PendingApproval';
+      break;
+    case ReportStatus.Approved:
+    case ReportStatus.Issued:
+      status = 'Approved';
+      break;
+    case ReportStatus.Rejected:
+      status = 'Draft';
+      break;
+    default:
+      status = 'Draft';
+  }
+
+  return {
+    id: report.id,
+    reportNumber: report.reportNumber,
+    requestNumber: report.testRequestNumber,
+    customerName: report.customerName,
+    specimenCode: report.specimenCodes[0] || '',
+    specimenName: report.title,
+    testCount: report.tests.length,
+    status,
+    createdAt: dayjs(report.createdAt).format('YYYY-MM-DD'),
+    approvedAt: report.issuedDate ? dayjs(report.issuedDate).format('YYYY-MM-DD HH:mm') : null,
+    approvedBy: approvedByUser?.fullName || null,
+    emailSent: report.status === ReportStatus.Issued,
+  };
+});
 
 const getStatusConfig = (status: string) => {
   const configs: Record<string, { color: string; text: string; icon: React.ReactNode }> = {

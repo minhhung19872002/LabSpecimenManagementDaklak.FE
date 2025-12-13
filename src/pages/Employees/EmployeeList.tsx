@@ -622,7 +622,7 @@ const EmployeeList: React.FC = () => {
             >
               <Text type="secondary">
                 <KeyOutlined style={{ marginRight: 8 }} />
-                Mật khẩu sẽ được tạo tự động bởi hệ thống và hiển thị sau khi tạo nhân viên.
+                Mật khẩu sẽ được tạo tự động và gửi đến email nhân viên đã cung cấp.
               </Text>
             </div>
           )}

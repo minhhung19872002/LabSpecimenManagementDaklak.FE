@@ -4,11 +4,10 @@ import { Form, Input, DatePicker, Button, Card, message, Select, Row, Col, Input
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { specimenService } from '../../services/specimenService';
-import { testRequestService } from '../../services/testRequestService';
 import { SpecimenStatus } from '../../types/specimen';
-import { TestRequestDto } from '../../types/testRequest';
 import dayjs from 'dayjs';
 import FileUpload from '../../components/common/FileUpload';
+import { mockTestRequests, mockSpecimenTypes, mockStorageLocations } from '../../mocks/mockData';
 
 const { TextArea } = Input;
 const { Title } = Typography;
@@ -20,30 +19,21 @@ const SpecimenForm: React.FC = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
-  const [testRequests, setTestRequests] = useState<TestRequestDto[]>([]);
   const [specimenImages, setSpecimenImages] = useState<any[]>([]);
   const isEditMode = !!id;
 
+  // Use centralized mock data for test requests
+  const testRequests = mockTestRequests.map(tr => ({
+    id: tr.id,
+    requestNumber: tr.requestNumber,
+    customerName: tr.customerName,
+  }));
+
   useEffect(() => {
-    loadTestRequests();
     if (isEditMode) {
       loadData();
     }
   }, [id]);
-
-  const loadTestRequests = async () => {
-    try {
-      const result = await testRequestService.getList({
-        skipCount: 0,
-        maxResultCount: 1000,
-        sorting: 'requestDate desc'
-      });
-      setTestRequests(result.items);
-    } catch (error) {
-      message.error(t('messages.loadFailed'));
-      console.error('Failed to load test requests:', error);
-    }
-  };
 
   const loadData = async () => {
     if (!id) return;
@@ -169,17 +159,12 @@ const SpecimenForm: React.FC = () => {
                 { max: 256, message: t('validation.maxLength', { max: 256 }) }
               ]}
             >
-              <Select placeholder="Chọn loại mẫu">
-                <Select.Option value="Máu">Máu toàn phần</Select.Option>
-                <Select.Option value="Huyết thanh">Huyết thanh</Select.Option>
-                <Select.Option value="Huyết tương">Huyết tương</Select.Option>
-                <Select.Option value="Dịch mũi họng">Dịch mũi họng (NTA/Swab)</Select.Option>
-                <Select.Option value="Nước tiểu">Nước tiểu</Select.Option>
-                <Select.Option value="Phân">Phân</Select.Option>
-                <Select.Option value="Đờm">Đờm</Select.Option>
-                <Select.Option value="Dịch não tủy">Dịch não tủy (CSF)</Select.Option>
-                <Select.Option value="Mô sinh thiết">Mô sinh thiết</Select.Option>
-                <Select.Option value="Khác">Khác</Select.Option>
+              <Select placeholder="Chọn loại mẫu" showSearch optionFilterProp="children">
+                {mockSpecimenTypes.map(type => (
+                  <Select.Option key={type.id} value={type.name}>
+                    {type.code} - {type.name}
+                  </Select.Option>
+                ))}
               </Select>
             </Form.Item>
           </Col>
@@ -223,13 +208,12 @@ const SpecimenForm: React.FC = () => {
                 { max: 256, message: t('validation.maxLength', { max: 256 }) }
               ]}
             >
-              <Select placeholder="Vị trí lưu mẫu" allowClear>
-                <Select.Option value="Tủ lạnh 2-8°C - Phòng XN Vi sinh">Tủ lạnh 2-8°C - Phòng XN Vi sinh</Select.Option>
-                <Select.Option value="Tủ đông -20°C - Phòng XN PCR">Tủ đông -20°C - Phòng XN PCR</Select.Option>
-                <Select.Option value="Tủ đông -80°C - Lưu trữ dài hạn">Tủ đông -80°C - Lưu trữ dài hạn</Select.Option>
-                <Select.Option value="Tủ lạnh - Phòng XN Huyết học">Tủ lạnh - Phòng XN Huyết học</Select.Option>
-                <Select.Option value="Phòng mẫu nhiệt độ thường">Phòng mẫu nhiệt độ thường</Select.Option>
-                <Select.Option value="Kho lưu mẫu âm">Kho lưu mẫu âm</Select.Option>
+              <Select placeholder="Vị trí lưu mẫu" allowClear showSearch optionFilterProp="children">
+                {mockStorageLocations.map(loc => (
+                  <Select.Option key={loc.id} value={loc.name}>
+                    {loc.code} - {loc.name} ({loc.temperature})
+                  </Select.Option>
+                ))}
               </Select>
             </Form.Item>
           </Col>

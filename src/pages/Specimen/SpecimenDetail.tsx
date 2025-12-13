@@ -6,24 +6,55 @@ import { specimenService } from '../../services/specimenService';
 import { SpecimenDto, SpecimenStatus } from '../../types/specimen';
 import dayjs from 'dayjs';
 import './SpecimenDetail.css';
+import { getSpecimenById, SpecimenStatus as MockSpecimenStatus } from '../../mocks/mockData';
 
-// Mock data fallback
-const getMockSpecimen = (id: string): SpecimenDto => ({
-  id,
-  code: `SPE-${dayjs().format('YYYYMMDD')}-${id.replace(/\D/g, '').padStart(4, '0')}`,
-  name: 'Mẫu huyết thanh - XN COVID-19',
-  type: 'Huyết thanh',
-  receivedDate: dayjs().subtract(2, 'day').toISOString(),
-  testRequestId: 'req-001',
-  testRequestNumber: 'REQ-20251210-0001',
-  quantity: 2,
-  unit: 'ống',
-  status: SpecimenStatus.Testing,
-  storageLocation: 'Tủ lạnh 2-8°C - Phòng XN Vi sinh',
-  storageCondition: '2-8°C',
-  notes: 'Mẫu từ BV Đa khoa tỉnh Đắk Lắk',
-  creationTime: dayjs().subtract(2, 'day').toISOString(),
-});
+// Get mock specimen from centralized data
+const getMockSpecimen = (id: string): SpecimenDto | null => {
+  const mockData = getSpecimenById(id);
+  if (!mockData) return null;
+
+  // Map mock status to SpecimenStatus
+  let status: SpecimenStatus;
+  switch (mockData.status) {
+    case MockSpecimenStatus.Received:
+      status = SpecimenStatus.Received;
+      break;
+    case MockSpecimenStatus.Testing:
+      status = SpecimenStatus.Testing;
+      break;
+    case MockSpecimenStatus.Storage:
+      status = SpecimenStatus.Storage;
+      break;
+    case MockSpecimenStatus.Disposal:
+      status = SpecimenStatus.Disposal;
+      break;
+    case MockSpecimenStatus.Destroyed:
+      status = SpecimenStatus.Destroyed;
+      break;
+    case MockSpecimenStatus.ReturnedToCustomer:
+      status = SpecimenStatus.ReturnedToCustomer;
+      break;
+    default:
+      status = SpecimenStatus.Received;
+  }
+
+  return {
+    id: mockData.id,
+    code: mockData.code,
+    name: mockData.name,
+    type: mockData.type,
+    receivedDate: mockData.receivedDate,
+    testRequestId: mockData.testRequestId,
+    testRequestNumber: mockData.testRequestNumber,
+    quantity: mockData.quantity,
+    unit: mockData.unit,
+    status,
+    storageLocation: mockData.storageLocation,
+    storageCondition: mockData.storageCondition,
+    notes: mockData.description,
+    creationTime: mockData.createdAt,
+  };
+};
 
 const SpecimenDetail: React.FC = () => {
   const { t } = useTranslation();

@@ -3,10 +3,9 @@ import { Form, Input, Button, Select, message, InputNumber, DatePicker, Card, Sp
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { testService } from '../../services/testService';
-import { specimenService } from '../../services/specimenService';
 import { CreateTestDto, UpdateTestDto, TestStatus } from '../../types/test';
-import { SpecimenDto } from '../../types/specimen';
 import dayjs from 'dayjs';
+import { mockSpecimens, mockTestMethods, mockUsers } from '../../mocks/mockData';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -14,27 +13,28 @@ const { Option } = Select;
 const TestForm: React.FC = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [specimens, setSpecimens] = useState<SpecimenDto[]>([]);
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
   const isEditMode = !!id;
 
+  // Use centralized mock data for specimens
+  const specimens = mockSpecimens.map(s => ({
+    id: s.id,
+    code: s.code,
+    name: s.name,
+  }));
+
+  // Get technicians for assignee dropdown
+  const technicians = mockUsers.filter(u =>
+    u.role === 'Technician' || u.role === 'LabManager'
+  );
+
   useEffect(() => {
-    fetchSpecimens();
     if (isEditMode && id) {
       fetchTest(id);
     }
   }, [id]);
-
-  const fetchSpecimens = async () => {
-    try {
-      const result = await specimenService.getList({ maxResultCount: 1000 });
-      setSpecimens(result.items);
-    } catch (error) {
-      message.error(t('messages.loadFailed'));
-    }
-  };
 
   const fetchTest = async (testId: string) => {
     setLoading(true);
@@ -120,7 +120,13 @@ const TestForm: React.FC = () => {
             name="method"
             rules={[{ required: true, message: t('validation.required') }]}
           >
-            <Input />
+            <Select placeholder="Chọn phương pháp thử" showSearch optionFilterProp="children">
+              {mockTestMethods.map(method => (
+                <Option key={method.id} value={method.name}>
+                  {method.code} - {method.name}
+                </Option>
+              ))}
+            </Select>
           </Form.Item>
 
           <Form.Item
@@ -128,7 +134,7 @@ const TestForm: React.FC = () => {
             name="standard"
             rules={[{ required: true, message: t('validation.required') }]}
           >
-            <Input />
+            <Input placeholder="Tiêu chuẩn áp dụng (VD: TCVN, QCVN...)" />
           </Form.Item>
 
           {isEditMode && (
@@ -163,7 +169,13 @@ const TestForm: React.FC = () => {
           )}
 
           <Form.Item label={t('test.assigneeId')} name="assigneeId">
-            <Input placeholder="User ID" />
+            <Select placeholder="Chọn người thực hiện" allowClear showSearch optionFilterProp="children">
+              {technicians.map(user => (
+                <Option key={user.id} value={user.id}>
+                  {user.fullName} - {user.department}
+                </Option>
+              ))}
+            </Select>
           </Form.Item>
 
           <Form.Item label={t('test.estimatedDuration')} name="estimatedDuration">

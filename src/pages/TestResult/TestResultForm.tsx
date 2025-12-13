@@ -3,10 +3,9 @@ import { Form, Input, Button, Select, message, InputNumber, DatePicker, Card, Sp
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { testResultService } from '../../services/testResultService';
-import { testService } from '../../services/testService';
 import { CreateTestResultDto, UpdateTestResultDto, ResultApprovalStatus } from '../../types/testResult';
-import { TestDto } from '../../types/test';
 import dayjs from 'dayjs';
+import { mockTests } from '../../mocks/mockData';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -14,27 +13,23 @@ const { Option } = Select;
 const TestResultForm: React.FC = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [tests, setTests] = useState<TestDto[]>([]);
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
   const isEditMode = !!id;
 
+  // Use centralized mock data for tests
+  const tests = mockTests.map(t => ({
+    id: t.id,
+    code: t.code,
+    name: t.name,
+  }));
+
   useEffect(() => {
-    fetchTests();
     if (isEditMode && id) {
       fetchTestResult(id);
     }
   }, [id]);
-
-  const fetchTests = async () => {
-    try {
-      const result = await testService.getList({ maxResultCount: 1000 });
-      setTests(result.items);
-    } catch (error) {
-      message.error(t('messages.loadFailed'));
-    }
-  };
 
   const fetchTestResult = async (testResultId: string) => {
     setLoading(true);

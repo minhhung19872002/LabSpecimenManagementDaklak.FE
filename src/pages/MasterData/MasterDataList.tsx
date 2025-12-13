@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Card,
   Table,
@@ -15,9 +15,6 @@ import {
   message,
   Popconfirm,
   Tabs,
-  Upload,
-  Descriptions,
-  Typography,
   Statistic
 } from 'antd';
 import {
@@ -25,18 +22,19 @@ import {
   EditOutlined,
   DeleteOutlined,
   SearchOutlined,
-  ReloadOutlined,
   DatabaseOutlined,
-  UploadOutlined,
-  DownloadOutlined,
   ImportOutlined,
   ExportOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import type { UploadProps } from 'antd';
 import dayjs from 'dayjs';
-
-const { Text } = Typography;
+import {
+  mockSpecimenTypes,
+  mockTestMethods,
+  mockStorageLocations,
+  mockDepartments,
+  mockCustomers,
+} from '../../mocks/mockData';
 
 // Types
 interface MasterDataItem {
@@ -48,67 +46,120 @@ interface MasterDataItem {
   isActive: boolean;
   sortOrder: number;
   createdAt: string;
+  // Extra fields for specific categories
+  temperature?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
 }
 
-// Mock data by category
-const mockDataByCategory: Record<string, MasterDataItem[]> = {
-  specimenTypes: [
-    { id: '1', code: 'NN', name: 'Nước ngầm', category: 'specimenTypes', description: 'Mẫu nước ngầm từ giếng khoan', isActive: true, sortOrder: 1, createdAt: dayjs().toISOString() },
-    { id: '2', code: 'NM', name: 'Nước mặt', category: 'specimenTypes', description: 'Mẫu nước sông, suối, hồ', isActive: true, sortOrder: 2, createdAt: dayjs().toISOString() },
-    { id: '3', code: 'DAT', name: 'Đất', category: 'specimenTypes', description: 'Mẫu đất các loại', isActive: true, sortOrder: 3, createdAt: dayjs().toISOString() },
-    { id: '4', code: 'TP', name: 'Thực phẩm', category: 'specimenTypes', description: 'Mẫu thực phẩm', isActive: true, sortOrder: 4, createdAt: dayjs().toISOString() },
-    { id: '5', code: 'PB', name: 'Phân bón', category: 'specimenTypes', description: 'Mẫu phân bón', isActive: true, sortOrder: 5, createdAt: dayjs().toISOString() },
-    { id: '6', code: 'CP', name: 'Cà phê', category: 'specimenTypes', description: 'Mẫu cà phê các loại', isActive: true, sortOrder: 6, createdAt: dayjs().toISOString() },
-    { id: '7', code: 'HT', name: 'Hồ tiêu', category: 'specimenTypes', description: 'Mẫu hồ tiêu', isActive: true, sortOrder: 7, createdAt: dayjs().toISOString() },
-    { id: '8', code: 'RC', name: 'Rau củ', category: 'specimenTypes', description: 'Mẫu rau củ quả', isActive: true, sortOrder: 8, createdAt: dayjs().toISOString() },
-  ],
-  testMethods: [
-    { id: '1', code: 'TCVN6492', name: 'TCVN 6492:2011', category: 'testMethods', description: 'Phương pháp xác định pH', isActive: true, sortOrder: 1, createdAt: dayjs().toISOString() },
-    { id: '2', code: 'TCVN4559', name: 'TCVN 4559:1998', category: 'testMethods', description: 'Phương pháp xác định EC', isActive: true, sortOrder: 2, createdAt: dayjs().toISOString() },
-    { id: '3', code: 'TCVN6638', name: 'TCVN 6638:2000', category: 'testMethods', description: 'Phương pháp xác định Nitơ tổng', isActive: true, sortOrder: 3, createdAt: dayjs().toISOString() },
-    { id: '4', code: 'TCVN6187', name: 'TCVN 6187-1:2019', category: 'testMethods', description: 'Phương pháp xác định Coliform', isActive: true, sortOrder: 4, createdAt: dayjs().toISOString() },
-    { id: '5', code: 'AOAC950', name: 'AOAC 950.40', category: 'testMethods', description: 'Phương pháp xác định Caffeine', isActive: true, sortOrder: 5, createdAt: dayjs().toISOString() },
-  ],
-  standards: [
-    { id: '1', code: 'QCVN09', name: 'QCVN 09-MT:2015/BTNMT', category: 'standards', description: 'Quy chuẩn nước ngầm', isActive: true, sortOrder: 1, createdAt: dayjs().toISOString() },
-    { id: '2', code: 'QCVN08', name: 'QCVN 08-MT:2015/BTNMT', category: 'standards', description: 'Quy chuẩn nước mặt', isActive: true, sortOrder: 2, createdAt: dayjs().toISOString() },
-    { id: '3', code: 'QCVN03', name: 'QCVN 03-MT:2015/BTNMT', category: 'standards', description: 'Quy chuẩn đất', isActive: true, sortOrder: 3, createdAt: dayjs().toISOString() },
-    { id: '4', code: 'QCVN01', name: 'QCVN 01:2009/BYT', category: 'standards', description: 'Quy chuẩn nước ăn uống', isActive: true, sortOrder: 4, createdAt: dayjs().toISOString() },
-  ],
-  parameters: [
-    { id: '1', code: 'PH', name: 'pH', category: 'parameters', description: 'Độ pH', isActive: true, sortOrder: 1, createdAt: dayjs().toISOString() },
-    { id: '2', code: 'EC', name: 'EC (Độ dẫn điện)', category: 'parameters', description: 'Độ dẫn điện', isActive: true, sortOrder: 2, createdAt: dayjs().toISOString() },
-    { id: '3', code: 'TDS', name: 'TDS', category: 'parameters', description: 'Tổng chất rắn hòa tan', isActive: true, sortOrder: 3, createdAt: dayjs().toISOString() },
-    { id: '4', code: 'N', name: 'Nitơ tổng (N)', category: 'parameters', description: 'Hàm lượng Nitơ tổng', isActive: true, sortOrder: 4, createdAt: dayjs().toISOString() },
-    { id: '5', code: 'P', name: 'Phospho tổng (P)', category: 'parameters', description: 'Hàm lượng Phospho tổng', isActive: true, sortOrder: 5, createdAt: dayjs().toISOString() },
-    { id: '6', code: 'K', name: 'Kali (K)', category: 'parameters', description: 'Hàm lượng Kali', isActive: true, sortOrder: 6, createdAt: dayjs().toISOString() },
-    { id: '7', code: 'COL', name: 'Coliform tổng', category: 'parameters', description: 'Coliform tổng số', isActive: true, sortOrder: 7, createdAt: dayjs().toISOString() },
-    { id: '8', code: 'ECOLI', name: 'E.coli', category: 'parameters', description: 'E.coli', isActive: true, sortOrder: 8, createdAt: dayjs().toISOString() },
-    { id: '9', code: 'PB', name: 'Chì (Pb)', category: 'parameters', description: 'Hàm lượng Chì', isActive: true, sortOrder: 9, createdAt: dayjs().toISOString() },
-    { id: '10', code: 'CD', name: 'Cadimi (Cd)', category: 'parameters', description: 'Hàm lượng Cadimi', isActive: true, sortOrder: 10, createdAt: dayjs().toISOString() },
-  ],
-  units: [
-    { id: '1', code: 'MGL', name: 'mg/L', category: 'units', description: 'Miligram trên lít', isActive: true, sortOrder: 1, createdAt: dayjs().toISOString() },
-    { id: '2', code: 'MGKG', name: 'mg/kg', category: 'units', description: 'Miligram trên kilogram', isActive: true, sortOrder: 2, createdAt: dayjs().toISOString() },
-    { id: '3', code: 'PERCENT', name: '%', category: 'units', description: 'Phần trăm', isActive: true, sortOrder: 3, createdAt: dayjs().toISOString() },
-    { id: '4', code: 'CFU100ML', name: 'CFU/100mL', category: 'units', description: 'Colony Forming Unit per 100mL', isActive: true, sortOrder: 4, createdAt: dayjs().toISOString() },
-    { id: '5', code: 'CFUG', name: 'CFU/g', category: 'units', description: 'Colony Forming Unit per gram', isActive: true, sortOrder: 5, createdAt: dayjs().toISOString() },
-    { id: '6', code: 'USCM', name: 'µS/cm', category: 'units', description: 'Micro Siemens per centimeter', isActive: true, sortOrder: 6, createdAt: dayjs().toISOString() },
-  ],
-  storageLocations: [
-    { id: '1', code: 'KLA1', name: 'Kho lạnh A1', category: 'storageLocations', description: 'Kho lạnh 2-8°C', isActive: true, sortOrder: 1, createdAt: dayjs().toISOString() },
-    { id: '2', code: 'KLA2', name: 'Kho lạnh A2', category: 'storageLocations', description: 'Kho lạnh 2-8°C', isActive: true, sortOrder: 2, createdAt: dayjs().toISOString() },
-    { id: '3', code: 'KHB1', name: 'Kho B1', category: 'storageLocations', description: 'Kho thường', isActive: true, sortOrder: 3, createdAt: dayjs().toISOString() },
-    { id: '4', code: 'KHB2', name: 'Kho B2', category: 'storageLocations', description: 'Kho thường', isActive: true, sortOrder: 4, createdAt: dayjs().toISOString() },
-    { id: '5', code: 'KHC1', name: 'Kho hóa chất C1', category: 'storageLocations', description: 'Kho hóa chất', isActive: true, sortOrder: 5, createdAt: dayjs().toISOString() },
-    { id: '6', code: 'PMD1', name: 'Phòng mẫu D1', category: 'storageLocations', description: 'Phòng lưu mẫu', isActive: true, sortOrder: 6, createdAt: dayjs().toISOString() },
-  ],
-  departments: [
-    { id: '1', code: 'PHH', name: 'Phòng Hóa học', category: 'departments', description: 'Phòng thử nghiệm Hóa học', isActive: true, sortOrder: 1, createdAt: dayjs().toISOString() },
-    { id: '2', code: 'PVS', name: 'Phòng Vi sinh', category: 'departments', description: 'Phòng thử nghiệm Vi sinh', isActive: true, sortOrder: 2, createdAt: dayjs().toISOString() },
-    { id: '3', code: 'PVL', name: 'Phòng Vật lý', category: 'departments', description: 'Phòng thử nghiệm Vật lý', isActive: true, sortOrder: 3, createdAt: dayjs().toISOString() },
-    { id: '4', code: 'PMT', name: 'Phòng Môi trường', category: 'departments', description: 'Phòng thử nghiệm Môi trường', isActive: true, sortOrder: 4, createdAt: dayjs().toISOString() },
-  ],
+// Convert mock data from mockData.ts to unified format
+const convertToMasterDataFormat = () => {
+  const specimenTypes: MasterDataItem[] = mockSpecimenTypes.map((item, index) => ({
+    id: item.id,
+    code: item.code,
+    name: item.name,
+    category: 'specimenTypes',
+    description: `Loại mẫu: ${item.name}`,
+    isActive: true,
+    sortOrder: index + 1,
+    createdAt: dayjs().toISOString(),
+  }));
+
+  const testMethods: MasterDataItem[] = mockTestMethods.map((item, index) => ({
+    id: item.id,
+    code: item.code,
+    name: item.name,
+    category: 'testMethods',
+    description: `Phương pháp: ${item.name}`,
+    isActive: true,
+    sortOrder: index + 1,
+    createdAt: dayjs().toISOString(),
+  }));
+
+  const storageLocations: MasterDataItem[] = mockStorageLocations.map((item, index) => ({
+    id: item.id,
+    code: item.code,
+    name: item.name,
+    category: 'storageLocations',
+    description: `Nhiệt độ: ${item.temperature}`,
+    temperature: item.temperature,
+    isActive: true,
+    sortOrder: index + 1,
+    createdAt: dayjs().toISOString(),
+  }));
+
+  const departments: MasterDataItem[] = mockDepartments.map((item, index) => ({
+    id: item.id,
+    code: item.code,
+    name: item.name,
+    category: 'departments',
+    description: `Phòng ban: ${item.name}`,
+    isActive: true,
+    sortOrder: index + 1,
+    createdAt: dayjs().toISOString(),
+  }));
+
+  const customers: MasterDataItem[] = mockCustomers.map((item, index) => ({
+    id: item.id,
+    code: item.id,
+    name: item.name,
+    category: 'customers',
+    description: item.address,
+    address: item.address,
+    phone: item.phone,
+    email: item.email,
+    isActive: true,
+    sortOrder: index + 1,
+    createdAt: dayjs().toISOString(),
+  }));
+
+  // Additional categories with static data
+  const standards: MasterDataItem[] = [
+    { id: 'std-001', code: 'QCVN09', name: 'QCVN 09-MT:2015/BTNMT', category: 'standards', description: 'Quy chuẩn nước ngầm', isActive: true, sortOrder: 1, createdAt: dayjs().toISOString() },
+    { id: 'std-002', code: 'QCVN08', name: 'QCVN 08-MT:2015/BTNMT', category: 'standards', description: 'Quy chuẩn nước mặt', isActive: true, sortOrder: 2, createdAt: dayjs().toISOString() },
+    { id: 'std-003', code: 'QCVN03', name: 'QCVN 03-MT:2015/BTNMT', category: 'standards', description: 'Quy chuẩn đất', isActive: true, sortOrder: 3, createdAt: dayjs().toISOString() },
+    { id: 'std-004', code: 'QCVN01', name: 'QCVN 01:2009/BYT', category: 'standards', description: 'Quy chuẩn nước ăn uống', isActive: true, sortOrder: 4, createdAt: dayjs().toISOString() },
+    { id: 'std-005', code: 'TCVN4193', name: 'TCVN 4193:2014', category: 'standards', description: 'Tiêu chuẩn cà phê nhân', isActive: true, sortOrder: 5, createdAt: dayjs().toISOString() },
+  ];
+
+  const parameters: MasterDataItem[] = [
+    { id: 'param-001', code: 'PH', name: 'pH', category: 'parameters', description: 'Độ pH', isActive: true, sortOrder: 1, createdAt: dayjs().toISOString() },
+    { id: 'param-002', code: 'EC', name: 'EC (Độ dẫn điện)', category: 'parameters', description: 'Độ dẫn điện - µS/cm', isActive: true, sortOrder: 2, createdAt: dayjs().toISOString() },
+    { id: 'param-003', code: 'TDS', name: 'TDS', category: 'parameters', description: 'Tổng chất rắn hòa tan - mg/L', isActive: true, sortOrder: 3, createdAt: dayjs().toISOString() },
+    { id: 'param-004', code: 'N', name: 'Nitơ tổng (N)', category: 'parameters', description: 'Hàm lượng Nitơ tổng - mg/kg', isActive: true, sortOrder: 4, createdAt: dayjs().toISOString() },
+    { id: 'param-005', code: 'P', name: 'Phospho tổng (P)', category: 'parameters', description: 'Hàm lượng Phospho tổng - mg/kg', isActive: true, sortOrder: 5, createdAt: dayjs().toISOString() },
+    { id: 'param-006', code: 'K', name: 'Kali (K)', category: 'parameters', description: 'Hàm lượng Kali - mg/kg', isActive: true, sortOrder: 6, createdAt: dayjs().toISOString() },
+    { id: 'param-007', code: 'COL', name: 'Coliform tổng', category: 'parameters', description: 'Coliform tổng số - CFU/100mL', isActive: true, sortOrder: 7, createdAt: dayjs().toISOString() },
+    { id: 'param-008', code: 'ECOLI', name: 'E.coli', category: 'parameters', description: 'E.coli - CFU/100mL', isActive: true, sortOrder: 8, createdAt: dayjs().toISOString() },
+    { id: 'param-009', code: 'PB', name: 'Chì (Pb)', category: 'parameters', description: 'Hàm lượng Chì - mg/kg', isActive: true, sortOrder: 9, createdAt: dayjs().toISOString() },
+    { id: 'param-010', code: 'CD', name: 'Cadimi (Cd)', category: 'parameters', description: 'Hàm lượng Cadimi - mg/kg', isActive: true, sortOrder: 10, createdAt: dayjs().toISOString() },
+    { id: 'param-011', code: 'AS', name: 'Asen (As)', category: 'parameters', description: 'Hàm lượng Asen - mg/kg', isActive: true, sortOrder: 11, createdAt: dayjs().toISOString() },
+    { id: 'param-012', code: 'CAF', name: 'Caffeine', category: 'parameters', description: 'Hàm lượng Caffeine - %', isActive: true, sortOrder: 12, createdAt: dayjs().toISOString() },
+    { id: 'param-013', code: 'MOIS', name: 'Độ ẩm', category: 'parameters', description: 'Độ ẩm - %', isActive: true, sortOrder: 13, createdAt: dayjs().toISOString() },
+  ];
+
+  const units: MasterDataItem[] = [
+    { id: 'unit-001', code: 'MGL', name: 'mg/L', category: 'units', description: 'Miligram trên lít', isActive: true, sortOrder: 1, createdAt: dayjs().toISOString() },
+    { id: 'unit-002', code: 'MGKG', name: 'mg/kg', category: 'units', description: 'Miligram trên kilogram', isActive: true, sortOrder: 2, createdAt: dayjs().toISOString() },
+    { id: 'unit-003', code: 'PERCENT', name: '%', category: 'units', description: 'Phần trăm', isActive: true, sortOrder: 3, createdAt: dayjs().toISOString() },
+    { id: 'unit-004', code: 'CFU100ML', name: 'CFU/100mL', category: 'units', description: 'Colony Forming Unit per 100mL', isActive: true, sortOrder: 4, createdAt: dayjs().toISOString() },
+    { id: 'unit-005', code: 'CFUG', name: 'CFU/g', category: 'units', description: 'Colony Forming Unit per gram', isActive: true, sortOrder: 5, createdAt: dayjs().toISOString() },
+    { id: 'unit-006', code: 'USCM', name: 'µS/cm', category: 'units', description: 'Micro Siemens per centimeter', isActive: true, sortOrder: 6, createdAt: dayjs().toISOString() },
+    { id: 'unit-007', code: 'PPM', name: 'ppm', category: 'units', description: 'Parts per million', isActive: true, sortOrder: 7, createdAt: dayjs().toISOString() },
+    { id: 'unit-008', code: 'PPB', name: 'ppb', category: 'units', description: 'Parts per billion', isActive: true, sortOrder: 8, createdAt: dayjs().toISOString() },
+  ];
+
+  return {
+    specimenTypes,
+    testMethods,
+    storageLocations,
+    departments,
+    customers,
+    standards,
+    parameters,
+    units,
+  };
 };
 
 const categoryLabels: Record<string, string> = {
@@ -119,11 +170,13 @@ const categoryLabels: Record<string, string> = {
   units: 'Đơn vị đo',
   storageLocations: 'Vị trí lưu kho',
   departments: 'Phòng ban',
+  customers: 'Khách hàng',
 };
 
 const MasterDataList: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState('specimenTypes');
-  const [data, setData] = useState<Record<string, MasterDataItem[]>>(mockDataByCategory);
+  const initialData = useMemo(() => convertToMasterDataFormat(), []);
+  const [data, setData] = useState<Record<string, MasterDataItem[]>>(initialData);
   const [searchText, setSearchText] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MasterDataItem | null>(null);
@@ -203,7 +256,6 @@ const MasterDataList: React.FC = () => {
   };
 
   const handleExportExcel = () => {
-    // Mock export
     const blob = new Blob(['Mock Excel Data'], { type: 'application/vnd.ms-excel' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -213,61 +265,110 @@ const MasterDataList: React.FC = () => {
     message.success('Xuất Excel thành công!');
   };
 
-  const columns: ColumnsType<MasterDataItem> = [
-    {
-      title: 'STT',
-      dataIndex: 'sortOrder',
-      key: 'sortOrder',
-      width: 60,
-    },
-    {
-      title: 'Mã',
-      dataIndex: 'code',
-      key: 'code',
-      width: 120,
-    },
-    {
-      title: 'Tên',
-      dataIndex: 'name',
-      key: 'name',
-      width: 250,
-    },
-    {
-      title: 'Mô tả',
-      dataIndex: 'description',
-      key: 'description',
-      ellipsis: true,
-    },
-    {
-      title: 'Trạng thái',
-      dataIndex: 'isActive',
-      key: 'isActive',
-      width: 120,
-      render: (isActive: boolean) => (
-        <Tag color={isActive ? 'green' : 'red'}>
-          {isActive ? 'Hoạt động' : 'Ngừng'}
-        </Tag>
-      ),
-    },
-    {
-      title: 'Thao tác',
-      key: 'actions',
-      width: 120,
-      render: (_, record) => (
-        <Space size="small">
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Có"
-            cancelText="Không"
-          >
-            <Button type="link" size="small" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ];
+  // Dynamic columns based on category
+  const getColumns = (): ColumnsType<MasterDataItem> => {
+    const baseColumns: ColumnsType<MasterDataItem> = [
+      {
+        title: 'STT',
+        dataIndex: 'sortOrder',
+        key: 'sortOrder',
+        width: 60,
+      },
+      {
+        title: 'Mã',
+        dataIndex: 'code',
+        key: 'code',
+        width: 120,
+      },
+      {
+        title: 'Tên',
+        dataIndex: 'name',
+        key: 'name',
+        width: 250,
+      },
+    ];
+
+    // Add extra columns for specific categories
+    if (activeCategory === 'customers') {
+      baseColumns.push(
+        {
+          title: 'Địa chỉ',
+          dataIndex: 'description',
+          key: 'description',
+          ellipsis: true,
+        },
+        {
+          title: 'Điện thoại',
+          dataIndex: 'phone',
+          key: 'phone',
+          width: 130,
+        },
+        {
+          title: 'Email',
+          dataIndex: 'email',
+          key: 'email',
+          width: 180,
+          ellipsis: true,
+        }
+      );
+    } else if (activeCategory === 'storageLocations') {
+      baseColumns.push(
+        {
+          title: 'Mô tả',
+          dataIndex: 'description',
+          key: 'description',
+          ellipsis: true,
+        },
+        {
+          title: 'Nhiệt độ',
+          dataIndex: 'temperature',
+          key: 'temperature',
+          width: 100,
+        }
+      );
+    } else {
+      baseColumns.push({
+        title: 'Mô tả',
+        dataIndex: 'description',
+        key: 'description',
+        ellipsis: true,
+      });
+    }
+
+    baseColumns.push(
+      {
+        title: 'Trạng thái',
+        dataIndex: 'isActive',
+        key: 'isActive',
+        width: 100,
+        render: (isActive: boolean) => (
+          <Tag color={isActive ? 'green' : 'red'}>
+            {isActive ? 'Hoạt động' : 'Ngừng'}
+          </Tag>
+        ),
+      },
+      {
+        title: 'Thao tác',
+        key: 'actions',
+        width: 100,
+        render: (_, record) => (
+          <Space size="small">
+            <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa?"
+              onConfirm={() => handleDelete(record.id)}
+              okText="Có"
+              cancelText="Không"
+            >
+              <Button type="link" size="small" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          </Space>
+        ),
+      }
+    );
+
+    return baseColumns;
+  };
 
   // Calculate stats
   const totalItems = Object.values(data).reduce((sum, arr) => sum + arr.length, 0);
@@ -318,7 +419,10 @@ const MasterDataList: React.FC = () => {
       >
         <Tabs
           activeKey={activeCategory}
-          onChange={setActiveCategory}
+          onChange={(key) => {
+            setActiveCategory(key);
+            setSearchText('');
+          }}
           tabPosition="left"
           style={{ minHeight: 400 }}
           items={Object.entries(categoryLabels).map(([key, label]) => ({
@@ -344,13 +448,14 @@ const MasterDataList: React.FC = () => {
                 </Row>
 
                 <Table
-                  columns={columns}
+                  columns={getColumns()}
                   dataSource={filteredData}
                   rowKey="id"
                   pagination={{
                     showSizeChanger: true,
                     showTotal: (total) => `Tổng ${total} mục`,
                   }}
+                  scroll={{ x: activeCategory === 'customers' ? 900 : 700 }}
                 />
               </>
             ),
@@ -392,6 +497,25 @@ const MasterDataList: React.FC = () => {
           <Form.Item name="description" label="Mô tả">
             <Input.TextArea rows={3} />
           </Form.Item>
+          {activeCategory === 'customers' && (
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item name="phone" label="Điện thoại">
+                  <Input />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item name="email" label="Email">
+                  <Input />
+                </Form.Item>
+              </Col>
+            </Row>
+          )}
+          {activeCategory === 'storageLocations' && (
+            <Form.Item name="temperature" label="Nhiệt độ bảo quản">
+              <Input placeholder="VD: 2-8°C" />
+            </Form.Item>
+          )}
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="sortOrder" label="Thứ tự sắp xếp">

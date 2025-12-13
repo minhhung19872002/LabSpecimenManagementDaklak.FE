@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { specimenHistoryService } from '../../services/specimenHistoryService';
 import { CreateSpecimenHistoryDto, UpdateSpecimenHistoryDto, SpecimenStatus } from '../../types/specimenHistory';
+import { mockSpecimens, mockStorageLocations, mockUsers } from '../../mocks/mockData';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -96,7 +97,13 @@ const SpecimenHistoryForm: React.FC = () => {
               name="specimenId"
               rules={[{ required: true, message: t('specimenHistory.form.specimenIdRequired') }]}
             >
-              <Input />
+              <Select placeholder="Chọn mẫu" showSearch optionFilterProp="children">
+                {mockSpecimens.map(specimen => (
+                  <Option key={specimen.id} value={specimen.id}>
+                    {specimen.code} - {specimen.name}
+                  </Option>
+                ))}
+              </Select>
             </Form.Item>
           )}
 
@@ -108,7 +115,16 @@ const SpecimenHistoryForm: React.FC = () => {
               { max: 200, message: t('specimenHistory.form.actionMaxLength') },
             ]}
           >
-            <Input />
+            <Select placeholder="Chọn hành động">
+              <Option value="Tiếp nhận mẫu">Tiếp nhận mẫu</Option>
+              <Option value="Chuyển vào phòng thử nghiệm">Chuyển vào phòng thử nghiệm</Option>
+              <Option value="Chuyển vào tủ lạnh">Chuyển vào tủ lạnh</Option>
+              <Option value="Lấy mẫu thử nghiệm">Lấy mẫu thử nghiệm</Option>
+              <Option value="Hoàn tất thử nghiệm">Hoàn tất thử nghiệm</Option>
+              <Option value="Chuyển lưu kho">Chuyển lưu kho</Option>
+              <Option value="Hủy mẫu">Hủy mẫu</Option>
+              <Option value="Trả mẫu cho khách">Trả mẫu cho khách</Option>
+            </Select>
           </Form.Item>
 
           <Form.Item
@@ -119,7 +135,14 @@ const SpecimenHistoryForm: React.FC = () => {
               { max: 200, message: t('specimenHistory.form.locationMaxLength') },
             ]}
           >
-            <Input />
+            <Select placeholder="Chọn vị trí" showSearch optionFilterProp="children">
+              <Option value="Quầy tiếp nhận">Quầy tiếp nhận</Option>
+              {mockStorageLocations.map(loc => (
+                <Option key={loc.id} value={loc.name}>
+                  {loc.code} - {loc.name}
+                </Option>
+              ))}
+            </Select>
           </Form.Item>
 
           <Form.Item

@@ -35,6 +35,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import isToday from 'dayjs/plugin/isToday';
+import { mockAuditLogs, mockUsers, getUserById } from '../../mocks/mockData';
 
 dayjs.extend(isToday);
 
@@ -66,17 +67,11 @@ interface FieldChange {
   newValue: string;
 }
 
-// Mock data
+// Convert centralized mock data to AuditLog format
 const generateMockData = (): AuditLog[] => {
-  const users = [
-    { id: '1', name: 'Nguyễn Văn A', role: 'Kỹ thuật viên' },
-    { id: '2', name: 'Trần Thị B', role: 'Trưởng phòng' },
-    { id: '3', name: 'Lê Văn C', role: 'Giám đốc' },
-    { id: '4', name: 'Admin', role: 'Quản trị viên' },
-  ];
-
+  // Generate more logs based on centralized data for better demo
+  const additionalLogs: AuditLog[] = [];
   const actions: AuditLog['action'][] = ['create', 'update', 'delete', 'view', 'approve', 'submit'];
-
   const entityTypes = [
     { type: 'TestRequest', name: 'Yêu cầu thử nghiệm' },
     { type: 'Specimen', name: 'Mẫu thử nghiệm' },
@@ -86,11 +81,34 @@ const generateMockData = (): AuditLog[] => {
     { type: 'User', name: 'Người dùng' },
   ];
 
-  return Array.from({ length: 100 }, (_, i) => {
-    const user = users[i % users.length];
+  // Convert existing centralized logs
+  const baseLogs: AuditLog[] = mockAuditLogs.map(log => {
+    const user = getUserById(log.userId);
+    return {
+      id: log.id,
+      timestamp: log.timestamp,
+      userId: log.userId,
+      userName: log.userName,
+      userRole: user?.role || 'Kỹ thuật viên',
+      action: log.action.toLowerCase() as AuditLog['action'],
+      entityType: log.entityType,
+      entityId: log.entityId,
+      entityName: `${log.entityType} ${log.entityCode}`,
+      description: log.description,
+      ipAddress: log.ipAddress,
+      userAgent: 'Chrome 120.0.0.0',
+      changes: log.details ? [
+        { field: 'Chi tiết', oldValue: '-', newValue: JSON.stringify(log.details) }
+      ] : undefined,
+    };
+  });
+
+  // Generate additional logs for demo (using centralized users)
+  for (let i = 0; i < 50; i++) {
+    const user = mockUsers[i % mockUsers.length];
     const action = actions[i % actions.length];
     const entityType = entityTypes[i % entityTypes.length];
-    const timestamp = dayjs().subtract(i * 30, 'minute');
+    const timestamp = dayjs().subtract((i + baseLogs.length) * 30, 'minute');
 
     let description = '';
     let changes: FieldChange[] | undefined;
@@ -120,11 +138,11 @@ const generateMockData = (): AuditLog[] => {
         break;
     }
 
-    return {
-      id: `log-${String(i + 1).padStart(5, '0')}`,
+    additionalLogs.push({
+      id: `log-${String(baseLogs.length + i + 1).padStart(5, '0')}`,
       timestamp: timestamp.toISOString(),
       userId: user.id,
-      userName: user.name,
+      userName: user.fullName,
       userRole: user.role,
       action,
       entityType: entityType.type,
@@ -134,8 +152,12 @@ const generateMockData = (): AuditLog[] => {
       ipAddress: `192.168.1.${100 + (i % 50)}`,
       userAgent: 'Chrome 120.0.0.0',
       changes,
-    };
-  });
+    });
+  }
+
+  return [...baseLogs, ...additionalLogs].sort((a, b) =>
+    dayjs(b.timestamp).unix() - dayjs(a.timestamp).unix()
+  );
 };
 
 const AuditLogList: React.FC = () => {

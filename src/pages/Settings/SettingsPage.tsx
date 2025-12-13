@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Card,
   Tabs,
@@ -15,8 +15,6 @@ import {
   InputNumber,
   Space,
   Tag,
-  Table,
-  Modal,
   Upload,
   Avatar,
   Descriptions
@@ -26,38 +24,15 @@ import {
   UserOutlined,
   BellOutlined,
   SafetyOutlined,
-  DatabaseOutlined,
   MailOutlined,
-  GlobalOutlined,
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
   UploadOutlined,
   SaveOutlined
 } from '@ant-design/icons';
-
-// Mock master data
-const mockTestMethods = [
-  { id: 1, code: 'TM-001', name: 'Phương pháp chuẩn độ', standard: 'TCVN 6492:2011' },
-  { id: 2, code: 'TM-002', name: 'Phương pháp quang phổ UV-Vis', standard: 'TCVN 6178:1996' },
-  { id: 3, code: 'TM-003', name: 'Phương pháp vi sinh đếm đĩa', standard: 'TCVN 6187-1:2019' },
-  { id: 4, code: 'TM-004', name: 'Phương pháp khối lượng', standard: 'TCVN 6663-3:2016' },
-];
-
-const mockSpecimenTypes = [
-  { id: 1, code: 'ST-001', name: 'Nước ngầm', description: 'Nước từ giếng khoan, giếng đào' },
-  { id: 2, code: 'ST-002', name: 'Nước mặt', description: 'Nước sông, hồ, suối' },
-  { id: 3, code: 'ST-003', name: 'Nước thải', description: 'Nước thải công nghiệp, sinh hoạt' },
-  { id: 4, code: 'ST-004', name: 'Đất', description: 'Đất nông nghiệp, đất xây dựng' },
-  { id: 5, code: 'ST-005', name: 'Thực phẩm', description: 'Thực phẩm các loại' },
-];
 
 const SettingsPage: React.FC = () => {
   const [profileForm] = Form.useForm();
   const [systemForm] = Form.useForm();
   const [emailForm] = Form.useForm();
-  const [isMethodModalOpen, setIsMethodModalOpen] = useState(false);
-  const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
 
   // Initialize forms with mock data
   React.useEffect(() => {
@@ -109,40 +84,6 @@ const SettingsPage: React.FC = () => {
       message.success('Đã gửi email test thành công!');
     });
   };
-
-  const methodColumns = [
-    { title: 'Mã', dataIndex: 'code', key: 'code', width: 100 },
-    { title: 'Tên phương pháp', dataIndex: 'name', key: 'name', width: 250 },
-    { title: 'Tiêu chuẩn', dataIndex: 'standard', key: 'standard', width: 150 },
-    {
-      title: 'Thao tác',
-      key: 'actions',
-      width: 100,
-      render: () => (
-        <Space size="small">
-          <Button type="text" size="small" icon={<EditOutlined />} />
-          <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-        </Space>
-      ),
-    },
-  ];
-
-  const typeColumns = [
-    { title: 'Mã', dataIndex: 'code', key: 'code', width: 100 },
-    { title: 'Tên loại mẫu', dataIndex: 'name', key: 'name', width: 150 },
-    { title: 'Mô tả', dataIndex: 'description', key: 'description', width: 250 },
-    {
-      title: 'Thao tác',
-      key: 'actions',
-      width: 100,
-      render: () => (
-        <Space size="small">
-          <Button type="text" size="small" icon={<EditOutlined />} />
-          <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-        </Space>
-      ),
-    },
-  ];
 
   return (
     <div>
@@ -368,40 +309,6 @@ const SettingsPage: React.FC = () => {
             ),
           },
           {
-            key: 'masterdata',
-            label: (
-              <span>
-                <DatabaseOutlined /> Dữ liệu danh mục
-              </span>
-            ),
-            children: (
-              <div>
-                <Card
-                  title="Phương pháp thử nghiệm"
-                  extra={
-                    <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsMethodModalOpen(true)}>
-                      Thêm mới
-                    </Button>
-                  }
-                  style={{ marginBottom: 16 }}
-                >
-                  <Table dataSource={mockTestMethods} columns={methodColumns} rowKey="id" pagination={false} size="small" scroll={{ x: 600 }} />
-                </Card>
-
-                <Card
-                  title="Loại mẫu thử"
-                  extra={
-                    <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsTypeModalOpen(true)}>
-                      Thêm mới
-                    </Button>
-                  }
-                >
-                  <Table dataSource={mockSpecimenTypes} columns={typeColumns} rowKey="id" pagination={false} size="small" scroll={{ x: 600 }} />
-                </Card>
-              </div>
-            ),
-          },
-          {
             key: 'security',
             label: (
               <span>
@@ -442,52 +349,6 @@ const SettingsPage: React.FC = () => {
           },
         ]}
       />
-
-      {/* Add Method Modal */}
-      <Modal
-        title="Thêm phương pháp thử nghiệm"
-        open={isMethodModalOpen}
-        onCancel={() => setIsMethodModalOpen(false)}
-        onOk={() => {
-          message.success('Đã thêm phương pháp mới');
-          setIsMethodModalOpen(false);
-        }}
-      >
-        <Form layout="vertical">
-          <Form.Item label="Mã phương pháp" rules={[{ required: true }]}>
-            <Input placeholder="TM-xxx" />
-          </Form.Item>
-          <Form.Item label="Tên phương pháp" rules={[{ required: true }]}>
-            <Input placeholder="Tên phương pháp thử nghiệm" />
-          </Form.Item>
-          <Form.Item label="Tiêu chuẩn áp dụng">
-            <Input placeholder="TCVN xxxx:yyyy" />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* Add Type Modal */}
-      <Modal
-        title="Thêm loại mẫu thử"
-        open={isTypeModalOpen}
-        onCancel={() => setIsTypeModalOpen(false)}
-        onOk={() => {
-          message.success('Đã thêm loại mẫu mới');
-          setIsTypeModalOpen(false);
-        }}
-      >
-        <Form layout="vertical">
-          <Form.Item label="Mã loại mẫu" rules={[{ required: true }]}>
-            <Input placeholder="ST-xxx" />
-          </Form.Item>
-          <Form.Item label="Tên loại mẫu" rules={[{ required: true }]}>
-            <Input placeholder="Tên loại mẫu thử" />
-          </Form.Item>
-          <Form.Item label="Mô tả">
-            <Input.TextArea rows={2} placeholder="Mô tả chi tiết" />
-          </Form.Item>
-        </Form>
-      </Modal>
     </div>
   );
 };

@@ -40,6 +40,7 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
+import { mockTaskAssignments, mockUsers, mockDepartments } from '../../mocks/mockData';
 
 // Types
 interface TaskAssignment {
@@ -73,75 +74,99 @@ interface TeamMember {
   completedCount: number;
 }
 
-// Mock data
+// Convert centralized mock data to TaskAssignment format
 const generateMockTasks = (): TaskAssignment[] => {
+  // Start with centralized task assignments
+  const baseTasks: TaskAssignment[] = mockTaskAssignments.map(task => ({
+    id: task.id,
+    taskNumber: task.taskNumber,
+    title: task.title,
+    description: task.description,
+    type: task.type as TaskAssignment['type'],
+    priority: task.priority as TaskAssignment['priority'],
+    status: task.status as TaskAssignment['status'],
+    assignedTo: task.assignedToName,
+    assignedBy: task.assignedByName,
+    department: task.department,
+    relatedTestRequests: task.relatedTestRequests,
+    relatedSpecimens: task.relatedSpecimens,
+    dueDate: task.dueDate,
+    startDate: task.startDate || undefined,
+    completedDate: task.completedDate || undefined,
+    progress: task.progress,
+    notes: task.notes || undefined,
+    createdAt: task.createdAt,
+  }));
+
+  // Generate additional tasks for demo using centralized users
+  const additionalTasks: TaskAssignment[] = [];
   const titles = [
-    'Phân tích mẫu nước giếng khoan - Lô 001',
-    'Kiểm nghiệm vi sinh thực phẩm - Công ty ABC',
+    'Phân tích mẫu nước giếng khoan - Lô 002',
+    'Kiểm nghiệm vi sinh thực phẩm - Công ty XYZ',
     'Phân tích dư lượng thuốc BVTV - Mẫu rau',
     'Hiệu chuẩn thiết bị pH - Phòng Hóa học',
-    'Xử lý mẫu cà phê - Viện NC Tây Nguyên',
     'Báo cáo kết quả tháng 12/2025',
     'Kiểm tra độ ẩm mẫu đất - HTX BMT',
     'Phân tích kim loại nặng - Mẫu phân bón',
   ];
-
-  const assignees = [
-    'Nguyễn Văn A',
-    'Trần Thị B',
-    'Lê Văn C',
-    'Phạm Thị D',
-    'Hoàng Văn E',
-  ];
-
-  const departments = [
-    'Phòng Hóa học',
-    'Phòng Vi sinh',
-    'Phòng Vật lý',
-    'Phòng Môi trường',
-  ];
-
   const types: TaskAssignment['type'][] = ['daily', 'weekly', 'adhoc', 'monthly'];
   const priorities: TaskAssignment['priority'][] = ['high', 'medium', 'low'];
   const statuses: TaskAssignment['status'][] = ['pending', 'accepted', 'in_progress', 'completed', 'in_progress'];
 
-  return Array.from({ length: 20 }, (_, i) => {
-    const createdDate = dayjs().subtract(i, 'day');
+  for (let i = 0; i < 10; i++) {
+    const user = mockUsers[(i + 2) % mockUsers.length]; // Start from technicians
+    const createdDate = dayjs().subtract(i + baseTasks.length, 'day');
     const dueDate = createdDate.add(3 + Math.floor(Math.random() * 7), 'day');
     const status = statuses[i % statuses.length];
     const progress = status === 'completed' ? 100 : status === 'in_progress' ? 30 + Math.floor(Math.random() * 60) : status === 'accepted' ? 10 : 0;
 
-    return {
-      id: `task-${String(i + 1).padStart(3, '0')}`,
-      taskNumber: `TASK-${dayjs().format('YYYYMMDD')}-${String(i + 1).padStart(4, '0')}`,
+    additionalTasks.push({
+      id: `task-extra-${String(i + 1).padStart(3, '0')}`,
+      taskNumber: `TASK-${dayjs().subtract(i, 'day').format('YYYYMMDD')}-${String(baseTasks.length + i + 1).padStart(4, '0')}`,
       title: titles[i % titles.length],
       description: `Mô tả công việc ${i + 1}`,
       type: types[i % types.length],
       priority: priorities[i % priorities.length],
       status: status,
-      assignedTo: assignees[i % assignees.length],
-      assignedBy: 'Trưởng phòng',
-      department: departments[i % departments.length],
-      relatedTestRequests: [`REQ-${dayjs().format('YYYYMMDD')}-${String((i % 25) + 1).padStart(4, '0')}`],
-      relatedSpecimens: [`SPE-${dayjs().format('YYYYMMDD')}-${String((i % 30) + 1).padStart(4, '0')}`],
+      assignedTo: user.fullName,
+      assignedBy: mockUsers[1].fullName, // Lab manager
+      department: user.department,
+      relatedTestRequests: [`REQ-${dayjs().format('YYYYMMDD')}-${String((i % 5) + 1).padStart(4, '0')}`],
+      relatedSpecimens: [`SPE-${dayjs().format('YYYYMMDD')}-${String((i % 8) + 1).padStart(4, '0')}`],
       dueDate: dueDate.toISOString(),
       startDate: status !== 'pending' ? createdDate.add(1, 'day').toISOString() : undefined,
       completedDate: status === 'completed' ? dueDate.subtract(1, 'day').toISOString() : undefined,
       progress: progress,
       notes: i % 3 === 0 ? `Ghi chú công việc ${i + 1}` : undefined,
       createdAt: createdDate.toISOString(),
-    };
-  });
+    });
+  }
+
+  return [...baseTasks, ...additionalTasks];
 };
 
+// Generate team members from centralized users
 const generateTeamMembers = (): TeamMember[] => {
-  return [
-    { id: '1', name: 'Nguyễn Văn A', department: 'Phòng Hóa học', role: 'Kỹ thuật viên', taskCount: 8, completedCount: 5 },
-    { id: '2', name: 'Trần Thị B', department: 'Phòng Vi sinh', role: 'Kỹ thuật viên', taskCount: 6, completedCount: 4 },
-    { id: '3', name: 'Lê Văn C', department: 'Phòng Hóa học', role: 'Kỹ thuật viên', taskCount: 5, completedCount: 3 },
-    { id: '4', name: 'Phạm Thị D', department: 'Phòng Vật lý', role: 'Kỹ thuật viên', taskCount: 4, completedCount: 4 },
-    { id: '5', name: 'Hoàng Văn E', department: 'Phòng Môi trường', role: 'Kỹ thuật viên', taskCount: 7, completedCount: 5 },
-  ];
+  // Filter users who can be assigned tasks (Technicians, LabManager)
+  const eligibleUsers = mockUsers.filter(u =>
+    u.role === 'Technician' || u.role === 'LabManager' || u.role === 'Reviewer'
+  );
+
+  return eligibleUsers.map(user => {
+    const allTasks = generateMockTasks();
+    const userTasks = allTasks.filter(t => t.assignedTo === user.fullName);
+    const completedTasks = userTasks.filter(t => t.status === 'completed');
+
+    return {
+      id: user.id,
+      name: user.fullName,
+      department: user.department,
+      role: user.role === 'LabManager' ? 'Trưởng phòng' :
+            user.role === 'Reviewer' ? 'Người duyệt' : 'Kỹ thuật viên',
+      taskCount: userTasks.length || Math.floor(Math.random() * 5) + 3,
+      completedCount: completedTasks.length || Math.floor(Math.random() * 3) + 1,
+    };
+  });
 };
 
 const TaskAssignmentList: React.FC = () => {
@@ -156,7 +181,10 @@ const TaskAssignmentList: React.FC = () => {
   const [editingItem, setEditingItem] = useState<TaskAssignment | null>(null);
   const [form] = Form.useForm();
 
-  const departments = ['Phòng Hóa học', 'Phòng Vi sinh', 'Phòng Vật lý', 'Phòng Môi trường'];
+  // Use centralized departments (filter out non-lab departments)
+  const departments = mockDepartments
+    .filter(d => d.name.includes('Phòng'))
+    .map(d => d.name);
 
   useEffect(() => {
     loadData();
