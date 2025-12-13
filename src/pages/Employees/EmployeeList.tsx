@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Card,
   Table,
@@ -19,7 +19,7 @@ import {
   Col,
   Statistic,
   Typography,
-} from 'antd';
+} from "antd";
 import {
   PlusOutlined,
   EditOutlined,
@@ -32,9 +32,9 @@ import {
   TeamOutlined,
   KeyOutlined,
   CopyOutlined,
-} from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
-import { mockUsers, mockDepartments } from '../../mocks/mockData';
+} from "@ant-design/icons";
+import type { ColumnsType } from "antd/es/table";
+import { mockUsers, mockDepartments } from "../../mocks/mockData";
 
 const { Text } = Typography;
 
@@ -54,22 +54,22 @@ interface Employee {
 }
 
 const roles = [
-  { value: 'Admin', label: 'Quản trị viên', color: 'red' },
-  { value: 'LabManager', label: 'Trưởng phòng TN', color: 'purple' },
-  { value: 'Technician', label: 'Kỹ thuật viên', color: 'blue' },
-  { value: 'Reviewer', label: 'Người duyệt B1', color: 'orange' },
-  { value: 'Approver', label: 'Người duyệt B2', color: 'green' },
-  { value: 'Viewer', label: 'Xem báo cáo', color: 'default' },
+  { value: "Admin", label: "Quản trị viên", color: "red" },
+  { value: "LabManager", label: "Trưởng phòng TN", color: "purple" },
+  { value: "Technician", label: "Kỹ thuật viên", color: "blue" },
+  { value: "Reviewer", label: "Người duyệt B1", color: "orange" },
+  { value: "Approver", label: "Người duyệt B2", color: "green" },
+  { value: "Viewer", label: "Xem báo cáo", color: "default" },
 ];
 
 const positions = [
-  'Giám đốc',
-  'Phó Giám đốc',
-  'Trưởng phòng',
-  'Phó trưởng phòng',
-  'Kỹ thuật viên chính',
-  'Kỹ thuật viên',
-  'Nhân viên',
+  "Giám đốc",
+  "Phó Giám đốc",
+  "Trưởng phòng",
+  "Phó trưởng phòng",
+  "Kỹ thuật viên chính",
+  "Kỹ thuật viên",
+  "Nhân viên",
 ];
 
 // Generate initial mock employees from centralized data
@@ -82,8 +82,10 @@ const generateInitialEmployees = (): Employee[] => {
     phone: user.phone,
     role: user.role,
     department: user.department,
-    departmentId: mockDepartments.find(d => d.name === user.department)?.id || 'dept-001',
-    position: index === 0 ? 'Giám đốc' : index === 1 ? 'Trưởng phòng' : 'Kỹ thuật viên',
+    departmentId:
+      mockDepartments.find((d) => d.name === user.department)?.id || "dept-001",
+    position:
+      index === 0 ? "Giám đốc" : index === 1 ? "Trưởng phòng" : "Kỹ thuật viên",
     isActive: user.isActive,
     createdAt: user.createdAt,
     lastLogin: user.lastLogin,
@@ -92,13 +94,13 @@ const generateInitialEmployees = (): Employee[] => {
 
 // Generate random password (simulating backend behavior)
 const generateRandomPassword = (length: number = 12): string => {
-  const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  const lowercase = 'abcdefghijklmnopqrstuvwxyz';
-  const numbers = '0123456789';
-  const special = '!@#$%^&*';
+  const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const lowercase = "abcdefghijklmnopqrstuvwxyz";
+  const numbers = "0123456789";
+  const special = "!@#$%^&*";
   const allChars = uppercase + lowercase + numbers + special;
 
-  let password = '';
+  let password = "";
   // Ensure at least one of each type
   password += uppercase[Math.floor(Math.random() * uppercase.length)];
   password += lowercase[Math.floor(Math.random() * lowercase.length)];
@@ -111,21 +113,27 @@ const generateRandomPassword = (length: number = 12): string => {
   }
 
   // Shuffle the password
-  return password.split('').sort(() => Math.random() - 0.5).join('');
+  return password
+    .split("")
+    .sort(() => Math.random() - 0.5)
+    .join("");
 };
 
 const EmployeeList: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [filteredData, setFilteredData] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchText, setSearchText] = useState('');
-  const [departmentFilter, setDepartmentFilter] = useState<string>('all');
-  const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [searchText, setSearchText] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState<string>("all");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Employee | null>(null);
-  const [generatedPassword, setGeneratedPassword] = useState<string>('');
-  const [newEmployeeInfo, setNewEmployeeInfo] = useState<{ username: string; email: string } | null>(null);
+  const [generatedPassword, setGeneratedPassword] = useState<string>("");
+  const [newEmployeeInfo, setNewEmployeeInfo] = useState<{
+    username: string;
+    email: string;
+  } | null>(null);
   const [form] = Form.useForm();
 
   useEffect(() => {
@@ -137,20 +145,23 @@ const EmployeeList: React.FC = () => {
 
     if (searchText) {
       const search = searchText.toLowerCase();
-      filtered = filtered.filter(item =>
-        item.fullName.toLowerCase().includes(search) ||
-        item.username.toLowerCase().includes(search) ||
-        item.email.toLowerCase().includes(search) ||
-        item.phone.includes(search)
+      filtered = filtered.filter(
+        (item) =>
+          item.fullName.toLowerCase().includes(search) ||
+          item.username.toLowerCase().includes(search) ||
+          item.email.toLowerCase().includes(search) ||
+          item.phone.includes(search)
       );
     }
 
-    if (departmentFilter !== 'all') {
-      filtered = filtered.filter(item => item.department === departmentFilter);
+    if (departmentFilter !== "all") {
+      filtered = filtered.filter(
+        (item) => item.department === departmentFilter
+      );
     }
 
-    if (roleFilter !== 'all') {
-      filtered = filtered.filter(item => item.role === roleFilter);
+    if (roleFilter !== "all") {
+      filtered = filtered.filter((item) => item.role === roleFilter);
     }
 
     setFilteredData(filtered);
@@ -185,15 +196,19 @@ const EmployeeList: React.FC = () => {
   };
 
   const handleDelete = (id: string) => {
-    setEmployees(prev => prev.filter(item => item.id !== id));
-    message.success('Đã xóa nhân viên');
+    setEmployees((prev) => prev.filter((item) => item.id !== id));
+    message.success("Đã xóa nhân viên");
   };
 
   const handleToggleActive = (id: string, checked: boolean) => {
-    setEmployees(prev =>
-      prev.map(item => (item.id === id ? { ...item, isActive: checked } : item))
+    setEmployees((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, isActive: checked } : item
+      )
     );
-    message.success(checked ? 'Đã kích hoạt tài khoản' : 'Đã vô hiệu hóa tài khoản');
+    message.success(
+      checked ? "Đã kích hoạt tài khoản" : "Đã vô hiệu hóa tài khoản"
+    );
   };
 
   const handleResetPassword = (record: Employee) => {
@@ -207,13 +222,15 @@ const EmployeeList: React.FC = () => {
 
   const handleCopyPassword = () => {
     navigator.clipboard.writeText(generatedPassword);
-    message.success('Đã sao chép mật khẩu');
+    message.success("Đã sao chép mật khẩu");
   };
 
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
-      const selectedDept = mockDepartments.find(d => d.id === values.departmentId);
+      const selectedDept = mockDepartments.find(
+        (d) => d.id === values.departmentId
+      );
 
       if (editingItem) {
         // Update existing employee
@@ -222,10 +239,12 @@ const EmployeeList: React.FC = () => {
           ...values,
           department: selectedDept?.name || editingItem.department,
         };
-        setEmployees(prev =>
-          prev.map(item => (item.id === editingItem.id ? updatedEmployee : item))
+        setEmployees((prev) =>
+          prev.map((item) =>
+            item.id === editingItem.id ? updatedEmployee : item
+          )
         );
-        message.success('Đã cập nhật thông tin nhân viên');
+        message.success("Đã cập nhật thông tin nhân viên");
         setIsModalOpen(false);
       } else {
         // Create new employee
@@ -236,129 +255,138 @@ const EmployeeList: React.FC = () => {
           username: values.username,
           fullName: values.fullName,
           email: values.email,
-          phone: values.phone || '',
+          phone: values.phone || "",
           role: values.role,
-          department: selectedDept?.name || '',
+          department: selectedDept?.name || "",
           departmentId: values.departmentId,
-          position: values.position || '',
+          position: values.position || "",
           isActive: values.isActive ?? true,
           createdAt: new Date().toISOString(),
           lastLogin: null,
         };
 
-        setEmployees(prev => [newEmployee, ...prev]);
+        setEmployees((prev) => [newEmployee, ...prev]);
         setIsModalOpen(false);
 
         // Show password modal
         setGeneratedPassword(newPassword);
-        setNewEmployeeInfo({ username: newEmployee.username, email: newEmployee.email });
+        setNewEmployeeInfo({
+          username: newEmployee.username,
+          email: newEmployee.email,
+        });
         setIsPasswordModalOpen(true);
-        message.success('Đã tạo nhân viên mới');
+        message.success("Đã tạo nhân viên mới");
       }
 
       form.resetFields();
     } catch (error) {
-      console.error('Validation failed:', error);
+      console.error("Validation failed:", error);
     }
   };
 
   const getRoleTag = (role: string) => {
-    const roleConfig = roles.find(r => r.value === role);
-    return <Tag color={roleConfig?.color || 'default'}>{roleConfig?.label || role}</Tag>;
+    const roleConfig = roles.find((r) => r.value === role);
+    return (
+      <Tag color={roleConfig?.color || "default"}>
+        {roleConfig?.label || role}
+      </Tag>
+    );
   };
 
   // Statistics
   const stats = {
     total: employees.length,
-    active: employees.filter(e => e.isActive).length,
-    inactive: employees.filter(e => !e.isActive).length,
-    byDepartment: mockDepartments.map(d => ({
+    active: employees.filter((e) => e.isActive).length,
+    inactive: employees.filter((e) => !e.isActive).length,
+    byDepartment: mockDepartments.map((d) => ({
       name: d.name,
-      count: employees.filter(e => e.department === d.name).length,
+      count: employees.filter((e) => e.department === d.name).length,
     })),
   };
 
   const columns: ColumnsType<Employee> = [
     {
-      title: 'Nhân viên',
-      key: 'employee',
+      title: "Nhân viên",
+      key: "employee",
       width: 250,
-      fixed: 'left',
+      fixed: "left",
       render: (_, record) => (
         <Space>
           <Avatar
             icon={<UserOutlined />}
-            style={{ backgroundColor: record.isActive ? '#1890ff' : '#d9d9d9' }}
+            style={{ backgroundColor: record.isActive ? "#1890ff" : "#d9d9d9" }}
           />
           <div>
             <div style={{ fontWeight: 500 }}>{record.fullName}</div>
-            <div style={{ fontSize: 12, color: '#666' }}>@{record.username}</div>
+            <div style={{ fontSize: 12, color: "#666" }}>
+              @{record.username}
+            </div>
           </div>
         </Space>
       ),
     },
     {
-      title: 'Email',
-      dataIndex: 'email',
-      key: 'email',
+      title: "Email",
+      dataIndex: "email",
+      key: "email",
       width: 220,
       render: (email: string) => (
         <Space>
-          <MailOutlined style={{ color: '#1890ff' }} />
+          <MailOutlined style={{ color: "#1890ff" }} />
           <span style={{ fontSize: 13 }}>{email}</span>
         </Space>
       ),
     },
     {
-      title: 'Điện thoại',
-      dataIndex: 'phone',
-      key: 'phone',
+      title: "Điện thoại",
+      dataIndex: "phone",
+      key: "phone",
       width: 130,
       render: (phone: string) => (
         <Space>
-          <PhoneOutlined style={{ color: '#52c41a' }} />
-          {phone || '-'}
+          <PhoneOutlined style={{ color: "#52c41a" }} />
+          {phone || "-"}
         </Space>
       ),
     },
     {
-      title: 'Phòng ban',
-      dataIndex: 'department',
-      key: 'department',
+      title: "Phòng ban",
+      dataIndex: "department",
+      key: "department",
       width: 150,
     },
     {
-      title: 'Chức vụ',
-      dataIndex: 'position',
-      key: 'position',
+      title: "Chức vụ",
+      dataIndex: "position",
+      key: "position",
       width: 140,
     },
     {
-      title: 'Vai trò',
-      dataIndex: 'role',
-      key: 'role',
+      title: "Vai trò",
+      dataIndex: "role",
+      key: "role",
       width: 140,
       render: (role: string) => getRoleTag(role),
     },
     {
-      title: 'Trạng thái',
-      dataIndex: 'isActive',
-      key: 'isActive',
+      title: "Trạng thái",
+      dataIndex: "isActive",
+      key: "isActive",
       width: 130,
       render: (isActive: boolean, record) => (
         <Switch
           checked={isActive}
-          onChange={checked => handleToggleActive(record.id, checked)}
+          onChange={(checked) => handleToggleActive(record.id, checked)}
           checkedChildren="Hoạt động"
           unCheckedChildren="Vô hiệu"
         />
       ),
     },
     {
-      title: 'Thao tác',
-      key: 'actions',
+      title: "Thao tác",
+      key: "actions",
       width: 150,
-      fixed: 'right',
+      fixed: "right",
       render: (_, record) => (
         <Space size="small">
           <Tooltip title="Sửa">
@@ -385,7 +413,12 @@ const EmployeeList: React.FC = () => {
             cancelText="Hủy"
           >
             <Tooltip title="Xóa">
-              <Button type="link" size="small" danger icon={<DeleteOutlined />} />
+              <Button
+                type="link"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+              />
             </Tooltip>
           </Popconfirm>
         </Space>
@@ -411,7 +444,7 @@ const EmployeeList: React.FC = () => {
             <Statistic
               title="Đang hoạt động"
               value={stats.active}
-              valueStyle={{ color: '#52c41a' }}
+              valueStyle={{ color: "#52c41a" }}
             />
           </Card>
         </Col>
@@ -420,7 +453,7 @@ const EmployeeList: React.FC = () => {
             <Statistic
               title="Vô hiệu hóa"
               value={stats.inactive}
-              valueStyle={{ color: '#ff4d4f' }}
+              valueStyle={{ color: "#ff4d4f" }}
             />
           </Card>
         </Col>
@@ -438,7 +471,11 @@ const EmployeeList: React.FC = () => {
             <Button icon={<ReloadOutlined />} onClick={loadData}>
               Làm mới
             </Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleCreate}
+            >
               Thêm nhân viên
             </Button>
           </Space>
@@ -451,19 +488,19 @@ const EmployeeList: React.FC = () => {
               placeholder="Tìm kiếm theo tên, username, email, SĐT..."
               prefix={<SearchOutlined />}
               value={searchText}
-              onChange={e => setSearchText(e.target.value)}
+              onChange={(e) => setSearchText(e.target.value)}
               allowClear
             />
           </Col>
           <Col xs={24} sm={6} md={4}>
             <Select
-              style={{ width: '100%' }}
+              style={{ width: "100%" }}
               placeholder="Phòng ban"
               value={departmentFilter}
               onChange={setDepartmentFilter}
             >
               <Select.Option value="all">Tất cả phòng ban</Select.Option>
-              {mockDepartments.map(d => (
+              {mockDepartments.map((d) => (
                 <Select.Option key={d.id} value={d.name}>
                   {d.name}
                 </Select.Option>
@@ -472,13 +509,13 @@ const EmployeeList: React.FC = () => {
           </Col>
           <Col xs={24} sm={6} md={4}>
             <Select
-              style={{ width: '100%' }}
+              style={{ width: "100%" }}
               placeholder="Vai trò"
               value={roleFilter}
               onChange={setRoleFilter}
             >
               <Select.Option value="all">Tất cả vai trò</Select.Option>
-              {roles.map(r => (
+              {roles.map((r) => (
                 <Select.Option key={r.value} value={r.value}>
                   {r.label}
                 </Select.Option>
@@ -494,7 +531,7 @@ const EmployeeList: React.FC = () => {
           loading={loading}
           pagination={{
             showSizeChanger: true,
-            showTotal: total => `Tổng ${total} nhân viên`,
+            showTotal: (total) => `Tổng ${total} nhân viên`,
           }}
           scroll={{ x: 1400 }}
         />
@@ -502,12 +539,15 @@ const EmployeeList: React.FC = () => {
 
       {/* Create/Edit Modal */}
       <Modal
-        title={editingItem ? 'Chỉnh sửa thông tin nhân viên' : 'Thêm nhân viên mới'}
+        title={
+          editingItem ? "Chỉnh sửa thông tin nhân viên" : "Thêm nhân viên mới"
+        }
         open={isModalOpen}
         onOk={handleModalOk}
         onCancel={() => setIsModalOpen(false)}
-        okText={editingItem ? 'Cập nhật' : 'Tạo nhân viên'}
+        okText={editingItem ? "Cập nhật" : "Tạo nhân viên"}
         cancelText="Hủy"
+        centered
         width={700}
       >
         <Form form={form} layout="vertical">
@@ -517,8 +557,12 @@ const EmployeeList: React.FC = () => {
                 name="username"
                 label="Tên đăng nhập"
                 rules={[
-                  { required: true, message: 'Vui lòng nhập tên đăng nhập' },
-                  { pattern: /^[a-z0-9._]+$/, message: 'Chỉ cho phép chữ thường, số, dấu chấm và gạch dưới' },
+                  { required: true, message: "Vui lòng nhập tên đăng nhập" },
+                  {
+                    pattern: /^[a-z0-9._]+$/,
+                    message:
+                      "Chỉ cho phép chữ thường, số, dấu chấm và gạch dưới",
+                  },
                 ]}
               >
                 <Input
@@ -532,7 +576,7 @@ const EmployeeList: React.FC = () => {
               <Form.Item
                 name="fullName"
                 label="Họ và tên"
-                rules={[{ required: true, message: 'Vui lòng nhập họ tên' }]}
+                rules={[{ required: true, message: "Vui lòng nhập họ tên" }]}
               >
                 <Input placeholder="Nguyễn Văn A" />
               </Form.Item>
@@ -545,11 +589,14 @@ const EmployeeList: React.FC = () => {
                 name="email"
                 label="Email"
                 rules={[
-                  { required: true, message: 'Vui lòng nhập email' },
-                  { type: 'email', message: 'Email không hợp lệ' },
+                  { required: true, message: "Vui lòng nhập email" },
+                  { type: "email", message: "Email không hợp lệ" },
                 ]}
               >
-                <Input prefix={<MailOutlined />} placeholder="email@labdaklak.vn" />
+                <Input
+                  prefix={<MailOutlined />}
+                  placeholder="email@labdaklak.vn"
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -564,10 +611,10 @@ const EmployeeList: React.FC = () => {
               <Form.Item
                 name="departmentId"
                 label="Phòng ban"
-                rules={[{ required: true, message: 'Vui lòng chọn phòng ban' }]}
+                rules={[{ required: true, message: "Vui lòng chọn phòng ban" }]}
               >
                 <Select placeholder="Chọn phòng ban">
-                  {mockDepartments.map(d => (
+                  {mockDepartments.map((d) => (
                     <Select.Option key={d.id} value={d.id}>
                       {d.name}
                     </Select.Option>
@@ -578,7 +625,7 @@ const EmployeeList: React.FC = () => {
             <Col span={12}>
               <Form.Item name="position" label="Chức vụ">
                 <Select placeholder="Chọn chức vụ" allowClear>
-                  {positions.map(p => (
+                  {positions.map((p) => (
                     <Select.Option key={p} value={p}>
                       {p}
                     </Select.Option>
@@ -593,10 +640,10 @@ const EmployeeList: React.FC = () => {
               <Form.Item
                 name="role"
                 label="Vai trò hệ thống"
-                rules={[{ required: true, message: 'Vui lòng chọn vai trò' }]}
+                rules={[{ required: true, message: "Vui lòng chọn vai trò" }]}
               >
                 <Select placeholder="Chọn vai trò">
-                  {roles.map(r => (
+                  {roles.map((r) => (
                     <Select.Option key={r.value} value={r.value}>
                       {r.label}
                     </Select.Option>
@@ -605,8 +652,15 @@ const EmployeeList: React.FC = () => {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="isActive" label="Trạng thái" valuePropName="checked">
-                <Switch checkedChildren="Hoạt động" unCheckedChildren="Vô hiệu" />
+              <Form.Item
+                name="isActive"
+                label="Trạng thái"
+                valuePropName="checked"
+              >
+                <Switch
+                  checkedChildren="Hoạt động"
+                  unCheckedChildren="Vô hiệu"
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -614,7 +668,7 @@ const EmployeeList: React.FC = () => {
           {!editingItem && (
             <div
               style={{
-                background: '#f5f5f5',
+                background: "#f5f5f5",
                 padding: 12,
                 borderRadius: 6,
                 marginTop: 8,
@@ -622,7 +676,8 @@ const EmployeeList: React.FC = () => {
             >
               <Text type="secondary">
                 <KeyOutlined style={{ marginRight: 8 }} />
-                Mật khẩu sẽ được tạo tự động và gửi đến email nhân viên đã cung cấp.
+                Mật khẩu sẽ được tạo tự động và gửi đến email nhân viên đã cung
+                cấp.
               </Text>
             </div>
           )}
@@ -633,26 +688,36 @@ const EmployeeList: React.FC = () => {
       <Modal
         title={
           <Space>
-            <KeyOutlined style={{ color: '#52c41a' }} />
+            <KeyOutlined style={{ color: "#52c41a" }} />
             Thông tin đăng nhập
           </Space>
         }
         open={isPasswordModalOpen}
         onCancel={() => setIsPasswordModalOpen(false)}
         footer={[
-          <Button key="copy" icon={<CopyOutlined />} onClick={handleCopyPassword}>
+          <Button
+            key="copy"
+            icon={<CopyOutlined />}
+            onClick={handleCopyPassword}
+          >
             Sao chép mật khẩu
           </Button>,
-          <Button key="close" type="primary" onClick={() => setIsPasswordModalOpen(false)}>
+          <Button
+            key="close"
+            type="primary"
+            onClick={() => setIsPasswordModalOpen(false)}
+          >
             Đóng
           </Button>,
         ]}
         width={500}
       >
-        <div style={{ padding: '16px 0' }}>
+        <div style={{ padding: "16px 0" }}>
           <div style={{ marginBottom: 16 }}>
             <Text type="secondary">Username:</Text>
-            <div style={{ fontSize: 16, fontWeight: 500 }}>{newEmployeeInfo?.username}</div>
+            <div style={{ fontSize: 16, fontWeight: 500 }}>
+              {newEmployeeInfo?.username}
+            </div>
           </div>
           <div style={{ marginBottom: 16 }}>
             <Text type="secondary">Email:</Text>
@@ -662,10 +727,10 @@ const EmployeeList: React.FC = () => {
             <Text type="secondary">Mật khẩu được tạo tự động:</Text>
             <div
               style={{
-                background: '#f5f5f5',
-                padding: '12px 16px',
+                background: "#f5f5f5",
+                padding: "12px 16px",
                 borderRadius: 6,
-                fontFamily: 'monospace',
+                fontFamily: "monospace",
                 fontSize: 18,
                 fontWeight: 600,
                 letterSpacing: 1,
@@ -677,16 +742,16 @@ const EmployeeList: React.FC = () => {
           </div>
           <div
             style={{
-              background: '#fff7e6',
-              border: '1px solid #ffd591',
+              background: "#fff7e6",
+              border: "1px solid #ffd591",
               padding: 12,
               borderRadius: 6,
               marginTop: 16,
             }}
           >
             <Text type="warning">
-              ⚠️ Vui lòng gửi thông tin đăng nhập này cho nhân viên và yêu cầu họ đổi mật khẩu
-              ngay sau khi đăng nhập lần đầu.
+              ⚠️ Vui lòng gửi thông tin đăng nhập này cho nhân viên và yêu cầu
+              họ đổi mật khẩu ngay sau khi đăng nhập lần đầu.
             </Text>
           </div>
         </div>

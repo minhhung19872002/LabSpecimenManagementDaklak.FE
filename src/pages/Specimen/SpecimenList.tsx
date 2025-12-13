@@ -1,34 +1,69 @@
 // @ts-nocheck
-import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Tag, message, Popconfirm, Card, Input, Row, Col, Select, Modal, Form, InputNumber, DatePicker } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import type { ColumnsType } from 'antd/es/table';
-import { specimenService } from '../../services/specimenService';
-import { SpecimenDto, SpecimenStatus } from '../../types/specimen';
-import dayjs from 'dayjs';
-import { mockSpecimens, mockTestRequests, mockSpecimenTypes, mockStorageLocations } from '../../mocks/mockData';
+import React, { useState, useEffect } from "react";
+import {
+  Table,
+  Button,
+  Space,
+  Tag,
+  message,
+  Popconfirm,
+  Card,
+  Input,
+  Row,
+  Col,
+  Select,
+  Modal,
+  Form,
+  InputNumber,
+  DatePicker,
+} from "antd";
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  EyeOutlined,
+  SearchOutlined,
+  ReloadOutlined,
+  MinusCircleOutlined,
+} from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import type { ColumnsType } from "antd/es/table";
+import { specimenService } from "../../services/specimenService";
+import { SpecimenDto, SpecimenStatus } from "../../types/specimen";
+import dayjs from "dayjs";
+import {
+  mockSpecimens,
+  mockTestRequests,
+  mockSpecimenTypes,
+  mockStorageLocations,
+} from "../../mocks/mockData";
 
 // Use centralized mock data
 const generateMockData = (): SpecimenDto[] => {
-  return mockSpecimens.map(specimen => {
-    const testRequest = mockTestRequests.find(r => r.id === specimen.testRequestId);
-    const specimenType = mockSpecimenTypes.find(t => t.id === specimen.typeId);
-    const storageLocation = mockStorageLocations.find(l => l.id === specimen.storageLocationId);
+  return mockSpecimens.map((specimen) => {
+    const testRequest = mockTestRequests.find(
+      (r) => r.id === specimen.testRequestId
+    );
+    const specimenType = mockSpecimenTypes.find(
+      (t) => t.id === specimen.typeId
+    );
+    const storageLocation = mockStorageLocations.find(
+      (l) => l.id === specimen.storageLocationId
+    );
     return {
       id: specimen.id,
       code: specimen.code,
       name: specimen.name,
-      type: specimenType?.name || 'N/A',
+      type: specimenType?.name || "N/A",
       receivedDate: specimen.receivedDate,
       testRequestId: specimen.testRequestId,
-      testRequestNumber: testRequest?.requestNumber || 'N/A',
+      testRequestNumber: testRequest?.requestNumber || "N/A",
       quantity: specimen.quantity,
       unit: specimen.unit,
       status: specimen.status,
-      storageLocation: storageLocation?.name || '-',
-      storageCondition: storageLocation?.temperature || '-',
+      storageLocation: storageLocation?.name || "-",
+      storageCondition: storageLocation?.temperature || "-",
       description: specimen.notes,
       creationTime: specimen.createdAt,
     };
@@ -44,15 +79,17 @@ const SpecimenList: React.FC = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [searchText, setSearchText] = useState('');
-  const [statusFilter, setStatusFilter] = useState<SpecimenStatus | 'all'>('all');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [searchText, setSearchText] = useState("");
+  const [statusFilter, setStatusFilter] = useState<SpecimenStatus | "all">(
+    "all"
+  );
+  const [typeFilter, setTypeFilter] = useState<string>("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<SpecimenDto | null>(null);
   const [form] = Form.useForm();
 
-  const specimenTypes = mockSpecimenTypes.map(t => t.name);
-  const storageLocations = mockStorageLocations.map(l => l.name);
+  const specimenTypes = mockSpecimenTypes.map((t) => t.name);
+  const storageLocations = mockStorageLocations.map((l) => l.name);
 
   const loadData = async () => {
     setLoading(true);
@@ -60,7 +97,7 @@ const SpecimenList: React.FC = () => {
       const result = await specimenService.getList({
         skipCount: (currentPage - 1) * pageSize,
         maxResultCount: pageSize,
-        sorting: 'receivedDate desc'
+        sorting: "receivedDate desc",
       });
       setData(result.items);
       setFilteredData(result.items);
@@ -85,20 +122,21 @@ const SpecimenList: React.FC = () => {
 
     if (searchText) {
       const search = searchText.toLowerCase();
-      filtered = filtered.filter(item =>
-        item.code.toLowerCase().includes(search) ||
-        item.name.toLowerCase().includes(search) ||
-        item.type?.toLowerCase().includes(search) ||
-        item.testRequestNumber?.toLowerCase().includes(search)
+      filtered = filtered.filter(
+        (item) =>
+          item.code.toLowerCase().includes(search) ||
+          item.name.toLowerCase().includes(search) ||
+          item.type?.toLowerCase().includes(search) ||
+          item.testRequestNumber?.toLowerCase().includes(search)
       );
     }
 
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(item => item.status === statusFilter);
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((item) => item.status === statusFilter);
     }
 
-    if (typeFilter !== 'all') {
-      filtered = filtered.filter(item => item.type === typeFilter);
+    if (typeFilter !== "all") {
+      filtered = filtered.filter((item) => item.type === typeFilter);
     }
 
     setFilteredData(filtered);
@@ -109,30 +147,59 @@ const SpecimenList: React.FC = () => {
     try {
       await specimenService.delete(id);
     } catch (error) {
-      console.log('Mock delete:', id);
+      console.log("Mock delete:", id);
     }
-    setData(prev => prev.filter(item => item.id !== id));
-    message.success('Xóa mẫu thành công!');
+    setData((prev) => prev.filter((item) => item.id !== id));
+    message.success("Xóa mẫu thành công!");
+  };
+
+  const generateSpecimenCode = (index: number) => {
+    return `SPE-${dayjs().format("YYYYMMDD")}-${String(
+      data.length + index + 1
+    ).padStart(4, "0")}`;
   };
 
   const handleCreate = () => {
     setEditingItem(null);
     form.resetFields();
     form.setFieldsValue({
-      code: `SPE-${dayjs().format('YYYYMMDD')}-${String(data.length + 1).padStart(4, '0')}`,
-      receivedDate: dayjs(),
-      status: SpecimenStatus.Received,
-      quantity: 1,
-      unit: 'mẫu',
+      testRequestId: undefined,
+      specimens: [
+        {
+          code: generateSpecimenCode(0),
+          receivedDate: dayjs(),
+          name: "",
+          type: undefined,
+          quantity: 1,
+          unit: "mẫu",
+          status: SpecimenStatus.Received,
+        },
+      ],
     });
     setIsModalOpen(true);
   };
 
   const handleEdit = (record: SpecimenDto) => {
     setEditingItem(record);
+    const testRequest = mockTestRequests.find(
+      (tr) => tr.requestNumber === record.testRequestNumber
+    );
     form.setFieldsValue({
-      ...record,
-      receivedDate: dayjs(record.receivedDate),
+      testRequestId: testRequest?.id,
+      specimens: [
+        {
+          code: record.code,
+          receivedDate: dayjs(record.receivedDate),
+          name: record.name,
+          type: record.type,
+          quantity: record.quantity,
+          unit: record.unit,
+          status: record.status,
+        },
+      ],
+      storageLocation: record.storageLocation,
+      storageCondition: record.storageCondition,
+      description: record.description,
     });
     setIsModalOpen(true);
   };
@@ -140,45 +207,78 @@ const SpecimenList: React.FC = () => {
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
-      const newItem: SpecimenDto = {
-        id: editingItem?.id || `spe-${Date.now()}`,
-        code: values.code,
-        name: values.name,
-        type: values.type,
-        receivedDate: values.receivedDate.toISOString(),
-        testRequestId: values.testRequestId,
-        testRequestNumber: values.testRequestNumber,
-        quantity: values.quantity,
-        unit: values.unit,
-        status: values.status,
-        storageLocation: values.storageLocation,
-        storageCondition: values.storageCondition,
-        description: values.description,
-        creationTime: editingItem?.creationTime || dayjs().toISOString(),
-      };
+      const testRequest = mockTestRequests.find(
+        (tr) => tr.id === values.testRequestId
+      );
+      const testRequestNumber = testRequest?.requestNumber || "";
 
       if (editingItem) {
-        setData(prev => prev.map(item => item.id === editingItem.id ? newItem : item));
-        message.success('Cập nhật mẫu thành công!');
+        // Edit mode - only one specimen
+        const specimen = values.specimens[0];
+        const updatedItem: SpecimenDto = {
+          id: editingItem.id,
+          code: specimen.code,
+          name: specimen.name,
+          type: specimen.type,
+          receivedDate: specimen.receivedDate.toISOString(),
+          testRequestId: values.testRequestId,
+          testRequestNumber: testRequestNumber,
+          quantity: specimen.quantity,
+          unit: specimen.unit,
+          status: specimen.status,
+          storageLocation: values.storageLocation,
+          storageCondition: values.storageCondition,
+          description: values.description,
+          creationTime: editingItem.creationTime,
+        };
+        setData((prev) =>
+          prev.map((item) => (item.id === editingItem.id ? updatedItem : item))
+        );
+        message.success("Cập nhật mẫu thành công!");
       } else {
-        setData(prev => [newItem, ...prev]);
-        message.success('Thêm mẫu mới thành công!');
+        // Create mode - multiple specimens
+        const newItems: SpecimenDto[] = values.specimens.map(
+          (specimen: any, index: number) => ({
+            id: `spe-${Date.now()}-${index}`,
+            code: specimen.code,
+            name: specimen.name,
+            type: specimen.type,
+            receivedDate: specimen.receivedDate.toISOString(),
+            testRequestId: values.testRequestId,
+            testRequestNumber: testRequestNumber,
+            quantity: specimen.quantity,
+            unit: specimen.unit,
+            status: specimen.status,
+            storageLocation: values.storageLocation,
+            storageCondition: values.storageCondition,
+            description: values.description,
+            creationTime: dayjs().toISOString(),
+          })
+        );
+        setData((prev) => [...newItems, ...prev]);
+        message.success(`Thêm ${newItems.length} mẫu mới thành công!`);
       }
       setIsModalOpen(false);
       form.resetFields();
     } catch (error) {
-      console.error('Validation failed:', error);
+      console.error("Validation failed:", error);
     }
   };
 
   const getStatusTag = (status: SpecimenStatus) => {
     const statusConfig = {
-      [SpecimenStatus.Received]: { color: 'blue', text: 'Đã nhận' },
-      [SpecimenStatus.Testing]: { color: 'processing', text: 'Đang thử nghiệm' },
-      [SpecimenStatus.Storage]: { color: 'cyan', text: 'Lưu kho' },
-      [SpecimenStatus.Disposal]: { color: 'warning', text: 'Chờ hủy' },
-      [SpecimenStatus.Destroyed]: { color: 'error', text: 'Đã hủy' },
-      [SpecimenStatus.ReturnedToCustomer]: { color: 'success', text: 'Đã trả khách' }
+      [SpecimenStatus.Received]: { color: "blue", text: "Đã nhận" },
+      [SpecimenStatus.Testing]: {
+        color: "processing",
+        text: "Đang thử nghiệm",
+      },
+      [SpecimenStatus.Storage]: { color: "cyan", text: "Lưu kho" },
+      [SpecimenStatus.Disposal]: { color: "warning", text: "Chờ hủy" },
+      [SpecimenStatus.Destroyed]: { color: "error", text: "Đã hủy" },
+      [SpecimenStatus.ReturnedToCustomer]: {
+        color: "success",
+        text: "Đã trả khách",
+      },
     };
     const config = statusConfig[status];
     return <Tag color={config.color}>{config.text}</Tag>;
@@ -186,67 +286,69 @@ const SpecimenList: React.FC = () => {
 
   const columns: ColumnsType<SpecimenDto> = [
     {
-      title: 'Mã mẫu',
-      dataIndex: 'code',
-      key: 'code',
+      title: "Mã mẫu",
+      dataIndex: "code",
+      key: "code",
       width: 180,
-      fixed: 'left',
+      fixed: "left",
       sorter: (a, b) => a.code.localeCompare(b.code),
     },
     {
-      title: 'Tên mẫu',
-      dataIndex: 'name',
-      key: 'name',
+      title: "Tên mẫu",
+      dataIndex: "name",
+      key: "name",
       width: 200,
       ellipsis: true,
     },
     {
-      title: 'Loại mẫu',
-      dataIndex: 'type',
-      key: 'type',
+      title: "Loại mẫu",
+      dataIndex: "type",
+      key: "type",
       width: 120,
-      filters: specimenTypes.map(t => ({ text: t, value: t })),
+      filters: specimenTypes.map((t) => ({ text: t, value: t })),
       onFilter: (value, record) => record.type === value,
     },
     {
-      title: 'Ngày nhận',
-      dataIndex: 'receivedDate',
-      key: 'receivedDate',
+      title: "Ngày nhận",
+      dataIndex: "receivedDate",
+      key: "receivedDate",
       width: 120,
-      render: (date: string) => dayjs(date).format('DD/MM/YYYY'),
-      sorter: (a, b) => dayjs(a.receivedDate).unix() - dayjs(b.receivedDate).unix(),
+      render: (date: string) => dayjs(date).format("DD/MM/YYYY"),
+      sorter: (a, b) =>
+        dayjs(a.receivedDate).unix() - dayjs(b.receivedDate).unix(),
     },
     {
-      title: 'Số yêu cầu',
-      dataIndex: 'testRequestNumber',
-      key: 'testRequestNumber',
-      width: 180
+      title: "Số yêu cầu",
+      dataIndex: "testRequestNumber",
+      key: "testRequestNumber",
+      width: 180,
     },
     {
-      title: 'Số lượng',
-      key: 'quantity',
+      title: "Số lượng",
+      key: "quantity",
       width: 100,
-      render: (_: any, record: SpecimenDto) => `${record.quantity} ${record.unit}`
+      render: (_: any, record: SpecimenDto) =>
+        `${record.quantity} ${record.unit}`,
     },
     {
-      title: 'Trạng thái',
-      dataIndex: 'status',
-      key: 'status',
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
       width: 140,
-      render: (status: SpecimenStatus) => getStatusTag(status)
+      render: (status: SpecimenStatus) => getStatusTag(status),
     },
     {
-      title: 'Vị trí lưu',
-      dataIndex: 'storageLocation',
-      key: 'storageLocation',
+      title: "Vị trí lưu",
+      dataIndex: "storageLocation",
+      key: "storageLocation",
       width: 120,
-      render: (text: string) => text || '-'
+      render: (text: string) => text || "-",
     },
     {
-      title: 'Thao tác',
-      key: 'actions',
+      title: "Thao tác",
+      key: "actions",
       width: 150,
-      fixed: 'right',
+      fixed: "right",
       render: (_: any, record: SpecimenDto) => (
         <Space size="small">
           <Button
@@ -270,8 +372,8 @@ const SpecimenList: React.FC = () => {
             <Button type="link" size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
-      )
-    }
+      ),
+    },
   ];
 
   return (
@@ -279,12 +381,10 @@ const SpecimenList: React.FC = () => {
       title="Danh sách mẫu thử nghiệm"
       extra={
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={loadData}>Làm mới</Button>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleCreate}
-          >
+          <Button icon={<ReloadOutlined />} onClick={loadData}>
+            Làm mới
+          </Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
             Thêm mẫu
           </Button>
         </Space>
@@ -303,31 +403,45 @@ const SpecimenList: React.FC = () => {
         </Col>
         <Col xs={24} sm={6} md={4}>
           <Select
-            style={{ width: '100%' }}
+            style={{ width: "100%" }}
             placeholder="Loại mẫu"
             value={typeFilter}
             onChange={setTypeFilter}
           >
             <Select.Option value="all">Tất cả loại</Select.Option>
-            {specimenTypes.map(t => (
-              <Select.Option key={t} value={t}>{t}</Select.Option>
+            {specimenTypes.map((t) => (
+              <Select.Option key={t} value={t}>
+                {t}
+              </Select.Option>
             ))}
           </Select>
         </Col>
         <Col xs={24} sm={6} md={4}>
           <Select
-            style={{ width: '100%' }}
+            style={{ width: "100%" }}
             placeholder="Trạng thái"
             value={statusFilter}
             onChange={setStatusFilter}
           >
             <Select.Option value="all">Tất cả trạng thái</Select.Option>
-            <Select.Option value={SpecimenStatus.Received}>Đã nhận</Select.Option>
-            <Select.Option value={SpecimenStatus.Testing}>Đang thử nghiệm</Select.Option>
-            <Select.Option value={SpecimenStatus.Storage}>Lưu kho</Select.Option>
-            <Select.Option value={SpecimenStatus.Disposal}>Chờ hủy</Select.Option>
-            <Select.Option value={SpecimenStatus.Destroyed}>Đã hủy</Select.Option>
-            <Select.Option value={SpecimenStatus.ReturnedToCustomer}>Đã trả khách</Select.Option>
+            <Select.Option value={SpecimenStatus.Received}>
+              Đã nhận
+            </Select.Option>
+            <Select.Option value={SpecimenStatus.Testing}>
+              Đang thử nghiệm
+            </Select.Option>
+            <Select.Option value={SpecimenStatus.Storage}>
+              Lưu kho
+            </Select.Option>
+            <Select.Option value={SpecimenStatus.Disposal}>
+              Chờ hủy
+            </Select.Option>
+            <Select.Option value={SpecimenStatus.Destroyed}>
+              Đã hủy
+            </Select.Option>
+            <Select.Option value={SpecimenStatus.ReturnedToCustomer}>
+              Đã trả khách
+            </Select.Option>
           </Select>
         </Col>
       </Row>
@@ -346,122 +460,269 @@ const SpecimenList: React.FC = () => {
           onChange: (page, size) => {
             setCurrentPage(page);
             setPageSize(size);
-          }
+          },
         }}
         scroll={{ x: 1500 }}
       />
 
       {/* Create/Edit Modal */}
       <Modal
-        title={editingItem ? 'Chỉnh sửa mẫu' : 'Thêm mẫu mới'}
+        title={editingItem ? "Chỉnh sửa mẫu" : "Thêm mẫu mới"}
         open={isModalOpen}
         onOk={handleModalOk}
         onCancel={() => setIsModalOpen(false)}
-        width={700}
-        okText={editingItem ? 'Cập nhật' : 'Thêm mẫu'}
+        width={900}
+        okText={editingItem ? "Cập nhật" : "Thêm mẫu"}
         cancelText="Hủy"
+        centered
+        styles={{ body: { maxHeight: "70vh", overflowY: "auto" } }}
       >
         <Form form={form} layout="vertical">
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="code"
-                label="Mã mẫu"
-                rules={[{ required: true, message: 'Vui lòng nhập mã mẫu' }]}
-              >
-                <Input disabled />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="receivedDate"
-                label="Ngày nhận"
-                rules={[{ required: true, message: 'Vui lòng chọn ngày nhận' }]}
-              >
-                <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="name"
-                label="Tên mẫu"
-                rules={[{ required: true, message: 'Vui lòng nhập tên mẫu' }]}
-              >
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="type"
-                label="Loại mẫu"
-                rules={[{ required: true, message: 'Vui lòng chọn loại mẫu' }]}
-              >
-                <Select>
-                  {specimenTypes.map(t => (
-                    <Select.Option key={t} value={t}>{t}</Select.Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="quantity" label="Số lượng">
-                <InputNumber min={1} style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="unit" label="Đơn vị">
-                <Select>
-                  <Select.Option value="mẫu">mẫu</Select.Option>
-                  <Select.Option value="ml">ml</Select.Option>
-                  <Select.Option value="L">L</Select.Option>
-                  <Select.Option value="g">g</Select.Option>
-                  <Select.Option value="kg">kg</Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="status" label="Trạng thái">
-                <Select>
-                  <Select.Option value={SpecimenStatus.Received}>Đã nhận</Select.Option>
-                  <Select.Option value={SpecimenStatus.Testing}>Đang thử nghiệm</Select.Option>
-                  <Select.Option value={SpecimenStatus.Storage}>Lưu kho</Select.Option>
-                  <Select.Option value={SpecimenStatus.Disposal}>Chờ hủy</Select.Option>
-                  <Select.Option value={SpecimenStatus.Destroyed}>Đã hủy</Select.Option>
-                  <Select.Option value={SpecimenStatus.ReturnedToCustomer}>Đã trả khách</Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="storageLocation" label="Vị trí lưu kho">
-                <Select allowClear>
-                  {storageLocations.map(loc => (
-                    <Select.Option key={loc} value={loc}>{loc}</Select.Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="storageCondition" label="Điều kiện bảo quản">
-                <Select allowClear>
-                  <Select.Option value="2-8°C">2-8°C (Lạnh)</Select.Option>
-                  <Select.Option value="-20°C">-20°C (Đông lạnh)</Select.Option>
-                  <Select.Option value="Nhiệt độ phòng">Nhiệt độ phòng</Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item name="testRequestNumber" label="Số yêu cầu thử nghiệm">
-            <Input placeholder="REQ-YYYYMMDD-XXXX" />
+          {/* Số yêu cầu thử nghiệm - Dropdown chung cho tất cả mẫu */}
+          <Form.Item
+            name="testRequestId"
+            label="Số yêu cầu thử nghiệm"
+            rules={[
+              { required: true, message: "Vui lòng chọn phiếu yêu cầu" },
+            ]}
+          >
+            <Select
+              placeholder="Chọn phiếu yêu cầu thử nghiệm"
+              showSearch
+              optionFilterProp="children"
+              allowClear
+            >
+              {mockTestRequests.map((tr) => (
+                <Select.Option key={tr.id} value={tr.id}>
+                  {tr.requestNumber} - {tr.customerName}
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
-          <Form.Item name="description" label="Mô tả">
-            <Input.TextArea rows={3} />
-          </Form.Item>
+
+          {/* Danh sách mẫu */}
+          <Form.List name="specimens">
+            {(fields, { add, remove }) => (
+              <>
+                {fields.map(({ key, name, ...restField }, index) => (
+                  <Card
+                    key={key}
+                    size="small"
+                    title={`Mẫu ${index + 1}`}
+                    style={{ marginBottom: 16 }}
+                    extra={
+                      !editingItem && fields.length > 1 && (
+                        <Button
+                          type="text"
+                          danger
+                          icon={<MinusCircleOutlined />}
+                          onClick={() => remove(name)}
+                        >
+                          Xóa
+                        </Button>
+                      )
+                    }
+                  >
+                    <Row gutter={16}>
+                      <Col span={8}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, "code"]}
+                          label="Mã mẫu"
+                          rules={[
+                            { required: true, message: "Vui lòng nhập mã mẫu" },
+                          ]}
+                        >
+                          <Input disabled />
+                        </Form.Item>
+                      </Col>
+                      <Col span={8}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, "receivedDate"]}
+                          label="Ngày nhận"
+                          rules={[
+                            {
+                              required: true,
+                              message: "Vui lòng chọn ngày nhận",
+                            },
+                          ]}
+                        >
+                          <DatePicker
+                            style={{ width: "100%" }}
+                            format="DD/MM/YYYY"
+                          />
+                        </Form.Item>
+                      </Col>
+                      <Col span={8}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, "name"]}
+                          label="Tên mẫu"
+                          rules={[
+                            { required: true, message: "Vui lòng nhập tên mẫu" },
+                          ]}
+                        >
+                          <Input />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    <Row gutter={16}>
+                      <Col span={8}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, "type"]}
+                          label="Loại mẫu"
+                          rules={[
+                            {
+                              required: true,
+                              message: "Vui lòng chọn loại mẫu",
+                            },
+                          ]}
+                        >
+                          <Select placeholder="Chọn loại mẫu">
+                            {specimenTypes.map((t) => (
+                              <Select.Option key={t} value={t}>
+                                {t}
+                              </Select.Option>
+                            ))}
+                          </Select>
+                        </Form.Item>
+                      </Col>
+                      <Col span={4}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, "quantity"]}
+                          label="Số lượng"
+                          rules={[
+                            {
+                              required: true,
+                              message: "Nhập số lượng",
+                            },
+                          ]}
+                        >
+                          <InputNumber min={1} style={{ width: "100%" }} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={4}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, "unit"]}
+                          label="Đơn vị"
+                          rules={[
+                            { required: true, message: "Chọn đơn vị" },
+                          ]}
+                        >
+                          <Select>
+                            <Select.Option value="mẫu">mẫu</Select.Option>
+                            <Select.Option value="ml">ml</Select.Option>
+                            <Select.Option value="L">L</Select.Option>
+                            <Select.Option value="g">g</Select.Option>
+                            <Select.Option value="kg">kg</Select.Option>
+                          </Select>
+                        </Form.Item>
+                      </Col>
+                      <Col span={8}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, "status"]}
+                          label="Trạng thái"
+                          rules={[
+                            {
+                              required: true,
+                              message: "Chọn trạng thái",
+                            },
+                          ]}
+                        >
+                          <Select>
+                            <Select.Option value={SpecimenStatus.Received}>
+                              Đã nhận
+                            </Select.Option>
+                            <Select.Option value={SpecimenStatus.Testing}>
+                              Đang thử nghiệm
+                            </Select.Option>
+                            <Select.Option value={SpecimenStatus.Storage}>
+                              Lưu kho
+                            </Select.Option>
+                            <Select.Option value={SpecimenStatus.Disposal}>
+                              Chờ hủy
+                            </Select.Option>
+                            <Select.Option value={SpecimenStatus.Destroyed}>
+                              Đã hủy
+                            </Select.Option>
+                            <Select.Option
+                              value={SpecimenStatus.ReturnedToCustomer}
+                            >
+                              Đã trả khách
+                            </Select.Option>
+                          </Select>
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                  </Card>
+                ))}
+
+                {/* Nút thêm mẫu mới - chỉ hiển thị khi tạo mới */}
+                {!editingItem && (
+                  <Form.Item>
+                    <Button
+                      type="dashed"
+                      onClick={() => {
+                        const currentSpecimens =
+                          form.getFieldValue("specimens") || [];
+                        add({
+                          code: generateSpecimenCode(currentSpecimens.length),
+                          receivedDate: dayjs(),
+                          name: "",
+                          type: undefined,
+                          quantity: 1,
+                          unit: "mẫu",
+                          status: SpecimenStatus.Received,
+                        });
+                      }}
+                      block
+                      icon={<PlusOutlined />}
+                    >
+                      Thêm mẫu
+                    </Button>
+                  </Form.Item>
+                )}
+              </>
+            )}
+          </Form.List>
+
+          {/* Thông tin chung */}
+          <Card size="small" title="Thông tin chung" style={{ marginTop: 16 }}>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item name="storageLocation" label="Vị trí lưu kho">
+                  <Select allowClear placeholder="Chọn vị trí lưu kho">
+                    {storageLocations.map((loc) => (
+                      <Select.Option key={loc} value={loc}>
+                        {loc}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item name="storageCondition" label="Điều kiện bảo quản">
+                  <Select allowClear placeholder="Chọn điều kiện bảo quản">
+                    <Select.Option value="2-8°C">2-8°C (Lạnh)</Select.Option>
+                    <Select.Option value="-20°C">
+                      -20°C (Đông lạnh)
+                    </Select.Option>
+                    <Select.Option value="Nhiệt độ phòng">
+                      Nhiệt độ phòng
+                    </Select.Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
+            <Form.Item name="description" label="Mô tả">
+              <Input.TextArea rows={3} />
+            </Form.Item>
+          </Card>
         </Form>
       </Modal>
     </Card>
