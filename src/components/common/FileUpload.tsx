@@ -221,6 +221,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
         title={previewTitle}
         footer={null}
         onCancel={() => setPreviewOpen(false)}
+        centered
       >
         <Image
           alt={previewTitle}

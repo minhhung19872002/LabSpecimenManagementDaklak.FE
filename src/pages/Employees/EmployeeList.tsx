@@ -694,6 +694,7 @@ const EmployeeList: React.FC = () => {
         }
         open={isPasswordModalOpen}
         onCancel={() => setIsPasswordModalOpen(false)}
+        centered
         footer={[
           <Button
             key="copy"

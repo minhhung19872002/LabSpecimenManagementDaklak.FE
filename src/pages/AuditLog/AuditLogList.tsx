@@ -475,6 +475,7 @@ const AuditLogList: React.FC = () => {
         onCancel={() => setIsDetailModalOpen(false)}
         footer={null}
         width={700}
+        centered
       >
         {selectedLog && (
           <>

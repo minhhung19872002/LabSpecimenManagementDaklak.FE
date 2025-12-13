@@ -341,6 +341,7 @@ const ExcelImport: React.FC<ExcelImportProps> = ({
         onCancel={handleClose}
         width={1000}
         footer={null}
+        centered
       >
         {step === 'upload' && (
           <div style={{ textAlign: 'center', padding: 40 }}>

@@ -249,6 +249,7 @@ const UserList: React.FC = () => {
         okText="Lưu"
         cancelText="Hủy"
         width={600}
+        centered
       >
         <Form form={form} layout="vertical">
           <Form.Item name="username" label="Tên đăng nhập" rules={[{ required: true, message: 'Vui lòng nhập tên đăng nhập' }]}>

@@ -396,6 +396,7 @@ const SubcontractorList: React.FC = () => {
         width={800}
         okText={editingItem ? 'Cập nhật' : 'Thêm mới'}
         cancelText="Hủy"
+        centered
       >
         <Form form={form} layout="vertical">
           <Row gutter={16}>
@@ -478,6 +479,7 @@ const SubcontractorList: React.FC = () => {
         onCancel={() => setIsDetailModalOpen(false)}
         footer={null}
         width={900}
+        centered
       >
         {selectedItem && (
           <Tabs

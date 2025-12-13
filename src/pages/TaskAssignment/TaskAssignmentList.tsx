@@ -592,6 +592,7 @@ const TaskAssignmentList: React.FC = () => {
         width={800}
         okText={editingItem ? 'Cập nhật' : 'Giao việc'}
         cancelText="Hủy"
+        centered
       >
         <Form form={form} layout="vertical">
           <Row gutter={16}>

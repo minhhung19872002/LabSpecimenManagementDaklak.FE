@@ -377,6 +377,7 @@ const TestResultList: React.FC = () => {
         width={700}
         okText={editingItem ? 'Cập nhật' : 'Thêm mới'}
         cancelText="Hủy"
+        centered
       >
         <Form form={form} layout="vertical">
           <Row gutter={16}>

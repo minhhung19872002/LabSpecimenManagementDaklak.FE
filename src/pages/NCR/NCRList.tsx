@@ -346,6 +346,7 @@ const NCRList: React.FC = () => {
         okText="Lưu"
         cancelText="Hủy"
         width={700}
+        centered
       >
         <Form form={form} layout="vertical">
           <Form.Item name="title" label="Tiêu đề" rules={[{ required: true }]}>
@@ -420,6 +421,7 @@ const NCRList: React.FC = () => {
         onCancel={() => setIsDetailOpen(false)}
         footer={<Button onClick={() => setIsDetailOpen(false)}>Đóng</Button>}
         width={800}
+        centered
       >
         {selectedNCR && (
           <>

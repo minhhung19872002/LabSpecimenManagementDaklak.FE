@@ -343,6 +343,7 @@ const TestResultDetail: React.FC = () => {
         title="Duyệt kết quả (Bước 1 - Trưởng phòng)"
         open={reviewModalVisible}
         onCancel={() => { setReviewModalVisible(false); setComment(''); }}
+        centered
         footer={[
           <Button key="cancel" onClick={() => { setReviewModalVisible(false); setComment(''); }}>
             Hủy
@@ -385,6 +386,7 @@ const TestResultDetail: React.FC = () => {
         title="Phê duyệt kết quả (Bước 2 - Giám đốc)"
         open={approveModalVisible}
         onCancel={() => { setApproveModalVisible(false); setComment(''); }}
+        centered
         footer={[
           <Button key="cancel" onClick={() => { setApproveModalVisible(false); setComment(''); }}>
             Hủy

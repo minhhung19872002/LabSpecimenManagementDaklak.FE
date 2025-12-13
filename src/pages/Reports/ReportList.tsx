@@ -304,6 +304,7 @@ const ReportList: React.FC = () => {
         title={`Chi tiết báo cáo: ${selectedReport?.reportNumber}`}
         open={previewVisible}
         onCancel={() => setPreviewVisible(false)}
+        centered
         footer={[
           <Button key="close" onClick={() => setPreviewVisible(false)}>
             Đóng
@@ -408,6 +409,7 @@ const ReportList: React.FC = () => {
           </Button>,
         ]}
         width={400}
+        centered
       >
         {selectedReport && (
           <div style={{ display: 'flex', justifyContent: 'center' }}>

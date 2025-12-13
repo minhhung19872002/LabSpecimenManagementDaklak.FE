@@ -472,6 +472,7 @@ const MasterDataList: React.FC = () => {
         width={600}
         okText={editingItem ? 'Cập nhật' : 'Thêm mới'}
         cancelText="Hủy"
+        centered
       >
         <Form form={form} layout="vertical">
           <Row gutter={16}>
