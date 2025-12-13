@@ -7,75 +7,28 @@ import { useTranslation } from 'react-i18next';
 import { testService } from '../../services/testService';
 import { TestDto, TestStatus } from '../../types/test';
 import dayjs from 'dayjs';
+import { mockTests, mockSpecimens, mockTestMethods, mockUsers } from '../../mocks/mockData';
 
-// Mock data for demo - Viện Vệ sinh Dịch tễ Tây Nguyên
+// Use centralized mock data
 const generateMockData = (): TestDto[] => {
-  const testNames = [
-    'Real-time PCR SARS-CoV-2',
-    'ELISA IgG/IgM COVID-19',
-    'Real-time PCR Influenza A/B',
-    'ELISA Dengue NS1/IgM/IgG',
-    'Nuôi cấy vi khuẩn đường ruột',
-    'Nhuộm soi AFB (Lao)',
-    'ELISA HIV 1/2',
-    'Real-time PCR Viêm gan B (HBV DNA)',
-    'XN Sốt rét (Giemsa)',
-    'ELISA Viêm gan C (Anti-HCV)',
-    'Nuôi cấy máu',
-    'Kháng sinh đồ',
-    'XN Ký sinh trùng đường ruột',
-    'Real-time PCR HPV',
-    'ELISA Rubella IgG/IgM',
-  ];
-
-  const methods = [
-    'RT-PCR theo CDC Hoa Kỳ',
-    'ELISA theo hướng dẫn nhà sản xuất',
-    'Nuôi cấy theo TCVN 8127:2009',
-    'Nhuộm Ziehl-Neelsen',
-    'Giemsa theo WHO',
-    'Kháng sinh đồ CLSI 2023',
-    'Real-time PCR Roche',
-    'ELISA Abbott',
-    'Soi tươi KOH',
-    'PCR Multiplex',
-  ];
-
-  const standards = [
-    'TCVN 8127:2009',
-    'WHO Guidelines 2023',
-    'CDC Protocol',
-    'CLSI M100-Ed33',
-    'Bộ Y tế Việt Nam',
-    'ISO 15189:2022',
-  ];
-
-  const statuses = [
-    TestStatus.Pending,
-    TestStatus.Assigned,
-    TestStatus.InProgress,
-    TestStatus.Completed,
-    TestStatus.Reviewed,
-    TestStatus.Approved,
-  ];
-
-  return Array.from({ length: 35 }, (_, i) => {
-    const createdDate = dayjs().subtract(i * 2, 'day');
-
+  return mockTests.map(test => {
+    const specimen = mockSpecimens.find(s => s.id === test.specimenId);
+    const testMethod = mockTestMethods.find(m => m.id === test.methodId);
+    const assignee = mockUsers.find(u => u.id === test.assigneeId);
     return {
-      id: `test-${String(i + 1).padStart(3, '0')}`,
-      code: `TEST-${dayjs().format('YYYYMMDD')}-${String(i + 1).padStart(4, '0')}`,
-      name: testNames[i % testNames.length],
-      specimenId: `spe-${String((i % 30) + 1).padStart(3, '0')}`,
-      specimenCode: `SPE-${dayjs().format('YYYYMMDD')}-${String((i % 30) + 1).padStart(4, '0')}`,
-      method: methods[i % methods.length],
-      standard: standards[i % standards.length],
-      status: statuses[i % statuses.length],
-      assignedTo: i % 2 === 0 ? ['ThS. Nguyễn Văn A', 'CN. Trần Thị B', 'KTV. Lê Văn C', 'ThS. Phạm Thị D', 'CN. Hoàng Văn E'][i % 5] : undefined,
-      startDate: i % 3 !== 0 ? createdDate.add(1, 'day').toISOString() : undefined,
-      completedDate: statuses[i % statuses.length] >= TestStatus.Completed ? createdDate.add(3, 'day').toISOString() : undefined,
-      notes: i % 4 === 0 ? `Ghi chú phép thử số ${i + 1}` : undefined,
-      creationTime: createdDate.toISOString(),
+      id: test.id,
+      code: test.code,
+      name: test.name,
+      specimenId: test.specimenId,
+      specimenCode: specimen?.code || 'N/A',
+      method: testMethod?.name || 'N/A',
+      standard: testMethod?.standard || '-',
+      status: test.status,
+      assignedTo: assignee?.fullName || '-',
+      startDate: test.startDate,
+      completedDate: test.completedDate,
+      notes: test.notes,
+      creationTime: test.createdAt,
     };
   });
 };
@@ -95,27 +48,8 @@ const TestList: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
-  const testMethods = [
-    'RT-PCR theo CDC Hoa Kỳ',
-    'ELISA theo hướng dẫn nhà sản xuất',
-    'Nuôi cấy theo TCVN 8127:2009',
-    'Nhuộm Ziehl-Neelsen',
-    'Giemsa theo WHO',
-    'Kháng sinh đồ CLSI 2023',
-    'Real-time PCR Roche',
-    'ELISA Abbott',
-    'Soi tươi KOH',
-    'PCR Multiplex',
-  ];
-
-  const testStandards = [
-    'TCVN 8127:2009',
-    'WHO Guidelines 2023',
-    'CDC Protocol',
-    'CLSI M100-Ed33',
-    'Bộ Y tế Việt Nam',
-    'ISO 15189:2022',
-  ];
+  const testMethods = mockTestMethods.map(m => m.name);
+  const testStandards = [...new Set(mockTestMethods.map(m => m.standard).filter(Boolean))];
 
   const fetchTests = async () => {
     setLoading(true);
@@ -311,11 +245,13 @@ const TestList: React.FC = () => {
         <Space size="small">
           <Button
             type="link"
+            size="small"
             icon={<EyeOutlined />}
             onClick={() => navigate(`/test/${record.id}`)}
           />
           <Button
             type="link"
+            size="small"
             icon={<EditOutlined />}
             onClick={() => handleEdit(record)}
           />
@@ -325,7 +261,7 @@ const TestList: React.FC = () => {
             okText="Có"
             cancelText="Không"
           >
-            <Button type="link" danger icon={<DeleteOutlined />} />
+            <Button type="link" size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
       ),
@@ -466,11 +402,9 @@ const TestList: React.FC = () => {
             <Col span={12}>
               <Form.Item name="assignedTo" label="Người thực hiện">
                 <Select allowClear>
-                  <Select.Option value="ThS. Nguyễn Văn A">ThS. Nguyễn Văn A - Phòng XN Vi sinh</Select.Option>
-                  <Select.Option value="CN. Trần Thị B">CN. Trần Thị B - Phòng XN PCR</Select.Option>
-                  <Select.Option value="KTV. Lê Văn C">KTV. Lê Văn C - Phòng XN Huyết học</Select.Option>
-                  <Select.Option value="ThS. Phạm Thị D">ThS. Phạm Thị D - Phòng XN Miễn dịch</Select.Option>
-                  <Select.Option value="CN. Hoàng Văn E">CN. Hoàng Văn E - Phòng XN Ký sinh trùng</Select.Option>
+                  {mockUsers.filter(u => u.role === 'Technician' || u.role === 'LabManager').map(u => (
+                    <Select.Option key={u.id} value={u.fullName}>{u.fullName}</Select.Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Layout, Menu, MenuProps } from 'antd';
 import {
   DashboardOutlined,
@@ -9,122 +9,196 @@ import {
   BarChartOutlined,
   WarningOutlined,
   SettingOutlined,
-  UserOutlined,
   HistoryOutlined,
   TeamOutlined,
   ScheduleOutlined,
   DatabaseOutlined,
   AuditOutlined,
+  SolutionOutlined,
+  ToolOutlined,
+  PieChartOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import './MainLayout.css';
 
 const { Header, Sider, Content } = Layout;
 
 type MenuItem = Required<MenuProps>['items'][number];
 
+// Map routes to menu keys
+const routeToKeyMap: Record<string, string> = {
+  '/dashboard': 'dashboard',
+  '/requests': 'requests',
+  '/test-request': 'requests',
+  '/specimens': 'specimens',
+  '/specimen': 'specimens',
+  '/tests': 'tests',
+  '/test': 'tests',
+  '/specimen-histories': 'specimenHistories',
+  '/test-results': 'results',
+  '/test-result': 'results',
+  '/reports': 'reports',
+  '/ncr': 'ncr',
+  '/statistics': 'statistics',
+  '/tasks': 'tasks',
+  '/subcontractors': 'subcontractors',
+  '/master-data': 'masterData',
+  '/audit-log': 'auditLog',
+  '/settings': 'settings',
+  '/employees': 'employees',
+};
+
 const MainLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Determine selected key based on current path
+  const selectedKey = useMemo(() => {
+    const pathname = location.pathname;
+
+    // Check exact match first
+    if (routeToKeyMap[pathname]) {
+      return routeToKeyMap[pathname];
+    }
+
+    // Check prefix match for nested routes (e.g., /test-request/123)
+    for (const route of Object.keys(routeToKeyMap)) {
+      if (pathname.startsWith(route)) {
+        return routeToKeyMap[route];
+      }
+    }
+
+    // Default to dashboard
+    return 'dashboard';
+  }, [location.pathname]);
+
+  // Default open all groups
+  const defaultOpenKeys = ['lab', 'quality', 'management', 'admin'];
+
+  // Helper to create label with tooltip
+  const menuLabel = (text: string) => <span title={text}>{text}</span>;
 
   const menuItems: MenuItem[] = [
     {
       key: 'dashboard',
       icon: <DashboardOutlined />,
-      label: t('menu.dashboard'),
+      label: menuLabel(t('menu.dashboard')),
       onClick: () => navigate('/dashboard'),
     },
     {
-      key: 'requests',
-      icon: <FileTextOutlined />,
-      label: t('menu.requests'),
-      onClick: () => navigate('/requests'),
-    },
-    {
-      key: 'specimens',
+      key: 'lab',
       icon: <ExperimentOutlined />,
-      label: t('menu.specimens'),
-      onClick: () => navigate('/specimens'),
+      label: menuLabel(t('menu.labOperations')),
+      children: [
+        {
+          key: 'requests',
+          icon: <FileTextOutlined />,
+          label: menuLabel(t('menu.requests')),
+          onClick: () => navigate('/requests'),
+        },
+        {
+          key: 'specimens',
+          icon: <ExperimentOutlined />,
+          label: menuLabel(t('menu.specimens')),
+          onClick: () => navigate('/specimens'),
+        },
+        {
+          key: 'tests',
+          icon: <CheckCircleOutlined />,
+          label: menuLabel(t('menu.tests')),
+          onClick: () => navigate('/tests'),
+        },
+        {
+          key: 'specimenHistories',
+          icon: <HistoryOutlined />,
+          label: menuLabel(t('menu.specimenHistories')),
+          onClick: () => navigate('/specimen-histories'),
+        },
+        {
+          key: 'results',
+          icon: <FileSearchOutlined />,
+          label: menuLabel(t('menu.results')),
+          onClick: () => navigate('/test-results'),
+        },
+      ],
     },
     {
-      key: 'tests',
-      icon: <CheckCircleOutlined />,
-      label: t('menu.tests'),
-      onClick: () => navigate('/tests'),
+      key: 'quality',
+      icon: <PieChartOutlined />,
+      label: menuLabel(t('menu.qualityReports')),
+      children: [
+        {
+          key: 'ncr',
+          icon: <WarningOutlined />,
+          label: menuLabel(t('menu.ncr')),
+          onClick: () => navigate('/ncr'),
+        },
+        {
+          key: 'reports',
+          icon: <BarChartOutlined />,
+          label: menuLabel(t('menu.reports')),
+          onClick: () => navigate('/reports'),
+        },
+        {
+          key: 'statistics',
+          icon: <BarChartOutlined />,
+          label: menuLabel(t('menu.statistics')),
+          onClick: () => navigate('/statistics'),
+        },
+      ],
     },
     {
-      key: 'specimenHistories',
-      icon: <HistoryOutlined />,
-      label: t('menu.specimenHistories'),
-      onClick: () => navigate('/specimen-histories'),
+      key: 'management',
+      icon: <ToolOutlined />,
+      label: menuLabel(t('menu.management')),
+      children: [
+        {
+          key: 'tasks',
+          icon: <ScheduleOutlined />,
+          label: menuLabel(t('menu.tasks')),
+          onClick: () => navigate('/tasks'),
+        },
+        {
+          key: 'subcontractors',
+          icon: <TeamOutlined />,
+          label: menuLabel(t('menu.subcontractors')),
+          onClick: () => navigate('/subcontractors'),
+        },
+        {
+          key: 'masterData',
+          icon: <DatabaseOutlined />,
+          label: menuLabel(t('menu.masterData')),
+          onClick: () => navigate('/master-data'),
+        },
+        {
+          key: 'auditLog',
+          icon: <AuditOutlined />,
+          label: menuLabel(t('menu.auditLog')),
+          onClick: () => navigate('/audit-log'),
+        },
+      ],
     },
     {
-      key: 'results',
-      icon: <FileSearchOutlined />,
-      label: t('menu.results'),
-      onClick: () => navigate('/test-results'),
-    },
-    {
-      key: 'reports',
-      icon: <BarChartOutlined />,
-      label: t('menu.reports'),
-      onClick: () => navigate('/reports'),
-    },
-    {
-      key: 'ncr',
-      icon: <WarningOutlined />,
-      label: t('menu.ncr'),
-      onClick: () => navigate('/ncr'),
-    },
-    {
-      key: 'statistics',
-      icon: <BarChartOutlined />,
-      label: t('menu.statistics'),
-      onClick: () => navigate('/statistics'),
-    },
-    {
-      type: 'divider',
-    },
-    {
-      key: 'tasks',
-      icon: <ScheduleOutlined />,
-      label: t('menu.tasks'),
-      onClick: () => navigate('/tasks'),
-    },
-    {
-      key: 'subcontractors',
-      icon: <TeamOutlined />,
-      label: t('menu.subcontractors'),
-      onClick: () => navigate('/subcontractors'),
-    },
-    {
-      key: 'masterData',
-      icon: <DatabaseOutlined />,
-      label: t('menu.masterData'),
-      onClick: () => navigate('/master-data'),
-    },
-    {
-      key: 'auditLog',
-      icon: <AuditOutlined />,
-      label: t('menu.auditLog'),
-      onClick: () => navigate('/audit-log'),
-    },
-    {
-      type: 'divider',
-    },
-    {
-      key: 'settings',
-      icon: <SettingOutlined />,
-      label: t('menu.settings'),
-      onClick: () => navigate('/settings'),
-    },
-    {
-      key: 'users',
-      icon: <UserOutlined />,
-      label: t('menu.users'),
-      onClick: () => navigate('/users'),
+      key: 'admin',
+      icon: <SolutionOutlined />,
+      label: menuLabel(t('menu.administration')),
+      children: [
+        {
+          key: 'employees',
+          icon: <TeamOutlined />,
+          label: menuLabel(t('menu.employees')),
+          onClick: () => navigate('/employees'),
+        },
+        {
+          key: 'settings',
+          icon: <SettingOutlined />,
+          label: menuLabel(t('menu.settings')),
+          onClick: () => navigate('/settings'),
+        },
+      ],
     },
   ];
 
@@ -136,7 +210,8 @@ const MainLayout: React.FC = () => {
         </div>
         <Menu
           theme="dark"
-          defaultSelectedKeys={['dashboard']}
+          selectedKeys={[selectedKey]}
+          defaultOpenKeys={defaultOpenKeys}
           mode="inline"
           items={menuItems}
         />

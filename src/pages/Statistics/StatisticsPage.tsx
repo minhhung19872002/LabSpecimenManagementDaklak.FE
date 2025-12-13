@@ -247,7 +247,7 @@ const StatisticsPage: React.FC = () => {
               value={onTimeRate}
               suffix="%"
               prefix={<ClockCircleOutlined style={{ color: '#13c2c2' }} />}
-              valueStyle={{ color: parseFloat(onTimeRate) >= 95 ? '#52c41a' : '#faad14' }}
+              styles={{ content: { color: parseFloat(onTimeRate) >= 95 ? '#52c41a' : '#faad14' } }}
             />
           </Card>
         </Col>
@@ -276,13 +276,13 @@ const StatisticsPage: React.FC = () => {
             </div>
             <Row gutter={16} style={{ textAlign: 'center', marginTop: 16 }}>
               <Col span={8}>
-                <Statistic title="Tổng" value={totalTests} valueStyle={{ fontSize: 18 }} />
+                <Statistic title="Tổng" value={totalTests} styles={{ content: { fontSize: 18 } }} />
               </Col>
               <Col span={8}>
-                <Statistic title="Hoàn thành" value={totalCompleted} valueStyle={{ fontSize: 18, color: '#52c41a' }} />
+                <Statistic title="Hoàn thành" value={totalCompleted} styles={{ content: { fontSize: 18, color: '#52c41a' } }} />
               </Col>
               <Col span={8}>
-                <Statistic title="Còn lại" value={totalTests - totalCompleted} valueStyle={{ fontSize: 18, color: '#faad14' }} />
+                <Statistic title="Còn lại" value={totalTests - totalCompleted} styles={{ content: { fontSize: 18, color: '#faad14' } }} />
               </Col>
             </Row>
           </Card>

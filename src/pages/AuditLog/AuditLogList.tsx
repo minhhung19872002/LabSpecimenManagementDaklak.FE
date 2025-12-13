@@ -34,6 +34,9 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
+import isToday from 'dayjs/plugin/isToday';
+
+dayjs.extend(isToday);
 
 const { RangePicker } = DatePicker;
 const { Text } = Typography;
@@ -327,27 +330,27 @@ const AuditLogList: React.FC = () => {
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Card>
-            <Statistic title="Hôm nay" value={stats.today} valueStyle={{ color: '#1890ff' }} />
+            <Statistic title="Hôm nay" value={stats.today} styles={{ content: { color: '#1890ff' } }} />
           </Card>
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Card>
-            <Statistic title="Tạo mới" value={stats.creates} valueStyle={{ color: '#52c41a' }} />
+            <Statistic title="Tạo mới" value={stats.creates} styles={{ content: { color: '#52c41a' } }} />
           </Card>
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Card>
-            <Statistic title="Cập nhật" value={stats.updates} valueStyle={{ color: '#1890ff' }} />
+            <Statistic title="Cập nhật" value={stats.updates} styles={{ content: { color: '#1890ff' } }} />
           </Card>
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Card>
-            <Statistic title="Xóa" value={stats.deletes} valueStyle={{ color: '#ff4d4f' }} />
+            <Statistic title="Xóa" value={stats.deletes} styles={{ content: { color: '#ff4d4f' } }} />
           </Card>
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Card>
-            <Statistic title="Phê duyệt" value={stats.approves} valueStyle={{ color: '#13c2c2' }} />
+            <Statistic title="Phê duyệt" value={stats.approves} styles={{ content: { color: '#13c2c2' } }} />
           </Card>
         </Col>
       </Row>

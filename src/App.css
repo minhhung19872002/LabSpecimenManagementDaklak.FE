@@ -3,3 +3,42 @@
   width: 100%;
   height: 100%;
 }
+
+/* Grab to scroll - only when table has horizontal overflow (class added by JS) */
+.ant-table-content.has-horizontal-scroll,
+.ant-table-body.has-horizontal-scroll {
+  cursor: grab;
+}
+
+.ant-table-content.is-grabbing,
+.ant-table-body.is-grabbing {
+  cursor: grabbing;
+}
+
+/* Reset cursor for interactive elements inside scrollable table */
+.has-horizontal-scroll button,
+.has-horizontal-scroll a,
+.has-horizontal-scroll input,
+.has-horizontal-scroll .ant-checkbox,
+.has-horizontal-scroll .ant-switch,
+.has-horizontal-scroll .ant-select,
+.has-horizontal-scroll .ant-dropdown-trigger,
+.has-horizontal-scroll .ant-btn,
+.has-horizontal-scroll .ant-tag {
+  cursor: pointer;
+}
+
+/* Fixed columns should have default cursor */
+.has-horizontal-scroll .ant-table-cell-fix-left,
+.has-horizontal-scroll .ant-table-cell-fix-right {
+  cursor: default;
+}
+
+.has-horizontal-scroll .ant-table-cell-fix-left button,
+.has-horizontal-scroll .ant-table-cell-fix-right button,
+.has-horizontal-scroll .ant-table-cell-fix-left a,
+.has-horizontal-scroll .ant-table-cell-fix-right a,
+.has-horizontal-scroll .ant-table-cell-fix-left .ant-btn,
+.has-horizontal-scroll .ant-table-cell-fix-right .ant-btn {
+  cursor: pointer;
+}

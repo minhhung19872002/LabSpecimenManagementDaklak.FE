@@ -8,72 +8,34 @@ import { testResultService } from '../../services/testResultService';
 import { TestResultDto, ResultApprovalStatus } from '../../types/testResult';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
+import { mockTestResults, mockTests, mockUsers } from '../../mocks/mockData';
 
-// Mock data for demo - Viện Vệ sinh Dịch tễ Tây Nguyên
+// Use centralized mock data
 const generateMockData = (): TestResultDto[] => {
-  const parameters = [
-    'SARS-CoV-2 (PCR)', 'Anti-SARS-CoV-2 IgG', 'Anti-SARS-CoV-2 IgM', 'Dengue NS1 Ag', 'Dengue IgM/IgG',
-    'HIV 1/2 Ab', 'HBsAg', 'Anti-HCV', 'AFB (Lao)', 'Sốt rét P.falciparum',
-    'Sốt rét P.vivax', 'Influenza A', 'Influenza B', 'Salmonella', 'E.coli O157',
-  ];
-
-  const units = [
-    'Ct value', 'COI', 'COI', 'COI', 'COI',
-    'COI', 'COI', 'COI', 'AFB/100 trường', '',
-    '', 'Ct value', 'Ct value', 'CFU/g', 'CFU/g',
-  ];
-
-  const statuses = [
-    ResultApprovalStatus.Draft,
-    ResultApprovalStatus.Submitted,
-    ResultApprovalStatus.Step1Reviewed,
-    ResultApprovalStatus.Step2Approved,
-    ResultApprovalStatus.Submitted,
-    ResultApprovalStatus.Draft,
-  ];
-
-  return Array.from({ length: 40 }, (_, i) => {
-    const paramIndex = i % parameters.length;
-    const createdDate = dayjs().subtract(i, 'day');
-    const isPass = Math.random() > 0.2; // 80% pass rate
-
-    // Generate random values based on parameter type (epidemiology)
-    let value = '';
-    if (paramIndex === 0 || paramIndex === 11 || paramIndex === 12) { // PCR Ct values
-      value = isPass ? 'Âm tính' : (15 + Math.random() * 20).toFixed(1);
-    } else if (paramIndex >= 1 && paramIndex <= 7) { // ELISA COI values
-      value = isPass ? (0.1 + Math.random() * 0.8).toFixed(2) : (1.2 + Math.random() * 3).toFixed(2);
-    } else if (paramIndex === 8) { // AFB
-      value = isPass ? '0' : `${Math.floor(1 + Math.random() * 10)}+`;
-    } else if (paramIndex === 9 || paramIndex === 10) { // Malaria
-      value = isPass ? 'Âm tính' : 'Dương tính';
-    } else { // Bacteria
-      value = Math.floor(Math.random() * 1000).toString();
-    }
-
+  return mockTestResults.map(result => {
+    const test = mockTests.find(t => t.id === result.testId);
+    const testedByUser = mockUsers.find(u => u.id === result.testedById);
+    const reviewedByUser = mockUsers.find(u => u.id === result.reviewedById);
+    const approvedByUser = mockUsers.find(u => u.id === result.approvedById);
     return {
-      id: `result-${String(i + 1).padStart(3, '0')}`,
-      testId: `test-${String((i % 35) + 1).padStart(3, '0')}`,
-      testCode: `TEST-${dayjs().format('YYYYMMDD')}-${String((i % 35) + 1).padStart(4, '0')}`,
-      testName: `Phép thử ${parameters[paramIndex]}`,
-      parameter: parameters[paramIndex],
-      value: value,
-      unit: units[paramIndex],
-      referenceRange: paramIndex === 0 || paramIndex === 11 || paramIndex === 12 ? 'Âm tính / Ct > 40' :
-                      paramIndex >= 1 && paramIndex <= 7 ? 'COI < 1.0 (Âm tính)' :
-                      paramIndex === 8 ? '0 AFB' :
-                      paramIndex === 9 || paramIndex === 10 ? 'Âm tính' :
-                      '< 100 CFU/g',
-      isPass: isPass,
-      approvalStatus: statuses[i % statuses.length],
-      testedBy: `Kỹ thuật viên ${(i % 5) + 1}`,
-      testedDate: createdDate.toISOString(),
-      reviewedBy: statuses[i % statuses.length] >= ResultApprovalStatus.Step1Reviewed ? `Trưởng phòng ${(i % 2) + 1}` : undefined,
-      reviewedDate: statuses[i % statuses.length] >= ResultApprovalStatus.Step1Reviewed ? createdDate.add(1, 'day').toISOString() : undefined,
-      approvedBy: statuses[i % statuses.length] >= ResultApprovalStatus.Step2Approved ? 'Giám đốc PTN' : undefined,
-      approvedDate: statuses[i % statuses.length] >= ResultApprovalStatus.Step2Approved ? createdDate.add(2, 'day').toISOString() : undefined,
-      notes: i % 5 === 0 ? `Ghi chú kết quả ${i + 1}` : undefined,
-      creationTime: createdDate.toISOString(),
+      id: result.id,
+      testId: result.testId,
+      testCode: test?.code || 'N/A',
+      testName: test?.name || 'N/A',
+      parameter: result.parameter,
+      value: result.value,
+      unit: result.unit,
+      referenceRange: result.referenceRange,
+      isPass: result.isPass,
+      approvalStatus: result.approvalStatus,
+      testedBy: testedByUser?.fullName || '-',
+      testedDate: result.testedDate,
+      reviewedBy: reviewedByUser?.fullName,
+      reviewedDate: result.reviewedDate,
+      approvedBy: approvedByUser?.fullName,
+      approvedDate: result.approvedDate,
+      notes: result.notes,
+      creationTime: result.createdAt,
     };
   });
 };
@@ -94,11 +56,7 @@ const TestResultList: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
-  const parameters = [
-    'SARS-CoV-2 (PCR)', 'Anti-SARS-CoV-2 IgG', 'Anti-SARS-CoV-2 IgM', 'Dengue NS1 Ag', 'Dengue IgM/IgG',
-    'HIV 1/2 Ab', 'HBsAg', 'Anti-HCV', 'AFB (Lao)', 'Sốt rét P.falciparum',
-    'Sốt rét P.vivax', 'Influenza A', 'Influenza B', 'Salmonella', 'E.coli O157',
-  ];
+  const parameters = mockTests.map(t => t.name);
 
   useEffect(() => {
     fetchTestResults();
@@ -312,11 +270,13 @@ const TestResultList: React.FC = () => {
         <Space size="small">
           <Button
             type="link"
+            size="small"
             icon={<EyeOutlined />}
             onClick={() => navigate(`/test-result/${record.id}`)}
           />
           <Button
             type="link"
+            size="small"
             icon={<EditOutlined />}
             onClick={() => handleEdit(record)}
           />
@@ -326,7 +286,7 @@ const TestResultList: React.FC = () => {
             okText="Có"
             cancelText="Không"
           >
-            <Button type="link" danger icon={<DeleteOutlined />} />
+            <Button type="link" size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
       ),
@@ -492,11 +452,9 @@ const TestResultList: React.FC = () => {
             <Col span={8}>
               <Form.Item name="testedBy" label="Người thử nghiệm">
                 <Select allowClear>
-                  <Select.Option value="ThS. Nguyễn Văn A">ThS. Nguyễn Văn A - Phòng XN Vi sinh</Select.Option>
-                  <Select.Option value="CN. Trần Thị B">CN. Trần Thị B - Phòng XN PCR</Select.Option>
-                  <Select.Option value="KTV. Lê Văn C">KTV. Lê Văn C - Phòng XN Huyết học</Select.Option>
-                  <Select.Option value="ThS. Phạm Thị D">ThS. Phạm Thị D - Phòng XN Miễn dịch</Select.Option>
-                  <Select.Option value="CN. Hoàng Văn E">CN. Hoàng Văn E - Phòng XN Ký sinh trùng</Select.Option>
+                  {mockUsers.filter(u => u.role === 'Technician' || u.role === 'LabManager').map(u => (
+                    <Select.Option key={u.id} value={u.fullName}>{u.fullName}</Select.Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>

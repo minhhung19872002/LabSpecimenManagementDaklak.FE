@@ -8,52 +8,24 @@ import type { ColumnsType } from 'antd/es/table';
 import { testRequestService } from '../../services/testRequestService';
 import { TestRequestDto, TestRequestStatus } from '../../types/testRequest';
 import dayjs from 'dayjs';
+import { mockTestRequests, mockCustomers } from '../../mocks/mockData';
 
-// Mock data for demo - Viện Vệ sinh Dịch tễ Tây Nguyên
+// Use centralized mock data
 const generateMockData = (): TestRequestDto[] => {
-  const customers = [
-    { name: 'Bệnh viện Đa khoa tỉnh Đắk Lắk', email: 'bvdaklak@syt.daklak.gov.vn', phone: '0262 3852 115' },
-    { name: 'Trung tâm Y tế TP. Buôn Ma Thuột', email: 'ttytbmt@syt.daklak.gov.vn', phone: '0262 3856 789' },
-    { name: 'Trung tâm Kiểm soát bệnh tật Đắk Nông', email: 'cdcdaknong@syt.daknong.gov.vn', phone: '0261 3544 123' },
-    { name: 'Bệnh viện Đa khoa Vùng Tây Nguyên', email: 'bvvungtaynguyen@moh.gov.vn', phone: '0262 3859 999' },
-    { name: 'Trung tâm Y tế huyện Krông Pắk', email: 'ttytkrongpak@syt.daklak.gov.vn', phone: '0262 3732 456' },
-    { name: 'Bệnh viện Sản Nhi Đắk Lắk', email: 'bvsannhi@syt.daklak.gov.vn', phone: '0262 3953 111' },
-    { name: 'Trung tâm Y tế huyện Ea H\'leo', email: 'ttytealeo@syt.daklak.gov.vn', phone: '0262 3777 222' },
-    { name: 'Trung tâm Kiểm soát bệnh tật Gia Lai', email: 'cdcgialai@syt.gialai.gov.vn', phone: '0269 3824 333' },
-    { name: 'Bệnh viện Y học Cổ truyền Đắk Lắk', email: 'bvyhct@syt.daklak.gov.vn', phone: '0262 3866 444' },
-    { name: 'Trung tâm Y tế huyện Cư M\'gar', email: 'ttytcumgar@syt.daklak.gov.vn', phone: '0262 3674 555' },
-  ];
-
-  const statuses = [
-    TestRequestStatus.Pending,
-    TestRequestStatus.InProgress,
-    TestRequestStatus.Completed,
-    TestRequestStatus.InProgress,
-    TestRequestStatus.Completed,
-    TestRequestStatus.Pending,
-    TestRequestStatus.Completed,
-    TestRequestStatus.InProgress,
-  ];
-
-  return Array.from({ length: 25 }, (_, i) => {
-    const customer = customers[i % customers.length];
-    const requestDate = dayjs().subtract(i * 3, 'day');
-    const expectedDate = requestDate.add(7, 'day');
-
+  return mockTestRequests.map(req => {
+    const customer = mockCustomers.find(c => c.id === req.customerId);
     return {
-      id: `req-${String(i + 1).padStart(3, '0')}`,
-      requestNumber: `REQ-${dayjs().format('YYYYMMDD')}-${String(i + 1).padStart(4, '0')}`,
-      requestDate: requestDate.toISOString(),
-      customerName: customer.name,
-      customerEmail: customer.email,
-      customerPhone: customer.phone,
-      customerAddress: customer.name.includes('Đắk Nông') ? `Đường Trần Hưng Đạo, TP. Gia Nghĩa, Đắk Nông` :
-                       customer.name.includes('Gia Lai') ? `Đường Trần Phú, TP. Pleiku, Gia Lai` :
-                       `${i % 5 + 1} Lê Duẩn, TP. Buôn Ma Thuột, Đắk Lắk`,
-      status: statuses[i % statuses.length],
-      expectedCompletionDate: expectedDate.toISOString(),
-      notes: i % 3 === 0 ? `Ghi chú yêu cầu số ${i + 1}` : undefined,
-      creationTime: requestDate.toISOString(),
+      id: req.id,
+      requestNumber: req.requestNumber,
+      requestDate: req.requestDate,
+      customerName: customer?.name || 'N/A',
+      customerEmail: customer?.email || '',
+      customerPhone: customer?.phone || '',
+      customerAddress: customer?.address || '',
+      status: req.status,
+      expectedCompletionDate: req.expectedCompletionDate,
+      notes: req.notes,
+      creationTime: req.createdAt,
     };
   });
 };
@@ -262,11 +234,13 @@ const TestRequestList: React.FC = () => {
         <Space size="small">
           <Button
             type="link"
+            size="small"
             icon={<EyeOutlined />}
             onClick={() => navigate(`/test-request/${record.id}`)}
           />
           <Button
             type="link"
+            size="small"
             icon={<EditOutlined />}
             onClick={() => handleEdit(record)}
           />
@@ -276,7 +250,7 @@ const TestRequestList: React.FC = () => {
             okText="Có"
             cancelText="Không"
           >
-            <Button type="link" danger icon={<DeleteOutlined />} />
+            <Button type="link" size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
       )

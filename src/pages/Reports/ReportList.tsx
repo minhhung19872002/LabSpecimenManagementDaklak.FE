@@ -161,6 +161,8 @@ const ReportList: React.FC = () => {
       title: 'Số báo cáo',
       dataIndex: 'reportNumber',
       key: 'reportNumber',
+      width: 180,
+      fixed: 'left' as const,
       render: (text: string, record: any) => (
         <a onClick={() => handlePreview(record)}>
           <Space>
@@ -174,21 +176,27 @@ const ReportList: React.FC = () => {
       title: 'Yêu cầu',
       dataIndex: 'requestNumber',
       key: 'requestNumber',
+      width: 180,
     },
     {
       title: 'Khách hàng',
       dataIndex: 'customerName',
       key: 'customerName',
+      width: 250,
+      ellipsis: true,
     },
     {
       title: 'Mẫu thử',
       dataIndex: 'specimenName',
       key: 'specimenName',
+      width: 220,
+      ellipsis: true,
     },
     {
       title: 'Số phép thử',
       dataIndex: 'testCount',
       key: 'testCount',
+      width: 100,
       align: 'center' as const,
       render: (count: number) => <Badge count={count} style={{ backgroundColor: '#1890ff' }} />,
     },
@@ -196,6 +204,7 @@ const ReportList: React.FC = () => {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
+      width: 120,
       render: (status: string) => {
         const config = getStatusConfig(status);
         return (
@@ -209,10 +218,12 @@ const ReportList: React.FC = () => {
       title: 'Ngày tạo',
       dataIndex: 'createdAt',
       key: 'createdAt',
+      width: 110,
     },
     {
-      title: 'QR Code',
+      title: 'QR',
       key: 'qrCode',
+      width: 60,
       align: 'center' as const,
       render: (_: any, record: any) =>
         record.status === 'Approved' ? (
@@ -231,6 +242,7 @@ const ReportList: React.FC = () => {
       title: 'Email',
       dataIndex: 'emailSent',
       key: 'emailSent',
+      width: 100,
       render: (sent: boolean) =>
         sent ? (
           <Tag color="green" icon={<MailOutlined />}>Đã gửi</Tag>
@@ -241,6 +253,8 @@ const ReportList: React.FC = () => {
     {
       title: 'Thao tác',
       key: 'actions',
+      width: 160,
+      fixed: 'right' as const,
       render: (_: any, record: any) => (
         <Space>
           <Tooltip title="Xem">
@@ -309,6 +323,7 @@ const ReportList: React.FC = () => {
           dataSource={filteredReports}
           columns={columns}
           rowKey="id"
+          scroll={{ x: 1480 }}
           pagination={{
             pageSize: 10,
             showSizeChanger: true,

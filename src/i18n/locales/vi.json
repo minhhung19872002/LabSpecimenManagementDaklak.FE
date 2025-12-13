@@ -56,20 +56,25 @@
   },
   "menu": {
     "dashboard": "Tổng quan",
+    "labOperations": "Phòng thí nghiệm",
     "requests": "Phiếu yêu cầu",
     "specimens": "Quản lý mẫu",
     "tests": "Thử nghiệm",
     "specimenHistories": "Lịch sử mẫu",
     "results": "Kết quả",
+    "qualityReports": "Chất lượng",
     "reports": "Báo cáo",
-    "ncr": "Công việc không phù hợp",
+    "ncr": "NCR",
     "statistics": "Thống kê",
+    "management": "Quản lý",
     "tasks": "Giao việc",
     "subcontractors": "Nhà thầu phụ",
-    "masterData": "Ngân hàng dữ liệu",
-    "auditLog": "Lịch sử thay đổi",
+    "masterData": "Dữ liệu gốc",
+    "auditLog": "Lịch sử",
+    "administration": "Quản trị",
     "settings": "Cài đặt",
-    "users": "Người dùng"
+    "users": "Người dùng",
+    "employees": "Nhân viên"
   },
   "request": {
     "title": "Phiếu Yêu Cầu Thử Nghiệm",
@@ -312,6 +317,27 @@
       "destroyed": "Đã hủy",
       "returnedToCustomer": "Đã trả khách hàng"
     }
+  },
+  "employee": {
+    "title": "Quản Lý Nhân Viên",
+    "create": "Thêm nhân viên",
+    "createEmployee": "Thêm Nhân Viên Mới",
+    "editEmployee": "Sửa Thông Tin Nhân Viên",
+    "username": "Tên đăng nhập",
+    "email": "Email",
+    "phone": "Số điện thoại",
+    "password": "Mật khẩu",
+    "department": "Phòng ban",
+    "totalEmployees": "Tổng số nhân viên",
+    "byDepartment": "Theo phòng ban",
+    "passwordGenerated": "Mật khẩu đã được tạo",
+    "passwordInfo": "Mật khẩu được tạo tự động bởi hệ thống. Vui lòng lưu lại và gửi cho nhân viên.",
+    "copyPassword": "Sao chép mật khẩu",
+    "passwordCopied": "Đã sao chép mật khẩu",
+    "createSuccess": "Thêm nhân viên thành công",
+    "updateSuccess": "Cập nhật nhân viên thành công",
+    "deleteSuccess": "Xóa nhân viên thành công",
+    "deleteConfirm": "Bạn có chắc chắn muốn xóa nhân viên này?"
   },
   "messages": {
     "saveSuccess": "Lưu thành công",

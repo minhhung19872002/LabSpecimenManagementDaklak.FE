@@ -11,41 +11,60 @@ import {
   SyncOutlined
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
+import {
+  mockTestRequests,
+  mockSpecimens,
+  mockTests,
+  mockNCRs,
+  mockCustomers,
+  mockUsers,
+  TestRequestStatus,
+  TestStatus,
+} from '../../mocks/mockData';
+import dayjs from 'dayjs';
 
-// Mock data for dashboard
+// Calculate stats from centralized mock data
 const mockStats = {
-  totalRequests: 156,
-  totalSpecimens: 423,
-  totalTests: 892,
-  ncrCount: 7,
-  pendingRequests: 23,
-  inProgressTests: 45,
-  completedToday: 12,
+  totalRequests: mockTestRequests.length,
+  totalSpecimens: mockSpecimens.length,
+  totalTests: mockTests.length,
+  ncrCount: mockNCRs.filter(n => n.status !== 'Closed').length,
+  pendingRequests: mockTestRequests.filter(r => r.status === TestRequestStatus.Pending).length,
+  inProgressTests: mockTests.filter(t => t.status === TestStatus.InProgress).length,
+  completedToday: mockTests.filter(t => t.status === TestStatus.Completed).length,
   avgTAT: 3.2,
 };
 
-// Mock data - Viện Vệ sinh Dịch tễ Tây Nguyên
-const recentRequests = [
-  { id: 1, requestNumber: 'REQ-20251212-0001', customerName: 'BV Đa khoa tỉnh Đắk Lắk', status: 'Pending', date: '2025-12-12' },
-  { id: 2, requestNumber: 'REQ-20251212-0002', customerName: 'TTYT TP. Buôn Ma Thuột', status: 'InProgress', date: '2025-12-12' },
-  { id: 3, requestNumber: 'REQ-20251211-0015', customerName: 'CDC Đắk Nông', status: 'Completed', date: '2025-12-11' },
-  { id: 4, requestNumber: 'REQ-20251211-0014', customerName: 'BV Đa khoa Vùng Tây Nguyên', status: 'InProgress', date: '2025-12-11' },
-  { id: 5, requestNumber: 'REQ-20251210-0010', customerName: 'CDC Gia Lai', status: 'Completed', date: '2025-12-10' },
-];
+// Use centralized mock data for recent requests
+const recentRequests = mockTestRequests.slice(0, 5).map(req => {
+  const customer = mockCustomers.find(c => c.id === req.customerId);
+  return {
+    id: req.id,
+    requestNumber: req.requestNumber,
+    customerName: customer?.name || 'N/A',
+    status: req.status,
+    date: dayjs(req.requestDate).format('YYYY-MM-DD'),
+  };
+});
 
-const pendingApprovals = [
-  { id: 1, testCode: 'TEST-20251212-0003', parameter: 'PCR SARS-CoV-2', status: 'PendingReview' },
-  { id: 2, testCode: 'TEST-20251212-0005', parameter: 'ELISA Dengue NS1', status: 'PendingApproval' },
-  { id: 3, testCode: 'TEST-20251211-0012', parameter: 'Nuôi cấy vi khuẩn', status: 'PendingReview' },
-];
+// Use centralized mock data for pending approvals
+const pendingApprovals = mockTests
+  .filter(t => t.status === TestStatus.Completed || t.status === TestStatus.Reviewed)
+  .slice(0, 3)
+  .map(test => ({
+    id: test.id,
+    testCode: test.code,
+    parameter: test.name,
+    status: test.status === TestStatus.Completed ? 'PendingReview' : 'PendingApproval',
+  }));
 
-const recentActivities = [
-  { time: '10:30', action: 'Nhập kết quả PCR', user: 'ThS. Nguyễn Văn A', detail: 'TEST-20251212-0003' },
-  { time: '10:15', action: 'Tiếp nhận mẫu huyết thanh', user: 'CN. Trần Thị B', detail: 'SPE-20251212-0005' },
-  { time: '09:45', action: 'Phê duyệt kết quả HIV', user: 'PGS.TS. Lê Văn C', detail: 'TEST-20251211-0010' },
-  { time: '09:30', action: 'Tạo yêu cầu XN Sốt rét', user: 'KTV. Phạm Thị D', detail: 'REQ-20251212-0002' },
-  { time: '09:00', action: 'Hoàn thành XN Cúm A/B', user: 'ThS. Nguyễn Văn A', detail: 'TEST-20251211-0008' },
-];
+// Use centralized mock data for recent activities
+const recentActivities = mockUsers.slice(0, 5).map((user, i) => ({
+  time: `${10 - i}:${30 - i * 15 >= 0 ? 30 - i * 15 : 45}`.padStart(5, '0'),
+  action: ['Nhập kết quả PCR', 'Tiếp nhận mẫu huyết thanh', 'Phê duyệt kết quả', 'Tạo yêu cầu XN', 'Hoàn thành XN'][i],
+  user: user.fullName,
+  detail: mockTests[i]?.code || mockTestRequests[i]?.requestNumber || 'N/A',
+}));
 
 const getStatusColor = (status: string) => {
   const colors: Record<string, string> = {
@@ -116,7 +135,7 @@ const Dashboard: React.FC = () => {
               title="Báo cáo NCR"
               value={mockStats.ncrCount}
               prefix={<WarningOutlined style={{ color: '#cf1322' }} />}
-              valueStyle={{ color: '#cf1322' }}
+              styles={{ content: { color: '#cf1322' } }}
             />
           </Card>
         </Col>
@@ -130,7 +149,7 @@ const Dashboard: React.FC = () => {
               title="Chờ xử lý"
               value={mockStats.pendingRequests}
               prefix={<ClockCircleOutlined style={{ color: '#faad14' }} />}
-              valueStyle={{ color: '#faad14' }}
+              styles={{ content: { color: '#faad14' } }}
             />
           </Card>
         </Col>
@@ -140,7 +159,7 @@ const Dashboard: React.FC = () => {
               title="Đang thử nghiệm"
               value={mockStats.inProgressTests}
               prefix={<SyncOutlined spin style={{ color: '#1890ff' }} />}
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
             />
           </Card>
         </Col>
@@ -150,7 +169,7 @@ const Dashboard: React.FC = () => {
               title="Hoàn thành hôm nay"
               value={mockStats.completedToday}
               prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Card>
         </Col>
@@ -161,7 +180,7 @@ const Dashboard: React.FC = () => {
               value={mockStats.avgTAT}
               prefix={<RiseOutlined style={{ color: '#13c2c2' }} />}
               precision={1}
-              valueStyle={{ color: '#13c2c2' }}
+              styles={{ content: { color: '#13c2c2' } }}
             />
           </Card>
         </Col>

@@ -33,80 +33,36 @@ import {
   EyeOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { mockNCRs as centralizedNCRs, mockUsers, mockTests, mockSpecimens } from '../../mocks/mockData';
 
 const { TextArea } = Input;
 
-// Mock data for NCR - Viện Vệ sinh Dịch tễ Tây Nguyên
-const mockNCRs = [
-  {
-    id: '1',
-    ncrNumber: 'NCR-20251212-0001',
-    title: 'Kết quả PCR COVID-19 có Ct value bất thường',
-    type: 'TestResult',
-    severity: 'Major',
-    status: 'Open',
-    reportedBy: 'ThS. Nguyễn Văn A',
-    reportedAt: '2025-12-12',
-    assignedTo: 'CN. Trần Thị B',
-    relatedTest: 'TEST-20251210-0005',
-    description: 'Kết quả PCR COVID-19 cho Ct value = 38.5, nằm trong vùng không xác định (35-40)',
-    rootCause: '',
-    correctiveAction: '',
-    dueDate: '2025-12-19',
-  },
-  {
-    id: '2',
-    ncrNumber: 'NCR-20251210-0003',
-    title: 'Mẫu huyết thanh bị vỡ trong quá trình vận chuyển',
-    type: 'Specimen',
-    severity: 'Critical',
-    status: 'InProgress',
-    reportedBy: 'KTV. Lê Văn C',
-    reportedAt: '2025-12-10',
-    assignedTo: 'ThS. Phạm Thị D',
-    relatedTest: 'SPE-20251208-0012',
-    description: 'Phát hiện 3 mẫu huyết thanh bị vỡ ống trong thùng vận chuyển từ BV Đa khoa tỉnh',
-    rootCause: 'Bao bì đóng gói không đủ chống sốc, nhiệt độ vận chuyển không ổn định',
-    correctiveAction: 'Đang thực hiện lấy mẫu lại và yêu cầu đơn vị gửi mẫu cải thiện quy trình đóng gói',
-    dueDate: '2025-12-15',
-  },
-  {
-    id: '3',
-    ncrNumber: 'NCR-20251205-0002',
-    title: 'Máy Real-time PCR chưa được bảo trì định kỳ',
-    type: 'Equipment',
-    severity: 'Minor',
-    status: 'Closed',
-    reportedBy: 'CN. Hoàng Văn E',
-    reportedAt: '2025-12-05',
-    assignedTo: 'ThS. Nguyễn Văn A',
-    relatedTest: 'EQP-PCR-001',
-    description: 'Máy Real-time PCR ABI 7500 chưa được bảo trì định kỳ theo lịch (quá hạn 15 ngày)',
-    rootCause: 'Quên lịch bảo trì do không có hệ thống nhắc nhở tự động',
-    correctiveAction: 'Đã liên hệ nhà cung cấp bảo trì và thiết lập hệ thống nhắc nhở trên phần mềm',
-    dueDate: '2025-12-08',
-    closedAt: '2025-12-07',
-    closedBy: 'KTV. Lê Văn C',
-  },
-  {
-    id: '4',
-    ncrNumber: 'NCR-20251201-0001',
-    title: 'Sai sót trong báo cáo kết quả XN HIV',
-    type: 'Report',
-    severity: 'Major',
-    status: 'Closed',
-    reportedBy: 'CN. Trần Thị B',
-    reportedAt: '2025-12-01',
-    assignedTo: 'KTV. Lê Văn C',
-    relatedTest: 'RPT-20251130-0010',
-    description: 'Báo cáo kết quả XN HIV gửi BV có sai tên bệnh nhân và số mẫu',
-    rootCause: 'Nhập liệu sai từ phiếu yêu cầu do chữ viết tay khó đọc',
-    correctiveAction: 'Đã thu hồi và phát hành lại báo cáo, yêu cầu sử dụng phiếu yêu cầu điện tử',
-    dueDate: '2025-12-05',
-    closedAt: '2025-12-04',
-    closedBy: 'ThS. Phạm Thị D',
-  },
-];
+// Use centralized mock data
+const mockNCRs = centralizedNCRs.map(ncr => {
+  const reportedByUser = mockUsers.find(u => u.id === ncr.reportedById);
+  const assignedToUser = mockUsers.find(u => u.id === ncr.assignedToId);
+  const closedByUser = mockUsers.find(u => u.id === ncr.closedById);
+  const relatedTest = mockTests.find(t => t.id === ncr.relatedTestId);
+  const relatedSpecimen = mockSpecimens.find(s => s.id === ncr.relatedSpecimenId);
+  return {
+    id: ncr.id,
+    ncrNumber: ncr.ncrNumber,
+    title: ncr.title,
+    type: ncr.type,
+    severity: ncr.severity,
+    status: ncr.status,
+    reportedBy: reportedByUser?.fullName || '-',
+    reportedAt: ncr.reportedAt,
+    assignedTo: assignedToUser?.fullName || '-',
+    relatedTest: relatedTest?.code || relatedSpecimen?.code || ncr.relatedTestId || '-',
+    description: ncr.description,
+    rootCause: ncr.rootCause || '',
+    correctiveAction: ncr.correctiveAction || '',
+    dueDate: ncr.dueDate,
+    closedAt: ncr.closedAt,
+    closedBy: closedByUser?.fullName,
+  };
+});
 
 const ncrTypes = [
   { value: 'TestResult', label: 'Kết quả thử nghiệm', color: 'blue' },
@@ -207,6 +163,8 @@ const NCRList: React.FC = () => {
       title: 'Mã NCR',
       dataIndex: 'ncrNumber',
       key: 'ncrNumber',
+      width: 180,
+      fixed: 'left' as const,
       render: (text: string, record: any) => (
         <a onClick={() => handleView(record)}>
           <Space>
@@ -220,12 +178,14 @@ const NCRList: React.FC = () => {
       title: 'Tiêu đề',
       dataIndex: 'title',
       key: 'title',
+      width: 200,
       ellipsis: true,
     },
     {
       title: 'Loại',
       dataIndex: 'type',
       key: 'type',
+      width: 140,
       render: (type: string) => {
         const config = ncrTypes.find((t) => t.value === type);
         return <Tag color={config?.color}>{config?.label}</Tag>;
@@ -235,6 +195,7 @@ const NCRList: React.FC = () => {
       title: 'Mức độ',
       dataIndex: 'severity',
       key: 'severity',
+      width: 120,
       render: (severity: string) => (
         <Tag color={severityConfig[severity]?.color}>{severityConfig[severity]?.text}</Tag>
       ),
@@ -243,6 +204,7 @@ const NCRList: React.FC = () => {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
+      width: 130,
       render: (status: string) => (
         <Tag color={statusConfig[status]?.color} icon={statusConfig[status]?.icon}>
           {statusConfig[status]?.text}
@@ -253,16 +215,19 @@ const NCRList: React.FC = () => {
       title: 'Người báo cáo',
       dataIndex: 'reportedBy',
       key: 'reportedBy',
+      width: 140,
     },
     {
       title: 'Người xử lý',
       dataIndex: 'assignedTo',
       key: 'assignedTo',
+      width: 140,
     },
     {
       title: 'Hạn xử lý',
       dataIndex: 'dueDate',
       key: 'dueDate',
+      width: 120,
       render: (date: string, record: any) => {
         const isOverdue = record.status !== 'Closed' && dayjs(date).isBefore(dayjs());
         return <span style={{ color: isOverdue ? '#cf1322' : undefined }}>{date}</span>;
@@ -271,17 +236,19 @@ const NCRList: React.FC = () => {
     {
       title: 'Thao tác',
       key: 'actions',
+      width: 120,
+      fixed: 'right' as const,
       render: (_: any, record: any) => (
-        <Space>
-          <Button type="text" icon={<EyeOutlined />} onClick={() => handleView(record)} />
-          <Button type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+        <Space size="small">
+          <Button type="text" size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
+          <Button type="text" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
           <Popconfirm
             title="Xóa NCR?"
             onConfirm={() => handleDelete(record.id)}
             okText="Xóa"
             cancelText="Hủy"
           >
-            <Button type="text" danger icon={<DeleteOutlined />} />
+            <Button type="text" size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
       ),
@@ -297,7 +264,7 @@ const NCRList: React.FC = () => {
             <Statistic
               title="NCR đang mở"
               value={openCount}
-              valueStyle={{ color: '#cf1322' }}
+              styles={{ content: { color: '#cf1322' } }}
               prefix={<ExclamationCircleOutlined />}
             />
           </Card>
@@ -307,7 +274,7 @@ const NCRList: React.FC = () => {
             <Statistic
               title="Đang xử lý"
               value={inProgressCount}
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
               prefix={<ClockCircleOutlined />}
             />
           </Card>
@@ -317,7 +284,7 @@ const NCRList: React.FC = () => {
             <Statistic
               title="Đã đóng"
               value={closedCount}
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
               prefix={<CheckCircleOutlined />}
             />
           </Card>
@@ -365,6 +332,7 @@ const NCRList: React.FC = () => {
           dataSource={filteredNCRs}
           columns={columns}
           rowKey="id"
+          scroll={{ x: 1290 }}
           pagination={{ pageSize: 10, showTotal: (total) => `Tổng ${total} NCR` }}
         />
       </Card>
@@ -407,10 +375,9 @@ const NCRList: React.FC = () => {
             <Col span={12}>
               <Form.Item name="assignedTo" label="Người xử lý" rules={[{ required: true }]}>
                 <Select placeholder="Chọn người xử lý">
-                  <Select.Option value="ThS. Nguyễn Văn A">ThS. Nguyễn Văn A - Phòng XN Vi sinh</Select.Option>
-                  <Select.Option value="CN. Trần Thị B">CN. Trần Thị B - Phòng XN PCR</Select.Option>
-                  <Select.Option value="KTV. Lê Văn C">KTV. Lê Văn C - Phòng XN Huyết học</Select.Option>
-                  <Select.Option value="ThS. Phạm Thị D">ThS. Phạm Thị D - Phòng XN Miễn dịch</Select.Option>
+                  {mockUsers.map(u => (
+                    <Select.Option key={u.id} value={u.fullName}>{u.fullName}</Select.Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>

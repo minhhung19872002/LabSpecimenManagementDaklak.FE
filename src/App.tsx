@@ -1,34 +1,69 @@
+import { lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
-import Dashboard from './pages/Dashboard/Dashboard';
-import Login from './pages/Login/Login';
-import TestRequestList from './pages/TestRequest/TestRequestList';
-import TestRequestForm from './pages/TestRequest/TestRequestForm';
-import TestRequestDetail from './pages/TestRequest/TestRequestDetail';
-import SpecimenList from './pages/Specimen/SpecimenList';
-import SpecimenForm from './pages/Specimen/SpecimenForm';
-import SpecimenDetail from './pages/Specimen/SpecimenDetail';
-import TestList from './pages/Test/TestList';
-import TestForm from './pages/Test/TestForm';
-import TestDetail from './pages/Test/TestDetail';
-import TestResultList from './pages/TestResult/TestResultList';
-import TestResultForm from './pages/TestResult/TestResultForm';
-import TestResultDetail from './pages/TestResult/TestResultDetail';
-import SpecimenHistoryList from './pages/SpecimenHistory/SpecimenHistoryList';
-import SpecimenHistoryForm from './pages/SpecimenHistory/SpecimenHistoryForm';
-import SpecimenHistoryDetail from './pages/SpecimenHistory/SpecimenHistoryDetail';
-import UserList from './pages/Users/UserList';
-import ReportList from './pages/Reports/ReportList';
-import NCRList from './pages/NCR/NCRList';
-import StatisticsPage from './pages/Statistics/StatisticsPage';
-import SettingsPage from './pages/Settings/SettingsPage';
-import SubcontractorList from './pages/Subcontractor/SubcontractorList';
-import TaskAssignmentList from './pages/TaskAssignment/TaskAssignmentList';
-import MasterDataList from './pages/MasterData/MasterDataList';
-import AuditLogList from './pages/AuditLog/AuditLogList';
+import Loadable from './components/common/Loadable';
+import { initTableGrabScroll } from './hooks/useTableGrabScroll';
 import './App.css';
 
+// Lazy load pages with code splitting
+const Login = Loadable(lazy(() => import('./pages/Login/Login')));
+const Dashboard = Loadable(lazy(() => import('./pages/Dashboard/Dashboard')));
+
+// Test Request
+const TestRequestList = Loadable(lazy(() => import('./pages/TestRequest/TestRequestList')));
+const TestRequestForm = Loadable(lazy(() => import('./pages/TestRequest/TestRequestForm')));
+const TestRequestDetail = Loadable(lazy(() => import('./pages/TestRequest/TestRequestDetail')));
+
+// Specimen
+const SpecimenList = Loadable(lazy(() => import('./pages/Specimen/SpecimenList')));
+const SpecimenForm = Loadable(lazy(() => import('./pages/Specimen/SpecimenForm')));
+const SpecimenDetail = Loadable(lazy(() => import('./pages/Specimen/SpecimenDetail')));
+
+// Test
+const TestList = Loadable(lazy(() => import('./pages/Test/TestList')));
+const TestForm = Loadable(lazy(() => import('./pages/Test/TestForm')));
+const TestDetail = Loadable(lazy(() => import('./pages/Test/TestDetail')));
+
+// Test Result
+const TestResultList = Loadable(lazy(() => import('./pages/TestResult/TestResultList')));
+const TestResultForm = Loadable(lazy(() => import('./pages/TestResult/TestResultForm')));
+const TestResultDetail = Loadable(lazy(() => import('./pages/TestResult/TestResultDetail')));
+
+// Specimen History
+const SpecimenHistoryList = Loadable(lazy(() => import('./pages/SpecimenHistory/SpecimenHistoryList')));
+const SpecimenHistoryForm = Loadable(lazy(() => import('./pages/SpecimenHistory/SpecimenHistoryForm')));
+const SpecimenHistoryDetail = Loadable(lazy(() => import('./pages/SpecimenHistory/SpecimenHistoryDetail')));
+
+// Reports & Analytics
+const ReportList = Loadable(lazy(() => import('./pages/Reports/ReportList')));
+const StatisticsPage = Loadable(lazy(() => import('./pages/Statistics/StatisticsPage')));
+
+// NCR
+const NCRList = Loadable(lazy(() => import('./pages/NCR/NCRList')));
+
+// Task Assignment
+const TaskAssignmentList = Loadable(lazy(() => import('./pages/TaskAssignment/TaskAssignmentList')));
+
+// Subcontractor
+const SubcontractorList = Loadable(lazy(() => import('./pages/Subcontractor/SubcontractorList')));
+
+// Master Data
+const MasterDataList = Loadable(lazy(() => import('./pages/MasterData/MasterDataList')));
+
+// Audit Log
+const AuditLogList = Loadable(lazy(() => import('./pages/AuditLog/AuditLogList')));
+
+// Administration
+const EmployeeList = Loadable(lazy(() => import('./pages/Employees/EmployeeList')));
+const SettingsPage = Loadable(lazy(() => import('./pages/Settings/SettingsPage')));
+
 function App() {
+  // Initialize grab-to-scroll for all tables
+  useEffect(() => {
+    const cleanup = initTableGrabScroll();
+    return cleanup;
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>
@@ -87,7 +122,7 @@ function App() {
           <Route path="audit-log" element={<AuditLogList />} />
 
           {/* Administration */}
-          <Route path="users" element={<UserList />} />
+          <Route path="employees" element={<EmployeeList />} />
           <Route path="settings" element={<SettingsPage />} />
 
           {/* Legacy route - redirect to test-results */}

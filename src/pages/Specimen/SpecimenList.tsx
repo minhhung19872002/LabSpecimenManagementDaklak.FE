@@ -8,52 +8,29 @@ import type { ColumnsType } from 'antd/es/table';
 import { specimenService } from '../../services/specimenService';
 import { SpecimenDto, SpecimenStatus } from '../../types/specimen';
 import dayjs from 'dayjs';
+import { mockSpecimens, mockTestRequests, mockSpecimenTypes, mockStorageLocations } from '../../mocks/mockData';
 
-// Mock data for demo - Viện Vệ sinh Dịch tễ Tây Nguyên
+// Use centralized mock data
 const generateMockData = (): SpecimenDto[] => {
-  const specimenTypes = ['Máu', 'Huyết thanh', 'Dịch mũi họng', 'Nước tiểu', 'Phân', 'Đờm', 'Dịch não tủy', 'Mô sinh thiết'];
-  const specimenNames = [
-    'Mẫu máu toàn phần - XN Sốt xuất huyết',
-    'Mẫu huyết thanh - XN COVID-19',
-    'Mẫu dịch ngoáy họng - PCR SARS-CoV-2',
-    'Mẫu nước tiểu - XN Vi khuẩn',
-    'Mẫu phân - XN Ký sinh trùng đường ruột',
-    'Mẫu đờm - XN Lao (AFB)',
-    'Mẫu huyết thanh - XN HIV',
-    'Mẫu máu - XN Sốt rét',
-    'Mẫu dịch NTA - XN Cúm A/B',
-    'Mẫu huyết thanh - XN Viêm gan B',
-  ];
-  const storageLocations = ['Tủ lạnh 2-8°C - Phòng XN Vi sinh', 'Tủ đông -20°C - Phòng XN PCR', 'Tủ đông -80°C - Lưu trữ dài hạn', 'Phòng mẫu nhiệt độ thường', 'Tủ lạnh - Phòng XN Huyết học', 'Kho lưu mẫu âm'];
-  const units = ['ml', 'ống', 'swab', 'mẫu', 'tube'];
-
-  const statuses = [
-    SpecimenStatus.Received,
-    SpecimenStatus.Testing,
-    SpecimenStatus.Storage,
-    SpecimenStatus.Testing,
-    SpecimenStatus.Received,
-    SpecimenStatus.Storage,
-  ];
-
-  return Array.from({ length: 30 }, (_, i) => {
-    const receivedDate = dayjs().subtract(i * 2, 'day');
-
+  return mockSpecimens.map(specimen => {
+    const testRequest = mockTestRequests.find(r => r.id === specimen.testRequestId);
+    const specimenType = mockSpecimenTypes.find(t => t.id === specimen.typeId);
+    const storageLocation = mockStorageLocations.find(l => l.id === specimen.storageLocationId);
     return {
-      id: `spe-${String(i + 1).padStart(3, '0')}`,
-      code: `SPE-${dayjs().format('YYYYMMDD')}-${String(i + 1).padStart(4, '0')}`,
-      name: specimenNames[i % specimenNames.length],
-      type: specimenTypes[i % specimenTypes.length],
-      receivedDate: receivedDate.toISOString(),
-      testRequestId: `req-${String((i % 25) + 1).padStart(3, '0')}`,
-      testRequestNumber: `REQ-${dayjs().format('YYYYMMDD')}-${String((i % 25) + 1).padStart(4, '0')}`,
-      quantity: Math.floor(Math.random() * 10) + 1,
-      unit: units[i % units.length],
-      status: statuses[i % statuses.length],
-      storageLocation: storageLocations[i % storageLocations.length],
-      storageCondition: i % 3 === 0 ? '-20°C đến -80°C' : i % 2 === 0 ? '2-8°C' : 'Nhiệt độ phòng',
-      description: i % 3 === 0 ? `Mô tả mẫu số ${i + 1}` : undefined,
-      creationTime: receivedDate.toISOString(),
+      id: specimen.id,
+      code: specimen.code,
+      name: specimen.name,
+      type: specimenType?.name || 'N/A',
+      receivedDate: specimen.receivedDate,
+      testRequestId: specimen.testRequestId,
+      testRequestNumber: testRequest?.requestNumber || 'N/A',
+      quantity: specimen.quantity,
+      unit: specimen.unit,
+      status: specimen.status,
+      storageLocation: storageLocation?.name || '-',
+      storageCondition: storageLocation?.temperature || '-',
+      description: specimen.notes,
+      creationTime: specimen.createdAt,
     };
   });
 };
@@ -74,8 +51,8 @@ const SpecimenList: React.FC = () => {
   const [editingItem, setEditingItem] = useState<SpecimenDto | null>(null);
   const [form] = Form.useForm();
 
-  const specimenTypes = ['Máu', 'Huyết thanh', 'Dịch mũi họng', 'Nước tiểu', 'Phân', 'Đờm', 'Dịch não tủy', 'Mô sinh thiết'];
-  const storageLocations = ['Tủ lạnh 2-8°C - Phòng XN Vi sinh', 'Tủ đông -20°C - Phòng XN PCR', 'Tủ đông -80°C - Lưu trữ dài hạn', 'Phòng mẫu nhiệt độ thường', 'Tủ lạnh - Phòng XN Huyết học', 'Kho lưu mẫu âm'];
+  const specimenTypes = mockSpecimenTypes.map(t => t.name);
+  const storageLocations = mockStorageLocations.map(l => l.name);
 
   const loadData = async () => {
     setLoading(true);
@@ -274,11 +251,13 @@ const SpecimenList: React.FC = () => {
         <Space size="small">
           <Button
             type="link"
+            size="small"
             icon={<EyeOutlined />}
             onClick={() => navigate(`/specimen/${record.id}`)}
           />
           <Button
             type="link"
+            size="small"
             icon={<EditOutlined />}
             onClick={() => handleEdit(record)}
           />
@@ -288,7 +267,7 @@ const SpecimenList: React.FC = () => {
             okText="Có"
             cancelText="Không"
           >
-            <Button type="link" danger icon={<DeleteOutlined />} />
+            <Button type="link" size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
       )

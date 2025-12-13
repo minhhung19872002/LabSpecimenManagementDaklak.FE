@@ -25,101 +25,32 @@ import {
   MailOutlined,
   PhoneOutlined
 } from '@ant-design/icons';
+import { mockUsers as centralizedMockUsers, mockDepartments, UserRole } from '../../mocks/mockData';
 
-// Mock data for users
-const mockUsers = [
-  {
-    id: '1',
-    username: 'admin',
-    fullName: 'Quản trị viên',
-    email: 'admin@labdaklak.vn',
-    phone: '0905123456',
-    role: 'Admin',
-    department: 'Quản lý',
-    isActive: true,
-    createdAt: '2025-01-01',
-    lastLogin: '2025-12-12 10:30',
-  },
-  {
-    id: '2',
-    username: 'nguyen.van.a',
-    fullName: 'Nguyễn Văn A',
-    email: 'nguyenvana@labdaklak.vn',
-    phone: '0905234567',
-    role: 'LabManager',
-    department: 'Phòng Hóa học',
-    isActive: true,
-    createdAt: '2025-02-15',
-    lastLogin: '2025-12-12 09:15',
-  },
-  {
-    id: '3',
-    username: 'tran.thi.b',
-    fullName: 'Trần Thị B',
-    email: 'tranthib@labdaklak.vn',
-    phone: '0905345678',
-    role: 'Technician',
-    department: 'Phòng Vi sinh',
-    isActive: true,
-    createdAt: '2025-03-20',
-    lastLogin: '2025-12-12 08:45',
-  },
-  {
-    id: '4',
-    username: 'le.van.c',
-    fullName: 'Lê Văn C',
-    email: 'levanc@labdaklak.vn',
-    phone: '0905456789',
-    role: 'Reviewer',
-    department: 'Phòng Hóa học',
-    isActive: true,
-    createdAt: '2025-04-10',
-    lastLogin: '2025-12-11 16:30',
-  },
-  {
-    id: '5',
-    username: 'pham.thi.d',
-    fullName: 'Phạm Thị D',
-    email: 'phamthid@labdaklak.vn',
-    phone: '0905567890',
-    role: 'Approver',
-    department: 'Ban Giám đốc',
-    isActive: true,
-    createdAt: '2025-05-05',
-    lastLogin: '2025-12-12 07:00',
-  },
-  {
-    id: '6',
-    username: 'hoang.van.e',
-    fullName: 'Hoàng Văn E',
-    email: 'hoangvane@labdaklak.vn',
-    phone: '0905678901',
-    role: 'Technician',
-    department: 'Phòng Vật lý',
-    isActive: false,
-    createdAt: '2025-06-15',
-    lastLogin: '2025-11-20 10:00',
-  },
-];
+// Transform centralized mock data to match UserList format
+const mockUsers = centralizedMockUsers.map(user => ({
+  id: user.id,
+  username: user.username,
+  fullName: user.fullName,
+  email: user.email,
+  phone: user.phone,
+  role: user.role,
+  department: user.department, // mockUsers already has department as string
+  isActive: user.isActive,
+  createdAt: user.createdAt,
+  lastLogin: user.lastLogin || '-',
+}));
 
 const roles = [
-  { value: 'Admin', label: 'Quản trị viên', color: 'red' },
-  { value: 'LabManager', label: 'Trưởng phòng TN', color: 'purple' },
-  { value: 'Technician', label: 'Kỹ thuật viên', color: 'blue' },
-  { value: 'Reviewer', label: 'Người duyệt B1', color: 'orange' },
-  { value: 'Approver', label: 'Người duyệt B2', color: 'green' },
-  { value: 'Viewer', label: 'Xem báo cáo', color: 'default' },
+  { value: UserRole.Admin, label: 'Quản trị viên', color: 'red' },
+  { value: UserRole.LabManager, label: 'Trưởng phòng TN', color: 'purple' },
+  { value: UserRole.Technician, label: 'Kỹ thuật viên', color: 'blue' },
+  { value: UserRole.Reviewer, label: 'Người duyệt B1', color: 'orange' },
+  { value: UserRole.Approver, label: 'Người duyệt B2', color: 'green' },
+  { value: UserRole.Viewer, label: 'Xem báo cáo', color: 'default' },
 ];
 
-const departments = [
-  'Quản lý',
-  'Ban Giám đốc',
-  'Phòng Hóa học',
-  'Phòng Vi sinh',
-  'Phòng Vật lý',
-  'Phòng Môi trường',
-  'Tiếp nhận mẫu',
-];
+const departments = mockDepartments.map(d => d.name);
 
 const UserList: React.FC = () => {
   const [users, setUsers] = useState(mockUsers);
@@ -251,14 +182,17 @@ const UserList: React.FC = () => {
     {
       title: 'Thao tác',
       key: 'actions',
+      width: 120,
+      fixed: 'right' as const,
       render: (_: any, record: any) => (
-        <Space>
+        <Space size="small">
           <Tooltip title="Sửa">
-            <Button type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+            <Button type="text" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
           </Tooltip>
           <Tooltip title="Đặt lại mật khẩu">
             <Button
               type="text"
+              size="small"
               icon={<LockOutlined />}
               onClick={() => message.info('Chức năng đặt lại mật khẩu (mockup)')}
             />
@@ -271,7 +205,7 @@ const UserList: React.FC = () => {
             cancelText="Hủy"
           >
             <Tooltip title="Xóa">
-              <Button type="text" danger icon={<DeleteOutlined />} />
+              <Button type="text" size="small" danger icon={<DeleteOutlined />} />
             </Tooltip>
           </Popconfirm>
         </Space>
@@ -302,6 +236,7 @@ const UserList: React.FC = () => {
           dataSource={filteredUsers}
           columns={columns}
           rowKey="id"
+          scroll={{ x: 1200 }}
           pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (total) => `Tổng ${total} người dùng` }}
         />
       </Card>

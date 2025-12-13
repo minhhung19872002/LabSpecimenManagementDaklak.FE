@@ -111,14 +111,15 @@ const SettingsPage: React.FC = () => {
   };
 
   const methodColumns = [
-    { title: 'Mã', dataIndex: 'code', key: 'code' },
-    { title: 'Tên phương pháp', dataIndex: 'name', key: 'name' },
-    { title: 'Tiêu chuẩn', dataIndex: 'standard', key: 'standard' },
+    { title: 'Mã', dataIndex: 'code', key: 'code', width: 100 },
+    { title: 'Tên phương pháp', dataIndex: 'name', key: 'name', width: 250 },
+    { title: 'Tiêu chuẩn', dataIndex: 'standard', key: 'standard', width: 150 },
     {
       title: 'Thao tác',
       key: 'actions',
+      width: 100,
       render: () => (
-        <Space>
+        <Space size="small">
           <Button type="text" size="small" icon={<EditOutlined />} />
           <Button type="text" size="small" danger icon={<DeleteOutlined />} />
         </Space>
@@ -127,14 +128,15 @@ const SettingsPage: React.FC = () => {
   ];
 
   const typeColumns = [
-    { title: 'Mã', dataIndex: 'code', key: 'code' },
-    { title: 'Tên loại mẫu', dataIndex: 'name', key: 'name' },
-    { title: 'Mô tả', dataIndex: 'description', key: 'description' },
+    { title: 'Mã', dataIndex: 'code', key: 'code', width: 100 },
+    { title: 'Tên loại mẫu', dataIndex: 'name', key: 'name', width: 150 },
+    { title: 'Mô tả', dataIndex: 'description', key: 'description', width: 250 },
     {
       title: 'Thao tác',
       key: 'actions',
+      width: 100,
       render: () => (
-        <Space>
+        <Space size="small">
           <Button type="text" size="small" icon={<EditOutlined />} />
           <Button type="text" size="small" danger icon={<DeleteOutlined />} />
         </Space>
@@ -383,7 +385,7 @@ const SettingsPage: React.FC = () => {
                   }
                   style={{ marginBottom: 16 }}
                 >
-                  <Table dataSource={mockTestMethods} columns={methodColumns} rowKey="id" pagination={false} size="small" />
+                  <Table dataSource={mockTestMethods} columns={methodColumns} rowKey="id" pagination={false} size="small" scroll={{ x: 600 }} />
                 </Card>
 
                 <Card
@@ -394,7 +396,7 @@ const SettingsPage: React.FC = () => {
                     </Button>
                   }
                 >
-                  <Table dataSource={mockSpecimenTypes} columns={typeColumns} rowKey="id" pagination={false} size="small" />
+                  <Table dataSource={mockSpecimenTypes} columns={typeColumns} rowKey="id" pagination={false} size="small" scroll={{ x: 600 }} />
                 </Card>
               </div>
             ),

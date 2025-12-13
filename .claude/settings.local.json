@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir c:UsersDanhPVDesktopFreeLSMLabSpecimenManagementDaklak.FEsrc /s /b)",
+      "Bash(npm run dev:*)"
+    ]
+  }
+}

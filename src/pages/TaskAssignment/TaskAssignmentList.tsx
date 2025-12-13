@@ -413,22 +413,22 @@ const TaskAssignmentList: React.FC = () => {
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Card>
-            <Statistic title="Chờ nhận" value={stats.pending} valueStyle={{ color: '#8c8c8c' }} />
+            <Statistic title="Chờ nhận" value={stats.pending} styles={{ content: { color: '#8c8c8c' } }} />
           </Card>
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Card>
-            <Statistic title="Đang thực hiện" value={stats.inProgress} valueStyle={{ color: '#1890ff' }} />
+            <Statistic title="Đang thực hiện" value={stats.inProgress} styles={{ content: { color: '#1890ff' } }} />
           </Card>
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Card>
-            <Statistic title="Hoàn thành" value={stats.completed} valueStyle={{ color: '#52c41a' }} />
+            <Statistic title="Hoàn thành" value={stats.completed} styles={{ content: { color: '#52c41a' } }} />
           </Card>
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Card>
-            <Statistic title="Quá hạn" value={stats.overdue} valueStyle={{ color: '#ff4d4f' }} />
+            <Statistic title="Quá hạn" value={stats.overdue} styles={{ content: { color: '#ff4d4f' } }} />
           </Card>
         </Col>
         <Col xs={12} sm={8} md={4}>
@@ -437,7 +437,7 @@ const TaskAssignmentList: React.FC = () => {
               title="Tỷ lệ hoàn thành"
               value={stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0}
               suffix="%"
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Card>
         </Col>

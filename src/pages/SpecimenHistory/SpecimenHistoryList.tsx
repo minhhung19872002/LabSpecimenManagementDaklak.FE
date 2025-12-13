@@ -7,67 +7,27 @@ import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
 import { specimenHistoryService } from '../../services/specimenHistoryService';
 import { SpecimenHistoryDto, SpecimenStatus } from '../../types/specimenHistory';
+import { mockSpecimenHistories, mockSpecimens, mockUsers, mockStorageLocations } from '../../mocks/mockData';
 
-// Mock data for demo
+// Use centralized mock data
 const generateMockData = (): SpecimenHistoryDto[] => {
-  const actions = [
-    'Tiếp nhận mẫu',
-    'Chuyển vào kho lạnh',
-    'Lấy mẫu thử nghiệm',
-    'Hoàn tất thử nghiệm',
-    'Chuyển lưu kho',
-    'Chuẩn bị hủy mẫu',
-    'Đã hủy mẫu',
-    'Trả mẫu cho khách hàng',
-  ];
-
-  const locations = [
-    'Quầy tiếp nhận',
-    'Kho lạnh A1',
-    'Kho lạnh A2',
-    'Phòng thử nghiệm Hóa học',
-    'Phòng thử nghiệm Vi sinh',
-    'Kho lưu mẫu B1',
-    'Khu vực hủy mẫu',
-    'Quầy trả mẫu',
-  ];
-
-  const performers = [
-    'Nguyễn Văn A',
-    'Trần Thị B',
-    'Lê Văn C',
-    'Phạm Thị D',
-    'Hoàng Văn E',
-  ];
-
-  const statuses = [
-    SpecimenStatus.Received,
-    SpecimenStatus.Storage,
-    SpecimenStatus.Testing,
-    SpecimenStatus.Testing,
-    SpecimenStatus.Storage,
-    SpecimenStatus.Disposal,
-    SpecimenStatus.Destroyed,
-    SpecimenStatus.ReturnedToCustomer,
-  ];
-
-  return Array.from({ length: 50 }, (_, i) => {
-    const createdDate = dayjs().subtract(i * 4, 'hour');
-    const actionIndex = i % actions.length;
-
+  return mockSpecimenHistories.map(history => {
+    const specimen = mockSpecimens.find(s => s.id === history.specimenId);
+    const performer = mockUsers.find(u => u.id === history.performedById);
+    const location = mockStorageLocations.find(l => l.id === history.locationId);
     return {
-      id: `history-${String(i + 1).padStart(3, '0')}`,
-      specimenId: `spe-${String((i % 30) + 1).padStart(3, '0')}`,
-      specimenCode: `SPE-${dayjs().format('YYYYMMDD')}-${String((i % 30) + 1).padStart(4, '0')}`,
-      action: actions[actionIndex],
-      location: locations[actionIndex],
-      status: statuses[actionIndex],
-      performedBy: performers[i % performers.length],
-      performedAt: createdDate.toISOString(),
-      temperature: actionIndex <= 4 ? `${(2 + Math.random() * 4).toFixed(1)}°C` : undefined,
-      humidity: actionIndex <= 4 ? `${(50 + Math.random() * 20).toFixed(0)}%` : undefined,
-      notes: i % 4 === 0 ? `Ghi chú lịch sử ${i + 1}` : undefined,
-      creationTime: createdDate.toISOString(),
+      id: history.id,
+      specimenId: history.specimenId,
+      specimenCode: specimen?.code || 'N/A',
+      action: history.action,
+      location: location?.name || history.location || '-',
+      status: history.status,
+      performedBy: performer?.fullName || '-',
+      performedAt: history.performedAt,
+      temperature: history.temperature,
+      humidity: history.humidity,
+      notes: history.notes,
+      creationTime: history.createdAt,
     };
   });
 };
@@ -98,16 +58,7 @@ const SpecimenHistoryList: React.FC = () => {
     'Trả mẫu cho khách hàng',
   ];
 
-  const locationOptions = [
-    'Quầy tiếp nhận',
-    'Kho lạnh A1',
-    'Kho lạnh A2',
-    'Phòng thử nghiệm Hóa học',
-    'Phòng thử nghiệm Vi sinh',
-    'Kho lưu mẫu B1',
-    'Khu vực hủy mẫu',
-    'Quầy trả mẫu',
-  ];
+  const locationOptions = mockStorageLocations.map(l => l.name);
 
   const fetchData = async () => {
     setLoading(true);
@@ -301,14 +252,16 @@ const SpecimenHistoryList: React.FC = () => {
       width: 150,
       fixed: 'right' as const,
       render: (_: any, record: SpecimenHistoryDto) => (
-        <Space>
+        <Space size="small">
           <Button
             type="link"
+            size="small"
             icon={<EyeOutlined />}
             onClick={() => navigate(`/specimen-histories/${record.id}`)}
           />
           <Button
             type="link"
+            size="small"
             icon={<EditOutlined />}
             onClick={() => handleEdit(record)}
           />
@@ -318,7 +271,7 @@ const SpecimenHistoryList: React.FC = () => {
             okText="Có"
             cancelText="Không"
           >
-            <Button type="link" danger icon={<DeleteOutlined />} />
+            <Button type="link" size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
       ),
@@ -468,11 +421,9 @@ const SpecimenHistoryList: React.FC = () => {
             <Col span={12}>
               <Form.Item name="performedBy" label="Người thực hiện">
                 <Select allowClear>
-                  <Select.Option value="Nguyễn Văn A">Nguyễn Văn A</Select.Option>
-                  <Select.Option value="Trần Thị B">Trần Thị B</Select.Option>
-                  <Select.Option value="Lê Văn C">Lê Văn C</Select.Option>
-                  <Select.Option value="Phạm Thị D">Phạm Thị D</Select.Option>
-                  <Select.Option value="Hoàng Văn E">Hoàng Văn E</Select.Option>
+                  {mockUsers.map(u => (
+                    <Select.Option key={u.id} value={u.fullName}>{u.fullName}</Select.Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>
