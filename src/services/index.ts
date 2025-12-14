@@ -1,0 +1,81 @@
+// API Client
+export { api } from './api';
+export { default as apiClient } from './api';
+
+// Auth Service
+export { authService } from './authService';
+export { default as authServiceDefault } from './authService';
+
+// Test Request Service
+export { testRequestService } from './testRequestService';
+export { default as testRequestServiceDefault } from './testRequestService';
+
+// Specimen Service
+export { specimenService } from './specimenService';
+export { default as specimenServiceDefault } from './specimenService';
+
+// Specimen History Service
+export { specimenHistoryService } from './specimenHistoryService';
+export { default as specimenHistoryServiceDefault } from './specimenHistoryService';
+
+// Test Service
+export { testService } from './testService';
+export { default as testServiceDefault } from './testService';
+
+// Test Result Service
+export { testResultService } from './testResultService';
+export { default as testResultServiceDefault } from './testResultService';
+
+// NCR Service
+export { ncrService } from './ncrService';
+export type { NCRDto, CreateNCRDto, UpdateNCRDto, NCRType, NCRSeverity, NCRStatus } from './ncrService';
+
+// Task Assignment Service
+export { taskAssignmentService } from './taskAssignmentService';
+export type {
+  TaskAssignmentDto,
+  CreateTaskAssignmentDto,
+  UpdateTaskAssignmentDto,
+  TaskType,
+  TaskPriority,
+  TaskStatus
+} from './taskAssignmentService';
+
+// Master Data Services
+export {
+  departmentService,
+  specimenTypeService,
+  testMethodService,
+  storageLocationService,
+  customerService
+} from './masterDataService';
+export type {
+  DepartmentDto,
+  CreateUpdateDepartmentDto,
+  SpecimenTypeDto,
+  CreateUpdateSpecimenTypeDto,
+  TestMethodDto,
+  CreateUpdateTestMethodDto,
+  StorageLocationDto,
+  CreateUpdateStorageLocationDto,
+  CustomerDto,
+  CreateUpdateCustomerDto,
+} from './masterDataService';
+
+// Report Service
+export { reportService } from './reportService';
+export type { ReportDto, CreateReportDto, UpdateReportDto, ReportStatus } from './reportService';
+
+// Dashboard Service
+export { dashboardService } from './dashboardService';
+export type { DashboardSummaryDto, DashboardChartData, RecentActivityDto } from './dashboardService';
+
+// Subcontractor Service
+export { subcontractorService } from './subcontractorService';
+export type {
+  SubcontractorDto,
+  SubcontractorCertificationDto,
+  CreateSubcontractorDto,
+  UpdateSubcontractorDto,
+  CreateSubcontractorCertificationDto
+} from './subcontractorService';

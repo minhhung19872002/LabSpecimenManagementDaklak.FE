@@ -31,10 +31,10 @@ const getMockSpecimenHistory = (id: string): SpecimenHistoryDto => {
     action: actions[index],
     location: locations[index % locations.length],
     status: SpecimenStatus.Testing,
-    performedBy: 'ThS. Nguyễn Văn A',
-    performedAt: dayjs().subtract(2, 'hour').toISOString(),
-    temperature: '4.5°C',
-    humidity: '65%',
+    performedByName: 'ThS. Nguyễn Văn A',
+    timestamp: dayjs().subtract(2, 'hour').toISOString(),
+    temperature: 4.5,
+    humidity: 65,
     notes: 'Mẫu từ Bệnh viện Đa khoa tỉnh Đắk Lắk - Xét nghiệm COVID-19',
     creationTime: dayjs().subtract(2, 'hour').toISOString(),
   };
@@ -126,11 +126,11 @@ const SpecimenHistoryDetail: React.FC = () => {
             </Descriptions.Item>
 
             <Descriptions.Item label="Người thực hiện">
-              {data.performedBy || '-'}
+              {data.performedByName || '-'}
             </Descriptions.Item>
 
             <Descriptions.Item label="Thời gian thực hiện">
-              {data.performedAt ? dayjs(data.performedAt).format('DD/MM/YYYY HH:mm') : '-'}
+              {data.timestamp ? dayjs(data.timestamp).format('DD/MM/YYYY HH:mm') : '-'}
             </Descriptions.Item>
 
             <Descriptions.Item label={t('specimenHistory.detail.creationTime')}>
@@ -138,11 +138,11 @@ const SpecimenHistoryDetail: React.FC = () => {
             </Descriptions.Item>
 
             <Descriptions.Item label="Nhiệt độ">
-              {data.temperature || '-'}
+              {data.temperature != null ? `${data.temperature}°C` : '-'}
             </Descriptions.Item>
 
             <Descriptions.Item label="Độ ẩm">
-              {data.humidity || '-'}
+              {data.humidity != null ? `${data.humidity}%` : '-'}
             </Descriptions.Item>
 
             <Descriptions.Item label={t('specimenHistory.detail.notes')} span={2}>

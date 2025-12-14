@@ -1,120 +1,156 @@
 // @ts-nocheck
-import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Popconfirm, message, Tag, Card, Input, Row, Col, Select, Modal, Form, DatePicker } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, SearchOutlined, ReloadOutlined, HistoryOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import dayjs from 'dayjs';
-import { specimenHistoryService } from '../../services/specimenHistoryService';
-import { SpecimenHistoryDto, SpecimenStatus } from '../../types/specimenHistory';
-import { mockSpecimenHistories, mockSpecimens, mockUsers, mockStorageLocations } from '../../mocks/mockData';
-
-// Use centralized mock data
-const generateMockData = (): SpecimenHistoryDto[] => {
-  return mockSpecimenHistories.map(history => {
-    const specimen = mockSpecimens.find(s => s.id === history.specimenId);
-    const performer = mockUsers.find(u => u.id === history.performedById);
-    const location = mockStorageLocations.find(l => l.id === history.locationId);
-    return {
-      id: history.id,
-      specimenId: history.specimenId,
-      specimenCode: specimen?.code || 'N/A',
-      action: history.action,
-      location: location?.name || history.location || '-',
-      status: history.status,
-      performedBy: performer?.fullName || '-',
-      performedAt: history.performedAt,
-      temperature: history.temperature,
-      humidity: history.humidity,
-      notes: history.notes,
-      creationTime: history.createdAt,
-    };
-  });
-};
+import React, { useState, useEffect } from "react";
+import {
+  Table,
+  Button,
+  Space,
+  Popconfirm,
+  message,
+  Tag,
+  Card,
+  Input,
+  Row,
+  Col,
+  Select,
+  Modal,
+  Form,
+  DatePicker,
+  InputNumber,
+} from "antd";
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  EyeOutlined,
+  ReloadOutlined,
+  HistoryOutlined,
+} from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import dayjs from "dayjs";
+import { specimenHistoryService } from "../../services/specimenHistoryService";
+import { specimenService } from "../../services/specimenService";
+import { storageLocationService } from "../../services/masterDataService";
+import { userService, UserLookupDto } from "../../services/userService";
+import {
+  SpecimenHistoryDto,
+  SpecimenStatus,
+} from "../../types/specimenHistory";
 
 const SpecimenHistoryList: React.FC = () => {
   const [data, setData] = useState<SpecimenHistoryDto[]>([]);
-  const [filteredData, setFilteredData] = useState<SpecimenHistoryDto[]>([]);
   const [loading, setLoading] = useState(false);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [searchText, setSearchText] = useState('');
-  const [statusFilter, setStatusFilter] = useState<SpecimenStatus | 'all'>('all');
+  const [totalCount, setTotalCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [searchText, setSearchText] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [statusFilter, setStatusFilter] = useState<SpecimenStatus | "all">(
+    "all"
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<SpecimenHistoryDto | null>(null);
+  const [editingItem, setEditingItem] = useState<SpecimenHistoryDto | null>(
+    null
+  );
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const { t } = useTranslation();
 
+  // Master data from API
+  const [specimens, setSpecimens] = useState<any[]>([]);
+  const [storageLocations, setStorageLocations] = useState<any[]>([]);
+  const [users, setUsers] = useState<UserLookupDto[]>([]);
+
   const actionOptions = [
-    'Tiếp nhận mẫu',
-    'Chuyển vào kho lạnh',
-    'Lấy mẫu thử nghiệm',
-    'Hoàn tất thử nghiệm',
-    'Chuyển lưu kho',
-    'Chuẩn bị hủy mẫu',
-    'Đã hủy mẫu',
-    'Trả mẫu cho khách hàng',
+    "Tiếp nhận mẫu",
+    "Chuyển vào kho lạnh",
+    "Lấy mẫu thử nghiệm",
+    "Hoàn tất thử nghiệm",
+    "Chuyển lưu kho",
+    "Chuẩn bị hủy mẫu",
+    "Đã hủy mẫu",
+    "Trả mẫu cho khách hàng",
   ];
 
-  const locationOptions = mockStorageLocations.map(l => l.name);
+  const loadMasterData = async () => {
+    try {
+      const [specimensResult, locationsResult] = await Promise.all([
+        specimenService.getList({ maxResultCount: 1000 }),
+        storageLocationService.getActive(),
+      ]);
+      setSpecimens(specimensResult.items || []);
+      setStorageLocations(locationsResult.items || []);
+    } catch (error) {
+      console.error("Error loading specimens/locations:", error);
+    }
 
-  const fetchData = async () => {
+    // Load users separately to handle errors
+    try {
+      const usersResult = await userService.getLookup();
+      console.log("Users loaded:", usersResult);
+      setUsers(usersResult || []);
+    } catch (error) {
+      console.error("Error loading users:", error);
+      setUsers([]);
+    }
+  };
+
+  const loadData = async () => {
     setLoading(true);
     try {
       const result = await specimenHistoryService.getList({
-        skipCount: 0,
-        maxResultCount: 100,
-        sorting: 'creationTime desc',
+        skipCount: (currentPage - 1) * pageSize,
+        maxResultCount: pageSize,
+        sorting: "creationTime desc",
+        search: searchText || undefined,
+        status: statusFilter !== "all" ? statusFilter : undefined,
       });
-      setData(result.items);
-      setFilteredData(result.items);
-      setTotal(result.totalCount);
+      const items = result.items || [];
+      setData(items);
+      setTotalCount(result.totalCount || 0);
     } catch (error) {
-      console.log('API not available, using mock data');
-      const mockData = generateMockData();
-      setData(mockData);
-      setFilteredData(mockData);
-      setTotal(mockData.length);
+      console.error("Error loading specimen histories:", error);
+      message.error(
+        "Không thể tải lịch sử mẫu. Vui lòng kiểm tra kết nối server."
+      );
+      setData([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
   };
 
+  // Load master data once on mount
   useEffect(() => {
-    fetchData();
+    loadMasterData();
   }, []);
 
+  // Load data when filters change
   useEffect(() => {
-    let filtered = [...data];
+    loadData();
+  }, [currentPage, pageSize, searchText, statusFilter]);
 
-    if (searchText) {
-      const search = searchText.toLowerCase();
-      filtered = filtered.filter(item =>
-        item.specimenCode?.toLowerCase().includes(search) ||
-        item.action?.toLowerCase().includes(search) ||
-        item.location?.toLowerCase().includes(search) ||
-        item.performedBy?.toLowerCase().includes(search)
-      );
-    }
+  // Handle search
+  const handleSearch = () => {
+    setSearchText(searchInput);
+    setCurrentPage(1);
+  };
 
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(item => item.status === statusFilter);
-    }
-
-    setFilteredData(filtered);
-    setTotal(filtered.length);
-  }, [searchText, statusFilter, data]);
+  // Handle status filter change
+  const handleStatusChange = (value: SpecimenStatus | "all") => {
+    setStatusFilter(value);
+    setCurrentPage(1);
+  };
 
   const handleDelete = async (id: string) => {
     try {
       await specimenHistoryService.delete(id);
+      message.success("Xóa lịch sử thành công!");
+      loadData();
     } catch (error) {
-      console.log('Mock delete:', id);
+      console.error("Error deleting specimen history:", error);
+      message.error("Không thể xóa lịch sử. Vui lòng thử lại.");
     }
-    setData(prev => prev.filter(item => item.id !== id));
-    message.success('Xóa lịch sử thành công!');
   };
 
   const handleCreate = () => {
@@ -122,7 +158,7 @@ const SpecimenHistoryList: React.FC = () => {
     form.resetFields();
     form.setFieldsValue({
       status: SpecimenStatus.Received,
-      performedAt: dayjs(),
+      timestamp: dayjs(),
     });
     setIsModalOpen(true);
   };
@@ -131,7 +167,7 @@ const SpecimenHistoryList: React.FC = () => {
     setEditingItem(record);
     form.setFieldsValue({
       ...record,
-      performedAt: record.performedAt ? dayjs(record.performedAt) : dayjs(),
+      timestamp: record.timestamp ? dayjs(record.timestamp) : dayjs(),
     });
     setIsModalOpen(true);
   };
@@ -139,63 +175,73 @@ const SpecimenHistoryList: React.FC = () => {
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
-      const newItem: SpecimenHistoryDto = {
-        id: editingItem?.id || `history-${Date.now()}`,
+      console.log("Form values:", values);
+      const payload = {
         specimenId: values.specimenId,
-        specimenCode: values.specimenCode,
         action: values.action,
         location: values.location,
         status: values.status,
-        performedBy: values.performedBy,
-        performedAt: values.performedAt?.toISOString(),
-        temperature: values.temperature,
-        humidity: values.humidity,
-        notes: values.notes,
-        creationTime: editingItem?.creationTime || dayjs().toISOString(),
+        notes: values.notes || "",
+        performedById: values.performedById || undefined,
+        temperature: values.temperature || undefined,
+        humidity: values.humidity || undefined,
+        timestamp: values.timestamp
+          ? values.timestamp.toISOString()
+          : undefined,
       };
 
       if (editingItem) {
-        setData(prev => prev.map(item => item.id === editingItem.id ? newItem : item));
-        message.success('Cập nhật lịch sử thành công!');
+        await specimenHistoryService.update(editingItem.id, payload);
+        message.success("Cập nhật lịch sử thành công!");
       } else {
-        setData(prev => [newItem, ...prev]);
-        message.success('Thêm lịch sử mới thành công!');
+        await specimenHistoryService.create(payload);
+        message.success("Thêm lịch sử mới thành công!");
       }
       setIsModalOpen(false);
       form.resetFields();
-    } catch (error) {
-      console.error('Validation failed:', error);
+      loadData();
+    } catch (error: any) {
+      console.error("Error saving specimen history:", error);
+      message.error("Không thể lưu lịch sử. Vui lòng thử lại.");
     }
   };
 
   const getStatusTag = (status: SpecimenStatus) => {
     const statusConfig = {
-      [SpecimenStatus.Received]: { color: 'blue', label: 'Đã nhận' },
-      [SpecimenStatus.Testing]: { color: 'processing', label: 'Đang thử nghiệm' },
-      [SpecimenStatus.Storage]: { color: 'cyan', label: 'Lưu kho' },
-      [SpecimenStatus.Disposal]: { color: 'warning', label: 'Chờ hủy' },
-      [SpecimenStatus.Destroyed]: { color: 'error', label: 'Đã hủy' },
-      [SpecimenStatus.ReturnedToCustomer]: { color: 'success', label: 'Đã trả khách' },
+      [SpecimenStatus.Received]: { color: "blue", label: "Đã nhận" },
+      [SpecimenStatus.Testing]: {
+        color: "processing",
+        label: "Đang thử nghiệm",
+      },
+      [SpecimenStatus.Storage]: { color: "cyan", label: "Lưu kho" },
+      [SpecimenStatus.Disposal]: { color: "warning", label: "Chờ hủy" },
+      [SpecimenStatus.Destroyed]: { color: "error", label: "Đã hủy" },
+      [SpecimenStatus.ReturnedToCustomer]: {
+        color: "success",
+        label: "Đã trả khách",
+      },
     };
 
     const config = statusConfig[status];
-    return <Tag color={config.color}>{config.label}</Tag>;
+    return (
+      <Tag color={config?.color || "default"}>{config?.label || status}</Tag>
+    );
   };
 
   const columns = [
     {
-      title: 'Mã mẫu',
-      dataIndex: 'specimenCode',
-      key: 'specimenCode',
+      title: "Mã mẫu",
+      dataIndex: "specimenCode",
+      key: "specimenCode",
       width: 180,
-      fixed: 'left' as const,
+      fixed: "left" as const,
       sorter: (a: SpecimenHistoryDto, b: SpecimenHistoryDto) =>
-        (a.specimenCode || '').localeCompare(b.specimenCode || ''),
+        (a.specimenCode || "").localeCompare(b.specimenCode || ""),
     },
     {
-      title: 'Hành động',
-      dataIndex: 'action',
-      key: 'action',
+      title: "Hành động",
+      dataIndex: "action",
+      key: "action",
       width: 180,
       render: (action: string) => (
         <Space>
@@ -205,52 +251,54 @@ const SpecimenHistoryList: React.FC = () => {
       ),
     },
     {
-      title: 'Vị trí',
-      dataIndex: 'location',
-      key: 'location',
+      title: "Vị trí",
+      dataIndex: "location",
+      key: "location",
       width: 180,
     },
     {
-      title: 'Trạng thái',
-      dataIndex: 'status',
-      key: 'status',
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
       width: 140,
       render: (status: SpecimenStatus) => getStatusTag(status),
     },
     {
-      title: 'Người thực hiện',
-      dataIndex: 'performedBy',
-      key: 'performedBy',
+      title: "Người thực hiện",
+      dataIndex: "performedByName",
+      key: "performedByName",
       width: 140,
+      render: (name: string) => name || "-",
     },
     {
-      title: 'Thời gian',
-      dataIndex: 'performedAt',
-      key: 'performedAt',
+      title: "Thời gian",
+      dataIndex: "timestamp",
+      key: "timestamp",
       width: 160,
-      render: (date: string) => date ? dayjs(date).format('DD/MM/YYYY HH:mm') : '-',
+      render: (date: string) =>
+        date ? dayjs(date).format("DD/MM/YYYY HH:mm") : "-",
       sorter: (a: SpecimenHistoryDto, b: SpecimenHistoryDto) =>
-        dayjs(a.performedAt).unix() - dayjs(b.performedAt).unix(),
+        dayjs(a.timestamp).unix() - dayjs(b.timestamp).unix(),
     },
     {
-      title: 'Nhiệt độ',
-      dataIndex: 'temperature',
-      key: 'temperature',
+      title: "Nhiệt độ",
+      dataIndex: "temperature",
+      key: "temperature",
       width: 100,
-      render: (val: string) => val || '-',
+      render: (val: string) => val || "-",
     },
     {
-      title: 'Độ ẩm',
-      dataIndex: 'humidity',
-      key: 'humidity',
+      title: "Độ ẩm",
+      dataIndex: "humidity",
+      key: "humidity",
       width: 100,
-      render: (val: string) => val || '-',
+      render: (val: string) => val || "-",
     },
     {
-      title: 'Thao tác',
-      key: 'actions',
+      title: "Thao tác",
+      key: "actions",
       width: 150,
-      fixed: 'right' as const,
+      fixed: "right" as const,
       render: (_: any, record: SpecimenHistoryDto) => (
         <Space size="small">
           <Button
@@ -283,12 +331,10 @@ const SpecimenHistoryList: React.FC = () => {
       title="Lịch sử mẫu thử nghiệm"
       extra={
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={fetchData}>Làm mới</Button>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleCreate}
-          >
+          <Button icon={<ReloadOutlined />} onClick={loadData}>
+            Làm mới
+          </Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
             Thêm lịch sử
           </Button>
         </Space>
@@ -297,46 +343,66 @@ const SpecimenHistoryList: React.FC = () => {
       {/* Search & Filter */}
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} sm={12} md={8}>
-          <Input
+          <Input.Search
             placeholder="Tìm kiếm theo mã mẫu, hành động, vị trí..."
-            prefix={<SearchOutlined />}
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onSearch={handleSearch}
+            onPressEnter={handleSearch}
             allowClear
+            onClear={() => {
+              setSearchInput("");
+              setSearchText("");
+              setCurrentPage(1);
+            }}
+            enterButton
           />
         </Col>
         <Col xs={24} sm={6} md={4}>
           <Select
-            style={{ width: '100%' }}
+            style={{ width: "100%" }}
             placeholder="Trạng thái"
             value={statusFilter}
-            onChange={setStatusFilter}
+            onChange={handleStatusChange}
           >
             <Select.Option value="all">Tất cả trạng thái</Select.Option>
-            <Select.Option value={SpecimenStatus.Received}>Đã nhận</Select.Option>
-            <Select.Option value={SpecimenStatus.Testing}>Đang thử nghiệm</Select.Option>
-            <Select.Option value={SpecimenStatus.Storage}>Lưu kho</Select.Option>
-            <Select.Option value={SpecimenStatus.Disposal}>Chờ hủy</Select.Option>
-            <Select.Option value={SpecimenStatus.Destroyed}>Đã hủy</Select.Option>
-            <Select.Option value={SpecimenStatus.ReturnedToCustomer}>Đã trả khách</Select.Option>
+            <Select.Option value={SpecimenStatus.Received}>
+              Đã nhận
+            </Select.Option>
+            <Select.Option value={SpecimenStatus.Testing}>
+              Đang thử nghiệm
+            </Select.Option>
+            <Select.Option value={SpecimenStatus.Storage}>
+              Lưu kho
+            </Select.Option>
+            <Select.Option value={SpecimenStatus.Disposal}>
+              Chờ hủy
+            </Select.Option>
+            <Select.Option value={SpecimenStatus.Destroyed}>
+              Đã hủy
+            </Select.Option>
+            <Select.Option value={SpecimenStatus.ReturnedToCustomer}>
+              Đã trả khách
+            </Select.Option>
           </Select>
         </Col>
       </Row>
 
       <Table
         columns={columns}
-        dataSource={filteredData}
+        dataSource={data}
         rowKey="id"
         loading={loading}
         pagination={{
-          current: page,
+          current: currentPage,
           pageSize: pageSize,
-          total: total,
+          total: totalCount,
+          pageSizeOptions: [50, 100, 150],
           showSizeChanger: true,
           showTotal: (total) => `Tổng ${total} bản ghi`,
-          onChange: (newPage, newPageSize) => {
-            setPage(newPage);
-            setPageSize(newPageSize || 10);
+          onChange: (page, size) => {
+            setCurrentPage(page);
+            setPageSize(size);
           },
         }}
         scroll={{ x: 1500 }}
@@ -344,12 +410,12 @@ const SpecimenHistoryList: React.FC = () => {
 
       {/* Create/Edit Modal */}
       <Modal
-        title={editingItem ? 'Chỉnh sửa lịch sử' : 'Thêm lịch sử mẫu'}
+        title={editingItem ? "Chỉnh sửa lịch sử" : "Thêm lịch sử mẫu"}
         open={isModalOpen}
         onOk={handleModalOk}
         onCancel={() => setIsModalOpen(false)}
         width={700}
-        okText={editingItem ? 'Cập nhật' : 'Thêm mới'}
+        okText={editingItem ? "Cập nhật" : "Thêm mới"}
         cancelText="Hủy"
         centered
       >
@@ -357,22 +423,31 @@ const SpecimenHistoryList: React.FC = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                name="specimenCode"
-                label="Mã mẫu"
-                rules={[{ required: true, message: 'Vui lòng nhập mã mẫu' }]}
+                name="specimenId"
+                label="Mẫu thử"
+                rules={[{ required: true, message: "Vui lòng chọn mẫu" }]}
               >
-                <Input placeholder="SPE-YYYYMMDD-XXXX" />
+                <Select
+                  placeholder="Chọn mẫu"
+                  showSearch
+                  optionFilterProp="children"
+                >
+                  {specimens.map((s) => (
+                    <Select.Option key={s.id} value={s.id}>
+                      {s.code} - {s.name}
+                    </Select.Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
-                name="performedAt"
+                name="timestamp"
                 label="Thời gian thực hiện"
-                rules={[{ required: true, message: 'Vui lòng chọn thời gian' }]}
               >
                 <DatePicker
                   showTime
-                  style={{ width: '100%' }}
+                  style={{ width: "100%" }}
                   format="DD/MM/YYYY HH:mm"
                 />
               </Form.Item>
@@ -383,11 +458,13 @@ const SpecimenHistoryList: React.FC = () => {
               <Form.Item
                 name="action"
                 label="Hành động"
-                rules={[{ required: true, message: 'Vui lòng chọn hành động' }]}
+                rules={[{ required: true, message: "Vui lòng chọn hành động" }]}
               >
                 <Select>
-                  {actionOptions.map(a => (
-                    <Select.Option key={a} value={a}>{a}</Select.Option>
+                  {actionOptions.map((a) => (
+                    <Select.Option key={a} value={a}>
+                      {a}
+                    </Select.Option>
                   ))}
                 </Select>
               </Form.Item>
@@ -396,11 +473,16 @@ const SpecimenHistoryList: React.FC = () => {
               <Form.Item
                 name="location"
                 label="Vị trí"
-                rules={[{ required: true, message: 'Vui lòng chọn vị trí' }]}
+                rules={[{ required: true, message: "Vui lòng chọn vị trí" }]}
               >
-                <Select>
-                  {locationOptions.map(l => (
-                    <Select.Option key={l} value={l}>{l}</Select.Option>
+                <Select showSearch optionFilterProp="children">
+                  <Select.Option value="Quầy tiếp nhận">
+                    Quầy tiếp nhận
+                  </Select.Option>
+                  {storageLocations.map((l) => (
+                    <Select.Option key={l.id} value={l.name}>
+                      {l.code} - {l.name}
+                    </Select.Option>
                   ))}
                 </Select>
               </Form.Item>
@@ -410,20 +492,42 @@ const SpecimenHistoryList: React.FC = () => {
             <Col span={12}>
               <Form.Item name="status" label="Trạng thái mẫu">
                 <Select>
-                  <Select.Option value={SpecimenStatus.Received}>Đã nhận</Select.Option>
-                  <Select.Option value={SpecimenStatus.Testing}>Đang thử nghiệm</Select.Option>
-                  <Select.Option value={SpecimenStatus.Storage}>Lưu kho</Select.Option>
-                  <Select.Option value={SpecimenStatus.Disposal}>Chờ hủy</Select.Option>
-                  <Select.Option value={SpecimenStatus.Destroyed}>Đã hủy</Select.Option>
-                  <Select.Option value={SpecimenStatus.ReturnedToCustomer}>Đã trả khách</Select.Option>
+                  <Select.Option value={SpecimenStatus.Received}>
+                    Đã nhận
+                  </Select.Option>
+                  <Select.Option value={SpecimenStatus.Testing}>
+                    Đang thử nghiệm
+                  </Select.Option>
+                  <Select.Option value={SpecimenStatus.Storage}>
+                    Lưu kho
+                  </Select.Option>
+                  <Select.Option value={SpecimenStatus.Disposal}>
+                    Chờ hủy
+                  </Select.Option>
+                  <Select.Option value={SpecimenStatus.Destroyed}>
+                    Đã hủy
+                  </Select.Option>
+                  <Select.Option value={SpecimenStatus.ReturnedToCustomer}>
+                    Đã trả khách
+                  </Select.Option>
                 </Select>
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="performedBy" label="Người thực hiện">
-                <Select allowClear>
-                  {mockUsers.map(u => (
-                    <Select.Option key={u.id} value={u.fullName}>{u.fullName}</Select.Option>
+              <Form.Item name="performedById" label="Người thực hiện">
+                <Select
+                  placeholder="Chọn người thực hiện"
+                  showSearch
+                  allowClear
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
+                  }
+                >
+                  {users.map((user) => (
+                    <Select.Option key={user.id} value={user.id}>
+                      {user.displayName}
+                    </Select.Option>
                   ))}
                 </Select>
               </Form.Item>
@@ -431,13 +535,25 @@ const SpecimenHistoryList: React.FC = () => {
           </Row>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="temperature" label="Nhiệt độ">
-                <Input placeholder="VD: 4.5°C" />
+              <Form.Item name="temperature" label="Nhiệt độ (°C)">
+                <InputNumber
+                  style={{ width: "100%" }}
+                  placeholder="VD: 25.5"
+                  step={0.1}
+                  precision={1}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="humidity" label="Độ ẩm">
-                <Input placeholder="VD: 65%" />
+              <Form.Item name="humidity" label="Độ ẩm (%)">
+                <InputNumber
+                  style={{ width: "100%" }}
+                  placeholder="VD: 65"
+                  min={0}
+                  max={100}
+                  step={1}
+                  precision={1}
+                />
               </Form.Item>
             </Col>
           </Row>

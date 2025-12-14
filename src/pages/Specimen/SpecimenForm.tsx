@@ -4,10 +4,11 @@ import { Form, Input, DatePicker, Button, Card, message, Select, Row, Col, Input
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { specimenService } from '../../services/specimenService';
+import { testRequestService } from '../../services/testRequestService';
+import { specimenTypeService, storageLocationService } from '../../services/masterDataService';
 import { SpecimenStatus } from '../../types/specimen';
 import dayjs from 'dayjs';
 import FileUpload from '../../components/common/FileUpload';
-import { mockTestRequests, mockSpecimenTypes, mockStorageLocations } from '../../mocks/mockData';
 
 const { TextArea } = Input;
 const { Title } = Typography;
@@ -22,14 +23,34 @@ const SpecimenForm: React.FC = () => {
   const [specimenImages, setSpecimenImages] = useState<any[]>([]);
   const isEditMode = !!id;
 
-  // Use centralized mock data for test requests
-  const testRequests = mockTestRequests.map(tr => ({
-    id: tr.id,
-    requestNumber: tr.requestNumber,
-    customerName: tr.customerName,
-  }));
+  // Data from API
+  const [testRequests, setTestRequests] = useState<any[]>([]);
+  const [specimenTypes, setSpecimenTypes] = useState<any[]>([]);
+  const [storageLocations, setStorageLocations] = useState<any[]>([]);
+
+  // Load master data
+  const loadMasterData = async () => {
+    try {
+      const [requestsResult, typesResult, locationsResult] = await Promise.all([
+        testRequestService.getList({ maxResultCount: 1000 }),
+        specimenTypeService.getActive(),
+        storageLocationService.getActive(),
+      ]);
+      setTestRequests(requestsResult.items.map((tr: any) => ({
+        id: tr.id,
+        requestNumber: tr.requestNumber,
+        customerName: tr.customerName,
+      })));
+      setSpecimenTypes(typesResult.items);
+      setStorageLocations(locationsResult.items);
+    } catch (error) {
+      console.error('Error loading master data:', error);
+      message.error('Không thể tải dữ liệu danh mục');
+    }
+  };
 
   useEffect(() => {
+    loadMasterData();
     if (isEditMode) {
       loadData();
     }
@@ -48,7 +69,7 @@ const SpecimenForm: React.FC = () => {
       if (data.specimenImages) {
         setSpecimenImages(data.specimenImages);
       }
-    } catch (error) {
+    } catch (error: any) {
       message.error(t('messages.loadFailed'));
       console.error('Failed to load specimen:', error);
     } finally {
@@ -77,7 +98,7 @@ const SpecimenForm: React.FC = () => {
         message.success(t('messages.createSuccess'));
       }
       navigate('/specimens');
-    } catch (error) {
+    } catch (error: any) {
       message.error(isEditMode ? t('messages.updateFailed') : t('messages.createFailed'));
       console.error('Failed to save specimen:', error);
     } finally {
@@ -160,7 +181,7 @@ const SpecimenForm: React.FC = () => {
               ]}
             >
               <Select placeholder="Chọn loại mẫu" showSearch optionFilterProp="children">
-                {mockSpecimenTypes.map(type => (
+                {specimenTypes.map(type => (
                   <Select.Option key={type.id} value={type.name}>
                     {type.code} - {type.name}
                   </Select.Option>
@@ -209,9 +230,9 @@ const SpecimenForm: React.FC = () => {
               ]}
             >
               <Select placeholder="Vị trí lưu mẫu" allowClear showSearch optionFilterProp="children">
-                {mockStorageLocations.map(loc => (
+                {storageLocations.map(loc => (
                   <Select.Option key={loc.id} value={loc.name}>
-                    {loc.code} - {loc.name} ({loc.temperature})
+                    {loc.code} - {loc.name} ({loc.temperature || 'N/A'})
                   </Select.Option>
                 ))}
               </Select>

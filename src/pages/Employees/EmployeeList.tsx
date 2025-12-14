@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Card,
   Table,
@@ -31,26 +31,17 @@ import {
   ReloadOutlined,
   TeamOutlined,
   KeyOutlined,
-  CopyOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
-import { mockUsers, mockDepartments } from "../../mocks/mockData";
+import { employeeService, EmployeeDto } from "../../services/employeeService";
+import { departmentService } from "../../services/masterDataService";
 
 const { Text } = Typography;
 
-interface Employee {
+interface Department {
   id: string;
-  username: string;
-  fullName: string;
-  email: string;
-  phone: string;
-  role: string;
-  department: string;
-  departmentId: string;
-  position: string;
-  isActive: boolean;
-  createdAt: string;
-  lastLogin: string | null;
+  name: string;
+  code: string;
 }
 
 const roles = [
@@ -72,110 +63,114 @@ const positions = [
   "Nhân viên",
 ];
 
-// Generate initial mock employees from centralized data
-const generateInitialEmployees = (): Employee[] => {
-  return mockUsers.map((user, index) => ({
-    id: user.id,
-    username: user.username,
-    fullName: user.fullName,
-    email: user.email,
-    phone: user.phone,
-    role: user.role,
-    department: user.department,
-    departmentId:
-      mockDepartments.find((d) => d.name === user.department)?.id || "dept-001",
-    position:
-      index === 0 ? "Giám đốc" : index === 1 ? "Trưởng phòng" : "Kỹ thuật viên",
-    isActive: user.isActive,
-    createdAt: user.createdAt,
-    lastLogin: user.lastLogin,
-  }));
-};
-
-// Generate random password (simulating backend behavior)
-const generateRandomPassword = (length: number = 12): string => {
-  const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  const lowercase = "abcdefghijklmnopqrstuvwxyz";
-  const numbers = "0123456789";
-  const special = "!@#$%^&*";
-  const allChars = uppercase + lowercase + numbers + special;
-
-  let password = "";
-  // Ensure at least one of each type
-  password += uppercase[Math.floor(Math.random() * uppercase.length)];
-  password += lowercase[Math.floor(Math.random() * lowercase.length)];
-  password += numbers[Math.floor(Math.random() * numbers.length)];
-  password += special[Math.floor(Math.random() * special.length)];
-
-  // Fill remaining characters
-  for (let i = password.length; i < length; i++) {
-    password += allChars[Math.floor(Math.random() * allChars.length)];
-  }
-
-  // Shuffle the password
-  return password
-    .split("")
-    .sort(() => Math.random() - 0.5)
-    .join("");
-};
-
 const EmployeeList: React.FC = () => {
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [filteredData, setFilteredData] = useState<Employee[]>([]);
+  const [employees, setEmployees] = useState<EmployeeDto[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
+  const [debouncedSearchText, setDebouncedSearchText] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<Employee | null>(null);
-  const [generatedPassword, setGeneratedPassword] = useState<string>("");
+  const [editingItem, setEditingItem] = useState<EmployeeDto | null>(null);
   const [newEmployeeInfo, setNewEmployeeInfo] = useState<{
-    username: string;
     email: string;
   } | null>(null);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [resetPasswordLoadingId, setResetPasswordLoadingId] = useState<string | null>(null);
   const [form] = Form.useForm();
 
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 50,
+    total: 0,
+  });
+
+  // Statistics state (load once without filters)
+  const [stats, setStats] = useState({
+    total: 0,
+    active: 0,
+    inactive: 0,
+  });
+
   useEffect(() => {
-    loadData();
+    loadDepartments();
+    loadStatistics();
   }, []);
 
+  // Debounce search text
   useEffect(() => {
-    let filtered = [...employees];
+    const timer = setTimeout(() => {
+      setDebouncedSearchText(searchText);
+      setPagination(prev => ({ ...prev, current: 1 }));
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchText]);
 
-    if (searchText) {
-      const search = searchText.toLowerCase();
-      filtered = filtered.filter(
-        (item) =>
-          item.fullName.toLowerCase().includes(search) ||
-          item.username.toLowerCase().includes(search) ||
-          item.email.toLowerCase().includes(search) ||
-          item.phone.includes(search)
-      );
+  // Load data when filters or pagination changes
+  useEffect(() => {
+    loadData();
+  }, [debouncedSearchText, departmentFilter, roleFilter, pagination.current, pagination.pageSize]);
+
+  const loadDepartments = async () => {
+    try {
+      const result = await departmentService.getList({ maxResultCount: 100 });
+      setDepartments(result.items || []);
+    } catch (error) {
+      console.error('Error loading departments:', error);
     }
+  };
 
-    if (departmentFilter !== "all") {
-      filtered = filtered.filter(
-        (item) => item.department === departmentFilter
-      );
+  const loadStatistics = async () => {
+    try {
+      // Load all employees once for statistics
+      const result = await employeeService.getList({ maxResultCount: 1000 });
+      const items = result.items || [];
+      setStats({
+        total: items.length,
+        active: items.filter((e) => e.isActive).length,
+        inactive: items.filter((e) => !e.isActive).length,
+      });
+    } catch (error) {
+      console.error('Error loading statistics:', error);
     }
+  };
 
-    if (roleFilter !== "all") {
-      filtered = filtered.filter((item) => item.role === roleFilter);
-    }
-
-    setFilteredData(filtered);
-  }, [searchText, departmentFilter, roleFilter, employees]);
-
-  const loadData = () => {
+  const loadData = async () => {
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      const data = generateInitialEmployees();
-      setEmployees(data);
-      setFilteredData(data);
+    try {
+      const params: any = {
+        skipCount: (pagination.current - 1) * pagination.pageSize,
+        maxResultCount: pagination.pageSize,
+        sorting: 'CreationTime DESC',
+      };
+
+      // Apply filters
+      if (debouncedSearchText) {
+        params.filter = debouncedSearchText;
+      }
+      if (departmentFilter !== 'all') {
+        const dept = departments.find(d => d.name === departmentFilter);
+        if (dept) {
+          params.departmentId = dept.id;
+        }
+      }
+      if (roleFilter !== 'all') {
+        params.role = roleFilter;
+      }
+
+      const result = await employeeService.getList(params);
+      setEmployees(result.items || []);
+      setPagination(prev => ({ ...prev, total: result.totalCount }));
+    } catch (error) {
+      console.error('Error loading employees:', error);
+      message.error('Không thể tải danh sách nhân viên. Vui lòng kiểm tra kết nối server.');
+      setEmployees([]);
+    } finally {
       setLoading(false);
-    }, 300);
+    }
   };
 
   const handleCreate = () => {
@@ -187,7 +182,7 @@ const EmployeeList: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleEdit = (record: Employee) => {
+  const handleEdit = (record: EmployeeDto) => {
     setEditingItem(record);
     form.setFieldsValue({
       ...record,
@@ -195,92 +190,96 @@ const EmployeeList: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    setEmployees((prev) => prev.filter((item) => item.id !== id));
-    message.success("Đã xóa nhân viên");
+  const handleDelete = async (id: string) => {
+    try {
+      await employeeService.delete(id);
+      message.success("Đã xóa nhân viên");
+      loadData();
+      loadStatistics();
+    } catch (error) {
+      console.error('Error deleting employee:', error);
+      message.error('Không thể xóa nhân viên. Vui lòng thử lại.');
+    }
   };
 
-  const handleToggleActive = (id: string, checked: boolean) => {
-    setEmployees((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, isActive: checked } : item
-      )
-    );
-    message.success(
-      checked ? "Đã kích hoạt tài khoản" : "Đã vô hiệu hóa tài khoản"
-    );
+  const handleToggleActive = async (id: string, checked: boolean) => {
+    try {
+      await employeeService.toggleActive(id, checked);
+      setEmployees((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, isActive: checked } : item
+        )
+      );
+      // Update statistics
+      setStats((prev) => ({
+        ...prev,
+        active: prev.active + (checked ? 1 : -1),
+        inactive: prev.inactive + (checked ? -1 : 1),
+      }));
+      message.success(
+        checked ? "Đã kích hoạt tài khoản" : "Đã vô hiệu hóa tài khoản"
+      );
+    } catch (error) {
+      console.error('Error toggling employee status:', error);
+      message.error('Không thể thay đổi trạng thái. Vui lòng thử lại.');
+    }
   };
 
-  const handleResetPassword = (record: Employee) => {
-    // Simulate backend generating a new password
-    const newPassword = generateRandomPassword();
-    setGeneratedPassword(newPassword);
-    setNewEmployeeInfo({ username: record.username, email: record.email });
-    setIsPasswordModalOpen(true);
-    message.success(`Đã đặt lại mật khẩu cho ${record.fullName}`);
-  };
-
-  const handleCopyPassword = () => {
-    navigator.clipboard.writeText(generatedPassword);
-    message.success("Đã sao chép mật khẩu");
+  const handleResetPassword = async (record: EmployeeDto) => {
+    setResetPasswordLoadingId(record.id);
+    try {
+      await employeeService.resetPassword(record.id);
+      setNewEmployeeInfo({ email: record.email });
+      setIsPasswordModalOpen(true);
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      message.error('Không thể đặt lại mật khẩu. Vui lòng thử lại.');
+    } finally {
+      setResetPasswordLoadingId(null);
+    }
   };
 
   const handleModalOk = async () => {
+    setModalLoading(true);
     try {
       const values = await form.validateFields();
-      const selectedDept = mockDepartments.find(
+      const selectedDept = departments.find(
         (d) => d.id === values.departmentId
       );
 
+      const payload = {
+        username: values.username,
+        fullName: values.fullName,
+        email: values.email,
+        phone: values.phone || "",
+        role: values.role,
+        departmentId: values.departmentId,
+        position: values.position || "",
+        isActive: values.isActive ?? true,
+      };
+
       if (editingItem) {
-        // Update existing employee
-        const updatedEmployee: Employee = {
-          ...editingItem,
-          ...values,
-          department: selectedDept?.name || editingItem.department,
-        };
-        setEmployees((prev) =>
-          prev.map((item) =>
-            item.id === editingItem.id ? updatedEmployee : item
-          )
-        );
+        await employeeService.update(editingItem.id, payload);
         message.success("Đã cập nhật thông tin nhân viên");
         setIsModalOpen(false);
+        loadData();
       } else {
-        // Create new employee
-        // Simulate backend generating password
-        const newPassword = generateRandomPassword();
-        const newEmployee: Employee = {
-          id: `user-${Date.now()}`,
-          username: values.username,
-          fullName: values.fullName,
-          email: values.email,
-          phone: values.phone || "",
-          role: values.role,
-          department: selectedDept?.name || "",
-          departmentId: values.departmentId,
-          position: values.position || "",
-          isActive: values.isActive ?? true,
-          createdAt: new Date().toISOString(),
-          lastLogin: null,
-        };
-
-        setEmployees((prev) => [newEmployee, ...prev]);
+        await employeeService.create(payload);
         setIsModalOpen(false);
+        loadData();
+        loadStatistics();
 
-        // Show password modal
-        setGeneratedPassword(newPassword);
-        setNewEmployeeInfo({
-          username: newEmployee.username,
-          email: newEmployee.email,
-        });
+        // Show notification that password was sent via email
+        setNewEmployeeInfo({ email: values.email });
         setIsPasswordModalOpen(true);
-        message.success("Đã tạo nhân viên mới");
       }
 
       form.resetFields();
-    } catch (error) {
-      console.error("Validation failed:", error);
+    } catch (error: any) {
+      console.error("Error saving employee:", error);
+      message.error('Không thể lưu thông tin nhân viên. Vui lòng thử lại.');
+    } finally {
+      setModalLoading(false);
     }
   };
 
@@ -293,18 +292,37 @@ const EmployeeList: React.FC = () => {
     );
   };
 
-  // Statistics
-  const stats = {
-    total: employees.length,
-    active: employees.filter((e) => e.isActive).length,
-    inactive: employees.filter((e) => !e.isActive).length,
-    byDepartment: mockDepartments.map((d) => ({
-      name: d.name,
-      count: employees.filter((e) => e.department === d.name).length,
-    })),
+  // Handle table pagination change
+  const handleTableChange = (paginationConfig: any) => {
+    setPagination(prev => ({
+      ...prev,
+      current: paginationConfig.current,
+      pageSize: paginationConfig.pageSize,
+    }));
   };
 
-  const columns: ColumnsType<Employee> = [
+  // Handle filter changes - reset to page 1
+  const handleDepartmentFilterChange = (value: string) => {
+    setDepartmentFilter(value);
+    setPagination(prev => ({ ...prev, current: 1 }));
+  };
+
+  const handleRoleFilterChange = (value: string) => {
+    setRoleFilter(value);
+    setPagination(prev => ({ ...prev, current: 1 }));
+  };
+
+  // Handle refresh
+  const handleRefresh = () => {
+    setSearchText('');
+    setDebouncedSearchText('');
+    setDepartmentFilter('all');
+    setRoleFilter('all');
+    setPagination(prev => ({ ...prev, current: 1 }));
+    loadStatistics();
+  };
+
+  const columns: ColumnsType<EmployeeDto> = [
     {
       title: "Nhân viên",
       key: "employee",
@@ -402,6 +420,7 @@ const EmployeeList: React.FC = () => {
               type="link"
               size="small"
               icon={<KeyOutlined />}
+              loading={resetPasswordLoadingId === record.id}
               onClick={() => handleResetPassword(record)}
             />
           </Tooltip>
@@ -468,7 +487,7 @@ const EmployeeList: React.FC = () => {
         }
         extra={
           <Space>
-            <Button icon={<ReloadOutlined />} onClick={loadData}>
+            <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
               Làm mới
             </Button>
             <Button
@@ -497,10 +516,10 @@ const EmployeeList: React.FC = () => {
               style={{ width: "100%" }}
               placeholder="Phòng ban"
               value={departmentFilter}
-              onChange={setDepartmentFilter}
+              onChange={handleDepartmentFilterChange}
             >
               <Select.Option value="all">Tất cả phòng ban</Select.Option>
-              {mockDepartments.map((d) => (
+              {departments.map((d) => (
                 <Select.Option key={d.id} value={d.name}>
                   {d.name}
                 </Select.Option>
@@ -512,7 +531,7 @@ const EmployeeList: React.FC = () => {
               style={{ width: "100%" }}
               placeholder="Vai trò"
               value={roleFilter}
-              onChange={setRoleFilter}
+              onChange={handleRoleFilterChange}
             >
               <Select.Option value="all">Tất cả vai trò</Select.Option>
               {roles.map((r) => (
@@ -526,13 +545,18 @@ const EmployeeList: React.FC = () => {
 
         <Table
           columns={columns}
-          dataSource={filteredData}
+          dataSource={employees}
           rowKey="id"
           loading={loading}
           pagination={{
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total: pagination.total,
+            pageSizeOptions: [20, 50, 100],
             showSizeChanger: true,
-            showTotal: (total) => `Tổng ${total} nhân viên`,
+            showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} nhân viên`,
           }}
+          onChange={handleTableChange}
           scroll={{ x: 1400 }}
         />
       </Card>
@@ -547,6 +571,7 @@ const EmployeeList: React.FC = () => {
         onCancel={() => setIsModalOpen(false)}
         okText={editingItem ? "Cập nhật" : "Tạo nhân viên"}
         cancelText="Hủy"
+        confirmLoading={modalLoading}
         centered
         width={700}
       >
@@ -614,7 +639,7 @@ const EmployeeList: React.FC = () => {
                 rules={[{ required: true, message: "Vui lòng chọn phòng ban" }]}
               >
                 <Select placeholder="Chọn phòng ban">
-                  {mockDepartments.map((d) => (
+                  {departments.map((d) => (
                     <Select.Option key={d.id} value={d.id}>
                       {d.name}
                     </Select.Option>
@@ -684,25 +709,18 @@ const EmployeeList: React.FC = () => {
         </Form>
       </Modal>
 
-      {/* Password Display Modal */}
+      {/* Password Sent Notification Modal */}
       <Modal
         title={
           <Space>
-            <KeyOutlined style={{ color: "#52c41a" }} />
-            Thông tin đăng nhập
+            <MailOutlined style={{ color: "#52c41a" }} />
+            Thông báo
           </Space>
         }
         open={isPasswordModalOpen}
         onCancel={() => setIsPasswordModalOpen(false)}
         centered
         footer={[
-          <Button
-            key="copy"
-            icon={<CopyOutlined />}
-            onClick={handleCopyPassword}
-          >
-            Sao chép mật khẩu
-          </Button>,
           <Button
             key="close"
             type="primary"
@@ -711,50 +729,29 @@ const EmployeeList: React.FC = () => {
             Đóng
           </Button>,
         ]}
-        width={500}
+        width={450}
       >
-        <div style={{ padding: "16px 0" }}>
-          <div style={{ marginBottom: 16 }}>
-            <Text type="secondary">Username:</Text>
-            <div style={{ fontSize: 16, fontWeight: 500 }}>
-              {newEmployeeInfo?.username}
-            </div>
-          </div>
-          <div style={{ marginBottom: 16 }}>
-            <Text type="secondary">Email:</Text>
-            <div style={{ fontSize: 16 }}>{newEmployeeInfo?.email}</div>
-          </div>
-          <div style={{ marginBottom: 16 }}>
-            <Text type="secondary">Mật khẩu được tạo tự động:</Text>
-            <div
-              style={{
-                background: "#f5f5f5",
-                padding: "12px 16px",
-                borderRadius: 6,
-                fontFamily: "monospace",
-                fontSize: 18,
-                fontWeight: 600,
-                letterSpacing: 1,
-                marginTop: 8,
-              }}
-            >
-              {generatedPassword}
-            </div>
-          </div>
+        <div style={{ padding: "16px 0", textAlign: "center" }}>
           <div
             style={{
-              background: "#fff7e6",
-              border: "1px solid #ffd591",
-              padding: 12,
-              borderRadius: 6,
-              marginTop: 16,
+              background: "#f6ffed",
+              border: "1px solid #b7eb8f",
+              padding: 24,
+              borderRadius: 8,
+              marginBottom: 16,
             }}
           >
-            <Text type="warning">
-              ⚠️ Vui lòng gửi thông tin đăng nhập này cho nhân viên và yêu cầu
-              họ đổi mật khẩu ngay sau khi đăng nhập lần đầu.
-            </Text>
+            <MailOutlined style={{ fontSize: 48, color: "#52c41a", marginBottom: 16 }} />
+            <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 8 }}>
+              Mật khẩu đã được gửi qua email
+            </div>
+            <div style={{ color: "#666" }}>
+              {newEmployeeInfo?.email}
+            </div>
           </div>
+          <Text type="secondary">
+            Nhân viên sẽ nhận được email chứa thông tin đăng nhập và được yêu cầu đổi mật khẩu sau khi đăng nhập lần đầu.
+          </Text>
         </div>
       </Modal>
     </div>

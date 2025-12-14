@@ -1,5 +1,5 @@
-import React from 'react';
-import { Card, Row, Col, Statistic, Table, Tag, Progress, List, Avatar, Timeline } from 'antd';
+import React, { useEffect, useState } from 'react';
+import { Card, Row, Col, Statistic, Table, Tag, Progress, List, Avatar, Timeline, Alert, Spin } from 'antd';
 import {
   FileTextOutlined,
   ExperimentOutlined,
@@ -11,60 +11,16 @@ import {
   SyncOutlined
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import {
-  mockTestRequests,
-  mockSpecimens,
-  mockTests,
-  mockNCRs,
-  mockCustomers,
-  mockUsers,
-  TestRequestStatus,
-  TestStatus,
-} from '../../mocks/mockData';
+import dashboardService, { DashboardSummaryDto, RecentActivityDto } from '../../services/dashboardService';
 import dayjs from 'dayjs';
 
-// Calculate stats from centralized mock data
-const mockStats = {
-  totalRequests: mockTestRequests.length,
-  totalSpecimens: mockSpecimens.length,
-  totalTests: mockTests.length,
-  ncrCount: mockNCRs.filter(n => n.status !== 'Closed').length,
-  pendingRequests: mockTestRequests.filter(r => r.status === TestRequestStatus.Pending).length,
-  inProgressTests: mockTests.filter(t => t.status === TestStatus.InProgress).length,
-  completedToday: mockTests.filter(t => t.status === TestStatus.Completed).length,
-  avgTAT: 3.2,
-};
-
-// Use centralized mock data for recent requests
-const recentRequests = mockTestRequests.slice(0, 5).map(req => {
-  const customer = mockCustomers.find(c => c.id === req.customerId);
-  return {
-    id: req.id,
-    requestNumber: req.requestNumber,
-    customerName: customer?.name || 'N/A',
-    status: req.status,
-    date: dayjs(req.requestDate).format('YYYY-MM-DD'),
-  };
-});
-
-// Use centralized mock data for pending approvals
-const pendingApprovals = mockTests
-  .filter(t => t.status === TestStatus.Completed || t.status === TestStatus.Reviewed)
-  .slice(0, 3)
-  .map(test => ({
-    id: test.id,
-    testCode: test.code,
-    parameter: test.name,
-    status: test.status === TestStatus.Completed ? 'PendingReview' : 'PendingApproval',
-  }));
-
-// Use centralized mock data for recent activities
-const recentActivities = mockUsers.slice(0, 5).map((user, i) => ({
-  time: `${10 - i}:${30 - i * 15 >= 0 ? 30 - i * 15 : 45}`.padStart(5, '0'),
-  action: ['Nhập kết quả PCR', 'Tiếp nhận mẫu huyết thanh', 'Phê duyệt kết quả', 'Tạo yêu cầu XN', 'Hoàn thành XN'][i],
-  user: user.fullName,
-  detail: mockTests[i]?.code || mockTestRequests[i]?.requestNumber || 'N/A',
-}));
+interface RecentRequest {
+  id: string;
+  requestNumber: string;
+  customerName: string;
+  status: string;
+  date: string;
+}
 
 const getStatusColor = (status: string) => {
   const colors: Record<string, string> = {
@@ -80,6 +36,78 @@ const getStatusColor = (status: string) => {
 
 const Dashboard: React.FC = () => {
   const { t } = useTranslation();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [summary, setSummary] = useState<DashboardSummaryDto | null>(null);
+  const [recentActivities, setRecentActivities] = useState<RecentActivityDto[]>([]);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch summary data
+        const summaryData = await dashboardService.getSummary();
+        setSummary(summaryData);
+
+        // Fetch recent activities
+        const activitiesData = await dashboardService.getRecentActivities(5);
+        setRecentActivities(activitiesData);
+      } catch (err: any) {
+        console.error('Failed to fetch dashboard data:', err);
+        setError(err?.response?.data?.error?.message || err?.message || 'Failed to load dashboard data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  // Recent requests from dashboard API
+  const [recentRequests, setRecentRequests] = useState<RecentRequest[]>([]);
+  const [pendingApprovals, setPendingApprovals] = useState<{id: string; testCode: string; parameter: string; status: string}[]>([]);
+
+  // Load additional dashboard data
+  useEffect(() => {
+    const loadExtraData = async () => {
+      try {
+        // Try to get recent requests
+        const requestsData = await dashboardService.getRecentRequests?.(5);
+        if (requestsData) {
+          setRecentRequests(requestsData.map((r: any) => ({
+            id: r.id,
+            requestNumber: r.requestNumber,
+            customerName: r.customerName,
+            status: r.status,
+            date: dayjs(r.requestDate).format('YYYY-MM-DD'),
+          })));
+        }
+      } catch (err) {
+        console.log('Could not load recent requests - API may not be available');
+      }
+
+      try {
+        // Try to get pending approvals
+        const approvalsData = await dashboardService.getPendingApprovals?.(5);
+        if (approvalsData) {
+          setPendingApprovals(approvalsData.map((a: any) => ({
+            id: a.id,
+            testCode: a.testCode,
+            parameter: a.parameter,
+            status: a.approvalStatus === 1 ? 'PendingReview' : 'PendingApproval',
+          })));
+        }
+      } catch (err) {
+        console.log('Could not load pending approvals - API may not be available');
+      }
+    };
+
+    if (summary) {
+      loadExtraData();
+    }
+  }, [summary]);
 
   const requestColumns = [
     { title: 'Mã yêu cầu', dataIndex: 'requestNumber', key: 'requestNumber' },
@@ -93,6 +121,42 @@ const Dashboard: React.FC = () => {
     { title: 'Ngày', dataIndex: 'date', key: 'date' },
   ];
 
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <Spin size="large" tip="Loading dashboard data..." />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div>
+        <h2 style={{ marginBottom: 24 }}>{t('menu.dashboard')}</h2>
+        <Alert
+          message="Error Loading Dashboard"
+          description={error}
+          type="error"
+          showIcon
+        />
+      </div>
+    );
+  }
+
+  if (!summary) {
+    return (
+      <div>
+        <h2 style={{ marginBottom: 24 }}>{t('menu.dashboard')}</h2>
+        <Alert
+          message="No Data"
+          description="No dashboard data available"
+          type="info"
+          showIcon
+        />
+      </div>
+    );
+  }
+
   return (
     <div>
       <h2 style={{ marginBottom: 24 }}>{t('menu.dashboard')}</h2>
@@ -103,9 +167,8 @@ const Dashboard: React.FC = () => {
           <Card hoverable>
             <Statistic
               title={t('statistics.totalRequests')}
-              value={mockStats.totalRequests}
+              value={summary.totalTestRequests}
               prefix={<FileTextOutlined style={{ color: '#1890ff' }} />}
-              suffix={<span style={{ fontSize: 14, color: '#52c41a' }}>+12 tháng này</span>}
             />
           </Card>
         </Col>
@@ -113,9 +176,8 @@ const Dashboard: React.FC = () => {
           <Card hoverable>
             <Statistic
               title={t('statistics.totalSpecimens')}
-              value={mockStats.totalSpecimens}
+              value={summary.totalSpecimens}
               prefix={<ExperimentOutlined style={{ color: '#722ed1' }} />}
-              suffix={<span style={{ fontSize: 14, color: '#52c41a' }}>+28 tháng này</span>}
             />
           </Card>
         </Col>
@@ -123,9 +185,8 @@ const Dashboard: React.FC = () => {
           <Card hoverable>
             <Statistic
               title={t('statistics.totalTests')}
-              value={mockStats.totalTests}
+              value={summary.totalTests}
               prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
-              suffix={<span style={{ fontSize: 14, color: '#52c41a' }}>+65 tháng này</span>}
             />
           </Card>
         </Col>
@@ -133,7 +194,7 @@ const Dashboard: React.FC = () => {
           <Card hoverable>
             <Statistic
               title="Báo cáo NCR"
-              value={mockStats.ncrCount}
+              value={summary.openNCRs}
               prefix={<WarningOutlined style={{ color: '#cf1322' }} />}
               styles={{ content: { color: '#cf1322' } }}
             />
@@ -147,7 +208,7 @@ const Dashboard: React.FC = () => {
           <Card size="small">
             <Statistic
               title="Chờ xử lý"
-              value={mockStats.pendingRequests}
+              value={summary.pendingTestRequests}
               prefix={<ClockCircleOutlined style={{ color: '#faad14' }} />}
               styles={{ content: { color: '#faad14' } }}
             />
@@ -157,7 +218,7 @@ const Dashboard: React.FC = () => {
           <Card size="small">
             <Statistic
               title="Đang thử nghiệm"
-              value={mockStats.inProgressTests}
+              value={summary.specimenInTesting}
               prefix={<SyncOutlined spin style={{ color: '#1890ff' }} />}
               styles={{ content: { color: '#1890ff' } }}
             />
@@ -166,8 +227,8 @@ const Dashboard: React.FC = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card size="small">
             <Statistic
-              title="Hoàn thành hôm nay"
-              value={mockStats.completedToday}
+              title="Hoàn thành"
+              value={summary.completedTests}
               prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
               styles={{ content: { color: '#52c41a' } }}
             />
@@ -176,10 +237,9 @@ const Dashboard: React.FC = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card size="small">
             <Statistic
-              title="TAT trung bình (ngày)"
-              value={mockStats.avgTAT}
+              title="Chờ phê duyệt"
+              value={summary.pendingApprovalResults}
               prefix={<RiseOutlined style={{ color: '#13c2c2' }} />}
-              precision={1}
               styles={{ content: { color: '#13c2c2' } }}
             />
           </Card>
@@ -232,30 +292,46 @@ const Dashboard: React.FC = () => {
             <div style={{ marginBottom: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                 <span>Yêu cầu hoàn thành</span>
-                <span>85%</span>
+                <span>{summary.totalTestRequests > 0 ? Math.round((summary.completedTests / summary.totalTestRequests) * 100) : 0}%</span>
               </div>
-              <Progress percent={85} status="active" strokeColor="#52c41a" />
+              <Progress
+                percent={summary.totalTestRequests > 0 ? Math.round((summary.completedTests / summary.totalTestRequests) * 100) : 0}
+                status="active"
+                strokeColor="#52c41a"
+              />
             </div>
             <div style={{ marginBottom: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span>Thử nghiệm đúng hạn</span>
-                <span>92%</span>
+                <span>Thử nghiệm đang thực hiện</span>
+                <span>{summary.totalTests > 0 ? Math.round((summary.specimenInTesting / summary.totalTests) * 100) : 0}%</span>
               </div>
-              <Progress percent={92} status="active" strokeColor="#1890ff" />
+              <Progress
+                percent={summary.totalTests > 0 ? Math.round((summary.specimenInTesting / summary.totalTests) * 100) : 0}
+                status="active"
+                strokeColor="#1890ff"
+              />
             </div>
             <div style={{ marginBottom: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                 <span>Kết quả đã phê duyệt</span>
-                <span>78%</span>
+                <span>{summary.totalTestResults > 0 ? Math.round(((summary.totalTestResults - summary.pendingApprovalResults) / summary.totalTestResults) * 100) : 0}%</span>
               </div>
-              <Progress percent={78} status="active" strokeColor="#722ed1" />
+              <Progress
+                percent={summary.totalTestResults > 0 ? Math.round(((summary.totalTestResults - summary.pendingApprovalResults) / summary.totalTestResults) * 100) : 0}
+                status="active"
+                strokeColor="#722ed1"
+              />
             </div>
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span>Tỷ lệ NCR</span>
-                <span>2%</span>
+                <span>Báo cáo NCR</span>
+                <span>{summary.openNCRs}</span>
               </div>
-              <Progress percent={2} status="exception" strokeColor="#cf1322" />
+              <Progress
+                percent={summary.totalTests > 0 ? Math.min(Math.round((summary.openNCRs / summary.totalTests) * 100), 100) : 0}
+                status={summary.openNCRs > 0 ? "exception" : "normal"}
+                strokeColor="#cf1322"
+              />
             </div>
           </Card>
         </Col>
@@ -263,20 +339,26 @@ const Dashboard: React.FC = () => {
         {/* Recent Activities */}
         <Col xs={24} lg={12}>
           <Card title="Hoạt động gần đây">
-            <Timeline
-              items={recentActivities.map((activity) => ({
-                color: 'blue',
-                children: (
-                  <div>
-                    <span style={{ fontWeight: 500 }}>{activity.time}</span> - {activity.action}
-                    <br />
-                    <span style={{ color: '#666' }}>
-                      <UserOutlined /> {activity.user} | {activity.detail}
-                    </span>
-                  </div>
-                ),
-              }))}
-            />
+            {recentActivities.length > 0 ? (
+              <Timeline
+                items={recentActivities.map((activity) => ({
+                  color: 'blue',
+                  children: (
+                    <div>
+                      <span style={{ fontWeight: 500 }}>{dayjs(activity.performedAt).format('HH:mm')}</span> - {activity.description}
+                      <br />
+                      <span style={{ color: '#666' }}>
+                        <UserOutlined /> {activity.performedByName || 'System'} | {activity.entityCode}
+                      </span>
+                    </div>
+                  ),
+                }))}
+              />
+            ) : (
+              <div style={{ textAlign: 'center', color: '#999', padding: '20px' }}>
+                Không có hoạt động gần đây
+              </div>
+            )}
           </Card>
         </Col>
       </Row>

@@ -17,11 +17,14 @@ export interface TestResultDto {
   isPass?: boolean;
   approvalStatus: ResultApprovalStatus;
   enteredById?: string;
+  enteredByName?: string;
   entryDate?: string;
   reviewerId?: string;
+  reviewerName?: string;
   reviewDate?: string;
   reviewComment?: string;
   approverId?: string;
+  approverName?: string;
   approvalDate?: string;
   approvalComment?: string;
   chartData?: string;

@@ -3,9 +3,10 @@ import { Form, Input, Button, Select, message, InputNumber, DatePicker, Card, Sp
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { testResultService } from '../../services/testResultService';
+import { testService } from '../../services/testService';
 import { CreateTestResultDto, UpdateTestResultDto, ResultApprovalStatus } from '../../types/testResult';
+import { TestDto } from '../../types/test';
 import dayjs from 'dayjs';
-import { mockTests } from '../../mocks/mockData';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -13,23 +14,30 @@ const { Option } = Select;
 const TestResultForm: React.FC = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [tests, setTests] = useState<TestDto[]>([]);
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
   const isEditMode = !!id;
 
-  // Use centralized mock data for tests
-  const tests = mockTests.map(t => ({
-    id: t.id,
-    code: t.code,
-    name: t.name,
-  }));
-
   useEffect(() => {
+    fetchTests();
     if (isEditMode && id) {
       fetchTestResult(id);
     }
   }, [id]);
+
+  const fetchTests = async () => {
+    try {
+      const result = await testService.getList({
+        maxResultCount: 1000,
+      });
+      setTests(result.items);
+    } catch (error) {
+      message.error('Không thể tải danh sách phép thử. Vui lòng kiểm tra kết nối API.');
+      console.error('Failed to fetch tests:', error);
+    }
+  };
 
   const fetchTestResult = async (testResultId: string) => {
     setLoading(true);
@@ -42,7 +50,8 @@ const TestResultForm: React.FC = () => {
         approvalDate: data.approvalDate ? dayjs(data.approvalDate) : null,
       });
     } catch (error) {
-      message.error(t('messages.loadFailed'));
+      message.error('Không thể tải thông tin kết quả. Vui lòng kiểm tra kết nối API.');
+      console.error('Failed to fetch test result:', error);
     } finally {
       setLoading(false);
     }
@@ -67,7 +76,8 @@ const TestResultForm: React.FC = () => {
       }
       navigate('/test-results');
     } catch (error) {
-      message.error(isEditMode ? t('messages.updateFailed') : t('messages.createFailed'));
+      message.error(isEditMode ? 'Không thể cập nhật kết quả. Vui lòng thử lại.' : 'Không thể tạo kết quả. Vui lòng thử lại.');
+      console.error('Failed to save test result:', error);
     } finally {
       setLoading(false);
     }

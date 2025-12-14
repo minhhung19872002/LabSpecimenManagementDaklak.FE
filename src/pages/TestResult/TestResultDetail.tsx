@@ -10,24 +10,6 @@ import './TestResultDetail.css';
 
 const { TextArea } = Input;
 
-// Mock data fallback
-const getMockTestResult = (id: string): TestResultDto => ({
-  id,
-  testId: 'test-001',
-  testCode: `TEST-${dayjs().format('YYYYMMDD')}-${id.replace(/\D/g, '').padStart(4, '0')}`,
-  testName: 'Real-time PCR SARS-CoV-2',
-  parameter: 'SARS-CoV-2 (PCR)',
-  value: 'Âm tính',
-  unit: '-',
-  referenceRange: 'Âm tính / Ct > 40',
-  isPass: true,
-  approvalStatus: ResultApprovalStatus.Draft,
-  testedBy: 'ThS. Nguyễn Văn A',
-  testedDate: dayjs().subtract(1, 'day').toISOString(),
-  notes: 'Kết quả âm tính với SARS-CoV-2',
-  creationTime: dayjs().subtract(1, 'day').toISOString(),
-});
-
 const TestResultDetail: React.FC = () => {
   const [testResult, setTestResult] = useState<TestResultDto | null>(null);
   const [loading, setLoading] = useState(false);
@@ -51,8 +33,8 @@ const TestResultDetail: React.FC = () => {
       const data = await testResultService.get(testResultId);
       setTestResult(data);
     } catch (error) {
-      console.log('API not available, using mock data');
-      setTestResult(getMockTestResult(testResultId));
+      message.error('Không thể tải thông tin kết quả. Vui lòng kiểm tra kết nối API.');
+      console.error('Failed to fetch test result:', error);
     } finally {
       setLoading(false);
     }
@@ -76,9 +58,8 @@ const TestResultDetail: React.FC = () => {
           setTestResult(result);
           message.success('Đã gửi kết quả để duyệt!');
         } catch (error) {
-          // Mock success for demo
-          setTestResult({ ...testResult, approvalStatus: ResultApprovalStatus.Submitted });
-          message.success('Đã gửi kết quả để duyệt! (Demo)');
+          message.error('Không thể gửi kết quả để duyệt. Vui lòng thử lại.');
+          console.error('Failed to submit for review:', error);
         } finally {
           setActionLoading(false);
         }
@@ -94,20 +75,13 @@ const TestResultDetail: React.FC = () => {
       const result = await testResultService.review(id, { isApproved, comment });
       setTestResult(result);
       message.success(isApproved ? 'Đã duyệt kết quả (Bước 1)!' : 'Đã từ chối kết quả!');
-    } catch (error) {
-      // Mock success for demo
-      setTestResult({
-        ...testResult,
-        approvalStatus: isApproved ? ResultApprovalStatus.Step1Reviewed : ResultApprovalStatus.Rejected,
-        reviewerId: 'reviewer-001',
-        reviewDate: dayjs().toISOString(),
-        reviewComment: comment,
-      });
-      message.success(isApproved ? 'Đã duyệt kết quả (Bước 1)! (Demo)' : 'Đã từ chối kết quả! (Demo)');
-    } finally {
-      setActionLoading(false);
       setReviewModalVisible(false);
       setComment('');
+    } catch (error) {
+      message.error('Không thể thực hiện duyệt. Vui lòng thử lại.');
+      console.error('Failed to review:', error);
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -119,20 +93,13 @@ const TestResultDetail: React.FC = () => {
       const result = await testResultService.approve(id, { isApproved, comment });
       setTestResult(result);
       message.success(isApproved ? 'Đã phê duyệt kết quả (Bước 2)!' : 'Đã từ chối kết quả!');
-    } catch (error) {
-      // Mock success for demo
-      setTestResult({
-        ...testResult,
-        approvalStatus: isApproved ? ResultApprovalStatus.Step2Approved : ResultApprovalStatus.Rejected,
-        approverId: 'approver-001',
-        approvalDate: dayjs().toISOString(),
-        approvalComment: comment,
-      });
-      message.success(isApproved ? 'Đã phê duyệt kết quả (Bước 2)! (Demo)' : 'Đã từ chối kết quả! (Demo)');
-    } finally {
-      setActionLoading(false);
       setApproveModalVisible(false);
       setComment('');
+    } catch (error) {
+      message.error('Không thể thực hiện phê duyệt. Vui lòng thử lại.');
+      console.error('Failed to approve:', error);
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -166,7 +133,7 @@ const TestResultDetail: React.FC = () => {
 
     return (
       <div style={{ marginTop: 16 }}>
-        <Divider orientation="left">Quy trình duyệt</Divider>
+        <Divider>Quy trình duyệt</Divider>
 
         {/* Workflow Progress */}
         <Alert
@@ -276,7 +243,8 @@ const TestResultDetail: React.FC = () => {
           </Space>
         }
       >
-        <Descriptions bordered column={2}>
+        {/* Thông tin kết quả thử nghiệm */}
+        <Descriptions bordered column={2} title="Thông tin kết quả">
           <Descriptions.Item label={t('testResult.testCode')}>{testResult.testCode}</Descriptions.Item>
           <Descriptions.Item label={t('testResult.testName')}>{testResult.testName}</Descriptions.Item>
           <Descriptions.Item label={t('testResult.parameter')}>{testResult.parameter}</Descriptions.Item>
@@ -302,37 +270,72 @@ const TestResultDetail: React.FC = () => {
               {getApprovalStatusText(testResult.approvalStatus)}
             </Tag>
           </Descriptions.Item>
+          <Descriptions.Item label="Người nhập">
+            {testResult.enteredByName || '-'}
+          </Descriptions.Item>
           <Descriptions.Item label={t('testResult.entryDate')}>
-            {testResult.entryDate ? dayjs(testResult.entryDate).format('YYYY-MM-DD HH:mm') : '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label="Người duyệt B1">
-            {testResult.reviewerId || '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('testResult.reviewDate')}>
-            {testResult.reviewDate ? dayjs(testResult.reviewDate).format('YYYY-MM-DD HH:mm') : '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('testResult.reviewComment')} span={2}>
-            {testResult.reviewComment || '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label="Người duyệt B2">
-            {testResult.approverId || '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('testResult.approvalDate')}>
-            {testResult.approvalDate ? dayjs(testResult.approvalDate).format('YYYY-MM-DD HH:mm') : '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label={t('testResult.approvalComment')} span={2}>
-            {testResult.approvalComment || '-'}
+            {testResult.entryDate ? dayjs(testResult.entryDate).format('DD/MM/YYYY HH:mm') : '-'}
           </Descriptions.Item>
           <Descriptions.Item label={t('testResult.notes')} span={2}>
             {testResult.notes || '-'}
           </Descriptions.Item>
           <Descriptions.Item label={t('common.createdAt')}>
-            {dayjs(testResult.creationTime).format('YYYY-MM-DD HH:mm')}
+            {dayjs(testResult.creationTime).format('DD/MM/YYYY HH:mm')}
           </Descriptions.Item>
           <Descriptions.Item label={t('common.lastModified')}>
-            {testResult.lastModificationTime ? dayjs(testResult.lastModificationTime).format('YYYY-MM-DD HH:mm') : '-'}
+            {testResult.lastModificationTime ? dayjs(testResult.lastModificationTime).format('DD/MM/YYYY HH:mm') : '-'}
           </Descriptions.Item>
         </Descriptions>
+
+        {/* Thông tin duyệt Bước 1 */}
+        <Card
+          size="small"
+          title={
+            <Space>
+              <CheckCircleOutlined style={{ color: testResult.reviewerName ? '#13c2c2' : '#d9d9d9' }} />
+              Duyệt Bước 1 - Trưởng phòng
+            </Space>
+          }
+          style={{ marginTop: 16 }}
+          styles={{ header: { backgroundColor: testResult.reviewerName ? '#e6fffb' : '#fafafa' } }}
+        >
+          <Descriptions bordered column={2} size="small">
+            <Descriptions.Item label="Người duyệt">
+              {testResult.reviewerName || <span style={{ color: '#999' }}>Chưa duyệt</span>}
+            </Descriptions.Item>
+            <Descriptions.Item label="Ngày duyệt">
+              {testResult.reviewDate ? dayjs(testResult.reviewDate).format('DD/MM/YYYY HH:mm') : <span style={{ color: '#999' }}>-</span>}
+            </Descriptions.Item>
+            <Descriptions.Item label="Nhận xét" span={2}>
+              {testResult.reviewComment || <span style={{ color: '#999' }}>Không có nhận xét</span>}
+            </Descriptions.Item>
+          </Descriptions>
+        </Card>
+
+        {/* Thông tin duyệt Bước 2 */}
+        <Card
+          size="small"
+          title={
+            <Space>
+              <CheckCircleOutlined style={{ color: testResult.approverName ? '#52c41a' : '#d9d9d9' }} />
+              Duyệt Bước 2 - Giám đốc
+            </Space>
+          }
+          style={{ marginTop: 16 }}
+          styles={{ header: { backgroundColor: testResult.approverName ? '#f6ffed' : '#fafafa' } }}
+        >
+          <Descriptions bordered column={2} size="small">
+            <Descriptions.Item label="Người phê duyệt">
+              {testResult.approverName || <span style={{ color: '#999' }}>Chưa phê duyệt</span>}
+            </Descriptions.Item>
+            <Descriptions.Item label="Ngày phê duyệt">
+              {testResult.approvalDate ? dayjs(testResult.approvalDate).format('DD/MM/YYYY HH:mm') : <span style={{ color: '#999' }}>-</span>}
+            </Descriptions.Item>
+            <Descriptions.Item label="Nhận xét" span={2}>
+              {testResult.approvalComment || <span style={{ color: '#999' }}>Không có nhận xét</span>}
+            </Descriptions.Item>
+          </Descriptions>
+        </Card>
 
         {/* Workflow Actions */}
         {renderWorkflowActions()}

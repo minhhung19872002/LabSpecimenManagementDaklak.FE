@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   Table,
@@ -15,7 +15,9 @@ import {
   message,
   Popconfirm,
   Tabs,
-  Statistic
+  Statistic,
+  Alert,
+  Spin
 } from 'antd';
 import {
   PlusOutlined,
@@ -24,169 +26,137 @@ import {
   SearchOutlined,
   DatabaseOutlined,
   ImportOutlined,
-  ExportOutlined
+  ExportOutlined,
+  DownloadOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import dayjs from 'dayjs';
 import {
-  mockSpecimenTypes,
-  mockTestMethods,
-  mockStorageLocations,
-  mockDepartments,
-  mockCustomers,
-} from '../../mocks/mockData';
+  departmentService,
+  specimenTypeService,
+  testMethodService,
+  storageLocationService,
+  customerService,
+  DepartmentDto,
+  SpecimenTypeDto,
+  TestMethodDto,
+  StorageLocationDto,
+  CustomerDto,
+  CreateUpdateDepartmentDto,
+  CreateUpdateSpecimenTypeDto,
+  CreateUpdateTestMethodDto,
+  CreateUpdateStorageLocationDto,
+  CreateUpdateCustomerDto,
+} from '../../services/masterDataService';
+import ImportExcelModal, { ImportType } from '../../components/common/ImportExcelModal';
+import { importService, downloadBlobAsFile } from '../../services/importService';
 
-// Types
-interface MasterDataItem {
-  id: string;
-  code: string;
-  name: string;
-  category: string;
-  description?: string;
-  isActive: boolean;
-  sortOrder: number;
-  createdAt: string;
-  // Extra fields for specific categories
-  temperature?: string;
-  address?: string;
-  phone?: string;
-  email?: string;
-}
-
-// Convert mock data from mockData.ts to unified format
-const convertToMasterDataFormat = () => {
-  const specimenTypes: MasterDataItem[] = mockSpecimenTypes.map((item, index) => ({
-    id: item.id,
-    code: item.code,
-    name: item.name,
-    category: 'specimenTypes',
-    description: `Loại mẫu: ${item.name}`,
-    isActive: true,
-    sortOrder: index + 1,
-    createdAt: dayjs().toISOString(),
-  }));
-
-  const testMethods: MasterDataItem[] = mockTestMethods.map((item, index) => ({
-    id: item.id,
-    code: item.code,
-    name: item.name,
-    category: 'testMethods',
-    description: `Phương pháp: ${item.name}`,
-    isActive: true,
-    sortOrder: index + 1,
-    createdAt: dayjs().toISOString(),
-  }));
-
-  const storageLocations: MasterDataItem[] = mockStorageLocations.map((item, index) => ({
-    id: item.id,
-    code: item.code,
-    name: item.name,
-    category: 'storageLocations',
-    description: `Nhiệt độ: ${item.temperature}`,
-    temperature: item.temperature,
-    isActive: true,
-    sortOrder: index + 1,
-    createdAt: dayjs().toISOString(),
-  }));
-
-  const departments: MasterDataItem[] = mockDepartments.map((item, index) => ({
-    id: item.id,
-    code: item.code,
-    name: item.name,
-    category: 'departments',
-    description: `Phòng ban: ${item.name}`,
-    isActive: true,
-    sortOrder: index + 1,
-    createdAt: dayjs().toISOString(),
-  }));
-
-  const customers: MasterDataItem[] = mockCustomers.map((item, index) => ({
-    id: item.id,
-    code: item.id,
-    name: item.name,
-    category: 'customers',
-    description: item.address,
-    address: item.address,
-    phone: item.phone,
-    email: item.email,
-    isActive: true,
-    sortOrder: index + 1,
-    createdAt: dayjs().toISOString(),
-  }));
-
-  // Additional categories with static data
-  const standards: MasterDataItem[] = [
-    { id: 'std-001', code: 'QCVN09', name: 'QCVN 09-MT:2015/BTNMT', category: 'standards', description: 'Quy chuẩn nước ngầm', isActive: true, sortOrder: 1, createdAt: dayjs().toISOString() },
-    { id: 'std-002', code: 'QCVN08', name: 'QCVN 08-MT:2015/BTNMT', category: 'standards', description: 'Quy chuẩn nước mặt', isActive: true, sortOrder: 2, createdAt: dayjs().toISOString() },
-    { id: 'std-003', code: 'QCVN03', name: 'QCVN 03-MT:2015/BTNMT', category: 'standards', description: 'Quy chuẩn đất', isActive: true, sortOrder: 3, createdAt: dayjs().toISOString() },
-    { id: 'std-004', code: 'QCVN01', name: 'QCVN 01:2009/BYT', category: 'standards', description: 'Quy chuẩn nước ăn uống', isActive: true, sortOrder: 4, createdAt: dayjs().toISOString() },
-    { id: 'std-005', code: 'TCVN4193', name: 'TCVN 4193:2014', category: 'standards', description: 'Tiêu chuẩn cà phê nhân', isActive: true, sortOrder: 5, createdAt: dayjs().toISOString() },
-  ];
-
-  const parameters: MasterDataItem[] = [
-    { id: 'param-001', code: 'PH', name: 'pH', category: 'parameters', description: 'Độ pH', isActive: true, sortOrder: 1, createdAt: dayjs().toISOString() },
-    { id: 'param-002', code: 'EC', name: 'EC (Độ dẫn điện)', category: 'parameters', description: 'Độ dẫn điện - µS/cm', isActive: true, sortOrder: 2, createdAt: dayjs().toISOString() },
-    { id: 'param-003', code: 'TDS', name: 'TDS', category: 'parameters', description: 'Tổng chất rắn hòa tan - mg/L', isActive: true, sortOrder: 3, createdAt: dayjs().toISOString() },
-    { id: 'param-004', code: 'N', name: 'Nitơ tổng (N)', category: 'parameters', description: 'Hàm lượng Nitơ tổng - mg/kg', isActive: true, sortOrder: 4, createdAt: dayjs().toISOString() },
-    { id: 'param-005', code: 'P', name: 'Phospho tổng (P)', category: 'parameters', description: 'Hàm lượng Phospho tổng - mg/kg', isActive: true, sortOrder: 5, createdAt: dayjs().toISOString() },
-    { id: 'param-006', code: 'K', name: 'Kali (K)', category: 'parameters', description: 'Hàm lượng Kali - mg/kg', isActive: true, sortOrder: 6, createdAt: dayjs().toISOString() },
-    { id: 'param-007', code: 'COL', name: 'Coliform tổng', category: 'parameters', description: 'Coliform tổng số - CFU/100mL', isActive: true, sortOrder: 7, createdAt: dayjs().toISOString() },
-    { id: 'param-008', code: 'ECOLI', name: 'E.coli', category: 'parameters', description: 'E.coli - CFU/100mL', isActive: true, sortOrder: 8, createdAt: dayjs().toISOString() },
-    { id: 'param-009', code: 'PB', name: 'Chì (Pb)', category: 'parameters', description: 'Hàm lượng Chì - mg/kg', isActive: true, sortOrder: 9, createdAt: dayjs().toISOString() },
-    { id: 'param-010', code: 'CD', name: 'Cadimi (Cd)', category: 'parameters', description: 'Hàm lượng Cadimi - mg/kg', isActive: true, sortOrder: 10, createdAt: dayjs().toISOString() },
-    { id: 'param-011', code: 'AS', name: 'Asen (As)', category: 'parameters', description: 'Hàm lượng Asen - mg/kg', isActive: true, sortOrder: 11, createdAt: dayjs().toISOString() },
-    { id: 'param-012', code: 'CAF', name: 'Caffeine', category: 'parameters', description: 'Hàm lượng Caffeine - %', isActive: true, sortOrder: 12, createdAt: dayjs().toISOString() },
-    { id: 'param-013', code: 'MOIS', name: 'Độ ẩm', category: 'parameters', description: 'Độ ẩm - %', isActive: true, sortOrder: 13, createdAt: dayjs().toISOString() },
-  ];
-
-  const units: MasterDataItem[] = [
-    { id: 'unit-001', code: 'MGL', name: 'mg/L', category: 'units', description: 'Miligram trên lít', isActive: true, sortOrder: 1, createdAt: dayjs().toISOString() },
-    { id: 'unit-002', code: 'MGKG', name: 'mg/kg', category: 'units', description: 'Miligram trên kilogram', isActive: true, sortOrder: 2, createdAt: dayjs().toISOString() },
-    { id: 'unit-003', code: 'PERCENT', name: '%', category: 'units', description: 'Phần trăm', isActive: true, sortOrder: 3, createdAt: dayjs().toISOString() },
-    { id: 'unit-004', code: 'CFU100ML', name: 'CFU/100mL', category: 'units', description: 'Colony Forming Unit per 100mL', isActive: true, sortOrder: 4, createdAt: dayjs().toISOString() },
-    { id: 'unit-005', code: 'CFUG', name: 'CFU/g', category: 'units', description: 'Colony Forming Unit per gram', isActive: true, sortOrder: 5, createdAt: dayjs().toISOString() },
-    { id: 'unit-006', code: 'USCM', name: 'µS/cm', category: 'units', description: 'Micro Siemens per centimeter', isActive: true, sortOrder: 6, createdAt: dayjs().toISOString() },
-    { id: 'unit-007', code: 'PPM', name: 'ppm', category: 'units', description: 'Parts per million', isActive: true, sortOrder: 7, createdAt: dayjs().toISOString() },
-    { id: 'unit-008', code: 'PPB', name: 'ppb', category: 'units', description: 'Parts per billion', isActive: true, sortOrder: 8, createdAt: dayjs().toISOString() },
-  ];
-
-  return {
-    specimenTypes,
-    testMethods,
-    storageLocations,
-    departments,
-    customers,
-    standards,
-    parameters,
-    units,
-  };
-};
+// Unified type for all master data items
+type MasterDataItem = DepartmentDto | SpecimenTypeDto | TestMethodDto | StorageLocationDto | CustomerDto;
 
 const categoryLabels: Record<string, string> = {
+  departments: 'Phòng ban',
   specimenTypes: 'Loại mẫu',
   testMethods: 'Phương pháp thử',
-  standards: 'Tiêu chuẩn',
-  parameters: 'Chỉ tiêu phân tích',
-  units: 'Đơn vị đo',
   storageLocations: 'Vị trí lưu kho',
-  departments: 'Phòng ban',
   customers: 'Khách hàng',
 };
 
 const MasterDataList: React.FC = () => {
-  const [activeCategory, setActiveCategory] = useState('specimenTypes');
-  const initialData = useMemo(() => convertToMasterDataFormat(), []);
-  const [data, setData] = useState<Record<string, MasterDataItem[]>>(initialData);
+  const [activeCategory, setActiveCategory] = useState('departments');
+  const [data, setData] = useState<Record<string, MasterDataItem[]>>({
+    departments: [],
+    specimenTypes: [],
+    testMethods: [],
+    storageLocations: [],
+    customers: [],
+  });
+  const [loading, setLoading] = useState<Record<string, boolean>>({
+    departments: false,
+    specimenTypes: false,
+    testMethods: false,
+    storageLocations: false,
+    customers: false,
+  });
+  const [error, setError] = useState<string | null>(null);
   const [searchText, setSearchText] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MasterDataItem | null>(null);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false);
   const [form] = Form.useForm();
+
+  // Map category to import type (only customers and testMethods support import)
+  const importTypeMap: Record<string, ImportType | null> = {
+    customers: 'customers',
+    testMethods: 'test-methods',
+    departments: null,
+    specimenTypes: null,
+    storageLocations: null,
+  };
+
+  const canImport = importTypeMap[activeCategory] !== null;
+
+  // Fetch data for a specific category
+  const fetchCategoryData = async (category: string) => {
+    try {
+      setLoading(prev => ({ ...prev, [category]: true }));
+      setError(null);
+
+      let result;
+      switch (category) {
+        case 'departments':
+          result = await departmentService.getList({ maxResultCount: 1000 });
+          break;
+        case 'specimenTypes':
+          result = await specimenTypeService.getList({ maxResultCount: 1000 });
+          break;
+        case 'testMethods':
+          result = await testMethodService.getList({ maxResultCount: 1000 });
+          break;
+        case 'storageLocations':
+          result = await storageLocationService.getList({ maxResultCount: 1000 });
+          break;
+        case 'customers':
+          result = await customerService.getList({ maxResultCount: 1000 });
+          break;
+        default:
+          result = { items: [], totalCount: 0 };
+      }
+
+      setData(prev => ({ ...prev, [category]: result.items }));
+    } catch (err: any) {
+      console.error(`Failed to fetch ${category}:`, err);
+      const errorMsg = err?.response?.data?.error?.message || err?.message || `Failed to load ${category}`;
+      setError(errorMsg);
+      message.error(errorMsg);
+    } finally {
+      setLoading(prev => ({ ...prev, [category]: false }));
+    }
+  };
+
+  // Load all categories on mount to get correct counts for stats
+  useEffect(() => {
+    const loadAllCategories = async () => {
+      const categories = Object.keys(categoryLabels);
+      await Promise.all(categories.map(category => fetchCategoryData(category)));
+    };
+    loadAllCategories();
+  }, []);
+
+  // Reload current category data when switching tabs (if needed for refresh)
+  useEffect(() => {
+    // Only reload if data is empty (not loaded yet)
+    if (data[activeCategory]?.length === 0 && !loading[activeCategory]) {
+      fetchCategoryData(activeCategory);
+    }
+  }, [activeCategory]);
 
   const currentData = data[activeCategory] || [];
   const filteredData = searchText
     ? currentData.filter(item =>
-        item.code.toLowerCase().includes(searchText.toLowerCase()) ||
-        item.name.toLowerCase().includes(searchText.toLowerCase())
+        item.code?.toLowerCase().includes(searchText.toLowerCase()) ||
+        item.name?.toLowerCase().includes(searchText.toLowerCase())
       )
     : currentData;
 
@@ -194,7 +164,6 @@ const MasterDataList: React.FC = () => {
     setEditingItem(null);
     form.resetFields();
     form.setFieldsValue({
-      category: activeCategory,
       isActive: true,
       sortOrder: currentData.length + 1,
     });
@@ -207,52 +176,138 @@ const MasterDataList: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    setData(prev => ({
-      ...prev,
-      [activeCategory]: prev[activeCategory].filter(item => item.id !== id),
-    }));
-    message.success('Xóa thành công!');
+  const handleDelete = async (id: string) => {
+    try {
+      setError(null);
+
+      switch (activeCategory) {
+        case 'departments':
+          await departmentService.delete(id);
+          break;
+        case 'specimenTypes':
+          await specimenTypeService.delete(id);
+          break;
+        case 'testMethods':
+          await testMethodService.delete(id);
+          break;
+        case 'storageLocations':
+          await storageLocationService.delete(id);
+          break;
+        case 'customers':
+          await customerService.delete(id);
+          break;
+      }
+
+      message.success('Xóa thành công!');
+      // Refresh data
+      await fetchCategoryData(activeCategory);
+    } catch (err: any) {
+      console.error('Failed to delete:', err);
+      const errorMsg = err?.response?.data?.error?.message || err?.message || 'Failed to delete item';
+      setError(errorMsg);
+      message.error(errorMsg);
+    }
   };
 
   const handleModalOk = async () => {
     try {
+      setModalLoading(true);
+      setError(null);
       const values = await form.validateFields();
-      const newItem: MasterDataItem = {
-        id: editingItem?.id || `${Date.now()}`,
-        code: values.code,
-        name: values.name,
-        category: activeCategory,
-        description: values.description,
-        isActive: values.isActive,
-        sortOrder: values.sortOrder,
-        createdAt: editingItem?.createdAt || dayjs().toISOString(),
-      };
 
       if (editingItem) {
-        setData(prev => ({
-          ...prev,
-          [activeCategory]: prev[activeCategory].map(item =>
-            item.id === editingItem.id ? newItem : item
-          ),
-        }));
+        // Update existing item
+        switch (activeCategory) {
+          case 'departments':
+            await departmentService.update(editingItem.id, values as CreateUpdateDepartmentDto);
+            break;
+          case 'specimenTypes':
+            await specimenTypeService.update(editingItem.id, values as CreateUpdateSpecimenTypeDto);
+            break;
+          case 'testMethods':
+            await testMethodService.update(editingItem.id, values as CreateUpdateTestMethodDto);
+            break;
+          case 'storageLocations':
+            await storageLocationService.update(editingItem.id, values as CreateUpdateStorageLocationDto);
+            break;
+          case 'customers':
+            await customerService.update(editingItem.id, values as CreateUpdateCustomerDto);
+            break;
+        }
         message.success('Cập nhật thành công!');
       } else {
-        setData(prev => ({
-          ...prev,
-          [activeCategory]: [...prev[activeCategory], newItem],
-        }));
+        // Create new item
+        switch (activeCategory) {
+          case 'departments':
+            await departmentService.create(values as CreateUpdateDepartmentDto);
+            break;
+          case 'specimenTypes':
+            await specimenTypeService.create(values as CreateUpdateSpecimenTypeDto);
+            break;
+          case 'testMethods':
+            await testMethodService.create(values as CreateUpdateTestMethodDto);
+            break;
+          case 'storageLocations':
+            await storageLocationService.create(values as CreateUpdateStorageLocationDto);
+            break;
+          case 'customers':
+            await customerService.create(values as CreateUpdateCustomerDto);
+            break;
+        }
         message.success('Thêm mới thành công!');
       }
+
       setIsModalOpen(false);
       form.resetFields();
-    } catch (error) {
-      console.error('Validation failed:', error);
+      // Refresh data
+      await fetchCategoryData(activeCategory);
+    } catch (err: any) {
+      console.error('Failed to save:', err);
+      const errorMsg = err?.response?.data?.error?.message || err?.message || 'Failed to save item';
+      setError(errorMsg);
+      message.error(errorMsg);
+    } finally {
+      setModalLoading(false);
     }
   };
 
   const handleImportExcel = () => {
-    message.info('Chức năng Import Excel - Đang phát triển');
+    if (canImport) {
+      setImportModalOpen(true);
+    } else {
+      message.info(`Import Excel chưa hỗ trợ cho ${categoryLabels[activeCategory]}`);
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    if (!canImport) {
+      message.info(`Download template chưa hỗ trợ cho ${categoryLabels[activeCategory]}`);
+      return;
+    }
+
+    setDownloadingTemplate(true);
+    try {
+      let blob: Blob;
+      let filename: string;
+
+      if (activeCategory === 'customers') {
+        blob = await importService.downloadCustomersTemplate();
+        filename = 'customers-template.xlsx';
+      } else if (activeCategory === 'testMethods') {
+        blob = await importService.downloadTestMethodsTemplate();
+        filename = 'test-methods-template.xlsx';
+      } else {
+        throw new Error('Unsupported category for template download');
+      }
+
+      downloadBlobAsFile(blob, filename);
+      message.success('Tải template thành công!');
+    } catch (error) {
+      console.error('Error downloading template:', error);
+      message.error('Không thể tải template. Vui lòng thử lại.');
+    } finally {
+      setDownloadingTemplate(false);
+    }
   };
 
   const handleExportExcel = () => {
@@ -273,6 +328,7 @@ const MasterDataList: React.FC = () => {
         dataIndex: 'sortOrder',
         key: 'sortOrder',
         width: 60,
+        render: (_, __, index) => index + 1,
       },
       {
         title: 'Mã',
@@ -293,8 +349,8 @@ const MasterDataList: React.FC = () => {
       baseColumns.push(
         {
           title: 'Địa chỉ',
-          dataIndex: 'description',
-          key: 'description',
+          dataIndex: 'address',
+          key: 'address',
           ellipsis: true,
         },
         {
@@ -324,6 +380,21 @@ const MasterDataList: React.FC = () => {
           dataIndex: 'temperature',
           key: 'temperature',
           width: 100,
+        }
+      );
+    } else if (activeCategory === 'testMethods') {
+      baseColumns.push(
+        {
+          title: 'Mô tả',
+          dataIndex: 'description',
+          key: 'description',
+          ellipsis: true,
+        },
+        {
+          title: 'Tiêu chuẩn',
+          dataIndex: 'standard',
+          key: 'standard',
+          width: 150,
         }
       );
     } else {
@@ -375,19 +446,30 @@ const MasterDataList: React.FC = () => {
 
   return (
     <div>
+      {error && (
+        <Alert
+          message="Error"
+          description={error}
+          type="error"
+          closable
+          onClose={() => setError(null)}
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
       {/* Stats Cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col xs={12} sm={8} md={4}>
+        <Col xs={12} sm={8} md={6}>
           <Card>
             <Statistic title="Tổng danh mục" value={Object.keys(data).length} prefix={<DatabaseOutlined />} />
           </Card>
         </Col>
-        <Col xs={12} sm={8} md={4}>
+        <Col xs={12} sm={8} md={6}>
           <Card>
             <Statistic title="Tổng dữ liệu" value={totalItems} />
           </Card>
         </Col>
-        {Object.entries(categoryLabels).slice(0, 4).map(([key, label]) => (
+        {Object.entries(categoryLabels).slice(0, 3).map(([key, label]) => (
           <Col xs={12} sm={8} md={4} key={key}>
             <Card>
               <Statistic title={label} value={data[key]?.length || 0} />
@@ -405,6 +487,15 @@ const MasterDataList: React.FC = () => {
         }
         extra={
           <Space>
+            {canImport && (
+              <Button
+                icon={<DownloadOutlined />}
+                onClick={handleDownloadTemplate}
+                loading={downloadingTemplate}
+              >
+                Tải Template
+              </Button>
+            )}
             <Button icon={<ImportOutlined />} onClick={handleImportExcel}>
               Import Excel
             </Button>
@@ -447,16 +538,20 @@ const MasterDataList: React.FC = () => {
                   </Col>
                 </Row>
 
-                <Table
-                  columns={getColumns()}
-                  dataSource={filteredData}
-                  rowKey="id"
-                  pagination={{
-                    showSizeChanger: true,
-                    showTotal: (total) => `Tổng ${total} mục`,
-                  }}
-                  scroll={{ x: activeCategory === 'customers' ? 900 : 700 }}
-                />
+                <Spin spinning={loading[key]} tip="Loading data...">
+                  <Table
+                    columns={getColumns()}
+                    dataSource={filteredData}
+                    rowKey="id"
+                    pagination={{
+                      pageSize: 50,
+                      pageSizeOptions: [50, 100, 150],
+                      showSizeChanger: true,
+                      showTotal: (total) => `Tổng ${total} mục`,
+                    }}
+                    scroll={{ x: activeCategory === 'customers' ? 900 : 700 }}
+                  />
+                </Spin>
               </>
             ),
           }))}
@@ -468,72 +563,151 @@ const MasterDataList: React.FC = () => {
         title={editingItem ? `Chỉnh sửa ${categoryLabels[activeCategory]}` : `Thêm ${categoryLabels[activeCategory]} mới`}
         open={isModalOpen}
         onOk={handleModalOk}
-        onCancel={() => setIsModalOpen(false)}
+        onCancel={() => {
+          setIsModalOpen(false);
+          form.resetFields();
+        }}
         width={600}
         okText={editingItem ? 'Cập nhật' : 'Thêm mới'}
         cancelText="Hủy"
         centered
+        confirmLoading={modalLoading}
       >
         <Form form={form} layout="vertical">
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item
-                name="code"
-                label="Mã"
-                rules={[{ required: true, message: 'Vui lòng nhập mã' }]}
-              >
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={16}>
-              <Form.Item
-                name="name"
-                label="Tên"
-                rules={[{ required: true, message: 'Vui lòng nhập tên' }]}
-              >
-                <Input />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item name="description" label="Mô tả">
-            <Input.TextArea rows={3} />
-          </Form.Item>
-          {activeCategory === 'customers' && (
+          {activeCategory !== 'customers' && (
             <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item name="phone" label="Điện thoại">
+              <Col span={8}>
+                <Form.Item
+                  name="code"
+                  label="Mã"
+                  rules={[{ required: true, message: 'Vui lòng nhập mã' }]}
+                >
                   <Input />
                 </Form.Item>
               </Col>
-              <Col span={12}>
-                <Form.Item name="email" label="Email">
+              <Col span={16}>
+                <Form.Item
+                  name="name"
+                  label="Tên"
+                  rules={[{ required: true, message: 'Vui lòng nhập tên' }]}
+                >
                   <Input />
                 </Form.Item>
               </Col>
             </Row>
           )}
-          {activeCategory === 'storageLocations' && (
-            <Form.Item name="temperature" label="Nhiệt độ bảo quản">
-              <Input placeholder="VD: 2-8°C" />
+          {activeCategory === 'customers' && (
+            <>
+              <Form.Item
+                name="name"
+                label="Tên khách hàng"
+                rules={[{ required: true, message: 'Vui lòng nhập tên khách hàng' }]}
+              >
+                <Input />
+              </Form.Item>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item name="phone" label="Điện thoại">
+                    <Input />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="email"
+                    label="Email"
+                    rules={[{ type: 'email', message: 'Email không hợp lệ' }]}
+                  >
+                    <Input />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Form.Item name="address" label="Địa chỉ">
+                <Input.TextArea rows={2} />
+              </Form.Item>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item name="taxCode" label="Mã số thuế">
+                    <Input />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item name="contactPerson" label="Người liên hệ">
+                    <Input />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </>
+          )}
+          {activeCategory !== 'customers' && (
+            <>
+              <Form.Item name="description" label="Mô tả">
+                <Input.TextArea rows={3} />
+              </Form.Item>
+              {activeCategory === 'storageLocations' && (
+                <Row gutter={16}>
+                  <Col span={8}>
+                    <Form.Item name="temperature" label="Nhiệt độ">
+                      <Input placeholder="VD: 2-8°C" />
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item name="humidity" label="Độ ẩm">
+                      <Input placeholder="VD: 60-70%" />
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item name="capacity" label="Sức chứa">
+                      <Input type="number" />
+                    </Form.Item>
+                  </Col>
+                </Row>
+              )}
+              {activeCategory === 'testMethods' && (
+                <Form.Item name="standard" label="Tiêu chuẩn">
+                  <Input placeholder="VD: TCVN 6663-6:2008" />
+                </Form.Item>
+              )}
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item name="sortOrder" label="Thứ tự sắp xếp">
+                    <Input type="number" />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item name="isActive" label="Trạng thái">
+                    <Select>
+                      <Select.Option value={true}>Hoạt động</Select.Option>
+                      <Select.Option value={false}>Ngừng</Select.Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
+            </>
+          )}
+          {activeCategory === 'customers' && (
+            <Form.Item name="isActive" label="Trạng thái">
+              <Select>
+                <Select.Option value={true}>Hoạt động</Select.Option>
+                <Select.Option value={false}>Ngừng</Select.Option>
+              </Select>
             </Form.Item>
           )}
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="sortOrder" label="Thứ tự sắp xếp">
-                <Input type="number" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="isActive" label="Trạng thái">
-                <Select>
-                  <Select.Option value={true}>Hoạt động</Select.Option>
-                  <Select.Option value={false}>Ngừng</Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
         </Form>
       </Modal>
+
+      {/* Import Excel Modal */}
+      {canImport && importTypeMap[activeCategory] && (
+        <ImportExcelModal
+          open={importModalOpen}
+          onClose={() => setImportModalOpen(false)}
+          onSuccess={() => {
+            setImportModalOpen(false);
+            fetchCategoryData(activeCategory);
+          }}
+          importType={importTypeMap[activeCategory]!}
+          title={`Import ${categoryLabels[activeCategory]}`}
+        />
+      )}
     </div>
   );
 };

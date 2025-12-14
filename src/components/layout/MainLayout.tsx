@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Layout, Menu, MenuProps } from 'antd';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Layout, Menu, MenuProps, Dropdown, Avatar, Space, Modal, Form, Input, message, Button } from 'antd';
 import {
   DashboardOutlined,
   FileTextOutlined,
@@ -17,9 +17,14 @@ import {
   SolutionOutlined,
   ToolOutlined,
   PieChartOutlined,
+  UserOutlined,
+  LogoutOutlined,
+  KeyOutlined,
+  DownOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { authService, UserInfo } from '../../services/authService';
 import './MainLayout.css';
 
 const { Header, Sider, Content } = Layout;
@@ -51,9 +56,76 @@ const routeToKeyMap: Record<string, string> = {
 
 const MainLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [changePasswordVisible, setChangePasswordVisible] = useState(false);
+  const [changePasswordLoading, setChangePasswordLoading] = useState(false);
+  const [changePasswordForm] = Form.useForm();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Load user info from localStorage
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user_info');
+    if (storedUser) {
+      try {
+        setUserInfo(JSON.parse(storedUser));
+      } catch {
+        // Ignore parsing errors
+      }
+    }
+  }, []);
+
+  // Handle logout
+  const handleLogout = () => {
+    Modal.confirm({
+      title: 'Xác nhận đăng xuất',
+      content: 'Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?',
+      okText: 'Đăng xuất',
+      cancelText: 'Hủy',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        await authService.logout();
+      },
+    });
+  };
+
+  // Handle change password
+  const handleChangePassword = async (values: { currentPassword: string; newPassword: string }) => {
+    setChangePasswordLoading(true);
+    try {
+      await authService.changePassword(values);
+      message.success('Đổi mật khẩu thành công!');
+      setChangePasswordVisible(false);
+      changePasswordForm.resetFields();
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Đổi mật khẩu thất bại. Vui lòng thử lại.';
+      message.error(errorMessage);
+    } finally {
+      setChangePasswordLoading(false);
+    }
+  };
+
+  // Get user display name
+  const getUserDisplayName = () => {
+    if (userInfo?.fullName) return userInfo.fullName;
+    if (userInfo?.name || userInfo?.surname) return `${userInfo.surname || ''} ${userInfo.name || ''}`.trim();
+    return userInfo?.userName || 'User';
+  };
+
+  // Get user role display
+  const getUserRole = () => {
+    if (userInfo?.roles && userInfo.roles.length > 0) {
+      return userInfo.roles[0];
+    }
+    return '';
+  };
+
+  // Get avatar letter
+  const getAvatarLetter = () => {
+    const name = getUserDisplayName();
+    return name.charAt(0).toUpperCase();
+  };
 
   // Determine selected key based on current path
   const selectedKey = useMemo(() => {
@@ -65,8 +137,10 @@ const MainLayout: React.FC = () => {
     }
 
     // Check prefix match for nested routes (e.g., /test-request/123)
-    for (const route of Object.keys(routeToKeyMap)) {
-      if (pathname.startsWith(route)) {
+    // Sort routes by length (longest first) to avoid matching shorter prefixes
+    const sortedRoutes = Object.keys(routeToKeyMap).sort((a, b) => b.length - a.length);
+    for (const route of sortedRoutes) {
+      if (pathname.startsWith(route + '/') || pathname === route) {
         return routeToKeyMap[route];
       }
     }
@@ -221,10 +295,139 @@ const MainLayout: React.FC = () => {
           <div className="header-content">
             <h1>{t('common.appName')}</h1>
             <div className="header-actions">
-              <span>{t('common.welcome')}, Admin</span>
+              <Dropdown
+                menu={{
+                  items: [
+                    {
+                      key: 'user-info',
+                      label: (
+                        <div className="user-dropdown-header">
+                          <div className="user-dropdown-name">{getUserDisplayName()}</div>
+                          <div className="user-dropdown-email">{userInfo?.email}</div>
+                          {getUserRole() && (
+                            <div className="user-dropdown-role">{getUserRole()}</div>
+                          )}
+                        </div>
+                      ),
+                      disabled: true,
+                    },
+                    { type: 'divider' },
+                    {
+                      key: 'change-password',
+                      icon: <KeyOutlined />,
+                      label: 'Đổi mật khẩu',
+                      onClick: () => setChangePasswordVisible(true),
+                    },
+                    {
+                      key: 'settings',
+                      icon: <SettingOutlined />,
+                      label: 'Cài đặt',
+                      onClick: () => navigate('/settings'),
+                    },
+                    { type: 'divider' },
+                    {
+                      key: 'logout',
+                      icon: <LogoutOutlined />,
+                      label: 'Đăng xuất',
+                      danger: true,
+                      onClick: handleLogout,
+                    },
+                  ],
+                }}
+                trigger={['click']}
+                placement="bottomRight"
+              >
+                <Space className="user-dropdown-trigger">
+                  <Avatar
+                    size={36}
+                    icon={<UserOutlined />}
+                    className="user-avatar"
+                  >
+                    {getAvatarLetter()}
+                  </Avatar>
+                  <div className="user-info-text">
+                    <span className="user-name">{getUserDisplayName()}</span>
+                    {getUserRole() && <span className="user-role">{getUserRole()}</span>}
+                  </div>
+                  <DownOutlined className="dropdown-arrow" />
+                </Space>
+              </Dropdown>
             </div>
           </div>
         </Header>
+
+        {/* Change Password Modal */}
+        <Modal
+          title="Đổi mật khẩu"
+          open={changePasswordVisible}
+          onCancel={() => {
+            setChangePasswordVisible(false);
+            changePasswordForm.resetFields();
+          }}
+          footer={null}
+          destroyOnClose
+        >
+          <Form
+            form={changePasswordForm}
+            layout="vertical"
+            onFinish={handleChangePassword}
+          >
+            <Form.Item
+              name="currentPassword"
+              label="Mật khẩu hiện tại"
+              rules={[{ required: true, message: 'Vui lòng nhập mật khẩu hiện tại' }]}
+            >
+              <Input.Password placeholder="Nhập mật khẩu hiện tại" />
+            </Form.Item>
+            <Form.Item
+              name="newPassword"
+              label="Mật khẩu mới"
+              rules={[
+                { required: true, message: 'Vui lòng nhập mật khẩu mới' },
+                { min: 6, message: 'Mật khẩu phải có ít nhất 6 ký tự' },
+              ]}
+            >
+              <Input.Password placeholder="Nhập mật khẩu mới" />
+            </Form.Item>
+            <Form.Item
+              name="confirmPassword"
+              label="Xác nhận mật khẩu mới"
+              dependencies={['newPassword']}
+              rules={[
+                { required: true, message: 'Vui lòng xác nhận mật khẩu mới' },
+                ({ getFieldValue }) => ({
+                  validator(_, value) {
+                    if (!value || getFieldValue('newPassword') === value) {
+                      return Promise.resolve();
+                    }
+                    return Promise.reject(new Error('Mật khẩu xác nhận không khớp'));
+                  },
+                }),
+              ]}
+            >
+              <Input.Password placeholder="Nhập lại mật khẩu mới" />
+            </Form.Item>
+            <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
+              <Space>
+                <Button
+                  onClick={() => {
+                    setChangePasswordVisible(false);
+                    changePasswordForm.resetFields();
+                  }}
+                >
+                  Hủy
+                </Button>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  loading={changePasswordLoading}
+                >
+                  Đổi mật khẩu
+                </Button>
+              </Space>
+            </Form.Item>
+          </Form>
+        </Modal>
         <Content style={{ margin: '16px', overflow: 'auto' }}>
           <div className="site-layout-content">
             <Outlet />

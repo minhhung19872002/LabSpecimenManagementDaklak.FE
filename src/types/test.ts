@@ -16,6 +16,7 @@ export interface TestDto {
   standard: string;
   status: TestStatus;
   assigneeId?: string;
+  assigneeName?: string;
   assignmentDate?: string;
   startDate?: string;
   completionDate?: string;

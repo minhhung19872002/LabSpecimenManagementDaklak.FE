@@ -13,11 +13,11 @@ import {
   Button,
   Modal,
   Descriptions,
-  Timeline,
   Typography,
   Statistic,
   Avatar,
-  Tooltip
+  Tooltip,
+  message,
 } from 'antd';
 import {
   SearchOutlined,
@@ -25,311 +25,222 @@ import {
   HistoryOutlined,
   UserOutlined,
   EyeOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  PlusOutlined,
-  FileTextOutlined,
-  ExperimentOutlined,
-  CheckCircleOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import isToday from 'dayjs/plugin/isToday';
-import { mockAuditLogs, mockUsers, getUserById } from '../../mocks/mockData';
+import { auditLogService, AuditLogDto } from '../../services/auditLogService';
 
 dayjs.extend(isToday);
 
 const { RangePicker } = DatePicker;
 const { Text } = Typography;
 
-// Types
-interface AuditLog {
-  id: string;
-  timestamp: string;
-  userId: string;
-  userName: string;
-  userRole: string;
-  action: 'create' | 'update' | 'delete' | 'view' | 'approve' | 'reject' | 'submit';
-  entityType: string;
-  entityId: string;
-  entityName: string;
-  description: string;
-  oldValue?: string;
-  newValue?: string;
-  ipAddress: string;
-  userAgent: string;
-  changes?: FieldChange[];
-}
-
-interface FieldChange {
-  field: string;
-  oldValue: string;
-  newValue: string;
-}
-
-// Convert centralized mock data to AuditLog format
-const generateMockData = (): AuditLog[] => {
-  // Generate more logs based on centralized data for better demo
-  const additionalLogs: AuditLog[] = [];
-  const actions: AuditLog['action'][] = ['create', 'update', 'delete', 'view', 'approve', 'submit'];
-  const entityTypes = [
-    { type: 'TestRequest', name: 'Yêu cầu thử nghiệm' },
-    { type: 'Specimen', name: 'Mẫu thử nghiệm' },
-    { type: 'Test', name: 'Phép thử' },
-    { type: 'TestResult', name: 'Kết quả thử nghiệm' },
-    { type: 'Report', name: 'Báo cáo' },
-    { type: 'User', name: 'Người dùng' },
-  ];
-
-  // Convert existing centralized logs
-  const baseLogs: AuditLog[] = mockAuditLogs.map(log => {
-    const user = getUserById(log.userId);
-    return {
-      id: log.id,
-      timestamp: log.timestamp,
-      userId: log.userId,
-      userName: log.userName,
-      userRole: user?.role || 'Kỹ thuật viên',
-      action: log.action.toLowerCase() as AuditLog['action'],
-      entityType: log.entityType,
-      entityId: log.entityId,
-      entityName: `${log.entityType} ${log.entityCode}`,
-      description: log.description,
-      ipAddress: log.ipAddress,
-      userAgent: 'Chrome 120.0.0.0',
-      changes: log.details ? [
-        { field: 'Chi tiết', oldValue: '-', newValue: JSON.stringify(log.details) }
-      ] : undefined,
-    };
-  });
-
-  // Generate additional logs for demo (using centralized users)
-  for (let i = 0; i < 50; i++) {
-    const user = mockUsers[i % mockUsers.length];
-    const action = actions[i % actions.length];
-    const entityType = entityTypes[i % entityTypes.length];
-    const timestamp = dayjs().subtract((i + baseLogs.length) * 30, 'minute');
-
-    let description = '';
-    let changes: FieldChange[] | undefined;
-
-    switch (action) {
-      case 'create':
-        description = `Tạo mới ${entityType.name} #${i + 1}`;
-        break;
-      case 'update':
-        description = `Cập nhật ${entityType.name} #${i + 1}`;
-        changes = [
-          { field: 'Trạng thái', oldValue: 'Chờ xử lý', newValue: 'Đang thực hiện' },
-          { field: 'Ghi chú', oldValue: 'Ghi chú cũ', newValue: 'Ghi chú mới đã cập nhật' },
-        ];
-        break;
-      case 'delete':
-        description = `Xóa ${entityType.name} #${i + 1}`;
-        break;
-      case 'view':
-        description = `Xem ${entityType.name} #${i + 1}`;
-        break;
-      case 'approve':
-        description = `Phê duyệt ${entityType.name} #${i + 1}`;
-        break;
-      case 'submit':
-        description = `Nộp ${entityType.name} #${i + 1}`;
-        break;
-    }
-
-    additionalLogs.push({
-      id: `log-${String(baseLogs.length + i + 1).padStart(5, '0')}`,
-      timestamp: timestamp.toISOString(),
-      userId: user.id,
-      userName: user.fullName,
-      userRole: user.role,
-      action,
-      entityType: entityType.type,
-      entityId: `${entityType.type.toLowerCase()}-${i + 1}`,
-      entityName: `${entityType.name} #${i + 1}`,
-      description,
-      ipAddress: `192.168.1.${100 + (i % 50)}`,
-      userAgent: 'Chrome 120.0.0.0',
-      changes,
-    });
-  }
-
-  return [...baseLogs, ...additionalLogs].sort((a, b) =>
-    dayjs(b.timestamp).unix() - dayjs(a.timestamp).unix()
-  );
-};
-
 const AuditLogList: React.FC = () => {
-  const [data, setData] = useState<AuditLog[]>([]);
-  const [filteredData, setFilteredData] = useState<AuditLog[]>([]);
+  const [data, setData] = useState<AuditLogDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
-  const [actionFilter, setActionFilter] = useState<string>('all');
-  const [entityFilter, setEntityFilter] = useState<string>('all');
-  const [userFilter, setUserFilter] = useState<string>('all');
+  const [methodFilter, setMethodFilter] = useState<string>('all');
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
-  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+  const [selectedLog, setSelectedLog] = useState<AuditLogDto | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [stats, setStats] = useState({
+    total: 0,
+    today: 0,
+    gets: 0,
+    posts: 0,
+    puts: 0,
+    deletes: 0,
+  });
 
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 50,
+    total: 0,
+  });
+
+  // Load data when filters or pagination changes
   useEffect(() => {
     loadData();
-  }, []);
+  }, [methodFilter, dateRange, pagination.current, pagination.pageSize]);
 
   useEffect(() => {
-    let filtered = [...data];
+    loadStatistics();
+  }, []);
 
-    if (searchText) {
-      const search = searchText.toLowerCase();
-      filtered = filtered.filter(item =>
-        item.description.toLowerCase().includes(search) ||
-        item.userName.toLowerCase().includes(search) ||
-        item.entityName.toLowerCase().includes(search)
-      );
+  const loadStatistics = async () => {
+    try {
+      const result = await auditLogService.getStatistics();
+      setStats(result);
+    } catch (error) {
+      console.error('Error loading statistics:', error);
     }
-
-    if (actionFilter !== 'all') {
-      filtered = filtered.filter(item => item.action === actionFilter);
-    }
-
-    if (entityFilter !== 'all') {
-      filtered = filtered.filter(item => item.entityType === entityFilter);
-    }
-
-    if (userFilter !== 'all') {
-      filtered = filtered.filter(item => item.userName === userFilter);
-    }
-
-    if (dateRange) {
-      filtered = filtered.filter(item => {
-        const date = dayjs(item.timestamp);
-        return date.isAfter(dateRange[0].startOf('day')) && date.isBefore(dateRange[1].endOf('day'));
-      });
-    }
-
-    setFilteredData(filtered);
-  }, [searchText, actionFilter, entityFilter, userFilter, dateRange, data]);
-
-  const loadData = () => {
-    setLoading(true);
-    setTimeout(() => {
-      const mockData = generateMockData();
-      setData(mockData);
-      setFilteredData(mockData);
-      setLoading(false);
-    }, 500);
   };
 
-  const handleViewDetail = (record: AuditLog) => {
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const params: any = {
+        skipCount: (pagination.current - 1) * pagination.pageSize,
+        maxResultCount: pagination.pageSize,
+        sorting: 'executionTime desc',
+      };
+
+      // Apply filters
+      if (methodFilter !== 'all') {
+        params.httpMethod = methodFilter;
+      }
+      if (dateRange) {
+        params.startTime = dateRange[0].startOf('day').toISOString();
+        params.endTime = dateRange[1].endOf('day').toISOString();
+      }
+
+      const result = await auditLogService.getList(params);
+      setData(result.items || []);
+      setPagination(prev => ({ ...prev, total: result.totalCount }));
+    } catch (error) {
+      console.error('Error loading audit logs:', error);
+      message.error('Không thể tải lịch sử thay đổi. Vui lòng kiểm tra kết nối server.');
+      setData([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle method filter change
+  const handleMethodFilterChange = (value: string) => {
+    setMethodFilter(value);
+    setPagination(prev => ({ ...prev, current: 1 }));
+  };
+
+  // Handle date range change
+  const handleDateRangeChange = (dates: [dayjs.Dayjs, dayjs.Dayjs] | null) => {
+    setDateRange(dates);
+    setPagination(prev => ({ ...prev, current: 1 }));
+  };
+
+  // Handle table pagination change
+  const handleTableChange = (paginationConfig: any) => {
+    setPagination(prev => ({
+      ...prev,
+      current: paginationConfig.current,
+      pageSize: paginationConfig.pageSize,
+    }));
+  };
+
+  // Handle refresh
+  const handleRefresh = () => {
+    setSearchText('');
+    setMethodFilter('all');
+    setDateRange(null);
+    setPagination(prev => ({ ...prev, current: 1 }));
+  };
+
+  // Local search filter (for URL search within current page)
+  const filteredData = searchText
+    ? data.filter(item =>
+        item.url?.toLowerCase().includes(searchText.toLowerCase()) ||
+        item.userName?.toLowerCase().includes(searchText.toLowerCase())
+      )
+    : data;
+
+  const handleViewDetail = (record: AuditLogDto) => {
     setSelectedLog(record);
     setIsDetailModalOpen(true);
   };
 
-  const getActionIcon = (action: string) => {
-    const icons: Record<string, React.ReactNode> = {
-      create: <PlusOutlined />,
-      update: <EditOutlined />,
-      delete: <DeleteOutlined />,
-      view: <EyeOutlined />,
-      approve: <CheckCircleOutlined />,
-      submit: <FileTextOutlined />,
+
+  const getHttpMethodTag = (method: string) => {
+    const config: Record<string, { color: string }> = {
+      GET: { color: 'blue' },
+      POST: { color: 'green' },
+      PUT: { color: 'orange' },
+      DELETE: { color: 'red' },
+      PATCH: { color: 'purple' },
     };
-    return icons[action] || <HistoryOutlined />;
+    const c = config[method] || { color: 'default' };
+    return <Tag color={c.color}>{method}</Tag>;
   };
 
-  const getActionTag = (action: string) => {
-    const config: Record<string, { color: string; text: string }> = {
-      create: { color: 'green', text: 'Tạo mới' },
-      update: { color: 'blue', text: 'Cập nhật' },
-      delete: { color: 'red', text: 'Xóa' },
-      view: { color: 'default', text: 'Xem' },
-      approve: { color: 'cyan', text: 'Phê duyệt' },
-      reject: { color: 'volcano', text: 'Từ chối' },
-      submit: { color: 'purple', text: 'Nộp' },
-    };
-    const c = config[action] || { color: 'default', text: action };
-    return <Tag color={c.color} icon={getActionIcon(action)}>{c.text}</Tag>;
+  const getStatusCodeTag = (code: number | undefined) => {
+    if (!code) return null;
+    let color = 'default';
+    if (code >= 200 && code < 300) color = 'green';
+    else if (code >= 400 && code < 500) color = 'orange';
+    else if (code >= 500) color = 'red';
+    return <Tag color={color}>{code}</Tag>;
   };
 
-  const getEntityTypeTag = (entityType: string) => {
-    const config: Record<string, { color: string; text: string }> = {
-      TestRequest: { color: 'blue', text: 'Yêu cầu' },
-      Specimen: { color: 'green', text: 'Mẫu' },
-      Test: { color: 'purple', text: 'Phép thử' },
-      TestResult: { color: 'cyan', text: 'Kết quả' },
-      Report: { color: 'orange', text: 'Báo cáo' },
-      User: { color: 'red', text: 'Người dùng' },
-    };
-    const c = config[entityType] || { color: 'default', text: entityType };
-    return <Tag color={c.color}>{c.text}</Tag>;
-  };
-
-  // Get unique users for filter
-  const uniqueUsers = [...new Set(data.map(d => d.userName))];
-
-  // Statistics
-  const stats = {
-    total: data.length,
-    today: data.filter(d => dayjs(d.timestamp).isToday()).length,
-    creates: data.filter(d => d.action === 'create').length,
-    updates: data.filter(d => d.action === 'update').length,
-    deletes: data.filter(d => d.action === 'delete').length,
-    approves: data.filter(d => d.action === 'approve').length,
-  };
-
-  const columns: ColumnsType<AuditLog> = [
+  const columns: ColumnsType<AuditLogDto> = [
     {
       title: 'Thời gian',
-      dataIndex: 'timestamp',
-      key: 'timestamp',
+      dataIndex: 'executionTime',
+      key: 'executionTime',
       width: 160,
-      render: (timestamp: string) => (
-        <Tooltip title={dayjs(timestamp).format('DD/MM/YYYY HH:mm:ss')}>
-          <Text>{dayjs(timestamp).format('DD/MM/YYYY HH:mm')}</Text>
+      render: (executionTime: string) => (
+        <Tooltip title={dayjs(executionTime).format('DD/MM/YYYY HH:mm:ss')}>
+          <Text>{dayjs(executionTime).format('DD/MM/YYYY HH:mm')}</Text>
         </Tooltip>
       ),
-      sorter: (a, b) => dayjs(a.timestamp).unix() - dayjs(b.timestamp).unix(),
+      sorter: (a, b) => dayjs(a.executionTime).unix() - dayjs(b.executionTime).unix(),
       defaultSortOrder: 'descend',
     },
     {
       title: 'Người dùng',
       key: 'user',
-      width: 180,
+      width: 150,
       render: (_, record) => (
         <Space>
           <Avatar size="small" icon={<UserOutlined />} />
-          <div>
-            <div>{record.userName}</div>
-            <Text type="secondary" style={{ fontSize: 12 }}>{record.userRole}</Text>
-          </div>
+          <Text>{record.userName || 'Anonymous'}</Text>
         </Space>
       ),
     },
     {
-      title: 'Hành động',
-      dataIndex: 'action',
-      key: 'action',
-      width: 120,
-      render: (action: string) => getActionTag(action),
+      title: 'Method',
+      dataIndex: 'httpMethod',
+      key: 'httpMethod',
+      width: 90,
+      render: (method: string) => method ? getHttpMethodTag(method) : '-',
     },
     {
-      title: 'Loại dữ liệu',
-      dataIndex: 'entityType',
-      key: 'entityType',
-      width: 120,
-      render: (entityType: string) => getEntityTypeTag(entityType),
-    },
-    {
-      title: 'Mô tả',
-      dataIndex: 'description',
-      key: 'description',
+      title: 'URL',
+      dataIndex: 'url',
+      key: 'url',
       ellipsis: true,
+      render: (url: string) => (
+        <Tooltip title={url}>
+          <Text>{url}</Text>
+        </Tooltip>
+      ),
+    },
+    {
+      title: 'Status',
+      dataIndex: 'httpStatusCode',
+      key: 'httpStatusCode',
+      width: 80,
+      render: (code: number) => getStatusCodeTag(code),
+    },
+    {
+      title: 'Thời gian (ms)',
+      dataIndex: 'executionDuration',
+      key: 'executionDuration',
+      width: 110,
+      render: (duration: number) => (
+        <Text type={duration > 1000 ? 'danger' : undefined}>{duration} ms</Text>
+      ),
     },
     {
       title: 'IP',
-      dataIndex: 'ipAddress',
-      key: 'ipAddress',
+      dataIndex: 'clientIpAddress',
+      key: 'clientIpAddress',
       width: 120,
+      render: (ip: string) => {
+        // Convert localhost addresses to readable format
+        if (ip === '::1' || ip === '127.0.0.1') return 'localhost';
+        return ip;
+      },
     },
     {
       title: '',
@@ -352,27 +263,27 @@ const AuditLogList: React.FC = () => {
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Card>
-            <Statistic title="Hôm nay" value={stats.today} styles={{ content: { color: '#1890ff' } }} />
+            <Statistic title="Hôm nay" value={stats.today} valueStyle={{ color: '#1890ff' }} />
           </Card>
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Card>
-            <Statistic title="Tạo mới" value={stats.creates} styles={{ content: { color: '#52c41a' } }} />
+            <Statistic title="GET" value={stats.gets} valueStyle={{ color: '#1890ff' }} />
           </Card>
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Card>
-            <Statistic title="Cập nhật" value={stats.updates} styles={{ content: { color: '#1890ff' } }} />
+            <Statistic title="POST" value={stats.posts} valueStyle={{ color: '#52c41a' }} />
           </Card>
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Card>
-            <Statistic title="Xóa" value={stats.deletes} styles={{ content: { color: '#ff4d4f' } }} />
+            <Statistic title="PUT" value={stats.puts} valueStyle={{ color: '#fa8c16' }} />
           </Card>
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Card>
-            <Statistic title="Phê duyệt" value={stats.approves} styles={{ content: { color: '#13c2c2' } }} />
+            <Statistic title="DELETE" value={stats.deletes} valueStyle={{ color: '#ff4d4f' }} />
           </Card>
         </Col>
       </Row>
@@ -386,14 +297,14 @@ const AuditLogList: React.FC = () => {
           </Space>
         }
         extra={
-          <Button icon={<ReloadOutlined />} onClick={loadData}>Làm mới</Button>
+          <Button icon={<ReloadOutlined />} onClick={handleRefresh}>Làm mới</Button>
         }
       >
         {/* Filters */}
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
           <Col xs={24} sm={12} md={6}>
             <Input
-              placeholder="Tìm kiếm..."
+              placeholder="Tìm kiếm URL, người dùng..."
               prefix={<SearchOutlined />}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
@@ -403,52 +314,24 @@ const AuditLogList: React.FC = () => {
           <Col xs={12} sm={6} md={3}>
             <Select
               style={{ width: '100%' }}
-              placeholder="Hành động"
-              value={actionFilter}
-              onChange={setActionFilter}
+              placeholder="HTTP Method"
+              value={methodFilter}
+              onChange={handleMethodFilterChange}
             >
               <Select.Option value="all">Tất cả</Select.Option>
-              <Select.Option value="create">Tạo mới</Select.Option>
-              <Select.Option value="update">Cập nhật</Select.Option>
-              <Select.Option value="delete">Xóa</Select.Option>
-              <Select.Option value="view">Xem</Select.Option>
-              <Select.Option value="approve">Phê duyệt</Select.Option>
-              <Select.Option value="submit">Nộp</Select.Option>
-            </Select>
-          </Col>
-          <Col xs={12} sm={6} md={3}>
-            <Select
-              style={{ width: '100%' }}
-              placeholder="Loại dữ liệu"
-              value={entityFilter}
-              onChange={setEntityFilter}
-            >
-              <Select.Option value="all">Tất cả</Select.Option>
-              <Select.Option value="TestRequest">Yêu cầu</Select.Option>
-              <Select.Option value="Specimen">Mẫu</Select.Option>
-              <Select.Option value="Test">Phép thử</Select.Option>
-              <Select.Option value="TestResult">Kết quả</Select.Option>
-              <Select.Option value="Report">Báo cáo</Select.Option>
-            </Select>
-          </Col>
-          <Col xs={12} sm={6} md={3}>
-            <Select
-              style={{ width: '100%' }}
-              placeholder="Người dùng"
-              value={userFilter}
-              onChange={setUserFilter}
-            >
-              <Select.Option value="all">Tất cả</Select.Option>
-              {uniqueUsers.map(u => (
-                <Select.Option key={u} value={u}>{u}</Select.Option>
-              ))}
+              <Select.Option value="GET">GET</Select.Option>
+              <Select.Option value="POST">POST</Select.Option>
+              <Select.Option value="PUT">PUT</Select.Option>
+              <Select.Option value="DELETE">DELETE</Select.Option>
+              <Select.Option value="PATCH">PATCH</Select.Option>
             </Select>
           </Col>
           <Col xs={24} sm={12} md={6}>
             <RangePicker
               style={{ width: '100%' }}
               placeholder={['Từ ngày', 'Đến ngày']}
-              onChange={(dates) => setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs])}
+              value={dateRange}
+              onChange={handleDateRangeChange}
               format="DD/MM/YYYY"
             />
           </Col>
@@ -460,79 +343,97 @@ const AuditLogList: React.FC = () => {
           rowKey="id"
           loading={loading}
           pagination={{
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total: pagination.total,
+            pageSizeOptions: [20, 50, 100],
             showSizeChanger: true,
-            showTotal: (total) => `Tổng ${total} bản ghi`,
-            defaultPageSize: 20,
+            showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} bản ghi`,
           }}
+          onChange={handleTableChange}
           scroll={{ x: 1200 }}
         />
       </Card>
 
       {/* Detail Modal */}
       <Modal
-        title="Chi tiết lịch sử thay đổi"
+        title="Chi tiết Audit Log"
         open={isDetailModalOpen}
         onCancel={() => setIsDetailModalOpen(false)}
         footer={null}
-        width={700}
+        width={800}
         centered
       >
         {selectedLog && (
           <>
             <Descriptions bordered column={2} style={{ marginBottom: 24 }}>
               <Descriptions.Item label="Thời gian">
-                {dayjs(selectedLog.timestamp).format('DD/MM/YYYY HH:mm:ss')}
+                {dayjs(selectedLog.executionTime).format('DD/MM/YYYY HH:mm:ss')}
               </Descriptions.Item>
-              <Descriptions.Item label="Hành động">
-                {getActionTag(selectedLog.action)}
+              <Descriptions.Item label="Thời gian xử lý">
+                {selectedLog.executionDuration} ms
               </Descriptions.Item>
               <Descriptions.Item label="Người thực hiện">
-                {selectedLog.userName}
+                {selectedLog.userName || 'Anonymous'}
               </Descriptions.Item>
-              <Descriptions.Item label="Vai trò">
-                {selectedLog.userRole}
+              <Descriptions.Item label="HTTP Method">
+                {selectedLog.httpMethod ? getHttpMethodTag(selectedLog.httpMethod) : '-'}
               </Descriptions.Item>
-              <Descriptions.Item label="Loại dữ liệu">
-                {getEntityTypeTag(selectedLog.entityType)}
+              <Descriptions.Item label="URL" span={2}>
+                {selectedLog.url}
               </Descriptions.Item>
-              <Descriptions.Item label="ID đối tượng">
-                {selectedLog.entityId}
-              </Descriptions.Item>
-              <Descriptions.Item label="Mô tả" span={2}>
-                {selectedLog.description}
+              <Descriptions.Item label="HTTP Status">
+                {getStatusCodeTag(selectedLog.httpStatusCode)}
               </Descriptions.Item>
               <Descriptions.Item label="Địa chỉ IP">
-                {selectedLog.ipAddress}
+                {selectedLog.clientIpAddress === '::1' || selectedLog.clientIpAddress === '127.0.0.1'
+                  ? 'localhost'
+                  : selectedLog.clientIpAddress}
               </Descriptions.Item>
-              <Descriptions.Item label="Trình duyệt">
-                {selectedLog.userAgent}
+              <Descriptions.Item label="Trình duyệt" span={2}>
+                <Text style={{ fontSize: 12 }}>{selectedLog.browserInfo}</Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="Application">
+                {selectedLog.applicationName}
+              </Descriptions.Item>
+              <Descriptions.Item label="Correlation ID">
+                <Text copyable style={{ fontSize: 12 }}>{selectedLog.correlationId}</Text>
               </Descriptions.Item>
             </Descriptions>
 
-            {selectedLog.changes && selectedLog.changes.length > 0 && (
+            {selectedLog.entityChanges && selectedLog.entityChanges.length > 0 && (
               <>
-                <Text strong>Chi tiết thay đổi:</Text>
-                <Table
-                  style={{ marginTop: 8 }}
-                  dataSource={selectedLog.changes}
-                  rowKey="field"
-                  pagination={false}
-                  columns={[
-                    { title: 'Trường', dataIndex: 'field', key: 'field' },
-                    {
-                      title: 'Giá trị cũ',
-                      dataIndex: 'oldValue',
-                      key: 'oldValue',
-                      render: (val) => <Text delete type="danger">{val}</Text>,
-                    },
-                    {
-                      title: 'Giá trị mới',
-                      dataIndex: 'newValue',
-                      key: 'newValue',
-                      render: (val) => <Text type="success">{val}</Text>,
-                    },
-                  ]}
-                />
+                <Text strong>Entity Changes:</Text>
+                {selectedLog.entityChanges.map((change, idx) => (
+                  <div key={idx} style={{ marginTop: 8 }}>
+                    <Tag color="blue">{change.changeType}</Tag>
+                    <Text type="secondary" style={{ marginLeft: 8 }}>{change.entityTypeFullName}</Text>
+                    {change.propertyChanges && change.propertyChanges.length > 0 && (
+                      <Table
+                        style={{ marginTop: 8 }}
+                        dataSource={change.propertyChanges}
+                        rowKey="id"
+                        pagination={false}
+                        size="small"
+                        columns={[
+                          { title: 'Property', dataIndex: 'propertyName', key: 'propertyName' },
+                          {
+                            title: 'Giá trị cũ',
+                            dataIndex: 'originalValue',
+                            key: 'originalValue',
+                            render: (val) => val ? <Text delete type="danger">{val}</Text> : '-',
+                          },
+                          {
+                            title: 'Giá trị mới',
+                            dataIndex: 'newValue',
+                            key: 'newValue',
+                            render: (val) => val ? <Text type="success">{val}</Text> : '-',
+                          },
+                        ]}
+                      />
+                    )}
+                  </div>
+                ))}
               </>
             )}
           </>

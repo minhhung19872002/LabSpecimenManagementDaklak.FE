@@ -5,42 +5,20 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, SearchOutlined
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { testService } from '../../services/testService';
+import { specimenService } from '../../services/specimenService';
+import { testMethodService } from '../../services/masterDataService';
+import { userService, UserLookupDto } from '../../services/userService';
 import { TestDto, TestStatus } from '../../types/test';
 import dayjs from 'dayjs';
-import { mockTests, mockSpecimens, mockTestMethods, mockUsers } from '../../mocks/mockData';
-
-// Use centralized mock data
-const generateMockData = (): TestDto[] => {
-  return mockTests.map(test => {
-    const specimen = mockSpecimens.find(s => s.id === test.specimenId);
-    const testMethod = mockTestMethods.find(m => m.id === test.methodId);
-    const assignee = mockUsers.find(u => u.id === test.assigneeId);
-    return {
-      id: test.id,
-      code: test.code,
-      name: test.name,
-      specimenId: test.specimenId,
-      specimenCode: specimen?.code || 'N/A',
-      method: testMethod?.name || 'N/A',
-      standard: testMethod?.standard || '-',
-      status: test.status,
-      assignedTo: assignee?.fullName || '-',
-      startDate: test.startDate,
-      completedDate: test.completedDate,
-      notes: test.notes,
-      creationTime: test.createdAt,
-    };
-  });
-};
 
 const TestList: React.FC = () => {
-  const [tests, setTests] = useState<TestDto[]>([]);
-  const [filteredData, setFilteredData] = useState<TestDto[]>([]);
+  const [data, setData] = useState<TestDto[]>([]);
   const [loading, setLoading] = useState(false);
-  const [total, setTotal] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(50);
   const [searchText, setSearchText] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [statusFilter, setStatusFilter] = useState<TestStatus | 'all'>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<TestDto | null>(null);
@@ -48,70 +26,94 @@ const TestList: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
-  const testMethods = mockTestMethods.map(m => m.name);
-  const testStandards = [...new Set(mockTestMethods.map(m => m.standard).filter(Boolean))];
+  // Master data from API
+  const [testMethods, setTestMethods] = useState<any[]>([]);
+  const [specimens, setSpecimens] = useState<any[]>([]);
+  const [users, setUsers] = useState<UserLookupDto[]>([]);
 
-  const fetchTests = async () => {
+  const loadMasterData = async () => {
+    try {
+      const [methodsResult, specimensResult] = await Promise.all([
+        testMethodService.getActive(),
+        specimenService.getList({ maxResultCount: 1000 }),
+      ]);
+      setTestMethods(methodsResult.items || []);
+      setSpecimens(specimensResult.items || []);
+    } catch (error) {
+      console.error('Error loading master data:', error);
+    }
+
+    // Load users separately to handle errors
+    try {
+      const usersResult = await userService.getLookup();
+      setUsers(usersResult || []);
+    } catch (error) {
+      console.error('Error loading users:', error);
+      setUsers([]);
+    }
+  };
+
+  const loadData = async () => {
     setLoading(true);
     try {
       const result = await testService.getList({
         skipCount: (currentPage - 1) * pageSize,
         maxResultCount: pageSize,
+        sorting: 'creationTime desc',
+        search: searchText || undefined,
+        status: statusFilter !== 'all' ? statusFilter : undefined,
       });
-      setTests(result.items);
-      setFilteredData(result.items);
-      setTotal(result.totalCount);
+      const items = result.items || [];
+      setData(items);
+      setTotalCount(result.totalCount || 0);
     } catch (error) {
-      // API not available, use mock data immediately
-      const mockData = generateMockData();
-      setTests(mockData);
-      setFilteredData(mockData);
-      setTotal(mockData.length);
+      console.error('Error loading tests:', error);
+      message.error('Không thể tải danh sách phép thử. Vui lòng kiểm tra kết nối server.');
+      setData([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
   };
 
+  // Load master data once on mount
   useEffect(() => {
-    fetchTests();
+    loadMasterData();
   }, []);
 
+  // Load data when filters change
   useEffect(() => {
-    let filtered = [...tests];
+    loadData();
+  }, [currentPage, pageSize, searchText, statusFilter]);
 
-    if (searchText) {
-      const search = searchText.toLowerCase();
-      filtered = filtered.filter(item =>
-        item.code.toLowerCase().includes(search) ||
-        item.name.toLowerCase().includes(search) ||
-        item.specimenCode?.toLowerCase().includes(search) ||
-        item.method?.toLowerCase().includes(search)
-      );
-    }
+  // Handle search
+  const handleSearch = () => {
+    setSearchText(searchInput);
+    setCurrentPage(1);
+  };
 
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(item => item.status === statusFilter);
-    }
-
-    setFilteredData(filtered);
-    setTotal(filtered.length);
-  }, [searchText, statusFilter, tests]);
+  // Handle status filter change
+  const handleStatusChange = (value: TestStatus | 'all') => {
+    setStatusFilter(value);
+    setCurrentPage(1);
+  };
 
   const handleDelete = async (id: string) => {
     try {
       await testService.delete(id);
+      message.success('Xóa phép thử thành công!');
+      loadData();
     } catch (error) {
-      console.log('Mock delete:', id);
+      console.error('Error deleting test:', error);
+      message.error('Không thể xóa phép thử. Vui lòng thử lại.');
     }
-    setTests(prev => prev.filter(item => item.id !== id));
-    message.success('Xóa phép thử thành công!');
   };
 
   const handleCreate = () => {
     setEditingItem(null);
     form.resetFields();
     form.setFieldsValue({
-      code: `TEST-${dayjs().format('YYYYMMDD')}-${String(tests.length + 1).padStart(4, '0')}`,
+      code: `TEST-${dayjs().format('YYYYMMDD')}-${String(data.length + 1).padStart(4, '0')}`,
       status: TestStatus.Pending,
     });
     setIsModalOpen(true);
@@ -130,33 +132,31 @@ const TestList: React.FC = () => {
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
-      const newItem: TestDto = {
-        id: editingItem?.id || `test-${Date.now()}`,
-        code: values.code,
-        name: values.name,
+      const payload = {
         specimenId: values.specimenId,
-        specimenCode: values.specimenCode,
+        name: values.name,
         method: values.method,
         standard: values.standard,
         status: values.status,
-        assignedTo: values.assignedTo,
+        assigneeId: values.assigneeId,
         startDate: values.startDate?.toISOString(),
-        completedDate: values.completedDate?.toISOString(),
+        completionDate: values.completedDate?.toISOString(),
         notes: values.notes,
-        creationTime: editingItem?.creationTime || dayjs().toISOString(),
       };
 
       if (editingItem) {
-        setTests(prev => prev.map(item => item.id === editingItem.id ? newItem : item));
+        await testService.update(editingItem.id, payload);
         message.success('Cập nhật phép thử thành công!');
       } else {
-        setTests(prev => [newItem, ...prev]);
+        await testService.create(payload);
         message.success('Thêm phép thử mới thành công!');
       }
       setIsModalOpen(false);
       form.resetFields();
-    } catch (error) {
-      console.error('Validation failed:', error);
+      loadData();
+    } catch (error: any) {
+      console.error('Error saving test:', error);
+      message.error('Không thể lưu phép thử. Vui lòng thử lại.');
     }
   };
 
@@ -222,10 +222,10 @@ const TestList: React.FC = () => {
     },
     {
       title: 'Người thực hiện',
-      dataIndex: 'assignedTo',
-      key: 'assignedTo',
+      dataIndex: 'assigneeName',
+      key: 'assigneeName',
       width: 140,
-      render: (text: string) => text || '-',
+      render: (name: string) => name || '-',
     },
     {
       title: 'Trạng thái',
@@ -273,7 +273,7 @@ const TestList: React.FC = () => {
       title="Danh sách phép thử"
       extra={
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={fetchTests}>Làm mới</Button>
+          <Button icon={<ReloadOutlined />} onClick={loadData}>Làm mới</Button>
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -287,12 +287,19 @@ const TestList: React.FC = () => {
       {/* Search & Filter */}
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} sm={12} md={8}>
-          <Input
-            placeholder="Tìm kiếm theo mã, tên, phương pháp..."
-            prefix={<SearchOutlined />}
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
+          <Input.Search
+            placeholder="Tìm kiếm theo mã, tên, phương pháp, tiêu chuẩn..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onSearch={handleSearch}
+            onPressEnter={handleSearch}
             allowClear
+            onClear={() => {
+              setSearchInput('');
+              setSearchText('');
+              setCurrentPage(1);
+            }}
+            enterButton
           />
         </Col>
         <Col xs={24} sm={6} md={4}>
@@ -300,7 +307,7 @@ const TestList: React.FC = () => {
             style={{ width: '100%' }}
             placeholder="Trạng thái"
             value={statusFilter}
-            onChange={setStatusFilter}
+            onChange={handleStatusChange}
           >
             <Select.Option value="all">Tất cả trạng thái</Select.Option>
             <Select.Option value={TestStatus.Pending}>Chờ xử lý</Select.Option>
@@ -315,19 +322,20 @@ const TestList: React.FC = () => {
 
       <Table
         columns={columns}
-        dataSource={filteredData}
+        dataSource={data}
         rowKey="id"
         loading={loading}
         pagination={{
           current: currentPage,
           pageSize: pageSize,
-          total: total,
-          onChange: (page, size) => {
-            setCurrentPage(page);
-            setPageSize(size || 10);
-          },
+          total: totalCount,
+          pageSizeOptions: [50, 100, 150],
           showSizeChanger: true,
           showTotal: (total) => `Tổng ${total} phép thử`,
+          onChange: (page, size) => {
+            setCurrentPage(page);
+            setPageSize(size);
+          },
         }}
         scroll={{ x: 1400 }}
       />
@@ -356,11 +364,21 @@ const TestList: React.FC = () => {
             </Col>
             <Col span={12}>
               <Form.Item
-                name="specimenCode"
-                label="Mã mẫu"
-                rules={[{ required: true, message: 'Vui lòng nhập mã mẫu' }]}
+                name="specimenId"
+                label="Mẫu thử"
+                rules={[{ required: true, message: 'Vui lòng chọn mẫu' }]}
               >
-                <Input placeholder="SPE-YYYYMMDD-XXXX" />
+                <Select
+                  showSearch
+                  optionFilterProp="children"
+                  placeholder="Chọn mẫu thử"
+                >
+                  {specimens.map(s => (
+                    <Select.Option key={s.id} value={s.id}>
+                      {s.code} - {s.name}
+                    </Select.Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
           </Row>
@@ -384,15 +402,19 @@ const TestList: React.FC = () => {
               >
                 <Select showSearch optionFilterProp="children">
                   {testMethods.map(m => (
-                    <Select.Option key={m} value={m}>{m}</Select.Option>
+                    <Select.Option key={m.id} value={m.name}>{m.code} - {m.name}</Select.Option>
                   ))}
                 </Select>
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="standard" label="Tiêu chuẩn áp dụng">
-                <Select allowClear showSearch optionFilterProp="children">
-                  {testStandards.map(s => (
+              <Form.Item
+                name="standard"
+                label="Tiêu chuẩn áp dụng"
+                rules={[{ required: true, message: 'Vui lòng nhập tiêu chuẩn' }]}
+              >
+                <Select showSearch optionFilterProp="children" placeholder="Chọn tiêu chuẩn">
+                  {[...new Set(testMethods.map(m => m.standard).filter(Boolean))].map(s => (
                     <Select.Option key={s} value={s}>{s}</Select.Option>
                   ))}
                 </Select>
@@ -401,10 +423,20 @@ const TestList: React.FC = () => {
           </Row>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="assignedTo" label="Người thực hiện">
-                <Select allowClear>
-                  {mockUsers.filter(u => u.role === 'Technician' || u.role === 'LabManager').map(u => (
-                    <Select.Option key={u.id} value={u.fullName}>{u.fullName}</Select.Option>
+              <Form.Item name="assigneeId" label="Người thực hiện">
+                <Select
+                  placeholder="Chọn người thực hiện"
+                  showSearch
+                  allowClear
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
+                  }
+                >
+                  {users.map((user) => (
+                    <Select.Option key={user.id} value={user.id}>
+                      {user.displayName}
+                    </Select.Option>
                   ))}
                 </Select>
               </Form.Item>

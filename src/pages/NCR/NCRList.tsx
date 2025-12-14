@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useState } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Card,
   Table,
@@ -18,8 +18,8 @@ import {
   Row,
   Col,
   Statistic,
-  Alert
-} from 'antd';
+  Alert,
+} from "antd";
 import {
   PlusOutlined,
   EditOutlined,
@@ -29,219 +29,321 @@ import {
   ExclamationCircleOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
-  FileTextOutlined,
-  EyeOutlined
-} from '@ant-design/icons';
-import dayjs from 'dayjs';
-import { mockNCRs as centralizedNCRs, mockUsers, mockTests, mockSpecimens } from '../../mocks/mockData';
+  EyeOutlined,
+} from "@ant-design/icons";
+import dayjs from "dayjs";
+import {
+  ncrService,
+  NCRDto,
+  CreateNCRDto,
+  UpdateNCRDto,
+  NCRType,
+  NCRSeverity,
+  NCRStatus,
+} from "../../services/ncrService";
+import {
+  departmentService,
+  DepartmentDto,
+} from "../../services/masterDataService";
 
 const { TextArea } = Input;
 
-// Use centralized mock data
-const mockNCRs = centralizedNCRs.map(ncr => {
-  const reportedByUser = mockUsers.find(u => u.id === ncr.reportedById);
-  const assignedToUser = mockUsers.find(u => u.id === ncr.assignedToId);
-  const closedByUser = mockUsers.find(u => u.id === ncr.closedById);
-  const relatedTest = mockTests.find(t => t.id === ncr.relatedTestId);
-  const relatedSpecimen = mockSpecimens.find(s => s.id === ncr.relatedSpecimenId);
-  return {
-    id: ncr.id,
-    ncrNumber: ncr.ncrNumber,
-    title: ncr.title,
-    type: ncr.type,
-    severity: ncr.severity,
-    status: ncr.status,
-    reportedBy: reportedByUser?.fullName || '-',
-    reportedAt: ncr.reportedAt,
-    assignedTo: assignedToUser?.fullName || '-',
-    relatedTest: relatedTest?.code || relatedSpecimen?.code || ncr.relatedTestId || '-',
-    description: ncr.description,
-    rootCause: ncr.rootCause || '',
-    correctiveAction: ncr.correctiveAction || '',
-    dueDate: ncr.dueDate,
-    closedAt: ncr.closedAt,
-    closedBy: closedByUser?.fullName,
-  };
-});
-
 const ncrTypes = [
-  { value: 'TestResult', label: 'Kết quả thử nghiệm', color: 'blue' },
-  { value: 'Specimen', label: 'Mẫu thử', color: 'purple' },
-  { value: 'Equipment', label: 'Thiết bị', color: 'orange' },
-  { value: 'Report', label: 'Báo cáo', color: 'cyan' },
-  { value: 'Process', label: 'Quy trình', color: 'magenta' },
-  { value: 'Other', label: 'Khác', color: 'default' },
+  { value: NCRType.Equipment, label: "Thiết bị", color: "orange" },
+  { value: NCRType.Process, label: "Quy trình", color: "magenta" },
+  { value: NCRType.Personnel, label: "Nhân sự", color: "purple" },
+  { value: NCRType.Environment, label: "Môi trường", color: "cyan" },
+  { value: NCRType.Material, label: "Vật liệu", color: "blue" },
+  { value: NCRType.Other, label: "Khác", color: "default" },
 ];
 
-const severityConfig: Record<string, { color: string; text: string }> = {
-  Minor: { color: 'green', text: 'Nhẹ' },
-  Major: { color: 'orange', text: 'Nghiêm trọng' },
-  Critical: { color: 'red', text: 'Rất nghiêm trọng' },
+const severityConfig: Record<number, { color: string; text: string }> = {
+  [NCRSeverity.Minor]: { color: "green", text: "Nhẹ" },
+  [NCRSeverity.Major]: { color: "orange", text: "Nghiêm trọng" },
+  [NCRSeverity.Critical]: { color: "red", text: "Rất nghiêm trọng" },
 };
 
-const statusConfig: Record<string, { color: string; text: string; icon: React.ReactNode }> = {
-  Open: { color: 'red', text: 'Mở', icon: <ExclamationCircleOutlined /> },
-  InProgress: { color: 'blue', text: 'Đang xử lý', icon: <ClockCircleOutlined /> },
-  Closed: { color: 'green', text: 'Đã đóng', icon: <CheckCircleOutlined /> },
+const statusConfig: Record<
+  number,
+  { color: string; text: string; icon: React.ReactNode }
+> = {
+  [NCRStatus.Open]: {
+    color: "red",
+    text: "Mở",
+    icon: <ExclamationCircleOutlined />,
+  },
+  [NCRStatus.InProgress]: {
+    color: "blue",
+    text: "Đang xử lý",
+    icon: <ClockCircleOutlined />,
+  },
+  [NCRStatus.Resolved]: {
+    color: "orange",
+    text: "Đã giải quyết",
+    icon: <CheckCircleOutlined />,
+  },
+  [NCRStatus.Closed]: {
+    color: "green",
+    text: "Đã đóng",
+    icon: <CheckCircleOutlined />,
+  },
+  [NCRStatus.Cancelled]: {
+    color: "default",
+    text: "Đã hủy",
+    icon: <ExclamationCircleOutlined />,
+  },
 };
+
+interface NCRDisplay extends NCRDto {
+  reportedByName?: string;
+  assignedToName?: string;
+  closedByName?: string;
+}
 
 const NCRList: React.FC = () => {
-  const [ncrs, setNcrs] = useState(mockNCRs);
-  const [searchText, setSearchText] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [ncrs, setNcrs] = useState<NCRDisplay[]>([]);
+  const [departments, setDepartments] = useState<DepartmentDto[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [statusFilter, setStatusFilter] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [editingNCR, setEditingNCR] = useState<any>(null);
-  const [selectedNCR, setSelectedNCR] = useState<any>(null);
+  const [editingNCR, setEditingNCR] = useState<NCRDisplay | null>(null);
+  const [selectedNCR, setSelectedNCR] = useState<NCRDisplay | null>(null);
   const [form] = Form.useForm();
 
+  useEffect(() => {
+    loadData();
+    loadDepartments();
+  }, []);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const response = await ncrService.getList({ maxResultCount: 1000 });
+      setNcrs(response.items);
+    } catch (error) {
+      console.error("Failed to load NCRs:", error);
+      message.error("Không thể tải danh sách NCR. Vui lòng thử lại.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadDepartments = async () => {
+    try {
+      const response = await departmentService.getActive();
+      setDepartments(response.items);
+    } catch (error) {
+      console.error("Failed to load departments:", error);
+    }
+  };
+
   // Stats
-  const openCount = ncrs.filter((n) => n.status === 'Open').length;
-  const inProgressCount = ncrs.filter((n) => n.status === 'InProgress').length;
-  const closedCount = ncrs.filter((n) => n.status === 'Closed').length;
+  const openCount = ncrs.filter((n) => n.status === NCRStatus.Open).length;
+  const inProgressCount = ncrs.filter(
+    (n) => n.status === NCRStatus.InProgress
+  ).length;
+  const closedCount = ncrs.filter((n) => n.status === NCRStatus.Closed).length;
 
   const handleAdd = () => {
     setEditingNCR(null);
     form.resetFields();
-    setIsModalOpen(true);
-  };
-
-  const handleEdit = (record: any) => {
-    setEditingNCR(record);
     form.setFieldsValue({
-      ...record,
-      dueDate: dayjs(record.dueDate),
+      dueDate: dayjs().add(7, "day"),
+      severity: NCRSeverity.Minor,
+      type: NCRType.Other,
     });
     setIsModalOpen(true);
   };
 
-  const handleView = (record: any) => {
+  const handleEdit = (record: NCRDisplay) => {
+    setEditingNCR(record);
+    form.setFieldsValue({
+      title: record.title,
+      description: record.description,
+      type: record.type,
+      severity: record.severity,
+      status: record.status,
+      assignedToId: record.assignedToId,
+      department: record.department,
+      relatedEntityCode: record.relatedEntityCode,
+      rootCause: record.rootCause,
+      correctiveAction: record.correctiveAction,
+      preventiveAction: record.preventiveAction,
+      dueDate: dayjs(record.dueDate),
+      notes: record.notes,
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleView = (record: NCRDisplay) => {
     setSelectedNCR(record);
     setIsDetailOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    setNcrs(ncrs.filter((n) => n.id !== id));
-    message.success('Đã xóa NCR');
+  const handleDelete = async (id: string) => {
+    try {
+      await ncrService.delete(id);
+      message.success("Đã xóa NCR");
+      loadData();
+    } catch (error) {
+      console.error("Failed to delete NCR:", error);
+      message.error("Không thể xóa NCR. Vui lòng thử lại.");
+    }
   };
 
-  const handleSave = () => {
-    form.validateFields().then((values) => {
-      const newNCR = {
-        ...values,
-        dueDate: values.dueDate.format('YYYY-MM-DD'),
-      };
+  const handleSave = async () => {
+    try {
+      const values = await form.validateFields();
 
       if (editingNCR) {
-        setNcrs(ncrs.map((n) => (n.id === editingNCR.id ? { ...n, ...newNCR } : n)));
-        message.success('Đã cập nhật NCR');
-      } else {
-        const ncr = {
-          id: Date.now().toString(),
-          ncrNumber: `NCR-${dayjs().format('YYYYMMDD')}-${String(ncrs.length + 1).padStart(4, '0')}`,
-          ...newNCR,
-          reportedAt: dayjs().format('YYYY-MM-DD'),
-          status: 'Open',
+        const updateData: UpdateNCRDto = {
+          title: values.title,
+          description: values.description,
+          type: values.type,
+          severity: values.severity,
+          status: values.status,
+          assignedToId: values.assignedToId,
+          department: values.department,
+          relatedEntityCode: values.relatedEntityCode,
+          rootCause: values.rootCause,
+          correctiveAction: values.correctiveAction,
+          preventiveAction: values.preventiveAction,
+          dueDate: values.dueDate.toISOString(),
+          notes: values.notes,
         };
-        setNcrs([ncr, ...ncrs]);
-        message.success('Đã tạo NCR mới');
+        await ncrService.update(editingNCR.id, updateData);
+        message.success("Đã cập nhật NCR");
+      } else {
+        const createData: CreateNCRDto = {
+          title: values.title,
+          description: values.description,
+          type: values.type,
+          severity: values.severity,
+          department: values.department,
+          relatedEntityCode: values.relatedEntityCode,
+          dueDate: values.dueDate.toISOString(),
+          notes: values.notes,
+        };
+        await ncrService.create(createData);
+        message.success("Đã tạo NCR mới");
       }
+
       setIsModalOpen(false);
-    });
+      loadData();
+    } catch (error) {
+      console.error("Failed to save NCR:", error);
+      message.error("Không thể lưu NCR. Vui lòng thử lại.");
+    }
   };
 
   const filteredNCRs = ncrs.filter((n) => {
     const matchSearch =
       n.ncrNumber.toLowerCase().includes(searchText.toLowerCase()) ||
       n.title.toLowerCase().includes(searchText.toLowerCase());
-    const matchStatus = !statusFilter || n.status === statusFilter;
+    const matchStatus = statusFilter === null || n.status === statusFilter;
     return matchSearch && matchStatus;
   });
 
   const columns = [
     {
-      title: 'Mã NCR',
-      dataIndex: 'ncrNumber',
-      key: 'ncrNumber',
+      title: "Mã NCR",
+      dataIndex: "ncrNumber",
+      key: "ncrNumber",
       width: 180,
-      fixed: 'left' as const,
-      render: (text: string, record: any) => (
+      fixed: "left" as const,
+      render: (text: string, record: NCRDisplay) => (
         <a onClick={() => handleView(record)}>
           <Space>
-            <WarningOutlined style={{ color: '#faad14' }} />
+            <WarningOutlined style={{ color: "#faad14" }} />
             {text}
           </Space>
         </a>
       ),
     },
     {
-      title: 'Tiêu đề',
-      dataIndex: 'title',
-      key: 'title',
+      title: "Tiêu đề",
+      dataIndex: "title",
+      key: "title",
       width: 200,
       ellipsis: true,
     },
     {
-      title: 'Loại',
-      dataIndex: 'type',
-      key: 'type',
+      title: "Loại",
+      dataIndex: "type",
+      key: "type",
       width: 140,
-      render: (type: string) => {
+      render: (type: number) => {
         const config = ncrTypes.find((t) => t.value === type);
         return <Tag color={config?.color}>{config?.label}</Tag>;
       },
     },
     {
-      title: 'Mức độ',
-      dataIndex: 'severity',
-      key: 'severity',
+      title: "Mức độ",
+      dataIndex: "severity",
+      key: "severity",
       width: 120,
-      render: (severity: string) => (
-        <Tag color={severityConfig[severity]?.color}>{severityConfig[severity]?.text}</Tag>
+      render: (severity: number) => (
+        <Tag color={severityConfig[severity]?.color}>
+          {severityConfig[severity]?.text}
+        </Tag>
       ),
     },
     {
-      title: 'Trạng thái',
-      dataIndex: 'status',
-      key: 'status',
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
       width: 130,
-      render: (status: string) => (
-        <Tag color={statusConfig[status]?.color} icon={statusConfig[status]?.icon}>
+      render: (status: number) => (
+        <Tag
+          color={statusConfig[status]?.color}
+          icon={statusConfig[status]?.icon}
+        >
           {statusConfig[status]?.text}
         </Tag>
       ),
     },
     {
-      title: 'Người báo cáo',
-      dataIndex: 'reportedBy',
-      key: 'reportedBy',
+      title: "Phòng ban",
+      dataIndex: "department",
+      key: "department",
       width: 140,
     },
     {
-      title: 'Người xử lý',
-      dataIndex: 'assignedTo',
-      key: 'assignedTo',
-      width: 140,
-    },
-    {
-      title: 'Hạn xử lý',
-      dataIndex: 'dueDate',
-      key: 'dueDate',
+      title: "Hạn xử lý",
+      dataIndex: "dueDate",
+      key: "dueDate",
       width: 120,
-      render: (date: string, record: any) => {
-        const isOverdue = record.status !== 'Closed' && dayjs(date).isBefore(dayjs());
-        return <span style={{ color: isOverdue ? '#cf1322' : undefined }}>{date}</span>;
+      render: (date: string, record: NCRDisplay) => {
+        const isOverdue =
+          record.status !== NCRStatus.Closed && dayjs(date).isBefore(dayjs());
+        return (
+          <span style={{ color: isOverdue ? "#cf1322" : undefined }}>
+            {dayjs(date).format("DD/MM/YYYY")}
+          </span>
+        );
       },
     },
     {
-      title: 'Thao tác',
-      key: 'actions',
+      title: "Thao tác",
+      key: "actions",
       width: 120,
-      fixed: 'right' as const,
-      render: (_: any, record: any) => (
+      fixed: "right" as const,
+      render: (_: any, record: NCRDisplay) => (
         <Space size="small">
-          <Button type="text" size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
-          <Button type="text" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+          <Button
+            type="text"
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => handleView(record)}
+          />
+          <Button
+            type="text"
+            size="small"
+            icon={<EditOutlined />}
+            onClick={() => handleEdit(record)}
+          />
           <Popconfirm
             title="Xóa NCR?"
             onConfirm={() => handleDelete(record.id)}
@@ -264,7 +366,7 @@ const NCRList: React.FC = () => {
             <Statistic
               title="NCR đang mở"
               value={openCount}
-              styles={{ content: { color: '#cf1322' } }}
+              styles={{ content: { color: "#cf1322" } }}
               prefix={<ExclamationCircleOutlined />}
             />
           </Card>
@@ -274,7 +376,7 @@ const NCRList: React.FC = () => {
             <Statistic
               title="Đang xử lý"
               value={inProgressCount}
-              styles={{ content: { color: '#1890ff' } }}
+              styles={{ content: { color: "#1890ff" } }}
               prefix={<ClockCircleOutlined />}
             />
           </Card>
@@ -284,7 +386,7 @@ const NCRList: React.FC = () => {
             <Statistic
               title="Đã đóng"
               value={closedCount}
-              styles={{ content: { color: '#52c41a' } }}
+              styles={{ content: { color: "#52c41a" } }}
               prefix={<CheckCircleOutlined />}
             />
           </Card>
@@ -318,9 +420,14 @@ const NCRList: React.FC = () => {
               value={statusFilter}
               onChange={setStatusFilter}
             >
-              <Select.Option value="Open">Mở</Select.Option>
-              <Select.Option value="InProgress">Đang xử lý</Select.Option>
-              <Select.Option value="Closed">Đã đóng</Select.Option>
+              <Select.Option value={NCRStatus.Open}>Mở</Select.Option>
+              <Select.Option value={NCRStatus.InProgress}>
+                Đang xử lý
+              </Select.Option>
+              <Select.Option value={NCRStatus.Resolved}>
+                Đã giải quyết
+              </Select.Option>
+              <Select.Option value={NCRStatus.Closed}>Đã đóng</Select.Option>
             </Select>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
               Tạo NCR
@@ -332,14 +439,20 @@ const NCRList: React.FC = () => {
           dataSource={filteredNCRs}
           columns={columns}
           rowKey="id"
+          loading={loading}
           scroll={{ x: 1290 }}
-          pagination={{ pageSize: 10, showTotal: (total) => `Tổng ${total} NCR` }}
+          pagination={{
+            pageSize: 50,
+            pageSizeOptions: [50, 100, 150],
+            showSizeChanger: true,
+            showTotal: (total) => `Tổng ${total} NCR`,
+          }}
         />
       </Card>
 
       {/* Create/Edit Modal */}
       <Modal
-        title={editingNCR ? 'Cập nhật NCR' : 'Tạo NCR mới'}
+        title={editingNCR ? "Cập nhật NCR" : "Tạo NCR mới"}
         open={isModalOpen}
         onOk={handleSave}
         onCancel={() => setIsModalOpen(false)}
@@ -347,70 +460,127 @@ const NCRList: React.FC = () => {
         cancelText="Hủy"
         width={700}
         centered
+        styles={{ body: { maxHeight: "70vh", overflowY: "auto", overflowX: "hidden" } }}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="title" label="Tiêu đề" rules={[{ required: true }]}>
+          <Form.Item
+            name="title"
+            label="Tiêu đề"
+            rules={[{ required: true, message: "Vui lòng nhập tiêu đề" }]}
+          >
             <Input placeholder="Mô tả ngắn gọn vấn đề" />
           </Form.Item>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="type" label="Loại NCR" rules={[{ required: true }]}>
+              <Form.Item
+                name="type"
+                label="Loại NCR"
+                rules={[{ required: true, message: "Vui lòng chọn loại" }]}
+              >
                 <Select placeholder="Chọn loại">
                   {ncrTypes.map((t) => (
-                    <Select.Option key={t.value} value={t.value}>{t.label}</Select.Option>
+                    <Select.Option key={t.value} value={t.value}>
+                      {t.label}
+                    </Select.Option>
                   ))}
                 </Select>
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="severity" label="Mức độ" rules={[{ required: true }]}>
+              <Form.Item
+                name="severity"
+                label="Mức độ"
+                rules={[{ required: true, message: "Vui lòng chọn mức độ" }]}
+              >
                 <Select placeholder="Chọn mức độ">
-                  <Select.Option value="Minor">Nhẹ</Select.Option>
-                  <Select.Option value="Major">Nghiêm trọng</Select.Option>
-                  <Select.Option value="Critical">Rất nghiêm trọng</Select.Option>
+                  <Select.Option value={NCRSeverity.Minor}>Nhẹ</Select.Option>
+                  <Select.Option value={NCRSeverity.Major}>
+                    Nghiêm trọng
+                  </Select.Option>
+                  <Select.Option value={NCRSeverity.Critical}>
+                    Rất nghiêm trọng
+                  </Select.Option>
                 </Select>
               </Form.Item>
             </Col>
           </Row>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="assignedTo" label="Người xử lý" rules={[{ required: true }]}>
-                <Select placeholder="Chọn người xử lý">
-                  {mockUsers.map(u => (
-                    <Select.Option key={u.id} value={u.fullName}>{u.fullName}</Select.Option>
+              <Form.Item name="department" label="Phòng ban">
+                <Select placeholder="Chọn phòng ban">
+                  {departments.map((d) => (
+                    <Select.Option key={d.id} value={d.name}>
+                      {d.name}
+                    </Select.Option>
                   ))}
                 </Select>
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="dueDate" label="Hạn xử lý" rules={[{ required: true }]}>
-                <DatePicker style={{ width: '100%' }} />
+              <Form.Item
+                name="dueDate"
+                label="Hạn xử lý"
+                rules={[{ required: true, message: "Vui lòng chọn hạn xử lý" }]}
+              >
+                <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" />
               </Form.Item>
             </Col>
           </Row>
-          <Form.Item name="relatedTest" label="Mã liên quan (Test/Specimen/Equipment)">
+          <Form.Item
+            name="relatedEntityCode"
+            label="Mã liên quan (Test/Specimen/Equipment)"
+          >
             <Input placeholder="TEST-xxx, SPE-xxx, EQP-xxx" />
           </Form.Item>
-          <Form.Item name="description" label="Mô tả chi tiết" rules={[{ required: true }]}>
-            <TextArea rows={3} placeholder="Mô tả chi tiết vấn đề không phù hợp" />
+          <Form.Item
+            name="description"
+            label="Mô tả chi tiết"
+            rules={[{ required: true, message: "Vui lòng nhập mô tả" }]}
+          >
+            <TextArea
+              rows={3}
+              placeholder="Mô tả chi tiết vấn đề không phù hợp"
+            />
           </Form.Item>
           {editingNCR && (
             <>
+              <Form.Item name="assignedToId" label="Người xử lý">
+                <Input placeholder="ID người xử lý" />
+              </Form.Item>
               <Form.Item name="rootCause" label="Nguyên nhân gốc">
                 <TextArea rows={2} placeholder="Phân tích nguyên nhân gốc rễ" />
               </Form.Item>
               <Form.Item name="correctiveAction" label="Hành động khắc phục">
-                <TextArea rows={2} placeholder="Mô tả các hành động khắc phục" />
+                <TextArea
+                  rows={2}
+                  placeholder="Mô tả các hành động khắc phục"
+                />
+              </Form.Item>
+              <Form.Item name="preventiveAction" label="Hành động phòng ngừa">
+                <TextArea
+                  rows={2}
+                  placeholder="Mô tả các hành động phòng ngừa"
+                />
               </Form.Item>
               <Form.Item name="status" label="Trạng thái">
                 <Select>
-                  <Select.Option value="Open">Mở</Select.Option>
-                  <Select.Option value="InProgress">Đang xử lý</Select.Option>
-                  <Select.Option value="Closed">Đã đóng</Select.Option>
+                  <Select.Option value={NCRStatus.Open}>Mở</Select.Option>
+                  <Select.Option value={NCRStatus.InProgress}>
+                    Đang xử lý
+                  </Select.Option>
+                  <Select.Option value={NCRStatus.Resolved}>
+                    Đã giải quyết
+                  </Select.Option>
+                  <Select.Option value={NCRStatus.Closed}>
+                    Đã đóng
+                  </Select.Option>
                 </Select>
               </Form.Item>
             </>
           )}
+          <Form.Item name="notes" label="Ghi chú">
+            <TextArea rows={2} placeholder="Ghi chú bổ sung" />
+          </Form.Item>
         </Form>
       </Modal>
 
@@ -422,17 +592,22 @@ const NCRList: React.FC = () => {
         footer={<Button onClick={() => setIsDetailOpen(false)}>Đóng</Button>}
         width={800}
         centered
+        styles={{ body: { maxHeight: "70vh", overflowY: "auto", overflowX: "hidden" } }}
       >
         {selectedNCR && (
           <>
             <Descriptions bordered column={2}>
-              <Descriptions.Item label="Mã NCR">{selectedNCR.ncrNumber}</Descriptions.Item>
+              <Descriptions.Item label="Mã NCR">
+                {selectedNCR.ncrNumber}
+              </Descriptions.Item>
               <Descriptions.Item label="Trạng thái">
                 <Tag color={statusConfig[selectedNCR.status]?.color}>
                   {statusConfig[selectedNCR.status]?.text}
                 </Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="Tiêu đề" span={2}>{selectedNCR.title}</Descriptions.Item>
+              <Descriptions.Item label="Tiêu đề" span={2}>
+                {selectedNCR.title}
+              </Descriptions.Item>
               <Descriptions.Item label="Loại">
                 {ncrTypes.find((t) => t.value === selectedNCR.type)?.label}
               </Descriptions.Item>
@@ -441,17 +616,40 @@ const NCRList: React.FC = () => {
                   {severityConfig[selectedNCR.severity]?.text}
                 </Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="Người báo cáo">{selectedNCR.reportedBy}</Descriptions.Item>
-              <Descriptions.Item label="Ngày báo cáo">{selectedNCR.reportedAt}</Descriptions.Item>
-              <Descriptions.Item label="Người xử lý">{selectedNCR.assignedTo}</Descriptions.Item>
-              <Descriptions.Item label="Hạn xử lý">{selectedNCR.dueDate}</Descriptions.Item>
-              <Descriptions.Item label="Mã liên quan" span={2}>{selectedNCR.relatedTest}</Descriptions.Item>
-              <Descriptions.Item label="Mô tả" span={2}>{selectedNCR.description}</Descriptions.Item>
+              <Descriptions.Item label="Phòng ban">
+                {selectedNCR.department || "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Ngày báo cáo">
+                {dayjs(selectedNCR.reportedAt).format("DD/MM/YYYY HH:mm")}
+              </Descriptions.Item>
+              <Descriptions.Item label="Hạn xử lý">
+                {dayjs(selectedNCR.dueDate).format("DD/MM/YYYY")}
+              </Descriptions.Item>
+              <Descriptions.Item label="Mã liên quan" span={2}>
+                {selectedNCR.relatedEntityCode || "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Mô tả" span={2}>
+                {selectedNCR.description}
+              </Descriptions.Item>
               {selectedNCR.rootCause && (
-                <Descriptions.Item label="Nguyên nhân gốc" span={2}>{selectedNCR.rootCause}</Descriptions.Item>
+                <Descriptions.Item label="Nguyên nhân gốc" span={2}>
+                  {selectedNCR.rootCause}
+                </Descriptions.Item>
               )}
               {selectedNCR.correctiveAction && (
-                <Descriptions.Item label="Hành động khắc phục" span={2}>{selectedNCR.correctiveAction}</Descriptions.Item>
+                <Descriptions.Item label="Hành động khắc phục" span={2}>
+                  {selectedNCR.correctiveAction}
+                </Descriptions.Item>
+              )}
+              {selectedNCR.preventiveAction && (
+                <Descriptions.Item label="Hành động phòng ngừa" span={2}>
+                  {selectedNCR.preventiveAction}
+                </Descriptions.Item>
+              )}
+              {selectedNCR.notes && (
+                <Descriptions.Item label="Ghi chú" span={2}>
+                  {selectedNCR.notes}
+                </Descriptions.Item>
               )}
             </Descriptions>
 
@@ -459,14 +657,30 @@ const NCRList: React.FC = () => {
               <Timeline
                 items={[
                   {
-                    color: 'red',
-                    children: `${selectedNCR.reportedAt} - NCR được tạo bởi ${selectedNCR.reportedBy}`,
+                    color: "red",
+                    children: `${dayjs(selectedNCR.reportedAt).format(
+                      "DD/MM/YYYY HH:mm"
+                    )} - NCR được tạo`,
                   },
-                  ...(selectedNCR.status !== 'Open'
-                    ? [{ color: 'blue', children: 'Đang xử lý - Phân tích nguyên nhân và thực hiện khắc phục' }]
+                  ...(selectedNCR.status !== NCRStatus.Open
+                    ? [
+                        {
+                          color: "blue",
+                          children:
+                            "Đang xử lý - Phân tích nguyên nhân và thực hiện khắc phục",
+                        },
+                      ]
                     : []),
-                  ...(selectedNCR.status === 'Closed'
-                    ? [{ color: 'green', children: `${selectedNCR.closedAt} - Đã đóng bởi ${selectedNCR.closedBy}` }]
+                  ...(selectedNCR.status === NCRStatus.Closed &&
+                  selectedNCR.closedAt
+                    ? [
+                        {
+                          color: "green",
+                          children: `${dayjs(selectedNCR.closedAt).format(
+                            "DD/MM/YYYY HH:mm"
+                          )} - Đã đóng`,
+                        },
+                      ]
                     : []),
                 ]}
               />

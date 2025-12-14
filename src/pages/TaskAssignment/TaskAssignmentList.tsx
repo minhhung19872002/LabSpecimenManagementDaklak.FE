@@ -18,9 +18,7 @@ import {
   Avatar,
   Progress,
   Statistic,
-  Timeline,
   Tabs,
-  Badge,
   Tooltip,
   List
 } from 'antd';
@@ -28,7 +26,6 @@ import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  EyeOutlined,
   SearchOutlined,
   ReloadOutlined,
   UserOutlined,
@@ -40,28 +37,23 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
-import { mockTaskAssignments, mockUsers, mockDepartments } from '../../mocks/mockData';
+import {
+  taskAssignmentService,
+  TaskAssignmentDto,
+  CreateTaskAssignmentDto,
+  UpdateTaskAssignmentDto,
+  TaskType,
+  TaskPriority,
+  TaskStatus,
+  GetTaskAssignmentListInput
+} from '../../services/taskAssignmentService';
+import { departmentService, DepartmentDto } from '../../services/masterDataService';
+import { userService, UserLookupDto } from '../../services/userService';
 
 // Types
-interface TaskAssignment {
-  id: string;
-  taskNumber: string;
-  title: string;
-  description?: string;
-  type: 'daily' | 'weekly' | 'monthly' | 'adhoc';
-  priority: 'high' | 'medium' | 'low';
-  status: 'pending' | 'accepted' | 'in_progress' | 'completed' | 'rejected';
-  assignedTo: string;
-  assignedBy: string;
-  department: string;
-  relatedTestRequests: string[];
-  relatedSpecimens: string[];
-  dueDate: string;
-  startDate?: string;
-  completedDate?: string;
-  progress: number;
-  notes?: string;
-  createdAt: string;
+interface TaskDisplay extends TaskAssignmentDto {
+  assignedToName?: string;
+  assignedByName?: string;
 }
 
 interface TeamMember {
@@ -74,262 +66,318 @@ interface TeamMember {
   completedCount: number;
 }
 
-// Convert centralized mock data to TaskAssignment format
-const generateMockTasks = (): TaskAssignment[] => {
-  // Start with centralized task assignments
-  const baseTasks: TaskAssignment[] = mockTaskAssignments.map(task => ({
-    id: task.id,
-    taskNumber: task.taskNumber,
-    title: task.title,
-    description: task.description,
-    type: task.type as TaskAssignment['type'],
-    priority: task.priority as TaskAssignment['priority'],
-    status: task.status as TaskAssignment['status'],
-    assignedTo: task.assignedToName,
-    assignedBy: task.assignedByName,
-    department: task.department,
-    relatedTestRequests: task.relatedTestRequests,
-    relatedSpecimens: task.relatedSpecimens,
-    dueDate: task.dueDate,
-    startDate: task.startDate || undefined,
-    completedDate: task.completedDate || undefined,
-    progress: task.progress,
-    notes: task.notes || undefined,
-    createdAt: task.createdAt,
-  }));
-
-  // Generate additional tasks for demo using centralized users
-  const additionalTasks: TaskAssignment[] = [];
-  const titles = [
-    'Phân tích mẫu nước giếng khoan - Lô 002',
-    'Kiểm nghiệm vi sinh thực phẩm - Công ty XYZ',
-    'Phân tích dư lượng thuốc BVTV - Mẫu rau',
-    'Hiệu chuẩn thiết bị pH - Phòng Hóa học',
-    'Báo cáo kết quả tháng 12/2025',
-    'Kiểm tra độ ẩm mẫu đất - HTX BMT',
-    'Phân tích kim loại nặng - Mẫu phân bón',
-  ];
-  const types: TaskAssignment['type'][] = ['daily', 'weekly', 'adhoc', 'monthly'];
-  const priorities: TaskAssignment['priority'][] = ['high', 'medium', 'low'];
-  const statuses: TaskAssignment['status'][] = ['pending', 'accepted', 'in_progress', 'completed', 'in_progress'];
-
-  for (let i = 0; i < 10; i++) {
-    const user = mockUsers[(i + 2) % mockUsers.length]; // Start from technicians
-    const createdDate = dayjs().subtract(i + baseTasks.length, 'day');
-    const dueDate = createdDate.add(3 + Math.floor(Math.random() * 7), 'day');
-    const status = statuses[i % statuses.length];
-    const progress = status === 'completed' ? 100 : status === 'in_progress' ? 30 + Math.floor(Math.random() * 60) : status === 'accepted' ? 10 : 0;
-
-    additionalTasks.push({
-      id: `task-extra-${String(i + 1).padStart(3, '0')}`,
-      taskNumber: `TASK-${dayjs().subtract(i, 'day').format('YYYYMMDD')}-${String(baseTasks.length + i + 1).padStart(4, '0')}`,
-      title: titles[i % titles.length],
-      description: `Mô tả công việc ${i + 1}`,
-      type: types[i % types.length],
-      priority: priorities[i % priorities.length],
-      status: status,
-      assignedTo: user.fullName,
-      assignedBy: mockUsers[1].fullName, // Lab manager
-      department: user.department,
-      relatedTestRequests: [`REQ-${dayjs().format('YYYYMMDD')}-${String((i % 5) + 1).padStart(4, '0')}`],
-      relatedSpecimens: [`SPE-${dayjs().format('YYYYMMDD')}-${String((i % 8) + 1).padStart(4, '0')}`],
-      dueDate: dueDate.toISOString(),
-      startDate: status !== 'pending' ? createdDate.add(1, 'day').toISOString() : undefined,
-      completedDate: status === 'completed' ? dueDate.subtract(1, 'day').toISOString() : undefined,
-      progress: progress,
-      notes: i % 3 === 0 ? `Ghi chú công việc ${i + 1}` : undefined,
-      createdAt: createdDate.toISOString(),
-    });
-  }
-
-  return [...baseTasks, ...additionalTasks];
-};
-
-// Generate team members from centralized users
-const generateTeamMembers = (): TeamMember[] => {
-  // Filter users who can be assigned tasks (Technicians, LabManager)
-  const eligibleUsers = mockUsers.filter(u =>
-    u.role === 'Technician' || u.role === 'LabManager' || u.role === 'Reviewer'
-  );
-
-  return eligibleUsers.map(user => {
-    const allTasks = generateMockTasks();
-    const userTasks = allTasks.filter(t => t.assignedTo === user.fullName);
-    const completedTasks = userTasks.filter(t => t.status === 'completed');
-
-    return {
-      id: user.id,
-      name: user.fullName,
-      department: user.department,
-      role: user.role === 'LabManager' ? 'Trưởng phòng' :
-            user.role === 'Reviewer' ? 'Người duyệt' : 'Kỹ thuật viên',
-      taskCount: userTasks.length || Math.floor(Math.random() * 5) + 3,
-      completedCount: completedTasks.length || Math.floor(Math.random() * 3) + 1,
-    };
-  });
-};
-
 const TaskAssignmentList: React.FC = () => {
-  const [tasks, setTasks] = useState<TaskAssignment[]>([]);
-  const [filteredTasks, setFilteredTasks] = useState<TaskAssignment[]>([]);
-  const [teamMembers] = useState<TeamMember[]>(generateTeamMembers());
+  const [tasks, setTasks] = useState<TaskDisplay[]>([]);
+  const [departments, setDepartments] = useState<DepartmentDto[]>([]);
+  const [users, setUsers] = useState<UserLookupDto[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(false);
+  const [teamLoading, setTeamLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [departmentFilter, setDepartmentFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<TaskStatus | undefined>(undefined);
+  const [departmentFilter, setDepartmentFilter] = useState<string | undefined>(undefined);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<TaskAssignment | null>(null);
+  const [editingItem, setEditingItem] = useState<TaskDisplay | null>(null);
   const [form] = Form.useForm();
 
-  // Use centralized departments (filter out non-lab departments)
-  const departments = mockDepartments
-    .filter(d => d.name.includes('Phòng'))
-    .map(d => d.name);
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 50,
+    total: 0,
+  });
 
   useEffect(() => {
-    loadData();
+    loadDepartments();
+    loadUsers();
+    loadTeamMembers();
   }, []);
 
+  // Load data when filters or pagination changes
   useEffect(() => {
-    let filtered = [...tasks];
+    loadData();
+  }, [searchText, statusFilter, departmentFilter, pagination.current, pagination.pageSize]);
 
-    if (searchText) {
-      const search = searchText.toLowerCase();
-      filtered = filtered.filter(item =>
-        item.taskNumber.toLowerCase().includes(search) ||
-        item.title.toLowerCase().includes(search) ||
-        item.assignedTo.toLowerCase().includes(search)
-      );
-    }
-
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(item => item.status === statusFilter);
-    }
-
-    if (departmentFilter !== 'all') {
-      filtered = filtered.filter(item => item.department === departmentFilter);
-    }
-
-    setFilteredTasks(filtered);
-  }, [searchText, statusFilter, departmentFilter, tasks]);
-
-  const loadData = () => {
+  const loadData = async () => {
     setLoading(true);
-    setTimeout(() => {
-      const mockData = generateMockTasks();
-      setTasks(mockData);
-      setFilteredTasks(mockData);
+    try {
+      const params: GetTaskAssignmentListInput = {
+        skipCount: (pagination.current - 1) * pagination.pageSize,
+        maxResultCount: pagination.pageSize,
+        filter: searchText || undefined,
+        status: statusFilter,
+        department: departmentFilter,
+      };
+
+      const response = await taskAssignmentService.getList(params);
+      setTasks(response.items);
+      setPagination(prev => ({ ...prev, total: response.totalCount }));
+    } catch (error) {
+      console.error('Failed to load task assignments:', error);
+      message.error('Không thể tải danh sách công việc. Vui lòng thử lại.');
+    } finally {
       setLoading(false);
-    }, 500);
+    }
+  };
+
+  const loadDepartments = async () => {
+    try {
+      const response = await departmentService.getActive();
+      setDepartments(response.items);
+    } catch (error) {
+      console.error('Failed to load departments:', error);
+    }
+  };
+
+  const loadUsers = async () => {
+    try {
+      const userList = await userService.getLookup();
+      setUsers(userList);
+    } catch (error) {
+      console.error('Failed to load users:', error);
+    }
+  };
+
+  // Load team members with task statistics
+  const loadTeamMembers = async () => {
+    setTeamLoading(true);
+    try {
+      // Load users first - this is the critical part
+      const userList = await userService.getLookup();
+
+      if (userList.length === 0) {
+        console.warn('No users found from lookup API');
+        setTeamMembers([]);
+        return;
+      }
+
+      // Load all tasks to calculate statistics (can fail without blocking user list)
+      // ABP limits MaxResultCount to 1000, so we need to load in batches
+      let allTasks: TaskAssignmentDto[] = [];
+      try {
+        const pageSize = 1000;
+        let skipCount = 0;
+        let hasMore = true;
+
+        while (hasMore) {
+          const response = await taskAssignmentService.getList({
+            maxResultCount: pageSize,
+            skipCount: skipCount,
+          });
+          const items = response.items || [];
+          allTasks = [...allTasks, ...items];
+
+          // Check if there are more items to load
+          if (items.length < pageSize || allTasks.length >= response.totalCount) {
+            hasMore = false;
+          } else {
+            skipCount += pageSize;
+          }
+        }
+      } catch (taskError) {
+        console.warn('Failed to load tasks for statistics, showing users without stats:', taskError);
+      }
+
+      // Calculate statistics for each user
+      // Note: Compare IDs case-insensitively since GUIDs may have different casing
+      const members: TeamMember[] = userList.map(user => {
+        const normalizedUserId = user.id.toLowerCase();
+        const userTasks = allTasks.filter(t => t.assignedToId?.toLowerCase() === normalizedUserId);
+        const completedTasks = userTasks.filter(t => t.status === TaskStatus.Completed);
+
+        return {
+          id: user.id,
+          name: user.displayName || user.name || user.userName,
+          department: user.departmentName || 'Chưa phân phòng',
+          role: user.position || 'Nhân viên',
+          avatar: undefined,
+          taskCount: userTasks.length,
+          completedCount: completedTasks.length,
+        };
+      });
+
+      // Sort: users with tasks first (by task count desc), then users without tasks
+      const sortedMembers = members.sort((a, b) => {
+        if (a.taskCount > 0 && b.taskCount === 0) return -1;
+        if (a.taskCount === 0 && b.taskCount > 0) return 1;
+        return b.taskCount - a.taskCount;
+      });
+
+      setTeamMembers(sortedMembers);
+    } catch (error) {
+      console.error('Failed to load team members:', error);
+      message.error('Không thể tải danh sách nhân viên');
+    } finally {
+      setTeamLoading(false);
+    }
   };
 
   const handleCreate = () => {
     setEditingItem(null);
     form.resetFields();
     form.setFieldsValue({
-      taskNumber: `TASK-${dayjs().format('YYYYMMDD')}-${String(tasks.length + 1).padStart(4, '0')}`,
-      status: 'pending',
-      priority: 'medium',
-      type: 'adhoc',
+      status: TaskStatus.Pending,
+      priority: TaskPriority.Medium,
+      type: TaskType.Adhoc,
       dueDate: dayjs().add(3, 'day'),
       progress: 0,
     });
     setIsModalOpen(true);
   };
 
-  const handleEdit = (record: TaskAssignment) => {
+  const handleEdit = (record: TaskDisplay) => {
     setEditingItem(record);
     form.setFieldsValue({
-      ...record,
+      title: record.title,
+      description: record.description,
+      type: record.type,
+      priority: record.priority,
+      status: record.status,
+      assignedToId: record.assignedToId,
+      department: record.department,
+      relatedEntityCode: record.relatedEntityCode,
       dueDate: dayjs(record.dueDate),
-      startDate: record.startDate ? dayjs(record.startDate) : null,
+      progress: record.progress,
+      notes: record.notes,
     });
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    setTasks(prev => prev.filter(item => item.id !== id));
-    message.success('Xóa công việc thành công!');
+  const handleDelete = async (id: string) => {
+    try {
+      await taskAssignmentService.delete(id);
+      message.success('Xóa công việc thành công!');
+      loadData();
+    } catch (error) {
+      console.error('Failed to delete task assignment:', error);
+      message.error('Không thể xóa công việc. Vui lòng thử lại.');
+    }
   };
 
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
-      const newItem: TaskAssignment = {
-        id: editingItem?.id || `task-${Date.now()}`,
-        taskNumber: values.taskNumber,
-        title: values.title,
-        description: values.description,
-        type: values.type,
-        priority: values.priority,
-        status: values.status,
-        assignedTo: values.assignedTo,
-        assignedBy: 'Trưởng phòng',
-        department: values.department,
-        relatedTestRequests: values.relatedTestRequests || [],
-        relatedSpecimens: values.relatedSpecimens || [],
-        dueDate: values.dueDate.toISOString(),
-        startDate: values.startDate?.toISOString(),
-        progress: values.progress || 0,
-        notes: values.notes,
-        createdAt: editingItem?.createdAt || dayjs().toISOString(),
-      };
 
       if (editingItem) {
-        setTasks(prev => prev.map(item => item.id === editingItem.id ? newItem : item));
+        const updateData: UpdateTaskAssignmentDto = {
+          title: values.title,
+          description: values.description,
+          type: values.type,
+          priority: values.priority,
+          status: values.status,
+          assignedToId: values.assignedToId,
+          department: values.department,
+          relatedEntityCode: values.relatedEntityCode,
+          dueDate: values.dueDate.toISOString(),
+          progress: values.progress || 0,
+          notes: values.notes,
+        };
+        await taskAssignmentService.update(editingItem.id, updateData);
         message.success('Cập nhật công việc thành công!');
       } else {
-        setTasks(prev => [newItem, ...prev]);
+        const createData: CreateTaskAssignmentDto = {
+          title: values.title,
+          description: values.description,
+          type: values.type,
+          priority: values.priority,
+          assignedToId: values.assignedToId,
+          department: values.department,
+          relatedEntityCode: values.relatedEntityCode,
+          dueDate: values.dueDate.toISOString(),
+          notes: values.notes,
+        };
+        await taskAssignmentService.create(createData);
         message.success('Giao việc thành công!');
       }
+
       setIsModalOpen(false);
       form.resetFields();
+      loadData();
     } catch (error) {
-      console.error('Validation failed:', error);
+      console.error('Failed to save task assignment:', error);
+      message.error('Không thể lưu công việc. Vui lòng thử lại.');
     }
   };
 
-  const getStatusTag = (status: string) => {
-    const config: Record<string, { color: string; text: string; icon: React.ReactNode }> = {
-      pending: { color: 'default', text: 'Chờ nhận', icon: <ClockCircleOutlined /> },
-      accepted: { color: 'blue', text: 'Đã nhận', icon: <CheckCircleOutlined /> },
-      in_progress: { color: 'processing', text: 'Đang thực hiện', icon: <ClockCircleOutlined /> },
-      completed: { color: 'success', text: 'Hoàn thành', icon: <CheckCircleOutlined /> },
-      rejected: { color: 'error', text: 'Từ chối', icon: <ExclamationCircleOutlined /> },
+  const getStatusTag = (status: number) => {
+    const config: Record<number, { color: string; text: string; icon: React.ReactNode }> = {
+      [TaskStatus.Pending]: { color: 'default', text: 'Chờ nhận', icon: <ClockCircleOutlined /> },
+      [TaskStatus.Accepted]: { color: 'blue', text: 'Đã nhận', icon: <CheckCircleOutlined /> },
+      [TaskStatus.InProgress]: { color: 'processing', text: 'Đang thực hiện', icon: <ClockCircleOutlined /> },
+      [TaskStatus.Completed]: { color: 'success', text: 'Hoàn thành', icon: <CheckCircleOutlined /> },
+      [TaskStatus.Rejected]: { color: 'error', text: 'Từ chối', icon: <ExclamationCircleOutlined /> },
+      [TaskStatus.Cancelled]: { color: 'default', text: 'Đã hủy', icon: <ExclamationCircleOutlined /> },
     };
     const c = config[status];
     return <Tag color={c.color} icon={c.icon}>{c.text}</Tag>;
   };
 
-  const getPriorityTag = (priority: string) => {
-    const config: Record<string, { color: string; text: string }> = {
-      high: { color: 'red', text: 'Cao' },
-      medium: { color: 'orange', text: 'Trung bình' },
-      low: { color: 'green', text: 'Thấp' },
+  const getPriorityTag = (priority: number) => {
+    const config: Record<number, { color: string; text: string }> = {
+      [TaskPriority.Low]: { color: 'green', text: 'Thấp' },
+      [TaskPriority.Medium]: { color: 'orange', text: 'Trung bình' },
+      [TaskPriority.High]: { color: 'red', text: 'Cao' },
+      [TaskPriority.Urgent]: { color: 'magenta', text: 'Khẩn cấp' },
     };
     return <Tag color={config[priority].color}>{config[priority].text}</Tag>;
   };
 
-  const getTypeTag = (type: string) => {
-    const config: Record<string, { color: string; text: string }> = {
-      daily: { color: 'cyan', text: 'Hàng ngày' },
-      weekly: { color: 'blue', text: 'Hàng tuần' },
-      monthly: { color: 'purple', text: 'Hàng tháng' },
-      adhoc: { color: 'default', text: 'Đột xuất' },
+  const getTypeTag = (type: number) => {
+    const config: Record<number, { color: string; text: string }> = {
+      [TaskType.Daily]: { color: 'cyan', text: 'Hàng ngày' },
+      [TaskType.Weekly]: { color: 'blue', text: 'Hàng tuần' },
+      [TaskType.Monthly]: { color: 'purple', text: 'Hàng tháng' },
+      [TaskType.Adhoc]: { color: 'default', text: 'Đột xuất' },
     };
     return <Tag color={config[type].color}>{config[type].text}</Tag>;
   };
 
-  // Statistics
+  // Statistics (use total from pagination for accurate count)
   const stats = {
-    total: tasks.length,
-    pending: tasks.filter(t => t.status === 'pending').length,
-    inProgress: tasks.filter(t => t.status === 'in_progress' || t.status === 'accepted').length,
-    completed: tasks.filter(t => t.status === 'completed').length,
-    overdue: tasks.filter(t => dayjs(t.dueDate).isBefore(dayjs()) && t.status !== 'completed').length,
+    total: pagination.total,
+    pending: tasks.filter(t => t.status === TaskStatus.Pending).length,
+    inProgress: tasks.filter(t => t.status === TaskStatus.InProgress || t.status === TaskStatus.Accepted).length,
+    completed: tasks.filter(t => t.status === TaskStatus.Completed).length,
+    overdue: tasks.filter(t => dayjs(t.dueDate).isBefore(dayjs()) && t.status !== TaskStatus.Completed).length,
   };
 
-  const columns: ColumnsType<TaskAssignment> = [
+  // Handle search with debounce
+  const handleSearch = (value: string) => {
+    setSearchText(value);
+    setPagination(prev => ({ ...prev, current: 1 })); // Reset to first page
+  };
+
+  // Handle status filter change
+  const handleStatusFilterChange = (value: string) => {
+    setStatusFilter(value === 'all' ? undefined : Number(value) as TaskStatus);
+    setPagination(prev => ({ ...prev, current: 1 })); // Reset to first page
+  };
+
+  // Handle department filter change
+  const handleDepartmentFilterChange = (value: string) => {
+    setDepartmentFilter(value === 'all' ? undefined : value);
+    setPagination(prev => ({ ...prev, current: 1 })); // Reset to first page
+  };
+
+  // Handle table pagination change
+  const handleTableChange = (paginationConfig: any) => {
+    setPagination(prev => ({
+      ...prev,
+      current: paginationConfig.current,
+      pageSize: paginationConfig.pageSize,
+    }));
+  };
+
+  // Handle refresh - reset filters and reload
+  const handleRefresh = () => {
+    setSearchText('');
+    setStatusFilter(undefined);
+    setDepartmentFilter(undefined);
+    setPagination(prev => ({ ...prev, current: 1 }));
+    loadTeamMembers(); // Also refresh team members statistics
+  };
+
+  const columns: ColumnsType<TaskDisplay> = [
     {
       title: 'Mã công việc',
       dataIndex: 'taskNumber',
@@ -349,24 +397,24 @@ const TaskAssignmentList: React.FC = () => {
       dataIndex: 'type',
       key: 'type',
       width: 100,
-      render: (type: string) => getTypeTag(type),
+      render: (type: number) => getTypeTag(type),
     },
     {
       title: 'Ưu tiên',
       dataIndex: 'priority',
       key: 'priority',
       width: 100,
-      render: (priority: string) => getPriorityTag(priority),
+      render: (priority: number) => getPriorityTag(priority),
     },
     {
       title: 'Người thực hiện',
-      dataIndex: 'assignedTo',
-      key: 'assignedTo',
+      dataIndex: 'assignedToName',
+      key: 'assignedToName',
       width: 150,
       render: (name: string) => (
         <Space>
           <Avatar size="small" icon={<UserOutlined />} />
-          {name}
+          {name || '-'}
         </Space>
       ),
     },
@@ -381,9 +429,9 @@ const TaskAssignmentList: React.FC = () => {
       dataIndex: 'dueDate',
       key: 'dueDate',
       width: 130,
-      render: (date: string) => {
+      render: (date: string, record: TaskDisplay) => {
         const d = dayjs(date);
-        const isOverdue = d.isBefore(dayjs());
+        const isOverdue = d.isBefore(dayjs()) && record.status !== TaskStatus.Completed;
         return (
           <Tooltip title={isOverdue ? 'Quá hạn!' : ''}>
             <span style={{ color: isOverdue ? '#ff4d4f' : undefined }}>
@@ -407,7 +455,7 @@ const TaskAssignmentList: React.FC = () => {
       dataIndex: 'status',
       key: 'status',
       width: 140,
-      render: (status: string) => getStatusTag(status),
+      render: (status: number) => getStatusTag(status),
     },
     {
       title: 'Thao tác',
@@ -480,7 +528,7 @@ const TaskAssignmentList: React.FC = () => {
         }
         extra={
           <Space>
-            <Button icon={<ReloadOutlined />} onClick={loadData}>Làm mới</Button>
+            <Button icon={<ReloadOutlined />} onClick={handleRefresh}>Làm mới</Button>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
               Giao việc mới
             </Button>
@@ -497,38 +545,41 @@ const TaskAssignmentList: React.FC = () => {
                   {/* Search & Filter */}
                   <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
                     <Col xs={24} sm={12} md={8}>
-                      <Input
-                        placeholder="Tìm kiếm theo mã, tiêu đề, người thực hiện..."
+                      <Input.Search
+                        placeholder="Tìm kiếm theo mã, tiêu đề..."
                         prefix={<SearchOutlined />}
                         value={searchText}
                         onChange={(e) => setSearchText(e.target.value)}
+                        onSearch={handleSearch}
                         allowClear
+                        enterButton
                       />
                     </Col>
                     <Col xs={24} sm={6} md={4}>
                       <Select
                         style={{ width: '100%' }}
                         placeholder="Trạng thái"
-                        value={statusFilter}
-                        onChange={setStatusFilter}
+                        value={statusFilter !== undefined ? String(statusFilter) : 'all'}
+                        onChange={handleStatusFilterChange}
                       >
-                        <Select.Option value="all">Tất cả</Select.Option>
-                        <Select.Option value="pending">Chờ nhận</Select.Option>
-                        <Select.Option value="accepted">Đã nhận</Select.Option>
-                        <Select.Option value="in_progress">Đang thực hiện</Select.Option>
-                        <Select.Option value="completed">Hoàn thành</Select.Option>
+                        <Select.Option value="all">Tất cả trạng thái</Select.Option>
+                        <Select.Option value={String(TaskStatus.Pending)}>Chờ nhận</Select.Option>
+                        <Select.Option value={String(TaskStatus.Accepted)}>Đã nhận</Select.Option>
+                        <Select.Option value={String(TaskStatus.InProgress)}>Đang thực hiện</Select.Option>
+                        <Select.Option value={String(TaskStatus.Completed)}>Hoàn thành</Select.Option>
+                        <Select.Option value={String(TaskStatus.Rejected)}>Từ chối</Select.Option>
                       </Select>
                     </Col>
                     <Col xs={24} sm={6} md={4}>
                       <Select
                         style={{ width: '100%' }}
                         placeholder="Phòng ban"
-                        value={departmentFilter}
-                        onChange={setDepartmentFilter}
+                        value={departmentFilter || 'all'}
+                        onChange={handleDepartmentFilterChange}
                       >
-                        <Select.Option value="all">Tất cả phòng</Select.Option>
+                        <Select.Option value="all">Tất cả phòng ban</Select.Option>
                         {departments.map(d => (
-                          <Select.Option key={d} value={d}>{d}</Select.Option>
+                          <Select.Option key={d.id} value={d.name}>{d.name}</Select.Option>
                         ))}
                       </Select>
                     </Col>
@@ -536,13 +587,18 @@ const TaskAssignmentList: React.FC = () => {
 
                   <Table
                     columns={columns}
-                    dataSource={filteredTasks}
+                    dataSource={tasks}
                     rowKey="id"
                     loading={loading}
                     pagination={{
+                      current: pagination.current,
+                      pageSize: pagination.pageSize,
+                      total: pagination.total,
+                      pageSizeOptions: [20, 50, 100],
                       showSizeChanger: true,
-                      showTotal: (total) => `Tổng ${total} công việc`,
+                      showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} công việc`,
                     }}
+                    onChange={handleTableChange}
                     scroll={{ x: 1600 }}
                   />
                 </>
@@ -550,32 +606,101 @@ const TaskAssignmentList: React.FC = () => {
             },
             {
               key: 'team',
-              label: 'Nhân viên',
+              label: `Nhân viên (${teamMembers.length})`,
               children: (
-                <List
-                  grid={{ gutter: 16, xs: 1, sm: 2, md: 3, lg: 4 }}
+                <Table
+                  loading={teamLoading}
                   dataSource={teamMembers}
-                  renderItem={(member) => (
-                    <List.Item>
-                      <Card>
-                        <Card.Meta
-                          avatar={<Avatar size={64} icon={<UserOutlined />} />}
-                          title={member.name}
-                          description={
-                            <Space direction="vertical" size={4}>
-                              <Tag color="blue">{member.department}</Tag>
-                              <span>{member.role}</span>
-                              <Progress
-                                percent={Math.round((member.completedCount / member.taskCount) * 100)}
-                                size="small"
-                                format={() => `${member.completedCount}/${member.taskCount}`}
-                              />
-                            </Space>
-                          }
-                        />
-                      </Card>
-                    </List.Item>
-                  )}
+                  rowKey="id"
+                  pagination={{
+                    pageSize: 10,
+                    showSizeChanger: true,
+                    pageSizeOptions: [10, 20, 50],
+                    showTotal: (total) => `Tổng ${total} nhân viên`,
+                  }}
+                  columns={[
+                    {
+                      title: 'Nhân viên',
+                      key: 'name',
+                      width: 250,
+                      render: (_, member: TeamMember) => (
+                        <Space>
+                          <Avatar size={40} icon={<UserOutlined />} style={{ backgroundColor: '#1890ff' }} />
+                          <div>
+                            <div style={{ fontWeight: 500 }}>{member.name}</div>
+                            <div style={{ fontSize: 12, color: '#999' }}>{member.role}</div>
+                          </div>
+                        </Space>
+                      ),
+                    },
+                    {
+                      title: 'Phòng ban',
+                      dataIndex: 'department',
+                      key: 'department',
+                      width: 180,
+                      render: (dept: string) => <Tag color="blue">{dept}</Tag>,
+                    },
+                    {
+                      title: 'Tổng công việc',
+                      dataIndex: 'taskCount',
+                      key: 'taskCount',
+                      width: 120,
+                      align: 'center' as const,
+                      sorter: (a: TeamMember, b: TeamMember) => a.taskCount - b.taskCount,
+                      render: (count: number) => (
+                        <span style={{ fontWeight: 500, color: count > 0 ? '#1890ff' : '#999' }}>
+                          {count}
+                        </span>
+                      ),
+                    },
+                    {
+                      title: 'Hoàn thành',
+                      dataIndex: 'completedCount',
+                      key: 'completedCount',
+                      width: 120,
+                      align: 'center' as const,
+                      sorter: (a: TeamMember, b: TeamMember) => a.completedCount - b.completedCount,
+                      render: (count: number) => (
+                        <span style={{ fontWeight: 500, color: count > 0 ? '#52c41a' : '#999' }}>
+                          {count}
+                        </span>
+                      ),
+                    },
+                    {
+                      title: 'Tiến độ',
+                      key: 'progress',
+                      width: 200,
+                      render: (_, member: TeamMember) => {
+                        const percent = member.taskCount > 0
+                          ? Math.round((member.completedCount / member.taskCount) * 100)
+                          : 0;
+                        return (
+                          <Progress
+                            percent={percent}
+                            size="small"
+                            status={percent === 100 ? 'success' : 'active'}
+                            format={() => `${member.completedCount}/${member.taskCount}`}
+                          />
+                        );
+                      },
+                    },
+                    {
+                      title: 'Trạng thái',
+                      key: 'status',
+                      width: 120,
+                      align: 'center' as const,
+                      render: (_, member: TeamMember) => {
+                        const pendingCount = member.taskCount - member.completedCount;
+                        if (member.taskCount === 0) {
+                          return <Tag>Chưa có việc</Tag>;
+                        }
+                        if (pendingCount === 0) {
+                          return <Tag color="success">Hoàn thành</Tag>;
+                        }
+                        return <Tag color="processing">{pendingCount} việc đang làm</Tag>;
+                      },
+                    },
+                  ]}
                 />
               ),
             },
@@ -597,31 +722,32 @@ const TaskAssignmentList: React.FC = () => {
         <Form form={form} layout="vertical">
           <Row gutter={16}>
             <Col span={8}>
-              <Form.Item name="taskNumber" label="Mã công việc" rules={[{ required: true }]}>
-                <Input disabled />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="type" label="Loại công việc" rules={[{ required: true }]}>
+              <Form.Item name="type" label="Loại công việc" rules={[{ required: true, message: 'Vui lòng chọn loại' }]}>
                 <Select>
-                  <Select.Option value="daily">Hàng ngày</Select.Option>
-                  <Select.Option value="weekly">Hàng tuần</Select.Option>
-                  <Select.Option value="monthly">Hàng tháng</Select.Option>
-                  <Select.Option value="adhoc">Đột xuất</Select.Option>
+                  <Select.Option value={TaskType.Daily}>Hàng ngày</Select.Option>
+                  <Select.Option value={TaskType.Weekly}>Hàng tuần</Select.Option>
+                  <Select.Option value={TaskType.Monthly}>Hàng tháng</Select.Option>
+                  <Select.Option value={TaskType.Adhoc}>Đột xuất</Select.Option>
                 </Select>
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="priority" label="Mức ưu tiên" rules={[{ required: true }]}>
+              <Form.Item name="priority" label="Mức ưu tiên" rules={[{ required: true, message: 'Vui lòng chọn mức ưu tiên' }]}>
                 <Select>
-                  <Select.Option value="high">Cao</Select.Option>
-                  <Select.Option value="medium">Trung bình</Select.Option>
-                  <Select.Option value="low">Thấp</Select.Option>
+                  <Select.Option value={TaskPriority.Low}>Thấp</Select.Option>
+                  <Select.Option value={TaskPriority.Medium}>Trung bình</Select.Option>
+                  <Select.Option value={TaskPriority.High}>Cao</Select.Option>
+                  <Select.Option value={TaskPriority.Urgent}>Khẩn cấp</Select.Option>
                 </Select>
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="dueDate" label="Hạn hoàn thành" rules={[{ required: true, message: 'Vui lòng chọn hạn hoàn thành' }]}>
+                <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
               </Form.Item>
             </Col>
           </Row>
-          <Form.Item name="title" label="Tiêu đề công việc" rules={[{ required: true }]}>
+          <Form.Item name="title" label="Tiêu đề công việc" rules={[{ required: true, message: 'Vui lòng nhập tiêu đề' }]}>
             <Input />
           </Form.Item>
           <Form.Item name="description" label="Mô tả">
@@ -629,50 +755,61 @@ const TaskAssignmentList: React.FC = () => {
           </Form.Item>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="assignedTo" label="Người thực hiện" rules={[{ required: true }]}>
-                <Select>
-                  {teamMembers.map(m => (
-                    <Select.Option key={m.id} value={m.name}>{m.name} - {m.department}</Select.Option>
+              <Form.Item name="assignedToId" label="Người thực hiện" rules={[{ required: true, message: 'Vui lòng chọn người thực hiện' }]}>
+                <Select
+                  placeholder="Chọn người thực hiện"
+                  showSearch
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
+                  }
+                >
+                  {users.map(u => (
+                    <Select.Option key={u.id} value={u.id}>
+                      {u.displayName || u.name || u.userName}
+                    </Select.Option>
                   ))}
                 </Select>
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="department" label="Phòng ban" rules={[{ required: true }]}>
+              <Form.Item name="department" label="Phòng ban" rules={[{ required: true, message: 'Vui lòng chọn phòng ban' }]}>
                 <Select>
                   {departments.map(d => (
-                    <Select.Option key={d} value={d}>{d}</Select.Option>
+                    <Select.Option key={d.id} value={d.name}>{d.name}</Select.Option>
                   ))}
                 </Select>
               </Form.Item>
             </Col>
           </Row>
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="dueDate" label="Hạn hoàn thành" rules={[{ required: true }]}>
-                <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="status" label="Trạng thái">
-                <Select>
-                  <Select.Option value="pending">Chờ nhận</Select.Option>
-                  <Select.Option value="accepted">Đã nhận</Select.Option>
-                  <Select.Option value="in_progress">Đang thực hiện</Select.Option>
-                  <Select.Option value="completed">Hoàn thành</Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="progress" label="Tiến độ (%)">
-                <Select>
-                  {[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map(p => (
-                    <Select.Option key={p} value={p}>{p}%</Select.Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
+          <Form.Item name="relatedEntityCode" label="Mã liên quan">
+            <Input placeholder="Mã yêu cầu kiểm nghiệm hoặc mã mẫu thử" />
+          </Form.Item>
+          {editingItem && (
+            <>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item name="status" label="Trạng thái">
+                    <Select>
+                      <Select.Option value={TaskStatus.Pending}>Chờ nhận</Select.Option>
+                      <Select.Option value={TaskStatus.Accepted}>Đã nhận</Select.Option>
+                      <Select.Option value={TaskStatus.InProgress}>Đang thực hiện</Select.Option>
+                      <Select.Option value={TaskStatus.Completed}>Hoàn thành</Select.Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item name="progress" label="Tiến độ (%)">
+                    <Select>
+                      {[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map(p => (
+                        <Select.Option key={p} value={p}>{p}%</Select.Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
+            </>
+          )}
           <Form.Item name="notes" label="Ghi chú">
             <Input.TextArea rows={2} />
           </Form.Item>

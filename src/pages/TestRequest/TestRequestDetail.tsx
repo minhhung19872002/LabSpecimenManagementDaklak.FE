@@ -7,46 +7,6 @@ import { testRequestService } from '../../services/testRequestService';
 import { TestRequestDto, TestRequestStatus } from '../../types/testRequest';
 import dayjs from 'dayjs';
 import './TestRequestDetail.css';
-import { getTestRequestById, TestRequestStatus as MockTestRequestStatus } from '../../mocks/mockData';
-
-// Get mock test request from centralized data
-const getMockTestRequest = (id: string): TestRequestDto | null => {
-  const mockData = getTestRequestById(id);
-  if (!mockData) return null;
-
-  // Map mock status to TestRequestStatus
-  let status: TestRequestStatus;
-  switch (mockData.status) {
-    case MockTestRequestStatus.Pending:
-      status = TestRequestStatus.Pending;
-      break;
-    case MockTestRequestStatus.InProgress:
-      status = TestRequestStatus.InProgress;
-      break;
-    case MockTestRequestStatus.Completed:
-      status = TestRequestStatus.Completed;
-      break;
-    case MockTestRequestStatus.Cancelled:
-      status = TestRequestStatus.Cancelled;
-      break;
-    default:
-      status = TestRequestStatus.Pending;
-  }
-
-  return {
-    id: mockData.id,
-    requestNumber: mockData.requestNumber,
-    requestDate: mockData.requestDate,
-    customerName: mockData.customerName,
-    customerEmail: mockData.customerEmail,
-    customerPhone: mockData.customerPhone,
-    customerAddress: mockData.customerAddress,
-    status,
-    expectedCompletionDate: mockData.expectedCompletionDate,
-    notes: mockData.notes,
-    creationTime: mockData.createdAt,
-  };
-};
 
 const TestRequestDetail: React.FC = () => {
   const { t } = useTranslation();
@@ -66,9 +26,10 @@ const TestRequestDetail: React.FC = () => {
     try {
       const result = await testRequestService.get(requestId);
       setData(result);
-    } catch (error) {
-      console.log('API not available, using mock data');
-      setData(getMockTestRequest(requestId));
+    } catch (error: any) {
+      console.error('Error loading test request:', error);
+      message.error('Không thể tải thông tin yêu cầu thử nghiệm');
+      setData(null);
     } finally {
       setLoading(false);
     }

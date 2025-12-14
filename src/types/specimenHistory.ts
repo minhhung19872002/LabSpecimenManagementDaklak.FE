@@ -14,9 +14,12 @@ export interface SpecimenHistoryDto {
   location: string;
   status: SpecimenStatus;
   notes?: string;
+  temperature?: number;
+  humidity?: number;
+  timestamp?: string;
   performedById?: string;
-  specimenCode?: string;
   performedByName?: string;
+  specimenCode?: string;
   creatorId?: string;
   creationTime: string;
 }
@@ -27,6 +30,9 @@ export interface CreateSpecimenHistoryDto {
   location: string;
   status: SpecimenStatus;
   notes?: string;
+  temperature?: number;
+  humidity?: number;
+  timestamp?: string;
   performedById?: string;
 }
 
@@ -35,5 +41,8 @@ export interface UpdateSpecimenHistoryDto {
   location: string;
   status: SpecimenStatus;
   notes?: string;
+  temperature?: number;
+  humidity?: number;
+  timestamp?: string;
   performedById?: string;
 }

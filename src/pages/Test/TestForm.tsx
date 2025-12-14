@@ -3,9 +3,10 @@ import { Form, Input, Button, Select, message, InputNumber, DatePicker, Card, Sp
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { testService } from '../../services/testService';
+import { specimenService } from '../../services/specimenService';
+import { testMethodService } from '../../services/masterDataService';
 import { CreateTestDto, UpdateTestDto, TestStatus } from '../../types/test';
 import dayjs from 'dayjs';
-import { mockSpecimens, mockTestMethods, mockUsers } from '../../mocks/mockData';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -18,23 +19,43 @@ const TestForm: React.FC = () => {
   const { t } = useTranslation();
   const isEditMode = !!id;
 
-  // Use centralized mock data for specimens
-  const specimens = mockSpecimens.map(s => ({
-    id: s.id,
-    code: s.code,
-    name: s.name,
-  }));
-
-  // Get technicians for assignee dropdown
-  const technicians = mockUsers.filter(u =>
-    u.role === 'Technician' || u.role === 'LabManager'
-  );
+  // Data for dropdowns
+  const [specimens, setSpecimens] = useState<any[]>([]);
+  const [testMethods, setTestMethods] = useState<any[]>([]);
 
   useEffect(() => {
+    fetchSpecimens();
+    fetchTestMethods();
     if (isEditMode && id) {
       fetchTest(id);
     }
   }, [id]);
+
+  const fetchSpecimens = async () => {
+    try {
+      const result = await specimenService.getList({
+        skipCount: 0,
+        maxResultCount: 1000,
+      });
+      setSpecimens(result.items);
+    } catch (error) {
+      message.error('Không thể tải danh sách mẫu thử!');
+      console.error('Failed to fetch specimens:', error);
+    }
+  };
+
+  const fetchTestMethods = async () => {
+    try {
+      const result = await testMethodService.getList({
+        skipCount: 0,
+        maxResultCount: 1000,
+      });
+      setTestMethods(result.items);
+    } catch (error) {
+      message.error('Không thể tải danh sách phương pháp thử!');
+      console.error('Failed to fetch test methods:', error);
+    }
+  };
 
   const fetchTest = async (testId: string) => {
     setLoading(true);
@@ -48,6 +69,7 @@ const TestForm: React.FC = () => {
       });
     } catch (error) {
       message.error(t('messages.loadFailed'));
+      console.error('Failed to fetch test:', error);
     } finally {
       setLoading(false);
     }
@@ -73,6 +95,7 @@ const TestForm: React.FC = () => {
       navigate('/tests');
     } catch (error) {
       message.error(isEditMode ? t('messages.updateFailed') : t('messages.createFailed'));
+      console.error('Failed to save test:', error);
     } finally {
       setLoading(false);
     }
@@ -121,7 +144,7 @@ const TestForm: React.FC = () => {
             rules={[{ required: true, message: t('validation.required') }]}
           >
             <Select placeholder="Chọn phương pháp thử" showSearch optionFilterProp="children">
-              {mockTestMethods.map(method => (
+              {testMethods.map(method => (
                 <Option key={method.id} value={method.name}>
                   {method.code} - {method.name}
                 </Option>
@@ -169,13 +192,7 @@ const TestForm: React.FC = () => {
           )}
 
           <Form.Item label={t('test.assigneeId')} name="assigneeId">
-            <Select placeholder="Chọn người thực hiện" allowClear showSearch optionFilterProp="children">
-              {technicians.map(user => (
-                <Option key={user.id} value={user.id}>
-                  {user.fullName} - {user.department}
-                </Option>
-              ))}
-            </Select>
+            <Input placeholder="Nhập ID người thực hiện" />
           </Form.Item>
 
           <Form.Item label={t('test.estimatedDuration')} name="estimatedDuration">

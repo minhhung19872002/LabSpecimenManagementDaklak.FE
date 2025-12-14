@@ -1,91 +1,41 @@
 // @ts-nocheck
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Space, message, Popconfirm, Tag, Card, Input, Row, Col, Select, Modal, Form, InputNumber, Switch } from 'antd';
+import { Table, Button, Space, message, Popconfirm, Tag, Card, Input, Row, Col, Select, Modal, Form, Switch } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { PlusOutlined, EyeOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ReloadOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { PlusOutlined, EyeOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import { testResultService } from '../../services/testResultService';
-import { TestResultDto, ResultApprovalStatus } from '../../types/testResult';
+import { testService } from '../../services/testService';
+import { TestResultDto, ResultApprovalStatus, CreateTestResultDto, UpdateTestResultDto } from '../../types/testResult';
+import { TestDto } from '../../types/test';
 import type { ColumnsType } from 'antd/es/table';
-import dayjs from 'dayjs';
-import { mockTestResults, mockTests, mockUsers } from '../../mocks/mockData';
-
-// Use centralized mock data
-const generateMockData = (): TestResultDto[] => {
-  return mockTestResults.map(result => {
-    const test = mockTests.find(t => t.id === result.testId);
-    const testedByUser = mockUsers.find(u => u.id === result.testedById);
-    const reviewedByUser = mockUsers.find(u => u.id === result.reviewedById);
-    const approvedByUser = mockUsers.find(u => u.id === result.approvedById);
-    return {
-      id: result.id,
-      testId: result.testId,
-      testCode: test?.code || 'N/A',
-      testName: test?.name || 'N/A',
-      parameter: result.parameter,
-      value: result.value,
-      unit: result.unit,
-      referenceRange: result.referenceRange,
-      isPass: result.isPass,
-      approvalStatus: result.approvalStatus,
-      testedBy: testedByUser?.fullName || '-',
-      testedDate: result.testedDate,
-      reviewedBy: reviewedByUser?.fullName,
-      reviewedDate: result.reviewedDate,
-      approvedBy: approvedByUser?.fullName,
-      approvedDate: result.approvedDate,
-      notes: result.notes,
-      creationTime: result.createdAt,
-    };
-  });
-};
 
 const TestResultList: React.FC = () => {
-  const [testResults, setTestResults] = useState<TestResultDto[]>([]);
-  const [filteredData, setFilteredData] = useState<TestResultDto[]>([]);
+  const [data, setData] = useState<TestResultDto[]>([]);
+  const [tests, setTests] = useState<TestDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(50);
   const [searchText, setSearchText] = useState('');
-  const [statusFilter, setStatusFilter] = useState<ResultApprovalStatus | 'all'>('all');
-  const [passFilter, setPassFilter] = useState<'all' | 'pass' | 'fail'>('all');
+  const [searchInput, setSearchInput] = useState('');
+  const [statusFilter, setStatusFilter] = useState<ResultApprovalStatus | undefined>(undefined);
+  const [passFilter, setPassFilter] = useState<boolean | undefined>(undefined);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<TestResultDto | null>(null);
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const { t } = useTranslation();
 
-  const parameters = mockTests.map(t => t.name);
-
+  // Load data when filters change
   useEffect(() => {
     fetchTestResults();
-  }, []);
+  }, [currentPage, pageSize, searchText, statusFilter, passFilter]);
 
+  // Load tests once on mount
   useEffect(() => {
-    let filtered = [...testResults];
-
-    if (searchText) {
-      const search = searchText.toLowerCase();
-      filtered = filtered.filter(item =>
-        item.testCode?.toLowerCase().includes(search) ||
-        item.testName?.toLowerCase().includes(search) ||
-        item.parameter?.toLowerCase().includes(search) ||
-        item.value?.toLowerCase().includes(search)
-      );
-    }
-
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(item => item.approvalStatus === statusFilter);
-    }
-
-    if (passFilter !== 'all') {
-      filtered = filtered.filter(item => passFilter === 'pass' ? item.isPass : !item.isPass);
-    }
-
-    setFilteredData(filtered);
-    setTotalCount(filtered.length);
-  }, [searchText, statusFilter, passFilter, testResults]);
+    fetchTests();
+  }, []);
 
   const fetchTestResults = async () => {
     setLoading(true);
@@ -94,29 +44,62 @@ const TestResultList: React.FC = () => {
         skipCount: (currentPage - 1) * pageSize,
         maxResultCount: pageSize,
         sorting: 'creationTime desc',
+        search: searchText || undefined,
+        approvalStatus: statusFilter,
+        isPass: passFilter,
       });
-      setTestResults(result.items);
-      setFilteredData(result.items);
+      setData(result.items);
       setTotalCount(result.totalCount);
     } catch (error) {
-      // API not available, use mock data immediately
-      const mockData = generateMockData();
-      setTestResults(mockData);
-      setFilteredData(mockData);
-      setTotalCount(mockData.length);
+      message.error('Không thể tải danh sách kết quả. Vui lòng kiểm tra kết nối API.');
+      console.error('Failed to fetch test results:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle search
+  const handleSearch = () => {
+    setSearchText(searchInput);
+    setCurrentPage(1);
+  };
+
+  // Handle status filter change
+  const handleStatusChange = (value: ResultApprovalStatus | 'all') => {
+    setStatusFilter(value === 'all' ? undefined : value);
+    setCurrentPage(1);
+  };
+
+  // Handle pass filter change
+  const handlePassFilterChange = (value: 'all' | 'pass' | 'fail') => {
+    if (value === 'all') {
+      setPassFilter(undefined);
+    } else {
+      setPassFilter(value === 'pass');
+    }
+    setCurrentPage(1);
+  };
+
+  const fetchTests = async () => {
+    try {
+      const result = await testService.getList({
+        maxResultCount: 1000,
+      });
+      setTests(result.items);
+    } catch (error) {
+      console.error('Failed to fetch tests:', error);
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
       await testResultService.delete(id);
+      message.success('Xóa kết quả thành công!');
+      fetchTestResults();
     } catch (error) {
-      console.log('Mock delete:', id);
+      message.error('Không thể xóa kết quả. Vui lòng thử lại.');
+      console.error('Failed to delete test result:', error);
     }
-    setTestResults(prev => prev.filter(item => item.id !== id));
-    message.success('Xóa kết quả thành công!');
   };
 
   const handleCreate = () => {
@@ -140,34 +123,43 @@ const TestResultList: React.FC = () => {
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
-      const newItem: TestResultDto = {
-        id: editingItem?.id || `result-${Date.now()}`,
-        testId: values.testId,
-        testCode: values.testCode,
-        testName: values.testName,
-        parameter: values.parameter,
-        value: values.value,
-        unit: values.unit,
-        referenceRange: values.referenceRange,
-        isPass: values.isPass,
-        approvalStatus: values.approvalStatus,
-        testedBy: values.testedBy || 'Kỹ thuật viên 1',
-        testedDate: dayjs().toISOString(),
-        notes: values.notes,
-        creationTime: editingItem?.creationTime || dayjs().toISOString(),
-      };
 
       if (editingItem) {
-        setTestResults(prev => prev.map(item => item.id === editingItem.id ? newItem : item));
+        const updateData: UpdateTestResultDto = {
+          parameter: values.parameter,
+          value: values.value,
+          unit: values.unit,
+          isPass: values.isPass,
+          approvalStatus: values.approvalStatus,
+          notes: values.notes,
+        };
+
+        await testResultService.update(editingItem.id, updateData);
         message.success('Cập nhật kết quả thành công!');
       } else {
-        setTestResults(prev => [newItem, ...prev]);
+        const createData: CreateTestResultDto = {
+          testId: values.testId,
+          parameter: values.parameter,
+          value: values.value,
+          unit: values.unit,
+          isPass: values.isPass,
+          notes: values.notes,
+        };
+
+        await testResultService.create(createData);
         message.success('Thêm kết quả mới thành công!');
       }
+
       setIsModalOpen(false);
       form.resetFields();
+      fetchTestResults();
     } catch (error) {
-      console.error('Validation failed:', error);
+      if (error.errorFields) {
+        console.error('Validation failed:', error);
+      } else {
+        message.error('Không thể lưu kết quả. Vui lòng thử lại.');
+        console.error('Failed to save test result:', error);
+      }
     }
   };
 
@@ -246,9 +238,9 @@ const TestResultList: React.FC = () => {
       onFilter: (value, record) => record.isPass === value,
     },
     {
-      title: 'Người thử',
-      dataIndex: 'testedBy',
-      key: 'testedBy',
+      title: 'Người nhập',
+      dataIndex: 'enteredByName',
+      key: 'enteredByName',
       width: 140,
       render: (val: string) => val || '-',
     },
@@ -312,20 +304,27 @@ const TestResultList: React.FC = () => {
       {/* Search & Filter */}
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} sm={12} md={8}>
-          <Input
+          <Input.Search
             placeholder="Tìm kiếm theo mã, chỉ tiêu, giá trị..."
-            prefix={<SearchOutlined />}
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onSearch={handleSearch}
+            onPressEnter={handleSearch}
             allowClear
+            onClear={() => {
+              setSearchInput('');
+              setSearchText('');
+              setCurrentPage(1);
+            }}
+            enterButton
           />
         </Col>
         <Col xs={24} sm={6} md={4}>
           <Select
             style={{ width: '100%' }}
             placeholder="Trạng thái duyệt"
-            value={statusFilter}
-            onChange={setStatusFilter}
+            value={statusFilter === undefined ? 'all' : statusFilter}
+            onChange={handleStatusChange}
           >
             <Select.Option value="all">Tất cả trạng thái</Select.Option>
             <Select.Option value={ResultApprovalStatus.Draft}>Nháp</Select.Option>
@@ -339,8 +338,8 @@ const TestResultList: React.FC = () => {
           <Select
             style={{ width: '100%' }}
             placeholder="Kết quả"
-            value={passFilter}
-            onChange={setPassFilter}
+            value={passFilter === undefined ? 'all' : (passFilter ? 'pass' : 'fail')}
+            onChange={handlePassFilterChange}
           >
             <Select.Option value="all">Tất cả</Select.Option>
             <Select.Option value="pass">Đạt</Select.Option>
@@ -351,13 +350,14 @@ const TestResultList: React.FC = () => {
 
       <Table
         columns={columns}
-        dataSource={filteredData}
+        dataSource={data}
         rowKey="id"
         loading={loading}
         pagination={{
           current: currentPage,
           pageSize: pageSize,
           total: totalCount,
+          pageSizeOptions: [50, 100, 150],
           showSizeChanger: true,
           showTotal: (total) => `Tổng ${total} kết quả`,
           onChange: (page, size) => {
@@ -383,24 +383,30 @@ const TestResultList: React.FC = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                name="testCode"
-                label="Mã phép thử"
-                rules={[{ required: true, message: 'Vui lòng nhập mã phép thử' }]}
+                name="testId"
+                label="Phép thử"
+                rules={[{ required: true, message: 'Vui lòng chọn phép thử' }]}
               >
-                <Input placeholder="TEST-YYYYMMDD-XXXX" />
+                <Select
+                  showSearch
+                  optionFilterProp="children"
+                  placeholder="Chọn phép thử"
+                >
+                  {tests.map(test => (
+                    <Select.Option key={test.id} value={test.id}>
+                      {test.code} - {test.name}
+                    </Select.Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
                 name="parameter"
                 label="Chỉ tiêu phân tích"
-                rules={[{ required: true, message: 'Vui lòng chọn chỉ tiêu' }]}
+                rules={[{ required: true, message: 'Vui lòng nhập chỉ tiêu' }]}
               >
-                <Select showSearch optionFilterProp="children">
-                  {parameters.map(p => (
-                    <Select.Option key={p} value={p}>{p}</Select.Option>
-                  ))}
-                </Select>
+                <Input placeholder="Nhập chỉ tiêu" />
               </Form.Item>
             </Col>
           </Row>
@@ -415,7 +421,11 @@ const TestResultList: React.FC = () => {
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="unit" label="Đơn vị">
+              <Form.Item
+                name="unit"
+                label="Đơn vị"
+                rules={[{ required: true, message: 'Vui lòng chọn đơn vị' }]}
+              >
                 <Select allowClear>
                   <Select.Option value="">Không có</Select.Option>
                   <Select.Option value="Ct value">Ct value</Select.Option>
@@ -434,31 +444,24 @@ const TestResultList: React.FC = () => {
             </Col>
           </Row>
           <Row gutter={16}>
-            <Col span={8}>
+            <Col span={12}>
               <Form.Item name="isPass" label="Kết quả" valuePropName="checked">
                 <Switch checkedChildren="Đạt" unCheckedChildren="Không đạt" />
               </Form.Item>
             </Col>
-            <Col span={8}>
-              <Form.Item name="approvalStatus" label="Trạng thái">
-                <Select>
-                  <Select.Option value={ResultApprovalStatus.Draft}>Nháp</Select.Option>
-                  <Select.Option value={ResultApprovalStatus.Submitted}>Đã nộp</Select.Option>
-                  <Select.Option value={ResultApprovalStatus.Step1Reviewed}>Đã xem xét</Select.Option>
-                  <Select.Option value={ResultApprovalStatus.Step2Approved}>Đã phê duyệt</Select.Option>
-                  <Select.Option value={ResultApprovalStatus.Rejected}>Từ chối</Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="testedBy" label="Người thử nghiệm">
-                <Select allowClear>
-                  {mockUsers.filter(u => u.role === 'Technician' || u.role === 'LabManager').map(u => (
-                    <Select.Option key={u.id} value={u.fullName}>{u.fullName}</Select.Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
+            {editingItem && (
+              <Col span={12}>
+                <Form.Item name="approvalStatus" label="Trạng thái">
+                  <Select>
+                    <Select.Option value={ResultApprovalStatus.Draft}>Nháp</Select.Option>
+                    <Select.Option value={ResultApprovalStatus.Submitted}>Đã nộp</Select.Option>
+                    <Select.Option value={ResultApprovalStatus.Step1Reviewed}>Đã xem xét</Select.Option>
+                    <Select.Option value={ResultApprovalStatus.Step2Approved}>Đã phê duyệt</Select.Option>
+                    <Select.Option value={ResultApprovalStatus.Rejected}>Từ chối</Select.Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+            )}
           </Row>
           <Form.Item name="notes" label="Ghi chú">
             <Input.TextArea rows={3} />

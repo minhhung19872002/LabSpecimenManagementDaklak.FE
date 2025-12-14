@@ -2,6 +2,7 @@ import { lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
 import Loadable from './components/common/Loadable';
+import PrivateRoute from './components/auth/PrivateRoute';
 import { initTableGrabScroll } from './hooks/useTableGrabScroll';
 import './App.css';
 
@@ -68,7 +69,11 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/" element={<MainLayout />}>
+        <Route path="/" element={
+          <PrivateRoute>
+            <MainLayout />
+          </PrivateRoute>
+        }>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
 

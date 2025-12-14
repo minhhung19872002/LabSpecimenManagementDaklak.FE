@@ -3,7 +3,7 @@
  * All mock data is consistent and properly related across modules
  */
 
-import dayjs from 'dayjs';
+// dayjs is available but not directly used in this file - related types use it
 
 // =====================================================
 // ENUMS & CONSTANTS

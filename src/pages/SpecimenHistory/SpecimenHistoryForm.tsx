@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Select, Button, Card, message, Spin } from 'antd';
+import { Form, Input, Select, Button, Card, message, Spin, DatePicker, InputNumber, Row, Col } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import dayjs from 'dayjs';
 import { specimenHistoryService } from '../../services/specimenHistoryService';
+import { specimenService } from '../../services/specimenService';
+import { storageLocationService } from '../../services/masterDataService';
+import { userService, UserLookupDto } from '../../services/userService';
 import { CreateSpecimenHistoryDto, UpdateSpecimenHistoryDto, SpecimenStatus } from '../../types/specimenHistory';
-import { mockSpecimens, mockStorageLocations, mockUsers } from '../../mocks/mockData';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -18,7 +21,28 @@ const SpecimenHistoryForm: React.FC = () => {
   const { t } = useTranslation();
   const isEdit = !!id;
 
+  // Master data from API
+  const [specimens, setSpecimens] = useState<any[]>([]);
+  const [storageLocations, setStorageLocations] = useState<any[]>([]);
+  const [users, setUsers] = useState<UserLookupDto[]>([]);
+
+  const loadMasterData = async () => {
+    try {
+      const [specimensResult, locationsResult, usersResult] = await Promise.all([
+        specimenService.getList({ maxResultCount: 1000 }),
+        storageLocationService.getActive(),
+        userService.getLookup(),
+      ]);
+      setSpecimens(specimensResult.items || []);
+      setStorageLocations(locationsResult.items || []);
+      setUsers(usersResult || []);
+    } catch (error) {
+      console.error('Error loading master data:', error);
+    }
+  };
+
   useEffect(() => {
+    loadMasterData();
     if (isEdit && id) {
       fetchData(id);
     }
@@ -29,10 +53,15 @@ const SpecimenHistoryForm: React.FC = () => {
     try {
       const data = await specimenHistoryService.getById(historyId);
       form.setFieldsValue({
+        specimenId: data.specimenId,
         action: data.action,
         location: data.location,
         status: data.status,
         notes: data.notes,
+        temperature: data.temperature,
+        humidity: data.humidity,
+        timestamp: data.timestamp ? dayjs(data.timestamp) : undefined,
+        performedById: data.performedById,
       });
     } catch (error) {
       message.error(t('specimenHistory.form.fetchError'));
@@ -45,12 +74,17 @@ const SpecimenHistoryForm: React.FC = () => {
   const onFinish = async (values: any) => {
     setSubmitting(true);
     try {
+      const timestamp = values.timestamp ? values.timestamp.toISOString() : undefined;
+
       if (isEdit && id) {
         const updateDto: UpdateSpecimenHistoryDto = {
           action: values.action,
           location: values.location,
           status: values.status,
           notes: values.notes,
+          temperature: values.temperature,
+          humidity: values.humidity,
+          timestamp: timestamp,
           performedById: values.performedById,
         };
         await specimenHistoryService.update(id, updateDto);
@@ -62,6 +96,9 @@ const SpecimenHistoryForm: React.FC = () => {
           location: values.location,
           status: values.status,
           notes: values.notes,
+          temperature: values.temperature,
+          humidity: values.humidity,
+          timestamp: timestamp,
           performedById: values.performedById,
         };
         await specimenHistoryService.create(createDto);
@@ -89,6 +126,7 @@ const SpecimenHistoryForm: React.FC = () => {
           onFinish={onFinish}
           initialValues={{
             status: SpecimenStatus.Received,
+            timestamp: dayjs(),
           }}
         >
           {!isEdit && (
@@ -98,7 +136,7 @@ const SpecimenHistoryForm: React.FC = () => {
               rules={[{ required: true, message: t('specimenHistory.form.specimenIdRequired') }]}
             >
               <Select placeholder="Chọn mẫu" showSearch optionFilterProp="children">
-                {mockSpecimens.map(specimen => (
+                {specimens.map(specimen => (
                   <Option key={specimen.id} value={specimen.id}>
                     {specimen.code} - {specimen.name}
                   </Option>
@@ -137,7 +175,7 @@ const SpecimenHistoryForm: React.FC = () => {
           >
             <Select placeholder="Chọn vị trí" showSearch optionFilterProp="children">
               <Option value="Quầy tiếp nhận">Quầy tiếp nhận</Option>
-              {mockStorageLocations.map(loc => (
+              {storageLocations.map(loc => (
                 <Option key={loc.id} value={loc.name}>
                   {loc.code} - {loc.name}
                 </Option>
@@ -160,11 +198,76 @@ const SpecimenHistoryForm: React.FC = () => {
             </Select>
           </Form.Item>
 
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item
+                label="Thời gian"
+                name="timestamp"
+              >
+                <DatePicker
+                  showTime
+                  format="DD/MM/YYYY HH:mm"
+                  style={{ width: '100%' }}
+                  placeholder="Chọn thời gian"
+                />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item
+                label="Nhiệt độ (°C)"
+                name="temperature"
+              >
+                <InputNumber
+                  style={{ width: '100%' }}
+                  placeholder="VD: 25.5"
+                  step={0.1}
+                  precision={1}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item
+                label="Độ ẩm (%)"
+                name="humidity"
+              >
+                <InputNumber
+                  style={{ width: '100%' }}
+                  placeholder="VD: 65"
+                  min={0}
+                  max={100}
+                  step={1}
+                  precision={1}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item
+            label="Người thực hiện"
+            name="performedById"
+          >
+            <Select
+              placeholder="Chọn người thực hiện"
+              showSearch
+              optionFilterProp="children"
+              allowClear
+              filterOption={(input, option) =>
+                (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
+              }
+            >
+              {users.map(user => (
+                <Option key={user.id} value={user.id}>
+                  {user.displayName}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+
           <Form.Item
             label={t('specimenHistory.form.notes')}
             name="notes"
           >
-            <TextArea rows={4} />
+            <TextArea rows={4} placeholder="Ghi chú thêm (nếu có)" />
           </Form.Item>
 
           <Form.Item>

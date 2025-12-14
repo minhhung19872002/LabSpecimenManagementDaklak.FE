@@ -4,14 +4,32 @@ import {
   CreateTestRequestDto,
   UpdateTestRequestDto,
   PagedResultDto,
-  PagedAndSortedResultRequestDto
+  PagedAndSortedResultRequestDto,
+  TestRequestStatus
 } from '../types/testRequest';
 
-const BASE_URL = '/api/app/test-request';
+const BASE_URL = '/api/v1/test-requests';
+
+// Extended params interface for search and filter
+export interface TestRequestListParams extends PagedAndSortedResultRequestDto {
+  search?: string;
+  status?: TestRequestStatus;
+}
+
+// Helper to convert params for API (ABP Framework uses SkipCount, MaxResultCount, Sorting)
+const toApiParams = (params: TestRequestListParams) => {
+  const apiParams: Record<string, any> = {};
+  if (params.skipCount !== undefined) apiParams.SkipCount = params.skipCount;
+  if (params.maxResultCount !== undefined) apiParams.MaxResultCount = params.maxResultCount;
+  if (params.sorting) apiParams.Sorting = params.sorting;
+  if (params.search) apiParams.Search = params.search;
+  if (params.status !== undefined) apiParams.Status = params.status;
+  return apiParams;
+};
 
 export const testRequestService = {
-  getList: async (params: PagedAndSortedResultRequestDto): Promise<PagedResultDto<TestRequestDto>> => {
-    const response = await api.get<PagedResultDto<TestRequestDto>>(BASE_URL, { params });
+  getList: async (params: TestRequestListParams): Promise<PagedResultDto<TestRequestDto>> => {
+    const response = await api.get<PagedResultDto<TestRequestDto>>(BASE_URL, { params: toApiParams(params) });
     return response.data;
   },
 
