@@ -17,7 +17,7 @@ i18n
     },
 
     backend: {
-      loadPath: '/src/i18n/locales/{{lng}}.json',
+      loadPath: '/locales/{{lng}}.json',
     },
 
     detection: {
