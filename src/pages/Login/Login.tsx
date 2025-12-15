@@ -12,15 +12,29 @@ interface LoginFormValues {
   rememberMe?: boolean;
 }
 
+const REMEMBERED_USERNAME_KEY = 'remembered_username';
+
 const Login: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+  const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Get the return URL from location state
   const from = (location.state as any)?.from?.pathname || '/dashboard';
+
+  // Load remembered username on mount
+  useEffect(() => {
+    const rememberedUsername = localStorage.getItem(REMEMBERED_USERNAME_KEY);
+    if (rememberedUsername) {
+      form.setFieldsValue({
+        username: rememberedUsername,
+        rememberMe: true,
+      });
+    }
+  }, [form]);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -42,6 +56,13 @@ const Login: React.FC = () => {
 
       // Check both success flag and accessToken
       if (response.success && response.accessToken) {
+        // Handle remember me - save or remove username from localStorage
+        if (values.rememberMe) {
+          localStorage.setItem(REMEMBERED_USERNAME_KEY, values.username);
+        } else {
+          localStorage.removeItem(REMEMBERED_USERNAME_KEY);
+        }
+
         message.success('Đăng nhập thành công!');
         // Store user info
         if (response.user) {
@@ -98,6 +119,7 @@ const Login: React.FC = () => {
         )}
 
         <Form
+          form={form}
           name="login"
           onFinish={onFinish}
           autoComplete="off"
