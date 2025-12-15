@@ -75,7 +75,6 @@ export { subcontractorService } from './subcontractorService';
 export type {
   SubcontractorDto,
   SubcontractorCertificationDto,
-  CreateSubcontractorDto,
-  UpdateSubcontractorDto,
+  CreateUpdateSubcontractorDto,
   CreateSubcontractorCertificationDto
 } from './subcontractorService';

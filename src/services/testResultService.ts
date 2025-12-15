@@ -104,7 +104,7 @@ export const testResultService = {
    * Lấy danh sách kết quả chờ duyệt B1 (cho Trưởng phòng)
    */
   async getPendingReviewList(params?: { skipCount?: number; maxResultCount?: number; sorting?: string }): Promise<PagedResultDto<TestResultDto>> {
-    const response = await api.get<PagedResultDto<TestResultDto>>(`${BASE_URL}/pending-review`, { params: toApiParams(params) });
+    const response = await api.get<PagedResultDto<TestResultDto>>(`${BASE_URL}/pending-review`, { params });
     return response.data;
   },
 
@@ -112,7 +112,7 @@ export const testResultService = {
    * Lấy danh sách kết quả chờ duyệt B2 (cho Giám đốc)
    */
   async getPendingApprovalList(params?: { skipCount?: number; maxResultCount?: number; sorting?: string }): Promise<PagedResultDto<TestResultDto>> {
-    const response = await api.get<PagedResultDto<TestResultDto>>(`${BASE_URL}/pending-approval`, { params: toApiParams(params) });
+    const response = await api.get<PagedResultDto<TestResultDto>>(`${BASE_URL}/pending-approval`, { params });
     return response.data;
   },
 };
