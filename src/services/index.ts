@@ -78,3 +78,15 @@ export type {
   CreateUpdateSubcontractorDto,
   CreateSubcontractorCertificationDto
 } from './subcontractorService';
+
+// Statistics Service
+export { statisticsService } from './statisticsService';
+export type {
+  StatisticsOverviewDto,
+  SampleMatrixDto,
+  TATComplianceDto,
+  WorkloadByDepartmentDto,
+  MonthlyTrendDto,
+  StatisticsDataDto,
+  StatisticsQueryParams
+} from './statisticsService';
