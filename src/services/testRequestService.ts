@@ -14,6 +14,8 @@ const BASE_URL = '/api/v1/test-requests';
 export interface TestRequestListParams extends PagedAndSortedResultRequestDto {
   search?: string;
   status?: TestRequestStatus;
+  expectedCompletionDateFrom?: string;
+  expectedCompletionDateTo?: string;
 }
 
 // Helper to convert params for API (ABP Framework uses SkipCount, MaxResultCount, Sorting)
@@ -24,6 +26,8 @@ const toApiParams = (params: TestRequestListParams) => {
   if (params.sorting) apiParams.Sorting = params.sorting;
   if (params.search) apiParams.Search = params.search;
   if (params.status !== undefined) apiParams.Status = params.status;
+  if (params.expectedCompletionDateFrom) apiParams.ExpectedCompletionDateFrom = params.expectedCompletionDateFrom;
+  if (params.expectedCompletionDateTo) apiParams.ExpectedCompletionDateTo = params.expectedCompletionDateTo;
   return apiParams;
 };
 

@@ -50,23 +50,17 @@ import {
   UpdateTestRequestSampleDto,
 } from "../../types/testRequest";
 import dayjs from "dayjs";
+import {
+  getAllProvinces,
+  getDistrictsByProvince,
+  getWardsByDistrict,
+  Province,
+  District,
+  Ward,
+} from "../../utils/vietnamLocations";
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;
-
-// Vietnam provinces data (simplified)
-const provinces = [
-  { value: "dak-lak", label: "Đắk Lắk" },
-  { value: "dak-nong", label: "Đắk Nông" },
-  { value: "gia-lai", label: "Gia Lai" },
-  { value: "kon-tum", label: "Kon Tum" },
-  { value: "lam-dong", label: "Lâm Đồng" },
-  { value: "binh-duong", label: "Bình Dương" },
-  { value: "binh-phuoc", label: "Bình Phước" },
-  { value: "tay-ninh", label: "Tây Ninh" },
-  { value: "ho-chi-minh", label: "TP. Hồ Chí Minh" },
-  { value: "ha-noi", label: "Hà Nội" },
-];
 
 interface SampleFormData {
   key: string;
@@ -136,6 +130,11 @@ const TestRequestForm: React.FC = () => {
   const [expandedGroupsInSelector, setExpandedGroupsInSelector] = useState<
     string[]
   >([]);
+
+  // Vietnam location states
+  const [provinces] = useState<Province[]>(getAllProvinces());
+  const [districts, setDistricts] = useState<District[]>([]);
+  const [wards, setWards] = useState<Ward[]>([]);
 
   // Load master data
   useEffect(() => {
@@ -209,6 +208,18 @@ const TestRequestForm: React.FC = () => {
     setLoadingData(true);
     try {
       const data = await testRequestService.get(id);
+
+      // Load districts and wards if province/district codes exist
+      if (data.provinceCode) {
+        const loadedDistricts = getDistrictsByProvince(data.provinceCode);
+        setDistricts(loadedDistricts);
+
+        if (data.districtCode) {
+          const loadedWards = getWardsByDistrict(data.districtCode);
+          setWards(loadedWards);
+        }
+      }
+
       form.setFieldsValue({
         ...data,
         contractDate: data.contractDate ? dayjs(data.contractDate) : null,
@@ -543,14 +554,21 @@ const TestRequestForm: React.FC = () => {
         storageLocation: sample.storageLocation || undefined,
         indicators: sample.indicatorIds.map((indId) => {
           const indicatorDates = selectedIndicatorDates[indId];
+          const indicator = indicators.find((i) => i.id === indId);
           return {
             indicatorId: indId,
+            unitPrice: indicator?.unitPrice || 0,
             transferDate: indicatorDates?.transferDate?.toISOString() || undefined,
             requestDate: indicatorDates?.requestDate?.toISOString() || undefined,
             sentToDepartment: checkedIndicators.includes(indId),
           };
         }),
       }));
+
+      // Get location names from codes
+      const selectedProvince = provinces.find((p) => p.code === values.provinceCode);
+      const selectedDistrict = districts.find((d) => d.code === values.districtCode);
+      const selectedWard = wards.find((w) => w.code === values.wardCode);
 
       const payload = {
         // Contract info
@@ -563,9 +581,12 @@ const TestRequestForm: React.FC = () => {
         sentToDepartment: values.sentToDepartment || false,
         resultReturned: values.resultReturned || false,
         customerName: values.customerName,
-        province: values.province || undefined,
-        district: values.district || undefined,
-        ward: values.ward || undefined,
+        provinceCode: values.provinceCode || undefined,
+        province: selectedProvince?.name || undefined,
+        districtCode: values.districtCode || undefined,
+        district: selectedDistrict?.name || undefined,
+        wardCode: values.wardCode || undefined,
+        ward: selectedWard?.name || undefined,
         address: values.address || undefined,
         taxCode: values.taxCode || undefined,
         contactPerson: values.contactPerson || undefined,
@@ -607,6 +628,8 @@ const TestRequestForm: React.FC = () => {
         // User references
         supervisorId: values.supervisorId || undefined,
         directorId: values.directorId || undefined,
+        changeRequest: values.changeRequest || undefined,
+        agreeTerms: values.agreeTerms || false,
 
         // Legacy fields
         requestDate: values.requestDate
@@ -923,6 +946,7 @@ const TestRequestForm: React.FC = () => {
                 name="contractNumber"
                 label="Số HĐ"
                 style={{ marginBottom: 0 }}
+                rules={[{ required: true, message: "Vui lòng nhập số HĐ" }]}
               >
                 <Input placeholder="Số hợp đồng" />
               </Form.Item>
@@ -932,6 +956,7 @@ const TestRequestForm: React.FC = () => {
                 name="contractDate"
                 label="Ngày HĐ"
                 style={{ marginBottom: 0 }}
+                rules={[{ required: true, message: "Vui lòng chọn ngày HĐ" }]}
               >
                 <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" />
               </Form.Item>
@@ -1000,45 +1025,140 @@ const TestRequestForm: React.FC = () => {
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={5}>
-              <Form.Item name="province" label="Tỉnh thành">
-                <Select placeholder="Chọn tỉnh thành" allowClear showSearch>
+              <Form.Item
+                name="provinceCode"
+                label="Tỉnh thành"
+                rules={[{ required: true, message: "Vui lòng chọn tỉnh thành" }]}
+              >
+                <Select
+                  placeholder="Chọn tỉnh thành"
+                  allowClear
+                  showSearch
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    (option?.children as unknown as string)
+                      ?.toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                  onChange={(value) => {
+                    form.setFieldsValue({ districtCode: undefined, wardCode: undefined });
+                    setWards([]);
+                    if (value) {
+                      setDistricts(getDistrictsByProvince(value));
+                    } else {
+                      setDistricts([]);
+                    }
+                  }}
+                >
                   {provinces.map((p) => (
-                    <Select.Option key={p.value} value={p.label}>
-                      {p.label}
+                    <Select.Option key={p.code} value={p.code}>
+                      {p.name}
                     </Select.Option>
                   ))}
                 </Select>
               </Form.Item>
             </Col>
             <Col xs={12} sm={12} md={5}>
-              <Form.Item name="district" label="Quận huyện">
-                <Input placeholder="Nhập quận/huyện" />
+              <Form.Item
+                name="districtCode"
+                label="Quận huyện"
+                rules={[{ required: true, message: "Vui lòng chọn quận huyện" }]}
+              >
+                <Select
+                  placeholder="Chọn quận/huyện"
+                  allowClear
+                  showSearch
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    (option?.children as unknown as string)
+                      ?.toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                  disabled={districts.length === 0}
+                  onChange={(value) => {
+                    form.setFieldsValue({ wardCode: undefined });
+                    if (value) {
+                      setWards(getWardsByDistrict(value));
+                    } else {
+                      setWards([]);
+                    }
+                  }}
+                >
+                  {districts.map((d) => (
+                    <Select.Option key={d.code} value={d.code}>
+                      {d.name}
+                    </Select.Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
             <Col xs={12} sm={12} md={6}>
-              <Form.Item name="ward" label="Phường xã">
-                <Input placeholder="Nhập phường/xã" />
+              <Form.Item
+                name="wardCode"
+                label="Phường xã"
+                rules={[{ required: true, message: "Vui lòng chọn phường xã" }]}
+              >
+                <Select
+                  placeholder="Chọn phường/xã"
+                  allowClear
+                  showSearch
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    (option?.children as unknown as string)
+                      ?.toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                  disabled={wards.length === 0}
+                >
+                  {wards.map((w) => (
+                    <Select.Option key={w.code} value={w.code}>
+                      {w.name}
+                    </Select.Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
           </Row>
           <Row gutter={[16, 8]}>
             <Col xs={24} sm={24} md={12}>
-              <Form.Item name="address" label="Địa chỉ">
+              <Form.Item
+                name="address"
+                label="Địa chỉ"
+                rules={[{ required: true, message: "Vui lòng nhập địa chỉ" }]}
+              >
                 <Input placeholder="Địa chỉ chi tiết" />
               </Form.Item>
             </Col>
             <Col xs={24} sm={8} md={4}>
-              <Form.Item name="taxCode" label="Mã số thuế">
+              <Form.Item
+                name="taxCode"
+                label="Mã số thuế"
+                rules={[{ required: true, message: "Vui lòng nhập mã số thuế" }]}
+              >
                 <Input placeholder="MST" />
               </Form.Item>
             </Col>
             <Col xs={12} sm={8} md={4}>
-              <Form.Item name="contactPerson" label="Người LH">
+              <Form.Item
+                name="contactPerson"
+                label="Người LH"
+                rules={[{ required: true, message: "Vui lòng nhập người liên hệ" }]}
+              >
                 <Input placeholder="Người liên hệ" />
               </Form.Item>
             </Col>
             <Col xs={12} sm={8} md={4}>
-              <Form.Item name="phone" label="Điện thoại">
+              <Form.Item
+                name="phone"
+                label="Điện thoại"
+                rules={[
+                  { required: true, message: "Vui lòng nhập số điện thoại" },
+                  {
+                    pattern: /^(0|\+84)[0-9]{9,10}$/,
+                    message: "Số điện thoại không hợp lệ",
+                  },
+                ]}
+              >
                 <Input placeholder="SĐT" />
               </Form.Item>
             </Col>
@@ -1316,10 +1436,16 @@ const TestRequestForm: React.FC = () => {
               {/* Đồng ý quy định */}
               <Row style={{ marginBottom: 8 }}>
                 <Col span={24}>
-                  <Checkbox>
-                    Đã đọc và đồng ý với quy định chung về yêu cầu dịch vụ thử
-                    nghiệm
-                  </Checkbox>
+                  <Form.Item
+                    name="agreeTerms"
+                    valuePropName="checked"
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Checkbox>
+                      Đã đọc và đồng ý với quy định chung về yêu cầu dịch vụ thử
+                      nghiệm
+                    </Checkbox>
+                  </Form.Item>
                 </Col>
               </Row>
             </Col>
@@ -1471,7 +1597,11 @@ const TestRequestForm: React.FC = () => {
                   <Text strong>PHỤ TRÁCH:</Text>
                 </Col>
                 <Col xs={14} sm={16}>
-                  <Form.Item name="supervisorId" style={{ marginBottom: 0 }}>
+                  <Form.Item
+                    name="supervisorId"
+                    style={{ marginBottom: 0 }}
+                    rules={[{ required: true, message: "Vui lòng chọn người phụ trách" }]}
+                  >
                     <Select
                       placeholder="Chọn người phụ trách..."
                       allowClear
@@ -1500,7 +1630,11 @@ const TestRequestForm: React.FC = () => {
                   <Text strong>GĐ TRUNG TÂM:</Text>
                 </Col>
                 <Col xs={14} sm={16}>
-                  <Form.Item name="directorId" style={{ marginBottom: 0 }}>
+                  <Form.Item
+                    name="directorId"
+                    style={{ marginBottom: 0 }}
+                    rules={[{ required: true, message: "Vui lòng chọn GĐ Trung tâm" }]}
+                  >
                     <Select
                       placeholder="Chọn GĐ Trung tâm..."
                       allowClear

@@ -123,8 +123,11 @@ export interface TestRequestDto {
   sentToDepartment: boolean;
   resultReturned: boolean;
   customerName: string;
+  provinceCode?: string;
   province?: string;
+  districtCode?: string;
   district?: string;
+  wardCode?: string;
   ward?: string;
   address?: string;
   taxCode?: string;
@@ -163,6 +166,8 @@ export interface TestRequestDto {
   supervisorName?: string;
   directorId?: string;
   directorName?: string;
+  changeRequest?: string;
+  agreeTerms: boolean;
 
   // Legacy fields
   requestNumber: string;
@@ -194,8 +199,11 @@ export interface CreateTestRequestDto {
   sentToDepartment?: boolean;
   resultReturned?: boolean;
   customerName: string;
+  provinceCode?: string;
   province?: string;
+  districtCode?: string;
   district?: string;
+  wardCode?: string;
   ward?: string;
   address?: string;
   taxCode?: string;
@@ -232,6 +240,8 @@ export interface CreateTestRequestDto {
   // User References
   supervisorId?: string;
   directorId?: string;
+  changeRequest?: string;
+  agreeTerms?: boolean;
 
   // Legacy fields
   requestDate: string;
@@ -252,8 +262,11 @@ export interface UpdateTestRequestDto {
   sentToDepartment?: boolean;
   resultReturned?: boolean;
   customerName: string;
+  provinceCode?: string;
   province?: string;
+  districtCode?: string;
   district?: string;
+  wardCode?: string;
   ward?: string;
   address?: string;
   taxCode?: string;
@@ -290,6 +303,8 @@ export interface UpdateTestRequestDto {
   // User References
   supervisorId?: string;
   directorId?: string;
+  changeRequest?: string;
+  agreeTerms?: boolean;
 
   // Legacy fields
   requestDate: string;
