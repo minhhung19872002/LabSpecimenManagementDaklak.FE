@@ -1,16 +1,88 @@
 // @ts-nocheck
-import React, { useState, useEffect } from 'react';
-import { Form, Input, DatePicker, Button, Card, message, Select, Row, Col, InputNumber, Divider, Typography } from 'antd';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { testRequestService } from '../../services/testRequestService';
-import { TestRequestStatus } from '../../types/testRequest';
-import dayjs from 'dayjs';
-import FileUpload from '../../components/common/FileUpload';
-import TATCalculator, { calculateWorkingEndDate } from '../../components/common/TATCalculator';
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  Form,
+  Input,
+  DatePicker,
+  Button,
+  Card,
+  message,
+  Select,
+  Row,
+  Col,
+  InputNumber,
+  Divider,
+  Typography,
+  Checkbox,
+  Radio,
+  Table,
+  Space,
+  Popconfirm,
+  TimePicker,
+  TreeSelect,
+  Modal,
+  Tooltip,
+  Popover,
+  Tag,
+} from "antd";
+import { PlusOutlined, DeleteOutlined, CloseOutlined } from "@ant-design/icons";
+import { Icon } from "@iconify/react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { testRequestService } from "../../services/testRequestService";
+import {
+  indicatorGroupService,
+  indicatorService,
+  storageLocationService,
+  IndicatorDto,
+  IndicatorGroupDto,
+  StorageLocationDto,
+} from "../../services/masterDataService";
+import { userService, UserLookupDto } from "../../services/userService";
+import {
+  TestRequestStatus,
+  ResultLanguage,
+  SamplingRequirement,
+  SampleStorageOption,
+  SampleStatus,
+  CreateTestRequestSampleDto,
+  CreateTestRequestSampleIndicatorDto,
+  UpdateTestRequestSampleDto,
+} from "../../types/testRequest";
+import dayjs from "dayjs";
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;
+
+// Vietnam provinces data (simplified)
+const provinces = [
+  { value: "dak-lak", label: "Đắk Lắk" },
+  { value: "dak-nong", label: "Đắk Nông" },
+  { value: "gia-lai", label: "Gia Lai" },
+  { value: "kon-tum", label: "Kon Tum" },
+  { value: "lam-dong", label: "Lâm Đồng" },
+  { value: "binh-duong", label: "Bình Dương" },
+  { value: "binh-phuoc", label: "Bình Phước" },
+  { value: "tay-ninh", label: "Tây Ninh" },
+  { value: "ho-chi-minh", label: "TP. Hồ Chí Minh" },
+  { value: "ha-noi", label: "Hà Nội" },
+];
+
+interface SampleFormData {
+  key: string;
+  id?: string;
+  sortOrder: number;
+  sampleCode: string;
+  sampleName: string;
+  samplingAddress?: string;
+  sampleQuantity?: string;
+  status: SampleStatus;
+  statusText?: string;
+  processingStatus?: string;
+  notes?: string;
+  storageLocation?: string;
+  indicatorIds: string[];
+}
 
 const TestRequestForm: React.FC = () => {
   const { t } = useTranslation();
@@ -19,24 +91,117 @@ const TestRequestForm: React.FC = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
-  const [attachments, setAttachments] = useState<any[]>([]);
-  const [tatDays, setTatDays] = useState<number>(5);
   const isEditMode = !!id;
 
+  // Sample table data
+  const [samples, setSamples] = useState<SampleFormData[]>([]);
+
+  // Master data
+  const [indicatorGroups, setIndicatorGroups] = useState<IndicatorGroupDto[]>(
+    []
+  );
+  const [indicators, setIndicators] = useState<IndicatorDto[]>([]);
+  const [storageLocations, setStorageLocations] = useState<
+    StorageLocationDto[]
+  >([]);
+  const [indicatorTreeData, setIndicatorTreeData] = useState<any[]>([]);
+  const [users, setUsers] = useState<UserLookupDto[]>([]);
+
+  // Costs
+  const [totalSampleCost, setTotalSampleCost] = useState(0);
+
+  // Method customer checkbox state
+  const [methodCustomerChecked, setMethodCustomerChecked] = useState(false);
+
+  // Indicator modal state
+  const [indicatorModalVisible, setIndicatorModalVisible] = useState(false);
+  const [currentSampleKey, setCurrentSampleKey] = useState<string | null>(null);
+  const [tempSelectedIndicators, setTempSelectedIndicators] = useState<
+    string[]
+  >([]);
+  const [selectedGroupFilter, setSelectedGroupFilter] = useState<string>("all");
+  const [indicatorSearchText, setIndicatorSearchText] = useState<string>("");
+  const [groupSelectorVisible, setGroupSelectorVisible] = useState(false);
+  const [groupSearchText, setGroupSearchText] = useState<string>("");
+
+  // Right panel state for dates and selection
+  const [selectedIndicatorDates, setSelectedIndicatorDates] = useState<
+    Record<string, { transferDate?: dayjs.Dayjs; requestDate?: dayjs.Dayjs }>
+  >({});
+  const [checkedIndicators, setCheckedIndicators] = useState<string[]>([]);
+
+  // Expanded groups state for left panel - default all expanded
+  const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
+  // Expanded groups state for group selector modal
+  const [expandedGroupsInSelector, setExpandedGroupsInSelector] = useState<
+    string[]
+  >([]);
+
+  // Load master data
+  useEffect(() => {
+    loadMasterData();
+  }, []);
+
+  // Set all groups expanded when indicatorGroups is loaded
+  useEffect(() => {
+    if (indicatorGroups.length > 0 && expandedGroups.length === 0) {
+      setExpandedGroups(indicatorGroups.map((g) => g.id));
+      setExpandedGroupsInSelector(indicatorGroups.map((g) => g.id));
+    }
+  }, [indicatorGroups]);
+
+  // Load edit data
   useEffect(() => {
     if (isEditMode) {
       loadData();
     }
   }, [id]);
 
-  // Auto-calculate expected completion date when request date or TAT changes
+  // Build indicator tree data when indicators or groups change
   useEffect(() => {
-    const requestDate = form.getFieldValue('requestDate');
-    if (requestDate && tatDays > 0) {
-      const endDate = calculateWorkingEndDate(requestDate, tatDays);
-      form.setFieldsValue({ expectedCompletionDate: endDate });
+    if (indicatorGroups.length > 0 && indicators.length > 0) {
+      const treeData = indicatorGroups
+        .map((group) => ({
+          title: group.name,
+          value: `group-${group.id}`,
+          key: `group-${group.id}`,
+          selectable: false,
+          children: indicators
+            .filter((ind) => ind.indicatorGroupId === group.id && ind.isActive)
+            .map((ind) => ({
+              title: `${ind.name} (${ind.unitPrice.toLocaleString("vi-VN")}đ)`,
+              value: ind.id,
+              key: ind.id,
+            })),
+        }))
+        .filter((group) => group.children.length > 0);
+      setIndicatorTreeData(treeData);
     }
-  }, [tatDays]);
+  }, [indicatorGroups, indicators]);
+
+  // Calculate total cost when samples change
+  useEffect(() => {
+    calculateTotalCost();
+  }, [samples, indicators]);
+
+  const loadMasterData = async () => {
+    try {
+      const [groupsData, indicatorsData, locationsData, usersData] =
+        await Promise.all([
+          indicatorGroupService.getActive(),
+          indicatorService.getActive(),
+          storageLocationService.getActive(),
+          userService.getLookup(),
+        ]);
+      setIndicatorGroups(groupsData);
+      setIndicators(indicatorsData);
+      setStorageLocations(locationsData.items || []);
+      setUsers(usersData);
+    } catch (error) {
+      console.error("Failed to load master data:", error);
+      message.error("Không thể tải dữ liệu danh mục");
+    }
+  };
 
   const loadData = async () => {
     if (!id) return;
@@ -46,72 +211,689 @@ const TestRequestForm: React.FC = () => {
       const data = await testRequestService.get(id);
       form.setFieldsValue({
         ...data,
+        contractDate: data.contractDate ? dayjs(data.contractDate) : null,
         requestDate: data.requestDate ? dayjs(data.requestDate) : null,
-        expectedCompletionDate: data.expectedCompletionDate ? dayjs(data.expectedCompletionDate) : null
+        expectedCompletionDate: data.expectedCompletionDate
+          ? dayjs(data.expectedCompletionDate)
+          : null,
+        samplingDate: data.samplingDate ? dayjs(data.samplingDate) : null,
+        samplingTime: data.samplingTime
+          ? dayjs(data.samplingTime, "HH:mm")
+          : null,
+        sampleStorageEndDate: data.sampleStorageEndDate
+          ? dayjs(data.sampleStorageEndDate)
+          : null,
       });
-      if (data.attachments) {
-        setAttachments(data.attachments);
+
+      // Set methodCustomer checkbox state
+      if (data.methodCustomer) {
+        setMethodCustomerChecked(true);
+      }
+
+      // Load samples
+      if (data.samples && data.samples.length > 0) {
+        const sampleData: SampleFormData[] = data.samples.map(
+          (sample, index) => ({
+            key: sample.id || `sample-${index}`,
+            id: sample.id,
+            sortOrder: sample.sortOrder,
+            sampleCode: sample.sampleCode,
+            sampleName: sample.sampleName,
+            samplingAddress: sample.samplingAddress,
+            sampleQuantity: sample.sampleQuantity,
+            status: sample.status,
+            statusText: sample.statusText || "",
+            processingStatus: sample.processingStatus || "",
+            notes: sample.notes,
+            storageLocation: sample.storageLocation,
+            indicatorIds:
+              sample.indicators?.map((ind) => ind.indicatorId) || [],
+          })
+        );
+        setSamples(sampleData);
+
+        // Restore indicator dates and checked states
+        const restoredDates: Record<string, { transferDate?: dayjs.Dayjs; requestDate?: dayjs.Dayjs }> = {};
+        const restoredChecked: string[] = [];
+
+        data.samples.forEach((sample) => {
+          sample.indicators?.forEach((ind) => {
+            restoredDates[ind.indicatorId] = {
+              transferDate: ind.transferDate ? dayjs(ind.transferDate) : undefined,
+              requestDate: ind.requestDate ? dayjs(ind.requestDate) : undefined,
+            };
+            if (ind.sentToDepartment) {
+              restoredChecked.push(ind.indicatorId);
+            }
+          });
+        });
+
+        setSelectedIndicatorDates(restoredDates);
+        setCheckedIndicators(restoredChecked);
       }
     } catch (error) {
-      message.error(t('messages.loadFailed'));
-      console.error('Failed to load test request:', error);
+      message.error("Không thể tải dữ liệu yêu cầu");
+      console.error("Failed to load test request:", error);
     } finally {
       setLoadingData(false);
     }
   };
 
-  const handleRequestDateChange = (date: any) => {
-    if (date && tatDays > 0) {
-      const endDate = calculateWorkingEndDate(date, tatDays);
-      form.setFieldsValue({ expectedCompletionDate: endDate });
+  const calculateTotalCost = useCallback(() => {
+    let total = 0;
+    samples.forEach((sample) => {
+      sample.indicatorIds.forEach((indId) => {
+        const indicator = indicators.find((i) => i.id === indId);
+        if (indicator) {
+          total += indicator.unitPrice;
+        }
+      });
+    });
+    setTotalSampleCost(total);
+  }, [samples, indicators]);
+
+  const addSample = () => {
+    const newSample: SampleFormData = {
+      key: `new-${Date.now()}`,
+      sortOrder: samples.length + 1,
+      sampleCode: "",
+      sampleName: "",
+      samplingAddress: "",
+      sampleQuantity: "",
+      status: SampleStatus.Normal,
+      statusText: "",
+      processingStatus: "",
+      notes: "",
+      storageLocation: "",
+      indicatorIds: [],
+    };
+    setSamples([...samples, newSample]);
+  };
+
+  const removeSample = (key: string) => {
+    setSamples(samples.filter((s) => s.key !== key));
+  };
+
+  const updateSample = (
+    key: string,
+    field: keyof SampleFormData,
+    value: any
+  ) => {
+    setSamples(
+      samples.map((s) => {
+        if (s.key === key) {
+          return { ...s, [field]: value };
+        }
+        return s;
+      })
+    );
+  };
+
+  // Indicator modal functions
+  const openIndicatorModal = (sampleKey: string) => {
+    const sample = samples.find((s) => s.key === sampleKey);
+    if (sample) {
+      setCurrentSampleKey(sampleKey);
+      setTempSelectedIndicators([...sample.indicatorIds]);
+      setSelectedGroupFilter("all");
+      setIndicatorModalVisible(true);
     }
   };
 
-  const handleTATChange = (value: number | null) => {
-    if (value) {
-      setTatDays(value);
-      const requestDate = form.getFieldValue('requestDate');
-      if (requestDate) {
-        const endDate = calculateWorkingEndDate(requestDate, value);
-        form.setFieldsValue({ expectedCompletionDate: endDate });
+  const handleIndicatorModalOk = () => {
+    if (currentSampleKey) {
+      updateSample(currentSampleKey, "indicatorIds", tempSelectedIndicators);
+    }
+    setIndicatorModalVisible(false);
+    setCurrentSampleKey(null);
+  };
+
+  const handleIndicatorModalCancel = () => {
+    setIndicatorModalVisible(false);
+    setCurrentSampleKey(null);
+    setTempSelectedIndicators([]);
+  };
+
+  const toggleIndicator = (indicatorId: string) => {
+    setTempSelectedIndicators((prev) => {
+      if (prev.includes(indicatorId)) {
+        return prev.filter((id) => id !== indicatorId);
+      } else {
+        return [...prev, indicatorId];
       }
+    });
+  };
+
+  // Remove indicator from sample directly
+  const removeIndicatorFromSample = (
+    sampleKey: string,
+    indicatorId: string
+  ) => {
+    const sample = samples.find((s) => s.key === sampleKey);
+    if (sample) {
+      const newIndicatorIds = sample.indicatorIds.filter(
+        (id) => id !== indicatorId
+      );
+      updateSample(sampleKey, "indicatorIds", newIndicatorIds);
     }
   };
+
+  // Get indicator info by id
+  const getIndicatorInfo = (indicatorId: string) => {
+    return indicators.find((ind) => ind.id === indicatorId);
+  };
+
+  // Get filtered indicators for modal
+  const getFilteredIndicators = () => {
+    let filtered = indicators.filter((ind) => ind.isActive);
+
+    if (selectedGroupFilter !== "all") {
+      filtered = filtered.filter(
+        (ind) => ind.indicatorGroupId === selectedGroupFilter
+      );
+    }
+
+    if (indicatorSearchText.trim()) {
+      const searchLower = indicatorSearchText.toLowerCase().trim();
+      filtered = filtered.filter(
+        (ind) =>
+          ind.name.toLowerCase().includes(searchLower) ||
+          ind.code?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return filtered;
+  };
+
+  // Get filtered groups for tree selector
+  const getFilteredGroupsWithIndicators = () => {
+    const searchLower = groupSearchText.toLowerCase().trim();
+
+    return indicatorGroups
+      .map((group) => {
+        const groupIndicators = indicators.filter(
+          (ind) =>
+            ind.indicatorGroupId === group.id &&
+            ind.isActive &&
+            (!searchLower ||
+              ind.name.toLowerCase().includes(searchLower) ||
+              group.name.toLowerCase().includes(searchLower))
+        );
+
+        return {
+          ...group,
+          indicators: groupIndicators,
+          matchesSearch:
+            !searchLower ||
+            group.name.toLowerCase().includes(searchLower) ||
+            groupIndicators.length > 0,
+        };
+      })
+      .filter((g) => g.matchesSearch);
+  };
+
+  // Handle group selection from tree
+  const handleGroupSelect = (groupId: string) => {
+    setSelectedGroupFilter(groupId);
+    setGroupSelectorVisible(false);
+    setGroupSearchText("");
+  };
+
+  // Handle indicator date change
+  const handleIndicatorDateChange = (
+    indicatorId: string,
+    field: "transferDate" | "requestDate",
+    value: dayjs.Dayjs | null
+  ) => {
+    setSelectedIndicatorDates((prev) => ({
+      ...prev,
+      [indicatorId]: {
+        ...prev[indicatorId],
+        [field]: value || undefined,
+      },
+    }));
+  };
+
+  // Handle checkbox toggle for right panel
+  const toggleCheckedIndicator = (indicatorId: string) => {
+    setCheckedIndicators((prev) => {
+      if (prev.includes(indicatorId)) {
+        return prev.filter((id) => id !== indicatorId);
+      } else {
+        return [...prev, indicatorId];
+      }
+    });
+  };
+
+  // Handle select all checkbox
+  const handleSelectAllIndicators = (checked: boolean) => {
+    if (checked) {
+      setCheckedIndicators([...tempSelectedIndicators]);
+    } else {
+      setCheckedIndicators([]);
+    }
+  };
+
+  // Handle send to department
+  const handleSendToDepartment = () => {
+    if (checkedIndicators.length === 0) {
+      message.warning("Vui lòng chọn ít nhất một chỉ tiêu để gửi khoa phòng");
+      return;
+    }
+    message.success(
+      `Đã gửi ${checkedIndicators.length} chỉ tiêu đến khoa phòng`
+    );
+  };
+
+  // Initialize dates for selected indicators
+  const initializeIndicatorDates = () => {
+    const today = dayjs();
+    const newDates: Record<
+      string,
+      { transferDate?: dayjs.Dayjs; requestDate?: dayjs.Dayjs }
+    > = {};
+    tempSelectedIndicators.forEach((id) => {
+      if (!selectedIndicatorDates[id]) {
+        newDates[id] = { transferDate: today, requestDate: today };
+      }
+    });
+    if (Object.keys(newDates).length > 0) {
+      setSelectedIndicatorDates((prev) => ({ ...prev, ...newDates }));
+    }
+  };
+
+  // Effect to initialize dates when modal opens
+  useEffect(() => {
+    if (indicatorModalVisible && tempSelectedIndicators.length > 0) {
+      initializeIndicatorDates();
+    }
+  }, [indicatorModalVisible, tempSelectedIndicators]);
 
   const onFinish = async (values: any) => {
+    if (samples.length === 0) {
+      message.error("Vui lòng thêm ít nhất một mẫu xét nghiệm");
+      return;
+    }
+
+    // Validate samples
+    const invalidSamples = samples.filter(
+      (s) => !s.sampleCode || !s.sampleName
+    );
+    if (invalidSamples.length > 0) {
+      message.error(
+        "Vui lòng điền đầy đủ mã mẫu và tên mẫu cho tất cả các mẫu"
+      );
+      return;
+    }
+
     setLoading(true);
     try {
+      // Build sample data
+      const sampleDtos = samples.map((sample, index) => ({
+        id: sample.id,
+        sortOrder: index + 1,
+        sampleCode: sample.sampleCode,
+        sampleName: sample.sampleName,
+        samplingAddress: sample.samplingAddress || undefined,
+        sampleQuantity: sample.sampleQuantity || undefined,
+        status: sample.status,
+        statusText: sample.statusText || undefined,
+        processingStatus: sample.processingStatus || undefined,
+        notes: sample.notes || undefined,
+        storageLocation: sample.storageLocation || undefined,
+        indicators: sample.indicatorIds.map((indId) => {
+          const indicatorDates = selectedIndicatorDates[indId];
+          return {
+            indicatorId: indId,
+            transferDate: indicatorDates?.transferDate?.toISOString() || undefined,
+            requestDate: indicatorDates?.requestDate?.toISOString() || undefined,
+            sentToDepartment: checkedIndicators.includes(indId),
+          };
+        }),
+      }));
+
       const payload = {
-        ...values,
-        requestDate: values.requestDate ? values.requestDate.toISOString() : new Date().toISOString(),
-        expectedCompletionDate: values.expectedCompletionDate ? values.expectedCompletionDate.toISOString() : null,
-        attachments: attachments.map(f => ({
-          name: f.name,
-          url: f.url || f.response?.url,
-          type: f.type
-        })),
-        tatDays: tatDays
+        // Contract info
+        contractNumber: values.contractNumber || undefined,
+        contractDate: values.contractDate
+          ? values.contractDate.toISOString()
+          : undefined,
+        sentToAccounting: values.sentToAccounting || false,
+        paymentReceived: values.paymentReceived || false,
+        sentToDepartment: values.sentToDepartment || false,
+        resultReturned: values.resultReturned || false,
+        customerName: values.customerName,
+        province: values.province || undefined,
+        district: values.district || undefined,
+        ward: values.ward || undefined,
+        address: values.address || undefined,
+        taxCode: values.taxCode || undefined,
+        contactPerson: values.contactPerson || undefined,
+        phone: values.phone || undefined,
+
+        // Sample count
+        totalSampleCount: samples.length,
+
+        // Testing method info
+        methodWestHighlandInstitute:
+          values.methodWestHighlandInstitute || false,
+        methodCustomer: methodCustomerChecked,
+        methodCustomerDetail: methodCustomerChecked
+          ? values.methodCustomerDetail
+          : undefined,
+        resultLanguage: values.resultLanguage ?? ResultLanguage.Vietnamese,
+        resultCopyCount: values.resultCopyCount || undefined,
+        separatePassedResults: values.separatePassedResults || false,
+        conformityDeclaration: values.conformityDeclaration || undefined,
+        otherRequirements: values.otherRequirements || undefined,
+        subContract: values.subContract || undefined,
+        samplingRequirement:
+          values.samplingRequirement ?? SamplingRequirement.CustomerSampling,
+        deliveryDirectPickup: values.deliveryDirectPickup || false,
+        deliveryPostal: values.deliveryPostal || false,
+        returnStoredSample: values.returnStoredSample || false,
+        sampleTypeService: values.sampleTypeService || false,
+        sampleTypeContract: values.sampleTypeContract || false,
+        sampleTypeTask: values.sampleTypeTask || false,
+        sampleTypeSubContract: values.sampleTypeSubContract || false,
+        resultDeliveryDate: values.expectedCompletionDate
+          ? values.expectedCompletionDate.toISOString()
+          : undefined,
+        sampleStorage: values.sampleStorageOption ?? SampleStorageOption.No,
+        totalCost: totalSampleCost,
+        totalCostInWords: values.totalCostInWords || undefined,
+        receiptNumber: values.receiptNumber || undefined,
+
+        // User references
+        supervisorId: values.supervisorId || undefined,
+        directorId: values.directorId || undefined,
+
+        // Legacy fields
+        requestDate: values.requestDate
+          ? values.requestDate.toISOString()
+          : new Date().toISOString(),
+        notes: values.notes || undefined,
+        expectedCompletionDate: values.expectedCompletionDate
+          ? values.expectedCompletionDate.toISOString()
+          : undefined,
+        subcontractor: values.subcontractor || undefined,
+
+        // Samples
+        samples: sampleDtos,
       };
 
       if (isEditMode && id) {
         await testRequestService.update(id, payload);
-        message.success(t('messages.updateSuccess'));
+        message.success("Cập nhật yêu cầu thành công!");
       } else {
         await testRequestService.create(payload);
-        message.success(t('messages.createSuccess'));
+        message.success("Tạo yêu cầu thành công!");
       }
-      navigate('/requests');
-    } catch (error) {
-      message.error(isEditMode ? t('messages.updateFailed') : t('messages.createFailed'));
-      console.error('Failed to save test request:', error);
+      navigate("/requests");
+    } catch (error: any) {
+      console.error("Failed to save test request:", error);
+      message.error(
+        error.response?.data?.error?.message ||
+          "Không thể lưu yêu cầu. Vui lòng thử lại."
+      );
     } finally {
       setLoading(false);
     }
   };
 
+  // Sample table columns
+  const sampleColumns = [
+    {
+      title: "STT",
+      dataIndex: "sortOrder",
+      key: "sortOrder",
+      width: 60,
+      render: (_: any, __: any, index: number) => index + 1,
+    },
+    {
+      title: "Mã mẫu *",
+      dataIndex: "sampleCode",
+      key: "sampleCode",
+      width: 120,
+      render: (value: string, record: SampleFormData) => (
+        <Input
+          value={value}
+          onChange={(e) =>
+            updateSample(record.key, "sampleCode", e.target.value)
+          }
+          placeholder="Mã mẫu"
+          size="small"
+        />
+      ),
+    },
+    {
+      title: "Tên mẫu *",
+      dataIndex: "sampleName",
+      key: "sampleName",
+      width: 180,
+      render: (value: string, record: SampleFormData) => (
+        <Input
+          value={value}
+          onChange={(e) =>
+            updateSample(record.key, "sampleName", e.target.value)
+          }
+          placeholder="Tên mẫu"
+          size="small"
+        />
+      ),
+    },
+    {
+      title: "Địa chỉ lấy mẫu",
+      dataIndex: "samplingAddress",
+      key: "samplingAddress",
+      width: 200,
+      render: (value: string, record: SampleFormData) => (
+        <Input
+          value={value}
+          onChange={(e) =>
+            updateSample(record.key, "samplingAddress", e.target.value)
+          }
+          placeholder="Địa chỉ"
+          size="small"
+        />
+      ),
+    },
+    {
+      title: <span style={{ whiteSpace: "nowrap" }}>Lượng mẫu</span>,
+      dataIndex: "sampleQuantity",
+      key: "sampleQuantity",
+      width: 90,
+      render: (value: string, record: SampleFormData) => (
+        <Input
+          value={value}
+          onChange={(e) =>
+            updateSample(record.key, "sampleQuantity", e.target.value)
+          }
+          placeholder="Số lượng"
+          size="small"
+        />
+      ),
+    },
+    {
+      title: "Tình trạng mẫu",
+      dataIndex: "statusText",
+      key: "statusText",
+      width: 140,
+      render: (value: string, record: SampleFormData) => (
+        <Input
+          value={value}
+          onChange={(e) =>
+            updateSample(record.key, "statusText", e.target.value)
+          }
+          placeholder="Tình trạng"
+          size="small"
+        />
+      ),
+    },
+    {
+      title: <span style={{ whiteSpace: "nowrap" }}>Chỉ tiêu kiểm nghiệm</span>,
+      dataIndex: "indicatorIds",
+      key: "indicatorIds",
+      width: 280,
+      render: (value: string[], record: SampleFormData) => {
+        const popoverContent = (
+          <div style={{ maxHeight: 300, overflowY: "auto", minWidth: 250 }}>
+            {value.length === 0 ? (
+              <Text type="secondary">Chưa chọn chỉ tiêu nào</Text>
+            ) : (
+              value.map((indId, idx) => {
+                const ind = getIndicatorInfo(indId);
+                return ind ? (
+                  <div
+                    key={indId}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "4px 0",
+                      borderBottom:
+                        idx < value.length - 1 ? "1px solid #f0f0f0" : "none",
+                    }}
+                  >
+                    <span style={{ flex: 1 }}>- {ind.name}</span>
+                    <Button
+                      type="text"
+                      size="small"
+                      danger
+                      icon={<CloseOutlined />}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeIndicatorFromSample(record.key, indId);
+                      }}
+                      style={{ marginLeft: 8 }}
+                    />
+                  </div>
+                ) : null;
+              })
+            )}
+          </div>
+        );
+
+        return (
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            {value.length > 0 ? (
+              <Popover
+                content={popoverContent}
+                title={`Chỉ tiêu kiểm nghiệm (${value.length})`}
+                trigger="click"
+                placement="bottomLeft"
+              >
+                <Button
+                  type="text"
+                  icon={<Icon icon="mdi:clipboard-check-outline" width={20} />}
+                  style={{
+                    color: "#000",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: "100%",
+                    height: "100%",
+                    padding: 0,
+                  }}
+                />
+              </Popover>
+            ) : (
+              <Text
+                type="secondary"
+                style={{ fontSize: 12, width: "100%", textAlign: "center" }}
+              >
+                Chưa chọn
+              </Text>
+            )}
+            <Tooltip title="Thêm chỉ tiêu">
+              <Button
+                type="primary"
+                size="small"
+                icon={<PlusOutlined />}
+                onClick={() => openIndicatorModal(record.key)}
+                style={{ flexShrink: 0 }}
+              />
+            </Tooltip>
+          </div>
+        );
+      },
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "processingStatus",
+      key: "processingStatus",
+      width: 140,
+      render: (value: string, record: SampleFormData) => (
+        <Select
+          value={value}
+          onChange={(v) => updateSample(record.key, "processingStatus", v)}
+          placeholder="Chọn..."
+          size="small"
+          style={{ width: "100%" }}
+          allowClear
+        >
+          <Select.Option value="Đã nhận">Đã nhận</Select.Option>
+          <Select.Option value="Đang thử nghiệm">Đang thử nghiệm</Select.Option>
+          <Select.Option value="Hoàn thành">Hoàn thành</Select.Option>
+          <Select.Option value="Trả kết quả">Trả kết quả</Select.Option>
+        </Select>
+      ),
+    },
+    {
+      title: "Vị trí lưu",
+      dataIndex: "storageLocation",
+      key: "storageLocation",
+      width: 120,
+      render: (value: string, record: SampleFormData) => (
+        <Input
+          value={value}
+          onChange={(e) =>
+            updateSample(record.key, "storageLocation", e.target.value)
+          }
+          placeholder="Vị trí"
+          size="small"
+        />
+      ),
+    },
+    {
+      title: "Ghi chú",
+      dataIndex: "notes",
+      key: "notes",
+      width: 150,
+      render: (value: string, record: SampleFormData) => (
+        <Input
+          value={value}
+          onChange={(e) => updateSample(record.key, "notes", e.target.value)}
+          placeholder="Ghi chú"
+          size="small"
+        />
+      ),
+    },
+    {
+      title: "",
+      key: "actions",
+      width: 50,
+      fixed: "right" as const,
+      render: (_: any, record: SampleFormData) => (
+        <Popconfirm
+          title="Xóa mẫu này?"
+          onConfirm={() => removeSample(record.key)}
+          okText="Xóa"
+          cancelText="Hủy"
+        >
+          <Button type="link" danger icon={<DeleteOutlined />} size="small" />
+        </Popconfirm>
+      ),
+    },
+  ];
+
   return (
     <Card
-      title={isEditMode ? t('request.editTestRequest') : t('request.createTestRequest')}
+      title={
+        isEditMode
+          ? "Chỉnh sửa yêu cầu thử nghiệm"
+          : "Tạo yêu cầu thử nghiệm mới"
+      }
       loading={loadingData}
     >
       <Form
@@ -121,218 +903,1220 @@ const TestRequestForm: React.FC = () => {
         initialValues={{
           requestDate: dayjs(),
           status: TestRequestStatus.Pending,
-          tatDays: 5
+          resultLanguage: ResultLanguage.Vietnamese,
+          samplingRequirement: SamplingRequirement.CustomerSampling,
+          sampleStorageOption: SampleStorageOption.No,
         }}
       >
-        {/* Thông tin khách hàng */}
-        <Title level={5}>Thông tin khách hàng</Title>
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item
-              name="customerName"
-              label={t('request.customerName')}
-              rules={[
-                { required: true, message: t('validation.required') },
-                { max: 256, message: t('validation.maxLength', { max: 256 }) }
-              ]}
-            >
-              <Input placeholder="Nhập tên khách hàng" />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item
-              name="customerEmail"
-              label={t('request.customerEmail')}
-              rules={[
-                { type: 'email', message: t('validation.email') },
-                { max: 256, message: t('validation.maxLength', { max: 256 }) }
-              ]}
-            >
-              <Input placeholder="email@example.com" />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item
-              name="customerPhone"
-              label={t('request.customerPhone')}
-              rules={[
-                { max: 50, message: t('validation.maxLength', { max: 50 }) }
-              ]}
-            >
-              <Input placeholder="0xxx xxx xxx" />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item
-              name="customerAddress"
-              label="Địa chỉ khách hàng"
-              rules={[
-                { max: 500, message: t('validation.maxLength', { max: 500 }) }
-              ]}
-            >
-              <Input placeholder="Địa chỉ khách hàng" />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Form.Item
-          name="customerInfo"
-          label={t('request.customerInfo')}
-          rules={[
-            { max: 1000, message: t('validation.maxLength', { max: 1000 }) }
-          ]}
+        {/* Thông tin hợp đồng */}
+        <div
+          style={{
+            background: "#fafafa",
+            padding: "16px",
+            marginBottom: "16px",
+            borderRadius: "4px",
+          }}
         >
-          <TextArea rows={2} placeholder="Thông tin bổ sung về khách hàng..." />
-        </Form.Item>
-
-        <Divider />
-
-        {/* Thời gian thử nghiệm */}
-        <Title level={5}>Thời gian thử nghiệm (TAT)</Title>
-        <Row gutter={16}>
-          <Col span={8}>
-            <Form.Item
-              name="requestDate"
-              label={t('request.requestDate')}
-              rules={[{ required: true, message: t('validation.required') }]}
-            >
-              <DatePicker
-                style={{ width: '100%' }}
-                format="DD/MM/YYYY"
-                onChange={handleRequestDateChange}
-              />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item
-              name="tatDays"
-              label="Số ngày TAT (ngày làm việc)"
-              tooltip="Thời gian thử nghiệm dự kiến, không tính thứ 7, Chủ nhật và ngày lễ"
-            >
-              <InputNumber
-                min={1}
-                max={365}
-                style={{ width: '100%' }}
-                onChange={handleTATChange}
-                addonAfter="ngày"
-              />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item
-              name="expectedCompletionDate"
-              label={t('request.expectedCompletionDate')}
-              tooltip="Tự động tính từ ngày tiếp nhận + TAT"
-            >
-              <DatePicker
-                style={{ width: '100%' }}
-                format="DD/MM/YYYY"
-              />
-            </Form.Item>
-          </Col>
-        </Row>
-        <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
-          * Ngày hoàn thành dự kiến được tính tự động, bỏ qua thứ 7, Chủ nhật và ngày lễ
-        </Text>
-
-        <Divider />
-
-        {/* Nhà thầu phụ */}
-        <Title level={5}>Nhà thầu phụ (nếu có)</Title>
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item
-              name="subcontractor"
-              label={t('request.subcontractor')}
-              rules={[
-                { max: 256, message: t('validation.maxLength', { max: 256 }) }
-              ]}
-            >
-              <Input placeholder="Tên nhà thầu phụ (nếu gửi mẫu ra ngoài)" />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item
-              name="subcontractorReason"
-              label="Lý do sử dụng nhà thầu phụ"
-            >
-              <Input placeholder="Lý do gửi mẫu cho nhà thầu phụ" />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Divider />
-
-        {/* File đính kèm */}
-        <Title level={5}>Hồ sơ đính kèm</Title>
-        <Form.Item
-          label="Đính kèm hình ảnh mẫu, biên bản, hồ sơ khách hàng"
-          tooltip="Hỗ trợ: Hình ảnh (JPG, PNG), PDF, Word, Excel. Tối đa 10 file, mỗi file ≤ 10MB"
-        >
-          <FileUpload
-            value={attachments}
-            onChange={setAttachments}
-            maxCount={10}
-            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
-            maxSize={10}
-          />
-        </Form.Item>
-
-        {isEditMode && (
-          <>
-            <Divider />
-            <Title level={5}>Trạng thái</Title>
-            <Row gutter={16}>
-              <Col span={12}>
+          <Row gutter={[16, 8]} align="middle">
+            <Col xs={12} sm={6} md={4}>
+              <Form.Item
+                name="contractNumber"
+                label="Số HĐ"
+                style={{ marginBottom: 0 }}
+              >
+                <Input placeholder="Số hợp đồng" />
+              </Form.Item>
+            </Col>
+            <Col xs={12} sm={6} md={4}>
+              <Form.Item
+                name="contractDate"
+                label="Ngày HĐ"
+                style={{ marginBottom: 0 }}
+              >
+                <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={16}>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "12px",
+                  paddingTop: "30px",
+                }}
+              >
                 <Form.Item
-                  name="status"
-                  label={t('request.status.label')}
-                  rules={[{ required: true, message: t('validation.required') }]}
+                  name="sentToAccounting"
+                  valuePropName="checked"
+                  style={{ marginBottom: 0 }}
                 >
-                  <Select>
-                    <Select.Option value={TestRequestStatus.Pending}>
-                      {t('request.status.pending')}
-                    </Select.Option>
-                    <Select.Option value={TestRequestStatus.InProgress}>
-                      {t('request.status.inProgress')}
-                    </Select.Option>
-                    <Select.Option value={TestRequestStatus.Completed}>
-                      {t('request.status.completed')}
-                    </Select.Option>
-                    <Select.Option value={TestRequestStatus.Cancelled}>
-                      {t('request.status.cancelled')}
-                    </Select.Option>
-                  </Select>
+                  <Checkbox>Gửi kế toán</Checkbox>
                 </Form.Item>
-              </Col>
-            </Row>
-          </>
-        )}
+                <Form.Item
+                  name="paymentReceived"
+                  valuePropName="checked"
+                  style={{ marginBottom: 0 }}
+                >
+                  <Checkbox>Đã thu tiền</Checkbox>
+                </Form.Item>
+                <Form.Item
+                  name="sentToDepartment"
+                  valuePropName="checked"
+                  style={{ marginBottom: 0 }}
+                >
+                  <Checkbox>Gửi khoa phòng</Checkbox>
+                </Form.Item>
+                <Form.Item
+                  name="resultReturned"
+                  valuePropName="checked"
+                  style={{ marginBottom: 0 }}
+                >
+                  <Checkbox>Trả kết quả</Checkbox>
+                </Form.Item>
+              </div>
+            </Col>
+          </Row>
+        </div>
+
+        {/* Thông tin khách hàng */}
+        <div
+          style={{
+            background: "#fafafa",
+            padding: "16px",
+            marginBottom: "16px",
+            borderRadius: "4px",
+          }}
+        >
+          <Row gutter={[16, 8]}>
+            <Col xs={24} sm={24} md={8}>
+              <Form.Item
+                name="customerName"
+                label="Tên CS/DN"
+                rules={[
+                  { required: true, message: "Vui lòng nhập tên khách hàng" },
+                ]}
+              >
+                <Input placeholder="Tên cơ sở / doanh nghiệp" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={5}>
+              <Form.Item name="province" label="Tỉnh thành">
+                <Select placeholder="Chọn tỉnh thành" allowClear showSearch>
+                  {provinces.map((p) => (
+                    <Select.Option key={p.value} value={p.label}>
+                      {p.label}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col xs={12} sm={12} md={5}>
+              <Form.Item name="district" label="Quận huyện">
+                <Input placeholder="Nhập quận/huyện" />
+              </Form.Item>
+            </Col>
+            <Col xs={12} sm={12} md={6}>
+              <Form.Item name="ward" label="Phường xã">
+                <Input placeholder="Nhập phường/xã" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={[16, 8]}>
+            <Col xs={24} sm={24} md={12}>
+              <Form.Item name="address" label="Địa chỉ">
+                <Input placeholder="Địa chỉ chi tiết" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8} md={4}>
+              <Form.Item name="taxCode" label="Mã số thuế">
+                <Input placeholder="MST" />
+              </Form.Item>
+            </Col>
+            <Col xs={12} sm={8} md={4}>
+              <Form.Item name="contactPerson" label="Người LH">
+                <Input placeholder="Người liên hệ" />
+              </Form.Item>
+            </Col>
+            <Col xs={12} sm={8} md={4}>
+              <Form.Item name="phone" label="Điện thoại">
+                <Input placeholder="SĐT" />
+              </Form.Item>
+            </Col>
+          </Row>
+        </div>
+
+        {/* Bảng thông tin mẫu */}
+        <Divider orientation="left">
+          <Space>
+            <span>
+              Mẫu {samples.length} / {samples.length}
+            </span>
+            <Button
+              type="primary"
+              size="small"
+              icon={<PlusOutlined />}
+              onClick={addSample}
+            >
+              Thêm mẫu
+            </Button>
+          </Space>
+        </Divider>
+
+        <Table
+          dataSource={samples}
+          columns={sampleColumns}
+          pagination={false}
+          scroll={{ x: 1500 }}
+          size="small"
+          bordered
+          style={{ marginBottom: "16px" }}
+          locale={{ emptyText: 'Chưa có mẫu nào. Nhấn "Thêm mẫu" để thêm.' }}
+        />
+
+        {/* Thông tin yêu cầu thử nghiệm */}
+        <div
+          style={{
+            background: "#fafafa",
+            padding: "16px",
+            marginBottom: "16px",
+            borderRadius: "4px",
+            border: "1px solid #d9d9d9",
+          }}
+        >
+          <Row gutter={[24, 16]}>
+            {/* CỘT TRÁI */}
+            <Col xs={24} lg={12}>
+              {/* Tổng số mẫu gửi */}
+              <Row style={{ marginBottom: 8 }}>
+                <Col xs={10} sm={8}>
+                  <Text>- Tổng số mẫu gửi:</Text>
+                </Col>
+                <Col xs={14} sm={16}>
+                  <Text strong style={{ color: "#1890ff" }}>
+                    {samples.length}
+                  </Text>
+                </Col>
+              </Row>
+
+              {/* Phương pháp thử nghiệm */}
+              <Row style={{ marginBottom: 8 }}>
+                <Col xs={10} sm={8}>
+                  <Text>- Phương pháp TN:</Text>
+                </Col>
+                <Col xs={14} sm={16}>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: "8px",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Form.Item
+                      name="methodWestHighlandInstitute"
+                      valuePropName="checked"
+                      style={{ marginBottom: 0 }}
+                    >
+                      <Checkbox>Viện VS DT Tây Nguyên</Checkbox>
+                    </Form.Item>
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      <Checkbox
+                        checked={methodCustomerChecked}
+                        onChange={(e) =>
+                          setMethodCustomerChecked(e.target.checked)
+                        }
+                        style={{ marginRight: 8 }}
+                      >
+                        Khách hàng
+                      </Checkbox>
+                      <Form.Item
+                        name="methodCustomerDetail"
+                        style={{ marginBottom: 0 }}
+                      >
+                        <Input
+                          placeholder="Chi tiết..."
+                          disabled={!methodCustomerChecked}
+                          style={{ width: 150, maxWidth: "100%" }}
+                          size="small"
+                        />
+                      </Form.Item>
+                    </span>
+                  </div>
+                </Col>
+              </Row>
+
+              {/* Phiếu KQTN */}
+              <Row style={{ marginBottom: 8 }}>
+                <Col xs={10} sm={8}>
+                  <Text>- Phiếu KQTN:</Text>
+                </Col>
+                <Col xs={14} sm={16}>
+                  <Form.Item name="resultLanguage" style={{ marginBottom: 0 }}>
+                    <Radio.Group
+                      style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}
+                    >
+                      <Radio value={ResultLanguage.Vietnamese}>
+                        Tiếng Việt
+                      </Radio>
+                      <Radio value={ResultLanguage.English}>Tiếng Anh</Radio>
+                      <Radio value={ResultLanguage.VietnameseAndEnglish}>
+                        Việt/Anh
+                      </Radio>
+                    </Radio.Group>
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              {/* Số bản KQTN */}
+              <Row style={{ marginBottom: 8 }}>
+                <Col xs={10} sm={8}>
+                  <Text>- Số bản KQTN:</Text>
+                </Col>
+                <Col xs={14} sm={16}>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: "8px",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Form.Item
+                      name="resultCopyCount"
+                      style={{ marginBottom: 0, width: 80 }}
+                    >
+                      <Input size="small" />
+                    </Form.Item>
+                    <Form.Item
+                      name="separatePassedResults"
+                      valuePropName="checked"
+                      style={{ marginBottom: 0 }}
+                    >
+                      <Checkbox>Yêu cầu tách KQ đạt</Checkbox>
+                    </Form.Item>
+                  </div>
+                </Col>
+              </Row>
+
+              {/* Công bố phù hợp */}
+              <Row style={{ marginBottom: 8 }}>
+                <Col xs={10} sm={8}>
+                  <Text>- Công bố phù hợp với:</Text>
+                </Col>
+                <Col xs={14} sm={16}>
+                  <Form.Item
+                    name="conformityDeclaration"
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Input size="small" />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              {/* Yêu cầu khác */}
+              <Row style={{ marginBottom: 8 }}>
+                <Col xs={10} sm={8}>
+                  <Text>- Yêu cầu khác:</Text>
+                </Col>
+                <Col xs={14} sm={16}>
+                  <Form.Item
+                    name="otherRequirements"
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Input size="small" />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              {/* Hợp đồng phụ */}
+              <Row style={{ marginBottom: 8 }}>
+                <Col xs={10} sm={8}>
+                  <Text>- Hợp đồng phụ:</Text>
+                </Col>
+                <Col xs={14} sm={16}>
+                  <Form.Item name="subContract" style={{ marginBottom: 0 }}>
+                    <Input size="small" />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              {/* Yêu cầu về lấy mẫu */}
+              <Row style={{ marginBottom: 8 }}>
+                <Col xs={10} sm={8}>
+                  <Text>- Yêu cầu về lấy mẫu:</Text>
+                </Col>
+                <Col xs={14} sm={16}>
+                  <Form.Item
+                    name="samplingRequirement"
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Radio.Group
+                      style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}
+                    >
+                      <Radio value={SamplingRequirement.LabSampling}>
+                        TTKN lấy mẫu
+                      </Radio>
+                      <Radio value={SamplingRequirement.CustomerSampling}>
+                        KH tự lấy mẫu
+                      </Radio>
+                    </Radio.Group>
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              {/* Hình thức trả kết quả */}
+              <Row style={{ marginBottom: 8 }}>
+                <Col xs={10} sm={8}>
+                  <Text>- Hình thức trả KQ:</Text>
+                </Col>
+                <Col xs={14} sm={16}>
+                  <div
+                    style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}
+                  >
+                    <Form.Item
+                      name="deliveryDirectPickup"
+                      valuePropName="checked"
+                      style={{ marginBottom: 0 }}
+                    >
+                      <Checkbox>KH nhận trực tiếp</Checkbox>
+                    </Form.Item>
+                    <Form.Item
+                      name="deliveryPostal"
+                      valuePropName="checked"
+                      style={{ marginBottom: 0 }}
+                    >
+                      <Checkbox>Gửi bưu điện</Checkbox>
+                    </Form.Item>
+                  </div>
+                </Col>
+              </Row>
+
+              {/* Trả lại mẫu lưu */}
+              <Row style={{ marginBottom: 8 }}>
+                <Col xs={10} sm={8}>
+                  <Text>- Trả lại mẫu lưu:</Text>
+                </Col>
+                <Col xs={14} sm={16}>
+                  <Form.Item
+                    name="returnStoredSample"
+                    valuePropName="checked"
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Checkbox>Có</Checkbox>
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              {/* Đồng ý quy định */}
+              <Row style={{ marginBottom: 8 }}>
+                <Col span={24}>
+                  <Checkbox>
+                    Đã đọc và đồng ý với quy định chung về yêu cầu dịch vụ thử
+                    nghiệm
+                  </Checkbox>
+                </Col>
+              </Row>
+            </Col>
+
+            {/* CỘT PHẢI */}
+            <Col xs={24} lg={12}>
+              {/* Hình thức mẫu gửi */}
+              <Row style={{ marginBottom: 8 }}>
+                <Col xs={10} sm={8}>
+                  <Text>- Hình thức mẫu gửi:</Text>
+                </Col>
+                <Col xs={14} sm={16}>
+                  <div
+                    style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}
+                  >
+                    <Form.Item
+                      name="sampleTypeService"
+                      valuePropName="checked"
+                      style={{ marginBottom: 0 }}
+                    >
+                      <Checkbox>Dịch vụ</Checkbox>
+                    </Form.Item>
+                    <Form.Item
+                      name="sampleTypeContract"
+                      valuePropName="checked"
+                      style={{ marginBottom: 0 }}
+                    >
+                      <Checkbox>Hợp đồng</Checkbox>
+                    </Form.Item>
+                    <Form.Item
+                      name="sampleTypeTask"
+                      valuePropName="checked"
+                      style={{ marginBottom: 0 }}
+                    >
+                      <Checkbox>Mẫu nhiệm vụ</Checkbox>
+                    </Form.Item>
+                    <Form.Item
+                      name="sampleTypeSubContract"
+                      valuePropName="checked"
+                      style={{ marginBottom: 0 }}
+                    >
+                      <Checkbox>Hợp đồng phụ</Checkbox>
+                    </Form.Item>
+                  </div>
+                </Col>
+              </Row>
+
+              {/* Ngày trả KQ */}
+              <Row style={{ marginBottom: 8 }}>
+                <Col xs={10} sm={8}>
+                  <Text>- Ngày trả KQ:</Text>
+                </Col>
+                <Col xs={14} sm={16}>
+                  <Form.Item
+                    name="expectedCompletionDate"
+                    style={{ marginBottom: 0, maxWidth: 150 }}
+                  >
+                    <DatePicker format="DD/MM/YYYY" style={{ width: "100%" }} />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              {/* Lưu mẫu */}
+              <Row style={{ marginBottom: 8 }}>
+                <Col xs={10} sm={8}>
+                  <Text>- Lưu mẫu:</Text>
+                </Col>
+                <Col xs={14} sm={16}>
+                  <Form.Item
+                    name="sampleStorageOption"
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Radio.Group
+                      style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}
+                    >
+                      <Radio value={SampleStorageOption.No}>Không</Radio>
+                      <Radio value={SampleStorageOption.Yes}>
+                        Có (theo QĐ của TT)
+                      </Radio>
+                    </Radio.Group>
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              {/* Tổng chi phí */}
+              <Row
+                style={{
+                  marginBottom: 8,
+                  background: "#e6f7ff",
+                  padding: "8px",
+                  borderRadius: 4,
+                }}
+              >
+                <Col xs={10} sm={8}>
+                  <Text strong>- Tổng chi phí:</Text>
+                </Col>
+                <Col xs={14} sm={16}>
+                  <Text strong style={{ fontSize: 16, color: "#1890ff" }}>
+                    {totalSampleCost.toLocaleString("vi-VN")} đ
+                  </Text>
+                </Col>
+              </Row>
+
+              {/* Bằng chữ */}
+              <Row>
+                <Col xs={10} sm={8}>
+                  <Text>- Bằng chữ:</Text>
+                </Col>
+                <Col xs={14} sm={16}>
+                  <Text italic>không đồng chẵn.</Text>
+                </Col>
+              </Row>
+            </Col>
+          </Row>
+
+          {/* Thay đổi yêu cầu + Số phiếu thu */}
+          <Row gutter={[16, 8]} style={{ marginTop: 16 }}>
+            <Col xs={24} md={12}>
+              <Row>
+                <Col xs={10} sm={8}>
+                  <Text>- Thay đổi yêu cầu:</Text>
+                </Col>
+                <Col xs={14} sm={16}>
+                  <Form.Item name="changeRequest" style={{ marginBottom: 0 }}>
+                    <Input size="small" placeholder="Nếu có..." />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </Col>
+            <Col xs={24} md={12}>
+              <Row>
+                <Col xs={10} sm={8}>
+                  <Text>- Số phiếu thu (TTDV):</Text>
+                </Col>
+                <Col xs={14} sm={16}>
+                  <Form.Item name="receiptNumber" style={{ marginBottom: 0 }}>
+                    <Input size="small" />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </Col>
+          </Row>
+
+          {/* Phụ trách + GĐ Trung tâm */}
+          <Row gutter={[16, 8]} style={{ marginTop: 16 }}>
+            <Col xs={24} md={12}>
+              <Row>
+                <Col xs={10} sm={8}>
+                  <Text strong>PHỤ TRÁCH:</Text>
+                </Col>
+                <Col xs={14} sm={16}>
+                  <Form.Item name="supervisorId" style={{ marginBottom: 0 }}>
+                    <Select
+                      placeholder="Chọn người phụ trách..."
+                      allowClear
+                      showSearch
+                      optionFilterProp="children"
+                      filterOption={(input, option) =>
+                        (option?.children as unknown as string)
+                          ?.toLowerCase()
+                          .includes(input.toLowerCase())
+                      }
+                      style={{ width: "100%" }}
+                    >
+                      {users.map((user) => (
+                        <Select.Option key={user.id} value={user.id}>
+                          {user.displayName || user.userName}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
+            </Col>
+            <Col xs={24} md={12}>
+              <Row>
+                <Col xs={10} sm={8}>
+                  <Text strong>GĐ TRUNG TÂM:</Text>
+                </Col>
+                <Col xs={14} sm={16}>
+                  <Form.Item name="directorId" style={{ marginBottom: 0 }}>
+                    <Select
+                      placeholder="Chọn GĐ Trung tâm..."
+                      allowClear
+                      showSearch
+                      optionFilterProp="children"
+                      filterOption={(input, option) =>
+                        (option?.children as unknown as string)
+                          ?.toLowerCase()
+                          .includes(input.toLowerCase())
+                      }
+                      style={{ width: "100%" }}
+                    >
+                      {users.map((user) => (
+                        <Select.Option key={user.id} value={user.id}>
+                          {user.displayName || user.userName}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
+            </Col>
+          </Row>
+        </div>
+
+        {/* Hidden fields for legacy support */}
+        <Form.Item name="requestDate" hidden>
+          <DatePicker />
+        </Form.Item>
+        <Form.Item name="status" hidden>
+          <Select />
+        </Form.Item>
+        <Form.Item name="customerEmail" hidden>
+          <Input />
+        </Form.Item>
 
         <Divider />
-
-        <Form.Item
-          name="notes"
-          label={t('request.notes')}
-          rules={[
-            { max: 2000, message: t('validation.maxLength', { max: 2000 }) }
-          ]}
-        >
-          <TextArea rows={4} placeholder="Ghi chú thêm..." />
-        </Form.Item>
 
         <Form.Item>
-          <Button type="primary" htmlType="submit" loading={loading}>
-            {isEditMode ? t('common.update') : t('common.create')}
-          </Button>
-          <Button style={{ marginLeft: 8 }} onClick={() => navigate('/requests')}>
-            {t('common.cancel')}
-          </Button>
+          <Space>
+            <Button type="primary" htmlType="submit" loading={loading}>
+              {isEditMode ? "Cập nhật" : "Tạo yêu cầu"}
+            </Button>
+            <Button onClick={() => navigate("/requests")}>Hủy</Button>
+          </Space>
         </Form.Item>
       </Form>
+
+      {/* Group Selector Modal */}
+      <Modal
+        title={
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <span>Nhóm chỉ tiêu</span>
+            <Input
+              placeholder="Find"
+              value={groupSearchText}
+              onChange={(e) => setGroupSearchText(e.target.value)}
+              style={{ width: 150 }}
+              size="small"
+              allowClear
+            />
+          </div>
+        }
+        open={groupSelectorVisible}
+        onCancel={() => {
+          setGroupSelectorVisible(false);
+          setGroupSearchText("");
+        }}
+        closeIcon={null}
+        footer={[
+          <Button
+            key="close"
+            type="primary"
+            onClick={() => {
+              setGroupSelectorVisible(false);
+              setGroupSearchText("");
+            }}
+          >
+            Đóng
+          </Button>,
+          <Button
+            key="clear"
+            onClick={(e) => {
+              e.stopPropagation();
+              setGroupSearchText("");
+              setSelectedGroupFilter("all");
+              setGroupSelectorVisible(false);
+            }}
+            style={{ marginLeft: 8, borderColor: "#faad14", color: "#faad14" }}
+          >
+            Clear
+          </Button>,
+        ]}
+        width={420}
+        styles={{ body: { padding: 0, maxHeight: 450, overflowY: "auto" } }}
+      >
+        <div style={{ borderTop: "1px solid #f0f0f0" }}>
+          {/* Groups tree view */}
+          {getFilteredGroupsWithIndicators().map((group, groupIndex) => {
+            const isExpandedInSelector = expandedGroupsInSelector.includes(
+              group.id
+            );
+            return (
+              <div key={group.id}>
+                <div
+                  style={{
+                    padding: "8px 12px",
+                    cursor: "pointer",
+                    background:
+                      selectedGroupFilter === group.id ? "#e6f7ff" : "#fff",
+                    borderBottom: "1px solid #f0f0f0",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    fontWeight: 500,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (selectedGroupFilter !== group.id)
+                      e.currentTarget.style.background = "#fafafa";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background =
+                      selectedGroupFilter === group.id ? "#e6f7ff" : "#fff";
+                  }}
+                >
+                  <Icon
+                    icon={
+                      isExpandedInSelector
+                        ? "mdi:chevron-down"
+                        : "mdi:chevron-right"
+                    }
+                    width={18}
+                    style={{ color: "#595959", flexShrink: 0 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setExpandedGroupsInSelector((prev) =>
+                        prev.includes(group.id)
+                          ? prev.filter((id) => id !== group.id)
+                          : [...prev, group.id]
+                      );
+                    }}
+                  />
+                  <span
+                    style={{ flex: 1 }}
+                    onClick={() => handleGroupSelect(group.id)}
+                  >
+                    {groupIndex + 1}. {group.name}
+                  </span>
+                  <span
+                    style={{ fontSize: 12, color: "#888", fontWeight: 400 }}
+                  >
+                    ({group.indicators.length})
+                  </span>
+                </div>
+                {isExpandedInSelector &&
+                  group.indicators.map((ind, indIndex) => (
+                    <div
+                      key={ind.id}
+                      style={{
+                        padding: "6px 12px 6px 40px",
+                        fontSize: 13,
+                        color: "#595959",
+                        background: "#fafafa",
+                        borderBottom: "1px solid #f5f5f5",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <span>
+                        — {groupIndex + 1}.{indIndex + 1} {ind.name}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            );
+          })}
+        </div>
+      </Modal>
+
+      {/* Indicator Selection Modal */}
+      <Modal
+        title={
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Icon icon="mdi:clipboard-check-outline" width={24} height={24} />
+            <span>Chọn chỉ tiêu</span>
+          </div>
+        }
+        open={indicatorModalVisible}
+        onOk={handleIndicatorModalOk}
+        onCancel={handleIndicatorModalCancel}
+        width={1200}
+        okText="Chọn"
+        cancelText="Thoát"
+        styles={{ body: { padding: 0 } }}
+      >
+        <div style={{ display: "flex", height: 500 }}>
+          {/* Left panel - Indicator list */}
+          <div
+            style={{
+              width: 320,
+              borderRight: "1px solid #f0f0f0",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <div
+              style={{
+                padding: "12px 16px",
+                borderBottom: "1px solid #f0f0f0",
+                background: "#fafafa",
+              }}
+            >
+              <div
+                onClick={() => setGroupSelectorVisible(true)}
+                style={{
+                  padding: "6px 12px",
+                  border: "1px solid #d9d9d9",
+                  borderRadius: 4,
+                  cursor: "pointer",
+                  background: "#fff",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <span
+                  style={{
+                    color: selectedGroupFilter === "all" ? "#999" : "#000",
+                  }}
+                >
+                  {selectedGroupFilter === "all"
+                    ? "--- Tất cả nhóm chỉ tiêu ---"
+                    : indicatorGroups.find((g) => g.id === selectedGroupFilter)
+                        ?.name || "Chọn nhóm..."}
+                </span>
+                <Icon icon="mdi:chevron-down" width={16} />
+              </div>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto" }}>
+              {selectedGroupFilter === "all"
+                ? // Hiển thị theo nhóm khi chọn "Tất cả"
+                  indicatorGroups.map((group) => {
+                    const groupIndicators = indicators.filter(
+                      (ind) => ind.indicatorGroupId === group.id && ind.isActive
+                    );
+                    if (groupIndicators.length === 0) return null;
+
+                    // Filter by search text if any
+                    const filteredIndicators = indicatorSearchText.trim()
+                      ? groupIndicators.filter(
+                          (ind) =>
+                            ind.name
+                              .toLowerCase()
+                              .includes(
+                                indicatorSearchText.toLowerCase().trim()
+                              ) ||
+                            ind.code
+                              ?.toLowerCase()
+                              .includes(
+                                indicatorSearchText.toLowerCase().trim()
+                              )
+                        )
+                      : groupIndicators;
+
+                    if (filteredIndicators.length === 0) return null;
+
+                    const isExpanded = expandedGroups.includes(group.id);
+
+                    return (
+                      <div key={group.id}>
+                        {/* Group header */}
+                        <div
+                          onClick={() => {
+                            setExpandedGroups((prev) =>
+                              prev.includes(group.id)
+                                ? prev.filter((id) => id !== group.id)
+                                : [...prev, group.id]
+                            );
+                          }}
+                          style={{
+                            padding: "8px 12px",
+                            background: "#fafafa",
+                            borderBottom: "1px solid #f0f0f0",
+                            fontWeight: 600,
+                            fontSize: 13,
+                            color: "#000",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            cursor: "pointer",
+                            userSelect: "none",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "#e6f7ff";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "#fafafa";
+                          }}
+                        >
+                          <Icon
+                            icon={
+                              isExpanded
+                                ? "mdi:chevron-down"
+                                : "mdi:chevron-right"
+                            }
+                            width={18}
+                            style={{ color: "#595959", flexShrink: 0 }}
+                          />
+                          <span style={{ flex: 1 }}>{group.name}</span>
+                          <span
+                            style={{
+                              fontSize: 12,
+                              color: "#888",
+                              fontWeight: 400,
+                            }}
+                          >
+                            ({filteredIndicators.length})
+                          </span>
+                        </div>
+                        {/* Group indicators - only show when expanded */}
+                        {isExpanded &&
+                          filteredIndicators.map((ind) => (
+                            <div
+                              key={ind.id}
+                              onClick={() => toggleIndicator(ind.id)}
+                              style={{
+                                padding: "6px 12px 6px 36px",
+                                borderBottom: "1px solid #f5f5f5",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                cursor: "pointer",
+                                background: tempSelectedIndicators.includes(
+                                  ind.id
+                                )
+                                  ? "#e6f7ff"
+                                  : "#fff",
+                              }}
+                              onMouseEnter={(e) => {
+                                if (!tempSelectedIndicators.includes(ind.id)) {
+                                  e.currentTarget.style.background = "#f5f5f5";
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background =
+                                  tempSelectedIndicators.includes(ind.id)
+                                    ? "#e6f7ff"
+                                    : "#fff";
+                              }}
+                            >
+                              <Checkbox
+                                checked={tempSelectedIndicators.includes(
+                                  ind.id
+                                )}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={() => toggleIndicator(ind.id)}
+                              />
+                              <span
+                                style={{
+                                  flex: 1,
+                                  fontSize: 13,
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {ind.name}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: 12,
+                                  color: "#888",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {ind.unitPrice?.toLocaleString("vi-VN")}
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+                    );
+                  })
+                : // Hiển thị flat khi đã chọn nhóm cụ thể
+                  getFilteredIndicators().map((ind) => (
+                    <div
+                      key={ind.id}
+                      onClick={() => toggleIndicator(ind.id)}
+                      style={{
+                        padding: "6px 12px",
+                        borderBottom: "1px solid #f5f5f5",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        cursor: "pointer",
+                        background: tempSelectedIndicators.includes(ind.id)
+                          ? "#e6f7ff"
+                          : "#fff",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!tempSelectedIndicators.includes(ind.id)) {
+                          e.currentTarget.style.background = "#f5f5f5";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background =
+                          tempSelectedIndicators.includes(ind.id)
+                            ? "#e6f7ff"
+                            : "#fff";
+                      }}
+                    >
+                      <Checkbox
+                        checked={tempSelectedIndicators.includes(ind.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={() => toggleIndicator(ind.id)}
+                      />
+                      <span
+                        style={{
+                          flex: 1,
+                          fontSize: 13,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {ind.name}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 12,
+                          color: "#888",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {ind.unitPrice?.toLocaleString("vi-VN")}
+                      </span>
+                    </div>
+                  ))}
+            </div>
+          </div>
+
+          {/* Right panel - Selected indicators */}
+          <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+            <div
+              style={{
+                padding: "8px 12px",
+                borderBottom: "1px solid #f0f0f0",
+                background: "#fafafa",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Text strong>Danh sách đã chọn</Text>
+                <Checkbox
+                  checked={
+                    checkedIndicators.length ===
+                      tempSelectedIndicators.length &&
+                    tempSelectedIndicators.length > 0
+                  }
+                  indeterminate={
+                    checkedIndicators.length > 0 &&
+                    checkedIndicators.length < tempSelectedIndicators.length
+                  }
+                  onChange={(e) => handleSelectAllIndicators(e.target.checked)}
+                >
+                  Chọn tất cả
+                </Checkbox>
+              </div>
+              <Button
+                type="primary"
+                size="small"
+                icon={<Icon icon="mdi:send" width={14} />}
+                onClick={handleSendToDepartment}
+              >
+                Gửi khoa phòng
+              </Button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto" }}>
+              <Table
+                dataSource={tempSelectedIndicators
+                  .map((id) => getIndicatorInfo(id))
+                  .filter(Boolean)}
+                rowKey="id"
+                size="small"
+                pagination={false}
+                scroll={{ y: 360, x: 705 }}
+                tableLayout="fixed"
+                columns={[
+                  {
+                    title: "[X]",
+                    key: "check",
+                    width: 40,
+                    render: (_: any, record: any) => (
+                      <Checkbox
+                        checked={checkedIndicators.includes(record.id)}
+                        onChange={() => toggleCheckedIndicator(record.id)}
+                      />
+                    ),
+                  },
+                  {
+                    title: "STT",
+                    key: "stt",
+                    width: 50,
+                    render: (_: any, __: any, index: number) => index + 1,
+                  },
+                  {
+                    title: "Chỉ tiêu",
+                    dataIndex: "name",
+                    key: "name",
+                    width: 200,
+                    ellipsis: true,
+                  },
+                  {
+                    title: "Đơn giá",
+                    dataIndex: "unitPrice",
+                    key: "unitPrice",
+                    width: 90,
+                    align: "right" as const,
+                    render: (value: number) => value?.toLocaleString("vi-VN"),
+                  },
+                  {
+                    title: "Ngày chuyển giao",
+                    key: "transferDate",
+                    width: 145,
+                    render: (_: any, record: any) => (
+                      <DatePicker
+                        value={selectedIndicatorDates[record.id]?.transferDate}
+                        onChange={(date) =>
+                          handleIndicatorDateChange(
+                            record.id,
+                            "transferDate",
+                            date
+                          )
+                        }
+                        format="DD/MM/YYYY"
+                        size="small"
+                        style={{ width: "100%" }}
+                        placeholder=""
+                      />
+                    ),
+                  },
+                  {
+                    title: "Ngày yêu cầu",
+                    key: "requestDate",
+                    width: 130,
+                    render: (_: any, record: any) => (
+                      <DatePicker
+                        value={selectedIndicatorDates[record.id]?.requestDate}
+                        onChange={(date) =>
+                          handleIndicatorDateChange(
+                            record.id,
+                            "requestDate",
+                            date
+                          )
+                        }
+                        format="DD/MM/YYYY"
+                        size="small"
+                        style={{ width: "100%" }}
+                        placeholder=""
+                      />
+                    ),
+                  },
+                  {
+                    title: "Xóa",
+                    key: "action",
+                    width: 50,
+                    render: (_: any, record: any) => (
+                      <Button
+                        type="text"
+                        size="small"
+                        danger
+                        icon={<CloseOutlined />}
+                        onClick={() => toggleIndicator(record.id)}
+                      />
+                    ),
+                  },
+                ]}
+              />
+            </div>
+            <div
+              style={{
+                padding: "12px 16px",
+                borderTop: "1px solid #d9d9d9",
+                background: "linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ fontSize: 14 }}>
+                Số chỉ tiêu: <Text strong>{tempSelectedIndicators.length}</Text>
+              </Text>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Text style={{ fontSize: 14 }}>Tổng tiền:</Text>
+                <Text strong style={{ fontSize: 16, color: "#1890ff" }}>
+                  {tempSelectedIndicators
+                    .reduce((sum, id) => {
+                      const ind = getIndicatorInfo(id);
+                      return sum + (ind?.unitPrice || 0);
+                    }, 0)
+                    .toLocaleString("vi-VN")}{" "}
+                  đ
+                </Text>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Modal>
     </Card>
   );
 };

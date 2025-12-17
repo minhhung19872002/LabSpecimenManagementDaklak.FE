@@ -61,6 +61,11 @@ apiClient.interceptors.request.use(
 // Response interceptor - unwrap API response
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
+    // Skip processing for blob responses (file downloads)
+    if (response.config.responseType === 'blob') {
+      return response;
+    }
+
     // Check if response is HTML (redirect to login page)
     const contentType = response.headers['content-type'] || '';
     if (contentType.includes('text/html')) {

@@ -1,5 +1,4 @@
-import api from './api';
-import { PagedResultDto } from './api';
+import { api, PagedResultDto } from './api';
 
 // Common interfaces
 export interface PagedAndSortedResultRequestDto {
@@ -122,12 +121,71 @@ export interface CreateUpdateCustomerDto {
   isActive: boolean;
 }
 
+// IndicatorGroup
+export interface IndicatorGroupDto {
+  id: string;
+  name: string;
+  isActive: boolean;
+  sortOrder: number;
+  indicatorCount: number;
+  creationTime: string;
+}
+
+export interface CreateUpdateIndicatorGroupDto {
+  name: string;
+  isActive: boolean;
+  sortOrder?: number;
+}
+
+// Indicator
+export interface IndicatorDto {
+  id: string;
+  code: string;
+  name: string;
+  unitPrice: number;
+  isActive: boolean;
+  indicatorGroupId: string;
+  indicatorGroupName: string;
+  sortOrder: number;
+  canDelete: boolean;
+  creationTime: string;
+}
+
+export interface CreateIndicatorDto {
+  name: string;
+  unitPrice: number;
+  isActive: boolean;
+  indicatorGroupId: string;
+  sortOrder?: number;
+}
+
+export interface UpdateIndicatorDto {
+  name: string;
+  unitPrice: number;
+  isActive: boolean;
+  indicatorGroupId: string;
+  sortOrder?: number;
+}
+
+export interface CreateBulkIndicatorsDto {
+  indicatorGroupId: string;
+  indicators: { name: string; unitPrice: number }[];
+}
+
+export interface IndicatorFilterDto extends PagedAndSortedResultRequestDto {
+  search?: string;
+  indicatorGroupId?: string;
+  isActive?: boolean;
+}
+
 // Service implementations - Using new API v1 endpoints
 const DEPARTMENT_URL = '/api/v1/departments';
 const SPECIMEN_TYPE_URL = '/api/v1/specimen-types';
 const TEST_METHOD_URL = '/api/v1/test-methods';
 const STORAGE_LOCATION_URL = '/api/v1/storage-locations';
 const CUSTOMER_URL = '/api/v1/customers';
+const INDICATOR_GROUP_URL = '/api/v1/indicator-groups';
+const INDICATOR_URL = '/api/v1/indicators';
 
 // Helper to convert params for API (ABP Framework uses SkipCount, MaxResultCount, Sorting)
 const toApiParams = (params: PagedAndSortedResultRequestDto) => {
@@ -275,3 +333,129 @@ export const customerService = {
     return { items: response.data, totalCount: response.data.length };
   },
 };
+
+export const indicatorGroupService = {
+  getList: async (params: PagedAndSortedResultRequestDto): Promise<PagedResultDto<IndicatorGroupDto>> => {
+    const response = await api.get<PagedResultDto<IndicatorGroupDto>>(INDICATOR_GROUP_URL, { params: toApiParams(params) });
+    return response.data;
+  },
+  get: async (id: string): Promise<IndicatorGroupDto> => {
+    const response = await api.get<IndicatorGroupDto>(`${INDICATOR_GROUP_URL}/${id}`);
+    return response.data;
+  },
+  create: async (data: CreateUpdateIndicatorGroupDto): Promise<IndicatorGroupDto> => {
+    const response = await api.post<IndicatorGroupDto>(INDICATOR_GROUP_URL, data);
+    return response.data;
+  },
+  update: async (id: string, data: CreateUpdateIndicatorGroupDto): Promise<IndicatorGroupDto> => {
+    const response = await api.put<IndicatorGroupDto>(`${INDICATOR_GROUP_URL}/${id}`, data);
+    return response.data;
+  },
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`${INDICATOR_GROUP_URL}/${id}`);
+  },
+  getActive: async (): Promise<IndicatorGroupDto[]> => {
+    const response = await api.get<IndicatorGroupDto[]>(`${INDICATOR_GROUP_URL}/active`);
+    return response.data || [];
+  },
+  getWithCount: async (): Promise<IndicatorGroupDto[]> => {
+    const response = await api.get<IndicatorGroupDto[]>(`${INDICATOR_GROUP_URL}/with-count`);
+    return response.data || [];
+  },
+  importFromExcel: async (file: File): Promise<ImportIndicatorGroupsResultDto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<ImportIndicatorGroupsResultDto>(`${INDICATOR_GROUP_URL}/import`, formData);
+    return response.data;
+  },
+  downloadTemplate: async (): Promise<Blob> => {
+    const response = await api.download(`${INDICATOR_GROUP_URL}/template`);
+    return response.data;
+  },
+};
+
+export const indicatorService = {
+  getList: async (params: IndicatorFilterDto): Promise<PagedResultDto<IndicatorDto>> => {
+    const apiParams: Record<string, any> = {};
+    if (params.skipCount !== undefined) apiParams.SkipCount = params.skipCount;
+    if (params.maxResultCount !== undefined) apiParams.MaxResultCount = params.maxResultCount;
+    if (params.sorting) apiParams.Sorting = params.sorting;
+    if (params.search) apiParams.Search = params.search;
+    if (params.indicatorGroupId) apiParams.IndicatorGroupId = params.indicatorGroupId;
+    if (params.isActive !== undefined) apiParams.IsActive = params.isActive;
+    const response = await api.get<PagedResultDto<IndicatorDto>>(INDICATOR_URL, { params: apiParams });
+    return response.data || { items: [], totalCount: 0 };
+  },
+  get: async (id: string): Promise<IndicatorDto> => {
+    const response = await api.get<IndicatorDto>(`${INDICATOR_URL}/${id}`);
+    return response.data;
+  },
+  create: async (data: CreateIndicatorDto): Promise<IndicatorDto> => {
+    const response = await api.post<IndicatorDto>(INDICATOR_URL, data);
+    return response.data;
+  },
+  createBulk: async (data: CreateBulkIndicatorsDto): Promise<IndicatorDto[]> => {
+    const response = await api.post<IndicatorDto[]>(`${INDICATOR_URL}/bulk`, data);
+    return response.data;
+  },
+  update: async (id: string, data: UpdateIndicatorDto): Promise<IndicatorDto> => {
+    const response = await api.put<IndicatorDto>(`${INDICATOR_URL}/${id}`, data);
+    return response.data;
+  },
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`${INDICATOR_URL}/${id}`);
+  },
+  toggleActive: async (id: string): Promise<IndicatorDto> => {
+    const response = await api.put<IndicatorDto>(`${INDICATOR_URL}/${id}/toggle-active`);
+    return response.data;
+  },
+  getByGroup: async (groupId: string): Promise<IndicatorDto[]> => {
+    const response = await api.get<IndicatorDto[]>(`${INDICATOR_URL}/by-group/${groupId}`);
+    return response.data;
+  },
+  getActive: async (): Promise<IndicatorDto[]> => {
+    const response = await api.get<IndicatorDto[]>(`${INDICATOR_URL}/active`);
+    return response.data;
+  },
+  canDelete: async (id: string): Promise<boolean> => {
+    const response = await api.get<boolean>(`${INDICATOR_URL}/can-delete/${id}`);
+    return response.data;
+  },
+  importFromExcel: async (file: File): Promise<ImportIndicatorsResultDto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<ImportIndicatorsResultDto>(`${INDICATOR_URL}/import`, formData);
+    return response.data;
+  },
+  downloadTemplate: async (): Promise<Blob> => {
+    const response = await api.download(`${INDICATOR_URL}/template`);
+    return response.data;
+  },
+};
+
+// Import result DTOs
+export interface ImportIndicatorsResultDto {
+  totalRows: number;
+  successCount: number;
+  errorCount: number;
+  errors: ImportIndicatorErrorDto[];
+}
+
+export interface ImportIndicatorErrorDto {
+  rowNumber: number;
+  indicatorName: string;
+  errorMessage: string;
+}
+
+export interface ImportIndicatorGroupsResultDto {
+  totalRows: number;
+  successCount: number;
+  errorCount: number;
+  errors: ImportIndicatorGroupErrorDto[];
+}
+
+export interface ImportIndicatorGroupErrorDto {
+  rowNumber: number;
+  groupName: string;
+  errorMessage: string;
+}

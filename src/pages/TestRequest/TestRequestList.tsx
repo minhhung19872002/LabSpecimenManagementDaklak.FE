@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Tag, message, Popconfirm, Card, Input, DatePicker, Row, Col, Select, Modal, Form } from 'antd';
+import { Table, Button, Space, Tag, message, Popconfirm, Card, Input, Row, Col, Select } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, ReloadOutlined, ImportOutlined, DownloadOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -22,9 +22,6 @@ const TestRequestList: React.FC = () => {
   const [searchText, setSearchText] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [statusFilter, setStatusFilter] = useState<TestRequestStatus | 'all'>('all');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<TestRequestDto | null>(null);
-  const [form] = Form.useForm();
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
 
@@ -94,55 +91,11 @@ const TestRequestList: React.FC = () => {
   };
 
   const handleCreate = () => {
-    setEditingItem(null);
-    form.resetFields();
-    form.setFieldsValue({
-      requestNumber: `REQ-${dayjs().format('YYYYMMDD')}-${String(data.length + 1).padStart(4, '0')}`,
-      requestDate: dayjs(),
-      status: TestRequestStatus.Pending,
-    });
-    setIsModalOpen(true);
+    navigate('/test-request/create');
   };
 
   const handleEdit = (record: TestRequestDto) => {
-    setEditingItem(record);
-    form.setFieldsValue({
-      ...record,
-      requestDate: dayjs(record.requestDate),
-      expectedCompletionDate: record.expectedCompletionDate ? dayjs(record.expectedCompletionDate) : null,
-    });
-    setIsModalOpen(true);
-  };
-
-  const handleModalOk = async () => {
-    try {
-      const values = await form.validateFields();
-      const requestData = {
-        requestNumber: values.requestNumber,
-        requestDate: values.requestDate.toISOString(),
-        customerName: values.customerName,
-        customerEmail: values.customerEmail || '',
-        customerPhone: values.customerPhone || '',
-        customerAddress: values.customerAddress || '',
-        status: values.status,
-        expectedCompletionDate: values.expectedCompletionDate?.toISOString(),
-        notes: values.notes || '',
-      };
-
-      if (editingItem) {
-        await testRequestService.update(editingItem.id, requestData);
-        message.success('Cập nhật yêu cầu thành công!');
-      } else {
-        await testRequestService.create(requestData);
-        message.success('Tạo yêu cầu mới thành công!');
-      }
-      setIsModalOpen(false);
-      form.resetFields();
-      loadData(); // Reload data from server
-    } catch (error: any) {
-      console.error('Error saving test request:', error);
-      message.error('Không thể lưu yêu cầu. Vui lòng thử lại.');
-    }
+    navigate(`/test-request/edit/${record.id}`);
   };
 
   const getStatusTag = (status: TestRequestStatus) => {
@@ -174,24 +127,40 @@ const TestRequestList: React.FC = () => {
       sorter: (a, b) => dayjs(a.requestDate).unix() - dayjs(b.requestDate).unix(),
     },
     {
-      title: 'Khách hàng',
+      title: 'Tên CS/DN',
       dataIndex: 'customerName',
       key: 'customerName',
       width: 200,
       ellipsis: true,
     },
     {
-      title: 'Email',
-      dataIndex: 'customerEmail',
-      key: 'customerEmail',
-      width: 200,
+      title: 'Người liên hệ',
+      dataIndex: 'contactPerson',
+      key: 'contactPerson',
+      width: 150,
       ellipsis: true,
     },
     {
       title: 'Điện thoại',
-      dataIndex: 'customerPhone',
-      key: 'customerPhone',
-      width: 150
+      dataIndex: 'phone',
+      key: 'phone',
+      width: 130
+    },
+    {
+      title: 'Số mẫu',
+      dataIndex: 'totalSampleCount',
+      key: 'totalSampleCount',
+      width: 80,
+      align: 'center' as const,
+      render: (value: number) => value || 0,
+    },
+    {
+      title: 'Tổng tiền',
+      dataIndex: 'totalCost',
+      key: 'totalCost',
+      width: 120,
+      align: 'right' as const,
+      render: (value: number) => value ? `${value.toLocaleString('vi-VN')}đ` : '-',
     },
     {
       title: 'Trạng thái',
@@ -272,7 +241,7 @@ const TestRequestList: React.FC = () => {
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} sm={12} md={8}>
           <Input.Search
-            placeholder="Tìm kiếm theo số YC, khách hàng, email, SĐT..."
+            placeholder="Tìm kiếm theo số YC, tên CS/DN, người liên hệ, SĐT..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             onSearch={handleSearch}
@@ -319,93 +288,8 @@ const TestRequestList: React.FC = () => {
             setPageSize(size);
           }
         }}
-        scroll={{ x: 1400 }}
+        scroll={{ x: 1600 }}
       />
-
-      {/* Create/Edit Modal */}
-      <Modal
-        title={editingItem ? 'Chỉnh sửa yêu cầu thử nghiệm' : 'Tạo yêu cầu thử nghiệm mới'}
-        open={isModalOpen}
-        onOk={handleModalOk}
-        onCancel={() => setIsModalOpen(false)}
-        width={700}
-        okText={editingItem ? 'Cập nhật' : 'Tạo mới'}
-        cancelText="Hủy"
-        centered
-      >
-        <Form form={form} layout="vertical">
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="requestNumber"
-                label="Số yêu cầu"
-                rules={[{ required: true, message: 'Vui lòng nhập số yêu cầu' }]}
-              >
-                <Input disabled />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="requestDate"
-                label="Ngày yêu cầu"
-                rules={[{ required: true, message: 'Vui lòng chọn ngày' }]}
-              >
-                <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="customerName"
-                label="Tên khách hàng"
-                rules={[{ required: true, message: 'Vui lòng nhập tên khách hàng' }]}
-              >
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="customerEmail"
-                label="Email"
-                rules={[{ type: 'email', message: 'Email không hợp lệ' }]}
-              >
-                <Input />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="customerPhone" label="Số điện thoại">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="status" label="Trạng thái">
-                <Select>
-                  <Select.Option value={TestRequestStatus.Pending}>Chờ xử lý</Select.Option>
-                  <Select.Option value={TestRequestStatus.InProgress}>Đang thực hiện</Select.Option>
-                  <Select.Option value={TestRequestStatus.Completed}>Hoàn thành</Select.Option>
-                  <Select.Option value={TestRequestStatus.Cancelled}>Đã hủy</Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item name="customerAddress" label="Địa chỉ">
-            <Input.TextArea rows={2} />
-          </Form.Item>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="expectedCompletionDate" label="Ngày hoàn thành dự kiến">
-                <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item name="notes" label="Ghi chú">
-            <Input.TextArea rows={3} />
-          </Form.Item>
-        </Form>
-      </Modal>
 
       {/* Import Excel Modal */}
       <ImportExcelModal
