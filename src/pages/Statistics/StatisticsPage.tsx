@@ -29,7 +29,6 @@ import dayjs from 'dayjs';
 import {
   statisticsService,
   StatisticsDataDto,
-  MonthlyTrendDto,
   SampleMatrixDto,
   WorkloadByDepartmentDto,
   TATComplianceDto

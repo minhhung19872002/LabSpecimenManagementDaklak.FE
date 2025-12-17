@@ -1,5 +1,11 @@
 .test-request-detail {
-  padding: 24px;
+  padding: 16px;
+}
+
+@media (min-width: 768px) {
+  .test-request-detail {
+    padding: 24px;
+  }
 }
 
 .loading-container {
@@ -16,4 +22,118 @@
 
 .test-request-detail .ant-descriptions-item-content {
   background-color: #ffffff;
+}
+
+/* Detail sections */
+.detail-section {
+  background: #fafafa;
+  padding: 16px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+}
+
+.detail-section .ant-typography h5 {
+  color: #1890ff;
+  border-bottom: 2px solid #1890ff;
+  padding-bottom: 8px;
+  margin-bottom: 16px !important;
+}
+
+@media (max-width: 576px) {
+  .detail-section {
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+}
+
+/* Detail item - label and value layout */
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+@media (min-width: 576px) {
+  .detail-item {
+    flex-direction: row;
+    gap: 8px;
+    align-items: flex-start;
+  }
+}
+
+.detail-item .ant-typography-secondary {
+  min-width: fit-content;
+  white-space: nowrap;
+}
+
+/* Card title responsive */
+.test-request-detail .ant-card-head-title {
+  white-space: normal;
+  line-height: 1.5;
+}
+
+/* Table responsive */
+.test-request-detail .ant-table-wrapper {
+  overflow-x: auto;
+}
+
+.test-request-detail .ant-table {
+  font-size: 13px;
+}
+
+@media (max-width: 768px) {
+  .test-request-detail .ant-table {
+    font-size: 12px;
+  }
+}
+
+/* Space wrapping on mobile */
+.test-request-detail .ant-space-wrap {
+  gap: 8px !important;
+}
+
+/* Boolean icon items */
+.test-request-detail .ant-space-item {
+  display: flex;
+  align-items: center;
+}
+
+/* Divider styling */
+.test-request-detail .ant-divider-horizontal.ant-divider-with-text {
+  margin: 24px 0 16px 0;
+}
+
+/* Card extra buttons */
+@media (max-width: 576px) {
+  .test-request-detail .ant-card-extra {
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  .test-request-detail .ant-card-extra .ant-space {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+/* Print styles */
+@media print {
+  .test-request-detail {
+    padding: 0;
+  }
+
+  .test-request-detail .ant-card {
+    box-shadow: none;
+    border: none;
+  }
+
+  .test-request-detail .ant-card-extra {
+    display: none;
+  }
+
+  .detail-section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
 }
