@@ -560,14 +560,15 @@ const TestRequestDetail: React.FC = () => {
               </Title>
               <Row gutter={[16, 12]}>
                 <Col xs={24}>
-                  <div className="detail-item" style={{
+                  <div style={{
                     background: '#e6f7ff',
-                    padding: '12px 16px',
+                    padding: '16px',
                     borderRadius: 8,
-                    border: '1px solid #91d5ff'
+                    border: '1px solid #91d5ff',
+                    textAlign: 'center'
                   }}>
-                    <Text type="secondary">Tổng chi phí:</Text>
-                    <Text strong style={{ fontSize: 20, color: '#1890ff' }}>
+                    <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>Tổng chi phí:</Text>
+                    <Text strong style={{ fontSize: 24, color: '#1890ff' }}>
                       {(data.totalCost || 0).toLocaleString('vi-VN')} đ
                     </Text>
                   </div>

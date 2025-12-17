@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError, InternalAxiosRequestConfig } from 'axios';
 
 // API Base URL from environment variable
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:44381';
@@ -31,6 +31,38 @@ export interface PagedResultDto<T> {
   items: T[];
   totalCount: number;
 }
+
+// Track if we're currently refreshing the token
+let isRefreshing = false;
+// Queue of failed requests to retry after token refresh
+let failedQueue: Array<{
+  resolve: (value: any) => void;
+  reject: (error: any) => void;
+  config: InternalAxiosRequestConfig;
+}> = [];
+
+// Process the queue of failed requests
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((request) => {
+    if (error) {
+      request.reject(error);
+    } else if (token) {
+      request.config.headers.Authorization = `Bearer ${token}`;
+      request.resolve(apiClient(request.config));
+    }
+  });
+  failedQueue = [];
+};
+
+// Clear tokens and redirect to login
+const handleAuthFailure = () => {
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+  localStorage.removeItem('user_info');
+  if (!window.location.pathname.includes('/login')) {
+    window.location.href = '/login';
+  }
+};
 
 // Create axios instance
 const apiClient: AxiosInstance = axios.create({
@@ -70,11 +102,7 @@ apiClient.interceptors.response.use(
     const contentType = response.headers['content-type'] || '';
     if (contentType.includes('text/html')) {
       // Backend redirected to login page - treat as 401
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login';
-      }
+      handleAuthFailure();
       return Promise.reject({
         response: { status: 401, data: { message: 'Session expired' } }
       });
@@ -104,22 +132,78 @@ apiClient.interceptors.response.use(
     }
     return response;
   },
-  (error) => {
-    if (error.response) {
-      // Handle 401 Unauthorized
-      if (error.response.status === 401) {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        // Only redirect if not already on login page
-        if (!window.location.pathname.includes('/login')) {
-          window.location.href = '/login';
-        }
+  async (error: AxiosError) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+    // Handle 401 Unauthorized or 403 Forbidden
+    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+      // Skip refresh for login/refresh endpoints
+      if (originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/refresh')) {
+        handleAuthFailure();
+        return Promise.reject(error);
       }
-      // Handle 403 Forbidden
-      if (error.response.status === 403) {
-        console.error('Access forbidden:', error.response.data);
+
+      // If this request was already retried, fail
+      if (originalRequest._retry) {
+        handleAuthFailure();
+        return Promise.reject(error);
+      }
+
+      // If we're already refreshing, queue this request
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject, config: originalRequest });
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      const refreshToken = localStorage.getItem('refresh_token');
+
+      if (!refreshToken) {
+        isRefreshing = false;
+        handleAuthFailure();
+        return Promise.reject(error);
+      }
+
+      try {
+        // Call refresh token API directly (not through apiClient to avoid interceptor loop)
+        const response = await axios.post(`${API_BASE_URL}/api/v1/auth/refresh`, {
+          refreshToken
+        });
+
+        const newAccessToken = response.data?.accessToken || response.data?.data?.accessToken;
+        const newRefreshToken = response.data?.refreshToken || response.data?.data?.refreshToken;
+
+        if (newAccessToken) {
+          localStorage.setItem('access_token', newAccessToken);
+          if (newRefreshToken) {
+            localStorage.setItem('refresh_token', newRefreshToken);
+          }
+
+          // Update authorization header for the original request
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+
+          // Process queued requests
+          processQueue(null, newAccessToken);
+
+          isRefreshing = false;
+
+          // Retry the original request
+          return apiClient(originalRequest);
+        } else {
+          throw new Error('No access token in refresh response');
+        }
+      } catch (refreshError) {
+        // Refresh failed - clear tokens and redirect to login
+        processQueue(refreshError, null);
+        isRefreshing = false;
+        handleAuthFailure();
+        return Promise.reject(refreshError);
       }
     }
+
     return Promise.reject(error);
   }
 );

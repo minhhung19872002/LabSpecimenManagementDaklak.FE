@@ -1,15 +1,40 @@
 // @ts-nocheck
-import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Tag, message, Popconfirm, Card, Input, Row, Col, Select } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, ReloadOutlined, ImportOutlined, DownloadOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import type { ColumnsType } from 'antd/es/table';
-import { testRequestService } from '../../services/testRequestService';
-import { TestRequestDto, TestRequestStatus } from '../../types/testRequest';
-import ImportExcelModal from '../../components/common/ImportExcelModal';
-import { importService, downloadBlobAsFile } from '../../services/importService';
-import dayjs from 'dayjs';
+import React, { useState, useEffect } from "react";
+import {
+  Table,
+  Button,
+  Space,
+  Tag,
+  message,
+  Popconfirm,
+  Card,
+  Input,
+  Row,
+  Col,
+  Select,
+  DatePicker,
+} from "antd";
+import type { Dayjs } from "dayjs";
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  EyeOutlined,
+  ReloadOutlined,
+  ImportOutlined,
+  DownloadOutlined,
+} from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import type { ColumnsType } from "antd/es/table";
+import { testRequestService } from "../../services/testRequestService";
+import { TestRequestDto, TestRequestStatus } from "../../types/testRequest";
+import ImportExcelModal from "../../components/common/ImportExcelModal";
+import {
+  importService,
+  downloadBlobAsFile,
+} from "../../services/importService";
+import dayjs from "dayjs";
 
 const TestRequestList: React.FC = () => {
   const { t } = useTranslation();
@@ -19,21 +44,26 @@ const TestRequestList: React.FC = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
-  const [searchText, setSearchText] = useState('');
-  const [searchInput, setSearchInput] = useState('');
-  const [statusFilter, setStatusFilter] = useState<TestRequestStatus | 'all'>('all');
+  const [searchText, setSearchText] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [statusFilter, setStatusFilter] = useState<TestRequestStatus | "all">(
+    "all"
+  );
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
+  const [dateRange, setDateRange] = useState<
+    [Dayjs | null, Dayjs | null] | null
+  >(null);
 
   const handleDownloadTemplate = async () => {
     setDownloadingTemplate(true);
     try {
       const blob = await importService.downloadTestRequestsTemplate();
-      downloadBlobAsFile(blob, 'test-requests-template.xlsx');
-      message.success('Tải template thành công!');
+      downloadBlobAsFile(blob, "test-requests-template.xlsx");
+      message.success("Tải template thành công!");
     } catch (error) {
-      console.error('Error downloading template:', error);
-      message.error('Không thể tải template. Vui lòng thử lại.');
+      console.error("Error downloading template:", error);
+      message.error("Không thể tải template. Vui lòng thử lại.");
     } finally {
       setDownloadingTemplate(false);
     }
@@ -45,16 +75,22 @@ const TestRequestList: React.FC = () => {
       const result = await testRequestService.getList({
         skipCount: (currentPage - 1) * pageSize,
         maxResultCount: pageSize,
-        sorting: 'requestDate desc',
+        sorting: "requestDate desc",
         search: searchText || undefined,
-        status: statusFilter !== 'all' ? statusFilter : undefined,
+        status: statusFilter !== "all" ? statusFilter : undefined,
+        expectedCompletionDateFrom:
+          dateRange?.[0]?.format("YYYY-MM-DD") || undefined,
+        expectedCompletionDateTo:
+          dateRange?.[1]?.format("YYYY-MM-DD") || undefined,
       });
       const items = result.items || [];
       setData(items);
       setTotalCount(result.totalCount || 0);
     } catch (error: any) {
-      console.error('Error loading test requests:', error);
-      message.error('Không thể tải danh sách yêu cầu thử nghiệm. Vui lòng kiểm tra kết nối server.');
+      console.error("Error loading test requests:", error);
+      message.error(
+        "Không thể tải danh sách yêu cầu thử nghiệm. Vui lòng kiểm tra kết nối server."
+      );
       setData([]);
       setTotalCount(0);
     } finally {
@@ -62,10 +98,10 @@ const TestRequestList: React.FC = () => {
     }
   };
 
-  // Load data when page, pageSize, searchText or statusFilter changes
+  // Load data when page, pageSize, searchText, statusFilter or dateRange changes
   useEffect(() => {
     loadData();
-  }, [currentPage, pageSize, searchText, statusFilter]);
+  }, [currentPage, pageSize, searchText, statusFilter, dateRange]);
 
   // Handle search with debounce
   const handleSearch = () => {
@@ -74,24 +110,32 @@ const TestRequestList: React.FC = () => {
   };
 
   // Handle status filter change
-  const handleStatusChange = (value: TestRequestStatus | 'all') => {
+  const handleStatusChange = (value: TestRequestStatus | "all") => {
     setStatusFilter(value);
+    setCurrentPage(1); // Reset to first page when filtering
+  };
+
+  // Handle date range change
+  const handleDateRangeChange = (
+    dates: [Dayjs | null, Dayjs | null] | null
+  ) => {
+    setDateRange(dates);
     setCurrentPage(1); // Reset to first page when filtering
   };
 
   const handleDelete = async (id: string) => {
     try {
       await testRequestService.delete(id);
-      message.success('Xóa yêu cầu thành công!');
+      message.success("Xóa yêu cầu thành công!");
       loadData(); // Reload data from server
     } catch (error: any) {
-      console.error('Error deleting test request:', error);
-      message.error('Không thể xóa yêu cầu. Vui lòng thử lại.');
+      console.error("Error deleting test request:", error);
+      message.error("Không thể xóa yêu cầu. Vui lòng thử lại.");
     }
   };
 
   const handleCreate = () => {
-    navigate('/test-request/create');
+    navigate("/test-request/create");
   };
 
   const handleEdit = (record: TestRequestDto) => {
@@ -100,10 +144,13 @@ const TestRequestList: React.FC = () => {
 
   const getStatusTag = (status: TestRequestStatus) => {
     const statusConfig = {
-      [TestRequestStatus.Pending]: { color: 'default', text: 'Chờ xử lý' },
-      [TestRequestStatus.InProgress]: { color: 'processing', text: 'Đang thực hiện' },
-      [TestRequestStatus.Completed]: { color: 'success', text: 'Hoàn thành' },
-      [TestRequestStatus.Cancelled]: { color: 'error', text: 'Đã hủy' }
+      [TestRequestStatus.Pending]: { color: "default", text: "Chờ xử lý" },
+      [TestRequestStatus.InProgress]: {
+        color: "processing",
+        text: "Đang thực hiện",
+      },
+      [TestRequestStatus.Completed]: { color: "success", text: "Hoàn thành" },
+      [TestRequestStatus.Cancelled]: { color: "error", text: "Đã hủy" },
     };
     const config = statusConfig[status];
     return <Tag color={config.color}>{config.text}</Tag>;
@@ -111,84 +158,80 @@ const TestRequestList: React.FC = () => {
 
   const columns: ColumnsType<TestRequestDto> = [
     {
-      title: 'Số yêu cầu',
-      dataIndex: 'requestNumber',
-      key: 'requestNumber',
+      title: "Số yêu cầu",
+      dataIndex: "requestNumber",
+      key: "requestNumber",
       width: 180,
-      fixed: 'left',
+      fixed: "left",
       sorter: (a, b) => a.requestNumber.localeCompare(b.requestNumber),
     },
     {
-      title: 'Ngày yêu cầu',
-      dataIndex: 'requestDate',
-      key: 'requestDate',
-      width: 120,
-      render: (date: string) => dayjs(date).format('DD/MM/YYYY'),
-      sorter: (a, b) => dayjs(a.requestDate).unix() - dayjs(b.requestDate).unix(),
+      title: "Ngày yêu cầu",
+      dataIndex: "requestDate",
+      key: "requestDate",
+      width: 130,
+      render: (date: string) => dayjs(date).format("DD/MM/YYYY"),
+      sorter: (a, b) =>
+        dayjs(a.requestDate).unix() - dayjs(b.requestDate).unix(),
     },
     {
-      title: 'Tên CS/DN',
-      dataIndex: 'customerName',
-      key: 'customerName',
+      title: "Ngày hoàn thành dự kiến",
+      dataIndex: "expectedCompletionDate",
+      key: "expectedCompletionDate",
+      width: 180,
+      render: (date: string) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
+    },
+    {
+      title: "Tên CS/DN",
+      dataIndex: "customerName",
+      key: "customerName",
       width: 200,
       ellipsis: true,
     },
     {
-      title: 'Người liên hệ',
-      dataIndex: 'contactPerson',
-      key: 'contactPerson',
+      title: "Người liên hệ",
+      dataIndex: "contactPerson",
+      key: "contactPerson",
       width: 150,
       ellipsis: true,
     },
     {
-      title: 'Điện thoại',
-      dataIndex: 'phone',
-      key: 'phone',
-      width: 130
+      title: "Điện thoại",
+      dataIndex: "phone",
+      key: "phone",
+      width: 130,
     },
     {
-      title: 'Số mẫu',
-      dataIndex: 'totalSampleCount',
-      key: 'totalSampleCount',
+      title: "Số mẫu",
+      dataIndex: "totalSampleCount",
+      key: "totalSampleCount",
       width: 80,
-      align: 'center' as const,
+      align: "center" as const,
       render: (value: number) => value || 0,
     },
     {
-      title: 'Tổng tiền',
-      dataIndex: 'totalCost',
-      key: 'totalCost',
+      title: "Tổng tiền",
+      dataIndex: "totalCost",
+      key: "totalCost",
       width: 120,
-      align: 'right' as const,
-      render: (value: number) => value ? `${value.toLocaleString('vi-VN')}đ` : '-',
+      align: "right" as const,
+      render: (value: number) =>
+        value ? `${value.toLocaleString("vi-VN")}đ` : "-",
     },
     {
-      title: 'Trạng thái',
-      dataIndex: 'status',
-      key: 'status',
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
       width: 140,
       render: (status: TestRequestStatus) => getStatusTag(status),
     },
     {
-      title: 'Ngày hoàn thành dự kiến',
-      dataIndex: 'expectedCompletionDate',
-      key: 'expectedCompletionDate',
-      width: 180,
-      render: (date: string) => date ? dayjs(date).format('DD/MM/YYYY') : '-'
-    },
-    {
-      title: 'Thao tác',
-      key: 'actions',
-      width: 150,
-      fixed: 'right',
+      title: "Thao tác",
+      key: "actions",
+      width: 80,
+      fixed: "right",
       render: (_: any, record: TestRequestDto) => (
         <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            icon={<EyeOutlined />}
-            onClick={() => navigate(`/test-request/${record.id}`)}
-          />
           <Button
             type="link"
             size="small"
@@ -204,8 +247,8 @@ const TestRequestList: React.FC = () => {
             <Button type="link" size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
-      )
-    }
+      ),
+    },
   ];
 
   return (
@@ -213,7 +256,9 @@ const TestRequestList: React.FC = () => {
       title="Danh sách yêu cầu thử nghiệm"
       extra={
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={loadData}>Làm mới</Button>
+          <Button icon={<ReloadOutlined />} onClick={loadData}>
+            Làm mới
+          </Button>
           <Button
             icon={<DownloadOutlined />}
             onClick={handleDownloadTemplate}
@@ -227,11 +272,7 @@ const TestRequestList: React.FC = () => {
           >
             Import Excel
           </Button>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleCreate}
-          >
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
             Tạo mới
           </Button>
         </Space>
@@ -248,26 +289,49 @@ const TestRequestList: React.FC = () => {
             onPressEnter={handleSearch}
             allowClear
             onClear={() => {
-              setSearchInput('');
-              setSearchText('');
+              setSearchInput("");
+              setSearchText("");
               setCurrentPage(1);
             }}
             enterButton
           />
         </Col>
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={12} md={5}>
           <Select
-            style={{ width: '100%' }}
+            style={{ width: "100%" }}
             placeholder="Lọc theo trạng thái"
             value={statusFilter}
             onChange={handleStatusChange}
           >
             <Select.Option value="all">Tất cả trạng thái</Select.Option>
-            <Select.Option value={TestRequestStatus.Pending}>Chờ xử lý</Select.Option>
-            <Select.Option value={TestRequestStatus.InProgress}>Đang thực hiện</Select.Option>
-            <Select.Option value={TestRequestStatus.Completed}>Hoàn thành</Select.Option>
-            <Select.Option value={TestRequestStatus.Cancelled}>Đã hủy</Select.Option>
+            <Select.Option value={TestRequestStatus.Pending}>
+              Chờ xử lý
+            </Select.Option>
+            <Select.Option value={TestRequestStatus.InProgress}>
+              Đang thực hiện
+            </Select.Option>
+            <Select.Option value={TestRequestStatus.Completed}>
+              Hoàn thành
+            </Select.Option>
+            <Select.Option value={TestRequestStatus.Cancelled}>
+              Đã hủy
+            </Select.Option>
           </Select>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ whiteSpace: "nowrap", color: "#666" }}>
+              Ngày HT dự kiến:
+            </span>
+            <DatePicker.RangePicker
+              style={{ flex: 1 }}
+              placeholder={["Từ ngày", "Đến ngày"]}
+              format="DD/MM/YYYY"
+              value={dateRange}
+              onChange={handleDateRangeChange}
+              allowClear
+            />
+          </div>
         </Col>
       </Row>
 
@@ -276,6 +340,10 @@ const TestRequestList: React.FC = () => {
         dataSource={data}
         rowKey="id"
         loading={loading}
+        onRow={(record) => ({
+          onDoubleClick: () => navigate(`/test-request/${record.id}`),
+          style: { cursor: "pointer" },
+        })}
         pagination={{
           current: currentPage,
           pageSize: pageSize,
@@ -286,7 +354,7 @@ const TestRequestList: React.FC = () => {
           onChange: (page, size) => {
             setCurrentPage(page);
             setPageSize(size);
-          }
+          },
         }}
         scroll={{ x: 1600 }}
       />
