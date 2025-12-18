@@ -1,16 +1,38 @@
 // @ts-nocheck
-import React, { useState, useEffect } from 'react';
-import { Card, Descriptions, Button, message, Tag, Spin, Space, Table, Divider, Typography, Row, Col } from 'antd';
-import { ArrowLeftOutlined, EditOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { testRequestService } from '../../services/testRequestService';
+import React, { useState, useEffect } from "react";
 import {
-  TestRequestDto, TestRequestStatus, ResultLanguage, SamplingRequirement,
-  SampleStorageOption, SampleStatus
-} from '../../types/testRequest';
-import dayjs from 'dayjs';
-import './TestRequestDetail.css';
+  Card,
+  Descriptions,
+  Button,
+  message,
+  Tag,
+  Spin,
+  Space,
+  Table,
+  Divider,
+  Typography,
+  Row,
+  Col,
+} from "antd";
+import {
+  ArrowLeftOutlined,
+  EditOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+} from "@ant-design/icons";
+import { useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { testRequestService } from "../../services/testRequestService";
+import {
+  TestRequestDto,
+  TestRequestStatus,
+  ResultLanguage,
+  SamplingRequirement,
+  SampleStorageOption,
+  SampleStatus,
+} from "../../types/testRequest";
+import dayjs from "dayjs";
+import "./TestRequestDetail.css";
 
 const { Title, Text } = Typography;
 
@@ -33,8 +55,8 @@ const TestRequestDetail: React.FC = () => {
       const result = await testRequestService.get(requestId);
       setData(result);
     } catch (error: any) {
-      console.error('Error loading test request:', error);
-      message.error('Không thể tải thông tin yêu cầu thử nghiệm');
+      console.error("Error loading test request:", error);
+      message.error("Không thể tải thông tin yêu cầu thử nghiệm");
       setData(null);
     } finally {
       setLoading(false);
@@ -43,10 +65,13 @@ const TestRequestDetail: React.FC = () => {
 
   const getStatusTag = (status: TestRequestStatus) => {
     const statusConfig = {
-      [TestRequestStatus.Pending]: { color: 'default', text: 'Chờ xử lý' },
-      [TestRequestStatus.InProgress]: { color: 'processing', text: 'Đang thực hiện' },
-      [TestRequestStatus.Completed]: { color: 'success', text: 'Hoàn thành' },
-      [TestRequestStatus.Cancelled]: { color: 'error', text: 'Đã hủy' }
+      [TestRequestStatus.Pending]: { color: "default", text: "Chờ xử lý" },
+      [TestRequestStatus.InProgress]: {
+        color: "processing",
+        text: "Đang thực hiện",
+      },
+      [TestRequestStatus.Completed]: { color: "success", text: "Hoàn thành" },
+      [TestRequestStatus.Cancelled]: { color: "error", text: "Đã hủy" },
     };
     const config = statusConfig[status];
     return <Tag color={config.color}>{config.text}</Tag>;
@@ -54,11 +79,14 @@ const TestRequestDetail: React.FC = () => {
 
   const getSampleStatusTag = (status: SampleStatus) => {
     const statusConfig = {
-      [SampleStatus.Normal]: { color: 'default', text: 'Bình thường' },
-      [SampleStatus.Damaged]: { color: 'warning', text: 'Hư hỏng' },
-      [SampleStatus.NotMeetRequirements]: { color: 'error', text: 'Không đạt YC' },
-      [SampleStatus.Testing]: { color: 'processing', text: 'Đang kiểm nghiệm' },
-      [SampleStatus.Completed]: { color: 'success', text: 'Hoàn thành' }
+      [SampleStatus.Normal]: { color: "default", text: "Bình thường" },
+      [SampleStatus.Damaged]: { color: "warning", text: "Hư hỏng" },
+      [SampleStatus.NotMeetRequirements]: {
+        color: "error",
+        text: "Không đạt YC",
+      },
+      [SampleStatus.Testing]: { color: "processing", text: "Đang kiểm nghiệm" },
+      [SampleStatus.Completed]: { color: "success", text: "Hoàn thành" },
     };
     const config = statusConfig[status];
     return <Tag color={config.color}>{config.text}</Tag>;
@@ -66,125 +94,176 @@ const TestRequestDetail: React.FC = () => {
 
   const getResultLanguageText = (lang: ResultLanguage) => {
     const langMap = {
-      [ResultLanguage.Vietnamese]: 'Tiếng Việt',
-      [ResultLanguage.English]: 'Tiếng Anh',
-      [ResultLanguage.VietnameseAndEnglish]: 'Tiếng Việt/Anh'
+      [ResultLanguage.Vietnamese]: "Tiếng Việt",
+      [ResultLanguage.English]: "Tiếng Anh",
+      [ResultLanguage.VietnameseAndEnglish]: "Tiếng Việt/Anh",
     };
-    return langMap[lang] || 'Tiếng Việt';
+    return langMap[lang] || "Tiếng Việt";
   };
 
   const getSamplingRequirementText = (req: SamplingRequirement) => {
     const reqMap = {
-      [SamplingRequirement.LabSampling]: 'TTKN lấy mẫu',
-      [SamplingRequirement.CustomerSampling]: 'KH tự lấy mẫu'
+      [SamplingRequirement.LabSampling]: "TTKN lấy mẫu",
+      [SamplingRequirement.CustomerSampling]: "KH tự lấy mẫu",
     };
-    return reqMap[req] || 'KH tự lấy mẫu';
+    return reqMap[req] || "KH tự lấy mẫu";
   };
 
   const getSampleStorageText = (opt: SampleStorageOption) => {
     const optMap = {
-      [SampleStorageOption.No]: 'Không',
-      [SampleStorageOption.Yes]: 'Có (theo quy định của Trung tâm)'
+      [SampleStorageOption.No]: "Không",
+      [SampleStorageOption.Yes]: "Có (theo quy định của Trung tâm)",
     };
-    return optMap[opt] || 'Không';
+    return optMap[opt] || "Không";
   };
 
   const BoolIcon = ({ value }: { value: boolean }) => {
     return value ? (
-      <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 16 }} />
+      <CheckCircleOutlined style={{ color: "#52c41a", fontSize: 16 }} />
     ) : (
-      <CloseCircleOutlined style={{ color: '#d9d9d9', fontSize: 16 }} />
+      <CloseCircleOutlined style={{ color: "#d9d9d9", fontSize: 16 }} />
     );
   };
 
   // Sample table columns
   const sampleColumns = [
     {
-      title: 'STT',
-      dataIndex: 'sortOrder',
-      key: 'sortOrder',
+      title: "STT",
+      dataIndex: "sortOrder",
+      key: "sortOrder",
       width: 50,
-      align: 'center' as const,
+      align: "center" as const,
     },
     {
-      title: 'Mã mẫu',
-      dataIndex: 'sampleCode',
-      key: 'sampleCode',
+      title: "Mã mẫu",
+      dataIndex: "sampleCode",
+      key: "sampleCode",
       width: 100,
     },
     {
-      title: 'Tên mẫu',
-      dataIndex: 'sampleName',
-      key: 'sampleName',
+      title: "Tên mẫu",
+      dataIndex: "sampleName",
+      key: "sampleName",
       width: 150,
     },
     {
-      title: 'Địa chỉ lấy mẫu',
-      dataIndex: 'samplingAddress',
-      key: 'samplingAddress',
+      title: "Địa chỉ lấy mẫu",
+      dataIndex: "samplingAddress",
+      key: "samplingAddress",
       width: 180,
-      render: (value: string) => value || '-',
+      render: (value: string) => value || "-",
     },
     {
-      title: 'Lượng mẫu',
-      dataIndex: 'sampleQuantity',
-      key: 'sampleQuantity',
+      title: "Lượng mẫu",
+      dataIndex: "sampleQuantity",
+      key: "sampleQuantity",
       width: 80,
-      render: (value: string) => value || '-',
+      render: (value: string) => value || "-",
     },
     {
-      title: 'Tình trạng mẫu',
-      dataIndex: 'statusText',
-      key: 'statusText',
+      title: "Tình trạng mẫu",
+      dataIndex: "statusText",
+      key: "statusText",
       width: 120,
-      render: (value: string, record: any) => value || getSampleStatusTag(record.status),
+      render: (value: string, record: any) =>
+        value || getSampleStatusTag(record.status),
     },
     {
-      title: 'Trạng thái XL',
-      dataIndex: 'processingStatus',
-      key: 'processingStatus',
+      title: "Trạng thái XL",
+      dataIndex: "processingStatus",
+      key: "processingStatus",
       width: 100,
-      render: (value: string) => value ? <Tag color="blue">{value}</Tag> : '-',
+      render: (value: string) =>
+        value ? <Tag color="blue">{value}</Tag> : "-",
     },
     {
-      title: 'Chỉ tiêu kiểm nghiệm',
-      dataIndex: 'indicators',
-      key: 'indicators',
+      title: "Chỉ tiêu kiểm nghiệm",
+      dataIndex: "indicators",
+      key: "indicators",
       width: 350,
       render: (indicators: any[]) => {
-        if (!indicators || indicators.length === 0) return '-';
+        if (!indicators || indicators.length === 0) return "-";
+
+        // Group indicators by laboratory
+        const unsentIndicators = indicators.filter((ind) => !ind.laboratoryId);
+        const sentIndicators = indicators.filter((ind) => ind.laboratoryId);
+        const groupedByLab: Record<string, { labName: string; indicators: any[] }> = {};
+
+        sentIndicators.forEach((ind) => {
+          const labId = ind.laboratoryId;
+          if (!groupedByLab[labId]) {
+            groupedByLab[labId] = {
+              labName: ind.laboratoryName || "Khoa phòng",
+              indicators: [],
+            };
+          }
+          groupedByLab[labId].indicators.push(ind);
+        });
+
+        const renderIndicator = (ind: any, idx: number) => (
+          <div
+            key={idx}
+            style={{
+              marginBottom: 4,
+              padding: "4px 8px",
+              background: "#f5f5f5",
+              borderRadius: 4,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                flexWrap: "wrap",
+              }}
+            >
+              <Tag color="blue" style={{ margin: 0, fontSize: 11 }}>
+                {ind.indicatorCode || ind.indicatorName}
+              </Tag>
+              <Text style={{ fontSize: 11 }}>{ind.indicatorName}</Text>
+              {ind.unitPrice > 0 && (
+                <Text type="secondary" style={{ fontSize: 11 }}>
+                  ({ind.unitPrice?.toLocaleString("vi-VN")}đ)
+                </Text>
+              )}
+            </div>
+            {ind.requestDate && (
+              <div style={{ fontSize: 10, color: "#888", marginTop: 2 }}>
+                YC xong: {dayjs(ind.requestDate).format("DD/MM/YYYY")}
+              </div>
+            )}
+          </div>
+        );
+
         return (
-          <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-            {indicators.map((ind, idx) => (
-              <div key={idx} style={{ marginBottom: 6, padding: '4px 8px', background: '#f5f5f5', borderRadius: 4 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  <Tag color="blue" style={{ margin: 0, fontSize: 11 }}>
-                    {ind.indicatorCode || ind.indicatorName}
-                  </Tag>
-                  <Text style={{ fontSize: 11 }}>{ind.indicatorName}</Text>
-                  {ind.unitPrice > 0 && (
-                    <Text type="secondary" style={{ fontSize: 11 }}>
-                      ({ind.unitPrice?.toLocaleString('vi-VN')}đ)
-                    </Text>
-                  )}
-                  {ind.sentToDepartment && (
-                    <Tag color="green" style={{ margin: 0, fontSize: 10 }}>Đã gửi KP</Tag>
-                  )}
+          <div style={{ maxHeight: 300, overflowY: "auto" }}>
+            {/* Unsent indicators */}
+            {unsentIndicators.length > 0 && (
+              <div style={{ marginBottom: 8 }}>
+                {unsentIndicators.map((ind, idx) => renderIndicator(ind, idx))}
+              </div>
+            )}
+
+            {/* Grouped by laboratory */}
+            {Object.entries(groupedByLab).map(([labId, { labName, indicators: labIndicators }]) => (
+              <div key={labId} style={{ marginBottom: 8 }}>
+                <div
+                  style={{
+                    padding: "4px 8px",
+                    fontWeight: 600,
+                    fontSize: 12,
+                    color: "#000",
+                    background: "#e6e6e6",
+                    borderRadius: 4,
+                    marginBottom: 4,
+                  }}
+                >
+                  {labName} ({labIndicators.length})
                 </div>
-                {(ind.transferDate || ind.requestDate) && (
-                  <div style={{ fontSize: 10, color: '#888', marginTop: 2 }}>
-                    {ind.transferDate && (
-                      <span style={{ marginRight: 8 }}>
-                        CG: {dayjs(ind.transferDate).format('DD/MM/YY')}
-                      </span>
-                    )}
-                    {ind.requestDate && (
-                      <span>
-                        YC: {dayjs(ind.requestDate).format('DD/MM/YY')}
-                      </span>
-                    )}
-                  </div>
-                )}
+                <div style={{ paddingLeft: 8 }}>
+                  {labIndicators.map((ind, idx) => renderIndicator(ind, idx))}
+                </div>
               </div>
             ))}
           </div>
@@ -192,27 +271,21 @@ const TestRequestDetail: React.FC = () => {
       },
     },
     {
-      title: 'Mã số mẫu',
-      dataIndex: 'storageLocation',
-      key: 'storageLocation',
-      width: 100,
-      render: (value: string) => value || '-',
-    },
-    {
-      title: 'Ghi chú',
-      dataIndex: 'notes',
-      key: 'notes',
+      title: "Ghi chú",
+      dataIndex: "notes",
+      key: "notes",
       width: 120,
       ellipsis: true,
-      render: (value: string) => value || '-',
+      render: (value: string) => value || "-",
     },
     {
-      title: 'Chi phí',
-      dataIndex: 'totalIndicatorCost',
-      key: 'totalIndicatorCost',
+      title: "Chi phí",
+      dataIndex: "totalIndicatorCost",
+      key: "totalIndicatorCost",
       width: 100,
-      align: 'right' as const,
-      render: (value: number) => value > 0 ? `${value.toLocaleString('vi-VN')}đ` : '-',
+      align: "right" as const,
+      render: (value: number) =>
+        value > 0 ? `${value.toLocaleString("vi-VN")}đ` : "-",
     },
   ];
 
@@ -227,7 +300,7 @@ const TestRequestDetail: React.FC = () => {
   if (!data) {
     return (
       <Card>
-        <p>{t('common.noData')}</p>
+        <p>{t("common.noData")}</p>
       </Card>
     );
   }
@@ -246,7 +319,7 @@ const TestRequestDetail: React.FC = () => {
           <Space wrap>
             <Button
               icon={<ArrowLeftOutlined />}
-              onClick={() => navigate('/requests')}
+              onClick={() => navigate("/requests")}
             >
               Quay lại
             </Button>
@@ -269,28 +342,32 @@ const TestRequestDetail: React.FC = () => {
             <Col xs={24} sm={12} md={6}>
               <div className="detail-item">
                 <Text type="secondary">Số HĐ:</Text>
-                <Text strong>{data.contractNumber || '-'}</Text>
+                <Text strong>{data.contractNumber || "-"}</Text>
               </div>
             </Col>
             <Col xs={24} sm={12} md={6}>
               <div className="detail-item">
                 <Text type="secondary">Ngày HĐ:</Text>
                 <Text strong>
-                  {data.contractDate ? dayjs(data.contractDate).format('DD/MM/YYYY') : '-'}
+                  {data.contractDate
+                    ? dayjs(data.contractDate).format("DD/MM/YYYY")
+                    : "-"}
                 </Text>
               </div>
             </Col>
             <Col xs={24} sm={12} md={6}>
               <div className="detail-item">
                 <Text type="secondary">Số phiếu thu:</Text>
-                <Text>{data.receiptNumber || '-'}</Text>
+                <Text>{data.receiptNumber || "-"}</Text>
               </div>
             </Col>
             <Col xs={24} sm={12} md={6}>
               <div className="detail-item">
                 <Text type="secondary">Ngày yêu cầu:</Text>
                 <Text strong>
-                  {data.requestDate ? dayjs(data.requestDate).format('DD/MM/YYYY HH:mm') : '-'}
+                  {data.requestDate
+                    ? dayjs(data.requestDate).format("DD/MM/YYYY HH:mm")
+                    : "-"}
                 </Text>
               </div>
             </Col>
@@ -328,13 +405,15 @@ const TestRequestDetail: React.FC = () => {
             <Col xs={24} md={12}>
               <div className="detail-item">
                 <Text type="secondary">Tên CS/DN:</Text>
-                <Text strong style={{ fontSize: 15 }}>{data.customerName || '-'}</Text>
+                <Text strong style={{ fontSize: 15 }}>
+                  {data.customerName || "-"}
+                </Text>
               </div>
             </Col>
             <Col xs={24} md={12}>
               <div className="detail-item">
                 <Text type="secondary">Mã số thuế:</Text>
-                <Text>{data.taxCode || '-'}</Text>
+                <Text>{data.taxCode || "-"}</Text>
               </div>
             </Col>
           </Row>
@@ -345,7 +424,7 @@ const TestRequestDetail: React.FC = () => {
                 <Text>
                   {[data.address, data.ward, data.district, data.province]
                     .filter(Boolean)
-                    .join(', ') || '-'}
+                    .join(", ") || "-"}
                 </Text>
               </div>
             </Col>
@@ -354,13 +433,13 @@ const TestRequestDetail: React.FC = () => {
             <Col xs={24} sm={12}>
               <div className="detail-item">
                 <Text type="secondary">Người liên hệ:</Text>
-                <Text strong>{data.contactPerson || '-'}</Text>
+                <Text strong>{data.contactPerson || "-"}</Text>
               </div>
             </Col>
             <Col xs={24} sm={12}>
               <div className="detail-item">
                 <Text type="secondary">Điện thoại:</Text>
-                <Text strong>{data.phone || '-'}</Text>
+                <Text strong>{data.phone || "-"}</Text>
               </div>
             </Col>
           </Row>
@@ -409,7 +488,9 @@ const TestRequestDetail: React.FC = () => {
         <Divider orientation="left" style={{ marginTop: 24 }}>
           <Space>
             <span style={{ fontWeight: 600 }}>Thông tin mẫu</span>
-            <Tag color="blue">{data.totalSampleCount || data.samples?.length || 0} mẫu</Tag>
+            <Tag color="blue">
+              {data.totalSampleCount || data.samples?.length || 0} mẫu
+            </Tag>
           </Space>
         </Divider>
 
@@ -422,7 +503,7 @@ const TestRequestDetail: React.FC = () => {
           size="small"
           bordered
           style={{ marginBottom: 24 }}
-          locale={{ emptyText: 'Không có mẫu nào' }}
+          locale={{ emptyText: "Không có mẫu nào" }}
         />
 
         {/* Yêu cầu về phương pháp */}
@@ -437,11 +518,15 @@ const TestRequestDetail: React.FC = () => {
                   <Space wrap size={[16, 8]}>
                     <Space size={4}>
                       <BoolIcon value={data.methodWestHighlandInstitute} />
-                      <Text style={{ fontSize: 13 }}>Theo Viện KHKT NN Tây Nguyên</Text>
+                      <Text style={{ fontSize: 13 }}>
+                        Theo Viện KHKT NN Tây Nguyên
+                      </Text>
                     </Space>
                     <Space size={4}>
                       <BoolIcon value={data.methodCustomer} />
-                      <Text style={{ fontSize: 13 }}>Theo yêu cầu khách hàng</Text>
+                      <Text style={{ fontSize: 13 }}>
+                        Theo yêu cầu khách hàng
+                      </Text>
                     </Space>
                   </Space>
                 </Col>
@@ -470,7 +555,7 @@ const TestRequestDetail: React.FC = () => {
                 <Col xs={24} sm={12}>
                   <div className="detail-item">
                     <Text type="secondary">Số bản:</Text>
-                    <Text>{data.resultCopyCount || '-'}</Text>
+                    <Text>{data.resultCopyCount || "-"}</Text>
                   </div>
                 </Col>
                 <Col xs={24}>
@@ -508,7 +593,9 @@ const TestRequestDetail: React.FC = () => {
                 <Col xs={24} sm={12}>
                   <div className="detail-item">
                     <Text type="secondary">Lấy mẫu:</Text>
-                    <Text>{getSamplingRequirementText(data.samplingRequirement)}</Text>
+                    <Text>
+                      {getSamplingRequirementText(data.samplingRequirement)}
+                    </Text>
                   </div>
                 </Col>
                 <Col xs={24} sm={12}>
@@ -536,16 +623,22 @@ const TestRequestDetail: React.FC = () => {
                 <Col xs={24} sm={12}>
                   <div className="detail-item">
                     <Text type="secondary">Ngày trả KQ:</Text>
-                    <Text strong style={{ color: '#1890ff' }}>
-                      {data.resultDeliveryDate ? dayjs(data.resultDeliveryDate).format('DD/MM/YYYY') : '-'}
+                    <Text strong style={{ color: "#1890ff" }}>
+                      {data.resultDeliveryDate
+                        ? dayjs(data.resultDeliveryDate).format("DD/MM/YYYY")
+                        : "-"}
                     </Text>
                   </div>
                 </Col>
                 <Col xs={24} sm={12}>
                   <div className="detail-item">
                     <Text type="secondary">Ngày hoàn thành dự kiến:</Text>
-                    <Text strong style={{ color: '#52c41a' }}>
-                      {data.expectedCompletionDate ? dayjs(data.expectedCompletionDate).format('DD/MM/YYYY') : '-'}
+                    <Text strong style={{ color: "#52c41a" }}>
+                      {data.expectedCompletionDate
+                        ? dayjs(data.expectedCompletionDate).format(
+                            "DD/MM/YYYY"
+                          )
+                        : "-"}
                     </Text>
                   </div>
                 </Col>
@@ -560,16 +653,23 @@ const TestRequestDetail: React.FC = () => {
               </Title>
               <Row gutter={[16, 12]}>
                 <Col xs={24}>
-                  <div style={{
-                    background: '#e6f7ff',
-                    padding: '16px',
-                    borderRadius: 8,
-                    border: '1px solid #91d5ff',
-                    textAlign: 'center'
-                  }}>
-                    <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>Tổng chi phí:</Text>
-                    <Text strong style={{ fontSize: 24, color: '#1890ff' }}>
-                      {(data.totalCost || 0).toLocaleString('vi-VN')} đ
+                  <div
+                    style={{
+                      background: "#e6f7ff",
+                      padding: "16px",
+                      borderRadius: 8,
+                      border: "1px solid #91d5ff",
+                      textAlign: "center",
+                    }}
+                  >
+                    <Text
+                      type="secondary"
+                      style={{ display: "block", marginBottom: 4 }}
+                    >
+                      Tổng chi phí:
+                    </Text>
+                    <Text strong style={{ fontSize: 24, color: "#1890ff" }}>
+                      {(data.totalCost || 0).toLocaleString("vi-VN")} đ
                     </Text>
                   </div>
                 </Col>
@@ -592,13 +692,13 @@ const TestRequestDetail: React.FC = () => {
                 <Col xs={24}>
                   <div className="detail-item">
                     <Text type="secondary">Người giám sát:</Text>
-                    <Text strong>{data.supervisorName || '-'}</Text>
+                    <Text strong>{data.supervisorName || "-"}</Text>
                   </div>
                 </Col>
                 <Col xs={24}>
                   <div className="detail-item">
                     <Text type="secondary">Giám đốc:</Text>
-                    <Text strong>{data.directorName || '-'}</Text>
+                    <Text strong>{data.directorName || "-"}</Text>
                   </div>
                 </Col>
               </Row>
@@ -626,12 +726,20 @@ const TestRequestDetail: React.FC = () => {
 
         {/* Thông tin hệ thống */}
         <Divider />
-        <Descriptions size="small" column={{ xs: 1, sm: 2 }} style={{ marginTop: 16 }}>
+        <Descriptions
+          size="small"
+          column={{ xs: 1, sm: 2 }}
+          style={{ marginTop: 16 }}
+        >
           <Descriptions.Item label="Ngày tạo">
-            {data.creationTime ? dayjs(data.creationTime).format('DD/MM/YYYY HH:mm:ss') : '-'}
+            {data.creationTime
+              ? dayjs(data.creationTime).format("DD/MM/YYYY HH:mm:ss")
+              : "-"}
           </Descriptions.Item>
           <Descriptions.Item label="Cập nhật lần cuối">
-            {data.lastModificationTime ? dayjs(data.lastModificationTime).format('DD/MM/YYYY HH:mm:ss') : '-'}
+            {data.lastModificationTime
+              ? dayjs(data.lastModificationTime).format("DD/MM/YYYY HH:mm:ss")
+              : "-"}
           </Descriptions.Item>
         </Descriptions>
       </Card>

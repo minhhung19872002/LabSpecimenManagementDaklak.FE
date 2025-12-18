@@ -35,9 +35,11 @@ import {
   indicatorGroupService,
   indicatorService,
   storageLocationService,
+  laboratoryService,
   IndicatorDto,
   IndicatorGroupDto,
   StorageLocationDto,
+  LaboratoryDto,
 } from "../../services/masterDataService";
 import { userService, UserLookupDto } from "../../services/userService";
 import { organizationService } from "../../services/organizationService";
@@ -141,6 +143,22 @@ const TestRequestForm: React.FC = () => {
     string[]
   >([]);
 
+  // Laboratory (Khoa phòng) selection modal state
+  const [laboratoryModalVisible, setLaboratoryModalVisible] = useState(false);
+  const [laboratories, setLaboratories] = useState<LaboratoryDto[]>([]);
+  const [selectedLaboratoryId, setSelectedLaboratoryId] = useState<
+    string | null
+  >(null);
+  const [laboratoryRequestDate, setLaboratoryRequestDate] =
+    useState<dayjs.Dayjs | null>(null);
+  const [indicatorsToSend, setIndicatorsToSend] = useState<string[]>([]);
+  // Store laboratory assignment for each indicator: { indicatorId: { laboratoryId, laboratoryName, requestDate } }
+  const [indicatorLaboratoryMap, setIndicatorLaboratoryMap] = useState<
+    Record<string, { laboratoryId: string; laboratoryName: string; requestDate: dayjs.Dayjs }>
+  >({});
+  // Expanded laboratory groups in right panel
+  const [expandedLabGroups, setExpandedLabGroups] = useState<string[]>([]);
+
   // Vietnam location states
   const [provinces] = useState<Province[]>(getAllProvinces());
   const [districts, setDistricts] = useState<District[]>([]);
@@ -195,19 +213,27 @@ const TestRequestForm: React.FC = () => {
 
   const loadMasterData = async () => {
     try {
-      const [groupsData, indicatorsData, locationsData, usersData, orgsData] =
-        await Promise.all([
-          indicatorGroupService.getActive(),
-          indicatorService.getActive(),
-          storageLocationService.getActive(),
-          userService.getLookup(),
-          organizationService.getAllActive(),
-        ]);
+      const [
+        groupsData,
+        indicatorsData,
+        locationsData,
+        usersData,
+        orgsData,
+        labsData,
+      ] = await Promise.all([
+        indicatorGroupService.getActive(),
+        indicatorService.getActive(),
+        storageLocationService.getActive(),
+        userService.getLookup(),
+        organizationService.getAllActive(),
+        laboratoryService.getActive(),
+      ]);
       setIndicatorGroups(groupsData);
       setIndicators(indicatorsData);
       setStorageLocations(locationsData.items || []);
       setUsers(usersData);
       setOrganizations(orgsData);
+      setLaboratories(labsData || []);
       // Don't set options initially - only show when user types
     } catch (error) {
       console.error("Failed to load master data:", error);
@@ -315,12 +341,17 @@ const TestRequestForm: React.FC = () => {
         );
         setSamples(sampleData);
 
-        // Restore indicator dates and checked states
+        // Restore indicator dates, checked states, and laboratory assignments
         const restoredDates: Record<
           string,
           { transferDate?: dayjs.Dayjs; requestDate?: dayjs.Dayjs }
         > = {};
         const restoredChecked: string[] = [];
+        const restoredLabMap: Record<
+          string,
+          { laboratoryId: string; laboratoryName: string; requestDate: dayjs.Dayjs }
+        > = {};
+        const expandedLabs: string[] = [];
 
         data.samples.forEach((sample) => {
           sample.indicators?.forEach((ind) => {
@@ -333,11 +364,25 @@ const TestRequestForm: React.FC = () => {
             if (ind.sentToDepartment) {
               restoredChecked.push(ind.indicatorId);
             }
+            // Restore laboratory assignment
+            if (ind.laboratoryId && ind.laboratoryName) {
+              restoredLabMap[ind.indicatorId] = {
+                laboratoryId: ind.laboratoryId,
+                laboratoryName: ind.laboratoryName,
+                requestDate: ind.requestDate ? dayjs(ind.requestDate) : dayjs(),
+              };
+              // Auto-expand laboratory groups
+              if (!expandedLabs.includes(ind.laboratoryId)) {
+                expandedLabs.push(ind.laboratoryId);
+              }
+            }
           });
         });
 
         setSelectedIndicatorDates(restoredDates);
         setCheckedIndicators(restoredChecked);
+        setIndicatorLaboratoryMap(restoredLabMap);
+        setExpandedLabGroups(expandedLabs);
       }
     } catch (error) {
       message.error("Không thể tải dữ liệu yêu cầu");
@@ -409,6 +454,17 @@ const TestRequestForm: React.FC = () => {
   };
 
   const handleIndicatorModalOk = () => {
+    // Validate: All indicators must be assigned to a laboratory
+    const unsentIndicators = tempSelectedIndicators.filter(
+      (id) => !indicatorLaboratoryMap[id]
+    );
+    if (unsentIndicators.length > 0) {
+      message.warning(
+        `Còn ${unsentIndicators.length} chỉ tiêu chưa được gửi đến khoa phòng. Vui lòng gửi tất cả chỉ tiêu trước khi lưu.`
+      );
+      return;
+    }
+
     if (currentSampleKey) {
       updateSample(currentSampleKey, "indicatorIds", tempSelectedIndicators);
     }
@@ -513,6 +569,22 @@ const TestRequestForm: React.FC = () => {
     field: "transferDate" | "requestDate",
     value: dayjs.Dayjs | null
   ) => {
+    const currentDates = selectedIndicatorDates[indicatorId] || {};
+
+    // Validate: transferDate không được lớn hơn requestDate
+    if (field === "transferDate" && value && currentDates.requestDate) {
+      if (value.isAfter(currentDates.requestDate)) {
+        message.warning("Ngày chuyển giao không được lớn hơn ngày yêu cầu");
+        return;
+      }
+    }
+    if (field === "requestDate" && value && currentDates.transferDate) {
+      if (value.isBefore(currentDates.transferDate)) {
+        message.warning("Ngày yêu cầu không được nhỏ hơn ngày chuyển giao");
+        return;
+      }
+    }
+
     setSelectedIndicatorDates((prev) => ({
       ...prev,
       [indicatorId]: {
@@ -542,15 +614,72 @@ const TestRequestForm: React.FC = () => {
     }
   };
 
-  // Handle send to department
-  const handleSendToDepartment = () => {
+  // Handle send to laboratory - open laboratory selection modal
+  const handleSendToLaboratory = () => {
     if (checkedIndicators.length === 0) {
       message.warning("Vui lòng chọn ít nhất một chỉ tiêu để gửi khoa phòng");
       return;
     }
+    // Store selected indicators and open modal
+    setIndicatorsToSend([...checkedIndicators]);
+    setLaboratoryRequestDate(null);
+    setSelectedLaboratoryId(null);
+    setLaboratoryModalVisible(true);
+  };
+
+  // Handle confirm send to laboratory
+  const handleConfirmSendToLaboratory = () => {
+    if (!selectedLaboratoryId) {
+      message.warning("Vui lòng chọn khoa phòng");
+      return;
+    }
+
+    if (!laboratoryRequestDate) {
+      message.warning("Vui lòng chọn ngày yêu cầu xong");
+      return;
+    }
+
+    const selectedLab = laboratories.find((d) => d.id === selectedLaboratoryId);
+    const labName = selectedLab?.name || "khoa phòng";
+
+    // Update the requestDate for selected indicators
+    setSelectedIndicatorDates((prev) => {
+      const updated = { ...prev };
+      indicatorsToSend.forEach((id) => {
+        updated[id] = {
+          ...updated[id],
+          requestDate: laboratoryRequestDate,
+        };
+      });
+      return updated;
+    });
+
+    // Store laboratory assignment for each indicator
+    setIndicatorLaboratoryMap((prev) => {
+      const updated = { ...prev };
+      indicatorsToSend.forEach((id) => {
+        updated[id] = {
+          laboratoryId: selectedLaboratoryId,
+          laboratoryName: labName,
+          requestDate: laboratoryRequestDate,
+        };
+      });
+      return updated;
+    });
+
+    // Auto expand the laboratory group
+    setExpandedLabGroups((prev) => {
+      if (!prev.includes(selectedLaboratoryId)) {
+        return [...prev, selectedLaboratoryId];
+      }
+      return prev;
+    });
+
     message.success(
-      `Đã gửi ${checkedIndicators.length} chỉ tiêu đến khoa phòng`
+      `Đã gửi ${indicatorsToSend.length} chỉ tiêu đến ${labName}`
     );
+    setLaboratoryModalVisible(false);
+    setCheckedIndicators([]);
   };
 
   // Initialize dates for selected indicators
@@ -612,14 +741,16 @@ const TestRequestForm: React.FC = () => {
         indicators: sample.indicatorIds.map((indId) => {
           const indicatorDates = selectedIndicatorDates[indId];
           const indicator = indicators.find((i) => i.id === indId);
+          const labAssignment = indicatorLaboratoryMap[indId];
           return {
             indicatorId: indId,
+            laboratoryId: labAssignment?.laboratoryId || undefined,
             unitPrice: indicator?.unitPrice || 0,
             transferDate:
               indicatorDates?.transferDate?.toISOString() || undefined,
-            requestDate:
+            requestDate: labAssignment?.requestDate?.toISOString() ||
               indicatorDates?.requestDate?.toISOString() || undefined,
-            sentToDepartment: checkedIndicators.includes(indId),
+            sentToDepartment: !!labAssignment || checkedIndicators.includes(indId),
           };
         }),
       }));
@@ -822,40 +953,74 @@ const TestRequestForm: React.FC = () => {
       key: "indicatorIds",
       width: 280,
       render: (value: string[], record: SampleFormData) => {
+        // Group indicators by laboratory
+        const unsentIndicators = value.filter((id) => !indicatorLaboratoryMap[id]);
+        const sentIndicators = value.filter((id) => indicatorLaboratoryMap[id]);
+        const groupedByLab: Record<string, { labName: string; indicators: string[] }> = {};
+        sentIndicators.forEach((id) => {
+          const labInfo = indicatorLaboratoryMap[id];
+          if (!groupedByLab[labInfo.laboratoryId]) {
+            groupedByLab[labInfo.laboratoryId] = {
+              labName: labInfo.laboratoryName,
+              indicators: [],
+            };
+          }
+          groupedByLab[labInfo.laboratoryId].indicators.push(id);
+        });
+
         const popoverContent = (
-          <div style={{ maxHeight: 300, overflowY: "auto", minWidth: 250 }}>
+          <div style={{ maxHeight: 300, overflowY: "auto", minWidth: 280 }}>
             {value.length === 0 ? (
               <Text type="secondary">Chưa chọn chỉ tiêu nào</Text>
             ) : (
-              value.map((indId, idx) => {
-                const ind = getIndicatorInfo(indId);
-                return ind ? (
-                  <div
-                    key={indId}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      padding: "4px 0",
-                      borderBottom:
-                        idx < value.length - 1 ? "1px solid #f0f0f0" : "none",
-                    }}
-                  >
-                    <span style={{ flex: 1 }}>- {ind.name}</span>
-                    <Button
-                      type="text"
-                      size="small"
-                      danger
-                      icon={<CloseOutlined />}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeIndicatorFromSample(record.key, indId);
+              <>
+                {/* Unsent indicators */}
+                {unsentIndicators.map((indId, idx) => {
+                  const ind = getIndicatorInfo(indId);
+                  return ind ? (
+                    <div
+                      key={indId}
+                      style={{
+                        padding: "4px 0",
+                        borderBottom: "1px solid #f0f0f0",
                       }}
-                      style={{ marginLeft: 8 }}
-                    />
+                    >
+                      <span>- {ind.name}</span>
+                    </div>
+                  ) : null;
+                })}
+                {/* Grouped by laboratory */}
+                {Object.entries(groupedByLab).map(([labId, { labName, indicators }]) => (
+                  <div key={labId}>
+                    <div
+                      style={{
+                        padding: "6px 0 4px 0",
+                        fontWeight: 600,
+                        fontSize: 13,
+                        color: "#000",
+                        borderBottom: "1px solid #f0f0f0",
+                        marginTop: unsentIndicators.length > 0 ? 8 : 0,
+                      }}
+                    >
+                      {labName} ({indicators.length})
+                    </div>
+                    {indicators.map((indId) => {
+                      const ind = getIndicatorInfo(indId);
+                      return ind ? (
+                        <div
+                          key={indId}
+                          style={{
+                            padding: "4px 0 4px 12px",
+                            borderBottom: "1px solid #f0f0f0",
+                          }}
+                        >
+                          <span>- {ind.name}</span>
+                        </div>
+                      ) : null;
+                    })}
                   </div>
-                ) : null;
-              })
+                ))}
+              </>
             )}
           </div>
         );
@@ -2243,7 +2408,7 @@ const TestRequestForm: React.FC = () => {
             </div>
           </div>
 
-          {/* Right panel - Selected indicators */}
+          {/* Right panel - Selected indicators grouped by laboratory */}
           <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
             <div
               style={{
@@ -2260,14 +2425,21 @@ const TestRequestForm: React.FC = () => {
                 <Checkbox
                   checked={
                     checkedIndicators.length ===
-                      tempSelectedIndicators.length &&
-                    tempSelectedIndicators.length > 0
+                      tempSelectedIndicators.filter((id) => !indicatorLaboratoryMap[id]).length &&
+                    tempSelectedIndicators.filter((id) => !indicatorLaboratoryMap[id]).length > 0
                   }
                   indeterminate={
                     checkedIndicators.length > 0 &&
-                    checkedIndicators.length < tempSelectedIndicators.length
+                    checkedIndicators.length < tempSelectedIndicators.filter((id) => !indicatorLaboratoryMap[id]).length
                   }
-                  onChange={(e) => handleSelectAllIndicators(e.target.checked)}
+                  onChange={(e) => {
+                    // Only select unsent indicators
+                    if (e.target.checked) {
+                      setCheckedIndicators(tempSelectedIndicators.filter((id) => !indicatorLaboratoryMap[id]));
+                    } else {
+                      setCheckedIndicators([]);
+                    }
+                  }}
                 >
                   Chọn tất cả
                 </Checkbox>
@@ -2276,112 +2448,174 @@ const TestRequestForm: React.FC = () => {
                 type="primary"
                 size="small"
                 icon={<Icon icon="mdi:send" width={14} />}
-                onClick={handleSendToDepartment}
+                onClick={handleSendToLaboratory}
               >
                 Gửi khoa phòng
               </Button>
             </div>
-            <div style={{ flex: 1, overflowY: "auto" }}>
-              <Table
-                dataSource={tempSelectedIndicators
-                  .map((id) => getIndicatorInfo(id))
-                  .filter(Boolean)}
-                rowKey="id"
-                size="small"
-                pagination={false}
-                scroll={{ y: 360, x: 705 }}
-                tableLayout="fixed"
-                columns={[
-                  {
-                    title: "[X]",
-                    key: "check",
-                    width: 40,
-                    render: (_: any, record: any) => (
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+              {/* Table header */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "8px 12px",
+                  background: "#fafafa",
+                  borderBottom: "1px solid #f0f0f0",
+                  fontWeight: 600,
+                  fontSize: 13,
+                  flexShrink: 0,
+                }}
+              >
+                <span style={{ width: 24 }}>[X]</span>
+                <span style={{ flex: 1 }}>Chỉ tiêu</span>
+                <span style={{ width: 80, textAlign: "right" }}>Đơn giá</span>
+                <span style={{ width: 110, textAlign: "center" }}>Ngày chuyển giao</span>
+                <span style={{ width: 110, textAlign: "center" }}>Ngày yêu cầu</span>
+                <span style={{ width: 32 }}>Xóa</span>
+              </div>
+              {/* Table body */}
+              <div style={{ flex: 1, overflowY: "auto" }}>
+              {/* Group indicators by laboratory */}
+              {(() => {
+                // Separate sent and unsent indicators
+                const unsentIndicators = tempSelectedIndicators.filter((id) => !indicatorLaboratoryMap[id]);
+                const sentIndicators = tempSelectedIndicators.filter((id) => indicatorLaboratoryMap[id]);
+
+                // Group sent indicators by laboratory
+                const groupedByLab: Record<string, { labName: string; requestDate: dayjs.Dayjs; indicators: string[] }> = {};
+                sentIndicators.forEach((id) => {
+                  const labInfo = indicatorLaboratoryMap[id];
+                  if (!groupedByLab[labInfo.laboratoryId]) {
+                    groupedByLab[labInfo.laboratoryId] = {
+                      labName: labInfo.laboratoryName,
+                      requestDate: labInfo.requestDate,
+                      indicators: [],
+                    };
+                  }
+                  groupedByLab[labInfo.laboratoryId].indicators.push(id);
+                });
+
+                // Render indicator row (shared between unsent and sent)
+                const renderIndicatorRow = (id: string, isInGroup: boolean = false) => {
+                  const ind = getIndicatorInfo(id);
+                  if (!ind) return null;
+                  return (
+                    <div
+                      key={id}
+                      style={{
+                        padding: isInGroup ? "8px 12px 8px 36px" : "8px 12px",
+                        borderBottom: "1px solid #f5f5f5",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        background: "#fff",
+                      }}
+                    >
                       <Checkbox
-                        checked={checkedIndicators.includes(record.id)}
-                        onChange={() => toggleCheckedIndicator(record.id)}
+                        checked={checkedIndicators.includes(id)}
+                        onChange={() => toggleCheckedIndicator(id)}
+                        style={{ width: 24 }}
                       />
-                    ),
-                  },
-                  {
-                    title: "STT",
-                    key: "stt",
-                    width: 50,
-                    render: (_: any, __: any, index: number) => index + 1,
-                  },
-                  {
-                    title: "Chỉ tiêu",
-                    dataIndex: "name",
-                    key: "name",
-                    width: 200,
-                    ellipsis: true,
-                  },
-                  {
-                    title: "Đơn giá",
-                    dataIndex: "unitPrice",
-                    key: "unitPrice",
-                    width: 90,
-                    align: "right" as const,
-                    render: (value: number) => value?.toLocaleString("vi-VN"),
-                  },
-                  {
-                    title: "Ngày chuyển giao",
-                    key: "transferDate",
-                    width: 145,
-                    render: (_: any, record: any) => (
+                      <span style={{ flex: 1, fontSize: 13 }}>{ind.name}</span>
+                      <span style={{ fontSize: 12, color: "#888", width: 80, textAlign: "right" }}>
+                        {ind.unitPrice?.toLocaleString("vi-VN")}đ
+                      </span>
                       <DatePicker
-                        value={selectedIndicatorDates[record.id]?.transferDate}
-                        onChange={(date) =>
-                          handleIndicatorDateChange(
-                            record.id,
-                            "transferDate",
-                            date
-                          )
-                        }
+                        value={selectedIndicatorDates[id]?.transferDate}
+                        onChange={(date) => handleIndicatorDateChange(id, "transferDate", date)}
                         format="DD/MM/YYYY"
                         size="small"
-                        style={{ width: "100%" }}
-                        placeholder=""
+                        style={{ width: 110 }}
+                        placeholder="Chuyển giao"
                       />
-                    ),
-                  },
-                  {
-                    title: "Ngày yêu cầu",
-                    key: "requestDate",
-                    width: 130,
-                    render: (_: any, record: any) => (
                       <DatePicker
-                        value={selectedIndicatorDates[record.id]?.requestDate}
-                        onChange={(date) =>
-                          handleIndicatorDateChange(
-                            record.id,
-                            "requestDate",
-                            date
-                          )
-                        }
+                        value={selectedIndicatorDates[id]?.requestDate}
+                        onChange={(date) => handleIndicatorDateChange(id, "requestDate", date)}
                         format="DD/MM/YYYY"
                         size="small"
-                        style={{ width: "100%" }}
-                        placeholder=""
+                        style={{ width: 110 }}
+                        placeholder="Yêu cầu"
                       />
-                    ),
-                  },
-                  {
-                    title: "Xóa",
-                    key: "action",
-                    width: 50,
-                    render: (_: any, record: any) => (
                       <Button
                         type="text"
                         size="small"
                         danger
                         icon={<CloseOutlined />}
-                        onClick={() => toggleIndicator(record.id)}
+                        style={{ width: 32 }}
+                        onClick={() => {
+                          toggleIndicator(id);
+                          // Also remove from laboratory map if exists
+                          if (indicatorLaboratoryMap[id]) {
+                            setIndicatorLaboratoryMap((prev) => {
+                              const updated = { ...prev };
+                              delete updated[id];
+                              return updated;
+                            });
+                          }
+                        }}
                       />
-                    ),
-                  },
-                ]}
-              />
+                    </div>
+                  );
+                };
+
+                return (
+                  <>
+                    {/* Unsent indicators - display normally without group header */}
+                    {unsentIndicators.map((id) => renderIndicatorRow(id, false))}
+
+                    {/* Sent indicators grouped by laboratory */}
+                    {Object.entries(groupedByLab).map(([labId, { labName, requestDate, indicators: labIndicators }]) => {
+                      const isExpanded = expandedLabGroups.includes(labId);
+                      return (
+                        <div key={labId}>
+                          {/* Group header */}
+                          <div
+                            onClick={() => {
+                              setExpandedLabGroups((prev) =>
+                                prev.includes(labId)
+                                  ? prev.filter((id) => id !== labId)
+                                  : [...prev, labId]
+                              );
+                            }}
+                            style={{
+                              padding: "8px 12px",
+                              background: "#fafafa",
+                              borderBottom: "1px solid #f0f0f0",
+                              fontWeight: 600,
+                              fontSize: 13,
+                              color: "#000",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                              cursor: "pointer",
+                              userSelect: "none",
+                            }}
+                          >
+                            <Icon
+                              icon={isExpanded ? "mdi:chevron-down" : "mdi:chevron-right"}
+                              width={18}
+                              style={{ color: "#595959", flexShrink: 0 }}
+                            />
+                            <span>{labName} ({labIndicators.length})</span>
+                          </div>
+                          {/* Group items - only show when expanded */}
+                          {isExpanded && labIndicators.map((id) => renderIndicatorRow(id, true))}
+                        </div>
+                      );
+                    })}
+
+                    {/* Empty state */}
+                    {tempSelectedIndicators.length === 0 && (
+                      <div style={{ padding: 24, textAlign: "center" }}>
+                        <Text type="secondary">Chưa chọn chỉ tiêu nào</Text>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+              </div>
             </div>
             <div
               style={{
@@ -2395,6 +2629,11 @@ const TestRequestForm: React.FC = () => {
             >
               <Text style={{ fontSize: 14 }}>
                 Số chỉ tiêu: <Text strong>{tempSelectedIndicators.length}</Text>
+                {tempSelectedIndicators.filter((id) => indicatorLaboratoryMap[id]).length > 0 && (
+                  <span style={{ color: "#52c41a", marginLeft: 8 }}>
+                    (Đã gửi: {tempSelectedIndicators.filter((id) => indicatorLaboratoryMap[id]).length})
+                  </span>
+                )}
               </Text>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <Text style={{ fontSize: 14 }}>Tổng tiền:</Text>
@@ -2408,6 +2647,140 @@ const TestRequestForm: React.FC = () => {
                   đ
                 </Text>
               </div>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Department Selection Modal */}
+      <Modal
+        title={
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Icon icon="mdi:office-building" width={24} height={24} />
+              <span>Chọn khoa phòng</span>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Button
+                type="primary"
+                icon={<Icon icon="mdi:check" width={16} />}
+                onClick={handleConfirmSendToLaboratory}
+              >
+                Gửi
+              </Button>
+              <Button
+                icon={<Icon icon="mdi:close" width={16} />}
+                onClick={() => setLaboratoryModalVisible(false)}
+              >
+                Thoát
+              </Button>
+            </div>
+          </div>
+        }
+        open={laboratoryModalVisible}
+        onCancel={() => setLaboratoryModalVisible(false)}
+        closable={false}
+        width={800}
+        centered
+        footer={null}
+        styles={{
+          body: {
+            padding: 0,
+            maxHeight: "calc(100vh - 200px)",
+            overflowY: "auto"
+          }
+        }}
+      >
+        <div style={{ padding: "16px" }}>
+          {/* Ngày yêu cầu xong */}
+          <Row align="middle" style={{ marginBottom: 16 }}>
+            <Col span={8}>
+              <Text>Ngày yêu cầu xong:</Text>
+            </Col>
+            <Col span={16}>
+              <DatePicker
+                value={laboratoryRequestDate}
+                onChange={(date) => setLaboratoryRequestDate(date)}
+                format="DD/MM/YYYY"
+                style={{ width: "100%" }}
+                placeholder="Chọn ngày..."
+                disabledDate={(current) => {
+                  // Disable dates before today
+                  return current && current.isBefore(dayjs().startOf("day"));
+                }}
+              />
+            </Col>
+          </Row>
+
+          {/* Danh sách khoa phòng - Radio */}
+          <div
+            style={{
+              border: "1px solid #d9d9d9",
+              borderRadius: 4,
+              padding: 12,
+              marginBottom: 16,
+              background: "#fafafa",
+            }}
+          >
+            <Radio.Group
+              value={selectedLaboratoryId}
+              onChange={(e) => setSelectedLaboratoryId(e.target.value)}
+              style={{ width: "100%" }}
+            >
+              <Space direction="vertical" style={{ width: "100%" }}>
+                {laboratories.map((lab) => (
+                  <Radio
+                    key={lab.id}
+                    value={lab.id}
+                    style={{ display: "block" }}
+                  >
+                    {lab.code ? `${lab.code} - ${lab.name}` : lab.name}
+                  </Radio>
+                ))}
+              </Space>
+            </Radio.Group>
+            {laboratories.length === 0 && (
+              <Text type="secondary">Không có khoa phòng nào</Text>
+            )}
+          </div>
+
+          {/* Danh sách chỉ tiêu đã chọn */}
+          <div>
+            <Text strong style={{ display: "block", marginBottom: 8 }}>
+              Chỉ tiêu đã chọn ({indicatorsToSend.length})
+            </Text>
+            <div
+              style={{
+                border: "1px solid #d9d9d9",
+                borderRadius: 4,
+              }}
+            >
+              <Table
+                dataSource={indicatorsToSend
+                  .map((id) => getIndicatorInfo(id))
+                  .filter(Boolean)}
+                rowKey="id"
+                size="small"
+                pagination={false}
+                columns={[
+                  {
+                    title: "Chỉ tiêu",
+                    dataIndex: "name",
+                    key: "name",
+                    ellipsis: true,
+                  },
+                  {
+                    title: "Đơn giá",
+                    dataIndex: "unitPrice",
+                    key: "unitPrice",
+                    width: 120,
+                    align: "right" as const,
+                    render: (value: number) =>
+                      value?.toLocaleString("vi-VN") + "đ",
+                  },
+                ]}
+                locale={{ emptyText: "Không có chỉ tiêu nào" }}
+              />
             </div>
           </div>
         </div>

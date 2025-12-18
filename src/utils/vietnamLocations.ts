@@ -64,7 +64,7 @@ export const getProvinceNameByCode = (code: string): string => {
 // Get district name by code
 export const getDistrictNameByCode = (provinceCode: string, districtCode: string): string => {
   if (!provinceCode || !districtCode) return '';
-  const districts = getDistricts(provinceCode);
+  const districts = getDistricts();
   const district = districts.find((d: District) => d.code === districtCode);
   return district?.name || '';
 };
@@ -72,7 +72,7 @@ export const getDistrictNameByCode = (provinceCode: string, districtCode: string
 // Get ward name by code
 export const getWardNameByCode = (districtCode: string, wardCode: string): string => {
   if (!districtCode || !wardCode) return '';
-  const wards = getWards(districtCode);
-  const ward = wards.find((w: Ward) => w.code === wardCode);
+  const wards = getWards();
+  const ward = wards.find((w: any) => w.code === wardCode);
   return ward?.name || '';
 };
