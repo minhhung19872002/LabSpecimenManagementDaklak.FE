@@ -121,6 +121,26 @@ export interface CreateUpdateCustomerDto {
   isActive: boolean;
 }
 
+// Laboratory (Khoa phòng)
+export interface LaboratoryDto {
+  id: string;
+  code: string;
+  name: string;
+  technicalManagerId?: string;
+  technicalManagerName?: string;
+  isActive: boolean;
+  sortOrder: number;
+  creationTime: string;
+}
+
+export interface CreateUpdateLaboratoryDto {
+  code: string;
+  name: string;
+  technicalManagerId?: string;
+  isActive: boolean;
+  sortOrder?: number;
+}
+
 // IndicatorGroup
 export interface IndicatorGroupDto {
   id: string;
@@ -186,6 +206,7 @@ const STORAGE_LOCATION_URL = '/api/v1/storage-locations';
 const CUSTOMER_URL = '/api/v1/customers';
 const INDICATOR_GROUP_URL = '/api/v1/indicator-groups';
 const INDICATOR_URL = '/api/v1/indicators';
+const LABORATORY_URL = '/api/v1/laboratories';
 
 // Helper to convert params for API (ABP Framework uses SkipCount, MaxResultCount, Sorting)
 const toApiParams = (params: PagedAndSortedResultRequestDto) => {
@@ -331,6 +352,39 @@ export const customerService = {
   getActive: async (): Promise<PagedResultDto<CustomerDto>> => {
     const response = await api.get<CustomerDto[]>(`${CUSTOMER_URL}/active`);
     return { items: response.data, totalCount: response.data.length };
+  },
+};
+
+export const laboratoryService = {
+  getAll: async (): Promise<LaboratoryDto[]> => {
+    const response = await api.get<LaboratoryDto[] | { items: LaboratoryDto[] }>(LABORATORY_URL);
+    // Handle both array and { items: [...] } format
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+    return response.data.items || [];
+  },
+  get: async (id: string): Promise<LaboratoryDto> => {
+    const response = await api.get<LaboratoryDto>(`${LABORATORY_URL}/${id}`);
+    return response.data;
+  },
+  create: async (data: CreateUpdateLaboratoryDto): Promise<LaboratoryDto> => {
+    const response = await api.post<LaboratoryDto>(LABORATORY_URL, data);
+    return response.data;
+  },
+  update: async (id: string, data: CreateUpdateLaboratoryDto): Promise<LaboratoryDto> => {
+    const response = await api.put<LaboratoryDto>(`${LABORATORY_URL}/${id}`, data);
+    return response.data;
+  },
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`${LABORATORY_URL}/${id}`);
+  },
+  getActive: async (): Promise<LaboratoryDto[]> => {
+    const response = await api.get<LaboratoryDto[] | { items: LaboratoryDto[] }>(`${LABORATORY_URL}/active`);
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+    return response.data.items || [];
   },
 };
 

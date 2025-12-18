@@ -36,16 +36,19 @@ import {
 	testMethodService,
 	storageLocationService,
 	customerService,
+	laboratoryService,
 	DepartmentDto,
 	SpecimenTypeDto,
 	TestMethodDto,
 	StorageLocationDto,
 	CustomerDto,
+	LaboratoryDto,
 	CreateUpdateDepartmentDto,
 	CreateUpdateSpecimenTypeDto,
 	CreateUpdateTestMethodDto,
 	CreateUpdateStorageLocationDto,
 	CreateUpdateCustomerDto,
+	CreateUpdateLaboratoryDto,
 } from "../../services/masterDataService";
 import ImportExcelModal, {
 	ImportType,
@@ -54,6 +57,7 @@ import {
 	importService,
 	downloadBlobAsFile,
 } from "../../services/importService";
+import { userService, UserLookupDto } from "../../services/userService";
 import IndicatorsTab from "./IndicatorsTab";
 
 // Unified type for all master data items
@@ -62,10 +66,12 @@ type MasterDataItem =
 	| SpecimenTypeDto
 	| TestMethodDto
 	| StorageLocationDto
-	| CustomerDto;
+	| CustomerDto
+	| LaboratoryDto;
 
 const categoryLabels: Record<string, string> = {
 	departments: "Phòng ban",
+	laboratories: "Khoa phòng",
 	specimenTypes: "Loại mẫu",
 	testMethods: "Phương pháp thử",
 	storageLocations: "Vị trí lưu kho",
@@ -77,6 +83,7 @@ const MasterDataList: React.FC = () => {
 	const [activeCategory, setActiveCategory] = useState("departments");
 	const [data, setData] = useState<Record<string, MasterDataItem[]>>({
 		departments: [],
+		laboratories: [],
 		specimenTypes: [],
 		testMethods: [],
 		storageLocations: [],
@@ -85,6 +92,7 @@ const MasterDataList: React.FC = () => {
 	});
 	const [loading, setLoading] = useState<Record<string, boolean>>({
 		departments: false,
+		laboratories: false,
 		specimenTypes: false,
 		testMethods: false,
 		storageLocations: false,
@@ -98,6 +106,7 @@ const MasterDataList: React.FC = () => {
 	const [modalLoading, setModalLoading] = useState(false);
 	const [importModalOpen, setImportModalOpen] = useState(false);
 	const [downloadingTemplate, setDownloadingTemplate] = useState(false);
+	const [users, setUsers] = useState<UserLookupDto[]>([]);
 	const [form] = Form.useForm();
 
 	// Map category to import type (only customers and testMethods support import)
@@ -105,6 +114,7 @@ const MasterDataList: React.FC = () => {
 		customers: "customers",
 		testMethods: "test-methods",
 		departments: null,
+		laboratories: null,
 		specimenTypes: null,
 		storageLocations: null,
 	};
@@ -123,6 +133,10 @@ const MasterDataList: React.FC = () => {
 					result = await departmentService.getList({
 						maxResultCount: 1000,
 					});
+					break;
+				case "laboratories":
+					const labItems = await laboratoryService.getAll();
+					result = { items: labItems, totalCount: labItems.length };
 					break;
 				case "specimenTypes":
 					result = await specimenTypeService.getList({
@@ -173,6 +187,19 @@ const MasterDataList: React.FC = () => {
 		loadAllCategories();
 	}, []);
 
+	// Load users for Quản lý kỹ thuật dropdown
+	useEffect(() => {
+		const loadUsers = async () => {
+			try {
+				const userList = await userService.getLookup();
+				setUsers(userList);
+			} catch (err) {
+				console.error("Failed to load users:", err);
+			}
+		};
+		loadUsers();
+	}, []);
+
 	// Reload current category data when switching tabs (if needed for refresh)
 	useEffect(() => {
 		// Only reload if data is empty (not loaded yet)
@@ -216,6 +243,9 @@ const MasterDataList: React.FC = () => {
 				case "departments":
 					await departmentService.delete(id);
 					break;
+				case "laboratories":
+					await laboratoryService.delete(id);
+					break;
 				case "specimenTypes":
 					await specimenTypeService.delete(id);
 					break;
@@ -235,10 +265,30 @@ const MasterDataList: React.FC = () => {
 			await fetchCategoryData(activeCategory);
 		} catch (err: any) {
 			console.error("Failed to delete:", err);
-			const errorMsg =
-				err?.response?.data?.error?.message ||
-				err?.message ||
-				"Failed to delete item";
+			// Handle different error formats from ABP Framework
+			let errorMsg = "Lỗi khi xóa dữ liệu";
+
+			if (err?.response?.data) {
+				const errorData = err.response.data;
+				if (errorData.error?.message) {
+					errorMsg = errorData.error.message;
+				} else if (errorData.message) {
+					errorMsg = errorData.message;
+				} else if (errorData.general && Array.isArray(errorData.general)) {
+					errorMsg = errorData.general.join(", ");
+				} else if (errorData.errors) {
+					const errorMessages = Object.values(errorData.errors).flat();
+					errorMsg = (errorMessages as string[]).join(", ");
+				} else if (typeof errorData === "object") {
+					const allErrors = Object.values(errorData).flat().filter((e) => typeof e === "string");
+					if (allErrors.length > 0) {
+						errorMsg = (allErrors as string[]).join(", ");
+					}
+				}
+			} else if (err?.message) {
+				errorMsg = err.message;
+			}
+
 			setError(errorMsg);
 			message.error(errorMsg);
 		}
@@ -257,6 +307,12 @@ const MasterDataList: React.FC = () => {
 						await departmentService.update(
 							editingItem.id,
 							values as CreateUpdateDepartmentDto
+						);
+						break;
+					case "laboratories":
+						await laboratoryService.update(
+							editingItem.id,
+							values as CreateUpdateLaboratoryDto
 						);
 						break;
 					case "specimenTypes":
@@ -293,6 +349,11 @@ const MasterDataList: React.FC = () => {
 							values as CreateUpdateDepartmentDto
 						);
 						break;
+					case "laboratories":
+						await laboratoryService.create(
+							values as CreateUpdateLaboratoryDto
+						);
+						break;
 					case "specimenTypes":
 						await specimenTypeService.create(
 							values as CreateUpdateSpecimenTypeDto
@@ -323,10 +384,39 @@ const MasterDataList: React.FC = () => {
 			await fetchCategoryData(activeCategory);
 		} catch (err: any) {
 			console.error("Failed to save:", err);
-			const errorMsg =
-				err?.response?.data?.error?.message ||
-				err?.message ||
-				"Failed to save item";
+			// Handle different error formats from ABP Framework
+			let errorMsg = "Lỗi khi lưu dữ liệu";
+
+			if (err?.response?.data) {
+				const errorData = err.response.data;
+				// ABP Framework format: { error: { message: "...", details: "..." } }
+				if (errorData.error?.message) {
+					errorMsg = errorData.error.message;
+				}
+				// Alternative ABP format: { message: "..." }
+				else if (errorData.message) {
+					errorMsg = errorData.message;
+				}
+				// Custom format with general errors: { general: ["error1", "error2"] }
+				else if (errorData.general && Array.isArray(errorData.general)) {
+					errorMsg = errorData.general.join(", ");
+				}
+				// Validation errors format: { errors: { field: ["error1", "error2"] } }
+				else if (errorData.errors) {
+					const errorMessages = Object.values(errorData.errors).flat();
+					errorMsg = (errorMessages as string[]).join(", ");
+				}
+				// Direct object with field arrays: { fieldName: ["error1"] }
+				else if (typeof errorData === "object") {
+					const allErrors = Object.values(errorData).flat().filter((e) => typeof e === "string");
+					if (allErrors.length > 0) {
+						errorMsg = (allErrors as string[]).join(", ");
+					}
+				}
+			} else if (err?.message) {
+				errorMsg = err.message;
+			}
+
 			setError(errorMsg);
 			message.error(errorMsg);
 		} finally {
@@ -466,6 +556,25 @@ const MasterDataList: React.FC = () => {
 					width: 150,
 				}
 			);
+		} else if (activeCategory === "laboratories") {
+			baseColumns.push({
+				title: "Quản lý kỹ thuật",
+				dataIndex: "technicalManagerName",
+				key: "technicalManagerName",
+				width: 180,
+				render: (technicalManagerName: string, record: any) => {
+					// If technicalManagerName is available, use it
+					if (technicalManagerName) {
+						return technicalManagerName;
+					}
+					// Otherwise, try to find from users list
+					if (record.technicalManagerId) {
+						const user = users.find((u) => u.id === record.technicalManagerId);
+						return user?.displayName || "-";
+					}
+					return "-";
+				},
+			});
 		} else {
 			baseColumns.push({
 				title: "Mô tả",
@@ -662,15 +771,19 @@ const MasterDataList: React.FC = () => {
 												columns={getColumns()}
 												dataSource={filteredData}
 												rowKey="id"
-												pagination={{
-													pageSize: 50,
-													pageSizeOptions: [
-														50, 100, 150,
-													],
-													showSizeChanger: true,
-													showTotal: (total) =>
-														`Tổng ${total} mục`,
-												}}
+												pagination={
+													activeCategory === "laboratories"
+														? false
+														: {
+																pageSize: 50,
+																pageSizeOptions: [
+																	50, 100, 150,
+																],
+																showSizeChanger: true,
+																showTotal: (total) =>
+																	`Tổng ${total} mục`,
+														  }
+												}
 												scroll={{
 													x:
 														activeCategory ===
@@ -797,7 +910,7 @@ const MasterDataList: React.FC = () => {
 							</Row>
 						</>
 					)}
-					{activeCategory !== "customers" && (
+					{activeCategory !== "customers" && activeCategory !== "laboratories" && (
 						<>
 							<Form.Item name="description" label="Mô tả">
 								<Input.TextArea rows={3} />
@@ -860,6 +973,45 @@ const MasterDataList: React.FC = () => {
 									</Form.Item>
 								</Col>
 							</Row>
+						</>
+					)}
+					{activeCategory === "laboratories" && (
+						<>
+							<Form.Item
+								name="technicalManagerId"
+								label="Quản lý kỹ thuật"
+							>
+								<Select
+									showSearch
+									allowClear
+									placeholder="Chọn quản lý kỹ thuật"
+									optionFilterProp="children"
+									filterOption={(input, option) =>
+										(option?.children as unknown as string)
+											?.toLowerCase()
+											.includes(input.toLowerCase())
+									}
+								>
+									{users.map((user) => (
+										<Select.Option key={user.id} value={user.id}>
+											{user.displayName}
+										</Select.Option>
+									))}
+								</Select>
+							</Form.Item>
+							<Form.Item
+								name="isActive"
+								label="Trạng thái"
+							>
+								<Select>
+									<Select.Option value={true}>
+										Hoạt động
+									</Select.Option>
+									<Select.Option value={false}>
+										Ngừng
+									</Select.Option>
+								</Select>
+							</Form.Item>
 						</>
 					)}
 					{activeCategory === "customers" && (

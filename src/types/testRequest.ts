@@ -40,6 +40,8 @@ export interface TestRequestSampleIndicatorDto {
   indicatorGroupName?: string;
   unitPrice: number;
   notes?: string;
+  laboratoryId?: string;
+  laboratoryName?: string;
   transferDate?: string;
   requestDate?: string;
   sentToDepartment: boolean;
@@ -47,6 +49,7 @@ export interface TestRequestSampleIndicatorDto {
 
 export interface CreateTestRequestSampleIndicatorDto {
   indicatorId: string;
+  laboratoryId?: string;
   unitPrice?: number;
   notes?: string;
   transferDate?: string;
@@ -57,6 +60,7 @@ export interface CreateTestRequestSampleIndicatorDto {
 export interface UpdateTestRequestSampleIndicatorDto {
   id?: string;
   indicatorId: string;
+  laboratoryId?: string;
   unitPrice?: number;
   notes?: string;
   transferDate?: string;
