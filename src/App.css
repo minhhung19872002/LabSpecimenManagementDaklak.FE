@@ -42,3 +42,69 @@
 .has-horizontal-scroll .ant-table-cell-fix-right .ant-btn {
   cursor: pointer;
 }
+
+/* Fullscreen modal for OnlyOffice Editor */
+.fullscreen-modal.ant-modal-wrap {
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+.fullscreen-modal .ant-modal {
+  max-width: 100vw !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  position: absolute !important;
+}
+
+.fullscreen-modal .ant-modal-content {
+  border-radius: 0 !important;
+  height: 100vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.fullscreen-modal .ant-modal-header {
+  border-radius: 0 !important;
+  flex-shrink: 0;
+}
+
+.fullscreen-modal .ant-modal-body {
+  flex: 1 !important;
+  height: calc(100vh - 110px) !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+.fullscreen-modal .ant-modal-footer {
+  border-radius: 0 !important;
+  flex-shrink: 0;
+}
+
+/* ant-modal-root container */
+.fullscreen-modal + .ant-modal-mask,
+.fullscreen-modal.ant-modal-wrap .ant-modal-mask {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+/* Ensure modal container is fullscreen */
+body .ant-modal-root .fullscreen-modal {
+  inset: 0 !important;
+}
+
+body .ant-modal-root .fullscreen-modal .ant-modal-centered {
+  display: block !important;
+}
+
+/* Fix for ant-modal-container inside wrap */
+.fullscreen-modal > div,
+.fullscreen-modal .ant-modal-container {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}

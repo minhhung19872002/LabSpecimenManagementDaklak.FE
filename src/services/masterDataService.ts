@@ -513,3 +513,82 @@ export interface ImportIndicatorGroupErrorDto {
   groupName: string;
   errorMessage: string;
 }
+
+// FormTemplate
+export interface FormTemplateDto {
+  fileName: string;
+  name: string;
+}
+
+export interface OnlyOfficeEditorConfigDto {
+  documentServerUrl: string;
+  config: OnlyOfficeConfig;
+}
+
+export interface OnlyOfficeConfig {
+  document: OnlyOfficeDocument;
+  documentType: string;
+  editorConfig: OnlyOfficeEditorSettings;
+  height: string;
+  width: string;
+  type: string;
+}
+
+export interface OnlyOfficeDocument {
+  fileType: string;
+  key: string;
+  title: string;
+  url: string;
+}
+
+export interface OnlyOfficeEditorSettings {
+  callbackUrl: string;
+  lang: string;
+  mode: string;
+  customization: OnlyOfficeCustomization;
+}
+
+export interface OnlyOfficeCustomization {
+  autosave: boolean;
+  chat: boolean;
+  comments: boolean;
+  compactHeader: boolean;
+  compactToolbar: boolean;
+  feedback: boolean;
+  forceSave: boolean;
+  help: boolean;
+  hideRightMenu: boolean;
+  hideRulers: boolean;
+  integrationMode: string;
+  logo: any;
+  macrosMode: string;
+  mentionShare: boolean;
+  plugins: boolean;
+  reviewDisplay: string;
+  toolbarHideFileName: boolean;
+  toolbarNoTabs: boolean;
+  uiicons: boolean;
+  unit: string;
+  zoom: number;
+}
+
+const FORM_TEMPLATE_URL = '/api/v1/form-templates';
+
+export const formTemplateService = {
+  getList: async (): Promise<FormTemplateDto[]> => {
+    const response = await api.get<FormTemplateDto[]>(FORM_TEMPLATE_URL);
+    return response.data || [];
+  },
+  getDownloadUrl: (fileName: string): string => {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:44381';
+    return `${baseUrl}${FORM_TEMPLATE_URL}/download/${encodeURIComponent(fileName)}`;
+  },
+  download: async (fileName: string): Promise<Blob> => {
+    const response = await api.download(`${FORM_TEMPLATE_URL}/download/${encodeURIComponent(fileName)}`);
+    return response.data;
+  },
+  getEditorConfig: async (fileName: string): Promise<OnlyOfficeEditorConfigDto> => {
+    const response = await api.get<OnlyOfficeEditorConfigDto>(`${FORM_TEMPLATE_URL}/editor-config/${encodeURIComponent(fileName)}`);
+    return response.data;
+  },
+};
