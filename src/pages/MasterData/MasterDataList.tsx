@@ -59,6 +59,7 @@ import {
 } from "../../services/importService";
 import { userService, UserLookupDto } from "../../services/userService";
 import IndicatorsTab from "./IndicatorsTab";
+import FormTemplatesTab from "./FormTemplatesTab";
 
 // Unified type for all master data items
 type MasterDataItem =
@@ -77,6 +78,7 @@ const categoryLabels: Record<string, string> = {
 	storageLocations: "Vị trí lưu kho",
 	customers: "Khách hàng",
 	indicators: "Nhóm chỉ tiêu",
+	formTemplates: "Form mẫu",
 };
 
 const MasterDataList: React.FC = () => {
@@ -686,7 +688,7 @@ const MasterDataList: React.FC = () => {
 					</Space>
 				}
 				extra={
-					activeCategory !== "indicators" && (
+					activeCategory !== "indicators" && activeCategory !== "formTemplates" && (
 						<Space>
 							{canImport && (
 								<Button
@@ -734,7 +736,7 @@ const MasterDataList: React.FC = () => {
 							label: (
 								<Space>
 									{label}
-									{key !== "indicators" && (
+									{key !== "indicators" && key !== "formTemplates" && (
 										<Tag>{data[key]?.length || 0}</Tag>
 									)}
 								</Space>
@@ -742,6 +744,8 @@ const MasterDataList: React.FC = () => {
 							children:
 								key === "indicators" ? (
 									<IndicatorsTab onDataChange={() => {}} />
+								) : key === "formTemplates" ? (
+									<FormTemplatesTab />
 								) : (
 									<>
 										<Row
