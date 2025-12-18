@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, Card, Checkbox, message, Alert } from 'antd';
-import { UserOutlined, LockOutlined } from '@ant-design/icons';
-import { useTranslation } from 'react-i18next';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { authService } from '../../services/authService';
-import './Login.css';
+import React, { useState, useEffect } from "react";
+import { Form, Input, Button, Card, Checkbox, message, Alert } from "antd";
+import { UserOutlined, LockOutlined } from "@ant-design/icons";
+import { useTranslation } from "react-i18next";
+import { useNavigate, useLocation } from "react-router-dom";
+import { authService } from "../../services/authService";
+import "./Login.css";
 
 interface LoginFormValues {
   username: string;
@@ -12,7 +12,7 @@ interface LoginFormValues {
   rememberMe?: boolean;
 }
 
-const REMEMBERED_USERNAME_KEY = 'remembered_username';
+const REMEMBERED_USERNAME_KEY = "remembered_username";
 
 const Login: React.FC = () => {
   const { t } = useTranslation();
@@ -23,7 +23,7 @@ const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Get the return URL from location state
-  const from = (location.state as any)?.from?.pathname || '/dashboard';
+  const from = (location.state as any)?.from?.pathname || "/dashboard";
 
   // Load remembered username on mount
   useEffect(() => {
@@ -31,6 +31,7 @@ const Login: React.FC = () => {
     if (rememberedUsername) {
       form.setFieldsValue({
         username: rememberedUsername,
+        password: "1q2w3E*",
         rememberMe: true,
       });
     }
@@ -63,38 +64,46 @@ const Login: React.FC = () => {
           localStorage.removeItem(REMEMBERED_USERNAME_KEY);
         }
 
-        message.success('Đăng nhập thành công!');
+        message.success("Đăng nhập thành công!");
         // Store user info
         if (response.user) {
-          localStorage.setItem('user_info', JSON.stringify(response.user));
+          localStorage.setItem("user_info", JSON.stringify(response.user));
         }
         // Navigate to the original requested page or dashboard
         navigate(from, { replace: true });
       } else if (response.errorMessage) {
         setError(response.errorMessage);
       } else {
-        setError('Đăng nhập thất bại. Vui lòng thử lại.');
+        setError("Đăng nhập thất bại. Vui lòng thử lại.");
       }
     } catch (err: any) {
-      console.error('Login error:', err);
+      console.error("Login error:", err);
 
       // Handle different error cases
       if (err.response?.status === 401) {
-        setError('Tên đăng nhập hoặc mật khẩu không đúng.');
+        setError("Tên đăng nhập hoặc mật khẩu không đúng.");
       } else if (err.response?.status === 400) {
         const errorData = err.response?.data;
         if (errorData?.errors) {
-          const errorMessages = Object.values(errorData.errors).flat().join(', ');
-          setError(errorMessages || 'Thông tin đăng nhập không hợp lệ.');
+          const errorMessages = Object.values(errorData.errors)
+            .flat()
+            .join(", ");
+          setError(errorMessages || "Thông tin đăng nhập không hợp lệ.");
         } else {
-          setError(errorData?.message || errorData?.errorMessage || 'Thông tin đăng nhập không hợp lệ.');
+          setError(
+            errorData?.message ||
+              errorData?.errorMessage ||
+              "Thông tin đăng nhập không hợp lệ."
+          );
         }
       } else if (err.response?.status === 423) {
-        setError('Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.');
+        setError("Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.");
       } else if (!err.response) {
-        setError('Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.');
+        setError(
+          "Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng."
+        );
       } else {
-        setError('Đã xảy ra lỗi. Vui lòng thử lại sau.');
+        setError("Đã xảy ra lỗi. Vui lòng thử lại sau.");
       }
     } finally {
       setLoading(false);
@@ -104,8 +113,8 @@ const Login: React.FC = () => {
   return (
     <div className="login-container">
       <Card className="login-card">
-        <h1>{t('common.appName')}</h1>
-        <h2>{t('common.login')}</h2>
+        <h1>{t("common.appName")}</h1>
+        <h2>{t("common.login")}</h2>
 
         {error && (
           <Alert
@@ -128,13 +137,13 @@ const Login: React.FC = () => {
           <Form.Item
             name="username"
             rules={[
-              { required: true, message: 'Vui lòng nhập tên đăng nhập!' },
-              { min: 3, message: 'Tên đăng nhập phải có ít nhất 3 ký tự!' },
+              { required: true, message: "Vui lòng nhập tên đăng nhập!" },
+              { min: 3, message: "Tên đăng nhập phải có ít nhất 3 ký tự!" },
             ]}
           >
             <Input
               prefix={<UserOutlined />}
-              placeholder={t('auth.username')}
+              placeholder={t("auth.username")}
               size="large"
               disabled={loading}
             />
@@ -143,13 +152,13 @@ const Login: React.FC = () => {
           <Form.Item
             name="password"
             rules={[
-              { required: true, message: 'Vui lòng nhập mật khẩu!' },
-              { min: 6, message: 'Mật khẩu phải có ít nhất 6 ký tự!' },
+              { required: true, message: "Vui lòng nhập mật khẩu!" },
+              { min: 6, message: "Mật khẩu phải có ít nhất 6 ký tự!" },
             ]}
           >
             <Input.Password
               prefix={<LockOutlined />}
-              placeholder={t('auth.password')}
+              placeholder={t("auth.password")}
               size="large"
               disabled={loading}
             />
@@ -167,7 +176,7 @@ const Login: React.FC = () => {
               size="large"
               loading={loading}
             >
-              {loading ? 'Đang đăng nhập...' : t('common.login')}
+              {loading ? "Đang đăng nhập..." : t("common.login")}
             </Button>
           </Form.Item>
         </Form>

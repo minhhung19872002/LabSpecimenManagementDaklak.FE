@@ -51,6 +51,9 @@ const SubcontractorList = Loadable(lazy(() => import('./pages/Subcontractor/Subc
 // Master Data
 const MasterDataList = Loadable(lazy(() => import('./pages/MasterData/MasterDataList')));
 
+// Organization
+const OrganizationList = Loadable(lazy(() => import('./pages/Organization/OrganizationList')));
+
 // Audit Log
 const AuditLogList = Loadable(lazy(() => import('./pages/AuditLog/AuditLogList')));
 
@@ -122,6 +125,9 @@ function App() {
 
           {/* Master Data - Ngân hàng dữ liệu */}
           <Route path="master-data" element={<MasterDataList />} />
+
+          {/* Organization - Cơ sở/Doanh nghiệp */}
+          <Route path="organizations" element={<OrganizationList />} />
 
           {/* Audit Log - Lịch sử thay đổi */}
           <Route path="audit-log" element={<AuditLogList />} />
