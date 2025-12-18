@@ -532,6 +532,7 @@ export interface OnlyOfficeConfig {
   height: string;
   width: string;
   type: string;
+  token?: string;
 }
 
 export interface OnlyOfficeDocument {
@@ -539,13 +540,32 @@ export interface OnlyOfficeDocument {
   key: string;
   title: string;
   url: string;
+  permissions?: OnlyOfficePermissions;
+}
+
+export interface OnlyOfficePermissions {
+  comment: boolean;
+  copy: boolean;
+  download: boolean;
+  edit: boolean;
+  fillForms: boolean;
+  modifyContentControl: boolean;
+  modifyFilter: boolean;
+  print: boolean;
+  review: boolean;
 }
 
 export interface OnlyOfficeEditorSettings {
   callbackUrl: string;
   lang: string;
   mode: string;
+  user?: OnlyOfficeUser;
   customization: OnlyOfficeCustomization;
+}
+
+export interface OnlyOfficeUser {
+  id: string;
+  name: string;
 }
 
 export interface OnlyOfficeCustomization {
