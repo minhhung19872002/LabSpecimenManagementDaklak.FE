@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Layout, Menu, MenuProps, Dropdown, Avatar, Space, Modal, Form, Input, message, Button } from 'antd';
+import { Layout, Menu, MenuProps, Dropdown, Avatar, Space, Modal, Form, Input, message, Button, Drawer } from 'antd';
 import {
   DashboardOutlined,
   FileTextOutlined,
@@ -21,6 +21,8 @@ import {
   LogoutOutlined,
   KeyOutlined,
   DownOutlined,
+  MenuOutlined,
+  CloseOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
@@ -36,6 +38,7 @@ const routeToKeyMap: Record<string, string> = {
   '/dashboard': 'dashboard',
   '/requests': 'requests',
   '/test-request': 'requests',
+  '/task-management': 'taskManagement',
   '/specimens': 'specimens',
   '/specimen': 'specimens',
   '/tests': 'tests',
@@ -49,13 +52,18 @@ const routeToKeyMap: Record<string, string> = {
   '/tasks': 'tasks',
   '/subcontractors': 'subcontractors',
   '/master-data': 'masterData',
+  '/organizations': 'organizations',
   '/audit-log': 'auditLog',
   '/settings': 'settings',
   '/employees': 'employees',
 };
 
+const MOBILE_BREAKPOINT = 768;
+
 const MainLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < MOBILE_BREAKPOINT);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [changePasswordVisible, setChangePasswordVisible] = useState(false);
   const [changePasswordLoading, setChangePasswordLoading] = useState(false);
@@ -63,6 +71,25 @@ const MainLayout: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Handle window resize for mobile detection
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < MOBILE_BREAKPOINT;
+      setIsMobile(mobile);
+      if (!mobile) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
 
   // Load user info from localStorage
   useEffect(() => {
@@ -174,6 +201,12 @@ const MainLayout: React.FC = () => {
           onClick: () => navigate('/requests'),
         },
         {
+          key: 'taskManagement',
+          icon: <ScheduleOutlined />,
+          label: menuLabel('Quản lý công việc'),
+          onClick: () => navigate('/task-management'),
+        },
+        {
           key: 'specimens',
           icon: <ExperimentOutlined />,
           label: menuLabel(t('menu.specimens')),
@@ -248,6 +281,12 @@ const MainLayout: React.FC = () => {
           onClick: () => navigate('/master-data'),
         },
         {
+          key: 'organizations',
+          icon: <TeamOutlined />,
+          label: menuLabel('Cơ sở/Doanh nghiệp'),
+          onClick: () => navigate('/organizations'),
+        },
+        {
           key: 'auditLog',
           icon: <AuditOutlined />,
           label: menuLabel(t('menu.auditLog')),
@@ -276,24 +315,60 @@ const MainLayout: React.FC = () => {
     },
   ];
 
+  // Menu component to be shared between Sider and Drawer
+  const menuContent = (
+    <>
+      <div className="logo">
+        <h2>{collapsed && !isMobile ? 'LSM' : t('common.appName')}</h2>
+      </div>
+      <Menu
+        theme="dark"
+        selectedKeys={[selectedKey]}
+        defaultOpenKeys={defaultOpenKeys}
+        mode="inline"
+        items={menuItems}
+      />
+    </>
+  );
+
   return (
     <Layout style={{ height: '100vh', overflow: 'hidden' }}>
-      <Sider collapsible collapsed={collapsed} onCollapse={setCollapsed}>
-        <div className="logo">
-          <h2>{collapsed ? 'LSM' : t('common.appName')}</h2>
-        </div>
-        <Menu
-          theme="dark"
-          selectedKeys={[selectedKey]}
-          defaultOpenKeys={defaultOpenKeys}
-          mode="inline"
-          items={menuItems}
-        />
-      </Sider>
+      {/* Desktop Sider */}
+      {!isMobile && (
+        <Sider collapsible collapsed={collapsed} onCollapse={setCollapsed}>
+          {menuContent}
+        </Sider>
+      )}
+
+      {/* Mobile Drawer */}
+      <Drawer
+        placement="left"
+        open={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+        width={260}
+        className="mobile-menu-drawer"
+        styles={{
+          body: { padding: 0, background: '#001529' },
+          header: { display: 'none' },
+        }}
+        closeIcon={<CloseOutlined style={{ color: '#fff' }} />}
+      >
+        {menuContent}
+      </Drawer>
+
       <Layout>
         <Header style={{ padding: '0 16px', background: '#fff' }}>
           <div className="header-content">
-            <h1>{t('common.appName')}</h1>
+            {/* Hamburger menu button for mobile */}
+            {isMobile && (
+              <Button
+                type="text"
+                icon={<MenuOutlined style={{ fontSize: 20 }} />}
+                onClick={() => setMobileMenuOpen(true)}
+                className="mobile-menu-trigger"
+              />
+            )}
+            <h1 className="header-title">{t('common.appName')}</h1>
             <div className="header-actions">
               <Dropdown
                 menu={{

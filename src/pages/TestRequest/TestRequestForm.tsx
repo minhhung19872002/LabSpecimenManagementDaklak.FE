@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Form,
   Input,
@@ -24,6 +24,7 @@ import {
   Tooltip,
   Popover,
   Tag,
+  AutoComplete,
 } from "antd";
 import { PlusOutlined, DeleteOutlined, CloseOutlined } from "@ant-design/icons";
 import { Icon } from "@iconify/react";
@@ -39,6 +40,8 @@ import {
   StorageLocationDto,
 } from "../../services/masterDataService";
 import { userService, UserLookupDto } from "../../services/userService";
+import { organizationService } from "../../services/organizationService";
+import { OrganizationDto } from "../../types/organization";
 import {
   TestRequestStatus,
   ResultLanguage,
@@ -58,6 +61,7 @@ import {
   District,
   Ward,
 } from "../../utils/vietnamLocations";
+import "./TestRequestForm.css";
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;
@@ -100,6 +104,12 @@ const TestRequestForm: React.FC = () => {
   >([]);
   const [indicatorTreeData, setIndicatorTreeData] = useState<any[]>([]);
   const [users, setUsers] = useState<UserLookupDto[]>([]);
+  const [organizations, setOrganizations] = useState<OrganizationDto[]>([]);
+  const [organizationOptions, setOrganizationOptions] = useState<
+    { value: string; label: string }[]
+  >([]);
+  const [organizationSearching, setOrganizationSearching] = useState(false);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Costs
   const [totalSampleCost, setTotalSampleCost] = useState(0);
@@ -185,22 +195,64 @@ const TestRequestForm: React.FC = () => {
 
   const loadMasterData = async () => {
     try {
-      const [groupsData, indicatorsData, locationsData, usersData] =
+      const [groupsData, indicatorsData, locationsData, usersData, orgsData] =
         await Promise.all([
           indicatorGroupService.getActive(),
           indicatorService.getActive(),
           storageLocationService.getActive(),
           userService.getLookup(),
+          organizationService.getAllActive(),
         ]);
       setIndicatorGroups(groupsData);
       setIndicators(indicatorsData);
       setStorageLocations(locationsData.items || []);
       setUsers(usersData);
+      setOrganizations(orgsData);
+      // Don't set options initially - only show when user types
     } catch (error) {
       console.error("Failed to load master data:", error);
       message.error("Không thể tải dữ liệu danh mục");
     }
   };
+
+  // Handle organization search for autocomplete with debounce
+  const handleOrganizationSearch = (searchText: string) => {
+    // Clear previous timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    // If empty, clear options
+    if (!searchText || searchText.trim().length < 1) {
+      setOrganizationOptions([]);
+      setOrganizationSearching(false);
+      return;
+    }
+
+    setOrganizationSearching(true);
+
+    // Debounce search - wait 300ms after user stops typing
+    debounceTimerRef.current = setTimeout(() => {
+      const filtered = organizations
+        .filter((org) =>
+          org.name.toLowerCase().includes(searchText.toLowerCase())
+        )
+        .slice(0, 20) // Limit to 20 results for performance
+        .map((org) => ({ value: org.name, label: org.name }));
+
+      setOrganizationOptions(filtered);
+      setOrganizationSearching(false);
+    }, 300);
+  };
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
 
   const loadData = async () => {
     if (!id) return;
@@ -264,13 +316,18 @@ const TestRequestForm: React.FC = () => {
         setSamples(sampleData);
 
         // Restore indicator dates and checked states
-        const restoredDates: Record<string, { transferDate?: dayjs.Dayjs; requestDate?: dayjs.Dayjs }> = {};
+        const restoredDates: Record<
+          string,
+          { transferDate?: dayjs.Dayjs; requestDate?: dayjs.Dayjs }
+        > = {};
         const restoredChecked: string[] = [];
 
         data.samples.forEach((sample) => {
           sample.indicators?.forEach((ind) => {
             restoredDates[ind.indicatorId] = {
-              transferDate: ind.transferDate ? dayjs(ind.transferDate) : undefined,
+              transferDate: ind.transferDate
+                ? dayjs(ind.transferDate)
+                : undefined,
               requestDate: ind.requestDate ? dayjs(ind.requestDate) : undefined,
             };
             if (ind.sentToDepartment) {
@@ -522,7 +579,7 @@ const TestRequestForm: React.FC = () => {
 
   const onFinish = async (values: any) => {
     if (samples.length === 0) {
-      message.error("Vui lòng thêm ít nhất một mẫu xét nghiệm");
+      message.warning("Vui lòng thêm ít nhất một mẫu xét nghiệm");
       return;
     }
 
@@ -531,7 +588,7 @@ const TestRequestForm: React.FC = () => {
       (s) => !s.sampleCode || !s.sampleName
     );
     if (invalidSamples.length > 0) {
-      message.error(
+      message.warning(
         "Vui lòng điền đầy đủ mã mẫu và tên mẫu cho tất cả các mẫu"
       );
       return;
@@ -558,16 +615,22 @@ const TestRequestForm: React.FC = () => {
           return {
             indicatorId: indId,
             unitPrice: indicator?.unitPrice || 0,
-            transferDate: indicatorDates?.transferDate?.toISOString() || undefined,
-            requestDate: indicatorDates?.requestDate?.toISOString() || undefined,
+            transferDate:
+              indicatorDates?.transferDate?.toISOString() || undefined,
+            requestDate:
+              indicatorDates?.requestDate?.toISOString() || undefined,
             sentToDepartment: checkedIndicators.includes(indId),
           };
         }),
       }));
 
       // Get location names from codes
-      const selectedProvince = provinces.find((p) => p.code === values.provinceCode);
-      const selectedDistrict = districts.find((d) => d.code === values.districtCode);
+      const selectedProvince = provinces.find(
+        (p) => p.code === values.provinceCode
+      );
+      const selectedDistrict = districts.find(
+        (d) => d.code === values.districtCode
+      );
       const selectedWard = wards.find((w) => w.code === values.wardCode);
 
       const payload = {
@@ -863,22 +926,6 @@ const TestRequestForm: React.FC = () => {
       ),
     },
     {
-      title: "Vị trí lưu",
-      dataIndex: "storageLocation",
-      key: "storageLocation",
-      width: 120,
-      render: (value: string, record: SampleFormData) => (
-        <Input
-          value={value}
-          onChange={(e) =>
-            updateSample(record.key, "storageLocation", e.target.value)
-          }
-          placeholder="Vị trí"
-          size="small"
-        />
-      ),
-    },
-    {
       title: "Ghi chú",
       dataIndex: "notes",
       key: "notes",
@@ -912,6 +959,7 @@ const TestRequestForm: React.FC = () => {
 
   return (
     <Card
+      className="test-request-form"
       title={
         isEditMode
           ? "Chỉnh sửa yêu cầu thử nghiệm"
@@ -932,16 +980,12 @@ const TestRequestForm: React.FC = () => {
         }}
       >
         {/* Thông tin hợp đồng */}
-        <div
-          style={{
-            background: "#fafafa",
-            padding: "16px",
-            marginBottom: "16px",
-            borderRadius: "4px",
-          }}
-        >
+        <div className="form-section">
+          <Title level={5} className="section-title">
+            Thông tin hợp đồng
+          </Title>
           <Row gutter={[16, 8]} align="middle">
-            <Col xs={12} sm={6} md={4}>
+            <Col xs={24} sm={12} md={12} lg={4}>
               <Form.Item
                 name="contractNumber"
                 label="Số HĐ"
@@ -951,7 +995,7 @@ const TestRequestForm: React.FC = () => {
                 <Input placeholder="Số hợp đồng" />
               </Form.Item>
             </Col>
-            <Col xs={12} sm={6} md={4}>
+            <Col xs={24} sm={12} md={12} lg={4}>
               <Form.Item
                 name="contractDate"
                 label="Ngày HĐ"
@@ -961,7 +1005,7 @@ const TestRequestForm: React.FC = () => {
                 <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={12} md={16}>
+            <Col xs={24} sm={24} md={16}>
               <div
                 style={{
                   display: "flex",
@@ -1004,16 +1048,12 @@ const TestRequestForm: React.FC = () => {
         </div>
 
         {/* Thông tin khách hàng */}
-        <div
-          style={{
-            background: "#fafafa",
-            padding: "16px",
-            marginBottom: "16px",
-            borderRadius: "4px",
-          }}
-        >
+        <div className="form-section">
+          <Title level={5} className="section-title">
+            Thông tin khách hàng
+          </Title>
           <Row gutter={[16, 8]}>
-            <Col xs={24} sm={24} md={8}>
+            <Col xs={24} sm={24} lg={12}>
               <Form.Item
                 name="customerName"
                 label="Tên CS/DN"
@@ -1021,14 +1061,30 @@ const TestRequestForm: React.FC = () => {
                   { required: true, message: "Vui lòng nhập tên khách hàng" },
                 ]}
               >
-                <Input placeholder="Tên cơ sở / doanh nghiệp" />
+                <AutoComplete
+                  options={organizationOptions}
+                  onSearch={handleOrganizationSearch}
+                  placeholder="Nhập tên cơ sở / doanh nghiệp..."
+                  filterOption={false}
+                  notFoundContent={
+                    organizationSearching ? (
+                      <span style={{ color: "#999" }}>Đang tìm kiếm...</span>
+                    ) : organizationOptions.length === 0 ? null : (
+                      <span style={{ color: "#999" }}>
+                        Không tìm thấy kết quả
+                      </span>
+                    )
+                  }
+                />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={12} md={5}>
+            <Col xs={24} sm={8} lg={4}>
               <Form.Item
                 name="provinceCode"
                 label="Tỉnh thành"
-                rules={[{ required: true, message: "Vui lòng chọn tỉnh thành" }]}
+                rules={[
+                  { required: true, message: "Vui lòng chọn tỉnh thành" },
+                ]}
               >
                 <Select
                   placeholder="Chọn tỉnh thành"
@@ -1041,7 +1097,10 @@ const TestRequestForm: React.FC = () => {
                       .includes(input.toLowerCase())
                   }
                   onChange={(value) => {
-                    form.setFieldsValue({ districtCode: undefined, wardCode: undefined });
+                    form.setFieldsValue({
+                      districtCode: undefined,
+                      wardCode: undefined,
+                    });
                     setWards([]);
                     if (value) {
                       setDistricts(getDistrictsByProvince(value));
@@ -1058,11 +1117,13 @@ const TestRequestForm: React.FC = () => {
                 </Select>
               </Form.Item>
             </Col>
-            <Col xs={12} sm={12} md={5}>
+            <Col xs={24} sm={8} lg={4}>
               <Form.Item
                 name="districtCode"
                 label="Quận huyện"
-                rules={[{ required: true, message: "Vui lòng chọn quận huyện" }]}
+                rules={[
+                  { required: true, message: "Vui lòng chọn quận huyện" },
+                ]}
               >
                 <Select
                   placeholder="Chọn quận/huyện"
@@ -1092,7 +1153,7 @@ const TestRequestForm: React.FC = () => {
                 </Select>
               </Form.Item>
             </Col>
-            <Col xs={12} sm={12} md={6}>
+            <Col xs={24} sm={8} lg={4}>
               <Form.Item
                 name="wardCode"
                 label="Phường xã"
@@ -1120,7 +1181,7 @@ const TestRequestForm: React.FC = () => {
             </Col>
           </Row>
           <Row gutter={[16, 8]}>
-            <Col xs={24} sm={24} md={12}>
+            <Col xs={24} sm={24} lg={12}>
               <Form.Item
                 name="address"
                 label="Địa chỉ"
@@ -1129,25 +1190,29 @@ const TestRequestForm: React.FC = () => {
                 <Input placeholder="Địa chỉ chi tiết" />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={8} md={4}>
+            <Col xs={24} sm={8} lg={4}>
               <Form.Item
                 name="taxCode"
                 label="Mã số thuế"
-                rules={[{ required: true, message: "Vui lòng nhập mã số thuế" }]}
+                rules={[
+                  { required: true, message: "Vui lòng nhập mã số thuế" },
+                ]}
               >
                 <Input placeholder="MST" />
               </Form.Item>
             </Col>
-            <Col xs={12} sm={8} md={4}>
+            <Col xs={24} sm={8} lg={4}>
               <Form.Item
                 name="contactPerson"
                 label="Người LH"
-                rules={[{ required: true, message: "Vui lòng nhập người liên hệ" }]}
+                rules={[
+                  { required: true, message: "Vui lòng nhập người liên hệ" },
+                ]}
               >
                 <Input placeholder="Người liên hệ" />
               </Form.Item>
             </Col>
-            <Col xs={12} sm={8} md={4}>
+            <Col xs={24} sm={8} lg={4}>
               <Form.Item
                 name="phone"
                 label="Điện thoại"
@@ -1166,11 +1231,26 @@ const TestRequestForm: React.FC = () => {
         </div>
 
         {/* Bảng thông tin mẫu */}
-        <Divider orientation="left">
-          <Space>
-            <span>
-              Mẫu {samples.length} / {samples.length}
-            </span>
+        <div className="form-section">
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 16,
+            }}
+          >
+            <Title
+              level={5}
+              className="section-title"
+              style={{
+                marginBottom: 0,
+                borderBottom: "none",
+                paddingBottom: 0,
+              }}
+            >
+              Thông tin mẫu ({samples.length} mẫu)
+            </Title>
             <Button
               type="primary"
               size="small"
@@ -1179,56 +1259,89 @@ const TestRequestForm: React.FC = () => {
             >
               Thêm mẫu
             </Button>
-          </Space>
-        </Divider>
+          </div>
 
-        <Table
-          dataSource={samples}
-          columns={sampleColumns}
-          pagination={false}
-          scroll={{ x: 1500 }}
-          size="small"
-          bordered
-          style={{ marginBottom: "16px" }}
-          locale={{ emptyText: 'Chưa có mẫu nào. Nhấn "Thêm mẫu" để thêm.' }}
-        />
+          <Table
+            dataSource={samples}
+            columns={sampleColumns}
+            pagination={false}
+            scroll={{ x: 1500 }}
+            size="small"
+            bordered
+            locale={{ emptyText: 'Chưa có mẫu nào. Nhấn "Thêm mẫu" để thêm.' }}
+          />
+        </div>
 
-        {/* Thông tin yêu cầu thử nghiệm */}
-        <div
-          style={{
-            background: "#fafafa",
-            padding: "16px",
-            marginBottom: "16px",
-            borderRadius: "4px",
-            border: "1px solid #d9d9d9",
-          }}
-        >
-          <Row gutter={[24, 16]}>
-            {/* CỘT TRÁI */}
-            <Col xs={24} lg={12}>
-              {/* Tổng số mẫu gửi */}
-              <Row style={{ marginBottom: 8 }}>
+        {/* Loại hình mẫu */}
+        <div className="form-section">
+          <Title level={5} className="section-title">
+            Loại hình mẫu
+          </Title>
+          <Row gutter={[16, 8]}>
+            <Col xs={24}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
+                <Form.Item
+                  name="sampleTypeService"
+                  valuePropName="checked"
+                  style={{ marginBottom: 0 }}
+                >
+                  <Checkbox>Dịch vụ</Checkbox>
+                </Form.Item>
+                <Form.Item
+                  name="sampleTypeContract"
+                  valuePropName="checked"
+                  style={{ marginBottom: 0 }}
+                >
+                  <Checkbox>Hợp đồng</Checkbox>
+                </Form.Item>
+                <Form.Item
+                  name="sampleTypeTask"
+                  valuePropName="checked"
+                  style={{ marginBottom: 0 }}
+                >
+                  <Checkbox>Mẫu nhiệm vụ</Checkbox>
+                </Form.Item>
+                <Form.Item
+                  name="sampleTypeSubContract"
+                  valuePropName="checked"
+                  style={{ marginBottom: 0 }}
+                >
+                  <Checkbox>Hợp đồng phụ</Checkbox>
+                </Form.Item>
+              </div>
+            </Col>
+          </Row>
+          <Row gutter={[16, 8]} style={{ marginTop: 12 }}>
+            <Col xs={24} sm={12}>
+              <Row align="middle">
                 <Col xs={10} sm={8}>
-                  <Text>- Tổng số mẫu gửi:</Text>
+                  <Text>Hợp đồng phụ:</Text>
                 </Col>
                 <Col xs={14} sm={16}>
-                  <Text strong style={{ color: "#1890ff" }}>
-                    {samples.length}
-                  </Text>
+                  <Form.Item name="subContract" style={{ marginBottom: 0 }}>
+                    <Input size="small" placeholder="Tên thầu phụ..." />
+                  </Form.Item>
                 </Col>
               </Row>
+            </Col>
+          </Row>
+        </div>
 
-              {/* Phương pháp thử nghiệm */}
-              <Row style={{ marginBottom: 8 }}>
-                <Col xs={10} sm={8}>
-                  <Text>- Phương pháp TN:</Text>
-                </Col>
-                <Col xs={14} sm={16}>
+        <Row gutter={[16, 0]}>
+          {/* CỘT TRÁI */}
+          <Col xs={24} lg={12}>
+            {/* Yêu cầu về phương pháp */}
+            <div className="form-section">
+              <Title level={5} className="section-title">
+                Yêu cầu về phương pháp
+              </Title>
+              <Row gutter={[16, 12]}>
+                <Col xs={24}>
                   <div
                     style={{
                       display: "flex",
                       flexWrap: "wrap",
-                      gap: "8px",
+                      gap: "16px",
                       alignItems: "center",
                     }}
                   >
@@ -1237,13 +1350,14 @@ const TestRequestForm: React.FC = () => {
                       valuePropName="checked"
                       style={{ marginBottom: 0 }}
                     >
-                      <Checkbox>Viện VS DT Tây Nguyên</Checkbox>
+                      <Checkbox>Viện KHKT NN Tây Nguyên</Checkbox>
                     </Form.Item>
                     <span
                       style={{
                         display: "inline-flex",
                         alignItems: "center",
-                        whiteSpace: "nowrap",
+                        flexWrap: "wrap",
+                        gap: 8,
                       }}
                     >
                       <Checkbox
@@ -1251,9 +1365,8 @@ const TestRequestForm: React.FC = () => {
                         onChange={(e) =>
                           setMethodCustomerChecked(e.target.checked)
                         }
-                        style={{ marginRight: 8 }}
                       >
-                        Khách hàng
+                        Theo yêu cầu KH
                       </Checkbox>
                       <Form.Item
                         name="methodCustomerDetail"
@@ -1262,7 +1375,7 @@ const TestRequestForm: React.FC = () => {
                         <Input
                           placeholder="Chi tiết..."
                           disabled={!methodCustomerChecked}
-                          style={{ width: 150, maxWidth: "100%" }}
+                          style={{ width: 150 }}
                           size="small"
                         />
                       </Form.Item>
@@ -1270,141 +1383,174 @@ const TestRequestForm: React.FC = () => {
                   </div>
                 </Col>
               </Row>
+            </div>
 
-              {/* Phiếu KQTN */}
-              <Row style={{ marginBottom: 8 }}>
-                <Col xs={10} sm={8}>
-                  <Text>- Phiếu KQTN:</Text>
+            {/* Yêu cầu về kết quả */}
+            <div className="form-section">
+              <Title level={5} className="section-title">
+                Yêu cầu về kết quả
+              </Title>
+              <Row gutter={[16, 12]}>
+                <Col xs={24} sm={12}>
+                  <Row align="middle">
+                    <Col xs={10}>
+                      <Text>Ngôn ngữ:</Text>
+                    </Col>
+                    <Col xs={14}>
+                      <Form.Item
+                        name="resultLanguage"
+                        style={{ marginBottom: 0 }}
+                      >
+                        <Radio.Group
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "4px",
+                          }}
+                        >
+                          <Radio value={ResultLanguage.Vietnamese}>
+                            Tiếng Việt
+                          </Radio>
+                          <Radio value={ResultLanguage.English}>
+                            Tiếng Anh
+                          </Radio>
+                          <Radio value={ResultLanguage.VietnameseAndEnglish}>
+                            Việt/Anh
+                          </Radio>
+                        </Radio.Group>
+                      </Form.Item>
+                    </Col>
+                  </Row>
                 </Col>
-                <Col xs={14} sm={16}>
-                  <Form.Item name="resultLanguage" style={{ marginBottom: 0 }}>
-                    <Radio.Group
-                      style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}
-                    >
-                      <Radio value={ResultLanguage.Vietnamese}>
-                        Tiếng Việt
-                      </Radio>
-                      <Radio value={ResultLanguage.English}>Tiếng Anh</Radio>
-                      <Radio value={ResultLanguage.VietnameseAndEnglish}>
-                        Việt/Anh
-                      </Radio>
-                    </Radio.Group>
+                <Col xs={24} sm={12}>
+                  <Row align="middle" style={{ marginBottom: 8 }}>
+                    <Col xs={10}>
+                      <Text>Số bản:</Text>
+                    </Col>
+                    <Col xs={14}>
+                      <Form.Item
+                        name="resultCopyCount"
+                        style={{ marginBottom: 0 }}
+                      >
+                        <Input size="small" style={{ width: 80 }} />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                  <Form.Item
+                    name="separatePassedResults"
+                    valuePropName="checked"
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Checkbox>Tách riêng CT đạt</Checkbox>
                   </Form.Item>
                 </Col>
               </Row>
-
-              {/* Số bản KQTN */}
-              <Row style={{ marginBottom: 8 }}>
-                <Col xs={10} sm={8}>
-                  <Text>- Số bản KQTN:</Text>
+              <Row gutter={[16, 8]} style={{ marginTop: 12 }}>
+                <Col xs={24} sm={12}>
+                  <Row align="middle">
+                    <Col xs={10}>
+                      <Text>Công bố hợp quy:</Text>
+                    </Col>
+                    <Col xs={14}>
+                      <Form.Item
+                        name="conformityDeclaration"
+                        style={{ marginBottom: 0 }}
+                      >
+                        <Input size="small" />
+                      </Form.Item>
+                    </Col>
+                  </Row>
                 </Col>
-                <Col xs={14} sm={16}>
+                <Col xs={24} sm={12}>
+                  <Row align="middle">
+                    <Col xs={10}>
+                      <Text>Yêu cầu khác:</Text>
+                    </Col>
+                    <Col xs={14}>
+                      <Form.Item
+                        name="otherRequirements"
+                        style={{ marginBottom: 0 }}
+                      >
+                        <Input size="small" />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                </Col>
+              </Row>
+            </div>
+
+            {/* Yêu cầu về lấy mẫu & giao trả */}
+            <div className="form-section">
+              <Title level={5} className="section-title">
+                Yêu cầu về lấy mẫu & giao trả
+              </Title>
+              <Row gutter={[16, 12]}>
+                <Col xs={24} sm={12}>
+                  <Row align="middle">
+                    <Col xs={10}>
+                      <Text>Lấy mẫu:</Text>
+                    </Col>
+                    <Col xs={14}>
+                      <Form.Item
+                        name="samplingRequirement"
+                        style={{ marginBottom: 0 }}
+                      >
+                        <Radio.Group
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "4px",
+                          }}
+                        >
+                          <Radio value={SamplingRequirement.LabSampling}>
+                            TTKN lấy mẫu
+                          </Radio>
+                          <Radio value={SamplingRequirement.CustomerSampling}>
+                            KH tự lấy mẫu
+                          </Radio>
+                        </Radio.Group>
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <Row align="middle">
+                    <Col xs={10}>
+                      <Text>Lưu mẫu:</Text>
+                    </Col>
+                    <Col xs={14}>
+                      <Form.Item
+                        name="sampleStorageOption"
+                        style={{ marginBottom: 0 }}
+                      >
+                        <Radio.Group
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "4px",
+                          }}
+                        >
+                          <Radio value={SampleStorageOption.No}>Không</Radio>
+                          <Radio value={SampleStorageOption.Yes}>
+                            Có (theo QĐ của TT)
+                          </Radio>
+                        </Radio.Group>
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                </Col>
+              </Row>
+              <Row gutter={[16, 8]} style={{ marginTop: 12 }}>
+                <Col xs={24}>
                   <div
-                    style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: "8px",
-                      alignItems: "center",
-                    }}
-                  >
-                    <Form.Item
-                      name="resultCopyCount"
-                      style={{ marginBottom: 0, width: 80 }}
-                    >
-                      <Input size="small" />
-                    </Form.Item>
-                    <Form.Item
-                      name="separatePassedResults"
-                      valuePropName="checked"
-                      style={{ marginBottom: 0 }}
-                    >
-                      <Checkbox>Yêu cầu tách KQ đạt</Checkbox>
-                    </Form.Item>
-                  </div>
-                </Col>
-              </Row>
-
-              {/* Công bố phù hợp */}
-              <Row style={{ marginBottom: 8 }}>
-                <Col xs={10} sm={8}>
-                  <Text>- Công bố phù hợp với:</Text>
-                </Col>
-                <Col xs={14} sm={16}>
-                  <Form.Item
-                    name="conformityDeclaration"
-                    style={{ marginBottom: 0 }}
-                  >
-                    <Input size="small" />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              {/* Yêu cầu khác */}
-              <Row style={{ marginBottom: 8 }}>
-                <Col xs={10} sm={8}>
-                  <Text>- Yêu cầu khác:</Text>
-                </Col>
-                <Col xs={14} sm={16}>
-                  <Form.Item
-                    name="otherRequirements"
-                    style={{ marginBottom: 0 }}
-                  >
-                    <Input size="small" />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              {/* Hợp đồng phụ */}
-              <Row style={{ marginBottom: 8 }}>
-                <Col xs={10} sm={8}>
-                  <Text>- Hợp đồng phụ:</Text>
-                </Col>
-                <Col xs={14} sm={16}>
-                  <Form.Item name="subContract" style={{ marginBottom: 0 }}>
-                    <Input size="small" />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              {/* Yêu cầu về lấy mẫu */}
-              <Row style={{ marginBottom: 8 }}>
-                <Col xs={10} sm={8}>
-                  <Text>- Yêu cầu về lấy mẫu:</Text>
-                </Col>
-                <Col xs={14} sm={16}>
-                  <Form.Item
-                    name="samplingRequirement"
-                    style={{ marginBottom: 0 }}
-                  >
-                    <Radio.Group
-                      style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}
-                    >
-                      <Radio value={SamplingRequirement.LabSampling}>
-                        TTKN lấy mẫu
-                      </Radio>
-                      <Radio value={SamplingRequirement.CustomerSampling}>
-                        KH tự lấy mẫu
-                      </Radio>
-                    </Radio.Group>
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              {/* Hình thức trả kết quả */}
-              <Row style={{ marginBottom: 8 }}>
-                <Col xs={10} sm={8}>
-                  <Text>- Hình thức trả KQ:</Text>
-                </Col>
-                <Col xs={14} sm={16}>
-                  <div
-                    style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}
+                    style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}
                   >
                     <Form.Item
                       name="deliveryDirectPickup"
                       valuePropName="checked"
                       style={{ marginBottom: 0 }}
                     >
-                      <Checkbox>KH nhận trực tiếp</Checkbox>
+                      <Checkbox>Nhận trực tiếp</Checkbox>
                     </Form.Item>
                     <Form.Item
                       name="deliveryPostal"
@@ -1413,29 +1559,214 @@ const TestRequestForm: React.FC = () => {
                     >
                       <Checkbox>Gửi bưu điện</Checkbox>
                     </Form.Item>
+                    <Form.Item
+                      name="returnStoredSample"
+                      valuePropName="checked"
+                      style={{ marginBottom: 0 }}
+                    >
+                      <Checkbox>Trả lại mẫu lưu</Checkbox>
+                    </Form.Item>
                   </div>
                 </Col>
               </Row>
-
-              {/* Trả lại mẫu lưu */}
-              <Row style={{ marginBottom: 8 }}>
-                <Col xs={10} sm={8}>
-                  <Text>- Trả lại mẫu lưu:</Text>
-                </Col>
-                <Col xs={14} sm={16}>
-                  <Form.Item
-                    name="returnStoredSample"
-                    valuePropName="checked"
-                    style={{ marginBottom: 0 }}
-                  >
-                    <Checkbox>Có</Checkbox>
-                  </Form.Item>
+              <Row gutter={[16, 8]} style={{ marginTop: 12 }}>
+                <Col xs={24} sm={12}>
+                  <Row align="middle">
+                    <Col xs={10}>
+                      <Text>Ngày trả KQ:</Text>
+                    </Col>
+                    <Col xs={14}>
+                      <Form.Item
+                        name="expectedCompletionDate"
+                        style={{ marginBottom: 0 }}
+                      >
+                        <DatePicker
+                          format="DD/MM/YYYY"
+                          style={{ width: "100%" }}
+                        />
+                      </Form.Item>
+                    </Col>
+                  </Row>
                 </Col>
               </Row>
+            </div>
+          </Col>
 
-              {/* Đồng ý quy định */}
-              <Row style={{ marginBottom: 8 }}>
-                <Col span={24}>
+          {/* CỘT PHẢI */}
+          <Col xs={24} lg={12}>
+            {/* Thông tin chi phí */}
+            <div className="form-section">
+              <Title level={5} className="section-title">
+                Thông tin chi phí
+              </Title>
+              <Row gutter={[16, 12]}>
+                <Col xs={24}>
+                  <div
+                    style={{
+                      background: "#e6f7ff",
+                      padding: "16px",
+                      borderRadius: 8,
+                      border: "1px solid #91d5ff",
+                      textAlign: "center",
+                    }}
+                  >
+                    <Text
+                      type="secondary"
+                      style={{ display: "block", marginBottom: 4 }}
+                    >
+                      Tổng chi phí:
+                    </Text>
+                    <Text strong style={{ fontSize: 24, color: "#1890ff" }}>
+                      {totalSampleCost.toLocaleString("vi-VN")} đ
+                    </Text>
+                  </div>
+                </Col>
+                <Col xs={24}>
+                  <Row align="middle">
+                    <Col xs={6}>
+                      <Text>Bằng chữ:</Text>
+                    </Col>
+                    <Col xs={18}>
+                      <Form.Item
+                        name="totalCostInWords"
+                        style={{ marginBottom: 0 }}
+                      >
+                        <Input
+                          size="small"
+                          placeholder="Nhập số tiền bằng chữ..."
+                        />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                </Col>
+                <Col xs={24}>
+                  <Row align="middle">
+                    <Col xs={6}>
+                      <Text>Số phiếu thu:</Text>
+                    </Col>
+                    <Col xs={18}>
+                      <Form.Item
+                        name="receiptNumber"
+                        style={{ marginBottom: 0 }}
+                      >
+                        <Input
+                          size="small"
+                          placeholder="Số phiếu thu TTDV..."
+                        />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                </Col>
+              </Row>
+            </div>
+
+            {/* Người phụ trách */}
+            <div className="form-section">
+              <Title level={5} className="section-title">
+                Người phụ trách
+              </Title>
+              <Row gutter={[16, 12]}>
+                <Col xs={24}>
+                  <Row align="middle">
+                    <Col xs={6}>
+                      <Text>Người giám sát:</Text>
+                    </Col>
+                    <Col xs={18}>
+                      <Form.Item
+                        name="supervisorId"
+                        style={{ marginBottom: 0 }}
+                        rules={[
+                          {
+                            required: true,
+                            message: "Vui lòng chọn người phụ trách",
+                          },
+                        ]}
+                      >
+                        <Select
+                          placeholder="Chọn người phụ trách..."
+                          allowClear
+                          showSearch
+                          optionFilterProp="children"
+                          filterOption={(input, option) =>
+                            (option?.children as unknown as string)
+                              ?.toLowerCase()
+                              .includes(input.toLowerCase())
+                          }
+                          style={{ width: "100%" }}
+                        >
+                          {users.map((user) => (
+                            <Select.Option key={user.id} value={user.id}>
+                              {user.displayName || user.userName}
+                            </Select.Option>
+                          ))}
+                        </Select>
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                </Col>
+                <Col xs={24}>
+                  <Row align="middle">
+                    <Col xs={6}>
+                      <Text>Giám đốc:</Text>
+                    </Col>
+                    <Col xs={18}>
+                      <Form.Item
+                        name="directorId"
+                        style={{ marginBottom: 0 }}
+                        rules={[
+                          {
+                            required: true,
+                            message: "Vui lòng chọn GĐ Trung tâm",
+                          },
+                        ]}
+                      >
+                        <Select
+                          placeholder="Chọn GĐ Trung tâm..."
+                          allowClear
+                          showSearch
+                          optionFilterProp="children"
+                          filterOption={(input, option) =>
+                            (option?.children as unknown as string)
+                              ?.toLowerCase()
+                              .includes(input.toLowerCase())
+                          }
+                          style={{ width: "100%" }}
+                        >
+                          {users.map((user) => (
+                            <Select.Option key={user.id} value={user.id}>
+                              {user.displayName || user.userName}
+                            </Select.Option>
+                          ))}
+                        </Select>
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                </Col>
+              </Row>
+            </div>
+
+            {/* Thông tin khác */}
+            <div className="form-section">
+              <Title level={5} className="section-title">
+                Thông tin khác
+              </Title>
+              <Row gutter={[16, 12]}>
+                <Col xs={24}>
+                  <Row align="middle">
+                    <Col xs={6}>
+                      <Text>Thay đổi YC:</Text>
+                    </Col>
+                    <Col xs={18}>
+                      <Form.Item
+                        name="changeRequest"
+                        style={{ marginBottom: 0 }}
+                      >
+                        <Input size="small" placeholder="Nếu có..." />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                </Col>
+                <Col xs={24}>
                   <Form.Item
                     name="agreeTerms"
                     valuePropName="checked"
@@ -1448,217 +1779,9 @@ const TestRequestForm: React.FC = () => {
                   </Form.Item>
                 </Col>
               </Row>
-            </Col>
-
-            {/* CỘT PHẢI */}
-            <Col xs={24} lg={12}>
-              {/* Hình thức mẫu gửi */}
-              <Row style={{ marginBottom: 8 }}>
-                <Col xs={10} sm={8}>
-                  <Text>- Hình thức mẫu gửi:</Text>
-                </Col>
-                <Col xs={14} sm={16}>
-                  <div
-                    style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}
-                  >
-                    <Form.Item
-                      name="sampleTypeService"
-                      valuePropName="checked"
-                      style={{ marginBottom: 0 }}
-                    >
-                      <Checkbox>Dịch vụ</Checkbox>
-                    </Form.Item>
-                    <Form.Item
-                      name="sampleTypeContract"
-                      valuePropName="checked"
-                      style={{ marginBottom: 0 }}
-                    >
-                      <Checkbox>Hợp đồng</Checkbox>
-                    </Form.Item>
-                    <Form.Item
-                      name="sampleTypeTask"
-                      valuePropName="checked"
-                      style={{ marginBottom: 0 }}
-                    >
-                      <Checkbox>Mẫu nhiệm vụ</Checkbox>
-                    </Form.Item>
-                    <Form.Item
-                      name="sampleTypeSubContract"
-                      valuePropName="checked"
-                      style={{ marginBottom: 0 }}
-                    >
-                      <Checkbox>Hợp đồng phụ</Checkbox>
-                    </Form.Item>
-                  </div>
-                </Col>
-              </Row>
-
-              {/* Ngày trả KQ */}
-              <Row style={{ marginBottom: 8 }}>
-                <Col xs={10} sm={8}>
-                  <Text>- Ngày trả KQ:</Text>
-                </Col>
-                <Col xs={14} sm={16}>
-                  <Form.Item
-                    name="expectedCompletionDate"
-                    style={{ marginBottom: 0, maxWidth: 150 }}
-                  >
-                    <DatePicker format="DD/MM/YYYY" style={{ width: "100%" }} />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              {/* Lưu mẫu */}
-              <Row style={{ marginBottom: 8 }}>
-                <Col xs={10} sm={8}>
-                  <Text>- Lưu mẫu:</Text>
-                </Col>
-                <Col xs={14} sm={16}>
-                  <Form.Item
-                    name="sampleStorageOption"
-                    style={{ marginBottom: 0 }}
-                  >
-                    <Radio.Group
-                      style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}
-                    >
-                      <Radio value={SampleStorageOption.No}>Không</Radio>
-                      <Radio value={SampleStorageOption.Yes}>
-                        Có (theo QĐ của TT)
-                      </Radio>
-                    </Radio.Group>
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              {/* Tổng chi phí */}
-              <Row
-                style={{
-                  marginBottom: 8,
-                  background: "#e6f7ff",
-                  padding: "8px",
-                  borderRadius: 4,
-                }}
-              >
-                <Col xs={10} sm={8}>
-                  <Text strong>- Tổng chi phí:</Text>
-                </Col>
-                <Col xs={14} sm={16}>
-                  <Text strong style={{ fontSize: 16, color: "#1890ff" }}>
-                    {totalSampleCost.toLocaleString("vi-VN")} đ
-                  </Text>
-                </Col>
-              </Row>
-
-              {/* Bằng chữ */}
-              <Row>
-                <Col xs={10} sm={8}>
-                  <Text>- Bằng chữ:</Text>
-                </Col>
-                <Col xs={14} sm={16}>
-                  <Text italic>không đồng chẵn.</Text>
-                </Col>
-              </Row>
-            </Col>
-          </Row>
-
-          {/* Thay đổi yêu cầu + Số phiếu thu */}
-          <Row gutter={[16, 8]} style={{ marginTop: 16 }}>
-            <Col xs={24} md={12}>
-              <Row>
-                <Col xs={10} sm={8}>
-                  <Text>- Thay đổi yêu cầu:</Text>
-                </Col>
-                <Col xs={14} sm={16}>
-                  <Form.Item name="changeRequest" style={{ marginBottom: 0 }}>
-                    <Input size="small" placeholder="Nếu có..." />
-                  </Form.Item>
-                </Col>
-              </Row>
-            </Col>
-            <Col xs={24} md={12}>
-              <Row>
-                <Col xs={10} sm={8}>
-                  <Text>- Số phiếu thu (TTDV):</Text>
-                </Col>
-                <Col xs={14} sm={16}>
-                  <Form.Item name="receiptNumber" style={{ marginBottom: 0 }}>
-                    <Input size="small" />
-                  </Form.Item>
-                </Col>
-              </Row>
-            </Col>
-          </Row>
-
-          {/* Phụ trách + GĐ Trung tâm */}
-          <Row gutter={[16, 8]} style={{ marginTop: 16 }}>
-            <Col xs={24} md={12}>
-              <Row>
-                <Col xs={10} sm={8}>
-                  <Text strong>PHỤ TRÁCH:</Text>
-                </Col>
-                <Col xs={14} sm={16}>
-                  <Form.Item
-                    name="supervisorId"
-                    style={{ marginBottom: 0 }}
-                    rules={[{ required: true, message: "Vui lòng chọn người phụ trách" }]}
-                  >
-                    <Select
-                      placeholder="Chọn người phụ trách..."
-                      allowClear
-                      showSearch
-                      optionFilterProp="children"
-                      filterOption={(input, option) =>
-                        (option?.children as unknown as string)
-                          ?.toLowerCase()
-                          .includes(input.toLowerCase())
-                      }
-                      style={{ width: "100%" }}
-                    >
-                      {users.map((user) => (
-                        <Select.Option key={user.id} value={user.id}>
-                          {user.displayName || user.userName}
-                        </Select.Option>
-                      ))}
-                    </Select>
-                  </Form.Item>
-                </Col>
-              </Row>
-            </Col>
-            <Col xs={24} md={12}>
-              <Row>
-                <Col xs={10} sm={8}>
-                  <Text strong>GĐ TRUNG TÂM:</Text>
-                </Col>
-                <Col xs={14} sm={16}>
-                  <Form.Item
-                    name="directorId"
-                    style={{ marginBottom: 0 }}
-                    rules={[{ required: true, message: "Vui lòng chọn GĐ Trung tâm" }]}
-                  >
-                    <Select
-                      placeholder="Chọn GĐ Trung tâm..."
-                      allowClear
-                      showSearch
-                      optionFilterProp="children"
-                      filterOption={(input, option) =>
-                        (option?.children as unknown as string)
-                          ?.toLowerCase()
-                          .includes(input.toLowerCase())
-                      }
-                      style={{ width: "100%" }}
-                    >
-                      {users.map((user) => (
-                        <Select.Option key={user.id} value={user.id}>
-                          {user.displayName || user.userName}
-                        </Select.Option>
-                      ))}
-                    </Select>
-                  </Form.Item>
-                </Col>
-              </Row>
-            </Col>
-          </Row>
-        </div>
+            </div>
+          </Col>
+        </Row>
 
         {/* Hidden fields for legacy support */}
         <Form.Item name="requestDate" hidden>
@@ -1686,21 +1809,16 @@ const TestRequestForm: React.FC = () => {
       {/* Group Selector Modal */}
       <Modal
         title={
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
-            <span>Nhóm chỉ tiêu</span>
-            <Input
-              placeholder="Find"
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <span style={{ fontSize: 16, fontWeight: 600 }}>Nhóm chỉ tiêu</span>
+            <Input.Search
+              placeholder="Tìm kiếm nhóm chỉ tiêu..."
               value={groupSearchText}
               onChange={(e) => setGroupSearchText(e.target.value)}
-              style={{ width: 150 }}
-              size="small"
+              onSearch={(value) => setGroupSearchText(value)}
               allowClear
+              enterButton="Tìm"
+              style={{ width: "100%" }}
             />
           </div>
         }
@@ -1731,13 +1849,55 @@ const TestRequestForm: React.FC = () => {
             }}
             style={{ marginLeft: 8, borderColor: "#faad14", color: "#faad14" }}
           >
-            Clear
+            Bỏ lọc
           </Button>,
         ]}
-        width={420}
-        styles={{ body: { padding: 0, maxHeight: 450, overflowY: "auto" } }}
+        width={750}
+        centered
+        styles={{
+          body: { padding: 0, maxHeight: 550, overflowY: "auto" },
+          wrapper: { maxWidth: "100%" },
+        }}
       >
         <div style={{ borderTop: "1px solid #f0f0f0" }}>
+          {/* Option: Hiển thị tất cả - Checkbox to expand all */}
+          <div
+            style={{
+              padding: "12px 16px",
+              cursor: "pointer",
+              background: "#fafafa",
+              borderBottom: "1px solid #f0f0f0",
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              fontWeight: 500,
+              fontSize: 14,
+            }}
+            onClick={() => {
+              // Toggle expand all groups
+              if (expandedGroupsInSelector.length === indicatorGroups.length) {
+                setExpandedGroupsInSelector([]);
+              } else {
+                setExpandedGroupsInSelector(indicatorGroups.map((g) => g.id));
+              }
+            }}
+          >
+            <Checkbox
+              checked={
+                expandedGroupsInSelector.length === indicatorGroups.length
+              }
+              indeterminate={
+                expandedGroupsInSelector.length > 0 &&
+                expandedGroupsInSelector.length < indicatorGroups.length
+              }
+            />
+            <Icon
+              icon="mdi:unfold-more-horizontal"
+              width={20}
+              style={{ color: "#1890ff" }}
+            />
+            <span style={{ color: "#1890ff" }}>Hiển thị tất cả</span>
+          </div>
           {/* Groups tree view */}
           {getFilteredGroupsWithIndicators().map((group, groupIndex) => {
             const isExpandedInSelector = expandedGroupsInSelector.includes(
@@ -1747,15 +1907,16 @@ const TestRequestForm: React.FC = () => {
               <div key={group.id}>
                 <div
                   style={{
-                    padding: "8px 12px",
+                    padding: "12px 16px",
                     cursor: "pointer",
                     background:
                       selectedGroupFilter === group.id ? "#e6f7ff" : "#fff",
                     borderBottom: "1px solid #f0f0f0",
                     display: "flex",
                     alignItems: "center",
-                    gap: 8,
+                    gap: 10,
                     fontWeight: 500,
+                    fontSize: 14,
                   }}
                   onMouseEnter={(e) => {
                     if (selectedGroupFilter !== group.id)
@@ -1772,7 +1933,7 @@ const TestRequestForm: React.FC = () => {
                         ? "mdi:chevron-down"
                         : "mdi:chevron-right"
                     }
-                    width={18}
+                    width={20}
                     style={{ color: "#595959", flexShrink: 0 }}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1790,7 +1951,7 @@ const TestRequestForm: React.FC = () => {
                     {groupIndex + 1}. {group.name}
                   </span>
                   <span
-                    style={{ fontSize: 12, color: "#888", fontWeight: 400 }}
+                    style={{ fontSize: 13, color: "#888", fontWeight: 400 }}
                   >
                     ({group.indicators.length})
                   </span>
@@ -1800,14 +1961,14 @@ const TestRequestForm: React.FC = () => {
                     <div
                       key={ind.id}
                       style={{
-                        padding: "6px 12px 6px 40px",
-                        fontSize: 13,
+                        padding: "10px 16px 10px 48px",
+                        fontSize: 14,
                         color: "#595959",
                         background: "#fafafa",
                         borderBottom: "1px solid #f5f5f5",
                         display: "flex",
                         alignItems: "center",
-                        gap: 6,
+                        gap: 8,
                       }}
                     >
                       <span>

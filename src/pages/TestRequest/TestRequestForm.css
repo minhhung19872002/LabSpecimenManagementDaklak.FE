@@ -1,0 +1,32 @@
+/* Detail sections for TestRequestForm - matching TestRequestDetail style */
+.test-request-form .form-section {
+  background: #fafafa;
+  padding: 16px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+}
+
+.test-request-form .form-section .section-title {
+  color: var(--ant-color-text-heading);
+  padding-bottom: 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+@media (max-width: 576px) {
+  .test-request-form .form-section {
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+}
+
+/* Form row alignment */
+.test-request-form .form-row {
+  margin-bottom: 8px;
+}
+
+.test-request-form .form-row .ant-col {
+  display: flex;
+  align-items: center;
+}
