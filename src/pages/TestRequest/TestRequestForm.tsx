@@ -152,7 +152,7 @@ const TestRequestForm: React.FC = () => {
   const [laboratoryRequestDate, setLaboratoryRequestDate] =
     useState<dayjs.Dayjs | null>(null);
   const [indicatorsToSend, setIndicatorsToSend] = useState<string[]>([]);
-  // Store laboratory assignment for each indicator: { indicatorId: { laboratoryId, laboratoryName, requestDate } }
+  // Store laboratory assignment for each indicator per sample: { sampleKey_indicatorId: { laboratoryId, laboratoryName, requestDate } }
   const [indicatorLaboratoryMap, setIndicatorLaboratoryMap] = useState<
     Record<string, { laboratoryId: string; laboratoryName: string; requestDate: dayjs.Dayjs }>
   >({});
@@ -353,7 +353,9 @@ const TestRequestForm: React.FC = () => {
         > = {};
         const expandedLabs: string[] = [];
 
-        data.samples.forEach((sample) => {
+        data.samples.forEach((sample, sampleIndex) => {
+          // Use sample.id as key, or fallback to index-based key
+          const sampleKey = sample.id || `sample-${sampleIndex}`;
           sample.indicators?.forEach((ind) => {
             restoredDates[ind.indicatorId] = {
               transferDate: ind.transferDate
@@ -364,9 +366,9 @@ const TestRequestForm: React.FC = () => {
             if (ind.sentToDepartment) {
               restoredChecked.push(ind.indicatorId);
             }
-            // Restore laboratory assignment
+            // Restore laboratory assignment - use sampleKey_indicatorId
             if (ind.laboratoryId && ind.laboratoryName) {
-              restoredLabMap[ind.indicatorId] = {
+              restoredLabMap[`${sampleKey}_${ind.indicatorId}`] = {
                 laboratoryId: ind.laboratoryId,
                 laboratoryName: ind.laboratoryName,
                 requestDate: ind.requestDate ? dayjs(ind.requestDate) : dayjs(),
@@ -456,7 +458,7 @@ const TestRequestForm: React.FC = () => {
   const handleIndicatorModalOk = () => {
     // Validate: All indicators must be assigned to a laboratory
     const unsentIndicators = tempSelectedIndicators.filter(
-      (id) => !indicatorLaboratoryMap[id]
+      (id) => !indicatorLaboratoryMap[`${currentSampleKey}_${id}`]
     );
     if (unsentIndicators.length > 0) {
       message.warning(
@@ -654,11 +656,13 @@ const TestRequestForm: React.FC = () => {
       return updated;
     });
 
-    // Store laboratory assignment for each indicator
+    // Store laboratory assignment for each indicator (per sample)
     setIndicatorLaboratoryMap((prev) => {
       const updated = { ...prev };
       indicatorsToSend.forEach((id) => {
-        updated[id] = {
+        // Use sampleKey_indicatorId as key to allow different labs per sample
+        const key = `${currentSampleKey}_${id}`;
+        updated[key] = {
           laboratoryId: selectedLaboratoryId,
           laboratoryName: labName,
           requestDate: laboratoryRequestDate,
@@ -741,7 +745,8 @@ const TestRequestForm: React.FC = () => {
         indicators: sample.indicatorIds.map((indId) => {
           const indicatorDates = selectedIndicatorDates[indId];
           const indicator = indicators.find((i) => i.id === indId);
-          const labAssignment = indicatorLaboratoryMap[indId];
+          // Use sampleKey_indicatorId to get lab assignment for this specific sample
+          const labAssignment = indicatorLaboratoryMap[`${sample.key}_${indId}`];
           return {
             indicatorId: indId,
             laboratoryId: labAssignment?.laboratoryId || undefined,
@@ -953,12 +958,12 @@ const TestRequestForm: React.FC = () => {
       key: "indicatorIds",
       width: 280,
       render: (value: string[], record: SampleFormData) => {
-        // Group indicators by laboratory
-        const unsentIndicators = value.filter((id) => !indicatorLaboratoryMap[id]);
-        const sentIndicators = value.filter((id) => indicatorLaboratoryMap[id]);
+        // Group indicators by laboratory - use sampleKey_indicatorId
+        const unsentIndicators = value.filter((id) => !indicatorLaboratoryMap[`${record.key}_${id}`]);
+        const sentIndicators = value.filter((id) => indicatorLaboratoryMap[`${record.key}_${id}`]);
         const groupedByLab: Record<string, { labName: string; indicators: string[] }> = {};
         sentIndicators.forEach((id) => {
-          const labInfo = indicatorLaboratoryMap[id];
+          const labInfo = indicatorLaboratoryMap[`${record.key}_${id}`];
           if (!groupedByLab[labInfo.laboratoryId]) {
             groupedByLab[labInfo.laboratoryId] = {
               labName: labInfo.laboratoryName,
@@ -2425,17 +2430,17 @@ const TestRequestForm: React.FC = () => {
                 <Checkbox
                   checked={
                     checkedIndicators.length ===
-                      tempSelectedIndicators.filter((id) => !indicatorLaboratoryMap[id]).length &&
-                    tempSelectedIndicators.filter((id) => !indicatorLaboratoryMap[id]).length > 0
+                      tempSelectedIndicators.filter((id) => !indicatorLaboratoryMap[`${currentSampleKey}_${id}`]).length &&
+                    tempSelectedIndicators.filter((id) => !indicatorLaboratoryMap[`${currentSampleKey}_${id}`]).length > 0
                   }
                   indeterminate={
                     checkedIndicators.length > 0 &&
-                    checkedIndicators.length < tempSelectedIndicators.filter((id) => !indicatorLaboratoryMap[id]).length
+                    checkedIndicators.length < tempSelectedIndicators.filter((id) => !indicatorLaboratoryMap[`${currentSampleKey}_${id}`]).length
                   }
                   onChange={(e) => {
                     // Only select unsent indicators
                     if (e.target.checked) {
-                      setCheckedIndicators(tempSelectedIndicators.filter((id) => !indicatorLaboratoryMap[id]));
+                      setCheckedIndicators(tempSelectedIndicators.filter((id) => !indicatorLaboratoryMap[`${currentSampleKey}_${id}`]));
                     } else {
                       setCheckedIndicators([]);
                     }
@@ -2479,14 +2484,14 @@ const TestRequestForm: React.FC = () => {
               <div style={{ flex: 1, overflowY: "auto" }}>
               {/* Group indicators by laboratory */}
               {(() => {
-                // Separate sent and unsent indicators
-                const unsentIndicators = tempSelectedIndicators.filter((id) => !indicatorLaboratoryMap[id]);
-                const sentIndicators = tempSelectedIndicators.filter((id) => indicatorLaboratoryMap[id]);
+                // Separate sent and unsent indicators - use sampleKey_indicatorId
+                const unsentIndicators = tempSelectedIndicators.filter((id) => !indicatorLaboratoryMap[`${currentSampleKey}_${id}`]);
+                const sentIndicators = tempSelectedIndicators.filter((id) => indicatorLaboratoryMap[`${currentSampleKey}_${id}`]);
 
                 // Group sent indicators by laboratory
                 const groupedByLab: Record<string, { labName: string; requestDate: dayjs.Dayjs; indicators: string[] }> = {};
                 sentIndicators.forEach((id) => {
-                  const labInfo = indicatorLaboratoryMap[id];
+                  const labInfo = indicatorLaboratoryMap[`${currentSampleKey}_${id}`];
                   if (!groupedByLab[labInfo.laboratoryId]) {
                     groupedByLab[labInfo.laboratoryId] = {
                       labName: labInfo.laboratoryName,
@@ -2546,11 +2551,12 @@ const TestRequestForm: React.FC = () => {
                         style={{ width: 32 }}
                         onClick={() => {
                           toggleIndicator(id);
-                          // Also remove from laboratory map if exists
-                          if (indicatorLaboratoryMap[id]) {
+                          // Also remove from laboratory map if exists - use sampleKey_indicatorId
+                          const labMapKey = `${currentSampleKey}_${id}`;
+                          if (indicatorLaboratoryMap[labMapKey]) {
                             setIndicatorLaboratoryMap((prev) => {
                               const updated = { ...prev };
-                              delete updated[id];
+                              delete updated[labMapKey];
                               return updated;
                             });
                           }
@@ -2629,9 +2635,9 @@ const TestRequestForm: React.FC = () => {
             >
               <Text style={{ fontSize: 14 }}>
                 Số chỉ tiêu: <Text strong>{tempSelectedIndicators.length}</Text>
-                {tempSelectedIndicators.filter((id) => indicatorLaboratoryMap[id]).length > 0 && (
+                {tempSelectedIndicators.filter((id) => indicatorLaboratoryMap[`${currentSampleKey}_${id}`]).length > 0 && (
                   <span style={{ color: "#52c41a", marginLeft: 8 }}>
-                    (Đã gửi: {tempSelectedIndicators.filter((id) => indicatorLaboratoryMap[id]).length})
+                    (Đã gửi: {tempSelectedIndicators.filter((id) => indicatorLaboratoryMap[`${currentSampleKey}_${id}`]).length})
                   </span>
                 )}
               </Text>

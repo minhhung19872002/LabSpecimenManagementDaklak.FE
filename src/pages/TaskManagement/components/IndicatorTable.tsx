@@ -1,7 +1,18 @@
-import React, { useState } from 'react';
-import { Table, Select, Input, Button, Space, Tag, Modal, Form, Typography } from 'antd';
-import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
-import dayjs from 'dayjs';
+import React, { useState } from "react";
+import {
+  Table,
+  Select,
+  Input,
+  Button,
+  Space,
+  Tag,
+  Modal,
+  Form,
+  Typography,
+  message,
+} from "antd";
+import { CheckOutlined, CloseOutlined, SendOutlined } from "@ant-design/icons";
+import dayjs from "dayjs";
 import {
   LaboratoryTaskIndicatorDto,
   IndicatorApprovalStatus,
@@ -9,17 +20,26 @@ import {
   IndicatorApprovalStatusColors,
   MethodLookupDto,
   UserLookupDto,
-} from '../../../types/laboratoryTask';
+} from "../../../types/laboratoryTask";
 
 const { Text } = Typography;
+
+interface IndicatorLocalChanges {
+  unit?: string;
+  result?: string;
+}
 
 interface IndicatorTableProps {
   indicators: LaboratoryTaskIndicatorDto[];
   methods: MethodLookupDto[];
   technicians: UserLookupDto[];
+  isAssigned: boolean; // true khi đã giao việc (lưu DB thành công)
+  localChanges: Record<string, IndicatorLocalChanges>; // local changes chưa lưu DB
   onMethodChange: (indicatorId: string, methodId: string) => void;
   onTechnicianChange: (indicatorId: string, technicianId: string) => void;
-  onUpdateResult: (indicatorId: string, result: string) => void;
+  onUnitChange: (indicatorId: string, unit: string) => void;
+  onResultChange: (indicatorId: string, result: string) => void;
+  onSubmitResult: (indicatorId: string) => void; // Gửi kết quả lên server
   onApprove: (indicatorId: string, approve: boolean, reason?: string) => void;
   loading?: boolean;
 }
@@ -28,14 +48,21 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   indicators,
   methods,
   technicians,
+  isAssigned,
+  localChanges,
   onMethodChange,
   onTechnicianChange,
-  onUpdateResult,
+  onUnitChange,
+  onResultChange,
+  onSubmitResult,
   onApprove,
   loading = false,
 }) => {
   // State for reject modal
-  const [rejectModal, setRejectModal] = useState<{ visible: boolean; indicatorId?: string }>({
+  const [rejectModal, setRejectModal] = useState<{
+    visible: boolean;
+    indicatorId?: string;
+  }>({
     visible: false,
   });
   const [rejectForm] = Form.useForm();
@@ -53,11 +80,29 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     }
   };
 
+  // Validate và gửi kết quả
+  const handleSubmitResult = (record: LaboratoryTaskIndicatorDto) => {
+    const changes = localChanges[record.id] || {};
+    const unit = changes.unit ?? record.unit;
+    const result = changes.result ?? record.result;
+
+    if (!unit?.trim()) {
+      message.warning("Vui lòng nhập ĐVT trước khi gửi kết quả");
+      return;
+    }
+    if (!result?.trim()) {
+      message.warning("Vui lòng nhập Kết quả trước khi gửi");
+      return;
+    }
+
+    onSubmitResult(record.id);
+  };
+
   const columns = [
     {
-      title: 'Tên chỉ tiêu',
-      dataIndex: 'indicatorName',
-      key: 'indicatorName',
+      title: "Tên chỉ tiêu",
+      dataIndex: "indicatorName",
+      key: "indicatorName",
       width: 180,
       render: (value: string, record: LaboratoryTaskIndicatorDto) => (
         <div>
@@ -71,103 +116,137 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       ),
     },
     {
-      title: 'Phương pháp',
-      dataIndex: 'methodId',
-      key: 'methodId',
+      title: "Phương pháp",
+      dataIndex: "methodId",
+      key: "methodId",
       width: 200,
       render: (value: string, record: LaboratoryTaskIndicatorDto) => (
         <Select
-          style={{ width: '100%' }}
+          style={{ width: "100%" }}
           size="small"
           value={value}
           placeholder="Chọn PP"
           onChange={(val) => onMethodChange(record.id, val)}
-          options={methods.map((m) => ({
+          options={(methods || []).map((m) => ({
             value: m.id,
             label: m.name,
           }))}
-          disabled={record.approvalStatus === IndicatorApprovalStatus.Approved}
+          disabled={
+            isAssigned ||
+            record.approvalStatus === IndicatorApprovalStatus.Approved
+          }
           allowClear
         />
       ),
     },
     {
-      title: 'ĐVT',
-      dataIndex: 'unit',
-      key: 'unit',
-      width: 70,
-      align: 'center' as const,
-      render: (value: string) => value || '-',
-    },
-    {
-      title: 'Kết quả',
-      dataIndex: 'result',
-      key: 'result',
-      width: 120,
-      render: (value: string, record: LaboratoryTaskIndicatorDto) => (
-        <Input
-          size="small"
-          defaultValue={value}
-          placeholder="Nhập KQ"
-          onBlur={(e) => {
-            if (e.target.value !== value) {
-              onUpdateResult(record.id, e.target.value);
+      title: "ĐVT",
+      dataIndex: "unit",
+      key: "unit",
+      width: 80,
+      render: (value: string, record: LaboratoryTaskIndicatorDto) => {
+        const currentValue = localChanges[record.id]?.unit ?? value;
+        return (
+          <Input
+            size="small"
+            value={currentValue}
+            placeholder="ĐVT"
+            onChange={(e) => onUnitChange(record.id, e.target.value)}
+            disabled={
+              !isAssigned ||
+              (record.approvalStatus !== IndicatorApprovalStatus.Pending &&
+                record.approvalStatus !== IndicatorApprovalStatus.Rejected)
             }
-          }}
-          onPressEnter={(e) => {
-            (e.target as HTMLInputElement).blur();
-          }}
-          disabled={
-            !record.methodId ||
-            record.approvalStatus === IndicatorApprovalStatus.Approved
-          }
-        />
-      ),
+          />
+        );
+      },
     },
     {
-      title: 'Kỹ thuật viên',
-      dataIndex: 'technicianId',
-      key: 'technicianId',
+      title: "Kết quả",
+      dataIndex: "result",
+      key: "result",
+      width: 120,
+      render: (value: string, record: LaboratoryTaskIndicatorDto) => {
+        const currentValue = localChanges[record.id]?.result ?? value;
+        return (
+          <Input
+            size="small"
+            value={currentValue}
+            placeholder="Nhập KQ"
+            onChange={(e) => onResultChange(record.id, e.target.value)}
+            disabled={
+              !isAssigned ||
+              (record.approvalStatus !== IndicatorApprovalStatus.Pending &&
+                record.approvalStatus !== IndicatorApprovalStatus.Rejected)
+            }
+          />
+        );
+      },
+    },
+    {
+      title: "Kỹ thuật viên",
+      dataIndex: "technicianId",
+      key: "technicianId",
       width: 180,
       render: (value: string, record: LaboratoryTaskIndicatorDto) => (
         <Select
-          style={{ width: '100%' }}
+          style={{ width: "100%" }}
           size="small"
           value={value}
           placeholder="Chọn KTV"
           onChange={(val) => onTechnicianChange(record.id, val)}
-          options={technicians.map((t) => ({
+          options={(technicians || []).map((t) => ({
             value: t.id,
             label: t.displayName || t.userName,
           }))}
-          disabled={record.approvalStatus === IndicatorApprovalStatus.Approved}
+          disabled={
+            isAssigned ||
+            record.approvalStatus === IndicatorApprovalStatus.Approved
+          }
           allowClear
         />
       ),
     },
     {
-      title: 'Ngày nhập',
-      dataIndex: 'entryDate',
-      key: 'entryDate',
+      title: "Ngày nhập",
+      dataIndex: "entryDate",
+      key: "entryDate",
       width: 100,
-      render: (date: string) => (date ? dayjs(date).format('DD/MM/YYYY') : '-'),
+      render: (date: string) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
     },
     {
-      title: 'Ngày duyệt',
-      dataIndex: 'approvalDate',
-      key: 'approvalDate',
+      title: "Ngày duyệt",
+      dataIndex: "approvalDate",
+      key: "approvalDate",
       width: 100,
-      render: (date: string) => (date ? dayjs(date).format('DD/MM/YYYY') : '-'),
+      render: (date: string) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
     },
     {
-      title: 'Trạng thái',
-      dataIndex: 'approvalStatus',
-      key: 'approvalStatus',
+      title: "Trạng thái",
+      dataIndex: "approvalStatus",
+      key: "approvalStatus",
       width: 180,
-      render: (status: IndicatorApprovalStatus, record: LaboratoryTaskIndicatorDto) => {
+      render: (
+        status: IndicatorApprovalStatus,
+        record: LaboratoryTaskIndicatorDto
+      ) => {
+        // Chưa giao việc thì không hiển thị gì
+        if (!isAssigned) {
+          return null;
+        }
+
         switch (status) {
           case IndicatorApprovalStatus.Pending:
-            return <Tag color={IndicatorApprovalStatusColors[status]}>{IndicatorApprovalStatusLabels[status]}</Tag>;
+            return (
+              <Button
+                type="primary"
+                size="small"
+                icon={<SendOutlined />}
+                onClick={() => handleSubmitResult(record)}
+              >
+                Gửi KQ
+              </Button>
+            );
 
           case IndicatorApprovalStatus.Entered:
             return (
@@ -184,7 +263,9 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                   danger
                   size="small"
                   icon={<CloseOutlined />}
-                  onClick={() => setRejectModal({ visible: true, indicatorId: record.id })}
+                  onClick={() =>
+                    setRejectModal({ visible: true, indicatorId: record.id })
+                  }
                 >
                   Từ chối
                 </Button>
@@ -192,20 +273,22 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             );
 
           case IndicatorApprovalStatus.Approved:
-            return <Tag color={IndicatorApprovalStatusColors[status]}>{IndicatorApprovalStatusLabels[status]}</Tag>;
+            return (
+              <Tag color={IndicatorApprovalStatusColors[status]}>
+                {IndicatorApprovalStatusLabels[status]}
+              </Tag>
+            );
 
           case IndicatorApprovalStatus.Rejected:
             return (
-              <div>
-                <Tag color={IndicatorApprovalStatusColors[status]}>{IndicatorApprovalStatusLabels[status]}</Tag>
-                {record.rejectionReason && (
-                  <div>
-                    <Text type="secondary" style={{ fontSize: 11 }}>
-                      {record.rejectionReason}
-                    </Text>
-                  </div>
-                )}
-              </div>
+              <Button
+                type="primary"
+                size="small"
+                icon={<SendOutlined />}
+                onClick={() => handleSubmitResult(record)}
+              >
+                Gửi lại KQ
+              </Button>
             );
 
           default:
@@ -215,11 +298,16 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     },
   ];
 
+  // Sort indicators theo id để cố định vị trí
+  const sortedIndicators = [...indicators].sort((a, b) =>
+    a.id.localeCompare(b.id)
+  );
+
   return (
     <>
       <Table
         columns={columns}
-        dataSource={indicators}
+        dataSource={sortedIndicators}
         rowKey="id"
         pagination={false}
         size="small"
@@ -238,14 +326,20 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         }}
         okText="Xác nhận"
         cancelText="Hủy"
+        width={600}
+        centered
+        getContainer={false}
       >
         <Form form={rejectForm} layout="vertical">
           <Form.Item
             name="reason"
             label="Lý do"
-            rules={[{ required: true, message: 'Vui lòng nhập lý do từ chối' }]}
+            rules={[{ required: true, message: "Vui lòng nhập lý do từ chối" }]}
           >
-            <Input.TextArea rows={3} placeholder="Nhập lý do từ chối kết quả..." />
+            <Input.TextArea
+              rows={3}
+              placeholder="Nhập lý do từ chối kết quả..."
+            />
           </Form.Item>
         </Form>
       </Modal>

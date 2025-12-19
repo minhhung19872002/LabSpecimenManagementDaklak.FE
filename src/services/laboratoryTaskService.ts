@@ -10,8 +10,8 @@ import {
   AssignIndicatorInput,
   UpdateIndicatorResultInput,
   ApproveIndicatorInput,
-  ListMethodLookupResult,
-  ListUserLookupResult
+  MethodLookupDto,
+  UserLookupDto
 } from '../types/laboratoryTask';
 
 const BASE_URL = '/api/v1/laboratory-tasks';
@@ -157,8 +157,8 @@ export const laboratoryTaskService = {
   /**
    * Lấy danh sách phương pháp theo chỉ tiêu
    */
-  getMethodsByIndicator: async (indicatorId: string): Promise<ListMethodLookupResult> => {
-    const response = await api.get<ListMethodLookupResult>(
+  getMethodsByIndicator: async (indicatorId: string): Promise<MethodLookupDto[]> => {
+    const response = await api.get<MethodLookupDto[]>(
       `${BASE_URL}/methods-lookup`,
       { params: { indicatorId } }
     );
@@ -168,8 +168,8 @@ export const laboratoryTaskService = {
   /**
    * Lấy danh sách kỹ thuật viên theo khoa phòng
    */
-  getTechniciansByLaboratory: async (laboratoryId: string): Promise<ListUserLookupResult> => {
-    const response = await api.get<ListUserLookupResult>(
+  getTechniciansByLaboratory: async (laboratoryId: string): Promise<UserLookupDto[]> => {
+    const response = await api.get<UserLookupDto[]>(
       `${BASE_URL}/technicians-lookup`,
       { params: { laboratoryId } }
     );
