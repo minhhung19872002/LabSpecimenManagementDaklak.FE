@@ -122,3 +122,17 @@ body .ant-modal-root .fullscreen-modal .ant-modal-centered {
   margin: 0 !important;
   padding: 0 !important;
 }
+
+/* Full width modal dialog */
+.full-width-modal .ant-modal {
+  width: calc(100vw - 48px) !important;
+  max-width: calc(100vw - 48px) !important;
+}
+
+@media (max-width: 768px) {
+  .full-width-modal .ant-modal {
+    width: calc(100vw - 16px) !important;
+    max-width: calc(100vw - 16px) !important;
+    margin: 8px auto !important;
+  }
+}

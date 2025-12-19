@@ -1,5 +1,18 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Layout, Menu, MenuProps, Dropdown, Avatar, Space, Modal, Form, Input, message, Button, Drawer } from 'antd';
+import React, { useState, useMemo, useEffect } from "react";
+import {
+  Layout,
+  Menu,
+  MenuProps,
+  Dropdown,
+  Avatar,
+  Space,
+  Modal,
+  Form,
+  Input,
+  message,
+  Button,
+  Drawer,
+} from "antd";
 import {
   DashboardOutlined,
   FileTextOutlined,
@@ -23,39 +36,39 @@ import {
   DownOutlined,
   MenuOutlined,
   CloseOutlined,
-} from '@ant-design/icons';
-import { useTranslation } from 'react-i18next';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { authService, UserInfo } from '../../services/authService';
-import './MainLayout.css';
+} from "@ant-design/icons";
+import { useTranslation } from "react-i18next";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import { authService, UserInfo } from "../../services/authService";
+import "./MainLayout.css";
 
 const { Header, Sider, Content } = Layout;
 
-type MenuItem = Required<MenuProps>['items'][number];
+type MenuItem = Required<MenuProps>["items"][number];
 
 // Map routes to menu keys
 const routeToKeyMap: Record<string, string> = {
-  '/dashboard': 'dashboard',
-  '/requests': 'requests',
-  '/test-request': 'requests',
-  '/task-management': 'taskManagement',
-  '/specimens': 'specimens',
-  '/specimen': 'specimens',
-  '/tests': 'tests',
-  '/test': 'tests',
-  '/specimen-histories': 'specimenHistories',
-  '/test-results': 'results',
-  '/test-result': 'results',
-  '/reports': 'reports',
-  '/ncr': 'ncr',
-  '/statistics': 'statistics',
-  '/tasks': 'tasks',
-  '/subcontractors': 'subcontractors',
-  '/master-data': 'masterData',
-  '/organizations': 'organizations',
-  '/audit-log': 'auditLog',
-  '/settings': 'settings',
-  '/employees': 'employees',
+  "/dashboard": "dashboard",
+  "/requests": "requests",
+  "/test-request": "requests",
+  "/tasks": "taskManagement",
+  "/test-management": "testManagement",
+  "/specimens": "specimens",
+  "/specimen": "specimens",
+  "/tests": "tests",
+  "/test": "tests",
+  "/specimen-histories": "specimenHistories",
+  "/test-results": "results",
+  "/test-result": "results",
+  "/reports": "reports",
+  "/ncr": "ncr",
+  "/statistics": "statistics",
+  "/subcontractors": "subcontractors",
+  "/master-data": "masterData",
+  "/organizations": "organizations",
+  "/audit-log": "auditLog",
+  "/settings": "settings",
+  "/employees": "employees",
 };
 
 const MOBILE_BREAKPOINT = 768;
@@ -63,7 +76,9 @@ const MOBILE_BREAKPOINT = 768;
 const MainLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < MOBILE_BREAKPOINT);
+  const [isMobile, setIsMobile] = useState(
+    window.innerWidth < MOBILE_BREAKPOINT
+  );
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [changePasswordVisible, setChangePasswordVisible] = useState(false);
   const [changePasswordLoading, setChangePasswordLoading] = useState(false);
@@ -82,8 +97,8 @@ const MainLayout: React.FC = () => {
       }
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   // Close mobile menu on route change
@@ -93,7 +108,7 @@ const MainLayout: React.FC = () => {
 
   // Load user info from localStorage
   useEffect(() => {
-    const storedUser = localStorage.getItem('user_info');
+    const storedUser = localStorage.getItem("user_info");
     if (storedUser) {
       try {
         setUserInfo(JSON.parse(storedUser));
@@ -106,10 +121,10 @@ const MainLayout: React.FC = () => {
   // Handle logout
   const handleLogout = () => {
     Modal.confirm({
-      title: 'Xác nhận đăng xuất',
-      content: 'Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?',
-      okText: 'Đăng xuất',
-      cancelText: 'Hủy',
+      title: "Xác nhận đăng xuất",
+      content: "Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?",
+      okText: "Đăng xuất",
+      cancelText: "Hủy",
       okButtonProps: { danger: true },
       onOk: async () => {
         await authService.logout();
@@ -118,15 +133,20 @@ const MainLayout: React.FC = () => {
   };
 
   // Handle change password
-  const handleChangePassword = async (values: { currentPassword: string; newPassword: string }) => {
+  const handleChangePassword = async (values: {
+    currentPassword: string;
+    newPassword: string;
+  }) => {
     setChangePasswordLoading(true);
     try {
       await authService.changePassword(values);
-      message.success('Đổi mật khẩu thành công!');
+      message.success("Đổi mật khẩu thành công!");
       setChangePasswordVisible(false);
       changePasswordForm.resetFields();
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Đổi mật khẩu thất bại. Vui lòng thử lại.';
+      const errorMessage =
+        error.response?.data?.message ||
+        "Đổi mật khẩu thất bại. Vui lòng thử lại.";
       message.error(errorMessage);
     } finally {
       setChangePasswordLoading(false);
@@ -136,8 +156,9 @@ const MainLayout: React.FC = () => {
   // Get user display name
   const getUserDisplayName = () => {
     if (userInfo?.fullName) return userInfo.fullName;
-    if (userInfo?.name || userInfo?.surname) return `${userInfo.surname || ''} ${userInfo.name || ''}`.trim();
-    return userInfo?.userName || 'User';
+    if (userInfo?.name || userInfo?.surname)
+      return `${userInfo.surname || ""} ${userInfo.name || ""}`.trim();
+    return userInfo?.userName || "User";
   };
 
   // Get user role display
@@ -145,7 +166,7 @@ const MainLayout: React.FC = () => {
     if (userInfo?.roles && userInfo.roles.length > 0) {
       return userInfo.roles[0];
     }
-    return '';
+    return "";
   };
 
   // Get avatar letter
@@ -165,151 +186,159 @@ const MainLayout: React.FC = () => {
 
     // Check prefix match for nested routes (e.g., /test-request/123)
     // Sort routes by length (longest first) to avoid matching shorter prefixes
-    const sortedRoutes = Object.keys(routeToKeyMap).sort((a, b) => b.length - a.length);
+    const sortedRoutes = Object.keys(routeToKeyMap).sort(
+      (a, b) => b.length - a.length
+    );
     for (const route of sortedRoutes) {
-      if (pathname.startsWith(route + '/') || pathname === route) {
+      if (pathname.startsWith(route + "/") || pathname === route) {
         return routeToKeyMap[route];
       }
     }
 
     // Default to dashboard
-    return 'dashboard';
+    return "dashboard";
   }, [location.pathname]);
 
   // Default open all groups
-  const defaultOpenKeys = ['lab', 'quality', 'management', 'admin'];
+  const defaultOpenKeys = ["lab", "quality", "management", "admin"];
 
   // Helper to create label with tooltip
   const menuLabel = (text: string) => <span title={text}>{text}</span>;
 
   const menuItems: MenuItem[] = [
     {
-      key: 'dashboard',
+      key: "dashboard",
       icon: <DashboardOutlined />,
-      label: menuLabel(t('menu.dashboard')),
-      onClick: () => navigate('/dashboard'),
+      label: menuLabel(t("menu.dashboard")),
+      onClick: () => navigate("/dashboard"),
     },
     {
-      key: 'lab',
+      key: "lab",
       icon: <ExperimentOutlined />,
-      label: menuLabel(t('menu.labOperations')),
+      label: menuLabel(t("menu.labOperations")),
       children: [
         {
-          key: 'requests',
+          key: "requests",
           icon: <FileTextOutlined />,
-          label: menuLabel(t('menu.requests')),
-          onClick: () => navigate('/requests'),
+          label: menuLabel(t("menu.requests")),
+          onClick: () => navigate("/requests"),
         },
         {
-          key: 'taskManagement',
+          key: "taskManagement",
           icon: <ScheduleOutlined />,
-          label: menuLabel('Quản lý công việc'),
-          onClick: () => navigate('/task-management'),
+          label: menuLabel("Quản lý công việc"),
+          onClick: () => navigate("/tasks"),
         },
         {
-          key: 'specimens',
+          key: "testManagement",
           icon: <ExperimentOutlined />,
-          label: menuLabel(t('menu.specimens')),
-          onClick: () => navigate('/specimens'),
+          label: menuLabel("Quản lý xét nghiệm"),
+          onClick: () => navigate("/test-management"),
         },
         {
-          key: 'tests',
+          key: "specimens",
+          icon: <ExperimentOutlined />,
+          label: menuLabel(t("menu.specimens")),
+          onClick: () => navigate("/specimens"),
+        },
+        {
+          key: "tests",
           icon: <CheckCircleOutlined />,
-          label: menuLabel(t('menu.tests')),
-          onClick: () => navigate('/tests'),
+          label: menuLabel(t("menu.tests")),
+          onClick: () => navigate("/tests"),
         },
         {
-          key: 'specimenHistories',
+          key: "specimenHistories",
           icon: <HistoryOutlined />,
-          label: menuLabel(t('menu.specimenHistories')),
-          onClick: () => navigate('/specimen-histories'),
+          label: menuLabel(t("menu.specimenHistories")),
+          onClick: () => navigate("/specimen-histories"),
         },
         {
-          key: 'results',
+          key: "results",
           icon: <FileSearchOutlined />,
-          label: menuLabel(t('menu.results')),
-          onClick: () => navigate('/test-results'),
+          label: menuLabel(t("menu.results")),
+          onClick: () => navigate("/test-results"),
         },
       ],
     },
     {
-      key: 'quality',
+      key: "quality",
       icon: <PieChartOutlined />,
-      label: menuLabel(t('menu.qualityReports')),
+      label: menuLabel(t("menu.qualityReports")),
       children: [
         {
-          key: 'ncr',
+          key: "ncr",
           icon: <WarningOutlined />,
-          label: menuLabel(t('menu.ncr')),
-          onClick: () => navigate('/ncr'),
+          label: menuLabel(t("menu.ncr")),
+          onClick: () => navigate("/ncr"),
         },
         {
-          key: 'reports',
+          key: "reports",
           icon: <BarChartOutlined />,
-          label: menuLabel(t('menu.reports')),
-          onClick: () => navigate('/reports'),
+          label: menuLabel(t("menu.reports")),
+          onClick: () => navigate("/reports"),
         },
         {
-          key: 'statistics',
+          key: "statistics",
           icon: <BarChartOutlined />,
-          label: menuLabel(t('menu.statistics')),
-          onClick: () => navigate('/statistics'),
+          label: menuLabel(t("menu.statistics")),
+          onClick: () => navigate("/statistics"),
         },
       ],
     },
     {
-      key: 'management',
+      key: "management",
       icon: <ToolOutlined />,
-      label: menuLabel(t('menu.management')),
+      label: menuLabel(t("menu.management")),
       children: [
+        // {
+        //   key: 'tasks',
+        //   icon: <ScheduleOutlined />,
+        //   label: menuLabel(t('menu.tasks')),
+        //   onClick: () => navigate('/tasks'),
+        // },
         {
-          key: 'tasks',
-          icon: <ScheduleOutlined />,
-          label: menuLabel(t('menu.tasks')),
-          onClick: () => navigate('/tasks'),
-        },
-        {
-          key: 'subcontractors',
+          key: "subcontractors",
           icon: <TeamOutlined />,
-          label: menuLabel(t('menu.subcontractors')),
-          onClick: () => navigate('/subcontractors'),
+          label: menuLabel(t("menu.subcontractors")),
+          onClick: () => navigate("/subcontractors"),
         },
         {
-          key: 'masterData',
+          key: "masterData",
           icon: <DatabaseOutlined />,
-          label: menuLabel(t('menu.masterData')),
-          onClick: () => navigate('/master-data'),
+          label: menuLabel(t("menu.masterData")),
+          onClick: () => navigate("/master-data"),
         },
         {
-          key: 'organizations',
+          key: "organizations",
           icon: <TeamOutlined />,
-          label: menuLabel('Cơ sở/Doanh nghiệp'),
-          onClick: () => navigate('/organizations'),
+          label: menuLabel("Cơ sở/Doanh nghiệp"),
+          onClick: () => navigate("/organizations"),
         },
         {
-          key: 'auditLog',
+          key: "auditLog",
           icon: <AuditOutlined />,
-          label: menuLabel(t('menu.auditLog')),
-          onClick: () => navigate('/audit-log'),
+          label: menuLabel(t("menu.auditLog")),
+          onClick: () => navigate("/audit-log"),
         },
       ],
     },
     {
-      key: 'admin',
+      key: "admin",
       icon: <SolutionOutlined />,
-      label: menuLabel(t('menu.administration')),
+      label: menuLabel(t("menu.administration")),
       children: [
         {
-          key: 'employees',
+          key: "employees",
           icon: <TeamOutlined />,
-          label: menuLabel(t('menu.employees')),
-          onClick: () => navigate('/employees'),
+          label: menuLabel(t("menu.employees")),
+          onClick: () => navigate("/employees"),
         },
         {
-          key: 'settings',
+          key: "settings",
           icon: <SettingOutlined />,
-          label: menuLabel(t('menu.settings')),
-          onClick: () => navigate('/settings'),
+          label: menuLabel(t("menu.settings")),
+          onClick: () => navigate("/settings"),
         },
       ],
     },
@@ -319,7 +348,7 @@ const MainLayout: React.FC = () => {
   const menuContent = (
     <>
       <div className="logo">
-        <h2>{collapsed && !isMobile ? 'LSM' : t('common.appName')}</h2>
+        <h2>{collapsed && !isMobile ? "LSM" : t("common.appName")}</h2>
       </div>
       <Menu
         theme="dark"
@@ -332,7 +361,7 @@ const MainLayout: React.FC = () => {
   );
 
   return (
-    <Layout style={{ height: '100vh', overflow: 'hidden' }}>
+    <Layout style={{ height: "100vh", overflow: "hidden" }}>
       {/* Desktop Sider */}
       {!isMobile && (
         <Sider collapsible collapsed={collapsed} onCollapse={setCollapsed}>
@@ -348,16 +377,16 @@ const MainLayout: React.FC = () => {
         width={260}
         className="mobile-menu-drawer"
         styles={{
-          body: { padding: 0, background: '#001529' },
-          header: { display: 'none' },
+          body: { padding: 0, background: "#001529" },
+          header: { display: "none" },
         }}
-        closeIcon={<CloseOutlined style={{ color: '#fff' }} />}
+        closeIcon={<CloseOutlined style={{ color: "#fff" }} />}
       >
         {menuContent}
       </Drawer>
 
       <Layout>
-        <Header style={{ padding: '0 16px', background: '#fff' }}>
+        <Header style={{ padding: "0 16px", background: "#fff" }}>
           <div className="header-content">
             {/* Hamburger menu button for mobile */}
             {isMobile && (
@@ -368,48 +397,54 @@ const MainLayout: React.FC = () => {
                 className="mobile-menu-trigger"
               />
             )}
-            <h1 className="header-title">{t('common.appName')}</h1>
+            <h1 className="header-title">{t("common.appName")}</h1>
             <div className="header-actions">
               <Dropdown
                 menu={{
                   items: [
                     {
-                      key: 'user-info',
+                      key: "user-info",
                       label: (
                         <div className="user-dropdown-header">
-                          <div className="user-dropdown-name">{getUserDisplayName()}</div>
-                          <div className="user-dropdown-email">{userInfo?.email}</div>
+                          <div className="user-dropdown-name">
+                            {getUserDisplayName()}
+                          </div>
+                          <div className="user-dropdown-email">
+                            {userInfo?.email}
+                          </div>
                           {getUserRole() && (
-                            <div className="user-dropdown-role">{getUserRole()}</div>
+                            <div className="user-dropdown-role">
+                              {getUserRole()}
+                            </div>
                           )}
                         </div>
                       ),
                       disabled: true,
                     },
-                    { type: 'divider' },
+                    { type: "divider" },
                     {
-                      key: 'change-password',
+                      key: "change-password",
                       icon: <KeyOutlined />,
-                      label: 'Đổi mật khẩu',
+                      label: "Đổi mật khẩu",
                       onClick: () => setChangePasswordVisible(true),
                     },
                     {
-                      key: 'settings',
+                      key: "settings",
                       icon: <SettingOutlined />,
-                      label: 'Cài đặt',
-                      onClick: () => navigate('/settings'),
+                      label: "Cài đặt",
+                      onClick: () => navigate("/settings"),
                     },
-                    { type: 'divider' },
+                    { type: "divider" },
                     {
-                      key: 'logout',
+                      key: "logout",
                       icon: <LogoutOutlined />,
-                      label: 'Đăng xuất',
+                      label: "Đăng xuất",
                       danger: true,
                       onClick: handleLogout,
                     },
                   ],
                 }}
-                trigger={['click']}
+                trigger={["click"]}
                 placement="bottomRight"
               >
                 <Space className="user-dropdown-trigger">
@@ -422,7 +457,9 @@ const MainLayout: React.FC = () => {
                   </Avatar>
                   <div className="user-info-text">
                     <span className="user-name">{getUserDisplayName()}</span>
-                    {getUserRole() && <span className="user-role">{getUserRole()}</span>}
+                    {getUserRole() && (
+                      <span className="user-role">{getUserRole()}</span>
+                    )}
                   </div>
                   <DownOutlined className="dropdown-arrow" />
                 </Space>
@@ -450,7 +487,9 @@ const MainLayout: React.FC = () => {
             <Form.Item
               name="currentPassword"
               label="Mật khẩu hiện tại"
-              rules={[{ required: true, message: 'Vui lòng nhập mật khẩu hiện tại' }]}
+              rules={[
+                { required: true, message: "Vui lòng nhập mật khẩu hiện tại" },
+              ]}
             >
               <Input.Password placeholder="Nhập mật khẩu hiện tại" />
             </Form.Item>
@@ -458,8 +497,8 @@ const MainLayout: React.FC = () => {
               name="newPassword"
               label="Mật khẩu mới"
               rules={[
-                { required: true, message: 'Vui lòng nhập mật khẩu mới' },
-                { min: 6, message: 'Mật khẩu phải có ít nhất 6 ký tự' },
+                { required: true, message: "Vui lòng nhập mật khẩu mới" },
+                { min: 6, message: "Mật khẩu phải có ít nhất 6 ký tự" },
               ]}
             >
               <Input.Password placeholder="Nhập mật khẩu mới" />
@@ -467,22 +506,24 @@ const MainLayout: React.FC = () => {
             <Form.Item
               name="confirmPassword"
               label="Xác nhận mật khẩu mới"
-              dependencies={['newPassword']}
+              dependencies={["newPassword"]}
               rules={[
-                { required: true, message: 'Vui lòng xác nhận mật khẩu mới' },
+                { required: true, message: "Vui lòng xác nhận mật khẩu mới" },
                 ({ getFieldValue }) => ({
                   validator(_, value) {
-                    if (!value || getFieldValue('newPassword') === value) {
+                    if (!value || getFieldValue("newPassword") === value) {
                       return Promise.resolve();
                     }
-                    return Promise.reject(new Error('Mật khẩu xác nhận không khớp'));
+                    return Promise.reject(
+                      new Error("Mật khẩu xác nhận không khớp")
+                    );
                   },
                 }),
               ]}
             >
               <Input.Password placeholder="Nhập lại mật khẩu mới" />
             </Form.Item>
-            <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
+            <Form.Item style={{ marginBottom: 0, textAlign: "right" }}>
               <Space>
                 <Button
                   onClick={() => {
@@ -503,7 +544,7 @@ const MainLayout: React.FC = () => {
             </Form.Item>
           </Form>
         </Modal>
-        <Content style={{ margin: '16px', overflow: 'auto' }}>
+        <Content style={{ margin: "16px", overflow: "auto" }}>
           <div className="site-layout-content">
             <Outlet />
           </div>

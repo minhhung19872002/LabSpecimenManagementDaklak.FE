@@ -30,17 +30,6 @@ export { default as testResultServiceDefault } from './testResultService';
 export { ncrService } from './ncrService';
 export type { NCRDto, CreateNCRDto, UpdateNCRDto, NCRType, NCRSeverity, NCRStatus } from './ncrService';
 
-// Task Assignment Service
-export { taskAssignmentService } from './taskAssignmentService';
-export type {
-  TaskAssignmentDto,
-  CreateTaskAssignmentDto,
-  UpdateTaskAssignmentDto,
-  TaskType,
-  TaskPriority,
-  TaskStatus
-} from './taskAssignmentService';
-
 // Master Data Services
 export {
   departmentService,
@@ -90,3 +79,7 @@ export type {
   StatisticsDataDto,
   StatisticsQueryParams
 } from './statisticsService';
+
+// Laboratory Task Service
+export { laboratoryTaskService } from './laboratoryTaskService';
+export { default as laboratoryTaskServiceDefault } from './laboratoryTaskService';

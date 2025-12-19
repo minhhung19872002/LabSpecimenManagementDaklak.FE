@@ -42,8 +42,9 @@ const StatisticsPage = Loadable(lazy(() => import('./pages/Statistics/Statistics
 // NCR
 const NCRList = Loadable(lazy(() => import('./pages/NCR/NCRList')));
 
-// Task Assignment
-const TaskAssignmentList = Loadable(lazy(() => import('./pages/TaskAssignment/TaskAssignmentList')));
+// Task Management - Quản lý công việc khoa phòng
+const TaskManagementList = Loadable(lazy(() => import('./pages/TaskManagement/TaskManagementList')));
+const TaskManagementDetail = Loadable(lazy(() => import('./pages/TaskManagement/TaskManagementDetail')));
 
 // Subcontractor
 const SubcontractorList = Loadable(lazy(() => import('./pages/Subcontractor/SubcontractorList')));
@@ -117,8 +118,10 @@ function App() {
           {/* NCR - Non-Conformance Reports */}
           <Route path="ncr" element={<NCRList />} />
 
-          {/* Task Assignment - Giao việc */}
-          <Route path="tasks" element={<TaskAssignmentList />} />
+          {/* Task Management - Quản lý công việc khoa phòng */}
+          <Route path="tasks" element={<TaskManagementList />} />
+          <Route path="task/:id" element={<TaskManagementDetail />} />
+          <Route path="test-management" element={<div style={{ padding: '24px', textAlign: 'center', fontSize: '18px', color: '#666' }}>Đang phát triển</div>} />
 
           {/* Subcontractor Management - Nhà thầu phụ */}
           <Route path="subcontractors" element={<SubcontractorList />} />
