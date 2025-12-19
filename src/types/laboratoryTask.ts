@@ -150,6 +150,7 @@ export interface AssignIndicatorInput {
 // Update indicator result DTO
 export interface UpdateIndicatorResultInput {
   result: string;
+  unit?: string;
 }
 
 // Approve indicator DTO
