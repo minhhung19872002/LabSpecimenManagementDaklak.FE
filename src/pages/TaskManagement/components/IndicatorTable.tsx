@@ -143,7 +143,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       title: "ĐVT",
       dataIndex: "unit",
       key: "unit",
-      width: 80,
+      width: 120,
       render: (value: string, record: LaboratoryTaskIndicatorDto) => {
         const currentValue = localChanges[record.id]?.unit ?? value;
         return (
@@ -165,7 +165,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       title: "Kết quả",
       dataIndex: "result",
       key: "result",
-      width: 120,
+      width: 200,
       render: (value: string, record: LaboratoryTaskIndicatorDto) => {
         const currentValue = localChanges[record.id]?.result ?? value;
         return (
@@ -187,7 +187,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       title: "Kỹ thuật viên",
       dataIndex: "technicianId",
       key: "technicianId",
-      width: 180,
+      width: 150,
       render: (value: string, record: LaboratoryTaskIndicatorDto) => (
         <Select
           style={{ width: "100%" }}
