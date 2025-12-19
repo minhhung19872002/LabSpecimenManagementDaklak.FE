@@ -27,7 +27,6 @@ import {
   SyncOutlined,
   SendOutlined,
   EditOutlined,
-  EyeOutlined,
   DeleteOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
@@ -158,10 +157,6 @@ const TaskManagementList: React.FC = () => {
     loadData();
   };
 
-  const handleViewDetail = (record: LaboratoryTaskDto) => {
-    navigate(`/task/${record.id}`);
-  };
-
   const handleOpenUpdateModal = (record: LaboratoryTaskDto) => {
     setSelectedTask(record);
     updateForm.setFieldsValue({
@@ -178,7 +173,9 @@ const TaskManagementList: React.FC = () => {
       if (!selectedTask) return;
 
       const updateData: UpdateLaboratoryTaskDto = {
-        testDate: values.testDate ? values.testDate.format('YYYY-MM-DD') : undefined,
+        testDate: values.testDate
+          ? values.testDate.format("YYYY-MM-DD")
+          : undefined,
         status: values.status,
         notes: values.notes,
       };
@@ -190,20 +187,6 @@ const TaskManagementList: React.FC = () => {
     } catch (error) {
       console.error("Failed to update task:", error);
       message.error("Không thể cập nhật công việc. Vui lòng thử lại.");
-    }
-  };
-
-  const handleUpdateStatus = async (
-    id: string,
-    newStatus: LaboratoryTaskStatus
-  ) => {
-    try {
-      await laboratoryTaskService.updateStatus(id, newStatus);
-      message.success("Cập nhật trạng thái thành công");
-      loadData();
-    } catch (error) {
-      console.error("Failed to update status:", error);
-      message.error("Không thể cập nhật trạng thái. Vui lòng thử lại.");
     }
   };
 
@@ -303,21 +286,13 @@ const TaskManagementList: React.FC = () => {
     {
       title: "Thao tác",
       key: "action",
-      width: 130,
+      width: 100,
       fixed: "right",
       render: (_: any, record: LaboratoryTaskDto) => (
         <Space size="small">
-          <Tooltip title="Xem chi tiết">
-            <Button
-              type="text"
-              size="small"
-              icon={<EyeOutlined />}
-              onClick={() => handleViewDetail(record)}
-            />
-          </Tooltip>
           <Tooltip title="Cập nhật">
             <Button
-              type="text"
+              type="link"
               size="small"
               icon={<EditOutlined />}
               onClick={() => handleOpenUpdateModal(record)}
@@ -354,6 +329,10 @@ const TaskManagementList: React.FC = () => {
       }}
       onChange={handleTableChange}
       scroll={{ x: 1100 }}
+      onRow={(record) => ({
+        onDoubleClick: () => navigate(`/task/${record.id}`),
+        style: { cursor: "pointer" },
+      })}
     />
   );
 
@@ -456,9 +435,7 @@ const TaskManagementList: React.FC = () => {
             <Select
               style={{ width: "100%" }}
               placeholder="Trạng thái"
-              value={
-                statusFilter !== undefined ? String(statusFilter) : "all"
-              }
+              value={statusFilter !== undefined ? String(statusFilter) : "all"}
               onChange={handleStatusFilterChange}
             >
               <Select.Option value="all">Tất cả trạng thái</Select.Option>
@@ -513,25 +490,45 @@ const TaskManagementList: React.FC = () => {
                   if (!value) return Promise.resolve();
 
                   const testDate = dayjs(value);
-                  const transferDate = selectedTask?.transferDate ? dayjs(selectedTask.transferDate) : null;
-                  const requestCompletionDate = selectedTask?.requestCompletionDate ? dayjs(selectedTask.requestCompletionDate) : null;
+                  const transferDate = selectedTask?.transferDate
+                    ? dayjs(selectedTask.transferDate)
+                    : null;
+                  const requestCompletionDate =
+                    selectedTask?.requestCompletionDate
+                      ? dayjs(selectedTask.requestCompletionDate)
+                      : null;
 
-                  if (transferDate && testDate.isBefore(transferDate, 'day')) {
-                    return Promise.reject(new Error('Ngày thí nghiệm phải >= ngày chuyển đi'));
+                  if (transferDate && testDate.isBefore(transferDate, "day")) {
+                    return Promise.reject(
+                      new Error("Ngày thí nghiệm phải >= ngày chuyển đi")
+                    );
                   }
-                  if (requestCompletionDate && testDate.isAfter(requestCompletionDate, 'day')) {
-                    return Promise.reject(new Error('Ngày thí nghiệm phải <= ngày yêu cầu xong'));
+                  if (
+                    requestCompletionDate &&
+                    testDate.isAfter(requestCompletionDate, "day")
+                  ) {
+                    return Promise.reject(
+                      new Error("Ngày thí nghiệm phải <= ngày yêu cầu xong")
+                    );
                   }
                   return Promise.resolve();
-                }
-              }
+                },
+              },
             ]}
             extra={
               selectedTask && (
-                <span style={{ fontSize: 12, color: '#888' }}>
-                  {selectedTask.transferDate && `Ngày chuyển: ${dayjs(selectedTask.transferDate).format('DD/MM/YYYY')}`}
-                  {selectedTask.transferDate && selectedTask.requestCompletionDate && ' - '}
-                  {selectedTask.requestCompletionDate && `Ngày YC xong: ${dayjs(selectedTask.requestCompletionDate).format('DD/MM/YYYY')}`}
+                <span style={{ fontSize: 12, color: "#888" }}>
+                  {selectedTask.transferDate &&
+                    `Ngày chuyển: ${dayjs(selectedTask.transferDate).format(
+                      "DD/MM/YYYY"
+                    )}`}
+                  {selectedTask.transferDate &&
+                    selectedTask.requestCompletionDate &&
+                    " - "}
+                  {selectedTask.requestCompletionDate &&
+                    `Ngày YC xong: ${dayjs(
+                      selectedTask.requestCompletionDate
+                    ).format("DD/MM/YYYY")}`}
                 </span>
               )
             }
@@ -542,13 +539,20 @@ const TaskManagementList: React.FC = () => {
               disabledDate={(current) => {
                 if (!current || !selectedTask) return false;
 
-                const transferDate = selectedTask.transferDate ? dayjs(selectedTask.transferDate).startOf('day') : null;
-                const requestCompletionDate = selectedTask.requestCompletionDate ? dayjs(selectedTask.requestCompletionDate).endOf('day') : null;
+                const transferDate = selectedTask.transferDate
+                  ? dayjs(selectedTask.transferDate).startOf("day")
+                  : null;
+                const requestCompletionDate = selectedTask.requestCompletionDate
+                  ? dayjs(selectedTask.requestCompletionDate).endOf("day")
+                  : null;
 
-                if (transferDate && current.isBefore(transferDate, 'day')) {
+                if (transferDate && current.isBefore(transferDate, "day")) {
                   return true;
                 }
-                if (requestCompletionDate && current.isAfter(requestCompletionDate, 'day')) {
+                if (
+                  requestCompletionDate &&
+                  current.isAfter(requestCompletionDate, "day")
+                ) {
                   return true;
                 }
                 return false;
