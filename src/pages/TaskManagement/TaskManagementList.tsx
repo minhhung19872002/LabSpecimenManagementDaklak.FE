@@ -11,7 +11,6 @@ import {
   Col,
   Select,
   Statistic,
-  Tabs,
   message,
   Modal,
   DatePicker,
@@ -416,6 +415,15 @@ const TaskManagementList: React.FC = () => {
             />
           </Card>
         </Col>
+        <Col xs={12} sm={8} md={4}>
+          <Card size="small">
+            <Statistic
+              title="Đã gửi KQ"
+              value={stats.resultSent}
+              valueStyle={{ color: "#722ed1" }}
+            />
+          </Card>
+        </Col>
       </Row>
 
       <Card
@@ -431,120 +439,57 @@ const TaskManagementList: React.FC = () => {
           </Button>
         }
       >
-        <Tabs
-          items={[
-            {
-              key: "all",
-              label: "Tất cả",
-              children: (
-                <>
-                  {/* Search & Filter */}
-                  <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-                    <Col xs={24} sm={12} md={8}>
-                      <Input.Search
-                        placeholder="Tìm theo số hợp đồng, quản lý kỹ thuật..."
-                        prefix={<SearchOutlined />}
-                        value={searchText}
-                        onChange={(e) => setSearchText(e.target.value)}
-                        onSearch={handleSearch}
-                        allowClear
-                        enterButton
-                      />
-                    </Col>
-                    <Col xs={24} sm={6} md={4}>
-                      <Select
-                        style={{ width: "100%" }}
-                        placeholder="Trạng thái"
-                        value={
-                          statusFilter !== undefined
-                            ? String(statusFilter)
-                            : "all"
-                        }
-                        onChange={handleStatusFilterChange}
-                      >
-                        <Select.Option value="all">
-                          Tất cả trạng thái
-                        </Select.Option>
-                        <Select.Option
-                          value={String(LaboratoryTaskStatus.NotAssignedMethod)}
-                        >
-                          Chưa gán phương pháp
-                        </Select.Option>
-                        <Select.Option
-                          value={String(LaboratoryTaskStatus.AssignedMethod)}
-                        >
-                          Đã gán phương pháp
-                        </Select.Option>
-                        <Select.Option
-                          value={String(LaboratoryTaskStatus.Testing)}
-                        >
-                          Đang thí nghiệm
-                        </Select.Option>
-                        <Select.Option
-                          value={String(LaboratoryTaskStatus.PendingApproval)}
-                        >
-                          Chờ duyệt kết quả
-                        </Select.Option>
-                        <Select.Option
-                          value={String(LaboratoryTaskStatus.Approved)}
-                        >
-                          Đã duyệt
-                        </Select.Option>
-                        <Select.Option
-                          value={String(LaboratoryTaskStatus.ResultSent)}
-                        >
-                          Đã gửi kết quả
-                        </Select.Option>
-                      </Select>
-                    </Col>
-                  </Row>
-                  {renderTable(tasks)}
-                </>
-              ),
-            },
-            {
-              key: "notAssigned",
-              label: `Chưa gán PP (${stats.notAssigned})`,
-              children: renderTable(
-                tasks.filter(
-                  (t) => t.status === LaboratoryTaskStatus.NotAssignedMethod
-                )
-              ),
-            },
-            {
-              key: "assigned",
-              label: `Đã gán PP (${stats.assigned})`,
-              children: renderTable(
-                tasks.filter(
-                  (t) => t.status === LaboratoryTaskStatus.AssignedMethod
-                )
-              ),
-            },
-            {
-              key: "testing",
-              label: `Đang TN (${stats.testing})`,
-              children: renderTable(
-                tasks.filter((t) => t.status === LaboratoryTaskStatus.Testing)
-              ),
-            },
-            {
-              key: "pendingApproval",
-              label: `Chờ duyệt (${stats.pendingApproval})`,
-              children: renderTable(
-                tasks.filter(
-                  (t) => t.status === LaboratoryTaskStatus.PendingApproval
-                )
-              ),
-            },
-            {
-              key: "approved",
-              label: `Đã duyệt (${stats.approved})`,
-              children: renderTable(
-                tasks.filter((t) => t.status === LaboratoryTaskStatus.Approved)
-              ),
-            },
-          ]}
-        />
+        {/* Search & Filter */}
+        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+          <Col xs={24} sm={12} md={8}>
+            <Input.Search
+              placeholder="Tìm theo số hợp đồng, quản lý kỹ thuật..."
+              prefix={<SearchOutlined />}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              onSearch={handleSearch}
+              allowClear
+              enterButton
+            />
+          </Col>
+          <Col xs={24} sm={6} md={4}>
+            <Select
+              style={{ width: "100%" }}
+              placeholder="Trạng thái"
+              value={
+                statusFilter !== undefined ? String(statusFilter) : "all"
+              }
+              onChange={handleStatusFilterChange}
+            >
+              <Select.Option value="all">Tất cả trạng thái</Select.Option>
+              <Select.Option
+                value={String(LaboratoryTaskStatus.NotAssignedMethod)}
+              >
+                Chưa gán phương pháp
+              </Select.Option>
+              <Select.Option
+                value={String(LaboratoryTaskStatus.AssignedMethod)}
+              >
+                Đã gán phương pháp
+              </Select.Option>
+              <Select.Option value={String(LaboratoryTaskStatus.Testing)}>
+                Đang thí nghiệm
+              </Select.Option>
+              <Select.Option
+                value={String(LaboratoryTaskStatus.PendingApproval)}
+              >
+                Chờ duyệt kết quả
+              </Select.Option>
+              <Select.Option value={String(LaboratoryTaskStatus.Approved)}>
+                Đã duyệt
+              </Select.Option>
+              <Select.Option value={String(LaboratoryTaskStatus.ResultSent)}>
+                Đã gửi kết quả
+              </Select.Option>
+            </Select>
+          </Col>
+        </Row>
+        {renderTable(tasks)}
       </Card>
 
       {/* Update Modal */}
