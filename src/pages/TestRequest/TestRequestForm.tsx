@@ -287,6 +287,13 @@ const TestRequestForm: React.FC = () => {
     try {
       const data = await testRequestService.get(id);
 
+      // Check if request is completed - redirect to detail page
+      if (data.status === TestRequestStatus.Completed) {
+        message.warning("Không thể chỉnh sửa yêu cầu đã hoàn thành");
+        navigate(`/test-request/${id}`);
+        return;
+      }
+
       // Load districts and wards if province/district codes exist
       if (data.provinceCode) {
         const loadedDistricts = getDistrictsByProvince(data.provinceCode);

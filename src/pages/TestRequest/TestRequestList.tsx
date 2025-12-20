@@ -230,24 +230,37 @@ const TestRequestList: React.FC = () => {
       key: "actions",
       width: 80,
       fixed: "right",
-      render: (_: any, record: TestRequestDto) => (
-        <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          />
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Có"
-            cancelText="Không"
-          >
-            <Button type="link" size="small" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
-      ),
+      render: (_: any, record: TestRequestDto) => {
+        const isCompleted = record.status === TestRequestStatus.Completed;
+        return (
+          <Space size="small">
+            <Button
+              type="link"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+              disabled={isCompleted}
+              title={isCompleted ? "Không thể chỉnh sửa yêu cầu đã hoàn thành" : "Chỉnh sửa"}
+            />
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa?"
+              onConfirm={() => handleDelete(record.id)}
+              okText="Có"
+              cancelText="Không"
+              disabled={isCompleted}
+            >
+              <Button
+                type="link"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                disabled={isCompleted}
+                title={isCompleted ? "Không thể xóa yêu cầu đã hoàn thành" : "Xóa"}
+              />
+            </Popconfirm>
+          </Space>
+        );
+      },
     },
   ];
 
