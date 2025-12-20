@@ -54,7 +54,45 @@ export const testRequestService = {
 
   delete: async (id: string): Promise<void> => {
     await api.delete(`${BASE_URL}/${id}`);
+  },
+
+  // Result Form APIs
+  generateResultForm: async (testRequestId: string, sampleId: string): Promise<{ fileName: string; sampleCode: string }> => {
+    const response = await api.post<{ fileName: string; sampleCode: string }>('/api/v1/result-forms/generate', {
+      testRequestId,
+      sampleId
+    });
+    return response.data;
+  },
+
+  getResultFormEditorConfig: async (fileName: string): Promise<any> => {
+    const response = await api.get(`/api/v1/result-forms/editor-config/${encodeURIComponent(fileName)}`);
+    return response.data;
+  },
+
+  // BM01 Result Form APIs
+  getSamplesForResultForm: async (testRequestId: string): Promise<SampleForSelectionDto[]> => {
+    const response = await api.get<SampleForSelectionDto[]>(`/api/v1/result-forms/samples-for-selection/${testRequestId}`);
+    return response.data;
+  },
+
+  generateBM01ResultForm: async (testRequestId: string, sampleId: string): Promise<{ fileName: string; sampleCode: string }> => {
+    const response = await api.post<{ fileName: string; sampleCode: string }>('/api/v1/result-forms/generate-bm01', {
+      testRequestId,
+      sampleId
+    });
+    return response.data;
   }
 };
+
+// Sample selection DTO for BM01 result form
+export interface SampleForSelectionDto {
+  id: string;
+  sampleCode: string;
+  sampleName: string;
+  testingStatus: string;
+  canGenerateResult: boolean;
+  requestedCompletionDate?: string;
+}
 
 export default testRequestService;
