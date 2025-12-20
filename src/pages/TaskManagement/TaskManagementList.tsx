@@ -161,7 +161,6 @@ const TaskManagementList: React.FC = () => {
     setSelectedTask(record);
     updateForm.setFieldsValue({
       testDate: record.testDate ? dayjs(record.testDate) : null,
-      status: record.status,
       notes: record.notes,
     });
     setUpdateModalVisible(true);
@@ -176,7 +175,6 @@ const TaskManagementList: React.FC = () => {
         testDate: values.testDate
           ? values.testDate.format("YYYY-MM-DD")
           : undefined,
-        status: values.status,
         notes: values.notes,
       };
 
@@ -288,27 +286,38 @@ const TaskManagementList: React.FC = () => {
       key: "action",
       width: 100,
       fixed: "right",
-      render: (_: any, record: LaboratoryTaskDto) => (
-        <Space size="small">
-          <Tooltip title="Cập nhật">
-            <Button
-              type="link"
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() => handleOpenUpdateModal(record)}
-            />
-          </Tooltip>
-          <Tooltip title="Xóa">
-            <Button
-              type="text"
-              size="small"
-              danger
-              icon={<DeleteOutlined />}
-              onClick={() => handleDelete(record.id)}
-            />
-          </Tooltip>
-        </Space>
-      ),
+      render: (_: any, record: LaboratoryTaskDto) => {
+        const isLocked = record.status === LaboratoryTaskStatus.Approved ||
+                         record.status === LaboratoryTaskStatus.ResultSent;
+        const lockedReason = record.status === LaboratoryTaskStatus.Approved
+          ? "Không thể chỉnh sửa nhiệm vụ đã duyệt"
+          : record.status === LaboratoryTaskStatus.ResultSent
+          ? "Không thể chỉnh sửa nhiệm vụ đã gửi kết quả"
+          : "";
+        return (
+          <Space size="small">
+            <Tooltip title={isLocked ? lockedReason : "Cập nhật"}>
+              <Button
+                type="link"
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => handleOpenUpdateModal(record)}
+                disabled={isLocked}
+              />
+            </Tooltip>
+            <Tooltip title={isLocked ? lockedReason : "Xóa"}>
+              <Button
+                type="text"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                onClick={() => handleDelete(record.id)}
+                disabled={isLocked}
+              />
+            </Tooltip>
+          </Space>
+        );
+      },
     },
   ];
 
@@ -558,28 +567,6 @@ const TaskManagementList: React.FC = () => {
                 return false;
               }}
             />
-          </Form.Item>
-          <Form.Item name="status" label="Trạng thái">
-            <Select>
-              <Select.Option value={LaboratoryTaskStatus.NotAssignedMethod}>
-                Chưa gán phương pháp
-              </Select.Option>
-              <Select.Option value={LaboratoryTaskStatus.AssignedMethod}>
-                Đã gán phương pháp
-              </Select.Option>
-              <Select.Option value={LaboratoryTaskStatus.Testing}>
-                Đang thí nghiệm
-              </Select.Option>
-              <Select.Option value={LaboratoryTaskStatus.PendingApproval}>
-                Chờ duyệt kết quả
-              </Select.Option>
-              <Select.Option value={LaboratoryTaskStatus.Approved}>
-                Đã duyệt
-              </Select.Option>
-              <Select.Option value={LaboratoryTaskStatus.ResultSent}>
-                Đã gửi kết quả
-              </Select.Option>
-            </Select>
           </Form.Item>
           <Form.Item name="notes" label="Ghi chú">
             <Input.TextArea rows={3} />

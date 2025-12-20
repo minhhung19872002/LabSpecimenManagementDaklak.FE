@@ -571,6 +571,8 @@ const TestRequestDetail: React.FC = () => {
               type="primary"
               icon={<EditOutlined />}
               onClick={() => navigate(`/test-request/edit/${id}`)}
+              disabled={data.status === TestRequestStatus.Completed}
+              title={data.status === TestRequestStatus.Completed ? "Không thể chỉnh sửa yêu cầu đã hoàn thành" : ""}
             >
               Chỉnh sửa
             </Button>
