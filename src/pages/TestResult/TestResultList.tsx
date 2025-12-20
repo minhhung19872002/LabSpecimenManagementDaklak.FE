@@ -258,30 +258,44 @@ const TestResultList: React.FC = () => {
       key: 'actions',
       width: 150,
       fixed: 'right',
-      render: (_: any, record: TestResultDto) => (
-        <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            icon={<EyeOutlined />}
-            onClick={() => navigate(`/test-result/${record.id}`)}
-          />
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          />
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Có"
-            cancelText="Không"
-          >
-            <Button type="link" size="small" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
-      ),
+      render: (_: any, record: TestResultDto) => {
+        const isLocked = record.approvalStatus === ResultApprovalStatus.Step2Approved;
+        const lockedReason = isLocked ? "Không thể chỉnh sửa kết quả đã duyệt" : "";
+        return (
+          <Space size="small">
+            <Button
+              type="link"
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={() => navigate(`/test-result/${record.id}`)}
+            />
+            <Button
+              type="link"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+              disabled={isLocked}
+              title={lockedReason}
+            />
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa?"
+              onConfirm={() => handleDelete(record.id)}
+              okText="Có"
+              cancelText="Không"
+              disabled={isLocked}
+            >
+              <Button
+                type="link"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                disabled={isLocked}
+                title={lockedReason}
+              />
+            </Popconfirm>
+          </Space>
+        );
+      },
     },
   ];
 

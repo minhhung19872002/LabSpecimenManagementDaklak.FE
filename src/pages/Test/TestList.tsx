@@ -241,30 +241,44 @@ const TestList: React.FC = () => {
       key: 'actions',
       width: 150,
       fixed: 'right' as const,
-      render: (_: any, record: TestDto) => (
-        <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            icon={<EyeOutlined />}
-            onClick={() => navigate(`/test/${record.id}`)}
-          />
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          />
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Có"
-            cancelText="Không"
-          >
-            <Button type="link" size="small" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
-      ),
+      render: (_: any, record: TestDto) => {
+        const isLocked = record.status === TestStatus.Approved;
+        const lockedReason = isLocked ? "Không thể chỉnh sửa phép thử đã duyệt" : "";
+        return (
+          <Space size="small">
+            <Button
+              type="link"
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={() => navigate(`/test/${record.id}`)}
+            />
+            <Button
+              type="link"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+              disabled={isLocked}
+              title={lockedReason}
+            />
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa?"
+              onConfirm={() => handleDelete(record.id)}
+              okText="Có"
+              cancelText="Không"
+              disabled={isLocked}
+            >
+              <Button
+                type="link"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                disabled={isLocked}
+                title={lockedReason}
+              />
+            </Popconfirm>
+          </Space>
+        );
+      },
     },
   ];
 
