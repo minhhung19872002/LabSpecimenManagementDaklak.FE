@@ -330,30 +330,48 @@ const NCRList: React.FC = () => {
       key: "actions",
       width: 120,
       fixed: "right" as const,
-      render: (_: any, record: NCRDisplay) => (
-        <Space size="small">
-          <Button
-            type="text"
-            size="small"
-            icon={<EyeOutlined />}
-            onClick={() => handleView(record)}
-          />
-          <Button
-            type="text"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          />
-          <Popconfirm
-            title="Xóa NCR?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Xóa"
-            cancelText="Hủy"
-          >
-            <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
-      ),
+      render: (_: any, record: NCRDisplay) => {
+        const isLocked = record.status === NCRStatus.Closed || record.status === NCRStatus.Cancelled;
+        const lockedReason = record.status === NCRStatus.Closed
+          ? "Không thể chỉnh sửa NCR đã đóng"
+          : record.status === NCRStatus.Cancelled
+          ? "Không thể chỉnh sửa NCR đã hủy"
+          : "";
+        return (
+          <Space size="small">
+            <Button
+              type="text"
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={() => handleView(record)}
+            />
+            <Button
+              type="text"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+              disabled={isLocked}
+              title={lockedReason}
+            />
+            <Popconfirm
+              title="Xóa NCR?"
+              onConfirm={() => handleDelete(record.id)}
+              okText="Xóa"
+              cancelText="Hủy"
+              disabled={isLocked}
+            >
+              <Button
+                type="text"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                disabled={isLocked}
+                title={lockedReason}
+              />
+            </Popconfirm>
+          </Space>
+        );
+      },
     },
   ];
 
