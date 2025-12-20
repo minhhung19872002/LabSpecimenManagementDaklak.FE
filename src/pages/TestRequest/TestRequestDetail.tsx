@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Card,
   Descriptions,
@@ -13,16 +13,20 @@ import {
   Typography,
   Row,
   Col,
+  Modal,
+  Tooltip,
 } from "antd";
 import {
   ArrowLeftOutlined,
   EditOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+  CloseOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { testRequestService } from "../../services/testRequestService";
+import { testRequestService, SampleForSelectionDto } from "../../services/testRequestService";
 import {
   TestRequestDto,
   TestRequestStatus,
@@ -42,6 +46,21 @@ const TestRequestDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<TestRequestDto | null>(null);
+
+  // OnlyOffice Editor states
+  const [editorModalVisible, setEditorModalVisible] = useState(false);
+  const [editorConfig, setEditorConfig] = useState<any>(null);
+  const [editorLoading, setEditorLoading] = useState(false);
+  const [scriptLoaded, setScriptLoaded] = useState(false);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
+  const docEditorRef = useRef<any>(null);
+
+  // BM01 Sample Selection Modal states
+  const [sampleSelectionModalVisible, setSampleSelectionModalVisible] = useState(false);
+  const [samplesForSelection, setSamplesForSelection] = useState<SampleForSelectionDto[]>([]);
+  const [loadingSamples, setLoadingSamples] = useState(false);
+  const [selectedSampleId, setSelectedSampleId] = useState<string | null>(null);
+  const [generatingBM01, setGeneratingBM01] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -124,6 +143,225 @@ const TestRequestDetail: React.FC = () => {
       <CloseCircleOutlined style={{ color: "#d9d9d9", fontSize: 16 }} />
     );
   };
+
+  // Load OnlyOffice script when modal opens
+  useEffect(() => {
+    if (!editorModalVisible || !editorConfig) return;
+
+    const scriptId = "onlyoffice-api-script";
+    let script = document.getElementById(scriptId) as HTMLScriptElement;
+
+    if (!script) {
+      script = document.createElement("script");
+      script.id = scriptId;
+      script.src = `${editorConfig.documentServerUrl}/web-apps/apps/api/documents/api.js`;
+      script.async = true;
+      script.onload = () => {
+        setScriptLoaded(true);
+        setEditorLoading(false);
+      };
+      script.onerror = () => {
+        message.error("Không thể tải OnlyOffice Document Server");
+        setEditorLoading(false);
+      };
+      document.head.appendChild(script);
+    } else {
+      if ((window as any).DocsAPI) {
+        setScriptLoaded(true);
+      }
+      setEditorLoading(false);
+    }
+  }, [editorModalVisible, editorConfig]);
+
+  // Initialize editor when script is loaded and modal is visible
+  useEffect(() => {
+    if (!scriptLoaded || !editorConfig || !editorModalVisible) return;
+
+    // Wait for DOM to be ready
+    const initTimer = setTimeout(() => {
+      try {
+        if (docEditorRef.current) {
+          docEditorRef.current.destroyEditor();
+        }
+
+        // Build config similar to OnlyOfficeEditor component
+        const config = {
+          document: {
+            fileType: editorConfig.config.document.fileType,
+            key: editorConfig.config.document.key,
+            title: editorConfig.config.document.title,
+            url: editorConfig.config.document.url,
+            permissions: {
+              edit: true,
+              download: true,
+              print: true,
+              comment: true,
+              copy: true,
+              fillForms: true,
+              modifyContentControl: true,
+              modifyFilter: true,
+              review: true,
+            },
+          },
+          documentType: editorConfig.config.documentType,
+          editorConfig: {
+            mode: "edit",
+            lang: "vi",
+            user: editorConfig.config.editorConfig?.user || { id: "1", name: "Editor" },
+            customization: {
+              autosave: false,
+              forcesave: true,
+              plugins: false,
+            },
+          },
+          height: "100%",
+          width: "100%",
+          type: "desktop",
+          events: {
+            onDocumentReady: () => {
+              console.log("Result form document is ready");
+            },
+            onError: (event: any) => {
+              console.error("OnlyOffice error:", event);
+              const errorCode = event?.data?.errorCode || event?.data;
+              if (errorCode === -2 || errorCode === -4 || errorCode === -5) {
+                console.warn("OnlyOffice temporary error:", errorCode);
+                return;
+              }
+              message.error("Có lỗi xảy ra với document editor");
+            },
+          },
+        };
+
+        docEditorRef.current = new (window as any).DocsAPI.DocEditor(
+          "result-form-editor-container",
+          config
+        );
+      } catch (err) {
+        console.error("Failed to initialize editor:", err);
+        message.error("Không thể khởi tạo editor");
+      }
+    }, 200);
+
+    return () => {
+      clearTimeout(initTimer);
+    };
+  }, [scriptLoaded, editorConfig, editorModalVisible]);
+
+  // Cleanup editor on modal close
+  useEffect(() => {
+    if (!editorModalVisible && docEditorRef.current) {
+      try {
+        docEditorRef.current.destroyEditor();
+        docEditorRef.current = null;
+      } catch (err) {
+        console.error("Failed to destroy editor:", err);
+      }
+    }
+  }, [editorModalVisible]);
+
+  const handleCloseEditorModal = () => {
+    if (docEditorRef.current) {
+      try {
+        docEditorRef.current.destroyEditor();
+        docEditorRef.current = null;
+      } catch (e) {
+        console.log("Editor destroy error:", e);
+      }
+    }
+    setEditorModalVisible(false);
+    setEditorConfig(null);
+    setScriptLoaded(false);
+  };
+
+  // Handle BM01 - Open sample selection modal
+  const handleOpenBM01Modal = async () => {
+    if (!id) return;
+
+    setLoadingSamples(true);
+    setSampleSelectionModalVisible(true);
+    setSelectedSampleId(null);
+
+    try {
+      const samples = await testRequestService.getSamplesForResultForm(id);
+      setSamplesForSelection(samples);
+    } catch (error: any) {
+      console.error("Error loading samples:", error);
+      message.error("Không thể tải danh sách mẫu");
+      setSampleSelectionModalVisible(false);
+    } finally {
+      setLoadingSamples(false);
+    }
+  };
+
+  // Handle BM01 - Generate result form
+  const handleGenerateBM01 = async () => {
+    if (!id || !selectedSampleId) {
+      message.warning("Vui lòng chọn một mẫu");
+      return;
+    }
+
+    const selectedSample = samplesForSelection.find(s => s.id === selectedSampleId);
+    if (selectedSample && !selectedSample.canGenerateResult) {
+      message.error("Mẫu chưa xét nghiệm xong");
+      return;
+    }
+
+    setGeneratingBM01(true);
+    try {
+      // Step 1: Generate the document
+      const result = await testRequestService.generateBM01ResultForm(id, selectedSampleId);
+      message.success(`Đã tạo phiếu kết quả BM01 cho mẫu ${result.sampleCode}`);
+
+      // Step 2: Close selection modal
+      setSampleSelectionModalVisible(false);
+
+      // Step 3: Get editor config and open OnlyOffice
+      const config = await testRequestService.getResultFormEditorConfig(result.fileName);
+      setEditorConfig(config);
+      setEditorLoading(true);
+      setEditorModalVisible(true);
+    } catch (error: any) {
+      console.error("Error generating BM01 result form:", error);
+      message.error(error?.response?.data?.error?.message || "Không thể tạo phiếu kết quả. Vui lòng thử lại.");
+    } finally {
+      setGeneratingBM01(false);
+    }
+  };
+
+  // Sample selection table columns
+  const sampleSelectionColumns = [
+    {
+      title: "Mã mẫu",
+      dataIndex: "sampleCode",
+      key: "sampleCode",
+      width: 120,
+    },
+    {
+      title: "Tên mẫu",
+      dataIndex: "sampleName",
+      key: "sampleName",
+      width: 200,
+    },
+    {
+      title: "Trạng thái XN",
+      dataIndex: "testingStatus",
+      key: "testingStatus",
+      width: 150,
+      render: (status: string, record: SampleForSelectionDto) => (
+        <Tag color={record.canGenerateResult ? "success" : "default"}>
+          {status}
+        </Tag>
+      ),
+    },
+    {
+      title: "Ngày YC xong",
+      dataIndex: "requestedCompletionDate",
+      key: "requestedCompletionDate",
+      width: 120,
+      render: (date: string) => date ? dayjs(date).format("DD/MM/YYYY") : "-",
+    },
+  ];
 
   // Sample table columns
   const sampleColumns = [
@@ -324,6 +562,12 @@ const TestRequestDetail: React.FC = () => {
               Quay lại
             </Button>
             <Button
+              icon={<FileTextOutlined />}
+              onClick={handleOpenBM01Modal}
+            >
+              In KQ Mẫu lẻ
+            </Button>
+            <Button
               type="primary"
               icon={<EditOutlined />}
               onClick={() => navigate(`/test-request/edit/${id}`)}
@@ -499,7 +743,7 @@ const TestRequestDetail: React.FC = () => {
           columns={sampleColumns}
           rowKey="id"
           pagination={false}
-          scroll={{ x: 1500 }}
+          scroll={{ x: 1600 }}
           size="small"
           bordered
           style={{ marginBottom: 24 }}
@@ -743,6 +987,102 @@ const TestRequestDetail: React.FC = () => {
           </Descriptions.Item>
         </Descriptions>
       </Card>
+
+      {/* BM01 Sample Selection Modal */}
+      <Modal
+        title="Chọn mẫu để xuất báo cáo BM01"
+        open={sampleSelectionModalVisible}
+        onCancel={() => setSampleSelectionModalVisible(false)}
+        width={700}
+        footer={[
+          <Button key="cancel" onClick={() => setSampleSelectionModalVisible(false)}>
+            Hủy
+          </Button>,
+          <Button
+            key="submit"
+            type="primary"
+            loading={generatingBM01}
+            disabled={!selectedSampleId || !samplesForSelection.find(s => s.id === selectedSampleId)?.canGenerateResult}
+            onClick={handleGenerateBM01}
+          >
+            Xuất báo cáo
+          </Button>,
+        ]}
+      >
+        <Spin spinning={loadingSamples}>
+          <Table
+            dataSource={samplesForSelection}
+            columns={sampleSelectionColumns}
+            rowKey="id"
+            pagination={false}
+            size="small"
+            rowSelection={{
+              type: "radio",
+              selectedRowKeys: selectedSampleId ? [selectedSampleId] : [],
+              onChange: (selectedRowKeys) => {
+                setSelectedSampleId(selectedRowKeys[0] as string);
+              },
+              getCheckboxProps: (record: SampleForSelectionDto) => ({
+                disabled: !record.canGenerateResult,
+              }),
+            }}
+            onRow={(record) => ({
+              onClick: () => {
+                if (record.canGenerateResult) {
+                  setSelectedSampleId(record.id);
+                }
+              },
+              style: {
+                cursor: record.canGenerateResult ? "pointer" : "not-allowed",
+                opacity: record.canGenerateResult ? 1 : 0.6,
+              },
+            })}
+            locale={{ emptyText: "Không có mẫu nào" }}
+          />
+          {samplesForSelection.some(s => !s.canGenerateResult) && (
+            <div style={{ marginTop: 12, color: "#888", fontSize: 12 }}>
+              * Chỉ có thể xuất báo cáo cho các mẫu có trạng thái "Đã gửi kết quả"
+            </div>
+          )}
+        </Spin>
+      </Modal>
+
+      {/* OnlyOffice Editor Modal - Full Screen */}
+      <Modal
+        title={null}
+        open={editorModalVisible}
+        onCancel={handleCloseEditorModal}
+        width="100vw"
+        style={{ top: 0, margin: 0, padding: 0, maxWidth: "100vw" }}
+        styles={{
+          body: { height: "calc(100vh - 53px)", padding: 0, overflow: "hidden" },
+          wrapper: { padding: 0 },
+          mask: { padding: 0 },
+          header: { display: "none" },
+          footer: { marginTop: 0, padding: "10px 16px" },
+        }}
+        wrapClassName="fullscreen-modal"
+        footer={
+          <Button icon={<CloseOutlined />} onClick={handleCloseEditorModal}>
+            Đóng
+          </Button>
+        }
+        closable={false}
+        destroyOnClose
+        centered={false}
+      >
+        {editorLoading ? (
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
+            <Spin size="large" tip="Đang tải editor..." />
+          </div>
+        ) : (
+          <div
+            id="result-form-editor-container"
+            ref={editorContainerRef}
+            style={{ width: "100%", height: "100%" }}
+          />
+        )}
+      </Modal>
     </div>
   );
 };
