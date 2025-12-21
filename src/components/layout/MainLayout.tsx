@@ -52,7 +52,8 @@ const routeToKeyMap: Record<string, string> = {
   "/requests": "requests",
   "/test-request": "requests",
   "/tasks": "taskManagement",
-  "/test-management": "testManagement",
+  "/task": "taskManagement",
+  "/testing": "testManagement",
   "/specimens": "specimens",
   "/specimen": "specimens",
   "/tests": "tests",
@@ -233,7 +234,7 @@ const MainLayout: React.FC = () => {
           key: "testManagement",
           icon: <ExperimentOutlined />,
           label: menuLabel("Quản lý xét nghiệm"),
-          onClick: () => navigate("/test-management"),
+          onClick: () => navigate("/testing"),
         },
         {
           key: "specimens",

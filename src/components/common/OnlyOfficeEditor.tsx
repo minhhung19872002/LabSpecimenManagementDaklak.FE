@@ -12,16 +12,37 @@ declare global {
   }
 }
 
+type OnlyOfficeMode = "edit" | "view";
+
 interface OnlyOfficeEditorProps {
   visible: boolean;
   fileName: string;
   onClose: () => void;
+
+  // NEW
+  mode?: OnlyOfficeMode; // default: "edit"
+  user?: { id: string; name: string };
+  permissions?: Partial<{
+    edit: boolean;
+    download: boolean;
+    print: boolean;
+    comment: boolean;
+    copy: boolean;
+    fillForms: boolean;
+    modifyContentControl: boolean;
+    modifyFilter: boolean;
+    review: boolean;
+  }>;
 }
 
 const OnlyOfficeEditor: React.FC<OnlyOfficeEditorProps> = ({
   visible,
   fileName,
   onClose,
+
+  mode = "edit",
+  user = { id: "1", name: "Editor" },
+  permissions,
 }) => {
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const editorInstanceRef = useRef<any>(null);
@@ -30,13 +51,14 @@ const OnlyOfficeEditor: React.FC<OnlyOfficeEditorProps> = ({
     useState<OnlyOfficeEditorConfigDto | null>(null);
   const [scriptLoaded, setScriptLoaded] = useState(false);
 
-  // Load OnlyOffice script
   useEffect(() => {
     if (!visible) return;
 
     const loadScript = async () => {
       try {
-        // First get the config to know the document server URL
+        setLoading(true);
+        setScriptLoaded(false);
+
         const config = await formTemplateService.getEditorConfig(fileName);
         setEditorConfig(config);
 
@@ -63,9 +85,7 @@ const OnlyOfficeEditor: React.FC<OnlyOfficeEditorProps> = ({
 
           document.head.appendChild(script);
         } else {
-          if (window.DocsAPI) {
-            setScriptLoaded(true);
-          }
+          if (window.DocsAPI) setScriptLoaded(true);
           setLoading(false);
         }
       } catch (err) {
@@ -78,7 +98,6 @@ const OnlyOfficeEditor: React.FC<OnlyOfficeEditorProps> = ({
     loadScript();
   }, [visible, fileName]);
 
-  // Initialize editor when script is loaded
   useEffect(() => {
     if (
       !scriptLoaded ||
@@ -88,41 +107,50 @@ const OnlyOfficeEditor: React.FC<OnlyOfficeEditorProps> = ({
     )
       return;
 
-    // Wait a bit for the container to be ready
     const initTimer = setTimeout(() => {
       try {
         if (editorInstanceRef.current) {
           editorInstanceRef.current.destroyEditor();
         }
 
-        // Convert config to the format OnlyOffice expects
-        // Use minimal config like the working test page
+        const isEditMode = mode === "edit";
+
+        // Default permissions
+        const defaultPermissions = {
+          edit: isEditMode, // quan trọng: view => false
+          download: true,
+          print: true,
+          comment: true,
+          copy: true,
+          fillForms: true,
+          modifyContentControl: true,
+          modifyFilter: true,
+          review: true,
+        };
+
+        const finalPermissions = {
+          ...defaultPermissions,
+          ...(permissions || {}),
+        };
+
+        // Nếu mode=view mà permissions.edit vẫn true do override -> ép về false để preview đúng nghĩa
+        if (!isEditMode) {
+          finalPermissions.edit = false;
+        }
+
         const config = {
           document: {
             fileType: editorConfig.config.document.fileType,
             key: editorConfig.config.document.key,
             title: editorConfig.config.document.title,
             url: editorConfig.config.document.url,
-            permissions: {
-              edit: true,
-              download: true,
-              print: true,
-              comment: true,
-              copy: true,
-              fillForms: true,
-              modifyContentControl: true,
-              modifyFilter: true,
-              review: true,
-            },
+            permissions: finalPermissions,
           },
           documentType: editorConfig.config.documentType,
           editorConfig: {
-            mode: "edit",
+            mode: isEditMode ? "edit" : "view", // preview
             lang: "vi",
-            user: {
-              id: "1",
-              name: "Editor",
-            },
+            user,
             customization: {
               autosave: false,
               forcesave: true,
@@ -138,36 +166,14 @@ const OnlyOfficeEditor: React.FC<OnlyOfficeEditorProps> = ({
             },
             onError: (event: any) => {
               console.error("OnlyOffice error:", event);
-              // Error codes:
-              // -1: Unknown error
-              // -2: Download error (connection issue - often temporary)
-              // -3: Document cannot be converted
-              // -4: Document cannot be downloaded
-              // -5: Document cannot be saved
-              // -6: Document editing error
               const errorCode = event?.data?.errorCode || event?.data;
-              // Ignore temporary connection errors (-2, -4, -5) as they often resolve themselves
-              if (errorCode === -2 || errorCode === -4 || errorCode === -5) {
-                console.warn(
-                  "OnlyOffice temporary error (will retry):",
-                  errorCode
-                );
+              if (errorCode === -2 || errorCode === -4 || errorCode === -5)
                 return;
-              }
               message.error("Có lỗi xảy ra với document editor");
             },
             onWarning: (event: any) => {
-              // Warning codes:
-              // -101: Callback connection check failed (can be ignored in development with self-signed certs)
               const warningCode = event?.data?.warningCode || event?.data;
-              // Ignore callback connection warnings (-101) as document still works
-              if (warningCode === -101) {
-                console.log(
-                  "OnlyOffice callback warning (ignored):",
-                  warningCode
-                );
-                return;
-              }
+              if (warningCode === -101) return;
               console.warn("OnlyOffice warning:", event);
             },
             onRequestSaveAs: (event: any) => {
@@ -186,12 +192,9 @@ const OnlyOfficeEditor: React.FC<OnlyOfficeEditorProps> = ({
       }
     }, 100);
 
-    return () => {
-      clearTimeout(initTimer);
-    };
-  }, [scriptLoaded, editorConfig, visible]);
+    return () => clearTimeout(initTimer);
+  }, [scriptLoaded, editorConfig, visible, mode, user, permissions]);
 
-  // Cleanup on close
   useEffect(() => {
     if (!visible && editorInstanceRef.current) {
       try {

@@ -83,3 +83,7 @@ export type {
 // Laboratory Task Service
 export { laboratoryTaskService } from './laboratoryTaskService';
 export { default as laboratoryTaskServiceDefault } from './laboratoryTaskService';
+
+// Testing Service (KTV view)
+export { testingService } from './testingService';
+export { default as testingServiceDefault } from './testingService';

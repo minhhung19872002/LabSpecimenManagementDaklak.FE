@@ -1846,7 +1846,7 @@ const TestRequestForm: React.FC = () => {
                 <Col xs={24}>
                   <Row align="middle">
                     <Col xs={6}>
-                      <Text>Người giám sát:</Text>
+                      <Text>Người giám sát: <span style={{ color: '#ff4d4f' }}>*</span></Text>
                     </Col>
                     <Col xs={18}>
                       <Form.Item
@@ -1884,7 +1884,7 @@ const TestRequestForm: React.FC = () => {
                 <Col xs={24}>
                   <Row align="middle">
                     <Col xs={6}>
-                      <Text>Giám đốc:</Text>
+                      <Text>Giám đốc: <span style={{ color: '#ff4d4f' }}>*</span></Text>
                     </Col>
                     <Col xs={18}>
                       <Form.Item

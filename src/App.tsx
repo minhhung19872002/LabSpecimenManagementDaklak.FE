@@ -46,6 +46,10 @@ const NCRList = Loadable(lazy(() => import('./pages/NCR/NCRList')));
 const TaskManagementList = Loadable(lazy(() => import('./pages/TaskManagement/TaskManagementList')));
 const TaskManagementDetail = Loadable(lazy(() => import('./pages/TaskManagement/TaskManagementDetail')));
 
+// Testing - Quản lý xét nghiệm (KTV view)
+const TestingList = Loadable(lazy(() => import('./pages/Testing/TestingList')));
+const TestingDetail = Loadable(lazy(() => import('./pages/Testing/TestingDetail')));
+
 // Subcontractor
 const SubcontractorList = Loadable(lazy(() => import('./pages/Subcontractor/SubcontractorList')));
 
@@ -121,7 +125,10 @@ function App() {
           {/* Task Management - Quản lý công việc khoa phòng */}
           <Route path="tasks" element={<TaskManagementList />} />
           <Route path="task/:id" element={<TaskManagementDetail />} />
-          <Route path="test-management" element={<div style={{ padding: '24px', textAlign: 'center', fontSize: '18px', color: '#666' }}>Đang phát triển</div>} />
+
+          {/* Testing - Quản lý xét nghiệm (KTV view) */}
+          <Route path="testing" element={<TestingList />} />
+          <Route path="testing/:id" element={<TestingDetail />} />
 
           {/* Subcontractor Management - Nhà thầu phụ */}
           <Route path="subcontractors" element={<SubcontractorList />} />
