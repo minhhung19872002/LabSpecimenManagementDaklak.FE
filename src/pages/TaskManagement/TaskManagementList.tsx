@@ -246,15 +246,17 @@ const TaskManagementList: React.FC = () => {
       render: (date: string, record: LaboratoryTaskDto) => {
         if (!date) return "-";
         const d = dayjs(date);
-        const isOverdue =
-          d.isBefore(dayjs()) &&
+        // Highlight if urgent (<=5 days remaining) and not done
+        const daysRemaining = d.diff(dayjs(), "day");
+        const isUrgent =
+          daysRemaining <= 5 &&
           record.status !== LaboratoryTaskStatus.Approved &&
           record.status !== LaboratoryTaskStatus.ResultSent;
         return (
           <span
             style={{
-              color: isOverdue ? "#ff4d4f" : undefined,
-              fontWeight: isOverdue ? "bold" : undefined,
+              color: isUrgent ? "#ff4d4f" : undefined,
+              fontWeight: isUrgent ? "bold" : undefined,
             }}
           >
             {d.format("DD/MM/YYYY")}
@@ -336,6 +338,18 @@ const TaskManagementList: React.FC = () => {
     },
   ];
 
+  // Helper to check if task is urgent (<=5 days remaining and not done)
+  const isTaskUrgent = (record: LaboratoryTaskDto) => {
+    if (!record.requestCompletionDate) return false;
+    if (
+      record.status === LaboratoryTaskStatus.Approved ||
+      record.status === LaboratoryTaskStatus.ResultSent
+    )
+      return false;
+    const daysRemaining = dayjs(record.requestCompletionDate).diff(dayjs(), "day");
+    return daysRemaining <= 5;
+  };
+
   const renderTable = (data: LaboratoryTaskDto[]) => (
     <Table
       columns={columns}
@@ -357,6 +371,7 @@ const TaskManagementList: React.FC = () => {
         onDoubleClick: () => navigate(`/task/${record.id}`),
         style: { cursor: "pointer" },
       })}
+      rowClassName={(record) => (isTaskUrgent(record) ? "urgent-row" : "")}
     />
   );
 
@@ -588,6 +603,15 @@ const TaskManagementList: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+      <style>{`
+        .urgent-row > td {
+          background-color: #fff2f0 !important;
+        }
+        .urgent-row:hover > td {
+          background-color: #ffebe8 !important;
+        }
+      `}</style>
     </div>
   );
 };
