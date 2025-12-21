@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Card,
   Table,
@@ -42,6 +42,7 @@ const { Text } = Typography;
 
 const TestingList: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [tasks, setTasks] = useState<TestingListDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
@@ -49,8 +50,11 @@ const TestingList: React.FC = () => {
     undefined
   );
   const [technicianFilter, setTechnicianFilter] = useState<string[]>([]);
+
+  // Read tab from URL, default to MyAssignments
+  const tabFromUrl = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState<TestingTabType>(
-    TestingTabType.MyAssignments
+    tabFromUrl === 'all' ? TestingTabType.All : TestingTabType.MyAssignments
   );
 
   // Technicians for filter dropdown
@@ -158,8 +162,11 @@ const TestingList: React.FC = () => {
   };
 
   const handleTabChange = (key: string) => {
-    setActiveTab(Number(key) as TestingTabType);
+    const newTab = Number(key) as TestingTabType;
+    setActiveTab(newTab);
     setPagination((prev) => ({ ...prev, current: 1 }));
+    // Update URL to preserve tab state
+    setSearchParams({ tab: newTab === TestingTabType.All ? 'all' : 'my' });
   };
 
   const handleTableChange = (paginationConfig: any) => {
@@ -277,7 +284,7 @@ const TestingList: React.FC = () => {
       onChange={handleTableChange}
       scroll={{ x: 1000 }}
       onRow={(record) => ({
-        onDoubleClick: () => navigate(`/testing/${record.laboratoryTaskId}`),
+        onDoubleClick: () => navigate(`/testing/${record.laboratoryTaskId}?viewMode=${activeTab === TestingTabType.MyAssignments ? 'my' : 'all'}`),
         style: { cursor: "pointer" },
       })}
       rowClassName={(record) => (record.isUrgent && record.testingStatus !== TestingStatus.Done ? "urgent-row" : "")}
