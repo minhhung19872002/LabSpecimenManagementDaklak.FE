@@ -82,6 +82,35 @@ export const testRequestService = {
       sampleId
     });
     return response.data;
+  },
+
+  // Generate test request form (BM05 - phiếu yêu cầu XN)
+  generateTestRequestForm: async (testRequestId: string): Promise<{ fileName: string; requestNumber: string }> => {
+    const response = await api.post<{ fileName: string; requestNumber: string }>('/api/v1/result-forms/generate-test-request', {
+      testRequestId
+    });
+    return response.data;
+  },
+
+  // Status transition APIs
+  printTestRequest: async (id: string): Promise<void> => {
+    await api.post(`${BASE_URL}/${id}/print`);
+  },
+
+  updateToPendingApproval: async (id: string): Promise<void> => {
+    await api.post(`${BASE_URL}/${id}/pending-approval`);
+  },
+
+  approve: async (id: string): Promise<void> => {
+    await api.post(`${BASE_URL}/${id}/approve`);
+  },
+
+  sendResult: async (id: string): Promise<void> => {
+    await api.post(`${BASE_URL}/${id}/send-result`);
+  },
+
+  complete: async (id: string): Promise<void> => {
+    await api.post(`${BASE_URL}/${id}/complete`);
   }
 };
 

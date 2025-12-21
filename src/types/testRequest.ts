@@ -1,10 +1,61 @@
 // Enums
 export enum TestRequestStatus {
-  Pending = 0,
-  InProgress = 1,
-  Completed = 2,
-  Cancelled = 3
+  New = 0,                // Mới - vừa tạo, chưa in phiếu
+  Pending = 1,            // Chờ xử lý - đã in phiếu XN
+  InProgress = 2,         // Đang thực hiện - QLKT đã gán PP + KTV
+  TestingCompleted = 3,   // TN Hoàn Thành - QLKT đã gửi kết quả
+  PendingApproval = 4,    // Chờ Phê duyệt - đã in KQ xét nghiệm
+  Approved = 5,           // Đã phê duyệt - lãnh đạo đã duyệt
+  ResultSent = 6,         // Đã gửi kết quả - đã nhấn gửi KQ
+  Completed = 7           // Hoàn Thành - kết thúc quy trình
 }
+
+// Labels for TestRequestStatus
+export const TestRequestStatusLabels: Record<TestRequestStatus, string> = {
+  [TestRequestStatus.New]: "Mới",
+  [TestRequestStatus.Pending]: "Chờ xử lý",
+  [TestRequestStatus.InProgress]: "Đang thực hiện",
+  [TestRequestStatus.TestingCompleted]: "TN Hoàn Thành",
+  [TestRequestStatus.PendingApproval]: "Chờ Phê duyệt",
+  [TestRequestStatus.Approved]: "Đã phê duyệt",
+  [TestRequestStatus.ResultSent]: "Đã gửi kết quả",
+  [TestRequestStatus.Completed]: "Hoàn Thành",
+};
+
+// Colors for TestRequestStatus (Ant Design Tag colors)
+export const TestRequestStatusColors: Record<TestRequestStatus, string> = {
+  [TestRequestStatus.New]: "default",
+  [TestRequestStatus.Pending]: "processing",
+  [TestRequestStatus.InProgress]: "blue",
+  [TestRequestStatus.TestingCompleted]: "cyan",
+  [TestRequestStatus.PendingApproval]: "orange",
+  [TestRequestStatus.Approved]: "green",
+  [TestRequestStatus.ResultSent]: "purple",
+  [TestRequestStatus.Completed]: "success",
+};
+
+// Helper functions for TestRequestStatus validation
+export const canEditTestRequest = (status: TestRequestStatus): boolean => {
+  // Full edit: New, Pending
+  // Limited edit: InProgress, TestingCompleted
+  // No edit: PendingApproval, Approved, ResultSent, Completed
+  return status !== TestRequestStatus.PendingApproval &&
+         status !== TestRequestStatus.Approved &&
+         status !== TestRequestStatus.ResultSent &&
+         status !== TestRequestStatus.Completed;
+};
+
+export const canEditFullInfo = (status: TestRequestStatus): boolean => {
+  return status === TestRequestStatus.New || status === TestRequestStatus.Pending;
+};
+
+export const canDeleteTestRequest = (status: TestRequestStatus): boolean => {
+  return status === TestRequestStatus.New || status === TestRequestStatus.Pending;
+};
+
+export const showActionsForTestRequest = (status: TestRequestStatus): boolean => {
+  return status !== TestRequestStatus.Completed;
+};
 
 export enum ResultLanguage {
   Vietnamese = 0,

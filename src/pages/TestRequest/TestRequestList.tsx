@@ -28,7 +28,15 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { ColumnsType } from "antd/es/table";
 import { testRequestService } from "../../services/testRequestService";
-import { TestRequestDto, TestRequestStatus } from "../../types/testRequest";
+import {
+  TestRequestDto,
+  TestRequestStatus,
+  TestRequestStatusLabels,
+  TestRequestStatusColors,
+  canEditTestRequest,
+  canDeleteTestRequest,
+  showActionsForTestRequest,
+} from "../../types/testRequest";
 import ImportExcelModal from "../../components/common/ImportExcelModal";
 import {
   importService,
@@ -143,17 +151,17 @@ const TestRequestList: React.FC = () => {
   };
 
   const getStatusTag = (status: TestRequestStatus) => {
-    const statusConfig = {
-      [TestRequestStatus.Pending]: { color: "default", text: "Chờ xử lý" },
-      [TestRequestStatus.InProgress]: {
-        color: "processing",
-        text: "Đang thực hiện",
-      },
-      [TestRequestStatus.Completed]: { color: "success", text: "Hoàn thành" },
-      [TestRequestStatus.Cancelled]: { color: "error", text: "Đã hủy" },
-    };
-    const config = statusConfig[status];
-    return <Tag color={config.color}>{config.text}</Tag>;
+    const label = TestRequestStatusLabels[status] || status.toString();
+    const color = TestRequestStatusColors[status] || "default";
+    return <Tag color={color}>{label}</Tag>;
+  };
+
+  // Check if a row is urgent (expected completion date <= 5 days from today and not completed)
+  const isUrgentRow = (record: TestRequestDto): boolean => {
+    if (!record.expectedCompletionDate) return false;
+    if (record.status >= TestRequestStatus.Completed) return false;
+    const daysRemaining = dayjs(record.expectedCompletionDate).diff(dayjs(), "day");
+    return daysRemaining <= 5;
   };
 
   const columns: ColumnsType<TestRequestDto> = [
@@ -231,7 +239,15 @@ const TestRequestList: React.FC = () => {
       width: 80,
       fixed: "right",
       render: (_: any, record: TestRequestDto) => {
-        const isCompleted = record.status === TestRequestStatus.Completed;
+        const canEdit = canEditTestRequest(record.status);
+        const canDelete = canDeleteTestRequest(record.status);
+        const showActions = showActionsForTestRequest(record.status);
+
+        // Hide actions column content when status = Completed
+        if (!showActions) {
+          return null;
+        }
+
         return (
           <Space size="small">
             <Button
@@ -239,23 +255,23 @@ const TestRequestList: React.FC = () => {
               size="small"
               icon={<EditOutlined />}
               onClick={() => handleEdit(record)}
-              disabled={isCompleted}
-              title={isCompleted ? "Không thể chỉnh sửa yêu cầu đã hoàn thành" : "Chỉnh sửa"}
+              disabled={!canEdit}
+              title={!canEdit ? "Không thể chỉnh sửa ở trạng thái này" : "Chỉnh sửa"}
             />
             <Popconfirm
               title="Bạn có chắc chắn muốn xóa?"
               onConfirm={() => handleDelete(record.id)}
               okText="Có"
               cancelText="Không"
-              disabled={isCompleted}
+              disabled={!canDelete}
             >
               <Button
                 type="link"
                 size="small"
                 danger
                 icon={<DeleteOutlined />}
-                disabled={isCompleted}
-                title={isCompleted ? "Không thể xóa yêu cầu đã hoàn thành" : "Xóa"}
+                disabled={!canDelete}
+                title={!canDelete ? "Không thể xóa ở trạng thái này" : "Xóa"}
               />
             </Popconfirm>
           </Space>
@@ -317,17 +333,29 @@ const TestRequestList: React.FC = () => {
             onChange={handleStatusChange}
           >
             <Select.Option value="all">Tất cả trạng thái</Select.Option>
+            <Select.Option value={TestRequestStatus.New}>
+              {TestRequestStatusLabels[TestRequestStatus.New]}
+            </Select.Option>
             <Select.Option value={TestRequestStatus.Pending}>
-              Chờ xử lý
+              {TestRequestStatusLabels[TestRequestStatus.Pending]}
             </Select.Option>
             <Select.Option value={TestRequestStatus.InProgress}>
-              Đang thực hiện
+              {TestRequestStatusLabels[TestRequestStatus.InProgress]}
+            </Select.Option>
+            <Select.Option value={TestRequestStatus.TestingCompleted}>
+              {TestRequestStatusLabels[TestRequestStatus.TestingCompleted]}
+            </Select.Option>
+            <Select.Option value={TestRequestStatus.PendingApproval}>
+              {TestRequestStatusLabels[TestRequestStatus.PendingApproval]}
+            </Select.Option>
+            <Select.Option value={TestRequestStatus.Approved}>
+              {TestRequestStatusLabels[TestRequestStatus.Approved]}
+            </Select.Option>
+            <Select.Option value={TestRequestStatus.ResultSent}>
+              {TestRequestStatusLabels[TestRequestStatus.ResultSent]}
             </Select.Option>
             <Select.Option value={TestRequestStatus.Completed}>
-              Hoàn thành
-            </Select.Option>
-            <Select.Option value={TestRequestStatus.Cancelled}>
-              Đã hủy
+              {TestRequestStatusLabels[TestRequestStatus.Completed]}
             </Select.Option>
           </Select>
         </Col>
@@ -348,11 +376,16 @@ const TestRequestList: React.FC = () => {
         </Col>
       </Row>
 
+      <style>{`
+        .urgent-row > td { background-color: #fff2f0 !important; }
+        .urgent-row:hover > td { background-color: #ffebe8 !important; }
+      `}</style>
       <Table
         columns={columns}
         dataSource={data}
         rowKey="id"
         loading={loading}
+        rowClassName={(record) => (isUrgentRow(record) ? "urgent-row" : "")}
         onRow={(record) => ({
           onDoubleClick: () => navigate(`/test-request/${record.id}`),
           style: { cursor: "pointer" },
