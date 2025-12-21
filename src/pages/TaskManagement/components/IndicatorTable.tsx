@@ -2,16 +2,15 @@ import React, { useState } from "react";
 import {
   Table,
   Select,
-  Input,
   Button,
   Space,
   Tag,
   Modal,
   Form,
   Typography,
-  message,
+  Input,
 } from "antd";
-import { CheckOutlined, CloseOutlined, SendOutlined } from "@ant-design/icons";
+import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import {
   LaboratoryTaskIndicatorDto,
@@ -24,22 +23,13 @@ import {
 
 const { Text } = Typography;
 
-interface IndicatorLocalChanges {
-  unit?: string;
-  result?: string;
-}
-
 interface IndicatorTableProps {
   indicators: LaboratoryTaskIndicatorDto[];
   methods: MethodLookupDto[];
   technicians: UserLookupDto[];
   isAssigned: boolean; // true khi đã giao việc (lưu DB thành công)
-  localChanges: Record<string, IndicatorLocalChanges>; // local changes chưa lưu DB
   onMethodChange: (indicatorId: string, methodId: string) => void;
   onTechnicianChange: (indicatorId: string, technicianId: string) => void;
-  onUnitChange: (indicatorId: string, unit: string) => void;
-  onResultChange: (indicatorId: string, result: string) => void;
-  onSubmitResult: (indicatorId: string) => void; // Gửi kết quả lên server
   onApprove: (indicatorId: string, approve: boolean, reason?: string) => void;
   loading?: boolean;
 }
@@ -49,12 +39,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   methods,
   technicians,
   isAssigned,
-  localChanges,
   onMethodChange,
   onTechnicianChange,
-  onUnitChange,
-  onResultChange,
-  onSubmitResult,
   onApprove,
   loading = false,
 }) => {
@@ -80,30 +66,13 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     }
   };
 
-  // Validate và gửi kết quả
-  const handleSubmitResult = (record: LaboratoryTaskIndicatorDto) => {
-    const changes = localChanges[record.id] || {};
-    const unit = changes.unit ?? record.unit;
-    const result = changes.result ?? record.result;
-
-    if (!unit?.trim()) {
-      message.warning("Vui lòng nhập ĐVT trước khi gửi kết quả");
-      return;
-    }
-    if (!result?.trim()) {
-      message.warning("Vui lòng nhập Kết quả trước khi gửi");
-      return;
-    }
-
-    onSubmitResult(record.id);
-  };
-
   const columns = [
     {
       title: "Tên chỉ tiêu",
       dataIndex: "indicatorName",
       key: "indicatorName",
-      width: 180,
+      width: 200,
+      fixed: "left" as const,
       render: (value: string, record: LaboratoryTaskIndicatorDto) => (
         <div>
           <div>{value}</div>
@@ -144,21 +113,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       dataIndex: "unit",
       key: "unit",
       width: 120,
-      render: (value: string, record: LaboratoryTaskIndicatorDto) => {
-        const currentValue = localChanges[record.id]?.unit ?? value;
-        return (
-          <Input
-            size="small"
-            value={currentValue}
-            placeholder="ĐVT"
-            onChange={(e) => onUnitChange(record.id, e.target.value)}
-            disabled={
-              !isAssigned ||
-              (record.approvalStatus !== IndicatorApprovalStatus.Pending &&
-                record.approvalStatus !== IndicatorApprovalStatus.Rejected)
-            }
-          />
-        );
+      render: (value: string) => {
+        return <Text>{value || "-"}</Text>;
       },
     },
     {
@@ -166,21 +122,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       dataIndex: "result",
       key: "result",
       width: 200,
-      render: (value: string, record: LaboratoryTaskIndicatorDto) => {
-        const currentValue = localChanges[record.id]?.result ?? value;
-        return (
-          <Input
-            size="small"
-            value={currentValue}
-            placeholder="Nhập KQ"
-            onChange={(e) => onResultChange(record.id, e.target.value)}
-            disabled={
-              !isAssigned ||
-              (record.approvalStatus !== IndicatorApprovalStatus.Pending &&
-                record.approvalStatus !== IndicatorApprovalStatus.Rejected)
-            }
-          />
-        );
+      render: (value: string) => {
+        return <Text>{value || "-"}</Text>;
       },
     },
     {
@@ -226,26 +169,22 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       dataIndex: "approvalStatus",
       key: "approvalStatus",
       width: 180,
+      fixed: "right" as const,
       render: (
         status: IndicatorApprovalStatus,
         record: LaboratoryTaskIndicatorDto
       ) => {
-        // Chưa giao việc thì không hiển thị gì
+        // Chưa giao việc thì hiển thị tag "Chưa giao việc"
         if (!isAssigned) {
-          return null;
+          return <Tag color="default">Chưa giao việc</Tag>;
         }
 
         switch (status) {
           case IndicatorApprovalStatus.Pending:
             return (
-              <Button
-                type="primary"
-                size="small"
-                icon={<SendOutlined />}
-                onClick={() => handleSubmitResult(record)}
-              >
-                Gửi KQ
-              </Button>
+              <Tag color={IndicatorApprovalStatusColors[status]}>
+                {IndicatorApprovalStatusLabels[status]}
+              </Tag>
             );
 
           case IndicatorApprovalStatus.Entered:
@@ -281,14 +220,9 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
 
           case IndicatorApprovalStatus.Rejected:
             return (
-              <Button
-                type="primary"
-                size="small"
-                icon={<SendOutlined />}
-                onClick={() => handleSubmitResult(record)}
-              >
-                Gửi lại KQ
-              </Button>
+              <Tag color={IndicatorApprovalStatusColors[status]}>
+                {IndicatorApprovalStatusLabels[status]}
+              </Tag>
             );
 
           default:
@@ -311,7 +245,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         rowKey="id"
         pagination={false}
         size="small"
-        scroll={{ x: 1200 }}
+        scroll={{ x: 1400 }}
         loading={loading}
       />
 

@@ -195,16 +195,6 @@ const TaskManagementDetail: React.FC = () => {
     }));
   };
 
-  const handleUnitChange = (indicatorId: string, unit: string) => {
-    setIndicatorChanges((prev) => ({
-      ...prev,
-      [indicatorId]: {
-        ...prev[indicatorId],
-        unit,
-      },
-    }));
-  };
-
   const handleAssignSample = async (sampleId: string) => {
     if (!task) return;
 
@@ -244,57 +234,6 @@ const TaskManagementDetail: React.FC = () => {
       console.error("Failed to assign:", error);
       message.error(
         error.response?.data?.error?.message || "Không thể giao việc"
-      );
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  // Lưu kết quả vào local state (không gọi API)
-  const handleResultChange = (indicatorId: string, result: string) => {
-    setIndicatorChanges((prev) => ({
-      ...prev,
-      [indicatorId]: {
-        ...prev[indicatorId],
-        result,
-      },
-    }));
-  };
-
-  // Gửi kết quả lên server (gọi API)
-  const handleSubmitResult = async (indicatorId: string) => {
-    // Tìm indicator từ task để lấy dữ liệu cũ
-    const indicator = task?.indicators?.find((ind) => ind.id === indicatorId);
-    const changes = indicatorChanges[indicatorId] || {};
-
-    // Lấy giá trị: ưu tiên localChanges, nếu không có thì lấy từ server
-    const unit = changes.unit ?? indicator?.unit;
-    const result = changes.result ?? indicator?.result;
-
-    // Validate đã được thực hiện ở IndicatorTable, nhưng double check
-    if (!unit?.trim() || !result?.trim()) {
-      message.warning("Vui lòng nhập đầy đủ ĐVT và Kết quả");
-      return;
-    }
-
-    setActionLoading(true);
-    try {
-      await laboratoryTaskService.updateIndicatorResult(indicatorId, {
-        result,
-        unit,
-      });
-      message.success("Gửi kết quả thành công");
-      // Clear local changes for this indicator
-      setIndicatorChanges((prev) => {
-        const updated = { ...prev };
-        delete updated[indicatorId];
-        return updated;
-      });
-      await loadTask();
-    } catch (error: any) {
-      console.error("Failed to submit result:", error);
-      message.error(
-        error.response?.data?.error?.message || "Không thể gửi kết quả"
       );
     } finally {
       setActionLoading(false);
@@ -404,12 +343,8 @@ const TaskManagementDetail: React.FC = () => {
         methods={methods}
         technicians={technicians}
         isAssigned={sample.sampleStatus !== "pending"}
-        localChanges={indicatorChanges}
         onMethodChange={handleMethodChange}
         onTechnicianChange={handleTechnicianChange}
-        onUnitChange={handleUnitChange}
-        onResultChange={handleResultChange}
-        onSubmitResult={handleSubmitResult}
         onApprove={handleApprove}
         loading={actionLoading}
       />

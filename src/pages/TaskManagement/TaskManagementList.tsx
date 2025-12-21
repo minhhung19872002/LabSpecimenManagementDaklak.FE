@@ -235,7 +235,7 @@ const TaskManagementList: React.FC = () => {
       title: "Ngày chuyển đi",
       dataIndex: "transferDate",
       key: "transferDate",
-      width: 130,
+      width: 140,
       render: (date: string) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
     },
     {
@@ -287,13 +287,15 @@ const TaskManagementList: React.FC = () => {
       width: 100,
       fixed: "right",
       render: (_: any, record: LaboratoryTaskDto) => {
-        const isLocked = record.status === LaboratoryTaskStatus.Approved ||
-                         record.status === LaboratoryTaskStatus.ResultSent;
-        const lockedReason = record.status === LaboratoryTaskStatus.Approved
-          ? "Không thể chỉnh sửa nhiệm vụ đã duyệt"
-          : record.status === LaboratoryTaskStatus.ResultSent
-          ? "Không thể chỉnh sửa nhiệm vụ đã gửi kết quả"
-          : "";
+        const isLocked =
+          record.status === LaboratoryTaskStatus.Approved ||
+          record.status === LaboratoryTaskStatus.ResultSent;
+        const lockedReason =
+          record.status === LaboratoryTaskStatus.Approved
+            ? "Không thể chỉnh sửa nhiệm vụ đã duyệt"
+            : record.status === LaboratoryTaskStatus.ResultSent
+            ? "Không thể chỉnh sửa nhiệm vụ đã gửi kết quả"
+            : "";
         return (
           <Space size="small">
             <Tooltip title={isLocked ? lockedReason : "Cập nhật"}>

@@ -166,12 +166,13 @@ export const laboratoryTaskService = {
   },
 
   /**
-   * Lấy danh sách kỹ thuật viên theo khoa phòng
+   * Lấy danh sách kỹ thuật viên theo khoa phòng (nếu không truyền laboratoryId thì lấy tất cả)
    */
-  getTechniciansByLaboratory: async (laboratoryId: string): Promise<UserLookupDto[]> => {
+  getTechniciansByLaboratory: async (laboratoryId?: string): Promise<UserLookupDto[]> => {
+    const params = laboratoryId ? { laboratoryId } : {};
     const response = await api.get<UserLookupDto[]>(
       `${BASE_URL}/technicians-lookup`,
-      { params: { laboratoryId } }
+      { params }
     );
     return response.data;
   }
