@@ -30,6 +30,9 @@ import { testRequestService, SampleForSelectionDto } from "../../services/testRe
 import {
   TestRequestDto,
   TestRequestStatus,
+  TestRequestStatusLabels,
+  TestRequestStatusColors,
+  canEditTestRequest,
   ResultLanguage,
   SamplingRequirement,
   SampleStorageOption,
@@ -62,6 +65,9 @@ const TestRequestDetail: React.FC = () => {
   const [selectedSampleId, setSelectedSampleId] = useState<string | null>(null);
   const [generatingBM01, setGeneratingBM01] = useState(false);
 
+  // Print test request form loading state
+  const [printingTestRequest, setPrintingTestRequest] = useState(false);
+
   useEffect(() => {
     if (id) {
       loadData(id);
@@ -83,17 +89,145 @@ const TestRequestDetail: React.FC = () => {
   };
 
   const getStatusTag = (status: TestRequestStatus) => {
-    const statusConfig = {
-      [TestRequestStatus.Pending]: { color: "default", text: "Chờ xử lý" },
-      [TestRequestStatus.InProgress]: {
-        color: "processing",
-        text: "Đang thực hiện",
-      },
-      [TestRequestStatus.Completed]: { color: "success", text: "Hoàn thành" },
-      [TestRequestStatus.Cancelled]: { color: "error", text: "Đã hủy" },
-    };
-    const config = statusConfig[status];
-    return <Tag color={config.color}>{config.text}</Tag>;
+    const label = TestRequestStatusLabels[status] || status.toString();
+    const color = TestRequestStatusColors[status] || "default";
+    return <Tag color={color}>{label}</Tag>;
+  };
+
+  // Render action buttons based on status
+  const renderActionButtons = () => {
+    if (!data) return null;
+
+    switch (data.status) {
+      case TestRequestStatus.New:
+      case TestRequestStatus.Pending:
+        return (
+          <Button
+            icon={<FileTextOutlined />}
+            onClick={() => handlePrintTestRequest()}
+            loading={printingTestRequest}
+          >
+            In phiếu XN
+          </Button>
+        );
+      case TestRequestStatus.TestingCompleted:
+        return (
+          <Space>
+            <Button
+              icon={<FileTextOutlined />}
+              onClick={handleOpenBM01Modal}
+            >
+              In KQ Mẫu đơn
+            </Button>
+            <Button
+              icon={<FileTextOutlined />}
+              onClick={() => handlePrintMixedResult()}
+            >
+              In KQ hỗn hợp
+            </Button>
+          </Space>
+        );
+      case TestRequestStatus.PendingApproval:
+        return (
+          <Button
+            type="primary"
+            icon={<CheckCircleOutlined />}
+            onClick={() => handleApprove()}
+          >
+            Phê duyệt
+          </Button>
+        );
+      case TestRequestStatus.Approved:
+        return (
+          <Button
+            type="primary"
+            onClick={() => handleSendResult()}
+          >
+            Gửi kết quả
+          </Button>
+        );
+      case TestRequestStatus.ResultSent:
+        return (
+          <Button
+            type="primary"
+            onClick={() => handleComplete()}
+          >
+            Hoàn thành
+          </Button>
+        );
+      default:
+        return null;
+    }
+  };
+
+  // Handle print test request form - generate document and open editor
+  // Status is automatically updated to Pending when generating form (if currently New)
+  const handlePrintTestRequest = async () => {
+    if (!id) return;
+    setPrintingTestRequest(true);
+    try {
+      // Step 1: Generate the test request form document (also updates status to Pending if New)
+      const result = await testRequestService.generateTestRequestForm(id);
+      message.success(`Đã tạo phiếu yêu cầu XN: ${result.requestNumber}`);
+
+      // Step 2: Get editor config and open OnlyOffice
+      const config = await testRequestService.getResultFormEditorConfig(result.fileName);
+      setEditorConfig(config);
+      setEditorLoading(true);
+      setEditorModalVisible(true);
+
+      // Step 3: Reload data to get updated status
+      loadData(id);
+    } catch (error: any) {
+      console.error("Error printing test request:", error);
+      message.error(error?.response?.data?.error?.message || "Không thể tạo phiếu. Vui lòng thử lại.");
+    } finally {
+      setPrintingTestRequest(false);
+    }
+  };
+
+  // Handle print mixed result (placeholder)
+  const handlePrintMixedResult = () => {
+    message.info("Chức năng in KQ hỗn hợp đang được phát triển");
+  };
+
+  // Handle send result
+  const handleSendResult = async () => {
+    if (!id) return;
+    try {
+      await testRequestService.sendResult(id);
+      message.success("Đã gửi kết quả thành công");
+      loadData(id); // Reload to get updated status
+    } catch (error: any) {
+      console.error("Error sending result:", error);
+      message.error(error?.response?.data?.error?.message || "Không thể gửi kết quả. Vui lòng thử lại.");
+    }
+  };
+
+  // Handle approve test request
+  const handleApprove = async () => {
+    if (!id) return;
+    try {
+      await testRequestService.approve(id);
+      message.success("Đã phê duyệt thành công");
+      loadData(id); // Reload to get updated status
+    } catch (error: any) {
+      console.error("Error approving test request:", error);
+      message.error(error?.response?.data?.error?.message || "Không thể phê duyệt. Vui lòng thử lại.");
+    }
+  };
+
+  // Handle complete test request
+  const handleComplete = async () => {
+    if (!id) return;
+    try {
+      await testRequestService.complete(id);
+      message.success("Đã hoàn thành yêu cầu thử nghiệm");
+      loadData(id); // Reload to get updated status
+    } catch (error: any) {
+      console.error("Error completing test request:", error);
+      message.error(error?.response?.data?.error?.message || "Không thể hoàn thành. Vui lòng thử lại.");
+    }
   };
 
   const getSampleStatusTag = (status: SampleStatus) => {
@@ -313,14 +447,20 @@ const TestRequestDetail: React.FC = () => {
       const result = await testRequestService.generateBM01ResultForm(id, selectedSampleId);
       message.success(`Đã tạo phiếu kết quả BM01 cho mẫu ${result.sampleCode}`);
 
-      // Step 2: Close selection modal
+      // Step 2: Update status to PendingApproval after printing result form
+      await testRequestService.updateToPendingApproval(id);
+
+      // Step 3: Close selection modal
       setSampleSelectionModalVisible(false);
 
-      // Step 3: Get editor config and open OnlyOffice
+      // Step 4: Get editor config and open OnlyOffice
       const config = await testRequestService.getResultFormEditorConfig(result.fileName);
       setEditorConfig(config);
       setEditorLoading(true);
       setEditorModalVisible(true);
+
+      // Step 5: Reload data to update status
+      loadData(id);
     } catch (error: any) {
       console.error("Error generating BM01 result form:", error);
       message.error(error?.response?.data?.error?.message || "Không thể tạo phiếu kết quả. Vui lòng thử lại.");
@@ -561,18 +701,13 @@ const TestRequestDetail: React.FC = () => {
             >
               Quay lại
             </Button>
-            <Button
-              icon={<FileTextOutlined />}
-              onClick={handleOpenBM01Modal}
-            >
-              In KQ Mẫu lẻ
-            </Button>
+            {renderActionButtons()}
             <Button
               type="primary"
               icon={<EditOutlined />}
               onClick={() => navigate(`/test-request/edit/${id}`)}
-              disabled={data.status === TestRequestStatus.Completed}
-              title={data.status === TestRequestStatus.Completed ? "Không thể chỉnh sửa yêu cầu đã hoàn thành" : ""}
+              disabled={!canEditTestRequest(data.status)}
+              title={!canEditTestRequest(data.status) ? "Không thể chỉnh sửa ở trạng thái này" : ""}
             >
               Chỉnh sửa
             </Button>

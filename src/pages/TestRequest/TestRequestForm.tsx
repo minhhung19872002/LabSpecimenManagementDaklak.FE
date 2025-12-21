@@ -53,6 +53,8 @@ import {
   CreateTestRequestSampleDto,
   CreateTestRequestSampleIndicatorDto,
   UpdateTestRequestSampleDto,
+  canEditTestRequest,
+  canEditFullInfo,
 } from "../../types/testRequest";
 import dayjs from "dayjs";
 import {
@@ -92,6 +94,32 @@ const TestRequestForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
   const isEditMode = !!id;
+
+  // Current status for field locking
+  const [currentStatus, setCurrentStatus] = useState<TestRequestStatus | null>(null);
+
+  // Helper to check if a field should be disabled based on status
+  const isFieldLocked = (fieldName: string): boolean => {
+    if (!isEditMode || currentStatus === null) return false;
+
+    // Fields that are locked when status >= InProgress
+    const lockedFields = [
+      "contractNumber", "contractDate",
+      "customerName", "address", "taxCode", "contactPerson", "phone",
+      "provinceCode", "districtCode", "wardCode",
+    ];
+
+    if (!canEditFullInfo(currentStatus)) {
+      return lockedFields.includes(fieldName);
+    }
+    return false;
+  };
+
+  // Check if samples section should be locked
+  const isSamplesLocked = (): boolean => {
+    if (!isEditMode || currentStatus === null) return false;
+    return !canEditFullInfo(currentStatus);
+  };
 
   // Sample table data
   const [samples, setSamples] = useState<SampleFormData[]>([]);
@@ -287,9 +315,12 @@ const TestRequestForm: React.FC = () => {
     try {
       const data = await testRequestService.get(id);
 
-      // Check if request is completed - redirect to detail page
-      if (data.status === TestRequestStatus.Completed) {
-        message.warning("Không thể chỉnh sửa yêu cầu đã hoàn thành");
+      // Set current status for field locking
+      setCurrentStatus(data.status);
+
+      // Check if request cannot be edited - redirect to detail page
+      if (!canEditTestRequest(data.status)) {
+        message.warning("Không thể chỉnh sửa phiếu ở trạng thái này");
         navigate(`/test-request/${id}`);
         return;
       }
@@ -415,6 +446,12 @@ const TestRequestForm: React.FC = () => {
   }, [samples, indicators]);
 
   const addSample = () => {
+    // Block when samples are locked
+    if (isSamplesLocked()) {
+      message.warning("Không thể thêm mẫu khi phiếu đang thực hiện");
+      return;
+    }
+
     const newSample: SampleFormData = {
       key: `new-${Date.now()}`,
       sortOrder: samples.length + 1,
@@ -433,6 +470,12 @@ const TestRequestForm: React.FC = () => {
   };
 
   const removeSample = (key: string) => {
+    // Block when samples are locked
+    if (isSamplesLocked()) {
+      message.warning("Không thể xóa mẫu khi phiếu đang thực hiện");
+      return;
+    }
+
     setSamples(samples.filter((s) => s.key !== key));
   };
 
@@ -441,6 +484,11 @@ const TestRequestForm: React.FC = () => {
     field: keyof SampleFormData,
     value: any
   ) => {
+    // Block when samples are locked
+    if (isSamplesLocked()) {
+      return; // Silently ignore updates when locked
+    }
+
     setSamples(
       samples.map((s) => {
         if (s.key === key) {
@@ -453,6 +501,12 @@ const TestRequestForm: React.FC = () => {
 
   // Indicator modal functions
   const openIndicatorModal = (sampleKey: string) => {
+    // Block when samples are locked
+    if (isSamplesLocked()) {
+      message.warning("Không thể thay đổi chỉ tiêu khi phiếu đang thực hiện");
+      return;
+    }
+
     const sample = samples.find((s) => s.key === sampleKey);
     if (sample) {
       setCurrentSampleKey(sampleKey);
@@ -1169,7 +1223,7 @@ const TestRequestForm: React.FC = () => {
                 style={{ marginBottom: 0 }}
                 rules={[{ required: true, message: "Vui lòng nhập số HĐ" }]}
               >
-                <Input placeholder="Số hợp đồng" />
+                <Input placeholder="Số hợp đồng" disabled={isFieldLocked("contractNumber")} />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={12} lg={4}>
@@ -1179,7 +1233,7 @@ const TestRequestForm: React.FC = () => {
                 style={{ marginBottom: 0 }}
                 rules={[{ required: true, message: "Vui lòng chọn ngày HĐ" }]}
               >
-                <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" />
+                <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" disabled={isFieldLocked("contractDate")} />
               </Form.Item>
             </Col>
             <Col xs={24} sm={24} md={16}>
@@ -1243,6 +1297,7 @@ const TestRequestForm: React.FC = () => {
                   onSearch={handleOrganizationSearch}
                   placeholder="Nhập tên cơ sở / doanh nghiệp..."
                   filterOption={false}
+                  disabled={isFieldLocked("customerName")}
                   notFoundContent={
                     organizationSearching ? (
                       <span style={{ color: "#999" }}>Đang tìm kiếm...</span>
@@ -1268,6 +1323,7 @@ const TestRequestForm: React.FC = () => {
                   allowClear
                   showSearch
                   optionFilterProp="children"
+                  disabled={isFieldLocked("provinceCode")}
                   filterOption={(input, option) =>
                     (option?.children as unknown as string)
                       ?.toLowerCase()
@@ -1312,7 +1368,7 @@ const TestRequestForm: React.FC = () => {
                       ?.toLowerCase()
                       .includes(input.toLowerCase())
                   }
-                  disabled={districts.length === 0}
+                  disabled={districts.length === 0 || isFieldLocked("districtCode")}
                   onChange={(value) => {
                     form.setFieldsValue({ wardCode: undefined });
                     if (value) {
@@ -1346,7 +1402,7 @@ const TestRequestForm: React.FC = () => {
                       ?.toLowerCase()
                       .includes(input.toLowerCase())
                   }
-                  disabled={wards.length === 0}
+                  disabled={wards.length === 0 || isFieldLocked("wardCode")}
                 >
                   {wards.map((w) => (
                     <Select.Option key={w.code} value={w.code}>
@@ -1364,7 +1420,7 @@ const TestRequestForm: React.FC = () => {
                 label="Địa chỉ"
                 rules={[{ required: true, message: "Vui lòng nhập địa chỉ" }]}
               >
-                <Input placeholder="Địa chỉ chi tiết" />
+                <Input placeholder="Địa chỉ chi tiết" disabled={isFieldLocked("address")} />
               </Form.Item>
             </Col>
             <Col xs={24} sm={8} lg={4}>
@@ -1375,7 +1431,7 @@ const TestRequestForm: React.FC = () => {
                   { required: true, message: "Vui lòng nhập mã số thuế" },
                 ]}
               >
-                <Input placeholder="MST" />
+                <Input placeholder="MST" disabled={isFieldLocked("taxCode")} />
               </Form.Item>
             </Col>
             <Col xs={24} sm={8} lg={4}>
@@ -1386,7 +1442,7 @@ const TestRequestForm: React.FC = () => {
                   { required: true, message: "Vui lòng nhập người liên hệ" },
                 ]}
               >
-                <Input placeholder="Người liên hệ" />
+                <Input placeholder="Người liên hệ" disabled={isFieldLocked("contactPerson")} />
               </Form.Item>
             </Col>
             <Col xs={24} sm={8} lg={4}>
@@ -1401,7 +1457,7 @@ const TestRequestForm: React.FC = () => {
                   },
                 ]}
               >
-                <Input placeholder="SĐT" />
+                <Input placeholder="SĐT" disabled={isFieldLocked("phone")} />
               </Form.Item>
             </Col>
           </Row>
@@ -1433,10 +1489,20 @@ const TestRequestForm: React.FC = () => {
               size="small"
               icon={<PlusOutlined />}
               onClick={addSample}
+              disabled={isSamplesLocked()}
+              title={isSamplesLocked() ? "Không thể thêm mẫu khi đang thực hiện" : ""}
             >
               Thêm mẫu
             </Button>
           </div>
+
+          {isSamplesLocked() && (
+            <div style={{ marginBottom: 12, padding: "8px 16px", background: "#fff7e6", borderRadius: 4, border: "1px solid #ffd591" }}>
+              <Text type="warning">
+                Không thể thêm/sửa/xóa mẫu khi phiếu đang thực hiện. Chỉ có thể sửa các thông tin khác.
+              </Text>
+            </div>
+          )}
 
           <Table
             dataSource={samples}
