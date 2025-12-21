@@ -88,7 +88,7 @@ export const authService = {
     if (!refreshToken) {
       throw new Error('No refresh token available');
     }
-    const response = await api.post<LoginResponse>(`${AUTH_URL}/refresh`, { refreshToken });
+    const response = await api.post<LoginResponse>(`${AUTH_URL}/refresh-token`, { refreshToken });
 
     // Store new tokens
     if (response.data.accessToken) {

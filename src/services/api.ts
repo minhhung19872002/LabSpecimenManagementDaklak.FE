@@ -138,7 +138,7 @@ apiClient.interceptors.response.use(
     // Handle 401 Unauthorized or 403 Forbidden
     if (error.response && (error.response.status === 401 || error.response.status === 403)) {
       // Skip refresh for login/refresh endpoints
-      if (originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/refresh')) {
+      if (originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/refresh-token')) {
         handleAuthFailure();
         return Promise.reject(error);
       }
@@ -169,7 +169,7 @@ apiClient.interceptors.response.use(
 
       try {
         // Call refresh token API directly (not through apiClient to avoid interceptor loop)
-        const response = await axios.post(`${API_BASE_URL}/api/v1/auth/refresh`, {
+        const response = await axios.post(`${API_BASE_URL}/api/v1/auth/refresh-token`, {
           refreshToken
         });
 
