@@ -28,6 +28,7 @@ interface IndicatorTableProps {
   methods: MethodLookupDto[];
   technicians: UserLookupDto[];
   isAssigned: boolean; // true khi đã giao việc (lưu DB thành công)
+  canEdit: boolean; // true khi task status cho phép edit (NotAssignedMethod hoặc AssignedMethod)
   onMethodChange: (indicatorId: string, methodId: string) => void;
   onTechnicianChange: (indicatorId: string, technicianId: string) => void;
   onApprove: (indicatorId: string, approve: boolean, reason?: string) => void;
@@ -39,6 +40,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   methods,
   technicians,
   isAssigned,
+  canEdit,
   onMethodChange,
   onTechnicianChange,
   onApprove,
@@ -101,7 +103,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             label: m.name,
           }))}
           disabled={
-            isAssigned ||
+            !canEdit ||
             record.approvalStatus === IndicatorApprovalStatus.Approved
           }
           allowClear
@@ -143,7 +145,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             label: t.displayName || t.userName,
           }))}
           disabled={
-            isAssigned ||
+            !canEdit ||
             record.approvalStatus === IndicatorApprovalStatus.Approved
           }
           allowClear

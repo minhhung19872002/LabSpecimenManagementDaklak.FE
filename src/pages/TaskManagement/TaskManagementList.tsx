@@ -287,34 +287,47 @@ const TaskManagementList: React.FC = () => {
       width: 100,
       fixed: "right",
       render: (_: any, record: LaboratoryTaskDto) => {
-        const isLocked =
-          record.status === LaboratoryTaskStatus.Approved ||
-          record.status === LaboratoryTaskStatus.ResultSent;
-        const lockedReason =
-          record.status === LaboratoryTaskStatus.Approved
-            ? "Không thể chỉnh sửa nhiệm vụ đã duyệt"
-            : record.status === LaboratoryTaskStatus.ResultSent
-            ? "Không thể chỉnh sửa nhiệm vụ đã gửi kết quả"
-            : "";
+        // Chỉ cho phép edit khi: Chưa gắn PP hoặc Đã gán PP
+        const canEdit =
+          record.status === LaboratoryTaskStatus.NotAssignedMethod ||
+          record.status === LaboratoryTaskStatus.AssignedMethod;
+
+        const getLockedMessage = (status: LaboratoryTaskStatus) => {
+          switch (status) {
+            case LaboratoryTaskStatus.Testing:
+              return "Không thể chỉnh sửa khi đang thí nghiệm";
+            case LaboratoryTaskStatus.PendingApproval:
+              return "Không thể chỉnh sửa khi đang chờ duyệt";
+            case LaboratoryTaskStatus.Approved:
+              return "Không thể chỉnh sửa khi đã duyệt";
+            case LaboratoryTaskStatus.ResultSent:
+              return "Không thể chỉnh sửa khi đã gửi kết quả";
+            default:
+              return "";
+          }
+        };
+
+        const lockedReason = getLockedMessage(record.status);
+
         return (
           <Space size="small">
-            <Tooltip title={isLocked ? lockedReason : "Cập nhật"}>
+            <Tooltip title={!canEdit ? lockedReason : "Cập nhật"}>
               <Button
                 type="link"
                 size="small"
                 icon={<EditOutlined />}
                 onClick={() => handleOpenUpdateModal(record)}
-                disabled={isLocked}
+                disabled={!canEdit}
               />
             </Tooltip>
-            <Tooltip title={isLocked ? lockedReason : "Xóa"}>
+            <Tooltip title={!canEdit ? lockedReason : "Xóa"}>
               <Button
                 type="text"
                 size="small"
                 danger
                 icon={<DeleteOutlined />}
                 onClick={() => handleDelete(record.id)}
-                disabled={isLocked}
+                disabled={!canEdit}
               />
             </Tooltip>
           </Space>
