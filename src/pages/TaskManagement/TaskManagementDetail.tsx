@@ -307,6 +307,11 @@ const TaskManagementDetail: React.FC = () => {
     );
   };
 
+  // Kiểm tra có thể chỉnh sửa task không (chỉ cho phép khi Chưa gắn PP hoặc Đã gán PP)
+  const canEditTask =
+    task?.status === LaboratoryTaskStatus.NotAssignedMethod ||
+    task?.status === LaboratoryTaskStatus.AssignedMethod;
+
   // Generate Collapse items
   const collapseItems = sampleList.map((sample) => ({
     key: sample.sampleId,
@@ -321,7 +326,7 @@ const TaskManagementDetail: React.FC = () => {
           </Space>
         </Col>
         <Col>
-          {sample.sampleStatus === "pending" && (
+          {canEditTask && (
             <Button
               type="primary"
               size="small"
@@ -331,7 +336,7 @@ const TaskManagementDetail: React.FC = () => {
                 handleAssignSample(sample.sampleId);
               }}
             >
-              Giao việc
+              {sample.sampleStatus === "pending" ? "Giao việc" : "Giao việc lại"}
             </Button>
           )}
         </Col>
@@ -343,6 +348,7 @@ const TaskManagementDetail: React.FC = () => {
         methods={methods}
         technicians={technicians}
         isAssigned={sample.sampleStatus !== "pending"}
+        canEdit={canEditTask}
         onMethodChange={handleMethodChange}
         onTechnicianChange={handleTechnicianChange}
         onApprove={handleApprove}
