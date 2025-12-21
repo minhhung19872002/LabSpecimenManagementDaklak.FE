@@ -224,12 +224,13 @@ const TestingList: React.FC = () => {
       render: (date: string, record: TestingListDto) => {
         if (!date) return "-";
         const d = dayjs(date);
-        // Highlight if urgent (<=5 days remaining)
+        // Highlight if urgent (<=5 days remaining) and not done
+        const shouldHighlight = record.isUrgent && record.testingStatus !== TestingStatus.Done;
         return (
           <span
             style={{
-              color: record.isUrgent ? "#ff4d4f" : undefined,
-              fontWeight: record.isUrgent ? "bold" : undefined,
+              color: shouldHighlight ? "#ff4d4f" : undefined,
+              fontWeight: shouldHighlight ? "bold" : undefined,
             }}
           >
             {d.format("DD/MM/YYYY")}
@@ -277,12 +278,9 @@ const TestingList: React.FC = () => {
       scroll={{ x: 1000 }}
       onRow={(record) => ({
         onDoubleClick: () => navigate(`/testing/${record.laboratoryTaskId}`),
-        style: {
-          cursor: "pointer",
-          backgroundColor: record.isUrgent ? "#fff2f0" : undefined,
-        },
+        style: { cursor: "pointer" },
       })}
-      rowClassName={(record) => (record.isUrgent ? "urgent-row" : "")}
+      rowClassName={(record) => (record.isUrgent && record.testingStatus !== TestingStatus.Done ? "urgent-row" : "")}
     />
   );
 
@@ -424,7 +422,7 @@ const TestingList: React.FC = () => {
       </Card>
 
       <style>{`
-        .urgent-row {
+        .urgent-row > td {
           background-color: #fff2f0 !important;
         }
         .urgent-row:hover > td {
