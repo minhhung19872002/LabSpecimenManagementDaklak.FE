@@ -236,18 +236,18 @@ const MainLayout: React.FC = () => {
           label: menuLabel("Quản lý xét nghiệm"),
           onClick: () => navigate("/testing"),
         },
-        {
-          key: "specimens",
-          icon: <ExperimentOutlined />,
-          label: menuLabel(t("menu.specimens")),
-          onClick: () => navigate("/specimens"),
-        },
-        {
-          key: "tests",
-          icon: <CheckCircleOutlined />,
-          label: menuLabel(t("menu.tests")),
-          onClick: () => navigate("/tests"),
-        },
+        // {
+        //   key: "specimens",
+        //   icon: <ExperimentOutlined />,
+        //   label: menuLabel(t("menu.specimens")),
+        //   onClick: () => navigate("/specimens"),
+        // },
+        // {
+        //   key: "tests",
+        //   icon: <CheckCircleOutlined />,
+        //   label: menuLabel(t("menu.tests")),
+        //   onClick: () => navigate("/tests"),
+        // },
         {
           key: "specimenHistories",
           icon: <HistoryOutlined />,

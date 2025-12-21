@@ -44,9 +44,13 @@ export const testingService = {
 
   /**
    * Get testing task detail by LaboratoryTask ID
+   * @param id LaboratoryTask ID
+   * @param viewMode Optional view mode - 'my' (only user's data), 'all' (full data)
    */
-  get: async (id: string): Promise<TestingDetailDto> => {
-    const response = await api.get<TestingDetailDto>(`${BASE_URL}/${id}`);
+  get: async (id: string, viewMode?: 'my' | 'all'): Promise<TestingDetailDto> => {
+    const params: Record<string, any> = {};
+    if (viewMode) params.ViewMode = viewMode;
+    const response = await api.get<TestingDetailDto>(`${BASE_URL}/${id}`, { params });
     return response.data;
   },
 
