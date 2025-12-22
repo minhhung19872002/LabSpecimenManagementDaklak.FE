@@ -1,20 +1,21 @@
-// @ts-nocheck
-import React, { useEffect, useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Table, Button, Space, message, Popconfirm, Tag, Card, Input, Row, Col, Select, Modal, Form, Switch } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { PlusOutlined, EyeOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
-import { testResultService } from '../../services/testResultService';
-import { testService } from '../../services/testService';
 import { TestResultDto, ResultApprovalStatus, CreateTestResultDto, UpdateTestResultDto } from '../../types/testResult';
-import { TestDto } from '../../types/test';
 import type { ColumnsType } from 'antd/es/table';
 
+// RTK Query imports
+import {
+  useGetTestResultListQuery,
+  useCreateTestResultMutation,
+  useUpdateTestResultMutation,
+  useDeleteTestResultMutation,
+} from '../../store/api/testResultApi';
+import { useGetTestListQuery } from '../../store/api/testApi';
+
 const TestResultList: React.FC = () => {
-  const [data, setData] = useState<TestResultDto[]>([]);
-  const [tests, setTests] = useState<TestDto[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [searchText, setSearchText] = useState('');
@@ -25,38 +26,29 @@ const TestResultList: React.FC = () => {
   const [editingItem, setEditingItem] = useState<TestResultDto | null>(null);
   const [form] = Form.useForm();
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  useTranslation();
 
-  // Load data when filters change
-  useEffect(() => {
-    fetchTestResults();
-  }, [currentPage, pageSize, searchText, statusFilter, passFilter]);
+  // RTK Query hooks
+  const { data: testResultsData, isLoading: loading, refetch } = useGetTestResultListQuery({
+    skipCount: (currentPage - 1) * pageSize,
+    maxResultCount: pageSize,
+    sorting: 'creationTime desc',
+    search: searchText || undefined,
+    approvalStatus: statusFilter,
+    isPass: passFilter,
+  });
 
-  // Load tests once on mount
-  useEffect(() => {
-    fetchTests();
-  }, []);
+  const { data: testsData } = useGetTestListQuery({ maxResultCount: 1000 });
 
-  const fetchTestResults = async () => {
-    setLoading(true);
-    try {
-      const result = await testResultService.getList({
-        skipCount: (currentPage - 1) * pageSize,
-        maxResultCount: pageSize,
-        sorting: 'creationTime desc',
-        search: searchText || undefined,
-        approvalStatus: statusFilter,
-        isPass: passFilter,
-      });
-      setData(result.items);
-      setTotalCount(result.totalCount);
-    } catch (error) {
-      message.error('Không thể tải danh sách kết quả. Vui lòng kiểm tra kết nối API.');
-      console.error('Failed to fetch test results:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Mutations
+  const [createTestResult] = useCreateTestResultMutation();
+  const [updateTestResult] = useUpdateTestResultMutation();
+  const [deleteTestResult] = useDeleteTestResultMutation();
+
+  // Derived data
+  const data = useMemo(() => testResultsData?.items || [], [testResultsData]);
+  const totalCount = testResultsData?.totalCount || 0;
+  const tests = useMemo(() => testsData?.items || [], [testsData]);
 
   // Handle search
   const handleSearch = () => {
@@ -80,22 +72,10 @@ const TestResultList: React.FC = () => {
     setCurrentPage(1);
   };
 
-  const fetchTests = async () => {
-    try {
-      const result = await testService.getList({
-        maxResultCount: 1000,
-      });
-      setTests(result.items);
-    } catch (error) {
-      console.error('Failed to fetch tests:', error);
-    }
-  };
-
   const handleDelete = async (id: string) => {
     try {
-      await testResultService.delete(id);
+      await deleteTestResult(id).unwrap();
       message.success('Xóa kết quả thành công!');
-      fetchTestResults();
     } catch (error) {
       message.error('Không thể xóa kết quả. Vui lòng thử lại.');
       console.error('Failed to delete test result:', error);
@@ -134,7 +114,7 @@ const TestResultList: React.FC = () => {
           notes: values.notes,
         };
 
-        await testResultService.update(editingItem.id, updateData);
+        await updateTestResult({ id: editingItem.id, data: updateData }).unwrap();
         message.success('Cập nhật kết quả thành công!');
       } else {
         const createData: CreateTestResultDto = {
@@ -146,14 +126,13 @@ const TestResultList: React.FC = () => {
           notes: values.notes,
         };
 
-        await testResultService.create(createData);
+        await createTestResult(createData).unwrap();
         message.success('Thêm kết quả mới thành công!');
       }
 
       setIsModalOpen(false);
       form.resetFields();
-      fetchTestResults();
-    } catch (error) {
+    } catch (error: any) {
       if (error.errorFields) {
         console.error('Validation failed:', error);
       } else {
@@ -304,7 +283,7 @@ const TestResultList: React.FC = () => {
       title="Kết quả thử nghiệm"
       extra={
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={fetchTestResults}>Làm mới</Button>
+          <Button icon={<ReloadOutlined />} onClick={() => refetch()}>Làm mới</Button>
           <Button
             type="primary"
             icon={<PlusOutlined />}

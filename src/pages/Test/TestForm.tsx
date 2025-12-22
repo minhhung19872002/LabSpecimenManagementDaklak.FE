@@ -1,82 +1,52 @@
-import React, { useEffect, useState } from 'react';
-import { Form, Input, Button, Select, message, InputNumber, DatePicker, Card, Space } from 'antd';
+import React, { useEffect, useMemo } from 'react';
+import { Form, Input, Button, Select, message, InputNumber, DatePicker, Card, Space, Spin } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { testService } from '../../services/testService';
-import { specimenService } from '../../services/specimenService';
-import { testMethodService } from '../../services/masterDataService';
-import { CreateTestDto, UpdateTestDto, TestStatus } from '../../types/test';
+import { TestStatus } from '../../types/test';
 import dayjs from 'dayjs';
+
+// RTK Query imports
+import { useGetTestQuery, useCreateTestMutation, useUpdateTestMutation } from '../../store/api/testApi';
+import { useGetSpecimenListQuery } from '../../store/api/specimenApi';
+import { useGetTestMethodListQuery } from '../../store/api/masterDataApi';
 
 const { TextArea } = Input;
 const { Option } = Select;
 
 const TestForm: React.FC = () => {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
   const isEditMode = !!id;
 
-  // Data for dropdowns
-  const [specimens, setSpecimens] = useState<any[]>([]);
-  const [testMethods, setTestMethods] = useState<any[]>([]);
+  // RTK Query hooks
+  const { data: testData, isLoading: loadingTest } = useGetTestQuery(id!, { skip: !id });
+  const { data: specimensData } = useGetSpecimenListQuery({ maxResultCount: 1000 });
+  const { data: testMethodsData } = useGetTestMethodListQuery({ maxResultCount: 1000 });
 
+  // Mutations
+  const [createTest, { isLoading: isCreating }] = useCreateTestMutation();
+  const [updateTest, { isLoading: isUpdating }] = useUpdateTestMutation();
+
+  // Derived data
+  const specimens = useMemo(() => specimensData?.items || [], [specimensData]);
+  const testMethods = useMemo(() => testMethodsData?.items || [], [testMethodsData]);
+  const loading = loadingTest || isCreating || isUpdating;
+
+  // Set form values when test data is loaded
   useEffect(() => {
-    fetchSpecimens();
-    fetchTestMethods();
-    if (isEditMode && id) {
-      fetchTest(id);
-    }
-  }, [id]);
-
-  const fetchSpecimens = async () => {
-    try {
-      const result = await specimenService.getList({
-        skipCount: 0,
-        maxResultCount: 1000,
-      });
-      setSpecimens(result.items);
-    } catch (error) {
-      message.error('Không thể tải danh sách mẫu thử!');
-      console.error('Failed to fetch specimens:', error);
-    }
-  };
-
-  const fetchTestMethods = async () => {
-    try {
-      const result = await testMethodService.getList({
-        skipCount: 0,
-        maxResultCount: 1000,
-      });
-      setTestMethods(result.items);
-    } catch (error) {
-      message.error('Không thể tải danh sách phương pháp thử!');
-      console.error('Failed to fetch test methods:', error);
-    }
-  };
-
-  const fetchTest = async (testId: string) => {
-    setLoading(true);
-    try {
-      const data = await testService.get(testId);
+    if (testData && isEditMode) {
       form.setFieldsValue({
-        ...data,
-        assignmentDate: data.assignmentDate ? dayjs(data.assignmentDate) : null,
-        startDate: data.startDate ? dayjs(data.startDate) : null,
-        completionDate: data.completionDate ? dayjs(data.completionDate) : null,
+        ...testData,
+        assignmentDate: testData.assignmentDate ? dayjs(testData.assignmentDate) : null,
+        startDate: testData.startDate ? dayjs(testData.startDate) : null,
+        completionDate: testData.completionDate ? dayjs(testData.completionDate) : null,
       });
-    } catch (error) {
-      message.error(t('messages.loadFailed'));
-      console.error('Failed to fetch test:', error);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [testData, isEditMode, form]);
 
   const onFinish = async (values: any) => {
-    setLoading(true);
     try {
       const formData = {
         ...values,
@@ -86,20 +56,26 @@ const TestForm: React.FC = () => {
       };
 
       if (isEditMode && id) {
-        await testService.update(id, formData as UpdateTestDto);
+        await updateTest({ id, data: formData }).unwrap();
         message.success(t('messages.updateSuccess'));
       } else {
-        await testService.create(formData as CreateTestDto);
+        await createTest(formData).unwrap();
         message.success(t('messages.createSuccess'));
       }
       navigate('/tests');
-    } catch (error) {
-      message.error(isEditMode ? t('messages.updateFailed') : t('messages.createFailed'));
+    } catch (error: any) {
       console.error('Failed to save test:', error);
-    } finally {
-      setLoading(false);
+      message.error(error?.data?.error?.message || (isEditMode ? t('messages.updateFailed') : t('messages.createFailed')));
     }
   };
+
+  if (loadingTest && isEditMode) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '50px' }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: '24px' }}>

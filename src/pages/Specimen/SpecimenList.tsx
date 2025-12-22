@@ -1,5 +1,4 @@
-// @ts-nocheck
-import React, { useState, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Table,
   Button,
@@ -28,22 +27,25 @@ import {
   DownloadOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
 import type { ColumnsType } from "antd/es/table";
-import { specimenService } from "../../services/specimenService";
-import { testRequestService } from "../../services/testRequestService";
+import {
+  useGetSpecimenListQuery,
+  useCreateSpecimenMutation,
+  useUpdateSpecimenMutation,
+  useDeleteSpecimenMutation,
+} from "../../store/api/specimenApi";
+import {
+  useGetActiveSpecimenTypesQuery,
+  useGetActiveStorageLocationsQuery,
+} from "../../store/api/masterDataApi";
+import { useGetTestRequestListQuery } from "../../store/api/testRequestApi";
 import { SpecimenDto, SpecimenStatus } from "../../types/specimen";
-import { specimenTypeService, storageLocationService } from "../../services/masterDataService";
 import { importService, downloadBlobAsFile } from "../../services/importService";
 import dayjs from "dayjs";
 import ImportExcelModal from "../../components/common/ImportExcelModal";
 
 const SpecimenList: React.FC = () => {
-  const { t } = useTranslation();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<SpecimenDto[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [searchText, setSearchText] = useState("");
@@ -56,74 +58,60 @@ const SpecimenList: React.FC = () => {
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
   const [form] = Form.useForm();
 
-  // Data from API
-  const [specimenTypes, setSpecimenTypes] = useState<string[]>([]);
-  const [storageLocations, setStorageLocations] = useState<any[]>([]);
-  const [testRequests, setTestRequests] = useState<any[]>([]);
+  // RTK Query hooks
+  const {
+    data: specimenData,
+    isLoading: loading,
+    isFetching,
+    refetch,
+  } = useGetSpecimenListQuery({
+    skipCount: (currentPage - 1) * pageSize,
+    maxResultCount: pageSize,
+    sorting: "receivedDate desc",
+    search: searchText || undefined,
+    status: statusFilter !== "all" ? statusFilter : undefined,
+    type: typeFilter !== "all" ? typeFilter : undefined,
+  });
+
+  const { data: specimenTypesData } = useGetActiveSpecimenTypesQuery();
+  const { data: storageLocationsData } = useGetActiveStorageLocationsQuery();
+  const { data: testRequestsData } = useGetTestRequestListQuery({ maxResultCount: 1000 });
+
+  const [createSpecimen, { isLoading: isCreating }] = useCreateSpecimenMutation();
+  const [updateSpecimen, { isLoading: isUpdating }] = useUpdateSpecimenMutation();
+  const [deleteSpecimen, { isLoading: isDeleting }] = useDeleteSpecimenMutation();
+
+  // Derived data
+  const data = useMemo(() => specimenData?.items || [], [specimenData]);
+  const totalCount = specimenData?.totalCount || 0;
+  const specimenTypes = useMemo(
+    () => specimenTypesData?.items?.map((t) => t.name) || [],
+    [specimenTypesData]
+  );
+  const storageLocations = useMemo(
+    () => storageLocationsData?.items || [],
+    [storageLocationsData]
+  );
+  const testRequests = useMemo(
+    () => testRequestsData?.items || [],
+    [testRequestsData]
+  );
+
+  const actionLoading = isCreating || isUpdating || isDeleting || isFetching;
 
   const handleDownloadTemplate = async () => {
     setDownloadingTemplate(true);
     try {
       const blob = await importService.downloadSpecimensTemplate();
-      downloadBlobAsFile(blob, 'specimens-template.xlsx');
-      message.success('Tải template thành công!');
+      downloadBlobAsFile(blob, "specimens-template.xlsx");
+      message.success("Tải template thành công!");
     } catch (error) {
-      console.error('Error downloading template:', error);
-      message.error('Không thể tải template. Vui lòng thử lại.');
+      console.error("Error downloading template:", error);
+      message.error("Không thể tải template. Vui lòng thử lại.");
     } finally {
       setDownloadingTemplate(false);
     }
   };
-
-  // Load master data
-  const loadMasterData = async () => {
-    try {
-      const [typesResult, locationsResult, requestsResult] = await Promise.all([
-        specimenTypeService.getActive(),
-        storageLocationService.getActive(),
-        testRequestService.getList({ maxResultCount: 1000 }),
-      ]);
-      setSpecimenTypes(typesResult.items.map((t: any) => t.name));
-      setStorageLocations(locationsResult.items);
-      setTestRequests(requestsResult.items);
-    } catch (error) {
-      console.error("Error loading master data:", error);
-    }
-  };
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const result = await specimenService.getList({
-        skipCount: (currentPage - 1) * pageSize,
-        maxResultCount: pageSize,
-        sorting: "receivedDate desc",
-        search: searchText || undefined,
-        status: statusFilter !== "all" ? statusFilter : undefined,
-        type: typeFilter !== "all" ? typeFilter : undefined,
-      });
-      const items = result.items || [];
-      setData(items);
-      setTotalCount(result.totalCount || 0);
-    } catch (error: any) {
-      console.error("Error loading specimens:", error);
-      message.error("Không thể tải danh sách mẫu. Vui lòng kiểm tra kết nối server.");
-      setData([]);
-      setTotalCount(0);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Load master data once on mount
-  useEffect(() => {
-    loadMasterData();
-  }, []);
-
-  // Load data when filters change
-  useEffect(() => {
-    loadData();
-  }, [currentPage, pageSize, searchText, statusFilter, typeFilter]);
 
   // Handle search
   const handleSearch = () => {
@@ -145,12 +133,11 @@ const SpecimenList: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      await specimenService.delete(id);
+      await deleteSpecimen(id).unwrap();
       message.success("Xóa mẫu thành công!");
-      loadData(); // Reload data from server
     } catch (error: any) {
       console.error("Error deleting specimen:", error);
-      message.error("Không thể xóa mẫu. Vui lòng thử lại.");
+      message.error(error.data?.error?.message || "Không thể xóa mẫu. Vui lòng thử lại.");
     }
   };
 
@@ -196,8 +183,7 @@ const SpecimenList: React.FC = () => {
         },
       ],
       storageLocation: record.storageLocation,
-      storageCondition: record.storageCondition,
-      description: record.description,
+      description: record.notes,
     });
     setIsModalOpen(true);
   };
@@ -205,8 +191,6 @@ const SpecimenList: React.FC = () => {
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
-      const testRequest = testRequests.find((tr) => tr.id === values.testRequestId);
-      const testRequestNumber = testRequest?.requestNumber || "";
 
       if (editingItem) {
         // Edit mode - only one specimen
@@ -223,7 +207,7 @@ const SpecimenList: React.FC = () => {
           storageLocation: values.storageLocation,
           notes: values.description,
         };
-        await specimenService.update(editingItem.id, updateData);
+        await updateSpecimen({ id: editingItem.id, data: updateData }).unwrap();
         message.success("Cập nhật mẫu thành công!");
       } else {
         // Create mode - multiple specimens
@@ -240,16 +224,15 @@ const SpecimenList: React.FC = () => {
             storageLocation: values.storageLocation,
             notes: values.description,
           };
-          await specimenService.create(createData);
+          await createSpecimen(createData).unwrap();
         }
         message.success(`Thêm ${values.specimens.length} mẫu mới thành công!`);
       }
       setIsModalOpen(false);
       form.resetFields();
-      loadData(); // Reload data from server
     } catch (error: any) {
       console.error("Error saving specimen:", error);
-      message.error("Không thể lưu mẫu. Vui lòng thử lại.");
+      message.error(error.data?.error?.message || "Không thể lưu mẫu. Vui lòng thử lại.");
     }
   };
 
@@ -347,7 +330,13 @@ const SpecimenList: React.FC = () => {
             okText="Có"
             cancelText="Không"
           >
-            <Button type="link" size="small" danger icon={<DeleteOutlined />} />
+            <Button
+              type="link"
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              loading={isDeleting}
+            />
           </Popconfirm>
         </Space>
       ),
@@ -359,7 +348,7 @@ const SpecimenList: React.FC = () => {
       title="Danh sách mẫu thử nghiệm"
       extra={
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={loadData}>
+          <Button icon={<ReloadOutlined />} onClick={() => refetch()} loading={isFetching}>
             Làm mới
           </Button>
           <Button
@@ -433,7 +422,7 @@ const SpecimenList: React.FC = () => {
         columns={columns}
         dataSource={data}
         rowKey="id"
-        loading={loading}
+        loading={loading || isFetching}
         pagination={{
           current: currentPage,
           pageSize: pageSize,
@@ -459,6 +448,7 @@ const SpecimenList: React.FC = () => {
         okText={editingItem ? "Cập nhật" : "Thêm mẫu"}
         cancelText="Hủy"
         centered
+        confirmLoading={actionLoading}
         styles={{ body: { maxHeight: "70vh", overflowY: "auto" } }}
       >
         <Form form={form} layout="vertical">
@@ -637,7 +627,7 @@ const SpecimenList: React.FC = () => {
                   <Select allowClear placeholder="Chọn vị trí lưu kho">
                     {storageLocations.map((loc) => (
                       <Select.Option key={loc.id} value={loc.name}>
-                        {loc.code} - {loc.name} ({loc.temperature || 'N/A'})
+                        {loc.code} - {loc.name} ({loc.temperature || "N/A"})
                       </Select.Option>
                     ))}
                   </Select>
@@ -666,7 +656,7 @@ const SpecimenList: React.FC = () => {
         onClose={() => setImportModalOpen(false)}
         onSuccess={() => {
           setImportModalOpen(false);
-          loadData();
+          refetch();
         }}
         importType="specimens"
         title="Import mẫu thử nghiệm"

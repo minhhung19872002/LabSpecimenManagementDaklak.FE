@@ -1,119 +1,93 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Form, Input, Select, Button, Card, message, Spin, DatePicker, InputNumber, Row, Col } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
-import { specimenHistoryService } from '../../services/specimenHistoryService';
-import { specimenService } from '../../services/specimenService';
-import { storageLocationService } from '../../services/masterDataService';
-import { userService, UserLookupDto } from '../../services/userService';
-import { CreateSpecimenHistoryDto, UpdateSpecimenHistoryDto, SpecimenStatus } from '../../types/specimenHistory';
+import { SpecimenStatus } from '../../types/specimenHistory';
+
+// RTK Query imports
+import {
+  useGetSpecimenHistoryQuery,
+  useCreateSpecimenHistoryMutation,
+  useUpdateSpecimenHistoryMutation,
+} from '../../store/api/specimenHistoryApi';
+import { useGetSpecimenListQuery } from '../../store/api/specimenApi';
+import { useGetActiveStorageLocationsQuery } from '../../store/api/masterDataApi';
+import { useGetUserLookupQuery } from '../../store/api/userApi';
 
 const { Option } = Select;
 const { TextArea } = Input;
 
 const SpecimenHistoryForm: React.FC = () => {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
   const isEdit = !!id;
 
-  // Master data from API
-  const [specimens, setSpecimens] = useState<any[]>([]);
-  const [storageLocations, setStorageLocations] = useState<any[]>([]);
-  const [users, setUsers] = useState<UserLookupDto[]>([]);
+  // RTK Query hooks
+  const { data: historyData, isLoading: loading } = useGetSpecimenHistoryQuery(id!, { skip: !id });
+  const { data: specimensData } = useGetSpecimenListQuery({ maxResultCount: 1000 });
+  const { data: storageLocationsData } = useGetActiveStorageLocationsQuery();
+  const { data: usersData } = useGetUserLookupQuery();
 
-  const loadMasterData = async () => {
-    try {
-      const [specimensResult, locationsResult, usersResult] = await Promise.all([
-        specimenService.getList({ maxResultCount: 1000 }),
-        storageLocationService.getActive(),
-        userService.getLookup(),
-      ]);
-      setSpecimens(specimensResult.items || []);
-      setStorageLocations(locationsResult.items || []);
-      setUsers(usersResult || []);
-    } catch (error) {
-      console.error('Error loading master data:', error);
-    }
-  };
+  // Mutations
+  const [createSpecimenHistory, { isLoading: isCreating }] = useCreateSpecimenHistoryMutation();
+  const [updateSpecimenHistory, { isLoading: isUpdating }] = useUpdateSpecimenHistoryMutation();
 
+  const submitting = isCreating || isUpdating;
+  const specimens = specimensData?.items || [];
+  const storageLocations = storageLocationsData?.items || [];
+  const users = usersData || [];
+
+  // Populate form when data is loaded
   useEffect(() => {
-    loadMasterData();
-    if (isEdit && id) {
-      fetchData(id);
-    }
-  }, [id]);
-
-  const fetchData = async (historyId: string) => {
-    setLoading(true);
-    try {
-      const data = await specimenHistoryService.getById(historyId);
+    if (historyData && isEdit) {
       form.setFieldsValue({
-        specimenId: data.specimenId,
-        action: data.action,
-        location: data.location,
-        status: data.status,
-        notes: data.notes,
-        temperature: data.temperature,
-        humidity: data.humidity,
-        timestamp: data.timestamp ? dayjs(data.timestamp) : undefined,
-        performedById: data.performedById,
+        specimenId: historyData.specimenId,
+        action: historyData.action,
+        location: historyData.location,
+        status: historyData.status,
+        notes: historyData.notes,
+        temperature: historyData.temperature,
+        humidity: historyData.humidity,
+        timestamp: historyData.timestamp ? dayjs(historyData.timestamp) : undefined,
+        performedById: historyData.performedById,
       });
-    } catch (error) {
-      message.error(t('specimenHistory.form.fetchError'));
-      console.error('Failed to fetch specimen history:', error);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [historyData, isEdit, form]);
 
   const onFinish = async (values: any) => {
-    setSubmitting(true);
     try {
       const timestamp = values.timestamp ? values.timestamp.toISOString() : undefined;
 
+      const payload = {
+        specimenId: values.specimenId,
+        action: values.action,
+        location: values.location,
+        status: values.status,
+        notes: values.notes,
+        temperature: values.temperature,
+        humidity: values.humidity,
+        timestamp: timestamp,
+        performedById: values.performedById,
+      };
+
       if (isEdit && id) {
-        const updateDto: UpdateSpecimenHistoryDto = {
-          action: values.action,
-          location: values.location,
-          status: values.status,
-          notes: values.notes,
-          temperature: values.temperature,
-          humidity: values.humidity,
-          timestamp: timestamp,
-          performedById: values.performedById,
-        };
-        await specimenHistoryService.update(id, updateDto);
+        await updateSpecimenHistory({ id, data: payload }).unwrap();
         message.success(t('specimenHistory.form.updateSuccess'));
       } else {
-        const createDto: CreateSpecimenHistoryDto = {
-          specimenId: values.specimenId,
-          action: values.action,
-          location: values.location,
-          status: values.status,
-          notes: values.notes,
-          temperature: values.temperature,
-          humidity: values.humidity,
-          timestamp: timestamp,
-          performedById: values.performedById,
-        };
-        await specimenHistoryService.create(createDto);
+        await createSpecimenHistory(payload).unwrap();
         message.success(t('specimenHistory.form.createSuccess'));
       }
       navigate('/specimen-histories');
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Failed to save specimen history:', error);
       message.error(
         isEdit
           ? t('specimenHistory.form.updateError')
           : t('specimenHistory.form.createError')
       );
-      console.error('Failed to save specimen history:', error);
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -136,7 +110,7 @@ const SpecimenHistoryForm: React.FC = () => {
               rules={[{ required: true, message: t('specimenHistory.form.specimenIdRequired') }]}
             >
               <Select placeholder="Chọn mẫu" showSearch optionFilterProp="children">
-                {specimens.map(specimen => (
+                {specimens.map((specimen: any) => (
                   <Option key={specimen.id} value={specimen.id}>
                     {specimen.code} - {specimen.name}
                   </Option>
@@ -175,7 +149,7 @@ const SpecimenHistoryForm: React.FC = () => {
           >
             <Select placeholder="Chọn vị trí" showSearch optionFilterProp="children">
               <Option value="Quầy tiếp nhận">Quầy tiếp nhận</Option>
-              {storageLocations.map(loc => (
+              {storageLocations.map((loc: any) => (
                 <Option key={loc.id} value={loc.name}>
                   {loc.code} - {loc.name}
                 </Option>
@@ -252,10 +226,10 @@ const SpecimenHistoryForm: React.FC = () => {
               optionFilterProp="children"
               allowClear
               filterOption={(input, option) =>
-                (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
+                String(option?.children || '').toLowerCase().includes(input.toLowerCase())
               }
             >
-              {users.map(user => (
+              {users.map((user: any) => (
                 <Option key={user.id} value={user.id}>
                   {user.displayName}
                 </Option>

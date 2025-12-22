@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Card,
@@ -11,7 +11,6 @@ import {
   Col,
   Select,
   Statistic,
-  message,
   Tabs,
   Typography,
 } from "antd";
@@ -27,8 +26,8 @@ import {
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
-import { testingService } from "../../services/testingService";
-import { laboratoryTaskService } from "../../services/laboratoryTaskService";
+import { useGetTestingListQuery } from "../../store/api/testingApi";
+import { useGetTechniciansByLaboratoryQuery } from "../../store/api/laboratoryTaskApi";
 import {
   TestingListDto,
   TestingStatus,
@@ -36,88 +35,52 @@ import {
   TestingStatusColors,
   TestingTabType,
 } from "../../types/testing";
-import { UserLookupDto } from "../../types/laboratoryTask";
 
 const { Text } = Typography;
 
 const TestingList: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [tasks, setTasks] = useState<TestingListDto[]>([]);
-  const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<TestingStatus | undefined>(
     undefined
   );
   const [technicianFilter, setTechnicianFilter] = useState<string[]>([]);
 
   // Read tab from URL, default to MyAssignments
-  const tabFromUrl = searchParams.get('tab');
+  const tabFromUrl = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState<TestingTabType>(
-    tabFromUrl === 'all' ? TestingTabType.All : TestingTabType.MyAssignments
+    tabFromUrl === "all" ? TestingTabType.All : TestingTabType.MyAssignments
   );
-
-  // Technicians for filter dropdown
-  const [technicians, setTechnicians] = useState<UserLookupDto[]>([]);
-  const [loadingTechnicians, setLoadingTechnicians] = useState(false);
 
   // Pagination state
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 50,
-    total: 0,
   });
 
-  // Load technicians for filter
-  useEffect(() => {
-    const loadTechnicians = async () => {
-      setLoadingTechnicians(true);
-      try {
-        // Get all technicians (no laboratory filter)
-        const result = await laboratoryTaskService.getTechniciansByLaboratory();
-        setTechnicians(result || []);
-      } catch (error) {
-        console.error("Failed to load technicians:", error);
-      } finally {
-        setLoadingTechnicians(false);
-      }
-    };
-    loadTechnicians();
-  }, []);
+  // RTK Query hooks
+  const {
+    data: taskData,
+    isLoading: loading,
+    isFetching,
+    refetch,
+  } = useGetTestingListQuery({
+    skipCount: (pagination.current - 1) * pagination.pageSize,
+    maxResultCount: pagination.pageSize,
+    tab: activeTab,
+    search: debouncedSearch || undefined,
+    statuses: statusFilter !== undefined ? [statusFilter] : undefined,
+    technicianIds: technicianFilter.length > 0 ? technicianFilter : undefined,
+  });
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const result = await testingService.getList({
-        skipCount: (pagination.current - 1) * pagination.pageSize,
-        maxResultCount: pagination.pageSize,
-        tab: activeTab,
-        search: searchText || undefined,
-        statuses: statusFilter !== undefined ? [statusFilter] : undefined,
-        technicianIds:
-          technicianFilter.length > 0 ? technicianFilter : undefined,
-      });
+  // Technicians for filter dropdown (no laboratory filter)
+  const { data: technicians = [], isLoading: loadingTechnicians } =
+    useGetTechniciansByLaboratoryQuery(undefined);
 
-      setTasks(result.items);
-      setPagination((prev) => ({ ...prev, total: result.totalCount }));
-    } catch (error) {
-      console.error("Failed to load testing tasks:", error);
-      message.error("Không thể tải danh sách xét nghiệm. Vui lòng thử lại.");
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    pagination.current,
-    pagination.pageSize,
-    activeTab,
-    searchText,
-    statusFilter,
-    technicianFilter,
-  ]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const tasks = taskData?.items || [];
+  const totalCount = taskData?.totalCount || 0;
 
   const getStatusTag = (status: TestingStatus) => {
     const label = TestingStatusLabels[status];
@@ -136,18 +99,21 @@ const TestingList: React.FC = () => {
     );
   };
 
-  // Statistics
-  const stats = {
-    total: pagination.total,
-    todo: tasks.filter((t) => t.testingStatus === TestingStatus.Todo).length,
-    inProgress: tasks.filter(
-      (t) => t.testingStatus === TestingStatus.InProgress
-    ).length,
-    done: tasks.filter((t) => t.testingStatus === TestingStatus.Done).length,
-  };
+  // Statistics (computed from current page data)
+  const stats = useMemo(
+    () => ({
+      total: totalCount,
+      todo: tasks.filter((t) => t.testingStatus === TestingStatus.Todo).length,
+      inProgress: tasks.filter(
+        (t) => t.testingStatus === TestingStatus.InProgress
+      ).length,
+      done: tasks.filter((t) => t.testingStatus === TestingStatus.Done).length,
+    }),
+    [tasks, totalCount]
+  );
 
   const handleSearch = (value: string) => {
-    setSearchText(value);
+    setDebouncedSearch(value);
     setPagination((prev) => ({ ...prev, current: 1 }));
   };
 
@@ -166,7 +132,7 @@ const TestingList: React.FC = () => {
     setActiveTab(newTab);
     setPagination((prev) => ({ ...prev, current: 1 }));
     // Update URL to preserve tab state
-    setSearchParams({ tab: newTab === TestingTabType.All ? 'all' : 'my' });
+    setSearchParams({ tab: newTab === TestingTabType.All ? "all" : "my" });
   };
 
   const handleTableChange = (paginationConfig: any) => {
@@ -179,10 +145,11 @@ const TestingList: React.FC = () => {
 
   const handleRefresh = () => {
     setSearchText("");
+    setDebouncedSearch("");
     setStatusFilter(undefined);
     setTechnicianFilter([]);
     setPagination((prev) => ({ ...prev, current: 1 }));
-    loadData();
+    refetch();
   };
 
   const columns: ColumnsType<TestingListDto> = [
@@ -232,7 +199,8 @@ const TestingList: React.FC = () => {
         if (!date) return "-";
         const d = dayjs(date);
         // Highlight if urgent (<=5 days remaining) and not done
-        const shouldHighlight = record.isUrgent && record.testingStatus !== TestingStatus.Done;
+        const shouldHighlight =
+          record.isUrgent && record.testingStatus !== TestingStatus.Done;
         return (
           <span
             style={{
@@ -271,11 +239,11 @@ const TestingList: React.FC = () => {
       columns={columns}
       dataSource={data}
       rowKey="id"
-      loading={loading}
+      loading={loading || isFetching}
       pagination={{
         current: pagination.current,
         pageSize: pagination.pageSize,
-        total: pagination.total,
+        total: totalCount,
         pageSizeOptions: [20, 50, 100],
         showSizeChanger: true,
         showTotal: (total, range) =>
@@ -284,10 +252,19 @@ const TestingList: React.FC = () => {
       onChange={handleTableChange}
       scroll={{ x: 1000 }}
       onRow={(record) => ({
-        onDoubleClick: () => navigate(`/testing/${record.laboratoryTaskId}?viewMode=${activeTab === TestingTabType.MyAssignments ? 'my' : 'all'}`),
+        onDoubleClick: () =>
+          navigate(
+            `/testing/${record.laboratoryTaskId}?viewMode=${
+              activeTab === TestingTabType.MyAssignments ? "my" : "all"
+            }`
+          ),
         style: { cursor: "pointer" },
       })}
-      rowClassName={(record) => (record.isUrgent && record.testingStatus !== TestingStatus.Done ? "urgent-row" : "")}
+      rowClassName={(record) =>
+        record.isUrgent && record.testingStatus !== TestingStatus.Done
+          ? "urgent-row"
+          : ""
+      }
     />
   );
 
@@ -362,7 +339,11 @@ const TestingList: React.FC = () => {
           </Space>
         }
         extra={
-          <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={handleRefresh}
+            loading={isFetching}
+          >
             Làm mới
           </Button>
         }

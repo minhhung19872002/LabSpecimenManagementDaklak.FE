@@ -27,12 +27,25 @@ import {
   MailOutlined,
   SaveOutlined
 } from '@ant-design/icons';
-import settingsService, {
-  UserProfileDto,
+
+// RTK Query imports
+import {
+  useGetUserProfileQuery,
+  useUpdateUserProfileMutation,
+  useChangePasswordMutation,
+  useGetSystemSettingsQuery,
+  useUpdateSystemSettingsMutation,
+  useGetEmailSettingsQuery,
+  useUpdateEmailSettingsMutation,
+  useTestEmailMutation,
+  useGetNotificationSettingsQuery,
+  useUpdateNotificationSettingsMutation,
+  useGetSecuritySettingsQuery,
+  useUpdateSecuritySettingsMutation,
   SystemSettingsDto,
   NotificationSettingsDto,
-  SecuritySettingsDto
-} from '../../services/settingsService';
+  SecuritySettingsDto,
+} from '../../store/api/settingsApi';
 
 const SettingsPage: React.FC = () => {
   const [profileForm] = Form.useForm();
@@ -42,169 +55,138 @@ const SettingsPage: React.FC = () => {
   const [notificationForm] = Form.useForm();
   const [securityForm] = Form.useForm();
 
-  const [loading, setLoading] = useState(false);
-  const [profileLoading, setProfileLoading] = useState(false);
-  const [systemLoading, setSystemLoading] = useState(false);
-  const [emailLoading, setEmailLoading] = useState(false);
-  const [notificationLoading, setNotificationLoading] = useState(false);
-  const [securityLoading, setSecurityLoading] = useState(false);
-  const [testEmailLoading, setTestEmailLoading] = useState(false);
-  const [passwordLoading, setPasswordLoading] = useState(false);
-
-  const [userProfile, setUserProfile] = useState<UserProfileDto | null>(null);
   const [activeTab, setActiveTab] = useState('profile');
 
-  // Load data when tab changes
+  // RTK Query hooks
+  const { data: userProfile, isLoading: profileLoading, refetch: refetchProfile } = useGetUserProfileQuery(undefined, { skip: activeTab !== 'profile' });
+  const { data: systemSettings, isLoading: systemLoading } = useGetSystemSettingsQuery(undefined, { skip: activeTab !== 'system' });
+  const { data: emailSettings, isLoading: emailLoading } = useGetEmailSettingsQuery(undefined, { skip: activeTab !== 'email' });
+  const { data: notificationSettings, isLoading: notificationLoading } = useGetNotificationSettingsQuery(undefined, { skip: activeTab !== 'notifications' });
+  const { data: securitySettings, isLoading: securityLoading } = useGetSecuritySettingsQuery(undefined, { skip: activeTab !== 'security' });
+
+  // Mutations
+  const [updateUserProfile, { isLoading: updatingProfile }] = useUpdateUserProfileMutation();
+  const [changePassword, { isLoading: changingPassword }] = useChangePasswordMutation();
+  const [updateSystemSettings, { isLoading: updatingSystem }] = useUpdateSystemSettingsMutation();
+  const [updateEmailSettings, { isLoading: updatingEmail }] = useUpdateEmailSettingsMutation();
+  const [testEmail, { isLoading: testingEmail }] = useTestEmailMutation();
+  const [updateNotificationSettings, { isLoading: updatingNotification }] = useUpdateNotificationSettingsMutation();
+  const [updateSecuritySettings, { isLoading: updatingSecurity }] = useUpdateSecuritySettingsMutation();
+
+  // Populate forms when data is loaded
   useEffect(() => {
-    loadTabData(activeTab);
-  }, [activeTab]);
-
-  const loadTabData = async (tab: string) => {
-    setLoading(true);
-    try {
-      switch (tab) {
-        case 'profile':
-          await loadProfile();
-          break;
-        case 'system':
-          await loadSystemSettings();
-          break;
-        case 'notifications':
-          await loadNotificationSettings();
-          break;
-        case 'email':
-          await loadEmailSettings();
-          break;
-        case 'security':
-          await loadSecuritySettings();
-          break;
-      }
-    } catch (error: any) {
-      message.error('Không thể tải dữ liệu: ' + (error.message || 'Lỗi không xác định'));
-    } finally {
-      setLoading(false);
+    if (userProfile) {
+      profileForm.setFieldsValue({
+        fullName: userProfile.fullName,
+        email: userProfile.email,
+        phoneNumber: userProfile.phoneNumber || '',
+        department: userProfile.department || '',
+        position: userProfile.position || ''
+      });
     }
-  };
+  }, [userProfile, profileForm]);
 
-  const loadProfile = async () => {
-    const profile = await settingsService.getUserProfile();
-    setUserProfile(profile);
-    profileForm.setFieldsValue({
-      fullName: profile.fullName,
-      email: profile.email,
-      phoneNumber: profile.phoneNumber || '',
-      department: profile.department || '',
-      position: profile.position || ''
-    });
-  };
+  useEffect(() => {
+    if (systemSettings) {
+      systemForm.setFieldsValue({
+        labName: systemSettings.labName,
+        labCode: systemSettings.labCode,
+        address: systemSettings.address,
+        defaultTAT: systemSettings.defaultTAT,
+        workingDays: systemSettings.workingDays,
+        language: systemSettings.language,
+        timezone: systemSettings.timezone
+      });
+    }
+  }, [systemSettings, systemForm]);
 
-  const loadSystemSettings = async () => {
-    const settings = await settingsService.getSystemSettings();
-    systemForm.setFieldsValue({
-      labName: settings.labName,
-      labCode: settings.labCode,
-      address: settings.address,
-      defaultTAT: settings.defaultTAT,
-      workingDays: settings.workingDays,
-      language: settings.language,
-      timezone: settings.timezone
-    });
-  };
+  useEffect(() => {
+    if (emailSettings) {
+      emailForm.setFieldsValue({
+        smtpHost: emailSettings.smtpHost,
+        smtpPort: emailSettings.smtpPort,
+        smtpUsername: emailSettings.smtpUsername,
+        smtpPassword: '', // Don't show password
+        enableSsl: emailSettings.enableSsl,
+        fromEmail: emailSettings.fromEmail,
+        fromName: emailSettings.fromName
+      });
+    }
+  }, [emailSettings, emailForm]);
 
-  const loadEmailSettings = async () => {
-    const settings = await settingsService.getEmailSettings();
-    emailForm.setFieldsValue({
-      smtpHost: settings.smtpHost,
-      smtpPort: settings.smtpPort,
-      smtpUsername: settings.smtpUsername,
-      smtpPassword: '', // Don't show password
-      enableSsl: settings.enableSsl,
-      fromEmail: settings.fromEmail,
-      fromName: settings.fromName
-    });
-  };
+  useEffect(() => {
+    if (notificationSettings) {
+      notificationForm.setFieldsValue({
+        emailEnabled: notificationSettings.emailEnabled,
+        newRequestAlert: notificationSettings.newRequestAlert,
+        resultApprovalAlert: notificationSettings.resultApprovalAlert,
+        tatWarningAlert: notificationSettings.tatWarningAlert,
+        ncrAlert: notificationSettings.ncrAlert,
+        weeklyReport: notificationSettings.weeklyReport,
+        monthlyReport: notificationSettings.monthlyReport
+      });
+    }
+  }, [notificationSettings, notificationForm]);
 
-  const loadNotificationSettings = async () => {
-    const settings = await settingsService.getNotificationSettings();
-    notificationForm.setFieldsValue({
-      emailEnabled: settings.emailEnabled,
-      newRequestAlert: settings.newRequestAlert,
-      resultApprovalAlert: settings.resultApprovalAlert,
-      tatWarningAlert: settings.tatWarningAlert,
-      ncrAlert: settings.ncrAlert,
-      weeklyReport: settings.weeklyReport,
-      monthlyReport: settings.monthlyReport
-    });
-  };
-
-  const loadSecuritySettings = async () => {
-    const settings = await settingsService.getSecuritySettings();
-    securityForm.setFieldsValue({
-      requireStrongPassword: settings.requireStrongPassword,
-      sessionTimeout: settings.sessionTimeout,
-      maxLoginAttempts: settings.maxLoginAttempts,
-      lockoutDuration: settings.lockoutDuration,
-      passwordExpiryDays: settings.passwordExpiryDays,
-      twoFactorEnabled: settings.twoFactorEnabled
-    });
-  };
+  useEffect(() => {
+    if (securitySettings) {
+      securityForm.setFieldsValue({
+        requireStrongPassword: securitySettings.requireStrongPassword,
+        sessionTimeout: securitySettings.sessionTimeout,
+        maxLoginAttempts: securitySettings.maxLoginAttempts,
+        lockoutDuration: securitySettings.lockoutDuration,
+        passwordExpiryDays: securitySettings.passwordExpiryDays,
+        twoFactorEnabled: securitySettings.twoFactorEnabled
+      });
+    }
+  }, [securitySettings, securityForm]);
 
   const handleSaveProfile = async () => {
     try {
       const values = await profileForm.validateFields();
-      setProfileLoading(true);
-      await settingsService.updateUserProfile({
+      await updateUserProfile({
         fullName: values.fullName,
         email: values.email,
         phoneNumber: values.phoneNumber
-      });
+      }).unwrap();
       message.success('Đã cập nhật thông tin cá nhân');
-      await loadProfile();
+      refetchProfile();
     } catch (error: any) {
-      if (error.errorFields) return; // Validation error
+      if (error.errorFields) return;
       message.error('Lỗi: ' + (error.message || 'Không thể cập nhật thông tin'));
-    } finally {
-      setProfileLoading(false);
     }
   };
 
   const handleChangePassword = async () => {
     try {
       const values = await passwordForm.validateFields();
-      setPasswordLoading(true);
-      await settingsService.changePassword({
+      await changePassword({
         currentPassword: values.currentPassword,
         newPassword: values.newPassword
-      });
+      }).unwrap();
       message.success('Đổi mật khẩu thành công!');
       passwordForm.resetFields();
     } catch (error: any) {
       if (error.errorFields) return;
       message.error('Lỗi: ' + (error.message || 'Không thể đổi mật khẩu'));
-    } finally {
-      setPasswordLoading(false);
     }
   };
 
   const handleSaveSystem = async () => {
     try {
       const values = await systemForm.validateFields();
-      setSystemLoading(true);
-      await settingsService.updateSystemSettings(values as SystemSettingsDto);
+      await updateSystemSettings(values as SystemSettingsDto).unwrap();
       message.success('Đã cập nhật cài đặt hệ thống');
     } catch (error: any) {
       if (error.errorFields) return;
       message.error('Lỗi: ' + (error.message || 'Không thể cập nhật cài đặt'));
-    } finally {
-      setSystemLoading(false);
     }
   };
 
   const handleSaveEmail = async () => {
     try {
       const values = await emailForm.validateFields();
-      setEmailLoading(true);
-      await settingsService.updateEmailSettings({
+      await updateEmailSettings({
         smtpHost: values.smtpHost,
         smtpPort: values.smtpPort,
         smtpUsername: values.smtpUsername,
@@ -212,13 +194,11 @@ const SettingsPage: React.FC = () => {
         enableSsl: values.enableSsl,
         fromEmail: values.fromEmail,
         fromName: values.fromName
-      });
+      }).unwrap();
       message.success('Đã cập nhật cài đặt email');
     } catch (error: any) {
       if (error.errorFields) return;
       message.error('Lỗi: ' + (error.message || 'Không thể cập nhật cài đặt'));
-    } finally {
-      setEmailLoading(false);
     }
   };
 
@@ -245,14 +225,11 @@ const SettingsPage: React.FC = () => {
           return Promise.reject();
         }
 
-        setTestEmailLoading(true);
         try {
-          await settingsService.testEmail({ toEmail });
+          await testEmail({ toEmail }).unwrap();
           message.success('Đã gửi email test thành công!');
         } catch (error: any) {
           message.error('Gửi email thất bại: ' + (error.message || 'Lỗi không xác định'));
-        } finally {
-          setTestEmailLoading(false);
         }
       }
     });
@@ -261,28 +238,22 @@ const SettingsPage: React.FC = () => {
   const handleSaveNotification = async () => {
     try {
       const values = await notificationForm.validateFields();
-      setNotificationLoading(true);
-      await settingsService.updateNotificationSettings(values as NotificationSettingsDto);
+      await updateNotificationSettings(values as NotificationSettingsDto).unwrap();
       message.success('Đã cập nhật cài đặt thông báo');
     } catch (error: any) {
       if (error.errorFields) return;
       message.error('Lỗi: ' + (error.message || 'Không thể cập nhật cài đặt'));
-    } finally {
-      setNotificationLoading(false);
     }
   };
 
   const handleSaveSecurity = async () => {
     try {
       const values = await securityForm.validateFields();
-      setSecurityLoading(true);
-      await settingsService.updateSecuritySettings(values as SecuritySettingsDto);
+      await updateSecuritySettings(values as SecuritySettingsDto).unwrap();
       message.success('Đã cập nhật cài đặt bảo mật');
     } catch (error: any) {
       if (error.errorFields) return;
       message.error('Lỗi: ' + (error.message || 'Không thể cập nhật cài đặt'));
-    } finally {
-      setSecurityLoading(false);
     }
   };
 
@@ -305,7 +276,7 @@ const SettingsPage: React.FC = () => {
               </span>
             ),
             children: (
-              <Spin spinning={loading}>
+              <Spin spinning={profileLoading}>
                 <Card title="Thông tin tài khoản">
                   <Row gutter={24}>
                     <Col xs={24} md={8} style={{ textAlign: 'center', marginBottom: 24 }}>
@@ -340,7 +311,7 @@ const SettingsPage: React.FC = () => {
                             </Form.Item>
                           </Col>
                         </Row>
-                        <Button type="primary" icon={<SaveOutlined />} onClick={handleSaveProfile} loading={profileLoading}>
+                        <Button type="primary" icon={<SaveOutlined />} onClick={handleSaveProfile} loading={updatingProfile}>
                           Lưu thay đổi
                         </Button>
                       </Form>
@@ -383,7 +354,7 @@ const SettingsPage: React.FC = () => {
                         >
                           <Input.Password placeholder="Xác nhận mật khẩu mới" />
                         </Form.Item>
-                        <Button type="primary" onClick={handleChangePassword} loading={passwordLoading}>
+                        <Button type="primary" onClick={handleChangePassword} loading={changingPassword}>
                           Đổi mật khẩu
                         </Button>
                       </Form>
@@ -401,7 +372,7 @@ const SettingsPage: React.FC = () => {
               </span>
             ),
             children: (
-              <Spin spinning={loading}>
+              <Spin spinning={systemLoading}>
                 <Card title="Cài đặt hệ thống">
                   <Form form={systemForm} layout="vertical">
                     <Row gutter={16}>
@@ -452,7 +423,7 @@ const SettingsPage: React.FC = () => {
                         <Select.Option value="sunday">Chủ nhật</Select.Option>
                       </Select>
                     </Form.Item>
-                    <Button type="primary" icon={<SaveOutlined />} onClick={handleSaveSystem} loading={systemLoading}>
+                    <Button type="primary" icon={<SaveOutlined />} onClick={handleSaveSystem} loading={updatingSystem}>
                       Lưu cài đặt
                     </Button>
                   </Form>
@@ -468,7 +439,7 @@ const SettingsPage: React.FC = () => {
               </span>
             ),
             children: (
-              <Spin spinning={loading}>
+              <Spin spinning={notificationLoading}>
                 <Card title="Cài đặt thông báo">
                   <Form form={notificationForm} layout="vertical">
                     <Descriptions bordered column={1}>
@@ -509,7 +480,7 @@ const SettingsPage: React.FC = () => {
                       </Descriptions.Item>
                     </Descriptions>
                     <div style={{ marginTop: 16 }}>
-                      <Button type="primary" icon={<SaveOutlined />} onClick={handleSaveNotification} loading={notificationLoading}>
+                      <Button type="primary" icon={<SaveOutlined />} onClick={handleSaveNotification} loading={updatingNotification}>
                         Lưu cài đặt
                       </Button>
                     </div>
@@ -526,7 +497,7 @@ const SettingsPage: React.FC = () => {
               </span>
             ),
             children: (
-              <Spin spinning={loading}>
+              <Spin spinning={emailLoading}>
                 <Card title="Cài đặt SMTP">
                   <Form form={emailForm} layout="vertical">
                     <Row gutter={16}>
@@ -570,10 +541,10 @@ const SettingsPage: React.FC = () => {
                       </Col>
                     </Row>
                     <Space>
-                      <Button type="primary" icon={<SaveOutlined />} onClick={handleSaveEmail} loading={emailLoading}>
+                      <Button type="primary" icon={<SaveOutlined />} onClick={handleSaveEmail} loading={updatingEmail}>
                         Lưu cài đặt
                       </Button>
-                      <Button icon={<MailOutlined />} onClick={handleTestEmail} loading={testEmailLoading}>
+                      <Button icon={<MailOutlined />} onClick={handleTestEmail} loading={testingEmail}>
                         Gửi email test
                       </Button>
                     </Space>
@@ -590,7 +561,7 @@ const SettingsPage: React.FC = () => {
               </span>
             ),
             children: (
-              <Spin spinning={loading}>
+              <Spin spinning={securityLoading}>
                 <Card title="Cài đặt bảo mật">
                   <Form form={securityForm} layout="vertical">
                     <Descriptions bordered column={1}>
@@ -628,7 +599,7 @@ const SettingsPage: React.FC = () => {
                       </Descriptions.Item>
                     </Descriptions>
                     <div style={{ marginTop: 16 }}>
-                      <Button type="primary" icon={<SaveOutlined />} onClick={handleSaveSecurity} loading={securityLoading}>
+                      <Button type="primary" icon={<SaveOutlined />} onClick={handleSaveSecurity} loading={updatingSecurity}>
                         Lưu cài đặt
                       </Button>
                     </div>

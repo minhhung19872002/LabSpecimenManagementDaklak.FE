@@ -1,5 +1,4 @@
-// @ts-nocheck
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Card,
   Table,
@@ -17,7 +16,6 @@ import {
   message,
   Tooltip,
   Badge,
-  Spin,
   Form
 } from 'antd';
 import {
@@ -38,11 +36,23 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import QRCodeGenerator, { MiniQRCode } from '../../components/common/QRCodeGenerator';
-import { reportService, CreateReportDto } from '../../services/reportService';
-import { testRequestService } from '../../services/testRequestService';
-import { specimenService } from '../../services/specimenService';
-import { testService } from '../../services/testService';
 import { downloadBlobAsFile } from '../../services/importService';
+
+// RTK Query imports
+import {
+  useGetReportListQuery,
+  useCreateReportMutation,
+  useSubmitReportForReviewMutation,
+  useApproveReportMutation,
+  useIssueReportMutation,
+  useSendReportEmailMutation,
+  ReportDto,
+  CreateReportDto,
+} from '../../store/api/reportApi';
+import { useGetTestRequestListQuery } from '../../store/api/testRequestApi';
+import { useGetSpecimensByTestRequestQuery } from '../../store/api/specimenApi';
+import { useGetTestsBySpecimenQuery } from '../../store/api/testApi';
+import { reportService } from '../../services/reportService';
 
 const { RangePicker } = DatePicker;
 
@@ -57,20 +67,53 @@ const getStatusConfig = (status: string) => {
 };
 
 const ReportList: React.FC = () => {
-  const [reports, setReports] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [qrModalVisible, setQrModalVisible] = useState(false);
   const [selectedReport, setSelectedReport] = useState<any>(null);
   const [createModalVisible, setCreateModalVisible] = useState(false);
-  const [testRequests, setTestRequests] = useState<any[]>([]);
-  const [specimens, setSpecimens] = useState<any[]>([]);
-  const [tests, setTests] = useState<any[]>([]);
-  const [createLoading, setCreateLoading] = useState(false);
+  const [selectedTestRequestId, setSelectedTestRequestId] = useState<string | null>(null);
   const [workflowLoading, setWorkflowLoading] = useState(false);
   const [form] = Form.useForm();
+
+  // RTK Query hooks
+  const { data: reportsData, isLoading: loading, refetch } = useGetReportListQuery({ maxResultCount: 100 });
+  const { data: testRequestsData } = useGetTestRequestListQuery({ maxResultCount: 1000 });
+  const { data: specimensData } = useGetSpecimensByTestRequestQuery(selectedTestRequestId!, { skip: !selectedTestRequestId });
+  const { data: testsData } = useGetTestsBySpecimenQuery(
+    specimensData && specimensData.length > 0 ? specimensData[0].id : '',
+    { skip: !specimensData || specimensData.length === 0 }
+  );
+
+  // Mutations
+  const [createReport, { isLoading: createLoading }] = useCreateReportMutation();
+  const [submitForReview] = useSubmitReportForReviewMutation();
+  const [approveReport] = useApproveReportMutation();
+  const [issueReport] = useIssueReportMutation();
+  const [sendReportEmail] = useSendReportEmailMutation();
+
+  // Derived data
+  const testRequests = useMemo(() => testRequestsData?.items || [], [testRequestsData]);
+  const specimens = useMemo(() => specimensData || [], [specimensData]);
+  const tests = useMemo(() => testsData || [], [testsData]);
+
+  const reports = useMemo(() => {
+    return (reportsData?.items || []).map((r: ReportDto) => ({
+      id: r.id,
+      reportNumber: r.reportNumber,
+      requestNumber: r.testRequestNumber || '',
+      customerName: r.customerName,
+      specimenCode: r.specimenCodes?.join(', ') || '',
+      specimenName: r.title,
+      testCount: r.testCount || 0,
+      status: r.status === 0 ? 'Draft' : r.status === 1 ? 'PendingApproval' : r.status === 2 ? 'Approved' : 'Issued',
+      createdAt: dayjs(r.creationTime).format('YYYY-MM-DD'),
+      approvedAt: r.issuedDate ? dayjs(r.issuedDate).format('YYYY-MM-DD HH:mm') : null,
+      approvedBy: r.approvedByName || null,
+      emailSent: r.status === 4, // Issued
+    }));
+  }, [reportsData]);
 
   // Workflow handlers
   const handleSubmitForApproval = async (record: any) => {
@@ -82,9 +125,8 @@ const ReportList: React.FC = () => {
       onOk: async () => {
         setWorkflowLoading(true);
         try {
-          await reportService.submitForReview(record.id);
+          await submitForReview(record.id).unwrap();
           message.success('Đã gửi báo cáo để duyệt!');
-          loadData();
         } catch (error) {
           message.error('Không thể gửi báo cáo để duyệt. Vui lòng thử lại.');
           console.error('Failed to submit for approval:', error);
@@ -104,9 +146,8 @@ const ReportList: React.FC = () => {
       onOk: async () => {
         setWorkflowLoading(true);
         try {
-          await reportService.approve(record.id);
+          await approveReport({ id: record.id }).unwrap();
           message.success('Đã duyệt báo cáo thành công!');
-          loadData();
         } catch (error) {
           message.error('Không thể duyệt báo cáo. Vui lòng thử lại.');
           console.error('Failed to approve:', error);
@@ -126,9 +167,8 @@ const ReportList: React.FC = () => {
       onOk: async () => {
         setWorkflowLoading(true);
         try {
-          await reportService.issue(record.id);
+          await issueReport(record.id).unwrap();
           message.success('Đã phát hành báo cáo thành công!');
-          loadData();
         } catch (error) {
           message.error('Không thể phát hành báo cáo. Vui lòng thử lại.');
           console.error('Failed to issue:', error);
@@ -138,47 +178,6 @@ const ReportList: React.FC = () => {
       },
     });
   };
-
-  const loadTestRequests = async () => {
-    try {
-      const result = await testRequestService.getList({ maxResultCount: 1000 });
-      setTestRequests(result.items);
-    } catch (error) {
-      console.error('Error loading test requests:', error);
-    }
-  };
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const result = await reportService.getList({ maxResultCount: 100 });
-      setReports(result.items.map((r: any) => ({
-        id: r.id,
-        reportNumber: r.reportNumber,
-        requestNumber: r.testRequestNumber || '',
-        customerName: r.customerName,
-        specimenCode: r.specimenCodes?.join(', ') || '',
-        specimenName: r.title,
-        testCount: r.testCount || 0,
-        status: r.status === 0 ? 'Draft' : r.status === 1 ? 'PendingApproval' : r.status === 2 ? 'Approved' : 'Issued',
-        createdAt: dayjs(r.creationTime).format('YYYY-MM-DD'),
-        approvedAt: r.issuedDate ? dayjs(r.issuedDate).format('YYYY-MM-DD HH:mm') : null,
-        approvedBy: r.approvedByName || null,
-        emailSent: r.status === 3, // Issued
-      })));
-    } catch (error) {
-      console.error('Error loading reports:', error);
-      message.error('Không thể tải danh sách báo cáo. Vui lòng kiểm tra kết nối server.');
-      setReports([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadData();
-    loadTestRequests();
-  }, []);
 
   const handlePreview = (record: any) => {
     setSelectedReport(record);
@@ -204,7 +203,7 @@ const ReportList: React.FC = () => {
 
   const handleSendEmail = async (record: any) => {
     try {
-      await reportService.sendEmail(record.id);
+      await sendReportEmail({ id: record.id, data: { email: '' } }).unwrap();
       message.success(`Đã gửi email báo cáo ${record.reportNumber} cho ${record.customerName}`);
     } catch (error) {
       message.error('Không thể gửi email. Vui lòng thử lại.');
@@ -217,13 +216,12 @@ const ReportList: React.FC = () => {
 
   const handleOpenCreateModal = () => {
     form.resetFields();
-    setSpecimens([]);
-    setTests([]);
+    setSelectedTestRequestId(null);
     setCreateModalVisible(true);
   };
 
   const handleTestRequestChange = async (testRequestId: string) => {
-    const selectedRequest = testRequests.find(tr => tr.id === testRequestId);
+    const selectedRequest = testRequests.find((tr: any) => tr.id === testRequestId);
     if (selectedRequest) {
       form.setFieldsValue({
         customerName: selectedRequest.customerName || '',
@@ -231,31 +229,13 @@ const ReportList: React.FC = () => {
         specimenIds: [],
         testIds: [],
       });
-
-      // Load specimens for this test request
-      try {
-        const specimenList = await specimenService.getByTestRequest(testRequestId);
-        setSpecimens(specimenList);
-
-        // Load tests for all specimens
-        const allTests: any[] = [];
-        for (const specimen of specimenList) {
-          const testList = await testService.getBySpecimen(specimen.id);
-          allTests.push(...testList);
-        }
-        setTests(allTests);
-      } catch (error) {
-        console.error('Error loading specimens/tests:', error);
-        setSpecimens([]);
-        setTests([]);
-      }
+      setSelectedTestRequestId(testRequestId);
     }
   };
 
   const handleCreateReport = async () => {
     try {
       const values = await form.validateFields();
-      setCreateLoading(true);
 
       const createData: CreateReportDto = {
         title: values.title,
@@ -266,26 +246,22 @@ const ReportList: React.FC = () => {
         notes: values.notes,
       };
 
-      await reportService.create(createData);
+      await createReport(createData).unwrap();
       message.success('Tạo báo cáo mới thành công!');
       setCreateModalVisible(false);
       form.resetFields();
-      setSpecimens([]);
-      setTests([]);
-      loadData();
-    } catch (error) {
+      setSelectedTestRequestId(null);
+    } catch (error: any) {
       if (error.errorFields) {
         console.error('Validation failed:', error);
       } else {
         message.error('Không thể tạo báo cáo. Vui lòng thử lại.');
         console.error('Failed to create report:', error);
       }
-    } finally {
-      setCreateLoading(false);
     }
   };
 
-  const filteredReports = reports.filter((r) => {
+  const filteredReports = reports.filter((r: any) => {
     const matchSearch =
       r.reportNumber?.toLowerCase().includes(searchText.toLowerCase()) ||
       r.customerName?.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -485,7 +461,7 @@ const ReportList: React.FC = () => {
         title="Báo cáo kết quả thử nghiệm"
         extra={
           <Space>
-            <Button icon={<ReloadOutlined />} onClick={loadData}>Làm mới</Button>
+            <Button icon={<ReloadOutlined />} onClick={() => refetch()}>Làm mới</Button>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreateModal}>
               Tạo báo cáo
             </Button>
@@ -661,10 +637,10 @@ const ReportList: React.FC = () => {
               optionFilterProp="children"
               onChange={handleTestRequestChange}
               filterOption={(input, option) =>
-                (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
+                String(option?.children || '').toLowerCase().includes(input.toLowerCase())
               }
             >
-              {testRequests.map(tr => (
+              {testRequests.map((tr: any) => (
                 <Select.Option key={tr.id} value={tr.id}>
                   {tr.requestNumber} - {tr.customerName}
                 </Select.Option>
@@ -698,7 +674,7 @@ const ReportList: React.FC = () => {
                 placeholder="Chọn mẫu thử để đưa vào báo cáo"
                 allowClear
               >
-                {specimens.map(s => (
+                {specimens.map((s: any) => (
                   <Select.Option key={s.id} value={s.id}>
                     {s.code} - {s.name}
                   </Select.Option>
@@ -717,7 +693,7 @@ const ReportList: React.FC = () => {
                 placeholder="Chọn phép thử để đưa vào báo cáo"
                 allowClear
               >
-                {tests.map(t => (
+                {tests.map((t: any) => (
                   <Select.Option key={t.id} value={t.id}>
                     {t.code} - {t.name}
                   </Select.Option>

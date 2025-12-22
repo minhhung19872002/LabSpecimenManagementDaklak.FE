@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { Table, Button, Space, message, Spin, Input, Row, Col } from "antd";
 import {
   DownloadOutlined,
@@ -7,36 +7,18 @@ import {
   PrinterOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
-import {
-  formTemplateService,
-  FormTemplateDto,
-} from "../../services/masterDataService";
+import { formTemplateService } from "../../services/masterDataService";
+import { useGetFormTemplateListQuery, FormTemplateDto } from "../../store/api/masterDataApi";
 import OnlyOfficeEditor from "../../components/common/OnlyOfficeEditor";
 
 const FormTemplatesTab: React.FC = () => {
-  const [templates, setTemplates] = useState<FormTemplateDto[]>([]);
-  const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
   const [editorVisible, setEditorVisible] = useState(false);
   const [selectedFile, setSelectedFile] = useState<string>("");
 
-  const fetchTemplates = async () => {
-    try {
-      setLoading(true);
-      const data = await formTemplateService.getList();
-      setTemplates(data);
-    } catch (err: any) {
-      console.error("Failed to fetch templates:", err);
-      message.error("Không thể tải danh sách form mẫu");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchTemplates();
-  }, []);
+  // RTK Query hook
+  const { data: templates = [], isLoading: loading } = useGetFormTemplateListQuery();
 
   const handleDownload = async (template: FormTemplateDto) => {
     try {
@@ -72,11 +54,12 @@ const FormTemplatesTab: React.FC = () => {
     setSelectedFile("");
   };
 
-  const filteredTemplates = searchText
-    ? templates.filter((t) =>
-        t.name.toLowerCase().includes(searchText.toLowerCase())
-      )
-    : templates;
+  const filteredTemplates = useMemo(() => {
+    if (!searchText) return templates;
+    return templates.filter((t) =>
+      t.name.toLowerCase().includes(searchText.toLowerCase())
+    );
+  }, [templates, searchText]);
 
   const columns: ColumnsType<FormTemplateDto> = [
     {

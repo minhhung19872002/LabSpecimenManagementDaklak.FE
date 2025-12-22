@@ -1,5 +1,4 @@
-// @ts-nocheck
-import React, { useState, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Card,
   Table,
@@ -32,19 +31,21 @@ import {
   EyeOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
+
+// RTK Query imports
 import {
-  ncrService,
+  useGetNCRListQuery,
+  useCreateNCRMutation,
+  useUpdateNCRMutation,
+  useDeleteNCRMutation,
   NCRDto,
   CreateNCRDto,
   UpdateNCRDto,
   NCRType,
   NCRSeverity,
   NCRStatus,
-} from "../../services/ncrService";
-import {
-  departmentService,
-  DepartmentDto,
-} from "../../services/masterDataService";
+} from "../../store/api/ncrApi";
+import { useGetActiveDepartmentsQuery } from "../../store/api/masterDataApi";
 
 const { TextArea } = Input;
 
@@ -101,9 +102,6 @@ interface NCRDisplay extends NCRDto {
 }
 
 const NCRList: React.FC = () => {
-  const [ncrs, setNcrs] = useState<NCRDisplay[]>([]);
-  const [departments, setDepartments] = useState<DepartmentDto[]>([]);
-  const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -112,32 +110,15 @@ const NCRList: React.FC = () => {
   const [selectedNCR, setSelectedNCR] = useState<NCRDisplay | null>(null);
   const [form] = Form.useForm();
 
-  useEffect(() => {
-    loadData();
-    loadDepartments();
-  }, []);
+  // RTK Query hooks
+  const { data: ncrData, isLoading: loading } = useGetNCRListQuery({ maxResultCount: 1000 });
+  const { data: departmentsData } = useGetActiveDepartmentsQuery();
+  const [createNCR] = useCreateNCRMutation();
+  const [updateNCR] = useUpdateNCRMutation();
+  const [deleteNCR] = useDeleteNCRMutation();
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const response = await ncrService.getList({ maxResultCount: 1000 });
-      setNcrs(response.items);
-    } catch (error) {
-      console.error("Failed to load NCRs:", error);
-      message.error("Không thể tải danh sách NCR. Vui lòng thử lại.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadDepartments = async () => {
-    try {
-      const response = await departmentService.getActive();
-      setDepartments(response.items);
-    } catch (error) {
-      console.error("Failed to load departments:", error);
-    }
-  };
+  const ncrs = useMemo(() => (ncrData?.items || []) as NCRDisplay[], [ncrData]);
+  const departments = useMemo(() => departmentsData?.items || [], [departmentsData]);
 
   // Stats
   const openCount = ncrs.filter((n) => n.status === NCRStatus.Open).length;
@@ -184,9 +165,8 @@ const NCRList: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      await ncrService.delete(id);
+      await deleteNCR(id).unwrap();
       message.success("Đã xóa NCR");
-      loadData();
     } catch (error) {
       console.error("Failed to delete NCR:", error);
       message.error("Không thể xóa NCR. Vui lòng thử lại.");
@@ -213,7 +193,7 @@ const NCRList: React.FC = () => {
           dueDate: values.dueDate.toISOString(),
           notes: values.notes,
         };
-        await ncrService.update(editingNCR.id, updateData);
+        await updateNCR({ id: editingNCR.id, data: updateData }).unwrap();
         message.success("Đã cập nhật NCR");
       } else {
         const createData: CreateNCRDto = {
@@ -226,12 +206,11 @@ const NCRList: React.FC = () => {
           dueDate: values.dueDate.toISOString(),
           notes: values.notes,
         };
-        await ncrService.create(createData);
+        await createNCR(createData).unwrap();
         message.success("Đã tạo NCR mới");
       }
 
       setIsModalOpen(false);
-      loadData();
     } catch (error) {
       console.error("Failed to save NCR:", error);
       message.error("Không thể lưu NCR. Vui lòng thử lại.");
@@ -330,7 +309,7 @@ const NCRList: React.FC = () => {
       key: "actions",
       width: 120,
       fixed: "right" as const,
-      render: (_: any, record: NCRDisplay) => {
+      render: (_: unknown, record: NCRDisplay) => {
         const isLocked = record.status === NCRStatus.Closed || record.status === NCRStatus.Cancelled;
         const lockedReason = record.status === NCRStatus.Closed
           ? "Không thể chỉnh sửa NCR đã đóng"

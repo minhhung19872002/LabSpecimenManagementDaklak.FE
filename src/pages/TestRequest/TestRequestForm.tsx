@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   Form,
   Input,
@@ -30,20 +30,25 @@ import { PlusOutlined, DeleteOutlined, CloseOutlined } from "@ant-design/icons";
 import { Icon } from "@iconify/react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { testRequestService } from "../../services/testRequestService";
+
+// RTK Query imports
 import {
-  indicatorGroupService,
-  indicatorService,
-  storageLocationService,
-  laboratoryService,
+  useGetTestRequestQuery,
+  useCreateTestRequestMutation,
+  useUpdateTestRequestMutation,
+} from "../../store/api/testRequestApi";
+import {
+  useGetActiveIndicatorGroupsQuery,
+  useGetActiveIndicatorsQuery,
+  useGetActiveStorageLocationsQuery,
+  useGetActiveLaboratoriesQuery,
   IndicatorDto,
   IndicatorGroupDto,
   StorageLocationDto,
   LaboratoryDto,
-} from "../../services/masterDataService";
-import { userService, UserLookupDto } from "../../services/userService";
-import { organizationService } from "../../services/organizationService";
-import { OrganizationDto } from "../../types/organization";
+} from "../../store/api/masterDataApi";
+import { useGetUserLookupQuery, UserLookupDto } from "../../store/api/userApi";
+import { useGetActiveOrganizationsQuery, OrganizationDto } from "../../store/api/organizationApi";
 import {
   TestRequestStatus,
   ResultLanguage,
@@ -91,9 +96,31 @@ const TestRequestForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
-  const [loadingData, setLoadingData] = useState(false);
+  const [saving, setSaving] = useState(false);
   const isEditMode = !!id;
+
+  // RTK Query hooks for master data
+  const { data: indicatorGroupsData } = useGetActiveIndicatorGroupsQuery();
+  const { data: indicatorsData } = useGetActiveIndicatorsQuery();
+  const { data: storageLocationsData } = useGetActiveStorageLocationsQuery();
+  const { data: laboratoriesData } = useGetActiveLaboratoriesQuery();
+  const { data: usersData } = useGetUserLookupQuery();
+  const { data: organizationsData } = useGetActiveOrganizationsQuery();
+
+  // RTK Query hook for test request data (only in edit mode)
+  const { data: testRequestData, isLoading: loadingData } = useGetTestRequestQuery(id!, { skip: !isEditMode });
+
+  // Mutations
+  const [createTestRequest] = useCreateTestRequestMutation();
+  const [updateTestRequest] = useUpdateTestRequestMutation();
+
+  // Memoized master data
+  const indicatorGroups = useMemo(() => indicatorGroupsData || [], [indicatorGroupsData]);
+  const indicators = useMemo(() => indicatorsData || [], [indicatorsData]);
+  const storageLocations = useMemo(() => storageLocationsData?.items || [], [storageLocationsData]);
+  const laboratories = useMemo(() => laboratoriesData || [], [laboratoriesData]);
+  const users = useMemo(() => usersData || [], [usersData]);
+  const organizations = useMemo(() => organizationsData || [], [organizationsData]);
 
   // Current status for field locking
   const [currentStatus, setCurrentStatus] = useState<TestRequestStatus | null>(null);
@@ -124,17 +151,8 @@ const TestRequestForm: React.FC = () => {
   // Sample table data
   const [samples, setSamples] = useState<SampleFormData[]>([]);
 
-  // Master data
-  const [indicatorGroups, setIndicatorGroups] = useState<IndicatorGroupDto[]>(
-    []
-  );
-  const [indicators, setIndicators] = useState<IndicatorDto[]>([]);
-  const [storageLocations, setStorageLocations] = useState<
-    StorageLocationDto[]
-  >([]);
+  // Local state for indicator tree and organization search
   const [indicatorTreeData, setIndicatorTreeData] = useState<any[]>([]);
-  const [users, setUsers] = useState<UserLookupDto[]>([]);
-  const [organizations, setOrganizations] = useState<OrganizationDto[]>([]);
   const [organizationOptions, setOrganizationOptions] = useState<
     { value: string; label: string }[]
   >([]);
@@ -173,7 +191,6 @@ const TestRequestForm: React.FC = () => {
 
   // Laboratory (Khoa phòng) selection modal state
   const [laboratoryModalVisible, setLaboratoryModalVisible] = useState(false);
-  const [laboratories, setLaboratories] = useState<LaboratoryDto[]>([]);
   const [selectedLaboratoryId, setSelectedLaboratoryId] = useState<
     string | null
   >(null);
@@ -192,11 +209,6 @@ const TestRequestForm: React.FC = () => {
   const [districts, setDistricts] = useState<District[]>([]);
   const [wards, setWards] = useState<Ward[]>([]);
 
-  // Load master data
-  useEffect(() => {
-    loadMasterData();
-  }, []);
-
   // Set all groups expanded when indicatorGroups is loaded
   useEffect(() => {
     if (indicatorGroups.length > 0 && expandedGroups.length === 0) {
@@ -205,12 +217,12 @@ const TestRequestForm: React.FC = () => {
     }
   }, [indicatorGroups]);
 
-  // Load edit data
+  // Load edit data when testRequestData is available
   useEffect(() => {
-    if (isEditMode) {
-      loadData();
+    if (isEditMode && testRequestData) {
+      loadDataFromQuery(testRequestData);
     }
-  }, [id]);
+  }, [testRequestData, isEditMode]);
 
   // Build indicator tree data when indicators or groups change
   useEffect(() => {
@@ -239,35 +251,6 @@ const TestRequestForm: React.FC = () => {
     calculateTotalCost();
   }, [samples, indicators]);
 
-  const loadMasterData = async () => {
-    try {
-      const [
-        groupsData,
-        indicatorsData,
-        locationsData,
-        usersData,
-        orgsData,
-        labsData,
-      ] = await Promise.all([
-        indicatorGroupService.getActive(),
-        indicatorService.getActive(),
-        storageLocationService.getActive(),
-        userService.getLookup(),
-        organizationService.getAllActive(),
-        laboratoryService.getActive(),
-      ]);
-      setIndicatorGroups(groupsData);
-      setIndicators(indicatorsData);
-      setStorageLocations(locationsData.items || []);
-      setUsers(usersData);
-      setOrganizations(orgsData);
-      setLaboratories(labsData || []);
-      // Don't set options initially - only show when user types
-    } catch (error) {
-      console.error("Failed to load master data:", error);
-      message.error("Không thể tải dữ liệu danh mục");
-    }
-  };
 
   // Handle organization search for autocomplete with debounce
   const handleOrganizationSearch = (searchText: string) => {
@@ -308,127 +291,113 @@ const TestRequestForm: React.FC = () => {
     };
   }, []);
 
-  const loadData = async () => {
-    if (!id) return;
+  const loadDataFromQuery = (data: any) => {
+    // Set current status for field locking
+    setCurrentStatus(data.status);
 
-    setLoadingData(true);
-    try {
-      const data = await testRequestService.get(id);
+    // Check if request cannot be edited - redirect to detail page
+    if (!canEditTestRequest(data.status)) {
+      message.warning("Không thể chỉnh sửa phiếu ở trạng thái này");
+      navigate(`/test-request/${id}`);
+      return;
+    }
 
-      // Set current status for field locking
-      setCurrentStatus(data.status);
+    // Load districts and wards if province/district codes exist
+    if (data.provinceCode) {
+      const loadedDistricts = getDistrictsByProvince(data.provinceCode);
+      setDistricts(loadedDistricts);
 
-      // Check if request cannot be edited - redirect to detail page
-      if (!canEditTestRequest(data.status)) {
-        message.warning("Không thể chỉnh sửa phiếu ở trạng thái này");
-        navigate(`/test-request/${id}`);
-        return;
+      if (data.districtCode) {
+        const loadedWards = getWardsByDistrict(data.districtCode);
+        setWards(loadedWards);
       }
+    }
 
-      // Load districts and wards if province/district codes exist
-      if (data.provinceCode) {
-        const loadedDistricts = getDistrictsByProvince(data.provinceCode);
-        setDistricts(loadedDistricts);
+    form.setFieldsValue({
+      ...data,
+      contractDate: data.contractDate ? dayjs(data.contractDate) : null,
+      requestDate: data.requestDate ? dayjs(data.requestDate) : null,
+      expectedCompletionDate: data.expectedCompletionDate
+        ? dayjs(data.expectedCompletionDate)
+        : null,
+      samplingDate: data.samplingDate ? dayjs(data.samplingDate) : null,
+      samplingTime: data.samplingTime
+        ? dayjs(data.samplingTime, "HH:mm")
+        : null,
+      sampleStorageEndDate: data.sampleStorageEndDate
+        ? dayjs(data.sampleStorageEndDate)
+        : null,
+    });
 
-        if (data.districtCode) {
-          const loadedWards = getWardsByDistrict(data.districtCode);
-          setWards(loadedWards);
-        }
-      }
+    // Set methodCustomer checkbox state
+    if (data.methodCustomer) {
+      setMethodCustomerChecked(true);
+    }
 
-      form.setFieldsValue({
-        ...data,
-        contractDate: data.contractDate ? dayjs(data.contractDate) : null,
-        requestDate: data.requestDate ? dayjs(data.requestDate) : null,
-        expectedCompletionDate: data.expectedCompletionDate
-          ? dayjs(data.expectedCompletionDate)
-          : null,
-        samplingDate: data.samplingDate ? dayjs(data.samplingDate) : null,
-        samplingTime: data.samplingTime
-          ? dayjs(data.samplingTime, "HH:mm")
-          : null,
-        sampleStorageEndDate: data.sampleStorageEndDate
-          ? dayjs(data.sampleStorageEndDate)
-          : null,
+    // Load samples
+    if (data.samples && data.samples.length > 0) {
+      const sampleData: SampleFormData[] = data.samples.map(
+        (sample, index) => ({
+          key: sample.id || `sample-${index}`,
+          id: sample.id,
+          sortOrder: sample.sortOrder,
+          sampleCode: sample.sampleCode,
+          sampleName: sample.sampleName,
+          samplingAddress: sample.samplingAddress,
+          sampleQuantity: sample.sampleQuantity,
+          status: sample.status,
+          statusText: sample.statusText || "",
+          processingStatus: sample.processingStatus || "",
+          notes: sample.notes,
+          storageLocation: sample.storageLocation,
+          indicatorIds:
+            sample.indicators?.map((ind) => ind.indicatorId) || [],
+        })
+      );
+      setSamples(sampleData);
+
+      // Restore indicator dates, checked states, and laboratory assignments
+      const restoredDates: Record<
+        string,
+        { transferDate?: dayjs.Dayjs; requestDate?: dayjs.Dayjs }
+      > = {};
+      const restoredChecked: string[] = [];
+      const restoredLabMap: Record<
+        string,
+        { laboratoryId: string; laboratoryName: string; requestDate: dayjs.Dayjs }
+      > = {};
+      const expandedLabs: string[] = [];
+
+      data.samples.forEach((sample: any, sampleIndex: number) => {
+        // Use sample.id as key, or fallback to index-based key
+        const sampleKey = sample.id || `sample-${sampleIndex}`;
+        sample.indicators?.forEach((ind: any) => {
+          restoredDates[ind.indicatorId] = {
+            transferDate: ind.transferDate ? dayjs(ind.transferDate) : undefined,
+            requestDate: ind.requestDate ? dayjs(ind.requestDate) : undefined,
+          };
+          if (ind.sentToDepartment) {
+            restoredChecked.push(ind.indicatorId);
+          }
+          // Restore laboratory assignment - use sampleKey_indicatorId
+          if (ind.laboratoryId && ind.laboratoryName) {
+            restoredLabMap[`${sampleKey}_${ind.indicatorId}`] = {
+              laboratoryId: ind.laboratoryId,
+              laboratoryName: ind.laboratoryName,
+              requestDate: ind.requestDate ? dayjs(ind.requestDate) : dayjs(),
+            };
+            // Auto-expand laboratory groups
+            if (!expandedLabs.includes(ind.laboratoryId)) {
+              expandedLabs.push(ind.laboratoryId);
+            }
+          }
+        });
       });
 
-      // Set methodCustomer checkbox state
-      if (data.methodCustomer) {
-        setMethodCustomerChecked(true);
-      }
-
-      // Load samples
-      if (data.samples && data.samples.length > 0) {
-        const sampleData: SampleFormData[] = data.samples.map(
-          (sample, index) => ({
-            key: sample.id || `sample-${index}`,
-            id: sample.id,
-            sortOrder: sample.sortOrder,
-            sampleCode: sample.sampleCode,
-            sampleName: sample.sampleName,
-            samplingAddress: sample.samplingAddress,
-            sampleQuantity: sample.sampleQuantity,
-            status: sample.status,
-            statusText: sample.statusText || "",
-            processingStatus: sample.processingStatus || "",
-            notes: sample.notes,
-            storageLocation: sample.storageLocation,
-            indicatorIds:
-              sample.indicators?.map((ind) => ind.indicatorId) || [],
-          })
-        );
-        setSamples(sampleData);
-
-        // Restore indicator dates, checked states, and laboratory assignments
-        const restoredDates: Record<
-          string,
-          { transferDate?: dayjs.Dayjs; requestDate?: dayjs.Dayjs }
-        > = {};
-        const restoredChecked: string[] = [];
-        const restoredLabMap: Record<
-          string,
-          { laboratoryId: string; laboratoryName: string; requestDate: dayjs.Dayjs }
-        > = {};
-        const expandedLabs: string[] = [];
-
-        data.samples.forEach((sample, sampleIndex) => {
-          // Use sample.id as key, or fallback to index-based key
-          const sampleKey = sample.id || `sample-${sampleIndex}`;
-          sample.indicators?.forEach((ind) => {
-            restoredDates[ind.indicatorId] = {
-              transferDate: ind.transferDate
-                ? dayjs(ind.transferDate)
-                : undefined,
-              requestDate: ind.requestDate ? dayjs(ind.requestDate) : undefined,
-            };
-            if (ind.sentToDepartment) {
-              restoredChecked.push(ind.indicatorId);
-            }
-            // Restore laboratory assignment - use sampleKey_indicatorId
-            if (ind.laboratoryId && ind.laboratoryName) {
-              restoredLabMap[`${sampleKey}_${ind.indicatorId}`] = {
-                laboratoryId: ind.laboratoryId,
-                laboratoryName: ind.laboratoryName,
-                requestDate: ind.requestDate ? dayjs(ind.requestDate) : dayjs(),
-              };
-              // Auto-expand laboratory groups
-              if (!expandedLabs.includes(ind.laboratoryId)) {
-                expandedLabs.push(ind.laboratoryId);
-              }
-            }
-          });
-        });
-
-        setSelectedIndicatorDates(restoredDates);
-        setCheckedIndicators(restoredChecked);
-        setIndicatorLaboratoryMap(restoredLabMap);
-        setExpandedLabGroups(expandedLabs);
-      }
-    } catch (error) {
-      message.error("Không thể tải dữ liệu yêu cầu");
-      console.error("Failed to load test request:", error);
-    } finally {
-      setLoadingData(false);
+      setSelectedIndicatorDates(restoredDates);
+      setCheckedIndicators(restoredChecked);
+      setIndicatorLaboratoryMap(restoredLabMap);
+      setExpandedLabGroups(expandedLabs);
     }
   };
 
@@ -788,7 +757,7 @@ const TestRequestForm: React.FC = () => {
       return;
     }
 
-    setLoading(true);
+    setSaving(true);
     try {
       // Build sample data
       const sampleDtos = samples.map((sample, index) => ({
@@ -906,21 +875,21 @@ const TestRequestForm: React.FC = () => {
       };
 
       if (isEditMode && id) {
-        await testRequestService.update(id, payload);
+        await updateTestRequest({ id, data: payload }).unwrap();
         message.success("Cập nhật yêu cầu thành công!");
       } else {
-        await testRequestService.create(payload);
+        await createTestRequest(payload).unwrap();
         message.success("Tạo yêu cầu thành công!");
       }
       navigate("/requests");
     } catch (error: any) {
       console.error("Failed to save test request:", error);
       message.error(
-        error.response?.data?.error?.message ||
+        error.data?.error?.message ||
           "Không thể lưu yêu cầu. Vui lòng thử lại."
       );
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -2041,7 +2010,7 @@ const TestRequestForm: React.FC = () => {
 
         <Form.Item>
           <Space>
-            <Button type="primary" htmlType="submit" loading={loading}>
+            <Button type="primary" htmlType="submit" loading={saving}>
               {isEditMode ? "Cập nhật" : "Tạo yêu cầu"}
             </Button>
             <Button onClick={() => navigate("/requests")}>Hủy</Button>

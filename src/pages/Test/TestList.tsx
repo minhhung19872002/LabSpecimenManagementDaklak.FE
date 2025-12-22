@@ -1,20 +1,22 @@
-// @ts-nocheck
-import React, { useEffect, useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Table, Button, Space, Tag, message, Popconfirm, Card, Input, Row, Col, Select, Modal, Form, DatePicker } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { testService } from '../../services/testService';
-import { specimenService } from '../../services/specimenService';
-import { testMethodService } from '../../services/masterDataService';
-import { userService, UserLookupDto } from '../../services/userService';
 import { TestDto, TestStatus } from '../../types/test';
 import dayjs from 'dayjs';
 
+// RTK Query imports
+import {
+  useGetTestListQuery,
+  useCreateTestMutation,
+  useUpdateTestMutation,
+  useDeleteTestMutation,
+} from '../../store/api/testApi';
+import { useGetSpecimenListQuery } from '../../store/api/specimenApi';
+import { useGetActiveTestMethodsQuery } from '../../store/api/masterDataApi';
+import { useGetUserLookupQuery } from '../../store/api/userApi';
+
 const TestList: React.FC = () => {
-  const [data, setData] = useState<TestDto[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [searchText, setSearchText] = useState('');
@@ -24,67 +26,37 @@ const TestList: React.FC = () => {
   const [editingItem, setEditingItem] = useState<TestDto | null>(null);
   const [form] = Form.useForm();
   const navigate = useNavigate();
-  const { t } = useTranslation();
 
-  // Master data from API
-  const [testMethods, setTestMethods] = useState<any[]>([]);
-  const [specimens, setSpecimens] = useState<any[]>([]);
-  const [users, setUsers] = useState<UserLookupDto[]>([]);
+  // RTK Query hooks
+  const {
+    data: testData,
+    isLoading: loading,
+    isFetching,
+    refetch,
+  } = useGetTestListQuery({
+    skipCount: (currentPage - 1) * pageSize,
+    maxResultCount: pageSize,
+    sorting: 'creationTime desc',
+    search: searchText || undefined,
+    status: statusFilter !== 'all' ? statusFilter : undefined,
+  });
 
-  const loadMasterData = async () => {
-    try {
-      const [methodsResult, specimensResult] = await Promise.all([
-        testMethodService.getActive(),
-        specimenService.getList({ maxResultCount: 1000 }),
-      ]);
-      setTestMethods(methodsResult.items || []);
-      setSpecimens(specimensResult.items || []);
-    } catch (error) {
-      console.error('Error loading master data:', error);
-    }
+  const { data: specimensData } = useGetSpecimenListQuery({ maxResultCount: 1000 });
+  const { data: testMethodsData } = useGetActiveTestMethodsQuery();
+  const { data: users = [] } = useGetUserLookupQuery();
 
-    // Load users separately to handle errors
-    try {
-      const usersResult = await userService.getLookup();
-      setUsers(usersResult || []);
-    } catch (error) {
-      console.error('Error loading users:', error);
-      setUsers([]);
-    }
-  };
+  // Mutations
+  const [createTest, { isLoading: isCreating }] = useCreateTestMutation();
+  const [updateTest, { isLoading: isUpdating }] = useUpdateTestMutation();
+  const [deleteTest] = useDeleteTestMutation();
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const result = await testService.getList({
-        skipCount: (currentPage - 1) * pageSize,
-        maxResultCount: pageSize,
-        sorting: 'creationTime desc',
-        search: searchText || undefined,
-        status: statusFilter !== 'all' ? statusFilter : undefined,
-      });
-      const items = result.items || [];
-      setData(items);
-      setTotalCount(result.totalCount || 0);
-    } catch (error) {
-      console.error('Error loading tests:', error);
-      message.error('Không thể tải danh sách phép thử. Vui lòng kiểm tra kết nối server.');
-      setData([]);
-      setTotalCount(0);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Derived data
+  const data = useMemo(() => testData?.items || [], [testData]);
+  const totalCount = testData?.totalCount || 0;
+  const specimens = useMemo(() => specimensData?.items || [], [specimensData]);
+  const testMethods = useMemo(() => testMethodsData?.items || [], [testMethodsData]);
 
-  // Load master data once on mount
-  useEffect(() => {
-    loadMasterData();
-  }, []);
-
-  // Load data when filters change
-  useEffect(() => {
-    loadData();
-  }, [currentPage, pageSize, searchText, statusFilter]);
+  const actionLoading = isCreating || isUpdating || isFetching;
 
   // Handle search
   const handleSearch = () => {
@@ -100,12 +72,11 @@ const TestList: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      await testService.delete(id);
+      await deleteTest(id).unwrap();
       message.success('Xóa phép thử thành công!');
-      loadData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting test:', error);
-      message.error('Không thể xóa phép thử. Vui lòng thử lại.');
+      message.error(error?.data?.error?.message || 'Không thể xóa phép thử. Vui lòng thử lại.');
     }
   };
 
@@ -124,7 +95,7 @@ const TestList: React.FC = () => {
     form.setFieldsValue({
       ...record,
       startDate: record.startDate ? dayjs(record.startDate) : null,
-      completedDate: record.completedDate ? dayjs(record.completedDate) : null,
+      completionDate: record.completionDate ? dayjs(record.completionDate) : null,
     });
     setIsModalOpen(true);
   };
@@ -140,23 +111,22 @@ const TestList: React.FC = () => {
         status: values.status,
         assigneeId: values.assigneeId,
         startDate: values.startDate?.toISOString(),
-        completionDate: values.completedDate?.toISOString(),
+        completionDate: values.completionDate?.toISOString(),
         notes: values.notes,
       };
 
       if (editingItem) {
-        await testService.update(editingItem.id, payload);
+        await updateTest({ id: editingItem.id, data: payload }).unwrap();
         message.success('Cập nhật phép thử thành công!');
       } else {
-        await testService.create(payload);
+        await createTest(payload).unwrap();
         message.success('Thêm phép thử mới thành công!');
       }
       setIsModalOpen(false);
       form.resetFields();
-      loadData();
     } catch (error: any) {
       console.error('Error saving test:', error);
-      message.error('Không thể lưu phép thử. Vui lòng thử lại.');
+      message.error(error?.data?.error?.message || 'Không thể lưu phép thử. Vui lòng thử lại.');
     }
   };
 
@@ -287,7 +257,7 @@ const TestList: React.FC = () => {
       title="Danh sách phép thử"
       extra={
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={loadData}>Làm mới</Button>
+          <Button icon={<ReloadOutlined />} onClick={() => refetch()} loading={isFetching}>Làm mới</Button>
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -338,7 +308,7 @@ const TestList: React.FC = () => {
         columns={columns}
         dataSource={data}
         rowKey="id"
-        loading={loading}
+        loading={loading || isFetching}
         pagination={{
           current: currentPage,
           pageSize: pageSize,
@@ -364,6 +334,7 @@ const TestList: React.FC = () => {
         okText={editingItem ? 'Cập nhật' : 'Thêm mới'}
         cancelText="Hủy"
         centered
+        confirmLoading={actionLoading}
       >
         <Form form={form} layout="vertical">
           <Row gutter={16}>
@@ -475,7 +446,7 @@ const TestList: React.FC = () => {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="completedDate" label="Ngày hoàn thành">
+              <Form.Item name="completionDate" label="Ngày hoàn thành">
                 <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
               </Form.Item>
             </Col>

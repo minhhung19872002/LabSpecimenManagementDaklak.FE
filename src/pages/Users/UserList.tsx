@@ -1,5 +1,4 @@
-// @ts-nocheck
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Card,
   Table,
@@ -29,14 +28,16 @@ import {
   PhoneOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
-import { userService, UserDto } from '../../services/userService';
-import { departmentService } from '../../services/masterDataService';
-
-interface Department {
-  id: string;
-  name: string;
-  code: string;
-}
+import {
+  useGetUserListQuery,
+  useCreateUserMutation,
+  useUpdateUserMutation,
+  useDeleteUserMutation,
+  useToggleUserActiveMutation,
+  useResetUserPasswordMutation,
+  UserDto,
+} from '../../store/api/userApi';
+import { useGetActiveDepartmentsQuery } from '../../store/api/masterDataApi';
 
 const roles = [
   { value: 'Admin', label: 'Quản trị viên', color: 'red' },
@@ -48,41 +49,32 @@ const roles = [
 ];
 
 const UserList: React.FC = () => {
-  const [users, setUsers] = useState<UserDto[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserDto | null>(null);
   const [form] = Form.useForm();
 
-  useEffect(() => {
-    loadData();
-    loadDepartments();
-  }, []);
+  // RTK Query hooks
+  const {
+    data: userData,
+    isLoading: loading,
+    isFetching,
+    refetch,
+  } = useGetUserListQuery({ maxResultCount: 100 });
 
-  const loadDepartments = async () => {
-    try {
-      const result = await departmentService.getList({ maxResultCount: 100 });
-      setDepartments(result.items || []);
-    } catch (error) {
-      console.error('Error loading departments:', error);
-    }
-  };
+  const { data: departmentsData } = useGetActiveDepartmentsQuery();
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const result = await userService.getList({ maxResultCount: 100 });
-      setUsers(result.items || []);
-    } catch (error) {
-      console.error('Error loading users:', error);
-      message.error('Không thể tải danh sách người dùng. Vui lòng kiểm tra kết nối server.');
-      setUsers([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [createUser, { isLoading: isCreating }] = useCreateUserMutation();
+  const [updateUser, { isLoading: isUpdating }] = useUpdateUserMutation();
+  const [deleteUser, { isLoading: isDeleting }] = useDeleteUserMutation();
+  const [toggleUserActive] = useToggleUserActiveMutation();
+  const [resetUserPassword] = useResetUserPasswordMutation();
+
+  // Derived data
+  const users = useMemo(() => userData?.items || [], [userData]);
+  const departments = useMemo(() => departmentsData?.items || [], [departmentsData]);
+
+  const actionLoading = isCreating || isUpdating || isDeleting || isFetching;
 
   const getRoleTag = (role: string) => {
     const roleConfig = roles.find((r) => r.value === role);
@@ -103,33 +95,31 @@ const UserList: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      await userService.delete(id);
-      setUsers(users.filter((u) => u.id !== id));
+      await deleteUser(id).unwrap();
       message.success('Đã xóa người dùng');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting user:', error);
-      message.error('Không thể xóa người dùng. Vui lòng thử lại.');
+      message.error(error.data?.error?.message || 'Không thể xóa người dùng. Vui lòng thử lại.');
     }
   };
 
   const handleToggleActive = async (id: string, checked: boolean) => {
     try {
-      await userService.toggleActive(id, checked);
-      setUsers(users.map((u) => (u.id === id ? { ...u, isActive: checked } : u)));
+      await toggleUserActive({ id, isActive: checked }).unwrap();
       message.success(checked ? 'Đã kích hoạt tài khoản' : 'Đã vô hiệu hóa tài khoản');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error toggling user status:', error);
-      message.error('Không thể thay đổi trạng thái. Vui lòng thử lại.');
+      message.error(error.data?.error?.message || 'Không thể thay đổi trạng thái. Vui lòng thử lại.');
     }
   };
 
   const handleResetPassword = async (record: UserDto) => {
     try {
-      const result = await userService.resetPassword(record.id);
+      const result = await resetUserPassword(record.id).unwrap();
       message.success(`Đã đặt lại mật khẩu cho ${record.fullName}. Mật khẩu mới: ${result.password}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error resetting password:', error);
-      message.error('Không thể đặt lại mật khẩu. Vui lòng thử lại.');
+      message.error(error.data?.error?.message || 'Không thể đặt lại mật khẩu. Vui lòng thử lại.');
     }
   };
 
@@ -138,27 +128,28 @@ const UserList: React.FC = () => {
       const values = await form.validateFields();
 
       if (editingUser) {
-        await userService.update(editingUser.id, values);
+        await updateUser({ id: editingUser.id, data: values }).unwrap();
         message.success('Đã cập nhật thông tin người dùng');
       } else {
-        await userService.create(values);
+        await createUser(values).unwrap();
         message.success('Đã thêm người dùng mới');
       }
       setIsModalOpen(false);
       form.resetFields();
-      loadData();
     } catch (error: any) {
       console.error('Error saving user:', error);
-      message.error('Không thể lưu thông tin người dùng. Vui lòng thử lại.');
+      message.error(error.data?.error?.message || 'Không thể lưu thông tin người dùng. Vui lòng thử lại.');
     }
   };
 
-  const filteredUsers = users.filter(
-    (u) =>
-      u.fullName.toLowerCase().includes(searchText.toLowerCase()) ||
-      u.username.toLowerCase().includes(searchText.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchText.toLowerCase())
-  );
+  const filteredUsers = useMemo(() => {
+    return users.filter(
+      (u) =>
+        u.fullName.toLowerCase().includes(searchText.toLowerCase()) ||
+        u.username.toLowerCase().includes(searchText.toLowerCase()) ||
+        u.email.toLowerCase().includes(searchText.toLowerCase())
+    );
+  }, [users, searchText]);
 
   const columns = [
     {
@@ -252,7 +243,7 @@ const UserList: React.FC = () => {
             cancelText="Hủy"
           >
             <Tooltip title="Xóa">
-              <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+              <Button type="text" size="small" danger icon={<DeleteOutlined />} loading={isDeleting} />
             </Tooltip>
           </Popconfirm>
         </Space>
@@ -274,7 +265,7 @@ const UserList: React.FC = () => {
               style={{ width: 250 }}
               allowClear
             />
-            <Button icon={<ReloadOutlined />} onClick={loadData}>
+            <Button icon={<ReloadOutlined />} onClick={() => refetch()} loading={isFetching}>
               Làm mới
             </Button>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
@@ -287,7 +278,7 @@ const UserList: React.FC = () => {
           dataSource={filteredUsers}
           columns={columns}
           rowKey="id"
-          loading={loading}
+          loading={loading || isFetching}
           scroll={{ x: 1200 }}
           pagination={{
             pageSize: 50,
@@ -307,6 +298,7 @@ const UserList: React.FC = () => {
         cancelText="Hủy"
         width={600}
         centered
+        confirmLoading={actionLoading}
       >
         <Form form={form} layout="vertical">
           <Row gutter={16}>

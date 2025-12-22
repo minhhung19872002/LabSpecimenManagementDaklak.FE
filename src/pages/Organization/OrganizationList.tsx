@@ -1,5 +1,4 @@
-// @ts-nocheck
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Table,
   Button,
@@ -22,14 +21,19 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { organizationService } from '../../services/organizationService';
-import { OrganizationDto, CreateUpdateOrganizationDto } from '../../types/organization';
 import dayjs from 'dayjs';
 
+// RTK Query imports
+import {
+  useGetOrganizationListQuery,
+  useCreateOrganizationMutation,
+  useUpdateOrganizationMutation,
+  useDeleteOrganizationMutation,
+  OrganizationDto,
+  CreateUpdateOrganizationDto,
+} from '../../store/api/organizationApi';
+
 const OrganizationList: React.FC = () => {
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<OrganizationDto[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [searchText, setSearchText] = useState('');
@@ -40,32 +44,24 @@ const OrganizationList: React.FC = () => {
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [editingRecord, setEditingRecord] = useState<OrganizationDto | null>(null);
   const [form] = Form.useForm();
-  const [submitting, setSubmitting] = useState(false);
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const result = await organizationService.getList({
-        skipCount: (currentPage - 1) * pageSize,
-        maxResultCount: pageSize,
-        sorting: 'sortOrder asc, name asc',
-        search: searchText || undefined,
-      });
-      setData(result.items || []);
-      setTotalCount(result.totalCount || 0);
-    } catch (error: any) {
-      console.error('Error loading organizations:', error);
-      message.error('Không thể tải danh sách. Vui lòng thử lại.');
-      setData([]);
-      setTotalCount(0);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // RTK Query hooks
+  const { data: organizationsData, isLoading: loading, refetch } = useGetOrganizationListQuery({
+    skipCount: (currentPage - 1) * pageSize,
+    maxResultCount: pageSize,
+    sorting: 'sortOrder asc, name asc',
+    search: searchText || undefined,
+  });
 
-  useEffect(() => {
-    loadData();
-  }, [currentPage, pageSize, searchText]);
+  // Mutations
+  const [createOrganization, { isLoading: isCreating }] = useCreateOrganizationMutation();
+  const [updateOrganization, { isLoading: isUpdating }] = useUpdateOrganizationMutation();
+  const [deleteOrganization] = useDeleteOrganizationMutation();
+
+  // Derived data
+  const data = useMemo(() => organizationsData?.items || [], [organizationsData]);
+  const totalCount = organizationsData?.totalCount || 0;
+  const submitting = isCreating || isUpdating;
 
   const handleSearch = () => {
     setSearchText(searchInput);
@@ -74,9 +70,8 @@ const OrganizationList: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      await organizationService.delete(id);
+      await deleteOrganization(id).unwrap();
       message.success('Xóa thành công!');
-      loadData();
     } catch (error: any) {
       console.error('Error deleting:', error);
       message.error('Không thể xóa. Vui lòng thử lại.');
@@ -106,7 +101,6 @@ const OrganizationList: React.FC = () => {
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
-      setSubmitting(true);
 
       const payload: CreateUpdateOrganizationDto = {
         name: values.name,
@@ -114,23 +108,20 @@ const OrganizationList: React.FC = () => {
       };
 
       if (modalMode === 'create') {
-        await organizationService.create(payload);
+        await createOrganization(payload).unwrap();
         message.success('Tạo mới thành công!');
       } else if (editingRecord) {
-        await organizationService.update(editingRecord.id, payload);
+        await updateOrganization({ id: editingRecord.id, data: payload }).unwrap();
         message.success('Cập nhật thành công!');
       }
 
       setModalVisible(false);
-      loadData();
     } catch (error: any) {
       if (error.errorFields) {
         return;
       }
       console.error('Error saving:', error);
       message.error('Không thể lưu. Vui lòng thử lại.');
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -198,7 +189,7 @@ const OrganizationList: React.FC = () => {
       title="Quản lý Cơ sở / Doanh nghiệp"
       extra={
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={loadData}>
+          <Button icon={<ReloadOutlined />} onClick={() => refetch()}>
             Làm mới
           </Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>

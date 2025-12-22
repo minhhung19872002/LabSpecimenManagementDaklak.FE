@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import {
 	Table,
 	Button,
@@ -32,8 +32,6 @@ import {
 import type { UploadFile } from "antd/es/upload/interface";
 import type { ColumnsType } from "antd/es/table";
 import {
-	indicatorGroupService,
-	indicatorService,
 	IndicatorGroupDto,
 	IndicatorDto,
 	CreateUpdateIndicatorGroupDto,
@@ -42,16 +40,29 @@ import {
 	CreateBulkIndicatorsDto,
 	ImportIndicatorsResultDto,
 	ImportIndicatorGroupsResultDto,
+	indicatorService,
+	indicatorGroupService,
 } from "../../services/masterDataService";
+
+// RTK Query imports
+import {
+	useGetIndicatorGroupsWithCountQuery,
+	useGetIndicatorListQuery,
+	useCreateIndicatorGroupMutation,
+	useUpdateIndicatorGroupMutation,
+	useDeleteIndicatorGroupMutation,
+	useCreateIndicatorMutation,
+	useUpdateIndicatorMutation,
+	useDeleteIndicatorMutation,
+	useToggleIndicatorActiveMutation,
+	useCreateBulkIndicatorsMutation,
+} from "../../store/api/masterDataApi";
 
 interface IndicatorsTabProps {
 	onDataChange?: () => void;
 }
 
 const IndicatorsTab: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
-	const [groups, setGroups] = useState<IndicatorGroupDto[]>([]);
-	const [indicators, setIndicators] = useState<IndicatorDto[]>([]);
-	const [loading, setLoading] = useState(false);
 	const [searchText, setSearchText] = useState("");
 	const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
 
@@ -61,20 +72,44 @@ const IndicatorsTab: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
 	const [bulkModalOpen, setBulkModalOpen] = useState(false);
 	const [importModalOpen, setImportModalOpen] = useState(false);
 	const [importGroupModalOpen, setImportGroupModalOpen] = useState(false);
-	const [editingGroup, setEditingGroup] = useState<IndicatorGroupDto | null>(
-		null
-	);
-	const [editingIndicator, setEditingIndicator] =
-		useState<IndicatorDto | null>(null);
-	const [modalLoading, setModalLoading] = useState(false);
+	const [editingGroup, setEditingGroup] = useState<IndicatorGroupDto | null>(null);
+	const [editingIndicator, setEditingIndicator] = useState<IndicatorDto | null>(null);
 	const [importResult, setImportResult] = useState<ImportIndicatorsResultDto | null>(null);
 	const [importGroupResult, setImportGroupResult] = useState<ImportIndicatorGroupsResultDto | null>(null);
 	const [fileList, setFileList] = useState<UploadFile[]>([]);
 	const [groupFileList, setGroupFileList] = useState<UploadFile[]>([]);
+	const [importLoading, setImportLoading] = useState(false);
 
 	const [groupForm] = Form.useForm();
 	const [indicatorForm] = Form.useForm();
 	const [bulkForm] = Form.useForm();
+
+	// RTK Query hooks
+	const { data: groupsData, isLoading: loadingGroups, isFetching: fetchingGroups } = useGetIndicatorGroupsWithCountQuery();
+	const { data: indicatorsData, isLoading: loadingIndicators, isFetching: fetchingIndicators } = useGetIndicatorListQuery({ maxResultCount: 1000 });
+
+	// Mutations
+	const [createIndicatorGroup, { isLoading: creatingGroup }] = useCreateIndicatorGroupMutation();
+	const [updateIndicatorGroup, { isLoading: updatingGroup }] = useUpdateIndicatorGroupMutation();
+	const [deleteIndicatorGroup] = useDeleteIndicatorGroupMutation();
+	const [createIndicator, { isLoading: creatingIndicator }] = useCreateIndicatorMutation();
+	const [updateIndicator, { isLoading: updatingIndicator }] = useUpdateIndicatorMutation();
+	const [deleteIndicator] = useDeleteIndicatorMutation();
+	const [toggleIndicatorActive] = useToggleIndicatorActiveMutation();
+	const [createBulkIndicators, { isLoading: creatingBulk }] = useCreateBulkIndicatorsMutation();
+
+	// Derived data
+	const groups = useMemo(() => groupsData || [], [groupsData]);
+	const indicators = useMemo(() => indicatorsData?.items || [], [indicatorsData]);
+	const loading = loadingGroups || loadingIndicators || fetchingGroups || fetchingIndicators;
+	const modalLoading = creatingGroup || updatingGroup || creatingIndicator || updatingIndicator || creatingBulk || importLoading;
+
+	// Set expanded rows when groups are loaded
+	React.useEffect(() => {
+		if (groups.length > 0 && expandedRowKeys.length === 0) {
+			setExpandedRowKeys(groups.map((g) => g.id));
+		}
+	}, [groups]);
 
 	// Computed options for Select
 	const groupOptions = useMemo(() => {
@@ -85,46 +120,13 @@ const IndicatorsTab: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
 		}));
 	}, [groups]);
 
-	// Fetch data
-	const fetchData = async () => {
-		setLoading(true);
-		try {
-			const [groupsData, indicatorsData] = await Promise.all([
-				indicatorGroupService.getWithCount(),
-				indicatorService.getList({ maxResultCount: 1000 }),
-			]);
-			console.log("groupsData: ", groupsData);
-			setGroups(groupsData || []);
-			setIndicators(indicatorsData?.items || []);
-			// Expand all groups by default
-			setExpandedRowKeys((groupsData || []).map((g) => g.id));
-		} catch (error) {
-			console.error("Failed to fetch indicators data:", error);
-			message.error("Không thể tải dữ liệu chỉ tiêu");
-			setGroups([]);
-			setIndicators([]);
-		} finally {
-			setLoading(false);
-		}
-	};
-
-	useEffect(() => {
-		fetchData();
-	}, []);
-
 	// Filter indicators by search
 	const filteredIndicators = searchText
 		? (indicators || []).filter(
 				(item) =>
-					item.code
-						?.toLowerCase()
-						.includes(searchText.toLowerCase()) ||
-					item.name
-						?.toLowerCase()
-						.includes(searchText.toLowerCase()) ||
-					item.indicatorGroupName
-						?.toLowerCase()
-						.includes(searchText.toLowerCase())
+					item.code?.toLowerCase().includes(searchText.toLowerCase()) ||
+					item.name?.toLowerCase().includes(searchText.toLowerCase()) ||
+					item.indicatorGroupName?.toLowerCase().includes(searchText.toLowerCase())
 		  )
 		: indicators || [];
 
@@ -132,9 +134,7 @@ const IndicatorsTab: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
 	const groupedData = (groups || []).map((group) => ({
 		...group,
 		key: group.id,
-		indicators: filteredIndicators.filter(
-			(ind) => ind.indicatorGroupId === group.id
-		),
+		indicators: filteredIndicators.filter((ind) => ind.indicatorGroupId === group.id),
 	}));
 
 	// Handle Group CRUD
@@ -152,49 +152,40 @@ const IndicatorsTab: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
 	};
 
 	const handleDeleteGroup = async (id: string) => {
-		const groupIndicators = indicators.filter(
-			(ind) => ind.indicatorGroupId === id
-		);
+		const groupIndicators = indicators.filter((ind) => ind.indicatorGroupId === id);
 		if (groupIndicators.length > 0) {
 			message.error("Không thể xóa nhóm có chứa chỉ tiêu");
 			return;
 		}
 		try {
-			await indicatorGroupService.delete(id);
+			await deleteIndicatorGroup(id).unwrap();
 			message.success("Xóa nhóm thành công!");
-			fetchData();
 			onDataChange?.();
-		} catch (error) {
-			message.error("Không thể xóa nhóm");
+		} catch (error: any) {
+			message.error(error?.data?.error?.message || "Không thể xóa nhóm");
 		}
 	};
 
 	const handleGroupModalOk = async () => {
 		try {
-			setModalLoading(true);
 			const values = await groupForm.validateFields();
 
 			if (editingGroup) {
-				await indicatorGroupService.update(
-					editingGroup.id,
-					values as CreateUpdateIndicatorGroupDto
-				);
+				await updateIndicatorGroup({
+					id: editingGroup.id,
+					data: values as CreateUpdateIndicatorGroupDto,
+				}).unwrap();
 				message.success("Cập nhật nhóm thành công!");
 			} else {
-				await indicatorGroupService.create(
-					values as CreateUpdateIndicatorGroupDto
-				);
+				await createIndicatorGroup(values as CreateUpdateIndicatorGroupDto).unwrap();
 				message.success("Thêm nhóm thành công!");
 			}
 
 			setGroupModalOpen(false);
 			groupForm.resetFields();
-			fetchData();
 			onDataChange?.();
-		} catch (error) {
-			message.error("Không thể lưu nhóm");
-		} finally {
-			setModalLoading(false);
+		} catch (error: any) {
+			message.error(error?.data?.error?.message || "Không thể lưu nhóm");
 		}
 	};
 
@@ -207,56 +198,49 @@ const IndicatorsTab: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
 
 	const handleDeleteIndicator = async (id: string) => {
 		try {
+			// Use service for canDelete check (not migrated to RTK Query)
 			const canDelete = await indicatorService.canDelete(id);
 			if (!canDelete) {
-				message.error(
-					"Không thể xóa chỉ tiêu này vì đã được sử dụng trong phiếu yêu cầu"
-				);
+				message.error("Không thể xóa chỉ tiêu này vì đã được sử dụng trong phiếu yêu cầu");
 				return;
 			}
-			await indicatorService.delete(id);
+			await deleteIndicator(id).unwrap();
 			message.success("Xóa chỉ tiêu thành công!");
-			fetchData();
 			onDataChange?.();
-		} catch (error) {
-			message.error("Không thể xóa chỉ tiêu");
+		} catch (error: any) {
+			message.error(error?.data?.error?.message || "Không thể xóa chỉ tiêu");
 		}
 	};
 
 	const handleToggleActive = async (id: string) => {
 		try {
-			await indicatorService.toggleActive(id);
+			await toggleIndicatorActive(id).unwrap();
 			message.success("Cập nhật trạng thái thành công!");
-			fetchData();
-		} catch (error) {
-			message.error("Không thể cập nhật trạng thái");
+		} catch (error: any) {
+			message.error(error?.data?.error?.message || "Không thể cập nhật trạng thái");
 		}
 	};
 
 	const handleIndicatorModalOk = async () => {
 		try {
-			setModalLoading(true);
 			const values = await indicatorForm.validateFields();
 
 			if (editingIndicator) {
-				await indicatorService.update(
-					editingIndicator.id,
-					values as UpdateIndicatorDto
-				);
+				await updateIndicator({
+					id: editingIndicator.id,
+					data: values as UpdateIndicatorDto,
+				}).unwrap();
 				message.success("Cập nhật chỉ tiêu thành công!");
 			} else {
-				await indicatorService.create(values as CreateIndicatorDto);
+				await createIndicator(values as CreateIndicatorDto).unwrap();
 				message.success("Thêm chỉ tiêu thành công!");
 			}
 
 			setIndicatorModalOpen(false);
 			indicatorForm.resetFields();
-			fetchData();
 			onDataChange?.();
-		} catch (error) {
-			message.error("Không thể lưu chỉ tiêu");
-		} finally {
-			setModalLoading(false);
+		} catch (error: any) {
+			message.error(error?.data?.error?.message || "Không thể lưu chỉ tiêu");
 		}
 	};
 
@@ -270,14 +254,11 @@ const IndicatorsTab: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
 
 	const handleBulkModalOk = async () => {
 		try {
-			setModalLoading(true);
 			const values = await bulkForm.validateFields();
 
 			const data: CreateBulkIndicatorsDto = {
 				indicatorGroupId: values.indicatorGroupId,
-				indicators: values.indicators.filter((item: any) =>
-					item.name?.trim()
-				),
+				indicators: values.indicators.filter((item: any) => item.name?.trim()),
 			};
 
 			if (data.indicators.length === 0) {
@@ -285,22 +266,18 @@ const IndicatorsTab: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
 				return;
 			}
 
-			await indicatorService.createBulk(data);
-			message.success(
-				`Thêm ${data.indicators.length} chỉ tiêu thành công!`
-			);
+			await createBulkIndicators(data).unwrap();
+			message.success(`Thêm ${data.indicators.length} chỉ tiêu thành công!`);
 
 			setBulkModalOpen(false);
 			bulkForm.resetFields();
-			fetchData();
 			onDataChange?.();
-		} catch (error) {
-			message.error("Không thể thêm chỉ tiêu");
-		} finally {
-			setModalLoading(false);
+		} catch (error: any) {
+			message.error(error?.data?.error?.message || "Không thể thêm chỉ tiêu");
 		}
 	};
 
+	// Import Excel handlers (keep using axios service for file upload)
 	const handleImportExcel = async () => {
 		if (fileList.length === 0) {
 			message.error("Vui lòng chọn file Excel");
@@ -314,13 +291,12 @@ const IndicatorsTab: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
 		}
 
 		try {
-			setModalLoading(true);
+			setImportLoading(true);
 			const result = await indicatorService.importFromExcel(file);
 			setImportResult(result);
 
 			if (result.successCount > 0) {
 				message.success(`Import thành công ${result.successCount} chỉ tiêu!`);
-				fetchData();
 				onDataChange?.();
 			}
 
@@ -330,7 +306,7 @@ const IndicatorsTab: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
 		} catch (error) {
 			message.error("Không thể import file");
 		} finally {
-			setModalLoading(false);
+			setImportLoading(false);
 		}
 	};
 
@@ -347,13 +323,12 @@ const IndicatorsTab: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
 		}
 
 		try {
-			setModalLoading(true);
+			setImportLoading(true);
 			const result = await indicatorGroupService.importFromExcel(file);
 			setImportGroupResult(result);
 
 			if (result.successCount > 0) {
 				message.success(`Import thành công ${result.successCount} nhóm chỉ tiêu!`);
-				fetchData();
 				onDataChange?.();
 			}
 
@@ -363,7 +338,7 @@ const IndicatorsTab: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
 		} catch (error) {
 			message.error("Không thể import file");
 		} finally {
-			setModalLoading(false);
+			setImportLoading(false);
 		}
 	};
 
@@ -419,21 +394,11 @@ const IndicatorsTab: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
 							onClick={() => handleEditIndicator(record)}
 						/>
 					</Tooltip>
-					<Tooltip
-						title={
-							record.isActive ? "Tắt hoạt động" : "Bật hoạt động"
-						}
-					>
+					<Tooltip title={record.isActive ? "Tắt hoạt động" : "Bật hoạt động"}>
 						<Button
 							type="link"
 							size="small"
-							icon={
-								record.isActive ? (
-									<StopOutlined />
-								) : (
-									<CheckCircleOutlined />
-								)
-							}
+							icon={record.isActive ? <StopOutlined /> : <CheckCircleOutlined />}
 							onClick={() => handleToggleActive(record.id)}
 						/>
 					</Tooltip>
@@ -444,21 +409,11 @@ const IndicatorsTab: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
 							okText="Có"
 							cancelText="Không"
 						>
-							<Button
-								type="link"
-								size="small"
-								danger
-								icon={<DeleteOutlined />}
-							/>
+							<Button type="link" size="small" danger icon={<DeleteOutlined />} />
 						</Popconfirm>
 					) : (
 						<Tooltip title="Không thể xóa vì đã được sử dụng">
-							<Button
-								type="link"
-								size="small"
-								disabled
-								icon={<DeleteOutlined />}
-							/>
+							<Button type="link" size="small" disabled icon={<DeleteOutlined />} />
 						</Tooltip>
 					)}
 				</Space>
@@ -467,9 +422,7 @@ const IndicatorsTab: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
 	];
 
 	// Columns for group table
-	const groupColumns: ColumnsType<
-		IndicatorGroupDto & { indicators: IndicatorDto[] }
-	> = [
+	const groupColumns: ColumnsType<IndicatorGroupDto & { indicators: IndicatorDto[] }> = [
 		{
 			title: "Tên nhóm",
 			dataIndex: "name",
@@ -515,21 +468,11 @@ const IndicatorsTab: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
 							okText="Có"
 							cancelText="Không"
 						>
-							<Button
-								type="link"
-								size="small"
-								danger
-								icon={<DeleteOutlined />}
-							/>
+							<Button type="link" size="small" danger icon={<DeleteOutlined />} />
 						</Popconfirm>
 					) : (
 						<Tooltip title="Không thể xóa nhóm có chứa chỉ tiêu">
-							<Button
-								type="link"
-								size="small"
-								disabled
-								icon={<DeleteOutlined />}
-							/>
+							<Button type="link" size="small" disabled icon={<DeleteOutlined />} />
 						</Tooltip>
 					)}
 				</Space>
@@ -552,41 +495,10 @@ const IndicatorsTab: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
 				</Col>
 				<Col xs={24} sm={12} md={16} style={{ textAlign: "right" }}>
 					<Space wrap>
-						{/* <Button
-							icon={<DownloadOutlined />}
-							onClick={handleDownloadGroupTemplate}
-						>
-							Template nhóm
-						</Button>
-						<Button
-							icon={<UploadOutlined />}
-							onClick={handleOpenImportGroupModal}
-						>
-							Import nhóm
-						</Button>
-						<Button
-							icon={<DownloadOutlined />}
-							onClick={handleDownloadTemplate}
-						>
-							Template chỉ tiêu
-						</Button>
-						<Button
-							icon={<UploadOutlined />}
-							onClick={handleOpenImportModal}
-						>
-							Import chỉ tiêu
-						</Button> */}
-						<Button
-							icon={<FolderAddOutlined />}
-							onClick={handleCreateGroup}
-						>
+						<Button icon={<FolderAddOutlined />} onClick={handleCreateGroup}>
 							Thêm nhóm
 						</Button>
-						<Button
-							type="primary"
-							icon={<PlusOutlined />}
-							onClick={handleBulkCreate}
-						>
+						<Button type="primary" icon={<PlusOutlined />} onClick={handleBulkCreate}>
 							Thêm chỉ tiêu
 						</Button>
 					</Space>
@@ -610,8 +522,7 @@ const IndicatorsTab: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
 						),
 						rowExpandable: () => true,
 						expandedRowKeys,
-						onExpandedRowsChange: (keys) =>
-							setExpandedRowKeys(keys as string[]),
+						onExpandedRowsChange: (keys) => setExpandedRowKeys(keys as string[]),
 					}}
 					pagination={{
 						pageSize: 50,
@@ -622,11 +533,7 @@ const IndicatorsTab: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
 
 			{/* Group Modal */}
 			<Modal
-				title={
-					editingGroup
-						? "Sửa nhóm chỉ tiêu"
-						: "Thêm nhóm chỉ tiêu mới"
-				}
+				title={editingGroup ? "Sửa nhóm chỉ tiêu" : "Thêm nhóm chỉ tiêu mới"}
 				open={groupModalOpen}
 				onOk={handleGroupModalOk}
 				onCancel={() => {
@@ -644,24 +551,13 @@ const IndicatorsTab: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
 					<Form.Item
 						name="name"
 						label="Tên nhóm"
-						rules={[
-							{
-								required: true,
-								message: "Vui lòng nhập tên nhóm",
-							},
-						]}
+						rules={[{ required: true, message: "Vui lòng nhập tên nhóm" }]}
 					>
 						<Input />
 					</Form.Item>
-					<Form.Item
-						name="isActive"
-						label="Trạng thái"
-						initialValue={true}
-					>
+					<Form.Item name="isActive" label="Trạng thái" initialValue={true}>
 						<Select defaultValue={true}>
-							<Select.Option value={true}>
-								Hoạt động
-							</Select.Option>
+							<Select.Option value={true}>Hoạt động</Select.Option>
 							<Select.Option value={false}>Ngừng</Select.Option>
 						</Select>
 					</Form.Item>
@@ -689,55 +585,32 @@ const IndicatorsTab: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
 					<Form.Item
 						name="indicatorGroupId"
 						label="Nhóm chỉ tiêu"
-						rules={[
-							{ required: true, message: "Vui lòng chọn nhóm" },
-						]}
+						rules={[{ required: true, message: "Vui lòng chọn nhóm" }]}
 					>
-						<Select
-							placeholder="Chọn nhóm"
-							showSearch
-							optionFilterProp="label"
-							options={groupOptions}
-						/>
+						<Select placeholder="Chọn nhóm" showSearch optionFilterProp="label" options={groupOptions} />
 					</Form.Item>
 					<Form.Item
 						name="name"
 						label="Tên chỉ tiêu"
-						rules={[
-							{
-								required: true,
-								message: "Vui lòng nhập tên chỉ tiêu",
-							},
-						]}
+						rules={[{ required: true, message: "Vui lòng nhập tên chỉ tiêu" }]}
 					>
 						<Input />
 					</Form.Item>
 					<Form.Item
 						name="unitPrice"
 						label="Đơn giá (VND)"
-						rules={[
-							{
-								required: true,
-								message: "Vui lòng nhập đơn giá",
-							},
-						]}
+						rules={[{ required: true, message: "Vui lòng nhập đơn giá" }]}
 					>
 						<InputNumber
 							style={{ width: "100%" }}
-							formatter={(value) =>
-								`${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-							}
-							parser={(value) =>
-								value?.replace(/\$\s?|(,*)/g, "") as any
-							}
+							formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+							parser={(value) => value?.replace(/\$\s?|(,*)/g, "") as any}
 							min={0}
 						/>
 					</Form.Item>
 					<Form.Item name="isActive" label="Trạng thái">
 						<Select>
-							<Select.Option value={true}>
-								Hoạt động
-							</Select.Option>
+							<Select.Option value={true}>Hoạt động</Select.Option>
 							<Select.Option value={false}>Ngừng</Select.Option>
 						</Select>
 					</Form.Item>
@@ -765,9 +638,7 @@ const IndicatorsTab: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
 					<Form.Item
 						name="indicatorGroupId"
 						label="Nhóm chỉ tiêu"
-						rules={[
-							{ required: true, message: "Vui lòng chọn nhóm" },
-						]}
+						rules={[{ required: true, message: "Vui lòng chọn nhóm" }]}
 					>
 						<Select
 							placeholder="Chọn nhóm cho tất cả chỉ tiêu"
@@ -781,22 +652,12 @@ const IndicatorsTab: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
 						{(fields, { add, remove }) => (
 							<>
 								{fields.map(({ key, name, ...restField }) => (
-									<Row
-										key={key}
-										gutter={8}
-										align="middle"
-										wrap={false}
-									>
+									<Row key={key} gutter={8} align="middle" wrap={false}>
 										<Col flex="auto">
 											<Form.Item
 												{...restField}
 												name={[name, "name"]}
-												rules={[
-													{
-														required: true,
-														message: "Nhập tên",
-													},
-												]}
+												rules={[{ required: true, message: "Nhập tên" }]}
 												style={{ marginBottom: 8 }}
 											>
 												<Input placeholder="Tên chỉ tiêu" />
@@ -806,29 +667,16 @@ const IndicatorsTab: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
 											<Form.Item
 												{...restField}
 												name={[name, "unitPrice"]}
-												rules={[
-													{
-														required: true,
-														message: "Nhập giá",
-													},
-												]}
+												rules={[{ required: true, message: "Nhập giá" }]}
 												style={{ marginBottom: 8 }}
 											>
 												<InputNumber
 													placeholder="Đơn giá"
 													style={{ width: "100%" }}
 													formatter={(value) =>
-														`${value}`.replace(
-															/\B(?=(\d{3})+(?!\d))/g,
-															","
-														)
+														`${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
 													}
-													parser={(value) =>
-														value?.replace(
-															/\$\s?|(,*)/g,
-															""
-														) as any
-													}
+													parser={(value) => value?.replace(/\$\s?|(,*)/g, "") as any}
 													min={0}
 													addonAfter="đ"
 												/>
@@ -847,9 +695,7 @@ const IndicatorsTab: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
 								<Form.Item>
 									<Button
 										type="dashed"
-										onClick={() =>
-											add({ name: "", unitPrice: 0 })
-										}
+										onClick={() => add({ name: "", unitPrice: 0 })}
 										block
 										icon={<PlusOutlined />}
 									>
@@ -904,12 +750,8 @@ const IndicatorsTab: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
 						<p className="ant-upload-drag-icon">
 							<UploadOutlined style={{ fontSize: 48, color: "#1890ff" }} />
 						</p>
-						<p className="ant-upload-text">
-							Kéo thả file Excel hoặc click để chọn file
-						</p>
-						<p className="ant-upload-hint">
-							Chỉ hỗ trợ file .xlsx, .xls
-						</p>
+						<p className="ant-upload-text">Kéo thả file Excel hoặc click để chọn file</p>
+						<p className="ant-upload-hint">Chỉ hỗ trợ file .xlsx, .xls</p>
 					</Upload.Dragger>
 
 					{importResult && (
@@ -977,12 +819,8 @@ const IndicatorsTab: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
 						<p className="ant-upload-drag-icon">
 							<UploadOutlined style={{ fontSize: 48, color: "#1890ff" }} />
 						</p>
-						<p className="ant-upload-text">
-							Kéo thả file Excel hoặc click để chọn file
-						</p>
-						<p className="ant-upload-hint">
-							Chỉ hỗ trợ file .xlsx, .xls
-						</p>
+						<p className="ant-upload-text">Kéo thả file Excel hoặc click để chọn file</p>
+						<p className="ant-upload-hint">Chỉ hỗ trợ file .xlsx, .xls</p>
 					</Upload.Dragger>
 
 					{importGroupResult && (

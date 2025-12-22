@@ -1,5 +1,4 @@
-// @ts-nocheck
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   Card,
   Descriptions,
@@ -14,7 +13,6 @@ import {
   Row,
   Col,
   Modal,
-  Tooltip,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -26,9 +24,19 @@ import {
 } from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { testRequestService, SampleForSelectionDto } from "../../services/testRequestService";
 import {
-  TestRequestDto,
+  useGetTestRequestQuery,
+  useGetSamplesForResultFormQuery,
+  useGenerateTestRequestFormMutation,
+  useGenerateBM01ResultFormMutation,
+  useGetResultFormEditorConfigQuery,
+  useUpdateToPendingApprovalMutation,
+  useApproveTestRequestMutation,
+  useSendResultMutation,
+  useCompleteTestRequestMutation,
+  SampleForSelectionDto,
+} from "../../store/api/testRequestApi";
+import {
   TestRequestStatus,
   TestRequestStatusLabels,
   TestRequestStatusColors,
@@ -47,46 +55,58 @@ const TestRequestDetail: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<TestRequestDto | null>(null);
+
+  // RTK Query hooks
+  const {
+    data,
+    isLoading: loading,
+  } = useGetTestRequestQuery(id!, { skip: !id });
 
   // OnlyOffice Editor states
   const [editorModalVisible, setEditorModalVisible] = useState(false);
   const [editorConfig, setEditorConfig] = useState<any>(null);
   const [editorLoading, setEditorLoading] = useState(false);
   const [scriptLoaded, setScriptLoaded] = useState(false);
+  const [generatedFileName, setGeneratedFileName] = useState<string | null>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const docEditorRef = useRef<any>(null);
 
   // BM01 Sample Selection Modal states
   const [sampleSelectionModalVisible, setSampleSelectionModalVisible] = useState(false);
-  const [samplesForSelection, setSamplesForSelection] = useState<SampleForSelectionDto[]>([]);
-  const [loadingSamples, setLoadingSamples] = useState(false);
   const [selectedSampleId, setSelectedSampleId] = useState<string | null>(null);
-  const [generatingBM01, setGeneratingBM01] = useState(false);
 
-  // Print test request form loading state
-  const [printingTestRequest, setPrintingTestRequest] = useState(false);
+  // RTK Query for samples
+  const {
+    data: samplesForSelection = [],
+    isLoading: loadingSamples,
+  } = useGetSamplesForResultFormQuery(id!, {
+    skip: !id || !sampleSelectionModalVisible,
+  });
 
+  // RTK Query for editor config
+  const {
+    data: editorConfigData,
+  } = useGetResultFormEditorConfigQuery(generatedFileName!, {
+    skip: !generatedFileName,
+  });
+
+  // Update editor config when data is loaded
   useEffect(() => {
-    if (id) {
-      loadData(id);
+    if (editorConfigData && generatedFileName) {
+      setEditorConfig(editorConfigData);
+      setEditorLoading(true);
+      setEditorModalVisible(true);
+      setGeneratedFileName(null);
     }
-  }, [id]);
+  }, [editorConfigData, generatedFileName]);
 
-  const loadData = async (requestId: string) => {
-    setLoading(true);
-    try {
-      const result = await testRequestService.get(requestId);
-      setData(result);
-    } catch (error: any) {
-      console.error("Error loading test request:", error);
-      message.error("Không thể tải thông tin yêu cầu thử nghiệm");
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Mutations
+  const [generateTestRequestForm, { isLoading: printingTestRequest }] = useGenerateTestRequestFormMutation();
+  const [generateBM01ResultForm, { isLoading: generatingBM01 }] = useGenerateBM01ResultFormMutation();
+  const [updateToPendingApproval] = useUpdateToPendingApprovalMutation();
+  const [approveTestRequest] = useApproveTestRequestMutation();
+  const [sendResult] = useSendResultMutation();
+  const [completeTestRequest] = useCompleteTestRequestMutation();
 
   const getStatusTag = (status: TestRequestStatus) => {
     const label = TestRequestStatusLabels[status] || status.toString();
@@ -161,28 +181,15 @@ const TestRequestDetail: React.FC = () => {
   };
 
   // Handle print test request form - generate document and open editor
-  // Status is automatically updated to Pending when generating form (if currently New)
   const handlePrintTestRequest = async () => {
     if (!id) return;
-    setPrintingTestRequest(true);
     try {
-      // Step 1: Generate the test request form document (also updates status to Pending if New)
-      const result = await testRequestService.generateTestRequestForm(id);
+      const result = await generateTestRequestForm(id).unwrap();
       message.success(`Đã tạo phiếu yêu cầu XN: ${result.requestNumber}`);
-
-      // Step 2: Get editor config and open OnlyOffice
-      const config = await testRequestService.getResultFormEditorConfig(result.fileName);
-      setEditorConfig(config);
-      setEditorLoading(true);
-      setEditorModalVisible(true);
-
-      // Step 3: Reload data to get updated status
-      loadData(id);
+      setGeneratedFileName(result.fileName);
     } catch (error: any) {
       console.error("Error printing test request:", error);
-      message.error(error?.response?.data?.error?.message || "Không thể tạo phiếu. Vui lòng thử lại.");
-    } finally {
-      setPrintingTestRequest(false);
+      message.error(error?.data?.error?.message || "Không thể tạo phiếu. Vui lòng thử lại.");
     }
   };
 
@@ -195,12 +202,11 @@ const TestRequestDetail: React.FC = () => {
   const handleSendResult = async () => {
     if (!id) return;
     try {
-      await testRequestService.sendResult(id);
+      await sendResult(id).unwrap();
       message.success("Đã gửi kết quả thành công");
-      loadData(id); // Reload to get updated status
     } catch (error: any) {
       console.error("Error sending result:", error);
-      message.error(error?.response?.data?.error?.message || "Không thể gửi kết quả. Vui lòng thử lại.");
+      message.error(error?.data?.error?.message || "Không thể gửi kết quả. Vui lòng thử lại.");
     }
   };
 
@@ -208,12 +214,11 @@ const TestRequestDetail: React.FC = () => {
   const handleApprove = async () => {
     if (!id) return;
     try {
-      await testRequestService.approve(id);
+      await approveTestRequest(id).unwrap();
       message.success("Đã phê duyệt thành công");
-      loadData(id); // Reload to get updated status
     } catch (error: any) {
       console.error("Error approving test request:", error);
-      message.error(error?.response?.data?.error?.message || "Không thể phê duyệt. Vui lòng thử lại.");
+      message.error(error?.data?.error?.message || "Không thể phê duyệt. Vui lòng thử lại.");
     }
   };
 
@@ -221,12 +226,11 @@ const TestRequestDetail: React.FC = () => {
   const handleComplete = async () => {
     if (!id) return;
     try {
-      await testRequestService.complete(id);
+      await completeTestRequest(id).unwrap();
       message.success("Đã hoàn thành yêu cầu thử nghiệm");
-      loadData(id); // Reload to get updated status
     } catch (error: any) {
       console.error("Error completing test request:", error);
-      message.error(error?.response?.data?.error?.message || "Không thể hoàn thành. Vui lòng thử lại.");
+      message.error(error?.data?.error?.message || "Không thể hoàn thành. Vui lòng thử lại.");
     }
   };
 
@@ -409,23 +413,9 @@ const TestRequestDetail: React.FC = () => {
   };
 
   // Handle BM01 - Open sample selection modal
-  const handleOpenBM01Modal = async () => {
-    if (!id) return;
-
-    setLoadingSamples(true);
+  const handleOpenBM01Modal = () => {
     setSampleSelectionModalVisible(true);
     setSelectedSampleId(null);
-
-    try {
-      const samples = await testRequestService.getSamplesForResultForm(id);
-      setSamplesForSelection(samples);
-    } catch (error: any) {
-      console.error("Error loading samples:", error);
-      message.error("Không thể tải danh sách mẫu");
-      setSampleSelectionModalVisible(false);
-    } finally {
-      setLoadingSamples(false);
-    }
   };
 
   // Handle BM01 - Generate result form
@@ -441,31 +431,22 @@ const TestRequestDetail: React.FC = () => {
       return;
     }
 
-    setGeneratingBM01(true);
     try {
       // Step 1: Generate the document
-      const result = await testRequestService.generateBM01ResultForm(id, selectedSampleId);
+      const result = await generateBM01ResultForm({ testRequestId: id, sampleId: selectedSampleId }).unwrap();
       message.success(`Đã tạo phiếu kết quả BM01 cho mẫu ${result.sampleCode}`);
 
       // Step 2: Update status to PendingApproval after printing result form
-      await testRequestService.updateToPendingApproval(id);
+      await updateToPendingApproval(id).unwrap();
 
       // Step 3: Close selection modal
       setSampleSelectionModalVisible(false);
 
-      // Step 4: Get editor config and open OnlyOffice
-      const config = await testRequestService.getResultFormEditorConfig(result.fileName);
-      setEditorConfig(config);
-      setEditorLoading(true);
-      setEditorModalVisible(true);
-
-      // Step 5: Reload data to update status
-      loadData(id);
+      // Step 4: Set file name to trigger editor config fetch
+      setGeneratedFileName(result.fileName);
     } catch (error: any) {
       console.error("Error generating BM01 result form:", error);
-      message.error(error?.response?.data?.error?.message || "Không thể tạo phiếu kết quả. Vui lòng thử lại.");
-    } finally {
-      setGeneratingBM01(false);
+      message.error(error?.data?.error?.message || "Không thể tạo phiếu kết quả. Vui lòng thử lại.");
     }
   };
 
@@ -504,7 +485,7 @@ const TestRequestDetail: React.FC = () => {
   ];
 
   // Sample table columns
-  const sampleColumns = [
+  const sampleColumns = useMemo(() => [
     {
       title: "STT",
       dataIndex: "sortOrder",
@@ -665,7 +646,7 @@ const TestRequestDetail: React.FC = () => {
       render: (value: number) =>
         value > 0 ? `${value.toLocaleString("vi-VN")}đ` : "-",
     },
-  ];
+  ], []);
 
   if (loading) {
     return (
@@ -866,7 +847,7 @@ const TestRequestDetail: React.FC = () => {
         </div>
 
         {/* Bảng mẫu */}
-        <Divider orientation="left" style={{ marginTop: 24 }}>
+        <Divider style={{ marginTop: 24 }}>
           <Space>
             <span style={{ fontWeight: 600 }}>Thông tin mẫu</span>
             <Tag color="blue">

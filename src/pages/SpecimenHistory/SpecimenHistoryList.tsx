@@ -1,5 +1,4 @@
-// @ts-nocheck
-import React, { useState, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Table,
   Button,
@@ -26,40 +25,58 @@ import {
   HistoryOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
 import dayjs from "dayjs";
-import { specimenHistoryService } from "../../services/specimenHistoryService";
-import { specimenService } from "../../services/specimenService";
-import { storageLocationService } from "../../services/masterDataService";
-import { userService, UserLookupDto } from "../../services/userService";
 import {
   SpecimenHistoryDto,
   SpecimenStatus,
 } from "../../types/specimenHistory";
 
+// RTK Query imports
+import {
+  useGetSpecimenHistoryListQuery,
+  useCreateSpecimenHistoryMutation,
+  useUpdateSpecimenHistoryMutation,
+  useDeleteSpecimenHistoryMutation,
+} from "../../store/api/specimenHistoryApi";
+import { useGetSpecimenListQuery } from "../../store/api/specimenApi";
+import { useGetActiveStorageLocationsQuery } from "../../store/api/masterDataApi";
+import { useGetUserLookupQuery } from "../../store/api/userApi";
+
 const SpecimenHistoryList: React.FC = () => {
-  const [data, setData] = useState<SpecimenHistoryDto[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [searchText, setSearchText] = useState("");
   const [searchInput, setSearchInput] = useState("");
-  const [statusFilter, setStatusFilter] = useState<SpecimenStatus | "all">(
-    "all"
-  );
+  const [statusFilter, setStatusFilter] = useState<SpecimenStatus | "all">("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<SpecimenHistoryDto | null>(
-    null
-  );
+  const [editingItem, setEditingItem] = useState<SpecimenHistoryDto | null>(null);
   const [form] = Form.useForm();
   const navigate = useNavigate();
-  const { t } = useTranslation();
 
-  // Master data from API
-  const [specimens, setSpecimens] = useState<any[]>([]);
-  const [storageLocations, setStorageLocations] = useState<any[]>([]);
-  const [users, setUsers] = useState<UserLookupDto[]>([]);
+  // RTK Query hooks
+  const { data: historyData, isLoading: loading, refetch } = useGetSpecimenHistoryListQuery({
+    skipCount: (currentPage - 1) * pageSize,
+    maxResultCount: pageSize,
+    sorting: "creationTime desc",
+    search: searchText || undefined,
+    status: statusFilter !== "all" ? statusFilter : undefined,
+  });
+
+  const { data: specimensData } = useGetSpecimenListQuery({ maxResultCount: 1000 });
+  const { data: storageLocationsData } = useGetActiveStorageLocationsQuery();
+  const { data: usersData } = useGetUserLookupQuery();
+
+  // Mutations
+  const [createSpecimenHistory] = useCreateSpecimenHistoryMutation();
+  const [updateSpecimenHistory] = useUpdateSpecimenHistoryMutation();
+  const [deleteSpecimenHistory] = useDeleteSpecimenHistoryMutation();
+
+  // Derived data
+  const data = useMemo(() => historyData?.items || [], [historyData]);
+  const totalCount = historyData?.totalCount || 0;
+  const specimens = useMemo(() => specimensData?.items || [], [specimensData]);
+  const storageLocations = useMemo(() => storageLocationsData?.items || [], [storageLocationsData]);
+  const users = useMemo(() => usersData || [], [usersData]);
 
   const actionOptions = [
     "Tiếp nhận mẫu",
@@ -71,64 +88,6 @@ const SpecimenHistoryList: React.FC = () => {
     "Đã hủy mẫu",
     "Trả mẫu cho khách hàng",
   ];
-
-  const loadMasterData = async () => {
-    try {
-      const [specimensResult, locationsResult] = await Promise.all([
-        specimenService.getList({ maxResultCount: 1000 }),
-        storageLocationService.getActive(),
-      ]);
-      setSpecimens(specimensResult.items || []);
-      setStorageLocations(locationsResult.items || []);
-    } catch (error) {
-      console.error("Error loading specimens/locations:", error);
-    }
-
-    // Load users separately to handle errors
-    try {
-      const usersResult = await userService.getLookup();
-      console.log("Users loaded:", usersResult);
-      setUsers(usersResult || []);
-    } catch (error) {
-      console.error("Error loading users:", error);
-      setUsers([]);
-    }
-  };
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const result = await specimenHistoryService.getList({
-        skipCount: (currentPage - 1) * pageSize,
-        maxResultCount: pageSize,
-        sorting: "creationTime desc",
-        search: searchText || undefined,
-        status: statusFilter !== "all" ? statusFilter : undefined,
-      });
-      const items = result.items || [];
-      setData(items);
-      setTotalCount(result.totalCount || 0);
-    } catch (error) {
-      console.error("Error loading specimen histories:", error);
-      message.error(
-        "Không thể tải lịch sử mẫu. Vui lòng kiểm tra kết nối server."
-      );
-      setData([]);
-      setTotalCount(0);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Load master data once on mount
-  useEffect(() => {
-    loadMasterData();
-  }, []);
-
-  // Load data when filters change
-  useEffect(() => {
-    loadData();
-  }, [currentPage, pageSize, searchText, statusFilter]);
 
   // Handle search
   const handleSearch = () => {
@@ -144,9 +103,8 @@ const SpecimenHistoryList: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      await specimenHistoryService.delete(id);
+      await deleteSpecimenHistory(id).unwrap();
       message.success("Xóa lịch sử thành công!");
-      loadData();
     } catch (error) {
       console.error("Error deleting specimen history:", error);
       message.error("Không thể xóa lịch sử. Vui lòng thử lại.");
@@ -175,7 +133,6 @@ const SpecimenHistoryList: React.FC = () => {
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
-      console.log("Form values:", values);
       const payload = {
         specimenId: values.specimenId,
         action: values.action,
@@ -185,21 +142,18 @@ const SpecimenHistoryList: React.FC = () => {
         performedById: values.performedById || undefined,
         temperature: values.temperature || undefined,
         humidity: values.humidity || undefined,
-        timestamp: values.timestamp
-          ? values.timestamp.toISOString()
-          : undefined,
+        timestamp: values.timestamp ? values.timestamp.toISOString() : undefined,
       };
 
       if (editingItem) {
-        await specimenHistoryService.update(editingItem.id, payload);
+        await updateSpecimenHistory({ id: editingItem.id, data: payload }).unwrap();
         message.success("Cập nhật lịch sử thành công!");
       } else {
-        await specimenHistoryService.create(payload);
+        await createSpecimenHistory(payload).unwrap();
         message.success("Thêm lịch sử mới thành công!");
       }
       setIsModalOpen(false);
       form.resetFields();
-      loadData();
     } catch (error: any) {
       console.error("Error saving specimen history:", error);
       message.error("Không thể lưu lịch sử. Vui lòng thử lại.");
@@ -209,23 +163,15 @@ const SpecimenHistoryList: React.FC = () => {
   const getStatusTag = (status: SpecimenStatus) => {
     const statusConfig = {
       [SpecimenStatus.Received]: { color: "blue", label: "Đã nhận" },
-      [SpecimenStatus.Testing]: {
-        color: "processing",
-        label: "Đang thử nghiệm",
-      },
+      [SpecimenStatus.Testing]: { color: "processing", label: "Đang thử nghiệm" },
       [SpecimenStatus.Storage]: { color: "cyan", label: "Lưu kho" },
       [SpecimenStatus.Disposal]: { color: "warning", label: "Chờ hủy" },
       [SpecimenStatus.Destroyed]: { color: "error", label: "Đã hủy" },
-      [SpecimenStatus.ReturnedToCustomer]: {
-        color: "success",
-        label: "Đã trả khách",
-      },
+      [SpecimenStatus.ReturnedToCustomer]: { color: "success", label: "Đã trả khách" },
     };
 
     const config = statusConfig[status];
-    return (
-      <Tag color={config?.color || "default"}>{config?.label || status}</Tag>
-    );
+    return <Tag color={config?.color || "default"}>{config?.label || status}</Tag>;
   };
 
   const columns = [
@@ -275,8 +221,7 @@ const SpecimenHistoryList: React.FC = () => {
       dataIndex: "timestamp",
       key: "timestamp",
       width: 160,
-      render: (date: string) =>
-        date ? dayjs(date).format("DD/MM/YYYY HH:mm") : "-",
+      render: (date: string) => (date ? dayjs(date).format("DD/MM/YYYY HH:mm") : "-"),
       sorter: (a: SpecimenHistoryDto, b: SpecimenHistoryDto) =>
         dayjs(a.timestamp).unix() - dayjs(b.timestamp).unix(),
     },
@@ -331,7 +276,7 @@ const SpecimenHistoryList: React.FC = () => {
       title="Lịch sử mẫu thử nghiệm"
       extra={
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={loadData}>
+          <Button icon={<ReloadOutlined />} onClick={() => refetch()}>
             Làm mới
           </Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
@@ -366,24 +311,12 @@ const SpecimenHistoryList: React.FC = () => {
             onChange={handleStatusChange}
           >
             <Select.Option value="all">Tất cả trạng thái</Select.Option>
-            <Select.Option value={SpecimenStatus.Received}>
-              Đã nhận
-            </Select.Option>
-            <Select.Option value={SpecimenStatus.Testing}>
-              Đang thử nghiệm
-            </Select.Option>
-            <Select.Option value={SpecimenStatus.Storage}>
-              Lưu kho
-            </Select.Option>
-            <Select.Option value={SpecimenStatus.Disposal}>
-              Chờ hủy
-            </Select.Option>
-            <Select.Option value={SpecimenStatus.Destroyed}>
-              Đã hủy
-            </Select.Option>
-            <Select.Option value={SpecimenStatus.ReturnedToCustomer}>
-              Đã trả khách
-            </Select.Option>
+            <Select.Option value={SpecimenStatus.Received}>Đã nhận</Select.Option>
+            <Select.Option value={SpecimenStatus.Testing}>Đang thử nghiệm</Select.Option>
+            <Select.Option value={SpecimenStatus.Storage}>Lưu kho</Select.Option>
+            <Select.Option value={SpecimenStatus.Disposal}>Chờ hủy</Select.Option>
+            <Select.Option value={SpecimenStatus.Destroyed}>Đã hủy</Select.Option>
+            <Select.Option value={SpecimenStatus.ReturnedToCustomer}>Đã trả khách</Select.Option>
           </Select>
         </Col>
       </Row>
@@ -427,12 +360,8 @@ const SpecimenHistoryList: React.FC = () => {
                 label="Mẫu thử"
                 rules={[{ required: true, message: "Vui lòng chọn mẫu" }]}
               >
-                <Select
-                  placeholder="Chọn mẫu"
-                  showSearch
-                  optionFilterProp="children"
-                >
-                  {specimens.map((s) => (
+                <Select placeholder="Chọn mẫu" showSearch optionFilterProp="children">
+                  {specimens.map((s: any) => (
                     <Select.Option key={s.id} value={s.id}>
                       {s.code} - {s.name}
                     </Select.Option>
@@ -441,10 +370,7 @@ const SpecimenHistoryList: React.FC = () => {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item
-                name="timestamp"
-                label="Thời gian thực hiện"
-              >
+              <Form.Item name="timestamp" label="Thời gian thực hiện">
                 <DatePicker
                   showTime
                   style={{ width: "100%" }}
@@ -476,10 +402,8 @@ const SpecimenHistoryList: React.FC = () => {
                 rules={[{ required: true, message: "Vui lòng chọn vị trí" }]}
               >
                 <Select showSearch optionFilterProp="children">
-                  <Select.Option value="Quầy tiếp nhận">
-                    Quầy tiếp nhận
-                  </Select.Option>
-                  {storageLocations.map((l) => (
+                  <Select.Option value="Quầy tiếp nhận">Quầy tiếp nhận</Select.Option>
+                  {storageLocations.map((l: any) => (
                     <Select.Option key={l.id} value={l.name}>
                       {l.code} - {l.name}
                     </Select.Option>
@@ -492,24 +416,12 @@ const SpecimenHistoryList: React.FC = () => {
             <Col span={12}>
               <Form.Item name="status" label="Trạng thái mẫu">
                 <Select>
-                  <Select.Option value={SpecimenStatus.Received}>
-                    Đã nhận
-                  </Select.Option>
-                  <Select.Option value={SpecimenStatus.Testing}>
-                    Đang thử nghiệm
-                  </Select.Option>
-                  <Select.Option value={SpecimenStatus.Storage}>
-                    Lưu kho
-                  </Select.Option>
-                  <Select.Option value={SpecimenStatus.Disposal}>
-                    Chờ hủy
-                  </Select.Option>
-                  <Select.Option value={SpecimenStatus.Destroyed}>
-                    Đã hủy
-                  </Select.Option>
-                  <Select.Option value={SpecimenStatus.ReturnedToCustomer}>
-                    Đã trả khách
-                  </Select.Option>
+                  <Select.Option value={SpecimenStatus.Received}>Đã nhận</Select.Option>
+                  <Select.Option value={SpecimenStatus.Testing}>Đang thử nghiệm</Select.Option>
+                  <Select.Option value={SpecimenStatus.Storage}>Lưu kho</Select.Option>
+                  <Select.Option value={SpecimenStatus.Disposal}>Chờ hủy</Select.Option>
+                  <Select.Option value={SpecimenStatus.Destroyed}>Đã hủy</Select.Option>
+                  <Select.Option value={SpecimenStatus.ReturnedToCustomer}>Đã trả khách</Select.Option>
                 </Select>
               </Form.Item>
             </Col>
@@ -521,10 +433,10 @@ const SpecimenHistoryList: React.FC = () => {
                   allowClear
                   optionFilterProp="children"
                   filterOption={(input, option) =>
-                    (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
+                    String(option?.children || "").toLowerCase().includes(input.toLowerCase())
                   }
                 >
-                  {users.map((user) => (
+                  {users.map((user: any) => (
                     <Select.Option key={user.id} value={user.id}>
                       {user.displayName}
                     </Select.Option>

@@ -3,8 +3,6 @@ import { Table, Input, Tag, Button, Typography, Tooltip, Space } from "antd";
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
-  SyncOutlined,
-  CloseCircleOutlined,
   HistoryOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
@@ -13,11 +11,7 @@ import {
   TestingIndicatorDto,
   SaveIndicatorResultDto,
 } from "../../../types/testing";
-import {
-  IndicatorApprovalStatus,
-  IndicatorApprovalStatusLabels,
-  IndicatorApprovalStatusColors,
-} from "../../../types/laboratoryTask";
+import { IndicatorApprovalStatus } from "../../../types/laboratoryTask";
 
 const { Text } = Typography;
 
@@ -77,24 +71,6 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
 
     // Notify parent of changes
     onResultsChange(Array.from(newResults.values()));
-  };
-
-  const getApprovalStatusTag = (status: IndicatorApprovalStatus) => {
-    const label = IndicatorApprovalStatusLabels[status];
-    const color = IndicatorApprovalStatusColors[status];
-
-    const iconMap: Record<IndicatorApprovalStatus, React.ReactNode> = {
-      [IndicatorApprovalStatus.Pending]: <ClockCircleOutlined />,
-      [IndicatorApprovalStatus.Entered]: <SyncOutlined />,
-      [IndicatorApprovalStatus.Approved]: <CheckCircleOutlined />,
-      [IndicatorApprovalStatus.Rejected]: <CloseCircleOutlined />,
-    };
-
-    return (
-      <Tag color={color} icon={iconMap[status]}>
-        {label}
-      </Tag>
-    );
   };
 
   const columns: ColumnsType<TestingIndicatorDto> = [

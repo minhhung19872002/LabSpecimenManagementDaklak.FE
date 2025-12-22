@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Card,
   Row,
@@ -26,43 +26,33 @@ import {
   ReloadOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { statisticsService } from '../../services/statisticsService';
+
+// RTK Query imports
 import {
-  statisticsService,
-  StatisticsDataDto,
+  useGetStatisticsDataQuery,
   SampleMatrixDto,
   WorkloadByDepartmentDto,
-  TATComplianceDto
-} from '../../services/statisticsService';
+  TATComplianceDto,
+} from '../../store/api/statisticsApi';
 
 const { RangePicker } = DatePicker;
 
 const StatisticsPage: React.FC = () => {
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
-  const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [statisticsData, setStatisticsData] = useState<StatisticsDataDto | null>(null);
 
-  const fetchStatistics = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params: { fromDate?: string; toDate?: string } = {};
-      if (dateRange) {
-        params.fromDate = dateRange[0].format('YYYY-MM-DD');
-        params.toDate = dateRange[1].format('YYYY-MM-DD');
-      }
-      const data = await statisticsService.getStatisticsData(params);
-      setStatisticsData(data);
-    } catch (error) {
-      console.error('Error fetching statistics:', error);
-      message.error('Không thể tải dữ liệu thống kê');
-    } finally {
-      setLoading(false);
-    }
+  // Build query params
+  const queryParams = useMemo(() => {
+    if (!dateRange) return undefined;
+    return {
+      fromDate: dateRange[0].format('YYYY-MM-DD'),
+      toDate: dateRange[1].format('YYYY-MM-DD'),
+    };
   }, [dateRange]);
 
-  useEffect(() => {
-    fetchStatistics();
-  }, [fetchStatistics]);
+  // RTK Query hook
+  const { data: statisticsData, isLoading: loading, refetch } = useGetStatisticsDataQuery(queryParams);
 
   const handleExport = async () => {
     setExporting(true);
@@ -98,10 +88,10 @@ const StatisticsPage: React.FC = () => {
   const tatCompliance = statisticsData?.tatCompliance || [];
 
   // Calculate totals from monthly trends
-  const totalRequests = monthlyTrends.reduce((sum, m) => sum + m.testRequests, 0);
-  const totalSpecimens = monthlyTrends.reduce((sum, m) => sum + m.specimens, 0);
-  const totalTests = monthlyTrends.reduce((sum, m) => sum + m.tests, 0);
-  const totalReports = monthlyTrends.reduce((sum, m) => sum + m.reports, 0);
+  const totalRequests = monthlyTrends.reduce((sum: number, m) => sum + m.testRequests, 0);
+  const totalSpecimens = monthlyTrends.reduce((sum: number, m) => sum + m.specimens, 0);
+  const totalTests = monthlyTrends.reduce((sum: number, m) => sum + m.tests, 0);
+  const totalReports = monthlyTrends.reduce((sum: number, m) => sum + m.reports, 0);
 
   const monthlyColumns = [
     { title: 'Tháng', dataIndex: 'month', key: 'month' },
@@ -193,7 +183,7 @@ const StatisticsPage: React.FC = () => {
               />
               <Button
                 icon={<ReloadOutlined />}
-                onClick={fetchStatistics}
+                onClick={() => refetch()}
                 loading={loading}
               >
                 Làm mới

@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useState, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Card,
   Table,
@@ -32,7 +32,16 @@ import {
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
-import { subcontractorService, GetSubcontractorListInput } from "../../services/subcontractorService";
+
+// RTK Query imports
+import {
+  useGetSubcontractorListQuery,
+  useCreateSubcontractorMutation,
+  useUpdateSubcontractorMutation,
+  useDeleteSubcontractorMutation,
+  SubcontractorDto,
+  SubcontractorCertificationDto,
+} from "../../store/api/subcontractorApi";
 
 const { Text } = Typography;
 
@@ -66,9 +75,8 @@ interface Certification {
 }
 
 const SubcontractorList: React.FC = () => {
-  const [data, setData] = useState<Subcontractor[]>([]);
-  const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
+  const [debouncedSearchText, setDebouncedSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -80,7 +88,6 @@ const SubcontractorList: React.FC = () => {
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 50,
-    total: 0,
   });
 
   const allCapabilities = [
@@ -100,10 +107,30 @@ const SubcontractorList: React.FC = () => {
     "ELISA chuyên sâu",
   ];
 
-  // Load data when filters or pagination changes
-  useEffect(() => {
-    loadData();
-  }, [searchText, statusFilter, pagination.current, pagination.pageSize]);
+  // Debounce search text
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchText(searchText);
+      setPagination(prev => ({ ...prev, current: 1 }));
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchText]);
+
+  // Build query params
+  const queryParams = useMemo(() => ({
+    skipCount: (pagination.current - 1) * pagination.pageSize,
+    maxResultCount: pagination.pageSize,
+    filter: debouncedSearchText || undefined,
+    isActive: statusFilter === "all" ? undefined : statusFilter === "active",
+  }), [pagination.current, pagination.pageSize, debouncedSearchText, statusFilter]);
+
+  // RTK Query hooks
+  const { data: subcontractorsData, isLoading: loading, refetch } = useGetSubcontractorListQuery(queryParams);
+  const [createSubcontractor, { isLoading: creating }] = useCreateSubcontractorMutation();
+  const [updateSubcontractor, { isLoading: updating }] = useUpdateSubcontractorMutation();
+  const [deleteSubcontractor] = useDeleteSubcontractorMutation();
+
+  const modalLoading = creating || updating;
 
   // Helper to parse capabilities JSON string to array
   const parseCapabilities = (
@@ -119,53 +146,33 @@ const SubcontractorList: React.FC = () => {
     }
   };
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const params: GetSubcontractorListInput = {
-        skipCount: (pagination.current - 1) * pagination.pageSize,
-        maxResultCount: pagination.pageSize,
-        filter: searchText || undefined,
-        isActive: statusFilter === "all" ? undefined : statusFilter === "active",
-      };
+  // Transform data
+  const data = useMemo(() => {
+    return (subcontractorsData?.items || []).map((sub: SubcontractorDto) => ({
+      id: sub.id,
+      code: sub.code,
+      name: sub.name,
+      address: sub.address || "",
+      phone: sub.phone || "",
+      email: sub.email || "",
+      contactPerson: sub.contactPerson || "",
+      taxCode: sub.taxCode || "",
+      status: sub.isActive === false ? "inactive" : "active",
+      capabilities: parseCapabilities(sub.capabilities),
+      certifications: (sub.certifications || []).map((cert: SubcontractorCertificationDto) => ({
+        ...cert,
+        status: dayjs(cert.expiryDate).isBefore(dayjs()) ? "expired" :
+                dayjs(cert.expiryDate).diff(dayjs(), "month") < 3 ? "expiring" : "valid",
+      })),
+      evaluationScore: sub.evaluationScore || 0,
+      contractStartDate: sub.contractStartDate || "",
+      contractEndDate: sub.contractEndDate || "",
+      notes: sub.notes,
+      createdAt: sub.creationTime,
+    })) as Subcontractor[];
+  }, [subcontractorsData]);
 
-      const result = await subcontractorService.getList(params);
-      const items = result.items.map((sub: any) => ({
-        id: sub.id,
-        code: sub.code,
-        name: sub.name,
-        address: sub.address,
-        phone: sub.phone,
-        email: sub.email,
-        contactPerson: sub.contactPerson,
-        taxCode: sub.taxCode,
-        status: sub.isActive === false ? "inactive" : "active",
-        capabilities: parseCapabilities(sub.capabilities),
-        certifications: sub.certifications || [],
-        evaluationScore: sub.evaluationScore || 0,
-        contractStartDate: sub.contractStartDate,
-        contractEndDate: sub.contractEndDate,
-        notes: sub.notes,
-        createdAt: sub.creationTime,
-      }));
-      setData(items);
-      setPagination(prev => ({ ...prev, total: result.totalCount }));
-    } catch (error) {
-      console.error("Error loading subcontractors:", error);
-      message.error(
-        "Không thể tải danh sách nhà thầu phụ. Vui lòng kiểm tra kết nối server."
-      );
-      setData([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle search
-  const handleSearch = (value: string) => {
-    setSearchText(value);
-    setPagination(prev => ({ ...prev, current: 1 }));
-  };
+  const totalCount = subcontractorsData?.totalCount || 0;
 
   // Handle status filter change
   const handleStatusFilterChange = (value: string) => {
@@ -185,8 +192,10 @@ const SubcontractorList: React.FC = () => {
   // Handle refresh
   const handleRefresh = () => {
     setSearchText("");
+    setDebouncedSearchText("");
     setStatusFilter("all");
     setPagination(prev => ({ ...prev, current: 1 }));
+    refetch();
   };
 
   const handleCreate = () => {
@@ -218,9 +227,8 @@ const SubcontractorList: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      await subcontractorService.delete(id);
+      await deleteSubcontractor(id).unwrap();
       message.success("Xóa nhà thầu phụ thành công!");
-      loadData();
     } catch (error) {
       console.error("Error deleting subcontractor:", error);
       message.error("Không thể xóa nhà thầu phụ. Vui lòng thử lại.");
@@ -252,15 +260,14 @@ const SubcontractorList: React.FC = () => {
       };
 
       if (editingItem) {
-        await subcontractorService.update(editingItem.id, payload);
+        await updateSubcontractor({ id: editingItem.id, data: payload }).unwrap();
         message.success("Cập nhật nhà thầu phụ thành công!");
       } else {
-        await subcontractorService.create(payload);
+        await createSubcontractor(payload).unwrap();
         message.success("Thêm nhà thầu phụ thành công!");
       }
       setIsModalOpen(false);
       form.resetFields();
-      loadData();
     } catch (error: any) {
       console.error("Error saving subcontractor:", error);
       message.error("Không thể lưu nhà thầu phụ. Vui lòng thử lại.");
@@ -273,7 +280,7 @@ const SubcontractorList: React.FC = () => {
       inactive: { color: "red", text: "Ngừng hoạt động" },
       pending: { color: "orange", text: "Chờ đánh giá" },
     };
-    return <Tag color={config[status].color}>{config[status].text}</Tag>;
+    return <Tag color={config[status]?.color}>{config[status]?.text}</Tag>;
   };
 
   const columns: ColumnsType<Subcontractor> = [
@@ -332,6 +339,7 @@ const SubcontractorList: React.FC = () => {
       key: "contractEndDate",
       width: 120,
       render: (date: string) => {
+        if (!date) return "-";
         const d = dayjs(date);
         const isExpiring = d.diff(dayjs(), "month") < 3;
         return (
@@ -400,14 +408,12 @@ const SubcontractorList: React.FC = () => {
         {/* Search & Filter */}
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
           <Col xs={24} sm={12} md={8}>
-            <Input.Search
+            <Input
               placeholder="Tìm kiếm theo mã, tên, người liên hệ..."
               prefix={<SearchOutlined />}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              onSearch={handleSearch}
               allowClear
-              enterButton
             />
           </Col>
           <Col xs={24} sm={6} md={4}>
@@ -432,7 +438,7 @@ const SubcontractorList: React.FC = () => {
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,
-            total: pagination.total,
+            total: totalCount,
             pageSizeOptions: [20, 50, 100],
             showSizeChanger: true,
             showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} nhà thầu phụ`,
@@ -452,6 +458,7 @@ const SubcontractorList: React.FC = () => {
         okText={editingItem ? "Cập nhật" : "Thêm mới"}
         cancelText="Hủy"
         centered
+        confirmLoading={modalLoading}
       >
         <Form form={form} layout="vertical">
           <Row gutter={16}>
@@ -589,12 +596,10 @@ const SubcontractorList: React.FC = () => {
                       {selectedItem.taxCode}
                     </Descriptions.Item>
                     <Descriptions.Item label="Bắt đầu HĐ">
-                      {dayjs(selectedItem.contractStartDate).format(
-                        "DD/MM/YYYY"
-                      )}
+                      {selectedItem.contractStartDate ? dayjs(selectedItem.contractStartDate).format("DD/MM/YYYY") : "-"}
                     </Descriptions.Item>
                     <Descriptions.Item label="Kết thúc HĐ">
-                      {dayjs(selectedItem.contractEndDate).format("DD/MM/YYYY")}
+                      {selectedItem.contractEndDate ? dayjs(selectedItem.contractEndDate).format("DD/MM/YYYY") : "-"}
                     </Descriptions.Item>
                   </Descriptions>
                 ),

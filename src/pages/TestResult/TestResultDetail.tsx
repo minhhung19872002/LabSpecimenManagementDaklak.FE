@@ -1,18 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Card, Descriptions, Button, Space, Spin, Tag, message, Modal, Input, Divider, Alert } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeftOutlined, EditOutlined, SendOutlined, CheckCircleOutlined, CloseCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import { testResultService } from '../../services/testResultService';
-import { TestResultDto, ResultApprovalStatus } from '../../types/testResult';
+import { ResultApprovalStatus } from '../../types/testResult';
 import dayjs from 'dayjs';
 import './TestResultDetail.css';
+
+// RTK Query imports
+import {
+  useGetTestResultQuery,
+  useSubmitForReviewMutation,
+  useReviewResultMutation,
+  useApproveResultMutation,
+} from '../../store/api/testResultApi';
 
 const { TextArea } = Input;
 
 const TestResultDetail: React.FC = () => {
-  const [testResult, setTestResult] = useState<TestResultDto | null>(null);
-  const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
   const [approveModalVisible, setApproveModalVisible] = useState(false);
@@ -21,24 +26,13 @@ const TestResultDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
 
-  useEffect(() => {
-    if (id) {
-      fetchTestResult(id);
-    }
-  }, [id]);
+  // RTK Query hooks
+  const { data: testResult, isLoading: loading, error, refetch } = useGetTestResultQuery(id!, { skip: !id });
 
-  const fetchTestResult = async (testResultId: string) => {
-    setLoading(true);
-    try {
-      const data = await testResultService.get(testResultId);
-      setTestResult(data);
-    } catch (error) {
-      message.error('Không thể tải thông tin kết quả. Vui lòng kiểm tra kết nối API.');
-      console.error('Failed to fetch test result:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Mutations
+  const [submitForReview] = useSubmitForReviewMutation();
+  const [reviewResult] = useReviewResultMutation();
+  const [approveResult] = useApproveResultMutation();
 
   // ==================== WORKFLOW ACTIONS ====================
 
@@ -54,8 +48,8 @@ const TestResultDetail: React.FC = () => {
       onOk: async () => {
         setActionLoading(true);
         try {
-          const result = await testResultService.submitForReview(id);
-          setTestResult(result);
+          await submitForReview({ id }).unwrap();
+          await refetch();
           message.success('Đã gửi kết quả để duyệt!');
         } catch (error) {
           message.error('Không thể gửi kết quả để duyệt. Vui lòng thử lại.');
@@ -72,8 +66,8 @@ const TestResultDetail: React.FC = () => {
 
     setActionLoading(true);
     try {
-      const result = await testResultService.review(id, { isApproved, comment });
-      setTestResult(result);
+      await reviewResult({ id, data: { isApproved, comment } }).unwrap();
+      await refetch();
       message.success(isApproved ? 'Đã duyệt kết quả (Bước 1)!' : 'Đã từ chối kết quả!');
       setReviewModalVisible(false);
       setComment('');
@@ -90,8 +84,8 @@ const TestResultDetail: React.FC = () => {
 
     setActionLoading(true);
     try {
-      const result = await testResultService.approve(id, { isApproved, comment });
-      setTestResult(result);
+      await approveResult({ id, data: { isApproved, comment } }).unwrap();
+      await refetch();
       message.success(isApproved ? 'Đã phê duyệt kết quả (Bước 2)!' : 'Đã từ chối kết quả!');
       setApproveModalVisible(false);
       setComment('');
@@ -219,6 +213,17 @@ const TestResultDetail: React.FC = () => {
       <div className="loading-container">
         <Spin size="large" />
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert
+        message="Lỗi"
+        description="Không thể tải thông tin kết quả. Vui lòng kiểm tra kết nối API."
+        type="error"
+        showIcon
+      />
     );
   }
 

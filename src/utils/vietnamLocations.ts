@@ -34,8 +34,8 @@ export interface Ward {
 }
 
 // Cache all districts and wards for filtering
-const allDistricts: District[] = getDistricts();
-const allWards: Ward[] = getWards();
+const allDistricts: District[] = getDistricts() as District[];
+const allWards: Ward[] = getWards() as Ward[];
 
 // Get all provinces
 export const getAllProvinces = (): Province[] => {

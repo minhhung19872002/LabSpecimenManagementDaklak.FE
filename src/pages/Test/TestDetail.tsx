@@ -1,38 +1,21 @@
-import React, { useEffect, useState } from 'react';
-import { Card, Descriptions, Button, Space, Spin, Tag, message } from 'antd';
+import React from 'react';
+import { Card, Descriptions, Button, Space, Spin, Tag, Alert } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeftOutlined, EditOutlined } from '@ant-design/icons';
-import { testService } from '../../services/testService';
-import { TestDto, TestStatus } from '../../types/test';
+import { TestStatus } from '../../types/test';
 import dayjs from 'dayjs';
 import './TestDetail.css';
 
+// RTK Query imports
+import { useGetTestQuery } from '../../store/api/testApi';
+
 const TestDetail: React.FC = () => {
-  const [test, setTest] = useState<TestDto | null>(null);
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
 
-  useEffect(() => {
-    if (id) {
-      fetchTest(id);
-    }
-  }, [id]);
-
-  const fetchTest = async (testId: string) => {
-    setLoading(true);
-    try {
-      const data = await testService.get(testId);
-      setTest(data);
-    } catch (error) {
-      message.error('Không thể tải thông tin phép thử. Vui lòng thử lại!');
-      console.error('Failed to fetch test:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: test, isLoading: loading, error } = useGetTestQuery(id!, { skip: !id });
 
   const getStatusColor = (status: TestStatus): string => {
     switch (status) {
@@ -63,6 +46,17 @@ const TestDetail: React.FC = () => {
       <div className="loading-container">
         <Spin size="large" />
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert
+        message="Lỗi"
+        description="Không thể tải thông tin phép thử. Vui lòng thử lại!"
+        type="error"
+        showIcon
+      />
     );
   }
 

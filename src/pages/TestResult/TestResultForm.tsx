@@ -1,64 +1,53 @@
-import React, { useEffect, useState } from 'react';
-import { Form, Input, Button, Select, message, InputNumber, DatePicker, Card, Space, Checkbox } from 'antd';
+import React, { useEffect, useMemo } from 'react';
+import { Form, Input, Button, Select, message, InputNumber, DatePicker, Card, Space, Checkbox, Spin } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { testResultService } from '../../services/testResultService';
-import { testService } from '../../services/testService';
 import { CreateTestResultDto, UpdateTestResultDto, ResultApprovalStatus } from '../../types/testResult';
-import { TestDto } from '../../types/test';
 import dayjs from 'dayjs';
+
+// RTK Query imports
+import {
+  useGetTestResultQuery,
+  useCreateTestResultMutation,
+  useUpdateTestResultMutation,
+} from '../../store/api/testResultApi';
+import { useGetTestListQuery } from '../../store/api/testApi';
 
 const { TextArea } = Input;
 const { Option } = Select;
 
 const TestResultForm: React.FC = () => {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
-  const [tests, setTests] = useState<TestDto[]>([]);
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
   const isEditMode = !!id;
 
+  // RTK Query hooks
+  const { data: testResult, isLoading: loadingTestResult } = useGetTestResultQuery(id!, { skip: !id });
+  const { data: testsData } = useGetTestListQuery({ maxResultCount: 1000 });
+
+  // Mutations
+  const [createTestResult, { isLoading: isCreating }] = useCreateTestResultMutation();
+  const [updateTestResult, { isLoading: isUpdating }] = useUpdateTestResultMutation();
+
+  // Derived data
+  const tests = useMemo(() => testsData?.items || [], [testsData]);
+  const loading = loadingTestResult || isCreating || isUpdating;
+
+  // Set form values when test result data is loaded
   useEffect(() => {
-    fetchTests();
-    if (isEditMode && id) {
-      fetchTestResult(id);
-    }
-  }, [id]);
-
-  const fetchTests = async () => {
-    try {
-      const result = await testService.getList({
-        maxResultCount: 1000,
-      });
-      setTests(result.items);
-    } catch (error) {
-      message.error('Không thể tải danh sách phép thử. Vui lòng kiểm tra kết nối API.');
-      console.error('Failed to fetch tests:', error);
-    }
-  };
-
-  const fetchTestResult = async (testResultId: string) => {
-    setLoading(true);
-    try {
-      const data = await testResultService.get(testResultId);
+    if (testResult && isEditMode) {
       form.setFieldsValue({
-        ...data,
-        entryDate: data.entryDate ? dayjs(data.entryDate) : null,
-        reviewDate: data.reviewDate ? dayjs(data.reviewDate) : null,
-        approvalDate: data.approvalDate ? dayjs(data.approvalDate) : null,
+        ...testResult,
+        entryDate: testResult.entryDate ? dayjs(testResult.entryDate) : null,
+        reviewDate: testResult.reviewDate ? dayjs(testResult.reviewDate) : null,
+        approvalDate: testResult.approvalDate ? dayjs(testResult.approvalDate) : null,
       });
-    } catch (error) {
-      message.error('Không thể tải thông tin kết quả. Vui lòng kiểm tra kết nối API.');
-      console.error('Failed to fetch test result:', error);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [testResult, isEditMode, form]);
 
   const onFinish = async (values: any) => {
-    setLoading(true);
     try {
       const formData = {
         ...values,
@@ -68,20 +57,26 @@ const TestResultForm: React.FC = () => {
       };
 
       if (isEditMode && id) {
-        await testResultService.update(id, formData as UpdateTestResultDto);
+        await updateTestResult({ id, data: formData as UpdateTestResultDto }).unwrap();
         message.success(t('messages.updateSuccess'));
       } else {
-        await testResultService.create(formData as CreateTestResultDto);
+        await createTestResult(formData as CreateTestResultDto).unwrap();
         message.success(t('messages.createSuccess'));
       }
       navigate('/test-results');
-    } catch (error) {
-      message.error(isEditMode ? 'Không thể cập nhật kết quả. Vui lòng thử lại.' : 'Không thể tạo kết quả. Vui lòng thử lại.');
+    } catch (error: any) {
       console.error('Failed to save test result:', error);
-    } finally {
-      setLoading(false);
+      message.error(error?.data?.error?.message || (isEditMode ? t('messages.updateFailed') : t('messages.createFailed')));
     }
   };
+
+  if (loadingTestResult && isEditMode) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '50px' }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: '24px' }}>

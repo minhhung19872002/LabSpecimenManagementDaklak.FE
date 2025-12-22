@@ -17,7 +17,6 @@ import {
   DashboardOutlined,
   FileTextOutlined,
   ExperimentOutlined,
-  CheckCircleOutlined,
   FileSearchOutlined,
   BarChartOutlined,
   WarningOutlined,

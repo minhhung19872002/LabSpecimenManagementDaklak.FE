@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from "react";
-import { Modal, Typography, Spin, Empty, Badge, Divider, Avatar } from "antd";
-import { HistoryOutlined, CloseCircleOutlined, UserOutlined } from "@ant-design/icons";
+import React from "react";
+import { Modal, Typography, Spin, Empty, Badge, Avatar } from "antd";
+import { HistoryOutlined, UserOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { testingService } from "../../../services/testingService";
-import { RejectionHistoryDto } from "../../../types/testing";
+import { useGetRejectionHistoryQuery } from "../../../store/api/testingApi";
 
 const { Text, Paragraph } = Typography;
 
@@ -20,26 +19,10 @@ const RejectionHistoryModal: React.FC<RejectionHistoryModalProps> = ({
   indicatorName,
   onClose,
 }) => {
-  const [loading, setLoading] = useState(false);
-  const [histories, setHistories] = useState<RejectionHistoryDto[]>([]);
-
-  useEffect(() => {
-    if (visible && indicatorId) {
-      loadHistory();
-    }
-  }, [visible, indicatorId]);
-
-  const loadHistory = async () => {
-    setLoading(true);
-    try {
-      const result = await testingService.getRejectionHistory(indicatorId);
-      setHistories(result);
-    } catch (error) {
-      console.error("Failed to load rejection history:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // RTK Query hook - only fetch when modal is visible and indicatorId is provided
+  const { data: histories = [], isLoading: loading } = useGetRejectionHistoryQuery(indicatorId, {
+    skip: !visible || !indicatorId,
+  });
 
   return (
     <Modal

@@ -1,5 +1,4 @@
-// @ts-nocheck
-import React, { useState, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import {
 	Card,
 	Table,
@@ -16,7 +15,6 @@ import {
 	Popconfirm,
 	Tabs,
 	Statistic,
-	Alert,
 	Spin,
 } from "antd";
 import {
@@ -31,12 +29,6 @@ import {
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import {
-	departmentService,
-	specimenTypeService,
-	testMethodService,
-	storageLocationService,
-	customerService,
-	laboratoryService,
 	DepartmentDto,
 	SpecimenTypeDto,
 	TestMethodDto,
@@ -57,9 +49,37 @@ import {
 	importService,
 	downloadBlobAsFile,
 } from "../../services/importService";
-import { userService, UserLookupDto } from "../../services/userService";
 import IndicatorsTab from "./IndicatorsTab";
 import FormTemplatesTab from "./FormTemplatesTab";
+
+// RTK Query imports
+import {
+	useGetDepartmentListQuery,
+	useGetLaboratoryListQuery,
+	useGetSpecimenTypeListQuery,
+	useGetTestMethodListQuery,
+	useGetStorageLocationListQuery,
+	useGetCustomerListQuery,
+	useCreateDepartmentMutation,
+	useUpdateDepartmentMutation,
+	useDeleteDepartmentMutation,
+	useCreateLaboratoryMutation,
+	useUpdateLaboratoryMutation,
+	useDeleteLaboratoryMutation,
+	useCreateSpecimenTypeMutation,
+	useUpdateSpecimenTypeMutation,
+	useDeleteSpecimenTypeMutation,
+	useCreateTestMethodMutation,
+	useUpdateTestMethodMutation,
+	useDeleteTestMethodMutation,
+	useCreateStorageLocationMutation,
+	useUpdateStorageLocationMutation,
+	useDeleteStorageLocationMutation,
+	useCreateCustomerMutation,
+	useUpdateCustomerMutation,
+	useDeleteCustomerMutation,
+} from "../../store/api/masterDataApi";
+import { useGetUserLookupQuery } from "../../store/api/userApi";
 
 // Unified type for all master data items
 type MasterDataItem =
@@ -83,33 +103,71 @@ const categoryLabels: Record<string, string> = {
 
 const MasterDataList: React.FC = () => {
 	const [activeCategory, setActiveCategory] = useState("departments");
-	const [data, setData] = useState<Record<string, MasterDataItem[]>>({
-		departments: [],
-		laboratories: [],
-		specimenTypes: [],
-		testMethods: [],
-		storageLocations: [],
-		customers: [],
-		indicators: [],
-	});
-	const [loading, setLoading] = useState<Record<string, boolean>>({
-		departments: false,
-		laboratories: false,
-		specimenTypes: false,
-		testMethods: false,
-		storageLocations: false,
-		customers: false,
-		indicators: false,
-	});
-	const [error, setError] = useState<string | null>(null);
 	const [searchText, setSearchText] = useState("");
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [editingItem, setEditingItem] = useState<MasterDataItem | null>(null);
-	const [modalLoading, setModalLoading] = useState(false);
 	const [importModalOpen, setImportModalOpen] = useState(false);
 	const [downloadingTemplate, setDownloadingTemplate] = useState(false);
-	const [users, setUsers] = useState<UserLookupDto[]>([]);
 	const [form] = Form.useForm();
+
+	// RTK Query hooks for fetching data
+	const { data: departmentsData, isLoading: loadingDepartments, isFetching: fetchingDepartments } = useGetDepartmentListQuery({ maxResultCount: 1000 });
+	const { data: laboratoriesData, isLoading: loadingLaboratories, isFetching: fetchingLaboratories } = useGetLaboratoryListQuery();
+	const { data: specimenTypesData, isLoading: loadingSpecimenTypes, isFetching: fetchingSpecimenTypes } = useGetSpecimenTypeListQuery({ maxResultCount: 1000 });
+	const { data: testMethodsData, isLoading: loadingTestMethods, isFetching: fetchingTestMethods } = useGetTestMethodListQuery({ maxResultCount: 1000 });
+	const { data: storageLocationsData, isLoading: loadingStorageLocations, isFetching: fetchingStorageLocations } = useGetStorageLocationListQuery({ maxResultCount: 1000 });
+	const { data: customersData, isLoading: loadingCustomers, isFetching: fetchingCustomers } = useGetCustomerListQuery({ maxResultCount: 1000 });
+	const { data: users = [] } = useGetUserLookupQuery();
+
+	// Mutations
+	const [createDepartment, { isLoading: creatingDepartment }] = useCreateDepartmentMutation();
+	const [updateDepartment, { isLoading: updatingDepartment }] = useUpdateDepartmentMutation();
+	const [deleteDepartment] = useDeleteDepartmentMutation();
+
+	const [createLaboratory, { isLoading: creatingLaboratory }] = useCreateLaboratoryMutation();
+	const [updateLaboratory, { isLoading: updatingLaboratory }] = useUpdateLaboratoryMutation();
+	const [deleteLaboratory] = useDeleteLaboratoryMutation();
+
+	const [createSpecimenType, { isLoading: creatingSpecimenType }] = useCreateSpecimenTypeMutation();
+	const [updateSpecimenType, { isLoading: updatingSpecimenType }] = useUpdateSpecimenTypeMutation();
+	const [deleteSpecimenType] = useDeleteSpecimenTypeMutation();
+
+	const [createTestMethod, { isLoading: creatingTestMethod }] = useCreateTestMethodMutation();
+	const [updateTestMethod, { isLoading: updatingTestMethod }] = useUpdateTestMethodMutation();
+	const [deleteTestMethod] = useDeleteTestMethodMutation();
+
+	const [createStorageLocation, { isLoading: creatingStorageLocation }] = useCreateStorageLocationMutation();
+	const [updateStorageLocation, { isLoading: updatingStorageLocation }] = useUpdateStorageLocationMutation();
+	const [deleteStorageLocation] = useDeleteStorageLocationMutation();
+
+	const [createCustomer, { isLoading: creatingCustomer }] = useCreateCustomerMutation();
+	const [updateCustomer, { isLoading: updatingCustomer }] = useUpdateCustomerMutation();
+	const [deleteCustomer] = useDeleteCustomerMutation();
+
+	// Derived data
+	const data = useMemo(() => ({
+		departments: departmentsData?.items || [],
+		laboratories: laboratoriesData || [],
+		specimenTypes: specimenTypesData?.items || [],
+		testMethods: testMethodsData?.items || [],
+		storageLocations: storageLocationsData?.items || [],
+		customers: customersData?.items || [],
+		indicators: [],
+	}), [departmentsData, laboratoriesData, specimenTypesData, testMethodsData, storageLocationsData, customersData]);
+
+	const loading = useMemo(() => ({
+		departments: loadingDepartments || fetchingDepartments,
+		laboratories: loadingLaboratories || fetchingLaboratories,
+		specimenTypes: loadingSpecimenTypes || fetchingSpecimenTypes,
+		testMethods: loadingTestMethods || fetchingTestMethods,
+		storageLocations: loadingStorageLocations || fetchingStorageLocations,
+		customers: loadingCustomers || fetchingCustomers,
+		indicators: false,
+	}), [loadingDepartments, fetchingDepartments, loadingLaboratories, fetchingLaboratories, loadingSpecimenTypes, fetchingSpecimenTypes, loadingTestMethods, fetchingTestMethods, loadingStorageLocations, fetchingStorageLocations, loadingCustomers, fetchingCustomers]);
+
+	const modalLoading = creatingDepartment || updatingDepartment || creatingLaboratory || updatingLaboratory ||
+		creatingSpecimenType || updatingSpecimenType || creatingTestMethod || updatingTestMethod ||
+		creatingStorageLocation || updatingStorageLocation || creatingCustomer || updatingCustomer;
 
 	// Map category to import type (only customers and testMethods support import)
 	const importTypeMap: Record<string, ImportType | null> = {
@@ -123,97 +181,10 @@ const MasterDataList: React.FC = () => {
 
 	const canImport = importTypeMap[activeCategory] !== null;
 
-	// Fetch data for a specific category
-	const fetchCategoryData = async (category: string) => {
-		try {
-			setLoading((prev) => ({ ...prev, [category]: true }));
-			setError(null);
-
-			let result;
-			switch (category) {
-				case "departments":
-					result = await departmentService.getList({
-						maxResultCount: 1000,
-					});
-					break;
-				case "laboratories":
-					const labItems = await laboratoryService.getAll();
-					result = { items: labItems, totalCount: labItems.length };
-					break;
-				case "specimenTypes":
-					result = await specimenTypeService.getList({
-						maxResultCount: 1000,
-					});
-					break;
-				case "testMethods":
-					result = await testMethodService.getList({
-						maxResultCount: 1000,
-					});
-					break;
-				case "storageLocations":
-					result = await storageLocationService.getList({
-						maxResultCount: 1000,
-					});
-					break;
-				case "customers":
-					result = await customerService.getList({
-						maxResultCount: 1000,
-					});
-					break;
-				default:
-					result = { items: [], totalCount: 0 };
-			}
-
-			setData((prev) => ({ ...prev, [category]: result.items }));
-		} catch (err: any) {
-			console.error(`Failed to fetch ${category}:`, err);
-			const errorMsg =
-				err?.response?.data?.error?.message ||
-				err?.message ||
-				`Failed to load ${category}`;
-			setError(errorMsg);
-			message.error(errorMsg);
-		} finally {
-			setLoading((prev) => ({ ...prev, [category]: false }));
-		}
-	};
-
-	// Load all categories on mount to get correct counts for stats
-	useEffect(() => {
-		const loadAllCategories = async () => {
-			const categories = Object.keys(categoryLabels);
-			await Promise.all(
-				categories.map((category) => fetchCategoryData(category))
-			);
-		};
-		loadAllCategories();
-	}, []);
-
-	// Load users for Quản lý kỹ thuật dropdown
-	useEffect(() => {
-		const loadUsers = async () => {
-			try {
-				const userList = await userService.getLookup();
-				setUsers(userList);
-			} catch (err) {
-				console.error("Failed to load users:", err);
-			}
-		};
-		loadUsers();
-	}, []);
-
-	// Reload current category data when switching tabs (if needed for refresh)
-	useEffect(() => {
-		// Only reload if data is empty (not loaded yet)
-		if (data[activeCategory]?.length === 0 && !loading[activeCategory]) {
-			fetchCategoryData(activeCategory);
-		}
-	}, [activeCategory]);
-
-	const currentData = data[activeCategory] || [];
+	const currentData = data[activeCategory as keyof typeof data] || [];
 	const filteredData = searchText
 		? currentData.filter(
-				(item) =>
+				(item: MasterDataItem) =>
 					item.code
 						?.toLowerCase()
 						.includes(searchText.toLowerCase()) ||
@@ -239,107 +210,77 @@ const MasterDataList: React.FC = () => {
 
 	const handleDelete = async (id: string) => {
 		try {
-			setError(null);
-
 			switch (activeCategory) {
 				case "departments":
-					await departmentService.delete(id);
+					await deleteDepartment(id).unwrap();
 					break;
 				case "laboratories":
-					await laboratoryService.delete(id);
+					await deleteLaboratory(id).unwrap();
 					break;
 				case "specimenTypes":
-					await specimenTypeService.delete(id);
+					await deleteSpecimenType(id).unwrap();
 					break;
 				case "testMethods":
-					await testMethodService.delete(id);
+					await deleteTestMethod(id).unwrap();
 					break;
 				case "storageLocations":
-					await storageLocationService.delete(id);
+					await deleteStorageLocation(id).unwrap();
 					break;
 				case "customers":
-					await customerService.delete(id);
+					await deleteCustomer(id).unwrap();
 					break;
 			}
 
 			message.success("Xóa thành công!");
-			// Refresh data
-			await fetchCategoryData(activeCategory);
 		} catch (err: any) {
 			console.error("Failed to delete:", err);
-			// Handle different error formats from ABP Framework
-			let errorMsg = "Lỗi khi xóa dữ liệu";
-
-			if (err?.response?.data) {
-				const errorData = err.response.data;
-				if (errorData.error?.message) {
-					errorMsg = errorData.error.message;
-				} else if (errorData.message) {
-					errorMsg = errorData.message;
-				} else if (errorData.general && Array.isArray(errorData.general)) {
-					errorMsg = errorData.general.join(", ");
-				} else if (errorData.errors) {
-					const errorMessages = Object.values(errorData.errors).flat();
-					errorMsg = (errorMessages as string[]).join(", ");
-				} else if (typeof errorData === "object") {
-					const allErrors = Object.values(errorData).flat().filter((e) => typeof e === "string");
-					if (allErrors.length > 0) {
-						errorMsg = (allErrors as string[]).join(", ");
-					}
-				}
-			} else if (err?.message) {
-				errorMsg = err.message;
-			}
-
-			setError(errorMsg);
+			const errorMsg = err?.data?.error?.message || err?.data?.message || "Lỗi khi xóa dữ liệu";
 			message.error(errorMsg);
 		}
 	};
 
 	const handleModalOk = async () => {
 		try {
-			setModalLoading(true);
-			setError(null);
 			const values = await form.validateFields();
 
 			if (editingItem) {
 				// Update existing item
 				switch (activeCategory) {
 					case "departments":
-						await departmentService.update(
-							editingItem.id,
-							values as CreateUpdateDepartmentDto
-						);
+						await updateDepartment({
+							id: editingItem.id,
+							data: values as CreateUpdateDepartmentDto,
+						}).unwrap();
 						break;
 					case "laboratories":
-						await laboratoryService.update(
-							editingItem.id,
-							values as CreateUpdateLaboratoryDto
-						);
+						await updateLaboratory({
+							id: editingItem.id,
+							data: values as CreateUpdateLaboratoryDto,
+						}).unwrap();
 						break;
 					case "specimenTypes":
-						await specimenTypeService.update(
-							editingItem.id,
-							values as CreateUpdateSpecimenTypeDto
-						);
+						await updateSpecimenType({
+							id: editingItem.id,
+							data: values as CreateUpdateSpecimenTypeDto,
+						}).unwrap();
 						break;
 					case "testMethods":
-						await testMethodService.update(
-							editingItem.id,
-							values as CreateUpdateTestMethodDto
-						);
+						await updateTestMethod({
+							id: editingItem.id,
+							data: values as CreateUpdateTestMethodDto,
+						}).unwrap();
 						break;
 					case "storageLocations":
-						await storageLocationService.update(
-							editingItem.id,
-							values as CreateUpdateStorageLocationDto
-						);
+						await updateStorageLocation({
+							id: editingItem.id,
+							data: values as CreateUpdateStorageLocationDto,
+						}).unwrap();
 						break;
 					case "customers":
-						await customerService.update(
-							editingItem.id,
-							values as CreateUpdateCustomerDto
-						);
+						await updateCustomer({
+							id: editingItem.id,
+							data: values as CreateUpdateCustomerDto,
+						}).unwrap();
 						break;
 				}
 				message.success("Cập nhật thành công!");
@@ -347,34 +288,22 @@ const MasterDataList: React.FC = () => {
 				// Create new item
 				switch (activeCategory) {
 					case "departments":
-						await departmentService.create(
-							values as CreateUpdateDepartmentDto
-						);
+						await createDepartment(values as CreateUpdateDepartmentDto).unwrap();
 						break;
 					case "laboratories":
-						await laboratoryService.create(
-							values as CreateUpdateLaboratoryDto
-						);
+						await createLaboratory(values as CreateUpdateLaboratoryDto).unwrap();
 						break;
 					case "specimenTypes":
-						await specimenTypeService.create(
-							values as CreateUpdateSpecimenTypeDto
-						);
+						await createSpecimenType(values as CreateUpdateSpecimenTypeDto).unwrap();
 						break;
 					case "testMethods":
-						await testMethodService.create(
-							values as CreateUpdateTestMethodDto
-						);
+						await createTestMethod(values as CreateUpdateTestMethodDto).unwrap();
 						break;
 					case "storageLocations":
-						await storageLocationService.create(
-							values as CreateUpdateStorageLocationDto
-						);
+						await createStorageLocation(values as CreateUpdateStorageLocationDto).unwrap();
 						break;
 					case "customers":
-						await customerService.create(
-							values as CreateUpdateCustomerDto
-						);
+						await createCustomer(values as CreateUpdateCustomerDto).unwrap();
 						break;
 				}
 				message.success("Thêm mới thành công!");
@@ -382,47 +311,10 @@ const MasterDataList: React.FC = () => {
 
 			setIsModalOpen(false);
 			form.resetFields();
-			// Refresh data
-			await fetchCategoryData(activeCategory);
 		} catch (err: any) {
 			console.error("Failed to save:", err);
-			// Handle different error formats from ABP Framework
-			let errorMsg = "Lỗi khi lưu dữ liệu";
-
-			if (err?.response?.data) {
-				const errorData = err.response.data;
-				// ABP Framework format: { error: { message: "...", details: "..." } }
-				if (errorData.error?.message) {
-					errorMsg = errorData.error.message;
-				}
-				// Alternative ABP format: { message: "..." }
-				else if (errorData.message) {
-					errorMsg = errorData.message;
-				}
-				// Custom format with general errors: { general: ["error1", "error2"] }
-				else if (errorData.general && Array.isArray(errorData.general)) {
-					errorMsg = errorData.general.join(", ");
-				}
-				// Validation errors format: { errors: { field: ["error1", "error2"] } }
-				else if (errorData.errors) {
-					const errorMessages = Object.values(errorData.errors).flat();
-					errorMsg = (errorMessages as string[]).join(", ");
-				}
-				// Direct object with field arrays: { fieldName: ["error1"] }
-				else if (typeof errorData === "object") {
-					const allErrors = Object.values(errorData).flat().filter((e) => typeof e === "string");
-					if (allErrors.length > 0) {
-						errorMsg = (allErrors as string[]).join(", ");
-					}
-				}
-			} else if (err?.message) {
-				errorMsg = err.message;
-			}
-
-			setError(errorMsg);
+			const errorMsg = err?.data?.error?.message || err?.data?.message || "Lỗi khi lưu dữ liệu";
 			message.error(errorMsg);
-		} finally {
-			setModalLoading(false);
 		}
 	};
 
@@ -639,17 +531,6 @@ const MasterDataList: React.FC = () => {
 
 	return (
 		<div>
-			{error && (
-				<Alert
-					message="Error"
-					description={error}
-					type="error"
-					closable
-					onClose={() => setError(null)}
-					style={{ marginBottom: 16 }}
-				/>
-			)}
-
 			{/* Stats Cards */}
 			<Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
 				<Col xs={12} sm={8} md={6}>
@@ -673,7 +554,7 @@ const MasterDataList: React.FC = () => {
 							<Card>
 								<Statistic
 									title={label}
-									value={data[key]?.length || 0}
+									value={(data[key as keyof typeof data] as MasterDataItem[])?.length || 0}
 								/>
 							</Card>
 						</Col>
@@ -737,7 +618,7 @@ const MasterDataList: React.FC = () => {
 								<Space>
 									{label}
 									{key !== "indicators" && key !== "formTemplates" && (
-										<Tag>{data[key]?.length || 0}</Tag>
+										<Tag>{(data[key as keyof typeof data] as MasterDataItem[])?.length || 0}</Tag>
 									)}
 								</Space>
 							),
@@ -768,12 +649,12 @@ const MasterDataList: React.FC = () => {
 										</Row>
 
 										<Spin
-											spinning={loading[key]}
+											spinning={loading[key as keyof typeof loading] || false}
 											tip="Loading data..."
 										>
 											<Table
 												columns={getColumns()}
-												dataSource={filteredData}
+												dataSource={filteredData as MasterDataItem[]}
 												rowKey="id"
 												pagination={
 													activeCategory === "laboratories"
@@ -1040,7 +921,7 @@ const MasterDataList: React.FC = () => {
 					onClose={() => setImportModalOpen(false)}
 					onSuccess={() => {
 						setImportModalOpen(false);
-						fetchCategoryData(activeCategory);
+						// RTK Query will auto-refetch due to cache invalidation
 					}}
 					importType={importTypeMap[activeCategory]!}
 					title={`Import ${categoryLabels[activeCategory]}`}

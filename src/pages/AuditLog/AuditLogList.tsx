@@ -1,5 +1,4 @@
-// @ts-nocheck
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Card,
   Table,
@@ -17,7 +16,6 @@ import {
   Statistic,
   Avatar,
   Tooltip,
-  message,
 } from 'antd';
 import {
   SearchOutlined,
@@ -29,7 +27,13 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import isToday from 'dayjs/plugin/isToday';
-import { auditLogService, AuditLogDto } from '../../services/auditLogService';
+
+// RTK Query imports
+import {
+  useGetAuditLogListQuery,
+  useGetAuditLogStatisticsQuery,
+  AuditLogDto,
+} from '../../store/api/auditLogApi';
 
 dayjs.extend(isToday);
 
@@ -37,105 +41,40 @@ const { RangePicker } = DatePicker;
 const { Text } = Typography;
 
 const AuditLogList: React.FC = () => {
-  const [data, setData] = useState<AuditLogDto[]>([]);
-  const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [methodFilter, setMethodFilter] = useState<string>('all');
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
   const [selectedLog, setSelectedLog] = useState<AuditLogDto | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [stats, setStats] = useState({
-    total: 0,
-    today: 0,
-    gets: 0,
-    posts: 0,
-    puts: 0,
-    deletes: 0,
-  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
 
-  // Pagination state
-  const [pagination, setPagination] = useState({
-    current: 1,
-    pageSize: 50,
-    total: 0,
-  });
+  // Build query params
+  const queryParams = useMemo(() => {
+    const params: any = {
+      skipCount: (currentPage - 1) * pageSize,
+      maxResultCount: pageSize,
+      sorting: 'executionTime desc',
+    };
 
-  // Load data when filters or pagination changes
-  useEffect(() => {
-    loadData();
-  }, [methodFilter, dateRange, pagination.current, pagination.pageSize]);
-
-  useEffect(() => {
-    loadStatistics();
-  }, []);
-
-  const loadStatistics = async () => {
-    try {
-      const result = await auditLogService.getStatistics();
-      setStats(result);
-    } catch (error) {
-      console.error('Error loading statistics:', error);
+    if (methodFilter !== 'all') {
+      params.httpMethod = methodFilter;
     }
-  };
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const params: any = {
-        skipCount: (pagination.current - 1) * pagination.pageSize,
-        maxResultCount: pagination.pageSize,
-        sorting: 'executionTime desc',
-      };
-
-      // Apply filters
-      if (methodFilter !== 'all') {
-        params.httpMethod = methodFilter;
-      }
-      if (dateRange) {
-        params.startTime = dateRange[0].startOf('day').toISOString();
-        params.endTime = dateRange[1].endOf('day').toISOString();
-      }
-
-      const result = await auditLogService.getList(params);
-      setData(result.items || []);
-      setPagination(prev => ({ ...prev, total: result.totalCount }));
-    } catch (error) {
-      console.error('Error loading audit logs:', error);
-      message.error('Không thể tải lịch sử thay đổi. Vui lòng kiểm tra kết nối server.');
-      setData([]);
-    } finally {
-      setLoading(false);
+    if (dateRange) {
+      params.startTime = dateRange[0].startOf('day').toISOString();
+      params.endTime = dateRange[1].endOf('day').toISOString();
     }
-  };
 
-  // Handle method filter change
-  const handleMethodFilterChange = (value: string) => {
-    setMethodFilter(value);
-    setPagination(prev => ({ ...prev, current: 1 }));
-  };
+    return params;
+  }, [currentPage, pageSize, methodFilter, dateRange]);
 
-  // Handle date range change
-  const handleDateRangeChange = (dates: [dayjs.Dayjs, dayjs.Dayjs] | null) => {
-    setDateRange(dates);
-    setPagination(prev => ({ ...prev, current: 1 }));
-  };
+  // RTK Query hooks
+  const { data: logsData, isLoading: loading, refetch } = useGetAuditLogListQuery(queryParams);
+  const { data: stats, refetch: refetchStats } = useGetAuditLogStatisticsQuery();
 
-  // Handle table pagination change
-  const handleTableChange = (paginationConfig: any) => {
-    setPagination(prev => ({
-      ...prev,
-      current: paginationConfig.current,
-      pageSize: paginationConfig.pageSize,
-    }));
-  };
-
-  // Handle refresh
-  const handleRefresh = () => {
-    setSearchText('');
-    setMethodFilter('all');
-    setDateRange(null);
-    setPagination(prev => ({ ...prev, current: 1 }));
-  };
+  // Derived data
+  const data = useMemo(() => logsData?.items || [], [logsData]);
+  const totalCount = logsData?.totalCount || 0;
 
   // Local search filter (for URL search within current page)
   const filteredData = searchText
@@ -145,11 +84,32 @@ const AuditLogList: React.FC = () => {
       )
     : data;
 
+  // Handle method filter change
+  const handleMethodFilterChange = (value: string) => {
+    setMethodFilter(value);
+    setCurrentPage(1);
+  };
+
+  // Handle date range change
+  const handleDateRangeChange = (dates: [dayjs.Dayjs, dayjs.Dayjs] | null) => {
+    setDateRange(dates);
+    setCurrentPage(1);
+  };
+
+  // Handle refresh
+  const handleRefresh = () => {
+    setSearchText('');
+    setMethodFilter('all');
+    setDateRange(null);
+    setCurrentPage(1);
+    refetch();
+    refetchStats();
+  };
+
   const handleViewDetail = (record: AuditLogDto) => {
     setSelectedLog(record);
     setIsDetailModalOpen(true);
   };
-
 
   const getHttpMethodTag = (method: string) => {
     const config: Record<string, { color: string }> = {
@@ -237,7 +197,6 @@ const AuditLogList: React.FC = () => {
       key: 'clientIpAddress',
       width: 120,
       render: (ip: string) => {
-        // Convert localhost addresses to readable format
         if (ip === '::1' || ip === '127.0.0.1') return 'localhost';
         return ip;
       },
@@ -258,32 +217,32 @@ const AuditLogList: React.FC = () => {
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={12} sm={8} md={4}>
           <Card>
-            <Statistic title="Tổng lịch sử" value={stats.total} prefix={<HistoryOutlined />} />
+            <Statistic title="Tổng lịch sử" value={stats?.total || 0} prefix={<HistoryOutlined />} />
           </Card>
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Card>
-            <Statistic title="Hôm nay" value={stats.today} valueStyle={{ color: '#1890ff' }} />
+            <Statistic title="Hôm nay" value={stats?.today || 0} valueStyle={{ color: '#1890ff' }} />
           </Card>
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Card>
-            <Statistic title="GET" value={stats.gets} valueStyle={{ color: '#1890ff' }} />
+            <Statistic title="GET" value={stats?.gets || 0} valueStyle={{ color: '#1890ff' }} />
           </Card>
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Card>
-            <Statistic title="POST" value={stats.posts} valueStyle={{ color: '#52c41a' }} />
+            <Statistic title="POST" value={stats?.posts || 0} valueStyle={{ color: '#52c41a' }} />
           </Card>
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Card>
-            <Statistic title="PUT" value={stats.puts} valueStyle={{ color: '#fa8c16' }} />
+            <Statistic title="PUT" value={stats?.puts || 0} valueStyle={{ color: '#fa8c16' }} />
           </Card>
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Card>
-            <Statistic title="DELETE" value={stats.deletes} valueStyle={{ color: '#ff4d4f' }} />
+            <Statistic title="DELETE" value={stats?.deletes || 0} valueStyle={{ color: '#ff4d4f' }} />
           </Card>
         </Col>
       </Row>
@@ -331,7 +290,7 @@ const AuditLogList: React.FC = () => {
               style={{ width: '100%' }}
               placeholder={['Từ ngày', 'Đến ngày']}
               value={dateRange}
-              onChange={handleDateRangeChange}
+              onChange={handleDateRangeChange as any}
               format="DD/MM/YYYY"
             />
           </Col>
@@ -343,14 +302,17 @@ const AuditLogList: React.FC = () => {
           rowKey="id"
           loading={loading}
           pagination={{
-            current: pagination.current,
-            pageSize: pagination.pageSize,
-            total: pagination.total,
+            current: currentPage,
+            pageSize: pageSize,
+            total: totalCount,
             pageSizeOptions: [20, 50, 100],
             showSizeChanger: true,
             showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} bản ghi`,
+            onChange: (page, size) => {
+              setCurrentPage(page);
+              setPageSize(size);
+            },
           }}
-          onChange={handleTableChange}
           scroll={{ x: 1200 }}
         />
       </Card>
@@ -404,7 +366,7 @@ const AuditLogList: React.FC = () => {
             {selectedLog.entityChanges && selectedLog.entityChanges.length > 0 && (
               <>
                 <Text strong>Entity Changes:</Text>
-                {selectedLog.entityChanges.map((change, idx) => (
+                {selectedLog.entityChanges.map((change: any, idx: number) => (
                   <div key={idx} style={{ marginTop: 8 }}>
                     <Tag color="blue">{change.changeType}</Tag>
                     <Text type="secondary" style={{ marginLeft: 8 }}>{change.entityTypeFullName}</Text>
@@ -421,13 +383,13 @@ const AuditLogList: React.FC = () => {
                             title: 'Giá trị cũ',
                             dataIndex: 'originalValue',
                             key: 'originalValue',
-                            render: (val) => val ? <Text delete type="danger">{val}</Text> : '-',
+                            render: (val: string) => val ? <Text delete type="danger">{val}</Text> : '-',
                           },
                           {
                             title: 'Giá trị mới',
                             dataIndex: 'newValue',
                             key: 'newValue',
-                            render: (val) => val ? <Text type="success">{val}</Text> : '-',
+                            render: (val: string) => val ? <Text type="success">{val}</Text> : '-',
                           },
                         ]}
                       />

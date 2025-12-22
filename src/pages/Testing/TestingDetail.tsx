@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Card,
@@ -22,9 +22,12 @@ import {
   ClockCircleOutlined,
   SyncOutlined,
 } from "@ant-design/icons";
-import { testingService } from "../../services/testingService";
 import {
-  TestingDetailDto,
+  useGetTestingDetailQuery,
+  useSaveResultsMutation,
+  useSubmitForApprovalMutation,
+} from "../../store/api/testingApi";
+import {
   TestingStatus,
   TestingStatusLabels,
   TestingStatusColors,
@@ -41,14 +44,25 @@ const TestingDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const viewMode = searchParams.get('viewMode');
-  const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [detail, setDetail] = useState<TestingDetailDto | null>(null);
+  const viewMode = searchParams.get('viewMode') as 'my' | 'all' | null;
+
+  // RTK Query hooks
+  const {
+    data: detail,
+    isLoading: loading,
+    isFetching,
+  } = useGetTestingDetailQuery(
+    { id: id!, viewMode: viewMode === 'all' ? 'all' : 'my' },
+    { skip: !id }
+  );
+
+  const [saveResults, { isLoading: isSaving }] = useSaveResultsMutation();
+  const [submitForApproval, { isLoading: isSubmittingApproval }] = useSubmitForApprovalMutation();
+
+  const submitting = isSaving || isSubmittingApproval || isFetching;
 
   // Edited results (per sample)
   const [sampleResults, setSampleResults] = useState<Map<string, SaveIndicatorResultDto[]>>(new Map());
-
 
   // Active collapse keys (open all panels by default)
   const [activeKeys, setActiveKeys] = useState<string[]>([]);
@@ -60,19 +74,11 @@ const TestingDetail: React.FC = () => {
     indicatorName: "",
   });
 
-  const loadDetail = useCallback(async () => {
-    if (!id) return;
-    setLoading(true);
-    try {
-      // Pass viewMode to API - 'my' (user's data only), 'all' (full data)
-      // Default to 'my' if not specified (matches default tab "Phân công của tôi")
-      const viewModeParam: 'my' | 'all' = viewMode === 'all' ? 'all' : 'my';
-      const result = await testingService.get(id, viewModeParam);
-      setDetail(result);
-
-      // Initialize sample results
+  // Initialize sample results when detail loads
+  useEffect(() => {
+    if (detail?.samples) {
       const initialResults = new Map<string, SaveIndicatorResultDto[]>();
-      result.samples.forEach((sample) => {
+      detail.samples.forEach((sample) => {
         initialResults.set(
           sample.sampleId,
           sample.indicators.map((ind) => ({
@@ -86,18 +92,11 @@ const TestingDetail: React.FC = () => {
       setSampleResults(initialResults);
 
       // Open all sample panels by default
-      setActiveKeys(result.samples.map((s) => s.sampleId));
-    } catch (error) {
-      console.error("Failed to load testing detail:", error);
-      message.error("Không thể tải thông tin xét nghiệm");
-    } finally {
-      setLoading(false);
+      if (activeKeys.length === 0) {
+        setActiveKeys(detail.samples.map((s) => s.sampleId));
+      }
     }
-  }, [id, viewMode]);
-
-  useEffect(() => {
-    loadDetail();
-  }, [loadDetail]);
+  }, [detail]);
 
   const getStatusTag = (status: TestingStatus) => {
     const label = TestingStatusLabels[status];
@@ -137,18 +136,17 @@ const TestingDetail: React.FC = () => {
     if (!indicatorResult) return;
 
     try {
-      await testingService.saveResults(id, { results: [indicatorResult] });
+      await saveResults({ id, input: { results: [indicatorResult] } }).unwrap();
       // Silent save on blur - no message needed
     } catch (error: any) {
       console.error("Failed to save result:", error);
-      message.error(error.response?.data?.error?.message || "Không thể lưu kết quả");
+      message.error(error.data?.error?.message || "Không thể lưu kết quả");
     }
   };
 
   const handleSubmitForApprovalSingle = async (indicatorId: string) => {
     if (!id) return;
 
-    setSubmitting(true);
     try {
       // First, save the results for this indicator before submitting
       // Find the indicator's current edited result
@@ -162,18 +160,15 @@ const TestingDetail: React.FC = () => {
 
       if (indicatorResult) {
         // Save the result first
-        await testingService.saveResults(id, { results: [indicatorResult] });
+        await saveResults({ id, input: { results: [indicatorResult] } }).unwrap();
       }
 
       // Then submit for approval
-      await testingService.submitForApproval(id, { indicatorIds: [indicatorId] });
+      await submitForApproval({ id, input: { indicatorIds: [indicatorId] } }).unwrap();
       message.success("Gửi duyệt thành công");
-      loadDetail();
     } catch (error: any) {
       console.error("Failed to submit for approval:", error);
-      message.error(error.response?.data?.error?.message || "Không thể gửi duyệt");
-    } finally {
-      setSubmitting(false);
+      message.error(error.data?.error?.message || "Không thể gửi duyệt");
     }
   };
 
@@ -186,25 +181,35 @@ const TestingDetail: React.FC = () => {
   };
 
   // Sort samples theo sampleId để cố định vị trí
-  const sortedSamples = detail?.samples
-    ? [...detail.samples].sort((a, b) => a.sampleId.localeCompare(b.sampleId))
-    : [];
+  const sortedSamples = useMemo(() => {
+    return detail?.samples
+      ? [...detail.samples].sort((a, b) => a.sampleId.localeCompare(b.sampleId))
+      : [];
+  }, [detail?.samples]);
 
   // Get all indicators from all samples
-  const allIndicators = detail?.samples?.flatMap((s) => s.indicators) || [];
+  const allIndicators = useMemo(() => {
+    return detail?.samples?.flatMap((s) => s.indicators) || [];
+  }, [detail?.samples]);
 
   // Check indicators status
-  const allApproved =
-    allIndicators.length > 0 &&
-    allIndicators.every((i) => i.approvalStatus === IndicatorApprovalStatus.Approved);
-
-  const allSubmittedOrApproved =
-    allIndicators.length > 0 &&
-    allIndicators.every(
-      (i) =>
-        i.approvalStatus === IndicatorApprovalStatus.Entered ||
-        i.approvalStatus === IndicatorApprovalStatus.Approved
+  const allApproved = useMemo(() => {
+    return (
+      allIndicators.length > 0 &&
+      allIndicators.every((i) => i.approvalStatus === IndicatorApprovalStatus.Approved)
     );
+  }, [allIndicators]);
+
+  const allSubmittedOrApproved = useMemo(() => {
+    return (
+      allIndicators.length > 0 &&
+      allIndicators.every(
+        (i) =>
+          i.approvalStatus === IndicatorApprovalStatus.Entered ||
+          i.approvalStatus === IndicatorApprovalStatus.Approved
+      )
+    );
+  }, [allIndicators]);
 
   if (loading) {
     return (

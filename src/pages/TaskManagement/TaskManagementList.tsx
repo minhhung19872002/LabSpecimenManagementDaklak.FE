@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Card,
@@ -31,7 +31,11 @@ import {
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
-import { laboratoryTaskService } from "../../services/laboratoryTaskService";
+import {
+  useGetLaboratoryTaskListQuery,
+  useUpdateLaboratoryTaskMutation,
+  useDeleteLaboratoryTaskMutation,
+} from "../../store/api/laboratoryTaskApi";
 import {
   LaboratoryTaskDto,
   LaboratoryTaskStatus,
@@ -44,9 +48,8 @@ const { Text } = Typography;
 
 const TaskManagementList: React.FC = () => {
   const navigate = useNavigate();
-  const [tasks, setTasks] = useState<LaboratoryTaskDto[]>([]);
-  const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<
     LaboratoryTaskStatus | undefined
   >(undefined);
@@ -62,32 +65,26 @@ const TaskManagementList: React.FC = () => {
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 50,
-    total: 0,
   });
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const result = await laboratoryTaskService.getList({
-        skipCount: (pagination.current - 1) * pagination.pageSize,
-        maxResultCount: pagination.pageSize,
-        status: statusFilter,
-        search: searchText || undefined,
-      });
+  // RTK Query hooks
+  const {
+    data: taskData,
+    isLoading: loading,
+    isFetching,
+    refetch,
+  } = useGetLaboratoryTaskListQuery({
+    skipCount: (pagination.current - 1) * pagination.pageSize,
+    maxResultCount: pagination.pageSize,
+    status: statusFilter,
+    search: debouncedSearch || undefined,
+  });
 
-      setTasks(result.items);
-      setPagination((prev) => ({ ...prev, total: result.totalCount }));
-    } catch (error) {
-      console.error("Failed to load laboratory tasks:", error);
-      message.error("Không thể tải danh sách công việc. Vui lòng thử lại.");
-    } finally {
-      setLoading(false);
-    }
-  }, [pagination.current, pagination.pageSize, statusFilter, searchText]);
+  const [updateTask, { isLoading: isUpdating }] = useUpdateLaboratoryTaskMutation();
+  const [deleteTask, { isLoading: isDeleting }] = useDeleteLaboratoryTaskMutation();
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const tasks = taskData?.items || [];
+  const totalCount = taskData?.totalCount || 0;
 
   const getStatusTag = (status: LaboratoryTaskStatus) => {
     const label = LaboratoryTaskStatusLabels[status];
@@ -109,9 +106,9 @@ const TaskManagementList: React.FC = () => {
     );
   };
 
-  // Statistics
-  const stats = {
-    total: pagination.total,
+  // Statistics (computed from current page data)
+  const stats = useMemo(() => ({
+    total: totalCount,
     notAssigned: tasks.filter(
       (t) => t.status === LaboratoryTaskStatus.NotAssignedMethod
     ).length,
@@ -128,10 +125,10 @@ const TaskManagementList: React.FC = () => {
     resultSent: tasks.filter(
       (t) => t.status === LaboratoryTaskStatus.ResultSent
     ).length,
-  };
+  }), [tasks, totalCount]);
 
   const handleSearch = (value: string) => {
-    setSearchText(value);
+    setDebouncedSearch(value);
     setPagination((prev) => ({ ...prev, current: 1 }));
   };
 
@@ -152,9 +149,10 @@ const TaskManagementList: React.FC = () => {
 
   const handleRefresh = () => {
     setSearchText("");
+    setDebouncedSearch("");
     setStatusFilter(undefined);
     setPagination((prev) => ({ ...prev, current: 1 }));
-    loadData();
+    refetch();
   };
 
   const handleOpenUpdateModal = (record: LaboratoryTaskDto) => {
@@ -178,10 +176,9 @@ const TaskManagementList: React.FC = () => {
         notes: values.notes,
       };
 
-      await laboratoryTaskService.update(selectedTask.id, updateData);
+      await updateTask({ id: selectedTask.id, data: updateData }).unwrap();
       message.success("Cập nhật công việc thành công");
       setUpdateModalVisible(false);
-      loadData();
     } catch (error) {
       console.error("Failed to update task:", error);
       message.error("Không thể cập nhật công việc. Vui lòng thử lại.");
@@ -197,9 +194,8 @@ const TaskManagementList: React.FC = () => {
       cancelText: "Hủy",
       onOk: async () => {
         try {
-          await laboratoryTaskService.delete(id);
+          await deleteTask(id).unwrap();
           message.success("Xóa công việc thành công");
-          loadData();
         } catch (error) {
           console.error("Failed to delete task:", error);
           message.error("Không thể xóa công việc. Vui lòng thử lại.");
@@ -329,7 +325,7 @@ const TaskManagementList: React.FC = () => {
                 danger
                 icon={<DeleteOutlined />}
                 onClick={() => handleDelete(record.id)}
-                disabled={!canEdit}
+                disabled={!canEdit || isDeleting}
               />
             </Tooltip>
           </Space>
@@ -355,11 +351,11 @@ const TaskManagementList: React.FC = () => {
       columns={columns}
       dataSource={data}
       rowKey="id"
-      loading={loading}
+      loading={loading || isFetching}
       pagination={{
         current: pagination.current,
         pageSize: pagination.pageSize,
-        total: pagination.total,
+        total: totalCount,
         pageSizeOptions: [20, 50, 100],
         showSizeChanger: true,
         showTotal: (total, range) =>
@@ -452,7 +448,7 @@ const TaskManagementList: React.FC = () => {
           </Space>
         }
         extra={
-          <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+          <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={isFetching}>
             Làm mới
           </Button>
         }
@@ -516,6 +512,7 @@ const TaskManagementList: React.FC = () => {
         onOk={handleUpdateTask}
         okText="Lưu"
         cancelText="Hủy"
+        confirmLoading={isUpdating}
         width={600}
         centered
       >

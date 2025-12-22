@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Card,
   Table,
@@ -33,8 +33,18 @@ import {
   KeyOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
-import { employeeService, EmployeeDto } from "../../services/employeeService";
-import { departmentService } from "../../services/masterDataService";
+
+// RTK Query imports
+import {
+  useGetEmployeeListQuery,
+  useCreateEmployeeMutation,
+  useUpdateEmployeeMutation,
+  useDeleteEmployeeMutation,
+  useToggleEmployeeActiveMutation,
+  useResetEmployeePasswordMutation,
+  EmployeeDto,
+} from "../../store/api/employeeApi";
+import { useGetDepartmentListQuery } from "../../store/api/masterDataApi";
 
 const { Text } = Typography;
 
@@ -64,9 +74,6 @@ const positions = [
 ];
 
 const EmployeeList: React.FC = () => {
-  const [employees, setEmployees] = useState<EmployeeDto[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [debouncedSearchText, setDebouncedSearchText] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
@@ -77,31 +84,62 @@ const EmployeeList: React.FC = () => {
   const [newEmployeeInfo, setNewEmployeeInfo] = useState<{
     email: string;
   } | null>(null);
-  const [modalLoading, setModalLoading] = useState(false);
-  const [resetPasswordLoadingId, setResetPasswordLoadingId] = useState<string | null>(null);
   const [form] = Form.useForm();
 
   // Pagination state
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 50,
-    total: 0,
   });
 
-  // Statistics state (load once without filters)
-  const [stats, setStats] = useState({
-    total: 0,
-    active: 0,
-    inactive: 0,
-  });
+  // RTK Query hooks
+  const { data: departmentsData } = useGetDepartmentListQuery({ maxResultCount: 100 });
+  const departments = useMemo(() => (departmentsData?.items || []) as Department[], [departmentsData]);
 
-  useEffect(() => {
-    loadDepartments();
-    loadStatistics();
-  }, []);
+  // Build query params
+  const queryParams = useMemo(() => {
+    const params: any = {
+      skipCount: (pagination.current - 1) * pagination.pageSize,
+      maxResultCount: pagination.pageSize,
+      sorting: 'CreationTime DESC',
+    };
+
+    if (debouncedSearchText) {
+      params.filter = debouncedSearchText;
+    }
+    if (departmentFilter !== 'all') {
+      const dept = departments.find(d => d.name === departmentFilter);
+      if (dept) {
+        params.departmentId = dept.id;
+      }
+    }
+    if (roleFilter !== 'all') {
+      params.role = roleFilter;
+    }
+
+    return params;
+  }, [debouncedSearchText, departmentFilter, roleFilter, pagination.current, pagination.pageSize, departments]);
+
+  const { data: employeesData, isLoading: loading, refetch } = useGetEmployeeListQuery(queryParams);
+
+  // Get all employees for statistics (separate query)
+  const { data: allEmployeesData } = useGetEmployeeListQuery({ maxResultCount: 1000 });
+
+  // Mutations
+  const [createEmployee, { isLoading: creating }] = useCreateEmployeeMutation();
+  const [updateEmployee, { isLoading: updating }] = useUpdateEmployeeMutation();
+  const [deleteEmployee] = useDeleteEmployeeMutation();
+  const [toggleEmployeeActive] = useToggleEmployeeActiveMutation();
+  const [resetEmployeePassword] = useResetEmployeePasswordMutation();
+
+  const [resetPasswordLoadingId, setResetPasswordLoadingId] = useState<string | null>(null);
+
+  const employees = useMemo(() => employeesData?.items || [], [employeesData]);
+  const totalCount = employeesData?.totalCount || 0;
+  const modalLoading = creating || updating;
 
   // Debounce search text
-  useEffect(() => {
+  React.useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchText(searchText);
       setPagination(prev => ({ ...prev, current: 1 }));
@@ -109,69 +147,15 @@ const EmployeeList: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchText]);
 
-  // Load data when filters or pagination changes
-  useEffect(() => {
-    loadData();
-  }, [debouncedSearchText, departmentFilter, roleFilter, pagination.current, pagination.pageSize]);
-
-  const loadDepartments = async () => {
-    try {
-      const result = await departmentService.getList({ maxResultCount: 100 });
-      setDepartments(result.items || []);
-    } catch (error) {
-      console.error('Error loading departments:', error);
-    }
-  };
-
-  const loadStatistics = async () => {
-    try {
-      // Load all employees once for statistics
-      const result = await employeeService.getList({ maxResultCount: 1000 });
-      const items = result.items || [];
-      setStats({
-        total: items.length,
-        active: items.filter((e) => e.isActive).length,
-        inactive: items.filter((e) => !e.isActive).length,
-      });
-    } catch (error) {
-      console.error('Error loading statistics:', error);
-    }
-  };
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const params: any = {
-        skipCount: (pagination.current - 1) * pagination.pageSize,
-        maxResultCount: pagination.pageSize,
-        sorting: 'CreationTime DESC',
-      };
-
-      // Apply filters
-      if (debouncedSearchText) {
-        params.filter = debouncedSearchText;
-      }
-      if (departmentFilter !== 'all') {
-        const dept = departments.find(d => d.name === departmentFilter);
-        if (dept) {
-          params.departmentId = dept.id;
-        }
-      }
-      if (roleFilter !== 'all') {
-        params.role = roleFilter;
-      }
-
-      const result = await employeeService.getList(params);
-      setEmployees(result.items || []);
-      setPagination(prev => ({ ...prev, total: result.totalCount }));
-    } catch (error) {
-      console.error('Error loading employees:', error);
-      message.error('Không thể tải danh sách nhân viên. Vui lòng kiểm tra kết nối server.');
-      setEmployees([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Statistics
+  const stats = useMemo(() => {
+    const items = allEmployeesData?.items || [];
+    return {
+      total: items.length,
+      active: items.filter((e) => e.isActive).length,
+      inactive: items.filter((e) => !e.isActive).length,
+    };
+  }, [allEmployeesData]);
 
   const handleCreate = () => {
     setEditingItem(null);
@@ -192,10 +176,8 @@ const EmployeeList: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      await employeeService.delete(id);
+      await deleteEmployee(id).unwrap();
       message.success("Đã xóa nhân viên");
-      loadData();
-      loadStatistics();
     } catch (error) {
       console.error('Error deleting employee:', error);
       message.error('Không thể xóa nhân viên. Vui lòng thử lại.');
@@ -204,18 +186,7 @@ const EmployeeList: React.FC = () => {
 
   const handleToggleActive = async (id: string, checked: boolean) => {
     try {
-      await employeeService.toggleActive(id, checked);
-      setEmployees((prev) =>
-        prev.map((item) =>
-          item.id === id ? { ...item, isActive: checked } : item
-        )
-      );
-      // Update statistics
-      setStats((prev) => ({
-        ...prev,
-        active: prev.active + (checked ? 1 : -1),
-        inactive: prev.inactive + (checked ? -1 : 1),
-      }));
+      await toggleEmployeeActive({ id, isActive: checked }).unwrap();
       message.success(
         checked ? "Đã kích hoạt tài khoản" : "Đã vô hiệu hóa tài khoản"
       );
@@ -228,7 +199,7 @@ const EmployeeList: React.FC = () => {
   const handleResetPassword = async (record: EmployeeDto) => {
     setResetPasswordLoadingId(record.id);
     try {
-      await employeeService.resetPassword(record.id);
+      await resetEmployeePassword(record.id).unwrap();
       setNewEmployeeInfo({ email: record.email });
       setIsPasswordModalOpen(true);
     } catch (error) {
@@ -240,12 +211,8 @@ const EmployeeList: React.FC = () => {
   };
 
   const handleModalOk = async () => {
-    setModalLoading(true);
     try {
       const values = await form.validateFields();
-      const selectedDept = departments.find(
-        (d) => d.id === values.departmentId
-      );
 
       const payload = {
         username: values.username,
@@ -259,15 +226,12 @@ const EmployeeList: React.FC = () => {
       };
 
       if (editingItem) {
-        await employeeService.update(editingItem.id, payload);
+        await updateEmployee({ id: editingItem.id, data: payload }).unwrap();
         message.success("Đã cập nhật thông tin nhân viên");
         setIsModalOpen(false);
-        loadData();
       } else {
-        await employeeService.create(payload);
+        await createEmployee(payload).unwrap();
         setIsModalOpen(false);
-        loadData();
-        loadStatistics();
 
         // Show notification that password was sent via email
         setNewEmployeeInfo({ email: values.email });
@@ -278,8 +242,6 @@ const EmployeeList: React.FC = () => {
     } catch (error: any) {
       console.error("Error saving employee:", error);
       message.error('Không thể lưu thông tin nhân viên. Vui lòng thử lại.');
-    } finally {
-      setModalLoading(false);
     }
   };
 
@@ -319,7 +281,7 @@ const EmployeeList: React.FC = () => {
     setDepartmentFilter('all');
     setRoleFilter('all');
     setPagination(prev => ({ ...prev, current: 1 }));
-    loadStatistics();
+    refetch();
   };
 
   const columns: ColumnsType<EmployeeDto> = [
@@ -551,7 +513,7 @@ const EmployeeList: React.FC = () => {
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,
-            total: pagination.total,
+            total: totalCount,
             pageSizeOptions: [20, 50, 100],
             showSizeChanger: true,
             showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} nhân viên`,

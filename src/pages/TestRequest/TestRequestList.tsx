@@ -1,5 +1,4 @@
-// @ts-nocheck
-import React, { useState, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Table,
   Button,
@@ -19,15 +18,16 @@ import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  EyeOutlined,
   ReloadOutlined,
   ImportOutlined,
   DownloadOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
 import type { ColumnsType } from "antd/es/table";
-import { testRequestService } from "../../services/testRequestService";
+import {
+  useGetTestRequestListQuery,
+  useDeleteTestRequestMutation,
+} from "../../store/api/testRequestApi";
 import {
   TestRequestDto,
   TestRequestStatus,
@@ -45,11 +45,7 @@ import {
 import dayjs from "dayjs";
 
 const TestRequestList: React.FC = () => {
-  const { t } = useTranslation();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<TestRequestDto[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [searchText, setSearchText] = useState("");
@@ -62,6 +58,29 @@ const TestRequestList: React.FC = () => {
   const [dateRange, setDateRange] = useState<
     [Dayjs | null, Dayjs | null] | null
   >(null);
+
+  // RTK Query hooks
+  const {
+    data: testRequestData,
+    isLoading: loading,
+    isFetching,
+    refetch,
+  } = useGetTestRequestListQuery({
+    skipCount: (currentPage - 1) * pageSize,
+    maxResultCount: pageSize,
+    sorting: "requestDate desc",
+    search: searchText || undefined,
+    status: statusFilter !== "all" ? statusFilter : undefined,
+    expectedCompletionDateFrom:
+      dateRange?.[0]?.format("YYYY-MM-DD") || undefined,
+    expectedCompletionDateTo:
+      dateRange?.[1]?.format("YYYY-MM-DD") || undefined,
+  });
+
+  const [deleteTestRequest, { isLoading: isDeleting }] = useDeleteTestRequestMutation();
+
+  const data = useMemo(() => testRequestData?.items || [], [testRequestData]);
+  const totalCount = testRequestData?.totalCount || 0;
 
   const handleDownloadTemplate = async () => {
     setDownloadingTemplate(true);
@@ -76,40 +95,6 @@ const TestRequestList: React.FC = () => {
       setDownloadingTemplate(false);
     }
   };
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const result = await testRequestService.getList({
-        skipCount: (currentPage - 1) * pageSize,
-        maxResultCount: pageSize,
-        sorting: "requestDate desc",
-        search: searchText || undefined,
-        status: statusFilter !== "all" ? statusFilter : undefined,
-        expectedCompletionDateFrom:
-          dateRange?.[0]?.format("YYYY-MM-DD") || undefined,
-        expectedCompletionDateTo:
-          dateRange?.[1]?.format("YYYY-MM-DD") || undefined,
-      });
-      const items = result.items || [];
-      setData(items);
-      setTotalCount(result.totalCount || 0);
-    } catch (error: any) {
-      console.error("Error loading test requests:", error);
-      message.error(
-        "Không thể tải danh sách yêu cầu thử nghiệm. Vui lòng kiểm tra kết nối server."
-      );
-      setData([]);
-      setTotalCount(0);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Load data when page, pageSize, searchText, statusFilter or dateRange changes
-  useEffect(() => {
-    loadData();
-  }, [currentPage, pageSize, searchText, statusFilter, dateRange]);
 
   // Handle search with debounce
   const handleSearch = () => {
@@ -133,12 +118,11 @@ const TestRequestList: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      await testRequestService.delete(id);
+      await deleteTestRequest(id).unwrap();
       message.success("Xóa yêu cầu thành công!");
-      loadData(); // Reload data from server
     } catch (error: any) {
       console.error("Error deleting test request:", error);
-      message.error("Không thể xóa yêu cầu. Vui lòng thử lại.");
+      message.error(error.data?.error?.message || "Không thể xóa yêu cầu. Vui lòng thử lại.");
     }
   };
 
@@ -270,7 +254,7 @@ const TestRequestList: React.FC = () => {
                 size="small"
                 danger
                 icon={<DeleteOutlined />}
-                disabled={!canDelete}
+                disabled={!canDelete || isDeleting}
                 title={!canDelete ? "Không thể xóa ở trạng thái này" : "Xóa"}
               />
             </Popconfirm>
@@ -285,7 +269,7 @@ const TestRequestList: React.FC = () => {
       title="Danh sách yêu cầu thử nghiệm"
       extra={
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={loadData}>
+          <Button icon={<ReloadOutlined />} onClick={() => refetch()} loading={isFetching}>
             Làm mới
           </Button>
           <Button
@@ -384,7 +368,7 @@ const TestRequestList: React.FC = () => {
         columns={columns}
         dataSource={data}
         rowKey="id"
-        loading={loading}
+        loading={loading || isFetching}
         rowClassName={(record) => (isUrgentRow(record) ? "urgent-row" : "")}
         onRow={(record) => ({
           onDoubleClick: () => navigate(`/test-request/${record.id}`),
@@ -411,7 +395,7 @@ const TestRequestList: React.FC = () => {
         onClose={() => setImportModalOpen(false)}
         onSuccess={() => {
           setImportModalOpen(false);
-          loadData();
+          refetch();
         }}
         importType="test-requests"
       />

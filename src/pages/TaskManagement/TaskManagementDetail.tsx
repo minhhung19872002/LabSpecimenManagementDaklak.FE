@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Card,
@@ -20,16 +20,20 @@ import {
   CaretRightOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { laboratoryTaskService } from "../../services/laboratoryTaskService";
 import {
-  LaboratoryTaskDto,
+  useGetLaboratoryTaskQuery,
+  useGetMethodsByIndicatorQuery,
+  useGetTechniciansByLaboratoryQuery,
+  useAssignSampleIndicatorsMutation,
+  useApproveIndicatorMutation,
+  useSendResultsMutation,
+} from "../../store/api/laboratoryTaskApi";
+import {
   LaboratoryTaskStatus,
   LaboratoryTaskStatusLabels,
   LaboratoryTaskStatusColors,
   LaboratoryTaskIndicatorDto,
   IndicatorApprovalStatus,
-  MethodLookupDto,
-  UserLookupDto,
   SampleInfo,
   SampleStatus,
   SampleStatusLabels,
@@ -59,50 +63,41 @@ const TaskManagementDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  // State
-  const [task, setTask] = useState<LaboratoryTaskDto | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [methods, setMethods] = useState<MethodLookupDto[]>([]);
-  const [technicians, setTechnicians] = useState<UserLookupDto[]>([]);
+  // State for collapse panels
   const [activeKeys, setActiveKeys] = useState<string[]>([]);
-  const [actionLoading, setActionLoading] = useState(false);
 
   // Local state for indicator changes (before saving)
   const [indicatorChanges, setIndicatorChanges] = useState<
     Record<string, Partial<LaboratoryTaskIndicatorDto>>
   >({});
 
-  // Load task data
-  const loadTask = useCallback(async () => {
-    if (!id) return;
+  // RTK Query hooks
+  const {
+    data: task,
+    isLoading: loading,
+    isFetching,
+  } = useGetLaboratoryTaskQuery(id!, { skip: !id });
 
-    setLoading(true);
-    try {
-      const data = await laboratoryTaskService.get(id);
-      setTask(data);
+  // Get first indicator ID for method lookup
+  const firstIndicatorId = task?.indicators?.[0]?.indicatorId || "";
 
-      // Load lookups - API returns array directly (not wrapped in { items: [] })
-      if (data.laboratoryId) {
-        const [methodsResult, techniciansResult] = await Promise.all([
-          laboratoryTaskService.getMethodsByIndicator(
-            data.indicators?.[0]?.indicatorId || ""
-          ),
-          laboratoryTaskService.getTechniciansByLaboratory(data.laboratoryId),
-        ]);
-        setMethods(methodsResult || []);
-        setTechnicians(techniciansResult || []);
-      }
-    } catch (error) {
-      console.error("Failed to load task:", error);
-      message.error("Không thể tải thông tin công việc");
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
+  const { data: methods = [] } = useGetMethodsByIndicatorQuery(firstIndicatorId, {
+    skip: !firstIndicatorId,
+  });
 
-  useEffect(() => {
-    loadTask();
-  }, [loadTask]);
+  const { data: technicians = [] } = useGetTechniciansByLaboratoryQuery(
+    task?.laboratoryId,
+    { skip: !task?.laboratoryId }
+  );
+
+  // Mutations
+  const [assignSampleIndicators, { isLoading: isAssigning }] =
+    useAssignSampleIndicatorsMutation();
+  const [approveIndicator, { isLoading: isApproving }] =
+    useApproveIndicatorMutation();
+  const [sendResults, { isLoading: isSending }] = useSendResultsMutation();
+
+  const actionLoading = isAssigning || isApproving || isSending || isFetching;
 
   // Group indicators by sample
   const indicatorsBySample = useMemo(() => {
@@ -220,23 +215,19 @@ const TaskManagementDetail: React.FC = () => {
       return;
     }
 
-    setActionLoading(true);
     try {
-      await laboratoryTaskService.assignSampleIndicators(
-        task.id,
+      await assignSampleIndicators({
+        taskId: task.id,
         sampleId,
-        assignments
-      );
+        assignments,
+      }).unwrap();
       message.success("Giao việc thành công");
       setIndicatorChanges({});
-      await loadTask();
     } catch (error: any) {
       console.error("Failed to assign:", error);
       message.error(
-        error.response?.data?.error?.message || "Không thể giao việc"
+        error.data?.error?.message || "Không thể giao việc"
       );
-    } finally {
-      setActionLoading(false);
     }
   };
 
@@ -245,21 +236,20 @@ const TaskManagementDetail: React.FC = () => {
     approve: boolean,
     reason?: string
   ) => {
-    setActionLoading(true);
     try {
-      await laboratoryTaskService.approveIndicator(indicatorId, {
-        approve,
-        rejectionReason: reason,
-      });
+      await approveIndicator({
+        indicatorId,
+        input: {
+          approve,
+          rejectionReason: reason,
+        },
+      }).unwrap();
       message.success(approve ? "Đã duyệt kết quả" : "Đã từ chối kết quả");
-      await loadTask();
     } catch (error: any) {
       console.error("Failed to approve:", error);
       message.error(
-        error.response?.data?.error?.message || "Không thể xử lý phê duyệt"
+        error.data?.error?.message || "Không thể xử lý phê duyệt"
       );
-    } finally {
-      setActionLoading(false);
     }
   };
 
@@ -274,18 +264,14 @@ const TaskManagementDetail: React.FC = () => {
       cancelText: "Hủy",
       centered: true,
       onOk: async () => {
-        setActionLoading(true);
         try {
-          await laboratoryTaskService.sendResults(task.id);
+          await sendResults(task.id).unwrap();
           message.success("Đã gửi kết quả thành công");
-          await loadTask();
         } catch (error: any) {
           console.error("Failed to send results:", error);
           message.error(
-            error.response?.data?.error?.message || "Không thể gửi kết quả"
+            error.data?.error?.message || "Không thể gửi kết quả"
           );
-        } finally {
-          setActionLoading(false);
         }
       },
     });

@@ -1,14 +1,22 @@
-// @ts-nocheck
-import React, { useState, useEffect } from 'react';
-import { Form, Input, DatePicker, Button, Card, message, Select, Row, Col, InputNumber, Divider, Typography } from 'antd';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Form, Input, DatePicker, Button, Card, message, Select, Row, Col, InputNumber, Divider, Typography, Spin } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { specimenService } from '../../services/specimenService';
-import { testRequestService } from '../../services/testRequestService';
-import { specimenTypeService, storageLocationService } from '../../services/masterDataService';
 import { SpecimenStatus } from '../../types/specimen';
 import dayjs from 'dayjs';
 import FileUpload from '../../components/common/FileUpload';
+
+// RTK Query imports
+import {
+  useGetSpecimenQuery,
+  useCreateSpecimenMutation,
+  useUpdateSpecimenMutation,
+} from '../../store/api/specimenApi';
+import { useGetTestRequestListQuery } from '../../store/api/testRequestApi';
+import {
+  useGetActiveSpecimenTypesQuery,
+  useGetActiveStorageLocationsQuery,
+} from '../../store/api/masterDataApi';
 
 const { TextArea } = Input;
 const { Title } = Typography;
@@ -18,99 +26,91 @@ const SpecimenForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
-  const [loadingData, setLoadingData] = useState(false);
   const [specimenImages, setSpecimenImages] = useState<any[]>([]);
   const isEditMode = !!id;
 
-  // Data from API
-  const [testRequests, setTestRequests] = useState<any[]>([]);
-  const [specimenTypes, setSpecimenTypes] = useState<any[]>([]);
-  const [storageLocations, setStorageLocations] = useState<any[]>([]);
+  // RTK Query hooks
+  const { data: specimenData, isLoading: loadingSpecimen } = useGetSpecimenQuery(id!, { skip: !id });
+  const { data: testRequestsData } = useGetTestRequestListQuery({ maxResultCount: 1000 });
+  const { data: specimenTypesData } = useGetActiveSpecimenTypesQuery();
+  const { data: storageLocationsData } = useGetActiveStorageLocationsQuery();
 
-  // Load master data
-  const loadMasterData = async () => {
-    try {
-      const [requestsResult, typesResult, locationsResult] = await Promise.all([
-        testRequestService.getList({ maxResultCount: 1000 }),
-        specimenTypeService.getActive(),
-        storageLocationService.getActive(),
-      ]);
-      setTestRequests(requestsResult.items.map((tr: any) => ({
-        id: tr.id,
-        requestNumber: tr.requestNumber,
-        customerName: tr.customerName,
-      })));
-      setSpecimenTypes(typesResult.items);
-      setStorageLocations(locationsResult.items);
-    } catch (error) {
-      console.error('Error loading master data:', error);
-      message.error('Không thể tải dữ liệu danh mục');
-    }
-  };
+  // Mutations
+  const [createSpecimen, { isLoading: isCreating }] = useCreateSpecimenMutation();
+  const [updateSpecimen, { isLoading: isUpdating }] = useUpdateSpecimenMutation();
 
+  // Derived data
+  const testRequests = useMemo(() => {
+    const items = testRequestsData?.items || [];
+    return items.map((tr: any) => ({
+      id: tr.id,
+      requestNumber: tr.requestNumber,
+      customerName: tr.customerName,
+    }));
+  }, [testRequestsData]);
+  const specimenTypes = useMemo(() => specimenTypesData?.items || [], [specimenTypesData]);
+  const storageLocations = useMemo(() => storageLocationsData?.items || [], [storageLocationsData]);
+  const loading = isCreating || isUpdating;
+
+  // Set form values when specimen data is loaded
   useEffect(() => {
-    loadMasterData();
-    if (isEditMode) {
-      loadData();
-    }
-  }, [id]);
-
-  const loadData = async () => {
-    if (!id) return;
-
-    setLoadingData(true);
-    try {
-      const data = await specimenService.get(id);
+    if (specimenData && isEditMode) {
       form.setFieldsValue({
-        ...data,
-        receivedDate: data.receivedDate ? dayjs(data.receivedDate) : null
+        ...specimenData,
+        receivedDate: specimenData.receivedDate ? dayjs(specimenData.receivedDate) : null,
       });
-      if (data.specimenImages) {
-        setSpecimenImages(data.specimenImages);
+      // Parse images from string if available
+      if (specimenData.images) {
+        try {
+          const parsedImages = JSON.parse(specimenData.images);
+          if (Array.isArray(parsedImages)) {
+            setSpecimenImages(parsedImages);
+          }
+        } catch {
+          // If not JSON, ignore
+        }
       }
-    } catch (error: any) {
-      message.error(t('messages.loadFailed'));
-      console.error('Failed to load specimen:', error);
-    } finally {
-      setLoadingData(false);
     }
-  };
+  }, [specimenData, isEditMode, form]);
 
   const onFinish = async (values: any) => {
-    setLoading(true);
     try {
       const payload = {
         ...values,
         receivedDate: values.receivedDate ? values.receivedDate.toISOString() : new Date().toISOString(),
-        specimenImages: specimenImages.map(f => ({
-          name: f.name,
-          url: f.url || f.response?.url,
-          type: f.type
-        }))
+        images: specimenImages.length > 0
+          ? JSON.stringify(specimenImages.map(f => ({
+              name: f.name,
+              url: f.url || f.response?.url,
+              type: f.type,
+            })))
+          : undefined,
       };
 
       if (isEditMode && id) {
-        await specimenService.update(id, payload);
+        await updateSpecimen({ id, data: payload }).unwrap();
         message.success(t('messages.updateSuccess'));
       } else {
-        await specimenService.create(payload);
+        await createSpecimen(payload).unwrap();
         message.success(t('messages.createSuccess'));
       }
       navigate('/specimens');
     } catch (error: any) {
-      message.error(isEditMode ? t('messages.updateFailed') : t('messages.createFailed'));
       console.error('Failed to save specimen:', error);
-    } finally {
-      setLoading(false);
+      message.error(error?.data?.error?.message || (isEditMode ? t('messages.updateFailed') : t('messages.createFailed')));
     }
   };
 
+  if (loadingSpecimen && isEditMode) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '50px' }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
+
   return (
-    <Card
-      title={isEditMode ? t('specimen.editSpecimen') : t('specimen.createSpecimen')}
-      loading={loadingData}
-    >
+    <Card title={isEditMode ? t('specimen.editSpecimen') : t('specimen.createSpecimen')}>
       <Form
         form={form}
         layout="vertical"
@@ -119,7 +119,7 @@ const SpecimenForm: React.FC = () => {
           receivedDate: dayjs(),
           quantity: 1,
           unit: 'Cái',
-          status: SpecimenStatus.Received
+          status: SpecimenStatus.Received,
         }}
       >
         {/* Thông tin cơ bản */}
@@ -136,10 +136,10 @@ const SpecimenForm: React.FC = () => {
                 placeholder={t('specimen.selectTestRequest')}
                 optionFilterProp="children"
                 filterOption={(input, option) =>
-                  (option?.children as string).toLowerCase().includes(input.toLowerCase())
+                  String(option?.children || '').toLowerCase().includes(input.toLowerCase())
                 }
               >
-                {testRequests.map(tr => (
+                {testRequests.map((tr: any) => (
                   <Select.Option key={tr.id} value={tr.id}>
                     {tr.requestNumber} - {tr.customerName}
                   </Select.Option>
@@ -165,7 +165,7 @@ const SpecimenForm: React.FC = () => {
               label={t('specimen.name')}
               rules={[
                 { required: true, message: t('validation.required') },
-                { max: 256, message: t('validation.maxLength', { max: 256 }) }
+                { max: 256, message: t('validation.maxLength', { max: 256 }) },
               ]}
             >
               <Input placeholder="Tên mẫu thử nghiệm" />
@@ -177,11 +177,11 @@ const SpecimenForm: React.FC = () => {
               label={t('specimen.type')}
               rules={[
                 { required: true, message: t('validation.required') },
-                { max: 256, message: t('validation.maxLength', { max: 256 }) }
+                { max: 256, message: t('validation.maxLength', { max: 256 }) },
               ]}
             >
               <Select placeholder="Chọn loại mẫu" showSearch optionFilterProp="children">
-                {specimenTypes.map(type => (
+                {specimenTypes.map((type: any) => (
                   <Select.Option key={type.id} value={type.name}>
                     {type.code} - {type.name}
                   </Select.Option>
@@ -207,7 +207,7 @@ const SpecimenForm: React.FC = () => {
               label={t('specimen.unit')}
               rules={[
                 { required: true, message: t('validation.required') },
-                { max: 50, message: t('validation.maxLength', { max: 50 }) }
+                { max: 50, message: t('validation.maxLength', { max: 50 }) },
               ]}
             >
               <Select placeholder="Đơn vị">
@@ -225,12 +225,10 @@ const SpecimenForm: React.FC = () => {
             <Form.Item
               name="storageLocation"
               label={t('specimen.storageLocation')}
-              rules={[
-                { max: 256, message: t('validation.maxLength', { max: 256 }) }
-              ]}
+              rules={[{ max: 256, message: t('validation.maxLength', { max: 256 }) }]}
             >
               <Select placeholder="Vị trí lưu mẫu" allowClear showSearch optionFilterProp="children">
-                {storageLocations.map(loc => (
+                {storageLocations.map((loc: any) => (
                   <Select.Option key={loc.id} value={loc.name}>
                     {loc.code} - {loc.name} ({loc.temperature || 'N/A'})
                   </Select.Option>
@@ -266,9 +264,7 @@ const SpecimenForm: React.FC = () => {
           name="deviation"
           label="Sai lệch của mẫu (nếu có)"
           tooltip="Ghi nhận các sai lệch so với yêu cầu ban đầu: thiếu số lượng, bao bì hư hỏng, nhiệt độ không đảm bảo..."
-          rules={[
-            { max: 1000, message: t('validation.maxLength', { max: 1000 }) }
-          ]}
+          rules={[{ max: 1000, message: t('validation.maxLength', { max: 1000 }) }]}
         >
           <TextArea
             rows={3}
@@ -318,9 +314,7 @@ const SpecimenForm: React.FC = () => {
         <Form.Item
           name="notes"
           label={t('specimen.notes')}
-          rules={[
-            { max: 2000, message: t('validation.maxLength', { max: 2000 }) }
-          ]}
+          rules={[{ max: 2000, message: t('validation.maxLength', { max: 2000 }) }]}
         >
           <TextArea rows={4} placeholder="Ghi chú thêm về mẫu..." />
         </Form.Item>

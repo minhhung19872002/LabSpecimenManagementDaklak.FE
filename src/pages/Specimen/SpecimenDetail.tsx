@@ -1,38 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Descriptions, Button, Space, message, Tag, Spin } from 'antd';
+import React from 'react';
+import { Card, Descriptions, Button, Space, Tag, Spin, Alert } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { specimenService } from '../../services/specimenService';
-import { SpecimenDto, SpecimenStatus } from '../../types/specimen';
+import { SpecimenStatus } from '../../types/specimen';
 import dayjs from 'dayjs';
 import './SpecimenDetail.css';
+
+// RTK Query imports
+import { useGetSpecimenQuery } from '../../store/api/specimenApi';
 
 const SpecimenDetail: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<SpecimenDto | null>(null);
 
-  useEffect(() => {
-    if (id) {
-      loadData(id);
-    }
-  }, [id]);
-
-  const loadData = async (specimenId: string) => {
-    setLoading(true);
-    try {
-      const result = await specimenService.get(specimenId);
-      setData(result);
-    } catch (error: any) {
-      console.error('Error loading specimen:', error);
-      message.error('Không thể tải thông tin mẫu');
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data, isLoading: loading, error } = useGetSpecimenQuery(id!, { skip: !id });
 
   const getStatusTag = (status: SpecimenStatus) => {
     const statusConfig = {
@@ -41,7 +23,7 @@ const SpecimenDetail: React.FC = () => {
       [SpecimenStatus.Storage]: { color: 'blue', text: t('specimen.status.storage') },
       [SpecimenStatus.Disposal]: { color: 'warning', text: t('specimen.status.disposal') },
       [SpecimenStatus.Destroyed]: { color: 'error', text: t('specimen.status.destroyed') },
-      [SpecimenStatus.ReturnedToCustomer]: { color: 'success', text: t('specimen.status.returnedToCustomer') }
+      [SpecimenStatus.ReturnedToCustomer]: { color: 'success', text: t('specimen.status.returnedToCustomer') },
     };
     const config = statusConfig[status];
     return <Tag color={config.color}>{config.text}</Tag>;
@@ -52,6 +34,17 @@ const SpecimenDetail: React.FC = () => {
       <div className="loading-container">
         <Spin size="large" />
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert
+        message="Lỗi"
+        description="Không thể tải thông tin mẫu. Vui lòng thử lại!"
+        type="error"
+        showIcon
+      />
     );
   }
 

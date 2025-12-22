@@ -3,7 +3,7 @@ import { Form, Input, Button, Card, Checkbox, message, Alert } from "antd";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
-import { authService } from "../../services/authService";
+import { useLoginMutation, authHelpers } from "../../store/api/authApi";
 import "./Login.css";
 
 interface LoginFormValues {
@@ -19,8 +19,10 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // RTK Query mutation
+  const [login, { isLoading: loading }] = useLoginMutation();
 
   // Get the return URL from location state
   const from = (location.state as any)?.from?.pathname || "/dashboard";
@@ -39,21 +41,20 @@ const Login: React.FC = () => {
 
   // Redirect if already logged in
   useEffect(() => {
-    if (authService.isAuthenticated()) {
+    if (authHelpers.isAuthenticated()) {
       navigate(from, { replace: true });
     }
   }, [navigate, from]);
 
   const onFinish = async (values: LoginFormValues) => {
-    setLoading(true);
     setError(null);
 
     try {
-      const response = await authService.login({
+      const response = await login({
         userNameOrEmail: values.username,
         password: values.password,
         rememberMe: values.rememberMe,
-      });
+      }).unwrap();
 
       // Check both success flag and accessToken
       if (response.success && response.accessToken) {
@@ -80,10 +81,10 @@ const Login: React.FC = () => {
       console.error("Login error:", err);
 
       // Handle different error cases
-      if (err.response?.status === 401) {
+      if (err.status === 401) {
         setError("Tên đăng nhập hoặc mật khẩu không đúng.");
-      } else if (err.response?.status === 400) {
-        const errorData = err.response?.data;
+      } else if (err.status === 400) {
+        const errorData = err.data;
         if (errorData?.errors) {
           const errorMessages = Object.values(errorData.errors)
             .flat()
@@ -96,17 +97,15 @@ const Login: React.FC = () => {
               "Thông tin đăng nhập không hợp lệ."
           );
         }
-      } else if (err.response?.status === 423) {
+      } else if (err.status === 423) {
         setError("Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.");
-      } else if (!err.response) {
+      } else if (!err.status) {
         setError(
           "Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng."
         );
       } else {
         setError("Đã xảy ra lỗi. Vui lòng thử lại sau.");
       }
-    } finally {
-      setLoading(false);
     }
   };
 
