@@ -34,11 +34,25 @@ const INDICATOR_GROUP_URL = '/api/v1/indicator-groups';
 const INDICATOR_URL = '/api/v1/indicators';
 const LABORATORY_URL = '/api/v1/laboratories';
 const FORM_TEMPLATE_URL = '/api/v1/form-templates';
+const MASTER_DATA_STATISTICS_URL = '/api/v1/master-data/statistics';
 
 // FormTemplate DTO
 export interface FormTemplateDto {
   fileName: string;
   name: string;
+}
+
+// Statistics DTO
+export interface MasterDataStatisticsDto {
+  departmentCount: number;
+  laboratoryCount: number;
+  specimenTypeCount: number;
+  testMethodCount: number;
+  storageLocationCount: number;
+  customerCount: number;
+  indicatorGroupCount: number;
+  indicatorCount: number;
+  formTemplateCount: number;
 }
 
 export const masterDataApi = createApi({
@@ -54,6 +68,7 @@ export const masterDataApi = createApi({
     'IndicatorGroup',
     'Indicator',
     'FormTemplate',
+    'MasterDataStatistics',
   ],
   endpoints: (builder) => ({
     // ============= Department =============
@@ -506,6 +521,12 @@ export const masterDataApi = createApi({
       query: () => FORM_TEMPLATE_URL,
       providesTags: [{ type: 'FormTemplate', id: 'LIST' }],
     }),
+
+    // ============= Statistics =============
+    getMasterDataStatistics: builder.query<MasterDataStatisticsDto, void>({
+      query: () => MASTER_DATA_STATISTICS_URL,
+      providesTags: [{ type: 'MasterDataStatistics', id: 'ALL' }],
+    }),
   }),
 });
 
@@ -583,6 +604,8 @@ export const {
   useCreateBulkIndicatorsMutation,
   // FormTemplate
   useGetFormTemplateListQuery,
+  // Statistics
+  useGetMasterDataStatisticsQuery,
 } = masterDataApi;
 
 export default masterDataApi;

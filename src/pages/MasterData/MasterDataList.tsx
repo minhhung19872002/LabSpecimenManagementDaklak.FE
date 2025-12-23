@@ -78,6 +78,7 @@ import {
 	useCreateCustomerMutation,
 	useUpdateCustomerMutation,
 	useDeleteCustomerMutation,
+	useGetMasterDataStatisticsQuery,
 } from "../../store/api/masterDataApi";
 import { useGetUserLookupQuery } from "../../store/api/userApi";
 
@@ -110,14 +111,35 @@ const MasterDataList: React.FC = () => {
 	const [downloadingTemplate, setDownloadingTemplate] = useState(false);
 	const [form] = Form.useForm();
 
-	// RTK Query hooks for fetching data
-	const { data: departmentsData, isLoading: loadingDepartments, isFetching: fetchingDepartments } = useGetDepartmentListQuery({ maxResultCount: 1000 });
-	const { data: laboratoriesData, isLoading: loadingLaboratories, isFetching: fetchingLaboratories } = useGetLaboratoryListQuery();
-	const { data: specimenTypesData, isLoading: loadingSpecimenTypes, isFetching: fetchingSpecimenTypes } = useGetSpecimenTypeListQuery({ maxResultCount: 1000 });
-	const { data: testMethodsData, isLoading: loadingTestMethods, isFetching: fetchingTestMethods } = useGetTestMethodListQuery({ maxResultCount: 1000 });
-	const { data: storageLocationsData, isLoading: loadingStorageLocations, isFetching: fetchingStorageLocations } = useGetStorageLocationListQuery({ maxResultCount: 1000 });
-	const { data: customersData, isLoading: loadingCustomers, isFetching: fetchingCustomers } = useGetCustomerListQuery({ maxResultCount: 1000 });
-	const { data: users = [] } = useGetUserLookupQuery();
+	// RTK Query: Statistics - always load for tab counts
+	const { data: statistics } = useGetMasterDataStatisticsQuery();
+
+	// RTK Query hooks for fetching data - only when tab is active
+	const { data: departmentsData, isLoading: loadingDepartments, isFetching: fetchingDepartments } = useGetDepartmentListQuery(
+		{ maxResultCount: 1000 },
+		{ skip: activeCategory !== "departments" }
+	);
+	const { data: laboratoriesData, isLoading: loadingLaboratories, isFetching: fetchingLaboratories } = useGetLaboratoryListQuery(
+		undefined,
+		{ skip: activeCategory !== "laboratories" }
+	);
+	const { data: specimenTypesData, isLoading: loadingSpecimenTypes, isFetching: fetchingSpecimenTypes } = useGetSpecimenTypeListQuery(
+		{ maxResultCount: 1000 },
+		{ skip: activeCategory !== "specimenTypes" }
+	);
+	const { data: testMethodsData, isLoading: loadingTestMethods, isFetching: fetchingTestMethods } = useGetTestMethodListQuery(
+		{ maxResultCount: 1000 },
+		{ skip: activeCategory !== "testMethods" }
+	);
+	const { data: storageLocationsData, isLoading: loadingStorageLocations, isFetching: fetchingStorageLocations } = useGetStorageLocationListQuery(
+		{ maxResultCount: 1000 },
+		{ skip: activeCategory !== "storageLocations" }
+	);
+	const { data: customersData, isLoading: loadingCustomers, isFetching: fetchingCustomers } = useGetCustomerListQuery(
+		{ maxResultCount: 1000 },
+		{ skip: activeCategory !== "customers" }
+	);
+	const { data: users = [] } = useGetUserLookupQuery(undefined, { skip: activeCategory !== "laboratories" });
 
 	// Mutations
 	const [createDepartment, { isLoading: creatingDepartment }] = useCreateDepartmentMutation();
@@ -523,11 +545,33 @@ const MasterDataList: React.FC = () => {
 		return baseColumns;
 	};
 
-	// Calculate stats
-	const totalItems = Object.values(data).reduce(
-		(sum, arr) => sum + arr.length,
-		0
-	);
+	// Helper to get count from statistics API
+	const getStatCount = (key: string): number => {
+		if (!statistics) return 0;
+		switch (key) {
+			case "departments": return statistics.departmentCount;
+			case "laboratories": return statistics.laboratoryCount;
+			case "specimenTypes": return statistics.specimenTypeCount;
+			case "testMethods": return statistics.testMethodCount;
+			case "storageLocations": return statistics.storageLocationCount;
+			case "customers": return statistics.customerCount;
+			case "indicators": return statistics.indicatorGroupCount;
+			case "formTemplates": return statistics.formTemplateCount;
+			default: return 0;
+		}
+	};
+
+	// Calculate total from statistics
+	const totalItems = statistics
+		? statistics.departmentCount +
+		  statistics.laboratoryCount +
+		  statistics.specimenTypeCount +
+		  statistics.testMethodCount +
+		  statistics.storageLocationCount +
+		  statistics.customerCount +
+		  statistics.indicatorGroupCount +
+		  statistics.formTemplateCount
+		: 0;
 
 	return (
 		<div>
@@ -554,7 +598,7 @@ const MasterDataList: React.FC = () => {
 							<Card>
 								<Statistic
 									title={label}
-									value={(data[key as keyof typeof data] as MasterDataItem[])?.length || 0}
+									value={getStatCount(key)}
 								/>
 							</Card>
 						</Col>
@@ -617,9 +661,7 @@ const MasterDataList: React.FC = () => {
 							label: (
 								<Space>
 									{label}
-									{key !== "indicators" && key !== "formTemplates" && (
-										<Tag>{(data[key as keyof typeof data] as MasterDataItem[])?.length || 0}</Tag>
-									)}
+									<Tag>{getStatCount(key)}</Tag>
 								</Space>
 							),
 							children:
