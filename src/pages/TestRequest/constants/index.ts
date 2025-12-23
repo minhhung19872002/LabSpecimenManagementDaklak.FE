@@ -26,3 +26,4 @@ export const STATUS_OPTIONS = [
 ];
 
 export * from "./form";
+export * from "./detail";

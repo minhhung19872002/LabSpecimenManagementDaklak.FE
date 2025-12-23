@@ -21,3 +21,4 @@ export interface TestRequestQueryParams {
 }
 
 export * from "./form";
+export * from "./detail";
