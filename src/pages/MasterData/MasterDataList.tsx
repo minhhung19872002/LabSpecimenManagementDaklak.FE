@@ -175,6 +175,7 @@ const MasterDataList: React.FC = () => {
 		storageLocations: storageLocationsData?.items || [],
 		customers: customersData?.items || [],
 		indicators: [],
+		formTemplates: [],
 	}), [departmentsData, laboratoriesData, specimenTypesData, testMethodsData, storageLocationsData, customersData]);
 
 	const loading = useMemo(() => ({

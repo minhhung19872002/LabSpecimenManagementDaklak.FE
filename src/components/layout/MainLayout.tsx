@@ -35,6 +35,7 @@ import {
   DownOutlined,
   MenuOutlined,
   CloseOutlined,
+  CheckCircleOutlined,
 } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
