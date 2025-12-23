@@ -56,6 +56,13 @@ import {
 
 import "./TestRequestForm.css";
 
+// Helper to format date without timezone shift (keeps local date)
+const formatDateForApi = (date: dayjs.Dayjs | null | undefined): string | undefined => {
+  if (!date) return undefined;
+  // Format as ISO string but use start of day in local timezone
+  return date.startOf('day').format('YYYY-MM-DDTHH:mm:ss.SSS[Z]');
+};
+
 const TestRequestForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -268,9 +275,9 @@ const TestRequestForm: React.FC = () => {
             indicatorId: indId,
             laboratoryId: labAssignment?.laboratoryId || undefined,
             unitPrice: indicator?.unitPrice || 0,
-            transferDate: indicatorDates?.transferDate?.toISOString() || undefined,
-            requestDate: labAssignment?.requestDate?.toISOString() ||
-              indicatorDates?.requestDate?.toISOString() || undefined,
+            transferDate: formatDateForApi(indicatorDates?.transferDate),
+            requestDate: formatDateForApi(labAssignment?.requestDate) ||
+              formatDateForApi(indicatorDates?.requestDate),
             sentToDepartment: !!labAssignment || indicatorModal.checkedIndicators.includes(indId),
           };
         }),
@@ -282,7 +289,7 @@ const TestRequestForm: React.FC = () => {
 
       const payload = {
         contractNumber: values.contractNumber || undefined,
-        contractDate: values.contractDate?.toISOString() || undefined,
+        contractDate: formatDateForApi(values.contractDate),
         sentToAccounting: values.sentToAccounting || false,
         paymentReceived: values.paymentReceived || false,
         sentToDepartment: values.sentToDepartment || false,
@@ -316,7 +323,7 @@ const TestRequestForm: React.FC = () => {
         sampleTypeContract: values.sampleTypeContract || false,
         sampleTypeTask: values.sampleTypeTask || false,
         sampleTypeSubContract: values.sampleTypeSubContract || false,
-        resultDeliveryDate: values.expectedCompletionDate?.toISOString() || undefined,
+        resultDeliveryDate: formatDateForApi(values.expectedCompletionDate),
         sampleStorage: values.sampleStorageOption ?? SampleStorageOption.No,
         totalCost: totalSampleCost,
         totalCostInWords: values.totalCostInWords || undefined,
@@ -325,9 +332,9 @@ const TestRequestForm: React.FC = () => {
         directorId: values.directorId || undefined,
         changeRequest: values.changeRequest || undefined,
         agreeTerms: values.agreeTerms || false,
-        requestDate: values.requestDate?.toISOString() || new Date().toISOString(),
+        requestDate: formatDateForApi(values.requestDate) || new Date().toISOString(),
         notes: values.notes || undefined,
-        expectedCompletionDate: values.expectedCompletionDate?.toISOString() || undefined,
+        expectedCompletionDate: formatDateForApi(values.expectedCompletionDate),
         subcontractor: values.subcontractor || undefined,
         samples: sampleDtos,
       };
