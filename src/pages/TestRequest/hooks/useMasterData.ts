@@ -59,7 +59,7 @@ export const useMasterData = () => {
 export const useOrganizationSearch = (organizations: any[]) => {
   const [organizationOptions, setOrganizationOptions] = useState<OrganizationOption[]>([]);
   const [organizationSearching, setOrganizationSearching] = useState(false);
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleOrganizationSearch = useCallback(
     (searchText: string) => {
