@@ -1,12 +1,10 @@
 import React from "react";
 import { Form, Input, Select, AutoComplete, Row, Col, Typography } from "antd";
-import { FormInstance } from "antd/es/form";
 import { Province, District, Ward } from "../../../../utils/vietnamLocations";
 
 const { Title } = Typography;
 
 interface CustomerInfoSectionProps {
-  form: FormInstance;
   isFieldLocked: (fieldName: string) => boolean;
   provinces: Province[];
   districts: District[];
@@ -19,7 +17,6 @@ interface CustomerInfoSectionProps {
 }
 
 const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
-  form,
   isFieldLocked,
   provinces,
   districts,
