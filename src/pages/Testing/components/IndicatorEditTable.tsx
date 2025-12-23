@@ -21,7 +21,7 @@ interface IndicatorEditTableProps {
   onShowRejectionHistory: (indicatorId: string, indicatorName: string) => void;
   onSaveIndicator: (indicatorId: string) => void;
   onSubmitForApproval: (indicatorId: string) => void;
-  submitting?: boolean;
+  submittingIds?: Set<string>;
 }
 
 const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
@@ -30,7 +30,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
   onShowRejectionHistory,
   onSaveIndicator,
   onSubmitForApproval,
-  submitting = false,
+  submittingIds = new Set(),
 }) => {
   const [editedResults, setEditedResults] = useState<
     Map<string, SaveIndicatorResultDto>
@@ -234,13 +234,14 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
         }
 
         // Editable row - show submit button only
+        const isSubmitting = submittingIds.has(record.id);
         return (
           <Button
             type="primary"
             size="small"
-            loading={submitting}
+            loading={isSubmitting}
             onClick={() => onSubmitForApproval(record.id)}
-            disabled={!canEditRow}
+            disabled={!canEditRow || isSubmitting}
           >
             Gửi duyệt
           </Button>
