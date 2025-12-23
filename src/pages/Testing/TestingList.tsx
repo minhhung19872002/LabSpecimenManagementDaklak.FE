@@ -1,335 +1,45 @@
-import React, { useState, useMemo } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import React from "react";
+import { Card, Button, Space } from "antd";
+import { ExperimentOutlined, ReloadOutlined } from "@ant-design/icons";
+import { useTestingList } from "./hooks";
 import {
-  Card,
-  Table,
-  Button,
-  Space,
-  Tag,
-  Input,
-  Row,
-  Col,
-  Select,
-  Statistic,
-  Tabs,
-  Typography,
-} from "antd";
-import {
-  ExperimentOutlined,
-  SearchOutlined,
-  ReloadOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  SyncOutlined,
-  UserOutlined,
-  TeamOutlined,
-} from "@ant-design/icons";
-import type { ColumnsType } from "antd/es/table";
-import dayjs from "dayjs";
-import { useGetTestingListQuery } from "../../store/api/testingApi";
-import { useGetTechniciansByLaboratoryQuery } from "../../store/api/laboratoryTaskApi";
-import {
-  TestingListDto,
-  TestingStatus,
-  TestingStatusLabels,
-  TestingStatusColors,
-  TestingTabType,
-} from "../../types/testing";
-
-const { Text } = Typography;
+  TestingStatistics,
+  TestingFilters,
+  TestingTable,
+} from "./components";
 
 const TestingList: React.FC = () => {
-  const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [searchText, setSearchText] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<TestingStatus | undefined>(
-    undefined
-  );
-  const [technicianFilter, setTechnicianFilter] = useState<string[]>([]);
-
-  // Read tab from URL, default to MyAssignments
-  const tabFromUrl = searchParams.get("tab");
-  const [activeTab, setActiveTab] = useState<TestingTabType>(
-    tabFromUrl === "all" ? TestingTabType.All : TestingTabType.MyAssignments
-  );
-
-  // Pagination state
-  const [pagination, setPagination] = useState({
-    current: 1,
-    pageSize: 50,
-  });
-
-  // RTK Query hooks
   const {
-    data: taskData,
-    isLoading: loading,
+    // Data
+    tasks,
+    totalCount,
+    stats,
+    loading,
     isFetching,
-    refetch,
-  } = useGetTestingListQuery({
-    skipCount: (pagination.current - 1) * pagination.pageSize,
-    maxResultCount: pagination.pageSize,
-    tab: activeTab,
-    search: debouncedSearch || undefined,
-    statuses: statusFilter !== undefined ? [statusFilter] : undefined,
-    technicianIds: technicianFilter.length > 0 ? technicianFilter : undefined,
-  });
+    technicians,
+    loadingTechnicians,
 
-  // Technicians for filter dropdown (no laboratory filter)
-  const { data: technicians = [], isLoading: loadingTechnicians } =
-    useGetTechniciansByLaboratoryQuery(undefined);
+    // Filter states
+    searchText,
+    setSearchText,
+    statusFilter,
+    technicianFilter,
+    activeTab,
+    pagination,
 
-  const tasks = taskData?.items || [];
-  const totalCount = taskData?.totalCount || 0;
-
-  const getStatusTag = (status: TestingStatus) => {
-    const label = TestingStatusLabels[status];
-    const color = TestingStatusColors[status];
-
-    const iconMap: Record<TestingStatus, React.ReactNode> = {
-      [TestingStatus.Todo]: <ClockCircleOutlined />,
-      [TestingStatus.InProgress]: <SyncOutlined spin />,
-      [TestingStatus.Done]: <CheckCircleOutlined />,
-    };
-
-    return (
-      <Tag color={color} icon={iconMap[status]}>
-        {label}
-      </Tag>
-    );
-  };
-
-  // Statistics (computed from current page data)
-  const stats = useMemo(
-    () => ({
-      total: totalCount,
-      todo: tasks.filter((t) => t.testingStatus === TestingStatus.Todo).length,
-      inProgress: tasks.filter(
-        (t) => t.testingStatus === TestingStatus.InProgress
-      ).length,
-      done: tasks.filter((t) => t.testingStatus === TestingStatus.Done).length,
-    }),
-    [tasks, totalCount]
-  );
-
-  const handleSearch = (value: string) => {
-    setDebouncedSearch(value);
-    setPagination((prev) => ({ ...prev, current: 1 }));
-  };
-
-  const handleStatusFilterChange = (value: TestingStatus | undefined) => {
-    setStatusFilter(value);
-    setPagination((prev) => ({ ...prev, current: 1 }));
-  };
-
-  const handleTechnicianFilterChange = (values: string[]) => {
-    setTechnicianFilter(values);
-    setPagination((prev) => ({ ...prev, current: 1 }));
-  };
-
-  const handleTabChange = (key: string) => {
-    const newTab = Number(key) as TestingTabType;
-    setActiveTab(newTab);
-    setPagination((prev) => ({ ...prev, current: 1 }));
-    // Update URL to preserve tab state
-    setSearchParams({ tab: newTab === TestingTabType.All ? "all" : "my" });
-  };
-
-  const handleTableChange = (paginationConfig: any) => {
-    setPagination((prev) => ({
-      ...prev,
-      current: paginationConfig.current,
-      pageSize: paginationConfig.pageSize,
-    }));
-  };
-
-  const handleRefresh = () => {
-    setSearchText("");
-    setDebouncedSearch("");
-    setStatusFilter(undefined);
-    setTechnicianFilter([]);
-    setPagination((prev) => ({ ...prev, current: 1 }));
-    refetch();
-  };
-
-  const columns: ColumnsType<TestingListDto> = [
-    {
-      title: "Số hợp đồng",
-      dataIndex: "contractNumber",
-      key: "contractNumber",
-      width: 150,
-      fixed: "left",
-      render: (value: string) => value || "-",
-    },
-    {
-      title: "Tổng mẫu",
-      dataIndex: "totalSampleCount",
-      key: "totalSampleCount",
-      width: 100,
-      align: "center",
-    },
-    {
-      title: "Tổng CT",
-      dataIndex: "totalIndicatorCount",
-      key: "totalIndicatorCount",
-      width: 100,
-      align: "center",
-    },
-    {
-      title: "Kỹ thuật viên",
-      dataIndex: "technicianNames",
-      key: "technicianNames",
-      width: 180,
-      ellipsis: true,
-      render: (value: string) => value || "-",
-    },
-    {
-      title: "Ngày chuyển đi",
-      dataIndex: "transferDate",
-      key: "transferDate",
-      width: 140,
-      render: (date: string) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
-    },
-    {
-      title: "Ngày YC xong",
-      dataIndex: "requestCompletionDate",
-      key: "requestCompletionDate",
-      width: 130,
-      render: (date: string, record: TestingListDto) => {
-        if (!date) return "-";
-        const d = dayjs(date);
-        // Highlight if urgent (<=5 days remaining) and not done
-        const shouldHighlight =
-          record.isUrgent && record.testingStatus !== TestingStatus.Done;
-        return (
-          <span
-            style={{
-              color: shouldHighlight ? "#ff4d4f" : undefined,
-              fontWeight: shouldHighlight ? "bold" : undefined,
-            }}
-          >
-            {d.format("DD/MM/YYYY")}
-          </span>
-        );
-      },
-    },
-    {
-      title: "Ngày thí nghiệm",
-      dataIndex: "testDate",
-      key: "testDate",
-      width: 140,
-      render: (date: string) =>
-        date ? (
-          dayjs(date).format("DD/MM/YYYY")
-        ) : (
-          <Text type="secondary">Chưa đặt</Text>
-        ),
-    },
-    {
-      title: "Trạng thái",
-      dataIndex: "testingStatus",
-      key: "testingStatus",
-      width: 140,
-      render: (status: TestingStatus) => getStatusTag(status),
-    },
-  ];
-
-  const renderTable = (data: TestingListDto[]) => (
-    <Table
-      columns={columns}
-      dataSource={data}
-      rowKey="id"
-      loading={loading || isFetching}
-      pagination={{
-        current: pagination.current,
-        pageSize: pagination.pageSize,
-        total: totalCount,
-        pageSizeOptions: [20, 50, 100],
-        showSizeChanger: true,
-        showTotal: (total, range) =>
-          `${range[0]}-${range[1]} của ${total} xét nghiệm`,
-      }}
-      onChange={handleTableChange}
-      scroll={{ x: 1000 }}
-      onRow={(record) => ({
-        onDoubleClick: () =>
-          navigate(
-            `/testing/${record.laboratoryTaskId}?viewMode=${
-              activeTab === TestingTabType.MyAssignments ? "my" : "all"
-            }`
-          ),
-        style: { cursor: "pointer" },
-      })}
-      rowClassName={(record) =>
-        record.isUrgent && record.testingStatus !== TestingStatus.Done
-          ? "urgent-row"
-          : ""
-      }
-    />
-  );
-
-  const tabItems = [
-    {
-      key: String(TestingTabType.MyAssignments),
-      label: (
-        <span>
-          <UserOutlined />
-          Phân công của tôi
-        </span>
-      ),
-    },
-    {
-      key: String(TestingTabType.All),
-      label: (
-        <span>
-          <TeamOutlined />
-          Hiển thị tất cả
-        </span>
-      ),
-    },
-  ];
+    // Handlers
+    handleSearch,
+    handleStatusFilterChange,
+    handleTechnicianFilterChange,
+    handleTabChange,
+    handleTableChange,
+    handleRefresh,
+    handleRowDoubleClick,
+  } = useTestingList();
 
   return (
     <div>
-      {/* Statistics Cards */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col xs={12} sm={8} md={6}>
-          <Card size="small">
-            <Statistic
-              title="Tổng xét nghiệm"
-              value={stats.total}
-              prefix={<ExperimentOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={8} md={6}>
-          <Card size="small">
-            <Statistic
-              title="Cần làm"
-              value={stats.todo}
-              valueStyle={{ color: "#8c8c8c" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={8} md={6}>
-          <Card size="small">
-            <Statistic
-              title="Đang thí nghiệm"
-              value={stats.inProgress}
-              valueStyle={{ color: "#1890ff" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={8} md={6}>
-          <Card size="small">
-            <Statistic
-              title="Đã xong"
-              value={stats.done}
-              valueStyle={{ color: "#52c41a" }}
-            />
-          </Card>
-        </Col>
-      </Row>
+      <TestingStatistics stats={stats} />
 
       <Card
         title={
@@ -348,65 +58,28 @@ const TestingList: React.FC = () => {
           </Button>
         }
       >
-        {/* Tabs */}
-        <Tabs
-          activeKey={String(activeTab)}
-          onChange={handleTabChange}
-          items={tabItems}
-          style={{ marginBottom: 16 }}
+        <TestingFilters
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          searchText={searchText}
+          onSearchTextChange={setSearchText}
+          onSearch={handleSearch}
+          statusFilter={statusFilter}
+          onStatusFilterChange={handleStatusFilterChange}
+          technicianFilter={technicianFilter}
+          onTechnicianFilterChange={handleTechnicianFilterChange}
+          technicians={technicians}
+          loadingTechnicians={loadingTechnicians}
         />
 
-        {/* Search & Filter */}
-        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          <Col xs={24} sm={12} md={8}>
-            <Input.Search
-              placeholder="Tìm theo số hợp đồng..."
-              prefix={<SearchOutlined />}
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              onSearch={handleSearch}
-              allowClear
-              enterButton
-            />
-          </Col>
-          <Col xs={24} sm={6} md={4}>
-            <Select
-              style={{ width: "100%" }}
-              placeholder="Trạng thái"
-              value={statusFilter}
-              onChange={handleStatusFilterChange}
-              allowClear
-            >
-              <Select.Option value={TestingStatus.Todo}>Cần làm</Select.Option>
-              <Select.Option value={TestingStatus.InProgress}>
-                Đang thí nghiệm
-              </Select.Option>
-              <Select.Option value={TestingStatus.Done}>Đã xong</Select.Option>
-            </Select>
-          </Col>
-          <Col xs={24} sm={6} md={4}>
-            <Select
-              mode="multiple"
-              style={{ width: "100%" }}
-              placeholder="Kỹ thuật viên"
-              value={technicianFilter}
-              onChange={handleTechnicianFilterChange}
-              allowClear
-              loading={loadingTechnicians}
-              maxTagCount={1}
-              optionFilterProp="children"
-              showSearch
-            >
-              {technicians.map((tech) => (
-                <Select.Option key={tech.id} value={tech.id}>
-                  {tech.displayName || tech.userName}
-                </Select.Option>
-              ))}
-            </Select>
-          </Col>
-        </Row>
-
-        {renderTable(tasks)}
+        <TestingTable
+          tasks={tasks}
+          loading={loading || isFetching}
+          pagination={pagination}
+          totalCount={totalCount}
+          onTableChange={handleTableChange}
+          onRowDoubleClick={handleRowDoubleClick}
+        />
       </Card>
 
       <style>{`
