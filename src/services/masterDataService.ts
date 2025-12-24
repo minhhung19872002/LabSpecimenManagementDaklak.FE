@@ -198,6 +198,19 @@ export interface IndicatorFilterDto extends PagedAndSortedResultRequestDto {
   isActive?: boolean;
 }
 
+// MasterData Statistics
+export interface MasterDataStatisticsDto {
+  departmentCount: number;
+  laboratoryCount: number;
+  specimenTypeCount: number;
+  testMethodCount: number;
+  storageLocationCount: number;
+  customerCount: number;
+  indicatorGroupCount: number;
+  indicatorCount: number;
+  formTemplateCount: number;
+}
+
 // Service implementations - Using new API v1 endpoints
 const DEPARTMENT_URL = '/api/v1/departments';
 const SPECIMEN_TYPE_URL = '/api/v1/specimen-types';
@@ -207,14 +220,28 @@ const CUSTOMER_URL = '/api/v1/customers';
 const INDICATOR_GROUP_URL = '/api/v1/indicator-groups';
 const INDICATOR_URL = '/api/v1/indicators';
 const LABORATORY_URL = '/api/v1/laboratories';
+const MASTER_DATA_STATISTICS_URL = '/api/v1/master-data/statistics';
 
-// Helper to convert params for API (ABP Framework uses SkipCount, MaxResultCount, Sorting)
+// Helper to convert params for API (API uses Page/Limit instead of SkipCount/MaxResultCount)
 const toApiParams = (params: PagedAndSortedResultRequestDto) => {
   const apiParams: Record<string, any> = {};
-  if (params.skipCount !== undefined) apiParams.SkipCount = params.skipCount;
-  if (params.maxResultCount !== undefined) apiParams.MaxResultCount = params.maxResultCount;
+  // Convert skipCount/maxResultCount to Page/Limit
+  const limit = params.maxResultCount || 10;
+  const skipCount = params.skipCount || 0;
+  const page = Math.floor(skipCount / limit) + 1;
+
+  apiParams.Page = page;
+  apiParams.Limit = limit;
   if (params.sorting) apiParams.Sorting = params.sorting;
   return apiParams;
+};
+
+// MasterData Statistics Service
+export const masterDataStatisticsService = {
+  getStatistics: async (): Promise<MasterDataStatisticsDto> => {
+    const response = await api.get<MasterDataStatisticsDto>(MASTER_DATA_STATISTICS_URL);
+    return response.data;
+  },
 };
 
 export const departmentService = {
