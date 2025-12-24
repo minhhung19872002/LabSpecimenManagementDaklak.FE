@@ -1,11 +1,11 @@
 // @ts-nocheck
 import React, { useEffect } from "react";
-import { Modal, Button, Checkbox, Typography, DatePicker } from "antd";
-import { CloseOutlined } from "@ant-design/icons";
+import { Modal, Button, Checkbox, Typography } from "antd";
 import { Icon } from "@iconify/react";
 import dayjs from "dayjs";
 import { IndicatorGroupDto, IndicatorDto } from "../../../../services/masterDataService";
 import { IndicatorDateInfo, LaboratoryAssignment } from "../types";
+import IndicatorRow from "./IndicatorRow";
 
 const { Text } = Typography;
 
@@ -83,74 +83,17 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     }
   }, [visible, tempSelectedIndicators]);
 
-  // Render indicator row
-  const renderIndicatorRow = (id: string, isInGroup: boolean = false) => {
-    const ind = getIndicatorInfo(id);
-    if (!ind) return null;
-    return (
-      <div
-        key={id}
-        style={{
-          padding: isInGroup ? "8px 12px 8px 36px" : "8px 12px",
-          borderBottom: "1px solid #f5f5f5",
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          background: "#fff",
-        }}
-      >
-        <Checkbox
-          checked={checkedIndicators.includes(id)}
-          onChange={() => toggleCheckedIndicator(id)}
-          style={{ width: 24 }}
-        />
-        <span style={{ flex: 1, fontSize: 13 }}>{ind.name}</span>
-        <span
-          style={{
-            fontSize: 12,
-            color: "#888",
-            width: 80,
-            textAlign: "right",
-          }}
-        >
-          {ind.unitPrice?.toLocaleString("vi-VN")}đ
-        </span>
-        <DatePicker
-          value={selectedIndicatorDates[id]?.transferDate}
-          onChange={(date) => handleIndicatorDateChange(id, "transferDate", date)}
-          format="DD/MM/YYYY"
-          size="small"
-          style={{ width: 110 }}
-          placeholder="Chuyển giao"
-        />
-        <DatePicker
-          value={selectedIndicatorDates[id]?.requestDate}
-          onChange={(date) => handleIndicatorDateChange(id, "requestDate", date)}
-          format="DD/MM/YYYY"
-          size="small"
-          style={{ width: 110 }}
-          placeholder="Yêu cầu"
-        />
-        <Button
-          type="text"
-          size="small"
-          danger
-          icon={<CloseOutlined />}
-          style={{ width: 32 }}
-          onClick={() => {
-            toggleIndicator(id);
-            const labMapKey = `${currentSampleKey}_${id}`;
-            if (indicatorLaboratoryMap[labMapKey]) {
-              setIndicatorLaboratoryMap((prev) => {
-                const updated = { ...prev };
-                delete updated[labMapKey];
-                return updated;
-              });
-            }
-          }}
-        />
-      </div>
-    );
+  // Handle remove indicator
+  const handleRemoveIndicator = (id: string) => {
+    toggleIndicator(id);
+    const labMapKey = `${currentSampleKey}_${id}`;
+    if (indicatorLaboratoryMap[labMapKey]) {
+      setIndicatorLaboratoryMap((prev) => {
+        const updated = { ...prev };
+        delete updated[labMapKey];
+        return updated;
+      });
+    }
   };
 
   // Separate sent and unsent indicators
@@ -483,7 +426,20 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
             {/* Table body */}
             <div style={{ flex: 1, overflowY: "auto" }}>
               {/* Unsent indicators */}
-              {unsentIndicators.map((id) => renderIndicatorRow(id, false))}
+              {unsentIndicators.map((id) => (
+                <IndicatorRow
+                  key={id}
+                  id={id}
+                  isInGroup={false}
+                  indicator={getIndicatorInfo(id)}
+                  isChecked={checkedIndicators.includes(id)}
+                  transferDate={selectedIndicatorDates[id]?.transferDate}
+                  requestDate={selectedIndicatorDates[id]?.requestDate}
+                  onCheckChange={toggleCheckedIndicator}
+                  onDateChange={handleIndicatorDateChange}
+                  onRemove={handleRemoveIndicator}
+                />
+              ))}
 
               {/* Sent indicators grouped by laboratory */}
               {Object.entries(groupedByLab).map(
@@ -523,7 +479,20 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                         </span>
                       </div>
                       {isExpanded &&
-                        labIndicators.map((id) => renderIndicatorRow(id, true))}
+                        labIndicators.map((id) => (
+                          <IndicatorRow
+                            key={id}
+                            id={id}
+                            isInGroup={true}
+                            indicator={getIndicatorInfo(id)}
+                            isChecked={checkedIndicators.includes(id)}
+                            transferDate={selectedIndicatorDates[id]?.transferDate}
+                            requestDate={selectedIndicatorDates[id]?.requestDate}
+                            onCheckChange={toggleCheckedIndicator}
+                            onDateChange={handleIndicatorDateChange}
+                            onRemove={handleRemoveIndicator}
+                          />
+                        ))}
                     </div>
                   );
                 }
