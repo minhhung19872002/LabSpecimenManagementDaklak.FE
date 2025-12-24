@@ -1,5 +1,5 @@
 import { Button, Space, Tag, Tooltip, Popconfirm } from "antd";
-import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { EditOutlined, DeleteOutlined, StopOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { GroupedTestMethodData, TestMethodIndicatorDto } from "../types";
 
@@ -8,7 +8,8 @@ export const DEFAULT_PAGE_SIZE = 50;
 // Columns cho bảng phương pháp (group level)
 export const getTestMethodColumns = (
   handleEdit: (record: GroupedTestMethodData) => void,
-  handleDelete: (id: string) => void
+  handleDelete: (id: string) => void,
+  handleToggleActive: (id: string) => void
 ): ColumnsType<GroupedTestMethodData> => [
   {
     title: "Tên phương pháp",
@@ -19,7 +20,7 @@ export const getTestMethodColumns = (
     title: "Trạng thái",
     dataIndex: "isActive",
     key: "isActive",
-    width: 120,
+    width: 100,
     render: (isActive: boolean) => (
       <Tag color={isActive ? "green" : "red"}>
         {isActive ? "Hoạt động" : "Ngừng"}
@@ -29,9 +30,20 @@ export const getTestMethodColumns = (
   {
     title: "Thao tác",
     key: "actions",
-    width: 100,
+    width: 120,
     render: (_, record) => (
       <Space size="small">
+        <Tooltip title={record.isActive ? "Tắt hoạt động" : "Bật hoạt động"}>
+          <Button
+            type="link"
+            size="small"
+            icon={record.isActive ? <StopOutlined /> : <CheckCircleOutlined />}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleToggleActive(record.id);
+            }}
+          />
+        </Tooltip>
         <Tooltip title="Sửa">
           <Button
             type="link"

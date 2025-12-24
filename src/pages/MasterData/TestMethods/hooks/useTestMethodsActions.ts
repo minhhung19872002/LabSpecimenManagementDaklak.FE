@@ -168,6 +168,25 @@ export const useTestMethodsActions = ({
     }
   };
 
+  // Toggle active status
+  const handleToggleActive = async (id: string) => {
+    try {
+      const result = await testMethodService.toggleActive(id);
+      message.success(
+        result.isActive
+          ? "Đã kích hoạt phương pháp thử!"
+          : "Đã ngừng kích hoạt phương pháp thử!"
+      );
+      fetchData();
+      onDataChange?.();
+    } catch (error: any) {
+      console.error("Failed to toggle active:", error);
+      const errorMsg =
+        error?.response?.data?.error?.message || "Không thể thay đổi trạng thái";
+      message.error(errorMsg);
+    }
+  };
+
   return {
     // TestMethod modal
     modalOpen,
@@ -190,5 +209,8 @@ export const useTestMethodsActions = ({
 
     // Remove indicator
     handleRemoveIndicator,
+
+    // Toggle active
+    handleToggleActive,
   };
 };
