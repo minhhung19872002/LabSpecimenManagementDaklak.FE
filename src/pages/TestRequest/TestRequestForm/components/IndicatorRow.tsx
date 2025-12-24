@@ -1,15 +1,16 @@
 // @ts-nocheck
 import React from "react";
-import { Button, Checkbox, DatePicker } from "antd";
+import { Button, Checkbox, DatePicker, Tooltip } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { IndicatorDto } from "../../../../services/masterDataService";
-import { IndicatorDateInfo, LaboratoryAssignment } from "../types";
 
 interface IndicatorRowProps {
-  id: string;
+  id: string; // IndicatorMethodKey: indicatorId_testMethodId
   isInGroup?: boolean;
   indicator: IndicatorDto | undefined;
+  methodName: string; // NEW: Phương pháp thử
+  unitPrice: number; // NEW: Giá từ TestMethodIndicator
   isChecked: boolean;
   transferDate?: dayjs.Dayjs;
   requestDate?: dayjs.Dayjs;
@@ -22,6 +23,8 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
   id,
   isInGroup = false,
   indicator,
+  methodName,
+  unitPrice,
   isChecked,
   transferDate,
   requestDate,
@@ -47,7 +50,33 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
         onChange={() => onCheckChange(id)}
         style={{ width: 24 }}
       />
-      <span style={{ flex: 1, fontSize: 13 }}>{indicator.name}</span>
+      <Tooltip title={indicator.name}>
+        <span
+          style={{
+            flex: 1,
+            fontSize: 13,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {indicator.name}
+        </span>
+      </Tooltip>
+      <Tooltip title={methodName}>
+        <span
+          style={{
+            width: 150,
+            fontSize: 12,
+            color: "#1890ff",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {methodName}
+        </span>
+      </Tooltip>
       <span
         style={{
           fontSize: 12,
@@ -56,7 +85,7 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
           textAlign: "right",
         }}
       >
-        {indicator.unitPrice?.toLocaleString("vi-VN")}đ
+        {unitPrice?.toLocaleString("vi-VN")}đ
       </span>
       <DatePicker
         value={transferDate}
@@ -65,6 +94,7 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
         size="small"
         style={{ width: 110 }}
         placeholder="Chuyển giao"
+        disabled // Ngày chuyển giao disabled, auto-set ngày hiện tại
       />
       <DatePicker
         value={requestDate}
@@ -73,6 +103,10 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
         size="small"
         style={{ width: 110 }}
         placeholder="Yêu cầu"
+        disabledDate={(current) => {
+          // Không cho chọn ngày quá khứ
+          return current && current.isBefore(dayjs().startOf("day"));
+        }}
       />
       <Button
         type="text"

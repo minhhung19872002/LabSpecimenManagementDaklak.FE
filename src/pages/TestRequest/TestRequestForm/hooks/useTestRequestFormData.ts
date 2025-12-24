@@ -9,10 +9,12 @@ import {
   indicatorService,
   storageLocationService,
   laboratoryService,
+  testMethodService,
   IndicatorDto,
   IndicatorGroupDto,
   StorageLocationDto,
   LaboratoryDto,
+  TestMethodWithIndicatorsDto,
 } from "../../../../services/masterDataService";
 import { userService, UserLookupDto } from "../../../../services/userService";
 import { organizationService } from "../../../../services/organizationService";
@@ -30,7 +32,15 @@ import {
   Ward,
 } from "../../../../utils/vietnamLocations";
 import { LOCKED_FIELDS } from "../constants";
-import { SampleFormData, IndicatorDateInfo, LaboratoryAssignment } from "../types";
+import {
+  SampleFormData,
+  IndicatorDateInfo,
+  LaboratoryAssignment,
+  IndicatorMethodInfo,
+  IndicatorMethodKey,
+  createIndicatorMethodKey,
+  parseIndicatorMethodKey,
+} from "../types";
 
 export const useTestRequestFormData = () => {
   const navigate = useNavigate();
@@ -65,13 +75,19 @@ export const useTestRequestFormData = () => {
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [laboratories, setLaboratories] = useState<LaboratoryDto[]>([]);
 
+  // Test methods and indicator-method mapping
+  const [testMethods, setTestMethods] = useState<TestMethodWithIndicatorsDto[]>([]);
+  const [indicatorMethodsMap, setIndicatorMethodsMap] = useState<Record<string, IndicatorMethodInfo[]>>({});
+
   // Costs
   const [totalSampleCost, setTotalSampleCost] = useState(0);
 
   // Indicator modal state
   const [indicatorModalVisible, setIndicatorModalVisible] = useState(false);
   const [currentSampleKey, setCurrentSampleKey] = useState<string | null>(null);
-  const [tempSelectedIndicators, setTempSelectedIndicators] = useState<string[]>([]);
+  const [tempSelectedIndicators, setTempSelectedIndicators] = useState<string[]>([]); // deprecated
+  const [tempSelectedIndicatorMethods, setTempSelectedIndicatorMethods] = useState<IndicatorMethodKey[]>([]);
+  const [expandedIndicators, setExpandedIndicators] = useState<string[]>([]); // For 3-level tree in left panel
   const [selectedGroupFilter, setSelectedGroupFilter] = useState<string>("all");
   const [indicatorSearchText, setIndicatorSearchText] = useState<string>("");
   const [groupSelectorVisible, setGroupSelectorVisible] = useState(false);
@@ -115,13 +131,14 @@ export const useTestRequestFormData = () => {
   // Load master data
   const loadMasterData = async () => {
     try {
-      const [groupsData, indicatorsData, locationsData, usersData, orgsData, labsData] = await Promise.all([
+      const [groupsData, indicatorsData, locationsData, usersData, orgsData, labsData, methodsData] = await Promise.all([
         indicatorGroupService.getActive(),
         indicatorService.getActive(),
         storageLocationService.getActive(),
         userService.getLookup(),
         organizationService.getAllActive(),
         laboratoryService.getActive(),
+        testMethodService.getWithIndicators(),
       ]);
       setIndicatorGroups(groupsData);
       setIndicators(indicatorsData);
@@ -129,6 +146,27 @@ export const useTestRequestFormData = () => {
       setUsers(usersData);
       setOrganizations(orgsData);
       setLaboratories(labsData || []);
+      setTestMethods(methodsData || []);
+
+      // Build map: indicatorId -> methods[]
+      const methodMap: Record<string, IndicatorMethodInfo[]> = {};
+      (methodsData || []).forEach((method) => {
+        method.indicators?.forEach((ind) => {
+          if (ind.isActive) {
+            if (!methodMap[ind.indicatorId]) {
+              methodMap[ind.indicatorId] = [];
+            }
+            methodMap[ind.indicatorId].push({
+              testMethodId: method.id,
+              testMethodCode: method.code,
+              testMethodName: method.name,
+              unitPrice: ind.unitPrice,
+              isActive: ind.isActive,
+            });
+          }
+        });
+      });
+      setIndicatorMethodsMap(methodMap);
     } catch (error) {
       console.error("Failed to load master data:", error);
       message.error("Không thể tải dữ liệu danh mục");
@@ -244,24 +282,36 @@ export const useTestRequestFormData = () => {
 
       // Load samples
       if (data.samples && data.samples.length > 0) {
-        const sampleData: SampleFormData[] = data.samples.map((sample, index) => ({
-          key: sample.id || `sample-${index}`,
-          id: sample.id,
-          sortOrder: sample.sortOrder,
-          sampleCode: sample.sampleCode,
-          sampleName: sample.sampleName,
-          samplingAddress: sample.samplingAddress,
-          sampleQuantity: sample.sampleQuantity,
-          status: sample.status,
-          statusText: sample.statusText || "",
-          processingStatus: sample.processingStatus || "",
-          notes: sample.notes,
-          storageLocation: sample.storageLocation,
-          indicatorIds: sample.indicators?.map((ind) => ind.indicatorId) || [],
-        }));
+        const sampleData: SampleFormData[] = data.samples.map((sample, index) => {
+          // Build indicatorMethods from indicators (indicatorId + testMethodId)
+          const indicatorMethods: IndicatorMethodKey[] = [];
+          sample.indicators?.forEach((ind) => {
+            if (ind.indicatorId && ind.testMethodId) {
+              indicatorMethods.push(createIndicatorMethodKey(ind.indicatorId, ind.testMethodId));
+            }
+          });
+
+          return {
+            key: sample.id || `sample-${index}`,
+            id: sample.id,
+            sortOrder: sample.sortOrder,
+            sampleCode: sample.sampleCode,
+            sampleName: sample.sampleName,
+            samplingAddress: sample.samplingAddress,
+            sampleQuantity: sample.sampleQuantity,
+            status: sample.status,
+            statusText: sample.statusText || "",
+            processingStatus: sample.processingStatus || "",
+            notes: sample.notes,
+            storageLocation: sample.storageLocation,
+            indicatorIds: sample.indicators?.map((ind) => ind.indicatorId) || [],
+            indicatorMethods: indicatorMethods,
+          };
+        });
         setSamples(sampleData);
 
         // Restore indicator dates, checked states, and laboratory assignments
+        // Now using IndicatorMethodKey format
         const restoredDates: Record<string, IndicatorDateInfo> = {};
         const restoredChecked: string[] = [];
         const restoredLabMap: Record<string, LaboratoryAssignment> = {};
@@ -270,18 +320,38 @@ export const useTestRequestFormData = () => {
         data.samples.forEach((sample, sampleIndex) => {
           const sampleKey = sample.id || `sample-${sampleIndex}`;
           sample.indicators?.forEach((ind) => {
-            restoredDates[ind.indicatorId] = {
-              transferDate: ind.transferDate ? dayjs(ind.transferDate) : undefined,
-              requestDate: ind.requestDate ? dayjs(ind.requestDate) : undefined,
+            // Create IndicatorMethodKey for each indicator
+            const methodKey = ind.testMethodId
+              ? createIndicatorMethodKey(ind.indicatorId, ind.testMethodId)
+              : ind.indicatorId; // Fallback for old data without testMethodId
+
+            // Parse dates - handle both UTC formats:
+            // 1. With Z suffix: "2025-12-24T22:55:31.290Z" (explicit UTC)
+            // 2. Without Z suffix: "2025-12-24T22:59:44.473" (server returns UTC without Z)
+            // We need to treat both as UTC and convert to local date
+            const parseDate = (dateStr: string | null | undefined): dayjs.Dayjs | undefined => {
+              if (!dateStr || typeof dateStr !== 'string') return undefined;
+              // If no Z suffix, append it to treat as UTC
+              const utcDateStr = dateStr.endsWith('Z') ? dateStr : `${dateStr}Z`;
+              // Parse as UTC, then convert to local timezone
+              const parsed = dayjs(utcDateStr);
+              if (!parsed.isValid()) return undefined;
+              // Return date at start of day in local timezone
+              return parsed.startOf('day');
+            };
+
+            restoredDates[methodKey] = {
+              transferDate: parseDate(ind.transferDate),
+              requestDate: parseDate(ind.requestDate),
             };
             if (ind.sentToDepartment) {
-              restoredChecked.push(ind.indicatorId);
+              restoredChecked.push(methodKey);
             }
             if (ind.laboratoryId && ind.laboratoryName) {
-              restoredLabMap[`${sampleKey}_${ind.indicatorId}`] = {
+              restoredLabMap[`${sampleKey}_${methodKey}`] = {
                 laboratoryId: ind.laboratoryId,
                 laboratoryName: ind.laboratoryName,
-                requestDate: ind.requestDate ? dayjs(ind.requestDate) : dayjs(),
+                requestDate: parseDate(ind.requestDate) || dayjs(),
               };
               if (!expandedLabs.includes(ind.laboratoryId)) {
                 expandedLabs.push(ind.laboratoryId);
@@ -303,23 +373,50 @@ export const useTestRequestFormData = () => {
     }
   };
 
-  // Calculate total cost
+  // Calculate total cost - now based on indicatorMethods with prices from TestMethodIndicator
   const calculateTotalCost = useCallback(() => {
     let total = 0;
     samples.forEach((sample) => {
-      sample.indicatorIds.forEach((indId) => {
-        const indicator = indicators.find((i) => i.id === indId);
-        if (indicator) {
-          total += indicator.unitPrice;
-        }
-      });
+      // New logic: use indicatorMethods if available
+      if (sample.indicatorMethods && sample.indicatorMethods.length > 0) {
+        sample.indicatorMethods.forEach((key) => {
+          const { indicatorId, testMethodId } = parseIndicatorMethodKey(key);
+          const methods = indicatorMethodsMap[indicatorId] || [];
+          const method = methods.find((m) => m.testMethodId === testMethodId);
+          if (method) {
+            total += method.unitPrice;
+          }
+        });
+      } else {
+        // Fallback to old logic for backward compatibility
+        sample.indicatorIds.forEach((indId) => {
+          const indicator = indicators.find((i) => i.id === indId);
+          if (indicator) {
+            total += indicator.unitPrice;
+          }
+        });
+      }
     });
     setTotalSampleCost(total);
-  }, [samples, indicators]);
+  }, [samples, indicators, indicatorMethodsMap]);
 
   // Get indicator info by id
   const getIndicatorInfo = (indicatorId: string) => {
     return indicators.find((ind) => ind.id === indicatorId);
+  };
+
+  // Get methods for an indicator
+  const getMethodsForIndicator = (indicatorId: string): IndicatorMethodInfo[] => {
+    return indicatorMethodsMap[indicatorId]?.filter((m) => m.isActive) || [];
+  };
+
+  // Get indicator and method info from IndicatorMethodKey
+  const getIndicatorMethodInfo = (key: IndicatorMethodKey) => {
+    const { indicatorId, testMethodId } = parseIndicatorMethodKey(key);
+    const indicator = indicators.find((i) => i.id === indicatorId);
+    const methods = indicatorMethodsMap[indicatorId] || [];
+    const method = methods.find((m) => m.testMethodId === testMethodId);
+    return { indicator, method, indicatorId, testMethodId };
   };
 
   // Get filtered indicators for modal
@@ -456,6 +553,8 @@ export const useTestRequestFormData = () => {
     organizationOptions,
     organizationSearching,
     laboratories,
+    testMethods,
+    indicatorMethodsMap,
 
     // Organization handlers
     handleOrganizationSearch,
@@ -472,6 +571,10 @@ export const useTestRequestFormData = () => {
     setCurrentSampleKey,
     tempSelectedIndicators,
     setTempSelectedIndicators,
+    tempSelectedIndicatorMethods,
+    setTempSelectedIndicatorMethods,
+    expandedIndicators,
+    setExpandedIndicators,
     selectedGroupFilter,
     setSelectedGroupFilter,
     indicatorSearchText,
@@ -514,6 +617,8 @@ export const useTestRequestFormData = () => {
 
     // Helpers
     getIndicatorInfo,
+    getMethodsForIndicator,
+    getIndicatorMethodInfo,
     getFilteredIndicators,
     getFilteredGroupsWithIndicators,
 

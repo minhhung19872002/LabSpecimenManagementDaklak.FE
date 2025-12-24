@@ -9,7 +9,15 @@ import {
   SampleStatus,
 } from "../../../../types/testRequest";
 import { numberToVietnameseWords } from "../../../../utils/numberToWords";
-import { SampleFormData, IndicatorDateInfo, LaboratoryAssignment } from "../types";
+import {
+  SampleFormData,
+  IndicatorDateInfo,
+  LaboratoryAssignment,
+  IndicatorMethodKey,
+  IndicatorMethodInfo,
+  createIndicatorMethodKey,
+  parseIndicatorMethodKey,
+} from "../types";
 import { generateSampleCode, printBarcode as printBarcodeUtil } from "../utils";
 
 interface UseTestRequestFormActionsProps {
@@ -40,8 +48,11 @@ interface UseTestRequestFormActionsProps {
   setCurrentSampleKey: (key: string | null) => void;
   tempSelectedIndicators: string[];
   setTempSelectedIndicators: React.Dispatch<React.SetStateAction<string[]>>;
+  tempSelectedIndicatorMethods: IndicatorMethodKey[];
+  setTempSelectedIndicatorMethods: React.Dispatch<React.SetStateAction<IndicatorMethodKey[]>>;
   setIndicatorModalVisible: (visible: boolean) => void;
   setSelectedGroupFilter: (filter: string) => void;
+  indicatorMethodsMap: Record<string, IndicatorMethodInfo[]>;
 
   // Laboratory modal
   laboratories: any[];
@@ -82,8 +93,11 @@ export const useTestRequestFormActions = ({
   setCurrentSampleKey,
   tempSelectedIndicators,
   setTempSelectedIndicators,
+  tempSelectedIndicatorMethods,
+  setTempSelectedIndicatorMethods,
   setIndicatorModalVisible,
   setSelectedGroupFilter,
+  indicatorMethodsMap,
   laboratories,
   selectedLaboratoryId,
   setSelectedLaboratoryId,
@@ -116,6 +130,7 @@ export const useTestRequestFormActions = ({
       notes: "",
       storageLocation: "",
       indicatorIds: [],
+      indicatorMethods: [],
     };
     setSamples([...samples, newSample]);
   };
@@ -160,6 +175,15 @@ export const useTestRequestFormActions = ({
     };
 
     const newLabMap = { ...indicatorLaboratoryMap };
+    // Copy lab assignments for indicatorMethods
+    sourceSample.indicatorMethods?.forEach((methodKey) => {
+      const sourceLabKey = `${key}_${methodKey}`;
+      const newLabKey = `${newSample.key}_${methodKey}`;
+      if (indicatorLaboratoryMap[sourceLabKey]) {
+        newLabMap[newLabKey] = { ...indicatorLaboratoryMap[sourceLabKey] };
+      }
+    });
+    // Backward compatible: also copy for indicatorIds
     sourceSample.indicatorIds.forEach((indId) => {
       const sourceLabKey = `${key}_${indId}`;
       const newLabKey = `${newSample.key}_${indId}`;
@@ -188,24 +212,53 @@ export const useTestRequestFormActions = ({
     if (sample) {
       setCurrentSampleKey(sampleKey);
       setTempSelectedIndicators([...sample.indicatorIds]);
+      setTempSelectedIndicatorMethods([...(sample.indicatorMethods || [])]);
       setSelectedGroupFilter("all");
+      setCheckedIndicators([]); // Reset checked indicators when opening modal
+
+      // Restore selectedIndicatorDates from indicatorLaboratoryMap for this sample
+      const restoredDates: Record<string, { transferDate?: dayjs.Dayjs; requestDate?: dayjs.Dayjs }> = {
+        ...selectedIndicatorDates,
+      };
+      (sample.indicatorMethods || []).forEach((methodKey) => {
+        const labMapKey = `${sampleKey}_${methodKey}`;
+        const labAssignment = indicatorLaboratoryMap[labMapKey];
+        if (labAssignment) {
+          restoredDates[methodKey] = {
+            ...restoredDates[methodKey],
+            requestDate: labAssignment.requestDate,
+            transferDate: restoredDates[methodKey]?.transferDate || dayjs(),
+          };
+        }
+      });
+      setSelectedIndicatorDates(restoredDates);
+
       setIndicatorModalVisible(true);
     }
   };
 
   const handleIndicatorModalOk = () => {
-    const unsentIndicators = tempSelectedIndicators.filter(
-      (id) => !indicatorLaboratoryMap[`${currentSampleKey}_${id}`]
-    );
-    if (unsentIndicators.length > 0) {
-      message.warning(
-        `Còn ${unsentIndicators.length} chỉ tiêu chưa được gửi đến khoa phòng. Vui lòng gửi tất cả chỉ tiêu trước khi lưu.`
-      );
-      return;
-    }
-
     if (currentSampleKey) {
-      updateSample(currentSampleKey, "indicatorIds", tempSelectedIndicators);
+      // Validate: all selected indicators must be sent to a laboratory
+      if (tempSelectedIndicatorMethods.length > 0) {
+        const unsentMethods = tempSelectedIndicatorMethods.filter(
+          (key) => !indicatorLaboratoryMap[`${currentSampleKey}_${key}`]
+        );
+        if (unsentMethods.length > 0) {
+          message.warning(
+            `Còn ${unsentMethods.length} chỉ tiêu chưa được gửi cho khoa phòng. Vui lòng gửi tất cả chỉ tiêu trước khi lưu.`
+          );
+          return;
+        }
+      }
+
+      // Update both indicatorIds (for backward compat) and indicatorMethods
+      const indicatorIds = tempSelectedIndicatorMethods.map((key) => {
+        const { indicatorId } = parseIndicatorMethodKey(key);
+        return indicatorId;
+      });
+      updateSample(currentSampleKey, "indicatorIds", indicatorIds);
+      updateSample(currentSampleKey, "indicatorMethods", tempSelectedIndicatorMethods);
     }
     setIndicatorModalVisible(false);
     setCurrentSampleKey(null);
@@ -215,8 +268,10 @@ export const useTestRequestFormActions = ({
     setIndicatorModalVisible(false);
     setCurrentSampleKey(null);
     setTempSelectedIndicators([]);
+    setTempSelectedIndicatorMethods([]);
   };
 
+  // OLD: Toggle indicator (deprecated, kept for backward compat)
   const toggleIndicator = (indicatorId: string) => {
     setTempSelectedIndicators((prev) => {
       if (prev.includes(indicatorId)) {
@@ -227,20 +282,49 @@ export const useTestRequestFormActions = ({
     });
   };
 
-  // Indicator date handling
+  // NEW: Toggle indicator method (indicatorId + testMethodId)
+  const toggleIndicatorMethod = (indicatorId: string, testMethodId: string) => {
+    const key = createIndicatorMethodKey(indicatorId, testMethodId);
+    setTempSelectedIndicatorMethods((prev) => {
+      if (prev.includes(key)) {
+        // Remove and clear dates
+        setSelectedIndicatorDates((dates) => {
+          const updated = { ...dates };
+          delete updated[key];
+          return updated;
+        });
+        return prev.filter((k) => k !== key);
+      } else {
+        // Add with auto-set transfer date to today
+        setSelectedIndicatorDates((dates) => ({
+          ...dates,
+          [key]: {
+            transferDate: dayjs(),
+            requestDate: dayjs(),
+          },
+        }));
+        return [...prev, key];
+      }
+    });
+  };
+
+  // Indicator date handling - now uses IndicatorMethodKey as id
   const handleIndicatorDateChange = (
-    indicatorId: string,
+    id: string, // Can be indicatorId or IndicatorMethodKey
     field: "transferDate" | "requestDate",
     value: dayjs.Dayjs | null
   ) => {
-    const currentDates = selectedIndicatorDates[indicatorId] || {};
+    const currentDates = selectedIndicatorDates[id] || {};
 
-    if (field === "transferDate" && value && currentDates.requestDate) {
-      if (value.isAfter(currentDates.requestDate)) {
-        message.warning("Ngày chuyển giao không được lớn hơn ngày yêu cầu");
+    // Validation: requestDate cannot be in the past
+    if (field === "requestDate" && value) {
+      if (value.isBefore(dayjs().startOf("day"))) {
+        message.warning("Ngày yêu cầu không được là ngày quá khứ");
         return;
       }
     }
+
+    // Validation: requestDate >= transferDate
     if (field === "requestDate" && value && currentDates.transferDate) {
       if (value.isBefore(currentDates.transferDate)) {
         message.warning("Ngày yêu cầu không được nhỏ hơn ngày chuyển giao");
@@ -250,26 +334,45 @@ export const useTestRequestFormActions = ({
 
     setSelectedIndicatorDates((prev) => ({
       ...prev,
-      [indicatorId]: {
-        ...prev[indicatorId],
+      [id]: {
+        ...prev[id],
         [field]: value || undefined,
       },
     }));
+
+    // Also update indicatorLaboratoryMap if this indicator is already sent to a laboratory
+    if (field === "requestDate" && currentSampleKey) {
+      const labMapKey = `${currentSampleKey}_${id}`;
+      if (indicatorLaboratoryMap[labMapKey]) {
+        setIndicatorLaboratoryMap((prev) => ({
+          ...prev,
+          [labMapKey]: {
+            ...prev[labMapKey],
+            requestDate: value || dayjs(),
+          },
+        }));
+      }
+    }
   };
 
-  const toggleCheckedIndicator = (indicatorId: string) => {
+  // Toggle checked indicator - now uses IndicatorMethodKey
+  const toggleCheckedIndicator = (id: string) => {
     setCheckedIndicators((prev) => {
-      if (prev.includes(indicatorId)) {
-        return prev.filter((id) => id !== indicatorId);
+      if (prev.includes(id)) {
+        return prev.filter((i) => i !== id);
       } else {
-        return [...prev, indicatorId];
+        return [...prev, id];
       }
     });
   };
 
   const handleSelectAllIndicators = (checked: boolean) => {
     if (checked) {
-      setCheckedIndicators([...tempSelectedIndicators]);
+      // Select all unsent indicator methods
+      const unsentMethods = tempSelectedIndicatorMethods.filter(
+        (key) => !indicatorLaboratoryMap[`${currentSampleKey}_${key}`]
+      );
+      setCheckedIndicators([...unsentMethods]);
     } else {
       setCheckedIndicators([]);
     }
@@ -287,7 +390,13 @@ export const useTestRequestFormActions = ({
       return;
     }
     setIndicatorsToSend([...checkedIndicators]);
-    setLaboratoryRequestDate(null);
+
+    // Get request date from the first checked indicator if available
+    const firstCheckedIndicator = checkedIndicators[0];
+    const firstIndicatorDates = selectedIndicatorDates[firstCheckedIndicator];
+    const defaultRequestDate = firstIndicatorDates?.requestDate || null;
+
+    setLaboratoryRequestDate(defaultRequestDate);
     setSelectedLaboratoryId(null);
     setLaboratoryModalVisible(true);
   };
@@ -337,7 +446,6 @@ export const useTestRequestFormActions = ({
       return prev;
     });
 
-    message.success(`Đã gửi ${indicatorsToSend.length} chỉ tiêu đến ${labName}`);
     setLaboratoryModalVisible(false);
     setCheckedIndicators([]);
   };
@@ -354,43 +462,81 @@ export const useTestRequestFormActions = ({
       return;
     }
 
-    const invalidSamples = samples.filter((s) => !s.sampleCode || !s.sampleName);
+    // Validate: must have contractNumber for sample code generation
+    const contractNumber = values.contractNumber;
+    if (!contractNumber) {
+      message.warning("Vui lòng nhập số hợp đồng");
+      return;
+    }
+
+    // Validate: all samples must have sampleName
+    const invalidSamples = samples.filter((s) => !s.sampleName);
     if (invalidSamples.length > 0) {
-      message.warning("Vui lòng điền đầy đủ mã mẫu và tên mẫu cho tất cả các mẫu");
+      message.warning("Vui lòng điền tên mẫu cho tất cả các mẫu");
       return;
     }
 
     setLoading(true);
     try {
-      const sampleDtos = samples.map((sample, index) => ({
-        id: sample.id,
-        sortOrder: index + 1,
-        sampleCode: sample.sampleCode,
-        sampleName: sample.sampleName,
-        samplingAddress: sample.samplingAddress || undefined,
-        sampleQuantity: sample.sampleQuantity || undefined,
-        status: sample.status,
-        statusText: sample.statusText || undefined,
-        processingStatus: sample.processingStatus || undefined,
-        notes: sample.notes || undefined,
-        storageLocation: sample.storageLocation || undefined,
-        indicators: sample.indicatorIds.map((indId) => {
-          const indicatorDates = selectedIndicatorDates[indId];
-          const indicator = indicators.find((i) => i.id === indId);
-          const labAssignment = indicatorLaboratoryMap[`${sample.key}_${indId}`];
-          return {
-            indicatorId: indId,
-            laboratoryId: labAssignment?.laboratoryId || undefined,
-            unitPrice: indicator?.unitPrice || 0,
-            transferDate: indicatorDates?.transferDate?.toISOString() || undefined,
-            requestDate:
-              labAssignment?.requestDate?.toISOString() ||
-              indicatorDates?.requestDate?.toISOString() ||
-              undefined,
-            sentToDepartment: !!labAssignment || checkedIndicators.includes(indId),
-          };
-        }),
-      }));
+      const sampleDtos = samples.map((sample, index) => {
+        // Auto-generate sampleCode from contractNumber
+        const orderNum = String(index + 1).padStart(2, "0");
+        const sampleCode = `${contractNumber}/${orderNum}`;
+
+        // Prefer indicatorMethods if available, fallback to indicatorIds
+        const indicatorsList = sample.indicatorMethods && sample.indicatorMethods.length > 0
+          ? sample.indicatorMethods.map((methodKey) => {
+              const { indicatorId, testMethodId } = parseIndicatorMethodKey(methodKey);
+              const indicatorDates = selectedIndicatorDates[methodKey];
+              const methods = indicatorMethodsMap[indicatorId] || [];
+              const method = methods.find((m) => m.testMethodId === testMethodId);
+              const labAssignment = indicatorLaboratoryMap[`${sample.key}_${methodKey}`];
+              return {
+                indicatorId,
+                testMethodId,
+                laboratoryId: labAssignment?.laboratoryId || undefined,
+                unitPrice: method?.unitPrice || 0,
+                transferDate: indicatorDates?.transferDate?.toISOString() || undefined,
+                requestDate:
+                  labAssignment?.requestDate?.toISOString() ||
+                  indicatorDates?.requestDate?.toISOString() ||
+                  undefined,
+                sentToDepartment: !!labAssignment || checkedIndicators.includes(methodKey),
+              };
+            })
+          : sample.indicatorIds.map((indId) => {
+              const indicatorDates = selectedIndicatorDates[indId];
+              const indicator = indicators.find((i) => i.id === indId);
+              const labAssignment = indicatorLaboratoryMap[`${sample.key}_${indId}`];
+              return {
+                indicatorId: indId,
+                testMethodId: undefined,
+                laboratoryId: labAssignment?.laboratoryId || undefined,
+                unitPrice: indicator?.unitPrice || 0,
+                transferDate: indicatorDates?.transferDate?.toISOString() || undefined,
+                requestDate:
+                  labAssignment?.requestDate?.toISOString() ||
+                  indicatorDates?.requestDate?.toISOString() ||
+                  undefined,
+                sentToDepartment: !!labAssignment || checkedIndicators.includes(indId),
+              };
+            });
+
+        return {
+          id: sample.id,
+          sortOrder: index + 1,
+          sampleCode: sampleCode,
+          sampleName: sample.sampleName,
+          samplingAddress: sample.samplingAddress || undefined,
+          sampleQuantity: sample.sampleQuantity || undefined,
+          status: sample.status,
+          statusText: sample.statusText || undefined,
+          processingStatus: sample.processingStatus || undefined,
+          notes: sample.notes || undefined,
+          storageLocation: sample.storageLocation || undefined,
+          indicators: indicatorsList,
+        };
+      });
 
       const selectedProvince = provinces.find((p) => p.code === values.provinceCode);
       const selectedWard = wards.find((w) => w.code === values.wardCode);
@@ -484,6 +630,7 @@ export const useTestRequestFormActions = ({
     handleIndicatorModalOk,
     handleIndicatorModalCancel,
     toggleIndicator,
+    toggleIndicatorMethod,
 
     // Indicator date actions
     handleIndicatorDateChange,
