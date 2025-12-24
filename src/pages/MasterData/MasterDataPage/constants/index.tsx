@@ -10,6 +10,7 @@ export const categoryLabels: Record<string, string> = {
   laboratories: "Khoa phòng",
   specimenTypes: "Loại mẫu",
   testMethods: "Phương pháp thử",
+  standards: "Tiêu chuẩn",
   storageLocations: "Vị trí lưu kho",
   customers: "Khách hàng",
   indicators: "Nhóm chỉ tiêu",
@@ -24,6 +25,7 @@ export const DEFAULT_PAGE_SIZE = 50;
 export const importTypeMap: Record<string, ImportType | null> = {
   customers: "customers",
   testMethods: "test-methods",
+  standards: null,
   departments: null,
   laboratories: null,
   specimenTypes: null,
@@ -200,6 +202,8 @@ export const getStatCount = (
       return statistics.specimenTypeCount;
     case "testMethods":
       return statistics.testMethodCount;
+    case "standards":
+      return statistics.standardCount;
     case "storageLocations":
       return statistics.storageLocationCount;
     case "customers":

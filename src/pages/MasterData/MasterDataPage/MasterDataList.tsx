@@ -12,6 +12,7 @@ import ImportExcelModal from "../../../components/common/ImportExcelModal";
 import IndicatorsTab from "../IndicatorsTab";
 import FormTemplatesTab from "../FormTemplatesTab";
 import TestMethodsTab from "../TestMethods";
+import StandardsTab from "../Standards";
 import { useMasterDataState } from "./hooks";
 import { useMasterDataActions } from "./hooks/useMasterDataActions";
 import {
@@ -82,6 +83,7 @@ const MasterDataList: React.FC = () => {
 
   const [form] = Form.useForm();
   const [testMethodsRefreshKey, setTestMethodsRefreshKey] = useState(0);
+  const [standardsRefreshKey, setStandardsRefreshKey] = useState(0);
 
   // Memoized columns
   const columns = useMemo(
@@ -124,7 +126,8 @@ const MasterDataList: React.FC = () => {
         extra={
           activeCategory !== "indicators" &&
           activeCategory !== "formTemplates" &&
-          activeCategory !== "testMethods" && (
+          activeCategory !== "testMethods" &&
+          activeCategory !== "standards" && (
             <Space>
               {canImport && (
                 <Button
@@ -157,9 +160,12 @@ const MasterDataList: React.FC = () => {
           onChange={(key) => {
             setActiveCategory(key);
             setSearchText("");
-            // Trigger refresh when switching to testMethods tab
+            // Trigger refresh when switching to testMethods or standards tab
             if (key === "testMethods") {
               setTestMethodsRefreshKey((prev) => prev + 1);
+            }
+            if (key === "standards") {
+              setStandardsRefreshKey((prev) => prev + 1);
             }
           }}
           tabPosition="left"
@@ -181,6 +187,11 @@ const MasterDataList: React.FC = () => {
                 <TestMethodsTab
                   onDataChange={() => fetchStatistics()}
                   refreshKey={testMethodsRefreshKey}
+                />
+              ) : key === "standards" ? (
+                <StandardsTab
+                  onDataChange={() => fetchStatistics()}
+                  refreshKey={standardsRefreshKey}
                 />
               ) : (
                 <MasterDataTable
