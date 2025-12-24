@@ -26,7 +26,13 @@ import {
   Tag,
   AutoComplete,
 } from "antd";
-import { PlusOutlined, DeleteOutlined, CloseOutlined, CopyOutlined, BarcodeOutlined } from "@ant-design/icons";
+import {
+  PlusOutlined,
+  DeleteOutlined,
+  CloseOutlined,
+  CopyOutlined,
+  BarcodeOutlined,
+} from "@ant-design/icons";
 import { Icon } from "@iconify/react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -100,7 +106,9 @@ const TestRequestForm: React.FC = () => {
   const methodRequirement = Form.useWatch("methodRequirement", form);
 
   // Current status for field locking
-  const [currentStatus, setCurrentStatus] = useState<TestRequestStatus | null>(null);
+  const [currentStatus, setCurrentStatus] = useState<TestRequestStatus | null>(
+    null
+  );
 
   // Helper to check if a field should be disabled based on status
   const isFieldLocked = (fieldName: string): boolean => {
@@ -108,9 +116,15 @@ const TestRequestForm: React.FC = () => {
 
     // Fields that are locked when status >= InProgress
     const lockedFields = [
-      "contractNumber", "contractDate",
-      "customerName", "address", "taxCode", "contactPerson", "phone",
-      "provinceCode", "wardCode",
+      "contractNumber",
+      "contractDate",
+      "customerName",
+      "address",
+      "taxCode",
+      "contactPerson",
+      "phone",
+      "provinceCode",
+      "wardCode",
     ];
 
     if (!canEditFullInfo(currentStatus)) {
@@ -148,7 +162,6 @@ const TestRequestForm: React.FC = () => {
   // Costs
   const [totalSampleCost, setTotalSampleCost] = useState(0);
 
-
   // Indicator modal state
   const [indicatorModalVisible, setIndicatorModalVisible] = useState(false);
   const [currentSampleKey, setCurrentSampleKey] = useState<string | null>(null);
@@ -184,7 +197,10 @@ const TestRequestForm: React.FC = () => {
   const [indicatorsToSend, setIndicatorsToSend] = useState<string[]>([]);
   // Store laboratory assignment for each indicator per sample: { sampleKey_indicatorId: { laboratoryId, laboratoryName, requestDate } }
   const [indicatorLaboratoryMap, setIndicatorLaboratoryMap] = useState<
-    Record<string, { laboratoryId: string; laboratoryName: string; requestDate: dayjs.Dayjs }>
+    Record<
+      string,
+      { laboratoryId: string; laboratoryName: string; requestDate: dayjs.Dayjs }
+    >
   >({});
   // Expanded laboratory groups in right panel
   const [expandedLabGroups, setExpandedLabGroups] = useState<string[]>([]);
@@ -385,7 +401,11 @@ const TestRequestForm: React.FC = () => {
         const restoredChecked: string[] = [];
         const restoredLabMap: Record<
           string,
-          { laboratoryId: string; laboratoryName: string; requestDate: dayjs.Dayjs }
+          {
+            laboratoryId: string;
+            laboratoryName: string;
+            requestDate: dayjs.Dayjs;
+          }
         > = {};
         const expandedLabs: string[] = [];
 
@@ -873,7 +893,9 @@ const TestRequestForm: React.FC = () => {
   const onFinish = async (values: any) => {
     // Validate agreeTerms checkbox
     if (!values.agreeTerms) {
-      message.warning("Vui lòng đọc và đồng ý với quy định chung về yêu cầu dịch vụ thử nghiệm");
+      message.warning(
+        "Vui lòng đọc và đồng ý với quy định chung về yêu cầu dịch vụ thử nghiệm"
+      );
       return;
     }
 
@@ -912,16 +934,20 @@ const TestRequestForm: React.FC = () => {
           const indicatorDates = selectedIndicatorDates[indId];
           const indicator = indicators.find((i) => i.id === indId);
           // Use sampleKey_indicatorId to get lab assignment for this specific sample
-          const labAssignment = indicatorLaboratoryMap[`${sample.key}_${indId}`];
+          const labAssignment =
+            indicatorLaboratoryMap[`${sample.key}_${indId}`];
           return {
             indicatorId: indId,
             laboratoryId: labAssignment?.laboratoryId || undefined,
             unitPrice: indicator?.unitPrice || 0,
             transferDate:
               indicatorDates?.transferDate?.toISOString() || undefined,
-            requestDate: labAssignment?.requestDate?.toISOString() ||
-              indicatorDates?.requestDate?.toISOString() || undefined,
-            sentToDepartment: !!labAssignment || checkedIndicators.includes(indId),
+            requestDate:
+              labAssignment?.requestDate?.toISOString() ||
+              indicatorDates?.requestDate?.toISOString() ||
+              undefined,
+            sentToDepartment:
+              !!labAssignment || checkedIndicators.includes(indId),
           };
         }),
       }));
@@ -959,9 +985,10 @@ const TestRequestForm: React.FC = () => {
         methodWestHighlandInstitute:
           values.methodRequirement === "westHighlandInstitute",
         methodCustomer: values.methodRequirement === "customerRequest",
-        methodCustomerDetail: values.methodRequirement === "customerRequest"
-          ? values.methodCustomerDetail
-          : undefined,
+        methodCustomerDetail:
+          values.methodRequirement === "customerRequest"
+            ? values.methodCustomerDetail
+            : undefined,
         resultLanguage: values.resultLanguage ?? ResultLanguage.Vietnamese,
         resultCopyCount: values.resultCopyCount || undefined,
         separatePassedResults: values.separatePassedResults || false,
@@ -982,7 +1009,10 @@ const TestRequestForm: React.FC = () => {
           : undefined,
         sampleStorage: values.sampleStorageOption ?? SampleStorageOption.No,
         totalCost: values.sampleTypeTask ? 0 : totalSampleCost,
-        totalCostInWords: values.sampleTypeTask || totalSampleCost === 0 ? "" : numberToVietnameseWords(totalSampleCost),
+        totalCostInWords:
+          values.sampleTypeTask || totalSampleCost === 0
+            ? ""
+            : numberToVietnameseWords(totalSampleCost),
         receiptNumber: values.receiptNumber || undefined,
 
         // User references
@@ -1041,7 +1071,9 @@ const TestRequestForm: React.FC = () => {
       render: (_: string, __: SampleFormData, index: number) => {
         const contractNumber = form.getFieldValue("contractNumber") || "";
         const orderNum = String(index + 1).padStart(2, "0");
-        const autoCode = contractNumber ? `${contractNumber}/${orderNum}` : `--/${orderNum}`;
+        const autoCode = contractNumber
+          ? `${contractNumber}/${orderNum}`
+          : `--/${orderNum}`;
         return (
           <Input
             value={autoCode}
@@ -1123,9 +1155,16 @@ const TestRequestForm: React.FC = () => {
       width: 280,
       render: (value: string[], record: SampleFormData) => {
         // Group indicators by laboratory - use sampleKey_indicatorId
-        const unsentIndicators = value.filter((id) => !indicatorLaboratoryMap[`${record.key}_${id}`]);
-        const sentIndicators = value.filter((id) => indicatorLaboratoryMap[`${record.key}_${id}`]);
-        const groupedByLab: Record<string, { labName: string; indicators: string[] }> = {};
+        const unsentIndicators = value.filter(
+          (id) => !indicatorLaboratoryMap[`${record.key}_${id}`]
+        );
+        const sentIndicators = value.filter(
+          (id) => indicatorLaboratoryMap[`${record.key}_${id}`]
+        );
+        const groupedByLab: Record<
+          string,
+          { labName: string; indicators: string[] }
+        > = {};
         sentIndicators.forEach((id) => {
           const labInfo = indicatorLaboratoryMap[`${record.key}_${id}`];
           if (!groupedByLab[labInfo.laboratoryId]) {
@@ -1159,36 +1198,38 @@ const TestRequestForm: React.FC = () => {
                   ) : null;
                 })}
                 {/* Grouped by laboratory */}
-                {Object.entries(groupedByLab).map(([labId, { labName, indicators }]) => (
-                  <div key={labId}>
-                    <div
-                      style={{
-                        padding: "6px 0 4px 0",
-                        fontWeight: 600,
-                        fontSize: 13,
-                        color: "#000",
-                        borderBottom: "1px solid #f0f0f0",
-                        marginTop: unsentIndicators.length > 0 ? 8 : 0,
-                      }}
-                    >
-                      {labName} ({indicators.length})
+                {Object.entries(groupedByLab).map(
+                  ([labId, { labName, indicators }]) => (
+                    <div key={labId}>
+                      <div
+                        style={{
+                          padding: "6px 0 4px 0",
+                          fontWeight: 600,
+                          fontSize: 13,
+                          color: "#000",
+                          borderBottom: "1px solid #f0f0f0",
+                          marginTop: unsentIndicators.length > 0 ? 8 : 0,
+                        }}
+                      >
+                        {labName} ({indicators.length})
+                      </div>
+                      {indicators.map((indId) => {
+                        const ind = getIndicatorInfo(indId);
+                        return ind ? (
+                          <div
+                            key={indId}
+                            style={{
+                              padding: "4px 0 4px 12px",
+                              borderBottom: "1px solid #f0f0f0",
+                            }}
+                          >
+                            <span>- {ind.name}</span>
+                          </div>
+                        ) : null;
+                      })}
                     </div>
-                    {indicators.map((indId) => {
-                      const ind = getIndicatorInfo(indId);
-                      return ind ? (
-                        <div
-                          key={indId}
-                          style={{
-                            padding: "4px 0 4px 12px",
-                            borderBottom: "1px solid #f0f0f0",
-                          }}
-                        >
-                          <span>- {ind.name}</span>
-                        </div>
-                      ) : null;
-                    })}
-                  </div>
-                ))}
+                  )
+                )}
               </>
             )}
           </div>
@@ -1282,7 +1323,9 @@ const TestRequestForm: React.FC = () => {
       render: (_: any, record: SampleFormData, index: number) => {
         const contractNumber = form.getFieldValue("contractNumber") || "";
         const orderNum = String(index + 1).padStart(2, "0");
-        const sampleCode = contractNumber ? `${contractNumber}/${orderNum}` : `--/${orderNum}`;
+        const sampleCode = contractNumber
+          ? `${contractNumber}/${orderNum}`
+          : `--/${orderNum}`;
         return (
           <Space size={0}>
             <Tooltip title="Nhân đôi">
@@ -1307,7 +1350,12 @@ const TestRequestForm: React.FC = () => {
               okText="Xóa"
               cancelText="Hủy"
             >
-              <Button type="link" danger icon={<DeleteOutlined />} size="small" />
+              <Button
+                type="link"
+                danger
+                icon={<DeleteOutlined />}
+                size="small"
+              />
             </Popconfirm>
           </Space>
         );
@@ -1350,7 +1398,10 @@ const TestRequestForm: React.FC = () => {
                 style={{ marginBottom: 0 }}
                 rules={[{ required: true, message: "Vui lòng nhập số HĐ" }]}
               >
-                <Input placeholder="Số hợp đồng" disabled={isFieldLocked("contractNumber")} />
+                <Input
+                  placeholder="Số hợp đồng"
+                  disabled={isFieldLocked("contractNumber")}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={12} lg={4}>
@@ -1360,7 +1411,11 @@ const TestRequestForm: React.FC = () => {
                 style={{ marginBottom: 0 }}
                 rules={[{ required: true, message: "Vui lòng chọn ngày HĐ" }]}
               >
-                <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" disabled={isFieldLocked("contractDate")} />
+                <DatePicker
+                  style={{ width: "100%" }}
+                  format="DD/MM/YYYY"
+                  disabled={isFieldLocked("contractDate")}
+                />
               </Form.Item>
             </Col>
             {/* Only show these checkboxes in edit mode */}
@@ -1498,7 +1553,7 @@ const TestRequestForm: React.FC = () => {
                 >
                   {wards.map((w) => (
                     <Select.Option key={w.code} value={w.code}>
-                      {w.fullName}
+                      {w.name}
                     </Select.Option>
                   ))}
                 </Select>
@@ -1512,14 +1567,14 @@ const TestRequestForm: React.FC = () => {
                 label="Địa chỉ"
                 rules={[{ required: true, message: "Vui lòng nhập địa chỉ" }]}
               >
-                <Input placeholder="Địa chỉ chi tiết" disabled={isFieldLocked("address")} />
+                <Input
+                  placeholder="Địa chỉ chi tiết"
+                  disabled={isFieldLocked("address")}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} sm={8} lg={4}>
-              <Form.Item
-                name="taxCode"
-                label="Mã số thuế"
-              >
+              <Form.Item name="taxCode" label="Mã số thuế">
                 <Input placeholder="MST" disabled={isFieldLocked("taxCode")} />
               </Form.Item>
             </Col>
@@ -1531,7 +1586,10 @@ const TestRequestForm: React.FC = () => {
                   { required: true, message: "Vui lòng nhập người liên hệ" },
                 ]}
               >
-                <Input placeholder="Người liên hệ" disabled={isFieldLocked("contactPerson")} />
+                <Input
+                  placeholder="Người liên hệ"
+                  disabled={isFieldLocked("contactPerson")}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} sm={8} lg={4}>
@@ -1579,16 +1637,27 @@ const TestRequestForm: React.FC = () => {
               icon={<PlusOutlined />}
               onClick={addSample}
               disabled={isSamplesLocked()}
-              title={isSamplesLocked() ? "Không thể thêm mẫu khi đang thực hiện" : ""}
+              title={
+                isSamplesLocked() ? "Không thể thêm mẫu khi đang thực hiện" : ""
+              }
             >
               Thêm mẫu
             </Button>
           </div>
 
           {isSamplesLocked() && (
-            <div style={{ marginBottom: 12, padding: "8px 16px", background: "#fff7e6", borderRadius: 4, border: "1px solid #ffd591" }}>
+            <div
+              style={{
+                marginBottom: 12,
+                padding: "8px 16px",
+                background: "#fff7e6",
+                borderRadius: 4,
+                border: "1px solid #ffd591",
+              }}
+            >
               <Text type="warning">
-                Không thể thêm/sửa/xóa mẫu khi phiếu đang thực hiện. Chỉ có thể sửa các thông tin khác.
+                Không thể thêm/sửa/xóa mẫu khi phiếu đang thực hiện. Chỉ có thể
+                sửa các thông tin khác.
               </Text>
             </div>
           )}
@@ -1683,7 +1752,9 @@ const TestRequestForm: React.FC = () => {
                           alignItems: "center",
                         }}
                       >
-                        <Radio value="westHighlandInstitute">Viện KHKT NN Tây Nguyên</Radio>
+                        <Radio value="westHighlandInstitute">
+                          Viện KHKT NN Tây Nguyên
+                        </Radio>
                         <span
                           style={{
                             display: "inline-flex",
@@ -1944,7 +2015,10 @@ const TestRequestForm: React.FC = () => {
                       Tổng chi phí:
                     </Text>
                     <Text strong style={{ fontSize: 24, color: "#1890ff" }}>
-                      {sampleTypeTask ? "0" : totalSampleCost.toLocaleString("vi-VN")} đ
+                      {sampleTypeTask
+                        ? "0"
+                        : totalSampleCost.toLocaleString("vi-VN")}{" "}
+                      đ
                     </Text>
                   </div>
                 </Col>
@@ -1956,7 +2030,11 @@ const TestRequestForm: React.FC = () => {
                     <Col xs={18}>
                       <Input
                         size="small"
-                        value={sampleTypeTask || totalSampleCost === 0 ? "" : numberToVietnameseWords(totalSampleCost)}
+                        value={
+                          sampleTypeTask || totalSampleCost === 0
+                            ? ""
+                            : numberToVietnameseWords(totalSampleCost)
+                        }
                         disabled
                       />
                     </Col>
@@ -1992,7 +2070,10 @@ const TestRequestForm: React.FC = () => {
                 <Col xs={24}>
                   <Row align="middle">
                     <Col xs={6}>
-                      <Text>Người giám sát: <span style={{ color: '#ff4d4f' }}>*</span></Text>
+                      <Text>
+                        Người giám sát:{" "}
+                        <span style={{ color: "#ff4d4f" }}>*</span>
+                      </Text>
                     </Col>
                     <Col xs={18}>
                       <Form.Item
@@ -2030,7 +2111,9 @@ const TestRequestForm: React.FC = () => {
                 <Col xs={24}>
                   <Row align="middle">
                     <Col xs={6}>
-                      <Text>Giám đốc: <span style={{ color: '#ff4d4f' }}>*</span></Text>
+                      <Text>
+                        Giám đốc: <span style={{ color: "#ff4d4f" }}>*</span>
+                      </Text>
                     </Col>
                     <Col xs={18}>
                       <Form.Item
@@ -2583,17 +2666,32 @@ const TestRequestForm: React.FC = () => {
                 <Checkbox
                   checked={
                     checkedIndicators.length ===
-                      tempSelectedIndicators.filter((id) => !indicatorLaboratoryMap[`${currentSampleKey}_${id}`]).length &&
-                    tempSelectedIndicators.filter((id) => !indicatorLaboratoryMap[`${currentSampleKey}_${id}`]).length > 0
+                      tempSelectedIndicators.filter(
+                        (id) =>
+                          !indicatorLaboratoryMap[`${currentSampleKey}_${id}`]
+                      ).length &&
+                    tempSelectedIndicators.filter(
+                      (id) =>
+                        !indicatorLaboratoryMap[`${currentSampleKey}_${id}`]
+                    ).length > 0
                   }
                   indeterminate={
                     checkedIndicators.length > 0 &&
-                    checkedIndicators.length < tempSelectedIndicators.filter((id) => !indicatorLaboratoryMap[`${currentSampleKey}_${id}`]).length
+                    checkedIndicators.length <
+                      tempSelectedIndicators.filter(
+                        (id) =>
+                          !indicatorLaboratoryMap[`${currentSampleKey}_${id}`]
+                      ).length
                   }
                   onChange={(e) => {
                     // Only select unsent indicators
                     if (e.target.checked) {
-                      setCheckedIndicators(tempSelectedIndicators.filter((id) => !indicatorLaboratoryMap[`${currentSampleKey}_${id}`]));
+                      setCheckedIndicators(
+                        tempSelectedIndicators.filter(
+                          (id) =>
+                            !indicatorLaboratoryMap[`${currentSampleKey}_${id}`]
+                        )
+                      );
                     } else {
                       setCheckedIndicators([]);
                     }
@@ -2611,7 +2709,14 @@ const TestRequestForm: React.FC = () => {
                 Gửi khoa phòng
               </Button>
             </div>
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
+              }}
+            >
               {/* Table header */}
               <div
                 style={{
@@ -2629,151 +2734,199 @@ const TestRequestForm: React.FC = () => {
                 <span style={{ width: 24 }}>[X]</span>
                 <span style={{ flex: 1 }}>Chỉ tiêu</span>
                 <span style={{ width: 80, textAlign: "right" }}>Đơn giá</span>
-                <span style={{ width: 110, textAlign: "center" }}>Ngày chuyển giao</span>
-                <span style={{ width: 110, textAlign: "center" }}>Ngày yêu cầu</span>
+                <span style={{ width: 110, textAlign: "center" }}>
+                  Ngày chuyển giao
+                </span>
+                <span style={{ width: 110, textAlign: "center" }}>
+                  Ngày yêu cầu
+                </span>
                 <span style={{ width: 32 }}>Xóa</span>
               </div>
               {/* Table body */}
               <div style={{ flex: 1, overflowY: "auto" }}>
-              {/* Group indicators by laboratory */}
-              {(() => {
-                // Separate sent and unsent indicators - use sampleKey_indicatorId
-                const unsentIndicators = tempSelectedIndicators.filter((id) => !indicatorLaboratoryMap[`${currentSampleKey}_${id}`]);
-                const sentIndicators = tempSelectedIndicators.filter((id) => indicatorLaboratoryMap[`${currentSampleKey}_${id}`]);
-
-                // Group sent indicators by laboratory
-                const groupedByLab: Record<string, { labName: string; requestDate: dayjs.Dayjs; indicators: string[] }> = {};
-                sentIndicators.forEach((id) => {
-                  const labInfo = indicatorLaboratoryMap[`${currentSampleKey}_${id}`];
-                  if (!groupedByLab[labInfo.laboratoryId]) {
-                    groupedByLab[labInfo.laboratoryId] = {
-                      labName: labInfo.laboratoryName,
-                      requestDate: labInfo.requestDate,
-                      indicators: [],
-                    };
-                  }
-                  groupedByLab[labInfo.laboratoryId].indicators.push(id);
-                });
-
-                // Render indicator row (shared between unsent and sent)
-                const renderIndicatorRow = (id: string, isInGroup: boolean = false) => {
-                  const ind = getIndicatorInfo(id);
-                  if (!ind) return null;
-                  return (
-                    <div
-                      key={id}
-                      style={{
-                        padding: isInGroup ? "8px 12px 8px 36px" : "8px 12px",
-                        borderBottom: "1px solid #f5f5f5",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        background: "#fff",
-                      }}
-                    >
-                      <Checkbox
-                        checked={checkedIndicators.includes(id)}
-                        onChange={() => toggleCheckedIndicator(id)}
-                        style={{ width: 24 }}
-                      />
-                      <span style={{ flex: 1, fontSize: 13 }}>{ind.name}</span>
-                      <span style={{ fontSize: 12, color: "#888", width: 80, textAlign: "right" }}>
-                        {ind.unitPrice?.toLocaleString("vi-VN")}đ
-                      </span>
-                      <DatePicker
-                        value={selectedIndicatorDates[id]?.transferDate}
-                        onChange={(date) => handleIndicatorDateChange(id, "transferDate", date)}
-                        format="DD/MM/YYYY"
-                        size="small"
-                        style={{ width: 110 }}
-                        placeholder="Chuyển giao"
-                      />
-                      <DatePicker
-                        value={selectedIndicatorDates[id]?.requestDate}
-                        onChange={(date) => handleIndicatorDateChange(id, "requestDate", date)}
-                        format="DD/MM/YYYY"
-                        size="small"
-                        style={{ width: 110 }}
-                        placeholder="Yêu cầu"
-                      />
-                      <Button
-                        type="text"
-                        size="small"
-                        danger
-                        icon={<CloseOutlined />}
-                        style={{ width: 32 }}
-                        onClick={() => {
-                          toggleIndicator(id);
-                          // Also remove from laboratory map if exists - use sampleKey_indicatorId
-                          const labMapKey = `${currentSampleKey}_${id}`;
-                          if (indicatorLaboratoryMap[labMapKey]) {
-                            setIndicatorLaboratoryMap((prev) => {
-                              const updated = { ...prev };
-                              delete updated[labMapKey];
-                              return updated;
-                            });
-                          }
-                        }}
-                      />
-                    </div>
+                {/* Group indicators by laboratory */}
+                {(() => {
+                  // Separate sent and unsent indicators - use sampleKey_indicatorId
+                  const unsentIndicators = tempSelectedIndicators.filter(
+                    (id) => !indicatorLaboratoryMap[`${currentSampleKey}_${id}`]
                   );
-                };
+                  const sentIndicators = tempSelectedIndicators.filter(
+                    (id) => indicatorLaboratoryMap[`${currentSampleKey}_${id}`]
+                  );
 
-                return (
-                  <>
-                    {/* Unsent indicators - display normally without group header */}
-                    {unsentIndicators.map((id) => renderIndicatorRow(id, false))}
+                  // Group sent indicators by laboratory
+                  const groupedByLab: Record<
+                    string,
+                    {
+                      labName: string;
+                      requestDate: dayjs.Dayjs;
+                      indicators: string[];
+                    }
+                  > = {};
+                  sentIndicators.forEach((id) => {
+                    const labInfo =
+                      indicatorLaboratoryMap[`${currentSampleKey}_${id}`];
+                    if (!groupedByLab[labInfo.laboratoryId]) {
+                      groupedByLab[labInfo.laboratoryId] = {
+                        labName: labInfo.laboratoryName,
+                        requestDate: labInfo.requestDate,
+                        indicators: [],
+                      };
+                    }
+                    groupedByLab[labInfo.laboratoryId].indicators.push(id);
+                  });
 
-                    {/* Sent indicators grouped by laboratory */}
-                    {Object.entries(groupedByLab).map(([labId, { labName, requestDate, indicators: labIndicators }]) => {
-                      const isExpanded = expandedLabGroups.includes(labId);
-                      return (
-                        <div key={labId}>
-                          {/* Group header */}
-                          <div
-                            onClick={() => {
-                              setExpandedLabGroups((prev) =>
-                                prev.includes(labId)
-                                  ? prev.filter((id) => id !== labId)
-                                  : [...prev, labId]
-                              );
-                            }}
-                            style={{
-                              padding: "8px 12px",
-                              background: "#fafafa",
-                              borderBottom: "1px solid #f0f0f0",
-                              fontWeight: 600,
-                              fontSize: 13,
-                              color: "#000",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 8,
-                              cursor: "pointer",
-                              userSelect: "none",
-                            }}
-                          >
-                            <Icon
-                              icon={isExpanded ? "mdi:chevron-down" : "mdi:chevron-right"}
-                              width={18}
-                              style={{ color: "#595959", flexShrink: 0 }}
-                            />
-                            <span>{labName} ({labIndicators.length})</span>
-                          </div>
-                          {/* Group items - only show when expanded */}
-                          {isExpanded && labIndicators.map((id) => renderIndicatorRow(id, true))}
-                        </div>
-                      );
-                    })}
-
-                    {/* Empty state */}
-                    {tempSelectedIndicators.length === 0 && (
-                      <div style={{ padding: 24, textAlign: "center" }}>
-                        <Text type="secondary">Chưa chọn chỉ tiêu nào</Text>
+                  // Render indicator row (shared between unsent and sent)
+                  const renderIndicatorRow = (
+                    id: string,
+                    isInGroup: boolean = false
+                  ) => {
+                    const ind = getIndicatorInfo(id);
+                    if (!ind) return null;
+                    return (
+                      <div
+                        key={id}
+                        style={{
+                          padding: isInGroup ? "8px 12px 8px 36px" : "8px 12px",
+                          borderBottom: "1px solid #f5f5f5",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          background: "#fff",
+                        }}
+                      >
+                        <Checkbox
+                          checked={checkedIndicators.includes(id)}
+                          onChange={() => toggleCheckedIndicator(id)}
+                          style={{ width: 24 }}
+                        />
+                        <span style={{ flex: 1, fontSize: 13 }}>
+                          {ind.name}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: 12,
+                            color: "#888",
+                            width: 80,
+                            textAlign: "right",
+                          }}
+                        >
+                          {ind.unitPrice?.toLocaleString("vi-VN")}đ
+                        </span>
+                        <DatePicker
+                          value={selectedIndicatorDates[id]?.transferDate}
+                          onChange={(date) =>
+                            handleIndicatorDateChange(id, "transferDate", date)
+                          }
+                          format="DD/MM/YYYY"
+                          size="small"
+                          style={{ width: 110 }}
+                          placeholder="Chuyển giao"
+                        />
+                        <DatePicker
+                          value={selectedIndicatorDates[id]?.requestDate}
+                          onChange={(date) =>
+                            handleIndicatorDateChange(id, "requestDate", date)
+                          }
+                          format="DD/MM/YYYY"
+                          size="small"
+                          style={{ width: 110 }}
+                          placeholder="Yêu cầu"
+                        />
+                        <Button
+                          type="text"
+                          size="small"
+                          danger
+                          icon={<CloseOutlined />}
+                          style={{ width: 32 }}
+                          onClick={() => {
+                            toggleIndicator(id);
+                            // Also remove from laboratory map if exists - use sampleKey_indicatorId
+                            const labMapKey = `${currentSampleKey}_${id}`;
+                            if (indicatorLaboratoryMap[labMapKey]) {
+                              setIndicatorLaboratoryMap((prev) => {
+                                const updated = { ...prev };
+                                delete updated[labMapKey];
+                                return updated;
+                              });
+                            }
+                          }}
+                        />
                       </div>
-                    )}
-                  </>
-                );
-              })()}
+                    );
+                  };
+
+                  return (
+                    <>
+                      {/* Unsent indicators - display normally without group header */}
+                      {unsentIndicators.map((id) =>
+                        renderIndicatorRow(id, false)
+                      )}
+
+                      {/* Sent indicators grouped by laboratory */}
+                      {Object.entries(groupedByLab).map(
+                        ([
+                          labId,
+                          { labName, requestDate, indicators: labIndicators },
+                        ]) => {
+                          const isExpanded = expandedLabGroups.includes(labId);
+                          return (
+                            <div key={labId}>
+                              {/* Group header */}
+                              <div
+                                onClick={() => {
+                                  setExpandedLabGroups((prev) =>
+                                    prev.includes(labId)
+                                      ? prev.filter((id) => id !== labId)
+                                      : [...prev, labId]
+                                  );
+                                }}
+                                style={{
+                                  padding: "8px 12px",
+                                  background: "#fafafa",
+                                  borderBottom: "1px solid #f0f0f0",
+                                  fontWeight: 600,
+                                  fontSize: 13,
+                                  color: "#000",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 8,
+                                  cursor: "pointer",
+                                  userSelect: "none",
+                                }}
+                              >
+                                <Icon
+                                  icon={
+                                    isExpanded
+                                      ? "mdi:chevron-down"
+                                      : "mdi:chevron-right"
+                                  }
+                                  width={18}
+                                  style={{ color: "#595959", flexShrink: 0 }}
+                                />
+                                <span>
+                                  {labName} ({labIndicators.length})
+                                </span>
+                              </div>
+                              {/* Group items - only show when expanded */}
+                              {isExpanded &&
+                                labIndicators.map((id) =>
+                                  renderIndicatorRow(id, true)
+                                )}
+                            </div>
+                          );
+                        }
+                      )}
+
+                      {/* Empty state */}
+                      {tempSelectedIndicators.length === 0 && (
+                        <div style={{ padding: 24, textAlign: "center" }}>
+                          <Text type="secondary">Chưa chọn chỉ tiêu nào</Text>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
             <div
@@ -2788,9 +2941,18 @@ const TestRequestForm: React.FC = () => {
             >
               <Text style={{ fontSize: 14 }}>
                 Số chỉ tiêu: <Text strong>{tempSelectedIndicators.length}</Text>
-                {tempSelectedIndicators.filter((id) => indicatorLaboratoryMap[`${currentSampleKey}_${id}`]).length > 0 && (
+                {tempSelectedIndicators.filter(
+                  (id) => indicatorLaboratoryMap[`${currentSampleKey}_${id}`]
+                ).length > 0 && (
                   <span style={{ color: "#52c41a", marginLeft: 8 }}>
-                    (Đã gửi: {tempSelectedIndicators.filter((id) => indicatorLaboratoryMap[`${currentSampleKey}_${id}`]).length})
+                    (Đã gửi:{" "}
+                    {
+                      tempSelectedIndicators.filter(
+                        (id) =>
+                          indicatorLaboratoryMap[`${currentSampleKey}_${id}`]
+                      ).length
+                    }
+                    )
                   </span>
                 )}
               </Text>
@@ -2814,7 +2976,14 @@ const TestRequestForm: React.FC = () => {
       {/* Department Selection Modal */}
       <Modal
         title={
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              width: "100%",
+            }}
+          >
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <Icon icon="mdi:office-building" width={24} height={24} />
               <span>Chọn khoa phòng</span>
@@ -2846,8 +3015,8 @@ const TestRequestForm: React.FC = () => {
           body: {
             padding: 0,
             maxHeight: "calc(100vh - 200px)",
-            overflowY: "auto"
-          }
+            overflowY: "auto",
+          },
         }}
       >
         <div style={{ padding: "16px" }}>
