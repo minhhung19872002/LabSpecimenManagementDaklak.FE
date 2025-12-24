@@ -495,7 +495,7 @@ export const indicatorService = {
     return response.data;
   },
   getActive: async (): Promise<IndicatorDto[]> => {
-    const response = await api.get<IndicatorDto[]>(`${INDICATOR_URL}/active`);
+    const response = await api.get<IndicatorDto[]>(`${INDICATOR_URL}/get-active`);
     return response.data;
   },
   canDelete: async (id: string): Promise<boolean> => {
@@ -512,7 +512,33 @@ export const indicatorService = {
     const response = await api.download(`${INDICATOR_URL}/template`);
     return response.data;
   },
+  batchDelete: async (ids: string[]): Promise<BatchOperationResultDto> => {
+    const response = await api.post<BatchOperationResultDto>(`${INDICATOR_URL}/batch-delete`, { ids });
+    return response.data;
+  },
+  batchDeactivate: async (ids: string[]): Promise<BatchOperationResultDto> => {
+    const response = await api.post<BatchOperationResultDto>(`${INDICATOR_URL}/batch-deactivate`, { ids });
+    return response.data;
+  },
+  batchActivate: async (ids: string[]): Promise<BatchOperationResultDto> => {
+    const response = await api.post<BatchOperationResultDto>(`${INDICATOR_URL}/batch-activate`, { ids });
+    return response.data;
+  },
 };
+
+// Batch operation DTOs
+export interface BatchOperationResultDto {
+  totalCount: number;
+  successCount: number;
+  failedCount: number;
+  errors: BatchOperationErrorDto[];
+}
+
+export interface BatchOperationErrorDto {
+  id: string;
+  name: string;
+  errorMessage: string;
+}
 
 // Import result DTOs
 export interface ImportIndicatorsResultDto {
