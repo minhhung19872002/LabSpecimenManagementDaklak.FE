@@ -93,6 +93,66 @@ export interface AddIndicatorsToTestMethodDto {
   indicators: { indicatorId: string; unitPrice: number }[];
 }
 
+// Standard
+export interface StandardDto {
+  id: string;
+  code: string;
+  name: string;
+  limitDescription?: string;
+  isActive: boolean;
+  sortOrder: number;
+  indicatorCount: number;
+  creationTime: string;
+}
+
+export interface CreateStandardDto {
+  name: string;
+  limitDescription?: string;
+  isActive?: boolean;
+}
+
+export interface UpdateStandardDto {
+  name: string;
+  limitDescription?: string;
+  isActive: boolean;
+}
+
+export interface StandardIndicatorDto {
+  id: string;
+  standardId: string;
+  indicatorId: string;
+  indicatorCode: string;
+  indicatorName: string;
+  testMethodId: string;
+  testMethodCode: string;
+  testMethodName: string;
+  unit: string;
+  comparisonOperator?: string;
+  allowedLimit?: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export interface StandardWithIndicatorsDto extends StandardDto {
+  indicators: StandardIndicatorDto[];
+}
+
+export interface AddIndicatorsToStandardDto {
+  indicators: {
+    indicatorId: string;
+    testMethodId: string;
+    unit: string;
+    comparisonOperator?: string;
+    allowedLimit?: string;
+  }[];
+}
+
+export interface UpdateStandardIndicatorDto {
+  comparisonOperator?: string;
+  allowedLimit?: string;
+  isActive: boolean;
+}
+
 // StorageLocation
 export interface StorageLocationDto {
   id: string;
@@ -226,6 +286,7 @@ export interface MasterDataStatisticsDto {
   laboratoryCount: number;
   specimenTypeCount: number;
   testMethodCount: number;
+  standardCount: number;
   storageLocationCount: number;
   customerCount: number;
   indicatorGroupCount: number;
@@ -237,6 +298,7 @@ export interface MasterDataStatisticsDto {
 const DEPARTMENT_URL = '/api/v1/departments';
 const SPECIMEN_TYPE_URL = '/api/v1/specimen-types';
 const TEST_METHOD_URL = '/api/v1/test-methods';
+const STANDARD_URL = '/api/v1/standards';
 const STORAGE_LOCATION_URL = '/api/v1/storage-locations';
 const CUSTOMER_URL = '/api/v1/customers';
 const INDICATOR_GROUP_URL = '/api/v1/indicator-groups';
@@ -364,6 +426,64 @@ export const testMethodService = {
   },
   toggleActive: async (id: string): Promise<TestMethodDto> => {
     const response = await api.post<TestMethodDto>(`${TEST_METHOD_URL}/${id}/toggle-active`);
+    return response.data;
+  },
+};
+
+export const standardService = {
+  getList: async (params: PagedAndSortedResultRequestDto): Promise<PagedResultDto<StandardDto>> => {
+    const response = await api.get<PagedResultDto<StandardDto>>(STANDARD_URL, { params: toApiParams(params) });
+    return response.data;
+  },
+  get: async (id: string): Promise<StandardDto> => {
+    const response = await api.get<StandardDto>(`${STANDARD_URL}/${id}`);
+    return response.data;
+  },
+  create: async (data: CreateStandardDto): Promise<StandardDto> => {
+    const response = await api.post<StandardDto>(STANDARD_URL, data);
+    return response.data;
+  },
+  update: async (id: string, data: UpdateStandardDto): Promise<StandardDto> => {
+    const response = await api.put<StandardDto>(`${STANDARD_URL}/${id}`, data);
+    return response.data;
+  },
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`${STANDARD_URL}/${id}`);
+  },
+  getActive: async (): Promise<PagedResultDto<StandardDto>> => {
+    const response = await api.get<StandardDto[]>(`${STANDARD_URL}/active`);
+    return { items: response.data, totalCount: response.data.length };
+  },
+  toggleActive: async (id: string): Promise<StandardDto> => {
+    const response = await api.post<StandardDto>(`${STANDARD_URL}/${id}/toggle-active`);
+    return response.data;
+  },
+  // Standards with indicators
+  getWithIndicators: async (): Promise<StandardWithIndicatorsDto[]> => {
+    const response = await api.get<StandardWithIndicatorsDto[]>(`${STANDARD_URL}/with-indicators`);
+    return response.data;
+  },
+  getOneWithIndicators: async (id: string): Promise<StandardWithIndicatorsDto> => {
+    const response = await api.get<StandardWithIndicatorsDto>(`${STANDARD_URL}/${id}/with-indicators`);
+    return response.data;
+  },
+  // Indicator management
+  getIndicators: async (standardId: string): Promise<StandardIndicatorDto[]> => {
+    const response = await api.get<StandardIndicatorDto[]>(`${STANDARD_URL}/${standardId}/indicators`);
+    return response.data;
+  },
+  addIndicators: async (standardId: string, data: AddIndicatorsToStandardDto): Promise<void> => {
+    await api.post(`${STANDARD_URL}/${standardId}/indicators`, data);
+  },
+  updateIndicator: async (standardId: string, indicatorId: string, data: UpdateStandardIndicatorDto): Promise<StandardIndicatorDto> => {
+    const response = await api.put<StandardIndicatorDto>(`${STANDARD_URL}/${standardId}/indicators/${indicatorId}`, data);
+    return response.data;
+  },
+  removeIndicator: async (standardId: string, indicatorId: string): Promise<void> => {
+    await api.delete(`${STANDARD_URL}/${standardId}/indicators/${indicatorId}`);
+  },
+  toggleIndicatorActive: async (standardId: string, indicatorId: string): Promise<StandardIndicatorDto> => {
+    const response = await api.post<StandardIndicatorDto>(`${STANDARD_URL}/${standardId}/indicators/${indicatorId}/toggle-active`);
     return response.data;
   },
 };
