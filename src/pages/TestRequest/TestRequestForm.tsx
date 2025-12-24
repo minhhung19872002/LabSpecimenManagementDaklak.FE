@@ -26,7 +26,7 @@ import {
   Tag,
   AutoComplete,
 } from "antd";
-import { PlusOutlined, DeleteOutlined, CloseOutlined } from "@ant-design/icons";
+import { PlusOutlined, DeleteOutlined, CloseOutlined, CopyOutlined, BarcodeOutlined } from "@ant-design/icons";
 import { Icon } from "@iconify/react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -59,12 +59,11 @@ import {
 import dayjs from "dayjs";
 import {
   getAllProvinces,
-  getDistrictsByProvince,
-  getWardsByDistrict,
+  getWardsByProvince,
   Province,
-  District,
   Ward,
 } from "../../utils/vietnamLocations";
+import { numberToVietnameseWords } from "../../utils/numberToWords";
 import "./TestRequestForm.css";
 
 const { TextArea } = Input;
@@ -95,6 +94,11 @@ const TestRequestForm: React.FC = () => {
   const [loadingData, setLoadingData] = useState(false);
   const isEditMode = !!id;
 
+  // Watch sampleTypeTask to handle cost display
+  const sampleTypeTask = Form.useWatch("sampleTypeTask", form);
+  // Watch methodRequirement to enable/disable detail input
+  const methodRequirement = Form.useWatch("methodRequirement", form);
+
   // Current status for field locking
   const [currentStatus, setCurrentStatus] = useState<TestRequestStatus | null>(null);
 
@@ -106,7 +110,7 @@ const TestRequestForm: React.FC = () => {
     const lockedFields = [
       "contractNumber", "contractDate",
       "customerName", "address", "taxCode", "contactPerson", "phone",
-      "provinceCode", "districtCode", "wardCode",
+      "provinceCode", "wardCode",
     ];
 
     if (!canEditFullInfo(currentStatus)) {
@@ -144,8 +148,6 @@ const TestRequestForm: React.FC = () => {
   // Costs
   const [totalSampleCost, setTotalSampleCost] = useState(0);
 
-  // Method customer checkbox state
-  const [methodCustomerChecked, setMethodCustomerChecked] = useState(false);
 
   // Indicator modal state
   const [indicatorModalVisible, setIndicatorModalVisible] = useState(false);
@@ -189,7 +191,6 @@ const TestRequestForm: React.FC = () => {
 
   // Vietnam location states
   const [provinces] = useState<Province[]>(getAllProvinces());
-  const [districts, setDistricts] = useState<District[]>([]);
   const [wards, setWards] = useState<Ward[]>([]);
 
   // Load master data
@@ -325,15 +326,10 @@ const TestRequestForm: React.FC = () => {
         return;
       }
 
-      // Load districts and wards if province/district codes exist
+      // Load wards by province (no district needed)
       if (data.provinceCode) {
-        const loadedDistricts = getDistrictsByProvince(data.provinceCode);
-        setDistricts(loadedDistricts);
-
-        if (data.districtCode) {
-          const loadedWards = getWardsByDistrict(data.districtCode);
-          setWards(loadedWards);
-        }
+        const loadedWards = getWardsByProvince(data.provinceCode);
+        setWards(loadedWards);
       }
 
       form.setFieldsValue({
@@ -352,9 +348,11 @@ const TestRequestForm: React.FC = () => {
           : null,
       });
 
-      // Set methodCustomer checkbox state
+      // Set methodRequirement based on existing data
       if (data.methodCustomer) {
-        setMethodCustomerChecked(true);
+        form.setFieldsValue({ methodRequirement: "customerRequest" });
+      } else {
+        form.setFieldsValue({ methodRequirement: "westHighlandInstitute" });
       }
 
       // Load samples
@@ -445,6 +443,13 @@ const TestRequestForm: React.FC = () => {
     setTotalSampleCost(total);
   }, [samples, indicators]);
 
+  // Generate sample code based on contract number
+  const generateSampleCode = (index: number): string => {
+    const contractNumber = form.getFieldValue("contractNumber") || "";
+    const orderNum = String(index).padStart(2, "0");
+    return contractNumber ? `${contractNumber}/${orderNum}` : "";
+  };
+
   const addSample = () => {
     // Block when samples are locked
     if (isSamplesLocked()) {
@@ -452,10 +457,11 @@ const TestRequestForm: React.FC = () => {
       return;
     }
 
+    const nextIndex = samples.length + 1;
     const newSample: SampleFormData = {
       key: `new-${Date.now()}`,
-      sortOrder: samples.length + 1,
-      sampleCode: "",
+      sortOrder: nextIndex,
+      sampleCode: generateSampleCode(nextIndex),
       sampleName: "",
       samplingAddress: "",
       sampleQuantity: "",
@@ -477,6 +483,99 @@ const TestRequestForm: React.FC = () => {
     }
 
     setSamples(samples.filter((s) => s.key !== key));
+  };
+
+  // Duplicate sample with all its data
+  const duplicateSample = (key: string) => {
+    if (isSamplesLocked()) {
+      message.warning("Không thể nhân đôi mẫu khi phiếu đang thực hiện");
+      return;
+    }
+
+    const sourceSample = samples.find((s) => s.key === key);
+    if (!sourceSample) return;
+
+    const newSample: SampleFormData = {
+      ...sourceSample,
+      key: `new-${Date.now()}`,
+      id: undefined, // New sample, no ID
+      sortOrder: samples.length + 1,
+      sampleCode: generateSampleCode(samples.length + 1),
+    };
+
+    // Copy laboratory assignments for the new sample
+    const newLabMap = { ...indicatorLaboratoryMap };
+    sourceSample.indicatorIds.forEach((indId) => {
+      const sourceLabKey = `${key}_${indId}`;
+      const newLabKey = `${newSample.key}_${indId}`;
+      if (indicatorLaboratoryMap[sourceLabKey]) {
+        newLabMap[newLabKey] = { ...indicatorLaboratoryMap[sourceLabKey] };
+      }
+    });
+    setIndicatorLaboratoryMap(newLabMap);
+
+    setSamples([...samples, newSample]);
+    message.success("Đã nhân đôi mẫu thành công");
+  };
+
+  // Print barcode for sample
+  const printBarcode = (sampleCode: string, sampleName: string) => {
+    // Open print dialog with barcode
+    const printWindow = window.open("", "_blank", "width=400,height=300");
+    if (printWindow) {
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>In Barcode - ${sampleCode}</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              text-align: center;
+              padding: 20px;
+              margin: 0;
+            }
+            .barcode-container {
+              display: inline-block;
+              padding: 15px;
+              border: 1px solid #ccc;
+            }
+            .sample-code {
+              font-size: 18px;
+              font-weight: bold;
+              margin-bottom: 10px;
+              letter-spacing: 2px;
+            }
+            .sample-name {
+              font-size: 12px;
+              color: #666;
+              margin-top: 10px;
+            }
+            .barcode {
+              font-family: 'Libre Barcode 39', cursive;
+              font-size: 48px;
+              letter-spacing: 0;
+            }
+            @media print {
+              body { margin: 0; }
+            }
+          </style>
+          <link href="https://fonts.googleapis.com/css2?family=Libre+Barcode+39&display=swap" rel="stylesheet">
+        </head>
+        <body>
+          <div class="barcode-container">
+            <div class="sample-code">${sampleCode}</div>
+            <div class="barcode">*${sampleCode}*</div>
+            <div class="sample-name">${sampleName || ""}</div>
+          </div>
+          <script>
+            setTimeout(() => { window.print(); }, 500);
+          </script>
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+    }
   };
 
   const updateSample = (
@@ -772,6 +871,12 @@ const TestRequestForm: React.FC = () => {
   }, [indicatorModalVisible, tempSelectedIndicators]);
 
   const onFinish = async (values: any) => {
+    // Validate agreeTerms checkbox
+    if (!values.agreeTerms) {
+      message.warning("Vui lòng đọc và đồng ý với quy định chung về yêu cầu dịch vụ thử nghiệm");
+      return;
+    }
+
     if (samples.length === 0) {
       message.warning("Vui lòng thêm ít nhất một mẫu xét nghiệm");
       return;
@@ -825,9 +930,6 @@ const TestRequestForm: React.FC = () => {
       const selectedProvince = provinces.find(
         (p) => p.code === values.provinceCode
       );
-      const selectedDistrict = districts.find(
-        (d) => d.code === values.districtCode
-      );
       const selectedWard = wards.find((w) => w.code === values.wardCode);
 
       const payload = {
@@ -843,8 +945,6 @@ const TestRequestForm: React.FC = () => {
         customerName: values.customerName,
         provinceCode: values.provinceCode || undefined,
         province: selectedProvince?.name || undefined,
-        districtCode: values.districtCode || undefined,
-        district: selectedDistrict?.name || undefined,
         wardCode: values.wardCode || undefined,
         ward: selectedWard?.name || undefined,
         address: values.address || undefined,
@@ -857,9 +957,9 @@ const TestRequestForm: React.FC = () => {
 
         // Testing method info
         methodWestHighlandInstitute:
-          values.methodWestHighlandInstitute || false,
-        methodCustomer: methodCustomerChecked,
-        methodCustomerDetail: methodCustomerChecked
+          values.methodRequirement === "westHighlandInstitute",
+        methodCustomer: values.methodRequirement === "customerRequest",
+        methodCustomerDetail: values.methodRequirement === "customerRequest"
           ? values.methodCustomerDetail
           : undefined,
         resultLanguage: values.resultLanguage ?? ResultLanguage.Vietnamese,
@@ -881,8 +981,8 @@ const TestRequestForm: React.FC = () => {
           ? values.expectedCompletionDate.toISOString()
           : undefined,
         sampleStorage: values.sampleStorageOption ?? SampleStorageOption.No,
-        totalCost: totalSampleCost,
-        totalCostInWords: values.totalCostInWords || undefined,
+        totalCost: values.sampleTypeTask ? 0 : totalSampleCost,
+        totalCostInWords: values.sampleTypeTask || totalSampleCost === 0 ? "" : numberToVietnameseWords(totalSampleCost),
         receiptNumber: values.receiptNumber || undefined,
 
         // User references
@@ -934,20 +1034,23 @@ const TestRequestForm: React.FC = () => {
       render: (_: any, __: any, index: number) => index + 1,
     },
     {
-      title: "Mã mẫu *",
+      title: "Mã mẫu",
       dataIndex: "sampleCode",
       key: "sampleCode",
-      width: 120,
-      render: (value: string, record: SampleFormData) => (
-        <Input
-          value={value}
-          onChange={(e) =>
-            updateSample(record.key, "sampleCode", e.target.value)
-          }
-          placeholder="Mã mẫu"
-          size="small"
-        />
-      ),
+      width: 130,
+      render: (_: string, __: SampleFormData, index: number) => {
+        const contractNumber = form.getFieldValue("contractNumber") || "";
+        const orderNum = String(index + 1).padStart(2, "0");
+        const autoCode = contractNumber ? `${contractNumber}/${orderNum}` : `--/${orderNum}`;
+        return (
+          <Input
+            value={autoCode}
+            disabled
+            size="small"
+            style={{ backgroundColor: "#f5f5f5" }}
+          />
+        );
+      },
     },
     {
       title: "Tên mẫu *",
@@ -1135,27 +1238,28 @@ const TestRequestForm: React.FC = () => {
         );
       },
     },
-    {
-      title: "Trạng thái",
-      dataIndex: "processingStatus",
-      key: "processingStatus",
-      width: 140,
-      render: (value: string, record: SampleFormData) => (
-        <Select
-          value={value}
-          onChange={(v) => updateSample(record.key, "processingStatus", v)}
-          placeholder="Chọn..."
-          size="small"
-          style={{ width: "100%" }}
-          allowClear
-        >
-          <Select.Option value="Đã nhận">Đã nhận</Select.Option>
-          <Select.Option value="Đang thử nghiệm">Đang thử nghiệm</Select.Option>
-          <Select.Option value="Hoàn thành">Hoàn thành</Select.Option>
-          <Select.Option value="Trả kết quả">Trả kết quả</Select.Option>
-        </Select>
-      ),
-    },
+    // Hidden: Status column temporarily not used
+    // {
+    //   title: "Trạng thái",
+    //   dataIndex: "processingStatus",
+    //   key: "processingStatus",
+    //   width: 140,
+    //   render: (value: string, record: SampleFormData) => (
+    //     <Select
+    //       value={value}
+    //       onChange={(v) => updateSample(record.key, "processingStatus", v)}
+    //       placeholder="Chọn..."
+    //       size="small"
+    //       style={{ width: "100%" }}
+    //       allowClear
+    //     >
+    //       <Select.Option value="Đã nhận">Đã nhận</Select.Option>
+    //       <Select.Option value="Đang thử nghiệm">Đang thử nghiệm</Select.Option>
+    //       <Select.Option value="Hoàn thành">Hoàn thành</Select.Option>
+    //       <Select.Option value="Trả kết quả">Trả kết quả</Select.Option>
+    //     </Select>
+    //   ),
+    // },
     {
       title: "Ghi chú",
       dataIndex: "notes",
@@ -1173,18 +1277,41 @@ const TestRequestForm: React.FC = () => {
     {
       title: "",
       key: "actions",
-      width: 50,
+      width: 100,
       fixed: "right" as const,
-      render: (_: any, record: SampleFormData) => (
-        <Popconfirm
-          title="Xóa mẫu này?"
-          onConfirm={() => removeSample(record.key)}
-          okText="Xóa"
-          cancelText="Hủy"
-        >
-          <Button type="link" danger icon={<DeleteOutlined />} size="small" />
-        </Popconfirm>
-      ),
+      render: (_: any, record: SampleFormData, index: number) => {
+        const contractNumber = form.getFieldValue("contractNumber") || "";
+        const orderNum = String(index + 1).padStart(2, "0");
+        const sampleCode = contractNumber ? `${contractNumber}/${orderNum}` : `--/${orderNum}`;
+        return (
+          <Space size={0}>
+            <Tooltip title="Nhân đôi">
+              <Button
+                type="link"
+                icon={<CopyOutlined />}
+                size="small"
+                onClick={() => duplicateSample(record.key)}
+              />
+            </Tooltip>
+            <Tooltip title="In Barcode">
+              <Button
+                type="link"
+                icon={<BarcodeOutlined />}
+                size="small"
+                onClick={() => printBarcode(sampleCode, record.sampleName)}
+              />
+            </Tooltip>
+            <Popconfirm
+              title="Xóa mẫu này?"
+              onConfirm={() => removeSample(record.key)}
+              okText="Xóa"
+              cancelText="Hủy"
+            >
+              <Button type="link" danger icon={<DeleteOutlined />} size="small" />
+            </Popconfirm>
+          </Space>
+        );
+      },
     },
   ];
 
@@ -1236,45 +1363,48 @@ const TestRequestForm: React.FC = () => {
                 <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" disabled={isFieldLocked("contractDate")} />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={24} md={16}>
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: "12px",
-                  paddingTop: "30px",
-                }}
-              >
-                <Form.Item
-                  name="sentToAccounting"
-                  valuePropName="checked"
-                  style={{ marginBottom: 0 }}
+            {/* Only show these checkboxes in edit mode */}
+            {isEditMode && (
+              <Col xs={24} sm={24} md={16}>
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "12px",
+                    paddingTop: "30px",
+                  }}
                 >
-                  <Checkbox>Gửi kế toán</Checkbox>
-                </Form.Item>
-                <Form.Item
-                  name="paymentReceived"
-                  valuePropName="checked"
-                  style={{ marginBottom: 0 }}
-                >
-                  <Checkbox>Đã thu tiền</Checkbox>
-                </Form.Item>
-                <Form.Item
-                  name="sentToDepartment"
-                  valuePropName="checked"
-                  style={{ marginBottom: 0 }}
-                >
-                  <Checkbox>Gửi khoa phòng</Checkbox>
-                </Form.Item>
-                <Form.Item
-                  name="resultReturned"
-                  valuePropName="checked"
-                  style={{ marginBottom: 0 }}
-                >
-                  <Checkbox>Trả kết quả</Checkbox>
-                </Form.Item>
-              </div>
-            </Col>
+                  <Form.Item
+                    name="sentToAccounting"
+                    valuePropName="checked"
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Checkbox>Gửi kế toán</Checkbox>
+                  </Form.Item>
+                  <Form.Item
+                    name="paymentReceived"
+                    valuePropName="checked"
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Checkbox>Đã thu tiền</Checkbox>
+                  </Form.Item>
+                  <Form.Item
+                    name="sentToDepartment"
+                    valuePropName="checked"
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Checkbox>Gửi khoa phòng</Checkbox>
+                  </Form.Item>
+                  <Form.Item
+                    name="resultReturned"
+                    valuePropName="checked"
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Checkbox>Trả kết quả</Checkbox>
+                  </Form.Item>
+                </div>
+              </Col>
+            )}
           </Row>
         </div>
 
@@ -1310,7 +1440,7 @@ const TestRequestForm: React.FC = () => {
                 />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={8} lg={4}>
+            <Col xs={24} sm={8} lg={6}>
               <Form.Item
                 name="provinceCode"
                 label="Tỉnh thành"
@@ -1331,14 +1461,12 @@ const TestRequestForm: React.FC = () => {
                   }
                   onChange={(value) => {
                     form.setFieldsValue({
-                      districtCode: undefined,
                       wardCode: undefined,
                     });
-                    setWards([]);
                     if (value) {
-                      setDistricts(getDistrictsByProvince(value));
+                      setWards(getWardsByProvince(value));
                     } else {
-                      setDistricts([]);
+                      setWards([]);
                     }
                   }}
                 >
@@ -1350,43 +1478,7 @@ const TestRequestForm: React.FC = () => {
                 </Select>
               </Form.Item>
             </Col>
-            <Col xs={24} sm={8} lg={4}>
-              <Form.Item
-                name="districtCode"
-                label="Quận huyện"
-                rules={[
-                  { required: true, message: "Vui lòng chọn quận huyện" },
-                ]}
-              >
-                <Select
-                  placeholder="Chọn quận/huyện"
-                  allowClear
-                  showSearch
-                  optionFilterProp="children"
-                  filterOption={(input, option) =>
-                    (option?.children as unknown as string)
-                      ?.toLowerCase()
-                      .includes(input.toLowerCase())
-                  }
-                  disabled={districts.length === 0 || isFieldLocked("districtCode")}
-                  onChange={(value) => {
-                    form.setFieldsValue({ wardCode: undefined });
-                    if (value) {
-                      setWards(getWardsByDistrict(value));
-                    } else {
-                      setWards([]);
-                    }
-                  }}
-                >
-                  {districts.map((d) => (
-                    <Select.Option key={d.code} value={d.code}>
-                      {d.name}
-                    </Select.Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={8} lg={4}>
+            <Col xs={24} sm={8} lg={6}>
               <Form.Item
                 name="wardCode"
                 label="Phường xã"
@@ -1406,7 +1498,7 @@ const TestRequestForm: React.FC = () => {
                 >
                   {wards.map((w) => (
                     <Select.Option key={w.code} value={w.code}>
-                      {w.name}
+                      {w.fullName}
                     </Select.Option>
                   ))}
                 </Select>
@@ -1427,9 +1519,6 @@ const TestRequestForm: React.FC = () => {
               <Form.Item
                 name="taxCode"
                 label="Mã số thuế"
-                rules={[
-                  { required: true, message: "Vui lòng nhập mã số thuế" },
-                ]}
               >
                 <Input placeholder="MST" disabled={isFieldLocked("taxCode")} />
               </Form.Item>
@@ -1508,7 +1597,7 @@ const TestRequestForm: React.FC = () => {
             dataSource={samples}
             columns={sampleColumns}
             pagination={false}
-            scroll={{ x: 1500 }}
+            scroll={{ x: 1500, y: 300 }}
             size="small"
             bordered
             locale={{ emptyText: 'Chưa có mẫu nào. Nhấn "Thêm mẫu" để thêm.' }}
@@ -1580,50 +1669,45 @@ const TestRequestForm: React.FC = () => {
               </Title>
               <Row gutter={[16, 12]}>
                 <Col xs={24}>
-                  <div
-                    style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: "16px",
-                      alignItems: "center",
-                    }}
+                  <Form.Item
+                    name="methodRequirement"
+                    style={{ marginBottom: 0 }}
+                    initialValue="westHighlandInstitute"
                   >
-                    <Form.Item
-                      name="methodWestHighlandInstitute"
-                      valuePropName="checked"
-                      style={{ marginBottom: 0 }}
-                    >
-                      <Checkbox>Viện KHKT NN Tây Nguyên</Checkbox>
-                    </Form.Item>
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        flexWrap: "wrap",
-                        gap: 8,
-                      }}
-                    >
-                      <Checkbox
-                        checked={methodCustomerChecked}
-                        onChange={(e) =>
-                          setMethodCustomerChecked(e.target.checked)
-                        }
+                    <Radio.Group>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: "16px",
+                          alignItems: "center",
+                        }}
                       >
-                        Theo yêu cầu KH
-                      </Checkbox>
-                      <Form.Item
-                        name="methodCustomerDetail"
-                        style={{ marginBottom: 0 }}
-                      >
-                        <Input
-                          placeholder="Chi tiết..."
-                          disabled={!methodCustomerChecked}
-                          style={{ width: 150 }}
-                          size="small"
-                        />
-                      </Form.Item>
-                    </span>
-                  </div>
+                        <Radio value="westHighlandInstitute">Viện KHKT NN Tây Nguyên</Radio>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            flexWrap: "wrap",
+                            gap: 8,
+                          }}
+                        >
+                          <Radio value="customerRequest">Theo yêu cầu KH</Radio>
+                          <Form.Item
+                            name="methodCustomerDetail"
+                            style={{ marginBottom: 0 }}
+                          >
+                            <Input
+                              placeholder="Chi tiết..."
+                              disabled={methodRequirement !== "customerRequest"}
+                              style={{ width: 150 }}
+                              size="small"
+                            />
+                          </Form.Item>
+                        </span>
+                      </div>
+                    </Radio.Group>
+                  </Form.Item>
                 </Col>
               </Row>
             </div>
@@ -1860,7 +1944,7 @@ const TestRequestForm: React.FC = () => {
                       Tổng chi phí:
                     </Text>
                     <Text strong style={{ fontSize: 24, color: "#1890ff" }}>
-                      {totalSampleCost.toLocaleString("vi-VN")} đ
+                      {sampleTypeTask ? "0" : totalSampleCost.toLocaleString("vi-VN")} đ
                     </Text>
                   </div>
                 </Col>
@@ -1870,15 +1954,11 @@ const TestRequestForm: React.FC = () => {
                       <Text>Bằng chữ:</Text>
                     </Col>
                     <Col xs={18}>
-                      <Form.Item
-                        name="totalCostInWords"
-                        style={{ marginBottom: 0 }}
-                      >
-                        <Input
-                          size="small"
-                          placeholder="Nhập số tiền bằng chữ..."
-                        />
-                      </Form.Item>
+                      <Input
+                        size="small"
+                        value={sampleTypeTask || totalSampleCost === 0 ? "" : numberToVietnameseWords(totalSampleCost)}
+                        disabled
+                      />
                     </Col>
                   </Row>
                 </Col>

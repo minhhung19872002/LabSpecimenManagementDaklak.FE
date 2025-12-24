@@ -35,7 +35,7 @@ export interface Ward {
 
 // Cache all districts and wards for filtering
 const allDistricts: District[] = getDistricts();
-const allWards: Ward[] = getWards();
+const allWards: Ward[] = getWards() as Ward[];
 
 // Get all provinces
 export const getAllProvinces = (): Province[] => {
@@ -52,6 +52,12 @@ export const getDistrictsByProvince = (provinceCode: string): District[] => {
 export const getWardsByDistrict = (districtCode: string): Ward[] => {
   if (!districtCode) return [];
   return allWards.filter((w) => w.districtCode === districtCode);
+};
+
+// Get wards by province code - filter from all wards
+export const getWardsByProvince = (provinceCode: string): Ward[] => {
+  if (!provinceCode) return [];
+  return allWards.filter((w) => w.provinceCode === provinceCode);
 };
 
 // Get province name by code
