@@ -1,6 +1,12 @@
 export interface OrganizationDto {
   id: string;
   name: string;
+  provinceCode: string;
+  wardCode: string;
+  address: string;
+  taxCode?: string;
+  contactPerson: string;
+  phone: string;
   isActive: boolean;
   sortOrder: number;
   creationTime?: string;
@@ -9,6 +15,12 @@ export interface OrganizationDto {
 
 export interface CreateUpdateOrganizationDto {
   name: string;
+  provinceCode: string;
+  wardCode: string;
+  address: string;
+  taxCode?: string;
+  contactPerson: string;
+  phone: string;
   isActive: boolean;
   sortOrder?: number;
 }
