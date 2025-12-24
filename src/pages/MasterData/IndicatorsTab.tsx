@@ -668,6 +668,19 @@ const IndicatorsTab: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
               // Chỉ hiển thị overlay nếu có ít nhất 1 chỉ tiêu trong group này được chọn
               const hasSelectedInThisGroup = someSelected;
 
+              // Lấy danh sách các chỉ tiêu đã được chọn (từ tất cả các group)
+              const selectedIndicators = indicators.filter((ind) =>
+                selectedRowKeys.includes(ind.id)
+              );
+              // Kiểm tra có chỉ tiêu nào đang ngừng hoạt động không (để hiện nút Kích hoạt)
+              const hasInactiveSelected = selectedIndicators.some(
+                (ind) => !ind.isActive
+              );
+              // Kiểm tra có chỉ tiêu nào đang hoạt động không (để hiện nút Ngưng)
+              const hasActiveSelected = selectedIndicators.some(
+                (ind) => ind.isActive
+              );
+
               return (
                 <div style={{ position: "relative" }}>
                   {hasSelectedInThisGroup && (
@@ -721,23 +734,27 @@ const IndicatorsTab: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
                         </span>
                       </div>
                       <Space size="small">
-                        <Button
-                          size="small"
-                          type="primary"
-                          icon={<CheckCircleOutlined />}
-                          onClick={handleBatchActivate}
-                          loading={batchLoading}
-                        >
-                          Kích hoạt
-                        </Button>
-                        <Button
-                          size="small"
-                          icon={<StopOutlined />}
-                          onClick={handleBatchDeactivate}
-                          loading={batchLoading}
-                        >
-                          Ngưng
-                        </Button>
+                        {hasInactiveSelected && (
+                          <Button
+                            size="small"
+                            type="primary"
+                            icon={<CheckCircleOutlined />}
+                            onClick={handleBatchActivate}
+                            loading={batchLoading}
+                          >
+                            Kích hoạt
+                          </Button>
+                        )}
+                        {hasActiveSelected && (
+                          <Button
+                            size="small"
+                            icon={<StopOutlined />}
+                            onClick={handleBatchDeactivate}
+                            loading={batchLoading}
+                          >
+                            Ngưng
+                          </Button>
+                        )}
                         <Button
                           size="small"
                           danger
