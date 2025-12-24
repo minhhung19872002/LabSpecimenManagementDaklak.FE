@@ -87,7 +87,7 @@ export const dashboardService = {
   // Additional methods for dashboard widgets
   getRecentRequests: async (count?: number): Promise<any[]> => {
     try {
-      const params = { limit: count || 5, sorting: 'requestDate desc' };
+      const params = { limit: count || 5, sorting: 'creationTime desc' };
       const response = await api.get('/api/v1/test-requests', { params });
       return response.data.items || [];
     } catch {

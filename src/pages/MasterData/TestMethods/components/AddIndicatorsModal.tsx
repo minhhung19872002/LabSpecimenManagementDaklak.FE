@@ -62,9 +62,10 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   // Handle indicator selection
   const handleSelectIndicator = (
     value: string,
-    option: { indicator: IndicatorDto },
+    option: { indicator?: IndicatorDto },
     fieldName: number
   ) => {
+    if (!option.indicator) return;
     const indicators = form.getFieldValue("indicators") || [];
     indicators[fieldName] = {
       ...indicators[fieldName],
@@ -118,22 +119,33 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                       {...restField}
                       name={[name, "indicatorId"]}
                       rules={[{ required: true, message: "Chọn chỉ tiêu" }]}
-                      style={{ marginBottom: 0, flex: 1 }}
+                      style={{ marginBottom: 0, flex: 1, minWidth: 0 }}
                     >
                       <Select
                         options={groupedOptions}
                         placeholder="Tìm và chọn chỉ tiêu"
                         style={{ width: "100%" }}
                         showSearch
+                        popupMatchSelectWidth={400}
+                        optionLabelProp="label"
                         filterOption={(inputValue, option) => {
                           if (!option?.label) return false;
                           const label = String(option.label).toLowerCase();
                           return label.includes(inputValue.toLowerCase());
                         }}
+                        optionRender={(option) => (
+                          <div style={{
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis"
+                          }}>
+                            {option.label}
+                          </div>
+                        )}
                         onSelect={(value, option) =>
                           handleSelectIndicator(
                             value,
-                            option as { indicator: IndicatorDto },
+                            option as { indicator?: IndicatorDto },
                             name
                           )
                         }

@@ -83,7 +83,7 @@ const TestRequestList: React.FC = () => {
       const result = await testRequestService.getList({
         skipCount: (currentPage - 1) * pageSize,
         maxResultCount: pageSize,
-        sorting: "requestDate desc",
+        sorting: "creationTime desc",
         search: searchText || undefined,
         status: statusFilter !== "all" ? statusFilter : undefined,
         expectedCompletionDateFrom:
