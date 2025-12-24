@@ -1,0 +1,324 @@
+import { message } from "antd";
+import type { FormInstance } from "antd";
+import {
+  departmentService,
+  specimenTypeService,
+  testMethodService,
+  storageLocationService,
+  customerService,
+  laboratoryService,
+  CreateUpdateDepartmentDto,
+  CreateUpdateSpecimenTypeDto,
+  CreateUpdateTestMethodDto,
+  CreateUpdateStorageLocationDto,
+  CreateUpdateCustomerDto,
+  CreateUpdateLaboratoryDto,
+} from "../../../../services/masterDataService";
+import {
+  importService,
+  downloadBlobAsFile,
+} from "../../../../services/importService";
+import { MasterDataItem } from "../types";
+import { categoryLabels, importTypeMap } from "../constants";
+
+interface UseMasterDataActionsParams {
+  activeCategory: string;
+  currentData: MasterDataItem[];
+  editingItem: MasterDataItem | null;
+  setIsModalOpen: (open: boolean) => void;
+  setEditingItem: (item: MasterDataItem | null) => void;
+  setModalLoading: (loading: boolean) => void;
+  setImportModalOpen: (open: boolean) => void;
+  setDownloadingTemplate: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  fetchCategoryData: (category: string, forceRefresh?: boolean) => Promise<void>;
+  fetchStatistics: () => Promise<void>;
+}
+
+export const useMasterDataActions = ({
+  activeCategory,
+  currentData,
+  editingItem,
+  setIsModalOpen,
+  setEditingItem,
+  setModalLoading,
+  setImportModalOpen,
+  setDownloadingTemplate,
+  setError,
+  fetchCategoryData,
+  fetchStatistics,
+}: UseMasterDataActionsParams) => {
+  const canImport = importTypeMap[activeCategory] !== null;
+
+  const handleCreate = (form: FormInstance) => {
+    setEditingItem(null);
+    form.resetFields();
+    form.setFieldsValue({
+      isActive: true,
+      sortOrder: currentData.length + 1,
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = (record: MasterDataItem, form: FormInstance) => {
+    setEditingItem(record);
+    form.setFieldsValue(record);
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      setError(null);
+
+      switch (activeCategory) {
+        case "departments":
+          await departmentService.delete(id);
+          break;
+        case "laboratories":
+          await laboratoryService.delete(id);
+          break;
+        case "specimenTypes":
+          await specimenTypeService.delete(id);
+          break;
+        case "testMethods":
+          await testMethodService.delete(id);
+          break;
+        case "storageLocations":
+          await storageLocationService.delete(id);
+          break;
+        case "customers":
+          await customerService.delete(id);
+          break;
+      }
+
+      message.success("Xóa thành công!");
+      // Refresh data and statistics
+      await fetchCategoryData(activeCategory, true);
+      fetchStatistics();
+    } catch (err: any) {
+      console.error("Failed to delete:", err);
+      // Handle different error formats from ABP Framework
+      let errorMsg = "Lỗi khi xóa dữ liệu";
+
+      if (err?.response?.data) {
+        const errorData = err.response.data;
+        if (errorData.error?.message) {
+          errorMsg = errorData.error.message;
+        } else if (errorData.message) {
+          errorMsg = errorData.message;
+        } else if (errorData.general && Array.isArray(errorData.general)) {
+          errorMsg = errorData.general.join(", ");
+        } else if (errorData.errors) {
+          const errorMessages = Object.values(errorData.errors).flat();
+          errorMsg = (errorMessages as string[]).join(", ");
+        } else if (typeof errorData === "object") {
+          const allErrors = Object.values(errorData)
+            .flat()
+            .filter((e) => typeof e === "string");
+          if (allErrors.length > 0) {
+            errorMsg = (allErrors as string[]).join(", ");
+          }
+        }
+      } else if (err?.message) {
+        errorMsg = err.message;
+      }
+
+      setError(errorMsg);
+      message.error(errorMsg);
+    }
+  };
+
+  const handleModalOk = async (form: FormInstance) => {
+    try {
+      setModalLoading(true);
+      setError(null);
+      const values = await form.validateFields();
+
+      if (editingItem) {
+        // Update existing item
+        switch (activeCategory) {
+          case "departments":
+            await departmentService.update(
+              editingItem.id,
+              values as CreateUpdateDepartmentDto
+            );
+            break;
+          case "laboratories":
+            await laboratoryService.update(
+              editingItem.id,
+              values as CreateUpdateLaboratoryDto
+            );
+            break;
+          case "specimenTypes":
+            await specimenTypeService.update(
+              editingItem.id,
+              values as CreateUpdateSpecimenTypeDto
+            );
+            break;
+          case "testMethods":
+            await testMethodService.update(
+              editingItem.id,
+              values as CreateUpdateTestMethodDto
+            );
+            break;
+          case "storageLocations":
+            await storageLocationService.update(
+              editingItem.id,
+              values as CreateUpdateStorageLocationDto
+            );
+            break;
+          case "customers":
+            await customerService.update(
+              editingItem.id,
+              values as CreateUpdateCustomerDto
+            );
+            break;
+        }
+        message.success("Cập nhật thành công!");
+      } else {
+        // Create new item
+        switch (activeCategory) {
+          case "departments":
+            await departmentService.create(values as CreateUpdateDepartmentDto);
+            break;
+          case "laboratories":
+            await laboratoryService.create(values as CreateUpdateLaboratoryDto);
+            break;
+          case "specimenTypes":
+            await specimenTypeService.create(
+              values as CreateUpdateSpecimenTypeDto
+            );
+            break;
+          case "testMethods":
+            await testMethodService.create(values as CreateUpdateTestMethodDto);
+            break;
+          case "storageLocations":
+            await storageLocationService.create(
+              values as CreateUpdateStorageLocationDto
+            );
+            break;
+          case "customers":
+            await customerService.create(values as CreateUpdateCustomerDto);
+            break;
+        }
+        message.success("Thêm mới thành công!");
+      }
+
+      setIsModalOpen(false);
+      form.resetFields();
+      // Refresh data and statistics
+      await fetchCategoryData(activeCategory, true);
+      if (!editingItem) {
+        // Only refresh statistics when creating new item
+        fetchStatistics();
+      }
+    } catch (err: any) {
+      console.error("Failed to save:", err);
+      // Handle different error formats from ABP Framework
+      let errorMsg = "Lỗi khi lưu dữ liệu";
+
+      if (err?.response?.data) {
+        const errorData = err.response.data;
+        // ABP Framework format: { error: { message: "...", details: "..." } }
+        if (errorData.error?.message) {
+          errorMsg = errorData.error.message;
+        }
+        // Alternative ABP format: { message: "..." }
+        else if (errorData.message) {
+          errorMsg = errorData.message;
+        }
+        // Custom format with general errors: { general: ["error1", "error2"] }
+        else if (errorData.general && Array.isArray(errorData.general)) {
+          errorMsg = errorData.general.join(", ");
+        }
+        // Validation errors format: { errors: { field: ["error1", "error2"] } }
+        else if (errorData.errors) {
+          const errorMessages = Object.values(errorData.errors).flat();
+          errorMsg = (errorMessages as string[]).join(", ");
+        }
+        // Direct object with field arrays: { fieldName: ["error1"] }
+        else if (typeof errorData === "object") {
+          const allErrors = Object.values(errorData)
+            .flat()
+            .filter((e) => typeof e === "string");
+          if (allErrors.length > 0) {
+            errorMsg = (allErrors as string[]).join(", ");
+          }
+        }
+      } else if (err?.message) {
+        errorMsg = err.message;
+      }
+
+      setError(errorMsg);
+      message.error(errorMsg);
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const handleImportExcel = () => {
+    if (canImport) {
+      setImportModalOpen(true);
+    } else {
+      message.info(
+        `Import Excel chưa hỗ trợ cho ${categoryLabels[activeCategory]}`
+      );
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    if (!canImport) {
+      message.info(
+        `Download template chưa hỗ trợ cho ${categoryLabels[activeCategory]}`
+      );
+      return;
+    }
+
+    setDownloadingTemplate(true);
+    try {
+      let blob: Blob;
+      let filename: string;
+
+      if (activeCategory === "customers") {
+        blob = await importService.downloadCustomersTemplate();
+        filename = "customers-template.xlsx";
+      } else if (activeCategory === "testMethods") {
+        blob = await importService.downloadTestMethodsTemplate();
+        filename = "test-methods-template.xlsx";
+      } else {
+        throw new Error("Unsupported category for template download");
+      }
+
+      downloadBlobAsFile(blob, filename);
+      message.success("Tải template thành công!");
+    } catch (error) {
+      console.error("Error downloading template:", error);
+      message.error("Không thể tải template. Vui lòng thử lại.");
+    } finally {
+      setDownloadingTemplate(false);
+    }
+  };
+
+  const handleExportExcel = () => {
+    const blob = new Blob(["Mock Excel Data"], {
+      type: "application/vnd.ms-excel",
+    });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `master_data_${activeCategory}.xlsx`;
+    a.click();
+    message.success("Xuất Excel thành công!");
+  };
+
+  return {
+    canImport,
+    handleCreate,
+    handleEdit,
+    handleDelete,
+    handleModalOk,
+    handleImportExcel,
+    handleDownloadTemplate,
+    handleExportExcel,
+  };
+};
