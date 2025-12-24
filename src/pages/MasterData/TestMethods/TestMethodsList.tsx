@@ -47,6 +47,7 @@ const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshK
     handleAddIndicatorsOk,
     handleAddIndicatorsCancel,
     handleRemoveIndicator,
+    handleToggleActive,
   } = useTestMethodsActions({
     fetchData,
     onDataChange,
@@ -69,9 +70,10 @@ const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshK
     () =>
       getTestMethodColumns(
         (record) => handleEdit(record, form),
-        handleDelete
+        handleDelete,
+        handleToggleActive
       ),
-    [handleEdit, handleDelete, form]
+    [handleEdit, handleDelete, handleToggleActive, form]
   );
 
   // Memoized columns for indicators
