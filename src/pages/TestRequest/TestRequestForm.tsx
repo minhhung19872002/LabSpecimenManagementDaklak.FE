@@ -104,6 +104,8 @@ const TestRequestForm: React.FC = () => {
   const sampleTypeTask = Form.useWatch("sampleTypeTask", form);
   // Watch methodRequirement to enable/disable detail input
   const methodRequirement = Form.useWatch("methodRequirement", form);
+  // Contract number for sample codes - only update on blur
+  const [sampleCodePrefix, setSampleCodePrefix] = useState<string>("");
 
   // Current status for field locking
   const [currentStatus, setCurrentStatus] = useState<TestRequestStatus | null>(
@@ -316,6 +318,51 @@ const TestRequestForm: React.FC = () => {
     }, 300);
   };
 
+  // Handle organization selection - auto fill customer info
+  const handleOrganizationSelect = (value: string) => {
+    const selectedOrg = organizations.find((org) => org.name === value);
+    if (selectedOrg) {
+      // Load wards for the selected province
+      if (selectedOrg.provinceCode) {
+        setWards(getWardsByProvince(selectedOrg.provinceCode));
+      }
+      // Auto fill fields
+      form.setFieldsValue({
+        customerName: selectedOrg.name,
+        provinceCode: selectedOrg.provinceCode,
+        wardCode: selectedOrg.wardCode,
+        address: selectedOrg.address,
+        taxCode: selectedOrg.taxCode,
+        contactPerson: selectedOrg.contactPerson,
+        phone: selectedOrg.phone,
+      });
+    }
+  };
+
+  // Handle phone blur - search organization by phone
+  const handlePhoneBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const phoneValue = e.target.value?.trim();
+    if (!phoneValue) return;
+
+    const foundOrg = organizations.find((org) => org.phone === phoneValue);
+    if (foundOrg) {
+      // Load wards for the selected province
+      if (foundOrg.provinceCode) {
+        setWards(getWardsByProvince(foundOrg.provinceCode));
+      }
+      // Auto fill fields
+      form.setFieldsValue({
+        customerName: foundOrg.name,
+        provinceCode: foundOrg.provinceCode,
+        wardCode: foundOrg.wardCode,
+        address: foundOrg.address,
+        taxCode: foundOrg.taxCode,
+        contactPerson: foundOrg.contactPerson,
+        phone: foundOrg.phone,
+      });
+    }
+  };
+
   // Cleanup debounce timer on unmount
   useEffect(() => {
     return () => {
@@ -363,6 +410,11 @@ const TestRequestForm: React.FC = () => {
           ? dayjs(data.sampleStorageEndDate)
           : null,
       });
+
+      // Set sample code prefix from contract number
+      if (data.contractNumber) {
+        setSampleCodePrefix(data.contractNumber);
+      }
 
       // Set methodRequirement based on existing data
       if (data.methodCustomer) {
@@ -1069,10 +1121,9 @@ const TestRequestForm: React.FC = () => {
       key: "sampleCode",
       width: 130,
       render: (_: string, __: SampleFormData, index: number) => {
-        const contractNumber = form.getFieldValue("contractNumber") || "";
         const orderNum = String(index + 1).padStart(2, "0");
-        const autoCode = contractNumber
-          ? `${contractNumber}/${orderNum}`
+        const autoCode = sampleCodePrefix
+          ? `${sampleCodePrefix}/${orderNum}`
           : `--/${orderNum}`;
         return (
           <Input
@@ -1279,28 +1330,6 @@ const TestRequestForm: React.FC = () => {
         );
       },
     },
-    // Hidden: Status column temporarily not used
-    // {
-    //   title: "Trạng thái",
-    //   dataIndex: "processingStatus",
-    //   key: "processingStatus",
-    //   width: 140,
-    //   render: (value: string, record: SampleFormData) => (
-    //     <Select
-    //       value={value}
-    //       onChange={(v) => updateSample(record.key, "processingStatus", v)}
-    //       placeholder="Chọn..."
-    //       size="small"
-    //       style={{ width: "100%" }}
-    //       allowClear
-    //     >
-    //       <Select.Option value="Đã nhận">Đã nhận</Select.Option>
-    //       <Select.Option value="Đang thử nghiệm">Đang thử nghiệm</Select.Option>
-    //       <Select.Option value="Hoàn thành">Hoàn thành</Select.Option>
-    //       <Select.Option value="Trả kết quả">Trả kết quả</Select.Option>
-    //     </Select>
-    //   ),
-    // },
     {
       title: "Ghi chú",
       dataIndex: "notes",
@@ -1321,10 +1350,9 @@ const TestRequestForm: React.FC = () => {
       width: 100,
       fixed: "right" as const,
       render: (_: any, record: SampleFormData, index: number) => {
-        const contractNumber = form.getFieldValue("contractNumber") || "";
         const orderNum = String(index + 1).padStart(2, "0");
-        const sampleCode = contractNumber
-          ? `${contractNumber}/${orderNum}`
+        const sampleCode = sampleCodePrefix
+          ? `${sampleCodePrefix}/${orderNum}`
           : `--/${orderNum}`;
         return (
           <Space size={0}>
@@ -1401,6 +1429,7 @@ const TestRequestForm: React.FC = () => {
                 <Input
                   placeholder="Số hợp đồng"
                   disabled={isFieldLocked("contractNumber")}
+                  onBlur={(e) => setSampleCodePrefix(e.target.value?.trim() || "")}
                 />
               </Form.Item>
             </Col>
@@ -1480,6 +1509,7 @@ const TestRequestForm: React.FC = () => {
                 <AutoComplete
                   options={organizationOptions}
                   onSearch={handleOrganizationSearch}
+                  onSelect={handleOrganizationSelect}
                   placeholder="Nhập tên cơ sở / doanh nghiệp..."
                   filterOption={false}
                   disabled={isFieldLocked("customerName")}
@@ -1604,7 +1634,11 @@ const TestRequestForm: React.FC = () => {
                   },
                 ]}
               >
-                <Input placeholder="SĐT" disabled={isFieldLocked("phone")} />
+                <Input
+                  placeholder="SĐT"
+                  disabled={isFieldLocked("phone")}
+                  onBlur={handlePhoneBlur}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -1666,10 +1700,17 @@ const TestRequestForm: React.FC = () => {
             dataSource={samples}
             columns={sampleColumns}
             pagination={false}
-            scroll={{ x: 1500, y: 300 }}
+            scroll={{ x: "max-content", y: 220 }}
             size="small"
             bordered
-            locale={{ emptyText: 'Chưa có mẫu nào. Nhấn "Thêm mẫu" để thêm.' }}
+            className="sample-table-fixed-height"
+            locale={{
+              emptyText: (
+                <div style={{ padding: "60px 0" }}>
+                  Chưa có mẫu nào. Nhấn "Thêm mẫu" để thêm.
+                </div>
+              ),
+            }}
           />
         </div>
 

@@ -30,3 +30,23 @@
   display: flex;
   align-items: center;
 }
+
+/* Sample table fixed height - minimum 5 rows, expand when more */
+.test-request-form .sample-table-fixed-height .ant-table-body {
+  min-height: 220px !important;
+  max-height: unset !important;
+  overflow-y: auto !important;
+}
+
+/* Hide scrollbar placeholder column and fix action column position */
+.test-request-form .sample-table-fixed-height .ant-table-cell-scrollbar {
+  display: none !important;
+}
+
+.test-request-form .sample-table-fixed-height .ant-table-cell-fix-end,
+.test-request-form .sample-table-fixed-height .ant-table-cell-fix-right,
+.test-request-form .sample-table-fixed-height .ant-table-cell-fix-right-first,
+.test-request-form .sample-table-fixed-height .ant-table-cell-fix-end-shadow {
+  right: 0 !important;
+  inset-inline-end: 0 !important;
+}
