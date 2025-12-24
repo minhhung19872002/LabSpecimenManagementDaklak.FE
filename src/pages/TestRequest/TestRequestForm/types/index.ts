@@ -1,6 +1,27 @@
 import { SampleStatus } from "../../../../types/testRequest";
 import dayjs from "dayjs";
 
+// Thông tin phương pháp cho một chỉ tiêu
+export interface IndicatorMethodInfo {
+  testMethodId: string;
+  testMethodCode: string;
+  testMethodName: string;
+  unitPrice: number;
+  isActive: boolean;
+}
+
+// Key duy nhất cho mỗi lựa chọn: indicatorId_testMethodId
+export type IndicatorMethodKey = `${string}_${string}`;
+
+// Helper để tạo và parse IndicatorMethodKey
+export const createIndicatorMethodKey = (indicatorId: string, testMethodId: string): IndicatorMethodKey =>
+  `${indicatorId}_${testMethodId}` as IndicatorMethodKey;
+
+export const parseIndicatorMethodKey = (key: IndicatorMethodKey): { indicatorId: string; testMethodId: string } => {
+  const [indicatorId, testMethodId] = key.split('_');
+  return { indicatorId, testMethodId };
+};
+
 export interface SampleFormData {
   key: string;
   id?: string;
@@ -14,7 +35,8 @@ export interface SampleFormData {
   processingStatus?: string;
   notes?: string;
   storageLocation?: string;
-  indicatorIds: string[];
+  indicatorIds: string[]; // deprecated, giữ để backward compatible
+  indicatorMethods: IndicatorMethodKey[]; // NEW: array of "indicatorId_testMethodId"
 }
 
 export interface IndicatorDateInfo {

@@ -17,7 +17,8 @@ import {
   BarcodeOutlined,
 } from "@ant-design/icons";
 import { Icon } from "@iconify/react";
-import { SampleFormData, LaboratoryAssignment } from "../types";
+import { SampleFormData, LaboratoryAssignment, IndicatorMethodKey, IndicatorMethodInfo } from "../types";
+import { IndicatorDto } from "../../../../services/masterDataService";
 
 const { Text } = Typography;
 
@@ -32,6 +33,12 @@ interface SampleTableSectionProps {
   printBarcode: (sampleCode: string, sampleName: string) => void;
   openIndicatorModal: (sampleKey: string) => void;
   getIndicatorInfo: (indicatorId: string) => any;
+  getIndicatorMethodInfo: (key: IndicatorMethodKey) => {
+    indicator: IndicatorDto | undefined;
+    method: IndicatorMethodInfo | undefined;
+    indicatorId: string;
+    testMethodId: string;
+  };
   indicatorLaboratoryMap: Record<string, LaboratoryAssignment>;
 }
 
@@ -46,6 +53,7 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
   printBarcode,
   openIndicatorModal,
   getIndicatorInfo,
+  getIndicatorMethodInfo,
   indicatorLaboratoryMap,
 }) => {
   const sampleColumns = [
@@ -142,53 +150,61 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
     },
     {
       title: <span style={{ whiteSpace: "nowrap" }}>Chỉ tiêu kiểm nghiệm</span>,
-      dataIndex: "indicatorIds",
-      key: "indicatorIds",
+      dataIndex: "indicatorMethods",
+      key: "indicatorMethods",
       width: 280,
-      render: (value: string[], record: SampleFormData) => {
-        const unsentIndicators = value.filter(
-          (id) => !indicatorLaboratoryMap[`${record.key}_${id}`]
+      render: (_: IndicatorMethodKey[], record: SampleFormData) => {
+        // Use indicatorMethods if available, fallback to indicatorIds for backward compat
+        const methods = record.indicatorMethods || [];
+        const hasData = methods.length > 0;
+
+        const unsentMethods = methods.filter(
+          (key) => !indicatorLaboratoryMap[`${record.key}_${key}`]
         );
-        const sentIndicators = value.filter(
-          (id) => indicatorLaboratoryMap[`${record.key}_${id}`]
+        const sentMethods = methods.filter(
+          (key) => indicatorLaboratoryMap[`${record.key}_${key}`]
         );
         const groupedByLab: Record<
           string,
-          { labName: string; indicators: string[] }
+          { labName: string; methods: IndicatorMethodKey[] }
         > = {};
-        sentIndicators.forEach((id) => {
-          const labInfo = indicatorLaboratoryMap[`${record.key}_${id}`];
+        sentMethods.forEach((key) => {
+          const labInfo = indicatorLaboratoryMap[`${record.key}_${key}`];
           if (!groupedByLab[labInfo.laboratoryId]) {
             groupedByLab[labInfo.laboratoryId] = {
               labName: labInfo.laboratoryName,
-              indicators: [],
+              methods: [],
             };
           }
-          groupedByLab[labInfo.laboratoryId].indicators.push(id);
+          groupedByLab[labInfo.laboratoryId].methods.push(key);
         });
 
         const popoverContent = (
-          <div style={{ maxHeight: 300, overflowY: "auto", minWidth: 280 }}>
-            {value.length === 0 ? (
+          <div style={{ maxHeight: 300, overflowY: "auto", minWidth: 320 }}>
+            {!hasData ? (
               <Text type="secondary">Chưa chọn chỉ tiêu nào</Text>
             ) : (
               <>
-                {unsentIndicators.map((indId) => {
-                  const ind = getIndicatorInfo(indId);
-                  return ind ? (
+                {unsentMethods.map((key) => {
+                  const { indicator, method } = getIndicatorMethodInfo(key);
+                  return indicator && method ? (
                     <div
-                      key={indId}
+                      key={key}
                       style={{
                         padding: "4px 0",
                         borderBottom: "1px solid #f0f0f0",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        gap: 8,
                       }}
                     >
-                      <span>- {ind.name}</span>
+                      <span style={{ flex: 1 }}>- {indicator.name}</span>
+                      <span style={{ color: "#1890ff", fontSize: 12 }}>{method.testMethodName}</span>
                     </div>
                   ) : null;
                 })}
                 {Object.entries(groupedByLab).map(
-                  ([labId, { labName, indicators }]) => (
+                  ([labId, { labName, methods: labMethods }]) => (
                     <div key={labId}>
                       <div
                         style={{
@@ -197,22 +213,26 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
                           fontSize: 13,
                           color: "#000",
                           borderBottom: "1px solid #f0f0f0",
-                          marginTop: unsentIndicators.length > 0 ? 8 : 0,
+                          marginTop: unsentMethods.length > 0 ? 8 : 0,
                         }}
                       >
-                        {labName} ({indicators.length})
+                        {labName} ({labMethods.length})
                       </div>
-                      {indicators.map((indId) => {
-                        const ind = getIndicatorInfo(indId);
-                        return ind ? (
+                      {labMethods.map((key) => {
+                        const { indicator, method } = getIndicatorMethodInfo(key);
+                        return indicator && method ? (
                           <div
-                            key={indId}
+                            key={key}
                             style={{
                               padding: "4px 0 4px 12px",
                               borderBottom: "1px solid #f0f0f0",
+                              display: "flex",
+                              justifyContent: "space-between",
+                              gap: 8,
                             }}
                           >
-                            <span>- {ind.name}</span>
+                            <span style={{ flex: 1 }}>- {indicator.name}</span>
+                            <span style={{ color: "#1890ff", fontSize: 12 }}>{method.testMethodName}</span>
                           </div>
                         ) : null;
                       })}
@@ -226,10 +246,10 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
 
         return (
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            {value.length > 0 ? (
+            {hasData ? (
               <Popover
                 content={popoverContent}
-                title={`Chỉ tiêu kiểm nghiệm (${value.length})`}
+                title={`Chỉ tiêu kiểm nghiệm (${methods.length})`}
                 trigger="click"
                 placement="bottomLeft"
               >

@@ -74,6 +74,10 @@ const TestRequestForm: React.FC = () => {
     setCurrentSampleKey,
     tempSelectedIndicators,
     setTempSelectedIndicators,
+    tempSelectedIndicatorMethods,
+    setTempSelectedIndicatorMethods,
+    expandedIndicators,
+    setExpandedIndicators,
     selectedGroupFilter,
     setSelectedGroupFilter,
     indicatorSearchText,
@@ -90,6 +94,7 @@ const TestRequestForm: React.FC = () => {
     setExpandedGroups,
     expandedGroupsInSelector,
     setExpandedGroupsInSelector,
+    indicatorMethodsMap,
     laboratoryModalVisible,
     setLaboratoryModalVisible,
     selectedLaboratoryId,
@@ -106,6 +111,8 @@ const TestRequestForm: React.FC = () => {
     wards,
     setWards,
     getIndicatorInfo,
+    getMethodsForIndicator,
+    getIndicatorMethodInfo,
     getFilteredIndicators,
     getFilteredGroupsWithIndicators,
     navigate,
@@ -122,6 +129,7 @@ const TestRequestForm: React.FC = () => {
     handleIndicatorModalOk,
     handleIndicatorModalCancel,
     toggleIndicator,
+    toggleIndicatorMethod,
     handleIndicatorDateChange,
     toggleCheckedIndicator,
     handleSelectAllIndicators,
@@ -155,8 +163,11 @@ const TestRequestForm: React.FC = () => {
     setCurrentSampleKey,
     tempSelectedIndicators,
     setTempSelectedIndicators,
+    tempSelectedIndicatorMethods,
+    setTempSelectedIndicatorMethods,
     setIndicatorModalVisible,
     setSelectedGroupFilter,
+    indicatorMethodsMap,
     laboratories,
     selectedLaboratoryId,
     setSelectedLaboratoryId,
@@ -224,6 +235,7 @@ const TestRequestForm: React.FC = () => {
           printBarcode={printBarcode}
           openIndicatorModal={openIndicatorModal}
           getIndicatorInfo={getIndicatorInfo}
+          getIndicatorMethodInfo={getIndicatorMethodInfo}
           indicatorLaboratoryMap={indicatorLaboratoryMap}
         />
 
@@ -306,6 +318,12 @@ const TestRequestForm: React.FC = () => {
         currentSampleKey={currentSampleKey}
         tempSelectedIndicators={tempSelectedIndicators}
         setTempSelectedIndicators={setTempSelectedIndicators}
+        tempSelectedIndicatorMethods={tempSelectedIndicatorMethods}
+        setTempSelectedIndicatorMethods={setTempSelectedIndicatorMethods}
+        indicatorMethodsMap={indicatorMethodsMap}
+        expandedIndicators={expandedIndicators}
+        setExpandedIndicators={setExpandedIndicators}
+        toggleIndicatorMethod={toggleIndicatorMethod}
         indicatorGroups={indicatorGroups}
         indicators={indicators}
         expandedGroups={expandedGroups}
@@ -315,6 +333,7 @@ const TestRequestForm: React.FC = () => {
         indicatorSearchText={indicatorSearchText}
         getFilteredIndicators={getFilteredIndicators}
         getIndicatorInfo={getIndicatorInfo}
+        getIndicatorMethodInfo={getIndicatorMethodInfo}
         toggleIndicator={toggleIndicator}
         selectedIndicatorDates={selectedIndicatorDates}
         setSelectedIndicatorDates={setSelectedIndicatorDates}
@@ -339,7 +358,7 @@ const TestRequestForm: React.FC = () => {
         laboratoryRequestDate={laboratoryRequestDate}
         setLaboratoryRequestDate={setLaboratoryRequestDate}
         indicatorsToSend={indicatorsToSend}
-        getIndicatorInfo={getIndicatorInfo}
+        getIndicatorMethodInfo={getIndicatorMethodInfo}
         handleConfirmSendToLaboratory={handleConfirmSendToLaboratory}
       />
     </Card>

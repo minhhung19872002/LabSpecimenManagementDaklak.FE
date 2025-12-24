@@ -1,9 +1,10 @@
 // @ts-nocheck
-import React from "react";
+import React, { useMemo } from "react";
 import { Modal, Button, Radio, DatePicker, Table, Space, Row, Col, Typography } from "antd";
 import { Icon } from "@iconify/react";
 import dayjs from "dayjs";
 import { LaboratoryDto, IndicatorDto } from "../../../../services/masterDataService";
+import { IndicatorMethodKey, IndicatorMethodInfo } from "../types";
 
 const { Text } = Typography;
 
@@ -15,8 +16,13 @@ interface LaboratorySelectionModalProps {
   setSelectedLaboratoryId: (id: string | null) => void;
   laboratoryRequestDate: dayjs.Dayjs | null;
   setLaboratoryRequestDate: (date: dayjs.Dayjs | null) => void;
-  indicatorsToSend: string[];
-  getIndicatorInfo: (indicatorId: string) => IndicatorDto | undefined;
+  indicatorsToSend: string[]; // Now contains IndicatorMethodKey[]
+  getIndicatorMethodInfo: (key: IndicatorMethodKey) => {
+    indicator: IndicatorDto | undefined;
+    method: IndicatorMethodInfo | undefined;
+    indicatorId: string;
+    testMethodId: string;
+  };
   handleConfirmSendToLaboratory: () => void;
 }
 
@@ -29,9 +35,22 @@ const LaboratorySelectionModal: React.FC<LaboratorySelectionModalProps> = ({
   laboratoryRequestDate,
   setLaboratoryRequestDate,
   indicatorsToSend,
-  getIndicatorInfo,
+  getIndicatorMethodInfo,
   handleConfirmSendToLaboratory,
 }) => {
+  // Transform indicatorsToSend (IndicatorMethodKey[]) to table data
+  const tableData = useMemo(() => {
+    return indicatorsToSend.map((key) => {
+      const { indicator, method } = getIndicatorMethodInfo(key as IndicatorMethodKey);
+      return {
+        key,
+        indicatorName: indicator?.name || "",
+        methodName: method?.testMethodName || "",
+        unitPrice: method?.unitPrice || 0,
+      };
+    });
+  }, [indicatorsToSend, getIndicatorMethodInfo]);
+
   return (
     <Modal
       title={
@@ -67,6 +86,7 @@ const LaboratorySelectionModal: React.FC<LaboratorySelectionModalProps> = ({
       width={800}
       centered
       footer={null}
+      zIndex={1100}
       styles={{
         body: {
           padding: 0,
@@ -135,17 +155,22 @@ const LaboratorySelectionModal: React.FC<LaboratorySelectionModalProps> = ({
             }}
           >
             <Table
-              dataSource={indicatorsToSend
-                .map((id) => getIndicatorInfo(id))
-                .filter(Boolean)}
-              rowKey="id"
+              dataSource={tableData}
+              rowKey="key"
               size="small"
               pagination={false}
               columns={[
                 {
                   title: "Chỉ tiêu",
-                  dataIndex: "name",
-                  key: "name",
+                  dataIndex: "indicatorName",
+                  key: "indicatorName",
+                  ellipsis: true,
+                },
+                {
+                  title: "Phương pháp",
+                  dataIndex: "methodName",
+                  key: "methodName",
+                  width: 200,
                   ellipsis: true,
                 },
                 {
