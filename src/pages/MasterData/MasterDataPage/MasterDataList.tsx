@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Card, Button, Space, Tag, Alert, Tabs, Form } from "antd";
 import {
   PlusOutlined,
@@ -11,6 +11,7 @@ import {
 import ImportExcelModal from "../../../components/common/ImportExcelModal";
 import IndicatorsTab from "../IndicatorsTab";
 import FormTemplatesTab from "../FormTemplatesTab";
+import TestMethodsTab from "../TestMethods";
 import { useMasterDataState } from "./hooks";
 import { useMasterDataActions } from "./hooks/useMasterDataActions";
 import {
@@ -80,6 +81,7 @@ const MasterDataList: React.FC = () => {
   });
 
   const [form] = Form.useForm();
+  const [testMethodsRefreshKey, setTestMethodsRefreshKey] = useState(0);
 
   // Memoized columns
   const columns = useMemo(
@@ -121,7 +123,8 @@ const MasterDataList: React.FC = () => {
         }
         extra={
           activeCategory !== "indicators" &&
-          activeCategory !== "formTemplates" && (
+          activeCategory !== "formTemplates" &&
+          activeCategory !== "testMethods" && (
             <Space>
               {canImport && (
                 <Button
@@ -154,6 +157,10 @@ const MasterDataList: React.FC = () => {
           onChange={(key) => {
             setActiveCategory(key);
             setSearchText("");
+            // Trigger refresh when switching to testMethods tab
+            if (key === "testMethods") {
+              setTestMethodsRefreshKey((prev) => prev + 1);
+            }
           }}
           tabPosition="left"
           style={{ minHeight: 400 }}
@@ -170,6 +177,11 @@ const MasterDataList: React.FC = () => {
                 <IndicatorsTab onDataChange={() => fetchStatistics()} />
               ) : key === "formTemplates" ? (
                 <FormTemplatesTab />
+              ) : key === "testMethods" ? (
+                <TestMethodsTab
+                  onDataChange={() => fetchStatistics()}
+                  refreshKey={testMethodsRefreshKey}
+                />
               ) : (
                 <MasterDataTable
                   activeCategory={activeCategory}

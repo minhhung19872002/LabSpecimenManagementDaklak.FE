@@ -9,7 +9,8 @@ import {
   laboratoryService,
   CreateUpdateDepartmentDto,
   CreateUpdateSpecimenTypeDto,
-  CreateUpdateTestMethodDto,
+  CreateTestMethodDto,
+  UpdateTestMethodDto,
   CreateUpdateStorageLocationDto,
   CreateUpdateCustomerDto,
   CreateUpdateLaboratoryDto,
@@ -158,7 +159,7 @@ export const useMasterDataActions = ({
           case "testMethods":
             await testMethodService.update(
               editingItem.id,
-              values as CreateUpdateTestMethodDto
+              values as UpdateTestMethodDto
             );
             break;
           case "storageLocations":
@@ -190,7 +191,7 @@ export const useMasterDataActions = ({
             );
             break;
           case "testMethods":
-            await testMethodService.create(values as CreateUpdateTestMethodDto);
+            await testMethodService.create(values as CreateTestMethodDto);
             break;
           case "storageLocations":
             await storageLocationService.create(
