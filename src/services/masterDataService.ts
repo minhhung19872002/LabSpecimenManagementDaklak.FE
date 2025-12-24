@@ -55,20 +55,42 @@ export interface TestMethodDto {
   id: string;
   code: string;
   name: string;
-  description?: string;
-  standard?: string;
+  unit: string;
   isActive: boolean;
   sortOrder: number;
+  indicatorCount: number;
   creationTime: string;
 }
 
-export interface CreateUpdateTestMethodDto {
-  code: string;
+export interface CreateTestMethodDto {
   name: string;
-  description?: string;
-  standard?: string;
+  unit: string;
+  isActive?: boolean;
+}
+
+export interface UpdateTestMethodDto {
+  name: string;
+  unit: string;
   isActive: boolean;
-  sortOrder?: number;
+}
+
+export interface TestMethodIndicatorDto {
+  id: string;
+  testMethodId: string;
+  indicatorId: string;
+  indicatorCode: string;
+  indicatorName: string;
+  unitPrice: number;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export interface TestMethodWithIndicatorsDto extends TestMethodDto {
+  indicators: TestMethodIndicatorDto[];
+}
+
+export interface AddIndicatorsToTestMethodDto {
+  indicators: { indicatorId: string; unitPrice: number }[];
 }
 
 // StorageLocation
@@ -305,11 +327,11 @@ export const testMethodService = {
     const response = await api.get<TestMethodDto>(`${TEST_METHOD_URL}/${id}`);
     return response.data;
   },
-  create: async (data: CreateUpdateTestMethodDto): Promise<TestMethodDto> => {
+  create: async (data: CreateTestMethodDto): Promise<TestMethodDto> => {
     const response = await api.post<TestMethodDto>(TEST_METHOD_URL, data);
     return response.data;
   },
-  update: async (id: string, data: CreateUpdateTestMethodDto): Promise<TestMethodDto> => {
+  update: async (id: string, data: UpdateTestMethodDto): Promise<TestMethodDto> => {
     const response = await api.put<TestMethodDto>(`${TEST_METHOD_URL}/${id}`, data);
     return response.data;
   },
@@ -320,9 +342,25 @@ export const testMethodService = {
     const response = await api.get<TestMethodDto[]>(`${TEST_METHOD_URL}/active`);
     return { items: response.data, totalCount: response.data.length };
   },
-  getByDepartment: async (departmentId: string): Promise<TestMethodDto[]> => {
-    const response = await api.get<TestMethodDto[]>(`${TEST_METHOD_URL}/by-department/${departmentId}`);
+  // Methods with indicators
+  getWithIndicators: async (): Promise<TestMethodWithIndicatorsDto[]> => {
+    const response = await api.get<TestMethodWithIndicatorsDto[]>(`${TEST_METHOD_URL}/with-indicators`);
     return response.data;
+  },
+  getOneWithIndicators: async (id: string): Promise<TestMethodWithIndicatorsDto> => {
+    const response = await api.get<TestMethodWithIndicatorsDto>(`${TEST_METHOD_URL}/${id}/with-indicators`);
+    return response.data;
+  },
+  // Indicator management
+  getIndicators: async (testMethodId: string): Promise<TestMethodIndicatorDto[]> => {
+    const response = await api.get<TestMethodIndicatorDto[]>(`${TEST_METHOD_URL}/${testMethodId}/indicators`);
+    return response.data;
+  },
+  addIndicators: async (testMethodId: string, data: AddIndicatorsToTestMethodDto): Promise<void> => {
+    await api.post(`${TEST_METHOD_URL}/${testMethodId}/indicators`, data);
+  },
+  removeIndicator: async (testMethodId: string, indicatorId: string): Promise<void> => {
+    await api.delete(`${TEST_METHOD_URL}/${testMethodId}/indicators/${indicatorId}`);
   },
 };
 
