@@ -7,12 +7,12 @@ import {
   Row,
   Col,
   Card,
-  Table,
   Tag,
   Space,
   Alert,
   Input,
   message,
+  Table,
 } from 'antd';
 import {
   CheckCircleOutlined,
@@ -31,6 +31,7 @@ import {
   ChangeApprovalStatus,
 } from '../../../types/testRequest';
 import { testRequestService } from '../../../services/testRequestService';
+import { userService, UserLookupDto } from '../../../services/userService';
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -53,6 +54,29 @@ interface IndicatorChange {
   indicator: any;
   oldIndicator?: any;
   sampleCode?: string;
+}
+
+interface SampleChange {
+  type: 'add' | 'update' | 'delete';
+  sampleCode: string;
+  oldSampleCode?: string;
+  sampleName?: string;
+  oldSampleName?: string;
+  oldSample?: any;
+  newSample?: any;
+  indicators: IndicatorChange[];
+  // Sample info for display
+  samplingAddress?: string;
+  oldSamplingAddress?: string;
+  sampleQuantity?: string;
+  oldSampleQuantity?: string;
+  storageLocation?: string;
+  oldStorageLocation?: string;
+  status?: number;
+  oldStatus?: number;
+  // Total cost
+  totalCost: number;
+  oldTotalCost?: number;
 }
 
 // Field labels mapping (support both camelCase and PascalCase)
@@ -189,15 +213,20 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
   const [pendingChanges, setPendingChanges] = useState<TestRequestChangeHistoryDto[]>([]);
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const [users, setUsers] = useState<UserLookupDto[]>([]);
 
-  // Load pending changes
+  // Load pending changes and users
   const loadChanges = async () => {
     if (!testRequestId) return;
     setLoading(true);
     try {
-      const history = await testRequestService.getChangeHistory(testRequestId);
+      const [history, usersData] = await Promise.all([
+        testRequestService.getChangeHistory(testRequestId),
+        userService.getLookup(),
+      ]);
       const pending = history.filter(h => h.approvalStatus === ChangeApprovalStatus.Pending);
       setPendingChanges(pending);
+      setUsers(usersData);
     } catch (error) {
       console.error('Error loading changes:', error);
       message.error('Không thể tải thông tin thay đổi');
@@ -213,9 +242,20 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
   }, [visible, testRequestId]);
 
   // Parse changes
-  const { fieldChanges, indicatorChanges } = useMemo(() => {
+  const { fieldChanges, sampleChanges } = useMemo(() => {
     const fields: FieldChange[] = [];
-    let indicators: IndicatorChange[] = [];
+    const samples: SampleChange[] = [];
+
+    // Helper functions
+    const getVal = (obj: any, key: string) => {
+      if (!obj) return undefined;
+      const lowerKey = key.toLowerCase();
+      for (const k of Object.keys(obj)) {
+        if (k.toLowerCase() === lowerKey) return obj[k];
+      }
+      return undefined;
+    };
+    const normalize = (v: any) => (v === null || v === undefined) ? '' : String(v);
 
     pendingChanges.forEach(change => {
       if (change.fieldName === 'Samples') {
@@ -224,10 +264,24 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
           const oldSamples = change.oldValue ? JSON.parse(change.oldValue) : [];
           const newSamples = change.newValue ? JSON.parse(change.newValue) : [];
 
-          // Helper to get sample indicators (handle both cases)
+          // Helper to get sample fields (handle both cases)
           const getIndicators = (sample: any) => sample.indicators || sample.Indicators || [];
-          const getSampleCode = (sample: any) => sample.sampleCode || sample.SampleCode;
+          const getSampleCode = (sample: any) => sample.sampleCode || sample.SampleCode || '-';
+          const getSampleName = (sample: any) => sample.sampleName || sample.SampleName || '';
           const getSampleId = (sample: any) => sample.id || sample.Id;
+          const getSamplingAddress = (sample: any) => sample.samplingAddress || sample.SamplingAddress || '';
+          const getSampleQuantity = (sample: any) => sample.sampleQuantity || sample.SampleQuantity || '';
+          const getStorageLocation = (sample: any) => sample.storageLocation || sample.StorageLocation || '';
+          const getStatus = (sample: any) => sample.status ?? sample.Status ?? 0;
+
+          // Calculate total cost for a sample
+          const calcTotalCost = (sample: any) => {
+            const inds = getIndicators(sample);
+            return inds.reduce((sum: number, ind: any) => {
+              const price = ind.unitPrice ?? ind.UnitPrice ?? 0;
+              return sum + price;
+            }, 0);
+          };
 
           // Build map only for samples with valid IDs
           const oldSampleMap = new Map<string, any>();
@@ -242,97 +296,142 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
             if (id) newSampleMap.set(id, s);
           });
 
+          // Helper to get indicator ID
+          const getIndId = (ind: any) => ind.id || ind.Id;
+
           // Find added samples (new samples without ID, or ID not in old)
           newSamples.forEach((s: any) => {
             const id = getSampleId(s);
-            // Sample is new if it has no ID, or its ID doesn't exist in old samples
             const isNewSample = !id || !oldSampleMap.has(id);
             if (isNewSample) {
-              // All indicators in new sample are added
-              getIndicators(s).forEach((ind: any) => {
-                indicators.push({ type: 'add', indicator: ind, sampleCode: getSampleCode(s) });
+              const indicatorChanges: IndicatorChange[] = getIndicators(s).map((ind: any) => ({
+                type: 'add' as const,
+                indicator: ind,
+                sampleCode: getSampleCode(s)
+              }));
+
+              samples.push({
+                type: 'add',
+                sampleCode: getSampleCode(s),
+                sampleName: getSampleName(s),
+                newSample: s,
+                indicators: indicatorChanges,
+                samplingAddress: getSamplingAddress(s),
+                sampleQuantity: getSampleQuantity(s),
+                storageLocation: getStorageLocation(s),
+                status: getStatus(s),
+                totalCost: calcTotalCost(s),
               });
             }
           });
 
-          // Find deleted samples and their indicators
+          // Find deleted samples
           oldSamples.forEach((s: any) => {
             const id = getSampleId(s);
             if (id && !newSampleMap.has(id)) {
-              // All indicators in deleted sample are deleted
-              getIndicators(s).forEach((ind: any) => {
-                indicators.push({ type: 'delete', indicator: ind, sampleCode: getSampleCode(s) });
+              const indicatorChanges: IndicatorChange[] = getIndicators(s).map((ind: any) => ({
+                type: 'delete' as const,
+                indicator: ind,
+                sampleCode: getSampleCode(s)
+              }));
+
+              samples.push({
+                type: 'delete',
+                sampleCode: getSampleCode(s),
+                sampleName: getSampleName(s),
+                oldSample: s,
+                indicators: indicatorChanges,
+                samplingAddress: getSamplingAddress(s),
+                sampleQuantity: getSampleQuantity(s),
+                storageLocation: getStorageLocation(s),
+                status: getStatus(s),
+                totalCost: calcTotalCost(s),
               });
             }
           });
 
-          // Find updated samples and their indicator changes (only for samples with matching IDs)
+          // Find updated samples
           newSamples.forEach((newS: any) => {
             const id = getSampleId(newS);
-            // Only check for updates if sample has an ID and exists in old samples
             if (!id) return;
-            const oldS: any = oldSampleMap.get(id);
-            if (oldS) {
-              // Check indicator changes within sample
-              const newInds = getIndicators(newS);
-              const oldInds = getIndicators(oldS);
+            const oldS = oldSampleMap.get(id);
+            if (!oldS) return;
 
-              // Helper to get indicator ID (backend now matches by composite key and preserves IDs)
-              const getIndId = (ind: any) => ind.id || ind.Id;
+            const newInds = getIndicators(newS);
+            const oldInds = getIndicators(oldS);
 
-              // Build maps by ID
-              const oldIndMap = new Map<string, any>();
-              oldInds.forEach((i: any) => {
-                const indId = getIndId(i);
-                if (indId) oldIndMap.set(indId, i);
-              });
+            // Build maps by ID
+            const oldIndMap = new Map<string, any>();
+            oldInds.forEach((i: any) => {
+              const indId = getIndId(i);
+              if (indId) oldIndMap.set(indId, i);
+            });
 
-              const newIndMap = new Map<string, any>();
-              newInds.forEach((i: any) => {
-                const indId = getIndId(i);
-                if (indId) newIndMap.set(indId, i);
-              });
+            const newIndMap = new Map<string, any>();
+            newInds.forEach((i: any) => {
+              const indId = getIndId(i);
+              if (indId) newIndMap.set(indId, i);
+            });
 
-              // Added indicators (in new but not in old, or new indicators without ID)
-              newInds.forEach((newInd: any) => {
-                const indId = getIndId(newInd);
-                if (!indId || !oldIndMap.has(indId)) {
-                  indicators.push({ type: 'add', indicator: newInd, sampleCode: getSampleCode(newS) });
+            const indicatorChanges: IndicatorChange[] = [];
+
+            // Added indicators
+            newInds.forEach((newInd: any) => {
+              const indId = getIndId(newInd);
+              if (!indId || !oldIndMap.has(indId)) {
+                indicatorChanges.push({ type: 'add', indicator: newInd, sampleCode: getSampleCode(newS) });
+              }
+            });
+
+            // Deleted indicators
+            oldInds.forEach((oldInd: any) => {
+              const indId = getIndId(oldInd);
+              if (indId && !newIndMap.has(indId)) {
+                indicatorChanges.push({ type: 'delete', indicator: oldInd, sampleCode: getSampleCode(newS) });
+              }
+            });
+
+            // Updated indicators
+            newInds.forEach((newInd: any) => {
+              const indId = getIndId(newInd);
+              if (indId && oldIndMap.has(indId)) {
+                const oldInd = oldIndMap.get(indId);
+                const fieldsToCompare = ['unitPrice', 'notes', 'testMethodId', 'laboratoryId'];
+                const hasChange = fieldsToCompare.some(f =>
+                  normalize(getVal(oldInd, f)) !== normalize(getVal(newInd, f))
+                );
+                if (hasChange) {
+                  indicatorChanges.push({ type: 'update', indicator: newInd, oldIndicator: oldInd, sampleCode: getSampleCode(newS) });
                 }
-              });
+              }
+            });
 
-              // Deleted indicators (in old but not in new)
-              oldInds.forEach((oldInd: any) => {
-                const indId = getIndId(oldInd);
-                if (indId && !newIndMap.has(indId)) {
-                  indicators.push({ type: 'delete', indicator: oldInd, sampleCode: getSampleCode(newS) });
-                }
-              });
+            // Check if sample itself has changes or has indicator changes
+            const sampleFieldsToCompare = ['samplingAddress', 'sampleQuantity', 'storageLocation', 'status', 'sampleName', 'sampleCode'];
+            const hasSampleChange = sampleFieldsToCompare.some(f =>
+              normalize(getVal(oldS, f)) !== normalize(getVal(newS, f))
+            );
 
-              // Updated indicators (same ID but different values)
-              newInds.forEach((newInd: any) => {
-                const indId = getIndId(newInd);
-                if (indId && oldIndMap.has(indId)) {
-                  const oldInd = oldIndMap.get(indId);
-                  // Compare meaningful fields
-                  const getVal = (obj: any, key: string) => {
-                    const lowerKey = key.toLowerCase();
-                    for (const k of Object.keys(obj || {})) {
-                      if (k.toLowerCase() === lowerKey) return obj[k];
-                    }
-                    return undefined;
-                  };
-                  const normalize = (v: any) => (v === null || v === undefined) ? '' : String(v);
-
-                  const fieldsToCompare = ['unitPrice', 'notes', 'testMethodId', 'laboratoryId'];
-                  const hasChange = fieldsToCompare.some(f =>
-                    normalize(getVal(oldInd, f)) !== normalize(getVal(newInd, f))
-                  );
-
-                  if (hasChange) {
-                    indicators.push({ type: 'update', indicator: newInd, oldIndicator: oldInd, sampleCode: getSampleCode(newS) });
-                  }
-                }
+            if (indicatorChanges.length > 0 || hasSampleChange) {
+              samples.push({
+                type: 'update',
+                sampleCode: getSampleCode(newS),
+                oldSampleCode: getSampleCode(oldS),
+                sampleName: getSampleName(newS),
+                oldSampleName: getSampleName(oldS),
+                oldSample: oldS,
+                newSample: newS,
+                indicators: indicatorChanges,
+                samplingAddress: getSamplingAddress(newS),
+                oldSamplingAddress: getSamplingAddress(oldS),
+                sampleQuantity: getSampleQuantity(newS),
+                oldSampleQuantity: getSampleQuantity(oldS),
+                storageLocation: getStorageLocation(newS),
+                oldStorageLocation: getStorageLocation(oldS),
+                status: getStatus(newS),
+                oldStatus: getStatus(oldS),
+                totalCost: calcTotalCost(newS),
+                oldTotalCost: calcTotalCost(oldS),
               });
             }
           });
@@ -349,7 +448,7 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
       }
     });
 
-    return { fieldChanges: fields, indicatorChanges: indicators };
+    return { fieldChanges: fields, sampleChanges: samples };
   }, [pendingChanges]);
 
   // Format value for display (case insensitive field matching)
@@ -395,6 +494,12 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
     // TotalCost
     if (lowerField === 'totalcost') {
       return new Intl.NumberFormat('vi-VN').format(Number(value)) + ' đ';
+    }
+
+    // SupervisorId, DirectorId - convert ID to name
+    if (lowerField === 'supervisorid' || lowerField === 'directorid') {
+      const user = users.find(u => u.id === value);
+      return user ? user.name : value;
     }
 
     return String(value);
@@ -461,129 +566,287 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
     );
   };
 
-  // Render indicator table
-  const renderIndicatorTable = () => {
-    if (indicatorChanges.length === 0) return null;
+  // Status label mapping
+  const getStatusLabel = (status: number | undefined) => {
+    const statusMap: Record<number, string> = {
+      0: 'Chờ xử lý',
+      1: 'Đang xử lý',
+      2: 'Hoàn thành',
+      3: 'Từ chối',
+    };
+    return statusMap[status ?? 0] || 'Chờ xử lý';
+  };
 
+  // Render change value with old/new comparison
+  const renderChangeValue = (label: string, newVal: string | undefined, oldVal: string | undefined, isDelete: boolean = false, isAdd: boolean = false) => {
+    const hasChange = oldVal !== undefined && oldVal !== newVal;
+
+    if (isDelete) {
+      return (
+        <div style={{ marginBottom: 4 }}>
+          <Text type="secondary" style={{ fontSize: 11, marginRight: 4 }}>{label}:</Text>
+          <Text delete type="secondary" style={{ fontSize: 12 }}>{newVal || '-'}</Text>
+        </div>
+      );
+    }
+
+    if (isAdd) {
+      return (
+        <div style={{ marginBottom: 4 }}>
+          <Text type="secondary" style={{ fontSize: 11, marginRight: 4 }}>{label}:</Text>
+          <Text style={{ fontSize: 12, color: '#52c41a', fontWeight: 500 }}>{newVal || '-'}</Text>
+        </div>
+      );
+    }
+
+    if (hasChange) {
+      return (
+        <div style={{ marginBottom: 4 }}>
+          <Text type="secondary" style={{ fontSize: 11, marginRight: 4 }}>{label}:</Text>
+          <Text delete type="secondary" style={{ fontSize: 11, marginRight: 4 }}>{oldVal || '-'}</Text>
+          <ArrowDownOutlined style={{ color: '#1890ff', transform: 'rotate(-90deg)', fontSize: 9, marginRight: 4 }} />
+          <Text style={{ fontSize: 12, color: '#52c41a', fontWeight: 500 }}>{newVal || '-'}</Text>
+        </div>
+      );
+    }
+
+    return null; // Don't show unchanged fields
+  };
+
+  // Render sample changes with expandable table
+  const renderSampleChanges = () => {
+    if (sampleChanges.length === 0) return null;
+
+    const totalIndicatorChanges = sampleChanges.reduce((sum, s) => sum + s.indicators.length, 0);
+
+    // Table columns for samples
     const columns = [
       {
         title: '',
         dataIndex: 'type',
-        width: 50,
+        width: 70,
         render: (type: string) => {
-          if (type === 'add') return <Tag color="success" icon={<PlusOutlined />} style={{ margin: 0 }}>A</Tag>;
-          if (type === 'delete') return <Tag color="error" icon={<DeleteOutlined />} style={{ margin: 0 }}>D</Tag>;
-          if (type === 'update') return <Tag color="warning" icon={<EditOutlined />} style={{ margin: 0 }}>U</Tag>;
-          return null;
+          if (type === 'add') return <Tag color="success" icon={<PlusOutlined />}>Thêm</Tag>;
+          if (type === 'delete') return <Tag color="error" icon={<DeleteOutlined />}>Xóa</Tag>;
+          return <Tag color="warning" icon={<EditOutlined />}>Sửa</Tag>;
         }
       },
       {
-        title: 'Mã chỉ tiêu',
-        dataIndex: ['indicator', 'indicatorCode'],
+        title: 'Mã mẫu',
+        dataIndex: 'sampleCode',
         width: 120,
-        render: (_: string, record: any) => {
-          const code = record.indicator?.indicatorCode || record.indicator?.IndicatorCode || '-';
+        render: (code: string, record: SampleChange) => {
           if (record.type === 'delete') {
-            return <Text delete type="secondary">{code}</Text>;
+            return <Text strong delete type="secondary">{code}</Text>;
           }
           if (record.type === 'add') {
-            return <Text style={{ color: '#52c41a', fontWeight: 500 }}>{code}</Text>;
+            return <Text strong style={{ color: '#52c41a' }}>{code}</Text>;
           }
-          return code;
+          // For update: show old → new if changed
+          if (record.oldSampleCode && record.oldSampleCode !== code) {
+            return (
+              <span>
+                <Text delete type="secondary" style={{ fontSize: 11 }}>{record.oldSampleCode}</Text>
+                <ArrowDownOutlined style={{ color: '#1890ff', transform: 'rotate(-90deg)', fontSize: 9, margin: '0 4px' }} />
+                <Text strong style={{ color: '#52c41a' }}>{code}</Text>
+              </span>
+            );
+          }
+          return <Text strong>{code}</Text>;
         }
       },
       {
-        title: 'Tên chỉ tiêu',
-        dataIndex: ['indicator', 'indicatorName'],
-        render: (_: string, record: any) => {
-          const name = record.indicator?.indicatorName || record.indicator?.IndicatorName || '-';
+        title: 'Tên mẫu',
+        dataIndex: 'sampleName',
+        render: (name: string, record: SampleChange) => {
           if (record.type === 'delete') {
-            return <Text delete type="secondary">{name}</Text>;
+            return <Text delete type="secondary">{name || '-'}</Text>;
           }
           if (record.type === 'add') {
-            return <Text style={{ color: '#52c41a', fontWeight: 500 }}>{name}</Text>;
+            return <Text style={{ color: '#52c41a', fontWeight: 500 }}>{name || '-'}</Text>;
           }
-          if (record.type === 'update' && record.oldIndicator) {
-            const oldName = record.oldIndicator?.indicatorName || record.oldIndicator?.IndicatorName;
-            if (oldName !== name) {
-              return (
-                <div>
-                  <Text delete type="secondary" style={{ fontSize: 12 }}>{oldName}</Text>
-                  <br />
-                  <Text style={{ color: '#52c41a' }}>{name}</Text>
-                </div>
-              );
-            }
+          // For update: show old → new if changed
+          if (record.oldSampleName && record.oldSampleName !== name) {
+            return (
+              <span>
+                <Text delete type="secondary" style={{ fontSize: 11 }}>{record.oldSampleName || '-'}</Text>
+                <ArrowDownOutlined style={{ color: '#1890ff', transform: 'rotate(-90deg)', fontSize: 9, margin: '0 4px' }} />
+                <Text style={{ color: '#52c41a', fontWeight: 500 }}>{name || '-'}</Text>
+              </span>
+            );
           }
-          return name;
+          return <Text>{name || '-'}</Text>;
         }
+      },
+      {
+        title: 'Chỉ tiêu',
+        dataIndex: 'indicators',
+        width: 80,
+        align: 'center' as const,
+        render: (inds: IndicatorChange[]) => inds.length > 0 ? <Tag color="blue">{inds.length}</Tag> : null
       },
       {
         title: 'Đơn giá',
-        dataIndex: ['indicator', 'unitPrice'],
-        width: 120,
-        render: (_: number, record: any) => {
-          const price = record.indicator?.unitPrice ?? record.indicator?.UnitPrice ?? 0;
-          const formattedPrice = new Intl.NumberFormat('vi-VN').format(price);
+        dataIndex: 'totalCost',
+        width: 140,
+        align: 'right' as const,
+        render: (cost: number, record: SampleChange) => {
+          const formatted = new Intl.NumberFormat('vi-VN').format(cost);
+          const oldFormatted = record.oldTotalCost !== undefined
+            ? new Intl.NumberFormat('vi-VN').format(record.oldTotalCost)
+            : null;
 
           if (record.type === 'delete') {
-            return <Text delete type="secondary">{formattedPrice}</Text>;
+            return <Text delete type="secondary">{formatted}đ</Text>;
           }
           if (record.type === 'add') {
-            return <Text style={{ color: '#52c41a', fontWeight: 500 }}>{formattedPrice}</Text>;
+            return <Text style={{ color: '#52c41a', fontWeight: 500 }}>{formatted}đ</Text>;
           }
-          if (record.type === 'update' && record.oldIndicator) {
-            const oldPrice = record.oldIndicator?.unitPrice ?? record.oldIndicator?.UnitPrice ?? 0;
-            if (oldPrice !== price) {
-              return (
-                <div>
-                  <Text delete type="secondary" style={{ fontSize: 12 }}>
-                    {new Intl.NumberFormat('vi-VN').format(oldPrice)}
-                  </Text>
-                  <br />
-                  <Text style={{ color: '#52c41a' }}>{formattedPrice}</Text>
-                </div>
-              );
-            }
+          if (oldFormatted && oldFormatted !== formatted) {
+            return (
+              <span>
+                <Text delete type="secondary" style={{ fontSize: 11 }}>{oldFormatted}đ</Text>
+                <ArrowDownOutlined style={{ color: '#1890ff', transform: 'rotate(-90deg)', fontSize: 9, margin: '0 4px' }} />
+                <Text style={{ color: '#52c41a', fontWeight: 500 }}>{formatted}đ</Text>
+              </span>
+            );
           }
-          return formattedPrice;
+          return <Text>{formatted}đ</Text>;
         }
       },
     ];
+
+    // Expanded row render
+    const expandedRowRender = (sample: SampleChange) => (
+      <div style={{ padding: '8px 16px', backgroundColor: '#fafafa' }}>
+        {/* Sample info changes */}
+        <div style={{ marginBottom: 12, paddingBottom: 8, borderBottom: '1px dashed #e8e8e8' }}>
+          <Text strong style={{ fontSize: 12, marginBottom: 8, display: 'block' }}>Thông tin mẫu:</Text>
+          <Row gutter={16}>
+            <Col span={12}>
+              {renderChangeValue('Tình trạng', getStatusLabel(sample.status), sample.oldStatus !== undefined ? getStatusLabel(sample.oldStatus) : undefined, sample.type === 'delete', sample.type === 'add')}
+              {renderChangeValue('Địa chỉ lấy mẫu', sample.samplingAddress, sample.oldSamplingAddress, sample.type === 'delete', sample.type === 'add')}
+            </Col>
+            <Col span={12}>
+              {renderChangeValue('Lượng mẫu', sample.sampleQuantity, sample.oldSampleQuantity, sample.type === 'delete', sample.type === 'add')}
+              {renderChangeValue('Vị trí lưu mẫu', sample.storageLocation, sample.oldStorageLocation, sample.type === 'delete', sample.type === 'add')}
+            </Col>
+          </Row>
+        </div>
+
+        {/* Indicators list */}
+        {sample.indicators.length > 0 && (
+          <Text strong style={{ fontSize: 12, marginBottom: 8, display: 'block' }}>Danh sách chỉ tiêu:</Text>
+        )}
+        {sample.indicators.map((ind, indIdx) => {
+          const indCode = ind.indicator?.indicatorCode || ind.indicator?.IndicatorCode || '-';
+          const indName = ind.indicator?.indicatorName || ind.indicator?.IndicatorName || '-';
+          const methodName = ind.indicator?.testMethodName || ind.indicator?.TestMethodName ||
+                            ind.indicator?.testMethodCode || ind.indicator?.TestMethodCode || '-';
+          const price = ind.indicator?.unitPrice ?? ind.indicator?.UnitPrice ?? 0;
+          const formattedPrice = new Intl.NumberFormat('vi-VN').format(price);
+
+          const oldMethodName = ind.oldIndicator?.testMethodName || ind.oldIndicator?.TestMethodName ||
+                               ind.oldIndicator?.testMethodCode || ind.oldIndicator?.TestMethodCode;
+          const oldPrice = ind.oldIndicator?.unitPrice ?? ind.oldIndicator?.UnitPrice;
+
+          const tagStyle = { marginRight: 4, fontSize: 10, lineHeight: '16px', padding: '0 4px' };
+          const indTypeTag = ind.type === 'add'
+            ? <Tag color="success" style={tagStyle}>A</Tag>
+            : ind.type === 'delete'
+            ? <Tag color="error" style={tagStyle}>D</Tag>
+            : <Tag color="warning" style={tagStyle}>U</Tag>;
+
+          const rowStyle: React.CSSProperties = ind.type === 'delete'
+            ? { backgroundColor: '#fff1f0', padding: '6px 8px', marginBottom: 4, borderRadius: 4 }
+            : ind.type === 'add'
+            ? { backgroundColor: '#f6ffed', padding: '6px 8px', marginBottom: 4, borderRadius: 4 }
+            : { backgroundColor: '#fffbe6', padding: '6px 8px', marginBottom: 4, borderRadius: 4 };
+
+          const textStyle: React.CSSProperties = ind.type === 'delete'
+            ? { textDecoration: 'line-through', color: '#999' }
+            : ind.type === 'add'
+            ? { color: '#52c41a', fontWeight: 500 }
+            : {};
+
+          return (
+            <div key={`ind-${indIdx}`} style={rowStyle}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
+                    {indTypeTag}
+                    <Text strong style={{ ...textStyle, fontSize: 12 }}>{indCode}</Text>
+                    <Text style={{ ...textStyle, marginLeft: 8, fontSize: 12 }}>{indName}</Text>
+                  </div>
+                  <div style={{ marginLeft: 28 }}>
+                    {ind.type === 'update' && oldMethodName && oldMethodName !== methodName ? (
+                      <div style={{ fontSize: 11 }}>
+                        <Text type="secondary">PP thử: </Text>
+                        <Text delete type="secondary">{oldMethodName}</Text>
+                        <ArrowDownOutlined style={{ color: '#1890ff', transform: 'rotate(-90deg)', fontSize: 9, margin: '0 4px' }} />
+                        <Text style={{ color: '#52c41a' }}>{methodName}</Text>
+                      </div>
+                    ) : (
+                      <Text type="secondary" style={{ fontSize: 11 }}>PP thử: <span style={textStyle}>{methodName}</span></Text>
+                    )}
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right', minWidth: 100 }}>
+                  {ind.type === 'update' && oldPrice !== undefined && oldPrice !== price ? (
+                    <div>
+                      <Text delete type="secondary" style={{ fontSize: 11 }}>
+                        {new Intl.NumberFormat('vi-VN').format(oldPrice)}đ
+                      </Text>
+                      <br />
+                      <Text style={{ color: '#52c41a', fontWeight: 500 }}>{formattedPrice}đ</Text>
+                    </div>
+                  ) : (
+                    <Text style={{ ...textStyle, fontWeight: 500 }}>{formattedPrice}đ</Text>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
 
     return (
       <Card
         title={
           <Space>
-            <span>Thay đổi chỉ tiêu</span>
-            <Tag color="blue">{indicatorChanges.length}</Tag>
+            <span>Thay đổi mẫu & chỉ tiêu</span>
+            <Tag color="blue">{sampleChanges.length} mẫu</Tag>
+            {totalIndicatorChanges > 0 && <Tag color="cyan">{totalIndicatorChanges} chỉ tiêu</Tag>}
           </Space>
         }
         size="small"
-        styles={{ body: { padding: '0' } }}
+        styles={{ body: { padding: 0 } }}
       >
         <Table
-          dataSource={indicatorChanges}
+          dataSource={sampleChanges}
           columns={columns}
-          rowKey={(r, i) => `${r.type}-${r.indicator?.id || r.indicator?.Id || i}`}
+          rowKey={(r, i) => `sample-${r.sampleCode}-${i}`}
           size="small"
           pagination={false}
+          expandable={{
+            expandedRowRender,
+          }}
           rowClassName={(record) => {
-            if (record.type === 'delete') return 'row-deleted';
-            if (record.type === 'add') return 'row-added';
-            return '';
+            if (record.type === 'delete') return 'sample-row-deleted';
+            if (record.type === 'add') return 'sample-row-added';
+            return 'sample-row-updated';
           }}
         />
         <style>{`
-          .row-deleted {
+          .sample-row-deleted {
             background-color: #fff1f0 !important;
           }
-          .row-deleted td {
-            text-decoration: line-through;
-            color: #999 !important;
-          }
-          .row-added {
+          .sample-row-added {
             background-color: #f6ffed !important;
+          }
+          .sample-row-updated {
+            background-color: #fffbe6 !important;
           }
         `}</style>
       </Card>
@@ -675,7 +938,7 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
   ];
   const unmatchedFields = fieldChanges.filter(f => !allKnownFieldsLower.includes(f.fieldName.toLowerCase()));
 
-  const hasChanges = fieldChanges.length > 0 || indicatorChanges.length > 0;
+  const hasChanges = fieldChanges.length > 0 || sampleChanges.length > 0;
 
   return (
     <>
@@ -739,7 +1002,7 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
               borderRadius: 6
             }}>
               <Text>
-                <strong>{fieldChanges.length + indicatorChanges.length}</strong> thay đổi cần xem xét
+                <strong>{fieldChanges.length + sampleChanges.length}</strong> thay đổi cần xem xét
               </Text>
               {pendingChanges[0]?.creatorName && (
                 <Text type="secondary" style={{ fontSize: 12 }}>
@@ -853,8 +1116,8 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
                 </Card>
               )}
 
-              {/* Indicator changes table */}
-              {renderIndicatorTable()}
+              {/* Sample & Indicator changes */}
+              {renderSampleChanges()}
             </div>
           </>
         )}
