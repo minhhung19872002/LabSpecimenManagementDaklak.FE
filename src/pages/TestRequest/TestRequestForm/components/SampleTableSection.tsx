@@ -69,14 +69,12 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
       dataIndex: "sampleCode",
       key: "sampleCode",
       width: 130,
-      render: (_: string, __: SampleFormData, index: number) => {
-        const orderNum = String(index + 1).padStart(2, "0");
-        const autoCode = sampleCodePrefix
-          ? `${sampleCodePrefix}/${orderNum}`
-          : `--/${orderNum}`;
+      render: (value: string, _record: SampleFormData) => {
+        // Hiển thị sampleCode đã lưu trong data (không tính lại từ index)
+        const displayCode = value || "--";
         return (
           <Input
-            value={autoCode}
+            value={displayCode}
             disabled
             size="small"
             style={{ backgroundColor: "#f5f5f5" }}
@@ -307,11 +305,9 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
       key: "actions",
       width: 100,
       fixed: "right" as const,
-      render: (_: any, record: SampleFormData, index: number) => {
-        const orderNum = String(index + 1).padStart(2, "0");
-        const sampleCode = sampleCodePrefix
-          ? `${sampleCodePrefix}/${orderNum}`
-          : `--/${orderNum}`;
+      render: (_: any, record: SampleFormData) => {
+        // Sử dụng sampleCode từ record (đã được lưu cố định)
+        const sampleCode = record.sampleCode || "--";
         return (
           <Space size={0}>
             <Tooltip title="Nhân đôi">

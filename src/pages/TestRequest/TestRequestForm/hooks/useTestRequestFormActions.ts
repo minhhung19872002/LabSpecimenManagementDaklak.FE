@@ -18,7 +18,7 @@ import {
   createIndicatorMethodKey,
   parseIndicatorMethodKey,
 } from "../types";
-import { generateSampleCode, printBarcode as printBarcodeUtil, SampleBarcodeInfo } from "../utils";
+import { generateSampleCode, getNextOrderNum, printBarcode as printBarcodeUtil, SampleBarcodeInfo } from "../utils";
 
 interface UseTestRequestFormActionsProps {
   form: any;
@@ -137,7 +137,8 @@ export const useTestRequestFormActions = ({
       'deliveryPostal', 'returnStoredSample', 'sampleTypeService', 'sampleTypeContract',
       'sampleTypeTask', 'sampleTypeSubContract', 'sampleStorage', 'totalCost', 'totalCostInWords',
       'receiptNumber', 'notes', 'changeRequest', 'agreeTerms', 'sentToAccounting',
-      'paymentReceived', 'sentToDepartment', 'resultReturned'
+      'paymentReceived', 'sentToDepartment', 'resultReturned',
+      'supervisorId', 'directorId', 'subcontractor'
     ];
 
     // Date fields
@@ -185,6 +186,8 @@ export const useTestRequestFormActions = ({
         IndicatorName: ind.indicatorName,
         UnitPrice: ind.unitPrice,
         TestMethodId: ind.testMethodId,
+        TestMethodCode: ind.testMethodCode,
+        TestMethodName: ind.testMethodName,
         LaboratoryId: ind.laboratoryId,
         Notes: ind.notes
       }))
@@ -197,16 +200,23 @@ export const useTestRequestFormActions = ({
       SamplingAddress: s.samplingAddress,
       SampleQuantity: s.sampleQuantity,
       Notes: s.notes,
-      Indicators: (s.indicators || []).map((ind: any) => ({
-        Id: ind.id || null,
-        IndicatorId: ind.indicatorId,
-        IndicatorCode: indicators.find(i => i.id === ind.indicatorId)?.code || '',
-        IndicatorName: indicators.find(i => i.id === ind.indicatorId)?.name || '',
-        UnitPrice: ind.unitPrice,
-        TestMethodId: ind.testMethodId,
-        LaboratoryId: ind.laboratoryId,
-        Notes: ind.notes
-      }))
+      Indicators: (s.indicators || []).map((ind: any) => {
+        // Find test method info from indicatorMethodsMap
+        const methods = indicatorMethodsMap[ind.indicatorId] || [];
+        const method = methods.find((m) => m.testMethodId === ind.testMethodId);
+        return {
+          Id: ind.id || null,
+          IndicatorId: ind.indicatorId,
+          IndicatorCode: indicators.find(i => i.id === ind.indicatorId)?.code || '',
+          IndicatorName: indicators.find(i => i.id === ind.indicatorId)?.name || '',
+          UnitPrice: ind.unitPrice,
+          TestMethodId: ind.testMethodId,
+          TestMethodCode: method?.testMethodCode || '',
+          TestMethodName: method?.testMethodName || '',
+          LaboratoryId: ind.laboratoryId,
+          Notes: ind.notes
+        };
+      })
     }));
 
     const oldSamplesJson = JSON.stringify(oldSamples);
@@ -230,11 +240,15 @@ export const useTestRequestFormActions = ({
       return;
     }
 
-    const nextIndex = samples.length + 1;
+    // Get next order number based on max existing (không tái sử dụng số đã xóa)
+    const existingSampleCodes = samples.map((s) => s.sampleCode);
+    const nextOrderNum = getNextOrderNum(existingSampleCodes);
+    const contractNumber = form.getFieldValue("contractNumber") || "";
+
     const newSample: SampleFormData = {
       key: `new-${Date.now()}`,
-      sortOrder: nextIndex,
-      sampleCode: generateSampleCode(form.getFieldValue("contractNumber") || "", nextIndex),
+      sortOrder: samples.length + 1,
+      sampleCode: generateSampleCode(contractNumber, nextOrderNum),
       sampleName: "",
       samplingAddress: "",
       sampleQuantity: "",
@@ -280,12 +294,17 @@ export const useTestRequestFormActions = ({
     const sourceSample = samples.find((s) => s.key === key);
     if (!sourceSample) return;
 
+    // Get next order number based on max existing (không tái sử dụng số đã xóa)
+    const existingSampleCodes = samples.map((s) => s.sampleCode);
+    const nextOrderNum = getNextOrderNum(existingSampleCodes);
+    const contractNumber = form.getFieldValue("contractNumber") || "";
+
     const newSample: SampleFormData = {
       ...sourceSample,
       key: `new-${Date.now()}`,
       id: undefined,
       sortOrder: samples.length + 1,
-      sampleCode: generateSampleCode(form.getFieldValue("contractNumber") || "", samples.length + 1),
+      sampleCode: generateSampleCode(contractNumber, nextOrderNum),
     };
 
     const newLabMap = { ...indicatorLaboratoryMap };
@@ -593,9 +612,8 @@ export const useTestRequestFormActions = ({
     setLoading(true);
     try {
       const sampleDtos = samples.map((sample, index) => {
-        // Auto-generate sampleCode from contractNumber
-        const orderNum = String(index + 1).padStart(2, "0");
-        const sampleCode = `${contractNumber}/${orderNum}`;
+        // Keep existing sampleCode (fixed, not regenerated)
+        const sampleCode = sample.sampleCode;
 
         // Prefer indicatorMethods if available, fallback to indicatorIds
         const indicatorsList = sample.indicatorMethods && sample.indicatorMethods.length > 0

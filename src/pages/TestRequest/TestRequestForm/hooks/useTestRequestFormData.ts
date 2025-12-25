@@ -42,6 +42,7 @@ import {
   createIndicatorMethodKey,
   parseIndicatorMethodKey,
 } from "../types";
+import { extractOrderNum, generateSampleCode } from "../utils";
 
 export const useTestRequestFormData = () => {
   const navigate = useNavigate();
@@ -57,6 +58,20 @@ export const useTestRequestFormData = () => {
 
   // Contract number for sample codes
   const [sampleCodePrefix, setSampleCodePrefix] = useState<string>("");
+
+  // Update sample codes when contract number changes (keep same order number, update prefix)
+  const updateSampleCodesPrefix = useCallback((newPrefix: string) => {
+    setSampleCodePrefix(newPrefix);
+    setSamples((prevSamples) =>
+      prevSamples.map((sample) => {
+        // Extract current order number from existing sampleCode
+        const orderNum = extractOrderNum(sample.sampleCode);
+        // Generate new sampleCode with new prefix but same order number
+        const newSampleCode = generateSampleCode(newPrefix, orderNum || 1);
+        return { ...sample, sampleCode: newSampleCode };
+      })
+    );
+  }, []);
 
   // Current status for field locking
   const [currentStatus, setCurrentStatus] = useState<TestRequestStatus | null>(null);
@@ -564,6 +579,7 @@ export const useTestRequestFormData = () => {
     // Sample code prefix
     sampleCodePrefix,
     setSampleCodePrefix,
+    updateSampleCodesPrefix,
 
     // Status
     currentStatus,

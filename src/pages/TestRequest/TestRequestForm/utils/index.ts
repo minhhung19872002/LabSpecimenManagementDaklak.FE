@@ -1,7 +1,24 @@
 // Generate sample code based on contract number
 export const generateSampleCode = (contractNumber: string, index: number): string => {
   const orderNum = String(index).padStart(2, "0");
-  return contractNumber ? `${contractNumber}/${orderNum}` : "";
+  const prefix = contractNumber || "--";
+  return `${prefix}/${orderNum}`;
+};
+
+// Extract order number from sample code (e.g., "HĐ/03" -> 3)
+export const extractOrderNum = (sampleCode: string): number => {
+  if (!sampleCode) return 0;
+  const parts = sampleCode.split("/");
+  if (parts.length < 2) return 0;
+  const num = parseInt(parts[parts.length - 1], 10);
+  return isNaN(num) ? 0 : num;
+};
+
+// Get next order number based on existing samples (max + 1)
+export const getNextOrderNum = (existingSampleCodes: string[]): number => {
+  if (existingSampleCodes.length === 0) return 1;
+  const maxNum = Math.max(...existingSampleCodes.map(extractOrderNum));
+  return maxNum + 1;
 };
 
 // Sample info for barcode printing

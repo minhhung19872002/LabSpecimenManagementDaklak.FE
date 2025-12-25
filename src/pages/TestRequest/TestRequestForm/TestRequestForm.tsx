@@ -52,6 +52,7 @@ const TestRequestForm: React.FC = () => {
     methodRequirement,
     sampleCodePrefix,
     setSampleCodePrefix,
+    updateSampleCodesPrefix,
     currentStatus,
     isFieldLocked,
     isSamplesLocked,
@@ -224,7 +225,7 @@ const TestRequestForm: React.FC = () => {
         <ContractInfoSection
           isEditMode={isEditMode}
           isFieldLocked={isFieldLocked}
-          setSampleCodePrefix={setSampleCodePrefix}
+          updateSampleCodesPrefix={updateSampleCodesPrefix}
         />
 
         {/* Thông tin khách hàng */}

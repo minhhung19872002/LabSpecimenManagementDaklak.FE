@@ -15,6 +15,7 @@ import {
   Col,
   Modal,
   Input,
+  Alert,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -26,7 +27,10 @@ import {
 } from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { testRequestService, SampleForSelectionDto } from "../../services/testRequestService";
+import {
+  testRequestService,
+  SampleForSelectionDto,
+} from "../../services/testRequestService";
 import {
   TestRequestDto,
   TestRequestStatus,
@@ -65,8 +69,11 @@ const TestRequestDetail: React.FC = () => {
   const docEditorRef = useRef<any>(null);
 
   // BM01 Sample Selection Modal states
-  const [sampleSelectionModalVisible, setSampleSelectionModalVisible] = useState(false);
-  const [samplesForSelection, setSamplesForSelection] = useState<SampleForSelectionDto[]>([]);
+  const [sampleSelectionModalVisible, setSampleSelectionModalVisible] =
+    useState(false);
+  const [samplesForSelection, setSamplesForSelection] = useState<
+    SampleForSelectionDto[]
+  >([]);
   const [loadingSamples, setLoadingSamples] = useState(false);
   const [selectedSampleId, setSelectedSampleId] = useState<string | null>(null);
   const [generatingBM01, setGeneratingBM01] = useState(false);
@@ -78,8 +85,9 @@ const TestRequestDetail: React.FC = () => {
   const [sendingSample, setSendingSample] = useState(false);
 
   // Reject result modal states
-  const [rejectResultModalVisible, setRejectResultModalVisible] = useState(false);
-  const [rejectResultReason, setRejectResultReason] = useState('');
+  const [rejectResultModalVisible, setRejectResultModalVisible] =
+    useState(false);
+  const [rejectResultReason, setRejectResultReason] = useState("");
   const [rejectResultLoading, setRejectResultLoading] = useState(false);
 
   // Change approval modal state
@@ -118,7 +126,10 @@ const TestRequestDetail: React.FC = () => {
     const buttons: React.ReactNode[] = [];
 
     // In phiếu XN - New hoặc Pending
-    if (data.status === TestRequestStatus.New || data.status === TestRequestStatus.Pending) {
+    if (
+      data.status === TestRequestStatus.New ||
+      data.status === TestRequestStatus.Pending
+    ) {
       buttons.push(
         <Button
           key="print"
@@ -208,11 +219,7 @@ const TestRequestDetail: React.FC = () => {
     // ResultSent - Hoàn thành
     if (canComplete(data.status)) {
       buttons.push(
-        <Button
-          key="complete"
-          type="primary"
-          onClick={() => handleComplete()}
-        >
+        <Button key="complete" type="primary" onClick={() => handleComplete()}>
           Hoàn thành
         </Button>
       );
@@ -232,7 +239,9 @@ const TestRequestDetail: React.FC = () => {
       message.success(`Đã tạo phiếu yêu cầu XN: ${result.requestNumber}`);
 
       // Step 2: Get editor config and open OnlyOffice
-      const config = await testRequestService.getResultFormEditorConfig(result.fileName);
+      const config = await testRequestService.getResultFormEditorConfig(
+        result.fileName
+      );
       setEditorConfig(config);
       setEditorLoading(true);
       setEditorModalVisible(true);
@@ -241,7 +250,10 @@ const TestRequestDetail: React.FC = () => {
       loadData(id);
     } catch (error: any) {
       console.error("Error printing test request:", error);
-      message.error(error?.response?.data?.error?.message || "Không thể tạo phiếu. Vui lòng thử lại.");
+      message.error(
+        error?.response?.data?.error?.message ||
+          "Không thể tạo phiếu. Vui lòng thử lại."
+      );
     } finally {
       setPrintingTestRequest(false);
     }
@@ -262,7 +274,10 @@ const TestRequestDetail: React.FC = () => {
       loadData(id);
     } catch (error: any) {
       console.error("Error sending sample:", error);
-      message.error(error?.response?.data?.error?.message || "Không thể gửi mẫu. Vui lòng thử lại.");
+      message.error(
+        error?.response?.data?.error?.message ||
+          "Không thể gửi mẫu. Vui lòng thử lại."
+      );
     } finally {
       setSendingSample(false);
     }
@@ -277,7 +292,10 @@ const TestRequestDetail: React.FC = () => {
       loadData(id); // Reload to get updated status
     } catch (error: any) {
       console.error("Error sending result:", error);
-      message.error(error?.response?.data?.error?.message || "Không thể gửi kết quả. Vui lòng thử lại.");
+      message.error(
+        error?.response?.data?.error?.message ||
+          "Không thể gửi kết quả. Vui lòng thử lại."
+      );
     }
   };
 
@@ -290,7 +308,10 @@ const TestRequestDetail: React.FC = () => {
       loadData(id); // Reload to get updated status
     } catch (error: any) {
       console.error("Error approving test request:", error);
-      message.error(error?.response?.data?.error?.message || "Không thể phê duyệt. Vui lòng thử lại.");
+      message.error(
+        error?.response?.data?.error?.message ||
+          "Không thể phê duyệt. Vui lòng thử lại."
+      );
     }
   };
 
@@ -305,11 +326,14 @@ const TestRequestDetail: React.FC = () => {
       await testRequestService.rejectResult(id, rejectResultReason);
       message.success("Đã trả lại cho Quản lý Kỹ thuật xem xét");
       setRejectResultModalVisible(false);
-      setRejectResultReason('');
+      setRejectResultReason("");
       loadData(id);
     } catch (error: any) {
       console.error("Error rejecting result:", error);
-      message.error(error?.response?.data?.error?.message || "Không thể từ chối kết quả. Vui lòng thử lại.");
+      message.error(
+        error?.response?.data?.error?.message ||
+          "Không thể từ chối kết quả. Vui lòng thử lại."
+      );
     } finally {
       setRejectResultLoading(false);
     }
@@ -324,7 +348,10 @@ const TestRequestDetail: React.FC = () => {
       loadData(id); // Reload to get updated status
     } catch (error: any) {
       console.error("Error completing test request:", error);
-      message.error(error?.response?.data?.error?.message || "Không thể hoàn thành. Vui lòng thử lại.");
+      message.error(
+        error?.response?.data?.error?.message ||
+          "Không thể hoàn thành. Vui lòng thử lại."
+      );
     }
   };
 
@@ -439,7 +466,10 @@ const TestRequestDetail: React.FC = () => {
           editorConfig: {
             mode: "edit",
             lang: "vi",
-            user: editorConfig.config.editorConfig?.user || { id: "1", name: "Editor" },
+            user: editorConfig.config.editorConfig?.user || {
+              id: "1",
+              name: "Editor",
+            },
             customization: {
               autosave: false,
               forcesave: true,
@@ -533,7 +563,9 @@ const TestRequestDetail: React.FC = () => {
       return;
     }
 
-    const selectedSample = samplesForSelection.find(s => s.id === selectedSampleId);
+    const selectedSample = samplesForSelection.find(
+      (s) => s.id === selectedSampleId
+    );
     if (selectedSample && !selectedSample.canGenerateResult) {
       message.error("Mẫu chưa xét nghiệm xong");
       return;
@@ -542,7 +574,10 @@ const TestRequestDetail: React.FC = () => {
     setGeneratingBM01(true);
     try {
       // Step 1: Generate the document
-      const result = await testRequestService.generateBM01ResultForm(id, selectedSampleId);
+      const result = await testRequestService.generateBM01ResultForm(
+        id,
+        selectedSampleId
+      );
       message.success(`Đã tạo phiếu kết quả BM01 cho mẫu ${result.sampleCode}`);
 
       // Step 2: Update status to PendingApproval after printing result form
@@ -552,7 +587,9 @@ const TestRequestDetail: React.FC = () => {
       setSampleSelectionModalVisible(false);
 
       // Step 4: Get editor config and open OnlyOffice
-      const config = await testRequestService.getResultFormEditorConfig(result.fileName);
+      const config = await testRequestService.getResultFormEditorConfig(
+        result.fileName
+      );
       setEditorConfig(config);
       setEditorLoading(true);
       setEditorModalVisible(true);
@@ -561,7 +598,10 @@ const TestRequestDetail: React.FC = () => {
       loadData(id);
     } catch (error: any) {
       console.error("Error generating BM01 result form:", error);
-      message.error(error?.response?.data?.error?.message || "Không thể tạo phiếu kết quả. Vui lòng thử lại.");
+      message.error(
+        error?.response?.data?.error?.message ||
+          "Không thể tạo phiếu kết quả. Vui lòng thử lại."
+      );
     } finally {
       setGeneratingBM01(false);
     }
@@ -597,7 +637,7 @@ const TestRequestDetail: React.FC = () => {
       dataIndex: "requestedCompletionDate",
       key: "requestedCompletionDate",
       width: 120,
-      render: (date: string) => date ? dayjs(date).format("DD/MM/YYYY") : "-",
+      render: (date: string) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
     },
   ];
 
@@ -663,7 +703,10 @@ const TestRequestDetail: React.FC = () => {
         // Group indicators by laboratory
         const unsentIndicators = indicators.filter((ind) => !ind.laboratoryId);
         const sentIndicators = indicators.filter((ind) => ind.laboratoryId);
-        const groupedByLab: Record<string, { labName: string; indicators: any[] }> = {};
+        const groupedByLab: Record<
+          string,
+          { labName: string; indicators: any[] }
+        > = {};
 
         sentIndicators.forEach((ind) => {
           const labId = ind.laboratoryId;
@@ -722,26 +765,28 @@ const TestRequestDetail: React.FC = () => {
             )}
 
             {/* Grouped by laboratory */}
-            {Object.entries(groupedByLab).map(([labId, { labName, indicators: labIndicators }]) => (
-              <div key={labId} style={{ marginBottom: 8 }}>
-                <div
-                  style={{
-                    padding: "4px 8px",
-                    fontWeight: 600,
-                    fontSize: 12,
-                    color: "#000",
-                    background: "#e6e6e6",
-                    borderRadius: 4,
-                    marginBottom: 4,
-                  }}
-                >
-                  {labName} ({labIndicators.length})
+            {Object.entries(groupedByLab).map(
+              ([labId, { labName, indicators: labIndicators }]) => (
+                <div key={labId} style={{ marginBottom: 8 }}>
+                  <div
+                    style={{
+                      padding: "4px 8px",
+                      fontWeight: 600,
+                      fontSize: 12,
+                      color: "#000",
+                      background: "#e6e6e6",
+                      borderRadius: 4,
+                      marginBottom: 4,
+                    }}
+                  >
+                    {labName} ({labIndicators.length})
+                  </div>
+                  <div style={{ paddingLeft: 8 }}>
+                    {labIndicators.map((ind, idx) => renderIndicator(ind, idx))}
+                  </div>
                 </div>
-                <div style={{ paddingLeft: 8 }}>
-                  {labIndicators.map((ind, idx) => renderIndicator(ind, idx))}
-                </div>
-              </div>
-            ))}
+              )
+            )}
           </div>
         );
       },
@@ -805,7 +850,7 @@ const TestRequestDetail: React.FC = () => {
                 type="primary"
                 icon={<EditOutlined />}
                 onClick={() => setOpenChangeApprovalModal(true)}
-                style={{ backgroundColor: '#faad14', borderColor: '#faad14' }}
+                style={{ backgroundColor: "#faad14", borderColor: "#faad14" }}
               >
                 Duyệt thay đổi
               </Button>
@@ -823,6 +868,16 @@ const TestRequestDetail: React.FC = () => {
           </Space>
         }
       >
+        {/* Thông báo khi có thay đổi đang chờ phê duyệt */}
+        {data.status === TestRequestStatus.PendingChangeApproval && (
+          <Alert
+            message="Có thay đổi đang chờ phê duyệt"
+            description="Dữ liệu hiển thị bên dưới là dữ liệu gốc trước khi thay đổi. Nhấn 'Duyệt thay đổi' để xem và phê duyệt các thay đổi được yêu cầu."
+            type="warning"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
         {/* Thông tin hợp đồng */}
         <div className="detail-section">
           <Title level={5} style={{ marginBottom: 12 }}>
@@ -1241,14 +1296,21 @@ const TestRequestDetail: React.FC = () => {
         onCancel={() => setSampleSelectionModalVisible(false)}
         width={700}
         footer={[
-          <Button key="cancel" onClick={() => setSampleSelectionModalVisible(false)}>
+          <Button
+            key="cancel"
+            onClick={() => setSampleSelectionModalVisible(false)}
+          >
             Hủy
           </Button>,
           <Button
             key="submit"
             type="primary"
             loading={generatingBM01}
-            disabled={!selectedSampleId || !samplesForSelection.find(s => s.id === selectedSampleId)?.canGenerateResult}
+            disabled={
+              !selectedSampleId ||
+              !samplesForSelection.find((s) => s.id === selectedSampleId)
+                ?.canGenerateResult
+            }
             onClick={handleGenerateBM01}
           >
             Xuất báo cáo
@@ -1285,9 +1347,10 @@ const TestRequestDetail: React.FC = () => {
             })}
             locale={{ emptyText: "Không có mẫu nào" }}
           />
-          {samplesForSelection.some(s => !s.canGenerateResult) && (
+          {samplesForSelection.some((s) => !s.canGenerateResult) && (
             <div style={{ marginTop: 12, color: "#888", fontSize: 12 }}>
-              * Chỉ có thể xuất báo cáo cho các mẫu có trạng thái "Đã gửi kết quả"
+              * Chỉ có thể xuất báo cáo cho các mẫu có trạng thái "Đã gửi kết
+              quả"
             </div>
           )}
         </Spin>
@@ -1301,7 +1364,11 @@ const TestRequestDetail: React.FC = () => {
         width="100vw"
         style={{ top: 0, margin: 0, padding: 0, maxWidth: "100vw" }}
         styles={{
-          body: { height: "calc(100vh - 53px)", padding: 0, overflow: "hidden" },
+          body: {
+            height: "calc(100vh - 53px)",
+            padding: 0,
+            overflow: "hidden",
+          },
           wrapper: { padding: 0 },
           mask: { padding: 0 },
           header: { display: "none" },
@@ -1318,7 +1385,14 @@ const TestRequestDetail: React.FC = () => {
         centered={false}
       >
         {editorLoading ? (
-          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: "100%",
+            }}
+          >
             <Spin size="large" tip="Đang tải editor..." />
           </div>
         ) : (
@@ -1346,13 +1420,16 @@ const TestRequestDetail: React.FC = () => {
         centered
         onCancel={() => {
           setRejectResultModalVisible(false);
-          setRejectResultReason('');
+          setRejectResultReason("");
         }}
         footer={[
-          <Button key="cancel" onClick={() => {
-            setRejectResultModalVisible(false);
-            setRejectResultReason('');
-          }}>
+          <Button
+            key="cancel"
+            onClick={() => {
+              setRejectResultModalVisible(false);
+              setRejectResultReason("");
+            }}
+          >
             Hủy
           </Button>,
           <Button
