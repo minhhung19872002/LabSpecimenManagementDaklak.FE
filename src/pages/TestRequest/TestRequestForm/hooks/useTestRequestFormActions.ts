@@ -18,7 +18,7 @@ import {
   createIndicatorMethodKey,
   parseIndicatorMethodKey,
 } from "../types";
-import { generateSampleCode, printBarcode as printBarcodeUtil } from "../utils";
+import { generateSampleCode, printBarcode as printBarcodeUtil, SampleBarcodeInfo } from "../utils";
 
 interface UseTestRequestFormActionsProps {
   form: any;
@@ -197,8 +197,8 @@ export const useTestRequestFormActions = ({
     message.success("Đã nhân đôi mẫu thành công");
   };
 
-  const printBarcode = (sampleCode: string, sampleName: string) => {
-    printBarcodeUtil(sampleCode, sampleName);
+  const printBarcode = (sampleInfo: SampleBarcodeInfo) => {
+    printBarcodeUtil(sampleInfo);
   };
 
   // Indicator modal functions

@@ -30,7 +30,7 @@ interface SampleTableSectionProps {
   removeSample: (key: string) => void;
   updateSample: (key: string, field: keyof SampleFormData, value: any) => void;
   duplicateSample: (key: string) => void;
-  printBarcode: (sampleCode: string, sampleName: string) => void;
+  printBarcode: (sampleInfo: { sampleCode: string; sampleName: string; samplingAddress?: string; sampleQuantity?: string; storageLocation?: string; }) => void;
   openIndicatorModal: (sampleKey: string) => void;
   getIndicatorInfo: (indicatorId: string) => any;
   getIndicatorMethodInfo: (key: IndicatorMethodKey) => {
@@ -327,7 +327,13 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
                 type="link"
                 icon={<BarcodeOutlined />}
                 size="small"
-                onClick={() => printBarcode(sampleCode, record.sampleName)}
+                onClick={() => printBarcode({
+                  sampleCode,
+                  sampleName: record.sampleName,
+                  samplingAddress: record.samplingAddress,
+                  sampleQuantity: record.sampleQuantity,
+                  storageLocation: record.storageLocation,
+                })}
               />
             </Tooltip>
             <Popconfirm

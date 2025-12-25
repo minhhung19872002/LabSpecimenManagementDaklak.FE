@@ -150,7 +150,7 @@ export interface TestRequestFormContextValue {
   handleConfirmSendToLaboratory: () => void;
 
   // Print barcode
-  printBarcode: (sampleCode: string, sampleName: string) => void;
+  printBarcode: (sampleInfo: { sampleCode: string; sampleName: string; samplingAddress?: string; sampleQuantity?: string; storageLocation?: string; }) => void;
 
   // Navigation
   navigate: (path: string) => void;
