@@ -9,6 +9,7 @@ import {
   Form,
   Typography,
   Input,
+  Tooltip,
 } from "antd";
 import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -91,24 +92,45 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       dataIndex: "methodId",
       key: "methodId",
       width: 200,
-      render: (value: string, record: LaboratoryTaskIndicatorDto) => (
-        <Select
-          style={{ width: "100%" }}
-          size="small"
-          value={value}
-          placeholder="Chọn PP"
-          onChange={(val) => onMethodChange(record.id, val)}
-          options={(methods || []).map((m) => ({
-            value: m.id,
-            label: m.name,
-          }))}
-          disabled={
-            !canEdit ||
-            record.approvalStatus === IndicatorApprovalStatus.Approved
-          }
-          allowClear
-        />
-      ),
+      render: (value: string, record: LaboratoryTaskIndicatorDto) => {
+        // Phương pháp đã được chọn từ TestRequest - hiển thị dạng text, không cho sửa
+        if (record.methodName) {
+          return (
+            <Tooltip title={record.methodName}>
+              <Text
+                style={{
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {record.methodName}
+              </Text>
+            </Tooltip>
+          );
+        }
+        // Chưa có phương pháp - hiển thị dropdown để chọn
+        return (
+          <Select
+            style={{ width: "100%" }}
+            size="small"
+            value={value}
+            placeholder="Chọn PP"
+            onChange={(val) => onMethodChange(record.id, val)}
+            options={(methods || []).map((m) => ({
+              value: m.id,
+              label: m.name,
+            }))}
+            disabled={
+              !canEdit ||
+              record.approvalStatus === IndicatorApprovalStatus.Approved
+            }
+            allowClear
+          />
+        );
+      },
     },
     {
       title: "ĐVT",

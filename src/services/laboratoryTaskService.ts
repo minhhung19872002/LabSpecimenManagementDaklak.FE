@@ -155,12 +155,13 @@ export const laboratoryTaskService = {
   },
 
   /**
-   * Lấy danh sách phương pháp theo chỉ tiêu
+   * Lấy danh sách phương pháp theo chỉ tiêu (indicatorId optional - nếu không truyền sẽ trả về tất cả)
    */
-  getMethodsByIndicator: async (indicatorId: string): Promise<MethodLookupDto[]> => {
+  getMethodsByIndicator: async (indicatorId?: string): Promise<MethodLookupDto[]> => {
+    const params = indicatorId ? { indicatorId } : {};
     const response = await api.get<MethodLookupDto[]>(
       `${BASE_URL}/methods-lookup`,
-      { params: { indicatorId } }
+      { params }
     );
     return response.data;
   },

@@ -84,9 +84,8 @@ const TaskManagementDetail: React.FC = () => {
       // Load lookups - API returns array directly (not wrapped in { items: [] })
       if (data.laboratoryId) {
         const [methodsResult, techniciansResult] = await Promise.all([
-          laboratoryTaskService.getMethodsByIndicator(
-            data.indicators?.[0]?.indicatorId || ""
-          ),
+          // Load all methods (indicatorId is optional)
+          laboratoryTaskService.getMethodsByIndicator(),
           laboratoryTaskService.getTechniciansByLaboratory(data.laboratoryId),
         ]);
         setMethods(methodsResult || []);

@@ -14,7 +14,7 @@ import {
   Row,
   Col,
   Modal,
-  Tooltip,
+  Input,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -33,15 +33,21 @@ import {
   TestRequestStatusLabels,
   TestRequestStatusColors,
   canEditTestRequest,
+  canSendSample,
+  canApproveOrRejectChanges,
+  canSendResult,
+  canComplete,
   ResultLanguage,
   SamplingRequirement,
   SampleStorageOption,
   SampleStatus,
 } from "../../types/testRequest";
 import dayjs from "dayjs";
+import ChangeApprovalModal from "./components/ChangeApprovalModal";
 import "./TestRequestDetail.css";
 
 const { Title, Text } = Typography;
+const { TextArea } = Input;
 
 const TestRequestDetail: React.FC = () => {
   const { t } = useTranslation();
@@ -67,6 +73,17 @@ const TestRequestDetail: React.FC = () => {
 
   // Print test request form loading state
   const [printingTestRequest, setPrintingTestRequest] = useState(false);
+
+  // Send sample loading state
+  const [sendingSample, setSendingSample] = useState(false);
+
+  // Reject result modal states
+  const [rejectResultModalVisible, setRejectResultModalVisible] = useState(false);
+  const [rejectResultReason, setRejectResultReason] = useState('');
+  const [rejectResultLoading, setRejectResultLoading] = useState(false);
+
+  // Change approval modal state
+  const [openChangeApprovalModal, setOpenChangeApprovalModal] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -98,66 +115,110 @@ const TestRequestDetail: React.FC = () => {
   const renderActionButtons = () => {
     if (!data) return null;
 
-    switch (data.status) {
-      case TestRequestStatus.New:
-      case TestRequestStatus.Pending:
-        return (
-          <Button
-            icon={<FileTextOutlined />}
-            onClick={() => handlePrintTestRequest()}
-            loading={printingTestRequest}
-          >
-            In phiếu XN
-          </Button>
-        );
-      case TestRequestStatus.TestingCompleted:
-        return (
-          <Space>
-            <Button
-              icon={<FileTextOutlined />}
-              onClick={handleOpenBM01Modal}
-            >
-              In KQ Mẫu đơn
-            </Button>
-            <Button
-              icon={<FileTextOutlined />}
-              onClick={() => handlePrintMixedResult()}
-            >
-              In KQ hỗn hợp
-            </Button>
-          </Space>
-        );
-      case TestRequestStatus.PendingApproval:
-        return (
-          <Button
-            type="primary"
-            icon={<CheckCircleOutlined />}
-            onClick={() => handleApprove()}
-          >
-            Phê duyệt
-          </Button>
-        );
-      case TestRequestStatus.Approved:
-        return (
-          <Button
-            type="primary"
-            onClick={() => handleSendResult()}
-          >
-            Gửi kết quả
-          </Button>
-        );
-      case TestRequestStatus.ResultSent:
-        return (
-          <Button
-            type="primary"
-            onClick={() => handleComplete()}
-          >
-            Hoàn thành
-          </Button>
-        );
-      default:
-        return null;
+    const buttons: React.ReactNode[] = [];
+
+    // In phiếu XN - New hoặc Pending
+    if (data.status === TestRequestStatus.New || data.status === TestRequestStatus.Pending) {
+      buttons.push(
+        <Button
+          key="print"
+          icon={<FileTextOutlined />}
+          onClick={() => handlePrintTestRequest()}
+          loading={printingTestRequest}
+        >
+          In phiếu XN
+        </Button>
+      );
     }
+
+    // Gửi mẫu - chỉ khi Pending
+    if (canSendSample(data.status)) {
+      buttons.push(
+        <Button
+          key="send-sample"
+          type="primary"
+          onClick={() => handleSendSample()}
+          loading={sendingSample}
+        >
+          Gửi mẫu
+        </Button>
+      );
+    }
+
+    // Phê duyệt/Từ chối thay đổi - PendingChangeApproval (cho QLCL)
+    // Chuyển sang tab "Lịch sử thay đổi" để xem chi tiết và duyệt/từ chối
+    // (Buttons đã được chuyển vào ChangeHistoryTab component)
+
+    // In KQ - InProgress hoặc SampleSent có thể không cần buttons đặc biệt
+    // PendingApproval - Phê duyệt KQ hoặc Không duyệt
+    if (data.status === TestRequestStatus.PendingApproval) {
+      buttons.push(
+        <Button
+          key="approve"
+          type="primary"
+          icon={<CheckCircleOutlined />}
+          onClick={() => handleApprove()}
+        >
+          Phê duyệt KQ
+        </Button>
+      );
+      buttons.push(
+        <Button
+          key="reject-result"
+          danger
+          icon={<CloseCircleOutlined />}
+          onClick={() => setRejectResultModalVisible(true)}
+        >
+          Không duyệt
+        </Button>
+      );
+    }
+
+    // Approved - In KQ, Gửi kết quả
+    if (data.status === TestRequestStatus.Approved) {
+      buttons.push(
+        <Button
+          key="print-bm01"
+          icon={<FileTextOutlined />}
+          onClick={handleOpenBM01Modal}
+        >
+          In KQ Mẫu đơn
+        </Button>
+      );
+      buttons.push(
+        <Button
+          key="print-mixed"
+          icon={<FileTextOutlined />}
+          onClick={() => handlePrintMixedResult()}
+        >
+          In KQ hỗn hợp
+        </Button>
+      );
+      buttons.push(
+        <Button
+          key="send-result"
+          type="primary"
+          onClick={() => handleSendResult()}
+        >
+          Gửi kết quả
+        </Button>
+      );
+    }
+
+    // ResultSent - Hoàn thành
+    if (canComplete(data.status)) {
+      buttons.push(
+        <Button
+          key="complete"
+          type="primary"
+          onClick={() => handleComplete()}
+        >
+          Hoàn thành
+        </Button>
+      );
+    }
+
+    return buttons.length > 0 ? <Space wrap>{buttons}</Space> : null;
   };
 
   // Handle print test request form - generate document and open editor
@@ -191,6 +252,22 @@ const TestRequestDetail: React.FC = () => {
     message.info("Chức năng in KQ hỗn hợp đang được phát triển");
   };
 
+  // Handle send sample: Pending → SampleSent
+  const handleSendSample = async () => {
+    if (!id) return;
+    setSendingSample(true);
+    try {
+      await testRequestService.sendSample(id);
+      message.success("Đã gửi mẫu thành công");
+      loadData(id);
+    } catch (error: any) {
+      console.error("Error sending sample:", error);
+      message.error(error?.response?.data?.error?.message || "Không thể gửi mẫu. Vui lòng thử lại.");
+    } finally {
+      setSendingSample(false);
+    }
+  };
+
   // Handle send result
   const handleSendResult = async () => {
     if (!id) return;
@@ -214,6 +291,27 @@ const TestRequestDetail: React.FC = () => {
     } catch (error: any) {
       console.error("Error approving test request:", error);
       message.error(error?.response?.data?.error?.message || "Không thể phê duyệt. Vui lòng thử lại.");
+    }
+  };
+
+  // Handle reject result: PendingApproval → InProgress (trả về cho QLKT xem xét)
+  const handleRejectResult = async () => {
+    if (!id || !rejectResultReason.trim()) {
+      message.warning("Vui lòng nhập lý do không duyệt");
+      return;
+    }
+    setRejectResultLoading(true);
+    try {
+      await testRequestService.rejectResult(id, rejectResultReason);
+      message.success("Đã trả lại cho Quản lý Kỹ thuật xem xét");
+      setRejectResultModalVisible(false);
+      setRejectResultReason('');
+      loadData(id);
+    } catch (error: any) {
+      console.error("Error rejecting result:", error);
+      message.error(error?.response?.data?.error?.message || "Không thể từ chối kết quả. Vui lòng thử lại.");
+    } finally {
+      setRejectResultLoading(false);
     }
   };
 
@@ -701,16 +799,27 @@ const TestRequestDetail: React.FC = () => {
             >
               Quay lại
             </Button>
+            {/* Nút Duyệt thay đổi - hiển thị khi PendingChangeApproval */}
+            {canApproveOrRejectChanges(data.status) && (
+              <Button
+                type="primary"
+                icon={<EditOutlined />}
+                onClick={() => setOpenChangeApprovalModal(true)}
+                style={{ backgroundColor: '#faad14', borderColor: '#faad14' }}
+              >
+                Duyệt thay đổi
+              </Button>
+            )}
             {renderActionButtons()}
-            <Button
-              type="primary"
-              icon={<EditOutlined />}
-              onClick={() => navigate(`/test-request/edit/${id}`)}
-              disabled={!canEditTestRequest(data.status)}
-              title={!canEditTestRequest(data.status) ? "Không thể chỉnh sửa ở trạng thái này" : ""}
-            >
-              Chỉnh sửa
-            </Button>
+            {canEditTestRequest(data.status) && (
+              <Button
+                type="primary"
+                icon={<EditOutlined />}
+                onClick={() => navigate(`/test-request/edit/${id}`)}
+              >
+                Chỉnh sửa
+              </Button>
+            )}
           </Space>
         }
       >
@@ -1219,6 +1328,59 @@ const TestRequestDetail: React.FC = () => {
             style={{ width: "100%", height: "100%" }}
           />
         )}
+      </Modal>
+
+      {/* Change Approval Modal */}
+      <ChangeApprovalModal
+        visible={openChangeApprovalModal}
+        testRequestId={id!}
+        onClose={() => setOpenChangeApprovalModal(false)}
+        onApproved={() => loadData(id!)}
+      />
+
+      {/* Reject Result Modal - Trả lại cho QLKT xem xét */}
+      <Modal
+        title="Không duyệt kết quả"
+        open={rejectResultModalVisible}
+        width={600}
+        centered
+        onCancel={() => {
+          setRejectResultModalVisible(false);
+          setRejectResultReason('');
+        }}
+        footer={[
+          <Button key="cancel" onClick={() => {
+            setRejectResultModalVisible(false);
+            setRejectResultReason('');
+          }}>
+            Hủy
+          </Button>,
+          <Button
+            key="submit"
+            type="primary"
+            danger
+            loading={rejectResultLoading}
+            disabled={!rejectResultReason.trim()}
+            onClick={handleRejectResult}
+          >
+            Xác nhận
+          </Button>,
+        ]}
+      >
+        <div style={{ marginBottom: 12 }}>
+          <Text>Kết quả sẽ được trả lại cho Quản lý Kỹ thuật xem xét.</Text>
+        </div>
+        <div style={{ marginBottom: 8 }}>
+          <Text>Vui lòng nhập lý do không duyệt:</Text>
+        </div>
+        <TextArea
+          rows={4}
+          value={rejectResultReason}
+          onChange={(e) => setRejectResultReason(e.target.value)}
+          placeholder="Nhập lý do không duyệt kết quả..."
+          maxLength={1000}
+          showCount
+        />
       </Modal>
     </div>
   );

@@ -339,11 +339,14 @@ const TestRequestList: React.FC = () => {
             <Select.Option value={TestRequestStatus.Pending}>
               {TestRequestStatusLabels[TestRequestStatus.Pending]}
             </Select.Option>
+            <Select.Option value={TestRequestStatus.SampleSent}>
+              {TestRequestStatusLabels[TestRequestStatus.SampleSent]}
+            </Select.Option>
             <Select.Option value={TestRequestStatus.InProgress}>
               {TestRequestStatusLabels[TestRequestStatus.InProgress]}
             </Select.Option>
-            <Select.Option value={TestRequestStatus.TestingCompleted}>
-              {TestRequestStatusLabels[TestRequestStatus.TestingCompleted]}
+            <Select.Option value={TestRequestStatus.PendingChangeApproval}>
+              {TestRequestStatusLabels[TestRequestStatus.PendingChangeApproval]}
             </Select.Option>
             <Select.Option value={TestRequestStatus.PendingApproval}>
               {TestRequestStatusLabels[TestRequestStatus.PendingApproval]}
