@@ -50,6 +50,10 @@ export interface LaboratoryAssignment {
   requestDate: dayjs.Dayjs;
 }
 
+// Map để lưu TestRequestSampleIndicator.id cho mỗi indicator trong sample
+// Key format: "sampleKey_indicatorMethodKey" -> TestRequestSampleIndicator.id
+export type IndicatorIdMap = Record<string, string>;
+
 export interface TestRequestFormContextValue {
   // Form state
   form: any;

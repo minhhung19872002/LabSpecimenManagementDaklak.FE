@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Table, Input, Tag, Button, Typography, Tooltip, Space } from "antd";
+import { Table, Input, Tag, Button, Typography, Tooltip, Space, message } from "antd";
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
-  SyncOutlined,
-  CloseCircleOutlined,
   HistoryOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
@@ -13,11 +11,7 @@ import {
   TestingIndicatorDto,
   SaveIndicatorResultDto,
 } from "../../../types/testing";
-import {
-  IndicatorApprovalStatus,
-  IndicatorApprovalStatusLabels,
-  IndicatorApprovalStatusColors,
-} from "../../../types/laboratoryTask";
+import { IndicatorApprovalStatus } from "../../../types/laboratoryTask";
 
 const { Text } = Typography;
 
@@ -79,22 +73,29 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     onResultsChange(Array.from(newResults.values()));
   };
 
-  const getApprovalStatusTag = (status: IndicatorApprovalStatus) => {
-    const label = IndicatorApprovalStatusLabels[status];
-    const color = IndicatorApprovalStatusColors[status];
+  // Validate before submit
+  const validateBeforeSubmit = (indicatorId: string): boolean => {
+    const editedData = editedResults.get(indicatorId);
+    const indicator = indicators.find((ind) => ind.id === indicatorId);
 
-    const iconMap: Record<IndicatorApprovalStatus, React.ReactNode> = {
-      [IndicatorApprovalStatus.Pending]: <ClockCircleOutlined />,
-      [IndicatorApprovalStatus.Entered]: <SyncOutlined />,
-      [IndicatorApprovalStatus.Approved]: <CheckCircleOutlined />,
-      [IndicatorApprovalStatus.Rejected]: <CloseCircleOutlined />,
-    };
+    const unit = editedData?.unit ?? indicator?.unit ?? "";
+    const result = editedData?.result ?? indicator?.result ?? "";
 
-    return (
-      <Tag color={color} icon={iconMap[status]}>
-        {label}
-      </Tag>
-    );
+    if (!unit.trim()) {
+      message.error("Vui lòng nhập Đơn vị tính (ĐVT)");
+      return false;
+    }
+    if (!result.trim()) {
+      message.error("Vui lòng nhập Kết quả");
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmitForApproval = (indicatorId: string) => {
+    if (validateBeforeSubmit(indicatorId)) {
+      onSubmitForApproval(indicatorId);
+    }
   };
 
   const columns: ColumnsType<TestingIndicatorDto> = [
@@ -263,7 +264,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
             type="primary"
             size="small"
             loading={submitting}
-            onClick={() => onSubmitForApproval(record.id)}
+            onClick={() => handleSubmitForApproval(record.id)}
             disabled={!canEditRow}
           >
             Gửi duyệt

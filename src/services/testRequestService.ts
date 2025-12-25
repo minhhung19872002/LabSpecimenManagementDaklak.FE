@@ -5,7 +5,9 @@ import {
   UpdateTestRequestDto,
   PagedResultDto,
   PagedAndSortedResultRequestDto,
-  TestRequestStatus
+  TestRequestStatus,
+  TestRequestChangeHistoryDto,
+  RejectChangesDto
 } from '../types/testRequest';
 
 const BASE_URL = '/api/v1/test-requests';
@@ -111,6 +113,47 @@ export const testRequestService = {
 
   complete: async (id: string): Promise<void> => {
     await api.post(`${BASE_URL}/${id}/complete`);
+  },
+
+  // New status transition APIs for sample sent and change approval flow
+
+  /**
+   * Gửi mẫu: Pending → SampleSent
+   */
+  sendSample: async (id: string): Promise<void> => {
+    await api.post(`${BASE_URL}/${id}/send-sample`);
+  },
+
+  /**
+   * Phê duyệt thay đổi: PendingChangeApproval → previous status (SampleSent/InProgress)
+   */
+  approveChanges: async (id: string): Promise<void> => {
+    await api.post(`${BASE_URL}/${id}/approve-changes`);
+  },
+
+  /**
+   * Từ chối thay đổi: Rollback data + PendingChangeApproval → previous status
+   */
+  rejectChanges: async (id: string, reason: string): Promise<void> => {
+    const data: RejectChangesDto = { reason };
+    await api.post(`${BASE_URL}/${id}/reject-changes`, data);
+  },
+
+  /**
+   * Lấy lịch sử thay đổi của phiếu yêu cầu
+   */
+  getChangeHistory: async (id: string): Promise<TestRequestChangeHistoryDto[]> => {
+    const response = await api.get<TestRequestChangeHistoryDto[]>(`${BASE_URL}/${id}/change-history`);
+    return response.data;
+  },
+
+  /**
+   * QLCL từ chối kết quả: PendingApproval → InProgress
+   * Trả lại cho QLKT xem xét
+   */
+  rejectResult: async (id: string, reason: string): Promise<void> => {
+    const data: RejectChangesDto = { reason };
+    await api.post(`${BASE_URL}/${id}/reject-result`, data);
   }
 };
 

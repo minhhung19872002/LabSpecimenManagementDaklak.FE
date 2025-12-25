@@ -228,7 +228,6 @@ export interface IndicatorGroupDto {
   id: string;
   name: string;
   isActive: boolean;
-  sortOrder: number;
   indicatorCount: number;
   creationTime: string;
 }
@@ -236,7 +235,6 @@ export interface IndicatorGroupDto {
 export interface CreateUpdateIndicatorGroupDto {
   name: string;
   isActive: boolean;
-  sortOrder?: number;
 }
 
 // Indicator
@@ -244,7 +242,6 @@ export interface IndicatorDto {
   id: string;
   code: string;
   name: string;
-  unitPrice: number;
   isActive: boolean;
   indicatorGroupId: string;
   indicatorGroupName: string;
@@ -255,7 +252,6 @@ export interface IndicatorDto {
 
 export interface CreateIndicatorDto {
   name: string;
-  unitPrice: number;
   isActive: boolean;
   indicatorGroupId: string;
   sortOrder?: number;
@@ -263,7 +259,6 @@ export interface CreateIndicatorDto {
 
 export interface UpdateIndicatorDto {
   name: string;
-  unitPrice: number;
   isActive: boolean;
   indicatorGroupId: string;
   sortOrder?: number;
@@ -271,7 +266,7 @@ export interface UpdateIndicatorDto {
 
 export interface CreateBulkIndicatorsDto {
   indicatorGroupId: string;
-  indicators: { name: string; unitPrice: number }[];
+  indicators: { name: string }[];
 }
 
 export interface IndicatorFilterDto extends PagedAndSortedResultRequestDto {

@@ -11,6 +11,7 @@ import {
   Col,
   Divider,
   Space,
+  Alert,
 } from "antd";
 import dayjs from "dayjs";
 import {
@@ -54,6 +55,7 @@ const TestRequestForm: React.FC = () => {
     currentStatus,
     isFieldLocked,
     isSamplesLocked,
+    isEditRequiresApproval,
     samples,
     setSamples,
     indicatorGroups,
@@ -107,6 +109,8 @@ const TestRequestForm: React.FC = () => {
     setIndicatorLaboratoryMap,
     expandedLabGroups,
     setExpandedLabGroups,
+    sampleIndicatorIdMap,
+    originalData,
     provinces,
     wards,
     setWards,
@@ -178,6 +182,9 @@ const TestRequestForm: React.FC = () => {
     setLaboratoryModalVisible,
     expandedLabGroups,
     setExpandedLabGroups,
+    sampleIndicatorIdMap,
+    originalData,
+    isEditRequiresApproval,
   });
 
   return (
@@ -190,6 +197,17 @@ const TestRequestForm: React.FC = () => {
       }
       loading={loadingData}
     >
+      {/* Warning when edit requires QLCL approval */}
+      {isEditRequiresApproval() && (
+        <Alert
+          message="Lưu ý: Thay đổi cần phê duyệt"
+          description="Phiếu yêu cầu đang ở trạng thái Đã gửi mẫu hoặc Đang thử nghiệm. Bạn chỉ có thể chỉnh sửa Thông tin mẫu. Các thông tin như Số HĐ, Ngày HĐ, Thông tin khách hàng đã bị khóa. Thay đổi sẽ cần được QLCL phê duyệt trước khi được áp dụng."
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
       <Form
         form={form}
         layout="vertical"

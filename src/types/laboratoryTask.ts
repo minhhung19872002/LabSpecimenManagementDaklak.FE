@@ -10,10 +10,11 @@ export enum LaboratoryTaskStatus {
 
 // Indicator Approval Status Enum (Phase 6)
 export enum IndicatorApprovalStatus {
-  Pending = 0,      // Chờ nhập kết quả
-  Entered = 1,      // Đã nhập kết quả
-  Approved = 2,     // Đã duyệt
-  Rejected = 3      // Không duyệt
+  Pending = 0,           // Chờ nhập kết quả
+  Entered = 1,           // Đã nhập kết quả
+  Approved = 2,          // Đã duyệt
+  Rejected = 3,          // Không duyệt
+  CustomerCancelled = 4  // Khách hàng hủy
 }
 
 // Status display helper
@@ -40,14 +41,16 @@ export const IndicatorApprovalStatusLabels: Record<IndicatorApprovalStatus, stri
   [IndicatorApprovalStatus.Pending]: 'Chờ nhập KQ',
   [IndicatorApprovalStatus.Entered]: 'Chờ duyệt',
   [IndicatorApprovalStatus.Approved]: 'Đã duyệt',
-  [IndicatorApprovalStatus.Rejected]: 'Từ chối'
+  [IndicatorApprovalStatus.Rejected]: 'Từ chối',
+  [IndicatorApprovalStatus.CustomerCancelled]: 'KH hủy'
 };
 
 export const IndicatorApprovalStatusColors: Record<IndicatorApprovalStatus, string> = {
   [IndicatorApprovalStatus.Pending]: 'default',
   [IndicatorApprovalStatus.Entered]: 'warning',
   [IndicatorApprovalStatus.Approved]: 'success',
-  [IndicatorApprovalStatus.Rejected]: 'error'
+  [IndicatorApprovalStatus.Rejected]: 'error',
+  [IndicatorApprovalStatus.CustomerCancelled]: 'volcano'
 };
 
 // Laboratory Task Indicator DTO (Phase 6 - Extended)

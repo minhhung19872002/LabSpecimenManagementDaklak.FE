@@ -1,60 +1,128 @@
 // Enums
 export enum TestRequestStatus {
-  New = 0,                // Mới - vừa tạo, chưa in phiếu
-  Pending = 1,            // Chờ xử lý - đã in phiếu XN
-  InProgress = 2,         // Đang thực hiện - QLKT đã gán PP + KTV
-  TestingCompleted = 3,   // TN Hoàn Thành - QLKT đã gửi kết quả
-  PendingApproval = 4,    // Chờ Phê duyệt - đã in KQ xét nghiệm
-  Approved = 5,           // Đã phê duyệt - lãnh đạo đã duyệt
-  ResultSent = 6,         // Đã gửi kết quả - đã nhấn gửi KQ
-  Completed = 7           // Hoàn Thành - kết thúc quy trình
+  New = 0,                      // Mới - vừa tạo, chưa in phiếu
+  Pending = 1,                  // Chờ xử lý - đã in phiếu XN
+  SampleSent = 2,               // Đã gửi mẫu - đã nhấn gửi mẫu (MỚI)
+  InProgress = 3,               // Đang thử nghiệm - QLKT đã gán PP + KTV
+  PendingChangeApproval = 4,    // Chờ phê duyệt thay đổi - chỉnh sửa cần QLCL duyệt (MỚI)
+  PendingApproval = 5,          // Chờ Phê duyệt KQ - đã in KQ xét nghiệm
+  Approved = 6,                 // Đã phê duyệt - lãnh đạo đã duyệt
+  ResultSent = 7,               // Đã gửi kết quả - đã nhấn gửi KQ
+  Completed = 8                 // Hoàn Thành - kết thúc quy trình
+}
+
+// Enum for change approval status
+export enum ChangeApprovalStatus {
+  Pending = 0,
+  Approved = 1,
+  Rejected = 2
 }
 
 // Labels for TestRequestStatus
 export const TestRequestStatusLabels: Record<TestRequestStatus, string> = {
   [TestRequestStatus.New]: "Mới",
   [TestRequestStatus.Pending]: "Chờ xử lý",
-  [TestRequestStatus.InProgress]: "Đang thực hiện",
-  [TestRequestStatus.TestingCompleted]: "TN Hoàn Thành",
-  [TestRequestStatus.PendingApproval]: "Chờ Phê duyệt",
+  [TestRequestStatus.SampleSent]: "Đã gửi mẫu",
+  [TestRequestStatus.InProgress]: "Đang thử nghiệm",
+  [TestRequestStatus.PendingChangeApproval]: "Chờ phê duyệt thay đổi",
+  [TestRequestStatus.PendingApproval]: "Chờ phê duyệt KQ",
   [TestRequestStatus.Approved]: "Đã phê duyệt",
   [TestRequestStatus.ResultSent]: "Đã gửi kết quả",
   [TestRequestStatus.Completed]: "Hoàn Thành",
+};
+
+// Labels for ChangeApprovalStatus
+export const ChangeApprovalStatusLabels: Record<ChangeApprovalStatus, string> = {
+  [ChangeApprovalStatus.Pending]: "Chờ duyệt",
+  [ChangeApprovalStatus.Approved]: "Đã duyệt",
+  [ChangeApprovalStatus.Rejected]: "Từ chối",
 };
 
 // Colors for TestRequestStatus (Ant Design Tag colors)
 export const TestRequestStatusColors: Record<TestRequestStatus, string> = {
   [TestRequestStatus.New]: "default",
   [TestRequestStatus.Pending]: "processing",
+  [TestRequestStatus.SampleSent]: "geekblue",
   [TestRequestStatus.InProgress]: "blue",
-  [TestRequestStatus.TestingCompleted]: "cyan",
+  [TestRequestStatus.PendingChangeApproval]: "gold",
   [TestRequestStatus.PendingApproval]: "orange",
   [TestRequestStatus.Approved]: "green",
   [TestRequestStatus.ResultSent]: "purple",
   [TestRequestStatus.Completed]: "success",
 };
 
-// Helper functions for TestRequestStatus validation
-export const canEditTestRequest = (status: TestRequestStatus): boolean => {
-  // Full edit: New, Pending
-  // Limited edit: InProgress, TestingCompleted
-  // No edit: PendingApproval, Approved, ResultSent, Completed
-  return status !== TestRequestStatus.PendingApproval &&
-         status !== TestRequestStatus.Approved &&
-         status !== TestRequestStatus.ResultSent &&
-         status !== TestRequestStatus.Completed;
+// Colors for ChangeApprovalStatus
+export const ChangeApprovalStatusColors: Record<ChangeApprovalStatus, string> = {
+  [ChangeApprovalStatus.Pending]: "gold",
+  [ChangeApprovalStatus.Approved]: "green",
+  [ChangeApprovalStatus.Rejected]: "red",
 };
 
+// Helper functions for TestRequestStatus validation
+
+/**
+ * Kiểm tra có thể chỉnh sửa toàn bộ thông tin không
+ * Full edit: New, Pending
+ */
 export const canEditFullInfo = (status: TestRequestStatus): boolean => {
   return status === TestRequestStatus.New || status === TestRequestStatus.Pending;
 };
 
+/**
+ * Kiểm tra có thể chỉnh sửa với phê duyệt (limited edit + cần QLCL duyệt)
+ * Limited edit: SampleSent, InProgress
+ */
+export const canEditWithApproval = (status: TestRequestStatus): boolean => {
+  return status === TestRequestStatus.SampleSent || status === TestRequestStatus.InProgress;
+};
+
+/**
+ * Kiểm tra có thể chỉnh sửa phiếu yêu cầu không (bao gồm full edit và limited edit)
+ */
+export const canEditTestRequest = (status: TestRequestStatus): boolean => {
+  return canEditFullInfo(status) || canEditWithApproval(status);
+};
+
+/**
+ * Kiểm tra có thể xóa phiếu yêu cầu không
+ */
 export const canDeleteTestRequest = (status: TestRequestStatus): boolean => {
   return status === TestRequestStatus.New || status === TestRequestStatus.Pending;
 };
 
+/**
+ * Kiểm tra có hiển thị actions cho phiếu yêu cầu không
+ */
 export const showActionsForTestRequest = (status: TestRequestStatus): boolean => {
   return status !== TestRequestStatus.Completed;
+};
+
+/**
+ * Kiểm tra có thể gửi mẫu không (Pending → SampleSent)
+ */
+export const canSendSample = (status: TestRequestStatus): boolean => {
+  return status === TestRequestStatus.Pending;
+};
+
+/**
+ * Kiểm tra có thể phê duyệt/từ chối thay đổi không (cho QLCL)
+ */
+export const canApproveOrRejectChanges = (status: TestRequestStatus): boolean => {
+  return status === TestRequestStatus.PendingChangeApproval;
+};
+
+/**
+ * Kiểm tra có thể gửi kết quả không
+ */
+export const canSendResult = (status: TestRequestStatus): boolean => {
+  return status === TestRequestStatus.Approved;
+};
+
+/**
+ * Kiểm tra có thể hoàn thành phiếu không
+ */
+export const canComplete = (status: TestRequestStatus): boolean => {
+  return status === TestRequestStatus.ResultSent;
 };
 
 export enum ResultLanguage {
@@ -382,4 +450,26 @@ export interface PagedAndSortedResultRequestDto {
   skipCount?: number;
   maxResultCount?: number;
   sorting?: string;
+}
+
+// Change History DTOs
+export interface TestRequestChangeHistoryDto {
+  id: string;
+  testRequestId: string;
+  fieldName: string;
+  oldValue?: string;
+  newValue?: string;
+  approvalStatus: ChangeApprovalStatus;
+  previousStatus?: TestRequestStatus;
+  approvedById?: string;
+  approvedByName?: string;
+  approvalDate?: string;
+  rejectionReason?: string;
+  creationTime: string;
+  creatorId?: string;
+  creatorName?: string;
+}
+
+export interface RejectChangesDto {
+  reason: string;
 }

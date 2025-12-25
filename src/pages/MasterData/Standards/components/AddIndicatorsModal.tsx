@@ -8,7 +8,7 @@ import {
   TestMethodWithIndicatorsDto,
 } from "../../../../services/masterDataService";
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 interface AddIndicatorsModalProps {
   open: boolean;
