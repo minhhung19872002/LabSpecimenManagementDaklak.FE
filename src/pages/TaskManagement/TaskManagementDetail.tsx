@@ -314,10 +314,10 @@ const TaskManagementDetail: React.FC = () => {
   };
 
   // Kiểm tra có thể chỉnh sửa task không
-  // Cho phép khi: Chưa gắn PP, Đã gán PP, hoặc QLCL từ chối (cần xem xét lại)
+  // Cho phép khi: Chưa gán KTV, Đã gán KTV, hoặc QLCL từ chối (cần xem xét lại)
   const canEditTask =
-    task?.status === LaboratoryTaskStatus.NotAssignedMethod ||
-    task?.status === LaboratoryTaskStatus.AssignedMethod ||
+    task?.status === LaboratoryTaskStatus.NotAssignedTechnician ||
+    task?.status === LaboratoryTaskStatus.AssignedTechnician ||
     task?.status === LaboratoryTaskStatus.ResultRejected;
 
   // Generate Collapse items

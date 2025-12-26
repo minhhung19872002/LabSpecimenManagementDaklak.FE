@@ -95,8 +95,8 @@ const TaskManagementList: React.FC = () => {
     const color = LaboratoryTaskStatusColors[status];
 
     const iconMap: Record<LaboratoryTaskStatus, React.ReactNode> = {
-      [LaboratoryTaskStatus.NotAssignedMethod]: <ClockCircleOutlined />,
-      [LaboratoryTaskStatus.AssignedMethod]: <CheckCircleOutlined />,
+      [LaboratoryTaskStatus.NotAssignedTechnician]: <ClockCircleOutlined />,
+      [LaboratoryTaskStatus.AssignedTechnician]: <CheckCircleOutlined />,
       [LaboratoryTaskStatus.Testing]: <SyncOutlined spin />,
       [LaboratoryTaskStatus.PendingApproval]: <ClockCircleOutlined />,
       [LaboratoryTaskStatus.Approved]: <CheckCircleOutlined />,
@@ -115,10 +115,10 @@ const TaskManagementList: React.FC = () => {
   const stats = {
     total: pagination.total,
     notAssigned: tasks.filter(
-      (t) => t.status === LaboratoryTaskStatus.NotAssignedMethod
+      (t) => t.status === LaboratoryTaskStatus.NotAssignedTechnician
     ).length,
     assigned: tasks.filter(
-      (t) => t.status === LaboratoryTaskStatus.AssignedMethod
+      (t) => t.status === LaboratoryTaskStatus.AssignedTechnician
     ).length,
     testing: tasks.filter((t) => t.status === LaboratoryTaskStatus.Testing)
       .length,
@@ -291,10 +291,10 @@ const TaskManagementList: React.FC = () => {
       width: 100,
       fixed: "right",
       render: (_: any, record: LaboratoryTaskDto) => {
-        // Chỉ cho phép edit khi: Chưa gắn PP hoặc Đã gán PP
+        // Chỉ cho phép edit khi: Chưa gán KTV hoặc Đã gán KTV
         const canEdit =
-          record.status === LaboratoryTaskStatus.NotAssignedMethod ||
-          record.status === LaboratoryTaskStatus.AssignedMethod;
+          record.status === LaboratoryTaskStatus.NotAssignedTechnician ||
+          record.status === LaboratoryTaskStatus.AssignedTechnician;
 
         const getLockedMessage = (status: LaboratoryTaskStatus) => {
           switch (status) {
@@ -481,14 +481,14 @@ const TaskManagementList: React.FC = () => {
             >
               <Select.Option value="all">Tất cả trạng thái</Select.Option>
               <Select.Option
-                value={String(LaboratoryTaskStatus.NotAssignedMethod)}
+                value={String(LaboratoryTaskStatus.NotAssignedTechnician)}
               >
-                Chưa gán phương pháp
+                Chưa gán KTV
               </Select.Option>
               <Select.Option
-                value={String(LaboratoryTaskStatus.AssignedMethod)}
+                value={String(LaboratoryTaskStatus.AssignedTechnician)}
               >
-                Đã gán phương pháp
+                Đã gán KTV
               </Select.Option>
               <Select.Option value={String(LaboratoryTaskStatus.Testing)}>
                 Đang thí nghiệm
