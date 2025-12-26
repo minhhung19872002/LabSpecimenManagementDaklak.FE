@@ -39,6 +39,7 @@ import {
   LaboratoryTaskStatusColors,
   UpdateLaboratoryTaskDto,
 } from "../../types/laboratoryTask";
+import { PATH_ROUTES } from "../../constants";
 
 const { Text } = Typography;
 
@@ -100,6 +101,7 @@ const TaskManagementList: React.FC = () => {
       [LaboratoryTaskStatus.PendingApproval]: <ClockCircleOutlined />,
       [LaboratoryTaskStatus.Approved]: <CheckCircleOutlined />,
       [LaboratoryTaskStatus.ResultSent]: <SendOutlined />,
+      [LaboratoryTaskStatus.ResultRejected]: <ClockCircleOutlined />,
     };
 
     return (
@@ -368,7 +370,7 @@ const TaskManagementList: React.FC = () => {
       onChange={handleTableChange}
       scroll={{ x: 1100 }}
       onRow={(record) => ({
-        onDoubleClick: () => navigate(`/task/${record.id}`),
+        onDoubleClick: () => navigate(PATH_ROUTES.tasks.detail(record.id)),
         style: { cursor: "pointer" },
       })}
       rowClassName={(record) => (isTaskUrgent(record) ? "urgent-row" : "")}

@@ -19,6 +19,7 @@ import {
   parseIndicatorMethodKey,
 } from "../types";
 import { generateSampleCode, getNextOrderNum, printBarcode as printBarcodeUtil, SampleBarcodeInfo } from "../utils";
+import { PATH_ROUTES } from "../../../../constants";
 
 interface UseTestRequestFormActionsProps {
   form: any;
@@ -742,7 +743,7 @@ export const useTestRequestFormActions = ({
 
           if (changeHistory.length === 0) {
             message.info("Không có thay đổi nào cần lưu");
-            navigate(`/test-request/${id}`);
+            navigate(PATH_ROUTES.testRequests.detail(id));
             return;
           }
 
@@ -760,7 +761,7 @@ export const useTestRequestFormActions = ({
         await testRequestService.create(payload);
         message.success("Tạo yêu cầu thành công!");
       }
-      navigate("/requests");
+      navigate(PATH_ROUTES.testRequests.index);
     } catch (error: any) {
       console.error("Failed to save test request:", error);
       message.error(

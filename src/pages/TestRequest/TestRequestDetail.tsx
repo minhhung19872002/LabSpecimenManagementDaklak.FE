@@ -47,8 +47,8 @@ import {
   SampleStatus,
 } from "../../types/testRequest";
 import dayjs from "dayjs";
-import ChangeApprovalModal from "./components/ChangeApprovalModal";
 import "./TestRequestDetail.css";
+import { PATH_ROUTES } from "../../constants";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -90,9 +90,7 @@ const TestRequestDetail: React.FC = () => {
   const [rejectResultReason, setRejectResultReason] = useState("");
   const [rejectResultLoading, setRejectResultLoading] = useState(false);
 
-  // Change approval modal state
-  const [openChangeApprovalModal, setOpenChangeApprovalModal] = useState(false);
-
+  
   useEffect(() => {
     if (id) {
       loadData(id);
@@ -839,19 +837,19 @@ const TestRequestDetail: React.FC = () => {
             <Space wrap>
               <Button
                 icon={<ArrowLeftOutlined />}
-                onClick={() => navigate("/requests")}
+                onClick={() => navigate(PATH_ROUTES.testRequests.index)}
               >
                 Quay lại
               </Button>
-              {/* Nút Duyệt thay đổi - hiển thị khi PendingChangeApproval */}
+              {/* Nút chuyển đến trang QLCL - hiển thị khi PendingChangeApproval */}
               {canApproveOrRejectChanges(data.status) && (
                 <Button
-                  type="primary"
+                  type="default"
                   icon={<EditOutlined />}
-                  onClick={() => setOpenChangeApprovalModal(true)}
-                  style={{ backgroundColor: "#faad14", borderColor: "#faad14" }}
+                  onClick={() => navigate(PATH_ROUTES.qualityManagement)}
+                  style={{ borderColor: "#faad14", color: "#faad14" }}
                 >
-                  Duyệt thay đổi
+                  Xem tại trang QLCL
                 </Button>
               )}
               {renderActionButtons()}
@@ -859,7 +857,7 @@ const TestRequestDetail: React.FC = () => {
                 <Button
                   type="primary"
                   icon={<EditOutlined />}
-                  onClick={() => navigate(`/test-request/edit/${id}`)}
+                  onClick={() => navigate(PATH_ROUTES.testRequests.edit(id!))}
                 >
                   Chỉnh sửa
                 </Button>
@@ -872,7 +870,7 @@ const TestRequestDetail: React.FC = () => {
         {data.status === TestRequestStatus.PendingChangeApproval && (
           <Alert
             message="Có thay đổi đang chờ phê duyệt"
-            description="Dữ liệu hiển thị bên dưới là dữ liệu gốc trước khi thay đổi. Nhấn 'Duyệt thay đổi' để xem và phê duyệt các thay đổi được yêu cầu."
+            description="Dữ liệu hiển thị bên dưới là dữ liệu gốc trước khi thay đổi. Vui lòng vào trang 'Quản lý chất lượng' để phê duyệt hoặc từ chối các thay đổi."
             type="warning"
             showIcon
             style={{ marginBottom: 16 }}
@@ -1393,14 +1391,6 @@ const TestRequestDetail: React.FC = () => {
           />
         )}
       </Modal>
-
-      {/* Change Approval Modal */}
-      <ChangeApprovalModal
-        visible={openChangeApprovalModal}
-        testRequestId={id!}
-        onClose={() => setOpenChangeApprovalModal(false)}
-        onApproved={() => loadData(id!)}
-      />
 
       {/* Reject Result Modal - Trả lại cho QLKT xem xét */}
       <Modal

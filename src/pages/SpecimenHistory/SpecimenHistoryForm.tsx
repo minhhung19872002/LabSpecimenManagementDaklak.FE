@@ -8,6 +8,7 @@ import { specimenService } from '../../services/specimenService';
 import { storageLocationService } from '../../services/masterDataService';
 import { userService, UserLookupDto } from '../../services/userService';
 import { CreateSpecimenHistoryDto, UpdateSpecimenHistoryDto, SpecimenStatus } from '../../types/specimenHistory';
+import { PATH_ROUTES } from '../../constants';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -104,7 +105,7 @@ const SpecimenHistoryForm: React.FC = () => {
         await specimenHistoryService.create(createDto);
         message.success(t('specimenHistory.form.createSuccess'));
       }
-      navigate('/specimen-histories');
+      navigate(PATH_ROUTES.specimenHistories.index);
     } catch (error) {
       message.error(
         isEdit
@@ -274,7 +275,7 @@ const SpecimenHistoryForm: React.FC = () => {
             <Button type="primary" htmlType="submit" loading={submitting} style={{ marginRight: 8 }}>
               {isEdit ? t('common.update') : t('common.create')}
             </Button>
-            <Button onClick={() => navigate('/specimen-histories')}>
+            <Button onClick={() => navigate(PATH_ROUTES.specimenHistories.index)}>
               {t('common.cancel')}
             </Button>
           </Form.Item>

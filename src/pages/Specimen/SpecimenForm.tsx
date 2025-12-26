@@ -9,6 +9,7 @@ import { specimenTypeService, storageLocationService } from '../../services/mast
 import { SpecimenStatus } from '../../types/specimen';
 import dayjs from 'dayjs';
 import FileUpload from '../../components/common/FileUpload';
+import { PATH_ROUTES } from '../../constants';
 
 const { TextArea } = Input;
 const { Title } = Typography;
@@ -97,7 +98,7 @@ const SpecimenForm: React.FC = () => {
         await specimenService.create(payload);
         message.success(t('messages.createSuccess'));
       }
-      navigate('/specimens');
+      navigate(PATH_ROUTES.specimens.index);
     } catch (error: any) {
       message.error(isEditMode ? t('messages.updateFailed') : t('messages.createFailed'));
       console.error('Failed to save specimen:', error);
@@ -329,7 +330,7 @@ const SpecimenForm: React.FC = () => {
           <Button type="primary" htmlType="submit" loading={loading}>
             {isEditMode ? t('common.update') : t('common.create')}
           </Button>
-          <Button style={{ marginLeft: 8 }} onClick={() => navigate('/specimens')}>
+          <Button style={{ marginLeft: 8 }} onClick={() => navigate(PATH_ROUTES.specimens.index)}>
             {t('common.cancel')}
           </Button>
         </Form.Item>

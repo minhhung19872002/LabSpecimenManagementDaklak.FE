@@ -7,6 +7,7 @@ import { specimenService } from '../../services/specimenService';
 import { testMethodService } from '../../services/masterDataService';
 import { CreateTestDto, UpdateTestDto, TestStatus } from '../../types/test';
 import dayjs from 'dayjs';
+import { PATH_ROUTES } from '../../constants';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -92,7 +93,7 @@ const TestForm: React.FC = () => {
         await testService.create(formData as CreateTestDto);
         message.success(t('messages.createSuccess'));
       }
-      navigate('/tests');
+      navigate(PATH_ROUTES.tests.index);
     } catch (error) {
       message.error(isEditMode ? t('messages.updateFailed') : t('messages.createFailed'));
       console.error('Failed to save test:', error);
@@ -208,7 +209,7 @@ const TestForm: React.FC = () => {
               <Button type="primary" htmlType="submit" loading={loading}>
                 {t('common.save')}
               </Button>
-              <Button onClick={() => navigate('/tests')}>
+              <Button onClick={() => navigate(PATH_ROUTES.tests.index)}>
                 {t('common.cancel')}
               </Button>
             </Space>
