@@ -231,6 +231,7 @@ const TestRequestList: React.FC = () => {
       dataIndex: "status",
       key: "status",
       width: 140,
+      fixed: "right" as const,
       render: (status: TestRequestStatus) => getStatusTag(status),
     },
     {

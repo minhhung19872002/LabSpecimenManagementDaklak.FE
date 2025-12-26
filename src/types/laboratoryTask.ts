@@ -5,7 +5,8 @@ export enum LaboratoryTaskStatus {
   Testing = 2,             // Đang thí nghiệm
   PendingApproval = 3,     // Chờ duyệt kết quả
   Approved = 4,            // Đã duyệt
-  ResultSent = 5           // Đã gửi kết quả
+  ResultSent = 5,          // Đã gửi kết quả
+  ResultRejected = 6       // QLCL từ chối KQ
 }
 
 // Indicator Approval Status Enum (Phase 6)
@@ -24,7 +25,8 @@ export const LaboratoryTaskStatusLabels: Record<LaboratoryTaskStatus, string> = 
   [LaboratoryTaskStatus.Testing]: 'Đang thí nghiệm',
   [LaboratoryTaskStatus.PendingApproval]: 'Chờ duyệt kết quả',
   [LaboratoryTaskStatus.Approved]: 'Đã duyệt',
-  [LaboratoryTaskStatus.ResultSent]: 'Đã gửi kết quả'
+  [LaboratoryTaskStatus.ResultSent]: 'Đã gửi kết quả',
+  [LaboratoryTaskStatus.ResultRejected]: 'QLCL từ chối'
 };
 
 export const LaboratoryTaskStatusColors: Record<LaboratoryTaskStatus, string> = {
@@ -33,7 +35,8 @@ export const LaboratoryTaskStatusColors: Record<LaboratoryTaskStatus, string> = 
   [LaboratoryTaskStatus.Testing]: 'processing',
   [LaboratoryTaskStatus.PendingApproval]: 'warning',
   [LaboratoryTaskStatus.Approved]: 'success',
-  [LaboratoryTaskStatus.ResultSent]: 'purple'
+  [LaboratoryTaskStatus.ResultSent]: 'purple',
+  [LaboratoryTaskStatus.ResultRejected]: 'error'
 };
 
 // Indicator Approval Status display helper (Phase 6)
@@ -97,6 +100,7 @@ export interface LaboratoryTaskDto {
   testDate?: string;
   status: LaboratoryTaskStatus;
   notes?: string;
+  resultRejectionReason?: string;  // Lý do QLCL từ chối KQ
 
   // Navigation properties
   testRequestNumber?: string;

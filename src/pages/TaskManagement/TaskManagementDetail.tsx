@@ -13,6 +13,7 @@ import {
   message,
   Spin,
   Modal,
+  Alert,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -118,17 +119,22 @@ const TaskManagementDetail: React.FC = () => {
         ...indicatorChanges[ind.id],
       }));
 
+      // Filter out CustomerCancelled indicators for status calculation
+      const activeIndicators = indicators.filter(
+        (i) => i.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled
+      );
+
       // Compute sample status từ SERVER DATA (không dùng local changes)
       // Để button "Giao việc" chỉ ẩn khi đã lưu xuống DB
-      const allApproved = indicators.every(
+      const allApproved = activeIndicators.length > 0 && activeIndicators.every(
         (i) => i.approvalStatus === IndicatorApprovalStatus.Approved
       );
-      const allEntered = indicators.every(
+      const allEntered = activeIndicators.length > 0 && activeIndicators.every(
         (i) => i.approvalStatus >= IndicatorApprovalStatus.Entered
       );
       // Chỉ check server data cho allAssigned
-      const allAssigned = indicators.every((i) => i.methodId && i.technicianId);
-      const hasAnyResult = indicators.some((i) => i.result);
+      const allAssigned = activeIndicators.length > 0 && activeIndicators.every((i) => i.methodId && i.technicianId);
+      const hasAnyResult = activeIndicators.some((i) => i.result);
 
       let sampleStatus: SampleStatus;
       if (allApproved) {
@@ -306,10 +312,12 @@ const TaskManagementDetail: React.FC = () => {
     );
   };
 
-  // Kiểm tra có thể chỉnh sửa task không (chỉ cho phép khi Chưa gắn PP hoặc Đã gán PP)
+  // Kiểm tra có thể chỉnh sửa task không
+  // Cho phép khi: Chưa gắn PP, Đã gán PP, hoặc QLCL từ chối (cần xem xét lại)
   const canEditTask =
     task?.status === LaboratoryTaskStatus.NotAssignedMethod ||
-    task?.status === LaboratoryTaskStatus.AssignedMethod;
+    task?.status === LaboratoryTaskStatus.AssignedMethod ||
+    task?.status === LaboratoryTaskStatus.ResultRejected;
 
   // Generate Collapse items
   const collapseItems = sampleList.map((sample) => ({
@@ -325,7 +333,7 @@ const TaskManagementDetail: React.FC = () => {
           </Space>
         </Col>
         <Col>
-          {canEditTask && (
+          {canEditTask && !sample.isApproved && (
             <Button
               type="primary"
               size="small"
@@ -402,7 +410,8 @@ const TaskManagementDetail: React.FC = () => {
               icon={<SendOutlined />}
               disabled={
                 !allSamplesApproved ||
-                task.status === LaboratoryTaskStatus.ResultSent
+                task.status === LaboratoryTaskStatus.ResultSent ||
+                task.status === LaboratoryTaskStatus.ResultRejected
               }
               loading={actionLoading}
               onClick={handleSendResults}
@@ -448,6 +457,26 @@ const TaskManagementDetail: React.FC = () => {
           </Space>
         </div>
       </Card>
+
+      {/* Alert khi QLCL từ chối kết quả */}
+      {task.status === LaboratoryTaskStatus.ResultRejected && (
+        <Alert
+          message="Kết quả bị từ chối"
+          description={
+            <>
+              <div>Quản lý Chất lượng đã từ chối kết quả và trả lại cho Quản lý Kỹ thuật xem xét.</div>
+              {task.resultRejectionReason && (
+                <div style={{ marginTop: 8 }}>
+                  <strong>Lý do:</strong> {task.resultRejectionReason}
+                </div>
+              )}
+            </>
+          }
+          type="error"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      )}
 
       {/* Collapsible Sample Panels */}
       <Card title={`Danh sách mẫu (${sampleList.length})`}>

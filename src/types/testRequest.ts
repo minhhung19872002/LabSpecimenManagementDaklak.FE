@@ -29,7 +29,7 @@ export const TestRequestStatusLabels: Record<TestRequestStatus, string> = {
   [TestRequestStatus.PendingChangeApproval]: "Chờ phê duyệt thay đổi",
   [TestRequestStatus.PendingApproval]: "Chờ phê duyệt KQ",
   [TestRequestStatus.Approved]: "Đã phê duyệt",
-  [TestRequestStatus.ResultSent]: "Đã gửi kết quả",
+  [TestRequestStatus.ResultSent]: "Gửi khách hàng",
   [TestRequestStatus.Completed]: "Hoàn Thành",
 };
 

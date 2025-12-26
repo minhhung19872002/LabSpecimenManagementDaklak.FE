@@ -121,11 +121,12 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       render: (_, record) => {
         const currentValue =
           editedResults.get(record.id)?.unit ?? record.unit ?? "";
-        // Disable if: no edit permission OR already submitted (Entered) OR approved
+        // Disable if: no edit permission OR already submitted (Entered) OR approved OR cancelled
         const isDisabled =
           !record.canEdit ||
           record.approvalStatus === IndicatorApprovalStatus.Entered ||
-          record.approvalStatus === IndicatorApprovalStatus.Approved;
+          record.approvalStatus === IndicatorApprovalStatus.Approved ||
+          record.approvalStatus === IndicatorApprovalStatus.CustomerCancelled;
 
         return (
           <Input
@@ -147,11 +148,12 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       render: (_, record) => {
         const currentValue =
           editedResults.get(record.id)?.result ?? record.result ?? "";
-        // Disable if: no edit permission OR already submitted (Entered) OR approved
+        // Disable if: no edit permission OR already submitted (Entered) OR approved OR cancelled
         const isDisabled =
           !record.canEdit ||
           record.approvalStatus === IndicatorApprovalStatus.Entered ||
-          record.approvalStatus === IndicatorApprovalStatus.Approved;
+          record.approvalStatus === IndicatorApprovalStatus.Approved ||
+          record.approvalStatus === IndicatorApprovalStatus.CustomerCancelled;
 
         return (
           <Input
@@ -238,7 +240,8 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
         const canEditRow =
           record.canEdit &&
           record.approvalStatus !== IndicatorApprovalStatus.Entered &&
-          record.approvalStatus !== IndicatorApprovalStatus.Approved;
+          record.approvalStatus !== IndicatorApprovalStatus.Approved &&
+          record.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled;
 
         // If approved - show tag
         if (record.approvalStatus === IndicatorApprovalStatus.Approved) {
@@ -254,6 +257,15 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
           return (
             <Tag color="warning">
               <ClockCircleOutlined /> Chờ duyệt
+            </Tag>
+          );
+        }
+
+        // If customer cancelled - show tag
+        if (record.approvalStatus === IndicatorApprovalStatus.CustomerCancelled) {
+          return (
+            <Tag color="volcano">
+              KH hủy
             </Tag>
           );
         }

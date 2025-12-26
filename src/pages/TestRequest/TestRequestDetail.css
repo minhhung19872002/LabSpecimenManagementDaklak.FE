@@ -1,10 +1,22 @@
 .test-request-detail {
-  padding: 16px;
+  padding: 0;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 992px) {
   .test-request-detail {
     padding: 24px;
+  }
+}
+
+/* Remove card border on mobile/tablet */
+@media (max-width: 991px) {
+  .test-request-detail .ant-card {
+    border: none;
+    border-radius: 0;
+  }
+
+  .test-request-detail .ant-card-bordered {
+    border: none;
   }
 }
 
@@ -70,6 +82,26 @@
 .test-request-detail .ant-card-head-title {
   white-space: normal;
   line-height: 1.5;
+}
+
+/* Card header flex container */
+.test-request-detail .card-header-flex {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@media (max-width: 767px) {
+  .test-request-detail .card-header-flex {
+    justify-content: flex-start;
+    padding: 8px 0;
+  }
+
+  .test-request-detail .card-header-flex > * {
+    flex: 0 0 100%;
+  }
 }
 
 /* Table responsive */

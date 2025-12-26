@@ -137,8 +137,7 @@ export const useTestRequestFormActions = ({
       'deliveryPostal', 'returnStoredSample', 'sampleTypeService', 'sampleTypeContract',
       'sampleTypeTask', 'sampleTypeSubContract', 'sampleStorage', 'totalCost', 'totalCostInWords',
       'receiptNumber', 'notes', 'changeRequest', 'agreeTerms', 'sentToAccounting',
-      'paymentReceived', 'sentToDepartment', 'resultReturned',
-      'supervisorId', 'directorId', 'subcontractor'
+      'paymentReceived', 'sentToDepartment', 'resultReturned', 'subcontractor'
     ];
 
     // Date fields
@@ -724,8 +723,6 @@ export const useTestRequestFormActions = ({
             ? ""
             : numberToVietnameseWords(totalSampleCost),
         receiptNumber: values.receiptNumber || undefined,
-        supervisorId: values.supervisorId || undefined,
-        directorId: values.directorId || undefined,
         changeRequest: values.changeRequest || undefined,
         agreeTerms: values.agreeTerms || false,
         requestDate: values.requestDate ? values.requestDate.format('YYYY-MM-DDTHH:mm:ss') : dayjs().format('YYYY-MM-DDTHH:mm:ss'),
