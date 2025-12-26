@@ -1,4 +1,5 @@
 import { SampleStatus } from "../../../../types/testRequest";
+import { IndicatorApprovalStatus } from "../../../../types/laboratoryTask";
 import dayjs from "dayjs";
 
 // Thông tin phương pháp cho một chỉ tiêu
@@ -48,6 +49,8 @@ export interface LaboratoryAssignment {
   laboratoryId: string;
   laboratoryName: string;
   requestDate: dayjs.Dayjs;
+  /** Trạng thái duyệt của chỉ tiêu (null nếu mới thêm, chưa lưu) */
+  approvalStatus?: IndicatorApprovalStatus;
 }
 
 // Map để lưu TestRequestSampleIndicator.id cho mỗi indicator trong sample
