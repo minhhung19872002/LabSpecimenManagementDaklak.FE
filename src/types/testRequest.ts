@@ -171,6 +171,8 @@ export interface TestRequestSampleIndicatorDto {
   sentToDepartment: boolean;
   /** Trạng thái duyệt từ LaboratoryTaskIndicator (null nếu chưa gửi mẫu) */
   approvalStatus?: IndicatorApprovalStatus;
+  /** Ngày thử nghiệm (ngày KTV bắt đầu thử nghiệm/check-in) */
+  testDate?: string;
 }
 
 export interface CreateTestRequestSampleIndicatorDto {
