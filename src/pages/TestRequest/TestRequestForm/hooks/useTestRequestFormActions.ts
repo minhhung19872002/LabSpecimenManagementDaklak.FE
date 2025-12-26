@@ -602,6 +602,20 @@ export const useTestRequestFormActions = ({
       return;
     }
 
+    // Validate: check if contract number already exists
+    try {
+      const excludeId = isEditMode ? id : undefined;
+      const exists = await testRequestService.checkContractNumberExists(contractNumber, excludeId);
+      if (exists) {
+        message.error("Số hợp đồng đã tồn tại. Vui lòng nhập số hợp đồng khác.");
+        return;
+      }
+    } catch (error) {
+      console.error("Failed to check contract number:", error);
+      message.error("Không thể kiểm tra số hợp đồng. Vui lòng thử lại.");
+      return;
+    }
+
     // Validate: all samples must have sampleName
     const invalidSamples = samples.filter((s) => !s.sampleName);
     if (invalidSamples.length > 0) {

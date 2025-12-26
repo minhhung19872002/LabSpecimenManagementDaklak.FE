@@ -78,13 +78,8 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     const editedData = editedResults.get(indicatorId);
     const indicator = indicators.find((ind) => ind.id === indicatorId);
 
-    const unit = editedData?.unit ?? indicator?.unit ?? "";
     const result = editedData?.result ?? indicator?.result ?? "";
 
-    if (!unit.trim()) {
-      message.error("Vui lòng nhập Đơn vị tính (ĐVT)");
-      return false;
-    }
     if (!result.trim()) {
       message.error("Vui lòng nhập Kết quả");
       return false;
@@ -117,25 +112,15 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     {
       title: "ĐVT",
       key: "unit",
-      width: 150,
+      width: 120,
       render: (_, record) => {
-        const currentValue =
-          editedResults.get(record.id)?.unit ?? record.unit ?? "";
-        // Disable if: no edit permission OR already submitted (Entered) OR approved OR cancelled
-        const isDisabled =
-          !record.canEdit ||
-          record.approvalStatus === IndicatorApprovalStatus.Entered ||
-          record.approvalStatus === IndicatorApprovalStatus.Approved ||
-          record.approvalStatus === IndicatorApprovalStatus.CustomerCancelled;
-
+        // ĐVT lấy từ phương pháp thử, không cho sửa
+        const unitValue = record.unit ?? "";
         return (
           <Input
-            value={currentValue}
-            onChange={(e) =>
-              handleFieldChange(record.id, "unit", e.target.value)
-            }
-            onBlur={() => onSaveIndicator(record.id)}
-            disabled={isDisabled}
+            value={unitValue}
+            disabled
+            style={{ backgroundColor: '#f5f5f5' }}
             placeholder="-"
           />
         );

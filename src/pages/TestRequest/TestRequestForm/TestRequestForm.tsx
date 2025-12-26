@@ -12,6 +12,7 @@ import {
   Divider,
   Space,
   Alert,
+  message,
 } from "antd";
 import dayjs from "dayjs";
 import {
@@ -212,6 +213,14 @@ const TestRequestForm: React.FC = () => {
         form={form}
         layout="vertical"
         onFinish={onFinish}
+        onFinishFailed={(errorInfo) => {
+          const firstError = errorInfo.errorFields[0];
+          if (firstError) {
+            message.error(firstError.errors[0] || "Vui lòng kiểm tra lại các trường bắt buộc");
+          } else {
+            message.error("Vui lòng kiểm tra lại các trường bắt buộc");
+          }
+        }}
         initialValues={{
           requestDate: dayjs(),
           status: TestRequestStatus.Pending,
