@@ -48,6 +48,11 @@ import {
 import dayjs from "dayjs";
 import "./TestRequestDetail.css";
 import { PATH_ROUTES } from "../../constants";
+import {
+  IndicatorApprovalStatus,
+  IndicatorApprovalStatusLabels,
+  IndicatorApprovalStatusColors,
+} from "../../types/laboratoryTask";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -715,41 +720,65 @@ const TestRequestDetail: React.FC = () => {
           groupedByLab[labId].indicators.push(ind);
         });
 
-        const renderIndicator = (ind: any, idx: number) => (
-          <div
-            key={idx}
-            style={{
-              marginBottom: 4,
-              padding: "4px 8px",
-              background: "#f5f5f5",
-              borderRadius: 4,
-            }}
-          >
+        const renderIndicator = (ind: any, idx: number) => {
+          // Get approval status info
+          const hasApprovalStatus = ind.approvalStatus !== undefined && ind.approvalStatus !== null;
+          const approvalStatusLabel = hasApprovalStatus
+            ? IndicatorApprovalStatusLabels[ind.approvalStatus as IndicatorApprovalStatus]
+            : null;
+          const approvalStatusColor = hasApprovalStatus
+            ? IndicatorApprovalStatusColors[ind.approvalStatus as IndicatorApprovalStatus]
+            : null;
+
+          return (
             <div
+              key={idx}
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                flexWrap: "wrap",
+                marginBottom: 4,
+                padding: "4px 8px",
+                background: "#f5f5f5",
+                borderRadius: 4,
               }}
             >
-              <Tag color="blue" style={{ margin: 0, fontSize: 11 }}>
-                {ind.indicatorCode || ind.indicatorName}
-              </Tag>
-              <Text style={{ fontSize: 11 }}>{ind.indicatorName}</Text>
-              {ind.unitPrice > 0 && (
-                <Text type="secondary" style={{ fontSize: 11 }}>
-                  ({ind.unitPrice?.toLocaleString("vi-VN")}đ)
-                </Text>
-              )}
-            </div>
-            {ind.requestDate && (
-              <div style={{ fontSize: 10, color: "#888", marginTop: 2 }}>
-                YC xong: {dayjs(ind.requestDate).format("DD/MM/YYYY")}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  flexWrap: "wrap",
+                }}
+              >
+                <Tag color="blue" style={{ margin: 0, fontSize: 11 }}>
+                  {ind.indicatorCode || ind.indicatorName}
+                </Tag>
+                <Text style={{ fontSize: 11 }}>{ind.indicatorName}</Text>
+                {ind.unitPrice > 0 && (
+                  <Text type="secondary" style={{ fontSize: 11 }}>
+                    ({ind.unitPrice?.toLocaleString("vi-VN")}đ)
+                  </Text>
+                )}
+                {/* Trạng thái duyệt */}
+                {hasApprovalStatus && approvalStatusLabel && (
+                  <Tag
+                    color={approvalStatusColor || 'default'}
+                    style={{ margin: 0, fontSize: 10 }}
+                  >
+                    {approvalStatusLabel}
+                  </Tag>
+                )}
               </div>
-            )}
-          </div>
-        );
+              <div style={{ fontSize: 10, color: "#888", marginTop: 2 }}>
+                {ind.requestDate && (
+                  <span>YC xong: {dayjs(ind.requestDate).format("DD/MM/YYYY")}</span>
+                )}
+                {ind.requestDate && ind.testDate && <span style={{ margin: "0 4px" }}>|</span>}
+                {ind.testDate && (
+                  <span>Ngày TN: {dayjs(ind.testDate).format("DD/MM/YYYY")}</span>
+                )}
+              </div>
+            </div>
+          );
+        };
 
         return (
           <div style={{ maxHeight: 300, overflowY: "auto" }}>
