@@ -36,6 +36,7 @@ import { userService, UserLookupDto } from '../../../services/userService';
 import {
   QualityManagementTaskDto,
   QualityTaskType,
+  ChangeApprovalBatchDto,
 } from '../../../types/qualityManagement';
 
 const { Text } = Typography;
@@ -46,6 +47,12 @@ interface ChangeApprovalModalProps {
   taskId: string | null;
   onClose: () => void;
   onUpdated: () => void;
+  /** Chế độ chỉ xem - ẩn các button Phê duyệt/Từ chối */
+  readonly?: boolean;
+  /** Dữ liệu batch được truyền trực tiếp (từ HistoryModal) - không cần gọi API */
+  batchData?: ChangeApprovalBatchDto;
+  /** Contract number để hiển thị khi dùng batchData */
+  contractNumber?: string;
 }
 
 interface FieldChange {
@@ -209,6 +216,9 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
   taskId,
   onClose,
   onUpdated,
+  readonly = false,
+  batchData,
+  contractNumber,
 }) => {
   const [loading, setLoading] = useState(false);
   const [approving, setApproving] = useState(false);
@@ -218,6 +228,9 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [users, setUsers] = useState<UserLookupDto[]>([]);
+
+  // Check if using batchData mode (data passed directly instead of loading from API)
+  const isBatchDataMode = !!batchData;
 
   // Load task and pending changes
   const loadData = async () => {
@@ -233,8 +246,17 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
         testRequestService.getChangeHistory(taskData.testRequestId),
         userService.getLookup(),
       ]);
-      const pending = history.filter(h => h.approvalStatus === ChangeApprovalStatus.Pending);
-      setPendingChanges(pending);
+
+      // In readonly mode, show all history for this task's batch
+      // In edit mode, only show pending changes
+      if (readonly) {
+        // Get the batch/creation time of changes related to this task
+        // Filter history by task's creation time range (same batch)
+        setPendingChanges(history);
+      } else {
+        const pending = history.filter(h => h.approvalStatus === ChangeApprovalStatus.Pending);
+        setPendingChanges(pending);
+      }
       setUsers(usersData);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -245,13 +267,36 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
   };
 
   useEffect(() => {
-    if (visible && taskId) {
+    // If batchData is provided, convert it to pendingChanges format
+    if (visible && isBatchDataMode && batchData) {
+      // Convert batchData.fields to TestRequestChangeHistoryDto format
+      const changes: TestRequestChangeHistoryDto[] = batchData.fields.map(field => ({
+        id: field.id,
+        testRequestId: '',
+        fieldName: field.fieldName || '',
+        oldValue: field.oldValue,
+        newValue: field.newValue,
+        reason: '',
+        creationTime: batchData.creationTime,
+        creatorId: batchData.creatorId,
+        creatorName: batchData.creatorName,
+        approvalStatus: batchData.status as any,
+        approvalDate: batchData.approvalDate,
+        approvedById: batchData.approvedById,
+        approvedByName: batchData.approvedByName,
+        rejectionReason: batchData.rejectionReason,
+      }));
+      setPendingChanges(changes);
+      return;
+    }
+
+    if (visible && taskId && !isBatchDataMode) {
       loadData();
-    } else {
+    } else if (!visible) {
       setTask(null);
       setPendingChanges([]);
     }
-  }, [visible, taskId]);
+  }, [visible, taskId, isBatchDataMode, batchData]);
 
   // Parse changes
   const { fieldChanges, sampleChanges } = useMemo(() => {
@@ -957,9 +1002,9 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
       <Modal
         title={
           <Space>
-            <ExclamationCircleOutlined style={{ color: '#faad14' }} />
-            <span>Xem xét thay đổi phiếu yêu cầu</span>
-            {task && <Tag color="blue">{task.contractNumber}</Tag>}
+            <ExclamationCircleOutlined style={{ color: (readonly || isBatchDataMode) ? '#1890ff' : '#faad14' }} />
+            <span>{(readonly || isBatchDataMode) ? 'Chi tiết thay đổi phiếu yêu cầu' : 'Xem xét thay đổi phiếu yêu cầu'}</span>
+            {(task?.contractNumber || contractNumber) && <Tag color="blue">{task?.contractNumber || contractNumber}</Tag>}
           </Space>
         }
         open={visible}
@@ -967,7 +1012,11 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
         width={800}
         centered
         styles={{ body: { maxHeight: 'calc(100vh - 200px)', overflow: 'auto', padding: '16px 24px' } }}
-        footer={[
+        footer={(readonly || isBatchDataMode || !hasChanges) ? [
+          <Button key="close" onClick={onClose}>
+            Đóng
+          </Button>
+        ] : [
           <Button
             key="reject"
             danger
@@ -991,9 +1040,9 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
           <div style={{ textAlign: 'center', padding: 40 }}>
             <Spin size="large" />
           </div>
-        ) : !task ? (
+        ) : !isBatchDataMode && !task ? (
           <Alert type="error" message="Không tìm thấy dữ liệu" showIcon />
-        ) : task.taskType !== QualityTaskType.ChangeApproval ? (
+        ) : !isBatchDataMode && task?.taskType !== QualityTaskType.ChangeApproval ? (
           <Alert type="warning" message="Task này không phải là phê duyệt thay đổi" showIcon />
         ) : !hasChanges ? (
           <Alert
@@ -1011,14 +1060,18 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
               alignItems: 'center',
               marginBottom: 16,
               padding: '8px 12px',
-              background: '#fffbe6',
-              border: '1px solid #ffe58f',
+              background: isBatchDataMode ? '#e6f7ff' : '#fffbe6',
+              border: isBatchDataMode ? '1px solid #91d5ff' : '1px solid #ffe58f',
               borderRadius: 6
             }}>
               <Text>
-                <strong>{fieldChanges.length + sampleChanges.length}</strong> thay đổi cần xem xét
+                <strong>{fieldChanges.length + sampleChanges.length}</strong> {isBatchDataMode ? 'thay đổi' : 'thay đổi cần xem xét'}
               </Text>
-              {pendingChanges[0]?.creatorName && (
+              {(isBatchDataMode && batchData?.creatorName) ? (
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  bởi <strong>{batchData.creatorName}</strong> - {dayjs(batchData.creationTime).format('DD/MM/YYYY HH:mm')}
+                </Text>
+              ) : pendingChanges[0]?.creatorName && (
                 <Text type="secondary" style={{ fontSize: 12 }}>
                   bởi <strong>{pendingChanges[0].creatorName}</strong> - {dayjs(pendingChanges[0].creationTime).format('DD/MM/YYYY HH:mm')}
                 </Text>

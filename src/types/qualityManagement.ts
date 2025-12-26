@@ -204,7 +204,7 @@ export enum ChangeApprovalStatus {
   Rejected = 2
 }
 
-// Change Approval History DTO
+// Change Approval History DTO (legacy flat format)
 export interface ChangeApprovalHistoryDto {
   id: string;
   action: string;
@@ -222,9 +222,32 @@ export interface ChangeApprovalHistoryDto {
   approvedByName?: string;
 }
 
+// Change Approval Field DTO (for grouped batch format)
+export interface ChangeApprovalFieldDto {
+  id: string;
+  fieldName?: string;
+  oldValue?: string;
+  newValue?: string;
+}
+
+// Change Approval Batch DTO (grouped by CreationTime)
+export interface ChangeApprovalBatchDto {
+  creationTime: string;
+  creatorId?: string;
+  creatorName?: string;
+  status: ChangeApprovalStatus;
+  action: string;
+  approvalDate?: string;
+  approvedById?: string;
+  approvedByName?: string;
+  rejectionReason?: string;
+  fields: ChangeApprovalFieldDto[];
+}
+
 // Task History Response DTO - supports both ResultApproval and ChangeApproval
 export interface TaskHistoryResponseDto {
   taskType: QualityTaskType;
   indicatorHistories: QualityTaskHistoryDto[];
   changeHistories: ChangeApprovalHistoryDto[];
+  changeHistoryBatches: ChangeApprovalBatchDto[];
 }

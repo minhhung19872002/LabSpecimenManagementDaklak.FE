@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Modal, Timeline, Typography, Tag, Spin, Empty, Collapse, Card } from 'antd';
-import { HistoryOutlined, CheckCircleOutlined, CloseCircleOutlined, EditOutlined } from '@ant-design/icons';
+import React, { useState, useEffect } from 'react';
+import { Modal, Timeline, Typography, Tag, Spin, Empty, Collapse, Card, Button } from 'antd';
+import { HistoryOutlined, CheckCircleOutlined, CloseCircleOutlined, EditOutlined, EyeOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { qualityManagementService } from '../../../services/qualityManagementService';
 import {
@@ -11,8 +11,9 @@ import {
   QualityIndicatorApprovalStatusColors,
   QualityTaskType,
   ChangeApprovalStatus,
-  ChangeApprovalHistoryDto,
+  ChangeApprovalBatchDto,
 } from '../../../types/qualityManagement';
+import ChangeApprovalModal from './ChangeApprovalModal';
 
 const { Text } = Typography;
 const { Panel } = Collapse;
@@ -69,6 +70,8 @@ const formatDisplayValue = (value: string | undefined | null): string => {
 const HistoryModal: React.FC<HistoryModalProps> = ({ visible, task, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [historyData, setHistoryData] = useState<TaskHistoryResponseDto | null>(null);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [selectedBatch, setSelectedBatch] = useState<ChangeApprovalBatchDto | null>(null);
 
   useEffect(() => {
     if (visible && task) {
@@ -143,48 +146,28 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ visible, task, onClose }) =
     </Timeline.Item>
   );
 
-  // Group change histories - all items share same status since they're filtered by batch
-  const groupedChangeHistory = useMemo(() => {
-    if (!historyData || historyData.changeHistories.length === 0) return null;
-
-    const items = historyData.changeHistories;
-    const firstItem = items[0];
-
-    return {
-      status: firstItem.status,
-      action: firstItem.action,
-      creationTime: firstItem.creationTime,
-      creatorName: firstItem.creatorName,
-      approvalDate: firstItem.approvalDate,
-      approvedByName: firstItem.approvedByName,
-      rejectionReason: firstItem.rejectionReason,
-      fields: items.map(item => ({
-        fieldName: item.fieldName,
-        oldValue: item.oldValue,
-        newValue: item.newValue,
-      })),
-    };
-  }, [historyData]);
-
-  const renderChangeApprovalHistory = () => {
-    if (!groupedChangeHistory) {
-      return <Empty description="Chưa có lịch sử thay đổi" />;
-    }
-
-    const { status, creationTime, creatorName, approvalDate, approvedByName, rejectionReason, fields } = groupedChangeHistory;
+  // Render a single batch card
+  const renderBatchCard = (batch: ChangeApprovalBatchDto, index: number, orderNumber?: number) => {
+    const { status, creationTime, creatorName, approvalDate, approvedByName, rejectionReason, fields, action } = batch;
 
     // Filter out Samples field for display (too complex)
     const displayFields = fields.filter(f => f.fieldName !== 'Samples');
     const hasSamplesChange = fields.some(f => f.fieldName === 'Samples');
 
+    // Use orderNumber if provided, otherwise fall back to index + 1
+    const displayOrder = orderNumber ?? (index + 1);
+
     return (
       <Card
+        key={`${creationTime}-${index}`}
         size="small"
+        style={{ marginBottom: 12 }}
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {getStatusIcon(status)}
-            <span>{groupedChangeHistory.action}</span>
+            <span>{action}</span>
             {getChangeApprovalStatusTag(status)}
+            <Tag style={{ marginLeft: 'auto' }}>Lần {displayOrder}</Tag>
           </div>
         }
         extra={
@@ -230,9 +213,9 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ visible, task, onClose }) =
             }
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {displayFields.map((field, index) => (
+              {displayFields.map((field, fieldIndex) => (
                 <div
-                  key={index}
+                  key={fieldIndex}
                   style={{
                     padding: '6px 10px',
                     background: '#fafafa',
@@ -262,19 +245,111 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ visible, task, onClose }) =
                     padding: '6px 10px',
                     background: '#fff7e6',
                     borderRadius: 4,
-                    borderLeft: '3px solid #fa8c16'
+                    borderLeft: '3px solid #fa8c16',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
                   }}
                 >
-                  <Tag color="orange">Mẫu và chỉ tiêu</Tag>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    (Xem chi tiết tại modal phê duyệt)
-                  </Text>
+                  <div>
+                    <Tag color="orange">Mẫu và chỉ tiêu</Tag>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      Có thay đổi mẫu/chỉ tiêu
+                    </Text>
+                  </div>
+                  <Button
+                    type="link"
+                    size="small"
+                    icon={<EyeOutlined />}
+                    onClick={() => {
+                      setSelectedBatch(batch);
+                      setDetailModalVisible(true);
+                    }}
+                  >
+                    Xem chi tiết
+                  </Button>
                 </div>
               )}
             </div>
           </Panel>
         </Collapse>
       </Card>
+    );
+  };
+
+  const renderChangeApprovalHistory = () => {
+    // Use changeHistoryBatches if available (new format)
+    let batches = historyData?.changeHistoryBatches || [];
+
+    // Fallback: if changeHistoryBatches is empty but changeHistories exists,
+    // convert changeHistories to batch format (for backward compatibility)
+    if (batches.length === 0 && historyData?.changeHistories && historyData.changeHistories.length > 0) {
+      // Group changeHistories by creationTime (within 1 second tolerance)
+      const batchMap = new Map<string, ChangeApprovalBatchDto>();
+
+      historyData.changeHistories.forEach(ch => {
+        const batchTime = new Date(ch.creationTime);
+        // Round to nearest second for grouping
+        const batchKey = Math.floor(batchTime.getTime() / 1000).toString();
+
+        if (batchMap.has(batchKey)) {
+          batchMap.get(batchKey)!.fields.push({
+            id: ch.id,
+            fieldName: ch.fieldName,
+            oldValue: ch.oldValue,
+            newValue: ch.newValue,
+          });
+        } else {
+          batchMap.set(batchKey, {
+            creationTime: ch.creationTime,
+            creatorId: ch.creatorId,
+            creatorName: ch.creatorName,
+            status: ch.status,
+            action: ch.action,
+            approvalDate: ch.approvalDate,
+            approvedById: ch.approvedById,
+            approvedByName: ch.approvedByName,
+            rejectionReason: ch.rejectionReason,
+            fields: [{
+              id: ch.id,
+              fieldName: ch.fieldName,
+              oldValue: ch.oldValue,
+              newValue: ch.newValue,
+            }],
+          });
+        }
+      });
+
+      batches = Array.from(batchMap.values());
+    }
+
+    if (batches.length === 0) {
+      return <Empty description="Chưa có lịch sử thay đổi" />;
+    }
+
+    // Sort batches by creationTime ascending to get correct order numbers (Lần 1, 2, 3...)
+    const sortedByTimeAsc = [...batches].sort(
+      (a, b) => new Date(a.creationTime).getTime() - new Date(b.creationTime).getTime()
+    );
+
+    // Create index map for batch order numbers
+    const batchOrderMap = new Map<string, number>();
+    sortedByTimeAsc.forEach((batch, index) => {
+      batchOrderMap.set(batch.creationTime, index + 1);
+    });
+
+    // Sort batches by creationTime descending (newest first for display)
+    const sortedBatches = [...batches].sort(
+      (a, b) => new Date(b.creationTime).getTime() - new Date(a.creationTime).getTime()
+    );
+
+    return (
+      <div>
+        {sortedBatches.map((batch) => {
+          const orderNumber = batchOrderMap.get(batch.creationTime) || 1;
+          return renderBatchCard(batch, orderNumber - 1, orderNumber);
+        })}
+      </div>
     );
   };
 
@@ -312,39 +387,54 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ visible, task, onClose }) =
   };
 
   const hasHistory = historyData && (
-    (historyData.taskType === QualityTaskType.ChangeApproval && historyData.changeHistories.length > 0) ||
+    (historyData.taskType === QualityTaskType.ChangeApproval && (historyData.changeHistoryBatches?.length > 0 || historyData.changeHistories.length > 0)) ||
     (historyData.taskType === QualityTaskType.ResultApproval && historyData.indicatorHistories.length > 0)
   );
 
   return (
-    <Modal
-      title={
-        <span>
-          <HistoryOutlined style={{ marginRight: 8 }} />
-          Lịch sử - {task?.contractNumber}
-          {task?.taskType === QualityTaskType.ChangeApproval && (
-            <Tag color="orange" style={{ marginLeft: 8 }}>Thay đổi phiếu</Tag>
-          )}
-        </span>
-      }
-      open={visible}
-      onCancel={onClose}
-      footer={null}
-      width={700}
-      styles={{ body: { maxHeight: '60vh', overflowY: 'auto' } }}
-    >
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: 40 }}>
-          <Spin size="large" />
-        </div>
-      ) : !hasHistory ? (
-        <Empty description="Chưa có lịch sử thay đổi" />
-      ) : historyData?.taskType === QualityTaskType.ChangeApproval ? (
-        renderChangeApprovalHistory()
-      ) : (
-        renderIndicatorHistory()
-      )}
-    </Modal>
+    <>
+      <Modal
+        title={
+          <span>
+            <HistoryOutlined style={{ marginRight: 8 }} />
+            Lịch sử - {task?.contractNumber}
+            {task?.taskType === QualityTaskType.ChangeApproval && (
+              <Tag color="orange" style={{ marginLeft: 8 }}>Thay đổi phiếu</Tag>
+            )}
+          </span>
+        }
+        open={visible}
+        onCancel={onClose}
+        footer={null}
+        width={700}
+        styles={{ body: { maxHeight: '60vh', overflowY: 'auto' } }}
+      >
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: 40 }}>
+            <Spin size="large" />
+          </div>
+        ) : !hasHistory ? (
+          <Empty description="Chưa có lịch sử thay đổi" />
+        ) : historyData?.taskType === QualityTaskType.ChangeApproval ? (
+          renderChangeApprovalHistory()
+        ) : (
+          renderIndicatorHistory()
+        )}
+      </Modal>
+
+      {/* Detail Modal - show changes for selected batch using ChangeApprovalModal */}
+      <ChangeApprovalModal
+        visible={detailModalVisible}
+        taskId={null}
+        onClose={() => {
+          setDetailModalVisible(false);
+          setSelectedBatch(null);
+        }}
+        onUpdated={() => {}}
+        batchData={selectedBatch || undefined}
+        contractNumber={task?.contractNumber}
+      />
+    </>
   );
 };
 
