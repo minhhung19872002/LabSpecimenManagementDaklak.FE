@@ -11,6 +11,8 @@ import {
   Col,
   Divider,
   Space,
+  Alert,
+  message,
 } from "antd";
 import dayjs from "dayjs";
 import {
@@ -30,13 +32,13 @@ import {
   ResultRequirementSection,
   SamplingDeliverySection,
   CostInfoSection,
-  SupervisorSection,
   OtherInfoSection,
   GroupSelectorModal,
   IndicatorSelectionModal,
   LaboratorySelectionModal,
 } from "./components";
 import "../TestRequestForm.css";
+import { PATH_ROUTES } from "../../../constants";
 
 const TestRequestForm: React.FC = () => {
   // Data hook
@@ -51,15 +53,16 @@ const TestRequestForm: React.FC = () => {
     methodRequirement,
     sampleCodePrefix,
     setSampleCodePrefix,
+    updateSampleCodesPrefix,
     currentStatus,
     isFieldLocked,
     isSamplesLocked,
+    isEditRequiresApproval,
     samples,
     setSamples,
     indicatorGroups,
     indicators,
     storageLocations,
-    users,
     organizations,
     organizationOptions,
     organizationSearching,
@@ -107,6 +110,8 @@ const TestRequestForm: React.FC = () => {
     setIndicatorLaboratoryMap,
     expandedLabGroups,
     setExpandedLabGroups,
+    sampleIndicatorIdMap,
+    originalData,
     provinces,
     wards,
     setWards,
@@ -178,6 +183,9 @@ const TestRequestForm: React.FC = () => {
     setLaboratoryModalVisible,
     expandedLabGroups,
     setExpandedLabGroups,
+    sampleIndicatorIdMap,
+    originalData,
+    isEditRequiresApproval,
   });
 
   return (
@@ -190,10 +198,29 @@ const TestRequestForm: React.FC = () => {
       }
       loading={loadingData}
     >
+      {/* Warning when edit requires QLCL approval */}
+      {isEditRequiresApproval() && (
+        <Alert
+          message="Lưu ý: Thay đổi cần phê duyệt"
+          description="Phiếu yêu cầu đang ở trạng thái Đã gửi mẫu hoặc Đang thử nghiệm. Bạn chỉ có thể chỉnh sửa Thông tin mẫu. Các thông tin như Số HĐ, Ngày HĐ, Thông tin khách hàng đã bị khóa. Thay đổi sẽ cần được QLCL phê duyệt trước khi được áp dụng."
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
       <Form
         form={form}
         layout="vertical"
         onFinish={onFinish}
+        onFinishFailed={(errorInfo) => {
+          const firstError = errorInfo.errorFields[0];
+          if (firstError) {
+            message.error(firstError.errors[0] || "Vui lòng kiểm tra lại các trường bắt buộc");
+          } else {
+            message.error("Vui lòng kiểm tra lại các trường bắt buộc");
+          }
+        }}
         initialValues={{
           requestDate: dayjs(),
           status: TestRequestStatus.Pending,
@@ -206,7 +233,7 @@ const TestRequestForm: React.FC = () => {
         <ContractInfoSection
           isEditMode={isEditMode}
           isFieldLocked={isFieldLocked}
-          setSampleCodePrefix={setSampleCodePrefix}
+          updateSampleCodesPrefix={updateSampleCodesPrefix}
         />
 
         {/* Thông tin khách hàng */}
@@ -263,9 +290,6 @@ const TestRequestForm: React.FC = () => {
               sampleTypeTask={sampleTypeTask}
             />
 
-            {/* Người phụ trách */}
-            <SupervisorSection users={users} />
-
             {/* Thông tin khác */}
             <OtherInfoSection />
           </Col>
@@ -289,7 +313,7 @@ const TestRequestForm: React.FC = () => {
             <Button type="primary" htmlType="submit" loading={loading}>
               {isEditMode ? "Cập nhật" : "Tạo yêu cầu"}
             </Button>
-            <Button onClick={() => navigate("/requests")}>Hủy</Button>
+            <Button onClick={() => navigate(PATH_ROUTES.testRequests.index)}>Hủy</Button>
           </Space>
         </Form.Item>
       </Form>

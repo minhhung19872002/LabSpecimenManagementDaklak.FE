@@ -9,6 +9,7 @@ import {
   Form,
   Typography,
   Input,
+  Tooltip,
 } from "antd";
 import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -28,7 +29,7 @@ interface IndicatorTableProps {
   methods: MethodLookupDto[];
   technicians: UserLookupDto[];
   isAssigned: boolean; // true khi đã giao việc (lưu DB thành công)
-  canEdit: boolean; // true khi task status cho phép edit (NotAssignedMethod hoặc AssignedMethod)
+  canEdit: boolean; // true khi task status cho phép edit (NotAssignedTechnician hoặc AssignedTechnician)
   onMethodChange: (indicatorId: string, methodId: string) => void;
   onTechnicianChange: (indicatorId: string, technicianId: string) => void;
   onApprove: (indicatorId: string, approve: boolean, reason?: string) => void;
@@ -91,24 +92,46 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       dataIndex: "methodId",
       key: "methodId",
       width: 200,
-      render: (value: string, record: LaboratoryTaskIndicatorDto) => (
-        <Select
-          style={{ width: "100%" }}
-          size="small"
-          value={value}
-          placeholder="Chọn PP"
-          onChange={(val) => onMethodChange(record.id, val)}
-          options={(methods || []).map((m) => ({
-            value: m.id,
-            label: m.name,
-          }))}
-          disabled={
-            !canEdit ||
-            record.approvalStatus === IndicatorApprovalStatus.Approved
-          }
-          allowClear
-        />
-      ),
+      render: (value: string, record: LaboratoryTaskIndicatorDto) => {
+        // Phương pháp đã được chọn từ TestRequest - hiển thị dạng text, không cho sửa
+        if (record.methodName) {
+          return (
+            <Tooltip title={record.methodName}>
+              <Text
+                style={{
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {record.methodName}
+              </Text>
+            </Tooltip>
+          );
+        }
+        // Chưa có phương pháp - hiển thị dropdown để chọn
+        return (
+          <Select
+            style={{ width: "100%" }}
+            size="small"
+            value={value}
+            placeholder="Chọn PP"
+            onChange={(val) => onMethodChange(record.id, val)}
+            options={(methods || []).map((m) => ({
+              value: m.id,
+              label: m.name,
+            }))}
+            disabled={
+              !canEdit ||
+              record.approvalStatus === IndicatorApprovalStatus.Approved ||
+              record.approvalStatus === IndicatorApprovalStatus.CustomerCancelled
+            }
+            allowClear
+          />
+        );
+      },
     },
     {
       title: "ĐVT",
@@ -146,7 +169,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           }))}
           disabled={
             !canEdit ||
-            record.approvalStatus === IndicatorApprovalStatus.Approved
+            record.approvalStatus === IndicatorApprovalStatus.Approved ||
+            record.approvalStatus === IndicatorApprovalStatus.CustomerCancelled
           }
           allowClear
         />
@@ -221,6 +245,13 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             );
 
           case IndicatorApprovalStatus.Rejected:
+            return (
+              <Tag color={IndicatorApprovalStatusColors[status]}>
+                {IndicatorApprovalStatusLabels[status]}
+              </Tag>
+            );
+
+          case IndicatorApprovalStatus.CustomerCancelled:
             return (
               <Tag color={IndicatorApprovalStatusColors[status]}>
                 {IndicatorApprovalStatusLabels[status]}

@@ -9,6 +9,7 @@ import { testService } from '../../services/testService';
 import { TestResultDto, ResultApprovalStatus, CreateTestResultDto, UpdateTestResultDto } from '../../types/testResult';
 import { TestDto } from '../../types/test';
 import type { ColumnsType } from 'antd/es/table';
+import { PATH_ROUTES } from '../../constants';
 
 const TestResultList: React.FC = () => {
   const [data, setData] = useState<TestResultDto[]>([]);
@@ -267,7 +268,7 @@ const TestResultList: React.FC = () => {
               type="link"
               size="small"
               icon={<EyeOutlined />}
-              onClick={() => navigate(`/test-result/${record.id}`)}
+              onClick={() => navigate(PATH_ROUTES.testResults.detail(record.id))}
             />
             <Button
               type="link"
