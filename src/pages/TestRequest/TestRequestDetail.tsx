@@ -38,7 +38,6 @@ import {
   TestRequestStatusColors,
   canEditTestRequest,
   canSendSample,
-  canApproveOrRejectChanges,
   canSendResult,
   canComplete,
   ResultLanguage,
@@ -90,7 +89,6 @@ const TestRequestDetail: React.FC = () => {
   const [rejectResultReason, setRejectResultReason] = useState("");
   const [rejectResultLoading, setRejectResultLoading] = useState(false);
 
-  
   useEffect(() => {
     if (id) {
       loadData(id);
@@ -841,17 +839,6 @@ const TestRequestDetail: React.FC = () => {
               >
                 Quay lại
               </Button>
-              {/* Nút chuyển đến trang QLCL - hiển thị khi PendingChangeApproval */}
-              {canApproveOrRejectChanges(data.status) && (
-                <Button
-                  type="default"
-                  icon={<EditOutlined />}
-                  onClick={() => navigate(PATH_ROUTES.qualityManagement)}
-                  style={{ borderColor: "#faad14", color: "#faad14" }}
-                >
-                  Xem tại trang QLCL
-                </Button>
-              )}
               {renderActionButtons()}
               {canEditTestRequest(data.status) && (
                 <Button
