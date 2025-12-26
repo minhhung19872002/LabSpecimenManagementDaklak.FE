@@ -58,6 +58,8 @@ const RejectModal: React.FC<RejectModalProps> = ({
       cancelText="Hủy"
       okButtonProps={{ danger: true, loading }}
       destroyOnClose
+      width={500}
+      centered
     >
       <Form form={form} layout="vertical">
         <Form.Item
