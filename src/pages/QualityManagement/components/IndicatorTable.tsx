@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Table,
   Tag,
@@ -10,14 +10,11 @@ import {
   Tooltip,
   Checkbox,
   Typography,
-} from 'antd';
-import {
-  CheckOutlined,
-  CloseOutlined,
-} from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
-import dayjs from 'dayjs';
-import { qualityManagementService } from '../../../services/qualityManagementService';
+} from "antd";
+import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
+import type { ColumnsType } from "antd/es/table";
+import dayjs from "dayjs";
+import { qualityManagementService } from "../../../services/qualityManagementService";
 import {
   QualityManagementIndicatorDto,
   QualityIndicatorApprovalStatus,
@@ -25,7 +22,7 @@ import {
   QualityIndicatorApprovalStatusColors,
   StandardLookupDto,
   QualityManagementStatus,
-} from '../../../types/qualityManagement';
+} from "../../../types/qualityManagement";
 
 const { Panel } = Collapse;
 const { Text } = Typography;
@@ -70,21 +67,27 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       const result = await qualityManagementService.getStandardsLookup();
       setStandards(result);
     } catch (error) {
-      console.error('Error loading standards:', error);
+      console.error("Error loading standards:", error);
     } finally {
       setLoadingStandards(false);
     }
   };
 
-  const handleStandardChange = async (indicatorId: string, standardId: string | undefined) => {
+  const handleStandardChange = async (
+    indicatorId: string,
+    standardId: string | undefined
+  ) => {
     setUpdatingStandard(indicatorId);
     try {
-      await qualityManagementService.updateIndicatorStandard(indicatorId, standardId || undefined);
-      message.success('Đã cập nhật tiêu chuẩn so sánh');
+      await qualityManagementService.updateIndicatorStandard(
+        indicatorId,
+        standardId || undefined
+      );
+      // message.success('Đã cập nhật tiêu chuẩn so sánh');
       onIndicatorUpdate();
     } catch (error) {
-      console.error('Error updating standard:', error);
-      message.error('Không thể cập nhật tiêu chuẩn');
+      console.error("Error updating standard:", error);
+      message.error("Không thể cập nhật tiêu chuẩn");
     } finally {
       setUpdatingStandard(null);
     }
@@ -107,7 +110,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       if (!groups[key]) {
         groups[key] = {
           laboratoryId: key,
-          laboratoryName: ind.laboratoryName || 'Không xác định',
+          laboratoryName: ind.laboratoryName || "Không xác định",
           indicators: [],
         };
       }
@@ -119,14 +122,20 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   // Handle select all in a lab group
   const handleSelectAllInGroup = (labGroup: LabGroup, checked: boolean) => {
     const approvedIds = labGroup.indicators
-      .filter((ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Approved)
+      .filter(
+        (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Approved
+      )
       .map((ind) => ind.id);
 
     if (checked) {
-      const newSelected = [...new Set([...selectedIndicatorIds, ...approvedIds])];
+      const newSelected = [
+        ...new Set([...selectedIndicatorIds, ...approvedIds]),
+      ];
       onSelectChange(newSelected);
     } else {
-      const newSelected = selectedIndicatorIds.filter((id) => !approvedIds.includes(id));
+      const newSelected = selectedIndicatorIds.filter(
+        (id) => !approvedIds.includes(id)
+      );
       onSelectChange(newSelected);
     }
   };
@@ -134,7 +143,9 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   // Check if all approved indicators in group are selected
   const isAllSelectedInGroup = (labGroup: LabGroup): boolean => {
     const approvedIds = labGroup.indicators
-      .filter((ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Approved)
+      .filter(
+        (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Approved
+      )
       .map((ind) => ind.id);
     if (approvedIds.length === 0) return false;
     return approvedIds.every((id) => selectedIndicatorIds.includes(id));
@@ -143,11 +154,12 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   const columns: ColumnsType<QualityManagementIndicatorDto> = [
     {
       title: () => null, // Header will be in Panel
-      dataIndex: 'checkbox',
-      key: 'checkbox',
+      dataIndex: "checkbox",
+      key: "checkbox",
       width: 50,
       render: (_, record) => {
-        const isApproved = record.approvalStatus === QualityIndicatorApprovalStatus.Approved;
+        const isApproved =
+          record.approvalStatus === QualityIndicatorApprovalStatus.Approved;
         return (
           <Checkbox
             checked={selectedIndicatorIds.includes(record.id)}
@@ -156,7 +168,9 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
               if (e.target.checked) {
                 onSelectChange([...selectedIndicatorIds, record.id]);
               } else {
-                onSelectChange(selectedIndicatorIds.filter((id) => id !== record.id));
+                onSelectChange(
+                  selectedIndicatorIds.filter((id) => id !== record.id)
+                );
               }
             }}
           />
@@ -164,68 +178,70 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       },
     },
     {
-      title: 'Tên chỉ tiêu',
-      dataIndex: 'indicatorName',
-      key: 'indicatorName',
+      title: "Tên chỉ tiêu",
+      dataIndex: "indicatorName",
+      key: "indicatorName",
       width: 180,
       ellipsis: true,
     },
     {
-      title: 'Tên mẫu',
-      key: 'sample',
+      title: "Tên mẫu",
+      key: "sample",
       width: 150,
       ellipsis: true,
       render: (_, record) => (
         <span>
           <Text strong>{record.sampleCode}</Text>
-          {record.sampleName && <Text type="secondary"> - {record.sampleName}</Text>}
+          {record.sampleName && (
+            <Text type="secondary"> - {record.sampleName}</Text>
+          )}
         </span>
       ),
     },
     {
-      title: 'Phương pháp',
-      dataIndex: 'methodName',
-      key: 'methodName',
+      title: "Phương pháp",
+      dataIndex: "methodName",
+      key: "methodName",
       width: 150,
       ellipsis: true,
     },
     {
-      title: 'ĐVT',
-      dataIndex: 'unit',
-      key: 'unit',
+      title: "ĐVT",
+      dataIndex: "unit",
+      key: "unit",
       width: 80,
-      align: 'center' as const,
+      align: "center" as const,
     },
     {
-      title: 'Kết quả',
-      dataIndex: 'result',
-      key: 'result',
+      title: "Kết quả",
+      dataIndex: "result",
+      key: "result",
       width: 100,
-      align: 'center' as const,
-      render: (text: string) => <Text strong>{text || '-'}</Text>,
+      align: "center" as const,
+      render: (text: string) => <Text strong>{text || "-"}</Text>,
     },
     {
-      title: 'Ngày gửi KQ',
-      dataIndex: 'resultSentDate',
-      key: 'resultSentDate',
+      title: "Ngày gửi KQ",
+      dataIndex: "resultSentDate",
+      key: "resultSentDate",
       width: 110,
-      render: (date: string) => (date ? dayjs(date).format('DD/MM/YYYY') : '-'),
+      render: (date: string) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
     },
     {
-      title: 'Ngày duyệt',
-      dataIndex: 'approvalDate',
-      key: 'approvalDate',
+      title: "Ngày duyệt",
+      dataIndex: "approvalDate",
+      key: "approvalDate",
       width: 110,
-      render: (date: string) => (date ? dayjs(date).format('DD/MM/YYYY') : '-'),
+      render: (date: string) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
     },
     {
-      title: 'So với',
-      dataIndex: 'standardId',
-      key: 'standardId',
+      title: "So với",
+      dataIndex: "standardId",
+      key: "standardId",
       width: 180,
       render: (standardId: string, record) => (
         <Select
-          style={{ width: '100%' }}
+          style={{ width: "100%" }}
           placeholder="Chọn tiêu chuẩn"
           allowClear
           value={standardId}
@@ -243,28 +259,31 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       ),
     },
     {
-      title: 'Giới hạn',
-      dataIndex: 'referenceLimit',
-      key: 'referenceLimit',
+      title: "Giới hạn",
+      dataIndex: "referenceLimit",
+      key: "referenceLimit",
       width: 120,
-      render: (text: string) => text || '-',
+      render: (text: string) => text || "-",
     },
     {
-      title: 'Trạng thái',
-      dataIndex: 'approvalStatus',
-      key: 'approvalStatus',
+      title: "Trạng thái",
+      dataIndex: "approvalStatus",
+      key: "approvalStatus",
       width: 120,
-      fixed: 'right' as const,
-      render: (status: QualityIndicatorApprovalStatus) => getApprovalStatusTag(status),
+      fixed: "right" as const,
+      render: (status: QualityIndicatorApprovalStatus) =>
+        getApprovalStatusTag(status),
     },
     {
-      title: 'Thao tác',
-      key: 'actions',
+      title: "Thao tác",
+      key: "actions",
       width: 100,
-      fixed: 'right' as const,
-      align: 'center' as const,
+      fixed: "right" as const,
+      align: "center" as const,
       render: (_, record) => {
-        const isPending = record.approvalStatus === QualityIndicatorApprovalStatus.PendingApproval;
+        const isPending =
+          record.approvalStatus ===
+          QualityIndicatorApprovalStatus.PendingApproval;
         if (!isPending || actionsDisabled) {
           return null;
         }
@@ -296,21 +315,26 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     <Collapse defaultActiveKey={groupedData.map((g) => g.laboratoryId)} ghost>
       {groupedData.map((group) => {
         const approvedCount = group.indicators.filter(
-          (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Approved
+          (ind) =>
+            ind.approvalStatus === QualityIndicatorApprovalStatus.Approved
         ).length;
         const pendingCount = group.indicators.filter(
-          (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.PendingApproval
+          (ind) =>
+            ind.approvalStatus ===
+            QualityIndicatorApprovalStatus.PendingApproval
         ).length;
 
         return (
           <Panel
             key={group.laboratoryId}
             header={
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                 <Checkbox
                   checked={isAllSelectedInGroup(group)}
                   disabled={approvedCount === 0}
-                  onChange={(e) => handleSelectAllInGroup(group, e.target.checked)}
+                  onChange={(e) =>
+                    handleSelectAllInGroup(group, e.target.checked)
+                  }
                   onClick={(e) => e.stopPropagation()}
                 />
                 <Text strong>{group.laboratoryName}</Text>
