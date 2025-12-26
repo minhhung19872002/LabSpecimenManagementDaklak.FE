@@ -830,42 +830,42 @@ const TestRequestDetail: React.FC = () => {
     <div className="test-request-detail">
       <Card
         title={
-          <Space wrap>
-            <span>Chi tiết yêu cầu thử nghiệm</span>
-            <Tag color="blue">{data.requestNumber}</Tag>
-            {getStatusTag(data.status)}
-          </Space>
-        }
-        extra={
-          <Space wrap>
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={() => navigate("/requests")}
-            >
-              Quay lại
-            </Button>
-            {/* Nút Duyệt thay đổi - hiển thị khi PendingChangeApproval */}
-            {canApproveOrRejectChanges(data.status) && (
+          <div className="card-header-flex">
+            <Space wrap>
+              <span>Chi tiết yêu cầu thử nghiệm</span>
+              <Tag color="blue">{data.requestNumber}</Tag>
+              {getStatusTag(data.status)}
+            </Space>
+            <Space wrap>
               <Button
-                type="primary"
-                icon={<EditOutlined />}
-                onClick={() => setOpenChangeApprovalModal(true)}
-                style={{ backgroundColor: "#faad14", borderColor: "#faad14" }}
+                icon={<ArrowLeftOutlined />}
+                onClick={() => navigate("/requests")}
               >
-                Duyệt thay đổi
+                Quay lại
               </Button>
-            )}
-            {renderActionButtons()}
-            {canEditTestRequest(data.status) && (
-              <Button
-                type="primary"
-                icon={<EditOutlined />}
-                onClick={() => navigate(`/test-request/edit/${id}`)}
-              >
-                Chỉnh sửa
-              </Button>
-            )}
-          </Space>
+              {/* Nút Duyệt thay đổi - hiển thị khi PendingChangeApproval */}
+              {canApproveOrRejectChanges(data.status) && (
+                <Button
+                  type="primary"
+                  icon={<EditOutlined />}
+                  onClick={() => setOpenChangeApprovalModal(true)}
+                  style={{ backgroundColor: "#faad14", borderColor: "#faad14" }}
+                >
+                  Duyệt thay đổi
+                </Button>
+              )}
+              {renderActionButtons()}
+              {canEditTestRequest(data.status) && (
+                <Button
+                  type="primary"
+                  icon={<EditOutlined />}
+                  onClick={() => navigate(`/test-request/edit/${id}`)}
+                >
+                  Chỉnh sửa
+                </Button>
+              )}
+            </Space>
+          </div>
         }
       >
         {/* Thông báo khi có thay đổi đang chờ phê duyệt */}
@@ -884,13 +884,13 @@ const TestRequestDetail: React.FC = () => {
             Thông tin hợp đồng
           </Title>
           <Row gutter={[16, 12]}>
-            <Col xs={24} sm={12} md={6}>
+            <Col xs={24} lg={12} xl={6}>
               <div className="detail-item">
                 <Text type="secondary">Số HĐ:</Text>
                 <Text strong>{data.contractNumber || "-"}</Text>
               </div>
             </Col>
-            <Col xs={24} sm={12} md={6}>
+            <Col xs={24} lg={12} xl={6}>
               <div className="detail-item">
                 <Text type="secondary">Ngày HĐ:</Text>
                 <Text strong>
@@ -900,13 +900,13 @@ const TestRequestDetail: React.FC = () => {
                 </Text>
               </div>
             </Col>
-            <Col xs={24} sm={12} md={6}>
+            <Col xs={24} lg={12} xl={6}>
               <div className="detail-item">
                 <Text type="secondary">Số phiếu thu:</Text>
                 <Text>{data.receiptNumber || "-"}</Text>
               </div>
             </Col>
-            <Col xs={24} sm={12} md={6}>
+            <Col xs={24} lg={12} xl={6}>
               <div className="detail-item">
                 <Text type="secondary">Ngày yêu cầu:</Text>
                 <Text strong>
@@ -947,7 +947,7 @@ const TestRequestDetail: React.FC = () => {
             Thông tin khách hàng
           </Title>
           <Row gutter={[16, 12]}>
-            <Col xs={24} md={12}>
+            <Col xs={24} xl={12}>
               <div className="detail-item">
                 <Text type="secondary">Tên CS/DN:</Text>
                 <Text strong style={{ fontSize: 15 }}>
@@ -955,7 +955,7 @@ const TestRequestDetail: React.FC = () => {
                 </Text>
               </div>
             </Col>
-            <Col xs={24} md={12}>
+            <Col xs={24} xl={12}>
               <div className="detail-item">
                 <Text type="secondary">Mã số thuế:</Text>
                 <Text>{data.taxCode || "-"}</Text>
@@ -975,13 +975,13 @@ const TestRequestDetail: React.FC = () => {
             </Col>
           </Row>
           <Row gutter={[16, 12]} style={{ marginTop: 8 }}>
-            <Col xs={24} sm={12}>
+            <Col xs={24} md={12}>
               <div className="detail-item">
                 <Text type="secondary">Người liên hệ:</Text>
                 <Text strong>{data.contactPerson || "-"}</Text>
               </div>
             </Col>
-            <Col xs={24} sm={12}>
+            <Col xs={24} md={12}>
               <div className="detail-item">
                 <Text type="secondary">Điện thoại:</Text>
                 <Text strong>{data.phone || "-"}</Text>
@@ -1051,9 +1051,122 @@ const TestRequestDetail: React.FC = () => {
           locale={{ emptyText: "Không có mẫu nào" }}
         />
 
-        {/* Yêu cầu về phương pháp */}
+        {/* Layout: Desktop 2 cols, Mobile responsive wrap */}
+        {/* Desktop: Left (Yêu cầu về kết quả, Yêu cầu về phương pháp), Right (Yêu cầu về lấy mẫu & giao trả, Thông tin chi phí) */}
+        {/* Mobile order: Yêu cầu về kết quả → Yêu cầu về lấy mẫu & giao trả → Yêu cầu về phương pháp → Thông tin chi phí */}
         <Row gutter={[24, 24]}>
-          <Col xs={24} lg={12}>
+          {/* Yêu cầu về kết quả - Desktop: Left col row 1, Mobile: order 1 */}
+          <Col xs={{ span: 24, order: 1 }} lg={{ span: 12, order: 1 }}>
+            <div className="detail-section">
+              <Title level={5} style={{ marginBottom: 12 }}>
+                Yêu cầu về kết quả
+              </Title>
+              <Row gutter={[16, 12]}>
+                <Col xs={24} xl={12}>
+                  <div className="detail-item">
+                    <Text type="secondary">Ngôn ngữ:</Text>
+                    <Text>{getResultLanguageText(data.resultLanguage)}</Text>
+                  </div>
+                </Col>
+                <Col xs={24} xl={12}>
+                  <div className="detail-item">
+                    <Text type="secondary">Số bản:</Text>
+                    <Text>{data.resultCopyCount || "-"}</Text>
+                  </div>
+                </Col>
+                <Col span={24}>
+                  <Space wrap size={[16, 8]}>
+                    <Space size={4}>
+                      <BoolIcon value={data.separatePassedResults} />
+                      <Text style={{ fontSize: 13 }}>Tách riêng CT đạt</Text>
+                    </Space>
+                  </Space>
+                </Col>
+                {data.conformityDeclaration && (
+                  <Col span={24}>
+                    <div className="detail-item">
+                      <Text type="secondary">Công bố hợp quy:</Text>
+                      <Text>{data.conformityDeclaration}</Text>
+                    </div>
+                  </Col>
+                )}
+                {data.otherRequirements && (
+                  <Col span={24}>
+                    <div className="detail-item">
+                      <Text type="secondary">Yêu cầu khác:</Text>
+                      <Text>{data.otherRequirements}</Text>
+                    </div>
+                  </Col>
+                )}
+              </Row>
+            </div>
+          </Col>
+
+          {/* Yêu cầu về lấy mẫu & giao trả - Desktop: Right col row 1, Mobile: order 2 */}
+          <Col xs={{ span: 24, order: 2 }} lg={{ span: 12, order: 2 }}>
+            <div className="detail-section">
+              <Title level={5} style={{ marginBottom: 12 }}>
+                Yêu cầu về lấy mẫu & giao trả
+              </Title>
+              <Row gutter={[16, 12]}>
+                <Col xs={24} xl={12}>
+                  <div className="detail-item">
+                    <Text type="secondary">Lấy mẫu:</Text>
+                    <Text>
+                      {getSamplingRequirementText(data.samplingRequirement)}
+                    </Text>
+                  </div>
+                </Col>
+                <Col xs={24} xl={12}>
+                  <div className="detail-item">
+                    <Text type="secondary">Lưu mẫu:</Text>
+                    <Text>{getSampleStorageText(data.sampleStorage)}</Text>
+                  </div>
+                </Col>
+                <Col span={24}>
+                  <Space wrap size={[16, 8]}>
+                    <Space size={4}>
+                      <BoolIcon value={data.deliveryDirectPickup} />
+                      <Text style={{ fontSize: 13 }}>Nhận trực tiếp</Text>
+                    </Space>
+                    <Space size={4}>
+                      <BoolIcon value={data.deliveryPostal} />
+                      <Text style={{ fontSize: 13 }}>Gửi bưu điện</Text>
+                    </Space>
+                    <Space size={4}>
+                      <BoolIcon value={data.returnStoredSample} />
+                      <Text style={{ fontSize: 13 }}>Trả lại mẫu lưu</Text>
+                    </Space>
+                  </Space>
+                </Col>
+                <Col span={24}>
+                  <div className="detail-item">
+                    <Text type="secondary">Ngày trả KQ:</Text>
+                    <Text strong style={{ color: "#1890ff" }}>
+                      {data.resultDeliveryDate
+                        ? dayjs(data.resultDeliveryDate).format("DD/MM/YYYY")
+                        : "-"}
+                    </Text>
+                  </div>
+                </Col>
+                <Col span={24}>
+                  <div className="detail-item">
+                    <Text type="secondary">Ngày hoàn thành dự kiến:</Text>
+                    <Text strong style={{ color: "#52c41a" }}>
+                      {data.expectedCompletionDate
+                        ? dayjs(data.expectedCompletionDate).format(
+                            "DD/MM/YYYY"
+                          )
+                        : "-"}
+                    </Text>
+                  </div>
+                </Col>
+              </Row>
+            </div>
+          </Col>
+
+          {/* Yêu cầu về phương pháp - Desktop: Left col row 2, Mobile: order 3 */}
+          <Col xs={{ span: 24, order: 3 }} lg={{ span: 12, order: 3 }}>
             <div className="detail-section">
               <Title level={5} style={{ marginBottom: 12 }}>
                 Yêu cầu về phương pháp
@@ -1085,113 +1198,10 @@ const TestRequestDetail: React.FC = () => {
                 )}
               </Row>
             </div>
-
-            <div className="detail-section" style={{ marginTop: 16 }}>
-              <Title level={5} style={{ marginBottom: 12 }}>
-                Yêu cầu về kết quả
-              </Title>
-              <Row gutter={[16, 12]}>
-                <Col xs={24} sm={12}>
-                  <div className="detail-item">
-                    <Text type="secondary">Ngôn ngữ:</Text>
-                    <Text>{getResultLanguageText(data.resultLanguage)}</Text>
-                  </div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div className="detail-item">
-                    <Text type="secondary">Số bản:</Text>
-                    <Text>{data.resultCopyCount || "-"}</Text>
-                  </div>
-                </Col>
-                <Col xs={24}>
-                  <Space wrap size={[16, 8]}>
-                    <Space size={4}>
-                      <BoolIcon value={data.separatePassedResults} />
-                      <Text style={{ fontSize: 13 }}>Tách riêng CT đạt</Text>
-                    </Space>
-                  </Space>
-                </Col>
-                {data.conformityDeclaration && (
-                  <Col xs={24}>
-                    <div className="detail-item">
-                      <Text type="secondary">Công bố hợp quy:</Text>
-                      <Text>{data.conformityDeclaration}</Text>
-                    </div>
-                  </Col>
-                )}
-                {data.otherRequirements && (
-                  <Col xs={24}>
-                    <div className="detail-item">
-                      <Text type="secondary">Yêu cầu khác:</Text>
-                      <Text>{data.otherRequirements}</Text>
-                    </div>
-                  </Col>
-                )}
-              </Row>
-            </div>
-
-            <div className="detail-section" style={{ marginTop: 16 }}>
-              <Title level={5} style={{ marginBottom: 12 }}>
-                Yêu cầu về lấy mẫu & giao trả
-              </Title>
-              <Row gutter={[16, 12]}>
-                <Col xs={24} sm={12}>
-                  <div className="detail-item">
-                    <Text type="secondary">Lấy mẫu:</Text>
-                    <Text>
-                      {getSamplingRequirementText(data.samplingRequirement)}
-                    </Text>
-                  </div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div className="detail-item">
-                    <Text type="secondary">Lưu mẫu:</Text>
-                    <Text>{getSampleStorageText(data.sampleStorage)}</Text>
-                  </div>
-                </Col>
-                <Col xs={24}>
-                  <Space wrap size={[16, 8]}>
-                    <Space size={4}>
-                      <BoolIcon value={data.deliveryDirectPickup} />
-                      <Text style={{ fontSize: 13 }}>Nhận trực tiếp</Text>
-                    </Space>
-                    <Space size={4}>
-                      <BoolIcon value={data.deliveryPostal} />
-                      <Text style={{ fontSize: 13 }}>Gửi bưu điện</Text>
-                    </Space>
-                    <Space size={4}>
-                      <BoolIcon value={data.returnStoredSample} />
-                      <Text style={{ fontSize: 13 }}>Trả lại mẫu lưu</Text>
-                    </Space>
-                  </Space>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div className="detail-item">
-                    <Text type="secondary">Ngày trả KQ:</Text>
-                    <Text strong style={{ color: "#1890ff" }}>
-                      {data.resultDeliveryDate
-                        ? dayjs(data.resultDeliveryDate).format("DD/MM/YYYY")
-                        : "-"}
-                    </Text>
-                  </div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div className="detail-item">
-                    <Text type="secondary">Ngày hoàn thành dự kiến:</Text>
-                    <Text strong style={{ color: "#52c41a" }}>
-                      {data.expectedCompletionDate
-                        ? dayjs(data.expectedCompletionDate).format(
-                            "DD/MM/YYYY"
-                          )
-                        : "-"}
-                    </Text>
-                  </div>
-                </Col>
-              </Row>
-            </div>
           </Col>
 
-          <Col xs={24} lg={12}>
+          {/* Thông tin chi phí - Desktop: Right col row 2, Mobile: order 4 */}
+          <Col xs={{ span: 24, order: 4 }} lg={{ span: 12, order: 4 }}>
             <div className="detail-section">
               <Title level={5} style={{ marginBottom: 12 }}>
                 Thông tin chi phí
@@ -1229,26 +1239,6 @@ const TestRequestDetail: React.FC = () => {
               </Row>
             </div>
 
-            <div className="detail-section" style={{ marginTop: 16 }}>
-              <Title level={5} style={{ marginBottom: 12 }}>
-                Người phụ trách
-              </Title>
-              <Row gutter={[16, 12]}>
-                <Col xs={24}>
-                  <div className="detail-item">
-                    <Text type="secondary">Người giám sát:</Text>
-                    <Text strong>{data.supervisorName || "-"}</Text>
-                  </div>
-                </Col>
-                <Col xs={24}>
-                  <div className="detail-item">
-                    <Text type="secondary">Giám đốc:</Text>
-                    <Text strong>{data.directorName || "-"}</Text>
-                  </div>
-                </Col>
-              </Row>
-            </div>
-
             {data.notes && (
               <div className="detail-section" style={{ marginTop: 16 }}>
                 <Title level={5} style={{ marginBottom: 12 }}>
@@ -1273,7 +1263,7 @@ const TestRequestDetail: React.FC = () => {
         <Divider />
         <Descriptions
           size="small"
-          column={{ xs: 1, sm: 2 }}
+          column={{ xs: 1, md: 2 }}
           style={{ marginTop: 16 }}
         >
           <Descriptions.Item label="Ngày tạo">

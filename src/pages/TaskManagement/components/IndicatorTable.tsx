@@ -125,7 +125,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             }))}
             disabled={
               !canEdit ||
-              record.approvalStatus === IndicatorApprovalStatus.Approved
+              record.approvalStatus === IndicatorApprovalStatus.Approved ||
+              record.approvalStatus === IndicatorApprovalStatus.CustomerCancelled
             }
             allowClear
           />
@@ -168,7 +169,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           }))}
           disabled={
             !canEdit ||
-            record.approvalStatus === IndicatorApprovalStatus.Approved
+            record.approvalStatus === IndicatorApprovalStatus.Approved ||
+            record.approvalStatus === IndicatorApprovalStatus.CustomerCancelled
           }
           allowClear
         />
@@ -243,6 +245,13 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             );
 
           case IndicatorApprovalStatus.Rejected:
+            return (
+              <Tag color={IndicatorApprovalStatusColors[status]}>
+                {IndicatorApprovalStatusLabels[status]}
+              </Tag>
+            );
+
+          case IndicatorApprovalStatus.CustomerCancelled:
             return (
               <Tag color={IndicatorApprovalStatusColors[status]}>
                 {IndicatorApprovalStatusLabels[status]}

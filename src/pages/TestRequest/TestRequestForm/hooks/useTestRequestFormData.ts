@@ -26,6 +26,7 @@ import {
   canEditFullInfo,
   canEditWithApproval,
 } from "../../../../types/testRequest";
+import { IndicatorApprovalStatus } from "../../../../types/laboratoryTask";
 import {
   getAllProvinces,
   getWardsByProvince,
@@ -319,9 +320,14 @@ export const useTestRequestFormData = () => {
       // Load samples
       if (data.samples && data.samples.length > 0) {
         const sampleData: SampleFormData[] = data.samples.map((sample, index) => {
-          // Build indicatorMethods from indicators (indicatorId + testMethodId)
+          // Filter out CustomerCancelled indicators - they should not be editable
+          const activeIndicators = sample.indicators?.filter(
+            (ind) => ind.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled
+          ) || [];
+
+          // Build indicatorMethods from active indicators (indicatorId + testMethodId)
           const indicatorMethods: IndicatorMethodKey[] = [];
-          sample.indicators?.forEach((ind) => {
+          activeIndicators.forEach((ind) => {
             if (ind.indicatorId && ind.testMethodId) {
               indicatorMethods.push(createIndicatorMethodKey(ind.indicatorId, ind.testMethodId));
             }
@@ -340,7 +346,7 @@ export const useTestRequestFormData = () => {
             processingStatus: sample.processingStatus || "",
             notes: sample.notes,
             storageLocation: sample.storageLocation,
-            indicatorIds: sample.indicators?.map((ind) => ind.indicatorId) || [],
+            indicatorIds: activeIndicators.map((ind) => ind.indicatorId),
             indicatorMethods: indicatorMethods,
           };
         });
@@ -354,9 +360,26 @@ export const useTestRequestFormData = () => {
         const expandedLabs: string[] = [];
         const restoredIndicatorIds: Record<string, string> = {}; // Store TestRequestSampleIndicator.id
 
+        // Parse dates helper - handle both UTC formats
+        const parseDate = (dateStr: string | null | undefined): dayjs.Dayjs | undefined => {
+          if (!dateStr || typeof dateStr !== 'string') return undefined;
+          // If no Z suffix, append it to treat as UTC
+          const utcDateStr = dateStr.endsWith('Z') ? dateStr : `${dateStr}Z`;
+          // Parse as UTC, then convert to local timezone
+          const parsed = dayjs(utcDateStr);
+          if (!parsed.isValid()) return undefined;
+          // Return date at start of day in local timezone
+          return parsed.startOf('day');
+        };
+
         data.samples.forEach((sample, sampleIndex) => {
           const sampleKey = sample.id || `sample-${sampleIndex}`;
-          sample.indicators?.forEach((ind) => {
+          // Filter out CustomerCancelled indicators
+          const activeIndicators = sample.indicators?.filter(
+            (ind) => ind.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled
+          ) || [];
+
+          activeIndicators.forEach((ind) => {
             // Create IndicatorMethodKey for each indicator
             const methodKey = ind.testMethodId
               ? createIndicatorMethodKey(ind.indicatorId, ind.testMethodId)
@@ -366,21 +389,6 @@ export const useTestRequestFormData = () => {
             if (ind.id) {
               restoredIndicatorIds[`${sampleKey}_${methodKey}`] = ind.id;
             }
-
-            // Parse dates - handle both UTC formats:
-            // 1. With Z suffix: "2025-12-24T22:55:31.290Z" (explicit UTC)
-            // 2. Without Z suffix: "2025-12-24T22:59:44.473" (server returns UTC without Z)
-            // We need to treat both as UTC and convert to local date
-            const parseDate = (dateStr: string | null | undefined): dayjs.Dayjs | undefined => {
-              if (!dateStr || typeof dateStr !== 'string') return undefined;
-              // If no Z suffix, append it to treat as UTC
-              const utcDateStr = dateStr.endsWith('Z') ? dateStr : `${dateStr}Z`;
-              // Parse as UTC, then convert to local timezone
-              const parsed = dayjs(utcDateStr);
-              if (!parsed.isValid()) return undefined;
-              // Return date at start of day in local timezone
-              return parsed.startOf('day');
-            };
 
             restoredDates[methodKey] = {
               transferDate: parseDate(ind.transferDate),

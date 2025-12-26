@@ -31,7 +31,6 @@ import {
   ResultRequirementSection,
   SamplingDeliverySection,
   CostInfoSection,
-  SupervisorSection,
   OtherInfoSection,
   GroupSelectorModal,
   IndicatorSelectionModal,
@@ -62,7 +61,6 @@ const TestRequestForm: React.FC = () => {
     indicatorGroups,
     indicators,
     storageLocations,
-    users,
     organizations,
     organizationOptions,
     organizationSearching,
@@ -281,9 +279,6 @@ const TestRequestForm: React.FC = () => {
               totalSampleCost={totalSampleCost}
               sampleTypeTask={sampleTypeTask}
             />
-
-            {/* Người phụ trách */}
-            <SupervisorSection users={users} />
 
             {/* Thông tin khác */}
             <OtherInfoSection />
