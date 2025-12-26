@@ -58,8 +58,15 @@ const RejectModal: React.FC<RejectModalProps> = ({
       cancelText="Hủy"
       okButtonProps={{ danger: true, loading }}
       destroyOnClose
-      width={500}
+      width={600}
       centered
+      getContainer={() => document.body}
+      wrapClassName="reject-modal-fullscreen"
+      style={{ top: 0 }}
+      styles={{
+        mask: { position: 'fixed', inset: 0 },
+        wrapper: { position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }
+      }}
     >
       <Form form={form} layout="vertical">
         <Form.Item

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Timeline, Typography, Tag, Spin, Empty, Collapse, Card, Button } from 'antd';
-import { HistoryOutlined, CheckCircleOutlined, CloseCircleOutlined, EditOutlined, EyeOutlined } from '@ant-design/icons';
+import { HistoryOutlined, CheckCircleOutlined, CloseCircleOutlined, EditOutlined, EyeOutlined, ExperimentOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { qualityManagementService } from '../../../services/qualityManagementService';
 import {
@@ -72,6 +72,8 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ visible, task, onClose }) =
   const [historyData, setHistoryData] = useState<TaskHistoryResponseDto | null>(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState<ChangeApprovalBatchDto | null>(null);
+  const [commentModalVisible, setCommentModalVisible] = useState(false);
+  const [selectedComment, setSelectedComment] = useState<string>('');
 
   useEffect(() => {
     if (visible && task) {
@@ -124,27 +126,57 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ visible, task, onClose }) =
     }
   };
 
-  const renderIndicatorTimelineItem = (item: { creationTime: string; oldStatus: QualityIndicatorApprovalStatus; newStatus: QualityIndicatorApprovalStatus; comment?: string; creatorName?: string }) => (
-    <Timeline.Item key={item.creationTime} color="blue">
-      <div style={{ marginBottom: 8 }}>
-        <Text type="secondary" style={{ fontSize: 12 }}>
-          {dayjs(item.creationTime).format('DD/MM/YYYY HH:mm')}
-          {item.creatorName && <span style={{ marginLeft: 8 }}>- {item.creatorName}</span>}
-        </Text>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        {getIndicatorStatusTag(item.oldStatus)}
-        <span>→</span>
-        {getIndicatorStatusTag(item.newStatus)}
-      </div>
-      {item.comment && (
-        <div style={{ marginTop: 8 }}>
-          <Text type="secondary">Lý do: </Text>
-          <Text>{item.comment}</Text>
+  const renderIndicatorTimelineItem = (item: { creationTime: string; oldStatus: QualityIndicatorApprovalStatus; newStatus: QualityIndicatorApprovalStatus; comment?: string; creatorName?: string }) => {
+    const MAX_COMMENT_LENGTH = 100;
+    const isLongComment = item.comment && item.comment.length > MAX_COMMENT_LENGTH;
+
+    return (
+      <Timeline.Item key={item.creationTime} color="blue">
+        <div style={{ marginBottom: 8 }}>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {dayjs(item.creationTime).format('DD/MM/YYYY HH:mm')}
+            {item.creatorName && <span style={{ marginLeft: 8 }}>- {item.creatorName}</span>}
+          </Text>
         </div>
-      )}
-    </Timeline.Item>
-  );
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {getIndicatorStatusTag(item.oldStatus)}
+          <span>→</span>
+          {getIndicatorStatusTag(item.newStatus)}
+        </div>
+        {item.comment && (
+          <div style={{ marginTop: 8 }}>
+            <Text type="secondary">Lý do: </Text>
+            {isLongComment ? (
+              <>
+                <Text style={{
+                  display: '-webkit-box',
+                  WebkitLineClamp: 3,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}>
+                  {item.comment}
+                </Text>
+                <Button
+                  type="link"
+                  size="small"
+                  style={{ padding: 0, height: 'auto' }}
+                  onClick={() => {
+                    setSelectedComment(item.comment || '');
+                    setCommentModalVisible(true);
+                  }}
+                >
+                  Xem thêm
+                </Button>
+              </>
+            ) : (
+              <Text>{item.comment}</Text>
+            )}
+          </div>
+        )}
+      </Timeline.Item>
+    );
+  };
 
   // Render a single batch card
   const renderBatchCard = (batch: ChangeApprovalBatchDto, index: number, orderNumber?: number) => {
@@ -358,31 +390,87 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ visible, task, onClose }) =
       return <Empty description="Chưa có lịch sử thay đổi" />;
     }
 
+    // Group indicators by sample
+    const groupedBySample = historyData.indicatorHistories.reduce((acc, indicator) => {
+      const sampleKey = indicator.sampleCode || 'unknown';
+      if (!acc[sampleKey]) {
+        acc[sampleKey] = {
+          sampleCode: indicator.sampleCode,
+          sampleName: indicator.sampleName,
+          indicators: []
+        };
+      }
+      acc[sampleKey].indicators.push(indicator);
+      return acc;
+    }, {} as Record<string, { sampleCode?: string; sampleName?: string; indicators: typeof historyData.indicatorHistories }>);
+
+    const sampleGroups = Object.values(groupedBySample);
+
     return (
-      <Collapse defaultActiveKey={historyData.indicatorHistories.map((_, i) => i.toString())} ghost>
-        {historyData.indicatorHistories.map((indicatorHistory, index) => (
-          <Panel
-            key={index.toString()}
-            header={
-              <div>
-                <Text strong>{indicatorHistory.indicatorCode}</Text>
-                <Text type="secondary" style={{ marginLeft: 8 }}>
-                  - {indicatorHistory.indicatorName}
-                </Text>
-                <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
-                  (Mẫu: {indicatorHistory.sampleCode})
-                </Text>
-              </div>
-            }
-          >
-            <Timeline style={{ marginTop: 16 }}>
-              {indicatorHistory.histories
-                .sort((a, b) => new Date(b.creationTime).getTime() - new Date(a.creationTime).getTime())
-                .map((h) => renderIndicatorTimelineItem(h))}
-            </Timeline>
-          </Panel>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {sampleGroups.map((group, groupIndex) => (
+          <div key={groupIndex}>
+            {/* Sample Header */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '8px 12px',
+              background: '#f5f5f5',
+              border: '1px solid #d9d9d9',
+              borderBottom: 'none',
+              borderRadius: '6px 6px 0 0'
+            }}>
+              <ExperimentOutlined style={{ color: '#1890ff' }} />
+              <Text strong>{group.sampleCode}</Text>
+              {group.sampleName && (
+                <Text type="secondary">- {group.sampleName}</Text>
+              )}
+              <Tag color="blue" style={{ marginLeft: 'auto' }}>
+                {group.indicators.length} chỉ tiêu
+              </Tag>
+            </div>
+
+            {/* Indicators Collapse */}
+            <div style={{
+              border: '1px solid #d9d9d9',
+              borderTop: 'none',
+              borderRadius: '0 0 6px 6px',
+              overflow: 'hidden'
+            }}>
+              <Collapse
+                defaultActiveKey={group.indicators.map((_, i) => `${groupIndex}-${i}`)}
+                style={{ background: '#fff', border: 'none' }}
+                ghost
+              >
+                {group.indicators.map((indicatorHistory, index) => (
+                  <Panel
+                    key={`${groupIndex}-${index}`}
+                    style={{
+                      borderBottom: index < group.indicators.length - 1 ? '1px solid #f0f0f0' : 'none'
+                    }}
+                    header={
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Text strong style={{ color: '#1890ff' }}>{indicatorHistory.indicatorCode}</Text>
+                        <Text type="secondary">- {indicatorHistory.indicatorName}</Text>
+                        <Tag color="default" style={{ marginLeft: 'auto' }}>
+                          {indicatorHistory.histories.length} thay đổi
+                        </Tag>
+                      </div>
+                    }
+                  >
+                    <Timeline style={{ marginTop: 8, marginBottom: 0, paddingLeft: 8 }}>
+                      {indicatorHistory.histories
+                        .sort((a, b) => new Date(b.creationTime).getTime() - new Date(a.creationTime).getTime())
+                        .map((h) => renderIndicatorTimelineItem(h))}
+                    </Timeline>
+                  </Panel>
+                ))}
+              </Collapse>
+            </div>
+          </div>
         ))}
-      </Collapse>
+      </div>
     );
   };
 
@@ -406,8 +494,14 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ visible, task, onClose }) =
         open={visible}
         onCancel={onClose}
         footer={null}
-        width={700}
-        styles={{ body: { maxHeight: '60vh', overflowY: 'auto' } }}
+        width={800}
+        centered
+        getContainer={() => document.body}
+        styles={{
+          body: { maxHeight: '70vh', overflowY: 'auto' },
+          mask: { position: 'fixed', inset: 0 },
+          wrapper: { position: 'fixed', inset: 0 }
+        }}
       >
         {loading ? (
           <div style={{ textAlign: 'center', padding: 40 }}>
@@ -434,6 +528,30 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ visible, task, onClose }) =
         batchData={selectedBatch || undefined}
         contractNumber={task?.contractNumber}
       />
+
+      {/* Comment Detail Modal */}
+      <Modal
+        title="Chi tiết lý do"
+        open={commentModalVisible}
+        onCancel={() => {
+          setCommentModalVisible(false);
+          setSelectedComment('');
+        }}
+        footer={[
+          <Button key="close" onClick={() => {
+            setCommentModalVisible(false);
+            setSelectedComment('');
+          }}>
+            Đóng
+          </Button>
+        ]}
+        width={500}
+        centered
+      >
+        <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+          {selectedComment}
+        </div>
+      </Modal>
     </>
   );
 };
