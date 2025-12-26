@@ -83,7 +83,7 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
       },
     },
     {
-      title: "Tên mẫu *",
+      title: <span>Tên mẫu <span style={{ color: '#ff4d4f' }}>*</span></span>,
       dataIndex: "sampleName",
       key: "sampleName",
       width: 180,
@@ -147,7 +147,7 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
       ),
     },
     {
-      title: <span style={{ whiteSpace: "nowrap" }}>Chỉ tiêu kiểm nghiệm</span>,
+      title: <span style={{ whiteSpace: "nowrap" }}>Chỉ tiêu kiểm nghiệm <span style={{ color: '#ff4d4f' }}>*</span></span>,
       dataIndex: "indicatorMethods",
       key: "indicatorMethods",
       width: 280,
