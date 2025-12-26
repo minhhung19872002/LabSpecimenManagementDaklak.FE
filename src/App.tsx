@@ -118,6 +118,9 @@ const SettingsPage = Loadable(
   lazy(() => import("./pages/Settings/SettingsPage"))
 );
 
+// 404 Not Found
+const NotFound = Loadable(lazy(() => import("./pages/NotFound/NotFound")));
+
 function App() {
   // Initialize grab-to-scroll for all tables
   useEffect(() => {
@@ -219,7 +222,13 @@ function App() {
             path="results"
             element={<Navigate to="/test-results" replace />}
           />
+
+          {/* 404 - Catch all unmatched routes inside MainLayout */}
+          <Route path="*" element={<NotFound />} />
         </Route>
+
+        {/* 404 - Catch all unmatched routes outside MainLayout */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );
