@@ -7,6 +7,7 @@ import { testResultService } from '../../services/testResultService';
 import { TestResultDto, ResultApprovalStatus } from '../../types/testResult';
 import dayjs from 'dayjs';
 import './TestResultDetail.css';
+import { PATH_ROUTES } from '../../constants';
 
 const { TextArea } = Input;
 
@@ -232,11 +233,11 @@ const TestResultDetail: React.FC = () => {
         title={t('testResult.viewTestResult')}
         extra={
           <Space>
-            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/test-results')}>
+            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(PATH_ROUTES.testResults.index)}>
               {t('common.back')}
             </Button>
             {testResult.approvalStatus === ResultApprovalStatus.Draft && (
-              <Button type="primary" icon={<EditOutlined />} onClick={() => navigate(`/test-result/edit/${id}`)}>
+              <Button type="primary" icon={<EditOutlined />} onClick={() => navigate(PATH_ROUTES.testResults.edit(id!))}>
                 {t('common.edit')}
               </Button>
             )}

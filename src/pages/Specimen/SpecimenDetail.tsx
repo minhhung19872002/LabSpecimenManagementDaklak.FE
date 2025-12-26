@@ -6,6 +6,7 @@ import { specimenService } from '../../services/specimenService';
 import { SpecimenDto, SpecimenStatus } from '../../types/specimen';
 import dayjs from 'dayjs';
 import './SpecimenDetail.css';
+import { PATH_ROUTES } from '../../constants';
 
 const SpecimenDetail: React.FC = () => {
   const { t } = useTranslation();
@@ -65,10 +66,10 @@ const SpecimenDetail: React.FC = () => {
         title={t('specimen.viewSpecimen')}
         extra={
           <Space>
-            <Button onClick={() => navigate('/specimens')}>
+            <Button onClick={() => navigate(PATH_ROUTES.specimens.index)}>
               {t('common.back')}
             </Button>
-            <Button type="primary" onClick={() => navigate(`/specimen/edit/${id}`)}>
+            <Button type="primary" onClick={() => navigate(PATH_ROUTES.specimens.edit(id!))}>
               {t('common.edit')}
             </Button>
           </Space>

@@ -44,6 +44,7 @@ import {
   parseIndicatorMethodKey,
 } from "../types";
 import { extractOrderNum, generateSampleCode } from "../utils";
+import { PATH_ROUTES } from "../../../../constants";
 
 export const useTestRequestFormData = () => {
   const navigate = useNavigate();
@@ -288,7 +289,7 @@ export const useTestRequestFormData = () => {
 
       if (!canEditTestRequest(data.status)) {
         message.warning("Không thể chỉnh sửa phiếu ở trạng thái này");
-        navigate(`/test-request/${id}`);
+        navigate(PATH_ROUTES.testRequests.detail(id));
         return;
       }
 

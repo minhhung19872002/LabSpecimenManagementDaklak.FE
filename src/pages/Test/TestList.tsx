@@ -10,6 +10,7 @@ import { testMethodService } from '../../services/masterDataService';
 import { userService, UserLookupDto } from '../../services/userService';
 import { TestDto, TestStatus } from '../../types/test';
 import dayjs from 'dayjs';
+import { PATH_ROUTES } from '../../constants';
 
 const TestList: React.FC = () => {
   const [data, setData] = useState<TestDto[]>([]);
@@ -250,7 +251,7 @@ const TestList: React.FC = () => {
               type="link"
               size="small"
               icon={<EyeOutlined />}
-              onClick={() => navigate(`/test/${record.id}`)}
+              onClick={() => navigate(PATH_ROUTES.tests.detail(record.id))}
             />
             <Button
               type="link"

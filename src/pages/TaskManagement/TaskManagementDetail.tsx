@@ -38,6 +38,7 @@ import {
   AssignIndicatorInput,
 } from "../../types/laboratoryTask";
 import IndicatorTable from "./components/IndicatorTable";
+import { PATH_ROUTES } from "../../constants";
 
 const { Title, Text } = Typography;
 
@@ -378,7 +379,7 @@ const TaskManagementDetail: React.FC = () => {
         <div style={{ textAlign: "center", padding: 50 }}>
           <Text type="secondary">Không tìm thấy công việc</Text>
           <br />
-          <Button type="link" onClick={() => navigate("/tasks")}>
+          <Button type="link" onClick={() => navigate(PATH_ROUTES.tasks.index)}>
             Quay lại danh sách
           </Button>
         </div>
@@ -395,7 +396,7 @@ const TaskManagementDetail: React.FC = () => {
             <Space>
               <Button
                 icon={<ArrowLeftOutlined />}
-                onClick={() => navigate("/tasks")}
+                onClick={() => navigate(PATH_ROUTES.tasks.index)}
               >
                 Quay lại
               </Button>

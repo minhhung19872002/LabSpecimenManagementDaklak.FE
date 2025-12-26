@@ -37,6 +37,7 @@ import {
   LaboratorySelectionModal,
 } from "./components";
 import "../TestRequestForm.css";
+import { PATH_ROUTES } from "../../../constants";
 
 const TestRequestForm: React.FC = () => {
   // Data hook
@@ -303,7 +304,7 @@ const TestRequestForm: React.FC = () => {
             <Button type="primary" htmlType="submit" loading={loading}>
               {isEditMode ? "Cập nhật" : "Tạo yêu cầu"}
             </Button>
-            <Button onClick={() => navigate("/requests")}>Hủy</Button>
+            <Button onClick={() => navigate(PATH_ROUTES.testRequests.index)}>Hủy</Button>
           </Space>
         </Form.Item>
       </Form>

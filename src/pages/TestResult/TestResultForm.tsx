@@ -7,6 +7,7 @@ import { testService } from '../../services/testService';
 import { CreateTestResultDto, UpdateTestResultDto, ResultApprovalStatus } from '../../types/testResult';
 import { TestDto } from '../../types/test';
 import dayjs from 'dayjs';
+import { PATH_ROUTES } from '../../constants';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -74,7 +75,7 @@ const TestResultForm: React.FC = () => {
         await testResultService.create(formData as CreateTestResultDto);
         message.success(t('messages.createSuccess'));
       }
-      navigate('/test-results');
+      navigate(PATH_ROUTES.testResults.index);
     } catch (error) {
       message.error(isEditMode ? 'Không thể cập nhật kết quả. Vui lòng thử lại.' : 'Không thể tạo kết quả. Vui lòng thử lại.');
       console.error('Failed to save test result:', error);
@@ -199,7 +200,7 @@ const TestResultForm: React.FC = () => {
               <Button type="primary" htmlType="submit" loading={loading}>
                 {t('common.save')}
               </Button>
-              <Button onClick={() => navigate('/test-results')}>
+              <Button onClick={() => navigate(PATH_ROUTES.testResults.index)}>
                 {t('common.cancel')}
               </Button>
             </Space>
