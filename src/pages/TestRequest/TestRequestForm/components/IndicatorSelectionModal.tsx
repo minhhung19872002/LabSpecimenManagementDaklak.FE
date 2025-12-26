@@ -683,6 +683,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                     {isExpanded &&
                       labMethods.map((key) => {
                         const { indicator, method } = getIndicatorMethodInfo(key);
+                        const labInfo = indicatorLaboratoryMap[`${currentSampleKey}_${key}`];
                         return (
                           <IndicatorRow
                             key={key}
@@ -694,6 +695,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                             isChecked={checkedIndicators.includes(key)}
                             transferDate={selectedIndicatorDates[key]?.transferDate}
                             requestDate={selectedIndicatorDates[key]?.requestDate}
+                            approvalStatus={labInfo?.approvalStatus}
                             onCheckChange={toggleCheckedIndicator}
                             onDateChange={handleIndicatorDateChange}
                             onRemove={handleRemoveIndicatorMethod}

@@ -1,3 +1,5 @@
+import { IndicatorApprovalStatus } from './laboratoryTask';
+
 // Enums
 export enum TestRequestStatus {
   New = 0,                      // Mới - vừa tạo, chưa in phiếu
@@ -161,9 +163,14 @@ export interface TestRequestSampleIndicatorDto {
   notes?: string;
   laboratoryId?: string;
   laboratoryName?: string;
+  testMethodId?: string;
+  testMethodCode?: string;
+  testMethodName?: string;
   transferDate?: string;
   requestDate?: string;
   sentToDepartment: boolean;
+  /** Trạng thái duyệt từ LaboratoryTaskIndicator (null nếu chưa gửi mẫu) */
+  approvalStatus?: IndicatorApprovalStatus;
 }
 
 export interface CreateTestRequestSampleIndicatorDto {
