@@ -18,7 +18,8 @@ import {
   createIndicatorMethodKey,
   parseIndicatorMethodKey,
 } from "../types";
-import { generateSampleCode, printBarcode as printBarcodeUtil, SampleBarcodeInfo } from "../utils";
+import { generateSampleCode, getNextOrderNum, printBarcode as printBarcodeUtil, SampleBarcodeInfo } from "../utils";
+import { PATH_ROUTES } from "../../../../constants";
 
 interface UseTestRequestFormActionsProps {
   form: any;
@@ -65,6 +66,15 @@ interface UseTestRequestFormActionsProps {
   setLaboratoryModalVisible: (visible: boolean) => void;
   expandedLabGroups: string[];
   setExpandedLabGroups: React.Dispatch<React.SetStateAction<string[]>>;
+
+  // Sample indicator IDs
+  sampleIndicatorIdMap: Record<string, string>;
+
+  // Original data snapshot for change detection
+  originalData: any;
+
+  // Check if edit requires approval
+  isEditRequiresApproval: () => boolean;
 }
 
 export const useTestRequestFormActions = ({
@@ -108,7 +118,121 @@ export const useTestRequestFormActions = ({
   setLaboratoryModalVisible,
   expandedLabGroups,
   setExpandedLabGroups,
+  sampleIndicatorIdMap,
+  originalData,
+  isEditRequiresApproval,
 }: UseTestRequestFormActionsProps) => {
+
+  // Helper: Build change history by comparing original and new data
+  const buildChangeHistory = (newPayload: any, newSampleDtos: any[]) => {
+    if (!originalData) return [];
+
+    const changes: Array<{ fieldName: string; oldValue: string; newValue: string }> = [];
+
+    // Fields to compare (simple fields)
+    const fieldsToCompare = [
+      'contractNumber', 'customerName', 'address', 'taxCode', 'contactPerson', 'phone',
+      'province', 'ward', 'methodWestHighlandInstitute', 'methodCustomer', 'methodCustomerDetail',
+      'resultLanguage', 'resultCopyCount', 'separatePassedResults', 'conformityDeclaration',
+      'otherRequirements', 'subContract', 'samplingRequirement', 'deliveryDirectPickup',
+      'deliveryPostal', 'returnStoredSample', 'sampleTypeService', 'sampleTypeContract',
+      'sampleTypeTask', 'sampleTypeSubContract', 'sampleStorage', 'totalCost', 'totalCostInWords',
+      'receiptNumber', 'notes', 'changeRequest', 'agreeTerms', 'sentToAccounting',
+      'paymentReceived', 'sentToDepartment', 'resultReturned', 'subcontractor'
+    ];
+
+    // Date fields
+    const dateFields = ['contractDate', 'expectedCompletionDate', 'resultDeliveryDate'];
+
+    // Compare simple fields
+    fieldsToCompare.forEach(field => {
+      const oldVal = originalData[field];
+      const newVal = newPayload[field];
+      const normalize = (v: any) => (v === null || v === undefined || v === '') ? null : v;
+      if (normalize(oldVal) !== normalize(newVal)) {
+        changes.push({
+          fieldName: field.charAt(0).toUpperCase() + field.slice(1), // PascalCase
+          oldValue: oldVal != null ? String(oldVal) : '',
+          newValue: newVal != null ? String(newVal) : ''
+        });
+      }
+    });
+
+    // Compare date fields (format to YYYY-MM-DD for comparison)
+    dateFields.forEach(field => {
+      const oldVal = originalData[field] ? originalData[field].split('T')[0] : null;
+      const newVal = newPayload[field] ? newPayload[field].split('T')[0] : null;
+      if (oldVal !== newVal) {
+        changes.push({
+          fieldName: field.charAt(0).toUpperCase() + field.slice(1),
+          oldValue: oldVal || '',
+          newValue: newVal || ''
+        });
+      }
+    });
+
+    // Compare samples - convert to JSON for storage
+    const oldSamples = (originalData.samples || []).map((s: any) => ({
+      Id: s.id,
+      SampleCode: s.sampleCode,
+      SampleName: s.sampleName,
+      SamplingAddress: s.samplingAddress,
+      SampleQuantity: s.sampleQuantity,
+      Notes: s.notes,
+      Indicators: (s.indicators || []).map((ind: any) => ({
+        Id: ind.id,
+        IndicatorId: ind.indicatorId,
+        IndicatorCode: ind.indicatorCode,
+        IndicatorName: ind.indicatorName,
+        UnitPrice: ind.unitPrice,
+        TestMethodId: ind.testMethodId,
+        TestMethodCode: ind.testMethodCode,
+        TestMethodName: ind.testMethodName,
+        LaboratoryId: ind.laboratoryId,
+        Notes: ind.notes
+      }))
+    }));
+
+    const newSamples = newSampleDtos.map((s: any) => ({
+      Id: s.id || null,
+      SampleCode: s.sampleCode,
+      SampleName: s.sampleName,
+      SamplingAddress: s.samplingAddress,
+      SampleQuantity: s.sampleQuantity,
+      Notes: s.notes,
+      Indicators: (s.indicators || []).map((ind: any) => {
+        // Find test method info from indicatorMethodsMap
+        const methods = indicatorMethodsMap[ind.indicatorId] || [];
+        const method = methods.find((m) => m.testMethodId === ind.testMethodId);
+        return {
+          Id: ind.id || null,
+          IndicatorId: ind.indicatorId,
+          IndicatorCode: indicators.find(i => i.id === ind.indicatorId)?.code || '',
+          IndicatorName: indicators.find(i => i.id === ind.indicatorId)?.name || '',
+          UnitPrice: ind.unitPrice,
+          TestMethodId: ind.testMethodId,
+          TestMethodCode: method?.testMethodCode || '',
+          TestMethodName: method?.testMethodName || '',
+          LaboratoryId: ind.laboratoryId,
+          Notes: ind.notes
+        };
+      })
+    }));
+
+    const oldSamplesJson = JSON.stringify(oldSamples);
+    const newSamplesJson = JSON.stringify(newSamples);
+
+    if (oldSamplesJson !== newSamplesJson) {
+      changes.push({
+        fieldName: 'Samples',
+        oldValue: oldSamplesJson,
+        newValue: newSamplesJson
+      });
+    }
+
+    return changes;
+  };
+
   // Sample actions
   const addSample = () => {
     if (isSamplesLocked()) {
@@ -116,11 +240,15 @@ export const useTestRequestFormActions = ({
       return;
     }
 
-    const nextIndex = samples.length + 1;
+    // Get next order number based on max existing (không tái sử dụng số đã xóa)
+    const existingSampleCodes = samples.map((s) => s.sampleCode);
+    const nextOrderNum = getNextOrderNum(existingSampleCodes);
+    const contractNumber = form.getFieldValue("contractNumber") || "";
+
     const newSample: SampleFormData = {
       key: `new-${Date.now()}`,
-      sortOrder: nextIndex,
-      sampleCode: generateSampleCode(form.getFieldValue("contractNumber") || "", nextIndex),
+      sortOrder: samples.length + 1,
+      sampleCode: generateSampleCode(contractNumber, nextOrderNum),
       sampleName: "",
       samplingAddress: "",
       sampleQuantity: "",
@@ -166,12 +294,17 @@ export const useTestRequestFormActions = ({
     const sourceSample = samples.find((s) => s.key === key);
     if (!sourceSample) return;
 
+    // Get next order number based on max existing (không tái sử dụng số đã xóa)
+    const existingSampleCodes = samples.map((s) => s.sampleCode);
+    const nextOrderNum = getNextOrderNum(existingSampleCodes);
+    const contractNumber = form.getFieldValue("contractNumber") || "";
+
     const newSample: SampleFormData = {
       ...sourceSample,
       key: `new-${Date.now()}`,
       id: undefined,
       sortOrder: samples.length + 1,
-      sampleCode: generateSampleCode(form.getFieldValue("contractNumber") || "", samples.length + 1),
+      sampleCode: generateSampleCode(contractNumber, nextOrderNum),
     };
 
     const newLabMap = { ...indicatorLaboratoryMap };
@@ -469,6 +602,20 @@ export const useTestRequestFormActions = ({
       return;
     }
 
+    // Validate: check if contract number already exists
+    try {
+      const excludeId = isEditMode ? id : undefined;
+      const exists = await testRequestService.checkContractNumberExists(contractNumber, excludeId);
+      if (exists) {
+        message.error("Số hợp đồng đã tồn tại. Vui lòng nhập số hợp đồng khác.");
+        return;
+      }
+    } catch (error) {
+      console.error("Failed to check contract number:", error);
+      message.error("Không thể kiểm tra số hợp đồng. Vui lòng thử lại.");
+      return;
+    }
+
     // Validate: all samples must have sampleName
     const invalidSamples = samples.filter((s) => !s.sampleName);
     if (invalidSamples.length > 0) {
@@ -479,9 +626,8 @@ export const useTestRequestFormActions = ({
     setLoading(true);
     try {
       const sampleDtos = samples.map((sample, index) => {
-        // Auto-generate sampleCode from contractNumber
-        const orderNum = String(index + 1).padStart(2, "0");
-        const sampleCode = `${contractNumber}/${orderNum}`;
+        // Keep existing sampleCode (fixed, not regenerated)
+        const sampleCode = sample.sampleCode;
 
         // Prefer indicatorMethods if available, fallback to indicatorIds
         const indicatorsList = sample.indicatorMethods && sample.indicatorMethods.length > 0
@@ -491,15 +637,18 @@ export const useTestRequestFormActions = ({
               const methods = indicatorMethodsMap[indicatorId] || [];
               const method = methods.find((m) => m.testMethodId === testMethodId);
               const labAssignment = indicatorLaboratoryMap[`${sample.key}_${methodKey}`];
+              // Get the TestRequestSampleIndicator.id if this indicator already exists
+              const existingIndicatorId = sampleIndicatorIdMap[`${sample.key}_${methodKey}`];
               return {
+                id: existingIndicatorId || undefined, // Include id for existing indicators
                 indicatorId,
                 testMethodId,
                 laboratoryId: labAssignment?.laboratoryId || undefined,
                 unitPrice: method?.unitPrice || 0,
-                transferDate: indicatorDates?.transferDate?.toISOString() || undefined,
+                transferDate: indicatorDates?.transferDate?.format('YYYY-MM-DD') || undefined,
                 requestDate:
-                  labAssignment?.requestDate?.toISOString() ||
-                  indicatorDates?.requestDate?.toISOString() ||
+                  labAssignment?.requestDate?.format('YYYY-MM-DD') ||
+                  indicatorDates?.requestDate?.format('YYYY-MM-DD') ||
                   undefined,
                 sentToDepartment: !!labAssignment || checkedIndicators.includes(methodKey),
               };
@@ -508,15 +657,18 @@ export const useTestRequestFormActions = ({
               const indicatorDates = selectedIndicatorDates[indId];
               const indicator = indicators.find((i) => i.id === indId);
               const labAssignment = indicatorLaboratoryMap[`${sample.key}_${indId}`];
+              // Get the TestRequestSampleIndicator.id if this indicator already exists
+              const existingIndicatorId = sampleIndicatorIdMap[`${sample.key}_${indId}`];
               return {
+                id: existingIndicatorId || undefined, // Include id for existing indicators
                 indicatorId: indId,
                 testMethodId: undefined,
                 laboratoryId: labAssignment?.laboratoryId || undefined,
                 unitPrice: indicator?.unitPrice || 0,
-                transferDate: indicatorDates?.transferDate?.toISOString() || undefined,
+                transferDate: indicatorDates?.transferDate?.format('YYYY-MM-DD') || undefined,
                 requestDate:
-                  labAssignment?.requestDate?.toISOString() ||
-                  indicatorDates?.requestDate?.toISOString() ||
+                  labAssignment?.requestDate?.format('YYYY-MM-DD') ||
+                  indicatorDates?.requestDate?.format('YYYY-MM-DD') ||
                   undefined,
                 sentToDepartment: !!labAssignment || checkedIndicators.includes(indId),
               };
@@ -543,7 +695,7 @@ export const useTestRequestFormActions = ({
 
       const payload = {
         contractNumber: values.contractNumber || undefined,
-        contractDate: values.contractDate ? values.contractDate.toISOString() : undefined,
+        contractDate: values.contractDate ? values.contractDate.format('YYYY-MM-DD') : undefined,
         sentToAccounting: values.sentToAccounting || false,
         paymentReceived: values.paymentReceived || false,
         sentToDepartment: values.sentToDepartment || false,
@@ -577,7 +729,7 @@ export const useTestRequestFormActions = ({
         sampleTypeTask: values.sampleTypeTask || false,
         sampleTypeSubContract: values.sampleTypeSubContract || false,
         resultDeliveryDate: values.expectedCompletionDate
-          ? values.expectedCompletionDate.toISOString()
+          ? values.expectedCompletionDate.format('YYYY-MM-DD')
           : undefined,
         sampleStorage: values.sampleStorageOption ?? SampleStorageOption.No,
         totalCost: values.sampleTypeTask ? 0 : totalSampleCost,
@@ -586,27 +738,44 @@ export const useTestRequestFormActions = ({
             ? ""
             : numberToVietnameseWords(totalSampleCost),
         receiptNumber: values.receiptNumber || undefined,
-        supervisorId: values.supervisorId || undefined,
-        directorId: values.directorId || undefined,
         changeRequest: values.changeRequest || undefined,
         agreeTerms: values.agreeTerms || false,
-        requestDate: values.requestDate ? values.requestDate.toISOString() : new Date().toISOString(),
+        requestDate: values.requestDate ? values.requestDate.format('YYYY-MM-DDTHH:mm:ss') : dayjs().format('YYYY-MM-DDTHH:mm:ss'),
         notes: values.notes || undefined,
         expectedCompletionDate: values.expectedCompletionDate
-          ? values.expectedCompletionDate.toISOString()
+          ? values.expectedCompletionDate.format('YYYY-MM-DD')
           : undefined,
         subcontractor: values.subcontractor || undefined,
         samples: sampleDtos,
       };
 
       if (isEditMode && id) {
-        await testRequestService.update(id, payload);
-        message.success("Cập nhật yêu cầu thành công!");
+        // Check if this edit requires approval
+        if (isEditRequiresApproval()) {
+          // Build change history from frontend comparison
+          const changeHistory = buildChangeHistory(payload, sampleDtos);
+
+          if (changeHistory.length === 0) {
+            message.info("Không có thay đổi nào cần lưu");
+            navigate(PATH_ROUTES.testRequests.detail(id));
+            return;
+          }
+
+          // Send with change history
+          await testRequestService.update(id, {
+            ...payload,
+            changeHistory // Frontend sends the changes
+          });
+          message.success("Yêu cầu thay đổi đã được gửi và đang chờ phê duyệt!");
+        } else {
+          await testRequestService.update(id, payload);
+          message.success("Cập nhật yêu cầu thành công!");
+        }
       } else {
         await testRequestService.create(payload);
         message.success("Tạo yêu cầu thành công!");
       }
-      navigate("/requests");
+      navigate(PATH_ROUTES.testRequests.index);
     } catch (error: any) {
       console.error("Failed to save test request:", error);
       message.error(

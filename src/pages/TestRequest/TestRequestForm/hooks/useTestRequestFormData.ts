@@ -24,7 +24,9 @@ import {
   SampleStatus,
   canEditTestRequest,
   canEditFullInfo,
+  canEditWithApproval,
 } from "../../../../types/testRequest";
+import { IndicatorApprovalStatus } from "../../../../types/laboratoryTask";
 import {
   getAllProvinces,
   getWardsByProvince,
@@ -41,6 +43,8 @@ import {
   createIndicatorMethodKey,
   parseIndicatorMethodKey,
 } from "../types";
+import { extractOrderNum, generateSampleCode } from "../utils";
+import { PATH_ROUTES } from "../../../../constants";
 
 export const useTestRequestFormData = () => {
   const navigate = useNavigate();
@@ -56,6 +60,20 @@ export const useTestRequestFormData = () => {
 
   // Contract number for sample codes
   const [sampleCodePrefix, setSampleCodePrefix] = useState<string>("");
+
+  // Update sample codes when contract number changes (keep same order number, update prefix)
+  const updateSampleCodesPrefix = useCallback((newPrefix: string) => {
+    setSampleCodePrefix(newPrefix);
+    setSamples((prevSamples) =>
+      prevSamples.map((sample) => {
+        // Extract current order number from existing sampleCode
+        const orderNum = extractOrderNum(sample.sampleCode);
+        // Generate new sampleCode with new prefix but same order number
+        const newSampleCode = generateSampleCode(newPrefix, orderNum || 1);
+        return { ...sample, sampleCode: newSampleCode };
+      })
+    );
+  }, []);
 
   // Current status for field locking
   const [currentStatus, setCurrentStatus] = useState<TestRequestStatus | null>(null);
@@ -109,6 +127,13 @@ export const useTestRequestFormData = () => {
   const [indicatorLaboratoryMap, setIndicatorLaboratoryMap] = useState<Record<string, LaboratoryAssignment>>({});
   const [expandedLabGroups, setExpandedLabGroups] = useState<string[]>([]);
 
+  // Store TestRequestSampleIndicator.id for each indicator
+  // Key format: "sampleKey_indicatorMethodKey" -> TestRequestSampleIndicator.id
+  const [sampleIndicatorIdMap, setSampleIndicatorIdMap] = useState<Record<string, string>>({});
+
+  // Snapshot của data gốc khi load form edit - dùng để so sánh thay đổi
+  const [originalData, setOriginalData] = useState<any>(null);
+
   // Vietnam location states
   const [provinces] = useState<Province[]>(getAllProvinces());
   const [wards, setWards] = useState<Ward[]>([]);
@@ -123,9 +148,19 @@ export const useTestRequestFormData = () => {
   };
 
   // Check if samples section should be locked
+  // Note: Samples can still be edited when status is SampleSent or InProgress (requires approval)
+  // Only locked when status >= PendingChangeApproval
   const isSamplesLocked = (): boolean => {
     if (!isEditMode || currentStatus === null) return false;
-    return !canEditFullInfo(currentStatus);
+    // Allow edit samples for New, Pending, SampleSent, InProgress
+    // Lock samples for PendingChangeApproval and beyond
+    return !canEditTestRequest(currentStatus);
+  };
+
+  // Check if this edit requires QLCL approval (SampleSent/InProgress status)
+  const isEditRequiresApproval = (): boolean => {
+    if (!isEditMode || currentStatus === null) return false;
+    return canEditWithApproval(currentStatus);
   };
 
   // Load master data
@@ -247,11 +282,14 @@ export const useTestRequestFormData = () => {
     try {
       const data = await testRequestService.get(id);
 
+      // Lưu snapshot data gốc để so sánh thay đổi sau này
+      setOriginalData(JSON.parse(JSON.stringify(data)));
+
       setCurrentStatus(data.status);
 
       if (!canEditTestRequest(data.status)) {
         message.warning("Không thể chỉnh sửa phiếu ở trạng thái này");
-        navigate(`/test-request/${id}`);
+        navigate(PATH_ROUTES.testRequests.detail(id));
         return;
       }
 
@@ -283,9 +321,14 @@ export const useTestRequestFormData = () => {
       // Load samples
       if (data.samples && data.samples.length > 0) {
         const sampleData: SampleFormData[] = data.samples.map((sample, index) => {
-          // Build indicatorMethods from indicators (indicatorId + testMethodId)
+          // Filter out CustomerCancelled indicators - they should not be editable
+          const activeIndicators = sample.indicators?.filter(
+            (ind) => ind.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled
+          ) || [];
+
+          // Build indicatorMethods from active indicators (indicatorId + testMethodId)
           const indicatorMethods: IndicatorMethodKey[] = [];
-          sample.indicators?.forEach((ind) => {
+          activeIndicators.forEach((ind) => {
             if (ind.indicatorId && ind.testMethodId) {
               indicatorMethods.push(createIndicatorMethodKey(ind.indicatorId, ind.testMethodId));
             }
@@ -304,41 +347,49 @@ export const useTestRequestFormData = () => {
             processingStatus: sample.processingStatus || "",
             notes: sample.notes,
             storageLocation: sample.storageLocation,
-            indicatorIds: sample.indicators?.map((ind) => ind.indicatorId) || [],
+            indicatorIds: activeIndicators.map((ind) => ind.indicatorId),
             indicatorMethods: indicatorMethods,
           };
         });
         setSamples(sampleData);
 
-        // Restore indicator dates, checked states, and laboratory assignments
+        // Restore indicator dates, checked states, laboratory assignments, and indicator IDs
         // Now using IndicatorMethodKey format
         const restoredDates: Record<string, IndicatorDateInfo> = {};
         const restoredChecked: string[] = [];
         const restoredLabMap: Record<string, LaboratoryAssignment> = {};
         const expandedLabs: string[] = [];
+        const restoredIndicatorIds: Record<string, string> = {}; // Store TestRequestSampleIndicator.id
+
+        // Parse dates helper - handle both UTC formats
+        const parseDate = (dateStr: string | null | undefined): dayjs.Dayjs | undefined => {
+          if (!dateStr || typeof dateStr !== 'string') return undefined;
+          // If no Z suffix, append it to treat as UTC
+          const utcDateStr = dateStr.endsWith('Z') ? dateStr : `${dateStr}Z`;
+          // Parse as UTC, then convert to local timezone
+          const parsed = dayjs(utcDateStr);
+          if (!parsed.isValid()) return undefined;
+          // Return date at start of day in local timezone
+          return parsed.startOf('day');
+        };
 
         data.samples.forEach((sample, sampleIndex) => {
           const sampleKey = sample.id || `sample-${sampleIndex}`;
-          sample.indicators?.forEach((ind) => {
+          // Filter out CustomerCancelled indicators
+          const activeIndicators = sample.indicators?.filter(
+            (ind) => ind.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled
+          ) || [];
+
+          activeIndicators.forEach((ind) => {
             // Create IndicatorMethodKey for each indicator
             const methodKey = ind.testMethodId
               ? createIndicatorMethodKey(ind.indicatorId, ind.testMethodId)
               : ind.indicatorId; // Fallback for old data without testMethodId
 
-            // Parse dates - handle both UTC formats:
-            // 1. With Z suffix: "2025-12-24T22:55:31.290Z" (explicit UTC)
-            // 2. Without Z suffix: "2025-12-24T22:59:44.473" (server returns UTC without Z)
-            // We need to treat both as UTC and convert to local date
-            const parseDate = (dateStr: string | null | undefined): dayjs.Dayjs | undefined => {
-              if (!dateStr || typeof dateStr !== 'string') return undefined;
-              // If no Z suffix, append it to treat as UTC
-              const utcDateStr = dateStr.endsWith('Z') ? dateStr : `${dateStr}Z`;
-              // Parse as UTC, then convert to local timezone
-              const parsed = dayjs(utcDateStr);
-              if (!parsed.isValid()) return undefined;
-              // Return date at start of day in local timezone
-              return parsed.startOf('day');
-            };
+            // Store the TestRequestSampleIndicator.id for this indicator
+            if (ind.id) {
+              restoredIndicatorIds[`${sampleKey}_${methodKey}`] = ind.id;
+            }
 
             restoredDates[methodKey] = {
               transferDate: parseDate(ind.transferDate),
@@ -352,6 +403,7 @@ export const useTestRequestFormData = () => {
                 laboratoryId: ind.laboratoryId,
                 laboratoryName: ind.laboratoryName,
                 requestDate: parseDate(ind.requestDate) || dayjs(),
+                approvalStatus: ind.approvalStatus,
               };
               if (!expandedLabs.includes(ind.laboratoryId)) {
                 expandedLabs.push(ind.laboratoryId);
@@ -364,6 +416,7 @@ export const useTestRequestFormData = () => {
         setCheckedIndicators(restoredChecked);
         setIndicatorLaboratoryMap(restoredLabMap);
         setExpandedLabGroups(expandedLabs);
+        setSampleIndicatorIdMap(restoredIndicatorIds);
       }
     } catch (error) {
       message.error("Không thể tải dữ liệu yêu cầu");
@@ -389,10 +442,13 @@ export const useTestRequestFormData = () => {
         });
       } else {
         // Fallback to old logic for backward compatibility
+        // Note: unitPrice is now in TestMethodIndicator, not in Indicator
+        // Old data without testMethodId will have no price calculated
         sample.indicatorIds.forEach((indId) => {
-          const indicator = indicators.find((i) => i.id === indId);
-          if (indicator) {
-            total += indicator.unitPrice;
+          const methods = indicatorMethodsMap[indId] || [];
+          if (methods.length > 0) {
+            // Use first method's price as fallback
+            total += methods[0].unitPrice;
           }
         });
       }
@@ -495,7 +551,7 @@ export const useTestRequestFormData = () => {
           children: indicators
             .filter((ind) => ind.indicatorGroupId === group.id && ind.isActive)
             .map((ind) => ({
-              title: `${ind.name} (${ind.unitPrice.toLocaleString("vi-VN")}đ)`,
+              title: ind.name,
               value: ind.id,
               key: ind.id,
             })),
@@ -533,11 +589,13 @@ export const useTestRequestFormData = () => {
     // Sample code prefix
     sampleCodePrefix,
     setSampleCodePrefix,
+    updateSampleCodesPrefix,
 
     // Status
     currentStatus,
     isFieldLocked,
     isSamplesLocked,
+    isEditRequiresApproval,
 
     // Samples
     samples,
@@ -609,6 +667,13 @@ export const useTestRequestFormData = () => {
     setIndicatorLaboratoryMap,
     expandedLabGroups,
     setExpandedLabGroups,
+
+    // Sample indicator IDs for update
+    sampleIndicatorIdMap,
+    setSampleIndicatorIdMap,
+
+    // Original data snapshot for change detection
+    originalData,
 
     // Location
     provinces,

@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
 import { specimenHistoryService } from '../../services/specimenHistoryService';
 import { SpecimenHistoryDto, SpecimenStatus } from '../../types/specimenHistory';
+import { PATH_ROUTES } from '../../constants';
 
 // Mock data fallback
 const getMockSpecimenHistory = (id: string): SpecimenHistoryDto => {
@@ -93,14 +94,14 @@ const SpecimenHistoryDetail: React.FC = () => {
           <Space>
             <Button
               icon={<ArrowLeftOutlined />}
-              onClick={() => navigate('/specimen-histories')}
+              onClick={() => navigate(PATH_ROUTES.specimenHistories.index)}
             >
               {t('common.back')}
             </Button>
             <Button
               type="primary"
               icon={<EditOutlined />}
-              onClick={() => navigate(`/specimen-histories/${id}/edit`)}
+              onClick={() => navigate(PATH_ROUTES.specimenHistories.edit(id!))}
             >
               {t('common.edit')}
             </Button>

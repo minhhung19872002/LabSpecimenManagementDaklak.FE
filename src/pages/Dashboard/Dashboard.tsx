@@ -30,6 +30,7 @@ import dashboardService, {
 	RecentActivityDto,
 } from "../../services/dashboardService";
 import dayjs from "dayjs";
+import { PATH_ROUTES } from "../../constants";
 
 interface RecentRequest {
 	id: string;
@@ -341,7 +342,7 @@ const Dashboard: React.FC = () => {
 				<Col xs={24} lg={14}>
 					<Card
 						title="Yêu cầu gần đây"
-						extra={<a href="/requests">Xem tất cả</a>}
+						extra={<a href={PATH_ROUTES.testRequests.index}>Xem tất cả</a>}
 					>
 						<Table
 							dataSource={recentRequests}
@@ -376,7 +377,7 @@ const Dashboard: React.FC = () => {
 											/>
 										}
 										title={
-											<a href={`/test/${item.id}`}>
+											<a href={PATH_ROUTES.tests.detail(item.id)}>
 												{item.testCode}
 											</a>
 										}

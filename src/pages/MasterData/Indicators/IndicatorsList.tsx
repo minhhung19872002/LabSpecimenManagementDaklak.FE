@@ -19,7 +19,6 @@ import { IndicatorsTabProps } from "./types";
 
 const IndicatorsList: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
   const {
-    groups,
     indicators,
     loading,
     searchText,

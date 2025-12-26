@@ -1,38 +1,42 @@
 // Laboratory Task Status Enum
 export enum LaboratoryTaskStatus {
-  NotAssignedMethod = 0,   // Chưa gán phương pháp
-  AssignedMethod = 1,      // Đã gán phương pháp
-  Testing = 2,             // Đang thí nghiệm
-  PendingApproval = 3,     // Chờ duyệt kết quả
-  Approved = 4,            // Đã duyệt
-  ResultSent = 5           // Đã gửi kết quả
+  NotAssignedTechnician = 0,   // Chưa gán KTV (Phương pháp đã có từ phiếu yêu cầu)
+  AssignedTechnician = 1,      // Đã gán KTV
+  Testing = 2,                 // Đang thí nghiệm
+  PendingApproval = 3,         // Chờ duyệt kết quả
+  Approved = 4,                // Đã duyệt
+  ResultSent = 5,              // Đã gửi kết quả
+  ResultRejected = 6           // QLCL từ chối KQ
 }
 
 // Indicator Approval Status Enum (Phase 6)
 export enum IndicatorApprovalStatus {
-  Pending = 0,      // Chờ nhập kết quả
-  Entered = 1,      // Đã nhập kết quả
-  Approved = 2,     // Đã duyệt
-  Rejected = 3      // Không duyệt
+  Pending = 0,           // Chờ nhập kết quả
+  Entered = 1,           // Đã nhập kết quả
+  Approved = 2,          // Đã duyệt
+  Rejected = 3,          // Không duyệt
+  CustomerCancelled = 4  // Khách hàng hủy
 }
 
 // Status display helper
 export const LaboratoryTaskStatusLabels: Record<LaboratoryTaskStatus, string> = {
-  [LaboratoryTaskStatus.NotAssignedMethod]: 'Chưa gán phương pháp',
-  [LaboratoryTaskStatus.AssignedMethod]: 'Đã gán phương pháp',
+  [LaboratoryTaskStatus.NotAssignedTechnician]: 'Chưa gán KTV',
+  [LaboratoryTaskStatus.AssignedTechnician]: 'Đã gán KTV',
   [LaboratoryTaskStatus.Testing]: 'Đang thí nghiệm',
   [LaboratoryTaskStatus.PendingApproval]: 'Chờ duyệt kết quả',
   [LaboratoryTaskStatus.Approved]: 'Đã duyệt',
-  [LaboratoryTaskStatus.ResultSent]: 'Đã gửi kết quả'
+  [LaboratoryTaskStatus.ResultSent]: 'Đã gửi kết quả',
+  [LaboratoryTaskStatus.ResultRejected]: 'QLCL từ chối'
 };
 
 export const LaboratoryTaskStatusColors: Record<LaboratoryTaskStatus, string> = {
-  [LaboratoryTaskStatus.NotAssignedMethod]: 'default',
-  [LaboratoryTaskStatus.AssignedMethod]: 'blue',
+  [LaboratoryTaskStatus.NotAssignedTechnician]: 'default',
+  [LaboratoryTaskStatus.AssignedTechnician]: 'blue',
   [LaboratoryTaskStatus.Testing]: 'processing',
   [LaboratoryTaskStatus.PendingApproval]: 'warning',
   [LaboratoryTaskStatus.Approved]: 'success',
-  [LaboratoryTaskStatus.ResultSent]: 'purple'
+  [LaboratoryTaskStatus.ResultSent]: 'purple',
+  [LaboratoryTaskStatus.ResultRejected]: 'error'
 };
 
 // Indicator Approval Status display helper (Phase 6)
@@ -40,14 +44,16 @@ export const IndicatorApprovalStatusLabels: Record<IndicatorApprovalStatus, stri
   [IndicatorApprovalStatus.Pending]: 'Chờ nhập KQ',
   [IndicatorApprovalStatus.Entered]: 'Chờ duyệt',
   [IndicatorApprovalStatus.Approved]: 'Đã duyệt',
-  [IndicatorApprovalStatus.Rejected]: 'Từ chối'
+  [IndicatorApprovalStatus.Rejected]: 'Từ chối',
+  [IndicatorApprovalStatus.CustomerCancelled]: 'KH hủy'
 };
 
 export const IndicatorApprovalStatusColors: Record<IndicatorApprovalStatus, string> = {
   [IndicatorApprovalStatus.Pending]: 'default',
   [IndicatorApprovalStatus.Entered]: 'warning',
   [IndicatorApprovalStatus.Approved]: 'success',
-  [IndicatorApprovalStatus.Rejected]: 'error'
+  [IndicatorApprovalStatus.Rejected]: 'error',
+  [IndicatorApprovalStatus.CustomerCancelled]: 'volcano'
 };
 
 // Laboratory Task Indicator DTO (Phase 6 - Extended)
@@ -94,6 +100,7 @@ export interface LaboratoryTaskDto {
   testDate?: string;
   status: LaboratoryTaskStatus;
   notes?: string;
+  resultRejectionReason?: string;  // Lý do QLCL từ chối KQ
 
   // Navigation properties
   testRequestNumber?: string;
@@ -195,8 +202,8 @@ export interface ListUserLookupResult {
 export type SampleStatus = 'pending' | 'assigned' | 'testing' | 'pendingApproval' | 'approved';
 
 export const SampleStatusLabels: Record<SampleStatus, string> = {
-  pending: 'Chưa gán PP',
-  assigned: 'Đã gán PP',
+  pending: 'Chưa gán KTV',
+  assigned: 'Đã gán KTV',
   testing: 'Đang TN',
   pendingApproval: 'Chờ duyệt',
   approved: 'Đã duyệt'

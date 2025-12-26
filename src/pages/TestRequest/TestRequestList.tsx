@@ -28,6 +28,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { ColumnsType } from "antd/es/table";
 import { testRequestService } from "../../services/testRequestService";
+import { PATH_ROUTES } from "../../constants";
 import {
   TestRequestDto,
   TestRequestStatus,
@@ -143,11 +144,11 @@ const TestRequestList: React.FC = () => {
   };
 
   const handleCreate = () => {
-    navigate("/test-request/create");
+    navigate(PATH_ROUTES.testRequests.create);
   };
 
   const handleEdit = (record: TestRequestDto) => {
-    navigate(`/test-request/edit/${record.id}`);
+    navigate(PATH_ROUTES.testRequests.edit(record.id));
   };
 
   const getStatusTag = (status: TestRequestStatus) => {
@@ -231,6 +232,7 @@ const TestRequestList: React.FC = () => {
       dataIndex: "status",
       key: "status",
       width: 140,
+      fixed: "right" as const,
       render: (status: TestRequestStatus) => getStatusTag(status),
     },
     {
@@ -339,11 +341,14 @@ const TestRequestList: React.FC = () => {
             <Select.Option value={TestRequestStatus.Pending}>
               {TestRequestStatusLabels[TestRequestStatus.Pending]}
             </Select.Option>
+            <Select.Option value={TestRequestStatus.SampleSent}>
+              {TestRequestStatusLabels[TestRequestStatus.SampleSent]}
+            </Select.Option>
             <Select.Option value={TestRequestStatus.InProgress}>
               {TestRequestStatusLabels[TestRequestStatus.InProgress]}
             </Select.Option>
-            <Select.Option value={TestRequestStatus.TestingCompleted}>
-              {TestRequestStatusLabels[TestRequestStatus.TestingCompleted]}
+            <Select.Option value={TestRequestStatus.PendingChangeApproval}>
+              {TestRequestStatusLabels[TestRequestStatus.PendingChangeApproval]}
             </Select.Option>
             <Select.Option value={TestRequestStatus.PendingApproval}>
               {TestRequestStatusLabels[TestRequestStatus.PendingApproval]}
@@ -387,7 +392,7 @@ const TestRequestList: React.FC = () => {
         loading={loading}
         rowClassName={(record) => (isUrgentRow(record) ? "urgent-row" : "")}
         onRow={(record) => ({
-          onDoubleClick: () => navigate(`/test-request/${record.id}`),
+          onDoubleClick: () => navigate(PATH_ROUTES.testRequests.detail(record.id)),
           style: { cursor: "pointer" },
         })}
         pagination={{

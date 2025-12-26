@@ -7,6 +7,7 @@ import { testService } from '../../services/testService';
 import { TestDto, TestStatus } from '../../types/test';
 import dayjs from 'dayjs';
 import './TestDetail.css';
+import { PATH_ROUTES } from '../../constants';
 
 const TestDetail: React.FC = () => {
   const [test, setTest] = useState<TestDto | null>(null);
@@ -76,10 +77,10 @@ const TestDetail: React.FC = () => {
         title={t('test.viewTest')}
         extra={
           <Space>
-            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/tests')}>
+            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(PATH_ROUTES.tests.index)}>
               {t('common.back')}
             </Button>
-            <Button type="primary" icon={<EditOutlined />} onClick={() => navigate(`/test/edit/${id}`)}>
+            <Button type="primary" icon={<EditOutlined />} onClick={() => navigate(PATH_ROUTES.tests.edit(id!))}>
               {t('common.edit')}
             </Button>
           </Space>

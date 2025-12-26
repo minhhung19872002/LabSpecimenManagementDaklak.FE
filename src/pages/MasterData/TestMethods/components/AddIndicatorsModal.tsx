@@ -69,7 +69,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
     const indicators = form.getFieldValue("indicators") || [];
     indicators[fieldName] = {
       ...indicators[fieldName],
-      unitPrice: option.indicator.unitPrice,
+      unitPrice: 0, // Default value, user can set the price
     };
     form.setFieldsValue({ indicators });
     setSelectedIndicators((prev) => ({

@@ -37,6 +37,7 @@ import { specimenTypeService, storageLocationService } from "../../services/mast
 import { importService, downloadBlobAsFile } from "../../services/importService";
 import dayjs from "dayjs";
 import ImportExcelModal from "../../components/common/ImportExcelModal";
+import { PATH_ROUTES } from "../../constants";
 
 const SpecimenList: React.FC = () => {
   const { t } = useTranslation();
@@ -333,7 +334,7 @@ const SpecimenList: React.FC = () => {
             type="link"
             size="small"
             icon={<EyeOutlined />}
-            onClick={() => navigate(`/specimen/${record.id}`)}
+            onClick={() => navigate(PATH_ROUTES.specimens.detail(record.id))}
           />
           <Button
             type="link"

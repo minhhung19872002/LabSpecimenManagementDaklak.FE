@@ -14,7 +14,8 @@ import {
   Row,
   Col,
   Modal,
-  Tooltip,
+  Input,
+  Alert,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -26,13 +27,19 @@ import {
 } from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { testRequestService, SampleForSelectionDto } from "../../services/testRequestService";
+import {
+  testRequestService,
+  SampleForSelectionDto,
+} from "../../services/testRequestService";
 import {
   TestRequestDto,
   TestRequestStatus,
   TestRequestStatusLabels,
   TestRequestStatusColors,
   canEditTestRequest,
+  canSendSample,
+  canSendResult,
+  canComplete,
   ResultLanguage,
   SamplingRequirement,
   SampleStorageOption,
@@ -40,8 +47,10 @@ import {
 } from "../../types/testRequest";
 import dayjs from "dayjs";
 import "./TestRequestDetail.css";
+import { PATH_ROUTES } from "../../constants";
 
 const { Title, Text } = Typography;
+const { TextArea } = Input;
 
 const TestRequestDetail: React.FC = () => {
   const { t } = useTranslation();
@@ -59,14 +68,26 @@ const TestRequestDetail: React.FC = () => {
   const docEditorRef = useRef<any>(null);
 
   // BM01 Sample Selection Modal states
-  const [sampleSelectionModalVisible, setSampleSelectionModalVisible] = useState(false);
-  const [samplesForSelection, setSamplesForSelection] = useState<SampleForSelectionDto[]>([]);
+  const [sampleSelectionModalVisible, setSampleSelectionModalVisible] =
+    useState(false);
+  const [samplesForSelection, setSamplesForSelection] = useState<
+    SampleForSelectionDto[]
+  >([]);
   const [loadingSamples, setLoadingSamples] = useState(false);
   const [selectedSampleId, setSelectedSampleId] = useState<string | null>(null);
   const [generatingBM01, setGeneratingBM01] = useState(false);
 
   // Print test request form loading state
   const [printingTestRequest, setPrintingTestRequest] = useState(false);
+
+  // Send sample loading state
+  const [sendingSample, setSendingSample] = useState(false);
+
+  // Reject result modal states
+  const [rejectResultModalVisible, setRejectResultModalVisible] =
+    useState(false);
+  const [rejectResultReason, setRejectResultReason] = useState("");
+  const [rejectResultLoading, setRejectResultLoading] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -98,66 +119,109 @@ const TestRequestDetail: React.FC = () => {
   const renderActionButtons = () => {
     if (!data) return null;
 
-    switch (data.status) {
-      case TestRequestStatus.New:
-      case TestRequestStatus.Pending:
-        return (
-          <Button
-            icon={<FileTextOutlined />}
-            onClick={() => handlePrintTestRequest()}
-            loading={printingTestRequest}
-          >
-            In phiếu XN
-          </Button>
-        );
-      case TestRequestStatus.TestingCompleted:
-        return (
-          <Space>
-            <Button
-              icon={<FileTextOutlined />}
-              onClick={handleOpenBM01Modal}
-            >
-              In KQ Mẫu đơn
-            </Button>
-            <Button
-              icon={<FileTextOutlined />}
-              onClick={() => handlePrintMixedResult()}
-            >
-              In KQ hỗn hợp
-            </Button>
-          </Space>
-        );
-      case TestRequestStatus.PendingApproval:
-        return (
-          <Button
-            type="primary"
-            icon={<CheckCircleOutlined />}
-            onClick={() => handleApprove()}
-          >
-            Phê duyệt
-          </Button>
-        );
-      case TestRequestStatus.Approved:
-        return (
-          <Button
-            type="primary"
-            onClick={() => handleSendResult()}
-          >
-            Gửi kết quả
-          </Button>
-        );
-      case TestRequestStatus.ResultSent:
-        return (
-          <Button
-            type="primary"
-            onClick={() => handleComplete()}
-          >
-            Hoàn thành
-          </Button>
-        );
-      default:
-        return null;
+    const buttons: React.ReactNode[] = [];
+
+    // In phiếu XN - New hoặc Pending
+    if (
+      data.status === TestRequestStatus.New ||
+      data.status === TestRequestStatus.Pending
+    ) {
+      buttons.push(
+        <Button
+          key="print"
+          icon={<FileTextOutlined />}
+          onClick={() => handlePrintTestRequest()}
+          loading={printingTestRequest}
+        >
+          In phiếu XN
+        </Button>
+      );
     }
+
+    // Gửi mẫu - chỉ khi Pending
+    if (canSendSample(data.status)) {
+      buttons.push(
+        <Button
+          key="send-sample"
+          type="primary"
+          onClick={() => handleSendSample()}
+          loading={sendingSample}
+        >
+          Gửi mẫu
+        </Button>
+      );
+    }
+
+    // Phê duyệt/Từ chối thay đổi - PendingChangeApproval (cho QLCL)
+    // Chuyển sang tab "Lịch sử thay đổi" để xem chi tiết và duyệt/từ chối
+    // (Buttons đã được chuyển vào ChangeHistoryTab component)
+
+    // In KQ - InProgress hoặc SampleSent có thể không cần buttons đặc biệt
+    // PendingApproval - Phê duyệt KQ hoặc Không duyệt
+    if (data.status === TestRequestStatus.PendingApproval) {
+      buttons.push(
+        <Button
+          key="approve"
+          type="primary"
+          icon={<CheckCircleOutlined />}
+          onClick={() => handleApprove()}
+        >
+          Phê duyệt KQ
+        </Button>
+      );
+      buttons.push(
+        <Button
+          key="reject-result"
+          danger
+          icon={<CloseCircleOutlined />}
+          onClick={() => setRejectResultModalVisible(true)}
+        >
+          Không duyệt
+        </Button>
+      );
+    }
+
+    // Approved - In KQ, Gửi kết quả
+    if (data.status === TestRequestStatus.Approved) {
+      buttons.push(
+        <Button
+          key="print-bm01"
+          icon={<FileTextOutlined />}
+          onClick={handleOpenBM01Modal}
+        >
+          In KQ Mẫu đơn
+        </Button>
+      );
+      buttons.push(
+        <Button
+          key="print-mixed"
+          icon={<FileTextOutlined />}
+          onClick={() => handlePrintMixedResult()}
+        >
+          In KQ hỗn hợp
+        </Button>
+      );
+      buttons.push(
+        <Button
+          key="send-result"
+          type="primary"
+          onClick={() => handleSendResult()}
+        >
+          Gửi kết quả
+        </Button>
+      );
+    }
+
+    // ResultSent - Hoàn thành
+    if (canComplete(data.status)) {
+      buttons.push(
+        <Button key="complete" type="primary" onClick={() => handleComplete()}>
+          Hoàn thành
+        </Button>
+      );
+    }
+
+    return buttons.length > 0 ? <Space wrap>{buttons}</Space> : null;
   };
 
   // Handle print test request form - generate document and open editor
@@ -171,7 +235,9 @@ const TestRequestDetail: React.FC = () => {
       message.success(`Đã tạo phiếu yêu cầu XN: ${result.requestNumber}`);
 
       // Step 2: Get editor config and open OnlyOffice
-      const config = await testRequestService.getResultFormEditorConfig(result.fileName);
+      const config = await testRequestService.getResultFormEditorConfig(
+        result.fileName
+      );
       setEditorConfig(config);
       setEditorLoading(true);
       setEditorModalVisible(true);
@@ -180,7 +246,10 @@ const TestRequestDetail: React.FC = () => {
       loadData(id);
     } catch (error: any) {
       console.error("Error printing test request:", error);
-      message.error(error?.response?.data?.error?.message || "Không thể tạo phiếu. Vui lòng thử lại.");
+      message.error(
+        error?.response?.data?.error?.message ||
+          "Không thể tạo phiếu. Vui lòng thử lại."
+      );
     } finally {
       setPrintingTestRequest(false);
     }
@@ -189,6 +258,25 @@ const TestRequestDetail: React.FC = () => {
   // Handle print mixed result (placeholder)
   const handlePrintMixedResult = () => {
     message.info("Chức năng in KQ hỗn hợp đang được phát triển");
+  };
+
+  // Handle send sample: Pending → SampleSent
+  const handleSendSample = async () => {
+    if (!id) return;
+    setSendingSample(true);
+    try {
+      await testRequestService.sendSample(id);
+      message.success("Đã gửi mẫu thành công");
+      loadData(id);
+    } catch (error: any) {
+      console.error("Error sending sample:", error);
+      message.error(
+        error?.response?.data?.error?.message ||
+          "Không thể gửi mẫu. Vui lòng thử lại."
+      );
+    } finally {
+      setSendingSample(false);
+    }
   };
 
   // Handle send result
@@ -200,7 +288,10 @@ const TestRequestDetail: React.FC = () => {
       loadData(id); // Reload to get updated status
     } catch (error: any) {
       console.error("Error sending result:", error);
-      message.error(error?.response?.data?.error?.message || "Không thể gửi kết quả. Vui lòng thử lại.");
+      message.error(
+        error?.response?.data?.error?.message ||
+          "Không thể gửi kết quả. Vui lòng thử lại."
+      );
     }
   };
 
@@ -213,7 +304,34 @@ const TestRequestDetail: React.FC = () => {
       loadData(id); // Reload to get updated status
     } catch (error: any) {
       console.error("Error approving test request:", error);
-      message.error(error?.response?.data?.error?.message || "Không thể phê duyệt. Vui lòng thử lại.");
+      message.error(
+        error?.response?.data?.error?.message ||
+          "Không thể phê duyệt. Vui lòng thử lại."
+      );
+    }
+  };
+
+  // Handle reject result: PendingApproval → InProgress (trả về cho QLKT xem xét)
+  const handleRejectResult = async () => {
+    if (!id || !rejectResultReason.trim()) {
+      message.warning("Vui lòng nhập lý do không duyệt");
+      return;
+    }
+    setRejectResultLoading(true);
+    try {
+      await testRequestService.rejectResult(id, rejectResultReason);
+      message.success("Đã trả lại cho Quản lý Kỹ thuật xem xét");
+      setRejectResultModalVisible(false);
+      setRejectResultReason("");
+      loadData(id);
+    } catch (error: any) {
+      console.error("Error rejecting result:", error);
+      message.error(
+        error?.response?.data?.error?.message ||
+          "Không thể từ chối kết quả. Vui lòng thử lại."
+      );
+    } finally {
+      setRejectResultLoading(false);
     }
   };
 
@@ -226,7 +344,10 @@ const TestRequestDetail: React.FC = () => {
       loadData(id); // Reload to get updated status
     } catch (error: any) {
       console.error("Error completing test request:", error);
-      message.error(error?.response?.data?.error?.message || "Không thể hoàn thành. Vui lòng thử lại.");
+      message.error(
+        error?.response?.data?.error?.message ||
+          "Không thể hoàn thành. Vui lòng thử lại."
+      );
     }
   };
 
@@ -341,7 +462,10 @@ const TestRequestDetail: React.FC = () => {
           editorConfig: {
             mode: "edit",
             lang: "vi",
-            user: editorConfig.config.editorConfig?.user || { id: "1", name: "Editor" },
+            user: editorConfig.config.editorConfig?.user || {
+              id: "1",
+              name: "Editor",
+            },
             customization: {
               autosave: false,
               forcesave: true,
@@ -435,7 +559,9 @@ const TestRequestDetail: React.FC = () => {
       return;
     }
 
-    const selectedSample = samplesForSelection.find(s => s.id === selectedSampleId);
+    const selectedSample = samplesForSelection.find(
+      (s) => s.id === selectedSampleId
+    );
     if (selectedSample && !selectedSample.canGenerateResult) {
       message.error("Mẫu chưa xét nghiệm xong");
       return;
@@ -444,7 +570,10 @@ const TestRequestDetail: React.FC = () => {
     setGeneratingBM01(true);
     try {
       // Step 1: Generate the document
-      const result = await testRequestService.generateBM01ResultForm(id, selectedSampleId);
+      const result = await testRequestService.generateBM01ResultForm(
+        id,
+        selectedSampleId
+      );
       message.success(`Đã tạo phiếu kết quả BM01 cho mẫu ${result.sampleCode}`);
 
       // Step 2: Update status to PendingApproval after printing result form
@@ -454,7 +583,9 @@ const TestRequestDetail: React.FC = () => {
       setSampleSelectionModalVisible(false);
 
       // Step 4: Get editor config and open OnlyOffice
-      const config = await testRequestService.getResultFormEditorConfig(result.fileName);
+      const config = await testRequestService.getResultFormEditorConfig(
+        result.fileName
+      );
       setEditorConfig(config);
       setEditorLoading(true);
       setEditorModalVisible(true);
@@ -463,7 +594,10 @@ const TestRequestDetail: React.FC = () => {
       loadData(id);
     } catch (error: any) {
       console.error("Error generating BM01 result form:", error);
-      message.error(error?.response?.data?.error?.message || "Không thể tạo phiếu kết quả. Vui lòng thử lại.");
+      message.error(
+        error?.response?.data?.error?.message ||
+          "Không thể tạo phiếu kết quả. Vui lòng thử lại."
+      );
     } finally {
       setGeneratingBM01(false);
     }
@@ -499,7 +633,7 @@ const TestRequestDetail: React.FC = () => {
       dataIndex: "requestedCompletionDate",
       key: "requestedCompletionDate",
       width: 120,
-      render: (date: string) => date ? dayjs(date).format("DD/MM/YYYY") : "-",
+      render: (date: string) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
     },
   ];
 
@@ -565,7 +699,10 @@ const TestRequestDetail: React.FC = () => {
         // Group indicators by laboratory
         const unsentIndicators = indicators.filter((ind) => !ind.laboratoryId);
         const sentIndicators = indicators.filter((ind) => ind.laboratoryId);
-        const groupedByLab: Record<string, { labName: string; indicators: any[] }> = {};
+        const groupedByLab: Record<
+          string,
+          { labName: string; indicators: any[] }
+        > = {};
 
         sentIndicators.forEach((ind) => {
           const labId = ind.laboratoryId;
@@ -624,26 +761,28 @@ const TestRequestDetail: React.FC = () => {
             )}
 
             {/* Grouped by laboratory */}
-            {Object.entries(groupedByLab).map(([labId, { labName, indicators: labIndicators }]) => (
-              <div key={labId} style={{ marginBottom: 8 }}>
-                <div
-                  style={{
-                    padding: "4px 8px",
-                    fontWeight: 600,
-                    fontSize: 12,
-                    color: "#000",
-                    background: "#e6e6e6",
-                    borderRadius: 4,
-                    marginBottom: 4,
-                  }}
-                >
-                  {labName} ({labIndicators.length})
+            {Object.entries(groupedByLab).map(
+              ([labId, { labName, indicators: labIndicators }]) => (
+                <div key={labId} style={{ marginBottom: 8 }}>
+                  <div
+                    style={{
+                      padding: "4px 8px",
+                      fontWeight: 600,
+                      fontSize: 12,
+                      color: "#000",
+                      background: "#e6e6e6",
+                      borderRadius: 4,
+                      marginBottom: 4,
+                    }}
+                  >
+                    {labName} ({labIndicators.length})
+                  </div>
+                  <div style={{ paddingLeft: 8 }}>
+                    {labIndicators.map((ind, idx) => renderIndicator(ind, idx))}
+                  </div>
                 </div>
-                <div style={{ paddingLeft: 8 }}>
-                  {labIndicators.map((ind, idx) => renderIndicator(ind, idx))}
-                </div>
-              </div>
-            ))}
+              )
+            )}
           </div>
         );
       },
@@ -687,46 +826,56 @@ const TestRequestDetail: React.FC = () => {
     <div className="test-request-detail">
       <Card
         title={
-          <Space wrap>
-            <span>Chi tiết yêu cầu thử nghiệm</span>
-            <Tag color="blue">{data.requestNumber}</Tag>
-            {getStatusTag(data.status)}
-          </Space>
-        }
-        extra={
-          <Space wrap>
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={() => navigate("/requests")}
-            >
-              Quay lại
-            </Button>
-            {renderActionButtons()}
-            <Button
-              type="primary"
-              icon={<EditOutlined />}
-              onClick={() => navigate(`/test-request/edit/${id}`)}
-              disabled={!canEditTestRequest(data.status)}
-              title={!canEditTestRequest(data.status) ? "Không thể chỉnh sửa ở trạng thái này" : ""}
-            >
-              Chỉnh sửa
-            </Button>
-          </Space>
+          <div className="card-header-flex">
+            <Space wrap>
+              <span>Chi tiết yêu cầu thử nghiệm</span>
+              <Tag color="blue">{data.requestNumber}</Tag>
+              {getStatusTag(data.status)}
+            </Space>
+            <Space wrap>
+              <Button
+                icon={<ArrowLeftOutlined />}
+                onClick={() => navigate(PATH_ROUTES.testRequests.index)}
+              >
+                Quay lại
+              </Button>
+              {renderActionButtons()}
+              {canEditTestRequest(data.status) && (
+                <Button
+                  type="primary"
+                  icon={<EditOutlined />}
+                  onClick={() => navigate(PATH_ROUTES.testRequests.edit(id!))}
+                >
+                  Chỉnh sửa
+                </Button>
+              )}
+            </Space>
+          </div>
         }
       >
+        {/* Thông báo khi có thay đổi đang chờ phê duyệt */}
+        {data.status === TestRequestStatus.PendingChangeApproval && (
+          <Alert
+            message="Có thay đổi đang chờ phê duyệt"
+            description="Dữ liệu hiển thị bên dưới là dữ liệu gốc trước khi thay đổi. Vui lòng vào trang 'Quản lý chất lượng' để phê duyệt hoặc từ chối các thay đổi."
+            type="warning"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
         {/* Thông tin hợp đồng */}
         <div className="detail-section">
           <Title level={5} style={{ marginBottom: 12 }}>
             Thông tin hợp đồng
           </Title>
           <Row gutter={[16, 12]}>
-            <Col xs={24} sm={12} md={6}>
+            <Col xs={24} lg={12} xl={6}>
               <div className="detail-item">
                 <Text type="secondary">Số HĐ:</Text>
                 <Text strong>{data.contractNumber || "-"}</Text>
               </div>
             </Col>
-            <Col xs={24} sm={12} md={6}>
+            <Col xs={24} lg={12} xl={6}>
               <div className="detail-item">
                 <Text type="secondary">Ngày HĐ:</Text>
                 <Text strong>
@@ -736,13 +885,13 @@ const TestRequestDetail: React.FC = () => {
                 </Text>
               </div>
             </Col>
-            <Col xs={24} sm={12} md={6}>
+            <Col xs={24} lg={12} xl={6}>
               <div className="detail-item">
                 <Text type="secondary">Số phiếu thu:</Text>
                 <Text>{data.receiptNumber || "-"}</Text>
               </div>
             </Col>
-            <Col xs={24} sm={12} md={6}>
+            <Col xs={24} lg={12} xl={6}>
               <div className="detail-item">
                 <Text type="secondary">Ngày yêu cầu:</Text>
                 <Text strong>
@@ -783,7 +932,7 @@ const TestRequestDetail: React.FC = () => {
             Thông tin khách hàng
           </Title>
           <Row gutter={[16, 12]}>
-            <Col xs={24} md={12}>
+            <Col xs={24} xl={12}>
               <div className="detail-item">
                 <Text type="secondary">Tên CS/DN:</Text>
                 <Text strong style={{ fontSize: 15 }}>
@@ -791,7 +940,7 @@ const TestRequestDetail: React.FC = () => {
                 </Text>
               </div>
             </Col>
-            <Col xs={24} md={12}>
+            <Col xs={24} xl={12}>
               <div className="detail-item">
                 <Text type="secondary">Mã số thuế:</Text>
                 <Text>{data.taxCode || "-"}</Text>
@@ -811,13 +960,13 @@ const TestRequestDetail: React.FC = () => {
             </Col>
           </Row>
           <Row gutter={[16, 12]} style={{ marginTop: 8 }}>
-            <Col xs={24} sm={12}>
+            <Col xs={24} md={12}>
               <div className="detail-item">
                 <Text type="secondary">Người liên hệ:</Text>
                 <Text strong>{data.contactPerson || "-"}</Text>
               </div>
             </Col>
-            <Col xs={24} sm={12}>
+            <Col xs={24} md={12}>
               <div className="detail-item">
                 <Text type="secondary">Điện thoại:</Text>
                 <Text strong>{data.phone || "-"}</Text>
@@ -887,9 +1036,122 @@ const TestRequestDetail: React.FC = () => {
           locale={{ emptyText: "Không có mẫu nào" }}
         />
 
-        {/* Yêu cầu về phương pháp */}
+        {/* Layout: Desktop 2 cols, Mobile responsive wrap */}
+        {/* Desktop: Left (Yêu cầu về kết quả, Yêu cầu về phương pháp), Right (Yêu cầu về lấy mẫu & giao trả, Thông tin chi phí) */}
+        {/* Mobile order: Yêu cầu về kết quả → Yêu cầu về lấy mẫu & giao trả → Yêu cầu về phương pháp → Thông tin chi phí */}
         <Row gutter={[24, 24]}>
-          <Col xs={24} lg={12}>
+          {/* Yêu cầu về kết quả - Desktop: Left col row 1, Mobile: order 1 */}
+          <Col xs={{ span: 24, order: 1 }} lg={{ span: 12, order: 1 }}>
+            <div className="detail-section">
+              <Title level={5} style={{ marginBottom: 12 }}>
+                Yêu cầu về kết quả
+              </Title>
+              <Row gutter={[16, 12]}>
+                <Col xs={24} xl={12}>
+                  <div className="detail-item">
+                    <Text type="secondary">Ngôn ngữ:</Text>
+                    <Text>{getResultLanguageText(data.resultLanguage)}</Text>
+                  </div>
+                </Col>
+                <Col xs={24} xl={12}>
+                  <div className="detail-item">
+                    <Text type="secondary">Số bản:</Text>
+                    <Text>{data.resultCopyCount || "-"}</Text>
+                  </div>
+                </Col>
+                <Col span={24}>
+                  <Space wrap size={[16, 8]}>
+                    <Space size={4}>
+                      <BoolIcon value={data.separatePassedResults} />
+                      <Text style={{ fontSize: 13 }}>Tách riêng CT đạt</Text>
+                    </Space>
+                  </Space>
+                </Col>
+                {data.conformityDeclaration && (
+                  <Col span={24}>
+                    <div className="detail-item">
+                      <Text type="secondary">Công bố hợp quy:</Text>
+                      <Text>{data.conformityDeclaration}</Text>
+                    </div>
+                  </Col>
+                )}
+                {data.otherRequirements && (
+                  <Col span={24}>
+                    <div className="detail-item">
+                      <Text type="secondary">Yêu cầu khác:</Text>
+                      <Text>{data.otherRequirements}</Text>
+                    </div>
+                  </Col>
+                )}
+              </Row>
+            </div>
+          </Col>
+
+          {/* Yêu cầu về lấy mẫu & giao trả - Desktop: Right col row 1, Mobile: order 2 */}
+          <Col xs={{ span: 24, order: 2 }} lg={{ span: 12, order: 2 }}>
+            <div className="detail-section">
+              <Title level={5} style={{ marginBottom: 12 }}>
+                Yêu cầu về lấy mẫu & giao trả
+              </Title>
+              <Row gutter={[16, 12]}>
+                <Col xs={24} xl={12}>
+                  <div className="detail-item">
+                    <Text type="secondary">Lấy mẫu:</Text>
+                    <Text>
+                      {getSamplingRequirementText(data.samplingRequirement)}
+                    </Text>
+                  </div>
+                </Col>
+                <Col xs={24} xl={12}>
+                  <div className="detail-item">
+                    <Text type="secondary">Lưu mẫu:</Text>
+                    <Text>{getSampleStorageText(data.sampleStorage)}</Text>
+                  </div>
+                </Col>
+                <Col span={24}>
+                  <Space wrap size={[16, 8]}>
+                    <Space size={4}>
+                      <BoolIcon value={data.deliveryDirectPickup} />
+                      <Text style={{ fontSize: 13 }}>Nhận trực tiếp</Text>
+                    </Space>
+                    <Space size={4}>
+                      <BoolIcon value={data.deliveryPostal} />
+                      <Text style={{ fontSize: 13 }}>Gửi bưu điện</Text>
+                    </Space>
+                    <Space size={4}>
+                      <BoolIcon value={data.returnStoredSample} />
+                      <Text style={{ fontSize: 13 }}>Trả lại mẫu lưu</Text>
+                    </Space>
+                  </Space>
+                </Col>
+                <Col span={24}>
+                  <div className="detail-item">
+                    <Text type="secondary">Ngày trả KQ:</Text>
+                    <Text strong style={{ color: "#1890ff" }}>
+                      {data.resultDeliveryDate
+                        ? dayjs(data.resultDeliveryDate).format("DD/MM/YYYY")
+                        : "-"}
+                    </Text>
+                  </div>
+                </Col>
+                <Col span={24}>
+                  <div className="detail-item">
+                    <Text type="secondary">Ngày hoàn thành dự kiến:</Text>
+                    <Text strong style={{ color: "#52c41a" }}>
+                      {data.expectedCompletionDate
+                        ? dayjs(data.expectedCompletionDate).format(
+                            "DD/MM/YYYY"
+                          )
+                        : "-"}
+                    </Text>
+                  </div>
+                </Col>
+              </Row>
+            </div>
+          </Col>
+
+          {/* Yêu cầu về phương pháp - Desktop: Left col row 2, Mobile: order 3 */}
+          <Col xs={{ span: 24, order: 3 }} lg={{ span: 12, order: 3 }}>
             <div className="detail-section">
               <Title level={5} style={{ marginBottom: 12 }}>
                 Yêu cầu về phương pháp
@@ -921,113 +1183,10 @@ const TestRequestDetail: React.FC = () => {
                 )}
               </Row>
             </div>
-
-            <div className="detail-section" style={{ marginTop: 16 }}>
-              <Title level={5} style={{ marginBottom: 12 }}>
-                Yêu cầu về kết quả
-              </Title>
-              <Row gutter={[16, 12]}>
-                <Col xs={24} sm={12}>
-                  <div className="detail-item">
-                    <Text type="secondary">Ngôn ngữ:</Text>
-                    <Text>{getResultLanguageText(data.resultLanguage)}</Text>
-                  </div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div className="detail-item">
-                    <Text type="secondary">Số bản:</Text>
-                    <Text>{data.resultCopyCount || "-"}</Text>
-                  </div>
-                </Col>
-                <Col xs={24}>
-                  <Space wrap size={[16, 8]}>
-                    <Space size={4}>
-                      <BoolIcon value={data.separatePassedResults} />
-                      <Text style={{ fontSize: 13 }}>Tách riêng CT đạt</Text>
-                    </Space>
-                  </Space>
-                </Col>
-                {data.conformityDeclaration && (
-                  <Col xs={24}>
-                    <div className="detail-item">
-                      <Text type="secondary">Công bố hợp quy:</Text>
-                      <Text>{data.conformityDeclaration}</Text>
-                    </div>
-                  </Col>
-                )}
-                {data.otherRequirements && (
-                  <Col xs={24}>
-                    <div className="detail-item">
-                      <Text type="secondary">Yêu cầu khác:</Text>
-                      <Text>{data.otherRequirements}</Text>
-                    </div>
-                  </Col>
-                )}
-              </Row>
-            </div>
-
-            <div className="detail-section" style={{ marginTop: 16 }}>
-              <Title level={5} style={{ marginBottom: 12 }}>
-                Yêu cầu về lấy mẫu & giao trả
-              </Title>
-              <Row gutter={[16, 12]}>
-                <Col xs={24} sm={12}>
-                  <div className="detail-item">
-                    <Text type="secondary">Lấy mẫu:</Text>
-                    <Text>
-                      {getSamplingRequirementText(data.samplingRequirement)}
-                    </Text>
-                  </div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div className="detail-item">
-                    <Text type="secondary">Lưu mẫu:</Text>
-                    <Text>{getSampleStorageText(data.sampleStorage)}</Text>
-                  </div>
-                </Col>
-                <Col xs={24}>
-                  <Space wrap size={[16, 8]}>
-                    <Space size={4}>
-                      <BoolIcon value={data.deliveryDirectPickup} />
-                      <Text style={{ fontSize: 13 }}>Nhận trực tiếp</Text>
-                    </Space>
-                    <Space size={4}>
-                      <BoolIcon value={data.deliveryPostal} />
-                      <Text style={{ fontSize: 13 }}>Gửi bưu điện</Text>
-                    </Space>
-                    <Space size={4}>
-                      <BoolIcon value={data.returnStoredSample} />
-                      <Text style={{ fontSize: 13 }}>Trả lại mẫu lưu</Text>
-                    </Space>
-                  </Space>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div className="detail-item">
-                    <Text type="secondary">Ngày trả KQ:</Text>
-                    <Text strong style={{ color: "#1890ff" }}>
-                      {data.resultDeliveryDate
-                        ? dayjs(data.resultDeliveryDate).format("DD/MM/YYYY")
-                        : "-"}
-                    </Text>
-                  </div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div className="detail-item">
-                    <Text type="secondary">Ngày hoàn thành dự kiến:</Text>
-                    <Text strong style={{ color: "#52c41a" }}>
-                      {data.expectedCompletionDate
-                        ? dayjs(data.expectedCompletionDate).format(
-                            "DD/MM/YYYY"
-                          )
-                        : "-"}
-                    </Text>
-                  </div>
-                </Col>
-              </Row>
-            </div>
           </Col>
 
-          <Col xs={24} lg={12}>
+          {/* Thông tin chi phí - Desktop: Right col row 2, Mobile: order 4 */}
+          <Col xs={{ span: 24, order: 4 }} lg={{ span: 12, order: 4 }}>
             <div className="detail-section">
               <Title level={5} style={{ marginBottom: 12 }}>
                 Thông tin chi phí
@@ -1065,26 +1224,6 @@ const TestRequestDetail: React.FC = () => {
               </Row>
             </div>
 
-            <div className="detail-section" style={{ marginTop: 16 }}>
-              <Title level={5} style={{ marginBottom: 12 }}>
-                Người phụ trách
-              </Title>
-              <Row gutter={[16, 12]}>
-                <Col xs={24}>
-                  <div className="detail-item">
-                    <Text type="secondary">Người giám sát:</Text>
-                    <Text strong>{data.supervisorName || "-"}</Text>
-                  </div>
-                </Col>
-                <Col xs={24}>
-                  <div className="detail-item">
-                    <Text type="secondary">Giám đốc:</Text>
-                    <Text strong>{data.directorName || "-"}</Text>
-                  </div>
-                </Col>
-              </Row>
-            </div>
-
             {data.notes && (
               <div className="detail-section" style={{ marginTop: 16 }}>
                 <Title level={5} style={{ marginBottom: 12 }}>
@@ -1109,7 +1248,7 @@ const TestRequestDetail: React.FC = () => {
         <Divider />
         <Descriptions
           size="small"
-          column={{ xs: 1, sm: 2 }}
+          column={{ xs: 1, md: 2 }}
           style={{ marginTop: 16 }}
         >
           <Descriptions.Item label="Ngày tạo">
@@ -1132,14 +1271,21 @@ const TestRequestDetail: React.FC = () => {
         onCancel={() => setSampleSelectionModalVisible(false)}
         width={700}
         footer={[
-          <Button key="cancel" onClick={() => setSampleSelectionModalVisible(false)}>
+          <Button
+            key="cancel"
+            onClick={() => setSampleSelectionModalVisible(false)}
+          >
             Hủy
           </Button>,
           <Button
             key="submit"
             type="primary"
             loading={generatingBM01}
-            disabled={!selectedSampleId || !samplesForSelection.find(s => s.id === selectedSampleId)?.canGenerateResult}
+            disabled={
+              !selectedSampleId ||
+              !samplesForSelection.find((s) => s.id === selectedSampleId)
+                ?.canGenerateResult
+            }
             onClick={handleGenerateBM01}
           >
             Xuất báo cáo
@@ -1176,9 +1322,10 @@ const TestRequestDetail: React.FC = () => {
             })}
             locale={{ emptyText: "Không có mẫu nào" }}
           />
-          {samplesForSelection.some(s => !s.canGenerateResult) && (
+          {samplesForSelection.some((s) => !s.canGenerateResult) && (
             <div style={{ marginTop: 12, color: "#888", fontSize: 12 }}>
-              * Chỉ có thể xuất báo cáo cho các mẫu có trạng thái "Đã gửi kết quả"
+              * Chỉ có thể xuất báo cáo cho các mẫu có trạng thái "Đã gửi kết
+              quả"
             </div>
           )}
         </Spin>
@@ -1192,7 +1339,11 @@ const TestRequestDetail: React.FC = () => {
         width="100vw"
         style={{ top: 0, margin: 0, padding: 0, maxWidth: "100vw" }}
         styles={{
-          body: { height: "calc(100vh - 53px)", padding: 0, overflow: "hidden" },
+          body: {
+            height: "calc(100vh - 53px)",
+            padding: 0,
+            overflow: "hidden",
+          },
           wrapper: { padding: 0 },
           mask: { padding: 0 },
           header: { display: "none" },
@@ -1209,7 +1360,14 @@ const TestRequestDetail: React.FC = () => {
         centered={false}
       >
         {editorLoading ? (
-          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: "100%",
+            }}
+          >
             <Spin size="large" tip="Đang tải editor..." />
           </div>
         ) : (
@@ -1219,6 +1377,54 @@ const TestRequestDetail: React.FC = () => {
             style={{ width: "100%", height: "100%" }}
           />
         )}
+      </Modal>
+
+      {/* Reject Result Modal - Trả lại cho QLKT xem xét */}
+      <Modal
+        title="Không duyệt kết quả"
+        open={rejectResultModalVisible}
+        width={600}
+        centered
+        onCancel={() => {
+          setRejectResultModalVisible(false);
+          setRejectResultReason("");
+        }}
+        footer={[
+          <Button
+            key="cancel"
+            onClick={() => {
+              setRejectResultModalVisible(false);
+              setRejectResultReason("");
+            }}
+          >
+            Hủy
+          </Button>,
+          <Button
+            key="submit"
+            type="primary"
+            danger
+            loading={rejectResultLoading}
+            disabled={!rejectResultReason.trim()}
+            onClick={handleRejectResult}
+          >
+            Xác nhận
+          </Button>,
+        ]}
+      >
+        <div style={{ marginBottom: 12 }}>
+          <Text>Kết quả sẽ được trả lại cho Quản lý Kỹ thuật xem xét.</Text>
+        </div>
+        <div style={{ marginBottom: 8 }}>
+          <Text>Vui lòng nhập lý do không duyệt:</Text>
+        </div>
+        <TextArea
+          rows={4}
+          value={rejectResultReason}
+          onChange={(e) => setRejectResultReason(e.target.value)}
+          placeholder="Nhập lý do không duyệt kết quả..."
+          maxLength={1000}
+          showCount
+        />
       </Modal>
     </div>
   );

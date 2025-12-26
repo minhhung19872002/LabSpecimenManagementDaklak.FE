@@ -7,13 +7,13 @@ const { Title } = Typography;
 interface ContractInfoSectionProps {
   isEditMode: boolean;
   isFieldLocked: (fieldName: string) => boolean;
-  setSampleCodePrefix: (prefix: string) => void;
+  updateSampleCodesPrefix: (prefix: string) => void;
 }
 
 const ContractInfoSection: React.FC<ContractInfoSectionProps> = ({
   isEditMode,
   isFieldLocked,
-  setSampleCodePrefix,
+  updateSampleCodesPrefix,
 }) => {
   return (
     <div className="form-section">
@@ -31,7 +31,7 @@ const ContractInfoSection: React.FC<ContractInfoSectionProps> = ({
             <Input
               placeholder="Số hợp đồng"
               disabled={isFieldLocked("contractNumber")}
-              onBlur={(e) => setSampleCodePrefix(e.target.value?.trim() || "")}
+              onBlur={(e) => updateSampleCodesPrefix(e.target.value?.trim() || "")}
             />
           </Form.Item>
         </Col>

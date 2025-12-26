@@ -6,7 +6,6 @@ export { default as MethodRequirementSection } from './MethodRequirementSection'
 export { default as ResultRequirementSection } from './ResultRequirementSection';
 export { default as SamplingDeliverySection } from './SamplingDeliverySection';
 export { default as CostInfoSection } from './CostInfoSection';
-export { default as SupervisorSection } from './SupervisorSection';
 export { default as OtherInfoSection } from './OtherInfoSection';
 export { default as GroupSelectorModal } from './GroupSelectorModal';
 export { default as IndicatorSelectionModal } from './IndicatorSelectionModal';
