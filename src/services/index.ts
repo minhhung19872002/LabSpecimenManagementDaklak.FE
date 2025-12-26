@@ -91,3 +91,7 @@ export { default as laboratoryTaskServiceDefault } from './laboratoryTaskService
 // Testing Service (KTV view)
 export { testingService } from './testingService';
 export { default as testingServiceDefault } from './testingService';
+
+// Quality Management Service (QLCL view)
+export { qualityManagementService } from './qualityManagementService';
+export { default as qualityManagementServiceDefault } from './qualityManagementService';
