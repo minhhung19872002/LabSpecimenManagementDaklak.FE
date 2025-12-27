@@ -21,6 +21,7 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   SyncOutlined,
+  WarningOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
@@ -113,9 +114,11 @@ const TestingList: React.FC = () => {
     const color = TestingStatusColors[status];
 
     const iconMap: Record<TestingStatus, React.ReactNode> = {
-      [TestingStatus.Todo]: <ClockCircleOutlined />,
+      [TestingStatus.NotStarted]: <ClockCircleOutlined />,
       [TestingStatus.InProgress]: <SyncOutlined spin />,
-      [TestingStatus.Done]: <CheckCircleOutlined />,
+      [TestingStatus.PendingApproval]: <ClockCircleOutlined />,
+      [TestingStatus.Rejected]: <WarningOutlined />,
+      [TestingStatus.Completed]: <CheckCircleOutlined />,
     };
 
     return (
@@ -128,11 +131,15 @@ const TestingList: React.FC = () => {
   // Statistics
   const stats = {
     total: pagination.total,
-    todo: tasks.filter((t) => t.testingStatus === TestingStatus.Todo).length,
+    notStarted: tasks.filter((t) => t.testingStatus === TestingStatus.NotStarted).length,
     inProgress: tasks.filter(
       (t) => t.testingStatus === TestingStatus.InProgress
     ).length,
-    done: tasks.filter((t) => t.testingStatus === TestingStatus.Done).length,
+    pendingApproval: tasks.filter(
+      (t) => t.testingStatus === TestingStatus.PendingApproval
+    ).length,
+    rejected: tasks.filter((t) => t.testingStatus === TestingStatus.Rejected).length,
+    completed: tasks.filter((t) => t.testingStatus === TestingStatus.Completed).length,
   };
 
   const handleSearch = (value: string) => {
@@ -212,8 +219,8 @@ const TestingList: React.FC = () => {
       render: (date: string, record: TestingListDto) => {
         if (!date) return "-";
         const d = dayjs(date);
-        // Highlight if urgent (<=5 days remaining) and not done
-        const shouldHighlight = record.isUrgent && record.testingStatus !== TestingStatus.Done;
+        // Highlight if urgent (<=5 days remaining) and not completed
+        const shouldHighlight = record.isUrgent && record.testingStatus !== TestingStatus.Completed;
         return (
           <span
             style={{
@@ -242,7 +249,7 @@ const TestingList: React.FC = () => {
       title: "Trạng thái",
       dataIndex: "testingStatus",
       key: "testingStatus",
-      width: 140,
+      width: 150,
       render: (status: TestingStatus) => getStatusTag(status),
     },
   ];
@@ -268,7 +275,7 @@ const TestingList: React.FC = () => {
         onDoubleClick: () => navigate(`/testing/${record.laboratoryTaskId}`),
         style: { cursor: "pointer" },
       })}
-      rowClassName={(record) => (record.isUrgent && record.testingStatus !== TestingStatus.Done ? "urgent-row" : "")}
+      rowClassName={(record) => (record.isUrgent && record.testingStatus !== TestingStatus.Completed ? "urgent-row" : "")}
     />
   );
 
@@ -276,7 +283,7 @@ const TestingList: React.FC = () => {
     <div>
       {/* Statistics Cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col xs={12} sm={8} md={6}>
+        <Col xs={12} sm={6} md={4}>
           <Card size="small">
             <Statistic
               title="Tổng xét nghiệm"
@@ -285,29 +292,47 @@ const TestingList: React.FC = () => {
             />
           </Card>
         </Col>
-        <Col xs={12} sm={8} md={6}>
+        <Col xs={12} sm={6} md={4}>
           <Card size="small">
             <Statistic
-              title="Cần làm"
-              value={stats.todo}
+              title="Chưa bắt đầu"
+              value={stats.notStarted}
               valueStyle={{ color: "#8c8c8c" }}
             />
           </Card>
         </Col>
-        <Col xs={12} sm={8} md={6}>
+        <Col xs={12} sm={6} md={4}>
           <Card size="small">
             <Statistic
-              title="Đang thí nghiệm"
+              title="Đang thử nghiệm"
               value={stats.inProgress}
               valueStyle={{ color: "#1890ff" }}
             />
           </Card>
         </Col>
-        <Col xs={12} sm={8} md={6}>
+        <Col xs={12} sm={6} md={4}>
           <Card size="small">
             <Statistic
-              title="Đã xong"
-              value={stats.done}
+              title="Chờ phê duyệt"
+              value={stats.pendingApproval}
+              valueStyle={{ color: "#faad14" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6} md={4}>
+          <Card size="small">
+            <Statistic
+              title="Bị từ chối"
+              value={stats.rejected}
+              valueStyle={{ color: "#ff4d4f" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6} md={4}>
+          <Card size="small">
+            <Statistic
+              title="Hoàn thành"
+              value={stats.completed}
               valueStyle={{ color: "#52c41a" }}
             />
           </Card>
@@ -348,11 +373,11 @@ const TestingList: React.FC = () => {
               onChange={handleStatusFilterChange}
               allowClear
             >
-              <Select.Option value={TestingStatus.Todo}>Cần làm</Select.Option>
-              <Select.Option value={TestingStatus.InProgress}>
-                Đang thí nghiệm
-              </Select.Option>
-              <Select.Option value={TestingStatus.Done}>Đã xong</Select.Option>
+              <Select.Option value={TestingStatus.NotStarted}>Chưa bắt đầu</Select.Option>
+              <Select.Option value={TestingStatus.InProgress}>Đang thử nghiệm</Select.Option>
+              <Select.Option value={TestingStatus.PendingApproval}>Chờ phê duyệt</Select.Option>
+              <Select.Option value={TestingStatus.Rejected}>Bị từ chối</Select.Option>
+              <Select.Option value={TestingStatus.Completed}>Hoàn thành</Select.Option>
             </Select>
           </Col>
           <Col xs={24} sm={6} md={4}>

@@ -1,10 +1,27 @@
 import { IndicatorApprovalStatus } from './laboratoryTask';
 
-// Testing Status Enum (KTV view)
+// Testing Status Enum (Task level - 5 statuses)
 export enum TestingStatus {
-  Todo = 0,        // Cần làm
-  InProgress = 1,  // Đang thí nghiệm
-  Done = 2         // Đã xong
+  NotStarted = 0,     // Chưa bắt đầu - Mới được assign
+  InProgress = 1,     // Đang thử nghiệm - Đã check-in >=1 chỉ tiêu
+  PendingApproval = 2, // Chờ phê duyệt - Đã gửi >=1 chỉ tiêu
+  Rejected = 3,       // Bị từ chối - Có >=1 chỉ tiêu bị từ chối
+  Completed = 4       // Hoàn thành - Tất cả đã duyệt
+}
+
+// Indicator Testing Status Enum (Indicator level - 5 statuses)
+export enum IndicatorTestingStatus {
+  Todo = 0,           // Cần làm - Chưa check-in
+  Testing = 1,        // Đang thí nghiệm - Đã check-in
+  PendingApproval = 2, // Chờ phê duyệt - Đã gửi kết quả
+  Rejected = 3,       // Bị từ chối - QLKT từ chối
+  Done = 4            // Đã xong - QLKT đã duyệt
+}
+
+// Sample Testing Image Type
+export enum SampleTestingImageType {
+  BeforeTesting = 0,  // Hình trước thử nghiệm
+  AfterTesting = 1    // Hình sau thử nghiệm
 }
 
 // Tab type for Testing list
@@ -13,17 +30,38 @@ export enum TestingTabType {
   All = 1             // Hiển thị tất cả
 }
 
-// Status display helper
+// Status display helper - Task level
 export const TestingStatusLabels: Record<TestingStatus, string> = {
-  [TestingStatus.Todo]: 'Cần làm',
-  [TestingStatus.InProgress]: 'Đang thí nghiệm',
-  [TestingStatus.Done]: 'Đã xong'
+  [TestingStatus.NotStarted]: 'Chưa bắt đầu',
+  [TestingStatus.InProgress]: 'Đang thử nghiệm',
+  [TestingStatus.PendingApproval]: 'Chờ phê duyệt',
+  [TestingStatus.Rejected]: 'Bị từ chối',
+  [TestingStatus.Completed]: 'Hoàn thành'
 };
 
 export const TestingStatusColors: Record<TestingStatus, string> = {
-  [TestingStatus.Todo]: 'default',
+  [TestingStatus.NotStarted]: 'default',
   [TestingStatus.InProgress]: 'processing',
-  [TestingStatus.Done]: 'success'
+  [TestingStatus.PendingApproval]: 'warning',
+  [TestingStatus.Rejected]: 'error',
+  [TestingStatus.Completed]: 'success'
+};
+
+// Status display helper - Indicator level
+export const IndicatorTestingStatusLabels: Record<IndicatorTestingStatus, string> = {
+  [IndicatorTestingStatus.Todo]: 'Cần làm',
+  [IndicatorTestingStatus.Testing]: 'Đang thí nghiệm',
+  [IndicatorTestingStatus.PendingApproval]: 'Chờ phê duyệt',
+  [IndicatorTestingStatus.Rejected]: 'Bị từ chối',
+  [IndicatorTestingStatus.Done]: 'Đã xong'
+};
+
+export const IndicatorTestingStatusColors: Record<IndicatorTestingStatus, string> = {
+  [IndicatorTestingStatus.Todo]: 'default',
+  [IndicatorTestingStatus.Testing]: 'processing',
+  [IndicatorTestingStatus.PendingApproval]: 'warning',
+  [IndicatorTestingStatus.Rejected]: 'error',
+  [IndicatorTestingStatus.Done]: 'success'
 };
 
 // Testing List DTO
@@ -61,6 +99,28 @@ export interface PagedTestingResult {
   totalCount: number;
 }
 
+// Sample Attachment DTO (from TestRequest - readonly)
+export interface SampleAttachmentDto {
+  id: string;
+  fileId: string;
+  fileName: string;
+  filePath: string;
+  fileSize: number;
+}
+
+// Sample Testing Image DTO (before/after testing)
+export interface SampleTestingImageDto {
+  id: string;
+  sampleId: string;
+  fileId: string;
+  fileName: string;
+  filePath: string;
+  fileSize: number;
+  imageType: SampleTestingImageType;
+  creationTime: string;
+  creatorId?: string;
+}
+
 // Testing Detail DTO
 export interface TestingDetailDto {
   id: string;
@@ -85,6 +145,9 @@ export interface TestingSampleDto {
   sampleCode?: string;
   sampleName?: string;
   statusText?: string;
+  sampleImages: SampleAttachmentDto[];           // Hình mẫu từ TestRequest (readonly)
+  beforeTestingImages: SampleTestingImageDto[];  // Hình trước TN (max 5)
+  afterTestingImages: SampleTestingImageDto[];   // Hình sau TN (max 5)
   indicators: TestingIndicatorDto[];
 }
 
@@ -100,13 +163,18 @@ export interface TestingIndicatorDto {
   result?: string;
   entryDate?: string;
   assignedDate?: string;
-  completionDate?: string;
+  startDate?: string;           // Ngày bắt đầu TN (khi ấn "Thực hiện")
+  submitDate?: string;          // Ngày gửi kết quả cho QLKT
+  completionDate?: string;      // Ngày duyệt
   approvalStatus: IndicatorApprovalStatus;
+  testingStatus: IndicatorTestingStatus;  // Trạng thái thử nghiệm
   latestRejectionReason?: string;
   rejectionHistoryCount: number;
   technicianId?: string;
   technicianName?: string;
   canEdit: boolean;
+  canCheckIn: boolean;          // Có thể check-in (Thực hiện) không
+  canSubmit: boolean;           // Có thể gửi kết quả không
 }
 
 // Save Indicator Result DTO
@@ -125,6 +193,24 @@ export interface SaveResultsInput {
 // Submit For Approval Input
 export interface SubmitForApprovalInput {
   indicatorIds: string[];
+}
+
+// Check In Indicators Input
+export interface CheckInIndicatorsInput {
+  sampleId: string;
+  indicatorIds: string[];
+}
+
+// Submit Results Input
+export interface SubmitResultsInput {
+  sampleId: string;
+  indicatorIds: string[];
+}
+
+// Upload Sample Testing Image Input
+export interface UploadSampleTestingImageInput {
+  sampleId: string;
+  imageType: SampleTestingImageType;
 }
 
 // Rejection History DTO
