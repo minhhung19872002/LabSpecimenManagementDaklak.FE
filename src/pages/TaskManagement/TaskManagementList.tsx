@@ -95,13 +95,12 @@ const TaskManagementList: React.FC = () => {
     const color = LaboratoryTaskStatusColors[status];
 
     const iconMap: Record<LaboratoryTaskStatus, React.ReactNode> = {
-      [LaboratoryTaskStatus.NotAssignedTechnician]: <ClockCircleOutlined />,
-      [LaboratoryTaskStatus.AssignedTechnician]: <CheckCircleOutlined />,
+      [LaboratoryTaskStatus.NotAssigned]: <ClockCircleOutlined />,
+      [LaboratoryTaskStatus.Assigned]: <CheckCircleOutlined />,
       [LaboratoryTaskStatus.Testing]: <SyncOutlined spin />,
       [LaboratoryTaskStatus.PendingApproval]: <ClockCircleOutlined />,
       [LaboratoryTaskStatus.Approved]: <CheckCircleOutlined />,
-      [LaboratoryTaskStatus.ResultSent]: <SendOutlined />,
-      [LaboratoryTaskStatus.ResultRejected]: <ClockCircleOutlined />,
+      [LaboratoryTaskStatus.SentToQuality]: <SendOutlined />,
     };
 
     return (
@@ -115,10 +114,10 @@ const TaskManagementList: React.FC = () => {
   const stats = {
     total: pagination.total,
     notAssigned: tasks.filter(
-      (t) => t.status === LaboratoryTaskStatus.NotAssignedTechnician
+      (t) => t.status === LaboratoryTaskStatus.NotAssigned
     ).length,
     assigned: tasks.filter(
-      (t) => t.status === LaboratoryTaskStatus.AssignedTechnician
+      (t) => t.status === LaboratoryTaskStatus.Assigned
     ).length,
     testing: tasks.filter((t) => t.status === LaboratoryTaskStatus.Testing)
       .length,
@@ -127,8 +126,8 @@ const TaskManagementList: React.FC = () => {
     ).length,
     approved: tasks.filter((t) => t.status === LaboratoryTaskStatus.Approved)
       .length,
-    resultSent: tasks.filter(
-      (t) => t.status === LaboratoryTaskStatus.ResultSent
+    sentToQuality: tasks.filter(
+      (t) => t.status === LaboratoryTaskStatus.SentToQuality
     ).length,
   };
 
@@ -234,11 +233,29 @@ const TaskManagementList: React.FC = () => {
       render: (value: string) => value || "-",
     },
     {
-      title: "Ngày chuyển đi",
+      title: "Ngày gửi khoa phòng",
       dataIndex: "transferDate",
       key: "transferDate",
-      width: 140,
-      render: (date: string) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
+      width: 160,
+      render: (date: string, record: LaboratoryTaskDto) => {
+        if (!date) return "-";
+        const d = dayjs(date);
+        // Highlight rule 2: >= 2 ngày từ ngày gửi khoa phòng + trạng thái "Chưa giao việc"
+        const daysSinceTransfer = dayjs().diff(d, "day");
+        const shouldHighlight =
+          daysSinceTransfer >= 2 &&
+          record.status === LaboratoryTaskStatus.NotAssigned;
+        return (
+          <span
+            style={{
+              color: shouldHighlight ? "#fa8c16" : undefined,
+              fontWeight: shouldHighlight ? "bold" : undefined,
+            }}
+          >
+            {d.format("DD/MM/YYYY")}
+          </span>
+        );
+      },
     },
     {
       title: "Ngày YC xong",
@@ -248,12 +265,12 @@ const TaskManagementList: React.FC = () => {
       render: (date: string, record: LaboratoryTaskDto) => {
         if (!date) return "-";
         const d = dayjs(date);
-        // Highlight if urgent (<=5 days remaining) and not done
+        // Highlight rule 1: < 5 days remaining and not done
         const daysRemaining = d.diff(dayjs(), "day");
         const isUrgent =
-          daysRemaining <= 5 &&
+          daysRemaining < 5 &&
           record.status !== LaboratoryTaskStatus.Approved &&
-          record.status !== LaboratoryTaskStatus.ResultSent;
+          record.status !== LaboratoryTaskStatus.SentToQuality;
         return (
           <span
             style={{
@@ -291,21 +308,21 @@ const TaskManagementList: React.FC = () => {
       width: 100,
       fixed: "right",
       render: (_: any, record: LaboratoryTaskDto) => {
-        // Chỉ cho phép edit khi: Chưa gán KTV hoặc Đã gán KTV
+        // Chỉ cho phép edit khi: Chưa giao việc hoặc Đã giao việc
         const canEdit =
-          record.status === LaboratoryTaskStatus.NotAssignedTechnician ||
-          record.status === LaboratoryTaskStatus.AssignedTechnician;
+          record.status === LaboratoryTaskStatus.NotAssigned ||
+          record.status === LaboratoryTaskStatus.Assigned;
 
         const getLockedMessage = (status: LaboratoryTaskStatus) => {
           switch (status) {
             case LaboratoryTaskStatus.Testing:
-              return "Không thể chỉnh sửa khi đang thí nghiệm";
+              return "Không thể chỉnh sửa khi đang thử nghiệm";
             case LaboratoryTaskStatus.PendingApproval:
               return "Không thể chỉnh sửa khi đang chờ duyệt";
             case LaboratoryTaskStatus.Approved:
               return "Không thể chỉnh sửa khi đã duyệt";
-            case LaboratoryTaskStatus.ResultSent:
-              return "Không thể chỉnh sửa khi đã gửi kết quả";
+            case LaboratoryTaskStatus.SentToQuality:
+              return "Không thể chỉnh sửa khi đã gửi QLCL";
             default:
               return "";
           }
@@ -340,16 +357,24 @@ const TaskManagementList: React.FC = () => {
     },
   ];
 
-  // Helper to check if task is urgent (<=5 days remaining and not done)
+  // Helper to check if task is urgent (< 5 days remaining and not done)
   const isTaskUrgent = (record: LaboratoryTaskDto) => {
     if (!record.requestCompletionDate) return false;
     if (
       record.status === LaboratoryTaskStatus.Approved ||
-      record.status === LaboratoryTaskStatus.ResultSent
+      record.status === LaboratoryTaskStatus.SentToQuality
     )
       return false;
     const daysRemaining = dayjs(record.requestCompletionDate).diff(dayjs(), "day");
-    return daysRemaining <= 5;
+    return daysRemaining < 5;
+  };
+
+  // Helper to check if task has been waiting too long (>= 2 days since transfer and still NotAssigned)
+  const isTaskDelayed = (record: LaboratoryTaskDto) => {
+    if (!record.transferDate) return false;
+    if (record.status !== LaboratoryTaskStatus.NotAssigned) return false;
+    const daysSinceTransfer = dayjs().diff(dayjs(record.transferDate), "day");
+    return daysSinceTransfer >= 2;
   };
 
   const renderTable = (data: LaboratoryTaskDto[]) => (
@@ -373,7 +398,11 @@ const TaskManagementList: React.FC = () => {
         onDoubleClick: () => navigate(PATH_ROUTES.tasks.detail(record.id)),
         style: { cursor: "pointer" },
       })}
-      rowClassName={(record) => (isTaskUrgent(record) ? "urgent-row" : "")}
+      rowClassName={(record) => {
+        if (isTaskUrgent(record)) return "urgent-row";
+        if (isTaskDelayed(record)) return "delayed-row";
+        return "";
+      }}
     />
   );
 
@@ -393,7 +422,7 @@ const TaskManagementList: React.FC = () => {
         <Col xs={12} sm={8} md={4}>
           <Card size="small">
             <Statistic
-              title="Chưa gán PP"
+              title="Chưa giao việc"
               value={stats.notAssigned}
               valueStyle={{ color: "#8c8c8c" }}
             />
@@ -402,7 +431,7 @@ const TaskManagementList: React.FC = () => {
         <Col xs={12} sm={8} md={4}>
           <Card size="small">
             <Statistic
-              title="Đã gán PP"
+              title="Đã giao việc"
               value={stats.assigned}
               valueStyle={{ color: "#1890ff" }}
             />
@@ -438,8 +467,8 @@ const TaskManagementList: React.FC = () => {
         <Col xs={12} sm={8} md={4}>
           <Card size="small">
             <Statistic
-              title="Đã gửi KQ"
-              value={stats.resultSent}
+              title="Đã gửi QLCL"
+              value={stats.sentToQuality}
               valueStyle={{ color: "#722ed1" }}
             />
           </Card>
@@ -481,17 +510,17 @@ const TaskManagementList: React.FC = () => {
             >
               <Select.Option value="all">Tất cả trạng thái</Select.Option>
               <Select.Option
-                value={String(LaboratoryTaskStatus.NotAssignedTechnician)}
+                value={String(LaboratoryTaskStatus.NotAssigned)}
               >
-                Chưa gán KTV
+                Chưa giao việc
               </Select.Option>
               <Select.Option
-                value={String(LaboratoryTaskStatus.AssignedTechnician)}
+                value={String(LaboratoryTaskStatus.Assigned)}
               >
-                Đã gán KTV
+                Đã giao việc
               </Select.Option>
               <Select.Option value={String(LaboratoryTaskStatus.Testing)}>
-                Đang thí nghiệm
+                Đang thử nghiệm
               </Select.Option>
               <Select.Option
                 value={String(LaboratoryTaskStatus.PendingApproval)}
@@ -501,8 +530,8 @@ const TaskManagementList: React.FC = () => {
               <Select.Option value={String(LaboratoryTaskStatus.Approved)}>
                 Đã duyệt
               </Select.Option>
-              <Select.Option value={String(LaboratoryTaskStatus.ResultSent)}>
-                Đã gửi kết quả
+              <Select.Option value={String(LaboratoryTaskStatus.SentToQuality)}>
+                Đã gửi QLCL
               </Select.Option>
             </Select>
           </Col>
@@ -612,6 +641,12 @@ const TaskManagementList: React.FC = () => {
         }
         .urgent-row:hover > td {
           background-color: #ffebe8 !important;
+        }
+        .delayed-row > td {
+          background-color: #fff7e6 !important;
+        }
+        .delayed-row:hover > td {
+          background-color: #ffe7ba !important;
         }
       `}</style>
     </div>

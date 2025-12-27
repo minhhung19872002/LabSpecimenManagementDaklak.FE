@@ -7,9 +7,13 @@ import {
   PagedLaboratoryTaskResult,
   ListLaboratoryTaskResult,
   LaboratoryTaskIndicatorDto,
+  LaboratoryTaskSupporterDto,
   AssignIndicatorInput,
   UpdateIndicatorResultInput,
   ApproveIndicatorInput,
+  ManageSupportersInput,
+  BulkApproveIndicatorsInput,
+  SendToQualityInput,
   MethodLookupDto,
   UserLookupDto
 } from '../types/laboratoryTask';
@@ -145,7 +149,7 @@ export const laboratoryTaskService = {
   },
 
   /**
-   * Gửi kết quả (chuyển status sang ResultSent)
+   * Gửi kết quả (chuyển status sang SentToQuality) - old method, sends all approved indicators
    */
   sendResults: async (taskId: string): Promise<LaboratoryTaskDto> => {
     const response = await api.post<LaboratoryTaskDto>(
@@ -176,6 +180,86 @@ export const laboratoryTaskService = {
       { params }
     );
     return response.data;
+  },
+
+  // ============= Supporter Management =============
+
+  /**
+   * Get supporters for a task
+   */
+  getSupporters: async (taskId: string): Promise<LaboratoryTaskSupporterDto[]> => {
+    const response = await api.get<LaboratoryTaskSupporterDto[]>(
+      `${BASE_URL}/${taskId}/supporters`
+    );
+    return response.data;
+  },
+
+  /**
+   * Add supporters to a task
+   */
+  addSupporters: async (taskId: string, input: ManageSupportersInput): Promise<LaboratoryTaskSupporterDto[]> => {
+    const response = await api.post<LaboratoryTaskSupporterDto[]>(
+      `${BASE_URL}/${taskId}/supporters`,
+      input
+    );
+    return response.data;
+  },
+
+  /**
+   * Remove a supporter from a task
+   */
+  removeSupporter: async (taskId: string, supporterId: string): Promise<void> => {
+    await api.delete(`${BASE_URL}/${taskId}/supporters/${supporterId}`);
+  },
+
+  /**
+   * Get available users to add as supporters
+   */
+  getAvailableSupporters: async (taskId: string): Promise<UserLookupDto[]> => {
+    const response = await api.get<UserLookupDto[]>(
+      `${BASE_URL}/${taskId}/available-supporters`
+    );
+    return response.data;
+  },
+
+  // ============= Bulk Approval =============
+
+  /**
+   * Bulk approve/reject indicators
+   */
+  bulkApproveIndicators: async (taskId: string, input: BulkApproveIndicatorsInput): Promise<LaboratoryTaskIndicatorDto[]> => {
+    const response = await api.post<LaboratoryTaskIndicatorDto[]>(
+      `${BASE_URL}/${taskId}/bulk-approve`,
+      input
+    );
+    return response.data;
+  },
+
+  // ============= Send to Quality Management =============
+
+  /**
+   * Send selected indicators to Quality Management
+   */
+  sendToQuality: async (taskId: string, input: SendToQualityInput): Promise<LaboratoryTaskDto> => {
+    const response = await api.post<LaboratoryTaskDto>(
+      `${BASE_URL}/${taskId}/send-to-quality`,
+      input
+    );
+    return response.data;
+  },
+
+  /**
+   * Get list of Quality Managers
+   */
+  getQualityManagers: async (): Promise<UserLookupDto[]> => {
+    const response = await api.get<UserLookupDto[] | { items: UserLookupDto[] }>(
+      `${BASE_URL}/quality-managers`
+    );
+    // Handle both array response and { items: [] } response
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+    return response.data?.items || [];
   }
 };
 

@@ -1,12 +1,11 @@
 // Laboratory Task Status Enum
 export enum LaboratoryTaskStatus {
-  NotAssignedTechnician = 0,   // Chưa gán KTV (Phương pháp đã có từ phiếu yêu cầu)
-  AssignedTechnician = 1,      // Đã gán KTV
-  Testing = 2,                 // Đang thí nghiệm
-  PendingApproval = 3,         // Chờ duyệt kết quả
-  Approved = 4,                // Đã duyệt
-  ResultSent = 5,              // Đã gửi kết quả
-  ResultRejected = 6           // QLCL từ chối KQ
+  NotAssigned = 0,       // Chưa giao việc (chưa gán KTV hoặc phương pháp)
+  Assigned = 1,          // Đã giao việc (tất cả chỉ tiêu đã có KTV + phương pháp)
+  Testing = 2,           // Đang thử nghiệm
+  PendingApproval = 3,   // Chờ duyệt kết quả
+  Approved = 4,          // Đã duyệt
+  SentToQuality = 5      // Đã gửi QL Chất lượng
 }
 
 // Indicator Approval Status Enum (Phase 6)
@@ -20,23 +19,21 @@ export enum IndicatorApprovalStatus {
 
 // Status display helper
 export const LaboratoryTaskStatusLabels: Record<LaboratoryTaskStatus, string> = {
-  [LaboratoryTaskStatus.NotAssignedTechnician]: 'Chưa gán KTV',
-  [LaboratoryTaskStatus.AssignedTechnician]: 'Đã gán KTV',
-  [LaboratoryTaskStatus.Testing]: 'Đang thí nghiệm',
+  [LaboratoryTaskStatus.NotAssigned]: 'Chưa giao việc',
+  [LaboratoryTaskStatus.Assigned]: 'Đã giao việc',
+  [LaboratoryTaskStatus.Testing]: 'Đang thử nghiệm',
   [LaboratoryTaskStatus.PendingApproval]: 'Chờ duyệt kết quả',
   [LaboratoryTaskStatus.Approved]: 'Đã duyệt',
-  [LaboratoryTaskStatus.ResultSent]: 'Đã gửi kết quả',
-  [LaboratoryTaskStatus.ResultRejected]: 'QLCL từ chối'
+  [LaboratoryTaskStatus.SentToQuality]: 'Đã gửi QLCL'
 };
 
 export const LaboratoryTaskStatusColors: Record<LaboratoryTaskStatus, string> = {
-  [LaboratoryTaskStatus.NotAssignedTechnician]: 'default',
-  [LaboratoryTaskStatus.AssignedTechnician]: 'blue',
+  [LaboratoryTaskStatus.NotAssigned]: 'default',
+  [LaboratoryTaskStatus.Assigned]: 'blue',
   [LaboratoryTaskStatus.Testing]: 'processing',
   [LaboratoryTaskStatus.PendingApproval]: 'warning',
   [LaboratoryTaskStatus.Approved]: 'success',
-  [LaboratoryTaskStatus.ResultSent]: 'purple',
-  [LaboratoryTaskStatus.ResultRejected]: 'error'
+  [LaboratoryTaskStatus.SentToQuality]: 'purple'
 };
 
 // Indicator Approval Status display helper (Phase 6)
@@ -106,7 +103,10 @@ export interface LaboratoryTaskDto {
   // Navigation properties
   testRequestNumber?: string;
   laboratoryName?: string;
+  laboratoryCode?: string;
+  customerName?: string;
   indicators?: LaboratoryTaskIndicatorDto[];
+  supporters?: LaboratoryTaskSupporterDto[];
 
   // Audit fields
   creationTime?: string;
@@ -200,22 +200,24 @@ export interface ListUserLookupResult {
 
 // ============= Sample Status (Computed) =============
 
-export type SampleStatus = 'pending' | 'assigned' | 'testing' | 'pendingApproval' | 'approved';
+export type SampleStatus = 'notStarted' | 'assigned' | 'testing' | 'pendingApproval' | 'approved' | 'rejected';
 
 export const SampleStatusLabels: Record<SampleStatus, string> = {
-  pending: 'Chưa gán KTV',
-  assigned: 'Đã gán KTV',
-  testing: 'Đang TN',
-  pendingApproval: 'Chờ duyệt',
-  approved: 'Đã duyệt'
+  notStarted: 'Chưa thực hiện',
+  assigned: 'Chưa thực hiện',  // Internal status, displayed same as notStarted
+  testing: 'Đang thử nghiệm',
+  pendingApproval: 'Chờ phê duyệt',
+  approved: 'Đã duyệt',
+  rejected: 'Từ chối'
 };
 
 export const SampleStatusColors: Record<SampleStatus, string> = {
-  pending: 'default',
-  assigned: 'blue',
+  notStarted: 'default',
+  assigned: 'default',  // Same color as notStarted
   testing: 'processing',
   pendingApproval: 'warning',
-  approved: 'success'
+  approved: 'success',
+  rejected: 'error'
 };
 
 // Sample info (computed from indicators)
@@ -228,3 +230,54 @@ export interface SampleInfo {
   sampleStatus: SampleStatus;
   isApproved: boolean;
 }
+
+// ============= Supporter DTOs =============
+
+export interface LaboratoryTaskSupporterDto {
+  id: string;
+  laboratoryTaskId: string;
+  userId: string;
+  userName?: string;
+  fullName?: string;
+  email?: string;
+  creationTime: string;
+}
+
+export interface ManageSupportersInput {
+  userIds: string[];
+}
+
+// ============= Bulk Approval DTOs =============
+
+export interface BulkApproveIndicatorsInput {
+  indicatorIds: string[];
+  approve: boolean;
+  rejectionReason?: string;
+}
+
+// ============= Send to Quality DTOs =============
+
+export interface SendToQualityInput {
+  indicatorIds: string[];
+  qualityManagerId: string;
+}
+
+// ============= Sample Status (Computed for Display) =============
+
+export type SampleTestingStatus = 'notStarted' | 'testing' | 'pendingApproval' | 'approved' | 'rejected';
+
+export const SampleTestingStatusLabels: Record<SampleTestingStatus, string> = {
+  notStarted: 'Chưa thực hiện',
+  testing: 'Đang TN',
+  pendingApproval: 'Chờ phê duyệt',
+  approved: 'Đã duyệt',
+  rejected: 'Từ chối'
+};
+
+export const SampleTestingStatusColors: Record<SampleTestingStatus, string> = {
+  notStarted: 'default',
+  testing: 'processing',
+  pendingApproval: 'warning',
+  approved: 'success',
+  rejected: 'error'
+};

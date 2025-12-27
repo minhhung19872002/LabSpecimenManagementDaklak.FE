@@ -14,14 +14,20 @@ import {
   Spin,
   Modal,
   Alert,
+  Form,
+  Input,
 } from "antd";
 import {
   ArrowLeftOutlined,
   SendOutlined,
   CaretRightOutlined,
+  TeamOutlined,
+  CheckOutlined,
+  CloseOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { laboratoryTaskService } from "../../services/laboratoryTaskService";
+import { testingService } from "../../services/testingService";
 import {
   LaboratoryTaskDto,
   LaboratoryTaskStatus,
@@ -37,7 +43,14 @@ import {
   SampleStatusColors,
   AssignIndicatorInput,
 } from "../../types/laboratoryTask";
+import {
+  SampleTestingImageDto,
+  SampleTestingImageType,
+} from "../../types/testing";
 import IndicatorTable from "./components/IndicatorTable";
+import SupporterModal from "./components/SupporterModal";
+import SampleImagesDisplay from "./components/SampleImagesDisplay";
+import SendToQualityModal from "./components/SendToQualityModal";
 import { PATH_ROUTES } from "../../constants";
 
 const { Title, Text } = Typography;
@@ -73,6 +86,35 @@ const TaskManagementDetail: React.FC = () => {
   const [indicatorChanges, setIndicatorChanges] = useState<
     Record<string, Partial<LaboratoryTaskIndicatorDto>>
   >({});
+
+  // Supporter modal state
+  const [supporterModalOpen, setSupporterModalOpen] = useState(false);
+
+  // Bulk selection state - per sample
+  const [selectedIndicators, setSelectedIndicators] = useState<
+    Record<string, string[]>
+  >({});
+
+  // Bulk reject modal state
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectingSampleId, setRejectingSampleId] = useState<string | null>(
+    null
+  );
+  const [rejectForm] = Form.useForm();
+
+  // Sample images state
+  const [sampleImages, setSampleImages] = useState<
+    Record<
+      string,
+      {
+        beforeTesting: SampleTestingImageDto[];
+        afterTesting: SampleTestingImageDto[];
+      }
+    >
+  >({});
+
+  // Send to quality modal state
+  const [sendToQualityModalOpen, setSendToQualityModalOpen] = useState(false);
 
   // Load task data
   const loadTask = useCallback(async () => {
@@ -113,62 +155,99 @@ const TaskManagementDetail: React.FC = () => {
 
   // Get sample list for collapse panels với computed status
   const sampleList = useMemo<SampleInfo[]>(() => {
-    const samples = Object.entries(indicatorsBySample).map(([sampleId, indicators]) => {
-      // Merge local changes with server data for display
-      const mergedIndicators = indicators.map((ind) => ({
-        ...ind,
-        ...indicatorChanges[ind.id],
-      }));
+    const samples = Object.entries(indicatorsBySample).map(
+      ([sampleId, indicators]) => {
+        // Merge local changes with server data for display
+        const mergedIndicators = indicators.map((ind) => ({
+          ...ind,
+          ...indicatorChanges[ind.id],
+        }));
 
-      // Filter out CustomerCancelled indicators for status calculation
-      const activeIndicators = indicators.filter(
-        (i) => i.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled
-      );
+        // Filter out CustomerCancelled indicators for status calculation
+        const activeIndicators = indicators.filter(
+          (i) => i.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled
+        );
 
-      // Compute sample status từ SERVER DATA (không dùng local changes)
-      // Để button "Giao việc" chỉ ẩn khi đã lưu xuống DB
-      const allApproved = activeIndicators.length > 0 && activeIndicators.every(
-        (i) => i.approvalStatus === IndicatorApprovalStatus.Approved
-      );
-      const allEntered = activeIndicators.length > 0 && activeIndicators.every(
-        (i) => i.approvalStatus >= IndicatorApprovalStatus.Entered
-      );
-      // Chỉ check server data cho allAssigned
-      const allAssigned = activeIndicators.length > 0 && activeIndicators.every((i) => i.methodId && i.technicianId);
-      const hasAnyResult = activeIndicators.some((i) => i.result);
+        // Compute sample status từ SERVER DATA
+        // Logic:
+        // - Chưa giao việc (notStarted): Chưa có methodId hoặc technicianId
+        // - Đã giao việc (assigned): Tất cả indicators đều có methodId + technicianId, nhưng chưa có testDate
+        // - Đang thử nghiệm (testing): Có ít nhất 1 indicator có testDate (KTV đã check-in)
+        // - Chờ phê duyệt (pendingApproval): Có ít nhất 1 indicator status = Entered
+        // - Đã duyệt (approved): Tất cả indicators đã được duyệt
+        // - Từ chối (rejected): Có indicator bị từ chối và KTV chưa thực hiện lại
 
-      let sampleStatus: SampleStatus;
-      if (allApproved) {
-        sampleStatus = "approved";
-      } else if (allEntered) {
-        sampleStatus = "pendingApproval";
-      } else if (hasAnyResult) {
-        sampleStatus = "testing";
-      } else if (allAssigned) {
-        sampleStatus = "assigned";
-      } else {
-        sampleStatus = "pending";
+        const allApproved =
+          activeIndicators.length > 0 &&
+          activeIndicators.every(
+            (i) => i.approvalStatus === IndicatorApprovalStatus.Approved
+          );
+
+        // Kiểm tra đã giao việc chưa: tất cả indicators đều có methodId và technicianId
+        const allAssigned =
+          activeIndicators.length > 0 &&
+          activeIndicators.every((i) => i.methodId && i.technicianId);
+
+        // Có indicator đang thử nghiệm: có testDate (KTV đã check-in)
+        const hasTesting = activeIndicators.some(
+          (i) =>
+            i.testDate && i.approvalStatus === IndicatorApprovalStatus.Pending
+        );
+
+        // Có indicator chờ phê duyệt (Entered)
+        const hasEntered = activeIndicators.some(
+          (i) => i.approvalStatus === IndicatorApprovalStatus.Entered
+        );
+
+        // Có indicator bị từ chối
+        const hasRejected = activeIndicators.some(
+          (i) => i.approvalStatus === IndicatorApprovalStatus.Rejected
+        );
+
+        let sampleStatus: SampleStatus;
+        if (allApproved) {
+          // Tất cả chỉ tiêu đã được duyệt
+          sampleStatus = "approved";
+        } else if (hasRejected && !hasTesting) {
+          // Có chỉ tiêu bị từ chối và KTV chưa check-in lại
+          sampleStatus = "rejected";
+        } else if (hasEntered) {
+          // Có ít nhất 1 chỉ tiêu chờ phê duyệt
+          sampleStatus = "pendingApproval";
+        } else if (hasTesting) {
+          // Có ít nhất 1 chỉ tiêu đang thử nghiệm (KTV đã check-in)
+          sampleStatus = "testing";
+        } else if (allAssigned) {
+          // Tất cả đã được giao việc nhưng KTV chưa check-in
+          sampleStatus = "assigned";
+        } else {
+          // Chưa giao việc (chưa có methodId hoặc technicianId)
+          sampleStatus = "notStarted";
+        }
+
+        return {
+          sampleId,
+          sampleCode: indicators[0]?.sampleCode,
+          sampleName: indicators[0]?.sampleName,
+          indicatorCount: indicators.length,
+          indicators: mergedIndicators as LaboratoryTaskIndicatorDto[],
+          sampleStatus,
+          isApproved: allApproved,
+        };
       }
-
-      return {
-        sampleId,
-        sampleCode: indicators[0]?.sampleCode,
-        sampleName: indicators[0]?.sampleName,
-        indicatorCount: indicators.length,
-        indicators: mergedIndicators as LaboratoryTaskIndicatorDto[],
-        sampleStatus,
-        isApproved: allApproved,
-      };
-    });
+    );
 
     // Sort theo sampleId để cố định vị trí
     return samples.sort((a, b) => a.sampleId.localeCompare(b.sampleId));
   }, [indicatorsBySample, indicatorChanges]);
 
-  // Check if ALL samples are approved → enable "Gửi kết quả"
-  const allSamplesApproved = useMemo(() => {
-    return sampleList.length > 0 && sampleList.every((s) => s.isApproved);
-  }, [sampleList]);
+  // Check if there are any approved indicators to send
+  const hasApprovedIndicators = useMemo(() => {
+    if (!task?.indicators) return false;
+    return task.indicators.some(
+      (ind) => ind.approvalStatus === IndicatorApprovalStatus.Approved
+    );
+  }, [task]);
 
   // Default expand all samples on load
   useEffect(() => {
@@ -269,33 +348,153 @@ const TaskManagementDetail: React.FC = () => {
     }
   };
 
-  const handleSendResults = async () => {
+  const handleSendResults = () => {
+    if (!task) return;
+    setSendToQualityModalOpen(true);
+  };
+
+  // Handle selection change for bulk operations
+  const handleSelectionChange = (sampleId: string, ids: string[]) => {
+    setSelectedIndicators((prev) => ({
+      ...prev,
+      [sampleId]: ids,
+    }));
+  };
+
+  // Handle bulk approve
+  const handleBulkApprove = async (sampleId: string) => {
     if (!task) return;
 
-    Modal.confirm({
-      title: "Xác nhận gửi kết quả",
-      content:
-        "Bạn có chắc chắn muốn gửi kết quả? Sau khi gửi sẽ không thể chỉnh sửa.",
-      okText: "Gửi kết quả",
-      cancelText: "Hủy",
-      centered: true,
-      onOk: async () => {
-        setActionLoading(true);
-        try {
-          await laboratoryTaskService.sendResults(task.id);
-          message.success("Đã gửi kết quả thành công");
-          await loadTask();
-        } catch (error: any) {
-          console.error("Failed to send results:", error);
-          message.error(
-            error.response?.data?.error?.message || "Không thể gửi kết quả"
-          );
-        } finally {
-          setActionLoading(false);
-        }
-      },
+    const ids = selectedIndicators[sampleId] || [];
+    if (ids.length === 0) {
+      message.warning("Vui lòng chọn ít nhất một chỉ tiêu");
+      return;
+    }
+
+    // Filter only indicators with Entered status (Chờ phê duyệt)
+    const sample = sampleList.find((s) => s.sampleId === sampleId);
+    const validIds = ids.filter((id) => {
+      const ind = sample?.indicators.find((i) => i.id === id);
+      return ind?.approvalStatus === IndicatorApprovalStatus.Entered;
     });
+
+    if (validIds.length === 0) {
+      message.warning(
+        "Không có chỉ tiêu nào đủ điều kiện duyệt (Chờ phê duyệt)"
+      );
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      await laboratoryTaskService.bulkApproveIndicators(task.id, {
+        indicatorIds: validIds,
+        approve: true,
+      });
+      message.success(`Đã duyệt ${validIds.length} chỉ tiêu`);
+      setSelectedIndicators((prev) => ({ ...prev, [sampleId]: [] }));
+      await loadTask();
+    } catch (error: any) {
+      console.error("Failed to bulk approve:", error);
+      message.error(
+        error.response?.data?.error?.message || "Không thể duyệt chỉ tiêu"
+      );
+    } finally {
+      setActionLoading(false);
+    }
   };
+
+  // Open reject modal
+  const openRejectModal = (sampleId: string) => {
+    const ids = selectedIndicators[sampleId] || [];
+    if (ids.length === 0) {
+      message.warning("Vui lòng chọn ít nhất một chỉ tiêu");
+      return;
+    }
+    setRejectingSampleId(sampleId);
+    setRejectModalOpen(true);
+  };
+
+  // Handle bulk reject
+  const handleBulkReject = async () => {
+    if (!task || !rejectingSampleId) return;
+
+    try {
+      const values = await rejectForm.validateFields();
+      const ids = selectedIndicators[rejectingSampleId] || [];
+
+      // Filter only indicators with Entered or Rejected status
+      const sample = sampleList.find((s) => s.sampleId === rejectingSampleId);
+      const validIds = ids.filter((id) => {
+        const ind = sample?.indicators.find((i) => i.id === id);
+        return (
+          ind?.approvalStatus === IndicatorApprovalStatus.Entered ||
+          ind?.approvalStatus === IndicatorApprovalStatus.Rejected
+        );
+      });
+
+      if (validIds.length === 0) {
+        message.warning("Không có chỉ tiêu nào đủ điều kiện từ chối");
+        return;
+      }
+
+      setActionLoading(true);
+      await laboratoryTaskService.bulkApproveIndicators(task.id, {
+        indicatorIds: validIds,
+        approve: false,
+        rejectionReason: values.reason,
+      });
+      message.success(`Đã từ chối ${validIds.length} chỉ tiêu`);
+      setSelectedIndicators((prev) => ({ ...prev, [rejectingSampleId]: [] }));
+      setRejectModalOpen(false);
+      setRejectingSampleId(null);
+      rejectForm.resetFields();
+      await loadTask();
+    } catch (error: any) {
+      if (error.errorFields) {
+        // Form validation error
+        return;
+      }
+      console.error("Failed to bulk reject:", error);
+      message.error(
+        error.response?.data?.error?.message || "Không thể từ chối chỉ tiêu"
+      );
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Load sample images
+  useEffect(() => {
+    const loadSampleImages = async () => {
+      if (!task || !id) return;
+
+      const sampleIds = Object.keys(indicatorsBySample);
+      for (const sampleId of sampleIds) {
+        try {
+          const images = await testingService.getSampleTestingImages(
+            id,
+            sampleId
+          );
+          setSampleImages((prev) => ({
+            ...prev,
+            [sampleId]: {
+              beforeTesting: images.filter(
+                (i) => i.imageType === SampleTestingImageType.BeforeTesting
+              ),
+              afterTesting: images.filter(
+                (i) => i.imageType === SampleTestingImageType.AfterTesting
+              ),
+            },
+          }));
+        } catch (error) {
+          console.error(`Failed to load images for sample ${sampleId}:`, error);
+        }
+      }
+    };
+
+    loadSampleImages();
+  }, [task, id, indicatorsBySample]);
 
   // Get status tag
   const getStatusTag = (status: LaboratoryTaskStatus) => {
@@ -306,64 +505,141 @@ const TaskManagementDetail: React.FC = () => {
     );
   };
 
-  // Get sample status tag
+  // Get sample status tag for display
+  // Note: 'assigned' is displayed as 'notStarted' (Chưa thực hiện) per customer requirement
+  // Customer only wants 5 statuses: Chưa thực hiện, Đang thử nghiệm, Chờ phê duyệt, Đã duyệt, Từ chối
   const getSampleStatusTag = (status: SampleStatus) => {
+    const displayStatus = status === "assigned" ? "notStarted" : status;
     return (
-      <Tag color={SampleStatusColors[status]}>{SampleStatusLabels[status]}</Tag>
+      <Tag color={SampleStatusColors[displayStatus]}>
+        {SampleStatusLabels[displayStatus]}
+      </Tag>
     );
   };
 
   // Kiểm tra có thể chỉnh sửa task không
-  // Cho phép khi: Chưa gán KTV, Đã gán KTV, hoặc QLCL từ chối (cần xem xét lại)
+  // Cho phép khi: Chưa giao việc hoặc Đã giao việc
   const canEditTask =
-    task?.status === LaboratoryTaskStatus.NotAssignedTechnician ||
-    task?.status === LaboratoryTaskStatus.AssignedTechnician ||
-    task?.status === LaboratoryTaskStatus.ResultRejected;
+    task?.status === LaboratoryTaskStatus.NotAssigned ||
+    task?.status === LaboratoryTaskStatus.Assigned;
+
+  // Check if sample has selected indicators for bulk actions
+  const getSampleSelectedCount = (sampleId: string) => {
+    return (selectedIndicators[sampleId] || []).length;
+  };
 
   // Generate Collapse items
-  const collapseItems = sampleList.map((sample) => ({
-    key: sample.sampleId,
-    label: (
-      <Row justify="space-between" align="middle" style={{ width: "100%" }}>
-        <Col>
-          <Space>
-            <Tag color="blue">{sample.sampleCode}</Tag>
-            <Text strong>{sample.sampleName}</Text>
-            <Text type="secondary">({sample.indicatorCount} chỉ tiêu)</Text>
-            {getSampleStatusTag(sample.sampleStatus)}
-          </Space>
-        </Col>
-        <Col>
-          {canEditTask && !sample.isApproved && (
-            <Button
-              type="primary"
-              size="small"
-              loading={actionLoading}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleAssignSample(sample.sampleId);
-              }}
-            >
-              {sample.sampleStatus === "pending" ? "Giao việc" : "Giao việc lại"}
-            </Button>
+  const collapseItems = sampleList.map((sample) => {
+    const selectedCount = getSampleSelectedCount(sample.sampleId);
+    const sampleImagesData = sampleImages[sample.sampleId];
+
+    return {
+      key: sample.sampleId,
+      label: (
+        <Row justify="space-between" align="middle" style={{ width: "100%" }}>
+          <Col>
+            <Space>
+              <Tag color="blue">{sample.sampleCode}</Tag>
+              <Text strong>{sample.sampleName}</Text>
+              <Text type="secondary">({sample.indicatorCount} chỉ tiêu)</Text>
+              {getSampleStatusTag(sample.sampleStatus)}
+            </Space>
+          </Col>
+          <Col>
+            <Space>
+              {/* Bulk approve/reject buttons - only show when pendingApproval (có indicator chờ phê duyệt) */}
+              {sample.sampleStatus === "pendingApproval" && (
+                <>
+                  <Button
+                    danger
+                    size="small"
+                    icon={<CloseOutlined />}
+                    loading={actionLoading}
+                    disabled={selectedCount === 0}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openRejectModal(sample.sampleId);
+                    }}
+                  >
+                    Từ chối{selectedCount > 0 ? ` (${selectedCount})` : ""}
+                  </Button>
+                  <Button
+                    type="primary"
+                    size="small"
+                    icon={<CheckOutlined />}
+                    loading={actionLoading}
+                    disabled={selectedCount === 0}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleBulkApprove(sample.sampleId);
+                    }}
+                  >
+                    Duyệt{selectedCount > 0 ? ` (${selectedCount})` : ""}
+                  </Button>
+                </>
+              )}
+              {/* Assign button - only show when notStarted */}
+              {canEditTask && sample.sampleStatus === "notStarted" && (
+                <Button
+                  type="primary"
+                  size="small"
+                  loading={actionLoading}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAssignSample(sample.sampleId);
+                  }}
+                >
+                  Giao việc
+                </Button>
+              )}
+              {/* Re-assign button - show when assigned but not approved */}
+              {canEditTask &&
+                sample.sampleStatus !== "notStarted" &&
+                !sample.isApproved && (
+                  <Button
+                    size="small"
+                    loading={actionLoading}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAssignSample(sample.sampleId);
+                    }}
+                  >
+                    Giao việc lại
+                  </Button>
+                )}
+            </Space>
+          </Col>
+        </Row>
+      ),
+      children: (
+        <>
+          {/* Sample Images Display */}
+          {sampleImagesData && (
+            <SampleImagesDisplay
+              beforeTestingImages={sampleImagesData.beforeTesting}
+              afterTestingImages={sampleImagesData.afterTesting}
+            />
           )}
-        </Col>
-      </Row>
-    ),
-    children: (
-      <IndicatorTable
-        indicators={sample.indicators}
-        methods={methods}
-        technicians={technicians}
-        isAssigned={sample.sampleStatus !== "pending"}
-        canEdit={canEditTask}
-        onMethodChange={handleMethodChange}
-        onTechnicianChange={handleTechnicianChange}
-        onApprove={handleApprove}
-        loading={actionLoading}
-      />
-    ),
-  }));
+          <IndicatorTable
+            indicators={sample.indicators}
+            methods={methods}
+            technicians={technicians}
+            isAssigned={sample.sampleStatus !== "notStarted"}
+            canEdit={canEditTask}
+            onMethodChange={handleMethodChange}
+            onTechnicianChange={handleTechnicianChange}
+            onApprove={handleApprove}
+            loading={actionLoading}
+            showCheckbox={true}
+            selectedIndicatorIds={selectedIndicators[sample.sampleId] || []}
+            onSelectionChange={(ids) =>
+              handleSelectionChange(sample.sampleId, ids)
+            }
+          />
+        </>
+      ),
+    };
+  });
 
   if (loading) {
     return (
@@ -406,19 +682,32 @@ const TaskManagementDetail: React.FC = () => {
             </Space>
           </Col>
           <Col>
-            <Button
-              type="primary"
-              icon={<SendOutlined />}
-              disabled={
-                !allSamplesApproved ||
-                task.status === LaboratoryTaskStatus.ResultSent ||
-                task.status === LaboratoryTaskStatus.ResultRejected
-              }
-              loading={actionLoading}
-              onClick={handleSendResults}
-            >
-              Gửi kết quả
-            </Button>
+            <Space>
+              {/* Button "Thêm người hỗ trợ" */}
+              <Button
+                icon={<TeamOutlined />}
+                onClick={() => setSupporterModalOpen(true)}
+              >
+                Thêm người hỗ trợ
+                {task.supporters && task.supporters.length > 0 && (
+                  <span style={{ marginLeft: 4 }}>
+                    ({task.supporters.length})
+                  </span>
+                )}
+              </Button>
+              <Button
+                type="primary"
+                icon={<SendOutlined />}
+                disabled={
+                  !hasApprovedIndicators ||
+                  task.status === LaboratoryTaskStatus.SentToQuality
+                }
+                loading={actionLoading}
+                onClick={handleSendResults}
+              >
+                Gửi kết quả
+              </Button>
+            </Space>
           </Col>
         </Row>
         <div style={{ marginTop: 12 }}>
@@ -438,7 +727,7 @@ const TaskManagementDetail: React.FC = () => {
         <div style={{ marginTop: 8 }}>
           <Space split={<Divider type="vertical" />}>
             <Text type="secondary">
-              Ngày chuyển:{" "}
+              Ngày gửi KP:{" "}
               {task.transferDate
                 ? dayjs(task.transferDate).format("DD/MM/YYYY")
                 : "-"}
@@ -459,21 +748,22 @@ const TaskManagementDetail: React.FC = () => {
         </div>
       </Card>
 
-      {/* Alert khi QLCL từ chối kết quả */}
-      {task.status === LaboratoryTaskStatus.ResultRejected && (
+      {/* Alert khi có lý do từ chối từ QLCL */}
+      {task.resultRejectionReason && (
         <Alert
           message="Kết quả bị từ chối"
           description={
             <>
-              <div>Quản lý Chất lượng đã từ chối kết quả và trả lại cho Quản lý Kỹ thuật xem xét.</div>
-              {task.resultRejectionReason && (
-                <div style={{ marginTop: 8 }}>
-                  <strong>Lý do:</strong> {task.resultRejectionReason}
-                </div>
-              )}
+              <div>
+                Quản lý Chất lượng đã từ chối kết quả. Vui lòng xem xét và gửi
+                lại.
+              </div>
+              <div style={{ marginTop: 8 }}>
+                <strong>Lý do:</strong> {task.resultRejectionReason}
+              </div>
             </>
           }
-          type="error"
+          type="warning"
           showIcon
           style={{ marginBottom: 16 }}
         />
@@ -490,6 +780,54 @@ const TaskManagementDetail: React.FC = () => {
           items={collapseItems}
         />
       </Card>
+
+      {/* Supporter Modal */}
+      <SupporterModal
+        open={supporterModalOpen}
+        onClose={() => setSupporterModalOpen(false)}
+        taskId={task.id}
+        currentSupporters={task.supporters || []}
+        onSuccess={loadTask}
+      />
+
+      {/* Bulk Reject Modal */}
+      <Modal
+        title="Lý do từ chối"
+        open={rejectModalOpen}
+        onOk={handleBulkReject}
+        onCancel={() => {
+          setRejectModalOpen(false);
+          setRejectingSampleId(null);
+          rejectForm.resetFields();
+        }}
+        okText="Xác nhận từ chối"
+        cancelText="Hủy"
+        okButtonProps={{ danger: true, loading: actionLoading }}
+        width={500}
+        centered
+      >
+        <Form form={rejectForm} layout="vertical">
+          <Form.Item
+            name="reason"
+            label="Lý do từ chối"
+            rules={[{ required: true, message: "Vui lòng nhập lý do từ chối" }]}
+          >
+            <Input.TextArea
+              rows={3}
+              placeholder="Nhập lý do từ chối kết quả..."
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Send to Quality Modal */}
+      <SendToQualityModal
+        open={sendToQualityModalOpen}
+        onClose={() => setSendToQualityModalOpen(false)}
+        taskId={task.id}
+        indicators={task.indicators || []}
+        onSuccess={loadTask}
+      />
     </div>
   );
 };

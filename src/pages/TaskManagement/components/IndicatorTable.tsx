@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Table,
   Select,
@@ -11,6 +11,7 @@ import {
   Input,
   Tooltip,
 } from "antd";
+import type { TableRowSelection } from "antd/es/table/interface";
 import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import {
@@ -34,6 +35,10 @@ interface IndicatorTableProps {
   onTechnicianChange: (indicatorId: string, technicianId: string) => void;
   onApprove: (indicatorId: string, approve: boolean, reason?: string) => void;
   loading?: boolean;
+  // Bulk selection props
+  showCheckbox?: boolean;
+  selectedIndicatorIds?: string[];
+  onSelectionChange?: (ids: string[]) => void;
 }
 
 const IndicatorTable: React.FC<IndicatorTableProps> = ({
@@ -46,6 +51,9 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   onTechnicianChange,
   onApprove,
   loading = false,
+  showCheckbox = false,
+  selectedIndicatorIds = [],
+  onSelectionChange,
 }) => {
   // State for reject modal
   const [rejectModal, setRejectModal] = useState<{
@@ -126,7 +134,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             disabled={
               !canEdit ||
               record.approvalStatus === IndicatorApprovalStatus.Approved ||
-              record.approvalStatus === IndicatorApprovalStatus.CustomerCancelled
+              record.approvalStatus ===
+                IndicatorApprovalStatus.CustomerCancelled
             }
             allowClear
           />
@@ -217,14 +226,6 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             return (
               <Space size="small">
                 <Button
-                  type="primary"
-                  size="small"
-                  icon={<CheckOutlined />}
-                  onClick={() => onApprove(record.id, true)}
-                >
-                  Duyệt
-                </Button>
-                <Button
                   danger
                   size="small"
                   icon={<CloseOutlined />}
@@ -233,6 +234,14 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                   }
                 >
                   Từ chối
+                </Button>
+                <Button
+                  type="primary"
+                  size="small"
+                  icon={<CheckOutlined />}
+                  onClick={() => onApprove(record.id, true)}
+                >
+                  Duyệt
                 </Button>
               </Space>
             );
@@ -270,6 +279,28 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     a.id.localeCompare(b.id)
   );
 
+  // Row selection configuration for bulk approval
+  const rowSelection:
+    | TableRowSelection<LaboratoryTaskIndicatorDto>
+    | undefined = useMemo(() => {
+    if (!showCheckbox || !onSelectionChange) return undefined;
+
+    return {
+      selectedRowKeys: selectedIndicatorIds,
+      onChange: (selectedRowKeys: React.Key[]) => {
+        onSelectionChange(selectedRowKeys as string[]);
+      },
+      getCheckboxProps: (record: LaboratoryTaskIndicatorDto) => ({
+        // Chỉ cho phép chọn indicators có trạng thái Entered (Chờ phê duyệt) hoặc Rejected
+        disabled:
+          record.approvalStatus === IndicatorApprovalStatus.Approved ||
+          record.approvalStatus === IndicatorApprovalStatus.CustomerCancelled ||
+          record.approvalStatus === IndicatorApprovalStatus.Pending,
+        name: record.id,
+      }),
+    };
+  }, [showCheckbox, selectedIndicatorIds, onSelectionChange]);
+
   return (
     <>
       <Table
@@ -280,6 +311,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         size="small"
         scroll={{ x: 1400 }}
         loading={loading}
+        rowSelection={rowSelection}
       />
 
       {/* Reject Reason Modal */}
