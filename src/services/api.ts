@@ -113,10 +113,12 @@ apiClient.interceptors.response.use(
     if (data && typeof data === 'object' && 'success' in data && 'data' in data) {
       // New API format - unwrap data
       if (!data.success) {
+        // Field validation errors are in data.errors (e.g., { code: ["Mã đã tồn tại"], name: ["Tên đã tồn tại"] })
+        // Other errors might be in data.data
         return Promise.reject({
           response: {
             status: data.statusCode,
-            data: data.errors
+            data: data.errors || data.data || { message: 'An error occurred' }
           }
         });
       }

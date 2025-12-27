@@ -157,12 +157,14 @@ const MasterDataModal: React.FC<MasterDataModalProps> = ({
                 </Form.Item>
               )}
               <Row gutter={16}>
-                <Col span={12}>
-                  <Form.Item name="sortOrder" label="Thứ tự sắp xếp">
-                    <Input type="number" />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
+                {activeCategory !== "specimenTypes" && (
+                  <Col span={12}>
+                    <Form.Item name="sortOrder" label="Thứ tự sắp xếp">
+                      <Input type="number" />
+                    </Form.Item>
+                  </Col>
+                )}
+                <Col span={activeCategory === "specimenTypes" ? 24 : 12}>
                   <Form.Item name="isActive" label="Trạng thái">
                     <Select>
                       <Select.Option value={true}>Hoạt động</Select.Option>
