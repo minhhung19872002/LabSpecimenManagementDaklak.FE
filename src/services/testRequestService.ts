@@ -156,20 +156,6 @@ export const testRequestService = {
     await api.post(`${BASE_URL}/${id}/reject-result`, data);
   },
 
-  /**
-   * Kiểm tra số hợp đồng có tồn tại không
-   * @param contractNumber Số hợp đồng cần kiểm tra
-   * @param excludeId ID của phiếu yêu cầu cần loại trừ (dùng khi update)
-   * @returns true nếu số HĐ đã tồn tại
-   */
-  checkContractNumberExists: async (contractNumber: string, excludeId?: string): Promise<boolean> => {
-    const params: Record<string, string> = { contractNumber };
-    if (excludeId) {
-      params.excludeId = excludeId;
-    }
-    const response = await api.get<boolean>(`${BASE_URL}/check-contract-number`, { params });
-    return response.data;
-  }
 };
 
 // Sample selection DTO for BM01 result form
