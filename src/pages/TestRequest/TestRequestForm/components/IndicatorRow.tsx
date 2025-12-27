@@ -49,25 +49,24 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
 
   return (
     <div
+      className="indicator-table-row"
       style={{
-        padding: isInGroup ? "8px 12px 8px 36px" : "8px 12px",
+        paddingLeft: isInGroup ? 36 : 12,
         borderBottom: "1px solid #f5f5f5",
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
         background: canDelete ? "#fff" : "#fafafa",
       }}
     >
       <Checkbox
         checked={isChecked}
         onChange={() => onCheckChange(id)}
-        style={{ width: 24 }}
+        style={{ width: 24, flexShrink: 0 }}
         disabled={!canDelete}
       />
       <Tooltip title={indicator.name}>
         <span
           style={{
             flex: 1,
+            minWidth: 80,
             fontSize: 13,
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -81,7 +80,8 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
       <Tooltip title={methodName}>
         <span
           style={{
-            width: 150,
+            width: 120,
+            flexShrink: 0,
             fontSize: 12,
             color: canDelete ? "#1890ff" : "#999",
             overflow: "hidden",
@@ -96,14 +96,15 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
         style={{
           fontSize: 12,
           color: "#888",
-          width: 80,
+          width: 70,
+          flexShrink: 0,
           textAlign: "right",
         }}
       >
         {unitPrice?.toLocaleString("vi-VN")}đ
       </span>
       {statusLabel && (
-        <Tag color={statusColor} style={{ margin: 0, fontSize: 11 }}>
+        <Tag color={statusColor} style={{ margin: 0, fontSize: 11, flexShrink: 0 }}>
           {statusLabel}
         </Tag>
       )}
@@ -112,8 +113,8 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
         onChange={(date) => onDateChange(id, "transferDate", date)}
         format="DD/MM/YYYY"
         size="small"
-        style={{ width: 110 }}
-        placeholder="Chuyển giao"
+        style={{ width: 100, flexShrink: 0 }}
+        placeholder="CG"
         disabled // Ngày chuyển giao disabled, auto-set ngày hiện tại
       />
       <DatePicker
@@ -121,8 +122,8 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
         onChange={(date) => onDateChange(id, "requestDate", date)}
         format="DD/MM/YYYY"
         size="small"
-        style={{ width: 110 }}
-        placeholder="Yêu cầu"
+        style={{ width: 100, flexShrink: 0 }}
+        placeholder="YC"
         disabled={!canDelete}
         disabledDate={(current) => {
           // Không cho chọn ngày quá khứ
@@ -135,7 +136,7 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
           size="small"
           danger
           icon={<CloseOutlined />}
-          style={{ width: 32 }}
+          style={{ width: 32, flexShrink: 0 }}
           onClick={() => onRemove(id)}
         />
       ) : (
@@ -144,7 +145,7 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
             type="text"
             size="small"
             icon={<LockOutlined />}
-            style={{ width: 32, color: "#999" }}
+            style={{ width: 32, flexShrink: 0, color: "#999" }}
             disabled
           />
         </Tooltip>
