@@ -19,6 +19,7 @@ import {
 import { userService, UserLookupDto } from "../../../../services/userService";
 import { organizationService } from "../../../../services/organizationService";
 import { OrganizationDto } from "../../../../types/organization";
+import { fileService } from "../../../../services/fileService";
 import {
   TestRequestStatus,
   SampleStatus,
@@ -349,6 +350,14 @@ export const useTestRequestFormData = () => {
             storageLocation: sample.storageLocation,
             indicatorIds: activeIndicators.map((ind) => ind.indicatorId),
             indicatorMethods: indicatorMethods,
+            // Load attachments from API response - use fileService to get full URL
+            attachments: (sample.attachments || []).map((att: any) => ({
+              id: att.id,
+              fileId: att.fileId,
+              fileName: att.fileName,
+              fileSize: att.fileSize,
+              url: fileService.getFileUrl(att.fileId),
+            })),
           };
         });
         setSamples(sampleData);

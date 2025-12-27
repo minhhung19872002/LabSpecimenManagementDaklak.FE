@@ -17,8 +17,9 @@ import {
   BarcodeOutlined,
 } from "@ant-design/icons";
 import { Icon } from "@iconify/react";
-import { SampleFormData, LaboratoryAssignment, IndicatorMethodKey, IndicatorMethodInfo } from "../types";
+import { SampleFormData, LaboratoryAssignment, IndicatorMethodKey, IndicatorMethodInfo, AttachmentInfo } from "../types";
 import { IndicatorDto } from "../../../../services/masterDataService";
+import SampleImageUpload from "./SampleImageUpload";
 
 const { Text } = Typography;
 
@@ -95,6 +96,21 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
           }
           placeholder="Tên mẫu"
           size="small"
+        />
+      ),
+    },
+    {
+      title: "Hình ảnh",
+      dataIndex: "attachments",
+      key: "attachments",
+      width: 140,
+      render: (_: AttachmentInfo[], record: SampleFormData) => (
+        <SampleImageUpload
+          attachments={record.attachments || []}
+          onChange={(attachments) =>
+            updateSample(record.key, "attachments", attachments)
+          }
+          disabled={isSamplesLocked()}
         />
       ),
     },

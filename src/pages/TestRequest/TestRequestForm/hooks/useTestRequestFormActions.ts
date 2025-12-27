@@ -259,6 +259,7 @@ export const useTestRequestFormActions = ({
       storageLocation: "",
       indicatorIds: [],
       indicatorMethods: [],
+      attachments: [],
     };
     setSamples([...samples, newSample]);
   };
@@ -687,6 +688,12 @@ export const useTestRequestFormActions = ({
           notes: sample.notes || undefined,
           storageLocation: sample.storageLocation || undefined,
           indicators: indicatorsList,
+          // Attachments: send full info (fileId, fileName, fileSize)
+          attachments: sample.attachments?.map((a) => ({
+            fileId: a.fileId,
+            fileName: a.fileName,
+            fileSize: a.fileSize,
+          })) || [],
         };
       });
 
