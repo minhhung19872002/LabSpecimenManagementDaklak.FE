@@ -5,7 +5,11 @@ import {
   PagedTestingResult,
   SaveResultsInput,
   SubmitForApprovalInput,
+  CheckInIndicatorsInput,
+  SubmitResultsInput,
   RejectionHistoryDto,
+  SampleTestingImageDto,
+  SampleTestingImageType,
 } from '../types/testing';
 
 const BASE_URL = '/api/v1/testing';
@@ -62,10 +66,24 @@ export const testingService = {
   },
 
   /**
-   * Submit indicators for approval
+   * Submit indicators for approval (legacy)
    */
   submitForApproval: async (id: string, input: SubmitForApprovalInput): Promise<void> => {
     await api.post(`${BASE_URL}/${id}/submit-approval`, input);
+  },
+
+  /**
+   * Check-in indicators (bắt đầu thử nghiệm - ấn "Thực hiện")
+   */
+  checkInIndicators: async (id: string, input: CheckInIndicatorsInput): Promise<void> => {
+    await api.post(`${BASE_URL}/${id}/check-in`, input);
+  },
+
+  /**
+   * Submit results for approval (gửi kết quả cho QLKT)
+   */
+  submitResults: async (id: string, input: SubmitResultsInput): Promise<void> => {
+    await api.post(`${BASE_URL}/${id}/submit-results`, input);
   },
 
   /**
@@ -74,6 +92,74 @@ export const testingService = {
   getRejectionHistory: async (indicatorId: string): Promise<RejectionHistoryDto[]> => {
     const response = await api.get<RejectionHistoryDto[]>(
       `${BASE_URL}/indicators/${indicatorId}/rejection-history`
+    );
+    return response.data;
+  },
+
+  /**
+   * Upload sample testing image (before/after testing) - single file
+   */
+  uploadSampleTestingImage: async (
+    taskId: string,
+    sampleId: string,
+    imageType: SampleTestingImageType,
+    file: File
+  ): Promise<SampleTestingImageDto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post<SampleTestingImageDto>(
+      `${BASE_URL}/${taskId}/samples/${sampleId}/images`,
+      formData,
+      {
+        params: { imageType },
+        headers: { 'Content-Type': 'multipart/form-data' }
+      }
+    );
+    return response.data;
+  },
+
+  /**
+   * Upload multiple sample testing images (before/after testing) - batch upload
+   */
+  uploadSampleTestingImages: async (
+    taskId: string,
+    sampleId: string,
+    imageType: SampleTestingImageType,
+    files: File[]
+  ): Promise<SampleTestingImageDto[]> => {
+    const formData = new FormData();
+    files.forEach(file => formData.append('files', file));
+    const response = await api.post<SampleTestingImageDto[]>(
+      `${BASE_URL}/${taskId}/samples/${sampleId}/images/batch`,
+      formData,
+      {
+        params: { imageType },
+        headers: { 'Content-Type': 'multipart/form-data' }
+      }
+    );
+    return response.data;
+  },
+
+  /**
+   * Delete sample testing image
+   */
+  deleteSampleTestingImage: async (imageId: string): Promise<void> => {
+    await api.delete(`${BASE_URL}/samples/images/${imageId}`);
+  },
+
+  /**
+   * Get sample testing images
+   */
+  getSampleTestingImages: async (
+    taskId: string,
+    sampleId: string,
+    imageType?: SampleTestingImageType
+  ): Promise<SampleTestingImageDto[]> => {
+    const params: Record<string, any> = {};
+    if (imageType !== undefined) params.imageType = imageType;
+    const response = await api.get<SampleTestingImageDto[]>(
+      `${BASE_URL}/${taskId}/samples/${sampleId}/images`,
+      { params }
     );
     return response.data;
   }

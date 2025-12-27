@@ -306,6 +306,7 @@ export const useTestRequestFormActions = ({
       id: undefined,
       sortOrder: samples.length + 1,
       sampleCode: generateSampleCode(contractNumber, nextOrderNum),
+      attachments: [], // Clear attachments when duplicating to avoid duplicate FileId error
     };
 
     const newLabMap = { ...indicatorLaboratoryMap };

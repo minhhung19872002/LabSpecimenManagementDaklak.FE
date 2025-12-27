@@ -1,36 +1,50 @@
 import React, { useState, useEffect } from "react";
-import { Table, Input, Tag, Button, Typography, Tooltip, Space, message } from "antd";
+import { Table, Input, Tag, Button, Typography, Tooltip, Space, Checkbox } from "antd";
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   HistoryOutlined,
+  WarningOutlined,
+  SyncOutlined,
+  SendOutlined,
+  PlayCircleOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import {
   TestingIndicatorDto,
   SaveIndicatorResultDto,
+  IndicatorTestingStatus,
+  IndicatorTestingStatusLabels,
+  IndicatorTestingStatusColors,
 } from "../../../types/testing";
-import { IndicatorApprovalStatus } from "../../../types/laboratoryTask";
 
 const { Text } = Typography;
 
 interface IndicatorEditTableProps {
   indicators: TestingIndicatorDto[];
+  selectedIndicatorIds: string[];
+  isUrgent?: boolean;
+  submitting?: boolean;
   onResultsChange: (results: SaveIndicatorResultDto[]) => void;
+  onSelectionChange: (indicatorIds: string[]) => void;
   onShowRejectionHistory: (indicatorId: string, indicatorName: string) => void;
   onSaveIndicator: (indicatorId: string) => void;
-  onSubmitForApproval: (indicatorId: string) => void;
-  submitting?: boolean;
+  onCheckInIndicator?: (indicatorId: string) => void;
+  onSubmitIndicator?: (indicatorId: string) => void;
 }
 
 const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
   indicators,
+  selectedIndicatorIds,
+  isUrgent = false,
+  submitting = false,
   onResultsChange,
+  onSelectionChange,
   onShowRejectionHistory,
   onSaveIndicator,
-  onSubmitForApproval,
-  submitting = false,
+  onCheckInIndicator,
+  onSubmitIndicator,
 }) => {
   const [editedResults, setEditedResults] = useState<
     Map<string, SaveIndicatorResultDto>
@@ -73,27 +87,88 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     onResultsChange(Array.from(newResults.values()));
   };
 
-  // Validate before submit
-  const validateBeforeSubmit = (indicatorId: string): boolean => {
-    const editedData = editedResults.get(indicatorId);
-    const indicator = indicators.find((ind) => ind.id === indicatorId);
-
-    const result = editedData?.result ?? indicator?.result ?? "";
-
-    if (!result.trim()) {
-      message.error("Vui lòng nhập Kết quả");
-      return false;
+  // Handle checkbox selection
+  const handleCheckboxChange = (indicatorId: string, checked: boolean) => {
+    if (checked) {
+      onSelectionChange([...selectedIndicatorIds, indicatorId]);
+    } else {
+      onSelectionChange(selectedIndicatorIds.filter(id => id !== indicatorId));
     }
-    return true;
   };
 
-  const handleSubmitForApproval = (indicatorId: string) => {
-    if (validateBeforeSubmit(indicatorId)) {
-      onSubmitForApproval(indicatorId);
+  // Handle select all
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      // Select all indicators that are not Done or PendingApproval
+      const selectableIds = indicators
+        .filter(ind =>
+          ind.testingStatus !== IndicatorTestingStatus.Done &&
+          ind.testingStatus !== IndicatorTestingStatus.PendingApproval
+        )
+        .map(ind => ind.id);
+      onSelectionChange(selectableIds);
+    } else {
+      onSelectionChange([]);
     }
+  };
+
+  // Check if indicator can be selected (not Done or PendingApproval)
+  const canSelectIndicator = (indicator: TestingIndicatorDto) => {
+    return indicator.testingStatus !== IndicatorTestingStatus.Done &&
+           indicator.testingStatus !== IndicatorTestingStatus.PendingApproval;
+  };
+
+  // Check if all selectable are selected
+  const selectableIndicators = indicators.filter(canSelectIndicator);
+  const allSelected = selectableIndicators.length > 0 &&
+    selectableIndicators.every(ind => selectedIndicatorIds.includes(ind.id));
+  const someSelected = selectableIndicators.some(ind => selectedIndicatorIds.includes(ind.id));
+
+  // Get testing status tag
+  const getTestingStatusTag = (status: IndicatorTestingStatus) => {
+    const label = IndicatorTestingStatusLabels[status];
+    const color = IndicatorTestingStatusColors[status];
+
+    const iconMap: Record<IndicatorTestingStatus, React.ReactNode> = {
+      [IndicatorTestingStatus.Todo]: <ClockCircleOutlined />,
+      [IndicatorTestingStatus.Testing]: <SyncOutlined spin />,
+      [IndicatorTestingStatus.PendingApproval]: <ClockCircleOutlined />,
+      [IndicatorTestingStatus.Rejected]: <WarningOutlined />,
+      [IndicatorTestingStatus.Done]: <CheckCircleOutlined />,
+    };
+
+    return (
+      <Tag color={color} icon={iconMap[status]}>
+        {label}
+      </Tag>
+    );
   };
 
   const columns: ColumnsType<TestingIndicatorDto> = [
+    {
+      title: (
+        <Checkbox
+          checked={allSelected}
+          indeterminate={someSelected && !allSelected}
+          onChange={(e) => handleSelectAll(e.target.checked)}
+          disabled={selectableIndicators.length === 0}
+        />
+      ),
+      key: "select",
+      width: 40,
+      fixed: "left" as const,
+      render: (_, record) => {
+        // Disable checkbox cho chỉ tiêu đã Done hoặc đang chờ duyệt
+        const isDisabled = !canSelectIndicator(record);
+        return (
+          <Checkbox
+            checked={selectedIndicatorIds.includes(record.id)}
+            onChange={(e) => handleCheckboxChange(record.id, e.target.checked)}
+            disabled={isDisabled}
+          />
+        );
+      },
+    },
     {
       title: "Tên chỉ tiêu",
       dataIndex: "indicatorName",
@@ -112,7 +187,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     {
       title: "ĐVT",
       key: "unit",
-      width: 120,
+      width: 100,
       render: (_, record) => {
         // ĐVT lấy từ phương pháp thử, không cho sửa
         const unitValue = record.unit ?? "";
@@ -129,50 +204,68 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     {
       title: "Kết quả",
       key: "result",
-      width: 200,
+      width: 180,
       render: (_, record) => {
         const currentValue =
           editedResults.get(record.id)?.result ?? record.result ?? "";
-        // Disable if: no edit permission OR already submitted (Entered) OR approved OR cancelled
+        // Chỉ cho nhập kết quả khi:
+        // - Có quyền edit (canEdit)
+        // - Trạng thái = "Đang thử nghiệm" (Testing)
+        // Disable nếu: không có quyền edit HOẶC trạng thái không phải Testing
         const isDisabled =
           !record.canEdit ||
-          record.approvalStatus === IndicatorApprovalStatus.Entered ||
-          record.approvalStatus === IndicatorApprovalStatus.Approved ||
-          record.approvalStatus === IndicatorApprovalStatus.CustomerCancelled;
+          record.testingStatus !== IndicatorTestingStatus.Testing;
 
         return (
-          <Input
-            value={currentValue}
-            onChange={(e) =>
-              handleFieldChange(record.id, "result", e.target.value)
+          <Tooltip
+            title={
+              record.testingStatus === IndicatorTestingStatus.Todo
+                ? 'Cần ấn "Thực hiện" trước khi nhập kết quả'
+                : record.testingStatus === IndicatorTestingStatus.Rejected
+                ? 'Cần ấn "Thực hiện" để thử nghiệm lại'
+                : undefined
             }
-            onBlur={() => onSaveIndicator(record.id)}
-            disabled={isDisabled}
-            placeholder="Nhập KQ"
-          />
+          >
+            <Input
+              value={currentValue}
+              onChange={(e) =>
+                handleFieldChange(record.id, "result", e.target.value)
+              }
+              onBlur={() => onSaveIndicator(record.id)}
+              disabled={isDisabled}
+              placeholder={isDisabled ? "-" : "Nhập KQ"}
+              style={isDisabled ? { backgroundColor: '#f5f5f5' } : undefined}
+            />
+          </Tooltip>
         );
       },
-    },
-    {
-      title: "Ngày nhập",
-      dataIndex: "entryDate",
-      key: "entryDate",
-      width: 100,
-      render: (date: string) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
     },
     {
       title: "Ngày giao việc",
       dataIndex: "assignedDate",
       key: "assignedDate",
-      width: 130,
+      width: 110,
       render: (date: string) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
     },
     {
-      title: "Ngày hoàn thành",
-      dataIndex: "completionDate",
-      key: "completionDate",
-      width: 150,
+      title: "Ngày bắt đầu TN",
+      dataIndex: "startDate",
+      key: "startDate",
+      width: 120,
       render: (date: string) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
+    },
+    {
+      title: "Ngày gửi KQ",
+      dataIndex: "submitDate",
+      key: "submitDate",
+      width: 110,
+      render: (date: string) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
+    },
+    {
+      title: "Trạng thái",
+      key: "testingStatus",
+      width: 130,
+      render: (_, record) => getTestingStatusTag(record.testingStatus),
     },
     {
       title: "Lý do từ chối",
@@ -219,72 +312,141 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     {
       title: "Thao tác",
       key: "actions",
-      width: 100,
+      width: 120,
       fixed: "right" as const,
       render: (_, record) => {
-        const canEditRow =
-          record.canEdit &&
-          record.approvalStatus !== IndicatorApprovalStatus.Entered &&
-          record.approvalStatus !== IndicatorApprovalStatus.Approved &&
-          record.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled;
+        const status = record.testingStatus;
+        const currentResult = editedResults.get(record.id)?.result ?? record.result;
+        const hasResult = currentResult && currentResult.trim() !== "";
 
-        // If approved - show tag
-        if (record.approvalStatus === IndicatorApprovalStatus.Approved) {
-          return (
-            <Tag color="success">
-              <CheckCircleOutlined /> Đã duyệt
-            </Tag>
-          );
+        // Nút "Thực hiện": hiện khi Todo hoặc Rejected
+        const canCheckIn =
+          status === IndicatorTestingStatus.Todo ||
+          status === IndicatorTestingStatus.Rejected;
+
+        // Nút "Gửi KQ": hiện khi Testing và có kết quả
+        const canSubmit =
+          status === IndicatorTestingStatus.Testing && hasResult;
+
+        // Không hiện gì nếu đã Done hoặc PendingApproval
+        if (
+          status === IndicatorTestingStatus.Done ||
+          status === IndicatorTestingStatus.PendingApproval
+        ) {
+          return <Text type="secondary">-</Text>;
         }
 
-        // If submitted (Entered) - show waiting tag
-        if (record.approvalStatus === IndicatorApprovalStatus.Entered) {
-          return (
-            <Tag color="warning">
-              <ClockCircleOutlined /> Chờ duyệt
-            </Tag>
-          );
-        }
-
-        // If customer cancelled - show tag
-        if (record.approvalStatus === IndicatorApprovalStatus.CustomerCancelled) {
-          return (
-            <Tag color="volcano">
-              KH hủy
-            </Tag>
-          );
-        }
-
-        // Editable row - show submit button only
         return (
-          <Button
-            type="primary"
-            size="small"
-            loading={submitting}
-            onClick={() => handleSubmitForApproval(record.id)}
-            disabled={!canEditRow}
-          >
-            Gửi duyệt
-          </Button>
+          <Space size={4}>
+            {canCheckIn && onCheckInIndicator && (
+              <Tooltip title="Bắt đầu thực hiện thử nghiệm">
+                <Button
+                  type="default"
+                  size="small"
+                  icon={<PlayCircleOutlined />}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCheckInIndicator(record.id);
+                  }}
+                  disabled={submitting}
+                >
+                  Thực hiện
+                </Button>
+              </Tooltip>
+            )}
+            {canSubmit && onSubmitIndicator && (
+              <Tooltip title="Gửi kết quả cho QLKT duyệt">
+                <Button
+                  type="primary"
+                  size="small"
+                  icon={<SendOutlined />}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSubmitIndicator(record.id);
+                  }}
+                  disabled={submitting}
+                >
+                  Gửi duyệt
+                </Button>
+              </Tooltip>
+            )}
+            {status === IndicatorTestingStatus.Testing && !hasResult && (
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Nhập KQ để gửi
+              </Text>
+            )}
+          </Space>
         );
       },
     },
   ];
 
-  // Sort indicators theo id để cố định vị trí
-  const sortedIndicators = [...indicators].sort((a, b) =>
-    a.id.localeCompare(b.id)
-  );
+  // Sort indicators theo thứ tự ưu tiên trạng thái, sau đó theo id
+  // Ưu tiên: Bị từ chối > Chờ phê duyệt > Đang TN > Cần làm > Đã xong
+  const getStatusPriority = (status: IndicatorTestingStatus): number => {
+    switch (status) {
+      case IndicatorTestingStatus.Rejected:
+        return 0; // Cao nhất
+      case IndicatorTestingStatus.PendingApproval:
+        return 1;
+      case IndicatorTestingStatus.Testing:
+        return 2;
+      case IndicatorTestingStatus.Todo:
+        return 3;
+      case IndicatorTestingStatus.Done:
+        return 4; // Thấp nhất
+      default:
+        return 5;
+    }
+  };
+
+  const sortedIndicators = [...indicators].sort((a, b) => {
+    const priorityA = getStatusPriority(a.testingStatus);
+    const priorityB = getStatusPriority(b.testingStatus);
+
+    // Nếu cùng priority thì sort theo id
+    if (priorityA !== priorityB) {
+      return priorityA - priorityB;
+    }
+    return a.id.localeCompare(b.id);
+  });
+
+  // Row class name for urgent highlighting
+  const getRowClassName = (record: TestingIndicatorDto) => {
+    if (isUrgent && record.testingStatus !== IndicatorTestingStatus.Done) {
+      return 'urgent-indicator-row';
+    }
+    return '';
+  };
 
   return (
     <div>
+      <style>
+        {`
+          .urgent-indicator-row > td {
+            background-color: #fff2f0 !important;
+          }
+          .urgent-indicator-row > td.ant-table-cell-fix-left,
+          .urgent-indicator-row > td.ant-table-cell-fix-right {
+            background-color: #fff2f0 !important;
+          }
+          .urgent-indicator-row:hover > td {
+            background-color: #ffebe8 !important;
+          }
+          .urgent-indicator-row:hover > td.ant-table-cell-fix-left,
+          .urgent-indicator-row:hover > td.ant-table-cell-fix-right {
+            background-color: #ffebe8 !important;
+          }
+        `}
+      </style>
       <Table
         columns={columns}
         dataSource={sortedIndicators}
         rowKey="id"
         pagination={false}
-        scroll={{ x: 1500 }}
+        scroll={{ x: 1650 }}
         size="small"
+        rowClassName={getRowClassName}
       />
     </div>
   );
