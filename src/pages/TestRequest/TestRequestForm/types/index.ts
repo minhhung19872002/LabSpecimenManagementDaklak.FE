@@ -2,6 +2,15 @@ import { SampleStatus } from "../../../../types/testRequest";
 import { IndicatorApprovalStatus } from "../../../../types/laboratoryTask";
 import dayjs from "dayjs";
 
+// Attachment info for sample images
+export interface AttachmentInfo {
+  id?: string;
+  fileId: string;
+  fileName: string;
+  fileSize: number;
+  url: string;
+}
+
 // Thông tin phương pháp cho một chỉ tiêu
 export interface IndicatorMethodInfo {
   testMethodId: string;
@@ -38,6 +47,8 @@ export interface SampleFormData {
   storageLocation?: string;
   indicatorIds: string[]; // deprecated, giữ để backward compatible
   indicatorMethods: IndicatorMethodKey[]; // NEW: array of "indicatorId_testMethodId"
+  // Attachments (images)
+  attachments: AttachmentInfo[];
 }
 
 export interface IndicatorDateInfo {

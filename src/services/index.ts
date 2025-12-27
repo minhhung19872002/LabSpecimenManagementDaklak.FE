@@ -95,3 +95,8 @@ export { default as testingServiceDefault } from './testingService';
 // Quality Management Service (QLCL view)
 export { qualityManagementService } from './qualityManagementService';
 export { default as qualityManagementServiceDefault } from './qualityManagementService';
+
+// File Service (upload/download)
+export { fileService } from './fileService';
+export { default as fileServiceDefault } from './fileService';
+export type { FileUploadResultDto, SampleAttachmentDto } from './fileService';

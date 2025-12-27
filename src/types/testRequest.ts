@@ -196,6 +196,15 @@ export interface UpdateTestRequestSampleIndicatorDto {
   sentToDepartment?: boolean;
 }
 
+// Attachment DTO for sample images
+export interface SampleAttachmentDto {
+  id: string;
+  fileId: string;
+  fileName: string;
+  fileSize: number;
+  url: string;
+}
+
 // Sample DTOs
 export interface TestRequestSampleDto {
   id: string;
@@ -212,6 +221,13 @@ export interface TestRequestSampleDto {
   storageLocation?: string;
   totalIndicatorCost: number;
   indicators: TestRequestSampleIndicatorDto[];
+  attachments?: SampleAttachmentDto[];
+}
+
+export interface AttachmentInputDto {
+  fileId: string;
+  fileName: string;
+  fileSize: number;
 }
 
 export interface CreateTestRequestSampleDto {
@@ -226,6 +242,7 @@ export interface CreateTestRequestSampleDto {
   notes?: string;
   storageLocation?: string;
   indicators: CreateTestRequestSampleIndicatorDto[];
+  attachments?: AttachmentInputDto[];
 }
 
 export interface UpdateTestRequestSampleDto {
@@ -241,6 +258,7 @@ export interface UpdateTestRequestSampleDto {
   notes?: string;
   storageLocation?: string;
   indicators: UpdateTestRequestSampleIndicatorDto[];
+  attachments?: AttachmentInputDto[];
 }
 
 // Main TestRequest DTOs

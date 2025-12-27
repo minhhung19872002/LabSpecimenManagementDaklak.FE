@@ -393,15 +393,13 @@ const MainLayout: React.FC = () => {
       <Layout>
         <Header style={{ padding: "0 16px", background: "#fff" }}>
           <div className="header-content">
-            {/* Hamburger menu button for mobile */}
-            {isMobile && (
-              <Button
-                type="text"
-                icon={<MenuOutlined style={{ fontSize: 20 }} />}
-                onClick={() => setMobileMenuOpen(true)}
-                className="mobile-menu-trigger"
-              />
-            )}
+            {/* Hamburger menu button for mobile - always rendered, controlled by CSS */}
+            <Button
+              type="text"
+              icon={<MenuOutlined style={{ fontSize: 20 }} />}
+              onClick={() => setMobileMenuOpen(true)}
+              className="mobile-menu-trigger"
+            />
             <h1 className="header-title">{t("common.appName")}</h1>
             <div className="header-actions">
               <Dropdown
