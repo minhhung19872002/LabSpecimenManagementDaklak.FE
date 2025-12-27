@@ -604,19 +604,8 @@ export const useTestRequestFormActions = ({
       return;
     }
 
-    // Validate: check if contract number already exists
-    try {
-      const excludeId = isEditMode ? id : undefined;
-      const exists = await testRequestService.checkContractNumberExists(contractNumber, excludeId);
-      if (exists) {
-        message.error("Số hợp đồng đã tồn tại. Vui lòng nhập số hợp đồng khác.");
-        return;
-      }
-    } catch (error) {
-      console.error("Failed to check contract number:", error);
-      message.error("Không thể kiểm tra số hợp đồng. Vui lòng thử lại.");
-      return;
-    }
+    // Note: Contract number duplicate validation is now done on the backend
+    // Backend will return field-level validation errors if contract number exists
 
     // Validate: all samples must have sampleName
     const invalidSamples = samples.filter((s) => !s.sampleName);
@@ -786,6 +775,29 @@ export const useTestRequestFormActions = ({
       navigate(PATH_ROUTES.testRequests.index);
     } catch (error: any) {
       console.error("Failed to save test request:", error);
+
+      // Handle field-level validation errors from backend
+      const errorData = error?.response?.data;
+      if (errorData && typeof errorData === "object") {
+        const fieldErrors: { name: string; errors: string[] }[] = [];
+        const validFields = ["contractNumber", "customerName", "address", "taxCode", "phone"];
+
+        for (const field of validFields) {
+          if (errorData[field]) {
+            const errorMessages = Array.isArray(errorData[field])
+              ? errorData[field]
+              : [errorData[field]];
+            fieldErrors.push({ name: field, errors: errorMessages });
+          }
+        }
+
+        if (fieldErrors.length > 0) {
+          form.setFields(fieldErrors);
+          message.error("Dữ liệu không hợp lệ, vui lòng kiểm tra lại");
+          return;
+        }
+      }
+
       message.error(
         error.response?.data?.error?.message || "Không thể lưu yêu cầu. Vui lòng thử lại."
       );
