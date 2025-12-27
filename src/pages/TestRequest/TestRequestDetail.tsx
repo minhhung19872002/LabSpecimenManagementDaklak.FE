@@ -722,12 +722,17 @@ const TestRequestDetail: React.FC = () => {
 
         const renderIndicator = (ind: any, idx: number) => {
           // Get approval status info
-          const hasApprovalStatus = ind.approvalStatus !== undefined && ind.approvalStatus !== null;
+          const hasApprovalStatus =
+            ind.approvalStatus !== undefined && ind.approvalStatus !== null;
           const approvalStatusLabel = hasApprovalStatus
-            ? IndicatorApprovalStatusLabels[ind.approvalStatus as IndicatorApprovalStatus]
+            ? IndicatorApprovalStatusLabels[
+                ind.approvalStatus as IndicatorApprovalStatus
+              ]
             : null;
           const approvalStatusColor = hasApprovalStatus
-            ? IndicatorApprovalStatusColors[ind.approvalStatus as IndicatorApprovalStatus]
+            ? IndicatorApprovalStatusColors[
+                ind.approvalStatus as IndicatorApprovalStatus
+              ]
             : null;
 
           return (
@@ -760,7 +765,7 @@ const TestRequestDetail: React.FC = () => {
                 {/* Trạng thái duyệt */}
                 {hasApprovalStatus && approvalStatusLabel && (
                   <Tag
-                    color={approvalStatusColor || 'default'}
+                    color={approvalStatusColor || "default"}
                     style={{ margin: 0, fontSize: 10 }}
                   >
                     {approvalStatusLabel}
@@ -769,11 +774,17 @@ const TestRequestDetail: React.FC = () => {
               </div>
               <div style={{ fontSize: 10, color: "#888", marginTop: 2 }}>
                 {ind.requestDate && (
-                  <span>YC xong: {dayjs(ind.requestDate).format("DD/MM/YYYY")}</span>
+                  <span>
+                    YC xong: {dayjs(ind.requestDate).format("DD/MM/YYYY")}
+                  </span>
                 )}
-                {ind.requestDate && ind.testDate && <span style={{ margin: "0 4px" }}>|</span>}
+                {ind.requestDate && ind.testDate && (
+                  <span style={{ margin: "0 4px" }}>|</span>
+                )}
                 {ind.testDate && (
-                  <span>Ngày TN: {dayjs(ind.testDate).format("DD/MM/YYYY")}</span>
+                  <span>
+                    Ngày TN: {dayjs(ind.testDate).format("DD/MM/YYYY")}
+                  </span>
                 )}
               </div>
             </div>
@@ -931,14 +942,16 @@ const TestRequestDetail: React.FC = () => {
               </div>
             </Col>
           </Row>
-          <Row gutter={[16, 8]} style={{ marginTop: 12 }}>
-            <Col xs={24}>
-              <Space wrap size={[16, 8]}>
-                <Space size={4}>
-                  <BoolIcon value={data.sentToAccounting} />
-                  <Text style={{ fontSize: 13 }}>Gửi kế toán</Text>
-                </Space>
-                <Space size={4}>
+          {/* Chỉ hiển thị "Gửi kế toán" khi trạng thái = ResultSent */}
+          {data.status === TestRequestStatus.ResultSent && (
+            <Row gutter={[16, 8]} style={{ marginTop: 12 }}>
+              <Col xs={24}>
+                <Space wrap size={[16, 8]}>
+                  <Space size={4}>
+                    <BoolIcon value={data.sentToAccounting} />
+                    <Text style={{ fontSize: 13 }}>Gửi kế toán</Text>
+                  </Space>
+                  {/* <Space size={4}>
                   <BoolIcon value={data.paymentReceived} />
                   <Text style={{ fontSize: 13 }}>Đã thu tiền</Text>
                 </Space>
@@ -949,10 +962,11 @@ const TestRequestDetail: React.FC = () => {
                 <Space size={4}>
                   <BoolIcon value={data.resultReturned} />
                   <Text style={{ fontSize: 13 }}>Trả kết quả</Text>
+                </Space> */}
                 </Space>
-              </Space>
-            </Col>
-          </Row>
+              </Col>
+            </Row>
+          )}
         </div>
 
         {/* Thông tin khách hàng */}

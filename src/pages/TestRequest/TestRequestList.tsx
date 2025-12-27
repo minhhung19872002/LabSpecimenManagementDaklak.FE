@@ -161,18 +161,23 @@ const TestRequestList: React.FC = () => {
   const isUrgentRow = (record: TestRequestDto): boolean => {
     if (!record.expectedCompletionDate) return false;
     if (record.status >= TestRequestStatus.Completed) return false;
-    const daysRemaining = dayjs(record.expectedCompletionDate).diff(dayjs(), "day");
+    const daysRemaining = dayjs(record.expectedCompletionDate).diff(
+      dayjs(),
+      "day"
+    );
     return daysRemaining <= 5;
   };
 
   const columns: ColumnsType<TestRequestDto> = [
     {
-      title: "Số yêu cầu",
-      dataIndex: "requestNumber",
-      key: "requestNumber",
-      width: 180,
+      title: "Số hợp đồng",
+      dataIndex: "contractNumber",
+      key: "contractNumber",
+      width: 140,
       fixed: "left",
-      sorter: (a, b) => a.requestNumber.localeCompare(b.requestNumber),
+      render: (value: string) => value || "-",
+      sorter: (a, b) =>
+        (a.contractNumber || "").localeCompare(b.contractNumber || ""),
     },
     {
       title: "Ngày yêu cầu",
@@ -258,7 +263,9 @@ const TestRequestList: React.FC = () => {
               icon={<EditOutlined />}
               onClick={() => handleEdit(record)}
               disabled={!canEdit}
-              title={!canEdit ? "Không thể chỉnh sửa ở trạng thái này" : "Chỉnh sửa"}
+              title={
+                !canEdit ? "Không thể chỉnh sửa ở trạng thái này" : "Chỉnh sửa"
+              }
             />
             <Popconfirm
               title="Bạn có chắc chắn muốn xóa?"
@@ -392,7 +399,8 @@ const TestRequestList: React.FC = () => {
         loading={loading}
         rowClassName={(record) => (isUrgentRow(record) ? "urgent-row" : "")}
         onRow={(record) => ({
-          onDoubleClick: () => navigate(PATH_ROUTES.testRequests.detail(record.id)),
+          onDoubleClick: () =>
+            navigate(PATH_ROUTES.testRequests.detail(record.id)),
           style: { cursor: "pointer" },
         })}
         pagination={{

@@ -1,6 +1,7 @@
 // @ts-nocheck
 import React from "react";
 import { Form, Input, DatePicker, Checkbox, Row, Col, Typography } from "antd";
+import { TestRequestStatus } from "../../../../types/testRequest";
 
 const { Title } = Typography;
 
@@ -8,13 +9,17 @@ interface ContractInfoSectionProps {
   isEditMode: boolean;
   isFieldLocked: (fieldName: string) => boolean;
   updateSampleCodesPrefix: (prefix: string) => void;
+  currentStatus?: TestRequestStatus;
 }
 
 const ContractInfoSection: React.FC<ContractInfoSectionProps> = ({
   isEditMode,
   isFieldLocked,
   updateSampleCodesPrefix,
+  currentStatus,
 }) => {
+  // Checkbox "Gửi kế toán" chỉ hiển thị khi trạng thái = ResultSent (Gửi khách hàng)
+  const showSentToAccounting = currentStatus === TestRequestStatus.ResultSent;
   return (
     <div className="form-section">
       <Title level={5} className="section-title">
@@ -31,7 +36,9 @@ const ContractInfoSection: React.FC<ContractInfoSectionProps> = ({
             <Input
               placeholder="Số hợp đồng"
               disabled={isFieldLocked("contractNumber")}
-              onBlur={(e) => updateSampleCodesPrefix(e.target.value?.trim() || "")}
+              onBlur={(e) =>
+                updateSampleCodesPrefix(e.target.value?.trim() || "")
+              }
             />
           </Form.Item>
         </Col>
@@ -49,7 +56,8 @@ const ContractInfoSection: React.FC<ContractInfoSectionProps> = ({
             />
           </Form.Item>
         </Col>
-        {isEditMode && (
+        {/* Checkbox "Gửi kế toán" chỉ hiển thị khi trạng thái = ResultSent */}
+        {isEditMode && showSentToAccounting && (
           <Col xs={24} sm={24} md={16}>
             <div
               style={{
@@ -66,7 +74,7 @@ const ContractInfoSection: React.FC<ContractInfoSectionProps> = ({
               >
                 <Checkbox>Gửi kế toán</Checkbox>
               </Form.Item>
-              <Form.Item
+              {/* <Form.Item
                 name="paymentReceived"
                 valuePropName="checked"
                 style={{ marginBottom: 0 }}
@@ -86,7 +94,7 @@ const ContractInfoSection: React.FC<ContractInfoSectionProps> = ({
                 style={{ marginBottom: 0 }}
               >
                 <Checkbox>Trả kết quả</Checkbox>
-              </Form.Item>
+              </Form.Item> */}
             </div>
           </Col>
         )}
