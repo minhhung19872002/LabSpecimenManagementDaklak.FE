@@ -133,6 +133,11 @@ export const useMasterDataActions = ({
     try {
       setModalLoading(true);
       setError(null);
+      // Clear previous field errors
+      form.setFields([
+        { name: "code", errors: [] },
+        { name: "name", errors: [] },
+      ]);
       const values = await form.validateFields();
 
       if (editingItem) {
@@ -217,34 +222,55 @@ export const useMasterDataActions = ({
       console.error("Failed to save:", err);
       // Handle different error formats from ABP Framework
       let errorMsg = "Lỗi khi lưu dữ liệu";
+      let hasFieldErrors = false;
 
       if (err?.response?.data) {
         const errorData = err.response.data;
+
+        // Handle field-level validation errors format: { code: "message", name: "message" }
+        // After API interceptor unwraps, errorData is directly the field errors object
+        if (typeof errorData === "object") {
+          const fieldErrors: { name: string; errors: string[] }[] = [];
+          const validFields = ["code", "name", "description", "phone", "email", "address", "taxCode", "contactPerson"];
+
+          for (const field of validFields) {
+            if (errorData[field] && typeof errorData[field] === "string") {
+              fieldErrors.push({
+                name: field,
+                errors: [errorData[field]],
+              });
+            } else if (errorData[field] && Array.isArray(errorData[field])) {
+              fieldErrors.push({
+                name: field,
+                errors: errorData[field],
+              });
+            }
+          }
+
+          if (fieldErrors.length > 0) {
+            form.setFields(fieldErrors);
+            hasFieldErrors = true;
+            // Show first error as toast
+            errorMsg = fieldErrors[0].errors[0];
+          }
+        }
+
         // ABP Framework format: { error: { message: "...", details: "..." } }
-        if (errorData.error?.message) {
+        if (!hasFieldErrors && errorData.error?.message) {
           errorMsg = errorData.error.message;
         }
         // Alternative ABP format: { message: "..." }
-        else if (errorData.message) {
+        else if (!hasFieldErrors && errorData.message) {
           errorMsg = errorData.message;
         }
         // Custom format with general errors: { general: ["error1", "error2"] }
-        else if (errorData.general && Array.isArray(errorData.general)) {
+        else if (!hasFieldErrors && errorData.general && Array.isArray(errorData.general)) {
           errorMsg = errorData.general.join(", ");
         }
         // Validation errors format: { errors: { field: ["error1", "error2"] } }
-        else if (errorData.errors) {
+        else if (!hasFieldErrors && errorData.errors) {
           const errorMessages = Object.values(errorData.errors).flat();
           errorMsg = (errorMessages as string[]).join(", ");
-        }
-        // Direct object with field arrays: { fieldName: ["error1"] }
-        else if (typeof errorData === "object") {
-          const allErrors = Object.values(errorData)
-            .flat()
-            .filter((e) => typeof e === "string");
-          if (allErrors.length > 0) {
-            errorMsg = (allErrors as string[]).join(", ");
-          }
         }
       } else if (err?.message) {
         errorMsg = err.message;
