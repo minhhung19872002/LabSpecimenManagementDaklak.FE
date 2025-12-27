@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   Card,
   Button,
@@ -40,8 +40,6 @@ const { Panel } = Collapse;
 const TestingDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const viewMode = searchParams.get('viewMode');
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [detail, setDetail] = useState<TestingDetailDto | null>(null);
@@ -64,10 +62,8 @@ const TestingDetail: React.FC = () => {
     if (!id) return;
     setLoading(true);
     try {
-      // Pass viewMode to API - 'my' (user's data only), 'all' (full data)
-      // Default to 'my' if not specified (matches default tab "Phân công của tôi")
-      const viewModeParam: 'my' | 'all' = viewMode === 'all' ? 'all' : 'my';
-      const result = await testingService.get(id, viewModeParam);
+      // Always use 'my' mode (user's data only) - default for "Phân công của tôi"
+      const result = await testingService.get(id, 'my');
       setDetail(result);
 
       // Initialize sample results
@@ -93,7 +89,7 @@ const TestingDetail: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [id, viewMode]);
+  }, [id]);
 
   useEffect(() => {
     loadDetail();
@@ -232,7 +228,7 @@ const TestingDetail: React.FC = () => {
       <div style={{ marginBottom: 16 }}>
         <Button
           icon={<ArrowLeftOutlined />}
-          onClick={() => navigate(`/testing?tab=${viewMode === 'all' ? 'all' : 'my'}`)}
+          onClick={() => navigate('/testing')}
         >
           Quay lại
         </Button>

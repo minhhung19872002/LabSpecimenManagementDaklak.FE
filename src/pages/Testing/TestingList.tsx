@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Card,
   Table,
@@ -12,7 +12,6 @@ import {
   Select,
   Statistic,
   message,
-  Tabs,
   Typography,
 } from "antd";
 import {
@@ -22,8 +21,6 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   SyncOutlined,
-  UserOutlined,
-  TeamOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
@@ -42,7 +39,6 @@ const { Text } = Typography;
 
 const TestingList: React.FC = () => {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const [tasks, setTasks] = useState<TestingListDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
@@ -50,12 +46,6 @@ const TestingList: React.FC = () => {
     undefined
   );
   const [technicianFilter, setTechnicianFilter] = useState<string[]>([]);
-
-  // Read tab from URL, default to MyAssignments
-  const tabFromUrl = searchParams.get('tab');
-  const [activeTab, setActiveTab] = useState<TestingTabType>(
-    tabFromUrl === 'all' ? TestingTabType.All : TestingTabType.MyAssignments
-  );
 
   // Technicians for filter dropdown
   const [technicians, setTechnicians] = useState<UserLookupDto[]>([]);
@@ -91,7 +81,7 @@ const TestingList: React.FC = () => {
       const result = await testingService.getList({
         skipCount: (pagination.current - 1) * pagination.pageSize,
         maxResultCount: pagination.pageSize,
-        tab: activeTab,
+        tab: TestingTabType.MyAssignments, // Always use MyAssignments
         search: searchText || undefined,
         statuses: statusFilter !== undefined ? [statusFilter] : undefined,
         technicianIds:
@@ -109,7 +99,6 @@ const TestingList: React.FC = () => {
   }, [
     pagination.current,
     pagination.pageSize,
-    activeTab,
     searchText,
     statusFilter,
     technicianFilter,
@@ -159,14 +148,6 @@ const TestingList: React.FC = () => {
   const handleTechnicianFilterChange = (values: string[]) => {
     setTechnicianFilter(values);
     setPagination((prev) => ({ ...prev, current: 1 }));
-  };
-
-  const handleTabChange = (key: string) => {
-    const newTab = Number(key) as TestingTabType;
-    setActiveTab(newTab);
-    setPagination((prev) => ({ ...prev, current: 1 }));
-    // Update URL to preserve tab state
-    setSearchParams({ tab: newTab === TestingTabType.All ? 'all' : 'my' });
   };
 
   const handleTableChange = (paginationConfig: any) => {
@@ -284,33 +265,12 @@ const TestingList: React.FC = () => {
       onChange={handleTableChange}
       scroll={{ x: 1000 }}
       onRow={(record) => ({
-        onDoubleClick: () => navigate(`/testing/${record.laboratoryTaskId}?viewMode=${activeTab === TestingTabType.MyAssignments ? 'my' : 'all'}`),
+        onDoubleClick: () => navigate(`/testing/${record.laboratoryTaskId}`),
         style: { cursor: "pointer" },
       })}
       rowClassName={(record) => (record.isUrgent && record.testingStatus !== TestingStatus.Done ? "urgent-row" : "")}
     />
   );
-
-  const tabItems = [
-    {
-      key: String(TestingTabType.MyAssignments),
-      label: (
-        <span>
-          <UserOutlined />
-          Phân công của tôi
-        </span>
-      ),
-    },
-    {
-      key: String(TestingTabType.All),
-      label: (
-        <span>
-          <TeamOutlined />
-          Hiển thị tất cả
-        </span>
-      ),
-    },
-  ];
 
   return (
     <div>
@@ -367,14 +327,6 @@ const TestingList: React.FC = () => {
           </Button>
         }
       >
-        {/* Tabs */}
-        <Tabs
-          activeKey={String(activeTab)}
-          onChange={handleTabChange}
-          items={tabItems}
-          style={{ marginBottom: 16 }}
-        />
-
         {/* Search & Filter */}
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
           <Col xs={24} sm={12} md={8}>
