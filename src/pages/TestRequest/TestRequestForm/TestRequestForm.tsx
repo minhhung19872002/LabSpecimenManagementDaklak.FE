@@ -234,6 +234,7 @@ const TestRequestForm: React.FC = () => {
           isEditMode={isEditMode}
           isFieldLocked={isFieldLocked}
           updateSampleCodesPrefix={updateSampleCodesPrefix}
+          currentStatus={currentStatus}
         />
 
         {/* Thông tin khách hàng */}
