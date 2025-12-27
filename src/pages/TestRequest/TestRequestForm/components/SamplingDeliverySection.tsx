@@ -55,52 +55,44 @@ const SamplingDeliverySection: React.FC = () => {
       </Title>
       <Row gutter={[16, 12]}>
         <Col xs={24} sm={12}>
-          <Row align="middle">
-            <Col xs={10}>
-              <Text>Lấy mẫu:</Text>
-            </Col>
-            <Col xs={14}>
-              <Form.Item name="samplingRequirement" style={{ marginBottom: 0 }}>
-                <Radio.Group
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "4px",
-                  }}
-                >
-                  <Radio value={SamplingRequirement.LabSampling}>
-                    TTKN lấy mẫu
-                  </Radio>
-                  <Radio value={SamplingRequirement.CustomerSampling}>
-                    KH tự lấy mẫu
-                  </Radio>
-                </Radio.Group>
-              </Form.Item>
-            </Col>
-          </Row>
+          <div className="form-field-mobile">
+            <Text className="form-field-label">Lấy mẫu:</Text>
+            <Form.Item name="samplingRequirement" style={{ marginBottom: 0 }}>
+              <Radio.Group
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px",
+                }}
+              >
+                <Radio value={SamplingRequirement.LabSampling}>
+                  TTKN lấy mẫu
+                </Radio>
+                <Radio value={SamplingRequirement.CustomerSampling}>
+                  KH tự lấy mẫu
+                </Radio>
+              </Radio.Group>
+            </Form.Item>
+          </div>
         </Col>
         <Col xs={24} sm={12}>
-          <Row align="middle">
-            <Col xs={10}>
-              <Text>Lưu mẫu:</Text>
-            </Col>
-            <Col xs={14}>
-              <Form.Item name="sampleStorageOption" style={{ marginBottom: 0 }}>
-                <Radio.Group
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "4px",
-                  }}
-                >
-                  <Radio value={SampleStorageOption.No}>Không</Radio>
-                  <Radio value={SampleStorageOption.Yes}>
-                    Có (theo QĐ của TT)
-                  </Radio>
-                </Radio.Group>
-              </Form.Item>
-            </Col>
-          </Row>
+          <div className="form-field-mobile">
+            <Text className="form-field-label">Lưu mẫu:</Text>
+            <Form.Item name="sampleStorageOption" style={{ marginBottom: 0 }}>
+              <Radio.Group
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px",
+                }}
+              >
+                <Radio value={SampleStorageOption.No}>Không</Radio>
+                <Radio value={SampleStorageOption.Yes}>
+                  Có (theo QĐ của TT)
+                </Radio>
+              </Radio.Group>
+            </Form.Item>
+          </div>
         </Col>
       </Row>
       <Row gutter={[16, 8]} style={{ marginTop: 12 }}>
@@ -131,10 +123,10 @@ const SamplingDeliverySection: React.FC = () => {
         </Col>
       </Row>
       <Row gutter={[16, 8]} style={{ marginTop: 12 }}>
-        <Col xs={24} sm={12}>
-          <div className="delivery-date-section">
-            <Text>Ngày trả KQ:</Text>
-            <Space size={8} wrap style={{ marginTop: 4 }}>
+        <Col xs={24}>
+          <div className="form-field-mobile">
+            <Text className="form-field-label">Ngày trả KQ:</Text>
+            <div className="delivery-date-inputs">
               <Space size={4}>
                 <InputNumber
                   min={1}
@@ -150,7 +142,7 @@ const SamplingDeliverySection: React.FC = () => {
               <Form.Item name="expectedCompletionDate" style={{ marginBottom: 0 }}>
                 <DatePicker format="DD/MM/YYYY" style={{ width: 130 }} />
               </Form.Item>
-            </Space>
+            </div>
           </div>
         </Col>
       </Row>

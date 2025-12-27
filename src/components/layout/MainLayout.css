@@ -231,6 +231,28 @@
 
 /* ============ Mobile Responsive Styles ============ */
 
+/* Form field mobile - default inline layout on desktop */
+.form-field-mobile {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.form-field-mobile .form-field-label {
+  min-width: 120px;
+  flex-shrink: 0;
+  padding-top: 4px;
+}
+
+/* Delivery date inputs - inline on desktop */
+.delivery-date-inputs {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
 /* Mobile menu trigger button - hidden by default on desktop */
 .mobile-menu-trigger {
   display: none;
@@ -294,6 +316,11 @@
     padding: 12px;
   }
 
+  /* Reduce card body padding on mobile */
+  .ant-card-body {
+    padding: 12px !important;
+  }
+
   /* Increase row gap in forms on mobile */
   .ant-row {
     row-gap: 16px !important;
@@ -306,6 +333,24 @@
   /* Show hamburger button */
   .mobile-menu-trigger {
     display: flex !important;
+  }
+
+  /* Form field mobile layout - stack title on top, content below */
+  .form-field-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .form-field-mobile .form-field-label {
+    font-weight: 500;
+    min-width: unset;
+    padding-top: 0;
+  }
+
+  /* Delivery date inputs - wrap on mobile */
+  .delivery-date-inputs {
+    flex-wrap: wrap;
   }
 }
 
