@@ -191,18 +191,20 @@ const TestingDetail: React.FC = () => {
     }
 
     // Lọc và phân loại chỉ tiêu
-    const sample = detail.samples.find(s => s.sampleId === sampleId);
+    const sample = detail.samples.find((s) => s.sampleId === sampleId);
     if (!sample) return;
 
     const validIndicatorIds: string[] = [];
     const alreadyTestingIds: string[] = [];
 
-    selected.forEach(indicatorId => {
-      const indicator = sample.indicators.find(i => i.id === indicatorId);
+    selected.forEach((indicatorId) => {
+      const indicator = sample.indicators.find((i) => i.id === indicatorId);
       if (!indicator) return;
 
-      if (indicator.testingStatus === IndicatorTestingStatus.Todo ||
-          indicator.testingStatus === IndicatorTestingStatus.Rejected) {
+      if (
+        indicator.testingStatus === IndicatorTestingStatus.Todo ||
+        indicator.testingStatus === IndicatorTestingStatus.Rejected
+      ) {
         validIndicatorIds.push(indicatorId);
       } else if (indicator.testingStatus === IndicatorTestingStatus.Testing) {
         alreadyTestingIds.push(indicatorId);
@@ -212,15 +214,19 @@ const TestingDetail: React.FC = () => {
     // Báo lỗi nếu có chỉ tiêu đang ở trạng thái "Đang thí nghiệm"
     if (alreadyTestingIds.length > 0 && validIndicatorIds.length === 0) {
       const testingNames = alreadyTestingIds
-        .map(id => sample.indicators.find(i => i.id === id)?.indicatorName)
+        .map((id) => sample.indicators.find((i) => i.id === id)?.indicatorName)
         .filter(Boolean)
-        .join(', ');
-      message.warning(`Các chỉ tiêu "${testingNames}" đang ở trạng thái "Đang thí nghiệm", không cần thực hiện lại`);
+        .join(", ");
+      message.warning(
+        `Các chỉ tiêu "${testingNames}" đang ở trạng thái "Đang thí nghiệm", không cần thực hiện lại`
+      );
       return;
     }
 
     if (validIndicatorIds.length === 0) {
-      message.warning("Không có chỉ tiêu nào ở trạng thái 'Cần làm' hoặc 'Bị từ chối' để thực hiện");
+      message.warning(
+        "Không có chỉ tiêu nào ở trạng thái 'Cần làm' hoặc 'Bị từ chối' để thực hiện"
+      );
       return;
     }
 
@@ -230,7 +236,9 @@ const TestingDetail: React.FC = () => {
         sampleId,
         indicatorIds: validIndicatorIds,
       });
-      message.success(`Đã bắt đầu thực hiện ${validIndicatorIds.length} chỉ tiêu`);
+      message.success(
+        `Đã bắt đầu thực hiện ${validIndicatorIds.length} chỉ tiêu`
+      );
       loadDetail();
     } catch (error: any) {
       console.error("Failed to check-in:", error);
@@ -254,7 +262,7 @@ const TestingDetail: React.FC = () => {
     }
 
     // Lọc chỉ các chỉ tiêu có trạng thái Testing
-    const sample = detail.samples.find(s => s.sampleId === sampleId);
+    const sample = detail.samples.find((s) => s.sampleId === sampleId);
     if (!sample) return;
 
     const results = sampleResults.get(sampleId) || [];
@@ -265,8 +273,8 @@ const TestingDetail: React.FC = () => {
     const todoStatusIds: string[] = [];
     const rejectedStatusIds: string[] = [];
 
-    selected.forEach(indicatorId => {
-      const indicator = sample.indicators.find(i => i.id === indicatorId);
+    selected.forEach((indicatorId) => {
+      const indicator = sample.indicators.find((i) => i.id === indicatorId);
       if (!indicator) return;
 
       // Phân loại theo trạng thái
@@ -286,10 +294,10 @@ const TestingDetail: React.FC = () => {
       }
 
       // Kiểm tra có kết quả không (từ edited results hoặc từ indicator)
-      const editedResult = results.find(r => r.indicatorId === indicatorId);
+      const editedResult = results.find((r) => r.indicatorId === indicatorId);
       const resultValue = editedResult?.result ?? indicator.result;
 
-      if (!resultValue || resultValue.trim() === '') {
+      if (!resultValue || resultValue.trim() === "") {
         missingResultIds.push(indicatorId);
         return;
       }
@@ -300,28 +308,32 @@ const TestingDetail: React.FC = () => {
     // Thông báo lỗi nếu có chỉ tiêu ở trạng thái "Cần làm"
     if (todoStatusIds.length > 0 && validIndicatorIds.length === 0) {
       const todoNames = todoStatusIds
-        .map(id => sample.indicators.find(i => i.id === id)?.indicatorName)
+        .map((id) => sample.indicators.find((i) => i.id === id)?.indicatorName)
         .filter(Boolean)
-        .join(', ');
-      message.warning(`Các chỉ tiêu "${todoNames}" đang ở trạng thái "Cần làm". Vui lòng ấn "Thực hiện" trước khi gửi kết quả`);
+        .join(", ");
+      message.warning(
+        `Các chỉ tiêu "${todoNames}" đang ở trạng thái "Cần làm". Vui lòng ấn "Thực hiện" trước khi gửi kết quả`
+      );
       return;
     }
 
     // Thông báo lỗi nếu có chỉ tiêu bị từ chối
     if (rejectedStatusIds.length > 0 && validIndicatorIds.length === 0) {
       const rejectedNames = rejectedStatusIds
-        .map(id => sample.indicators.find(i => i.id === id)?.indicatorName)
+        .map((id) => sample.indicators.find((i) => i.id === id)?.indicatorName)
         .filter(Boolean)
-        .join(', ');
-      message.warning(`Các chỉ tiêu "${rejectedNames}" đang ở trạng thái "Bị từ chối". Vui lòng ấn "Thực hiện" để thử nghiệm lại`);
+        .join(", ");
+      message.warning(
+        `Các chỉ tiêu "${rejectedNames}" đang ở trạng thái "Bị từ chối". Vui lòng ấn "Thực hiện" để thử nghiệm lại`
+      );
       return;
     }
 
     if (missingResultIds.length > 0) {
       const missingNames = missingResultIds
-        .map(id => sample.indicators.find(i => i.id === id)?.indicatorName)
+        .map((id) => sample.indicators.find((i) => i.id === id)?.indicatorName)
         .filter(Boolean)
-        .join(', ');
+        .join(", ");
       message.warning(`Vui lòng nhập kết quả cho: ${missingNames}`);
       return;
     }
@@ -332,7 +344,9 @@ const TestingDetail: React.FC = () => {
     }
 
     // Save all selected indicators first
-    const selectedResults = results.filter(r => validIndicatorIds.includes(r.indicatorId));
+    const selectedResults = results.filter((r) =>
+      validIndicatorIds.includes(r.indicatorId)
+    );
 
     setSubmitting(true);
     try {
@@ -344,7 +358,9 @@ const TestingDetail: React.FC = () => {
         sampleId,
         indicatorIds: validIndicatorIds,
       });
-      message.success(`Gửi kết quả thành công cho ${validIndicatorIds.length} chỉ tiêu`);
+      message.success(
+        `Gửi kết quả thành công cho ${validIndicatorIds.length} chỉ tiêu`
+      );
       loadDetail();
     } catch (error: any) {
       console.error("Failed to submit results:", error);
@@ -364,7 +380,7 @@ const TestingDetail: React.FC = () => {
     if (!detail) return;
 
     // Update detail with new images
-    const updatedSamples = detail.samples.map(sample => {
+    const updatedSamples = detail.samples.map((sample) => {
       if (sample.sampleId !== sampleId) return sample;
 
       if (imageType === SampleTestingImageType.BeforeTesting) {
@@ -393,7 +409,7 @@ const TestingDetail: React.FC = () => {
     let sampleId: string | null = null;
     let indicator = null;
     for (const sample of detail.samples) {
-      const found = sample.indicators.find(i => i.id === indicatorId);
+      const found = sample.indicators.find((i) => i.id === indicatorId);
       if (found) {
         sampleId = sample.sampleId;
         indicator = found;
@@ -404,9 +420,13 @@ const TestingDetail: React.FC = () => {
     if (!sampleId || !indicator) return;
 
     // Chỉ check-in nếu trạng thái = Todo hoặc Rejected
-    if (indicator.testingStatus !== IndicatorTestingStatus.Todo &&
-        indicator.testingStatus !== IndicatorTestingStatus.Rejected) {
-      message.warning('Chỉ tiêu này không ở trạng thái "Cần làm" hoặc "Bị từ chối"');
+    if (
+      indicator.testingStatus !== IndicatorTestingStatus.Todo &&
+      indicator.testingStatus !== IndicatorTestingStatus.Rejected
+    ) {
+      message.warning(
+        'Chỉ tiêu này không ở trạng thái "Cần làm" hoặc "Bị từ chối"'
+      );
       return;
     }
 
@@ -416,7 +436,7 @@ const TestingDetail: React.FC = () => {
         sampleId,
         indicatorIds: [indicatorId],
       });
-      message.success('Đã bắt đầu thực hiện chỉ tiêu');
+      message.success("Đã bắt đầu thực hiện chỉ tiêu");
       loadDetail();
     } catch (error: any) {
       console.error("Failed to check-in indicator:", error);
@@ -436,7 +456,7 @@ const TestingDetail: React.FC = () => {
     let sampleId: string | null = null;
     let indicator = null;
     for (const sample of detail.samples) {
-      const found = sample.indicators.find(i => i.id === indicatorId);
+      const found = sample.indicators.find((i) => i.id === indicatorId);
       if (found) {
         sampleId = sample.sampleId;
         indicator = found;
@@ -454,11 +474,11 @@ const TestingDetail: React.FC = () => {
 
     // Kiểm tra có kết quả không
     const results = sampleResults.get(sampleId) || [];
-    const editedResult = results.find(r => r.indicatorId === indicatorId);
+    const editedResult = results.find((r) => r.indicatorId === indicatorId);
     const resultValue = editedResult?.result ?? indicator.result;
 
-    if (!resultValue || resultValue.trim() === '') {
-      message.warning('Vui lòng nhập kết quả trước khi gửi');
+    if (!resultValue || resultValue.trim() === "") {
+      message.warning("Vui lòng nhập kết quả trước khi gửi");
       return;
     }
 
@@ -473,7 +493,7 @@ const TestingDetail: React.FC = () => {
         sampleId,
         indicatorIds: [indicatorId],
       });
-      message.success('Gửi kết quả thành công');
+      message.success("Gửi kết quả thành công");
       loadDetail();
     } catch (error: any) {
       console.error("Failed to submit indicator result:", error);
@@ -490,7 +510,9 @@ const TestingDetail: React.FC = () => {
     ? (() => {
         const deadline = new Date(detail.requestCompletionDate);
         const today = new Date();
-        const diffDays = Math.ceil((deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        const diffDays = Math.ceil(
+          (deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+        );
         return diffDays <= 3;
       })()
     : false;
@@ -502,8 +524,12 @@ const TestingDetail: React.FC = () => {
 
   // Check if sample is completed (all indicators are Done)
   const isSampleCompleted = (sample: TestingSampleDto) => {
-    return sample.indicators.length > 0 &&
-      sample.indicators.every(ind => ind.testingStatus === IndicatorTestingStatus.Done);
+    return (
+      sample.indicators.length > 0 &&
+      sample.indicators.every(
+        (ind) => ind.testingStatus === IndicatorTestingStatus.Done
+      )
+    );
   };
 
   if (loading) {
@@ -531,31 +557,31 @@ const TestingDetail: React.FC = () => {
     const selected = selectedIndicators.get(sample.sampleId) || [];
 
     // Kiểm tra có chỉ tiêu nào được chọn ở trạng thái Todo hoặc Rejected không
-    const hasCheckInableIndicators = selected.some(indicatorId => {
-      const indicator = sample.indicators.find(i => i.id === indicatorId);
-      return indicator && (
-        indicator.testingStatus === IndicatorTestingStatus.Todo ||
-        indicator.testingStatus === IndicatorTestingStatus.Rejected
+    const hasCheckInableIndicators = selected.some((indicatorId) => {
+      const indicator = sample.indicators.find((i) => i.id === indicatorId);
+      return (
+        indicator &&
+        (indicator.testingStatus === IndicatorTestingStatus.Todo ||
+          indicator.testingStatus === IndicatorTestingStatus.Rejected)
       );
     });
 
     // Kiểm tra có chỉ tiêu nào được chọn ở trạng thái Testing không
-    const hasSubmittableIndicators = selected.some(indicatorId => {
-      const indicator = sample.indicators.find(i => i.id === indicatorId);
-      return indicator && indicator.testingStatus === IndicatorTestingStatus.Testing;
+    const hasSubmittableIndicators = selected.some((indicatorId) => {
+      const indicator = sample.indicators.find((i) => i.id === indicatorId);
+      return (
+        indicator && indicator.testingStatus === IndicatorTestingStatus.Testing
+      );
     });
 
     return (
-      <div style={{ width: '100%' }}>
+      <div style={{ width: "100%" }}>
         <Row justify="space-between" align="middle" wrap={false}>
           <Col flex="auto">
             <Space wrap size={8}>
               <Text strong>
                 {sample.sampleCode} - {sample.sampleName}
               </Text>
-              {sample.statusText && (
-                <Tag color="blue">{sample.statusText}</Tag>
-              )}
               <Text type="secondary">
                 ({sample.indicators.length} chỉ tiêu)
               </Text>
@@ -569,7 +595,11 @@ const TestingDetail: React.FC = () => {
                 size="small"
                 icon={<PlayCircleOutlined />}
                 onClick={() => handleCheckIn(sample.sampleId)}
-                disabled={submitting || selected.length === 0 || !hasCheckInableIndicators}
+                disabled={
+                  submitting ||
+                  selected.length === 0 ||
+                  !hasCheckInableIndicators
+                }
               >
                 Thực hiện
               </Button>
@@ -578,7 +608,11 @@ const TestingDetail: React.FC = () => {
                 size="small"
                 icon={<SendOutlined />}
                 onClick={() => handleSubmitResults(sample.sampleId)}
-                disabled={submitting || selected.length === 0 || !hasSubmittableIndicators}
+                disabled={
+                  submitting ||
+                  selected.length === 0 ||
+                  !hasSubmittableIndicators
+                }
               >
                 Gửi kết quả
               </Button>
@@ -595,7 +629,13 @@ const TestingDetail: React.FC = () => {
     const canUpload = !isSampleCompleted(sample);
 
     return (
-      <div style={{ marginBottom: 16, padding: '12px 0', borderBottom: '1px solid #f0f0f0' }}>
+      <div
+        style={{
+          marginBottom: 16,
+          padding: "12px 0",
+          borderBottom: "1px solid #f0f0f0",
+        }}
+      >
         <Space size={24} wrap>
           {/* Hình mẫu (readonly từ TestRequest) */}
           {sample.sampleImages?.length > 0 && (
@@ -612,7 +652,11 @@ const TestingDetail: React.FC = () => {
             images={sample.beforeTestingImages || []}
             canUpload={canUpload}
             onImagesChange={(images) =>
-              handleImagesChange(sample.sampleId, SampleTestingImageType.BeforeTesting, images)
+              handleImagesChange(
+                sample.sampleId,
+                SampleTestingImageType.BeforeTesting,
+                images
+              )
             }
           />
           {/* Hình sau TN */}
@@ -623,7 +667,11 @@ const TestingDetail: React.FC = () => {
             images={sample.afterTestingImages || []}
             canUpload={canUpload}
             onImagesChange={(images) =>
-              handleImagesChange(sample.sampleId, SampleTestingImageType.AfterTesting, images)
+              handleImagesChange(
+                sample.sampleId,
+                SampleTestingImageType.AfterTesting,
+                images
+              )
             }
           />
         </Space>
@@ -689,7 +737,12 @@ const TestingDetail: React.FC = () => {
             {detail.technicalManagerName || "N/A"}
           </Descriptions.Item>
           <Descriptions.Item label="Ngày YC hoàn thành">
-            <span style={{ color: isUrgent ? '#ff4d4f' : undefined, fontWeight: isUrgent ? 'bold' : undefined }}>
+            <span
+              style={{
+                color: isUrgent ? "#ff4d4f" : undefined,
+                fontWeight: isUrgent ? "bold" : undefined,
+              }}
+            >
               {detail.requestCompletionDate
                 ? new Date(detail.requestCompletionDate).toLocaleDateString(
                     "vi-VN"
@@ -748,16 +801,15 @@ const TestingDetail: React.FC = () => {
         expandIconPosition="start"
       >
         {sortedSamples.map((sample) => (
-          <Panel
-            header={renderSamplePanelHeader(sample)}
-            key={sample.sampleId}
-          >
+          <Panel header={renderSamplePanelHeader(sample)} key={sample.sampleId}>
             {/* Images section */}
             {renderSampleImages(sample)}
             {/* Indicators table */}
             <IndicatorEditTable
               indicators={sample.indicators}
-              selectedIndicatorIds={selectedIndicators.get(sample.sampleId) || []}
+              selectedIndicatorIds={
+                selectedIndicators.get(sample.sampleId) || []
+              }
               isUrgent={isUrgent}
               submitting={submitting}
               onResultsChange={(results) =>
