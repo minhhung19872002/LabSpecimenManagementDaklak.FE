@@ -16,6 +16,8 @@ import {
   Modal,
   Input,
   Alert,
+  Upload,
+  Image,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -25,6 +27,7 @@ import {
   CloseOutlined,
   FileTextOutlined,
   HistoryOutlined,
+  UploadOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -55,6 +58,7 @@ import {
   IndicatorApprovalStatusColors,
 } from "../../types/laboratoryTask";
 import ProcessTimelineModal from "./components/ProcessTimelineModal";
+import { fileService } from "../../services/fileService";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -99,6 +103,11 @@ const TestRequestDetail: React.FC = () => {
   // Process timeline modal state
   const [processTimelineModalVisible, setProcessTimelineModalVisible] =
     useState(false);
+
+  // Postal delivery image upload modal states (tối đa 5 hình)
+  const [postalImageModalVisible, setPostalImageModalVisible] = useState(false);
+  const [uploadingPostalImage, setUploadingPostalImage] = useState(false);
+  const [postalImages, setPostalImages] = useState<Array<{ fileId: string; url: string }>>([]);
 
   useEffect(() => {
     if (id) {
@@ -169,28 +178,28 @@ const TestRequestDetail: React.FC = () => {
 
     // In KQ - InProgress hoặc SampleSent có thể không cần buttons đặc biệt
     // PendingApproval - Phê duyệt KQ hoặc Không duyệt
-    if (data.status === TestRequestStatus.PendingApproval) {
-      buttons.push(
-        <Button
-          key="approve"
-          type="primary"
-          icon={<CheckCircleOutlined />}
-          onClick={() => handleApprove()}
-        >
-          Phê duyệt KQ
-        </Button>
-      );
-      buttons.push(
-        <Button
-          key="reject-result"
-          danger
-          icon={<CloseCircleOutlined />}
-          onClick={() => setRejectResultModalVisible(true)}
-        >
-          Không duyệt
-        </Button>
-      );
-    }
+    // if (data.status === TestRequestStatus.PendingApproval) {
+    //   buttons.push(
+    //     <Button
+    //       key="approve"
+    //       type="primary"
+    //       icon={<CheckCircleOutlined />}
+    //       onClick={() => handleApprove()}
+    //     >
+    //       Phê duyệt KQ
+    //     </Button>
+    //   );
+    //   buttons.push(
+    //     <Button
+    //       key="reject-result"
+    //       danger
+    //       icon={<CloseCircleOutlined />}
+    //       onClick={() => setRejectResultModalVisible(true)}
+    //     >
+    //       Không duyệt
+    //     </Button>
+    //   );
+    // }
 
     // Approved - In KQ, Gửi kết quả
     if (data.status === TestRequestStatus.Approved) {
@@ -348,13 +357,114 @@ const TestRequestDetail: React.FC = () => {
 
   // Handle complete test request
   const handleComplete = async () => {
-    if (!id) return;
+    if (!id || !data) return;
+
+    // Nếu Gửi bưu điện = true, hiện modal upload hình ảnh
+    if (data.deliveryPostal) {
+      setPostalImageModalVisible(true);
+      return;
+    }
+
+    // Hoàn thành bình thường (không yêu cầu gửi bưu điện)
     try {
       await testRequestService.complete(id);
       message.success("Đã hoàn thành yêu cầu thử nghiệm");
       loadData(id); // Reload to get updated status
     } catch (error: any) {
       console.error("Error completing test request:", error);
+      message.error(
+        error?.response?.data?.error?.message ||
+          "Không thể hoàn thành. Vui lòng thử lại."
+      );
+    }
+  };
+
+  // Handle postal image upload (tối đa 5 hình)
+  const handlePostalImageUpload = async (file: File, fileList: File[]) => {
+    // Get current count and calculate remaining slots
+    const currentCount = postalImages.length;
+    const remainingSlots = 5 - currentCount;
+    const fileIndex = fileList.indexOf(file);
+
+    // Show warning on first file if total exceeds limit
+    if (fileIndex === 0 && fileList.length > remainingSlots) {
+      if (remainingSlots <= 0) {
+        message.warning("Đã đạt tối đa 5 hình ảnh. Không thể thêm hình mới.");
+        return false;
+      } else {
+        message.warning(`Chỉ có thể thêm ${remainingSlots} hình nữa. ${fileList.length - remainingSlots} hình sẽ bị bỏ qua.`);
+      }
+    }
+
+    // Skip files that exceed the limit
+    if (fileIndex >= remainingSlots) {
+      return false;
+    }
+
+    // Validate file - check if it's an image
+    if (!file.type.startsWith('image/')) {
+      message.error(`${file.name}: Chỉ chấp nhận file hình ảnh`);
+      return false;
+    }
+
+    // Check file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      message.error(`${file.name}: Kích thước file tối đa 10MB`);
+      return false;
+    }
+
+    // Validate file using fileService
+    const validationError = fileService.getValidationError(file);
+    if (validationError) {
+      message.error(validationError);
+      return false;
+    }
+
+    setUploadingPostalImage(true);
+    try {
+      const result = await fileService.uploadImage(file);
+      // Use fileService.getFileUrl to get full URL
+      const fullUrl = fileService.getFileUrl(result.fileId);
+      setPostalImages(prev => {
+        // Double check limit before adding
+        if (prev.length >= 5) {
+          return prev;
+        }
+        return [...prev, {
+          fileId: result.fileId,
+          url: fullUrl
+        }];
+      });
+    } catch (error) {
+      message.error(`Upload ${file.name} thất bại`);
+    } finally {
+      setUploadingPostalImage(false);
+    }
+    return false; // Prevent default upload behavior
+  };
+
+  // Remove postal image
+  const handleRemovePostalImage = (fileId: string) => {
+    setPostalImages(prev => prev.filter(img => img.fileId !== fileId));
+  };
+
+  // Handle complete with postal images
+  const handleCompleteWithImage = async () => {
+    if (!id || postalImages.length === 0) {
+      message.error("Vui lòng upload ít nhất 1 hình ảnh gửi bưu điện");
+      return;
+    }
+
+    try {
+      const imageFileIds = postalImages.map(img => img.fileId);
+      await testRequestService.completeWithImage(id, imageFileIds);
+      message.success("Đã hoàn thành yêu cầu thử nghiệm");
+      setPostalImageModalVisible(false);
+      setPostalImages([]);
+      loadData(id);
+    } catch (error: any) {
+      console.error("Error completing with image:", error);
       message.error(
         error?.response?.data?.error?.message ||
           "Không thể hoàn thành. Vui lòng thử lại."
@@ -1294,6 +1404,31 @@ const TestRequestDetail: React.FC = () => {
           </Col>
         </Row>
 
+        {/* Hình ảnh gửi bưu điện - hiển thị khi có */}
+        {data.deliveryPostal && data.postalDeliveryImages && data.postalDeliveryImages.length > 0 && (
+          <>
+            <Divider orientation="left" style={{ marginTop: 24 }}>
+              <span style={{ fontWeight: 600 }}>Hình ảnh gửi bưu điện ({data.postalDeliveryImages.length} hình)</span>
+            </Divider>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, padding: "16px 0", justifyContent: 'center' }}>
+              <Image.PreviewGroup>
+                {data.postalDeliveryImages.map((img, index) => {
+                  // Use fileService.getFileUrl for consistent URL generation
+                  const imageUrl = fileService.getFileUrl(img.fileId);
+                  return (
+                    <Image
+                      key={img.fileId}
+                      src={imageUrl}
+                      alt={`Hình ảnh gửi bưu điện ${index + 1}`}
+                      style={{ maxWidth: 200, maxHeight: 200, objectFit: 'cover' }}
+                    />
+                  );
+                })}
+              </Image.PreviewGroup>
+            </div>
+          </>
+        )}
+
         {/* Thông tin hệ thống */}
         <Divider />
         <Descriptions
@@ -1483,6 +1618,81 @@ const TestRequestDetail: React.FC = () => {
         onClose={() => setProcessTimelineModalVisible(false)}
         testRequestId={id!}
       />
+
+      {/* Postal Delivery Image Upload Modal */}
+      <Modal
+        title="Hoàn thành - Upload hình ảnh gửi bưu điện"
+        open={postalImageModalVisible}
+        onCancel={() => {
+          setPostalImageModalVisible(false);
+          setPostalImages([]);
+        }}
+        onOk={handleCompleteWithImage}
+        okText="Hoàn thành"
+        cancelText="Hủy"
+        okButtonProps={{ disabled: postalImages.length === 0 }}
+        centered
+        width={600}
+      >
+        <Alert
+          message={`Bắt buộc upload hình ảnh minh chứng gửi bưu điện (tối đa 5 hình, đã chọn ${postalImages.length}/5)`}
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+        <Upload
+          accept="image/*"
+          multiple
+          showUploadList={false}
+          beforeUpload={handlePostalImageUpload}
+          disabled={uploadingPostalImage || postalImages.length >= 5}
+        >
+          <Button
+            icon={<UploadOutlined />}
+            loading={uploadingPostalImage}
+            disabled={postalImages.length >= 5}
+          >
+            Chọn hình ảnh ({postalImages.length}/5)
+          </Button>
+        </Upload>
+        {postalImages.length > 0 && (
+          <div style={{ marginTop: 16, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <Image.PreviewGroup>
+              {postalImages.map((img, index) => (
+                <div key={img.fileId} style={{ position: 'relative', display: 'inline-block' }}>
+                  <Image
+                    src={img.url}
+                    alt={`Hình ảnh gửi bưu điện ${index + 1}`}
+                    style={{ width: 100, height: 100, objectFit: 'cover' }}
+                  />
+                  <Button
+                    type="text"
+                    danger
+                    size="small"
+                    icon={<CloseOutlined />}
+                    onClick={() => handleRemovePostalImage(img.fileId)}
+                    style={{
+                      position: 'absolute',
+                      top: -8,
+                      right: -8,
+                      background: 'white',
+                      borderRadius: '50%',
+                      padding: 0,
+                      width: 20,
+                      height: 20,
+                      minWidth: 20,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                    }}
+                  />
+                </div>
+              ))}
+            </Image.PreviewGroup>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

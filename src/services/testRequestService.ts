@@ -116,6 +116,14 @@ export const testRequestService = {
     await api.post(`${BASE_URL}/${id}/complete`);
   },
 
+  /**
+   * Hoàn thành với hình ảnh gửi bưu điện (tối đa 5 hình)
+   * Dùng khi DeliveryPostal = true
+   */
+  completeWithImage: async (id: string, imageFileIds: string[]): Promise<void> => {
+    await api.post(`${BASE_URL}/${id}/complete-with-image`, { imageFileIds });
+  },
+
   // New status transition APIs for sample sent and change approval flow
 
   /**
