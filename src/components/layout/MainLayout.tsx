@@ -17,19 +17,13 @@ import {
   DashboardOutlined,
   FileTextOutlined,
   ExperimentOutlined,
-  CheckCircleOutlined,
-  FileSearchOutlined,
-  BarChartOutlined,
-  WarningOutlined,
   SettingOutlined,
-  HistoryOutlined,
   TeamOutlined,
   ScheduleOutlined,
   DatabaseOutlined,
   AuditOutlined,
   SolutionOutlined,
   ToolOutlined,
-  PieChartOutlined,
   UserOutlined,
   LogoutOutlined,
   KeyOutlined,
@@ -42,11 +36,21 @@ import { useTranslation } from "react-i18next";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { authService, UserInfo } from "../../services/authService";
 import "./MainLayout.css";
-import { PATH_ROUTES } from "../../constants";
+import { PATH_ROUTES, ROLES } from "../../constants";
 
 const { Header, Sider, Content } = Layout;
 
 type MenuItem = Required<MenuProps>["items"][number];
+
+// Extended menu item type with roles
+interface MenuItemWithRoles {
+  key: string;
+  icon: React.ReactNode;
+  label: React.ReactNode;
+  onClick?: () => void;
+  roles: string[];
+  children?: MenuItemWithRoles[];
+}
 
 // Map routes to menu keys
 const routeToKeyMap: Record<string, string> = {
@@ -204,127 +208,114 @@ const MainLayout: React.FC = () => {
   // Helper to create label with tooltip
   const menuLabel = (text: string) => <span title={text}>{text}</span>;
 
-  const menuItems: MenuItem[] = [
+  // All roles shorthand
+  const ALL_ROLES = [
+    ROLES.ADMIN,
+    ROLES.QUALITY_MANAGER,
+    ROLES.LAB_TECHNICAL_MANAGER,
+    ROLES.SAMPLE_RECEIVER,
+    ROLES.LAB_TECHNICIAN,
+  ];
+
+  // Menu items configuration with roles
+  const allMenuItems: MenuItemWithRoles[] = [
     {
       key: "dashboard",
       icon: <DashboardOutlined />,
       label: menuLabel(t("menu.dashboard")),
       onClick: () => navigate(PATH_ROUTES.dashboard),
+      roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER, ROLES.LAB_TECHNICAL_MANAGER],
     },
     {
       key: "lab",
       icon: <ExperimentOutlined />,
       label: menuLabel(t("menu.labOperations")),
+      roles: ALL_ROLES,
       children: [
         {
           key: "requests",
           icon: <FileTextOutlined />,
           label: menuLabel(t("menu.requests")),
           onClick: () => navigate(PATH_ROUTES.testRequests.index),
+          roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER, ROLES.SAMPLE_RECEIVER],
         },
         {
           key: "taskManagement",
           icon: <ScheduleOutlined />,
           label: menuLabel("Quản lý công việc"),
           onClick: () => navigate(PATH_ROUTES.tasks.index),
+          roles: [
+            ROLES.ADMIN,
+            ROLES.QUALITY_MANAGER,
+            ROLES.LAB_TECHNICAL_MANAGER,
+          ],
         },
         {
           key: "testManagement",
           icon: <ExperimentOutlined />,
           label: menuLabel("Quản lý xét nghiệm"),
           onClick: () => navigate(PATH_ROUTES.testing.index),
+          roles: [
+            ROLES.ADMIN,
+            ROLES.QUALITY_MANAGER,
+            ROLES.LAB_TECHNICAL_MANAGER,
+            ROLES.LAB_TECHNICIAN,
+          ],
         },
         {
           key: "qualityManagement",
           icon: <SafetyCertificateOutlined />,
           label: menuLabel("Quản lý chất lượng"),
           onClick: () => navigate(PATH_ROUTES.qualityManagement),
+          roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
         },
         {
           key: "specimens",
           icon: <ExperimentOutlined />,
           label: menuLabel(t("menu.specimens")),
           onClick: () => navigate(PATH_ROUTES.specimens.index),
+          roles: [
+            ROLES.ADMIN,
+            ROLES.QUALITY_MANAGER,
+            ROLES.LAB_TECHNICAL_MANAGER,
+            ROLES.LAB_TECHNICIAN,
+          ],
         },
-        // {
-        //   key: "tests",
-        //   icon: <CheckCircleOutlined />,
-        //   label: menuLabel(t("menu.tests")),
-        //   onClick: () => navigate(PATH_ROUTES.tests.index),
-        // },
-        // {
-        //   key: "specimenHistories",
-        //   icon: <HistoryOutlined />,
-        //   label: menuLabel(t("menu.specimenHistories")),
-        //   onClick: () => navigate(PATH_ROUTES.specimenHistories.index),
-        // },
-        // {
-        //   key: "results",
-        //   icon: <FileSearchOutlined />,
-        //   label: menuLabel(t("menu.results")),
-        //   onClick: () => navigate(PATH_ROUTES.testResults.index),
-        // },
       ],
     },
-    // {
-    //   key: "quality",
-    //   icon: <PieChartOutlined />,
-    //   label: menuLabel(t("menu.qualityReports")),
-    //   children: [
-    //     {
-    //       key: "ncr",
-    //       icon: <WarningOutlined />,
-    //       label: menuLabel(t("menu.ncr")),
-    //       onClick: () => navigate(PATH_ROUTES.ncr),
-    //     },
-    //     {
-    //       key: "reports",
-    //       icon: <BarChartOutlined />,
-    //       label: menuLabel(t("menu.reports")),
-    //       onClick: () => navigate(PATH_ROUTES.reports),
-    //     },
-    //     {
-    //       key: "statistics",
-    //       icon: <BarChartOutlined />,
-    //       label: menuLabel(t("menu.statistics")),
-    //       onClick: () => navigate(PATH_ROUTES.statistics),
-    //     },
-    //   ],
-    // },
     {
       key: "management",
       icon: <ToolOutlined />,
       label: menuLabel(t("menu.management")),
+      roles: [ROLES.ADMIN],
       children: [
-        // {
-        //   key: 'tasks',
-        //   icon: <ScheduleOutlined />,
-        //   label: menuLabel(t('menu.tasks')),
-        //   onClick: () => navigate('/tasks'),
-        // },
         {
           key: "subcontractors",
           icon: <TeamOutlined />,
           label: menuLabel(t("menu.subcontractors")),
           onClick: () => navigate(PATH_ROUTES.subcontractors),
+          roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
         },
         {
           key: "masterData",
           icon: <DatabaseOutlined />,
           label: menuLabel(t("menu.masterData")),
           onClick: () => navigate(PATH_ROUTES.masterData),
+          roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
         },
         {
           key: "organizations",
           icon: <TeamOutlined />,
           label: menuLabel("Cơ sở/Doanh nghiệp"),
           onClick: () => navigate(PATH_ROUTES.organizations),
+          roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
         },
         {
           key: "auditLog",
           icon: <AuditOutlined />,
           label: menuLabel(t("menu.auditLog")),
           onClick: () => navigate(PATH_ROUTES.auditLog),
+          roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
         },
       ],
     },
@@ -332,22 +323,57 @@ const MainLayout: React.FC = () => {
       key: "admin",
       icon: <SolutionOutlined />,
       label: menuLabel(t("menu.administration")),
+      roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
       children: [
         {
           key: "employees",
           icon: <TeamOutlined />,
           label: menuLabel(t("menu.employees")),
           onClick: () => navigate(PATH_ROUTES.employees),
+          roles: [ROLES.ADMIN],
         },
         {
           key: "settings",
           icon: <SettingOutlined />,
           label: menuLabel(t("menu.settings")),
           onClick: () => navigate(PATH_ROUTES.settings),
+          roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
         },
       ],
     },
   ];
+
+  // Filter menu items based on user roles
+  const filterMenuByRoles = (items: MenuItemWithRoles[]): MenuItem[] => {
+    const userRoles = userInfo?.roles || [];
+    const result: MenuItem[] = [];
+
+    for (const item of items) {
+      // Check if user has any of the required roles
+      if (!item.roles.some((role) => userRoles.includes(role))) {
+        continue;
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { roles, children, ...rest } = item;
+
+      if (children && children.length > 0) {
+        const filteredChildren = filterMenuByRoles(children);
+        if (filteredChildren.length > 0) {
+          result.push({ ...rest, children: filteredChildren });
+        }
+      } else {
+        result.push(rest);
+      }
+    }
+
+    return result;
+  };
+
+  // Build menu items based on user roles
+  const menuItems: MenuItem[] = useMemo(() => {
+    return filterMenuByRoles(allMenuItems);
+  }, [userInfo, t, navigate]);
 
   // Menu component to be shared between Sider and Drawer
   const menuContent = (

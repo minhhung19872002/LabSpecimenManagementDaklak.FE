@@ -3,7 +3,8 @@ import { Form, Input, Button, Card, Checkbox, message, Alert } from "antd";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
-import { authService } from "../../services/authService";
+import { authService, UserInfo } from "../../services/authService";
+import { PATH_ROUTES, ROLES } from "../../constants";
 import "./Login.css";
 
 interface LoginFormValues {
@@ -13,6 +14,28 @@ interface LoginFormValues {
 }
 
 const REMEMBERED_USERNAME_KEY = "remembered_username";
+
+// Role-based default routes
+const getDefaultRouteByRole = (roles: string[]): string => {
+  // Check roles in order of priority
+  if (roles.includes(ROLES.ADMIN)) {
+    return PATH_ROUTES.dashboard;
+  }
+  if (roles.includes(ROLES.QUALITY_MANAGER)) {
+    return PATH_ROUTES.dashboard;
+  }
+  if (roles.includes(ROLES.LAB_TECHNICAL_MANAGER)) {
+    return PATH_ROUTES.dashboard;
+  }
+  if (roles.includes(ROLES.SAMPLE_RECEIVER)) {
+    return PATH_ROUTES.testRequests.index;
+  }
+  if (roles.includes(ROLES.LAB_TECHNICIAN)) {
+    return PATH_ROUTES.testing.index;
+  }
+  // Default fallback
+  return PATH_ROUTES.dashboard;
+};
 
 const Login: React.FC = () => {
   const { t } = useTranslation();
@@ -40,6 +63,20 @@ const Login: React.FC = () => {
   // Redirect if already logged in
   useEffect(() => {
     if (authService.isAuthenticated()) {
+      // Get user info from localStorage to determine correct redirect
+      const storedUser = localStorage.getItem("user_info");
+      if (storedUser) {
+        try {
+          const userInfo: UserInfo = JSON.parse(storedUser);
+          if (userInfo.roles && userInfo.roles.length > 0) {
+            const defaultRoute = getDefaultRouteByRole(userInfo.roles);
+            navigate(defaultRoute, { replace: true });
+            return;
+          }
+        } catch {
+          // Ignore parsing errors
+        }
+      }
       navigate(from, { replace: true });
     }
   }, [navigate, from]);
@@ -69,8 +106,18 @@ const Login: React.FC = () => {
         if (response.user) {
           localStorage.setItem("user_info", JSON.stringify(response.user));
         }
-        // Navigate to the original requested page or dashboard
-        navigate(from, { replace: true });
+
+        // Determine redirect path based on user role
+        let redirectPath = from;
+        if (response.user?.roles && response.user.roles.length > 0) {
+          // If coming from login directly (not redirected), use role-based route
+          if (from === "/dashboard" || from === "/") {
+            redirectPath = getDefaultRouteByRole(response.user.roles);
+          }
+        }
+
+        // Navigate to the appropriate page based on role
+        navigate(redirectPath, { replace: true });
       } else if (response.errorMessage) {
         setError(response.errorMessage);
       } else {

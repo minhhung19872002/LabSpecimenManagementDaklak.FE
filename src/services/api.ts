@@ -64,6 +64,13 @@ const handleAuthFailure = () => {
   }
 };
 
+// Handle 403 Forbidden - redirect to forbidden page
+const handleForbidden = () => {
+  if (!window.location.pathname.includes('/403')) {
+    window.location.href = '/403';
+  }
+};
+
 // Create axios instance
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -137,8 +144,14 @@ apiClient.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-    // Handle 401 Unauthorized or 403 Forbidden
-    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+    // Handle 403 Forbidden - redirect to forbidden page (not logout)
+    if (error.response?.status === 403) {
+      handleForbidden();
+      return Promise.reject(error);
+    }
+
+    // Handle 401 Unauthorized
+    if (error.response?.status === 401) {
       // Skip refresh for login/refresh endpoints
       if (originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/refresh-token')) {
         handleAuthFailure();

@@ -74,4 +74,6 @@ export const PATH_ROUTES = {
   settings: '/settings',
 
   login: '/login',
+
+  forbidden: '/403',
 };
