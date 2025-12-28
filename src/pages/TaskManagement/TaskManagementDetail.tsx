@@ -398,9 +398,11 @@ const TaskManagementDetail: React.FC = () => {
       await loadTask();
     } catch (error: any) {
       console.error("Failed to bulk approve:", error);
-      message.error(
-        error.response?.data?.error?.message || "Không thể duyệt chỉ tiêu"
-      );
+      const errorMsg =
+        error.response?.data?.general?.[0] ||
+        error.response?.data?.error?.message ||
+        "Không thể duyệt chỉ tiêu";
+      message.error(errorMsg);
     } finally {
       setActionLoading(false);
     }
@@ -458,9 +460,11 @@ const TaskManagementDetail: React.FC = () => {
         return;
       }
       console.error("Failed to bulk reject:", error);
-      message.error(
-        error.response?.data?.error?.message || "Không thể từ chối chỉ tiêu"
-      );
+      const errorMsg =
+        error.response?.data?.general?.[0] ||
+        error.response?.data?.error?.message ||
+        "Không thể từ chối chỉ tiêu";
+      message.error(errorMsg);
     } finally {
       setActionLoading(false);
     }

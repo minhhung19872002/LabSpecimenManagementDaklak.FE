@@ -121,6 +121,9 @@ const SettingsPage = Loadable(
 // 404 Not Found
 const NotFound = Loadable(lazy(() => import("./pages/NotFound/NotFound")));
 
+// 403 Forbidden
+const Forbidden = Loadable(lazy(() => import("./pages/Forbidden/Forbidden")));
+
 function App() {
   // Initialize grab-to-scroll for all tables
   useEffect(() => {
@@ -132,6 +135,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/403" element={<Forbidden />} />
         <Route
           path="/"
           element={
