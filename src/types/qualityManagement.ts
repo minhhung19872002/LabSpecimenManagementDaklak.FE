@@ -107,6 +107,7 @@ export interface QualityManagementIndicatorDto {
   sampleId: string;
   sampleCode?: string;
   sampleName?: string;
+  specimenTypeName?: string;
   indicatorId: string;
   indicatorCode?: string;
   indicatorName?: string;

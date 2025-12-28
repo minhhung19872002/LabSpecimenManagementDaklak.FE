@@ -45,6 +45,7 @@ export interface SampleFormData {
   processingStatus?: string;
   notes?: string;
   storageLocation?: string;
+  specimenTypeId?: string;
   indicatorIds: string[]; // deprecated, giữ để backward compatible
   indicatorMethods: IndicatorMethodKey[]; // NEW: array of "indicatorId_testMethodId"
   // Attachments (images)
@@ -99,6 +100,7 @@ export interface TestRequestFormContextValue {
   users: any[];
   organizations: any[];
   laboratories: any[];
+  specimenTypes: any[];
   provinces: any[];
   wards: any[];
   setWards: React.Dispatch<React.SetStateAction<any[]>>;

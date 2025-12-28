@@ -187,15 +187,22 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     {
       title: "Tên mẫu",
       key: "sample",
-      width: 150,
+      width: 180,
       ellipsis: true,
       render: (_, record) => (
-        <span>
-          <Text strong>{record.sampleCode}</Text>
-          {record.sampleName && (
-            <Text type="secondary"> - {record.sampleName}</Text>
+        <div>
+          <div>
+            <Text strong>{record.sampleCode}</Text>
+            {record.sampleName && (
+              <Text type="secondary"> - {record.sampleName}</Text>
+            )}
+          </div>
+          {record.specimenTypeName && (
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Loại: {record.specimenTypeName}
+            </Text>
           )}
-        </span>
+        </div>
       ),
     },
     {

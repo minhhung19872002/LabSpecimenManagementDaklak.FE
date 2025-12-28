@@ -48,7 +48,7 @@ export interface SampleStorageItemDto {
   id: string;
   sampleCode: string;
   sampleName: string;
-  sampleType: string | null;
+  specimenTypeName: string | null;
   storageDate: string | null;
   sampleQuantity: string | null;
   statusText: string | null;

@@ -10,11 +10,13 @@ import {
   storageLocationService,
   laboratoryService,
   testMethodService,
+  specimenTypeService,
   IndicatorDto,
   IndicatorGroupDto,
   StorageLocationDto,
   LaboratoryDto,
   TestMethodWithIndicatorsDto,
+  SpecimenTypeDto,
 } from "../../../../services/masterDataService";
 import { userService, UserLookupDto } from "../../../../services/userService";
 import { organizationService } from "../../../../services/organizationService";
@@ -93,6 +95,7 @@ export const useTestRequestFormData = () => {
   const [organizationSearching, setOrganizationSearching] = useState(false);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [laboratories, setLaboratories] = useState<LaboratoryDto[]>([]);
+  const [specimenTypes, setSpecimenTypes] = useState<SpecimenTypeDto[]>([]);
 
   // Test methods and indicator-method mapping
   const [testMethods, setTestMethods] = useState<TestMethodWithIndicatorsDto[]>([]);
@@ -167,7 +170,7 @@ export const useTestRequestFormData = () => {
   // Load master data
   const loadMasterData = async () => {
     try {
-      const [groupsData, indicatorsData, locationsData, usersData, orgsData, labsData, methodsData] = await Promise.all([
+      const [groupsData, indicatorsData, locationsData, usersData, orgsData, labsData, methodsData, specimenTypesData] = await Promise.all([
         indicatorGroupService.getActive(),
         indicatorService.getActive(),
         storageLocationService.getActive(),
@@ -175,6 +178,7 @@ export const useTestRequestFormData = () => {
         organizationService.getAllActive(),
         laboratoryService.getActive(),
         testMethodService.getWithIndicators(),
+        specimenTypeService.getActive(),
       ]);
       setIndicatorGroups(groupsData);
       setIndicators(indicatorsData);
@@ -183,6 +187,7 @@ export const useTestRequestFormData = () => {
       setOrganizations(orgsData);
       setLaboratories(labsData || []);
       setTestMethods(methodsData || []);
+      setSpecimenTypes(specimenTypesData.items || []);
 
       // Build map: indicatorId -> methods[]
       const methodMap: Record<string, IndicatorMethodInfo[]> = {};
@@ -372,6 +377,7 @@ export const useTestRequestFormData = () => {
             processingStatus: sample.processingStatus || "",
             notes: sample.notes,
             storageLocation: sample.storageLocation,
+            specimenTypeId: sample.specimenTypeId,
             indicatorIds: activeIndicators.map((ind) => ind.indicatorId),
             indicatorMethods: indicatorMethods,
             // Load attachments from API response - use fileService to get full URL
@@ -644,6 +650,7 @@ export const useTestRequestFormData = () => {
     organizationOptions,
     organizationSearching,
     laboratories,
+    specimenTypes,
     testMethods,
     indicatorMethodsMap,
 

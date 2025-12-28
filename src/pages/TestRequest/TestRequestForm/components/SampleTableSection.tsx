@@ -9,6 +9,7 @@ import {
   Typography,
   Tooltip,
   Popover,
+  Select,
 } from "antd";
 import {
   PlusOutlined,
@@ -18,7 +19,7 @@ import {
 } from "@ant-design/icons";
 import { Icon } from "@iconify/react";
 import { SampleFormData, LaboratoryAssignment, IndicatorMethodKey, IndicatorMethodInfo, AttachmentInfo } from "../types";
-import { IndicatorDto } from "../../../../services/masterDataService";
+import { IndicatorDto, SpecimenTypeDto } from "../../../../services/masterDataService";
 import SampleImageUpload from "./SampleImageUpload";
 
 const { Text } = Typography;
@@ -41,6 +42,7 @@ interface SampleTableSectionProps {
     testMethodId: string;
   };
   indicatorLaboratoryMap: Record<string, LaboratoryAssignment>;
+  specimenTypes: SpecimenTypeDto[];
 }
 
 const SampleTableSection: React.FC<SampleTableSectionProps> = ({
@@ -56,6 +58,7 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
   getIndicatorInfo,
   getIndicatorMethodInfo,
   indicatorLaboratoryMap,
+  specimenTypes,
 }) => {
   const sampleColumns = [
     {
@@ -96,6 +99,29 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
           }
           placeholder="Tên mẫu"
           size="small"
+        />
+      ),
+    },
+    {
+      title: <span>Loại mẫu <span style={{ color: '#ff4d4f' }}>*</span></span>,
+      dataIndex: "specimenTypeId",
+      key: "specimenTypeId",
+      width: 180,
+      render: (value: string, record: SampleFormData) => (
+        <Select
+          value={value}
+          onChange={(val) => updateSample(record.key, "specimenTypeId", val)}
+          placeholder="Chọn loại mẫu"
+          style={{ width: "100%" }}
+          size="small"
+          disabled={isSamplesLocked()}
+          options={specimenTypes.map((st) => ({
+            value: st.id,
+            label: st.name,
+          }))}
+          showSearch
+          optionFilterProp="label"
+          allowClear
         />
       ),
     },

@@ -67,6 +67,7 @@ const TestRequestForm: React.FC = () => {
     organizationOptions,
     organizationSearching,
     laboratories,
+    specimenTypes,
     handleOrganizationSearch,
     handleOrganizationSelect,
     handlePhoneBlur,
@@ -186,6 +187,7 @@ const TestRequestForm: React.FC = () => {
     sampleIndicatorIdMap,
     originalData,
     isEditRequiresApproval,
+    specimenTypes,
   });
 
   return (
@@ -265,6 +267,7 @@ const TestRequestForm: React.FC = () => {
           getIndicatorInfo={getIndicatorInfo}
           getIndicatorMethodInfo={getIndicatorMethodInfo}
           indicatorLaboratoryMap={indicatorLaboratoryMap}
+          specimenTypes={specimenTypes}
         />
 
         {/* Loại hình mẫu */}

@@ -75,6 +75,9 @@ interface UseTestRequestFormActionsProps {
 
   // Check if edit requires approval
   isEditRequiresApproval: () => boolean;
+
+  // SpecimenTypes for name lookup
+  specimenTypes: any[];
 }
 
 export const useTestRequestFormActions = ({
@@ -121,6 +124,7 @@ export const useTestRequestFormActions = ({
   sampleIndicatorIdMap,
   originalData,
   isEditRequiresApproval,
+  specimenTypes,
 }: UseTestRequestFormActionsProps) => {
 
   // Helper: Build change history by comparing original and new data
@@ -171,6 +175,13 @@ export const useTestRequestFormActions = ({
       }
     });
 
+    // Helper to get specimen type name from ID
+    const getSpecimenTypeName = (typeId: string | undefined) => {
+      if (!typeId) return '';
+      const specimenType = specimenTypes.find((st: any) => st.id === typeId);
+      return specimenType?.name || '';
+    };
+
     // Compare samples - convert to JSON for storage
     const oldSamples = (originalData.samples || []).map((s: any) => ({
       Id: s.id,
@@ -182,6 +193,8 @@ export const useTestRequestFormActions = ({
       ProcessingStatus: s.processingStatus,
       Notes: s.notes,
       StorageLocation: s.storageLocation,
+      SpecimenTypeId: s.specimenTypeId,
+      SpecimenTypeName: s.specimenTypeName || getSpecimenTypeName(s.specimenTypeId),
       Indicators: (s.indicators || []).map((ind: any) => ({
         Id: ind.id,
         IndicatorId: ind.indicatorId,
@@ -206,6 +219,8 @@ export const useTestRequestFormActions = ({
       ProcessingStatus: s.processingStatus,
       Notes: s.notes,
       StorageLocation: s.storageLocation,
+      SpecimenTypeId: s.specimenTypeId,
+      SpecimenTypeName: getSpecimenTypeName(s.specimenTypeId),
       Indicators: (s.indicators || []).map((ind: any) => {
         // Find test method info from indicatorMethodsMap
         const methods = indicatorMethodsMap[ind.indicatorId] || [];
@@ -620,6 +635,14 @@ export const useTestRequestFormActions = ({
       return;
     }
 
+    // Validate: all samples must have specimenTypeId
+    const samplesWithoutSpecimenType = samples.filter((s) => !s.specimenTypeId);
+    if (samplesWithoutSpecimenType.length > 0) {
+      const sampleCodes = samplesWithoutSpecimenType.map((s) => s.sampleCode || s.sampleName).join(", ");
+      message.warning(`Các mẫu sau chưa chọn loại mẫu: ${sampleCodes}`);
+      return;
+    }
+
     // Validate: all samples must have at least one indicator
     const samplesWithoutIndicators = samples.filter((s) => {
       const hasIndicatorMethods = s.indicatorMethods && s.indicatorMethods.length > 0;
@@ -695,6 +718,7 @@ export const useTestRequestFormActions = ({
           processingStatus: sample.processingStatus || undefined,
           notes: sample.notes || undefined,
           storageLocation: sample.storageLocation || undefined,
+          specimenTypeId: sample.specimenTypeId || undefined,
           indicators: indicatorsList,
           // Attachments: send full info (fileId, fileName, fileSize)
           attachments: sample.attachments?.map((a) => ({
