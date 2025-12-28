@@ -46,6 +46,7 @@ import {
 import {
   SampleTestingImageDto,
   SampleTestingImageType,
+  SampleAttachmentDto,
 } from "../../types/testing";
 import IndicatorTable from "./components/IndicatorTable";
 import SupporterModal from "./components/SupporterModal";
@@ -102,11 +103,12 @@ const TaskManagementDetail: React.FC = () => {
   );
   const [rejectForm] = Form.useForm();
 
-  // Sample images state
+  // Sample images state (includes sample attachments from TestRequest)
   const [sampleImages, setSampleImages] = useState<
     Record<
       string,
       {
+        sampleAttachments: SampleAttachmentDto[];
         beforeTesting: SampleTestingImageDto[];
         afterTesting: SampleTestingImageDto[];
       }
@@ -464,37 +466,99 @@ const TaskManagementDetail: React.FC = () => {
     }
   };
 
-  // Load sample images
+  // Load sample images (testing images + sample attachments from TestRequest)
   useEffect(() => {
     const loadSampleImages = async () => {
       if (!task || !id) return;
 
-      const sampleIds = Object.keys(indicatorsBySample);
-      for (const sampleId of sampleIds) {
-        try {
-          const images = await testingService.getSampleTestingImages(
-            id,
-            sampleId
-          );
-          setSampleImages((prev) => ({
-            ...prev,
-            [sampleId]: {
-              beforeTesting: images.filter(
-                (i) => i.imageType === SampleTestingImageType.BeforeTesting
-              ),
-              afterTesting: images.filter(
-                (i) => i.imageType === SampleTestingImageType.AfterTesting
-              ),
-            },
-          }));
-        } catch (error) {
-          console.error(`Failed to load images for sample ${sampleId}:`, error);
+      try {
+        // Load testing detail to get all sample images at once
+        const testingDetail = await testingService.get(id);
+
+        const newSampleImages: Record<
+          string,
+          {
+            sampleAttachments: SampleAttachmentDto[];
+            beforeTesting: SampleTestingImageDto[];
+            afterTesting: SampleTestingImageDto[];
+          }
+        > = {};
+
+        for (const sample of testingDetail.samples) {
+          newSampleImages[sample.sampleId] = {
+            sampleAttachments: sample.sampleImages || [],
+            beforeTesting: sample.beforeTestingImages || [],
+            afterTesting: sample.afterTestingImages || [],
+          };
+        }
+
+        setSampleImages(newSampleImages);
+      } catch (error) {
+        console.error("Failed to load sample images:", error);
+        // Fallback: load images per sample
+        const sampleIds = Object.keys(indicatorsBySample);
+        for (const sampleId of sampleIds) {
+          try {
+            const images = await testingService.getSampleTestingImages(
+              id,
+              sampleId
+            );
+            setSampleImages((prev) => ({
+              ...prev,
+              [sampleId]: {
+                sampleAttachments: [],
+                beforeTesting: images.filter(
+                  (i) => i.imageType === SampleTestingImageType.BeforeTesting
+                ),
+                afterTesting: images.filter(
+                  (i) => i.imageType === SampleTestingImageType.AfterTesting
+                ),
+              },
+            }));
+          } catch (err) {
+            console.error(`Failed to load images for sample ${sampleId}:`, err);
+          }
         }
       }
     };
 
     loadSampleImages();
   }, [task, id, indicatorsBySample]);
+
+  // Handle before testing images change
+  const handleBeforeImagesChange = (
+    sampleId: string,
+    images: SampleTestingImageDto[]
+  ) => {
+    setSampleImages((prev) => ({
+      ...prev,
+      [sampleId]: {
+        ...prev[sampleId],
+        beforeTesting: images,
+      },
+    }));
+  };
+
+  // Handle after testing images change
+  const handleAfterImagesChange = (
+    sampleId: string,
+    images: SampleTestingImageDto[]
+  ) => {
+    setSampleImages((prev) => ({
+      ...prev,
+      [sampleId]: {
+        ...prev[sampleId],
+        afterTesting: images,
+      },
+    }));
+  };
+
+  // Check if can upload images (same logic as canEditTask)
+  const canUploadImages =
+    task?.status === LaboratoryTaskStatus.NotAssigned ||
+    task?.status === LaboratoryTaskStatus.Assigned ||
+    task?.status === LaboratoryTaskStatus.Testing ||
+    task?.status === LaboratoryTaskStatus.PendingApproval;
 
   // Get status tag
   const getStatusTag = (status: LaboratoryTaskStatus) => {
@@ -613,13 +677,22 @@ const TaskManagementDetail: React.FC = () => {
       ),
       children: (
         <>
-          {/* Sample Images Display */}
-          {sampleImagesData && (
-            <SampleImagesDisplay
-              beforeTestingImages={sampleImagesData.beforeTesting}
-              afterTestingImages={sampleImagesData.afterTesting}
-            />
-          )}
+          {/* Sample Images Display with upload support */}
+          <SampleImagesDisplay
+            taskId={id}
+            sampleId={sample.sampleId}
+            sampleImages={sampleImagesData?.sampleAttachments}
+            beforeTestingImages={sampleImagesData?.beforeTesting}
+            afterTestingImages={sampleImagesData?.afterTesting}
+            canUpload={canUploadImages}
+            maxImages={5}
+            onBeforeImagesChange={(images) =>
+              handleBeforeImagesChange(sample.sampleId, images)
+            }
+            onAfterImagesChange={(images) =>
+              handleAfterImagesChange(sample.sampleId, images)
+            }
+          />
           <IndicatorTable
             indicators={sample.indicators}
             methods={methods}

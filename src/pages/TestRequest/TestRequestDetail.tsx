@@ -28,6 +28,7 @@ import {
   FileTextOutlined,
   HistoryOutlined,
   UploadOutlined,
+  PictureOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -1469,16 +1470,42 @@ const TestRequestDetail: React.FC = () => {
                     // Use fileService.getFileUrl for consistent URL generation
                     const imageUrl = fileService.getFileUrl(img.fileId);
                     return (
-                      <Image
+                      <div
                         key={img.fileId}
-                        src={imageUrl}
-                        alt={`Hình ảnh gửi bưu điện ${index + 1}`}
                         style={{
-                          maxWidth: 200,
-                          maxHeight: 200,
-                          objectFit: "cover",
+                          width: 200,
+                          height: 200,
+                          border: "1px solid #d9d9d9",
+                          borderRadius: 8,
+                          overflow: "hidden",
+                          position: "relative",
                         }}
-                      />
+                      >
+                        <Image
+                          src={imageUrl}
+                          alt={`Hình ảnh gửi bưu điện ${index + 1}`}
+                          width={200}
+                          height={200}
+                          style={{
+                            objectFit: "cover",
+                          }}
+                          fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+                          placeholder={
+                            <div
+                              style={{
+                                width: 200,
+                                height: 200,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                background: "#f5f5f5",
+                              }}
+                            >
+                              <PictureOutlined style={{ fontSize: 40, color: "#999" }} />
+                            </div>
+                          }
+                        />
+                      </div>
                     );
                   })}
                 </Image.PreviewGroup>
