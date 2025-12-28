@@ -178,7 +178,10 @@ export const useTestRequestFormActions = ({
       SampleName: s.sampleName,
       SamplingAddress: s.samplingAddress,
       SampleQuantity: s.sampleQuantity,
+      StatusText: s.statusText,
+      ProcessingStatus: s.processingStatus,
       Notes: s.notes,
+      StorageLocation: s.storageLocation,
       Indicators: (s.indicators || []).map((ind: any) => ({
         Id: ind.id,
         IndicatorId: ind.indicatorId,
@@ -199,7 +202,10 @@ export const useTestRequestFormActions = ({
       SampleName: s.sampleName,
       SamplingAddress: s.samplingAddress,
       SampleQuantity: s.sampleQuantity,
+      StatusText: s.statusText,
+      ProcessingStatus: s.processingStatus,
       Notes: s.notes,
+      StorageLocation: s.storageLocation,
       Indicators: (s.indicators || []).map((ind: any) => {
         // Find test method info from indicatorMethodsMap
         const methods = indicatorMethodsMap[ind.indicatorId] || [];
@@ -611,6 +617,18 @@ export const useTestRequestFormActions = ({
     const invalidSamples = samples.filter((s) => !s.sampleName);
     if (invalidSamples.length > 0) {
       message.warning("Vui lòng điền tên mẫu cho tất cả các mẫu");
+      return;
+    }
+
+    // Validate: all samples must have at least one indicator
+    const samplesWithoutIndicators = samples.filter((s) => {
+      const hasIndicatorMethods = s.indicatorMethods && s.indicatorMethods.length > 0;
+      const hasIndicatorIds = s.indicatorIds && s.indicatorIds.length > 0;
+      return !hasIndicatorMethods && !hasIndicatorIds;
+    });
+    if (samplesWithoutIndicators.length > 0) {
+      const sampleCodes = samplesWithoutIndicators.map((s) => s.sampleCode || s.sampleName).join(", ");
+      message.warning(`Các mẫu sau chưa có chỉ tiêu: ${sampleCodes}`);
       return;
     }
 

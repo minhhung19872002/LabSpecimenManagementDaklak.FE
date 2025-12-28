@@ -220,6 +220,8 @@ export interface TestRequestSampleDto {
   notes?: string;
   storageLocation?: string;
   totalIndicatorCost: number;
+  /** Đánh dấu mẫu đã bị hủy (dùng cho quản lý mẫu lưu kho) */
+  isCancelled?: boolean;
   indicators: TestRequestSampleIndicatorDto[];
   attachments?: SampleAttachmentDto[];
 }

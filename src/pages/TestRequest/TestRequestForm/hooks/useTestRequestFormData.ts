@@ -284,7 +284,22 @@ export const useTestRequestFormData = () => {
       const data = await testRequestService.get(id);
 
       // Lưu snapshot data gốc để so sánh thay đổi sau này
-      setOriginalData(JSON.parse(JSON.stringify(data)));
+      // IMPORTANT: Filter out cancelled samples and CustomerCancelled indicators
+      // so that change history comparison doesn't include already-cancelled items
+      const originalDataCopy = JSON.parse(JSON.stringify(data));
+      if (originalDataCopy.samples) {
+        originalDataCopy.samples = originalDataCopy.samples
+          .filter((s: any) => !s.isCancelled)
+          .map((s: any) => ({
+            ...s,
+            indicators: (s.indicators || []).filter(
+              (ind: any) => ind.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled
+            ),
+          }))
+          // Remove samples with no remaining active indicators (all were CustomerCancelled)
+          .filter((s: any) => (s.indicators || []).length > 0 || !s.id);
+      }
+      setOriginalData(originalDataCopy);
 
       setCurrentStatus(data.status);
 
@@ -319,9 +334,18 @@ export const useTestRequestFormData = () => {
         form.setFieldsValue({ methodRequirement: "westHighlandInstitute" });
       }
 
-      // Load samples
-      if (data.samples && data.samples.length > 0) {
-        const sampleData: SampleFormData[] = data.samples.map((sample, index) => {
+      // Load samples - filter out cancelled samples and samples with no indicators (they are kept for Sample Storage history)
+      const activeSamples = (data.samples || []).filter((sample) => {
+        // Filter out cancelled samples
+        if (sample.isCancelled) return false;
+        // Filter out samples with no active indicators (all deleted or cancelled)
+        const activeIndicators = sample.indicators?.filter(
+          (ind) => ind.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled
+        ) || [];
+        return activeIndicators.length > 0 || !sample.id; // Keep new samples without id
+      });
+      if (activeSamples.length > 0) {
+        const sampleData: SampleFormData[] = activeSamples.map((sample, index) => {
           // Filter out CustomerCancelled indicators - they should not be editable
           const activeIndicators = sample.indicators?.filter(
             (ind) => ind.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled
@@ -382,7 +406,7 @@ export const useTestRequestFormData = () => {
           return parsed.startOf('day');
         };
 
-        data.samples.forEach((sample, sampleIndex) => {
+        activeSamples.forEach((sample, sampleIndex) => {
           const sampleKey = sample.id || `sample-${sampleIndex}`;
           // Filter out CustomerCancelled indicators
           const activeIndicators = sample.indicators?.filter(

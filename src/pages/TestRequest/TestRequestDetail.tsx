@@ -356,21 +356,6 @@ const TestRequestDetail: React.FC = () => {
     }
   };
 
-  const getSampleStatusTag = (status: SampleStatus) => {
-    const statusConfig = {
-      [SampleStatus.Normal]: { color: "default", text: "Bình thường" },
-      [SampleStatus.Damaged]: { color: "warning", text: "Hư hỏng" },
-      [SampleStatus.NotMeetRequirements]: {
-        color: "error",
-        text: "Không đạt YC",
-      },
-      [SampleStatus.Testing]: { color: "processing", text: "Đang kiểm nghiệm" },
-      [SampleStatus.Completed]: { color: "success", text: "Hoàn thành" },
-    };
-    const config = statusConfig[status];
-    return <Tag color={config.color}>{config.text}</Tag>;
-  };
-
   const getResultLanguageText = (lang: ResultLanguage) => {
     const langMap = {
       [ResultLanguage.Vietnamese]: "Tiếng Việt",
@@ -682,8 +667,7 @@ const TestRequestDetail: React.FC = () => {
       dataIndex: "statusText",
       key: "statusText",
       width: 120,
-      render: (value: string, record: any) =>
-        value || getSampleStatusTag(record.status),
+      render: (value: string, record: any) => value || "-",
     },
     {
       title: "Trạng thái XL",
@@ -1068,7 +1052,7 @@ const TestRequestDetail: React.FC = () => {
         </Divider>
 
         <Table
-          dataSource={data.samples || []}
+          dataSource={(data.samples || []).filter(s => !s.isCancelled)}
           columns={sampleColumns}
           rowKey="id"
           pagination={false}
