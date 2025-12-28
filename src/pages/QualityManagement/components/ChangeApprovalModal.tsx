@@ -13,6 +13,7 @@ import {
   Input,
   message,
   Table,
+  Image,
 } from 'antd';
 import {
   CheckCircleOutlined,
@@ -24,6 +25,7 @@ import {
   ArrowDownOutlined,
   CheckSquareOutlined,
   BorderOutlined,
+  FileImageOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import {
@@ -38,6 +40,7 @@ import {
   QualityTaskType,
   ChangeApprovalBatchDto,
 } from '../../../types/qualityManagement';
+import fileService from '../../../services/fileService';
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -66,6 +69,12 @@ interface IndicatorChange {
   indicator: any;
   oldIndicator?: any;
   sampleCode?: string;
+}
+
+interface AttachmentInfo {
+  fileId: string;
+  fileName: string;
+  fileSize: number;
 }
 
 interface SampleChange {
@@ -97,6 +106,9 @@ interface SampleChange {
   oldNotes?: string;
   totalCost: number;
   oldTotalCost?: number;
+  // Attachments
+  attachments?: AttachmentInfo[];
+  oldAttachments?: AttachmentInfo[];
 }
 
 // Field labels mapping (support both camelCase and PascalCase)
@@ -238,6 +250,10 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [users, setUsers] = useState<UserLookupDto[]>([]);
+  // State for attachment preview modal
+  const [previewImages, setPreviewImages] = useState<AttachmentInfo[]>([]);
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [previewTitle, setPreviewTitle] = useState('');
 
   // Check if using batchData mode (data passed directly instead of loading from API)
   const isBatchDataMode = !!batchData;
@@ -333,6 +349,7 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
 
           // Helper to get sample fields (handle both cases)
           const getIndicators = (sample: any) => sample.indicators || sample.Indicators || [];
+          const getAttachments = (sample: any) => sample.attachments || sample.Attachments || [];
           const getSampleCode = (sample: any) => sample.sampleCode || sample.SampleCode || '-';
           const getSampleName = (sample: any) => sample.sampleName || sample.SampleName || '';
           const getSampleId = (sample: any) => sample.id || sample.Id;
@@ -398,6 +415,11 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
                 processingStatus: getProcessingStatus(s),
                 notes: getNotes(s),
                 totalCost: calcTotalCost(s),
+                attachments: getAttachments(s).map((a: any) => ({
+                  fileId: a.fileId || a.FileId,
+                  fileName: a.fileName || a.FileName,
+                  fileSize: a.fileSize || a.FileSize || 0,
+                })),
               });
             }
           });
@@ -428,6 +450,11 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
                 processingStatus: getProcessingStatus(s),
                 notes: getNotes(s),
                 totalCost: calcTotalCost(s),
+                oldAttachments: getAttachments(s).map((a: any) => ({
+                  fileId: a.fileId || a.FileId,
+                  fileName: a.fileName || a.FileName,
+                  fileSize: a.fileSize || a.FileSize || 0,
+                })),
               });
             }
           });
@@ -494,7 +521,12 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
               normalize(getVal(oldS, f)) !== normalize(getVal(newS, f))
             );
 
-            if (indicatorChanges.length > 0 || hasSampleChange) {
+            // Check attachments change
+            const oldAttachmentsJson = JSON.stringify(getAttachments(oldS).map((a: any) => a.fileId || a.FileId).sort());
+            const newAttachmentsJson = JSON.stringify(getAttachments(newS).map((a: any) => a.fileId || a.FileId).sort());
+            const hasAttachmentsChange = oldAttachmentsJson !== newAttachmentsJson;
+
+            if (indicatorChanges.length > 0 || hasSampleChange || hasAttachmentsChange) {
               samples.push({
                 type: 'update',
                 sampleCode: getSampleCode(newS),
@@ -524,6 +556,16 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
                 oldNotes: getNotes(oldS),
                 totalCost: calcTotalCost(newS),
                 oldTotalCost: calcTotalCost(oldS),
+                attachments: getAttachments(newS).map((a: any) => ({
+                  fileId: a.fileId || a.FileId,
+                  fileName: a.fileName || a.FileName,
+                  fileSize: a.fileSize || a.FileSize || 0,
+                })),
+                oldAttachments: getAttachments(oldS).map((a: any) => ({
+                  fileId: a.fileId || a.FileId,
+                  fileName: a.fileName || a.FileName,
+                  fileSize: a.fileSize || a.FileSize || 0,
+                })),
               });
             }
           });
@@ -815,6 +857,161 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
             </Col>
           </Row>
         </div>
+
+        {/* Attachments changes */}
+        {(() => {
+          const attachments = sample.attachments || [];
+          const oldAttachments = sample.oldAttachments || [];
+          const hasAttachmentChanges = sample.type === 'add' || sample.type === 'delete' ||
+            JSON.stringify(attachments.map(a => a.fileId).sort()) !== JSON.stringify(oldAttachments.map(a => a.fileId).sort());
+
+          if (!hasAttachmentChanges && attachments.length === 0 && oldAttachments.length === 0) return null;
+
+          // Tìm attachments thêm mới và xóa
+          const oldFileIds = new Set(oldAttachments.map(a => a.fileId));
+          const newFileIds = new Set(attachments.map(a => a.fileId));
+          const addedAttachments = attachments.filter(a => !oldFileIds.has(a.fileId));
+          const removedAttachments = oldAttachments.filter(a => !newFileIds.has(a.fileId));
+
+          if (sample.type !== 'add' && sample.type !== 'delete' && addedAttachments.length === 0 && removedAttachments.length === 0) return null;
+
+          // Helper to render image thumbnails with +N button
+          const renderImageThumbnails = (
+            images: AttachmentInfo[],
+            type: 'add' | 'delete',
+            label?: string
+          ) => {
+            if (images.length === 0) return null;
+            const maxDisplay = 2;
+            const displayImages = images.slice(0, maxDisplay);
+            const remainingCount = images.length - maxDisplay;
+
+            const borderColor = type === 'add' ? '#52c41a' : '#ff4d4f';
+            const bgColor = type === 'add' ? '#f6ffed' : '#fff1f0';
+
+            return (
+              <div style={{ marginBottom: 8 }}>
+                {label && (
+                  <Text type="secondary" style={{ fontSize: 11, marginRight: 8, display: 'block', marginBottom: 4 }}>
+                    <Tag color={type === 'add' ? 'success' : 'error'} style={{ marginRight: 4 }}>
+                      {type === 'add' ? <PlusOutlined /> : <DeleteOutlined />}
+                    </Tag>
+                    {label}:
+                  </Text>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <Image.PreviewGroup>
+                    {displayImages.map((att, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          position: 'relative',
+                          width: 60,
+                          height: 60,
+                          borderRadius: 4,
+                          overflow: 'hidden',
+                          border: `2px solid ${borderColor}`,
+                          backgroundColor: bgColor,
+                        }}
+                      >
+                        <Image
+                          src={fileService.getFileUrl(att.fileId)}
+                          alt={att.fileName}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            opacity: type === 'delete' ? 0.5 : 1,
+                          }}
+                          fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEwAACxMBAJqcGAAAAVlJREFUaN7t2D0KwjAYBuDXohvg4uTq4OLm5ubk4OLm5uLg4OYJPIGbJ/AEnkB3cXAQBwfBwcVBcHDw+0FSNNSS9k9S3g9CIW3zPCVJm1QKJZGsEIBYmm3bFwCqpNsHKqqqrgLwqJBe0zStaLfbu0aj0R1F0bNOq9VKAhAL53D4FRhj0Ol0ekulEkwTIE9zuHGO43gwTXMAQNUJcBWApmkaOL9Wq/GZGONzSAIA1DCsEJ7nfep0On46k/B9PwGgRvrYP0RnAZjcgGlCZAG4AkB3MBjANE2oqvo+BqABQKPb7QIA6AOJ+P4fEonE2wiABiZwA9M0EYYh4vH4WxTwPiMB0IvH4zFOnU4nqSgKDg4OcHJyggcA0hYAwLt2u/0CwMXFRRydnZ3h8vJSxEYiALJxMhqN+AMAYDAYgKIoLC8v4+joiB8RSdkbO4gCANcAuL29RXAJ+EfxCsm1Ye4EAAAAAElFTkSuQmCC"
+                        />
+                        {type === 'delete' && (
+                          <div
+                            style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              backgroundColor: 'rgba(255, 77, 79, 0.3)',
+                            }}
+                          >
+                            <DeleteOutlined style={{ color: '#ff4d4f', fontSize: 20 }} />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </Image.PreviewGroup>
+                  {remainingCount > 0 && (
+                    <div
+                      onClick={() => {
+                        setPreviewImages(images);
+                        setPreviewTitle(`${type === 'add' ? 'Thêm' : 'Xóa'} - ${sample.sampleCode}`);
+                        setPreviewVisible(true);
+                      }}
+                      style={{
+                        width: 60,
+                        height: 60,
+                        borderRadius: 4,
+                        border: `2px dashed ${borderColor}`,
+                        backgroundColor: bgColor,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = type === 'add' ? '#d9f7be' : '#ffccc7';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = bgColor;
+                      }}
+                    >
+                      <Text strong style={{ color: borderColor, fontSize: 14 }}>
+                        +{remainingCount}
+                      </Text>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          };
+
+          return (
+            <div style={{ marginBottom: 12, paddingBottom: 8, borderBottom: '1px dashed #e8e8e8' }}>
+              <Text strong style={{ fontSize: 12, marginBottom: 8, display: 'block' }}>
+                <FileImageOutlined style={{ marginRight: 4 }} />
+                Hình ảnh đính kèm:
+              </Text>
+
+              {sample.type === 'add' ? (
+                // Mẫu mới - hiển thị tất cả attachments là thêm mới
+                attachments.length > 0 ? (
+                  renderImageThumbnails(attachments, 'add')
+                ) : (
+                  <Text type="secondary" style={{ fontSize: 11 }}>Không có hình ảnh</Text>
+                )
+              ) : sample.type === 'delete' ? (
+                // Mẫu bị xóa - hiển thị tất cả attachments là bị xóa
+                oldAttachments.length > 0 ? (
+                  renderImageThumbnails(oldAttachments, 'delete')
+                ) : (
+                  <Text type="secondary" style={{ fontSize: 11 }}>Không có hình ảnh</Text>
+                )
+              ) : (
+                // Mẫu được update - hiển thị thay đổi
+                <div>
+                  {renderImageThumbnails(addedAttachments, 'add', 'Thêm')}
+                  {renderImageThumbnails(removedAttachments, 'delete', 'Xóa')}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Indicators list */}
         {sample.indicators.length > 0 && (
@@ -1258,6 +1455,56 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
           maxLength={1000}
           showCount
         />
+      </Modal>
+
+      {/* Image Preview Modal */}
+      <Modal
+        title={
+          <Space>
+            <FileImageOutlined />
+            <span>Xem hình ảnh: {previewTitle}</span>
+          </Space>
+        }
+        open={previewVisible}
+        onCancel={() => {
+          setPreviewVisible(false);
+          setPreviewImages([]);
+          setPreviewTitle('');
+        }}
+        footer={null}
+        width={800}
+        centered
+      >
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
+          <Image.PreviewGroup>
+            {previewImages.map((img, idx) => (
+              <div
+                key={idx}
+                style={{
+                  width: 150,
+                  height: 150,
+                  borderRadius: 8,
+                  overflow: 'hidden',
+                  border: '1px solid #f0f0f0',
+                }}
+              >
+                <Image
+                  src={fileService.getFileUrl(img.fileId)}
+                  alt={img.fileName}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                  }}
+                  fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEwAACxMBAJqcGAAAAVlJREFUaN7t2D0KwjAYBuDXohvg4uTq4OLm5ubk4OLm5uLg4OYJPIGbJ/AEnkB3cXAQBwfBwcVBcHDw+0FSNNSS9k9S3g9CIW3zPCVJm1QKJZGsEIBYmm3bFwCqpNsHKqqqrgLwqJBe0zStaLfbu0aj0R1F0bNOq9VKAhAL53D4FRhj0Ol0ekulEkwTIE9zuHGO43gwTXMAQNUJcBWApmkaOL9Wq/GZGONzSAIA1DCsEJ7nfep0On46k/B9PwGgRvrYP0RnAZjcgGlCZAG4AkB3MBjANE2oqvo+BqABQKPb7QIA6AOJ+P4fEonE2wiABiZwA9M0EYYh4vH4WxTwPiMB0IvH4zFOnU4nqSgKDg4OcHJyggcA0hYAwLt2u/0CwMXFRRydnZ3h8vJSxEYiALJxMhqN+AMAYDAYgKIoLC8v4+joiB8RSdkbO4gCANcAuL29RXAJ+EfxCsm1Ye4EAAAAAElFTkSuQmCC"
+                />
+                <div style={{ padding: 4, textAlign: 'center' }}>
+                  <Text ellipsis style={{ fontSize: 11 }}>{img.fileName}</Text>
+                </div>
+              </div>
+            ))}
+          </Image.PreviewGroup>
+        </div>
       </Modal>
     </>
   );

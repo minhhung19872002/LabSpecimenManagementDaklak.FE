@@ -110,11 +110,15 @@ const TestRequestDetail: React.FC = () => {
   // Postal delivery image upload modal states (tối đa 5 hình)
   const [postalImageModalVisible, setPostalImageModalVisible] = useState(false);
   const [uploadingPostalImage, setUploadingPostalImage] = useState(false);
-  const [postalImages, setPostalImages] = useState<Array<{ fileId: string; url: string }>>([]);
+  const [postalImages, setPostalImages] = useState<
+    Array<{ fileId: string; url: string }>
+  >([]);
 
   // Sample images modal state
-  const [sampleImagesModalVisible, setSampleImagesModalVisible] = useState(false);
-  const [selectedSampleForImages, setSelectedSampleForImages] = useState<TestRequestSampleDto | null>(null);
+  const [sampleImagesModalVisible, setSampleImagesModalVisible] =
+    useState(false);
+  const [selectedSampleForImages, setSelectedSampleForImages] =
+    useState<TestRequestSampleDto | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -262,12 +266,12 @@ const TestRequestDetail: React.FC = () => {
       message.success(`Đã tạo phiếu yêu cầu XN: ${result.requestNumber}`);
 
       // Step 2: Get editor config and open OnlyOffice
-      const config = await testRequestService.getResultFormEditorConfig(
-        result.fileName
-      );
-      setEditorConfig(config);
-      setEditorLoading(true);
-      setEditorModalVisible(true);
+      // const config = await testRequestService.getResultFormEditorConfig(
+      //   result.fileName
+      // );
+      // setEditorConfig(config);
+      // setEditorLoading(true);
+      // setEditorModalVisible(true);
 
       // Step 3: Reload data to get updated status
       loadData(id);
@@ -399,7 +403,11 @@ const TestRequestDetail: React.FC = () => {
         message.warning("Đã đạt tối đa 5 hình ảnh. Không thể thêm hình mới.");
         return false;
       } else {
-        message.warning(`Chỉ có thể thêm ${remainingSlots} hình nữa. ${fileList.length - remainingSlots} hình sẽ bị bỏ qua.`);
+        message.warning(
+          `Chỉ có thể thêm ${remainingSlots} hình nữa. ${
+            fileList.length - remainingSlots
+          } hình sẽ bị bỏ qua.`
+        );
       }
     }
 
@@ -409,7 +417,7 @@ const TestRequestDetail: React.FC = () => {
     }
 
     // Validate file - check if it's an image
-    if (!file.type.startsWith('image/')) {
+    if (!file.type.startsWith("image/")) {
       message.error(`${file.name}: Chỉ chấp nhận file hình ảnh`);
       return false;
     }
@@ -433,15 +441,18 @@ const TestRequestDetail: React.FC = () => {
       const result = await fileService.uploadImage(file);
       // Use fileService.getFileUrl to get full URL
       const fullUrl = fileService.getFileUrl(result.fileId);
-      setPostalImages(prev => {
+      setPostalImages((prev) => {
         // Double check limit before adding
         if (prev.length >= 5) {
           return prev;
         }
-        return [...prev, {
-          fileId: result.fileId,
-          url: fullUrl
-        }];
+        return [
+          ...prev,
+          {
+            fileId: result.fileId,
+            url: fullUrl,
+          },
+        ];
       });
     } catch (error) {
       message.error(`Upload ${file.name} thất bại`);
@@ -453,7 +464,7 @@ const TestRequestDetail: React.FC = () => {
 
   // Remove postal image
   const handleRemovePostalImage = (fileId: string) => {
-    setPostalImages(prev => prev.filter(img => img.fileId !== fileId));
+    setPostalImages((prev) => prev.filter((img) => img.fileId !== fileId));
   };
 
   // Handle complete with postal images
@@ -464,7 +475,7 @@ const TestRequestDetail: React.FC = () => {
     }
 
     try {
-      const imageFileIds = postalImages.map(img => img.fileId);
+      const imageFileIds = postalImages.map((img) => img.fileId);
       await testRequestService.completeWithImage(id, imageFileIds);
       message.success("Đã hoàn thành yêu cầu thử nghiệm");
       setPostalImageModalVisible(false);
@@ -994,7 +1005,14 @@ const TestRequestDetail: React.FC = () => {
   return (
     <div className="test-request-detail">
       {/* Back button and Process Timeline */}
-      <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div
+        style={{
+          marginBottom: 16,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
         <Button
           icon={<ArrowLeftOutlined />}
           onClick={() => navigate(PATH_ROUTES.testRequests.index)}
@@ -1207,7 +1225,7 @@ const TestRequestDetail: React.FC = () => {
         </Divider>
 
         <Table
-          dataSource={(data.samples || []).filter(s => !s.isCancelled)}
+          dataSource={(data.samples || []).filter((s) => !s.isCancelled)}
           columns={sampleColumns}
           rowKey="id"
           pagination={false}
@@ -1427,29 +1445,46 @@ const TestRequestDetail: React.FC = () => {
         </Row>
 
         {/* Hình ảnh gửi bưu điện - hiển thị khi có */}
-        {data.deliveryPostal && data.postalDeliveryImages && data.postalDeliveryImages.length > 0 && (
-          <>
-            <Divider orientation="left" style={{ marginTop: 24 }}>
-              <span style={{ fontWeight: 600 }}>Hình ảnh gửi bưu điện ({data.postalDeliveryImages.length} hình)</span>
-            </Divider>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, padding: "16px 0", justifyContent: 'center' }}>
-              <Image.PreviewGroup>
-                {data.postalDeliveryImages.map((img, index) => {
-                  // Use fileService.getFileUrl for consistent URL generation
-                  const imageUrl = fileService.getFileUrl(img.fileId);
-                  return (
-                    <Image
-                      key={img.fileId}
-                      src={imageUrl}
-                      alt={`Hình ảnh gửi bưu điện ${index + 1}`}
-                      style={{ maxWidth: 200, maxHeight: 200, objectFit: 'cover' }}
-                    />
-                  );
-                })}
-              </Image.PreviewGroup>
-            </div>
-          </>
-        )}
+        {data.deliveryPostal &&
+          data.postalDeliveryImages &&
+          data.postalDeliveryImages.length > 0 && (
+            <>
+              <Divider orientation="left" style={{ marginTop: 24 }}>
+                <span style={{ fontWeight: 600 }}>
+                  Hình ảnh gửi bưu điện ({data.postalDeliveryImages.length}{" "}
+                  hình)
+                </span>
+              </Divider>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 16,
+                  padding: "16px 0",
+                  justifyContent: "center",
+                }}
+              >
+                <Image.PreviewGroup>
+                  {data.postalDeliveryImages.map((img, index) => {
+                    // Use fileService.getFileUrl for consistent URL generation
+                    const imageUrl = fileService.getFileUrl(img.fileId);
+                    return (
+                      <Image
+                        key={img.fileId}
+                        src={imageUrl}
+                        alt={`Hình ảnh gửi bưu điện ${index + 1}`}
+                        style={{
+                          maxWidth: 200,
+                          maxHeight: 200,
+                          objectFit: "cover",
+                        }}
+                      />
+                    );
+                  })}
+                </Image.PreviewGroup>
+              </div>
+            </>
+          )}
 
         {/* Thông tin hệ thống */}
         <Divider />
@@ -1678,14 +1713,19 @@ const TestRequestDetail: React.FC = () => {
           </Button>
         </Upload>
         {postalImages.length > 0 && (
-          <div style={{ marginTop: 16, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <div
+            style={{ marginTop: 16, display: "flex", flexWrap: "wrap", gap: 8 }}
+          >
             <Image.PreviewGroup>
               {postalImages.map((img, index) => (
-                <div key={img.fileId} style={{ position: 'relative', display: 'inline-block' }}>
+                <div
+                  key={img.fileId}
+                  style={{ position: "relative", display: "inline-block" }}
+                >
                   <Image
                     src={img.url}
                     alt={`Hình ảnh gửi bưu điện ${index + 1}`}
-                    style={{ width: 100, height: 100, objectFit: 'cover' }}
+                    style={{ width: 100, height: 100, objectFit: "cover" }}
                   />
                   <Button
                     type="text"
@@ -1694,19 +1734,19 @@ const TestRequestDetail: React.FC = () => {
                     icon={<CloseOutlined />}
                     onClick={() => handleRemovePostalImage(img.fileId)}
                     style={{
-                      position: 'absolute',
+                      position: "absolute",
                       top: -8,
                       right: -8,
-                      background: 'white',
-                      borderRadius: '50%',
+                      background: "white",
+                      borderRadius: "50%",
                       padding: 0,
                       width: 20,
                       height: 20,
                       minWidth: 20,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
                     }}
                   />
                 </div>
