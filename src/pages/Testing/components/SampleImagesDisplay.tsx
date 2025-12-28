@@ -19,32 +19,14 @@ const SampleImagesDisplay: React.FC<SampleImagesDisplayProps> = ({
     return null;
   }
 
-  const getImageUrl = (image: SampleAttachmentDto) => {
-    const { filePath, fileName } = image;
-    // If already a full URL, return as-is
-    if (filePath.startsWith('http')) return filePath;
-
-    // Normalize path: replace backslashes with forward slashes
-    const normalizedPath = filePath.replace(/\\/g, '/');
-
-    // Build base URL - use VITE_API_BASE_URL
+  const getImageUrl = (fileId: string): string => {
+    if (!fileId) return '';
     const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
-    let url = `${baseUrl}/${normalizedPath}`;
-
-    // If filePath doesn't have extension, try to get from fileName
-    const hasExtension = /\.[a-zA-Z0-9]+$/.test(normalizedPath);
-    if (!hasExtension && fileName) {
-      const extMatch = fileName.match(/\.[a-zA-Z0-9]+$/);
-      if (extMatch) {
-        url += extMatch[0];
-      }
-    }
-
-    return url;
+    return `${baseUrl}/api/v1/files/${fileId}`;
   };
 
   const handlePreview = (image: SampleAttachmentDto) => {
-    setPreviewImage(getImageUrl(image));
+    setPreviewImage(getImageUrl(image.fileId));
     setPreviewOpen(true);
   };
 
@@ -70,7 +52,7 @@ const SampleImagesDisplay: React.FC<SampleImagesDisplayProps> = ({
             onClick={() => handlePreview(image)}
           >
             <Image
-              src={getImageUrl(image)}
+              src={getImageUrl(image.fileId)}
               alt={image.fileName}
               width={48}
               height={48}

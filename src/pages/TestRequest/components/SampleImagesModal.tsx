@@ -43,14 +43,8 @@ const SampleImagesModal: React.FC<SampleImagesModalProps> = ({
     beforeTestingImages.length +
     afterTestingImages.length;
 
-  const getImageUrl = (urlOrFileId: string) => {
-    // For attachments, URL might be relative path
-    // For testing images, URL is also relative path from backend
-    if (urlOrFileId.startsWith('http')) {
-      return urlOrFileId;
-    }
-    // Extract fileId from URL if it's a path like /api/v1/files/{fileId}
-    const fileId = urlOrFileId.split('/').pop() || urlOrFileId;
+  const getImageUrl = (fileId: string): string => {
+    if (!fileId) return '';
     return fileService.getFileUrl(fileId);
   };
 
@@ -87,7 +81,7 @@ const SampleImagesModal: React.FC<SampleImagesModalProps> = ({
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
                 gap: 12,
               }}
             >
@@ -99,9 +93,6 @@ const SampleImagesModal: React.FC<SampleImagesModalProps> = ({
                 const fileName = isTestingImage
                   ? (img as SampleTestingImageDto).fileName
                   : (img as SampleAttachmentDto).fileName;
-                const url = isTestingImage
-                  ? (img as SampleTestingImageDto).url
-                  : (img as SampleAttachmentDto).url;
                 const creationTime = isTestingImage
                   ? (img as SampleTestingImageDto).creationTime
                   : undefined;
@@ -109,19 +100,21 @@ const SampleImagesModal: React.FC<SampleImagesModalProps> = ({
                 return (
                   <div
                     key={img.id}
+                    className="sample-image-item"
                     style={{
                       position: 'relative',
                       borderRadius: 8,
                       overflow: 'hidden',
                       border: '1px solid #f0f0f0',
+                      aspectRatio: '1 / 1',
                     }}
                   >
                     <Image
-                      src={getImageUrl(url || fileId)}
+                      src={getImageUrl(fileId)}
                       alt={fileName || `Hình ${index + 1}`}
+                      width="100%"
+                      height="100%"
                       style={{
-                        width: '100%',
-                        height: 120,
                         objectFit: 'cover',
                       }}
                       fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgesA"
@@ -210,6 +203,24 @@ const SampleImagesModal: React.FC<SampleImagesModalProps> = ({
           'Chưa có hình sau TN'
         )}
       </div>
+      {/* CSS to fix ant-image mask position */}
+      <style>{`
+        .sample-image-item .ant-image {
+          display: block;
+          width: 100%;
+          height: 100%;
+        }
+        .sample-image-item .ant-image-img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        .sample-image-item .ant-image-mask {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+      `}</style>
     </Modal>
   );
 };
