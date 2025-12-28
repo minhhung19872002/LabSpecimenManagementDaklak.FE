@@ -649,6 +649,13 @@ const TestRequestDetail: React.FC = () => {
       width: 150,
     },
     {
+      title: "Loại mẫu",
+      dataIndex: "specimenTypeName",
+      key: "specimenTypeName",
+      width: 150,
+      render: (value: string) => value || "-",
+    },
+    {
       title: "Địa chỉ lấy mẫu",
       dataIndex: "samplingAddress",
       key: "samplingAddress",

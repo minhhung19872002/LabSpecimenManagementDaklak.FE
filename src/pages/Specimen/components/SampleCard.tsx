@@ -96,7 +96,7 @@ const SampleCard: React.FC<SampleCardProps> = ({
           <InfoItem label="Tên mẫu" value={sample.sampleName} />
         </Col>
         <Col xs={24} md={12} lg={6}>
-          <InfoItem label="Loại mẫu" value={sample.sampleType} />
+          <InfoItem label="Loại mẫu" value={sample.specimenTypeName} />
         </Col>
         <Col xs={24} md={12} lg={6}>
           <InfoItem label="Ngày lưu mẫu" value={formatDate(sample.storageDate)} />

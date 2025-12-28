@@ -72,6 +72,10 @@ interface SampleChange {
   oldSampleQuantity?: string;
   storageLocation?: string;
   oldStorageLocation?: string;
+  specimenTypeId?: string;
+  oldSpecimenTypeId?: string;
+  specimenTypeName?: string;
+  oldSpecimenTypeName?: string;
   status?: number;
   oldStatus?: number;
   statusText?: string;
@@ -278,6 +282,8 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
           const getSamplingAddress = (sample: any) => sample.samplingAddress || sample.SamplingAddress || '';
           const getSampleQuantity = (sample: any) => sample.sampleQuantity || sample.SampleQuantity || '';
           const getStorageLocation = (sample: any) => sample.storageLocation || sample.StorageLocation || '';
+          const getSpecimenTypeId = (sample: any) => sample.specimenTypeId || sample.SpecimenTypeId || '';
+          const getSpecimenTypeName = (sample: any) => sample.specimenTypeName || sample.SpecimenTypeName || '';
           const getStatus = (sample: any) => sample.status ?? sample.Status ?? 0;
           const getStatusText = (sample: any) => sample.statusText || sample.StatusText || '';
           const getProcessingStatus = (sample: any) => sample.processingStatus || sample.ProcessingStatus || '';
@@ -328,6 +334,8 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
                 samplingAddress: getSamplingAddress(s),
                 sampleQuantity: getSampleQuantity(s),
                 storageLocation: getStorageLocation(s),
+                specimenTypeId: getSpecimenTypeId(s),
+                specimenTypeName: getSpecimenTypeName(s),
                 status: getStatus(s),
                 statusText: getStatusText(s),
                 processingStatus: getProcessingStatus(s),
@@ -356,6 +364,8 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
                 samplingAddress: getSamplingAddress(s),
                 sampleQuantity: getSampleQuantity(s),
                 storageLocation: getStorageLocation(s),
+                specimenTypeId: getSpecimenTypeId(s),
+                specimenTypeName: getSpecimenTypeName(s),
                 status: getStatus(s),
                 statusText: getStatusText(s),
                 processingStatus: getProcessingStatus(s),
@@ -422,7 +432,7 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
             });
 
             // Check if sample itself has changes or has indicator changes
-            const sampleFieldsToCompare = ['samplingAddress', 'sampleQuantity', 'storageLocation', 'status', 'sampleName', 'sampleCode', 'statusText', 'processingStatus', 'notes'];
+            const sampleFieldsToCompare = ['samplingAddress', 'sampleQuantity', 'storageLocation', 'specimenTypeId', 'status', 'sampleName', 'sampleCode', 'statusText', 'processingStatus', 'notes'];
             const hasSampleChange = sampleFieldsToCompare.some(f =>
               normalize(getVal(oldS, f)) !== normalize(getVal(newS, f))
             );
@@ -443,6 +453,10 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
                 oldSampleQuantity: getSampleQuantity(oldS),
                 storageLocation: getStorageLocation(newS),
                 oldStorageLocation: getStorageLocation(oldS),
+                specimenTypeId: getSpecimenTypeId(newS),
+                oldSpecimenTypeId: getSpecimenTypeId(oldS),
+                specimenTypeName: getSpecimenTypeName(newS),
+                oldSpecimenTypeName: getSpecimenTypeName(oldS),
                 status: getStatus(newS),
                 oldStatus: getStatus(oldS),
                 statusText: getStatusText(newS),
@@ -751,6 +765,7 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
             </Col>
             <Col span={12}>
               {renderChangeValue('Lượng mẫu', sample.sampleQuantity, sample.oldSampleQuantity, sample.type === 'delete', sample.type === 'add')}
+              {renderChangeValue('Loại mẫu', sample.specimenTypeName, sample.oldSpecimenTypeName, sample.type === 'delete', sample.type === 'add')}
               {renderChangeValue('Vị trí lưu mẫu', sample.storageLocation, sample.oldStorageLocation, sample.type === 'delete', sample.type === 'add')}
               {renderChangeValue('Ghi chú', sample.notes, sample.oldNotes, sample.type === 'delete', sample.type === 'add')}
             </Col>

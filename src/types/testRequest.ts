@@ -222,6 +222,10 @@ export interface TestRequestSampleDto {
   totalIndicatorCost: number;
   /** Đánh dấu mẫu đã bị hủy (dùng cho quản lý mẫu lưu kho) */
   isCancelled?: boolean;
+  /** Loại mẫu ID */
+  specimenTypeId?: string;
+  /** Tên loại mẫu */
+  specimenTypeName?: string;
   indicators: TestRequestSampleIndicatorDto[];
   attachments?: SampleAttachmentDto[];
 }
@@ -243,6 +247,7 @@ export interface CreateTestRequestSampleDto {
   processingStatus?: string;
   notes?: string;
   storageLocation?: string;
+  specimenTypeId?: string;
   indicators: CreateTestRequestSampleIndicatorDto[];
   attachments?: AttachmentInputDto[];
 }
@@ -259,6 +264,7 @@ export interface UpdateTestRequestSampleDto {
   processingStatus?: string;
   notes?: string;
   storageLocation?: string;
+  specimenTypeId?: string;
   indicators: UpdateTestRequestSampleIndicatorDto[];
   attachments?: AttachmentInputDto[];
 }
