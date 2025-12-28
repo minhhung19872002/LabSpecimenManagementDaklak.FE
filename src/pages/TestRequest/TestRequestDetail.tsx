@@ -24,6 +24,7 @@ import {
   CloseCircleOutlined,
   CloseOutlined,
   FileTextOutlined,
+  HistoryOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -53,6 +54,7 @@ import {
   IndicatorApprovalStatusLabels,
   IndicatorApprovalStatusColors,
 } from "../../types/laboratoryTask";
+import ProcessTimelineModal from "./components/ProcessTimelineModal";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -93,6 +95,10 @@ const TestRequestDetail: React.FC = () => {
     useState(false);
   const [rejectResultReason, setRejectResultReason] = useState("");
   const [rejectResultLoading, setRejectResultLoading] = useState(false);
+
+  // Process timeline modal state
+  const [processTimelineModalVisible, setProcessTimelineModalVisible] =
+    useState(false);
 
   useEffect(() => {
     if (id) {
@@ -855,6 +861,22 @@ const TestRequestDetail: React.FC = () => {
 
   return (
     <div className="test-request-detail">
+      {/* Back button and Process Timeline */}
+      <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Button
+          icon={<ArrowLeftOutlined />}
+          onClick={() => navigate(PATH_ROUTES.testRequests.index)}
+        >
+          Quay lại
+        </Button>
+        <Button
+          icon={<HistoryOutlined />}
+          onClick={() => setProcessTimelineModalVisible(true)}
+        >
+          Xem tiến trình
+        </Button>
+      </div>
+
       <Card
         title={
           <div className="card-header-flex">
@@ -864,12 +886,6 @@ const TestRequestDetail: React.FC = () => {
               {getStatusTag(data.status)}
             </Space>
             <Space wrap>
-              <Button
-                icon={<ArrowLeftOutlined />}
-                onClick={() => navigate(PATH_ROUTES.testRequests.index)}
-              >
-                Quay lại
-              </Button>
               {renderActionButtons()}
               {canEditTestRequest(data.status) && (
                 <Button
@@ -1460,6 +1476,13 @@ const TestRequestDetail: React.FC = () => {
           showCount
         />
       </Modal>
+
+      {/* Process Timeline Modal */}
+      <ProcessTimelineModal
+        open={processTimelineModalVisible}
+        onClose={() => setProcessTimelineModalVisible(false)}
+        testRequestId={id!}
+      />
     </div>
   );
 };

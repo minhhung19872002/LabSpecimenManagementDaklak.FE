@@ -508,3 +508,19 @@ export interface TestRequestChangeHistoryDto {
 export interface RejectChangesDto {
   reason: string;
 }
+
+// Timeline DTOs
+export interface TimelineStepDto {
+  title: string;
+  status: "completed" | "current" | "pending";
+  date?: string;
+  userId?: string;
+  userName?: string;
+  extraInfo?: string[];
+}
+
+export interface TestRequestTimelineDto {
+  id: string;
+  status: TestRequestStatus;
+  steps: TimelineStepDto[];
+}
