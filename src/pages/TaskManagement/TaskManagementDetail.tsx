@@ -665,21 +665,23 @@ const TaskManagementDetail: React.FC = () => {
 
   return (
     <div>
+      {/* Back button */}
+      <div style={{ marginBottom: 16 }}>
+        <Button
+          icon={<ArrowLeftOutlined />}
+          onClick={() => navigate(PATH_ROUTES.tasks.index)}
+        >
+          Quay lại
+        </Button>
+      </div>
+
       {/* Header Card */}
       <Card style={{ marginBottom: 16 }}>
         <Row justify="space-between" align="middle">
           <Col>
-            <Space>
-              <Button
-                icon={<ArrowLeftOutlined />}
-                onClick={() => navigate(PATH_ROUTES.tasks.index)}
-              >
-                Quay lại
-              </Button>
-              <Title level={4} style={{ margin: 0 }}>
-                Số nhận mẫu giao việc: {task.testRequestNumber}
-              </Title>
-            </Space>
+            <Title level={4} style={{ margin: 0 }}>
+              Số nhận mẫu giao việc: {task.testRequestNumber}
+            </Title>
           </Col>
           <Col>
             <Space>

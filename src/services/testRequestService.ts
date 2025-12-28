@@ -7,7 +7,8 @@ import {
   PagedAndSortedResultRequestDto,
   TestRequestStatus,
   TestRequestChangeHistoryDto,
-  RejectChangesDto
+  RejectChangesDto,
+  TestRequestTimelineDto
 } from '../types/testRequest';
 
 const BASE_URL = '/api/v1/test-requests';
@@ -154,6 +155,14 @@ export const testRequestService = {
   rejectResult: async (id: string, reason: string): Promise<void> => {
     const data: RejectChangesDto = { reason };
     await api.post(`${BASE_URL}/${id}/reject-result`, data);
+  },
+
+  /**
+   * Lấy tiến trình/timeline của phiếu yêu cầu
+   */
+  getTimeline: async (id: string): Promise<TestRequestTimelineDto> => {
+    const response = await api.get<TestRequestTimelineDto>(`${BASE_URL}/${id}/timeline`);
+    return response.data;
   },
 
 };
