@@ -74,6 +74,12 @@ interface SampleChange {
   oldStorageLocation?: string;
   status?: number;
   oldStatus?: number;
+  statusText?: string;
+  oldStatusText?: string;
+  processingStatus?: string;
+  oldProcessingStatus?: string;
+  notes?: string;
+  oldNotes?: string;
   // Total cost
   totalCost: number;
   oldTotalCost?: number;
@@ -273,6 +279,9 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
           const getSampleQuantity = (sample: any) => sample.sampleQuantity || sample.SampleQuantity || '';
           const getStorageLocation = (sample: any) => sample.storageLocation || sample.StorageLocation || '';
           const getStatus = (sample: any) => sample.status ?? sample.Status ?? 0;
+          const getStatusText = (sample: any) => sample.statusText || sample.StatusText || '';
+          const getProcessingStatus = (sample: any) => sample.processingStatus || sample.ProcessingStatus || '';
+          const getNotes = (sample: any) => sample.notes || sample.Notes || '';
 
           // Calculate total cost for a sample
           const calcTotalCost = (sample: any) => {
@@ -320,6 +329,9 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
                 sampleQuantity: getSampleQuantity(s),
                 storageLocation: getStorageLocation(s),
                 status: getStatus(s),
+                statusText: getStatusText(s),
+                processingStatus: getProcessingStatus(s),
+                notes: getNotes(s),
                 totalCost: calcTotalCost(s),
               });
             }
@@ -345,6 +357,9 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
                 sampleQuantity: getSampleQuantity(s),
                 storageLocation: getStorageLocation(s),
                 status: getStatus(s),
+                statusText: getStatusText(s),
+                processingStatus: getProcessingStatus(s),
+                notes: getNotes(s),
                 totalCost: calcTotalCost(s),
               });
             }
@@ -407,7 +422,7 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
             });
 
             // Check if sample itself has changes or has indicator changes
-            const sampleFieldsToCompare = ['samplingAddress', 'sampleQuantity', 'storageLocation', 'status', 'sampleName', 'sampleCode'];
+            const sampleFieldsToCompare = ['samplingAddress', 'sampleQuantity', 'storageLocation', 'status', 'sampleName', 'sampleCode', 'statusText', 'processingStatus', 'notes'];
             const hasSampleChange = sampleFieldsToCompare.some(f =>
               normalize(getVal(oldS, f)) !== normalize(getVal(newS, f))
             );
@@ -430,6 +445,12 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
                 oldStorageLocation: getStorageLocation(oldS),
                 status: getStatus(newS),
                 oldStatus: getStatus(oldS),
+                statusText: getStatusText(newS),
+                oldStatusText: getStatusText(oldS),
+                processingStatus: getProcessingStatus(newS),
+                oldProcessingStatus: getProcessingStatus(oldS),
+                notes: getNotes(newS),
+                oldNotes: getNotes(oldS),
                 totalCost: calcTotalCost(newS),
                 oldTotalCost: calcTotalCost(oldS),
               });
@@ -724,12 +745,14 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
           <Text strong style={{ fontSize: 12, marginBottom: 8, display: 'block' }}>Thông tin mẫu:</Text>
           <Row gutter={16}>
             <Col span={12}>
-              {renderChangeValue('Tình trạng', getStatusLabel(sample.status), sample.oldStatus !== undefined ? getStatusLabel(sample.oldStatus) : undefined, sample.type === 'delete', sample.type === 'add')}
+              {renderChangeValue('Tình trạng mẫu', sample.statusText, sample.oldStatusText, sample.type === 'delete', sample.type === 'add')}
+              {renderChangeValue('Trạng thái xử lý', sample.processingStatus, sample.oldProcessingStatus, sample.type === 'delete', sample.type === 'add')}
               {renderChangeValue('Địa chỉ lấy mẫu', sample.samplingAddress, sample.oldSamplingAddress, sample.type === 'delete', sample.type === 'add')}
             </Col>
             <Col span={12}>
               {renderChangeValue('Lượng mẫu', sample.sampleQuantity, sample.oldSampleQuantity, sample.type === 'delete', sample.type === 'add')}
               {renderChangeValue('Vị trí lưu mẫu', sample.storageLocation, sample.oldStorageLocation, sample.type === 'delete', sample.type === 'add')}
+              {renderChangeValue('Ghi chú', sample.notes, sample.oldNotes, sample.type === 'delete', sample.type === 'add')}
             </Col>
           </Row>
         </div>
