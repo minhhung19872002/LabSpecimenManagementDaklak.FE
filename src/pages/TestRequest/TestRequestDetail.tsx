@@ -58,7 +58,10 @@ import {
   IndicatorApprovalStatusColors,
 } from "../../types/laboratoryTask";
 import ProcessTimelineModal from "./components/ProcessTimelineModal";
+import SampleImagesModal from "./components/SampleImagesModal";
+import SampleImagesButton from "./components/SampleImagesButton";
 import { fileService } from "../../services/fileService";
+import { TestRequestSampleDto } from "../../types/testRequest";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -108,6 +111,10 @@ const TestRequestDetail: React.FC = () => {
   const [postalImageModalVisible, setPostalImageModalVisible] = useState(false);
   const [uploadingPostalImage, setUploadingPostalImage] = useState(false);
   const [postalImages, setPostalImages] = useState<Array<{ fileId: string; url: string }>>([]);
+
+  // Sample images modal state
+  const [sampleImagesModalVisible, setSampleImagesModalVisible] = useState(false);
+  const [selectedSampleForImages, setSelectedSampleForImages] = useState<TestRequestSampleDto | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -770,6 +777,21 @@ const TestRequestDetail: React.FC = () => {
       key: "specimenTypeName",
       width: 150,
       render: (value: string) => value || "-",
+    },
+    {
+      title: "Hình ảnh",
+      key: "images",
+      width: 80,
+      align: "center" as const,
+      render: (_: any, record: TestRequestSampleDto) => (
+        <SampleImagesButton
+          sample={record}
+          onClick={() => {
+            setSelectedSampleForImages(record);
+            setSampleImagesModalVisible(true);
+          }}
+        />
+      ),
     },
     {
       title: "Địa chỉ lấy mẫu",
@@ -1693,6 +1715,16 @@ const TestRequestDetail: React.FC = () => {
           </div>
         )}
       </Modal>
+
+      {/* Sample Images Modal */}
+      <SampleImagesModal
+        open={sampleImagesModalVisible}
+        onClose={() => {
+          setSampleImagesModalVisible(false);
+          setSelectedSampleForImages(null);
+        }}
+        sample={selectedSampleForImages}
+      />
     </div>
   );
 };

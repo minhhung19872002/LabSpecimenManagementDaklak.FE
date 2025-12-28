@@ -601,17 +601,6 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
     );
   };
 
-  // Status label mapping
-  const getStatusLabel = (status: number | undefined) => {
-    const statusMap: Record<number, string> = {
-      0: 'Chờ xử lý',
-      1: 'Đang xử lý',
-      2: 'Hoàn thành',
-      3: 'Từ chối',
-    };
-    return statusMap[status ?? 0] || 'Chờ xử lý';
-  };
-
   // Render change value with old/new comparison
   const renderChangeValue = (label: string, newVal: string | undefined, oldVal: string | undefined, isDelete: boolean = false, isAdd: boolean = false) => {
     const hasChange = oldVal !== undefined && oldVal !== newVal;

@@ -211,6 +211,22 @@ export interface PostalDeliveryImageDto {
   url: string;
 }
 
+// Sample Testing Image DTO (hình trước/sau thử nghiệm)
+export enum SampleTestingImageType {
+  BeforeTesting = 0,
+  AfterTesting = 1
+}
+
+export interface SampleTestingImageDto {
+  id: string;
+  fileId: string;
+  fileName: string;
+  fileSize: number;
+  url: string;
+  imageType: SampleTestingImageType;
+  creationTime: string;
+}
+
 // Sample DTOs
 export interface TestRequestSampleDto {
   id: string;
@@ -234,6 +250,10 @@ export interface TestRequestSampleDto {
   specimenTypeName?: string;
   indicators: TestRequestSampleIndicatorDto[];
   attachments?: SampleAttachmentDto[];
+  /** Hình ảnh trước thử nghiệm */
+  beforeTestingImages?: SampleTestingImageDto[];
+  /** Hình ảnh sau thử nghiệm */
+  afterTestingImages?: SampleTestingImageDto[];
 }
 
 export interface AttachmentInputDto {
