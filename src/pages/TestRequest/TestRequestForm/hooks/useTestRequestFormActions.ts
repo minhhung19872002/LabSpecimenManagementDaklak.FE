@@ -206,6 +206,11 @@ export const useTestRequestFormActions = ({
         TestMethodName: ind.testMethodName,
         LaboratoryId: ind.laboratoryId,
         Notes: ind.notes
+      })),
+      Attachments: (s.attachments || []).map((a: any) => ({
+        FileId: a.fileId,
+        FileName: a.fileName,
+        FileSize: a.fileSize
       }))
     }));
 
@@ -237,7 +242,12 @@ export const useTestRequestFormActions = ({
           LaboratoryId: ind.laboratoryId,
           Notes: ind.notes
         };
-      })
+      }),
+      Attachments: (s.attachments || []).map((a: any) => ({
+        FileId: a.fileId,
+        FileName: a.fileName,
+        FileSize: a.fileSize
+      }))
     }));
 
     const oldSamplesJson = JSON.stringify(oldSamples);
