@@ -205,6 +205,12 @@ export interface SampleAttachmentDto {
   url: string;
 }
 
+// Postal Delivery Image DTO
+export interface PostalDeliveryImageDto {
+  fileId: string;
+  url: string;
+}
+
 // Sample DTOs
 export interface TestRequestSampleDto {
   id: string;
@@ -334,6 +340,9 @@ export interface TestRequestDto {
   status: TestRequestStatus;
   expectedCompletionDate?: string;
   subcontractor?: string;
+
+  // Postal Delivery Images (tối đa 5 hình)
+  postalDeliveryImages?: PostalDeliveryImageDto[];
 
   // Samples
   samples: TestRequestSampleDto[];
