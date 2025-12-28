@@ -1,0 +1,19 @@
+/* Row highlighting for PendingDisposal status */
+.row-pending-disposal,
+.row-pending-disposal td,
+.row-pending-disposal .ant-table-cell-fix-left,
+.row-pending-disposal .ant-table-cell-fix-right {
+  background-color: #fff7e6 !important;
+}
+
+/* Hover state for highlighted rows */
+.row-pending-disposal:hover td,
+.row-pending-disposal:hover .ant-table-cell-fix-left,
+.row-pending-disposal:hover .ant-table-cell-fix-right {
+  background-color: #ffe7ba !important;
+}
+
+/* Cursor pointer to indicate clickable rows */
+.ant-table-row {
+  cursor: pointer;
+}
