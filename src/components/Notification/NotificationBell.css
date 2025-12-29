@@ -1,0 +1,151 @@
+/* Notification Bell Icon */
+.notification-bell-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+.notification-bell-wrapper:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.notification-bell-icon {
+  font-size: 20px;
+  color: #595959;
+}
+
+/* Popover Overlay */
+.notification-popover-overlay .ant-popover-inner {
+  padding: 0;
+  border-radius: 8px;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.08),
+              0 3px 6px -4px rgba(0, 0, 0, 0.12),
+              0 9px 28px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Popover Container */
+.notification-popover {
+  width: 380px;
+  max-width: 90vw;
+}
+
+/* Popover Header */
+.notification-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* Popover Body */
+.notification-popover-body {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.notification-loading {
+  display: flex;
+  justify-content: center;
+  padding: 40px;
+}
+
+/* Popover Footer */
+.notification-popover-footer {
+  border-top: 1px solid #f0f0f0;
+  padding: 8px 0;
+}
+
+/* Notification Item */
+.notification-item {
+  padding: 12px 16px !important;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border-bottom: 1px solid #f5f5f5 !important;
+}
+
+.notification-item:last-child {
+  border-bottom: none !important;
+}
+
+.notification-item:hover {
+  background-color: #fafafa;
+}
+
+.notification-item.unread {
+  background-color: #e6f7ff;
+}
+
+.notification-item.unread:hover {
+  background-color: #bae7ff;
+}
+
+.notification-item-content {
+  width: 100%;
+}
+
+/* Creation time */
+.notification-time {
+  font-size: 12px;
+  color: #8c8c8c;
+  margin-bottom: 6px;
+}
+
+/* Message content */
+.notification-message {
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.5;
+  font-size: 14px;
+  color: #262626;
+  white-space: pre-wrap;
+}
+
+.notification-item.unread .notification-message {
+  font-weight: 500;
+}
+
+/* Deadline indicator */
+.notification-deadline {
+  text-align: right;
+  font-size: 12px;
+  color: #52c41a;
+  margin-top: 8px;
+  font-weight: 500;
+}
+
+.notification-deadline.overdue {
+  color: #ff4d4f;
+  font-weight: 600;
+}
+
+.notification-deadline.is-deadline-type {
+  color: #ff4d4f;
+}
+
+/* Scrollbar styling */
+.notification-popover-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.notification-popover-body::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 3px;
+}
+
+.notification-popover-body::-webkit-scrollbar-thumb {
+  background: #bfbfbf;
+  border-radius: 3px;
+}
+
+.notification-popover-body::-webkit-scrollbar-thumb:hover {
+  background: #8c8c8c;
+}

@@ -37,6 +37,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { authService, UserInfo } from "../../services/authService";
+import { NotificationBell } from "../Notification";
 import "./MainLayout.css";
 import { PATH_ROUTES, ROLES } from "../../constants";
 
@@ -453,6 +454,7 @@ const MainLayout: React.FC = () => {
             />
             <h1 className="header-title">{t("common.appName")}</h1>
             <div className="header-actions">
+              <NotificationBell />
               <Dropdown
                 menu={{
                   items: [
