@@ -54,6 +54,10 @@ export interface SampleStorageItemDto {
   statusText: string | null;
   isCancelled: boolean;
   cancelledDate: string | null;
+  /** Cần hủy mẫu (được set bởi cronjob khi HĐ hoàn thành + 5 ngày) */
+  needDisposal: boolean;
+  /** Ngày được đánh dấu cần hủy */
+  needDisposalDate: string | null;
 }
 
 /**
