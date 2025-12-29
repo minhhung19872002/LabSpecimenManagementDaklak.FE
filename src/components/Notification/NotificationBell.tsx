@@ -133,11 +133,11 @@ const NotificationBell: React.FC = () => {
     }
 
     // Navigate to related page
-    const route = getNotificationRoute(notification);
-    if (route) {
-      setPopoverVisible(false);
-      navigate(route);
-    }
+    // const route = getNotificationRoute(notification);
+    // if (route) {
+    //   setPopoverVisible(false);
+    //   navigate(route);
+    // }
   };
 
   // Mark all as read
