@@ -31,6 +31,8 @@ import {
   MenuOutlined,
   CloseOutlined,
   SafetyCertificateOutlined,
+  BarChartOutlined,
+  PieChartOutlined,
 } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
@@ -129,6 +131,7 @@ const MainLayout: React.FC = () => {
       okText: "Đăng xuất",
       cancelText: "Hủy",
       okButtonProps: { danger: true },
+      centered: true,
       onOk: async () => {
         await authService.logout();
       },
@@ -203,7 +206,7 @@ const MainLayout: React.FC = () => {
   }, [location.pathname]);
 
   // Default open all groups
-  const defaultOpenKeys = ["lab", "quality", "management", "admin"];
+  const defaultOpenKeys = ["overview", "lab", "quality", "management", "admin"];
 
   // Helper to create label with tooltip
   const menuLabel = (text: string) => <span title={text}>{text}</span>;
@@ -220,11 +223,33 @@ const MainLayout: React.FC = () => {
   // Menu items configuration with roles
   const allMenuItems: MenuItemWithRoles[] = [
     {
-      key: "dashboard",
-      icon: <DashboardOutlined />,
-      label: menuLabel(t("menu.dashboard")),
-      onClick: () => navigate(PATH_ROUTES.dashboard),
+      key: "overview",
+      icon: <PieChartOutlined />,
+      label: menuLabel(t("menu.overview")),
       roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER, ROLES.LAB_TECHNICAL_MANAGER],
+      children: [
+        {
+          key: "dashboard",
+          icon: <DashboardOutlined />,
+          label: menuLabel(t("menu.dashboard")),
+          onClick: () => navigate(PATH_ROUTES.dashboard),
+          roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER, ROLES.LAB_TECHNICAL_MANAGER],
+        },
+        {
+          key: "reports",
+          icon: <BarChartOutlined />,
+          label: menuLabel(t("menu.reports")),
+          onClick: () => navigate(PATH_ROUTES.reports),
+          roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
+        },
+        {
+          key: "statistics",
+          icon: <BarChartOutlined />,
+          label: menuLabel(t("menu.statistics")),
+          onClick: () => navigate(PATH_ROUTES.statistics),
+          roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
+        },
+      ],
     },
     {
       key: "lab",

@@ -55,7 +55,8 @@
     "invalidCredentials": "Thông tin đăng nhập không đúng"
   },
   "menu": {
-    "dashboard": "Tổng quan",
+    "overview": "Tổng quan",
+    "dashboard": "Báo cáo tổng quan",
     "labOperations": "Hoạt động phòng thí nghiệm",
     "requests": "Phiếu yêu cầu",
     "specimens": "Quản lý mẫu",
