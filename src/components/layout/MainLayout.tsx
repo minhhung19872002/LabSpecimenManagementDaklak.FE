@@ -38,6 +38,9 @@ import { useTranslation } from "react-i18next";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { authService, UserInfo } from "../../services/authService";
 import { NotificationBell } from "../Notification";
+import WorkReminderModal, { LabTechManagerReminderModal } from "../WorkReminderModal";
+import { useWorkReminderPopup } from "../../hooks/useWorkReminderPopup";
+import { useLabTechManagerReminderPopup } from "../../hooks/useLabTechManagerReminderPopup";
 import "./MainLayout.css";
 import { PATH_ROUTES, ROLES } from "../../constants";
 
@@ -92,6 +95,12 @@ const MainLayout: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Work reminder popup for SampleReceiver
+  const { open: workReminderOpen, tasks: workReminderTasks, closePopup: closeWorkReminder } = useWorkReminderPopup();
+
+  // Work reminder popup for Lab Technical Manager
+  const { open: labTechReminderOpen, tasks: labTechReminderTasks, closePopup: closeLabTechReminder } = useLabTechManagerReminderPopup();
 
   // Handle window resize for mobile detection
   useEffect(() => {
@@ -605,6 +614,20 @@ const MainLayout: React.FC = () => {
             <Outlet />
           </div>
         </Content>
+
+        {/* Work Reminder Modal for SampleReceiver */}
+        <WorkReminderModal
+          open={workReminderOpen}
+          tasks={workReminderTasks}
+          onClose={closeWorkReminder}
+        />
+
+        {/* Work Reminder Modal for Lab Technical Manager */}
+        <LabTechManagerReminderModal
+          open={labTechReminderOpen}
+          tasks={labTechReminderTasks}
+          onClose={closeLabTechReminder}
+        />
       </Layout>
     </Layout>
   );
