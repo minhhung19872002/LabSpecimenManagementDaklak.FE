@@ -2,8 +2,9 @@ import api from './api';
 
 const BASE_URL = '/api/v1/notifications';
 
-// Notification Type Enum - For QLKT (LabTechnicalManager)
+// Notification Type Enum
 export enum NotificationType {
+  // For QLKT (LabTechnicalManager)
   SampleSentToLab = 0,              // Mẫu đã gửi đến khoa phòng
   PendingWorkAssignment = 1,        // Chưa phân công công việc
   SingleIndicatorSubmitted = 2,     // KTV gửi 1 chỉ tiêu
@@ -13,10 +14,17 @@ export enum NotificationType {
   ResultApprovedByQM = 6,           // QLCL duyệt kết quả
   NewSamplesAdded = 7,              // Có mẫu/chỉ tiêu mới thêm
   SamplesCancelled = 8,             // Mẫu/chỉ tiêu bị hủy
+
+  // For QLCL (QualityManager)
+  SingleResultSubmittedToQM = 10,   // QLKT gửi 1 kết quả cần QLCL phê duyệt
+  MultipleResultsSubmittedToQM = 11,// QLKT gửi nhiều kết quả cần QLCL phê duyệt
+  DeadlineReminder = 12,            // Nhắc nhở deadline trả kết quả
+  HandoverReminder = 13,            // Nhắc nhở bàn giao kết quả
 }
 
 // Labels for NotificationType
 export const NotificationTypeLabels: Record<NotificationType, string> = {
+  // QLKT notifications
   [NotificationType.SampleSentToLab]: 'Mẫu gửi đến khoa phòng',
   [NotificationType.PendingWorkAssignment]: 'Chưa phân công công việc',
   [NotificationType.SingleIndicatorSubmitted]: 'Chỉ tiêu cần phê duyệt',
@@ -26,6 +34,12 @@ export const NotificationTypeLabels: Record<NotificationType, string> = {
   [NotificationType.ResultApprovedByQM]: 'Kết quả được phê duyệt',
   [NotificationType.NewSamplesAdded]: 'Có mẫu/chỉ tiêu mới',
   [NotificationType.SamplesCancelled]: 'Mẫu/chỉ tiêu bị hủy',
+
+  // QLCL notifications
+  [NotificationType.SingleResultSubmittedToQM]: 'Kết quả chỉ tiêu mới',
+  [NotificationType.MultipleResultsSubmittedToQM]: 'Kết quả chỉ tiêu mới',
+  [NotificationType.DeadlineReminder]: 'Nhắc nhở deadline',
+  [NotificationType.HandoverReminder]: 'Nhắc nhở bàn giao',
 };
 
 // Notification DTO
