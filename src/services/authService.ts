@@ -81,6 +81,8 @@ export const authService = {
     localStorage.removeItem('user_info');
     localStorage.removeItem('workReminderLastShownTime'); // Clear SampleReceiver work reminder state on logout
     localStorage.removeItem('labTechManagerReminderLastShownTime'); // Clear LabTechManager work reminder state on logout
+    localStorage.removeItem('labTechnicianReminderLastShownTime'); // Clear LabTechnician work reminder state on logout
+    localStorage.removeItem('qualityManagerReminderLastShownTime'); // Clear QualityManager work reminder state on logout
     window.location.href = '/login';
   },
 
