@@ -63,6 +63,7 @@ import SampleImagesModal from "./components/SampleImagesModal";
 import SampleImagesButton from "./components/SampleImagesButton";
 import { fileService } from "../../services/fileService";
 import { TestRequestSampleDto } from "../../types/testRequest";
+import { API_BASE_URL } from "../../services/api";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -82,7 +83,7 @@ const TestRequestDetail: React.FC = () => {
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const docEditorRef = useRef<any>(null);
 
-  // BM01 Sample Selection Modal states
+  // BM01 Sample Selection Modal states (Single)
   const [sampleSelectionModalVisible, setSampleSelectionModalVisible] =
     useState(false);
   const [samplesForSelection, setSamplesForSelection] = useState<
@@ -91,6 +92,13 @@ const TestRequestDetail: React.FC = () => {
   const [loadingSamples, setLoadingSamples] = useState(false);
   const [selectedSampleId, setSelectedSampleId] = useState<string | null>(null);
   const [generatingBM01, setGeneratingBM01] = useState(false);
+  const [bm01Note, setBm01Note] = useState<string>("");
+
+  // Mixed Result Modal states (Multiple samples)
+  const [mixedResultModalVisible, setMixedResultModalVisible] = useState(false);
+  const [selectedSampleIds, setSelectedSampleIds] = useState<string[]>([]);
+  const [generatingMixed, setGeneratingMixed] = useState(false);
+  const [mixedNote, setMixedNote] = useState<string>("");
 
   // Print test request form loading state
   const [printingTestRequest, setPrintingTestRequest] = useState(false);
@@ -228,7 +236,7 @@ const TestRequestDetail: React.FC = () => {
         <Button
           key="print-mixed"
           icon={<FileTextOutlined />}
-          onClick={() => handlePrintMixedResult()}
+          onClick={() => handleOpenMixedResultModal()}
         >
           In KQ hỗn hợp
         </Button>
@@ -256,28 +264,57 @@ const TestRequestDetail: React.FC = () => {
     return buttons.length > 0 ? <Space wrap>{buttons}</Space> : null;
   };
 
-  // Handle print test request form - generate document and open editor
+  // Handle print test request form - generate PDF and open in new tab
   // Status is automatically updated to Pending when generating form (if currently New)
   const handlePrintTestRequest = async () => {
     if (!id) return;
     setPrintingTestRequest(true);
+
+    // Open new tab immediately to avoid popup blocker (must be in sync with user action)
+    const newTab = window.open("about:blank", "_blank");
+
+    // Show loading state in the new tab
+    if (newTab) {
+      newTab.document.write(`
+        <html>
+          <head>
+            <title>Đang tạo phiếu...</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
+              .loader { text-align: center; }
+              .spinner { width: 40px; height: 40px; border: 4px solid #e0e0e0; border-top: 4px solid #1890ff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+              @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+              p { color: #666; font-size: 16px; }
+            </style>
+          </head>
+          <body><div class="loader"><div class="spinner"></div><p>Đang tạo phiếu yêu cầu...</p></div></body>
+        </html>
+      `);
+    }
+
     try {
-      // Step 1: Generate the test request form document (also updates status to Pending if New)
+      // Step 1: Generate the test request form document (returns PDF, also updates status to Pending if New)
       const result = await testRequestService.generateTestRequestForm(id);
       message.success(`Đã tạo phiếu yêu cầu XN: ${result.requestNumber}`);
 
-      // Step 2: Get editor config and open OnlyOffice
-      // const config = await testRequestService.getResultFormEditorConfig(
-      //   result.fileName
-      // );
-      // setEditorConfig(config);
-      // setEditorLoading(true);
-      // setEditorModalVisible(true);
+      // Step 2: Navigate the already-opened tab to PDF URL
+      // Use /view/ endpoint for inline display (preview) instead of /download/ which forces download
+      const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(result.fileName)}`;
+      if (newTab) {
+        newTab.location.href = pdfUrl;
+      } else {
+        // Fallback if popup was blocked
+        window.open(pdfUrl, "_blank");
+      }
 
       // Step 3: Reload data to get updated status
       loadData(id);
     } catch (error: any) {
       console.error("Error printing test request:", error);
+      // Close the blank tab if there was an error
+      if (newTab) {
+        newTab.close();
+      }
       message.error(
         error?.response?.data?.error?.message ||
           "Không thể tạo phiếu. Vui lòng thử lại."
@@ -287,9 +324,105 @@ const TestRequestDetail: React.FC = () => {
     }
   };
 
-  // Handle print mixed result (placeholder)
-  const handlePrintMixedResult = () => {
-    message.info("Chức năng in KQ hỗn hợp đang được phát triển");
+  // Handle print mixed result - Open modal to select multiple samples
+  const handleOpenMixedResultModal = async () => {
+    if (!id) return;
+
+    setLoadingSamples(true);
+    setMixedResultModalVisible(true);
+    setSelectedSampleIds([]);
+    setMixedNote(""); // Reset note when opening modal
+
+    try {
+      const samples = await testRequestService.getSamplesForResultForm(id);
+      setSamplesForSelection(samples);
+    } catch (error: any) {
+      console.error("Error loading samples:", error);
+      message.error("Không thể tải danh sách mẫu");
+      setMixedResultModalVisible(false);
+    } finally {
+      setLoadingSamples(false);
+    }
+  };
+
+  // Handle generate mixed result form
+  const handleGenerateMixedResult = async () => {
+    if (!id || selectedSampleIds.length === 0) {
+      message.warning("Vui lòng chọn ít nhất một mẫu");
+      return;
+    }
+
+    // Validate all selected samples can generate result
+    const invalidSamples = selectedSampleIds.filter(sampleId => {
+      const sample = samplesForSelection.find(s => s.id === sampleId);
+      return sample && !sample.canGenerateResult;
+    });
+
+    if (invalidSamples.length > 0) {
+      message.error("Có mẫu chưa xét nghiệm xong, không thể xuất báo cáo");
+      return;
+    }
+
+    setGeneratingMixed(true);
+
+    // Open new tab immediately to avoid popup blocker (must be in sync with user action)
+    const newTab = window.open("about:blank", "_blank");
+
+    // Show loading state in the new tab
+    if (newTab) {
+      newTab.document.write(`
+        <html>
+          <head>
+            <title>Đang tạo phiếu...</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
+              .loader { text-align: center; }
+              .spinner { width: 40px; height: 40px; border: 4px solid #e0e0e0; border-top: 4px solid #1890ff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+              @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+              p { color: #666; font-size: 16px; }
+            </style>
+          </head>
+          <body><div class="loader"><div class="spinner"></div><p>Đang tạo phiếu kết quả...</p></div></body>
+        </html>
+      `);
+    }
+
+    try {
+      // Generate mixed result for multiple samples
+      const result = await testRequestService.generateMixedSamplesResultForm(
+        id,
+        selectedSampleIds,
+        mixedNote || undefined
+      );
+      message.success(`Đã tạo phiếu kết quả hỗn hợp cho ${selectedSampleIds.length} mẫu`);
+
+      // Close modal
+      setMixedResultModalVisible(false);
+
+      // Navigate the already-opened tab to PDF URL
+      const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(result.fileName)}`;
+      if (newTab) {
+        newTab.location.href = pdfUrl;
+      } else {
+        // Fallback if popup was blocked
+        window.open(pdfUrl, "_blank");
+      }
+
+      // Reload data
+      loadData(id);
+    } catch (error: any) {
+      console.error("Error generating mixed result form:", error);
+      // Close the blank tab if there was an error
+      if (newTab) {
+        newTab.close();
+      }
+      message.error(
+        error?.response?.data?.error?.message ||
+          "Không thể tạo phiếu kết quả. Vui lòng thử lại."
+      );
+    } finally {
+      setGeneratingMixed(false);
+    }
   };
 
   // Handle send sample: Pending → SampleSent
@@ -664,6 +797,7 @@ const TestRequestDetail: React.FC = () => {
     setLoadingSamples(true);
     setSampleSelectionModalVisible(true);
     setSelectedSampleId(null);
+    setBm01Note(""); // Reset note when opening modal
 
     try {
       const samples = await testRequestService.getSamplesForResultForm(id);
@@ -693,32 +827,58 @@ const TestRequestDetail: React.FC = () => {
     }
 
     setGeneratingBM01(true);
+
+    // Open new tab immediately to avoid popup blocker (must be in sync with user action)
+    const newTab = window.open("about:blank", "_blank");
+
+    // Show loading state in the new tab
+    if (newTab) {
+      newTab.document.write(`
+        <html>
+          <head>
+            <title>Đang tạo phiếu...</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
+              .loader { text-align: center; }
+              .spinner { width: 40px; height: 40px; border: 4px solid #e0e0e0; border-top: 4px solid #1890ff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+              @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+              p { color: #666; font-size: 16px; }
+            </style>
+          </head>
+          <body><div class="loader"><div class="spinner"></div><p>Đang tạo phiếu kết quả...</p></div></body>
+        </html>
+      `);
+    }
+
     try {
-      // Step 1: Generate the document
+      // Step 1: Generate the document with optional note
       const result = await testRequestService.generateBM01ResultForm(
         id,
-        selectedSampleId
+        selectedSampleId,
+        bm01Note || undefined
       );
       message.success(`Đã tạo phiếu kết quả BM01 cho mẫu ${result.sampleCode}`);
 
-      // Step 2: Update status to PendingApproval after printing result form
-      await testRequestService.updateToPendingApproval(id);
-
-      // Step 3: Close selection modal
+      // Step 2: Close selection modal
       setSampleSelectionModalVisible(false);
 
-      // Step 4: Get editor config and open OnlyOffice
-      const config = await testRequestService.getResultFormEditorConfig(
-        result.fileName
-      );
-      setEditorConfig(config);
-      setEditorLoading(true);
-      setEditorModalVisible(true);
+      // Step 3: Navigate the already-opened tab to PDF URL
+      const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(result.fileName)}`;
+      if (newTab) {
+        newTab.location.href = pdfUrl;
+      } else {
+        // Fallback if popup was blocked
+        window.open(pdfUrl, "_blank");
+      }
 
-      // Step 5: Reload data to update status
+      // Step 4: Reload data to update status
       loadData(id);
     } catch (error: any) {
       console.error("Error generating BM01 result form:", error);
+      // Close the blank tab if there was an error
+      if (newTab) {
+        newTab.close();
+      }
       message.error(
         error?.response?.data?.error?.message ||
           "Không thể tạo phiếu kết quả. Vui lòng thử lại."
@@ -1597,6 +1757,104 @@ const TestRequestDetail: React.FC = () => {
               quả"
             </div>
           )}
+
+          {/* Note input field */}
+          <div style={{ marginTop: 16 }}>
+            <label style={{ display: "block", marginBottom: 8, fontWeight: 500 }}>
+              Ghi chú (không bắt buộc)
+            </label>
+            <Input.TextArea
+              value={bm01Note}
+              onChange={(e) => setBm01Note(e.target.value)}
+              placeholder="Nhập ghi chú sẽ được đưa vào phần cuối của báo cáo..."
+              rows={3}
+              maxLength={500}
+              showCount
+            />
+          </div>
+        </Spin>
+      </Modal>
+
+      {/* Mixed Result Sample Selection Modal */}
+      <Modal
+        title="Chọn mẫu để xuất báo cáo kết quả hỗn hợp"
+        open={mixedResultModalVisible}
+        onCancel={() => setMixedResultModalVisible(false)}
+        width={700}
+        footer={[
+          <Button
+            key="cancel"
+            onClick={() => setMixedResultModalVisible(false)}
+          >
+            Hủy
+          </Button>,
+          <Button
+            key="submit"
+            type="primary"
+            loading={generatingMixed}
+            disabled={selectedSampleIds.length === 0}
+            onClick={handleGenerateMixedResult}
+          >
+            Xuất báo cáo ({selectedSampleIds.length} mẫu)
+          </Button>,
+        ]}
+      >
+        <Spin spinning={loadingSamples}>
+          <Table
+            dataSource={samplesForSelection}
+            columns={sampleSelectionColumns}
+            rowKey="id"
+            pagination={false}
+            size="small"
+            rowSelection={{
+              type: "checkbox",
+              selectedRowKeys: selectedSampleIds,
+              onChange: (selectedRowKeys) => {
+                setSelectedSampleIds(selectedRowKeys as string[]);
+              },
+              getCheckboxProps: (record: SampleForSelectionDto) => ({
+                disabled: !record.canGenerateResult,
+              }),
+            }}
+            onRow={(record) => ({
+              onClick: () => {
+                if (record.canGenerateResult) {
+                  setSelectedSampleIds(prev => {
+                    if (prev.includes(record.id)) {
+                      return prev.filter(id => id !== record.id);
+                    }
+                    return [...prev, record.id];
+                  });
+                }
+              },
+              style: {
+                cursor: record.canGenerateResult ? "pointer" : "not-allowed",
+                opacity: record.canGenerateResult ? 1 : 0.6,
+              },
+            })}
+            locale={{ emptyText: "Không có mẫu nào" }}
+          />
+          {samplesForSelection.some((s) => !s.canGenerateResult) && (
+            <div style={{ marginTop: 12, color: "#888", fontSize: 12 }}>
+              * Chỉ có thể xuất báo cáo cho các mẫu có trạng thái "Đã gửi kết
+              quả"
+            </div>
+          )}
+
+          {/* Note input field */}
+          <div style={{ marginTop: 16 }}>
+            <label style={{ display: "block", marginBottom: 8, fontWeight: 500 }}>
+              Ghi chú (không bắt buộc)
+            </label>
+            <Input.TextArea
+              value={mixedNote}
+              onChange={(e) => setMixedNote(e.target.value)}
+              placeholder="Nhập ghi chú sẽ được đưa vào phần cuối của báo cáo..."
+              rows={3}
+              maxLength={500}
+              showCount
+            />
+          </div>
         </Spin>
       </Modal>
 

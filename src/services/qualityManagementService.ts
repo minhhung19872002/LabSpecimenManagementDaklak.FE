@@ -88,12 +88,14 @@ export const qualityManagementService = {
   },
 
   // Task Actions
-  printSingleResult: async (taskId: string, indicatorId: string): Promise<void> => {
-    await api.post(`${BASE_URL}/${taskId}/print-single`, { indicatorId });
+  printSingleResult: async (taskId: string, indicatorId: string, note?: string): Promise<{ fileName: string }> => {
+    const response = await api.post<{ fileName: string }>(`${BASE_URL}/${taskId}/print-single`, { indicatorId, note });
+    return response.data;
   },
 
-  printMixedResult: async (taskId: string, indicatorIds: string[]): Promise<void> => {
-    await api.post(`${BASE_URL}/${taskId}/print-mixed`, { indicatorIds });
+  printMixedResult: async (taskId: string, indicatorIds: string[], note?: string): Promise<{ fileName: string }> => {
+    const response = await api.post<{ fileName: string }>(`${BASE_URL}/${taskId}/print-mixed`, { indicatorIds, note });
+    return response.data;
   },
 
   sendResult: async (taskId: string): Promise<void> => {

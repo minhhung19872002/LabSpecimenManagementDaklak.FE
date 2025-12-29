@@ -4,22 +4,20 @@ import {
   DownloadOutlined,
   SearchOutlined,
   FileWordOutlined,
-  PrinterOutlined,
+  FilePdfOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import {
   formTemplateService,
   FormTemplateDto,
 } from "../../services/masterDataService";
-import OnlyOfficeEditor from "../../components/common/OnlyOfficeEditor";
+import { API_BASE_URL } from "../../services/api";
 
 const FormTemplatesTab: React.FC = () => {
   const [templates, setTemplates] = useState<FormTemplateDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
-  const [editorVisible, setEditorVisible] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<string>("");
 
   const fetchTemplates = async () => {
     try {
@@ -62,14 +60,10 @@ const FormTemplatesTab: React.FC = () => {
     }
   };
 
-  const handlePrint = (template: FormTemplateDto) => {
-    setSelectedFile(template.fileName);
-    setEditorVisible(true);
-  };
-
-  const handleEditorClose = () => {
-    setEditorVisible(false);
-    setSelectedFile("");
+  const handleViewPdf = (template: FormTemplateDto) => {
+    // Open PDF in new browser tab
+    const pdfUrl = `${API_BASE_URL}/api/v1/form-templates/view-pdf/${encodeURIComponent(template.fileName)}`;
+    window.open(pdfUrl, "_blank");
   };
 
   const filteredTemplates = searchText
@@ -103,10 +97,10 @@ const FormTemplatesTab: React.FC = () => {
       render: (_, record) => (
         <Space>
           <Button
-            icon={<PrinterOutlined />}
-            onClick={() => handlePrint(record)}
+            icon={<FilePdfOutlined />}
+            onClick={() => handleViewPdf(record)}
           >
-            Xem & In
+            Xem PDF
           </Button>
           <Button
             type="primary"
@@ -146,14 +140,6 @@ const FormTemplatesTab: React.FC = () => {
           }}
         />
       </Spin>
-
-      <OnlyOfficeEditor
-        visible={editorVisible}
-        fileName={selectedFile}
-        mode="view"
-        permissions={{ print: true, download: true, edit: false }}
-        onClose={handleEditorClose}
-      />
     </>
   );
 };

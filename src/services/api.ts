@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError, InternalAxiosRequestConfig } from 'axios';
 
 // API Base URL from environment variable
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:44381';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:44381';
 
 // API Response wrapper format
 export interface ApiResponse<T> {
