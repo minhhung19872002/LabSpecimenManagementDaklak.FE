@@ -35,6 +35,7 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import { employeeService, EmployeeDto } from "../../services/employeeService";
 import { departmentService } from "../../services/masterDataService";
+import { ROLES } from "../../constants";
 
 const { Text } = Typography;
 
@@ -45,12 +46,11 @@ interface Department {
 }
 
 const roles = [
-  { value: "Admin", label: "Quản trị viên", color: "red" },
-  { value: "LabManager", label: "Trưởng phòng TN", color: "purple" },
-  { value: "Technician", label: "Kỹ thuật viên", color: "blue" },
-  { value: "Reviewer", label: "Người duyệt B1", color: "orange" },
-  { value: "Approver", label: "Người duyệt B2", color: "green" },
-  { value: "Viewer", label: "Xem báo cáo", color: "default" },
+  { value: ROLES.ADMIN, label: "Quản trị viên", color: "red" },
+  { value: ROLES.LAB_TECHNICAL_MANAGER, label: "Quản lý kỹ thuật Lab", color: "purple" },
+  { value: ROLES.SAMPLE_RECEIVER, label: "Giao nhận mẫu", color: "blue" },
+  { value: ROLES.QUALITY_MANAGER, label: "Quản lý chất lượng", color: "green" },
+  { value: ROLES.LAB_TECHNICIAN, label: "Kỹ thuật viên", color: "orange" },
 ];
 
 const positions = [
