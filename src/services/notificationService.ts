@@ -20,6 +20,12 @@ export enum NotificationType {
   MultipleResultsSubmittedToQM = 11,// QLKT gửi nhiều kết quả cần QLCL phê duyệt
   DeadlineReminder = 12,            // Nhắc nhở deadline trả kết quả
   HandoverReminder = 13,            // Nhắc nhở bàn giao kết quả
+
+  // For SampleReceiver (Bộ phận Giao nhận mẫu)
+  ChangeApproved = 20,              // QLCL phê duyệt thay đổi
+  ChangeRejected = 21,              // QLCL từ chối thay đổi
+  NewTestRequestPending = 22,       // Phiếu yêu cầu mới cần gửi mẫu
+  SampleReturnReminder = 23,        // Nhắc nhở trả mẫu cho khách hàng
 }
 
 // Labels for NotificationType
@@ -40,6 +46,12 @@ export const NotificationTypeLabels: Record<NotificationType, string> = {
   [NotificationType.MultipleResultsSubmittedToQM]: 'Kết quả chỉ tiêu mới',
   [NotificationType.DeadlineReminder]: 'Nhắc nhở deadline',
   [NotificationType.HandoverReminder]: 'Nhắc nhở bàn giao',
+
+  // SampleReceiver notifications
+  [NotificationType.ChangeApproved]: 'Thay đổi được phê duyệt',
+  [NotificationType.ChangeRejected]: 'Thay đổi bị từ chối',
+  [NotificationType.NewTestRequestPending]: 'Phiếu yêu cầu mới',
+  [NotificationType.SampleReturnReminder]: 'Nhắc nhở trả mẫu',
 };
 
 // Notification DTO
