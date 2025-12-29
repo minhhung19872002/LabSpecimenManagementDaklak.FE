@@ -9,6 +9,7 @@ import {
   StandardLookupDto,
   StandardIndicatorInfoDto,
   TaskHistoryResponseDto,
+  QualityManagerPendingTaskDto,
 } from '../types/qualityManagement';
 
 const BASE_URL = '/api/v1/quality-management';
@@ -124,6 +125,14 @@ export const qualityManagementService = {
 
   rejectChanges: async (taskId: string, reason: string): Promise<void> => {
     await api.post(`${BASE_URL}/${taskId}/reject-changes`, { reason });
+  },
+
+  // Work Reminder
+  getQualityManagerPendingTasks: async (): Promise<QualityManagerPendingTaskDto[]> => {
+    const response = await api.get<QualityManagerPendingTaskDto[]>(
+      `${BASE_URL}/quality-manager-pending-tasks`
+    );
+    return response.data;
   },
 };
 

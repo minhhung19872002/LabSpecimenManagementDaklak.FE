@@ -38,9 +38,11 @@ import { useTranslation } from "react-i18next";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { authService, UserInfo } from "../../services/authService";
 import { NotificationBell } from "../Notification";
-import WorkReminderModal, { LabTechManagerReminderModal } from "../WorkReminderModal";
+import WorkReminderModal, { LabTechManagerReminderModal, LabTechnicianReminderModal, QualityManagerReminderModal } from "../WorkReminderModal";
 import { useWorkReminderPopup } from "../../hooks/useWorkReminderPopup";
 import { useLabTechManagerReminderPopup } from "../../hooks/useLabTechManagerReminderPopup";
+import { useLabTechnicianReminderPopup } from "../../hooks/useLabTechnicianReminderPopup";
+import { useQualityManagerReminderPopup } from "../../hooks/useQualityManagerReminderPopup";
 import "./MainLayout.css";
 import { PATH_ROUTES, ROLES } from "../../constants";
 
@@ -101,6 +103,12 @@ const MainLayout: React.FC = () => {
 
   // Work reminder popup for Lab Technical Manager
   const { open: labTechReminderOpen, tasks: labTechReminderTasks, closePopup: closeLabTechReminder } = useLabTechManagerReminderPopup();
+
+  // Work reminder popup for Lab Technician (KTV)
+  const { open: labTechnicianReminderOpen, tasks: labTechnicianReminderTasks, closePopup: closeLabTechnicianReminder } = useLabTechnicianReminderPopup();
+
+  // Work reminder popup for Quality Manager (QLCL)
+  const { open: qualityManagerReminderOpen, tasks: qualityManagerReminderTasks, closePopup: closeQualityManagerReminder } = useQualityManagerReminderPopup();
 
   // Handle window resize for mobile detection
   useEffect(() => {
@@ -627,6 +635,20 @@ const MainLayout: React.FC = () => {
           open={labTechReminderOpen}
           tasks={labTechReminderTasks}
           onClose={closeLabTechReminder}
+        />
+
+        {/* Work Reminder Modal for Lab Technician (KTV) */}
+        <LabTechnicianReminderModal
+          open={labTechnicianReminderOpen}
+          tasks={labTechnicianReminderTasks}
+          onClose={closeLabTechnicianReminder}
+        />
+
+        {/* Work Reminder Modal for Quality Manager (QLCL) */}
+        <QualityManagerReminderModal
+          open={qualityManagerReminderOpen}
+          tasks={qualityManagerReminderTasks}
+          onClose={closeQualityManagerReminder}
         />
       </Layout>
     </Layout>

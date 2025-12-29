@@ -252,3 +252,15 @@ export interface TaskHistoryResponseDto {
   changeHistories: ChangeApprovalHistoryDto[];
   changeHistoryBatches: ChangeApprovalBatchDto[];
 }
+
+// Quality Manager Pending Task DTO (for popup reminder)
+export interface QualityManagerPendingTaskDto {
+  id: string;
+  testRequestId: string;
+  contractNumber: string;
+  taskName: string;
+  transferDate?: string;
+  requestCompletionDate?: string;
+  status: QualityManagementStatus;
+  daysUntilDeadline?: number;
+}
