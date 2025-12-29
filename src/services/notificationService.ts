@@ -4,26 +4,54 @@ const BASE_URL = '/api/v1/notifications';
 
 // Notification Type Enum
 export enum NotificationType {
-  ChangeApprovalRequest = 0,    // Yêu cầu phê duyệt thay đổi
-  ChangeApproved = 1,           // Thay đổi được duyệt
-  ChangeRejected = 2,           // Thay đổi bị từ chối
-  ResultApprovalRequest = 3,    // Yêu cầu phê duyệt KQ
-  ResultApproved = 4,           // KQ được duyệt
-  ResultRejected = 5,           // KQ bị từ chối
-  NewTestRequest = 6,           // Phiếu mới
-  DeadlineReminder = 7          // Nhắc deadline
+  // For QLKT (LabTechnicalManager)
+  SampleSentToLab = 0,              // Mẫu đã gửi đến khoa phòng
+  PendingWorkAssignment = 1,        // Chưa phân công công việc
+  SingleIndicatorSubmitted = 2,     // KTV gửi 1 chỉ tiêu
+  MultipleIndicatorsSubmitted = 3,  // KTV gửi nhiều chỉ tiêu
+  SingleResultRejectedByQM = 4,     // QLCL từ chối 1 kết quả
+  MultipleResultsRejectedByQM = 5,  // QLCL từ chối nhiều kết quả
+  ResultApprovedByQM = 6,           // QLCL duyệt kết quả
+  NewSamplesAdded = 7,              // Có mẫu/chỉ tiêu mới thêm
+  SamplesCancelled = 8,             // Mẫu/chỉ tiêu bị hủy
+
+  // For QLCL (QualityManager)
+  SingleResultSubmittedToQM = 10,   // QLKT gửi 1 kết quả cần QLCL phê duyệt
+  MultipleResultsSubmittedToQM = 11,// QLKT gửi nhiều kết quả cần QLCL phê duyệt
+  DeadlineReminder = 12,            // Nhắc nhở deadline trả kết quả
+  HandoverReminder = 13,            // Nhắc nhở bàn giao kết quả
+
+  // For SampleReceiver (Bộ phận Giao nhận mẫu)
+  ChangeApproved = 20,              // QLCL phê duyệt thay đổi
+  ChangeRejected = 21,              // QLCL từ chối thay đổi
+  NewTestRequestPending = 22,       // Phiếu yêu cầu mới cần gửi mẫu
+  SampleReturnReminder = 23,        // Nhắc nhở trả mẫu cho khách hàng
 }
 
 // Labels for NotificationType
 export const NotificationTypeLabels: Record<NotificationType, string> = {
-  [NotificationType.ChangeApprovalRequest]: 'Yêu cầu phê duyệt thay đổi',
-  [NotificationType.ChangeApproved]: 'Thay đổi được duyệt',
+  // QLKT notifications
+  [NotificationType.SampleSentToLab]: 'Mẫu gửi đến khoa phòng',
+  [NotificationType.PendingWorkAssignment]: 'Chưa phân công công việc',
+  [NotificationType.SingleIndicatorSubmitted]: 'Chỉ tiêu cần phê duyệt',
+  [NotificationType.MultipleIndicatorsSubmitted]: 'Nhiều chỉ tiêu cần phê duyệt',
+  [NotificationType.SingleResultRejectedByQM]: 'Kết quả bị từ chối',
+  [NotificationType.MultipleResultsRejectedByQM]: 'Nhiều kết quả bị từ chối',
+  [NotificationType.ResultApprovedByQM]: 'Kết quả được phê duyệt',
+  [NotificationType.NewSamplesAdded]: 'Có mẫu/chỉ tiêu mới',
+  [NotificationType.SamplesCancelled]: 'Mẫu/chỉ tiêu bị hủy',
+
+  // QLCL notifications
+  [NotificationType.SingleResultSubmittedToQM]: 'Kết quả chỉ tiêu mới',
+  [NotificationType.MultipleResultsSubmittedToQM]: 'Kết quả chỉ tiêu mới',
+  [NotificationType.DeadlineReminder]: 'Nhắc nhở deadline',
+  [NotificationType.HandoverReminder]: 'Nhắc nhở bàn giao',
+
+  // SampleReceiver notifications
+  [NotificationType.ChangeApproved]: 'Thay đổi được phê duyệt',
   [NotificationType.ChangeRejected]: 'Thay đổi bị từ chối',
-  [NotificationType.ResultApprovalRequest]: 'Yêu cầu phê duyệt KQ',
-  [NotificationType.ResultApproved]: 'KQ được duyệt',
-  [NotificationType.ResultRejected]: 'KQ bị từ chối',
-  [NotificationType.NewTestRequest]: 'Phiếu mới',
-  [NotificationType.DeadlineReminder]: 'Nhắc deadline',
+  [NotificationType.NewTestRequestPending]: 'Phiếu yêu cầu mới',
+  [NotificationType.SampleReturnReminder]: 'Nhắc nhở trả mẫu',
 };
 
 // Notification DTO
@@ -38,6 +66,11 @@ export interface NotificationDto {
   isRead: boolean;
   readAt?: string;
   creationTime: string;
+  deadlineDate?: string;
+  senderName?: string;
+  itemCount?: number;
+  additionalData?: string;
+  daysRemaining?: number;
 }
 
 // Paged result DTO
@@ -52,14 +85,22 @@ export interface PagedResultRequestDto {
   maxResultCount?: number;
 }
 
+// Get notifications input with filters
+export interface GetNotificationsInput extends PagedResultRequestDto {
+  isRead?: boolean;
+  type?: NotificationType;
+}
+
 export const notificationService = {
   /**
    * Lấy danh sách thông báo của user hiện tại
    */
-  getMyNotifications: async (params: PagedResultRequestDto = {}): Promise<PagedResultDto<NotificationDto>> => {
+  getMyNotifications: async (params: GetNotificationsInput = {}): Promise<PagedResultDto<NotificationDto>> => {
     const apiParams: Record<string, any> = {};
     if (params.skipCount !== undefined) apiParams.SkipCount = params.skipCount;
     if (params.maxResultCount !== undefined) apiParams.MaxResultCount = params.maxResultCount;
+    if (params.isRead !== undefined) apiParams.IsRead = params.isRead;
+    if (params.type !== undefined) apiParams.Type = params.type;
 
     const response = await api.get<PagedResultDto<NotificationDto>>(BASE_URL, { params: apiParams });
     return response.data;

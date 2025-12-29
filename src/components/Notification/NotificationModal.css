@@ -1,0 +1,153 @@
+/* Notification Modal */
+.notification-modal .ant-modal-body {
+  padding: 0;
+}
+
+.notification-modal .ant-modal-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* Modal Header */
+.notification-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Filters */
+.notification-modal-filters {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  border-bottom: 1px solid #f0f0f0;
+  background-color: #fafafa;
+}
+
+/* Modal Body */
+.notification-modal-body {
+  min-height: 400px;
+  max-height: 500px;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.notification-modal-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+.notification-modal-body .ant-empty {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+/* Notification Item */
+.notification-modal-item {
+  padding: 16px 24px !important;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border-bottom: 1px solid #f0f0f0 !important;
+}
+
+.notification-modal-item:last-child {
+  border-bottom: none !important;
+}
+
+.notification-modal-item:hover {
+  background-color: #fafafa;
+}
+
+.notification-modal-item.unread {
+  background-color: #e6f7ff;
+}
+
+.notification-modal-item.unread:hover {
+  background-color: #bae7ff;
+}
+
+.notification-modal-item-content {
+  width: 100%;
+}
+
+/* Item Header */
+.notification-modal-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.notification-modal-time {
+  font-size: 12px;
+}
+
+.notification-modal-type {
+  font-size: 11px;
+}
+
+/* Message */
+.notification-modal-message {
+  line-height: 1.6;
+  font-size: 14px;
+  color: #262626;
+  white-space: pre-wrap;
+}
+
+.notification-modal-item.unread .notification-modal-message {
+  font-weight: 500;
+}
+
+/* Deadline */
+.notification-modal-deadline {
+  text-align: right;
+  font-size: 13px;
+  color: #52c41a;
+  margin-top: 10px;
+  font-weight: 500;
+}
+
+.notification-modal-deadline.overdue {
+  color: #ff4d4f;
+  font-weight: 600;
+}
+
+.notification-modal-deadline.is-deadline-type {
+  color: #ff4d4f;
+}
+
+/* Load More Button */
+.notification-modal-load-more {
+  padding: 16px 24px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.notification-modal-load-more .ant-btn {
+  height: 40px;
+  font-size: 14px;
+}
+
+/* Scrollbar */
+.notification-modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.notification-modal-body::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 3px;
+}
+
+.notification-modal-body::-webkit-scrollbar-thumb {
+  background: #bfbfbf;
+  border-radius: 3px;
+}
+
+.notification-modal-body::-webkit-scrollbar-thumb:hover {
+  background: #8c8c8c;
+}
