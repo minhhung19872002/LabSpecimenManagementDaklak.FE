@@ -107,6 +107,11 @@ const SampleCard: React.FC<SampleCardProps> = ({
         <Col xs={24} md={12} lg={6}>
           <InfoItem label="Tình trạng" value={sample.statusText} />
         </Col>
+        {sample.isCancelled && (
+          <Col xs={24} md={12} lg={6}>
+            <InfoItem label="Ngày hủy mẫu" value={formatDate(sample.cancelledDate)} />
+          </Col>
+        )}
       </Row>
     </div>
   );

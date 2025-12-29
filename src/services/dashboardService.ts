@@ -38,6 +38,55 @@ export interface RecentActivityDto {
   performedAt: string;
 }
 
+// New Dashboard Overview DTOs
+export interface DashboardOverviewDto {
+  totalContracts: number;
+  totalSamples: number;
+  totalIndicators: number;
+  totalNCRs: number;
+  totalRevenue: number;
+  onTimeTests: number;
+  lateTests: number;
+  pendingApproval: number;
+}
+
+export interface DashboardRecentRequestDto {
+  id: string;
+  contractNumber: string;
+  customerName: string;
+  pendingDate?: string;
+  sampleCount: number;
+  indicatorCount: number;
+  totalCost: number;
+  status: number;
+}
+
+export interface DashboardRecentRequestPagedResult {
+  items: DashboardRecentRequestDto[];
+  totalCount: number;
+}
+
+export interface RevenueByCustomerDto {
+  customerName: string;
+  totalSamples: number;
+  totalIndicators: number;
+  revenue: number;
+}
+
+export interface RevenueByCustomerPagedResult {
+  items: RevenueByCustomerDto[];
+  totalCount: number;
+}
+
+export interface MonthlyRevenueDto {
+  month: number;
+  monthName: string;
+  contractCount: number;
+  totalSamples: number;
+  totalIndicators: number;
+  revenue: number;
+}
+
 const BASE_URL = '/api/v1/dashboard';
 const STATISTICS_URL = '/api/v1/statistics';
 
@@ -129,6 +178,47 @@ export const dashboardService = {
 
   getPerformanceMetrics: async (): Promise<any> => {
     const response = await api.get(`${STATISTICS_URL}/performance`);
+    return response.data;
+  },
+
+  // New Dashboard Overview APIs
+  getDashboardOverview: async (fromDate: string, toDate: string): Promise<DashboardOverviewDto> => {
+    const response = await api.get<DashboardOverviewDto>(`${BASE_URL}/overview`, {
+      params: { fromDate, toDate }
+    });
+    return response.data;
+  },
+
+  getDashboardRecentRequests: async (
+    customerName?: string,
+    skipCount: number = 0,
+    maxResultCount: number = 10
+  ): Promise<DashboardRecentRequestPagedResult> => {
+    const response = await api.get<DashboardRecentRequestPagedResult>(`${BASE_URL}/recent-requests`, {
+      params: { customerName, skipCount, maxResultCount }
+    });
+    return response.data;
+  },
+
+  getRevenueByCustomer: async (
+    skipCount: number = 0,
+    maxResultCount: number = 10
+  ): Promise<RevenueByCustomerPagedResult> => {
+    const response = await api.get<RevenueByCustomerPagedResult>(`${BASE_URL}/revenue-by-customer`, {
+      params: { skipCount, maxResultCount }
+    });
+    return response.data;
+  },
+
+  getMonthlyRevenue: async (customerName: string, year: number): Promise<MonthlyRevenueDto[]> => {
+    const response = await api.get<MonthlyRevenueDto[]>(`${BASE_URL}/monthly-revenue`, {
+      params: { customerName, year }
+    });
+    return response.data;
+  },
+
+  getCustomerNames: async (): Promise<string[]> => {
+    const response = await api.get<string[]>(`${BASE_URL}/customer-names`);
     return response.data;
   },
 };
