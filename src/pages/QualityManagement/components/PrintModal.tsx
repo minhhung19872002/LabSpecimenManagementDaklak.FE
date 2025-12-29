@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, Table, Button, Space, Typography, message } from 'antd';
+import { Modal, Table, Button, Space, Typography, message, Input } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -15,7 +15,7 @@ interface PrintModalProps {
   indicators: QualityManagementIndicatorDto[];
   selectedIds: string[];
   onCancel: () => void;
-  onPrint: (indicatorIds: string[]) => Promise<void>;
+  onPrint: (indicatorIds: string[], note?: string, newTab?: Window | null) => Promise<void>;
 }
 
 const PrintModal: React.FC<PrintModalProps> = ({
@@ -28,6 +28,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
 }) => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [note, setNote] = useState<string>('');
 
   // Get only approved indicators
   const approvedIndicators = indicators.filter(
@@ -40,6 +41,10 @@ const PrintModal: React.FC<PrintModalProps> = ({
       setSelectedRowKeys(selectedIds);
     } else if (mode === 'single' && visible) {
       setSelectedRowKeys([]);
+    }
+    // Reset note when modal opens
+    if (visible) {
+      setNote('');
     }
   }, [mode, selectedIds, visible]);
 
@@ -54,10 +59,39 @@ const PrintModal: React.FC<PrintModalProps> = ({
       return;
     }
 
+    // Open new tab immediately to avoid popup blocker (must be in sync with user action)
+    const newTab = window.open('about:blank', '_blank');
+
+    // Show loading state in the new tab
+    if (newTab) {
+      newTab.document.write(`
+        <html>
+          <head>
+            <title>Đang tạo phiếu...</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
+              .loader { text-align: center; }
+              .spinner { width: 40px; height: 40px; border: 4px solid #e0e0e0; border-top: 4px solid #1890ff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+              @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+              p { color: #666; font-size: 16px; }
+            </style>
+          </head>
+          <body><div class="loader"><div class="spinner"></div><p>Đang tạo phiếu kết quả...</p></div></body>
+        </html>
+      `);
+    }
+
     setLoading(true);
     try {
-      await onPrint(selectedRowKeys);
+      await onPrint(selectedRowKeys, note || undefined, newTab);
       setSelectedRowKeys([]);
+      setNote('');
+    } catch (error) {
+      // Close the blank tab if there was an error
+      if (newTab) {
+        newTab.close();
+      }
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -65,6 +99,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
 
   const handleCancel = () => {
     setSelectedRowKeys([]);
+    setNote('');
     onCancel();
   };
 
@@ -170,15 +205,32 @@ const PrintModal: React.FC<PrintModalProps> = ({
           <Text type="secondary">Không có chỉ tiêu nào đã được duyệt</Text>
         </div>
       ) : (
-        <Table
-          rowSelection={rowSelection}
-          columns={columns}
-          dataSource={approvedIndicators}
-          rowKey="id"
-          pagination={false}
-          size="small"
-          scroll={{ y: 400 }}
-        />
+        <>
+          <Table
+            rowSelection={rowSelection}
+            columns={columns}
+            dataSource={approvedIndicators}
+            rowKey="id"
+            pagination={false}
+            size="small"
+            scroll={{ y: 300 }}
+          />
+
+          {/* Note input field */}
+          <div style={{ marginTop: 16 }}>
+            <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>
+              Ghi chú (không bắt buộc)
+            </label>
+            <Input.TextArea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Nhập ghi chú sẽ được đưa vào phần cuối của báo cáo..."
+              rows={3}
+              maxLength={500}
+              showCount
+            />
+          </div>
+        </>
       )}
     </Modal>
   );

@@ -80,10 +80,21 @@ export const testRequestService = {
     return response.data;
   },
 
-  generateBM01ResultForm: async (testRequestId: string, sampleId: string): Promise<{ fileName: string; sampleCode: string }> => {
+  generateBM01ResultForm: async (testRequestId: string, sampleId: string, note?: string): Promise<{ fileName: string; sampleCode: string }> => {
     const response = await api.post<{ fileName: string; sampleCode: string }>('/api/v1/result-forms/generate-bm01', {
       testRequestId,
-      sampleId
+      sampleId,
+      note
+    });
+    return response.data;
+  },
+
+  // Generate mixed samples result form (In KQ Hỗn hợp cho nhiều mẫu)
+  generateMixedSamplesResultForm: async (testRequestId: string, sampleIds: string[], note?: string): Promise<{ fileName: string; sampleCode: string }> => {
+    const response = await api.post<{ fileName: string; sampleCode: string }>('/api/v1/result-forms/generate-mixed-samples', {
+      testRequestId,
+      sampleIds,
+      note
     });
     return response.data;
   },

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Badge, Popover, List, Typography, Button, Empty, Spin } from "antd";
 import { BellOutlined, CheckOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { useNavigate } from "react-router-dom";
 import {
   notificationService,
   NotificationDto,
@@ -43,8 +42,8 @@ const parseMessage = (message: string) => {
   });
 };
 
-// Get route based on notification type and reference
-const getNotificationRoute = (notification: NotificationDto): string | null => {
+// Get route based on notification type and reference (reserved for future use)
+const _getNotificationRoute = (notification: NotificationDto): string | null => {
   const { referenceType, referenceId } = notification;
 
   if (!referenceId) return null;
@@ -60,6 +59,7 @@ const getNotificationRoute = (notification: NotificationDto): string | null => {
       return null;
   }
 };
+void _getNotificationRoute; // Suppress unused warning
 
 // Check if notification is deadline-related
 const isDeadlineNotification = (type: NotificationType): boolean => {
@@ -70,7 +70,6 @@ const isDeadlineNotification = (type: NotificationType): boolean => {
 };
 
 const NotificationBell: React.FC = () => {
-  const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<NotificationDto[]>([]);
   const [loading, setLoading] = useState(false);

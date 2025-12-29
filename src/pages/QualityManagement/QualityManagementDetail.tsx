@@ -119,19 +119,34 @@ const QualityManagementDetail: React.FC = () => {
     setPrintModalVisible(true);
   };
 
-  const handlePrint = async (indicatorIds: string[]) => {
+  const handlePrint = async (indicatorIds: string[], note?: string, newTab?: Window | null) => {
     if (!task) return;
     try {
+      let result: { fileName: string };
       if (printMode === 'single') {
-        await qualityManagementService.printSingleResult(task.id, indicatorIds[0]);
+        result = await qualityManagementService.printSingleResult(task.id, indicatorIds[0], note);
       } else {
-        await qualityManagementService.printMixedResult(task.id, indicatorIds);
+        result = await qualityManagementService.printMixedResult(task.id, indicatorIds, note);
       }
-      message.success('Đã gửi lệnh in');
+      message.success('Đã tạo phiếu kết quả');
       setPrintModalVisible(false);
+
+      // Navigate the already-opened tab to PDF URL (or open new if no tab was passed)
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://localhost:51611';
+      const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(result.fileName)}`;
+      if (newTab) {
+        newTab.location.href = pdfUrl;
+      } else {
+        window.open(pdfUrl, '_blank');
+      }
+
       loadData();
     } catch (error) {
       console.error('Error printing:', error);
+      // Close the blank tab if there was an error
+      if (newTab) {
+        newTab.close();
+      }
       message.error('Không thể in kết quả');
     }
   };
