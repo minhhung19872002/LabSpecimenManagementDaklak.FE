@@ -15,7 +15,8 @@ import {
   BulkApproveIndicatorsInput,
   SendToQualityInput,
   MethodLookupDto,
-  UserLookupDto
+  UserLookupDto,
+  LabTechManagerPendingTaskDto
 } from '../types/laboratoryTask';
 
 const BASE_URL = '/api/v1/laboratory-tasks';
@@ -260,6 +261,18 @@ export const laboratoryTaskService = {
       return response.data;
     }
     return response.data?.items || [];
+  },
+
+  // ============= Work Reminder =============
+
+  /**
+   * Lấy danh sách công việc cần làm cho Lab Technical Manager (popup reminder)
+   */
+  getLabTechManagerPendingTasks: async (): Promise<LabTechManagerPendingTaskDto[]> => {
+    const response = await api.get<LabTechManagerPendingTaskDto[]>(
+      `${BASE_URL}/lab-tech-manager-pending-tasks`
+    );
+    return response.data;
   }
 };
 

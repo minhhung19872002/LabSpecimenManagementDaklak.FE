@@ -8,7 +8,8 @@ import {
   TestRequestStatus,
   TestRequestChangeHistoryDto,
   RejectChangesDto,
-  TestRequestTimelineDto
+  TestRequestTimelineDto,
+  SampleReceiverPendingTaskDto
 } from '../types/testRequest';
 
 const BASE_URL = '/api/v1/test-requests';
@@ -170,6 +171,14 @@ export const testRequestService = {
    */
   getTimeline: async (id: string): Promise<TestRequestTimelineDto> => {
     const response = await api.get<TestRequestTimelineDto>(`${BASE_URL}/${id}/timeline`);
+    return response.data;
+  },
+
+  /**
+   * Lấy danh sách công việc cần làm cho SampleReceiver (dùng cho popup reminder)
+   */
+  getSampleReceiverPendingTasks: async (): Promise<SampleReceiverPendingTaskDto[]> => {
+    const response = await api.get<SampleReceiverPendingTaskDto[]>(`${BASE_URL}/sample-receiver-pending-tasks`);
     return response.data;
   },
 

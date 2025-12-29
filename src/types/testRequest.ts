@@ -553,3 +553,13 @@ export interface TestRequestTimelineDto {
   status: TestRequestStatus;
   steps: TimelineStepDto[];
 }
+
+// Sample Receiver Pending Task DTO (for popup reminder)
+export interface SampleReceiverPendingTaskDto {
+  id: string;
+  contractNumber: string;
+  taskName: string;
+  pendingDate: string | null;
+  expectedCompletionDate: string | null;
+  status: TestRequestStatus;
+}
