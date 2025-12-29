@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Card,
@@ -38,8 +38,9 @@ import {
   LaboratoryTaskStatusLabels,
   LaboratoryTaskStatusColors,
   UpdateLaboratoryTaskDto,
+  GetLaboratoryTaskListDto,
 } from "../../types/laboratoryTask";
-import { PATH_ROUTES } from "../../constants";
+import { PATH_ROUTES, ROLES } from "../../constants";
 
 const { Text } = Typography;
 
@@ -66,15 +67,36 @@ const TaskManagementList: React.FC = () => {
     total: 0,
   });
 
+  const currentUser = useMemo(() => {
+    try {
+      const userInfo = localStorage.getItem("user_info");
+      return userInfo ? JSON.parse(userInfo) : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await laboratoryTaskService.getList({
+      if (!currentUser) return;
+
+      const isAdmin = currentUser.roles
+        ? currentUser.roles?.find((role: string) => role === ROLES.ADMIN)
+        : false;
+
+      let params: GetLaboratoryTaskListDto = {
         skipCount: (pagination.current - 1) * pagination.pageSize,
         maxResultCount: pagination.pageSize,
         status: statusFilter,
         search: searchText || undefined,
-      });
+      };
+
+      if (!isAdmin) {
+        params.technicalManagerId = currentUser.id;
+      }
+
+      const result = await laboratoryTaskService.getList(params);
 
       setTasks(result.items);
       setPagination((prev) => ({ ...prev, total: result.totalCount }));
@@ -84,7 +106,13 @@ const TaskManagementList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [pagination.current, pagination.pageSize, statusFilter, searchText]);
+  }, [
+    pagination.current,
+    pagination.pageSize,
+    statusFilter,
+    searchText,
+    currentUser,
+  ]);
 
   useEffect(() => {
     loadData();
@@ -116,9 +144,8 @@ const TaskManagementList: React.FC = () => {
     notAssigned: tasks.filter(
       (t) => t.status === LaboratoryTaskStatus.NotAssigned
     ).length,
-    assigned: tasks.filter(
-      (t) => t.status === LaboratoryTaskStatus.Assigned
-    ).length,
+    assigned: tasks.filter((t) => t.status === LaboratoryTaskStatus.Assigned)
+      .length,
     testing: tasks.filter((t) => t.status === LaboratoryTaskStatus.Testing)
       .length,
     pendingApproval: tasks.filter(
@@ -365,7 +392,10 @@ const TaskManagementList: React.FC = () => {
       record.status === LaboratoryTaskStatus.SentToQuality
     )
       return false;
-    const daysRemaining = dayjs(record.requestCompletionDate).diff(dayjs(), "day");
+    const daysRemaining = dayjs(record.requestCompletionDate).diff(
+      dayjs(),
+      "day"
+    );
     return daysRemaining < 5;
   };
 
@@ -509,14 +539,10 @@ const TaskManagementList: React.FC = () => {
               onChange={handleStatusFilterChange}
             >
               <Select.Option value="all">Tất cả trạng thái</Select.Option>
-              <Select.Option
-                value={String(LaboratoryTaskStatus.NotAssigned)}
-              >
+              <Select.Option value={String(LaboratoryTaskStatus.NotAssigned)}>
                 Chưa giao việc
               </Select.Option>
-              <Select.Option
-                value={String(LaboratoryTaskStatus.Assigned)}
-              >
+              <Select.Option value={String(LaboratoryTaskStatus.Assigned)}>
                 Đã giao việc
               </Select.Option>
               <Select.Option value={String(LaboratoryTaskStatus.Testing)}>
