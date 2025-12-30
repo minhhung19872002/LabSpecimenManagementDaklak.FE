@@ -13,7 +13,6 @@ interface PrintModalProps {
   visible: boolean;
   mode: 'single' | 'mixed';
   indicators: QualityManagementIndicatorDto[];
-  selectedIds: string[];
   onCancel: () => void;
   onPrint: (indicatorIds: string[], note?: string, newTab?: Window | null) => Promise<void>;
 }
@@ -22,7 +21,6 @@ const PrintModal: React.FC<PrintModalProps> = ({
   visible,
   mode,
   indicators,
-  selectedIds,
   onCancel,
   onPrint,
 }) => {
@@ -35,18 +33,13 @@ const PrintModal: React.FC<PrintModalProps> = ({
     (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Approved
   );
 
-  // If mode is mixed, use the passed selectedIds, otherwise allow selection
+  // Reset selection and note when modal opens
   React.useEffect(() => {
-    if (mode === 'mixed' && visible) {
-      setSelectedRowKeys(selectedIds);
-    } else if (mode === 'single' && visible) {
-      setSelectedRowKeys([]);
-    }
-    // Reset note when modal opens
     if (visible) {
+      setSelectedRowKeys([]);
       setNote('');
     }
-  }, [mode, selectedIds, visible]);
+  }, [visible]);
 
   const handlePrint = async () => {
     if (selectedRowKeys.length === 0) {
@@ -196,7 +189,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
         <Text type="secondary">
           {mode === 'single'
             ? 'Chọn 1 chỉ tiêu để in kết quả đơn'
-            : `Đã chọn ${selectedRowKeys.length} chỉ tiêu để in kết quả hỗn hợp`}
+            : 'Chọn nhiều chỉ tiêu để in kết quả hỗn hợp'}
         </Text>
       </div>
 

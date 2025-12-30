@@ -46,7 +46,6 @@ const QualityManagementDetail: React.FC = () => {
   // State
   const [loading, setLoading] = useState(false);
   const [task, setTask] = useState<QualityManagementTaskDto | null>(null);
-  const [selectedIndicatorIds, setSelectedIndicatorIds] = useState<string[]>([]);
   const [selectedPendingIds, setSelectedPendingIds] = useState<string[]>([]);
 
   // Modals
@@ -300,9 +299,9 @@ const QualityManagementDetail: React.FC = () => {
               <Button
                 icon={<PrinterOutlined />}
                 onClick={handlePrintMixed}
-                disabled={!canPrint || selectedIndicatorIds.length === 0}
+                disabled={!canPrint}
               >
-                In KQ Hỗn hợp ({selectedIndicatorIds.length})
+                In KQ Hỗn hợp
               </Button>
               <Button
                 type="primary"
@@ -395,8 +394,6 @@ const QualityManagementDetail: React.FC = () => {
           <IndicatorTable
             indicators={indicators}
             taskStatus={task.status}
-            selectedIndicatorIds={selectedIndicatorIds}
-            onSelectChange={setSelectedIndicatorIds}
             onApprove={handleApproveIndicator}
             onReject={handleRejectIndicator}
             onIndicatorUpdate={loadData}
@@ -411,7 +408,6 @@ const QualityManagementDetail: React.FC = () => {
         visible={printModalVisible}
         mode={printMode}
         indicators={indicators}
-        selectedIds={selectedIndicatorIds}
         onCancel={() => setPrintModalVisible(false)}
         onPrint={handlePrint}
       />
