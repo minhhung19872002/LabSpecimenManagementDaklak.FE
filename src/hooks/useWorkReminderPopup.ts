@@ -41,6 +41,22 @@ const shouldShowPopup = (hasPending: boolean, hasResultSent: boolean): boolean =
 };
 
 /**
+ * Check if minimum time has passed (used before API call)
+ * Uses the shortest interval (1h) to determine if we should fetch
+ */
+const shouldFetchTasks = (): boolean => {
+  const elapsed = getElapsedTime();
+
+  // Never shown before (first login) -> fetch
+  if (elapsed === null) return true;
+
+  // Use minimum interval (1h) to check if we should fetch
+  if (elapsed >= PENDING_INTERVAL) return true;
+
+  return false;
+};
+
+/**
  * Calculate remaining time until next popup should show
  */
 const getRemainingTime = (hasPending: boolean, hasResultSent: boolean): number | null => {
@@ -79,100 +95,118 @@ export const useWorkReminderPopup = (): UseWorkReminderPopupResult => {
   const [open, setOpen] = useState(false);
   const [tasks, setTasks] = useState<SampleReceiverPendingTaskDto[]>([]);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const isSampleReceiver = useRef(false);
-
-  // Check if current user has SampleReceiver role
-  const checkSampleReceiverRole = useCallback((): boolean => {
-    try {
-      const userInfoStr = localStorage.getItem("user_info");
-      if (!userInfoStr) return false;
-
-      const userInfo = JSON.parse(userInfoStr);
-      const roles = userInfo.roles || [];
-      return roles.includes(ROLES.SAMPLE_RECEIVER);
-    } catch {
-      return false;
-    }
-  }, []);
-
-  // Fetch pending tasks
-  const fetchTasks = useCallback(async (): Promise<SampleReceiverPendingTaskDto[]> => {
-    try {
-      const result = await testRequestService.getSampleReceiverPendingTasks();
-      return result;
-    } catch (error) {
-      console.error("Error fetching sample receiver pending tasks:", error);
-      return [];
-    }
-  }, []);
-
-  // Show popup and update last shown time
-  const showPopup = useCallback((taskList: SampleReceiverPendingTaskDto[]) => {
-    if (taskList.length > 0) {
-      setTasks(taskList);
-      setOpen(true);
-      localStorage.setItem(LAST_SHOWN_TIME_KEY, Date.now().toString());
-    }
-  }, []);
+  const isInitialized = useRef(false);
 
   // Close popup
   const closePopup = useCallback(() => {
     setOpen(false);
   }, []);
 
-  // Schedule next check based on remaining time
-  const scheduleNextCheck = useCallback((hasPending: boolean, hasResultSent: boolean) => {
-    // Clear existing timeout
-    if (intervalRef.current) {
-      clearTimeout(intervalRef.current);
-      intervalRef.current = null;
-    }
-
-    const remaining = getRemainingTime(hasPending, hasResultSent);
-    if (remaining === null) return;
-
-    // Schedule check after remaining time
-    intervalRef.current = setTimeout(async () => {
-      const newTasks = await fetchTasks();
-      if (newTasks.length > 0) {
-        const newHasPending = newTasks.some(t => t.status === TestRequestStatus.Pending);
-        const newHasResultSent = newTasks.some(t => t.status === TestRequestStatus.ResultSent);
-
-        if (shouldShowPopup(newHasPending, newHasResultSent)) {
-          showPopup(newTasks);
-        }
-
-        // Schedule next check with full interval
-        scheduleNextCheck(newHasPending, newHasResultSent);
-      }
-    }, remaining);
-  }, [fetchTasks, showPopup]);
-
-  // Check and show popup (respects time intervals)
-  const checkAndShowIfNeeded = useCallback(async () => {
-    const taskList = await fetchTasks();
-    if (taskList.length === 0) return;
-
-    const hasPending = taskList.some(t => t.status === TestRequestStatus.Pending);
-    const hasResultSent = taskList.some(t => t.status === TestRequestStatus.ResultSent);
-
-    // Check if should show based on elapsed time
-    if (shouldShowPopup(hasPending, hasResultSent)) {
-      showPopup(taskList);
-    }
-
-    // Schedule next check based on remaining time (not full interval)
-    scheduleNextCheck(hasPending, hasResultSent);
-  }, [fetchTasks, showPopup, scheduleNextCheck]);
-
-  // Initial check on mount
+  // Initial check on mount - chỉ chạy một lần
   useEffect(() => {
-    // Check role
-    isSampleReceiver.current = checkSampleReceiverRole();
+    // Prevent double initialization in StrictMode
+    if (isInitialized.current) return;
+    isInitialized.current = true;
 
-    if (!isSampleReceiver.current) {
+    // Check if current user has SampleReceiver role
+    const checkSampleReceiverRole = (): boolean => {
+      try {
+        const userInfoStr = localStorage.getItem("user_info");
+        if (!userInfoStr) return false;
+
+        const userInfo = JSON.parse(userInfoStr);
+        const roles = userInfo.roles || [];
+        return roles.includes(ROLES.SAMPLE_RECEIVER);
+      } catch {
+        return false;
+      }
+    };
+
+    if (!checkSampleReceiverRole()) {
       return;
     }
+
+    // Fetch pending tasks
+    const fetchTasks = async (): Promise<SampleReceiverPendingTaskDto[]> => {
+      try {
+        const result = await testRequestService.getSampleReceiverPendingTasks();
+        return result;
+      } catch (error) {
+        console.error("Error fetching sample receiver pending tasks:", error);
+        return [];
+      }
+    };
+
+    // Show popup and update last shown time
+    const showPopup = (taskList: SampleReceiverPendingTaskDto[]) => {
+      if (taskList.length > 0) {
+        setTasks(taskList);
+        setOpen(true);
+        localStorage.setItem(LAST_SHOWN_TIME_KEY, Date.now().toString());
+      }
+    };
+
+    // Schedule next check based on remaining time
+    const scheduleNextCheck = (hasPending: boolean, hasResultSent: boolean) => {
+      // Clear existing timeout
+      if (intervalRef.current) {
+        clearTimeout(intervalRef.current);
+        intervalRef.current = null;
+      }
+
+      const remaining = getRemainingTime(hasPending, hasResultSent);
+      if (remaining === null) return;
+
+      // Schedule check after remaining time
+      intervalRef.current = setTimeout(async () => {
+        const newTasks = await fetchTasks();
+        if (newTasks.length > 0) {
+          const newHasPending = newTasks.some(t => t.status === TestRequestStatus.Pending);
+          const newHasResultSent = newTasks.some(t => t.status === TestRequestStatus.ResultSent);
+
+          if (shouldShowPopup(newHasPending, newHasResultSent)) {
+            showPopup(newTasks);
+          }
+
+          // Schedule next check with full interval
+          scheduleNextCheck(newHasPending, newHasResultSent);
+        }
+      }, remaining);
+    };
+
+    // Check and show popup (respects time intervals)
+    const checkAndShowIfNeeded = async () => {
+      // Lần đầu login (chưa có key) -> luôn gọi API
+      const isFirstLogin = !localStorage.getItem(LAST_SHOWN_TIME_KEY);
+
+      // Nếu không phải lần đầu, check thời gian TRƯỚC khi gọi API
+      if (!isFirstLogin && !shouldFetchTasks()) {
+        // Schedule với minimum interval vì chưa biết task types
+        scheduleNextCheck(true, false);
+        return;
+      }
+
+      // Gọi API lấy tasks
+      const taskList = await fetchTasks();
+
+      if (taskList.length === 0) {
+        // Không có task -> set key để tránh gọi API liên tục, schedule với minimum interval
+        localStorage.setItem(LAST_SHOWN_TIME_KEY, Date.now().toString());
+        scheduleNextCheck(true, false);
+        return;
+      }
+
+      const hasPending = taskList.some(t => t.status === TestRequestStatus.Pending);
+      const hasResultSent = taskList.some(t => t.status === TestRequestStatus.ResultSent);
+
+      // Check if should show based on elapsed time và task types
+      if (shouldShowPopup(hasPending, hasResultSent)) {
+        showPopup(taskList);
+      }
+
+      // Schedule next check based on remaining time (not full interval)
+      scheduleNextCheck(hasPending, hasResultSent);
+    };
 
     // Initial fetch and show (respects time intervals)
     checkAndShowIfNeeded();
@@ -183,7 +217,7 @@ export const useWorkReminderPopup = (): UseWorkReminderPopupResult => {
         clearTimeout(intervalRef.current);
       }
     };
-  }, [checkSampleReceiverRole, checkAndShowIfNeeded]);
+  }, []); // Empty dependency - chỉ chạy một lần khi mount
 
   return {
     open,
