@@ -264,3 +264,19 @@ export interface QualityManagerPendingTaskDto {
   status: QualityManagementStatus;
   daysUntilDeadline?: number;
 }
+
+// Bulk Approve Indicators Result DTO
+export interface BulkApproveIndicatorsResultDto {
+  successCount: number;
+  failedCount: number;
+  failedIndicators: string[];
+  approvedIndicators: QualityManagementIndicatorDto[];
+}
+
+// Bulk Reject Indicators Result DTO
+export interface BulkRejectIndicatorsResultDto {
+  successCount: number;
+  failedCount: number;
+  failedIndicators: string[];
+  rejectedIndicators: QualityManagementIndicatorDto[];
+}

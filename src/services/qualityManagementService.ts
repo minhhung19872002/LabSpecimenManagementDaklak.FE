@@ -10,6 +10,8 @@ import {
   StandardIndicatorInfoDto,
   TaskHistoryResponseDto,
   QualityManagerPendingTaskDto,
+  BulkApproveIndicatorsResultDto,
+  BulkRejectIndicatorsResultDto,
 } from '../types/qualityManagement';
 
 const BASE_URL = '/api/v1/quality-management';
@@ -61,6 +63,22 @@ export const qualityManagementService = {
     const response = await api.post<QualityManagementIndicatorDto>(
       `${BASE_URL}/indicators/${indicatorId}/reject`,
       { reason }
+    );
+    return response.data;
+  },
+
+  bulkApproveIndicators: async (indicatorIds: string[]): Promise<BulkApproveIndicatorsResultDto> => {
+    const response = await api.post<BulkApproveIndicatorsResultDto>(
+      `${BASE_URL}/indicators/bulk-approve`,
+      { indicatorIds }
+    );
+    return response.data;
+  },
+
+  bulkRejectIndicators: async (indicatorIds: string[], reason: string): Promise<BulkRejectIndicatorsResultDto> => {
+    const response = await api.post<BulkRejectIndicatorsResultDto>(
+      `${BASE_URL}/indicators/bulk-reject`,
+      { indicatorIds, reason }
     );
     return response.data;
   },
