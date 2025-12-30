@@ -115,6 +115,10 @@ export interface LaboratoryTaskDto {
   indicators?: LaboratoryTaskIndicatorDto[];
   supporters?: LaboratoryTaskSupporterDto[];
 
+  // Current user role flags
+  isCurrentUserTechnicalManager?: boolean;  // Current user là QLKT của task này
+  isCurrentUserSupporter?: boolean;  // Current user là Supporter của task này
+
   // Audit fields
   creationTime?: string;
   creatorId?: string;
