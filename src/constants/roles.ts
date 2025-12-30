@@ -8,3 +8,17 @@ export const ROLES = {
 } as const;
 
 export type RoleType = (typeof ROLES)[keyof typeof ROLES];
+
+// Role display names in Vietnamese
+export const ROLE_DISPLAY_NAMES: Record<string, string> = {
+  [ROLES.ADMIN]: "Quản trị viên",
+  [ROLES.LAB_TECHNICAL_MANAGER]: "Quản lý kỹ thuật",
+  [ROLES.SAMPLE_RECEIVER]: "Bộ phận giao nhận mẫu",
+  [ROLES.QUALITY_MANAGER]: "Quản lý chất lượng",
+  [ROLES.LAB_TECHNICIAN]: "Kỹ thuật viên",
+};
+
+// Get display name for a role
+export const getRoleDisplayName = (role: string): string => {
+  return ROLE_DISPLAY_NAMES[role] || role;
+};
