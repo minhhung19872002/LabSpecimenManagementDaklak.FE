@@ -39,7 +39,7 @@ import {
   UpdateLaboratoryTaskDto,
   GetLaboratoryTaskListDto,
 } from "../../types/laboratoryTask";
-import { PATH_ROUTES, ROLES } from "../../constants";
+import { PATH_ROUTES } from "../../constants";
 
 const { Text } = Typography;
 
@@ -81,20 +81,14 @@ const TaskManagementList: React.FC = () => {
     try {
       if (!currentUser) return;
 
-      const isAdmin = currentUser.roles
-        ? currentUser.roles?.find((role: string) => role === ROLES.ADMIN)
-        : false;
-
-      let params: GetLaboratoryTaskListDto = {
+      // Backend đã xử lý logic filter theo QLKT OR supporter
+      // Admin sẽ thấy tất cả, user khác chỉ thấy tasks mà họ là QLKT hoặc supporter
+      const params: GetLaboratoryTaskListDto = {
         skipCount: (pagination.current - 1) * pagination.pageSize,
         maxResultCount: pagination.pageSize,
         status: statusFilter,
         search: searchText || undefined,
       };
-
-      if (!isAdmin) {
-        params.technicalManagerId = currentUser.id;
-      }
 
       const result = await laboratoryTaskService.getList(params);
 
