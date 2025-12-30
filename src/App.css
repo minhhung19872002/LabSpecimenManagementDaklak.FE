@@ -136,3 +136,30 @@ body .ant-modal-root .fullscreen-modal .ant-modal-centered {
     margin: 8px auto !important;
   }
 }
+
+/* Remove sticky/fixed columns on tablet and below (< lg breakpoint) for better scrolling */
+@media (max-width: 991px) {
+  .ant-table-cell-fix-left,
+  .ant-table-cell-fix-right,
+  .ant-table-cell-fix-start,
+  .ant-table-cell-fix-end,
+  .ant-table-cell-fix {
+    position: static !important;
+    z-index: auto !important;
+    background: inherit !important;
+  }
+
+  /* Remove sticky shadow */
+  .ant-table-cell-fix-left-last::after,
+  .ant-table-cell-fix-right-first::after,
+  .ant-table-cell-fix-start-last::after,
+  .ant-table-cell-fix-end-first::after {
+    display: none !important;
+  }
+
+  /* Ensure table can scroll horizontally */
+  .ant-table-content,
+  .ant-table-body {
+    overflow-x: auto !important;
+  }
+}
