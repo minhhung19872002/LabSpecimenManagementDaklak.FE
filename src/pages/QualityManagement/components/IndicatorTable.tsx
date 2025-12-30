@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Table,
   Tag,
@@ -16,11 +16,14 @@ import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { qualityManagementService } from "../../../services/qualityManagementService";
 import {
+  standardService,
+  StandardWithIndicatorsDto,
+} from "../../../services/masterDataService";
+import {
   QualityManagementIndicatorDto,
   QualityIndicatorApprovalStatus,
   QualityIndicatorApprovalStatusLabels,
   QualityIndicatorApprovalStatusColors,
-  StandardLookupDto,
   QualityManagementStatus,
 } from "../../../types/qualityManagement";
 
@@ -53,7 +56,9 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   onReject,
   onIndicatorUpdate,
 }) => {
-  const [standards, setStandards] = useState<StandardLookupDto[]>([]);
+  const [standardsWithIndicators, setStandardsWithIndicators] = useState<
+    StandardWithIndicatorsDto[]
+  >([]);
   const [loadingStandards, setLoadingStandards] = useState(false);
   const [updatingStandard, setUpdatingStandard] = useState<string | null>(null);
 
@@ -64,14 +69,23 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   const loadStandards = async () => {
     setLoadingStandards(true);
     try {
-      const result = await qualityManagementService.getStandardsLookup();
-      setStandards(result);
+      const result = await standardService.getWithIndicators();
+      setStandardsWithIndicators(result);
     } catch (error) {
       console.error("Error loading standards:", error);
     } finally {
       setLoadingStandards(false);
     }
   };
+
+  // Get standards that contain a specific indicator (by indicatorId)
+  const getStandardsForIndicator = useMemo(() => {
+    return (indicatorId: string) => {
+      return standardsWithIndicators.filter((standard) =>
+        standard.indicators.some((si) => si.indicatorId === indicatorId)
+      );
+    };
+  }, [standardsWithIndicators]);
 
   const handleStandardChange = async (
     indicatorId: string,
@@ -246,24 +260,32 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       dataIndex: "standardId",
       key: "standardId",
       width: 180,
-      render: (standardId: string, record) => (
-        <Select
-          style={{ width: "100%" }}
-          placeholder="Chọn tiêu chuẩn"
-          allowClear
-          value={standardId}
-          onChange={(value) => handleStandardChange(record.id, value)}
-          loading={updatingStandard === record.id || loadingStandards}
-          disabled={actionsDisabled}
-          size="small"
-        >
-          {standards.map((s) => (
-            <Select.Option key={s.id} value={s.id}>
-              {s.name}
-            </Select.Option>
-          ))}
-        </Select>
-      ),
+      render: (standardId: string, record) => {
+        // Filter standards that contain this indicator
+        const availableStandards = getStandardsForIndicator(record.indicatorId);
+        return (
+          <Select
+            style={{ width: "100%" }}
+            placeholder={
+              availableStandards.length === 0
+                ? "Không có tiêu chuẩn"
+                : "Chọn tiêu chuẩn"
+            }
+            allowClear
+            value={standardId}
+            onChange={(value) => handleStandardChange(record.id, value)}
+            loading={updatingStandard === record.id || loadingStandards}
+            disabled={actionsDisabled || availableStandards.length === 0}
+            size="small"
+          >
+            {availableStandards.map((s) => (
+              <Select.Option key={s.id} value={s.id}>
+                {s.name}
+              </Select.Option>
+            ))}
+          </Select>
+        );
+      },
     },
     {
       title: "Giới hạn",
