@@ -96,6 +96,11 @@ const TaskManagementDetail: React.FC = () => {
     Record<string, string[]>
   >({});
 
+  // Standard selections state - lưu trữ local standard selections chưa được save
+  const [standardSelections, setStandardSelections] = useState<
+    Record<string, string | null>
+  >({});
+
   // Bulk reject modal state
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectingSampleId, setRejectingSampleId] = useState<string | null>(
@@ -471,15 +476,23 @@ const TaskManagementDetail: React.FC = () => {
   const handleApprove = async (
     indicatorId: string,
     approve: boolean,
-    reason?: string
+    reason?: string,
+    standardId?: string | null
   ) => {
     setActionLoading(true);
     try {
       await laboratoryTaskService.approveIndicator(indicatorId, {
         approve,
         rejectionReason: reason,
+        standardId: standardId,
       });
       message.success(approve ? "Đã duyệt kết quả" : "Đã từ chối kết quả");
+      // Xóa standard selection đã lưu cho indicator này
+      setStandardSelections((prev) => {
+        const newSelections = { ...prev };
+        delete newSelections[indicatorId];
+        return newSelections;
+      });
       await loadTask();
     } catch (error: any) {
       console.error("Failed to approve:", error);
@@ -489,6 +502,14 @@ const TaskManagementDetail: React.FC = () => {
     } finally {
       setActionLoading(false);
     }
+  };
+
+  // Handle standard change - chỉ lưu vào local state
+  const handleStandardChange = (indicatorId: string, standardId: string | null) => {
+    setStandardSelections((prev) => ({
+      ...prev,
+      [indicatorId]: standardId,
+    }));
   };
 
   const handleSendResults = () => {
@@ -530,11 +551,28 @@ const TaskManagementDetail: React.FC = () => {
 
     setActionLoading(true);
     try {
+      // Lấy standardIds cho các indicator được chọn
+      const standardIdsMap: Record<string, string | null> = {};
+      validIds.forEach((id) => {
+        const indicator = sample?.indicators.find((i) => i.id === id);
+        // Ưu tiên local state, fallback to DB value
+        standardIdsMap[id] = standardSelections[id] !== undefined
+          ? standardSelections[id]
+          : indicator?.standardId || null;
+      });
+
       await laboratoryTaskService.bulkApproveIndicators(task.id, {
         indicatorIds: validIds,
         approve: true,
+        standardIds: standardIdsMap,
       });
       message.success(`Đã duyệt ${validIds.length} chỉ tiêu`);
+      // Xóa standard selections cho các indicator đã xử lý
+      setStandardSelections((prev) => {
+        const newSelections = { ...prev };
+        validIds.forEach((id) => delete newSelections[id]);
+        return newSelections;
+      });
       setSelectedIndicators((prev) => ({ ...prev, [sampleId]: [] }));
       await loadTask();
     } catch (error: any) {
@@ -584,12 +622,29 @@ const TaskManagementDetail: React.FC = () => {
       }
 
       setActionLoading(true);
+      // Lấy standardIds cho các indicator được chọn
+      const standardIdsMap: Record<string, string | null> = {};
+      validIds.forEach((id) => {
+        const indicator = sample?.indicators.find((i) => i.id === id);
+        // Ưu tiên local state, fallback to DB value
+        standardIdsMap[id] = standardSelections[id] !== undefined
+          ? standardSelections[id]
+          : indicator?.standardId || null;
+      });
+
       await laboratoryTaskService.bulkApproveIndicators(task.id, {
         indicatorIds: validIds,
         approve: false,
         rejectionReason: values.reason,
+        standardIds: standardIdsMap,
       });
       message.success(`Đã từ chối ${validIds.length} chỉ tiêu`);
+      // Xóa standard selections cho các indicator đã xử lý
+      setStandardSelections((prev) => {
+        const newSelections = { ...prev };
+        validIds.forEach((id) => delete newSelections[id]);
+        return newSelections;
+      });
       setSelectedIndicators((prev) => ({ ...prev, [rejectingSampleId]: [] }));
       setRejectModalOpen(false);
       setRejectingSampleId(null);
@@ -856,6 +911,8 @@ const TaskManagementDetail: React.FC = () => {
             onSelectionChange={(ids) =>
               handleSelectionChange(sample.sampleId, ids)
             }
+            standardSelections={standardSelections}
+            onStandardChange={handleStandardChange}
           />
         </>
       ),
