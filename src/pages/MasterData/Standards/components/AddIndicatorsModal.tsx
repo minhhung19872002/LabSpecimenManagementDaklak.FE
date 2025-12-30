@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Modal, Form, Input, Button, Typography, Select, Divider } from "antd";
 import { PlusOutlined, MinusCircleOutlined } from "@ant-design/icons";
 import type { FormInstance } from "antd";
+import { NumericFormat } from "react-number-format";
 import {
   IndicatorDto,
   IndicatorGroupDto,
@@ -292,7 +293,20 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                       name={[name, "allowedLimit"]}
                       style={{ marginBottom: 0, width: 120 }}
                     >
-                      <Input placeholder="Giới hạn" />
+                      <NumericFormat
+                        placeholder="Giới hạn"
+                        allowNegative={false}
+                        decimalScale={1}
+                        customInput={Input}
+                        onValueChange={(values) => {
+                          const indicators = form.getFieldValue("indicators") || [];
+                          indicators[name] = {
+                            ...indicators[name],
+                            allowedLimit: values.value,
+                          };
+                          form.setFieldsValue({ indicators });
+                        }}
+                      />
                     </Form.Item>
 
                     {/* Remove button */}

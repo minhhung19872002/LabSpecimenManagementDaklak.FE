@@ -84,6 +84,11 @@ export interface LaboratoryTaskIndicatorDto {
   approvedByName?: string;
   rejectionReason?: string;
   isSentToQuality?: boolean;  // Đã gửi cho QLCL chưa
+  // Phase 7 - Standard comparison fields
+  standardId?: string;  // ID tiêu chuẩn so sánh
+  standardName?: string;  // Tên tiêu chuẩn
+  comparisonOperator?: string;  // Ký hiệu so sánh (<=, >=, <, >, =)
+  allowedLimit?: string;  // Giới hạn cho phép
 }
 
 // Main Laboratory Task DTO
@@ -167,6 +172,7 @@ export interface UpdateIndicatorResultInput {
 export interface ApproveIndicatorInput {
   approve: boolean;
   rejectionReason?: string;
+  standardId?: string | null;
 }
 
 // ============= Lookup DTOs =============
@@ -255,6 +261,7 @@ export interface BulkApproveIndicatorsInput {
   indicatorIds: string[];
   approve: boolean;
   rejectionReason?: string;
+  standardIds?: Record<string, string | null>;
 }
 
 // ============= Send to Quality DTOs =============

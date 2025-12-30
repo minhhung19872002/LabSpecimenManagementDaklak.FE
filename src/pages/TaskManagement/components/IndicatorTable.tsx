@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Table,
   Select,
@@ -23,6 +23,10 @@ import {
   UserLookupDto,
   SampleStatus,
 } from "../../../types/laboratoryTask";
+import {
+  standardService,
+  StandardWithIndicatorsDto,
+} from "../../../services/masterDataService";
 
 const { Text } = Typography;
 
@@ -35,12 +39,17 @@ interface IndicatorTableProps {
   sampleStatus?: SampleStatus; // Sample status to determine selection mode
   onMethodChange: (indicatorId: string, methodId: string) => void;
   onTechnicianChange: (indicatorId: string, technicianId: string) => void;
-  onApprove: (indicatorId: string, approve: boolean, reason?: string) => void;
+  onApprove: (indicatorId: string, approve: boolean, reason?: string, standardId?: string | null) => void;
   loading?: boolean;
   // Bulk selection props
   showCheckbox?: boolean;
   selectedIndicatorIds?: string[];
   onSelectionChange?: (ids: string[]) => void;
+  // Callback để lấy standardIds cho bulk approve
+  onGetStandardIds?: () => Record<string, string | null>;
+  // Callback để set standardIds từ parent
+  standardSelections?: Record<string, string | null>;
+  onStandardChange?: (indicatorId: string, standardId: string | null) => void;
 }
 
 const IndicatorTable: React.FC<IndicatorTableProps> = ({
@@ -57,6 +66,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   showCheckbox = false,
   selectedIndicatorIds = [],
   onSelectionChange,
+  standardSelections = {},
+  onStandardChange,
 }) => {
   // Determine selection mode based on sample status
   // notStarted/assigned → assignment mode (để chọn indicator giao việc)
@@ -65,6 +76,13 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     sampleStatus === "notStarted" || sampleStatus === "assigned"
       ? "assignment"
       : "approval";
+
+  // State for standards
+  const [standardsWithIndicators, setStandardsWithIndicators] = useState<
+    StandardWithIndicatorsDto[]
+  >([]);
+  const [loadingStandards, setLoadingStandards] = useState(false);
+
   // State for reject modal
   const [rejectModal, setRejectModal] = useState<{
     visible: boolean;
@@ -74,11 +92,103 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   });
   const [rejectForm] = Form.useForm();
 
+  // Load standards on mount
+  useEffect(() => {
+    loadStandards();
+  }, []);
+
+  const loadStandards = async () => {
+    setLoadingStandards(true);
+    try {
+      const result = await standardService.getWithIndicators();
+      setStandardsWithIndicators(result);
+    } catch (error) {
+      console.error("Error loading standards:", error);
+    } finally {
+      setLoadingStandards(false);
+    }
+  };
+
+  // Get standards that contain a specific indicator AND method
+  const getStandardsForIndicator = useMemo(() => {
+    return (indicatorId: string, methodId?: string) => {
+      return standardsWithIndicators.filter((standard) =>
+        standard.indicators.some(
+          (si) =>
+            si.indicatorId === indicatorId &&
+            (!methodId || si.testMethodId === methodId)
+        )
+      );
+    };
+  }, [standardsWithIndicators]);
+
+  // Get standard indicator info (comparison operator, allowed limit)
+  const getStandardIndicatorInfo = (
+    standardId: string,
+    indicatorId: string,
+    methodId?: string
+  ) => {
+    const standard = standardsWithIndicators.find((s) => s.id === standardId);
+    if (!standard) return null;
+    return standard.indicators.find(
+      (si) =>
+        si.indicatorId === indicatorId &&
+        (!methodId || si.testMethodId === methodId)
+    );
+  };
+
+  // Handle standard change - chỉ lưu local state, không gọi API
+  const handleStandardChange = (
+    indicatorId: string,
+    standardId: string | undefined
+  ) => {
+    onStandardChange?.(indicatorId, standardId || null);
+  };
+
+  // Calculate pass/fail status
+  const calculatePassFail = (
+    result: string | undefined,
+    comparisonOperator: string | undefined,
+    allowedLimit: string | undefined
+  ): "pass" | "fail" | null => {
+    if (!comparisonOperator || !allowedLimit) return null;
+    if (!result) return null;
+
+    // Parse result to number (default to 0 if not a number)
+    const resultNum = parseFloat(result);
+    const resultValue = isNaN(resultNum) ? 0 : resultNum;
+
+    // Parse limit to number
+    const limitNum = parseFloat(allowedLimit);
+    if (isNaN(limitNum)) return null;
+
+    // Compare based on operator
+    switch (comparisonOperator) {
+      case "<=":
+        return resultValue <= limitNum ? "pass" : "fail";
+      case ">=":
+        return resultValue >= limitNum ? "pass" : "fail";
+      case "<":
+        return resultValue < limitNum ? "pass" : "fail";
+      case ">":
+        return resultValue > limitNum ? "pass" : "fail";
+      case "=":
+        return resultValue === limitNum ? "pass" : "fail";
+      default:
+        return null;
+    }
+  };
+
   const handleReject = async () => {
     try {
       const values = await rejectForm.validateFields();
       if (rejectModal.indicatorId) {
-        onApprove(rejectModal.indicatorId, false, values.reason);
+        // Lấy standardId từ local state hoặc từ indicator
+        const indicator = indicators.find(i => i.id === rejectModal.indicatorId);
+        const selectedStandardId = standardSelections[rejectModal.indicatorId] !== undefined
+          ? standardSelections[rejectModal.indicatorId]
+          : indicator?.standardId;
+        onApprove(rejectModal.indicatorId, false, values.reason, selectedStandardId);
         setRejectModal({ visible: false });
         rejectForm.resetFields();
       }
@@ -171,6 +281,135 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       },
     },
     {
+      title: "So với",
+      dataIndex: "standardId",
+      key: "standardId",
+      width: 180,
+      render: (_: unknown, record: LaboratoryTaskIndicatorDto) => {
+        // Ưu tiên lấy từ local state, nếu không có thì lấy từ DB
+        const selectedStandardId = standardSelections[record.id] !== undefined
+          ? standardSelections[record.id]
+          : record.standardId;
+
+        // Lấy danh sách tiêu chuẩn phù hợp với chỉ tiêu và phương pháp
+        const availableStandards = getStandardsForIndicator(
+          record.indicatorId,
+          record.methodId
+        );
+
+        // Chỉ cho phép chọn khi indicator ở trạng thái Entered (Chờ phê duyệt)
+        const canSelectStandard =
+          record.approvalStatus === IndicatorApprovalStatus.Entered;
+
+        return (
+          <Select
+            style={{ width: "100%" }}
+            placeholder="Chọn tiêu chuẩn"
+            allowClear
+            value={selectedStandardId || undefined}
+            onChange={(value) => handleStandardChange(record.id, value)}
+            loading={loadingStandards}
+            disabled={!canSelectStandard}
+            size="small"
+          >
+            {availableStandards.map((s) => (
+              <Select.Option key={s.id} value={s.id}>
+                {s.name}
+              </Select.Option>
+            ))}
+          </Select>
+        );
+      },
+    },
+    {
+      title: "Giới hạn",
+      key: "allowedLimit",
+      width: 120,
+      render: (_: unknown, record: LaboratoryTaskIndicatorDto) => {
+        // Ưu tiên lấy từ local state, nếu không có thì lấy từ DB
+        const selectedStandardId = standardSelections[record.id] !== undefined
+          ? standardSelections[record.id]
+          : record.standardId;
+
+        // Nếu đã có standardId được chọn, lấy thông tin từ standardIndicator
+        if (selectedStandardId) {
+          const standardInfo = getStandardIndicatorInfo(
+            selectedStandardId,
+            record.indicatorId,
+            record.methodId
+          );
+          if (standardInfo) {
+            const { comparisonOperator, allowedLimit } = standardInfo;
+            if (comparisonOperator && allowedLimit) {
+              return (
+                <Text>
+                  {comparisonOperator} {allowedLimit}
+                </Text>
+              );
+            }
+          }
+          // Fallback to data from API if available (chỉ khi dùng standardId từ DB)
+          if (selectedStandardId === record.standardId && record.comparisonOperator && record.allowedLimit) {
+            return (
+              <Text>
+                {record.comparisonOperator} {record.allowedLimit}
+              </Text>
+            );
+          }
+        }
+        return "-";
+      },
+    },
+    {
+      title: "Đạt/Không đạt",
+      key: "passFailStatus",
+      width: 120,
+      render: (_: unknown, record: LaboratoryTaskIndicatorDto) => {
+        // Ưu tiên lấy từ local state, nếu không có thì lấy từ DB
+        const selectedStandardId = standardSelections[record.id] !== undefined
+          ? standardSelections[record.id]
+          : record.standardId;
+
+        // Cần có standardId, kết quả, và thông tin giới hạn
+        if (!selectedStandardId || !record.result) return null;
+
+        let comparisonOperator = record.comparisonOperator;
+        let allowedLimit = record.allowedLimit;
+
+        // Lấy từ standardIndicator
+        const standardInfo = getStandardIndicatorInfo(
+          selectedStandardId,
+          record.indicatorId,
+          record.methodId
+        );
+        if (standardInfo) {
+          comparisonOperator = standardInfo.comparisonOperator;
+          allowedLimit = standardInfo.allowedLimit;
+        }
+
+        const passFailStatus = calculatePassFail(
+          record.result,
+          comparisonOperator,
+          allowedLimit
+        );
+
+        if (passFailStatus === "pass") {
+          return (
+            <Text strong style={{ color: "#52c41a" }}>
+              Đạt
+            </Text>
+          );
+        } else if (passFailStatus === "fail") {
+          return (
+            <Text strong style={{ color: "#ff4d4f" }}>
+              Không đạt
+            </Text>
+          );
+        }
+        return null;
+      },
+    },
+    {
       title: "Kỹ thuật viên",
       dataIndex: "technicianId",
       key: "technicianId",
@@ -242,6 +481,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             );
 
           case IndicatorApprovalStatus.Entered:
+            // Lấy standardId từ local state hoặc DB
+            const selectedStandardIdForApprove = standardSelections[record.id] !== undefined
+              ? standardSelections[record.id]
+              : record.standardId;
             return (
               <Space size="small">
                 <Button
@@ -258,7 +501,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                   type="primary"
                   size="small"
                   icon={<CheckOutlined />}
-                  onClick={() => onApprove(record.id, true)}
+                  onClick={() => onApprove(record.id, true, undefined, selectedStandardIdForApprove)}
                 >
                   Duyệt
                 </Button>
@@ -342,7 +585,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         rowKey="id"
         pagination={false}
         size="small"
-        scroll={{ x: 1400 }}
+        scroll={{ x: 1900 }}
         loading={loading}
         rowSelection={rowSelection}
       />

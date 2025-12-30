@@ -161,6 +161,7 @@ export interface TestingIndicatorDto {
   methodName?: string;
   unit?: string;
   result?: string;
+  note?: string;
   entryDate?: string;
   assignedDate?: string;
   startDate?: string;           // Ngày bắt đầu TN (khi ấn "Thực hiện")
@@ -183,6 +184,7 @@ export interface SaveIndicatorResultDto {
   methodId?: string;
   unit?: string;
   result?: string;
+  note?: string;
 }
 
 // Save Results Input

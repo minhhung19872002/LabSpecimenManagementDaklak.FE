@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { Table, Input, Tag, Button, Typography, Tooltip, Space, Checkbox } from "antd";
+import {
+  Table,
+  Input,
+  Tag,
+  Button,
+  Typography,
+  Tooltip,
+  Space,
+  Checkbox,
+} from "antd";
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -11,6 +20,7 @@ import {
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
+import { NumericFormat } from "react-number-format";
 import {
   TestingIndicatorDto,
   SaveIndicatorResultDto,
@@ -62,6 +72,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
         methodId: ind.methodId,
         unit: ind.unit,
         result: ind.result,
+        note: ind.note,
       });
     });
     setEditedResults(initialResults);
@@ -92,7 +103,9 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     if (checked) {
       onSelectionChange([...selectedIndicatorIds, indicatorId]);
     } else {
-      onSelectionChange(selectedIndicatorIds.filter(id => id !== indicatorId));
+      onSelectionChange(
+        selectedIndicatorIds.filter((id) => id !== indicatorId)
+      );
     }
   };
 
@@ -101,11 +114,12 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     if (checked) {
       // Select all indicators that are not Done or PendingApproval
       const selectableIds = indicators
-        .filter(ind =>
-          ind.testingStatus !== IndicatorTestingStatus.Done &&
-          ind.testingStatus !== IndicatorTestingStatus.PendingApproval
+        .filter(
+          (ind) =>
+            ind.testingStatus !== IndicatorTestingStatus.Done &&
+            ind.testingStatus !== IndicatorTestingStatus.PendingApproval
         )
-        .map(ind => ind.id);
+        .map((ind) => ind.id);
       onSelectionChange(selectableIds);
     } else {
       onSelectionChange([]);
@@ -114,15 +128,20 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
 
   // Check if indicator can be selected (not Done or PendingApproval)
   const canSelectIndicator = (indicator: TestingIndicatorDto) => {
-    return indicator.testingStatus !== IndicatorTestingStatus.Done &&
-           indicator.testingStatus !== IndicatorTestingStatus.PendingApproval;
+    return (
+      indicator.testingStatus !== IndicatorTestingStatus.Done &&
+      indicator.testingStatus !== IndicatorTestingStatus.PendingApproval
+    );
   };
 
   // Check if all selectable are selected
   const selectableIndicators = indicators.filter(canSelectIndicator);
-  const allSelected = selectableIndicators.length > 0 &&
-    selectableIndicators.every(ind => selectedIndicatorIds.includes(ind.id));
-  const someSelected = selectableIndicators.some(ind => selectedIndicatorIds.includes(ind.id));
+  const allSelected =
+    selectableIndicators.length > 0 &&
+    selectableIndicators.every((ind) => selectedIndicatorIds.includes(ind.id));
+  const someSelected = selectableIndicators.some((ind) =>
+    selectedIndicatorIds.includes(ind.id)
+  );
 
   // Get testing status tag
   const getTestingStatusTag = (status: IndicatorTestingStatus) => {
@@ -195,7 +214,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
           <Input
             value={unitValue}
             disabled
-            style={{ backgroundColor: '#f5f5f5' }}
+            style={{ backgroundColor: "#f5f5f5" }}
             placeholder="-"
           />
         );
@@ -204,7 +223,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     {
       title: "Kết quả",
       key: "result",
-      width: 180,
+      width: 80,
       render: (_, record) => {
         const currentValue =
           editedResults.get(record.id)?.result ?? record.result ?? "";
@@ -212,29 +231,75 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
         // - Có quyền edit (canEdit)
         // - Trạng thái = "Đang thử nghiệm" (Testing)
         // Disable nếu: không có quyền edit HOẶC trạng thái không phải Testing
+
         const isDisabled =
           !record.canEdit ||
           record.testingStatus !== IndicatorTestingStatus.Testing;
 
+        // Tooltip content for disabled state
+        const tooltipContent =
+          record.testingStatus === IndicatorTestingStatus.Todo
+            ? 'Cần ấn "Thực hiện" trước khi nhập kết quả'
+            : record.testingStatus === IndicatorTestingStatus.Rejected
+            ? 'Cần ấn "Thực hiện" để thử nghiệm lại'
+            : undefined;
+
         return (
-          <Tooltip
-            title={
-              record.testingStatus === IndicatorTestingStatus.Todo
-                ? 'Cần ấn "Thực hiện" trước khi nhập kết quả'
-                : record.testingStatus === IndicatorTestingStatus.Rejected
-                ? 'Cần ấn "Thực hiện" để thử nghiệm lại'
-                : undefined
-            }
-          >
+          <Tooltip title={tooltipContent}>
+            <NumericFormat
+              value={currentValue}
+              onValueChange={(values) => {
+                handleFieldChange(record.id, "result", values.value);
+              }}
+              onBlur={() => {
+                onSaveIndicator(record.id);
+              }}
+              disabled={isDisabled}
+              placeholder={isDisabled ? "-" : "Nhập KQ (VD: 0.5)"}
+              allowNegative={false}
+              decimalScale={1}
+              customInput={Input}
+              style={isDisabled ? { backgroundColor: "#f5f5f5" } : undefined}
+            />
+          </Tooltip>
+        );
+      },
+    },
+    {
+      title: "Ghi chú",
+      key: "note",
+      width: 200,
+      render: (_, record) => {
+        const currentValue =
+          editedResults.get(record.id)?.note ?? record.note ?? "";
+
+        // Enable khi: có quyền edit và trạng thái = Testing
+        const isDisabled =
+          !record.canEdit ||
+          record.testingStatus !== IndicatorTestingStatus.Testing;
+
+        // Tooltip content for disabled state
+        const tooltipContent =
+          record.testingStatus === IndicatorTestingStatus.Todo
+            ? 'Cần ấn "Thực hiện" trước khi nhập ghi chú'
+            : record.testingStatus === IndicatorTestingStatus.Rejected
+            ? 'Cần ấn "Thực hiện" để thử nghiệm lại'
+            : undefined;
+
+        return (
+          <Tooltip title={tooltipContent}>
             <Input
               value={currentValue}
               onChange={(e) =>
-                handleFieldChange(record.id, "result", e.target.value)
+                handleFieldChange(record.id, "note", e.target.value)
               }
-              onBlur={() => onSaveIndicator(record.id)}
+              onBlur={() => {
+                onSaveIndicator(record.id);
+              }}
               disabled={isDisabled}
-              placeholder={isDisabled ? "-" : "Nhập KQ"}
-              style={isDisabled ? { backgroundColor: '#f5f5f5' } : undefined}
+              placeholder={isDisabled ? "-" : "Nhập ghi chú"}
+              maxLength={500}
+              style={isDisabled ? { backgroundColor: "#f5f5f5" } : undefined}
             />
           </Tooltip>
         );
@@ -316,7 +381,8 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       fixed: "right" as const,
       render: (_, record) => {
         const status = record.testingStatus;
-        const currentResult = editedResults.get(record.id)?.result ?? record.result;
+        const currentResult =
+          editedResults.get(record.id)?.result ?? record.result;
         const hasResult = currentResult && currentResult.trim() !== "";
 
         // Nút "Thực hiện": hiện khi Todo hoặc Rejected
@@ -414,9 +480,9 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
   // Row class name for urgent highlighting
   const getRowClassName = (record: TestingIndicatorDto) => {
     if (isUrgent && record.testingStatus !== IndicatorTestingStatus.Done) {
-      return 'urgent-indicator-row';
+      return "urgent-indicator-row";
     }
-    return '';
+    return "";
   };
 
   return (
@@ -444,7 +510,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
         dataSource={sortedIndicators}
         rowKey="id"
         pagination={false}
-        scroll={{ x: 1650 }}
+        scroll={{ x: 1850 }}
         size="small"
         rowClassName={getRowClassName}
       />
