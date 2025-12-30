@@ -21,6 +21,7 @@ import {
   IndicatorApprovalStatusColors,
   MethodLookupDto,
   UserLookupDto,
+  SampleStatus,
 } from "../../../types/laboratoryTask";
 
 const { Text } = Typography;
@@ -31,6 +32,7 @@ interface IndicatorTableProps {
   technicians: UserLookupDto[];
   isAssigned: boolean; // true khi đã giao việc (lưu DB thành công)
   canEdit: boolean; // true khi task status cho phép edit (NotAssignedTechnician hoặc AssignedTechnician)
+  sampleStatus?: SampleStatus; // Sample status to determine selection mode
   onMethodChange: (indicatorId: string, methodId: string) => void;
   onTechnicianChange: (indicatorId: string, technicianId: string) => void;
   onApprove: (indicatorId: string, approve: boolean, reason?: string) => void;
@@ -47,6 +49,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   technicians,
   isAssigned,
   canEdit,
+  sampleStatus,
   onMethodChange,
   onTechnicianChange,
   onApprove,
@@ -55,6 +58,13 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   selectedIndicatorIds = [],
   onSelectionChange,
 }) => {
+  // Determine selection mode based on sample status
+  // notStarted/assigned → assignment mode (để chọn indicator giao việc)
+  // pendingApproval → approval mode (để duyệt/từ chối)
+  const selectionMode: "approval" | "assignment" =
+    sampleStatus === "notStarted" || sampleStatus === "assigned"
+      ? "assignment"
+      : "approval";
   // State for reject modal
   const [rejectModal, setRejectModal] = useState<{
     visible: boolean;
@@ -209,8 +219,12 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         status: IndicatorApprovalStatus,
         record: LaboratoryTaskIndicatorDto
       ) => {
+        // Kiểm tra indicator đã được giao việc (lưu vào DB) chưa
+        // Dựa vào assignedDate - chỉ có khi đã lưu DB thành công
+        const indicatorAssigned = !!record.assignedDate;
+
         // Chưa giao việc thì hiển thị tag "Chưa giao việc"
-        if (!isAssigned) {
+        if (!indicatorAssigned) {
           return <Tag color="default">Chưa giao việc</Tag>;
         }
 
@@ -279,7 +293,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     a.id.localeCompare(b.id)
   );
 
-  // Row selection configuration for bulk approval
+  // Row selection configuration for bulk operations
   const rowSelection:
     | TableRowSelection<LaboratoryTaskIndicatorDto>
     | undefined = useMemo(() => {
@@ -290,16 +304,30 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       onChange: (selectedRowKeys: React.Key[]) => {
         onSelectionChange(selectedRowKeys as string[]);
       },
-      getCheckboxProps: (record: LaboratoryTaskIndicatorDto) => ({
-        // Chỉ cho phép chọn indicators có trạng thái Entered (Chờ phê duyệt) hoặc Rejected
-        disabled:
-          record.approvalStatus === IndicatorApprovalStatus.Approved ||
-          record.approvalStatus === IndicatorApprovalStatus.CustomerCancelled ||
-          record.approvalStatus === IndicatorApprovalStatus.Pending,
-        name: record.id,
-      }),
+      getCheckboxProps: (record: LaboratoryTaskIndicatorDto) => {
+        if (selectionMode === "assignment") {
+          // Assignment mode: chỉ disable cho Approved và CustomerCancelled
+          // Các trạng thái khác (Pending, Entered, Rejected) đều có thể chọn để giao việc
+          return {
+            disabled:
+              record.approvalStatus === IndicatorApprovalStatus.Approved ||
+              record.approvalStatus ===
+                IndicatorApprovalStatus.CustomerCancelled,
+            name: record.id,
+          };
+        }
+        // Approval mode: chỉ cho phép chọn indicators có trạng thái Entered (Chờ phê duyệt) hoặc Rejected
+        return {
+          disabled:
+            record.approvalStatus === IndicatorApprovalStatus.Approved ||
+            record.approvalStatus ===
+              IndicatorApprovalStatus.CustomerCancelled ||
+            record.approvalStatus === IndicatorApprovalStatus.Pending,
+          name: record.id,
+        };
+      },
     };
-  }, [showCheckbox, selectedIndicatorIds, onSelectionChange]);
+  }, [showCheckbox, selectedIndicatorIds, onSelectionChange, selectionMode]);
 
   return (
     <>

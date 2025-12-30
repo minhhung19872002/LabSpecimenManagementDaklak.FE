@@ -282,30 +282,155 @@ const TaskManagementDetail: React.FC = () => {
     }));
   };
 
+  // State for reassign confirmation modal
+  const [reassignModalOpen, setReassignModalOpen] = useState(false);
+  const [reassignInfo, setReassignInfo] = useState<{
+    sampleId: string;
+    assignments: AssignIndicatorInput[];
+    reassignedIndicators: Array<{
+      indicatorName: string;
+      currentTechnicianName: string;
+      newTechnicianName: string;
+    }>;
+  } | null>(null);
+
   const handleAssignSample = async (sampleId: string) => {
     if (!task) return;
 
     const sample = sampleList.find((s) => s.sampleId === sampleId);
     if (!sample) return;
 
-    // Build assignments from local changes + server data
-    const assignments: AssignIndicatorInput[] = sample.indicators.map(
-      (ind) => ({
-        indicatorId: ind.id,
-        methodId: indicatorChanges[ind.id]?.methodId || ind.methodId,
-        technicianId:
-          indicatorChanges[ind.id]?.technicianId || ind.technicianId,
-      })
-    );
-
-    // Validate
-    const invalid = assignments.some((a) => !a.methodId || !a.technicianId);
-    if (invalid) {
-      message.error(
-        "Vui lòng chọn phương pháp và kỹ thuật viên cho tất cả chỉ tiêu"
-      );
+    // Get selected indicators for this sample
+    const selectedIds = selectedIndicators[sampleId] || [];
+    if (selectedIds.length === 0) {
+      message.warning("Vui lòng chọn ít nhất một chỉ tiêu để giao việc");
       return;
     }
+
+    // Filter only selected indicators (excluding Approved and CustomerCancelled)
+    const selectedIndicatorsList = sample.indicators.filter(
+      (ind) =>
+        selectedIds.includes(ind.id) &&
+        ind.approvalStatus !== IndicatorApprovalStatus.Approved &&
+        ind.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled
+    );
+
+    if (selectedIndicatorsList.length === 0) {
+      message.warning("Không có chỉ tiêu nào đủ điều kiện để giao việc");
+      return;
+    }
+
+    // Build assignments from local changes + server data
+    const assignments: AssignIndicatorInput[] = selectedIndicatorsList.map(
+      (ind) => {
+        const localChange = indicatorChanges[ind.id];
+        return {
+          indicatorId: ind.id,
+          methodId: localChange?.methodId || ind.methodId,
+          technicianId: localChange?.technicianId || ind.technicianId,
+        };
+      }
+    );
+
+    // Validate - check which indicators are missing method or technician
+    const missingMethod: string[] = [];
+    const missingTechnician: string[] = [];
+
+    for (const assignment of assignments) {
+      const indicator = selectedIndicatorsList.find(
+        (ind) => ind.id === assignment.indicatorId
+      );
+      const indicatorName = indicator?.indicatorName || "-";
+
+      if (!assignment.methodId) {
+        missingMethod.push(indicatorName);
+      }
+      if (!assignment.technicianId) {
+        missingTechnician.push(indicatorName);
+      }
+    }
+
+    if (missingMethod.length > 0 || missingTechnician.length > 0) {
+      let errorMsg = "";
+      if (missingTechnician.length > 0) {
+        errorMsg = `Chỉ tiêu chưa chọn KTV: ${missingTechnician.join(", ")}`;
+      }
+      if (missingMethod.length > 0) {
+        if (errorMsg) errorMsg += ". ";
+        errorMsg += `Chỉ tiêu chưa chọn phương pháp: ${missingMethod.join(", ")}`;
+      }
+      message.error(errorMsg);
+      return;
+    }
+
+    // Check if any indicator is being reassigned to a different technician
+    const reassignedIndicators: Array<{
+      indicatorName: string;
+      currentTechnicianName: string;
+      newTechnicianName: string;
+    }> = [];
+
+    for (const assignment of assignments) {
+      // Lấy indicator từ task.indicators (giá trị gốc từ server, không bị merge)
+      const originalIndicator = task.indicators?.find(
+        (ind) => ind.id === assignment.indicatorId
+      );
+      const indicator = selectedIndicatorsList.find(
+        (ind) => ind.id === assignment.indicatorId
+      );
+
+      // Chỉ check reassign nếu indicator đã được giao việc (có assignedDate) và có KTV
+      // Sử dụng originalIndicator để lấy giá trị gốc từ server
+      if (originalIndicator && originalIndicator.assignedDate && originalIndicator.technicianId) {
+        // Indicator đã được giao việc trước đó
+        const newTechnicianId = assignment.technicianId;
+        if (
+          newTechnicianId &&
+          newTechnicianId !== originalIndicator.technicianId
+        ) {
+          // Đang giao lại cho người khác
+          const newTechnician = technicians.find(
+            (t) => t.id === newTechnicianId
+          );
+          // Lấy tên KTV hiện tại từ server hoặc từ danh sách technicians
+          const currentTechnician = technicians.find(
+            (t) => t.id === originalIndicator.technicianId
+          );
+          const currentTechnicianName =
+            originalIndicator.technicianName ||
+            currentTechnician?.displayName ||
+            currentTechnician?.userName ||
+            "-";
+          reassignedIndicators.push({
+            indicatorName: indicator?.indicatorName || "-",
+            currentTechnicianName,
+            newTechnicianName:
+              newTechnician?.displayName || newTechnician?.userName || "-",
+          });
+        }
+      }
+    }
+
+    // If there are reassigned indicators, show confirmation modal
+    if (reassignedIndicators.length > 0) {
+      setReassignInfo({
+        sampleId,
+        assignments,
+        reassignedIndicators,
+      });
+      setReassignModalOpen(true);
+      return;
+    }
+
+    // No reassignment, proceed directly
+    await executeAssignment(sampleId, assignments);
+  };
+
+  const executeAssignment = async (
+    sampleId: string,
+    assignments: AssignIndicatorInput[]
+  ) => {
+    if (!task) return;
 
     setActionLoading(true);
     try {
@@ -316,6 +441,8 @@ const TaskManagementDetail: React.FC = () => {
       );
       message.success("Giao việc thành công");
       setIndicatorChanges({});
+      // Clear selection after successful assignment
+      setSelectedIndicators((prev) => ({ ...prev, [sampleId]: [] }));
       await loadTask();
     } catch (error: any) {
       console.error("Failed to assign:", error);
@@ -325,6 +452,18 @@ const TaskManagementDetail: React.FC = () => {
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const handleConfirmReassign = async () => {
+    if (!reassignInfo) return;
+    setReassignModalOpen(false);
+    await executeAssignment(reassignInfo.sampleId, reassignInfo.assignments);
+    setReassignInfo(null);
+  };
+
+  const handleCancelReassign = () => {
+    setReassignModalOpen(false);
+    setReassignInfo(null);
   };
 
   const handleApprove = async (
@@ -652,12 +791,13 @@ const TaskManagementDetail: React.FC = () => {
                   type="primary"
                   size="small"
                   loading={actionLoading}
+                  disabled={selectedCount === 0}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleAssignSample(sample.sampleId);
                   }}
                 >
-                  Giao việc
+                  Giao việc{selectedCount > 0 ? ` (${selectedCount})` : ""}
                 </Button>
               )}
               {/* Re-assign button - show when assigned but not approved */}
@@ -667,12 +807,13 @@ const TaskManagementDetail: React.FC = () => {
                   <Button
                     size="small"
                     loading={actionLoading}
+                    disabled={selectedCount === 0}
                     onClick={(e) => {
                       e.stopPropagation();
                       handleAssignSample(sample.sampleId);
                     }}
                   >
-                    Giao việc lại
+                    Giao việc lại{selectedCount > 0 ? ` (${selectedCount})` : ""}
                   </Button>
                 )}
             </Space>
@@ -703,6 +844,7 @@ const TaskManagementDetail: React.FC = () => {
             technicians={technicians}
             isAssigned={sample.sampleStatus !== "notStarted"}
             canEdit={canEditTask}
+            sampleStatus={sample.sampleStatus}
             onMethodChange={handleMethodChange}
             onTechnicianChange={handleTechnicianChange}
             onApprove={handleApprove}
@@ -907,6 +1049,51 @@ const TaskManagementDetail: React.FC = () => {
         indicators={task.indicators || []}
         onSuccess={loadTask}
       />
+
+      {/* Reassign Confirmation Modal */}
+      <Modal
+        title="Xác nhận giao việc lại"
+        open={reassignModalOpen}
+        onOk={handleConfirmReassign}
+        onCancel={handleCancelReassign}
+        okText="Xác nhận giao việc lại"
+        cancelText="Hủy"
+        okButtonProps={{ loading: actionLoading }}
+        width={600}
+        centered
+      >
+        <Alert
+          message="Một số chỉ tiêu đã được giao việc cho KTV khác"
+          description="Bạn có chắc chắn muốn giao lại các chỉ tiêu sau cho KTV mới?"
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+        <div style={{ maxHeight: 300, overflowY: "auto" }}>
+          {reassignInfo?.reassignedIndicators.map((item, index) => (
+            <div
+              key={index}
+              style={{
+                padding: "8px 12px",
+                marginBottom: 8,
+                backgroundColor: "#fafafa",
+                borderRadius: 4,
+                border: "1px solid #d9d9d9",
+              }}
+            >
+              <div>
+                <Text strong>{item.indicatorName}</Text>
+              </div>
+              <div style={{ marginTop: 4 }}>
+                <Text type="secondary">KTV hiện tại: </Text>
+                <Text>{item.currentTechnicianName}</Text>
+                <Text type="secondary"> → KTV mới: </Text>
+                <Text type="success">{item.newTechnicianName}</Text>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Modal>
     </div>
   );
 };
