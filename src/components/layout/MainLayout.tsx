@@ -38,7 +38,11 @@ import { useTranslation } from "react-i18next";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { authService, UserInfo } from "../../services/authService";
 import { NotificationBell } from "../Notification";
-import WorkReminderModal, { LabTechManagerReminderModal, LabTechnicianReminderModal, QualityManagerReminderModal } from "../WorkReminderModal";
+import WorkReminderModal, {
+  LabTechManagerReminderModal,
+  LabTechnicianReminderModal,
+  QualityManagerReminderModal,
+} from "../WorkReminderModal";
 import { useWorkReminderPopup } from "../../hooks/useWorkReminderPopup";
 import { useLabTechManagerReminderPopup } from "../../hooks/useLabTechManagerReminderPopup";
 import { useLabTechnicianReminderPopup } from "../../hooks/useLabTechnicianReminderPopup";
@@ -99,16 +103,32 @@ const MainLayout: React.FC = () => {
   const location = useLocation();
 
   // Work reminder popup for SampleReceiver
-  const { open: workReminderOpen, tasks: workReminderTasks, closePopup: closeWorkReminder } = useWorkReminderPopup();
+  const {
+    open: workReminderOpen,
+    tasks: workReminderTasks,
+    closePopup: closeWorkReminder,
+  } = useWorkReminderPopup();
 
   // Work reminder popup for Lab Technical Manager
-  const { open: labTechReminderOpen, tasks: labTechReminderTasks, closePopup: closeLabTechReminder } = useLabTechManagerReminderPopup();
+  const {
+    open: labTechReminderOpen,
+    tasks: labTechReminderTasks,
+    closePopup: closeLabTechReminder,
+  } = useLabTechManagerReminderPopup();
 
   // Work reminder popup for Lab Technician (KTV)
-  const { open: labTechnicianReminderOpen, tasks: labTechnicianReminderTasks, closePopup: closeLabTechnicianReminder } = useLabTechnicianReminderPopup();
+  const {
+    open: labTechnicianReminderOpen,
+    tasks: labTechnicianReminderTasks,
+    closePopup: closeLabTechnicianReminder,
+  } = useLabTechnicianReminderPopup();
 
   // Work reminder popup for Quality Manager (QLCL)
-  const { open: qualityManagerReminderOpen, tasks: qualityManagerReminderTasks, closePopup: closeQualityManagerReminder } = useQualityManagerReminderPopup();
+  const {
+    open: qualityManagerReminderOpen,
+    tasks: qualityManagerReminderTasks,
+    closePopup: closeQualityManagerReminder,
+  } = useQualityManagerReminderPopup();
 
   // Handle window resize for mobile detection
   useEffect(() => {
@@ -251,15 +271,19 @@ const MainLayout: React.FC = () => {
           icon: <DashboardOutlined />,
           label: menuLabel(t("menu.dashboard")),
           onClick: () => navigate(PATH_ROUTES.dashboard),
-          roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER, ROLES.LAB_TECHNICAL_MANAGER],
+          roles: [
+            ROLES.ADMIN,
+            ROLES.QUALITY_MANAGER,
+            ROLES.LAB_TECHNICAL_MANAGER,
+          ],
         },
-        {
-          key: "reports",
-          icon: <BarChartOutlined />,
-          label: menuLabel(t("menu.reports")),
-          onClick: () => navigate(PATH_ROUTES.reports),
-          roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
-        },
+        // {
+        //   key: "reports",
+        //   icon: <BarChartOutlined />,
+        //   label: menuLabel(t("menu.reports")),
+        //   onClick: () => navigate(PATH_ROUTES.reports),
+        //   roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
+        // },
         {
           key: "statistics",
           icon: <BarChartOutlined />,

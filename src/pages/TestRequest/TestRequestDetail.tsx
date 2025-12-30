@@ -295,11 +295,13 @@ const TestRequestDetail: React.FC = () => {
     try {
       // Step 1: Generate the test request form document (returns PDF, also updates status to Pending if New)
       const result = await testRequestService.generateTestRequestForm(id);
-      message.success(`Đã tạo phiếu yêu cầu XN: ${result.requestNumber}`);
+      message.success(`Đã tạo phiếu yêu cầu XN: ${result.contractNumber}`);
 
       // Step 2: Navigate the already-opened tab to PDF URL
       // Use /view/ endpoint for inline display (preview) instead of /download/ which forces download
-      const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(result.fileName)}`;
+      const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(
+        result.fileName
+      )}`;
       if (newTab) {
         newTab.location.href = pdfUrl;
       } else {
@@ -353,8 +355,8 @@ const TestRequestDetail: React.FC = () => {
     }
 
     // Validate all selected samples can generate result
-    const invalidSamples = selectedSampleIds.filter(sampleId => {
-      const sample = samplesForSelection.find(s => s.id === sampleId);
+    const invalidSamples = selectedSampleIds.filter((sampleId) => {
+      const sample = samplesForSelection.find((s) => s.id === sampleId);
       return sample && !sample.canGenerateResult;
     });
 
@@ -394,13 +396,17 @@ const TestRequestDetail: React.FC = () => {
         selectedSampleIds,
         mixedNote || undefined
       );
-      message.success(`Đã tạo phiếu kết quả hỗn hợp cho ${selectedSampleIds.length} mẫu`);
+      message.success(
+        `Đã tạo phiếu kết quả hỗn hợp cho ${selectedSampleIds.length} mẫu`
+      );
 
       // Close modal
       setMixedResultModalVisible(false);
 
       // Navigate the already-opened tab to PDF URL
-      const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(result.fileName)}`;
+      const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(
+        result.fileName
+      )}`;
       if (newTab) {
         newTab.location.href = pdfUrl;
       } else {
@@ -863,7 +869,9 @@ const TestRequestDetail: React.FC = () => {
       setSampleSelectionModalVisible(false);
 
       // Step 3: Navigate the already-opened tab to PDF URL
-      const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(result.fileName)}`;
+      const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(
+        result.fileName
+      )}`;
       if (newTab) {
         newTab.location.href = pdfUrl;
       } else {
@@ -1661,7 +1669,9 @@ const TestRequestDetail: React.FC = () => {
                                 background: "#f5f5f5",
                               }}
                             >
-                              <PictureOutlined style={{ fontSize: 40, color: "#999" }} />
+                              <PictureOutlined
+                                style={{ fontSize: 40, color: "#999" }}
+                              />
                             </div>
                           }
                         />
@@ -1760,7 +1770,9 @@ const TestRequestDetail: React.FC = () => {
 
           {/* Note input field */}
           <div style={{ marginTop: 16 }}>
-            <label style={{ display: "block", marginBottom: 8, fontWeight: 500 }}>
+            <label
+              style={{ display: "block", marginBottom: 8, fontWeight: 500 }}
+            >
               Ghi chú (không bắt buộc)
             </label>
             <Input.TextArea
@@ -1819,9 +1831,9 @@ const TestRequestDetail: React.FC = () => {
             onRow={(record) => ({
               onClick: () => {
                 if (record.canGenerateResult) {
-                  setSelectedSampleIds(prev => {
+                  setSelectedSampleIds((prev) => {
                     if (prev.includes(record.id)) {
-                      return prev.filter(id => id !== record.id);
+                      return prev.filter((id) => id !== record.id);
                     }
                     return [...prev, record.id];
                   });
@@ -1843,7 +1855,9 @@ const TestRequestDetail: React.FC = () => {
 
           {/* Note input field */}
           <div style={{ marginTop: 16 }}>
-            <label style={{ display: "block", marginBottom: 8, fontWeight: 500 }}>
+            <label
+              style={{ display: "block", marginBottom: 8, fontWeight: 500 }}
+            >
               Ghi chú (không bắt buộc)
             </label>
             <Input.TextArea
