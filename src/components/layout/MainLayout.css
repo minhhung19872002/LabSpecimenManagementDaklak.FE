@@ -530,3 +530,20 @@
   flex-direction: column;
   height: 100%;
 }
+
+/* ============ Change Password Modal ============ */
+.change-password-modal {
+  width: 100% !important;
+  max-width: 420px !important;
+}
+
+.change-password-modal .ant-modal-content {
+  width: 100%;
+}
+
+@media (max-width: 480px) {
+  .change-password-modal {
+    max-width: calc(100vw - 32px) !important;
+    margin: 16px !important;
+  }
+}

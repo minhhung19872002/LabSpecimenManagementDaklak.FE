@@ -48,7 +48,7 @@ import { useLabTechManagerReminderPopup } from "../../hooks/useLabTechManagerRem
 import { useLabTechnicianReminderPopup } from "../../hooks/useLabTechnicianReminderPopup";
 import { useQualityManagerReminderPopup } from "../../hooks/useQualityManagerReminderPopup";
 import "./MainLayout.css";
-import { PATH_ROUTES, ROLES } from "../../constants";
+import { PATH_ROUTES, ROLES, getRoleDisplayName } from "../../constants";
 
 const { Header, Sider, Content } = Layout;
 
@@ -208,7 +208,7 @@ const MainLayout: React.FC = () => {
   // Get user role display
   const getUserRole = () => {
     if (userInfo?.roles && userInfo.roles.length > 0) {
-      return userInfo.roles[0];
+      return getRoleDisplayName(userInfo.roles[0]);
     }
     return "";
   };
@@ -575,6 +575,8 @@ const MainLayout: React.FC = () => {
           }}
           footer={null}
           destroyOnClose
+          centered
+          className="change-password-modal"
         >
           <Form
             form={changePasswordForm}
