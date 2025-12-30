@@ -178,10 +178,9 @@ const QualityManagementDetail: React.FC = () => {
     (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Rejected
   ).length;
 
-  // Button states
-  const canPrint = approvedCount > 0 && task?.status !== QualityManagementStatus.ResultSent;
-  const canSendResult = task?.status === QualityManagementStatus.Approved ||
-                        task?.status === QualityManagementStatus.PendingSignature;
+  // Button states - always allow print/send for approved indicators (even after ResultSent)
+  const canPrint = approvedCount > 0;
+  const canSendResult = approvedCount > 0;
 
   // Status tag
   const getStatusTag = (status: QualityManagementStatus) => (
