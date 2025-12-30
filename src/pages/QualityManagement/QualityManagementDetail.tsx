@@ -19,6 +19,8 @@ import {
   SendOutlined,
   SafetyCertificateOutlined,
   CheckCircleOutlined,
+  CheckOutlined,
+  CloseOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { qualityManagementService } from '../../services/qualityManagementService';
@@ -45,15 +47,19 @@ const QualityManagementDetail: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [task, setTask] = useState<QualityManagementTaskDto | null>(null);
   const [selectedIndicatorIds, setSelectedIndicatorIds] = useState<string[]>([]);
+  const [selectedPendingIds, setSelectedPendingIds] = useState<string[]>([]);
 
   // Modals
   const [printModalVisible, setPrintModalVisible] = useState(false);
   const [printMode, setPrintMode] = useState<'single' | 'mixed'>('single');
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [rejectingIndicatorId, setRejectingIndicatorId] = useState<string | null>(null);
+  const [bulkRejectModalVisible, setBulkRejectModalVisible] = useState(false);
 
   // Action states
   const [sendingResult, setSendingResult] = useState(false);
+  const [bulkApproving, setBulkApproving] = useState(false);
+  const [bulkRejecting, setBulkRejecting] = useState(false);
 
   // Load data
   const loadData = useCallback(async () => {
@@ -106,6 +112,60 @@ const QualityManagementDetail: React.FC = () => {
     } catch (error) {
       console.error('Error rejecting indicator:', error);
       throw error;
+    }
+  };
+
+  // Bulk approve handlers
+  const handleBulkApprove = async () => {
+    if (selectedPendingIds.length === 0) {
+      message.warning('Vui lòng chọn ít nhất một chỉ tiêu để duyệt');
+      return;
+    }
+    setBulkApproving(true);
+    try {
+      const result = await qualityManagementService.bulkApproveIndicators(selectedPendingIds);
+      if (result.successCount > 0) {
+        message.success(`Đã duyệt ${result.successCount} chỉ tiêu`);
+      }
+      if (result.failedCount > 0) {
+        message.warning(`${result.failedCount} chỉ tiêu không thể duyệt`);
+      }
+      setSelectedPendingIds([]);
+      loadData();
+    } catch (error) {
+      console.error('Error bulk approving indicators:', error);
+      message.error('Không thể duyệt chỉ tiêu');
+    } finally {
+      setBulkApproving(false);
+    }
+  };
+
+  const handleBulkRejectClick = () => {
+    if (selectedPendingIds.length === 0) {
+      message.warning('Vui lòng chọn ít nhất một chỉ tiêu để từ chối');
+      return;
+    }
+    setBulkRejectModalVisible(true);
+  };
+
+  const handleBulkRejectConfirm = async (reason: string) => {
+    setBulkRejecting(true);
+    try {
+      const result = await qualityManagementService.bulkRejectIndicators(selectedPendingIds, reason);
+      if (result.successCount > 0) {
+        message.success(`Đã từ chối ${result.successCount} chỉ tiêu`);
+      }
+      if (result.failedCount > 0) {
+        message.warning(`${result.failedCount} chỉ tiêu không thể từ chối`);
+      }
+      setBulkRejectModalVisible(false);
+      setSelectedPendingIds([]);
+      loadData();
+    } catch (error) {
+      console.error('Error bulk rejecting indicators:', error);
+      throw error;
+    } finally {
+      setBulkRejecting(false);
     }
   };
 
@@ -281,7 +341,7 @@ const QualityManagementDetail: React.FC = () => {
       {/* Indicator Statistics */}
       {task.taskType === QualityTaskType.ResultApproval && (
         <Card size="small" style={{ marginBottom: 16 }}>
-          <Row gutter={24}>
+          <Row gutter={24} justify="space-between" align="middle">
             <Col>
               <Space>
                 <Tag color="warning">{pendingCount} Chờ duyệt</Tag>
@@ -289,7 +349,32 @@ const QualityManagementDetail: React.FC = () => {
                 {rejectedCount > 0 && <Tag color="error">{rejectedCount} Từ chối</Tag>}
               </Space>
             </Col>
-            {task.status === QualityManagementStatus.Approved && (
+            <Col>
+              <Space>
+                {/* Bulk action buttons - always visible, disabled when no selection */}
+                <Button
+                  danger
+                  icon={<CloseOutlined />}
+                  onClick={handleBulkRejectClick}
+                  loading={bulkRejecting}
+                  disabled={selectedPendingIds.length === 0}
+                >
+                  Từ chối {selectedPendingIds.length > 0 ? `(${selectedPendingIds.length})` : ''}
+                </Button>
+                <Button
+                  type="primary"
+                  icon={<CheckOutlined />}
+                  onClick={handleBulkApprove}
+                  loading={bulkApproving}
+                  disabled={selectedPendingIds.length === 0}
+                >
+                  Duyệt {selectedPendingIds.length > 0 ? `(${selectedPendingIds.length})` : ''}
+                </Button>
+              </Space>
+            </Col>
+          </Row>
+          {task.status === QualityManagementStatus.Approved && (
+            <Row style={{ marginTop: 8 }}>
               <Col>
                 <Alert
                   type="success"
@@ -299,8 +384,8 @@ const QualityManagementDetail: React.FC = () => {
                   style={{ padding: '4px 12px' }}
                 />
               </Col>
-            )}
-          </Row>
+            </Row>
+          )}
         </Card>
       )}
 
@@ -315,6 +400,8 @@ const QualityManagementDetail: React.FC = () => {
             onApprove={handleApproveIndicator}
             onReject={handleRejectIndicator}
             onIndicatorUpdate={loadData}
+            selectedPendingIds={selectedPendingIds}
+            onPendingSelectChange={setSelectedPendingIds}
           />
         </Card>
       )}
@@ -337,6 +424,14 @@ const QualityManagementDetail: React.FC = () => {
         }}
         onConfirm={handleRejectConfirm}
         title="Từ chối duyệt chỉ tiêu"
+      />
+
+      {/* Bulk Reject Modal */}
+      <RejectModal
+        visible={bulkRejectModalVisible}
+        onCancel={() => setBulkRejectModalVisible(false)}
+        onConfirm={handleBulkRejectConfirm}
+        title={`Từ chối ${selectedPendingIds.length} chỉ tiêu`}
       />
     </div>
   );
