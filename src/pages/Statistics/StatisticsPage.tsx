@@ -18,18 +18,16 @@ import {
   FileTextOutlined,
   ExperimentOutlined,
   CheckCircleOutlined,
-  ClockCircleOutlined,
   DownloadOutlined,
   BarChartOutlined,
   PieChartOutlined,
-  LineChartOutlined,
   ReloadOutlined
 } from '@ant-design/icons';
+import { Column, Pie } from '@ant-design/charts';
 import dayjs from 'dayjs';
 import {
   statisticsService,
   StatisticsDataDto,
-  SampleMatrixDto,
   WorkloadByDepartmentDto,
   TATComplianceDto
 } from '../../services/statisticsService';
@@ -109,24 +107,6 @@ const StatisticsPage: React.FC = () => {
     { title: 'Mẫu', dataIndex: 'specimens', key: 'specimens' },
     { title: 'Phép thử', dataIndex: 'tests', key: 'tests' },
     { title: 'Báo cáo', dataIndex: 'reports', key: 'reports' },
-  ];
-
-  const specimenColumns = [
-    { title: 'Loại mẫu', dataIndex: 'specimenType', key: 'specimenType' },
-    { title: 'Tổng', dataIndex: 'totalCount', key: 'totalCount' },
-    { title: 'Đã nhận', dataIndex: 'receivedCount', key: 'receivedCount' },
-    { title: 'Đang thử', dataIndex: 'testingCount', key: 'testingCount' },
-    { title: 'Hoàn thành', dataIndex: 'completedCount', key: 'completedCount' },
-    {
-      title: 'Tiến độ',
-      key: 'progress',
-      render: (_: unknown, record: SampleMatrixDto) => {
-        const rate = record.totalCount > 0
-          ? parseFloat(((record.completedCount / record.totalCount) * 100).toFixed(1))
-          : 0;
-        return <Progress percent={rate} size="small" style={{ width: 100 }} />;
-      },
-    },
   ];
 
   const departmentColumns = [
@@ -214,7 +194,7 @@ const StatisticsPage: React.FC = () => {
       <Spin spinning={loading}>
         {/* Summary Stats */}
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          <Col xs={24} sm={12} lg={6}>
+          <Col xs={24} sm={12} lg={8}>
             <Card>
               <Statistic
                 title="Tổng yêu cầu"
@@ -223,7 +203,7 @@ const StatisticsPage: React.FC = () => {
               />
             </Card>
           </Col>
-          <Col xs={24} sm={12} lg={6}>
+          <Col xs={24} sm={12} lg={8}>
             <Card>
               <Statistic
                 title="Tổng mẫu thử"
@@ -232,7 +212,7 @@ const StatisticsPage: React.FC = () => {
               />
             </Card>
           </Col>
-          <Col xs={24} sm={12} lg={6}>
+          <Col xs={24} sm={12} lg={8}>
             <Card>
               <Statistic
                 title="Tổng phép thử"
@@ -241,82 +221,88 @@ const StatisticsPage: React.FC = () => {
               />
             </Card>
           </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Tỷ lệ đúng hạn"
-                value={overview?.tatComplianceRate ?? 0}
-                suffix="%"
-                precision={1}
-                prefix={<ClockCircleOutlined style={{ color: '#13c2c2' }} />}
-                valueStyle={{
-                  color: (overview?.tatComplianceRate ?? 0) >= 95 ? '#52c41a' : '#faad14'
-                }}
-              />
+        </Row>
+
+        {/* Charts Row 1: Monthly Trends & Sample Distribution */}
+        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+          <Col xs={24} lg={14}>
+            <Card title={<><BarChartOutlined /> Xu hướng theo tháng</>}>
+              {monthlyTrends.length > 0 ? (
+                <Column
+                  data={monthlyTrends.flatMap(item => [
+                    { month: item.month, type: 'Yêu cầu', value: item.testRequests },
+                    { month: item.month, type: 'Mẫu', value: item.specimens },
+                    { month: item.month, type: 'Phép thử', value: item.tests },
+                    { month: item.month, type: 'Báo cáo', value: item.reports },
+                  ])}
+                  xField="month"
+                  yField="value"
+                  colorField="type"
+                  group={true}
+                  height={300}
+                  legend={{ position: 'top' }}
+                  color={['#1890ff', '#722ed1', '#52c41a', '#faad14']}
+                />
+              ) : (
+                <Empty description="Không có dữ liệu" style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }} />
+              )}
+            </Card>
+          </Col>
+          <Col xs={24} lg={10}>
+            <Card title={<><PieChartOutlined /> Phân bố loại mẫu</>}>
+              {sampleMatrix.length > 0 ? (
+                <Pie
+                  data={sampleMatrix.map(item => ({
+                    type: item.specimenType,
+                    value: item.totalCount
+                  }))}
+                  angleField="value"
+                  colorField="type"
+                  height={300}
+                  radius={0.8}
+                  innerRadius={0.5}
+                  label={{
+                    text: 'value',
+                    position: 'outside',
+                  }}
+                  legend={{ position: 'right' }}
+                  tooltip={{
+                    title: 'type',
+                  }}
+                />
+              ) : (
+                <Empty description="Không có dữ liệu" style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }} />
+              )}
             </Card>
           </Col>
         </Row>
 
-        {/* Performance Cards */}
+        {/* Charts Row 2: Department Workload */}
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          <Col xs={24} md={12}>
-            <Card title={<><LineChartOutlined /> Tỷ lệ hoàn thành</>}>
-              <div style={{ textAlign: 'center', padding: '20px 0' }}>
-                <Progress
-                  type="dashboard"
-                  percent={overview?.completionRate ?? 0}
-                  strokeColor={{
-                    '0%': '#108ee9',
-                    '100%': '#87d068',
+          <Col xs={24}>
+            <Card title={<><BarChartOutlined /> Khối lượng công việc theo khoa phòng</>}>
+              {workloadByDepartment.length > 0 ? (
+                <Column
+                  data={workloadByDepartment.flatMap(item => [
+                    { department: item.department, type: 'Chờ xử lý', value: item.pendingTasks },
+                    { department: item.department, type: 'Đang thực hiện', value: item.inProgressTasks },
+                    { department: item.department, type: 'Hoàn thành', value: item.completedTasks },
+                  ])}
+                  xField="department"
+                  yField="value"
+                  colorField="type"
+                  isStack={true}
+                  height={300}
+                  legend={{ position: 'top' }}
+                  color={['#faad14', '#1890ff', '#52c41a']}
+                  label={{
+                    text: 'value',
+                    position: 'inside',
+                    textBaseline: 'bottom',
                   }}
-                  format={(percent) => (
-                    <div>
-                      <div style={{ fontSize: 28, fontWeight: 'bold' }}>{percent?.toFixed(1)}%</div>
-                      <div style={{ fontSize: 12, color: '#666' }}>Hoàn thành</div>
-                    </div>
-                  )}
-                  size={180}
-                />
-              </div>
-              <Row gutter={16} style={{ textAlign: 'center', marginTop: 16 }}>
-                <Col span={8}>
-                  <Statistic
-                    title="Tổng phép thử"
-                    value={overview?.totalTests ?? 0}
-                    valueStyle={{ fontSize: 18 }}
-                  />
-                </Col>
-                <Col span={8}>
-                  <Statistic
-                    title="Báo cáo"
-                    value={overview?.totalReports ?? totalReports}
-                    valueStyle={{ fontSize: 18, color: '#52c41a' }}
-                  />
-                </Col>
-                <Col span={8}>
-                  <Statistic
-                    title="TAT"
-                    value={overview?.tatComplianceRate ?? 0}
-                    suffix="%"
-                    precision={1}
-                    valueStyle={{ fontSize: 18, color: '#13c2c2' }}
-                  />
-                </Col>
-              </Row>
-            </Card>
-          </Col>
-          <Col xs={24} md={12}>
-            <Card title={<><PieChartOutlined /> Phân bố loại mẫu</>}>
-              {sampleMatrix.length > 0 ? (
-                <Table
-                  dataSource={sampleMatrix}
-                  columns={specimenColumns}
-                  rowKey="specimenType"
-                  pagination={false}
-                  size="small"
                 />
               ) : (
-                <Empty description="Không có dữ liệu" />
+                <Empty description="Không có dữ liệu" style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }} />
               )}
             </Card>
           </Col>
