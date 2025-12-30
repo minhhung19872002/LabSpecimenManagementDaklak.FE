@@ -33,12 +33,10 @@ const { Text } = Typography;
 interface IndicatorTableProps {
   indicators: QualityManagementIndicatorDto[];
   taskStatus: QualityManagementStatus;
-  selectedIndicatorIds: string[];
-  onSelectChange: (ids: string[]) => void;
   onApprove: (indicatorId: string) => void;
   onReject: (indicatorId: string) => void;
   onIndicatorUpdate: () => void;
-  // Bulk action selection props
+  // Bulk action selection props (for pending indicators)
   selectedPendingIds: string[];
   onPendingSelectChange: (ids: string[]) => void;
 }
@@ -53,8 +51,6 @@ interface LabGroup {
 const IndicatorTable: React.FC<IndicatorTableProps> = ({
   indicators,
   taskStatus,
-  selectedIndicatorIds,
-  onSelectChange,
   onApprove,
   onReject,
   onIndicatorUpdate,
@@ -138,27 +134,6 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     return Object.values(groups);
   }, [indicators]);
 
-  // Handle select all APPROVED in a lab group (for print)
-  const handleSelectAllApprovedInGroup = (labGroup: LabGroup, checked: boolean) => {
-    const approvedIds = labGroup.indicators
-      .filter(
-        (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Approved
-      )
-      .map((ind) => ind.id);
-
-    if (checked) {
-      const newSelected = [
-        ...new Set([...selectedIndicatorIds, ...approvedIds]),
-      ];
-      onSelectChange(newSelected);
-    } else {
-      const newSelected = selectedIndicatorIds.filter(
-        (id) => !approvedIds.includes(id)
-      );
-      onSelectChange(newSelected);
-    }
-  };
-
   // Handle select all PENDING in a lab group (for bulk approve/reject)
   const handleSelectAllPendingInGroup = (labGroup: LabGroup, checked: boolean) => {
     const pendingIds = labGroup.indicators
@@ -180,17 +155,6 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     }
   };
 
-  // Check if all approved indicators in group are selected
-  const isAllApprovedSelectedInGroup = (labGroup: LabGroup): boolean => {
-    const approvedIds = labGroup.indicators
-      .filter(
-        (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Approved
-      )
-      .map((ind) => ind.id);
-    if (approvedIds.length === 0) return false;
-    return approvedIds.every((id) => selectedIndicatorIds.includes(id));
-  };
-
   // Check if all pending indicators in group are selected
   const isAllPendingSelectedInGroup = (labGroup: LabGroup): boolean => {
     const pendingIds = labGroup.indicators
@@ -209,28 +173,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       key: "checkbox",
       width: 50,
       render: (_, record) => {
-        const isApproved =
-          record.approvalStatus === QualityIndicatorApprovalStatus.Approved;
         const isPending =
           record.approvalStatus === QualityIndicatorApprovalStatus.PendingApproval;
-
-        // Approved indicators use selectedIndicatorIds (for print)
-        if (isApproved) {
-          return (
-            <Checkbox
-              checked={selectedIndicatorIds.includes(record.id)}
-              onChange={(e) => {
-                if (e.target.checked) {
-                  onSelectChange([...selectedIndicatorIds, record.id]);
-                } else {
-                  onSelectChange(
-                    selectedIndicatorIds.filter((id) => id !== record.id)
-                  );
-                }
-              }}
-            />
-          );
-        }
 
         // Pending indicators use selectedPendingIds (for bulk approve/reject)
         if (isPending && !actionsDisabled) {
@@ -250,8 +194,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           );
         }
 
-        // Rejected or other status - disabled checkbox
-        return <Checkbox disabled />;
+        // Approved, Rejected or other status - no checkbox needed
+        return null;
       },
     },
     {
@@ -431,19 +375,6 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                       checked={isAllPendingSelectedInGroup(group)}
                       onChange={(e) =>
                         handleSelectAllPendingInGroup(group, e.target.checked)
-                      }
-                      onClick={(e) => e.stopPropagation()}
-                      style={{ marginRight: 4 }}
-                    />
-                  </Tooltip>
-                )}
-                {/* Checkbox for approved indicators (print) */}
-                {approvedCount > 0 && (
-                  <Tooltip title="Chọn tất cả chỉ tiêu đã duyệt (in KQ)">
-                    <Checkbox
-                      checked={isAllApprovedSelectedInGroup(group)}
-                      onChange={(e) =>
-                        handleSelectAllApprovedInGroup(group, e.target.checked)
                       }
                       onClick={(e) => e.stopPropagation()}
                     />
