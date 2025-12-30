@@ -43,10 +43,12 @@ const SendToQualityModal: React.FC<SendToQualityModalProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [selectedIndicatorIds, setSelectedIndicatorIds] = useState<string[]>([]);
 
-  // Filter only approved indicators
+  // Filter only approved indicators that haven't been sent to quality yet
   const approvedIndicators = useMemo(() => {
     return indicators.filter(
-      (ind) => ind.approvalStatus === IndicatorApprovalStatus.Approved
+      (ind) =>
+        ind.approvalStatus === IndicatorApprovalStatus.Approved &&
+        !ind.isSentToQuality
     );
   }, [indicators]);
 
@@ -252,7 +254,7 @@ const SendToQualityModal: React.FC<SendToQualityModalProps> = ({
 
           {approvedIndicators.length === 0 ? (
             <Empty
-              description="Không có chỉ tiêu nào đã duyệt"
+              description="Không có chỉ tiêu nào đã duyệt chưa gửi"
               image={Empty.PRESENTED_IMAGE_SIMPLE}
             />
           ) : (

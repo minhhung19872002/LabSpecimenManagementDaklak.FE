@@ -83,6 +83,7 @@ export interface LaboratoryTaskIndicatorDto {
   approvedById?: string;
   approvedByName?: string;
   rejectionReason?: string;
+  isSentToQuality?: boolean;  // Đã gửi cho QLCL chưa
 }
 
 // Main Laboratory Task DTO

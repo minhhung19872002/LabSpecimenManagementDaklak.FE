@@ -243,11 +243,13 @@ const TaskManagementDetail: React.FC = () => {
     return samples.sort((a, b) => a.sampleId.localeCompare(b.sampleId));
   }, [indicatorsBySample, indicatorChanges]);
 
-  // Check if there are any approved indicators to send
-  const hasApprovedIndicators = useMemo(() => {
+  // Check if there are any approved indicators that haven't been sent to quality yet
+  const hasUnsentApprovedIndicators = useMemo(() => {
     if (!task?.indicators) return false;
     return task.indicators.some(
-      (ind) => ind.approvalStatus === IndicatorApprovalStatus.Approved
+      (ind) =>
+        ind.approvalStatus === IndicatorApprovalStatus.Approved &&
+        !ind.isSentToQuality
     );
   }, [task]);
 
@@ -785,8 +787,9 @@ const TaskManagementDetail: React.FC = () => {
                   </Button>
                 </>
               )}
-              {/* Assign button - only show when notStarted */}
-              {canEditTask && sample.sampleStatus === "notStarted" && (
+              {/* Assign button - show when sample has notStarted indicators */}
+              {/* Không phụ thuộc vào task status - vì có thể có sample chưa giao trong task đang Testing */}
+              {sample.sampleStatus === "notStarted" && (
                 <Button
                   type="primary"
                   size="small"
@@ -801,8 +804,7 @@ const TaskManagementDetail: React.FC = () => {
                 </Button>
               )}
               {/* Re-assign button - show when assigned but not approved */}
-              {canEditTask &&
-                sample.sampleStatus !== "notStarted" &&
+              {sample.sampleStatus !== "notStarted" &&
                 !sample.isApproved && (
                   <Button
                     size="small"
@@ -919,10 +921,7 @@ const TaskManagementDetail: React.FC = () => {
               <Button
                 type="primary"
                 icon={<SendOutlined />}
-                disabled={
-                  !hasApprovedIndicators ||
-                  task.status === LaboratoryTaskStatus.SentToQuality
-                }
+                disabled={!hasUnsentApprovedIndicators}
                 loading={actionLoading}
                 onClick={handleSendResults}
               >

@@ -130,6 +130,11 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           );
         }
         // Chưa có phương pháp - hiển thị dropdown để chọn
+        // Cho phép chỉnh sửa nếu indicator chưa được duyệt hoặc chưa bị hủy
+        const canEditMethod =
+          record.approvalStatus !== IndicatorApprovalStatus.Approved &&
+          record.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled;
+
         return (
           <Select
             style={{ width: "100%" }}
@@ -141,12 +146,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
               value: m.id,
               label: m.name,
             }))}
-            disabled={
-              !canEdit ||
-              record.approvalStatus === IndicatorApprovalStatus.Approved ||
-              record.approvalStatus ===
-                IndicatorApprovalStatus.CustomerCancelled
-            }
+            disabled={!canEditMethod}
             allowClear
           />
         );
@@ -175,25 +175,30 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       dataIndex: "technicianId",
       key: "technicianId",
       width: 150,
-      render: (value: string, record: LaboratoryTaskIndicatorDto) => (
-        <Select
-          style={{ width: "100%" }}
-          size="small"
-          value={value}
-          placeholder="Chọn KTV"
-          onChange={(val) => onTechnicianChange(record.id, val)}
-          options={(technicians || []).map((t) => ({
-            value: t.id,
-            label: t.displayName || t.userName,
-          }))}
-          disabled={
-            !canEdit ||
-            record.approvalStatus === IndicatorApprovalStatus.Approved ||
-            record.approvalStatus === IndicatorApprovalStatus.CustomerCancelled
-          }
-          allowClear
-        />
-      ),
+      render: (value: string, record: LaboratoryTaskIndicatorDto) => {
+        // Cho phép chỉnh sửa KTV nếu:
+        // 1. Indicator chưa được duyệt (Approved) và chưa bị hủy (CustomerCancelled)
+        // 2. Không quan tâm đến task status - vì có thể có indicator chưa giao việc trong task đang Testing
+        const canEditIndicator =
+          record.approvalStatus !== IndicatorApprovalStatus.Approved &&
+          record.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled;
+
+        return (
+          <Select
+            style={{ width: "100%" }}
+            size="small"
+            value={value}
+            placeholder="Chọn KTV"
+            onChange={(val) => onTechnicianChange(record.id, val)}
+            options={(technicians || []).map((t) => ({
+              value: t.id,
+              label: t.displayName || t.userName,
+            }))}
+            disabled={!canEditIndicator}
+            allowClear
+          />
+        );
+      },
     },
     {
       title: "Ngày nhập",
