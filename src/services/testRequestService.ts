@@ -100,8 +100,8 @@ export const testRequestService = {
   },
 
   // Generate test request form (BM05 - phiếu yêu cầu XN)
-  generateTestRequestForm: async (testRequestId: string): Promise<{ fileName: string; requestNumber: string }> => {
-    const response = await api.post<{ fileName: string; requestNumber: string }>('/api/v1/result-forms/generate-test-request', {
+  generateTestRequestForm: async (testRequestId: string): Promise<{ fileName: string; requestNumber: string; contractNumber: string }> => {
+    const response = await api.post<{ fileName: string; requestNumber: string; contractNumber: string }>('/api/v1/result-forms/generate-test-request', {
       testRequestId
     });
     return response.data;
