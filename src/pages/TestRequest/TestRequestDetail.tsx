@@ -529,7 +529,9 @@ const TestRequestDetail: React.FC = () => {
       } else {
         // Status was updated to previous status because not all indicators are completed
         const statusLabel = TestRequestStatusLabels[updatedData.status];
-        message.warning(`Chưa hoàn thành tất cả chỉ tiêu. Trạng thái đã cập nhật về: ${statusLabel}`);
+        message.warning(
+          `Chưa hoàn thành tất cả chỉ tiêu. Trạng thái đã cập nhật về: ${statusLabel}`
+        );
       }
     } catch (error: any) {
       console.error("Error completing test request:", error);
@@ -640,7 +642,9 @@ const TestRequestDetail: React.FC = () => {
       } else {
         // Status was updated to previous status because not all indicators are completed
         const statusLabel = TestRequestStatusLabels[updatedData.status];
-        message.warning(`Chưa hoàn thành tất cả chỉ tiêu. Trạng thái đã cập nhật về: ${statusLabel}`);
+        message.warning(
+          `Chưa hoàn thành tất cả chỉ tiêu. Trạng thái đã cập nhật về: ${statusLabel}`
+        );
       }
     } catch (error: any) {
       console.error("Error completing with image:", error);
@@ -1256,36 +1260,26 @@ const TestRequestDetail: React.FC = () => {
             Thông tin hợp đồng
           </Title>
           <Row gutter={[16, 12]}>
-            <Col xs={24} lg={12} xl={6}>
+            <Col xs={24} lg={12} xl={8}>
               <div className="detail-item">
                 <Text type="secondary">Số HĐ:</Text>
                 <Text strong>{data.contractNumber || "-"}</Text>
               </div>
             </Col>
-            <Col xs={24} lg={12} xl={6}>
+            <Col xs={24} lg={12} xl={8}>
               <div className="detail-item">
                 <Text type="secondary">Ngày HĐ:</Text>
                 <Text strong>
                   {data.contractDate
-                    ? dayjs(data.contractDate).format("DD/MM/YYYY")
+                    ? dayjs(data.contractDate).format("DD/MM/YYYY HH:mm")
                     : "-"}
                 </Text>
               </div>
             </Col>
-            <Col xs={24} lg={12} xl={6}>
+            <Col xs={24} lg={12} xl={8}>
               <div className="detail-item">
                 <Text type="secondary">Số phiếu thu:</Text>
                 <Text>{data.receiptNumber || "-"}</Text>
-              </div>
-            </Col>
-            <Col xs={24} lg={12} xl={6}>
-              <div className="detail-item">
-                <Text type="secondary">Ngày yêu cầu:</Text>
-                <Text strong>
-                  {data.requestDate
-                    ? dayjs(data.requestDate).format("DD/MM/YYYY HH:mm")
-                    : "-"}
-                </Text>
               </div>
             </Col>
           </Row>

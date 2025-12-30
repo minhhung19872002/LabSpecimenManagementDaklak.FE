@@ -744,7 +744,7 @@ export const useTestRequestFormActions = ({
 
       const payload = {
         contractNumber: values.contractNumber || undefined,
-        contractDate: values.contractDate ? values.contractDate.format('YYYY-MM-DD') : undefined,
+        contractDate: values.contractDate ? values.contractDate.format('YYYY-MM-DDTHH:mm:ss') : undefined,
         sentToAccounting: values.sentToAccounting || false,
         paymentReceived: values.paymentReceived || false,
         sentToDepartment: values.sentToDepartment || false,

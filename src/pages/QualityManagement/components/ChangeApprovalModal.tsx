@@ -228,9 +228,13 @@ const CHECKBOX_FIELDS = [
 
 // Date fields (both cases)
 const DATE_FIELDS = [
-  'contractDate', 'ContractDate',
   'expectedCompletionDate', 'ExpectedCompletionDate',
   'resultDeliveryDate', 'ResultDeliveryDate'
+];
+
+// DateTime fields (show time as well)
+const DATETIME_FIELDS = [
+  'contractDate', 'ContractDate',
 ];
 
 const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
@@ -591,7 +595,13 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
 
     const lowerField = fieldName.toLowerCase();
 
-    // Date fields
+    // DateTime fields (show date and time)
+    if (DATETIME_FIELDS.some(f => f.toLowerCase() === lowerField)) {
+      const d = dayjs(value);
+      return d.isValid() ? d.format('DD/MM/YYYY HH:mm') : value;
+    }
+
+    // Date fields (show date only)
     if (DATE_FIELDS.some(f => f.toLowerCase() === lowerField)) {
       const d = dayjs(value);
       return d.isValid() ? d.format('DD/MM/YYYY') : value;

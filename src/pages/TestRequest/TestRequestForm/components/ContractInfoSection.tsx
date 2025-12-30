@@ -51,7 +51,8 @@ const ContractInfoSection: React.FC<ContractInfoSectionProps> = ({
           >
             <DatePicker
               style={{ width: "100%" }}
-              format="DD/MM/YYYY"
+              format="DD/MM/YYYY HH:mm"
+              showTime={{ format: "HH:mm" }}
               disabled={isFieldLocked("contractDate")}
             />
           </Form.Item>
