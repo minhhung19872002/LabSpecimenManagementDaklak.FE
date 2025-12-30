@@ -71,96 +71,107 @@ export const useLabTechnicianReminderPopup = (): UseLabTechnicianReminderPopupRe
   const [open, setOpen] = useState(false);
   const [tasks, setTasks] = useState<LabTechnicianPendingTaskDto[]>([]);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isLabTechnician = useRef(false);
-
-  // Check if current user has LabTechnician role
-  const checkLabTechnicianRole = useCallback((): boolean => {
-    try {
-      const userInfoStr = localStorage.getItem("user_info");
-      if (!userInfoStr) return false;
-
-      const userInfo = JSON.parse(userInfoStr);
-      const roles = userInfo.roles || [];
-      return roles.includes(ROLES.LAB_TECHNICIAN);
-    } catch {
-      return false;
-    }
-  }, []);
-
-  // Fetch pending tasks
-  const fetchTasks = useCallback(async (): Promise<LabTechnicianPendingTaskDto[]> => {
-    try {
-      const result = await laboratoryTaskService.getLabTechnicianPendingTasks();
-      return result;
-    } catch (error) {
-      console.error("Error fetching lab technician pending tasks:", error);
-      return [];
-    }
-  }, []);
-
-  // Show popup and update last shown time
-  const showPopup = useCallback((taskList: LabTechnicianPendingTaskDto[]) => {
-    if (taskList.length > 0) {
-      setTasks(taskList);
-      setOpen(true);
-      localStorage.setItem(LAST_SHOWN_TIME_KEY, Date.now().toString());
-    }
-  }, []);
+  const isInitialized = useRef(false);
 
   // Close popup
   const closePopup = useCallback(() => {
     setOpen(false);
   }, []);
 
-  // Schedule next check based on remaining time
-  const scheduleNextCheck = useCallback(() => {
-    // Clear existing timeout
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
+  // Initial check on mount - chỉ chạy một lần
+  useEffect(() => {
+    // Prevent double initialization in StrictMode
+    if (isInitialized.current) return;
+    isInitialized.current = true;
+
+    // Check if current user has LabTechnician role
+    const checkLabTechnicianRole = (): boolean => {
+      try {
+        const userInfoStr = localStorage.getItem("user_info");
+        if (!userInfoStr) return false;
+
+        const userInfo = JSON.parse(userInfoStr);
+        const roles = userInfo.roles || [];
+        return roles.includes(ROLES.LAB_TECHNICIAN);
+      } catch {
+        return false;
+      }
+    };
+
+    if (!checkLabTechnicianRole()) {
+      return;
     }
 
-    const remaining = getRemainingTime();
-    if (remaining === null) return;
+    // Fetch pending tasks
+    const fetchTasks = async (): Promise<LabTechnicianPendingTaskDto[]> => {
+      try {
+        const result = await laboratoryTaskService.getLabTechnicianPendingTasks();
+        return result;
+      } catch (error) {
+        console.error("Error fetching lab technician pending tasks:", error);
+        return [];
+      }
+    };
 
-    // Schedule check after remaining time
-    timeoutRef.current = setTimeout(async () => {
-      const newTasks = await fetchTasks();
-      if (newTasks.length > 0 && shouldShowPopup()) {
-        showPopup(newTasks);
+    // Show popup and update last shown time
+    const showPopup = (taskList: LabTechnicianPendingTaskDto[]) => {
+      if (taskList.length > 0) {
+        setTasks(taskList);
+        setOpen(true);
+        localStorage.setItem(LAST_SHOWN_TIME_KEY, Date.now().toString());
+      }
+    };
+
+    // Schedule next check based on remaining time
+    const scheduleNextCheck = () => {
+      // Clear existing timeout
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
       }
 
-      // Schedule next check with full interval
-      scheduleNextCheck();
-    }, remaining);
-  }, [fetchTasks, showPopup]);
+      const remaining = getRemainingTime();
+      if (remaining === null) return;
 
-  // Check and show popup (respects time intervals)
-  const checkAndShowIfNeeded = useCallback(async () => {
-    const taskList = await fetchTasks();
-    if (taskList.length === 0) {
-      // Still schedule next check even if no tasks
-      scheduleNextCheck();
-      return;
-    }
+      // Schedule check after remaining time
+      timeoutRef.current = setTimeout(async () => {
+        const newTasks = await fetchTasks();
+        if (newTasks.length > 0 && shouldShowPopup()) {
+          showPopup(newTasks);
+        }
 
-    // Check if should show based on elapsed time
-    if (shouldShowPopup()) {
+        // Schedule next check with full interval
+        scheduleNextCheck();
+      }, remaining);
+    };
+
+    // Check and show popup (respects time intervals)
+    const checkAndShowIfNeeded = async () => {
+      // Lần đầu login (chưa có key) -> luôn gọi API
+      const isFirstLogin = !localStorage.getItem(LAST_SHOWN_TIME_KEY);
+
+      // Nếu không phải lần đầu, check thời gian TRƯỚC khi gọi API
+      if (!isFirstLogin && !shouldShowPopup()) {
+        scheduleNextCheck();
+        return;
+      }
+
+      // Gọi API lấy tasks
+      const taskList = await fetchTasks();
+
+      if (taskList.length === 0) {
+        // Không có task -> set key để tránh gọi API liên tục, schedule next check
+        localStorage.setItem(LAST_SHOWN_TIME_KEY, Date.now().toString());
+        scheduleNextCheck();
+        return;
+      }
+
+      // Có task -> hiển thị popup (showPopup sẽ set key)
       showPopup(taskList);
-    }
 
-    // Schedule next check based on remaining time (not full interval)
-    scheduleNextCheck();
-  }, [fetchTasks, showPopup, scheduleNextCheck]);
-
-  // Initial check on mount
-  useEffect(() => {
-    // Check role
-    isLabTechnician.current = checkLabTechnicianRole();
-
-    if (!isLabTechnician.current) {
-      return;
-    }
+      // Schedule next check
+      scheduleNextCheck();
+    };
 
     // Initial fetch and show (respects time intervals)
     checkAndShowIfNeeded();
@@ -171,7 +182,7 @@ export const useLabTechnicianReminderPopup = (): UseLabTechnicianReminderPopupRe
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [checkLabTechnicianRole, checkAndShowIfNeeded]);
+  }, []); // Empty dependency - chỉ chạy một lần khi mount
 
   return {
     open,

@@ -390,7 +390,7 @@ const MainLayout: React.FC = () => {
       key: "admin",
       icon: <SolutionOutlined />,
       label: menuLabel(t("menu.administration")),
-      roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
+      roles: ALL_ROLES,
       children: [
         {
           key: "employees",
@@ -404,7 +404,7 @@ const MainLayout: React.FC = () => {
           icon: <SettingOutlined />,
           label: menuLabel(t("menu.settings")),
           onClick: () => navigate(PATH_ROUTES.settings),
-          roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
+          roles: ALL_ROLES,
         },
       ],
     },

@@ -1,28 +1,8 @@
 import React from 'react';
-import { Button, Result } from 'antd';
+import { Button, Result, Space } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { PATH_ROUTES, ROLES } from '../../constants';
-import { UserInfo } from '../../services/authService';
-
-// Get default route based on user role
-const getDefaultRouteByRole = (roles: string[]): string => {
-  if (roles.includes(ROLES.ADMIN)) {
-    return PATH_ROUTES.dashboard;
-  }
-  if (roles.includes(ROLES.QUALITY_MANAGER)) {
-    return PATH_ROUTES.dashboard;
-  }
-  if (roles.includes(ROLES.LAB_TECHNICAL_MANAGER)) {
-    return PATH_ROUTES.dashboard;
-  }
-  if (roles.includes(ROLES.SAMPLE_RECEIVER)) {
-    return PATH_ROUTES.testRequests.index;
-  }
-  if (roles.includes(ROLES.LAB_TECHNICIAN)) {
-    return PATH_ROUTES.testing.index;
-  }
-  return PATH_ROUTES.dashboard;
-};
+import { getDefaultRouteForUser } from '../../constants';
+import { UserInfo, authService } from '../../services/authService';
 
 const Forbidden: React.FC = () => {
   const navigate = useNavigate();
@@ -34,14 +14,22 @@ const Forbidden: React.FC = () => {
       try {
         const userInfo: UserInfo = JSON.parse(storedUser);
         if (userInfo.roles && userInfo.roles.length > 0) {
-          navigate(getDefaultRouteByRole(userInfo.roles), { replace: true });
-          return;
+          const route = getDefaultRouteForUser(userInfo.roles);
+          if (route) {
+            navigate(route, { replace: true });
+            return;
+          }
         }
       } catch {
         // Ignore parsing errors
       }
     }
-    navigate(PATH_ROUTES.dashboard, { replace: true });
+    // If no valid route found, logout user
+    authService.logout();
+  };
+
+  const handleLogout = () => {
+    authService.logout();
   };
 
   return (
@@ -57,9 +45,14 @@ const Forbidden: React.FC = () => {
         title="403"
         subTitle="Bạn không có quyền truy cập trang này."
         extra={
-          <Button type="primary" onClick={handleGoToHome}>
-            Về trang chủ
-          </Button>
+          <Space>
+            <Button type="primary" onClick={handleGoToHome}>
+              Về trang chủ
+            </Button>
+            <Button onClick={handleLogout}>
+              Đăng xuất
+            </Button>
+          </Space>
         }
       />
     </div>

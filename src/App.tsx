@@ -4,7 +4,28 @@ import MainLayout from "./components/layout/MainLayout";
 import Loadable from "./components/common/Loadable";
 import PrivateRoute from "./components/auth/PrivateRoute";
 import { initTableGrabScroll } from "./hooks/useTableGrabScroll";
+import { getDefaultRouteForUser, PATH_ROUTES } from "./constants";
+import { UserInfo } from "./services/authService";
 import "./App.css";
+
+// Helper component to redirect to user's default route based on their role
+const DefaultRouteRedirect = () => {
+  const storedUser = localStorage.getItem('user_info');
+  let defaultRoute = PATH_ROUTES.dashboard;
+
+  if (storedUser) {
+    try {
+      const userInfo: UserInfo = JSON.parse(storedUser);
+      if (userInfo.roles && userInfo.roles.length > 0) {
+        defaultRoute = getDefaultRouteForUser(userInfo.roles) || PATH_ROUTES.dashboard;
+      }
+    } catch {
+      // Ignore parsing errors
+    }
+  }
+
+  return <Navigate to={defaultRoute} replace />;
+};
 
 // Lazy load pages with code splitting
 const Login = Loadable(lazy(() => import("./pages/Login/Login")));
@@ -144,7 +165,7 @@ function App() {
             </PrivateRoute>
           }
         >
-          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route index element={<DefaultRouteRedirect />} />
           <Route path="dashboard" element={<Dashboard />} />
 
           {/* Test Request Routes */}

@@ -26,7 +26,6 @@ import {
   ClockCircleOutlined,
   SyncOutlined,
   SendOutlined,
-  EditOutlined,
   DeleteOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
@@ -55,7 +54,8 @@ const TaskManagementList: React.FC = () => {
 
   // Modal states
   const [updateModalVisible, setUpdateModalVisible] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<LaboratoryTaskDto | null>(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [selectedTask, _setSelectedTask] = useState<LaboratoryTaskDto | null>(
     null
   );
   const [updateForm] = Form.useForm();
@@ -99,7 +99,11 @@ const TaskManagementList: React.FC = () => {
       const result = await laboratoryTaskService.getList(params);
 
       setTasks(result.items);
-      setPagination((prev) => ({ ...prev, total: result.totalCount }));
+      // Chỉ update total khi giá trị thực sự thay đổi để tránh re-render loop
+      setPagination((prev) => {
+        if (prev.total === result.totalCount) return prev;
+        return { ...prev, total: result.totalCount };
+      });
     } catch (error) {
       console.error("Failed to load laboratory tasks:", error);
       message.error("Không thể tải danh sách công việc. Vui lòng thử lại.");
@@ -185,14 +189,14 @@ const TaskManagementList: React.FC = () => {
     loadData();
   };
 
-  const handleOpenUpdateModal = (record: LaboratoryTaskDto) => {
-    setSelectedTask(record);
-    updateForm.setFieldsValue({
-      testDate: record.testDate ? dayjs(record.testDate) : null,
-      notes: record.notes,
-    });
-    setUpdateModalVisible(true);
-  };
+  // const handleOpenUpdateModal = (record: LaboratoryTaskDto) => {
+  //   setSelectedTask(record);
+  //   updateForm.setFieldsValue({
+  //     testDate: record.testDate ? dayjs(record.testDate) : null,
+  //     notes: record.notes,
+  //   });
+  //   setUpdateModalVisible(true);
+  // };
 
   const handleUpdateTask = async () => {
     try {
@@ -364,7 +368,7 @@ const TaskManagementList: React.FC = () => {
                 type="link"
                 size="small"
                 icon={<EditOutlined />}
-                onClick={() => handleOpenUpdateModal(record)}
+                onClick={() => _handleOpenUpdateModal(record)}
                 disabled={!canEdit}
               />
             </Tooltip> */}
