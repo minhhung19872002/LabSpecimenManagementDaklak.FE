@@ -360,7 +360,6 @@ export const useTestRequestFormActions = ({
     setIndicatorLaboratoryMap(newLabMap);
 
     setSamples([...samples, newSample]);
-    message.success("Đã nhân đôi mẫu thành công");
   };
 
   const printBarcode = (sampleInfo: SampleBarcodeInfo) => {
@@ -818,11 +817,11 @@ export const useTestRequestFormActions = ({
           message.success("Yêu cầu thay đổi đã được gửi và đang chờ phê duyệt!");
         } else {
           await testRequestService.update(id, payload);
-          message.success("Cập nhật yêu cầu thành công!");
+          message.success("Cập nhật phiếu yêu cầu thành công!");
         }
       } else {
-        await testRequestService.create(payload);
-        message.success("Tạo yêu cầu thành công!");
+       const testRequest = await testRequestService.create(payload);
+        message.success(`Đã tạo phiếu yêu cầu XN: ${testRequest?.contractNumber}`);
       }
       navigate(PATH_ROUTES.testRequests.index);
     } catch (error: any) {

@@ -364,7 +364,9 @@ const TaskManagementDetail: React.FC = () => {
       }
       if (missingMethod.length > 0) {
         if (errorMsg) errorMsg += ". ";
-        errorMsg += `Chỉ tiêu chưa chọn phương pháp: ${missingMethod.join(", ")}`;
+        errorMsg += `Chỉ tiêu chưa chọn phương pháp: ${missingMethod.join(
+          ", "
+        )}`;
       }
       message.error(errorMsg);
       return;
@@ -388,7 +390,11 @@ const TaskManagementDetail: React.FC = () => {
 
       // Chỉ check reassign nếu indicator đã được giao việc (có assignedDate) và có KTV
       // Sử dụng originalIndicator để lấy giá trị gốc từ server
-      if (originalIndicator && originalIndicator.assignedDate && originalIndicator.technicianId) {
+      if (
+        originalIndicator &&
+        originalIndicator.assignedDate &&
+        originalIndicator.technicianId
+      ) {
         // Indicator đã được giao việc trước đó
         const newTechnicianId = assignment.technicianId;
         if (
@@ -505,7 +511,10 @@ const TaskManagementDetail: React.FC = () => {
   };
 
   // Handle standard change - chỉ lưu vào local state
-  const handleStandardChange = (indicatorId: string, standardId: string | null) => {
+  const handleStandardChange = (
+    indicatorId: string,
+    standardId: string | null
+  ) => {
     setStandardSelections((prev) => ({
       ...prev,
       [indicatorId]: standardId,
@@ -556,9 +565,10 @@ const TaskManagementDetail: React.FC = () => {
       validIds.forEach((id) => {
         const indicator = sample?.indicators.find((i) => i.id === id);
         // Ưu tiên local state, fallback to DB value
-        standardIdsMap[id] = standardSelections[id] !== undefined
-          ? standardSelections[id]
-          : indicator?.standardId || null;
+        standardIdsMap[id] =
+          standardSelections[id] !== undefined
+            ? standardSelections[id]
+            : indicator?.standardId || null;
       });
 
       await laboratoryTaskService.bulkApproveIndicators(task.id, {
@@ -627,9 +637,10 @@ const TaskManagementDetail: React.FC = () => {
       validIds.forEach((id) => {
         const indicator = sample?.indicators.find((i) => i.id === id);
         // Ưu tiên local state, fallback to DB value
-        standardIdsMap[id] = standardSelections[id] !== undefined
-          ? standardSelections[id]
-          : indicator?.standardId || null;
+        standardIdsMap[id] =
+          standardSelections[id] !== undefined
+            ? standardSelections[id]
+            : indicator?.standardId || null;
       });
 
       await laboratoryTaskService.bulkApproveIndicators(task.id, {
@@ -859,20 +870,19 @@ const TaskManagementDetail: React.FC = () => {
                 </Button>
               )}
               {/* Re-assign button - show when assigned but not approved */}
-              {sample.sampleStatus !== "notStarted" &&
-                !sample.isApproved && (
-                  <Button
-                    size="small"
-                    loading={actionLoading}
-                    disabled={selectedCount === 0}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleAssignSample(sample.sampleId);
-                    }}
-                  >
-                    Giao việc lại{selectedCount > 0 ? ` (${selectedCount})` : ""}
-                  </Button>
-                )}
+              {sample.sampleStatus !== "notStarted" && !sample.isApproved && (
+                <Button
+                  size="small"
+                  loading={actionLoading}
+                  disabled={selectedCount === 0}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAssignSample(sample.sampleId);
+                  }}
+                >
+                  Giao việc lại{selectedCount > 0 ? ` (${selectedCount})` : ""}
+                </Button>
+              )}
             </Space>
           </Col>
         </Row>
@@ -958,7 +968,7 @@ const TaskManagementDetail: React.FC = () => {
         <Row justify="space-between" align="middle">
           <Col>
             <Title level={4} style={{ margin: 0 }}>
-              Số nhận mẫu giao việc: {task.testRequestNumber}
+              Số nhận mẫu giao việc
             </Title>
           </Col>
           <Col>

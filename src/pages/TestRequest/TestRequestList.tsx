@@ -68,7 +68,7 @@ const TestRequestList: React.FC = () => {
     setDownloadingTemplate(true);
     try {
       const blob = await importService.downloadTestRequestsTemplate();
-      downloadBlobAsFile(blob, "test-requests-template.xlsx");
+      downloadBlobAsFile(blob, "requests-template.xlsx");
       message.success("Tải template thành công!");
     } catch (error) {
       console.error("Error downloading template:", error);
