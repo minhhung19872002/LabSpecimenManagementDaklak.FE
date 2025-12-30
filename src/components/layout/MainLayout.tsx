@@ -315,6 +315,8 @@ const MainLayout: React.FC = () => {
             ROLES.ADMIN,
             ROLES.QUALITY_MANAGER,
             ROLES.LAB_TECHNICAL_MANAGER,
+            ROLES.LAB_TECHNICIAN,
+            ROLES.SAMPLE_RECEIVER,
           ],
         },
         {

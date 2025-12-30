@@ -36,12 +36,14 @@ export const ROUTE_PERMISSIONS: Record<string, string[]> = {
   ],
 
   // ============================================
-  // Quản lý công việc - Admin, QLCL, QLKT
+  // Quản lý công việc - Admin, QLCL, QLKT, KTV, BPGN (supporter có thể được thêm từ bất kỳ role nào)
   // ============================================
   [PATH_ROUTES.tasks.index]: [
     ROLES.ADMIN,
     ROLES.QUALITY_MANAGER,
     ROLES.LAB_TECHNICAL_MANAGER,
+    ROLES.LAB_TECHNICIAN,
+    ROLES.SAMPLE_RECEIVER,
   ],
 
   // ============================================

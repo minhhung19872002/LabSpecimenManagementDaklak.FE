@@ -48,6 +48,7 @@ import {
   SampleTestingImageType,
   SampleAttachmentDto,
 } from "../../types/testing";
+import { ROLES } from "../../constants/roles";
 import IndicatorTable from "./components/IndicatorTable";
 import SupporterModal from "./components/SupporterModal";
 import SampleImagesDisplay from "./components/SampleImagesDisplay";
@@ -122,6 +123,24 @@ const TaskManagementDetail: React.FC = () => {
 
   // Send to quality modal state
   const [sendToQualityModalOpen, setSendToQualityModalOpen] = useState(false);
+
+  // Check if current user is admin
+  const isAdmin = useMemo(() => {
+    try {
+      const userInfoStr = localStorage.getItem("user_info");
+      if (!userInfoStr) return false;
+      const userInfo = JSON.parse(userInfoStr);
+      const roles = userInfo.roles || [];
+      return roles.includes(ROLES.ADMIN);
+    } catch {
+      return false;
+    }
+  }, []);
+
+  // Check if current user can manage supporters (QLKT or Admin)
+  const canManageSupporters = useMemo(() => {
+    return isAdmin || (task?.isCurrentUserTechnicalManager ?? false);
+  }, [isAdmin, task?.isCurrentUserTechnicalManager]);
 
   // Load task data
   const loadTask = useCallback(async () => {
@@ -973,18 +992,20 @@ const TaskManagementDetail: React.FC = () => {
           </Col>
           <Col>
             <Space>
-              {/* Button "Thêm người hỗ trợ" */}
-              <Button
-                icon={<TeamOutlined />}
-                onClick={() => setSupporterModalOpen(true)}
-              >
-                Thêm người hỗ trợ
-                {task.supporters && task.supporters.length > 0 && (
-                  <span style={{ marginLeft: 4 }}>
-                    ({task.supporters.length})
-                  </span>
-                )}
-              </Button>
+              {/* Button "Thêm người hỗ trợ" - chỉ hiển thị cho QLKT hoặc Admin */}
+              {canManageSupporters && (
+                <Button
+                  icon={<TeamOutlined />}
+                  onClick={() => setSupporterModalOpen(true)}
+                >
+                  Thêm người hỗ trợ
+                  {task.supporters && task.supporters.length > 0 && (
+                    <span style={{ marginLeft: 4 }}>
+                      ({task.supporters.length})
+                    </span>
+                  )}
+                </Button>
+              )}
               <Button
                 type="primary"
                 icon={<SendOutlined />}
