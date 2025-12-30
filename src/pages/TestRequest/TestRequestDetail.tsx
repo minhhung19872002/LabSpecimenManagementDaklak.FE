@@ -507,6 +507,7 @@ const TestRequestDetail: React.FC = () => {
   };
 
   // Handle complete test request
+  // If not all indicators are completed, status will be updated to previous status based on priority
   const handleComplete = async () => {
     if (!id || !data) return;
 
@@ -519,8 +520,17 @@ const TestRequestDetail: React.FC = () => {
     // Hoàn thành bình thường (không yêu cầu gửi bưu điện)
     try {
       await testRequestService.complete(id);
-      message.success("Đã hoàn thành yêu cầu thử nghiệm");
-      loadData(id); // Reload to get updated status
+      // Reload data to check new status
+      const updatedData = await testRequestService.get(id);
+      setData(updatedData);
+
+      if (updatedData.status === TestRequestStatus.Completed) {
+        message.success("Đã hoàn thành yêu cầu thử nghiệm");
+      } else {
+        // Status was updated to previous status because not all indicators are completed
+        const statusLabel = TestRequestStatusLabels[updatedData.status];
+        message.warning(`Chưa hoàn thành tất cả chỉ tiêu. Trạng thái đã cập nhật về: ${statusLabel}`);
+      }
     } catch (error: any) {
       console.error("Error completing test request:", error);
       message.error(
@@ -608,6 +618,7 @@ const TestRequestDetail: React.FC = () => {
   };
 
   // Handle complete with postal images
+  // If not all indicators are completed, status will be updated to previous status based on priority
   const handleCompleteWithImage = async () => {
     if (!id || postalImages.length === 0) {
       message.error("Vui lòng upload ít nhất 1 hình ảnh gửi bưu điện");
@@ -617,10 +628,20 @@ const TestRequestDetail: React.FC = () => {
     try {
       const imageFileIds = postalImages.map((img) => img.fileId);
       await testRequestService.completeWithImage(id, imageFileIds);
-      message.success("Đã hoàn thành yêu cầu thử nghiệm");
       setPostalImageModalVisible(false);
       setPostalImages([]);
-      loadData(id);
+
+      // Reload data to check new status
+      const updatedData = await testRequestService.get(id);
+      setData(updatedData);
+
+      if (updatedData.status === TestRequestStatus.Completed) {
+        message.success("Đã hoàn thành yêu cầu thử nghiệm");
+      } else {
+        // Status was updated to previous status because not all indicators are completed
+        const statusLabel = TestRequestStatusLabels[updatedData.status];
+        message.warning(`Chưa hoàn thành tất cả chỉ tiêu. Trạng thái đã cập nhật về: ${statusLabel}`);
+      }
     } catch (error: any) {
       console.error("Error completing with image:", error);
       message.error(
