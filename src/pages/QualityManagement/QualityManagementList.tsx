@@ -208,8 +208,8 @@ const QualityManagementList: React.FC = () => {
     },
     {
       title: 'Ngày gửi KQ',
-      dataIndex: 'resultSentDate',
-      key: 'resultSentDate',
+      dataIndex: 'creationTime',
+      key: 'creationTime',
       width: 120,
       render: (date: string) => (date ? dayjs(date).format('DD/MM/YYYY') : '-'),
     },

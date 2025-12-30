@@ -359,7 +359,7 @@ const TaskManagementList: React.FC = () => {
 
         return (
           <Space size="small">
-            <Tooltip title={!canEdit ? lockedReason : "Cập nhật"}>
+            {/* <Tooltip title={!canEdit ? lockedReason : "Cập nhật"}>
               <Button
                 type="link"
                 size="small"
@@ -367,7 +367,7 @@ const TaskManagementList: React.FC = () => {
                 onClick={() => handleOpenUpdateModal(record)}
                 disabled={!canEdit}
               />
-            </Tooltip>
+            </Tooltip> */}
             <Tooltip title={!canEdit ? lockedReason : "Xóa"}>
               <Button
                 type="text"
