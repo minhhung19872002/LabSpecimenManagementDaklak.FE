@@ -74,8 +74,30 @@ const EditIndicatorModal: React.FC<EditIndicatorModalProps> = ({
         <Form.Item
           name="allowedLimit"
           label="Giới hạn cho phép"
+          rules={[
+            {
+              validator: (_, value) => {
+                if (value === undefined || value === null || value === "") {
+                  return Promise.resolve();
+                }
+                const num = parseFloat(value);
+                if (isNaN(num)) {
+                  return Promise.reject(new Error("Vui lòng nhập số hợp lệ"));
+                }
+                if (num < 0) {
+                  return Promise.reject(new Error("Giá trị phải >= 0"));
+                }
+                // Check max 1 decimal place
+                const decimalPart = value.toString().split(".")[1];
+                if (decimalPart && decimalPart.length > 1) {
+                  return Promise.reject(new Error("Chỉ cho phép tối đa 1 chữ số thập phân"));
+                }
+                return Promise.resolve();
+              },
+            },
+          ]}
         >
-          <Input placeholder="Nhập giới hạn" />
+          <Input placeholder="Nhập giới hạn (VD: 0.5)" />
         </Form.Item>
 
         <Form.Item name="isActive" label="Trạng thái" initialValue={true}>

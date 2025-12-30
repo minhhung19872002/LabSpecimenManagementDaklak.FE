@@ -277,14 +277,13 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       dataIndex: "approvalStatus",
       key: "approvalStatus",
       width: 120,
-      fixed: "right" as const,
       render: (status: QualityIndicatorApprovalStatus) =>
         getApprovalStatusTag(status),
     },
     {
       title: "Thao tác",
       key: "actions",
-      width: 100,
+      width: 180,
       fixed: "right" as const,
       align: "center" as const,
       render: (_, record) => {
@@ -302,7 +301,9 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                 size="small"
                 icon={<CheckOutlined />}
                 onClick={() => onApprove(record.id)}
-              />
+              >
+                Duyệt
+              </Button>
             </Tooltip>
             <Tooltip title="Từ chối">
               <Button
@@ -310,7 +311,9 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                 size="small"
                 icon={<CloseOutlined />}
                 onClick={() => onReject(record.id)}
-              />
+              >
+                Từ chối
+              </Button>
             </Tooltip>
           </Space>
         );
