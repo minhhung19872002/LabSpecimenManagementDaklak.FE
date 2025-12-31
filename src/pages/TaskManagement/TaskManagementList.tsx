@@ -54,7 +54,7 @@ const TaskManagementList: React.FC = () => {
 
   // Modal states
   const [updateModalVisible, setUpdateModalVisible] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   const [selectedTask, _setSelectedTask] = useState<LaboratoryTaskDto | null>(
     null
   );

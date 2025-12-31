@@ -1,939 +1,710 @@
-# Kiến Trúc Frontend - Hệ Thống Quản Lý Mẫu Phòng Thí Nghiệm
+# Frontend Architecture & Coding Conventions
 
-## 1. Tổng Quan Kiến Trúc
+> **IMPORTANT**: Tài liệu này là quy chuẩn code cho project. Claude phải tuân theo khi code.
 
-### 1.1 Technology Stack
-- **Framework**: React 18+
-- **Language**: TypeScript
-- **Build Tool**: Vite
-- **State Management**: Redux Toolkit + RTK Query
-- **Routing**: React Router v6
-- **UI Framework**: Ant Design / Material-UI
-- **Form Management**: React Hook Form + Zod
-- **Data Fetching**: Axios + RTK Query
-- **Charts**: Recharts / Apache ECharts
-- **i18n**: react-i18next (Tiếng Việt)
-- **Testing**: Vitest + React Testing Library
-- **Code Quality**: ESLint + Prettier
-
-### 1.2 Kiến Trúc Tổng Thể
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      User Interface                          │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │   Desktop    │  │    Tablet    │  │     Mobile       │  │
-│  │  (Responsive)│  │  (Responsive)│  │   (Responsive)   │  │
-│  └──────────────┘  └──────────────┘  └──────────────────┘  │
-└────────────────────────────┬────────────────────────────────┘
-                             │
-┌────────────────────────────┴────────────────────────────────┐
-│                    Presentation Layer                        │
-│  ┌────────────────────────────────────────────────────────┐ │
-│  │              React Components (Pages)                  │ │
-│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ │ │
-│  │  │  Login   │ │Dashboard │ │TestReq   │ │Specimen  │ │ │
-│  │  │  /Auth   │ │  /Stats  │ │  /Lab    │ │  /Report │ │ │
-│  │  └──────────┘ └──────────┘ └──────────┘ └──────────┘ │ │
-│  └────────────────────────────────────────────────────────┘ │
-│                             │                                │
-│  ┌────────────────────────────────────────────────────────┐ │
-│  │            Reusable Components Library                 │ │
-│  │  - Tables (with filter, sort, pagination)             │ │
-│  │  - Forms (with validation)                            │ │
-│  │  - Modals, Drawers, Cards                             │ │
-│  │  - Charts, Graphs                                     │ │
-│  │  - File Upload, QR Scanner                            │ │
-│  └────────────────────────────────────────────────────────┘ │
-└──────────────────────────────────────────────────────────────┘
-                             │
-┌────────────────────────────┴────────────────────────────────┐
-│                    Application Layer                         │
-│  ┌────────────────┐  ┌────────────────┐  ┌───────────────┐ │
-│  │  Redux Store   │  │  React Router  │  │  RTK Query    │ │
-│  │  - Auth State  │  │  - Navigation  │  │  - API Cache  │ │
-│  │  - User Prefs  │  │  - Guards      │  │  - Mutations  │ │
-│  │  - UI State    │  │  - Lazy Load   │  │  - Queries    │ │
-│  └────────────────┘  └────────────────┘  └───────────────┘ │
-│                                                              │
-│  ┌────────────────┐  ┌────────────────┐  ┌───────────────┐ │
-│  │  Hooks         │  │  Utils         │  │  Validators   │ │
-│  │  - useAuth     │  │  - formatDate  │  │  - Zod Schema │ │
-│  │  - useForm     │  │  - formatNum   │  │  - Rules      │ │
-│  │  - useTable    │  │  - helpers     │  │               │ │
-│  └────────────────┘  └────────────────┘  └───────────────┘ │
-└──────────────────────────────────────────────────────────────┘
-                             │
-┌────────────────────────────┴────────────────────────────────┐
-│                    Data Access Layer                         │
-│  ┌────────────────┐  ┌────────────────┐  ┌───────────────┐ │
-│  │  API Services  │  │  WebSocket     │  │  Local Storage│ │
-│  │  - REST APIs   │  │  - Real-time   │  │  - Token      │ │
-│  │  - Interceptors│  │  - Notifications│ │  - Settings   │ │
-│  └────────────────┘  └────────────────┘  └───────────────┘ │
-└──────────────────────────────────────────────────────────────┘
-```
-
-## 2. Cấu Trúc Project
+## Project Structure (Thực tế)
 
 ```
-lab-specimen-management-fe/
-├── public/
-│   ├── locales/
-│   │   └── vi/
-│   │       └── translation.json
-│   └── assets/
-│       ├── images/
-│       └── icons/
-├── src/
-│   ├── app/
-│   │   ├── store.ts                     # Redux store configuration
-│   │   └── rootReducer.ts
-│   │
-│   ├── features/
-│   │   ├── auth/
-│   │   │   ├── components/
-│   │   │   │   ├── LoginForm.tsx
-│   │   │   │   ├── RegisterForm.tsx
-│   │   │   │   └── PasswordReset.tsx
-│   │   │   ├── pages/
-│   │   │   │   ├── LoginPage.tsx
-│   │   │   │   └── ProfilePage.tsx
-│   │   │   ├── slices/
-│   │   │   │   └── authSlice.ts
-│   │   │   ├── services/
-│   │   │   │   └── authApi.ts           # RTK Query
-│   │   │   └── hooks/
-│   │   │       └── useAuth.ts
-│   │   │
-│   │   ├── test-requests/
-│   │   │   ├── components/
-│   │   │   │   ├── TestRequestForm.tsx
-│   │   │   │   ├── TestRequestList.tsx
-│   │   │   │   ├── TestRequestDetail.tsx
-│   │   │   │   ├── TestItemTable.tsx
-│   │   │   │   └── ExcelImport.tsx
-│   │   │   ├── pages/
-│   │   │   │   ├── TestRequestListPage.tsx
-│   │   │   │   ├── CreateTestRequestPage.tsx
-│   │   │   │   └── TestRequestDetailPage.tsx
-│   │   │   ├── services/
-│   │   │   │   └── testRequestApi.ts
-│   │   │   ├── types/
-│   │   │   │   └── testRequest.types.ts
-│   │   │   └── utils/
-│   │   │       └── tatCalculator.ts
-│   │   │
-│   │   ├── specimens/
-│   │   │   ├── components/
-│   │   │   │   ├── SpecimenList.tsx
-│   │   │   │   ├── SpecimenDetail.tsx
-│   │   │   │   ├── SpecimenHistory.tsx
-│   │   │   │   ├── SpecimenLocationMap.tsx
-│   │   │   │   └── SpecimenStatusBadge.tsx
-│   │   │   ├── pages/
-│   │   │   │   ├── SpecimenListPage.tsx
-│   │   │   │   └── SpecimenDetailPage.tsx
-│   │   │   └── services/
-│   │   │       └── specimenApi.ts
-│   │   │
-│   │   ├── laboratory/
-│   │   │   ├── components/
-│   │   │   │   ├── AssignmentList.tsx
-│   │   │   │   ├── ResultEntry.tsx
-│   │   │   │   ├── ResultApproval.tsx
-│   │   │   │   └── ResultChart.tsx
-│   │   │   ├── pages/
-│   │   │   │   ├── LabWorkbench.tsx
-│   │   │   │   ├── MyAssignments.tsx
-│   │   │   │   └── ResultApprovalPage.tsx
-│   │   │   └── services/
-│   │   │       └── laboratoryApi.ts
-│   │   │
-│   │   ├── reports/
-│   │   │   ├── components/
-│   │   │   │   ├── ReportForm.tsx
-│   │   │   │   ├── ReportPreview.tsx
-│   │   │   │   ├── ReportApprovalFlow.tsx
-│   │   │   │   ├── QRCodeGenerator.tsx
-│   │   │   │   └── QRCodeScanner.tsx
-│   │   │   ├── pages/
-│   │   │   │   ├── CreateReportPage.tsx
-│   │   │   │   ├── ReportApprovalPage.tsx
-│   │   │   │   ├── ReportListPage.tsx
-│   │   │   │   └── ReportVerifyPage.tsx
-│   │   │   └── services/
-│   │   │       └── reportApi.ts
-│   │   │
-│   │   ├── non-conformance/
-│   │   │   ├── components/
-│   │   │   │   ├── NCRForm.tsx
-│   │   │   │   ├── NCRWorkflow.tsx
-│   │   │   │   └── CorrectiveActionForm.tsx
-│   │   │   ├── pages/
-│   │   │   │   ├── NCRListPage.tsx
-│   │   │   │   └── NCRDetailPage.tsx
-│   │   │   └── services/
-│   │   │       └── ncrApi.ts
-│   │   │
-│   │   ├── statistics/
-│   │   │   ├── components/
-│   │   │   │   ├── Dashboard.tsx
-│   │   │   │   ├── SampleMatrixChart.tsx
-│   │   │   │   ├── TATComplianceChart.tsx
-│   │   │   │   ├── DepartmentWorkload.tsx
-│   │   │   │   └── ExportExcel.tsx
-│   │   │   ├── pages/
-│   │   │   │   ├── DashboardPage.tsx
-│   │   │   │   └── ReportsPage.tsx
-│   │   │   └── services/
-│   │   │       └── statisticsApi.ts
-│   │   │
-│   │   └── settings/
-│   │       ├── components/
-│   │       │   ├── UserPreferences.tsx
-│   │       │   ├── SystemSettings.tsx
-│   │       │   └── BackupConfig.tsx
-│   │       └── pages/
-│   │           └── SettingsPage.tsx
-│   │
-│   ├── shared/
-│   │   ├── components/
-│   │   │   ├── layout/
-│   │   │   │   ├── AppLayout.tsx
-│   │   │   │   ├── Header.tsx
-│   │   │   │   ├── Sidebar.tsx
-│   │   │   │   ├── Footer.tsx
-│   │   │   │   └── Breadcrumb.tsx
-│   │   │   ├── common/
-│   │   │   │   ├── Button.tsx
-│   │   │   │   ├── Input.tsx
-│   │   │   │   ├── Select.tsx
-│   │   │   │   ├── DatePicker.tsx
-│   │   │   │   ├── Table.tsx
-│   │   │   │   ├── Modal.tsx
-│   │   │   │   ├── Drawer.tsx
-│   │   │   │   ├── Card.tsx
-│   │   │   │   ├── Tabs.tsx
-│   │   │   │   ├── Notification.tsx
-│   │   │   │   ├── Loading.tsx
-│   │   │   │   └── ErrorBoundary.tsx
-│   │   │   ├── forms/
-│   │   │   │   ├── FormField.tsx
-│   │   │   │   ├── FormGroup.tsx
-│   │   │   │   └── FormValidation.tsx
-│   │   │   └── data-display/
-│   │   │       ├── StatusBadge.tsx
-│   │   │       ├── Timeline.tsx
-│   │   │       ├── AuditTrail.tsx
-│   │   │       └── FileUpload.tsx
-│   │   │
-│   │   ├── hooks/
-│   │   │   ├── useAuth.ts
-│   │   │   ├── usePermission.ts
-│   │   │   ├── useTable.ts
-│   │   │   ├── useForm.ts
-│   │   │   ├── useDebounce.ts
-│   │   │   ├── useLocalStorage.ts
-│   │   │   └── useNotification.ts
-│   │   │
-│   │   ├── utils/
-│   │   │   ├── api/
-│   │   │   │   ├── axios.config.ts
-│   │   │   │   └── interceptors.ts
-│   │   │   ├── formatters/
-│   │   │   │   ├── dateFormatter.ts
-│   │   │   │   ├── numberFormatter.ts
-│   │   │   │   └── currencyFormatter.ts
-│   │   │   ├── validators/
-│   │   │   │   ├── schemas.ts           # Zod schemas
-│   │   │   │   └── customValidators.ts
-│   │   │   ├── constants/
-│   │   │   │   ├── permissions.ts
-│   │   │   │   ├── routes.ts
-│   │   │   │   └── enums.ts
-│   │   │   └── helpers/
-│   │   │       ├── downloadFile.ts
-│   │   │       ├── generatePDF.ts
-│   │   │       └── qrCode.ts
-│   │   │
-│   │   └── types/
-│   │       ├── api.types.ts
-│   │       ├── common.types.ts
-│   │       └── index.ts
-│   │
-│   ├── routes/
-│   │   ├── index.tsx
-│   │   ├── PrivateRoute.tsx
-│   │   ├── PublicRoute.tsx
-│   │   └── routes.config.ts
-│   │
-│   ├── App.tsx
-│   ├── main.tsx
-│   └── vite-env.d.ts
-│
-├── .env.development
-├── .env.production
-├── .eslintrc.json
-├── .prettierrc
-├── tsconfig.json
-├── vite.config.ts
-├── package.json
-└── README.md
+src/
+├── components/          # Reusable UI components
+│   ├── common/          # Generic components (Loadable, etc.)
+│   ├── layout/          # Layout components (MainLayout)
+│   └── auth/            # Auth components (PrivateRoute, AuthRoute)
+├── pages/               # Page components (one folder per feature)
+│   └── [Feature]/
+│       ├── [Feature]List.tsx      # List page
+│       ├── [Feature]Detail.tsx    # Detail page
+│       ├── [Feature]Form.tsx      # Create/Edit form (optional)
+│       └── components/            # Page-specific components
+├── services/            # API service layer
+├── types/               # TypeScript interfaces & types
+├── hooks/               # Custom React hooks
+├── constants/           # Constants, enums, routes, roles
+├── locales/             # i18n translations
+└── App.tsx              # Main app with routes
 ```
 
-## 3. Module Chi Tiết
+---
 
-### 3.1 Authentication Module
-**Chức năng:**
-- Login/Logout
-- Remember me
-- Password reset
-- Session management
-- Token refresh tự động
+## 1. Service Layer Pattern
 
-**State Management:**
-```typescript
-interface AuthState {
-  user: User | null;
-  token: string | null;
-  refreshToken: string | null;
-  isAuthenticated: boolean;
-  loading: boolean;
-  error: string | null;
-  permissions: string[];
-}
-```
+### 1.1 Service Structure (QUAN TRỌNG)
 
-**Components:**
-- `LoginForm`: Form đăng nhập với validation
-- `PasswordReset`: Reset mật khẩu
-- `ProfilePage`: Thông tin cá nhân, đổi mật khẩu
+```tsx
+// services/[feature]Service.ts
+import api from "./api";
+import {
+  FeatureDto,
+  CreateFeatureDto,
+  UpdateFeatureDto,
+  GetFeatureListDto,
+} from "../types/feature";
 
-### 3.2 Test Request Module
-**Chức năng:**
-- Tạo/sửa/xóa phiếu yêu cầu
-- Import từ Excel
-- Đính kèm hình ảnh, tài liệu
-- Tính toán TAT tự động
-- Theo dõi trạng thái
+const BASE_URL = "/api/v1/features";
 
-**Key Components:**
-```typescript
-// TestRequestForm.tsx
-interface TestRequestFormProps {
-  mode: 'create' | 'edit';
-  initialData?: TestRequest;
-  onSubmit: (data: TestRequestInput) => void;
-}
-
-// TestRequestList.tsx
-interface TestRequestListProps {
-  filters?: TestRequestFilters;
-  onView: (id: string) => void;
-  onEdit: (id: string) => void;
-  onDelete: (id: string) => void;
-}
-
-// ExcelImport.tsx
-interface ExcelImportProps {
-  templateUrl: string;
-  onImport: (file: File) => Promise<void>;
-}
-```
-
-### 3.3 Specimen Management Module
-**Chức năng:**
-- Danh sách mẫu với filter, search
-- Chi tiết mẫu
-- Lịch sử di chuyển (timeline)
-- Cập nhật vị trí
-- Quản lý tình trạng mẫu
-
-**Components:**
-- `SpecimenList`: Table với pagination, filter
-- `SpecimenDetail`: Thông tin chi tiết
-- `SpecimenHistory`: Timeline lịch sử
-- `SpecimenLocationMap`: Sơ đồ vị trí lưu mẫu
-
-### 3.4 Laboratory Module
-**Chức năng:**
-- Danh sách công việc được giao
-- Nhận công việc
-- Nhập kết quả (với validation)
-- Biểu diễn kết quả (charts)
-- Duyệt kết quả
-
-**Components:**
-```typescript
-// ResultEntry.tsx
-interface ResultEntryProps {
-  testAssignment: TestAssignment;
-  onSave: (results: TestResult[]) => void;
-}
-
-// ResultChart.tsx
-interface ResultChartProps {
-  data: TestResult[];
-  type: 'line' | 'bar' | 'scatter';
-}
-```
-
-### 3.5 Report Module
-**Chức năng:**
-- Tạo báo cáo từ kết quả
-- Preview báo cáo trước khi phê duyệt
-- Workflow phê duyệt 2 bước
-- Sinh QR code
-- Quét QR code để xác thực
-- Download PDF
-
-**Components:**
-- `ReportForm`: Form tạo báo cáo
-- `ReportPreview`: Xem trước báo cáo
-- `ReportApprovalFlow`: Quy trình phê duyệt
-- `QRCodeGenerator`: Tạo QR code
-- `QRCodeScanner`: Quét QR code
-
-### 3.6 Statistics & Dashboard Module
-**Chức năng:**
-- Dashboard tổng quan theo vai trò
-- Biểu đồ thống kê
-- Export Excel
-- Filter theo ngày, bộ phận, nền mẫu
-
-**Charts:**
-- Số lượng mẫu/phép thử theo thời gian (Line/Bar chart)
-- Phân bố theo nền mẫu (Pie chart)
-- TAT compliance (Gauge chart)
-- Workload theo bộ phận (Bar chart)
-- NCR trends (Line chart)
-
-## 4. State Management với Redux Toolkit
-
-### 4.1 Store Structure
-```typescript
-// app/store.ts
-import { configureStore } from '@reduxjs/toolkit';
-import { setupListeners } from '@reduxjs/toolkit/query';
-
-import authReducer from '@/features/auth/slices/authSlice';
-import uiReducer from '@/shared/slices/uiSlice';
-import { authApi } from '@/features/auth/services/authApi';
-import { testRequestApi } from '@/features/test-requests/services/testRequestApi';
-// ... other APIs
-
-export const store = configureStore({
-  reducer: {
-    auth: authReducer,
-    ui: uiReducer,
-    [authApi.reducerPath]: authApi.reducer,
-    [testRequestApi.reducerPath]: testRequestApi.reducer,
-    // ... other API reducers
-  },
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(
-      authApi.middleware,
-      testRequestApi.middleware,
-      // ... other API middlewares
-    ),
-});
-
-setupListeners(store.dispatch);
-
-export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch;
-```
-
-### 4.2 RTK Query API Services
-```typescript
-// features/test-requests/services/testRequestApi.ts
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-
-export const testRequestApi = createApi({
-  reducerPath: 'testRequestApi',
-  baseQuery: fetchBaseQuery({
-    baseUrl: import.meta.env.VITE_API_URL,
-    prepareHeaders: (headers, { getState }) => {
-      const token = (getState() as RootState).auth.token;
-      if (token) {
-        headers.set('authorization', `Bearer ${token}`);
-      }
-      return headers;
-    },
-  }),
-  tagTypes: ['TestRequest'],
-  endpoints: (builder) => ({
-    getTestRequests: builder.query<TestRequestListResponse, TestRequestFilters>({
-      query: (filters) => ({
-        url: '/test-requests',
-        params: filters,
-      }),
-      providesTags: ['TestRequest'],
-    }),
-    getTestRequest: builder.query<TestRequest, string>({
-      query: (id) => `/test-requests/${id}`,
-      providesTags: (result, error, id) => [{ type: 'TestRequest', id }],
-    }),
-    createTestRequest: builder.mutation<TestRequest, CreateTestRequestInput>({
-      query: (data) => ({
-        url: '/test-requests',
-        method: 'POST',
-        body: data,
-      }),
-      invalidatesTags: ['TestRequest'],
-    }),
-    updateTestRequest: builder.mutation<TestRequest, UpdateTestRequestInput>({
-      query: ({ id, ...data }) => ({
-        url: `/test-requests/${id}`,
-        method: 'PUT',
-        body: data,
-      }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'TestRequest', id }],
-    }),
-    deleteTestRequest: builder.mutation<void, string>({
-      query: (id) => ({
-        url: `/test-requests/${id}`,
-        method: 'DELETE',
-      }),
-      invalidatesTags: ['TestRequest'],
-    }),
-  }),
-});
-
-export const {
-  useGetTestRequestsQuery,
-  useGetTestRequestQuery,
-  useCreateTestRequestMutation,
-  useUpdateTestRequestMutation,
-  useDeleteTestRequestMutation,
-} = testRequestApi;
-```
-
-## 5. Routing & Navigation
-
-### 5.1 Route Configuration
-```typescript
-// routes/routes.config.ts
-export const ROUTES = {
-  HOME: '/',
-  LOGIN: '/login',
-  DASHBOARD: '/dashboard',
-
-  TEST_REQUESTS: {
-    LIST: '/test-requests',
-    CREATE: '/test-requests/create',
-    DETAIL: '/test-requests/:id',
-    EDIT: '/test-requests/:id/edit',
+export const featureService = {
+  // Get list with pagination
+  getList: async (params: GetFeatureListDto): Promise<PagedResultDto<FeatureDto>> => {
+    const response = await api.get<PagedResultDto<FeatureDto>>(BASE_URL, { params });
+    return response.data;
   },
 
-  SPECIMENS: {
-    LIST: '/specimens',
-    DETAIL: '/specimens/:id',
+  // Get single item
+  get: async (id: string): Promise<FeatureDto> => {
+    const response = await api.get<FeatureDto>(`${BASE_URL}/${id}`);
+    return response.data;
   },
 
-  LABORATORY: {
-    WORKBENCH: '/laboratory',
-    ASSIGNMENTS: '/laboratory/assignments',
-    RESULTS: '/laboratory/results',
-    APPROVAL: '/laboratory/approval',
+  // Create
+  create: async (data: CreateFeatureDto): Promise<FeatureDto> => {
+    const response = await api.post<FeatureDto>(BASE_URL, data);
+    return response.data;
   },
 
-  REPORTS: {
-    LIST: '/reports',
-    CREATE: '/reports/create',
-    DETAIL: '/reports/:id',
-    APPROVAL: '/reports/approval',
-    VERIFY: '/reports/verify/:code',
+  // Update
+  update: async (id: string, data: UpdateFeatureDto): Promise<FeatureDto> => {
+    const response = await api.put<FeatureDto>(`${BASE_URL}/${id}`, data);
+    return response.data;
   },
 
-  NCR: {
-    LIST: '/ncr',
-    CREATE: '/ncr/create',
-    DETAIL: '/ncr/:id',
+  // Delete
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`${BASE_URL}/${id}`);
   },
 
-  STATISTICS: {
-    DASHBOARD: '/statistics/dashboard',
-    REPORTS: '/statistics/reports',
+  // Custom action với path parameter
+  approve: async (id: string): Promise<FeatureDto> => {
+    const response = await api.post<FeatureDto>(`${BASE_URL}/${id}/approve`);
+    return response.data;
   },
 
-  SETTINGS: '/settings',
-};
-```
-
-### 5.2 Protected Routes
-```typescript
-// routes/PrivateRoute.tsx
-import { Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from '@/features/auth/hooks/useAuth';
-
-interface PrivateRouteProps {
-  requiredPermissions?: string[];
-}
-
-export const PrivateRoute: React.FC<PrivateRouteProps> = ({
-  requiredPermissions
-}) => {
-  const { isAuthenticated, hasPermissions } = useAuth();
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (requiredPermissions && !hasPermissions(requiredPermissions)) {
-    return <Navigate to="/unauthorized" replace />;
-  }
-
-  return <Outlet />;
-};
-```
-
-## 6. Form Management với React Hook Form + Zod
-
-### 6.1 Validation Schema
-```typescript
-// features/test-requests/schemas/testRequest.schema.ts
-import { z } from 'zod';
-
-export const testRequestSchema = z.object({
-  customerId: z.string().min(1, 'Vui lòng chọn khách hàng'),
-  sampleName: z.string().min(1, 'Vui lòng nhập tên mẫu'),
-  sampleMatrix: z.string().min(1, 'Vui lòng chọn nền mẫu'),
-  receivedDate: z.date(),
-  requestedTests: z.array(z.object({
-    testMethodId: z.string(),
-    parameters: z.array(z.string()).min(1, 'Chọn ít nhất 1 thông số'),
-  })).min(1, 'Chọn ít nhất 1 phép thử'),
-  attachments: z.array(z.object({
-    fileName: z.string(),
-    fileUrl: z.string().url(),
-  })).optional(),
-});
-
-export type TestRequestFormData = z.infer<typeof testRequestSchema>;
-```
-
-### 6.2 Form Component
-```typescript
-// features/test-requests/components/TestRequestForm.tsx
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-
-export const TestRequestForm: React.FC<TestRequestFormProps> = ({
-  onSubmit,
-  initialData
-}) => {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-    control,
-  } = useForm<TestRequestFormData>({
-    resolver: zodResolver(testRequestSchema),
-    defaultValues: initialData,
-  });
-
-  return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      {/* Form fields */}
-    </form>
-  );
-};
-```
-
-## 7. UI/UX Guidelines
-
-### 7.1 Responsive Design
-- Mobile-first approach
-- Breakpoints:
-  - Mobile: < 768px
-  - Tablet: 768px - 1024px
-  - Desktop: > 1024px
-
-### 7.2 Theme & Styling
-```typescript
-// theme.config.ts
-export const theme = {
-  colors: {
-    primary: '#1890ff',
-    success: '#52c41a',
-    warning: '#faad14',
-    error: '#f5222d',
-    info: '#1890ff',
-  },
-  fonts: {
-    body: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-    heading: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-  },
-  spacing: {
-    xs: '4px',
-    sm: '8px',
-    md: '16px',
-    lg: '24px',
-    xl: '32px',
+  // Lookup - Handle cả array và { items: [] } response từ ABP
+  getLookup: async (filterParam?: string): Promise<LookupDto[]> => {
+    const response = await api.get<LookupDto[] | { items: LookupDto[] }>(
+      `${BASE_URL}/lookup`,
+      { params: filterParam ? { filter: filterParam } : undefined }
+    );
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+    return response.data?.items || [];
   },
 };
 ```
 
-### 7.3 Accessibility
-- ARIA labels
-- Keyboard navigation
-- Screen reader support
-- Color contrast compliance (WCAG AA)
+---
 
-### 7.4 User Preferences
-- Lưu layout preferences (sidebar collapsed/expanded)
-- Table column visibility
-- Default filters
-- Theme preference (light/dark)
+## 2. Types Pattern
 
-## 8. Performance Optimization
+### 2.1 DTO Structure
 
-### 8.1 Code Splitting
-```typescript
-// Lazy load routes
-const TestRequestListPage = lazy(() =>
-  import('@/features/test-requests/pages/TestRequestListPage')
-);
+```tsx
+// types/[feature].ts
 
-// Suspense wrapper
-<Suspense fallback={<Loading />}>
-  <TestRequestListPage />
-</Suspense>
-```
+// Base DTO (response from API)
+export interface FeatureDto {
+  id: string;
+  name: string;
+  code: string;
+  status: FeatureStatus;
+  createdAt: string;
 
-### 8.2 Memoization
-```typescript
-// useMemo for expensive calculations
-const filteredData = useMemo(() =>
-  data.filter(item => item.status === 'active'),
-  [data]
-);
-
-// useCallback for event handlers
-const handleDelete = useCallback((id: string) => {
-  // delete logic
-}, []);
-```
-
-### 8.3 Virtual Scrolling
-- Sử dụng react-window cho danh sách lớn
-- Pagination cho tables
-- Infinite scroll cho feeds
-
-## 9. Internationalization (i18n)
-
-### 9.1 Translation Files
-```json
-// public/locales/vi/translation.json
-{
-  "common": {
-    "save": "Lưu",
-    "cancel": "Hủy",
-    "delete": "Xóa",
-    "edit": "Sửa",
-    "create": "Tạo mới"
-  },
-  "testRequest": {
-    "title": "Phiếu yêu cầu thử nghiệm",
-    "create": "Tạo phiếu yêu cầu",
-    "list": "Danh sách yêu cầu"
-  }
+  // Role flags - Backend tính toán dựa trên CurrentUser
+  isCurrentUserOwner?: boolean;
+  isCurrentUserApprover?: boolean;
+  canEdit?: boolean;
 }
-```
 
-### 9.2 Usage
-```typescript
-import { useTranslation } from 'react-i18next';
+// Create DTO
+export interface CreateFeatureDto {
+  name: string;
+  code: string;
+}
 
-const Component = () => {
-  const { t } = useTranslation();
+// Update DTO (partial)
+export interface UpdateFeatureDto {
+  name?: string;
+  code?: string;
+  status?: FeatureStatus;
+}
 
-  return <h1>{t('testRequest.title')}</h1>;
+// List filter DTO - match với backend GetListDto
+export interface GetFeatureListDto {
+  skipCount?: number;
+  maxResultCount?: number;
+  search?: string;
+  status?: FeatureStatus;
+  sorting?: string;
+}
+
+// Enum - match với backend enum
+export enum FeatureStatus {
+  Draft = 0,
+  Pending = 1,
+  Approved = 2,
+  Rejected = 3,
+}
+
+// Status Labels (Vietnamese)
+export const FeatureStatusLabels: Record<FeatureStatus, string> = {
+  [FeatureStatus.Draft]: "Nháp",
+  [FeatureStatus.Pending]: "Chờ duyệt",
+  [FeatureStatus.Approved]: "Đã duyệt",
+  [FeatureStatus.Rejected]: "Từ chối",
 };
-```
 
-## 10. Error Handling
+// Status Colors (Ant Design tag colors)
+export const FeatureStatusColors: Record<FeatureStatus, string> = {
+  [FeatureStatus.Draft]: "default",
+  [FeatureStatus.Pending]: "processing",
+  [FeatureStatus.Approved]: "success",
+  [FeatureStatus.Rejected]: "error",
+};
 
-### 10.1 Error Boundary
-```typescript
-// shared/components/common/ErrorBoundary.tsx
-class ErrorBoundary extends React.Component {
-  componentDidCatch(error, errorInfo) {
-    // Log error to monitoring service
-    console.error(error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return <ErrorPage />;
-    }
-    return this.props.children;
-  }
+// Lookup DTO
+export interface FeatureLookupDto {
+  id: string;
+  name: string;
+  displayName?: string;
 }
 ```
 
-### 10.2 API Error Handling
-```typescript
-// Axios interceptor
-axios.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Redirect to login
-    }
-    if (error.response?.status === 403) {
-      // Show permission error
-    }
-    if (error.response?.status >= 500) {
-      // Show server error
-    }
-    return Promise.reject(error);
-  }
-);
-```
+### 2.2 Common Types
 
-## 11. Testing Strategy
+```tsx
+// types/common.ts
 
-### 11.1 Unit Tests
-```typescript
-// features/test-requests/components/TestRequestForm.test.tsx
-import { render, screen, fireEvent } from '@testing-library/react';
-import { TestRequestForm } from './TestRequestForm';
-
-describe('TestRequestForm', () => {
-  it('validates required fields', async () => {
-    render(<TestRequestForm onSubmit={jest.fn()} />);
-
-    fireEvent.click(screen.getByText('Lưu'));
-
-    expect(await screen.findByText('Vui lòng chọn khách hàng')).toBeInTheDocument();
-  });
-});
-```
-
-### 11.2 Integration Tests
-- Test API calls với MSW (Mock Service Worker)
-- Test Redux state changes
-- Test navigation flows
-
-### 11.3 E2E Tests (Playwright/Cypress)
-- Critical user journeys
-- Create test request → Lab work → Report approval → Customer delivery
-
-## 12. Security Measures
-
-### 12.1 XSS Prevention
-- Sanitize user input
-- Use dangerouslySetInnerHTML carefully
-- Content Security Policy headers
-
-### 12.2 CSRF Protection
-- CSRF tokens trong forms
-- SameSite cookies
-
-### 12.3 Secure Storage
-- Token storage trong httpOnly cookies (nếu có thể)
-- Sensitive data không lưu trong localStorage
-- Encrypt sensitive data trước khi lưu
-
-## 13. Build & Deployment
-
-### 13.1 Environment Variables
-```bash
-# .env.development
-VITE_API_URL=http://localhost:5000/api
-VITE_APP_NAME=Lab Specimen Management
-
-# .env.production
-VITE_API_URL=https://api.labmanagement.vn/api
-VITE_APP_NAME=Lab Specimen Management
-```
-
-### 13.2 Build Configuration
-```typescript
-// vite.config.ts
-export default defineConfig({
-  plugins: [react()],
-  build: {
-    outDir: 'dist',
-    sourcemap: false,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          redux: ['@reduxjs/toolkit', 'react-redux'],
-          ui: ['antd'],
-        },
-      },
-    },
-  },
-});
-```
-
-### 13.3 Deployment
-- Docker container
-- Nginx reverse proxy
-- CI/CD pipeline (GitHub Actions)
-- Automated testing before deploy
-
-## 14. Monitoring & Analytics
-
-### 14.1 Error Tracking
-- Sentry integration
-- Custom error reporting
-
-### 14.2 Performance Monitoring
-- Web Vitals tracking
-- Lighthouse scores
-- Bundle size monitoring
-
-### 14.3 User Analytics
-- User behavior tracking
-- Feature usage statistics
-- Performance metrics
-
-## 15. Development Workflow
-
-### 15.1 Git Workflow
-- Feature branches
-- Pull requests with code review
-- Conventional commits
-
-### 15.2 Code Quality Tools
-```json
-// .eslintrc.json
-{
-  "extends": [
-    "eslint:recommended",
-    "plugin:react/recommended",
-    "plugin:@typescript-eslint/recommended"
-  ],
-  "rules": {
-    "no-console": "warn",
-    "react/prop-types": "off"
-  }
+// ABP Paged result
+export interface PagedResultDto<T> {
+  items: T[];
+  totalCount: number;
 }
-```
 
-### 15.3 Pre-commit Hooks
-```json
-// package.json
-{
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged"
-    }
-  },
-  "lint-staged": {
-    "*.{ts,tsx}": ["eslint --fix", "prettier --write"]
-  }
+// ABP List result (non-paged)
+export interface ListResultDto<T> {
+  items: T[];
+}
+
+// User lookup (chuẩn cho tất cả user dropdowns)
+export interface UserLookupDto {
+  id: string;
+  userName: string;
+  name?: string;
+  surname?: string;
+  displayName: string;
+  email?: string;
+  phoneNumber?: string;
+  isActive: boolean;
 }
 ```
 
 ---
 
-**Document Version:** 1.0
-**Last Updated:** 2025-12-10
-**Author:** Development Team
-**Status:** Draft
+## 3. Page Component Patterns
+
+### 3.1 List Page Structure
+
+```tsx
+// pages/[Feature]/[Feature]List.tsx
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { Card, Table, Button, Space, message } from "antd";
+import type { ColumnsType } from "antd/es/table";
+import { featureService } from "../../services/featureService";
+import { FeatureDto, FeatureStatus, FeatureStatusLabels } from "../../types/feature";
+import { PATH_ROUTES } from "../../constants";
+
+const FeatureList: React.FC = () => {
+  const navigate = useNavigate();
+
+  // State
+  const [data, setData] = useState<FeatureDto[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 20,
+    total: 0,
+  });
+
+  // Load data với useCallback
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const result = await featureService.getList({
+        skipCount: (pagination.current - 1) * pagination.pageSize,
+        maxResultCount: pagination.pageSize,
+      });
+      setData(result.items);
+      setPagination(prev => {
+        if (prev.total === result.totalCount) return prev;
+        return { ...prev, total: result.totalCount };
+      });
+    } catch (error) {
+      console.error("Failed to load:", error);
+      message.error("Không thể tải dữ liệu");
+    } finally {
+      setLoading(false);
+    }
+  }, [pagination.current, pagination.pageSize]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Columns với useMemo
+  const columns: ColumnsType<FeatureDto> = useMemo(() => [
+    {
+      title: "Tên",
+      dataIndex: "name",
+      key: "name",
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      render: (status: FeatureStatus) => FeatureStatusLabels[status],
+    },
+    {
+      title: "Thao tác",
+      key: "actions",
+      render: (_, record) => (
+        <Button onClick={() => navigate(PATH_ROUTES.feature.detail(record.id))}>
+          Chi tiết
+        </Button>
+      ),
+    },
+  ], [navigate]);
+
+  return (
+    <Card title="Danh sách">
+      <Table
+        columns={columns}
+        dataSource={data}
+        loading={loading}
+        rowKey="id"
+        pagination={{
+          ...pagination,
+          showSizeChanger: true,
+          showTotal: (total) => `Tổng ${total} bản ghi`,
+        }}
+        onChange={(p) => setPagination(prev => ({
+          ...prev,
+          current: p.current || 1,
+          pageSize: p.pageSize || 20,
+        }))}
+      />
+    </Card>
+  );
+};
+
+export default FeatureList;
+```
+
+### 3.2 Detail Page Structure
+
+```tsx
+// pages/[Feature]/[Feature]Detail.tsx
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Card, Spin, Button, message } from "antd";
+import { ArrowLeftOutlined } from "@ant-design/icons";
+import { featureService } from "../../services/featureService";
+import { FeatureDto } from "../../types/feature";
+import { PATH_ROUTES } from "../../constants";
+import { ROLES } from "../../constants/roles";
+
+const FeatureDetail: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+
+  const [data, setData] = useState<FeatureDto | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Check admin role
+  const isAdmin = useMemo(() => {
+    try {
+      const userInfoStr = localStorage.getItem("user_info");
+      if (!userInfoStr) return false;
+      const userInfo = JSON.parse(userInfoStr);
+      return userInfo.roles?.includes(ROLES.ADMIN) ?? false;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  // Permission check: sử dụng flag từ backend + admin
+  const canEdit = useMemo(() => {
+    return isAdmin || data?.isCurrentUserOwner || data?.canEdit;
+  }, [isAdmin, data]);
+
+  const loadData = useCallback(async () => {
+    if (!id) return;
+    setLoading(true);
+    try {
+      const result = await featureService.get(id);
+      setData(result);
+    } catch (error) {
+      console.error("Failed to load:", error);
+      message.error("Không thể tải dữ liệu");
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  if (loading) {
+    return <Spin size="large" />;
+  }
+
+  if (!data) {
+    return <div>Không tìm thấy dữ liệu</div>;
+  }
+
+  return (
+    <div>
+      <Button
+        icon={<ArrowLeftOutlined />}
+        onClick={() => navigate(PATH_ROUTES.feature.index)}
+        style={{ marginBottom: 16 }}
+      >
+        Quay lại
+      </Button>
+
+      <Card title="Chi tiết">
+        {/* Content */}
+
+        {/* Conditional button based on permission */}
+        {canEdit && (
+          <Button type="primary" onClick={handleEdit}>
+            Chỉnh sửa
+          </Button>
+        )}
+      </Card>
+    </div>
+  );
+};
+
+export default FeatureDetail;
+```
+
+### 3.3 Modal Component Pattern
+
+```tsx
+// pages/[Feature]/components/FeatureModal.tsx
+import React, { useState, useEffect } from "react";
+import { Modal, Form, Input, Select, message, Spin } from "antd";
+import { featureService } from "../../../services/featureService";
+import { FeatureDto, CreateFeatureDto } from "../../../types/feature";
+
+interface FeatureModalProps {
+  open: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+  // Context data (ví dụ: taskId để filter)
+  parentId?: string;
+  // Edit mode
+  initialData?: FeatureDto;
+}
+
+const FeatureModal: React.FC<FeatureModalProps> = ({
+  open,
+  onClose,
+  onSuccess,
+  parentId,
+  initialData,
+}) => {
+  const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
+  const [lookupData, setLookupData] = useState<LookupDto[]>([]);
+  const [loadingLookup, setLoadingLookup] = useState(false);
+
+  // Load lookup data when modal opens
+  useEffect(() => {
+    if (open && parentId) {
+      loadLookupData();
+    }
+  }, [open, parentId]);
+
+  // Reset form when modal opens/closes
+  useEffect(() => {
+    if (open) {
+      if (initialData) {
+        form.setFieldsValue(initialData);
+      } else {
+        form.resetFields();
+      }
+    }
+  }, [open, initialData, form]);
+
+  const loadLookupData = async () => {
+    setLoadingLookup(true);
+    try {
+      const data = await featureService.getLookup(parentId);
+      setLookupData(data);
+    } catch (error) {
+      console.error("Failed to load lookup:", error);
+      message.error("Không thể tải dữ liệu");
+    } finally {
+      setLoadingLookup(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      setLoading(true);
+
+      if (initialData) {
+        await featureService.update(initialData.id, values);
+        message.success("Cập nhật thành công");
+      } else {
+        await featureService.create(values);
+        message.success("Tạo mới thành công");
+      }
+
+      onSuccess();
+      onClose();
+    } catch (error: any) {
+      console.error("Failed:", error);
+      // ABP error format
+      message.error(
+        error.response?.data?.error?.message || "Có lỗi xảy ra"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Modal
+      title={initialData ? "Chỉnh sửa" : "Tạo mới"}
+      open={open}
+      onCancel={onClose}
+      onOk={handleSubmit}
+      confirmLoading={loading}
+      destroyOnClose
+      width={600}
+    >
+      <Form form={form} layout="vertical">
+        <Form.Item
+          name="name"
+          label="Tên"
+          rules={[{ required: true, message: "Vui lòng nhập tên" }]}
+        >
+          <Input placeholder="Nhập tên..." />
+        </Form.Item>
+
+        <Form.Item
+          name="typeId"
+          label="Loại"
+          rules={[{ required: true, message: "Vui lòng chọn loại" }]}
+        >
+          <Select
+            placeholder="Chọn loại..."
+            loading={loadingLookup}
+            options={lookupData.map(item => ({
+              value: item.id,
+              label: item.displayName || item.name,
+            }))}
+            filterOption={(input, option) =>
+              (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
+            }
+            showSearch
+            allowClear
+          />
+        </Form.Item>
+      </Form>
+    </Modal>
+  );
+};
+
+export default FeatureModal;
+```
+
+---
+
+## 4. Authorization Pattern
+
+### 4.1 Backend Role Flags trong DTO
+
+Backend PHẢI return role flags trong DTO để FE control UI:
+
+```tsx
+// Backend DTO
+interface TaskDto {
+  id: string;
+  // ... fields
+
+  // Role flags - Backend tính dựa trên CurrentUser
+  isCurrentUserTechnicalManager?: boolean;  // User là QLKT của task này
+  isCurrentUserSupporter?: boolean;         // User là Supporter
+  canEdit?: boolean;                        // User có quyền edit
+  canApprove?: boolean;                     // User có quyền approve
+}
+```
+
+### 4.2 Frontend Permission Check
+
+```tsx
+// Trong component
+const isAdmin = useMemo(() => {
+  try {
+    const userInfoStr = localStorage.getItem("user_info");
+    if (!userInfoStr) return false;
+    const userInfo = JSON.parse(userInfoStr);
+    return userInfo.roles?.includes(ROLES.ADMIN) ?? false;
+  } catch {
+    return false;
+  }
+}, []);
+
+// Kết hợp backend flag + admin check
+const canManage = isAdmin || task?.isCurrentUserTechnicalManager;
+
+// Render conditional
+return (
+  <>
+    {canManage && (
+      <Button onClick={handleManage}>Quản lý</Button>
+    )}
+  </>
+);
+```
+
+---
+
+## 5. Constants Pattern
+
+### 5.1 Routes
+
+```tsx
+// constants/routes.ts
+export const PATH_ROUTES = {
+  dashboard: "/dashboard",
+
+  // Nested routes với helper functions
+  feature: {
+    index: "/features",
+    create: "/features/create",
+    detail: (id: string) => `/features/${id}`,
+    edit: (id: string) => `/features/edit/${id}`,
+  },
+
+  // Simple routes
+  settings: "/settings",
+};
+```
+
+### 5.2 Roles
+
+```tsx
+// constants/roles.ts
+export const ROLES = {
+  ADMIN: "admin",
+  LAB_TECHNICAL_MANAGER: "LabTechnicalManager",
+  SAMPLE_RECEIVER: "SampleReceiver",
+  QUALITY_MANAGER: "QualityManager",
+  LAB_TECHNICIAN: "LabTechnician",
+} as const;
+
+export type RoleType = (typeof ROLES)[keyof typeof ROLES];
+
+export const ALL_ROLES = Object.values(ROLES);
+
+export const ROLE_DISPLAY_NAMES: Record<string, string> = {
+  [ROLES.ADMIN]: "Quản trị viên",
+  [ROLES.LAB_TECHNICAL_MANAGER]: "Quản lý kỹ thuật",
+  [ROLES.SAMPLE_RECEIVER]: "Bộ phận giao nhận mẫu",
+  [ROLES.QUALITY_MANAGER]: "Quản lý chất lượng",
+  [ROLES.LAB_TECHNICIAN]: "Kỹ thuật viên",
+};
+```
+
+---
+
+## 6. Error Handling Pattern
+
+```tsx
+try {
+  await featureService.create(data);
+  message.success("Tạo mới thành công");
+  onSuccess();
+} catch (error: any) {
+  console.error("Failed:", error);
+
+  // ABP error format
+  const errorMessage =
+    error.response?.data?.error?.message ||
+    error.message ||
+    "Có lỗi xảy ra";
+
+  message.error(errorMessage);
+}
+```
+
+---
+
+## 7. Sidebar Menu Pattern
+
+```tsx
+// MainLayout.tsx - Menu item với roles
+{
+  key: "featureName",
+  icon: <FeatureIcon />,
+  label: menuLabel("Tên chức năng"),
+  onClick: () => navigate(PATH_ROUTES.feature.index),
+  roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],  // Roles được phép
+},
+```
+
+---
+
+## 8. Naming Conventions
+
+| Type | Convention | Example |
+|------|------------|---------|
+| Component File | PascalCase | `FeatureList.tsx` |
+| Service File | camelCase + Service | `featureService.ts` |
+| Type File | camelCase | `feature.ts` |
+| Hook File | camelCase với `use` | `useFeatureData.ts` |
+| Interface/Type | PascalCase + Dto/Props | `FeatureDto`, `FeatureModalProps` |
+| Enum | PascalCase | `FeatureStatus` |
+| Constant | SCREAMING_SNAKE | `BASE_URL`, `ROLES` |
+| Function | camelCase | `loadData`, `handleSubmit` |
+
+---
+
+## 9. Best Practices
+
+1. **useCallback cho functions trong useEffect dependencies**
+2. **useMemo cho expensive computations và derived state**
+3. **Backend handles authorization, FE uses returned flags**
+4. **Handle loading và error states explicitly**
+5. **Vietnamese cho user messages, English cho logs**
+6. **Không import unused dependencies**
+7. **Sử dụng Ant Design components consistently**
+8. **API calls PHẢI ở service layer, KHÔNG trong components**
+9. **Pagination state update cẩn thận để tránh re-render loop**
+10. **Cleanup trong useEffect khi cần (subscriptions, timers)**
+
+---
+
+## 10. File Checklist khi tạo Feature mới
+
+- [ ] `types/[feature].ts` - DTOs, enums, labels, colors
+- [ ] `services/[feature]Service.ts` - API calls
+- [ ] `pages/[Feature]/[Feature]List.tsx` - List page
+- [ ] `pages/[Feature]/[Feature]Detail.tsx` - Detail page
+- [ ] `pages/[Feature]/components/` - Feature-specific modals, tables
+- [ ] `constants/routes.ts` - Thêm routes
+- [ ] `constants/permissions.ts` - Thêm permissions (nếu cần)
+- [ ] `App.tsx` - Thêm Route components
+- [ ] `MainLayout.tsx` - Thêm menu item với roles
+
+---
+
+**Version:** 2.0
+**Updated:** 2025-01-01

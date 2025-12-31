@@ -118,10 +118,11 @@ export const useMasterDataState = () => {
             maxResultCount: 1000,
           });
           break;
-        case "laboratories":
+        case "laboratories": {
           const labItems = await laboratoryService.getAll();
           result = { items: labItems, totalCount: labItems.length };
           break;
+        }
         case "specimenTypes":
           result = await specimenTypeService.getList({
             skipCount,
