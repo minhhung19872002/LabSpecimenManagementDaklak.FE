@@ -85,7 +85,7 @@ const SendToQualityModal: React.FC<SendToQualityModalProps> = ({
   const loadQualityManagers = async () => {
     setLoadingManagers(true);
     try {
-      const managers = await laboratoryTaskService.getQualityManagers();
+      const managers = await laboratoryTaskService.getQualityManagers(taskId);
       setQualityManagers(managers || []);
     } catch (error) {
       console.error("Failed to load quality managers:", error);
