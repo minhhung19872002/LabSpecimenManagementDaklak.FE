@@ -480,7 +480,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
               </Tag>
             );
 
-          case IndicatorApprovalStatus.Entered:
+          case IndicatorApprovalStatus.Entered: {
             // Lấy standardId từ local state hoặc DB
             const selectedStandardIdForApprove = standardSelections[record.id] !== undefined
               ? standardSelections[record.id]
@@ -507,6 +507,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                 </Button>
               </Space>
             );
+          }
 
           case IndicatorApprovalStatus.Approved:
             return (

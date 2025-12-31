@@ -33,6 +33,8 @@ import {
   SafetyCertificateOutlined,
   BarChartOutlined,
   PieChartOutlined,
+  HistoryOutlined,
+  WarningOutlined,
 } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
@@ -277,13 +279,13 @@ const MainLayout: React.FC = () => {
             ROLES.LAB_TECHNICAL_MANAGER,
           ],
         },
-        // {
-        //   key: "reports",
-        //   icon: <BarChartOutlined />,
-        //   label: menuLabel(t("menu.reports")),
-        //   onClick: () => navigate(PATH_ROUTES.reports),
-        //   roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
-        // },
+        {
+          key: "reports",
+          icon: <BarChartOutlined />,
+          label: menuLabel(t("menu.reports")),
+          onClick: () => navigate(PATH_ROUTES.reports),
+          roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
+        },
         {
           key: "statistics",
           icon: <BarChartOutlined />,
@@ -349,6 +351,27 @@ const MainLayout: React.FC = () => {
             ROLES.LAB_TECHNICAL_MANAGER,
             ROLES.LAB_TECHNICIAN,
           ],
+        },
+        {
+          key: "specimenHistories",
+          icon: <HistoryOutlined />,
+          label: menuLabel("Lịch sử lưu mẫu"),
+          onClick: () => navigate(PATH_ROUTES.specimenHistories.index),
+          roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
+        },
+        {
+          key: "ncr",
+          icon: <WarningOutlined />,
+          label: menuLabel("Báo cáo NCR"),
+          onClick: () => navigate(PATH_ROUTES.ncr),
+          roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
+        },
+        {
+          key: "reports",
+          icon: <FileTextOutlined />,
+          label: menuLabel(t("menu.reports")),
+          onClick: () => navigate(PATH_ROUTES.reports),
+          roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
         },
       ],
     },

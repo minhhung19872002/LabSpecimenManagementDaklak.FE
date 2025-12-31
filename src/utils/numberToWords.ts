@@ -63,6 +63,6 @@ export function numberToVietnameseWords(num: number): string {
   }
 
   // Capitalize first letter
-  let result = parts.join(' ').trim() + ' đồng';
+  const result = parts.join(' ').trim() + ' đồng';
   return result.charAt(0).toUpperCase() + result.slice(1);
 }
