@@ -251,11 +251,11 @@ export const laboratoryTaskService = {
   },
 
   /**
-   * Get list of Quality Managers
+   * Get list of Quality Managers (filtered by same department as QLKT of task)
    */
-  getQualityManagers: async (): Promise<UserLookupDto[]> => {
+  getQualityManagers: async (taskId: string): Promise<UserLookupDto[]> => {
     const response = await api.get<UserLookupDto[] | { items: UserLookupDto[] }>(
-      `${BASE_URL}/quality-managers`
+      `${BASE_URL}/${taskId}/quality-managers`
     );
     // Handle both array response and { items: [] } response
     if (Array.isArray(response.data)) {
