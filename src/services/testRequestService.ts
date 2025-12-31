@@ -14,6 +14,13 @@ import {
 
 const BASE_URL = '/api/v1/test-requests';
 
+// Template DTO for result form templates
+export interface TemplateDto {
+  name: string;
+  displayName: string;
+  fileName: string;
+}
+
 // Extended params interface for search and filter
 export interface TestRequestListParams extends PagedAndSortedResultRequestDto {
   search?: string;
@@ -80,11 +87,12 @@ export const testRequestService = {
     return response.data;
   },
 
-  generateBM01ResultForm: async (testRequestId: string, sampleId: string, note?: string): Promise<{ fileName: string; sampleCode: string }> => {
+  generateBM01ResultForm: async (testRequestId: string, sampleId: string, note?: string, templateName?: string): Promise<{ fileName: string; sampleCode: string }> => {
     const response = await api.post<{ fileName: string; sampleCode: string }>('/api/v1/result-forms/generate-bm01', {
       testRequestId,
       sampleId,
-      note
+      note,
+      templateName
     });
     return response.data;
   },
@@ -104,6 +112,12 @@ export const testRequestService = {
     const response = await api.post<{ fileName: string; requestNumber: string; contractNumber: string }>('/api/v1/result-forms/generate-test-request', {
       testRequestId
     });
+    return response.data;
+  },
+
+  // Get available templates for result forms
+  getTemplates: async (): Promise<TemplateDto[]> => {
+    const response = await api.get<TemplateDto[]>('/api/v1/result-forms/templates');
     return response.data;
   },
 
