@@ -18,6 +18,7 @@ import {
   Alert,
   Upload,
   Image,
+  Select,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -35,6 +36,7 @@ import { useTranslation } from "react-i18next";
 import {
   testRequestService,
   SampleForSelectionDto,
+  TemplateDto,
 } from "../../services/testRequestService";
 import {
   TestRequestDto,
@@ -93,6 +95,13 @@ const TestRequestDetail: React.FC = () => {
   const [selectedSampleId, setSelectedSampleId] = useState<string | null>(null);
   const [generatingBM01, setGeneratingBM01] = useState(false);
   const [bm01Note, setBm01Note] = useState<string>("");
+
+  // Template selection states (for BM01 single mode)
+  const [templates, setTemplates] = useState<TemplateDto[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<string | undefined>(
+    undefined
+  );
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
 
   // Mixed Result Modal states (Multiple samples)
   const [mixedResultModalVisible, setMixedResultModalVisible] = useState(false);
@@ -223,24 +232,24 @@ const TestRequestDetail: React.FC = () => {
 
     // Approved - In KQ, Gửi kết quả
     if (data.status === TestRequestStatus.Approved) {
-      buttons.push(
-        <Button
-          key="print-bm01"
-          icon={<FileTextOutlined />}
-          onClick={handleOpenBM01Modal}
-        >
-          In KQ Mẫu đơn
-        </Button>
-      );
-      buttons.push(
-        <Button
-          key="print-mixed"
-          icon={<FileTextOutlined />}
-          onClick={() => handleOpenMixedResultModal()}
-        >
-          In KQ hỗn hợp
-        </Button>
-      );
+      // buttons.push(
+      //   <Button
+      //     key="print-bm01"
+      //     icon={<FileTextOutlined />}
+      //     onClick={handleOpenBM01Modal}
+      //   >
+      //     In KQ
+      //   </Button>
+      // );
+      // buttons.push(
+      //   <Button
+      //     key="print-mixed"
+      //     icon={<FileTextOutlined />}
+      //     onClick={() => handleOpenMixedResultModal()}
+      //   >
+      //     In KQ hỗn hợp
+      //   </Button>
+      // );
       buttons.push(
         <Button
           key="send-result"
@@ -821,6 +830,23 @@ const TestRequestDetail: React.FC = () => {
     setScriptLoaded(false);
   };
 
+  // Load templates for BM01 single result form
+  const loadTemplates = async () => {
+    setLoadingTemplates(true);
+    try {
+      const result = await testRequestService.getTemplates();
+      setTemplates(result);
+      // Set default template (first one)
+      if (result.length > 0) {
+        setSelectedTemplate(result[0].name);
+      }
+    } catch (error) {
+      console.error("Error loading templates:", error);
+    } finally {
+      setLoadingTemplates(false);
+    }
+  };
+
   // Handle BM01 - Open sample selection modal
   const handleOpenBM01Modal = async () => {
     if (!id) return;
@@ -829,9 +855,14 @@ const TestRequestDetail: React.FC = () => {
     setSampleSelectionModalVisible(true);
     setSelectedSampleId(null);
     setBm01Note(""); // Reset note when opening modal
+    setSelectedTemplate(undefined); // Reset template selection
 
     try {
-      const samples = await testRequestService.getSamplesForResultForm(id);
+      // Load samples and templates in parallel
+      const [samples] = await Promise.all([
+        testRequestService.getSamplesForResultForm(id),
+        loadTemplates(),
+      ]);
       setSamplesForSelection(samples);
     } catch (error: any) {
       console.error("Error loading samples:", error);
@@ -882,13 +913,14 @@ const TestRequestDetail: React.FC = () => {
     }
 
     try {
-      // Step 1: Generate the document with optional note
+      // Step 1: Generate the document with optional note and template
       const result = await testRequestService.generateBM01ResultForm(
         id,
         selectedSampleId,
-        bm01Note || undefined
+        bm01Note || undefined,
+        selectedTemplate
       );
-      message.success(`Đã tạo phiếu kết quả BM01 cho mẫu ${result.sampleCode}`);
+      message.success(`Đã tạo phiếu kết quả cho mẫu ${result.sampleCode}`);
 
       // Step 2: Close selection modal
       setSampleSelectionModalVisible(false);
@@ -1720,7 +1752,7 @@ const TestRequestDetail: React.FC = () => {
 
       {/* BM01 Sample Selection Modal */}
       <Modal
-        title="Chọn mẫu để xuất báo cáo BM01"
+        title="Chọn mẫu để xuất báo cáo"
         open={sampleSelectionModalVisible}
         onCancel={() => setSampleSelectionModalVisible(false)}
         width={700}
@@ -1747,6 +1779,28 @@ const TestRequestDetail: React.FC = () => {
         ]}
       >
         <Spin spinning={loadingSamples}>
+          {/* Template selection */}
+          <div style={{ marginTop: 16, marginBottom: 8 }}>
+            <label
+              style={{ display: "block", marginBottom: 8, fontWeight: 500 }}
+            >
+              Chọn biểu mẫu
+            </label>
+            <Select
+              style={{ width: "100%" }}
+              value={selectedTemplate}
+              onChange={setSelectedTemplate}
+              loading={loadingTemplates}
+              placeholder="Chọn biểu mẫu"
+            >
+              {templates.map((template) => (
+                <Select.Option key={template.name} value={template.name}>
+                  {template.displayName}
+                </Select.Option>
+              ))}
+            </Select>
+          </div>
+
           <Table
             dataSource={samplesForSelection}
             columns={sampleSelectionColumns}
