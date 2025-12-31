@@ -106,13 +106,13 @@ export const qualityManagementService = {
   },
 
   // Task Actions
-  printSingleResult: async (taskId: string, indicatorId: string, note?: string): Promise<{ fileName: string }> => {
-    const response = await api.post<{ fileName: string }>(`${BASE_URL}/${taskId}/print-single`, { indicatorId, note });
+  printSingleResult: async (taskId: string, indicatorId: string, note?: string, templateName?: string): Promise<{ fileName: string }> => {
+    const response = await api.post<{ fileName: string }>(`${BASE_URL}/${taskId}/print-single`, { indicatorId, note, templateName });
     return response.data;
   },
 
-  printMixedResult: async (taskId: string, indicatorIds: string[], note?: string): Promise<{ fileName: string }> => {
-    const response = await api.post<{ fileName: string }>(`${BASE_URL}/${taskId}/print-mixed`, { indicatorIds, note });
+  printMixedResult: async (taskId: string, indicatorIds: string[], note?: string, templateName?: string): Promise<{ fileName: string }> => {
+    const response = await api.post<{ fileName: string }>(`${BASE_URL}/${taskId}/print-mixed`, { indicatorIds, note, templateName });
     return response.data;
   },
 
@@ -154,6 +154,18 @@ export const qualityManagementService = {
     );
     return response.data;
   },
+
+  // Templates
+  getTemplates: async (): Promise<TemplateDto[]> => {
+    const response = await api.get<TemplateDto[]>('/api/v1/result-forms/templates');
+    return response.data;
+  },
 };
+
+export interface TemplateDto {
+  name: string;
+  displayName: string;
+  fileName: string;
+}
 
 export default qualityManagementService;

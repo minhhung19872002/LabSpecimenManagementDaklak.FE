@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { Modal, Table, Button, Space, Typography, message, Input } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Modal, Table, Button, Space, Typography, message, Input, Select } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import {
   QualityManagementIndicatorDto,
   QualityIndicatorApprovalStatus,
 } from '../../../types/qualityManagement';
+import { qualityManagementService, TemplateDto } from '../../../services/qualityManagementService';
 
 const { Text } = Typography;
 
@@ -14,7 +15,7 @@ interface PrintModalProps {
   mode: 'single' | 'mixed';
   indicators: QualityManagementIndicatorDto[];
   onCancel: () => void;
-  onPrint: (indicatorIds: string[], note?: string, newTab?: Window | null) => Promise<void>;
+  onPrint: (indicatorIds: string[], note?: string, newTab?: Window | null, templateName?: string) => Promise<void>;
 }
 
 const PrintModal: React.FC<PrintModalProps> = ({
@@ -27,19 +28,48 @@ const PrintModal: React.FC<PrintModalProps> = ({
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [note, setNote] = useState<string>('');
+  const [templates, setTemplates] = useState<TemplateDto[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<string | undefined>(undefined);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
 
   // Get only approved indicators
   const approvedIndicators = indicators.filter(
     (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Approved
   );
 
+  // Load templates when modal opens (only for single mode)
+  useEffect(() => {
+    if (visible && mode === 'single') {
+      loadTemplates();
+    }
+  }, [visible, mode]);
+
+  const loadTemplates = async () => {
+    setLoadingTemplates(true);
+    try {
+      const result = await qualityManagementService.getTemplates();
+      setTemplates(result);
+      // Set default template (first one)
+      if (result.length > 0) {
+        setSelectedTemplate(result[0].name);
+      }
+    } catch (error) {
+      console.error('Error loading templates:', error);
+    } finally {
+      setLoadingTemplates(false);
+    }
+  };
+
   // Reset selection and note when modal opens
-  React.useEffect(() => {
+  useEffect(() => {
     if (visible) {
       setSelectedRowKeys([]);
       setNote('');
+      if (mode !== 'single') {
+        setSelectedTemplate(undefined);
+      }
     }
-  }, [visible]);
+  }, [visible, mode]);
 
   const handlePrint = async () => {
     if (selectedRowKeys.length === 0) {
@@ -76,7 +106,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
 
     setLoading(true);
     try {
-      await onPrint(selectedRowKeys, note || undefined, newTab);
+      await onPrint(selectedRowKeys, note || undefined, newTab, mode === 'single' ? selectedTemplate : undefined);
       setSelectedRowKeys([]);
       setNote('');
     } catch (error) {
@@ -93,6 +123,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
   const handleCancel = () => {
     setSelectedRowKeys([]);
     setNote('');
+    setSelectedTemplate(undefined);
     onCancel();
   };
 
@@ -192,6 +223,28 @@ const PrintModal: React.FC<PrintModalProps> = ({
             : 'Chọn nhiều chỉ tiêu để in kết quả hỗn hợp'}
         </Text>
       </div>
+
+      {/* Template selection - only for single mode */}
+      {mode === 'single' && (
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>
+            Chọn biểu mẫu
+          </label>
+          <Select
+            style={{ width: '100%' }}
+            value={selectedTemplate}
+            onChange={setSelectedTemplate}
+            loading={loadingTemplates}
+            placeholder="Chọn biểu mẫu"
+          >
+            {templates.map((template) => (
+              <Select.Option key={template.name} value={template.name}>
+                {template.displayName}
+              </Select.Option>
+            ))}
+          </Select>
+        </div>
+      )}
 
       {approvedIndicators.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 40 }}>

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   Card,
   Button,
@@ -12,7 +12,7 @@ import {
   Row,
   Col,
   Alert,
-} from 'antd';
+} from "antd";
 import {
   ArrowLeftOutlined,
   PrinterOutlined,
@@ -21,9 +21,9 @@ import {
   CheckCircleOutlined,
   CheckOutlined,
   CloseOutlined,
-} from '@ant-design/icons';
-import dayjs from 'dayjs';
-import { qualityManagementService } from '../../services/qualityManagementService';
+} from "@ant-design/icons";
+import dayjs from "dayjs";
+import { qualityManagementService } from "../../services/qualityManagementService";
 import {
   QualityManagementTaskDto,
   QualityManagementStatus,
@@ -31,11 +31,11 @@ import {
   QualityManagementStatusColors,
   QualityTaskType,
   QualityIndicatorApprovalStatus,
-} from '../../types/qualityManagement';
-import IndicatorTable from './components/IndicatorTable';
-import PrintModal from './components/PrintModal';
-import RejectModal from './components/RejectModal';
-import { PATH_ROUTES } from '../../constants';
+} from "../../types/qualityManagement";
+import IndicatorTable from "./components/IndicatorTable";
+import PrintModal from "./components/PrintModal";
+import RejectModal from "./components/RejectModal";
+import { PATH_ROUTES } from "../../constants";
 
 const { Title } = Typography;
 
@@ -50,9 +50,11 @@ const QualityManagementDetail: React.FC = () => {
 
   // Modals
   const [printModalVisible, setPrintModalVisible] = useState(false);
-  const [printMode, setPrintMode] = useState<'single' | 'mixed'>('single');
+  const [printMode, setPrintMode] = useState<"single" | "mixed">("single");
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
-  const [rejectingIndicatorId, setRejectingIndicatorId] = useState<string | null>(null);
+  const [rejectingIndicatorId, setRejectingIndicatorId] = useState<
+    string | null
+  >(null);
   const [bulkRejectModalVisible, setBulkRejectModalVisible] = useState(false);
 
   // Action states
@@ -68,8 +70,8 @@ const QualityManagementDetail: React.FC = () => {
       const result = await qualityManagementService.get(id);
       setTask(result);
     } catch (error) {
-      console.error('Error loading task:', error);
-      message.error('Không thể tải dữ liệu');
+      console.error("Error loading task:", error);
+      message.error("Không thể tải dữ liệu");
     } finally {
       setLoading(false);
     }
@@ -87,11 +89,11 @@ const QualityManagementDetail: React.FC = () => {
   const handleApproveIndicator = async (indicatorId: string) => {
     try {
       await qualityManagementService.approveIndicator(indicatorId);
-      message.success('Đã duyệt chỉ tiêu');
+      message.success("Đã duyệt chỉ tiêu");
       loadData();
     } catch (error) {
-      console.error('Error approving indicator:', error);
-      message.error('Không thể duyệt chỉ tiêu');
+      console.error("Error approving indicator:", error);
+      message.error("Không thể duyệt chỉ tiêu");
     }
   };
 
@@ -103,13 +105,16 @@ const QualityManagementDetail: React.FC = () => {
   const handleRejectConfirm = async (reason: string) => {
     if (!rejectingIndicatorId) return;
     try {
-      await qualityManagementService.rejectIndicator(rejectingIndicatorId, reason);
-      message.success('Đã từ chối chỉ tiêu');
+      await qualityManagementService.rejectIndicator(
+        rejectingIndicatorId,
+        reason
+      );
+      message.success("Đã từ chối chỉ tiêu");
       setRejectModalVisible(false);
       setRejectingIndicatorId(null);
       loadData();
     } catch (error) {
-      console.error('Error rejecting indicator:', error);
+      console.error("Error rejecting indicator:", error);
       throw error;
     }
   };
@@ -117,12 +122,14 @@ const QualityManagementDetail: React.FC = () => {
   // Bulk approve handlers
   const handleBulkApprove = async () => {
     if (selectedPendingIds.length === 0) {
-      message.warning('Vui lòng chọn ít nhất một chỉ tiêu để duyệt');
+      message.warning("Vui lòng chọn ít nhất một chỉ tiêu để duyệt");
       return;
     }
     setBulkApproving(true);
     try {
-      const result = await qualityManagementService.bulkApproveIndicators(selectedPendingIds);
+      const result = await qualityManagementService.bulkApproveIndicators(
+        selectedPendingIds
+      );
       if (result.successCount > 0) {
         message.success(`Đã duyệt ${result.successCount} chỉ tiêu`);
       }
@@ -132,8 +139,8 @@ const QualityManagementDetail: React.FC = () => {
       setSelectedPendingIds([]);
       loadData();
     } catch (error) {
-      console.error('Error bulk approving indicators:', error);
-      message.error('Không thể duyệt chỉ tiêu');
+      console.error("Error bulk approving indicators:", error);
+      message.error("Không thể duyệt chỉ tiêu");
     } finally {
       setBulkApproving(false);
     }
@@ -141,7 +148,7 @@ const QualityManagementDetail: React.FC = () => {
 
   const handleBulkRejectClick = () => {
     if (selectedPendingIds.length === 0) {
-      message.warning('Vui lòng chọn ít nhất một chỉ tiêu để từ chối');
+      message.warning("Vui lòng chọn ít nhất một chỉ tiêu để từ chối");
       return;
     }
     setBulkRejectModalVisible(true);
@@ -150,7 +157,10 @@ const QualityManagementDetail: React.FC = () => {
   const handleBulkRejectConfirm = async (reason: string) => {
     setBulkRejecting(true);
     try {
-      const result = await qualityManagementService.bulkRejectIndicators(selectedPendingIds, reason);
+      const result = await qualityManagementService.bulkRejectIndicators(
+        selectedPendingIds,
+        reason
+      );
       if (result.successCount > 0) {
         message.success(`Đã từ chối ${result.successCount} chỉ tiêu`);
       }
@@ -161,7 +171,7 @@ const QualityManagementDetail: React.FC = () => {
       setSelectedPendingIds([]);
       loadData();
     } catch (error) {
-      console.error('Error bulk rejecting indicators:', error);
+      console.error("Error bulk rejecting indicators:", error);
       throw error;
     } finally {
       setBulkRejecting(false);
@@ -169,44 +179,59 @@ const QualityManagementDetail: React.FC = () => {
   };
 
   const handlePrintSingle = () => {
-    setPrintMode('single');
+    setPrintMode("single");
     setPrintModalVisible(true);
   };
 
   const handlePrintMixed = () => {
-    setPrintMode('mixed');
+    setPrintMode("mixed");
     setPrintModalVisible(true);
   };
 
-  const handlePrint = async (indicatorIds: string[], note?: string, newTab?: Window | null) => {
+  const handlePrint = async (
+    indicatorIds: string[],
+    note?: string,
+    newTab?: Window | null
+  ) => {
     if (!task) return;
     try {
       let result: { fileName: string };
-      if (printMode === 'single') {
-        result = await qualityManagementService.printSingleResult(task.id, indicatorIds[0], note);
+      if (printMode === "single") {
+        result = await qualityManagementService.printSingleResult(
+          task.id,
+          indicatorIds[0],
+          note
+        );
       } else {
-        result = await qualityManagementService.printMixedResult(task.id, indicatorIds, note);
+        result = await qualityManagementService.printMixedResult(
+          task.id,
+          indicatorIds,
+          note
+        );
       }
-      message.success('Đã tạo phiếu kết quả');
+      message.success("Đã tạo phiếu kết quả");
       setPrintModalVisible(false);
 
       // Navigate the already-opened tab to PDF URL (or open new if no tab was passed)
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://localhost:51611';
-      const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(result.fileName)}`;
+      const API_BASE_URL =
+        import.meta.env.VITE_API_BASE_URL || "https://localhost:51611";
+      const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(
+        result.fileName
+      )}`;
       if (newTab) {
         newTab.location.href = pdfUrl;
       } else {
-        window.open(pdfUrl, '_blank');
+        window.open(pdfUrl, "_blank");
       }
 
       loadData();
     } catch (error) {
-      console.error('Error printing:', error);
+      console.error("Error printing:", error);
       // Close the blank tab if there was an error
       if (newTab) {
         newTab.close();
       }
-      message.error('Không thể in kết quả');
+      message.error("Không thể in kết quả");
     }
   };
 
@@ -215,11 +240,11 @@ const QualityManagementDetail: React.FC = () => {
     setSendingResult(true);
     try {
       await qualityManagementService.sendResult(task.id);
-      message.success('Đã gửi kết quả');
+      message.success("Đã gửi kết quả");
       loadData();
     } catch (error) {
-      console.error('Error sending result:', error);
-      message.error('Không thể gửi kết quả');
+      console.error("Error sending result:", error);
+      message.error("Không thể gửi kết quả");
     } finally {
       setSendingResult(false);
     }
@@ -231,7 +256,8 @@ const QualityManagementDetail: React.FC = () => {
     (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Approved
   ).length;
   const pendingCount = indicators.filter(
-    (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.PendingApproval
+    (ind) =>
+      ind.approvalStatus === QualityIndicatorApprovalStatus.PendingApproval
   ).length;
   const rejectedCount = indicators.filter(
     (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Rejected
@@ -243,14 +269,17 @@ const QualityManagementDetail: React.FC = () => {
 
   // Status tag
   const getStatusTag = (status: QualityManagementStatus) => (
-    <Tag color={QualityManagementStatusColors[status]} style={{ fontSize: 14, padding: '4px 12px' }}>
+    <Tag
+      color={QualityManagementStatusColors[status]}
+      style={{ fontSize: 14, padding: "4px 12px" }}
+    >
       {QualityManagementStatusLabels[status]}
     </Tag>
   );
 
   if (loading && !task) {
     return (
-      <div style={{ padding: 24, textAlign: 'center' }}>
+      <div style={{ padding: 24, textAlign: "center" }}>
         <Spin size="large" />
       </div>
     );
@@ -294,7 +323,7 @@ const QualityManagementDetail: React.FC = () => {
                 onClick={handlePrintSingle}
                 disabled={!canPrint}
               >
-                In KQ Đơn
+                In KQ
               </Button>
               <Button
                 icon={<PrinterOutlined />}
@@ -320,20 +349,36 @@ const QualityManagementDetail: React.FC = () => {
       {/* Task Info */}
       <Card size="small" style={{ marginBottom: 16 }}>
         <Descriptions column={4} size="small">
-          <Descriptions.Item label="Khách hàng">{task.customerName || '-'}</Descriptions.Item>
-          <Descriptions.Item label="Tổng mẫu">{task.totalSampleCount}</Descriptions.Item>
-          <Descriptions.Item label="Tổng chỉ tiêu">{task.totalIndicatorCount}</Descriptions.Item>
-          <Descriptions.Item label="Khoa phòng">{task.laboratoryNames || '-'}</Descriptions.Item>
+          <Descriptions.Item label="Khách hàng">
+            {task.customerName || "-"}
+          </Descriptions.Item>
+          <Descriptions.Item label="Tổng mẫu">
+            {task.totalSampleCount}
+          </Descriptions.Item>
+          <Descriptions.Item label="Tổng chỉ tiêu">
+            {task.totalIndicatorCount}
+          </Descriptions.Item>
+          <Descriptions.Item label="Khoa phòng">
+            {task.laboratoryNames || "-"}
+          </Descriptions.Item>
           <Descriptions.Item label="Ngày chuyển đi">
-            {task.transferDate ? dayjs(task.transferDate).format('DD/MM/YYYY') : '-'}
+            {task.transferDate
+              ? dayjs(task.transferDate).format("DD/MM/YYYY")
+              : "-"}
           </Descriptions.Item>
           <Descriptions.Item label="Ngày YC xong">
-            {task.requestCompletionDate ? dayjs(task.requestCompletionDate).format('DD/MM/YYYY') : '-'}
+            {task.requestCompletionDate
+              ? dayjs(task.requestCompletionDate).format("DD/MM/YYYY")
+              : "-"}
           </Descriptions.Item>
           <Descriptions.Item label="Ngày gửi KQ">
-            {task.resultSentDate ? dayjs(task.resultSentDate).format('DD/MM/YYYY') : '-'}
+            {task.resultSentDate
+              ? dayjs(task.resultSentDate).format("DD/MM/YYYY")
+              : "-"}
           </Descriptions.Item>
-          <Descriptions.Item label="QLKT">{task.technicalManagerNames || '-'}</Descriptions.Item>
+          <Descriptions.Item label="QLKT">
+            {task.technicalManagerNames || "-"}
+          </Descriptions.Item>
         </Descriptions>
       </Card>
 
@@ -345,7 +390,9 @@ const QualityManagementDetail: React.FC = () => {
               <Space>
                 <Tag color="warning">{pendingCount} Chờ duyệt</Tag>
                 <Tag color="success">{approvedCount} Đã duyệt</Tag>
-                {rejectedCount > 0 && <Tag color="error">{rejectedCount} Từ chối</Tag>}
+                {rejectedCount > 0 && (
+                  <Tag color="error">{rejectedCount} Từ chối</Tag>
+                )}
               </Space>
             </Col>
             <Col>
@@ -358,7 +405,10 @@ const QualityManagementDetail: React.FC = () => {
                   loading={bulkRejecting}
                   disabled={selectedPendingIds.length === 0}
                 >
-                  Từ chối {selectedPendingIds.length > 0 ? `(${selectedPendingIds.length})` : ''}
+                  Từ chối{" "}
+                  {selectedPendingIds.length > 0
+                    ? `(${selectedPendingIds.length})`
+                    : ""}
                 </Button>
                 <Button
                   type="primary"
@@ -367,7 +417,10 @@ const QualityManagementDetail: React.FC = () => {
                   loading={bulkApproving}
                   disabled={selectedPendingIds.length === 0}
                 >
-                  Duyệt {selectedPendingIds.length > 0 ? `(${selectedPendingIds.length})` : ''}
+                  Duyệt{" "}
+                  {selectedPendingIds.length > 0
+                    ? `(${selectedPendingIds.length})`
+                    : ""}
                 </Button>
               </Space>
             </Col>
@@ -380,7 +433,7 @@ const QualityManagementDetail: React.FC = () => {
                   message="Tất cả chỉ tiêu đã được duyệt"
                   showIcon
                   icon={<CheckCircleOutlined />}
-                  style={{ padding: '4px 12px' }}
+                  style={{ padding: "4px 12px" }}
                 />
               </Col>
             </Row>
