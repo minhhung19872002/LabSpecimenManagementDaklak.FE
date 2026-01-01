@@ -1,9 +1,9 @@
 // @ts-nocheck
 import React from "react";
 import { Row, Col, Button, Popconfirm, Typography, Tooltip } from "antd";
-import dayjs from "dayjs";
 import type { SampleStorageItemDto } from "../../../types/sampleStorage";
 import { SampleStorageStatus } from "../../../types/sampleStorage";
+import { formatDate } from "../../../utils/formatters";
 
 const { Text } = Typography;
 
@@ -20,9 +20,6 @@ const SampleCard: React.FC<SampleCardProps> = ({
 }) => {
   const showCancelButton =
     parentStatus === SampleStorageStatus.PendingDisposal && !sample.isCancelled;
-
-  const formatDate = (date: string | null) =>
-    date ? dayjs(date).format("DD/MM/YYYY") : "-";
 
   const InfoItem: React.FC<{ label: string; value: React.ReactNode }> = ({
     label,

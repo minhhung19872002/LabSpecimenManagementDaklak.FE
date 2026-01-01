@@ -22,7 +22,7 @@ import {
   SampleStorageStatusColors,
 } from "../../types/sampleStorage";
 import SampleStorageDetailModal from "./components/SampleStorageDetailModal";
-import dayjs from "dayjs";
+import { formatDate } from "../../utils/formatters";
 import "./SpecimenList.css";
 
 const SpecimenList: React.FC = () => {
@@ -107,9 +107,6 @@ const SpecimenList: React.FC = () => {
       {SampleStorageStatusLabels[status]}
     </Tag>
   );
-
-  const formatDate = (date: string | null) =>
-    date ? dayjs(date).format("DD/MM/YYYY") : "-";
 
   const columns: ColumnsType<SampleStorageDto> = [
     {
