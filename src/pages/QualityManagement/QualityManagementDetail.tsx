@@ -26,6 +26,7 @@ import { qualityManagementService } from "../../services/qualityManagementServic
 import { formatDate } from "../../utils/formatters";
 import {
   QualityManagementTaskDto,
+  QualityManagementIndicatorDto,
   QualityManagementStatus,
   QualityManagementStatusLabels,
   QualityManagementStatusColors,
@@ -62,6 +63,25 @@ const QualityManagementDetail: React.FC = () => {
   const [bulkApproving, setBulkApproving] = useState(false);
   const [bulkRejecting, setBulkRejecting] = useState(false);
 
+  // Helper function to update indicators optimistically
+  const updateIndicatorsOptimistically = useCallback(
+    (
+      indicatorIds: string[],
+      updates: Partial<QualityManagementIndicatorDto>
+    ) => {
+      setTask((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          indicators: prev.indicators?.map((ind) =>
+            indicatorIds.includes(ind.id) ? { ...ind, ...updates } : ind
+          ),
+        };
+      });
+    },
+    []
+  );
+
   // Load data
   const loadData = useCallback(async () => {
     if (!id) return;
@@ -77,6 +97,18 @@ const QualityManagementDetail: React.FC = () => {
     }
   }, [id]);
 
+  // Reload full data from server (preserving UI states like selection)
+  const reloadData = useCallback(async () => {
+    if (!id) return;
+    try {
+      const result = await qualityManagementService.get(id);
+      setTask(result);
+      // Note: selectedPendingIds is NOT reset
+    } catch (error) {
+      console.error("Failed to reload data:", error);
+    }
+  }, [id]);
+
   useEffect(() => {
     loadData();
   }, [loadData]);
@@ -89,11 +121,23 @@ const QualityManagementDetail: React.FC = () => {
   const handleApproveIndicator = async (indicatorId: string) => {
     try {
       await qualityManagementService.approveIndicator(indicatorId);
+
+      // Optimistic update: cập nhật approvalStatus thành Approved
+      const now = new Date().toISOString();
+      updateIndicatorsOptimistically([indicatorId], {
+        approvalStatus: QualityIndicatorApprovalStatus.Approved,
+        approvalDate: now,
+      });
+
+      // Reload full data from server (avoid duplicating BE logic for task status)
+      await reloadData();
+
       message.success("Đã duyệt chỉ tiêu");
-      loadData();
     } catch (error) {
       console.error("Error approving indicator:", error);
       message.error("Không thể duyệt chỉ tiêu");
+      // Reload để sync lại với server nếu có lỗi
+      await loadData();
     }
   };
 
@@ -109,12 +153,23 @@ const QualityManagementDetail: React.FC = () => {
         rejectingIndicatorId,
         reason
       );
+
+      // Optimistic update: cập nhật approvalStatus thành Rejected
+      updateIndicatorsOptimistically([rejectingIndicatorId], {
+        approvalStatus: QualityIndicatorApprovalStatus.Rejected,
+        rejectionReason: reason,
+      });
+
+      // Reload full data from server (avoid duplicating BE logic for task status)
+      await reloadData();
+
       message.success("Đã từ chối chỉ tiêu");
       setRejectModalVisible(false);
       setRejectingIndicatorId(null);
-      loadData();
     } catch (error) {
       console.error("Error rejecting indicator:", error);
+      // Reload để sync lại với server nếu có lỗi
+      await loadData();
       throw error;
     }
   };
@@ -130,6 +185,17 @@ const QualityManagementDetail: React.FC = () => {
       const result = await qualityManagementService.bulkApproveIndicators(
         selectedPendingIds
       );
+
+      // Optimistic update: cập nhật approvalStatus thành Approved cho tất cả
+      const now = new Date().toISOString();
+      updateIndicatorsOptimistically(selectedPendingIds, {
+        approvalStatus: QualityIndicatorApprovalStatus.Approved,
+        approvalDate: now,
+      });
+
+      // Reload full data from server (avoid duplicating BE logic for task status)
+      await reloadData();
+
       if (result.successCount > 0) {
         message.success(`Đã duyệt ${result.successCount} chỉ tiêu`);
       }
@@ -137,10 +203,11 @@ const QualityManagementDetail: React.FC = () => {
         message.warning(`${result.failedCount} chỉ tiêu không thể duyệt`);
       }
       setSelectedPendingIds([]);
-      loadData();
     } catch (error) {
       console.error("Error bulk approving indicators:", error);
       message.error("Không thể duyệt chỉ tiêu");
+      // Reload để sync lại với server nếu có lỗi
+      await loadData();
     } finally {
       setBulkApproving(false);
     }
@@ -161,6 +228,16 @@ const QualityManagementDetail: React.FC = () => {
         selectedPendingIds,
         reason
       );
+
+      // Optimistic update: cập nhật approvalStatus thành Rejected cho tất cả
+      updateIndicatorsOptimistically(selectedPendingIds, {
+        approvalStatus: QualityIndicatorApprovalStatus.Rejected,
+        rejectionReason: reason,
+      });
+
+      // Reload full data from server (avoid duplicating BE logic for task status)
+      await reloadData();
+
       if (result.successCount > 0) {
         message.success(`Đã từ chối ${result.successCount} chỉ tiêu`);
       }
@@ -169,9 +246,10 @@ const QualityManagementDetail: React.FC = () => {
       }
       setBulkRejectModalVisible(false);
       setSelectedPendingIds([]);
-      loadData();
     } catch (error) {
       console.error("Error bulk rejecting indicators:", error);
+      // Reload để sync lại với server nếu có lỗi
+      await loadData();
       throw error;
     } finally {
       setBulkRejecting(false);
@@ -240,11 +318,16 @@ const QualityManagementDetail: React.FC = () => {
     setSendingResult(true);
     try {
       await qualityManagementService.sendResult(task.id);
+
+      // Reload full data from server (avoid duplicating BE logic)
+      await reloadData();
+
       message.success("Đã gửi kết quả");
-      loadData();
     } catch (error) {
       console.error("Error sending result:", error);
       message.error("Không thể gửi kết quả");
+      // Reload để sync lại với server nếu có lỗi
+      await loadData();
     } finally {
       setSendingResult(false);
     }

@@ -785,6 +785,122 @@ export const ROLE_DISPLAY_NAMES: Record<string, string> = {
   [ROLES.QUALITY_MANAGER]: "Quản lý chất lượng",
   [ROLES.LAB_TECHNICIAN]: "Kỹ thuật viên",
 };
+
+// Role options cho UI dropdowns/selects (User management)
+export const ROLE_OPTIONS = [
+  { value: "Admin", label: "Quản trị viên", color: "red" },
+  { value: "LabManager", label: "Trưởng phòng TN", color: "purple" },
+  { value: "Technician", label: "Kỹ thuật viên", color: "blue" },
+  { value: "Reviewer", label: "Người duyệt B1", color: "orange" },
+  { value: "Approver", label: "Người duyệt B2", color: "green" },
+  { value: "Viewer", label: "Xem báo cáo", color: "default" },
+] as const;
+```
+
+### 5.3 Storage Keys (QUAN TRỌNG - Tránh Magic Strings)
+
+**KHÔNG BAO GIỜ** dùng magic strings cho localStorage keys. Luôn dùng constants:
+
+```tsx
+// constants/storage.ts
+export const STORAGE_KEYS = {
+  ACCESS_TOKEN: "access_token",
+  REFRESH_TOKEN: "refresh_token",
+  USER_INFO: "user_info",
+  // Work reminder popup state keys
+  WORK_REMINDER_LAST_SHOWN: "workReminderLastShownTime",
+  LAB_TECH_MANAGER_REMINDER_LAST_SHOWN: "labTechManagerReminderLastShownTime",
+  LAB_TECHNICIAN_REMINDER_LAST_SHOWN: "labTechnicianReminderLastShownTime",
+  QUALITY_MANAGER_REMINDER_LAST_SHOWN: "qualityManagerReminderLastShownTime",
+} as const;
+
+export type StorageKeyType = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
+```
+
+**Usage:**
+```tsx
+// ❌ SAI - Magic string
+localStorage.getItem('access_token');
+localStorage.setItem('user_info', JSON.stringify(user));
+
+// ✅ ĐÚNG - Dùng constant
+import { STORAGE_KEYS } from '../constants';
+
+localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+localStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(user));
+```
+
+### 5.4 HTTP Status Codes (QUAN TRỌNG - Tránh Magic Numbers)
+
+**KHÔNG BAO GIỜ** dùng magic numbers cho HTTP status codes. Luôn dùng constants:
+
+```tsx
+// constants/http.ts
+export const HTTP_STATUS = {
+  OK: 200,
+  CREATED: 201,
+  BAD_REQUEST: 400,
+  UNAUTHORIZED: 401,
+  FORBIDDEN: 403,
+  NOT_FOUND: 404,
+  LOCKED: 423,
+  INTERNAL_SERVER_ERROR: 500,
+} as const;
+
+export type HttpStatusType = (typeof HTTP_STATUS)[keyof typeof HTTP_STATUS];
+```
+
+**Usage:**
+```tsx
+// ❌ SAI - Magic number
+if (error.response?.status === 401) { ... }
+if (error.response?.status === 403) { ... }
+
+// ✅ ĐÚNG - Dùng constant
+import { HTTP_STATUS } from '../constants';
+
+if (error.response?.status === HTTP_STATUS.UNAUTHORIZED) { ... }
+if (error.response?.status === HTTP_STATUS.FORBIDDEN) { ... }
+```
+
+### 5.5 Enum Values (QUAN TRỌNG - Tránh Magic Numbers)
+
+**KHÔNG BAO GIỜ** dùng magic numbers cho enum values. Luôn import và dùng enum:
+
+```tsx
+// ❌ SAI - Magic number
+const result = await qualityManagementService.getList({
+  status: 0, // QualityManagementStatus.PendingApproval
+});
+
+// ✅ ĐÚNG - Dùng enum
+import { QualityManagementStatus } from '../../types/qualityManagement';
+
+const result = await qualityManagementService.getList({
+  status: QualityManagementStatus.PendingApproval,
+});
+```
+
+### 5.6 Constants Index Export
+
+Luôn export tất cả constants từ `constants/index.ts`:
+
+```tsx
+// constants/index.ts
+export * from './routes';
+export * from './roles';
+export * from './permissions';
+export * from './storage';
+export * from './http';
+```
+
+**Import pattern:**
+```tsx
+// Import từ index
+import { PATH_ROUTES, ROLES, STORAGE_KEYS, HTTP_STATUS } from '../../constants';
+
+// KHÔNG import trực tiếp từ file con (trừ khi cần thiết)
+// import { ROLES } from '../../constants/roles'; // Tránh
 ```
 
 ---
@@ -1422,8 +1538,9 @@ pages/[Feature]/
 
 ---
 
-**Version:** 4.0
+**Version:** 5.0
 **Updated:** 2026-01-01
 **Changes:**
 - v3.0: Added Container-Presentational Pattern (Section 3)
 - v4.0: Added Custom Hooks Pattern (Section 10), React Hook Form + Yup Pattern (Section 11)
+- v5.0: Added Magic Strings/Numbers Rules (Section 5.3-5.6) - STORAGE_KEYS, HTTP_STATUS, Enum usage

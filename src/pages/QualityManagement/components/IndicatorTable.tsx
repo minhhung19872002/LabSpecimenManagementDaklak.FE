@@ -50,7 +50,7 @@ interface LabGroup {
 
 const IndicatorTable: React.FC<IndicatorTableProps> = ({
   indicators,
-  taskStatus,
+  taskStatus: _taskStatus,
   onApprove,
   onReject,
   onIndicatorUpdate,
