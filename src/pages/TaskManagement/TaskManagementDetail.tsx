@@ -78,6 +78,25 @@ const TaskManagementDetail: React.FC = () => {
   // State
   const [task, setTask] = useState<LaboratoryTaskDto | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Helper function to update indicators optimistically
+  const updateIndicatorsOptimistically = useCallback(
+    (
+      indicatorIds: string[],
+      updates: Partial<LaboratoryTaskIndicatorDto>
+    ) => {
+      setTask((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          indicators: prev.indicators?.map((ind) =>
+            indicatorIds.includes(ind.id) ? { ...ind, ...updates } : ind
+          ),
+        };
+      });
+    },
+    []
+  );
   const [methods, setMethods] = useState<MethodLookupDto[]>([]);
   const [technicians, setTechnicians] = useState<UserLookupDto[]>([]);
   const [activeKeys, setActiveKeys] = useState<string[]>([]);
@@ -165,6 +184,18 @@ const TaskManagementDetail: React.FC = () => {
       message.error("Không thể tải thông tin công việc");
     } finally {
       setLoading(false);
+    }
+  }, [id]);
+
+  // Reload full data from server (preserving UI states like selection, activeKeys)
+  const reloadData = useCallback(async () => {
+    if (!id) return;
+    try {
+      const result = await laboratoryTaskService.get(id);
+      setTask(result);
+      // Note: selectedIndicators, activeKeys, indicatorChanges are NOT reset
+    } catch (error) {
+      console.error("Failed to reload data:", error);
     }
   }, [id]);
 
@@ -470,16 +501,46 @@ const TaskManagementDetail: React.FC = () => {
         sampleId,
         assignments
       );
+
+      // Optimistic update: cập nhật indicators ngay lập tức
+      const now = new Date().toISOString();
+      setTask((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          indicators: prev.indicators?.map((ind) => {
+            const assignment = assignments.find((a) => a.indicatorId === ind.id);
+            if (assignment) {
+              const technician = technicians.find((t) => t.id === assignment.technicianId);
+              const method = methods.find((m) => m.id === assignment.methodId);
+              return {
+                ...ind,
+                methodId: assignment.methodId,
+                technicianId: assignment.technicianId,
+                technicianName: technician?.displayName || technician?.userName || ind.technicianName,
+                methodName: method?.name || ind.methodName,
+                assignedDate: now,
+              };
+            }
+            return ind;
+          }),
+        };
+      });
+
+      // Reload full data from server (avoid duplicating BE logic)
+      await reloadData();
+
       message.success("Giao việc thành công");
       setIndicatorChanges({});
       // Clear selection after successful assignment
       setSelectedIndicators((prev) => ({ ...prev, [sampleId]: [] }));
-      await loadTask();
     } catch (error: any) {
       console.error("Failed to assign:", error);
       message.error(
         error.response?.data?.error?.message || "Không thể giao việc"
       );
+      // Reload để sync lại với server nếu có lỗi
+      await loadTask();
     } finally {
       setActionLoading(false);
     }
@@ -510,6 +571,19 @@ const TaskManagementDetail: React.FC = () => {
         rejectionReason: reason,
         standardId: standardId,
       });
+
+      // Optimistic update: cập nhật indicator ngay lập tức
+      updateIndicatorsOptimistically([indicatorId], {
+        approvalStatus: approve
+          ? IndicatorApprovalStatus.Approved
+          : IndicatorApprovalStatus.Rejected,
+        rejectionReason: approve ? undefined : reason,
+        standardId: standardId ?? undefined,
+      });
+
+      // Reload full data from server (avoid duplicating BE logic for task status)
+      await reloadData();
+
       message.success(approve ? "Đã duyệt kết quả" : "Đã từ chối kết quả");
       // Xóa standard selection đã lưu cho indicator này
       setStandardSelections((prev) => {
@@ -517,12 +591,13 @@ const TaskManagementDetail: React.FC = () => {
         delete newSelections[indicatorId];
         return newSelections;
       });
-      await loadTask();
     } catch (error: any) {
       console.error("Failed to approve:", error);
       message.error(
         error.response?.data?.error?.message || "Không thể xử lý phê duyệt"
       );
+      // Reload để sync lại với server nếu có lỗi
+      await loadTask();
     } finally {
       setActionLoading(false);
     }
@@ -594,6 +669,15 @@ const TaskManagementDetail: React.FC = () => {
         approve: true,
         standardIds: standardIdsMap,
       });
+
+      // Optimistic update: cập nhật indicators ngay lập tức
+      updateIndicatorsOptimistically(validIds, {
+        approvalStatus: IndicatorApprovalStatus.Approved,
+      });
+
+      // Reload full data from server (avoid duplicating BE logic for task status)
+      await reloadData();
+
       message.success(`Đã duyệt ${validIds.length} chỉ tiêu`);
       // Xóa standard selections cho các indicator đã xử lý
       setStandardSelections((prev) => {
@@ -602,7 +686,6 @@ const TaskManagementDetail: React.FC = () => {
         return newSelections;
       });
       setSelectedIndicators((prev) => ({ ...prev, [sampleId]: [] }));
-      await loadTask();
     } catch (error: any) {
       console.error("Failed to bulk approve:", error);
       const errorMsg =
@@ -610,6 +693,8 @@ const TaskManagementDetail: React.FC = () => {
         error.response?.data?.error?.message ||
         "Không thể duyệt chỉ tiêu";
       message.error(errorMsg);
+      // Reload để sync lại với server nếu có lỗi
+      await loadTask();
     } finally {
       setActionLoading(false);
     }
@@ -667,6 +752,16 @@ const TaskManagementDetail: React.FC = () => {
         rejectionReason: values.reason,
         standardIds: standardIdsMap,
       });
+
+      // Optimistic update: cập nhật indicators ngay lập tức
+      updateIndicatorsOptimistically(validIds, {
+        approvalStatus: IndicatorApprovalStatus.Rejected,
+        rejectionReason: values.reason,
+      });
+
+      // Reload full data from server (avoid duplicating BE logic for task status)
+      await reloadData();
+
       message.success(`Đã từ chối ${validIds.length} chỉ tiêu`);
       // Xóa standard selections cho các indicator đã xử lý
       setStandardSelections((prev) => {
@@ -678,7 +773,6 @@ const TaskManagementDetail: React.FC = () => {
       setRejectModalOpen(false);
       setRejectingSampleId(null);
       rejectForm.resetFields();
-      await loadTask();
     } catch (error: any) {
       if (error.errorFields) {
         // Form validation error
@@ -690,6 +784,8 @@ const TaskManagementDetail: React.FC = () => {
         error.response?.data?.error?.message ||
         "Không thể từ chối chỉ tiêu";
       message.error(errorMsg);
+      // Reload để sync lại với server nếu có lỗi
+      await loadTask();
     } finally {
       setActionLoading(false);
     }
@@ -1090,7 +1186,7 @@ const TaskManagementDetail: React.FC = () => {
         onClose={() => setSupporterModalOpen(false)}
         taskId={task.id}
         currentSupporters={task.supporters || []}
-        onSuccess={loadTask}
+        onSuccess={reloadData}
       />
 
       {/* Bulk Reject Modal */}
@@ -1129,7 +1225,7 @@ const TaskManagementDetail: React.FC = () => {
         onClose={() => setSendToQualityModalOpen(false)}
         taskId={task.id}
         indicators={task.indicators || []}
-        onSuccess={loadTask}
+        onSuccess={reloadData}
       />
 
       {/* Reassign Confirmation Modal */}

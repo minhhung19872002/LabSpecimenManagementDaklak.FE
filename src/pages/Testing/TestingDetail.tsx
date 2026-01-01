@@ -4,6 +4,7 @@ import { message } from "antd";
 import { testingService } from "../../services/testingService";
 import {
   TestingDetailDto,
+  TestingIndicatorDto,
   SaveIndicatorResultDto,
   SampleTestingImageType,
   SampleTestingImageDto,
@@ -17,6 +18,62 @@ const TestingDetail: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [detail, setDetail] = useState<TestingDetailDto | null>(null);
+
+  // Helper function to update indicators optimistically (indicator-level only)
+  // Task-level status is fetched from server to avoid duplicating BE logic
+  const updateIndicatorsOptimistically = useCallback(
+    (indicatorIds: string[], indicatorUpdates: Partial<TestingIndicatorDto>) => {
+      setDetail((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          samples: prev.samples.map((sample) => ({
+            ...sample,
+            indicators: sample.indicators.map((ind) =>
+              indicatorIds.includes(ind.id) ? { ...ind, ...indicatorUpdates } : ind
+            ),
+          })),
+        };
+      });
+    },
+    []
+  );
+
+  // Reload full data from server (preserving UI states like selection, activeKeys)
+  const reloadData = useCallback(async () => {
+    if (!id) return;
+    try {
+      const result = await testingService.get(id, "my");
+      setDetail(result);
+
+      // Update sample results with new data (preserve any unsaved edits by merging)
+      setSampleResults((prev) => {
+        const newResults = new Map<string, SaveIndicatorResultDto[]>();
+        result.samples.forEach((sample) => {
+          const existingResults = prev.get(sample.sampleId);
+          newResults.set(
+            sample.sampleId,
+            sample.indicators.map((ind) => {
+              // Keep existing edited result if available
+              const existingResult = existingResults?.find(
+                (r) => r.indicatorId === ind.id
+              );
+              return {
+                indicatorId: ind.id,
+                methodId: ind.methodId,
+                unit: ind.unit,
+                result: existingResult?.result ?? ind.result,
+              };
+            })
+          );
+        });
+        return newResults;
+      });
+      // Note: selectedIndicators and activeKeys are NOT reset
+    } catch (error) {
+      console.error("Failed to reload data:", error);
+    }
+  }, [id]);
 
   // Edited results (per sample)
   const [sampleResults, setSampleResults] = useState<
@@ -172,15 +229,35 @@ const TestingDetail: React.FC = () => {
         sampleId,
         indicatorIds: validIndicatorIds,
       });
+
+      // Optimistic update: cập nhật indicator testingStatus thành Testing
+      const now = new Date().toISOString();
+      updateIndicatorsOptimistically(validIndicatorIds, {
+        testingStatus: IndicatorTestingStatus.Testing,
+        startDate: now,
+        canCheckIn: false,
+        canSubmit: true,
+      });
+
+      // Reload full data from server (avoid duplicating BE logic)
+      await reloadData();
+
       message.success(
         `Đã bắt đầu thực hiện ${validIndicatorIds.length} chỉ tiêu`
       );
-      loadDetail();
+      // Clear selection sau khi thành công
+      setSelectedIndicators((prev) => {
+        const newSelected = new Map(prev);
+        newSelected.set(sampleId, []);
+        return newSelected;
+      });
     } catch (error: any) {
       console.error("Failed to check-in:", error);
       message.error(
         error.response?.data?.error?.message || "Không thể thực hiện"
       );
+      // Reload để sync lại với server nếu có lỗi
+      await loadDetail();
     } finally {
       setSubmitting(false);
     }
@@ -283,15 +360,34 @@ const TestingDetail: React.FC = () => {
         sampleId,
         indicatorIds: validIndicatorIds,
       });
+
+      // Optimistic update: cập nhật indicator testingStatus thành PendingApproval
+      const now = new Date().toISOString();
+      updateIndicatorsOptimistically(validIndicatorIds, {
+        testingStatus: IndicatorTestingStatus.PendingApproval,
+        submitDate: now,
+        canSubmit: false,
+      });
+
+      // Reload full data from server (avoid duplicating BE logic)
+      await reloadData();
+
       message.success(
         `Gửi kết quả thành công cho ${validIndicatorIds.length} chỉ tiêu`
       );
-      loadDetail();
+      // Clear selection sau khi thành công
+      setSelectedIndicators((prev) => {
+        const newSelected = new Map(prev);
+        newSelected.set(sampleId, []);
+        return newSelected;
+      });
     } catch (error: any) {
       console.error("Failed to submit results:", error);
       message.error(
         error.response?.data?.error?.message || "Không thể gửi kết quả"
       );
+      // Reload để sync lại với server nếu có lỗi
+      await loadDetail();
     } finally {
       setSubmitting(false);
     }
@@ -357,13 +453,27 @@ const TestingDetail: React.FC = () => {
         sampleId,
         indicatorIds: [indicatorId],
       });
+
+      // Optimistic update: cập nhật indicator testingStatus thành Testing
+      const now = new Date().toISOString();
+      updateIndicatorsOptimistically([indicatorId], {
+        testingStatus: IndicatorTestingStatus.Testing,
+        startDate: now,
+        canCheckIn: false,
+        canSubmit: true,
+      });
+
+      // Reload full data from server (avoid duplicating BE logic)
+      await reloadData();
+
       message.success("Đã bắt đầu thực hiện chỉ tiêu");
-      loadDetail();
     } catch (error: any) {
       console.error("Failed to check-in indicator:", error);
       message.error(
         error.response?.data?.error?.message || "Không thể thực hiện"
       );
+      // Reload để sync lại với server nếu có lỗi
+      await loadDetail();
     } finally {
       setSubmitting(false);
     }
@@ -409,13 +519,27 @@ const TestingDetail: React.FC = () => {
         sampleId,
         indicatorIds: [indicatorId],
       });
+
+      // Optimistic update: cập nhật indicator testingStatus thành PendingApproval
+      const now = new Date().toISOString();
+      updateIndicatorsOptimistically([indicatorId], {
+        testingStatus: IndicatorTestingStatus.PendingApproval,
+        submitDate: now,
+        canSubmit: false,
+        result: resultValue,
+      });
+
+      // Reload full data from server (avoid duplicating BE logic)
+      await reloadData();
+
       message.success("Gửi kết quả thành công");
-      loadDetail();
     } catch (error: any) {
       console.error("Failed to submit indicator result:", error);
       message.error(
         error.response?.data?.error?.message || "Không thể gửi kết quả"
       );
+      // Reload để sync lại với server nếu có lỗi
+      await loadDetail();
     } finally {
       setSubmitting(false);
     }
