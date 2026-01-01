@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { message } from "antd";
 import type { FormInstance } from "antd";
+import type { UseFormReturn } from "react-hook-form";
 import {
   standardService,
   CreateStandardDto,
@@ -9,6 +10,7 @@ import {
   UpdateStandardIndicatorDto,
 } from "../../../../services/masterDataService";
 import { GroupedStandardData, StandardIndicatorDto } from "../types";
+import { StandardFormData } from "../schemas/standardSchema";
 
 interface UseStandardsActionsParams {
   fetchData: () => Promise<void>;
@@ -38,18 +40,20 @@ export const useStandardsActions = ({
   const [editingIndicatorStandardId, setEditingIndicatorStandardId] = useState<string | null>(null);
 
   // Standard CRUD
-  const handleCreate = (form: FormInstance) => {
+  const handleCreate = (form: UseFormReturn<StandardFormData>) => {
     setEditingItem(null);
-    form.resetFields();
-    form.setFieldsValue({ isActive: true });
+    form.reset({ name: "", limitDescription: "", isActive: true });
     setModalOpen(true);
   };
 
-  const handleEdit = (record: GroupedStandardData, form: FormInstance) => {
+  const handleEdit = (
+    record: GroupedStandardData,
+    form: UseFormReturn<StandardFormData>
+  ) => {
     setEditingItem(record);
-    form.setFieldsValue({
+    form.reset({
       name: record.name,
-      limitDescription: record.limitDescription,
+      limitDescription: record.limitDescription || "",
       isActive: record.isActive,
     });
     setModalOpen(true);
@@ -69,21 +73,23 @@ export const useStandardsActions = ({
     }
   };
 
-  const handleModalOk = async (form: FormInstance) => {
+  const handleModalOk = async (
+    data: StandardFormData,
+    form: UseFormReturn<StandardFormData>
+  ) => {
     try {
       setModalLoading(true);
-      const values = await form.validateFields();
 
       if (editingItem) {
-        await standardService.update(editingItem.id, values as UpdateStandardDto);
+        await standardService.update(editingItem.id, data as UpdateStandardDto);
         message.success("Cập nhật tiêu chuẩn thành công!");
       } else {
-        await standardService.create(values as CreateStandardDto);
+        await standardService.create(data as CreateStandardDto);
         message.success("Thêm tiêu chuẩn thành công!");
       }
 
       setModalOpen(false);
-      form.resetFields();
+      form.reset();
       fetchData();
       onDataChange?.();
     } catch (error: any) {
@@ -96,9 +102,9 @@ export const useStandardsActions = ({
     }
   };
 
-  const handleModalCancel = (form: FormInstance) => {
+  const handleModalCancel = (form: UseFormReturn<StandardFormData>) => {
     setModalOpen(false);
-    form.resetFields();
+    form.reset();
   };
 
   // Toggle active status for Standard

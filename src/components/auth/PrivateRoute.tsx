@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation, Outlet } from 'react-router-dom';
 import { authService, UserInfo } from '../../services/authService';
-import { hasRoutePermission, getDefaultRouteForUser, PATH_ROUTES } from '../../constants';
+import { hasRoutePermission, getDefaultRouteForUser, PATH_ROUTES, STORAGE_KEYS } from '../../constants';
 
 interface PrivateRouteProps {
   children?: React.ReactNode;
@@ -23,7 +23,7 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
   }
 
   // Get user roles for permission check
-  const storedUser = localStorage.getItem('user_info');
+  const storedUser = localStorage.getItem(STORAGE_KEYS.USER_INFO);
   let userRoles: string[] = [];
 
   if (storedUser) {

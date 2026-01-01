@@ -5,6 +5,8 @@ import {
   SearchOutlined,
   FolderAddOutlined,
 } from "@ant-design/icons";
+import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
 import { useIndicatorsData, useIndicatorsActions } from "./hooks";
 import { getIndicatorColumns, getGroupColumns } from "./constants";
 import {
@@ -16,6 +18,12 @@ import {
   ImportGroupModal,
 } from "./components";
 import { IndicatorsTabProps } from "./types";
+import {
+  indicatorSchema,
+  indicatorGroupSchema,
+  IndicatorFormData,
+  IndicatorGroupFormData,
+} from "./schemas/indicatorSchema";
 
 const IndicatorsList: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
   const {
@@ -86,8 +94,14 @@ const IndicatorsList: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
     onDataChange,
   });
 
-  const [groupForm] = Form.useForm();
-  const [indicatorForm] = Form.useForm();
+  const groupForm = useForm<IndicatorGroupFormData>({
+    resolver: yupResolver(indicatorGroupSchema),
+    defaultValues: { name: "", isActive: true },
+  });
+  const indicatorForm = useForm<IndicatorFormData>({
+    resolver: yupResolver(indicatorSchema),
+    defaultValues: { indicatorGroupId: "", name: "", isActive: true },
+  });
   const [bulkForm] = Form.useForm();
 
   // Memoized columns with handlers
@@ -164,10 +178,10 @@ const IndicatorsList: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
         loading={modalLoading}
         editingGroup={editingGroup}
         form={groupForm}
-        onOk={() => handleGroupModalOk(groupForm)}
+        onOk={(data) => handleGroupModalOk(data, groupForm)}
         onCancel={() => {
           setGroupModalOpen(false);
-          groupForm.resetFields();
+          groupForm.reset();
         }}
       />
 
@@ -178,10 +192,10 @@ const IndicatorsList: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
         editingIndicator={editingIndicator}
         form={indicatorForm}
         groupOptions={groupOptions}
-        onOk={() => handleIndicatorModalOk(indicatorForm)}
+        onOk={(data) => handleIndicatorModalOk(data, indicatorForm)}
         onCancel={() => {
           setIndicatorModalOpen(false);
-          indicatorForm.resetFields();
+          indicatorForm.reset();
         }}
       />
 

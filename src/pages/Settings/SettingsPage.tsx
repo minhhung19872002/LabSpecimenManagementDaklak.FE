@@ -33,7 +33,7 @@ import settingsService, {
   NotificationSettingsDto,
   SecuritySettingsDto
 } from '../../services/settingsService';
-import { ROLES } from '../../constants';
+import { ROLES, STORAGE_KEYS } from '../../constants';
 import { UserInfo } from '../../services/authService';
 
 /**
@@ -87,7 +87,7 @@ const SettingsPage: React.FC = () => {
 
   // Load user roles from localStorage
   useEffect(() => {
-    const storedUser = localStorage.getItem('user_info');
+    const storedUser = localStorage.getItem(STORAGE_KEYS.USER_INFO);
     if (storedUser) {
       try {
         const userInfo: UserInfo = JSON.parse(storedUser);

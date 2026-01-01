@@ -1,6 +1,8 @@
 import React, { useMemo, useEffect, useRef } from "react";
 import { Button, Space, Row, Col, Form } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
+import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
 import { useStandardsData, useStandardsActions } from "./hooks";
 import {
   StandardsTable,
@@ -10,6 +12,7 @@ import {
 } from "./components";
 import { getStandardColumns, getIndicatorColumns } from "./constants";
 import { StandardsTabProps, StandardIndicatorDto } from "./types";
+import { standardSchema, StandardFormData } from "./schemas/standardSchema";
 
 const StandardsList: React.FC<StandardsTabProps> = ({ onDataChange, refreshKey }) => {
   const {
@@ -69,7 +72,10 @@ const StandardsList: React.FC<StandardsTabProps> = ({ onDataChange, refreshKey }
     setExpandedRowKeys,
   });
 
-  const [form] = Form.useForm();
+  const form = useForm<StandardFormData>({
+    resolver: yupResolver(standardSchema),
+    defaultValues: { name: "", limitDescription: "", isActive: true },
+  });
   const [addIndicatorsForm] = Form.useForm();
   const [editIndicatorForm] = Form.useForm();
 
@@ -135,7 +141,7 @@ const StandardsList: React.FC<StandardsTabProps> = ({ onDataChange, refreshKey }
         loading={modalLoading}
         editingItem={editingItem}
         form={form}
-        onOk={() => handleModalOk(form)}
+        onOk={(data) => handleModalOk(data, form)}
         onCancel={() => handleModalCancel(form)}
       />
 

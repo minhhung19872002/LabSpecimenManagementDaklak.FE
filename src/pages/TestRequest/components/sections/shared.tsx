@@ -1,0 +1,62 @@
+import React from "react";
+import { Tag, Space, Typography } from "antd";
+import { CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
+import {
+  TestRequestStatus,
+  TestRequestStatusLabels,
+  TestRequestStatusColors,
+  ResultLanguage,
+  SamplingRequirement,
+  SampleStorageOption,
+} from "../../../../types/testRequest";
+
+const { Text } = Typography;
+
+export const BoolIcon: React.FC<{ value: boolean }> = ({ value }) => {
+  return value ? (
+    <CheckCircleOutlined style={{ color: "#52c41a", fontSize: 16 }} />
+  ) : (
+    <CloseCircleOutlined style={{ color: "#d9d9d9", fontSize: 16 }} />
+  );
+};
+
+export const BoolItem: React.FC<{ value: boolean; label: string }> = ({
+  value,
+  label,
+}) => (
+  <Space size={4}>
+    <BoolIcon value={value} />
+    <Text style={{ fontSize: 13 }}>{label}</Text>
+  </Space>
+);
+
+export const getStatusTag = (status: TestRequestStatus) => {
+  const label = TestRequestStatusLabels[status] || status.toString();
+  const color = TestRequestStatusColors[status] || "default";
+  return <Tag color={color}>{label}</Tag>;
+};
+
+export const getResultLanguageText = (lang: ResultLanguage) => {
+  const langMap = {
+    [ResultLanguage.Vietnamese]: "Tiếng Việt",
+    [ResultLanguage.English]: "Tiếng Anh",
+    [ResultLanguage.VietnameseAndEnglish]: "Tiếng Việt/Anh",
+  };
+  return langMap[lang] || "Tiếng Việt";
+};
+
+export const getSamplingRequirementText = (req: SamplingRequirement) => {
+  const reqMap = {
+    [SamplingRequirement.LabSampling]: "TTKN lấy mẫu",
+    [SamplingRequirement.CustomerSampling]: "KH tự lấy mẫu",
+  };
+  return reqMap[req] || "KH tự lấy mẫu";
+};
+
+export const getSampleStorageText = (opt: SampleStorageOption) => {
+  const optMap = {
+    [SampleStorageOption.No]: "Không",
+    [SampleStorageOption.Yes]: "Có (theo quy định của Trung tâm)",
+  };
+  return optMap[opt] || "Không";
+};

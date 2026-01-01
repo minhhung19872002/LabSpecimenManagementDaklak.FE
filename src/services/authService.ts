@@ -1,4 +1,5 @@
 import { api } from './api';
+import { STORAGE_KEYS } from '../constants';
 
 const AUTH_URL = '/api/v1/auth';
 
@@ -60,10 +61,10 @@ export const authService = {
     const refreshToken = data.refreshToken;
 
     if (accessToken) {
-      localStorage.setItem('access_token', accessToken);
+      localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
     }
     if (refreshToken) {
-      localStorage.setItem('refresh_token', refreshToken);
+      localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
     }
 
     return data;
@@ -76,19 +77,19 @@ export const authService = {
     } catch {
       // Ignore errors during logout
     }
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user_info');
-    localStorage.removeItem('workReminderLastShownTime'); // Clear SampleReceiver work reminder state on logout
-    localStorage.removeItem('labTechManagerReminderLastShownTime'); // Clear LabTechManager work reminder state on logout
-    localStorage.removeItem('labTechnicianReminderLastShownTime'); // Clear LabTechnician work reminder state on logout
-    localStorage.removeItem('qualityManagerReminderLastShownTime'); // Clear QualityManager work reminder state on logout
+    localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.USER_INFO);
+    localStorage.removeItem(STORAGE_KEYS.WORK_REMINDER_LAST_SHOWN); // Clear SampleReceiver work reminder state on logout
+    localStorage.removeItem(STORAGE_KEYS.LAB_TECH_MANAGER_REMINDER_LAST_SHOWN); // Clear LabTechManager work reminder state on logout
+    localStorage.removeItem(STORAGE_KEYS.LAB_TECHNICIAN_REMINDER_LAST_SHOWN); // Clear LabTechnician work reminder state on logout
+    localStorage.removeItem(STORAGE_KEYS.QUALITY_MANAGER_REMINDER_LAST_SHOWN); // Clear QualityManager work reminder state on logout
     window.location.href = '/login';
   },
 
   // Refresh token
   refreshToken: async (): Promise<LoginResponse> => {
-    const refreshToken = localStorage.getItem('refresh_token');
+    const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
     if (!refreshToken) {
       throw new Error('No refresh token available');
     }
@@ -96,10 +97,10 @@ export const authService = {
 
     // Store new tokens
     if (response.data.accessToken) {
-      localStorage.setItem('access_token', response.data.accessToken);
+      localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, response.data.accessToken);
     }
     if (response.data.refreshToken) {
-      localStorage.setItem('refresh_token', response.data.refreshToken);
+      localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, response.data.refreshToken);
     }
 
     return response.data;
@@ -118,17 +119,17 @@ export const authService = {
 
   // Check if user is authenticated
   isAuthenticated: (): boolean => {
-    return !!localStorage.getItem('access_token');
+    return !!localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
   },
 
   // Get stored token
   getToken: (): string | null => {
-    return localStorage.getItem('access_token');
+    return localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
   },
 
   // Get refresh token
   getRefreshToken: (): string | null => {
-    return localStorage.getItem('refresh_token');
+    return localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
   },
 };
 

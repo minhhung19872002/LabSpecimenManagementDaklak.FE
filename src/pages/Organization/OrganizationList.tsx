@@ -1,8 +1,8 @@
-import React from 'react';
-import { Card, Button, Space, Input, Row, Col } from 'antd';
-import { PlusOutlined, ReloadOutlined } from '@ant-design/icons';
-import { useOrganizationList } from './hooks/useOrganizationList';
-import { OrganizationTable, OrganizationFormModal } from './components';
+import React from "react";
+import { Card, Button, Space, Input, Row, Col } from "antd";
+import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
+import { useOrganizationList } from "./hooks/useOrganizationList";
+import { OrganizationTable, OrganizationFormModal } from "./components";
 
 const OrganizationList: React.FC = () => {
   const {
@@ -25,8 +25,8 @@ const OrganizationList: React.FC = () => {
     // Modal
     modalVisible,
     modalMode,
-    editingRecord,
     submitting,
+    form,
     handleCreate,
     handleEdit,
     handleModalClose,
@@ -84,7 +84,7 @@ const OrganizationList: React.FC = () => {
       <OrganizationFormModal
         visible={modalVisible}
         mode={modalMode}
-        editingRecord={editingRecord}
+        form={form}
         submitting={submitting}
         wards={wards}
         onProvinceChange={handleProvinceChange}

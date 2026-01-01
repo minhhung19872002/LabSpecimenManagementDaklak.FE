@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ROLES } from "../constants/roles";
+import { ROLES, STORAGE_KEYS } from "../constants";
 
 /**
  * Configuration for reminder popup hook
@@ -70,7 +70,7 @@ const getRemainingTime = (storageKey: string, interval: number): number | null =
  */
 const checkUserRole = (requiredRole: string): boolean => {
   try {
-    const userInfoStr = localStorage.getItem("user_info");
+    const userInfoStr = localStorage.getItem(STORAGE_KEYS.USER_INFO);
     if (!userInfoStr) return false;
 
     const userInfo = JSON.parse(userInfoStr);

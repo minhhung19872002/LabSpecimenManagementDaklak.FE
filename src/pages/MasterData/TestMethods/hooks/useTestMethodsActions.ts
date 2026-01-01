@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { message } from "antd";
 import type { FormInstance } from "antd";
+import type { UseFormReturn } from "react-hook-form";
 import {
   testMethodService,
   CreateTestMethodDto,
@@ -8,6 +9,7 @@ import {
   AddIndicatorsToTestMethodDto,
 } from "../../../../services/masterDataService";
 import { GroupedTestMethodData } from "../types";
+import { TestMethodFormData } from "../schemas/testMethodSchema";
 
 interface UseTestMethodsActionsParams {
   fetchData: () => Promise<void>;
@@ -31,16 +33,18 @@ export const useTestMethodsActions = ({
   const [selectedTestMethodId, setSelectedTestMethodId] = useState<string | null>(null);
 
   // TestMethod CRUD
-  const handleCreate = (form: FormInstance) => {
+  const handleCreate = (form: UseFormReturn<TestMethodFormData>) => {
     setEditingItem(null);
-    form.resetFields();
-    form.setFieldsValue({ isActive: true });
+    form.reset({ name: "", unit: "", isActive: true });
     setModalOpen(true);
   };
 
-  const handleEdit = (record: GroupedTestMethodData, form: FormInstance) => {
+  const handleEdit = (
+    record: GroupedTestMethodData,
+    form: UseFormReturn<TestMethodFormData>
+  ) => {
     setEditingItem(record);
-    form.setFieldsValue({
+    form.reset({
       name: record.name,
       unit: record.unit,
       isActive: record.isActive,
@@ -62,21 +66,23 @@ export const useTestMethodsActions = ({
     }
   };
 
-  const handleModalOk = async (form: FormInstance) => {
+  const handleModalOk = async (
+    data: TestMethodFormData,
+    form: UseFormReturn<TestMethodFormData>
+  ) => {
     try {
       setModalLoading(true);
-      const values = await form.validateFields();
 
       if (editingItem) {
-        await testMethodService.update(editingItem.id, values as UpdateTestMethodDto);
+        await testMethodService.update(editingItem.id, data as UpdateTestMethodDto);
         message.success("Cập nhật phương pháp thử thành công!");
       } else {
-        await testMethodService.create(values as CreateTestMethodDto);
+        await testMethodService.create(data as CreateTestMethodDto);
         message.success("Thêm phương pháp thử thành công!");
       }
 
       setModalOpen(false);
-      form.resetFields();
+      form.reset();
       fetchData();
       onDataChange?.();
     } catch (error: any) {
@@ -89,12 +95,12 @@ export const useTestMethodsActions = ({
     }
   };
 
-  const handleModalCancel = (form: FormInstance) => {
+  const handleModalCancel = (form: UseFormReturn<TestMethodFormData>) => {
     setModalOpen(false);
-    form.resetFields();
+    form.reset();
   };
 
-  // Add Indicators to TestMethod
+  // Add Indicators to TestMethod (still uses Ant Design Form for dynamic fields)
   const handleOpenAddIndicators = (testMethodId: string, form: FormInstance) => {
     setSelectedTestMethodId(testMethodId);
     form.resetFields();

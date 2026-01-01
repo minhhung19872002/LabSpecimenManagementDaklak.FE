@@ -13,12 +13,15 @@ import {
   message,
 } from "antd";
 import { SendOutlined } from "@ant-design/icons";
+import { useForm, Controller } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
 import { laboratoryTaskService } from "../../../services/laboratoryTaskService";
 import {
   LaboratoryTaskIndicatorDto,
   UserLookupDto,
   IndicatorApprovalStatus,
 } from "../../../types/laboratoryTask";
+import { sendToQualitySchema, SendToQualityFormData } from "../schemas";
 
 const { Text } = Typography;
 
@@ -37,7 +40,18 @@ const SendToQualityModal: React.FC<SendToQualityModalProps> = ({
   indicators,
   onSuccess,
 }) => {
-  const [form] = Form.useForm();
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<SendToQualityFormData>({
+    resolver: yupResolver(sendToQualitySchema),
+    defaultValues: {
+      qualityManagerId: "",
+    },
+  });
+
   const [qualityManagers, setQualityManagers] = useState<UserLookupDto[]>([]);
   const [loadingManagers, setLoadingManagers] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -77,10 +91,10 @@ const SendToQualityModal: React.FC<SendToQualityModalProps> = ({
   // Reset form when modal closes
   useEffect(() => {
     if (!open) {
-      form.resetFields();
+      reset();
       setSelectedIndicatorIds([]);
     }
-  }, [open, form]);
+  }, [open, reset]);
 
   const loadQualityManagers = async () => {
     setLoadingManagers(true);
@@ -96,16 +110,14 @@ const SendToQualityModal: React.FC<SendToQualityModalProps> = ({
     }
   };
 
-  const handleSubmit = async () => {
+  const onSubmit = async (values: SendToQualityFormData) => {
+    if (selectedIndicatorIds.length === 0) {
+      message.warning("Vui lòng chọn ít nhất một chỉ tiêu để gửi");
+      return;
+    }
+
+    setSubmitting(true);
     try {
-      const values = await form.validateFields();
-
-      if (selectedIndicatorIds.length === 0) {
-        message.warning("Vui lòng chọn ít nhất một chỉ tiêu để gửi");
-        return;
-      }
-
-      setSubmitting(true);
       await laboratoryTaskService.sendToQuality(taskId, {
         indicatorIds: selectedIndicatorIds,
         qualityManagerId: values.qualityManagerId,
@@ -115,10 +127,6 @@ const SendToQualityModal: React.FC<SendToQualityModalProps> = ({
       onSuccess();
       onClose();
     } catch (error: any) {
-      if (error.errorFields) {
-        // Form validation error
-        return;
-      }
       console.error("Failed to send to quality:", error);
       message.error(
         error.response?.data?.error?.message || "Không thể gửi kết quả"
@@ -185,7 +193,7 @@ const SendToQualityModal: React.FC<SendToQualityModalProps> = ({
           type="primary"
           icon={<SendOutlined />}
           loading={submitting}
-          onClick={handleSubmit}
+          onClick={handleSubmit(onSubmit)}
           disabled={selectedIndicatorIds.length === 0}
         >
           Gửi kết quả ({selectedIndicatorIds.length})
@@ -194,36 +202,44 @@ const SendToQualityModal: React.FC<SendToQualityModalProps> = ({
       width={700}
       centered
     >
-      <Form form={form} layout="vertical">
+      <Form layout="vertical">
         {/* Quality Manager Selection */}
         <Form.Item
-          name="qualityManagerId"
           label="Quản lý chất lượng"
-          rules={[{ required: true, message: "Vui lòng chọn Quản lý chất lượng" }]}
+          required
+          validateStatus={errors.qualityManagerId ? "error" : ""}
+          help={errors.qualityManagerId?.message}
         >
-          <Select
-            placeholder="Chọn Quản lý chất lượng..."
-            loading={loadingManagers}
-            options={(qualityManagers || []).map((manager) => ({
-              value: manager.id,
-              label: manager.displayName || manager.userName,
-            }))}
-            filterOption={(input, option) =>
-              (option?.label as string)
-                ?.toLowerCase()
-                .includes(input.toLowerCase())
-            }
-            showSearch
-            notFoundContent={
-              loadingManagers ? (
-                <Spin size="small" />
-              ) : (
-                <Empty
-                  description="Không có Quản lý chất lượng"
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                />
-              )
-            }
+          <Controller
+            name="qualityManagerId"
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                placeholder="Chọn Quản lý chất lượng..."
+                loading={loadingManagers}
+                options={(qualityManagers || []).map((manager) => ({
+                  value: manager.id,
+                  label: manager.displayName || manager.userName,
+                }))}
+                filterOption={(input, option) =>
+                  (option?.label as string)
+                    ?.toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+                showSearch
+                notFoundContent={
+                  loadingManagers ? (
+                    <Spin size="small" />
+                  ) : (
+                    <Empty
+                      description="Không có Quản lý chất lượng"
+                      image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    />
+                  )
+                }
+              />
+            )}
           />
         </Form.Item>
 

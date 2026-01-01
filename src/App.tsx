@@ -4,13 +4,13 @@ import MainLayout from "./components/layout/MainLayout";
 import Loadable from "./components/common/Loadable";
 import PrivateRoute from "./components/auth/PrivateRoute";
 import { initTableGrabScroll } from "./hooks/useTableGrabScroll";
-import { getDefaultRouteForUser, PATH_ROUTES } from "./constants";
+import { getDefaultRouteForUser, PATH_ROUTES, STORAGE_KEYS } from "./constants";
 import { UserInfo } from "./services/authService";
 import "./App.css";
 
 // Helper component to redirect to user's default route based on their role
 const DefaultRouteRedirect = () => {
-  const storedUser = localStorage.getItem('user_info');
+  const storedUser = localStorage.getItem(STORAGE_KEYS.USER_INFO);
   let defaultRoute = PATH_ROUTES.dashboard;
 
   if (storedUser) {

@@ -48,12 +48,11 @@ import {
   SampleTestingImageType,
   SampleAttachmentDto,
 } from "../../types/testing";
-import { ROLES } from "../../constants/roles";
 import IndicatorTable from "./components/IndicatorTable";
 import SupporterModal from "./components/SupporterModal";
 import SampleImagesDisplay from "./components/SampleImagesDisplay";
 import SendToQualityModal from "./components/SendToQualityModal";
-import { PATH_ROUTES } from "../../constants";
+import { PATH_ROUTES, ROLES, STORAGE_KEYS } from "../../constants";
 
 const { Title, Text } = Typography;
 
@@ -127,7 +126,7 @@ const TaskManagementDetail: React.FC = () => {
   // Check if current user is admin
   const isAdmin = useMemo(() => {
     try {
-      const userInfoStr = localStorage.getItem("user_info");
+      const userInfoStr = localStorage.getItem(STORAGE_KEYS.USER_INFO);
       if (!userInfoStr) return false;
       const userInfo = JSON.parse(userInfoStr);
       const roles = userInfo.roles || [];

@@ -1,8 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
-import { message } from 'antd';
-import { organizationService } from '../../../services/organizationService';
-import { OrganizationDto, CreateUpdateOrganizationDto } from '../../../types/organization';
-import { getWardsByProvince, Ward } from '../../../utils/vietnamLocations';
+import { useState, useEffect, useCallback } from "react";
+import { message } from "antd";
+import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import { organizationService } from "../../../services/organizationService";
+import {
+  OrganizationDto,
+  CreateUpdateOrganizationDto,
+} from "../../../types/organization";
+import { getWardsByProvince, Ward } from "../../../utils/vietnamLocations";
+import { organizationSchema, OrganizationFormData } from "../schemas";
 
 export const useOrganizationList = () => {
   // Data state
@@ -15,17 +21,25 @@ export const useOrganizationList = () => {
   const [pageSize, setPageSize] = useState(20);
 
   // Search state
-  const [searchText, setSearchText] = useState('');
-  const [searchInput, setSearchInput] = useState('');
+  const [searchText, setSearchText] = useState("");
+  const [searchInput, setSearchInput] = useState("");
 
   // Modal state
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [editingRecord, setEditingRecord] = useState<OrganizationDto | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   // Location state
   const [wards, setWards] = useState<Ward[]>([]);
+
+  // React Hook Form
+  const form = useForm<OrganizationFormData>({
+    resolver: yupResolver(organizationSchema),
+    defaultValues: {
+      isActive: true,
+    },
+  });
 
   // Load data
   const loadData = useCallback(async () => {
@@ -34,14 +48,14 @@ export const useOrganizationList = () => {
       const result = await organizationService.getList({
         skipCount: (currentPage - 1) * pageSize,
         maxResultCount: pageSize,
-        sorting: 'sortOrder asc, name asc',
+        sorting: "sortOrder asc, name asc",
         search: searchText || undefined,
       });
       setData(result.items || []);
       setTotalCount(result.totalCount || 0);
-    } catch (error: any) {
-      console.error('Error loading organizations:', error);
-      message.error('Không thể tải danh sách. Vui lòng thử lại.');
+    } catch (error) {
+      console.error("Error loading organizations:", error);
+      message.error("Không thể tải danh sách. Vui lòng thử lại.");
       setData([]);
       setTotalCount(0);
     } finally {
@@ -64,8 +78,8 @@ export const useOrganizationList = () => {
   }, []);
 
   const handleClearSearch = useCallback(() => {
-    setSearchInput('');
-    setSearchText('');
+    setSearchInput("");
+    setSearchText("");
     setCurrentPage(1);
   }, []);
 
@@ -77,72 +91,118 @@ export const useOrganizationList = () => {
 
   // Modal handlers
   const handleCreate = useCallback(() => {
-    setModalMode('create');
+    setModalMode("create");
     setEditingRecord(null);
     setWards([]);
+    form.reset({
+      name: "",
+      provinceCode: "",
+      wardCode: "",
+      address: "",
+      taxCode: null,
+      contactPerson: "",
+      phone: "",
+      isActive: true,
+    });
     setModalVisible(true);
-  }, []);
+  }, [form]);
 
-  const handleEdit = useCallback((record: OrganizationDto) => {
-    setModalMode('edit');
-    setEditingRecord(record);
+  const handleEdit = useCallback(
+    (record: OrganizationDto) => {
+      setModalMode("edit");
+      setEditingRecord(record);
 
-    // Load wards based on provinceCode
-    if (record.provinceCode) {
-      setWards(getWardsByProvince(record.provinceCode));
-    } else {
-      setWards([]);
-    }
+      // Load wards based on provinceCode
+      if (record.provinceCode) {
+        setWards(getWardsByProvince(record.provinceCode));
+      } else {
+        setWards([]);
+      }
 
-    setModalVisible(true);
-  }, []);
+      form.reset({
+        name: record.name,
+        provinceCode: record.provinceCode,
+        wardCode: record.wardCode,
+        address: record.address,
+        taxCode: record.taxCode || null,
+        contactPerson: record.contactPerson,
+        phone: record.phone,
+        isActive: record.isActive,
+      });
+      setModalVisible(true);
+    },
+    [form]
+  );
 
   const handleModalClose = useCallback(() => {
     setModalVisible(false);
     setEditingRecord(null);
-  }, []);
+    form.reset();
+  }, [form]);
 
-  const handleProvinceChange = useCallback((value: string) => {
-    if (value) {
-      setWards(getWardsByProvince(value));
-    } else {
-      setWards([]);
-    }
-  }, []);
+  const handleProvinceChange = useCallback(
+    (value: string) => {
+      if (value) {
+        setWards(getWardsByProvince(value));
+      } else {
+        setWards([]);
+      }
+      // Clear wardCode when province changes
+      form.setValue("wardCode", "");
+    },
+    [form]
+  );
 
   // CRUD handlers
-  const handleSave = useCallback(async (values: CreateUpdateOrganizationDto) => {
-    setSubmitting(true);
-    try {
-      if (modalMode === 'create') {
-        await organizationService.create(values);
-        message.success('Tạo mới thành công!');
-      } else if (editingRecord) {
-        await organizationService.update(editingRecord.id, values);
-        message.success('Cập nhật thành công!');
-      }
-      setModalVisible(false);
-      loadData();
-      return true;
-    } catch (error: any) {
-      console.error('Error saving:', error);
-      message.error('Không thể lưu. Vui lòng thử lại.');
-      return false;
-    } finally {
-      setSubmitting(false);
-    }
-  }, [modalMode, editingRecord, loadData]);
+  const handleSave = useCallback(
+    async (formData: OrganizationFormData) => {
+      setSubmitting(true);
+      try {
+        const payload: CreateUpdateOrganizationDto = {
+          name: formData.name,
+          provinceCode: formData.provinceCode,
+          wardCode: formData.wardCode,
+          address: formData.address,
+          taxCode: formData.taxCode || undefined,
+          contactPerson: formData.contactPerson,
+          phone: formData.phone,
+          isActive: formData.isActive,
+        };
 
-  const handleDelete = useCallback(async (id: string) => {
-    try {
-      await organizationService.delete(id);
-      message.success('Xóa thành công!');
-      loadData();
-    } catch (error: any) {
-      console.error('Error deleting:', error);
-      message.error('Không thể xóa. Vui lòng thử lại.');
-    }
-  }, [loadData]);
+        if (modalMode === "create") {
+          await organizationService.create(payload);
+          message.success("Tạo mới thành công!");
+        } else if (editingRecord) {
+          await organizationService.update(editingRecord.id, payload);
+          message.success("Cập nhật thành công!");
+        }
+
+        setModalVisible(false);
+        form.reset();
+        loadData();
+      } catch (error) {
+        console.error("Error saving:", error);
+        message.error("Không thể lưu. Vui lòng thử lại.");
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [modalMode, editingRecord, form, loadData]
+  );
+
+  const handleDelete = useCallback(
+    async (id: string) => {
+      try {
+        await organizationService.delete(id);
+        message.success("Xóa thành công!");
+        loadData();
+      } catch (error) {
+        console.error("Error deleting:", error);
+        message.error("Không thể xóa. Vui lòng thử lại.");
+      }
+    },
+    [loadData]
+  );
 
   return {
     // Data
@@ -166,6 +226,7 @@ export const useOrganizationList = () => {
     modalMode,
     editingRecord,
     submitting,
+    form,
     handleCreate,
     handleEdit,
     handleModalClose,

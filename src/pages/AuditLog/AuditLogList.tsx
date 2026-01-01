@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Card,
   Table,
@@ -11,30 +11,23 @@ import {
   Select,
   DatePicker,
   Button,
-  Modal,
-  Descriptions,
-  Typography,
   Statistic,
-  Avatar,
-  Tooltip,
   message,
-} from 'antd';
+} from "antd";
 import {
   SearchOutlined,
   ReloadOutlined,
   HistoryOutlined,
-  UserOutlined,
-  EyeOutlined,
-} from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
-import dayjs from 'dayjs';
-import isToday from 'dayjs/plugin/isToday';
-import { auditLogService, AuditLogDto } from '../../services/auditLogService';
+} from "@ant-design/icons";
+import dayjs from "dayjs";
+import isToday from "dayjs/plugin/isToday";
+import { auditLogService, AuditLogDto } from "../../services/auditLogService";
+import { getAuditLogColumns } from "./columns";
+import AuditLogDetailModal from "./components/AuditLogDetailModal";
 
 dayjs.extend(isToday);
 
 const { RangePicker } = DatePicker;
-const { Text } = Typography;
 
 const AuditLogList: React.FC = () => {
   const [data, setData] = useState<AuditLogDto[]>([]);
@@ -150,107 +143,7 @@ const AuditLogList: React.FC = () => {
     setIsDetailModalOpen(true);
   };
 
-
-  const getHttpMethodTag = (method: string) => {
-    const config: Record<string, { color: string }> = {
-      GET: { color: 'blue' },
-      POST: { color: 'green' },
-      PUT: { color: 'orange' },
-      DELETE: { color: 'red' },
-      PATCH: { color: 'purple' },
-    };
-    const c = config[method] || { color: 'default' };
-    return <Tag color={c.color}>{method}</Tag>;
-  };
-
-  const getStatusCodeTag = (code: number | undefined) => {
-    if (!code) return null;
-    let color = 'default';
-    if (code >= 200 && code < 300) color = 'green';
-    else if (code >= 400 && code < 500) color = 'orange';
-    else if (code >= 500) color = 'red';
-    return <Tag color={color}>{code}</Tag>;
-  };
-
-  const columns: ColumnsType<AuditLogDto> = [
-    {
-      title: 'Thời gian',
-      dataIndex: 'executionTime',
-      key: 'executionTime',
-      width: 160,
-      render: (executionTime: string) => (
-        <Tooltip title={dayjs(executionTime).format('DD/MM/YYYY HH:mm:ss')}>
-          <Text>{dayjs(executionTime).format('DD/MM/YYYY HH:mm')}</Text>
-        </Tooltip>
-      ),
-      sorter: (a, b) => dayjs(a.executionTime).unix() - dayjs(b.executionTime).unix(),
-      defaultSortOrder: 'descend',
-    },
-    {
-      title: 'Người dùng',
-      key: 'user',
-      width: 150,
-      render: (_, record) => (
-        <Space>
-          <Avatar size="small" icon={<UserOutlined />} />
-          <Text>{record.userName || 'Anonymous'}</Text>
-        </Space>
-      ),
-    },
-    {
-      title: 'Method',
-      dataIndex: 'httpMethod',
-      key: 'httpMethod',
-      width: 90,
-      render: (method: string) => method ? getHttpMethodTag(method) : '-',
-    },
-    {
-      title: 'URL',
-      dataIndex: 'url',
-      key: 'url',
-      ellipsis: true,
-      render: (url: string) => (
-        <Tooltip title={url}>
-          <Text>{url}</Text>
-        </Tooltip>
-      ),
-    },
-    {
-      title: 'Status',
-      dataIndex: 'httpStatusCode',
-      key: 'httpStatusCode',
-      width: 80,
-      render: (code: number) => getStatusCodeTag(code),
-    },
-    {
-      title: 'Thời gian (ms)',
-      dataIndex: 'executionDuration',
-      key: 'executionDuration',
-      width: 110,
-      render: (duration: number) => (
-        <Text type={duration > 1000 ? 'danger' : undefined}>{duration} ms</Text>
-      ),
-    },
-    {
-      title: 'IP',
-      dataIndex: 'clientIpAddress',
-      key: 'clientIpAddress',
-      width: 120,
-      render: (ip: string) => {
-        // Convert localhost addresses to readable format
-        if (ip === '::1' || ip === '127.0.0.1') return 'localhost';
-        return ip;
-      },
-    },
-    {
-      title: '',
-      key: 'actions',
-      width: 60,
-      render: (_, record) => (
-        <Button type="link" icon={<EyeOutlined />} onClick={() => handleViewDetail(record)} />
-      ),
-    },
-  ];
+  const columns = getAuditLogColumns({ onViewDetail: handleViewDetail });
 
   return (
     <div>
@@ -356,89 +249,11 @@ const AuditLogList: React.FC = () => {
       </Card>
 
       {/* Detail Modal */}
-      <Modal
-        title="Chi tiết Audit Log"
+      <AuditLogDetailModal
         open={isDetailModalOpen}
-        onCancel={() => setIsDetailModalOpen(false)}
-        footer={null}
-        width={800}
-        centered
-      >
-        {selectedLog && (
-          <>
-            <Descriptions bordered column={2} style={{ marginBottom: 24 }}>
-              <Descriptions.Item label="Thời gian">
-                {dayjs(selectedLog.executionTime).format('DD/MM/YYYY HH:mm:ss')}
-              </Descriptions.Item>
-              <Descriptions.Item label="Thời gian xử lý">
-                {selectedLog.executionDuration} ms
-              </Descriptions.Item>
-              <Descriptions.Item label="Người thực hiện">
-                {selectedLog.userName || 'Anonymous'}
-              </Descriptions.Item>
-              <Descriptions.Item label="HTTP Method">
-                {selectedLog.httpMethod ? getHttpMethodTag(selectedLog.httpMethod) : '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label="URL" span={2}>
-                {selectedLog.url}
-              </Descriptions.Item>
-              <Descriptions.Item label="HTTP Status">
-                {getStatusCodeTag(selectedLog.httpStatusCode)}
-              </Descriptions.Item>
-              <Descriptions.Item label="Địa chỉ IP">
-                {selectedLog.clientIpAddress === '::1' || selectedLog.clientIpAddress === '127.0.0.1'
-                  ? 'localhost'
-                  : selectedLog.clientIpAddress}
-              </Descriptions.Item>
-              <Descriptions.Item label="Trình duyệt" span={2}>
-                <Text style={{ fontSize: 12 }}>{selectedLog.browserInfo}</Text>
-              </Descriptions.Item>
-              <Descriptions.Item label="Application">
-                {selectedLog.applicationName}
-              </Descriptions.Item>
-              <Descriptions.Item label="Correlation ID">
-                <Text copyable style={{ fontSize: 12 }}>{selectedLog.correlationId}</Text>
-              </Descriptions.Item>
-            </Descriptions>
-
-            {selectedLog.entityChanges && selectedLog.entityChanges.length > 0 && (
-              <>
-                <Text strong>Entity Changes:</Text>
-                {selectedLog.entityChanges.map((change, idx) => (
-                  <div key={idx} style={{ marginTop: 8 }}>
-                    <Tag color="blue">{change.changeType}</Tag>
-                    <Text type="secondary" style={{ marginLeft: 8 }}>{change.entityTypeFullName}</Text>
-                    {change.propertyChanges && change.propertyChanges.length > 0 && (
-                      <Table
-                        style={{ marginTop: 8 }}
-                        dataSource={change.propertyChanges}
-                        rowKey="id"
-                        pagination={false}
-                        size="small"
-                        columns={[
-                          { title: 'Property', dataIndex: 'propertyName', key: 'propertyName' },
-                          {
-                            title: 'Giá trị cũ',
-                            dataIndex: 'originalValue',
-                            key: 'originalValue',
-                            render: (val) => val ? <Text delete type="danger">{val}</Text> : '-',
-                          },
-                          {
-                            title: 'Giá trị mới',
-                            dataIndex: 'newValue',
-                            key: 'newValue',
-                            render: (val) => val ? <Text type="success">{val}</Text> : '-',
-                          },
-                        ]}
-                      />
-                    )}
-                  </div>
-                ))}
-              </>
-            )}
-          </>
-        )}
-      </Modal>
+        onClose={() => setIsDetailModalOpen(false)}
+        log={selectedLog}
+      />
     </div>
   );
 };

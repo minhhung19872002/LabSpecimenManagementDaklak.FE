@@ -50,7 +50,7 @@ import { useLabTechManagerReminderPopup } from "../../hooks/useLabTechManagerRem
 import { useLabTechnicianReminderPopup } from "../../hooks/useLabTechnicianReminderPopup";
 import { useQualityManagerReminderPopup } from "../../hooks/useQualityManagerReminderPopup";
 import "./MainLayout.css";
-import { PATH_ROUTES, ROLES, getRoleDisplayName } from "../../constants";
+import { PATH_ROUTES, ROLES, getRoleDisplayName, STORAGE_KEYS } from "../../constants";
 
 const { Header, Sider, Content } = Layout;
 
@@ -153,7 +153,7 @@ const MainLayout: React.FC = () => {
 
   // Load user info from localStorage
   useEffect(() => {
-    const storedUser = localStorage.getItem("user_info");
+    const storedUser = localStorage.getItem(STORAGE_KEYS.USER_INFO);
     if (storedUser) {
       try {
         setUserInfo(JSON.parse(storedUser));
