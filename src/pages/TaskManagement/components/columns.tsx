@@ -1,0 +1,182 @@
+import React from "react";
+import { Button, Space, Tag, Tooltip, Typography } from "antd";
+import {
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  SyncOutlined,
+  SendOutlined,
+  DeleteOutlined,
+} from "@ant-design/icons";
+import type { ColumnsType } from "antd/es/table";
+import dayjs from "dayjs";
+import {
+  LaboratoryTaskDto,
+  LaboratoryTaskStatus,
+  LaboratoryTaskStatusLabels,
+  LaboratoryTaskStatusColors,
+} from "../../../types/laboratoryTask";
+import { formatDate } from "../../../utils/formatters";
+
+const { Text } = Typography;
+
+interface GetColumnsOptions {
+  onDelete: (id: string) => void;
+}
+
+const getStatusTag = (status: LaboratoryTaskStatus) => {
+  const label = LaboratoryTaskStatusLabels[status];
+  const color = LaboratoryTaskStatusColors[status];
+
+  const iconMap: Record<LaboratoryTaskStatus, React.ReactNode> = {
+    [LaboratoryTaskStatus.NotAssigned]: <ClockCircleOutlined />,
+    [LaboratoryTaskStatus.Assigned]: <CheckCircleOutlined />,
+    [LaboratoryTaskStatus.Testing]: <SyncOutlined spin />,
+    [LaboratoryTaskStatus.PendingApproval]: <ClockCircleOutlined />,
+    [LaboratoryTaskStatus.Approved]: <CheckCircleOutlined />,
+    [LaboratoryTaskStatus.SentToQuality]: <SendOutlined />,
+  };
+
+  return (
+    <Tag color={color} icon={iconMap[status]}>
+      {label}
+    </Tag>
+  );
+};
+
+const getLockedMessage = (status: LaboratoryTaskStatus) => {
+  switch (status) {
+    case LaboratoryTaskStatus.Testing:
+      return "Không thể chỉnh sửa khi đang thử nghiệm";
+    case LaboratoryTaskStatus.PendingApproval:
+      return "Không thể chỉnh sửa khi đang chờ duyệt";
+    case LaboratoryTaskStatus.Approved:
+      return "Không thể chỉnh sửa khi đã duyệt";
+    case LaboratoryTaskStatus.SentToQuality:
+      return "Không thể chỉnh sửa khi đã gửi QLCL";
+    default:
+      return "";
+  }
+};
+
+export const getTaskManagementColumns = (
+  options: GetColumnsOptions
+): ColumnsType<LaboratoryTaskDto> => [
+  {
+    title: "Số hợp đồng",
+    dataIndex: "contractNumber",
+    key: "contractNumber",
+    width: 150,
+    fixed: "left",
+    render: (value: string) => value || "-",
+  },
+  {
+    title: "Tổng số mẫu",
+    dataIndex: "totalSampleCount",
+    key: "totalSampleCount",
+    width: 120,
+    align: "center",
+  },
+  {
+    title: "Quản lý kỹ thuật",
+    dataIndex: "technicalManagerName",
+    key: "technicalManagerName",
+    width: 180,
+    render: (value: string) => value || "-",
+  },
+  {
+    title: "Ngày gửi khoa phòng",
+    dataIndex: "transferDate",
+    key: "transferDate",
+    width: 160,
+    render: (date: string, record: LaboratoryTaskDto) => {
+      if (!date) return "-";
+      const d = dayjs(date);
+      const daysSinceTransfer = dayjs().diff(d, "day");
+      const shouldHighlight =
+        daysSinceTransfer >= 2 &&
+        record.status === LaboratoryTaskStatus.NotAssigned;
+      return (
+        <span
+          style={{
+            color: shouldHighlight ? "#fa8c16" : undefined,
+            fontWeight: shouldHighlight ? "bold" : undefined,
+          }}
+        >
+          {d.format("DD/MM/YYYY")}
+        </span>
+      );
+    },
+  },
+  {
+    title: "Ngày YC xong",
+    dataIndex: "requestCompletionDate",
+    key: "requestCompletionDate",
+    width: 130,
+    render: (date: string, record: LaboratoryTaskDto) => {
+      if (!date) return "-";
+      const d = dayjs(date);
+      const daysRemaining = d.diff(dayjs(), "day");
+      const isUrgent =
+        daysRemaining < 5 &&
+        record.status !== LaboratoryTaskStatus.Approved &&
+        record.status !== LaboratoryTaskStatus.SentToQuality;
+      return (
+        <span
+          style={{
+            color: isUrgent ? "#ff4d4f" : undefined,
+            fontWeight: isUrgent ? "bold" : undefined,
+          }}
+        >
+          {d.format("DD/MM/YYYY")}
+        </span>
+      );
+    },
+  },
+  {
+    title: "Ngày thí nghiệm",
+    dataIndex: "testDate",
+    key: "testDate",
+    width: 140,
+    render: (date: string) =>
+      date ? (
+        formatDate(date)
+      ) : (
+        <Text type="secondary">Chưa đặt</Text>
+      ),
+  },
+  {
+    title: "Trạng thái",
+    dataIndex: "status",
+    key: "status",
+    width: 180,
+    render: (status: LaboratoryTaskStatus) => getStatusTag(status),
+  },
+  {
+    title: "Thao tác",
+    key: "action",
+    width: 100,
+    fixed: "right",
+    render: (_: unknown, record: LaboratoryTaskDto) => {
+      const canEdit =
+        record.status === LaboratoryTaskStatus.NotAssigned ||
+        record.status === LaboratoryTaskStatus.Assigned;
+
+      const lockedReason = getLockedMessage(record.status);
+
+      return (
+        <Space size="small">
+          <Tooltip title={!canEdit ? lockedReason : "Xóa"}>
+            <Button
+              type="text"
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => options.onDelete(record.id)}
+              disabled={!canEdit}
+            />
+          </Tooltip>
+        </Space>
+      );
+    },
+  },
+];

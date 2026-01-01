@@ -22,8 +22,8 @@ import {
   CheckOutlined,
   CloseOutlined,
 } from "@ant-design/icons";
-import dayjs from "dayjs";
 import { qualityManagementService } from "../../services/qualityManagementService";
+import { formatDate } from "../../utils/formatters";
 import {
   QualityManagementTaskDto,
   QualityManagementStatus,
@@ -362,19 +362,13 @@ const QualityManagementDetail: React.FC = () => {
             {task.laboratoryNames || "-"}
           </Descriptions.Item>
           <Descriptions.Item label="Ngày chuyển đi">
-            {task.transferDate
-              ? dayjs(task.transferDate).format("DD/MM/YYYY")
-              : "-"}
+            {formatDate(task.transferDate)}
           </Descriptions.Item>
           <Descriptions.Item label="Ngày YC xong">
-            {task.requestCompletionDate
-              ? dayjs(task.requestCompletionDate).format("DD/MM/YYYY")
-              : "-"}
+            {formatDate(task.requestCompletionDate)}
           </Descriptions.Item>
           <Descriptions.Item label="Ngày gửi KQ">
-            {task.resultSentDate
-              ? dayjs(task.resultSentDate).format("DD/MM/YYYY")
-              : "-"}
+            {formatDate(task.resultSentDate)}
           </Descriptions.Item>
           <Descriptions.Item label="QLKT">
             {task.technicalManagerNames || "-"}

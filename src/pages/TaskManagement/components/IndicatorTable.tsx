@@ -13,7 +13,7 @@ import {
 } from "antd";
 import type { TableRowSelection } from "antd/es/table/interface";
 import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
-import dayjs from "dayjs";
+import { formatDate } from "../../../utils/formatters";
 import {
   LaboratoryTaskIndicatorDto,
   IndicatorApprovalStatus,
@@ -444,14 +444,14 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       dataIndex: "entryDate",
       key: "entryDate",
       width: 100,
-      render: (date: string) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
+      render: (date: string) => formatDate(date),
     },
     {
       title: "Ngày duyệt",
       dataIndex: "approvalDate",
       key: "approvalDate",
       width: 100,
-      render: (date: string) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
+      render: (date: string) => formatDate(date),
     },
     {
       title: "Trạng thái",

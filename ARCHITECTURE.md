@@ -200,9 +200,173 @@ export interface UserLookupDto {
 
 ---
 
-## 3. Page Component Patterns
+## 3. Container-Presentational Pattern
 
-### 3.1 List Page Structure
+### 3.1 Concept
+
+Tách components thành 2 loại:
+- **Container**: Chứa logic, state, API calls
+- **Presentational**: Chỉ render UI, nhận data qua props
+
+### 3.2 Table Columns Pattern (QUAN TRỌNG)
+
+Tách columns definition ra file riêng để giữ component chính gọn:
+
+```
+pages/[Feature]/
+├── [Feature]List.tsx           # Container - chứa state, handlers
+├── [Feature]Detail.tsx         # Container
+└── components/
+    ├── columns.tsx             # Columns definitions
+    ├── [Feature]Table.tsx      # Presentational table (nếu cần)
+    └── [Feature]Modal.tsx      # Modal component
+```
+
+**columns.tsx:**
+```tsx
+// pages/[Feature]/components/columns.tsx
+import type { ColumnsType } from "antd/es/table";
+import { Tag, Typography } from "antd";
+import { FeatureDto, FeatureStatus, FeatureStatusLabels, FeatureStatusColors } from "../../../types/feature";
+import { formatDate } from "../../../utils/formatters";
+
+const { Link } = Typography;
+
+interface GetColumnsOptions {
+  onView?: (record: FeatureDto) => void;
+  onEdit?: (record: FeatureDto) => void;
+  onDelete?: (id: string) => void;
+}
+
+export const getFeatureColumns = (options?: GetColumnsOptions): ColumnsType<FeatureDto> => [
+  {
+    title: "Mã",
+    dataIndex: "code",
+    key: "code",
+    width: 120,
+    render: (text: string, record: FeatureDto) => (
+      <Link onClick={() => options?.onView?.(record)}>{text}</Link>
+    ),
+  },
+  {
+    title: "Tên",
+    dataIndex: "name",
+    key: "name",
+    ellipsis: true,
+  },
+  {
+    title: "Ngày tạo",
+    dataIndex: "createdAt",
+    key: "createdAt",
+    width: 120,
+    render: (date: string) => formatDate(date),
+  },
+  {
+    title: "Trạng thái",
+    dataIndex: "status",
+    key: "status",
+    width: 120,
+    render: (status: FeatureStatus) => (
+      <Tag color={FeatureStatusColors[status]}>
+        {FeatureStatusLabels[status]}
+      </Tag>
+    ),
+  },
+];
+```
+
+**Usage trong List component:**
+```tsx
+// pages/[Feature]/[Feature]List.tsx
+import { getFeatureColumns } from "./components/columns";
+
+const FeatureList: React.FC = () => {
+  const navigate = useNavigate();
+
+  // Columns với handlers
+  const columns = useMemo(
+    () => getFeatureColumns({
+      onView: (record) => navigate(`/features/${record.id}`),
+      onEdit: (record) => setEditingItem(record),
+      onDelete: (id) => handleDelete(id),
+    }),
+    [navigate]
+  );
+
+  return (
+    <Table columns={columns} dataSource={data} />
+  );
+};
+```
+
+### 3.3 Modal với Columns Pattern
+
+Khi Modal có Table với columns riêng:
+
+```tsx
+// components/[Feature]Modal/columns.tsx
+export const getModalColumns = (): ColumnsType<ItemDto> => [
+  // ...column definitions
+];
+
+// components/[Feature]Modal/[Feature]Modal.tsx
+import { getModalColumns } from "./columns";
+
+const FeatureModal: React.FC<Props> = ({ open, onClose, tasks }) => {
+  const columns = useMemo(() => getModalColumns(), []);
+
+  return (
+    <Modal open={open} onCancel={onClose}>
+      <Table columns={columns} dataSource={tasks} />
+    </Modal>
+  );
+};
+```
+
+### 3.4 Shared Columns Pattern
+
+Khi nhiều components dùng chung columns format:
+
+```tsx
+// components/shared/tableColumns.ts
+import { formatDate } from "../../utils/formatters";
+
+// Reusable date column
+export const dateColumn = (title: string, dataIndex: string) => ({
+  title,
+  dataIndex,
+  key: dataIndex,
+  width: 120,
+  render: (date: string) => formatDate(date),
+});
+
+// Reusable status column
+export const statusColumn = <T extends number | string>(
+  labels: Record<T, string>,
+  colors: Record<T, string>
+) => ({
+  title: "Trạng thái",
+  dataIndex: "status",
+  key: "status",
+  width: 120,
+  render: (status: T) => (
+    <Tag color={colors[status]}>{labels[status]}</Tag>
+  ),
+});
+
+// Usage
+const columns: ColumnsType<TaskDto> = [
+  dateColumn("Ngày tạo", "createdAt"),
+  dateColumn("Ngày cập nhật", "updatedAt"),
+  statusColumn(TaskStatusLabels, TaskStatusColors),
+];
+```
+
+---
+
+## 4. Page Component Patterns
+
+### 4.1 List Page Structure
 
 ```tsx
 // pages/[Feature]/[Feature]List.tsx
@@ -300,7 +464,7 @@ const FeatureList: React.FC = () => {
 export default FeatureList;
 ```
 
-### 3.2 Detail Page Structure
+### 4.2 Detail Page Structure
 
 ```tsx
 // pages/[Feature]/[Feature]Detail.tsx
@@ -390,7 +554,7 @@ const FeatureDetail: React.FC = () => {
 export default FeatureDetail;
 ```
 
-### 3.3 Modal Component Pattern
+### 4.3 Modal Component Pattern
 
 ```tsx
 // pages/[Feature]/components/FeatureModal.tsx
@@ -706,5 +870,560 @@ try {
 
 ---
 
-**Version:** 2.0
-**Updated:** 2025-01-01
+## 10. Custom Hooks Pattern (QUAN TRỌNG)
+
+### 10.1 Concept
+
+Tách logic (state, API calls, handlers) ra custom hooks riêng để:
+- Component UI gọn gàng, dễ đọc
+- Logic có thể reuse
+- Dễ test
+
+### 10.2 Hook Structure cho List Pages
+
+```
+pages/[Feature]/
+├── [Feature]List.tsx           # UI Component - chỉ render
+├── hooks/
+│   └── useFeatureList.ts       # Logic hook - state, API, handlers
+└── components/
+    └── columns.tsx             # Column definitions
+```
+
+**hooks/useFeatureList.ts:**
+```tsx
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { message } from "antd";
+import { featureService } from "../../../services/featureService";
+import { FeatureDto, FeatureStatus } from "../../../types/feature";
+
+interface UseFeatureListReturn {
+  // State
+  data: FeatureDto[];
+  loading: boolean;
+  pagination: { current: number; pageSize: number; total: number };
+  searchText: string;
+  statusFilter: FeatureStatus | undefined;
+
+  // Handlers
+  loadData: () => Promise<void>;
+  handleSearch: (value: string) => void;
+  handleStatusChange: (value: FeatureStatus | undefined) => void;
+  handleTableChange: (pagination: any) => void;
+  handleDelete: (id: string) => Promise<void>;
+  handleRefresh: () => void;
+}
+
+export const useFeatureList = (): UseFeatureListReturn => {
+  const [data, setData] = useState<FeatureDto[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [statusFilter, setStatusFilter] = useState<FeatureStatus | undefined>();
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 50,
+    total: 0,
+  });
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const result = await featureService.getList({
+        skipCount: (pagination.current - 1) * pagination.pageSize,
+        maxResultCount: pagination.pageSize,
+        search: searchText || undefined,
+        status: statusFilter,
+      });
+      setData(result.items);
+      setPagination(prev => {
+        if (prev.total === result.totalCount) return prev;
+        return { ...prev, total: result.totalCount };
+      });
+    } catch (error) {
+      console.error("Failed to load:", error);
+      message.error("Không thể tải dữ liệu");
+    } finally {
+      setLoading(false);
+    }
+  }, [pagination.current, pagination.pageSize, searchText, statusFilter]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleSearch = (value: string) => {
+    setSearchText(value);
+    setPagination(prev => ({ ...prev, current: 1 }));
+  };
+
+  const handleStatusChange = (value: FeatureStatus | undefined) => {
+    setStatusFilter(value);
+    setPagination(prev => ({ ...prev, current: 1 }));
+  };
+
+  const handleTableChange = (paginationConfig: any) => {
+    setPagination(prev => ({
+      ...prev,
+      current: paginationConfig.current,
+      pageSize: paginationConfig.pageSize,
+    }));
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await featureService.delete(id);
+      message.success("Xóa thành công");
+      loadData();
+    } catch (error) {
+      console.error("Failed to delete:", error);
+      message.error("Không thể xóa");
+    }
+  };
+
+  const handleRefresh = () => {
+    setSearchText("");
+    setStatusFilter(undefined);
+    setPagination(prev => ({ ...prev, current: 1 }));
+  };
+
+  return {
+    data,
+    loading,
+    pagination,
+    searchText,
+    statusFilter,
+    loadData,
+    handleSearch,
+    handleStatusChange,
+    handleTableChange,
+    handleDelete,
+    handleRefresh,
+  };
+};
+```
+
+**Usage trong List component:**
+```tsx
+// pages/[Feature]/[Feature]List.tsx
+import React, { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { Card, Table, Button, Space, Input, Select, Row, Col } from "antd";
+import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
+import { useFeatureList } from "./hooks/useFeatureList";
+import { getFeatureColumns } from "./components/columns";
+import { FeatureStatus, FeatureStatusLabels } from "../../types/feature";
+
+const FeatureList: React.FC = () => {
+  const navigate = useNavigate();
+  const {
+    data,
+    loading,
+    pagination,
+    searchText,
+    statusFilter,
+    loadData,
+    handleSearch,
+    handleStatusChange,
+    handleTableChange,
+    handleDelete,
+    handleRefresh,
+  } = useFeatureList();
+
+  const columns = useMemo(
+    () => getFeatureColumns({
+      onEdit: (record) => navigate(`/features/${record.id}/edit`),
+      onDelete: handleDelete,
+    }),
+    [navigate, handleDelete]
+  );
+
+  return (
+    <Card
+      title="Danh sách"
+      extra={<Button icon={<ReloadOutlined />} onClick={handleRefresh}>Làm mới</Button>}
+    >
+      {/* Filters */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+        <Col xs={24} sm={12} md={8}>
+          <Input.Search
+            placeholder="Tìm kiếm..."
+            prefix={<SearchOutlined />}
+            value={searchText}
+            onChange={(e) => handleSearch(e.target.value)}
+            onSearch={handleSearch}
+            allowClear
+            enterButton
+          />
+        </Col>
+        <Col xs={24} sm={6} md={4}>
+          <Select
+            style={{ width: "100%" }}
+            placeholder="Trạng thái"
+            value={statusFilter}
+            onChange={handleStatusChange}
+            allowClear
+          >
+            {Object.entries(FeatureStatusLabels).map(([key, label]) => (
+              <Select.Option key={key} value={Number(key)}>
+                {label}
+              </Select.Option>
+            ))}
+          </Select>
+        </Col>
+      </Row>
+
+      {/* Table */}
+      <Table
+        columns={columns}
+        dataSource={data}
+        rowKey="id"
+        loading={loading}
+        pagination={{
+          ...pagination,
+          showSizeChanger: true,
+          showTotal: (total) => `Tổng ${total} mục`,
+        }}
+        onChange={handleTableChange}
+      />
+    </Card>
+  );
+};
+
+export default FeatureList;
+```
+
+---
+
+## 11. React Hook Form + Yup Pattern (QUAN TRỌNG)
+
+### 11.1 Dependencies
+
+```bash
+npm install react-hook-form yup @hookform/resolvers
+```
+
+### 11.2 Form với React Hook Form + Yup
+
+```
+pages/[Feature]/
+├── [Feature]Form.tsx           # Form UI
+├── hooks/
+│   └── useFeatureForm.ts       # Form logic hook
+└── schemas/
+    └── featureSchema.ts        # Yup validation schema
+```
+
+**schemas/featureSchema.ts:**
+```tsx
+import * as yup from "yup";
+
+export const featureSchema = yup.object({
+  name: yup
+    .string()
+    .required("Tên là bắt buộc")
+    .min(3, "Tên tối thiểu 3 ký tự")
+    .max(100, "Tên tối đa 100 ký tự"),
+  code: yup
+    .string()
+    .required("Mã là bắt buộc")
+    .matches(/^[A-Z0-9]+$/, "Mã chỉ chứa chữ in hoa và số"),
+  email: yup
+    .string()
+    .email("Email không hợp lệ")
+    .nullable(),
+  phone: yup
+    .string()
+    .matches(/^[0-9]{10,11}$/, "Số điện thoại không hợp lệ")
+    .nullable(),
+  status: yup
+    .number()
+    .required("Trạng thái là bắt buộc"),
+  startDate: yup
+    .date()
+    .required("Ngày bắt đầu là bắt buộc"),
+  endDate: yup
+    .date()
+    .nullable()
+    .min(yup.ref("startDate"), "Ngày kết thúc phải sau ngày bắt đầu"),
+}).required();
+
+export type FeatureFormData = yup.InferType<typeof featureSchema>;
+```
+
+**hooks/useFeatureForm.ts:**
+```tsx
+import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import { message } from "antd";
+import { useNavigate } from "react-router-dom";
+import { featureService } from "../../../services/featureService";
+import { featureSchema, FeatureFormData } from "../schemas/featureSchema";
+import { FeatureDto } from "../../../types/feature";
+
+interface UseFeatureFormProps {
+  initialData?: FeatureDto;
+  isEditMode?: boolean;
+}
+
+export const useFeatureForm = ({ initialData, isEditMode }: UseFeatureFormProps = {}) => {
+  const navigate = useNavigate();
+
+  const form = useForm<FeatureFormData>({
+    resolver: yupResolver(featureSchema),
+    defaultValues: initialData ? {
+      name: initialData.name,
+      code: initialData.code,
+      email: initialData.email,
+      phone: initialData.phone,
+      status: initialData.status,
+      startDate: initialData.startDate ? new Date(initialData.startDate) : undefined,
+      endDate: initialData.endDate ? new Date(initialData.endDate) : undefined,
+    } : {
+      name: "",
+      code: "",
+      status: 0,
+    },
+  });
+
+  const onSubmit = async (data: FeatureFormData) => {
+    try {
+      if (isEditMode && initialData) {
+        await featureService.update(initialData.id, data);
+        message.success("Cập nhật thành công");
+      } else {
+        await featureService.create(data);
+        message.success("Tạo mới thành công");
+      }
+      navigate(-1);
+    } catch (error: any) {
+      console.error("Failed to save:", error);
+      const errorMessage = error.response?.data?.error?.message || "Có lỗi xảy ra";
+      message.error(errorMessage);
+    }
+  };
+
+  const handleCancel = () => {
+    navigate(-1);
+  };
+
+  return {
+    form,
+    onSubmit: form.handleSubmit(onSubmit),
+    handleCancel,
+    isSubmitting: form.formState.isSubmitting,
+    errors: form.formState.errors,
+  };
+};
+```
+
+**FeatureForm.tsx (với Ant Design):**
+```tsx
+import React from "react";
+import { Card, Form, Input, Select, DatePicker, Button, Space, Row, Col } from "antd";
+import { Controller } from "react-hook-form";
+import dayjs from "dayjs";
+import { useFeatureForm } from "./hooks/useFeatureForm";
+import { FeatureStatusLabels } from "../../types/feature";
+
+interface FeatureFormProps {
+  initialData?: FeatureDto;
+  isEditMode?: boolean;
+}
+
+const FeatureForm: React.FC<FeatureFormProps> = ({ initialData, isEditMode }) => {
+  const { form, onSubmit, handleCancel, isSubmitting, errors } = useFeatureForm({
+    initialData,
+    isEditMode,
+  });
+
+  return (
+    <Card title={isEditMode ? "Chỉnh sửa" : "Tạo mới"}>
+      <Form layout="vertical" onFinish={onSubmit}>
+        <Row gutter={16}>
+          <Col xs={24} md={12}>
+            <Form.Item
+              label="Tên"
+              required
+              validateStatus={errors.name ? "error" : ""}
+              help={errors.name?.message}
+            >
+              <Controller
+                name="name"
+                control={form.control}
+                render={({ field }) => (
+                  <Input {...field} placeholder="Nhập tên" />
+                )}
+              />
+            </Form.Item>
+          </Col>
+
+          <Col xs={24} md={12}>
+            <Form.Item
+              label="Mã"
+              required
+              validateStatus={errors.code ? "error" : ""}
+              help={errors.code?.message}
+            >
+              <Controller
+                name="code"
+                control={form.control}
+                render={({ field }) => (
+                  <Input {...field} placeholder="Nhập mã" disabled={isEditMode} />
+                )}
+              />
+            </Form.Item>
+          </Col>
+
+          <Col xs={24} md={12}>
+            <Form.Item
+              label="Trạng thái"
+              required
+              validateStatus={errors.status ? "error" : ""}
+              help={errors.status?.message}
+            >
+              <Controller
+                name="status"
+                control={form.control}
+                render={({ field }) => (
+                  <Select {...field} placeholder="Chọn trạng thái">
+                    {Object.entries(FeatureStatusLabels).map(([key, label]) => (
+                      <Select.Option key={key} value={Number(key)}>
+                        {label}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                )}
+              />
+            </Form.Item>
+          </Col>
+
+          <Col xs={24} md={12}>
+            <Form.Item
+              label="Ngày bắt đầu"
+              required
+              validateStatus={errors.startDate ? "error" : ""}
+              help={errors.startDate?.message}
+            >
+              <Controller
+                name="startDate"
+                control={form.control}
+                render={({ field }) => (
+                  <DatePicker
+                    {...field}
+                    value={field.value ? dayjs(field.value) : null}
+                    onChange={(date) => field.onChange(date?.toDate())}
+                    format="DD/MM/YYYY"
+                    style={{ width: "100%" }}
+                  />
+                )}
+              />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Form.Item>
+          <Space>
+            <Button type="primary" htmlType="submit" loading={isSubmitting}>
+              {isEditMode ? "Cập nhật" : "Tạo mới"}
+            </Button>
+            <Button onClick={handleCancel}>Hủy</Button>
+          </Space>
+        </Form.Item>
+      </Form>
+    </Card>
+  );
+};
+
+export default FeatureForm;
+```
+
+### 11.3 Common Yup Validators
+
+```tsx
+// schemas/commonValidators.ts
+import * as yup from "yup";
+
+// Vietnamese phone number
+export const phoneSchema = yup
+  .string()
+  .matches(/^(0[0-9]{9,10})$/, "Số điện thoại không hợp lệ")
+  .nullable();
+
+// Vietnamese ID number (CCCD/CMND)
+export const idNumberSchema = yup
+  .string()
+  .matches(/^[0-9]{9,12}$/, "Số CCCD/CMND không hợp lệ")
+  .nullable();
+
+// Required string with min/max
+export const requiredString = (min = 1, max = 255) =>
+  yup
+    .string()
+    .required("Trường này là bắt buộc")
+    .min(min, `Tối thiểu ${min} ký tự`)
+    .max(max, `Tối đa ${max} ký tự`);
+
+// Optional positive number
+export const optionalPositiveNumber = yup
+  .number()
+  .positive("Giá trị phải lớn hơn 0")
+  .nullable()
+  .transform((value) => (isNaN(value) ? null : value));
+
+// Date range validation
+export const dateRangeSchema = (startField: string) =>
+  yup
+    .date()
+    .nullable()
+    .when(startField, (startDate, schema) =>
+      startDate
+        ? schema.min(startDate, "Ngày kết thúc phải sau ngày bắt đầu")
+        : schema
+    );
+```
+
+---
+
+## 12. File Structure Summary
+
+```
+pages/[Feature]/
+├── [Feature]List.tsx           # List UI (stateless)
+├── [Feature]Detail.tsx         # Detail UI (stateless)
+├── [Feature]Form.tsx           # Form UI (stateless)
+├── hooks/
+│   ├── useFeatureList.ts       # List logic
+│   ├── useFeatureDetail.ts     # Detail logic
+│   └── useFeatureForm.ts       # Form logic (RHF + Yup)
+├── schemas/
+│   └── featureSchema.ts        # Yup validation
+└── components/
+    ├── columns.tsx             # Table columns
+    └── [Feature]Modal.tsx      # Modals
+```
+
+---
+
+## Checklist Feature Mới
+
+- [ ] `types/[feature].ts` - DTOs, enums, status labels/colors
+- [ ] `services/[feature]Service.ts` - API calls
+- [ ] `pages/[Feature]/hooks/useFeatureList.ts` - List logic hook
+- [ ] `pages/[Feature]/hooks/useFeatureForm.ts` - Form logic hook (RHF)
+- [ ] `pages/[Feature]/schemas/featureSchema.ts` - Yup schema
+- [ ] `pages/[Feature]/components/columns.tsx` - Table columns
+- [ ] `pages/[Feature]/[Feature]List.tsx` - List UI
+- [ ] `pages/[Feature]/[Feature]Detail.tsx` - Detail UI
+- [ ] `pages/[Feature]/[Feature]Form.tsx` - Form UI (optional)
+- [ ] `constants/routes.ts` - Thêm routes
+- [ ] `constants/permissions.ts` - Thêm permissions (nếu cần)
+- [ ] `App.tsx` - Thêm Route components
+- [ ] `MainLayout.tsx` - Thêm menu item với roles
+
+---
+
+**Version:** 4.0
+**Updated:** 2026-01-01
+**Changes:**
+- v3.0: Added Container-Presentational Pattern (Section 3)
+- v4.0: Added Custom Hooks Pattern (Section 10), React Hook Form + Yup Pattern (Section 11)

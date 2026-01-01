@@ -19,8 +19,8 @@ import {
   PlayCircleOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
-import dayjs from "dayjs";
 import { NumericFormat } from "react-number-format";
+import { formatDate } from "../../../utils/formatters";
 import {
   TestingIndicatorDto,
   SaveIndicatorResultDto,
@@ -310,21 +310,21 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       dataIndex: "assignedDate",
       key: "assignedDate",
       width: 110,
-      render: (date: string) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
+      render: (date: string) => formatDate(date),
     },
     {
       title: "Ngày bắt đầu TN",
       dataIndex: "startDate",
       key: "startDate",
       width: 120,
-      render: (date: string) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
+      render: (date: string) => formatDate(date),
     },
     {
       title: "Ngày gửi KQ",
       dataIndex: "submitDate",
       key: "submitDate",
       width: 110,
-      render: (date: string) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
+      render: (date: string) => formatDate(date),
     },
     {
       title: "Trạng thái",

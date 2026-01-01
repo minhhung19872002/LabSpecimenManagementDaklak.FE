@@ -13,8 +13,8 @@ import {
 } from "antd";
 import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
-import dayjs from "dayjs";
 import { qualityManagementService } from "../../../services/qualityManagementService";
+import { formatDate } from "../../../utils/formatters";
 import {
   standardService,
   StandardWithIndicatorsDto,
@@ -253,14 +253,14 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       dataIndex: "resultSentDate",
       key: "resultSentDate",
       width: 110,
-      render: (date: string) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
+      render: (date: string) => formatDate(date),
     },
     {
       title: "Ngày duyệt",
       dataIndex: "approvalDate",
       key: "approvalDate",
       width: 110,
-      render: (date: string) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
+      render: (date: string) => formatDate(date),
     },
     {
       title: "So với",
