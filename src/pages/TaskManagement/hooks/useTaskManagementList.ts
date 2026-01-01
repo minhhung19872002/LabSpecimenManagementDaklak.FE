@@ -8,7 +8,7 @@ import {
   LaboratoryTaskStatus,
   GetLaboratoryTaskListDto,
 } from "../../../types/laboratoryTask";
-import { PATH_ROUTES } from "../../../constants";
+import { PATH_ROUTES, STORAGE_KEYS } from "../../../constants";
 import { getTaskManagementColumns } from "../components/columns";
 
 export const useTaskManagementList = () => {
@@ -29,7 +29,7 @@ export const useTaskManagementList = () => {
 
   const currentUser = useMemo(() => {
     try {
-      const userInfo = localStorage.getItem("user_info");
+      const userInfo = localStorage.getItem(STORAGE_KEYS.USER_INFO);
       return userInfo ? JSON.parse(userInfo) : null;
     } catch {
       return null;

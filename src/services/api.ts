@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { STORAGE_KEYS, HTTP_STATUS } from '../constants';
 
 // API Base URL from environment variable
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:44381';
@@ -56,9 +57,9 @@ const processQueue = (error: any, token: string | null = null) => {
 
 // Clear tokens and redirect to login
 const handleAuthFailure = () => {
-  localStorage.removeItem('access_token');
-  localStorage.removeItem('refresh_token');
-  localStorage.removeItem('user_info');
+  localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+  localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+  localStorage.removeItem(STORAGE_KEYS.USER_INFO);
   if (!window.location.pathname.includes('/login')) {
     window.location.href = '/login';
   }
@@ -86,7 +87,7 @@ const apiClient: AxiosInstance = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     // Add auth token if available
-    const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -145,13 +146,13 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
     // Handle 403 Forbidden - redirect to forbidden page (not logout)
-    if (error.response?.status === 403) {
+    if (error.response?.status === HTTP_STATUS.FORBIDDEN) {
       handleForbidden();
       return Promise.reject(error);
     }
 
     // Handle 401 Unauthorized
-    if (error.response?.status === 401) {
+    if (error.response?.status === HTTP_STATUS.UNAUTHORIZED) {
       // Skip refresh for login/refresh endpoints
       if (originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/refresh-token')) {
         handleAuthFailure();
@@ -174,7 +175,7 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = localStorage.getItem('refresh_token');
+      const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
 
       if (!refreshToken) {
         isRefreshing = false;
@@ -192,9 +193,9 @@ apiClient.interceptors.response.use(
         const newRefreshToken = response.data?.refreshToken || response.data?.data?.refreshToken;
 
         if (newAccessToken) {
-          localStorage.setItem('access_token', newAccessToken);
+          localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
           if (newRefreshToken) {
-            localStorage.setItem('refresh_token', newRefreshToken);
+            localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
           }
 
           // Update authorization header for the original request

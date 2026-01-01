@@ -1,10 +1,13 @@
 import React, { useMemo, useEffect, useRef } from "react";
 import { Button, Space, Row, Col, Form } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
+import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
 import { useTestMethodsData, useTestMethodsActions } from "./hooks";
 import { TestMethodsTable, TestMethodModal, AddIndicatorsModal } from "./components";
 import { getTestMethodColumns, getIndicatorColumns } from "./constants";
 import { TestMethodsTabProps } from "./types";
+import { testMethodSchema, TestMethodFormData } from "./schemas/testMethodSchema";
 
 const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshKey }) => {
   const {
@@ -55,7 +58,10 @@ const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshK
     setExpandedRowKeys,
   });
 
-  const [form] = Form.useForm();
+  const form = useForm<TestMethodFormData>({
+    resolver: yupResolver(testMethodSchema),
+    defaultValues: { name: "", unit: "", isActive: true },
+  });
   const [addIndicatorsForm] = Form.useForm();
 
   // Get existing indicator IDs for the selected test method
@@ -121,7 +127,7 @@ const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshK
         loading={modalLoading}
         editingItem={editingItem}
         form={form}
-        onOk={() => handleModalOk(form)}
+        onOk={(data) => handleModalOk(data, form)}
         onCancel={() => handleModalCancel(form)}
       />
 

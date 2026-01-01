@@ -2,6 +2,7 @@ import { useState } from "react";
 import { message, Modal } from "antd";
 import type { FormInstance } from "antd";
 import type { UploadFile } from "antd/es/upload/interface";
+import type { UseFormReturn } from "react-hook-form";
 import {
   indicatorGroupService,
   indicatorService,
@@ -16,6 +17,10 @@ import {
   ImportIndicatorsResultDto,
   ImportIndicatorGroupsResultDto,
 } from "../types";
+import {
+  IndicatorFormData,
+  IndicatorGroupFormData,
+} from "../schemas/indicatorSchema";
 
 interface UseIndicatorsActionsParams {
   indicators: IndicatorDto[];
@@ -55,16 +60,18 @@ export const useIndicatorsActions = ({
   const [groupFileList, setGroupFileList] = useState<UploadFile[]>([]);
 
   // Handle Group CRUD
-  const handleCreateGroup = (groupForm: FormInstance) => {
+  const handleCreateGroup = (groupForm: UseFormReturn<IndicatorGroupFormData>) => {
     setEditingGroup(null);
-    groupForm.resetFields();
-    groupForm.setFieldsValue({ isActive: true });
+    groupForm.reset({ name: "", isActive: true });
     setGroupModalOpen(true);
   };
 
-  const handleEditGroup = (group: IndicatorGroupDto, groupForm: FormInstance) => {
+  const handleEditGroup = (
+    group: IndicatorGroupDto,
+    groupForm: UseFormReturn<IndicatorGroupFormData>
+  ) => {
     setEditingGroup(group);
-    groupForm.setFieldsValue(group);
+    groupForm.reset({ name: group.name, isActive: group.isActive });
     setGroupModalOpen(true);
   };
 
@@ -86,26 +93,26 @@ export const useIndicatorsActions = ({
     }
   };
 
-  const handleGroupModalOk = async (groupForm: FormInstance) => {
+  const handleGroupModalOk = async (
+    data: IndicatorGroupFormData,
+    groupForm: UseFormReturn<IndicatorGroupFormData>
+  ) => {
     try {
       setModalLoading(true);
-      const values = await groupForm.validateFields();
 
       if (editingGroup) {
         await indicatorGroupService.update(
           editingGroup.id,
-          values as CreateUpdateIndicatorGroupDto
+          data as CreateUpdateIndicatorGroupDto
         );
         message.success("Cập nhật nhóm thành công!");
       } else {
-        await indicatorGroupService.create(
-          values as CreateUpdateIndicatorGroupDto
-        );
+        await indicatorGroupService.create(data as CreateUpdateIndicatorGroupDto);
         message.success("Thêm nhóm thành công!");
       }
 
       setGroupModalOpen(false);
-      groupForm.resetFields();
+      groupForm.reset();
       fetchData();
       onDataChange?.();
     } catch (error) {
@@ -116,9 +123,16 @@ export const useIndicatorsActions = ({
   };
 
   // Handle Indicator CRUD
-  const handleEditIndicator = (indicator: IndicatorDto, indicatorForm: FormInstance) => {
+  const handleEditIndicator = (
+    indicator: IndicatorDto,
+    indicatorForm: UseFormReturn<IndicatorFormData>
+  ) => {
     setEditingIndicator(indicator);
-    indicatorForm.setFieldsValue(indicator);
+    indicatorForm.reset({
+      indicatorGroupId: indicator.indicatorGroupId,
+      name: indicator.name,
+      isActive: indicator.isActive,
+    });
     setIndicatorModalOpen(true);
   };
 
@@ -252,24 +266,26 @@ export const useIndicatorsActions = ({
     });
   };
 
-  const handleIndicatorModalOk = async (indicatorForm: FormInstance) => {
+  const handleIndicatorModalOk = async (
+    data: IndicatorFormData,
+    indicatorForm: UseFormReturn<IndicatorFormData>
+  ) => {
     try {
       setModalLoading(true);
-      const values = await indicatorForm.validateFields();
 
       if (editingIndicator) {
         await indicatorService.update(
           editingIndicator.id,
-          values as UpdateIndicatorDto
+          data as UpdateIndicatorDto
         );
         message.success("Cập nhật chỉ tiêu thành công!");
       } else {
-        await indicatorService.create(values as CreateIndicatorDto);
+        await indicatorService.create(data as CreateIndicatorDto);
         message.success("Thêm chỉ tiêu thành công!");
       }
 
       setIndicatorModalOpen(false);
-      indicatorForm.resetFields();
+      indicatorForm.reset();
       fetchData();
       onDataChange?.();
     } catch (error) {
@@ -279,7 +295,7 @@ export const useIndicatorsActions = ({
     }
   };
 
-  // Handle Bulk Create
+  // Handle Bulk Create (still uses Ant Design Form for dynamic fields)
   const handleBulkCreate = (bulkForm: FormInstance) => {
     console.log("handleBulkCreate");
     bulkForm.resetFields();

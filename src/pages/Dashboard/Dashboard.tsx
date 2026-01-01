@@ -1,33 +1,4 @@
- 
 import React, { useEffect, useState, useMemo } from "react";
-import {
-  Card,
-  Row,
-  Col,
-  Statistic,
-  Table,
-  Tag,
-  Spin,
-  Radio,
-  DatePicker,
-  Button,
-  Select,
-  Typography,
-  Space,
-  Alert,
-} from "antd";
-import {
-  FileTextOutlined,
-  ExperimentOutlined,
-  CheckCircleOutlined,
-  WarningOutlined,
-  ClockCircleOutlined,
-  DollarOutlined,
-  ReloadOutlined,
-  AuditOutlined,
-  FieldTimeOutlined,
-  RightOutlined,
-} from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import dashboardService, {
   DashboardOverviewDto,
@@ -36,14 +7,11 @@ import dashboardService, {
   MonthlyRevenueDto,
 } from "../../services/dashboardService";
 import { qualityManagementService } from "../../services/qualityManagementService";
-import { QualityManagementTaskDto } from "../../types/qualityManagement";
+import { QualityManagementTaskDto, QualityManagementStatus } from "../../types/qualityManagement";
 import dayjs, { Dayjs } from "dayjs";
 import { PATH_ROUTES } from "../../constants";
-import { formatDate } from "../../utils/formatters";
-import { Column } from "@ant-design/charts";
-
-const { Title, Text } = Typography;
-const { RangePicker } = DatePicker;
+import { formatCurrency } from "./columns";
+import DashboardContainer from "./components/DashboardContainer";
 
 type FilterPeriod = "month" | "quarter" | "half_year" | "year";
 
@@ -76,14 +44,6 @@ const getDateRangeForPeriod = (period: FilterPeriod): [Dayjs, Dayjs] => {
     default:
       return [now.startOf("month"), now.endOf("month")];
   }
-};
-
-const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-    maximumFractionDigits: 0,
-  }).format(value);
 };
 
 const Dashboard: React.FC = () => {
@@ -139,7 +99,7 @@ const Dashboard: React.FC = () => {
       const result = await qualityManagementService.getList({
         skipCount: 0,
         maxResultCount: 10,
-        status: 0, // QualityManagementStatus.PendingApproval
+        status: QualityManagementStatus.PendingApproval,
       });
       setPendingTasks(result.items || []);
     } catch (err) {
@@ -287,414 +247,34 @@ const Dashboard: React.FC = () => {
     },
   }), [monthlyRevenue]);
 
-  // Pending tasks columns
-  const pendingTasksColumns = [
-    {
-      title: "Số HĐ",
-      dataIndex: "contractNumber",
-      key: "contractNumber",
-      width: 120,
-      render: (text: string) => <Text strong>{text}</Text>,
-    },
-    {
-      title: "Khách hàng",
-      dataIndex: "customerName",
-      key: "customerName",
-      ellipsis: true,
-    },
-    {
-      title: "Loại",
-      dataIndex: "taskType",
-      key: "taskType",
-      width: 100,
-      render: (type: number) => (
-        <Tag color={type === 0 ? "blue" : "orange"}>
-          {type === 0 ? "Kết quả" : "Thay đổi"}
-        </Tag>
-      ),
-    },
-  ];
-
-  // Recent requests columns
-  const recentRequestsColumns = [
-    {
-      title: "Số HĐ",
-      dataIndex: "contractNumber",
-      key: "contractNumber",
-      width: 120,
-      render: (text: string) => <Text strong>{text}</Text>,
-    },
-    {
-      title: "Tên CS/DN",
-      dataIndex: "customerName",
-      key: "customerName",
-      ellipsis: true,
-    },
-    {
-      title: "Ngày gửi YC",
-      dataIndex: "pendingDate",
-      key: "pendingDate",
-      width: 110,
-      render: (date: string) => formatDate(date),
-    },
-    {
-      title: "Mẫu",
-      dataIndex: "sampleCount",
-      key: "sampleCount",
-      width: 60,
-      align: "center" as const,
-    },
-    {
-      title: "Chỉ tiêu",
-      dataIndex: "indicatorCount",
-      key: "indicatorCount",
-      width: 80,
-      align: "center" as const,
-    },
-    {
-      title: "Tổng tiền",
-      dataIndex: "totalCost",
-      key: "totalCost",
-      width: 120,
-      align: "right" as const,
-      render: (value: number) => formatCurrency(value),
-    },
-  ];
-
-  // Revenue by customer columns
-  const revenueColumns = [
-    {
-      title: "Cơ sở/Doanh nghiệp",
-      dataIndex: "customerName",
-      key: "customerName",
-      ellipsis: true,
-    },
-    {
-      title: "Mẫu",
-      dataIndex: "totalSamples",
-      key: "totalSamples",
-      width: 70,
-      align: "center" as const,
-    },
-    {
-      title: "Chỉ tiêu",
-      dataIndex: "totalIndicators",
-      key: "totalIndicators",
-      width: 80,
-      align: "center" as const,
-    },
-    {
-      title: "Doanh thu",
-      dataIndex: "revenue",
-      key: "revenue",
-      width: 130,
-      align: "right" as const,
-      render: (value: number) => formatCurrency(value),
-    },
-  ];
-
-  if (error) {
-    return (
-      <div>
-        <Title level={3} style={{ marginBottom: 24 }}>Báo cáo Tổng quan</Title>
-        <Alert
-          message="Lỗi"
-          description={error}
-          type="error"
-          showIcon
-        />
-      </div>
-    );
-  }
-
   return (
-    <div>
-      {/* Header with Title and Filters */}
-      <div style={{ marginBottom: 24 }}>
-        <Row justify="space-between" align="middle" gutter={[16, 16]}>
-          <Col>
-            <Title level={3} style={{ margin: 0 }}>Báo cáo Tổng quan</Title>
-          </Col>
-          <Col>
-            <Space wrap>
-              <Radio.Group
-                value={isCustomDateRange ? undefined : filterPeriod}
-                onChange={(e) => handlePeriodChange(e.target.value)}
-                optionType="button"
-                buttonStyle="solid"
-              >
-                <Radio.Button value="month">Tháng</Radio.Button>
-                <Radio.Button value="quarter">Quý</Radio.Button>
-                <Radio.Button value="half_year">Nửa năm</Radio.Button>
-                <Radio.Button value="year">Năm</Radio.Button>
-              </Radio.Group>
-              <RangePicker
-                value={dateRange}
-                onChange={handleDateRangeChange}
-                format="DD/MM/YYYY"
-                allowClear={false}
-              />
-              <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
-                Làm mới
-              </Button>
-            </Space>
-          </Col>
-        </Row>
-      </div>
-
-      {/* Statistics Cards - Row 1 */}
-      <Spin spinning={loading}>
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} lg={6}>
-            <Card hoverable>
-              <Statistic
-                title="Tổng số hợp đồng"
-                value={overview?.totalContracts || 0}
-                prefix={<FileTextOutlined style={{ color: "#1890ff" }} />}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card hoverable>
-              <Statistic
-                title="Tổng số mẫu"
-                value={overview?.totalSamples || 0}
-                prefix={<ExperimentOutlined style={{ color: "#722ed1" }} />}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card hoverable>
-              <Statistic
-                title="Tổng số chỉ tiêu"
-                value={overview?.totalIndicators || 0}
-                prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card hoverable>
-              <Statistic
-                title="Báo cáo NCT"
-                value={overview?.totalNCRs || 0}
-                prefix={<WarningOutlined style={{ color: "#cf1322" }} />}
-                valueStyle={{ color: "#cf1322" }}
-              />
-            </Card>
-          </Col>
-        </Row>
-
-        {/* Statistics Cards - Row 2 */}
-        <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-          <Col xs={24} sm={12} lg={6}>
-            <Card hoverable>
-              <Statistic
-                title="Tổng doanh thu"
-                value={overview?.totalRevenue || 0}
-                prefix={<DollarOutlined style={{ color: "#faad14" }} />}
-                valueStyle={{ color: "#faad14" }}
-                formatter={(value) => formatCurrency(Number(value))}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card hoverable>
-              <Statistic
-                title="TN đúng hạn"
-                value={overview?.onTimeTests || 0}
-                prefix={<FieldTimeOutlined style={{ color: "#52c41a" }} />}
-                valueStyle={{ color: "#52c41a" }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card hoverable>
-              <Statistic
-                title="TN trễ hạn"
-                value={overview?.lateTests || 0}
-                prefix={<ClockCircleOutlined style={{ color: "#ff4d4f" }} />}
-                valueStyle={{ color: "#ff4d4f" }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card hoverable>
-              <Statistic
-                title="Chờ phê duyệt"
-                value={overview?.pendingApproval || 0}
-                prefix={<AuditOutlined style={{ color: "#13c2c2" }} />}
-                valueStyle={{ color: "#13c2c2" }}
-              />
-            </Card>
-          </Col>
-        </Row>
-      </Spin>
-
-      {/* Pending Approvals & Recent Requests - 50/50 */}
-      <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
-        <Col xs={24} lg={12}>
-          <Card
-            title={
-              <Space>
-                <AuditOutlined />
-                <span>Chờ phê duyệt</span>
-                <Tag color="orange">{pendingTasks.length}</Tag>
-              </Space>
-            }
-            extra={
-              <Button
-                type="link"
-                onClick={() => navigate(PATH_ROUTES.qualityManagement)}
-              >
-                Xem tất cả <RightOutlined />
-              </Button>
-            }
-            bodyStyle={{ padding: 0, minHeight: 280 }}
-          >
-            <Spin spinning={loadingPendingTasks}>
-              <Table
-                dataSource={pendingTasks.slice(0, 5)}
-                columns={pendingTasksColumns}
-                rowKey="id"
-                pagination={false}
-                size="small"
-              />
-            </Spin>
-          </Card>
-        </Col>
-
-        <Col xs={24} lg={12}>
-          <Card
-            title={
-              <Space>
-                <FileTextOutlined />
-                <span>Yêu cầu gần đây</span>
-              </Space>
-            }
-            extra={
-              <Space>
-                <Select
-                  placeholder="Chọn CS/DN"
-                  allowClear
-                  style={{ width: 180 }}
-                  value={recentRequestsFilter}
-                  onChange={setRecentRequestsFilter}
-                  options={customerNames.map((name) => ({ label: name, value: name }))}
-                  showSearch
-                  filterOption={(input, option) =>
-                    (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-                  }
-                />
-                <Button
-                  type="link"
-                  onClick={() => navigate(PATH_ROUTES.testRequests.index)}
-                >
-                  Xem tất cả <RightOutlined />
-                </Button>
-              </Space>
-            }
-            bodyStyle={{ padding: 0, minHeight: 280 }}
-          >
-            <Spin spinning={loadingRecentRequests}>
-              <Table
-                dataSource={recentRequests.slice(0, 5)}
-                columns={recentRequestsColumns}
-                rowKey="id"
-                size="small"
-                scroll={{ x: 600 }}
-                pagination={false}
-              />
-            </Spin>
-          </Card>
-        </Col>
-      </Row>
-
-      {/* Revenue Report Section */}
-      <Card
-        title={
-          <Space>
-            <DollarOutlined />
-            <span>Báo cáo chi tiết doanh thu</span>
-          </Space>
-        }
-        style={{ marginTop: 24 }}
-      >
-        <Row gutter={[16, 16]}>
-          {/* Revenue Table - Left */}
-          <Col xs={24} lg={12}>
-            <Spin spinning={loadingRevenue}>
-              <Table
-                className="revenue-table"
-                dataSource={revenueByCustomer}
-                columns={revenueColumns}
-                rowKey="customerName"
-                size="small"
-                pagination={false}
-                onRow={(record) => ({
-                  onClick: () => setSelectedCustomer(record.customerName),
-                  style: {
-                    cursor: "pointer",
-                    backgroundColor: selectedCustomer === record.customerName ? "#fff1f0" : undefined,
-                  },
-                })}
-                rowClassName={(record) =>
-                  selectedCustomer === record.customerName ? "selected-row" : ""
-                }
-              />
-            </Spin>
-          </Col>
-
-          {/* Revenue Chart - Right */}
-          <Col xs={24} lg={12}>
-            <div style={{ marginBottom: 16 }}>
-              <Select
-                placeholder="Chọn Cơ sở/DN"
-                style={{ width: 300 }}
-                value={selectedCustomer}
-                onChange={setSelectedCustomer}
-                options={customerNames.map((name) => ({ label: name, value: name }))}
-                showSearch
-                filterOption={(input, option) =>
-                  (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-                }
-              />
-            </div>
-            <Spin spinning={loadingMonthlyRevenue}>
-              {monthlyRevenue.length > 0 ? (
-                <Column {...chartConfig} height={300} />
-              ) : (
-                <div
-                  style={{
-                    height: 300,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#999",
-                  }}
-                >
-                  {selectedCustomer
-                    ? "Không có dữ liệu doanh thu cho doanh nghiệp này"
-                    : "Chọn một doanh nghiệp để xem biểu đồ"}
-                </div>
-              )}
-            </Spin>
-          </Col>
-        </Row>
-      </Card>
-
-      <style>{`
-        .selected-row {
-          background-color: #fff1f0 !important;
-        }
-        .selected-row:hover > td {
-          background-color: #ffccc7 !important;
-        }
-        .revenue-table .ant-table-tbody > tr > td {
-          height: 32px;
-          padding: 2px 10px !important;
-        }
-      `}</style>
-    </div>
+    <DashboardContainer
+      filterPeriod={filterPeriod}
+      dateRange={dateRange}
+      isCustomDateRange={isCustomDateRange}
+      recentRequestsFilter={recentRequestsFilter}
+      selectedCustomer={selectedCustomer}
+      customerNames={customerNames}
+      loading={loading}
+      error={error}
+      overview={overview}
+      pendingTasks={pendingTasks}
+      recentRequests={recentRequests}
+      revenueByCustomer={revenueByCustomer}
+      monthlyRevenue={monthlyRevenue}
+      loadingPendingTasks={loadingPendingTasks}
+      loadingRecentRequests={loadingRecentRequests}
+      loadingRevenue={loadingRevenue}
+      loadingMonthlyRevenue={loadingMonthlyRevenue}
+      chartConfig={chartConfig}
+      onPeriodChange={handlePeriodChange}
+      onDateRangeChange={handleDateRangeChange}
+      onRefresh={handleRefresh}
+      onRecentRequestsFilterChange={setRecentRequestsFilter}
+      onSelectedCustomerChange={setSelectedCustomer}
+      onNavigateToQualityManagement={() => navigate(PATH_ROUTES.qualityManagement)}
+      onNavigateToTestRequests={() => navigate(PATH_ROUTES.testRequests.index)}
+    />
   );
 };
 

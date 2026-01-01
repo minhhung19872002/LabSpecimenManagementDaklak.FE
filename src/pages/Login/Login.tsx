@@ -4,7 +4,7 @@ import { UserOutlined, LockOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import { authService, UserInfo } from "../../services/authService";
-import { PATH_ROUTES, ROLES } from "../../constants";
+import { PATH_ROUTES, ROLES, STORAGE_KEYS } from "../../constants";
 import "./Login.css";
 
 interface LoginFormValues {
@@ -64,7 +64,7 @@ const Login: React.FC = () => {
   useEffect(() => {
     if (authService.isAuthenticated()) {
       // Get user info from localStorage to determine correct redirect
-      const storedUser = localStorage.getItem("user_info");
+      const storedUser = localStorage.getItem(STORAGE_KEYS.USER_INFO);
       if (storedUser) {
         try {
           const userInfo: UserInfo = JSON.parse(storedUser);
@@ -104,7 +104,7 @@ const Login: React.FC = () => {
         message.success("Đăng nhập thành công!");
         // Store user info
         if (response.user) {
-          localStorage.setItem("user_info", JSON.stringify(response.user));
+          localStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(response.user));
         }
 
         // Determine redirect path based on user role

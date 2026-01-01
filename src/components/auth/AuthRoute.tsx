@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { Spin } from 'antd';
-import { hasRoutePermission, getDefaultRouteForUser, PATH_ROUTES } from '../../constants';
+import { hasRoutePermission, getDefaultRouteForUser, PATH_ROUTES, STORAGE_KEYS } from '../../constants';
 import { UserInfo } from '../../services/authService';
 
 interface AuthRouteProps {
@@ -17,8 +17,8 @@ const AuthRoute: React.FC<AuthRouteProps> = ({ children }) => {
 
   useEffect(() => {
     const checkAuth = () => {
-      const token = localStorage.getItem('access_token');
-      const storedUser = localStorage.getItem('user_info');
+      const token = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+      const storedUser = localStorage.getItem(STORAGE_KEYS.USER_INFO);
 
       if (!token || !storedUser) {
         setIsAuthenticated(false);

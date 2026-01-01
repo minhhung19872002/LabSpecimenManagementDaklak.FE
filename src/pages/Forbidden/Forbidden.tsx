@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, Result, Space } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { getDefaultRouteForUser } from '../../constants';
+import { getDefaultRouteForUser, STORAGE_KEYS } from '../../constants';
 import { UserInfo, authService } from '../../services/authService';
 
 const Forbidden: React.FC = () => {
@@ -9,7 +9,7 @@ const Forbidden: React.FC = () => {
 
   const handleGoToHome = () => {
     // Get user roles from localStorage and navigate to appropriate page
-    const storedUser = localStorage.getItem('user_info');
+    const storedUser = localStorage.getItem(STORAGE_KEYS.USER_INFO);
     if (storedUser) {
       try {
         const userInfo: UserInfo = JSON.parse(storedUser);

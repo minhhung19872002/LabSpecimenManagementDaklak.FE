@@ -1,11 +1,9 @@
-// @ts-nocheck
-import React, { useState, useEffect } from 'react';
+import React, { useMemo } from "react";
 import {
   Card,
   Table,
   Button,
   Space,
-  Tag,
   Input,
   DatePicker,
   Select,
@@ -14,470 +12,81 @@ import {
   Modal,
   Descriptions,
   Divider,
-  message,
-  Tooltip,
-  Badge,
-  Spin,
-  Form
-} from 'antd';
+  Tag,
+} from "antd";
 import {
   SearchOutlined,
-  FilePdfOutlined,
-  MailOutlined,
-  EyeOutlined,
-  PrinterOutlined,
-  QrcodeOutlined,
-  DownloadOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
   ReloadOutlined,
   PlusOutlined,
-  SendOutlined,
-  AuditOutlined,
-  RocketOutlined
-} from '@ant-design/icons';
-import dayjs from 'dayjs';
-import QRCodeGenerator, { MiniQRCode } from '../../components/common/QRCodeGenerator';
-import { reportService, CreateReportDto } from '../../services/reportService';
-import { testRequestService } from '../../services/testRequestService';
-import { specimenService } from '../../services/specimenService';
-import { testService } from '../../services/testService';
-import { downloadBlobAsFile } from '../../services/importService';
+  QrcodeOutlined,
+  DownloadOutlined,
+} from "@ant-design/icons";
+import QRCodeGenerator, { MiniQRCode } from "../../components/common/QRCodeGenerator";
+import { useReportList, getStatusConfig } from "./hooks";
+import { ReportFormModal, getReportColumns } from "./components";
 
 const { RangePicker } = DatePicker;
 
-const getStatusConfig = (status: string) => {
-  const configs: Record<string, { color: string; text: string; icon: React.ReactNode }> = {
-    Draft: { color: 'default', text: 'Bản nháp', icon: <ClockCircleOutlined /> },
-    PendingApproval: { color: 'orange', text: 'Chờ duyệt', icon: <ClockCircleOutlined /> },
-    Approved: { color: 'green', text: 'Đã duyệt', icon: <CheckCircleOutlined /> },
-    Issued: { color: 'blue', text: 'Đã phát hành', icon: <CheckCircleOutlined /> },
-  };
-  return configs[status] || { color: 'default', text: status, icon: null };
-};
-
 const ReportList: React.FC = () => {
-  const [reports, setReports] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searchText, setSearchText] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const [previewVisible, setPreviewVisible] = useState(false);
-  const [qrModalVisible, setQrModalVisible] = useState(false);
-  const [selectedReport, setSelectedReport] = useState<any>(null);
-  const [createModalVisible, setCreateModalVisible] = useState(false);
-  const [testRequests, setTestRequests] = useState<any[]>([]);
-  const [specimens, setSpecimens] = useState<any[]>([]);
-  const [tests, setTests] = useState<any[]>([]);
-  const [createLoading, setCreateLoading] = useState(false);
-  const [workflowLoading, setWorkflowLoading] = useState(false);
-  const [form] = Form.useForm();
+  const {
+    data,
+    testRequests,
+    specimens,
+    tests,
+    loading,
+    createLoading,
+    workflowLoading,
+    searchText,
+    statusFilter,
+    isCreateModalOpen,
+    isPreviewOpen,
+    isQrModalOpen,
+    selectedReport,
+    form,
+    handleSearchChange,
+    handleStatusFilterChange,
+    handleOpenCreateModal,
+    handleTestRequestChange,
+    handleCreateModalCancel,
+    handleCreateModalSubmit,
+    handlePreview,
+    handlePreviewClose,
+    handleShowQR,
+    handleQrModalClose,
+    handleExportPDF,
+    handleSendEmail,
+    handlePrint,
+    handleSubmitForApproval,
+    handleApprove,
+    handleIssue,
+    loadData,
+  } = useReportList();
 
-  // Workflow handlers
-  const handleSubmitForApproval = async (record: any) => {
-    Modal.confirm({
-      title: 'Xác nhận gửi duyệt',
-      content: `Bạn có chắc chắn muốn gửi báo cáo "${record.reportNumber}" để duyệt?`,
-      okText: 'Gửi duyệt',
-      cancelText: 'Hủy',
-      onOk: async () => {
-        setWorkflowLoading(true);
-        try {
-          await reportService.submitForReview(record.id);
-          message.success('Đã gửi báo cáo để duyệt!');
-          loadData();
-        } catch (error) {
-          message.error('Không thể gửi báo cáo để duyệt. Vui lòng thử lại.');
-          console.error('Failed to submit for approval:', error);
-        } finally {
-          setWorkflowLoading(false);
-        }
-      },
-    });
-  };
-
-  const handleApprove = async (record: any) => {
-    Modal.confirm({
-      title: 'Xác nhận duyệt báo cáo',
-      content: `Bạn có chắc chắn muốn duyệt báo cáo "${record.reportNumber}"?`,
-      okText: 'Duyệt',
-      cancelText: 'Hủy',
-      onOk: async () => {
-        setWorkflowLoading(true);
-        try {
-          await reportService.approve(record.id);
-          message.success('Đã duyệt báo cáo thành công!');
-          loadData();
-        } catch (error) {
-          message.error('Không thể duyệt báo cáo. Vui lòng thử lại.');
-          console.error('Failed to approve:', error);
-        } finally {
-          setWorkflowLoading(false);
-        }
-      },
-    });
-  };
-
-  const handleIssue = async (record: any) => {
-    Modal.confirm({
-      title: 'Xác nhận phát hành báo cáo',
-      content: `Bạn có chắc chắn muốn phát hành báo cáo "${record.reportNumber}"? Sau khi phát hành, báo cáo sẽ có mã QR truy xuất.`,
-      okText: 'Phát hành',
-      cancelText: 'Hủy',
-      onOk: async () => {
-        setWorkflowLoading(true);
-        try {
-          await reportService.issue(record.id);
-          message.success('Đã phát hành báo cáo thành công!');
-          loadData();
-        } catch (error) {
-          message.error('Không thể phát hành báo cáo. Vui lòng thử lại.');
-          console.error('Failed to issue:', error);
-        } finally {
-          setWorkflowLoading(false);
-        }
-      },
-    });
-  };
-
-  const loadTestRequests = async () => {
-    try {
-      const result = await testRequestService.getList({ maxResultCount: 1000 });
-      setTestRequests(result.items);
-    } catch (error) {
-      console.error('Error loading test requests:', error);
-    }
-  };
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const result = await reportService.getList({ maxResultCount: 100 });
-      setReports(result.items.map((r: any) => ({
-        id: r.id,
-        reportNumber: r.reportNumber,
-        requestNumber: r.testRequestNumber || '',
-        customerName: r.customerName,
-        specimenCode: r.specimenCodes?.join(', ') || '',
-        specimenName: r.title,
-        testCount: r.testCount || 0,
-        status: r.status === 0 ? 'Draft' : r.status === 1 ? 'PendingApproval' : r.status === 2 ? 'Approved' : 'Issued',
-        createdAt: dayjs(r.creationTime).format('YYYY-MM-DD'),
-        approvedAt: r.issuedDate ? dayjs(r.issuedDate).format('YYYY-MM-DD HH:mm') : null,
-        approvedBy: r.approvedByName || null,
-        emailSent: r.status === 3, // Issued
-      })));
-    } catch (error) {
-      console.error('Error loading reports:', error);
-      message.error('Không thể tải danh sách báo cáo. Vui lòng kiểm tra kết nối server.');
-      setReports([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadData();
-    loadTestRequests();
-  }, []);
-
-  const handlePreview = (record: any) => {
-    setSelectedReport(record);
-    setPreviewVisible(true);
-  };
-
-  const handleShowQR = (record: any) => {
-    setSelectedReport(record);
-    setQrModalVisible(true);
-  };
-
-  const handleExportPDF = async (record: any) => {
-    try {
-      message.loading({ content: `Đang xuất PDF báo cáo ${record.reportNumber}...`, key: 'exportPdf' });
-      const blob = await reportService.exportPdf(record.id);
-      downloadBlobAsFile(blob, `BaoCao_${record.reportNumber}.pdf`);
-      message.success({ content: `Xuất PDF báo cáo ${record.reportNumber} thành công!`, key: 'exportPdf' });
-    } catch (error) {
-      console.error('Error exporting PDF:', error);
-      message.error({ content: 'Không thể xuất PDF. Vui lòng thử lại.', key: 'exportPdf' });
-    }
-  };
-
-  const handleSendEmail = async (record: any) => {
-    try {
-      await reportService.sendEmail(record.id);
-      message.success(`Đã gửi email báo cáo ${record.reportNumber} cho ${record.customerName}`);
-    } catch (error) {
-      message.error('Không thể gửi email. Vui lòng thử lại.');
-    }
-  };
-
-  const handlePrint = (record: any) => {
-    message.info(`Đang in báo cáo ${record.reportNumber}...`);
-  };
-
-  const handleOpenCreateModal = () => {
-    form.resetFields();
-    setSpecimens([]);
-    setTests([]);
-    setCreateModalVisible(true);
-  };
-
-  const handleTestRequestChange = async (testRequestId: string) => {
-    const selectedRequest = testRequests.find(tr => tr.id === testRequestId);
-    if (selectedRequest) {
-      form.setFieldsValue({
-        customerName: selectedRequest.customerName || '',
-        title: `Báo cáo kết quả - ${selectedRequest.requestNumber || ''}`,
-        specimenIds: [],
-        testIds: [],
-      });
-
-      // Load specimens for this test request
-      try {
-        const specimenList = await specimenService.getByTestRequest(testRequestId);
-        setSpecimens(specimenList);
-
-        // Load tests for all specimens
-        const allTests: any[] = [];
-        for (const specimen of specimenList) {
-          const testList = await testService.getBySpecimen(specimen.id);
-          allTests.push(...testList);
-        }
-        setTests(allTests);
-      } catch (error) {
-        console.error('Error loading specimens/tests:', error);
-        setSpecimens([]);
-        setTests([]);
-      }
-    }
-  };
-
-  const handleCreateReport = async () => {
-    try {
-      const values = await form.validateFields();
-      setCreateLoading(true);
-
-      const createData: CreateReportDto = {
-        title: values.title,
-        testRequestId: values.testRequestId,
-        customerName: values.customerName,
-        specimenIds: values.specimenIds?.length > 0 ? JSON.stringify(values.specimenIds) : undefined,
-        testIds: values.testIds?.length > 0 ? JSON.stringify(values.testIds) : undefined,
-        notes: values.notes,
-      };
-
-      await reportService.create(createData);
-      message.success('Tạo báo cáo mới thành công!');
-      setCreateModalVisible(false);
-      form.resetFields();
-      setSpecimens([]);
-      setTests([]);
-      loadData();
-    } catch (error) {
-      if (error.errorFields) {
-        console.error('Validation failed:', error);
-      } else {
-        message.error('Không thể tạo báo cáo. Vui lòng thử lại.');
-        console.error('Failed to create report:', error);
-      }
-    } finally {
-      setCreateLoading(false);
-    }
-  };
-
-  const filteredReports = reports.filter((r) => {
-    const matchSearch =
-      r.reportNumber?.toLowerCase().includes(searchText.toLowerCase()) ||
-      r.customerName?.toLowerCase().includes(searchText.toLowerCase()) ||
-      r.requestNumber?.toLowerCase().includes(searchText.toLowerCase());
-    const matchStatus = !statusFilter || r.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
-
-  const columns = [
-    {
-      title: 'Số báo cáo',
-      dataIndex: 'reportNumber',
-      key: 'reportNumber',
-      width: 180,
-      fixed: 'left' as const,
-      render: (text: string, record: any) => (
-        <a onClick={() => handlePreview(record)}>
-          <Space>
-            <FilePdfOutlined style={{ color: '#cf1322' }} />
-            {text}
-          </Space>
-        </a>
-      ),
-    },
-    {
-      title: 'Yêu cầu',
-      dataIndex: 'requestNumber',
-      key: 'requestNumber',
-      width: 180,
-    },
-    {
-      title: 'Khách hàng',
-      dataIndex: 'customerName',
-      key: 'customerName',
-      width: 250,
-      ellipsis: true,
-    },
-    {
-      title: 'Mẫu thử',
-      dataIndex: 'specimenName',
-      key: 'specimenName',
-      width: 220,
-      ellipsis: true,
-    },
-    {
-      title: 'Số phép thử',
-      dataIndex: 'testCount',
-      key: 'testCount',
-      width: 100,
-      align: 'center' as const,
-      render: (count: number) => <Badge count={count} style={{ backgroundColor: '#1890ff' }} />,
-    },
-    {
-      title: 'Trạng thái',
-      dataIndex: 'status',
-      key: 'status',
-      width: 120,
-      render: (status: string) => {
-        const config = getStatusConfig(status);
-        return (
-          <Tag color={config.color} icon={config.icon}>
-            {config.text}
-          </Tag>
-        );
-      },
-    },
-    {
-      title: 'Ngày tạo',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      width: 110,
-    },
-    {
-      title: 'QR',
-      key: 'qrCode',
-      width: 60,
-      align: 'center' as const,
-      render: (_: any, record: any) =>
-        record.status === 'Approved' || record.status === 'Issued' ? (
-          <Tooltip title="Click để xem mã QR">
-            <Button
-              type="text"
-              icon={<QrcodeOutlined style={{ fontSize: 20, color: '#1890ff' }} />}
-              onClick={() => handleShowQR(record)}
-            />
-          </Tooltip>
-        ) : (
-          <span style={{ color: '#d9d9d9' }}>-</span>
-        ),
-    },
-    {
-      title: 'Email',
-      dataIndex: 'emailSent',
-      key: 'emailSent',
-      width: 100,
-      render: (sent: boolean) =>
-        sent ? (
-          <Tag color="green" icon={<MailOutlined />}>Đã gửi</Tag>
-        ) : (
-          <Tag color="default">Chưa gửi</Tag>
-        ),
-    },
-    {
-      title: 'Quy trình',
-      key: 'workflow',
-      width: 140,
-      render: (_: any, record: any) => {
-        if (record.status === 'Draft') {
-          return (
-            <Button
-              type="primary"
-              size="small"
-              icon={<SendOutlined />}
-              onClick={() => handleSubmitForApproval(record)}
-              loading={workflowLoading}
-            >
-              Gửi duyệt
-            </Button>
-          );
-        }
-        if (record.status === 'PendingApproval') {
-          return (
-            <Button
-              type="primary"
-              size="small"
-              icon={<AuditOutlined />}
-              onClick={() => handleApprove(record)}
-              loading={workflowLoading}
-              style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
-            >
-              Duyệt
-            </Button>
-          );
-        }
-        if (record.status === 'Approved') {
-          return (
-            <Button
-              type="primary"
-              size="small"
-              icon={<RocketOutlined />}
-              onClick={() => handleIssue(record)}
-              loading={workflowLoading}
-              style={{ backgroundColor: '#1890ff', borderColor: '#1890ff' }}
-            >
-              Phát hành
-            </Button>
-          );
-        }
-        if (record.status === 'Issued') {
-          return <Tag color="success" icon={<CheckCircleOutlined />}>Hoàn tất</Tag>;
-        }
-        return null;
-      },
-    },
-    {
-      title: 'Thao tác',
-      key: 'actions',
-      width: 160,
-      fixed: 'right' as const,
-      render: (_: any, record: any) => (
-        <Space>
-          <Tooltip title="Xem">
-            <Button type="text" icon={<EyeOutlined />} onClick={() => handlePreview(record)} />
-          </Tooltip>
-          <Tooltip title="Xuất PDF">
-            <Button
-              type="text"
-              icon={<DownloadOutlined />}
-              onClick={() => handleExportPDF(record)}
-              disabled={record.status !== 'Approved' && record.status !== 'Issued'}
-            />
-          </Tooltip>
-          <Tooltip title="In">
-            <Button
-              type="text"
-              icon={<PrinterOutlined />}
-              onClick={() => handlePrint(record)}
-              disabled={record.status !== 'Approved' && record.status !== 'Issued'}
-            />
-          </Tooltip>
-          <Tooltip title="Gửi email">
-            <Button
-              type="text"
-              icon={<MailOutlined />}
-              onClick={() => handleSendEmail(record)}
-              disabled={record.status !== 'Approved' && record.status !== 'Issued'}
-            />
-          </Tooltip>
-        </Space>
-      ),
-    },
-  ];
+  const columns = useMemo(
+    () =>
+      getReportColumns({
+        onPreview: handlePreview,
+        onShowQR: handleShowQR,
+        onExportPDF: handleExportPDF,
+        onPrint: handlePrint,
+        onSendEmail: handleSendEmail,
+        onSubmitForApproval: handleSubmitForApproval,
+        onApprove: handleApprove,
+        onIssue: handleIssue,
+        workflowLoading,
+      }),
+    [
+      handlePreview,
+      handleShowQR,
+      handleExportPDF,
+      handlePrint,
+      handleSendEmail,
+      handleSubmitForApproval,
+      handleApprove,
+      handleIssue,
+      workflowLoading,
+    ]
+  );
 
   return (
     <div>
@@ -485,7 +94,9 @@ const ReportList: React.FC = () => {
         title="Báo cáo kết quả thử nghiệm"
         extra={
           <Space>
-            <Button icon={<ReloadOutlined />} onClick={loadData}>Làm mới</Button>
+            <Button icon={<ReloadOutlined />} onClick={loadData}>
+              Làm mới
+            </Button>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreateModal}>
               Tạo báo cáo
             </Button>
@@ -498,16 +109,16 @@ const ReportList: React.FC = () => {
               placeholder="Tìm kiếm theo mã, khách hàng..."
               prefix={<SearchOutlined />}
               value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
             />
           </Col>
           <Col xs={24} sm={12} md={6}>
             <Select
               placeholder="Trạng thái"
               allowClear
-              style={{ width: '100%' }}
+              style={{ width: "100%" }}
               value={statusFilter}
-              onChange={setStatusFilter}
+              onChange={handleStatusFilterChange}
             >
               <Select.Option value="Draft">Bản nháp</Select.Option>
               <Select.Option value="PendingApproval">Chờ duyệt</Select.Option>
@@ -516,12 +127,12 @@ const ReportList: React.FC = () => {
             </Select>
           </Col>
           <Col xs={24} sm={12} md={10}>
-            <RangePicker style={{ width: '100%' }} placeholder={['Từ ngày', 'Đến ngày']} />
+            <RangePicker style={{ width: "100%" }} placeholder={["Từ ngày", "Đến ngày"]} />
           </Col>
         </Row>
 
         <Table
-          dataSource={filteredReports}
+          dataSource={data}
           columns={columns}
           rowKey="id"
           loading={loading}
@@ -535,23 +146,36 @@ const ReportList: React.FC = () => {
         />
       </Card>
 
+      {/* Create Report Modal */}
+      <ReportFormModal
+        open={isCreateModalOpen}
+        form={form}
+        testRequests={testRequests}
+        specimens={specimens}
+        tests={tests}
+        loading={createLoading}
+        onTestRequestChange={handleTestRequestChange}
+        onCancel={handleCreateModalCancel}
+        onSubmit={handleCreateModalSubmit}
+      />
+
       {/* Preview Modal */}
       <Modal
         title={`Chi tiết báo cáo: ${selectedReport?.reportNumber}`}
-        open={previewVisible}
-        onCancel={() => setPreviewVisible(false)}
+        open={isPreviewOpen}
+        onCancel={handlePreviewClose}
         centered
         footer={[
-          <Button key="close" onClick={() => setPreviewVisible(false)}>
+          <Button key="close" onClick={handlePreviewClose}>
             Đóng
           </Button>,
-          (selectedReport?.status === 'Approved' || selectedReport?.status === 'Issued') && (
+          (selectedReport?.status === "Approved" || selectedReport?.status === "Issued") && (
             <Button
               key="qr"
               icon={<QrcodeOutlined />}
               onClick={() => {
-                setPreviewVisible(false);
-                setQrModalVisible(true);
+                handlePreviewClose();
+                if (selectedReport) handleShowQR(selectedReport);
               }}
             >
               Mã QR
@@ -561,8 +185,10 @@ const ReportList: React.FC = () => {
             key="pdf"
             type="primary"
             icon={<DownloadOutlined />}
-            onClick={() => handleExportPDF(selectedReport)}
-            disabled={selectedReport?.status !== 'Approved' && selectedReport?.status !== 'Issued'}
+            onClick={() => selectedReport && handleExportPDF(selectedReport)}
+            disabled={
+              selectedReport?.status !== "Approved" && selectedReport?.status !== "Issued"
+            }
           >
             Xuất PDF
           </Button>,
@@ -572,30 +198,40 @@ const ReportList: React.FC = () => {
         {selectedReport && (
           <>
             <Descriptions bordered column={2}>
-              <Descriptions.Item label="Số báo cáo">{selectedReport.reportNumber}</Descriptions.Item>
+              <Descriptions.Item label="Số báo cáo">
+                {selectedReport.reportNumber}
+              </Descriptions.Item>
               <Descriptions.Item label="Trạng thái">
                 <Tag color={getStatusConfig(selectedReport.status).color}>
                   {getStatusConfig(selectedReport.status).text}
                 </Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="Số yêu cầu">{selectedReport.requestNumber}</Descriptions.Item>
+              <Descriptions.Item label="Số yêu cầu">
+                {selectedReport.requestNumber}
+              </Descriptions.Item>
               <Descriptions.Item label="Ngày tạo">{selectedReport.createdAt}</Descriptions.Item>
-              <Descriptions.Item label="Khách hàng" span={2}>{selectedReport.customerName}</Descriptions.Item>
+              <Descriptions.Item label="Khách hàng" span={2}>
+                {selectedReport.customerName}
+              </Descriptions.Item>
               <Descriptions.Item label="Mã mẫu">{selectedReport.specimenCode}</Descriptions.Item>
               <Descriptions.Item label="Tên mẫu">{selectedReport.specimenName}</Descriptions.Item>
               <Descriptions.Item label="Số phép thử">{selectedReport.testCount}</Descriptions.Item>
               {selectedReport.approvedAt && (
                 <>
-                  <Descriptions.Item label="Ngày duyệt">{selectedReport.approvedAt}</Descriptions.Item>
-                  <Descriptions.Item label="Người duyệt">{selectedReport.approvedBy}</Descriptions.Item>
+                  <Descriptions.Item label="Ngày duyệt">
+                    {selectedReport.approvedAt}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Người duyệt">
+                    {selectedReport.approvedBy}
+                  </Descriptions.Item>
                 </>
               )}
             </Descriptions>
 
-            {(selectedReport.status === 'Approved' || selectedReport.status === 'Issued') && (
+            {(selectedReport.status === "Approved" || selectedReport.status === "Issued") && (
               <>
                 <Divider>Mã QR truy xuất</Divider>
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+                <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
                   <MiniQRCode
                     value={`${window.location.origin}/verify/${selectedReport.reportNumber}`}
                     size={100}
@@ -611,10 +247,10 @@ const ReportList: React.FC = () => {
       {/* QR Code Modal */}
       <Modal
         title="Mã QR truy xuất báo cáo"
-        open={qrModalVisible}
-        onCancel={() => setQrModalVisible(false)}
+        open={isQrModalOpen}
+        onCancel={handleQrModalClose}
         footer={[
-          <Button key="close" onClick={() => setQrModalVisible(false)}>
+          <Button key="close" onClick={handleQrModalClose}>
             Đóng
           </Button>,
         ]}
@@ -622,7 +258,7 @@ const ReportList: React.FC = () => {
         centered
       >
         {selectedReport && (
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <div style={{ display: "flex", justifyContent: "center" }}>
             <QRCodeGenerator
               value={`${window.location.origin}/verify/${selectedReport.reportNumber}`}
               reportNumber={selectedReport.reportNumber}
@@ -635,104 +271,6 @@ const ReportList: React.FC = () => {
             />
           </div>
         )}
-      </Modal>
-
-      {/* Create Report Modal */}
-      <Modal
-        title="Tạo báo cáo mới"
-        open={createModalVisible}
-        onOk={handleCreateReport}
-        onCancel={() => setCreateModalVisible(false)}
-        okText="Tạo báo cáo"
-        cancelText="Hủy"
-        confirmLoading={createLoading}
-        width={600}
-        centered
-      >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            name="testRequestId"
-            label="Yêu cầu thử nghiệm"
-            rules={[{ required: true, message: 'Vui lòng chọn yêu cầu thử nghiệm' }]}
-          >
-            <Select
-              showSearch
-              placeholder="Chọn yêu cầu thử nghiệm"
-              optionFilterProp="children"
-              onChange={handleTestRequestChange}
-              filterOption={(input, option) =>
-                (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
-              }
-            >
-              {testRequests.map(tr => (
-                <Select.Option key={tr.id} value={tr.id}>
-                  {tr.requestNumber} - {tr.customerName}
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            name="title"
-            label="Tiêu đề báo cáo"
-            rules={[{ required: true, message: 'Vui lòng nhập tiêu đề báo cáo' }]}
-          >
-            <Input placeholder="Nhập tiêu đề báo cáo" />
-          </Form.Item>
-
-          <Form.Item
-            name="customerName"
-            label="Tên khách hàng"
-            rules={[{ required: true, message: 'Vui lòng nhập tên khách hàng' }]}
-          >
-            <Input placeholder="Nhập tên khách hàng" />
-          </Form.Item>
-
-          {specimens.length > 0 && (
-            <Form.Item
-              name="specimenIds"
-              label="Chọn mẫu thử"
-            >
-              <Select
-                mode="multiple"
-                placeholder="Chọn mẫu thử để đưa vào báo cáo"
-                allowClear
-              >
-                {specimens.map(s => (
-                  <Select.Option key={s.id} value={s.id}>
-                    {s.code} - {s.name}
-                  </Select.Option>
-                ))}
-              </Select>
-            </Form.Item>
-          )}
-
-          {tests.length > 0 && (
-            <Form.Item
-              name="testIds"
-              label="Chọn phép thử"
-            >
-              <Select
-                mode="multiple"
-                placeholder="Chọn phép thử để đưa vào báo cáo"
-                allowClear
-              >
-                {tests.map(t => (
-                  <Select.Option key={t.id} value={t.id}>
-                    {t.code} - {t.name}
-                  </Select.Option>
-                ))}
-              </Select>
-            </Form.Item>
-          )}
-
-          <Form.Item
-            name="notes"
-            label="Ghi chú"
-          >
-            <Input.TextArea rows={3} placeholder="Nhập ghi chú (tùy chọn)" />
-          </Form.Item>
-        </Form>
       </Modal>
     </div>
   );

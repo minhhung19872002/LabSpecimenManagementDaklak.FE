@@ -22,3 +22,13 @@ export const ROLE_DISPLAY_NAMES: Record<string, string> = {
 export const getRoleDisplayName = (role: string): string => {
   return ROLE_DISPLAY_NAMES[role] || role;
 };
+
+// Role options for UI dropdowns/selects (User management)
+export const ROLE_OPTIONS = [
+  { value: "Admin", label: "Quản trị viên", color: "red" },
+  { value: "LabManager", label: "Trưởng phòng TN", color: "purple" },
+  { value: "Technician", label: "Kỹ thuật viên", color: "blue" },
+  { value: "Reviewer", label: "Người duyệt B1", color: "orange" },
+  { value: "Approver", label: "Người duyệt B2", color: "green" },
+  { value: "Viewer", label: "Xem báo cáo", color: "default" },
+] as const;

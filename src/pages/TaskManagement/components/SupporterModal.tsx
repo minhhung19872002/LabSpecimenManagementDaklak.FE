@@ -18,6 +18,7 @@ import {
   PlusOutlined,
 } from "@ant-design/icons";
 import { laboratoryTaskService } from "../../../services/laboratoryTaskService";
+import { STORAGE_KEYS } from "../../../constants";
 import {
   LaboratoryTaskSupporterDto,
   UserLookupDto,
@@ -49,7 +50,7 @@ const SupporterModal: React.FC<SupporterModalProps> = ({
   // Get current user ID to exclude from available users
   const currentUserId = useMemo(() => {
     try {
-      const userInfo = localStorage.getItem("user_info");
+      const userInfo = localStorage.getItem(STORAGE_KEYS.USER_INFO);
       return userInfo ? JSON.parse(userInfo).id : null;
     } catch {
       return null;

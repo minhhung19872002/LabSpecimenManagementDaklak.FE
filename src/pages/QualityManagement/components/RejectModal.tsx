@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
-import { Modal, Input, Form, message } from 'antd';
-import { CloseCircleOutlined } from '@ant-design/icons';
+import { useState } from "react";
+import { Modal, Input, Form, message } from "antd";
+import { CloseCircleOutlined } from "@ant-design/icons";
+import { useForm, Controller } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import { rejectSchema, RejectFormData } from "../schemas/rejectSchema";
 
 const { TextArea } = Input;
 
@@ -15,31 +18,35 @@ const RejectModal: React.FC<RejectModalProps> = ({
   visible,
   onCancel,
   onConfirm,
-  title = 'Từ chối duyệt chỉ tiêu',
+  title = "Từ chối duyệt chỉ tiêu",
 }) => {
-  const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
 
-  const handleOk = async () => {
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<RejectFormData>({
+    resolver: yupResolver(rejectSchema),
+    defaultValues: { reason: "" },
+  });
+
+  const handleOk = async (data: RejectFormData) => {
     try {
-      const values = await form.validateFields();
       setLoading(true);
-      await onConfirm(values.reason);
-      form.resetFields();
+      await onConfirm(data.reason);
+      reset();
     } catch (error: any) {
-      if (error.errorFields) {
-        // Form validation error
-        return;
-      }
-      console.error('Error rejecting:', error);
-      message.error('Không thể từ chối. Vui lòng thử lại.');
+      console.error("Error rejecting:", error);
+      message.error("Không thể từ chối. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleCancel = () => {
-    form.resetFields();
+    reset();
     onCancel();
   };
 
@@ -47,12 +54,12 @@ const RejectModal: React.FC<RejectModalProps> = ({
     <Modal
       title={
         <span>
-          <CloseCircleOutlined style={{ color: '#ff4d4f', marginRight: 8 }} />
+          <CloseCircleOutlined style={{ color: "#ff4d4f", marginRight: 8 }} />
           {title}
         </span>
       }
       open={visible}
-      onOk={handleOk}
+      onOk={handleSubmit(handleOk)}
       onCancel={handleCancel}
       okText="Xác nhận từ chối"
       cancelText="Hủy"
@@ -64,24 +71,35 @@ const RejectModal: React.FC<RejectModalProps> = ({
       wrapClassName="reject-modal-fullscreen"
       style={{ top: 0 }}
       styles={{
-        mask: { position: 'fixed', inset: 0 },
-        wrapper: { position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }
+        mask: { position: "fixed", inset: 0 },
+        wrapper: {
+          position: "fixed",
+          inset: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        },
       }}
     >
-      <Form form={form} layout="vertical">
+      <Form layout="vertical">
         <Form.Item
-          name="reason"
           label="Lý do từ chối"
-          rules={[
-            { required: true, message: 'Vui lòng nhập lý do từ chối' },
-            { min: 10, message: 'Lý do từ chối phải có ít nhất 10 ký tự' },
-          ]}
+          required
+          validateStatus={errors.reason ? "error" : ""}
+          help={errors.reason?.message}
         >
-          <TextArea
-            rows={4}
-            placeholder="Nhập lý do từ chối..."
-            maxLength={500}
-            showCount
+          <Controller
+            name="reason"
+            control={control}
+            render={({ field }) => (
+              <TextArea
+                {...field}
+                rows={4}
+                placeholder="Nhập lý do từ chối..."
+                maxLength={500}
+                showCount
+              />
+            )}
           />
         </Form.Item>
       </Form>

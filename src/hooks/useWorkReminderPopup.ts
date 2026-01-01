@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { testRequestService } from "../services/testRequestService";
 import { SampleReceiverPendingTaskDto, TestRequestStatus } from "../types/testRequest";
-import { ROLES } from "../constants/roles";
+import { ROLES, STORAGE_KEYS } from "../constants";
 
 // Storage key
-const STORAGE_KEY = "workReminderLastShownTime";
+const STORAGE_KEY = STORAGE_KEYS.WORK_REMINDER_LAST_SHOWN;
 
 // Intervals in milliseconds
 const PENDING_INTERVAL = 60 * 60 * 1000; // 1 hour
@@ -77,7 +77,7 @@ const getRemainingTime = (hasPending: boolean, hasResultSent: boolean): number |
  */
 const checkSampleReceiverRole = (): boolean => {
   try {
-    const userInfoStr = localStorage.getItem("user_info");
+    const userInfoStr = localStorage.getItem(STORAGE_KEYS.USER_INFO);
     if (!userInfoStr) return false;
 
     const userInfo = JSON.parse(userInfoStr);
