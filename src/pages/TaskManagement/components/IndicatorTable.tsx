@@ -70,10 +70,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   onStandardChange,
 }) => {
   // Determine selection mode based on sample status
-  // notStarted/assigned → assignment mode (để chọn indicator giao việc)
-  // pendingApproval → approval mode (để duyệt/từ chối)
+  // notStarted/assigned/pendingApproval → assignment mode (để chọn indicator giao việc)
+  // Cho phép giao việc cho các chỉ tiêu chưa assign ngay cả khi có chỉ tiêu đang chờ duyệt
   const selectionMode: "approval" | "assignment" =
-    sampleStatus === "notStarted" || sampleStatus === "assigned"
+    sampleStatus === "notStarted" || sampleStatus === "assigned" || sampleStatus === "pendingApproval"
       ? "assignment"
       : "approval";
 
