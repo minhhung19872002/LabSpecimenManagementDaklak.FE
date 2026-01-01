@@ -25,8 +25,8 @@ import {
   CheckOutlined,
   CloseOutlined,
 } from "@ant-design/icons";
-import dayjs from "dayjs";
 import { laboratoryTaskService } from "../../services/laboratoryTaskService";
+import { formatDate } from "../../utils/formatters";
 import { testingService } from "../../services/testingService";
 import {
   LaboratoryTaskDto,
@@ -1036,20 +1036,16 @@ const TaskManagementDetail: React.FC = () => {
           <Space split={<Divider type="vertical" />}>
             <Text type="secondary">
               Ngày gửi KP:{" "}
-              {task.transferDate
-                ? dayjs(task.transferDate).format("DD/MM/YYYY")
-                : "-"}
+              {formatDate(task.transferDate)}
             </Text>
             <Text type="secondary">
               Ngày YC xong:{" "}
-              {task.requestCompletionDate
-                ? dayjs(task.requestCompletionDate).format("DD/MM/YYYY")
-                : "-"}
+              {formatDate(task.requestCompletionDate)}
             </Text>
             <Text type="secondary">
               Ngày TN:{" "}
               {task.testDate
-                ? dayjs(task.testDate).format("DD/MM/YYYY")
+                ? formatDate(task.testDate)
                 : "Chưa đặt"}
             </Text>
           </Space>

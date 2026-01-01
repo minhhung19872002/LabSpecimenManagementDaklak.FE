@@ -1,283 +1,44 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import React from "react";
 import {
   Card,
   Table,
   Button,
   Space,
-  Tag,
   Input,
   Row,
   Col,
   Select,
   Statistic,
-  message,
-  Typography,
 } from "antd";
 import {
   ExperimentOutlined,
   SearchOutlined,
   ReloadOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  SyncOutlined,
-  WarningOutlined,
 } from "@ant-design/icons";
-import type { ColumnsType } from "antd/es/table";
-import dayjs from "dayjs";
-import { testingService } from "../../services/testingService";
-import { laboratoryTaskService } from "../../services/laboratoryTaskService";
-import {
-  TestingListDto,
-  TestingStatus,
-  TestingStatusLabels,
-  TestingStatusColors,
-  TestingTabType,
-} from "../../types/testing";
-import { UserLookupDto } from "../../types/laboratoryTask";
-
-const { Text } = Typography;
+import { TestingStatus } from "../../types/testing";
+import { useTestingList } from "./hooks";
 
 const TestingList: React.FC = () => {
-  const navigate = useNavigate();
-  const [tasks, setTasks] = useState<TestingListDto[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searchText, setSearchText] = useState("");
-  const [statusFilter, setStatusFilter] = useState<TestingStatus | undefined>(
-    undefined
-  );
-  const [technicianFilter, setTechnicianFilter] = useState<string[]>([]);
-
-  // Technicians for filter dropdown
-  const [technicians, setTechnicians] = useState<UserLookupDto[]>([]);
-  const [loadingTechnicians, setLoadingTechnicians] = useState(false);
-
-  // Pagination state
-  const [pagination, setPagination] = useState({
-    current: 1,
-    pageSize: 50,
-    total: 0,
-  });
-
-  // Load technicians for filter
-  useEffect(() => {
-    const loadTechnicians = async () => {
-      setLoadingTechnicians(true);
-      try {
-        // Get all technicians (no laboratory filter)
-        const result = await laboratoryTaskService.getTechniciansByLaboratory();
-        setTechnicians(result || []);
-      } catch (error) {
-        console.error("Failed to load technicians:", error);
-      } finally {
-        setLoadingTechnicians(false);
-      }
-    };
-    loadTechnicians();
-  }, []);
-
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const result = await testingService.getList({
-        skipCount: (pagination.current - 1) * pagination.pageSize,
-        maxResultCount: pagination.pageSize,
-        tab: TestingTabType.MyAssignments, // Always use MyAssignments
-        search: searchText || undefined,
-        statuses: statusFilter !== undefined ? [statusFilter] : undefined,
-        technicianIds:
-          technicianFilter.length > 0 ? technicianFilter : undefined,
-      });
-
-      setTasks(result.items);
-      setPagination((prev) => ({ ...prev, total: result.totalCount }));
-    } catch (error) {
-      console.error("Failed to load testing tasks:", error);
-      message.error("Không thể tải danh sách xét nghiệm. Vui lòng thử lại.");
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    pagination.current,
-    pagination.pageSize,
+  const {
+    tasks,
+    loading,
     searchText,
     statusFilter,
     technicianFilter,
-  ]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  const getStatusTag = (status: TestingStatus) => {
-    const label = TestingStatusLabels[status];
-    const color = TestingStatusColors[status];
-
-    const iconMap: Record<TestingStatus, React.ReactNode> = {
-      [TestingStatus.NotStarted]: <ClockCircleOutlined />,
-      [TestingStatus.InProgress]: <SyncOutlined spin />,
-      [TestingStatus.PendingApproval]: <ClockCircleOutlined />,
-      [TestingStatus.Rejected]: <WarningOutlined />,
-      [TestingStatus.Completed]: <CheckCircleOutlined />,
-    };
-
-    return (
-      <Tag color={color} icon={iconMap[status]}>
-        {label}
-      </Tag>
-    );
-  };
-
-  // Statistics
-  const stats = {
-    total: pagination.total,
-    notStarted: tasks.filter((t) => t.testingStatus === TestingStatus.NotStarted).length,
-    inProgress: tasks.filter(
-      (t) => t.testingStatus === TestingStatus.InProgress
-    ).length,
-    pendingApproval: tasks.filter(
-      (t) => t.testingStatus === TestingStatus.PendingApproval
-    ).length,
-    rejected: tasks.filter((t) => t.testingStatus === TestingStatus.Rejected).length,
-    completed: tasks.filter((t) => t.testingStatus === TestingStatus.Completed).length,
-  };
-
-  const handleSearch = (value: string) => {
-    setSearchText(value);
-    setPagination((prev) => ({ ...prev, current: 1 }));
-  };
-
-  const handleStatusFilterChange = (value: TestingStatus | undefined) => {
-    setStatusFilter(value);
-    setPagination((prev) => ({ ...prev, current: 1 }));
-  };
-
-  const handleTechnicianFilterChange = (values: string[]) => {
-    setTechnicianFilter(values);
-    setPagination((prev) => ({ ...prev, current: 1 }));
-  };
-
-  const handleTableChange = (paginationConfig: any) => {
-    setPagination((prev) => ({
-      ...prev,
-      current: paginationConfig.current,
-      pageSize: paginationConfig.pageSize,
-    }));
-  };
-
-  const handleRefresh = () => {
-    setSearchText("");
-    setStatusFilter(undefined);
-    setTechnicianFilter([]);
-    setPagination((prev) => ({ ...prev, current: 1 }));
-    loadData();
-  };
-
-  const columns: ColumnsType<TestingListDto> = [
-    {
-      title: "Số hợp đồng",
-      dataIndex: "contractNumber",
-      key: "contractNumber",
-      width: 150,
-      fixed: "left",
-      render: (value: string) => value || "-",
-    },
-    {
-      title: "Tổng mẫu",
-      dataIndex: "totalSampleCount",
-      key: "totalSampleCount",
-      width: 100,
-      align: "center",
-    },
-    {
-      title: "Tổng CT",
-      dataIndex: "totalIndicatorCount",
-      key: "totalIndicatorCount",
-      width: 100,
-      align: "center",
-    },
-    {
-      title: "Kỹ thuật viên",
-      dataIndex: "technicianNames",
-      key: "technicianNames",
-      width: 180,
-      ellipsis: true,
-      render: (value: string) => value || "-",
-    },
-    {
-      title: "Ngày chuyển đi",
-      dataIndex: "transferDate",
-      key: "transferDate",
-      width: 140,
-      render: (date: string) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
-    },
-    {
-      title: "Ngày YC xong",
-      dataIndex: "requestCompletionDate",
-      key: "requestCompletionDate",
-      width: 130,
-      render: (date: string, record: TestingListDto) => {
-        if (!date) return "-";
-        const d = dayjs(date);
-        // Highlight if urgent (<=5 days remaining) and not completed
-        const shouldHighlight = record.isUrgent && record.testingStatus !== TestingStatus.Completed;
-        return (
-          <span
-            style={{
-              color: shouldHighlight ? "#ff4d4f" : undefined,
-              fontWeight: shouldHighlight ? "bold" : undefined,
-            }}
-          >
-            {d.format("DD/MM/YYYY")}
-          </span>
-        );
-      },
-    },
-    {
-      title: "Ngày thí nghiệm",
-      dataIndex: "testDate",
-      key: "testDate",
-      width: 140,
-      render: (date: string) =>
-        date ? (
-          dayjs(date).format("DD/MM/YYYY")
-        ) : (
-          <Text type="secondary">Chưa đặt</Text>
-        ),
-    },
-    {
-      title: "Trạng thái",
-      dataIndex: "testingStatus",
-      key: "testingStatus",
-      width: 150,
-      render: (status: TestingStatus) => getStatusTag(status),
-    },
-  ];
-
-  const renderTable = (data: TestingListDto[]) => (
-    <Table
-      columns={columns}
-      dataSource={data}
-      rowKey="id"
-      loading={loading}
-      pagination={{
-        current: pagination.current,
-        pageSize: pagination.pageSize,
-        total: pagination.total,
-        pageSizeOptions: [20, 50, 100],
-        showSizeChanger: true,
-        showTotal: (total, range) =>
-          `${range[0]}-${range[1]} của ${total} xét nghiệm`,
-      }}
-      onChange={handleTableChange}
-      scroll={{ x: 1000 }}
-      onRow={(record) => ({
-        onDoubleClick: () => navigate(`/testing/${record.laboratoryTaskId}`),
-        style: { cursor: "pointer" },
-      })}
-      rowClassName={(record) => (record.isUrgent && record.testingStatus !== TestingStatus.Completed ? "urgent-row" : "")}
-    />
-  );
+    technicians,
+    loadingTechnicians,
+    pagination,
+    stats,
+    columns,
+    handleSearch,
+    handleSearchInputChange,
+    handleStatusFilterChange,
+    handleTechnicianFilterChange,
+    handleTableChange,
+    handleRefresh,
+    handleRowDoubleClick,
+    getRowClassName,
+  } = useTestingList();
 
   return (
     <div>
@@ -359,7 +120,7 @@ const TestingList: React.FC = () => {
               placeholder="Tìm theo số hợp đồng..."
               prefix={<SearchOutlined />}
               value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
+              onChange={(e) => handleSearchInputChange(e.target.value)}
               onSearch={handleSearch}
               allowClear
               enterButton
@@ -373,11 +134,21 @@ const TestingList: React.FC = () => {
               onChange={handleStatusFilterChange}
               allowClear
             >
-              <Select.Option value={TestingStatus.NotStarted}>Chưa bắt đầu</Select.Option>
-              <Select.Option value={TestingStatus.InProgress}>Đang thử nghiệm</Select.Option>
-              <Select.Option value={TestingStatus.PendingApproval}>Chờ phê duyệt</Select.Option>
-              <Select.Option value={TestingStatus.Rejected}>Bị từ chối</Select.Option>
-              <Select.Option value={TestingStatus.Completed}>Hoàn thành</Select.Option>
+              <Select.Option value={TestingStatus.NotStarted}>
+                Chưa bắt đầu
+              </Select.Option>
+              <Select.Option value={TestingStatus.InProgress}>
+                Đang thử nghiệm
+              </Select.Option>
+              <Select.Option value={TestingStatus.PendingApproval}>
+                Chờ phê duyệt
+              </Select.Option>
+              <Select.Option value={TestingStatus.Rejected}>
+                Bị từ chối
+              </Select.Option>
+              <Select.Option value={TestingStatus.Completed}>
+                Hoàn thành
+              </Select.Option>
             </Select>
           </Col>
           <Col xs={24} sm={6} md={4}>
@@ -402,7 +173,28 @@ const TestingList: React.FC = () => {
           </Col>
         </Row>
 
-        {renderTable(tasks)}
+        <Table
+          columns={columns}
+          dataSource={tasks}
+          rowKey="id"
+          loading={loading}
+          pagination={{
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total: pagination.total,
+            pageSizeOptions: [20, 50, 100],
+            showSizeChanger: true,
+            showTotal: (total, range) =>
+              `${range[0]}-${range[1]} của ${total} xét nghiệm`,
+          }}
+          onChange={handleTableChange}
+          scroll={{ x: 1000 }}
+          onRow={(record) => ({
+            onDoubleClick: () => handleRowDoubleClick(record),
+            style: { cursor: "pointer" },
+          })}
+          rowClassName={getRowClassName}
+        />
       </Card>
 
       <style>{`

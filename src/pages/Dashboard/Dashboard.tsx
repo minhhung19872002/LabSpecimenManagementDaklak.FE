@@ -39,6 +39,7 @@ import { qualityManagementService } from "../../services/qualityManagementServic
 import { QualityManagementTaskDto } from "../../types/qualityManagement";
 import dayjs, { Dayjs } from "dayjs";
 import { PATH_ROUTES } from "../../constants";
+import { formatDate } from "../../utils/formatters";
 import { Column } from "@ant-design/charts";
 
 const { Title, Text } = Typography;
@@ -334,7 +335,7 @@ const Dashboard: React.FC = () => {
       dataIndex: "pendingDate",
       key: "pendingDate",
       width: 110,
-      render: (date: string) => date ? dayjs(date).format("DD/MM/YYYY") : "-",
+      render: (date: string) => formatDate(date),
     },
     {
       title: "Mẫu",

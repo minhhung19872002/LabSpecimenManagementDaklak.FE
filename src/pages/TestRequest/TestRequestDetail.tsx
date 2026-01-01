@@ -55,6 +55,7 @@ import {
 import dayjs from "dayjs";
 import "./TestRequestDetail.css";
 import { PATH_ROUTES } from "../../constants";
+import { formatDate } from "../../utils/formatters";
 import {
   IndicatorApprovalStatus,
   IndicatorApprovalStatusLabels,
@@ -983,7 +984,7 @@ const TestRequestDetail: React.FC = () => {
       dataIndex: "requestedCompletionDate",
       key: "requestedCompletionDate",
       width: 120,
-      render: (date: string) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
+      render: (date: string) => formatDate(date),
     },
   ];
 
@@ -1141,7 +1142,7 @@ const TestRequestDetail: React.FC = () => {
               <div style={{ fontSize: 10, color: "#888", marginTop: 2 }}>
                 {ind.requestDate && (
                   <span>
-                    YC xong: {dayjs(ind.requestDate).format("DD/MM/YYYY")}
+                    YC xong: {formatDate(ind.requestDate)}
                   </span>
                 )}
                 {ind.requestDate && ind.testDate && (
@@ -1149,7 +1150,7 @@ const TestRequestDetail: React.FC = () => {
                 )}
                 {ind.testDate && (
                   <span>
-                    Ngày TN: {dayjs(ind.testDate).format("DD/MM/YYYY")}
+                    Ngày TN: {formatDate(ind.testDate)}
                   </span>
                 )}
               </div>
@@ -1544,9 +1545,7 @@ const TestRequestDetail: React.FC = () => {
                   <div className="detail-item">
                     <Text type="secondary">Ngày trả KQ:</Text>
                     <Text strong style={{ color: "#1890ff" }}>
-                      {data.resultDeliveryDate
-                        ? dayjs(data.resultDeliveryDate).format("DD/MM/YYYY")
-                        : "-"}
+                      {formatDate(data.resultDeliveryDate)}
                     </Text>
                   </div>
                 </Col>
