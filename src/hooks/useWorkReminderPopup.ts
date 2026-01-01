@@ -3,8 +3,8 @@ import { testRequestService } from "../services/testRequestService";
 import { SampleReceiverPendingTaskDto, TestRequestStatus } from "../types/testRequest";
 import { ROLES } from "../constants/roles";
 
-// Storage keys
-const LAST_SHOWN_TIME_KEY = "workReminderLastShownTime";
+// Storage key
+const STORAGE_KEY = "workReminderLastShownTime";
 
 // Intervals in milliseconds
 const PENDING_INTERVAL = 60 * 60 * 1000; // 1 hour
@@ -14,7 +14,7 @@ const RESULT_SENT_INTERVAL = 2 * 60 * 60 * 1000; // 2 hours
  * Get elapsed time since last shown
  */
 const getElapsedTime = (): number | null => {
-  const lastShownStr = localStorage.getItem(LAST_SHOWN_TIME_KEY);
+  const lastShownStr = localStorage.getItem(STORAGE_KEY);
   if (!lastShownStr) return null;
 
   const lastShown = parseInt(lastShownStr, 10);
@@ -23,7 +23,7 @@ const getElapsedTime = (): number | null => {
 
 /**
  * Check if enough time has passed since last shown
- * Returns true if should show popup
+ * Uses different intervals based on task types
  */
 const shouldShowPopup = (hasPending: boolean, hasResultSent: boolean): boolean => {
   const elapsed = getElapsedTime();
@@ -62,14 +62,30 @@ const shouldFetchTasks = (): boolean => {
 const getRemainingTime = (hasPending: boolean, hasResultSent: boolean): number | null => {
   const elapsed = getElapsedTime();
 
-  // Never shown before -> show immediately (return 0 or small delay)
-  if (elapsed === null) return 100; // Small delay for initial render
+  // Never shown before -> show immediately (return small delay)
+  if (elapsed === null) return 100;
 
   const targetInterval = hasPending ? PENDING_INTERVAL : (hasResultSent ? RESULT_SENT_INTERVAL : null);
   if (!targetInterval) return null;
 
   const remaining = targetInterval - elapsed;
   return remaining > 0 ? remaining : 0;
+};
+
+/**
+ * Check if user has SampleReceiver role
+ */
+const checkSampleReceiverRole = (): boolean => {
+  try {
+    const userInfoStr = localStorage.getItem("user_info");
+    if (!userInfoStr) return false;
+
+    const userInfo = JSON.parse(userInfoStr);
+    const roles = userInfo.roles || [];
+    return roles.includes(ROLES.SAMPLE_RECEIVER);
+  } catch {
+    return false;
+  }
 };
 
 interface UseWorkReminderPopupResult {
@@ -90,6 +106,9 @@ interface UseWorkReminderPopupResult {
  * Tên công việc:
  * - Pending → "Cần chuyển mẫu thử nghiệm"
  * - ResultSent → "Cần trả kết quả cho khách hàng"
+ *
+ * NOTE: Hook này có logic phức tạp hơn các reminder hooks khác
+ * vì có 2 intervals khác nhau tùy vào loại task.
  */
 export const useWorkReminderPopup = (): UseWorkReminderPopupResult => {
   const [open, setOpen] = useState(false);
@@ -108,20 +127,6 @@ export const useWorkReminderPopup = (): UseWorkReminderPopupResult => {
     if (isInitialized.current) return;
     isInitialized.current = true;
 
-    // Check if current user has SampleReceiver role
-    const checkSampleReceiverRole = (): boolean => {
-      try {
-        const userInfoStr = localStorage.getItem("user_info");
-        if (!userInfoStr) return false;
-
-        const userInfo = JSON.parse(userInfoStr);
-        const roles = userInfo.roles || [];
-        return roles.includes(ROLES.SAMPLE_RECEIVER);
-      } catch {
-        return false;
-      }
-    };
-
     if (!checkSampleReceiverRole()) {
       return;
     }
@@ -129,8 +134,7 @@ export const useWorkReminderPopup = (): UseWorkReminderPopupResult => {
     // Fetch pending tasks
     const fetchTasks = async (): Promise<SampleReceiverPendingTaskDto[]> => {
       try {
-        const result = await testRequestService.getSampleReceiverPendingTasks();
-        return result;
+        return await testRequestService.getSampleReceiverPendingTasks();
       } catch (error) {
         console.error("Error fetching sample receiver pending tasks:", error);
         return [];
@@ -142,7 +146,7 @@ export const useWorkReminderPopup = (): UseWorkReminderPopupResult => {
       if (taskList.length > 0) {
         setTasks(taskList);
         setOpen(true);
-        localStorage.setItem(LAST_SHOWN_TIME_KEY, Date.now().toString());
+        localStorage.setItem(STORAGE_KEY, Date.now().toString());
       }
     };
 
@@ -177,7 +181,7 @@ export const useWorkReminderPopup = (): UseWorkReminderPopupResult => {
     // Check and show popup (respects time intervals)
     const checkAndShowIfNeeded = async () => {
       // Lần đầu login (chưa có key) -> luôn gọi API
-      const isFirstLogin = !localStorage.getItem(LAST_SHOWN_TIME_KEY);
+      const isFirstLogin = !localStorage.getItem(STORAGE_KEY);
 
       // Nếu không phải lần đầu, check thời gian TRƯỚC khi gọi API
       if (!isFirstLogin && !shouldFetchTasks()) {
@@ -191,7 +195,7 @@ export const useWorkReminderPopup = (): UseWorkReminderPopupResult => {
 
       if (taskList.length === 0) {
         // Không có task -> set key để tránh gọi API liên tục, schedule với minimum interval
-        localStorage.setItem(LAST_SHOWN_TIME_KEY, Date.now().toString());
+        localStorage.setItem(STORAGE_KEY, Date.now().toString());
         scheduleNextCheck(true, false);
         return;
       }
