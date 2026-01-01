@@ -115,7 +115,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   );
 
   // Check if actions should be disabled based on task status
-  const actionsDisabled = taskStatus === QualityManagementStatus.ResultSent;
+  // Allow approving pending indicators even after ResultSent (for partial send scenarios)
+  const actionsDisabled = false;
 
   // Group indicators by laboratory
   const groupedData: LabGroup[] = React.useMemo(() => {
