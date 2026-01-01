@@ -1,8 +1,8 @@
 import React from "react";
 import { Modal, Table, Button, Typography } from "antd";
-import dayjs from "dayjs";
 import type { ColumnsType } from "antd/es/table";
 import { LabTechManagerPendingTaskDto, LaboratoryTaskStatus } from "../../types/laboratoryTask";
+import { formatDate } from "../../utils/formatters";
 
 const { Text, Link } = Typography;
 
@@ -17,8 +17,6 @@ const LabTechManagerReminderModal: React.FC<LabTechManagerReminderModalProps> = 
   tasks,
   onClose,
 }) => {
-  const formatDate = (date: string | null) =>
-    date ? dayjs(date).format("DD/MM/YYYY") : "-";
 
   // Open in new tab
   const handleOpenInNewTab = (record: LabTechManagerPendingTaskDto, e: React.MouseEvent) => {

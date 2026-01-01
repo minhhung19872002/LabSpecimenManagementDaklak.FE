@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Modal, Timeline, Typography, Spin, message } from "antd";
 import { CheckCircleFilled, ClockCircleFilled } from "@ant-design/icons";
-import dayjs from "dayjs";
 import { TestRequestTimelineDto, TimelineStepDto } from "../../../types/testRequest";
 import { testRequestService } from "../../../services/testRequestService";
+import { formatDateTime } from "../../../utils/formatters";
 
 const { Text } = Typography;
 
@@ -38,10 +38,6 @@ const ProcessTimelineModal: React.FC<ProcessTimelineModalProps> = ({
     } finally {
       setLoading(false);
     }
-  };
-
-  const formatDate = (date?: string | null) => {
-    return date ? dayjs(date).format("DD/MM/YYYY HH:mm") : undefined;
   };
 
   const getTimelineDot = (status: string) => {
@@ -124,7 +120,7 @@ const ProcessTimelineModal: React.FC<ProcessTimelineModalProps> = ({
         </Text>
         {step.date && !isPending && (
           <Text type="secondary" style={{ fontSize: 12, display: "block" }}>
-            {dateLabel}: {formatDate(step.date)}
+            {dateLabel}: {formatDateTime(step.date)}
           </Text>
         )}
         {step.userName && userLabel && !isPending && (

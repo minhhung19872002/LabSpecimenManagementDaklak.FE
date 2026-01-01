@@ -12,8 +12,8 @@ import {
   List,
   Collapse,
 } from "antd";
-import dayjs from "dayjs";
 import { sampleStorageService } from "../../../services/sampleStorageService";
+import { formatDate } from "../../../utils/formatters";
 import type {
   SampleStorageDetailDto,
   SampleStorageItemDto,
@@ -100,9 +100,6 @@ const SampleStorageDetailModal: React.FC<SampleStorageDetailModalProps> = ({
       {SampleStorageStatusLabels[status]}
     </Tag>
   );
-
-  const formatDate = (date: string | null) =>
-    date ? dayjs(date).format("DD/MM/YYYY") : "-";
 
   // Get samples that are not cancelled (for cancel all confirmation)
   const uncancelledSamples = detail?.samples.filter((s) => !s.isCancelled) || [];
