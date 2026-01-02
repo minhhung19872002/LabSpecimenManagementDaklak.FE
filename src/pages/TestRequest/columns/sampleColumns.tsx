@@ -29,7 +29,17 @@ export const getSampleColumns = ({
     title: "Mã mẫu",
     dataIndex: "sampleCode",
     key: "sampleCode",
-    width: 100,
+    width: 120,
+    render: (value: string, record: TestRequestSampleDto) => (
+      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <span>{value}</span>
+        {record.isCustomerCancelled && (
+          <Tag color="volcano" style={{ margin: 0, fontSize: 10 }}>
+            KH hủy
+          </Tag>
+        )}
+      </div>
+    ),
   },
   {
     title: "Tên mẫu",
