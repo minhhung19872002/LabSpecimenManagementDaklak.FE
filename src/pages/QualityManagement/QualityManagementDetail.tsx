@@ -24,6 +24,7 @@ import {
 } from "@ant-design/icons";
 import { qualityManagementService } from "../../services/qualityManagementService";
 import { formatDate } from "../../utils/formatters";
+import { getApiErrorMessage } from "../../utils/errorHandler";
 import {
   QualityManagementTaskDto,
   QualityManagementIndicatorDto,
@@ -323,9 +324,9 @@ const QualityManagementDetail: React.FC = () => {
       await reloadData();
 
       message.success("Đã gửi kết quả");
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error sending result:", error);
-      message.error("Không thể gửi kết quả");
+      message.error(getApiErrorMessage(error, "Không thể gửi kết quả"));
       // Reload để sync lại với server nếu có lỗi
       await loadData();
     } finally {
