@@ -232,39 +232,43 @@ const TaskManagementDetail: React.FC = () => {
           );
 
         // Compute sample status từ SERVER DATA
-        // Logic:
-        // - KH hủy (customerCancelled): Tất cả chỉ tiêu đều bị KH hủy
-        // - Chưa giao việc (notStarted): Chưa có methodId hoặc technicianId
-        // - Đã giao việc (assigned): Tất cả indicators đều có methodId + technicianId, nhưng chưa có testDate
-        // - Đang thử nghiệm (testing): Có ít nhất 1 indicator có testDate (KTV đã check-in)
-        // - Chờ phê duyệt (pendingApproval): Có ít nhất 1 indicator status = Entered
-        // - Đã duyệt (approved): Tất cả indicators đã được duyệt
-        // - Từ chối (rejected): Có indicator bị từ chối và KTV chưa thực hiện lại
+        // Logic mới: Ưu tiên trạng thái THẤP NHẤT (phải hoàn thành TẤT CẢ mới lên status cao hơn)
+        // Ngoại trừ PendingApproval/Rejected - ưu tiên hiển thị vì cần action
+        //
+        // Thứ tự kiểm tra:
+        // 1. KH hủy (customerCancelled): Tất cả chỉ tiêu đều bị KH hủy
+        // 2. Chờ phê duyệt (pendingApproval): Có ≥1 indicator Entered → cần QLKT duyệt
+        // 3. Từ chối (rejected): Có ≥1 indicator Rejected (và không có Testing) → cần KTV làm lại
+        // 4. Đã duyệt (approved): TẤT CẢ indicators đã được duyệt
+        // 5. Đang thử nghiệm (testing): TẤT CẢ đã giao việc + có ≥1 đang test
+        // 6. Đã giao việc (assigned): TẤT CẢ indicators đã có method + KTV
+        // 7. Chưa giao việc (notStarted): Còn indicator chưa được giao
 
+        // TẤT CẢ chỉ tiêu đã được duyệt
         const allApproved =
           activeIndicators.length > 0 &&
           activeIndicators.every(
             (i) => i.approvalStatus === IndicatorApprovalStatus.Approved
           );
 
-        // Kiểm tra đã giao việc chưa: tất cả indicators đều có methodId và technicianId
+        // TẤT CẢ chỉ tiêu đã được giao việc (có method + KTV)
         const allAssigned =
           activeIndicators.length > 0 &&
           activeIndicators.every((i) => i.methodId && i.technicianId);
 
-        // Có indicator đang thử nghiệm: có testDate (KTV đã check-in)
-        const hasTesting = activeIndicators.some(
+        // Có ≥1 chỉ tiêu đang thử nghiệm (có testDate, KTV đã check-in)
+        const anyTesting = activeIndicators.some(
           (i) =>
             i.testDate && i.approvalStatus === IndicatorApprovalStatus.Pending
         );
 
-        // Có indicator chờ phê duyệt (Entered)
-        const hasEntered = activeIndicators.some(
+        // Có ≥1 chỉ tiêu chờ phê duyệt (Entered) - ưu tiên hiển thị vì cần action
+        const anyEntered = activeIndicators.some(
           (i) => i.approvalStatus === IndicatorApprovalStatus.Entered
         );
 
-        // Có indicator bị từ chối
-        const hasRejected = activeIndicators.some(
+        // Có ≥1 chỉ tiêu bị từ chối - ưu tiên hiển thị vì cần action
+        const anyRejected = activeIndicators.some(
           (i) => i.approvalStatus === IndicatorApprovalStatus.Rejected
         );
 
@@ -272,23 +276,23 @@ const TaskManagementDetail: React.FC = () => {
         if (allCustomerCancelled) {
           // Tất cả chỉ tiêu đều bị KH hủy
           sampleStatus = "customerCancelled";
-        } else if (allApproved) {
-          // Tất cả chỉ tiêu đã được duyệt
-          sampleStatus = "approved";
-        } else if (hasRejected && !hasTesting) {
-          // Có chỉ tiêu bị từ chối và KTV chưa check-in lại
-          sampleStatus = "rejected";
-        } else if (hasEntered) {
-          // Có ít nhất 1 chỉ tiêu chờ phê duyệt
+        } else if (anyEntered) {
+          // Có ≥1 chỉ tiêu chờ duyệt - ưu tiên hiển thị vì cần QLKT duyệt
           sampleStatus = "pendingApproval";
-        } else if (hasTesting) {
-          // Có ít nhất 1 chỉ tiêu đang thử nghiệm (KTV đã check-in)
+        } else if (anyRejected && !anyTesting) {
+          // Có ≥1 chỉ tiêu bị từ chối và KTV chưa check-in lại - cần KTV làm lại
+          sampleStatus = "rejected";
+        } else if (allApproved) {
+          // TẤT CẢ chỉ tiêu đã được duyệt
+          sampleStatus = "approved";
+        } else if (allAssigned && anyTesting) {
+          // TẤT CẢ đã được giao việc VÀ có ≥1 đang thử nghiệm
           sampleStatus = "testing";
         } else if (allAssigned) {
-          // Tất cả đã được giao việc nhưng KTV chưa check-in
+          // TẤT CẢ đã được giao việc (chưa có ai test)
           sampleStatus = "assigned";
         } else {
-          // Chưa giao việc (chưa có methodId hoặc technicianId)
+          // Còn chỉ tiêu chưa được giao việc
           sampleStatus = "notStarted";
         }
 
