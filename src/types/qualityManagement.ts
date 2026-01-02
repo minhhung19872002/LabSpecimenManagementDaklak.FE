@@ -122,6 +122,8 @@ export interface QualityManagementIndicatorDto {
   referenceLimit?: string;
   approvalStatus: QualityIndicatorApprovalStatus;
   rejectionReason?: string;
+  isResultSent: boolean;
+  qualityResultSentDate?: string;
   approvedById?: string;
   approvedByName?: string;
 }
