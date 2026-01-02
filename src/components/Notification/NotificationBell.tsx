@@ -270,7 +270,7 @@ const NotificationBell: React.FC = () => {
         arrow={false}
       >
         <div className="notification-bell-wrapper">
-          <Badge count={unreadCount} size="small" offset={[-2, 2]}>
+          <Badge count={unreadCount} size="small" offset={[-2, 2]} overflowCount={99}>
             <BellOutlined className="notification-bell-icon" />
           </Badge>
         </div>
