@@ -31,6 +31,9 @@ const DefaultRouteRedirect = () => {
 const Login = Loadable(lazy(() => import("./pages/Login/Login")));
 const Dashboard = Loadable(lazy(() => import("./pages/Dashboard/Dashboard")));
 
+// Demo Layout - for testing new Figma design
+const DemoLayout = Loadable(lazy(() => import("./pages/DemoLayout/DemoLayout")));
+
 // Test Request
 const TestRequestList = Loadable(
   lazy(() => import("./pages/TestRequest/TestRequestList"))
@@ -157,6 +160,8 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/403" element={<Forbidden />} />
+        {/* Demo Layout - standalone page for testing new design */}
+        <Route path="/demo-layout" element={<DemoLayout />} />
         <Route
           path="/"
           element={

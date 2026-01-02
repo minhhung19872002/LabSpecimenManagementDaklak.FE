@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
 import {
-  Layout,
   Menu,
   MenuProps,
   Dropdown,
@@ -51,9 +50,31 @@ import { useLabTechManagerReminderPopup } from "../../hooks/useLabTechManagerRem
 import { useLabTechnicianReminderPopup } from "../../hooks/useLabTechnicianReminderPopup";
 import { useQualityManagerReminderPopup } from "../../hooks/useQualityManagerReminderPopup";
 import "./MainLayout.css";
-import { PATH_ROUTES, ROLES, getRoleDisplayName, STORAGE_KEYS } from "../../constants";
+import {
+  PATH_ROUTES,
+  ROLES,
+  getRoleDisplayName,
+  STORAGE_KEYS,
+} from "../../constants";
 
-const { Header, Sider, Content } = Layout;
+// Flask Icon SVG Component
+const FlaskIcon = () => (
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M9 3V8.5L3.5 17.5C2.5 19 3.5 21 5.5 21H18.5C20.5 21 21.5 19 20.5 17.5L15 8.5V3M9 3H15M9 3H8M15 3H16M7 15H17"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
 
 type MenuItem = Required<MenuProps>["items"][number];
 
@@ -479,29 +500,55 @@ const MainLayout: React.FC = () => {
     return filterMenuByRoles(allMenuItems);
   }, [userInfo, t, navigate]);
 
-  // Menu component to be shared between Sider and Drawer
-  const menuContent = (
+  // Toggle sidebar collapse
+  const toggleCollapsed = () => {
+    setCollapsed(!collapsed);
+  };
+
+  // Sidebar content component
+  const sidebarContent = (
     <>
-      <div className="logo">
-        <h2>{collapsed && !isMobile ? "LSM" : t("common.appName")}</h2>
+      {/* Logo */}
+      <div className="sidebar-logo">
+        <div className="sidebar-logo-icon">
+          <FlaskIcon />
+        </div>
+        {!collapsed && (
+          <div className="sidebar-logo-text">
+            <span className="sidebar-logo-title">LSMS</span>
+            <span className="sidebar-logo-subtitle">{t("common.appName")}</span>
+          </div>
+        )}
       </div>
-      <Menu
-        theme="dark"
-        selectedKeys={[selectedKey]}
-        defaultOpenKeys={defaultOpenKeys}
-        mode="inline"
-        items={menuItems}
-      />
+
+      {/* Menu */}
+      <div className="sidebar-menu-wrapper">
+        <Menu
+          mode="inline"
+          selectedKeys={[selectedKey]}
+          defaultOpenKeys={collapsed ? [] : defaultOpenKeys}
+          items={menuItems}
+          inlineCollapsed={collapsed}
+        />
+      </div>
     </>
   );
 
   return (
-    <Layout style={{ height: "100vh", overflow: "hidden" }}>
-      {/* Desktop Sider */}
+    <div className="main-layout">
+      {/* Desktop Sidebar */}
       {!isMobile && (
-        <Sider collapsible collapsed={collapsed} onCollapse={setCollapsed}>
-          {menuContent}
-        </Sider>
+        <aside className={`main-sidebar ${collapsed ? "collapsed" : ""}`}>
+          {sidebarContent}
+          {/* Collapse Toggle Button */}
+          {/* <button
+            className="sidebar-collapse-btn"
+            onClick={toggleCollapsed}
+            title={collapsed ? "Mở rộng" : "Thu gọn"}
+          >
+            {collapsed ? "»" : "«"}
+          </button> */}
+        </aside>
       )}
 
       {/* Mobile Drawer */}
@@ -512,95 +559,110 @@ const MainLayout: React.FC = () => {
         width={260}
         className="mobile-menu-drawer"
         styles={{
-          body: { padding: 0, background: "#001529" },
+          body: { padding: 0, background: "#FFFFFF" },
           header: { display: "none" },
         }}
-        closeIcon={<CloseOutlined style={{ color: "#fff" }} />}
+        closeIcon={<CloseOutlined style={{ color: "#096DD9" }} />}
       >
-        {menuContent}
+        <div className="mobile-sidebar">{sidebarContent}</div>
       </Drawer>
 
-      <Layout>
-        <Header style={{ padding: "0 16px", background: "#fff" }}>
-          <div className="header-content">
-            {/* Hamburger menu button for mobile - always rendered, controlled by CSS */}
-            <Button
-              type="text"
-              icon={<MenuOutlined style={{ fontSize: 20 }} />}
-              onClick={() => setMobileMenuOpen(true)}
-              className="mobile-menu-trigger"
-            />
-            <h1 className="header-title">{t("common.appName")}</h1>
-            <div className="header-actions">
-              <NotificationBell />
-              <Dropdown
-                menu={{
-                  items: [
-                    {
-                      key: "user-info",
-                      label: (
-                        <div className="user-dropdown-header">
-                          <div className="user-dropdown-name">
-                            {getUserDisplayName()}
-                          </div>
-                          <div className="user-dropdown-email">
-                            {userInfo?.email}
-                          </div>
-                          {getUserRole() && (
-                            <div className="user-dropdown-role">
-                              {getUserRole()}
-                            </div>
-                          )}
-                        </div>
-                      ),
-                      disabled: true,
-                    },
-                    { type: "divider" },
-                    {
-                      key: "change-password",
-                      icon: <KeyOutlined />,
-                      label: "Đổi mật khẩu",
-                      onClick: () => setChangePasswordVisible(true),
-                    },
-                    {
-                      key: "settings",
-                      icon: <SettingOutlined />,
-                      label: "Cài đặt",
-                      onClick: () => navigate(PATH_ROUTES.settings),
-                    },
-                    { type: "divider" },
-                    {
-                      key: "logout",
-                      icon: <LogoutOutlined />,
-                      label: "Đăng xuất",
-                      danger: true,
-                      onClick: handleLogout,
-                    },
-                  ],
-                }}
-                trigger={["click"]}
-                placement="bottomRight"
-              >
-                <Space className="user-dropdown-trigger">
-                  <Avatar
-                    size={36}
-                    icon={<UserOutlined />}
-                    className="user-avatar"
-                  >
-                    {getAvatarLetter()}
-                  </Avatar>
-                  <div className="user-info-text">
-                    <span className="user-name">{getUserDisplayName()}</span>
-                    {getUserRole() && (
-                      <span className="user-role">{getUserRole()}</span>
-                    )}
-                  </div>
-                  <DownOutlined className="dropdown-arrow" />
-                </Space>
-              </Dropdown>
+      {/* Main Content Area */}
+      <div className="main-content-wrapper">
+        {/* Header */}
+        <header className="main-header">
+          <div className="header-left">
+            {/* Mobile menu button */}
+            {isMobile && (
+              <Button
+                type="text"
+                icon={<MenuOutlined style={{ fontSize: 20 }} />}
+                onClick={() => setMobileMenuOpen(true)}
+                className="mobile-menu-btn"
+              />
+            )}
+            <div className="header-title-wrapper">
+              <h1 className="header-title">{t("common.appName")}</h1>
+              <span className="header-subtitle">
+                Tổng hợp số liệu hoạt động của phòng Lab
+              </span>
             </div>
           </div>
-        </Header>
+
+          <div className="header-right">
+            <NotificationBell />
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: "user-info",
+                    label: (
+                      <div className="user-dropdown-header">
+                        <div className="user-dropdown-name">
+                          {getUserDisplayName()}
+                        </div>
+                        <div className="user-dropdown-email">
+                          {userInfo?.email}
+                        </div>
+                        {getUserRole() && (
+                          <div className="user-dropdown-role">
+                            {getUserRole()}
+                          </div>
+                        )}
+                      </div>
+                    ),
+                    disabled: true,
+                  },
+                  { type: "divider" },
+                  {
+                    key: "change-password",
+                    icon: <KeyOutlined />,
+                    label: "Đổi mật khẩu",
+                    onClick: () => setChangePasswordVisible(true),
+                  },
+                  {
+                    key: "settings",
+                    icon: <SettingOutlined />,
+                    label: "Cài đặt",
+                    onClick: () => navigate(PATH_ROUTES.settings),
+                  },
+                  { type: "divider" },
+                  {
+                    key: "logout",
+                    icon: <LogoutOutlined />,
+                    label: "Đăng xuất",
+                    danger: true,
+                    onClick: handleLogout,
+                  },
+                ],
+              }}
+              trigger={["click"]}
+              placement="bottomRight"
+            >
+              <div className="user-dropdown-trigger">
+                <Avatar
+                  size={32}
+                  icon={<UserOutlined />}
+                  className="user-avatar"
+                >
+                  {getAvatarLetter()}
+                </Avatar>
+                <div className="user-info-text">
+                  <span className="user-name">{getUserDisplayName()}</span>
+                  {getUserRole() && (
+                    <span className="user-role">{getUserRole()}</span>
+                  )}
+                </div>
+                <DownOutlined className="dropdown-arrow" />
+              </div>
+            </Dropdown>
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <main className="main-content">
+          <Outlet />
+        </main>
 
         {/* Change Password Modal */}
         <Modal
@@ -680,11 +742,6 @@ const MainLayout: React.FC = () => {
             </Form.Item>
           </Form>
         </Modal>
-        <Content style={{ margin: "16px", overflow: "auto" }}>
-          <div className="site-layout-content">
-            <Outlet />
-          </div>
-        </Content>
 
         {/* Work Reminder Modal for SampleReceiver */}
         <WorkReminderModal
@@ -713,8 +770,8 @@ const MainLayout: React.FC = () => {
           tasks={qualityManagerReminderTasks}
           onClose={closeQualityManagerReminder}
         />
-      </Layout>
-    </Layout>
+      </div>
+    </div>
   );
 };
 
