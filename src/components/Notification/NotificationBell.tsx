@@ -7,6 +7,7 @@ import {
   NotificationDto,
   NotificationType,
 } from "../../services/notificationService";
+import { signalRService } from "../../services/signalRService";
 import NotificationModal from "./NotificationModal";
 import "./NotificationBell.css";
 
@@ -106,6 +107,16 @@ const NotificationBell: React.FC = () => {
   useEffect(() => {
     loadUnreadCount();
   }, [loadUnreadCount]);
+
+  // Subscribe to SignalR new notification events
+  useEffect(() => {
+    const unsubscribe = signalRService.onNewNotification(() => {
+      // Increment unread count by 1 when a new notification is received
+      setUnreadCount((prev) => prev + 1);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // Load notifications when popover opens
   useEffect(() => {
