@@ -244,6 +244,8 @@ export interface TestRequestSampleDto {
   totalIndicatorCost: number;
   /** Đánh dấu mẫu đã bị hủy (dùng cho quản lý mẫu lưu kho) */
   isCancelled?: boolean;
+  /** Đánh dấu mẫu đã bị khách hàng hủy (sau khi đã gửi mẫu) */
+  isCustomerCancelled?: boolean;
   /** Loại mẫu ID */
   specimenTypeId?: string;
   /** Tên loại mẫu */
