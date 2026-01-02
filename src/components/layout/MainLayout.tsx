@@ -39,6 +39,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { authService, UserInfo } from "../../services/authService";
+import { signalRService } from "../../services/signalRService";
 import { NotificationBell } from "../Notification";
 import WorkReminderModal, {
   LabTechManagerReminderModal,
@@ -162,6 +163,17 @@ const MainLayout: React.FC = () => {
       }
     }
   }, []);
+
+  // Connect to SignalR when user is authenticated
+  useEffect(() => {
+    if (userInfo) {
+      signalRService.connect();
+    }
+
+    return () => {
+      signalRService.disconnect();
+    };
+  }, [userInfo]);
 
   // Handle logout
   const handleLogout = () => {
