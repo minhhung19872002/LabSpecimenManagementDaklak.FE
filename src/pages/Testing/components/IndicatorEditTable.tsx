@@ -17,6 +17,7 @@ import {
   SyncOutlined,
   SendOutlined,
   PlayCircleOutlined,
+  StopOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { NumericFormat } from "react-number-format";
@@ -112,12 +113,13 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
   // Handle select all
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      // Select all indicators that are not Done or PendingApproval
+      // Select all indicators that are not Done, PendingApproval, or Cancelled
       const selectableIds = indicators
         .filter(
           (ind) =>
             ind.testingStatus !== IndicatorTestingStatus.Done &&
-            ind.testingStatus !== IndicatorTestingStatus.PendingApproval
+            ind.testingStatus !== IndicatorTestingStatus.PendingApproval &&
+            ind.testingStatus !== IndicatorTestingStatus.Cancelled
         )
         .map((ind) => ind.id);
       onSelectionChange(selectableIds);
@@ -126,11 +128,12 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     }
   };
 
-  // Check if indicator can be selected (not Done or PendingApproval)
+  // Check if indicator can be selected (not Done, PendingApproval, or Cancelled)
   const canSelectIndicator = (indicator: TestingIndicatorDto) => {
     return (
       indicator.testingStatus !== IndicatorTestingStatus.Done &&
-      indicator.testingStatus !== IndicatorTestingStatus.PendingApproval
+      indicator.testingStatus !== IndicatorTestingStatus.PendingApproval &&
+      indicator.testingStatus !== IndicatorTestingStatus.Cancelled
     );
   };
 
@@ -154,6 +157,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       [IndicatorTestingStatus.PendingApproval]: <ClockCircleOutlined />,
       [IndicatorTestingStatus.Rejected]: <WarningOutlined />,
       [IndicatorTestingStatus.Done]: <CheckCircleOutlined />,
+      [IndicatorTestingStatus.Cancelled]: <StopOutlined />,
     };
 
     return (
@@ -394,10 +398,11 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
         const canSubmit =
           status === IndicatorTestingStatus.Testing && hasResult;
 
-        // Không hiện gì nếu đã Done hoặc PendingApproval
+        // Không hiện gì nếu đã Done, PendingApproval, hoặc Cancelled
         if (
           status === IndicatorTestingStatus.Done ||
-          status === IndicatorTestingStatus.PendingApproval
+          status === IndicatorTestingStatus.PendingApproval ||
+          status === IndicatorTestingStatus.Cancelled
         ) {
           return <Text type="secondary">-</Text>;
         }
@@ -448,7 +453,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
   ];
 
   // Sort indicators theo thứ tự ưu tiên trạng thái, sau đó theo id
-  // Ưu tiên: Bị từ chối > Chờ phê duyệt > Đang TN > Cần làm > Đã xong
+  // Ưu tiên: Bị từ chối > Chờ phê duyệt > Đang TN > Cần làm > Đã xong > KH hủy
   const getStatusPriority = (status: IndicatorTestingStatus): number => {
     switch (status) {
       case IndicatorTestingStatus.Rejected:
@@ -460,9 +465,11 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       case IndicatorTestingStatus.Todo:
         return 3;
       case IndicatorTestingStatus.Done:
-        return 4; // Thấp nhất
+        return 4;
+      case IndicatorTestingStatus.Cancelled:
+        return 5; // Thấp nhất - KH hủy hiển thị cuối cùng
       default:
-        return 5;
+        return 6;
     }
   };
 
