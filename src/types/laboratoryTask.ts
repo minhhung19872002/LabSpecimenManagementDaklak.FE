@@ -212,7 +212,7 @@ export interface ListUserLookupResult {
 
 // ============= Sample Status (Computed) =============
 
-export type SampleStatus = 'notStarted' | 'assigned' | 'testing' | 'pendingApproval' | 'approved' | 'rejected';
+export type SampleStatus = 'notStarted' | 'assigned' | 'testing' | 'pendingApproval' | 'approved' | 'rejected' | 'customerCancelled';
 
 export const SampleStatusLabels: Record<SampleStatus, string> = {
   notStarted: 'Chưa thực hiện',
@@ -220,7 +220,8 @@ export const SampleStatusLabels: Record<SampleStatus, string> = {
   testing: 'Đang thử nghiệm',
   pendingApproval: 'Chờ phê duyệt',
   approved: 'Đã duyệt',
-  rejected: 'Từ chối'
+  rejected: 'Từ chối',
+  customerCancelled: 'KH hủy'
 };
 
 export const SampleStatusColors: Record<SampleStatus, string> = {
@@ -229,7 +230,8 @@ export const SampleStatusColors: Record<SampleStatus, string> = {
   testing: 'processing',
   pendingApproval: 'warning',
   approved: 'success',
-  rejected: 'error'
+  rejected: 'error',
+  customerCancelled: 'volcano'
 };
 
 // Sample info (computed from indicators)

@@ -9,13 +9,14 @@ export enum TestingStatus {
   Completed = 4       // Hoàn thành - Tất cả đã duyệt
 }
 
-// Indicator Testing Status Enum (Indicator level - 5 statuses)
+// Indicator Testing Status Enum (Indicator level - 6 statuses)
 export enum IndicatorTestingStatus {
   Todo = 0,           // Cần làm - Chưa check-in
   Testing = 1,        // Đang thí nghiệm - Đã check-in
   PendingApproval = 2, // Chờ phê duyệt - Đã gửi kết quả
   Rejected = 3,       // Bị từ chối - QLKT từ chối
-  Done = 4            // Đã xong - QLKT đã duyệt
+  Done = 4,           // Đã xong - QLKT đã duyệt
+  Cancelled = 5       // KH hủy - Khách hàng đã hủy chỉ tiêu này
 }
 
 // Sample Testing Image Type
@@ -53,7 +54,8 @@ export const IndicatorTestingStatusLabels: Record<IndicatorTestingStatus, string
   [IndicatorTestingStatus.Testing]: 'Đang thí nghiệm',
   [IndicatorTestingStatus.PendingApproval]: 'Chờ phê duyệt',
   [IndicatorTestingStatus.Rejected]: 'Bị từ chối',
-  [IndicatorTestingStatus.Done]: 'Đã xong'
+  [IndicatorTestingStatus.Done]: 'Đã xong',
+  [IndicatorTestingStatus.Cancelled]: 'KH hủy'
 };
 
 export const IndicatorTestingStatusColors: Record<IndicatorTestingStatus, string> = {
@@ -61,7 +63,8 @@ export const IndicatorTestingStatusColors: Record<IndicatorTestingStatus, string
   [IndicatorTestingStatus.Testing]: 'processing',
   [IndicatorTestingStatus.PendingApproval]: 'warning',
   [IndicatorTestingStatus.Rejected]: 'error',
-  [IndicatorTestingStatus.Done]: 'success'
+  [IndicatorTestingStatus.Done]: 'success',
+  [IndicatorTestingStatus.Cancelled]: 'volcano'
 };
 
 // Testing List DTO

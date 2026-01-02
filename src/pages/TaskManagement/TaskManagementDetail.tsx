@@ -224,8 +224,16 @@ const TaskManagementDetail: React.FC = () => {
           (i) => i.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled
         );
 
+        // Check if all indicators are CustomerCancelled
+        const allCustomerCancelled =
+          indicators.length > 0 &&
+          indicators.every(
+            (i) => i.approvalStatus === IndicatorApprovalStatus.CustomerCancelled
+          );
+
         // Compute sample status từ SERVER DATA
         // Logic:
+        // - KH hủy (customerCancelled): Tất cả chỉ tiêu đều bị KH hủy
         // - Chưa giao việc (notStarted): Chưa có methodId hoặc technicianId
         // - Đã giao việc (assigned): Tất cả indicators đều có methodId + technicianId, nhưng chưa có testDate
         // - Đang thử nghiệm (testing): Có ít nhất 1 indicator có testDate (KTV đã check-in)
@@ -261,7 +269,10 @@ const TaskManagementDetail: React.FC = () => {
         );
 
         let sampleStatus: SampleStatus;
-        if (allApproved) {
+        if (allCustomerCancelled) {
+          // Tất cả chỉ tiêu đều bị KH hủy
+          sampleStatus = "customerCancelled";
+        } else if (allApproved) {
           // Tất cả chỉ tiêu đã được duyệt
           sampleStatus = "approved";
         } else if (hasRejected && !hasTesting) {
@@ -983,8 +994,10 @@ const TaskManagementDetail: React.FC = () => {
                   Giao việc{selectedCount > 0 ? ` (${selectedCount})` : ""}
                 </Button>
               )}
-              {/* Re-assign button - show when assigned but not approved */}
-              {sample.sampleStatus !== "notStarted" && !sample.isApproved && (
+              {/* Re-assign button - show when assigned but not approved, hide when customerCancelled */}
+              {sample.sampleStatus !== "notStarted" &&
+                sample.sampleStatus !== "customerCancelled" &&
+                !sample.isApproved && (
                 <Button
                   size="small"
                   loading={actionLoading}

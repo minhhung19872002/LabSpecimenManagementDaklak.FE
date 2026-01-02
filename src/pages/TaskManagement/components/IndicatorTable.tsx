@@ -463,6 +463,15 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         status: IndicatorApprovalStatus,
         record: LaboratoryTaskIndicatorDto
       ) => {
+        // Ưu tiên hiển thị "KH hủy" trước - bất kể đã giao việc hay chưa
+        if (status === IndicatorApprovalStatus.CustomerCancelled) {
+          return (
+            <Tag color={IndicatorApprovalStatusColors[status]}>
+              {IndicatorApprovalStatusLabels[status]}
+            </Tag>
+          );
+        }
+
         // Kiểm tra indicator đã được giao việc (lưu vào DB) chưa
         // Dựa vào assignedDate - chỉ có khi đã lưu DB thành công
         const indicatorAssigned = !!record.assignedDate;
@@ -523,12 +532,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
               </Tag>
             );
 
-          case IndicatorApprovalStatus.CustomerCancelled:
-            return (
-              <Tag color={IndicatorApprovalStatusColors[status]}>
-                {IndicatorApprovalStatusLabels[status]}
-              </Tag>
-            );
+          // CustomerCancelled đã xử lý ở đầu function
 
           default:
             return null;
