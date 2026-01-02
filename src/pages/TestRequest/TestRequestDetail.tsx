@@ -10,6 +10,7 @@ import {
   TestRequestStatusLabels,
   TestRequestSampleDto,
 } from "../../types/testRequest";
+import { IndicatorApprovalStatus } from "../../types/laboratoryTask";
 import "./TestRequestDetail.css";
 import { API_BASE_URL } from "../../services/api";
 
@@ -18,8 +19,7 @@ import TestRequestDetailContainer from "./components/TestRequestDetailContainer"
 import ProcessTimelineModal from "./components/ProcessTimelineModal";
 import SampleImagesModal from "./components/SampleImagesModal";
 import PostalDeliveryImageModal from "./components/PostalDeliveryImageModal";
-import BM01SampleSelectionModal from "./components/BM01SampleSelectionModal";
-import MixedResultModal from "./components/MixedResultModal";
+import PrintIndicatorModal from "./components/PrintIndicatorModal";
 import RejectResultModal from "./components/RejectResultModal";
 
 const TestRequestDetail: React.FC = () => {
@@ -29,9 +29,9 @@ const TestRequestDetail: React.FC = () => {
   const [data, setData] = useState<TestRequestDto | null>(null);
 
   // Modal states
-  const [sampleSelectionModalVisible, setSampleSelectionModalVisible] =
+  const [printIndicatorModalVisible, setPrintIndicatorModalVisible] =
     useState(false);
-  const [mixedResultModalVisible, setMixedResultModalVisible] = useState(false);
+  const [printMode, setPrintMode] = useState<'single' | 'mixed'>('single');
   const [rejectResultModalVisible, setRejectResultModalVisible] =
     useState(false);
   const [processTimelineModalVisible, setProcessTimelineModalVisible] =
@@ -219,6 +219,35 @@ const TestRequestDetail: React.FC = () => {
     setSampleImagesModalVisible(true);
   };
 
+  // Handle print single result (In KQ)
+  const handlePrintSingle = () => {
+    setPrintMode('single');
+    setPrintIndicatorModalVisible(true);
+  };
+
+  // Handle print mixed result (In KQ hỗn hợp)
+  const handlePrintMixed = () => {
+    setPrintMode('mixed');
+    setPrintIndicatorModalVisible(true);
+  };
+
+  // Calculate canPrint: có ít nhất 1 chỉ tiêu đã được duyệt
+  const canPrint = React.useMemo(() => {
+    if (!data?.samples) return false;
+
+    // Đếm số chỉ tiêu đã duyệt từ tất cả các mẫu
+    let approvedCount = 0;
+    for (const sample of data.samples) {
+      if (sample.isCancelled || sample.isCustomerCancelled) continue;
+      for (const indicator of sample.indicators || []) {
+        if (indicator.approvalStatus === IndicatorApprovalStatus.Approved) {
+          approvedCount++;
+        }
+      }
+    }
+    return approvedCount > 0;
+  }, [data?.samples]);
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -248,21 +277,17 @@ const TestRequestDetail: React.FC = () => {
         onComplete={handleComplete}
         onOpenProcessTimeline={() => setProcessTimelineModalVisible(true)}
         onViewSampleImages={handleViewSampleImages}
+        onPrintSingle={handlePrintSingle}
+        onPrintMixed={handlePrintMixed}
+        canPrint={canPrint}
       />
 
-      {/* BM01 Sample Selection Modal */}
-      <BM01SampleSelectionModal
-        open={sampleSelectionModalVisible}
-        onClose={() => setSampleSelectionModalVisible(false)}
+      {/* Print Indicator Modal (In KQ / In KQ hỗn hợp) */}
+      <PrintIndicatorModal
+        visible={printIndicatorModalVisible}
+        mode={printMode}
         testRequestId={id!}
-        onSuccess={() => loadData(id!)}
-      />
-
-      {/* Mixed Result Sample Selection Modal */}
-      <MixedResultModal
-        open={mixedResultModalVisible}
-        onClose={() => setMixedResultModalVisible(false)}
-        testRequestId={id!}
+        onCancel={() => setPrintIndicatorModalVisible(false)}
         onSuccess={() => loadData(id!)}
       />
 

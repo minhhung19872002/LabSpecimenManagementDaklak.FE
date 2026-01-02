@@ -11,6 +11,7 @@ import {
   TestRequestTimelineDto,
   SampleReceiverPendingTaskDto
 } from '../types/testRequest';
+import { QualityManagementIndicatorDto } from '../types/qualityManagement';
 
 const BASE_URL = '/api/v1/test-requests';
 
@@ -204,6 +205,48 @@ export const testRequestService = {
    */
   getSampleReceiverPendingTasks: async (): Promise<SampleReceiverPendingTaskDto[]> => {
     const response = await api.get<SampleReceiverPendingTaskDto[]>(`${BASE_URL}/sample-receiver-pending-tasks`);
+    return response.data;
+  },
+
+  /**
+   * Lấy danh sách chỉ tiêu đã duyệt cho In KQ
+   */
+  getApprovedIndicators: async (testRequestId: string): Promise<QualityManagementIndicatorDto[]> => {
+    const response = await api.get<QualityManagementIndicatorDto[]>(`${BASE_URL}/${testRequestId}/approved-indicators`);
+    return response.data;
+  },
+
+  /**
+   * In kết quả đơn (1 chỉ tiêu)
+   */
+  printSingleResult: async (
+    testRequestId: string,
+    indicatorId: string,
+    note?: string,
+    templateName?: string
+  ): Promise<{ fileName: string }> => {
+    const response = await api.post<{ fileName: string }>(`${BASE_URL}/${testRequestId}/print-single`, {
+      indicatorId,
+      note,
+      templateName
+    });
+    return response.data;
+  },
+
+  /**
+   * In kết quả hỗn hợp (nhiều chỉ tiêu)
+   */
+  printMixedResult: async (
+    testRequestId: string,
+    indicatorIds: string[],
+    note?: string,
+    templateName?: string
+  ): Promise<{ fileName: string }> => {
+    const response = await api.post<{ fileName: string }>(`${BASE_URL}/${testRequestId}/print-mixed`, {
+      indicatorIds,
+      note,
+      templateName
+    });
     return response.data;
   },
 

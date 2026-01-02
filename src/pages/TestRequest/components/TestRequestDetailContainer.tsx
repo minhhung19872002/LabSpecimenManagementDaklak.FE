@@ -17,6 +17,7 @@ import {
   EditOutlined,
   FileTextOutlined,
   HistoryOutlined,
+  PrinterOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import {
@@ -54,6 +55,9 @@ interface TestRequestDetailContainerProps {
   onComplete: () => void;
   onOpenProcessTimeline: () => void;
   onViewSampleImages: (sample: TestRequestSampleDto) => void;
+  onPrintSingle: () => void;
+  onPrintMixed: () => void;
+  canPrint: boolean;
 }
 
 const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
@@ -67,6 +71,9 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
   onComplete,
   onOpenProcessTimeline,
   onViewSampleImages,
+  onPrintSingle,
+  onPrintMixed,
+  canPrint,
 }) => {
   const navigate = useNavigate();
 
@@ -119,6 +126,36 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
       buttons.push(
         <Button key="complete" type="primary" onClick={onComplete}>
           Hoàn thành
+        </Button>
+      );
+    }
+
+    // In KQ và In KQ hỗn hợp - hiển thị khi có thể in (có chỉ tiêu đã duyệt)
+    // Hiển thị từ trạng thái PendingApproval trở đi
+    if (
+      data.status === TestRequestStatus.PendingApproval ||
+      data.status === TestRequestStatus.Approved ||
+      data.status === TestRequestStatus.ResultSent ||
+      data.status === TestRequestStatus.Completed
+    ) {
+      buttons.push(
+        <Button
+          key="print-single"
+          icon={<PrinterOutlined />}
+          onClick={onPrintSingle}
+          disabled={!canPrint}
+        >
+          In KQ
+        </Button>
+      );
+      buttons.push(
+        <Button
+          key="print-mixed"
+          icon={<PrinterOutlined />}
+          onClick={onPrintMixed}
+          disabled={!canPrint}
+        >
+          In KQ Hỗn hợp
         </Button>
       );
     }
