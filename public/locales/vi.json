@@ -1,6 +1,7 @@
 {
   "common": {
     "appName": "Hệ Thống Quản Lý Mẫu Thử Nghiệm",
+    "subName": "Hệ thống quản lý phòng Lab",
     "welcome": "Chào mừng",
     "login": "Đăng nhập",
     "logout": "Đăng xuất",
