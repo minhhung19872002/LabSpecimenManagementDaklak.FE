@@ -22,6 +22,71 @@ export interface TemplateDto {
   fileName: string;
 }
 
+// Preview test request form input - matches BE PreviewTestRequestFormInput
+export interface PreviewSampleIndicatorDto {
+  indicatorId: string;
+  indicatorName: string;
+  unitPrice: number;
+}
+
+export interface PreviewTestRequestSampleDto {
+  sortOrder: number;
+  sampleCode: string;
+  sampleName: string;
+  samplingAddress?: string;
+  sampleQuantity?: string;
+  statusText?: string;
+  notes?: string;
+  indicators: PreviewSampleIndicatorDto[];
+}
+
+export interface PreviewTestRequestFormInput {
+  contractNumber?: string;
+  contractDate?: string;
+  sentToAccounting: boolean;
+  paymentReceived: boolean;
+  sentToDepartment: boolean;
+  resultReturned: boolean;
+  customerName: string;
+  provinceCode?: string;
+  province?: string;
+  districtCode?: string;
+  district?: string;
+  wardCode?: string;
+  ward?: string;
+  address?: string;
+  taxCode?: string;
+  contactPerson?: string;
+  phone?: string;
+  totalSampleCount: number;
+  methodWestHighlandInstitute: boolean;
+  methodCustomer: boolean;
+  methodCustomerDetail?: string;
+  resultLanguage: number; // 0=Vietnamese, 1=English, 2=Both
+  resultCopyCount?: string;
+  separatePassedResults: boolean;
+  conformityDeclaration?: string;
+  otherRequirements?: string;
+  subContract?: string;
+  samplingRequirement: number; // 0=CustomerSampling, 1=LabSampling
+  deliveryDirectPickup: boolean;
+  deliveryPostal: boolean;
+  returnStoredSample: boolean;
+  sampleTypeService: boolean;
+  sampleTypeContract: boolean;
+  sampleTypeTask: boolean;
+  sampleTypeSubContract: boolean;
+  resultDeliveryDate?: string;
+  sampleStorage: number; // 0=No, 1=Yes
+  totalCost: number;
+  totalCostInWords?: string;
+  receiptNumber?: string;
+  agreeTerms: boolean;
+  requestDate: string;
+  notes?: string;
+  samples: PreviewTestRequestSampleDto[];
+}
+
 // Extended params interface for search and filter
 export interface TestRequestListParams extends PagedAndSortedResultRequestDto {
   search?: string;
@@ -113,6 +178,12 @@ export const testRequestService = {
     const response = await api.post<{ fileName: string; requestNumber: string; contractNumber: string }>('/api/v1/result-forms/generate-test-request', {
       testRequestId
     });
+    return response.data;
+  },
+
+  // Preview test request form (BM05) with form data - no DB save required
+  previewTestRequestForm: async (formData: PreviewTestRequestFormInput): Promise<{ fileName: string; requestNumber: string; contractNumber: string }> => {
+    const response = await api.post<{ fileName: string; requestNumber: string; contractNumber: string }>('/api/v1/result-forms/preview-test-request', formData);
     return response.data;
   },
 
