@@ -214,36 +214,50 @@ const Dashboard: React.FC = () => {
     }
   }, [selectedCustomer]);
 
-  // Chart config
+  // Chart config - Simple bar chart showing revenue by month
   const chartConfig = useMemo(() => ({
-    data: monthlyRevenue.flatMap((item) => [
-      { month: item.monthName, type: "Số hợp đồng", value: item.contractCount },
-      { month: item.monthName, type: "Tổng số mẫu", value: item.totalSamples },
-      { month: item.monthName, type: "Tổng số chỉ tiêu", value: item.totalIndicators },
-      { month: item.monthName, type: "Tổng số tiền", value: item.revenue / 10000 }, // Scale down for display
-    ]),
+    data: monthlyRevenue.map((item) => ({
+      month: item.monthName,
+      revenue: item.revenue,
+    })),
     xField: "month",
-    yField: "value",
-    seriesField: "type",
-    isGroup: true,
+    yField: "revenue",
+    color: "#597EF7",
     columnStyle: {
       radius: [4, 4, 0, 0],
     },
-    legend: {
-      position: "top-right" as const,
+    xAxis: {
+      label: {
+        style: {
+          fill: "#8C8C8C",
+          fontSize: 12,
+        },
+      },
     },
-    label: {
-      position: "top" as const,
-      style: {
-        fill: "#666",
-        fontSize: 10,
+    yAxis: {
+      label: {
+        formatter: (v: string) => {
+          const num = Number(v);
+          if (num >= 1000000000) {
+            return `${(num / 1000000000).toFixed(0)}tỷ`;
+          }
+          if (num >= 1000000) {
+            return `${(num / 1000000).toFixed(0)}tr`;
+          }
+          return v;
+        },
+        style: {
+          fill: "#8C8C8C",
+          fontSize: 12,
+        },
       },
-      formatter: (datum: any) => {
-        if (datum.type === "Tổng số tiền") {
-          return formatCurrency(datum.value * 10000);
-        }
-        return datum.value > 0 ? datum.value : "";
-      },
+    },
+    label: false,
+    tooltip: {
+      formatter: (datum: any) => ({
+        name: "Doanh thu",
+        value: formatCurrency(datum.revenue),
+      }),
     },
   }), [monthlyRevenue]);
 

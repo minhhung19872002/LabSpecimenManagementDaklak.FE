@@ -3,29 +3,29 @@ import {
   Card,
   Row,
   Col,
-  Statistic,
   Table,
-  Tag,
   Spin,
   Radio,
-  DatePicker,
   Button,
   Select,
   Typography,
   Space,
   Alert,
+  Badge,
 } from "antd";
+import { DatePicker } from "antd";
+
+const { RangePicker } = DatePicker;
 import {
   FileTextOutlined,
   ExperimentOutlined,
   CheckCircleOutlined,
-  WarningOutlined,
   ClockCircleOutlined,
   DollarOutlined,
-  ReloadOutlined,
-  AuditOutlined,
-  FieldTimeOutlined,
+  EditOutlined,
+  SyncOutlined,
   RightOutlined,
+  ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import { Column } from "@ant-design/charts";
 import { Dayjs } from "dayjs";
@@ -37,14 +37,13 @@ import {
 } from "../../../services/dashboardService";
 import { QualityManagementTaskDto } from "../../../types/qualityManagement";
 import {
-  getPendingTasksColumns,
   getRecentRequestsColumns,
   getRevenueColumns,
   formatCurrency,
 } from "../columns";
+import "../Dashboard.css";
 
-const { Title } = Typography;
-const { RangePicker } = DatePicker;
+const { Title, Text } = Typography;
 
 type FilterPeriod = "month" | "quarter" | "half_year" | "year";
 
@@ -85,11 +84,70 @@ interface DashboardContainerProps {
   onNavigateToTestRequests: () => void;
 }
 
+// Stats data configuration - all stats in one grid
+const getAllStats = (overview: DashboardOverviewDto | null) => {
+  const total = (overview?.onTimeTests || 0) + (overview?.lateTests || 0);
+  const onTimePercent =
+    total > 0 ? Math.round(((overview?.onTimeTests || 0) / total) * 100) : 0;
+  const latePercent =
+    total > 0 ? Math.round(((overview?.lateTests || 0) / total) * 100) : 0;
+
+  return [
+    {
+      title: "Tổng số hợp đồng",
+      value: overview?.totalContracts || 0,
+      iconBg: "blue",
+      icon: <FileTextOutlined />,
+    },
+    {
+      title: "Tổng số mẫu",
+      value: (overview?.totalSamples || 0).toLocaleString(),
+      iconBg: "purple",
+      icon: <ExperimentOutlined />,
+    },
+    {
+      title: "Tổng doanh thu",
+      value: formatCurrency(overview?.totalRevenue || 0),
+      iconBg: "orange",
+      icon: <DollarOutlined />,
+    },
+    {
+      title: "Báo cáo NCT",
+      value: overview?.totalNCRs || 0,
+      iconBg: "red",
+      icon: <ExclamationCircleOutlined />,
+    },
+    {
+      title: "TN Đúng hạn",
+      value: `${onTimePercent}%`,
+      iconBg: "green",
+      icon: <CheckCircleOutlined />,
+    },
+    {
+      title: "TN Trễ hạn",
+      value: `${latePercent}%`,
+      iconBg: "orange",
+      icon: <ClockCircleOutlined />,
+    },
+    {
+      title: "Chờ phê duyệt",
+      value: overview?.pendingApproval || 0,
+      iconBg: "blue",
+      icon: <EditOutlined />,
+    },
+    {
+      title: "Đang thực hiện",
+      value: total,
+      iconBg: "purple",
+      icon: <SyncOutlined />,
+    },
+  ];
+};
+
 const DashboardContainer: React.FC<DashboardContainerProps> = ({
   filterPeriod,
   dateRange,
   isCustomDateRange,
-  recentRequestsFilter,
   selectedCustomer,
   customerNames,
   loading,
@@ -106,217 +164,145 @@ const DashboardContainer: React.FC<DashboardContainerProps> = ({
   chartConfig,
   onPeriodChange,
   onDateRangeChange,
-  onRefresh,
-  onRecentRequestsFilterChange,
   onSelectedCustomerChange,
   onNavigateToQualityManagement,
   onNavigateToTestRequests,
 }) => {
-  const pendingTasksColumns = getPendingTasksColumns();
   const recentRequestsColumns = getRecentRequestsColumns();
   const revenueColumns = getRevenueColumns();
+
+  const allStats = getAllStats(overview);
 
   if (error) {
     return (
       <div>
-        <Title level={3} style={{ marginBottom: 24 }}>Báo cáo Tổng quan</Title>
-        <Alert
-          message="Lỗi"
-          description={error}
-          type="error"
-          showIcon
-        />
+        <Title level={3} style={{ marginBottom: 24 }}>
+          Báo cáo Tổng quan
+        </Title>
+        <Alert message="Lỗi" description={error} type="error" showIcon />
       </div>
     );
   }
 
   return (
     <div>
-      {/* Header with Title and Filters */}
-      <div style={{ marginBottom: 24 }}>
-        <Row justify="space-between" align="middle" gutter={[16, 16]}>
-          <Col>
-            <Title level={3} style={{ margin: 0 }}>Báo cáo Tổng quan</Title>
-          </Col>
-          <Col>
-            <Space wrap>
-              <Radio.Group
-                value={isCustomDateRange ? undefined : filterPeriod}
-                onChange={(e) => onPeriodChange(e.target.value)}
-                optionType="button"
-                buttonStyle="solid"
-              >
-                <Radio.Button value="month">Tháng</Radio.Button>
-                <Radio.Button value="quarter">Quý</Radio.Button>
-                <Radio.Button value="half_year">Nửa năm</Radio.Button>
-                <Radio.Button value="year">Năm</Radio.Button>
-              </Radio.Group>
-              <RangePicker
-                value={dateRange}
-                onChange={onDateRangeChange}
-                format="DD/MM/YYYY"
-                allowClear={false}
-              />
-              <Button icon={<ReloadOutlined />} onClick={onRefresh}>
-                Làm mới
-              </Button>
-            </Space>
-          </Col>
-        </Row>
+      {/* Filter Bar */}
+      <div className="dashboard-filter-bar">
+        <Title level={3} className="dashboard-title">
+          Báo cáo Tổng quan
+        </Title>
+        <div className="dashboard-filter-controls">
+          <div className="dashboard-period-tabs">
+            <Radio.Group
+              value={isCustomDateRange ? undefined : filterPeriod}
+              onChange={(e) => onPeriodChange(e.target.value)}
+              optionType="button"
+              buttonStyle="solid"
+            >
+              <Radio.Button value="month">Tháng</Radio.Button>
+              <Radio.Button value="quarter">Quý</Radio.Button>
+              <Radio.Button value="half_year">Nửa năm</Radio.Button>
+              <Radio.Button value="year">Năm</Radio.Button>
+            </Radio.Group>
+          </div>
+          <RangePicker
+            value={dateRange}
+            onChange={(dates) => {
+              if (dates && dates[0] && dates[1]) {
+                onDateRangeChange(dates as [Dayjs | null, Dayjs | null]);
+              }
+            }}
+            format="DD/MM/YYYY"
+            allowClear={false}
+            style={{ width: 240 }}
+          />
+        </div>
       </div>
 
-      {/* Statistics Cards - Row 1 */}
       <Spin spinning={loading}>
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} lg={6}>
-            <Card hoverable>
-              <Statistic
-                title="Tổng số hợp đồng"
-                value={overview?.totalContracts || 0}
-                prefix={<FileTextOutlined style={{ color: "#1890ff" }} />}
-              />
+        {/* Stats Cards Grid */}
+        <div className="dashboard-stats-grid">
+          {allStats.map((stat, index) => (
+            <Card key={index} className="dashboard-stat-card" bordered={false}>
+              <div className="dashboard-stat-content">
+                <div className="dashboard-stat-info">
+                  <Text className="dashboard-stat-title">{stat.title}</Text>
+                  <div className="dashboard-stat-value">{stat.value}</div>
+                </div>
+                <div className={`dashboard-stat-icon ${stat.iconBg}`}>
+                  {stat.icon}
+                </div>
+              </div>
             </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card hoverable>
-              <Statistic
-                title="Tổng số mẫu"
-                value={overview?.totalSamples || 0}
-                prefix={<ExperimentOutlined style={{ color: "#722ed1" }} />}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card hoverable>
-              <Statistic
-                title="Tổng số chỉ tiêu"
-                value={overview?.totalIndicators || 0}
-                prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card hoverable>
-              <Statistic
-                title="Báo cáo NCT"
-                value={overview?.totalNCRs || 0}
-                prefix={<WarningOutlined style={{ color: "#cf1322" }} />}
-                valueStyle={{ color: "#cf1322" }}
-              />
-            </Card>
-          </Col>
-        </Row>
-
-        {/* Statistics Cards - Row 2 */}
-        <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-          <Col xs={24} sm={12} lg={6}>
-            <Card hoverable>
-              <Statistic
-                title="Tổng doanh thu"
-                value={overview?.totalRevenue || 0}
-                prefix={<DollarOutlined style={{ color: "#faad14" }} />}
-                valueStyle={{ color: "#faad14" }}
-                formatter={(value) => formatCurrency(Number(value))}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card hoverable>
-              <Statistic
-                title="TN đúng hạn"
-                value={overview?.onTimeTests || 0}
-                prefix={<FieldTimeOutlined style={{ color: "#52c41a" }} />}
-                valueStyle={{ color: "#52c41a" }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card hoverable>
-              <Statistic
-                title="TN trễ hạn"
-                value={overview?.lateTests || 0}
-                prefix={<ClockCircleOutlined style={{ color: "#ff4d4f" }} />}
-                valueStyle={{ color: "#ff4d4f" }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card hoverable>
-              <Statistic
-                title="Chờ phê duyệt"
-                value={overview?.pendingApproval || 0}
-                prefix={<AuditOutlined style={{ color: "#13c2c2" }} />}
-                valueStyle={{ color: "#13c2c2" }}
-              />
-            </Card>
-          </Col>
-        </Row>
+          ))}
+        </div>
       </Spin>
 
-      {/* Pending Approvals & Recent Requests - 50/50 */}
-      <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
-        <Col xs={24} lg={12}>
+      {/* Two Column Section: Pending Approval & Recent Requests */}
+      <Row
+        gutter={32}
+        className="dashboard-two-col-row"
+      >
+        {/* Pending Approval - 1/3 width */}
+        <Col xs={24} lg={8}>
           <Card
+            className="dashboard-pending-card"
+            bordered={false}
             title={
               <Space>
-                <AuditOutlined />
                 <span>Chờ phê duyệt</span>
-                <Tag color="orange">{pendingTasks.length}</Tag>
+                <Badge
+                  count={pendingTasks.length}
+                  style={{ backgroundColor: "#CF1322" }}
+                />
               </Space>
             }
             extra={
-              <Button
-                type="link"
-                onClick={onNavigateToQualityManagement}
-              >
+              <Button type="link" onClick={onNavigateToQualityManagement}>
                 Xem tất cả <RightOutlined />
               </Button>
             }
-            bodyStyle={{ padding: 0, minHeight: 280 }}
           >
             <Spin spinning={loadingPendingTasks}>
-              <Table
-                dataSource={pendingTasks.slice(0, 5)}
-                columns={pendingTasksColumns}
-                rowKey="id"
-                pagination={false}
-                size="small"
-              />
+              {pendingTasks.slice(0, 3).map((task, index) => (
+                <div key={task.id || index} className="dashboard-pending-item">
+                  <div className="dashboard-pending-item-info">
+                    <span className="dashboard-pending-item-code">
+                      {task.contractNumber || `HD${task.id?.slice(0, 7)}`}
+                    </span>
+                    <span className="dashboard-pending-item-org">
+                      {task.customerName || "Không có thông tin"}
+                    </span>
+                  </div>
+                  <Button size="small">Kết quả</Button>
+                </div>
+              ))}
+              {pendingTasks.length === 0 && (
+                <div
+                  style={{
+                    padding: "20px",
+                    textAlign: "center",
+                    color: "#8C8C8C",
+                  }}
+                >
+                  Không có yêu cầu chờ phê duyệt
+                </div>
+              )}
             </Spin>
           </Card>
         </Col>
 
-        <Col xs={24} lg={12}>
+        {/* Recent Requests - 2/3 width */}
+        <Col xs={24} lg={16}>
           <Card
-            title={
-              <Space>
-                <FileTextOutlined />
-                <span>Yêu cầu gần đây</span>
-              </Space>
-            }
+            className="dashboard-recent-card"
+            bordered={false}
+            title={<span>Yêu cầu gần đây</span>}
             extra={
-              <Space>
-                <Select
-                  placeholder="Chọn CS/DN"
-                  allowClear
-                  style={{ width: 180 }}
-                  value={recentRequestsFilter}
-                  onChange={onRecentRequestsFilterChange}
-                  options={customerNames.map((name) => ({ label: name, value: name }))}
-                  showSearch
-                  filterOption={(input, option) =>
-                    (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-                  }
-                />
-                <Button
-                  type="link"
-                  onClick={onNavigateToTestRequests}
-                >
-                  Xem tất cả <RightOutlined />
-                </Button>
-              </Space>
+              <Button type="link" onClick={onNavigateToTestRequests}>
+                Xem tất cả <RightOutlined />
+              </Button>
             }
-            bodyStyle={{ padding: 0, minHeight: 280 }}
           >
             <Spin spinning={loadingRecentRequests}>
               <Table
@@ -334,30 +320,34 @@ const DashboardContainer: React.FC<DashboardContainerProps> = ({
 
       {/* Revenue Report Section */}
       <Card
+        className="dashboard-revenue-card"
+        bordered={false}
         title={
-          <Space>
-            <DollarOutlined />
-            <span>Báo cáo chi tiết doanh thu</span>
-          </Space>
+          <div className="dashboard-revenue-header">
+            <span className="dashboard-revenue-title">
+              Báo cáo chi tiết doanh thu
+            </span>
+            <span className="dashboard-revenue-subtitle">
+              Tổng doanh thu theo tháng trong năm {new Date().getFullYear()}
+            </span>
+          </div>
         }
-        style={{ marginTop: 24 }}
       >
-        <Row gutter={[16, 16]}>
+        <div className="dashboard-revenue-content">
           {/* Revenue Table - Left */}
-          <Col xs={24} lg={12}>
+          <div className="dashboard-revenue-table">
             <Spin spinning={loadingRevenue}>
               <Table
-                className="revenue-table"
                 dataSource={revenueByCustomer}
                 columns={revenueColumns}
                 rowKey="customerName"
                 size="small"
                 pagination={false}
+                scroll={{ x: 280 }}
                 onRow={(record) => ({
                   onClick: () => onSelectedCustomerChange(record.customerName),
                   style: {
                     cursor: "pointer",
-                    backgroundColor: selectedCustomer === record.customerName ? "#fff1f0" : undefined,
                   },
                 })}
                 rowClassName={(record) =>
@@ -365,20 +355,25 @@ const DashboardContainer: React.FC<DashboardContainerProps> = ({
                 }
               />
             </Spin>
-          </Col>
+          </div>
 
           {/* Revenue Chart - Right */}
-          <Col xs={24} lg={12}>
-            <div style={{ marginBottom: 16 }}>
+          <div className="dashboard-revenue-chart">
+            <div className="dashboard-revenue-chart-header">
               <Select
                 placeholder="Chọn Cơ sở/DN"
-                style={{ width: 300 }}
+                style={{ width: 280 }}
                 value={selectedCustomer}
                 onChange={onSelectedCustomerChange}
-                options={customerNames.map((name) => ({ label: name, value: name }))}
+                options={customerNames.map((name) => ({
+                  label: name,
+                  value: name,
+                }))}
                 showSearch
                 filterOption={(input, option) =>
-                  (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                  (option?.label ?? "")
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
                 }
               />
             </div>
@@ -401,22 +396,9 @@ const DashboardContainer: React.FC<DashboardContainerProps> = ({
                 </div>
               )}
             </Spin>
-          </Col>
-        </Row>
+          </div>
+        </div>
       </Card>
-
-      <style>{`
-        .selected-row {
-          background-color: #fff1f0 !important;
-        }
-        .selected-row:hover > td {
-          background-color: #ffccc7 !important;
-        }
-        .revenue-table .ant-table-tbody > tr > td {
-          height: 32px;
-          padding: 2px 10px !important;
-        }
-      `}</style>
     </div>
   );
 };

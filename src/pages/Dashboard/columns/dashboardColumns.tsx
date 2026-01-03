@@ -94,6 +94,7 @@ export const getRevenueColumns = (): ColumnsType<RevenueByCustomerDto> => [
     title: "Cơ sở/Doanh nghiệp",
     dataIndex: "customerName",
     key: "customerName",
+    width: 150,
     ellipsis: true,
   },
   {
