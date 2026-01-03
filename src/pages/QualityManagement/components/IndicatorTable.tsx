@@ -1,24 +1,17 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React from "react";
 import {
   Table,
   Tag,
   Button,
   Space,
-  Select,
   Collapse,
-  message,
   Tooltip,
   Checkbox,
   Typography,
 } from "antd";
 import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
-import { qualityManagementService } from "../../../services/qualityManagementService";
 import { formatDate } from "../../../utils/formatters";
-import {
-  standardService,
-  StandardWithIndicatorsDto,
-} from "../../../services/masterDataService";
 import {
   QualityManagementIndicatorDto,
   QualityIndicatorApprovalStatus,
@@ -41,10 +34,12 @@ interface IndicatorTableProps {
   onPendingSelectChange: (ids: string[]) => void;
 }
 
-// Group indicators by laboratory
-interface LabGroup {
-  laboratoryId: string;
-  laboratoryName: string;
+// Group indicators by sample
+interface SampleGroup {
+  sampleId: string;
+  sampleCode: string;
+  sampleName: string;
+  specimenTypeName: string;
   indicators: QualityManagementIndicatorDto[];
 }
 
@@ -53,61 +48,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   taskStatus: _taskStatus,
   onApprove,
   onReject,
-  onIndicatorUpdate,
+  onIndicatorUpdate: _onIndicatorUpdate,
   selectedPendingIds,
   onPendingSelectChange,
 }) => {
-  const [standardsWithIndicators, setStandardsWithIndicators] = useState<
-    StandardWithIndicatorsDto[]
-  >([]);
-  const [loadingStandards, setLoadingStandards] = useState(false);
-  const [updatingStandard, setUpdatingStandard] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadStandards();
-  }, []);
-
-  const loadStandards = async () => {
-    setLoadingStandards(true);
-    try {
-      const result = await standardService.getWithIndicators();
-      setStandardsWithIndicators(result);
-    } catch (error) {
-      console.error("Error loading standards:", error);
-    } finally {
-      setLoadingStandards(false);
-    }
-  };
-
-  // Get standards that contain a specific indicator (by indicatorId)
-  const getStandardsForIndicator = useMemo(() => {
-    return (indicatorId: string) => {
-      return standardsWithIndicators.filter((standard) =>
-        standard.indicators.some((si) => si.indicatorId === indicatorId)
-      );
-    };
-  }, [standardsWithIndicators]);
-
-  const handleStandardChange = async (
-    indicatorId: string,
-    standardId: string | undefined
-  ) => {
-    setUpdatingStandard(indicatorId);
-    try {
-      await qualityManagementService.updateIndicatorStandard(
-        indicatorId,
-        standardId || undefined
-      );
-      // message.success('Đã cập nhật tiêu chuẩn so sánh');
-      onIndicatorUpdate();
-    } catch (error) {
-      console.error("Error updating standard:", error);
-      message.error("Không thể cập nhật tiêu chuẩn");
-    } finally {
-      setUpdatingStandard(null);
-    }
-  };
-
   const getApprovalStatusTag = (status: QualityIndicatorApprovalStatus) => (
     <Tag color={QualityIndicatorApprovalStatusColors[status]}>
       {QualityIndicatorApprovalStatusLabels[status]}
@@ -118,15 +62,17 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   // Allow approving pending indicators even after ResultSent (for partial send scenarios)
   const actionsDisabled = false;
 
-  // Group indicators by laboratory
-  const groupedData: LabGroup[] = React.useMemo(() => {
-    const groups: Record<string, LabGroup> = {};
+  // Group indicators by sample
+  const groupedData: SampleGroup[] = React.useMemo(() => {
+    const groups: Record<string, SampleGroup> = {};
     indicators.forEach((ind) => {
-      const key = ind.laboratoryId;
+      const key = ind.sampleId;
       if (!groups[key]) {
         groups[key] = {
-          laboratoryId: key,
-          laboratoryName: ind.laboratoryName || "Không xác định",
+          sampleId: key,
+          sampleCode: ind.sampleCode || "",
+          sampleName: ind.sampleName || "",
+          specimenTypeName: ind.specimenTypeName || "",
           indicators: [],
         };
       }
@@ -135,9 +81,9 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     return Object.values(groups);
   }, [indicators]);
 
-  // Handle select all PENDING in a lab group (for bulk approve/reject)
-  const handleSelectAllPendingInGroup = (labGroup: LabGroup, checked: boolean) => {
-    const pendingIds = labGroup.indicators
+  // Handle select all PENDING in a sample group (for bulk approve/reject)
+  const handleSelectAllPendingInGroup = (group: SampleGroup, checked: boolean) => {
+    const pendingIds = group.indicators
       .filter(
         (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.PendingApproval
       )
@@ -157,8 +103,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   };
 
   // Check if all pending indicators in group are selected
-  const isAllPendingSelectedInGroup = (labGroup: LabGroup): boolean => {
-    const pendingIds = labGroup.indicators
+  const isAllPendingSelectedInGroup = (group: SampleGroup): boolean => {
+    const pendingIds = group.indicators
       .filter(
         (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.PendingApproval
       )
@@ -167,192 +113,160 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     return pendingIds.every((id) => selectedPendingIds.includes(id));
   };
 
-  const columns: ColumnsType<QualityManagementIndicatorDto> = [
-    {
-      title: () => null, // Header will be in Panel
-      dataIndex: "checkbox",
-      key: "checkbox",
-      width: 50,
-      render: (_, record) => {
-        const isPending =
-          record.approvalStatus === QualityIndicatorApprovalStatus.PendingApproval;
+  // Generate columns based on whether group has pending indicators
+  const getColumns = (hasPendingIndicators: boolean): ColumnsType<QualityManagementIndicatorDto> => {
+    const cols: ColumnsType<QualityManagementIndicatorDto> = [];
 
-        // Pending indicators use selectedPendingIds (for bulk approve/reject)
-        if (isPending && !actionsDisabled) {
-          return (
-            <Checkbox
-              checked={selectedPendingIds.includes(record.id)}
-              onChange={(e) => {
-                if (e.target.checked) {
-                  onPendingSelectChange([...selectedPendingIds, record.id]);
-                } else {
-                  onPendingSelectChange(
-                    selectedPendingIds.filter((id) => id !== record.id)
-                  );
-                }
-              }}
-            />
-          );
-        }
+    // Only show checkbox column if there are pending indicators
+    if (hasPendingIndicators && !actionsDisabled) {
+      cols.push({
+        title: () => null,
+        dataIndex: "checkbox",
+        key: "checkbox",
+        width: 50,
+        render: (_, record) => {
+          const isPending =
+            record.approvalStatus === QualityIndicatorApprovalStatus.PendingApproval;
 
-        // Approved, Rejected or other status - no checkbox needed
-        return null;
-      },
-    },
-    {
-      title: "Tên chỉ tiêu",
-      dataIndex: "indicatorName",
-      key: "indicatorName",
-      width: 180,
-      ellipsis: true,
-    },
-    {
-      title: "Tên mẫu",
-      key: "sample",
-      width: 180,
-      ellipsis: true,
-      render: (_, record) => (
-        <div>
-          <div>
-            <Text strong>{record.sampleCode}</Text>
-            {record.sampleName && (
-              <Text type="secondary"> - {record.sampleName}</Text>
-            )}
-          </div>
-          {record.specimenTypeName && (
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              Loại: {record.specimenTypeName}
-            </Text>
-          )}
-        </div>
-      ),
-    },
-    {
-      title: "Phương pháp",
-      dataIndex: "methodName",
-      key: "methodName",
-      width: 150,
-      ellipsis: true,
-    },
-    {
-      title: "ĐVT",
-      dataIndex: "unit",
-      key: "unit",
-      width: 80,
-      align: "center" as const,
-    },
-    {
-      title: "Kết quả",
-      dataIndex: "result",
-      key: "result",
-      width: 100,
-      align: "center" as const,
-      render: (text: string) => <Text strong>{text || "-"}</Text>,
-    },
-    {
-      title: "Ngày gửi KQ",
-      dataIndex: "resultSentDate",
-      key: "resultSentDate",
-      width: 110,
-      render: (date: string) => formatDate(date),
-    },
-    {
-      title: "Ngày duyệt",
-      dataIndex: "approvalDate",
-      key: "approvalDate",
-      width: 110,
-      render: (date: string) => formatDate(date),
-    },
-    {
-      title: "So với",
-      dataIndex: "standardId",
-      key: "standardId",
-      width: 180,
-      render: (standardId: string, record) => {
-        // Filter standards that contain this indicator
-        const availableStandards = getStandardsForIndicator(record.indicatorId);
-        return (
-          <Select
-            style={{ width: "100%" }}
-            placeholder={
-              availableStandards.length === 0
-                ? "Không có tiêu chuẩn"
-                : "Chọn tiêu chuẩn"
-            }
-            allowClear
-            value={standardId}
-            onChange={(value) => handleStandardChange(record.id, value)}
-            loading={updatingStandard === record.id || loadingStandards}
-            disabled={actionsDisabled || availableStandards.length === 0}
-            size="small"
-          >
-            {availableStandards.map((s) => (
-              <Select.Option key={s.id} value={s.id}>
-                {s.name}
-              </Select.Option>
-            ))}
-          </Select>
-        );
-      },
-    },
-    {
-      title: "Giới hạn",
-      dataIndex: "referenceLimit",
-      key: "referenceLimit",
-      width: 120,
-      render: (text: string) => text || "-",
-    },
-    {
-      title: "Trạng thái",
-      dataIndex: "approvalStatus",
-      key: "approvalStatus",
-      width: 120,
-      render: (status: QualityIndicatorApprovalStatus) =>
-        getApprovalStatusTag(status),
-    },
-    {
-      title: "Thao tác",
-      key: "actions",
-      width: 180,
-      fixed: "right" as const,
-      align: "center" as const,
-      render: (_, record) => {
-        const isPending =
-          record.approvalStatus ===
-          QualityIndicatorApprovalStatus.PendingApproval;
-        if (!isPending || actionsDisabled) {
+          if (isPending) {
+            return (
+              <Checkbox
+                checked={selectedPendingIds.includes(record.id)}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    onPendingSelectChange([...selectedPendingIds, record.id]);
+                  } else {
+                    onPendingSelectChange(
+                      selectedPendingIds.filter((id) => id !== record.id)
+                    );
+                  }
+                }}
+              />
+            );
+          }
           return null;
-        }
-        return (
-          <Space size="small">
-            <Tooltip title="Duyệt">
-              <Button
-                type="primary"
-                size="small"
-                icon={<CheckOutlined />}
-                onClick={() => onApprove(record.id)}
-              >
-                Duyệt
-              </Button>
-            </Tooltip>
-            <Tooltip title="Từ chối">
-              <Button
-                danger
-                size="small"
-                icon={<CloseOutlined />}
-                onClick={() => onReject(record.id)}
-              >
-                Từ chối
-              </Button>
-            </Tooltip>
-          </Space>
-        );
+        },
+      });
+    }
+
+    // Base columns
+    cols.push(
+      {
+        title: "Tên chỉ tiêu",
+        dataIndex: "indicatorName",
+        key: "indicatorName",
+        width: 200,
+        ellipsis: true,
       },
-    },
-  ];
+      {
+        title: "Phương pháp",
+        dataIndex: "methodName",
+        key: "methodName",
+        width: 150,
+        ellipsis: true,
+      },
+      {
+        title: "ĐVT",
+        dataIndex: "unit",
+        key: "unit",
+        width: 80,
+        align: "center" as const,
+      },
+      {
+        title: "Kết quả",
+        dataIndex: "result",
+        key: "result",
+        width: 100,
+        align: "center" as const,
+        render: (text: string) => <Text strong>{text || "-"}</Text>,
+      },
+      {
+        title: "Ngày gửi KQ",
+        dataIndex: "resultSentDate",
+        key: "resultSentDate",
+        width: 110,
+        render: (date: string) => formatDate(date),
+      },
+      {
+        title: "Ngày duyệt",
+        dataIndex: "approvalDate",
+        key: "approvalDate",
+        width: 110,
+        render: (date: string) => formatDate(date),
+      },
+      {
+        title: "So với",
+        dataIndex: "standardName",
+        key: "standardName",
+        width: 150,
+        ellipsis: true,
+        render: (text: string) => text || "-",
+      },
+      {
+        title: "Giới hạn",
+        dataIndex: "referenceLimit",
+        key: "referenceLimit",
+        width: 120,
+        render: (text: string) => text || "-",
+      },
+      {
+        title: "Trạng thái",
+        dataIndex: "approvalStatus",
+        key: "approvalStatus",
+        width: 120,
+        render: (status: QualityIndicatorApprovalStatus) =>
+          getApprovalStatusTag(status),
+      }
+    );
+
+    // Only show actions column if there are pending indicators
+    if (hasPendingIndicators && !actionsDisabled) {
+      cols.push({
+        title: "Thao tác",
+        key: "actions",
+        width: 180,
+        fixed: "right" as const,
+        align: "center" as const,
+        render: (_, record) => {
+          const isPending =
+            record.approvalStatus ===
+            QualityIndicatorApprovalStatus.PendingApproval;
+          if (!isPending) {
+            return null;
+          }
+          return (
+            <Space size="small">
+              <Tooltip title="Duyệt">
+                <Button
+                  type="primary"
+                  size="small"
+                  icon={<CheckOutlined />}
+                  onClick={() => onApprove(record.id)}
+                >
+                  Duyệt
+                </Button>
+              </Tooltip>
+              <Tooltip title="Từ chối">
+                <Button
+                  danger
+                  size="small"
+                  icon={<CloseOutlined />}
+                  onClick={() => onReject(record.id)}
+                >
+                  Từ chối
+                </Button>
+              </Tooltip>
+            </Space>
+          );
+        },
+      });
+    }
+
+    return cols;
+  };
 
   return (
-    <Collapse defaultActiveKey={groupedData.map((g) => g.laboratoryId)} ghost>
+    <Collapse defaultActiveKey={groupedData.map((g) => g.sampleId)} ghost>
       {groupedData.map((group) => {
         const approvedCount = group.indicators.filter(
           (ind) =>
@@ -364,9 +278,14 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             QualityIndicatorApprovalStatus.PendingApproval
         ).length;
 
+        // Build sample display name
+        const sampleDisplayName = group.sampleName
+          ? `${group.sampleCode} - ${group.sampleName}`
+          : group.sampleCode;
+
         return (
           <Panel
-            key={group.laboratoryId}
+            key={group.sampleId}
             header={
               <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                 {/* Checkbox for pending indicators (bulk approve/reject) */}
@@ -381,7 +300,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                     />
                   </Tooltip>
                 )}
-                <Text strong>{group.laboratoryName}</Text>
+                <Text strong>{sampleDisplayName}</Text>
+                {group.specimenTypeName && (
+                  <Text type="secondary">({group.specimenTypeName})</Text>
+                )}
                 <Space size="small">
                   <Tag color="blue">{group.indicators.length} chỉ tiêu</Tag>
                   {approvedCount > 0 && (
@@ -400,7 +322,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
               rowKey="id"
               pagination={false}
               size="small"
-              scroll={{ x: 1400 }}
+              scroll={{ x: 1200 }}
             />
           </Panel>
         );

@@ -36,6 +36,7 @@ import {
   WarningOutlined,
   LeftOutlined,
   RightOutlined,
+  DollarOutlined,
 } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
@@ -93,6 +94,7 @@ interface MenuItemWithRoles {
 // Map routes to menu keys
 const routeToKeyMap: Record<string, string> = {
   "/dashboard": "dashboard",
+  "/quotations": "quotations",
   "/test-requests": "requests",
   "/tasks": "taskManagement",
   "/testing": "testManagement",
@@ -337,8 +339,15 @@ const MainLayout: React.FC = () => {
       key: "lab",
       icon: <ExperimentOutlined />,
       label: menuLabel(t("menu.labOperations")),
-      roles: ALL_ROLES,
+      roles: [...ALL_ROLES, ROLES.ACCOUNTANT],
       children: [
+        {
+          key: "quotations",
+          icon: <DollarOutlined />,
+          label: menuLabel("Báo giá"),
+          onClick: () => navigate(PATH_ROUTES.quotations.index),
+          roles: [ROLES.ADMIN, ROLES.ACCOUNTANT],
+        },
         {
           key: "requests",
           icon: <FileTextOutlined />,
