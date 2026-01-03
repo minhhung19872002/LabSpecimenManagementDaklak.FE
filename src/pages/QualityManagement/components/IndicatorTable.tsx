@@ -317,7 +317,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             }
           >
             <Table
-              columns={columns}
+              columns={getColumns(pendingCount > 0)}
               dataSource={group.indicators}
               rowKey="id"
               pagination={false}
