@@ -10,6 +10,7 @@ import {
   RejectionHistoryDto,
   SampleTestingImageDto,
   SampleTestingImageType,
+  IndicatorImageDto,
 } from '../types/testing';
 
 const BASE_URL = '/api/v1/testing';
@@ -160,6 +161,65 @@ export const testingService = {
     const response = await api.get<SampleTestingImageDto[]>(
       `${BASE_URL}/${taskId}/samples/${sampleId}/images`,
       { params }
+    );
+    return response.data;
+  },
+
+  // ============= Indicator Image APIs =============
+
+  /**
+   * Upload indicator image - single file
+   */
+  uploadIndicatorImage: async (
+    taskId: string,
+    indicatorId: string,
+    file: File
+  ): Promise<IndicatorImageDto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post<IndicatorImageDto>(
+      `${BASE_URL}/${taskId}/indicators/${indicatorId}/images`,
+      formData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      }
+    );
+    return response.data;
+  },
+
+  /**
+   * Upload multiple indicator images - batch upload
+   */
+  uploadIndicatorImages: async (
+    taskId: string,
+    indicatorId: string,
+    files: File[]
+  ): Promise<IndicatorImageDto[]> => {
+    const formData = new FormData();
+    files.forEach(file => formData.append('files', file));
+    const response = await api.post<IndicatorImageDto[]>(
+      `${BASE_URL}/${taskId}/indicators/${indicatorId}/images/batch`,
+      formData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      }
+    );
+    return response.data;
+  },
+
+  /**
+   * Delete indicator image
+   */
+  deleteIndicatorImage: async (imageId: string): Promise<void> => {
+    await api.delete(`${BASE_URL}/indicators/images/${imageId}`);
+  },
+
+  /**
+   * Get indicator images
+   */
+  getIndicatorImages: async (indicatorId: string): Promise<IndicatorImageDto[]> => {
+    const response = await api.get<IndicatorImageDto[]>(
+      `${BASE_URL}/indicators/${indicatorId}/images`
     );
     return response.data;
   }

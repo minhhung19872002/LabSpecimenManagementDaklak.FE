@@ -10,6 +10,7 @@ import {
   SampleTestingImageType,
   SampleTestingImageDto,
   IndicatorTestingStatus,
+  IndicatorImageDto,
 } from "../../types/testing";
 import TestingDetailContainer from "./components/TestingDetailContainer";
 
@@ -570,6 +571,68 @@ const TestingDetail: React.FC = () => {
     }
   };
 
+  // Handler for uploading indicator images
+  const handleUploadIndicatorImages = async (
+    indicatorId: string,
+    files: File[]
+  ): Promise<IndicatorImageDto[]> => {
+    if (!id) return [];
+
+    try {
+      const newImages = await testingService.uploadIndicatorImages(
+        id,
+        indicatorId,
+        files
+      );
+
+      // Update local state to reflect the new images
+      setDetail((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          samples: prev.samples.map((sample) => ({
+            ...sample,
+            indicators: sample.indicators.map((ind) =>
+              ind.id === indicatorId
+                ? { ...ind, images: [...(ind.images || []), ...newImages] }
+                : ind
+            ),
+          })),
+        };
+      });
+
+      return newImages;
+    } catch (error: any) {
+      console.error("Failed to upload indicator images:", error);
+      throw error;
+    }
+  };
+
+  // Handler for deleting indicator image
+  const handleDeleteIndicatorImage = async (imageId: string): Promise<void> => {
+    try {
+      await testingService.deleteIndicatorImage(imageId);
+
+      // Update local state to remove the deleted image
+      setDetail((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          samples: prev.samples.map((sample) => ({
+            ...sample,
+            indicators: sample.indicators.map((ind) => ({
+              ...ind,
+              images: (ind.images || []).filter((img) => img.id !== imageId),
+            })),
+          })),
+        };
+      });
+    } catch (error: any) {
+      console.error("Failed to delete indicator image:", error);
+      throw error;
+    }
+  };
+
   // Check if deadline is urgent (<=3 days)
   const isUrgent = detail?.requestCompletionDate
     ? (() => {
@@ -613,6 +676,8 @@ const TestingDetail: React.FC = () => {
       onSaveIndicator={handleSaveIndicator}
       onCheckInIndicator={handleCheckInSingleIndicator}
       onSubmitIndicator={handleSubmitSingleIndicator}
+      onUploadIndicatorImages={handleUploadIndicatorImages}
+      onDeleteIndicatorImage={handleDeleteIndicatorImage}
     />
   );
 };

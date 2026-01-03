@@ -28,7 +28,9 @@ import {
   IndicatorTestingStatus,
   IndicatorTestingStatusLabels,
   IndicatorTestingStatusColors,
+  IndicatorImageDto,
 } from "../../../types/testing";
+import IndicatorImageCell from "../../../components/common/IndicatorImageCell";
 
 const { Text } = Typography;
 
@@ -49,6 +51,8 @@ interface IndicatorEditTableProps {
   onSaveIndicator: (indicatorId: string) => void;
   onCheckInIndicator?: (indicatorId: string) => void;
   onSubmitIndicator?: (indicatorId: string) => void;
+  onUploadIndicatorImages?: (indicatorId: string, files: File[]) => Promise<IndicatorImageDto[]>;
+  onDeleteIndicatorImage?: (imageId: string) => Promise<void>;
 }
 
 const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
@@ -63,6 +67,8 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
   onSaveIndicator,
   onCheckInIndicator,
   onSubmitIndicator,
+  onUploadIndicatorImages,
+  onDeleteIndicatorImage,
 }) => {
   const [editedResults, setEditedResults] = useState<
     Map<string, SaveIndicatorResultDto>
@@ -278,6 +284,32 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
               }
             />
           </Tooltip>
+        );
+      },
+    },
+    {
+      title: "Hình ảnh",
+      key: "images",
+      width: 120,
+      render: (_, record) => {
+        // Chỉ cho phép upload khi trạng thái = Testing
+        const canUpload =
+          record.canEdit &&
+          record.testingStatus === IndicatorTestingStatus.Testing &&
+          !!onUploadIndicatorImages;
+
+        return (
+          <IndicatorImageCell
+            images={record.images || []}
+            canUpload={canUpload}
+            maxImages={5}
+            onUpload={
+              canUpload && onUploadIndicatorImages
+                ? (files) => onUploadIndicatorImages(record.id, files)
+                : undefined
+            }
+            onDelete={onDeleteIndicatorImage}
+          />
         );
       },
     },
@@ -529,7 +561,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
         dataSource={sortedIndicators}
         rowKey="id"
         pagination={false}
-        scroll={{ x: 1850 }}
+        scroll={{ x: 1970 }}
         size="small"
         rowClassName={getRowClassName}
       />

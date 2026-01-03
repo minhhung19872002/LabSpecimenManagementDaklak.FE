@@ -7,6 +7,7 @@ import {
   SaveIndicatorResultDto,
   SampleTestingImageType,
   SampleTestingImageDto,
+  IndicatorImageDto,
 } from "../../../types/testing";
 import IndicatorEditTable from "./IndicatorEditTable";
 import RejectionHistoryModal from "./RejectionHistoryModal";
@@ -55,6 +56,8 @@ interface TestingDetailContainerProps {
   onSaveIndicator: (indicatorId: string) => void;
   onCheckInIndicator: (indicatorId: string) => void;
   onSubmitIndicator: (indicatorId: string) => void;
+  onUploadIndicatorImages?: (indicatorId: string, files: File[]) => Promise<IndicatorImageDto[]>;
+  onDeleteIndicatorImage?: (imageId: string) => Promise<void>;
 }
 
 const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
@@ -80,6 +83,8 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
   onSaveIndicator,
   onCheckInIndicator,
   onSubmitIndicator,
+  onUploadIndicatorImages,
+  onDeleteIndicatorImage,
 }) => {
   if (loading) {
     return (
@@ -178,6 +183,8 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
               onSaveIndicator={onSaveIndicator}
               onCheckInIndicator={onCheckInIndicator}
               onSubmitIndicator={onSubmitIndicator}
+              onUploadIndicatorImages={onUploadIndicatorImages}
+              onDeleteIndicatorImage={onDeleteIndicatorImage}
             />
           </Panel>
         ))}

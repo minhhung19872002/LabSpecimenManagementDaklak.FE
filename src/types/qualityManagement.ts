@@ -1,3 +1,5 @@
+import { IndicatorImageDto } from './testing';
+
 // Quality Management Status Enum
 export enum QualityManagementStatus {
   PendingApproval = 0,    // Chờ phê duyệt
@@ -126,6 +128,7 @@ export interface QualityManagementIndicatorDto {
   qualityResultSentDate?: string;
   approvedById?: string;
   approvedByName?: string;
+  images?: IndicatorImageDto[];  // Hình ảnh chỉ tiêu (max 5)
 }
 
 // Quality Indicator Status History DTO

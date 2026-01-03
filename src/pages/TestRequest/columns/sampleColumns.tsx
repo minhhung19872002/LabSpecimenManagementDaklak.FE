@@ -1,6 +1,6 @@
 import { Tag, Typography } from "antd";
 import { ColumnsType } from "antd/es/table";
-import { TestRequestSampleDto } from "../../../types/testRequest";
+import { TestRequestSampleDto, IndicatorImageDto } from "../../../types/testRequest";
 import {
   IndicatorApprovalStatus,
   IndicatorApprovalStatusLabels,
@@ -8,6 +8,7 @@ import {
 } from "../../../types/laboratoryTask";
 import { formatDate } from "../../../utils/formatters";
 import SampleImagesButton from "../components/SampleImagesButton";
+import IndicatorImageCell from "../../../components/common/IndicatorImageCell";
 
 const { Text } = Typography;
 
@@ -133,6 +134,9 @@ export const getSampleColumns = ({
             ]
           : null;
 
+        // Get indicator images
+        const indicatorImages: IndicatorImageDto[] = ind.images || [];
+
         return (
           <div
             key={idx}
@@ -177,6 +181,16 @@ export const getSampleColumns = ({
               )}
               {ind.testDate && <span>Ngày TN: {formatDate(ind.testDate)}</span>}
             </div>
+            {/* Hình ảnh của chỉ tiêu */}
+            {indicatorImages.length > 0 && (
+              <div style={{ marginTop: 4 }}>
+                <IndicatorImageCell
+                  images={indicatorImages}
+                  canUpload={false}
+                  maxImages={5}
+                />
+              </div>
+            )}
           </div>
         );
       };

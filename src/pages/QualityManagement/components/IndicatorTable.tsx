@@ -19,6 +19,7 @@ import {
   QualityIndicatorApprovalStatusColors,
   QualityManagementStatus,
 } from "../../../types/qualityManagement";
+import IndicatorImageCell from "../../../components/common/IndicatorImageCell";
 
 const { Panel } = Collapse;
 const { Text } = Typography;
@@ -181,6 +182,20 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         render: (text: string) => <Text strong>{text || "-"}</Text>,
       },
       {
+        title: "Hình ảnh",
+        key: "images",
+        width: 120,
+        render: (_, record) => {
+          return (
+            <IndicatorImageCell
+              images={record.images || []}
+              canUpload={false}
+              maxImages={5}
+            />
+          );
+        },
+      },
+      {
         title: "Ngày gửi KQ",
         dataIndex: "resultSentDate",
         key: "resultSentDate",
@@ -322,7 +337,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
               rowKey="id"
               pagination={false}
               size="small"
-              scroll={{ x: 1200 }}
+              scroll={{ x: 1320 }}
             />
           </Panel>
         );

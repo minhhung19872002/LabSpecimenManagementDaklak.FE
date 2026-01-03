@@ -1,3 +1,5 @@
+import { IndicatorImageDto } from './testing';
+
 // Laboratory Task Status Enum
 export enum LaboratoryTaskStatus {
   NotAssigned = 0,       // Chưa giao việc (chưa gán KTV hoặc phương pháp)
@@ -89,6 +91,7 @@ export interface LaboratoryTaskIndicatorDto {
   standardName?: string;  // Tên tiêu chuẩn
   comparisonOperator?: string;  // Ký hiệu so sánh (<=, >=, <, >, =)
   allowedLimit?: string;  // Giới hạn cho phép
+  images?: IndicatorImageDto[];  // Hình ảnh chỉ tiêu (max 5)
 }
 
 // Main Laboratory Task DTO
