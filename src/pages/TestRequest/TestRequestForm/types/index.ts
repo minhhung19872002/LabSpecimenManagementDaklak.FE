@@ -46,6 +46,7 @@ export interface SampleFormData {
   notes?: string;
   storageLocation?: string;
   specimenTypeId?: string;
+  specimenTypeName?: string; // For AutoComplete - will be resolved to ID on save
   indicatorIds: string[]; // deprecated, giữ để backward compatible
   indicatorMethods: IndicatorMethodKey[]; // NEW: array of "indicatorId_testMethodId"
   // Attachments (images)

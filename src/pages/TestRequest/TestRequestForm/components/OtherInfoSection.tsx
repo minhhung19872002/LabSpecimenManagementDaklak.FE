@@ -33,12 +33,13 @@ const OtherInfoSection: React.FC = () => {
                 validator: (_, value) =>
                   value
                     ? Promise.resolve()
-                    : Promise.reject(new Error("Vui lòng đọc và đồng ý với quy định chung")),
+                    : Promise.reject(
+                        new Error("Vui lòng đọc và đồng ý với quy định chung")
+                      ),
               },
             ]}
           >
             <Checkbox>
-              <Text strong style={{ color: '#ff4d4f' }}>*</Text>{" "}
               Đã đọc và đồng ý với quy định chung về yêu cầu dịch vụ thử nghiệm
             </Checkbox>
           </Form.Item>

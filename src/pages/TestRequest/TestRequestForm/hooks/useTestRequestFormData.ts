@@ -94,8 +94,10 @@ export const useTestRequestFormData = () => {
   const [organizationOptions, setOrganizationOptions] = useState<{ value: string; label: string }[]>([]);
   const [organizationSearching, setOrganizationSearching] = useState(false);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const specimenTypeDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const [laboratories, setLaboratories] = useState<LaboratoryDto[]>([]);
   const [specimenTypes, setSpecimenTypes] = useState<SpecimenTypeDto[]>([]);
+  const [specimenTypeOptions, setSpecimenTypeOptions] = useState<{ value: string; label: string }[]>([]);
 
   // Test methods and indicator-method mapping
   const [testMethods, setTestMethods] = useState<TestMethodWithIndicatorsDto[]>([]);
@@ -280,6 +282,49 @@ export const useTestRequestFormData = () => {
     }
   };
 
+  // Handle specimen type search for autocomplete with debounce (case-insensitive)
+  const handleSpecimenTypeSearch = (searchText: string) => {
+    if (specimenTypeDebounceRef.current) {
+      clearTimeout(specimenTypeDebounceRef.current);
+    }
+
+    if (!searchText || searchText.trim().length < 1) {
+      setSpecimenTypeOptions([]);
+      return;
+    }
+
+    specimenTypeDebounceRef.current = setTimeout(() => {
+      const searchLower = searchText.toLowerCase().trim();
+      const filtered = specimenTypes
+        .filter((st) => st.name.toLowerCase().includes(searchLower))
+        .slice(0, 20)
+        .map((st) => ({ value: st.name, label: st.name }));
+
+      setSpecimenTypeOptions(filtered);
+    }, 300);
+  };
+
+  // Handle specimen type selection - find existing or keep as new name
+  // Case-insensitive matching: if exists, use the existing name
+  const handleSpecimenTypeSelect = (sampleKey: string, value: string) => {
+    // Find existing specimen type (case-insensitive)
+    const existing = specimenTypes.find(
+      (st) => st.name.toLowerCase() === value.toLowerCase()
+    );
+
+    setSamples((prevSamples) =>
+      prevSamples.map((sample) =>
+        sample.key === sampleKey
+          ? {
+              ...sample,
+              specimenTypeName: existing ? existing.name : value, // Use existing name if found
+              specimenTypeId: existing ? existing.id : undefined,
+            }
+          : sample
+      )
+    );
+  };
+
   // Load edit data
   const loadData = async () => {
     if (!id) return;
@@ -378,6 +423,7 @@ export const useTestRequestFormData = () => {
             notes: sample.notes,
             storageLocation: sample.storageLocation,
             specimenTypeId: sample.specimenTypeId,
+            specimenTypeName: sample.specimenTypeName || "", // Load from API
             indicatorIds: activeIndicators.map((ind) => ind.indicatorId),
             indicatorMethods: indicatorMethods,
             // Load attachments from API response - use fileService to get full URL
@@ -609,6 +655,9 @@ export const useTestRequestFormData = () => {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
+      if (specimenTypeDebounceRef.current) {
+        clearTimeout(specimenTypeDebounceRef.current);
+      }
     };
   }, []);
 
@@ -656,6 +705,11 @@ export const useTestRequestFormData = () => {
 
     // Organization handlers
     handleOrganizationSearch,
+
+    // Specimen Type handlers
+    specimenTypeOptions,
+    handleSpecimenTypeSearch,
+    handleSpecimenTypeSelect,
     handleOrganizationSelect,
     handlePhoneBlur,
 
