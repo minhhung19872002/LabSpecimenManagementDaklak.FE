@@ -11,3 +11,4 @@ export { default as GroupSelectorModal } from './GroupSelectorModal';
 export { default as IndicatorSelectionModal } from './IndicatorSelectionModal';
 export { default as IndicatorRow } from './IndicatorRow';
 export { default as LaboratorySelectionModal } from './LaboratorySelectionModal';
+export { default as BarcodeQRModal } from './BarcodeQRModal';

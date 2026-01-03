@@ -288,6 +288,7 @@ export const useTestRequestFormActions = ({
       processingStatus: "",
       notes: "",
       storageLocation: "",
+      specimenTypeName: "",
       indicatorIds: [],
       indicatorMethods: [],
       attachments: [],
@@ -617,11 +618,6 @@ export const useTestRequestFormActions = ({
 
   // Form submit
   const onFinish = async (values: any) => {
-    if (!values.agreeTerms) {
-      message.warning("Vui lòng đọc và đồng ý với quy định chung về yêu cầu dịch vụ thử nghiệm");
-      return;
-    }
-
     if (samples.length === 0) {
       message.warning("Vui lòng thêm ít nhất một mẫu xét nghiệm");
       return;
@@ -644,14 +640,6 @@ export const useTestRequestFormActions = ({
       return;
     }
 
-    // Validate: all samples must have specimenTypeId
-    const samplesWithoutSpecimenType = samples.filter((s) => !s.specimenTypeId);
-    if (samplesWithoutSpecimenType.length > 0) {
-      const sampleCodes = samplesWithoutSpecimenType.map((s) => s.sampleCode || s.sampleName).join(", ");
-      message.warning(`Các mẫu sau chưa chọn loại mẫu: ${sampleCodes}`);
-      return;
-    }
-
     // Validate: all samples must have at least one indicator
     const samplesWithoutIndicators = samples.filter((s) => {
       const hasIndicatorMethods = s.indicatorMethods && s.indicatorMethods.length > 0;
@@ -666,6 +654,9 @@ export const useTestRequestFormActions = ({
 
     setLoading(true);
     try {
+      // specimenTypeName will be resolved to specimenTypeId on backend
+      // Backend will create new SpecimenType if name doesn't exist (case-insensitive)
+
       const sampleDtos = samples.map((sample, index) => {
         // Keep existing sampleCode (fixed, not regenerated)
         const sampleCode = sample.sampleCode;
@@ -728,6 +719,7 @@ export const useTestRequestFormActions = ({
           notes: sample.notes || undefined,
           storageLocation: sample.storageLocation || undefined,
           specimenTypeId: sample.specimenTypeId || undefined,
+          specimenTypeName: sample.specimenTypeName?.trim() || undefined, // Backend will resolve to ID
           indicators: indicatorsList,
           // Attachments: send full info (fileId, fileName, fileSize)
           attachments: sample.attachments?.map((a) => ({

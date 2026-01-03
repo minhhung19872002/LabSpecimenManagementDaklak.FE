@@ -68,6 +68,9 @@ const TestRequestForm: React.FC = () => {
     organizationSearching,
     laboratories,
     specimenTypes,
+    specimenTypeOptions,
+    handleSpecimenTypeSearch,
+    handleSpecimenTypeSelect,
     handleOrganizationSearch,
     handleOrganizationSelect,
     handlePhoneBlur,
@@ -130,7 +133,6 @@ const TestRequestForm: React.FC = () => {
     removeSample,
     updateSample,
     duplicateSample,
-    printBarcode,
     openIndicatorModal,
     handleIndicatorModalOk,
     handleIndicatorModalCancel,
@@ -262,12 +264,14 @@ const TestRequestForm: React.FC = () => {
           removeSample={removeSample}
           updateSample={updateSample}
           duplicateSample={duplicateSample}
-          printBarcode={printBarcode}
           openIndicatorModal={openIndicatorModal}
           getIndicatorInfo={getIndicatorInfo}
           getIndicatorMethodInfo={getIndicatorMethodInfo}
           indicatorLaboratoryMap={indicatorLaboratoryMap}
           specimenTypes={specimenTypes}
+          specimenTypeOptions={specimenTypeOptions}
+          handleSpecimenTypeSearch={handleSpecimenTypeSearch}
+          handleSpecimenTypeSelect={handleSpecimenTypeSelect}
         />
 
         {/* Loại hình mẫu */}

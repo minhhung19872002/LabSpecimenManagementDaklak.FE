@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React from "react";
+import React, { useState } from "react";
 import {
   Button,
   Input,
@@ -9,7 +9,7 @@ import {
   Typography,
   Tooltip,
   Popover,
-  Select,
+  AutoComplete,
 } from "antd";
 import {
   PlusOutlined,
@@ -21,6 +21,7 @@ import { Icon } from "@iconify/react";
 import { SampleFormData, LaboratoryAssignment, IndicatorMethodKey, IndicatorMethodInfo, AttachmentInfo } from "../types";
 import { IndicatorDto, SpecimenTypeDto } from "../../../../services/masterDataService";
 import SampleImageUpload from "./SampleImageUpload";
+import BarcodeQRModal, { SampleCodeInfo } from "./BarcodeQRModal";
 
 const { Text } = Typography;
 
@@ -32,7 +33,6 @@ interface SampleTableSectionProps {
   removeSample: (key: string) => void;
   updateSample: (key: string, field: keyof SampleFormData, value: any) => void;
   duplicateSample: (key: string) => void;
-  printBarcode: (sampleInfo: { sampleCode: string; sampleName: string; samplingAddress?: string; sampleQuantity?: string; storageLocation?: string; }) => void;
   openIndicatorModal: (sampleKey: string) => void;
   getIndicatorInfo: (indicatorId: string) => any;
   getIndicatorMethodInfo: (key: IndicatorMethodKey) => {
@@ -43,6 +43,9 @@ interface SampleTableSectionProps {
   };
   indicatorLaboratoryMap: Record<string, LaboratoryAssignment>;
   specimenTypes: SpecimenTypeDto[];
+  specimenTypeOptions: { value: string; label: string }[];
+  handleSpecimenTypeSearch: (searchText: string) => void;
+  handleSpecimenTypeSelect: (sampleKey: string, value: string) => void;
 }
 
 const SampleTableSection: React.FC<SampleTableSectionProps> = ({
@@ -53,13 +56,29 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
   removeSample,
   updateSample,
   duplicateSample,
-  printBarcode,
   openIndicatorModal,
   getIndicatorInfo,
   getIndicatorMethodInfo,
   indicatorLaboratoryMap,
   specimenTypes,
+  specimenTypeOptions,
+  handleSpecimenTypeSearch,
+  handleSpecimenTypeSelect,
 }) => {
+  // Barcode/QR Modal state
+  const [barcodeModalVisible, setBarcodeModalVisible] = useState(false);
+  const [selectedSampleForBarcode, setSelectedSampleForBarcode] = useState<SampleCodeInfo | null>(null);
+
+  const openBarcodeModal = (sampleInfo: SampleCodeInfo) => {
+    setSelectedSampleForBarcode(sampleInfo);
+    setBarcodeModalVisible(true);
+  };
+
+  const closeBarcodeModal = () => {
+    setBarcodeModalVisible(false);
+    setSelectedSampleForBarcode(null);
+  };
+
   const sampleColumns = [
     {
       title: "STT",
@@ -103,24 +122,22 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
       ),
     },
     {
-      title: <span>Loại mẫu <span style={{ color: '#ff4d4f' }}>*</span></span>,
-      dataIndex: "specimenTypeId",
-      key: "specimenTypeId",
+      title: "Loại mẫu",
+      dataIndex: "specimenTypeName",
+      key: "specimenTypeName",
       width: 180,
       render: (value: string, record: SampleFormData) => (
-        <Select
-          value={value}
-          onChange={(val) => updateSample(record.key, "specimenTypeId", val)}
-          placeholder="Chọn loại mẫu"
+        <AutoComplete
+          value={value || ""}
+          options={specimenTypeOptions}
+          onSearch={handleSpecimenTypeSearch}
+          onSelect={(val) => handleSpecimenTypeSelect(record.key, val)}
+          onChange={(val) => updateSample(record.key, "specimenTypeName", val || "")}
+          placeholder="Nhập loại mẫu..."
           style={{ width: "100%" }}
           size="small"
           disabled={isSamplesLocked()}
-          options={specimenTypes.map((st) => ({
-            value: st.id,
-            label: st.name,
-          }))}
-          showSearch
-          optionFilterProp="label"
+          filterOption={false}
           allowClear
         />
       ),
@@ -360,12 +377,12 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
                 onClick={() => duplicateSample(record.key)}
               />
             </Tooltip>
-            <Tooltip title="In Barcode">
+            <Tooltip title="In mã mẫu">
               <Button
                 type="link"
                 icon={<BarcodeOutlined />}
                 size="small"
-                onClick={() => printBarcode({
+                onClick={() => openBarcodeModal({
                   sampleCode,
                   sampleName: record.sampleName,
                   samplingAddress: record.samplingAddress,
@@ -460,6 +477,13 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
             </div>
           ),
         }}
+      />
+
+      {/* Barcode/QR Code Modal */}
+      <BarcodeQRModal
+        visible={barcodeModalVisible}
+        onClose={closeBarcodeModal}
+        sampleInfo={selectedSampleForBarcode}
       />
     </div>
   );
