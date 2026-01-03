@@ -270,7 +270,8 @@ const QualityManagementDetail: React.FC = () => {
   const handlePrint = async (
     indicatorIds: string[],
     note?: string,
-    newTab?: Window | null
+    newTab?: Window | null,
+    templateName?: string
   ) => {
     if (!task) return;
     try {
@@ -279,7 +280,8 @@ const QualityManagementDetail: React.FC = () => {
         result = await qualityManagementService.printSingleResult(
           task.id,
           indicatorIds[0],
-          note
+          note,
+          templateName
         );
       } else {
         result = await qualityManagementService.printMixedResult(
