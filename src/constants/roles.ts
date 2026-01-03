@@ -5,6 +5,7 @@ export const ROLES = {
   SAMPLE_RECEIVER: "SampleReceiver",
   QUALITY_MANAGER: "QualityManager",
   LAB_TECHNICIAN: "LabTechnician",
+  ACCOUNTANT: "Accountant",
 } as const;
 
 export type RoleType = (typeof ROLES)[keyof typeof ROLES];
@@ -16,6 +17,7 @@ export const ROLE_DISPLAY_NAMES: Record<string, string> = {
   [ROLES.SAMPLE_RECEIVER]: "Bộ phận giao nhận mẫu",
   [ROLES.QUALITY_MANAGER]: "Quản lý chất lượng",
   [ROLES.LAB_TECHNICIAN]: "Kỹ thuật viên",
+  [ROLES.ACCOUNTANT]: "Kế toán",
 };
 
 // Get display name for a role

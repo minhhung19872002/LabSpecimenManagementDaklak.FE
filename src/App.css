@@ -163,3 +163,8 @@ body .ant-modal-root .fullscreen-modal .ant-modal-centered {
     overflow-x: auto !important;
   }
 }
+
+/* Remove margin bottom from table pagination */
+.ant-table-wrapper .ant-table-pagination.ant-pagination {
+  margin-bottom: 0 !important;
+}

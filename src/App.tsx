@@ -17,7 +17,8 @@ const DefaultRouteRedirect = () => {
     try {
       const userInfo: UserInfo = JSON.parse(storedUser);
       if (userInfo.roles && userInfo.roles.length > 0) {
-        defaultRoute = getDefaultRouteForUser(userInfo.roles) || PATH_ROUTES.dashboard;
+        defaultRoute =
+          getDefaultRouteForUser(userInfo.roles) || PATH_ROUTES.dashboard;
       }
     } catch {
       // Ignore parsing errors
@@ -31,8 +32,13 @@ const DefaultRouteRedirect = () => {
 const Login = Loadable(lazy(() => import("./pages/Login/Login")));
 const Dashboard = Loadable(lazy(() => import("./pages/Dashboard/Dashboard")));
 
-// Demo Layout - for testing new Figma design
-const DemoLayout = Loadable(lazy(() => import("./pages/DemoLayout/DemoLayout")));
+// Quotation - Báo giá
+const QuotationList = Loadable(
+  lazy(() => import("./pages/Quotation/QuotationList"))
+);
+const QuotationForm = Loadable(
+  lazy(() => import("./pages/Quotation/QuotationForm"))
+);
 
 // Test Request
 const TestRequestList = Loadable(
@@ -160,8 +166,6 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/403" element={<Forbidden />} />
-        {/* Demo Layout - standalone page for testing new design */}
-        <Route path="/demo-layout" element={<DemoLayout />} />
         <Route
           path="/"
           element={
@@ -172,6 +176,11 @@ function App() {
         >
           <Route index element={<DefaultRouteRedirect />} />
           <Route path="dashboard" element={<Dashboard />} />
+
+          {/* Quotation Routes - Báo giá */}
+          <Route path="quotations" element={<QuotationList />} />
+          <Route path="quotations/create" element={<QuotationForm />} />
+          <Route path="quotations/edit/:id" element={<QuotationForm />} />
 
           {/* Test Request Routes */}
           <Route path="test-requests" element={<TestRequestList />} />
@@ -228,8 +237,14 @@ function App() {
           <Route path="testing/:id" element={<TestingDetail />} />
 
           {/* Quality Management - Quản lý chất lượng (QLCL view) */}
-          <Route path="quality-management" element={<QualityManagementList />} />
-          <Route path="quality-management/:id" element={<QualityManagementDetail />} />
+          <Route
+            path="quality-management"
+            element={<QualityManagementList />}
+          />
+          <Route
+            path="quality-management/:id"
+            element={<QualityManagementDetail />}
+          />
 
           {/* Subcontractor Management - Nhà thầu phụ */}
           <Route path="subcontractors" element={<SubcontractorList />} />

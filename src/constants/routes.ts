@@ -8,6 +8,13 @@ export const PATH_ROUTES = {
 
   dashboard: '/dashboard',
 
+  quotations: {
+    index: '/quotations',
+    create: '/quotations/create',
+    detail: (id: string) => `/quotations/${id}`,
+    edit: (id: string) => `/quotations/edit/${id}`,
+  },
+
   testRequests: {
     index: '/test-requests',
     create: '/test-requests/create',
