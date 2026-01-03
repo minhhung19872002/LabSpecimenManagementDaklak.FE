@@ -179,6 +179,7 @@ export interface TestingIndicatorDto {
   canEdit: boolean;
   canCheckIn: boolean;          // Có thể check-in (Thực hiện) không
   canSubmit: boolean;           // Có thể gửi kết quả không
+  images: IndicatorImageDto[];  // Hình ảnh chỉ tiêu (max 5)
 }
 
 // Save Indicator Result DTO
@@ -226,4 +227,16 @@ export interface RejectionHistoryDto {
   rejectedDate: string;
   rejectedById: string;
   rejectedByName?: string;
+}
+
+// Indicator Image DTO
+export interface IndicatorImageDto {
+  id: string;
+  laboratoryTaskIndicatorId: string;
+  fileId: string;
+  fileName: string;
+  fileSize: number;
+  url: string;
+  creationTime: string;
+  creatorId?: string;
 }

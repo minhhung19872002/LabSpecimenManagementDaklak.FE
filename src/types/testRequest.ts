@@ -152,6 +152,18 @@ export enum SampleStatus {
 }
 
 // Sample Indicator DTOs
+/** Hình ảnh của chỉ tiêu (từ IndicatorImage) */
+export interface IndicatorImageDto {
+  id: string;
+  laboratoryTaskIndicatorId: string;
+  fileId: string;
+  fileName: string;
+  fileSize: number;
+  url: string;
+  creationTime: string;
+  creatorId?: string;
+}
+
 export interface TestRequestSampleIndicatorDto {
   id: string;
   testRequestSampleId: string;
@@ -173,6 +185,8 @@ export interface TestRequestSampleIndicatorDto {
   approvalStatus?: IndicatorApprovalStatus;
   /** Ngày thử nghiệm (ngày KTV bắt đầu thử nghiệm/check-in) */
   testDate?: string;
+  /** Hình ảnh của chỉ tiêu */
+  images?: IndicatorImageDto[];
 }
 
 export interface CreateTestRequestSampleIndicatorDto {

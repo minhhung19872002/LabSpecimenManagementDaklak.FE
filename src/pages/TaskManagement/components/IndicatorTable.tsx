@@ -23,6 +23,7 @@ import {
   UserLookupDto,
   SampleStatus,
 } from "../../../types/laboratoryTask";
+import IndicatorImageCell from "../../../components/common/IndicatorImageCell";
 import {
   standardService,
   StandardWithIndicatorsDto,
@@ -278,6 +279,20 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       width: 200,
       render: (value: string) => {
         return <Text>{value || "-"}</Text>;
+      },
+    },
+    {
+      title: "Hình ảnh",
+      key: "images",
+      width: 120,
+      render: (_: unknown, record: LaboratoryTaskIndicatorDto) => {
+        return (
+          <IndicatorImageCell
+            images={record.images || []}
+            canUpload={false}
+            maxImages={5}
+          />
+        );
       },
     },
     {
@@ -590,7 +605,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         rowKey="id"
         pagination={false}
         size="small"
-        scroll={{ x: 1900 }}
+        scroll={{ x: 2020 }}
         loading={loading}
         rowSelection={rowSelection}
       />
