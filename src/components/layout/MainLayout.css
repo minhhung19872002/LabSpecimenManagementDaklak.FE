@@ -19,8 +19,7 @@
   padding: 16px 12px;
   gap: 24px;
   width: 256px;
-  height: fit-content;
-  max-height: calc(100vh - 48px);
+  height: calc(100vh - 48px);
   background: #FFFFFF;
   box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.08);
   border-radius: 16px;
@@ -33,6 +32,117 @@
 .main-sidebar.collapsed {
   width: 80px;
   padding: 16px 8px;
+  align-items: center;
+}
+
+/* Collapsed menu items - center icons */
+.main-sidebar.collapsed .sidebar-menu-wrapper {
+  align-items: center;
+}
+
+.main-sidebar.collapsed .sidebar-menu-wrapper .ant-menu-item,
+.main-sidebar.collapsed .sidebar-menu-wrapper .ant-menu-submenu-title {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  display: flex;
+  justify-content: center;
+}
+
+.main-sidebar.collapsed .sidebar-menu-wrapper .ant-menu-item .anticon,
+.main-sidebar.collapsed .sidebar-menu-wrapper .ant-menu-submenu-title .anticon {
+  margin: 0;
+  font-size: 18px;
+}
+
+/* Hide menu title text and arrow when collapsed */
+.main-sidebar.collapsed .sidebar-menu-wrapper .ant-menu-title-content,
+.main-sidebar.collapsed .sidebar-menu-wrapper .ant-menu-item span[title],
+.main-sidebar.collapsed .sidebar-menu-wrapper .ant-menu-submenu-title span[title] {
+  display: none !important;
+  width: 0 !important;
+  overflow: hidden !important;
+}
+
+.main-sidebar.collapsed .sidebar-menu-wrapper .ant-menu-submenu-arrow {
+  display: none !important;
+}
+
+/* Ensure only icon is visible when collapsed */
+.main-sidebar.collapsed .sidebar-menu-wrapper .ant-menu-item {
+  width: 48px !important;
+  min-width: 48px !important;
+}
+
+.main-sidebar.collapsed .sidebar-menu-wrapper .ant-menu-submenu-title {
+  width: 100% !important;
+}
+
+/* Hide submenu children when collapsed */
+.main-sidebar.collapsed .sidebar-menu-wrapper .ant-menu-sub {
+  display: none !important;
+}
+
+/* Highlight parent submenu when collapsed and has selected child */
+.main-sidebar.collapsed .sidebar-menu-wrapper .ant-menu-submenu-selected > .ant-menu-submenu-title {
+  background: #096DD9 !important;
+  border-radius: 8px;
+}
+
+.main-sidebar.collapsed .sidebar-menu-wrapper .ant-menu-submenu-selected > .ant-menu-submenu-title .anticon {
+  color: #FFFFFF !important;
+}
+
+/* Remove border radius from collapsed submenu popup items */
+.ant-menu-submenu-popup .ant-menu-item,
+.ant-menu-submenu-popup .ant-menu-item:first-child,
+.ant-menu-submenu-popup .ant-menu-item:last-child,
+.ant-menu-submenu-popup .ant-menu-item:only-child {
+  border-radius: 0 !important;
+  margin: 0 !important;
+}
+
+.ant-menu-submenu-popup .ant-menu-item:first-child {
+  padding-top: 4px !important;
+  margin-top: 0 !important;
+}
+
+.ant-menu-submenu-popup .ant-menu-item:last-child {
+  padding-bottom: 4px !important;
+  margin-bottom: 0 !important;
+}
+
+.ant-menu-submenu-popup .ant-menu {
+  border-radius: 8px !important;
+  overflow: hidden;
+  padding: 0 !important;
+}
+
+/* Popup menu item selected state */
+.ant-menu-submenu-popup .ant-menu-item-selected {
+  background: #096DD9 !important;
+  color: #FFFFFF !important;
+}
+
+.ant-menu-submenu-popup .ant-menu-item-selected .anticon {
+  color: #FFFFFF !important;
+}
+
+.ant-menu-submenu-popup .ant-menu-item-selected .ant-menu-title-content {
+  color: #FFFFFF !important;
+}
+
+/* Popup menu item active (clicking) state */
+.ant-menu-submenu-popup .ant-menu-item:active {
+  background: #096DD9 !important;
+  color: #FFFFFF !important;
+}
+
+.ant-menu-submenu-popup .ant-menu-item:active .anticon {
+  color: #FFFFFF !important;
+}
+
+.ant-menu-submenu-popup .ant-menu-item:active .ant-menu-title-content {
+  color: #FFFFFF !important;
 }
 
 /* ==================== Sidebar Logo ==================== */
@@ -240,28 +350,46 @@
 /* ==================== Sidebar Collapse Button ==================== */
 .sidebar-collapse-btn {
   position: absolute;
-  top: 50px;
+  top: 50%;
   right: -12px;
+  transform: translateY(-50%);
   width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: #096DD9;
-  border: 2px solid #FFFFFF;
-  color: #FFFFFF;
+  height: 48px;
+  border-radius: 0 8px 8px 0;
+  background: #FFFFFF;
+  border: 1px solid #F0F0F0;
+  border-left: none;
+  color: #8C8C8C;
   font-size: 12px;
-  font-weight: bold;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 10;
-  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s ease;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.06);
+  transition: all 0.2s ease;
+  opacity: 0;
+}
+
+.main-sidebar:hover .sidebar-collapse-btn {
+  opacity: 1;
 }
 
 .sidebar-collapse-btn:hover {
-  background: #1890FF;
-  transform: scale(1.1);
+  background: #F5F5F5;
+  color: #096DD9;
+  width: 28px;
+}
+
+.sidebar-collapse-btn:active {
+  background: #E6F4FF;
+}
+
+/* Hide collapse button on mobile - sidebar uses drawer instead */
+@media (max-width: 767px) {
+  .sidebar-collapse-btn {
+    display: none !important;
+  }
 }
 
 /* ==================== Main Content Wrapper ==================== */
@@ -320,9 +448,9 @@
   gap: 16px;
 }
 
-/* Mobile menu button */
+/* Mobile menu button - hidden by default, shown on mobile */
 .mobile-menu-btn {
-  display: flex;
+  display: none;
   justify-content: center;
   align-items: center;
   width: 40px;
@@ -467,6 +595,11 @@
   /* Hide sidebar on mobile - use drawer instead */
   .main-sidebar {
     display: none !important;
+  }
+
+  /* Show mobile menu button */
+  .mobile-menu-btn {
+    display: flex !important;
   }
 
   .user-info-text {
