@@ -4,13 +4,13 @@ import {
   Select,
   Button,
   Space,
-  Tag,
   Modal,
   Form,
   Typography,
   Input,
   Tooltip,
 } from "antd";
+import StatusTag from "../../../components/common/StatusTag";
 import type { TableRowSelection } from "antd/es/table/interface";
 import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
 import { formatDate } from "../../../utils/formatters";
@@ -481,9 +481,9 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         // Ưu tiên hiển thị "KH hủy" trước - bất kể đã giao việc hay chưa
         if (status === IndicatorApprovalStatus.CustomerCancelled) {
           return (
-            <Tag color={IndicatorApprovalStatusColors[status]}>
+            <StatusTag color={IndicatorApprovalStatusColors[status]}>
               {IndicatorApprovalStatusLabels[status]}
-            </Tag>
+            </StatusTag>
           );
         }
 
@@ -493,15 +493,15 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
 
         // Chưa giao việc thì hiển thị tag "Chưa giao việc"
         if (!indicatorAssigned) {
-          return <Tag color="default">Chưa giao việc</Tag>;
+          return <StatusTag color="default">Chưa giao việc</StatusTag>;
         }
 
         switch (status) {
           case IndicatorApprovalStatus.Pending:
             return (
-              <Tag color={IndicatorApprovalStatusColors[status]}>
+              <StatusTag color={IndicatorApprovalStatusColors[status]}>
                 {IndicatorApprovalStatusLabels[status]}
-              </Tag>
+              </StatusTag>
             );
 
           case IndicatorApprovalStatus.Entered: {
@@ -535,16 +535,16 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
 
           case IndicatorApprovalStatus.Approved:
             return (
-              <Tag color={IndicatorApprovalStatusColors[status]}>
+              <StatusTag color={IndicatorApprovalStatusColors[status]}>
                 {IndicatorApprovalStatusLabels[status]}
-              </Tag>
+              </StatusTag>
             );
 
           case IndicatorApprovalStatus.Rejected:
             return (
-              <Tag color={IndicatorApprovalStatusColors[status]}>
+              <StatusTag color={IndicatorApprovalStatusColors[status]}>
                 {IndicatorApprovalStatusLabels[status]}
-              </Tag>
+              </StatusTag>
             );
 
           // CustomerCancelled đã xử lý ở đầu function

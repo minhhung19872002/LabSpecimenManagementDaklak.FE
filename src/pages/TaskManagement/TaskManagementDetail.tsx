@@ -17,6 +17,7 @@ import {
   Form,
   Input,
 } from "antd";
+import StatusTag from "../../components/common/StatusTag";
 import {
   ArrowLeftOutlined,
   SendOutlined,
@@ -903,9 +904,9 @@ const TaskManagementDetail: React.FC = () => {
   // Get status tag
   const getStatusTag = (status: LaboratoryTaskStatus) => {
     return (
-      <Tag color={LaboratoryTaskStatusColors[status]}>
+      <StatusTag color={LaboratoryTaskStatusColors[status]}>
         {LaboratoryTaskStatusLabels[status]}
-      </Tag>
+      </StatusTag>
     );
   };
 
@@ -915,9 +916,9 @@ const TaskManagementDetail: React.FC = () => {
   const getSampleStatusTag = (status: SampleStatus) => {
     const displayStatus = status === "assigned" ? "notStarted" : status;
     return (
-      <Tag color={SampleStatusColors[displayStatus]}>
+      <StatusTag color={SampleStatusColors[displayStatus]}>
         {SampleStatusLabels[displayStatus]}
-      </Tag>
+      </StatusTag>
     );
   };
 

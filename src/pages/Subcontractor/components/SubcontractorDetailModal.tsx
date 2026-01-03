@@ -10,6 +10,7 @@ import {
 import { CheckCircleOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { Subcontractor, Certification } from "../hooks";
+import StatusTag from "../../../components/common/StatusTag";
 
 interface SubcontractorDetailModalProps {
   open: boolean;
@@ -24,7 +25,7 @@ const getStatusTag = (status: string) => {
     pending: { color: "orange", text: "Chờ đánh giá" },
   };
   const statusConfig = config[status] || { color: "default", text: status };
-  return <Tag color={statusConfig.color}>{statusConfig.text}</Tag>;
+  return <StatusTag color={statusConfig.color}>{statusConfig.text}</StatusTag>;
 };
 
 const SubcontractorDetailModal: React.FC<SubcontractorDetailModalProps> = ({

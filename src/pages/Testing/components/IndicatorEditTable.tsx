@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import {
   Table,
   Input,
-  Tag,
   Button,
   Typography,
   Tooltip,
@@ -10,6 +9,7 @@ import {
   Checkbox,
   AutoComplete,
 } from "antd";
+import StatusTag from "../../../components/common/StatusTag";
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -174,9 +174,9 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     };
 
     return (
-      <Tag color={color} icon={iconMap[status]}>
+      <StatusTag color={color} icon={iconMap[status]}>
         {label}
-      </Tag>
+      </StatusTag>
     );
   };
 

@@ -1,4 +1,4 @@
-import { Button, Space, Tag, Popconfirm } from "antd";
+import { Button, Space, Popconfirm } from "antd";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
@@ -12,6 +12,7 @@ import {
   showActionsForTestRequest,
 } from "../../../types/testRequest";
 import { formatDate } from "../../../utils/formatters";
+import StatusTag from "../../../components/common/StatusTag";
 
 interface GetColumnsOptions {
   onEdit: (record: TestRequestDto) => void;
@@ -21,7 +22,7 @@ interface GetColumnsOptions {
 const getStatusTag = (status: TestRequestStatus) => {
   const label = TestRequestStatusLabels[status] || status.toString();
   const color = TestRequestStatusColors[status] || "default";
-  return <Tag color={color}>{label}</Tag>;
+  return <StatusTag color={color}>{label}</StatusTag>;
 };
 
 export const getTestRequestColumns = (

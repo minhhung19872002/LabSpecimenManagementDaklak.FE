@@ -10,6 +10,7 @@ import {
   QualityManagementStatusColors,
   QualityTaskType,
 } from "../../../types/qualityManagement";
+import StatusTag from "../../../components/common/StatusTag";
 
 interface GetColumnsOptions {
   onViewHistory: (record: QualityManagementTaskDto, e: React.MouseEvent) => void;
@@ -17,9 +18,9 @@ interface GetColumnsOptions {
 }
 
 const getStatusTag = (status: QualityManagementStatus) => (
-  <Tag color={QualityManagementStatusColors[status]}>
+  <StatusTag color={QualityManagementStatusColors[status]}>
     {QualityManagementStatusLabels[status]}
-  </Tag>
+  </StatusTag>
 );
 
 const isUrgent = (record: QualityManagementTaskDto): boolean => {

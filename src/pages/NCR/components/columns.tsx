@@ -12,6 +12,7 @@ import {
 import dayjs from "dayjs";
 import { NCRStatus } from "../../../services/ncrService";
 import { NCRDisplay, NCR_TYPES, SEVERITY_CONFIG, STATUS_CONFIG } from "../hooks";
+import StatusTag from "../../../components/common/StatusTag";
 
 interface ColumnActions {
   onView: (record: NCRDisplay) => void;
@@ -83,9 +84,9 @@ export const getNCRColumns = ({ onView, onEdit, onDelete }: ColumnActions) => [
     key: "status",
     width: 130,
     render: (status: number) => (
-      <Tag color={STATUS_CONFIG[status]?.color} icon={getStatusIcon(status)}>
+      <StatusTag color={STATUS_CONFIG[status]?.color} icon={getStatusIcon(status)}>
         {STATUS_CONFIG[status]?.text}
-      </Tag>
+      </StatusTag>
     ),
   },
   {

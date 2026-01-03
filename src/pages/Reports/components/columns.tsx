@@ -14,6 +14,7 @@ import {
   RocketOutlined,
 } from "@ant-design/icons";
 import { ReportDisplay, getStatusConfig } from "../hooks";
+import StatusTag from "../../../components/common/StatusTag";
 
 interface ColumnActions {
   onPreview: (record: ReportDisplay) => void;
@@ -104,9 +105,9 @@ export const getReportColumns = ({
     render: (status: string) => {
       const config = getStatusConfig(status);
       return (
-        <Tag color={config.color} icon={getStatusIcon(status)}>
+        <StatusTag color={config.color} icon={getStatusIcon(status)}>
           {config.text}
-        </Tag>
+        </StatusTag>
       );
     },
   },

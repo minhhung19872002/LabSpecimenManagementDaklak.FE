@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Descriptions, Button, Space, Spin, Tag } from 'antd';
+import { Card, Descriptions, Button, Space, Spin } from 'antd';
 import { ArrowLeftOutlined, EditOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -7,6 +7,7 @@ import dayjs from 'dayjs';
 import { specimenHistoryService } from '../../services/specimenHistoryService';
 import { SpecimenHistoryDto, SpecimenStatus } from '../../types/specimenHistory';
 import { PATH_ROUTES } from '../../constants';
+import StatusTag from '../../components/common/StatusTag';
 
 // Mock data fallback
 const getMockSpecimenHistory = (id: string): SpecimenHistoryDto => {
@@ -79,7 +80,7 @@ const SpecimenHistoryDetail: React.FC = () => {
     };
 
     const config = statusConfig[status];
-    return <Tag color={config.color}>{config.label}</Tag>;
+    return <StatusTag color={config.color}>{config.label}</StatusTag>;
   };
 
   if (!data && !loading) {

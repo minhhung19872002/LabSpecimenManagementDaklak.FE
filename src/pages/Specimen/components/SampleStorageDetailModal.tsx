@@ -12,6 +12,7 @@ import {
   List,
   Collapse,
 } from "antd";
+import StatusTag from "../../../components/common/StatusTag";
 import { sampleStorageService } from "../../../services/sampleStorageService";
 import { formatDate } from "../../../utils/formatters";
 import type {
@@ -96,9 +97,9 @@ const SampleStorageDetailModal: React.FC<SampleStorageDetailModalProps> = ({
   };
 
   const getStatusTag = (status: SampleStorageStatus) => (
-    <Tag color={SampleStorageStatusColors[status]}>
+    <StatusTag color={SampleStorageStatusColors[status]}>
       {SampleStorageStatusLabels[status]}
-    </Tag>
+    </StatusTag>
   );
 
   // Get samples that are not cancelled (for cancel all confirmation)

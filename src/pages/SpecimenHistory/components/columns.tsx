@@ -1,4 +1,4 @@
-import { Button, Space, Tag, Popconfirm } from "antd";
+import { Button, Space, Popconfirm } from "antd";
 import {
   EditOutlined,
   DeleteOutlined,
@@ -10,6 +10,7 @@ import {
   SpecimenHistoryDto,
   SpecimenStatus,
 } from "../../../types/specimenHistory";
+import StatusTag from "../../../components/common/StatusTag";
 
 interface GetColumnsOptions {
   onView: (id: string) => void;
@@ -28,7 +29,7 @@ const getStatusTag = (status: SpecimenStatus) => {
   };
 
   const config = statusConfig[status];
-  return <Tag color={config?.color || "default"}>{config?.label || status}</Tag>;
+  return <StatusTag color={config?.color || "default"}>{config?.label || status}</StatusTag>;
 };
 
 export const getSpecimenHistoryColumns = (options: GetColumnsOptions) => [

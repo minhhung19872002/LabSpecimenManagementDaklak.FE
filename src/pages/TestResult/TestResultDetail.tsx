@@ -8,6 +8,7 @@ import { TestResultDto, ResultApprovalStatus } from '../../types/testResult';
 import dayjs from 'dayjs';
 import './TestResultDetail.css';
 import { PATH_ROUTES } from '../../constants';
+import StatusTag from '../../components/common/StatusTag';
 
 const { TextArea } = Input;
 
@@ -267,9 +268,9 @@ const TestResultDetail: React.FC = () => {
             {testResult.upperLimit !== undefined && testResult.upperLimit !== null ? testResult.upperLimit : '-'}
           </Descriptions.Item>
           <Descriptions.Item label={t('testResult.approvalStatus.label')}>
-            <Tag color={getApprovalStatusColor(testResult.approvalStatus)}>
+            <StatusTag color={getApprovalStatusColor(testResult.approvalStatus)}>
               {getApprovalStatusText(testResult.approvalStatus)}
-            </Tag>
+            </StatusTag>
           </Descriptions.Item>
           <Descriptions.Item label="Người nhập">
             {testResult.enteredByName || '-'}

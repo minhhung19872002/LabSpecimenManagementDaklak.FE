@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Descriptions, Button, Space, message, Tag, Spin } from 'antd';
+import { Card, Descriptions, Button, Space, message, Spin } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { specimenService } from '../../services/specimenService';
@@ -7,6 +7,7 @@ import { SpecimenDto, SpecimenStatus } from '../../types/specimen';
 import dayjs from 'dayjs';
 import './SpecimenDetail.css';
 import { PATH_ROUTES } from '../../constants';
+import StatusTag from '../../components/common/StatusTag';
 
 const SpecimenDetail: React.FC = () => {
   const { t } = useTranslation();
@@ -45,7 +46,7 @@ const SpecimenDetail: React.FC = () => {
       [SpecimenStatus.ReturnedToCustomer]: { color: 'success', text: t('specimen.status.returnedToCustomer') }
     };
     const config = statusConfig[status];
-    return <Tag color={config.color}>{config.text}</Tag>;
+    return <StatusTag color={config.color}>{config.text}</StatusTag>;
   };
 
   if (loading) {

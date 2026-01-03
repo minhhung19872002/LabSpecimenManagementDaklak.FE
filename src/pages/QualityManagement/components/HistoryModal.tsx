@@ -14,6 +14,7 @@ import {
   ChangeApprovalBatchDto,
 } from '../../../types/qualityManagement';
 import ChangeApprovalModal from './ChangeApprovalModal';
+import StatusTag from '../../../components/common/StatusTag';
 
 const { Text } = Typography;
 const { Panel } = Collapse;
@@ -95,21 +96,21 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ visible, task, onClose }) =
   };
 
   const getIndicatorStatusTag = (status: QualityIndicatorApprovalStatus) => (
-    <Tag color={QualityIndicatorApprovalStatusColors[status]}>
+    <StatusTag color={QualityIndicatorApprovalStatusColors[status]}>
       {QualityIndicatorApprovalStatusLabels[status]}
-    </Tag>
+    </StatusTag>
   );
 
   const getChangeApprovalStatusTag = (status: ChangeApprovalStatus) => {
     switch (status) {
       case ChangeApprovalStatus.Pending:
-        return <Tag color="warning">Chờ phê duyệt</Tag>;
+        return <StatusTag color="warning">Chờ phê duyệt</StatusTag>;
       case ChangeApprovalStatus.Approved:
-        return <Tag color="success">Đã phê duyệt</Tag>;
+        return <StatusTag color="success">Đã phê duyệt</StatusTag>;
       case ChangeApprovalStatus.Rejected:
-        return <Tag color="error">Đã từ chối</Tag>;
+        return <StatusTag color="error">Đã từ chối</StatusTag>;
       default:
-        return <Tag>Không xác định</Tag>;
+        return <StatusTag>Không xác định</StatusTag>;
     }
   };
 

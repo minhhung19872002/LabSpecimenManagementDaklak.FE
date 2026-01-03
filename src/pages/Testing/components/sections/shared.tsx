@@ -1,5 +1,4 @@
 import React from "react";
-import { Tag } from "antd";
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -11,6 +10,7 @@ import {
   TestingStatusLabels,
   TestingStatusColors,
 } from "../../../../types/testing";
+import StatusTag from "../../../../components/common/StatusTag";
 
 export const getStatusTag = (status: TestingStatus) => {
   const label = TestingStatusLabels[status];
@@ -25,12 +25,12 @@ export const getStatusTag = (status: TestingStatus) => {
   };
 
   return (
-    <Tag
+    <StatusTag
       color={color}
       icon={iconMap[status]}
-      style={{ fontSize: 14, padding: "4px 12px" }}
+      style={{ fontSize: 14, padding: "2px 10px" }}
     >
       {label}
-    </Tag>
+    </StatusTag>
   );
 };

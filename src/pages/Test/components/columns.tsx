@@ -1,6 +1,7 @@
-import { Button, Space, Tag, Popconfirm } from "antd";
+import { Button, Space, Popconfirm } from "antd";
 import { EditOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
 import { TestDto, TestStatus } from "../../../types/test";
+import StatusTag from "../../../components/common/StatusTag";
 
 interface GetColumnsOptions {
   onView: (id: string) => void;
@@ -95,7 +96,7 @@ export const getTestColumns = (options: GetColumnsOptions) => [
     key: "status",
     width: 130,
     render: (status: TestStatus) => (
-      <Tag color={getStatusColor(status)}>{getStatusText(status)}</Tag>
+      <StatusTag color={getStatusColor(status)}>{getStatusText(status)}</StatusTag>
     ),
   },
   {
