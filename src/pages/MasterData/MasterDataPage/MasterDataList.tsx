@@ -13,6 +13,7 @@ import IndicatorsTab from "../IndicatorsTab";
 import FormTemplatesTab from "../FormTemplatesTab";
 import TestMethodsTab from "../TestMethods";
 import StandardsTab from "../Standards";
+import TestResultValuesTab from "../TestResultValues";
 import { useMasterDataState } from "./hooks";
 import { useMasterDataActions } from "./hooks/useMasterDataActions";
 import {
@@ -127,7 +128,8 @@ const MasterDataList: React.FC = () => {
           activeCategory !== "indicators" &&
           activeCategory !== "formTemplates" &&
           activeCategory !== "testMethods" &&
-          activeCategory !== "standards" && (
+          activeCategory !== "standards" &&
+          activeCategory !== "testResultValues" && (
             <Space>
               {canImport && (
                 <Button
@@ -193,6 +195,8 @@ const MasterDataList: React.FC = () => {
                   onDataChange={() => fetchStatistics()}
                   refreshKey={standardsRefreshKey}
                 />
+              ) : key === "testResultValues" ? (
+                <TestResultValuesTab onDataChange={() => fetchStatistics()} />
               ) : (
                 <MasterDataTable
                   activeCategory={activeCategory}

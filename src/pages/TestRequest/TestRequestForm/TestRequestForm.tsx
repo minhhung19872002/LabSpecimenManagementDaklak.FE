@@ -145,6 +145,7 @@ const TestRequestForm: React.FC = () => {
     handleSendToLaboratory,
     handleConfirmSendToLaboratory,
     onFinish,
+    handlePreviewForm,
   } = useTestRequestFormActions({
     form,
     isEditMode,
@@ -320,6 +321,9 @@ const TestRequestForm: React.FC = () => {
           <Space>
             <Button type="primary" htmlType="submit" loading={loading}>
               {isEditMode ? "Cập nhật" : "Tạo yêu cầu"}
+            </Button>
+            <Button onClick={handlePreviewForm} loading={loading}>
+              Xem phiếu
             </Button>
             <Button onClick={() => navigate(PATH_ROUTES.testRequests.index)}>Hủy</Button>
           </Space>

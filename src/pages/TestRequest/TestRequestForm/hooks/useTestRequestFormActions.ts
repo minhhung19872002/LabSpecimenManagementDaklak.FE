@@ -1,7 +1,8 @@
 // @ts-nocheck
 import { message } from "antd";
 import dayjs from "dayjs";
-import { testRequestService } from "../../../../services/testRequestService";
+import { testRequestService, PreviewTestRequestFormInput } from "../../../../services/testRequestService";
+import { API_BASE_URL } from "../../../../services/api";
 import {
   ResultLanguage,
   SamplingRequirement,
@@ -849,6 +850,118 @@ export const useTestRequestFormActions = ({
     }
   };
 
+  /**
+   * Preview test request form (BM05) with current form data
+   * Opens PDF in new tab without saving to DB
+   */
+  const handlePreviewForm = async () => {
+    try {
+      // Validate required fields
+      await form.validateFields(["customerName"]);
+    } catch {
+      message.warning("Vui lòng nhập tên khách hàng trước khi xem phiếu");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const values = form.getFieldsValue();
+
+      // Build preview input from form data
+      const previewInput: PreviewTestRequestFormInput = {
+        contractNumber: values.contractNumber || "",
+        contractDate: values.contractDate ? values.contractDate.toISOString() : undefined,
+        sentToAccounting: values.sentToAccounting || false,
+        paymentReceived: values.paymentReceived || false,
+        sentToDepartment: values.sentToDepartment || false,
+        resultReturned: values.resultReturned || false,
+        customerName: values.customerName || "",
+        provinceCode: values.provinceCode || undefined,
+        province: values.provinceCode
+          ? provinces.find((p: any) => p.code === values.provinceCode)?.name
+          : undefined,
+        districtCode: values.districtCode || undefined,
+        district: values.districtCode
+          ? wards.find((w: any) => w.code === values.districtCode)?.name
+          : undefined,
+        wardCode: values.wardCode || undefined,
+        ward: values.wardCode
+          ? wards.find((w: any) => w.code === values.wardCode)?.name
+          : undefined,
+        address: values.address || undefined,
+        taxCode: values.taxCode || undefined,
+        contactPerson: values.contactPerson || undefined,
+        phone: values.phone || undefined,
+        totalSampleCount: samples.length,
+        methodWestHighlandInstitute: values.methodWestHighlandInstitute || false,
+        methodCustomer: values.methodCustomer || false,
+        methodCustomerDetail: values.methodCustomerDetail || undefined,
+        resultLanguage: values.resultLanguage ?? ResultLanguage.Vietnamese,
+        resultCopyCount: values.resultCopyCount || undefined,
+        separatePassedResults: values.separatePassedResults || false,
+        conformityDeclaration: values.conformityDeclaration || undefined,
+        otherRequirements: values.otherRequirements || undefined,
+        subContract: values.subContract || undefined,
+        samplingRequirement: values.samplingRequirement ?? SamplingRequirement.CustomerSampling,
+        deliveryDirectPickup: values.deliveryDirectPickup || false,
+        deliveryPostal: values.deliveryPostal || false,
+        returnStoredSample: values.returnStoredSample || false,
+        sampleTypeService: values.sampleTypeService || false,
+        sampleTypeContract: values.sampleTypeContract || false,
+        sampleTypeTask: values.sampleTypeTask || false,
+        sampleTypeSubContract: values.sampleTypeSubContract || false,
+        resultDeliveryDate: values.resultDeliveryDate
+          ? values.resultDeliveryDate.toISOString()
+          : undefined,
+        sampleStorage: values.sampleStorageOption ?? SampleStorageOption.No,
+        totalCost: totalSampleCost,
+        totalCostInWords: numberToVietnameseWords(totalSampleCost),
+        receiptNumber: values.receiptNumber || undefined,
+        agreeTerms: values.agreeTerms || false,
+        requestDate: values.requestDate
+          ? values.requestDate.toISOString()
+          : new Date().toISOString(),
+        notes: values.notes || undefined,
+        samples: samples.map((sample, index) => ({
+          sortOrder: index + 1,
+          sampleCode: sample.sampleCode || "",
+          sampleName: sample.sampleName || "",
+          samplingAddress: sample.samplingAddress || undefined,
+          sampleQuantity: sample.sampleQuantity || undefined,
+          statusText: sample.statusText || undefined,
+          notes: sample.notes || undefined,
+          indicators: (sample.indicatorMethods || []).map((methodKey: IndicatorMethodKey) => {
+            const { indicatorId, testMethodId } = parseIndicatorMethodKey(methodKey);
+            const indicator = indicators.find((ind: any) => ind.id === indicatorId);
+            const method = indicatorMethodsMap[indicatorId]?.find(
+              (m: IndicatorMethodInfo) => m.testMethodId === testMethodId
+            );
+            return {
+              indicatorId,
+              indicatorName: indicator?.name || "",
+              unitPrice: method?.unitPrice || 0,
+            };
+          }),
+        })),
+      };
+
+      const result = await testRequestService.previewTestRequestForm(previewInput);
+
+      // Open PDF in new tab (same as In phiếu XN pattern)
+      const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(result.fileName)}`;
+      window.open(pdfUrl, "_blank");
+
+      message.success("Đã tạo phiếu xem trước");
+    } catch (error: any) {
+      console.error("Error previewing form:", error);
+      message.error(
+        error.response?.data?.error?.message || "Không thể tạo phiếu xem trước. Vui lòng thử lại."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     // Sample actions
     addSample,
@@ -878,5 +991,8 @@ export const useTestRequestFormActions = ({
 
     // Form submit
     onFinish,
+
+    // Preview form
+    handlePreviewForm,
   };
 };

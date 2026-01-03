@@ -14,6 +14,7 @@ export const categoryLabels: Record<string, string> = {
   customers: "Khách hàng",
   indicators: "Nhóm chỉ tiêu",
   formTemplates: "Form mẫu",
+  testResultValues: "Quản lý kết quả",
 };
 
 // Categories that don't use server-side pagination (load all at once)
@@ -29,6 +30,7 @@ export const importTypeMap: Record<string, ImportType | null> = {
   laboratories: null,
   specimenTypes: null,
   storageLocations: null,
+  testResultValues: null,
 };
 
 // Dynamic columns based on category
@@ -211,6 +213,8 @@ export const getStatCount = (
       return statistics.indicatorCount;
     case "formTemplates":
       return statistics.formTemplateCount;
+    case "testResultValues":
+      return statistics.testResultValueCount || 0;
     default:
       return 0;
   }
