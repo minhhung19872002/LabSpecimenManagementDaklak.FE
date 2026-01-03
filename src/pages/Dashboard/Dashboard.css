@@ -541,14 +541,15 @@
 }
 
 .dashboard-revenue-table {
-  flex: 1 1 calc(33.333% - 16px);
-  min-width: 200px;
+  flex: 0 0 40%;
+  min-width: 280px;
+  max-width: 500px;
   overflow-x: auto;
   overflow-y: hidden;
 }
 
 .dashboard-revenue-chart {
-  flex: 2 1 calc(66.666% - 16px);
+  flex: 1 1 0;
   min-width: 300px;
 }
 
@@ -647,10 +648,10 @@
 /* ==================== Responsive ==================== */
 
 /* Desktop: 4 columns (default - above 992px) */
-/* Tablet: 3 columns (768px - 991px) */
+/* Tablet: 2 columns (768px - 991px) */
 @media (max-width: 991px) {
   .dashboard-stats-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     margin-bottom: 16px;
   }
 

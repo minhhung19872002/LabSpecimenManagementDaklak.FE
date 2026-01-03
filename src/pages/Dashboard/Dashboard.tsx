@@ -215,6 +215,22 @@ const Dashboard: React.FC = () => {
   }, [selectedCustomer]);
 
   // Chart config - Simple bar chart showing revenue by month
+  const formatYAxisValue = (v: number) => {
+    if (v >= 1000000000) {
+      const val = v / 1000000000;
+      return `${val % 1 === 0 ? val.toFixed(0) : val.toFixed(1)}tỷ`;
+    }
+    if (v >= 1000000) {
+      const val = v / 1000000;
+      return `${val % 1 === 0 ? val.toFixed(0) : val.toFixed(1)}tr`;
+    }
+    if (v >= 1000) {
+      const val = v / 1000;
+      return `${val % 1 === 0 ? val.toFixed(0) : val.toFixed(1)}k`;
+    }
+    return String(v);
+  };
+
   const chartConfig = useMemo(() => ({
     data: monthlyRevenue.map((item) => ({
       month: item.monthName,
@@ -226,29 +242,22 @@ const Dashboard: React.FC = () => {
     columnStyle: {
       radius: [4, 4, 0, 0],
     },
-    xAxis: {
-      label: {
-        style: {
-          fill: "#8C8C8C",
-          fontSize: 12,
+    axis: {
+      x: {
+        label: {
+          style: {
+            fill: "#8C8C8C",
+            fontSize: 12,
+          },
         },
       },
-    },
-    yAxis: {
-      label: {
-        formatter: (v: string) => {
-          const num = Number(v);
-          if (num >= 1000000000) {
-            return `${(num / 1000000000).toFixed(0)}tỷ`;
-          }
-          if (num >= 1000000) {
-            return `${(num / 1000000).toFixed(0)}tr`;
-          }
-          return v;
-        },
-        style: {
-          fill: "#8C8C8C",
-          fontSize: 12,
+      y: {
+        labelFormatter: (v: number) => formatYAxisValue(v),
+        label: {
+          style: {
+            fill: "#8C8C8C",
+            fontSize: 12,
+          },
         },
       },
     },

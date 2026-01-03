@@ -17,6 +17,23 @@ export const formatCurrency = (value: number): string => {
   }).format(value);
 };
 
+// Format currency in short form (e.g., 6tr, 1.5tỷ)
+export const formatCurrencyShort = (value: number): string => {
+  if (value >= 1000000000) {
+    const billions = value / 1000000000;
+    return `${billions % 1 === 0 ? billions.toFixed(0) : billions.toFixed(1)}tỷ`;
+  }
+  if (value >= 1000000) {
+    const millions = value / 1000000;
+    return `${millions % 1 === 0 ? millions.toFixed(0) : millions.toFixed(1)}tr`;
+  }
+  if (value >= 1000) {
+    const thousands = value / 1000;
+    return `${thousands % 1 === 0 ? thousands.toFixed(0) : thousands.toFixed(1)}k`;
+  }
+  return value.toString();
+};
+
 export const getPendingTasksColumns = (): ColumnsType<QualityManagementTaskDto> => [
   {
     title: "Số HĐ",
