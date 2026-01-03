@@ -34,6 +34,8 @@ import {
   PieChartOutlined,
   HistoryOutlined,
   WarningOutlined,
+  LeftOutlined,
+  RightOutlined,
 } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
@@ -113,8 +115,7 @@ const routeToKeyMap: Record<string, string> = {
 const MOBILE_BREAKPOINT = 768;
 
 const MainLayout: React.FC = () => {
-  const [collapsed, _setCollapsed] = useState(false);
-  void _setCollapsed; // Suppress unused warning
+  const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(
     window.innerWidth < MOBILE_BREAKPOINT
@@ -164,6 +165,9 @@ const MainLayout: React.FC = () => {
         setMobileMenuOpen(false);
       }
     };
+
+    // Check on mount
+    handleResize();
 
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
@@ -501,10 +505,10 @@ const MainLayout: React.FC = () => {
     return filterMenuByRoles(allMenuItems);
   }, [userInfo, t, navigate]);
 
-  // Toggle sidebar collapse (commented out for now)
-  // const toggleCollapsed = () => {
-  //   setCollapsed(!collapsed);
-  // };
+  // Toggle sidebar collapse
+  const toggleCollapsed = () => {
+    setCollapsed(!collapsed);
+  };
 
   // Sidebar content component
   const sidebarContent = (
@@ -542,13 +546,13 @@ const MainLayout: React.FC = () => {
         <aside className={`main-sidebar ${collapsed ? "collapsed" : ""}`}>
           {sidebarContent}
           {/* Collapse Toggle Button */}
-          {/* <button
+          <button
             className="sidebar-collapse-btn"
             onClick={toggleCollapsed}
             title={collapsed ? "Mở rộng" : "Thu gọn"}
           >
-            {collapsed ? "»" : "«"}
-          </button> */}
+            {collapsed ? <RightOutlined /> : <LeftOutlined />}
+          </button>
         </aside>
       )}
 
@@ -573,15 +577,13 @@ const MainLayout: React.FC = () => {
         {/* Header */}
         <header className="main-header">
           <div className="header-left">
-            {/* Mobile menu button */}
-            {isMobile && (
-              <Button
-                type="text"
-                icon={<MenuOutlined style={{ fontSize: 20 }} />}
-                onClick={() => setMobileMenuOpen(true)}
-                className="mobile-menu-btn"
-              />
-            )}
+            {/* Mobile menu button - visible only on mobile via CSS */}
+            <Button
+              type="text"
+              icon={<MenuOutlined style={{ fontSize: 20 }} />}
+              onClick={() => setMobileMenuOpen(true)}
+              className="mobile-menu-btn"
+            />
             <div className="header-title-wrapper">
               <h1 className="header-title">{t("common.appName")}</h1>
               <span className="header-subtitle">
