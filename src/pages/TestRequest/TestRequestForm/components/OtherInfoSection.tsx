@@ -28,16 +28,6 @@ const OtherInfoSection: React.FC = () => {
             name="agreeTerms"
             valuePropName="checked"
             style={{ marginBottom: 0 }}
-            rules={[
-              {
-                validator: (_, value) =>
-                  value
-                    ? Promise.resolve()
-                    : Promise.reject(
-                        new Error("Vui lòng đọc và đồng ý với quy định chung")
-                      ),
-              },
-            ]}
           >
             <Checkbox>
               Đã đọc và đồng ý với quy định chung về yêu cầu dịch vụ thử nghiệm
