@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { message } from "antd";
 import { testingService } from "../../services/testingService";
+import { testResultValueService } from "../../services/testResultValueService";
 import {
   TestingDetailDto,
   TestingIndicatorDto,
@@ -12,12 +13,18 @@ import {
 } from "../../types/testing";
 import TestingDetailContainer from "./components/TestingDetailContainer";
 
+interface ResultOption {
+  value: string;
+  label: string;
+}
+
 const TestingDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [detail, setDetail] = useState<TestingDetailDto | null>(null);
+  const [resultOptions, setResultOptions] = useState<ResultOption[]>([]);
 
   // Helper function to update indicators optimistically (indicator-level only)
   // Task-level status is fetched from server to avoid duplicating BE logic
@@ -137,6 +144,24 @@ const TestingDetail: React.FC = () => {
   useEffect(() => {
     loadDetail();
   }, [loadDetail]);
+
+  // Load result value options for autocomplete
+  useEffect(() => {
+    const loadResultOptions = async () => {
+      try {
+        const data = await testResultValueService.getActive();
+        setResultOptions(
+          data.map((item) => ({
+            value: item.name,
+            label: item.name,
+          }))
+        );
+      } catch (error) {
+        console.error("Failed to load result options:", error);
+      }
+    };
+    loadResultOptions();
+  }, []);
 
   const handleResultsChange = (
     sampleId: string,
@@ -573,6 +598,7 @@ const TestingDetail: React.FC = () => {
       activeKeys={activeKeys}
       selectedIndicators={selectedIndicators}
       historyModal={historyModal}
+      resultOptions={resultOptions}
       onBack={() => navigate("/testing")}
       onCollapseChange={setActiveKeys}
       onCheckIn={handleCheckIn}

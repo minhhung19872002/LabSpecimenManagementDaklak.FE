@@ -19,6 +19,11 @@ import {
 
 const { Panel } = Collapse;
 
+interface ResultOption {
+  value: string;
+  label: string;
+}
+
 interface TestingDetailContainerProps {
   detail: TestingDetailDto;
   taskId: string;
@@ -33,6 +38,7 @@ interface TestingDetailContainerProps {
     indicatorId: string;
     indicatorName: string;
   };
+  resultOptions?: ResultOption[];
   onBack: () => void;
   onCollapseChange: (keys: string[]) => void;
   onCheckIn: (sampleId: string) => void;
@@ -61,6 +67,7 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
   activeKeys,
   selectedIndicators,
   historyModal,
+  resultOptions = [],
   onBack,
   onCollapseChange,
   onCheckIn,
@@ -160,6 +167,7 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
               }
               isUrgent={isUrgent}
               submitting={submitting}
+              resultOptions={resultOptions}
               onResultsChange={(results) =>
                 onResultsChange(sample.sampleId, results)
               }

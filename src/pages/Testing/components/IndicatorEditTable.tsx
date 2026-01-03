@@ -8,6 +8,7 @@ import {
   Tooltip,
   Space,
   Checkbox,
+  AutoComplete,
 } from "antd";
 import {
   CheckCircleOutlined,
@@ -20,7 +21,6 @@ import {
   StopOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
-import { NumericFormat } from "react-number-format";
 import { formatDate } from "../../../utils/formatters";
 import {
   TestingIndicatorDto,
@@ -32,11 +32,17 @@ import {
 
 const { Text } = Typography;
 
+interface ResultOption {
+  value: string;
+  label: string;
+}
+
 interface IndicatorEditTableProps {
   indicators: TestingIndicatorDto[];
   selectedIndicatorIds: string[];
   isUrgent?: boolean;
   submitting?: boolean;
+  resultOptions?: ResultOption[];
   onResultsChange: (results: SaveIndicatorResultDto[]) => void;
   onSelectionChange: (indicatorIds: string[]) => void;
   onShowRejectionHistory: (indicatorId: string, indicatorName: string) => void;
@@ -50,6 +56,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
   selectedIndicatorIds,
   isUrgent = false,
   submitting = false,
+  resultOptions = [],
   onResultsChange,
   onSelectionChange,
   onShowRejectionHistory,
@@ -227,7 +234,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     {
       title: "Kết quả",
       key: "result",
-      width: 80,
+      width: 120,
       render: (_, record) => {
         const currentValue =
           editedResults.get(record.id)?.result ?? record.result ?? "";
@@ -250,20 +257,25 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
 
         return (
           <Tooltip title={tooltipContent}>
-            <NumericFormat
+            <AutoComplete
               value={currentValue}
-              onValueChange={(values) => {
-                handleFieldChange(record.id, "result", values.value);
+              options={resultOptions}
+              onChange={(value) => {
+                handleFieldChange(record.id, "result", value);
               }}
               onBlur={() => {
                 onSaveIndicator(record.id);
               }}
               disabled={isDisabled}
-              placeholder={isDisabled ? "-" : "Nhập KQ (VD: 0.5)"}
-              allowNegative={false}
-              decimalScale={1}
-              customInput={Input}
-              style={isDisabled ? { backgroundColor: "#f5f5f5" } : undefined}
+              placeholder={isDisabled ? "-" : "Nhập KQ"}
+              style={{
+                width: "100%",
+                backgroundColor: isDisabled ? "#f5f5f5" : undefined,
+              }}
+              filterOption={(inputValue, option) =>
+                option?.value.toUpperCase().includes(inputValue.toUpperCase()) ??
+                false
+              }
             />
           </Tooltip>
         );
