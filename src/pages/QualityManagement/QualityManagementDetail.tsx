@@ -13,6 +13,7 @@ import {
   Col,
   Alert,
 } from "antd";
+import StatusTag from "../../components/common/StatusTag";
 import {
   ArrowLeftOutlined,
   PrinterOutlined,
@@ -355,12 +356,12 @@ const QualityManagementDetail: React.FC = () => {
 
   // Status tag
   const getStatusTag = (status: QualityManagementStatus) => (
-    <Tag
+    <StatusTag
       color={QualityManagementStatusColors[status]}
-      style={{ fontSize: 14, padding: "4px 12px" }}
+      style={{ fontSize: 14, padding: "2px 10px" }}
     >
       {QualityManagementStatusLabels[status]}
-    </Tag>
+    </StatusTag>
   );
 
   if (loading && !task) {

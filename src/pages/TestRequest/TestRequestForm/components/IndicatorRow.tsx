@@ -1,10 +1,11 @@
 // @ts-nocheck
 import React from "react";
-import { Button, Checkbox, DatePicker, Tooltip, Tag } from "antd";
+import { Button, Checkbox, DatePicker, Tooltip } from "antd";
 import { CloseOutlined, LockOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { IndicatorDto } from "../../../../services/masterDataService";
 import { IndicatorApprovalStatus, IndicatorApprovalStatusLabels, IndicatorApprovalStatusColors } from "../../../../types/laboratoryTask";
+import StatusTag from "../../../../components/common/StatusTag";
 
 interface IndicatorRowProps {
   id: string; // IndicatorMethodKey: indicatorId_testMethodId
@@ -104,9 +105,9 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
         {unitPrice?.toLocaleString("vi-VN")}đ
       </span>
       {statusLabel && (
-        <Tag color={statusColor} style={{ margin: 0, fontSize: 11, flexShrink: 0 }}>
+        <StatusTag color={statusColor} style={{ fontSize: 11, flexShrink: 0, minWidth: 60 }}>
           {statusLabel}
-        </Tag>
+        </StatusTag>
       )}
       <DatePicker
         value={transferDate}

@@ -3,6 +3,7 @@ import { Modal, Button, Descriptions, Tag, Card, Timeline } from "antd";
 import dayjs from "dayjs";
 import { NCRStatus } from "../../../services/ncrService";
 import { NCRDisplay, NCR_TYPES, SEVERITY_CONFIG, STATUS_CONFIG } from "../hooks";
+import StatusTag from "../../../components/common/StatusTag";
 
 interface NCRDetailModalProps {
   open: boolean;
@@ -49,9 +50,9 @@ const NCRDetailModal: React.FC<NCRDetailModalProps> = ({ open, ncr, onClose }) =
       <Descriptions bordered column={2}>
         <Descriptions.Item label="Mã NCR">{ncr.ncrNumber}</Descriptions.Item>
         <Descriptions.Item label="Trạng thái">
-          <Tag color={STATUS_CONFIG[ncr.status]?.color}>
+          <StatusTag color={STATUS_CONFIG[ncr.status]?.color}>
             {STATUS_CONFIG[ncr.status]?.text}
-          </Tag>
+          </StatusTag>
         </Descriptions.Item>
         <Descriptions.Item label="Tiêu đề" span={2}>
           {ncr.title}

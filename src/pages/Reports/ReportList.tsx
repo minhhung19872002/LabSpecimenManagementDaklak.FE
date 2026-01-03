@@ -12,7 +12,6 @@ import {
   Modal,
   Descriptions,
   Divider,
-  Tag,
 } from "antd";
 import {
   SearchOutlined,
@@ -24,6 +23,7 @@ import {
 import QRCodeGenerator, { MiniQRCode } from "../../components/common/QRCodeGenerator";
 import { useReportList, getStatusConfig } from "./hooks";
 import { ReportFormModal, getReportColumns } from "./components";
+import StatusTag from "../../components/common/StatusTag";
 
 const { RangePicker } = DatePicker;
 
@@ -202,9 +202,9 @@ const ReportList: React.FC = () => {
                 {selectedReport.reportNumber}
               </Descriptions.Item>
               <Descriptions.Item label="Trạng thái">
-                <Tag color={getStatusConfig(selectedReport.status).color}>
+                <StatusTag color={getStatusConfig(selectedReport.status).color}>
                   {getStatusConfig(selectedReport.status).text}
-                </Tag>
+                </StatusTag>
               </Descriptions.Item>
               <Descriptions.Item label="Số yêu cầu">
                 {selectedReport.requestNumber}

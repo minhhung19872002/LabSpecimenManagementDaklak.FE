@@ -1,8 +1,9 @@
-import { Button, Space, Tag, Popconfirm, Typography } from "antd";
+import { Button, Space, Popconfirm, Typography, Tag } from "antd";
 import { EditOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { Subcontractor } from "../hooks";
+import StatusTag from "../../../components/common/StatusTag";
 
 const { Text } = Typography;
 
@@ -19,7 +20,7 @@ const getStatusTag = (status: string) => {
     pending: { color: "orange", text: "Chờ đánh giá" },
   };
   const statusConfig = config[status] || { color: "default", text: status };
-  return <Tag color={statusConfig.color}>{statusConfig.text}</Tag>;
+  return <StatusTag color={statusConfig.color}>{statusConfig.text}</StatusTag>;
 };
 
 export const getSubcontractorColumns = (

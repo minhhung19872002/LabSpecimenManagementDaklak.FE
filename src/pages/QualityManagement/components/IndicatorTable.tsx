@@ -9,6 +9,7 @@ import {
   Checkbox,
   Typography,
 } from "antd";
+import StatusTag from "../../../components/common/StatusTag";
 import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { formatDate } from "../../../utils/formatters";
@@ -54,9 +55,9 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   onPendingSelectChange,
 }) => {
   const getApprovalStatusTag = (status: QualityIndicatorApprovalStatus) => (
-    <Tag color={QualityIndicatorApprovalStatusColors[status]}>
+    <StatusTag color={QualityIndicatorApprovalStatusColors[status]}>
       {QualityIndicatorApprovalStatusLabels[status]}
-    </Tag>
+    </StatusTag>
   );
 
   // Check if actions should be disabled based on task status

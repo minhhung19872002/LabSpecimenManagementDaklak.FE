@@ -9,6 +9,7 @@ import {
 import { formatDate } from "../../../utils/formatters";
 import SampleImagesButton from "../components/SampleImagesButton";
 import IndicatorImageCell from "../../../components/common/IndicatorImageCell";
+import StatusTag from "../../../components/common/StatusTag";
 
 const { Text } = Typography;
 
@@ -35,9 +36,9 @@ export const getSampleColumns = ({
       <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
         <span>{value}</span>
         {record.isCustomerCancelled && (
-          <Tag color="volcano" style={{ margin: 0, fontSize: 10 }}>
+          <StatusTag color="volcano" style={{ fontSize: 10, minWidth: 50 }}>
             KH hủy
-          </Tag>
+          </StatusTag>
         )}
       </div>
     ),
@@ -166,12 +167,12 @@ export const getSampleColumns = ({
               )}
               {/* Trạng thái duyệt */}
               {hasApprovalStatus && approvalStatusLabel && (
-                <Tag
+                <StatusTag
                   color={approvalStatusColor || "default"}
-                  style={{ margin: 0, fontSize: 10 }}
+                  style={{ fontSize: 10, minWidth: 55 }}
                 >
                   {approvalStatusLabel}
-                </Tag>
+                </StatusTag>
               )}
             </div>
             <div style={{ fontSize: 10, color: "#888", marginTop: 2 }}>

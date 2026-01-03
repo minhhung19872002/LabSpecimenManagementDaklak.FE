@@ -1,5 +1,5 @@
 import React from "react";
-import { Tag, Space, Typography } from "antd";
+import { Space, Typography } from "antd";
 import { CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
 import {
   TestRequestStatus,
@@ -9,6 +9,7 @@ import {
   SamplingRequirement,
   SampleStorageOption,
 } from "../../../../types/testRequest";
+import StatusTag from "../../../../components/common/StatusTag";
 
 const { Text } = Typography;
 
@@ -33,7 +34,7 @@ export const BoolItem: React.FC<{ value: boolean; label: string }> = ({
 export const getStatusTag = (status: TestRequestStatus) => {
   const label = TestRequestStatusLabels[status] || status.toString();
   const color = TestRequestStatusColors[status] || "default";
-  return <Tag color={color}>{label}</Tag>;
+  return <StatusTag color={color}>{label}</StatusTag>;
 };
 
 export const getResultLanguageText = (lang: ResultLanguage) => {

@@ -72,7 +72,7 @@ export const theme: ThemeConfig = {
   token: {
     // Colors
     colorPrimary: colors.primary,
-    colorSuccess: colors.success,
+    // colorSuccess: colors.success,
     colorError: colors.error,
     colorWarning: colors.warning,
     colorInfo: colors.primary,

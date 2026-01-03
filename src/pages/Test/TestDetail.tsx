@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Descriptions, Button, Space, Spin, Tag, message } from 'antd';
+import { Card, Descriptions, Button, Space, Spin, message } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeftOutlined, EditOutlined } from '@ant-design/icons';
@@ -8,6 +8,7 @@ import { TestDto, TestStatus } from '../../types/test';
 import dayjs from 'dayjs';
 import './TestDetail.css';
 import { PATH_ROUTES } from '../../constants';
+import StatusTag from '../../components/common/StatusTag';
 
 const TestDetail: React.FC = () => {
   const [test, setTest] = useState<TestDto | null>(null);
@@ -89,7 +90,7 @@ const TestDetail: React.FC = () => {
         <Descriptions bordered column={2}>
           <Descriptions.Item label={t('test.code')}>{test.code}</Descriptions.Item>
           <Descriptions.Item label={t('test.status.label')}>
-            <Tag color={getStatusColor(test.status)}>{getStatusText(test.status)}</Tag>
+            <StatusTag color={getStatusColor(test.status)}>{getStatusText(test.status)}</StatusTag>
           </Descriptions.Item>
           <Descriptions.Item label={t('test.name')} span={2}>{test.name}</Descriptions.Item>
           <Descriptions.Item label={t('test.specimenCode')}>{test.specimenCode}</Descriptions.Item>

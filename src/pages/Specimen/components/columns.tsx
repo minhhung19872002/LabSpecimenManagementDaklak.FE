@@ -1,4 +1,4 @@
-import { Button, Space, Tag } from "antd";
+import { Button, Space } from "antd";
 import { EyeOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
@@ -9,15 +9,16 @@ import {
   SampleStorageStatusColors,
 } from "../../../types/sampleStorage";
 import { formatDate } from "../../../utils/formatters";
+import StatusTag from "../../../components/common/StatusTag";
 
 interface GetColumnsOptions {
   onView: (record: SampleStorageDto) => void;
 }
 
 const getStatusTag = (status: SampleStorageStatus) => (
-  <Tag color={SampleStorageStatusColors[status]}>
+  <StatusTag color={SampleStorageStatusColors[status]}>
     {SampleStorageStatusLabels[status]}
-  </Tag>
+  </StatusTag>
 );
 
 export const getSpecimenColumns = (

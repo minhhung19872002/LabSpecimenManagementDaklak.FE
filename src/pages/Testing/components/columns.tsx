@@ -1,5 +1,5 @@
 import React from "react";
-import { Tag, Typography } from "antd";
+import { Typography } from "antd";
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -14,6 +14,7 @@ import {
   TestingStatusColors,
 } from "../../../types/testing";
 import { formatDate } from "../../../utils/formatters";
+import StatusTag from "../../../components/common/StatusTag";
 
 const { Text } = Typography;
 
@@ -30,9 +31,9 @@ const getStatusTag = (status: TestingStatus) => {
   };
 
   return (
-    <Tag color={color} icon={iconMap[status]}>
+    <StatusTag color={color} icon={iconMap[status]}>
       {label}
-    </Tag>
+    </StatusTag>
   );
 };
 

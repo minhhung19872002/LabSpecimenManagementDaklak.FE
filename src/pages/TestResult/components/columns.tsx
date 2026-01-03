@@ -7,6 +7,7 @@ import {
   CloseCircleOutlined,
 } from "@ant-design/icons";
 import { TestResultDto, ResultApprovalStatus } from "../../../types/testResult";
+import StatusTag from "../../../components/common/StatusTag";
 
 interface GetColumnsOptions {
   onView: (id: string) => void;
@@ -123,9 +124,9 @@ export const getTestResultColumns = (options: GetColumnsOptions) => [
     key: "approvalStatus",
     width: 140,
     render: (status: ResultApprovalStatus) => (
-      <Tag color={getApprovalStatusColor(status)}>
+      <StatusTag color={getApprovalStatusColor(status)}>
         {getApprovalStatusText(status)}
-      </Tag>
+      </StatusTag>
     ),
   },
   {
