@@ -8,9 +8,9 @@ import { PATH_ROUTES } from './routes';
  * - Admin: Tất cả các chức năng
  * - Kỹ thuật viên (KTV): Quản lý thử nghiệm, Quản lý mẫu
  * - Quản lý chất lượng (QLCL): Dashboard, Quản lý phiếu yêu cầu, Quản lý công việc,
- *                              Quản lý xét nghiệm, Quản lý mẫu, Quản lý chất lượng
+ *                              Quản lý thử nghiệm, Quản lý mẫu, Quản lý chất lượng
  * - Bộ phận giao nhận mẫu: Quản lý phiếu yêu cầu
- * - Quản lý kỹ thuật (QLKT): Dashboard, Quản lý công việc, Quản lý xét nghiệm, Quản lý mẫu
+ * - Quản lý kỹ thuật (QLKT): Dashboard, Quản lý công việc, Quản lý thử nghiệm, Quản lý mẫu
  *
  * Các trang còn lại: Chỉ Admin
  */
@@ -47,7 +47,7 @@ export const ROUTE_PERMISSIONS: Record<string, string[]> = {
   ],
 
   // ============================================
-  // Quản lý xét nghiệm/thử nghiệm - Admin, QLCL, QLKT, KTV
+  // Quản lý thử nghiệm/thử nghiệm - Admin, QLCL, QLKT, KTV
   // ============================================
   [PATH_ROUTES.testing.index]: [
     ROLES.ADMIN,

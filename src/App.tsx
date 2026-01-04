@@ -102,9 +102,7 @@ const StatisticsPage = Loadable(
 const NCRList = Loadable(lazy(() => import("./pages/NCR/NCRList")));
 
 // Receipt - Phiếu thu
-const ReceiptList = Loadable(
-  lazy(() => import("./pages/Receipt/ReceiptList"))
-);
+const ReceiptList = Loadable(lazy(() => import("./pages/Receipt/ReceiptList")));
 const ReceiptDetail = Loadable(
   lazy(() => import("./pages/Receipt/ReceiptDetail"))
 );
@@ -117,7 +115,7 @@ const TaskManagementDetail = Loadable(
   lazy(() => import("./pages/TaskManagement/TaskManagementDetail"))
 );
 
-// Testing - Quản lý xét nghiệm (KTV view)
+// Testing - Quản lý thử nghiệm (KTV view)
 const TestingList = Loadable(lazy(() => import("./pages/Testing/TestingList")));
 const TestingDetail = Loadable(
   lazy(() => import("./pages/Testing/TestingDetail"))
@@ -248,7 +246,7 @@ function App() {
           <Route path="tasks" element={<TaskManagementList />} />
           <Route path="tasks/:id" element={<TaskManagementDetail />} />
 
-          {/* Testing - Quản lý xét nghiệm (KTV view) */}
+          {/* Testing - Quản lý thử nghiệm (KTV view) */}
           <Route path="testing" element={<TestingList />} />
           <Route path="testing/:id" element={<TestingDetail />} />
 

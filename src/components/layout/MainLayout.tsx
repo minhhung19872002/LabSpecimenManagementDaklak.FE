@@ -379,7 +379,7 @@ const MainLayout: React.FC = () => {
         {
           key: "testManagement",
           icon: <ExperimentOutlined />,
-          label: menuLabel("Quản lý xét nghiệm"),
+          label: menuLabel("Quản lý thử nghiệm"),
           onClick: () => navigate(PATH_ROUTES.testing.index),
           roles: [
             ROLES.ADMIN,

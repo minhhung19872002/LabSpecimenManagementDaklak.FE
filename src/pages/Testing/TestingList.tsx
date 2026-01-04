@@ -104,7 +104,7 @@ const TestingList: React.FC = () => {
         title={
           <Space>
             <ExperimentOutlined />
-            Quản lý xét nghiệm
+            Quản lý thử nghiệm
           </Space>
         }
         extra={
