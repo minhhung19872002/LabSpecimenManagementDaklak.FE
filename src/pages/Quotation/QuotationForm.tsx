@@ -368,9 +368,6 @@ const QuotationForm: React.FC = () => {
             <Form.Item
               name="customerName"
               label="Tên CS/DN"
-              rules={[
-                { required: true, message: "Vui lòng nhập tên CS/DN" },
-              ]}
               style={{ marginBottom: 0 }}
             >
               <AutoComplete
