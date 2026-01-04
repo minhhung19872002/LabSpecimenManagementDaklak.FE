@@ -8,11 +8,13 @@ const { Title, Text } = Typography;
 interface CostInfoSectionProps {
   totalSampleCost: number;
   sampleTypeTask: boolean;
+  isEditMode: boolean;
 }
 
 const CostInfoSection: React.FC<CostInfoSectionProps> = ({
   totalSampleCost,
   sampleTypeTask,
+  isEditMode,
 }) => {
   return (
     <div className="form-section">
@@ -59,18 +61,21 @@ const CostInfoSection: React.FC<CostInfoSectionProps> = ({
             </Col>
           </Row>
         </Col>
-        <Col xs={24}>
-          <Row align="middle">
-            <Col xs={6}>
-              <Text>Số phiếu thu:</Text>
-            </Col>
-            <Col xs={18}>
-              <Form.Item name="receiptNumber" style={{ marginBottom: 0 }}>
-                <Input size="small" placeholder="Số phiếu thu TTDV..." />
-              </Form.Item>
-            </Col>
-          </Row>
-        </Col>
+        {/* Chỉ hiển thị "Số phiếu thu" khi đang chỉnh sửa (không hiển thị khi tạo mới) */}
+        {isEditMode && (
+          <Col xs={24}>
+            <Row align="middle">
+              <Col xs={6}>
+                <Text>Số phiếu thu:</Text>
+              </Col>
+              <Col xs={18}>
+                <Form.Item name="receiptNumber" style={{ marginBottom: 0 }}>
+                  <Input size="small" placeholder="Số phiếu thu TTDV..." />
+                </Form.Item>
+              </Col>
+            </Row>
+          </Col>
+        )}
       </Row>
     </div>
   );

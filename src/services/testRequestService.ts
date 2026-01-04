@@ -340,6 +340,14 @@ export const testRequestService = {
     await api.post(`${BASE_URL}/${id}/cancel-request`);
   },
 
+  /**
+   * Sinh số hợp đồng tự động với format HDYYYYMMDD###
+   */
+  generateContractNumber: async (): Promise<string> => {
+    const response = await api.get<string>(`${BASE_URL}/generate-contract-number`);
+    return response.data;
+  },
+
 };
 
 // Sample selection DTO for BM01 result form
