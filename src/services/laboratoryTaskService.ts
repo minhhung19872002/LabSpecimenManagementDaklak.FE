@@ -284,6 +284,18 @@ export const laboratoryTaskService = {
       `${BASE_URL}/lab-technician-pending-tasks`
     );
     return response.data;
+  },
+
+  /**
+   * Cập nhật ghi chú cho chỉ tiêu
+   */
+  updateIndicatorNote: async (indicatorId: string, note: string | null): Promise<LaboratoryTaskIndicatorDto> => {
+    const response = await api.put<LaboratoryTaskIndicatorDto>(
+      `${BASE_URL}/indicators/${indicatorId}/note`,
+      JSON.stringify(note),
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+    return response.data;
   }
 };
 

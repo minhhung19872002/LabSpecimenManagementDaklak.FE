@@ -76,6 +76,7 @@ export interface LaboratoryTaskIndicatorDto {
   assignedDate?: string;  // Ngày giao việc cho KTV
   testDate?: string;  // Ngày thử nghiệm (ngày KTV bắt đầu/check-in)
   result?: string;
+  note?: string;  // Ghi chú từ KTV
   unit?: string;
   entryDate?: string;
   enteredById?: string;

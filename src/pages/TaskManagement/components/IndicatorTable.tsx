@@ -41,6 +41,7 @@ interface IndicatorTableProps {
   onMethodChange: (indicatorId: string, methodId: string) => void;
   onTechnicianChange: (indicatorId: string, technicianId: string) => void;
   onApprove: (indicatorId: string, approve: boolean, reason?: string, standardId?: string | null) => void;
+  onUpdateNote?: (indicatorId: string, note: string | null) => Promise<void>;
   loading?: boolean;
   // Bulk selection props
   showCheckbox?: boolean;
@@ -63,6 +64,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   onMethodChange,
   onTechnicianChange,
   onApprove,
+  onUpdateNote,
   loading = false,
   showCheckbox = false,
   selectedIndicatorIds = [],
@@ -92,6 +94,9 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     visible: false,
   });
   const [rejectForm] = Form.useForm();
+
+  // State for saving note (track which indicator is being saved)
+  const [savingNoteId, setSavingNoteId] = useState<string | null>(null);
 
   // Load standards on mount
   useEffect(() => {
@@ -198,6 +203,23 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     }
   };
 
+  // Handle save note on blur
+  const handleSaveNote = async (indicatorId: string, newValue: string, originalValue: string) => {
+    if (!onUpdateNote) return;
+
+    // Nếu không thay đổi thì không gọi API
+    if (newValue === originalValue) return;
+
+    setSavingNoteId(indicatorId);
+    try {
+      await onUpdateNote(indicatorId, newValue || null);
+    } catch (error) {
+      console.error("Error updating note:", error);
+    } finally {
+      setSavingNoteId(null);
+    }
+  };
+
   const columns = [
     {
       title: "Tên chỉ tiêu",
@@ -279,6 +301,44 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       width: 200,
       render: (value: string) => {
         return <Text>{value || "-"}</Text>;
+      },
+    },
+    {
+      title: "Ghi chú",
+      dataIndex: "note",
+      key: "note",
+      width: 150,
+      render: (value: string, record: LaboratoryTaskIndicatorDto) => {
+        // Không cho edit khi đã duyệt hoặc KH hủy
+        const isApproved = record.approvalStatus === IndicatorApprovalStatus.Approved;
+        const isCancelled = record.approvalStatus === IndicatorApprovalStatus.CustomerCancelled;
+        const canEditNote = !isApproved && !isCancelled && onUpdateNote;
+        const isSaving = savingNoteId === record.id;
+
+        // Read-only mode
+        if (!canEditNote) {
+          return value ? (
+            <Tooltip title={value}>
+              <Text>{value}</Text>
+            </Tooltip>
+          ) : (
+            <Text type="secondary">-</Text>
+          );
+        }
+
+        // Edit mode - always show Input
+        return (
+          <Input
+            size="small"
+            defaultValue={value || ""}
+            onBlur={(e) => handleSaveNote(record.id, e.target.value, value || "")}
+            onPressEnter={(e) => (e.target as HTMLInputElement).blur()}
+            disabled={isSaving}
+            maxLength={500}
+            placeholder="Nhập ghi chú..."
+            style={{ width: "100%" }}
+          />
+        );
       },
     },
     {
@@ -605,7 +665,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         rowKey="id"
         pagination={false}
         size="small"
-        scroll={{ x: 2020 }}
+        scroll={{ x: 2170 }}
         loading={loading}
         rowSelection={rowSelection}
       />
