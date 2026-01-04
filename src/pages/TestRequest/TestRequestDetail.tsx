@@ -1,6 +1,6 @@
 // @ts-nocheck
-import React, { useState, useEffect } from "react";
-import { Card, message, Spin, Modal } from "antd";
+import React, { useState, useEffect, useMemo } from "react";
+import { Card, message, Spin, Modal, Input, Form } from "antd";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { testRequestService } from "../../services/testRequestService";
@@ -13,6 +13,7 @@ import {
 import { IndicatorApprovalStatus } from "../../types/laboratoryTask";
 import "./TestRequestDetail.css";
 import { API_BASE_URL } from "../../services/api";
+import { ROLES, STORAGE_KEYS } from "../../constants";
 
 // Components
 import TestRequestDetailContainer from "./components/TestRequestDetailContainer";
@@ -41,12 +42,16 @@ const TestRequestDetail: React.FC = () => {
     useState(false);
   const [selectedSampleForImages, setSelectedSampleForImages] =
     useState<TestRequestSampleDto | null>(null);
+  const [cancelModalVisible, setCancelModalVisible] = useState(false);
 
   // Loading states
   const [printingTestRequest, setPrintingTestRequest] = useState(false);
   const [sendingSample, setSendingSample] = useState(false);
   const [sendingToAccounting, setSendingToAccounting] = useState(false);
   const [cancellingRequest, setCancellingRequest] = useState(false);
+
+  // Form for cancel reason
+  const [cancelForm] = Form.useForm();
 
   useEffect(() => {
     if (id) {
@@ -159,34 +164,39 @@ const TestRequestDetail: React.FC = () => {
     }
   };
 
-  // Handle cancel request (Hủy yêu cầu)
+  // Handle cancel request - open modal to enter reason
   const handleCancelRequest = () => {
     if (!id) return;
+    cancelForm.resetFields();
+    setCancelModalVisible(true);
+  };
 
-    Modal.confirm({
-      title: "Xác nhận hủy yêu cầu",
-      content: "Bạn có chắc chắn muốn hủy phiếu yêu cầu này? Phiếu thu liên quan cũng sẽ bị hủy.",
-      okText: "Hủy yêu cầu",
-      okType: "danger",
-      cancelText: "Không",
-      centered: true,
-      onOk: async () => {
-        setCancellingRequest(true);
-        try {
-          await testRequestService.cancelRequest(id);
-          message.success("Đã hủy phiếu yêu cầu thành công");
-          loadData(id);
-        } catch (error: any) {
-          console.error("Error cancelling request:", error);
-          message.error(
-            error?.response?.data?.error?.message ||
-              "Không thể hủy yêu cầu. Vui lòng thử lại."
-          );
-        } finally {
-          setCancellingRequest(false);
-        }
-      },
-    });
+  // Handle confirm cancel with reason
+  const handleConfirmCancel = async () => {
+    if (!id) return;
+
+    try {
+      const values = await cancelForm.validateFields();
+      setCancellingRequest(true);
+
+      await testRequestService.cancelRequest(id, values.reason);
+      message.success("Đã hủy phiếu yêu cầu thành công");
+      setCancelModalVisible(false);
+      cancelForm.resetFields();
+      loadData(id);
+    } catch (error: any) {
+      if (error.errorFields) {
+        // Form validation error
+        return;
+      }
+      console.error("Error cancelling request:", error);
+      message.error(
+        error?.response?.data?.error?.message ||
+          "Không thể hủy yêu cầu. Vui lòng thử lại."
+      );
+    } finally {
+      setCancellingRequest(false);
+    }
   };
 
   // Handle send result
@@ -299,6 +309,21 @@ const TestRequestDetail: React.FC = () => {
     return approvedCount > 0;
   }, [data?.samples]);
 
+  // Check if user can print test request form (In phiếu XN)
+  // Only admin or SampleReceiver can see this button
+  const canPrintTestRequest = useMemo(() => {
+    try {
+      const userInfoStr = localStorage.getItem(STORAGE_KEYS.USER_INFO);
+      if (!userInfoStr) return false;
+
+      const userInfo = JSON.parse(userInfoStr);
+      const roles = userInfo.roles || [];
+      return roles.includes(ROLES.ADMIN) || roles.includes(ROLES.SAMPLE_RECEIVER);
+    } catch {
+      return false;
+    }
+  }, []);
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -335,6 +360,7 @@ const TestRequestDetail: React.FC = () => {
         onSendToAccounting={handleSendToAccounting}
         onCancelRequest={handleCancelRequest}
         canPrint={canPrint}
+        canPrintTestRequest={canPrintTestRequest}
       />
 
       {/* Print Indicator Modal (In KQ / In KQ hỗn hợp) */}
@@ -377,6 +403,42 @@ const TestRequestDetail: React.FC = () => {
         }}
         sample={selectedSampleForImages}
       />
+
+      {/* Cancel Request Modal */}
+      <Modal
+        title="Hủy yêu cầu"
+        open={cancelModalVisible}
+        onOk={handleConfirmCancel}
+        onCancel={() => {
+          setCancelModalVisible(false);
+          cancelForm.resetFields();
+        }}
+        confirmLoading={cancellingRequest}
+        okText="Xác nhận hủy"
+        okType="danger"
+        cancelText="Đóng"
+        centered
+        width={500}
+        styles={{
+          mask: { width: "100%" },
+          wrapper: { width: "100%" },
+        }}
+      >
+        <Form form={cancelForm} layout="vertical">
+          <Form.Item
+            name="reason"
+            label="Lý do hủy"
+            rules={[{ required: true, message: "Vui lòng nhập lý do hủy" }]}
+          >
+            <Input.TextArea
+              rows={4}
+              placeholder="Nhập lý do hủy yêu cầu..."
+              maxLength={500}
+              showCount
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
     </>
   );
 };

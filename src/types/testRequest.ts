@@ -148,11 +148,23 @@ export const canSendToAccounting = (status: TestRequestStatus): boolean => {
 };
 
 /**
- * Kiểm tra có thể hủy yêu cầu không
+ * Kiểm tra có thể hủy yêu cầu không (logic cũ - chỉ New và PendingPayment)
  * Điều kiện: status = New hoặc PendingPayment
+ * @deprecated Sử dụng canCancelRequest thay thế
  */
 export const canCancelPaymentRequest = (status: TestRequestStatus): boolean => {
   return status === TestRequestStatus.New || status === TestRequestStatus.PendingPayment;
+};
+
+/**
+ * Kiểm tra có thể hủy yêu cầu không (logic mới)
+ * Điều kiện: tất cả status NGOẠI TRỪ Completed, ResultSent và Cancelled
+ * Cho phép hủy khi KH đổi ý không muốn làm nữa
+ */
+export const canCancelRequest = (status: TestRequestStatus): boolean => {
+  return status !== TestRequestStatus.Completed &&
+         status !== TestRequestStatus.ResultSent &&
+         status !== TestRequestStatus.Cancelled;
 };
 
 /**
@@ -598,11 +610,12 @@ export interface RejectChangesDto {
 // Timeline DTOs
 export interface TimelineStepDto {
   title: string;
-  status: "completed" | "current" | "pending";
+  status: "completed" | "current" | "pending" | "cancelled";
   date?: string;
   userId?: string;
   userName?: string;
   extraInfo?: string[];
+  note?: string;
 }
 
 export interface TestRequestTimelineDto {

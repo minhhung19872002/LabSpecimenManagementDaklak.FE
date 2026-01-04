@@ -333,11 +333,13 @@ export const testRequestService = {
   },
 
   /**
-   * Hủy yêu cầu khi đang chờ thanh toán
-   * Hủy Receipt + chuyển TestRequest thành Cancelled
+   * Hủy yêu cầu
+   * Hủy Receipt (nếu có) + chuyển TestRequest thành Cancelled
+   * @param id - ID của yêu cầu
+   * @param reason - Lý do hủy (bắt buộc)
    */
-  cancelRequest: async (id: string): Promise<void> => {
-    await api.post(`${BASE_URL}/${id}/cancel-request`);
+  cancelRequest: async (id: string, reason: string): Promise<void> => {
+    await api.post(`${BASE_URL}/${id}/cancel-request`, { reason });
   },
 
   /**
