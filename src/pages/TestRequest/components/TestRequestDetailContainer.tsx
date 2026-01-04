@@ -28,7 +28,7 @@ import {
   canComplete,
   TestRequestSampleDto,
   canSendToAccounting,
-  canCancelPaymentRequest,
+  canCancelRequest,
   isCancelledRequest,
 } from "../../../types/testRequest";
 import dayjs from "dayjs";
@@ -65,6 +65,7 @@ interface TestRequestDetailContainerProps {
   onSendToAccounting: () => void;
   onCancelRequest: () => void;
   canPrint: boolean;
+  canPrintTestRequest: boolean;
 }
 
 const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
@@ -85,10 +86,12 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
   onSendToAccounting,
   onCancelRequest,
   canPrint,
+  canPrintTestRequest,
 }) => {
   const navigate = useNavigate();
 
   // Render action buttons based on status
+  // Thứ tự ưu tiên: Primary actions > In phiếu > In KQ > Hủy yêu cầu (danger cuối cùng)
   const renderActionButtons = () => {
     const buttons: React.ReactNode[] = [];
 
@@ -97,7 +100,7 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
       return null;
     }
 
-    // === PAYMENT FLOW ===
+    // === 1. PRIMARY ACTIONS (ưu tiên cao nhất) ===
 
     // Gửi kế toán - chỉ khi status = New
     if (canSendToAccounting(data.status)) {
@@ -109,36 +112,6 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
           loading={sendingToAccounting}
         >
           Gửi kế toán
-        </Button>
-      );
-    }
-
-    // Hủy yêu cầu - xuất hiện khi status = New hoặc PendingPayment
-    if (canCancelPaymentRequest(data.status)) {
-      buttons.push(
-        <Button
-          key="cancel-request"
-          danger
-          onClick={onCancelRequest}
-          loading={cancellingRequest}
-        >
-          Hủy yêu cầu
-        </Button>
-      );
-    }
-
-    // === AFTER PAYMENT ===
-
-    // In phiếu XN - khi status = Paid
-    if (data.status === TestRequestStatus.Paid) {
-      buttons.push(
-        <Button
-          key="print"
-          icon={<FileTextOutlined />}
-          onClick={onPrintTestRequest}
-          loading={printingTestRequest}
-        >
-          In phiếu XN
         </Button>
       );
     }
@@ -157,9 +130,7 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
       );
     }
 
-    // === RESULT FLOW ===
-
-    // Approved - Gửi kết quả
+    // Gửi kết quả - khi status = Approved
     if (data.status === TestRequestStatus.Approved) {
       buttons.push(
         <Button key="send-result" type="primary" onClick={onSendResult}>
@@ -168,7 +139,7 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
       );
     }
 
-    // ResultSent - Hoàn thành
+    // Hoàn thành - khi status = ResultSent
     if (canComplete(data.status)) {
       buttons.push(
         <Button key="complete" type="primary" onClick={onComplete}>
@@ -177,8 +148,25 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
       );
     }
 
-    // In KQ và In KQ hỗn hợp - hiển thị khi có thể in (có chỉ tiêu đã duyệt)
-    // Hiển thị từ trạng thái PendingApproval trở đi
+    // === 2. IN PHIẾU XN (ưu tiên trung bình) ===
+
+    // In phiếu XN - chỉ admin hoặc SampleReceiver mới thấy
+    if (canPrintTestRequest) {
+      buttons.push(
+        <Button
+          key="print"
+          icon={<FileTextOutlined />}
+          onClick={onPrintTestRequest}
+          loading={printingTestRequest}
+        >
+          In phiếu XN
+        </Button>
+      );
+    }
+
+    // === 3. IN KẾT QUẢ (ưu tiên thấp hơn) ===
+
+    // In KQ và In KQ hỗn hợp - hiển thị từ trạng thái PendingApproval trở đi
     if (
       data.status === TestRequestStatus.PendingApproval ||
       data.status === TestRequestStatus.Approved ||
@@ -203,6 +191,22 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
           disabled={!canPrint}
         >
           In KQ Hỗn hợp
+        </Button>
+      );
+    }
+
+    // === 4. HỦY YÊU CẦU (danger - cuối cùng) ===
+
+    // Hủy yêu cầu - hiển thị ở tất cả status trừ Completed, ResultSent và Cancelled
+    if (canCancelRequest(data.status)) {
+      buttons.push(
+        <Button
+          key="cancel-request"
+          danger
+          onClick={onCancelRequest}
+          loading={cancellingRequest}
+        >
+          Hủy yêu cầu
         </Button>
       );
     }

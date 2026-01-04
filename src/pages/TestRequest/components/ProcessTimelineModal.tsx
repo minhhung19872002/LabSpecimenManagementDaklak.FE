@@ -1,11 +1,42 @@
 import React, { useEffect, useState } from "react";
 import { Modal, Timeline, Typography, Spin, message } from "antd";
-import { CheckCircleFilled, ClockCircleFilled } from "@ant-design/icons";
+import { CheckCircleFilled, ClockCircleFilled, CloseCircleFilled } from "@ant-design/icons";
 import { TestRequestTimelineDto, TimelineStepDto } from "../../../types/testRequest";
 import { testRequestService } from "../../../services/testRequestService";
 import { formatDateTime } from "../../../utils/formatters";
 
 const { Text } = Typography;
+
+// Component hiển thị lý do với "Xem thêm/Thu gọn"
+const NOTE_MAX_LENGTH = 80;
+
+const ExpandableNote: React.FC<{ note: string }> = ({ note }) => {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = note.length > NOTE_MAX_LENGTH;
+
+  if (!isLong) {
+    return (
+      <Text type="secondary" style={{ fontSize: 12, display: "block" }}>
+        Lý do: {note}
+      </Text>
+    );
+  }
+
+  return (
+    <Text type="secondary" style={{ fontSize: 12, display: "block" }}>
+      Lý do: {expanded ? note : `${note.slice(0, NOTE_MAX_LENGTH)}...`}{" "}
+      <a
+        onClick={(e) => {
+          e.stopPropagation();
+          setExpanded(!expanded);
+        }}
+        style={{ fontSize: 12 }}
+      >
+        {expanded ? "Thu gọn" : "Xem thêm"}
+      </a>
+    </Text>
+  );
+};
 
 interface ProcessTimelineModalProps {
   open: boolean;
@@ -48,6 +79,8 @@ const ProcessTimelineModal: React.FC<ProcessTimelineModalProps> = ({
         return <ClockCircleFilled style={{ fontSize: 18, color: "#faad14" }} />;
       case "pending":
         return <ClockCircleFilled style={{ fontSize: 18, color: "#d9d9d9" }} />;
+      case "cancelled":
+        return <CloseCircleFilled style={{ fontSize: 18, color: "#ff4d4f" }} />;
       default:
         return undefined;
     }
@@ -72,6 +105,8 @@ const ProcessTimelineModal: React.FC<ProcessTimelineModalProps> = ({
         return "Ngày tạo";
       case "Hoàn thành":
         return "Ngày hoàn thành";
+      case "Đã hủy":
+        return "Ngày hủy";
       default:
         return "Ngày";
     }
@@ -96,6 +131,8 @@ const ProcessTimelineModal: React.FC<ProcessTimelineModalProps> = ({
         return "Người gửi";
       case "Hoàn thành":
         return ""; // No user label for completion
+      case "Đã hủy":
+        return "Người hủy";
       default:
         return "Người thực hiện";
     }
@@ -105,13 +142,14 @@ const ProcessTimelineModal: React.FC<ProcessTimelineModalProps> = ({
     const dateLabel = getDateLabel(step.title);
     const userLabel = getUserLabel(step.title);
     const isPending = step.status === "pending";
+    const isCancelled = step.status === "cancelled";
 
     return (
       <div style={{ paddingBottom: 8 }}>
         <Text
           strong
           style={{
-            color: isPending ? "#999" : "#000",
+            color: isCancelled ? "#ff4d4f" : (isPending ? "#999" : "#000"),
             fontSize: 15,
             display: "block",
           }}
@@ -128,6 +166,7 @@ const ProcessTimelineModal: React.FC<ProcessTimelineModalProps> = ({
             {userLabel}: {step.userName}
           </Text>
         )}
+        {step.note && <ExpandableNote note={step.note} />}
         {step.extraInfo && step.extraInfo.length > 0 && !isPending && (
           <div style={{ marginTop: 4 }}>
             <Text type="secondary" style={{ fontSize: 12, display: "block" }}>
