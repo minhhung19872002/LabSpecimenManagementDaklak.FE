@@ -210,6 +210,17 @@ export const useTestRequestFormData = () => {
         });
       });
       setIndicatorMethodsMap(methodMap);
+
+      // Auto-generate contract number for new test request (create mode only)
+      if (!id) {
+        try {
+          const contractNumber = await testRequestService.generateContractNumber();
+          form.setFieldValue('contractNumber', contractNumber);
+          setSampleCodePrefix(contractNumber);
+        } catch (error) {
+          console.error("Failed to generate contract number:", error);
+        }
+      }
     } catch (error) {
       console.error("Failed to load master data:", error);
       message.error("Không thể tải dữ liệu danh mục");
