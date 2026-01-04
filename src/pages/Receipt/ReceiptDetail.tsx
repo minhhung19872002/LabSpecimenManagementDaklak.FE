@@ -452,14 +452,30 @@ const ReceiptDetail: React.FC = () => {
             Thông tin hợp đồng
           </Title>
           <Row gutter={[16, 12]}>
-            <Col xs={24} lg={12} xl={6}>
-              <div className="detail-item">
+            <Col xs={24} md={8}>
+              <div
+                className="detail-item"
+                style={{
+                  height: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
                 <Text type="secondary">Số HĐ:</Text>
                 <Text strong>{testRequest.contractNumber || "-"}</Text>
               </div>
             </Col>
-            <Col xs={24} lg={12} xl={6}>
-              <div className="detail-item">
+            <Col xs={24} md={8}>
+              <div
+                className="detail-item"
+                style={{
+                  height: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
                 <Text type="secondary">Ngày HĐ:</Text>
                 <Text strong>
                   {testRequest.contractDate
@@ -468,9 +484,14 @@ const ReceiptDetail: React.FC = () => {
                 </Text>
               </div>
             </Col>
-            <Col xs={24} lg={12} xl={6}>
-              <div className="detail-item">
-                <Text type="secondary">Số phiếu thu:</Text>
+            <Col xs={24} md={8}>
+              <div
+                className="detail-item"
+                style={{ display: "flex", alignItems: "center", gap: 8 }}
+              >
+                <Text type="secondary" style={{ whiteSpace: "nowrap" }}>
+                  Số phiếu thu:
+                </Text>
                 <Input
                   value={receiptNumber}
                   onChange={(e) =>
