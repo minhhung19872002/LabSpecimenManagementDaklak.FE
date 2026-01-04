@@ -297,6 +297,7 @@ const TestRequestForm: React.FC = () => {
             <CostInfoSection
               totalSampleCost={totalSampleCost}
               sampleTypeTask={sampleTypeTask}
+              isEditMode={isEditMode}
             />
 
             {/* Thông tin khác */}
