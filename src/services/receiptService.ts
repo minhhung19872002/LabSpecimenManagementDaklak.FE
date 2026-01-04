@@ -1,5 +1,10 @@
 import { api, PagedResultDto } from './api';
-import { ReceiptDto, GetReceiptListInput } from '../types/receipt';
+import {
+  ReceiptDto,
+  ReceiptDetailDto,
+  GetReceiptListInput,
+  UpdateReceiptDto,
+} from '../types/receipt';
 
 const BASE_URL = '/api/v1/receipts';
 
@@ -18,5 +23,26 @@ export const receiptService = {
   get: async (id: string): Promise<ReceiptDto> => {
     const response = await api.get<ReceiptDto>(`${BASE_URL}/${id}`);
     return response.data;
+  },
+
+  // Get receipt detail with full TestRequest data
+  getDetail: async (id: string): Promise<ReceiptDetailDto> => {
+    const response = await api.get<ReceiptDetailDto>(`${BASE_URL}/${id}/detail`);
+    return response.data;
+  },
+
+  // Update receipt info (receipt number, voucher code)
+  update: async (id: string, data: UpdateReceiptDto): Promise<void> => {
+    await api.put(`${BASE_URL}/${id}`, data);
+  },
+
+  // Mark as paid
+  markAsPaid: async (id: string): Promise<void> => {
+    await api.post(`${BASE_URL}/${id}/mark-paid`);
+  },
+
+  // Mark as unpaid
+  markAsUnpaid: async (id: string): Promise<void> => {
+    await api.post(`${BASE_URL}/${id}/mark-unpaid`);
   },
 };

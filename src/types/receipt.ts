@@ -35,6 +35,7 @@ export interface ReceiptDto {
   id: string;
   testRequestId: string;
   receiptNumber?: string;
+  voucherCode?: string; // Mã số biên lai
   status: ReceiptStatus;
   notes?: string;
   paidDate?: string;
@@ -60,4 +61,20 @@ export interface GetReceiptListInput {
   sorting?: string;
   skipCount?: number;
   maxResultCount?: number;
+}
+
+/**
+ * Receipt Detail DTO - includes full TestRequest data
+ */
+export interface ReceiptDetailDto extends ReceiptDto {
+  // TestRequest detail - import from testRequest.ts
+  testRequestDetail?: import('./testRequest').TestRequestDto;
+}
+
+/**
+ * DTO for updating receipt info
+ */
+export interface UpdateReceiptDto {
+  receiptNumber?: string;
+  voucherCode?: string;
 }

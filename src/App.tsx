@@ -102,6 +102,9 @@ const NCRList = Loadable(lazy(() => import("./pages/NCR/NCRList")));
 const ReceiptList = Loadable(
   lazy(() => import("./pages/Receipt/ReceiptList"))
 );
+const ReceiptDetail = Loadable(
+  lazy(() => import("./pages/Receipt/ReceiptDetail"))
+);
 
 // Task Management - Quản lý công việc khoa phòng
 const TaskManagementList = Loadable(
@@ -235,6 +238,7 @@ function App() {
 
           {/* Receipt - Phiếu thu */}
           <Route path="receipts" element={<ReceiptList />} />
+          <Route path="receipts/:id" element={<ReceiptDetail />} />
 
           {/* Task Management - Quản lý công việc khoa phòng */}
           <Route path="tasks" element={<TaskManagementList />} />
