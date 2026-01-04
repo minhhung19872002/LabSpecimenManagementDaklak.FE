@@ -116,6 +116,7 @@ const TestRequestForm: React.FC = () => {
     setExpandedLabGroups,
     sampleIndicatorIdMap,
     originalData,
+    sourceQuotationId,
     provinces,
     wards,
     setWards,
@@ -191,6 +192,7 @@ const TestRequestForm: React.FC = () => {
     originalData,
     isEditRequiresApproval,
     specimenTypes,
+    sourceQuotationId,
   });
 
   return (

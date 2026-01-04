@@ -33,7 +33,7 @@ export const getWorkReminderColumns = (
     key: "taskName",
     render: (text: string, record: SampleReceiverPendingTaskDto) => (
       <Text
-        type={record.status === TestRequestStatus.Pending ? "warning" : "secondary"}
+        type={record.status === TestRequestStatus.New ? "warning" : "secondary"}
         strong
       >
         {text}

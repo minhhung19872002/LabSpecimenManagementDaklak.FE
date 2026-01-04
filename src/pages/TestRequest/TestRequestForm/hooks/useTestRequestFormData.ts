@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Form, message } from "antd";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import dayjs from "dayjs";
 import { testRequestService } from "../../../../services/testRequestService";
 import {
@@ -48,10 +48,13 @@ import {
 } from "../types";
 import { extractOrderNum, generateSampleCode } from "../utils";
 import { PATH_ROUTES } from "../../../../constants";
+import { quotationService } from "../../../../services/quotationService";
 
 export const useTestRequestFormData = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const quotationId = searchParams.get("quotationId");
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
@@ -139,6 +142,12 @@ export const useTestRequestFormData = () => {
 
   // Snapshot của data gốc khi load form edit - dùng để so sánh thay đổi
   const [originalData, setOriginalData] = useState<any>(null);
+
+  // Store quotationId when creating from quotation
+  const [sourceQuotationId, setSourceQuotationId] = useState<string | null>(quotationId);
+
+  // Track if quotation has been loaded (to prevent re-loading)
+  const quotationLoadedRef = useRef(false);
 
   // Vietnam location states
   const [provinces] = useState<Province[]>(getAllProvinces());
@@ -522,6 +531,92 @@ export const useTestRequestFormData = () => {
     }
   };
 
+  // Load data from quotation (when creating test request from quotation)
+  const loadFromQuotation = async (quotationIdToLoad: string) => {
+    setLoadingData(true);
+    try {
+      const quotation = await quotationService.get(quotationIdToLoad);
+
+      // Find organization to get full info
+      const org = organizations.find((o) => o.id === quotation.organizationId);
+      if (org?.provinceCode) {
+        setWards(getWardsByProvince(org.provinceCode));
+      }
+
+      // Fill customer info from quotation
+      form.setFieldsValue({
+        customerName: quotation.customerName,
+        provinceCode: quotation.provinceCode || org?.provinceCode,
+        wardCode: quotation.wardCode || org?.wardCode,
+        address: quotation.address || org?.address,
+        taxCode: quotation.taxCode || org?.taxCode,
+        contactPerson: quotation.contactPerson || org?.contactPerson,
+        phone: quotation.phone || org?.phone,
+      });
+
+      // Calculate max sample count from items
+      const maxSampleCount = Math.max(...quotation.items.map((item) => item.sampleCount), 1);
+
+      // Generate samples based on max sample count
+      const generatedSamples: SampleFormData[] = [];
+      const generatedDates: Record<string, IndicatorDateInfo> = {};
+
+      for (let i = 0; i < maxSampleCount; i++) {
+        const sampleKey = `quotation-sample-${Date.now()}-${i}`;
+        const sampleCode = generateSampleCode(sampleCodePrefix, i + 1);
+
+        // Find indicators for this sample (all items with sampleCount > i)
+        const indicatorMethodsList: IndicatorMethodKey[] = [];
+        quotation.items.forEach((item) => {
+          if (item.sampleCount > i) {
+            // Handle case where testMethodId might be null/undefined
+            const testMethodId = item.testMethodId || "";
+            const methodKey = createIndicatorMethodKey(item.indicatorId, testMethodId);
+            indicatorMethodsList.push(methodKey);
+
+            // Set dates for indicators
+            if (!generatedDates[methodKey]) {
+              generatedDates[methodKey] = {
+                transferDate: dayjs(),
+                requestDate: dayjs(),
+              };
+            }
+          }
+        });
+
+        generatedSamples.push({
+          key: sampleKey,
+          sortOrder: i + 1,
+          sampleCode,
+          sampleName: "",
+          samplingAddress: "",
+          sampleQuantity: "",
+          status: SampleStatus.Normal,
+          statusText: "",
+          processingStatus: "",
+          notes: "",
+          storageLocation: "",
+          specimenTypeId: undefined,
+          specimenTypeName: "",
+          indicatorIds: indicatorMethodsList.map((k) => parseIndicatorMethodKey(k).indicatorId),
+          indicatorMethods: indicatorMethodsList,
+          attachments: [],
+        });
+      }
+
+      setSamples(generatedSamples);
+      setSelectedIndicatorDates(generatedDates);
+      setSourceQuotationId(quotationIdToLoad);
+
+      message.success(`Đã tải dữ liệu từ báo giá ${quotation.quotationNumber}`);
+    } catch (error) {
+      console.error("Failed to load quotation:", error);
+      message.error("Không thể tải dữ liệu từ báo giá");
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
   // Calculate total cost - now based on indicatorMethods with prices from TestMethodIndicator
   const calculateTotalCost = useCallback(() => {
     let total = 0;
@@ -635,6 +730,23 @@ export const useTestRequestFormData = () => {
       loadData();
     }
   }, [id]);
+
+  // Load from quotation when quotationId is present (create mode)
+  // Wait for indicatorMethodsMap and indicators to be loaded before loading from quotation
+  useEffect(() => {
+    if (
+      !isEditMode &&
+      quotationId &&
+      organizations.length > 0 &&
+      sampleCodePrefix &&
+      indicators.length > 0 &&
+      Object.keys(indicatorMethodsMap).length > 0 &&
+      !quotationLoadedRef.current
+    ) {
+      quotationLoadedRef.current = true;
+      loadFromQuotation(quotationId);
+    }
+  }, [quotationId, organizations, sampleCodePrefix, isEditMode, indicators, indicatorMethodsMap]);
 
   useEffect(() => {
     if (indicatorGroups.length > 0 && indicators.length > 0) {
@@ -779,6 +891,9 @@ export const useTestRequestFormData = () => {
 
     // Original data snapshot for change detection
     originalData,
+
+    // Quotation source
+    sourceQuotationId,
 
     // Location
     provinces,

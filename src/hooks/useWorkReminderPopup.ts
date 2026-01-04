@@ -165,7 +165,7 @@ export const useWorkReminderPopup = (): UseWorkReminderPopupResult => {
       intervalRef.current = setTimeout(async () => {
         const newTasks = await fetchTasks();
         if (newTasks.length > 0) {
-          const newHasPending = newTasks.some(t => t.status === TestRequestStatus.Pending);
+          const newHasPending = newTasks.some(t => t.status === TestRequestStatus.New);
           const newHasResultSent = newTasks.some(t => t.status === TestRequestStatus.ResultSent);
 
           if (shouldShowPopup(newHasPending, newHasResultSent)) {
@@ -200,7 +200,7 @@ export const useWorkReminderPopup = (): UseWorkReminderPopupResult => {
         return;
       }
 
-      const hasPending = taskList.some(t => t.status === TestRequestStatus.Pending);
+      const hasPending = taskList.some(t => t.status === TestRequestStatus.New);
       const hasResultSent = taskList.some(t => t.status === TestRequestStatus.ResultSent);
 
       // Check if should show based on elapsed time và task types

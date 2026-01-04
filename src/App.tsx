@@ -36,6 +36,9 @@ const Dashboard = Loadable(lazy(() => import("./pages/Dashboard/Dashboard")));
 const QuotationList = Loadable(
   lazy(() => import("./pages/Quotation/QuotationList"))
 );
+const QuotationView = Loadable(
+  lazy(() => import("./pages/Quotation/QuotationView"))
+);
 const QuotationForm = Loadable(
   lazy(() => import("./pages/Quotation/QuotationForm"))
 );
@@ -188,6 +191,7 @@ function App() {
           {/* Quotation Routes - Báo giá */}
           <Route path="quotations" element={<QuotationList />} />
           <Route path="quotations/create" element={<QuotationForm />} />
+          <Route path="quotations/view/:id" element={<QuotationView />} />
           <Route path="quotations/edit/:id" element={<QuotationForm />} />
 
           {/* Test Request Routes */}

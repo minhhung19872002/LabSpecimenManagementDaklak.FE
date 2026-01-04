@@ -90,7 +90,10 @@ const QuotationList: React.FC = () => {
       key: "quotationNumber",
       width: 160,
       render: (text, record) => (
-        <a onClick={() => navigate(PATH_ROUTES.quotations.edit(record.id))}>
+        <a onClick={(e) => {
+          e.stopPropagation();
+          navigate(PATH_ROUTES.quotations.view(record.id));
+        }}>
           {text}
         </a>
       ),
@@ -137,7 +140,7 @@ const QuotationList: React.FC = () => {
       align: "center",
       fixed: "right",
       render: (_, record) => (
-        <Space size="small">
+        <Space size="small" onClick={(e) => e.stopPropagation()}>
           <Button
             type="text"
             size="small"
@@ -215,6 +218,10 @@ const QuotationList: React.FC = () => {
           onChange: handlePageChange,
         }}
         scroll={{ x: 900 }}
+        onRow={(record) => ({
+          onClick: () => navigate(PATH_ROUTES.quotations.view(record.id)),
+          style: { cursor: "pointer" },
+        })}
       />
     </Card>
   );
