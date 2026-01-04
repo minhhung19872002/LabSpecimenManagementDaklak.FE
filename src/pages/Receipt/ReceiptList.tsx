@@ -29,6 +29,7 @@ const ReceiptList: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [searchInput, setSearchInput] = useState('');
+  const [searchFilter, setSearchFilter] = useState(''); // Applied filter
   const [statusFilter, setStatusFilter] = useState<ReceiptStatus | undefined>(
     undefined
   );
@@ -38,7 +39,7 @@ const ReceiptList: React.FC = () => {
     setLoading(true);
     try {
       const result = await receiptService.getList({
-        filter: searchInput || undefined,
+        filter: searchFilter || undefined,
         status: statusFilter,
         sorting: sorting,
         skipCount: (currentPage - 1) * pageSize,
@@ -52,19 +53,20 @@ const ReceiptList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchInput, statusFilter, sorting, currentPage, pageSize]);
+  }, [searchFilter, statusFilter, sorting, currentPage, pageSize]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
   const handleSearch = () => {
+    setSearchFilter(searchInput);
     setCurrentPage(1);
-    fetchData();
   };
 
   const handleClearSearch = () => {
     setSearchInput('');
+    setSearchFilter('');
     setCurrentPage(1);
   };
 
