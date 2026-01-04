@@ -101,8 +101,11 @@ const TestRequestList: React.FC = () => {
             <Select.Option value={TestRequestStatus.New}>
               {TestRequestStatusLabels[TestRequestStatus.New]}
             </Select.Option>
-            <Select.Option value={TestRequestStatus.Pending}>
-              {TestRequestStatusLabels[TestRequestStatus.Pending]}
+            <Select.Option value={TestRequestStatus.PendingPayment}>
+              {TestRequestStatusLabels[TestRequestStatus.PendingPayment]}
+            </Select.Option>
+            <Select.Option value={TestRequestStatus.Paid}>
+              {TestRequestStatusLabels[TestRequestStatus.Paid]}
             </Select.Option>
             <Select.Option value={TestRequestStatus.SampleSent}>
               {TestRequestStatusLabels[TestRequestStatus.SampleSent]}
@@ -124,6 +127,9 @@ const TestRequestList: React.FC = () => {
             </Select.Option>
             <Select.Option value={TestRequestStatus.Completed}>
               {TestRequestStatusLabels[TestRequestStatus.Completed]}
+            </Select.Option>
+            <Select.Option value={TestRequestStatus.Cancelled}>
+              {TestRequestStatusLabels[TestRequestStatus.Cancelled]}
             </Select.Option>
           </Select>
         </Col>
