@@ -32,12 +32,13 @@ const QuotationList: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [searchInput, setSearchInput] = useState("");
+  const [searchFilter, setSearchFilter] = useState(""); // Applied filter
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const result = await quotationService.getList({
-        filter: searchInput || undefined,
+        filter: searchFilter || undefined,
         skipCount: (currentPage - 1) * pageSize,
         maxResultCount: pageSize,
       });
@@ -49,7 +50,7 @@ const QuotationList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchInput, currentPage, pageSize]);
+  }, [searchFilter, currentPage, pageSize]);
 
   useEffect(() => {
     fetchData();
@@ -68,11 +69,12 @@ const QuotationList: React.FC = () => {
 
   const handleSearch = () => {
     setCurrentPage(1);
-    fetchData();
+    setSearchFilter(searchInput);
   };
 
   const handleClearSearch = () => {
     setSearchInput("");
+    setSearchFilter("");
     setCurrentPage(1);
   };
 
