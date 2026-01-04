@@ -82,10 +82,7 @@ const TaskManagementDetail: React.FC = () => {
 
   // Helper function to update indicators optimistically
   const updateIndicatorsOptimistically = useCallback(
-    (
-      indicatorIds: string[],
-      updates: Partial<LaboratoryTaskIndicatorDto>
-    ) => {
+    (indicatorIds: string[], updates: Partial<LaboratoryTaskIndicatorDto>) => {
       setTask((prev) => {
         if (!prev) return prev;
         return {
@@ -229,7 +226,8 @@ const TaskManagementDetail: React.FC = () => {
         const allCustomerCancelled =
           indicators.length > 0 &&
           indicators.every(
-            (i) => i.approvalStatus === IndicatorApprovalStatus.CustomerCancelled
+            (i) =>
+              i.approvalStatus === IndicatorApprovalStatus.CustomerCancelled
           );
 
         // Compute sample status từ SERVER DATA
@@ -525,15 +523,22 @@ const TaskManagementDetail: React.FC = () => {
         return {
           ...prev,
           indicators: prev.indicators?.map((ind) => {
-            const assignment = assignments.find((a) => a.indicatorId === ind.id);
+            const assignment = assignments.find(
+              (a) => a.indicatorId === ind.id
+            );
             if (assignment) {
-              const technician = technicians.find((t) => t.id === assignment.technicianId);
+              const technician = technicians.find(
+                (t) => t.id === assignment.technicianId
+              );
               const method = methods.find((m) => m.id === assignment.methodId);
               return {
                 ...ind,
                 methodId: assignment.methodId,
                 technicianId: assignment.technicianId,
-                technicianName: technician?.displayName || technician?.userName || ind.technicianName,
+                technicianName:
+                  technician?.displayName ||
+                  technician?.userName ||
+                  ind.technicianName,
                 methodName: method?.name || ind.methodName,
                 assignedDate: now,
               };
@@ -628,6 +633,26 @@ const TaskManagementDetail: React.FC = () => {
       ...prev,
       [indicatorId]: standardId,
     }));
+  };
+
+  // Handle update note
+  const handleUpdateNote = async (indicatorId: string, note: string | null) => {
+    try {
+      const updatedIndicator = await laboratoryTaskService.updateIndicatorNote(
+        indicatorId,
+        note
+      );
+      // Optimistic update
+      updateIndicatorsOptimistically([indicatorId], {
+        note: updatedIndicator.note,
+      });
+    } catch (error: any) {
+      console.error("Failed to update note:", error);
+      message.error(
+        error.response?.data?.error?.message || "Không thể cập nhật ghi chú"
+      );
+      throw error;
+    }
   };
 
   const handleSendResults = () => {
@@ -1003,18 +1028,19 @@ const TaskManagementDetail: React.FC = () => {
               {sample.sampleStatus !== "notStarted" &&
                 sample.sampleStatus !== "customerCancelled" &&
                 !sample.isApproved && (
-                <Button
-                  size="small"
-                  loading={actionLoading}
-                  disabled={selectedCount === 0}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAssignSample(sample.sampleId);
-                  }}
-                >
-                  Giao việc lại{selectedCount > 0 ? ` (${selectedCount})` : ""}
-                </Button>
-              )}
+                  <Button
+                    size="small"
+                    loading={actionLoading}
+                    disabled={selectedCount === 0}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAssignSample(sample.sampleId);
+                    }}
+                  >
+                    Giao việc lại
+                    {selectedCount > 0 ? ` (${selectedCount})` : ""}
+                  </Button>
+                )}
             </Space>
           </Col>
         </Row>
@@ -1047,6 +1073,7 @@ const TaskManagementDetail: React.FC = () => {
             onMethodChange={handleMethodChange}
             onTechnicianChange={handleTechnicianChange}
             onApprove={handleApprove}
+            onUpdateNote={handleUpdateNote}
             loading={actionLoading}
             showCheckbox={true}
             selectedIndicatorIds={selectedIndicators[sample.sampleId] || []}
@@ -1148,18 +1175,13 @@ const TaskManagementDetail: React.FC = () => {
         <div style={{ marginTop: 8 }}>
           <Space split={<Divider type="vertical" />}>
             <Text type="secondary">
-              Ngày gửi KP:{" "}
-              {formatDate(task.transferDate)}
+              Ngày gửi KP: {formatDate(task.transferDate)}
             </Text>
             <Text type="secondary">
-              Ngày YC xong:{" "}
-              {formatDate(task.requestCompletionDate)}
+              Ngày YC xong: {formatDate(task.requestCompletionDate)}
             </Text>
             <Text type="secondary">
-              Ngày TN:{" "}
-              {task.testDate
-                ? formatDate(task.testDate)
-                : "Chưa đặt"}
+              Ngày TN: {task.testDate ? formatDate(task.testDate) : "Chưa đặt"}
             </Text>
           </Space>
         </div>
