@@ -105,6 +105,7 @@ const routeToKeyMap: Record<string, string> = {
   "/test-results": "results",
   "/reports": "reports",
   "/ncr": "ncr",
+  "/receipts": "receipts",
   "/statistics": "statistics",
   "/subcontractors": "subcontractors",
   "/master-data": "masterData",
@@ -346,6 +347,13 @@ const MainLayout: React.FC = () => {
           icon: <DollarOutlined />,
           label: menuLabel("Báo giá"),
           onClick: () => navigate(PATH_ROUTES.quotations.index),
+          roles: [ROLES.ADMIN, ROLES.ACCOUNTANT],
+        },
+        {
+          key: "receipts",
+          icon: <DollarOutlined />,
+          label: menuLabel("Quản lý phiếu thu"),
+          onClick: () => navigate(PATH_ROUTES.receipts.index),
           roles: [ROLES.ADMIN, ROLES.ACCOUNTANT],
         },
         {
