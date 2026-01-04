@@ -418,6 +418,9 @@ export interface TestRequestDto {
   // Samples
   samples: TestRequestSampleDto[];
 
+  // Quotation reference
+  quotationId?: string;
+
   // Audit fields from ABP Framework
   isDeleted?: boolean;
   deleterId?: string | null;
@@ -489,6 +492,9 @@ export interface CreateTestRequestDto {
 
   // Samples
   samples: CreateTestRequestSampleDto[];
+
+  // Quotation reference
+  quotationId?: string;
 }
 
 export interface UpdateTestRequestDto {

@@ -135,7 +135,10 @@ const QuotationForm: React.FC = () => {
   };
 
   // Handle organization selection
-  const handleOrganizationSelect = (value: string, option: OrganizationOption) => {
+  const handleOrganizationSelect = (
+    value: string,
+    option: OrganizationOption
+  ) => {
     setSelectedOrganizationId(option.id);
     form.setFieldsValue({
       customerName: value,
@@ -240,7 +243,9 @@ const QuotationForm: React.FC = () => {
       navigate(PATH_ROUTES.quotations.index);
     } catch (error: any) {
       console.error("Failed to save quotation:", error);
-      message.error(error.response?.data?.error?.message || "Lưu báo giá thất bại");
+      message.error(
+        error.response?.data?.error?.message || "Lưu báo giá thất bại"
+      );
     } finally {
       setSaving(false);
     }
@@ -296,11 +301,7 @@ const QuotationForm: React.FC = () => {
       key: "totalPrice",
       width: 130,
       align: "right",
-      render: (value) => (
-        <Text strong>
-          {formatCurrency(value)}
-        </Text>
-      ),
+      render: (value) => <Text strong>{formatCurrency(value)}</Text>,
     },
     {
       title: "",
@@ -326,7 +327,11 @@ const QuotationForm: React.FC = () => {
       <Spin spinning={loading}>
         <Card>
           {/* Header */}
-          <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
+          <Row
+            justify="space-between"
+            align="middle"
+            style={{ marginBottom: 24 }}
+          >
             <Col>
               <Space>
                 <Button
@@ -357,7 +362,7 @@ const QuotationForm: React.FC = () => {
                   onClick={handleSave}
                   loading={saving}
                 >
-                  Lưu nháp
+                  Lưu
                 </Button>
               </Space>
             </Col>

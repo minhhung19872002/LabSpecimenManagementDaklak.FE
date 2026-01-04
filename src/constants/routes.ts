@@ -12,6 +12,7 @@ export const PATH_ROUTES = {
     index: '/quotations',
     create: '/quotations/create',
     detail: (id: string) => `/quotations/${id}`,
+    view: (id: string) => `/quotations/view/${id}`,
     edit: (id: string) => `/quotations/edit/${id}`,
   },
 

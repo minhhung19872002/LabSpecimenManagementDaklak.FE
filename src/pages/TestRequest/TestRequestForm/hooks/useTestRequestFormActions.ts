@@ -79,6 +79,9 @@ interface UseTestRequestFormActionsProps {
 
   // SpecimenTypes for name lookup
   specimenTypes: any[];
+
+  // Quotation source (when creating from quotation)
+  sourceQuotationId: string | null;
 }
 
 export const useTestRequestFormActions = ({
@@ -126,6 +129,7 @@ export const useTestRequestFormActions = ({
   originalData,
   isEditRequiresApproval,
   specimenTypes,
+  sourceQuotationId,
 }: UseTestRequestFormActionsProps) => {
 
   // Helper: Build change history by comparing original and new data
@@ -653,6 +657,28 @@ export const useTestRequestFormActions = ({
       return;
     }
 
+    // Validate: all indicators must have laboratory assigned
+    const samplesWithoutLab: string[] = [];
+    samples.forEach((sample) => {
+      const methodKeys = sample.indicatorMethods && sample.indicatorMethods.length > 0
+        ? sample.indicatorMethods
+        : sample.indicatorIds;
+
+      const hasMissingLab = methodKeys.some((key) => {
+        const labKey = `${sample.key}_${key}`;
+        return !indicatorLaboratoryMap[labKey];
+      });
+
+      if (hasMissingLab) {
+        samplesWithoutLab.push(sample.sampleName || sample.sampleCode || `Mẫu ${sample.sortOrder}`);
+      }
+    });
+
+    if (samplesWithoutLab.length > 0) {
+      message.warning(`Các mẫu chưa được gán khoa phòng: ${samplesWithoutLab.join(", ")}`);
+      return;
+    }
+
     setLoading(true);
     try {
       // specimenTypeName will be resolved to specimenTypeId on backend
@@ -735,6 +761,7 @@ export const useTestRequestFormActions = ({
       const selectedWard = wards.find((w) => w.code === values.wardCode);
 
       const payload = {
+        quotationId: sourceQuotationId || undefined,
         contractNumber: values.contractNumber || undefined,
         contractDate: values.contractDate ? values.contractDate.format('YYYY-MM-DDTHH:mm:ss') : undefined,
         sentToAccounting: values.sentToAccounting || false,
