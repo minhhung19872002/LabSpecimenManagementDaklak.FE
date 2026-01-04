@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Card,
   Button,
@@ -13,35 +13,37 @@ import {
   Popover,
   Image,
   Tag,
-} from 'antd';
+} from "antd";
 import {
   ArrowLeftOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
   SaveOutlined,
-} from '@ant-design/icons';
-import { Icon } from '@iconify/react';
-import { useNavigate, useParams } from 'react-router-dom';
-import dayjs from 'dayjs';
-import { receiptService } from '../../services/receiptService';
+  EyeOutlined,
+} from "@ant-design/icons";
+import { Icon } from "@iconify/react";
+import { useNavigate, useParams } from "react-router-dom";
+import dayjs from "dayjs";
+import { receiptService } from "../../services/receiptService";
+import { API_BASE_URL } from "../../services/api";
 import {
   ReceiptDetailDto,
   ReceiptStatus,
   ReceiptStatusLabels,
   ReceiptStatusColors,
-} from '../../types/receipt';
-import { TestRequestSampleDto } from '../../types/testRequest';
-import { PATH_ROUTES } from '../../constants';
-import StatusTag from '../../components/common/StatusTag';
+} from "../../types/receipt";
+import { TestRequestSampleDto } from "../../types/testRequest";
+import { PATH_ROUTES } from "../../constants";
+import StatusTag from "../../components/common/StatusTag";
 
 const { Title, Text } = Typography;
 
 // Helper components
 const BoolIcon: React.FC<{ value: boolean }> = ({ value }) => {
   return value ? (
-    <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 16 }} />
+    <CheckCircleOutlined style={{ color: "#52c41a", fontSize: 16 }} />
   ) : (
-    <CloseCircleOutlined style={{ color: '#d9d9d9', fontSize: 16 }} />
+    <CloseCircleOutlined style={{ color: "#d9d9d9", fontSize: 16 }} />
   );
 };
 
@@ -62,8 +64,8 @@ const ReceiptDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [data, setData] = useState<ReceiptDetailDto | null>(null);
-  const [receiptNumber, setReceiptNumber] = useState('');
-  const [voucherCode, setVoucherCode] = useState('');
+  const [receiptNumber, setReceiptNumber] = useState("");
+  const [voucherCode, setVoucherCode] = useState("");
   const [hasChanges, setHasChanges] = useState(false);
 
   // Load data
@@ -74,11 +76,11 @@ const ReceiptDetail: React.FC = () => {
       try {
         const result = await receiptService.getDetail(id);
         setData(result);
-        setReceiptNumber(result.receiptNumber || '');
-        setVoucherCode(result.voucherCode || '');
+        setReceiptNumber(result.receiptNumber || "");
+        setVoucherCode(result.voucherCode || "");
       } catch (error) {
-        console.error('Failed to load receipt:', error);
-        message.error('Không thể tải thông tin phiếu thu');
+        console.error("Failed to load receipt:", error);
+        message.error("Không thể tải thông tin phiếu thu");
       } finally {
         setLoading(false);
       }
@@ -90,17 +92,14 @@ const ReceiptDetail: React.FC = () => {
   useEffect(() => {
     if (data) {
       const changed =
-        receiptNumber !== (data.receiptNumber || '') ||
-        voucherCode !== (data.voucherCode || '');
+        receiptNumber !== (data.receiptNumber || "") ||
+        voucherCode !== (data.voucherCode || "");
       setHasChanges(changed);
     }
   }, [receiptNumber, voucherCode, data]);
 
   // Validate integer only input
-  const handleNumberInput = (
-    value: string,
-    setter: (val: string) => void
-  ) => {
+  const handleNumberInput = (value: string, setter: (val: string) => void) => {
     if (/^[0-9]*$/.test(value)) {
       setter(value);
     }
@@ -122,14 +121,14 @@ const ReceiptDetail: React.FC = () => {
     setSaving(true);
     try {
       await receiptService.update(id, { receiptNumber, voucherCode });
-      message.success('Đã lưu thông tin phiếu thu');
+      message.success("Đã lưu thông tin phiếu thu");
       setHasChanges(false);
       // Reload to get latest data
       const result = await receiptService.getDetail(id);
       setData(result);
     } catch (error) {
-      console.error('Failed to save:', error);
-      message.error('Không thể lưu thông tin');
+      console.error("Failed to save:", error);
+      message.error("Không thể lưu thông tin");
     } finally {
       setSaving(false);
     }
@@ -145,14 +144,14 @@ const ReceiptDetail: React.FC = () => {
         await receiptService.update(id, { receiptNumber, voucherCode });
       }
       await receiptService.markAsPaid(id);
-      message.success('Đã đánh dấu thanh toán');
+      message.success("Đã đánh dấu thanh toán");
       // Reload data
       const result = await receiptService.getDetail(id);
       setData(result);
       setHasChanges(false);
     } catch (error) {
-      console.error('Failed to mark as paid:', error);
-      message.error('Không thể cập nhật trạng thái');
+      console.error("Failed to mark as paid:", error);
+      message.error("Không thể cập nhật trạng thái");
     } finally {
       setSaving(false);
     }
@@ -168,14 +167,14 @@ const ReceiptDetail: React.FC = () => {
         await receiptService.update(id, { receiptNumber, voucherCode });
       }
       await receiptService.markAsUnpaid(id);
-      message.success('Đã đánh dấu chưa thanh toán');
+      message.success("Đã đánh dấu chưa thanh toán");
       // Reload data
       const result = await receiptService.getDetail(id);
       setData(result);
       setHasChanges(false);
     } catch (error) {
-      console.error('Failed to mark as unpaid:', error);
-      message.error('Không thể cập nhật trạng thái');
+      console.error("Failed to mark as unpaid:", error);
+      message.error("Không thể cập nhật trạng thái");
     } finally {
       setSaving(false);
     }
@@ -186,48 +185,81 @@ const ReceiptDetail: React.FC = () => {
   // Sample table columns for read-only display
   const sampleColumns = [
     {
-      title: 'STT',
-      key: 'sortOrder',
+      title: "STT",
+      key: "sortOrder",
       width: 50,
-      render: (_: unknown, __: TestRequestSampleDto, index: number) => index + 1,
+      render: (_: unknown, __: TestRequestSampleDto, index: number) =>
+        index + 1,
     },
     {
-      title: 'Mã mẫu',
-      dataIndex: 'sampleCode',
-      key: 'sampleCode',
+      title: "Mã mẫu",
+      dataIndex: "sampleCode",
+      key: "sampleCode",
       width: 120,
     },
     {
-      title: 'Tên mẫu',
-      dataIndex: 'sampleName',
-      key: 'sampleName',
+      title: "Tên mẫu",
+      dataIndex: "sampleName",
+      key: "sampleName",
       width: 180,
     },
     {
-      title: 'Loại mẫu',
-      dataIndex: 'specimenTypeName',
-      key: 'specimenTypeName',
+      title: "Loại mẫu",
+      dataIndex: "specimenTypeName",
+      key: "specimenTypeName",
       width: 150,
     },
     {
-      title: 'Hình ảnh',
-      dataIndex: 'attachments',
-      key: 'attachments',
-      width: 100,
+      title: "Hình ảnh",
+      dataIndex: "attachments",
+      key: "attachments",
+      width: 120,
       render: (attachments: { url: string; fileName: string }[]) => {
-        if (!attachments || attachments.length === 0) return '-';
+        if (!attachments || attachments.length === 0) return "-";
         return (
           <Image.PreviewGroup>
             <Space size={4}>
-              {attachments.slice(0, 3).map((att, idx) => (
-                <Image
-                  key={idx}
-                  src={att.url}
-                  width={32}
-                  height={32}
-                  style={{ objectFit: 'cover', borderRadius: 4 }}
-                />
-              ))}
+              {attachments.slice(0, 3).map((att, idx) => {
+                const fullUrl = att.url.startsWith("http")
+                  ? att.url
+                  : `${API_BASE_URL}${att.url}`;
+                return (
+                  <div
+                    key={idx}
+                    style={{
+                      position: "relative",
+                      width: 32,
+                      height: 32,
+                      borderRadius: 4,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <Image
+                      src={fullUrl}
+                      width={32}
+                      height={32}
+                      style={{ objectFit: "cover" }}
+                      preview={{
+                        mask: (
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              width: "100%",
+                              height: "100%",
+                            }}
+                          >
+                            <EyeOutlined
+                              style={{ fontSize: 14, color: "#fff" }}
+                            />
+                          </div>
+                        ),
+                      }}
+                    />
+                  </div>
+                );
+              })}
               {attachments.length > 3 && (
                 <Text type="secondary">+{attachments.length - 3}</Text>
               )}
@@ -237,25 +269,48 @@ const ReceiptDetail: React.FC = () => {
       },
     },
     {
-      title: 'Chỉ tiêu kiểm nghiệm',
-      dataIndex: 'indicators',
-      key: 'indicators',
-      width: 280,
-      render: (indicators: TestRequestSampleDto['indicators']) => {
-        if (!indicators || indicators.length === 0) return '-';
+      title: "Địa chỉ lấy mẫu",
+      dataIndex: "samplingAddress",
+      key: "samplingAddress",
+      width: 180,
+      ellipsis: true,
+      render: (text: string | undefined) => text || "-",
+    },
+    {
+      title: "Lượng mẫu",
+      dataIndex: "sampleQuantity",
+      key: "sampleQuantity",
+      width: 100,
+      render: (text: string | undefined) => text || "-",
+    },
+    {
+      title: "Tình trạng mẫu",
+      dataIndex: "statusText",
+      key: "statusText",
+      width: 130,
+      ellipsis: true,
+      render: (text: string | undefined) => text || "-",
+    },
+    {
+      title: "Chỉ tiêu kiểm nghiệm",
+      dataIndex: "indicators",
+      key: "indicators",
+      width: 150,
+      render: (indicators: TestRequestSampleDto["indicators"]) => {
+        if (!indicators || indicators.length === 0) return "-";
 
         const popoverContent = (
-          <div style={{ maxHeight: 300, overflowY: 'auto', minWidth: 350 }}>
+          <div style={{ maxHeight: 300, overflowY: "auto", minWidth: 350 }}>
             {indicators.map((ind, idx) => (
               <div
                 key={idx}
                 style={{
-                  padding: '6px 0',
+                  padding: "6px 0",
                   borderBottom:
-                    idx < indicators.length - 1 ? '1px solid #f0f0f0' : 'none',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
+                    idx < indicators.length - 1 ? "1px solid #f0f0f0" : "none",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
                   gap: 12,
                 }}
               >
@@ -271,8 +326,8 @@ const ReceiptDetail: React.FC = () => {
                     </div>
                   )}
                 </div>
-                <Text style={{ color: '#1890ff', whiteSpace: 'nowrap' }}>
-                  {(ind.unitPrice || 0).toLocaleString('vi-VN')} đ
+                <Text style={{ color: "#1890ff", whiteSpace: "nowrap" }}>
+                  {(ind.unitPrice || 0).toLocaleString("vi-VN")} đ
                 </Text>
               </div>
             ))}
@@ -289,29 +344,40 @@ const ReceiptDetail: React.FC = () => {
             <Button
               type="text"
               icon={<Icon icon="mdi:clipboard-check-outline" width={18} />}
-              style={{ padding: '4px 8px' }}
+              style={{ padding: "4px 8px" }}
             >
-              <span style={{ marginLeft: 4 }}>{indicators.length} chỉ tiêu</span>
+              <span style={{ marginLeft: 4 }}>
+                {indicators.length} chỉ tiêu
+              </span>
             </Button>
           </Popover>
         );
       },
     },
     {
-      title: 'Thành tiền',
-      dataIndex: 'totalIndicatorCost',
-      key: 'totalIndicatorCost',
+      title: "Ghi chú",
+      dataIndex: "notes",
+      key: "notes",
+      width: 150,
+      ellipsis: true,
+      render: (text: string | undefined) => text || "-",
+    },
+    {
+      title: "Thành tiền",
+      dataIndex: "totalIndicatorCost",
+      key: "totalIndicatorCost",
       width: 120,
-      align: 'right' as const,
+      align: "right" as const,
+      fixed: "right" as const,
       render: (value: number) => (
-        <Text strong>{(value || 0).toLocaleString('vi-VN')} đ</Text>
+        <Text strong>{(value || 0).toLocaleString("vi-VN")} đ</Text>
       ),
     },
   ];
 
   if (loading) {
     return (
-      <div style={{ padding: 24, textAlign: 'center' }}>
+      <div style={{ padding: 24, textAlign: "center" }}>
         <Spin size="large" />
       </div>
     );
@@ -320,7 +386,7 @@ const ReceiptDetail: React.FC = () => {
   if (!data || !testRequest) {
     return (
       <Card>
-        <div style={{ textAlign: 'center', padding: 24 }}>
+        <div style={{ textAlign: "center", padding: 24 }}>
           <Text type="secondary">Không tìm thấy phiếu thu</Text>
         </div>
       </Card>
@@ -330,15 +396,12 @@ const ReceiptDetail: React.FC = () => {
   return (
     <div style={{ padding: 0 }}>
       {/* Header */}
-      <Card
-        style={{ marginBottom: 16 }}
-        bodyStyle={{ padding: '12px 24px' }}
-      >
+      <Card style={{ marginBottom: 16 }} bodyStyle={{ padding: "12px 24px" }}>
         <div
           style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
           }}
         >
           <Space>
@@ -396,7 +459,7 @@ const ReceiptDetail: React.FC = () => {
             <Col xs={24} lg={12} xl={6}>
               <div className="detail-item">
                 <Text type="secondary">Số HĐ:</Text>
-                <Text strong>{testRequest.contractNumber || '-'}</Text>
+                <Text strong>{testRequest.contractNumber || "-"}</Text>
               </div>
             </Col>
             <Col xs={24} lg={12} xl={6}>
@@ -404,8 +467,8 @@ const ReceiptDetail: React.FC = () => {
                 <Text type="secondary">Ngày HĐ:</Text>
                 <Text strong>
                   {testRequest.contractDate
-                    ? dayjs(testRequest.contractDate).format('DD/MM/YYYY')
-                    : '-'}
+                    ? dayjs(testRequest.contractDate).format("DD/MM/YYYY")
+                    : "-"}
                 </Text>
               </div>
             </Col>
@@ -456,14 +519,14 @@ const ReceiptDetail: React.FC = () => {
               <div className="detail-item">
                 <Text type="secondary">Tên CS/DN:</Text>
                 <Text strong style={{ fontSize: 15 }}>
-                  {testRequest.customerName || '-'}
+                  {testRequest.customerName || "-"}
                 </Text>
               </div>
             </Col>
             <Col xs={24} xl={12}>
               <div className="detail-item">
                 <Text type="secondary">Mã số thuế:</Text>
-                <Text>{testRequest.taxCode || '-'}</Text>
+                <Text>{testRequest.taxCode || "-"}</Text>
               </div>
             </Col>
           </Row>
@@ -479,7 +542,7 @@ const ReceiptDetail: React.FC = () => {
                     testRequest.province,
                   ]
                     .filter(Boolean)
-                    .join(', ') || '-'}
+                    .join(", ") || "-"}
                 </Text>
               </div>
             </Col>
@@ -488,13 +551,13 @@ const ReceiptDetail: React.FC = () => {
             <Col xs={24} md={12}>
               <div className="detail-item">
                 <Text type="secondary">Người liên hệ:</Text>
-                <Text strong>{testRequest.contactPerson || '-'}</Text>
+                <Text strong>{testRequest.contactPerson || "-"}</Text>
               </div>
             </Col>
             <Col xs={24} md={12}>
               <div className="detail-item">
                 <Text type="secondary">Điện thoại:</Text>
-                <Text strong>{testRequest.phone || '-'}</Text>
+                <Text strong>{testRequest.phone || "-"}</Text>
               </div>
             </Col>
           </Row>
@@ -510,7 +573,7 @@ const ReceiptDetail: React.FC = () => {
             columns={sampleColumns}
             rowKey="id"
             pagination={false}
-            scroll={{ x: 'max-content' }}
+            scroll={{ x: "max-content" }}
             size="small"
             bordered
           />
@@ -524,7 +587,10 @@ const ReceiptDetail: React.FC = () => {
           <Row gutter={[16, 8]}>
             <Col xs={24}>
               <Space wrap size={[16, 8]}>
-                <BoolItem value={testRequest.sampleTypeService} label="Dịch vụ" />
+                <BoolItem
+                  value={testRequest.sampleTypeService}
+                  label="Dịch vụ"
+                />
                 <BoolItem
                   value={testRequest.sampleTypeContract}
                   label="Hợp đồng"
@@ -587,21 +653,21 @@ const ReceiptDetail: React.FC = () => {
             <Col xs={24}>
               <div
                 style={{
-                  background: '#e6f7ff',
-                  padding: '16px',
+                  background: "#e6f7ff",
+                  padding: "16px",
                   borderRadius: 8,
-                  border: '1px solid #91d5ff',
-                  textAlign: 'center',
+                  border: "1px solid #91d5ff",
+                  textAlign: "center",
                 }}
               >
                 <Text
                   type="secondary"
-                  style={{ display: 'block', marginBottom: 4 }}
+                  style={{ display: "block", marginBottom: 4 }}
                 >
                   Tổng chi phí:
                 </Text>
-                <Text strong style={{ fontSize: 24, color: '#1890ff' }}>
-                  {(testRequest.totalCost || 0).toLocaleString('vi-VN')} đ
+                <Text strong style={{ fontSize: 24, color: "#1890ff" }}>
+                  {(testRequest.totalCost || 0).toLocaleString("vi-VN")} đ
                 </Text>
               </div>
             </Col>
@@ -624,9 +690,12 @@ const ReceiptDetail: React.FC = () => {
             </Title>
             <Row gutter={[16, 12]}>
               <Col xs={24}>
-                <Tag color="green" style={{ fontSize: 14, padding: '4px 12px' }}>
-                  Đã thanh toán ngày{' '}
-                  {dayjs(data.paidDate).format('DD/MM/YYYY HH:mm')}
+                <Tag
+                  color="green"
+                  style={{ fontSize: 14, padding: "4px 12px" }}
+                >
+                  Đã thanh toán ngày{" "}
+                  {dayjs(data.paidDate).format("DD/MM/YYYY HH:mm")}
                 </Tag>
               </Col>
             </Row>

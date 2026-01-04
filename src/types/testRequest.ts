@@ -2,15 +2,17 @@ import { IndicatorApprovalStatus } from './laboratoryTask';
 
 // Enums
 export enum TestRequestStatus {
-  New = 0,                      // Mới - vừa tạo, chưa in phiếu
-  Pending = 1,                  // Chờ xử lý - đã in phiếu XN
-  SampleSent = 2,               // Đã gửi mẫu - đã nhấn gửi mẫu (MỚI)
-  InProgress = 3,               // Đang thử nghiệm - QLKT đã gán PP + KTV
-  PendingChangeApproval = 4,    // Chờ phê duyệt thay đổi - chỉnh sửa cần QLCL duyệt (MỚI)
-  PendingApproval = 5,          // Chờ Phê duyệt KQ - đã in KQ xét nghiệm
-  Approved = 6,                 // Đã phê duyệt - lãnh đạo đã duyệt
-  ResultSent = 7,               // Đã gửi kết quả - đã nhấn gửi KQ
-  Completed = 8                 // Hoàn Thành - kết thúc quy trình
+  New = 0,                      // Mới - vừa tạo, chưa gửi kế toán
+  PendingPayment = 1,           // Chờ thanh toán - đã gửi kế toán, chờ thanh toán
+  Paid = 2,                     // Đã thanh toán - kế toán xác nhận đã thanh toán
+  SampleSent = 3,               // Đã gửi mẫu - người dùng xác nhận đã gửi mẫu
+  InProgress = 4,               // Đang thử nghiệm - QLKT đã gán PP + KTV
+  PendingChangeApproval = 5,    // Chờ phê duyệt thay đổi - chỉnh sửa cần QLCL duyệt
+  PendingApproval = 6,          // Chờ phê duyệt KQ - QLKT đã gửi kết quả
+  Approved = 7,                 // Đã phê duyệt - QLCL đã duyệt KQ
+  ResultSent = 8,               // Gửi khách hàng - đã nhấn gửi KQ
+  Completed = 9,                // Hoàn Thành - kết thúc quy trình
+  Cancelled = 10                // Hủy phiếu yêu cầu - BP Giao nhận hủy
 }
 
 // Enum for change approval status
@@ -23,7 +25,8 @@ export enum ChangeApprovalStatus {
 // Labels for TestRequestStatus
 export const TestRequestStatusLabels: Record<TestRequestStatus, string> = {
   [TestRequestStatus.New]: "Mới",
-  [TestRequestStatus.Pending]: "Chờ xử lý",
+  [TestRequestStatus.PendingPayment]: "Chờ thanh toán",
+  [TestRequestStatus.Paid]: "Đã thanh toán",
   [TestRequestStatus.SampleSent]: "Đã gửi mẫu",
   [TestRequestStatus.InProgress]: "Đang thử nghiệm",
   [TestRequestStatus.PendingChangeApproval]: "Chờ phê duyệt thay đổi",
@@ -31,6 +34,7 @@ export const TestRequestStatusLabels: Record<TestRequestStatus, string> = {
   [TestRequestStatus.Approved]: "Đã phê duyệt",
   [TestRequestStatus.ResultSent]: "Gửi khách hàng",
   [TestRequestStatus.Completed]: "Hoàn Thành",
+  [TestRequestStatus.Cancelled]: "Hủy phiếu yêu cầu",
 };
 
 // Labels for ChangeApprovalStatus
@@ -43,14 +47,16 @@ export const ChangeApprovalStatusLabels: Record<ChangeApprovalStatus, string> = 
 // Colors for TestRequestStatus (Ant Design Tag colors)
 export const TestRequestStatusColors: Record<TestRequestStatus, string> = {
   [TestRequestStatus.New]: "default",
-  [TestRequestStatus.Pending]: "processing",
+  [TestRequestStatus.PendingPayment]: "gold",
+  [TestRequestStatus.Paid]: "cyan",
   [TestRequestStatus.SampleSent]: "geekblue",
   [TestRequestStatus.InProgress]: "blue",
-  [TestRequestStatus.PendingChangeApproval]: "gold",
+  [TestRequestStatus.PendingChangeApproval]: "orange",
   [TestRequestStatus.PendingApproval]: "orange",
   [TestRequestStatus.Approved]: "green",
   [TestRequestStatus.ResultSent]: "purple",
   [TestRequestStatus.Completed]: "success",
+  [TestRequestStatus.Cancelled]: "red",
 };
 
 // Colors for ChangeApprovalStatus
@@ -64,10 +70,12 @@ export const ChangeApprovalStatusColors: Record<ChangeApprovalStatus, string> = 
 
 /**
  * Kiểm tra có thể chỉnh sửa toàn bộ thông tin không
- * Full edit: New, Pending
+ * Full edit: New, PendingPayment, Paid
  */
 export const canEditFullInfo = (status: TestRequestStatus): boolean => {
-  return status === TestRequestStatus.New || status === TestRequestStatus.Pending;
+  return status === TestRequestStatus.New ||
+         status === TestRequestStatus.PendingPayment ||
+         status === TestRequestStatus.Paid;
 };
 
 /**
@@ -89,7 +97,9 @@ export const canEditTestRequest = (status: TestRequestStatus): boolean => {
  * Kiểm tra có thể xóa phiếu yêu cầu không
  */
 export const canDeleteTestRequest = (status: TestRequestStatus): boolean => {
-  return status === TestRequestStatus.New || status === TestRequestStatus.Pending;
+  return status === TestRequestStatus.New ||
+         status === TestRequestStatus.PendingPayment ||
+         status === TestRequestStatus.Paid;
 };
 
 /**
@@ -100,10 +110,10 @@ export const showActionsForTestRequest = (status: TestRequestStatus): boolean =>
 };
 
 /**
- * Kiểm tra có thể gửi mẫu không (Pending → SampleSent)
+ * Kiểm tra có thể gửi mẫu không (Paid → SampleSent)
  */
 export const canSendSample = (status: TestRequestStatus): boolean => {
-  return status === TestRequestStatus.Pending;
+  return status === TestRequestStatus.Paid;
 };
 
 /**
@@ -125,6 +135,31 @@ export const canSendResult = (status: TestRequestStatus): boolean => {
  */
 export const canComplete = (status: TestRequestStatus): boolean => {
   return status === TestRequestStatus.ResultSent;
+};
+
+// Payment Flow Helper Functions
+
+/**
+ * Kiểm tra có thể gửi kế toán không
+ * Chỉ khi status = New
+ */
+export const canSendToAccounting = (status: TestRequestStatus): boolean => {
+  return status === TestRequestStatus.New;
+};
+
+/**
+ * Kiểm tra có thể hủy yêu cầu không
+ * Điều kiện: status = New hoặc PendingPayment
+ */
+export const canCancelPaymentRequest = (status: TestRequestStatus): boolean => {
+  return status === TestRequestStatus.New || status === TestRequestStatus.PendingPayment;
+};
+
+/**
+ * Kiểm tra phiếu đã bị hủy chưa
+ */
+export const isCancelledRequest = (status: TestRequestStatus): boolean => {
+  return status === TestRequestStatus.Cancelled;
 };
 
 export enum ResultLanguage {

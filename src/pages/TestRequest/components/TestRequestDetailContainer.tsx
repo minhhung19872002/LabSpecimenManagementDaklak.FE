@@ -27,6 +27,9 @@ import {
   canSendSample,
   canComplete,
   TestRequestSampleDto,
+  canSendToAccounting,
+  canCancelPaymentRequest,
+  isCancelledRequest,
 } from "../../../types/testRequest";
 import dayjs from "dayjs";
 import { PATH_ROUTES } from "../../../constants";
@@ -49,6 +52,8 @@ interface TestRequestDetailContainerProps {
   id: string;
   printingTestRequest: boolean;
   sendingSample: boolean;
+  sendingToAccounting: boolean;
+  cancellingRequest: boolean;
   onPrintTestRequest: () => void;
   onSendSample: () => void;
   onSendResult: () => void;
@@ -57,6 +62,8 @@ interface TestRequestDetailContainerProps {
   onViewSampleImages: (sample: TestRequestSampleDto) => void;
   onPrintSingle: () => void;
   onPrintMixed: () => void;
+  onSendToAccounting: () => void;
+  onCancelRequest: () => void;
   canPrint: boolean;
 }
 
@@ -65,6 +72,8 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
   id,
   printingTestRequest,
   sendingSample,
+  sendingToAccounting,
+  cancellingRequest,
   onPrintTestRequest,
   onSendSample,
   onSendResult,
@@ -73,6 +82,8 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
   onViewSampleImages,
   onPrintSingle,
   onPrintMixed,
+  onSendToAccounting,
+  onCancelRequest,
   canPrint,
 }) => {
   const navigate = useNavigate();
@@ -81,11 +92,45 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
   const renderActionButtons = () => {
     const buttons: React.ReactNode[] = [];
 
-    // In phiếu XN - New hoặc Pending
-    if (
-      data.status === TestRequestStatus.New ||
-      data.status === TestRequestStatus.Pending
-    ) {
+    // Nếu đã bị hủy thì không hiện action buttons
+    if (isCancelledRequest(data.status)) {
+      return null;
+    }
+
+    // === PAYMENT FLOW ===
+
+    // Gửi kế toán - chỉ khi status = New
+    if (canSendToAccounting(data.status)) {
+      buttons.push(
+        <Button
+          key="send-to-accounting"
+          type="primary"
+          onClick={onSendToAccounting}
+          loading={sendingToAccounting}
+        >
+          Gửi kế toán
+        </Button>
+      );
+    }
+
+    // Hủy yêu cầu - xuất hiện khi status = New hoặc PendingPayment
+    if (canCancelPaymentRequest(data.status)) {
+      buttons.push(
+        <Button
+          key="cancel-request"
+          danger
+          onClick={onCancelRequest}
+          loading={cancellingRequest}
+        >
+          Hủy yêu cầu
+        </Button>
+      );
+    }
+
+    // === AFTER PAYMENT ===
+
+    // In phiếu XN - khi status = Paid
+    if (data.status === TestRequestStatus.Paid) {
       buttons.push(
         <Button
           key="print"
@@ -98,7 +143,7 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
       );
     }
 
-    // Gửi mẫu - chỉ khi Pending
+    // Gửi mẫu - khi status = Paid
     if (canSendSample(data.status)) {
       buttons.push(
         <Button
@@ -111,6 +156,8 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
         </Button>
       );
     }
+
+    // === RESULT FLOW ===
 
     // Approved - Gửi kết quả
     if (data.status === TestRequestStatus.Approved) {
@@ -199,7 +246,7 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
             </Space>
             <Space wrap>
               {renderActionButtons()}
-              {canEditTestRequest(data.status) && (
+              {canEditTestRequest(data.status) && !isCancelledRequest(data.status) && (
                 <Button
                   type="primary"
                   icon={<EditOutlined />}

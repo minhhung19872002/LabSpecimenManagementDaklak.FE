@@ -18,8 +18,17 @@ import {
   BarcodeOutlined,
 } from "@ant-design/icons";
 import { Icon } from "@iconify/react";
-import { SampleFormData, LaboratoryAssignment, IndicatorMethodKey, IndicatorMethodInfo, AttachmentInfo } from "../types";
-import { IndicatorDto, SpecimenTypeDto } from "../../../../services/masterDataService";
+import {
+  SampleFormData,
+  LaboratoryAssignment,
+  IndicatorMethodKey,
+  IndicatorMethodInfo,
+  AttachmentInfo,
+} from "../types";
+import {
+  IndicatorDto,
+  SpecimenTypeDto,
+} from "../../../../services/masterDataService";
 import SampleImageUpload from "./SampleImageUpload";
 import BarcodeQRModal, { SampleCodeInfo } from "./BarcodeQRModal";
 
@@ -67,7 +76,8 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
 }) => {
   // Barcode/QR Modal state
   const [barcodeModalVisible, setBarcodeModalVisible] = useState(false);
-  const [selectedSampleForBarcode, setSelectedSampleForBarcode] = useState<SampleCodeInfo | null>(null);
+  const [selectedSampleForBarcode, setSelectedSampleForBarcode] =
+    useState<SampleCodeInfo | null>(null);
 
   const openBarcodeModal = (sampleInfo: SampleCodeInfo) => {
     setSelectedSampleForBarcode(sampleInfo);
@@ -106,7 +116,11 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
       },
     },
     {
-      title: <span>Tên mẫu <span style={{ color: '#ff4d4f' }}>*</span></span>,
+      title: (
+        <span>
+          Tên mẫu <span style={{ color: "#ff4d4f" }}>*</span>
+        </span>
+      ),
       dataIndex: "sampleName",
       key: "sampleName",
       width: 180,
@@ -132,7 +146,9 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
           options={specimenTypeOptions}
           onSearch={handleSpecimenTypeSearch}
           onSelect={(val) => handleSpecimenTypeSelect(record.key, val)}
-          onChange={(val) => updateSample(record.key, "specimenTypeName", val || "")}
+          onChange={(val) =>
+            updateSample(record.key, "specimenTypeName", val || "")
+          }
           placeholder="Nhập loại mẫu..."
           style={{ width: "100%" }}
           size="small"
@@ -206,10 +222,14 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
       ),
     },
     {
-      title: <span style={{ whiteSpace: "nowrap" }}>Chỉ tiêu kiểm nghiệm <span style={{ color: '#ff4d4f' }}>*</span></span>,
+      title: (
+        <span style={{ whiteSpace: "nowrap" }}>
+          Chỉ tiêu kiểm nghiệm <span style={{ color: "#ff4d4f" }}>*</span>
+        </span>
+      ),
       dataIndex: "indicatorMethods",
       key: "indicatorMethods",
-      width: 280,
+      width: 200,
       render: (_: IndicatorMethodKey[], record: SampleFormData) => {
         // Use indicatorMethods if available, fallback to indicatorIds for backward compat
         const methods = record.indicatorMethods || [];
@@ -256,7 +276,9 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
                       }}
                     >
                       <span style={{ flex: 1 }}>- {indicator.name}</span>
-                      <span style={{ color: "#1890ff", fontSize: 12 }}>{method.testMethodName}</span>
+                      <span style={{ color: "#1890ff", fontSize: 12 }}>
+                        {method.testMethodName}
+                      </span>
                     </div>
                   ) : null;
                 })}
@@ -276,7 +298,8 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
                         {labName} ({labMethods.length})
                       </div>
                       {labMethods.map((key) => {
-                        const { indicator, method } = getIndicatorMethodInfo(key);
+                        const { indicator, method } =
+                          getIndicatorMethodInfo(key);
                         return indicator && method ? (
                           <div
                             key={key}
@@ -289,7 +312,9 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
                             }}
                           >
                             <span style={{ flex: 1 }}>- {indicator.name}</span>
-                            <span style={{ color: "#1890ff", fontSize: 12 }}>{method.testMethodName}</span>
+                            <span style={{ color: "#1890ff", fontSize: 12 }}>
+                              {method.testMethodName}
+                            </span>
                           </div>
                         ) : null;
                       })}
@@ -382,13 +407,15 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
                 type="link"
                 icon={<BarcodeOutlined />}
                 size="small"
-                onClick={() => openBarcodeModal({
-                  sampleCode,
-                  sampleName: record.sampleName,
-                  samplingAddress: record.samplingAddress,
-                  sampleQuantity: record.sampleQuantity,
-                  storageLocation: record.storageLocation,
-                })}
+                onClick={() =>
+                  openBarcodeModal({
+                    sampleCode,
+                    sampleName: record.sampleName,
+                    samplingAddress: record.samplingAddress,
+                    sampleQuantity: record.sampleQuantity,
+                    storageLocation: record.storageLocation,
+                  })
+                }
               />
             </Tooltip>
             <Popconfirm
@@ -456,8 +483,8 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
           }}
         >
           <Text type="warning">
-            Không thể thêm/sửa/xóa mẫu khi phiếu đang thực hiện. Chỉ có thể
-            sửa các thông tin khác.
+            Không thể thêm/sửa/xóa mẫu khi phiếu đang thực hiện. Chỉ có thể sửa
+            các thông tin khác.
           </Text>
         </div>
       )}

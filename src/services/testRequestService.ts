@@ -321,6 +321,25 @@ export const testRequestService = {
     return response.data;
   },
 
+  // Payment Flow APIs
+
+  /**
+   * Gửi kế toán - Tạo Receipt tự động
+   * @returns ID của Receipt được tạo
+   */
+  sendToAccounting: async (id: string): Promise<string> => {
+    const response = await api.post<string>(`${BASE_URL}/${id}/send-to-accounting`);
+    return response.data;
+  },
+
+  /**
+   * Hủy yêu cầu khi đang chờ thanh toán
+   * Hủy Receipt + chuyển TestRequest thành Cancelled
+   */
+  cancelRequest: async (id: string): Promise<void> => {
+    await api.post(`${BASE_URL}/${id}/cancel-request`);
+  },
+
 };
 
 // Sample selection DTO for BM01 result form

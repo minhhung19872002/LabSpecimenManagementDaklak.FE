@@ -91,11 +91,11 @@ const ReceiptList: React.FC = () => {
     }
   };
 
-  const handleEdit = (record: ReceiptDto) => {
+  const handleRowDoubleClick = (record: ReceiptDto) => {
     navigate(PATH_ROUTES.receipts.detail(record.id));
   };
 
-  const columns = getColumns({ onEdit: handleEdit });
+  const columns = getColumns();
 
   // Status filter options
   const statusOptions = [
@@ -146,6 +146,10 @@ const ReceiptList: React.FC = () => {
         dataSource={data}
         rowKey="id"
         loading={loading}
+        onRow={(record) => ({
+          onDoubleClick: () => handleRowDoubleClick(record),
+          style: { cursor: 'pointer' },
+        })}
         pagination={{
           current: currentPage,
           pageSize: pageSize,

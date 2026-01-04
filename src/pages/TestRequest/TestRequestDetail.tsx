@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useState, useEffect } from "react";
-import { Card, message, Spin } from "antd";
+import { Card, message, Spin, Modal } from "antd";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { testRequestService } from "../../services/testRequestService";
@@ -45,6 +45,8 @@ const TestRequestDetail: React.FC = () => {
   // Loading states
   const [printingTestRequest, setPrintingTestRequest] = useState(false);
   const [sendingSample, setSendingSample] = useState(false);
+  const [sendingToAccounting, setSendingToAccounting] = useState(false);
+  const [cancellingRequest, setCancellingRequest] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -136,6 +138,55 @@ const TestRequestDetail: React.FC = () => {
     } finally {
       setSendingSample(false);
     }
+  };
+
+  // Handle send to accounting (Gửi kế toán)
+  const handleSendToAccounting = async () => {
+    if (!id) return;
+    setSendingToAccounting(true);
+    try {
+      const receiptId = await testRequestService.sendToAccounting(id);
+      message.success("Đã gửi kế toán thành công. Phiếu thu đã được tạo.");
+      loadData(id);
+    } catch (error: any) {
+      console.error("Error sending to accounting:", error);
+      message.error(
+        error?.response?.data?.error?.message ||
+          "Không thể gửi kế toán. Vui lòng thử lại."
+      );
+    } finally {
+      setSendingToAccounting(false);
+    }
+  };
+
+  // Handle cancel request (Hủy yêu cầu)
+  const handleCancelRequest = () => {
+    if (!id) return;
+
+    Modal.confirm({
+      title: "Xác nhận hủy yêu cầu",
+      content: "Bạn có chắc chắn muốn hủy phiếu yêu cầu này? Phiếu thu liên quan cũng sẽ bị hủy.",
+      okText: "Hủy yêu cầu",
+      okType: "danger",
+      cancelText: "Không",
+      centered: true,
+      onOk: async () => {
+        setCancellingRequest(true);
+        try {
+          await testRequestService.cancelRequest(id);
+          message.success("Đã hủy phiếu yêu cầu thành công");
+          loadData(id);
+        } catch (error: any) {
+          console.error("Error cancelling request:", error);
+          message.error(
+            error?.response?.data?.error?.message ||
+              "Không thể hủy yêu cầu. Vui lòng thử lại."
+          );
+        } finally {
+          setCancellingRequest(false);
+        }
+      },
+    });
   };
 
   // Handle send result
@@ -271,6 +322,8 @@ const TestRequestDetail: React.FC = () => {
         id={id!}
         printingTestRequest={printingTestRequest}
         sendingSample={sendingSample}
+        sendingToAccounting={sendingToAccounting}
+        cancellingRequest={cancellingRequest}
         onPrintTestRequest={handlePrintTestRequest}
         onSendSample={handleSendSample}
         onSendResult={handleSendResult}
@@ -279,6 +332,8 @@ const TestRequestDetail: React.FC = () => {
         onViewSampleImages={handleViewSampleImages}
         onPrintSingle={handlePrintSingle}
         onPrintMixed={handlePrintMixed}
+        onSendToAccounting={handleSendToAccounting}
+        onCancelRequest={handleCancelRequest}
         canPrint={canPrint}
       />
 
