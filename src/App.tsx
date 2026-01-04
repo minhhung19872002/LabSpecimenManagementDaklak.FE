@@ -98,6 +98,11 @@ const StatisticsPage = Loadable(
 // NCR
 const NCRList = Loadable(lazy(() => import("./pages/NCR/NCRList")));
 
+// Receipt - Phiếu thu
+const ReceiptList = Loadable(
+  lazy(() => import("./pages/Receipt/ReceiptList"))
+);
+
 // Task Management - Quản lý công việc khoa phòng
 const TaskManagementList = Loadable(
   lazy(() => import("./pages/TaskManagement/TaskManagementList"))
@@ -227,6 +232,9 @@ function App() {
 
           {/* NCR - Non-Conformance Reports */}
           <Route path="ncr" element={<NCRList />} />
+
+          {/* Receipt - Phiếu thu */}
+          <Route path="receipts" element={<ReceiptList />} />
 
           {/* Task Management - Quản lý công việc khoa phòng */}
           <Route path="tasks" element={<TaskManagementList />} />

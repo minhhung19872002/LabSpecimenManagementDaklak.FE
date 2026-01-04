@@ -68,6 +68,11 @@ export const PATH_ROUTES = {
 
   ncr: '/ncr',
 
+  receipts: {
+    index: '/receipts',
+    detail: (id: string) => `/receipts/${id}`,
+  },
+
   subcontractors: '/subcontractors',
 
   masterData: '/master-data',
