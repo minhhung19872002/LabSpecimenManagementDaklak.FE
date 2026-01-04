@@ -65,7 +65,6 @@ const ReceiptDetail: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [data, setData] = useState<ReceiptDetailDto | null>(null);
   const [receiptNumber, setReceiptNumber] = useState("");
-  const [voucherCode, setVoucherCode] = useState("");
   const [hasChanges, setHasChanges] = useState(false);
 
   // Load data
@@ -77,7 +76,6 @@ const ReceiptDetail: React.FC = () => {
         const result = await receiptService.getDetail(id);
         setData(result);
         setReceiptNumber(result.receiptNumber || "");
-        setVoucherCode(result.voucherCode || "");
       } catch (error) {
         console.error("Failed to load receipt:", error);
         message.error("Không thể tải thông tin phiếu thu");
@@ -91,12 +89,10 @@ const ReceiptDetail: React.FC = () => {
   // Track changes
   useEffect(() => {
     if (data) {
-      const changed =
-        receiptNumber !== (data.receiptNumber || "") ||
-        voucherCode !== (data.voucherCode || "");
+      const changed = receiptNumber !== (data.receiptNumber || "");
       setHasChanges(changed);
     }
-  }, [receiptNumber, voucherCode, data]);
+  }, [receiptNumber, data]);
 
   // Validate integer only input
   const handleNumberInput = (value: string, setter: (val: string) => void) => {
@@ -108,19 +104,19 @@ const ReceiptDetail: React.FC = () => {
   // Check if can change status
   const canChangeStatus = useMemo(() => {
     if (!data) return false;
-    const hasReceiptInfo = !!(receiptNumber?.trim() || voucherCode?.trim());
+    const hasReceiptInfo = !!receiptNumber?.trim();
     const isValidStatus =
       data.status !== ReceiptStatus.Paid &&
       data.status !== ReceiptStatus.Cancelled;
     return hasReceiptInfo && isValidStatus;
-  }, [receiptNumber, voucherCode, data]);
+  }, [receiptNumber, data]);
 
   // Save receipt info
   const handleSave = async () => {
     if (!id) return;
     setSaving(true);
     try {
-      await receiptService.update(id, { receiptNumber, voucherCode });
+      await receiptService.update(id, { receiptNumber });
       message.success("Đã lưu thông tin phiếu thu");
       setHasChanges(false);
       // Reload to get latest data
@@ -141,7 +137,7 @@ const ReceiptDetail: React.FC = () => {
     try {
       // Save changes first if any
       if (hasChanges) {
-        await receiptService.update(id, { receiptNumber, voucherCode });
+        await receiptService.update(id, { receiptNumber });
       }
       await receiptService.markAsPaid(id);
       message.success("Đã đánh dấu thanh toán");
@@ -164,7 +160,7 @@ const ReceiptDetail: React.FC = () => {
     try {
       // Save changes first if any
       if (hasChanges) {
-        await receiptService.update(id, { receiptNumber, voucherCode });
+        await receiptService.update(id, { receiptNumber });
       }
       await receiptService.markAsUnpaid(id);
       message.success("Đã đánh dấu chưa thanh toán");
@@ -489,23 +485,6 @@ const ReceiptDetail: React.FC = () => {
                 />
               </div>
             </Col>
-            <Col xs={24} lg={12} xl={6}>
-              <div className="detail-item">
-                <Text type="secondary">Mã số biên lai:</Text>
-                <Input
-                  value={voucherCode}
-                  onChange={(e) =>
-                    handleNumberInput(e.target.value, setVoucherCode)
-                  }
-                  placeholder="Nhập mã số biên lai"
-                  style={{ width: 180 }}
-                  disabled={
-                    data.status === ReceiptStatus.Paid ||
-                    data.status === ReceiptStatus.Cancelled
-                  }
-                />
-              </div>
-            </Col>
           </Row>
         </div>
 
@@ -552,12 +531,6 @@ const ReceiptDetail: React.FC = () => {
               <div className="detail-item">
                 <Text type="secondary">Người liên hệ:</Text>
                 <Text strong>{testRequest.contactPerson || "-"}</Text>
-              </div>
-            </Col>
-            <Col xs={24} md={12}>
-              <div className="detail-item">
-                <Text type="secondary">Điện thoại:</Text>
-                <Text strong>{testRequest.phone || "-"}</Text>
               </div>
             </Col>
           </Row>

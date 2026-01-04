@@ -35,7 +35,6 @@ export interface ReceiptDto {
   id: string;
   testRequestId: string;
   receiptNumber?: string;
-  voucherCode?: string; // Mã số biên lai
   status: ReceiptStatus;
   notes?: string;
   paidDate?: string;
@@ -76,5 +75,4 @@ export interface ReceiptDetailDto extends ReceiptDto {
  */
 export interface UpdateReceiptDto {
   receiptNumber?: string;
-  voucherCode?: string;
 }
