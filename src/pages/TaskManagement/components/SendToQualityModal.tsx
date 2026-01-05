@@ -260,6 +260,13 @@ const SendToQualityModal: React.FC<SendToQualityModalProps> = ({
       ]}
       width={700}
       centered
+      styles={{
+        body: {
+          maxHeight: "calc(100vh - 200px)",
+          overflowY: "auto",
+          overflowX: "hidden",
+        },
+      }}
     >
       <Form layout="vertical">
         {/* Quality Manager Selection */}
