@@ -45,6 +45,8 @@ interface IndicatorEditTableProps {
   isUrgent?: boolean;
   submitting?: boolean;
   resultOptions?: ResultOption[];
+  /** Có quyền thực hiện thao tác (nhập/sửa/gửi kết quả) theo Permission Matrix */
+  canPerformActions?: boolean;
   onResultsChange: (results: SaveIndicatorResultDto[]) => void;
   onSelectionChange: (indicatorIds: string[]) => void;
   onShowRejectionHistory: (indicatorId: string, indicatorName: string) => void;
@@ -61,6 +63,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
   isUrgent = false,
   submitting = false,
   resultOptions = [],
+  canPerformActions = true,
   onResultsChange,
   onSelectionChange,
   onShowRejectionHistory,
@@ -245,11 +248,12 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
         const currentValue =
           editedResults.get(record.id)?.result ?? record.result ?? "";
         // Chỉ cho nhập kết quả khi:
-        // - Có quyền edit (canEdit)
+        // - Có quyền từ Permission Matrix (canPerformActions)
+        // - Có quyền edit từ server (canEdit)
         // - Trạng thái = "Đang thử nghiệm" (Testing)
-        // Disable nếu: không có quyền edit HOẶC trạng thái không phải Testing
 
         const isDisabled =
+          !canPerformActions ||
           !record.canEdit ||
           record.testingStatus !== IndicatorTestingStatus.Testing;
 
@@ -292,8 +296,9 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       key: "images",
       width: 120,
       render: (_, record) => {
-        // Chỉ cho phép upload khi trạng thái = Testing
+        // Chỉ cho phép upload khi có quyền + trạng thái = Testing
         const canUpload =
+          canPerformActions &&
           record.canEdit &&
           record.testingStatus === IndicatorTestingStatus.Testing &&
           !!onUploadIndicatorImages;
@@ -321,8 +326,9 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
         const currentValue =
           editedResults.get(record.id)?.note ?? record.note ?? "";
 
-        // Enable khi: có quyền edit và trạng thái = Testing
+        // Enable khi: có quyền Permission Matrix + quyền edit từ server + trạng thái = Testing
         const isDisabled =
+          !canPerformActions ||
           !record.canEdit ||
           record.testingStatus !== IndicatorTestingStatus.Testing;
 
@@ -428,6 +434,11 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       width: 120,
       fixed: "right" as const,
       render: (_, record) => {
+        // Nếu không có quyền thao tác, hiện dấu "-"
+        if (!canPerformActions) {
+          return <Text type="secondary">-</Text>;
+        }
+
         const status = record.testingStatus;
         const currentResult =
           editedResults.get(record.id)?.result ?? record.result;

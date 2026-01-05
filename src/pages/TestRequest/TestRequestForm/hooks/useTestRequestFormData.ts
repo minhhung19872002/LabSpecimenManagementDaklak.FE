@@ -49,6 +49,7 @@ import {
 import { extractOrderNum, generateSampleCode } from "../utils";
 import { PATH_ROUTES } from "../../../../constants";
 import { quotationService } from "../../../../services/quotationService";
+import { checkActionPermission } from "../../../../hooks/useActionPermission";
 
 export const useTestRequestFormData = () => {
   const navigate = useNavigate();
@@ -59,6 +60,24 @@ export const useTestRequestFormData = () => {
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
   const isEditMode = !!id;
+
+  // Check permission khi edit mode - redirect nếu không có quyền
+  useEffect(() => {
+    if (isEditMode) {
+      const { canAll } = checkActionPermission('testRequests', 'edit');
+      if (!canAll) {
+        message.error('Bạn không có quyền chỉnh sửa phiếu yêu cầu');
+        navigate(PATH_ROUTES.testRequests.index);
+      }
+    } else {
+      // Check permission khi create mode
+      const { canAll } = checkActionPermission('testRequests', 'create');
+      if (!canAll) {
+        message.error('Bạn không có quyền tạo phiếu yêu cầu');
+        navigate(PATH_ROUTES.testRequests.index);
+      }
+    }
+  }, [isEditMode, navigate]);
 
   // Watch form fields
   const sampleTypeTask = Form.useWatch("sampleTypeTask", form);

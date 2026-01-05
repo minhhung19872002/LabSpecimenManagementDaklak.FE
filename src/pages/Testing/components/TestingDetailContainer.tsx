@@ -40,6 +40,8 @@ interface TestingDetailContainerProps {
     indicatorName: string;
   };
   resultOptions?: ResultOption[];
+  /** Có quyền thực hiện thao tác (nhập/sửa/gửi kết quả) theo Permission Matrix */
+  canPerformActions?: boolean;
   onBack: () => void;
   onCollapseChange: (keys: string[]) => void;
   onCheckIn: (sampleId: string) => void;
@@ -71,6 +73,7 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
   selectedIndicators,
   historyModal,
   resultOptions = [],
+  canPerformActions = true,
   onBack,
   onCollapseChange,
   onCheckIn,
@@ -152,6 +155,7 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
                   selectedIndicators.get(sample.sampleId) || []
                 }
                 submitting={submitting}
+                canPerformActions={canPerformActions}
                 onCheckIn={onCheckIn}
                 onSubmitResults={onSubmitResults}
               />
@@ -163,6 +167,7 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
               taskId={taskId}
               sample={sample}
               onImagesChange={onImagesChange}
+              canUpload={canPerformActions}
             />
             {/* Indicators table */}
             <IndicatorEditTable
@@ -173,6 +178,7 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
               isUrgent={isUrgent}
               submitting={submitting}
               resultOptions={resultOptions}
+              canPerformActions={canPerformActions}
               onResultsChange={(results) =>
                 onResultsChange(sample.sampleId, results)
               }

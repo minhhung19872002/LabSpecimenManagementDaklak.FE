@@ -51,6 +51,7 @@ const SETTINGS_TAB_PERMISSIONS: Record<string, string[]> = {
     ROLES.LAB_TECHNICAL_MANAGER,
     ROLES.SAMPLE_RECEIVER,
     ROLES.LAB_TECHNICIAN,
+    ROLES.ACCOUNTANT,
   ],
   notifications: [
     ROLES.ADMIN,
@@ -58,6 +59,7 @@ const SETTINGS_TAB_PERMISSIONS: Record<string, string[]> = {
     ROLES.LAB_TECHNICAL_MANAGER,
     ROLES.SAMPLE_RECEIVER,
     ROLES.LAB_TECHNICIAN,
+    ROLES.ACCOUNTANT,
   ],
   system: [ROLES.ADMIN],
   email: [ROLES.ADMIN],

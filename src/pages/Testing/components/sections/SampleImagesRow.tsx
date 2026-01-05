@@ -12,6 +12,8 @@ import SampleImagesDisplay from "../SampleImagesDisplay";
 interface SampleImagesRowProps {
   taskId: string;
   sample: TestingSampleDto;
+  /** Có quyền upload hình từ Permission Matrix */
+  canUpload?: boolean;
   onImagesChange: (
     sampleId: string,
     imageType: SampleTestingImageType,
@@ -22,6 +24,7 @@ interface SampleImagesRowProps {
 const SampleImagesRow: React.FC<SampleImagesRowProps> = ({
   taskId,
   sample,
+  canUpload: canUploadProp = true,
   onImagesChange,
 }) => {
   // Check if sample is completed (all indicators are Done)
@@ -31,7 +34,8 @@ const SampleImagesRow: React.FC<SampleImagesRowProps> = ({
       (ind) => ind.testingStatus === IndicatorTestingStatus.Done
     );
 
-  const canUpload = !isSampleCompleted;
+  // Kết hợp cả quyền Permission Matrix và trạng thái sample
+  const canUpload = canUploadProp && !isSampleCompleted;
 
   return (
     <div

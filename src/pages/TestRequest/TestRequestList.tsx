@@ -22,6 +22,7 @@ import {
 } from "../../types/testRequest";
 import ImportExcelModal from "../../components/common/ImportExcelModal";
 import { useTestRequestList } from "./hooks";
+import { useActionPermission } from "../../hooks/useActionPermission";
 
 const TestRequestList: React.FC = () => {
   const {
@@ -52,6 +53,10 @@ const TestRequestList: React.FC = () => {
     handleImportSuccess,
   } = useTestRequestList();
 
+  // Check permission cho action "create" theo Permission Matrix
+  // Chỉ BP Giao nhận và Admin có quyền tạo mới, QLCL chỉ có quyền View
+  const { canAll: canCreate } = useActionPermission('testRequests', 'create');
+
   return (
     <Card
       title="Danh sách yêu cầu thử nghiệm"
@@ -60,19 +65,24 @@ const TestRequestList: React.FC = () => {
           <Button icon={<ReloadOutlined />} onClick={loadData}>
             Làm mới
           </Button>
-          <Button
-            icon={<DownloadOutlined />}
-            onClick={handleDownloadTemplate}
-            loading={downloadingTemplate}
-          >
-            Tải Template
-          </Button>
-          <Button icon={<ImportOutlined />} onClick={openImportModal}>
-            Import Excel
-          </Button>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-            Tạo mới
-          </Button>
+          {/* Chỉ hiển thị buttons tạo mới/import khi có quyền create */}
+          {canCreate && (
+            <>
+              <Button
+                icon={<DownloadOutlined />}
+                onClick={handleDownloadTemplate}
+                loading={downloadingTemplate}
+              >
+                Tải Template
+              </Button>
+              <Button icon={<ImportOutlined />} onClick={openImportModal}>
+                Import Excel
+              </Button>
+              <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+                Tạo mới
+              </Button>
+            </>
+          )}
         </Space>
       }
     >

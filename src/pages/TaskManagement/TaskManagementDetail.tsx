@@ -53,7 +53,8 @@ import IndicatorTable from "./components/IndicatorTable";
 import SupporterModal from "./components/SupporterModal";
 import SampleImagesDisplay from "./components/SampleImagesDisplay";
 import SendToQualityModal from "./components/SendToQualityModal";
-import { PATH_ROUTES, ROLES, STORAGE_KEYS } from "../../constants";
+import { PATH_ROUTES } from "../../constants";
+import { useMultipleActionPermissions } from "../../hooks/useActionPermission";
 
 const { Title, Text } = Typography;
 
@@ -140,23 +141,25 @@ const TaskManagementDetail: React.FC = () => {
   // Send to quality modal state
   const [sendToQualityModalOpen, setSendToQualityModalOpen] = useState(false);
 
-  // Check if current user is admin
-  const isAdmin = useMemo(() => {
-    try {
-      const userInfoStr = localStorage.getItem(STORAGE_KEYS.USER_INFO);
-      if (!userInfoStr) return false;
-      const userInfo = JSON.parse(userInfoStr);
-      const roles = userInfo.roles || [];
-      return roles.includes(ROLES.ADMIN);
-    } catch {
-      return false;
-    }
-  }, []);
+  // Sử dụng hook để check permissions cho tất cả actions theo Permission Matrix
+  const actionPermissions = useMultipleActionPermissions('tasks', [
+    'assignTesting',
+    'addSupporter',
+    'editMethod',
+    'approveResult',
+  ]);
 
-  // Check if current user can manage supporters (QLKT or Admin)
+  // Check quyền từ Permission Matrix
+  // QLKT (A) = canAll, Admin (V) = canView
+  const canAssignTesting = actionPermissions.assignTesting?.canAll || false;
+  const canAddSupporter = actionPermissions.addSupporter?.canAll || false;
+  const canEditMethod = actionPermissions.editMethod?.canAll || false;
+  const canApproveResult = actionPermissions.approveResult?.canAll || false;
+
+  // Check if current user can manage supporters (QLKT hoặc có quyền addSupporter)
   const canManageSupporters = useMemo(() => {
-    return isAdmin || (task?.isCurrentUserTechnicalManager ?? false);
-  }, [isAdmin, task?.isCurrentUserTechnicalManager]);
+    return canAddSupporter || (task?.isCurrentUserTechnicalManager ?? false);
+  }, [canAddSupporter, task?.isCurrentUserTechnicalManager]);
 
   // Load task data
   const loadTask = useCallback(async () => {
@@ -948,10 +951,10 @@ const TaskManagementDetail: React.FC = () => {
   };
 
   // Kiểm tra có thể chỉnh sửa task không
-  // Cho phép khi: Chưa giao việc hoặc Đã giao việc
+  // Cho phép khi: Chưa giao việc hoặc Đã giao việc VÀ có quyền editMethod
   const canEditTask =
-    task?.status === LaboratoryTaskStatus.NotAssigned ||
-    task?.status === LaboratoryTaskStatus.Assigned;
+    (task?.status === LaboratoryTaskStatus.NotAssigned ||
+    task?.status === LaboratoryTaskStatus.Assigned) && canEditMethod;
 
   // Check if sample has selected indicators for bulk actions
   const getSampleSelectedCount = (sampleId: string) => {
@@ -977,8 +980,8 @@ const TaskManagementDetail: React.FC = () => {
           </Col>
           <Col>
             <Space>
-              {/* Bulk approve/reject buttons - only show when pendingApproval (có indicator chờ phê duyệt) */}
-              {sample.sampleStatus === "pendingApproval" && (
+              {/* Bulk approve/reject buttons - only show when pendingApproval VÀ có quyền approveResult */}
+              {sample.sampleStatus === "pendingApproval" && canApproveResult && (
                 <>
                   <Button
                     danger
@@ -1008,9 +1011,8 @@ const TaskManagementDetail: React.FC = () => {
                   </Button>
                 </>
               )}
-              {/* Assign button - show when sample has notStarted indicators */}
-              {/* Không phụ thuộc vào task status - vì có thể có sample chưa giao trong task đang Testing */}
-              {sample.sampleStatus === "notStarted" && (
+              {/* Assign button - show when sample has notStarted indicators VÀ có quyền assignTesting */}
+              {sample.sampleStatus === "notStarted" && canAssignTesting && (
                 <Button
                   type="primary"
                   size="small"
@@ -1024,10 +1026,11 @@ const TaskManagementDetail: React.FC = () => {
                   Giao việc{selectedCount > 0 ? ` (${selectedCount})` : ""}
                 </Button>
               )}
-              {/* Re-assign button - show when assigned but not approved, hide when customerCancelled */}
+              {/* Re-assign button - show when assigned but not approved, hide when customerCancelled VÀ có quyền assignTesting */}
               {sample.sampleStatus !== "notStarted" &&
                 sample.sampleStatus !== "customerCancelled" &&
-                !sample.isApproved && (
+                !sample.isApproved &&
+                canAssignTesting && (
                   <Button
                     size="small"
                     loading={actionLoading}
@@ -1069,6 +1072,7 @@ const TaskManagementDetail: React.FC = () => {
             technicians={technicians}
             isAssigned={sample.sampleStatus !== "notStarted"}
             canEdit={canEditTask}
+            canAssignTechnician={canAssignTesting}
             sampleStatus={sample.sampleStatus}
             onMethodChange={handleMethodChange}
             onTechnicianChange={handleTechnicianChange}
@@ -1132,7 +1136,7 @@ const TaskManagementDetail: React.FC = () => {
           </Col>
           <Col>
             <Space>
-              {/* Button "Thêm người hỗ trợ" - chỉ hiển thị cho QLKT hoặc Admin */}
+              {/* Button "Thêm người hỗ trợ" - chỉ hiển thị cho QLKT (có quyền addSupporter) hoặc là QLKT của task này */}
               {canManageSupporters && (
                 <Button
                   icon={<TeamOutlined />}
@@ -1146,15 +1150,18 @@ const TaskManagementDetail: React.FC = () => {
                   )}
                 </Button>
               )}
-              <Button
-                type="primary"
-                icon={<SendOutlined />}
-                disabled={!hasUnsentApprovedIndicators}
-                loading={actionLoading}
-                onClick={handleSendResults}
-              >
-                Gửi kết quả
-              </Button>
+              {/* Nút Gửi kết quả - chỉ QLKT có quyền (canApproveResult) */}
+              {canApproveResult && (
+                <Button
+                  type="primary"
+                  icon={<SendOutlined />}
+                  disabled={!hasUnsentApprovedIndicators}
+                  loading={actionLoading}
+                  onClick={handleSendResults}
+                >
+                  Gửi kết quả
+                </Button>
+              )}
             </Space>
           </Col>
         </Row>

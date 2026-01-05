@@ -13,6 +13,7 @@ import {
   IndicatorImageDto,
 } from "../../types/testing";
 import TestingDetailContainer from "./components/TestingDetailContainer";
+import { useMultipleActionPermissions } from "../../hooks/useActionPermission";
 
 interface ResultOption {
   value: string;
@@ -26,6 +27,22 @@ const TestingDetail: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [detail, setDetail] = useState<TestingDetailDto | null>(null);
   const [resultOptions, setResultOptions] = useState<ResultOption[]>([]);
+
+  // Sử dụng hook để check permissions cho tất cả actions theo Permission Matrix
+  // Testing: KTV (A), QLKT (V), Admin (V)
+  const actionPermissions = useMultipleActionPermissions('testing', [
+    'inputResult',
+    'editResult',
+    'sendResult',
+  ]);
+
+  // KTV có quyền ALL = canAll = true, QLKT/Admin chỉ có View
+  const canInputResult = actionPermissions.inputResult?.canAll || false;
+  const canEditResult = actionPermissions.editResult?.canAll || false;
+  const canSendResult = actionPermissions.sendResult?.canAll || false;
+
+  // Tổng hợp: có thể thao tác (nhập/sửa/gửi) nếu có bất kỳ quyền nào
+  const canPerformActions = canInputResult || canEditResult || canSendResult;
 
   // Helper function to update indicators optimistically (indicator-level only)
   // Task-level status is fetched from server to avoid duplicating BE logic
@@ -662,6 +679,7 @@ const TestingDetail: React.FC = () => {
       selectedIndicators={selectedIndicators}
       historyModal={historyModal}
       resultOptions={resultOptions}
+      canPerformActions={canPerformActions}
       onBack={() => navigate("/testing")}
       onCollapseChange={setActiveKeys}
       onCheckIn={handleCheckIn}

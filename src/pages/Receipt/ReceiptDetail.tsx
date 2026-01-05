@@ -61,6 +61,10 @@ const ReceiptDetail: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
 
+  // Note: Receipts theo Permission Matrix chỉ có Kế toán (A) và Admin (A)
+  // Cả 2 đều có full quyền nên không cần check UI chi tiết
+  // Route permission đã được config đúng trong permissions.ts
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [data, setData] = useState<ReceiptDetailDto | null>(null);

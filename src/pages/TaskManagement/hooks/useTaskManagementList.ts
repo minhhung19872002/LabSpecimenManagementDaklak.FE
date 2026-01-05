@@ -10,9 +10,14 @@ import {
 } from "../../../types/laboratoryTask";
 import { PATH_ROUTES, STORAGE_KEYS } from "../../../constants";
 import { getTaskManagementColumns } from "../components/columns";
+import { useActionPermission } from "../../../hooks/useActionPermission";
 
 export const useTaskManagementList = () => {
   const navigate = useNavigate();
+
+  // Check quyền theo Permission Matrix - chỉ QLKT có quyền xóa (assignTesting bao gồm quyền xóa)
+  const { canAll: canDeletePermission } = useActionPermission('tasks', 'assignTesting');
+
   const [tasks, setTasks] = useState<LaboratoryTaskDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
@@ -193,8 +198,11 @@ export const useTaskManagementList = () => {
   );
 
   const columns = useMemo(
-    () => getTaskManagementColumns({ onDelete: handleDelete }),
-    [handleDelete]
+    () => getTaskManagementColumns({
+      onDelete: handleDelete,
+      canDeletePermission,
+    }),
+    [handleDelete, canDeletePermission]
   );
 
   return {

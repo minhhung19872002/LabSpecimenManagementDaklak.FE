@@ -12,6 +12,8 @@ interface SamplePanelHeaderProps {
   sample: TestingSampleDto;
   selectedIndicatorIds: string[];
   submitting: boolean;
+  /** Có quyền thực hiện thao tác (nhập/sửa/gửi kết quả) theo Permission Matrix */
+  canPerformActions?: boolean;
   onCheckIn: (sampleId: string) => void;
   onSubmitResults: (sampleId: string) => void;
 }
@@ -20,6 +22,7 @@ const SamplePanelHeader: React.FC<SamplePanelHeaderProps> = ({
   sample,
   selectedIndicatorIds,
   submitting,
+  canPerformActions = true,
   onCheckIn,
   onSubmitResults,
 }) => {
@@ -52,36 +55,39 @@ const SamplePanelHeader: React.FC<SamplePanelHeaderProps> = ({
             <Text type="secondary">({sample.indicators.length} chỉ tiêu)</Text>
           </Space>
         </Col>
-        <Col flex="none" onClick={(e) => e.stopPropagation()}>
-          <Space size={8}>
-            <Button
-              type="default"
-              size="small"
-              icon={<PlayCircleOutlined />}
-              onClick={() => onCheckIn(sample.sampleId)}
-              disabled={
-                submitting ||
-                selectedIndicatorIds.length === 0 ||
-                !hasCheckInableIndicators
-              }
-            >
-              Thực hiện
-            </Button>
-            <Button
-              type="primary"
-              size="small"
-              icon={<SendOutlined />}
-              onClick={() => onSubmitResults(sample.sampleId)}
-              disabled={
-                submitting ||
-                selectedIndicatorIds.length === 0 ||
-                !hasSubmittableIndicators
-              }
-            >
-              Gửi kết quả
-            </Button>
-          </Space>
-        </Col>
+        {/* Chỉ hiển thị buttons khi có quyền thao tác */}
+        {canPerformActions && (
+          <Col flex="none" onClick={(e) => e.stopPropagation()}>
+            <Space size={8}>
+              <Button
+                type="default"
+                size="small"
+                icon={<PlayCircleOutlined />}
+                onClick={() => onCheckIn(sample.sampleId)}
+                disabled={
+                  submitting ||
+                  selectedIndicatorIds.length === 0 ||
+                  !hasCheckInableIndicators
+                }
+              >
+                Thực hiện
+              </Button>
+              <Button
+                type="primary"
+                size="small"
+                icon={<SendOutlined />}
+                onClick={() => onSubmitResults(sample.sampleId)}
+                disabled={
+                  submitting ||
+                  selectedIndicatorIds.length === 0 ||
+                  !hasSubmittableIndicators
+                }
+              >
+                Gửi kết quả
+              </Button>
+            </Space>
+          </Col>
+        )}
       </Row>
     </div>
   );

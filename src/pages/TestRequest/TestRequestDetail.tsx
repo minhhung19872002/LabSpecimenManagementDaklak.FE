@@ -13,7 +13,7 @@ import {
 import { IndicatorApprovalStatus } from "../../types/laboratoryTask";
 import "./TestRequestDetail.css";
 import { API_BASE_URL } from "../../services/api";
-import { ROLES, STORAGE_KEYS } from "../../constants";
+import { useMultipleActionPermissions } from "../../hooks/useActionPermission";
 
 // Components
 import TestRequestDetailContainer from "./components/TestRequestDetailContainer";
@@ -309,20 +309,24 @@ const TestRequestDetail: React.FC = () => {
     return approvedCount > 0;
   }, [data?.samples]);
 
+  // Sử dụng hook để check permissions cho tất cả actions
+  const actionPermissions = useMultipleActionPermissions('testRequests', [
+    'edit',
+    'sendSample',
+    'cancel',
+    'sendToAccounting',
+    'printRequest',
+  ]);
+
   // Check if user can print test request form (In phiếu XN)
   // Only admin or SampleReceiver can see this button
-  const canPrintTestRequest = useMemo(() => {
-    try {
-      const userInfoStr = localStorage.getItem(STORAGE_KEYS.USER_INFO);
-      if (!userInfoStr) return false;
+  const canPrintTestRequest = actionPermissions.printRequest?.canAll || false;
 
-      const userInfo = JSON.parse(userInfoStr);
-      const roles = userInfo.roles || [];
-      return roles.includes(ROLES.ADMIN) || roles.includes(ROLES.SAMPLE_RECEIVER);
-    } catch {
-      return false;
-    }
-  }, []);
+  // Check các quyền khác
+  const canEditRequest = actionPermissions.edit?.canAll || false;
+  const canSendSampleAction = actionPermissions.sendSample?.canAll || false;
+  const canCancelAction = actionPermissions.cancel?.canAll || false;
+  const canSendToAccountingAction = actionPermissions.sendToAccounting?.canAll || false;
 
   if (loading) {
     return (
@@ -361,6 +365,11 @@ const TestRequestDetail: React.FC = () => {
         onCancelRequest={handleCancelRequest}
         canPrint={canPrint}
         canPrintTestRequest={canPrintTestRequest}
+        // Permission flags theo Permission Matrix
+        canEditRequest={canEditRequest}
+        canSendSampleAction={canSendSampleAction}
+        canCancelAction={canCancelAction}
+        canSendToAccountingAction={canSendToAccountingAction}
       />
 
       {/* Print Indicator Modal (In KQ / In KQ hỗn hợp) */}

@@ -37,6 +37,8 @@ interface IndicatorTableProps {
   technicians: UserLookupDto[];
   isAssigned: boolean; // true khi đã giao việc (lưu DB thành công)
   canEdit: boolean; // true khi task status cho phép edit (NotAssignedTechnician hoặc AssignedTechnician)
+  /** Permission theo Permission Matrix - chỉ QLKT có quyền giao KTV và edit Note */
+  canAssignTechnician?: boolean;
   sampleStatus?: SampleStatus; // Sample status to determine selection mode
   onMethodChange: (indicatorId: string, methodId: string) => void;
   onTechnicianChange: (indicatorId: string, technicianId: string) => void;
@@ -60,6 +62,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   technicians,
   isAssigned: _isAssigned,
   canEdit: _canEdit,
+  canAssignTechnician = true, // Default true để không break existing usage
   sampleStatus,
   onMethodChange,
   onTechnicianChange,
@@ -309,10 +312,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       key: "note",
       width: 150,
       render: (value: string, record: LaboratoryTaskIndicatorDto) => {
-        // Không cho edit khi đã duyệt hoặc KH hủy
+        // Không cho edit khi đã duyệt hoặc KH hủy hoặc không có quyền assignTechnician
         const isApproved = record.approvalStatus === IndicatorApprovalStatus.Approved;
         const isCancelled = record.approvalStatus === IndicatorApprovalStatus.CustomerCancelled;
-        const canEditNote = !isApproved && !isCancelled && onUpdateNote;
+        const canEditNote = !isApproved && !isCancelled && onUpdateNote && canAssignTechnician;
         const isSaving = savingNoteId === record.id;
 
         // Read-only mode
@@ -492,10 +495,11 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       render: (value: string, record: LaboratoryTaskIndicatorDto) => {
         // Cho phép chỉnh sửa KTV nếu:
         // 1. Indicator chưa được duyệt (Approved) và chưa bị hủy (CustomerCancelled)
-        // 2. Không quan tâm đến task status - vì có thể có indicator chưa giao việc trong task đang Testing
+        // 2. Có quyền assignTechnician theo Permission Matrix (chỉ QLKT)
         const canEditIndicator =
           record.approvalStatus !== IndicatorApprovalStatus.Approved &&
-          record.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled;
+          record.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled &&
+          canAssignTechnician;
 
         return (
           <Select
