@@ -53,7 +53,7 @@ import IndicatorTable from "./components/IndicatorTable";
 import SupporterModal from "./components/SupporterModal";
 import SampleImagesDisplay from "./components/SampleImagesDisplay";
 import SendToQualityModal from "./components/SendToQualityModal";
-import { PATH_ROUTES } from "../../constants";
+import { PATH_ROUTES, STORAGE_KEYS } from "../../constants";
 import { useMultipleActionPermissions } from "../../hooks/useActionPermission";
 
 const { Title, Text } = Typography;
@@ -149,14 +149,30 @@ const TaskManagementDetail: React.FC = () => {
     'approveResult',
   ]);
 
-  // Check quyền từ Permission Matrix
-  // QLKT (A) = canAll, Admin (V) = canView
-  const canAssignTesting = actionPermissions.assignTesting?.canAll || false;
-  const canAddSupporter = actionPermissions.addSupporter?.canAll || false;
-  const canEditMethod = actionPermissions.editMethod?.canAll || false;
-  const canApproveResult = actionPermissions.approveResult?.canAll || false;
+  // Check if current user is a supporter of this task
+  const isCurrentUserSupporter = useMemo(() => {
+    if (!task?.supporters) return false;
+    const storedUser = localStorage.getItem(STORAGE_KEYS.USER_INFO);
+    if (!storedUser) return false;
+    try {
+      const userInfo = JSON.parse(storedUser);
+      return task.supporters.some(s => s.userId === userInfo.id);
+    } catch {
+      return false;
+    }
+  }, [task?.supporters]);
 
-  // Check if current user can manage supporters (QLKT hoặc có quyền addSupporter)
+  // Check quyền từ Permission Matrix + supporter status
+  // QLKT (A) = canAll, Admin (V) = canView, Supporter = same as QLKT (except addSupporter)
+  // Người hỗ trợ có quyền: giao KTV, duyệt/từ chối, gửi QLCL
+  // Người hỗ trợ KHÔNG có quyền: xóa task, thêm supporter khác
+  const canAssignTesting = actionPermissions.assignTesting?.canAll || isCurrentUserSupporter || false;
+  const canAddSupporter = actionPermissions.addSupporter?.canAll || false; // Supporter KHÔNG có quyền thêm supporter khác
+  const canEditMethod = actionPermissions.editMethod?.canAll || isCurrentUserSupporter || false;
+  const canApproveResult = actionPermissions.approveResult?.canAll || isCurrentUserSupporter || false;
+
+  // Check if current user can manage supporters (chỉ QLKT của task hoặc có quyền addSupporter)
+  // Supporter KHÔNG có quyền này
   const canManageSupporters = useMemo(() => {
     return canAddSupporter || (task?.isCurrentUserTechnicalManager ?? false);
   }, [canAddSupporter, task?.isCurrentUserTechnicalManager]);

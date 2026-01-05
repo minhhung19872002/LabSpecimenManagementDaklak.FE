@@ -1,7 +1,8 @@
 import React from 'react';
 import { Navigate, useLocation, Outlet } from 'react-router-dom';
 import { authService, UserInfo } from '../../services/authService';
-import { hasRoutePermission, getDefaultRouteForUser, PATH_ROUTES, STORAGE_KEYS } from '../../constants';
+import { hasRoutePermission, getDefaultRouteForUser, PATH_ROUTES, STORAGE_KEYS, SUPPORTER_ALLOWED_ROUTES } from '../../constants';
+import { useSupporterStatus } from '../../hooks/useSupporterStatus';
 
 interface PrivateRouteProps {
   children?: React.ReactNode;
@@ -16,6 +17,7 @@ interface PrivateRouteProps {
 const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
   const location = useLocation();
   const isAuthenticated = authService.isAuthenticated();
+  const { isSupporter, loading: supporterLoading } = useSupporterStatus();
 
   if (!isAuthenticated) {
     // Redirect to login page with return URL
@@ -35,8 +37,19 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
     }
   }
 
-  // Check route permission
-  const hasPermission = hasRoutePermission(location.pathname, userRoles);
+  // Check if this is a supporter-allowed route and we're still loading supporter status
+  const isSupporterRoute = SUPPORTER_ALLOWED_ROUTES.some(
+    route => location.pathname === route || location.pathname.startsWith(route + '/')
+  );
+
+  // If checking supporter status for supporter-allowed routes, wait for loading
+  if (isSupporterRoute && supporterLoading) {
+    // Return null or loading indicator while checking supporter status
+    return null;
+  }
+
+  // Check route permission (including supporter status)
+  const hasPermission = hasRoutePermission(location.pathname, userRoles, isSupporter);
 
   if (!hasPermission) {
     // Get default route for user
