@@ -279,6 +279,8 @@ export interface BulkApproveIndicatorsInput {
 export interface SendToQualityInput {
   indicatorIds: string[];
   qualityManagerId: string;
+  noteContent?: string | null;
+  selectedNoteIds?: string[] | null;
 }
 
 // ============= Sample Status (Computed for Display) =============

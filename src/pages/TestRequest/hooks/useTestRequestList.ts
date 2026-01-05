@@ -14,9 +14,14 @@ import {
   TestRequestStatus,
 } from "../../../types/testRequest";
 import { getTestRequestColumns } from "../components/columns";
+import { useActionPermission } from "../../../hooks/useActionPermission";
 
 export const useTestRequestList = () => {
   const navigate = useNavigate();
+
+  // Check quyền edit theo Permission Matrix (bao gồm cả quyền xóa)
+  const { canAll: canEditPermission } = useActionPermission('testRequests', 'edit');
+
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<TestRequestDto[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -169,8 +174,12 @@ export const useTestRequestList = () => {
   }, [loadData]);
 
   const columns = useMemo(
-    () => getTestRequestColumns({ onEdit: handleEdit, onDelete: handleDelete }),
-    [handleEdit, handleDelete]
+    () => getTestRequestColumns({
+      onEdit: handleEdit,
+      onDelete: handleDelete,
+      canEditPermission,
+    }),
+    [handleEdit, handleDelete, canEditPermission]
   );
 
   return {

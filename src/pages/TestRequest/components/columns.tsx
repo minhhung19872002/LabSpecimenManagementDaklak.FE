@@ -17,6 +17,8 @@ import StatusTag from "../../../components/common/StatusTag";
 interface GetColumnsOptions {
   onEdit: (record: TestRequestDto) => void;
   onDelete: (id: string) => void;
+  /** Có quyền chỉnh sửa/xóa theo Permission Matrix (BP Giao nhận, Admin) */
+  canEditPermission?: boolean;
 }
 
 const getStatusTag = (status: TestRequestStatus) => {
@@ -105,9 +107,17 @@ export const getTestRequestColumns = (
     width: 80,
     fixed: "right",
     render: (_: unknown, record: TestRequestDto) => {
-      const canEdit = canEditTestRequest(record.status);
-      const canDelete = canDeleteTestRequest(record.status);
+      // Check cả status và permission
+      const canEditByStatus = canEditTestRequest(record.status);
+      const canEditByPermission = options.canEditPermission !== false; // default true for backward compatibility
+      const canEdit = canEditByStatus && canEditByPermission;
+      const canDelete = canDeleteTestRequest(record.status) && canEditByPermission;
       const showActions = showActionsForTestRequest(record.status);
+
+      // Nếu không có quyền theo Permission Matrix, ẩn luôn cột thao tác
+      if (!canEditByPermission) {
+        return null;
+      }
 
       if (!showActions) {
         return null;

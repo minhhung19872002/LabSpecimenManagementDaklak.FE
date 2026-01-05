@@ -340,7 +340,7 @@ const MainLayout: React.FC = () => {
           icon: <DollarOutlined />,
           label: menuLabel("Báo giá"),
           onClick: () => navigate(PATH_ROUTES.quotations.index),
-          roles: [ROLES.ADMIN, ROLES.ACCOUNTANT],
+          roles: [...ALL_ROLES, ROLES.ACCOUNTANT],
         },
         {
           key: "receipts",
@@ -363,10 +363,7 @@ const MainLayout: React.FC = () => {
           onClick: () => navigate(PATH_ROUTES.tasks.index),
           roles: [
             ROLES.ADMIN,
-            ROLES.QUALITY_MANAGER,
             ROLES.LAB_TECHNICAL_MANAGER,
-            ROLES.LAB_TECHNICIAN,
-            ROLES.SAMPLE_RECEIVER,
           ],
         },
         {
@@ -376,7 +373,6 @@ const MainLayout: React.FC = () => {
           onClick: () => navigate(PATH_ROUTES.testing.index),
           roles: [
             ROLES.ADMIN,
-            ROLES.QUALITY_MANAGER,
             ROLES.LAB_TECHNICAL_MANAGER,
             ROLES.LAB_TECHNICIAN,
           ],

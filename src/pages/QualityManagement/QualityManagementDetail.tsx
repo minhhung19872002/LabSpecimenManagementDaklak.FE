@@ -46,6 +46,10 @@ const QualityManagementDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
+  // Note: QualityManagement theo Permission Matrix chỉ có QLCL (A) và Admin (A)
+  // Cả 2 đều có full quyền nên không cần check UI chi tiết
+  // Route permission đã được config đúng trong permissions.ts
+
   // State
   const [loading, setLoading] = useState(false);
   const [task, setTask] = useState<QualityManagementTaskDto | null>(null);

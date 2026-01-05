@@ -36,22 +36,22 @@ export const ROUTE_PERMISSIONS: Record<string, string[]> = {
   ],
 
   // ============================================
-  // Quản lý công việc - Admin, QLCL, QLKT, KTV, BPGN (supporter có thể được thêm từ bất kỳ role nào)
+  // Quản lý công việc - QLKT (A), Admin (V)
+  // Theo Permission Matrix: QLKT có full quyền, Admin chỉ View
+  // QLCL, KTV, BP Giao nhận KHÔNG có quyền truy cập
   // ============================================
   [PATH_ROUTES.tasks.index]: [
     ROLES.ADMIN,
-    ROLES.QUALITY_MANAGER,
     ROLES.LAB_TECHNICAL_MANAGER,
-    ROLES.LAB_TECHNICIAN,
-    ROLES.SAMPLE_RECEIVER,
   ],
 
   // ============================================
-  // Quản lý thử nghiệm/thử nghiệm - Admin, QLCL, QLKT, KTV
+  // Quản lý thử nghiệm - KTV (A), QLKT (V), Admin (V)
+  // Theo Permission Matrix: KTV có full quyền, QLKT và Admin chỉ View
+  // QLCL KHÔNG có quyền truy cập
   // ============================================
   [PATH_ROUTES.testing.index]: [
     ROLES.ADMIN,
-    ROLES.QUALITY_MANAGER,
     ROLES.LAB_TECHNICAL_MANAGER,
     ROLES.LAB_TECHNICIAN,
   ],
@@ -75,6 +75,14 @@ export const ROUTE_PERMISSIONS: Record<string, string[]> = {
   ],
 
   // ============================================
+  // Lịch sử lưu mẫu - Admin, QLCL
+  // ============================================
+  [PATH_ROUTES.specimenHistories.index]: [
+    ROLES.ADMIN,
+    ROLES.QUALITY_MANAGER,
+  ],
+
+  // ============================================
   // Các trang còn lại - Chỉ Admin
   // ============================================
 
@@ -84,8 +92,8 @@ export const ROUTE_PERMISSIONS: Record<string, string[]> = {
   // Báo cáo
   [PATH_ROUTES.reports]: [ROLES.ADMIN],
 
-  // NCR
-  [PATH_ROUTES.ncr]: [ROLES.ADMIN],
+  // NCR - Admin, QLCL
+  [PATH_ROUTES.ncr]: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
 
   // Nhà thầu phụ
   [PATH_ROUTES.subcontractors]: [ROLES.ADMIN],
@@ -101,6 +109,27 @@ export const ROUTE_PERMISSIONS: Record<string, string[]> = {
 
   // Nhân viên
   [PATH_ROUTES.employees]: [ROLES.ADMIN],
+
+  // ============================================
+  // Quản lý phiếu thu - Kế toán (A), Admin (A)
+  // Theo Permission Matrix: Kế toán và Admin có full quyền
+  // ============================================
+  [PATH_ROUTES.receipts.index]: [
+    ROLES.ADMIN,
+    ROLES.ACCOUNTANT,
+  ],
+
+  // ============================================
+  // Báo giá - Tất cả roles đều có quyền
+  // ============================================
+  [PATH_ROUTES.quotations.index]: [
+    ROLES.ADMIN,
+    ROLES.QUALITY_MANAGER,
+    ROLES.LAB_TECHNICAL_MANAGER,
+    ROLES.SAMPLE_RECEIVER,
+    ROLES.LAB_TECHNICIAN,
+    ROLES.ACCOUNTANT,
+  ],
 
   // ============================================
   // Cài đặt - Tất cả roles (mỗi role sẽ thấy tab phù hợp)

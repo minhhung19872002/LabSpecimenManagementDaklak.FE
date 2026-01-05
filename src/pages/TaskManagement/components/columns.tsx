@@ -22,6 +22,8 @@ const { Text } = Typography;
 
 interface GetColumnsOptions {
   onDelete: (id: string) => void;
+  /** Có quyền xóa theo Permission Matrix (chỉ QLKT) */
+  canDeletePermission?: boolean;
 }
 
 const getStatusTag = (status: LaboratoryTaskStatus) => {
@@ -158,6 +160,12 @@ export const getTaskManagementColumns = (
     width: 100,
     fixed: "right",
     render: (_: unknown, record: LaboratoryTaskDto) => {
+      // Check permission - nếu không có quyền xóa, ẩn luôn cột thao tác
+      const canDeleteByPermission = options.canDeletePermission !== false;
+      if (!canDeleteByPermission) {
+        return null;
+      }
+
       const canEdit =
         record.status === LaboratoryTaskStatus.NotAssigned ||
         record.status === LaboratoryTaskStatus.Assigned;

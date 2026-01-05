@@ -66,6 +66,11 @@ interface TestRequestDetailContainerProps {
   onCancelRequest: () => void;
   canPrint: boolean;
   canPrintTestRequest: boolean;
+  // Permission flags theo Permission Matrix
+  canEditRequest: boolean;
+  canSendSampleAction: boolean;
+  canCancelAction: boolean;
+  canSendToAccountingAction: boolean;
 }
 
 const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
@@ -87,6 +92,11 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
   onCancelRequest,
   canPrint,
   canPrintTestRequest,
+  // Permission flags
+  canEditRequest,
+  canSendSampleAction,
+  canCancelAction,
+  canSendToAccountingAction,
 }) => {
   const navigate = useNavigate();
 
@@ -102,8 +112,8 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
 
     // === 1. PRIMARY ACTIONS (ưu tiên cao nhất) ===
 
-    // Gửi kế toán - chỉ khi status = New
-    if (canSendToAccounting(data.status)) {
+    // Gửi kế toán - chỉ khi status = New VÀ có quyền sendToAccounting
+    if (canSendToAccounting(data.status) && canSendToAccountingAction) {
       buttons.push(
         <Button
           key="send-to-accounting"
@@ -116,8 +126,8 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
       );
     }
 
-    // Gửi mẫu - khi status = Paid
-    if (canSendSample(data.status)) {
+    // Gửi mẫu - khi status = Paid VÀ có quyền sendSample
+    if (canSendSample(data.status) && canSendSampleAction) {
       buttons.push(
         <Button
           key="send-sample"
@@ -197,8 +207,8 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
 
     // === 4. HỦY YÊU CẦU (danger - cuối cùng) ===
 
-    // Hủy yêu cầu - hiển thị ở tất cả status trừ Completed, ResultSent và Cancelled
-    if (canCancelRequest(data.status)) {
+    // Hủy yêu cầu - hiển thị ở tất cả status trừ Completed, ResultSent và Cancelled VÀ có quyền cancel
+    if (canCancelRequest(data.status) && canCancelAction) {
       buttons.push(
         <Button
           key="cancel-request"
@@ -250,7 +260,7 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
             </Space>
             <Space wrap>
               {renderActionButtons()}
-              {canEditTestRequest(data.status) && !isCancelledRequest(data.status) && (
+              {canEditTestRequest(data.status) && !isCancelledRequest(data.status) && canEditRequest && (
                 <Button
                   type="primary"
                   icon={<EditOutlined />}
