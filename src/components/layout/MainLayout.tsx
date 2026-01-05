@@ -321,13 +321,6 @@ const MainLayout: React.FC = () => {
           ],
         },
         {
-          key: "reports",
-          icon: <BarChartOutlined />,
-          label: menuLabel(t("menu.reports")),
-          onClick: () => navigate(PATH_ROUTES.reports),
-          roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
-        },
-        {
           key: "statistics",
           icon: <BarChartOutlined />,
           label: menuLabel(t("menu.statistics")),
@@ -419,13 +412,6 @@ const MainLayout: React.FC = () => {
           icon: <WarningOutlined />,
           label: menuLabel("Báo cáo NCR"),
           onClick: () => navigate(PATH_ROUTES.ncr),
-          roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
-        },
-        {
-          key: "reports",
-          icon: <FileTextOutlined />,
-          label: menuLabel(t("menu.reports")),
-          onClick: () => navigate(PATH_ROUTES.reports),
           roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
         },
       ],

@@ -11,6 +11,9 @@ import {
   Empty,
   Divider,
   message,
+  Input,
+  Row,
+  Col,
 } from "antd";
 import { SendOutlined } from "@ant-design/icons";
 import { useForm, Controller } from "react-hook-form";
@@ -22,8 +25,10 @@ import {
   IndicatorApprovalStatus,
 } from "../../../types/laboratoryTask";
 import { sendToQualitySchema, SendToQualityFormData } from "../schemas";
+import { noteService } from "../../../services/noteService";
 
 const { Text } = Typography;
+const { TextArea } = Input;
 
 interface SendToQualityModalProps {
   open: boolean;
@@ -57,6 +62,12 @@ const SendToQualityModal: React.FC<SendToQualityModalProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [selectedIndicatorIds, setSelectedIndicatorIds] = useState<string[]>([]);
 
+  // Note states
+  const [noteContent, setNoteContent] = useState<string>("");
+  const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([]);
+  const [masterNotes, setMasterNotes] = useState<any[]>([]);
+  const [loadingNotes, setLoadingNotes] = useState(false);
+
   // Filter only approved indicators that haven't been sent to quality yet
   const approvedIndicators = useMemo(() => {
     return indicators.filter(
@@ -79,20 +90,52 @@ const SendToQualityModal: React.FC<SendToQualityModalProps> = ({
     return grouped;
   }, [approvedIndicators]);
 
-  // Load quality managers when modal opens
+  // Load quality managers and master notes when modal opens
   useEffect(() => {
     if (open) {
       loadQualityManagers();
+      loadMasterNotes();
       // Select all approved indicators by default
       setSelectedIndicatorIds(approvedIndicators.map((ind) => ind.id));
     }
   }, [open, approvedIndicators]);
+
+  // Build note content from selected indicators - only add, don't remove
+  useEffect(() => {
+    if (open && selectedIndicatorIds.length > 0) {
+      const selectedInds = approvedIndicators.filter(ind =>
+        selectedIndicatorIds.includes(ind.id)
+      );
+      const noteLines = selectedInds
+        .map(ind => ind.note)
+        .filter(note => note && note.trim())
+        .map(note => `- ${note}`);
+
+      const newNoteContent = noteLines.join('\n');
+      // Only update if we're adding new content (initial load or adding indicators)
+      setNoteContent(prev => {
+        // If current content is empty, set new content
+        if (!prev.trim()) {
+          return newNoteContent;
+        }
+        // If new content has more lines, append the difference
+        const prevLines = prev.split('\n').filter(line => line.trim());
+        const newLines = noteLines.filter(line => !prevLines.includes(line));
+        if (newLines.length > 0) {
+          return prev + '\n' + newLines.join('\n');
+        }
+        return prev;
+      });
+    }
+  }, [selectedIndicatorIds, approvedIndicators, open]);
 
   // Reset form when modal closes
   useEffect(() => {
     if (!open) {
       reset();
       setSelectedIndicatorIds([]);
+      setNoteContent("");
+      setSelectedNoteIds([]);
     }
   }, [open, reset]);
 
@@ -110,6 +153,20 @@ const SendToQualityModal: React.FC<SendToQualityModalProps> = ({
     }
   };
 
+  const loadMasterNotes = async () => {
+    setLoadingNotes(true);
+    try {
+      const notes = await noteService.getActiveNotes();
+      setMasterNotes(notes || []);
+    } catch (error) {
+      console.error("Failed to load master notes:", error);
+      message.error("Không thể tải danh sách ghi chú");
+      setMasterNotes([]);
+    } finally {
+      setLoadingNotes(false);
+    }
+  };
+
   const onSubmit = async (values: SendToQualityFormData) => {
     if (selectedIndicatorIds.length === 0) {
       message.warning("Vui lòng chọn ít nhất một chỉ tiêu để gửi");
@@ -121,6 +178,8 @@ const SendToQualityModal: React.FC<SendToQualityModalProps> = ({
       await laboratoryTaskService.sendToQuality(taskId, {
         indicatorIds: selectedIndicatorIds,
         qualityManagerId: values.qualityManagerId,
+        noteContent: noteContent.trim() || null,
+        selectedNoteIds: selectedNoteIds.length > 0 ? selectedNoteIds : null,
       });
 
       message.success("Đã gửi kết quả đến Quản lý chất lượng");
@@ -332,6 +391,92 @@ const SendToQualityModal: React.FC<SendToQualityModalProps> = ({
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+
+        <Divider />
+
+        {/* Note Section */}
+        <div style={{ marginBottom: 16 }}>
+          <Text strong style={{ display: "block", marginBottom: 8 }}>
+            Ghi chú
+          </Text>
+          <Row gutter={16}>
+            <Col span={14}>
+              <TextArea
+                value={noteContent}
+                onChange={(e) => setNoteContent(e.target.value)}
+                placeholder="Nhập ghi chú..."
+                rows={4}
+                maxLength={2000}
+                showCount
+              />
+            </Col>
+            <Col span={10}>
+              <Select
+                mode="multiple"
+                value={selectedNoteIds}
+                onChange={setSelectedNoteIds}
+                placeholder="Chọn ghi chú từ Master Data..."
+                loading={loadingNotes}
+                style={{ width: "100%" }}
+                options={(masterNotes || []).map((note) => ({
+                  value: note.id,
+                  label: note.content,
+                }))}
+                filterOption={(input, option) =>
+                  (option?.label as string)
+                    ?.toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+                showSearch
+                notFoundContent={
+                  loadingNotes ? (
+                    <Spin size="small" />
+                  ) : (
+                    <Empty
+                      description="Không có ghi chú"
+                      image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    />
+                  )
+                }
+              />
+            </Col>
+          </Row>
+
+          {/* Preview Section */}
+          {(noteContent.trim() || selectedNoteIds.length > 0) && (
+            <div
+              style={{
+                marginTop: 12,
+                padding: 12,
+                backgroundColor: "#f5f5f5",
+                borderRadius: 6,
+                border: "1px solid #d9d9d9",
+              }}
+            >
+              <Text strong style={{ display: "block", marginBottom: 8 }}>
+                Xem trước nội dung ghi chú:
+              </Text>
+              <div style={{ whiteSpace: "pre-line" }}>
+                {noteContent.trim() && (
+                  <div style={{ marginBottom: 8 }}>
+                    <Text>{noteContent}</Text>
+                  </div>
+                )}
+                {selectedNoteIds.length > 0 && (
+                  <div>
+                    {masterNotes
+                      .filter((note) => selectedNoteIds.includes(note.id))
+                      .map((note) => (
+                        <div key={note.id} style={{ marginBottom: 4 }}>
+                          <Text>- {note.content}</Text>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
