@@ -152,8 +152,14 @@ export const DEFAULT_ROUTE_BY_ROLE: Record<string, string> = {
   [ROLES.LAB_TECHNICIAN]: PATH_ROUTES.testing.index,
 };
 
+// Routes that supporters can access (in addition to their role-based permissions)
+export const SUPPORTER_ALLOWED_ROUTES = [
+  PATH_ROUTES.tasks.index,
+  PATH_ROUTES.testing.index,
+];
+
 // Check if user has permission to access a route
-export const hasRoutePermission = (pathname: string, userRoles: string[]): boolean => {
+export const hasRoutePermission = (pathname: string, userRoles: string[], isSupporter?: boolean): boolean => {
   if (!userRoles || userRoles.length === 0) {
     return false;
   }
@@ -166,13 +172,31 @@ export const hasRoutePermission = (pathname: string, userRoles: string[]): boole
   // Check exact match first
   const allowedRoles = ROUTE_PERMISSIONS[pathname];
   if (allowedRoles) {
-    return userRoles.some(role => allowedRoles.includes(role));
+    if (userRoles.some(role => allowedRoles.includes(role))) {
+      return true;
+    }
   }
 
   // Check prefix match for nested routes (e.g., /test-requests/123)
   for (const route of Object.keys(ROUTE_PERMISSIONS)) {
     if (pathname.startsWith(route + '/') || pathname.startsWith(route + '?')) {
-      return userRoles.some(role => ROUTE_PERMISSIONS[route].includes(role));
+      if (userRoles.some(role => ROUTE_PERMISSIONS[route].includes(role))) {
+        return true;
+      }
+    }
+  }
+
+  // Check supporter access for supporter-allowed routes
+  if (isSupporter) {
+    // Check exact match
+    if (SUPPORTER_ALLOWED_ROUTES.includes(pathname)) {
+      return true;
+    }
+    // Check prefix match for nested routes (e.g., /tasks/123)
+    for (const route of SUPPORTER_ALLOWED_ROUTES) {
+      if (pathname.startsWith(route + '/') || pathname.startsWith(route + '?')) {
+        return true;
+      }
     }
   }
 

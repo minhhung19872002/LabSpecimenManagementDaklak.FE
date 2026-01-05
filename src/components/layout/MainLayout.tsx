@@ -52,6 +52,7 @@ import { useWorkReminderPopup } from "../../hooks/useWorkReminderPopup";
 import { useLabTechManagerReminderPopup } from "../../hooks/useLabTechManagerReminderPopup";
 import { useLabTechnicianReminderPopup } from "../../hooks/useLabTechnicianReminderPopup";
 import { useQualityManagerReminderPopup } from "../../hooks/useQualityManagerReminderPopup";
+import { useSupporterStatus, clearSupporterCache } from "../../hooks/useSupporterStatus";
 import "./MainLayout.css";
 import {
   PATH_ROUTES,
@@ -89,6 +90,7 @@ interface MenuItemWithRoles {
   onClick?: () => void;
   roles: string[];
   children?: MenuItemWithRoles[];
+  supporterAllowed?: boolean; // If true, supporters can also access this menu item
 }
 
 // Map routes to menu keys
@@ -159,6 +161,9 @@ const MainLayout: React.FC = () => {
     closePopup: closeQualityManagerReminder,
   } = useQualityManagerReminderPopup();
 
+  // Check if current user is a supporter for any incomplete task
+  const { isSupporter } = useSupporterStatus();
+
   // Handle window resize for mobile detection
   useEffect(() => {
     const handleResize = () => {
@@ -214,6 +219,7 @@ const MainLayout: React.FC = () => {
       okButtonProps: { danger: true },
       centered: true,
       onOk: async () => {
+        clearSupporterCache(); // Clear supporter cache on logout
         await authService.logout();
       },
     });
@@ -365,6 +371,7 @@ const MainLayout: React.FC = () => {
             ROLES.ADMIN,
             ROLES.LAB_TECHNICAL_MANAGER,
           ],
+          supporterAllowed: true, // Người hỗ trợ có quyền truy cập
         },
         {
           key: "testManagement",
@@ -376,6 +383,7 @@ const MainLayout: React.FC = () => {
             ROLES.LAB_TECHNICAL_MANAGER,
             ROLES.LAB_TECHNICIAN,
           ],
+          supporterAllowed: true, // Người hỗ trợ có quyền truy cập
         },
         {
           key: "qualityManagement",
@@ -472,19 +480,22 @@ const MainLayout: React.FC = () => {
     },
   ];
 
-  // Filter menu items based on user roles
+  // Filter menu items based on user roles and supporter status
   const filterMenuByRoles = (items: MenuItemWithRoles[]): MenuItem[] => {
     const userRoles = userInfo?.roles || [];
     const result: MenuItem[] = [];
 
     for (const item of items) {
-      // Check if user has any of the required roles
-      if (!item.roles.some((role) => userRoles.includes(role))) {
+      // Check if user has any of the required roles OR is a supporter (for supporterAllowed items)
+      const hasRoleAccess = item.roles.some((role) => userRoles.includes(role));
+      const hasSupporterAccess = item.supporterAllowed && isSupporter;
+
+      if (!hasRoleAccess && !hasSupporterAccess) {
         continue;
       }
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { roles, children, ...rest } = item;
+      const { roles, children, supporterAllowed, ...rest } = item;
 
       if (children && children.length > 0) {
         const filteredChildren = filterMenuByRoles(children);
@@ -499,10 +510,10 @@ const MainLayout: React.FC = () => {
     return result;
   };
 
-  // Build menu items based on user roles
+  // Build menu items based on user roles and supporter status
   const menuItems: MenuItem[] = useMemo(() => {
     return filterMenuByRoles(allMenuItems);
-  }, [userInfo, t, navigate]);
+  }, [userInfo, t, navigate, isSupporter]);
 
   // Toggle sidebar collapse
   const toggleCollapsed = () => {

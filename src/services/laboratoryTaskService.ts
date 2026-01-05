@@ -224,6 +224,15 @@ export const laboratoryTaskService = {
     return response.data;
   },
 
+  /**
+   * Check if current user is a supporter for any incomplete task
+   * Used for sidebar visibility - "Quản lý công việc" and "Quản lý thử nghiệm"
+   */
+  isCurrentUserSupporter: async (): Promise<boolean> => {
+    const response = await api.get<boolean>(`${BASE_URL}/is-supporter`);
+    return response.data;
+  },
+
   // ============= Bulk Approval =============
 
   /**
