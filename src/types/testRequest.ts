@@ -8,12 +8,16 @@ export enum TestRequestStatus {
   SampleSent = 3,               // Đã gửi mẫu - người dùng xác nhận đã gửi mẫu
   InProgress = 4,               // Đang thử nghiệm - QLKT đã gán PP + KTV
   PendingChangeApproval = 5,    // Chờ phê duyệt thay đổi - chỉnh sửa cần QLCL duyệt
-  PendingApproval = 6,          // Chờ phê duyệt KQ - QLKT đã gửi kết quả
-  Approved = 7,                 // Đã phê duyệt - QLCL đã duyệt KQ
-  ResultSent = 8,               // Gửi khách hàng - đã nhấn gửi KQ
+  PendingApproval = 6,          // [DEPRECATED] Chờ phê duyệt KQ - QLKT đã gửi kết quả
+  Approved = 7,                 // [DEPRECATED] Đã phê duyệt - QLCL đã duyệt KQ
+  ResultSent = 8,               // [DEPRECATED] Gửi khách hàng - đã nhấn gửi KQ
   Completed = 9,                // Hoàn Thành - kết thúc quy trình
   Cancelled = 10,               // Hủy phiếu yêu cầu - BP Giao nhận hủy
-  UnderReview = 11              // Đang xem xét YC - đã gửi QLKT xem xét
+  UnderReview = 11,             // Đang xem xét YC - đã gửi QLKT xem xét
+  WaitingCustomerConfirm = 12,  // Chờ KH xác nhận - QLKT yêu cầu đổi PP hoặc từ chối
+  RequestApproved = 13,         // Đã duyệt yêu cầu - Tất cả phòng LAB đã duyệt
+  PartialResultSent = 14,       // Đã trả 1 phần KQ - đã trả một phần kết quả cho KH
+  ReportPublished = 15          // Đã phát hành BC - BC đã được phát hành
 }
 
 // Enum for change approval status
@@ -37,6 +41,10 @@ export const TestRequestStatusLabels: Record<TestRequestStatus, string> = {
   [TestRequestStatus.Completed]: "Hoàn Thành",
   [TestRequestStatus.Cancelled]: "Hủy phiếu yêu cầu",
   [TestRequestStatus.UnderReview]: "Đang xem xét YC",
+  [TestRequestStatus.WaitingCustomerConfirm]: "Chờ KH xác nhận",
+  [TestRequestStatus.RequestApproved]: "Đã duyệt yêu cầu",
+  [TestRequestStatus.PartialResultSent]: "Đã trả 1 phần KQ",
+  [TestRequestStatus.ReportPublished]: "Đã phát hành BC",
 };
 
 // Labels for ChangeApprovalStatus
@@ -60,6 +68,10 @@ export const TestRequestStatusColors: Record<TestRequestStatus, string> = {
   [TestRequestStatus.Completed]: "success",
   [TestRequestStatus.Cancelled]: "red",
   [TestRequestStatus.UnderReview]: "processing",
+  [TestRequestStatus.WaitingCustomerConfirm]: "warning",
+  [TestRequestStatus.RequestApproved]: "lime",
+  [TestRequestStatus.PartialResultSent]: "volcano",
+  [TestRequestStatus.ReportPublished]: "magenta",
 };
 
 // Colors for ChangeApprovalStatus
@@ -643,4 +655,34 @@ export interface SampleReceiverPendingTaskDto {
   pendingDate: string | null;
   expectedCompletionDate: string | null;
   status: TestRequestStatus;
+}
+
+// ============= Workflow Redesign - BPGN Confirmation DTOs =============
+
+// DTO for pending indicator confirmation (for BPGN to confirm)
+export interface IndicatorPendingConfirmationDto {
+  id: string;                           // LaboratoryTaskIndicator ID
+  sampleCode?: string;
+  sampleName?: string;
+  indicatorCode?: string;
+  indicatorName?: string;
+  laboratoryName?: string;
+  approvalStatus: IndicatorApprovalStatus;
+  testingRejectionReason?: string;      // Lý do từ chối TN (nếu có)
+  oldMethodName?: string;               // PP cũ (nếu yêu cầu đổi PP)
+  newMethodName?: string;               // PP mới đề xuất (nếu yêu cầu đổi PP)
+  methodChangeReason?: string;          // Lý do yêu cầu đổi PP (nếu có)
+  requestedByName?: string;             // Người yêu cầu đổi PP / từ chối TN
+  requestedDate?: string;               // Ngày yêu cầu
+}
+
+// DTO for BPGN to confirm a single indicator
+export interface ConfirmIndicatorInput {
+  confirmed: boolean;                   // true = KH đồng ý, false = KH không đồng ý
+}
+
+// DTO for BPGN to bulk confirm indicators
+export interface BulkConfirmIndicatorsInput {
+  indicatorIds: string[];               // Danh sách LaboratoryTaskIndicator IDs
+  confirmed: boolean;                   // true = KH đồng ý, false = KH không đồng ý
 }

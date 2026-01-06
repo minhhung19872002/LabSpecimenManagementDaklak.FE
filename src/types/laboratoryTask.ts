@@ -2,49 +2,72 @@ import { IndicatorImageDto } from './testing';
 
 // Laboratory Task Status Enum
 export enum LaboratoryTaskStatus {
-  NotAssigned = 0,       // Chưa giao việc (chưa gán KTV hoặc phương pháp)
-  Assigned = 1,          // Đã giao việc (tất cả chỉ tiêu đã có KTV + phương pháp)
-  Testing = 2,           // Đang thử nghiệm
-  PendingApproval = 3,   // Chờ duyệt kết quả
-  Approved = 4,          // Đã duyệt
-  SentToQuality = 5      // Đã gửi QL Chất lượng
+  UnderEvaluation = 0,      // Đang đánh giá thử nghiệm - QLKT đang xem xét
+  WaitingCustomerResponse = 1, // Chờ KH phản hồi - chờ KH xác nhận
+  PartialAccepted = 2,      // Chấp nhận 1 phần
+  FullyAccepted = 3,        // Chấp nhận thử nghiệm (toàn bộ)
+  TestingRejected = 4,      // Từ chối thử nghiệm (toàn bộ)
+  Assigned = 5,             // Đã giao việc (tất cả chỉ tiêu đã có KTV + phương pháp)
+  InProgress = 6,           // Đang thử nghiệm
+  WaitingApproval = 7,      // Chờ duyệt kết quả
+  Approved = 8,             // Đã duyệt
+  Rejected = 9,             // Từ chối (KQ không đạt)
+  SentToQuality = 10        // Đã gửi QL Chất lượng
 }
 
-// Indicator Approval Status Enum (Phase 6)
+// Indicator Approval Status Enum (Phase 6 + Workflow Redesign)
 export enum IndicatorApprovalStatus {
-  Pending = 0,           // Chờ nhập kết quả
-  Entered = 1,           // Đã nhập kết quả
-  Approved = 2,          // Đã duyệt
-  Rejected = 3,          // Không duyệt
-  CustomerCancelled = 4  // Khách hàng hủy
+  Pending = 0,              // Chờ nhập kết quả / Chờ QLKT đánh giá
+  Entered = 1,              // Đã nhập kết quả
+  Approved = 2,             // Đã duyệt (QLKT duyệt kết quả)
+  Rejected = 3,             // Không duyệt (Từ chối kết quả)
+  CustomerCancelled = 4,    // Khách hàng hủy
+  MethodChangeRequested = 5, // Yêu cầu đổi phương pháp - chờ KH xác nhận
+  MethodChanged = 6,        // Đã đổi phương pháp - KH đã xác nhận
+  TestingRejected = 7,      // Từ chối thử nghiệm - QLKT từ chối, KH xác nhận
+  AcceptedForTesting = 8    // Chấp nhận thử nghiệm - QLKT chấp nhận
 }
 
 // Status display helper
 export const LaboratoryTaskStatusLabels: Record<LaboratoryTaskStatus, string> = {
-  [LaboratoryTaskStatus.NotAssigned]: 'Chưa giao việc',
+  [LaboratoryTaskStatus.UnderEvaluation]: 'Đang đánh giá',
+  [LaboratoryTaskStatus.WaitingCustomerResponse]: 'Chờ KH phản hồi',
+  [LaboratoryTaskStatus.PartialAccepted]: 'Chấp nhận 1 phần',
+  [LaboratoryTaskStatus.FullyAccepted]: 'Chấp nhận TN',
+  [LaboratoryTaskStatus.TestingRejected]: 'Từ chối TN',
   [LaboratoryTaskStatus.Assigned]: 'Đã giao việc',
-  [LaboratoryTaskStatus.Testing]: 'Đang thử nghiệm',
-  [LaboratoryTaskStatus.PendingApproval]: 'Chờ duyệt kết quả',
+  [LaboratoryTaskStatus.InProgress]: 'Đang thử nghiệm',
+  [LaboratoryTaskStatus.WaitingApproval]: 'Chờ duyệt kết quả',
   [LaboratoryTaskStatus.Approved]: 'Đã duyệt',
+  [LaboratoryTaskStatus.Rejected]: 'Từ chối KQ',
   [LaboratoryTaskStatus.SentToQuality]: 'Đã gửi QLCL'
 };
 
 export const LaboratoryTaskStatusColors: Record<LaboratoryTaskStatus, string> = {
-  [LaboratoryTaskStatus.NotAssigned]: 'default',
+  [LaboratoryTaskStatus.UnderEvaluation]: 'processing',
+  [LaboratoryTaskStatus.WaitingCustomerResponse]: 'warning',
+  [LaboratoryTaskStatus.PartialAccepted]: 'cyan',
+  [LaboratoryTaskStatus.FullyAccepted]: 'lime',
+  [LaboratoryTaskStatus.TestingRejected]: 'red',
   [LaboratoryTaskStatus.Assigned]: 'blue',
-  [LaboratoryTaskStatus.Testing]: 'processing',
-  [LaboratoryTaskStatus.PendingApproval]: 'warning',
+  [LaboratoryTaskStatus.InProgress]: 'processing',
+  [LaboratoryTaskStatus.WaitingApproval]: 'orange',
   [LaboratoryTaskStatus.Approved]: 'success',
+  [LaboratoryTaskStatus.Rejected]: 'error',
   [LaboratoryTaskStatus.SentToQuality]: 'purple'
 };
 
-// Indicator Approval Status display helper (Phase 6)
+// Indicator Approval Status display helper (Phase 6 + Workflow Redesign)
 export const IndicatorApprovalStatusLabels: Record<IndicatorApprovalStatus, string> = {
-  [IndicatorApprovalStatus.Pending]: 'Chờ nhập KQ',
-  [IndicatorApprovalStatus.Entered]: 'Chờ duyệt',
-  [IndicatorApprovalStatus.Approved]: 'Đã duyệt',
-  [IndicatorApprovalStatus.Rejected]: 'Từ chối',
-  [IndicatorApprovalStatus.CustomerCancelled]: 'KH hủy'
+  [IndicatorApprovalStatus.Pending]: 'Chờ đánh giá',
+  [IndicatorApprovalStatus.Entered]: 'Chờ duyệt KQ',
+  [IndicatorApprovalStatus.Approved]: 'Đã duyệt KQ',
+  [IndicatorApprovalStatus.Rejected]: 'Từ chối KQ',
+  [IndicatorApprovalStatus.CustomerCancelled]: 'KH hủy',
+  [IndicatorApprovalStatus.MethodChangeRequested]: 'Yêu cầu đổi PP',
+  [IndicatorApprovalStatus.MethodChanged]: 'Đã đổi PP',
+  [IndicatorApprovalStatus.TestingRejected]: 'Từ chối TN',
+  [IndicatorApprovalStatus.AcceptedForTesting]: 'Chấp nhận TN'
 };
 
 export const IndicatorApprovalStatusColors: Record<IndicatorApprovalStatus, string> = {
@@ -52,10 +75,14 @@ export const IndicatorApprovalStatusColors: Record<IndicatorApprovalStatus, stri
   [IndicatorApprovalStatus.Entered]: 'warning',
   [IndicatorApprovalStatus.Approved]: 'success',
   [IndicatorApprovalStatus.Rejected]: 'error',
-  [IndicatorApprovalStatus.CustomerCancelled]: 'volcano'
+  [IndicatorApprovalStatus.CustomerCancelled]: 'volcano',
+  [IndicatorApprovalStatus.MethodChangeRequested]: 'gold',
+  [IndicatorApprovalStatus.MethodChanged]: 'cyan',
+  [IndicatorApprovalStatus.TestingRejected]: 'red',
+  [IndicatorApprovalStatus.AcceptedForTesting]: 'lime'
 };
 
-// Laboratory Task Indicator DTO (Phase 6 - Extended)
+// Laboratory Task Indicator DTO (Phase 6 - Extended + Workflow Redesign)
 export interface LaboratoryTaskIndicatorDto {
   id: string;
   testRequestSampleIndicatorId: string;
@@ -87,12 +114,45 @@ export interface LaboratoryTaskIndicatorDto {
   approvedByName?: string;
   rejectionReason?: string;
   isSentToQuality?: boolean;  // Đã gửi cho QLCL chưa
+
+  // Workflow Redesign - Testing Rejection fields
+  testingRejectionReason?: string;  // Lý do từ chối thử nghiệm (QLKT từ chối)
+  testingRejectionDate?: string;    // Ngày QLKT từ chối TN
+  testingRejectedById?: string;     // Người từ chối TN
+  testingRejectedByName?: string;
+
+  // Workflow Redesign - Customer Confirmation fields
+  customerConfirmationDate?: string;  // Ngày KH xác nhận
+  customerConfirmedById?: string;     // Người xác nhận KH (BPGN)
+  customerConfirmedByName?: string;
+
   // Phase 7 - Standard comparison fields
   standardId?: string;  // ID tiêu chuẩn so sánh
   standardName?: string;  // Tên tiêu chuẩn
   comparisonOperator?: string;  // Ký hiệu so sánh (<=, >=, <, >, =)
   allowedLimit?: string;  // Giới hạn cho phép
   images?: IndicatorImageDto[];  // Hình ảnh chỉ tiêu (max 5)
+
+  // Workflow Redesign - Method Change History
+  methodChangeHistories?: MethodChangeHistoryDto[];
+}
+
+// Method Change History DTO
+export interface MethodChangeHistoryDto {
+  id: string;
+  indicatorId: string;
+  oldMethodId?: string;
+  oldMethodName?: string;
+  newMethodId: string;
+  newMethodName: string;
+  reason: string;
+  requestedDate: string;
+  requestedByUserId: string;
+  requestedByUserName: string;
+  confirmedDate?: string;
+  confirmedByUserId?: string;
+  confirmedByUserName?: string;
+  isApproved?: boolean;  // null = chờ, true = đồng ý, false = không đồng ý
 }
 
 // Main Laboratory Task DTO
@@ -326,4 +386,38 @@ export interface LabTechnicianPendingTaskDto {
   pendingCount: number;
   enteredCount: number;
   rejectedCount: number;
+}
+
+// ============= Workflow Redesign - QLKT Evaluation DTOs =============
+
+// Enum for indicator evaluation actions
+export enum IndicatorEvaluationAction {
+  Accept = 0,             // Chấp nhận thử nghiệm
+  RequestMethodChange = 1, // Yêu cầu đổi phương pháp
+  Reject = 2              // Từ chối thử nghiệm
+}
+
+// DTO for QLKT to evaluate a single indicator
+export interface EvaluateIndicatorInput {
+  action: IndicatorEvaluationAction;
+  newMethodId?: string;   // Required when action = RequestMethodChange
+  reason?: string;        // Required when action = RequestMethodChange or Reject
+}
+
+// Item in method change request
+export interface MethodChangeRequestItem {
+  indicatorId: string;
+  newMethodId: string;
+}
+
+// DTO for QLKT to request method change for multiple indicators
+export interface RequestMethodChangeInput {
+  items: MethodChangeRequestItem[];
+  reason: string;
+}
+
+// DTO for QLKT to reject indicators for testing
+export interface RejectIndicatorsForTestingInput {
+  indicatorIds: string[];
+  reason: string;
 }

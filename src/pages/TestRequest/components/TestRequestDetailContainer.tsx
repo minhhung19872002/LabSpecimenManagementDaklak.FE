@@ -67,6 +67,7 @@ interface TestRequestDetailContainerProps {
   onSendToAccounting: () => void;
   onSendToQLKT: () => void;
   onCancelRequest: () => void;
+  onOpenCustomerConfirmation: () => void;
   canPrint: boolean;
   canPrintTestRequest: boolean;
   // Permission flags theo Permission Matrix
@@ -95,6 +96,7 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
   onSendToAccounting,
   onSendToQLKT,
   onCancelRequest,
+  onOpenCustomerConfirmation,
   canPrint,
   canPrintTestRequest,
   // Permission flags
@@ -141,6 +143,19 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
           loading={sendingToQLKT}
         >
           Gửi QLKT
+        </Button>
+      );
+    }
+
+    // Xác nhận KH - khi status = WaitingCustomerConfirm VÀ có quyền sendToAccounting (BPGN)
+    if (data.status === TestRequestStatus.WaitingCustomerConfirm && canSendToAccountingAction) {
+      buttons.push(
+        <Button
+          key="confirm-customer"
+          type="primary"
+          onClick={onOpenCustomerConfirmation}
+        >
+          Xác nhận KH
         </Button>
       );
     }

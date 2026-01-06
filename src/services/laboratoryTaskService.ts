@@ -17,7 +17,10 @@ import {
   MethodLookupDto,
   UserLookupDto,
   LabTechManagerPendingTaskDto,
-  LabTechnicianPendingTaskDto
+  LabTechnicianPendingTaskDto,
+  EvaluateIndicatorInput,
+  RequestMethodChangeInput,
+  RejectIndicatorsForTestingInput
 } from '../types/laboratoryTask';
 
 const BASE_URL = '/api/v1/laboratory-tasks';
@@ -303,6 +306,60 @@ export const laboratoryTaskService = {
       `${BASE_URL}/indicators/${indicatorId}/note`,
       JSON.stringify(note),
       { headers: { 'Content-Type': 'application/json' } }
+    );
+    return response.data;
+  },
+
+  // ============= Workflow Redesign - QLKT Evaluation (Per-Indicator) =============
+
+  /**
+   * QLKT đánh giá từng chỉ tiêu (Accept/RequestMethodChange/Reject)
+   */
+  evaluateIndicator: async (
+    indicatorId: string,
+    input: EvaluateIndicatorInput
+  ): Promise<LaboratoryTaskIndicatorDto> => {
+    const response = await api.post<LaboratoryTaskIndicatorDto>(
+      `${BASE_URL}/indicators/${indicatorId}/evaluate`,
+      input
+    );
+    return response.data;
+  },
+
+  /**
+   * QLKT yêu cầu đổi phương pháp cho nhiều chỉ tiêu cùng lúc
+   */
+  requestMethodChange: async (
+    taskId: string,
+    input: RequestMethodChangeInput
+  ): Promise<LaboratoryTaskIndicatorDto[]> => {
+    const response = await api.post<LaboratoryTaskIndicatorDto[]>(
+      `${BASE_URL}/${taskId}/request-method-change`,
+      input
+    );
+    return response.data;
+  },
+
+  /**
+   * QLKT từ chối thử nghiệm cho nhiều chỉ tiêu cùng lúc
+   */
+  rejectIndicatorsForTesting: async (
+    taskId: string,
+    input: RejectIndicatorsForTestingInput
+  ): Promise<LaboratoryTaskIndicatorDto[]> => {
+    const response = await api.post<LaboratoryTaskIndicatorDto[]>(
+      `${BASE_URL}/${taskId}/reject-indicators`,
+      input
+    );
+    return response.data;
+  },
+
+  /**
+   * QLKT duyệt tất cả chỉ tiêu còn lại (status = Pending) của task
+   */
+  approveAllRemainingIndicators: async (taskId: string): Promise<LaboratoryTaskDto> => {
+    const response = await api.post<LaboratoryTaskDto>(
+      `${BASE_URL}/${taskId}/approve-all-remaining`
     );
     return response.data;
   }

@@ -22,6 +22,7 @@ import SampleImagesModal from "./components/SampleImagesModal";
 import PostalDeliveryImageModal from "./components/PostalDeliveryImageModal";
 import PrintIndicatorModal from "./components/PrintIndicatorModal";
 import RejectResultModal from "./components/RejectResultModal";
+import CustomerConfirmationModal from "./components/CustomerConfirmationModal";
 
 const TestRequestDetail: React.FC = () => {
   const { t } = useTranslation();
@@ -43,6 +44,8 @@ const TestRequestDetail: React.FC = () => {
   const [selectedSampleForImages, setSelectedSampleForImages] =
     useState<TestRequestSampleDto | null>(null);
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  const [customerConfirmationModalVisible, setCustomerConfirmationModalVisible] =
+    useState(false);
 
   // Loading states
   const [printingTestRequest, setPrintingTestRequest] = useState(false);
@@ -312,6 +315,11 @@ const TestRequestDetail: React.FC = () => {
     setPrintIndicatorModalVisible(true);
   };
 
+  // Handle open customer confirmation modal
+  const handleOpenCustomerConfirmation = () => {
+    setCustomerConfirmationModalVisible(true);
+  };
+
   // Calculate canPrint: có ít nhất 1 chỉ tiêu đã được duyệt
   const canPrint = React.useMemo(() => {
     if (!data?.samples) return false;
@@ -385,6 +393,7 @@ const TestRequestDetail: React.FC = () => {
         onSendToAccounting={handleSendToAccounting}
         onSendToQLKT={handleSendToQLKT}
         onCancelRequest={handleCancelRequest}
+        onOpenCustomerConfirmation={handleOpenCustomerConfirmation}
         canPrint={canPrint}
         canPrintTestRequest={canPrintTestRequest}
         // Permission flags theo Permission Matrix
@@ -470,6 +479,14 @@ const TestRequestDetail: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* Customer Confirmation Modal (BPGN xác nhận phản hồi KH) */}
+      <CustomerConfirmationModal
+        visible={customerConfirmationModalVisible}
+        testRequestId={id!}
+        onClose={() => setCustomerConfirmationModalVisible(false)}
+        onConfirmComplete={() => loadData(id!)}
+      />
     </>
   );
 };
