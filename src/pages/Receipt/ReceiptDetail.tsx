@@ -111,9 +111,20 @@ const ReceiptDetail: React.FC = () => {
     const hasReceiptInfo = !!receiptNumber?.trim();
     const isValidStatus =
       data.status !== ReceiptStatus.Paid &&
-      data.status !== ReceiptStatus.Cancelled;
+      data.status !== ReceiptStatus.Cancelled &&
+      data.status !== ReceiptStatus.NoPaymentRequired;
     return hasReceiptInfo && isValidStatus;
   }, [receiptNumber, data]);
+
+  // Check if receipt is read-only (Paid, Cancelled, NoPaymentRequired)
+  const isReadOnly = useMemo(() => {
+    if (!data) return true;
+    return (
+      data.status === ReceiptStatus.Paid ||
+      data.status === ReceiptStatus.Cancelled ||
+      data.status === ReceiptStatus.NoPaymentRequired
+    );
+  }, [data]);
 
   // Save receipt info
   const handleSave = async () => {
@@ -419,7 +430,7 @@ const ReceiptDetail: React.FC = () => {
             </StatusTag>
           </Space>
           <Space>
-            {hasChanges && (
+            {hasChanges && !isReadOnly && (
               <Button
                 icon={<SaveOutlined />}
                 onClick={handleSave}
@@ -428,22 +439,26 @@ const ReceiptDetail: React.FC = () => {
                 Lưu thay đổi
               </Button>
             )}
-            <Button
-              type="default"
-              onClick={handleMarkAsUnpaid}
-              loading={saving}
-              disabled={!canChangeStatus}
-            >
-              Chưa thanh toán
-            </Button>
-            <Button
-              type="primary"
-              onClick={handleMarkAsPaid}
-              loading={saving}
-              disabled={!canChangeStatus}
-            >
-              Đã thanh toán
-            </Button>
+            {!isReadOnly && (
+              <>
+                <Button
+                  type="default"
+                  onClick={handleMarkAsUnpaid}
+                  loading={saving}
+                  disabled={!canChangeStatus}
+                >
+                  Chưa thanh toán
+                </Button>
+                <Button
+                  type="primary"
+                  onClick={handleMarkAsPaid}
+                  loading={saving}
+                  disabled={!canChangeStatus}
+                >
+                  Đã thanh toán
+                </Button>
+              </>
+            )}
           </Space>
         </div>
       </Card>
@@ -503,10 +518,7 @@ const ReceiptDetail: React.FC = () => {
                   }
                   placeholder="Nhập số phiếu thu"
                   style={{ width: 180 }}
-                  disabled={
-                    data.status === ReceiptStatus.Paid ||
-                    data.status === ReceiptStatus.Cancelled
-                  }
+                  disabled={isReadOnly}
                 />
               </div>
             </Col>

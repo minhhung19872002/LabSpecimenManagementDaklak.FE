@@ -333,6 +333,13 @@ export const testRequestService = {
   },
 
   /**
+   * Gửi QLKT - Chuyển từ Paid sang UnderReview (Đang xem xét YC)
+   */
+  sendToQLKT: async (id: string): Promise<void> => {
+    await api.post(`${BASE_URL}/${id}/send-to-qlkt`);
+  },
+
+  /**
    * Hủy yêu cầu
    * Hủy Receipt (nếu có) + chuyển TestRequest thành Cancelled
    * @param id - ID của yêu cầu

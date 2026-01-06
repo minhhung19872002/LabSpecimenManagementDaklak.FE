@@ -12,7 +12,8 @@ export enum TestRequestStatus {
   Approved = 7,                 // Đã phê duyệt - QLCL đã duyệt KQ
   ResultSent = 8,               // Gửi khách hàng - đã nhấn gửi KQ
   Completed = 9,                // Hoàn Thành - kết thúc quy trình
-  Cancelled = 10                // Hủy phiếu yêu cầu - BP Giao nhận hủy
+  Cancelled = 10,               // Hủy phiếu yêu cầu - BP Giao nhận hủy
+  UnderReview = 11              // Đang xem xét YC - đã gửi QLKT xem xét
 }
 
 // Enum for change approval status
@@ -35,6 +36,7 @@ export const TestRequestStatusLabels: Record<TestRequestStatus, string> = {
   [TestRequestStatus.ResultSent]: "Gửi khách hàng",
   [TestRequestStatus.Completed]: "Hoàn Thành",
   [TestRequestStatus.Cancelled]: "Hủy phiếu yêu cầu",
+  [TestRequestStatus.UnderReview]: "Đang xem xét YC",
 };
 
 // Labels for ChangeApprovalStatus
@@ -57,6 +59,7 @@ export const TestRequestStatusColors: Record<TestRequestStatus, string> = {
   [TestRequestStatus.ResultSent]: "purple",
   [TestRequestStatus.Completed]: "success",
   [TestRequestStatus.Cancelled]: "red",
+  [TestRequestStatus.UnderReview]: "processing",
 };
 
 // Colors for ChangeApprovalStatus
@@ -141,10 +144,18 @@ export const canComplete = (status: TestRequestStatus): boolean => {
 
 /**
  * Kiểm tra có thể gửi kế toán không
- * Chỉ khi status = New
+ * Chỉ khi status = PendingPayment (sau khi In phiếu XN)
  */
 export const canSendToAccounting = (status: TestRequestStatus): boolean => {
-  return status === TestRequestStatus.New;
+  return status === TestRequestStatus.PendingPayment;
+};
+
+/**
+ * Kiểm tra có thể gửi QLKT không
+ * Chỉ khi status = Paid (sau khi kế toán xác nhận thanh toán)
+ */
+export const canSendToQLKT = (status: TestRequestStatus): boolean => {
+  return status === TestRequestStatus.Paid;
 };
 
 /**

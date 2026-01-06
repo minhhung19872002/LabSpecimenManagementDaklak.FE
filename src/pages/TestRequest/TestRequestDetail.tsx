@@ -48,6 +48,7 @@ const TestRequestDetail: React.FC = () => {
   const [printingTestRequest, setPrintingTestRequest] = useState(false);
   const [sendingSample, setSendingSample] = useState(false);
   const [sendingToAccounting, setSendingToAccounting] = useState(false);
+  const [sendingToQLKT, setSendingToQLKT] = useState(false);
   const [cancellingRequest, setCancellingRequest] = useState(false);
 
   // Form for cancel reason
@@ -161,6 +162,25 @@ const TestRequestDetail: React.FC = () => {
       );
     } finally {
       setSendingToAccounting(false);
+    }
+  };
+
+  // Handle send to QLKT (Gửi QLKT)
+  const handleSendToQLKT = async () => {
+    if (!id) return;
+    setSendingToQLKT(true);
+    try {
+      await testRequestService.sendToQLKT(id);
+      message.success("Đã gửi QLKT thành công");
+      loadData(id);
+    } catch (error: any) {
+      console.error("Error sending to QLKT:", error);
+      message.error(
+        error?.response?.data?.error?.message ||
+          "Không thể gửi QLKT. Vui lòng thử lại."
+      );
+    } finally {
+      setSendingToQLKT(false);
     }
   };
 
@@ -352,6 +372,7 @@ const TestRequestDetail: React.FC = () => {
         printingTestRequest={printingTestRequest}
         sendingSample={sendingSample}
         sendingToAccounting={sendingToAccounting}
+        sendingToQLKT={sendingToQLKT}
         cancellingRequest={cancellingRequest}
         onPrintTestRequest={handlePrintTestRequest}
         onSendSample={handleSendSample}
@@ -362,6 +383,7 @@ const TestRequestDetail: React.FC = () => {
         onPrintSingle={handlePrintSingle}
         onPrintMixed={handlePrintMixed}
         onSendToAccounting={handleSendToAccounting}
+        onSendToQLKT={handleSendToQLKT}
         onCancelRequest={handleCancelRequest}
         canPrint={canPrint}
         canPrintTestRequest={canPrintTestRequest}

@@ -28,6 +28,7 @@ import {
   canComplete,
   TestRequestSampleDto,
   canSendToAccounting,
+  canSendToQLKT,
   canCancelRequest,
   isCancelledRequest,
 } from "../../../types/testRequest";
@@ -53,6 +54,7 @@ interface TestRequestDetailContainerProps {
   printingTestRequest: boolean;
   sendingSample: boolean;
   sendingToAccounting: boolean;
+  sendingToQLKT: boolean;
   cancellingRequest: boolean;
   onPrintTestRequest: () => void;
   onSendSample: () => void;
@@ -63,6 +65,7 @@ interface TestRequestDetailContainerProps {
   onPrintSingle: () => void;
   onPrintMixed: () => void;
   onSendToAccounting: () => void;
+  onSendToQLKT: () => void;
   onCancelRequest: () => void;
   canPrint: boolean;
   canPrintTestRequest: boolean;
@@ -79,6 +82,7 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
   printingTestRequest,
   sendingSample,
   sendingToAccounting,
+  sendingToQLKT,
   cancellingRequest,
   onPrintTestRequest,
   onSendSample,
@@ -89,6 +93,7 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
   onPrintSingle,
   onPrintMixed,
   onSendToAccounting,
+  onSendToQLKT,
   onCancelRequest,
   canPrint,
   canPrintTestRequest,
@@ -112,7 +117,7 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
 
     // === 1. PRIMARY ACTIONS (ưu tiên cao nhất) ===
 
-    // Gửi kế toán - chỉ khi status = New VÀ có quyền sendToAccounting
+    // Gửi kế toán - chỉ khi status = PendingPayment VÀ có quyền sendToAccounting
     if (canSendToAccounting(data.status) && canSendToAccountingAction) {
       buttons.push(
         <Button
@@ -126,19 +131,33 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
       );
     }
 
-    // Gửi mẫu - khi status = Paid VÀ có quyền sendSample
-    if (canSendSample(data.status) && canSendSampleAction) {
+    // Gửi QLKT - khi status = Paid VÀ có quyền sendToAccounting (BPGN)
+    if (canSendToQLKT(data.status) && canSendToAccountingAction) {
       buttons.push(
         <Button
-          key="send-sample"
+          key="send-to-qlkt"
           type="primary"
-          onClick={onSendSample}
-          loading={sendingSample}
+          onClick={onSendToQLKT}
+          loading={sendingToQLKT}
         >
-          Gửi mẫu
+          Gửi QLKT
         </Button>
       );
     }
+
+    // Gửi mẫu - ẨN (đã thay thế bằng Gửi QLKT)
+    // if (canSendSample(data.status) && canSendSampleAction) {
+    //   buttons.push(
+    //     <Button
+    //       key="send-sample"
+    //       type="primary"
+    //       onClick={onSendSample}
+    //       loading={sendingSample}
+    //     >
+    //       Gửi mẫu
+    //     </Button>
+    //   );
+    // }
 
     // Gửi kết quả - khi status = Approved
     if (data.status === TestRequestStatus.Approved) {
