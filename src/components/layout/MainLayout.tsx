@@ -305,6 +305,7 @@ const MainLayout: React.FC = () => {
     ROLES.LAB_TECHNICAL_MANAGER,
     ROLES.SAMPLE_RECEIVER,
     ROLES.LAB_TECHNICIAN,
+    ROLES.ACCOUNTANT,
   ];
 
   // Menu items configuration with roles
