@@ -31,11 +31,16 @@ const getStatusTag = (status: LaboratoryTaskStatus) => {
   const color = LaboratoryTaskStatusColors[status];
 
   const iconMap: Record<LaboratoryTaskStatus, React.ReactNode> = {
-    [LaboratoryTaskStatus.NotAssigned]: <ClockCircleOutlined />,
+    [LaboratoryTaskStatus.UnderEvaluation]: <ClockCircleOutlined />,
+    [LaboratoryTaskStatus.WaitingCustomerResponse]: <ClockCircleOutlined />,
+    [LaboratoryTaskStatus.PartialAccepted]: <CheckCircleOutlined />,
+    [LaboratoryTaskStatus.FullyAccepted]: <CheckCircleOutlined />,
+    [LaboratoryTaskStatus.TestingRejected]: <ClockCircleOutlined />,
     [LaboratoryTaskStatus.Assigned]: <CheckCircleOutlined />,
-    [LaboratoryTaskStatus.Testing]: <SyncOutlined spin />,
-    [LaboratoryTaskStatus.PendingApproval]: <ClockCircleOutlined />,
+    [LaboratoryTaskStatus.InProgress]: <SyncOutlined spin />,
+    [LaboratoryTaskStatus.WaitingApproval]: <ClockCircleOutlined />,
     [LaboratoryTaskStatus.Approved]: <CheckCircleOutlined />,
+    [LaboratoryTaskStatus.Rejected]: <ClockCircleOutlined />,
     [LaboratoryTaskStatus.SentToQuality]: <SendOutlined />,
   };
 
@@ -48,9 +53,9 @@ const getStatusTag = (status: LaboratoryTaskStatus) => {
 
 const getLockedMessage = (status: LaboratoryTaskStatus) => {
   switch (status) {
-    case LaboratoryTaskStatus.Testing:
+    case LaboratoryTaskStatus.InProgress:
       return "Không thể chỉnh sửa khi đang thử nghiệm";
-    case LaboratoryTaskStatus.PendingApproval:
+    case LaboratoryTaskStatus.WaitingApproval:
       return "Không thể chỉnh sửa khi đang chờ duyệt";
     case LaboratoryTaskStatus.Approved:
       return "Không thể chỉnh sửa khi đã duyệt";
@@ -97,7 +102,7 @@ export const getTaskManagementColumns = (
       const daysSinceTransfer = dayjs().diff(d, "day");
       const shouldHighlight =
         daysSinceTransfer >= 2 &&
-        record.status === LaboratoryTaskStatus.NotAssigned;
+        record.status === LaboratoryTaskStatus.UnderEvaluation;
       return (
         <span
           style={{
@@ -167,7 +172,9 @@ export const getTaskManagementColumns = (
       }
 
       const canEdit =
-        record.status === LaboratoryTaskStatus.NotAssigned ||
+        record.status === LaboratoryTaskStatus.UnderEvaluation ||
+        record.status === LaboratoryTaskStatus.FullyAccepted ||
+        record.status === LaboratoryTaskStatus.PartialAccepted ||
         record.status === LaboratoryTaskStatus.Assigned;
 
       const lockedReason = getLockedMessage(record.status);

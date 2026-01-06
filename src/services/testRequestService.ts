@@ -9,7 +9,10 @@ import {
   TestRequestChangeHistoryDto,
   RejectChangesDto,
   TestRequestTimelineDto,
-  SampleReceiverPendingTaskDto
+  SampleReceiverPendingTaskDto,
+  IndicatorPendingConfirmationDto,
+  ConfirmIndicatorInput,
+  BulkConfirmIndicatorsInput
 } from '../types/testRequest';
 import { QualityManagementIndicatorDto } from '../types/qualityManagement';
 
@@ -354,6 +357,47 @@ export const testRequestService = {
    */
   generateContractNumber: async (): Promise<string> => {
     const response = await api.get<string>(`${BASE_URL}/generate-contract-number`);
+    return response.data;
+  },
+
+  // ============= Workflow Redesign - BPGN Confirmation (Per-Indicator) =============
+
+  /**
+   * Lấy danh sách chỉ tiêu chờ KH xác nhận
+   */
+  getIndicatorsPendingConfirmation: async (id: string): Promise<IndicatorPendingConfirmationDto[]> => {
+    const response = await api.get<IndicatorPendingConfirmationDto[]>(
+      `${BASE_URL}/${id}/indicators-pending-confirmation`
+    );
+    return response.data;
+  },
+
+  /**
+   * BPGN xác nhận từng chỉ tiêu (KH xác nhận đồng ý/không đồng ý)
+   */
+  confirmIndicator: async (
+    testRequestId: string,
+    indicatorId: string,
+    input: ConfirmIndicatorInput
+  ): Promise<IndicatorPendingConfirmationDto> => {
+    const response = await api.post<IndicatorPendingConfirmationDto>(
+      `${BASE_URL}/${testRequestId}/indicators/${indicatorId}/confirm`,
+      input
+    );
+    return response.data;
+  },
+
+  /**
+   * BPGN xác nhận nhiều chỉ tiêu cùng lúc (KH xác nhận đồng ý/không đồng ý)
+   */
+  bulkConfirmIndicators: async (
+    testRequestId: string,
+    input: BulkConfirmIndicatorsInput
+  ): Promise<IndicatorPendingConfirmationDto[]> => {
+    const response = await api.post<IndicatorPendingConfirmationDto[]>(
+      `${BASE_URL}/${testRequestId}/bulk-confirm-indicators`,
+      input
+    );
     return response.data;
   },
 
