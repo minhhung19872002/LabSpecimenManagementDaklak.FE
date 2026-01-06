@@ -140,6 +140,7 @@ export const ROUTE_PERMISSIONS: Record<string, string[]> = {
     ROLES.LAB_TECHNICAL_MANAGER,
     ROLES.SAMPLE_RECEIVER,
     ROLES.LAB_TECHNICIAN,
+    ROLES.ACCOUNTANT,
   ],
 };
 
