@@ -53,6 +53,7 @@ const TestRequestDetail: React.FC = () => {
   const [sendingToAccounting, setSendingToAccounting] = useState(false);
   const [sendingToQLKT, setSendingToQLKT] = useState(false);
   const [cancellingRequest, setCancellingRequest] = useState(false);
+  const [confirmingDelivery, setConfirmingDelivery] = useState(false);
 
   // Form for cancel reason
   const [cancelForm] = Form.useForm();
@@ -303,6 +304,34 @@ const TestRequestDetail: React.FC = () => {
     setSampleImagesModalVisible(true);
   };
 
+  // Handle confirm delivery to customer (BPGN)
+  const handleConfirmDelivery = async () => {
+    if (!id) return;
+
+    Modal.confirm({
+      title: "Xác nhận bàn giao kết quả",
+      content: "Bạn có chắc chắn muốn xác nhận đã bàn giao kết quả cho khách hàng?",
+      okText: "Xác nhận",
+      cancelText: "Hủy",
+      onOk: async () => {
+        setConfirmingDelivery(true);
+        try {
+          await testRequestService.confirmDeliveryToCustomer(id);
+          message.success("Đã xác nhận bàn giao kết quả cho khách hàng");
+          loadData(id);
+        } catch (error: any) {
+          console.error("Error confirming delivery:", error);
+          message.error(
+            error?.response?.data?.error?.message ||
+              "Không thể xác nhận bàn giao. Vui lòng thử lại."
+          );
+        } finally {
+          setConfirmingDelivery(false);
+        }
+      },
+    });
+  };
+
   // Handle print single result (In KQ)
   const handlePrintSingle = () => {
     setPrintMode('single');
@@ -382,6 +411,7 @@ const TestRequestDetail: React.FC = () => {
         sendingToAccounting={sendingToAccounting}
         sendingToQLKT={sendingToQLKT}
         cancellingRequest={cancellingRequest}
+        confirmingDelivery={confirmingDelivery}
         onPrintTestRequest={handlePrintTestRequest}
         onSendSample={handleSendSample}
         onSendResult={handleSendResult}
@@ -394,6 +424,7 @@ const TestRequestDetail: React.FC = () => {
         onSendToQLKT={handleSendToQLKT}
         onCancelRequest={handleCancelRequest}
         onOpenCustomerConfirmation={handleOpenCustomerConfirmation}
+        onConfirmDelivery={handleConfirmDelivery}
         canPrint={canPrint}
         canPrintTestRequest={canPrintTestRequest}
         // Permission flags theo Permission Matrix

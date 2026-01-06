@@ -56,6 +56,7 @@ interface TestRequestDetailContainerProps {
   sendingToAccounting: boolean;
   sendingToQLKT: boolean;
   cancellingRequest: boolean;
+  confirmingDelivery?: boolean;
   onPrintTestRequest: () => void;
   onSendSample: () => void;
   onSendResult: () => void;
@@ -68,6 +69,7 @@ interface TestRequestDetailContainerProps {
   onSendToQLKT: () => void;
   onCancelRequest: () => void;
   onOpenCustomerConfirmation: () => void;
+  onConfirmDelivery?: () => void;
   canPrint: boolean;
   canPrintTestRequest: boolean;
   // Permission flags theo Permission Matrix
@@ -85,6 +87,7 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
   sendingToAccounting,
   sendingToQLKT,
   cancellingRequest,
+  confirmingDelivery,
   onPrintTestRequest,
   onSendSample,
   onSendResult,
@@ -97,6 +100,7 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
   onSendToQLKT,
   onCancelRequest,
   onOpenCustomerConfirmation,
+  onConfirmDelivery,
   canPrint,
   canPrintTestRequest,
   // Permission flags
@@ -188,6 +192,24 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
       buttons.push(
         <Button key="complete" type="primary" onClick={onComplete}>
           Hoàn thành
+        </Button>
+      );
+    }
+
+    // Xác nhận bàn giao KH - BPGN xác nhận khi status = ReportPublished hoặc PartialResultSent
+    if (
+      (data.status === TestRequestStatus.ReportPublished ||
+        data.status === TestRequestStatus.PartialResultSent) &&
+      onConfirmDelivery
+    ) {
+      buttons.push(
+        <Button
+          key="confirm-delivery"
+          type="primary"
+          onClick={onConfirmDelivery}
+          loading={confirmingDelivery}
+        >
+          Xác nhận bàn giao KH
         </Button>
       );
     }

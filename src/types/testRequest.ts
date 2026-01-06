@@ -686,3 +686,24 @@ export interface BulkConfirmIndicatorsInput {
   indicatorIds: string[];               // Danh sách LaboratoryTaskIndicator IDs
   confirmed: boolean;                   // true = KH đồng ý, false = KH không đồng ý
 }
+
+// ============= BPGN - Confirm Delivery to Customer =============
+
+// Input for BPGN confirming delivery to customer
+export interface ConfirmDeliveryInput {
+  note?: string;
+}
+
+// DTO for published report (log history)
+export interface PublishedReportDto {
+  id: string;
+  testRequestId: string;
+  qualityManagementTaskId: string;
+  fileName: string;
+  reportType: 'Single' | 'Mixed';
+  printNote?: string;
+  indicatorIds: string[];
+  indicatorNames: string[];
+  creationTime: string;
+  creatorName?: string;
+}

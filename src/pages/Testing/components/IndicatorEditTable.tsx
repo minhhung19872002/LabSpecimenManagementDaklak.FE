@@ -444,12 +444,12 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
           editedResults.get(record.id)?.result ?? record.result;
         const hasResult = currentResult && currentResult.trim() !== "";
 
-        // Nút "Thực hiện": hiện khi Todo hoặc Rejected
-        const canCheckIn =
-          status === IndicatorTestingStatus.Todo ||
-          status === IndicatorTestingStatus.Rejected;
+        // Sử dụng canCheckIn từ API response
+        // Backend đã tính toán đầy đủ các điều kiện (quyền, status, TestDate)
+        const canCheckIn = record.canCheckIn;
 
-        // Nút "Gửi KQ": hiện khi Testing và có kết quả
+        // canSubmit: kết hợp điều kiện từ API (quyền, status, TestDate) với hasResult từ form
+        // Backend trả về canSubmit=true nếu có result trong DB, nhưng user có thể đang edit
         const canSubmit =
           status === IndicatorTestingStatus.Testing && hasResult;
 

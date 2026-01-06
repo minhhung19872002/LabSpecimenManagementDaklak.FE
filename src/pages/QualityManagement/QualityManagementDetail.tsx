@@ -321,19 +321,19 @@ const QualityManagementDetail: React.FC = () => {
     }
   };
 
-  const handleSendResult = async () => {
+  const handleConfirmHandover = async () => {
     if (!task) return;
     setSendingResult(true);
     try {
-      await qualityManagementService.sendResult(task.id);
+      await qualityManagementService.confirmHandover(task.id);
 
       // Reload full data from server (avoid duplicating BE logic)
       await reloadData();
 
-      message.success("Đã gửi kết quả");
+      message.success("Đã xác nhận giao BPGN");
     } catch (error: unknown) {
-      console.error("Error sending result:", error);
-      message.error(getApiErrorMessage(error, "Không thể gửi kết quả"));
+      console.error("Error confirming handover:", error);
+      message.error(getApiErrorMessage(error, "Không thể xác nhận giao BPGN"));
       // Reload để sync lại với server nếu có lỗi
       await loadData();
     } finally {
@@ -354,9 +354,11 @@ const QualityManagementDetail: React.FC = () => {
     (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Rejected
   ).length;
 
-  // Button states - always allow print/send for approved indicators (even after ResultSent)
-  const canPrint = approvedCount > 0;
-  const canSendResult = approvedCount > 0;
+  // Button states
+  // In KQ: chỉ khi có chỉ tiêu đã duyệt và status >= PendingPublish
+  const canPrint = approvedCount > 0 && task?.status !== QualityManagementStatus.PendingApproval && task?.status !== QualityManagementStatus.Rejected;
+  // Xác nhận giao BPGN: chỉ khi đã phát hành (1 phần hoặc full)
+  const canConfirmHandover = task?.status === QualityManagementStatus.PartialPublished || task?.status === QualityManagementStatus.FullyPublished;
 
   // Status tag
   const getStatusTag = (status: QualityManagementStatus) => (
@@ -426,11 +428,11 @@ const QualityManagementDetail: React.FC = () => {
               <Button
                 type="primary"
                 icon={<SendOutlined />}
-                onClick={handleSendResult}
-                disabled={!canSendResult}
+                onClick={handleConfirmHandover}
+                disabled={!canConfirmHandover}
                 loading={sendingResult}
               >
-                Gửi kết quả
+                Xác nhận giao BPGN
               </Button>
             </Space>
           </Col>
@@ -458,8 +460,11 @@ const QualityManagementDetail: React.FC = () => {
           <Descriptions.Item label="Ngày YC xong">
             {formatDate(task.requestCompletionDate)}
           </Descriptions.Item>
-          <Descriptions.Item label="Ngày gửi KQ">
-            {formatDate(task.resultSentDate)}
+          <Descriptions.Item label="Ngày giao BPGN">
+            {formatDate(task.handoverDate)}
+          </Descriptions.Item>
+          <Descriptions.Item label="Người giao BPGN">
+            {task.handoverByUserName || "-"}
           </Descriptions.Item>
           <Descriptions.Item label="QLKT">
             {task.technicalManagerNames || "-"}
@@ -510,12 +515,25 @@ const QualityManagementDetail: React.FC = () => {
               </Space>
             </Col>
           </Row>
-          {task.status === QualityManagementStatus.Approved && (
+          {task.status === QualityManagementStatus.PendingPublish && (
             <Row style={{ marginTop: 8 }}>
               <Col>
                 <Alert
                   type="success"
-                  message="Tất cả chỉ tiêu đã được duyệt"
+                  message="Tất cả chỉ tiêu đã được duyệt - Chờ phát hành"
+                  showIcon
+                  icon={<CheckCircleOutlined />}
+                  style={{ padding: "4px 12px" }}
+                />
+              </Col>
+            </Row>
+          )}
+          {task.status === QualityManagementStatus.HandedOver && (
+            <Row style={{ marginTop: 8 }}>
+              <Col>
+                <Alert
+                  type="info"
+                  message={`Đã giao BPGN${task.handoverNote ? ` - Ghi chú: ${task.handoverNote}` : ''}`}
                   showIcon
                   icon={<CheckCircleOutlined />}
                   style={{ padding: "4px 12px" }}

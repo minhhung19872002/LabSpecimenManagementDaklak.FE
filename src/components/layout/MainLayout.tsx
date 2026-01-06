@@ -52,7 +52,10 @@ import { useWorkReminderPopup } from "../../hooks/useWorkReminderPopup";
 import { useLabTechManagerReminderPopup } from "../../hooks/useLabTechManagerReminderPopup";
 import { useLabTechnicianReminderPopup } from "../../hooks/useLabTechnicianReminderPopup";
 import { useQualityManagerReminderPopup } from "../../hooks/useQualityManagerReminderPopup";
-import { useSupporterStatus, clearSupporterCache } from "../../hooks/useSupporterStatus";
+import {
+  useSupporterStatus,
+  clearSupporterCache,
+} from "../../hooks/useSupporterStatus";
 import "./MainLayout.css";
 import {
   PATH_ROUTES,
@@ -368,10 +371,7 @@ const MainLayout: React.FC = () => {
           icon: <ScheduleOutlined />,
           label: menuLabel("Quản lý công việc"),
           onClick: () => navigate(PATH_ROUTES.tasks.index),
-          roles: [
-            ROLES.ADMIN,
-            ROLES.LAB_TECHNICAL_MANAGER,
-          ],
+          roles: [ROLES.ADMIN, ROLES.LAB_TECHNICAL_MANAGER],
           supporterAllowed: true, // Người hỗ trợ có quyền truy cập
         },
         {
@@ -531,7 +531,7 @@ const MainLayout: React.FC = () => {
         </div>
         {!collapsed && (
           <div className="sidebar-logo-text">
-            <span className="sidebar-logo-title">LSMS</span>
+            <span className="sidebar-logo-title">StarLab</span>
             <span className="sidebar-logo-subtitle">{t("common.subName")}</span>
           </div>
         )}

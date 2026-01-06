@@ -126,20 +126,26 @@ const TestRequestList: React.FC = () => {
             <Select.Option value={TestRequestStatus.PendingChangeApproval}>
               {TestRequestStatusLabels[TestRequestStatus.PendingChangeApproval]}
             </Select.Option>
-            <Select.Option value={TestRequestStatus.PendingApproval}>
-              {TestRequestStatusLabels[TestRequestStatus.PendingApproval]}
-            </Select.Option>
-            <Select.Option value={TestRequestStatus.Approved}>
-              {TestRequestStatusLabels[TestRequestStatus.Approved]}
-            </Select.Option>
-            <Select.Option value={TestRequestStatus.ResultSent}>
-              {TestRequestStatusLabels[TestRequestStatus.ResultSent]}
-            </Select.Option>
             <Select.Option value={TestRequestStatus.Completed}>
               {TestRequestStatusLabels[TestRequestStatus.Completed]}
             </Select.Option>
             <Select.Option value={TestRequestStatus.Cancelled}>
               {TestRequestStatusLabels[TestRequestStatus.Cancelled]}
+            </Select.Option>
+            <Select.Option value={TestRequestStatus.UnderReview}>
+              {TestRequestStatusLabels[TestRequestStatus.UnderReview]}
+            </Select.Option>
+            <Select.Option value={TestRequestStatus.WaitingCustomerConfirm}>
+              {TestRequestStatusLabels[TestRequestStatus.WaitingCustomerConfirm]}
+            </Select.Option>
+            <Select.Option value={TestRequestStatus.RequestApproved}>
+              {TestRequestStatusLabels[TestRequestStatus.RequestApproved]}
+            </Select.Option>
+            <Select.Option value={TestRequestStatus.PartialResultSent}>
+              {TestRequestStatusLabels[TestRequestStatus.PartialResultSent]}
+            </Select.Option>
+            <Select.Option value={TestRequestStatus.ReportPublished}>
+              {TestRequestStatusLabels[TestRequestStatus.ReportPublished]}
             </Select.Option>
           </Select>
         </Col>

@@ -12,7 +12,9 @@ import {
   SampleReceiverPendingTaskDto,
   IndicatorPendingConfirmationDto,
   ConfirmIndicatorInput,
-  BulkConfirmIndicatorsInput
+  BulkConfirmIndicatorsInput,
+  ConfirmDeliveryInput,
+  PublishedReportDto
 } from '../types/testRequest';
 import { QualityManagementIndicatorDto } from '../types/qualityManagement';
 
@@ -397,6 +399,29 @@ export const testRequestService = {
     const response = await api.post<IndicatorPendingConfirmationDto[]>(
       `${BASE_URL}/${testRequestId}/bulk-confirm-indicators`,
       input
+    );
+    return response.data;
+  },
+
+  // ============= BPGN - Confirm Delivery to Customer =============
+
+  /**
+   * BPGN xác nhận đã bàn giao kết quả cho khách hàng
+   * Status tự động tính dựa trên chỉ tiêu đã xuất bên QLCL
+   */
+  confirmDeliveryToCustomer: async (
+    testRequestId: string,
+    input?: ConfirmDeliveryInput
+  ): Promise<void> => {
+    await api.post(`${BASE_URL}/${testRequestId}/confirm-delivery`, input || {});
+  },
+
+  /**
+   * Lấy danh sách báo cáo đã xuất của TestRequest (để xem lịch sử)
+   */
+  getPublishedReports: async (testRequestId: string): Promise<PublishedReportDto[]> => {
+    const response = await api.get<PublishedReportDto[]>(
+      `${BASE_URL}/${testRequestId}/published-reports`
     );
     return response.data;
   },
