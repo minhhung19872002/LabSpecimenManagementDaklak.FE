@@ -30,12 +30,12 @@ export enum IndicatorApprovalStatus {
 
 // Status display helper
 export const LaboratoryTaskStatusLabels: Record<LaboratoryTaskStatus, string> = {
-  [LaboratoryTaskStatus.UnderEvaluation]: 'Đang đánh giá',
+  [LaboratoryTaskStatus.UnderEvaluation]: 'Đánh giá thử nghiệm',
   [LaboratoryTaskStatus.WaitingCustomerResponse]: 'Chờ KH phản hồi',
   [LaboratoryTaskStatus.PartialAccepted]: 'Chấp nhận 1 phần',
   [LaboratoryTaskStatus.FullyAccepted]: 'Chấp nhận TN',
   [LaboratoryTaskStatus.TestingRejected]: 'Từ chối TN',
-  [LaboratoryTaskStatus.Assigned]: 'Đã giao việc',
+  [LaboratoryTaskStatus.Assigned]: 'Đã phân công',
   [LaboratoryTaskStatus.InProgress]: 'Đang thử nghiệm',
   [LaboratoryTaskStatus.WaitingApproval]: 'Chờ duyệt kết quả',
   [LaboratoryTaskStatus.Approved]: 'Đã duyệt',

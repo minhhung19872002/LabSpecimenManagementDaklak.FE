@@ -1168,8 +1168,10 @@ const TaskManagementDetail: React.FC = () => {
                   )}
                 </Button>
               )}
-              {/* Nút Gửi kết quả - chỉ QLKT có quyền (canApproveResult) và không hiển thị khi đang đánh giá */}
-              {canApproveResult && task.status !== LaboratoryTaskStatus.UnderEvaluation && (
+              {/* Nút Gửi kết quả - chỉ QLKT có quyền (canApproveResult) và không hiển thị khi đang đánh giá hoặc chờ KH xác nhận */}
+              {canApproveResult &&
+                task.status !== LaboratoryTaskStatus.UnderEvaluation &&
+                task.status !== LaboratoryTaskStatus.WaitingCustomerResponse && (
                 <Button
                   type="primary"
                   icon={<SendOutlined />}
@@ -1233,13 +1235,18 @@ const TaskManagementDetail: React.FC = () => {
         />
       )}
 
-      {/* Evaluation Mode for UnderEvaluation status */}
-      {task.status === LaboratoryTaskStatus.UnderEvaluation ? (
+      {/* Evaluation Mode for UnderEvaluation or WaitingCustomerResponse status */}
+      {(task.status === LaboratoryTaskStatus.UnderEvaluation ||
+        task.status === LaboratoryTaskStatus.WaitingCustomerResponse) ? (
         <Card title={`Đánh giá chỉ tiêu (${task.indicators?.length || 0})`}>
           <Alert
-            message="Chế độ đánh giá thử nghiệm"
-            description="QLKT đánh giá từng chỉ tiêu: Chấp nhận, Yêu cầu đổi phương pháp, hoặc Từ chối thử nghiệm."
-            type="info"
+            message={task.status === LaboratoryTaskStatus.WaitingCustomerResponse
+              ? "Chờ khách hàng xác nhận"
+              : "Chế độ đánh giá thử nghiệm"}
+            description={task.status === LaboratoryTaskStatus.WaitingCustomerResponse
+              ? "Có chỉ tiêu đang chờ KH xác nhận (đổi PP hoặc từ chối TN). QLKT vẫn có thể đánh giá các chỉ tiêu Pending còn lại."
+              : "QLKT đánh giá từng chỉ tiêu: Chấp nhận, Yêu cầu đổi phương pháp, hoặc Từ chối thử nghiệm."}
+            type={task.status === LaboratoryTaskStatus.WaitingCustomerResponse ? "warning" : "info"}
             showIcon
             style={{ marginBottom: 16 }}
           />

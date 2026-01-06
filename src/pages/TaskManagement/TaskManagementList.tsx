@@ -52,7 +52,7 @@ const TaskManagementList: React.FC = () => {
         <Col xs={12} sm={8} md={4}>
           <Card size="small">
             <Statistic
-              title="Đang đánh giá"
+              title="Đánh giá thử nghiệm"
               value={stats.underEvaluation}
               valueStyle={{ color: "#8c8c8c" }}
             />
@@ -140,7 +140,7 @@ const TaskManagementList: React.FC = () => {
             >
               <Select.Option value="all">Tất cả trạng thái</Select.Option>
               <Select.Option value={String(LaboratoryTaskStatus.UnderEvaluation)}>
-                Đang đánh giá
+                Đánh giá thử nghiệm
               </Select.Option>
               <Select.Option value={String(LaboratoryTaskStatus.WaitingCustomerResponse)}>
                 Chờ KH phản hồi
@@ -152,7 +152,7 @@ const TaskManagementList: React.FC = () => {
                 Chấp nhận 1 phần
               </Select.Option>
               <Select.Option value={String(LaboratoryTaskStatus.Assigned)}>
-                Đã giao việc
+                Đã phân công
               </Select.Option>
               <Select.Option value={String(LaboratoryTaskStatus.InProgress)}>
                 Đang thử nghiệm

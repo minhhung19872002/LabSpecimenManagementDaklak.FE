@@ -18,12 +18,8 @@ import {
   StopOutlined,
 } from "@ant-design/icons";
 import { testRequestService } from "../../../services/testRequestService";
-import {
-  IndicatorPendingConfirmationDto,
-} from "../../../types/testRequest";
-import {
-  IndicatorApprovalStatus,
-} from "../../../types/laboratoryTask";
+import { IndicatorPendingConfirmationDto } from "../../../types/testRequest";
+import { IndicatorApprovalStatus } from "../../../types/laboratoryTask";
 import { formatDate } from "../../../utils/formatters";
 
 const { Text, Title } = Typography;
@@ -43,7 +39,9 @@ const CustomerConfirmationModal: React.FC<CustomerConfirmationModalProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
-  const [indicators, setIndicators] = useState<IndicatorPendingConfirmationDto[]>([]);
+  const [indicators, setIndicators] = useState<
+    IndicatorPendingConfirmationDto[]
+  >([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
 
   // Load pending confirmation indicators
@@ -52,7 +50,9 @@ const CustomerConfirmationModal: React.FC<CustomerConfirmationModalProps> = ({
 
     setLoading(true);
     try {
-      const result = await testRequestService.getIndicatorsPendingConfirmation(testRequestId);
+      const result = await testRequestService.getIndicatorsPendingConfirmation(
+        testRequestId
+      );
       setIndicators(result);
       setSelectedRowKeys([]);
     } catch (error: any) {
@@ -70,16 +70,25 @@ const CustomerConfirmationModal: React.FC<CustomerConfirmationModalProps> = ({
   }, [visible, testRequestId]);
 
   // Handle single indicator confirmation
-  const handleConfirmSingle = async (indicatorId: string, confirmed: boolean) => {
+  const handleConfirmSingle = async (
+    indicatorId: string,
+    confirmed: boolean
+  ) => {
     setActionLoading(true);
     try {
-      await testRequestService.confirmIndicator(testRequestId, indicatorId, { confirmed });
-      message.success(confirmed ? "Đã xác nhận đồng ý" : "Đã xác nhận không đồng ý");
+      await testRequestService.confirmIndicator(testRequestId, indicatorId, {
+        confirmed,
+      });
+      message.success(
+        confirmed ? "Đã xác nhận đồng ý" : "Đã xác nhận không đồng ý"
+      );
       loadIndicators();
       onConfirmComplete();
     } catch (error: any) {
       console.error("Failed to confirm indicator:", error);
-      message.error(error.response?.data?.error?.message || "Không thể xác nhận chỉ tiêu");
+      message.error(
+        error.response?.data?.error?.message || "Không thể xác nhận chỉ tiêu"
+      );
     } finally {
       setActionLoading(false);
     }
@@ -107,7 +116,9 @@ const CustomerConfirmationModal: React.FC<CustomerConfirmationModalProps> = ({
       onConfirmComplete();
     } catch (error: any) {
       console.error("Failed to bulk confirm:", error);
-      message.error(error.response?.data?.error?.message || "Không thể xác nhận chỉ tiêu");
+      message.error(
+        error.response?.data?.error?.message || "Không thể xác nhận chỉ tiêu"
+      );
     } finally {
       setActionLoading(false);
     }
@@ -115,17 +126,23 @@ const CustomerConfirmationModal: React.FC<CustomerConfirmationModalProps> = ({
 
   // Get description based on status
   const getStatusDescription = (record: IndicatorPendingConfirmationDto) => {
-    if (record.approvalStatus === IndicatorApprovalStatus.MethodChangeRequested) {
+    if (
+      record.approvalStatus === IndicatorApprovalStatus.MethodChangeRequested
+    ) {
       return (
         <div>
           <div style={{ marginBottom: 8 }}>
-            <Tag icon={<SwapOutlined />} color="gold">Yêu cầu đổi phương pháp</Tag>
+            <Tag icon={<SwapOutlined />} color="gold">
+              Yêu cầu đổi phương pháp
+            </Tag>
           </div>
           <Text type="secondary">PP cũ: </Text>
           <Text>{record.oldMethodName || "-"}</Text>
           <br />
           <Text type="secondary">PP mới: </Text>
-          <Text strong style={{ color: "#1890ff" }}>{record.newMethodName || "-"}</Text>
+          <Text strong style={{ color: "#1890ff" }}>
+            {record.newMethodName || "-"}
+          </Text>
           <br />
           <Text type="secondary">Lý do: </Text>
           <Text>{record.methodChangeReason || "-"}</Text>
@@ -137,7 +154,9 @@ const CustomerConfirmationModal: React.FC<CustomerConfirmationModalProps> = ({
       return (
         <div>
           <div style={{ marginBottom: 8 }}>
-            <Tag icon={<StopOutlined />} color="red">Từ chối thử nghiệm</Tag>
+            <Tag icon={<StopOutlined />} color="red">
+              Từ chối thử nghiệm
+            </Tag>
           </div>
           <Text type="secondary">Lý do: </Text>
           <Text>{record.testingRejectionReason || "-"}</Text>
@@ -150,7 +169,9 @@ const CustomerConfirmationModal: React.FC<CustomerConfirmationModalProps> = ({
 
   // Get action buttons based on status
   const getActionButtons = (record: IndicatorPendingConfirmationDto) => {
-    if (record.approvalStatus === IndicatorApprovalStatus.MethodChangeRequested) {
+    if (
+      record.approvalStatus === IndicatorApprovalStatus.MethodChangeRequested
+    ) {
       return (
         <Space size="small">
           <Tooltip title="KH đồng ý đổi PP">
@@ -172,7 +193,7 @@ const CustomerConfirmationModal: React.FC<CustomerConfirmationModalProps> = ({
               onClick={() => handleConfirmSingle(record.id, false)}
               loading={actionLoading}
             >
-              Không đồng ý
+              Từ chối
             </Button>
           </Tooltip>
         </Space>
@@ -201,7 +222,7 @@ const CustomerConfirmationModal: React.FC<CustomerConfirmationModalProps> = ({
               onClick={() => handleConfirmSingle(record.id, false)}
               loading={actionLoading}
             >
-              Không đồng ý
+              Từ chối
             </Button>
           </Tooltip>
         </Space>
@@ -247,7 +268,8 @@ const CustomerConfirmationModal: React.FC<CustomerConfirmationModalProps> = ({
       title: "Nội dung yêu cầu",
       key: "description",
       width: 300,
-      render: (_: unknown, record: IndicatorPendingConfirmationDto) => getStatusDescription(record),
+      render: (_: unknown, record: IndicatorPendingConfirmationDto) =>
+        getStatusDescription(record),
     },
     {
       title: "Người yêu cầu",
@@ -268,7 +290,8 @@ const CustomerConfirmationModal: React.FC<CustomerConfirmationModalProps> = ({
       key: "actions",
       width: 200,
       fixed: "right" as const,
-      render: (_: unknown, record: IndicatorPendingConfirmationDto) => getActionButtons(record),
+      render: (_: unknown, record: IndicatorPendingConfirmationDto) =>
+        getActionButtons(record),
     },
   ];
 
@@ -283,7 +306,9 @@ const CustomerConfirmationModal: React.FC<CustomerConfirmationModalProps> = ({
     <Modal
       title={
         <Space>
-          <Title level={5} style={{ margin: 0 }}>Xác nhận phản hồi khách hàng</Title>
+          <Title level={5} style={{ margin: 0 }}>
+            Xác nhận phản hồi khách hàng
+          </Title>
           <Tag color="warning">{indicators.length} chỉ tiêu</Tag>
         </Space>
       }
@@ -292,7 +317,6 @@ const CustomerConfirmationModal: React.FC<CustomerConfirmationModalProps> = ({
       width={1200}
       footer={
         <Space>
-          <Button onClick={onClose}>Đóng</Button>
           <Button
             danger
             icon={<CloseOutlined />}
@@ -300,7 +324,7 @@ const CustomerConfirmationModal: React.FC<CustomerConfirmationModalProps> = ({
             loading={actionLoading}
             onClick={() => handleBulkConfirm(false)}
           >
-            Không đồng ý ({selectedRowKeys.length})
+            Từ chối ({selectedRowKeys.length})
           </Button>
           <Button
             type="primary"
@@ -328,23 +352,6 @@ const CustomerConfirmationModal: React.FC<CustomerConfirmationModalProps> = ({
         />
       ) : (
         <>
-          <Alert
-            message="Hướng dẫn xác nhận"
-            description={
-              <ul style={{ marginBottom: 0 }}>
-                <li>
-                  <Text strong>Yêu cầu đổi phương pháp:</Text> KH đồng ý → Chỉ tiêu sẽ được thử nghiệm với PP mới. KH không đồng ý → Hủy chỉ tiêu này.
-                </li>
-                <li>
-                  <Text strong>Từ chối thử nghiệm:</Text> KH đồng ý → Xác nhận hủy chỉ tiêu. KH không đồng ý → Chỉ tiêu quay về đánh giá lại.
-                </li>
-              </ul>
-            }
-            type="info"
-            showIcon
-            style={{ marginBottom: 16 }}
-          />
-
           <Table
             columns={columns}
             dataSource={indicators}

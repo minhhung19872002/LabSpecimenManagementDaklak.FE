@@ -16,7 +16,7 @@ const getTaskNameType = (
   if (record.status === QualityManagementStatus.PendingApproval) {
     return "warning";
   }
-  if (record.status === QualityManagementStatus.Approved || record.status === QualityManagementStatus.PendingSignature) {
+  if (record.status === QualityManagementStatus.PendingPublish || record.status === QualityManagementStatus.PartialPublished || record.status === QualityManagementStatus.FullyPublished) {
     return "warning";
   }
   if (record.daysUntilDeadline !== undefined && record.daysUntilDeadline <= 2) {
