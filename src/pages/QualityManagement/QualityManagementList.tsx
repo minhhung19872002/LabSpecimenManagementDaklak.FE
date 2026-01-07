@@ -59,33 +59,43 @@ const QualityManagementList: React.FC = () => {
 
       {/* Statistics Cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={8}>
+        <Col xs={24} sm={6}>
           <Card size="small">
             <Statistic
-              title="Hợp đồng chờ phê duyệt"
+              title="Chờ phê duyệt"
               value={statistics?.pendingApprovalCount || 0}
               prefix={<ClockCircleOutlined />}
               valueStyle={{ color: "#faad14" }}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={8}>
+        <Col xs={24} sm={6}>
           <Card size="small">
             <Statistic
-              title="Hợp đồng trễ hạn"
+              title="Trễ hạn"
               value={statistics?.overdueCount || 0}
               prefix={<WarningOutlined />}
               valueStyle={{ color: "#ff4d4f" }}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={8}>
+        <Col xs={24} sm={6}>
           <Card size="small">
             <Statistic
-              title="Chờ ký"
-              value={statistics?.pendingSignatureCount || 0}
+              title="Chờ phát hành"
+              value={statistics?.pendingPublishCount || 0}
               prefix={<FileTextOutlined />}
-              valueStyle={{ color: "#722ed1" }}
+              valueStyle={{ color: "#1677ff" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={6}>
+          <Card size="small">
+            <Statistic
+              title="Đã phát hành"
+              value={statistics?.publishedCount || 0}
+              prefix={<FileTextOutlined />}
+              valueStyle={{ color: "#13c2c2" }}
             />
           </Card>
         </Col>

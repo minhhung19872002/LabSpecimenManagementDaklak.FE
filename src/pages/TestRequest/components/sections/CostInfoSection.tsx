@@ -1,20 +1,34 @@
 import React from "react";
-import { Row, Col, Typography } from "antd";
+import { Row, Col, Typography, Button } from "antd";
+import { HistoryOutlined } from "@ant-design/icons";
 import { TestRequestDto } from "../../../../types/testRequest";
 
 const { Title, Text } = Typography;
 
 interface CostInfoSectionProps {
   data: TestRequestDto;
+  onViewCostHistory?: () => void;
 }
 
-const CostInfoSection: React.FC<CostInfoSectionProps> = ({ data }) => {
+const CostInfoSection: React.FC<CostInfoSectionProps> = ({ data, onViewCostHistory }) => {
   return (
     <>
       <div className="detail-section">
-        <Title level={5} style={{ marginBottom: 12 }}>
-          Thông tin chi phí
-        </Title>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <Title level={5} style={{ margin: 0 }}>
+            Thông tin chi phí
+          </Title>
+          {onViewCostHistory && (
+            <Button
+              type="link"
+              icon={<HistoryOutlined />}
+              onClick={onViewCostHistory}
+              size="small"
+            >
+              Xem lịch sử thay đổi
+            </Button>
+          )}
+        </div>
         <Row gutter={[16, 12]}>
           <Col xs={24}>
             <div

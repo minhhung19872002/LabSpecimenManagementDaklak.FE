@@ -52,8 +52,8 @@ const TaskManagementList: React.FC = () => {
         <Col xs={12} sm={8} md={4}>
           <Card size="small">
             <Statistic
-              title="Chưa giao việc"
-              value={stats.notAssigned}
+              title="Đánh giá thử nghiệm"
+              value={stats.underEvaluation}
               valueStyle={{ color: "#8c8c8c" }}
             />
           </Card>
@@ -61,9 +61,9 @@ const TaskManagementList: React.FC = () => {
         <Col xs={12} sm={8} md={4}>
           <Card size="small">
             <Statistic
-              title="Đã giao việc"
-              value={stats.assigned}
-              valueStyle={{ color: "#1890ff" }}
+              title="Chấp nhận TN"
+              value={stats.accepted}
+              valueStyle={{ color: "#52c41a" }}
             />
           </Card>
         </Col>
@@ -71,7 +71,7 @@ const TaskManagementList: React.FC = () => {
           <Card size="small">
             <Statistic
               title="Đang TN"
-              value={stats.testing}
+              value={stats.inProgress}
               valueStyle={{ color: "#faad14" }}
             />
           </Card>
@@ -80,7 +80,7 @@ const TaskManagementList: React.FC = () => {
           <Card size="small">
             <Statistic
               title="Chờ duyệt"
-              value={stats.pendingApproval}
+              value={stats.waitingApproval}
               valueStyle={{ color: "#fa8c16" }}
             />
           </Card>
@@ -139,17 +139,26 @@ const TaskManagementList: React.FC = () => {
               onChange={handleStatusFilterChange}
             >
               <Select.Option value="all">Tất cả trạng thái</Select.Option>
-              <Select.Option value={String(LaboratoryTaskStatus.NotAssigned)}>
-                Chưa giao việc
+              <Select.Option value={String(LaboratoryTaskStatus.UnderEvaluation)}>
+                Đánh giá thử nghiệm
+              </Select.Option>
+              <Select.Option value={String(LaboratoryTaskStatus.WaitingCustomerResponse)}>
+                Chờ KH phản hồi
+              </Select.Option>
+              <Select.Option value={String(LaboratoryTaskStatus.FullyAccepted)}>
+                Chấp nhận TN
+              </Select.Option>
+              <Select.Option value={String(LaboratoryTaskStatus.PartialAccepted)}>
+                Chấp nhận 1 phần
               </Select.Option>
               <Select.Option value={String(LaboratoryTaskStatus.Assigned)}>
-                Đã giao việc
+                Đã phân công
               </Select.Option>
-              <Select.Option value={String(LaboratoryTaskStatus.Testing)}>
+              <Select.Option value={String(LaboratoryTaskStatus.InProgress)}>
                 Đang thử nghiệm
               </Select.Option>
               <Select.Option
-                value={String(LaboratoryTaskStatus.PendingApproval)}
+                value={String(LaboratoryTaskStatus.WaitingApproval)}
               >
                 Chờ duyệt kết quả
               </Select.Option>

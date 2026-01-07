@@ -82,15 +82,22 @@ export const useTaskManagementList = () => {
   const stats = useMemo(
     () => ({
       total: pagination.total,
-      notAssigned: tasks.filter(
-        (t) => t.status === LaboratoryTaskStatus.NotAssigned
+      underEvaluation: tasks.filter(
+        (t) => t.status === LaboratoryTaskStatus.UnderEvaluation
+      ).length,
+      waitingCustomerResponse: tasks.filter(
+        (t) => t.status === LaboratoryTaskStatus.WaitingCustomerResponse
+      ).length,
+      accepted: tasks.filter(
+        (t) => t.status === LaboratoryTaskStatus.FullyAccepted ||
+               t.status === LaboratoryTaskStatus.PartialAccepted
       ).length,
       assigned: tasks.filter((t) => t.status === LaboratoryTaskStatus.Assigned)
         .length,
-      testing: tasks.filter((t) => t.status === LaboratoryTaskStatus.Testing)
+      inProgress: tasks.filter((t) => t.status === LaboratoryTaskStatus.InProgress)
         .length,
-      pendingApproval: tasks.filter(
-        (t) => t.status === LaboratoryTaskStatus.PendingApproval
+      waitingApproval: tasks.filter(
+        (t) => t.status === LaboratoryTaskStatus.WaitingApproval
       ).length,
       approved: tasks.filter((t) => t.status === LaboratoryTaskStatus.Approved)
         .length,
@@ -180,10 +187,10 @@ export const useTaskManagementList = () => {
     return daysRemaining < 5;
   }, []);
 
-  // Helper to check if task has been waiting too long (>= 2 days since transfer and still NotAssigned)
+  // Helper to check if task has been waiting too long (>= 2 days since transfer and still UnderEvaluation)
   const isTaskDelayed = useCallback((record: LaboratoryTaskDto) => {
     if (!record.transferDate) return false;
-    if (record.status !== LaboratoryTaskStatus.NotAssigned) return false;
+    if (record.status !== LaboratoryTaskStatus.UnderEvaluation) return false;
     const daysSinceTransfer = dayjs().diff(dayjs(record.transferDate), "day");
     return daysSinceTransfer >= 2;
   }, []);

@@ -12,6 +12,7 @@ import {
   QualityManagerPendingTaskDto,
   BulkApproveIndicatorsResultDto,
   BulkRejectIndicatorsResultDto,
+  ConfirmHandoverInput,
 } from '../types/qualityManagement';
 
 const BASE_URL = '/api/v1/quality-management';
@@ -116,8 +117,20 @@ export const qualityManagementService = {
     return response.data;
   },
 
+  /**
+   * @deprecated Sử dụng confirmHandover thay thế
+   */
   sendResult: async (taskId: string): Promise<void> => {
     await api.post(`${BASE_URL}/${taskId}/send-result`);
+  },
+
+  /**
+   * Xác nhận đã giao kết quả cho BPGN
+   * Cập nhật task status thành HandedOver
+   * Khi tất cả quality tasks đã HandedOver → TestRequest chuyển sang ReportPublished
+   */
+  confirmHandover: async (taskId: string, input?: ConfirmHandoverInput): Promise<void> => {
+    await api.post(`${BASE_URL}/${taskId}/confirm-handover`, input || {});
   },
 
   // Lookup

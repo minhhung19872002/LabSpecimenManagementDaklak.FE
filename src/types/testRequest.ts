@@ -8,11 +8,16 @@ export enum TestRequestStatus {
   SampleSent = 3,               // Đã gửi mẫu - người dùng xác nhận đã gửi mẫu
   InProgress = 4,               // Đang thử nghiệm - QLKT đã gán PP + KTV
   PendingChangeApproval = 5,    // Chờ phê duyệt thay đổi - chỉnh sửa cần QLCL duyệt
-  PendingApproval = 6,          // Chờ phê duyệt KQ - QLKT đã gửi kết quả
-  Approved = 7,                 // Đã phê duyệt - QLCL đã duyệt KQ
-  ResultSent = 8,               // Gửi khách hàng - đã nhấn gửi KQ
+  PendingApproval = 6,          // [DEPRECATED] Chờ phê duyệt KQ - QLKT đã gửi kết quả
+  Approved = 7,                 // [DEPRECATED] Đã phê duyệt - QLCL đã duyệt KQ
+  ResultSent = 8,               // [DEPRECATED] Gửi khách hàng - đã nhấn gửi KQ
   Completed = 9,                // Hoàn Thành - kết thúc quy trình
-  Cancelled = 10                // Hủy phiếu yêu cầu - BP Giao nhận hủy
+  Cancelled = 10,               // Hủy phiếu yêu cầu - BP Giao nhận hủy
+  UnderReview = 11,             // Đang xem xét YC - đã gửi QLKT xem xét
+  WaitingCustomerConfirm = 12,  // Chờ KH xác nhận - QLKT yêu cầu đổi PP hoặc từ chối
+  RequestApproved = 13,         // Đã duyệt yêu cầu - Tất cả phòng LAB đã duyệt
+  PartialResultSent = 14,       // Đã trả 1 phần KQ - đã trả một phần kết quả cho KH
+  ReportPublished = 15          // Đã phát hành BC - BC đã được phát hành
 }
 
 // Enum for change approval status
@@ -35,6 +40,11 @@ export const TestRequestStatusLabels: Record<TestRequestStatus, string> = {
   [TestRequestStatus.ResultSent]: "Gửi khách hàng",
   [TestRequestStatus.Completed]: "Hoàn Thành",
   [TestRequestStatus.Cancelled]: "Hủy phiếu yêu cầu",
+  [TestRequestStatus.UnderReview]: "Đang xem xét YC",
+  [TestRequestStatus.WaitingCustomerConfirm]: "Chờ KH xác nhận",
+  [TestRequestStatus.RequestApproved]: "Đã duyệt yêu cầu",
+  [TestRequestStatus.PartialResultSent]: "Đã trả 1 phần KQ",
+  [TestRequestStatus.ReportPublished]: "Đã phát hành BC",
 };
 
 // Labels for ChangeApprovalStatus
@@ -57,6 +67,11 @@ export const TestRequestStatusColors: Record<TestRequestStatus, string> = {
   [TestRequestStatus.ResultSent]: "purple",
   [TestRequestStatus.Completed]: "success",
   [TestRequestStatus.Cancelled]: "red",
+  [TestRequestStatus.UnderReview]: "processing",
+  [TestRequestStatus.WaitingCustomerConfirm]: "warning",
+  [TestRequestStatus.RequestApproved]: "lime",
+  [TestRequestStatus.PartialResultSent]: "volcano",
+  [TestRequestStatus.ReportPublished]: "magenta",
 };
 
 // Colors for ChangeApprovalStatus
@@ -141,10 +156,18 @@ export const canComplete = (status: TestRequestStatus): boolean => {
 
 /**
  * Kiểm tra có thể gửi kế toán không
- * Chỉ khi status = New
+ * Chỉ khi status = PendingPayment (sau khi In phiếu XN)
  */
 export const canSendToAccounting = (status: TestRequestStatus): boolean => {
-  return status === TestRequestStatus.New;
+  return status === TestRequestStatus.PendingPayment;
+};
+
+/**
+ * Kiểm tra có thể gửi QLKT không
+ * Chỉ khi status = Paid (sau khi kế toán xác nhận thanh toán)
+ */
+export const canSendToQLKT = (status: TestRequestStatus): boolean => {
+  return status === TestRequestStatus.Paid;
 };
 
 /**
@@ -632,4 +655,89 @@ export interface SampleReceiverPendingTaskDto {
   pendingDate: string | null;
   expectedCompletionDate: string | null;
   status: TestRequestStatus;
+}
+
+// ============= Workflow Redesign - BPGN Confirmation DTOs =============
+
+// DTO for pending indicator confirmation (for BPGN to confirm)
+export interface IndicatorPendingConfirmationDto {
+  id: string;                           // LaboratoryTaskIndicator ID
+  sampleCode?: string;
+  sampleName?: string;
+  indicatorCode?: string;
+  indicatorName?: string;
+  laboratoryName?: string;
+  approvalStatus: IndicatorApprovalStatus;
+  testingRejectionReason?: string;      // Lý do từ chối TN (nếu có)
+  oldMethodName?: string;               // PP cũ (nếu yêu cầu đổi PP)
+  newMethodName?: string;               // PP mới đề xuất (nếu yêu cầu đổi PP)
+  methodChangeReason?: string;          // Lý do yêu cầu đổi PP (nếu có)
+  requestedByName?: string;             // Người yêu cầu đổi PP / từ chối TN
+  requestedDate?: string;               // Ngày yêu cầu
+}
+
+// DTO for BPGN to confirm a single indicator
+export interface ConfirmIndicatorInput {
+  confirmed: boolean;                   // true = KH đồng ý, false = KH không đồng ý
+}
+
+// DTO for BPGN to bulk confirm indicators
+export interface BulkConfirmIndicatorsInput {
+  indicatorIds: string[];               // Danh sách LaboratoryTaskIndicator IDs
+  confirmed: boolean;                   // true = KH đồng ý, false = KH không đồng ý
+}
+
+// ============= BPGN - Confirm Delivery to Customer =============
+
+// Input for BPGN confirming delivery to customer
+export interface ConfirmDeliveryInput {
+  note?: string;
+}
+
+// DTO for published report (log history)
+export interface PublishedReportDto {
+  id: string;
+  testRequestId: string;
+  qualityManagementTaskId: string;
+  fileName: string;
+  reportType: 'Single' | 'Mixed';
+  printNote?: string;
+  indicatorIds: string[];
+  indicatorNames: string[];
+  creationTime: string;
+  creatorName?: string;
+}
+
+// ============= Cost Change History =============
+
+// Loại thay đổi tiền
+export enum CostChangeType {
+  IndicatorCancelled = 1,   // KH hủy chỉ tiêu (không đồng ý đổi PP)
+  MethodChanged = 2,        // KH đồng ý đổi PP (giá có thể thay đổi)
+  SampleCancelled = 3,      // KH hủy cả mẫu
+  ManualAdjustment = 4      // Điều chỉnh thủ công
+}
+
+export const CostChangeTypeLabels: Record<CostChangeType, string> = {
+  [CostChangeType.IndicatorCancelled]: 'KH hủy chỉ tiêu',
+  [CostChangeType.MethodChanged]: 'Thay đổi phương pháp',
+  [CostChangeType.SampleCancelled]: 'KH hủy mẫu',
+  [CostChangeType.ManualAdjustment]: 'Điều chỉnh thủ công'
+};
+
+// DTO for cost change history
+export interface CostChangeHistoryDto {
+  id: string;
+  testRequestId: string;
+  changeType: CostChangeType;
+  changeTypeLabel: string;
+  oldTotalCost: number;
+  newTotalCost: number;
+  differenceAmount: number;
+  affectedIndicatorId?: string;
+  affectedIndicatorName?: string;
+  indicatorUnitPrice?: number;
+  reason?: string;
+  creationTime: string;
+  creatorName?: string;
 }

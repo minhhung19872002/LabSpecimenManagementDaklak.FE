@@ -127,7 +127,8 @@ export const useQualityManagementList = () => {
   // Check if row is urgent (RequestCompletionDate - now <= 2 days)
   const isUrgent = useCallback((record: QualityManagementTaskDto): boolean => {
     if (!record.requestCompletionDate) return false;
-    if (record.status === QualityManagementStatus.ResultSent) return false;
+    // Không cảnh báo urgent nếu đã HandedOver (hoàn thành)
+    if (record.status === QualityManagementStatus.HandedOver) return false;
     const daysRemaining = dayjs(record.requestCompletionDate).diff(
       dayjs(),
       "day"

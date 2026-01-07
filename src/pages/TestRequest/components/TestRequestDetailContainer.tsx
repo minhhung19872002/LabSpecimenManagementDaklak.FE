@@ -28,6 +28,7 @@ import {
   canComplete,
   TestRequestSampleDto,
   canSendToAccounting,
+  canSendToQLKT,
   canCancelRequest,
   isCancelledRequest,
 } from "../../../types/testRequest";
@@ -53,7 +54,9 @@ interface TestRequestDetailContainerProps {
   printingTestRequest: boolean;
   sendingSample: boolean;
   sendingToAccounting: boolean;
+  sendingToQLKT: boolean;
   cancellingRequest: boolean;
+  confirmingDelivery?: boolean;
   onPrintTestRequest: () => void;
   onSendSample: () => void;
   onSendResult: () => void;
@@ -63,7 +66,11 @@ interface TestRequestDetailContainerProps {
   onPrintSingle: () => void;
   onPrintMixed: () => void;
   onSendToAccounting: () => void;
+  onSendToQLKT: () => void;
   onCancelRequest: () => void;
+  onOpenCustomerConfirmation: () => void;
+  onConfirmDelivery?: () => void;
+  onViewCostHistory?: () => void;
   canPrint: boolean;
   canPrintTestRequest: boolean;
   // Permission flags theo Permission Matrix
@@ -79,7 +86,9 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
   printingTestRequest,
   sendingSample,
   sendingToAccounting,
+  sendingToQLKT,
   cancellingRequest,
+  confirmingDelivery,
   onPrintTestRequest,
   onSendSample,
   onSendResult,
@@ -89,7 +98,11 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
   onPrintSingle,
   onPrintMixed,
   onSendToAccounting,
+  onSendToQLKT,
   onCancelRequest,
+  onOpenCustomerConfirmation,
+  onConfirmDelivery,
+  onViewCostHistory,
   canPrint,
   canPrintTestRequest,
   // Permission flags
@@ -112,7 +125,7 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
 
     // === 1. PRIMARY ACTIONS (ưu tiên cao nhất) ===
 
-    // Gửi kế toán - chỉ khi status = New VÀ có quyền sendToAccounting
+    // Gửi kế toán - chỉ khi status = PendingPayment VÀ có quyền sendToAccounting
     if (canSendToAccounting(data.status) && canSendToAccountingAction) {
       buttons.push(
         <Button
@@ -126,19 +139,46 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
       );
     }
 
-    // Gửi mẫu - khi status = Paid VÀ có quyền sendSample
-    if (canSendSample(data.status) && canSendSampleAction) {
+    // Gửi QLKT - khi status = Paid VÀ có quyền sendToAccounting (BPGN)
+    if (canSendToQLKT(data.status) && canSendToAccountingAction) {
       buttons.push(
         <Button
-          key="send-sample"
+          key="send-to-qlkt"
           type="primary"
-          onClick={onSendSample}
-          loading={sendingSample}
+          onClick={onSendToQLKT}
+          loading={sendingToQLKT}
         >
-          Gửi mẫu
+          Gửi QLKT
         </Button>
       );
     }
+
+    // Xác nhận KH - khi status = WaitingCustomerConfirm VÀ có quyền sendToAccounting (BPGN)
+    if (data.status === TestRequestStatus.WaitingCustomerConfirm && canSendToAccountingAction) {
+      buttons.push(
+        <Button
+          key="confirm-customer"
+          type="primary"
+          onClick={onOpenCustomerConfirmation}
+        >
+          Xác nhận KH
+        </Button>
+      );
+    }
+
+    // Gửi mẫu - ẨN (đã thay thế bằng Gửi QLKT)
+    // if (canSendSample(data.status) && canSendSampleAction) {
+    //   buttons.push(
+    //     <Button
+    //       key="send-sample"
+    //       type="primary"
+    //       onClick={onSendSample}
+    //       loading={sendingSample}
+    //     >
+    //       Gửi mẫu
+    //     </Button>
+    //   );
+    // }
 
     // Gửi kết quả - khi status = Approved
     if (data.status === TestRequestStatus.Approved) {
@@ -154,6 +194,24 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
       buttons.push(
         <Button key="complete" type="primary" onClick={onComplete}>
           Hoàn thành
+        </Button>
+      );
+    }
+
+    // Xác nhận bàn giao KH - BPGN xác nhận khi status = ReportPublished hoặc PartialResultSent
+    if (
+      (data.status === TestRequestStatus.ReportPublished ||
+        data.status === TestRequestStatus.PartialResultSent) &&
+      onConfirmDelivery
+    ) {
+      buttons.push(
+        <Button
+          key="confirm-delivery"
+          type="primary"
+          onClick={onConfirmDelivery}
+          loading={confirmingDelivery}
+        >
+          Xác nhận bàn giao KH
         </Button>
       );
     }
@@ -334,7 +392,7 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
 
           {/* Thông tin chi phí */}
           <Col xs={{ span: 24, order: 4 }} lg={{ span: 12, order: 4 }}>
-            <CostInfoSection data={data} />
+            <CostInfoSection data={data} onViewCostHistory={onViewCostHistory} />
           </Col>
         </Row>
 

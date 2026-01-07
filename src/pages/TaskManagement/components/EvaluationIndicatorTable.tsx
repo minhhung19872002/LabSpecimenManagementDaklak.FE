@@ -1,0 +1,484 @@
+import React, { useState, useMemo } from "react";
+import {
+  Table,
+  Select,
+  Button,
+  Space,
+  Modal,
+  Form,
+  Typography,
+  Input,
+  Tag,
+  Tooltip,
+} from "antd";
+import StatusTag from "../../../components/common/StatusTag";
+import type { TableRowSelection } from "antd/es/table/interface";
+import { CheckOutlined, CloseOutlined, SwapOutlined } from "@ant-design/icons";
+import {
+  LaboratoryTaskIndicatorDto,
+  IndicatorApprovalStatus,
+  IndicatorApprovalStatusLabels,
+  IndicatorApprovalStatusColors,
+  MethodLookupDto,
+  IndicatorEvaluationAction,
+} from "../../../types/laboratoryTask";
+import { laboratoryTaskService } from "../../../services/laboratoryTaskService";
+
+const { Text } = Typography;
+
+interface EvaluationIndicatorTableProps {
+  indicators: LaboratoryTaskIndicatorDto[];
+  methods: MethodLookupDto[];
+  taskId: string;
+  canEvaluate: boolean;  // QLKT permission
+  loading?: boolean;
+  onEvaluationComplete: () => void;  // Callback to refresh data after evaluation
+}
+
+const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
+  indicators,
+  methods,
+  taskId,
+  canEvaluate,
+  loading = false,
+  onEvaluationComplete,
+}) => {
+  // State for selected indicators
+  const [selectedIndicatorIds, setSelectedIndicatorIds] = useState<string[]>([]);
+
+  // State for action loading
+  const [actionLoading, setActionLoading] = useState(false);
+
+  // State for method change modal
+  const [methodChangeModal, setMethodChangeModal] = useState<{
+    visible: boolean;
+    indicatorId?: string;
+    mode: 'single' | 'bulk';
+  }>({
+    visible: false,
+    mode: 'single',
+  });
+  const [methodChangeForm] = Form.useForm();
+
+  // State for reject modal
+  const [rejectModal, setRejectModal] = useState<{
+    visible: boolean;
+    indicatorId?: string;
+    mode: 'single' | 'bulk';
+  }>({
+    visible: false,
+    mode: 'single',
+  });
+  const [rejectForm] = Form.useForm();
+
+  // Filter indicators that are pending evaluation (Pending status)
+  const pendingIndicators = useMemo(() => {
+    return indicators.filter(
+      (ind) => ind.approvalStatus === IndicatorApprovalStatus.Pending
+    );
+  }, [indicators]);
+
+  // Check if there are pending indicators for "Approve All" button
+  const hasPendingIndicators = pendingIndicators.length > 0;
+
+  // Handle single indicator accept
+  const handleAccept = async (indicatorId: string) => {
+    if (!canEvaluate) return;
+
+    setActionLoading(true);
+    try {
+      await laboratoryTaskService.evaluateIndicator(indicatorId, {
+        action: IndicatorEvaluationAction.Accept,
+      });
+      onEvaluationComplete();
+    } catch (error: any) {
+      console.error("Failed to accept indicator:", error);
+      Modal.error({
+        title: "Lỗi",
+        content: error.response?.data?.error?.message || "Không thể chấp nhận chỉ tiêu",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Handle method change request (single)
+  const handleMethodChangeRequest = async () => {
+    try {
+      const values = await methodChangeForm.validateFields();
+
+      setActionLoading(true);
+
+      if (methodChangeModal.mode === 'single' && methodChangeModal.indicatorId) {
+        await laboratoryTaskService.evaluateIndicator(methodChangeModal.indicatorId, {
+          action: IndicatorEvaluationAction.RequestMethodChange,
+          newMethodId: values.newMethodId,
+          reason: values.reason,
+        });
+      } else if (methodChangeModal.mode === 'bulk' && selectedIndicatorIds.length > 0) {
+        await laboratoryTaskService.requestMethodChange(taskId, {
+          items: selectedIndicatorIds.map((id) => ({
+            indicatorId: id,
+            newMethodId: values.newMethodId,
+          })),
+          reason: values.reason,
+        });
+        setSelectedIndicatorIds([]);
+      }
+
+      setMethodChangeModal({ visible: false, mode: 'single' });
+      methodChangeForm.resetFields();
+      onEvaluationComplete();
+    } catch (error: any) {
+      if (error.errorFields) return;  // Form validation error
+      console.error("Failed to request method change:", error);
+      Modal.error({
+        title: "Lỗi",
+        content: error.response?.data?.error?.message || "Không thể yêu cầu đổi phương pháp",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Handle reject (single or bulk)
+  const handleReject = async () => {
+    try {
+      const values = await rejectForm.validateFields();
+
+      setActionLoading(true);
+
+      if (rejectModal.mode === 'single' && rejectModal.indicatorId) {
+        await laboratoryTaskService.evaluateIndicator(rejectModal.indicatorId, {
+          action: IndicatorEvaluationAction.Reject,
+          reason: values.reason,
+        });
+      } else if (rejectModal.mode === 'bulk' && selectedIndicatorIds.length > 0) {
+        await laboratoryTaskService.rejectIndicatorsForTesting(taskId, {
+          indicatorIds: selectedIndicatorIds,
+          reason: values.reason,
+        });
+        setSelectedIndicatorIds([]);
+      }
+
+      setRejectModal({ visible: false, mode: 'single' });
+      rejectForm.resetFields();
+      onEvaluationComplete();
+    } catch (error: any) {
+      if (error.errorFields) return;  // Form validation error
+      console.error("Failed to reject indicator:", error);
+      Modal.error({
+        title: "Lỗi",
+        content: error.response?.data?.error?.message || "Không thể từ chối thử nghiệm",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Handle approve all remaining
+  const handleApproveAllRemaining = async () => {
+    Modal.confirm({
+      title: "Xác nhận chấp nhận tất cả",
+      content: `Bạn có chắc muốn chấp nhận thử nghiệm cho ${pendingIndicators.length} chỉ tiêu còn lại?`,
+      okText: "Chấp nhận tất cả",
+      cancelText: "Hủy",
+      onOk: async () => {
+        setActionLoading(true);
+        try {
+          await laboratoryTaskService.approveAllRemainingIndicators(taskId);
+          onEvaluationComplete();
+        } catch (error: any) {
+          console.error("Failed to approve all:", error);
+          Modal.error({
+            title: "Lỗi",
+            content: error.response?.data?.error?.message || "Không thể chấp nhận tất cả chỉ tiêu",
+          });
+        } finally {
+          setActionLoading(false);
+        }
+      },
+    });
+  };
+
+  // Get status display for indicator
+  const getStatusDisplay = (record: LaboratoryTaskIndicatorDto) => {
+    const status = record.approvalStatus;
+
+    if (status === IndicatorApprovalStatus.Pending && canEvaluate) {
+      // Show action buttons for pending indicators
+      return (
+        <Space size="small" wrap>
+          <Tooltip title="Chấp nhận thử nghiệm">
+            <Button
+              type="primary"
+              size="small"
+              icon={<CheckOutlined />}
+              onClick={() => handleAccept(record.id)}
+              loading={actionLoading}
+            >
+              Chấp nhận
+            </Button>
+          </Tooltip>
+          <Tooltip title="Yêu cầu đổi phương pháp">
+            <Button
+              size="small"
+              icon={<SwapOutlined />}
+              onClick={() => setMethodChangeModal({ visible: true, indicatorId: record.id, mode: 'single' })}
+              loading={actionLoading}
+            >
+              Đổi PP
+            </Button>
+          </Tooltip>
+          <Tooltip title="Từ chối thử nghiệm">
+            <Button
+              danger
+              size="small"
+              icon={<CloseOutlined />}
+              onClick={() => setRejectModal({ visible: true, indicatorId: record.id, mode: 'single' })}
+              loading={actionLoading}
+            >
+              Từ chối
+            </Button>
+          </Tooltip>
+        </Space>
+      );
+    }
+
+    // Show status tag for non-pending indicators
+    return (
+      <StatusTag color={IndicatorApprovalStatusColors[status]}>
+        {IndicatorApprovalStatusLabels[status]}
+      </StatusTag>
+    );
+  };
+
+  const columns = [
+    {
+      title: "Mẫu",
+      key: "sample",
+      width: 150,
+      render: (_: unknown, record: LaboratoryTaskIndicatorDto) => (
+        <div>
+          <Tag color="blue">{record.sampleCode}</Tag>
+          <div style={{ fontSize: 12, marginTop: 4 }}>{record.sampleName}</div>
+        </div>
+      ),
+    },
+    {
+      title: "Tên chỉ tiêu",
+      dataIndex: "indicatorName",
+      key: "indicatorName",
+      width: 200,
+      render: (value: string, record: LaboratoryTaskIndicatorDto) => (
+        <div>
+          <div>{value}</div>
+          {record.indicatorGroupName && (
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              {record.indicatorGroupName}
+            </Text>
+          )}
+        </div>
+      ),
+    },
+    {
+      title: "Phương pháp hiện tại",
+      dataIndex: "methodName",
+      key: "methodName",
+      width: 200,
+      render: (value: string) => (
+        <Tooltip title={value}>
+          <Text
+            style={{
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {value || "-"}
+          </Text>
+        </Tooltip>
+      ),
+    },
+    {
+      title: "Đơn giá",
+      dataIndex: "unitPrice",
+      key: "unitPrice",
+      width: 120,
+      render: (value: number) => (
+        <Text>{value?.toLocaleString("vi-VN")} đ</Text>
+      ),
+    },
+    {
+      title: "Trạng thái / Hành động",
+      key: "status",
+      width: 280,
+      fixed: "right" as const,
+      render: (_: unknown, record: LaboratoryTaskIndicatorDto) => getStatusDisplay(record),
+    },
+  ];
+
+  // Sort indicators: Pending first, then by sample code
+  const sortedIndicators = useMemo(() => {
+    return [...indicators].sort((a, b) => {
+      // Pending first
+      if (a.approvalStatus === IndicatorApprovalStatus.Pending &&
+          b.approvalStatus !== IndicatorApprovalStatus.Pending) {
+        return -1;
+      }
+      if (a.approvalStatus !== IndicatorApprovalStatus.Pending &&
+          b.approvalStatus === IndicatorApprovalStatus.Pending) {
+        return 1;
+      }
+      // Then by sample code
+      return (a.sampleCode || "").localeCompare(b.sampleCode || "");
+    });
+  }, [indicators]);
+
+  // Row selection configuration
+  const rowSelection: TableRowSelection<LaboratoryTaskIndicatorDto> | undefined = useMemo(() => {
+    if (!canEvaluate) return undefined;
+
+    return {
+      selectedRowKeys: selectedIndicatorIds,
+      onChange: (selectedRowKeys: React.Key[]) => {
+        setSelectedIndicatorIds(selectedRowKeys as string[]);
+      },
+      getCheckboxProps: (record: LaboratoryTaskIndicatorDto) => ({
+        // Only allow selecting Pending indicators
+        disabled: record.approvalStatus !== IndicatorApprovalStatus.Pending,
+        name: record.id,
+      }),
+    };
+  }, [selectedIndicatorIds, canEvaluate]);
+
+  const selectedCount = selectedIndicatorIds.length;
+
+  return (
+    <>
+      {/* Bulk action buttons */}
+      {canEvaluate && (
+        <div style={{ marginBottom: 16 }}>
+          <Space wrap>
+            <Button
+              type="primary"
+              icon={<CheckOutlined />}
+              onClick={handleApproveAllRemaining}
+              disabled={!hasPendingIndicators}
+              loading={actionLoading}
+            >
+              Chấp nhận tất cả ({pendingIndicators.length})
+            </Button>
+            <Button
+              icon={<SwapOutlined />}
+              onClick={() => setMethodChangeModal({ visible: true, mode: 'bulk' })}
+              disabled={selectedCount === 0}
+              loading={actionLoading}
+            >
+              Đổi PP ({selectedCount})
+            </Button>
+            <Button
+              danger
+              icon={<CloseOutlined />}
+              onClick={() => setRejectModal({ visible: true, mode: 'bulk' })}
+              disabled={selectedCount === 0}
+              loading={actionLoading}
+            >
+              Từ chối TN ({selectedCount})
+            </Button>
+          </Space>
+        </div>
+      )}
+
+      <Table
+        columns={columns}
+        dataSource={sortedIndicators}
+        rowKey="id"
+        pagination={false}
+        size="small"
+        scroll={{ x: 950 }}
+        loading={loading || actionLoading}
+        rowSelection={rowSelection}
+      />
+
+      {/* Method Change Modal */}
+      <Modal
+        title={methodChangeModal.mode === 'single' ? "Yêu cầu đổi phương pháp" : `Yêu cầu đổi PP cho ${selectedCount} chỉ tiêu`}
+        open={methodChangeModal.visible}
+        onOk={handleMethodChangeRequest}
+        onCancel={() => {
+          setMethodChangeModal({ visible: false, mode: 'single' });
+          methodChangeForm.resetFields();
+        }}
+        okText="Xác nhận"
+        cancelText="Hủy"
+        okButtonProps={{ loading: actionLoading }}
+        width={600}
+        centered
+      >
+        <Form form={methodChangeForm} layout="vertical">
+          <Form.Item
+            name="newMethodId"
+            label="Phương pháp mới"
+            rules={[{ required: true, message: "Vui lòng chọn phương pháp mới" }]}
+          >
+            <Select
+              placeholder="Chọn phương pháp mới"
+              options={methods.map((m) => ({
+                value: m.id,
+                label: m.name,
+              }))}
+              showSearch
+              filterOption={(input, option) =>
+                (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+              }
+            />
+          </Form.Item>
+          <Form.Item
+            name="reason"
+            label="Lý do đổi phương pháp"
+            rules={[{ required: true, message: "Vui lòng nhập lý do" }]}
+          >
+            <Input.TextArea
+              rows={3}
+              placeholder="Nhập lý do yêu cầu đổi phương pháp..."
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Reject Modal */}
+      <Modal
+        title={rejectModal.mode === 'single' ? "Từ chối thử nghiệm" : `Từ chối TN cho ${selectedCount} chỉ tiêu`}
+        open={rejectModal.visible}
+        onOk={handleReject}
+        onCancel={() => {
+          setRejectModal({ visible: false, mode: 'single' });
+          rejectForm.resetFields();
+        }}
+        okText="Xác nhận từ chối"
+        cancelText="Hủy"
+        okButtonProps={{ danger: true, loading: actionLoading }}
+        width={600}
+        centered
+      >
+        <Form form={rejectForm} layout="vertical">
+          <Form.Item
+            name="reason"
+            label="Lý do từ chối"
+            rules={[{ required: true, message: "Vui lòng nhập lý do từ chối" }]}
+          >
+            <Input.TextArea
+              rows={3}
+              placeholder="Nhập lý do từ chối thử nghiệm..."
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </>
+  );
+};
+
+export default EvaluationIndicatorTable;
