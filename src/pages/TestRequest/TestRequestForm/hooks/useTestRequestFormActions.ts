@@ -425,18 +425,7 @@ export const useTestRequestFormActions = ({
 
   const handleIndicatorModalOk = () => {
     if (currentSampleKey) {
-      // Validate: all selected indicators must be sent to a laboratory
-      if (tempSelectedIndicatorMethods.length > 0) {
-        const unsentMethods = tempSelectedIndicatorMethods.filter(
-          (key) => !indicatorLaboratoryMap[`${currentSampleKey}_${key}`]
-        );
-        if (unsentMethods.length > 0) {
-          message.warning(
-            `Còn ${unsentMethods.length} chỉ tiêu chưa được gửi cho khoa phòng. Vui lòng gửi tất cả chỉ tiêu trước khi lưu.`
-          );
-          return;
-        }
-      }
+      // Không validate khoa phòng - cho phép lưu mà không cần gửi khoa phòng
 
       // Update both indicatorIds (for backward compat) and indicatorMethods
       const indicatorIds = tempSelectedIndicatorMethods.map((key) => {
@@ -481,12 +470,12 @@ export const useTestRequestFormActions = ({
         });
         return prev.filter((k) => k !== key);
       } else {
-        // Add with auto-set transfer date to today
+        // Add with auto-set transfer date to today, requestDate is empty by default
         setSelectedIndicatorDates((dates) => ({
           ...dates,
           [key]: {
             transferDate: dayjs(),
-            requestDate: dayjs(),
+            requestDate: undefined, // Để trống theo yêu cầu KH
           },
         }));
         return [...prev, key];
@@ -672,27 +661,7 @@ export const useTestRequestFormActions = ({
       return;
     }
 
-    // Validate: all indicators must have laboratory assigned
-    const samplesWithoutLab: string[] = [];
-    samples.forEach((sample) => {
-      const methodKeys = sample.indicatorMethods && sample.indicatorMethods.length > 0
-        ? sample.indicatorMethods
-        : sample.indicatorIds;
-
-      const hasMissingLab = methodKeys.some((key) => {
-        const labKey = `${sample.key}_${key}`;
-        return !indicatorLaboratoryMap[labKey];
-      });
-
-      if (hasMissingLab) {
-        samplesWithoutLab.push(sample.sampleName || sample.sampleCode || `Mẫu ${sample.sortOrder}`);
-      }
-    });
-
-    if (samplesWithoutLab.length > 0) {
-      message.warning(`Các mẫu chưa được gán khoa phòng: ${samplesWithoutLab.join(", ")}`);
-      return;
-    }
+    // Không validate khoa phòng - cho phép lưu mà không cần gán khoa phòng cho chỉ tiêu
 
     setLoading(true);
     try {
