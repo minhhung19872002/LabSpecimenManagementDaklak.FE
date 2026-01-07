@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Modal, Table, Button, Space, Typography, message, Input, Spin, Checkbox, Collapse, Divider, Tag } from 'antd';
-import { PrinterOutlined, CaretRightOutlined } from '@ant-design/icons';
+import { Modal, Table, Button, Space, Typography, message, Input, Spin, Checkbox, Collapse, Divider, Tag, List } from 'antd';
+import { PrinterOutlined, CaretRightOutlined, FilePdfOutlined, FolderOpenOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import {
   QualityManagementIndicatorDto,
@@ -35,7 +35,6 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
   onSuccess,
 }) => {
   const [selectedIndicatorIds, setSelectedIndicatorIds] = useState<string[]>([]);
-  const [selectedLabIds, setSelectedLabIds] = useState<string[]>([]);
   const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingIndicators, setLoadingIndicators] = useState(false);
@@ -43,6 +42,8 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
   const [templates, setTemplates] = useState<TemplateDto[]>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [indicators, setIndicators] = useState<QualityManagementIndicatorDto[]>([]);
+  const [generatedResults, setGeneratedResults] = useState<PrintResultItem[]>([]);
+  const [showResults, setShowResults] = useState(false);
 
   // Load indicators when modal opens
   useEffect(() => {
@@ -56,9 +57,10 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
   useEffect(() => {
     if (visible) {
       setSelectedIndicatorIds([]);
-      setSelectedLabIds([]);
       setSelectedTemplates([]);
       setNote('');
+      setGeneratedResults([]);
+      setShowResults(false);
     }
   }, [visible]);
 
@@ -120,20 +122,6 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
     return Object.values(groups);
   }, [approvedIndicators]);
 
-  // Auto-select labs when indicators are selected
-  useEffect(() => {
-    const labsWithSelectedIndicators = new Set<string>();
-
-    selectedIndicatorIds.forEach((indicatorId) => {
-      const indicator = approvedIndicators.find((i) => i.id === indicatorId);
-      if (indicator?.laboratoryId) {
-        labsWithSelectedIndicators.add(indicator.laboratoryId);
-      }
-    });
-
-    setSelectedLabIds(Array.from(labsWithSelectedIndicators));
-  }, [selectedIndicatorIds, approvedIndicators]);
-
   // Calculate selected indicators per lab
   const selectedIndicatorsPerLab = useMemo(() => {
     const result: Record<string, number> = {};
@@ -146,13 +134,49 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
     return result;
   }, [selectedIndicatorIds, approvedIndicators]);
 
+  // Function to open all tabs - triggered by user click
+  const handleOpenAllTabs = () => {
+    let blockedCount = 0;
+
+    // Try to open all PDFs
+    generatedResults.forEach((item) => {
+      const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(item.fileName)}`;
+      const newWindow = window.open(pdfUrl, '_blank');
+
+      // Check if popup was blocked
+      if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+        blockedCount++;
+      }
+    });
+
+    // If some popups were blocked, show instruction
+    if (blockedCount > 0) {
+      Modal.warning({
+        title: 'Trình duyệt đã chặn popup',
+        content: (
+          <div>
+            <p>Trình duyệt đã chặn {blockedCount} cửa sổ popup.</p>
+            <p>Để mở tất cả file PDF, vui lòng:</p>
+            <ol>
+              <li>Click vào biểu tượng popup bị chặn trên thanh địa chỉ (thường ở góc phải)</li>
+              <li>Chọn "Luôn cho phép popup từ trang này"</li>
+              <li>Sau đó click lại nút "Mở toàn bộ"</li>
+            </ol>
+            <p>Hoặc bạn có thể click từng nút "Xem PDF" bên dưới.</p>
+          </div>
+        ),
+        okText: 'Đã hiểu',
+      });
+    }
+  };
+
   const handlePrint = async () => {
     if (selectedIndicatorIds.length === 0) {
       message.warning('Vui lòng chọn ít nhất một chỉ tiêu để in');
       return;
     }
 
-    if (selectedTemplates.length === 0) {
+    if (mode === 'single' && selectedTemplates.length === 0) {
       message.warning('Vui lòng chọn ít nhất một biểu mẫu');
       return;
     }
@@ -161,27 +185,7 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
 
     try {
       if (mode === 'single') {
-        // Open single tab with loading state
-        const newTab = window.open('about:blank', '_blank');
-        if (newTab) {
-          newTab.document.write(`
-            <html>
-              <head>
-                <title>Đang tạo phiếu kết quả...</title>
-                <style>
-                  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
-                  .loader { text-align: center; }
-                  .spinner { width: 40px; height: 40px; border: 4px solid #e0e0e0; border-top: 4px solid #1890ff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
-                  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-                  p { color: #666; font-size: 16px; }
-                </style>
-              </head>
-              <body><div class="loader"><div class="spinner"></div><p>Đang tạo phiếu kết quả...</p></div></body>
-            </html>
-          `);
-        }
-
-        // Use new batch API for single mode with multiple templates/labs
+        // Call API to generate PDFs
         const result = await testRequestService.printMultiSingleResult(
           testRequestId,
           selectedIndicatorIds,
@@ -191,109 +195,11 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
 
         message.success(`Đã tạo ${result.results.length} phiếu kết quả`);
 
-        // If only 1 result, navigate directly to PDF
-        if (result.results.length === 1) {
-          const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(result.results[0].fileName)}`;
-          if (newTab) {
-            newTab.location.href = pdfUrl;
-          } else {
-            window.open(pdfUrl, '_blank');
-          }
-        } else {
-          // Multiple results - show list page with links
-          const pdfLinks = result.results.map((item: PrintResultItem) => ({
-            url: `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(item.fileName)}`,
-            labName: item.laboratoryName,
-            templateName: item.templateName,
-          }));
-
-          // Debug log
-          console.log('Generated PDF links:', pdfLinks);
-
-          if (newTab) {
-            // Build cards HTML separately to avoid template literal issues
-            const cardsHtml = pdfLinks.map((link, index) =>
-              '<div class="card">' +
-                '<div class="info">' +
-                  '<div class="lab-name">' + (index + 1) + '. ' + link.labName + '</div>' +
-                  '<div class="template-name">' + link.templateName + '</div>' +
-                '</div>' +
-                '<a href="' + link.url + '" target="_blank" class="btn">Xem PDF</a>' +
-              '</div>'
-            ).join('');
-
-            const linksJson = JSON.stringify(pdfLinks.map(l => l.url));
-
-            newTab.document.open();
-            newTab.document.write(`
-              <!DOCTYPE html>
-              <html>
-                <head>
-                  <title>Phiếu kết quả (${pdfLinks.length} file)</title>
-                  <style>
-                    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 24px; background: #f5f5f5; }
-                    .container { max-width: 800px; margin: 0 auto; }
-                    h1 { color: #1890ff; font-size: 24px; margin-bottom: 24px; }
-                    .card { background: white; border-radius: 8px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
-                    .info { flex: 1; }
-                    .lab-name { font-weight: 600; color: #333; margin-bottom: 4px; }
-                    .template-name { color: #666; font-size: 14px; }
-                    .btn { background: #1890ff; color: white; padding: 8px 16px; border-radius: 4px; text-decoration: none; font-size: 14px; display: inline-block; }
-                    .btn:hover { background: #40a9ff; }
-                    .download-all { margin-bottom: 16px; }
-                    .download-all-btn { background: #52c41a; color: white; padding: 10px 20px; border-radius: 4px; text-decoration: none; font-size: 14px; cursor: pointer; border: none; margin-right: 8px; }
-                    .download-all-btn:hover { background: #73d13d; }
-                    .iframes-container { display: none; }
-                  </style>
-                </head>
-                <body>
-                  <div class="container">
-                    <h1>Đã tạo ${pdfLinks.length} phiếu kết quả</h1>
-                    <div class="download-all">
-                      <button class="download-all-btn" onclick="downloadAll()">Tải tất cả PDF</button>
-                    </div>
-                    ${cardsHtml}
-                  </div>
-                  <div class="iframes-container" id="iframes"></div>
-                  <script>
-                    function downloadAll() {
-                      var links = ${linksJson};
-                      var container = document.getElementById('iframes');
-                      links.forEach(function(url) {
-                        var iframe = document.createElement('iframe');
-                        iframe.style.display = 'none';
-                        iframe.src = url;
-                        container.appendChild(iframe);
-                      });
-                    }
-                  </script>
-                </body>
-              </html>
-            `);
-            newTab.document.close();
-          }
-        }
+        // Store results and show results view
+        setGeneratedResults(result.results);
+        setShowResults(true);
       } else {
-        // Mixed mode - use existing API
-        const newTab = window.open('about:blank', '_blank');
-        if (newTab) {
-          newTab.document.write(`
-            <html>
-              <head>
-                <title>Đang tạo phiếu...</title>
-                <style>
-                  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
-                  .loader { text-align: center; }
-                  .spinner { width: 40px; height: 40px; border: 4px solid #e0e0e0; border-top: 4px solid #1890ff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
-                  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-                  p { color: #666; font-size: 16px; }
-                </style>
-              </head>
-              <body><div class="loader"><div class="spinner"></div><p>Đang tạo phiếu kết quả...</p></div></body>
-            </html>
-          `);
-        }
-
+        // Mixed mode - single PDF, open directly
         const result = await testRequestService.printMixedResult(
           testRequestId,
           selectedIndicatorIds,
@@ -303,18 +209,14 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
         message.success('Đã tạo phiếu kết quả');
 
         const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(result.fileName)}`;
-        if (newTab) {
-          newTab.location.href = pdfUrl;
-        } else {
-          window.open(pdfUrl, '_blank');
-        }
-      }
+        window.open(pdfUrl, '_blank');
 
-      setSelectedIndicatorIds([]);
-      setSelectedLabIds([]);
-      setNote('');
-      onCancel();
-      onSuccess?.();
+        // Close modal for mixed mode (single PDF)
+        setSelectedIndicatorIds([]);
+        setNote('');
+        onCancel();
+        onSuccess?.();
+      }
     } catch (error: any) {
       console.error('Error printing:', error);
       message.error(error?.response?.data?.error?.message || 'Không thể in kết quả');
@@ -323,12 +225,22 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
     }
   };
 
+  const handleCloseResults = () => {
+    setShowResults(false);
+    setGeneratedResults([]);
+    setSelectedIndicatorIds([]);
+    setNote('');
+    onCancel();
+    onSuccess?.();
+  };
+
   const handleCancel = () => {
     setSelectedIndicatorIds([]);
-    setSelectedLabIds([]);
     setSelectedTemplates([]);
     setNote('');
     setIndicators([]);
+    setGeneratedResults([]);
+    setShowResults(false);
     onCancel();
   };
 
@@ -374,6 +286,69 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
       width: 70,
     },
   ];
+
+  // Render results view when PDFs are generated
+  if (showResults) {
+    return (
+      <Modal
+        title={
+          <span>
+            <FilePdfOutlined style={{ marginRight: 8 }} />
+            Kết quả đã tạo ({generatedResults.length} file)
+          </span>
+        }
+        open={visible}
+        onCancel={handleCloseResults}
+        width={600}
+        centered
+        footer={
+          <Space>
+            <Button onClick={handleCloseResults}>Đóng</Button>
+            {generatedResults.length > 0 && (
+              <Button
+                type="primary"
+                icon={<FolderOpenOutlined />}
+                onClick={handleOpenAllTabs}
+              >
+                Mở toàn bộ ({generatedResults.length} file)
+              </Button>
+            )}
+          </Space>
+        }
+      >
+        <div style={{ marginBottom: 16 }}>
+          <Text type="secondary">
+            Click "Mở toàn bộ" để mở tất cả file PDF, hoặc click từng file bên dưới.
+          </Text>
+        </div>
+        <List
+          dataSource={generatedResults}
+          renderItem={(item, index) => (
+            <List.Item
+              actions={[
+                <Button
+                  type="link"
+                  icon={<FilePdfOutlined />}
+                  onClick={() => {
+                    const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(item.fileName)}`;
+                    window.open(pdfUrl, '_blank');
+                  }}
+                >
+                  Xem PDF
+                </Button>
+              ]}
+            >
+              <List.Item.Meta
+                avatar={<FilePdfOutlined style={{ fontSize: 24, color: '#f5222d' }} />}
+                title={`File ${index + 1}: ${item.laboratoryName || 'PDF'}`}
+                description={`Template: ${item.templateName || 'BM01'}`}
+              />
+            </List.Item>
+          )}
+        />
+      </Modal>
+    );
+  }
 
   return (
     <Modal
