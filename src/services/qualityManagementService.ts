@@ -117,6 +117,20 @@ export const qualityManagementService = {
     return response.data;
   },
 
+  // Batch print multiple indicators with multiple templates
+  printMultiSingleResult: async (
+    taskId: string,
+    indicatorIds: string[],
+    templateNames: string[],
+    note?: string
+  ): Promise<{ results: Array<{ fileName: string; laboratoryId: string; laboratoryName: string; templateName: string }> }> => {
+    const response = await api.post<{ results: Array<{ fileName: string; laboratoryId: string; laboratoryName: string; templateName: string }> }>(
+      `${BASE_URL}/${taskId}/print-multi-single`,
+      { indicatorIds, templateNames, note }
+    );
+    return response.data;
+  },
+
   /**
    * @deprecated Sử dụng confirmHandover thay thế
    */
