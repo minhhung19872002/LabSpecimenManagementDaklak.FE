@@ -1,57 +1,111 @@
-import React, { useState, useEffect } from 'react';
-import { Modal, Table, Button, Space, Typography, message, Input, Select } from 'antd';
-import { PrinterOutlined } from '@ant-design/icons';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Modal, Table, Button, Space, Typography, message, Input, Spin, Checkbox, Collapse, Divider, Tag, List } from 'antd';
+import { PrinterOutlined, CaretRightOutlined, FilePdfOutlined, FolderOpenOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import {
   QualityManagementIndicatorDto,
   QualityIndicatorApprovalStatus,
 } from '../../../types/qualityManagement';
 import { qualityManagementService, TemplateDto } from '../../../services/qualityManagementService';
+import { API_BASE_URL } from '../../../services/api';
 
-const { Text } = Typography;
+const { Text, Title } = Typography;
+
+// Print result item for batch print
+interface PrintResultItem {
+  fileName: string;
+  laboratoryId: string;
+  laboratoryName: string;
+  templateName: string;
+}
 
 interface PrintModalProps {
   visible: boolean;
   mode: 'single' | 'mixed';
+  taskId: string;
   indicators: QualityManagementIndicatorDto[];
   onCancel: () => void;
-  onPrint: (indicatorIds: string[], note?: string, newTab?: Window | null, templateName?: string) => Promise<void>;
+  onSuccess?: () => void;
+}
+
+// Group indicators by laboratory
+interface LabGroup {
+  laboratoryId: string;
+  laboratoryName: string;
+  indicators: QualityManagementIndicatorDto[];
 }
 
 const PrintModal: React.FC<PrintModalProps> = ({
   visible,
   mode,
+  taskId,
   indicators,
   onCancel,
-  onPrint,
+  onSuccess,
 }) => {
-  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+  const [selectedIndicatorIds, setSelectedIndicatorIds] = useState<string[]>([]);
+  const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [note, setNote] = useState<string>('');
   const [templates, setTemplates] = useState<TemplateDto[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<string | undefined>(undefined);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [generatedResults, setGeneratedResults] = useState<PrintResultItem[]>([]);
+  const [showResults, setShowResults] = useState(false);
 
   // Get only approved indicators
-  const approvedIndicators = indicators.filter(
-    (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Approved
+  const approvedIndicators = useMemo(() =>
+    indicators.filter((ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Approved),
+    [indicators]
   );
 
-  // Load templates when modal opens (only for single mode)
+  // Group indicators by laboratory
+  const labGroups: LabGroup[] = useMemo(() => {
+    const groups: Record<string, LabGroup> = {};
+
+    approvedIndicators.forEach((indicator) => {
+      const labId = indicator.laboratoryId || 'unknown';
+      const labName = indicator.laboratoryName || 'Không xác định';
+
+      if (!groups[labId]) {
+        groups[labId] = {
+          laboratoryId: labId,
+          laboratoryName: labName,
+          indicators: [],
+        };
+      }
+      groups[labId].indicators.push(indicator);
+    });
+
+    return Object.values(groups);
+  }, [approvedIndicators]);
+
+  // Load templates when modal opens
   useEffect(() => {
-    if (visible && mode === 'single') {
+    if (visible) {
       loadTemplates();
     }
-  }, [visible, mode]);
+  }, [visible]);
+
+  // Reset state when modal opens
+  useEffect(() => {
+    if (visible) {
+      setSelectedIndicatorIds([]);
+      setSelectedTemplates([]);
+      setNote('');
+      setGeneratedResults([]);
+      setShowResults(false);
+    }
+  }, [visible]);
 
   const loadTemplates = async () => {
     setLoadingTemplates(true);
     try {
       const result = await qualityManagementService.getTemplates();
       setTemplates(result);
-      // Set default template (first one)
+      // Set BM01 as default selected template
       if (result.length > 0) {
-        setSelectedTemplate(result[0].name);
+        const bm01 = result.find(t => t.name.includes('BM01'));
+        setSelectedTemplates([bm01?.name || result[0].name]);
       }
     } catch (error) {
       console.error('Error loading templates:', error);
@@ -60,70 +114,124 @@ const PrintModal: React.FC<PrintModalProps> = ({
     }
   };
 
-  // Reset selection and note when modal opens
-  useEffect(() => {
-    if (visible) {
-      setSelectedRowKeys([]);
-      setNote('');
-      if (mode !== 'single') {
-        setSelectedTemplate(undefined);
+  // Calculate selected indicators per lab
+  const selectedIndicatorsPerLab = useMemo(() => {
+    const result: Record<string, number> = {};
+    selectedIndicatorIds.forEach((indicatorId) => {
+      const indicator = approvedIndicators.find((i) => i.id === indicatorId);
+      if (indicator?.laboratoryId) {
+        result[indicator.laboratoryId] = (result[indicator.laboratoryId] || 0) + 1;
       }
+    });
+    return result;
+  }, [selectedIndicatorIds, approvedIndicators]);
+
+  // Function to open all tabs - triggered by user click
+  const handleOpenAllTabs = () => {
+    let blockedCount = 0;
+
+    // Try to open all PDFs
+    generatedResults.forEach((item) => {
+      const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(item.fileName)}`;
+      const newWindow = window.open(pdfUrl, '_blank');
+
+      // Check if popup was blocked
+      if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+        blockedCount++;
+      }
+    });
+
+    // If some popups were blocked, show instruction
+    if (blockedCount > 0) {
+      Modal.warning({
+        title: 'Trình duyệt đã chặn popup',
+        content: (
+          <div>
+            <p>Trình duyệt đã chặn {blockedCount} cửa sổ popup.</p>
+            <p>Để mở tất cả file PDF, vui lòng:</p>
+            <ol>
+              <li>Click vào biểu tượng popup bị chặn trên thanh địa chỉ (thường ở góc phải)</li>
+              <li>Chọn "Luôn cho phép popup từ trang này"</li>
+              <li>Sau đó click lại nút "Mở toàn bộ"</li>
+            </ol>
+            <p>Hoặc bạn có thể click từng nút "Xem PDF" bên dưới.</p>
+          </div>
+        ),
+        okText: 'Đã hiểu',
+      });
     }
-  }, [visible, mode]);
+  };
 
   const handlePrint = async () => {
-    if (selectedRowKeys.length === 0) {
+    if (selectedIndicatorIds.length === 0) {
       message.warning('Vui lòng chọn ít nhất một chỉ tiêu để in');
       return;
     }
 
-    if (mode === 'single' && selectedRowKeys.length > 1) {
-      message.warning('In KQ đơn chỉ cho phép chọn 1 chỉ tiêu');
+    if (mode === 'single' && selectedTemplates.length === 0) {
+      message.warning('Vui lòng chọn ít nhất một biểu mẫu');
       return;
     }
 
-    // Open new tab immediately to avoid popup blocker (must be in sync with user action)
-    const newTab = window.open('about:blank', '_blank');
-
-    // Show loading state in the new tab
-    if (newTab) {
-      newTab.document.write(`
-        <html>
-          <head>
-            <title>Đang tạo phiếu...</title>
-            <style>
-              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
-              .loader { text-align: center; }
-              .spinner { width: 40px; height: 40px; border: 4px solid #e0e0e0; border-top: 4px solid #1890ff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
-              @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-              p { color: #666; font-size: 16px; }
-            </style>
-          </head>
-          <body><div class="loader"><div class="spinner"></div><p>Đang tạo phiếu kết quả...</p></div></body>
-        </html>
-      `);
-    }
-
     setLoading(true);
+
     try {
-      await onPrint(selectedRowKeys, note || undefined, newTab, mode === 'single' ? selectedTemplate : undefined);
-      setSelectedRowKeys([]);
-      setNote('');
-    } catch (error) {
-      // Close the blank tab if there was an error
-      if (newTab) {
-        newTab.close();
+      if (mode === 'single') {
+        // Call API to generate PDFs (batch processing)
+        const result = await qualityManagementService.printMultiSingleResult(
+          taskId,
+          selectedIndicatorIds,
+          selectedTemplates,
+          note || undefined
+        );
+
+        message.success(`Đã tạo ${result.results.length} phiếu kết quả`);
+
+        // Store results and show results view
+        setGeneratedResults(result.results);
+        setShowResults(true);
+      } else {
+        // Mixed mode - single PDF, open directly
+        const result = await qualityManagementService.printMixedResult(
+          taskId,
+          selectedIndicatorIds,
+          note || undefined
+        );
+
+        message.success('Đã tạo phiếu kết quả');
+
+        const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(result.fileName)}`;
+        window.open(pdfUrl, '_blank');
+
+        // Close modal for mixed mode (single PDF)
+        setSelectedIndicatorIds([]);
+        setNote('');
+        onCancel();
+        onSuccess?.();
       }
-      throw error;
+    } catch (error: any) {
+      console.error('Error printing:', error);
+      message.error(error?.response?.data?.error?.message || 'Không thể in kết quả');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCancel = () => {
-    setSelectedRowKeys([]);
+  const handleCloseResults = () => {
+    setShowResults(false);
+    setGeneratedResults([]);
+    setSelectedIndicatorIds([]);
     setNote('');
-    setSelectedTemplate(undefined);
+    onCancel();
+    onSuccess?.();
+  };
+
+  const handleCancel = () => {
+    setSelectedIndicatorIds([]);
+    setSelectedTemplates([]);
+    setNote('');
+    setGeneratedResults([]);
+    setShowResults(false);
     onCancel();
   };
 
@@ -138,57 +246,100 @@ const PrintModal: React.FC<PrintModalProps> = ({
       title: 'Tên mẫu',
       dataIndex: 'sampleName',
       key: 'sampleName',
-      width: 150,
+      width: 140,
       ellipsis: true,
     },
     {
       title: 'Tên chỉ tiêu',
       dataIndex: 'indicatorName',
       key: 'indicatorName',
-      width: 180,
+      width: 160,
       ellipsis: true,
     },
     {
       title: 'Phương pháp',
       dataIndex: 'methodName',
       key: 'methodName',
-      width: 150,
+      width: 140,
       ellipsis: true,
     },
     {
       title: 'Kết quả',
       dataIndex: 'result',
       key: 'result',
-      width: 100,
+      width: 90,
       render: (text: string) => <Text strong>{text || '-'}</Text>,
     },
     {
       title: 'ĐVT',
       dataIndex: 'unit',
       key: 'unit',
-      width: 80,
-    },
-    {
-      title: 'Giới hạn',
-      dataIndex: 'referenceLimit',
-      key: 'referenceLimit',
-      width: 120,
-      render: (text: string) => text || '-',
+      width: 70,
     },
   ];
 
-  const rowSelection = {
-    selectedRowKeys,
-    onChange: (keys: React.Key[]) => {
-      if (mode === 'single') {
-        // Only allow single selection for single print mode
-        setSelectedRowKeys(keys.slice(-1) as string[]);
-      } else {
-        setSelectedRowKeys(keys as string[]);
-      }
-    },
-    type: mode === 'single' ? ('radio' as const) : ('checkbox' as const),
-  };
+  // Render results view when PDFs are generated
+  if (showResults) {
+    return (
+      <Modal
+        title={
+          <span>
+            <FilePdfOutlined style={{ marginRight: 8 }} />
+            Kết quả đã tạo ({generatedResults.length} file)
+          </span>
+        }
+        open={visible}
+        onCancel={handleCloseResults}
+        width={600}
+        centered
+        footer={
+          <Space>
+            <Button onClick={handleCloseResults}>Đóng</Button>
+            {generatedResults.length > 0 && (
+              <Button
+                type="primary"
+                icon={<FolderOpenOutlined />}
+                onClick={handleOpenAllTabs}
+              >
+                Mở toàn bộ ({generatedResults.length} file)
+              </Button>
+            )}
+          </Space>
+        }
+      >
+        <div style={{ marginBottom: 16 }}>
+          <Text type="secondary">
+            Click "Mở toàn bộ" để mở tất cả file PDF, hoặc click từng file bên dưới.
+          </Text>
+        </div>
+        <List
+          dataSource={generatedResults}
+          renderItem={(item, index) => (
+            <List.Item
+              actions={[
+                <Button
+                  type="link"
+                  icon={<FilePdfOutlined />}
+                  onClick={() => {
+                    const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(item.fileName)}`;
+                    window.open(pdfUrl, '_blank');
+                  }}
+                >
+                  Xem PDF
+                </Button>
+              ]}
+            >
+              <List.Item.Meta
+                avatar={<FilePdfOutlined style={{ fontSize: 24, color: '#f5222d' }} />}
+                title={`File ${index + 1}: ${item.laboratoryName || 'PDF'}`}
+                description={`Template: ${item.templateName || 'BM01'}`}
+              />
+            </List.Item>
+          )}
+        />
+      </Modal>
+    );
+  }
 
   return (
     <Modal
@@ -200,7 +351,8 @@ const PrintModal: React.FC<PrintModalProps> = ({
       }
       open={visible}
       onCancel={handleCancel}
-      width={900}
+      width={1000}
+      centered
       footer={
         <Space>
           <Button onClick={handleCancel}>Hủy</Button>
@@ -209,9 +361,9 @@ const PrintModal: React.FC<PrintModalProps> = ({
             icon={<PrinterOutlined />}
             onClick={handlePrint}
             loading={loading}
-            disabled={selectedRowKeys.length === 0}
+            disabled={selectedIndicatorIds.length === 0 || loadingTemplates || (mode === 'single' && selectedTemplates.length === 0)}
           >
-            In ({selectedRowKeys.length} chỉ tiêu)
+            In ({selectedIndicatorIds.length} chỉ tiêu)
           </Button>
         </Space>
       }
@@ -219,59 +371,98 @@ const PrintModal: React.FC<PrintModalProps> = ({
       <div style={{ marginBottom: 16 }}>
         <Text type="secondary">
           {mode === 'single'
-            ? 'Chọn 1 chỉ tiêu để in kết quả đơn'
+            ? 'Chọn các chỉ tiêu và biểu mẫu để in. Hệ thống sẽ tạo 1 PDF cho mỗi lab × template.'
             : 'Chọn nhiều chỉ tiêu để in kết quả hỗn hợp'}
         </Text>
       </div>
 
-      {/* Template selection - only for single mode */}
-      {mode === 'single' && (
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>
-            Chọn biểu mẫu
-          </label>
-          <Select
-            style={{ width: '100%' }}
-            value={selectedTemplate}
-            onChange={setSelectedTemplate}
-            loading={loadingTemplates}
-            placeholder="Chọn biểu mẫu"
-          >
-            {templates.map((template) => (
-              <Select.Option key={template.name} value={template.name}>
-                {template.displayName}
-              </Select.Option>
-            ))}
-          </Select>
+      {loadingTemplates ? (
+        <div style={{ textAlign: 'center', padding: 40 }}>
+          <Spin tip="Đang tải dữ liệu..." />
         </div>
-      )}
-
-      {approvedIndicators.length === 0 ? (
+      ) : approvedIndicators.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 40 }}>
           <Text type="secondary">Không có chỉ tiêu nào đã được duyệt</Text>
         </div>
       ) : (
         <>
-          <Table
-            rowSelection={rowSelection}
-            columns={columns}
-            dataSource={approvedIndicators}
-            rowKey="id"
-            pagination={false}
-            size="small"
-            scroll={{ y: 300 }}
-          />
+          {/* Indicators grouped by lab with collapse */}
+          <Title level={5} style={{ marginBottom: 12 }}>Chọn chỉ tiêu để in</Title>
+          <div style={{ maxHeight: 400, overflowY: 'auto', marginBottom: 16 }}>
+            <Collapse
+              defaultActiveKey={labGroups.map((g) => g.laboratoryId)}
+              expandIcon={({ isActive }) => <CaretRightOutlined rotate={isActive ? 90 : 0} />}
+              items={labGroups.map((group) => ({
+                key: group.laboratoryId,
+                label: (
+                  <Space>
+                    <Text strong>{group.laboratoryName}</Text>
+                    <Tag color="blue">
+                      {group.indicators.length} chỉ tiêu
+                    </Tag>
+                    {selectedIndicatorsPerLab[group.laboratoryId] > 0 && (
+                      <Tag color="green">
+                        Đã chọn: {selectedIndicatorsPerLab[group.laboratoryId]}
+                      </Tag>
+                    )}
+                  </Space>
+                ),
+                children: (
+                  <Table
+                    dataSource={group.indicators}
+                    columns={columns}
+                    rowKey="id"
+                    size="small"
+                    pagination={false}
+                    rowSelection={{
+                      selectedRowKeys: selectedIndicatorIds,
+                      onChange: (keys) => {
+                        // Update selected indicators for this lab only
+                        const otherLabIndicatorIds = selectedIndicatorIds.filter(
+                          (id) => !group.indicators.map((i) => i.id).includes(id)
+                        );
+                        setSelectedIndicatorIds([...otherLabIndicatorIds, ...keys as string[]]);
+                      },
+                      type: 'checkbox',
+                    }}
+                    scroll={{ x: 700 }}
+                  />
+                ),
+              }))}
+            />
+          </div>
+
+          {/* Template selection - only for single mode */}
+          {mode === 'single' && (
+            <>
+              <Divider style={{ margin: '16px 0' }} />
+              <Title level={5} style={{ marginBottom: 12 }}>Chọn biểu mẫu báo cáo</Title>
+              <div style={{ marginBottom: 16 }}>
+                <Checkbox.Group
+                  value={selectedTemplates}
+                  onChange={(values) => setSelectedTemplates(values as string[])}
+                >
+                  <Space direction="vertical">
+                    {templates.map((template) => (
+                      <Checkbox key={template.name} value={template.name}>
+                        {template.displayName}
+                      </Checkbox>
+                    ))}
+                  </Space>
+                </Checkbox.Group>
+              </div>
+            </>
+          )}
 
           {/* Note input field */}
-          <div style={{ marginTop: 16 }}>
-            <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>
-              Ghi chú (không bắt buộc)
-            </label>
+          <Divider style={{ margin: '16px 0' }} />
+          <div>
+            <Title level={5} style={{ marginBottom: 8 }}>Ghi chú (không bắt buộc)</Title>
             <Input.TextArea
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="Nhập ghi chú sẽ được đưa vào phần cuối của báo cáo..."
-              rows={3}
+              rows={2}
               maxLength={500}
               showCount
             />
