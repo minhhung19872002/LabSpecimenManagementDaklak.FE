@@ -650,6 +650,47 @@ const TestingDetail: React.FC = () => {
     }
   };
 
+  // Handler for receiving sample
+  const handleReceiveSample = async (sampleId: string) => {
+    if (!id) return;
+
+    setSubmitting(true);
+    try {
+      await testingService.receiveSample(id, sampleId);
+
+      // Optimistic update: cập nhật sample isReceived
+      setDetail((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          samples: prev.samples.map((sample) =>
+            sample.sampleId === sampleId
+              ? {
+                  ...sample,
+                  isReceived: true,
+                  receivedDate: new Date().toISOString(),
+                }
+              : sample
+          ),
+        };
+      });
+
+      // Reload full data from server
+      await reloadData();
+
+      message.success("Đã nhận mẫu thành công");
+    } catch (error: any) {
+      console.error("Failed to receive sample:", error);
+      message.error(
+        error.response?.data?.error?.message || "Không thể nhận mẫu"
+      );
+      // Reload để sync lại với server nếu có lỗi
+      await loadDetail();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // Check if deadline is urgent (<=3 days)
   const isUrgent = detail?.requestCompletionDate
     ? (() => {
@@ -684,6 +725,7 @@ const TestingDetail: React.FC = () => {
       onCollapseChange={setActiveKeys}
       onCheckIn={handleCheckIn}
       onSubmitResults={handleSubmitResults}
+      onReceiveSample={handleReceiveSample}
       onResultsChange={handleResultsChange}
       onSelectionChange={handleSelectionChange}
       onImagesChange={handleImagesChange}

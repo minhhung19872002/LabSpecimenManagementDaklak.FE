@@ -10,15 +10,28 @@ interface CostInfoSectionProps {
   onViewCostHistory?: () => void;
 }
 
-const CostInfoSection: React.FC<CostInfoSectionProps> = ({ data, onViewCostHistory }) => {
+const CostInfoSection: React.FC<CostInfoSectionProps> = ({
+  data,
+  onViewCostHistory,
+}) => {
+  // Mẫu nhiệm vụ: Không cần thanh toán
+  const isTaskSample = data.sampleTypeTask;
+
   return (
     <>
       <div className="detail-section">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 12,
+          }}
+        >
           <Title level={5} style={{ margin: 0 }}>
             Thông tin chi phí
           </Title>
-          {onViewCostHistory && (
+          {onViewCostHistory && !isTaskSample && (
             <Button
               type="link"
               icon={<HistoryOutlined />}
@@ -47,11 +60,11 @@ const CostInfoSection: React.FC<CostInfoSectionProps> = ({ data, onViewCostHisto
                 Tổng chi phí:
               </Text>
               <Text strong style={{ fontSize: 24, color: "#1890ff" }}>
-                {(data.totalCost || 0).toLocaleString("vi-VN")} đ
+                {(isTaskSample ? 0 : data.totalCost || 0).toLocaleString("vi-VN")} đ
               </Text>
             </div>
           </Col>
-          {data.totalCostInWords && (
+          {!isTaskSample && data.totalCostInWords && (
             <Col xs={24}>
               <div className="detail-item">
                 <Text type="secondary">Bằng chữ:</Text>

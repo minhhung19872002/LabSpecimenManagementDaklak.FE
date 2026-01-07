@@ -152,6 +152,9 @@ export interface TestingSampleDto {
   beforeTestingImages: SampleTestingImageDto[];  // Hình trước TN (max 5)
   afterTestingImages: SampleTestingImageDto[];   // Hình sau TN (max 5)
   indicators: TestingIndicatorDto[];
+  isReceived: boolean;                           // KTV đã nhận mẫu chưa
+  receivedDate?: string;                         // Ngày nhận mẫu
+  receivedByUserName?: string;                   // Tên KTV nhận mẫu
 }
 
 // Testing Indicator DTO
