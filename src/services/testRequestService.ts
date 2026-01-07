@@ -29,6 +29,19 @@ export interface TemplateDto {
   fileName: string;
 }
 
+// Print result item for batch print
+export interface PrintResultItem {
+  fileName: string;
+  laboratoryId: string;
+  laboratoryName: string;
+  templateName: string;
+}
+
+// Print multi result output for batch print
+export interface PrintMultiResultOutput {
+  results: PrintResultItem[];
+}
+
 // Preview test request form input - matches BE PreviewTestRequestFormInput
 export interface PreviewSampleIndicatorDto {
   indicatorId: string;
@@ -324,6 +337,24 @@ export const testRequestService = {
       indicatorIds,
       note,
       templateName
+    });
+    return response.data;
+  },
+
+  /**
+   * In kết quả đơn với nhiều chỉ tiêu và nhiều templates (batch processing)
+   * Generates (labs × templates) PDFs
+   */
+  printMultiSingleResult: async (
+    testRequestId: string,
+    indicatorIds: string[],
+    templateNames: string[],
+    note?: string
+  ): Promise<PrintMultiResultOutput> => {
+    const response = await api.post<PrintMultiResultOutput>(`${BASE_URL}/${testRequestId}/print-multi-single`, {
+      indicatorIds,
+      templateNames,
+      note
     });
     return response.data;
   },
