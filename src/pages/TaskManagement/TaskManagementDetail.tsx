@@ -99,7 +99,6 @@ const TaskManagementDetail: React.FC = () => {
   );
   const [methods, setMethods] = useState<MethodLookupDto[]>([]);
   const [technicians, setTechnicians] = useState<UserLookupDto[]>([]);
-  const [activeKeys, setActiveKeys] = useState<string[]>([]);
   const [actionLoading, setActionLoading] = useState(false);
 
   // Local state for indicator changes (before saving)
@@ -340,13 +339,6 @@ const TaskManagementDetail: React.FC = () => {
         !ind.isSentToQuality
     );
   }, [task]);
-
-  // Default expand all samples on load
-  useEffect(() => {
-    if (sampleList.length > 0 && activeKeys.length === 0) {
-      setActiveKeys(sampleList.map((s) => s.sampleId));
-    }
-  }, [sampleList, activeKeys.length]);
 
   // Handlers
   const handleMethodChange = (indicatorId: string, methodId: string) => {
@@ -1263,8 +1255,7 @@ const TaskManagementDetail: React.FC = () => {
         /* Collapsible Sample Panels for other statuses */
         <Card title={`Danh sách mẫu (${sampleList.length})`}>
           <Collapse
-            activeKey={activeKeys}
-            onChange={(keys) => setActiveKeys(keys as string[])}
+            defaultActiveKey={sampleList.map((s) => s.sampleId)}
             expandIcon={({ isActive }) => (
               <CaretRightOutlined rotate={isActive ? 90 : 0} />
             )}
