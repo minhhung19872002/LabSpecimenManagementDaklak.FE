@@ -707,3 +707,37 @@ export interface PublishedReportDto {
   creationTime: string;
   creatorName?: string;
 }
+
+// ============= Cost Change History =============
+
+// Loại thay đổi tiền
+export enum CostChangeType {
+  IndicatorCancelled = 1,   // KH hủy chỉ tiêu (không đồng ý đổi PP)
+  MethodChanged = 2,        // KH đồng ý đổi PP (giá có thể thay đổi)
+  SampleCancelled = 3,      // KH hủy cả mẫu
+  ManualAdjustment = 4      // Điều chỉnh thủ công
+}
+
+export const CostChangeTypeLabels: Record<CostChangeType, string> = {
+  [CostChangeType.IndicatorCancelled]: 'KH hủy chỉ tiêu',
+  [CostChangeType.MethodChanged]: 'Thay đổi phương pháp',
+  [CostChangeType.SampleCancelled]: 'KH hủy mẫu',
+  [CostChangeType.ManualAdjustment]: 'Điều chỉnh thủ công'
+};
+
+// DTO for cost change history
+export interface CostChangeHistoryDto {
+  id: string;
+  testRequestId: string;
+  changeType: CostChangeType;
+  changeTypeLabel: string;
+  oldTotalCost: number;
+  newTotalCost: number;
+  differenceAmount: number;
+  affectedIndicatorId?: string;
+  affectedIndicatorName?: string;
+  indicatorUnitPrice?: number;
+  reason?: string;
+  creationTime: string;
+  creatorName?: string;
+}

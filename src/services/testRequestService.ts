@@ -14,7 +14,8 @@ import {
   ConfirmIndicatorInput,
   BulkConfirmIndicatorsInput,
   ConfirmDeliveryInput,
-  PublishedReportDto
+  PublishedReportDto,
+  CostChangeHistoryDto
 } from '../types/testRequest';
 import { QualityManagementIndicatorDto } from '../types/qualityManagement';
 
@@ -422,6 +423,18 @@ export const testRequestService = {
   getPublishedReports: async (testRequestId: string): Promise<PublishedReportDto[]> => {
     const response = await api.get<PublishedReportDto[]>(
       `${BASE_URL}/${testRequestId}/published-reports`
+    );
+    return response.data;
+  },
+
+  // ============= Cost Change History =============
+
+  /**
+   * Lấy lịch sử thay đổi tiền của phiếu yêu cầu
+   */
+  getCostChangeHistory: async (testRequestId: string): Promise<CostChangeHistoryDto[]> => {
+    const response = await api.get<CostChangeHistoryDto[]>(
+      `${BASE_URL}/${testRequestId}/cost-history`
     );
     return response.data;
   },
