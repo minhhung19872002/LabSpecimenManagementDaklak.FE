@@ -17,7 +17,8 @@ export enum TestRequestStatus {
   WaitingCustomerConfirm = 12,  // Chờ KH xác nhận - QLKT yêu cầu đổi PP hoặc từ chối
   RequestApproved = 13,         // Đã duyệt yêu cầu - Tất cả phòng LAB đã duyệt
   PartialResultSent = 14,       // Đã trả 1 phần KQ - đã trả một phần kết quả cho KH
-  ReportPublished = 15          // Đã phát hành BC - BC đã được phát hành
+  ReportPublished = 15,         // Đã phát hành BC - BC đã được phát hành
+  NoPaymentRequired = 16        // Không cần thanh toán - Mẫu nhiệm vụ
 }
 
 // Enum for change approval status
@@ -45,6 +46,7 @@ export const TestRequestStatusLabels: Record<TestRequestStatus, string> = {
   [TestRequestStatus.RequestApproved]: "Đã duyệt yêu cầu",
   [TestRequestStatus.PartialResultSent]: "Đã trả 1 phần KQ",
   [TestRequestStatus.ReportPublished]: "Đã phát hành BC",
+  [TestRequestStatus.NoPaymentRequired]: "Không cần thanh toán",
 };
 
 // Labels for ChangeApprovalStatus
@@ -72,6 +74,7 @@ export const TestRequestStatusColors: Record<TestRequestStatus, string> = {
   [TestRequestStatus.RequestApproved]: "lime",
   [TestRequestStatus.PartialResultSent]: "volcano",
   [TestRequestStatus.ReportPublished]: "magenta",
+  [TestRequestStatus.NoPaymentRequired]: "green",
 };
 
 // Colors for ChangeApprovalStatus
@@ -125,10 +128,10 @@ export const showActionsForTestRequest = (status: TestRequestStatus): boolean =>
 };
 
 /**
- * Kiểm tra có thể gửi mẫu không (Paid → SampleSent)
+ * Kiểm tra có thể gửi mẫu không (RequestApproved → SampleSent)
  */
 export const canSendSample = (status: TestRequestStatus): boolean => {
-  return status === TestRequestStatus.Paid;
+  return status === TestRequestStatus.RequestApproved;
 };
 
 /**
@@ -164,10 +167,10 @@ export const canSendToAccounting = (status: TestRequestStatus, sentToAccounting?
 
 /**
  * Kiểm tra có thể gửi QLKT không
- * Chỉ khi status = Paid (sau khi kế toán xác nhận thanh toán)
+ * Chỉ khi status = Paid (mẫu thường) hoặc NoPaymentRequired (mẫu nhiệm vụ)
  */
 export const canSendToQLKT = (status: TestRequestStatus): boolean => {
-  return status === TestRequestStatus.Paid;
+  return status === TestRequestStatus.Paid || status === TestRequestStatus.NoPaymentRequired;
 };
 
 /**
@@ -740,4 +743,13 @@ export interface CostChangeHistoryDto {
   reason?: string;
   creationTime: string;
   creatorName?: string;
+}
+
+// ============= Update Indicators Laboratory (Send to QLKT) =============
+
+// Input để cập nhật LaboratoryId cho từng chỉ tiêu
+export interface UpdateIndicatorLaboratoryInput {
+  sampleIndicatorId: string;
+  laboratoryId: string;
+  requestDate?: string; // ISO date string
 }

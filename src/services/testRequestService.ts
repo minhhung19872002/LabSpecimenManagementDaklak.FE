@@ -15,7 +15,8 @@ import {
   BulkConfirmIndicatorsInput,
   ConfirmDeliveryInput,
   PublishedReportDto,
-  CostChangeHistoryDto
+  CostChangeHistoryDto,
+  UpdateIndicatorLaboratoryInput
 } from '../types/testRequest';
 import { QualityManagementIndicatorDto } from '../types/qualityManagement';
 
@@ -343,6 +344,16 @@ export const testRequestService = {
    */
   sendToQLKT: async (id: string): Promise<void> => {
     await api.post(`${BASE_URL}/${id}/send-to-qlkt`);
+  },
+
+  /**
+   * Cập nhật LaboratoryId và RequestDate cho các chỉ tiêu trước khi gửi QLKT
+   */
+  updateIndicatorsLaboratory: async (
+    id: string,
+    indicators: UpdateIndicatorLaboratoryInput[]
+  ): Promise<void> => {
+    await api.post(`${BASE_URL}/${id}/update-indicators-laboratory`, { indicators });
   },
 
   /**

@@ -222,6 +222,25 @@ export const testingService = {
       `${BASE_URL}/indicators/${indicatorId}/images`
     );
     return response.data;
+  },
+
+  // ============= Sample Received APIs =============
+
+  /**
+   * KTV nhận mẫu - đánh dấu mẫu đã nhận trước khi thực hiện thí nghiệm
+   */
+  receiveSample: async (taskId: string, sampleId: string): Promise<void> => {
+    await api.post(`${BASE_URL}/${taskId}/samples/${sampleId}/receive`);
+  },
+
+  /**
+   * Kiểm tra mẫu đã được nhận chưa
+   */
+  isSampleReceived: async (taskId: string, sampleId: string): Promise<boolean> => {
+    const response = await api.get<boolean>(
+      `${BASE_URL}/${taskId}/samples/${sampleId}/is-received`
+    );
+    return response.data;
   }
 };
 
