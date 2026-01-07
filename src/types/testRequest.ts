@@ -156,10 +156,10 @@ export const canComplete = (status: TestRequestStatus): boolean => {
 
 /**
  * Kiểm tra có thể gửi kế toán không
- * Chỉ khi status = PendingPayment (sau khi In phiếu XN)
+ * Điều kiện: status = PendingPayment VÀ chưa gửi kế toán (sentToAccounting = false)
  */
-export const canSendToAccounting = (status: TestRequestStatus): boolean => {
-  return status === TestRequestStatus.PendingPayment;
+export const canSendToAccounting = (status: TestRequestStatus, sentToAccounting?: boolean): boolean => {
+  return status === TestRequestStatus.PendingPayment && !sentToAccounting;
 };
 
 /**

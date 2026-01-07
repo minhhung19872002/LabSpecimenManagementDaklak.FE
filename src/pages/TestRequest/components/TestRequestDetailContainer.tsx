@@ -125,8 +125,8 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
 
     // === 1. PRIMARY ACTIONS (ưu tiên cao nhất) ===
 
-    // Gửi kế toán - chỉ khi status = PendingPayment VÀ có quyền sendToAccounting
-    if (canSendToAccounting(data.status) && canSendToAccountingAction) {
+    // Gửi kế toán - chỉ khi status = PendingPayment VÀ chưa gửi kế toán VÀ có quyền sendToAccounting
+    if (canSendToAccounting(data.status, data.sentToAccounting) && canSendToAccountingAction) {
       buttons.push(
         <Button
           key="send-to-accounting"
