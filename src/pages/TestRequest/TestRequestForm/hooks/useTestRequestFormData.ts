@@ -593,11 +593,11 @@ export const useTestRequestFormData = () => {
             const methodKey = createIndicatorMethodKey(item.indicatorId, testMethodId);
             indicatorMethodsList.push(methodKey);
 
-            // Set dates for indicators
+            // Set dates for indicators (requestDate để trống theo yêu cầu KH)
             if (!generatedDates[methodKey]) {
               generatedDates[methodKey] = {
                 transferDate: dayjs(),
-                requestDate: dayjs(),
+                requestDate: undefined,
               };
             }
           }
