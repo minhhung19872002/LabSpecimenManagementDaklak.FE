@@ -137,9 +137,15 @@ const ReceiptDetail: React.FC = () => {
       // Reload to get latest data
       const result = await receiptService.getDetail(id);
       setData(result);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to save:", error);
-      message.error("Không thể lưu thông tin");
+      // API interceptor đã unwrap errors, format: { general: ["message"] } hoặc { message: "..." }
+      const errorData = error?.response?.data;
+      const errorMessage =
+        errorData?.general?.[0] ||
+        errorData?.message ||
+        "Không thể lưu thông tin";
+      message.error(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -160,9 +166,14 @@ const ReceiptDetail: React.FC = () => {
       const result = await receiptService.getDetail(id);
       setData(result);
       setHasChanges(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to mark as paid:", error);
-      message.error("Không thể cập nhật trạng thái");
+      const errorData = error?.response?.data;
+      const errorMessage =
+        errorData?.general?.[0] ||
+        errorData?.message ||
+        "Không thể cập nhật trạng thái";
+      message.error(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -183,9 +194,14 @@ const ReceiptDetail: React.FC = () => {
       const result = await receiptService.getDetail(id);
       setData(result);
       setHasChanges(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to mark as unpaid:", error);
-      message.error("Không thể cập nhật trạng thái");
+      const errorData = error?.response?.data;
+      const errorMessage =
+        errorData?.general?.[0] ||
+        errorData?.message ||
+        "Không thể cập nhật trạng thái";
+      message.error(errorMessage);
     } finally {
       setSaving(false);
     }
