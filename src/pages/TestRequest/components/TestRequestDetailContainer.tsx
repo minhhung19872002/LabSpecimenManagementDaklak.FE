@@ -70,6 +70,7 @@ interface TestRequestDetailContainerProps {
   onCancelRequest: () => void;
   onOpenCustomerConfirmation: () => void;
   onConfirmDelivery?: () => void;
+  onViewCostHistory?: () => void;
   canPrint: boolean;
   canPrintTestRequest: boolean;
   // Permission flags theo Permission Matrix
@@ -101,6 +102,7 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
   onCancelRequest,
   onOpenCustomerConfirmation,
   onConfirmDelivery,
+  onViewCostHistory,
   canPrint,
   canPrintTestRequest,
   // Permission flags
@@ -390,7 +392,7 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
 
           {/* Thông tin chi phí */}
           <Col xs={{ span: 24, order: 4 }} lg={{ span: 12, order: 4 }}>
-            <CostInfoSection data={data} />
+            <CostInfoSection data={data} onViewCostHistory={onViewCostHistory} />
           </Col>
         </Row>
 

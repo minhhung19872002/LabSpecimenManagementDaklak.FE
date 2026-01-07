@@ -23,6 +23,7 @@ import PostalDeliveryImageModal from "./components/PostalDeliveryImageModal";
 import PrintIndicatorModal from "./components/PrintIndicatorModal";
 import RejectResultModal from "./components/RejectResultModal";
 import CustomerConfirmationModal from "./components/CustomerConfirmationModal";
+import CostChangeHistoryModal from "./components/CostChangeHistoryModal";
 
 const TestRequestDetail: React.FC = () => {
   const { t } = useTranslation();
@@ -46,6 +47,7 @@ const TestRequestDetail: React.FC = () => {
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [customerConfirmationModalVisible, setCustomerConfirmationModalVisible] =
     useState(false);
+  const [costHistoryModalVisible, setCostHistoryModalVisible] = useState(false);
 
   // Loading states
   const [printingTestRequest, setPrintingTestRequest] = useState(false);
@@ -425,6 +427,7 @@ const TestRequestDetail: React.FC = () => {
         onCancelRequest={handleCancelRequest}
         onOpenCustomerConfirmation={handleOpenCustomerConfirmation}
         onConfirmDelivery={handleConfirmDelivery}
+        onViewCostHistory={() => setCostHistoryModalVisible(true)}
         canPrint={canPrint}
         canPrintTestRequest={canPrintTestRequest}
         // Permission flags theo Permission Matrix
@@ -517,6 +520,13 @@ const TestRequestDetail: React.FC = () => {
         testRequestId={id!}
         onClose={() => setCustomerConfirmationModalVisible(false)}
         onConfirmComplete={() => loadData(id!)}
+      />
+
+      {/* Cost Change History Modal */}
+      <CostChangeHistoryModal
+        open={costHistoryModalVisible}
+        onClose={() => setCostHistoryModalVisible(false)}
+        testRequestId={id!}
       />
     </>
   );
