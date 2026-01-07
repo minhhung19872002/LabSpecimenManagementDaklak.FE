@@ -126,7 +126,10 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
     // === 1. PRIMARY ACTIONS (ưu tiên cao nhất) ===
 
     // Gửi kế toán - chỉ khi status = PendingPayment VÀ chưa gửi kế toán VÀ có quyền sendToAccounting
-    if (canSendToAccounting(data.status, data.sentToAccounting) && canSendToAccountingAction) {
+    if (
+      canSendToAccounting(data.status, data.sentToAccounting) &&
+      canSendToAccountingAction
+    ) {
       buttons.push(
         <Button
           key="send-to-accounting"
@@ -154,7 +157,10 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
     }
 
     // Xác nhận KH - khi status = WaitingCustomerConfirm VÀ có quyền sendToAccounting (BPGN)
-    if (data.status === TestRequestStatus.WaitingCustomerConfirm && canSendToAccountingAction) {
+    if (
+      data.status === TestRequestStatus.WaitingCustomerConfirm &&
+      canSendToAccountingAction
+    ) {
       buttons.push(
         <Button
           key="confirm-customer"
@@ -166,19 +172,19 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
       );
     }
 
-    // Gửi mẫu - ẨN (đã thay thế bằng Gửi QLKT)
-    // if (canSendSample(data.status) && canSendSampleAction) {
-    //   buttons.push(
-    //     <Button
-    //       key="send-sample"
-    //       type="primary"
-    //       onClick={onSendSample}
-    //       loading={sendingSample}
-    //     >
-    //       Gửi mẫu
-    //     </Button>
-    //   );
-    // }
+    // Gửi mẫu - khi status = RequestApproved (Đã duyệt yêu cầu)
+    if (canSendSample(data.status) && canSendSampleAction) {
+      buttons.push(
+        <Button
+          key="send-sample"
+          type="primary"
+          onClick={onSendSample}
+          loading={sendingSample}
+        >
+          Gửi mẫu
+        </Button>
+      );
+    }
 
     // Gửi kết quả - khi status = Approved
     if (data.status === TestRequestStatus.Approved) {
@@ -318,15 +324,17 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
             </Space>
             <Space wrap>
               {renderActionButtons()}
-              {canEditTestRequest(data.status) && !isCancelledRequest(data.status) && canEditRequest && (
-                <Button
-                  type="primary"
-                  icon={<EditOutlined />}
-                  onClick={() => navigate(PATH_ROUTES.testRequests.edit(id))}
-                >
-                  Chỉnh sửa
-                </Button>
-              )}
+              {canEditTestRequest(data.status) &&
+                !isCancelledRequest(data.status) &&
+                canEditRequest && (
+                  <Button
+                    type="primary"
+                    icon={<EditOutlined />}
+                    onClick={() => navigate(PATH_ROUTES.testRequests.edit(id))}
+                  >
+                    Chỉnh sửa
+                  </Button>
+                )}
             </Space>
           </div>
         }
@@ -392,7 +400,10 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
 
           {/* Thông tin chi phí */}
           <Col xs={{ span: 24, order: 4 }} lg={{ span: 12, order: 4 }}>
-            <CostInfoSection data={data} onViewCostHistory={onViewCostHistory} />
+            <CostInfoSection
+              data={data}
+              onViewCostHistory={onViewCostHistory}
+            />
           </Col>
         </Row>
 

@@ -34,7 +34,7 @@ const TestRequestDetail: React.FC = () => {
   // Modal states
   const [printIndicatorModalVisible, setPrintIndicatorModalVisible] =
     useState(false);
-  const [printMode, setPrintMode] = useState<'single' | 'mixed'>('single');
+  const [printMode, setPrintMode] = useState<"single" | "mixed">("single");
   const [rejectResultModalVisible, setRejectResultModalVisible] =
     useState(false);
   const [processTimelineModalVisible, setProcessTimelineModalVisible] =
@@ -45,8 +45,10 @@ const TestRequestDetail: React.FC = () => {
   const [selectedSampleForImages, setSelectedSampleForImages] =
     useState<TestRequestSampleDto | null>(null);
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
-  const [customerConfirmationModalVisible, setCustomerConfirmationModalVisible] =
-    useState(false);
+  const [
+    customerConfirmationModalVisible,
+    setCustomerConfirmationModalVisible,
+  ] = useState(false);
   const [costHistoryModalVisible, setCostHistoryModalVisible] = useState(false);
 
   // Loading states
@@ -134,22 +136,31 @@ const TestRequestDetail: React.FC = () => {
   };
 
   // Handle send sample
-  const handleSendSample = async () => {
+  const handleSendSample = () => {
     if (!id) return;
-    setSendingSample(true);
-    try {
-      await testRequestService.sendSample(id);
-      message.success("Đã gửi mẫu thành công");
-      loadData(id);
-    } catch (error: any) {
-      console.error("Error sending sample:", error);
-      message.error(
-        error?.response?.data?.error?.message ||
-          "Không thể gửi mẫu. Vui lòng thử lại."
-      );
-    } finally {
-      setSendingSample(false);
-    }
+    Modal.confirm({
+      title: "Xác nhận gửi mẫu",
+      content: "Bạn có chắc chắn muốn gửi mẫu không?",
+      okText: "Gửi mẫu",
+      cancelText: "Hủy",
+      centered: true,
+      onOk: async () => {
+        setSendingSample(true);
+        try {
+          await testRequestService.sendSample(id);
+          message.success("Đã gửi mẫu thành công");
+          loadData(id);
+        } catch (error: any) {
+          console.error("Error sending sample:", error);
+          message.error(
+            error?.response?.data?.error?.message ||
+              "Không thể gửi mẫu. Vui lòng thử lại."
+          );
+        } finally {
+          setSendingSample(false);
+        }
+      },
+    });
   };
 
   // Handle send to accounting (Gửi kế toán)
@@ -312,7 +323,8 @@ const TestRequestDetail: React.FC = () => {
 
     Modal.confirm({
       title: "Xác nhận bàn giao kết quả",
-      content: "Bạn có chắc chắn muốn xác nhận đã bàn giao kết quả cho khách hàng?",
+      content:
+        "Bạn có chắc chắn muốn xác nhận đã bàn giao kết quả cho khách hàng?",
       okText: "Xác nhận",
       cancelText: "Hủy",
       onOk: async () => {
@@ -336,13 +348,13 @@ const TestRequestDetail: React.FC = () => {
 
   // Handle print single result (In KQ)
   const handlePrintSingle = () => {
-    setPrintMode('single');
+    setPrintMode("single");
     setPrintIndicatorModalVisible(true);
   };
 
   // Handle print mixed result (In KQ hỗn hợp)
   const handlePrintMixed = () => {
-    setPrintMode('mixed');
+    setPrintMode("mixed");
     setPrintIndicatorModalVisible(true);
   };
 
@@ -369,12 +381,12 @@ const TestRequestDetail: React.FC = () => {
   }, [data?.samples]);
 
   // Sử dụng hook để check permissions cho tất cả actions
-  const actionPermissions = useMultipleActionPermissions('testRequests', [
-    'edit',
-    'sendSample',
-    'cancel',
-    'sendToAccounting',
-    'printRequest',
+  const actionPermissions = useMultipleActionPermissions("testRequests", [
+    "edit",
+    "sendSample",
+    "cancel",
+    "sendToAccounting",
+    "printRequest",
   ]);
 
   // Check if user can print test request form (In phiếu XN)
@@ -385,7 +397,8 @@ const TestRequestDetail: React.FC = () => {
   const canEditRequest = actionPermissions.edit?.canAll || false;
   const canSendSampleAction = actionPermissions.sendSample?.canAll || false;
   const canCancelAction = actionPermissions.cancel?.canAll || false;
-  const canSendToAccountingAction = actionPermissions.sendToAccounting?.canAll || false;
+  const canSendToAccountingAction =
+    actionPermissions.sendToAccounting?.canAll || false;
 
   if (loading) {
     return (
