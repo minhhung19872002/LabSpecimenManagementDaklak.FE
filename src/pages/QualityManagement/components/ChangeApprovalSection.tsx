@@ -153,7 +153,7 @@ const ChangeApprovalSection: React.FC<ChangeApprovalSectionProps> = ({
         )}
       </Descriptions>
 
-      {!isPending && task.status === QualityManagementStatus.Approved && (
+      {!isPending && task.status === QualityManagementStatus.HandedOver && (
         <Alert
           style={{ marginTop: 16 }}
           type="success"

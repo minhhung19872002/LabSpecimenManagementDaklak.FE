@@ -1,6 +1,9 @@
 import { Tag, Typography } from "antd";
 import { ColumnsType } from "antd/es/table";
-import { TestRequestSampleDto, IndicatorImageDto } from "../../../types/testRequest";
+import {
+  TestRequestSampleDto,
+  IndicatorImageDto,
+} from "../../../types/testRequest";
 import {
   IndicatorApprovalStatus,
   IndicatorApprovalStatusLabels,
@@ -31,9 +34,16 @@ export const getSampleColumns = ({
     title: "Mã mẫu",
     dataIndex: "sampleCode",
     key: "sampleCode",
-    width: 120,
+    width: 150,
     render: (value: string, record: TestRequestSampleDto) => (
-      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          gap: 4,
+        }}
+      >
         <span>{value}</span>
         {record.isCustomerCancelled && (
           <StatusTag color="volcano" style={{ fontSize: 10, minWidth: 50 }}>
@@ -62,7 +72,10 @@ export const getSampleColumns = ({
     width: 80,
     align: "center" as const,
     render: (_: unknown, record: TestRequestSampleDto) => (
-      <SampleImagesButton sample={record} onClick={() => onViewImages(record)} />
+      <SampleImagesButton
+        sample={record}
+        onClick={() => onViewImages(record)}
+      />
     ),
   },
   {
@@ -176,7 +189,9 @@ export const getSampleColumns = ({
               )}
             </div>
             <div style={{ fontSize: 10, color: "#888", marginTop: 2 }}>
-              {ind.requestDate && <span>YC xong: {formatDate(ind.requestDate)}</span>}
+              {ind.requestDate && (
+                <span>YC xong: {formatDate(ind.requestDate)}</span>
+              )}
               {ind.requestDate && ind.testDate && (
                 <span style={{ margin: "0 4px" }}>|</span>
               )}

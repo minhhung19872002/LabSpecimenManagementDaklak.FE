@@ -306,7 +306,22 @@ export const useTestRequestFormActions = ({
       message.warning("Không thể xóa mẫu khi phiếu đang thực hiện");
       return;
     }
-    setSamples(samples.filter((s) => s.key !== key));
+
+    const newSamples = samples.filter((s) => s.key !== key);
+
+    // Nếu là form tạo mới (không phải edit), đánh lại số mẫu liên tục
+    if (!isEditMode) {
+      const contractNumber = form.getFieldValue("contractNumber") || "";
+      const reorderedSamples = newSamples.map((sample, index) => ({
+        ...sample,
+        sortOrder: index + 1,
+        sampleCode: generateSampleCode(contractNumber, index + 1),
+      }));
+      setSamples(reorderedSamples);
+    } else {
+      // Edit mode: giữ nguyên mã mẫu như hiện tại
+      setSamples(newSamples);
+    }
   };
 
   const updateSample = (key: string, field: keyof SampleFormData, value: any) => {

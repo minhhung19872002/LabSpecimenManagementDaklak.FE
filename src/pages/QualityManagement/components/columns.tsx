@@ -25,7 +25,8 @@ const getStatusTag = (status: QualityManagementStatus) => (
 
 const isUrgent = (record: QualityManagementTaskDto): boolean => {
   if (!record.requestCompletionDate) return false;
-  if (record.status === QualityManagementStatus.ResultSent) return false;
+  // Không cảnh báo urgent nếu đã HandedOver (hoàn thành)
+  if (record.status === QualityManagementStatus.HandedOver) return false;
   const daysRemaining = dayjs(record.requestCompletionDate).diff(dayjs(), "day");
   return daysRemaining <= 2;
 };

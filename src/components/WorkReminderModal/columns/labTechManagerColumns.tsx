@@ -13,10 +13,10 @@ interface LabTechManagerColumnsOptions {
 const getTaskNameType = (
   record: LabTechManagerPendingTaskDto
 ): "warning" | "danger" | "secondary" => {
-  if (record.status === LaboratoryTaskStatus.PendingApproval) {
+  if (record.status === LaboratoryTaskStatus.WaitingApproval) {
     return "warning";
   }
-  if (record.status === LaboratoryTaskStatus.NotAssigned) {
+  if (record.status === LaboratoryTaskStatus.UnderEvaluation) {
     return "warning";
   }
   if (record.daysUntilDeadline !== null && record.daysUntilDeadline <= 2) {

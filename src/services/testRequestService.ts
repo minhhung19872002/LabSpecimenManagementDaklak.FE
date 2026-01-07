@@ -9,7 +9,13 @@ import {
   TestRequestChangeHistoryDto,
   RejectChangesDto,
   TestRequestTimelineDto,
-  SampleReceiverPendingTaskDto
+  SampleReceiverPendingTaskDto,
+  IndicatorPendingConfirmationDto,
+  ConfirmIndicatorInput,
+  BulkConfirmIndicatorsInput,
+  ConfirmDeliveryInput,
+  PublishedReportDto,
+  CostChangeHistoryDto
 } from '../types/testRequest';
 import { QualityManagementIndicatorDto } from '../types/qualityManagement';
 
@@ -333,6 +339,13 @@ export const testRequestService = {
   },
 
   /**
+   * Gửi QLKT - Chuyển từ Paid sang UnderReview (Đang xem xét YC)
+   */
+  sendToQLKT: async (id: string): Promise<void> => {
+    await api.post(`${BASE_URL}/${id}/send-to-qlkt`);
+  },
+
+  /**
    * Hủy yêu cầu
    * Hủy Receipt (nếu có) + chuyển TestRequest thành Cancelled
    * @param id - ID của yêu cầu
@@ -347,6 +360,82 @@ export const testRequestService = {
    */
   generateContractNumber: async (): Promise<string> => {
     const response = await api.get<string>(`${BASE_URL}/generate-contract-number`);
+    return response.data;
+  },
+
+  // ============= Workflow Redesign - BPGN Confirmation (Per-Indicator) =============
+
+  /**
+   * Lấy danh sách chỉ tiêu chờ KH xác nhận
+   */
+  getIndicatorsPendingConfirmation: async (id: string): Promise<IndicatorPendingConfirmationDto[]> => {
+    const response = await api.get<IndicatorPendingConfirmationDto[]>(
+      `${BASE_URL}/${id}/indicators-pending-confirmation`
+    );
+    return response.data;
+  },
+
+  /**
+   * BPGN xác nhận từng chỉ tiêu (KH xác nhận đồng ý/không đồng ý)
+   */
+  confirmIndicator: async (
+    testRequestId: string,
+    indicatorId: string,
+    input: ConfirmIndicatorInput
+  ): Promise<IndicatorPendingConfirmationDto> => {
+    const response = await api.post<IndicatorPendingConfirmationDto>(
+      `${BASE_URL}/${testRequestId}/indicators/${indicatorId}/confirm`,
+      input
+    );
+    return response.data;
+  },
+
+  /**
+   * BPGN xác nhận nhiều chỉ tiêu cùng lúc (KH xác nhận đồng ý/không đồng ý)
+   */
+  bulkConfirmIndicators: async (
+    testRequestId: string,
+    input: BulkConfirmIndicatorsInput
+  ): Promise<IndicatorPendingConfirmationDto[]> => {
+    const response = await api.post<IndicatorPendingConfirmationDto[]>(
+      `${BASE_URL}/${testRequestId}/bulk-confirm-indicators`,
+      input
+    );
+    return response.data;
+  },
+
+  // ============= BPGN - Confirm Delivery to Customer =============
+
+  /**
+   * BPGN xác nhận đã bàn giao kết quả cho khách hàng
+   * Status tự động tính dựa trên chỉ tiêu đã xuất bên QLCL
+   */
+  confirmDeliveryToCustomer: async (
+    testRequestId: string,
+    input?: ConfirmDeliveryInput
+  ): Promise<void> => {
+    await api.post(`${BASE_URL}/${testRequestId}/confirm-delivery`, input || {});
+  },
+
+  /**
+   * Lấy danh sách báo cáo đã xuất của TestRequest (để xem lịch sử)
+   */
+  getPublishedReports: async (testRequestId: string): Promise<PublishedReportDto[]> => {
+    const response = await api.get<PublishedReportDto[]>(
+      `${BASE_URL}/${testRequestId}/published-reports`
+    );
+    return response.data;
+  },
+
+  // ============= Cost Change History =============
+
+  /**
+   * Lấy lịch sử thay đổi tiền của phiếu yêu cầu
+   */
+  getCostChangeHistory: async (testRequestId: string): Promise<CostChangeHistoryDto[]> => {
+    const response = await api.get<CostChangeHistoryDto[]>(
+      `${BASE_URL}/${testRequestId}/cost-history`
+    );
     return response.data;
   },
 

@@ -6,6 +6,7 @@ export enum ReceiptStatus {
   Unpaid = 1, // Chưa thanh toán
   Paid = 2, // Đã thanh toán
   Cancelled = 3, // Hủy yêu cầu
+  NoPaymentRequired = 4, // Không cần thanh toán (Mẫu nhiệm vụ)
 }
 
 /**
@@ -16,6 +17,7 @@ export const ReceiptStatusLabels: Record<ReceiptStatus, string> = {
   [ReceiptStatus.Unpaid]: 'Chưa thanh toán',
   [ReceiptStatus.Paid]: 'Đã thanh toán',
   [ReceiptStatus.Cancelled]: 'Hủy yêu cầu',
+  [ReceiptStatus.NoPaymentRequired]: 'Không cần thanh toán',
 };
 
 /**
@@ -26,6 +28,7 @@ export const ReceiptStatusColors: Record<ReceiptStatus, string> = {
   [ReceiptStatus.Unpaid]: 'orange',
   [ReceiptStatus.Paid]: 'green',
   [ReceiptStatus.Cancelled]: 'red',
+  [ReceiptStatus.NoPaymentRequired]: 'cyan',
 };
 
 /**

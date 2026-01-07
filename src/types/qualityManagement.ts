@@ -3,11 +3,11 @@ import { IndicatorImageDto } from './testing';
 // Quality Management Status Enum
 export enum QualityManagementStatus {
   PendingApproval = 0,    // Chờ phê duyệt
-  Testing = 1,            // Đang thử nghiệm
-  Approved = 2,           // Đã duyệt
-  Rejected = 3,           // Từ chối phê duyệt
-  PendingSignature = 4,   // Chờ ký
-  ResultSent = 5          // Đã trả KQ
+  Rejected = 1,           // Từ chối phê duyệt
+  PendingPublish = 2,     // Chờ phát hành
+  PartialPublished = 3,   // Đã phát hành 1 phần
+  FullyPublished = 4,     // Đã phát hành
+  HandedOver = 5          // Đã giao BPGN
 }
 
 // Quality Indicator Approval Status Enum
@@ -26,20 +26,20 @@ export enum QualityTaskType {
 // Status display helper
 export const QualityManagementStatusLabels: Record<QualityManagementStatus, string> = {
   [QualityManagementStatus.PendingApproval]: 'Chờ phê duyệt',
-  [QualityManagementStatus.Testing]: 'Đang thử nghiệm',
-  [QualityManagementStatus.Approved]: 'Đã duyệt',
   [QualityManagementStatus.Rejected]: 'Từ chối phê duyệt',
-  [QualityManagementStatus.PendingSignature]: 'Chờ ký',
-  [QualityManagementStatus.ResultSent]: 'Đã trả KQ'
+  [QualityManagementStatus.PendingPublish]: 'Chờ phát hành',
+  [QualityManagementStatus.PartialPublished]: 'Đã phát hành 1 phần',
+  [QualityManagementStatus.FullyPublished]: 'Đã phát hành',
+  [QualityManagementStatus.HandedOver]: 'Đã giao BPGN'
 };
 
 export const QualityManagementStatusColors: Record<QualityManagementStatus, string> = {
   [QualityManagementStatus.PendingApproval]: 'warning',
-  [QualityManagementStatus.Testing]: 'processing',
-  [QualityManagementStatus.Approved]: 'success',
   [QualityManagementStatus.Rejected]: 'error',
-  [QualityManagementStatus.PendingSignature]: 'purple',
-  [QualityManagementStatus.ResultSent]: 'cyan'
+  [QualityManagementStatus.PendingPublish]: 'processing',
+  [QualityManagementStatus.PartialPublished]: 'cyan',
+  [QualityManagementStatus.FullyPublished]: 'blue',
+  [QualityManagementStatus.HandedOver]: 'success'
 };
 
 // Indicator Approval Status display helper
@@ -85,11 +85,16 @@ export interface QualityManagementTaskDto {
   laboratoryNames?: string;
   transferDate?: string;
   requestCompletionDate?: string;
-  resultSentDate?: string;
   status: QualityManagementStatus;
+  // Thông tin giao BPGN
+  handoverDate?: string;
+  handoverByUserName?: string;
+  handoverNote?: string;
   customerName?: string;
   technicalManagerNames?: string;
   changeHistoryId?: string;
+  assignedQualityManagerId?: string;
+  assignedQualityManagerName?: string;
   changeHistory?: ChangeHistoryDto;
   indicators?: QualityManagementIndicatorDto[];
 
@@ -124,8 +129,11 @@ export interface QualityManagementIndicatorDto {
   referenceLimit?: string;
   approvalStatus: QualityIndicatorApprovalStatus;
   rejectionReason?: string;
-  isResultSent: boolean;
-  qualityResultSentDate?: string;
+  isResultSent: boolean;  // DEPRECATED
+  qualityResultSentDate?: string;  // DEPRECATED
+  // Thông tin in kết quả
+  isPrinted: boolean;
+  printedDate?: string;
   approvedById?: string;
   approvedByName?: string;
   images?: IndicatorImageDto[];  // Hình ảnh chỉ tiêu (max 5)
@@ -149,7 +157,8 @@ export interface QualityIndicatorStatusHistoryDto {
 export interface QualityManagementStatisticsDto {
   pendingApprovalCount: number;
   overdueCount: number;
-  pendingSignatureCount: number;
+  pendingPublishCount: number;   // Chờ phát hành
+  publishedCount: number;        // Đã phát hành (1 phần hoặc toàn bộ)
 }
 
 // Filter Input DTO
@@ -284,4 +293,9 @@ export interface BulkRejectIndicatorsResultDto {
   failedCount: number;
   failedIndicators: string[];
   rejectedIndicators: QualityManagementIndicatorDto[];
+}
+
+// Confirm Handover Input DTO
+export interface ConfirmHandoverInput {
+  note?: string;
 }

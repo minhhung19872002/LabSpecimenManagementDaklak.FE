@@ -22,6 +22,8 @@ import SampleImagesModal from "./components/SampleImagesModal";
 import PostalDeliveryImageModal from "./components/PostalDeliveryImageModal";
 import PrintIndicatorModal from "./components/PrintIndicatorModal";
 import RejectResultModal from "./components/RejectResultModal";
+import CustomerConfirmationModal from "./components/CustomerConfirmationModal";
+import CostChangeHistoryModal from "./components/CostChangeHistoryModal";
 
 const TestRequestDetail: React.FC = () => {
   const { t } = useTranslation();
@@ -43,12 +45,17 @@ const TestRequestDetail: React.FC = () => {
   const [selectedSampleForImages, setSelectedSampleForImages] =
     useState<TestRequestSampleDto | null>(null);
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  const [customerConfirmationModalVisible, setCustomerConfirmationModalVisible] =
+    useState(false);
+  const [costHistoryModalVisible, setCostHistoryModalVisible] = useState(false);
 
   // Loading states
   const [printingTestRequest, setPrintingTestRequest] = useState(false);
   const [sendingSample, setSendingSample] = useState(false);
   const [sendingToAccounting, setSendingToAccounting] = useState(false);
+  const [sendingToQLKT, setSendingToQLKT] = useState(false);
   const [cancellingRequest, setCancellingRequest] = useState(false);
+  const [confirmingDelivery, setConfirmingDelivery] = useState(false);
 
   // Form for cancel reason
   const [cancelForm] = Form.useForm();
@@ -161,6 +168,25 @@ const TestRequestDetail: React.FC = () => {
       );
     } finally {
       setSendingToAccounting(false);
+    }
+  };
+
+  // Handle send to QLKT (Gửi QLKT)
+  const handleSendToQLKT = async () => {
+    if (!id) return;
+    setSendingToQLKT(true);
+    try {
+      await testRequestService.sendToQLKT(id);
+      message.success("Đã gửi QLKT thành công");
+      loadData(id);
+    } catch (error: any) {
+      console.error("Error sending to QLKT:", error);
+      message.error(
+        error?.response?.data?.error?.message ||
+          "Không thể gửi QLKT. Vui lòng thử lại."
+      );
+    } finally {
+      setSendingToQLKT(false);
     }
   };
 
@@ -280,6 +306,34 @@ const TestRequestDetail: React.FC = () => {
     setSampleImagesModalVisible(true);
   };
 
+  // Handle confirm delivery to customer (BPGN)
+  const handleConfirmDelivery = async () => {
+    if (!id) return;
+
+    Modal.confirm({
+      title: "Xác nhận bàn giao kết quả",
+      content: "Bạn có chắc chắn muốn xác nhận đã bàn giao kết quả cho khách hàng?",
+      okText: "Xác nhận",
+      cancelText: "Hủy",
+      onOk: async () => {
+        setConfirmingDelivery(true);
+        try {
+          await testRequestService.confirmDeliveryToCustomer(id);
+          message.success("Đã xác nhận bàn giao kết quả cho khách hàng");
+          loadData(id);
+        } catch (error: any) {
+          console.error("Error confirming delivery:", error);
+          message.error(
+            error?.response?.data?.error?.message ||
+              "Không thể xác nhận bàn giao. Vui lòng thử lại."
+          );
+        } finally {
+          setConfirmingDelivery(false);
+        }
+      },
+    });
+  };
+
   // Handle print single result (In KQ)
   const handlePrintSingle = () => {
     setPrintMode('single');
@@ -290,6 +344,11 @@ const TestRequestDetail: React.FC = () => {
   const handlePrintMixed = () => {
     setPrintMode('mixed');
     setPrintIndicatorModalVisible(true);
+  };
+
+  // Handle open customer confirmation modal
+  const handleOpenCustomerConfirmation = () => {
+    setCustomerConfirmationModalVisible(true);
   };
 
   // Calculate canPrint: có ít nhất 1 chỉ tiêu đã được duyệt
@@ -352,7 +411,9 @@ const TestRequestDetail: React.FC = () => {
         printingTestRequest={printingTestRequest}
         sendingSample={sendingSample}
         sendingToAccounting={sendingToAccounting}
+        sendingToQLKT={sendingToQLKT}
         cancellingRequest={cancellingRequest}
+        confirmingDelivery={confirmingDelivery}
         onPrintTestRequest={handlePrintTestRequest}
         onSendSample={handleSendSample}
         onSendResult={handleSendResult}
@@ -362,7 +423,11 @@ const TestRequestDetail: React.FC = () => {
         onPrintSingle={handlePrintSingle}
         onPrintMixed={handlePrintMixed}
         onSendToAccounting={handleSendToAccounting}
+        onSendToQLKT={handleSendToQLKT}
         onCancelRequest={handleCancelRequest}
+        onOpenCustomerConfirmation={handleOpenCustomerConfirmation}
+        onConfirmDelivery={handleConfirmDelivery}
+        onViewCostHistory={() => setCostHistoryModalVisible(true)}
         canPrint={canPrint}
         canPrintTestRequest={canPrintTestRequest}
         // Permission flags theo Permission Matrix
@@ -448,6 +513,21 @@ const TestRequestDetail: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* Customer Confirmation Modal (BPGN xác nhận phản hồi KH) */}
+      <CustomerConfirmationModal
+        visible={customerConfirmationModalVisible}
+        testRequestId={id!}
+        onClose={() => setCustomerConfirmationModalVisible(false)}
+        onConfirmComplete={() => loadData(id!)}
+      />
+
+      {/* Cost Change History Modal */}
+      <CostChangeHistoryModal
+        open={costHistoryModalVisible}
+        onClose={() => setCostHistoryModalVisible(false)}
+        testRequestId={id!}
+      />
     </>
   );
 };

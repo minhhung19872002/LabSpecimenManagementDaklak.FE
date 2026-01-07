@@ -50,6 +50,7 @@ import {
   SampleAttachmentDto,
 } from "../../types/testing";
 import IndicatorTable from "./components/IndicatorTable";
+import EvaluationIndicatorTable from "./components/EvaluationIndicatorTable";
 import SupporterModal from "./components/SupporterModal";
 import SampleImagesDisplay from "./components/SampleImagesDisplay";
 import SendToQualityModal from "./components/SendToQualityModal";
@@ -939,11 +940,11 @@ const TaskManagementDetail: React.FC = () => {
   };
 
   // Check if can upload images (same logic as canEditTask)
+  // Allow upload during: Assigned, InProgress, WaitingApproval
   const canUploadImages =
-    task?.status === LaboratoryTaskStatus.NotAssigned ||
     task?.status === LaboratoryTaskStatus.Assigned ||
-    task?.status === LaboratoryTaskStatus.Testing ||
-    task?.status === LaboratoryTaskStatus.PendingApproval;
+    task?.status === LaboratoryTaskStatus.InProgress ||
+    task?.status === LaboratoryTaskStatus.WaitingApproval;
 
   // Get status tag
   const getStatusTag = (status: LaboratoryTaskStatus) => {
@@ -967,9 +968,10 @@ const TaskManagementDetail: React.FC = () => {
   };
 
   // Kiểm tra có thể chỉnh sửa task không
-  // Cho phép khi: Chưa giao việc hoặc Đã giao việc VÀ có quyền editMethod
+  // Cho phép khi: FullyAccepted/PartialAccepted (sau khi QLKT đánh giá) hoặc Đã giao việc VÀ có quyền editMethod
   const canEditTask =
-    (task?.status === LaboratoryTaskStatus.NotAssigned ||
+    (task?.status === LaboratoryTaskStatus.FullyAccepted ||
+    task?.status === LaboratoryTaskStatus.PartialAccepted ||
     task?.status === LaboratoryTaskStatus.Assigned) && canEditMethod;
 
   // Check if sample has selected indicators for bulk actions
@@ -1166,8 +1168,10 @@ const TaskManagementDetail: React.FC = () => {
                   )}
                 </Button>
               )}
-              {/* Nút Gửi kết quả - chỉ QLKT có quyền (canApproveResult) */}
-              {canApproveResult && (
+              {/* Nút Gửi kết quả - chỉ QLKT có quyền (canApproveResult) và không hiển thị khi đang đánh giá hoặc chờ KH xác nhận */}
+              {canApproveResult &&
+                task.status !== LaboratoryTaskStatus.UnderEvaluation &&
+                task.status !== LaboratoryTaskStatus.WaitingCustomerResponse && (
                 <Button
                   type="primary"
                   icon={<SendOutlined />}
@@ -1231,17 +1235,43 @@ const TaskManagementDetail: React.FC = () => {
         />
       )}
 
-      {/* Collapsible Sample Panels */}
-      <Card title={`Danh sách mẫu (${sampleList.length})`}>
-        <Collapse
-          activeKey={activeKeys}
-          onChange={(keys) => setActiveKeys(keys as string[])}
-          expandIcon={({ isActive }) => (
-            <CaretRightOutlined rotate={isActive ? 90 : 0} />
-          )}
-          items={collapseItems}
-        />
-      </Card>
+      {/* Evaluation Mode for UnderEvaluation or WaitingCustomerResponse status */}
+      {(task.status === LaboratoryTaskStatus.UnderEvaluation ||
+        task.status === LaboratoryTaskStatus.WaitingCustomerResponse) ? (
+        <Card title={`Đánh giá chỉ tiêu (${task.indicators?.length || 0})`}>
+          <Alert
+            message={task.status === LaboratoryTaskStatus.WaitingCustomerResponse
+              ? "Chờ khách hàng xác nhận"
+              : "Chế độ đánh giá thử nghiệm"}
+            description={task.status === LaboratoryTaskStatus.WaitingCustomerResponse
+              ? "Có chỉ tiêu đang chờ KH xác nhận (đổi PP hoặc từ chối TN). QLKT vẫn có thể đánh giá các chỉ tiêu Pending còn lại."
+              : "QLKT đánh giá từng chỉ tiêu: Chấp nhận, Yêu cầu đổi phương pháp, hoặc Từ chối thử nghiệm."}
+            type={task.status === LaboratoryTaskStatus.WaitingCustomerResponse ? "warning" : "info"}
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+          <EvaluationIndicatorTable
+            indicators={task.indicators || []}
+            methods={methods}
+            taskId={task.id}
+            canEvaluate={canApproveResult}
+            loading={loading}
+            onEvaluationComplete={reloadData}
+          />
+        </Card>
+      ) : (
+        /* Collapsible Sample Panels for other statuses */
+        <Card title={`Danh sách mẫu (${sampleList.length})`}>
+          <Collapse
+            activeKey={activeKeys}
+            onChange={(keys) => setActiveKeys(keys as string[])}
+            expandIcon={({ isActive }) => (
+              <CaretRightOutlined rotate={isActive ? 90 : 0} />
+            )}
+            items={collapseItems}
+          />
+        </Card>
+      )}
 
       {/* Supporter Modal */}
       <SupporterModal
