@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useState } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   Button,
   Input,
@@ -33,6 +33,21 @@ import SampleImageUpload from "./SampleImageUpload";
 import BarcodeQRModal, { SampleCodeInfo } from "./BarcodeQRModal";
 
 const { Text } = Typography;
+
+// Default column widths
+const DEFAULT_COLUMN_WIDTHS: Record<string, number> = {
+  sortOrder: 60,
+  sampleCode: 130,
+  sampleName: 180,
+  specimenTypeName: 180,
+  attachments: 140,
+  samplingAddress: 200,
+  sampleQuantity: 90,
+  statusText: 140,
+  indicatorMethods: 200,
+  notes: 150,
+  actions: 100,
+};
 
 interface SampleTableSectionProps {
   samples: SampleFormData[];
@@ -79,6 +94,91 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
   const [selectedSampleForBarcode, setSelectedSampleForBarcode] =
     useState<SampleCodeInfo | null>(null);
 
+  // Column widths state for resizing
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(DEFAULT_COLUMN_WIDTHS);
+  const resizingRef = useRef<{ column: string; startX: number; startWidth: number } | null>(null);
+
+  // Handle column resize
+  const handleResize = useCallback((column: string) => (e: React.SyntheticEvent, { size }: { size: { width: number } }) => {
+    setColumnWidths((prev) => ({
+      ...prev,
+      [column]: size.width,
+    }));
+  }, []);
+
+  // Handle resize start
+  const handleResizeStart = useCallback((e: React.MouseEvent, column: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    resizingRef.current = {
+      column,
+      startX: e.clientX,
+      startWidth: columnWidths[column] || 100,
+    };
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!resizingRef.current) return;
+      const { column: col, startX, startWidth } = resizingRef.current;
+      const diff = moveEvent.clientX - startX;
+      const newWidth = Math.max(50, startWidth + diff);
+      setColumnWidths((prev) => ({
+        ...prev,
+        [col]: newWidth,
+      }));
+    };
+
+    const handleMouseUp = () => {
+      resizingRef.current = null;
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  }, [columnWidths]);
+
+  // Resizable header cell component
+  const ResizableTitle = ({ onResize, width, columnKey, children, ...restProps }: any) => {
+    if (!width || columnKey === "actions") {
+      return <th {...restProps}>{children}</th>;
+    }
+
+    return (
+      <th {...restProps} style={{ ...restProps.style, position: "relative" }}>
+        {children}
+        <div
+          style={{
+            position: "absolute",
+            right: 0,
+            top: 0,
+            bottom: 0,
+            width: 8,
+            cursor: "col-resize",
+            zIndex: 1,
+          }}
+          onMouseDown={(e) => handleResizeStart(e, columnKey)}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div
+            style={{
+              position: "absolute",
+              right: 3,
+              top: "30%",
+              bottom: "30%",
+              width: 2,
+              background: "#d9d9d9",
+              borderRadius: 1,
+            }}
+          />
+        </div>
+      </th>
+    );
+  };
+
   const openBarcodeModal = (sampleInfo: SampleCodeInfo) => {
     setSelectedSampleForBarcode(sampleInfo);
     setBarcodeModalVisible(true);
@@ -89,19 +189,30 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
     setSelectedSampleForBarcode(null);
   };
 
+  // Generate columns with dynamic widths and onHeaderCell
+  const getColumnWidth = (key: string) => columnWidths[key] || DEFAULT_COLUMN_WIDTHS[key] || 100;
+
   const sampleColumns = [
     {
       title: "STT",
       dataIndex: "sortOrder",
       key: "sortOrder",
-      width: 60,
+      width: getColumnWidth("sortOrder"),
+      onHeaderCell: (column: any) => ({
+        width: column.width,
+        columnKey: "sortOrder",
+      }),
       render: (_: any, __: any, index: number) => index + 1,
     },
     {
       title: "Mã mẫu",
       dataIndex: "sampleCode",
       key: "sampleCode",
-      width: 130,
+      width: getColumnWidth("sampleCode"),
+      onHeaderCell: (column: any) => ({
+        width: column.width,
+        columnKey: "sampleCode",
+      }),
       render: (value: string, _record: SampleFormData) => {
         // Hiển thị sampleCode đã lưu trong data (không tính lại từ index)
         const displayCode = value || "--";
@@ -123,7 +234,11 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
       ),
       dataIndex: "sampleName",
       key: "sampleName",
-      width: 180,
+      width: getColumnWidth("sampleName"),
+      onHeaderCell: (column: any) => ({
+        width: column.width,
+        columnKey: "sampleName",
+      }),
       render: (value: string, record: SampleFormData) => (
         <Input
           value={value}
@@ -139,7 +254,11 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
       title: "Loại mẫu",
       dataIndex: "specimenTypeName",
       key: "specimenTypeName",
-      width: 180,
+      width: getColumnWidth("specimenTypeName"),
+      onHeaderCell: (column: any) => ({
+        width: column.width,
+        columnKey: "specimenTypeName",
+      }),
       render: (value: string, record: SampleFormData) => (
         <AutoComplete
           value={value || ""}
@@ -162,7 +281,11 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
       title: "Hình ảnh",
       dataIndex: "attachments",
       key: "attachments",
-      width: 140,
+      width: getColumnWidth("attachments"),
+      onHeaderCell: (column: any) => ({
+        width: column.width,
+        columnKey: "attachments",
+      }),
       render: (_: AttachmentInfo[], record: SampleFormData) => (
         <SampleImageUpload
           attachments={record.attachments || []}
@@ -177,7 +300,11 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
       title: "Địa chỉ lấy mẫu",
       dataIndex: "samplingAddress",
       key: "samplingAddress",
-      width: 200,
+      width: getColumnWidth("samplingAddress"),
+      onHeaderCell: (column: any) => ({
+        width: column.width,
+        columnKey: "samplingAddress",
+      }),
       render: (value: string, record: SampleFormData) => (
         <Input
           value={value}
@@ -193,7 +320,11 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
       title: <span style={{ whiteSpace: "nowrap" }}>Lượng mẫu</span>,
       dataIndex: "sampleQuantity",
       key: "sampleQuantity",
-      width: 90,
+      width: getColumnWidth("sampleQuantity"),
+      onHeaderCell: (column: any) => ({
+        width: column.width,
+        columnKey: "sampleQuantity",
+      }),
       render: (value: string, record: SampleFormData) => (
         <Input
           value={value}
@@ -209,7 +340,11 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
       title: "Tình trạng mẫu",
       dataIndex: "statusText",
       key: "statusText",
-      width: 140,
+      width: getColumnWidth("statusText"),
+      onHeaderCell: (column: any) => ({
+        width: column.width,
+        columnKey: "statusText",
+      }),
       render: (value: string, record: SampleFormData) => (
         <Input
           value={value}
@@ -229,7 +364,11 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
       ),
       dataIndex: "indicatorMethods",
       key: "indicatorMethods",
-      width: 200,
+      width: getColumnWidth("indicatorMethods"),
+      onHeaderCell: (column: any) => ({
+        width: column.width,
+        columnKey: "indicatorMethods",
+      }),
       render: (_: IndicatorMethodKey[], record: SampleFormData) => {
         // Use indicatorMethods if available, fallback to indicatorIds for backward compat
         const methods = record.indicatorMethods || [];
@@ -374,7 +513,11 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
       title: "Ghi chú",
       dataIndex: "notes",
       key: "notes",
-      width: 150,
+      width: getColumnWidth("notes"),
+      onHeaderCell: (column: any) => ({
+        width: column.width,
+        columnKey: "notes",
+      }),
       render: (value: string, record: SampleFormData) => (
         <Input
           value={value}
@@ -387,8 +530,12 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
     {
       title: "",
       key: "actions",
-      width: 100,
+      width: getColumnWidth("actions"),
       fixed: "right" as const,
+      onHeaderCell: (column: any) => ({
+        width: column.width,
+        columnKey: "actions",
+      }),
       render: (_: any, record: SampleFormData) => {
         // Sử dụng sampleCode từ record (đã được lưu cố định)
         const sampleCode = record.sampleCode || "--";
@@ -492,6 +639,11 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
       <Table
         dataSource={samples}
         columns={sampleColumns}
+        components={{
+          header: {
+            cell: ResizableTitle,
+          },
+        }}
         pagination={false}
         scroll={{ x: "max-content", y: 220 }}
         size="small"
