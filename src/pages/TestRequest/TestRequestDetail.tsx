@@ -25,6 +25,7 @@ import RejectResultModal from "./components/RejectResultModal";
 import CustomerConfirmationModal from "./components/CustomerConfirmationModal";
 import CostChangeHistoryModal from "./components/CostChangeHistoryModal";
 import SendToQLKTModal from "./components/SendToQLKTModal";
+import PaymentConfirmationModal from "./components/PaymentConfirmationModal";
 
 const TestRequestDetail: React.FC = () => {
   const { t } = useTranslation();
@@ -52,6 +53,8 @@ const TestRequestDetail: React.FC = () => {
   ] = useState(false);
   const [costHistoryModalVisible, setCostHistoryModalVisible] = useState(false);
   const [sendToQLKTModalVisible, setSendToQLKTModalVisible] = useState(false);
+  const [paymentConfirmationModalVisible, setPaymentConfirmationModalVisible] =
+    useState(false);
 
   // Loading states
   const [printingTestRequest, setPrintingTestRequest] = useState(false);
@@ -358,6 +361,11 @@ const TestRequestDetail: React.FC = () => {
     setCustomerConfirmationModalVisible(true);
   };
 
+  // Handle open payment confirmation modal
+  const handleOpenPaymentConfirmation = () => {
+    setPaymentConfirmationModalVisible(true);
+  };
+
   // Calculate canPrint: có ít nhất 1 chỉ tiêu đã được duyệt
   const canPrint = React.useMemo(() => {
     if (!data?.samples) return false;
@@ -436,6 +444,7 @@ const TestRequestDetail: React.FC = () => {
         onOpenCustomerConfirmation={handleOpenCustomerConfirmation}
         onConfirmDelivery={handleConfirmDelivery}
         onViewCostHistory={() => setCostHistoryModalVisible(true)}
+        onOpenPaymentConfirmation={handleOpenPaymentConfirmation}
         canPrint={canPrint}
         canPrintTestRequest={canPrintTestRequest}
         // Permission flags theo Permission Matrix
@@ -546,6 +555,14 @@ const TestRequestDetail: React.FC = () => {
           onSuccess={handleSendToQLKTSuccess}
         />
       )}
+
+      {/* Payment Confirmation Modal (Xác nhận thanh toán) */}
+      <PaymentConfirmationModal
+        open={paymentConfirmationModalVisible}
+        onClose={() => setPaymentConfirmationModalVisible(false)}
+        testRequestId={id!}
+        onSuccess={() => loadData(id!)}
+      />
     </>
   );
 };

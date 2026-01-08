@@ -4,6 +4,9 @@ import {
   ReceiptDetailDto,
   GetReceiptListInput,
   UpdateReceiptDto,
+  PaymentInfoDto,
+  CreatePaymentInput,
+  PaymentResultDto,
 } from '../types/receipt';
 
 const BASE_URL = '/api/v1/receipts';
@@ -44,5 +47,25 @@ export const receiptService = {
   // Mark as unpaid
   markAsUnpaid: async (id: string): Promise<void> => {
     await api.post(`${BASE_URL}/${id}/mark-unpaid`);
+  },
+
+  // Get payment info for modal - auto creates Receipt if not exists
+  getPaymentInfo: async (testRequestId: string): Promise<PaymentInfoDto> => {
+    const response = await api.get<PaymentInfoDto>(
+      `${BASE_URL}/payment-info/${testRequestId}`
+    );
+    return response.data;
+  },
+
+  // Process a new payment
+  processPayment: async (
+    receiptId: string,
+    input: CreatePaymentInput
+  ): Promise<PaymentResultDto> => {
+    const response = await api.post<PaymentResultDto>(
+      `${BASE_URL}/${receiptId}/payments`,
+      input
+    );
+    return response.data;
   },
 };
