@@ -167,10 +167,12 @@ export const canSendToAccounting = (status: TestRequestStatus, sentToAccounting?
 
 /**
  * Kiểm tra có thể gửi QLKT không
- * Chỉ khi status = Paid (mẫu thường) hoặc NoPaymentRequired (mẫu nhiệm vụ)
+ * Cho phép khi status = PendingPayment (đã in phiếu thu), Paid (mẫu thường) hoặc NoPaymentRequired (mẫu nhiệm vụ)
  */
 export const canSendToQLKT = (status: TestRequestStatus): boolean => {
-  return status === TestRequestStatus.Paid || status === TestRequestStatus.NoPaymentRequired;
+  return status === TestRequestStatus.PendingPayment ||
+         status === TestRequestStatus.Paid ||
+         status === TestRequestStatus.NoPaymentRequired;
 };
 
 /**
