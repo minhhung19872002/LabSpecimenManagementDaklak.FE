@@ -71,6 +71,7 @@ interface TestRequestDetailContainerProps {
   onOpenCustomerConfirmation: () => void;
   onConfirmDelivery?: () => void;
   onViewCostHistory?: () => void;
+  onOpenPaymentConfirmation?: () => void;
   canPrint: boolean;
   canPrintTestRequest: boolean;
   // Permission flags theo Permission Matrix
@@ -103,6 +104,7 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
   onOpenCustomerConfirmation,
   onConfirmDelivery,
   onViewCostHistory,
+  onOpenPaymentConfirmation,
   canPrint,
   canPrintTestRequest,
   // Permission flags
@@ -125,19 +127,43 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
 
     // === 1. PRIMARY ACTIONS (ưu tiên cao nhất) ===
 
-    // Gửi kế toán - chỉ khi status = PendingPayment VÀ chưa gửi kế toán VÀ có quyền sendToAccounting
-    if (
-      canSendToAccounting(data.status, data.sentToAccounting) &&
-      canSendToAccountingAction
-    ) {
+    // [COMMENTED] Gửi kế toán - Đã thay bằng "Xác nhận thanh toán" với modal thanh toán từng phần
+    // if (
+    //   canSendToAccounting(data.status, data.sentToAccounting) &&
+    //   canSendToAccountingAction
+    // ) {
+    //   buttons.push(
+    //     <Button
+    //       key="send-to-accounting"
+    //       type="primary"
+    //       onClick={onSendToAccounting}
+    //       loading={sendingToAccounting}
+    //     >
+    //       Gửi kế toán
+    //     </Button>
+    //   );
+    // }
+
+    // Xác nhận thanh toán / Lịch sử thanh toán
+    // - Hiển thị "Xác nhận thanh toán" khi chưa thanh toán đủ
+    // - Hiển thị "Lịch sử thanh toán" khi đã thanh toán đủ (paymentReceived = true)
+    // - Ẩn khi status = Cancelled hoặc NoPaymentRequired
+    // - Sử dụng paymentReceived thay vì status vì status có thể đã chuyển sang trạng thái khác sau thanh toán
+    const isPaid = data.paymentReceived === true;
+    const canShowPaymentButton =
+      data.status !== TestRequestStatus.Cancelled &&
+      data.status !== TestRequestStatus.NoPaymentRequired &&
+      canSendToAccountingAction &&
+      onOpenPaymentConfirmation;
+
+    if (canShowPaymentButton) {
       buttons.push(
         <Button
-          key="send-to-accounting"
-          type="primary"
-          onClick={onSendToAccounting}
-          loading={sendingToAccounting}
+          key="payment-confirmation"
+          type={isPaid ? "default" : "primary"}
+          onClick={onOpenPaymentConfirmation}
         >
-          Gửi kế toán
+          {isPaid ? "Lịch sử thanh toán" : "Xác nhận thanh toán"}
         </Button>
       );
     }
