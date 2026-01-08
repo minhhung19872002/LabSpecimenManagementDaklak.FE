@@ -204,6 +204,24 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
     });
   };
 
+  // Apply request date to all checked indicators
+  const handleApplyRequestDateToChecked = (date: dayjs.Dayjs | null) => {
+    if (checkedIndicatorIds.length === 0) {
+      message.warning("Vui lòng chọn ít nhất 1 chỉ tiêu");
+      return;
+    }
+
+    setIndicatorStates((prev) => {
+      const updated = { ...prev };
+      checkedIndicatorIds.forEach((id) => {
+        if (updated[id]) {
+          updated[id] = { ...updated[id], requestDate: date || undefined };
+        }
+      });
+      return updated;
+    });
+  };
+
   // Handle submit
   const handleSubmit = async () => {
     // Validate all indicators have laboratory
@@ -388,7 +406,8 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
       }
       open={visible}
       onCancel={onCancel}
-      width={900}
+      width="90vw"
+      style={{ maxWidth: 900 }}
       centered
       footer={
         <div
@@ -427,7 +446,7 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
           <Spin />
         </div>
       ) : (
-        <div style={{ maxHeight: "60vh", overflow: "auto" }}>
+        <div style={{ maxHeight: "60vh", overflowY: "auto" }}>
           {/* Bulk action bar */}
           <div
             style={{
@@ -437,15 +456,15 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
               display: "flex",
               alignItems: "center",
               gap: 12,
+              flexWrap: "wrap",
             }}
           >
             <Text type="secondary" style={{ fontSize: 12 }}>
-              Gán khoa phòng cho các chỉ tiêu đã chọn (
-              {checkedIndicatorIds.length}):
+              Gán cho các chỉ tiêu đã chọn ({checkedIndicatorIds.length}):
             </Text>
             <Select
               size="small"
-              style={{ width: 200 }}
+              style={{ width: 180 }}
               placeholder="Chọn khoa phòng"
               onChange={handleApplyLabToChecked}
               options={laboratories.map((lab) => ({
@@ -454,74 +473,90 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
               }))}
               disabled={checkedIndicatorIds.length === 0}
             />
+            <DatePicker
+              size="small"
+              style={{ width: 130 }}
+              placeholder="Chọn ngày YC"
+              format="DD/MM/YYYY"
+              onChange={handleApplyRequestDateToChecked}
+              disabled={checkedIndicatorIds.length === 0}
+              disabledDate={(current) => {
+                return current && current.isBefore(dayjs().startOf("day"));
+              }}
+            />
           </div>
 
-          {/* Table header */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "8px 12px",
-              background: "#f5f5f5",
-              borderBottom: "1px solid #e8e8e8",
-              fontWeight: 600,
-              fontSize: 12,
-            }}
-          >
-            <div style={{ width: 24, flexShrink: 0 }}></div>
-            <div style={{ flex: 1, minWidth: 80 }}>Chỉ tiêu</div>
-            <div style={{ width: 100, flexShrink: 0 }}>Phương pháp</div>
-            <div style={{ width: 70, flexShrink: 0, textAlign: "right" }}>
-              Đơn giá
-            </div>
-            <div style={{ width: 110, flexShrink: 0 }}>Ngày CG</div>
-            <div style={{ width: 110, flexShrink: 0 }}>Ngày YC</div>
-            <div style={{ width: 150, flexShrink: 0 }}>Khoa phòng</div>
-          </div>
-
-          {/* Samples grouped by Collapse */}
-          <Collapse
-            activeKey={expandedPanels}
-            onChange={(keys) => setExpandedPanels(keys as string[])}
-            bordered={false}
-            style={{ background: "#fff" }}
-          >
-            {activeSamples.map((sample) => (
-              <Panel
-                key={sample.id}
-                header={
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                    }}
-                  >
-                    <Checkbox
-                      checked={isSampleAllChecked(sample)}
-                      indeterminate={isSampleIndeterminate(sample)}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        handleSelectAllSample(sample.id, e.target.checked);
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <Text strong>
-                      {sample.sampleCode} - {sample.sampleName}
-                    </Text>
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                      ({sample.indicators?.length || 0} chỉ tiêu)
-                    </Text>
-                  </div>
-                }
+          {/* Scrollable table container */}
+          <div style={{ overflowX: "auto" }}>
+            <div style={{ minWidth: 700 }}>
+              {/* Table header */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "8px 12px",
+                  background: "#f5f5f5",
+                  borderBottom: "1px solid #e8e8e8",
+                  fontWeight: 600,
+                  fontSize: 12,
+                }}
               >
-                {sample.indicators?.map((indicator) =>
-                  renderIndicatorRow(indicator, false)
-                )}
-              </Panel>
-            ))}
-          </Collapse>
+                <div style={{ width: 24, flexShrink: 0 }}></div>
+                <div style={{ flex: 1, minWidth: 80 }}>Chỉ tiêu</div>
+                <div style={{ width: 100, flexShrink: 0 }}>Phương pháp</div>
+                <div style={{ width: 70, flexShrink: 0, textAlign: "right" }}>
+                  Đơn giá
+                </div>
+                <div style={{ width: 110, flexShrink: 0 }}>Ngày CG</div>
+                <div style={{ width: 110, flexShrink: 0 }}>Ngày YC</div>
+                <div style={{ width: 150, flexShrink: 0 }}>Khoa phòng</div>
+              </div>
+
+              {/* Samples grouped by Collapse */}
+              <Collapse
+                activeKey={expandedPanels}
+                onChange={(keys) => setExpandedPanels(keys as string[])}
+                bordered={false}
+                style={{ background: "#fff" }}
+              >
+                {activeSamples.map((sample) => (
+                  <Panel
+                    key={sample.id}
+                    header={
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 12,
+                        }}
+                      >
+                        <Checkbox
+                          checked={isSampleAllChecked(sample)}
+                          indeterminate={isSampleIndeterminate(sample)}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            handleSelectAllSample(sample.id, e.target.checked);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <Text strong>
+                          {sample.sampleCode} - {sample.sampleName}
+                        </Text>
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          ({sample.indicators?.length || 0} chỉ tiêu)
+                        </Text>
+                      </div>
+                    }
+                  >
+                    {sample.indicators?.map((indicator) =>
+                      renderIndicatorRow(indicator, false)
+                    )}
+                  </Panel>
+                ))}
+              </Collapse>
+            </div>
+          </div>
         </div>
       )}
     </Modal>
