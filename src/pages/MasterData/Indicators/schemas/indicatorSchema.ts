@@ -11,6 +11,7 @@ export type IndicatorFormData = yup.InferType<typeof indicatorSchema>;
 export const indicatorGroupSchema = yup.object({
   name: yup.string().required("Vui lòng nhập tên nhóm"),
   isActive: yup.boolean().default(true),
+  laboratoryId: yup.string().optional(),
 });
 
 export type IndicatorGroupFormData = yup.InferType<typeof indicatorGroupSchema>;

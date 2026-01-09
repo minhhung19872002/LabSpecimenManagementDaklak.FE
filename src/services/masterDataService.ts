@@ -230,11 +230,16 @@ export interface IndicatorGroupDto {
   isActive: boolean;
   indicatorCount: number;
   creationTime: string;
+  /** Khoa phòng thực hiện (để auto-fill khi gửi QLKT) */
+  laboratoryId?: string;
+  laboratoryName?: string;
 }
 
 export interface CreateUpdateIndicatorGroupDto {
   name: string;
   isActive: boolean;
+  /** Khoa phòng thực hiện (không bắt buộc) - để auto-fill khi gửi QLKT */
+  laboratoryId?: string;
 }
 
 // Indicator

@@ -34,6 +34,7 @@ const IndicatorsList: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
     selectedRowKeys,
     batchLoading,
     groupOptions,
+    laboratoryOptions,
     groupedData,
     setSearchText,
     setExpandedRowKeys,
@@ -95,8 +96,8 @@ const IndicatorsList: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
   });
 
   const groupForm = useForm<IndicatorGroupFormData>({
-    resolver: yupResolver(indicatorGroupSchema),
-    defaultValues: { name: "", isActive: true },
+    resolver: yupResolver(indicatorGroupSchema) as any,
+    defaultValues: { name: "", isActive: true, laboratoryId: undefined },
   });
   const indicatorForm = useForm<IndicatorFormData>({
     resolver: yupResolver(indicatorSchema),
@@ -178,6 +179,7 @@ const IndicatorsList: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
         loading={modalLoading}
         editingGroup={editingGroup}
         form={groupForm}
+        laboratoryOptions={laboratoryOptions}
         onOk={(data) => handleGroupModalOk(data, groupForm)}
         onCancel={() => {
           setGroupModalOpen(false);

@@ -103,7 +103,14 @@ export const getGroupColumns = (
     title: "Tên nhóm",
     dataIndex: "name",
     key: "name",
-    width: 300,
+    width: 250,
+  },
+  {
+    title: "Khoa phòng thực hiện",
+    dataIndex: "laboratoryName",
+    key: "laboratoryName",
+    width: 180,
+    render: (laboratoryName: string | undefined) => laboratoryName || "-",
   },
   {
     title: "Số chỉ tiêu",

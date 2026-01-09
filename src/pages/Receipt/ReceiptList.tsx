@@ -8,8 +8,9 @@ import {
   Col,
   Select,
   message,
+  Space,
 } from 'antd';
-import { ReloadOutlined } from '@ant-design/icons';
+import { ReloadOutlined, DownloadOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import type { TablePaginationConfig, SorterResult } from 'antd/es/table/interface';
 import { receiptService } from '../../services/receiptService';
@@ -20,6 +21,8 @@ import {
 } from '../../types/receipt';
 import { PATH_ROUTES } from '../../constants';
 import { getColumns } from './components/columns';
+import PaymentConfirmationModal from '../TestRequest/components/PaymentConfirmationModal';
+import ExportReceiptModal from './components/ExportReceiptModal';
 
 const ReceiptList: React.FC = () => {
   const navigate = useNavigate();
@@ -34,6 +37,13 @@ const ReceiptList: React.FC = () => {
     undefined
   );
   const [sorting, setSorting] = useState<string | undefined>(undefined);
+
+  // Payment confirmation modal state
+  const [paymentModalVisible, setPaymentModalVisible] = useState(false);
+  const [selectedTestRequestId, setSelectedTestRequestId] = useState<string | null>(null);
+
+  // Export modal state
+  const [exportModalVisible, setExportModalVisible] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -97,7 +107,26 @@ const ReceiptList: React.FC = () => {
     navigate(PATH_ROUTES.receipts.detail(record.id));
   };
 
-  const columns = getColumns();
+  // Handle open payment confirmation modal
+  const handleOpenPaymentModal = (testRequestId: string) => {
+    setSelectedTestRequestId(testRequestId);
+    setPaymentModalVisible(true);
+  };
+
+  // Handle close payment confirmation modal
+  const handleClosePaymentModal = () => {
+    setPaymentModalVisible(false);
+    setSelectedTestRequestId(null);
+  };
+
+  // Handle payment success - reload data
+  const handlePaymentSuccess = () => {
+    fetchData();
+  };
+
+  const columns = getColumns({
+    onConfirmPayment: handleOpenPaymentModal,
+  });
 
   // Status filter options
   const statusOptions = [
@@ -112,9 +141,17 @@ const ReceiptList: React.FC = () => {
     <Card
       title="Danh sách phiếu thu"
       extra={
-        <Button icon={<ReloadOutlined />} onClick={fetchData}>
-          Làm mới
-        </Button>
+        <Space>
+          <Button
+            icon={<DownloadOutlined />}
+            onClick={() => setExportModalVisible(true)}
+          >
+            Xuất phiếu thu
+          </Button>
+          <Button icon={<ReloadOutlined />} onClick={fetchData}>
+            Làm mới
+          </Button>
+        </Space>
       }
     >
       {/* Filters */}
@@ -161,7 +198,23 @@ const ReceiptList: React.FC = () => {
           showTotal: (total) => `Tổng ${total} phiếu thu`,
         }}
         onChange={handleTableChange}
-        scroll={{ x: 1100 }}
+        scroll={{ x: 1200 }}
+      />
+
+      {/* Payment Confirmation Modal */}
+      {selectedTestRequestId && (
+        <PaymentConfirmationModal
+          open={paymentModalVisible}
+          onClose={handleClosePaymentModal}
+          testRequestId={selectedTestRequestId}
+          onSuccess={handlePaymentSuccess}
+        />
+      )}
+
+      {/* Export Receipt Modal */}
+      <ExportReceiptModal
+        open={exportModalVisible}
+        onClose={() => setExportModalVisible(false)}
       />
     </Card>
   );
