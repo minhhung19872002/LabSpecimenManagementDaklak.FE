@@ -122,7 +122,7 @@ export const parseResultToNumber = (
  */
 export const compareResultWithLimit = (
   result: string | null | undefined,
-  limit: number | null | undefined,
+  limit: number | string | null | undefined,
   decimalPlaces: number = 4
 ): {
   parsedValue: number | null;
@@ -140,8 +140,11 @@ export const compareResultWithLimit = (
     };
   }
 
-  // Cannot compare if limit is not defined
-  if (limit === null || limit === undefined || isNaN(limit)) {
+  // Convert limit to number (handle string input)
+  const numericLimit = typeof limit === "string" ? parseFloat(limit) : limit;
+
+  // Cannot compare if limit is not defined or not a valid number
+  if (numericLimit === null || numericLimit === undefined || isNaN(numericLimit)) {
     return {
       parsedValue,
       isWithinLimit: null,
@@ -151,7 +154,7 @@ export const compareResultWithLimit = (
 
   return {
     parsedValue,
-    isWithinLimit: parsedValue <= limit,
+    isWithinLimit: parsedValue <= numericLimit,
     canCompare: true,
   };
 };
