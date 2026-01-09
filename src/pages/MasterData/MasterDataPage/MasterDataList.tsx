@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import { Card, Button, Space, Tag, Alert, Tabs, Form } from "antd";
 import {
   PlusOutlined,
@@ -21,6 +21,7 @@ import {
   MasterDataTable,
   MasterDataModal,
   StatisticsCards,
+  SpecimenTypeIndicatorModal,
 } from "./components";
 import {
   categoryLabels,
@@ -28,6 +29,8 @@ import {
   getColumns,
   getStatCount,
 } from "./constants";
+import { SpecimenTypeWithIndicatorsDto } from "../../../services/masterDataService";
+import { MasterDataItem } from "./types";
 
 const MasterDataList: React.FC = () => {
   const {
@@ -87,6 +90,24 @@ const MasterDataList: React.FC = () => {
   const [testMethodsRefreshKey, setTestMethodsRefreshKey] = useState(0);
   const [standardsRefreshKey, setStandardsRefreshKey] = useState(0);
 
+  // State for SpecimenType Indicator Modal
+  const [indicatorModalOpen, setIndicatorModalOpen] = useState(false);
+  const [selectedSpecimenType, setSelectedSpecimenType] =
+    useState<SpecimenTypeWithIndicatorsDto | null>(null);
+
+  // Handle manage indicators for specimen type
+  const handleManageIndicators = useCallback((record: MasterDataItem) => {
+    // Cast to SpecimenTypeWithIndicatorsDto (indicators will be loaded by modal)
+    setSelectedSpecimenType(record as SpecimenTypeWithIndicatorsDto);
+    setIndicatorModalOpen(true);
+  }, []);
+
+  // Handle indicator modal data change
+  const handleIndicatorDataChange = useCallback(() => {
+    fetchCategoryData(activeCategory, true);
+    fetchStatistics();
+  }, [activeCategory, fetchCategoryData, fetchStatistics]);
+
   // Memoized columns
   const columns = useMemo(
     () =>
@@ -94,9 +115,10 @@ const MasterDataList: React.FC = () => {
         activeCategory,
         users,
         (record) => handleEdit(record, form),
-        handleDelete
+        handleDelete,
+        handleManageIndicators
       ),
-    [activeCategory, users, handleEdit, handleDelete, form]
+    [activeCategory, users, handleEdit, handleDelete, form, handleManageIndicators]
   );
 
   return (
@@ -246,6 +268,17 @@ const MasterDataList: React.FC = () => {
           title={`Import ${categoryLabels[activeCategory]}`}
         />
       )}
+
+      {/* Specimen Type Indicator Modal */}
+      <SpecimenTypeIndicatorModal
+        open={indicatorModalOpen}
+        specimenType={selectedSpecimenType}
+        onClose={() => {
+          setIndicatorModalOpen(false);
+          setSelectedSpecimenType(null);
+        }}
+        onDataChange={handleIndicatorDataChange}
+      />
     </div>
   );
 };
