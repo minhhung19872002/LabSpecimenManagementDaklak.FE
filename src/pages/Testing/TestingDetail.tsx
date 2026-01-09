@@ -219,93 +219,6 @@ const TestingDetail: React.FC = () => {
     }
   };
 
-  const handleCheckIn = async (sampleId: string) => {
-    if (!id || !detail) return;
-    const selected = selectedIndicators.get(sampleId) || [];
-
-    if (selected.length === 0) {
-      message.warning("Vui lòng chọn ít nhất 1 chỉ tiêu để thực hiện");
-      return;
-    }
-
-    const sample = detail.samples.find((s) => s.sampleId === sampleId);
-    if (!sample) return;
-
-    const validIndicatorIds: string[] = [];
-    const alreadyTestingIds: string[] = [];
-
-    selected.forEach((indicatorId) => {
-      const indicator = sample.indicators.find((i) => i.id === indicatorId);
-      if (!indicator) return;
-
-      if (
-        indicator.testingStatus === IndicatorTestingStatus.Todo ||
-        indicator.testingStatus === IndicatorTestingStatus.Rejected
-      ) {
-        validIndicatorIds.push(indicatorId);
-      } else if (indicator.testingStatus === IndicatorTestingStatus.Testing) {
-        alreadyTestingIds.push(indicatorId);
-      }
-    });
-
-    if (alreadyTestingIds.length > 0 && validIndicatorIds.length === 0) {
-      const testingNames = alreadyTestingIds
-        .map((id) => sample.indicators.find((i) => i.id === id)?.indicatorName)
-        .filter(Boolean)
-        .join(", ");
-      message.warning(
-        `Các chỉ tiêu "${testingNames}" đang ở trạng thái "Đang thí nghiệm", không cần thực hiện lại`
-      );
-      return;
-    }
-
-    if (validIndicatorIds.length === 0) {
-      message.warning(
-        "Không có chỉ tiêu nào ở trạng thái 'Cần làm' hoặc 'Bị từ chối' để thực hiện"
-      );
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      await testingService.checkInIndicators(id, {
-        sampleId,
-        indicatorIds: validIndicatorIds,
-      });
-
-      // Optimistic update: cập nhật indicator testingStatus thành Testing
-      const now = new Date().toISOString();
-      updateIndicatorsOptimistically(validIndicatorIds, {
-        testingStatus: IndicatorTestingStatus.Testing,
-        startDate: now,
-        canCheckIn: false,
-        canSubmit: true,
-      });
-
-      // Reload full data from server (avoid duplicating BE logic)
-      await reloadData();
-
-      message.success(
-        `Đã bắt đầu thực hiện ${validIndicatorIds.length} chỉ tiêu`
-      );
-      // Clear selection sau khi thành công
-      setSelectedIndicators((prev) => {
-        const newSelected = new Map(prev);
-        newSelected.set(sampleId, []);
-        return newSelected;
-      });
-    } catch (error: any) {
-      console.error("Failed to check-in:", error);
-      message.error(
-        error.response?.data?.error?.message || "Không thể thực hiện"
-      );
-      // Reload để sync lại với server nếu có lỗi
-      await loadDetail();
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const handleSubmitResults = async (sampleId: string) => {
     if (!id || !detail) return;
     const selected = selectedIndicators.get(sampleId) || [];
@@ -319,61 +232,39 @@ const TestingDetail: React.FC = () => {
     if (!sample) return;
 
     const results = sampleResults.get(sampleId) || [];
-    const validIndicatorIds: string[] = [];
+    const validIndicators: { indicatorId: string; testDate: string }[] = [];
     const missingResultIds: string[] = [];
-    const todoStatusIds: string[] = [];
-    const rejectedStatusIds: string[] = [];
+    const missingTestDateIds: string[] = [];
 
     selected.forEach((indicatorId) => {
       const indicator = sample.indicators.find((i) => i.id === indicatorId);
       if (!indicator) return;
 
-      if (indicator.testingStatus === IndicatorTestingStatus.Todo) {
-        todoStatusIds.push(indicatorId);
-        return;
-      }
-
-      if (indicator.testingStatus === IndicatorTestingStatus.Rejected) {
-        rejectedStatusIds.push(indicatorId);
-        return;
-      }
-
-      if (indicator.testingStatus !== IndicatorTestingStatus.Testing) {
+      // Chỉ xử lý các chỉ tiêu có trạng thái cho phép gửi (Todo, Testing, Rejected)
+      if (
+        indicator.testingStatus !== IndicatorTestingStatus.Todo &&
+        indicator.testingStatus !== IndicatorTestingStatus.Testing &&
+        indicator.testingStatus !== IndicatorTestingStatus.Rejected
+      ) {
         return;
       }
 
       const editedResult = results.find((r) => r.indicatorId === indicatorId);
       const resultValue = editedResult?.result ?? indicator.result;
+      const testDate = editedResult?.testDate ?? indicator.testDate;
 
       if (!resultValue || resultValue.trim() === "") {
         missingResultIds.push(indicatorId);
         return;
       }
 
-      validIndicatorIds.push(indicatorId);
+      if (!testDate) {
+        missingTestDateIds.push(indicatorId);
+        return;
+      }
+
+      validIndicators.push({ indicatorId, testDate });
     });
-
-    if (todoStatusIds.length > 0 && validIndicatorIds.length === 0) {
-      const todoNames = todoStatusIds
-        .map((id) => sample.indicators.find((i) => i.id === id)?.indicatorName)
-        .filter(Boolean)
-        .join(", ");
-      message.warning(
-        `Các chỉ tiêu "${todoNames}" đang ở trạng thái "Cần làm". Vui lòng ấn "Thực hiện" trước khi gửi kết quả`
-      );
-      return;
-    }
-
-    if (rejectedStatusIds.length > 0 && validIndicatorIds.length === 0) {
-      const rejectedNames = rejectedStatusIds
-        .map((id) => sample.indicators.find((i) => i.id === id)?.indicatorName)
-        .filter(Boolean)
-        .join(", ");
-      message.warning(
-        `Các chỉ tiêu "${rejectedNames}" đang ở trạng thái "Bị từ chối". Vui lòng ấn "Thực hiện" để thử nghiệm lại`
-      );
-      return;
-    }
 
     if (missingResultIds.length > 0) {
       const missingNames = missingResultIds
@@ -384,24 +275,39 @@ const TestingDetail: React.FC = () => {
       return;
     }
 
-    if (validIndicatorIds.length === 0) {
+    if (missingTestDateIds.length > 0) {
+      const missingNames = missingTestDateIds
+        .map((id) => sample.indicators.find((i) => i.id === id)?.indicatorName)
+        .filter(Boolean)
+        .join(", ");
+      message.warning(`Vui lòng chọn ngày thử nghiệm cho: ${missingNames}`);
+      return;
+    }
+
+    if (validIndicators.length === 0) {
       message.warning("Không có chỉ tiêu hợp lệ để gửi kết quả");
       return;
     }
 
+    const validIndicatorIds = validIndicators.map((v) => v.indicatorId);
     const selectedResults = results.filter((r) =>
       validIndicatorIds.includes(r.indicatorId)
     );
 
     setSubmitting(true);
     try {
+      // Lưu kết quả trước
       if (selectedResults.length > 0) {
         await testingService.saveResults(id, { results: selectedResults });
       }
 
+      // Gửi kết quả với testDate
       await testingService.submitResults(id, {
         sampleId,
-        indicatorIds: validIndicatorIds,
+        indicators: validIndicators.map((v) => ({
+          indicatorId: v.indicatorId,
+          testDate: v.testDate,
+        })),
       });
 
       // Optimistic update: cập nhật indicator testingStatus thành PendingApproval
@@ -416,7 +322,7 @@ const TestingDetail: React.FC = () => {
       await reloadData();
 
       message.success(
-        `Gửi kết quả thành công cho ${validIndicatorIds.length} chỉ tiêu`
+        `Gửi kết quả thành công cho ${validIndicators.length} chỉ tiêu`
       );
       // Clear selection sau khi thành công
       setSelectedIndicators((prev) => {
@@ -464,64 +370,6 @@ const TestingDetail: React.FC = () => {
     });
   };
 
-  const handleCheckInSingleIndicator = async (indicatorId: string) => {
-    if (!id || !detail) return;
-
-    let sampleId: string | null = null;
-    let indicator = null;
-    for (const sample of detail.samples) {
-      const found = sample.indicators.find((i) => i.id === indicatorId);
-      if (found) {
-        sampleId = sample.sampleId;
-        indicator = found;
-        break;
-      }
-    }
-
-    if (!sampleId || !indicator) return;
-
-    if (
-      indicator.testingStatus !== IndicatorTestingStatus.Todo &&
-      indicator.testingStatus !== IndicatorTestingStatus.Rejected
-    ) {
-      message.warning(
-        'Chỉ tiêu này không ở trạng thái "Cần làm" hoặc "Bị từ chối"'
-      );
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      await testingService.checkInIndicators(id, {
-        sampleId,
-        indicatorIds: [indicatorId],
-      });
-
-      // Optimistic update: cập nhật indicator testingStatus thành Testing
-      const now = new Date().toISOString();
-      updateIndicatorsOptimistically([indicatorId], {
-        testingStatus: IndicatorTestingStatus.Testing,
-        startDate: now,
-        canCheckIn: false,
-        canSubmit: true,
-      });
-
-      // Reload full data from server (avoid duplicating BE logic)
-      await reloadData();
-
-      message.success("Đã bắt đầu thực hiện chỉ tiêu");
-    } catch (error: any) {
-      console.error("Failed to check-in indicator:", error);
-      message.error(
-        error.response?.data?.error?.message || "Không thể thực hiện"
-      );
-      // Reload để sync lại với server nếu có lỗi
-      await loadDetail();
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const handleSubmitSingleIndicator = async (indicatorId: string) => {
     if (!id || !detail) return;
 
@@ -538,29 +386,42 @@ const TestingDetail: React.FC = () => {
 
     if (!sampleId || !indicator) return;
 
-    if (indicator.testingStatus !== IndicatorTestingStatus.Testing) {
-      message.warning('Chỉ tiêu này không ở trạng thái "Đang thí nghiệm"');
+    // Cho phép gửi khi trạng thái = Todo, Testing hoặc Rejected
+    if (
+      indicator.testingStatus !== IndicatorTestingStatus.Todo &&
+      indicator.testingStatus !== IndicatorTestingStatus.Testing &&
+      indicator.testingStatus !== IndicatorTestingStatus.Rejected
+    ) {
+      message.warning("Chỉ tiêu này không thể gửi kết quả");
       return;
     }
 
     const results = sampleResults.get(sampleId) || [];
     const editedResult = results.find((r) => r.indicatorId === indicatorId);
     const resultValue = editedResult?.result ?? indicator.result;
+    const testDate = editedResult?.testDate ?? indicator.testDate;
 
     if (!resultValue || resultValue.trim() === "") {
       message.warning("Vui lòng nhập kết quả trước khi gửi");
       return;
     }
 
+    if (!testDate) {
+      message.warning("Vui lòng chọn ngày thử nghiệm trước khi gửi");
+      return;
+    }
+
     setSubmitting(true);
     try {
+      // Lưu kết quả trước
       if (editedResult) {
         await testingService.saveResults(id, { results: [editedResult] });
       }
 
+      // Gửi kết quả với testDate
       await testingService.submitResults(id, {
         sampleId,
-        indicatorIds: [indicatorId],
+        indicators: [{ indicatorId, testDate }],
       });
 
       // Optimistic update: cập nhật indicator testingStatus thành PendingApproval
@@ -650,47 +511,6 @@ const TestingDetail: React.FC = () => {
     }
   };
 
-  // Handler for receiving sample
-  const handleReceiveSample = async (sampleId: string) => {
-    if (!id) return;
-
-    setSubmitting(true);
-    try {
-      await testingService.receiveSample(id, sampleId);
-
-      // Optimistic update: cập nhật sample isReceived
-      setDetail((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          samples: prev.samples.map((sample) =>
-            sample.sampleId === sampleId
-              ? {
-                  ...sample,
-                  isReceived: true,
-                  receivedDate: new Date().toISOString(),
-                }
-              : sample
-          ),
-        };
-      });
-
-      // Reload full data from server
-      await reloadData();
-
-      message.success("Đã nhận mẫu thành công");
-    } catch (error: any) {
-      console.error("Failed to receive sample:", error);
-      message.error(
-        error.response?.data?.error?.message || "Không thể nhận mẫu"
-      );
-      // Reload để sync lại với server nếu có lỗi
-      await loadDetail();
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   // Check if deadline is urgent (<=3 days)
   const isUrgent = detail?.requestCompletionDate
     ? (() => {
@@ -723,9 +543,7 @@ const TestingDetail: React.FC = () => {
       canPerformActions={canPerformActions}
       onBack={() => navigate("/testing")}
       onCollapseChange={setActiveKeys}
-      onCheckIn={handleCheckIn}
       onSubmitResults={handleSubmitResults}
-      onReceiveSample={handleReceiveSample}
       onResultsChange={handleResultsChange}
       onSelectionChange={handleSelectionChange}
       onImagesChange={handleImagesChange}
@@ -734,7 +552,6 @@ const TestingDetail: React.FC = () => {
         setHistoryModal({ visible: false, indicatorId: "", indicatorName: "" })
       }
       onSaveIndicator={handleSaveIndicator}
-      onCheckInIndicator={handleCheckInSingleIndicator}
       onSubmitIndicator={handleSubmitSingleIndicator}
       onUploadIndicatorImages={handleUploadIndicatorImages}
       onDeleteIndicatorImage={handleDeleteIndicatorImage}

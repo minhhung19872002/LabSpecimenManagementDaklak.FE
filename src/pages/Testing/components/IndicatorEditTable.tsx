@@ -8,6 +8,7 @@ import {
   Space,
   Checkbox,
   AutoComplete,
+  DatePicker,
 } from "antd";
 import StatusTag from "../../../components/common/StatusTag";
 import {
@@ -17,7 +18,6 @@ import {
   WarningOutlined,
   SyncOutlined,
   SendOutlined,
-  PlayCircleOutlined,
   StopOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
@@ -31,6 +31,7 @@ import {
   IndicatorImageDto,
 } from "../../../types/testing";
 import IndicatorImageCell from "../../../components/common/IndicatorImageCell";
+import dayjs from "dayjs";
 
 const { Text } = Typography;
 
@@ -51,7 +52,6 @@ interface IndicatorEditTableProps {
   onSelectionChange: (indicatorIds: string[]) => void;
   onShowRejectionHistory: (indicatorId: string, indicatorName: string) => void;
   onSaveIndicator: (indicatorId: string) => void;
-  onCheckInIndicator?: (indicatorId: string) => void;
   onSubmitIndicator?: (indicatorId: string) => void;
   onUploadIndicatorImages?: (indicatorId: string, files: File[]) => Promise<IndicatorImageDto[]>;
   onDeleteIndicatorImage?: (imageId: string) => Promise<void>;
@@ -68,7 +68,6 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
   onSelectionChange,
   onShowRejectionHistory,
   onSaveIndicator,
-  onCheckInIndicator,
   onSubmitIndicator,
   onUploadIndicatorImages,
   onDeleteIndicatorImage,
@@ -90,6 +89,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
         unit: ind.unit,
         result: ind.result,
         note: ind.note,
+        testDate: ind.testDate,
       });
     });
     setEditedResults(initialResults);
@@ -107,12 +107,21 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       methodId: undefined,
       unit: undefined,
       result: undefined,
+      testDate: undefined,
     };
     newResults.set(indicatorId, { ...current, [field]: value });
     setEditedResults(newResults);
 
     // Notify parent of changes
     onResultsChange(Array.from(newResults.values()));
+  };
+
+  const handleTestDateChange = (
+    indicatorId: string,
+    date: dayjs.Dayjs | null
+  ) => {
+    const dateStr = date ? date.format("YYYY-MM-DD") : undefined;
+    handleFieldChange(indicatorId, "testDate", dateStr);
   };
 
   // Handle checkbox selection
@@ -247,47 +256,39 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       render: (_, record) => {
         const currentValue =
           editedResults.get(record.id)?.result ?? record.result ?? "";
-        // Chỉ cho nhập kết quả khi:
+        // Cho phép nhập kết quả khi:
         // - Có quyền từ Permission Matrix (canPerformActions)
         // - Có quyền edit từ server (canEdit)
-        // - Trạng thái = "Đang thử nghiệm" (Testing)
+        // - Trạng thái = Todo, Testing hoặc Rejected (cho phép nhập ngay, không cần check-in)
 
         const isDisabled =
           !canPerformActions ||
           !record.canEdit ||
-          record.testingStatus !== IndicatorTestingStatus.Testing;
-
-        // Tooltip content for disabled state
-        const tooltipContent =
-          record.testingStatus === IndicatorTestingStatus.Todo
-            ? 'Cần ấn "Thực hiện" trước khi nhập kết quả'
-            : record.testingStatus === IndicatorTestingStatus.Rejected
-            ? 'Cần ấn "Thực hiện" để thử nghiệm lại'
-            : undefined;
+          (record.testingStatus !== IndicatorTestingStatus.Todo &&
+            record.testingStatus !== IndicatorTestingStatus.Testing &&
+            record.testingStatus !== IndicatorTestingStatus.Rejected);
 
         return (
-          <Tooltip title={tooltipContent}>
-            <AutoComplete
-              value={currentValue}
-              options={resultOptions}
-              onChange={(value) => {
-                handleFieldChange(record.id, "result", value);
-              }}
-              onBlur={() => {
-                onSaveIndicator(record.id);
-              }}
-              disabled={isDisabled}
-              placeholder={isDisabled ? "-" : "Nhập KQ"}
-              style={{
-                width: "100%",
-                backgroundColor: isDisabled ? "#f5f5f5" : undefined,
-              }}
-              filterOption={(inputValue, option) =>
-                option?.value.toUpperCase().includes(inputValue.toUpperCase()) ??
-                false
-              }
-            />
-          </Tooltip>
+          <AutoComplete
+            value={currentValue}
+            options={resultOptions}
+            onChange={(value) => {
+              handleFieldChange(record.id, "result", value);
+            }}
+            onBlur={() => {
+              onSaveIndicator(record.id);
+            }}
+            disabled={isDisabled}
+            placeholder={isDisabled ? "-" : "Nhập KQ"}
+            style={{
+              width: "100%",
+              backgroundColor: isDisabled ? "#f5f5f5" : undefined,
+            }}
+            filterOption={(inputValue, option) =>
+              option?.value.toUpperCase().includes(inputValue.toUpperCase()) ??
+              false
+            }
+          />
         );
       },
     },
@@ -296,11 +297,13 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       key: "images",
       width: 120,
       render: (_, record) => {
-        // Chỉ cho phép upload khi có quyền + trạng thái = Testing
+        // Cho phép upload khi có quyền + trạng thái = Todo, Testing hoặc Rejected
         const canUpload =
           canPerformActions &&
           record.canEdit &&
-          record.testingStatus === IndicatorTestingStatus.Testing &&
+          (record.testingStatus === IndicatorTestingStatus.Todo ||
+            record.testingStatus === IndicatorTestingStatus.Testing ||
+            record.testingStatus === IndicatorTestingStatus.Rejected) &&
           !!onUploadIndicatorImages;
 
         return (
@@ -319,47 +322,6 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       },
     },
     {
-      title: "Ghi chú",
-      key: "note",
-      width: 200,
-      render: (_, record) => {
-        const currentValue =
-          editedResults.get(record.id)?.note ?? record.note ?? "";
-
-        // Enable khi: có quyền Permission Matrix + quyền edit từ server + trạng thái = Testing
-        const isDisabled =
-          !canPerformActions ||
-          !record.canEdit ||
-          record.testingStatus !== IndicatorTestingStatus.Testing;
-
-        // Tooltip content for disabled state
-        const tooltipContent =
-          record.testingStatus === IndicatorTestingStatus.Todo
-            ? 'Cần ấn "Thực hiện" trước khi nhập ghi chú'
-            : record.testingStatus === IndicatorTestingStatus.Rejected
-            ? 'Cần ấn "Thực hiện" để thử nghiệm lại'
-            : undefined;
-
-        return (
-          <Tooltip title={tooltipContent}>
-            <Input
-              value={currentValue}
-              onChange={(e) =>
-                handleFieldChange(record.id, "note", e.target.value)
-              }
-              onBlur={() => {
-                onSaveIndicator(record.id);
-              }}
-              disabled={isDisabled}
-              placeholder={isDisabled ? "-" : "Nhập ghi chú"}
-              maxLength={500}
-              style={isDisabled ? { backgroundColor: "#f5f5f5" } : undefined}
-            />
-          </Tooltip>
-        );
-      },
-    },
-    {
       title: "Ngày giao việc",
       dataIndex: "assignedDate",
       key: "assignedDate",
@@ -367,11 +329,41 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       render: (date: string) => formatDate(date),
     },
     {
-      title: "Ngày bắt đầu TN",
-      dataIndex: "startDate",
-      key: "startDate",
-      width: 120,
-      render: (date: string) => formatDate(date),
+      title: "Ngày thử nghiệm",
+      key: "testDate",
+      width: 140,
+      render: (_, record) => {
+        // Chỉ cho chọn ngày khi có quyền thao tác và trạng thái cho phép
+        const isDisabled =
+          !canPerformActions ||
+          !record.canEdit ||
+          record.testingStatus === IndicatorTestingStatus.Done ||
+          record.testingStatus === IndicatorTestingStatus.PendingApproval ||
+          record.testingStatus === IndicatorTestingStatus.Cancelled;
+
+        // Nếu indicator bị từ chối, không cho chọn ngày trước hôm nay
+        const disabledDate =
+          record.testingStatus === IndicatorTestingStatus.Rejected
+            ? (current: dayjs.Dayjs) =>
+                current && current < dayjs().startOf("day")
+            : undefined;
+
+        // Lấy giá trị testDate từ editedResults hoặc từ record
+        const currentTestDate = editedResults.get(record.id)?.testDate;
+        const dateValue = currentTestDate ? dayjs(currentTestDate) : null;
+
+        return (
+          <DatePicker
+            value={dateValue}
+            onChange={(date) => handleTestDateChange(record.id, date)}
+            disabled={isDisabled}
+            disabledDate={disabledDate}
+            format="DD/MM/YYYY"
+            placeholder="Chọn ngày"
+            style={{ width: "100%" }}
+          />
+        );
+      },
     },
     {
       title: "Ngày gửi KQ",
@@ -443,15 +435,16 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
         const currentResult =
           editedResults.get(record.id)?.result ?? record.result;
         const hasResult = currentResult && currentResult.trim() !== "";
+        const currentTestDate = editedResults.get(record.id)?.testDate;
+        const hasTestDate = !!currentTestDate;
 
-        // Sử dụng canCheckIn từ API response
-        // Backend đã tính toán đầy đủ các điều kiện (quyền, status, TestDate)
-        const canCheckIn = record.canCheckIn;
-
-        // canSubmit: kết hợp điều kiện từ API (quyền, status, TestDate) với hasResult từ form
-        // Backend trả về canSubmit=true nếu có result trong DB, nhưng user có thể đang edit
+        // Có thể gửi duyệt khi: có kết quả + có ngày thử nghiệm + trạng thái cho phép
         const canSubmit =
-          status === IndicatorTestingStatus.Testing && hasResult;
+          (status === IndicatorTestingStatus.Todo ||
+            status === IndicatorTestingStatus.Testing ||
+            status === IndicatorTestingStatus.Rejected) &&
+          hasResult &&
+          hasTestDate;
 
         // Không hiện gì nếu đã Done, PendingApproval, hoặc Cancelled
         if (
@@ -464,22 +457,6 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
 
         return (
           <Space size={4}>
-            {canCheckIn && onCheckInIndicator && (
-              <Tooltip title="Bắt đầu thực hiện thử nghiệm">
-                <Button
-                  type="default"
-                  size="small"
-                  icon={<PlayCircleOutlined />}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onCheckInIndicator(record.id);
-                  }}
-                  disabled={submitting}
-                >
-                  Thực hiện
-                </Button>
-              </Tooltip>
-            )}
             {canSubmit && onSubmitIndicator && (
               <Tooltip title="Gửi kết quả cho QLKT duyệt">
                 <Button
@@ -496,9 +473,14 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
                 </Button>
               </Tooltip>
             )}
-            {status === IndicatorTestingStatus.Testing && !hasResult && (
+            {!hasResult && (
               <Text type="secondary" style={{ fontSize: 12 }}>
                 Nhập KQ để gửi
+              </Text>
+            )}
+            {hasResult && !hasTestDate && (
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Chọn ngày TN
               </Text>
             )}
           </Space>
