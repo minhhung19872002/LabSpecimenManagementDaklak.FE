@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Modal, DatePicker, message, Space, Typography } from 'antd';
-import dayjs, { Dayjs } from 'dayjs';
+import type { Dayjs } from 'dayjs';
 import { receiptService } from '../../../services/receiptService';
 
 const { RangePicker } = DatePicker;

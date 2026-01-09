@@ -17,7 +17,6 @@ import StatusTag from "../../components/common/StatusTag";
 import {
   ArrowLeftOutlined,
   PrinterOutlined,
-  SendOutlined,
   SafetyCertificateOutlined,
   CheckCircleOutlined,
   CheckOutlined,
@@ -25,7 +24,6 @@ import {
 } from "@ant-design/icons";
 import { qualityManagementService } from "../../services/qualityManagementService";
 import { formatDate } from "../../utils/formatters";
-import { getApiErrorMessage } from "../../utils/errorHandler";
 import {
   QualityManagementTaskDto,
   QualityManagementIndicatorDto,
@@ -65,7 +63,6 @@ const QualityManagementDetail: React.FC = () => {
   const [bulkRejectModalVisible, setBulkRejectModalVisible] = useState(false);
 
   // Action states
-  const [sendingResult, setSendingResult] = useState(false);
   const [bulkApproving, setBulkApproving] = useState(false);
   const [bulkRejecting, setBulkRejecting] = useState(false);
 
@@ -272,26 +269,6 @@ const QualityManagementDetail: React.FC = () => {
     setPrintModalVisible(true);
   };
 
-  const handleConfirmHandover = async () => {
-    if (!task) return;
-    setSendingResult(true);
-    try {
-      await qualityManagementService.confirmHandover(task.id);
-
-      // Reload full data from server (avoid duplicating BE logic)
-      await reloadData();
-
-      message.success("Đã xác nhận giao BPGN");
-    } catch (error: unknown) {
-      console.error("Error confirming handover:", error);
-      message.error(getApiErrorMessage(error, "Không thể xác nhận giao BPGN"));
-      // Reload để sync lại với server nếu có lỗi
-      await loadData();
-    } finally {
-      setSendingResult(false);
-    }
-  };
-
   // Computed
   const indicators = task?.indicators || [];
   const approvedCount = indicators.filter(
@@ -308,8 +285,6 @@ const QualityManagementDetail: React.FC = () => {
   // Button states
   // In KQ: chỉ khi có chỉ tiêu đã duyệt và status >= PendingPublish
   const canPrint = approvedCount > 0 && task?.status !== QualityManagementStatus.PendingApproval && task?.status !== QualityManagementStatus.Rejected;
-  // Xác nhận giao BPGN: chỉ khi đã phát hành (1 phần hoặc full)
-  const canConfirmHandover = task?.status === QualityManagementStatus.PartialPublished || task?.status === QualityManagementStatus.FullyPublished;
 
   // Status tag
   const getStatusTag = (status: QualityManagementStatus) => (
@@ -375,15 +350,6 @@ const QualityManagementDetail: React.FC = () => {
                 disabled={!canPrint}
               >
                 In KQ Hỗn hợp
-              </Button>
-              <Button
-                type="primary"
-                icon={<SendOutlined />}
-                onClick={handleConfirmHandover}
-                disabled={!canConfirmHandover}
-                loading={sendingResult}
-              >
-                Xác nhận giao BPGN
               </Button>
             </Space>
           </Col>
