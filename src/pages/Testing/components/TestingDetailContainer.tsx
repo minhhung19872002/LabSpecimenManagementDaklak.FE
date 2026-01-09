@@ -54,7 +54,7 @@ interface TestingDetailContainerProps {
   ) => void;
   onShowRejectionHistory: (indicatorId: string, indicatorName: string) => void;
   onCloseHistoryModal: () => void;
-  onSaveIndicator: (indicatorId: string) => void;
+  onSaveIndicator: (indicatorId: string, result?: SaveIndicatorResultDto) => void;
   onSubmitIndicator: (indicatorId: string) => void;
   onUploadIndicatorImages?: (indicatorId: string, files: File[]) => Promise<IndicatorImageDto[]>;
   onDeleteIndicatorImage?: (imageId: string) => Promise<void>;

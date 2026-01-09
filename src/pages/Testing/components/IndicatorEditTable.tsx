@@ -51,7 +51,7 @@ interface IndicatorEditTableProps {
   onResultsChange: (results: SaveIndicatorResultDto[]) => void;
   onSelectionChange: (indicatorIds: string[]) => void;
   onShowRejectionHistory: (indicatorId: string, indicatorName: string) => void;
-  onSaveIndicator: (indicatorId: string) => void;
+  onSaveIndicator: (indicatorId: string, result?: SaveIndicatorResultDto) => void;
   onSubmitIndicator?: (indicatorId: string) => void;
   onUploadIndicatorImages?: (indicatorId: string, files: File[]) => Promise<IndicatorImageDto[]>;
   onDeleteIndicatorImage?: (imageId: string) => Promise<void>;
@@ -121,7 +121,27 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     date: dayjs.Dayjs | null
   ) => {
     const dateStr = date ? date.format("YYYY-MM-DD") : undefined;
-    handleFieldChange(indicatorId, "testDate", dateStr);
+
+    // Build the updated result with new testDate
+    const current = editedResults.get(indicatorId) || {
+      indicatorId,
+      methodId: undefined,
+      unit: undefined,
+      result: undefined,
+      testDate: undefined,
+    };
+    const updatedResult: SaveIndicatorResultDto = { ...current, testDate: dateStr };
+
+    // Update local state
+    const newResults = new Map(editedResults);
+    newResults.set(indicatorId, updatedResult);
+    setEditedResults(newResults);
+
+    // Notify parent of changes
+    onResultsChange(Array.from(newResults.values()));
+
+    // Auto-save with the new value directly (don't rely on state)
+    onSaveIndicator(indicatorId, updatedResult);
   };
 
   // Handle checkbox selection
