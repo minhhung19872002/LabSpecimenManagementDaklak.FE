@@ -1,4 +1,5 @@
-import { Tag } from "antd";
+import { Tag, Button, Tooltip } from "antd";
+import { DollarOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import {
@@ -9,7 +10,11 @@ import {
 } from "../../../types/receipt";
 import { formatCurrency } from "../../../utils/formatters";
 
-export const getColumns = (): ColumnsType<ReceiptDto> => [
+interface GetColumnsOptions {
+  onConfirmPayment?: (testRequestId: string) => void;
+}
+
+export const getColumns = (options?: GetColumnsOptions): ColumnsType<ReceiptDto> => [
   {
     title: "Số hợp đồng",
     dataIndex: "contractNumber",
@@ -67,5 +72,38 @@ export const getColumns = (): ColumnsType<ReceiptDto> => [
         {ReceiptStatusLabels[status]}
       </Tag>
     ),
+  },
+  {
+    title: "Thao tác",
+    key: "actions",
+    width: 130,
+    align: "center",
+    fixed: "right",
+    render: (_: unknown, record: ReceiptDto) => {
+      // Chỉ hiển thị button khi status là PendingPayment hoặc PartiallyPaid
+      const canConfirmPayment =
+        record.status === ReceiptStatus.PendingPayment ||
+        record.status === ReceiptStatus.PartiallyPaid;
+
+      if (!canConfirmPayment) {
+        return null;
+      }
+
+      return (
+        <Tooltip title="Xác nhận thanh toán">
+          <Button
+            type="primary"
+            size="small"
+            icon={<DollarOutlined />}
+            onClick={(e) => {
+              e.stopPropagation();
+              options?.onConfirmPayment?.(record.testRequestId);
+            }}
+          >
+            Thanh toán
+          </Button>
+        </Tooltip>
+      );
+    },
   },
 ];

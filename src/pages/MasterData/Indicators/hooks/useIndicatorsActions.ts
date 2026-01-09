@@ -62,7 +62,7 @@ export const useIndicatorsActions = ({
   // Handle Group CRUD
   const handleCreateGroup = (groupForm: UseFormReturn<IndicatorGroupFormData>) => {
     setEditingGroup(null);
-    groupForm.reset({ name: "", isActive: true });
+    groupForm.reset({ name: "", isActive: true, laboratoryId: undefined });
     setGroupModalOpen(true);
   };
 
@@ -71,7 +71,11 @@ export const useIndicatorsActions = ({
     groupForm: UseFormReturn<IndicatorGroupFormData>
   ) => {
     setEditingGroup(group);
-    groupForm.reset({ name: group.name, isActive: group.isActive });
+    groupForm.reset({
+      name: group.name,
+      isActive: group.isActive,
+      laboratoryId: group.laboratoryId || undefined,
+    });
     setGroupModalOpen(true);
   };
 

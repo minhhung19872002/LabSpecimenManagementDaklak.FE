@@ -79,6 +79,7 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
   }, [visible]);
 
   // Initialize indicator states when modal opens
+  // Auto-fill laboratoryId from indicator's existing value or from indicator group's default laboratory
   useEffect(() => {
     if (visible && testRequest?.samples) {
       const states: Record<string, IndicatorState> = {};
@@ -89,9 +90,13 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
         panelKeys.push(sample.id);
 
         sample.indicators?.forEach((indicator) => {
+          // Priority: existing laboratoryId > indicatorGroupLaboratoryId > undefined
+          const autoFilledLabId =
+            indicator.laboratoryId || indicator.indicatorGroupLaboratoryId || undefined;
+
           states[indicator.id] = {
             sampleIndicatorId: indicator.id,
-            laboratoryId: indicator.laboratoryId || undefined,
+            laboratoryId: autoFilledLabId,
             requestDate: indicator.requestDate
               ? dayjs(indicator.requestDate)
               : undefined,

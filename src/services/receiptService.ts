@@ -68,4 +68,15 @@ export const receiptService = {
     );
     return response.data;
   },
+
+  // Export payment history to Excel
+  exportPaymentHistory: async (params: {
+    fromDate?: string;
+    toDate?: string;
+  }): Promise<Blob> => {
+    const response = await api.download(`${BASE_URL}/export-payment-history`, {
+      params,
+    });
+    return response.data;
+  },
 };

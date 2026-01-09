@@ -3,12 +3,15 @@ import { message } from "antd";
 import {
   indicatorGroupService,
   indicatorService,
+  laboratoryService,
+  LaboratoryDto,
 } from "../../../../services/masterDataService";
 import { IndicatorGroupDto, IndicatorDto, GroupedIndicatorData } from "../types";
 
 export const useIndicatorsData = () => {
   const [groups, setGroups] = useState<IndicatorGroupDto[]>([]);
   const [indicators, setIndicators] = useState<IndicatorDto[]>([]);
+  const [laboratories, setLaboratories] = useState<LaboratoryDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
@@ -24,17 +27,27 @@ export const useIndicatorsData = () => {
     }));
   }, [groups]);
 
+  // Computed options for Laboratory Select (Khoa phòng thực hiện)
+  const laboratoryOptions = useMemo(() => {
+    return (laboratories || []).map((lab) => ({
+      value: lab.id,
+      label: lab.name + (!lab.isActive ? " (Ngừng)" : ""),
+    }));
+  }, [laboratories]);
+
   // Fetch data
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [groupsData, indicatorsData] = await Promise.all([
+      const [groupsData, indicatorsData, laboratoriesData] = await Promise.all([
         indicatorGroupService.getWithCount(),
         indicatorService.getList({ maxResultCount: 1000 }),
+        laboratoryService.getActive(),
       ]);
       console.log("groupsData: ", groupsData);
       setGroups(groupsData || []);
       setIndicators(indicatorsData?.items || []);
+      setLaboratories(laboratoriesData || []);
       // Expand all groups by default
       setExpandedRowKeys((groupsData || []).map((g) => g.id));
     } catch (error) {
@@ -42,6 +55,7 @@ export const useIndicatorsData = () => {
       message.error("Không thể tải dữ liệu chỉ tiêu");
       setGroups([]);
       setIndicators([]);
+      setLaboratories([]);
     } finally {
       setLoading(false);
     }
@@ -76,17 +90,20 @@ export const useIndicatorsData = () => {
     // State
     groups,
     indicators,
+    laboratories,
     loading,
     searchText,
     expandedRowKeys,
     selectedRowKeys,
     batchLoading,
     groupOptions,
+    laboratoryOptions,
     filteredIndicators,
     groupedData,
     // Setters
     setGroups,
     setIndicators,
+    setLaboratories,
     setLoading,
     setSearchText,
     setExpandedRowKeys,

@@ -246,6 +246,8 @@ export interface TestRequestSampleIndicatorDto {
   indicatorCode?: string;
   indicatorName?: string;
   indicatorGroupName?: string;
+  /** Khoa phòng mặc định của nhóm chỉ tiêu (để auto-fill khi gửi QLKT) */
+  indicatorGroupLaboratoryId?: string;
   unitPrice: number;
   notes?: string;
   laboratoryId?: string;
