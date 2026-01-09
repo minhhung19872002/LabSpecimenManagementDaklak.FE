@@ -13,7 +13,7 @@ import {
 import StatusTag from "../../../components/common/StatusTag";
 import type { TableRowSelection } from "antd/es/table/interface";
 import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
-import { formatDate } from "../../../utils/formatters";
+import { formatDate, parseResultToNumber } from "../../../utils/formatters";
 import {
   LaboratoryTaskIndicatorDto,
   IndicatorApprovalStatus,
@@ -163,26 +163,26 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     if (!comparisonOperator || !allowedLimit) return null;
     if (!result) return null;
 
-    // Parse result to number (default to 0 if not a number)
-    const resultNum = parseFloat(result);
-    const resultValue = isNaN(resultNum) ? 0 : resultNum;
+    // Parse result to number using parseResultToNumber (supports scientific notation like "2,0 x 10^2")
+    const resultValue = parseResultToNumber(result);
+    if (resultValue === null) return null;
 
-    // Parse limit to number
-    const limitNum = parseFloat(allowedLimit);
-    if (isNaN(limitNum)) return null;
+    // Parse limit to number (also supports scientific notation)
+    const limitValue = parseResultToNumber(allowedLimit);
+    if (limitValue === null) return null;
 
     // Compare based on operator
     switch (comparisonOperator) {
       case "<=":
-        return resultValue <= limitNum ? "pass" : "fail";
+        return resultValue <= limitValue ? "pass" : "fail";
       case ">=":
-        return resultValue >= limitNum ? "pass" : "fail";
+        return resultValue >= limitValue ? "pass" : "fail";
       case "<":
-        return resultValue < limitNum ? "pass" : "fail";
+        return resultValue < limitValue ? "pass" : "fail";
       case ">":
-        return resultValue > limitNum ? "pass" : "fail";
+        return resultValue > limitValue ? "pass" : "fail";
       case "=":
-        return resultValue === limitNum ? "pass" : "fail";
+        return resultValue === limitValue ? "pass" : "fail";
       default:
         return null;
     }
