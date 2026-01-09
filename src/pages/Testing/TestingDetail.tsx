@@ -196,16 +196,21 @@ const TestingDetail: React.FC = () => {
     setSelectedIndicators(newSelected);
   };
 
-  const handleSaveIndicator = async (indicatorId: string) => {
+  const handleSaveIndicator = async (indicatorId: string, directResult?: SaveIndicatorResultDto) => {
     if (!id) return;
 
-    let indicatorResult: SaveIndicatorResultDto | undefined;
-    sampleResults.forEach((results) => {
-      const found = results.find((r) => r.indicatorId === indicatorId);
-      if (found) {
-        indicatorResult = found;
-      }
-    });
+    // Use directResult if provided (for immediate save like testDate change)
+    // Otherwise, look up from sampleResults state
+    let indicatorResult: SaveIndicatorResultDto | undefined = directResult;
+
+    if (!indicatorResult) {
+      sampleResults.forEach((results) => {
+        const found = results.find((r) => r.indicatorId === indicatorId);
+        if (found) {
+          indicatorResult = found;
+        }
+      });
+    }
 
     if (!indicatorResult) return;
 
