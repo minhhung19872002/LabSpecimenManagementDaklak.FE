@@ -171,6 +171,7 @@ export interface TestingIndicatorDto {
   entryDate?: string;
   assignedDate?: string;
   startDate?: string;           // Ngày bắt đầu TN (khi ấn "Thực hiện")
+  testDate?: string;            // Ngày thử nghiệm (do KTV chọn)
   submitDate?: string;          // Ngày gửi kết quả cho QLKT
   completionDate?: string;      // Ngày duyệt
   approvalStatus: IndicatorApprovalStatus;
@@ -192,6 +193,7 @@ export interface SaveIndicatorResultDto {
   unit?: string;
   result?: string;
   note?: string;
+  testDate?: string;  // Ngày thử nghiệm
 }
 
 // Save Results Input
@@ -210,10 +212,16 @@ export interface CheckInIndicatorsInput {
   indicatorIds: string[];
 }
 
+// Submit Indicator Input
+export interface SubmitIndicatorInput {
+  indicatorId: string;
+  testDate: string;
+}
+
 // Submit Results Input
 export interface SubmitResultsInput {
   sampleId: string;
-  indicatorIds: string[];
+  indicators: SubmitIndicatorInput[];
 }
 
 // Upload Sample Testing Image Input

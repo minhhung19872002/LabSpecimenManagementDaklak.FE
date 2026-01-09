@@ -44,9 +44,7 @@ interface TestingDetailContainerProps {
   canPerformActions?: boolean;
   onBack: () => void;
   onCollapseChange: (keys: string[]) => void;
-  onCheckIn: (sampleId: string) => void;
   onSubmitResults: (sampleId: string) => void;
-  onReceiveSample: (sampleId: string) => void;
   onResultsChange: (sampleId: string, results: SaveIndicatorResultDto[]) => void;
   onSelectionChange: (sampleId: string, indicatorIds: string[]) => void;
   onImagesChange: (
@@ -57,7 +55,6 @@ interface TestingDetailContainerProps {
   onShowRejectionHistory: (indicatorId: string, indicatorName: string) => void;
   onCloseHistoryModal: () => void;
   onSaveIndicator: (indicatorId: string) => void;
-  onCheckInIndicator: (indicatorId: string) => void;
   onSubmitIndicator: (indicatorId: string) => void;
   onUploadIndicatorImages?: (indicatorId: string, files: File[]) => Promise<IndicatorImageDto[]>;
   onDeleteIndicatorImage?: (imageId: string) => Promise<void>;
@@ -77,16 +74,13 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
   canPerformActions = true,
   onBack,
   onCollapseChange,
-  onCheckIn,
   onSubmitResults,
-  onReceiveSample,
   onResultsChange,
   onSelectionChange,
   onImagesChange,
   onShowRejectionHistory,
   onCloseHistoryModal,
   onSaveIndicator,
-  onCheckInIndicator,
   onSubmitIndicator,
   onUploadIndicatorImages,
   onDeleteIndicatorImage,
@@ -148,60 +142,52 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
         onChange={(keys) => onCollapseChange(keys as string[])}
         expandIconPosition="start"
       >
-        {sortedSamples.map((sample) => {
-          // Chỉ cho phép thao tác khi đã nhận mẫu
-          const canPerformActionsForSample = canPerformActions && sample.isReceived;
-
-          return (
-            <Panel
-              header={
-                <SamplePanelHeader
-                  sample={sample}
-                  selectedIndicatorIds={
-                    selectedIndicators.get(sample.sampleId) || []
-                  }
-                  submitting={submitting}
-                  canPerformActions={canPerformActions}
-                  onCheckIn={onCheckIn}
-                  onSubmitResults={onSubmitResults}
-                  onReceiveSample={onReceiveSample}
-                />
-              }
-              key={sample.sampleId}
-            >
-              {/* Images section - disable khi chưa nhận mẫu */}
-              <SampleImagesRow
-                taskId={taskId}
+        {sortedSamples.map((sample) => (
+          <Panel
+            header={
+              <SamplePanelHeader
                 sample={sample}
-                onImagesChange={onImagesChange}
-                canUpload={canPerformActionsForSample}
-              />
-              {/* Indicators table - disable khi chưa nhận mẫu */}
-              <IndicatorEditTable
-                indicators={sample.indicators}
                 selectedIndicatorIds={
                   selectedIndicators.get(sample.sampleId) || []
                 }
-                isUrgent={isUrgent}
                 submitting={submitting}
-                resultOptions={resultOptions}
-                canPerformActions={canPerformActionsForSample}
-                onResultsChange={(results) =>
-                  onResultsChange(sample.sampleId, results)
-                }
-                onSelectionChange={(ids) =>
-                  onSelectionChange(sample.sampleId, ids)
-                }
-                onShowRejectionHistory={onShowRejectionHistory}
-                onSaveIndicator={onSaveIndicator}
-                onCheckInIndicator={onCheckInIndicator}
-                onSubmitIndicator={onSubmitIndicator}
-                onUploadIndicatorImages={onUploadIndicatorImages}
-                onDeleteIndicatorImage={onDeleteIndicatorImage}
+                canPerformActions={canPerformActions}
+                onSubmitResults={onSubmitResults}
               />
-            </Panel>
-          );
-        })}
+            }
+            key={sample.sampleId}
+          >
+            {/* Images section */}
+            <SampleImagesRow
+              taskId={taskId}
+              sample={sample}
+              onImagesChange={onImagesChange}
+              canUpload={canPerformActions}
+            />
+            {/* Indicators table */}
+            <IndicatorEditTable
+              indicators={sample.indicators}
+              selectedIndicatorIds={
+                selectedIndicators.get(sample.sampleId) || []
+              }
+              isUrgent={isUrgent}
+              submitting={submitting}
+              resultOptions={resultOptions}
+              canPerformActions={canPerformActions}
+              onResultsChange={(results) =>
+                onResultsChange(sample.sampleId, results)
+              }
+              onSelectionChange={(ids) =>
+                onSelectionChange(sample.sampleId, ids)
+              }
+              onShowRejectionHistory={onShowRejectionHistory}
+              onSaveIndicator={onSaveIndicator}
+              onSubmitIndicator={onSubmitIndicator}
+              onUploadIndicatorImages={onUploadIndicatorImages}
+              onDeleteIndicatorImage={onDeleteIndicatorImage}
+            />
+          </Panel>
+        ))}
       </Collapse>
 
       {/* Rejection History Modal */}
