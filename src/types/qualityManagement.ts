@@ -127,6 +127,8 @@ export interface QualityManagementIndicatorDto {
   standardId?: string;
   standardName?: string;
   referenceLimit?: string;
+  comparisonOperator?: string;  // Ký hiệu so sánh (<=, >=, <, >, =)
+  allowedLimit?: string;  // Giới hạn cho phép
   approvalStatus: QualityIndicatorApprovalStatus;
   rejectionReason?: string;
   isResultSent: boolean;  // DEPRECATED

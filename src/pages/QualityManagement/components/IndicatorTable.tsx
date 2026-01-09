@@ -220,10 +220,14 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       },
       {
         title: "Giới hạn",
-        dataIndex: "referenceLimit",
-        key: "referenceLimit",
+        key: "limit",
         width: 120,
-        render: (text: string) => text || "-",
+        render: (_, record) => {
+          if (record.comparisonOperator && record.allowedLimit) {
+            return `${record.comparisonOperator} ${record.allowedLimit}`;
+          }
+          return record.referenceLimit || "-";
+        },
       },
       {
         title: "Trạng thái",
