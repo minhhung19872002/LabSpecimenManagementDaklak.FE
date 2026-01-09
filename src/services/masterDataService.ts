@@ -39,6 +39,7 @@ export interface SpecimenTypeDto {
   description?: string;
   isActive: boolean;
   sortOrder: number;
+  indicatorCount: number;
   creationTime: string;
 }
 
@@ -48,6 +49,25 @@ export interface CreateUpdateSpecimenTypeDto {
   description?: string;
   isActive: boolean;
   sortOrder?: number;
+}
+
+export interface SpecimenTypeIndicatorDto {
+  id: string;
+  specimenTypeId: string;
+  indicatorId: string;
+  indicatorCode: string;
+  indicatorName: string;
+  indicatorGroupName?: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export interface SpecimenTypeWithIndicatorsDto extends SpecimenTypeDto {
+  indicators: SpecimenTypeIndicatorDto[];
+}
+
+export interface AddIndicatorsToSpecimenTypeDto {
+  indicatorIds: string[];
 }
 
 // TestMethod
@@ -377,6 +397,29 @@ export const specimenTypeService = {
   getActive: async (): Promise<PagedResultDto<SpecimenTypeDto>> => {
     const response = await api.get<SpecimenTypeDto[]>(`${SPECIMEN_TYPE_URL}/active`);
     return { items: response.data, totalCount: response.data.length };
+  },
+  // Indicator management methods
+  getWithIndicators: async (): Promise<SpecimenTypeWithIndicatorsDto[]> => {
+    const response = await api.get<SpecimenTypeWithIndicatorsDto[]>(`${SPECIMEN_TYPE_URL}/with-indicators`);
+    return response.data;
+  },
+  getOneWithIndicators: async (id: string): Promise<SpecimenTypeWithIndicatorsDto> => {
+    const response = await api.get<SpecimenTypeWithIndicatorsDto>(`${SPECIMEN_TYPE_URL}/${id}/with-indicators`);
+    return response.data;
+  },
+  getIndicators: async (id: string): Promise<SpecimenTypeIndicatorDto[]> => {
+    const response = await api.get<SpecimenTypeIndicatorDto[]>(`${SPECIMEN_TYPE_URL}/${id}/indicators`);
+    return response.data;
+  },
+  addIndicators: async (id: string, data: AddIndicatorsToSpecimenTypeDto): Promise<void> => {
+    await api.post(`${SPECIMEN_TYPE_URL}/${id}/indicators`, data);
+  },
+  removeIndicator: async (id: string, indicatorId: string): Promise<void> => {
+    await api.delete(`${SPECIMEN_TYPE_URL}/${id}/indicators/${indicatorId}`);
+  },
+  toggleIndicatorActive: async (id: string, indicatorId: string): Promise<SpecimenTypeIndicatorDto> => {
+    const response = await api.post<SpecimenTypeIndicatorDto>(`${SPECIMEN_TYPE_URL}/${id}/indicators/${indicatorId}/toggle-active`);
+    return response.data;
   },
 };
 
