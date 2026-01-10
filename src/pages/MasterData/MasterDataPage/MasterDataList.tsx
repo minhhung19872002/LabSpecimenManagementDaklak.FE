@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState } from "react";
 import { Card, Button, Space, Tag, Alert, Tabs, Form } from "antd";
 import {
   PlusOutlined,
@@ -15,13 +15,13 @@ import TestMethodsTab from "../TestMethods";
 import StandardsTab from "../Standards";
 import TestResultValuesTab from "../TestResultValues";
 import NotesTab from "../Notes";
+import SpecimenTypesTab from "../SpecimenTypes";
 import { useMasterDataState } from "./hooks";
 import { useMasterDataActions } from "./hooks/useMasterDataActions";
 import {
   MasterDataTable,
   MasterDataModal,
   StatisticsCards,
-  SpecimenTypeIndicatorModal,
 } from "./components";
 import {
   categoryLabels,
@@ -29,7 +29,6 @@ import {
   getColumns,
   getStatCount,
 } from "./constants";
-import { SpecimenTypeWithIndicatorsDto } from "../../../services/masterDataService";
 import { MasterDataItem } from "./types";
 
 const MasterDataList: React.FC = () => {
@@ -89,24 +88,7 @@ const MasterDataList: React.FC = () => {
   const [form] = Form.useForm();
   const [testMethodsRefreshKey, setTestMethodsRefreshKey] = useState(0);
   const [standardsRefreshKey, setStandardsRefreshKey] = useState(0);
-
-  // State for SpecimenType Indicator Modal
-  const [indicatorModalOpen, setIndicatorModalOpen] = useState(false);
-  const [selectedSpecimenType, setSelectedSpecimenType] =
-    useState<SpecimenTypeWithIndicatorsDto | null>(null);
-
-  // Handle manage indicators for specimen type
-  const handleManageIndicators = useCallback((record: MasterDataItem) => {
-    // Cast to SpecimenTypeWithIndicatorsDto (indicators will be loaded by modal)
-    setSelectedSpecimenType(record as SpecimenTypeWithIndicatorsDto);
-    setIndicatorModalOpen(true);
-  }, []);
-
-  // Handle indicator modal data change
-  const handleIndicatorDataChange = useCallback(() => {
-    fetchCategoryData(activeCategory, true);
-    fetchStatistics();
-  }, [activeCategory, fetchCategoryData, fetchStatistics]);
+  const [specimenTypesRefreshKey, setSpecimenTypesRefreshKey] = useState(0);
 
   // Memoized columns
   const columns = useMemo(
@@ -115,10 +97,9 @@ const MasterDataList: React.FC = () => {
         activeCategory,
         users,
         (record) => handleEdit(record, form),
-        handleDelete,
-        handleManageIndicators
+        handleDelete
       ),
-    [activeCategory, users, handleEdit, handleDelete, form, handleManageIndicators]
+    [activeCategory, users, handleEdit, handleDelete, form]
   );
 
   return (
@@ -153,7 +134,8 @@ const MasterDataList: React.FC = () => {
           activeCategory !== "testMethods" &&
           activeCategory !== "standards" &&
           activeCategory !== "testResultValues" &&
-          activeCategory !== "notes" && (
+          activeCategory !== "notes" &&
+          activeCategory !== "specimenTypes" && (
             <Space>
               {canImport && (
                 <Button
@@ -186,12 +168,15 @@ const MasterDataList: React.FC = () => {
           onChange={(key) => {
             setActiveCategory(key);
             setSearchText("");
-            // Trigger refresh when switching to testMethods or standards tab
+            // Trigger refresh when switching to testMethods, standards, or specimenTypes tab
             if (key === "testMethods") {
               setTestMethodsRefreshKey((prev) => prev + 1);
             }
             if (key === "standards") {
               setStandardsRefreshKey((prev) => prev + 1);
+            }
+            if (key === "specimenTypes") {
+              setSpecimenTypesRefreshKey((prev) => prev + 1);
             }
           }}
           tabPosition="left"
@@ -223,6 +208,11 @@ const MasterDataList: React.FC = () => {
                 <TestResultValuesTab onDataChange={() => fetchStatistics()} />
               ) : key === "notes" ? (
                 <NotesTab onDataChange={() => fetchStatistics()} />
+              ) : key === "specimenTypes" ? (
+                <SpecimenTypesTab
+                  onDataChange={() => fetchStatistics()}
+                  refreshKey={specimenTypesRefreshKey}
+                />
               ) : (
                 <MasterDataTable
                   activeCategory={activeCategory}
@@ -268,17 +258,6 @@ const MasterDataList: React.FC = () => {
           title={`Import ${categoryLabels[activeCategory]}`}
         />
       )}
-
-      {/* Specimen Type Indicator Modal */}
-      <SpecimenTypeIndicatorModal
-        open={indicatorModalOpen}
-        specimenType={selectedSpecimenType}
-        onClose={() => {
-          setIndicatorModalOpen(false);
-          setSelectedSpecimenType(null);
-        }}
-        onDataChange={handleIndicatorDataChange}
-      />
     </div>
   );
 };
