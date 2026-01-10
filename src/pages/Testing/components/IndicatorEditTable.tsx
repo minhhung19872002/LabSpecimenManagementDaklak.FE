@@ -270,6 +270,32 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       },
     },
     {
+      title: "So với",
+      dataIndex: "standardName",
+      key: "standardName",
+      width: 150,
+      render: (value: string | undefined) => (
+        <Tooltip title={value}>
+          <Text ellipsis style={{ maxWidth: 140 }}>
+            {value || <Text type="secondary">-</Text>}
+          </Text>
+        </Tooltip>
+      ),
+    },
+    {
+      title: "Giới hạn",
+      dataIndex: "limitDescription",
+      key: "limitDescription",
+      width: 150,
+      render: (value: string | undefined) => (
+        <Tooltip title={value}>
+          <Text ellipsis style={{ maxWidth: 140 }}>
+            {value || <Text type="secondary">-</Text>}
+          </Text>
+        </Tooltip>
+      ),
+    },
+    {
       title: "Kết quả",
       key: "result",
       width: 120,
@@ -574,7 +600,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
         dataSource={sortedIndicators}
         rowKey="id"
         pagination={false}
-        scroll={{ x: 1970 }}
+        scroll={{ x: 2270 }}
         size="small"
         rowClassName={getRowClassName}
       />

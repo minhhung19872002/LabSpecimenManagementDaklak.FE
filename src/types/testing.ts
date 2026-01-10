@@ -184,6 +184,9 @@ export interface TestingIndicatorDto {
   canCheckIn: boolean;          // Có thể check-in (Thực hiện) không
   canSubmit: boolean;           // Có thể gửi kết quả không
   images: IndicatorImageDto[];  // Hình ảnh chỉ tiêu (max 5)
+  standardId?: string;          // ID tiêu chuẩn so sánh (set by QLKT)
+  standardName?: string;        // Tên tiêu chuẩn
+  limitDescription?: string;    // Giới hạn cho phép
 }
 
 // Save Indicator Result DTO
