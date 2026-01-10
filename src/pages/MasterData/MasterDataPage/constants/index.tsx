@@ -1,5 +1,5 @@
-import { Button, Space, Tag, Popconfirm, Tooltip } from "antd";
-import { EditOutlined, DeleteOutlined, UnorderedListOutlined } from "@ant-design/icons";
+import { Button, Space, Tag, Popconfirm } from "antd";
+import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { ImportType } from "../../../../components/common/ImportExcelModal";
 import { MasterDataItem, UserLookupDto } from "../types";
@@ -40,8 +40,7 @@ export const getColumns = (
   activeCategory: string,
   users: UserLookupDto[],
   handleEdit: (record: MasterDataItem) => void,
-  handleDelete: (id: string) => void,
-  handleManageIndicators?: (record: MasterDataItem) => void
+  handleDelete: (id: string) => void
 ): ColumnsType<MasterDataItem> => {
   const baseColumns: ColumnsType<MasterDataItem> = [
     {
@@ -137,34 +136,6 @@ export const getColumns = (
         return "-";
       },
     });
-  } else if (activeCategory === "specimenTypes") {
-    baseColumns.push(
-      {
-        title: "Mô tả",
-        dataIndex: "description",
-        key: "description",
-        ellipsis: true,
-      },
-      {
-        title: "Số chỉ tiêu",
-        dataIndex: "indicatorCount",
-        key: "indicatorCount",
-        width: 110,
-        align: "center",
-        render: (count: number, record) => (
-          <Tooltip title="Quản lý chỉ tiêu">
-            <Button
-              type="link"
-              size="small"
-              icon={<UnorderedListOutlined />}
-              onClick={() => handleManageIndicators?.(record)}
-            >
-              {count || 0}
-            </Button>
-          </Tooltip>
-        ),
-      }
-    );
   } else {
     baseColumns.push({
       title: "Mô tả",
