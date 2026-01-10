@@ -320,27 +320,33 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
 
         // Read-only mode
         if (!canEditNote) {
-          return value ? (
-            <Tooltip title={value}>
-              <Text>{value}</Text>
-            </Tooltip>
-          ) : (
-            <Text type="secondary">-</Text>
+          return (
+            <div style={{ minHeight: 32, display: "flex", alignItems: "center" }}>
+              {value ? (
+                <Tooltip title={value}>
+                  <Text>{value}</Text>
+                </Tooltip>
+              ) : (
+                <Text type="secondary">-</Text>
+              )}
+            </div>
           );
         }
 
         // Edit mode - always show Input
         return (
-          <Input
-            size="small"
-            defaultValue={value || ""}
-            onBlur={(e) => handleSaveNote(record.id, e.target.value, value || "")}
-            onPressEnter={(e) => (e.target as HTMLInputElement).blur()}
-            disabled={isSaving}
-            maxLength={500}
-            placeholder="Nhập ghi chú..."
-            style={{ width: "100%" }}
-          />
+          <div style={{ minHeight: 32, display: "flex", alignItems: "center" }}>
+            <Input
+              size="small"
+              defaultValue={value || ""}
+              onBlur={(e) => handleSaveNote(record.id, e.target.value, value || "")}
+              onPressEnter={(e) => (e.target as HTMLInputElement).blur()}
+              disabled={isSaving}
+              maxLength={500}
+              placeholder="Nhập ghi chú..."
+              style={{ width: "100%" }}
+            />
+          </div>
         );
       },
     },
@@ -375,27 +381,32 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           record.methodId
         );
 
-        // Chỉ cho phép chọn khi indicator ở trạng thái Entered (Chờ phê duyệt)
+        // Cho phép chọn tiêu chuẩn ở tất cả trạng thái trừ các trạng thái sau
         const canSelectStandard =
-          record.approvalStatus === IndicatorApprovalStatus.Entered;
+          record.approvalStatus !== IndicatorApprovalStatus.Approved &&
+          record.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled &&
+          record.approvalStatus !== IndicatorApprovalStatus.MethodChangeRequested &&
+          record.approvalStatus !== IndicatorApprovalStatus.TestingRejected;
 
         return (
-          <Select
-            style={{ width: "100%" }}
-            placeholder="Chọn tiêu chuẩn"
-            allowClear
-            value={selectedStandardId || undefined}
-            onChange={(value) => handleStandardChange(record.id, value)}
-            loading={loadingStandards}
-            disabled={!canSelectStandard}
-            size="small"
-          >
-            {availableStandards.map((s) => (
-              <Select.Option key={s.id} value={s.id}>
-                {s.name}
-              </Select.Option>
-            ))}
-          </Select>
+          <div style={{ minHeight: 32, display: "flex", alignItems: "center" }}>
+            <Select
+              style={{ width: "100%" }}
+              placeholder="Chọn tiêu chuẩn"
+              allowClear
+              value={selectedStandardId || undefined}
+              onChange={(value) => handleStandardChange(record.id, value)}
+              loading={loadingStandards}
+              disabled={!canSelectStandard}
+              size="small"
+            >
+              {availableStandards.map((s) => (
+                <Select.Option key={s.id} value={s.id}>
+                  {s.name}
+                </Select.Option>
+              ))}
+            </Select>
+          </div>
         );
       },
     },
@@ -502,19 +513,21 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           canAssignTechnician;
 
         return (
-          <Select
-            style={{ width: "100%" }}
-            size="small"
-            value={value}
-            placeholder="Chọn KTV"
-            onChange={(val) => onTechnicianChange(record.id, val)}
-            options={(technicians || []).map((t) => ({
-              value: t.id,
-              label: t.displayName || t.userName,
-            }))}
-            disabled={!canEditIndicator}
-            allowClear
-          />
+          <div style={{ minHeight: 32, display: "flex", alignItems: "center" }}>
+            <Select
+              style={{ width: "100%" }}
+              size="small"
+              value={value}
+              placeholder="Chọn KTV"
+              onChange={(val) => onTechnicianChange(record.id, val)}
+              options={(technicians || []).map((t) => ({
+                value: t.id,
+                label: t.displayName || t.userName,
+              }))}
+              disabled={!canEditIndicator}
+              allowClear
+            />
+          </div>
         );
       },
     },
