@@ -142,11 +142,11 @@ const TaskManagementDetail: React.FC = () => {
   const [sendToQualityModalOpen, setSendToQualityModalOpen] = useState(false);
 
   // Sử dụng hook để check permissions cho tất cả actions theo Permission Matrix
-  const actionPermissions = useMultipleActionPermissions('tasks', [
-    'assignTesting',
-    'addSupporter',
-    'editMethod',
-    'approveResult',
+  const actionPermissions = useMultipleActionPermissions("tasks", [
+    "assignTesting",
+    "addSupporter",
+    "editMethod",
+    "approveResult",
   ]);
 
   // Check if current user is a supporter of this task
@@ -156,7 +156,7 @@ const TaskManagementDetail: React.FC = () => {
     if (!storedUser) return false;
     try {
       const userInfo = JSON.parse(storedUser);
-      return task.supporters.some(s => s.userId === userInfo.id);
+      return task.supporters.some((s) => s.userId === userInfo.id);
     } catch {
       return false;
     }
@@ -166,10 +166,13 @@ const TaskManagementDetail: React.FC = () => {
   // QLKT (A) = canAll, Admin (V) = canView, Supporter = same as QLKT (except addSupporter)
   // Người hỗ trợ có quyền: giao KTV, duyệt/từ chối, gửi QLCL
   // Người hỗ trợ KHÔNG có quyền: xóa task, thêm supporter khác
-  const canAssignTesting = actionPermissions.assignTesting?.canAll || isCurrentUserSupporter || false;
+  const canAssignTesting =
+    actionPermissions.assignTesting?.canAll || isCurrentUserSupporter || false;
   const canAddSupporter = actionPermissions.addSupporter?.canAll || false; // Supporter KHÔNG có quyền thêm supporter khác
-  const canEditMethod = actionPermissions.editMethod?.canAll || isCurrentUserSupporter || false;
-  const canApproveResult = actionPermissions.approveResult?.canAll || isCurrentUserSupporter || false;
+  const canEditMethod =
+    actionPermissions.editMethod?.canAll || isCurrentUserSupporter || false;
+  const canApproveResult =
+    actionPermissions.approveResult?.canAll || isCurrentUserSupporter || false;
 
   // Check if current user can manage supporters (chỉ QLKT của task hoặc có quyền addSupporter)
   // Supporter KHÔNG có quyền này
@@ -636,15 +639,35 @@ const TaskManagementDetail: React.FC = () => {
     }
   };
 
-  // Handle standard change - chỉ lưu vào local state
-  const handleStandardChange = (
+  // Handle standard change - lưu vào DB và local state
+  const handleStandardChange = async (
     indicatorId: string,
     standardId: string | null
   ) => {
+    // Optimistic update: cập nhật local state trước
     setStandardSelections((prev) => ({
       ...prev,
       [indicatorId]: standardId,
     }));
+
+    try {
+      // Gọi API để lưu vào database (dùng laboratoryTaskService cho QLKT)
+      await laboratoryTaskService.updateIndicatorStandard(
+        indicatorId,
+        standardId
+      );
+    } catch (error: any) {
+      console.error("Failed to update standard:", error);
+      message.error(
+        error.response?.data?.error?.message || "Không thể cập nhật tiêu chuẩn"
+      );
+      // Revert local state nếu có lỗi
+      setStandardSelections((prev) => {
+        const newState = { ...prev };
+        delete newState[indicatorId];
+        return newState;
+      });
+    }
   };
 
   // Handle update note
@@ -963,8 +986,9 @@ const TaskManagementDetail: React.FC = () => {
   // Cho phép khi: FullyAccepted/PartialAccepted (sau khi QLKT đánh giá) hoặc Đã giao việc VÀ có quyền editMethod
   const canEditTask =
     (task?.status === LaboratoryTaskStatus.FullyAccepted ||
-    task?.status === LaboratoryTaskStatus.PartialAccepted ||
-    task?.status === LaboratoryTaskStatus.Assigned) && canEditMethod;
+      task?.status === LaboratoryTaskStatus.PartialAccepted ||
+      task?.status === LaboratoryTaskStatus.Assigned) &&
+    canEditMethod;
 
   // Check if sample has selected indicators for bulk actions
   const getSampleSelectedCount = (sampleId: string) => {
@@ -991,36 +1015,37 @@ const TaskManagementDetail: React.FC = () => {
           <Col>
             <Space>
               {/* Bulk approve/reject buttons - only show when pendingApproval VÀ có quyền approveResult */}
-              {sample.sampleStatus === "pendingApproval" && canApproveResult && (
-                <>
-                  <Button
-                    danger
-                    size="small"
-                    icon={<CloseOutlined />}
-                    loading={actionLoading}
-                    disabled={selectedCount === 0}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openRejectModal(sample.sampleId);
-                    }}
-                  >
-                    Từ chối{selectedCount > 0 ? ` (${selectedCount})` : ""}
-                  </Button>
-                  <Button
-                    type="primary"
-                    size="small"
-                    icon={<CheckOutlined />}
-                    loading={actionLoading}
-                    disabled={selectedCount === 0}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleBulkApprove(sample.sampleId);
-                    }}
-                  >
-                    Duyệt{selectedCount > 0 ? ` (${selectedCount})` : ""}
-                  </Button>
-                </>
-              )}
+              {sample.sampleStatus === "pendingApproval" &&
+                canApproveResult && (
+                  <>
+                    <Button
+                      danger
+                      size="small"
+                      icon={<CloseOutlined />}
+                      loading={actionLoading}
+                      disabled={selectedCount === 0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openRejectModal(sample.sampleId);
+                      }}
+                    >
+                      Từ chối{selectedCount > 0 ? ` (${selectedCount})` : ""}
+                    </Button>
+                    <Button
+                      type="primary"
+                      size="small"
+                      icon={<CheckOutlined />}
+                      loading={actionLoading}
+                      disabled={selectedCount === 0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleBulkApprove(sample.sampleId);
+                      }}
+                    >
+                      Duyệt{selectedCount > 0 ? ` (${selectedCount})` : ""}
+                    </Button>
+                  </>
+                )}
               {/* Assign button - show when sample has notStarted indicators VÀ có quyền assignTesting */}
               {sample.sampleStatus === "notStarted" && canAssignTesting && (
                 <Button
@@ -1163,17 +1188,18 @@ const TaskManagementDetail: React.FC = () => {
               {/* Nút Gửi kết quả - chỉ QLKT có quyền (canApproveResult) và không hiển thị khi đang đánh giá hoặc chờ KH xác nhận */}
               {canApproveResult &&
                 task.status !== LaboratoryTaskStatus.UnderEvaluation &&
-                task.status !== LaboratoryTaskStatus.WaitingCustomerResponse && (
-                <Button
-                  type="primary"
-                  icon={<SendOutlined />}
-                  disabled={!hasUnsentApprovedIndicators}
-                  loading={actionLoading}
-                  onClick={handleSendResults}
-                >
-                  Gửi kết quả
-                </Button>
-              )}
+                task.status !==
+                  LaboratoryTaskStatus.WaitingCustomerResponse && (
+                  <Button
+                    type="primary"
+                    icon={<SendOutlined />}
+                    disabled={!hasUnsentApprovedIndicators}
+                    loading={actionLoading}
+                    onClick={handleSendResults}
+                  >
+                    Gửi kết quả
+                  </Button>
+                )}
             </Space>
           </Col>
         </Row>
@@ -1228,17 +1254,25 @@ const TaskManagementDetail: React.FC = () => {
       )}
 
       {/* Evaluation Mode for UnderEvaluation or WaitingCustomerResponse status */}
-      {(task.status === LaboratoryTaskStatus.UnderEvaluation ||
-        task.status === LaboratoryTaskStatus.WaitingCustomerResponse) ? (
+      {task.status === LaboratoryTaskStatus.UnderEvaluation ||
+      task.status === LaboratoryTaskStatus.WaitingCustomerResponse ? (
         <Card title={`Đánh giá chỉ tiêu (${task.indicators?.length || 0})`}>
           <Alert
-            message={task.status === LaboratoryTaskStatus.WaitingCustomerResponse
-              ? "Chờ khách hàng xác nhận"
-              : "Chế độ đánh giá thử nghiệm"}
-            description={task.status === LaboratoryTaskStatus.WaitingCustomerResponse
-              ? "Có chỉ tiêu đang chờ KH xác nhận (đổi PP hoặc từ chối TN). QLKT vẫn có thể đánh giá các chỉ tiêu Pending còn lại."
-              : "QLKT đánh giá từng chỉ tiêu: Chấp nhận, Yêu cầu đổi phương pháp, hoặc Từ chối thử nghiệm."}
-            type={task.status === LaboratoryTaskStatus.WaitingCustomerResponse ? "warning" : "info"}
+            message={
+              task.status === LaboratoryTaskStatus.WaitingCustomerResponse
+                ? "Chờ khách hàng xác nhận"
+                : "Chế độ đánh giá thử nghiệm"
+            }
+            description={
+              task.status === LaboratoryTaskStatus.WaitingCustomerResponse
+                ? "Có chỉ tiêu đang chờ KH xác nhận (đổi PP hoặc từ chối TN). QLKT vẫn có thể đánh giá các chỉ tiêu Pending còn lại."
+                : "QLKT đánh giá từng chỉ tiêu: Chấp nhận, Yêu cầu đổi phương pháp, hoặc Từ chối thử nghiệm."
+            }
+            type={
+              task.status === LaboratoryTaskStatus.WaitingCustomerResponse
+                ? "warning"
+                : "info"
+            }
             showIcon
             style={{ marginBottom: 16 }}
           />

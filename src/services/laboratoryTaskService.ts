@@ -310,6 +310,18 @@ export const laboratoryTaskService = {
     return response.data;
   },
 
+  /**
+   * Cập nhật tiêu chuẩn so sánh cho chỉ tiêu
+   */
+  updateIndicatorStandard: async (indicatorId: string, standardId: string | null): Promise<LaboratoryTaskIndicatorDto> => {
+    const response = await api.put<LaboratoryTaskIndicatorDto>(
+      `${BASE_URL}/indicators/${indicatorId}/standard`,
+      JSON.stringify(standardId),
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+    return response.data;
+  },
+
   // ============= Workflow Redesign - QLKT Evaluation (Per-Indicator) =============
 
   /**
