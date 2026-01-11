@@ -58,6 +58,8 @@ interface TestingDetailContainerProps {
   onSubmitIndicator: (indicatorId: string) => void;
   onUploadIndicatorImages?: (indicatorId: string, files: File[]) => Promise<IndicatorImageDto[]>;
   onDeleteIndicatorImage?: (imageId: string) => Promise<void>;
+  /** Callback khi chọn ngày thử nghiệm bulk cho các chỉ tiêu được select */
+  onBulkTestDateChange?: (sampleId: string, indicatorIds: string[], date: string) => void;
 }
 
 const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
@@ -84,6 +86,7 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
   onSubmitIndicator,
   onUploadIndicatorImages,
   onDeleteIndicatorImage,
+  onBulkTestDateChange,
 }) => {
   if (loading) {
     return (
@@ -153,6 +156,7 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
                 submitting={submitting}
                 canPerformActions={canPerformActions}
                 onSubmitResults={onSubmitResults}
+                onBulkTestDateChange={onBulkTestDateChange}
               />
             }
             key={sample.sampleId}
