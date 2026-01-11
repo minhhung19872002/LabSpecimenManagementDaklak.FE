@@ -90,10 +90,12 @@ const QuotationList: React.FC = () => {
       key: "quotationNumber",
       width: 160,
       render: (text, record) => (
-        <a onClick={(e) => {
-          e.stopPropagation();
-          navigate(PATH_ROUTES.quotations.view(record.id));
-        }}>
+        <a
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(PATH_ROUTES.quotations.view(record.id));
+          }}
+        >
           {text}
         </a>
       ),
@@ -223,12 +225,13 @@ const QuotationList: React.FC = () => {
           total: totalCount,
           pageSizeOptions: [50, 100, 150],
           showSizeChanger: true,
-          showTotal: (total, range) => `Hiển thị ${range[0]}-${range[1]}/${total}`,
+          showTotal: (total, range) =>
+            `Hiển thị ${range[0]}-${range[1]}/${total}`,
           onChange: handlePageChange,
         }}
         scroll={{ x: 900 }}
         onRow={(record) => ({
-          onClick: () => navigate(PATH_ROUTES.quotations.view(record.id)),
+          onDoubleClick: () => navigate(PATH_ROUTES.quotations.view(record.id)),
           style: { cursor: "pointer" },
         })}
         style={{ borderRadius: 0 }}
