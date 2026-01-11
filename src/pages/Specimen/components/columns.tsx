@@ -1,5 +1,5 @@
 import { Button, Space } from "antd";
-import { EyeOutlined } from "@ant-design/icons";
+import { EyeOutlined } from "../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import type { SampleStorageDto } from "../../../types/sampleStorage";

@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useEffect, useMemo, useState } from "react";
 import { Modal, Button, Checkbox, Typography, Drawer } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { PlusOutlined } from "../../../../components/common/Icon";
 import { Icon } from "@iconify/react";
 import dayjs from "dayjs";
 import {

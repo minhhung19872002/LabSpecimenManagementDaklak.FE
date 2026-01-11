@@ -1,5 +1,5 @@
 import { Button, Space, Popconfirm } from "antd";
-import { EditOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
+import { EditOutlined, DeleteOutlined, EyeOutlined } from "../../../components/common/Icon";
 import { TestDto, TestStatus } from "../../../types/test";
 import StatusTag from "../../../components/common/StatusTag";
 

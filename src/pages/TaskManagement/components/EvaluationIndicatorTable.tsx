@@ -13,7 +13,7 @@ import {
 } from "antd";
 import StatusTag from "../../../components/common/StatusTag";
 import type { TableRowSelection } from "antd/es/table/interface";
-import { CheckOutlined, CloseOutlined, SwapOutlined } from "@ant-design/icons";
+import { CheckOutlined, CloseOutlined, SwapOutlined } from "../../../components/common/Icon";
 import {
   LaboratoryTaskIndicatorDto,
   IndicatorApprovalStatus,

@@ -26,7 +26,7 @@ import {
   SafetyOutlined,
   MailOutlined,
   SaveOutlined
-} from '@ant-design/icons';
+} from '../../components/common/Icon';
 import settingsService, {
   UserProfileDto,
   SystemSettingsDto,

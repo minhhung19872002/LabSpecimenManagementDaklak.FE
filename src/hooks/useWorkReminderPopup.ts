@@ -69,7 +69,8 @@ const getRemainingTime = (hasPending: boolean, hasResultSent: boolean): number |
   if (!targetInterval) return null;
 
   const remaining = targetInterval - elapsed;
-  return remaining > 0 ? remaining : 0;
+  // Nếu đã quá interval, trả về full interval để tránh gọi API liên tục
+  return remaining > 0 ? remaining : targetInterval;
 };
 
 /**

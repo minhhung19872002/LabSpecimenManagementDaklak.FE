@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Modal, Form, InputNumber, Button, Typography, Select } from "antd";
-import { PlusOutlined, MinusCircleOutlined } from "@ant-design/icons";
+import { PlusOutlined, MinusCircleOutlined } from "../../../../components/common/Icon";
 import type { FormInstance } from "antd";
 import { IndicatorDto, IndicatorGroupDto } from "../../../../services/masterDataService";
 

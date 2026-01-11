@@ -25,7 +25,7 @@ import {
   TeamOutlined,
   CheckOutlined,
   CloseOutlined,
-} from "@ant-design/icons";
+} from "../../components/common/Icon";
 import { laboratoryTaskService } from "../../services/laboratoryTaskService";
 import { formatDate } from "../../utils/formatters";
 import { testingService } from "../../services/testingService";

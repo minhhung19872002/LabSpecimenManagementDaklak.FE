@@ -14,7 +14,7 @@ import {
   ExperimentOutlined,
   SearchOutlined,
   ReloadOutlined,
-} from "@ant-design/icons";
+} from "../../components/common/Icon";
 import { TestingStatus } from "../../types/testing";
 import { useTestingList } from "./hooks";
 
@@ -108,9 +108,7 @@ const TestingList: React.FC = () => {
           </Space>
         }
         extra={
-          <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
-            Làm mới
-          </Button>
+          <Button icon={<ReloadOutlined />} onClick={handleRefresh} />
         }
       >
         {/* Search & Filter */}

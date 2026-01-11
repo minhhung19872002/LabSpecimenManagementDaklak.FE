@@ -16,7 +16,7 @@ import {
   DeleteOutlined,
   CopyOutlined,
   BarcodeOutlined,
-} from "@ant-design/icons";
+} from "../../../../components/common/Icon";
 import { Icon } from "@iconify/react";
 import {
   SampleFormData,

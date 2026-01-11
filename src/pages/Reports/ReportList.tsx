@@ -19,7 +19,7 @@ import {
   PlusOutlined,
   QrcodeOutlined,
   DownloadOutlined,
-} from "@ant-design/icons";
+} from "../../components/common/Icon";
 import QRCodeGenerator, { MiniQRCode } from "../../components/common/QRCodeGenerator";
 import { useReportList, getStatusConfig } from "./hooks";
 import { ReportFormModal, getReportColumns } from "./components";
@@ -94,9 +94,7 @@ const ReportList: React.FC = () => {
         title="Báo cáo kết quả thử nghiệm"
         extra={
           <Space>
-            <Button icon={<ReloadOutlined />} onClick={loadData}>
-              Làm mới
-            </Button>
+            <Button icon={<ReloadOutlined />} onClick={loadData} />
             <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreateModal}>
               Tạo báo cáo
             </Button>

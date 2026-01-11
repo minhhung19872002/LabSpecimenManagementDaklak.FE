@@ -1,6 +1,6 @@
 import React from "react";
 import { Card, Row, Col, Space, Typography } from "antd";
-import { ExperimentOutlined } from "@ant-design/icons";
+import { ExperimentOutlined } from "../../../../components/common/Icon";
 import { TestingDetailDto } from "../../../../types/testing";
 import { getStatusTag } from "./shared";
 

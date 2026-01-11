@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Descriptions, Button, Space, Spin } from 'antd';
-import { ArrowLeftOutlined, EditOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, EditOutlined } from '../../components/common/Icon';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';

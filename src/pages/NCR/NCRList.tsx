@@ -17,7 +17,7 @@ import {
   ExclamationCircleOutlined,
   ClockCircleOutlined,
   CheckCircleOutlined,
-} from "@ant-design/icons";
+} from "../../components/common/Icon";
 import { NCRStatus } from "../../services/ncrService";
 import { useNCRList } from "./hooks";
 import { NCRFormModal, NCRDetailModal } from "./components";

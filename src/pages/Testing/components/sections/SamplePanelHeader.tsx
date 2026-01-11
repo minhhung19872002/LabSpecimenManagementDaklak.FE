@@ -1,6 +1,6 @@
 import React from "react";
 import { Button, Space, Row, Col, Typography } from "antd";
-import { SendOutlined } from "@ant-design/icons";
+import { SendOutlined } from "../../../../components/common/Icon";
 import {
   TestingSampleDto,
   IndicatorTestingStatus,

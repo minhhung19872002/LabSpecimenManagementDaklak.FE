@@ -1,6 +1,6 @@
 import React from "react";
 import { Button, Space, Tag, Tooltip, Badge } from "antd";
-import {
+import Icon, {
   FilePdfOutlined,
   EyeOutlined,
   DownloadOutlined,
@@ -11,8 +11,7 @@ import {
   CheckCircleOutlined,
   SendOutlined,
   AuditOutlined,
-  RocketOutlined,
-} from "@ant-design/icons";
+} from "../../../components/common/Icon";
 import { ReportDisplay, getStatusConfig } from "../hooks";
 import StatusTag from "../../../components/common/StatusTag";
 
@@ -186,7 +185,7 @@ export const getReportColumns = ({
           <Button
             type="primary"
             size="small"
-            icon={<RocketOutlined />}
+            icon={<Icon name="send-check" />}
             onClick={() => onIssue(record)}
             loading={workflowLoading}
             style={{ backgroundColor: "#1890ff", borderColor: "#1890ff" }}

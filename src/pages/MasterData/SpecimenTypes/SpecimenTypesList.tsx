@@ -1,6 +1,6 @@
 import React, { useMemo, useEffect, useRef } from "react";
 import { Button, Row, Col } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { PlusOutlined } from "../../../components/common/Icon";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useSpecimenTypesData, useSpecimenTypesActions } from "./hooks";

@@ -1,6 +1,6 @@
 import React from "react";
 import { Modal, Form, Input, Select, Button, Row, Col } from "antd";
-import { PlusOutlined, MinusCircleOutlined } from "@ant-design/icons";
+import { PlusOutlined, MinusCircleOutlined } from "../../../../components/common/Icon";
 import type { FormInstance } from "antd";
 
 interface GroupOption {

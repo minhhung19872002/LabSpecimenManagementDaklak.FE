@@ -4,7 +4,7 @@ import {
   PlusOutlined,
   SearchOutlined,
   FolderAddOutlined,
-} from "@ant-design/icons";
+} from "../../../components/common/Icon";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useIndicatorsData, useIndicatorsActions } from "./hooks";

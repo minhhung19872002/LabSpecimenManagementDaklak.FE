@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Badge, Tooltip } from 'antd';
-import { CameraOutlined } from '@ant-design/icons';
+import { CameraOutlined } from '../../../components/common/Icon';
 import { TestRequestSampleDto } from '../../../types/testRequest';
 
 interface SampleImagesButtonProps {

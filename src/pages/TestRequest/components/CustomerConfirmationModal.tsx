@@ -16,7 +16,7 @@ import {
   CloseOutlined,
   SwapOutlined,
   StopOutlined,
-} from "@ant-design/icons";
+} from "../../../components/common/Icon";
 import { testRequestService } from "../../../services/testRequestService";
 import { IndicatorPendingConfirmationDto } from "../../../types/testRequest";
 import { IndicatorApprovalStatus } from "../../../types/laboratoryTask";
