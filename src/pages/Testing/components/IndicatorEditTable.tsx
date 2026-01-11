@@ -286,16 +286,19 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     },
     {
       title: "Giới hạn",
-      dataIndex: "limitDescription",
-      key: "limitDescription",
-      width: 150,
-      render: (value: string | undefined) => (
-        <Tooltip title={value}>
-          <Text ellipsis style={{ maxWidth: 140 }}>
-            {value || <Text type="secondary">-</Text>}
-          </Text>
-        </Tooltip>
-      ),
+      key: "allowedLimit",
+      width: 120,
+      render: (_, record) => {
+        // Hiển thị giới hạn với ký hiệu so sánh nếu có (giống TaskManagement)
+        if (record.comparisonOperator && record.allowedLimit) {
+          return (
+            <Text>
+              {record.comparisonOperator} {record.allowedLimit}
+            </Text>
+          );
+        }
+        return "-";
+      },
     },
     {
       title: "Kết quả",
