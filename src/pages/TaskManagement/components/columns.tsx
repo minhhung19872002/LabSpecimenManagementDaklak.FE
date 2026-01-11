@@ -6,7 +6,8 @@ import {
   SyncOutlined,
   SendOutlined,
   DeleteOutlined,
-} from "@ant-design/icons";
+  CloseCircleOutlined,
+} from "../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import {
@@ -35,12 +36,12 @@ const getStatusTag = (status: LaboratoryTaskStatus) => {
     [LaboratoryTaskStatus.WaitingCustomerResponse]: <ClockCircleOutlined />,
     [LaboratoryTaskStatus.PartialAccepted]: <CheckCircleOutlined />,
     [LaboratoryTaskStatus.FullyAccepted]: <CheckCircleOutlined />,
-    [LaboratoryTaskStatus.TestingRejected]: <ClockCircleOutlined />,
+    [LaboratoryTaskStatus.TestingRejected]: <CloseCircleOutlined />,
     [LaboratoryTaskStatus.Assigned]: <CheckCircleOutlined />,
     [LaboratoryTaskStatus.InProgress]: <SyncOutlined spin />,
     [LaboratoryTaskStatus.WaitingApproval]: <ClockCircleOutlined />,
     [LaboratoryTaskStatus.Approved]: <CheckCircleOutlined />,
-    [LaboratoryTaskStatus.Rejected]: <ClockCircleOutlined />,
+    [LaboratoryTaskStatus.Rejected]: <CloseCircleOutlined />,
     [LaboratoryTaskStatus.SentToQuality]: <SendOutlined />,
   };
 

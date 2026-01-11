@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { Modal, Select, Button, Typography, Space } from "antd";
-import { PlusOutlined, MinusCircleOutlined } from "@ant-design/icons";
+import { PlusOutlined, MinusCircleOutlined } from "../../../../components/common/Icon";
 import { IndicatorDto, IndicatorGroupDto } from "../../../../services/masterDataService";
 
 const { Text } = Typography;

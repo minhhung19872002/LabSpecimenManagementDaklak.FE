@@ -1,6 +1,6 @@
 import React from "react";
 import { Button, Collapse, Alert, Spin, Card } from "antd";
-import { ArrowLeftOutlined, WarningOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, WarningOutlined } from "../../../components/common/Icon";
 import {
   TestingDetailDto,
   TestingSampleDto,

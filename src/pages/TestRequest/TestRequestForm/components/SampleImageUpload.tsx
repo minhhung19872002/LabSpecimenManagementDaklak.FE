@@ -5,7 +5,7 @@ import {
   EyeOutlined,
   DeleteOutlined,
   LoadingOutlined,
-} from "@ant-design/icons";
+} from "../../../../components/common/Icon";
 import type { UploadProps, RcFile } from "antd/es/upload/interface";
 import { fileService } from "../../../../services/fileService";
 import { AttachmentInfo } from "../types";

@@ -1,5 +1,5 @@
 import { Button, Space, Tag, Tooltip, Popconfirm } from "antd";
-import { EditOutlined, DeleteOutlined, StopOutlined, CheckCircleOutlined } from "@ant-design/icons";
+import { EditOutlined, DeleteOutlined, StopOutlined, CheckCircleOutlined } from "../../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import { GroupedTestMethodData, TestMethodIndicatorDto } from "../types";
 

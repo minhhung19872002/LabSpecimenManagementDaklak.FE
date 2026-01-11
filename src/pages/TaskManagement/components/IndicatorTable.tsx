@@ -12,7 +12,7 @@ import {
 } from "antd";
 import StatusTag from "../../../components/common/StatusTag";
 import type { TableRowSelection } from "antd/es/table/interface";
-import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
+import { CheckOutlined, CloseOutlined } from "../../../components/common/Icon";
 import { formatDate, parseResultToNumber } from "../../../utils/formatters";
 import {
   LaboratoryTaskIndicatorDto,

@@ -15,7 +15,7 @@ import {
   EditOutlined,
   DeleteOutlined,
   ReloadOutlined,
-} from "@ant-design/icons";
+} from "../../components/common/Icon";
 import { useNavigate } from "react-router-dom";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
@@ -174,9 +174,7 @@ const QuotationList: React.FC = () => {
       title="Danh sách báo giá"
       extra={
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={fetchData}>
-            Làm mới
-          </Button>
+          <Button icon={<ReloadOutlined />} onClick={fetchData} />
           <Button
             type="primary"
             icon={<PlusOutlined />}

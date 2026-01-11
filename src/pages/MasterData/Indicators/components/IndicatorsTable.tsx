@@ -5,7 +5,7 @@ import {
   StopOutlined,
   CheckCircleOutlined,
   CloseOutlined,
-} from "@ant-design/icons";
+} from "../../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import { IndicatorDto, GroupedIndicatorData } from "../types";
 

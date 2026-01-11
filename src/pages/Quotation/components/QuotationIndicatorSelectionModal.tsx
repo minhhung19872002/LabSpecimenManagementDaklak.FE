@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { Modal, Checkbox, Typography, Input, Empty, Spin } from "antd";
-import { SearchOutlined } from "@ant-design/icons";
+import { SearchOutlined } from "../../../components/common/Icon";
 import { Icon } from "@iconify/react";
 import {
   testMethodService,

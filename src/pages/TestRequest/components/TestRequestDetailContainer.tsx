@@ -18,7 +18,7 @@ import {
   FileTextOutlined,
   HistoryOutlined,
   PrinterOutlined,
-} from "@ant-design/icons";
+} from "../../../components/common/Icon";
 import { useNavigate } from "react-router-dom";
 import {
   TestRequestDto,

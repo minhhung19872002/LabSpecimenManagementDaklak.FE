@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Upload, Image, Space, Tooltip, Modal, message, Spin, Badge } from 'antd';
-import { PlusOutlined, DeleteOutlined, EyeOutlined, PictureOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, EyeOutlined, PictureOutlined } from './Icon';
 import type { RcFile } from 'antd/es/upload/interface';
 
 export interface IndicatorImageDto {

@@ -26,7 +26,7 @@ import {
   CheckSquareOutlined,
   BorderOutlined,
   FileImageOutlined,
-} from '@ant-design/icons';
+} from '../../../components/common/Icon';
 import dayjs from 'dayjs';
 import {
   TestRequestChangeHistoryDto,

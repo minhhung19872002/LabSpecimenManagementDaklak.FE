@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, Descriptions, Button, Space, Spin, message } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeftOutlined, EditOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, EditOutlined } from '../../components/common/Icon';
 import { testService } from '../../services/testService';
 import { TestDto, TestStatus } from '../../types/test';
 import dayjs from 'dayjs';

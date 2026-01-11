@@ -10,7 +10,7 @@ import {
   Typography,
 } from "antd";
 import StatusTag from "../../../components/common/StatusTag";
-import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
+import { CheckOutlined, CloseOutlined } from "../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import { formatDate } from "../../../utils/formatters";
 import {

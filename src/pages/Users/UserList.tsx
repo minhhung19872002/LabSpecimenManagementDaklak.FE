@@ -1,6 +1,6 @@
 import React from "react";
 import { Card, Table, Button, Space, Input } from "antd";
-import { PlusOutlined, SearchOutlined, ReloadOutlined } from "@ant-design/icons";
+import { PlusOutlined, SearchOutlined, ReloadOutlined } from "../../components/common/Icon";
 import { useUserList } from "./hooks";
 import { UserFormModal } from "./components";
 
@@ -35,9 +35,7 @@ const UserList: React.FC = () => {
               style={{ width: 250 }}
               allowClear
             />
-            <Button icon={<ReloadOutlined />} onClick={loadData}>
-              Làm mới
-            </Button>
+            <Button icon={<ReloadOutlined />} onClick={loadData} />
             <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
               Thêm người dùng
             </Button>

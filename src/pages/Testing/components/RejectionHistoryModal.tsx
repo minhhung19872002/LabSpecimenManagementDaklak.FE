@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Typography, Spin, Empty, Badge, Avatar } from "antd";
-import { HistoryOutlined, UserOutlined } from "@ant-design/icons";
+import { HistoryOutlined, UserOutlined } from "../../../components/common/Icon";
 import dayjs from "dayjs";
 import { testingService } from "../../../services/testingService";
 import { RejectionHistoryDto } from "../../../types/testing";

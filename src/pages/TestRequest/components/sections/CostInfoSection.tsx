@@ -1,6 +1,6 @@
 import React from "react";
 import { Row, Col, Typography, Button } from "antd";
-import { HistoryOutlined } from "@ant-design/icons";
+import { HistoryOutlined } from "../../../../components/common/Icon";
 import { TestRequestDto } from "../../../../types/testRequest";
 
 const { Title, Text } = Typography;
