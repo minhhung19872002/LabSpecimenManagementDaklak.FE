@@ -76,10 +76,12 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     Map<string, SaveIndicatorResultDto>
   >(new Map());
 
-  // Track indicator IDs to detect actual changes
-  const indicatorIds = indicators.map((ind) => ind.id).join(",");
+  // Track indicator data to detect actual changes (IDs + testDates)
+  const indicatorDataKey = indicators
+    .map((ind) => `${ind.id}:${ind.testDate || ""}`)
+    .join(",");
 
-  // Initialize edited results from indicators - only when indicator list changes
+  // Initialize edited results from indicators - when indicator list or testDate changes
   useEffect(() => {
     const initialResults = new Map<string, SaveIndicatorResultDto>();
     indicators.forEach((ind) => {
@@ -94,7 +96,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     });
     setEditedResults(initialResults);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [indicatorIds]);
+  }, [indicatorDataKey]);
 
   const handleFieldChange = (
     indicatorId: string,
