@@ -819,15 +819,17 @@ export const useTestRequestFormActions = ({
             changeHistory // Frontend sends the changes
           });
           message.success("Yêu cầu thay đổi đã được gửi và đang chờ phê duyệt!");
+          navigate(PATH_ROUTES.testRequests.detail(id));
         } else {
           await testRequestService.update(id, payload);
           message.success("Cập nhật phiếu yêu cầu thành công!");
+          navigate(PATH_ROUTES.testRequests.detail(id));
         }
       } else {
-       const testRequest = await testRequestService.create(payload);
+        const testRequest = await testRequestService.create(payload);
         message.success(`Đã tạo phiếu yêu cầu XN: ${testRequest?.contractNumber}`);
+        navigate(PATH_ROUTES.testRequests.detail(testRequest.id));
       }
-      navigate(PATH_ROUTES.testRequests.index);
     } catch (error: any) {
       console.error("Failed to save test request:", error);
 
