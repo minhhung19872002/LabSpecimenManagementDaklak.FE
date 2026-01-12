@@ -20,7 +20,6 @@ import {
 import StatusTag from "../../components/common/StatusTag";
 import {
   ArrowLeftOutlined,
-  SendOutlined,
   CaretRightOutlined,
   TeamOutlined,
   CheckOutlined,
@@ -53,7 +52,6 @@ import IndicatorTable from "./components/IndicatorTable";
 import EvaluationIndicatorTable from "./components/EvaluationIndicatorTable";
 import SupporterModal from "./components/SupporterModal";
 import SampleImagesDisplay from "./components/SampleImagesDisplay";
-import SendToQualityModal from "./components/SendToQualityModal";
 import { PATH_ROUTES, STORAGE_KEYS } from "../../constants";
 import { useMultipleActionPermissions } from "../../hooks/useActionPermission";
 
@@ -137,9 +135,6 @@ const TaskManagementDetail: React.FC = () => {
       }
     >
   >({});
-
-  // Send to quality modal state
-  const [sendToQualityModalOpen, setSendToQualityModalOpen] = useState(false);
 
   // Sử dụng hook để check permissions cho tất cả actions theo Permission Matrix
   const actionPermissions = useMultipleActionPermissions("tasks", [
@@ -332,16 +327,6 @@ const TaskManagementDetail: React.FC = () => {
     // Sort theo sampleId để cố định vị trí
     return samples.sort((a, b) => a.sampleId.localeCompare(b.sampleId));
   }, [indicatorsBySample, indicatorChanges]);
-
-  // Check if there are any approved indicators that haven't been sent to quality yet
-  const hasUnsentApprovedIndicators = useMemo(() => {
-    if (!task?.indicators) return false;
-    return task.indicators.some(
-      (ind) =>
-        ind.approvalStatus === IndicatorApprovalStatus.Approved &&
-        !ind.isSentToQuality
-    );
-  }, [task]);
 
   // Handlers
   const handleMethodChange = (indicatorId: string, methodId: string) => {
@@ -688,11 +673,6 @@ const TaskManagementDetail: React.FC = () => {
       );
       throw error;
     }
-  };
-
-  const handleSendResults = () => {
-    if (!task) return;
-    setSendToQualityModalOpen(true);
   };
 
   // Handle selection change for bulk operations
@@ -1184,21 +1164,6 @@ const TaskManagementDetail: React.FC = () => {
                   )}
                 </Button>
               )}
-              {/* Nút Gửi kết quả - chỉ QLKT có quyền (canApproveResult) và không hiển thị khi đang đánh giá hoặc chờ KH xác nhận */}
-              {canApproveResult &&
-                task.status !== LaboratoryTaskStatus.UnderEvaluation &&
-                task.status !==
-                  LaboratoryTaskStatus.WaitingCustomerResponse && (
-                  <Button
-                    type="primary"
-                    icon={<SendOutlined />}
-                    disabled={!hasUnsentApprovedIndicators}
-                    loading={actionLoading}
-                    onClick={handleSendResults}
-                  >
-                    Gửi kết quả
-                  </Button>
-                )}
             </Space>
           </Col>
         </Row>
@@ -1335,15 +1300,6 @@ const TaskManagementDetail: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-
-      {/* Send to Quality Modal */}
-      <SendToQualityModal
-        open={sendToQualityModalOpen}
-        onClose={() => setSendToQualityModalOpen(false)}
-        taskId={task.id}
-        indicators={task.indicators || []}
-        onSuccess={reloadData}
-      />
 
       {/* Reassign Confirmation Modal */}
       <Modal
