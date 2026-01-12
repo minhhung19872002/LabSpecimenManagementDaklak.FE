@@ -14,7 +14,8 @@ import {
   message,
   Empty,
   Modal,
-  Tooltip
+  Tooltip,
+  Radio
 } from 'antd';
 import {
   FileTextOutlined,
@@ -28,7 +29,7 @@ import {
   FullscreenExitOutlined
 } from '../../components/common/Icon';
 import { Column, Pie } from '@ant-design/charts';
-import dayjs from 'dayjs';
+import dayjs, { Dayjs } from 'dayjs';
 import {
   statisticsService,
   StatisticsDataDto,
@@ -38,11 +39,48 @@ import {
 
 const { RangePicker } = DatePicker;
 
+type FilterPeriod = 'month' | 'quarter' | 'half_year' | 'year';
+
+// Helper function to calculate date range based on period
+const getDateRangeForPeriod = (period: FilterPeriod): [Dayjs, Dayjs] => {
+  const now = dayjs();
+  const year = now.year();
+  const month = now.month() + 1; // dayjs month is 0-indexed
+
+  switch (period) {
+    case 'month':
+      return [now.startOf('month'), now.endOf('month')];
+    case 'quarter': {
+      const quarter = Math.ceil(month / 3);
+      const quarterStart = (quarter - 1) * 3 + 1;
+      return [
+        dayjs().month(quarterStart - 1).startOf('month'),
+        dayjs().month(quarterStart + 1).endOf('month'),
+      ];
+    }
+    case 'half_year': {
+      if (month <= 6) {
+        return [dayjs(`${year}-01-01`), dayjs(`${year}-06-30`)];
+      } else {
+        return [dayjs(`${year}-07-01`), dayjs(`${year}-12-31`)];
+      }
+    }
+    case 'year':
+      return [now.startOf('year'), now.endOf('year')];
+    default:
+      return [now.startOf('month'), now.endOf('month')];
+  }
+};
+
 // Fullscreen modal state
 type FullscreenState = boolean;
 
 const StatisticsPage: React.FC = () => {
-  const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
+  // Filter state
+  const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>('month');
+  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>(getDateRangeForPeriod('month'));
+  const [isCustomDateRange, setIsCustomDateRange] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [statisticsData, setStatisticsData] = useState<StatisticsDataDto | null>(null);
@@ -52,11 +90,10 @@ const StatisticsPage: React.FC = () => {
   const fetchStatistics = useCallback(async () => {
     setLoading(true);
     try {
-      const params: { fromDate?: string; toDate?: string } = {};
-      if (dateRange) {
-        params.fromDate = dateRange[0].format('YYYY-MM-DD');
-        params.toDate = dateRange[1].format('YYYY-MM-DD');
-      }
+      const params: { fromDate?: string; toDate?: string } = {
+        fromDate: dateRange[0].format('YYYY-MM-DD'),
+        toDate: dateRange[1].format('YYYY-MM-DD'),
+      };
       const data = await statisticsService.getStatisticsData(params);
       setStatisticsData(data);
     } catch (error) {
@@ -66,6 +103,21 @@ const StatisticsPage: React.FC = () => {
       setLoading(false);
     }
   }, [dateRange]);
+
+  // Handle period change
+  const handlePeriodChange = (period: FilterPeriod) => {
+    setFilterPeriod(period);
+    setDateRange(getDateRangeForPeriod(period));
+    setIsCustomDateRange(false);
+  };
+
+  // Handle date range change
+  const handleDateRangeChange = (dates: [Dayjs | null, Dayjs | null] | null) => {
+    if (dates && dates[0] && dates[1]) {
+      setDateRange([dates[0], dates[1]]);
+      setIsCustomDateRange(true);
+    }
+  };
 
   useEffect(() => {
     fetchStatistics();
@@ -85,18 +137,15 @@ const StatisticsPage: React.FC = () => {
   const handleExport = async () => {
     setExporting(true);
     try {
-      const params: { fromDate?: string; toDate?: string } = {};
-      if (dateRange) {
-        params.fromDate = dateRange[0].format('YYYY-MM-DD');
-        params.toDate = dateRange[1].format('YYYY-MM-DD');
-      }
+      const params: { fromDate?: string; toDate?: string } = {
+        fromDate: dateRange[0].format('YYYY-MM-DD'),
+        toDate: dateRange[1].format('YYYY-MM-DD'),
+      };
       const blob = await statisticsService.exportToExcel(params);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const fileName = dateRange
-        ? `statistics_${dateRange[0].format('YYYYMMDD')}_${dateRange[1].format('YYYYMMDD')}.xlsx`
-        : `statistics_${dayjs().format('YYYYMMDD')}.xlsx`;
+      const fileName = `statistics_${dateRange[0].format('YYYYMMDD')}_${dateRange[1].format('YYYYMMDD')}.xlsx`;
       a.download = fileName;
       a.click();
       window.URL.revokeObjectURL(url);
@@ -175,8 +224,8 @@ const StatisticsPage: React.FC = () => {
   ];
 
   // Render Monthly Trend Chart
-  // height = 0 means autoFit to container
-  const renderMonthlyTrendChart = (height: number) => (
+  // autoFit = true means chart will fit to container width
+  const renderMonthlyTrendChart = (autoFit: boolean = false) => (
     monthlyTrends.length > 0 ? (
       <Column
         data={monthlyTrends.flatMap(item => [
@@ -189,50 +238,59 @@ const StatisticsPage: React.FC = () => {
         yField="value"
         colorField="type"
         group={true}
-        height={height || undefined}
-        autoFit={height === 0}
+        height={autoFit ? undefined : 300}
+        autoFit={autoFit}
         legend={{ position: 'top' }}
         color={['#1890ff', '#722ed1', '#52c41a', '#faad14']}
       />
     ) : (
-      <Empty description="Không có dữ liệu" style={{ height: height || '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }} />
+      <Empty description="Không có dữ liệu" style={{ height: autoFit ? '100%' : 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }} />
     )
   );
 
   return (
     <div>
-      {/* Header */}
-      <Card style={{ marginBottom: 16 }}>
-        <Row justify="space-between" align="middle">
-          <Col>
-            <h2 style={{ margin: 0 }}>
-              <BarChartOutlined /> Thống kê & Báo cáo
-            </h2>
-          </Col>
-          <Col>
-            <Space>
-              <RangePicker
-                placeholder={['Từ ngày', 'Đến ngày']}
-                value={dateRange}
-                onChange={(dates) => setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs] | null)}
-              />
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={fetchStatistics}
-                loading={loading}
-              />
-              <Button
-                type="primary"
-                icon={<DownloadOutlined />}
-                onClick={handleExport}
-                loading={exporting}
-              >
-                Xuất Excel
-              </Button>
-            </Space>
-          </Col>
-        </Row>
-      </Card>
+      {/* Header - Filter Bar */}
+      <div className="statistics-filter-bar">
+        <h2 className="statistics-title">
+          <BarChartOutlined /> Thống kê & Báo cáo
+        </h2>
+        <div className="statistics-filter-controls">
+          <div className="statistics-period-tabs">
+            <Radio.Group
+              value={isCustomDateRange ? undefined : filterPeriod}
+              onChange={(e) => handlePeriodChange(e.target.value)}
+              optionType="button"
+              buttonStyle="solid"
+            >
+              <Radio.Button value="month">Tháng</Radio.Button>
+              <Radio.Button value="quarter">Quý</Radio.Button>
+              <Radio.Button value="half_year">Nửa năm</Radio.Button>
+              <Radio.Button value="year">Năm</Radio.Button>
+            </Radio.Group>
+          </div>
+          <RangePicker
+            value={dateRange}
+            onChange={handleDateRangeChange}
+            format="DD/MM/YYYY"
+            allowClear={false}
+            style={{ width: 240 }}
+          />
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={fetchStatistics}
+            loading={loading}
+          />
+          <Button
+            type="primary"
+            icon={<DownloadOutlined />}
+            onClick={handleExport}
+            loading={exporting}
+          >
+            Xuất Excel
+          </Button>
+        </div>
+      </div>
 
       <Spin spinning={loading}>
         {/* Summary Stats */}
@@ -288,7 +346,9 @@ const StatisticsPage: React.FC = () => {
               style={{ cursor: 'pointer' }}
               onClick={() => setShowFullscreen(true)}
             >
-              {renderMonthlyTrendChart(300)}
+              <div style={{ height: 300, width: '100%' }}>
+                {renderMonthlyTrendChart(true)}
+              </div>
             </Card>
           </Col>
           <Col xs={24} lg={10}>
@@ -435,7 +495,7 @@ const StatisticsPage: React.FC = () => {
         wrapClassName="chart-fullscreen-modal"
       >
         <div style={{ width: '100%', height: 'calc(80vh - 100px)' }}>
-          {showFullscreen && chartReady && renderMonthlyTrendChart(0)}
+          {showFullscreen && chartReady && renderMonthlyTrendChart(true)}
         </div>
       </Modal>
     </div>
