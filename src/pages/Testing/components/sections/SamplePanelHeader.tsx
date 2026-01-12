@@ -17,7 +17,11 @@ interface SamplePanelHeaderProps {
   canPerformActions?: boolean;
   onSubmitResults: (sampleId: string) => void;
   /** Callback khi chọn ngày thử nghiệm cho các chỉ tiêu được select */
-  onBulkTestDateChange?: (sampleId: string, indicatorIds: string[], date: string) => void;
+  onBulkTestDateChange?: (
+    sampleId: string,
+    indicatorIds: string[],
+    date: string
+  ) => void;
 }
 
 const SamplePanelHeader: React.FC<SamplePanelHeaderProps> = ({
@@ -86,7 +90,7 @@ const SamplePanelHeader: React.FC<SamplePanelHeaderProps> = ({
         {/* Chỉ hiển thị DatePicker và button Gửi kết quả khi có quyền thao tác */}
         {canPerformActions && (
           <Col flex="none" onClick={(e) => e.stopPropagation()}>
-            <Space size={8}>
+            <Space size={8} align="center">
               <Text type="secondary" style={{ fontSize: 13 }}>
                 Ngày thử nghiệm:
               </Text>
