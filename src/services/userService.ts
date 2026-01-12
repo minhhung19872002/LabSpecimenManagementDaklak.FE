@@ -136,6 +136,23 @@ export const userService = {
     const response = await api.post<{ items: UserLookupDto[] }>('/api/v1/users/lookup/by-ids', ids);
     return response.data.items;
   },
+
+  /**
+   * Lấy danh sách users có chức vụ Phó Giám đốc
+   */
+  getVicePresidents: async (): Promise<UserLookupDto[]> => {
+    try {
+      const response = await api.get('/api/v1/users/lookup/vice-presidents');
+      // Handle both { items: [...] } and direct array response
+      if (Array.isArray(response.data)) {
+        return response.data;
+      }
+      return response.data?.items || [];
+    } catch (error) {
+      console.error('Failed to fetch vice presidents:', error);
+      return [];
+    }
+  },
 };
 
 export default userService;
