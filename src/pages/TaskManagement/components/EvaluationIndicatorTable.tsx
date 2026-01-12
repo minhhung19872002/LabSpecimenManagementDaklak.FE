@@ -71,10 +71,11 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
   });
   const [rejectForm] = Form.useForm();
 
-  // Filter indicators that are pending evaluation (Pending status)
+  // Filter indicators that need evaluation (Pending or CannotTest status)
   const pendingIndicators = useMemo(() => {
     return indicators.filter(
-      (ind) => ind.approvalStatus === IndicatorApprovalStatus.Pending
+      (ind) => ind.approvalStatus === IndicatorApprovalStatus.Pending ||
+               ind.approvalStatus === IndicatorApprovalStatus.CannotTest
     );
   }, [indicators]);
 
@@ -201,14 +202,41 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
     });
   };
 
-  // Get status display for indicator
-  const getStatusDisplay = (record: LaboratoryTaskIndicatorDto) => {
+  // Get status tag for indicator
+  const getStatusTag = (record: LaboratoryTaskIndicatorDto) => {
     const status = record.approvalStatus;
 
-    if (status === IndicatorApprovalStatus.Pending && canEvaluate) {
-      // Show action buttons for pending indicators
+    if (status === IndicatorApprovalStatus.CannotTest) {
       return (
-        <Space size="small" wrap>
+        <Tag color="orange">KTV báo không TN được</Tag>
+      );
+    }
+
+    return (
+      <StatusTag color={IndicatorApprovalStatusColors[status]}>
+        {IndicatorApprovalStatusLabels[status]}
+      </StatusTag>
+    );
+  };
+
+  // Get action buttons for indicator
+  const getActionButtons = (record: LaboratoryTaskIndicatorDto) => {
+    const status = record.approvalStatus;
+
+    // Các trạng thái cần QLKT đánh giá: Pending và CannotTest (KTV báo không TN được)
+    const needsEvaluation = status === IndicatorApprovalStatus.Pending ||
+                           status === IndicatorApprovalStatus.CannotTest;
+
+    if (!needsEvaluation || !canEvaluate) {
+      return <></>;
+    }
+
+    const isCannotTest = status === IndicatorApprovalStatus.CannotTest;
+
+    return (
+      <Space size="small" wrap>
+        {/* Chỉ hiển thị Chấp nhận TN cho trạng thái Pending, không hiển thị cho CannotTest */}
+        {!isCannotTest && (
           <Tooltip title="Chấp nhận thử nghiệm">
             <Button
               type="primary"
@@ -217,121 +245,147 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
               onClick={() => handleAccept(record.id)}
               loading={actionLoading}
             >
-              Chấp nhận
+              Chấp nhận TN
             </Button>
           </Tooltip>
-          <Tooltip title="Yêu cầu đổi phương pháp">
-            <Button
-              size="small"
-              icon={<SwapOutlined />}
-              onClick={() => setMethodChangeModal({ visible: true, indicatorId: record.id, mode: 'single' })}
-              loading={actionLoading}
-            >
-              Đổi PP
-            </Button>
-          </Tooltip>
-          <Tooltip title="Từ chối thử nghiệm">
-            <Button
-              danger
-              size="small"
-              icon={<CloseOutlined />}
-              onClick={() => setRejectModal({ visible: true, indicatorId: record.id, mode: 'single' })}
-              loading={actionLoading}
-            >
-              Từ chối
-            </Button>
-          </Tooltip>
-        </Space>
-      );
-    }
-
-    // Show status tag for non-pending indicators
-    return (
-      <StatusTag color={IndicatorApprovalStatusColors[status]}>
-        {IndicatorApprovalStatusLabels[status]}
-      </StatusTag>
+        )}
+        <Tooltip title="Yêu cầu đổi phương pháp">
+          <Button
+            size="small"
+            icon={<SwapOutlined />}
+            onClick={() => setMethodChangeModal({ visible: true, indicatorId: record.id, mode: 'single' })}
+            loading={actionLoading}
+          >
+            Đổi PP
+          </Button>
+        </Tooltip>
+        <Tooltip title="Từ chối thử nghiệm">
+          <Button
+            danger
+            size="small"
+            icon={<CloseOutlined />}
+            onClick={() => setRejectModal({ visible: true, indicatorId: record.id, mode: 'single' })}
+            loading={actionLoading}
+          >
+            Từ chối TN
+          </Button>
+        </Tooltip>
+      </Space>
     );
   };
 
-  const columns = [
-    {
-      title: "Mẫu",
-      key: "sample",
-      width: 150,
-      render: (_: unknown, record: LaboratoryTaskIndicatorDto) => (
-        <div>
-          <Tag color="blue">{record.sampleCode}</Tag>
-          <div style={{ fontSize: 12, marginTop: 4 }}>{record.sampleName}</div>
-        </div>
-      ),
-    },
-    {
-      title: "Tên chỉ tiêu",
-      dataIndex: "indicatorName",
-      key: "indicatorName",
-      width: 200,
-      render: (value: string, record: LaboratoryTaskIndicatorDto) => (
-        <div>
-          <div>{value}</div>
-          {record.indicatorGroupName && (
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              {record.indicatorGroupName}
-            </Text>
-          )}
-        </div>
-      ),
-    },
-    {
-      title: "Phương pháp hiện tại",
-      dataIndex: "methodName",
-      key: "methodName",
-      width: 200,
-      render: (value: string) => (
-        <Tooltip title={value}>
-          <Text
-            style={{
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            {value || "-"}
-          </Text>
-        </Tooltip>
-      ),
-    },
-    {
-      title: "Đơn giá",
-      dataIndex: "unitPrice",
-      key: "unitPrice",
-      width: 120,
-      render: (value: number) => (
-        <Text>{value?.toLocaleString("vi-VN")} đ</Text>
-      ),
-    },
-    {
-      title: "Trạng thái / Hành động",
-      key: "status",
-      width: 280,
-      fixed: "right" as const,
-      render: (_: unknown, record: LaboratoryTaskIndicatorDto) => getStatusDisplay(record),
-    },
-  ];
+  // Check if there are any indicators that need action (for showing/hiding action column)
+  const hasActionableIndicators = useMemo(() => {
+    if (!canEvaluate) return false;
+    return indicators.some(
+      (ind) => ind.approvalStatus === IndicatorApprovalStatus.Pending ||
+               ind.approvalStatus === IndicatorApprovalStatus.CannotTest
+    );
+  }, [indicators, canEvaluate]);
 
-  // Sort indicators: Pending first, then by sample code
+  const columns = useMemo(() => {
+    const baseColumns = [
+      {
+        title: "Mẫu",
+        key: "sample",
+        width: 150,
+        render: (_: unknown, record: LaboratoryTaskIndicatorDto) => (
+          <div>
+            <Tag color="blue">{record.sampleCode}</Tag>
+            <div style={{ fontSize: 12, marginTop: 4 }}>{record.sampleName}</div>
+          </div>
+        ),
+      },
+      {
+        title: "Tên chỉ tiêu",
+        dataIndex: "indicatorName",
+        key: "indicatorName",
+        width: 200,
+        render: (value: string, record: LaboratoryTaskIndicatorDto) => (
+          <div>
+            <div>{value}</div>
+            {record.indicatorGroupName && (
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                {record.indicatorGroupName}
+              </Text>
+            )}
+          </div>
+        ),
+      },
+      {
+        title: "Phương pháp hiện tại",
+        dataIndex: "methodName",
+        key: "methodName",
+        width: 200,
+        render: (value: string) => (
+          <Tooltip title={value}>
+            <Text
+              style={{
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {value || "-"}
+            </Text>
+          </Tooltip>
+        ),
+      },
+      {
+        title: "Đơn giá",
+        dataIndex: "unitPrice",
+        key: "unitPrice",
+        width: 120,
+        render: (value: number) => (
+          <Text>{value?.toLocaleString("vi-VN")} đ</Text>
+        ),
+      },
+      {
+        title: "Trạng thái",
+        key: "status",
+        width: 150,
+        render: (_: unknown, record: LaboratoryTaskIndicatorDto) => getStatusTag(record),
+      },
+      // Cột Hành động - sẽ được filter ra nếu không có chỉ tiêu cần action
+      {
+        title: "Hành động",
+        key: "actions",
+        width: 250,
+        fixed: "right" as const,
+        render: (_: unknown, record: LaboratoryTaskIndicatorDto) => getActionButtons(record),
+        hidden: !hasActionableIndicators,
+      },
+    ].filter(col => !('hidden' in col) || !col.hidden);
+
+    return baseColumns;
+  }, [hasActionableIndicators]);
+
+  // Sort indicators: Needs evaluation (Pending, CannotTest) first, then by sample code
   const sortedIndicators = useMemo(() => {
+    const needsEvaluation = (status: IndicatorApprovalStatus) =>
+      status === IndicatorApprovalStatus.Pending ||
+      status === IndicatorApprovalStatus.CannotTest;
+
     return [...indicators].sort((a, b) => {
-      // Pending first
-      if (a.approvalStatus === IndicatorApprovalStatus.Pending &&
-          b.approvalStatus !== IndicatorApprovalStatus.Pending) {
+      // Needs evaluation first (CannotTest before Pending for visibility)
+      const aNeedsEval = needsEvaluation(a.approvalStatus);
+      const bNeedsEval = needsEvaluation(b.approvalStatus);
+
+      if (aNeedsEval && !bNeedsEval) return -1;
+      if (!aNeedsEval && bNeedsEval) return 1;
+
+      // CannotTest before Pending (more urgent)
+      if (a.approvalStatus === IndicatorApprovalStatus.CannotTest &&
+          b.approvalStatus === IndicatorApprovalStatus.Pending) {
         return -1;
       }
-      if (a.approvalStatus !== IndicatorApprovalStatus.Pending &&
-          b.approvalStatus === IndicatorApprovalStatus.Pending) {
+      if (a.approvalStatus === IndicatorApprovalStatus.Pending &&
+          b.approvalStatus === IndicatorApprovalStatus.CannotTest) {
         return 1;
       }
+
       // Then by sample code
       return (a.sampleCode || "").localeCompare(b.sampleCode || "");
     });
@@ -347,8 +401,9 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
         setSelectedIndicatorIds(selectedRowKeys as string[]);
       },
       getCheckboxProps: (record: LaboratoryTaskIndicatorDto) => ({
-        // Only allow selecting Pending indicators
-        disabled: record.approvalStatus !== IndicatorApprovalStatus.Pending,
+        // Only allow selecting indicators that need evaluation (Pending or CannotTest)
+        disabled: record.approvalStatus !== IndicatorApprovalStatus.Pending &&
+                  record.approvalStatus !== IndicatorApprovalStatus.CannotTest,
         name: record.id,
       }),
     };

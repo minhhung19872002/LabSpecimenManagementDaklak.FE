@@ -4,6 +4,7 @@ import {
   ClockCircleOutlined,
   SyncOutlined,
   WarningOutlined,
+  StopOutlined,
 } from "../../../../components/common/Icon";
 import {
   TestingStatus,
@@ -22,6 +23,7 @@ export const getStatusTag = (status: TestingStatus) => {
     [TestingStatus.PendingApproval]: <ClockCircleOutlined />,
     [TestingStatus.Rejected]: <WarningOutlined />,
     [TestingStatus.Completed]: <CheckCircleOutlined />,
+    [TestingStatus.CannotTest]: <StopOutlined />,
   };
 
   return (

@@ -55,6 +55,8 @@ interface IndicatorEditTableProps {
   onSubmitIndicator?: (indicatorId: string) => void;
   onUploadIndicatorImages?: (indicatorId: string, files: File[]) => Promise<IndicatorImageDto[]>;
   onDeleteIndicatorImage?: (imageId: string) => Promise<void>;
+  /** Callback khi click button "Không TN được" */
+  onShowCannotTestModal?: (indicatorId: string, indicatorName: string) => void;
 }
 
 const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
@@ -71,6 +73,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
   onSubmitIndicator,
   onUploadIndicatorImages,
   onDeleteIndicatorImage,
+  onShowCannotTestModal,
 }) => {
   const [editedResults, setEditedResults] = useState<
     Map<string, SaveIndicatorResultDto>
@@ -205,6 +208,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       [IndicatorTestingStatus.Rejected]: <WarningOutlined />,
       [IndicatorTestingStatus.Done]: <CheckCircleOutlined />,
       [IndicatorTestingStatus.Cancelled]: <StopOutlined />,
+      [IndicatorTestingStatus.CannotTest]: <StopOutlined />,
     };
 
     return (
@@ -497,14 +501,21 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
           hasResult &&
           hasTestDate;
 
-        // Không hiện gì nếu đã Done, PendingApproval, hoặc Cancelled
+        // Không hiện gì nếu đã Done, PendingApproval, Cancelled, hoặc CannotTest
         if (
           status === IndicatorTestingStatus.Done ||
           status === IndicatorTestingStatus.PendingApproval ||
-          status === IndicatorTestingStatus.Cancelled
+          status === IndicatorTestingStatus.Cancelled ||
+          status === IndicatorTestingStatus.CannotTest
         ) {
           return <Text type="secondary">-</Text>;
         }
+
+        // Có thể báo không TN được khi: Todo, Testing, Rejected
+        const canMarkCannotTest =
+          status === IndicatorTestingStatus.Todo ||
+          status === IndicatorTestingStatus.Testing ||
+          status === IndicatorTestingStatus.Rejected;
 
         return (
           <Space size={4}>
@@ -524,12 +535,27 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
                 </Button>
               </Tooltip>
             )}
-            {!hasResult && (
+            {canMarkCannotTest && onShowCannotTestModal && (
+              <Tooltip title="Báo không thể thử nghiệm">
+                <Button
+                  type="text"
+                  size="small"
+                  danger
+                  icon={<StopOutlined />}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onShowCannotTestModal(record.id, record.indicatorName || '');
+                  }}
+                  disabled={submitting}
+                />
+              </Tooltip>
+            )}
+            {!hasResult && !canSubmit && (
               <Text type="secondary" style={{ fontSize: 12 }}>
                 Nhập KQ để gửi
               </Text>
             )}
-            {hasResult && !hasTestDate && (
+            {hasResult && !hasTestDate && !canSubmit && (
               <Text type="secondary" style={{ fontSize: 12 }}>
                 Chọn ngày TN
               </Text>
@@ -541,23 +567,25 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
   ];
 
   // Sort indicators theo thứ tự ưu tiên trạng thái, sau đó theo id
-  // Ưu tiên: Bị từ chối > Chờ phê duyệt > Đang TN > Cần làm > Đã xong > KH hủy
+  // Ưu tiên: Bị từ chối > Không TN được > Chờ phê duyệt > Đang TN > Cần làm > Đã xong > KH hủy
   const getStatusPriority = (status: IndicatorTestingStatus): number => {
     switch (status) {
       case IndicatorTestingStatus.Rejected:
         return 0; // Cao nhất
+      case IndicatorTestingStatus.CannotTest:
+        return 1; // Không TN được - cần xử lý
       case IndicatorTestingStatus.PendingApproval:
-        return 1;
-      case IndicatorTestingStatus.Testing:
         return 2;
-      case IndicatorTestingStatus.Todo:
+      case IndicatorTestingStatus.Testing:
         return 3;
-      case IndicatorTestingStatus.Done:
+      case IndicatorTestingStatus.Todo:
         return 4;
+      case IndicatorTestingStatus.Done:
+        return 5;
       case IndicatorTestingStatus.Cancelled:
-        return 5; // Thấp nhất - KH hủy hiển thị cuối cùng
+        return 6; // Thấp nhất - KH hủy hiển thị cuối cùng
       default:
-        return 6;
+        return 7;
     }
   };
 

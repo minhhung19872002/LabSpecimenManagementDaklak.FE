@@ -5,6 +5,7 @@ import {
   ClockCircleOutlined,
   SyncOutlined,
   CloseCircleOutlined,
+  StopOutlined,
 } from "../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -28,6 +29,7 @@ const getStatusTag = (status: TestingStatus) => {
     [TestingStatus.PendingApproval]: <ClockCircleOutlined />,
     [TestingStatus.Rejected]: <CloseCircleOutlined />,
     [TestingStatus.Completed]: <CheckCircleOutlined />,
+    [TestingStatus.CannotTest]: <StopOutlined />,
   };
 
   return (

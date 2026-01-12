@@ -1,22 +1,24 @@
 import { IndicatorApprovalStatus } from './laboratoryTask';
 
-// Testing Status Enum (Task level - 5 statuses)
+// Testing Status Enum (Task level - 6 statuses)
 export enum TestingStatus {
   NotStarted = 0,     // Chưa bắt đầu - Mới được assign
   InProgress = 1,     // Đang thử nghiệm - Đã check-in >=1 chỉ tiêu
   PendingApproval = 2, // Chờ phê duyệt - Đã gửi >=1 chỉ tiêu
   Rejected = 3,       // Bị từ chối - Có >=1 chỉ tiêu bị từ chối
-  Completed = 4       // Hoàn thành - Tất cả đã duyệt
+  Completed = 4,      // Hoàn thành - Tất cả đã duyệt
+  CannotTest = 5      // Không TN được - Có chỉ tiêu KTV báo không thể TN
 }
 
-// Indicator Testing Status Enum (Indicator level - 6 statuses)
+// Indicator Testing Status Enum (Indicator level - 7 statuses)
 export enum IndicatorTestingStatus {
   Todo = 0,           // Cần làm - Chưa check-in
   Testing = 1,        // Đang thí nghiệm - Đã check-in
   PendingApproval = 2, // Chờ phê duyệt - Đã gửi kết quả
   Rejected = 3,       // Bị từ chối - QLKT từ chối
   Done = 4,           // Đã xong - QLKT đã duyệt
-  Cancelled = 5       // KH hủy - Khách hàng đã hủy chỉ tiêu này
+  Cancelled = 5,      // KH hủy - Khách hàng đã hủy chỉ tiêu này
+  CannotTest = 6      // Không TN được - KTV báo không thể thử nghiệm
 }
 
 // Sample Testing Image Type
@@ -37,7 +39,8 @@ export const TestingStatusLabels: Record<TestingStatus, string> = {
   [TestingStatus.InProgress]: 'Đang thử nghiệm',
   [TestingStatus.PendingApproval]: 'Chờ phê duyệt',
   [TestingStatus.Rejected]: 'Bị từ chối',
-  [TestingStatus.Completed]: 'Hoàn thành'
+  [TestingStatus.Completed]: 'Hoàn thành',
+  [TestingStatus.CannotTest]: 'Không TN được'
 };
 
 export const TestingStatusColors: Record<TestingStatus, string> = {
@@ -45,7 +48,8 @@ export const TestingStatusColors: Record<TestingStatus, string> = {
   [TestingStatus.InProgress]: 'processing',
   [TestingStatus.PendingApproval]: 'warning',
   [TestingStatus.Rejected]: 'error',
-  [TestingStatus.Completed]: 'success'
+  [TestingStatus.Completed]: 'success',
+  [TestingStatus.CannotTest]: 'orange'
 };
 
 // Status display helper - Indicator level
@@ -55,7 +59,8 @@ export const IndicatorTestingStatusLabels: Record<IndicatorTestingStatus, string
   [IndicatorTestingStatus.PendingApproval]: 'Chờ phê duyệt',
   [IndicatorTestingStatus.Rejected]: 'Bị từ chối',
   [IndicatorTestingStatus.Done]: 'Đã xong',
-  [IndicatorTestingStatus.Cancelled]: 'KH hủy'
+  [IndicatorTestingStatus.Cancelled]: 'KH hủy',
+  [IndicatorTestingStatus.CannotTest]: 'Không TN được'
 };
 
 export const IndicatorTestingStatusColors: Record<IndicatorTestingStatus, string> = {
@@ -64,7 +69,8 @@ export const IndicatorTestingStatusColors: Record<IndicatorTestingStatus, string
   [IndicatorTestingStatus.PendingApproval]: 'warning',
   [IndicatorTestingStatus.Rejected]: 'error',
   [IndicatorTestingStatus.Done]: 'success',
-  [IndicatorTestingStatus.Cancelled]: 'volcano'
+  [IndicatorTestingStatus.Cancelled]: 'volcano',
+  [IndicatorTestingStatus.CannotTest]: 'orange'
 };
 
 // Testing List DTO
@@ -236,6 +242,18 @@ export interface UploadSampleTestingImageInput {
   imageType: SampleTestingImageType;
 }
 
+// Rejection History Image DTO
+export interface RejectionHistoryImageDto {
+  id: string;
+  rejectionHistoryId: string;
+  fileId: string;
+  fileName: string;
+  fileSize: number;
+  url: string;
+  creationTime: string;
+  creatorId?: string;
+}
+
 // Rejection History DTO
 export interface RejectionHistoryDto {
   id: string;
@@ -244,6 +262,14 @@ export interface RejectionHistoryDto {
   rejectedDate: string;
   rejectedById: string;
   rejectedByName?: string;
+  isCannotTest: boolean;           // true = KTV báo không TN được
+  reportedByRole?: string;         // "Technician" hoặc "QualityManager"
+  images: RejectionHistoryImageDto[]; // Hình ảnh đính kèm
+}
+
+// Cannot Test DTO (KTV báo không TN được)
+export interface CannotTestDto {
+  reason: string;
 }
 
 // Indicator Image DTO

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Modal, Typography, Spin, Empty, Badge, Avatar } from "antd";
-import { HistoryOutlined, UserOutlined } from "../../../components/common/Icon";
+import { Modal, Typography, Spin, Empty, Badge, Avatar, Image, Space, Tag } from "antd";
+import { HistoryOutlined, UserOutlined, PictureOutlined, StopOutlined, CloseCircleOutlined } from "../../../components/common/Icon";
 import dayjs from "dayjs";
 import { testingService } from "../../../services/testingService";
 import { RejectionHistoryDto } from "../../../types/testing";
+import { API_BASE_URL } from "../../../services/api";
 
 const { Text, Paragraph } = Typography;
 
@@ -94,17 +95,26 @@ const RejectionHistoryModal: React.FC<RejectionHistoryModalProps> = ({
                   {/* Content */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     {/* Header */}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                      <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8, flexWrap: "wrap", gap: 4 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                         <Text strong style={{ fontSize: 14 }}>
                           {item.rejectedByName || "N/A"}
                         </Text>
+                        {/* Badge phân biệt loại */}
+                        {item.isCannotTest ? (
+                          <Tag color="orange" icon={<StopOutlined />} style={{ margin: 0 }}>
+                            KTV báo không TN được
+                          </Tag>
+                        ) : (
+                          <Tag color="red" icon={<CloseCircleOutlined />} style={{ margin: 0 }}>
+                            {item.reportedByRole === "QualityManager" ? "QLCL từ chối" : "QLKT từ chối"}
+                          </Tag>
+                        )}
                         {index === 0 && (
                           <Badge
                             count="Mới nhất"
                             style={{
                               backgroundColor: "#fa8c16",
-                              marginLeft: 8,
                               fontSize: 11,
                             }}
                           />
@@ -121,7 +131,7 @@ const RejectionHistoryModal: React.FC<RejectionHistoryModalProps> = ({
                         padding: "10px 12px",
                         backgroundColor: "#fff",
                         borderRadius: 6,
-                        borderLeft: `3px solid ${index === 0 ? "#fa8c16" : "#d9d9d9"}`,
+                        borderLeft: `3px solid ${item.isCannotTest ? "#fa8c16" : "#ff4d4f"}`,
                       }}
                     >
                       <Paragraph
@@ -131,6 +141,37 @@ const RejectionHistoryModal: React.FC<RejectionHistoryModalProps> = ({
                         {item.rejectionReason || "Không có lý do"}
                       </Paragraph>
                     </div>
+
+                    {/* Images */}
+                    {item.images && item.images.length > 0 && (
+                      <div style={{ marginTop: 12 }}>
+                        <Space size={4} align="center" style={{ marginBottom: 8 }}>
+                          <PictureOutlined style={{ color: "#8c8c8c" }} />
+                          <Text type="secondary" style={{ fontSize: 12 }}>
+                            Hình ảnh đính kèm ({item.images.length})
+                          </Text>
+                        </Space>
+                        <Image.PreviewGroup>
+                          <Space size={8} wrap>
+                            {item.images.map((img) => (
+                              <Image
+                                key={img.id}
+                                src={`${API_BASE_URL}${img.url}`}
+                                alt={img.fileName}
+                                width={80}
+                                height={80}
+                                style={{
+                                  objectFit: "cover",
+                                  borderRadius: 4,
+                                  border: "1px solid #f0f0f0",
+                                }}
+                                fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+                              />
+                            ))}
+                          </Space>
+                        </Image.PreviewGroup>
+                      </div>
+                    )}
                   </div>
                 </div>
 
