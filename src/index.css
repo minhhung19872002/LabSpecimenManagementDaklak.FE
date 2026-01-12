@@ -439,3 +439,27 @@ code {
 .no-border-radius-table .ant-table-pagination .ant-pagination-jump-next {
   order: 3;
 }
+
+/* Chart Fullscreen Modal - 90% on desktop, 100% on mobile */
+.chart-fullscreen-modal .ant-modal {
+  max-width: 90% !important;
+}
+
+@media screen and (max-width: 768px) {
+  .chart-fullscreen-modal .ant-modal {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    top: 0 !important;
+  }
+
+  .chart-fullscreen-modal .ant-modal-content {
+    height: 100vh !important;
+    border-radius: 0 !important;
+  }
+
+  .chart-fullscreen-modal .ant-modal-body {
+    height: calc(100vh - 55px) !important;
+    max-height: none !important;
+  }
+}

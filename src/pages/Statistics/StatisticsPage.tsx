@@ -12,7 +12,9 @@ import {
   Tabs,
   Spin,
   message,
-  Empty
+  Empty,
+  Modal,
+  Tooltip
 } from 'antd';
 import {
   FileTextOutlined,
@@ -21,7 +23,9 @@ import {
   DownloadOutlined,
   BarChartOutlined,
   PieChartOutlined,
-  ReloadOutlined
+  ReloadOutlined,
+  FullscreenOutlined,
+  FullscreenExitOutlined
 } from '../../components/common/Icon';
 import { Column, Pie } from '@ant-design/charts';
 import dayjs from 'dayjs';
@@ -34,11 +38,16 @@ import {
 
 const { RangePicker } = DatePicker;
 
+// Fullscreen modal state
+type FullscreenState = boolean;
+
 const StatisticsPage: React.FC = () => {
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [statisticsData, setStatisticsData] = useState<StatisticsDataDto | null>(null);
+  const [showFullscreen, setShowFullscreen] = useState<FullscreenState>(false);
+  const [chartReady, setChartReady] = useState(false);
 
   const fetchStatistics = useCallback(async () => {
     setLoading(true);
@@ -61,6 +70,17 @@ const StatisticsPage: React.FC = () => {
   useEffect(() => {
     fetchStatistics();
   }, [fetchStatistics]);
+
+  // Delay chart render until modal animation completes
+  useEffect(() => {
+    if (showFullscreen) {
+      setChartReady(false);
+      const timer = setTimeout(() => setChartReady(true), 100);
+      return () => clearTimeout(timer);
+    } else {
+      setChartReady(false);
+    }
+  }, [showFullscreen]);
 
   const handleExport = async () => {
     setExporting(true);
@@ -154,6 +174,31 @@ const StatisticsPage: React.FC = () => {
     },
   ];
 
+  // Render Monthly Trend Chart
+  // height = 0 means autoFit to container
+  const renderMonthlyTrendChart = (height: number) => (
+    monthlyTrends.length > 0 ? (
+      <Column
+        data={monthlyTrends.flatMap(item => [
+          { month: item.month, type: 'Yêu cầu', value: item.testRequests },
+          { month: item.month, type: 'Mẫu', value: item.specimens },
+          { month: item.month, type: 'Phép thử', value: item.tests },
+          { month: item.month, type: 'Báo cáo', value: item.reports },
+        ])}
+        xField="month"
+        yField="value"
+        colorField="type"
+        group={true}
+        height={height || undefined}
+        autoFit={height === 0}
+        legend={{ position: 'top' }}
+        color={['#1890ff', '#722ed1', '#52c41a', '#faad14']}
+      />
+    ) : (
+      <Empty description="Không có dữ liệu" style={{ height: height || '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }} />
+    )
+  );
+
   return (
     <div>
       {/* Header */}
@@ -224,26 +269,26 @@ const StatisticsPage: React.FC = () => {
         {/* Charts Row 1: Monthly Trends & Sample Distribution */}
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
           <Col xs={24} lg={14}>
-            <Card title={<><BarChartOutlined /> Xu hướng theo tháng</>}>
-              {monthlyTrends.length > 0 ? (
-                <Column
-                  data={monthlyTrends.flatMap(item => [
-                    { month: item.month, type: 'Yêu cầu', value: item.testRequests },
-                    { month: item.month, type: 'Mẫu', value: item.specimens },
-                    { month: item.month, type: 'Phép thử', value: item.tests },
-                    { month: item.month, type: 'Báo cáo', value: item.reports },
-                  ])}
-                  xField="month"
-                  yField="value"
-                  colorField="type"
-                  group={true}
-                  height={300}
-                  legend={{ position: 'top' }}
-                  color={['#1890ff', '#722ed1', '#52c41a', '#faad14']}
-                />
-              ) : (
-                <Empty description="Không có dữ liệu" style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }} />
-              )}
+            <Card
+              title={<><BarChartOutlined /> Xu hướng theo tháng</>}
+              extra={
+                <Tooltip title="Xem toàn màn hình">
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<FullscreenOutlined />}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowFullscreen(true);
+                    }}
+                  />
+                </Tooltip>
+              }
+              hoverable
+              style={{ cursor: 'pointer' }}
+              onClick={() => setShowFullscreen(true)}
+            >
+              {renderMonthlyTrendChart(300)}
             </Card>
           </Col>
           <Col xs={24} lg={10}>
@@ -368,6 +413,31 @@ const StatisticsPage: React.FC = () => {
           />
         </Card>
       </Spin>
+
+      {/* Fullscreen Modal for Monthly Trends */}
+      <Modal
+        title={
+          <Space>
+            <BarChartOutlined /> Xu hướng theo tháng
+          </Space>
+        }
+        open={showFullscreen}
+        onCancel={() => setShowFullscreen(false)}
+        footer={null}
+        width="90%"
+        centered
+        styles={{
+          body: {
+            padding: '24px 0 0 0',
+            overflow: 'hidden'
+          }
+        }}
+        wrapClassName="chart-fullscreen-modal"
+      >
+        <div style={{ width: '100%', height: 'calc(80vh - 100px)' }}>
+          {showFullscreen && chartReady && renderMonthlyTrendChart(0)}
+        </div>
+      </Modal>
     </div>
   );
 };
