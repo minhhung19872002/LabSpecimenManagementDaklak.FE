@@ -1,6 +1,6 @@
 import React from "react";
 import { Table, Button, Space, Card, Input, Row, Col, Select } from "antd";
-import { ReloadOutlined } from "@ant-design/icons";
+import { ReloadOutlined } from "../../components/common/Icon";
 import {
   SampleStorageStatus,
   SampleStorageStatusLabels,
@@ -38,9 +38,7 @@ const SpecimenList: React.FC = () => {
       title="Quản lý mẫu"
       extra={
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={loadData}>
-            Làm mới
-          </Button>
+          <Button icon={<ReloadOutlined />} onClick={loadData} />
         </Space>
       }
     >

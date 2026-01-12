@@ -4,7 +4,7 @@ import {
   DeleteOutlined,
   EyeOutlined,
   HistoryOutlined,
-} from "@ant-design/icons";
+} from "../../../components/common/Icon";
 import dayjs from "dayjs";
 import {
   SpecimenHistoryDto,

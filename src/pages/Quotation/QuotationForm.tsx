@@ -22,7 +22,7 @@ import {
   ArrowLeftOutlined,
   SaveOutlined,
   EyeOutlined,
-} from "@ant-design/icons";
+} from "../../components/common/Icon";
 import { useNavigate, useParams } from "react-router-dom";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";

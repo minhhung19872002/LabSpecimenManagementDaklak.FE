@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Upload, Image, Space, Tooltip, Modal, message, Spin } from 'antd';
-import { PlusOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, EyeOutlined } from '../../../components/common/Icon';
 import type { RcFile } from 'antd/es/upload/interface';
 import { SampleTestingImageDto, SampleTestingImageType } from '../../../types/testing';
 import testingService from '../../../services/testingService';

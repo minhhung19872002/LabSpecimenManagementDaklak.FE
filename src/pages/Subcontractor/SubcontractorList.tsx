@@ -5,7 +5,7 @@ import {
   SearchOutlined,
   ReloadOutlined,
   SafetyCertificateOutlined,
-} from "@ant-design/icons";
+} from "../../components/common/Icon";
 import { useSubcontractorList } from "./hooks";
 import {
   SubcontractorFormModal,
@@ -50,9 +50,7 @@ const SubcontractorList: React.FC = () => {
         }
         extra={
           <Space>
-            <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
-              Làm mới
-            </Button>
+            <Button icon={<ReloadOutlined />} onClick={handleRefresh} />
             <Button
               type="primary"
               icon={<PlusOutlined />}

@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React from "react";
 import { Divider, Image } from "antd";
-import { PictureOutlined } from "@ant-design/icons";
+import { PictureOutlined } from "../../../../components/common/Icon";
 import { TestRequestDto } from "../../../../types/testRequest";
 import { fileService } from "../../../../services/fileService";
 

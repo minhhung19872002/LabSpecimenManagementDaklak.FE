@@ -1,5 +1,5 @@
 import { Button, Space, Tag, Tooltip, Popconfirm } from "antd";
-import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { EditOutlined, DeleteOutlined } from "../../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import { GroupedSpecimenTypeData, SpecimenTypeIndicatorDto } from "../types";
 

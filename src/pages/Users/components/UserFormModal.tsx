@@ -6,7 +6,7 @@ import {
   MailOutlined,
   PhoneOutlined,
   LockOutlined,
-} from "@ant-design/icons";
+} from "../../../components/common/Icon";
 import { UserFormData } from "../schemas";
 import { Department, ROLES } from "../hooks";
 

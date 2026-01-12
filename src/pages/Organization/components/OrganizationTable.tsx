@@ -1,6 +1,6 @@
 import React from 'react';
 import { Table, Button, Space, Tag, Popconfirm } from 'antd';
-import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { EditOutlined, DeleteOutlined } from '../../../components/common/Icon';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { OrganizationDto } from '../../../types/organization';

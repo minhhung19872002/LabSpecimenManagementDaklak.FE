@@ -1,6 +1,6 @@
 import React from "react";
 import { Table, Button, Space, Card, Input, Row, Col, Select } from "antd";
-import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
+import { PlusOutlined, ReloadOutlined } from "../../components/common/Icon";
 import { ResultApprovalStatus } from "../../types/testResult";
 import { useTestResultList } from "./hooks";
 import TestResultFormModal from "./components/TestResultFormModal";
@@ -37,9 +37,7 @@ const TestResultList: React.FC = () => {
       title="Kết quả thử nghiệm"
       extra={
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={loadData}>
-            Làm mới
-          </Button>
+          <Button icon={<ReloadOutlined />} onClick={loadData} />
           <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
             Thêm kết quả
           </Button>

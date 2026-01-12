@@ -12,10 +12,9 @@ import {
   Button,
   Drawer,
 } from "antd";
-import {
+import Icon, {
   DashboardOutlined,
   FileTextOutlined,
-  ExperimentOutlined,
   SettingOutlined,
   TeamOutlined,
   ScheduleOutlined,
@@ -37,7 +36,7 @@ import {
   LeftOutlined,
   RightOutlined,
   DollarOutlined,
-} from "@ant-design/icons";
+} from "../common/Icon";
 import { useTranslation } from "react-i18next";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { authService, UserInfo } from "../../services/authService";
@@ -341,13 +340,13 @@ const MainLayout: React.FC = () => {
     },
     {
       key: "lab",
-      icon: <ExperimentOutlined />,
+      icon: <Icon name="activity" />,
       label: menuLabel(t("menu.labOperations")),
       roles: [...ALL_ROLES, ROLES.ACCOUNTANT],
       children: [
         {
           key: "quotations",
-          icon: <DollarOutlined />,
+          icon: <Icon name="file-earmark-text" />,
           label: menuLabel("Báo giá"),
           onClick: () => navigate(PATH_ROUTES.quotations.index),
           roles: [...ALL_ROLES, ROLES.ACCOUNTANT],
@@ -376,7 +375,7 @@ const MainLayout: React.FC = () => {
         },
         {
           key: "testManagement",
-          icon: <ExperimentOutlined />,
+          icon: <Icon name="clipboard2-pulse" />,
           label: menuLabel("Quản lý thử nghiệm"),
           onClick: () => navigate(PATH_ROUTES.testing.index),
           roles: [
@@ -395,7 +394,7 @@ const MainLayout: React.FC = () => {
         },
         {
           key: "specimens",
-          icon: <ExperimentOutlined />,
+          icon: <Icon name="droplet-half" />,
           label: menuLabel(t("menu.specimens")),
           onClick: () => navigate(PATH_ROUTES.specimens.index),
           roles: [

@@ -7,7 +7,7 @@ import {
   Table,
   Tag,
 } from "antd";
-import { CheckCircleOutlined } from "@ant-design/icons";
+import { CheckCircleOutlined } from "../../../components/common/Icon";
 import dayjs from "dayjs";
 import { Subcontractor, Certification } from "../hooks";
 import StatusTag from "../../../components/common/StatusTag";

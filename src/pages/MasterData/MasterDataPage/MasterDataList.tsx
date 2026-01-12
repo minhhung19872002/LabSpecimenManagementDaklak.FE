@@ -7,7 +7,7 @@ import {
   ImportOutlined,
   ExportOutlined,
   DownloadOutlined,
-} from "@ant-design/icons";
+} from "../../../components/common/Icon";
 import ImportExcelModal from "../../../components/common/ImportExcelModal";
 import IndicatorsTab from "../IndicatorsTab";
 import FormTemplatesTab from "../FormTemplatesTab";

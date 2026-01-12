@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, Descriptions, Button, Space, Spin, Tag, message, Modal, Input, Divider, Alert } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeftOutlined, EditOutlined, SendOutlined, CheckCircleOutlined, CloseCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, EditOutlined, SendOutlined, CheckCircleOutlined, CloseCircleOutlined, ExclamationCircleOutlined } from '../../components/common/Icon';
 import { testResultService } from '../../services/testResultService';
 import { TestResultDto, ResultApprovalStatus } from '../../types/testResult';
 import dayjs from 'dayjs';
