@@ -93,6 +93,7 @@ const TestingDetail: React.FC = () => {
                 methodId: ind.methodId,
                 unit: ind.unit,
                 result: existingResult?.result ?? ind.result,
+                testDate: existingResult?.testDate ?? ind.testDate, // Quan trọng: cần testDate để batch submit hoạt động
               };
             })
           );
@@ -149,6 +150,7 @@ const TestingDetail: React.FC = () => {
             methodId: ind.methodId,
             unit: ind.unit,
             result: ind.result,
+            testDate: ind.testDate, // Quan trọng: cần testDate để batch submit hoạt động
           }))
         );
       });
