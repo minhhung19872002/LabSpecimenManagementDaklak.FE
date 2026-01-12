@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Modal, Table, Button, Space, Typography, message, Input, Spin, Checkbox, Collapse, Divider, Tag, List } from 'antd';
+import { Modal, Table, Button, Space, Typography, message, Input, Spin, Checkbox, Collapse, Divider, Tag, List, Select } from 'antd';
 import { PrinterOutlined, CaretRightOutlined, FilePdfOutlined, FolderOpenOutlined } from '../../../components/common/Icon';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -8,6 +8,7 @@ import {
 } from '../../../types/qualityManagement';
 import { qualityManagementService, TemplateDto } from '../../../services/qualityManagementService';
 import { API_BASE_URL } from '../../../services/api';
+import userService, { UserLookupDto } from '../../../services/userService';
 
 const { Text, Title } = Typography;
 
@@ -51,6 +52,9 @@ const PrintModal: React.FC<PrintModalProps> = ({
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [generatedResults, setGeneratedResults] = useState<PrintResultItem[]>([]);
   const [showResults, setShowResults] = useState(false);
+  const [vicePresidents, setVicePresidents] = useState<UserLookupDto[]>([]);
+  const [selectedVicePresidentId, setSelectedVicePresidentId] = useState<string | undefined>(undefined);
+  const [loadingVicePresidents, setLoadingVicePresidents] = useState(false);
 
   // Get only approved indicators
   const approvedIndicators = useMemo(() =>
@@ -83,6 +87,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
   useEffect(() => {
     if (visible) {
       loadTemplates();
+      loadVicePresidents();
     }
   }, [visible]);
 
@@ -94,6 +99,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
       setNote('');
       setGeneratedResults([]);
       setShowResults(false);
+      setSelectedVicePresidentId(undefined);
     }
   }, [visible]);
 
@@ -111,6 +117,18 @@ const PrintModal: React.FC<PrintModalProps> = ({
       console.error('Error loading templates:', error);
     } finally {
       setLoadingTemplates(false);
+    }
+  };
+
+  const loadVicePresidents = async () => {
+    setLoadingVicePresidents(true);
+    try {
+      const result = await userService.getVicePresidents();
+      setVicePresidents(result);
+    } catch (error) {
+      console.error('Error loading vice presidents:', error);
+    } finally {
+      setLoadingVicePresidents(false);
     }
   };
 
@@ -182,7 +200,8 @@ const PrintModal: React.FC<PrintModalProps> = ({
           taskId,
           selectedIndicatorIds,
           selectedTemplates,
-          note || undefined
+          note || undefined,
+          selectedVicePresidentId
         );
 
         message.success(`Đã tạo ${result.results.length} phiếu kết quả`);
@@ -195,7 +214,9 @@ const PrintModal: React.FC<PrintModalProps> = ({
         const result = await qualityManagementService.printMixedResult(
           taskId,
           selectedIndicatorIds,
-          note || undefined
+          note || undefined,
+          undefined, // templateName
+          selectedVicePresidentId
         );
 
         message.success('Đã tạo phiếu kết quả');
@@ -232,6 +253,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
     setNote('');
     setGeneratedResults([]);
     setShowResults(false);
+    setSelectedVicePresidentId(undefined);
     onCancel();
   };
 
@@ -353,6 +375,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
       onCancel={handleCancel}
       width={1000}
       centered
+      styles={{ body: { maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' } }}
       footer={
         <Space>
           <Button onClick={handleCancel}>Hủy</Button>
@@ -453,6 +476,29 @@ const PrintModal: React.FC<PrintModalProps> = ({
               </div>
             </>
           )}
+
+          {/* Vice President selection */}
+          <Divider style={{ margin: '16px 0' }} />
+          <div style={{ marginBottom: 16 }}>
+            <Title level={5} style={{ marginBottom: 8 }}>Phó Giám đốc ký (không bắt buộc)</Title>
+            <Select
+              style={{ width: '100%' }}
+              placeholder="Chọn Phó Giám đốc ký báo cáo"
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              loading={loadingVicePresidents}
+              value={selectedVicePresidentId}
+              onChange={(value) => setSelectedVicePresidentId(value)}
+              options={vicePresidents.map((vp) => ({
+                value: vp.id,
+                label: vp.displayName,
+              }))}
+            />
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Nếu chọn, tên sẽ được thay thế vào vị trí Phó Giám đốc trong báo cáo
+            </Text>
+          </div>
 
           {/* Note input field */}
           <Divider style={{ margin: '16px 0' }} />
