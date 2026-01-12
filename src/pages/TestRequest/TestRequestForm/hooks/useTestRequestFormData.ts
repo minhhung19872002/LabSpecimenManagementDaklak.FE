@@ -135,6 +135,11 @@ export const useTestRequestFormData = () => {
   const [tempSelectedIndicatorMethods, setTempSelectedIndicatorMethods] = useState<IndicatorMethodKey[]>([]);
   const [expandedIndicators, setExpandedIndicators] = useState<string[]>([]); // For 3-level tree in left panel
   const [selectedGroupFilter, setSelectedGroupFilter] = useState<string>("all");
+  // Filter theo loại mẫu
+  const [currentSampleSpecimenTypeId, setCurrentSampleSpecimenTypeId] = useState<string | undefined>(undefined);
+  const [currentSampleSpecimenTypeName, setCurrentSampleSpecimenTypeName] = useState<string | undefined>(undefined);
+  const [specimenTypeIndicatorIds, setSpecimenTypeIndicatorIds] = useState<string[]>([]);
+  const [specimenTypeFilterActive, setSpecimenTypeFilterActive] = useState(false);
   const [indicatorSearchText, setIndicatorSearchText] = useState<string>("");
   const [groupSelectorVisible, setGroupSelectorVisible] = useState(false);
   const [groupSearchText, setGroupSearchText] = useState<string>("");
@@ -877,6 +882,15 @@ export const useTestRequestFormData = () => {
     setGroupSelectorVisible,
     groupSearchText,
     setGroupSearchText,
+    // Filter theo loại mẫu
+    currentSampleSpecimenTypeId,
+    setCurrentSampleSpecimenTypeId,
+    currentSampleSpecimenTypeName,
+    setCurrentSampleSpecimenTypeName,
+    specimenTypeIndicatorIds,
+    setSpecimenTypeIndicatorIds,
+    specimenTypeFilterActive,
+    setSpecimenTypeFilterActive,
 
     // Dates and checks
     selectedIndicatorDates,

@@ -2,6 +2,7 @@
 import { message } from "antd";
 import dayjs from "dayjs";
 import { testRequestService, PreviewTestRequestFormInput } from "../../../../services/testRequestService";
+import { specimenTypeService } from "../../../../services/masterDataService";
 import { API_BASE_URL } from "../../../../services/api";
 import {
   ResultLanguage,
@@ -55,6 +56,11 @@ interface UseTestRequestFormActionsProps {
   setIndicatorModalVisible: (visible: boolean) => void;
   setSelectedGroupFilter: (filter: string) => void;
   indicatorMethodsMap: Record<string, IndicatorMethodInfo[]>;
+  // Filter theo loại mẫu
+  setCurrentSampleSpecimenTypeId: (id: string | undefined) => void;
+  setCurrentSampleSpecimenTypeName: (name: string | undefined) => void;
+  setSpecimenTypeIndicatorIds: React.Dispatch<React.SetStateAction<string[]>>;
+  setSpecimenTypeFilterActive: React.Dispatch<React.SetStateAction<boolean>>;
 
   // Laboratory modal
   laboratories: any[];
@@ -115,6 +121,10 @@ export const useTestRequestFormActions = ({
   setIndicatorModalVisible,
   setSelectedGroupFilter,
   indicatorMethodsMap,
+  setCurrentSampleSpecimenTypeId,
+  setCurrentSampleSpecimenTypeName,
+  setSpecimenTypeIndicatorIds,
+  setSpecimenTypeFilterActive,
   laboratories,
   selectedLaboratoryId,
   setSelectedLaboratoryId,
@@ -388,7 +398,7 @@ export const useTestRequestFormActions = ({
   };
 
   // Indicator modal functions
-  const openIndicatorModal = (sampleKey: string) => {
+  const openIndicatorModal = async (sampleKey: string) => {
     if (isSamplesLocked()) {
       message.warning("Không thể thay đổi chỉ tiêu khi phiếu đang thực hiện");
       return;
@@ -418,6 +428,30 @@ export const useTestRequestFormActions = ({
         }
       });
       setSelectedIndicatorDates(restoredDates);
+
+      // Fetch indicators theo loại mẫu nếu có specimenTypeId
+      if (sample.specimenTypeId) {
+        setCurrentSampleSpecimenTypeId(sample.specimenTypeId);
+        setCurrentSampleSpecimenTypeName(sample.specimenTypeName);
+        setSpecimenTypeFilterActive(true); // Mặc định check filter nếu có loại mẫu
+        try {
+          const specimenTypeIndicators = await specimenTypeService.getIndicators(sample.specimenTypeId);
+          const indicatorIds = specimenTypeIndicators
+            .filter(sti => sti.isActive)
+            .map(sti => sti.indicatorId);
+          setSpecimenTypeIndicatorIds(indicatorIds);
+          // Nếu không có chỉ tiêu -> hiện empty, nếu có thì hiện chỉ tiêu của loại mẫu đó
+        } catch (error) {
+          console.error("Failed to fetch specimen type indicators:", error);
+          setSpecimenTypeIndicatorIds([]);
+          // Vẫn giữ filter active, chỉ là danh sách rỗng
+        }
+      } else {
+        setCurrentSampleSpecimenTypeId(undefined);
+        setCurrentSampleSpecimenTypeName(undefined);
+        setSpecimenTypeIndicatorIds([]);
+        setSpecimenTypeFilterActive(false);
+      }
 
       setIndicatorModalVisible(true);
     }
