@@ -60,11 +60,16 @@ code {
 }
 
 /* ===========================================
-   Responsive Component Heights for Tablet/Mobile
-   - Desktop (>992px): default 40px
-   - Tablet (768-992px): 36px
-   - Mobile (<768px): 32px
+   Responsive Component Heights
+   - Desktop (>992px): 40px (default), small: 32px
+   - Tablet (768-992px): 36px, small: 28px
+   - Mobile (<768px): 32px, small: 24px
    =========================================== */
+
+/* Desktop - ensure DatePicker small matches Button small */
+.ant-picker-small {
+  height: 32px !important;
+}
 
 /* Tablet breakpoint */
 @media screen and (max-width: 992px) {

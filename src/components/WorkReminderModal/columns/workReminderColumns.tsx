@@ -1,13 +1,19 @@
 import React from "react";
 import { Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { SampleReceiverPendingTaskDto, TestRequestStatus } from "../../../types/testRequest";
+import {
+  SampleReceiverPendingTaskDto,
+  TestRequestStatus,
+} from "../../../types/testRequest";
 import { formatDate } from "../../../utils/formatters";
 
 const { Text, Link } = Typography;
 
 interface WorkReminderColumnsOptions {
-  onOpenInNewTab: (record: SampleReceiverPendingTaskDto, e: React.MouseEvent) => void;
+  onOpenInNewTab: (
+    record: SampleReceiverPendingTaskDto,
+    e: React.MouseEvent
+  ) => void;
 }
 
 export const getWorkReminderColumns = (
@@ -18,13 +24,7 @@ export const getWorkReminderColumns = (
     dataIndex: "contractNumber",
     key: "contractNumber",
     render: (text: string, record: SampleReceiverPendingTaskDto) => (
-      <Link
-        href={`/test-requests/${record.id}`}
-        target="_blank"
-        onClick={(e) => options.onOpenInNewTab(record, e)}
-      >
-        {text}
-      </Link>
+      <Link onClick={(e) => options.onOpenInNewTab(record, e)}>{text}</Link>
     ),
   },
   {

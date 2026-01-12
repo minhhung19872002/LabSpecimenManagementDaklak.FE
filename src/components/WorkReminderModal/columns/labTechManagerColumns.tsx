@@ -1,13 +1,19 @@
 import React from "react";
 import { Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { LabTechManagerPendingTaskDto, LaboratoryTaskStatus } from "../../../types/laboratoryTask";
+import {
+  LabTechManagerPendingTaskDto,
+  LaboratoryTaskStatus,
+} from "../../../types/laboratoryTask";
 import { formatDate } from "../../../utils/formatters";
 
 const { Text, Link } = Typography;
 
 interface LabTechManagerColumnsOptions {
-  onOpenInNewTab: (record: LabTechManagerPendingTaskDto, e: React.MouseEvent) => void;
+  onOpenInNewTab: (
+    record: LabTechManagerPendingTaskDto,
+    e: React.MouseEvent
+  ) => void;
 }
 
 const getTaskNameType = (
@@ -33,11 +39,7 @@ export const getLabTechManagerColumns = (
     dataIndex: "contractNumber",
     key: "contractNumber",
     render: (text: string, record: LabTechManagerPendingTaskDto) => (
-      <Link
-        href={`/tasks/${record.id}`}
-        target="_blank"
-        onClick={(e) => options.onOpenInNewTab(record, e)}
-      >
+      <Link onClick={(e) => options.onOpenInNewTab(record, e)}>
         {text || "-"}
       </Link>
     ),
@@ -47,10 +49,7 @@ export const getLabTechManagerColumns = (
     dataIndex: "taskName",
     key: "taskName",
     render: (text: string, record: LabTechManagerPendingTaskDto) => (
-      <Text
-        type={getTaskNameType(record)}
-        strong
-      >
+      <Text type={getTaskNameType(record)} strong>
         {text}
       </Text>
     ),
@@ -69,7 +68,10 @@ export const getLabTechManagerColumns = (
       const formatted = formatDate(date);
       if (record.daysUntilDeadline !== null && record.daysUntilDeadline <= 5) {
         return (
-          <Text type={record.daysUntilDeadline <= 2 ? "danger" : "warning"} strong>
+          <Text
+            type={record.daysUntilDeadline <= 2 ? "danger" : "warning"}
+            strong
+          >
             {formatted}
           </Text>
         );

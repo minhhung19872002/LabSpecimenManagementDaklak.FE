@@ -1,7 +1,10 @@
 import React from "react";
 import { Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { QualityManagerPendingTaskDto, QualityManagementStatus } from "../../../types/qualityManagement";
+import {
+  QualityManagerPendingTaskDto,
+  QualityManagementStatus,
+} from "../../../types/qualityManagement";
 import { formatDate } from "../../../utils/formatters";
 
 const { Text, Link } = Typography;
@@ -16,7 +19,11 @@ const getTaskNameType = (
   if (record.status === QualityManagementStatus.PendingApproval) {
     return "warning";
   }
-  if (record.status === QualityManagementStatus.PendingPublish || record.status === QualityManagementStatus.PartialPublished || record.status === QualityManagementStatus.FullyPublished) {
+  if (
+    record.status === QualityManagementStatus.PendingPublish ||
+    record.status === QualityManagementStatus.PartialPublished ||
+    record.status === QualityManagementStatus.FullyPublished
+  ) {
     return "warning";
   }
   if (record.daysUntilDeadline !== undefined && record.daysUntilDeadline <= 2) {
@@ -33,13 +40,7 @@ export const getQualityManagerColumns = (
     dataIndex: "contractNumber",
     key: "contractNumber",
     render: (text: string) => (
-      <Link
-        href="/quality-management"
-        target="_blank"
-        onClick={options.onOpenInNewTab}
-      >
-        {text || "-"}
-      </Link>
+      <Link onClick={options.onOpenInNewTab}>{text || "-"}</Link>
     ),
   },
   {
@@ -47,10 +48,7 @@ export const getQualityManagerColumns = (
     dataIndex: "taskName",
     key: "taskName",
     render: (text: string, record: QualityManagerPendingTaskDto) => (
-      <Text
-        type={getTaskNameType(record)}
-        strong
-      >
+      <Text type={getTaskNameType(record)} strong>
         {text}
       </Text>
     ),
@@ -65,11 +63,20 @@ export const getQualityManagerColumns = (
     title: "Ngày YC xong",
     dataIndex: "requestCompletionDate",
     key: "requestCompletionDate",
-    render: (date: string | undefined, record: QualityManagerPendingTaskDto) => {
+    render: (
+      date: string | undefined,
+      record: QualityManagerPendingTaskDto
+    ) => {
       const formatted = formatDate(date);
-      if (record.daysUntilDeadline !== undefined && record.daysUntilDeadline <= 5) {
+      if (
+        record.daysUntilDeadline !== undefined &&
+        record.daysUntilDeadline <= 5
+      ) {
         return (
-          <Text type={record.daysUntilDeadline <= 2 ? "danger" : "warning"} strong>
+          <Text
+            type={record.daysUntilDeadline <= 2 ? "danger" : "warning"}
+            strong
+          >
             {formatted}
           </Text>
         );
