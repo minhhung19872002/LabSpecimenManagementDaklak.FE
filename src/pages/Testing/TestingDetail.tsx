@@ -125,6 +125,13 @@ const TestingDetail: React.FC = () => {
     indicatorName: "",
   });
 
+  // Cannot test modal
+  const [cannotTestModal, setCannotTestModal] = useState({
+    visible: false,
+    indicatorId: "",
+    indicatorName: "",
+  });
+
   const loadDetail = useCallback(async () => {
     if (!id) return;
     setLoading(true);
@@ -381,6 +388,29 @@ const TestingDetail: React.FC = () => {
       indicatorId,
       indicatorName,
     });
+  };
+
+  const showCannotTestModal = (indicatorId: string, indicatorName: string) => {
+    setCannotTestModal({
+      visible: true,
+      indicatorId,
+      indicatorName,
+    });
+  };
+
+  const closeCannotTestModal = () => {
+    setCannotTestModal({
+      visible: false,
+      indicatorId: "",
+      indicatorName: "",
+    });
+  };
+
+  const handleCannotTestSuccess = async () => {
+    closeCannotTestModal();
+    // Reload data to get updated status
+    await reloadData();
+    message.success("Đã báo không thể thử nghiệm thành công");
   };
 
   const handleSubmitSingleIndicator = async (indicatorId: string) => {
@@ -644,6 +674,7 @@ const TestingDetail: React.FC = () => {
       activeKeys={activeKeys}
       selectedIndicators={selectedIndicators}
       historyModal={historyModal}
+      cannotTestModal={cannotTestModal}
       resultOptions={resultOptions}
       canPerformActions={canPerformActions}
       onBack={() => navigate("/testing")}
@@ -656,6 +687,9 @@ const TestingDetail: React.FC = () => {
       onCloseHistoryModal={() =>
         setHistoryModal({ visible: false, indicatorId: "", indicatorName: "" })
       }
+      onShowCannotTestModal={showCannotTestModal}
+      onCloseCannotTestModal={closeCannotTestModal}
+      onCannotTestSuccess={handleCannotTestSuccess}
       onSaveIndicator={handleSaveIndicator}
       onSubmitIndicator={handleSubmitSingleIndicator}
       onUploadIndicatorImages={handleUploadIndicatorImages}

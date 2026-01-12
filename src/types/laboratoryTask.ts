@@ -25,7 +25,8 @@ export enum IndicatorApprovalStatus {
   MethodChangeRequested = 5, // Yêu cầu đổi phương pháp - chờ KH xác nhận
   MethodChanged = 6,        // Đã đổi phương pháp - KH đã xác nhận
   TestingRejected = 7,      // Từ chối thử nghiệm - QLKT từ chối, KH xác nhận
-  AcceptedForTesting = 8    // Chấp nhận thử nghiệm - QLKT chấp nhận
+  AcceptedForTesting = 8,   // Chấp nhận thử nghiệm - QLKT chấp nhận
+  CannotTest = 9            // Không TN được - KTV báo không thể thử nghiệm
 }
 
 // Status display helper
@@ -67,7 +68,8 @@ export const IndicatorApprovalStatusLabels: Record<IndicatorApprovalStatus, stri
   [IndicatorApprovalStatus.MethodChangeRequested]: 'Yêu cầu đổi PP',
   [IndicatorApprovalStatus.MethodChanged]: 'Đã đổi PP',
   [IndicatorApprovalStatus.TestingRejected]: 'Từ chối TN',
-  [IndicatorApprovalStatus.AcceptedForTesting]: 'Chấp nhận TN'
+  [IndicatorApprovalStatus.AcceptedForTesting]: 'Chấp nhận TN',
+  [IndicatorApprovalStatus.CannotTest]: 'Không TN được'
 };
 
 export const IndicatorApprovalStatusColors: Record<IndicatorApprovalStatus, string> = {
@@ -79,7 +81,8 @@ export const IndicatorApprovalStatusColors: Record<IndicatorApprovalStatus, stri
   [IndicatorApprovalStatus.MethodChangeRequested]: 'gold',
   [IndicatorApprovalStatus.MethodChanged]: 'cyan',
   [IndicatorApprovalStatus.TestingRejected]: 'red',
-  [IndicatorApprovalStatus.AcceptedForTesting]: 'lime'
+  [IndicatorApprovalStatus.AcceptedForTesting]: 'lime',
+  [IndicatorApprovalStatus.CannotTest]: 'orange'
 };
 
 // Laboratory Task Indicator DTO (Phase 6 - Extended + Workflow Redesign)

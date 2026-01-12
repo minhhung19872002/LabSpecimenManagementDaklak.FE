@@ -1007,7 +1007,6 @@ const TaskManagementDetail: React.FC = () => {
           <Col>
             <Space>
               <Tag color="blue">{sample.sampleCode}</Tag>
-              <Text strong>{sample.sampleName}</Text>
               <Text type="secondary">({sample.indicatorCount} chỉ tiêu)</Text>
               {getSampleStatusTag(sample.sampleStatus)}
             </Space>

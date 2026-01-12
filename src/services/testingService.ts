@@ -1,6 +1,7 @@
 import api from './api';
 import {
   TestingDetailDto,
+  TestingIndicatorDto,
   GetTestingListInput,
   PagedTestingResult,
   SaveResultsInput,
@@ -8,9 +9,11 @@ import {
   CheckInIndicatorsInput,
   SubmitResultsInput,
   RejectionHistoryDto,
+  RejectionHistoryImageDto,
   SampleTestingImageDto,
   SampleTestingImageType,
   IndicatorImageDto,
+  CannotTestDto,
 } from '../types/testing';
 
 const BASE_URL = '/api/v1/testing';
@@ -241,6 +244,68 @@ export const testingService = {
       `${BASE_URL}/${taskId}/samples/${sampleId}/is-received`
     );
     return response.data;
+  },
+
+  // ============= Cannot Test (KTV báo không TN được) APIs =============
+
+  /**
+   * KTV báo không thể thử nghiệm chỉ tiêu
+   */
+  markCannotTest: async (
+    taskId: string,
+    indicatorId: string,
+    input: CannotTestDto
+  ): Promise<TestingIndicatorDto> => {
+    const response = await api.post<TestingIndicatorDto>(
+      `${BASE_URL}/${taskId}/indicators/${indicatorId}/cannot-test`,
+      input
+    );
+    return response.data;
+  },
+
+  /**
+   * Upload hình ảnh cho rejection history - single file
+   */
+  uploadRejectionHistoryImage: async (
+    rejectionHistoryId: string,
+    file: File
+  ): Promise<RejectionHistoryImageDto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post<RejectionHistoryImageDto>(
+      `${BASE_URL}/rejection-histories/${rejectionHistoryId}/images`,
+      formData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      }
+    );
+    return response.data;
+  },
+
+  /**
+   * Upload nhiều hình ảnh cho rejection history - batch upload
+   */
+  uploadRejectionHistoryImages: async (
+    rejectionHistoryId: string,
+    files: File[]
+  ): Promise<RejectionHistoryImageDto[]> => {
+    const formData = new FormData();
+    files.forEach(file => formData.append('files', file));
+    const response = await api.post<RejectionHistoryImageDto[]>(
+      `${BASE_URL}/rejection-histories/${rejectionHistoryId}/images/batch`,
+      formData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      }
+    );
+    return response.data;
+  },
+
+  /**
+   * Xóa hình ảnh rejection history
+   */
+  deleteRejectionHistoryImage: async (imageId: string): Promise<void> => {
+    await api.delete(`${BASE_URL}/rejection-histories/images/${imageId}`);
   }
 };
 
