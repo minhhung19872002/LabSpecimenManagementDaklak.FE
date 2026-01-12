@@ -22,7 +22,7 @@ import {
   WarningOutlined,
   ReloadOutlined,
   InboxOutlined,
-} from '@ant-design/icons';
+} from './Icon';
 import { importService, downloadBlobAsFile, PreviewResultDto, ImportResultDto } from '../../services/importService';
 
 const { Text, Title } = Typography;

@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React from "react";
 import { Button, Checkbox, DatePicker, Tooltip } from "antd";
-import { CloseOutlined, LockOutlined } from "@ant-design/icons";
+import { CloseOutlined, LockOutlined } from "../../../../components/common/Icon";
 import dayjs from "dayjs";
 import { IndicatorDto } from "../../../../services/masterDataService";
 import { IndicatorApprovalStatus, IndicatorApprovalStatusLabels, IndicatorApprovalStatusColors } from "../../../../types/laboratoryTask";

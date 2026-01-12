@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Timeline, Typography, Tag, Spin, Empty, Collapse, Card, Button } from 'antd';
-import { HistoryOutlined, CheckCircleOutlined, CloseCircleOutlined, EditOutlined, EyeOutlined, ExperimentOutlined } from '@ant-design/icons';
+import { HistoryOutlined, CheckCircleOutlined, CloseCircleOutlined, EditOutlined, EyeOutlined, ExperimentOutlined } from '../../../components/common/Icon';
 import dayjs from 'dayjs';
 import { qualityManagementService } from '../../../services/qualityManagementService';
 import {

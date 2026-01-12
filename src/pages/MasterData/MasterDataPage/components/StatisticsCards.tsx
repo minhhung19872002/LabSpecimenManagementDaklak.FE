@@ -1,6 +1,6 @@
 import React from "react";
 import { Row, Col, Card, Statistic } from "antd";
-import { DatabaseOutlined } from "@ant-design/icons";
+import { DatabaseOutlined } from "../../../../components/common/Icon";
 import { MasterDataStatisticsDto } from "../types";
 import { categoryLabels, getStatCount } from "../constants";
 

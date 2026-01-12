@@ -6,7 +6,7 @@ import {
   PrinterOutlined,
   CopyOutlined,
   QrcodeOutlined,
-} from '@ant-design/icons';
+} from './Icon';
 
 const { Text } = Typography;
 

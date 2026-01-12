@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Form, Input, Button, Typography, Select, Divider } from "antd";
-import { PlusOutlined, MinusCircleOutlined } from "@ant-design/icons";
+import { PlusOutlined, MinusCircleOutlined } from "../../../../components/common/Icon";
 import type { FormInstance } from "antd";
 import { NumericFormat } from "react-number-format";
 import {

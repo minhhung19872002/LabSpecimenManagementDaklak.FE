@@ -4,7 +4,7 @@ import {
   ClockCircleOutlined,
   SyncOutlined,
   WarningOutlined,
-} from "@ant-design/icons";
+} from "../../../../components/common/Icon";
 import {
   TestingStatus,
   TestingStatusLabels,

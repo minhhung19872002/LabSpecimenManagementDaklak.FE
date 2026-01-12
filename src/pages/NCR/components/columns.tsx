@@ -8,7 +8,7 @@ import {
   ExclamationCircleOutlined,
   ClockCircleOutlined,
   CheckCircleOutlined,
-} from "@ant-design/icons";
+} from "../../../components/common/Icon";
 import dayjs from "dayjs";
 import { NCRStatus } from "../../../services/ncrService";
 import { NCRDisplay, NCR_TYPES, SEVERITY_CONFIG, STATUS_CONFIG } from "../hooks";

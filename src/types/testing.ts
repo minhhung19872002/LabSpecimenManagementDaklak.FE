@@ -186,7 +186,10 @@ export interface TestingIndicatorDto {
   images: IndicatorImageDto[];  // Hình ảnh chỉ tiêu (max 5)
   standardId?: string;          // ID tiêu chuẩn so sánh (set by QLKT)
   standardName?: string;        // Tên tiêu chuẩn
-  limitDescription?: string;    // Giới hạn cho phép
+  limitDescription?: string;    // Mô tả quy chuẩn
+  referenceLimit?: string;      // Giới hạn tham chiếu
+  comparisonOperator?: string;  // Ký hiệu so sánh (<=, >=, <, >, =)
+  allowedLimit?: string;        // Giới hạn cho phép (giá trị cụ thể)
 }
 
 // Save Indicator Result DTO

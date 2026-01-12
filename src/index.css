@@ -391,3 +391,46 @@ code {
     height: 24px !important;
   }
 }
+
+/* Table without border radius */
+.no-border-radius-table .ant-table,
+.no-border-radius-table .ant-table-container,
+.no-border-radius-table .ant-table-wrapper,
+.no-border-radius-table .ant-table-content,
+.no-border-radius-table .ant-table-thead > tr > th:first-child,
+.no-border-radius-table .ant-table-thead > tr > th:last-child,
+.no-border-radius-table .ant-table-tbody > tr:last-child > td:first-child,
+.no-border-radius-table .ant-table-tbody > tr:last-child > td:last-child {
+  border-radius: 0 !important;
+}
+
+/* Pagination padding for full-width table */
+.no-border-radius-table .ant-table-pagination {
+  padding: 16px !important;
+  margin: 0 !important;
+  display: flex !important;
+  flex-wrap: wrap;
+  justify-content: space-between !important;
+  align-items: center;
+}
+
+/* Move showTotal and page size selector to the left */
+.no-border-radius-table .ant-table-pagination .ant-pagination-total-text {
+  order: 1;
+  margin-right: 8px !important;
+}
+
+.no-border-radius-table .ant-table-pagination .ant-pagination-options {
+  order: 2;
+  margin-left: 0 !important;
+  margin-right: auto !important;
+}
+
+/* Keep pagination buttons on the right */
+.no-border-radius-table .ant-table-pagination .ant-pagination-prev,
+.no-border-radius-table .ant-table-pagination .ant-pagination-next,
+.no-border-radius-table .ant-table-pagination .ant-pagination-item,
+.no-border-radius-table .ant-table-pagination .ant-pagination-jump-prev,
+.no-border-radius-table .ant-table-pagination .ant-pagination-jump-next {
+  order: 3;
+}

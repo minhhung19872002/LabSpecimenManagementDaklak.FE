@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Badge, Popover, List, Typography, Button, Empty, Spin } from "antd";
-import { BellOutlined, CheckOutlined } from "@ant-design/icons";
+import { BellOutlined, CheckOutlined } from "../common/Icon";
 import dayjs from "dayjs";
 import {
   notificationService,

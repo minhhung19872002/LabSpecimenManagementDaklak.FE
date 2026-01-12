@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useRef, useEffect, useState } from "react";
 import { Modal, Tabs, Button, Space } from "antd";
-import { PrinterOutlined } from "@ant-design/icons";
+import { PrinterOutlined } from "../../../../components/common/Icon";
 import QRCode from "qrcode";
 
 export interface SampleCodeInfo {

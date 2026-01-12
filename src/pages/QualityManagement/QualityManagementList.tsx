@@ -17,7 +17,7 @@ import {
   ClockCircleOutlined,
   FileTextOutlined,
   WarningOutlined,
-} from "@ant-design/icons";
+} from "../../components/common/Icon";
 import { QualityManagementStatusLabels } from "../../types/qualityManagement";
 import HistoryModal from "./components/HistoryModal";
 import ChangeApprovalModal from "./components/ChangeApprovalModal";
@@ -131,9 +131,7 @@ const QualityManagementList: React.FC = () => {
             </Select>
           </Col>
           <Col>
-            <Button icon={<ReloadOutlined />} onClick={loadData}>
-              Làm mới
-            </Button>
+            <Button icon={<ReloadOutlined />} onClick={loadData} />
           </Col>
         </Row>
       </Card>

@@ -16,7 +16,7 @@ import {
   SearchOutlined,
   EditOutlined,
   DeleteOutlined,
-} from "@ant-design/icons";
+} from "../../../components/common/Icon";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 import testResultValueService, {
   TestResultValueDto,

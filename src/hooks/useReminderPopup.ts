@@ -62,7 +62,8 @@ const getRemainingTime = (storageKey: string, interval: number): number | null =
   if (elapsed === null) return 100;
 
   const remaining = interval - elapsed;
-  return remaining > 0 ? remaining : 0;
+  // Nếu đã quá interval, trả về full interval để tránh gọi API liên tục
+  return remaining > 0 ? remaining : interval;
 };
 
 /**

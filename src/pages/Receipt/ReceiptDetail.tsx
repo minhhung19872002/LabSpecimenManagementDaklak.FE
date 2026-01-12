@@ -20,7 +20,7 @@ import {
   CloseCircleOutlined,
   SaveOutlined,
   EyeOutlined,
-} from "@ant-design/icons";
+} from "../../components/common/Icon";
 import { Icon } from "@iconify/react";
 import { useNavigate, useParams } from "react-router-dom";
 import dayjs from "dayjs";

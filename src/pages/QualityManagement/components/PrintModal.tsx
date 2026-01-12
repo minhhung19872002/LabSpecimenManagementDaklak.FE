@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Modal, Table, Button, Space, Typography, message, Input, Spin, Checkbox, Collapse, Divider, Tag, List } from 'antd';
-import { PrinterOutlined, CaretRightOutlined, FilePdfOutlined, FolderOpenOutlined } from '@ant-design/icons';
+import { PrinterOutlined, CaretRightOutlined, FilePdfOutlined, FolderOpenOutlined } from '../../../components/common/Icon';
 import type { ColumnsType } from 'antd/es/table';
 import {
   QualityManagementIndicatorDto,

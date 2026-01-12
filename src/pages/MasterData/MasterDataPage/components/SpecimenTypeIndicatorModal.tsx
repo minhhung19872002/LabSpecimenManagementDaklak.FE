@@ -15,7 +15,7 @@ import {
 import {
   PlusOutlined,
   DeleteOutlined,
-} from "@ant-design/icons";
+} from "../../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import {
   SpecimenTypeIndicatorDto,

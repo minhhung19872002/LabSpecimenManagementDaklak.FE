@@ -16,7 +16,7 @@ import {
   UserOutlined,
   DeleteOutlined,
   PlusOutlined,
-} from "@ant-design/icons";
+} from "../../../components/common/Icon";
 import { laboratoryTaskService } from "../../../services/laboratoryTaskService";
 import { STORAGE_KEYS } from "../../../constants";
 import {

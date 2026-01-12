@@ -19,7 +19,7 @@ import {
   SyncOutlined,
   SendOutlined,
   StopOutlined,
-} from "@ant-design/icons";
+} from "../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import { formatDate } from "../../../utils/formatters";
 import {
@@ -76,10 +76,12 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     Map<string, SaveIndicatorResultDto>
   >(new Map());
 
-  // Track indicator IDs to detect actual changes
-  const indicatorIds = indicators.map((ind) => ind.id).join(",");
+  // Track indicator data to detect actual changes (IDs + testDates)
+  const indicatorDataKey = indicators
+    .map((ind) => `${ind.id}:${ind.testDate || ""}`)
+    .join(",");
 
-  // Initialize edited results from indicators - only when indicator list changes
+  // Initialize edited results from indicators - when indicator list or testDate changes
   useEffect(() => {
     const initialResults = new Map<string, SaveIndicatorResultDto>();
     indicators.forEach((ind) => {
@@ -94,7 +96,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     });
     setEditedResults(initialResults);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [indicatorIds]);
+  }, [indicatorDataKey]);
 
   const handleFieldChange = (
     indicatorId: string,
@@ -284,16 +286,19 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     },
     {
       title: "Giới hạn",
-      dataIndex: "limitDescription",
-      key: "limitDescription",
-      width: 150,
-      render: (value: string | undefined) => (
-        <Tooltip title={value}>
-          <Text ellipsis style={{ maxWidth: 140 }}>
-            {value || <Text type="secondary">-</Text>}
-          </Text>
-        </Tooltip>
-      ),
+      key: "allowedLimit",
+      width: 120,
+      render: (_, record) => {
+        // Hiển thị giới hạn với ký hiệu so sánh nếu có (giống TaskManagement)
+        if (record.comparisonOperator && record.allowedLimit) {
+          return (
+            <Text>
+              {record.comparisonOperator} {record.allowedLimit}
+            </Text>
+          );
+        }
+        return "-";
+      },
     },
     {
       title: "Kết quả",

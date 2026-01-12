@@ -22,7 +22,7 @@ import {
   BarChartOutlined,
   PieChartOutlined,
   ReloadOutlined
-} from '@ant-design/icons';
+} from '../../components/common/Icon';
 import { Column, Pie } from '@ant-design/charts';
 import dayjs from 'dayjs';
 import {
@@ -175,9 +175,7 @@ const StatisticsPage: React.FC = () => {
                 icon={<ReloadOutlined />}
                 onClick={fetchStatistics}
                 loading={loading}
-              >
-                Làm mới
-              </Button>
+              />
               <Button
                 type="primary"
                 icon={<DownloadOutlined />}

@@ -3,3 +3,5 @@ export { default as TATCalculator, calculateWorkingEndDate, getRemainingWorkingD
 export { default as QRCodeGenerator, BatchQRCodeGenerator, MiniQRCode } from './QRCodeGenerator';
 export { default as ExcelImport } from './ExcelImport';
 export { default as StatusTag } from './StatusTag';
+export { default as Icon } from './Icon';
+export * from './Icon';
