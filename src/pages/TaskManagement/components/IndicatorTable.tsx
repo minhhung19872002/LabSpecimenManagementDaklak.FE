@@ -155,6 +155,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   };
 
   // Calculate pass/fail status
+  // Text không tính được sẽ được convert sang 0 để vẫn so sánh được
   const calculatePassFail = (
     result: string | undefined,
     comparisonOperator: string | undefined,
@@ -163,13 +164,16 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     if (!comparisonOperator || !allowedLimit) return null;
     if (!result) return null;
 
-    // Parse result to number using parseResultToNumber (supports scientific notation like "2,0 x 10^2")
+    // Parse result to number using parseResultToNumber
+    // Supports: scientific notation ("2,0 x 10^2"), math expressions ("10^2*5+4"), plain numbers
+    // Text không tính được (như "Âm tính") sẽ trả về 0
     const resultValue = parseResultToNumber(result);
-    if (resultValue === null) return null;
 
-    // Parse limit to number (also supports scientific notation)
+    // Parse limit to number (also supports scientific notation and math expressions)
     const limitValue = parseResultToNumber(allowedLimit);
-    if (limitValue === null) return null;
+
+    // Both values are guaranteed to be numbers (text → 0)
+    if (resultValue === null || limitValue === null) return null;
 
     // Compare based on operator
     switch (comparisonOperator) {
