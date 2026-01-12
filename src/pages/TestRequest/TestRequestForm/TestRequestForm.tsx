@@ -229,6 +229,7 @@ const TestRequestForm: React.FC = () => {
           }
         }}
         initialValues={{
+          contractDate: dayjs(),
           requestDate: dayjs(),
           status: TestRequestStatus.Pending,
           resultLanguage: ResultLanguage.Vietnamese,
