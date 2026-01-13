@@ -219,6 +219,7 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
       content: `Bạn có chắc muốn chấp nhận thử nghiệm cho ${pendingIndicators.length} chỉ tiêu còn lại?`,
       okText: "Chấp nhận tất cả",
       cancelText: "Hủy",
+      centered: true,
       onOk: async () => {
         setActionLoading(true);
         try {
@@ -317,9 +318,8 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
       status === IndicatorApprovalStatus.Pending ||
       status === IndicatorApprovalStatus.CannotTest;
 
-    // Các trạng thái có thể YC bổ sung: AcceptedForTesting và CannotTest
+    // Chỉ có thể YC bổ sung khi KTV báo không TN được (CannotTest)
     const canRequestSupplementary =
-      status === IndicatorApprovalStatus.AcceptedForTesting ||
       status === IndicatorApprovalStatus.CannotTest;
 
     // Nếu không cần đánh giá và không thể YC bổ sung, không hiển thị button
@@ -328,8 +328,6 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
     }
 
     const isCannotTest = status === IndicatorApprovalStatus.CannotTest;
-    const isAcceptedForTesting =
-      status === IndicatorApprovalStatus.AcceptedForTesting;
 
     return (
       <Space size="small" wrap>
@@ -384,42 +382,25 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
         )}
 
         {/* Buttons cho trạng thái CannotTest (KTV báo không TN được) */}
+        {/* Chỉ hiển thị Từ chối TN - không hiển thị Chấp nhận (đã chấp nhận rồi) và Đổi PP */}
         {isCannotTest && (
-          <>
-            <Tooltip title="Yêu cầu đổi phương pháp">
-              <Button
-                size="small"
-                icon={<SwapOutlined />}
-                onClick={() =>
-                  setMethodChangeModal({
-                    visible: true,
-                    indicatorId: record.id,
-                    mode: "single",
-                  })
-                }
-                loading={actionLoading}
-              >
-                Đổi PP
-              </Button>
-            </Tooltip>
-            <Tooltip title="Từ chối thử nghiệm">
-              <Button
-                danger
-                size="small"
-                icon={<CloseOutlined />}
-                onClick={() =>
-                  setRejectModal({
-                    visible: true,
-                    indicatorId: record.id,
-                    mode: "single",
-                  })
-                }
-                loading={actionLoading}
-              >
-                Từ chối TN
-              </Button>
-            </Tooltip>
-          </>
+          <Tooltip title="Từ chối thử nghiệm">
+            <Button
+              danger
+              size="small"
+              icon={<CloseOutlined />}
+              onClick={() =>
+                setRejectModal({
+                  visible: true,
+                  indicatorId: record.id,
+                  mode: "single",
+                })
+              }
+              loading={actionLoading}
+            >
+              Từ chối TN
+            </Button>
+          </Tooltip>
         )}
 
         {/* Button YC bổ sung cho AcceptedForTesting và CannotTest */}
@@ -447,8 +428,7 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
     return indicators.some(
       (ind) =>
         ind.approvalStatus === IndicatorApprovalStatus.Pending ||
-        ind.approvalStatus === IndicatorApprovalStatus.CannotTest ||
-        ind.approvalStatus === IndicatorApprovalStatus.AcceptedForTesting
+        ind.approvalStatus === IndicatorApprovalStatus.CannotTest
     );
   }, [indicators, canEvaluate]);
 

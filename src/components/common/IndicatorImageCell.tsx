@@ -1,7 +1,21 @@
-import React, { useState } from 'react';
-import { Upload, Image, Space, Tooltip, Modal, message, Spin, Badge } from 'antd';
-import { PlusOutlined, DeleteOutlined, EyeOutlined, PictureOutlined } from './Icon';
-import type { RcFile } from 'antd/es/upload/interface';
+import React, { useState } from "react";
+import {
+  Upload,
+  Image,
+  Space,
+  Tooltip,
+  Modal,
+  message,
+  Spin,
+  Badge,
+} from "antd";
+import {
+  PlusOutlined,
+  DeleteOutlined,
+  EyeOutlined,
+  PictureOutlined,
+} from "./Icon";
+import type { RcFile } from "antd/es/upload/interface";
 
 export interface IndicatorImageDto {
   id: string;
@@ -32,19 +46,19 @@ const IndicatorImageCell: React.FC<IndicatorImageCellProps> = ({
   loading = false,
 }) => {
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewImage, setPreviewImage] = useState('');
+  const [previewImage, setPreviewImage] = useState("");
   const [uploading, setUploading] = useState(false);
 
   const getImageUrl = (image: IndicatorImageDto): string => {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
 
     if (image.url) {
       // If url starts with /, it's a relative path - prepend baseUrl
-      if (image.url.startsWith('/')) {
+      if (image.url.startsWith("/")) {
         return `${baseUrl}${image.url}`;
       }
       // If url starts with uploads/, it's a relative path - prepend baseUrl with /
-      if (image.url.startsWith('uploads/')) {
+      if (image.url.startsWith("uploads/")) {
         return `${baseUrl}/${image.url}`;
       }
       return image.url;
@@ -52,7 +66,7 @@ const IndicatorImageCell: React.FC<IndicatorImageCellProps> = ({
     if (image.fileId) {
       return `${baseUrl}/api/v1/files/${image.fileId}`;
     }
-    return '';
+    return "";
   };
 
   const handlePreview = (image: IndicatorImageDto) => {
@@ -67,14 +81,14 @@ const IndicatorImageCell: React.FC<IndicatorImageCellProps> = ({
     }
 
     // Validate: only allow image files
-    const imageFiles = fileList.filter(f => f.type.startsWith('image/'));
+    const imageFiles = fileList.filter((f) => f.type.startsWith("image/"));
     const nonImageCount = fileList.length - imageFiles.length;
     if (nonImageCount > 0) {
       message.warning(`Đã bỏ qua ${nonImageCount} file không phải hình ảnh`);
     }
 
     if (imageFiles.length === 0) {
-      message.error('Vui lòng chọn file hình ảnh (jpg, png, gif, ...)');
+      message.error("Vui lòng chọn file hình ảnh (jpg, png, gif, ...)");
       return false;
     }
 
@@ -88,7 +102,9 @@ const IndicatorImageCell: React.FC<IndicatorImageCellProps> = ({
     const filesToUpload = imageFiles.slice(0, remainingSlots);
 
     if (imageFiles.length > remainingSlots) {
-      message.warning(`Chỉ upload được ${remainingSlots} hình (còn lại ${remainingSlots}/${maxImages} slot)`);
+      message.warning(
+        `Chỉ upload được ${remainingSlots} hình (còn lại ${remainingSlots}/${maxImages} slot)`
+      );
     }
 
     if (!onUpload) return false;
@@ -101,8 +117,10 @@ const IndicatorImageCell: React.FC<IndicatorImageCellProps> = ({
         message.success(`Upload thành công ${newImages.length} hình`);
       }
     } catch (error: any) {
-      console.error('Upload failed:', error);
-      message.error(error?.response?.data?.error?.message || 'Upload hình ảnh thất bại');
+      console.error("Upload failed:", error);
+      message.error(
+        error?.response?.data?.error?.message || "Upload hình ảnh thất bại"
+      );
     }
 
     setUploading(false);
@@ -113,25 +131,28 @@ const IndicatorImageCell: React.FC<IndicatorImageCellProps> = ({
     if (!onDelete) return;
 
     Modal.confirm({
-      title: 'Xác nhận xóa',
-      content: 'Bạn có chắc muốn xóa hình ảnh này?',
-      okText: 'Xóa',
-      okType: 'danger',
-      cancelText: 'Hủy',
+      title: "Xác nhận xóa",
+      content: "Bạn có chắc muốn xóa hình ảnh này?",
+      okText: "Xóa",
+      okType: "danger",
+      cancelText: "Hủy",
+      centered: true,
       onOk: async () => {
         try {
           await onDelete(imageId);
-          message.success('Xóa hình ảnh thành công');
+          message.success("Xóa hình ảnh thành công");
         } catch (error: any) {
-          message.error(error?.response?.data?.error?.message || 'Xóa hình ảnh thất bại');
+          message.error(
+            error?.response?.data?.error?.message || "Xóa hình ảnh thất bại"
+          );
         }
-      }
+      },
     });
   };
 
   // If no images and cannot upload, show empty state
   if (images.length === 0 && !canUpload) {
-    return <span style={{ color: '#999' }}>-</span>;
+    return <span style={{ color: "#999" }}>-</span>;
   }
 
   // Compact display: show 1 thumbnail + badge for remaining
@@ -145,13 +166,13 @@ const IndicatorImageCell: React.FC<IndicatorImageCellProps> = ({
           <div
             key={image.id}
             style={{
-              position: 'relative',
+              position: "relative",
               width: 32,
               height: 32,
-              border: '1px solid #d9d9d9',
+              border: "1px solid #d9d9d9",
               borderRadius: 4,
-              overflow: 'hidden',
-              cursor: 'pointer',
+              overflow: "hidden",
+              cursor: "pointer",
             }}
           >
             <Image
@@ -159,30 +180,35 @@ const IndicatorImageCell: React.FC<IndicatorImageCellProps> = ({
               alt={image.fileName}
               width={32}
               height={32}
-              style={{ objectFit: 'cover' }}
+              style={{ objectFit: "cover" }}
               preview={false}
               onClick={() => handlePreview(image)}
             />
             <div
               style={{
-                position: 'absolute',
+                position: "absolute",
                 top: 0,
                 left: 0,
                 right: 0,
                 bottom: 0,
-                background: 'rgba(0,0,0,0.4)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                background: "rgba(0,0,0,0.4)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 opacity: 0,
-                transition: 'opacity 0.2s',
+                transition: "opacity 0.2s",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = '0')}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = "0")}
             >
               <Tooltip title="Xem">
                 <EyeOutlined
-                  style={{ color: '#fff', fontSize: 12, cursor: 'pointer', marginRight: canUpload ? 2 : 0 }}
+                  style={{
+                    color: "#fff",
+                    fontSize: 12,
+                    cursor: "pointer",
+                    marginRight: canUpload ? 2 : 0,
+                  }}
                   onClick={(e) => {
                     e.stopPropagation();
                     handlePreview(image);
@@ -192,7 +218,7 @@ const IndicatorImageCell: React.FC<IndicatorImageCellProps> = ({
               {canUpload && (
                 <Tooltip title="Xóa">
                   <DeleteOutlined
-                    style={{ color: '#fff', fontSize: 12, cursor: 'pointer' }}
+                    style={{ color: "#fff", fontSize: 12, cursor: "pointer" }}
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDelete(image.id);
@@ -206,20 +232,22 @@ const IndicatorImageCell: React.FC<IndicatorImageCellProps> = ({
 
         {/* Badge for remaining images */}
         {remainingCount > 0 && (
-          <Tooltip title={`Còn ${remainingCount} hình nữa. Click để xem tất cả.`}>
+          <Tooltip
+            title={`Còn ${remainingCount} hình nữa. Click để xem tất cả.`}
+          >
             <div
               style={{
                 width: 32,
                 height: 32,
-                border: '1px solid #d9d9d9',
+                border: "1px solid #d9d9d9",
                 borderRadius: 4,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: '#f5f5f5',
-                cursor: 'pointer',
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "#f5f5f5",
+                cursor: "pointer",
                 fontSize: 11,
-                color: '#666',
+                color: "#666",
               }}
               onClick={() => images[1] && handlePreview(images[1])}
             >
@@ -242,19 +270,19 @@ const IndicatorImageCell: React.FC<IndicatorImageCellProps> = ({
                 style={{
                   width: 32,
                   height: 32,
-                  border: '1px dashed #1890ff',
+                  border: "1px dashed #1890ff",
                   borderRadius: 4,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  background: '#f0f5ff',
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  background: "#f0f5ff",
                 }}
               >
                 {uploading || loading ? (
                   <Spin size="small" />
                 ) : (
-                  <PlusOutlined style={{ color: '#1890ff', fontSize: 12 }} />
+                  <PlusOutlined style={{ color: "#1890ff", fontSize: 12 }} />
                 )}
               </div>
             </Tooltip>
@@ -264,7 +292,7 @@ const IndicatorImageCell: React.FC<IndicatorImageCellProps> = ({
         {/* Show count badge if has images but compact view */}
         {images.length > 0 && !canUpload && visibleImages.length === 0 && (
           <Badge count={images.length} size="small">
-            <PictureOutlined style={{ fontSize: 16, color: '#1890ff' }} />
+            <PictureOutlined style={{ fontSize: 16, color: "#1890ff" }} />
           </Badge>
         )}
       </Space>
@@ -278,42 +306,56 @@ const IndicatorImageCell: React.FC<IndicatorImageCellProps> = ({
         centered
         title={`Hình ảnh (${images.length}/${maxImages})`}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {/* Main preview image */}
-          <div style={{ textAlign: 'center' }}>
+          <div style={{ textAlign: "center" }}>
             <img
               alt="preview"
-              style={{ maxWidth: '100%', maxHeight: 500, objectFit: 'contain' }}
+              style={{ maxWidth: "100%", maxHeight: 500, objectFit: "contain" }}
               src={previewImage}
             />
           </div>
 
           {/* Thumbnail list */}
           {images.length > 1 && (
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                justifyContent: "center",
+                flexWrap: "wrap",
+              }}
+            >
               {images.map((image) => (
                 <div
                   key={image.id}
                   style={{
-                    position: 'relative',
+                    position: "relative",
                     width: 64,
                     height: 64,
-                    border: previewImage === getImageUrl(image) ? '2px solid #1890ff' : '1px solid #d9d9d9',
+                    border:
+                      previewImage === getImageUrl(image)
+                        ? "2px solid #1890ff"
+                        : "1px solid #d9d9d9",
                     borderRadius: 4,
-                    overflow: 'hidden',
-                    cursor: 'pointer',
+                    overflow: "hidden",
+                    cursor: "pointer",
                   }}
                   onClick={() => setPreviewImage(getImageUrl(image))}
                 >
                   <img
                     src={getImageUrl(image)}
                     alt={image.fileName}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
                   />
                   {canUpload && (
                     <div
                       style={{
-                        position: 'absolute',
+                        position: "absolute",
                         top: 2,
                         right: 2,
                       }}
@@ -321,9 +363,9 @@ const IndicatorImageCell: React.FC<IndicatorImageCellProps> = ({
                       <Tooltip title="Xóa">
                         <DeleteOutlined
                           style={{
-                            color: '#fff',
+                            color: "#fff",
                             fontSize: 12,
-                            background: 'rgba(255,0,0,0.7)',
+                            background: "rgba(255,0,0,0.7)",
                             padding: 2,
                             borderRadius: 2,
                           }}
