@@ -10,6 +10,7 @@ import { testRequestService, TemplateDto, PrintResultItem } from '../../../servi
 import { qualityManagementService } from '../../../services/qualityManagementService';
 import { API_BASE_URL } from '../../../services/api';
 import userService, { UserLookupDto } from '../../../services/userService';
+import { IndicatorName } from '../../../components/common';
 
 const { Text, Title } = Typography;
 
@@ -286,6 +287,7 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
       key: 'indicatorName',
       width: 160,
       ellipsis: true,
+      render: (_: any, record: QualityManagementIndicatorDto) => <IndicatorName name={record.indicatorName || ""} formattedName={record.indicatorFormattedName} />,
     },
     {
       title: 'Phương pháp',

@@ -12,6 +12,7 @@ import {
 import { PlusOutlined } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
 import { testingService } from '../../../services/testingService';
+import { IndicatorName } from '../../../components/common';
 
 const { TextArea } = Input;
 const { Text } = Typography;
@@ -190,7 +191,7 @@ const CannotTestModal: React.FC<CannotTestModalProps> = ({
       >
         <div style={{ marginBottom: 16 }}>
           <Text type="secondary">Chỉ tiêu: </Text>
-          <Text strong>{indicatorName}</Text>
+          <IndicatorName name={indicatorName} style={{ fontWeight: 600 }} />
         </div>
 
         <Form

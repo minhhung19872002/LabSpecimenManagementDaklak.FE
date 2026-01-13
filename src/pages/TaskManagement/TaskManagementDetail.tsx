@@ -55,6 +55,7 @@ import SupporterModal from "./components/SupporterModal";
 import SampleImagesDisplay from "./components/SampleImagesDisplay";
 import { PATH_ROUTES, STORAGE_KEYS } from "../../constants";
 import { useMultipleActionPermissions } from "../../hooks/useActionPermission";
+import { IndicatorName } from "../../components/common";
 
 const { Title, Text } = Typography;
 
@@ -396,6 +397,7 @@ const TaskManagementDetail: React.FC = () => {
     assignments: AssignIndicatorInput[];
     reassignedIndicators: Array<{
       indicatorName: string;
+      indicatorFormattedName?: string;
       currentTechnicianName: string;
       newTechnicianName: string;
     }>;
@@ -475,6 +477,7 @@ const TaskManagementDetail: React.FC = () => {
     // Check if any indicator is being reassigned to a different technician
     const reassignedIndicators: Array<{
       indicatorName: string;
+      indicatorFormattedName?: string;
       currentTechnicianName: string;
       newTechnicianName: string;
     }> = [];
@@ -516,6 +519,7 @@ const TaskManagementDetail: React.FC = () => {
             "-";
           reassignedIndicators.push({
             indicatorName: indicator?.indicatorName || "-",
+            indicatorFormattedName: indicator?.indicatorFormattedName,
             currentTechnicianName,
             newTechnicianName:
               newTechnician?.displayName || newTechnician?.userName || "-",
@@ -1043,9 +1047,10 @@ const TaskManagementDetail: React.FC = () => {
           </Col>
           <Col>
             <Space>
-              {/* Bulk approve/reject buttons - only show when pendingApproval VÀ có quyền approveResult VÀ không trong giai đoạn đánh giá/hoàn thành */}
+              {/* Bulk approve/reject buttons - only show when pendingApproval VÀ có quyền approveResult VÀ không trong giai đoạn đánh giá
+                  Note: Cho phép duyệt khi SentToQuality vì có thể có mẫu chưa được duyệt */}
               {!isInEvaluationPhase &&
-                !isCompletedPhase &&
+                (task?.status === LaboratoryTaskStatus.SentToQuality || !isCompletedPhase) &&
                 sample.sampleStatus === "pendingApproval" &&
                 canApproveResult && (
                   <>
@@ -1415,7 +1420,7 @@ const TaskManagementDetail: React.FC = () => {
               }}
             >
               <div>
-                <Text strong>{item.indicatorName}</Text>
+                <IndicatorName name={item.indicatorName} formattedName={item.indicatorFormattedName} style={{ fontWeight: 600 }} />
               </div>
               <div style={{ marginTop: 4 }}>
                 <Text type="secondary">KTV hiện tại: </Text>

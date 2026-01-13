@@ -98,6 +98,7 @@ export interface LaboratoryTaskIndicatorDto {
   indicatorId: string;
   indicatorCode?: string;
   indicatorName?: string;
+  indicatorFormattedName?: string;  // Tên chỉ tiêu có định dạng HTML
   indicatorGroupName?: string;
   unitPrice: number;
 

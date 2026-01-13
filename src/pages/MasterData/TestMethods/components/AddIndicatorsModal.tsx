@@ -3,6 +3,7 @@ import { Modal, Form, InputNumber, Button, Typography, Select } from "antd";
 import { PlusOutlined, MinusCircleOutlined } from "../../../../components/common/Icon";
 import type { FormInstance } from "antd";
 import { IndicatorDto, IndicatorGroupDto } from "../../../../services/masterDataService";
+import IndicatorName from "../../../../components/common/IndicatorName";
 
 const { Text } = Typography;
 
@@ -48,14 +49,20 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
           label: <Text strong>{group.name}</Text>,
           options: availableIndicators.map((ind) => ({
             value: ind.id,
-            label: `${ind.code} - ${ind.name}`,
+            label: (
+              <span>
+                {ind.code} -{" "}
+                <IndicatorName name={ind.name} formattedName={ind.formattedName} />
+              </span>
+            ),
+            searchText: `${ind.code} - ${ind.name}`,
             indicator: ind,
           })),
         };
       })
       .filter(Boolean) as {
       label: React.ReactNode;
-      options: { value: string; label: string; indicator: IndicatorDto }[];
+      options: { value: string; label: React.ReactNode; searchText: string; indicator: IndicatorDto }[];
     }[];
   };
 
@@ -129,9 +136,9 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                         popupMatchSelectWidth={400}
                         optionLabelProp="label"
                         filterOption={(inputValue, option) => {
-                          if (!option?.label) return false;
-                          const label = String(option.label).toLowerCase();
-                          return label.includes(inputValue.toLowerCase());
+                          const searchText = (option as { searchText?: string })?.searchText;
+                          if (!searchText) return false;
+                          return searchText.toLowerCase().includes(inputValue.toLowerCase());
                         }}
                         optionRender={(option) => (
                           <div style={{

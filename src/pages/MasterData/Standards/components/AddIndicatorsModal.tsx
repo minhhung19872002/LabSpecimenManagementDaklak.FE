@@ -8,6 +8,7 @@ import {
   IndicatorGroupDto,
   TestMethodWithIndicatorsDto,
 } from "../../../../services/masterDataService";
+import IndicatorName from "../../../../components/common/IndicatorName";
 
 const { Text } = Typography;
 
@@ -78,14 +79,20 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
           label: <Text strong>{group.name}</Text>,
           options: availableIndicators.map((ind) => ({
             value: ind.id,
-            label: `${ind.code} - ${ind.name}`,
+            label: (
+              <span>
+                {ind.code} -{" "}
+                <IndicatorName name={ind.name} formattedName={ind.formattedName} />
+              </span>
+            ),
+            searchText: `${ind.code} - ${ind.name}`,
             indicator: ind,
           })),
         };
       })
       .filter(Boolean) as {
       label: React.ReactNode;
-      options: { value: string; label: string; indicator: IndicatorDto }[];
+      options: { value: string; label: React.ReactNode; searchText: string; indicator: IndicatorDto }[];
     }[];
   };
 
@@ -214,9 +221,9 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                         placeholder="Chọn chỉ tiêu"
                         showSearch
                         filterOption={(inputValue, option) => {
-                          if (!option?.label) return false;
-                          const label = String(option.label).toLowerCase();
-                          return label.includes(inputValue.toLowerCase());
+                          const searchText = (option as { searchText?: string })?.searchText;
+                          if (!searchText) return false;
+                          return searchText.toLowerCase().includes(inputValue.toLowerCase());
                         }}
                         onSelect={(value) => handleSelectIndicator(value, name)}
                         onChange={(value) => {

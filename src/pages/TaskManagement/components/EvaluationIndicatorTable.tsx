@@ -28,6 +28,7 @@ import {
   IndicatorEvaluationAction,
 } from "../../../types/laboratoryTask";
 import { laboratoryTaskService } from "../../../services/laboratoryTaskService";
+import { IndicatorName } from "../../../components/common";
 
 const { Text } = Typography;
 
@@ -470,11 +471,15 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
         width: 200,
         render: (value: string, record: LaboratoryTaskIndicatorDto) => (
           <div>
-            <div>{value}</div>
+            <div>
+              <IndicatorName name={value} formattedName={record.indicatorFormattedName} />
+            </div>
             {record.indicatorGroupName && (
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                {record.indicatorGroupName}
-              </Text>
+              <div style={{ marginTop: 2 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  {record.indicatorGroupName}
+                </Text>
+              </div>
             )}
           </div>
         ),

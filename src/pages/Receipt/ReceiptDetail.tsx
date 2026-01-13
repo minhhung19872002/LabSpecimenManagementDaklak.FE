@@ -35,6 +35,7 @@ import {
 import { TestRequestSampleDto } from "../../types/testRequest";
 import { PATH_ROUTES } from "../../constants";
 import StatusTag from "../../components/common/StatusTag";
+import { IndicatorName } from "../../components/common";
 
 const { Title, Text } = Typography;
 
@@ -342,9 +343,11 @@ const ReceiptDetail: React.FC = () => {
                 }}
               >
                 <div style={{ flex: 1 }}>
-                  <Text strong style={{ fontSize: 13 }}>
-                    {ind.indicatorName}
-                  </Text>
+                  <IndicatorName
+                    name={ind.indicatorName || ""}
+                    formattedName={ind.indicatorFormattedName}
+                    style={{ fontSize: 13 }}
+                  />
                   {ind.testMethodName && (
                     <div>
                       <Text type="secondary" style={{ fontSize: 12 }}>

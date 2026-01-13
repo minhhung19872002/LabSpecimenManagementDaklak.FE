@@ -16,6 +16,7 @@ import {
   PlusOutlined,
   DeleteOutlined,
 } from "../../../../components/common/Icon";
+import { IndicatorName } from "../../../../components/common";
 import type { ColumnsType } from "antd/es/table";
 import {
   SpecimenTypeIndicatorDto,
@@ -116,13 +117,19 @@ const SpecimenTypeIndicatorModal: React.FC<SpecimenTypeIndicatorModalProps> = ({
           label: <Text strong>{group.name}</Text>,
           options: availableIndicators.map((ind) => ({
             value: ind.id,
-            label: `${ind.code} - ${ind.name}`,
+            label: (
+              <span>
+                {ind.code} -{" "}
+                <IndicatorName name={ind.name} formattedName={ind.formattedName} />
+              </span>
+            ),
+            searchText: `${ind.code} - ${ind.name}`,
           })),
         };
       })
       .filter(Boolean) as {
       label: React.ReactNode;
-      options: { value: string; label: string }[];
+      options: { value: string; label: React.ReactNode; searchText: string }[];
     }[];
   };
 
@@ -196,6 +203,7 @@ const SpecimenTypeIndicatorModal: React.FC<SpecimenTypeIndicatorModalProps> = ({
       dataIndex: "indicatorName",
       key: "indicatorName",
       ellipsis: true,
+      render: (_, record) => <IndicatorName name={record.indicatorName} formattedName={record.indicatorFormattedName} />,
     },
     {
       title: "Nhóm chỉ tiêu",
@@ -268,9 +276,9 @@ const SpecimenTypeIndicatorModal: React.FC<SpecimenTypeIndicatorModalProps> = ({
               style={{ width: "calc(100% - 100px)" }}
               showSearch
               filterOption={(input, option) => {
-                if (!option?.label) return false;
-                const label = String(option.label).toLowerCase();
-                return label.includes(input.toLowerCase());
+                const searchText = (option as { searchText?: string })?.searchText;
+                if (!searchText) return false;
+                return searchText.toLowerCase().includes(input.toLowerCase());
               }}
               maxTagCount={3}
               maxTagPlaceholder={(omittedValues) => `+${omittedValues.length}...`}

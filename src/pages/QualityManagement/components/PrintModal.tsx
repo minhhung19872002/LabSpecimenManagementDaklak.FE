@@ -9,6 +9,7 @@ import {
 import { qualityManagementService, TemplateDto } from '../../../services/qualityManagementService';
 import { API_BASE_URL } from '../../../services/api';
 import userService, { UserLookupDto } from '../../../services/userService';
+import { IndicatorName } from '../../../components/common';
 
 const { Text, Title } = Typography;
 
@@ -277,6 +278,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
       key: 'indicatorName',
       width: 160,
       ellipsis: true,
+      render: (value: string, record) => value ? <IndicatorName name={value} formattedName={record.indicatorFormattedName} /> : "-",
     },
     {
       title: 'Phương pháp',

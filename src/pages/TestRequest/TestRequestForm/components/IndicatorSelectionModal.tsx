@@ -8,6 +8,7 @@ import {
   IndicatorGroupDto,
   IndicatorDto,
 } from "../../../../services/masterDataService";
+import IndicatorName from "../../../../components/common/IndicatorName";
 import {
   IndicatorDateInfo,
   LaboratoryAssignment,
@@ -416,7 +417,9 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                               width={16}
                               style={{ color: "#595959", flexShrink: 0 }}
                             />
-                            <span
+                            <IndicatorName
+                              name={ind.name}
+                              formattedName={ind.formattedName}
                               style={{
                                 flex: 1,
                                 fontSize: 13,
@@ -424,9 +427,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                 textOverflow: "ellipsis",
                                 whiteSpace: "nowrap",
                               }}
-                            >
-                              {ind.name}
-                            </span>
+                            />
                             {selectedMethodsCount > 0 && (
                               <span
                                 style={{
@@ -581,7 +582,9 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                         width={16}
                         style={{ color: "#595959", flexShrink: 0 }}
                       />
-                      <span
+                      <IndicatorName
+                        name={ind.name}
+                        formattedName={ind.formattedName}
                         style={{
                           flex: 1,
                           fontSize: 13,
@@ -589,9 +592,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
                         }}
-                      >
-                        {ind.name}
-                      </span>
+                      />
                       {selectedMethodsCount > 0 && (
                         <span
                           style={{

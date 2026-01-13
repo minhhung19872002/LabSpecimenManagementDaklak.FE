@@ -6,6 +6,7 @@ import dayjs from "dayjs";
 import { IndicatorDto } from "../../../../services/masterDataService";
 import { IndicatorApprovalStatus, IndicatorApprovalStatusLabels, IndicatorApprovalStatusColors } from "../../../../types/laboratoryTask";
 import StatusTag from "../../../../components/common/StatusTag";
+import { IndicatorName } from "../../../../components/common";
 
 interface IndicatorRowProps {
   id: string; // IndicatorMethodKey: indicatorId_testMethodId
@@ -64,7 +65,9 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
         disabled={!canDelete}
       />
       <Tooltip title={indicator.name}>
-        <span
+        <IndicatorName
+          name={indicator.name}
+          formattedName={indicator.formattedName}
           style={{
             flex: 1,
             minWidth: 80,
@@ -74,9 +77,7 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
             whiteSpace: "nowrap",
             color: canDelete ? "inherit" : "#666",
           }}
-        >
-          {indicator.name}
-        </span>
+        />
       </Tooltip>
       <Tooltip title={methodName}>
         <span

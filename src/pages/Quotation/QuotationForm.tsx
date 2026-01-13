@@ -37,6 +37,7 @@ import { formatCurrency } from "../../utils/formatters";
 import QuotationIndicatorSelectionModal, {
   SelectedMethodInfo,
 } from "./components/QuotationIndicatorSelectionModal";
+import { IndicatorName } from "../../components/common";
 
 const { Title, Text } = Typography;
 
@@ -265,6 +266,7 @@ const QuotationForm: React.FC = () => {
       dataIndex: "indicatorName",
       key: "indicatorName",
       ellipsis: true,
+      render: (_, record) => <IndicatorName name={record.indicatorName} formattedName={record.indicatorFormattedName} />,
     },
     {
       title: "Phương pháp",

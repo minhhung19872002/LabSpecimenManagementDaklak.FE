@@ -23,6 +23,7 @@ import { quotationService } from "../../services/quotationService";
 import { QuotationDto, QuotationItemDto } from "../../types/quotation";
 import { PATH_ROUTES } from "../../constants";
 import { formatCurrency } from "../../utils/formatters";
+import { IndicatorName } from "../../components/common";
 
 const { Text } = Typography;
 
@@ -71,6 +72,7 @@ const QuotationView: React.FC = () => {
       dataIndex: "indicatorName",
       key: "indicatorName",
       ellipsis: true,
+      render: (_, record) => <IndicatorName name={record.indicatorName} formattedName={record.indicatorFormattedName} />,
     },
     {
       title: "Phương pháp",

@@ -1,5 +1,6 @@
 import { Button, Space, Tag, Tooltip, Popconfirm } from "antd";
 import { EditOutlined, DeleteOutlined } from "../../../../components/common/Icon";
+import { IndicatorName } from "../../../../components/common";
 import type { ColumnsType } from "antd/es/table";
 import { GroupedSpecimenTypeData, SpecimenTypeIndicatorDto } from "../types";
 
@@ -102,6 +103,7 @@ export const getIndicatorColumns = (
     title: "Tên chỉ tiêu",
     dataIndex: "indicatorName",
     key: "indicatorName",
+    render: (_, record) => <IndicatorName name={record.indicatorName} formattedName={record.indicatorFormattedName} />,
   },
   {
     title: "Nhóm chỉ tiêu",

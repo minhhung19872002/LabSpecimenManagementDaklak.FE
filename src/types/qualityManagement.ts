@@ -118,6 +118,7 @@ export interface QualityManagementIndicatorDto {
   indicatorId: string;
   indicatorCode?: string;
   indicatorName?: string;
+  indicatorFormattedName?: string;  // Tên chỉ tiêu có định dạng HTML
   methodId?: string;
   methodName?: string;
   unit?: string;
@@ -209,6 +210,7 @@ export interface QualityTaskHistoryDto {
   indicatorId: string;
   indicatorCode?: string;
   indicatorName?: string;
+  indicatorFormattedName?: string;  // Tên chỉ tiêu có định dạng HTML
   sampleCode?: string;
   sampleName?: string;
   histories: QualityIndicatorStatusHistoryDto[];

@@ -57,6 +57,7 @@ export interface SpecimenTypeIndicatorDto {
   indicatorId: string;
   indicatorCode: string;
   indicatorName: string;
+  indicatorFormattedName?: string;  // Tên chỉ tiêu có định dạng HTML
   indicatorGroupName?: string;
   isActive: boolean;
   sortOrder: number;
@@ -100,6 +101,7 @@ export interface TestMethodIndicatorDto {
   indicatorId: string;
   indicatorCode: string;
   indicatorName: string;
+  indicatorFormattedName?: string;  // Tên chỉ tiêu có định dạng HTML
   unitPrice: number;
   isActive: boolean;
   sortOrder: number;
@@ -143,6 +145,7 @@ export interface StandardIndicatorDto {
   indicatorId: string;
   indicatorCode: string;
   indicatorName: string;
+  indicatorFormattedName?: string;  // Tên chỉ tiêu có định dạng HTML
   testMethodId: string;
   testMethodCode: string;
   testMethodName: string;
@@ -267,6 +270,8 @@ export interface IndicatorDto {
   id: string;
   code: string;
   name: string;
+  /** Tên có định dạng HTML (bold, italic, underline, sub, sup) */
+  formattedName?: string;
   isActive: boolean;
   indicatorGroupId: string;
   indicatorGroupName: string;
@@ -277,6 +282,8 @@ export interface IndicatorDto {
 
 export interface CreateIndicatorDto {
   name: string;
+  /** Tên có định dạng HTML */
+  formattedName?: string;
   isActive: boolean;
   indicatorGroupId: string;
   sortOrder?: number;
@@ -284,6 +291,8 @@ export interface CreateIndicatorDto {
 
 export interface UpdateIndicatorDto {
   name: string;
+  /** Tên có định dạng HTML */
+  formattedName?: string;
   isActive: boolean;
   indicatorGroupId: string;
   sortOrder?: number;
@@ -291,7 +300,7 @@ export interface UpdateIndicatorDto {
 
 export interface CreateBulkIndicatorsDto {
   indicatorGroupId: string;
-  indicators: { name: string }[];
+  indicators: { name: string; formattedName?: string }[];
 }
 
 export interface IndicatorFilterDto extends PagedAndSortedResultRequestDto {

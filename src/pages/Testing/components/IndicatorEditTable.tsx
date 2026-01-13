@@ -31,6 +31,7 @@ import {
   IndicatorImageDto,
 } from "../../../types/testing";
 import IndicatorImageCell from "../../../components/common/IndicatorImageCell";
+import { IndicatorName } from "../../../components/common";
 import dayjs from "dayjs";
 
 const { Text } = Typography;
@@ -249,7 +250,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       key: "indicatorName",
       width: 200,
       fixed: "left" as const,
-      render: (value: string) => value || "-",
+      render: (value: string, record) => value ? <IndicatorName name={value} formattedName={record.indicatorFormattedName} /> : "-",
     },
     {
       title: "Phương pháp",

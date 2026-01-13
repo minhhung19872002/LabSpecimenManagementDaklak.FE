@@ -41,6 +41,7 @@ import {
   ChangeApprovalBatchDto,
 } from '../../../types/qualityManagement';
 import fileService from '../../../services/fileService';
+import { IndicatorName } from '../../../components/common';
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -1030,6 +1031,7 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
         {sample.indicators.map((ind, indIdx) => {
           const indCode = ind.indicator?.indicatorCode || ind.indicator?.IndicatorCode || '-';
           const indName = ind.indicator?.indicatorName || ind.indicator?.IndicatorName || '-';
+          const indFormattedName = ind.indicator?.indicatorFormattedName || ind.indicator?.IndicatorFormattedName;
           const methodName = ind.indicator?.testMethodName || ind.indicator?.TestMethodName ||
                             ind.indicator?.testMethodCode || ind.indicator?.TestMethodCode || '-';
           const price = ind.indicator?.unitPrice ?? ind.indicator?.UnitPrice ?? 0;
@@ -1065,7 +1067,7 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
                   <div style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
                     {indTypeTag}
                     <Text strong style={{ ...textStyle, fontSize: 12 }}>{indCode}</Text>
-                    <Text style={{ ...textStyle, marginLeft: 8, fontSize: 12 }}>{indName}</Text>
+                    <span style={{ ...textStyle, marginLeft: 8, fontSize: 12 }}><IndicatorName name={indName} formattedName={indFormattedName} /></span>
                   </div>
                   <div style={{ marginLeft: 28 }}>
                     {ind.type === 'update' && oldMethodName && oldMethodName !== methodName ? (
