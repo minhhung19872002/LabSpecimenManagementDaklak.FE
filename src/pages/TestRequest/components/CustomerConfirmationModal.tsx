@@ -16,6 +16,7 @@ import {
   CloseOutlined,
   SwapOutlined,
   StopOutlined,
+  FileAddOutlined,
 } from "../../../components/common/Icon";
 import { testRequestService } from "../../../services/testRequestService";
 import { IndicatorPendingConfirmationDto } from "../../../types/testRequest";
@@ -164,6 +165,27 @@ const CustomerConfirmationModal: React.FC<CustomerConfirmationModalProps> = ({
       );
     }
 
+    if (record.approvalStatus === IndicatorApprovalStatus.SupplementaryRequested) {
+      return (
+        <div>
+          <div style={{ marginBottom: 8 }}>
+            <Tag icon={<FileAddOutlined />} color="cyan">
+              Yêu cầu bổ sung thông tin
+            </Tag>
+          </div>
+          <Text type="secondary">Nội dung yêu cầu: </Text>
+          <Text>{record.supplementaryRequestReason || "-"}</Text>
+          {record.supplementaryRequestedByName && (
+            <>
+              <br />
+              <Text type="secondary">Người yêu cầu: </Text>
+              <Text>{record.supplementaryRequestedByName}</Text>
+            </>
+          )}
+        </div>
+      );
+    }
+
     return null;
   };
 
@@ -215,6 +237,35 @@ const CustomerConfirmationModal: React.FC<CustomerConfirmationModalProps> = ({
             </Button>
           </Tooltip>
           <Tooltip title="KH không đồng ý từ chối (vẫn muốn TN)">
+            <Button
+              danger
+              size="small"
+              icon={<CloseOutlined />}
+              onClick={() => handleConfirmSingle(record.id, false)}
+              loading={actionLoading}
+            >
+              Từ chối
+            </Button>
+          </Tooltip>
+        </Space>
+      );
+    }
+
+    if (record.approvalStatus === IndicatorApprovalStatus.SupplementaryRequested) {
+      return (
+        <Space size="small">
+          <Tooltip title="KH đồng ý cung cấp bổ sung, tiếp tục thử nghiệm">
+            <Button
+              type="primary"
+              size="small"
+              icon={<CheckOutlined />}
+              onClick={() => handleConfirmSingle(record.id, true)}
+              loading={actionLoading}
+            >
+              Đồng ý bổ sung
+            </Button>
+          </Tooltip>
+          <Tooltip title="KH từ chối bổ sung, hủy chỉ tiêu này">
             <Button
               danger
               size="small"
