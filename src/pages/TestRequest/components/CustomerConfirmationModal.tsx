@@ -165,12 +165,14 @@ const CustomerConfirmationModal: React.FC<CustomerConfirmationModalProps> = ({
       );
     }
 
-    if (record.approvalStatus === IndicatorApprovalStatus.SupplementaryRequested) {
+    if (
+      record.approvalStatus === IndicatorApprovalStatus.SupplementaryRequested
+    ) {
       return (
         <div>
           <div style={{ marginBottom: 8 }}>
             <Tag icon={<FileAddOutlined />} color="cyan">
-              Yêu cầu bổ sung thông tin
+              Yêu cầu bổ sung
             </Tag>
           </div>
           <Text type="secondary">Nội dung yêu cầu: </Text>
@@ -251,7 +253,9 @@ const CustomerConfirmationModal: React.FC<CustomerConfirmationModalProps> = ({
       );
     }
 
-    if (record.approvalStatus === IndicatorApprovalStatus.SupplementaryRequested) {
+    if (
+      record.approvalStatus === IndicatorApprovalStatus.SupplementaryRequested
+    ) {
       return (
         <Space size="small">
           <Tooltip title="KH đồng ý cung cấp bổ sung, tiếp tục thử nghiệm">
@@ -262,7 +266,7 @@ const CustomerConfirmationModal: React.FC<CustomerConfirmationModalProps> = ({
               onClick={() => handleConfirmSingle(record.id, true)}
               loading={actionLoading}
             >
-              Đồng ý bổ sung
+              Đồng ý
             </Button>
           </Tooltip>
           <Tooltip title="KH từ chối bổ sung, hủy chỉ tiêu này">
