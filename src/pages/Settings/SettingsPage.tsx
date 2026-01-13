@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Card,
   Tabs,
@@ -17,24 +17,24 @@ import {
   Avatar,
   Descriptions,
   Spin,
-  Modal
-} from 'antd';
+  Modal,
+} from "antd";
 import {
   SettingOutlined,
   UserOutlined,
   BellOutlined,
   SafetyOutlined,
   MailOutlined,
-  SaveOutlined
-} from '../../components/common/Icon';
+  SaveOutlined,
+} from "../../components/common/Icon";
 import settingsService, {
   UserProfileDto,
   SystemSettingsDto,
   NotificationSettingsDto,
-  SecuritySettingsDto
-} from '../../services/settingsService';
-import { ROLES, STORAGE_KEYS } from '../../constants';
-import { UserInfo } from '../../services/authService';
+  SecuritySettingsDto,
+} from "../../services/settingsService";
+import { ROLES, STORAGE_KEYS } from "../../constants";
+import { UserInfo } from "../../services/authService";
 
 /**
  * Settings Tab Permission Matrix:
@@ -85,7 +85,7 @@ const SettingsPage: React.FC = () => {
 
   const [userProfile, setUserProfile] = useState<UserProfileDto | null>(null);
   const [userRoles, setUserRoles] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState('profile');
+  const [activeTab, setActiveTab] = useState("profile");
 
   // Load user roles from localStorage
   useEffect(() => {
@@ -107,12 +107,14 @@ const SettingsPage: React.FC = () => {
     }
     const allowedRoles = SETTINGS_TAB_PERMISSIONS[tabKey];
     if (!allowedRoles) return false;
-    return userRoles.some(role => allowedRoles.includes(role));
+    return userRoles.some((role) => allowedRoles.includes(role));
   };
 
   // Get allowed tabs for current user
   const allowedTabs = useMemo(() => {
-    return Object.keys(SETTINGS_TAB_PERMISSIONS).filter(tabKey => hasTabPermission(tabKey));
+    return Object.keys(SETTINGS_TAB_PERMISSIONS).filter((tabKey) =>
+      hasTabPermission(tabKey)
+    );
   }, [userRoles]);
 
   // Set initial active tab to first allowed tab
@@ -133,24 +135,26 @@ const SettingsPage: React.FC = () => {
     setLoading(true);
     try {
       switch (tab) {
-        case 'profile':
+        case "profile":
           await loadProfile();
           break;
-        case 'system':
+        case "system":
           await loadSystemSettings();
           break;
-        case 'notifications':
+        case "notifications":
           await loadNotificationSettings();
           break;
-        case 'email':
+        case "email":
           await loadEmailSettings();
           break;
-        case 'security':
+        case "security":
           await loadSecuritySettings();
           break;
       }
     } catch (error: any) {
-      message.error('Không thể tải dữ liệu: ' + (error.message || 'Lỗi không xác định'));
+      message.error(
+        "Không thể tải dữ liệu: " + (error.message || "Lỗi không xác định")
+      );
     } finally {
       setLoading(false);
     }
@@ -162,9 +166,9 @@ const SettingsPage: React.FC = () => {
     profileForm.setFieldsValue({
       fullName: profile.fullName,
       email: profile.email,
-      phoneNumber: profile.phoneNumber || '',
-      department: profile.department || '',
-      position: profile.position || ''
+      phoneNumber: profile.phoneNumber || "",
+      department: profile.department || "",
+      position: profile.position || "",
     });
   };
 
@@ -177,7 +181,7 @@ const SettingsPage: React.FC = () => {
       defaultTAT: settings.defaultTAT,
       workingDays: settings.workingDays,
       language: settings.language,
-      timezone: settings.timezone
+      timezone: settings.timezone,
     });
   };
 
@@ -187,10 +191,10 @@ const SettingsPage: React.FC = () => {
       smtpHost: settings.smtpHost,
       smtpPort: settings.smtpPort,
       smtpUsername: settings.smtpUsername,
-      smtpPassword: '', // Don't show password
+      smtpPassword: "", // Don't show password
       enableSsl: settings.enableSsl,
       fromEmail: settings.fromEmail,
-      fromName: settings.fromName
+      fromName: settings.fromName,
     });
   };
 
@@ -203,7 +207,7 @@ const SettingsPage: React.FC = () => {
       tatWarningAlert: settings.tatWarningAlert,
       ncrAlert: settings.ncrAlert,
       weeklyReport: settings.weeklyReport,
-      monthlyReport: settings.monthlyReport
+      monthlyReport: settings.monthlyReport,
     });
   };
 
@@ -215,7 +219,7 @@ const SettingsPage: React.FC = () => {
       maxLoginAttempts: settings.maxLoginAttempts,
       lockoutDuration: settings.lockoutDuration,
       passwordExpiryDays: settings.passwordExpiryDays,
-      twoFactorEnabled: settings.twoFactorEnabled
+      twoFactorEnabled: settings.twoFactorEnabled,
     });
   };
 
@@ -226,13 +230,15 @@ const SettingsPage: React.FC = () => {
       await settingsService.updateUserProfile({
         fullName: values.fullName,
         email: values.email,
-        phoneNumber: values.phoneNumber
+        phoneNumber: values.phoneNumber,
       });
-      message.success('Đã cập nhật thông tin cá nhân');
+      message.success("Đã cập nhật thông tin cá nhân");
       await loadProfile();
     } catch (error: any) {
       if (error.errorFields) return; // Validation error
-      message.error('Lỗi: ' + (error.message || 'Không thể cập nhật thông tin'));
+      message.error(
+        "Lỗi: " + (error.message || "Không thể cập nhật thông tin")
+      );
     } finally {
       setProfileLoading(false);
     }
@@ -244,13 +250,13 @@ const SettingsPage: React.FC = () => {
       setPasswordLoading(true);
       await settingsService.changePassword({
         currentPassword: values.currentPassword,
-        newPassword: values.newPassword
+        newPassword: values.newPassword,
       });
-      message.success('Đổi mật khẩu thành công!');
+      message.success("Đổi mật khẩu thành công!");
       passwordForm.resetFields();
     } catch (error: any) {
       if (error.errorFields) return;
-      message.error('Lỗi: ' + (error.message || 'Không thể đổi mật khẩu'));
+      message.error("Lỗi: " + (error.message || "Không thể đổi mật khẩu"));
     } finally {
       setPasswordLoading(false);
     }
@@ -261,10 +267,10 @@ const SettingsPage: React.FC = () => {
       const values = await systemForm.validateFields();
       setSystemLoading(true);
       await settingsService.updateSystemSettings(values as SystemSettingsDto);
-      message.success('Đã cập nhật cài đặt hệ thống');
+      message.success("Đã cập nhật cài đặt hệ thống");
     } catch (error: any) {
       if (error.errorFields) return;
-      message.error('Lỗi: ' + (error.message || 'Không thể cập nhật cài đặt'));
+      message.error("Lỗi: " + (error.message || "Không thể cập nhật cài đặt"));
     } finally {
       setSystemLoading(false);
     }
@@ -281,12 +287,12 @@ const SettingsPage: React.FC = () => {
         smtpPassword: values.smtpPassword || undefined,
         enableSsl: values.enableSsl,
         fromEmail: values.fromEmail,
-        fromName: values.fromName
+        fromName: values.fromName,
       });
-      message.success('Đã cập nhật cài đặt email');
+      message.success("Đã cập nhật cài đặt email");
     } catch (error: any) {
       if (error.errorFields) return;
-      message.error('Lỗi: ' + (error.message || 'Không thể cập nhật cài đặt'));
+      message.error("Lỗi: " + (error.message || "Không thể cập nhật cài đặt"));
     } finally {
       setEmailLoading(false);
     }
@@ -294,37 +300,42 @@ const SettingsPage: React.FC = () => {
 
   const handleTestEmail = async () => {
     Modal.confirm({
-      title: 'Gửi email test',
+      title: "Gửi email test",
       content: (
         <div>
           <p>Nhập địa chỉ email để nhận test:</p>
           <Input
             id="test-email-input"
             placeholder="email@example.com"
-            defaultValue={userProfile?.email || ''}
+            defaultValue={userProfile?.email || ""}
           />
         </div>
       ),
-      okText: 'Gửi',
-      cancelText: 'Hủy',
+      okText: "Gửi",
+      cancelText: "Hủy",
+      centered: true,
       onOk: async () => {
-        const emailInput = document.getElementById('test-email-input') as HTMLInputElement;
+        const emailInput = document.getElementById(
+          "test-email-input"
+        ) as HTMLInputElement;
         const toEmail = emailInput?.value;
         if (!toEmail) {
-          message.error('Vui lòng nhập địa chỉ email');
+          message.error("Vui lòng nhập địa chỉ email");
           return Promise.reject();
         }
 
         setTestEmailLoading(true);
         try {
           await settingsService.testEmail({ toEmail });
-          message.success('Đã gửi email test thành công!');
+          message.success("Đã gửi email test thành công!");
         } catch (error: any) {
-          message.error('Gửi email thất bại: ' + (error.message || 'Lỗi không xác định'));
+          message.error(
+            "Gửi email thất bại: " + (error.message || "Lỗi không xác định")
+          );
         } finally {
           setTestEmailLoading(false);
         }
-      }
+      },
     });
   };
 
@@ -332,11 +343,13 @@ const SettingsPage: React.FC = () => {
     try {
       const values = await notificationForm.validateFields();
       setNotificationLoading(true);
-      await settingsService.updateNotificationSettings(values as NotificationSettingsDto);
-      message.success('Đã cập nhật cài đặt thông báo');
+      await settingsService.updateNotificationSettings(
+        values as NotificationSettingsDto
+      );
+      message.success("Đã cập nhật cài đặt thông báo");
     } catch (error: any) {
       if (error.errorFields) return;
-      message.error('Lỗi: ' + (error.message || 'Không thể cập nhật cài đặt'));
+      message.error("Lỗi: " + (error.message || "Không thể cập nhật cài đặt"));
     } finally {
       setNotificationLoading(false);
     }
@@ -346,11 +359,13 @@ const SettingsPage: React.FC = () => {
     try {
       const values = await securityForm.validateFields();
       setSecurityLoading(true);
-      await settingsService.updateSecuritySettings(values as SecuritySettingsDto);
-      message.success('Đã cập nhật cài đặt bảo mật');
+      await settingsService.updateSecuritySettings(
+        values as SecuritySettingsDto
+      );
+      message.success("Đã cập nhật cài đặt bảo mật");
     } catch (error: any) {
       if (error.errorFields) return;
-      message.error('Lỗi: ' + (error.message || 'Không thể cập nhật cài đặt'));
+      message.error("Lỗi: " + (error.message || "Không thể cập nhật cài đặt"));
     } finally {
       setSecurityLoading(false);
     }
@@ -359,7 +374,7 @@ const SettingsPage: React.FC = () => {
   // Define all tabs
   const allTabs = [
     {
-      key: 'profile',
+      key: "profile",
       label: (
         <span>
           <UserOutlined /> Thông tin cá nhân
@@ -369,21 +384,47 @@ const SettingsPage: React.FC = () => {
         <Spin spinning={loading}>
           <Card title="Thông tin tài khoản">
             <Row gutter={24}>
-              <Col xs={24} md={8} style={{ textAlign: 'center', marginBottom: 24 }}>
-                <Avatar size={120} icon={<UserOutlined />} style={{ backgroundColor: '#1890ff' }}>
+              <Col
+                xs={24}
+                md={8}
+                style={{ textAlign: "center", marginBottom: 24 }}
+              >
+                <Avatar
+                  size={120}
+                  icon={<UserOutlined />}
+                  style={{ backgroundColor: "#1890ff" }}
+                >
                   {userProfile?.fullName?.charAt(0).toUpperCase()}
                 </Avatar>
                 <div style={{ marginTop: 16 }}>
-                  <div style={{ fontWeight: 'bold', fontSize: 16 }}>{userProfile?.fullName}</div>
-                  <div style={{ color: '#666' }}>{userProfile?.userName}</div>
+                  <div style={{ fontWeight: "bold", fontSize: 16 }}>
+                    {userProfile?.fullName}
+                  </div>
+                  <div style={{ color: "#666" }}>{userProfile?.userName}</div>
                 </div>
               </Col>
               <Col xs={24} md={16}>
                 <Form form={profileForm} layout="vertical">
-                  <Form.Item name="fullName" label="Họ và tên" rules={[{ required: true, message: 'Vui lòng nhập họ tên' }]}>
+                  <Form.Item
+                    name="fullName"
+                    label="Họ và tên"
+                    rules={[
+                      { required: true, message: "Vui lòng nhập họ tên" },
+                    ]}
+                  >
                     <Input />
                   </Form.Item>
-                  <Form.Item name="email" label="Email" rules={[{ required: true, type: 'email', message: 'Email không hợp lệ' }]}>
+                  <Form.Item
+                    name="email"
+                    label="Email"
+                    rules={[
+                      {
+                        required: true,
+                        type: "email",
+                        message: "Email không hợp lệ",
+                      },
+                    ]}
+                  >
                     <Input prefix={<MailOutlined />} />
                   </Form.Item>
                   <Form.Item name="phoneNumber" label="Số điện thoại">
@@ -401,7 +442,12 @@ const SettingsPage: React.FC = () => {
                       </Form.Item>
                     </Col>
                   </Row>
-                  <Button type="primary" icon={<SaveOutlined />} onClick={handleSaveProfile} loading={profileLoading}>
+                  <Button
+                    type="primary"
+                    icon={<SaveOutlined />}
+                    onClick={handleSaveProfile}
+                    loading={profileLoading}
+                  >
                     Lưu thay đổi
                   </Button>
                 </Form>
@@ -412,7 +458,12 @@ const SettingsPage: React.FC = () => {
                   <Form.Item
                     name="currentPassword"
                     label="Mật khẩu hiện tại"
-                    rules={[{ required: true, message: 'Vui lòng nhập mật khẩu hiện tại' }]}
+                    rules={[
+                      {
+                        required: true,
+                        message: "Vui lòng nhập mật khẩu hiện tại",
+                      },
+                    ]}
                   >
                     <Input.Password placeholder="Mật khẩu hiện tại" />
                   </Form.Item>
@@ -420,8 +471,8 @@ const SettingsPage: React.FC = () => {
                     name="newPassword"
                     label="Mật khẩu mới"
                     rules={[
-                      { required: true, message: 'Vui lòng nhập mật khẩu mới' },
-                      { min: 6, message: 'Mật khẩu phải có ít nhất 6 ký tự' }
+                      { required: true, message: "Vui lòng nhập mật khẩu mới" },
+                      { min: 6, message: "Mật khẩu phải có ít nhất 6 ký tự" },
                     ]}
                   >
                     <Input.Password placeholder="Mật khẩu mới" />
@@ -429,22 +480,34 @@ const SettingsPage: React.FC = () => {
                   <Form.Item
                     name="confirmPassword"
                     label="Xác nhận mật khẩu mới"
-                    dependencies={['newPassword']}
+                    dependencies={["newPassword"]}
                     rules={[
-                      { required: true, message: 'Vui lòng xác nhận mật khẩu mới' },
+                      {
+                        required: true,
+                        message: "Vui lòng xác nhận mật khẩu mới",
+                      },
                       ({ getFieldValue }) => ({
                         validator(_, value) {
-                          if (!value || getFieldValue('newPassword') === value) {
+                          if (
+                            !value ||
+                            getFieldValue("newPassword") === value
+                          ) {
                             return Promise.resolve();
                           }
-                          return Promise.reject(new Error('Mật khẩu xác nhận không khớp'));
-                        }
-                      })
+                          return Promise.reject(
+                            new Error("Mật khẩu xác nhận không khớp")
+                          );
+                        },
+                      }),
                     ]}
                   >
                     <Input.Password placeholder="Xác nhận mật khẩu mới" />
                   </Form.Item>
-                  <Button type="primary" onClick={handleChangePassword} loading={passwordLoading}>
+                  <Button
+                    type="primary"
+                    onClick={handleChangePassword}
+                    loading={passwordLoading}
+                  >
                     Đổi mật khẩu
                   </Button>
                 </Form>
@@ -455,7 +518,7 @@ const SettingsPage: React.FC = () => {
       ),
     },
     {
-      key: 'notifications',
+      key: "notifications",
       label: (
         <span>
           <BellOutlined /> Thông báo
@@ -467,22 +530,38 @@ const SettingsPage: React.FC = () => {
             <Form form={notificationForm} layout="vertical">
               <Descriptions bordered column={1}>
                 <Descriptions.Item label="Thông báo qua email">
-                  <Form.Item name="emailEnabled" valuePropName="checked" noStyle>
+                  <Form.Item
+                    name="emailEnabled"
+                    valuePropName="checked"
+                    noStyle
+                  >
                     <Switch />
                   </Form.Item>
                 </Descriptions.Item>
                 <Descriptions.Item label="Thông báo khi có yêu cầu mới">
-                  <Form.Item name="newRequestAlert" valuePropName="checked" noStyle>
+                  <Form.Item
+                    name="newRequestAlert"
+                    valuePropName="checked"
+                    noStyle
+                  >
                     <Switch />
                   </Form.Item>
                 </Descriptions.Item>
                 <Descriptions.Item label="Thông báo khi có kết quả cần duyệt">
-                  <Form.Item name="resultApprovalAlert" valuePropName="checked" noStyle>
+                  <Form.Item
+                    name="resultApprovalAlert"
+                    valuePropName="checked"
+                    noStyle
+                  >
                     <Switch />
                   </Form.Item>
                 </Descriptions.Item>
                 <Descriptions.Item label="Thông báo khi sắp hết hạn TAT">
-                  <Form.Item name="tatWarningAlert" valuePropName="checked" noStyle>
+                  <Form.Item
+                    name="tatWarningAlert"
+                    valuePropName="checked"
+                    noStyle
+                  >
                     <Switch />
                   </Form.Item>
                 </Descriptions.Item>
@@ -492,18 +571,31 @@ const SettingsPage: React.FC = () => {
                   </Form.Item>
                 </Descriptions.Item>
                 <Descriptions.Item label="Báo cáo hàng tuần">
-                  <Form.Item name="weeklyReport" valuePropName="checked" noStyle>
+                  <Form.Item
+                    name="weeklyReport"
+                    valuePropName="checked"
+                    noStyle
+                  >
                     <Switch />
                   </Form.Item>
                 </Descriptions.Item>
                 <Descriptions.Item label="Báo cáo hàng tháng">
-                  <Form.Item name="monthlyReport" valuePropName="checked" noStyle>
+                  <Form.Item
+                    name="monthlyReport"
+                    valuePropName="checked"
+                    noStyle
+                  >
                     <Switch />
                   </Form.Item>
                 </Descriptions.Item>
               </Descriptions>
               <div style={{ marginTop: 16 }}>
-                <Button type="primary" icon={<SaveOutlined />} onClick={handleSaveNotification} loading={notificationLoading}>
+                <Button
+                  type="primary"
+                  icon={<SaveOutlined />}
+                  onClick={handleSaveNotification}
+                  loading={notificationLoading}
+                >
                   Lưu cài đặt
                 </Button>
               </div>
@@ -513,7 +605,7 @@ const SettingsPage: React.FC = () => {
       ),
     },
     {
-      key: 'system',
+      key: "system",
       label: (
         <span>
           <SettingOutlined /> Cài đặt chung
@@ -525,12 +617,20 @@ const SettingsPage: React.FC = () => {
             <Form form={systemForm} layout="vertical">
               <Row gutter={16}>
                 <Col xs={24} md={12}>
-                  <Form.Item name="labName" label="Tên phòng thí nghiệm" rules={[{ required: true }]}>
+                  <Form.Item
+                    name="labName"
+                    label="Tên phòng thí nghiệm"
+                    rules={[{ required: true }]}
+                  >
                     <Input />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
-                  <Form.Item name="labCode" label="Mã VILAS" rules={[{ required: true }]}>
+                  <Form.Item
+                    name="labCode"
+                    label="Mã VILAS"
+                    rules={[{ required: true }]}
+                  >
                     <Input />
                   </Form.Item>
                 </Col>
@@ -541,7 +641,7 @@ const SettingsPage: React.FC = () => {
               <Row gutter={16}>
                 <Col xs={24} md={8}>
                   <Form.Item name="defaultTAT" label="TAT mặc định (ngày)">
-                    <InputNumber min={1} max={30} style={{ width: '100%' }} />
+                    <InputNumber min={1} max={30} style={{ width: "100%" }} />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={8}>
@@ -555,7 +655,9 @@ const SettingsPage: React.FC = () => {
                 <Col xs={24} md={8}>
                   <Form.Item name="timezone" label="Múi giờ">
                     <Select>
-                      <Select.Option value="Asia/Ho_Chi_Minh">UTC+7 (Việt Nam)</Select.Option>
+                      <Select.Option value="Asia/Ho_Chi_Minh">
+                        UTC+7 (Việt Nam)
+                      </Select.Option>
                     </Select>
                   </Form.Item>
                 </Col>
@@ -571,7 +673,12 @@ const SettingsPage: React.FC = () => {
                   <Select.Option value="sunday">Chủ nhật</Select.Option>
                 </Select>
               </Form.Item>
-              <Button type="primary" icon={<SaveOutlined />} onClick={handleSaveSystem} loading={systemLoading}>
+              <Button
+                type="primary"
+                icon={<SaveOutlined />}
+                onClick={handleSaveSystem}
+                loading={systemLoading}
+              >
                 Lưu cài đặt
               </Button>
             </Form>
@@ -580,7 +687,7 @@ const SettingsPage: React.FC = () => {
       ),
     },
     {
-      key: 'email',
+      key: "email",
       label: (
         <span>
           <MailOutlined /> Email SMTP
@@ -592,13 +699,21 @@ const SettingsPage: React.FC = () => {
             <Form form={emailForm} layout="vertical">
               <Row gutter={16}>
                 <Col xs={24} md={16}>
-                  <Form.Item name="smtpHost" label="SMTP Server" rules={[{ required: true }]}>
+                  <Form.Item
+                    name="smtpHost"
+                    label="SMTP Server"
+                    rules={[{ required: true }]}
+                  >
                     <Input placeholder="smtp.gmail.com" />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={8}>
-                  <Form.Item name="smtpPort" label="Port" rules={[{ required: true }]}>
-                    <InputNumber style={{ width: '100%' }} />
+                  <Form.Item
+                    name="smtpPort"
+                    label="Port"
+                    rules={[{ required: true }]}
+                  >
+                    <InputNumber style={{ width: "100%" }} />
                   </Form.Item>
                 </Col>
               </Row>
@@ -614,7 +729,11 @@ const SettingsPage: React.FC = () => {
                   </Form.Item>
                 </Col>
               </Row>
-              <Form.Item name="enableSsl" label="SSL/TLS" valuePropName="checked">
+              <Form.Item
+                name="enableSsl"
+                label="SSL/TLS"
+                valuePropName="checked"
+              >
                 <Switch checkedChildren="Bật" unCheckedChildren="Tắt" />
               </Form.Item>
               <Divider>Thông tin người gửi</Divider>
@@ -631,10 +750,19 @@ const SettingsPage: React.FC = () => {
                 </Col>
               </Row>
               <Space>
-                <Button type="primary" icon={<SaveOutlined />} onClick={handleSaveEmail} loading={emailLoading}>
+                <Button
+                  type="primary"
+                  icon={<SaveOutlined />}
+                  onClick={handleSaveEmail}
+                  loading={emailLoading}
+                >
                   Lưu cài đặt
                 </Button>
-                <Button icon={<MailOutlined />} onClick={handleTestEmail} loading={testEmailLoading}>
+                <Button
+                  icon={<MailOutlined />}
+                  onClick={handleTestEmail}
+                  loading={testEmailLoading}
+                >
                   Gửi email test
                 </Button>
               </Space>
@@ -644,7 +772,7 @@ const SettingsPage: React.FC = () => {
       ),
     },
     {
-      key: 'security',
+      key: "security",
       label: (
         <span>
           <SafetyOutlined /> Bảo mật
@@ -656,10 +784,16 @@ const SettingsPage: React.FC = () => {
             <Form form={securityForm} layout="vertical">
               <Descriptions bordered column={1}>
                 <Descriptions.Item label="Yêu cầu mật khẩu mạnh">
-                  <Form.Item name="requireStrongPassword" valuePropName="checked" noStyle>
+                  <Form.Item
+                    name="requireStrongPassword"
+                    valuePropName="checked"
+                    noStyle
+                  >
                     <Switch />
                   </Form.Item>
-                  <span style={{ marginLeft: 8, color: '#666' }}>Tối thiểu 8 ký tự, có chữ hoa, số và ký tự đặc biệt</span>
+                  <span style={{ marginLeft: 8, color: "#666" }}>
+                    Tối thiểu 8 ký tự, có chữ hoa, số và ký tự đặc biệt
+                  </span>
                 </Descriptions.Item>
                 <Descriptions.Item label="Thời gian hết hạn session (phút)">
                   <Form.Item name="sessionTimeout" noStyle>
@@ -682,14 +816,25 @@ const SettingsPage: React.FC = () => {
                   </Form.Item>
                 </Descriptions.Item>
                 <Descriptions.Item label="Xác thực 2 bước (2FA)">
-                  <Form.Item name="twoFactorEnabled" valuePropName="checked" noStyle>
+                  <Form.Item
+                    name="twoFactorEnabled"
+                    valuePropName="checked"
+                    noStyle
+                  >
                     <Switch />
                   </Form.Item>
-                  <Tag color="blue" style={{ marginLeft: 8 }}>Coming soon</Tag>
+                  <Tag color="blue" style={{ marginLeft: 8 }}>
+                    Coming soon
+                  </Tag>
                 </Descriptions.Item>
               </Descriptions>
               <div style={{ marginTop: 16 }}>
-                <Button type="primary" icon={<SaveOutlined />} onClick={handleSaveSecurity} loading={securityLoading}>
+                <Button
+                  type="primary"
+                  icon={<SaveOutlined />}
+                  onClick={handleSaveSecurity}
+                  loading={securityLoading}
+                >
                   Lưu cài đặt
                 </Button>
               </div>
@@ -701,7 +846,7 @@ const SettingsPage: React.FC = () => {
   ];
 
   // Filter tabs based on user permissions
-  const visibleTabs = allTabs.filter(tab => hasTabPermission(tab.key));
+  const visibleTabs = allTabs.filter((tab) => hasTabPermission(tab.key));
 
   return (
     <div>

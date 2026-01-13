@@ -1,8 +1,27 @@
 import React, { useState } from "react";
-import { Image, Space, Typography, Tooltip, Upload, Modal, message, Spin } from "antd";
-import { PictureOutlined, CameraOutlined, PlusOutlined, DeleteOutlined, EyeOutlined } from "../../../components/common/Icon";
+import {
+  Image,
+  Space,
+  Typography,
+  Tooltip,
+  Upload,
+  Modal,
+  message,
+  Spin,
+} from "antd";
+import {
+  PictureOutlined,
+  CameraOutlined,
+  PlusOutlined,
+  DeleteOutlined,
+  EyeOutlined,
+} from "../../../components/common/Icon";
 import type { RcFile } from "antd/es/upload/interface";
-import { SampleTestingImageDto, SampleAttachmentDto, SampleTestingImageType } from "../../../types/testing";
+import {
+  SampleTestingImageDto,
+  SampleAttachmentDto,
+  SampleTestingImageType,
+} from "../../../types/testing";
 import fileService from "../../../services/fileService";
 import testingService from "../../../services/testingService";
 
@@ -12,18 +31,18 @@ const { Text } = Typography;
  * Get image URL using fileId with /api/v1/files/{fileId}
  */
 const getImageUrl = (fileId: string): string => {
-  if (!fileId) return '';
+  if (!fileId) return "";
   return fileService.getFileUrl(fileId);
 };
 
 interface SampleImagesDisplayProps {
   taskId?: string;
   sampleId?: string;
-  sampleImages?: SampleAttachmentDto[];        // Hình mẫu từ TestRequest (readonly)
+  sampleImages?: SampleAttachmentDto[]; // Hình mẫu từ TestRequest (readonly)
   beforeTestingImages?: SampleTestingImageDto[]; // Hình trước TN
-  afterTestingImages?: SampleTestingImageDto[];  // Hình sau TN
-  canUpload?: boolean;                          // Cho phép upload hay không
-  maxImages?: number;                           // Số hình tối đa mỗi loại
+  afterTestingImages?: SampleTestingImageDto[]; // Hình sau TN
+  canUpload?: boolean; // Cho phép upload hay không
+  maxImages?: number; // Số hình tối đa mỗi loại
   onBeforeImagesChange?: (images: SampleTestingImageDto[]) => void;
   onAfterImagesChange?: (images: SampleTestingImageDto[]) => void;
 }
@@ -88,9 +107,19 @@ const UploadableImageGroup: React.FC<{
   canUpload: boolean;
   maxImages: number;
   onImagesChange?: (images: SampleTestingImageDto[]) => void;
-}> = ({ title, icon, images, taskId, sampleId, imageType, canUpload, maxImages, onImagesChange }) => {
+}> = ({
+  title,
+  icon,
+  images,
+  taskId,
+  sampleId,
+  imageType,
+  canUpload,
+  maxImages,
+  onImagesChange,
+}) => {
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewImage, setPreviewImage] = useState('');
+  const [previewImage, setPreviewImage] = useState("");
   const [uploading, setUploading] = useState(false);
 
   const handlePreview = (image: SampleTestingImageDto) => {
@@ -105,14 +134,14 @@ const UploadableImageGroup: React.FC<{
     }
 
     // Validate: chỉ cho phép file hình ảnh
-    const imageFiles = fileList.filter(f => f.type.startsWith('image/'));
+    const imageFiles = fileList.filter((f) => f.type.startsWith("image/"));
     const nonImageCount = fileList.length - imageFiles.length;
     if (nonImageCount > 0) {
       message.warning(`Đã bỏ qua ${nonImageCount} file không phải hình ảnh`);
     }
 
     if (imageFiles.length === 0) {
-      message.error('Vui lòng chọn file hình ảnh (jpg, png, gif, ...)');
+      message.error("Vui lòng chọn file hình ảnh (jpg, png, gif, ...)");
       return false;
     }
 
@@ -126,7 +155,9 @@ const UploadableImageGroup: React.FC<{
     const filesToUpload = imageFiles.slice(0, remainingSlots);
 
     if (imageFiles.length > remainingSlots) {
-      message.warning(`Chỉ upload được ${remainingSlots} hình (còn lại ${remainingSlots}/${maxImages} slot)`);
+      message.warning(
+        `Chỉ upload được ${remainingSlots} hình (còn lại ${remainingSlots}/${maxImages} slot)`
+      );
     }
 
     setUploading(true);
@@ -146,8 +177,10 @@ const UploadableImageGroup: React.FC<{
         message.success(`Upload thành công ${newImages.length} hình`);
       }
     } catch (error: any) {
-      console.error('Batch upload failed:', error);
-      message.error(error?.response?.data?.error?.message || 'Upload hình ảnh thất bại');
+      console.error("Batch upload failed:", error);
+      message.error(
+        error?.response?.data?.error?.message || "Upload hình ảnh thất bại"
+      );
     }
 
     setUploading(false);
@@ -156,21 +189,24 @@ const UploadableImageGroup: React.FC<{
 
   const handleDelete = async (imageId: string) => {
     Modal.confirm({
-      title: 'Xác nhận xóa',
-      content: 'Bạn có chắc muốn xóa hình ảnh này?',
-      okText: 'Xóa',
-      okType: 'danger',
-      cancelText: 'Hủy',
+      title: "Xác nhận xóa",
+      content: "Bạn có chắc muốn xóa hình ảnh này?",
+      okText: "Xóa",
+      okType: "danger",
+      cancelText: "Hủy",
+      centered: true,
       onOk: async () => {
         try {
           await testingService.deleteSampleTestingImage(imageId);
-          const updatedImages = images.filter(img => img.id !== imageId);
+          const updatedImages = images.filter((img) => img.id !== imageId);
           onImagesChange?.(updatedImages);
-          message.success('Xóa hình ảnh thành công');
+          message.success("Xóa hình ảnh thành công");
         } catch (error: any) {
-          message.error(error?.response?.data?.error?.message || 'Xóa hình ảnh thất bại');
+          message.error(
+            error?.response?.data?.error?.message || "Xóa hình ảnh thất bại"
+          );
         }
-      }
+      },
     });
   };
 
@@ -188,12 +224,12 @@ const UploadableImageGroup: React.FC<{
             <div
               key={image.id}
               style={{
-                position: 'relative',
+                position: "relative",
                 width: 48,
                 height: 48,
-                border: '1px solid #d9d9d9',
+                border: "1px solid #d9d9d9",
                 borderRadius: 4,
-                overflow: 'hidden'
+                overflow: "hidden",
               }}
             >
               <Image
@@ -201,30 +237,35 @@ const UploadableImageGroup: React.FC<{
                 alt={image.fileName}
                 width={48}
                 height={48}
-                style={{ objectFit: 'cover' }}
+                style={{ objectFit: "cover" }}
                 preview={false}
                 onClick={() => handlePreview(image)}
               />
               <div
                 style={{
-                  position: 'absolute',
+                  position: "absolute",
                   top: 0,
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  background: 'rgba(0,0,0,0.4)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  background: "rgba(0,0,0,0.4)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                   opacity: 0,
-                  transition: 'opacity 0.2s',
+                  transition: "opacity 0.2s",
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-                onMouseLeave={(e) => (e.currentTarget.style.opacity = '0')}
+                onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                onMouseLeave={(e) => (e.currentTarget.style.opacity = "0")}
               >
                 <Tooltip title="Xem">
                   <EyeOutlined
-                    style={{ color: '#fff', fontSize: 14, cursor: 'pointer', marginRight: 4 }}
+                    style={{
+                      color: "#fff",
+                      fontSize: 14,
+                      cursor: "pointer",
+                      marginRight: 4,
+                    }}
                     onClick={(e) => {
                       e.stopPropagation();
                       handlePreview(image);
@@ -234,7 +275,7 @@ const UploadableImageGroup: React.FC<{
                 {canUpload && (
                   <Tooltip title="Xóa">
                     <DeleteOutlined
-                      style={{ color: '#fff', fontSize: 14, cursor: 'pointer' }}
+                      style={{ color: "#fff", fontSize: 14, cursor: "pointer" }}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDelete(image.id);
@@ -257,16 +298,20 @@ const UploadableImageGroup: React.FC<{
                 style={{
                   width: 48,
                   height: 48,
-                  border: '1px dashed #d9d9d9',
+                  border: "1px dashed #d9d9d9",
                   borderRadius: 4,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  background: '#fafafa'
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  background: "#fafafa",
                 }}
               >
-                {uploading ? <Spin size="small" /> : <PlusOutlined style={{ color: '#999' }} />}
+                {uploading ? (
+                  <Spin size="small" />
+                ) : (
+                  <PlusOutlined style={{ color: "#999" }} />
+                )}
               </div>
             </Upload>
           )}
@@ -278,7 +323,7 @@ const UploadableImageGroup: React.FC<{
           width={800}
           centered
         >
-          <img alt="preview" style={{ width: '100%' }} src={previewImage} />
+          <img alt="preview" style={{ width: "100%" }} src={previewImage} />
         </Modal>
       </div>
     </div>
