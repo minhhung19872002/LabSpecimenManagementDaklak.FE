@@ -681,6 +681,10 @@ export interface IndicatorPendingConfirmationDto {
   methodChangeReason?: string;          // Lý do yêu cầu đổi PP (nếu có)
   requestedByName?: string;             // Người yêu cầu đổi PP / từ chối TN
   requestedDate?: string;               // Ngày yêu cầu
+  // Supplementary Request fields
+  supplementaryRequestReason?: string;  // Lý do yêu cầu bổ sung
+  supplementaryRequestDate?: string;    // Ngày yêu cầu bổ sung
+  supplementaryRequestedByName?: string; // Tên người yêu cầu bổ sung
 }
 
 // DTO for BPGN to confirm a single indicator

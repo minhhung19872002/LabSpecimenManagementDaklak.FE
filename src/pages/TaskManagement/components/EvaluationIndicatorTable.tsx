@@ -13,7 +13,12 @@ import {
 } from "antd";
 import StatusTag from "../../../components/common/StatusTag";
 import type { TableRowSelection } from "antd/es/table/interface";
-import { CheckOutlined, CloseOutlined, SwapOutlined } from "../../../components/common/Icon";
+import {
+  CheckOutlined,
+  CloseOutlined,
+  SwapOutlined,
+  FileAddOutlined,
+} from "../../../components/common/Icon";
 import {
   LaboratoryTaskIndicatorDto,
   IndicatorApprovalStatus,
@@ -30,9 +35,9 @@ interface EvaluationIndicatorTableProps {
   indicators: LaboratoryTaskIndicatorDto[];
   methods: MethodLookupDto[];
   taskId: string;
-  canEvaluate: boolean;  // QLKT permission
+  canEvaluate: boolean; // QLKT permission
   loading?: boolean;
-  onEvaluationComplete: () => void;  // Callback to refresh data after evaluation
+  onEvaluationComplete: () => void; // Callback to refresh data after evaluation
 }
 
 const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
@@ -44,7 +49,9 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
   onEvaluationComplete,
 }) => {
   // State for selected indicators
-  const [selectedIndicatorIds, setSelectedIndicatorIds] = useState<string[]>([]);
+  const [selectedIndicatorIds, setSelectedIndicatorIds] = useState<string[]>(
+    []
+  );
 
   // State for action loading
   const [actionLoading, setActionLoading] = useState(false);
@@ -53,10 +60,10 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
   const [methodChangeModal, setMethodChangeModal] = useState<{
     visible: boolean;
     indicatorId?: string;
-    mode: 'single' | 'bulk';
+    mode: "single" | "bulk";
   }>({
     visible: false,
-    mode: 'single',
+    mode: "single",
   });
   const [methodChangeForm] = Form.useForm();
 
@@ -64,18 +71,28 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
   const [rejectModal, setRejectModal] = useState<{
     visible: boolean;
     indicatorId?: string;
-    mode: 'single' | 'bulk';
+    mode: "single" | "bulk";
   }>({
     visible: false,
-    mode: 'single',
+    mode: "single",
   });
   const [rejectForm] = Form.useForm();
+
+  // State for supplementary request modal
+  const [supplementaryModal, setSupplementaryModal] = useState<{
+    visible: boolean;
+    indicatorId?: string;
+  }>({
+    visible: false,
+  });
+  const [supplementaryForm] = Form.useForm();
 
   // Filter indicators that need evaluation (Pending or CannotTest status)
   const pendingIndicators = useMemo(() => {
     return indicators.filter(
-      (ind) => ind.approvalStatus === IndicatorApprovalStatus.Pending ||
-               ind.approvalStatus === IndicatorApprovalStatus.CannotTest
+      (ind) =>
+        ind.approvalStatus === IndicatorApprovalStatus.Pending ||
+        ind.approvalStatus === IndicatorApprovalStatus.CannotTest
     );
   }, [indicators]);
 
@@ -96,7 +113,9 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
       console.error("Failed to accept indicator:", error);
       Modal.error({
         title: "Lỗi",
-        content: error.response?.data?.error?.message || "Không thể chấp nhận chỉ tiêu",
+        content:
+          error.response?.data?.error?.message ||
+          "Không thể chấp nhận chỉ tiêu",
       });
     } finally {
       setActionLoading(false);
@@ -110,13 +129,22 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
 
       setActionLoading(true);
 
-      if (methodChangeModal.mode === 'single' && methodChangeModal.indicatorId) {
-        await laboratoryTaskService.evaluateIndicator(methodChangeModal.indicatorId, {
-          action: IndicatorEvaluationAction.RequestMethodChange,
-          newMethodId: values.newMethodId,
-          reason: values.reason,
-        });
-      } else if (methodChangeModal.mode === 'bulk' && selectedIndicatorIds.length > 0) {
+      if (
+        methodChangeModal.mode === "single" &&
+        methodChangeModal.indicatorId
+      ) {
+        await laboratoryTaskService.evaluateIndicator(
+          methodChangeModal.indicatorId,
+          {
+            action: IndicatorEvaluationAction.RequestMethodChange,
+            newMethodId: values.newMethodId,
+            reason: values.reason,
+          }
+        );
+      } else if (
+        methodChangeModal.mode === "bulk" &&
+        selectedIndicatorIds.length > 0
+      ) {
         await laboratoryTaskService.requestMethodChange(taskId, {
           items: selectedIndicatorIds.map((id) => ({
             indicatorId: id,
@@ -127,15 +155,17 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
         setSelectedIndicatorIds([]);
       }
 
-      setMethodChangeModal({ visible: false, mode: 'single' });
+      setMethodChangeModal({ visible: false, mode: "single" });
       methodChangeForm.resetFields();
       onEvaluationComplete();
     } catch (error: any) {
-      if (error.errorFields) return;  // Form validation error
+      if (error.errorFields) return; // Form validation error
       console.error("Failed to request method change:", error);
       Modal.error({
         title: "Lỗi",
-        content: error.response?.data?.error?.message || "Không thể yêu cầu đổi phương pháp",
+        content:
+          error.response?.data?.error?.message ||
+          "Không thể yêu cầu đổi phương pháp",
       });
     } finally {
       setActionLoading(false);
@@ -149,12 +179,15 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
 
       setActionLoading(true);
 
-      if (rejectModal.mode === 'single' && rejectModal.indicatorId) {
+      if (rejectModal.mode === "single" && rejectModal.indicatorId) {
         await laboratoryTaskService.evaluateIndicator(rejectModal.indicatorId, {
           action: IndicatorEvaluationAction.Reject,
           reason: values.reason,
         });
-      } else if (rejectModal.mode === 'bulk' && selectedIndicatorIds.length > 0) {
+      } else if (
+        rejectModal.mode === "bulk" &&
+        selectedIndicatorIds.length > 0
+      ) {
         await laboratoryTaskService.rejectIndicatorsForTesting(taskId, {
           indicatorIds: selectedIndicatorIds,
           reason: values.reason,
@@ -162,15 +195,17 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
         setSelectedIndicatorIds([]);
       }
 
-      setRejectModal({ visible: false, mode: 'single' });
+      setRejectModal({ visible: false, mode: "single" });
       rejectForm.resetFields();
       onEvaluationComplete();
     } catch (error: any) {
-      if (error.errorFields) return;  // Form validation error
+      if (error.errorFields) return; // Form validation error
       console.error("Failed to reject indicator:", error);
       Modal.error({
         title: "Lỗi",
-        content: error.response?.data?.error?.message || "Không thể từ chối thử nghiệm",
+        content:
+          error.response?.data?.error?.message ||
+          "Không thể từ chối thử nghiệm",
       });
     } finally {
       setActionLoading(false);
@@ -193,7 +228,9 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
           console.error("Failed to approve all:", error);
           Modal.error({
             title: "Lỗi",
-            content: error.response?.data?.error?.message || "Không thể chấp nhận tất cả chỉ tiêu",
+            content:
+              error.response?.data?.error?.message ||
+              "Không thể chấp nhận tất cả chỉ tiêu",
           });
         } finally {
           setActionLoading(false);
@@ -202,13 +239,52 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
     });
   };
 
+  // Handle supplementary request
+  const handleSupplementaryRequest = async () => {
+    try {
+      const values = await supplementaryForm.validateFields();
+      setActionLoading(true);
+
+      if (supplementaryModal.indicatorId) {
+        await laboratoryTaskService.evaluateIndicator(
+          supplementaryModal.indicatorId,
+          {
+            action: IndicatorEvaluationAction.RequestSupplementary,
+            reason: values.reason,
+          }
+        );
+      }
+
+      setSupplementaryModal({ visible: false });
+      supplementaryForm.resetFields();
+      onEvaluationComplete();
+    } catch (error: any) {
+      if (error.errorFields) return; // Form validation error
+      console.error("Failed to request supplementary:", error);
+      Modal.error({
+        title: "Lỗi",
+        content:
+          error.response?.data?.error?.message ||
+          "Không thể gửi yêu cầu bổ sung",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   // Get status tag for indicator
   const getStatusTag = (record: LaboratoryTaskIndicatorDto) => {
     const status = record.approvalStatus;
 
     if (status === IndicatorApprovalStatus.CannotTest) {
+      return <Tag color="orange">KTV báo không TN được</Tag>;
+    }
+
+    if (status === IndicatorApprovalStatus.SupplementaryRequested) {
       return (
-        <Tag color="orange">KTV báo không TN được</Tag>
+        <Tooltip title={`Lý do: ${record.supplementaryRequestReason || "-"}`}>
+          <Tag color="cyan">YC bổ sung</Tag>
+        </Tooltip>
       );
     }
 
@@ -223,53 +299,144 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
   const getActionButtons = (record: LaboratoryTaskIndicatorDto) => {
     const status = record.approvalStatus;
 
-    // Các trạng thái cần QLKT đánh giá: Pending và CannotTest (KTV báo không TN được)
-    const needsEvaluation = status === IndicatorApprovalStatus.Pending ||
-                           status === IndicatorApprovalStatus.CannotTest;
+    if (!canEvaluate) {
+      return <></>;
+    }
 
-    if (!needsEvaluation || !canEvaluate) {
+    // Không hiển thị button nào khi đang chờ KH xác nhận (SupplementaryRequested, MethodChangeRequested, TestingRejected)
+    if (
+      status === IndicatorApprovalStatus.SupplementaryRequested ||
+      status === IndicatorApprovalStatus.MethodChangeRequested ||
+      status === IndicatorApprovalStatus.TestingRejected
+    ) {
+      return <></>;
+    }
+
+    // Các trạng thái cần QLKT đánh giá: Pending và CannotTest (KTV báo không TN được)
+    const needsEvaluation =
+      status === IndicatorApprovalStatus.Pending ||
+      status === IndicatorApprovalStatus.CannotTest;
+
+    // Các trạng thái có thể YC bổ sung: AcceptedForTesting và CannotTest
+    const canRequestSupplementary =
+      status === IndicatorApprovalStatus.AcceptedForTesting ||
+      status === IndicatorApprovalStatus.CannotTest;
+
+    // Nếu không cần đánh giá và không thể YC bổ sung, không hiển thị button
+    if (!needsEvaluation && !canRequestSupplementary) {
       return <></>;
     }
 
     const isCannotTest = status === IndicatorApprovalStatus.CannotTest;
+    const isAcceptedForTesting =
+      status === IndicatorApprovalStatus.AcceptedForTesting;
 
     return (
       <Space size="small" wrap>
-        {/* Chỉ hiển thị Chấp nhận TN cho trạng thái Pending, không hiển thị cho CannotTest */}
-        {!isCannotTest && (
-          <Tooltip title="Chấp nhận thử nghiệm">
+        {/* Buttons cho trạng thái Pending */}
+        {needsEvaluation && !isCannotTest && (
+          <>
+            <Tooltip title="Chấp nhận thử nghiệm">
+              <Button
+                type="primary"
+                size="small"
+                icon={<CheckOutlined />}
+                onClick={() => handleAccept(record.id)}
+                loading={actionLoading}
+              >
+                Chấp nhận TN
+              </Button>
+            </Tooltip>
+            <Tooltip title="Yêu cầu đổi phương pháp">
+              <Button
+                size="small"
+                icon={<SwapOutlined />}
+                onClick={() =>
+                  setMethodChangeModal({
+                    visible: true,
+                    indicatorId: record.id,
+                    mode: "single",
+                  })
+                }
+                loading={actionLoading}
+              >
+                Đổi PP
+              </Button>
+            </Tooltip>
+            <Tooltip title="Từ chối thử nghiệm">
+              <Button
+                danger
+                size="small"
+                icon={<CloseOutlined />}
+                onClick={() =>
+                  setRejectModal({
+                    visible: true,
+                    indicatorId: record.id,
+                    mode: "single",
+                  })
+                }
+                loading={actionLoading}
+              >
+                Từ chối TN
+              </Button>
+            </Tooltip>
+          </>
+        )}
+
+        {/* Buttons cho trạng thái CannotTest (KTV báo không TN được) */}
+        {isCannotTest && (
+          <>
+            <Tooltip title="Yêu cầu đổi phương pháp">
+              <Button
+                size="small"
+                icon={<SwapOutlined />}
+                onClick={() =>
+                  setMethodChangeModal({
+                    visible: true,
+                    indicatorId: record.id,
+                    mode: "single",
+                  })
+                }
+                loading={actionLoading}
+              >
+                Đổi PP
+              </Button>
+            </Tooltip>
+            <Tooltip title="Từ chối thử nghiệm">
+              <Button
+                danger
+                size="small"
+                icon={<CloseOutlined />}
+                onClick={() =>
+                  setRejectModal({
+                    visible: true,
+                    indicatorId: record.id,
+                    mode: "single",
+                  })
+                }
+                loading={actionLoading}
+              >
+                Từ chối TN
+              </Button>
+            </Tooltip>
+          </>
+        )}
+
+        {/* Button YC bổ sung cho AcceptedForTesting và CannotTest */}
+        {canRequestSupplementary && (
+          <Tooltip title="Yêu cầu KH cung cấp thông tin bổ sung">
             <Button
-              type="primary"
               size="small"
-              icon={<CheckOutlined />}
-              onClick={() => handleAccept(record.id)}
+              icon={<FileAddOutlined />}
+              onClick={() =>
+                setSupplementaryModal({ visible: true, indicatorId: record.id })
+              }
               loading={actionLoading}
             >
-              Chấp nhận TN
+              YC bổ sung
             </Button>
           </Tooltip>
         )}
-        <Tooltip title="Yêu cầu đổi phương pháp">
-          <Button
-            size="small"
-            icon={<SwapOutlined />}
-            onClick={() => setMethodChangeModal({ visible: true, indicatorId: record.id, mode: 'single' })}
-            loading={actionLoading}
-          >
-            Đổi PP
-          </Button>
-        </Tooltip>
-        <Tooltip title="Từ chối thử nghiệm">
-          <Button
-            danger
-            size="small"
-            icon={<CloseOutlined />}
-            onClick={() => setRejectModal({ visible: true, indicatorId: record.id, mode: 'single' })}
-            loading={actionLoading}
-          >
-            Từ chối TN
-          </Button>
-        </Tooltip>
       </Space>
     );
   };
@@ -278,8 +445,10 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
   const hasActionableIndicators = useMemo(() => {
     if (!canEvaluate) return false;
     return indicators.some(
-      (ind) => ind.approvalStatus === IndicatorApprovalStatus.Pending ||
-               ind.approvalStatus === IndicatorApprovalStatus.CannotTest
+      (ind) =>
+        ind.approvalStatus === IndicatorApprovalStatus.Pending ||
+        ind.approvalStatus === IndicatorApprovalStatus.CannotTest ||
+        ind.approvalStatus === IndicatorApprovalStatus.AcceptedForTesting
     );
   }, [indicators, canEvaluate]);
 
@@ -292,7 +461,9 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
         render: (_: unknown, record: LaboratoryTaskIndicatorDto) => (
           <div>
             <Tag color="blue">{record.sampleCode}</Tag>
-            <div style={{ fontSize: 12, marginTop: 4 }}>{record.sampleName}</div>
+            <div style={{ fontSize: 12, marginTop: 4 }}>
+              {record.sampleName}
+            </div>
           </div>
         ),
       },
@@ -346,7 +517,8 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
         title: "Trạng thái",
         key: "status",
         width: 150,
-        render: (_: unknown, record: LaboratoryTaskIndicatorDto) => getStatusTag(record),
+        render: (_: unknown, record: LaboratoryTaskIndicatorDto) =>
+          getStatusTag(record),
       },
       // Cột Hành động - sẽ được filter ra nếu không có chỉ tiêu cần action
       {
@@ -354,10 +526,11 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
         key: "actions",
         width: 250,
         fixed: "right" as const,
-        render: (_: unknown, record: LaboratoryTaskIndicatorDto) => getActionButtons(record),
+        render: (_: unknown, record: LaboratoryTaskIndicatorDto) =>
+          getActionButtons(record),
         hidden: !hasActionableIndicators,
       },
-    ].filter(col => !('hidden' in col) || !col.hidden);
+    ].filter((col) => !("hidden" in col) || !col.hidden);
 
     return baseColumns;
   }, [hasActionableIndicators]);
@@ -377,12 +550,16 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
       if (!aNeedsEval && bNeedsEval) return 1;
 
       // CannotTest before Pending (more urgent)
-      if (a.approvalStatus === IndicatorApprovalStatus.CannotTest &&
-          b.approvalStatus === IndicatorApprovalStatus.Pending) {
+      if (
+        a.approvalStatus === IndicatorApprovalStatus.CannotTest &&
+        b.approvalStatus === IndicatorApprovalStatus.Pending
+      ) {
         return -1;
       }
-      if (a.approvalStatus === IndicatorApprovalStatus.Pending &&
-          b.approvalStatus === IndicatorApprovalStatus.CannotTest) {
+      if (
+        a.approvalStatus === IndicatorApprovalStatus.Pending &&
+        b.approvalStatus === IndicatorApprovalStatus.CannotTest
+      ) {
         return 1;
       }
 
@@ -392,7 +569,9 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
   }, [indicators]);
 
   // Row selection configuration
-  const rowSelection: TableRowSelection<LaboratoryTaskIndicatorDto> | undefined = useMemo(() => {
+  const rowSelection:
+    | TableRowSelection<LaboratoryTaskIndicatorDto>
+    | undefined = useMemo(() => {
     if (!canEvaluate) return undefined;
 
     return {
@@ -402,8 +581,9 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
       },
       getCheckboxProps: (record: LaboratoryTaskIndicatorDto) => ({
         // Only allow selecting indicators that need evaluation (Pending or CannotTest)
-        disabled: record.approvalStatus !== IndicatorApprovalStatus.Pending &&
-                  record.approvalStatus !== IndicatorApprovalStatus.CannotTest,
+        disabled:
+          record.approvalStatus !== IndicatorApprovalStatus.Pending &&
+          record.approvalStatus !== IndicatorApprovalStatus.CannotTest,
         name: record.id,
       }),
     };
@@ -428,7 +608,9 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
             </Button>
             <Button
               icon={<SwapOutlined />}
-              onClick={() => setMethodChangeModal({ visible: true, mode: 'bulk' })}
+              onClick={() =>
+                setMethodChangeModal({ visible: true, mode: "bulk" })
+              }
               disabled={selectedCount === 0}
               loading={actionLoading}
             >
@@ -437,7 +619,7 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
             <Button
               danger
               icon={<CloseOutlined />}
-              onClick={() => setRejectModal({ visible: true, mode: 'bulk' })}
+              onClick={() => setRejectModal({ visible: true, mode: "bulk" })}
               disabled={selectedCount === 0}
               loading={actionLoading}
             >
@@ -460,11 +642,15 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
 
       {/* Method Change Modal */}
       <Modal
-        title={methodChangeModal.mode === 'single' ? "Yêu cầu đổi phương pháp" : `Yêu cầu đổi PP cho ${selectedCount} chỉ tiêu`}
+        title={
+          methodChangeModal.mode === "single"
+            ? "Yêu cầu đổi phương pháp"
+            : `Yêu cầu đổi PP cho ${selectedCount} chỉ tiêu`
+        }
         open={methodChangeModal.visible}
         onOk={handleMethodChangeRequest}
         onCancel={() => {
-          setMethodChangeModal({ visible: false, mode: 'single' });
+          setMethodChangeModal({ visible: false, mode: "single" });
           methodChangeForm.resetFields();
         }}
         okText="Xác nhận"
@@ -477,7 +663,9 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
           <Form.Item
             name="newMethodId"
             label="Phương pháp mới"
-            rules={[{ required: true, message: "Vui lòng chọn phương pháp mới" }]}
+            rules={[
+              { required: true, message: "Vui lòng chọn phương pháp mới" },
+            ]}
           >
             <Select
               placeholder="Chọn phương pháp mới"
@@ -487,7 +675,9 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
               }))}
               showSearch
               filterOption={(input, option) =>
-                (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                (option?.label ?? "")
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
               }
             />
           </Form.Item>
@@ -506,11 +696,15 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
 
       {/* Reject Modal */}
       <Modal
-        title={rejectModal.mode === 'single' ? "Từ chối thử nghiệm" : `Từ chối TN cho ${selectedCount} chỉ tiêu`}
+        title={
+          rejectModal.mode === "single"
+            ? "Từ chối thử nghiệm"
+            : `Từ chối TN cho ${selectedCount} chỉ tiêu`
+        }
         open={rejectModal.visible}
         onOk={handleReject}
         onCancel={() => {
-          setRejectModal({ visible: false, mode: 'single' });
+          setRejectModal({ visible: false, mode: "single" });
           rejectForm.resetFields();
         }}
         okText="Xác nhận từ chối"
@@ -528,6 +722,37 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
             <Input.TextArea
               rows={3}
               placeholder="Nhập lý do từ chối thử nghiệm..."
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Supplementary Request Modal */}
+      <Modal
+        title="Yêu cầu cung cấp bổ sung"
+        open={supplementaryModal.visible}
+        onOk={handleSupplementaryRequest}
+        onCancel={() => {
+          setSupplementaryModal({ visible: false });
+          supplementaryForm.resetFields();
+        }}
+        okText="Gửi yêu cầu"
+        cancelText="Hủy"
+        okButtonProps={{ loading: actionLoading }}
+        width={600}
+        centered
+      >
+        <Form form={supplementaryForm} layout="vertical">
+          <Form.Item
+            name="reason"
+            label="Nội dung yêu cầu bổ sung"
+            rules={[
+              { required: true, message: "Vui lòng nhập nội dung yêu cầu" },
+            ]}
+          >
+            <Input.TextArea
+              rows={4}
+              placeholder="Nhập nội dung cần khách hàng bổ sung..."
             />
           </Form.Item>
         </Form>
