@@ -73,6 +73,29 @@ const groupBy = <T, K extends keyof T>(
   }, {} as Record<string, T[]>);
 };
 
+// Helper to extract error message from API response
+// API trả về format: { errors: { fieldName: ["message1", "message2"] } }
+const getApiErrorMessage = (error: any, defaultMessage: string): string => {
+  const errorData = error?.response?.data;
+  if (!errorData) return defaultMessage;
+
+  // Nếu có errors object, lấy message đầu tiên từ field đầu tiên
+  if (errorData.errors && typeof errorData.errors === "object") {
+    const firstField = Object.keys(errorData.errors)[0];
+    if (firstField && Array.isArray(errorData.errors[firstField])) {
+      return errorData.errors[firstField][0] || defaultMessage;
+    }
+  }
+
+  // Fallback các format khác
+  return (
+    errorData.general?.[0] ||
+    errorData.error?.message ||
+    errorData.message ||
+    defaultMessage
+  );
+};
+
 const TaskManagementDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -628,9 +651,7 @@ const TaskManagementDetail: React.FC = () => {
       });
     } catch (error: any) {
       console.error("Failed to approve:", error);
-      message.error(
-        error.response?.data?.error?.message || "Không thể xử lý phê duyệt"
-      );
+      message.error(getApiErrorMessage(error, "Không thể xử lý phê duyệt"));
       // Reload để sync lại với server nếu có lỗi
       await loadTask();
     } finally {
@@ -758,11 +779,7 @@ const TaskManagementDetail: React.FC = () => {
       setSelectedIndicators((prev) => ({ ...prev, [sampleId]: [] }));
     } catch (error: any) {
       console.error("Failed to bulk approve:", error);
-      const errorMsg =
-        error.response?.data?.general?.[0] ||
-        error.response?.data?.error?.message ||
-        "Không thể duyệt chỉ tiêu";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể duyệt chỉ tiêu"));
       // Reload để sync lại với server nếu có lỗi
       await loadTask();
     } finally {
@@ -849,11 +866,7 @@ const TaskManagementDetail: React.FC = () => {
         return;
       }
       console.error("Failed to bulk reject:", error);
-      const errorMsg =
-        error.response?.data?.general?.[0] ||
-        error.response?.data?.error?.message ||
-        "Không thể từ chối chỉ tiêu";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể từ chối chỉ tiêu"));
       // Reload để sync lại với server nếu có lỗi
       await loadTask();
     } finally {

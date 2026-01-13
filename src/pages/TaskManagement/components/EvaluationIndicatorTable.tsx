@@ -31,6 +31,29 @@ import { laboratoryTaskService } from "../../../services/laboratoryTaskService";
 
 const { Text } = Typography;
 
+// Helper to extract error message from API response
+// API trả về format: { errors: { fieldName: ["message1", "message2"] } }
+const getApiErrorMessage = (error: any, defaultMessage: string): string => {
+  const errorData = error?.response?.data;
+  if (!errorData) return defaultMessage;
+
+  // Nếu có errors object, lấy message đầu tiên từ field đầu tiên
+  if (errorData.errors && typeof errorData.errors === "object") {
+    const firstField = Object.keys(errorData.errors)[0];
+    if (firstField && Array.isArray(errorData.errors[firstField])) {
+      return errorData.errors[firstField][0] || defaultMessage;
+    }
+  }
+
+  // Fallback các format khác
+  return (
+    errorData.general?.[0] ||
+    errorData.error?.message ||
+    errorData.message ||
+    defaultMessage
+  );
+};
+
 interface EvaluationIndicatorTableProps {
   indicators: LaboratoryTaskIndicatorDto[];
   methods: MethodLookupDto[];
@@ -113,9 +136,7 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
       console.error("Failed to accept indicator:", error);
       Modal.error({
         title: "Lỗi",
-        content:
-          error.response?.data?.error?.message ||
-          "Không thể chấp nhận chỉ tiêu",
+        content: getApiErrorMessage(error, "Không thể chấp nhận chỉ tiêu"),
       });
     } finally {
       setActionLoading(false);
@@ -163,9 +184,7 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
       console.error("Failed to request method change:", error);
       Modal.error({
         title: "Lỗi",
-        content:
-          error.response?.data?.error?.message ||
-          "Không thể yêu cầu đổi phương pháp",
+        content: getApiErrorMessage(error, "Không thể yêu cầu đổi phương pháp"),
       });
     } finally {
       setActionLoading(false);
@@ -203,9 +222,7 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
       console.error("Failed to reject indicator:", error);
       Modal.error({
         title: "Lỗi",
-        content:
-          error.response?.data?.error?.message ||
-          "Không thể từ chối thử nghiệm",
+        content: getApiErrorMessage(error, "Không thể từ chối thử nghiệm"),
       });
     } finally {
       setActionLoading(false);
@@ -229,9 +246,10 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
           console.error("Failed to approve all:", error);
           Modal.error({
             title: "Lỗi",
-            content:
-              error.response?.data?.error?.message ||
-              "Không thể chấp nhận tất cả chỉ tiêu",
+            content: getApiErrorMessage(
+              error,
+              "Không thể chấp nhận tất cả chỉ tiêu"
+            ),
           });
         } finally {
           setActionLoading(false);
@@ -264,9 +282,7 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
       console.error("Failed to request supplementary:", error);
       Modal.error({
         title: "Lỗi",
-        content:
-          error.response?.data?.error?.message ||
-          "Không thể gửi yêu cầu bổ sung",
+        content: getApiErrorMessage(error, "Không thể gửi yêu cầu bổ sung"),
       });
     } finally {
       setActionLoading(false);
