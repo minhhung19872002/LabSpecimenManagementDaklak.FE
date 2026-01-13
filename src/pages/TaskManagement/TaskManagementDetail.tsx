@@ -16,6 +16,7 @@ import {
   Alert,
   Form,
   Input,
+  Tabs,
 } from "antd";
 import StatusTag from "../../components/common/StatusTag";
 import {
@@ -124,6 +125,9 @@ const TaskManagementDetail: React.FC = () => {
   );
   const [rejectForm] = Form.useForm();
 
+  // Tab state for switching between Evaluation and Sample List
+  const [activeTab, setActiveTab] = useState<string>("samples");
+
   // Sample images state (includes sample attachments from TestRequest)
   const [sampleImages, setSampleImages] = useState<
     Record<
@@ -217,6 +221,16 @@ const TaskManagementDetail: React.FC = () => {
   useEffect(() => {
     loadTask();
   }, [loadTask]);
+
+  // Set default active tab based on task status
+  useEffect(() => {
+    if (task) {
+      const needsEvaluation =
+        task.status === LaboratoryTaskStatus.UnderEvaluation ||
+        task.status === LaboratoryTaskStatus.WaitingCustomerResponse;
+      setActiveTab(needsEvaluation ? "evaluation" : "samples");
+    }
+  }, [task?.status]);
 
   // Group indicators by sample
   const indicatorsBySample = useMemo(() => {
@@ -934,12 +948,33 @@ const TaskManagementDetail: React.FC = () => {
     }));
   };
 
+  // Check if task is in evaluation phase (UnderEvaluation or WaitingCustomerResponse)
+  // During this phase, cannot assign/edit in Sample List tab
+  const isInEvaluationPhase =
+    task?.status === LaboratoryTaskStatus.UnderEvaluation ||
+    task?.status === LaboratoryTaskStatus.WaitingCustomerResponse;
+
+  // Check if task is in completed phase (Approved, Rejected, SentToQuality, TestingRejected)
+  // During this phase, cannot assign/edit
+  const isCompletedPhase =
+    task?.status === LaboratoryTaskStatus.Approved ||
+    task?.status === LaboratoryTaskStatus.Rejected ||
+    task?.status === LaboratoryTaskStatus.SentToQuality ||
+    task?.status === LaboratoryTaskStatus.TestingRejected;
+
+  // Check if can assign technician to indicators
+  // Allowed when: PartialAccepted, FullyAccepted, Assigned, InProgress, WaitingApproval
+  // NOT allowed when: UnderEvaluation, WaitingCustomerResponse, Approved, Rejected, SentToQuality, TestingRejected
+  const canAssignToIndicator =
+    !isInEvaluationPhase && !isCompletedPhase && canAssignTesting;
+
   // Check if can upload images (same logic as canEditTask)
   // Allow upload during: Assigned, InProgress, WaitingApproval
   const canUploadImages =
-    task?.status === LaboratoryTaskStatus.Assigned ||
-    task?.status === LaboratoryTaskStatus.InProgress ||
-    task?.status === LaboratoryTaskStatus.WaitingApproval;
+    !isInEvaluationPhase &&
+    (task?.status === LaboratoryTaskStatus.Assigned ||
+      task?.status === LaboratoryTaskStatus.InProgress ||
+      task?.status === LaboratoryTaskStatus.WaitingApproval);
 
   // Get status tag
   const getStatusTag = (status: LaboratoryTaskStatus) => {
@@ -964,7 +999,9 @@ const TaskManagementDetail: React.FC = () => {
 
   // Kiểm tra có thể chỉnh sửa task không
   // Cho phép khi: FullyAccepted/PartialAccepted (sau khi QLKT đánh giá) hoặc Đã giao việc VÀ có quyền editMethod
+  // KHÔNG cho phép khi đang trong giai đoạn đánh giá (UnderEvaluation/WaitingCustomerResponse)
   const canEditTask =
+    !isInEvaluationPhase &&
     (task?.status === LaboratoryTaskStatus.FullyAccepted ||
       task?.status === LaboratoryTaskStatus.PartialAccepted ||
       task?.status === LaboratoryTaskStatus.Assigned) &&
@@ -993,8 +1030,10 @@ const TaskManagementDetail: React.FC = () => {
           </Col>
           <Col>
             <Space>
-              {/* Bulk approve/reject buttons - only show when pendingApproval VÀ có quyền approveResult */}
-              {sample.sampleStatus === "pendingApproval" &&
+              {/* Bulk approve/reject buttons - only show when pendingApproval VÀ có quyền approveResult VÀ không trong giai đoạn đánh giá/hoàn thành */}
+              {!isInEvaluationPhase &&
+                !isCompletedPhase &&
+                sample.sampleStatus === "pendingApproval" &&
                 canApproveResult && (
                   <>
                     <Button
@@ -1025,26 +1064,27 @@ const TaskManagementDetail: React.FC = () => {
                     </Button>
                   </>
                 )}
-              {/* Assign button - show when sample has notStarted indicators VÀ có quyền assignTesting */}
-              {sample.sampleStatus === "notStarted" && canAssignTesting && (
-                <Button
-                  type="primary"
-                  size="small"
-                  loading={actionLoading}
-                  disabled={selectedCount === 0}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAssignSample(sample.sampleId);
-                  }}
-                >
-                  Giao việc{selectedCount > 0 ? ` (${selectedCount})` : ""}
-                </Button>
-              )}
-              {/* Re-assign button - show when assigned but not approved, hide when customerCancelled VÀ có quyền assignTesting */}
-              {sample.sampleStatus !== "notStarted" &&
+              {/* Assign button - show when sample has notStarted indicators VÀ có quyền assignTesting VÀ không trong giai đoạn đánh giá/hoàn thành */}
+              {canAssignToIndicator &&
+                sample.sampleStatus === "notStarted" && (
+                  <Button
+                    type="primary"
+                    size="small"
+                    loading={actionLoading}
+                    disabled={selectedCount === 0}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAssignSample(sample.sampleId);
+                    }}
+                  >
+                    Giao việc{selectedCount > 0 ? ` (${selectedCount})` : ""}
+                  </Button>
+                )}
+              {/* Re-assign button - show when assigned but not approved, hide when customerCancelled VÀ có quyền assignTesting VÀ không trong giai đoạn đánh giá/hoàn thành */}
+              {canAssignToIndicator &&
+                sample.sampleStatus !== "notStarted" &&
                 sample.sampleStatus !== "customerCancelled" &&
-                !sample.isApproved &&
-                canAssignTesting && (
+                !sample.isApproved && (
                   <Button
                     size="small"
                     loading={actionLoading}
@@ -1086,7 +1126,7 @@ const TaskManagementDetail: React.FC = () => {
             technicians={technicians}
             isAssigned={sample.sampleStatus !== "notStarted"}
             canEdit={canEditTask}
-            canAssignTechnician={canAssignTesting}
+            canAssignTechnician={canAssignToIndicator}
             sampleStatus={sample.sampleStatus}
             onMethodChange={handleMethodChange}
             onTechnicianChange={handleTechnicianChange}
@@ -1217,50 +1257,79 @@ const TaskManagementDetail: React.FC = () => {
         />
       )}
 
-      {/* Evaluation Mode for UnderEvaluation or WaitingCustomerResponse status */}
-      {task.status === LaboratoryTaskStatus.UnderEvaluation ||
-      task.status === LaboratoryTaskStatus.WaitingCustomerResponse ? (
-        <Card title={`Đánh giá chỉ tiêu (${task.indicators?.length || 0})`}>
-          <Alert
-            message={
-              task.status === LaboratoryTaskStatus.WaitingCustomerResponse
-                ? "Chờ khách hàng xác nhận"
-                : "Chế độ đánh giá thử nghiệm"
-            }
-            description={
-              task.status === LaboratoryTaskStatus.WaitingCustomerResponse
-                ? "Có chỉ tiêu đang chờ KH xác nhận (đổi PP hoặc từ chối TN). QLKT vẫn có thể đánh giá các chỉ tiêu Pending còn lại."
-                : "QLKT đánh giá từng chỉ tiêu: Chấp nhận, Yêu cầu đổi phương pháp, hoặc Từ chối thử nghiệm."
-            }
-            type={
-              task.status === LaboratoryTaskStatus.WaitingCustomerResponse
-                ? "warning"
-                : "info"
-            }
-            showIcon
-            style={{ marginBottom: 16 }}
-          />
-          <EvaluationIndicatorTable
-            indicators={task.indicators || []}
-            methods={methods}
-            taskId={task.id}
-            canEvaluate={canApproveResult}
-            loading={loading}
-            onEvaluationComplete={reloadData}
-          />
-        </Card>
-      ) : (
-        /* Collapsible Sample Panels for other statuses */
-        <Card title={`Danh sách mẫu (${sampleList.length})`}>
-          <Collapse
-            defaultActiveKey={sampleList.map((s) => s.sampleId)}
-            expandIcon={({ isActive }) => (
-              <CaretRightOutlined rotate={isActive ? 90 : 0} />
-            )}
-            items={collapseItems}
-          />
-        </Card>
-      )}
+      {/* Tabs for Evaluation and Sample List */}
+      <Card>
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          items={[
+            {
+              key: "evaluation",
+              label: `Đánh giá chỉ tiêu (${task.indicators?.length || 0})`,
+              children: (
+                <>
+                  {/* Alert based on task status */}
+                  {task.status === LaboratoryTaskStatus.UnderEvaluation ||
+                  task.status === LaboratoryTaskStatus.WaitingCustomerResponse ? (
+                    <Alert
+                      message={
+                        task.status === LaboratoryTaskStatus.WaitingCustomerResponse
+                          ? "Chờ khách hàng xác nhận"
+                          : "Chế độ đánh giá thử nghiệm"
+                      }
+                      description={
+                        task.status === LaboratoryTaskStatus.WaitingCustomerResponse
+                          ? "Có chỉ tiêu đang chờ KH xác nhận (đổi PP hoặc từ chối TN). QLKT vẫn có thể đánh giá các chỉ tiêu Pending còn lại."
+                          : "QLKT đánh giá từng chỉ tiêu: Chấp nhận, Yêu cầu đổi phương pháp, hoặc Từ chối thử nghiệm."
+                      }
+                      type={
+                        task.status === LaboratoryTaskStatus.WaitingCustomerResponse
+                          ? "warning"
+                          : "info"
+                      }
+                      showIcon
+                      style={{ marginBottom: 16 }}
+                    />
+                  ) : (
+                    <Alert
+                      message="Không có yêu cầu đánh giá"
+                      description="Công việc này đã hoàn thành giai đoạn đánh giá hoặc chưa cần đánh giá."
+                      type="info"
+                      showIcon
+                      style={{ marginBottom: 16 }}
+                    />
+                  )}
+                  <EvaluationIndicatorTable
+                    indicators={task.indicators || []}
+                    methods={methods}
+                    taskId={task.id}
+                    canEvaluate={
+                      canApproveResult &&
+                      (task.status === LaboratoryTaskStatus.UnderEvaluation ||
+                        task.status === LaboratoryTaskStatus.WaitingCustomerResponse)
+                    }
+                    loading={loading}
+                    onEvaluationComplete={reloadData}
+                  />
+                </>
+              ),
+            },
+            {
+              key: "samples",
+              label: `Danh sách mẫu (${sampleList.length})`,
+              children: (
+                <Collapse
+                  defaultActiveKey={sampleList.map((s) => s.sampleId)}
+                  expandIcon={({ isActive }) => (
+                    <CaretRightOutlined rotate={isActive ? 90 : 0} />
+                  )}
+                  items={collapseItems}
+                />
+              ),
+            },
+          ]}
+        />
+      </Card>
 
       {/* Supporter Modal */}
       <SupporterModal
