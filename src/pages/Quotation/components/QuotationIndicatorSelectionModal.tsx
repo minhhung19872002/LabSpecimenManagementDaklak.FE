@@ -12,6 +12,7 @@ import {
   IndicatorDto,
 } from "../../../services/masterDataService";
 import { formatCurrency } from "../../../utils/formatters";
+import { IndicatorName } from "../../../components/common";
 
 const { Text } = Typography;
 
@@ -389,7 +390,9 @@ const QuotationIndicatorSelectionModal: React.FC<
                               width={16}
                               style={{ color: "#595959", flexShrink: 0 }}
                             />
-                            <span
+                            <IndicatorName
+                              name={indicator.name}
+                              formattedName={indicator.formattedName}
                               style={{
                                 flex: 1,
                                 fontSize: 13,
@@ -397,9 +400,7 @@ const QuotationIndicatorSelectionModal: React.FC<
                                 textOverflow: "ellipsis",
                                 whiteSpace: "nowrap",
                               }}
-                            >
-                              {indicator.name}
-                            </span>
+                            />
                             {selectedCount > 0 && (
                               <span
                                 style={{

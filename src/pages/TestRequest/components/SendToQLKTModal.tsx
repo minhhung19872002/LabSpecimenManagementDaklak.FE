@@ -26,6 +26,7 @@ import {
   laboratoryService,
 } from "../../../services/masterDataService";
 import { testRequestService } from "../../../services/testRequestService";
+import { IndicatorName } from "../../../components/common";
 
 const { Text } = Typography;
 const { Panel } = Collapse;
@@ -324,7 +325,9 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
           style={{ width: 24, flexShrink: 0 }}
         />
         <Tooltip title={indicator.indicatorName}>
-          <span
+          <IndicatorName
+            name={indicator.indicatorName}
+            formattedName={indicator.indicatorFormattedName}
             style={{
               flex: 1,
               minWidth: 80,
@@ -333,9 +336,7 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
             }}
-          >
-            {indicator.indicatorName}
-          </span>
+          />
         </Tooltip>
         <Tooltip title={indicator.testMethodName}>
           <span

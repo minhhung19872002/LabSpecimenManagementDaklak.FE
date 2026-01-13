@@ -3,6 +3,7 @@ import { Modal, Form, Input, Select, Typography } from "antd";
 import type { FormInstance } from "antd";
 import { NumericFormat } from "react-number-format";
 import { StandardIndicatorDto } from "../types";
+import { IndicatorName } from "../../../../components/common";
 
 const { Text } = Typography;
 
@@ -48,7 +49,7 @@ const EditIndicatorModal: React.FC<EditIndicatorModalProps> = ({
         {indicator && (
           <>
             <Form.Item label="Chỉ tiêu">
-              <Text strong>{indicator.indicatorName}</Text>
+              <IndicatorName name={indicator.indicatorName} formattedName={indicator.indicatorFormattedName} style={{ fontWeight: 600 }} />
             </Form.Item>
 
             <Form.Item label="Phương pháp">

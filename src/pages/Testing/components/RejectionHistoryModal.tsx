@@ -5,6 +5,7 @@ import dayjs from "dayjs";
 import { testingService } from "../../../services/testingService";
 import { RejectionHistoryDto } from "../../../types/testing";
 import { API_BASE_URL } from "../../../services/api";
+import { IndicatorName } from "../../../components/common";
 
 const { Text, Paragraph } = Typography;
 
@@ -49,9 +50,9 @@ const RejectionHistoryModal: React.FC<RejectionHistoryModalProps> = ({
           <HistoryOutlined style={{ fontSize: 18, color: "#fa8c16" }} />
           <span>Lịch sử từ chối</span>
           {indicatorName && (
-            <Text type="secondary" style={{ fontWeight: "normal", fontSize: 14 }}>
-              - {indicatorName}
-            </Text>
+            <span style={{ fontWeight: "normal", fontSize: 14, color: "rgba(0, 0, 0, 0.45)" }}>
+              - <IndicatorName name={indicatorName} />
+            </span>
           )}
         </div>
       }

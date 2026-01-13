@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { Modal, Select, Button, Typography, Space } from "antd";
 import { PlusOutlined, MinusCircleOutlined } from "../../../../components/common/Icon";
 import { IndicatorDto, IndicatorGroupDto } from "../../../../services/masterDataService";
+import IndicatorName from "../../../../components/common/IndicatorName";
 
 const { Text } = Typography;
 
@@ -45,13 +46,19 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
           label: <Text strong>{group.name}</Text>,
           options: availableIndicators.map((ind) => ({
             value: ind.id,
-            label: `${ind.code} - ${ind.name}`,
+            label: (
+              <span>
+                {ind.code} -{" "}
+                <IndicatorName name={ind.name} formattedName={ind.formattedName} />
+              </span>
+            ),
+            searchText: `${ind.code} - ${ind.name}`,
           })),
         };
       })
       .filter(Boolean) as {
       label: React.ReactNode;
-      options: { value: string; label: string }[];
+      options: { value: string; label: React.ReactNode; searchText: string }[];
     }[];
   };
 
@@ -108,6 +115,13 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
       cancelText="Hủy"
       width={500}
       centered
+      styles={{
+        body: {
+          maxHeight: "calc(100vh - 200px)",
+          overflowY: "auto",
+          overflowX: "hidden",
+        },
+      }}
     >
       <div style={{ marginTop: 16 }}>
         <Text strong style={{ marginBottom: 8, display: "block" }}>
@@ -128,9 +142,10 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                 popupMatchSelectWidth={400}
                 optionLabelProp="label"
                 filterOption={(inputValue, option) => {
-                  if (!option?.label) return false;
-                  const label = String(option.label).toLowerCase();
-                  return label.includes(inputValue.toLowerCase());
+                  // Use searchText for filtering (plain text for search)
+                  const searchText = (option as { searchText?: string })?.searchText;
+                  if (!searchText) return false;
+                  return searchText.toLowerCase().includes(inputValue.toLowerCase());
                 }}
                 onChange={(value) => handleSelectChange(value, index)}
                 allowClear

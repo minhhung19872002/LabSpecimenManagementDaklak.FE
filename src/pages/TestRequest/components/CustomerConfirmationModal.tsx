@@ -22,6 +22,7 @@ import { testRequestService } from "../../../services/testRequestService";
 import { IndicatorPendingConfirmationDto } from "../../../types/testRequest";
 import { IndicatorApprovalStatus } from "../../../types/laboratoryTask";
 import { formatDate } from "../../../utils/formatters";
+import { IndicatorName } from "../../../components/common";
 
 const { Text, Title } = Typography;
 
@@ -305,7 +306,7 @@ const CustomerConfirmationModal: React.FC<CustomerConfirmationModalProps> = ({
       width: 180,
       render: (_: unknown, record: IndicatorPendingConfirmationDto) => (
         <div>
-          <Text strong>{record.indicatorName}</Text>
+          <IndicatorName name={record.indicatorName || ""} formattedName={record.indicatorFormattedName} style={{ fontWeight: 600 }} />
           <br />
           <Text type="secondary" style={{ fontSize: 12 }}>
             {record.indicatorCode}

@@ -24,6 +24,7 @@ import {
   SampleStatus,
 } from "../../../types/laboratoryTask";
 import IndicatorImageCell from "../../../components/common/IndicatorImageCell";
+import { IndicatorName } from "../../../components/common";
 import {
   standardService,
   StandardWithIndicatorsDto,
@@ -236,11 +237,15 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       fixed: "left" as const,
       render: (value: string, record: LaboratoryTaskIndicatorDto) => (
         <div>
-          <div>{value}</div>
+          <div>
+            <IndicatorName name={value} formattedName={record.indicatorFormattedName} />
+          </div>
           {record.indicatorGroupName && (
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              {record.indicatorGroupName}
-            </Text>
+            <div style={{ marginTop: 2 }}>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                {record.indicatorGroupName}
+              </Text>
+            </div>
           )}
         </div>
       ),

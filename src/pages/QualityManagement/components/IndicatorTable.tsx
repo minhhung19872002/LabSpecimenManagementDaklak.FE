@@ -21,6 +21,7 @@ import {
   QualityManagementStatus,
 } from "../../../types/qualityManagement";
 import IndicatorImageCell from "../../../components/common/IndicatorImageCell";
+import { IndicatorName } from "../../../components/common";
 
 const { Panel } = Collapse;
 const { Text } = Typography;
@@ -159,6 +160,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         key: "indicatorName",
         width: 200,
         ellipsis: true,
+        render: (value: string, record) => value ? <IndicatorName name={value} formattedName={record.indicatorFormattedName} /> : "-",
       },
       {
         title: "Phương pháp",

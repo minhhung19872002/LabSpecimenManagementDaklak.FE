@@ -5,3 +5,5 @@ export { default as ExcelImport } from './ExcelImport';
 export { default as StatusTag } from './StatusTag';
 export { default as Icon } from './Icon';
 export * from './Icon';
+export { default as RichTextEditor } from './RichTextEditor';
+export { default as IndicatorName } from './IndicatorName';

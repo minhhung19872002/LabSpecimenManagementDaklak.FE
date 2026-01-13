@@ -13,6 +13,7 @@ import { formatDate } from "../../../utils/formatters";
 import SampleImagesButton from "../components/SampleImagesButton";
 import IndicatorImageCell from "../../../components/common/IndicatorImageCell";
 import StatusTag from "../../../components/common/StatusTag";
+import { IndicatorName } from "../../../components/common";
 
 const { Text } = Typography;
 
@@ -172,7 +173,7 @@ export const getSampleColumns = ({
               <Tag color="blue" style={{ margin: 0, fontSize: 11 }}>
                 {ind.indicatorCode || ind.indicatorName}
               </Tag>
-              <Text style={{ fontSize: 11 }}>{ind.indicatorName}</Text>
+              <IndicatorName name={ind.indicatorName} formattedName={ind.indicatorFormattedName} style={{ fontSize: 11 }} />
               {ind.unitPrice > 0 && (
                 <Text type="secondary" style={{ fontSize: 11 }}>
                   ({ind.unitPrice?.toLocaleString("vi-VN")}đ)
