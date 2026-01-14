@@ -107,9 +107,11 @@ export const getIndicatorColumns = (
   },
   {
     title: "Tên phương pháp",
-    dataIndex: "testMethodName",
     key: "testMethodName",
     width: 200,
+    render: (_, record) => (
+      <IndicatorName name={record.testMethodName} formattedName={record.testMethodFormattedName} />
+    ),
   },
   {
     title: "Đơn vị",

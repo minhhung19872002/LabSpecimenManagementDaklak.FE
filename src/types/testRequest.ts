@@ -256,6 +256,7 @@ export interface TestRequestSampleIndicatorDto {
   testMethodId?: string;
   testMethodCode?: string;
   testMethodName?: string;
+  testMethodFormattedName?: string | null;
   transferDate?: string;
   requestDate?: string;
   sentToDepartment: boolean;

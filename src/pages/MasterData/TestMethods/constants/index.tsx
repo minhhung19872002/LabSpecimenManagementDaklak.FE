@@ -14,8 +14,10 @@ export const getTestMethodColumns = (
 ): ColumnsType<GroupedTestMethodData> => [
   {
     title: "Tên phương pháp",
-    dataIndex: "name",
     key: "name",
+    render: (_, record) => (
+      <IndicatorName name={record.name} formattedName={record.formattedName} />
+    ),
   },
   {
     title: "Trạng thái",

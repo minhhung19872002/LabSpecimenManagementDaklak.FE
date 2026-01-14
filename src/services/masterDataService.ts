@@ -76,6 +76,7 @@ export interface TestMethodDto {
   id: string;
   code: string;
   name: string;
+  formattedName?: string | null;
   unit: string;
   isActive: boolean;
   sortOrder: number;
@@ -85,12 +86,14 @@ export interface TestMethodDto {
 
 export interface CreateTestMethodDto {
   name: string;
+  formattedName?: string | null;
   unit: string;
   isActive?: boolean;
 }
 
 export interface UpdateTestMethodDto {
   name: string;
+  formattedName?: string | null;
   unit: string;
   isActive: boolean;
 }
@@ -149,6 +152,7 @@ export interface StandardIndicatorDto {
   testMethodId: string;
   testMethodCode: string;
   testMethodName: string;
+  testMethodFormattedName?: string | null;
   unit: string;
   comparisonOperator?: string;
   allowedLimit?: string;

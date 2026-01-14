@@ -502,7 +502,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                       whiteSpace: "nowrap",
                                     }}
                                   >
-                                    {method.testMethodName}
+                                    <IndicatorName name={method.testMethodName} formattedName={method.testMethodFormattedName} />
                                   </span>
                                   <span
                                     style={{
@@ -664,7 +664,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              {method.testMethodName}
+                              <IndicatorName name={method.testMethodName} formattedName={method.testMethodFormattedName} />
                             </span>
                             <span
                               style={{
@@ -840,6 +840,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                           isInGroup={false}
                           indicator={indicator}
                           methodName={method?.testMethodName || ""}
+                          methodFormattedName={method?.testMethodFormattedName}
                           unitPrice={method?.unitPrice || 0}
                           isChecked={checkedIndicators.includes(key)}
                           transferDate={
@@ -909,6 +910,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                     isInGroup={true}
                                     indicator={indicator}
                                     methodName={method?.testMethodName || ""}
+                                    methodFormattedName={method?.testMethodFormattedName}
                                     unitPrice={method?.unitPrice || 0}
                                     isChecked={checkedIndicators.includes(key)}
                                     transferDate={

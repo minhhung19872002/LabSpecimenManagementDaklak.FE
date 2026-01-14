@@ -16,6 +16,7 @@ export interface IndicatorMethodInfo {
   testMethodId: string;
   testMethodCode: string;
   testMethodName: string;
+  testMethodFormattedName?: string;  // Tên phương pháp có định dạng HTML
   unitPrice: number;
   isActive: boolean;
 }

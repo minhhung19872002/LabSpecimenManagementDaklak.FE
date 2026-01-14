@@ -172,6 +172,7 @@ export interface TestingIndicatorDto {
   indicatorFormattedName?: string;  // Tên chỉ tiêu có định dạng HTML
   methodId?: string;
   methodName?: string;
+  methodFormattedName?: string;  // Tên phương pháp có định dạng HTML
   unit?: string;
   result?: string;
   note?: string;

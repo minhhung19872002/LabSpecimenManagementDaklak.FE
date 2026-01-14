@@ -260,7 +260,9 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         if (record.methodName) {
           return (
             <Tooltip title={record.methodName}>
-              <Text
+              <IndicatorName
+                name={record.methodName}
+                formattedName={record.methodFormattedName}
                 style={{
                   display: "-webkit-box",
                   WebkitLineClamp: 2,
@@ -268,9 +270,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                 }}
-              >
-                {record.methodName}
-              </Text>
+              />
             </Tooltip>
           );
         }

@@ -295,6 +295,7 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
       key: 'methodName',
       width: 140,
       ellipsis: true,
+      render: (_: any, record: QualityManagementIndicatorDto) => <IndicatorName name={record.methodName || ""} formattedName={record.methodFormattedName} />,
     },
     {
       title: 'Kết quả',

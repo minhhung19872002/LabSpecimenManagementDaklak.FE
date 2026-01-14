@@ -13,6 +13,7 @@ interface IndicatorRowProps {
   isInGroup?: boolean;
   indicator: IndicatorDto | undefined;
   methodName: string; // NEW: Phương pháp thử
+  methodFormattedName?: string; // NEW: Phương pháp thử có định dạng HTML
   unitPrice: number; // NEW: Giá từ TestMethodIndicator
   isChecked: boolean;
   transferDate?: dayjs.Dayjs;
@@ -28,6 +29,7 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
   isInGroup = false,
   indicator,
   methodName,
+  methodFormattedName,
   unitPrice,
   isChecked,
   transferDate,
@@ -80,7 +82,9 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
         />
       </Tooltip>
       <Tooltip title={methodName}>
-        <span
+        <IndicatorName
+          name={methodName}
+          formattedName={methodFormattedName}
           style={{
             width: 120,
             flexShrink: 0,
@@ -90,9 +94,7 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
           }}
-        >
-          {methodName}
-        </span>
+        />
       </Tooltip>
       <span
         style={{

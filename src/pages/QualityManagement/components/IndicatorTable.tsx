@@ -168,6 +168,9 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         key: "methodName",
         width: 150,
         ellipsis: true,
+        render: (value: string, record) => value ? (
+          <IndicatorName name={value} formattedName={record.methodFormattedName} />
+        ) : "-",
       },
       {
         title: "ĐVT",

@@ -489,9 +489,11 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
         dataIndex: "methodName",
         key: "methodName",
         width: 200,
-        render: (value: string) => (
+        render: (value: string, record: LaboratoryTaskIndicatorDto) => (
           <Tooltip title={value}>
-            <Text
+            <IndicatorName
+              name={value || "-"}
+              formattedName={record.methodFormattedName}
               style={{
                 display: "-webkit-box",
                 WebkitLineClamp: 2,
@@ -499,9 +501,7 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
                 overflow: "hidden",
                 textOverflow: "ellipsis",
               }}
-            >
-              {value || "-"}
-            </Text>
+            />
           </Tooltip>
         ),
       },

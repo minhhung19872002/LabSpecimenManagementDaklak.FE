@@ -47,7 +47,9 @@ interface QuotationItemRow {
   indicatorId: string;
   testMethodId: string;
   indicatorName: string;
+  indicatorFormattedName?: string | null;
   testMethodName: string;
+  testMethodFormattedName?: string | null;
   sampleCount: number;
   unitPrice: number;
   totalPrice: number;
@@ -120,7 +122,9 @@ const QuotationForm: React.FC = () => {
         indicatorId: item.indicatorId,
         testMethodId: item.testMethodId,
         indicatorName: item.indicatorName,
+        indicatorFormattedName: item.indicatorFormattedName,
         testMethodName: item.testMethodName,
+        testMethodFormattedName: item.testMethodFormattedName,
         sampleCount: item.sampleCount,
         unitPrice: item.unitPrice,
         totalPrice: item.totalPrice,
@@ -165,7 +169,9 @@ const QuotationForm: React.FC = () => {
         indicatorId: method.indicatorId,
         testMethodId: method.testMethodId,
         indicatorName: method.indicatorName,
+        indicatorFormattedName: method.indicatorFormattedName,
         testMethodName: method.testMethodName,
+        testMethodFormattedName: method.testMethodFormattedName,
         sampleCount: 1,
         unitPrice: method.unitPrice,
         totalPrice: method.unitPrice,
@@ -270,9 +276,11 @@ const QuotationForm: React.FC = () => {
     },
     {
       title: "Phương pháp",
-      dataIndex: "testMethodName",
       key: "testMethodName",
       ellipsis: true,
+      render: (_, record) => (
+        <IndicatorName name={record.testMethodName} formattedName={record.testMethodFormattedName} />
+      ),
     },
     {
       title: "Số mẫu",
