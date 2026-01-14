@@ -2,6 +2,8 @@ import React from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
+import Subscript from "@tiptap/extension-subscript";
+import Superscript from "@tiptap/extension-superscript";
 import Placeholder from "@tiptap/extension-placeholder";
 
 interface RichTextEditorProps {
@@ -31,6 +33,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         hardBreak: false,
       }),
       Underline,
+      Subscript,
+      Superscript,
       Placeholder.configure({
         placeholder,
       }),
@@ -64,8 +68,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         }
         .rich-text-editor-wrapper .tiptap {
           box-sizing: border-box;
-          height: 40px;
-          padding: 8px 11px;
+          min-height: 32px;
+          padding: 4px 11px;
           border: 1px solid #d9d9d9;
           border-radius: 6px;
           outline: none;
@@ -73,24 +77,17 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           font-size: 14px;
           line-height: 22px;
           background: #fff;
-          overflow: hidden;
-          display: flex;
-          align-items: center;
         }
-        .rich-text-editor-wrapper .tiptap:hover {
+        .rich-text-editor-wrapper:hover .tiptap {
           border-color: #4096ff;
         }
-        .rich-text-editor-wrapper .tiptap:focus,
-        .rich-text-editor-wrapper .tiptap.ProseMirror-focused {
+        .rich-text-editor-wrapper:focus-within .tiptap {
           border-color: #1677ff;
           box-shadow: 0 0 0 2px rgba(5, 145, 255, 0.1);
         }
         .rich-text-editor-wrapper .tiptap p {
           margin: 0;
           line-height: 22px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
         }
         .rich-text-editor-wrapper .tiptap p.is-editor-empty:first-child::before {
           content: attr(data-placeholder);

@@ -1,10 +1,9 @@
-import { Modal, Form, Select, Typography } from "antd";
+import { Modal, Form, Select, Tooltip } from "antd";
 import { Controller, UseFormReturn } from "react-hook-form";
+import Icon from "../../../../components/common/Icon";
 import { IndicatorDto } from "../types";
 import { IndicatorFormData } from "../schemas/indicatorSchema";
 import { RichTextEditor } from "../../../../components/common";
-
-const { Text } = Typography;
 
 interface GroupOption {
   value: string;
@@ -75,9 +74,22 @@ const IndicatorModal: React.FC<IndicatorModalProps> = ({
           label={
             <span>
               Tên chỉ tiêu{" "}
-              <Text type="secondary" style={{ fontWeight: "normal" }}>
-                (Ctrl+B: đậm, Ctrl+I: nghiêng, Ctrl+U: gạch chân)
-              </Text>
+              <Tooltip
+                title={
+                  <div>
+                    <div>Phím tắt định dạng:</div>
+                    <div>Ctrl+B: Đậm</div>
+                    <div>Ctrl+I: Nghiêng</div>
+                    <div>Ctrl+U: Gạch chân</div>
+                    <div>Ctrl+,: Chỉ số dưới (x₂)</div>
+                    <div>Ctrl+.: Chỉ số trên (x²)</div>
+                  </div>
+                }
+              >
+                <span style={{ cursor: "help" }}>
+                  <Icon name="info-circle" style={{ color: "#8c8c8c" }} />
+                </span>
+              </Tooltip>
             </span>
           }
           required
