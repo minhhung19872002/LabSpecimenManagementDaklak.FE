@@ -78,9 +78,9 @@ const EditIndicatorModal: React.FC<EditIndicatorModalProps> = ({
           label="Giới hạn cho phép"
         >
           <NumericFormat
-            placeholder="Nhập giới hạn (VD: 0.5)"
+            placeholder="Nhập giới hạn (VD: 0.0001)"
             allowNegative={false}
-            decimalScale={1}
+            decimalScale={4}
             customInput={Input}
             onValueChange={(values) => {
               form.setFieldValue("allowedLimit", values.value);
