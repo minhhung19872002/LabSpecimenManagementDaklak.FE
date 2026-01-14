@@ -21,7 +21,7 @@ import {
   DeleteOutlined,
   ArrowLeftOutlined,
   SaveOutlined,
-  EyeOutlined,
+  MailOutlined,
 } from "../../components/common/Icon";
 import { useNavigate, useParams } from "react-router-dom";
 import type { ColumnsType } from "antd/es/table";
@@ -37,6 +37,7 @@ import { formatCurrency } from "../../utils/formatters";
 import QuotationIndicatorSelectionModal, {
   SelectedMethodInfo,
 } from "./components/QuotationIndicatorSelectionModal";
+import SendQuotationEmailModal from "./components/SendQuotationEmailModal";
 import { IndicatorName } from "../../components/common";
 
 const { Title, Text } = Typography;
@@ -72,6 +73,7 @@ const QuotationForm: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [items, setItems] = useState<QuotationItemRow[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
+  const [emailModalVisible, setEmailModalVisible] = useState(false);
   const [organizationOptions, setOrganizationOptions] = useState<
     OrganizationOption[]
   >([]);
@@ -358,13 +360,16 @@ const QuotationForm: React.FC = () => {
             <Col>
               <Space>
                 <Button
-                  icon={<EyeOutlined />}
+                  icon={<MailOutlined />}
                   onClick={() => {
-                    // TODO: Implement preview logic
-                    message.info("Chức năng xem trước đang phát triển");
+                    if (items.length === 0) {
+                      message.warning("Vui lòng thêm ít nhất một chỉ tiêu để gửi email");
+                      return;
+                    }
+                    setEmailModalVisible(true);
                   }}
                 >
-                  Xem trước
+                  Gửi email
                 </Button>
                 <Button
                   type="primary"
@@ -477,6 +482,22 @@ const QuotationForm: React.FC = () => {
         onCancel={() => setModalVisible(false)}
         onOk={handleAddIndicators}
         excludedMethods={excludedMethods}
+      />
+
+      {/* Send Email Modal */}
+      <SendQuotationEmailModal
+        visible={emailModalVisible}
+        onCancel={() => setEmailModalVisible(false)}
+        customerName={form.getFieldValue("customerName") || ""}
+        items={items.map((item, index) => ({
+          no: index + 1,
+          indicatorName: item.indicatorName,
+          testMethodName: item.testMethodName,
+          sampleCount: item.sampleCount,
+          unitPrice: item.unitPrice,
+          totalPrice: item.totalPrice,
+        }))}
+        totalCost={totalCost}
       />
     </div>
   );
