@@ -452,7 +452,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
       onCancel={handleCancel}
       width={1200}
       centered
-      styles={{ body: { maxHeight: "calc(100vh - 200px)", overflowY: "auto" } }}
+      styles={{ body: { maxHeight: "calc(100vh - 200px)", overflowY: "auto", overflowX: "hidden" } }}
       footer={
         <Space>
           <Button onClick={handleCancel}>Hủy</Button>
@@ -549,6 +549,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
                       marginBottom: isLastLab ? 0 : 8,
                       borderRadius: 8,
                       border: "1px solid var(--ant-color-border)",
+                      background: "#F0F5FF",
                     },
                     children: (
                       <div style={{ margin: "-16px" }}>
@@ -570,6 +571,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
                                 selectedInSample === sampleIndicatorIds.length;
                               const someSampleSelected =
                                 selectedInSample > 0 && !allSampleSelected;
+                              const isLastSample = sampleIndex === labGroup.sampleGroups.length - 1;
 
                               return {
                                 key: sampleGroup.sampleId,
@@ -620,17 +622,22 @@ const PrintModal: React.FC<PrintModalProps> = ({
                                 ),
                                 style: {
                                   marginBottom: 0,
-                                  background: "#fafafa",
-                                  borderRadius: 6,
+                                  background: "none",
+                                  borderRadius: isLastSample ? "0 0 8px 8px" : 0,
                                   border: "none",
+                                  borderTop: sampleIndex > 0 ? "1px solid #e8e8e8" : "none",
                                 },
                                 children: (
-                                  <Table
-                                    dataSource={sampleGroup.indicators}
-                                    columns={columns}
-                                    rowKey="id"
-                                    size="small"
-                                    pagination={false}
+                                  <div style={{ borderRadius: 8, overflow: "hidden" }}>
+                                    <Table
+                                      dataSource={sampleGroup.indicators}
+                                      columns={columns}
+                                      rowKey="id"
+                                      size="small"
+                                      pagination={false}
+                                      scroll={{ x: "max-content" }}
+                                      bordered
+                                      style={{ maxWidth: "100%" }}
                                     rowSelection={{
                                       selectedRowKeys: selectedIndicatorIds,
                                       onChange: (keys) => {
@@ -646,7 +653,8 @@ const PrintModal: React.FC<PrintModalProps> = ({
                                       },
                                       type: "checkbox",
                                     }}
-                                  />
+                                    />
+                                  </div>
                                 ),
                               };
                             }
