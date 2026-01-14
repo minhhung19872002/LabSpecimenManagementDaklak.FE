@@ -35,6 +35,8 @@ export interface PrintResultItem {
   laboratoryId: string;
   laboratoryName: string;
   templateName: string;
+  sampleCode?: string;
+  sampleName?: string;
 }
 
 // Print multi result output for batch print
