@@ -303,7 +303,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                       <NumericFormat
                         placeholder="Giới hạn"
                         allowNegative={false}
-                        decimalScale={1}
+                        decimalScale={4}
                         customInput={Input}
                         onValueChange={(values) => {
                           const indicators = form.getFieldValue("indicators") || [];
