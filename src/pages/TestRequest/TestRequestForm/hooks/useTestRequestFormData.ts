@@ -236,6 +236,7 @@ export const useTestRequestFormData = () => {
               testMethodId: method.id,
               testMethodCode: method.code,
               testMethodName: method.name,
+              testMethodFormattedName: method.formattedName || undefined,
               unitPrice: ind.unitPrice,
               isActive: ind.isActive,
             });

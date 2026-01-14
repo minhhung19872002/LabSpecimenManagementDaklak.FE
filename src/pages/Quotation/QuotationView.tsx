@@ -76,9 +76,11 @@ const QuotationView: React.FC = () => {
     },
     {
       title: "Phương pháp",
-      dataIndex: "testMethodName",
       key: "testMethodName",
       ellipsis: true,
+      render: (_, record) => (
+        <IndicatorName name={record.testMethodName} formattedName={record.testMethodFormattedName} />
+      ),
     },
     {
       title: "Số mẫu",

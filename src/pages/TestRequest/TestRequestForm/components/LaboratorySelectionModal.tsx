@@ -48,6 +48,7 @@ const LaboratorySelectionModal: React.FC<LaboratorySelectionModalProps> = ({
         indicatorName: indicator?.name || "",
         indicatorFormattedName: indicator?.formattedName,
         methodName: method?.testMethodName || "",
+        methodFormattedName: method?.testMethodFormattedName,
         unitPrice: method?.unitPrice || 0,
       };
     });
@@ -85,7 +86,7 @@ const LaboratorySelectionModal: React.FC<LaboratorySelectionModalProps> = ({
       open={visible}
       onCancel={onCancel}
       closable={false}
-      width={800}
+      width={900}
       centered
       footer={null}
       zIndex={1100}
@@ -173,8 +174,11 @@ const LaboratorySelectionModal: React.FC<LaboratorySelectionModalProps> = ({
                   title: "Phương pháp",
                   dataIndex: "methodName",
                   key: "methodName",
-                  width: 200,
+                  width: 250,
                   ellipsis: true,
+                  render: (_: any, record: any) => (
+                    <IndicatorName name={record.methodName} formattedName={record.methodFormattedName} />
+                  ),
                 },
                 {
                   title: "Đơn giá",

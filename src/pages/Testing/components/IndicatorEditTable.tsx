@@ -257,7 +257,11 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       dataIndex: "methodName",
       key: "method",
       width: 180,
-      render: (value: string) => value || <Text type="secondary">-</Text>,
+      render: (value: string, record) => value ? (
+        <IndicatorName name={value} formattedName={record.methodFormattedName} />
+      ) : (
+        <Text type="secondary">-</Text>
+      ),
     },
     {
       title: "ĐVT",

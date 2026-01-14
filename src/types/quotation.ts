@@ -22,7 +22,9 @@ export interface QuotationItemDto {
   indicatorId: string;
   testMethodId: string;
   indicatorName: string;
+  indicatorFormattedName?: string | null;
   testMethodName: string;
+  testMethodFormattedName?: string | null;
   sampleCount: number;
   unitPrice: number;
   totalPrice: number;

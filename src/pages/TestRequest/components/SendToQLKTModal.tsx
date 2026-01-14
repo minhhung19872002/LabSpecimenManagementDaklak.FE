@@ -93,7 +93,9 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
         sample.indicators?.forEach((indicator) => {
           // Priority: existing laboratoryId > indicatorGroupLaboratoryId > undefined
           const autoFilledLabId =
-            indicator.laboratoryId || indicator.indicatorGroupLaboratoryId || undefined;
+            indicator.laboratoryId ||
+            indicator.indicatorGroupLaboratoryId ||
+            undefined;
 
           states[indicator.id] = {
             sampleIndicatorId: indicator.id,
@@ -339,9 +341,11 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
           />
         </Tooltip>
         <Tooltip title={indicator.testMethodName}>
-          <span
+          <IndicatorName
+            name={indicator.testMethodName || "-"}
+            formattedName={indicator.testMethodFormattedName}
             style={{
-              width: 100,
+              width: 140,
               flexShrink: 0,
               fontSize: 12,
               color: "#1890ff",
@@ -349,9 +353,7 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
             }}
-          >
-            {indicator.testMethodName || "-"}
-          </span>
+          />
         </Tooltip>
         <span
           style={{
@@ -510,7 +512,7 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
               >
                 <div style={{ width: 24, flexShrink: 0 }}></div>
                 <div style={{ flex: 1, minWidth: 80 }}>Chỉ tiêu</div>
-                <div style={{ width: 100, flexShrink: 0 }}>Phương pháp</div>
+                <div style={{ width: 140, flexShrink: 0 }}>Phương pháp</div>
                 <div style={{ width: 70, flexShrink: 0, textAlign: "right" }}>
                   Đơn giá
                 </div>

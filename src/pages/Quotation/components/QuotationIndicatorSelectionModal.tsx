@@ -20,8 +20,10 @@ const { Text } = Typography;
 export interface SelectedMethodInfo {
   indicatorId: string;
   indicatorName: string;
+  indicatorFormattedName?: string;
   testMethodId: string;
   testMethodName: string;
+  testMethodFormattedName?: string;
   unitPrice: number;
 }
 
@@ -36,6 +38,7 @@ interface QuotationIndicatorSelectionModalProps {
 interface MethodInfo {
   testMethodId: string;
   testMethodName: string;
+  testMethodFormattedName?: string;
   unitPrice: number;
 }
 
@@ -95,6 +98,7 @@ const QuotationIndicatorSelectionModal: React.FC<
             methodsMap[ind.indicatorId].push({
               testMethodId: method.id,
               testMethodName: method.name,
+              testMethodFormattedName: method.formattedName || undefined,
               unitPrice: ind.unitPrice,
             });
           }
@@ -170,8 +174,10 @@ const QuotationIndicatorSelectionModal: React.FC<
       return {
         indicatorId,
         indicatorName: indicator?.name || "",
+        indicatorFormattedName: indicator?.formattedName || undefined,
         testMethodId,
         testMethodName: method?.testMethodName || "",
+        testMethodFormattedName: method?.testMethodFormattedName || undefined,
         unitPrice: method?.unitPrice || 0,
       };
     });
@@ -483,7 +489,9 @@ const QuotationIndicatorSelectionModal: React.FC<
                                       )
                                     }
                                   />
-                                  <span
+                                  <IndicatorName
+                                    name={method.testMethodName}
+                                    formattedName={method.testMethodFormattedName}
                                     style={{
                                       flex: 1,
                                       fontSize: 12,
@@ -492,9 +500,7 @@ const QuotationIndicatorSelectionModal: React.FC<
                                       textOverflow: "ellipsis",
                                       whiteSpace: "nowrap",
                                     }}
-                                  >
-                                    {method.testMethodName}
-                                  </span>
+                                  />
                                   {isExcluded && (
                                     <span
                                       style={{

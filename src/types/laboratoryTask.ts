@@ -105,6 +105,7 @@ export interface LaboratoryTaskIndicatorDto {
   // Phase 6 workflow fields
   methodId?: string;
   methodName?: string;
+  methodFormattedName?: string;  // Tên phương pháp có định dạng HTML
   technicianId?: string;
   technicianName?: string;
   assignedDate?: string;  // Ngày giao việc cho KTV
