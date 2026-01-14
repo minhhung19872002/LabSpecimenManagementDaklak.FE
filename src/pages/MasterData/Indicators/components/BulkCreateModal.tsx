@@ -1,10 +1,8 @@
 import React from "react";
-import { Modal, Form, Select, Button, Row, Col, Typography } from "antd";
-import { PlusOutlined, MinusCircleOutlined } from "../../../../components/common/Icon";
+import { Modal, Form, Select, Button, Row, Col, Tooltip } from "antd";
+import Icon, { PlusOutlined, MinusCircleOutlined } from "../../../../components/common/Icon";
 import { RichTextEditor } from "../../../../components/common";
 import type { FormInstance } from "antd";
-
-const { Text } = Typography;
 
 interface GroupOption {
   value: string;
@@ -49,9 +47,22 @@ const BulkCreateModal: React.FC<BulkCreateModalProps> = ({
       title={
         <span>
           Thêm nhiều chỉ tiêu{" "}
-          <Text type="secondary" style={{ fontWeight: "normal", fontSize: 12 }}>
-            (Ctrl+B: đậm, Ctrl+I: nghiêng, Ctrl+U: gạch chân)
-          </Text>
+          <Tooltip
+            title={
+              <div>
+                <div>Phím tắt định dạng:</div>
+                <div>Ctrl+B: Đậm</div>
+                <div>Ctrl+I: Nghiêng</div>
+                <div>Ctrl+U: Gạch chân</div>
+                <div>Ctrl+,: Chỉ số dưới (x₂)</div>
+                <div>Ctrl+.: Chỉ số trên (x²)</div>
+              </div>
+            }
+          >
+            <span style={{ cursor: "help" }}>
+              <Icon name="info-circle" style={{ color: "#8c8c8c" }} />
+            </span>
+          </Tooltip>
         </span>
       }
       open={open}
