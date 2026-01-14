@@ -47,30 +47,53 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
 }) => {
   // Track selected indicators for each row (needed for cascading select)
   const [selectedIndicators, setSelectedIndicators] = useState<Record<number, string>>({});
+  // Track selected methods for each row (to prevent duplicate indicator+method combinations)
+  const [selectedMethods, setSelectedMethods] = useState<Record<number, string>>({});
 
   // Reset state when modal closes
   useEffect(() => {
     if (!open) {
       setSelectedIndicators({});
+      setSelectedMethods({});
     }
   }, [open]);
 
+  // Get used methods for a specific indicator (across all rows except current)
+  const getUsedMethodsForIndicator = (indicatorId: string, excludeFieldName: number): string[] => {
+    const usedMethods: string[] = [];
+    Object.entries(selectedIndicators).forEach(([fn, indId]) => {
+      if (indId === indicatorId && Number(fn) !== excludeFieldName) {
+        const methodId = selectedMethods[Number(fn)];
+        if (methodId) {
+          usedMethods.push(methodId);
+        }
+      }
+    });
+    return usedMethods;
+  };
+
   // Build grouped options for indicator Select
-  // Only show indicators that have at least one test method
+  // Only show indicators that have at least one available test method
   const buildIndicatorOptions = (fieldName: number) => {
     return indicatorGroups
       .filter((group) => group.isActive && indicatorsByGroup[group.id]?.length > 0)
       .map((group) => {
         const availableIndicators = (indicatorsByGroup[group.id] || []).filter(
-          (ind) =>
-            // Check if indicator has at least one test method
-            getMethodsForIndicator(ind.id).length > 0 &&
+          (ind) => {
             // Check if not already exists in standard
-            !existingIndicatorIds.includes(ind.id) &&
-            // Check if not already selected in another row
-            !Object.entries(selectedIndicators).some(
-              ([fn, id]) => id === ind.id && Number(fn) !== fieldName
-            )
+            if (existingIndicatorIds.includes(ind.id)) return false;
+
+            // Get all methods for this indicator
+            const allMethods = getMethodsForIndicator(ind.id);
+            if (allMethods.length === 0) return false;
+
+            // Get methods already used in other rows for this indicator
+            const usedMethods = getUsedMethodsForIndicator(ind.id, fieldName);
+
+            // Check if there are any available methods left
+            const availableMethods = allMethods.filter(m => !usedMethods.includes(m.id));
+            return availableMethods.length > 0;
+          }
         );
 
         if (availableIndicators.length === 0) return null;
@@ -96,15 +119,25 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
     }[];
   };
 
-  // Build method options for the selected indicator
+  // Build method options for the selected indicator (excluding already used methods)
   const buildMethodOptions = (fieldName: number) => {
     const indicatorId = selectedIndicators[fieldName];
     if (!indicatorId) return [];
 
-    const methods = getMethodsForIndicator(indicatorId);
-    return methods.map((method) => ({
+    const allMethods = getMethodsForIndicator(indicatorId);
+
+    // Get methods already used for this indicator in other rows
+    const usedMethods = getUsedMethodsForIndicator(indicatorId, fieldName);
+
+    // Filter out used methods
+    const availableMethods = allMethods.filter(m => !usedMethods.includes(m.id));
+
+    return availableMethods.map((method) => ({
       value: method.id,
-      label: method.name,
+      label: (
+        <IndicatorName name={method.name} formattedName={method.formattedName} />
+      ),
+      searchText: method.name,
       unit: method.unit,
     }));
   };
@@ -125,9 +158,16 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
       ...prev,
       [fieldName]: value,
     }));
+
+    // Clear selected method for this row
+    setSelectedMethods((prev) => {
+      const newState = { ...prev };
+      delete newState[fieldName];
+      return newState;
+    });
   };
 
-  // Handle method selection - auto-fill unit
+  // Handle method selection - auto-fill unit and track selected method
   const handleSelectMethod = (
     value: string,
     option: { unit: string },
@@ -140,11 +180,18 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
       unit: option.unit,
     };
     form.setFieldsValue({ indicators });
+
+    // Track selected method
+    setSelectedMethods((prev) => ({
+      ...prev,
+      [fieldName]: value,
+    }));
   };
 
   // Handle cancel
   const handleCancel = () => {
     setSelectedIndicators({});
+    setSelectedMethods({});
     onCancel();
   };
 
@@ -152,6 +199,11 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   const handleRemoveRow = (fieldName: number, remove: (index: number) => void) => {
     remove(fieldName);
     setSelectedIndicators((prev) => {
+      const newState = { ...prev };
+      delete newState[fieldName];
+      return newState;
+    });
+    setSelectedMethods((prev) => {
       const newState = { ...prev };
       delete newState[fieldName];
       return newState;
@@ -233,6 +285,11 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                               delete newState[name];
                               return newState;
                             });
+                            setSelectedMethods((prev) => {
+                              const newState = { ...prev };
+                              delete newState[name];
+                              return newState;
+                            });
                             // Clear method and unit
                             const indicators = form.getFieldValue("indicators") || [];
                             indicators[name] = {
@@ -259,13 +316,29 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                         placeholder="Chọn phương pháp"
                         showSearch
                         filterOption={(inputValue, option) => {
-                          if (!option?.label) return false;
-                          const label = String(option.label).toLowerCase();
-                          return label.includes(inputValue.toLowerCase());
+                          const searchText = (option as { searchText?: string })?.searchText;
+                          if (!searchText) return false;
+                          return searchText.toLowerCase().includes(inputValue.toLowerCase());
                         }}
                         onSelect={(value, option) =>
                           handleSelectMethod(value, option as { unit: string }, name)
                         }
+                        onChange={(value) => {
+                          if (!value) {
+                            // Clear method tracking and unit when method is cleared
+                            setSelectedMethods((prev) => {
+                              const newState = { ...prev };
+                              delete newState[name];
+                              return newState;
+                            });
+                            const indicators = form.getFieldValue("indicators") || [];
+                            indicators[name] = {
+                              ...indicators[name],
+                              unit: "",
+                            };
+                            form.setFieldsValue({ indicators });
+                          }
+                        }}
                         disabled={!selectedIndicators[name]}
                         allowClear
                       />
