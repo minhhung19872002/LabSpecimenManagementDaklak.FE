@@ -9,9 +9,11 @@ import {
   Input,
   Spin,
   Checkbox,
-  Divider,
   List,
   Select,
+  Row,
+  Col,
+  Collapse,
 } from "antd";
 import {
   PrinterOutlined,
@@ -33,7 +35,7 @@ import { API_BASE_URL } from "../../../services/api";
 import userService, { UserLookupDto } from "../../../services/userService";
 import { IndicatorName } from "../../../components/common";
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 interface PrintIndicatorModalProps {
   visible: boolean;
@@ -338,7 +340,6 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
       title: "Tên chỉ tiêu",
       dataIndex: "indicatorName",
       key: "indicatorName",
-      width: 180,
       ellipsis: true,
       render: (_: any, record: QualityManagementIndicatorDto) => (
         <IndicatorName
@@ -351,7 +352,6 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
       title: "Phương pháp",
       dataIndex: "methodName",
       key: "methodName",
-      width: 160,
       ellipsis: true,
       render: (_: any, record: QualityManagementIndicatorDto) => (
         <IndicatorName
@@ -364,14 +364,14 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
       title: "Kết quả",
       dataIndex: "result",
       key: "result",
-      width: 90,
+      width: 80,
       render: (text: string) => <Text strong>{text || "-"}</Text>,
     },
     {
       title: "ĐVT",
       dataIndex: "unit",
       key: "unit",
-      width: 70,
+      width: 60,
     },
   ];
 
@@ -457,7 +457,7 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
       }
       open={visible}
       onCancel={handleCancel}
-      width={1000}
+      width={1200}
       centered
       styles={{ body: { maxHeight: "calc(100vh - 200px)", overflowY: "auto" } }}
       footer={
@@ -479,14 +479,6 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
         </Space>
       }
     >
-      <div style={{ marginBottom: 16 }}>
-        <Text type="secondary">
-          {mode === "single"
-            ? "Chọn các chỉ tiêu và biểu mẫu để in. Hệ thống sẽ tạo 1 PDF cho mỗi lab × template."
-            : "Chọn nhiều chỉ tiêu để in kết quả hỗn hợp"}
-        </Text>
-      </div>
-
       {loadingIndicators || loadingTemplates ? (
         <div style={{ textAlign: "center", padding: 40 }}>
           <Spin tip="Đang tải dữ liệu..." />
@@ -496,172 +488,175 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
           <Text type="secondary">Không có chỉ tiêu nào đã được duyệt</Text>
         </div>
       ) : (
-        <>
-          {/* Indicators grouped by Lab > Sample */}
-          <Title level={5} style={{ marginBottom: 12 }}>
-            Chọn chỉ tiêu để in
-          </Title>
-          <div style={{ maxHeight: 400, overflowY: "auto", marginBottom: 16 }}>
-            {labGroups.map((labGroup) => {
-              const selectedInLab = labGroup.allIndicatorIds.filter((id) =>
-                selectedIndicatorIds.includes(id)
-              ).length;
-              const allLabSelected =
-                selectedInLab === labGroup.allIndicatorIds.length;
-              const someLabSelected = selectedInLab > 0 && !allLabSelected;
+        <Row gutter={24}>
+          {/* Left column - Indicators grouped by Lab > Sample */}
+          <Col span={16} style={{ overflow: "hidden" }}>
+            <div style={{ maxHeight: "calc(100vh - 280px)", overflowY: "auto", overflowX: "hidden" }}>
+              <Collapse
+                defaultActiveKey={labGroups.map((lg) => lg.laboratoryId)}
+                expandIconPosition="end"
+                style={{ background: "transparent", border: "none" }}
+                items={labGroups.map((labGroup, labIndex) => {
+                  const selectedInLab = labGroup.allIndicatorIds.filter((id) =>
+                    selectedIndicatorIds.includes(id)
+                  ).length;
+                  const allLabSelected =
+                    selectedInLab === labGroup.allIndicatorIds.length;
+                  const someLabSelected = selectedInLab > 0 && !allLabSelected;
+                  const isLastLab = labIndex === labGroups.length - 1;
 
-              return (
-                <div key={labGroup.laboratoryId} style={{ marginBottom: 16 }}>
-                  {/* Lab Header */}
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      padding: "10px 12px",
+                  return {
+                    key: labGroup.laboratoryId,
+                    label: (
+                      <div
+                        style={{ display: "flex", alignItems: "center", gap: 8 }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Checkbox
+                          checked={allLabSelected}
+                          indeterminate={someLabSelected}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            if (e.target.checked) {
+                              setSelectedIndicatorIds([
+                                ...new Set([
+                                  ...selectedIndicatorIds,
+                                  ...labGroup.allIndicatorIds,
+                                ]),
+                              ]);
+                            } else {
+                              setSelectedIndicatorIds(
+                                selectedIndicatorIds.filter(
+                                  (id) => !labGroup.allIndicatorIds.includes(id)
+                                )
+                              );
+                            }
+                          }}
+                        />
+                        <Text strong style={{ fontSize: 14, color: "#0958d9" }}>
+                          {labGroup.laboratoryName}
+                        </Text>
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          ({selectedInLab}/{labGroup.allIndicatorIds.length} chỉ tiêu)
+                        </Text>
+                      </div>
+                    ),
+                    style: {
+                      marginBottom: isLastLab ? 0 : 8,
                       background: "#e6f4ff",
                       borderRadius: 8,
-                      marginBottom: 8,
-                    }}
-                  >
-                    <Checkbox
-                      checked={allLabSelected}
-                      indeterminate={someLabSelected}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedIndicatorIds([
-                            ...new Set([
-                              ...selectedIndicatorIds,
-                              ...labGroup.allIndicatorIds,
-                            ]),
-                          ]);
-                        } else {
-                          setSelectedIndicatorIds(
-                            selectedIndicatorIds.filter(
-                              (id) => !labGroup.allIndicatorIds.includes(id)
-                            )
+                      border: "1px solid var(--ant-color-border)",
+                    },
+                    children: (
+                      <div style={{ margin: "-16px" }}>
+                        <Collapse
+                          defaultActiveKey={labGroup.sampleGroups.map((sg) => sg.sampleId)}
+                          expandIconPosition="end"
+                          style={{ background: "transparent", border: "none" }}
+                          items={labGroup.sampleGroups.map((sampleGroup, sampleIndex) => {
+                          const sampleIndicatorIds = sampleGroup.indicators.map(
+                            (i) => i.id
                           );
-                        }
-                      }}
-                    />
-                    <Text strong style={{ fontSize: 14, color: "#0958d9" }}>
-                      {labGroup.laboratoryName}
-                    </Text>
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                      ({selectedInLab}/{labGroup.allIndicatorIds.length} chỉ
-                      tiêu)
-                    </Text>
-                  </div>
+                          const selectedInSample = sampleIndicatorIds.filter((id) =>
+                            selectedIndicatorIds.includes(id)
+                          ).length;
+                          const allSampleSelected =
+                            selectedInSample === sampleIndicatorIds.length;
+                          const someSampleSelected =
+                            selectedInSample > 0 && !allSampleSelected;
+                          const isLastSample = sampleIndex === labGroup.sampleGroups.length - 1;
 
-                  {/* Samples within lab */}
-                  <div style={{ paddingLeft: 16 }}>
-                    {labGroup.sampleGroups.map((sampleGroup) => {
-                      const sampleIndicatorIds = sampleGroup.indicators.map(
-                        (i) => i.id
-                      );
-                      const selectedInSample = sampleIndicatorIds.filter((id) =>
-                        selectedIndicatorIds.includes(id)
-                      ).length;
-                      const allSampleSelected =
-                        selectedInSample === sampleIndicatorIds.length;
-                      const someSampleSelected =
-                        selectedInSample > 0 && !allSampleSelected;
-
-                      return (
-                        <div
-                          key={sampleGroup.sampleId}
-                          style={{ marginBottom: 12 }}
-                        >
-                          {/* Sample Header */}
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 8,
-                              padding: "6px 10px",
+                          return {
+                            key: sampleGroup.sampleId,
+                            label: (
+                              <div
+                                style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Checkbox
+                                  checked={allSampleSelected}
+                                  indeterminate={someSampleSelected}
+                                  onChange={(e) => {
+                                    e.stopPropagation();
+                                    if (e.target.checked) {
+                                      setSelectedIndicatorIds([
+                                        ...new Set([
+                                          ...selectedIndicatorIds,
+                                          ...sampleIndicatorIds,
+                                        ]),
+                                      ]);
+                                    } else {
+                                      setSelectedIndicatorIds(
+                                        selectedIndicatorIds.filter(
+                                          (id) => !sampleIndicatorIds.includes(id)
+                                        )
+                                      );
+                                    }
+                                  }}
+                                />
+                                <Text style={{ fontSize: 13 }}>
+                                  {sampleGroup.sampleCode}
+                                </Text>
+                                {sampleGroup.sampleName && (
+                                  <Text type="secondary" style={{ fontSize: 12 }}>
+                                    - {sampleGroup.sampleName}
+                                  </Text>
+                                )}
+                                <Text
+                                  type="secondary"
+                                  style={{ fontSize: 12, marginLeft: "auto", marginRight: 8 }}
+                                >
+                                  {selectedInSample}/{sampleIndicatorIds.length}
+                                </Text>
+                              </div>
+                            ),
+                            style: {
+                              marginBottom: isLastSample ? 0 : 6,
                               background: "#fafafa",
                               borderRadius: 6,
-                              marginBottom: 6,
-                            }}
-                          >
-                            <Checkbox
-                              checked={allSampleSelected}
-                              indeterminate={someSampleSelected}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedIndicatorIds([
-                                    ...new Set([
-                                      ...selectedIndicatorIds,
-                                      ...sampleIndicatorIds,
-                                    ]),
-                                  ]);
-                                } else {
-                                  setSelectedIndicatorIds(
-                                    selectedIndicatorIds.filter(
+                              border: "none",
+                            },
+                            children: (
+                              <Table
+                                dataSource={sampleGroup.indicators}
+                                columns={columns}
+                                rowKey="id"
+                                size="small"
+                                pagination={false}
+                                rowSelection={{
+                                  selectedRowKeys: selectedIndicatorIds,
+                                  onChange: (keys) => {
+                                    const otherIds = selectedIndicatorIds.filter(
                                       (id) => !sampleIndicatorIds.includes(id)
-                                    )
-                                  );
-                                }
-                              }}
-                            />
-                            <Text style={{ fontSize: 13 }}>
-                              {sampleGroup.sampleCode}
-                            </Text>
-                            {sampleGroup.sampleName && (
-                              <Text type="secondary" style={{ fontSize: 12 }}>
-                                - {sampleGroup.sampleName}
-                              </Text>
-                            )}
-                            <Text
-                              type="secondary"
-                              style={{ fontSize: 12, marginLeft: "auto" }}
-                            >
-                              {selectedInSample}/{sampleIndicatorIds.length}
-                            </Text>
-                          </div>
+                                    );
+                                    setSelectedIndicatorIds([
+                                      ...otherIds,
+                                      ...(keys as string[]),
+                                    ]);
+                                  },
+                                  type: "checkbox",
+                                }}
+                              />
+                            ),
+                          };
+                          })}
+                        />
+                      </div>
+                    ),
+                  };
+                })}
+              />
+            </div>
+          </Col>
 
-                          {/* Indicators table */}
-                          <Table
-                            dataSource={sampleGroup.indicators}
-                            columns={columns}
-                            rowKey="id"
-                            size="small"
-                            pagination={false}
-                            showHeader={
-                              sampleGroup === labGroup.sampleGroups[0]
-                            }
-                            rowSelection={{
-                              selectedRowKeys: selectedIndicatorIds,
-                              onChange: (keys) => {
-                                const otherIds = selectedIndicatorIds.filter(
-                                  (id) => !sampleIndicatorIds.includes(id)
-                                );
-                                setSelectedIndicatorIds([
-                                  ...otherIds,
-                                  ...(keys as string[]),
-                                ]);
-                              },
-                              type: "checkbox",
-                            }}
-                            style={{ marginLeft: 24 }}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Template selection - only for single mode */}
-          {mode === "single" && (
-            <>
-              <Divider style={{ margin: "16px 0" }} />
-              <Title level={5} style={{ marginBottom: 12 }}>
-                Chọn biểu mẫu báo cáo
-              </Title>
-              <div style={{ marginBottom: 16 }}>
+          {/* Right column - Options */}
+          <Col span={8}>
+            {/* Template selection - only for single mode */}
+            {mode === "single" && (
+              <div style={{ marginBottom: 24 }}>
+                <Text strong style={{ display: "block", marginBottom: 12 }}>
+                  Chọn biểu mẫu báo cáo:
+                </Text>
                 <Checkbox.Group
                   value={selectedTemplates}
                   onChange={(values) =>
@@ -677,51 +672,48 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
                   </Space>
                 </Checkbox.Group>
               </div>
-            </>
-          )}
+            )}
 
-          {/* Vice President selection */}
-          <Divider style={{ margin: "16px 0" }} />
-          <div style={{ marginBottom: 16 }}>
-            <Title level={5} style={{ marginBottom: 8 }}>
-              Phó Giám đốc ký (không bắt buộc)
-            </Title>
-            <Select
-              style={{ width: "100%" }}
-              placeholder="Chọn Phó Giám đốc ký báo cáo"
-              allowClear
-              showSearch
-              optionFilterProp="label"
-              loading={loadingVicePresidents}
-              value={selectedVicePresidentId}
-              onChange={(value) => setSelectedVicePresidentId(value)}
-              options={vicePresidents.map((vp) => ({
-                value: vp.id,
-                label: vp.displayName,
-              }))}
-            />
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              Nếu chọn, tên sẽ được thay thế vào vị trí Phó Giám đốc trong báo
-              cáo
-            </Text>
-          </div>
+            {/* Vice President selection */}
+            <div style={{ marginBottom: 24 }}>
+              <Text strong style={{ display: "block", marginBottom: 8 }}>
+                Phó Giám đốc ký (không bắt buộc)
+              </Text>
+              <Select
+                style={{ width: "100%" }}
+                placeholder="Chọn"
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                loading={loadingVicePresidents}
+                value={selectedVicePresidentId}
+                onChange={(value) => setSelectedVicePresidentId(value)}
+                options={vicePresidents.map((vp) => ({
+                  value: vp.id,
+                  label: vp.displayName,
+                }))}
+              />
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Nếu chọn, tên sẽ được thay thế v...
+              </Text>
+            </div>
 
-          {/* Note input field */}
-          <Divider style={{ margin: "16px 0" }} />
-          <div>
-            <Title level={5} style={{ marginBottom: 8 }}>
-              Ghi chú (không bắt buộc)
-            </Title>
-            <Input.TextArea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Nhập ghi chú sẽ được đưa vào phần cuối của báo cáo..."
-              rows={2}
-              maxLength={500}
-              showCount
-            />
-          </div>
-        </>
+            {/* Note input field */}
+            <div>
+              <Text strong style={{ display: "block", marginBottom: 8 }}>
+                Ghi chú (không bắt buộc)
+              </Text>
+              <Input.TextArea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Nhập ghi chú sẽ được đưa vào phần cuối của báo cáo..."
+                rows={3}
+                maxLength={500}
+                showCount
+              />
+            </div>
+          </Col>
+        </Row>
       )}
     </Modal>
   );
