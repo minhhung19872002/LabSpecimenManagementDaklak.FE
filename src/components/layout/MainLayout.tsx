@@ -33,8 +33,6 @@ import Icon, {
   PieChartOutlined,
   HistoryOutlined,
   WarningOutlined,
-  LeftOutlined,
-  RightOutlined,
   DollarOutlined,
 } from "../common/Icon";
 import { useTranslation } from "react-i18next";
@@ -119,14 +117,8 @@ const routeToKeyMap: Record<string, string> = {
   "/employees": "employees",
 };
 
-const MOBILE_BREAKPOINT = 768;
-
 const MainLayout: React.FC = () => {
-  const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(
-    window.innerWidth < MOBILE_BREAKPOINT
-  );
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [changePasswordVisible, setChangePasswordVisible] = useState(false);
   const [changePasswordLoading, setChangePasswordLoading] = useState(false);
@@ -165,23 +157,6 @@ const MainLayout: React.FC = () => {
 
   // Check if current user is a supporter for any incomplete task
   const { isSupporter } = useSupporterStatus();
-
-  // Handle window resize for mobile detection
-  useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth < MOBILE_BREAKPOINT;
-      setIsMobile(mobile);
-      if (!mobile) {
-        setMobileMenuOpen(false);
-      }
-    };
-
-    // Check on mount
-    handleResize();
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -515,25 +490,54 @@ const MainLayout: React.FC = () => {
     return filterMenuByRoles(allMenuItems);
   }, [userInfo, t, navigate, isSupporter]);
 
-  // Toggle sidebar collapse
-  const toggleCollapsed = () => {
-    setCollapsed(!collapsed);
+  // Build header menu groups with filtered children
+  const headerMenuGroups = useMemo(() => {
+    const userRoles = userInfo?.roles || [];
+
+    return allMenuItems
+      .map((group) => {
+        // Check if user has access to the group
+        const hasGroupAccess = group.roles.some((role) =>
+          userRoles.includes(role)
+        );
+        if (!hasGroupAccess) return null;
+
+        // Filter children based on user roles
+        const filteredChildren = (group.children || []).filter((child) => {
+          const hasRoleAccess = child.roles.some((role) =>
+            userRoles.includes(role)
+          );
+          const hasSupporterAccess = child.supporterAllowed && isSupporter;
+          return hasRoleAccess || hasSupporterAccess;
+        });
+
+        if (filteredChildren.length === 0) return null;
+
+        return {
+          ...group,
+          children: filteredChildren,
+        };
+      })
+      .filter(Boolean) as MenuItemWithRoles[];
+  }, [userInfo, isSupporter]);
+
+  // Check if a group has selected child
+  const isGroupActive = (group: MenuItemWithRoles) => {
+    return group.children?.some((child) => child.key === selectedKey) || false;
   };
 
-  // Sidebar content component
-  const sidebarContent = (
+  // Mobile sidebar content component
+  const mobileSidebarContent = (
     <>
       {/* Logo */}
       <div className="sidebar-logo">
         <div className="sidebar-logo-icon">
           <FlaskIcon />
         </div>
-        {!collapsed && (
-          <div className="sidebar-logo-text">
-            <span className="sidebar-logo-title">StarLab</span>
-            <span className="sidebar-logo-subtitle">{t("common.subName")}</span>
-          </div>
-        )}
+        <div className="sidebar-logo-text">
+          <span className="sidebar-logo-title">StarLab</span>
+          <span className="sidebar-logo-subtitle">{t("common.subName")}</span>
+        </div>
       </div>
 
       {/* Menu */}
@@ -541,9 +545,8 @@ const MainLayout: React.FC = () => {
         <Menu
           mode="inline"
           selectedKeys={[selectedKey]}
-          defaultOpenKeys={collapsed ? [] : defaultOpenKeys}
+          defaultOpenKeys={defaultOpenKeys}
           items={menuItems}
-          inlineCollapsed={collapsed}
         />
       </div>
     </>
@@ -551,21 +554,6 @@ const MainLayout: React.FC = () => {
 
   return (
     <div className="main-layout">
-      {/* Desktop Sidebar */}
-      {!isMobile && (
-        <aside className={`main-sidebar ${collapsed ? "collapsed" : ""}`}>
-          {sidebarContent}
-          {/* Collapse Toggle Button */}
-          <button
-            className="sidebar-collapse-btn"
-            onClick={toggleCollapsed}
-            title={collapsed ? "Mở rộng" : "Thu gọn"}
-          >
-            {collapsed ? <RightOutlined /> : <LeftOutlined />}
-          </button>
-        </aside>
-      )}
-
       {/* Mobile Drawer */}
       <Drawer
         placement="left"
@@ -579,7 +567,7 @@ const MainLayout: React.FC = () => {
         }}
         closeIcon={<CloseOutlined style={{ color: "#096DD9" }} />}
       >
-        <div className="mobile-sidebar">{sidebarContent}</div>
+        <div className="mobile-sidebar">{mobileSidebarContent}</div>
       </Drawer>
 
       {/* Main Content Area */}
@@ -594,13 +582,57 @@ const MainLayout: React.FC = () => {
               onClick={() => setMobileMenuOpen(true)}
               className="mobile-menu-btn"
             />
-            <div className="header-title-wrapper">
-              <h1 className="header-title">{t("common.appName")}</h1>
-              <span className="header-subtitle">
-                Tổng hợp số liệu hoạt động của phòng Lab
-              </span>
+            {/* Logo */}
+            <div className="header-logo">
+              <div className="header-logo-icon">
+                <FlaskIcon />
+              </div>
+              <div className="header-logo-text">
+                <span className="header-logo-title">StarLab</span>
+                <span className="header-logo-subtitle">
+                  {t("common.subName")}
+                </span>
+              </div>
             </div>
           </div>
+
+          {/* Header Navigation Menu - Desktop only */}
+          <nav className="header-nav">
+            {headerMenuGroups.map((group) => (
+              <Dropdown
+                key={group.key}
+                trigger={["click"]}
+                dropdownRender={() => (
+                  <div className="header-menu-dropdown">
+                    {group.children?.map((item) => (
+                      <div
+                        key={item.key}
+                        className={`menu-dropdown-item ${
+                          selectedKey === item.key ? "selected" : ""
+                        }`}
+                        onClick={() => {
+                          item.onClick?.();
+                        }}
+                      >
+                        {item.icon}
+                        <span>{item.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              >
+                <div
+                  className={`header-nav-item ${
+                    isGroupActive(group) ? "active" : ""
+                  }`}
+                >
+                  {group.icon}
+                  <span>{group.label}</span>
+                  <DownOutlined className="nav-arrow" />
+                </div>
+              </Dropdown>
+            ))}
+          </nav>
 
           <div className="header-right">
             <NotificationBell />
