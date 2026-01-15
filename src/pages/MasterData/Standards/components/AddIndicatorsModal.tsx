@@ -9,6 +9,7 @@ import {
   TestMethodWithIndicatorsDto,
 } from "../../../../services/masterDataService";
 import IndicatorName from "../../../../components/common/IndicatorName";
+import { COMPARISON_OPERATORS, LOWER_OPERATORS, UPPER_OPERATORS } from "../constants";
 
 const { Text } = Typography;
 
@@ -24,14 +25,6 @@ interface AddIndicatorsModalProps {
   onOk: () => void;
   onCancel: () => void;
 }
-
-const COMPARISON_OPERATORS = [
-  { value: "<=", label: "<=" },
-  { value: ">=", label: ">=" },
-  { value: "<", label: "<" },
-  { value: ">", label: ">" },
-  { value: "=", label: "=" },
-];
 
 const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   open,
@@ -49,12 +42,15 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   const [selectedIndicators, setSelectedIndicators] = useState<Record<number, string>>({});
   // Track selected methods for each row (to prevent duplicate indicator+method combinations)
   const [selectedMethods, setSelectedMethods] = useState<Record<number, string>>({});
+  // Track comparison mode for each row (single or range)
+  const [comparisonModes, setComparisonModes] = useState<Record<number, "single" | "range">>({});
 
   // Reset state when modal closes
   useEffect(() => {
     if (!open) {
       setSelectedIndicators({});
       setSelectedMethods({});
+      setComparisonModes({});
     }
   }, [open]);
 
@@ -188,10 +184,45 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
     }));
   };
 
+  // Handle comparison operator change
+  const handleComparisonChange = (value: string | undefined, fieldName: number) => {
+    const isRange = value === "range";
+    setComparisonModes((prev) => ({
+      ...prev,
+      [fieldName]: isRange ? "range" : "single",
+    }));
+
+    // Update form fields based on mode
+    const indicators = form.getFieldValue("indicators") || [];
+    if (!isRange) {
+      // Single mode: clear range fields
+      indicators[fieldName] = {
+        ...indicators[fieldName],
+        comparisonOperator: value,
+        lowerOperator: undefined,
+        lowerLimit: undefined,
+        upperOperator: undefined,
+        upperLimit: undefined,
+      };
+    } else {
+      // Range mode: keep comparisonOperator as "range" for state tracking,
+      // clear single limit field, set default range operators
+      indicators[fieldName] = {
+        ...indicators[fieldName],
+        comparisonOperator: "range",
+        allowedLimit: undefined,
+        lowerOperator: ">",
+        upperOperator: "<",
+      };
+    }
+    form.setFieldsValue({ indicators });
+  };
+
   // Handle cancel
   const handleCancel = () => {
     setSelectedIndicators({});
     setSelectedMethods({});
+    setComparisonModes({});
     onCancel();
   };
 
@@ -208,6 +239,38 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
       delete newState[fieldName];
       return newState;
     });
+    setComparisonModes((prev) => {
+      const newState = { ...prev };
+      delete newState[fieldName];
+      return newState;
+    });
+  };
+
+  // Custom validation for range
+  const validateRange = (_: unknown, value: unknown, fieldName: number) => {
+    const indicators = form.getFieldValue("indicators") || [];
+    const indicator = indicators[fieldName];
+
+    if (comparisonModes[fieldName] !== "range") {
+      return Promise.resolve();
+    }
+
+    const lowerLimit = parseFloat(indicator?.lowerLimit || "");
+    const upperLimit = parseFloat(indicator?.upperLimit || "");
+
+    if (isNaN(lowerLimit) || isNaN(upperLimit)) {
+      return Promise.resolve();
+    }
+
+    if (lowerLimit > upperLimit) {
+      return Promise.reject("Cận dưới không được lớn hơn cận trên");
+    }
+
+    if (lowerLimit === upperLimit) {
+      return Promise.reject("Cận dưới không được bằng cận trên");
+    }
+
+    return Promise.resolve();
   };
 
   return (
@@ -219,7 +282,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
       confirmLoading={loading}
       okText="Thêm"
       cancelText="Hủy"
-      width={950}
+      width={1100}
       centered
       forceRender
     >
@@ -231,19 +294,19 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
       <Form form={form} layout="vertical" requiredMark>
         {/* Header row */}
         <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-          <Text strong style={{ width: 280 }}>
+          <Text strong style={{ width: 250 }}>
             Chỉ tiêu <Text type="danger">*</Text>
           </Text>
-          <Text strong style={{ width: 250 }}>
+          <Text strong style={{ width: 220 }}>
             Phương pháp <Text type="danger">*</Text>
           </Text>
-          <Text strong style={{ width: 100 }}>
+          <Text strong style={{ width: 80 }}>
             Đơn vị <Text type="danger">*</Text>
           </Text>
-          <Text strong style={{ width: 80 }}>
-            Ký hiệu
+          <Text strong style={{ width: 90 }}>
+            So sánh
           </Text>
-          <Text strong style={{ width: 120 }}>
+          <Text strong style={{ flex: 1 }}>
             Giới hạn
           </Text>
           <div style={{ width: 14 }} />
@@ -255,6 +318,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
               {fields.map(({ key, name, ...restField }) => {
                 const indicatorOptions = buildIndicatorOptions(name);
                 const methodOptions = buildMethodOptions(name);
+                const isRangeMode = comparisonModes[name] === "range";
 
                 return (
                   <div
@@ -266,7 +330,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                       {...restField}
                       name={[name, "indicatorId"]}
                       rules={[{ required: true, message: "Chọn" }]}
-                      style={{ marginBottom: 0, width: 280 }}
+                      style={{ marginBottom: 0, width: 250 }}
                     >
                       <Select
                         options={indicatorOptions}
@@ -309,7 +373,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                       {...restField}
                       name={[name, "testMethodId"]}
                       rules={[{ required: true, message: "Chọn" }]}
-                      style={{ marginBottom: 0, width: 250 }}
+                      style={{ marginBottom: 0, width: 220 }}
                     >
                       <Select
                         options={methodOptions}
@@ -349,45 +413,124 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                       {...restField}
                       name={[name, "unit"]}
                       rules={[{ required: true, message: "Chọn PP" }]}
-                      style={{ marginBottom: 0, width: 100 }}
+                      style={{ marginBottom: 0, width: 80 }}
                     >
-                      <Input placeholder="Đơn vị" disabled />
+                      <Input placeholder="ĐVT" disabled />
                     </Form.Item>
 
-                    {/* Comparison Operator */}
+                    {/* Comparison Operator Selector */}
                     <Form.Item
                       {...restField}
                       name={[name, "comparisonOperator"]}
-                      style={{ marginBottom: 0, width: 80 }}
+                      style={{ marginBottom: 0, width: 90 }}
                     >
                       <Select
                         options={COMPARISON_OPERATORS}
                         placeholder="--"
                         allowClear
+                        onChange={(value) => handleComparisonChange(value, name)}
                       />
                     </Form.Item>
 
-                    {/* Allowed Limit */}
-                    <Form.Item
-                      {...restField}
-                      name={[name, "allowedLimit"]}
-                      style={{ marginBottom: 0, width: 120 }}
-                    >
-                      <NumericFormat
-                        placeholder="Giới hạn"
-                        allowNegative={false}
-                        decimalScale={4}
-                        customInput={Input}
-                        onValueChange={(values) => {
-                          const indicators = form.getFieldValue("indicators") || [];
-                          indicators[name] = {
-                            ...indicators[name],
-                            allowedLimit: values.value,
-                          };
-                          form.setFieldsValue({ indicators });
-                        }}
-                      />
-                    </Form.Item>
+                    {/* Limit fields - conditional rendering */}
+                    {isRangeMode ? (
+                      // Range mode: 4 fields
+                      <div style={{ display: "flex", gap: 4, flex: 1 }}>
+                        {/* Lower Operator */}
+                        <Form.Item
+                          {...restField}
+                          name={[name, "lowerOperator"]}
+                          style={{ marginBottom: 0, width: 60 }}
+                          initialValue=">"
+                        >
+                          <Select options={LOWER_OPERATORS} />
+                        </Form.Item>
+
+                        {/* Lower Limit */}
+                        <Form.Item
+                          {...restField}
+                          name={[name, "lowerLimit"]}
+                          rules={[
+                            { required: true, message: "Bắt buộc" },
+                            { validator: (_, value) => validateRange(_, value, name) }
+                          ]}
+                          style={{ marginBottom: 0, width: 80 }}
+                        >
+                          <NumericFormat
+                            placeholder="Cận dưới"
+                            allowNegative={false}
+                            decimalScale={4}
+                            customInput={Input}
+                            onValueChange={(values) => {
+                              const indicators = form.getFieldValue("indicators") || [];
+                              indicators[name] = {
+                                ...indicators[name],
+                                lowerLimit: values.value,
+                              };
+                              form.setFieldsValue({ indicators });
+                            }}
+                          />
+                        </Form.Item>
+
+                        {/* Upper Operator */}
+                        <Form.Item
+                          {...restField}
+                          name={[name, "upperOperator"]}
+                          style={{ marginBottom: 0, width: 60 }}
+                          initialValue="<"
+                        >
+                          <Select options={UPPER_OPERATORS} />
+                        </Form.Item>
+
+                        {/* Upper Limit */}
+                        <Form.Item
+                          {...restField}
+                          name={[name, "upperLimit"]}
+                          rules={[
+                            { required: true, message: "Bắt buộc" },
+                            { validator: (_, value) => validateRange(_, value, name) }
+                          ]}
+                          style={{ marginBottom: 0, width: 80 }}
+                        >
+                          <NumericFormat
+                            placeholder="Cận trên"
+                            allowNegative={false}
+                            decimalScale={4}
+                            customInput={Input}
+                            onValueChange={(values) => {
+                              const indicators = form.getFieldValue("indicators") || [];
+                              indicators[name] = {
+                                ...indicators[name],
+                                upperLimit: values.value,
+                              };
+                              form.setFieldsValue({ indicators });
+                            }}
+                          />
+                        </Form.Item>
+                      </div>
+                    ) : (
+                      // Single mode: 1 field (giới hạn)
+                      <Form.Item
+                        {...restField}
+                        name={[name, "allowedLimit"]}
+                        style={{ marginBottom: 0, flex: 1 }}
+                      >
+                        <NumericFormat
+                          placeholder="Giới hạn"
+                          allowNegative={false}
+                          decimalScale={4}
+                          customInput={Input}
+                          onValueChange={(values) => {
+                            const indicators = form.getFieldValue("indicators") || [];
+                            indicators[name] = {
+                              ...indicators[name],
+                              allowedLimit: values.value,
+                            };
+                            form.setFieldsValue({ indicators });
+                          }}
+                        />
+                      </Form.Item>
+                    )}
 
                     {/* Remove button */}
                     <MinusCircleOutlined

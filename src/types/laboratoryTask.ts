@@ -111,7 +111,9 @@ export interface LaboratoryTaskIndicatorDto {
   assignedDate?: string;  // Ngày giao việc cho KTV
   testDate?: string;  // Ngày thử nghiệm (ngày KTV bắt đầu/check-in)
   result?: string;
-  note?: string;  // Ghi chú từ KTV
+  freeTextNote?: string;  // Ghi chú tự do (áp dụng cho tất cả chỉ tiêu trong sample)
+  masterDataNoteIds?: string;  // Danh sách ID của Master Data Notes (comma-separated)
+  masterDataNoteContents?: string[];  // Nội dung các Master Data Notes (để hiển thị UI)
   unit?: string;
   entryDate?: string;
   enteredById?: string;
@@ -139,6 +141,10 @@ export interface LaboratoryTaskIndicatorDto {
   standardName?: string;  // Tên tiêu chuẩn
   comparisonOperator?: string;  // Ký hiệu so sánh (<=, >=, <, >, =)
   allowedLimit?: string;  // Giới hạn cho phép
+  lowerOperator?: string;  // Ký hiệu cận dưới (>, >=) - cho khoảng
+  lowerLimit?: string;  // Giá trị cận dưới - cho khoảng
+  upperOperator?: string;  // Ký hiệu cận trên (<, <=) - cho khoảng
+  upperLimit?: string;  // Giá trị cận trên - cho khoảng
   images?: IndicatorImageDto[];  // Hình ảnh chỉ tiêu (max 5)
 
   // Workflow Redesign - Method Change History
