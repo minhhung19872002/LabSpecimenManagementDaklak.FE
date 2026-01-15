@@ -1,6 +1,6 @@
 import React from "react";
 import { Modal, Button, Space, Typography } from "antd";
-import { MailOutlined } from "@ant-design/icons";
+import { MailOutlined } from "../../../components/common/Icon";
 
 const { Text } = Typography;
 

@@ -1,6 +1,6 @@
 import React from "react";
 import { Modal, Space, Alert, Upload } from "antd";
-import { UploadOutlined } from "@ant-design/icons";
+import { UploadOutlined } from "../../../../components/common/Icon";
 import type { UploadFile } from "antd/es/upload/interface";
 import { ImportIndicatorsResultDto, ImportIndicatorGroupsResultDto } from "../types";
 

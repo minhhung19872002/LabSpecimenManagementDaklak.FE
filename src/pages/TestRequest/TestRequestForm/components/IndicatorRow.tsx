@@ -1,17 +1,19 @@
 // @ts-nocheck
 import React from "react";
 import { Button, Checkbox, DatePicker, Tooltip } from "antd";
-import { CloseOutlined, LockOutlined } from "@ant-design/icons";
+import { CloseOutlined, LockOutlined } from "../../../../components/common/Icon";
 import dayjs from "dayjs";
 import { IndicatorDto } from "../../../../services/masterDataService";
 import { IndicatorApprovalStatus, IndicatorApprovalStatusLabels, IndicatorApprovalStatusColors } from "../../../../types/laboratoryTask";
 import StatusTag from "../../../../components/common/StatusTag";
+import { IndicatorName } from "../../../../components/common";
 
 interface IndicatorRowProps {
   id: string; // IndicatorMethodKey: indicatorId_testMethodId
   isInGroup?: boolean;
   indicator: IndicatorDto | undefined;
   methodName: string; // NEW: Phương pháp thử
+  methodFormattedName?: string; // NEW: Phương pháp thử có định dạng HTML
   unitPrice: number; // NEW: Giá từ TestMethodIndicator
   isChecked: boolean;
   transferDate?: dayjs.Dayjs;
@@ -27,6 +29,7 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
   isInGroup = false,
   indicator,
   methodName,
+  methodFormattedName,
   unitPrice,
   isChecked,
   transferDate,
@@ -64,7 +67,9 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
         disabled={!canDelete}
       />
       <Tooltip title={indicator.name}>
-        <span
+        <IndicatorName
+          name={indicator.name}
+          formattedName={indicator.formattedName}
           style={{
             flex: 1,
             minWidth: 80,
@@ -74,12 +79,12 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
             whiteSpace: "nowrap",
             color: canDelete ? "inherit" : "#666",
           }}
-        >
-          {indicator.name}
-        </span>
+        />
       </Tooltip>
       <Tooltip title={methodName}>
-        <span
+        <IndicatorName
+          name={methodName}
+          formattedName={methodFormattedName}
           style={{
             width: 120,
             flexShrink: 0,
@@ -89,9 +94,7 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
           }}
-        >
-          {methodName}
-        </span>
+        />
       </Tooltip>
       <span
         style={{

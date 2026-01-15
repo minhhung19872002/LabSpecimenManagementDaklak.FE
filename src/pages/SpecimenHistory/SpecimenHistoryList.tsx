@@ -1,6 +1,6 @@
 import React from "react";
 import { Table, Button, Space, Card, Input, Row, Col, Select } from "antd";
-import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
+import { PlusOutlined, ReloadOutlined } from "../../components/common/Icon";
 import { SpecimenStatus } from "../../types/specimenHistory";
 import { useSpecimenHistoryList } from "./hooks";
 import SpecimenHistoryFormModal from "./components/SpecimenHistoryFormModal";
@@ -37,9 +37,7 @@ const SpecimenHistoryList: React.FC = () => {
       title="Lịch sử mẫu thử nghiệm"
       extra={
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={loadData}>
-            Làm mới
-          </Button>
+          <Button icon={<ReloadOutlined />} onClick={loadData} />
           <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
             Thêm lịch sử
           </Button>

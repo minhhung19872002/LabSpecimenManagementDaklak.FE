@@ -26,7 +26,7 @@ import {
   SyncOutlined,
   RightOutlined,
   ExclamationCircleOutlined,
-} from "@ant-design/icons";
+} from "../../../components/common/Icon";
 import { Column } from "@ant-design/charts";
 import { Dayjs } from "dayjs";
 import {

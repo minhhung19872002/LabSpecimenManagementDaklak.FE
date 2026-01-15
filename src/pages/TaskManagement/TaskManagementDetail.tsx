@@ -16,16 +16,17 @@ import {
   Alert,
   Form,
   Input,
+  Tabs,
 } from "antd";
 import StatusTag from "../../components/common/StatusTag";
 import {
   ArrowLeftOutlined,
-  SendOutlined,
   CaretRightOutlined,
   TeamOutlined,
   CheckOutlined,
   CloseOutlined,
-} from "@ant-design/icons";
+  EditOutlined,
+} from "../../components/common/Icon";
 import { laboratoryTaskService } from "../../services/laboratoryTaskService";
 import { formatDate } from "../../utils/formatters";
 import { testingService } from "../../services/testingService";
@@ -53,9 +54,10 @@ import IndicatorTable from "./components/IndicatorTable";
 import EvaluationIndicatorTable from "./components/EvaluationIndicatorTable";
 import SupporterModal from "./components/SupporterModal";
 import SampleImagesDisplay from "./components/SampleImagesDisplay";
-import SendToQualityModal from "./components/SendToQualityModal";
+import NoteModal, { NoteSaveInput } from "./components/NoteModal";
 import { PATH_ROUTES, STORAGE_KEYS } from "../../constants";
 import { useMultipleActionPermissions } from "../../hooks/useActionPermission";
+import { IndicatorName } from "../../components/common";
 
 const { Title, Text } = Typography;
 
@@ -72,6 +74,29 @@ const groupBy = <T, K extends keyof T>(
     result[groupKey].push(item);
     return result;
   }, {} as Record<string, T[]>);
+};
+
+// Helper to extract error message from API response
+// API trả về format: { errors: { fieldName: ["message1", "message2"] } }
+const getApiErrorMessage = (error: any, defaultMessage: string): string => {
+  const errorData = error?.response?.data;
+  if (!errorData) return defaultMessage;
+
+  // Nếu có errors object, lấy message đầu tiên từ field đầu tiên
+  if (errorData.errors && typeof errorData.errors === "object") {
+    const firstField = Object.keys(errorData.errors)[0];
+    if (firstField && Array.isArray(errorData.errors[firstField])) {
+      return errorData.errors[firstField][0] || defaultMessage;
+    }
+  }
+
+  // Fallback các format khác
+  return (
+    errorData.general?.[0] ||
+    errorData.error?.message ||
+    errorData.message ||
+    defaultMessage
+  );
 };
 
 const TaskManagementDetail: React.FC = () => {
@@ -126,6 +151,19 @@ const TaskManagementDetail: React.FC = () => {
   );
   const [rejectForm] = Form.useForm();
 
+  // Note modal state
+  const [noteModal, setNoteModal] = useState<{
+    visible: boolean;
+    selectedIndicatorIds: string[];
+    allIndicatorIds: string[];
+    sampleId: string;
+    initialFreeTextNote: string;
+    selectedIndicatorsMasterData: { indicatorId: string; masterDataNoteIds: string }[];
+  }>({ visible: false, selectedIndicatorIds: [], allIndicatorIds: [], sampleId: "", initialFreeTextNote: "", selectedIndicatorsMasterData: [] });
+
+  // Tab state for switching between Evaluation and Sample List
+  const [activeTab, setActiveTab] = useState<string>("samples");
+
   // Sample images state (includes sample attachments from TestRequest)
   const [sampleImages, setSampleImages] = useState<
     Record<
@@ -138,15 +176,12 @@ const TaskManagementDetail: React.FC = () => {
     >
   >({});
 
-  // Send to quality modal state
-  const [sendToQualityModalOpen, setSendToQualityModalOpen] = useState(false);
-
   // Sử dụng hook để check permissions cho tất cả actions theo Permission Matrix
-  const actionPermissions = useMultipleActionPermissions('tasks', [
-    'assignTesting',
-    'addSupporter',
-    'editMethod',
-    'approveResult',
+  const actionPermissions = useMultipleActionPermissions("tasks", [
+    "assignTesting",
+    "addSupporter",
+    "editMethod",
+    "approveResult",
   ]);
 
   // Check if current user is a supporter of this task
@@ -156,7 +191,7 @@ const TaskManagementDetail: React.FC = () => {
     if (!storedUser) return false;
     try {
       const userInfo = JSON.parse(storedUser);
-      return task.supporters.some(s => s.userId === userInfo.id);
+      return task.supporters.some((s) => s.userId === userInfo.id);
     } catch {
       return false;
     }
@@ -166,10 +201,13 @@ const TaskManagementDetail: React.FC = () => {
   // QLKT (A) = canAll, Admin (V) = canView, Supporter = same as QLKT (except addSupporter)
   // Người hỗ trợ có quyền: giao KTV, duyệt/từ chối, gửi QLCL
   // Người hỗ trợ KHÔNG có quyền: xóa task, thêm supporter khác
-  const canAssignTesting = actionPermissions.assignTesting?.canAll || isCurrentUserSupporter || false;
+  const canAssignTesting =
+    actionPermissions.assignTesting?.canAll || isCurrentUserSupporter || false;
   const canAddSupporter = actionPermissions.addSupporter?.canAll || false; // Supporter KHÔNG có quyền thêm supporter khác
-  const canEditMethod = actionPermissions.editMethod?.canAll || isCurrentUserSupporter || false;
-  const canApproveResult = actionPermissions.approveResult?.canAll || isCurrentUserSupporter || false;
+  const canEditMethod =
+    actionPermissions.editMethod?.canAll || isCurrentUserSupporter || false;
+  const canApproveResult =
+    actionPermissions.approveResult?.canAll || isCurrentUserSupporter || false;
 
   // Check if current user can manage supporters (chỉ QLKT của task hoặc có quyền addSupporter)
   // Supporter KHÔNG có quyền này
@@ -219,6 +257,16 @@ const TaskManagementDetail: React.FC = () => {
   useEffect(() => {
     loadTask();
   }, [loadTask]);
+
+  // Set default active tab based on task status
+  useEffect(() => {
+    if (task) {
+      const needsEvaluation =
+        task.status === LaboratoryTaskStatus.UnderEvaluation ||
+        task.status === LaboratoryTaskStatus.WaitingCustomerResponse;
+      setActiveTab(needsEvaluation ? "evaluation" : "samples");
+    }
+  }, [task?.status]);
 
   // Group indicators by sample
   const indicatorsBySample = useMemo(() => {
@@ -330,16 +378,6 @@ const TaskManagementDetail: React.FC = () => {
     return samples.sort((a, b) => a.sampleId.localeCompare(b.sampleId));
   }, [indicatorsBySample, indicatorChanges]);
 
-  // Check if there are any approved indicators that haven't been sent to quality yet
-  const hasUnsentApprovedIndicators = useMemo(() => {
-    if (!task?.indicators) return false;
-    return task.indicators.some(
-      (ind) =>
-        ind.approvalStatus === IndicatorApprovalStatus.Approved &&
-        !ind.isSentToQuality
-    );
-  }, [task]);
-
   // Handlers
   const handleMethodChange = (indicatorId: string, methodId: string) => {
     setIndicatorChanges((prev) => ({
@@ -371,6 +409,7 @@ const TaskManagementDetail: React.FC = () => {
     assignments: AssignIndicatorInput[];
     reassignedIndicators: Array<{
       indicatorName: string;
+      indicatorFormattedName?: string;
       currentTechnicianName: string;
       newTechnicianName: string;
     }>;
@@ -450,6 +489,7 @@ const TaskManagementDetail: React.FC = () => {
     // Check if any indicator is being reassigned to a different technician
     const reassignedIndicators: Array<{
       indicatorName: string;
+      indicatorFormattedName?: string;
       currentTechnicianName: string;
       newTechnicianName: string;
     }> = [];
@@ -491,6 +531,7 @@ const TaskManagementDetail: React.FC = () => {
             "-";
           reassignedIndicators.push({
             indicatorName: indicator?.indicatorName || "-",
+            indicatorFormattedName: indicator?.indicatorFormattedName,
             currentTechnicianName,
             newTechnicianName:
               newTechnician?.displayName || newTechnician?.userName || "-",
@@ -626,9 +667,7 @@ const TaskManagementDetail: React.FC = () => {
       });
     } catch (error: any) {
       console.error("Failed to approve:", error);
-      message.error(
-        error.response?.data?.error?.message || "Không thể xử lý phê duyệt"
-      );
+      message.error(getApiErrorMessage(error, "Không thể xử lý phê duyệt"));
       // Reload để sync lại với server nếu có lỗi
       await loadTask();
     } finally {
@@ -636,18 +675,38 @@ const TaskManagementDetail: React.FC = () => {
     }
   };
 
-  // Handle standard change - chỉ lưu vào local state
-  const handleStandardChange = (
+  // Handle standard change - lưu vào DB và local state
+  const handleStandardChange = async (
     indicatorId: string,
     standardId: string | null
   ) => {
+    // Optimistic update: cập nhật local state trước
     setStandardSelections((prev) => ({
       ...prev,
       [indicatorId]: standardId,
     }));
+
+    try {
+      // Gọi API để lưu vào database (dùng laboratoryTaskService cho QLKT)
+      await laboratoryTaskService.updateIndicatorStandard(
+        indicatorId,
+        standardId
+      );
+    } catch (error: any) {
+      console.error("Failed to update standard:", error);
+      message.error(
+        error.response?.data?.error?.message || "Không thể cập nhật tiêu chuẩn"
+      );
+      // Revert local state nếu có lỗi
+      setStandardSelections((prev) => {
+        const newState = { ...prev };
+        delete newState[indicatorId];
+        return newState;
+      });
+    }
   };
 
-  // Handle update note
+  // Handle update note (for single indicator from modal)
   const handleUpdateNote = async (indicatorId: string, note: string | null) => {
     try {
       const updatedIndicator = await laboratoryTaskService.updateIndicatorNote(
@@ -656,7 +715,7 @@ const TaskManagementDetail: React.FC = () => {
       );
       // Optimistic update
       updateIndicatorsOptimistically([indicatorId], {
-        note: updatedIndicator.note,
+        freeTextNote: updatedIndicator.freeTextNote,
       });
     } catch (error: any) {
       console.error("Failed to update note:", error);
@@ -667,9 +726,85 @@ const TaskManagementDetail: React.FC = () => {
     }
   };
 
-  const handleSendResults = () => {
-    if (!task) return;
-    setSendToQualityModalOpen(true);
+  // Handle open note modal for single indicator (click từ cell)
+  const handleOpenNoteModal = (indicatorId: string, _currentNote: string, sampleId: string) => {
+    const sample = sampleList.find((s) => s.sampleId === sampleId);
+    const allIds = sample?.indicators.map((i) => i.id) || [];
+
+    // Lấy indicator hiện tại để auto-fill dữ liệu
+    const currentIndicator = sample?.indicators.find((i) => i.id === indicatorId);
+
+    setNoteModal({
+      visible: true,
+      selectedIndicatorIds: [indicatorId],
+      allIndicatorIds: allIds,
+      sampleId,
+      initialFreeTextNote: currentIndicator?.freeTextNote || "",
+      selectedIndicatorsMasterData: [{
+        indicatorId,
+        masterDataNoteIds: currentIndicator?.masterDataNoteIds || "",
+      }],
+    });
+  };
+
+  // Handle open note modal for bulk indicators (click button)
+  const handleOpenBulkNoteModal = (sampleId: string) => {
+    const sample = sampleList.find((s) => s.sampleId === sampleId);
+    const allIds = sample?.indicators.map((i) => i.id) || [];
+    const selectedIds = selectedIndicators[sampleId] || [];
+
+    if (selectedIds.length === 0) {
+      message.warning("Vui lòng chọn ít nhất một chỉ tiêu");
+      return;
+    }
+
+    // Lấy FreeTextNote từ indicator đầu tiên (vì FreeTextNote chung cho cả sample)
+    const firstIndicator = sample?.indicators.find((i) => selectedIds.includes(i.id));
+
+    // Lấy MasterDataNoteIds của tất cả các indicator được chọn để detect mixed data
+    const selectedIndicatorsMasterData = selectedIds.map((indicatorId) => {
+      const indicator = sample?.indicators.find((i) => i.id === indicatorId);
+      return {
+        indicatorId,
+        masterDataNoteIds: indicator?.masterDataNoteIds || "",
+      };
+    });
+
+    setNoteModal({
+      visible: true,
+      selectedIndicatorIds: selectedIds,
+      allIndicatorIds: allIds,
+      sampleId,
+      initialFreeTextNote: firstIndicator?.freeTextNote || "",
+      selectedIndicatorsMasterData,
+    });
+  };
+
+  // Handle save note from modal
+  const handleSaveNote = async (input: NoteSaveInput) => {
+    if (!id) return;
+
+    try {
+      // Gọi API mới với cấu trúc tách biệt FreeTextNote và MasterDataNoteIds
+      await laboratoryTaskService.bulkUpdateIndicatorNote(id, {
+        allIndicatorIds: noteModal.allIndicatorIds,
+        selectedIndicatorIds: noteModal.selectedIndicatorIds,
+        freeTextNote: input.freeText,
+        masterDataNoteIds: input.skipMasterDataUpdate ? null : (input.masterDataNoteIds.length > 0 ? input.masterDataNoteIds : []),
+        appendMode: false, // Replace mode - vì đây là modal nhập mới
+        skipMasterDataUpdate: input.skipMasterDataUpdate,
+      });
+
+      // Reload task data
+      await loadTask();
+      message.success("Đã cập nhật ghi chú");
+    } catch (error) {
+      console.error("Failed to save note:", error);
+      message.error("Không thể lưu ghi chú");
+      throw error;
+    }
+
+    setNoteModal({ visible: false, selectedIndicatorIds: [], allIndicatorIds: [], sampleId: "", initialFreeTextNote: "", selectedIndicatorsMasterData: [] });
   };
 
   // Handle selection change for bulk operations
@@ -741,11 +876,7 @@ const TaskManagementDetail: React.FC = () => {
       setSelectedIndicators((prev) => ({ ...prev, [sampleId]: [] }));
     } catch (error: any) {
       console.error("Failed to bulk approve:", error);
-      const errorMsg =
-        error.response?.data?.general?.[0] ||
-        error.response?.data?.error?.message ||
-        "Không thể duyệt chỉ tiêu";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể duyệt chỉ tiêu"));
       // Reload để sync lại với server nếu có lỗi
       await loadTask();
     } finally {
@@ -832,11 +963,7 @@ const TaskManagementDetail: React.FC = () => {
         return;
       }
       console.error("Failed to bulk reject:", error);
-      const errorMsg =
-        error.response?.data?.general?.[0] ||
-        error.response?.data?.error?.message ||
-        "Không thể từ chối chỉ tiêu";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể từ chối chỉ tiêu"));
       // Reload để sync lại với server nếu có lỗi
       await loadTask();
     } finally {
@@ -931,12 +1058,33 @@ const TaskManagementDetail: React.FC = () => {
     }));
   };
 
+  // Check if task is in evaluation phase (UnderEvaluation or WaitingCustomerResponse)
+  // During this phase, cannot assign/edit in Sample List tab
+  const isInEvaluationPhase =
+    task?.status === LaboratoryTaskStatus.UnderEvaluation ||
+    task?.status === LaboratoryTaskStatus.WaitingCustomerResponse;
+
+  // Check if task is in completed phase (Approved, Rejected, SentToQuality, TestingRejected)
+  // During this phase, cannot assign/edit
+  const isCompletedPhase =
+    task?.status === LaboratoryTaskStatus.Approved ||
+    task?.status === LaboratoryTaskStatus.Rejected ||
+    task?.status === LaboratoryTaskStatus.SentToQuality ||
+    task?.status === LaboratoryTaskStatus.TestingRejected;
+
+  // Check if can assign technician to indicators
+  // Allowed when: PartialAccepted, FullyAccepted, Assigned, InProgress, WaitingApproval
+  // NOT allowed when: UnderEvaluation, WaitingCustomerResponse, Approved, Rejected, SentToQuality, TestingRejected
+  const canAssignToIndicator =
+    !isInEvaluationPhase && !isCompletedPhase && canAssignTesting;
+
   // Check if can upload images (same logic as canEditTask)
   // Allow upload during: Assigned, InProgress, WaitingApproval
   const canUploadImages =
-    task?.status === LaboratoryTaskStatus.Assigned ||
-    task?.status === LaboratoryTaskStatus.InProgress ||
-    task?.status === LaboratoryTaskStatus.WaitingApproval;
+    !isInEvaluationPhase &&
+    (task?.status === LaboratoryTaskStatus.Assigned ||
+      task?.status === LaboratoryTaskStatus.InProgress ||
+      task?.status === LaboratoryTaskStatus.WaitingApproval);
 
   // Get status tag
   const getStatusTag = (status: LaboratoryTaskStatus) => {
@@ -961,10 +1109,13 @@ const TaskManagementDetail: React.FC = () => {
 
   // Kiểm tra có thể chỉnh sửa task không
   // Cho phép khi: FullyAccepted/PartialAccepted (sau khi QLKT đánh giá) hoặc Đã giao việc VÀ có quyền editMethod
+  // KHÔNG cho phép khi đang trong giai đoạn đánh giá (UnderEvaluation/WaitingCustomerResponse)
   const canEditTask =
+    !isInEvaluationPhase &&
     (task?.status === LaboratoryTaskStatus.FullyAccepted ||
-    task?.status === LaboratoryTaskStatus.PartialAccepted ||
-    task?.status === LaboratoryTaskStatus.Assigned) && canEditMethod;
+      task?.status === LaboratoryTaskStatus.PartialAccepted ||
+      task?.status === LaboratoryTaskStatus.Assigned) &&
+    canEditMethod;
 
   // Check if sample has selected indicators for bulk actions
   const getSampleSelectedCount = (sampleId: string) => {
@@ -983,64 +1134,83 @@ const TaskManagementDetail: React.FC = () => {
           <Col>
             <Space>
               <Tag color="blue">{sample.sampleCode}</Tag>
-              <Text strong>{sample.sampleName}</Text>
               <Text type="secondary">({sample.indicatorCount} chỉ tiêu)</Text>
               {getSampleStatusTag(sample.sampleStatus)}
             </Space>
           </Col>
           <Col>
             <Space>
-              {/* Bulk approve/reject buttons - only show when pendingApproval VÀ có quyền approveResult */}
-              {sample.sampleStatus === "pendingApproval" && canApproveResult && (
-                <>
+              {/* Bulk approve/reject buttons - only show when pendingApproval VÀ có quyền approveResult VÀ không trong giai đoạn đánh giá
+                  Note: Cho phép duyệt khi SentToQuality vì có thể có mẫu chưa được duyệt */}
+              {!isInEvaluationPhase &&
+                (task?.status === LaboratoryTaskStatus.SentToQuality || !isCompletedPhase) &&
+                sample.sampleStatus === "pendingApproval" &&
+                canApproveResult && (
+                  <>
+                    <Button
+                      danger
+                      size="small"
+                      icon={<CloseOutlined />}
+                      loading={actionLoading}
+                      disabled={selectedCount === 0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openRejectModal(sample.sampleId);
+                      }}
+                    >
+                      Từ chối{selectedCount > 0 ? ` (${selectedCount})` : ""}
+                    </Button>
+                    <Button
+                      type="primary"
+                      size="small"
+                      icon={<CheckOutlined />}
+                      loading={actionLoading}
+                      disabled={selectedCount === 0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleBulkApprove(sample.sampleId);
+                      }}
+                    >
+                      Duyệt{selectedCount > 0 ? ` (${selectedCount})` : ""}
+                    </Button>
+                  </>
+                )}
+              {/* Bulk note button - show when has selected indicators (không phụ thuộc task status) */}
+              {selectedCount > 0 &&
+                !sample.isApproved && (
                   <Button
-                    danger
                     size="small"
-                    icon={<CloseOutlined />}
+                    icon={<EditOutlined />}
                     loading={actionLoading}
-                    disabled={selectedCount === 0}
                     onClick={(e) => {
                       e.stopPropagation();
-                      openRejectModal(sample.sampleId);
+                      handleOpenBulkNoteModal(sample.sampleId);
                     }}
                   >
-                    Từ chối{selectedCount > 0 ? ` (${selectedCount})` : ""}
+                    Ghi chú ({selectedCount})
                   </Button>
+                )}
+              {/* Assign button - show when sample has notStarted indicators VÀ có quyền assignTesting VÀ không trong giai đoạn đánh giá/hoàn thành */}
+              {canAssignToIndicator &&
+                sample.sampleStatus === "notStarted" && (
                   <Button
                     type="primary"
                     size="small"
-                    icon={<CheckOutlined />}
                     loading={actionLoading}
                     disabled={selectedCount === 0}
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleBulkApprove(sample.sampleId);
+                      handleAssignSample(sample.sampleId);
                     }}
                   >
-                    Duyệt{selectedCount > 0 ? ` (${selectedCount})` : ""}
+                    Giao việc{selectedCount > 0 ? ` (${selectedCount})` : ""}
                   </Button>
-                </>
-              )}
-              {/* Assign button - show when sample has notStarted indicators VÀ có quyền assignTesting */}
-              {sample.sampleStatus === "notStarted" && canAssignTesting && (
-                <Button
-                  type="primary"
-                  size="small"
-                  loading={actionLoading}
-                  disabled={selectedCount === 0}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAssignSample(sample.sampleId);
-                  }}
-                >
-                  Giao việc{selectedCount > 0 ? ` (${selectedCount})` : ""}
-                </Button>
-              )}
-              {/* Re-assign button - show when assigned but not approved, hide when customerCancelled VÀ có quyền assignTesting */}
-              {sample.sampleStatus !== "notStarted" &&
+                )}
+              {/* Re-assign button - show when assigned but not approved, hide when customerCancelled VÀ có quyền assignTesting VÀ không trong giai đoạn đánh giá/hoàn thành */}
+              {canAssignToIndicator &&
+                sample.sampleStatus !== "notStarted" &&
                 sample.sampleStatus !== "customerCancelled" &&
-                !sample.isApproved &&
-                canAssignTesting && (
+                !sample.isApproved && (
                   <Button
                     size="small"
                     loading={actionLoading}
@@ -1082,12 +1252,14 @@ const TaskManagementDetail: React.FC = () => {
             technicians={technicians}
             isAssigned={sample.sampleStatus !== "notStarted"}
             canEdit={canEditTask}
-            canAssignTechnician={canAssignTesting}
+            canAssignTechnician={canAssignToIndicator}
             sampleStatus={sample.sampleStatus}
+            sampleId={sample.sampleId}
             onMethodChange={handleMethodChange}
             onTechnicianChange={handleTechnicianChange}
             onApprove={handleApprove}
             onUpdateNote={handleUpdateNote}
+            onOpenNoteModal={handleOpenNoteModal}
             loading={actionLoading}
             showCheckbox={true}
             selectedIndicatorIds={selectedIndicators[sample.sampleId] || []}
@@ -1160,20 +1332,6 @@ const TaskManagementDetail: React.FC = () => {
                   )}
                 </Button>
               )}
-              {/* Nút Gửi kết quả - chỉ QLKT có quyền (canApproveResult) và không hiển thị khi đang đánh giá hoặc chờ KH xác nhận */}
-              {canApproveResult &&
-                task.status !== LaboratoryTaskStatus.UnderEvaluation &&
-                task.status !== LaboratoryTaskStatus.WaitingCustomerResponse && (
-                <Button
-                  type="primary"
-                  icon={<SendOutlined />}
-                  disabled={!hasUnsentApprovedIndicators}
-                  loading={actionLoading}
-                  onClick={handleSendResults}
-                >
-                  Gửi kết quả
-                </Button>
-              )}
             </Space>
           </Col>
         </Row>
@@ -1227,42 +1385,79 @@ const TaskManagementDetail: React.FC = () => {
         />
       )}
 
-      {/* Evaluation Mode for UnderEvaluation or WaitingCustomerResponse status */}
-      {(task.status === LaboratoryTaskStatus.UnderEvaluation ||
-        task.status === LaboratoryTaskStatus.WaitingCustomerResponse) ? (
-        <Card title={`Đánh giá chỉ tiêu (${task.indicators?.length || 0})`}>
-          <Alert
-            message={task.status === LaboratoryTaskStatus.WaitingCustomerResponse
-              ? "Chờ khách hàng xác nhận"
-              : "Chế độ đánh giá thử nghiệm"}
-            description={task.status === LaboratoryTaskStatus.WaitingCustomerResponse
-              ? "Có chỉ tiêu đang chờ KH xác nhận (đổi PP hoặc từ chối TN). QLKT vẫn có thể đánh giá các chỉ tiêu Pending còn lại."
-              : "QLKT đánh giá từng chỉ tiêu: Chấp nhận, Yêu cầu đổi phương pháp, hoặc Từ chối thử nghiệm."}
-            type={task.status === LaboratoryTaskStatus.WaitingCustomerResponse ? "warning" : "info"}
-            showIcon
-            style={{ marginBottom: 16 }}
-          />
-          <EvaluationIndicatorTable
-            indicators={task.indicators || []}
-            methods={methods}
-            taskId={task.id}
-            canEvaluate={canApproveResult}
-            loading={loading}
-            onEvaluationComplete={reloadData}
-          />
-        </Card>
-      ) : (
-        /* Collapsible Sample Panels for other statuses */
-        <Card title={`Danh sách mẫu (${sampleList.length})`}>
-          <Collapse
-            defaultActiveKey={sampleList.map((s) => s.sampleId)}
-            expandIcon={({ isActive }) => (
-              <CaretRightOutlined rotate={isActive ? 90 : 0} />
-            )}
-            items={collapseItems}
-          />
-        </Card>
-      )}
+      {/* Tabs for Evaluation and Sample List */}
+      <Card>
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          items={[
+            {
+              key: "evaluation",
+              label: `Đánh giá chỉ tiêu (${task.indicators?.length || 0})`,
+              children: (
+                <>
+                  {/* Alert based on task status */}
+                  {task.status === LaboratoryTaskStatus.UnderEvaluation ||
+                  task.status === LaboratoryTaskStatus.WaitingCustomerResponse ? (
+                    <Alert
+                      message={
+                        task.status === LaboratoryTaskStatus.WaitingCustomerResponse
+                          ? "Chờ khách hàng xác nhận"
+                          : "Chế độ đánh giá thử nghiệm"
+                      }
+                      description={
+                        task.status === LaboratoryTaskStatus.WaitingCustomerResponse
+                          ? "Có chỉ tiêu đang chờ KH xác nhận (đổi PP hoặc từ chối TN). QLKT vẫn có thể đánh giá các chỉ tiêu Pending còn lại."
+                          : "QLKT đánh giá từng chỉ tiêu: Chấp nhận, Yêu cầu đổi phương pháp, hoặc Từ chối thử nghiệm."
+                      }
+                      type={
+                        task.status === LaboratoryTaskStatus.WaitingCustomerResponse
+                          ? "warning"
+                          : "info"
+                      }
+                      showIcon
+                      style={{ marginBottom: 16 }}
+                    />
+                  ) : (
+                    <Alert
+                      message="Không có yêu cầu đánh giá"
+                      description="Công việc này đã hoàn thành giai đoạn đánh giá hoặc chưa cần đánh giá."
+                      type="info"
+                      showIcon
+                      style={{ marginBottom: 16 }}
+                    />
+                  )}
+                  <EvaluationIndicatorTable
+                    indicators={task.indicators || []}
+                    methods={methods}
+                    taskId={task.id}
+                    canEvaluate={
+                      canApproveResult &&
+                      (task.status === LaboratoryTaskStatus.UnderEvaluation ||
+                        task.status === LaboratoryTaskStatus.WaitingCustomerResponse)
+                    }
+                    loading={loading}
+                    onEvaluationComplete={reloadData}
+                  />
+                </>
+              ),
+            },
+            {
+              key: "samples",
+              label: `Danh sách mẫu (${sampleList.length})`,
+              children: (
+                <Collapse
+                  defaultActiveKey={sampleList.map((s) => s.sampleId)}
+                  expandIcon={({ isActive }) => (
+                    <CaretRightOutlined rotate={isActive ? 90 : 0} />
+                  )}
+                  items={collapseItems}
+                />
+              ),
+            },
+          ]}
+        />
+      </Card>
 
       {/* Supporter Modal */}
       <SupporterModal
@@ -1271,6 +1466,19 @@ const TaskManagementDetail: React.FC = () => {
         taskId={task.id}
         currentSupporters={task.supporters || []}
         onSuccess={reloadData}
+      />
+
+      {/* Note Modal */}
+      <NoteModal
+        open={noteModal.visible}
+        onClose={() => setNoteModal({ visible: false, selectedIndicatorIds: [], allIndicatorIds: [], sampleId: "", initialFreeTextNote: "", selectedIndicatorsMasterData: [] })}
+        selectedIndicatorIds={noteModal.selectedIndicatorIds}
+        allIndicatorIds={noteModal.allIndicatorIds}
+        onSave={handleSaveNote}
+        loading={actionLoading}
+        title={noteModal.selectedIndicatorIds.length > 1 ? `Ghi chú cho ${noteModal.selectedIndicatorIds.length} chỉ tiêu` : "Ghi chú"}
+        initialFreeTextNote={noteModal.initialFreeTextNote}
+        selectedIndicatorsMasterData={noteModal.selectedIndicatorsMasterData}
       />
 
       {/* Bulk Reject Modal */}
@@ -1302,15 +1510,6 @@ const TaskManagementDetail: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-
-      {/* Send to Quality Modal */}
-      <SendToQualityModal
-        open={sendToQualityModalOpen}
-        onClose={() => setSendToQualityModalOpen(false)}
-        taskId={task.id}
-        indicators={task.indicators || []}
-        onSuccess={reloadData}
-      />
 
       {/* Reassign Confirmation Modal */}
       <Modal
@@ -1344,7 +1543,7 @@ const TaskManagementDetail: React.FC = () => {
               }}
             >
               <div>
-                <Text strong>{item.indicatorName}</Text>
+                <IndicatorName name={item.indicatorName} formattedName={item.indicatorFormattedName} style={{ fontWeight: 600 }} />
               </div>
               <div style={{ marginTop: 4 }}>
                 <Text type="secondary">KTV hiện tại: </Text>

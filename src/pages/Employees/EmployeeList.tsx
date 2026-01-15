@@ -15,7 +15,7 @@ import {
   SearchOutlined,
   ReloadOutlined,
   TeamOutlined,
-} from "@ant-design/icons";
+} from "../../components/common/Icon";
 import { useEmployeeList, ROLE_OPTIONS } from "./hooks";
 import { EmployeeFormModal, PasswordSentModal } from "./components";
 
@@ -93,9 +93,7 @@ const EmployeeList: React.FC = () => {
         }
         extra={
           <Space>
-            <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
-              Làm mới
-            </Button>
+            <Button icon={<ReloadOutlined />} onClick={handleRefresh} />
             <Button
               type="primary"
               icon={<PlusOutlined />}

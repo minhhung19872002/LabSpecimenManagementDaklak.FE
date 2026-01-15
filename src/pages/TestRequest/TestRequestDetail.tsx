@@ -325,6 +325,7 @@ const TestRequestDetail: React.FC = () => {
         "Bạn có chắc chắn muốn xác nhận đã bàn giao kết quả cho khách hàng?",
       okText: "Xác nhận",
       cancelText: "Hủy",
+      centered: true,
       onOk: async () => {
         setConfirmingDelivery(true);
         try {

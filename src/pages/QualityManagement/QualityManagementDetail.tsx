@@ -21,7 +21,7 @@ import {
   CheckCircleOutlined,
   CheckOutlined,
   CloseOutlined,
-} from "@ant-design/icons";
+} from "../../components/common/Icon";
 import { qualityManagementService } from "../../services/qualityManagementService";
 import { formatDate } from "../../utils/formatters";
 import {

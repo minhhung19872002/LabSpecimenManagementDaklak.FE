@@ -1,9 +1,42 @@
 import { Button, Space, Tag, Tooltip, Popconfirm } from "antd";
-import { EditOutlined, DeleteOutlined, StopOutlined, CheckCircleOutlined } from "@ant-design/icons";
+import { EditOutlined, DeleteOutlined, StopOutlined, CheckCircleOutlined } from "../../../../components/common/Icon";
+import { IndicatorName } from "../../../../components/common";
 import type { ColumnsType } from "antd/es/table";
 import { GroupedStandardData, StandardIndicatorDto } from "../types";
 
 export const DEFAULT_PAGE_SIZE = 50;
+
+// Comparison operators for single limit
+export const COMPARISON_OPERATORS = [
+  { value: "≤", label: "≤" },
+  { value: "≥", label: "≥" },
+  { value: "<", label: "<" },
+  { value: ">", label: ">" },
+  { value: "=", label: "=" },
+  { value: "range", label: "Khoảng" },
+];
+
+// Operators for lower bound (range)
+export const LOWER_OPERATORS = [
+  { value: ">", label: ">" },
+  { value: "≥", label: "≥" },
+];
+
+// Operators for upper bound (range)
+export const UPPER_OPERATORS = [
+  { value: "<", label: "<" },
+  { value: "≤", label: "≤" },
+];
+
+// Helper function to convert operator symbols for display
+export const convertOperatorSymbol = (op?: string): string => {
+  if (!op) return "";
+  switch (op) {
+    case "<=": return "≤";
+    case ">=": return "≥";
+    default: return op;
+  }
+};
 
 // Columns cho bảng tiêu chuẩn (group level)
 export const getStandardColumns = (
@@ -102,12 +135,15 @@ export const getIndicatorColumns = (
     dataIndex: "indicatorName",
     key: "indicatorName",
     width: 200,
+    render: (_, record) => <IndicatorName name={record.indicatorName} formattedName={record.indicatorFormattedName} />,
   },
   {
     title: "Tên phương pháp",
-    dataIndex: "testMethodName",
     key: "testMethodName",
     width: 200,
+    render: (_, record) => (
+      <IndicatorName name={record.testMethodName} formattedName={record.testMethodFormattedName} />
+    ),
   },
   {
     title: "Đơn vị",
@@ -118,14 +154,21 @@ export const getIndicatorColumns = (
   {
     title: "Giới hạn",
     key: "limit",
-    width: 150,
+    width: 180,
     render: (_, record) => {
-      // If allowedLimit is null, empty, or "0", just show "0" without operator
+      // Range case: both lowerLimit and upperLimit have values
+      if (record.lowerLimit && record.upperLimit) {
+        const lower = convertOperatorSymbol(record.lowerOperator) || ">";
+        const upper = convertOperatorSymbol(record.upperOperator) || "<";
+        return `${lower} ${record.lowerLimit} và ${upper} ${record.upperLimit}`;
+      }
+      // Single limit case
       if (!record.allowedLimit || record.allowedLimit === "0") {
         return "0";
       }
-      // Otherwise, merge with comparison operator
-      return `${record.comparisonOperator || ""} ${record.allowedLimit}`.trim();
+      // Convert operator symbol for display
+      const op = convertOperatorSymbol(record.comparisonOperator);
+      return `${op} ${record.allowedLimit}`.trim();
     },
   },
   {

@@ -10,7 +10,7 @@ import {
   Typography,
 } from "antd";
 import StatusTag from "../../../components/common/StatusTag";
-import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
+import { CheckOutlined, CloseOutlined } from "../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import { formatDate } from "../../../utils/formatters";
 import {
@@ -21,6 +21,7 @@ import {
   QualityManagementStatus,
 } from "../../../types/qualityManagement";
 import IndicatorImageCell from "../../../components/common/IndicatorImageCell";
+import { IndicatorName } from "../../../components/common";
 
 const { Panel } = Collapse;
 const { Text } = Typography;
@@ -159,6 +160,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         key: "indicatorName",
         width: 200,
         ellipsis: true,
+        render: (value: string, record) => value ? <IndicatorName name={value} formattedName={record.indicatorFormattedName} /> : "-",
       },
       {
         title: "Phương pháp",
@@ -166,6 +168,9 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         key: "methodName",
         width: 150,
         ellipsis: true,
+        render: (value: string, record) => value ? (
+          <IndicatorName name={value} formattedName={record.methodFormattedName} />
+        ) : "-",
       },
       {
         title: "ĐVT",

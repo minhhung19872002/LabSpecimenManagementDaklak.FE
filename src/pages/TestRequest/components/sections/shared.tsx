@@ -1,6 +1,6 @@
 import React from "react";
 import { Space, Typography } from "antd";
-import { CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
+import { CheckCircleOutlined, CloseCircleOutlined } from "../../../../components/common/Icon";
 import {
   TestRequestStatus,
   TestRequestStatusLabels,

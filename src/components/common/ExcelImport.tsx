@@ -21,7 +21,7 @@ import {
   CheckCircleOutlined,
   WarningOutlined,
   ReloadOutlined,
-} from '@ant-design/icons';
+} from './Icon';
 import * as XLSX from 'xlsx';
 
 const { Text, Title } = Typography;

@@ -14,7 +14,7 @@ import {
   ExperimentOutlined,
   SearchOutlined,
   ReloadOutlined,
-} from "@ant-design/icons";
+} from "../../components/common/Icon";
 import { LaboratoryTaskStatus } from "../../types/laboratoryTask";
 import { useTaskManagementList } from "./hooks";
 
@@ -113,9 +113,7 @@ const TaskManagementList: React.FC = () => {
           </Space>
         }
         extra={
-          <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
-            Làm mới
-          </Button>
+          <Button icon={<ReloadOutlined />} onClick={handleRefresh} />
         }
       >
         {/* Search & Filter */}

@@ -93,6 +93,14 @@ const TestRequestForm: React.FC = () => {
     setGroupSelectorVisible,
     groupSearchText,
     setGroupSearchText,
+    currentSampleSpecimenTypeId,
+    setCurrentSampleSpecimenTypeId,
+    currentSampleSpecimenTypeName,
+    setCurrentSampleSpecimenTypeName,
+    specimenTypeIndicatorIds,
+    setSpecimenTypeIndicatorIds,
+    specimenTypeFilterActive,
+    setSpecimenTypeFilterActive,
     selectedIndicatorDates,
     setSelectedIndicatorDates,
     checkedIndicators,
@@ -178,6 +186,10 @@ const TestRequestForm: React.FC = () => {
     setIndicatorModalVisible,
     setSelectedGroupFilter,
     indicatorMethodsMap,
+    setCurrentSampleSpecimenTypeId,
+    setCurrentSampleSpecimenTypeName,
+    setSpecimenTypeIndicatorIds,
+    setSpecimenTypeFilterActive,
     laboratories,
     selectedLaboratoryId,
     setSelectedLaboratoryId,
@@ -229,6 +241,7 @@ const TestRequestForm: React.FC = () => {
           }
         }}
         initialValues={{
+          contractDate: dayjs(),
           requestDate: dayjs(),
           status: TestRequestStatus.Pending,
           resultLanguage: ResultLanguage.Vietnamese,
@@ -385,6 +398,10 @@ const TestRequestForm: React.FC = () => {
         setIndicatorLaboratoryMap={setIndicatorLaboratoryMap}
         expandedLabGroups={expandedLabGroups}
         setExpandedLabGroups={setExpandedLabGroups}
+        currentSampleSpecimenTypeName={currentSampleSpecimenTypeName}
+        specimenTypeIndicatorIds={specimenTypeIndicatorIds}
+        specimenTypeFilterActive={specimenTypeFilterActive}
+        setSpecimenTypeFilterActive={setSpecimenTypeFilterActive}
       />
 
       {/* Laboratory Selection Modal */}

@@ -150,6 +150,7 @@ export const useTaskManagementList = () => {
         okText: "Xóa",
         okType: "danger",
         cancelText: "Hủy",
+        centered: true,
         onOk: async () => {
           try {
             await laboratoryTaskService.delete(id);

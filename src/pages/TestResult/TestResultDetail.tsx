@@ -1,14 +1,33 @@
-import React, { useEffect, useState } from 'react';
-import { Card, Descriptions, Button, Space, Spin, Tag, message, Modal, Input, Divider, Alert } from 'antd';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { ArrowLeftOutlined, EditOutlined, SendOutlined, CheckCircleOutlined, CloseCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import { testResultService } from '../../services/testResultService';
-import { TestResultDto, ResultApprovalStatus } from '../../types/testResult';
-import dayjs from 'dayjs';
-import './TestResultDetail.css';
-import { PATH_ROUTES } from '../../constants';
-import StatusTag from '../../components/common/StatusTag';
+import React, { useEffect, useState } from "react";
+import {
+  Card,
+  Descriptions,
+  Button,
+  Space,
+  Spin,
+  Tag,
+  message,
+  Modal,
+  Input,
+  Divider,
+  Alert,
+} from "antd";
+import { useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import {
+  ArrowLeftOutlined,
+  EditOutlined,
+  SendOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  ExclamationCircleOutlined,
+} from "../../components/common/Icon";
+import { testResultService } from "../../services/testResultService";
+import { TestResultDto, ResultApprovalStatus } from "../../types/testResult";
+import dayjs from "dayjs";
+import "./TestResultDetail.css";
+import { PATH_ROUTES } from "../../constants";
+import StatusTag from "../../components/common/StatusTag";
 
 const { TextArea } = Input;
 
@@ -18,7 +37,7 @@ const TestResultDetail: React.FC = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
   const [approveModalVisible, setApproveModalVisible] = useState(false);
-  const [comment, setComment] = useState('');
+  const [comment, setComment] = useState("");
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
@@ -35,8 +54,10 @@ const TestResultDetail: React.FC = () => {
       const data = await testResultService.get(testResultId);
       setTestResult(data);
     } catch (error) {
-      message.error('Không thể tải thông tin kết quả. Vui lòng kiểm tra kết nối API.');
-      console.error('Failed to fetch test result:', error);
+      message.error(
+        "Không thể tải thông tin kết quả. Vui lòng kiểm tra kết nối API."
+      );
+      console.error("Failed to fetch test result:", error);
     } finally {
       setLoading(false);
     }
@@ -48,20 +69,21 @@ const TestResultDetail: React.FC = () => {
     if (!id || !testResult) return;
 
     Modal.confirm({
-      title: 'Xác nhận gửi duyệt',
+      title: "Xác nhận gửi duyệt",
       icon: <ExclamationCircleOutlined />,
-      content: 'Bạn có chắc chắn muốn gửi kết quả này để duyệt?',
-      okText: 'Gửi duyệt',
-      cancelText: 'Hủy',
+      content: "Bạn có chắc chắn muốn gửi kết quả này để duyệt?",
+      okText: "Gửi duyệt",
+      cancelText: "Hủy",
+      centered: true,
       onOk: async () => {
         setActionLoading(true);
         try {
           const result = await testResultService.submitForReview(id);
           setTestResult(result);
-          message.success('Đã gửi kết quả để duyệt!');
+          message.success("Đã gửi kết quả để duyệt!");
         } catch (error) {
-          message.error('Không thể gửi kết quả để duyệt. Vui lòng thử lại.');
-          console.error('Failed to submit for review:', error);
+          message.error("Không thể gửi kết quả để duyệt. Vui lòng thử lại.");
+          console.error("Failed to submit for review:", error);
         } finally {
           setActionLoading(false);
         }
@@ -74,14 +96,19 @@ const TestResultDetail: React.FC = () => {
 
     setActionLoading(true);
     try {
-      const result = await testResultService.review(id, { isApproved, comment });
+      const result = await testResultService.review(id, {
+        isApproved,
+        comment,
+      });
       setTestResult(result);
-      message.success(isApproved ? 'Đã duyệt kết quả (Bước 1)!' : 'Đã từ chối kết quả!');
+      message.success(
+        isApproved ? "Đã duyệt kết quả (Bước 1)!" : "Đã từ chối kết quả!"
+      );
       setReviewModalVisible(false);
-      setComment('');
+      setComment("");
     } catch (error) {
-      message.error('Không thể thực hiện duyệt. Vui lòng thử lại.');
-      console.error('Failed to review:', error);
+      message.error("Không thể thực hiện duyệt. Vui lòng thử lại.");
+      console.error("Failed to review:", error);
     } finally {
       setActionLoading(false);
     }
@@ -92,14 +119,19 @@ const TestResultDetail: React.FC = () => {
 
     setActionLoading(true);
     try {
-      const result = await testResultService.approve(id, { isApproved, comment });
+      const result = await testResultService.approve(id, {
+        isApproved,
+        comment,
+      });
       setTestResult(result);
-      message.success(isApproved ? 'Đã phê duyệt kết quả (Bước 2)!' : 'Đã từ chối kết quả!');
+      message.success(
+        isApproved ? "Đã phê duyệt kết quả (Bước 2)!" : "Đã từ chối kết quả!"
+      );
       setApproveModalVisible(false);
-      setComment('');
+      setComment("");
     } catch (error) {
-      message.error('Không thể thực hiện phê duyệt. Vui lòng thử lại.');
-      console.error('Failed to approve:', error);
+      message.error("Không thể thực hiện phê duyệt. Vui lòng thử lại.");
+      console.error("Failed to approve:", error);
     } finally {
       setActionLoading(false);
     }
@@ -107,23 +139,35 @@ const TestResultDetail: React.FC = () => {
 
   const getApprovalStatusColor = (status: ResultApprovalStatus): string => {
     switch (status) {
-      case ResultApprovalStatus.Draft: return 'default';
-      case ResultApprovalStatus.Submitted: return 'blue';
-      case ResultApprovalStatus.Step1Reviewed: return 'cyan';
-      case ResultApprovalStatus.Step2Approved: return 'green';
-      case ResultApprovalStatus.Rejected: return 'red';
-      default: return 'default';
+      case ResultApprovalStatus.Draft:
+        return "default";
+      case ResultApprovalStatus.Submitted:
+        return "blue";
+      case ResultApprovalStatus.Step1Reviewed:
+        return "cyan";
+      case ResultApprovalStatus.Step2Approved:
+        return "green";
+      case ResultApprovalStatus.Rejected:
+        return "red";
+      default:
+        return "default";
     }
   };
 
   const getApprovalStatusText = (status: ResultApprovalStatus): string => {
     switch (status) {
-      case ResultApprovalStatus.Draft: return 'Nháp';
-      case ResultApprovalStatus.Submitted: return 'Chờ duyệt B1';
-      case ResultApprovalStatus.Step1Reviewed: return 'Chờ duyệt B2';
-      case ResultApprovalStatus.Step2Approved: return 'Đã phê duyệt';
-      case ResultApprovalStatus.Rejected: return 'Từ chối';
-      default: return '';
+      case ResultApprovalStatus.Draft:
+        return "Nháp";
+      case ResultApprovalStatus.Submitted:
+        return "Chờ duyệt B1";
+      case ResultApprovalStatus.Step1Reviewed:
+        return "Chờ duyệt B2";
+      case ResultApprovalStatus.Step2Approved:
+        return "Đã phê duyệt";
+      case ResultApprovalStatus.Rejected:
+        return "Từ chối";
+      default:
+        return "";
     }
   };
 
@@ -140,17 +184,47 @@ const TestResultDetail: React.FC = () => {
         {/* Workflow Progress */}
         <Alert
           message={
-            <Space split={<span style={{ color: '#ccc' }}> → </span>}>
-              <Tag color={approvalStatus === ResultApprovalStatus.Draft ? 'processing' : approvalStatus > ResultApprovalStatus.Draft ? 'success' : 'default'}>
+            <Space split={<span style={{ color: "#ccc" }}> → </span>}>
+              <Tag
+                color={
+                  approvalStatus === ResultApprovalStatus.Draft
+                    ? "processing"
+                    : approvalStatus > ResultApprovalStatus.Draft
+                    ? "success"
+                    : "default"
+                }
+              >
                 1. Nháp
               </Tag>
-              <Tag color={approvalStatus === ResultApprovalStatus.Submitted ? 'processing' : approvalStatus > ResultApprovalStatus.Submitted ? 'success' : 'default'}>
+              <Tag
+                color={
+                  approvalStatus === ResultApprovalStatus.Submitted
+                    ? "processing"
+                    : approvalStatus > ResultApprovalStatus.Submitted
+                    ? "success"
+                    : "default"
+                }
+              >
                 2. Chờ duyệt B1
               </Tag>
-              <Tag color={approvalStatus === ResultApprovalStatus.Step1Reviewed ? 'processing' : approvalStatus > ResultApprovalStatus.Step1Reviewed ? 'success' : 'default'}>
+              <Tag
+                color={
+                  approvalStatus === ResultApprovalStatus.Step1Reviewed
+                    ? "processing"
+                    : approvalStatus > ResultApprovalStatus.Step1Reviewed
+                    ? "success"
+                    : "default"
+                }
+              >
                 3. Chờ duyệt B2
               </Tag>
-              <Tag color={approvalStatus === ResultApprovalStatus.Step2Approved ? 'success' : 'default'}>
+              <Tag
+                color={
+                  approvalStatus === ResultApprovalStatus.Step2Approved
+                    ? "success"
+                    : "default"
+                }
+              >
                 4. Hoàn thành
               </Tag>
             </Space>
@@ -180,7 +254,7 @@ const TestResultDetail: React.FC = () => {
               icon={<CheckCircleOutlined />}
               onClick={() => setReviewModalVisible(true)}
               loading={actionLoading}
-              style={{ backgroundColor: '#13c2c2' }}
+              style={{ backgroundColor: "#13c2c2" }}
             >
               Duyệt B1 (Trưởng phòng)
             </Button>
@@ -193,7 +267,7 @@ const TestResultDetail: React.FC = () => {
               icon={<CheckCircleOutlined />}
               onClick={() => setApproveModalVisible(true)}
               loading={actionLoading}
-              style={{ backgroundColor: '#52c41a' }}
+              style={{ backgroundColor: "#52c41a" }}
             >
               Duyệt B2 (Giám đốc)
             </Button>
@@ -201,13 +275,13 @@ const TestResultDetail: React.FC = () => {
 
           {/* Final status */}
           {approvalStatus === ResultApprovalStatus.Step2Approved && (
-            <Tag color="success" style={{ padding: '8px 16px', fontSize: 14 }}>
+            <Tag color="success" style={{ padding: "8px 16px", fontSize: 14 }}>
               <CheckCircleOutlined /> Đã phê duyệt hoàn tất
             </Tag>
           )}
 
           {approvalStatus === ResultApprovalStatus.Rejected && (
-            <Tag color="error" style={{ padding: '8px 16px', fontSize: 14 }}>
+            <Tag color="error" style={{ padding: "8px 16px", fontSize: 14 }}>
               <CloseCircleOutlined /> Đã bị từ chối - Cần chỉnh sửa lại
             </Tag>
           )}
@@ -231,15 +305,22 @@ const TestResultDetail: React.FC = () => {
   return (
     <div className="test-result-detail">
       <Card
-        title={t('testResult.viewTestResult')}
+        title={t("testResult.viewTestResult")}
         extra={
           <Space>
-            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(PATH_ROUTES.testResults.index)}>
-              {t('common.back')}
+            <Button
+              icon={<ArrowLeftOutlined />}
+              onClick={() => navigate(PATH_ROUTES.testResults.index)}
+            >
+              {t("common.back")}
             </Button>
             {testResult.approvalStatus === ResultApprovalStatus.Draft && (
-              <Button type="primary" icon={<EditOutlined />} onClick={() => navigate(PATH_ROUTES.testResults.edit(id!))}>
-                {t('common.edit')}
+              <Button
+                type="primary"
+                icon={<EditOutlined />}
+                onClick={() => navigate(PATH_ROUTES.testResults.edit(id!))}
+              >
+                {t("common.edit")}
               </Button>
             )}
           </Space>
@@ -247,45 +328,71 @@ const TestResultDetail: React.FC = () => {
       >
         {/* Thông tin kết quả thử nghiệm */}
         <Descriptions bordered column={2} title="Thông tin kết quả">
-          <Descriptions.Item label={t('testResult.testCode')}>{testResult.testCode}</Descriptions.Item>
-          <Descriptions.Item label={t('testResult.testName')}>{testResult.testName}</Descriptions.Item>
-          <Descriptions.Item label={t('testResult.parameter')}>{testResult.parameter}</Descriptions.Item>
-          <Descriptions.Item label={t('testResult.value')}>{testResult.value}</Descriptions.Item>
-          <Descriptions.Item label={t('testResult.unit')}>{testResult.unit}</Descriptions.Item>
-          <Descriptions.Item label={t('testResult.isPass')}>
+          <Descriptions.Item label={t("testResult.testCode")}>
+            {testResult.testCode}
+          </Descriptions.Item>
+          <Descriptions.Item label={t("testResult.testName")}>
+            {testResult.testName}
+          </Descriptions.Item>
+          <Descriptions.Item label={t("testResult.parameter")}>
+            {testResult.parameter}
+          </Descriptions.Item>
+          <Descriptions.Item label={t("testResult.value")}>
+            {testResult.value}
+          </Descriptions.Item>
+          <Descriptions.Item label={t("testResult.unit")}>
+            {testResult.unit}
+          </Descriptions.Item>
+          <Descriptions.Item label={t("testResult.isPass")}>
             {testResult.isPass !== undefined && testResult.isPass !== null ? (
               testResult.isPass ? (
-                <Tag color="green">{t('testResult.pass')}</Tag>
+                <Tag color="green">{t("testResult.pass")}</Tag>
               ) : (
-                <Tag color="red">{t('testResult.fail')}</Tag>
+                <Tag color="red">{t("testResult.fail")}</Tag>
               )
-            ) : '-'}
+            ) : (
+              "-"
+            )}
           </Descriptions.Item>
-          <Descriptions.Item label={t('testResult.lowerLimit')}>
-            {testResult.lowerLimit !== undefined && testResult.lowerLimit !== null ? testResult.lowerLimit : '-'}
+          <Descriptions.Item label={t("testResult.lowerLimit")}>
+            {testResult.lowerLimit !== undefined &&
+            testResult.lowerLimit !== null
+              ? testResult.lowerLimit
+              : "-"}
           </Descriptions.Item>
-          <Descriptions.Item label={t('testResult.upperLimit')}>
-            {testResult.upperLimit !== undefined && testResult.upperLimit !== null ? testResult.upperLimit : '-'}
+          <Descriptions.Item label={t("testResult.upperLimit")}>
+            {testResult.upperLimit !== undefined &&
+            testResult.upperLimit !== null
+              ? testResult.upperLimit
+              : "-"}
           </Descriptions.Item>
-          <Descriptions.Item label={t('testResult.approvalStatus.label')}>
-            <StatusTag color={getApprovalStatusColor(testResult.approvalStatus)}>
+          <Descriptions.Item label={t("testResult.approvalStatus.label")}>
+            <StatusTag
+              color={getApprovalStatusColor(testResult.approvalStatus)}
+            >
               {getApprovalStatusText(testResult.approvalStatus)}
             </StatusTag>
           </Descriptions.Item>
           <Descriptions.Item label="Người nhập">
-            {testResult.enteredByName || '-'}
+            {testResult.enteredByName || "-"}
           </Descriptions.Item>
-          <Descriptions.Item label={t('testResult.entryDate')}>
-            {testResult.entryDate ? dayjs(testResult.entryDate).format('DD/MM/YYYY HH:mm') : '-'}
+          <Descriptions.Item label={t("testResult.entryDate")}>
+            {testResult.entryDate
+              ? dayjs(testResult.entryDate).format("DD/MM/YYYY HH:mm")
+              : "-"}
           </Descriptions.Item>
-          <Descriptions.Item label={t('testResult.notes')} span={2}>
-            {testResult.notes || '-'}
+          <Descriptions.Item label={t("testResult.notes")} span={2}>
+            {testResult.notes || "-"}
           </Descriptions.Item>
-          <Descriptions.Item label={t('common.createdAt')}>
-            {dayjs(testResult.creationTime).format('DD/MM/YYYY HH:mm')}
+          <Descriptions.Item label={t("common.createdAt")}>
+            {dayjs(testResult.creationTime).format("DD/MM/YYYY HH:mm")}
           </Descriptions.Item>
-          <Descriptions.Item label={t('common.lastModified')}>
-            {testResult.lastModificationTime ? dayjs(testResult.lastModificationTime).format('DD/MM/YYYY HH:mm') : '-'}
+          <Descriptions.Item label={t("common.lastModified")}>
+            {testResult.lastModificationTime
+              ? dayjs(testResult.lastModificationTime).format(
+                  "DD/MM/YYYY HH:mm"
+                )
+              : "-"}
           </Descriptions.Item>
         </Descriptions>
 
@@ -294,22 +401,38 @@ const TestResultDetail: React.FC = () => {
           size="small"
           title={
             <Space>
-              <CheckCircleOutlined style={{ color: testResult.reviewerName ? '#13c2c2' : '#d9d9d9' }} />
+              <CheckCircleOutlined
+                style={{
+                  color: testResult.reviewerName ? "#13c2c2" : "#d9d9d9",
+                }}
+              />
               Duyệt Bước 1 - Trưởng phòng
             </Space>
           }
           style={{ marginTop: 16 }}
-          styles={{ header: { backgroundColor: testResult.reviewerName ? '#e6fffb' : '#fafafa' } }}
+          styles={{
+            header: {
+              backgroundColor: testResult.reviewerName ? "#e6fffb" : "#fafafa",
+            },
+          }}
         >
           <Descriptions bordered column={2} size="small">
             <Descriptions.Item label="Người duyệt">
-              {testResult.reviewerName || <span style={{ color: '#999' }}>Chưa duyệt</span>}
+              {testResult.reviewerName || (
+                <span style={{ color: "#999" }}>Chưa duyệt</span>
+              )}
             </Descriptions.Item>
             <Descriptions.Item label="Ngày duyệt">
-              {testResult.reviewDate ? dayjs(testResult.reviewDate).format('DD/MM/YYYY HH:mm') : <span style={{ color: '#999' }}>-</span>}
+              {testResult.reviewDate ? (
+                dayjs(testResult.reviewDate).format("DD/MM/YYYY HH:mm")
+              ) : (
+                <span style={{ color: "#999" }}>-</span>
+              )}
             </Descriptions.Item>
             <Descriptions.Item label="Nhận xét" span={2}>
-              {testResult.reviewComment || <span style={{ color: '#999' }}>Không có nhận xét</span>}
+              {testResult.reviewComment || (
+                <span style={{ color: "#999" }}>Không có nhận xét</span>
+              )}
             </Descriptions.Item>
           </Descriptions>
         </Card>
@@ -319,22 +442,38 @@ const TestResultDetail: React.FC = () => {
           size="small"
           title={
             <Space>
-              <CheckCircleOutlined style={{ color: testResult.approverName ? '#52c41a' : '#d9d9d9' }} />
+              <CheckCircleOutlined
+                style={{
+                  color: testResult.approverName ? "#52c41a" : "#d9d9d9",
+                }}
+              />
               Duyệt Bước 2 - Giám đốc
             </Space>
           }
           style={{ marginTop: 16 }}
-          styles={{ header: { backgroundColor: testResult.approverName ? '#f6ffed' : '#fafafa' } }}
+          styles={{
+            header: {
+              backgroundColor: testResult.approverName ? "#f6ffed" : "#fafafa",
+            },
+          }}
         >
           <Descriptions bordered column={2} size="small">
             <Descriptions.Item label="Người phê duyệt">
-              {testResult.approverName || <span style={{ color: '#999' }}>Chưa phê duyệt</span>}
+              {testResult.approverName || (
+                <span style={{ color: "#999" }}>Chưa phê duyệt</span>
+              )}
             </Descriptions.Item>
             <Descriptions.Item label="Ngày phê duyệt">
-              {testResult.approvalDate ? dayjs(testResult.approvalDate).format('DD/MM/YYYY HH:mm') : <span style={{ color: '#999' }}>-</span>}
+              {testResult.approvalDate ? (
+                dayjs(testResult.approvalDate).format("DD/MM/YYYY HH:mm")
+              ) : (
+                <span style={{ color: "#999" }}>-</span>
+              )}
             </Descriptions.Item>
             <Descriptions.Item label="Nhận xét" span={2}>
-              {testResult.approvalComment || <span style={{ color: '#999' }}>Không có nhận xét</span>}
+              {testResult.approvalComment || (
+                <span style={{ color: "#999" }}>Không có nhận xét</span>
+              )}
             </Descriptions.Item>
           </Descriptions>
         </Card>
@@ -347,10 +486,19 @@ const TestResultDetail: React.FC = () => {
       <Modal
         title="Duyệt kết quả (Bước 1 - Trưởng phòng)"
         open={reviewModalVisible}
-        onCancel={() => { setReviewModalVisible(false); setComment(''); }}
+        onCancel={() => {
+          setReviewModalVisible(false);
+          setComment("");
+        }}
         centered
         footer={[
-          <Button key="cancel" onClick={() => { setReviewModalVisible(false); setComment(''); }}>
+          <Button
+            key="cancel"
+            onClick={() => {
+              setReviewModalVisible(false);
+              setComment("");
+            }}
+          >
             Hủy
           </Button>,
           <Button
@@ -373,9 +521,16 @@ const TestResultDetail: React.FC = () => {
           </Button>,
         ]}
       >
-        <p>Bạn đang duyệt kết quả: <strong>{testResult.testCode}</strong></p>
+        <p>
+          Bạn đang duyệt kết quả: <strong>{testResult.testCode}</strong>
+        </p>
         <p>Chỉ tiêu: {testResult.parameter}</p>
-        <p>Kết quả: <strong>{testResult.value} {testResult.unit}</strong></p>
+        <p>
+          Kết quả:{" "}
+          <strong>
+            {testResult.value} {testResult.unit}
+          </strong>
+        </p>
         <Divider />
         <p>Nhận xét (tùy chọn):</p>
         <TextArea
@@ -390,10 +545,19 @@ const TestResultDetail: React.FC = () => {
       <Modal
         title="Phê duyệt kết quả (Bước 2 - Giám đốc)"
         open={approveModalVisible}
-        onCancel={() => { setApproveModalVisible(false); setComment(''); }}
+        onCancel={() => {
+          setApproveModalVisible(false);
+          setComment("");
+        }}
         centered
         footer={[
-          <Button key="cancel" onClick={() => { setApproveModalVisible(false); setComment(''); }}>
+          <Button
+            key="cancel"
+            onClick={() => {
+              setApproveModalVisible(false);
+              setComment("");
+            }}
+          >
             Hủy
           </Button>,
           <Button
@@ -410,16 +574,23 @@ const TestResultDetail: React.FC = () => {
             type="primary"
             icon={<CheckCircleOutlined />}
             loading={actionLoading}
-            style={{ backgroundColor: '#52c41a' }}
+            style={{ backgroundColor: "#52c41a" }}
             onClick={() => handleApprove(true)}
           >
             Phê duyệt
           </Button>,
         ]}
       >
-        <p>Bạn đang phê duyệt kết quả: <strong>{testResult.testCode}</strong></p>
+        <p>
+          Bạn đang phê duyệt kết quả: <strong>{testResult.testCode}</strong>
+        </p>
         <p>Chỉ tiêu: {testResult.parameter}</p>
-        <p>Kết quả: <strong>{testResult.value} {testResult.unit}</strong></p>
+        <p>
+          Kết quả:{" "}
+          <strong>
+            {testResult.value} {testResult.unit}
+          </strong>
+        </p>
         {testResult.reviewComment && (
           <Alert
             message="Nhận xét từ Trưởng phòng"

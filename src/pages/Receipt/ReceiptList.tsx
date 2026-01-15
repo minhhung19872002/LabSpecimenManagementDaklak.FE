@@ -10,7 +10,7 @@ import {
   message,
   Space,
 } from 'antd';
-import { ReloadOutlined, DownloadOutlined } from '@ant-design/icons';
+import { ReloadOutlined, DownloadOutlined } from '../../components/common/Icon';
 import { useNavigate } from 'react-router-dom';
 import type { TablePaginationConfig, SorterResult } from 'antd/es/table/interface';
 import { receiptService } from '../../services/receiptService';
@@ -148,9 +148,7 @@ const ReceiptList: React.FC = () => {
           >
             Xuất phiếu thu
           </Button>
-          <Button icon={<ReloadOutlined />} onClick={fetchData}>
-            Làm mới
-          </Button>
+          <Button icon={<ReloadOutlined />} onClick={fetchData} />
         </Space>
       }
     >

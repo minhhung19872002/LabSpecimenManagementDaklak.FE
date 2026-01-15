@@ -1,5 +1,5 @@
 import { Button, Tag, Space, Avatar, Tooltip, Typography } from "antd";
-import { UserOutlined, EyeOutlined } from "@ant-design/icons";
+import { UserOutlined, EyeOutlined } from "../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { AuditLogDto } from "../../../services/auditLogService";

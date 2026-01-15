@@ -7,7 +7,10 @@ import { formatDate } from "../../../utils/formatters";
 const { Text, Link } = Typography;
 
 interface LabTechnicianColumnsOptions {
-  onOpenInNewTab: (record: LabTechnicianPendingTaskDto, e: React.MouseEvent) => void;
+  onOpenInNewTab: (
+    record: LabTechnicianPendingTaskDto,
+    e: React.MouseEvent
+  ) => void;
 }
 
 const getTaskNameType = (
@@ -27,11 +30,7 @@ export const getLabTechnicianColumns = (
     dataIndex: "contractNumber",
     key: "contractNumber",
     render: (text: string, record: LabTechnicianPendingTaskDto) => (
-      <Link
-        href={`/testing/${record.id}`}
-        target="_blank"
-        onClick={(e) => options.onOpenInNewTab(record, e)}
-      >
+      <Link onClick={(e) => options.onOpenInNewTab(record, e)}>
         {text || "-"}
       </Link>
     ),
@@ -41,10 +40,7 @@ export const getLabTechnicianColumns = (
     dataIndex: "taskName",
     key: "taskName",
     render: (text: string, record: LabTechnicianPendingTaskDto) => (
-      <Text
-        type={getTaskNameType(record)}
-        strong
-      >
+      <Text type={getTaskNameType(record)} strong>
         {text}
       </Text>
     ),

@@ -19,7 +19,7 @@ import {
   SyncOutlined,
   SendOutlined,
   StopOutlined,
-} from "@ant-design/icons";
+} from "../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import { formatDate } from "../../../utils/formatters";
 import {
@@ -31,6 +31,7 @@ import {
   IndicatorImageDto,
 } from "../../../types/testing";
 import IndicatorImageCell from "../../../components/common/IndicatorImageCell";
+import { IndicatorName } from "../../../components/common";
 import dayjs from "dayjs";
 
 const { Text } = Typography;
@@ -55,6 +56,8 @@ interface IndicatorEditTableProps {
   onSubmitIndicator?: (indicatorId: string) => void;
   onUploadIndicatorImages?: (indicatorId: string, files: File[]) => Promise<IndicatorImageDto[]>;
   onDeleteIndicatorImage?: (imageId: string) => Promise<void>;
+  /** Callback khi click button "Không TN được" */
+  onShowCannotTestModal?: (indicatorId: string, indicatorName: string) => void;
 }
 
 const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
@@ -71,15 +74,18 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
   onSubmitIndicator,
   onUploadIndicatorImages,
   onDeleteIndicatorImage,
+  onShowCannotTestModal,
 }) => {
   const [editedResults, setEditedResults] = useState<
     Map<string, SaveIndicatorResultDto>
   >(new Map());
 
-  // Track indicator IDs to detect actual changes
-  const indicatorIds = indicators.map((ind) => ind.id).join(",");
+  // Track indicator data to detect actual changes (IDs + testDates)
+  const indicatorDataKey = indicators
+    .map((ind) => `${ind.id}:${ind.testDate || ""}`)
+    .join(",");
 
-  // Initialize edited results from indicators - only when indicator list changes
+  // Initialize edited results from indicators - when indicator list or testDate changes
   useEffect(() => {
     const initialResults = new Map<string, SaveIndicatorResultDto>();
     indicators.forEach((ind) => {
@@ -94,7 +100,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     });
     setEditedResults(initialResults);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [indicatorIds]);
+  }, [indicatorDataKey]);
 
   const handleFieldChange = (
     indicatorId: string,
@@ -203,6 +209,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       [IndicatorTestingStatus.Rejected]: <WarningOutlined />,
       [IndicatorTestingStatus.Done]: <CheckCircleOutlined />,
       [IndicatorTestingStatus.Cancelled]: <StopOutlined />,
+      [IndicatorTestingStatus.CannotTest]: <StopOutlined />,
     };
 
     return (
@@ -243,14 +250,18 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       key: "indicatorName",
       width: 200,
       fixed: "left" as const,
-      render: (value: string) => value || "-",
+      render: (value: string, record) => value ? <IndicatorName name={value} formattedName={record.indicatorFormattedName} /> : "-",
     },
     {
       title: "Phương pháp",
       dataIndex: "methodName",
       key: "method",
       width: 180,
-      render: (value: string) => value || <Text type="secondary">-</Text>,
+      render: (value: string, record) => value ? (
+        <IndicatorName name={value} formattedName={record.methodFormattedName} />
+      ) : (
+        <Text type="secondary">-</Text>
+      ),
     },
     {
       title: "ĐVT",
@@ -267,6 +278,35 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
             placeholder="-"
           />
         );
+      },
+    },
+    {
+      title: "So với",
+      dataIndex: "standardName",
+      key: "standardName",
+      width: 150,
+      render: (value: string | undefined) => (
+        <Tooltip title={value}>
+          <Text ellipsis style={{ maxWidth: 140 }}>
+            {value || <Text type="secondary">-</Text>}
+          </Text>
+        </Tooltip>
+      ),
+    },
+    {
+      title: "Giới hạn",
+      key: "allowedLimit",
+      width: 120,
+      render: (_, record) => {
+        // Hiển thị giới hạn với ký hiệu so sánh nếu có (giống TaskManagement)
+        if (record.comparisonOperator && record.allowedLimit) {
+          return (
+            <Text>
+              {record.comparisonOperator} {record.allowedLimit}
+            </Text>
+          );
+        }
+        return "-";
       },
     },
     {
@@ -466,14 +506,21 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
           hasResult &&
           hasTestDate;
 
-        // Không hiện gì nếu đã Done, PendingApproval, hoặc Cancelled
+        // Không hiện gì nếu đã Done, PendingApproval, Cancelled, hoặc CannotTest
         if (
           status === IndicatorTestingStatus.Done ||
           status === IndicatorTestingStatus.PendingApproval ||
-          status === IndicatorTestingStatus.Cancelled
+          status === IndicatorTestingStatus.Cancelled ||
+          status === IndicatorTestingStatus.CannotTest
         ) {
           return <Text type="secondary">-</Text>;
         }
+
+        // Có thể báo không TN được khi: Todo, Testing, Rejected
+        const canMarkCannotTest =
+          status === IndicatorTestingStatus.Todo ||
+          status === IndicatorTestingStatus.Testing ||
+          status === IndicatorTestingStatus.Rejected;
 
         return (
           <Space size={4}>
@@ -493,12 +540,27 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
                 </Button>
               </Tooltip>
             )}
-            {!hasResult && (
+            {canMarkCannotTest && onShowCannotTestModal && (
+              <Tooltip title="Báo không thể thử nghiệm">
+                <Button
+                  type="text"
+                  size="small"
+                  danger
+                  icon={<StopOutlined />}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onShowCannotTestModal(record.id, record.indicatorName || '');
+                  }}
+                  disabled={submitting}
+                />
+              </Tooltip>
+            )}
+            {!hasResult && !canSubmit && (
               <Text type="secondary" style={{ fontSize: 12 }}>
                 Nhập KQ để gửi
               </Text>
             )}
-            {hasResult && !hasTestDate && (
+            {hasResult && !hasTestDate && !canSubmit && (
               <Text type="secondary" style={{ fontSize: 12 }}>
                 Chọn ngày TN
               </Text>
@@ -510,23 +572,25 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
   ];
 
   // Sort indicators theo thứ tự ưu tiên trạng thái, sau đó theo id
-  // Ưu tiên: Bị từ chối > Chờ phê duyệt > Đang TN > Cần làm > Đã xong > KH hủy
+  // Ưu tiên: Bị từ chối > Không TN được > Chờ phê duyệt > Đang TN > Cần làm > Đã xong > KH hủy
   const getStatusPriority = (status: IndicatorTestingStatus): number => {
     switch (status) {
       case IndicatorTestingStatus.Rejected:
         return 0; // Cao nhất
+      case IndicatorTestingStatus.CannotTest:
+        return 1; // Không TN được - cần xử lý
       case IndicatorTestingStatus.PendingApproval:
-        return 1;
-      case IndicatorTestingStatus.Testing:
         return 2;
-      case IndicatorTestingStatus.Todo:
+      case IndicatorTestingStatus.Testing:
         return 3;
-      case IndicatorTestingStatus.Done:
+      case IndicatorTestingStatus.Todo:
         return 4;
+      case IndicatorTestingStatus.Done:
+        return 5;
       case IndicatorTestingStatus.Cancelled:
-        return 5; // Thấp nhất - KH hủy hiển thị cuối cùng
+        return 6; // Thấp nhất - KH hủy hiển thị cuối cùng
       default:
-        return 6;
+        return 7;
     }
   };
 
@@ -574,7 +638,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
         dataSource={sortedIndicators}
         rowKey="id"
         pagination={false}
-        scroll={{ x: 1970 }}
+        scroll={{ x: 2270 }}
         size="small"
         rowClassName={getRowClassName}
       />

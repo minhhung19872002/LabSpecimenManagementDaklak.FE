@@ -25,7 +25,9 @@ export enum IndicatorApprovalStatus {
   MethodChangeRequested = 5, // Yêu cầu đổi phương pháp - chờ KH xác nhận
   MethodChanged = 6,        // Đã đổi phương pháp - KH đã xác nhận
   TestingRejected = 7,      // Từ chối thử nghiệm - QLKT từ chối, KH xác nhận
-  AcceptedForTesting = 8    // Chấp nhận thử nghiệm - QLKT chấp nhận
+  AcceptedForTesting = 8,   // Chấp nhận thử nghiệm - QLKT chấp nhận
+  CannotTest = 9,           // Không TN được - KTV báo không thể thử nghiệm
+  SupplementaryRequested = 10 // Yêu cầu bổ sung - QLKT yêu cầu KH cung cấp thông tin bổ sung
 }
 
 // Status display helper
@@ -67,7 +69,9 @@ export const IndicatorApprovalStatusLabels: Record<IndicatorApprovalStatus, stri
   [IndicatorApprovalStatus.MethodChangeRequested]: 'Yêu cầu đổi PP',
   [IndicatorApprovalStatus.MethodChanged]: 'Đã đổi PP',
   [IndicatorApprovalStatus.TestingRejected]: 'Từ chối TN',
-  [IndicatorApprovalStatus.AcceptedForTesting]: 'Chấp nhận TN'
+  [IndicatorApprovalStatus.AcceptedForTesting]: 'Chấp nhận TN',
+  [IndicatorApprovalStatus.CannotTest]: 'Không TN được',
+  [IndicatorApprovalStatus.SupplementaryRequested]: 'YC bổ sung'
 };
 
 export const IndicatorApprovalStatusColors: Record<IndicatorApprovalStatus, string> = {
@@ -79,7 +83,9 @@ export const IndicatorApprovalStatusColors: Record<IndicatorApprovalStatus, stri
   [IndicatorApprovalStatus.MethodChangeRequested]: 'gold',
   [IndicatorApprovalStatus.MethodChanged]: 'cyan',
   [IndicatorApprovalStatus.TestingRejected]: 'red',
-  [IndicatorApprovalStatus.AcceptedForTesting]: 'lime'
+  [IndicatorApprovalStatus.AcceptedForTesting]: 'lime',
+  [IndicatorApprovalStatus.CannotTest]: 'orange',
+  [IndicatorApprovalStatus.SupplementaryRequested]: 'cyan'
 };
 
 // Laboratory Task Indicator DTO (Phase 6 - Extended + Workflow Redesign)
@@ -92,18 +98,22 @@ export interface LaboratoryTaskIndicatorDto {
   indicatorId: string;
   indicatorCode?: string;
   indicatorName?: string;
+  indicatorFormattedName?: string;  // Tên chỉ tiêu có định dạng HTML
   indicatorGroupName?: string;
   unitPrice: number;
 
   // Phase 6 workflow fields
   methodId?: string;
   methodName?: string;
+  methodFormattedName?: string;  // Tên phương pháp có định dạng HTML
   technicianId?: string;
   technicianName?: string;
   assignedDate?: string;  // Ngày giao việc cho KTV
   testDate?: string;  // Ngày thử nghiệm (ngày KTV bắt đầu/check-in)
   result?: string;
-  note?: string;  // Ghi chú từ KTV
+  freeTextNote?: string;  // Ghi chú tự do (áp dụng cho tất cả chỉ tiêu trong sample)
+  masterDataNoteIds?: string;  // Danh sách ID của Master Data Notes (comma-separated)
+  masterDataNoteContents?: string[];  // Nội dung các Master Data Notes (để hiển thị UI)
   unit?: string;
   entryDate?: string;
   enteredById?: string;
@@ -131,10 +141,20 @@ export interface LaboratoryTaskIndicatorDto {
   standardName?: string;  // Tên tiêu chuẩn
   comparisonOperator?: string;  // Ký hiệu so sánh (<=, >=, <, >, =)
   allowedLimit?: string;  // Giới hạn cho phép
+  lowerOperator?: string;  // Ký hiệu cận dưới (>, >=) - cho khoảng
+  lowerLimit?: string;  // Giá trị cận dưới - cho khoảng
+  upperOperator?: string;  // Ký hiệu cận trên (<, <=) - cho khoảng
+  upperLimit?: string;  // Giá trị cận trên - cho khoảng
   images?: IndicatorImageDto[];  // Hình ảnh chỉ tiêu (max 5)
 
   // Workflow Redesign - Method Change History
   methodChangeHistories?: MethodChangeHistoryDto[];
+
+  // Supplementary Request fields
+  supplementaryRequestReason?: string;  // Lý do yêu cầu bổ sung
+  supplementaryRequestDate?: string;    // Ngày yêu cầu bổ sung
+  supplementaryRequestedById?: string;  // ID người yêu cầu bổ sung (QLKT)
+  supplementaryRequestedByName?: string; // Tên người yêu cầu bổ sung
 }
 
 // Method Change History DTO
@@ -394,7 +414,8 @@ export interface LabTechnicianPendingTaskDto {
 export enum IndicatorEvaluationAction {
   Accept = 0,             // Chấp nhận thử nghiệm
   RequestMethodChange = 1, // Yêu cầu đổi phương pháp
-  Reject = 2              // Từ chối thử nghiệm
+  Reject = 2,             // Từ chối thử nghiệm
+  RequestSupplementary = 3 // Yêu cầu bổ sung thông tin
 }
 
 // DTO for QLKT to evaluate a single indicator

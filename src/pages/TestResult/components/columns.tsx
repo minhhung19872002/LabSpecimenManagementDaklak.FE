@@ -5,7 +5,7 @@ import {
   EyeOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
-} from "@ant-design/icons";
+} from "../../../components/common/Icon";
 import { TestResultDto, ResultApprovalStatus } from "../../../types/testResult";
 import StatusTag from "../../../components/common/StatusTag";
 

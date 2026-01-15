@@ -7,7 +7,7 @@ import {
   DownloadOutlined,
   ZoomInOutlined,
   ZoomOutOutlined,
-} from "@ant-design/icons";
+} from "../../../../components/common/Icon";
 import { AttachmentInfo } from "../types";
 import { fileService } from "../../../../services/fileService";
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Modal, Input, Form, message } from "antd";
-import { CloseCircleOutlined } from "@ant-design/icons";
+import { CloseCircleOutlined } from "../../../components/common/Icon";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { rejectSchema, RejectFormData } from "../schemas/rejectSchema";

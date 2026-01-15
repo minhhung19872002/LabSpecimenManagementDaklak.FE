@@ -8,6 +8,31 @@ import {
 
 const BASE_URL = "/api/v1/quotations";
 
+export interface SendQuotationEmailItemDto {
+  no: number;
+  parameter: string;
+  testMethod: string;
+  numberOfSample: number;
+  unitPrice: number;
+  price: number;
+}
+
+export interface SendQuotationEmailDto {
+  to: string[];
+  cc?: string[];
+  subject: string;
+  body: string;
+  customerName: string;
+  items: SendQuotationEmailItemDto[];
+  totalPrice: number;
+}
+
+export interface GenerateQuotationPdfDto {
+  customerName?: string;
+  items: SendQuotationEmailItemDto[];
+  totalPrice: number;
+}
+
 export const quotationService = {
   // Get list of quotations with pagination
   getList: async (
@@ -49,5 +74,19 @@ export const quotationService = {
   generateNumber: async (): Promise<string> => {
     const response = await api.get<string>(`${BASE_URL}/generate-number`);
     return response.data;
+  },
+
+  // Send quotation email with PDF attachment
+  sendEmail: async (data: SendQuotationEmailDto): Promise<void> => {
+    await api.post(`${BASE_URL}/send-email`, data);
+  },
+
+  // Generate PDF for preview (returns blob URL)
+  generatePdf: async (data: GenerateQuotationPdfDto): Promise<string> => {
+    const response = await api.post(`${BASE_URL}/generate-pdf`, data, {
+      responseType: "blob",
+    });
+    const blob = new Blob([response.data], { type: "application/pdf" });
+    return URL.createObjectURL(blob);
   },
 };

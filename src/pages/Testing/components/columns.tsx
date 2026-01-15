@@ -4,8 +4,9 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   SyncOutlined,
-  WarningOutlined,
-} from "@ant-design/icons";
+  CloseCircleOutlined,
+  StopOutlined,
+} from "../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import {
   TestingListDto,
@@ -26,8 +27,9 @@ const getStatusTag = (status: TestingStatus) => {
     [TestingStatus.NotStarted]: <ClockCircleOutlined />,
     [TestingStatus.InProgress]: <SyncOutlined spin />,
     [TestingStatus.PendingApproval]: <ClockCircleOutlined />,
-    [TestingStatus.Rejected]: <WarningOutlined />,
+    [TestingStatus.Rejected]: <CloseCircleOutlined />,
     [TestingStatus.Completed]: <CheckCircleOutlined />,
+    [TestingStatus.CannotTest]: <StopOutlined />,
   };
 
   return (

@@ -10,7 +10,7 @@ import {
   FileExcelOutlined,
   FileWordOutlined,
   FileImageOutlined,
-} from '@ant-design/icons';
+} from './Icon';
 import type { UploadFile, UploadProps } from 'antd';
 
 const { Text } = Typography;

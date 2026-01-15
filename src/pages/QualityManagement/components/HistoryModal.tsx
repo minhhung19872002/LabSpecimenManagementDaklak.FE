@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Timeline, Typography, Tag, Spin, Empty, Collapse, Card, Button } from 'antd';
-import { HistoryOutlined, CheckCircleOutlined, CloseCircleOutlined, EditOutlined, EyeOutlined, ExperimentOutlined } from '@ant-design/icons';
+import { HistoryOutlined, CheckCircleOutlined, CloseCircleOutlined, EditOutlined, EyeOutlined, ExperimentOutlined } from '../../../components/common/Icon';
 import dayjs from 'dayjs';
 import { qualityManagementService } from '../../../services/qualityManagementService';
 import {
@@ -15,6 +15,7 @@ import {
 } from '../../../types/qualityManagement';
 import ChangeApprovalModal from './ChangeApprovalModal';
 import StatusTag from '../../../components/common/StatusTag';
+import { IndicatorName } from '../../../components/common';
 
 const { Text } = Typography;
 const { Panel } = Collapse;
@@ -453,7 +454,7 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ visible, task, onClose }) =
                     header={
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <Text strong style={{ color: '#1890ff' }}>{indicatorHistory.indicatorCode}</Text>
-                        <Text type="secondary">- {indicatorHistory.indicatorName}</Text>
+                        <span style={{ color: 'rgba(0, 0, 0, 0.45)' }}>- <IndicatorName name={indicatorHistory.indicatorName || ""} formattedName={indicatorHistory.indicatorFormattedName} /></span>
                         <Tag color="default" style={{ marginLeft: 'auto' }}>
                           {indicatorHistory.histories.length} thay đổi
                         </Tag>

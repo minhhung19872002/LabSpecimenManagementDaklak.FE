@@ -1,5 +1,5 @@
 import { Button, Space, Popconfirm, Typography, Tag } from "antd";
-import { EditOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
+import { EditOutlined, DeleteOutlined, EyeOutlined } from "../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { Subcontractor } from "../hooks";

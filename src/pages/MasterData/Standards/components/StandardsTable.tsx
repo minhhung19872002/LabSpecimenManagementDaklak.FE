@@ -1,6 +1,6 @@
 import React from "react";
 import { Table, Input, Row, Col, Spin, Button, Empty } from "antd";
-import { SearchOutlined, PlusOutlined } from "@ant-design/icons";
+import { SearchOutlined, PlusOutlined } from "../../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import { GroupedStandardData, StandardIndicatorDto } from "../types";
 
