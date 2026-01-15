@@ -6,7 +6,7 @@ import { PATH_ROUTES } from './routes';
  *
  * Permission Matrix:
  * - Admin: Tất cả các chức năng
- * - Kỹ thuật viên (KTV): Quản lý thử nghiệm, Quản lý mẫu
+ * - Thử nghiệm viên (KTV): Quản lý thử nghiệm, Quản lý mẫu
  * - Quản lý chất lượng (QLCL): Dashboard, Quản lý phiếu yêu cầu, Quản lý công việc,
  *                              Quản lý thử nghiệm, Quản lý mẫu, Quản lý chất lượng
  * - Bộ phận giao nhận mẫu: Quản lý phiếu yêu cầu

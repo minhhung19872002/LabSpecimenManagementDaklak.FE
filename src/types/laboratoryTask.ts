@@ -243,7 +243,7 @@ export interface ListLaboratoryTaskResult {
 
 // ============= Phase 6 - Workflow Input DTOs =============
 
-// Assign indicator DTO (gán phương pháp + kỹ thuật viên)
+// Assign indicator DTO (gán phương pháp + Thử nghiệm viên)
 export interface AssignIndicatorInput {
   indicatorId: string;
   methodId?: string;

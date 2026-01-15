@@ -153,7 +153,7 @@ const TestingList: React.FC = () => {
             <Select
               mode="multiple"
               style={{ width: "100%" }}
-              placeholder="Kỹ thuật viên"
+              placeholder="Thử nghiệm viên"
               value={technicianFilter}
               onChange={handleTechnicianFilterChange}
               allowClear

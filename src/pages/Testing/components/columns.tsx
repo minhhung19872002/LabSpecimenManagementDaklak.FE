@@ -63,7 +63,7 @@ export const getTestingColumns = (): ColumnsType<TestingListDto> => [
     align: "center",
   },
   {
-    title: "Kỹ thuật viên",
+    title: "Thử nghiệm viên",
     dataIndex: "technicianNames",
     key: "technicianNames",
     width: 180,
@@ -84,7 +84,8 @@ export const getTestingColumns = (): ColumnsType<TestingListDto> => [
     width: 130,
     render: (date: string, record: TestingListDto) => {
       if (!date) return "-";
-      const shouldHighlight = record.isUrgent && record.testingStatus !== TestingStatus.Completed;
+      const shouldHighlight =
+        record.isUrgent && record.testingStatus !== TestingStatus.Completed;
       return (
         <span
           style={{
@@ -103,11 +104,7 @@ export const getTestingColumns = (): ColumnsType<TestingListDto> => [
     key: "testDate",
     width: 140,
     render: (date: string) =>
-      date ? (
-        formatDate(date)
-      ) : (
-        <Text type="secondary">Chưa đặt</Text>
-      ),
+      date ? formatDate(date) : <Text type="secondary">Chưa đặt</Text>,
   },
   {
     title: "Trạng thái",
