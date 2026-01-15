@@ -17,6 +17,7 @@ import {
   LaboratoryDto,
   TestMethodWithIndicatorsDto,
   SpecimenTypeDto,
+  SpecimenTypeWithIndicatorsDto,
 } from "../../../../services/masterDataService";
 import { userService, UserLookupDto } from "../../../../services/userService";
 import { organizationService } from "../../../../services/organizationService";
@@ -119,6 +120,9 @@ export const useTestRequestFormData = () => {
   const specimenTypeDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const [laboratories, setLaboratories] = useState<LaboratoryDto[]>([]);
   const [specimenTypes, setSpecimenTypes] = useState<SpecimenTypeDto[]>([]);
+  const [specimenTypesWithIndicators, setSpecimenTypesWithIndicators] = useState<SpecimenTypeWithIndicatorsDto[]>([]);
+  // Map: indicatorId -> list of specimenTypes that contain this indicator
+  const [indicatorToSpecimenTypesMap, setIndicatorToSpecimenTypesMap] = useState<Record<string, { id: string; name: string }[]>>({});
   const [specimenTypeOptions, setSpecimenTypeOptions] = useState<{ value: string; label: string }[]>([]);
 
   // Test methods and indicator-method mapping
@@ -208,7 +212,7 @@ export const useTestRequestFormData = () => {
   // Load master data
   const loadMasterData = async () => {
     try {
-      const [groupsData, indicatorsData, locationsData, usersData, orgsData, labsData, methodsData, specimenTypesData] = await Promise.all([
+      const [groupsData, indicatorsData, locationsData, usersData, orgsData, labsData, methodsData, specimenTypesData, specimenTypesWithIndsData] = await Promise.all([
         indicatorGroupService.getActive(),
         indicatorService.getActive(),
         storageLocationService.getActive(),
@@ -217,6 +221,7 @@ export const useTestRequestFormData = () => {
         laboratoryService.getActive(),
         testMethodService.getWithIndicators(),
         specimenTypeService.getActive(),
+        specimenTypeService.getWithIndicators(),
       ]);
       setIndicatorGroups(groupsData);
       setIndicators(indicatorsData);
@@ -226,6 +231,23 @@ export const useTestRequestFormData = () => {
       setLaboratories(labsData || []);
       setTestMethods(methodsData || []);
       setSpecimenTypes(specimenTypesData.items || []);
+      setSpecimenTypesWithIndicators(specimenTypesWithIndsData || []);
+
+      // Build reverse map: indicatorId -> list of specimenTypes
+      const indToSpecMap: Record<string, { id: string; name: string }[]> = {};
+      (specimenTypesWithIndsData || []).forEach((st) => {
+        if (st.isActive && st.indicators) {
+          st.indicators.forEach((ind) => {
+            if (ind.isActive) {
+              if (!indToSpecMap[ind.indicatorId]) {
+                indToSpecMap[ind.indicatorId] = [];
+              }
+              indToSpecMap[ind.indicatorId].push({ id: st.id, name: st.name });
+            }
+          });
+        }
+      });
+      setIndicatorToSpecimenTypesMap(indToSpecMap);
 
       // Build map: indicatorId -> methods[]
       const methodMap: Record<string, IndicatorMethodInfo[]> = {};
@@ -886,6 +908,8 @@ export const useTestRequestFormData = () => {
     organizationSearching,
     laboratories,
     specimenTypes,
+    specimenTypesWithIndicators,
+    indicatorToSpecimenTypesMap,
     testMethods,
     indicatorMethodsMap,
 

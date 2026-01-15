@@ -68,6 +68,8 @@ const TestRequestForm: React.FC = () => {
     organizationSearching,
     laboratories,
     specimenTypes,
+    specimenTypesWithIndicators,
+    indicatorToSpecimenTypesMap,
     specimenTypeOptions,
     handleSpecimenTypeSearch,
     handleSpecimenTypeSelect,
@@ -410,6 +412,8 @@ const TestRequestForm: React.FC = () => {
         specimenTypeIndicatorIds={specimenTypeIndicatorIds}
         specimenTypeFilterActive={specimenTypeFilterActive}
         setSpecimenTypeFilterActive={setSpecimenTypeFilterActive}
+        specimenTypesWithIndicators={specimenTypesWithIndicators}
+        indicatorToSpecimenTypesMap={indicatorToSpecimenTypesMap}
       />
 
       {/* Laboratory Selection Modal */}

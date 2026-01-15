@@ -7,6 +7,7 @@ import dayjs from "dayjs";
 import {
   IndicatorGroupDto,
   IndicatorDto,
+  SpecimenTypeWithIndicatorsDto,
 } from "../../../../services/masterDataService";
 import IndicatorName from "../../../../components/common/IndicatorName";
 import {
@@ -79,6 +80,9 @@ interface IndicatorSelectionModalProps {
   specimenTypeIndicatorIds: string[];
   specimenTypeFilterActive: boolean;
   setSpecimenTypeFilterActive: React.Dispatch<React.SetStateAction<boolean>>;
+  // Group theo loại mẫu (2 cấp)
+  specimenTypesWithIndicators: SpecimenTypeWithIndicatorsDto[];
+  indicatorToSpecimenTypesMap: Record<string, { id: string; name: string }[]>;
 }
 
 const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
@@ -117,6 +121,8 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
   specimenTypeIndicatorIds,
   specimenTypeFilterActive,
   setSpecimenTypeFilterActive,
+  specimenTypesWithIndicators,
+  indicatorToSpecimenTypesMap,
 }) => {
   // Handle remove indicator method
   const handleRemoveIndicatorMethod = (key: IndicatorMethodKey) => {
@@ -200,6 +206,395 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
   // State for mobile indicator picker drawer
   const [indicatorPickerOpen, setIndicatorPickerOpen] = useState(false);
 
+  // State for group mode: "indicatorGroup" | "specimenType"
+  const [groupMode, setGroupMode] = useState<"indicatorGroup" | "specimenType">("specimenType");
+  // State for expanded specimen types (when groupMode = "specimenType")
+  const [expandedSpecimenTypes, setExpandedSpecimenTypes] = useState<string[]>([]);
+
+  // Auto-expand all specimen types when modal opens and groupMode is specimenType
+  useEffect(() => {
+    if (visible && groupMode === "specimenType" && expandedSpecimenTypes.length === 0) {
+      const activeSpecimenTypes = specimenTypesWithIndicators.filter(st => st.isActive).map(st => st.id);
+      setExpandedSpecimenTypes([...activeSpecimenTypes, "others"]); // Include "others" for indicators without specimen type
+    }
+  }, [visible, groupMode, specimenTypesWithIndicators]);
+
+  // Helper: Toggle all methods of an indicator
+  const toggleAllMethodsOfIndicator = (indicatorId: string, select: boolean) => {
+    const methods = indicatorMethodsMap[indicatorId]?.filter((m) => m.isActive) || [];
+    methods.forEach((method) => {
+      const isCurrentlySelected = isMethodSelected(indicatorId, method.testMethodId);
+      if (select && !isCurrentlySelected) {
+        toggleIndicatorMethod(indicatorId, method.testMethodId);
+      } else if (!select && isCurrentlySelected) {
+        toggleIndicatorMethod(indicatorId, method.testMethodId);
+      }
+    });
+  };
+
+  // Helper: Toggle all indicators in a group (within specimen type context)
+  const toggleAllIndicatorsInGroup = (indicatorIds: string[], select: boolean) => {
+    indicatorIds.forEach((indId) => {
+      toggleAllMethodsOfIndicator(indId, select);
+    });
+  };
+
+  // Helper: Check if all methods of an indicator are selected
+  const areAllMethodsSelected = (indicatorId: string): boolean => {
+    const methods = indicatorMethodsMap[indicatorId]?.filter((m) => m.isActive) || [];
+    if (methods.length === 0) return false;
+    return methods.every((m) => isMethodSelected(indicatorId, m.testMethodId));
+  };
+
+  // Helper: Check if some (but not all) methods of an indicator are selected
+  const areSomeMethodsSelected = (indicatorId: string): boolean => {
+    const methods = indicatorMethodsMap[indicatorId]?.filter((m) => m.isActive) || [];
+    if (methods.length === 0) return false;
+    const selectedCount = methods.filter((m) => isMethodSelected(indicatorId, m.testMethodId)).length;
+    return selectedCount > 0 && selectedCount < methods.length;
+  };
+
+  // Helper: Check if all indicators in a list are fully selected
+  const areAllIndicatorsSelected = (indicatorIds: string[]): boolean => {
+    if (indicatorIds.length === 0) return false;
+    return indicatorIds.every((indId) => areAllMethodsSelected(indId));
+  };
+
+  // Helper: Check if some indicators in a list are selected (partial)
+  const areSomeIndicatorsSelected = (indicatorIds: string[]): boolean => {
+    if (indicatorIds.length === 0) return false;
+    const hasAnySelected = indicatorIds.some((indId) => {
+      const methods = indicatorMethodsMap[indId]?.filter((m) => m.isActive) || [];
+      return methods.some((m) => isMethodSelected(indId, m.testMethodId));
+    });
+    return hasAnySelected && !areAllIndicatorsSelected(indicatorIds);
+  };
+
+  // Helper: Render indicator with methods (reusable)
+  const renderIndicatorWithMethods = (ind: IndicatorDto, indentLevel: number = 1) => {
+    const methods = indicatorMethodsMap[ind.id]?.filter((m) => m.isActive) || [];
+    const isIndicatorExpanded = expandedIndicators.includes(ind.id);
+    const selectedMethodsCount = methods.filter((m) =>
+      isMethodSelected(ind.id, m.testMethodId)
+    ).length;
+    const paddingLeft = indentLevel === 1 ? 12 : indentLevel === 2 ? 28 : 12;
+    const methodPaddingLeft = indentLevel === 1 ? 32 : indentLevel === 2 ? 48 : 32;
+    const isAllSelected = areAllMethodsSelected(ind.id);
+    const isSomeSelected = areSomeMethodsSelected(ind.id);
+
+    return (
+      <div key={ind.id}>
+        {/* Indicator header */}
+        <div
+          style={{
+            padding: `6px 12px 6px ${paddingLeft}px`,
+            borderBottom: "1px solid #f5f5f5",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            background: selectedMethodsCount > 0 ? "#e6f7ff" : "#fff",
+          }}
+        >
+          <Checkbox
+            checked={isAllSelected}
+            indeterminate={isSomeSelected}
+            onClick={(e) => e.stopPropagation()}
+            onChange={() => toggleAllMethodsOfIndicator(ind.id, !isAllSelected)}
+          />
+          <IndicatorName
+            name={ind.name}
+            formattedName={ind.formattedName}
+            style={{
+              flex: 1,
+              fontSize: 13,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          />
+          <Icon
+            icon={isIndicatorExpanded ? "mdi:chevron-up" : "mdi:chevron-down"}
+            width={18}
+            style={{ color: "#595959", flexShrink: 0, cursor: "pointer" }}
+            onClick={() => {
+              setExpandedIndicators((prev) =>
+                prev.includes(ind.id)
+                  ? prev.filter((id) => id !== ind.id)
+                  : [...prev, ind.id]
+              );
+            }}
+          />
+        </div>
+
+        {/* Methods under indicator */}
+        {isIndicatorExpanded &&
+          methods.map((method) => {
+            const isSelected = isMethodSelected(ind.id, method.testMethodId);
+            return (
+              <div
+                key={method.testMethodId}
+                onClick={() => toggleIndicatorMethod(ind.id, method.testMethodId)}
+                style={{
+                  padding: `5px 12px 5px ${methodPaddingLeft}px`,
+                  borderBottom: "1px solid #f8f8f8",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  cursor: "pointer",
+                  background: isSelected ? "#bae7ff" : "#fff",
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSelected) {
+                    e.currentTarget.style.background = "#f0f0f0";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = isSelected ? "#bae7ff" : "#fff";
+                }}
+              >
+                <Checkbox
+                  checked={isSelected}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={() => toggleIndicatorMethod(ind.id, method.testMethodId)}
+                />
+                <span
+                  style={{
+                    flex: 1,
+                    fontSize: 12,
+                    color: "#595959",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  <IndicatorName name={method.testMethodName} formattedName={method.testMethodFormattedName} />
+                </span>
+                <span
+                  style={{
+                    fontSize: 12,
+                    color: "#888",
+                    fontWeight: 500,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {method.unitPrice?.toLocaleString("vi-VN")}đ
+                </span>
+              </div>
+            );
+          })}
+      </div>
+    );
+  };
+
+  // Render content grouped by Specimen Type (2 levels: SpecimenType > IndicatorGroup > Indicator > Method)
+  const renderBySpecimenType = () => {
+    // Get all indicators with active methods
+    let activeIndicators = indicators.filter(
+      (ind) => ind.isActive && indicatorMethodsMap[ind.id]?.some((m) => m.isActive)
+    );
+
+    // Apply specimen type filter if active
+    if (specimenTypeFilterActive) {
+      activeIndicators = activeIndicators.filter((ind) =>
+        specimenTypeIndicatorIds.includes(ind.id)
+      );
+    }
+
+    // Apply search filter
+    if (indicatorSearchText.trim()) {
+      const searchLower = indicatorSearchText.toLowerCase().trim();
+      activeIndicators = activeIndicators.filter(
+        (ind) =>
+          ind.name.toLowerCase().includes(searchLower) ||
+          ind.code?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    const activeIndicatorIds = new Set(activeIndicators.map((i) => i.id));
+
+    // Group by specimen type
+    const specimenTypeGroups: {
+      id: string;
+      name: string;
+      indicatorsByGroup: Map<string, IndicatorDto[]>;
+    }[] = [];
+
+    // Process each active specimen type
+    specimenTypesWithIndicators
+      .filter((st) => st.isActive)
+      .forEach((st) => {
+        const stIndicatorIds = st.indicators
+          ?.filter((sti) => sti.isActive)
+          .map((sti) => sti.indicatorId) || [];
+
+        // Get indicators that belong to this specimen type AND are active
+        const stIndicators = activeIndicators.filter((ind) =>
+          stIndicatorIds.includes(ind.id)
+        );
+
+        if (stIndicators.length === 0) return;
+
+        // Group by indicator group within this specimen type
+        const indicatorsByGroup = new Map<string, IndicatorDto[]>();
+        stIndicators.forEach((ind) => {
+          const groupId = ind.indicatorGroupId;
+          if (!indicatorsByGroup.has(groupId)) {
+            indicatorsByGroup.set(groupId, []);
+          }
+          indicatorsByGroup.get(groupId)!.push(ind);
+        });
+
+        specimenTypeGroups.push({
+          id: st.id,
+          name: st.name,
+          indicatorsByGroup,
+        });
+      });
+
+    // Find indicators without specimen type (or not in any active specimen type)
+    const indicatorsWithSpecimenType = new Set<string>();
+    specimenTypesWithIndicators.forEach((st) => {
+      st.indicators?.forEach((sti) => {
+        if (sti.isActive) {
+          indicatorsWithSpecimenType.add(sti.indicatorId);
+        }
+      });
+    });
+
+    const othersIndicators = activeIndicators.filter(
+      (ind) => !indicatorsWithSpecimenType.has(ind.id)
+    );
+
+    if (othersIndicators.length > 0) {
+      const indicatorsByGroup = new Map<string, IndicatorDto[]>();
+      othersIndicators.forEach((ind) => {
+        const groupId = ind.indicatorGroupId;
+        if (!indicatorsByGroup.has(groupId)) {
+          indicatorsByGroup.set(groupId, []);
+        }
+        indicatorsByGroup.get(groupId)!.push(ind);
+      });
+
+      specimenTypeGroups.push({
+        id: "others",
+        name: "Khác",
+        indicatorsByGroup,
+      });
+    }
+
+    return (
+      <>
+        {specimenTypeGroups.map((stGroup) => {
+          const isSpecimenTypeExpanded = expandedSpecimenTypes.includes(stGroup.id);
+          // Get all indicator IDs in this specimen type group
+          const allIndicatorIdsInGroup: string[] = [];
+          stGroup.indicatorsByGroup.forEach((inds) => {
+            inds.forEach((ind) => allIndicatorIdsInGroup.push(ind.id));
+          });
+          const isAllSpecimenTypeSelected = areAllIndicatorsSelected(allIndicatorIdsInGroup);
+          const isSomeSpecimenTypeSelected = areSomeIndicatorsSelected(allIndicatorIdsInGroup);
+
+          return (
+            <div key={stGroup.id}>
+              {/* Specimen Type header */}
+              <div
+                style={{
+                  padding: "8px 12px",
+                  background: "#fafafa",
+                  borderBottom: "1px solid #f0f0f0",
+                  fontWeight: 600,
+                  fontSize: 13,
+                  color: "#000",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  userSelect: "none",
+                }}
+              >
+                <Checkbox
+                  checked={isAllSpecimenTypeSelected}
+                  indeterminate={isSomeSpecimenTypeSelected}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={() => toggleAllIndicatorsInGroup(allIndicatorIdsInGroup, !isAllSpecimenTypeSelected)}
+                />
+                <span style={{ flex: 1 }}>{stGroup.name}</span>
+                <Icon
+                  icon={isSpecimenTypeExpanded ? "mdi:chevron-up" : "mdi:chevron-down"}
+                  width={18}
+                  style={{ color: "#595959", flexShrink: 0, cursor: "pointer" }}
+                  onClick={() => {
+                    setExpandedSpecimenTypes((prev) =>
+                      prev.includes(stGroup.id)
+                        ? prev.filter((id) => id !== stGroup.id)
+                        : [...prev, stGroup.id]
+                    );
+                  }}
+                />
+              </div>
+
+              {/* Indicator Groups within Specimen Type */}
+              {isSpecimenTypeExpanded &&
+                Array.from(stGroup.indicatorsByGroup.entries()).map(([groupId, groupInds]) => {
+                  const group = indicatorGroups.find((g) => g.id === groupId);
+                  if (!group) return null;
+
+                  const isGroupExpanded = expandedGroups.includes(`${stGroup.id}_${groupId}`);
+                  const groupIndicatorIds = groupInds.map((ind) => ind.id);
+                  const isAllGroupSelected = areAllIndicatorsSelected(groupIndicatorIds);
+                  const isSomeGroupSelected = areSomeIndicatorsSelected(groupIndicatorIds);
+
+                  return (
+                    <div key={`${stGroup.id}_${groupId}`}>
+                      {/* Indicator Group header */}
+                      <div
+                        style={{
+                          padding: "6px 12px 6px 24px",
+                          background: "#fafafa",
+                          borderBottom: "1px solid #f0f0f0",
+                          fontWeight: 500,
+                          fontSize: 13,
+                          color: "#000",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          userSelect: "none",
+                        }}
+                      >
+                        <Checkbox
+                          checked={isAllGroupSelected}
+                          indeterminate={isSomeGroupSelected}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={() => toggleAllIndicatorsInGroup(groupIndicatorIds, !isAllGroupSelected)}
+                        />
+                        <span style={{ flex: 1 }}>{group.name}</span>
+                        <Icon
+                          icon={isGroupExpanded ? "mdi:chevron-up" : "mdi:chevron-down"}
+                          width={16}
+                          style={{ color: "#595959", flexShrink: 0, cursor: "pointer" }}
+                          onClick={() => {
+                            const key = `${stGroup.id}_${groupId}`;
+                            setExpandedGroups((prev) =>
+                              prev.includes(key)
+                                ? prev.filter((id) => id !== key)
+                                : [...prev, key]
+                            );
+                          }}
+                        />
+                      </div>
+
+                      {/* Indicators within Group */}
+                      {isGroupExpanded &&
+                        groupInds.map((ind) => renderIndicatorWithMethods(ind, 2))}
+                    </div>
+                  );
+                })}
+            </div>
+          );
+        })}
+      </>
+    );
+  };
+
   // Left panel content - extracted for reuse in drawer
   const leftPanelContent = (
     <>
@@ -213,32 +608,53 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
           gap: 8,
         }}
       >
-        {/* Filter theo nhóm chỉ tiêu */}
-        <div
-          onClick={() => setGroupSelectorVisible(true)}
-          style={{
-            padding: "6px 12px",
-            border: "1px solid #d9d9d9",
-            borderRadius: 4,
-            cursor: "pointer",
-            background: "#fff",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <span
+        {/* Toggle group mode */}
+        <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
+          <Button
+            type={groupMode === "specimenType" ? "primary" : "default"}
+            size="small"
+            onClick={() => setGroupMode("specimenType")}
+            icon={<Icon icon="mdi:flask-outline" width={14} />}
+          >
+            Loại mẫu
+          </Button>
+          <Button
+            type={groupMode === "indicatorGroup" ? "primary" : "default"}
+            size="small"
+            onClick={() => setGroupMode("indicatorGroup")}
+            icon={<Icon icon="mdi:folder-outline" width={14} />}
+          >
+            Nhóm CT
+          </Button>
+        </div>
+        {/* Filter theo nhóm chỉ tiêu - chỉ hiện khi groupMode = indicatorGroup */}
+        {groupMode === "indicatorGroup" && (
+          <div
+            onClick={() => setGroupSelectorVisible(true)}
             style={{
-              color: selectedGroupFilter === "all" ? "#999" : "#000",
+              padding: "6px 12px",
+              border: "1px solid #d9d9d9",
+              borderRadius: 4,
+              cursor: "pointer",
+              background: "#fff",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
             }}
           >
-            {selectedGroupFilter === "all"
-              ? "--- Tất cả nhóm chỉ tiêu ---"
-              : indicatorGroups.find((g) => g.id === selectedGroupFilter)
-                  ?.name || "Chọn nhóm..."}
-          </span>
-          <Icon icon="mdi:chevron-down" width={16} />
-        </div>
+            <span
+              style={{
+                color: selectedGroupFilter === "all" ? "#999" : "#000",
+              }}
+            >
+              {selectedGroupFilter === "all"
+                ? "--- Tất cả nhóm chỉ tiêu ---"
+                : indicatorGroups.find((g) => g.id === selectedGroupFilter)
+                    ?.name || "Chọn nhóm..."}
+            </span>
+            <Icon icon="mdi:chevron-down" width={16} />
+          </div>
+        )}
         {/* Filter theo loại mẫu */}
         {currentSampleSpecimenTypeName && (
           <Checkbox
@@ -275,6 +691,9 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
               Bỏ chọn filter để xem tất cả chỉ tiêu
             </Text>
           </div>
+        ) : groupMode === "specimenType" ? (
+          // Render grouped by Specimen Type
+          renderBySpecimenType()
         ) : selectedGroupFilter === "all"
           ? indicatorGroups.map((group) => {
               // Get indicators in this group that have active methods
@@ -310,18 +729,14 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
               if (filteredIndicators.length === 0) return null;
 
               const isGroupExpanded = expandedGroups.includes(group.id);
+              const groupIndicatorIds = filteredIndicators.map((ind) => ind.id);
+              const isAllGroupSelected = areAllIndicatorsSelected(groupIndicatorIds);
+              const isSomeGroupSelected = areSomeIndicatorsSelected(groupIndicatorIds);
 
               return (
                 <div key={group.id}>
                   {/* Group header */}
                   <div
-                    onClick={() => {
-                      setExpandedGroups((prev) =>
-                        prev.includes(group.id)
-                          ? prev.filter((id) => id !== group.id)
-                          : [...prev, group.id]
-                      );
-                    }}
                     style={{
                       padding: "8px 12px",
                       background: "#fafafa",
@@ -332,198 +747,37 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                       display: "flex",
                       alignItems: "center",
                       gap: 8,
-                      cursor: "pointer",
                       userSelect: "none",
                     }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "#e6f7ff";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "#fafafa";
-                    }}
                   >
-                    <Icon
-                      icon={
-                        isGroupExpanded
-                          ? "mdi:chevron-down"
-                          : "mdi:chevron-right"
-                      }
-                      width={18}
-                      style={{ color: "#595959", flexShrink: 0 }}
+                    <Checkbox
+                      checked={isAllGroupSelected}
+                      indeterminate={isSomeGroupSelected}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={() => toggleAllIndicatorsInGroup(groupIndicatorIds, !isAllGroupSelected)}
                     />
                     <span style={{ flex: 1 }}>{group.name}</span>
-                    <span
-                      style={{
-                        fontSize: 12,
-                        color: "#888",
-                        fontWeight: 400,
+                    <Icon
+                      icon={isGroupExpanded ? "mdi:chevron-up" : "mdi:chevron-down"}
+                      width={18}
+                      style={{ color: "#595959", flexShrink: 0, cursor: "pointer" }}
+                      onClick={() => {
+                        setExpandedGroups((prev) =>
+                          prev.includes(group.id)
+                            ? prev.filter((id) => id !== group.id)
+                            : [...prev, group.id]
+                        );
                       }}
-                    >
-                      ({filteredIndicators.length})
-                    </span>
+                    />
                   </div>
 
-                  {/* Indicators under group */}
+                  {/* Indicators under group - reuse helper */}
                   {isGroupExpanded &&
-                    filteredIndicators.map((ind) => {
-                      const methods =
-                        indicatorMethodsMap[ind.id]?.filter(
-                          (m) => m.isActive
-                        ) || [];
-                      const isIndicatorExpanded = expandedIndicators.includes(
-                        ind.id
-                      );
-                      const selectedMethodsCount = methods.filter((m) =>
-                        isMethodSelected(ind.id, m.testMethodId)
-                      ).length;
-
-                      return (
-                        <div key={ind.id}>
-                          {/* Indicator header */}
-                          <div
-                            onClick={() => {
-                              setExpandedIndicators((prev) =>
-                                prev.includes(ind.id)
-                                  ? prev.filter((id) => id !== ind.id)
-                                  : [...prev, ind.id]
-                              );
-                            }}
-                            style={{
-                              padding: "6px 12px 6px 28px",
-                              borderBottom: "1px solid #f5f5f5",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 8,
-                              cursor: "pointer",
-                              background:
-                                selectedMethodsCount > 0 ? "#e6f7ff" : "#fff",
-                            }}
-                            onMouseEnter={(e) => {
-                              if (selectedMethodsCount === 0) {
-                                e.currentTarget.style.background = "#f5f5f5";
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background =
-                                selectedMethodsCount > 0 ? "#e6f7ff" : "#fff";
-                            }}
-                          >
-                            <Icon
-                              icon={
-                                isIndicatorExpanded
-                                  ? "mdi:chevron-down"
-                                  : "mdi:chevron-right"
-                              }
-                              width={16}
-                              style={{ color: "#595959", flexShrink: 0 }}
-                            />
-                            <IndicatorName
-                              name={ind.name}
-                              formattedName={ind.formattedName}
-                              style={{
-                                flex: 1,
-                                fontSize: 13,
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                              }}
-                            />
-                            {selectedMethodsCount > 0 && (
-                              <span
-                                style={{
-                                  fontSize: 11,
-                                  color: "#1890ff",
-                                  background: "#e6f7ff",
-                                  padding: "1px 6px",
-                                  borderRadius: 10,
-                                }}
-                              >
-                                {selectedMethodsCount}
-                              </span>
-                            )}
-                            <span style={{ fontSize: 12, color: "#888" }}>
-                              ({methods.length})
-                            </span>
-                          </div>
-
-                          {/* Methods under indicator */}
-                          {isIndicatorExpanded &&
-                            methods.map((method) => {
-                              const isSelected = isMethodSelected(
-                                ind.id,
-                                method.testMethodId
-                              );
-                              return (
-                                <div
-                                  key={method.testMethodId}
-                                  onClick={() =>
-                                    toggleIndicatorMethod(
-                                      ind.id,
-                                      method.testMethodId
-                                    )
-                                  }
-                                  style={{
-                                    padding: "5px 12px 5px 48px",
-                                    borderBottom: "1px solid #f8f8f8",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 8,
-                                    cursor: "pointer",
-                                    background: isSelected ? "#bae7ff" : "#fff",
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    if (!isSelected) {
-                                      e.currentTarget.style.background =
-                                        "#f0f0f0";
-                                    }
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.background =
-                                      isSelected ? "#bae7ff" : "#fff";
-                                  }}
-                                >
-                                  <Checkbox
-                                    checked={isSelected}
-                                    onClick={(e) => e.stopPropagation()}
-                                    onChange={() =>
-                                      toggleIndicatorMethod(
-                                        ind.id,
-                                        method.testMethodId
-                                      )
-                                    }
-                                  />
-                                  <span
-                                    style={{
-                                      flex: 1,
-                                      fontSize: 12,
-                                      color: "#595959",
-                                      overflow: "hidden",
-                                      textOverflow: "ellipsis",
-                                      whiteSpace: "nowrap",
-                                    }}
-                                  >
-                                    <IndicatorName name={method.testMethodName} formattedName={method.testMethodFormattedName} />
-                                  </span>
-                                  <span
-                                    style={{
-                                      fontSize: 12,
-                                      color: "#888",
-                                      fontWeight: 500,
-                                      whiteSpace: "nowrap",
-                                    }}
-                                  >
-                                    {method.unitPrice?.toLocaleString("vi-VN")}đ
-                                  </span>
-                                </div>
-                              );
-                            })}
-                        </div>
-                      );
-                    })}
+                    filteredIndicators.map((ind) => renderIndicatorWithMethods(ind, 1))}
                 </div>
               );
             })
-          : // When a specific group is selected
+          : // When a specific group is selected - reuse helper
             getFilteredIndicators()
               .filter((ind) =>
                 indicatorMethodsMap[ind.id]?.some((m) => m.isActive)
@@ -534,154 +788,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                 !specimenTypeFilterActive ||
                 specimenTypeIndicatorIds.includes(ind.id)
               )
-              .map((ind) => {
-                const methods =
-                  indicatorMethodsMap[ind.id]?.filter((m) => m.isActive) || [];
-                const isIndicatorExpanded = expandedIndicators.includes(ind.id);
-                const selectedMethodsCount = methods.filter((m) =>
-                  isMethodSelected(ind.id, m.testMethodId)
-                ).length;
-
-                return (
-                  <div key={ind.id}>
-                    {/* Indicator header */}
-                    <div
-                      onClick={() => {
-                        setExpandedIndicators((prev) =>
-                          prev.includes(ind.id)
-                            ? prev.filter((id) => id !== ind.id)
-                            : [...prev, ind.id]
-                        );
-                      }}
-                      style={{
-                        padding: "6px 12px",
-                        borderBottom: "1px solid #f5f5f5",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        cursor: "pointer",
-                        background:
-                          selectedMethodsCount > 0 ? "#e6f7ff" : "#fff",
-                      }}
-                      onMouseEnter={(e) => {
-                        if (selectedMethodsCount === 0) {
-                          e.currentTarget.style.background = "#f5f5f5";
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background =
-                          selectedMethodsCount > 0 ? "#e6f7ff" : "#fff";
-                      }}
-                    >
-                      <Icon
-                        icon={
-                          isIndicatorExpanded
-                            ? "mdi:chevron-down"
-                            : "mdi:chevron-right"
-                        }
-                        width={16}
-                        style={{ color: "#595959", flexShrink: 0 }}
-                      />
-                      <IndicatorName
-                        name={ind.name}
-                        formattedName={ind.formattedName}
-                        style={{
-                          flex: 1,
-                          fontSize: 13,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      />
-                      {selectedMethodsCount > 0 && (
-                        <span
-                          style={{
-                            fontSize: 11,
-                            color: "#1890ff",
-                            background: "#e6f7ff",
-                            padding: "1px 6px",
-                            borderRadius: 10,
-                          }}
-                        >
-                          {selectedMethodsCount}
-                        </span>
-                      )}
-                      <span style={{ fontSize: 12, color: "#888" }}>
-                        ({methods.length})
-                      </span>
-                    </div>
-
-                    {/* Methods */}
-                    {isIndicatorExpanded &&
-                      methods.map((method) => {
-                        const isSelected = isMethodSelected(
-                          ind.id,
-                          method.testMethodId
-                        );
-                        return (
-                          <div
-                            key={method.testMethodId}
-                            onClick={() =>
-                              toggleIndicatorMethod(ind.id, method.testMethodId)
-                            }
-                            style={{
-                              padding: "5px 12px 5px 32px",
-                              borderBottom: "1px solid #f8f8f8",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 8,
-                              cursor: "pointer",
-                              background: isSelected ? "#bae7ff" : "#fff",
-                            }}
-                            onMouseEnter={(e) => {
-                              if (!isSelected) {
-                                e.currentTarget.style.background = "#f0f0f0";
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = isSelected
-                                ? "#bae7ff"
-                                : "#fff";
-                            }}
-                          >
-                            <Checkbox
-                              checked={isSelected}
-                              onClick={(e) => e.stopPropagation()}
-                              onChange={() =>
-                                toggleIndicatorMethod(
-                                  ind.id,
-                                  method.testMethodId
-                                )
-                              }
-                            />
-                            <span
-                              style={{
-                                flex: 1,
-                                fontSize: 12,
-                                color: "#595959",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              <IndicatorName name={method.testMethodName} formattedName={method.testMethodFormattedName} />
-                            </span>
-                            <span
-                              style={{
-                                fontSize: 12,
-                                color: "#888",
-                                fontWeight: 500,
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {method.unitPrice?.toLocaleString("vi-VN")}đ
-                            </span>
-                          </div>
-                        );
-                      })}
-                  </div>
-                );
-              })}
+              .map((ind) => renderIndicatorWithMethods(ind, 1))}
       </div>
     </>
   );
