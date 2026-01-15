@@ -19,6 +19,7 @@ import {
 } from "../../../components/common/Icon";
 import { laboratoryTaskService } from "../../../services/laboratoryTaskService";
 import { STORAGE_KEYS } from "../../../constants";
+import { getApiErrorMessage } from "../../../utils/errorHandler";
 import {
   LaboratoryTaskSupporterDto,
   UserLookupDto,
@@ -108,7 +109,7 @@ const SupporterModal: React.FC<SupporterModalProps> = ({
     } catch (error: any) {
       console.error("Failed to add supporters:", error);
       message.error(
-        error.response?.data?.error?.message || "Không thể thêm người hỗ trợ"
+        getApiErrorMessage(error, "Không thể thêm người hỗ trợ")
       );
     } finally {
       setAddingSupporter(false);
@@ -125,7 +126,7 @@ const SupporterModal: React.FC<SupporterModalProps> = ({
     } catch (error: any) {
       console.error("Failed to remove supporter:", error);
       message.error(
-        error.response?.data?.error?.message || "Không thể xóa người hỗ trợ"
+        getApiErrorMessage(error, "Không thể xóa người hỗ trợ")
       );
     } finally {
       setRemovingId(null);

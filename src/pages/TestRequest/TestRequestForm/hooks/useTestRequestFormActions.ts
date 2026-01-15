@@ -22,6 +22,7 @@ import {
 } from "../types";
 import { generateSampleCode, getNextOrderNum, printBarcode as printBarcodeUtil, SampleBarcodeInfo } from "../utils";
 import { PATH_ROUTES } from "../../../../constants";
+import { getApiErrorMessage } from "../../../../utils/errorHandler";
 
 interface UseTestRequestFormActionsProps {
   form: any;
@@ -889,9 +890,7 @@ export const useTestRequestFormActions = ({
         }
       }
 
-      message.error(
-        error.response?.data?.error?.message || "Không thể lưu yêu cầu. Vui lòng thử lại."
-      );
+      message.error(getApiErrorMessage(error, "Không thể lưu yêu cầu. Vui lòng thử lại."));
     } finally {
       setLoading(false);
     }
@@ -1001,9 +1000,7 @@ export const useTestRequestFormActions = ({
       message.success("Đã tạo phiếu xem trước");
     } catch (error: any) {
       console.error("Error previewing form:", error);
-      message.error(
-        error.response?.data?.error?.message || "Không thể tạo phiếu xem trước. Vui lòng thử lại."
-      );
+      message.error(getApiErrorMessage(error, "Không thể tạo phiếu xem trước. Vui lòng thử lại."));
     } finally {
       setLoading(false);
     }
