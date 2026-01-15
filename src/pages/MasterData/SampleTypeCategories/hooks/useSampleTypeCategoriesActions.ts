@@ -4,38 +4,12 @@ import { UseFormReturn } from "react-hook-form";
 import { sampleTypeCategoryService } from "../../../../services/masterDataService";
 import { SampleTypeCategoryDto } from "../types";
 import { SampleTypeCategoryFormData } from "../schemas";
+import { getApiErrorMessage } from "../../../../utils/errorHandler";
 
 interface UseSampleTypeCategoriesActionsProps {
   fetchData: () => Promise<void>;
   onDataChange?: () => void;
 }
-
-/**
- * Extract error message from API error response
- * API response interceptor unwraps errors, so error.response.data is directly the errors object
- * Format: { "general": ["message1"], "fieldName": ["message2"] } or { message: "..." }
- */
-const extractErrorMessage = (error: any, defaultMessage: string): string => {
-  const data = error.response?.data;
-
-  if (!data) return defaultMessage;
-
-  // If data is an object with arrays (field errors format)
-  if (typeof data === 'object' && !Array.isArray(data)) {
-    // Check for direct message property
-    if (data.message) return data.message;
-
-    // Try to get first error from field errors (e.g., { "general": ["..."], "name": ["..."] })
-    const keys = Object.keys(data);
-    for (const key of keys) {
-      if (Array.isArray(data[key]) && data[key].length > 0) {
-        return data[key][0];
-      }
-    }
-  }
-
-  return defaultMessage;
-};
 
 export const useSampleTypeCategoriesActions = ({
   fetchData,
@@ -79,7 +53,7 @@ export const useSampleTypeCategoriesActions = ({
       await fetchData();
       onDataChange?.();
     } catch (error: any) {
-      const errorMessage = extractErrorMessage(error, "Không thể xóa danh mục. Vui lòng kiểm tra lại.");
+      const errorMessage = getApiErrorMessage(error, "Không thể xóa danh mục. Vui lòng kiểm tra lại.");
       message.error(errorMessage);
     }
   };
@@ -110,7 +84,7 @@ export const useSampleTypeCategoriesActions = ({
           await fetchData();
           onDataChange?.();
         } catch (error: any) {
-          const errorMessage = extractErrorMessage(error, `Không thể ${statusText} danh mục. Vui lòng thử lại.`);
+          const errorMessage = getApiErrorMessage(error, `Không thể ${statusText} danh mục. Vui lòng thử lại.`);
           message.error(errorMessage);
         }
       },
@@ -144,7 +118,7 @@ export const useSampleTypeCategoriesActions = ({
       await fetchData();
       onDataChange?.();
     } catch (error: any) {
-      const errorMessage = extractErrorMessage(error, "Không thể lưu danh mục. Vui lòng thử lại.");
+      const errorMessage = getApiErrorMessage(error, "Không thể lưu danh mục. Vui lòng thử lại.");
       message.error(errorMessage);
     } finally {
       setModalLoading(false);

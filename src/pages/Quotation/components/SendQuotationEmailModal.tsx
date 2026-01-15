@@ -21,6 +21,7 @@ import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
 import { quotationService } from "../../../services/quotationService";
 import { formatCurrency } from "../../../utils/formatters";
+import { getApiErrorMessage } from "../../../utils/errorHandler";
 
 const { Text } = Typography;
 
@@ -177,17 +178,12 @@ const SendQuotationEmailModal: React.FC<SendQuotationEmailModalProps> = ({
             <div style="text-align: center; color: #ff4d4f;">
               <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
               <div style="font-size: 18px;">Tạo PDF thất bại</div>
-              <div style="color: #666; margin-top: 8px;">${
-                error.response?.data?.error?.message || "Vui lòng thử lại."
-              }</div>
+              <div style="color: #666; margin-top: 8px;">${getApiErrorMessage(error, "Vui lòng thử lại.")}</div>
             </div>
           </div>
         `;
       }
-      message.error(
-        error.response?.data?.error?.message ||
-          "Tạo PDF thất bại. Vui lòng thử lại."
-      );
+      message.error(getApiErrorMessage(error, "Tạo PDF thất bại. Vui lòng thử lại."));
     } finally {
       setLoadingPdfPreview(false);
     }
@@ -245,10 +241,7 @@ const SendQuotationEmailModal: React.FC<SendQuotationEmailModalProps> = ({
         return;
       }
       console.error("Failed to send email:", error);
-      message.error(
-        error.response?.data?.error?.message ||
-          "Gửi email thất bại. Vui lòng thử lại."
-      );
+      message.error(getApiErrorMessage(error, "Gửi email thất bại. Vui lòng thử lại."));
     } finally {
       setSending(false);
     }

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { message } from "antd";
 import { testingService } from "../../services/testingService";
 import { testResultValueService } from "../../services/testResultValueService";
+import { getApiErrorMessage } from "../../utils/errorHandler";
 import {
   TestingDetailDto,
   TestingIndicatorDto,
@@ -236,7 +237,7 @@ const TestingDetail: React.FC = () => {
     } catch (error: any) {
       console.error("Failed to save result:", error);
       message.error(
-        error.response?.data?.error?.message || "Không thể lưu kết quả"
+        getApiErrorMessage(error, "Không thể lưu kết quả")
       );
     }
   };
@@ -355,7 +356,7 @@ const TestingDetail: React.FC = () => {
     } catch (error: any) {
       console.error("Failed to submit results:", error);
       message.error(
-        error.response?.data?.error?.message || "Không thể gửi kết quả"
+        getApiErrorMessage(error, "Không thể gửi kết quả")
       );
       // Reload để sync lại với server nếu có lỗi
       await loadDetail();
@@ -485,7 +486,7 @@ const TestingDetail: React.FC = () => {
     } catch (error: any) {
       console.error("Failed to submit indicator result:", error);
       message.error(
-        error.response?.data?.error?.message || "Không thể gửi kết quả"
+        getApiErrorMessage(error, "Không thể gửi kết quả")
       );
       // Reload để sync lại với server nếu có lỗi
       await loadDetail();
@@ -641,7 +642,7 @@ const TestingDetail: React.FC = () => {
     } catch (error: any) {
       console.error("Failed to save bulk test dates:", error);
       message.error(
-        error.response?.data?.error?.message || "Không thể lưu ngày thử nghiệm"
+        getApiErrorMessage(error, "Không thể lưu ngày thử nghiệm")
       );
       // Reload lại data nếu có lỗi để sync với server
       await reloadData();

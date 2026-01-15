@@ -28,6 +28,7 @@ import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { quotationService } from "../../services/quotationService";
 import { organizationService } from "../../services/organizationService";
+import { getApiErrorMessage } from "../../utils/errorHandler";
 import {
   CreateUpdateQuotationDto,
   QuotationStatus,
@@ -252,9 +253,7 @@ const QuotationForm: React.FC = () => {
       navigate(PATH_ROUTES.quotations.index);
     } catch (error: any) {
       console.error("Failed to save quotation:", error);
-      message.error(
-        error.response?.data?.error?.message || "Lưu báo giá thất bại"
-      );
+      message.error(getApiErrorMessage(error, "Lưu báo giá thất bại"));
     } finally {
       setSaving(false);
     }

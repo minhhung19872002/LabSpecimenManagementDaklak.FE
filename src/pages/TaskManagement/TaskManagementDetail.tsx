@@ -57,6 +57,7 @@ import SampleImagesDisplay from "./components/SampleImagesDisplay";
 import NoteModal, { NoteSaveInput } from "./components/NoteModal";
 import { PATH_ROUTES, STORAGE_KEYS } from "../../constants";
 import { useMultipleActionPermissions } from "../../hooks/useActionPermission";
+import { getApiErrorMessage } from "../../utils/errorHandler";
 import { IndicatorName } from "../../components/common";
 
 const { Title, Text } = Typography;
@@ -611,7 +612,7 @@ const TaskManagementDetail: React.FC = () => {
     } catch (error: any) {
       console.error("Failed to assign:", error);
       message.error(
-        error.response?.data?.error?.message || "Không thể giao việc"
+        getApiErrorMessage(error, "Không thể giao việc")
       );
       // Reload để sync lại với server nếu có lỗi
       await loadTask();
@@ -695,7 +696,7 @@ const TaskManagementDetail: React.FC = () => {
     } catch (error: any) {
       console.error("Failed to update standard:", error);
       message.error(
-        error.response?.data?.error?.message || "Không thể cập nhật tiêu chuẩn"
+        getApiErrorMessage(error, "Không thể cập nhật tiêu chuẩn")
       );
       // Revert local state nếu có lỗi
       setStandardSelections((prev) => {
@@ -720,7 +721,7 @@ const TaskManagementDetail: React.FC = () => {
     } catch (error: any) {
       console.error("Failed to update note:", error);
       message.error(
-        error.response?.data?.error?.message || "Không thể cập nhật ghi chú"
+        getApiErrorMessage(error, "Không thể cập nhật ghi chú")
       );
       throw error;
     }
