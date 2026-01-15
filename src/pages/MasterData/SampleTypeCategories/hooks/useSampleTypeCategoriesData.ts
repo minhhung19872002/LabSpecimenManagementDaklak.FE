@@ -18,9 +18,10 @@ export const useSampleTypeCategoriesData = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
+      // Load all specimen types (including inactive) to show nested in categories
       const [categoriesData, specimenTypesData] = await Promise.all([
         sampleTypeCategoryService.getWithCount(),
-        specimenTypeService.getActive(),
+        specimenTypeService.getList({ skipCount: 0, maxResultCount: 1000 }),
       ]);
 
       setCategories(categoriesData || []);
