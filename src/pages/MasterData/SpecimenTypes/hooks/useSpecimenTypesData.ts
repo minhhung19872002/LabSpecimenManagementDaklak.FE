@@ -2,47 +2,46 @@ import { useState, useEffect, useMemo } from "react";
 import { message } from "antd";
 import {
   specimenTypeService,
+  sampleTypeCategoryService,
   indicatorGroupService,
   indicatorService,
 } from "../../../../services/masterDataService";
 import {
   SpecimenTypeWithIndicatorsDto,
   GroupedSpecimenTypeData,
+  SampleTypeCategoryDto,
 } from "../types";
 import { IndicatorDto, IndicatorGroupDto } from "../../../../services/masterDataService";
 
 export const useSpecimenTypesData = () => {
   const [specimenTypes, setSpecimenTypes] = useState<SpecimenTypeWithIndicatorsDto[]>([]);
+  const [categories, setCategories] = useState<SampleTypeCategoryDto[]>([]);
   const [indicatorGroups, setIndicatorGroups] = useState<IndicatorGroupDto[]>([]);
   const [indicators, setIndicators] = useState<IndicatorDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
-  const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [expandedSpecimenTypeKeys, setExpandedSpecimenTypeKeys] = useState<string[]>([]);
 
   // Fetch all data
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [typesData, groupsData, indicatorsData] = await Promise.all([
+      const [typesData, categoriesData, groupsData, indicatorsData] = await Promise.all([
         specimenTypeService.getWithIndicators(),
+        sampleTypeCategoryService.getWithCount(),
         indicatorGroupService.getActive(),
         indicatorService.getActive(),
       ]);
 
       setSpecimenTypes(typesData || []);
+      setCategories(categoriesData || []);
       setIndicatorGroups(groupsData || []);
       setIndicators(indicatorsData || []);
-
-      // Only collapse all on initial load
-      if (isInitialLoad) {
-        setExpandedRowKeys([]);
-        setIsInitialLoad(false);
-      }
     } catch (error) {
       console.error("Failed to fetch data:", error);
       message.error("Không thể tải dữ liệu loại mẫu");
       setSpecimenTypes([]);
+      setCategories([]);
     } finally {
       setLoading(false);
     }
@@ -61,6 +60,7 @@ export const useSpecimenTypesData = () => {
       (item) =>
         item.name?.toLowerCase().includes(lowerSearch) ||
         item.description?.toLowerCase().includes(lowerSearch) ||
+        item.sampleTypeCategoryName?.toLowerCase().includes(lowerSearch) ||
         item.indicators?.some(
           (ind) =>
             ind.indicatorCode?.toLowerCase().includes(lowerSearch) ||
@@ -69,7 +69,7 @@ export const useSpecimenTypesData = () => {
     );
   }, [specimenTypes, searchText]);
 
-  // Convert to grouped data for table
+  // Flat list of specimen types with key
   const groupedData: GroupedSpecimenTypeData[] = useMemo(() => {
     return filteredData.map((type) => ({
       ...type,
@@ -77,14 +77,14 @@ export const useSpecimenTypesData = () => {
     }));
   }, [filteredData]);
 
-  // Options for indicator group select (for AddIndicatorsModal)
-  const groupOptions = useMemo(() => {
-    return indicatorGroups.map((group) => ({
-      value: group.id,
-      label: group.name,
-      isActive: group.isActive,
+  // Options for category select (for SpecimenTypeModal)
+  const categoryOptions = useMemo(() => {
+    return categories.map((category) => ({
+      value: category.id,
+      label: category.name + (!category.isActive ? " (Ngừng)" : ""),
+      isActive: category.isActive,
     }));
-  }, [indicatorGroups]);
+  }, [categories]);
 
   // Group indicators by group for selection
   const indicatorsByGroup = useMemo(() => {
@@ -103,16 +103,17 @@ export const useSpecimenTypesData = () => {
 
   return {
     specimenTypes,
+    categories,
     loading,
     searchText,
     groupedData,
-    expandedRowKeys,
+    expandedSpecimenTypeKeys,
     indicatorGroups,
     indicators,
-    groupOptions,
+    categoryOptions,
     indicatorsByGroup,
     setSearchText,
-    setExpandedRowKeys,
+    setExpandedSpecimenTypeKeys,
     fetchData,
   };
 };

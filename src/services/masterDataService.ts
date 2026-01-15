@@ -31,6 +31,22 @@ export interface CreateUpdateDepartmentDto {
   sortOrder?: number;
 }
 
+// SampleTypeCategory (Danh mục loại mẫu)
+export interface SampleTypeCategoryDto {
+  id: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
+  specimenTypeCount: number;
+  creationTime: string;
+}
+
+export interface CreateUpdateSampleTypeCategoryDto {
+  name: string;
+  description?: string;
+  isActive: boolean;
+}
+
 // SpecimenType
 export interface SpecimenTypeDto {
   id: string;
@@ -40,15 +56,18 @@ export interface SpecimenTypeDto {
   isActive: boolean;
   sortOrder: number;
   indicatorCount: number;
+  sampleTypeCategoryId?: string;
+  sampleTypeCategoryName?: string;
   creationTime: string;
 }
 
 export interface CreateUpdateSpecimenTypeDto {
-  code: string;
+  code?: string;
   name: string;
   description?: string;
   isActive: boolean;
   sortOrder?: number;
+  sampleTypeCategoryId?: string;
 }
 
 export interface SpecimenTypeIndicatorDto {
@@ -341,6 +360,7 @@ export interface MasterDataStatisticsDto {
 
 // Service implementations - Using new API v1 endpoints
 const DEPARTMENT_URL = '/api/v1/departments';
+const SAMPLE_TYPE_CATEGORY_URL = '/api/v1/sample-type-categories';
 const SPECIMEN_TYPE_URL = '/api/v1/specimen-types';
 const TEST_METHOD_URL = '/api/v1/test-methods';
 const STANDARD_URL = '/api/v1/standards';
@@ -396,6 +416,47 @@ export const departmentService = {
   getActive: async (): Promise<PagedResultDto<DepartmentDto>> => {
     const response = await api.get<DepartmentDto[]>(`${DEPARTMENT_URL}/active`);
     return { items: response.data, totalCount: response.data.length };
+  },
+};
+
+export const sampleTypeCategoryService = {
+  getList: async (params: PagedAndSortedResultRequestDto): Promise<PagedResultDto<SampleTypeCategoryDto>> => {
+    const response = await api.get<PagedResultDto<SampleTypeCategoryDto>>(SAMPLE_TYPE_CATEGORY_URL, { params: toApiParams(params) });
+    return response.data;
+  },
+  get: async (id: string): Promise<SampleTypeCategoryDto> => {
+    const response = await api.get<SampleTypeCategoryDto>(`${SAMPLE_TYPE_CATEGORY_URL}/${id}`);
+    return response.data;
+  },
+  create: async (data: CreateUpdateSampleTypeCategoryDto): Promise<SampleTypeCategoryDto> => {
+    const response = await api.post<SampleTypeCategoryDto>(SAMPLE_TYPE_CATEGORY_URL, data);
+    return response.data;
+  },
+  update: async (id: string, data: CreateUpdateSampleTypeCategoryDto): Promise<SampleTypeCategoryDto> => {
+    const response = await api.put<SampleTypeCategoryDto>(`${SAMPLE_TYPE_CATEGORY_URL}/${id}`, data);
+    return response.data;
+  },
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`${SAMPLE_TYPE_CATEGORY_URL}/${id}`);
+  },
+  getActive: async (): Promise<SampleTypeCategoryDto[]> => {
+    const response = await api.get<{ items: SampleTypeCategoryDto[] } | SampleTypeCategoryDto[]>(`${SAMPLE_TYPE_CATEGORY_URL}/active`);
+    // Handle both array and { items: [] } response formats
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+    return response.data?.items || [];
+  },
+  getWithCount: async (): Promise<SampleTypeCategoryDto[]> => {
+    const response = await api.get<{ items: SampleTypeCategoryDto[] } | SampleTypeCategoryDto[]>(`${SAMPLE_TYPE_CATEGORY_URL}/with-count`);
+    // Handle both array and { items: [] } response formats
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+    return response.data?.items || [];
+  },
+  toggleActive: async (id: string): Promise<void> => {
+    await api.post(`${SAMPLE_TYPE_CATEGORY_URL}/${id}/toggle-active`);
   },
 };
 

@@ -1,1 +1,6 @@
-export { specimenTypeSchema, type SpecimenTypeFormData } from "./specimenTypeSchema";
+export {
+  specimenTypeSchema,
+  sampleTypeCategorySchema,
+  type SpecimenTypeFormData,
+  type SampleTypeCategoryFormData,
+} from "./specimenTypeSchema";

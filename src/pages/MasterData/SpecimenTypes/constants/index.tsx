@@ -1,12 +1,15 @@
 import { Button, Space, Tag, Tooltip, Popconfirm } from "antd";
-import { EditOutlined, DeleteOutlined } from "../../../../components/common/Icon";
+import {
+  EditOutlined,
+  DeleteOutlined,
+} from "../../../../components/common/Icon";
 import { IndicatorName } from "../../../../components/common";
 import type { ColumnsType } from "antd/es/table";
 import { GroupedSpecimenTypeData, SpecimenTypeIndicatorDto } from "../types";
 
 export const DEFAULT_PAGE_SIZE = 50;
 
-// Columns cho bảng loại mẫu (group level) - Không có STT và Mã
+// Columns cho bảng loại mẫu (flat list với cột danh mục)
 export const getSpecimenTypeColumns = (
   handleEdit: (record: GroupedSpecimenTypeData) => void,
   handleDelete: (id: string) => void
@@ -16,6 +19,14 @@ export const getSpecimenTypeColumns = (
     dataIndex: "name",
     key: "name",
     width: 200,
+  },
+  {
+    title: "Danh mục loại mẫu",
+    dataIndex: "sampleTypeCategoryName",
+    key: "sampleTypeCategoryName",
+    width: 180,
+    ellipsis: true,
+    render: (categoryName: string | undefined) => categoryName || "-",
   },
   {
     title: "Mô tả",
@@ -29,6 +40,12 @@ export const getSpecimenTypeColumns = (
         {description || "-"}
       </Tooltip>
     ),
+  },
+  {
+    title: "Số chỉ tiêu",
+    key: "indicatorCount",
+    width: 100,
+    render: (_, record) => record.indicators?.length || 0,
   },
   {
     title: "Trạng thái",

@@ -9,10 +9,10 @@ interface SpecimenTypesTableProps {
   groupedData: GroupedSpecimenTypeData[];
   specimenTypeColumns: ColumnsType<GroupedSpecimenTypeData>;
   indicatorColumns: ColumnsType<SpecimenTypeIndicatorDto>;
-  expandedRowKeys: string[];
+  expandedSpecimenTypeKeys: string[];
   searchText: string;
   onSearchChange: (value: string) => void;
-  onExpandedRowsChange: (keys: string[]) => void;
+  onExpandedSpecimenTypeKeysChange: (keys: string[]) => void;
   onAddIndicators: (specimenTypeId: string) => void;
 }
 
@@ -21,10 +21,10 @@ const SpecimenTypesTable: React.FC<SpecimenTypesTableProps> = ({
   groupedData,
   specimenTypeColumns,
   indicatorColumns,
-  expandedRowKeys,
+  expandedSpecimenTypeKeys,
   searchText,
   onSearchChange,
-  onExpandedRowsChange,
+  onExpandedSpecimenTypeKeysChange,
   onAddIndicators,
 }) => {
   return (
@@ -32,7 +32,7 @@ const SpecimenTypesTable: React.FC<SpecimenTypesTableProps> = ({
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} sm={12} md={8}>
           <Input
-            placeholder="Tìm kiếm theo tên, mô tả, chỉ tiêu..."
+            placeholder="Tìm kiếm theo tên, mô tả, danh mục, chỉ tiêu..."
             prefix={<SearchOutlined />}
             value={searchText}
             onChange={(e) => onSearchChange(e.target.value)}
@@ -47,16 +47,16 @@ const SpecimenTypesTable: React.FC<SpecimenTypesTableProps> = ({
           dataSource={groupedData}
           rowKey="id"
           expandable={{
-            expandedRowRender: (record) => {
-              const hasIndicators = record.indicators && record.indicators.length > 0;
+            expandedRowRender: (specimenTypeRecord) => {
+              const hasIndicators = specimenTypeRecord.indicators && specimenTypeRecord.indicators.length > 0;
 
               return (
-                <div style={{ padding: "8px 0" }}>
+                <div style={{ padding: "8px 0", marginLeft: 16 }}>
                   {hasIndicators ? (
                     <>
                       <Table
                         columns={indicatorColumns}
-                        dataSource={record.indicators}
+                        dataSource={specimenTypeRecord.indicators}
                         rowKey="id"
                         pagination={false}
                         size="small"
@@ -66,7 +66,7 @@ const SpecimenTypesTable: React.FC<SpecimenTypesTableProps> = ({
                           type="dashed"
                           size="small"
                           icon={<PlusOutlined />}
-                          onClick={() => onAddIndicators(record.id)}
+                          onClick={() => onAddIndicators(specimenTypeRecord.id)}
                         >
                           Thêm chỉ tiêu
                         </Button>
@@ -80,7 +80,7 @@ const SpecimenTypesTable: React.FC<SpecimenTypesTableProps> = ({
                       <Button
                         type="primary"
                         icon={<PlusOutlined />}
-                        onClick={() => onAddIndicators(record.id)}
+                        onClick={() => onAddIndicators(specimenTypeRecord.id)}
                       >
                         Thêm chỉ tiêu
                       </Button>
@@ -90,8 +90,8 @@ const SpecimenTypesTable: React.FC<SpecimenTypesTableProps> = ({
               );
             },
             rowExpandable: () => true,
-            expandedRowKeys,
-            onExpandedRowsChange: (keys) => onExpandedRowsChange(keys as string[]),
+            expandedRowKeys: expandedSpecimenTypeKeys,
+            onExpandedRowsChange: (keys) => onExpandedSpecimenTypeKeysChange(keys as string[]),
           }}
           pagination={{
             pageSize: 50,
