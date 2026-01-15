@@ -47,6 +47,21 @@ export interface CreateUpdateSampleTypeCategoryDto {
   isActive: boolean;
 }
 
+// SampleCondition (Tình trạng mẫu)
+export interface SampleConditionDto {
+  id: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
+  creationTime: string;
+}
+
+export interface CreateUpdateSampleConditionDto {
+  name: string;
+  description?: string;
+  isActive: boolean;
+}
+
 // SpecimenType
 export interface SpecimenTypeDto {
   id: string;
@@ -361,6 +376,7 @@ export interface MasterDataStatisticsDto {
 // Service implementations - Using new API v1 endpoints
 const DEPARTMENT_URL = '/api/v1/departments';
 const SAMPLE_TYPE_CATEGORY_URL = '/api/v1/sample-type-categories';
+const SAMPLE_CONDITION_URL = '/api/v1/sample-conditions';
 const SPECIMEN_TYPE_URL = '/api/v1/specimen-types';
 const TEST_METHOD_URL = '/api/v1/test-methods';
 const STANDARD_URL = '/api/v1/standards';
@@ -457,6 +473,38 @@ export const sampleTypeCategoryService = {
   },
   toggleActive: async (id: string): Promise<void> => {
     await api.post(`${SAMPLE_TYPE_CATEGORY_URL}/${id}/toggle-active`);
+  },
+};
+
+export const sampleConditionService = {
+  getList: async (params?: PagedAndSortedResultRequestDto): Promise<PagedResultDto<SampleConditionDto>> => {
+    const response = await api.get<PagedResultDto<SampleConditionDto>>(SAMPLE_CONDITION_URL, { params: params ? toApiParams(params) : {} });
+    return response.data;
+  },
+  get: async (id: string): Promise<SampleConditionDto> => {
+    const response = await api.get<SampleConditionDto>(`${SAMPLE_CONDITION_URL}/${id}`);
+    return response.data;
+  },
+  create: async (data: CreateUpdateSampleConditionDto): Promise<SampleConditionDto> => {
+    const response = await api.post<SampleConditionDto>(SAMPLE_CONDITION_URL, data);
+    return response.data;
+  },
+  update: async (id: string, data: CreateUpdateSampleConditionDto): Promise<SampleConditionDto> => {
+    const response = await api.put<SampleConditionDto>(`${SAMPLE_CONDITION_URL}/${id}`, data);
+    return response.data;
+  },
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`${SAMPLE_CONDITION_URL}/${id}`);
+  },
+  getActive: async (): Promise<SampleConditionDto[]> => {
+    const response = await api.get<{ items: SampleConditionDto[] } | SampleConditionDto[]>(`${SAMPLE_CONDITION_URL}/active`);
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+    return response.data?.items || [];
+  },
+  toggleActive: async (id: string): Promise<void> => {
+    await api.post(`${SAMPLE_CONDITION_URL}/${id}/toggle-active`);
   },
 };
 
