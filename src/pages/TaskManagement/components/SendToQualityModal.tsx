@@ -108,7 +108,7 @@ const SendToQualityModal: React.FC<SendToQualityModalProps> = ({
         selectedIndicatorIds.includes(ind.id)
       );
       const noteLines = selectedInds
-        .map(ind => ind.note)
+        .map(ind => ind.freeTextNote)
         .filter(note => note && note.trim())
         .map(note => `- ${note}`);
 

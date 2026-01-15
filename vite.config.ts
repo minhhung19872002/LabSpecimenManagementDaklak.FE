@@ -42,6 +42,12 @@ export default defineConfig({
         // Exclude large files from precache
         globIgnores: ['**/vietnamLocations*.js'],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3MB limit
+        // Navigate fallback for SPA - serves index.html for all navigation requests when offline
+        navigateFallback: 'index.html',
+        navigateFallbackDenylist: [/^\/api\//],
+        // Take control immediately without waiting for tabs to close
+        skipWaiting: true,
+        clientsClaim: true,
         runtimeCaching: [
           {
             // Cache API responses with NetworkFirst strategy
@@ -86,7 +92,10 @@ export default defineConfig({
         ]
       },
       devOptions: {
-        enabled: true // Enable PWA in dev mode for testing
+        enabled: true, // Enable PWA in dev mode for offline testing
+        type: 'module',
+        navigateFallback: '/',
+        navigateFallbackAllowlist: [/^\/(?!api).*/]
       }
     })
   ],

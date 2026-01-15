@@ -1,4 +1,5 @@
 import api from './api';
+import { createOfflineService, BaseCrudService } from './offline/createOfflineService';
 
 export interface NCRDto {
   id: string;
@@ -93,7 +94,6 @@ export interface PagedAndSortedResultRequestDto {
 
 const BASE_URL = '/api/v1/ncrs';
 
-// Helper to convert params for API (ABP Framework uses SkipCount, MaxResultCount, Sorting)
 const toApiParams = (params: PagedAndSortedResultRequestDto) => {
   const apiParams: Record<string, any> = {};
   if (params.skipCount !== undefined) apiParams.SkipCount = params.skipCount;
@@ -110,41 +110,57 @@ export interface AssignNCRDto {
   assignedToId: string;
 }
 
-export const ncrService = {
+const ncrApiService = {
   getList: async (params: PagedAndSortedResultRequestDto): Promise<PagedResultDto<NCRDto>> => {
     const response = await api.get<PagedResultDto<NCRDto>>(BASE_URL, { params: toApiParams(params) });
     return response.data;
   },
-
   get: async (id: string): Promise<NCRDto> => {
     const response = await api.get<NCRDto>(`${BASE_URL}/${id}`);
     return response.data;
   },
-
   create: async (data: CreateNCRDto): Promise<NCRDto> => {
     const response = await api.post<NCRDto>(BASE_URL, data);
     return response.data;
   },
-
   update: async (id: string, data: UpdateNCRDto): Promise<NCRDto> => {
     const response = await api.put<NCRDto>(`${BASE_URL}/${id}`, data);
     return response.data;
   },
-
   delete: async (id: string): Promise<void> => {
     await api.delete(`${BASE_URL}/${id}`);
   },
+};
 
+const baseService: BaseCrudService<NCRDto, CreateNCRDto, UpdateNCRDto, PagedAndSortedResultRequestDto> = {
+  getList: ncrApiService.getList,
+  get: ncrApiService.get,
+  create: ncrApiService.create,
+  update: ncrApiService.update,
+  delete: ncrApiService.delete,
+};
+
+const offlineEnabledService = createOfflineService<NCRDto, CreateNCRDto, UpdateNCRDto, PagedAndSortedResultRequestDto>('NCR', baseService);
+
+export const ncrService = {
+  getList: offlineEnabledService.getList,
+  get: offlineEnabledService.get,
+  create: offlineEnabledService.create,
+  update: offlineEnabledService.update,
+  delete: offlineEnabledService.delete,
+  isOnline: offlineEnabledService.isOnline,
+  getPendingSyncCount: offlineEnabledService.getPendingSyncCount,
+  forceSync: offlineEnabledService.forceSync,
+  getCachedList: offlineEnabledService.getCachedList,
+  getCached: offlineEnabledService.getCached,
   assign: async (id: string, data: AssignNCRDto): Promise<NCRDto> => {
     const response = await api.post<NCRDto>(`${BASE_URL}/${id}/assign`, data);
     return response.data;
   },
-
   close: async (id: string, data: CloseNCRDto = {}): Promise<NCRDto> => {
     const response = await api.post<NCRDto>(`${BASE_URL}/${id}/close`, data);
     return response.data;
   },
-
   getOpenNCRs: async (): Promise<NCRDto[]> => {
     const response = await api.get<NCRDto[]>(`${BASE_URL}/open`);
     return response.data;

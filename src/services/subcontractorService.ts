@@ -1,4 +1,5 @@
 import api from './api';
+import { createOfflineService, BaseCrudService } from './offline/createOfflineService';
 
 export interface SubcontractorDto {
   id: string;
@@ -31,7 +32,6 @@ export interface SubcontractorCertificationDto {
   filePath?: string;
 }
 
-// Backend uses same DTO for create and update (code is auto-generated)
 export interface CreateUpdateSubcontractorDto {
   name: string;
   address?: string;
@@ -74,7 +74,6 @@ export interface GetSubcontractorListInput extends PagedAndSortedResultRequestDt
 
 const BASE_URL = '/api/v1/subcontractors';
 
-// Helper to convert params for API (ABP Framework uses PascalCase)
 const toApiParams = (params: GetSubcontractorListInput) => {
   const apiParams: Record<string, any> = {};
   if (params.skipCount !== undefined) apiParams.SkipCount = params.skipCount;
@@ -85,41 +84,57 @@ const toApiParams = (params: GetSubcontractorListInput) => {
   return apiParams;
 };
 
-export const subcontractorService = {
+const subcontractorApiService = {
   getList: async (params: GetSubcontractorListInput = {}): Promise<PagedResultDto<SubcontractorDto>> => {
     const response = await api.get<PagedResultDto<SubcontractorDto>>(BASE_URL, { params: toApiParams(params) });
     return response.data;
   },
-
   get: async (id: string): Promise<SubcontractorDto> => {
     const response = await api.get<SubcontractorDto>(`${BASE_URL}/${id}`);
     return response.data;
   },
-
   create: async (data: CreateUpdateSubcontractorDto): Promise<SubcontractorDto> => {
     const response = await api.post<SubcontractorDto>(BASE_URL, data);
     return response.data;
   },
-
   update: async (id: string, data: CreateUpdateSubcontractorDto): Promise<SubcontractorDto> => {
     const response = await api.put<SubcontractorDto>(`${BASE_URL}/${id}`, data);
     return response.data;
   },
-
   delete: async (id: string): Promise<void> => {
     await api.delete(`${BASE_URL}/${id}`);
   },
+};
 
+const baseService: BaseCrudService<SubcontractorDto, CreateUpdateSubcontractorDto, CreateUpdateSubcontractorDto, GetSubcontractorListInput> = {
+  getList: subcontractorApiService.getList,
+  get: subcontractorApiService.get,
+  create: subcontractorApiService.create,
+  update: subcontractorApiService.update,
+  delete: subcontractorApiService.delete,
+};
+
+const offlineEnabledService = createOfflineService<SubcontractorDto, CreateUpdateSubcontractorDto, CreateUpdateSubcontractorDto, GetSubcontractorListInput>('Subcontractor', baseService);
+
+export const subcontractorService = {
+  getList: offlineEnabledService.getList,
+  get: offlineEnabledService.get,
+  create: offlineEnabledService.create,
+  update: offlineEnabledService.update,
+  delete: offlineEnabledService.delete,
+  isOnline: offlineEnabledService.isOnline,
+  getPendingSyncCount: offlineEnabledService.getPendingSyncCount,
+  forceSync: offlineEnabledService.forceSync,
+  getCachedList: offlineEnabledService.getCachedList,
+  getCached: offlineEnabledService.getCached,
   getActive: async (): Promise<SubcontractorDto[]> => {
     const response = await api.get<SubcontractorDto[]>(`${BASE_URL}/active`);
     return response.data;
   },
-
   addCertification: async (id: string, data: CreateSubcontractorCertificationDto): Promise<SubcontractorCertificationDto> => {
     const response = await api.post<SubcontractorCertificationDto>(`${BASE_URL}/${id}/certifications`, data);
     return response.data;
   },
-
   removeCertification: async (id: string, certificationId: string): Promise<void> => {
     await api.delete(`${BASE_URL}/${id}/certifications/${certificationId}`);
   },

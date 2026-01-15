@@ -7,7 +7,6 @@ import {
   Space,
   message,
   Divider,
-  Typography,
 } from "antd";
 import {
   MailOutlined,
@@ -20,9 +19,6 @@ import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
 import { quotationService } from "../../../services/quotationService";
-import { formatCurrency } from "../../../utils/formatters";
-
-const { Text } = Typography;
 
 interface QuotationItemForEmail {
   no: number;
@@ -58,13 +54,13 @@ const SendQuotationEmailModal: React.FC<SendQuotationEmailModalProps> = ({
         heading: {
           levels: [1, 2, 3],
         },
-        bulletList: true,
-        orderedList: true,
+        bulletList: {},
+        orderedList: {},
         blockquote: false,
         codeBlock: false,
         code: false,
-        horizontalRule: true,
-        hardBreak: true,
+        horizontalRule: {},
+        hardBreak: {},
       }),
       Underline,
       Placeholder.configure({

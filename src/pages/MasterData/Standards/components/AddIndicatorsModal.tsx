@@ -247,7 +247,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   };
 
   // Custom validation for range
-  const validateRange = (_: unknown, value: unknown, fieldName: number) => {
+  const validateRange = (_: unknown, _value: unknown, fieldName: number) => {
     const indicators = form.getFieldValue("indicators") || [];
     const indicator = indicators[fieldName];
 

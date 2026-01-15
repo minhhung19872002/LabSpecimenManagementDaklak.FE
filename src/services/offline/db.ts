@@ -17,7 +17,8 @@ export type SyncEntityType =
   | 'StandardIndicator'
   | 'TestMethod'
   | 'Laboratory'
-  | 'SpecimenType';
+  | 'SpecimenType'
+  | 'TestResult';
 
 /**
  * Sync queue item status

@@ -59,8 +59,8 @@ const SpecimenTypesList: React.FC<SpecimenTypesTabProps> = ({ onDataChange, refr
   });
 
   const form = useForm<SpecimenTypeFormData>({
-    resolver: yupResolver(specimenTypeSchema),
-    defaultValues: { name: "", description: "", isActive: true },
+    resolver: yupResolver(specimenTypeSchema) as any,
+    defaultValues: { code: "", name: "", description: "", isActive: true },
   });
 
   // Get existing indicator IDs for the selected specimen type

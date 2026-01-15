@@ -100,6 +100,7 @@ class SyncManager {
   }
 
   async init(): Promise<void> {
+    console.log('[SyncManager] Initializing, online status:', this.isOnline);
     await getDB();
     if (this.isOnline) {
       this.startPeriodicSync();
@@ -128,6 +129,7 @@ class SyncManager {
   }
 
   private async handleOnline(): Promise<void> {
+    console.log('[SyncManager] Online event triggered');
     this.isOnline = true;
     this.emit('statusChange', { isOnline: true });
     this.startPeriodicSync();
@@ -197,11 +199,13 @@ class SyncManager {
 
 
   async sync(): Promise<GenericSyncBatchResponseDto | null> {
+    console.log('[SyncManager] sync() called, isOnline:', this.isOnline, 'isSyncing:', this.isSyncing);
     if (!this.isOnline || this.isSyncing) {
       return null;
     }
 
     const pendingItems = await getPendingSyncItems();
+    console.log('[SyncManager] Pending items count:', pendingItems.length);
     if (pendingItems.length === 0) {
       return null;
     }
@@ -225,6 +229,7 @@ class SyncManager {
       const response = await api.post<GenericSyncBatchResponseDto>('/api/v1/sync/batch', syncRequest);
       const result = response.data;
 
+      console.log('[SyncManager] Sync response:', JSON.stringify(result, null, 2));
       await this.processGenericResults(result.results, pendingItems);
 
       const syncedTypes = new Set(pendingItems.map(item => item.entityType));
