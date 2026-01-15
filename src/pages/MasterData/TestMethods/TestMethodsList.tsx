@@ -59,7 +59,7 @@ const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshK
   });
 
   const form = useForm<TestMethodFormData>({
-    resolver: yupResolver(testMethodSchema),
+    resolver: yupResolver(testMethodSchema) as any,
     defaultValues: { name: "", unit: "", isActive: true },
   });
   const [addIndicatorsForm] = Form.useForm();

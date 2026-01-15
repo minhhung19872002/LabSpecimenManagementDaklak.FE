@@ -25,8 +25,7 @@ import {
   BarChartOutlined,
   PieChartOutlined,
   ReloadOutlined,
-  FullscreenOutlined,
-  FullscreenExitOutlined
+  FullscreenOutlined
 } from '../../components/common/Icon';
 import { Column, Pie } from '@ant-design/charts';
 import dayjs, { Dayjs } from 'dayjs';
