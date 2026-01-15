@@ -555,6 +555,11 @@ export const specimenTypeService = {
     const response = await api.post<SpecimenTypeIndicatorDto>(`${SPECIMEN_TYPE_URL}/${id}/indicators/${indicatorId}/toggle-active`);
     return response.data;
   },
+  // Batch remove indicators from specimen type
+  batchRemoveIndicators: async (specimenTypeId: string, indicatorIds: string[]): Promise<number> => {
+    const response = await api.post<number>(`${SPECIMEN_TYPE_URL}/${specimenTypeId}/indicators/batch-remove`, { ids: indicatorIds });
+    return response.data;
+  },
 };
 
 export const testMethodService = {
@@ -603,6 +608,11 @@ export const testMethodService = {
   },
   toggleActive: async (id: string): Promise<TestMethodDto> => {
     const response = await api.post<TestMethodDto>(`${TEST_METHOD_URL}/${id}/toggle-active`);
+    return response.data;
+  },
+  // Batch remove indicators
+  batchRemoveIndicators: async (testMethodId: string, indicatorIds: string[]): Promise<number> => {
+    const response = await api.post<number>(`${TEST_METHOD_URL}/${testMethodId}/indicators/batch-remove`, { ids: indicatorIds });
     return response.data;
   },
 };
@@ -661,6 +671,21 @@ export const standardService = {
   },
   toggleIndicatorActive: async (standardId: string, indicatorId: string): Promise<StandardIndicatorDto> => {
     const response = await api.post<StandardIndicatorDto>(`${STANDARD_URL}/${standardId}/indicators/${indicatorId}/toggle-active`);
+    return response.data;
+  },
+  // Batch remove indicators
+  batchRemoveIndicators: async (standardId: string, indicatorIds: string[]): Promise<number> => {
+    const response = await api.post<number>(`${STANDARD_URL}/${standardId}/indicators/batch-remove`, { ids: indicatorIds });
+    return response.data;
+  },
+  // Batch activate indicators
+  batchActivateIndicators: async (standardId: string, indicatorIds: string[]): Promise<number> => {
+    const response = await api.post<number>(`${STANDARD_URL}/${standardId}/indicators/batch-activate`, { ids: indicatorIds });
+    return response.data;
+  },
+  // Batch deactivate indicators
+  batchDeactivateIndicators: async (standardId: string, indicatorIds: string[]): Promise<number> => {
+    const response = await api.post<number>(`${STANDARD_URL}/${standardId}/indicators/batch-deactivate`, { ids: indicatorIds });
     return response.data;
   },
 };

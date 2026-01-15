@@ -26,6 +26,11 @@ const StandardsList: React.FC<StandardsTabProps> = ({ onDataChange, refreshKey }
     setSearchText,
     setExpandedRowKeys,
     fetchData,
+    // Batch selection for indicators
+    selectedIndicatorKeys,
+    setSelectedIndicatorKeys,
+    batchLoading,
+    setBatchLoading,
   } = useStandardsData();
 
   // Refresh data when refreshKey changes (when switching to this tab)
@@ -65,15 +70,23 @@ const StandardsList: React.FC<StandardsTabProps> = ({ onDataChange, refreshKey }
     handleEditIndicatorCancel,
     handleRemoveIndicator,
     handleToggleIndicatorActive,
+    // Batch remove indicators
+    handleBatchRemoveIndicators,
+    // Batch activate/deactivate indicators
+    handleBatchActivateIndicators,
+    handleBatchDeactivateIndicators,
   } = useStandardsActions({
     fetchData,
     onDataChange,
     expandedRowKeys,
     setExpandedRowKeys,
+    selectedIndicatorKeys,
+    setSelectedIndicatorKeys,
+    setBatchLoading,
   });
 
   const form = useForm<StandardFormData>({
-    resolver: yupResolver(standardSchema),
+    resolver: yupResolver(standardSchema) as any,
     defaultValues: { name: "", limitDescription: "", isActive: true },
   });
   const [addIndicatorsForm] = Form.useForm();
@@ -123,11 +136,19 @@ const StandardsList: React.FC<StandardsTabProps> = ({ onDataChange, refreshKey }
       {/* Expandable Table */}
       <StandardsTable
         loading={loading}
+        batchLoading={batchLoading}
         groupedData={groupedData}
         standardColumns={standardColumns}
         indicatorColumns={indicatorColumns}
         expandedRowKeys={expandedRowKeys}
         searchText={searchText}
+        // Batch selection for indicators
+        selectedIndicatorKeys={selectedIndicatorKeys}
+        onSelectedIndicatorKeysChange={setSelectedIndicatorKeys}
+        onBatchRemoveIndicators={handleBatchRemoveIndicators}
+        onBatchActivateIndicators={handleBatchActivateIndicators}
+        onBatchDeactivateIndicators={handleBatchDeactivateIndicators}
+        // Handlers
         onSearchChange={setSearchText}
         onExpandedRowsChange={setExpandedRowKeys}
         onAddIndicators={(standardId, standardName) =>

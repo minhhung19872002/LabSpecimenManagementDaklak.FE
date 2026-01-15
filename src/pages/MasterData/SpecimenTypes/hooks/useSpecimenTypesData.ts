@@ -21,6 +21,9 @@ export const useSpecimenTypesData = () => {
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [expandedSpecimenTypeKeys, setExpandedSpecimenTypeKeys] = useState<string[]>([]);
+  // Batch selection for indicators (keyed by specimenTypeId)
+  const [selectedIndicatorKeys, setSelectedIndicatorKeys] = useState<Record<string, string[]>>({});
+  const [batchLoading, setBatchLoading] = useState(false);
 
   // Fetch all data
   const fetchData = async () => {
@@ -115,5 +118,10 @@ export const useSpecimenTypesData = () => {
     setSearchText,
     setExpandedSpecimenTypeKeys,
     fetchData,
+    // Batch selection for indicators
+    selectedIndicatorKeys,
+    setSelectedIndicatorKeys,
+    batchLoading,
+    setBatchLoading,
   };
 };

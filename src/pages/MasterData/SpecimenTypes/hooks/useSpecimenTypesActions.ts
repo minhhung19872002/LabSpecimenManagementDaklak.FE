@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { message } from "antd";
+import { message, Modal } from "antd";
 import type { UseFormReturn } from "react-hook-form";
 import {
   specimenTypeService,
@@ -14,6 +14,10 @@ interface UseSpecimenTypesActionsParams {
   onDataChange?: () => void;
   expandedSpecimenTypeKeys: string[];
   setExpandedSpecimenTypeKeys: React.Dispatch<React.SetStateAction<string[]>>;
+  // Batch selection for indicators
+  selectedIndicatorKeys: Record<string, string[]>;
+  setSelectedIndicatorKeys: (keys: Record<string, string[]>) => void;
+  setBatchLoading: (loading: boolean) => void;
 }
 
 export const useSpecimenTypesActions = ({
@@ -21,6 +25,9 @@ export const useSpecimenTypesActions = ({
   onDataChange,
   expandedSpecimenTypeKeys,
   setExpandedSpecimenTypeKeys,
+  selectedIndicatorKeys,
+  setSelectedIndicatorKeys,
+  setBatchLoading,
 }: UseSpecimenTypesActionsParams) => {
   // SpecimenType modal states
   const [modalOpen, setModalOpen] = useState(false);
@@ -187,6 +194,42 @@ export const useSpecimenTypesActions = ({
     }
   };
 
+  // ============= Batch Remove Indicators =============
+  const handleBatchRemoveIndicators = async (specimenTypeId: string) => {
+    const selectedIds = selectedIndicatorKeys[specimenTypeId] || [];
+    if (selectedIds.length === 0) {
+      message.warning("Vui lòng chọn ít nhất một chỉ tiêu");
+      return;
+    }
+
+    Modal.confirm({
+      title: "Xác nhận xóa",
+      content: `Bạn có chắc chắn muốn xóa ${selectedIds.length} chỉ tiêu đã chọn khỏi loại mẫu này?`,
+      okText: "Xóa",
+      okType: "danger",
+      cancelText: "Hủy",
+      centered: true,
+      onOk: async () => {
+        try {
+          setBatchLoading(true);
+          const count = await specimenTypeService.batchRemoveIndicators(specimenTypeId, selectedIds);
+          message.success(`Đã xóa ${count} chỉ tiêu thành công!`);
+          // Clear selection for this specimen type
+          setSelectedIndicatorKeys({
+            ...selectedIndicatorKeys,
+            [specimenTypeId]: [],
+          });
+          await fetchData();
+          onDataChange?.();
+        } catch (error) {
+          message.error("Không thể xóa chỉ tiêu");
+        } finally {
+          setBatchLoading(false);
+        }
+      },
+    });
+  };
+
   return {
     // SpecimenType modal
     modalOpen,
@@ -212,5 +255,8 @@ export const useSpecimenTypesActions = ({
 
     // Toggle indicator active
     handleToggleIndicatorActive,
+
+    // Batch remove indicators
+    handleBatchRemoveIndicators,
   };
 };
