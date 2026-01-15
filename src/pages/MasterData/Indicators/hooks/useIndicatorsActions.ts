@@ -135,6 +135,7 @@ export const useIndicatorsActions = ({
     indicatorForm.reset({
       indicatorGroupId: indicator.indicatorGroupId,
       name: indicator.name,
+      formattedName: indicator.formattedName || indicator.name,
       isActive: indicator.isActive,
     });
     setIndicatorModalOpen(true);
@@ -303,7 +304,7 @@ export const useIndicatorsActions = ({
   const handleBulkCreate = (bulkForm: FormInstance) => {
     console.log("handleBulkCreate");
     bulkForm.resetFields();
-    bulkForm.setFieldsValue({ indicators: [{ name: "" }] });
+    bulkForm.setFieldsValue({ indicators: [{ name: "", formattedName: "" }] });
     setBulkModalOpen(true);
   };
 
@@ -312,9 +313,17 @@ export const useIndicatorsActions = ({
       setModalLoading(true);
       const values = await bulkForm.validateFields();
 
+      // Map form values to DTO format
+      const indicators = values.indicators
+        .filter((item: any) => item?.name?.trim())
+        .map((item: any) => ({
+          name: item.name.trim(),
+          formattedName: item.formattedName || item.name.trim(),
+        }));
+
       const data: CreateBulkIndicatorsDto = {
         indicatorGroupId: values.indicatorGroupId,
-        indicators: values.indicators.filter((item: any) => item.name?.trim()),
+        indicators,
       };
 
       if (data.indicators.length === 0) {

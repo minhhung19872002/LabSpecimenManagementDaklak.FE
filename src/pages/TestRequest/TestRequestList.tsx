@@ -15,7 +15,7 @@ import {
   ReloadOutlined,
   ImportOutlined,
   DownloadOutlined,
-} from "@ant-design/icons";
+} from "../../components/common/Icon";
 import {
   TestRequestStatus,
   TestRequestStatusLabels,
@@ -62,9 +62,7 @@ const TestRequestList: React.FC = () => {
       title="Danh sách yêu cầu thử nghiệm"
       extra={
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={loadData}>
-            Làm mới
-          </Button>
+          <Button icon={<ReloadOutlined />} onClick={loadData} />
           {/* Chỉ hiển thị buttons tạo mới/import khi có quyền create */}
           {canCreate && (
             <>

@@ -12,32 +12,18 @@ import {
   Button,
   Drawer,
 } from "antd";
-import {
-  DashboardOutlined,
-  FileTextOutlined,
-  ExperimentOutlined,
+import Icon, {
   SettingOutlined,
   TeamOutlined,
-  ScheduleOutlined,
   DatabaseOutlined,
   AuditOutlined,
-  SolutionOutlined,
-  ToolOutlined,
   UserOutlined,
   LogoutOutlined,
   KeyOutlined,
   DownOutlined,
   MenuOutlined,
   CloseOutlined,
-  SafetyCertificateOutlined,
-  BarChartOutlined,
-  PieChartOutlined,
-  HistoryOutlined,
-  WarningOutlined,
-  LeftOutlined,
-  RightOutlined,
-  DollarOutlined,
-} from "@ant-design/icons";
+} from "../common/Icon";
 import { useTranslation } from "react-i18next";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { authService, UserInfo } from "../../services/authService";
@@ -64,25 +50,6 @@ import {
   getRoleDisplayName,
   STORAGE_KEYS,
 } from "../../constants";
-
-// Flask Icon SVG Component
-const FlaskIcon = () => (
-  <svg
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <path
-      d="M9 3V8.5L3.5 17.5C2.5 19 3.5 21 5.5 21H18.5C20.5 21 21.5 19 20.5 17.5L15 8.5V3M9 3H15M9 3H8M15 3H16M7 15H17"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
 
 type MenuItem = Required<MenuProps>["items"][number];
 
@@ -121,14 +88,10 @@ const routeToKeyMap: Record<string, string> = {
   "/employees": "employees",
 };
 
-const MOBILE_BREAKPOINT = 768;
-
 const MainLayout: React.FC = () => {
-  const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(
-    window.innerWidth < MOBILE_BREAKPOINT
-  );
+  const [openMenuKey, setOpenMenuKey] = useState<string | null>(null);
+  const [isScrolled, setIsScrolled] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [changePasswordVisible, setChangePasswordVisible] = useState(false);
   const [changePasswordLoading, setChangePasswordLoading] = useState(false);
@@ -168,27 +131,19 @@ const MainLayout: React.FC = () => {
   // Check if current user is a supporter for any incomplete task
   const { isSupporter } = useSupporterStatus();
 
-  // Handle window resize for mobile detection
-  useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth < MOBILE_BREAKPOINT;
-      setIsMobile(mobile);
-      if (!mobile) {
-        setMobileMenuOpen(false);
-      }
-    };
-
-    // Check on mount
-    handleResize();
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
   // Close mobile menu on route change
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
+
+  // Detect scroll to add shadow to header
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Load user info from localStorage
   useEffect(() => {
@@ -316,13 +271,13 @@ const MainLayout: React.FC = () => {
   const allMenuItems: MenuItemWithRoles[] = [
     {
       key: "overview",
-      icon: <PieChartOutlined />,
+      icon: <Icon name="layout-wtf" />,
       label: menuLabel(t("menu.overview")),
       roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER, ROLES.LAB_TECHNICAL_MANAGER],
       children: [
         {
           key: "dashboard",
-          icon: <DashboardOutlined />,
+          icon: <Icon name="layout-wtf" />,
           label: menuLabel(t("menu.dashboard")),
           onClick: () => navigate(PATH_ROUTES.dashboard),
           roles: [
@@ -333,7 +288,7 @@ const MainLayout: React.FC = () => {
         },
         {
           key: "statistics",
-          icon: <BarChartOutlined />,
+          icon: <Icon name="bar-chart-line" />,
           label: menuLabel(t("menu.statistics")),
           onClick: () => navigate(PATH_ROUTES.statistics),
           roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
@@ -342,34 +297,34 @@ const MainLayout: React.FC = () => {
     },
     {
       key: "lab",
-      icon: <ExperimentOutlined />,
+      icon: <Icon name="flask-florence" />,
       label: menuLabel(t("menu.labOperations")),
       roles: [...ALL_ROLES, ROLES.ACCOUNTANT],
       children: [
         {
           key: "quotations",
-          icon: <DollarOutlined />,
+          icon: <Icon name="currency-dollar" />,
           label: menuLabel("Báo giá"),
           onClick: () => navigate(PATH_ROUTES.quotations.index),
           roles: [...ALL_ROLES, ROLES.ACCOUNTANT],
         },
         {
           key: "receipts",
-          icon: <DollarOutlined />,
+          icon: <Icon name="journal-text" />,
           label: menuLabel("Quản lý phiếu thu"),
           onClick: () => navigate(PATH_ROUTES.receipts.index),
           roles: [ROLES.ADMIN, ROLES.ACCOUNTANT],
         },
         {
           key: "requests",
-          icon: <FileTextOutlined />,
+          icon: <Icon name="file-earmark-text" />,
           label: menuLabel(t("menu.requests")),
           onClick: () => navigate(PATH_ROUTES.testRequests.index),
           roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER, ROLES.SAMPLE_RECEIVER],
         },
         {
           key: "taskManagement",
-          icon: <ScheduleOutlined />,
+          icon: <Icon name="check2-square" />,
           label: menuLabel("Quản lý công việc"),
           onClick: () => navigate(PATH_ROUTES.tasks.index),
           roles: [ROLES.ADMIN, ROLES.LAB_TECHNICAL_MANAGER],
@@ -377,7 +332,7 @@ const MainLayout: React.FC = () => {
         },
         {
           key: "testManagement",
-          icon: <ExperimentOutlined />,
+          icon: <Icon name="flask-florence" />,
           label: menuLabel("Quản lý thử nghiệm"),
           onClick: () => navigate(PATH_ROUTES.testing.index),
           roles: [
@@ -389,14 +344,14 @@ const MainLayout: React.FC = () => {
         },
         {
           key: "qualityManagement",
-          icon: <SafetyCertificateOutlined />,
+          icon: <Icon name="shield-check" />,
           label: menuLabel("Quản lý chất lượng"),
           onClick: () => navigate(PATH_ROUTES.qualityManagement),
           roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
         },
         {
           key: "specimens",
-          icon: <ExperimentOutlined />,
+          icon: <Icon name="droplet-half" />,
           label: menuLabel(t("menu.specimens")),
           onClick: () => navigate(PATH_ROUTES.specimens.index),
           roles: [
@@ -408,14 +363,14 @@ const MainLayout: React.FC = () => {
         },
         {
           key: "specimenHistories",
-          icon: <HistoryOutlined />,
+          icon: <Icon name="clock" />,
           label: menuLabel("Lịch sử lưu mẫu"),
           onClick: () => navigate(PATH_ROUTES.specimenHistories.index),
           roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
         },
         {
           key: "ncr",
-          icon: <WarningOutlined />,
+          icon: <Icon name="exclamation-diamond" />,
           label: menuLabel("Báo cáo NCR"),
           onClick: () => navigate(PATH_ROUTES.ncr),
           roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
@@ -424,7 +379,7 @@ const MainLayout: React.FC = () => {
     },
     {
       key: "management",
-      icon: <ToolOutlined />,
+      icon: <Icon name="ui-checks-grid" />,
       label: menuLabel(t("menu.management")),
       roles: [ROLES.ADMIN],
       children: [
@@ -444,7 +399,7 @@ const MainLayout: React.FC = () => {
         },
         {
           key: "organizations",
-          icon: <TeamOutlined />,
+          icon: <Icon name="building" />,
           label: menuLabel("Cơ sở/Doanh nghiệp"),
           onClick: () => navigate(PATH_ROUTES.organizations),
           roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
@@ -460,7 +415,7 @@ const MainLayout: React.FC = () => {
     },
     {
       key: "admin",
-      icon: <SolutionOutlined />,
+      icon: <Icon name="database" />,
       label: menuLabel(t("menu.administration")),
       roles: ALL_ROLES,
       children: [
@@ -517,25 +472,54 @@ const MainLayout: React.FC = () => {
     return filterMenuByRoles(allMenuItems);
   }, [userInfo, t, navigate, isSupporter]);
 
-  // Toggle sidebar collapse
-  const toggleCollapsed = () => {
-    setCollapsed(!collapsed);
+  // Build header menu groups with filtered children
+  const headerMenuGroups = useMemo(() => {
+    const userRoles = userInfo?.roles || [];
+
+    return allMenuItems
+      .map((group) => {
+        // Check if user has access to the group
+        const hasGroupAccess = group.roles.some((role) =>
+          userRoles.includes(role)
+        );
+        if (!hasGroupAccess) return null;
+
+        // Filter children based on user roles
+        const filteredChildren = (group.children || []).filter((child) => {
+          const hasRoleAccess = child.roles.some((role) =>
+            userRoles.includes(role)
+          );
+          const hasSupporterAccess = child.supporterAllowed && isSupporter;
+          return hasRoleAccess || hasSupporterAccess;
+        });
+
+        if (filteredChildren.length === 0) return null;
+
+        return {
+          ...group,
+          children: filteredChildren,
+        };
+      })
+      .filter(Boolean) as MenuItemWithRoles[];
+  }, [userInfo, isSupporter]);
+
+  // Check if a group has selected child
+  const isGroupActive = (group: MenuItemWithRoles) => {
+    return group.children?.some((child) => child.key === selectedKey) || false;
   };
 
-  // Sidebar content component
-  const sidebarContent = (
+  // Mobile sidebar content component
+  const mobileSidebarContent = (
     <>
       {/* Logo */}
       <div className="sidebar-logo">
         <div className="sidebar-logo-icon">
-          <FlaskIcon />
+          <Icon name="flask-florence" />
         </div>
-        {!collapsed && (
-          <div className="sidebar-logo-text">
-            <span className="sidebar-logo-title">StarLab</span>
-            <span className="sidebar-logo-subtitle">{t("common.subName")}</span>
-          </div>
-        )}
+        <div className="sidebar-logo-text">
+          <span className="sidebar-logo-title">StarLab</span>
+          <span className="sidebar-logo-subtitle">{t("common.subName")}</span>
+        </div>
       </div>
 
       {/* Menu */}
@@ -543,9 +527,8 @@ const MainLayout: React.FC = () => {
         <Menu
           mode="inline"
           selectedKeys={[selectedKey]}
-          defaultOpenKeys={collapsed ? [] : defaultOpenKeys}
+          defaultOpenKeys={defaultOpenKeys}
           items={menuItems}
-          inlineCollapsed={collapsed}
         />
       </div>
     </>
@@ -553,21 +536,6 @@ const MainLayout: React.FC = () => {
 
   return (
     <div className="main-layout">
-      {/* Desktop Sidebar */}
-      {!isMobile && (
-        <aside className={`main-sidebar ${collapsed ? "collapsed" : ""}`}>
-          {sidebarContent}
-          {/* Collapse Toggle Button */}
-          <button
-            className="sidebar-collapse-btn"
-            onClick={toggleCollapsed}
-            title={collapsed ? "Mở rộng" : "Thu gọn"}
-          >
-            {collapsed ? <RightOutlined /> : <LeftOutlined />}
-          </button>
-        </aside>
-      )}
-
       {/* Mobile Drawer */}
       <Drawer
         placement="left"
@@ -581,13 +549,13 @@ const MainLayout: React.FC = () => {
         }}
         closeIcon={<CloseOutlined style={{ color: "#096DD9" }} />}
       >
-        <div className="mobile-sidebar">{sidebarContent}</div>
+        <div className="mobile-sidebar">{mobileSidebarContent}</div>
       </Drawer>
 
       {/* Main Content Area */}
       <div className="main-content-wrapper">
         {/* Header */}
-        <header className="main-header">
+        <header className={`main-header ${isScrolled ? "scrolled" : ""}`}>
           <div className="header-left">
             {/* Mobile menu button - visible only on mobile via CSS */}
             <Button
@@ -596,13 +564,65 @@ const MainLayout: React.FC = () => {
               onClick={() => setMobileMenuOpen(true)}
               className="mobile-menu-btn"
             />
-            <div className="header-title-wrapper">
-              <h1 className="header-title">{t("common.appName")}</h1>
-              <span className="header-subtitle">
-                Tổng hợp số liệu hoạt động của phòng Lab
-              </span>
+            {/* Logo */}
+            <div className="header-logo">
+              <div className="header-logo-icon">
+                <Icon name="flask-florence" />
+              </div>
+              <div className="header-logo-text">
+                <span className="header-logo-title">StarLab</span>
+                <span className="header-logo-subtitle">
+                  {t("common.subName")}
+                </span>
+              </div>
             </div>
           </div>
+
+          {/* Header Navigation Menu - Desktop only */}
+          <nav className="header-nav">
+            {headerMenuGroups.map((group) => (
+              <Dropdown
+                key={group.key}
+                open={openMenuKey === group.key}
+                onOpenChange={(open) => {
+                  if (!open) setOpenMenuKey(null);
+                }}
+                dropdownRender={() => (
+                  <div
+                    className="header-menu-dropdown"
+                    onMouseLeave={() => setOpenMenuKey(null)}
+                  >
+                    {group.children?.map((item) => (
+                      <div
+                        key={item.key}
+                        className={`menu-dropdown-item ${
+                          selectedKey === item.key ? "selected" : ""
+                        }`}
+                        onClick={() => {
+                          item.onClick?.();
+                          setOpenMenuKey(null);
+                        }}
+                      >
+                        {item.icon}
+                        <span>{item.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              >
+                <div
+                  className={`header-nav-item ${
+                    isGroupActive(group) ? "active" : ""
+                  }`}
+                  onMouseEnter={() => setOpenMenuKey(group.key)}
+                >
+                  {group.icon}
+                  <span>{group.label}</span>
+                  <DownOutlined className="nav-arrow" />
+                </div>
+              </Dropdown>
+            ))}
+          </nav>
 
           <div className="header-right">
             <OfflineIndicator />

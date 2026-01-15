@@ -35,7 +35,7 @@ export const useTestMethodsActions = ({
   // TestMethod CRUD
   const handleCreate = (form: UseFormReturn<TestMethodFormData>) => {
     setEditingItem(null);
-    form.reset({ name: "", unit: "", isActive: true });
+    form.reset({ name: "", formattedName: "", unit: "", isActive: true });
     setModalOpen(true);
   };
 
@@ -46,6 +46,7 @@ export const useTestMethodsActions = ({
     setEditingItem(record);
     form.reset({
       name: record.name,
+      formattedName: record.formattedName || "",
       unit: record.unit,
       isActive: record.isActive,
     });

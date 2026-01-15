@@ -39,6 +39,7 @@ export interface SpecimenTypeDto {
   description?: string;
   isActive: boolean;
   sortOrder: number;
+  indicatorCount: number;
   creationTime: string;
 }
 
@@ -50,11 +51,32 @@ export interface CreateUpdateSpecimenTypeDto {
   sortOrder?: number;
 }
 
+export interface SpecimenTypeIndicatorDto {
+  id: string;
+  specimenTypeId: string;
+  indicatorId: string;
+  indicatorCode: string;
+  indicatorName: string;
+  indicatorFormattedName?: string;  // Tên chỉ tiêu có định dạng HTML
+  indicatorGroupName?: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export interface SpecimenTypeWithIndicatorsDto extends SpecimenTypeDto {
+  indicators: SpecimenTypeIndicatorDto[];
+}
+
+export interface AddIndicatorsToSpecimenTypeDto {
+  indicatorIds: string[];
+}
+
 // TestMethod
 export interface TestMethodDto {
   id: string;
   code: string;
   name: string;
+  formattedName?: string | null;
   unit: string;
   isActive: boolean;
   sortOrder: number;
@@ -64,12 +86,14 @@ export interface TestMethodDto {
 
 export interface CreateTestMethodDto {
   name: string;
+  formattedName?: string | null;
   unit: string;
   isActive?: boolean;
 }
 
 export interface UpdateTestMethodDto {
   name: string;
+  formattedName?: string | null;
   unit: string;
   isActive: boolean;
 }
@@ -80,6 +104,7 @@ export interface TestMethodIndicatorDto {
   indicatorId: string;
   indicatorCode: string;
   indicatorName: string;
+  indicatorFormattedName?: string;  // Tên chỉ tiêu có định dạng HTML
   unitPrice: number;
   isActive: boolean;
   sortOrder: number;
@@ -123,12 +148,18 @@ export interface StandardIndicatorDto {
   indicatorId: string;
   indicatorCode: string;
   indicatorName: string;
+  indicatorFormattedName?: string;  // Tên chỉ tiêu có định dạng HTML
   testMethodId: string;
   testMethodCode: string;
   testMethodName: string;
+  testMethodFormattedName?: string | null;
   unit: string;
   comparisonOperator?: string;
   allowedLimit?: string;
+  lowerOperator?: string;
+  lowerLimit?: string;
+  upperOperator?: string;
+  upperLimit?: string;
   isActive: boolean;
   sortOrder: number;
 }
@@ -144,12 +175,20 @@ export interface AddIndicatorsToStandardDto {
     unit: string;
     comparisonOperator?: string;
     allowedLimit?: string;
+    lowerOperator?: string;
+    lowerLimit?: string;
+    upperOperator?: string;
+    upperLimit?: string;
   }[];
 }
 
 export interface UpdateStandardIndicatorDto {
   comparisonOperator?: string;
   allowedLimit?: string;
+  lowerOperator?: string;
+  lowerLimit?: string;
+  upperOperator?: string;
+  upperLimit?: string;
   isActive: boolean;
 }
 
@@ -247,6 +286,8 @@ export interface IndicatorDto {
   id: string;
   code: string;
   name: string;
+  /** Tên có định dạng HTML (bold, italic, underline, sub, sup) */
+  formattedName?: string;
   isActive: boolean;
   indicatorGroupId: string;
   indicatorGroupName: string;
@@ -257,6 +298,8 @@ export interface IndicatorDto {
 
 export interface CreateIndicatorDto {
   name: string;
+  /** Tên có định dạng HTML */
+  formattedName?: string;
   isActive: boolean;
   indicatorGroupId: string;
   sortOrder?: number;
@@ -264,6 +307,8 @@ export interface CreateIndicatorDto {
 
 export interface UpdateIndicatorDto {
   name: string;
+  /** Tên có định dạng HTML */
+  formattedName?: string;
   isActive: boolean;
   indicatorGroupId: string;
   sortOrder?: number;
@@ -271,7 +316,7 @@ export interface UpdateIndicatorDto {
 
 export interface CreateBulkIndicatorsDto {
   indicatorGroupId: string;
-  indicators: { name: string }[];
+  indicators: { name: string; formattedName?: string }[];
 }
 
 export interface IndicatorFilterDto extends PagedAndSortedResultRequestDto {
@@ -377,6 +422,29 @@ export const specimenTypeService = {
   getActive: async (): Promise<PagedResultDto<SpecimenTypeDto>> => {
     const response = await api.get<SpecimenTypeDto[]>(`${SPECIMEN_TYPE_URL}/active`);
     return { items: response.data, totalCount: response.data.length };
+  },
+  // Indicator management methods
+  getWithIndicators: async (): Promise<SpecimenTypeWithIndicatorsDto[]> => {
+    const response = await api.get<SpecimenTypeWithIndicatorsDto[]>(`${SPECIMEN_TYPE_URL}/with-indicators`);
+    return response.data;
+  },
+  getOneWithIndicators: async (id: string): Promise<SpecimenTypeWithIndicatorsDto> => {
+    const response = await api.get<SpecimenTypeWithIndicatorsDto>(`${SPECIMEN_TYPE_URL}/${id}/with-indicators`);
+    return response.data;
+  },
+  getIndicators: async (id: string): Promise<SpecimenTypeIndicatorDto[]> => {
+    const response = await api.get<SpecimenTypeIndicatorDto[]>(`${SPECIMEN_TYPE_URL}/${id}/indicators`);
+    return response.data;
+  },
+  addIndicators: async (id: string, data: AddIndicatorsToSpecimenTypeDto): Promise<void> => {
+    await api.post(`${SPECIMEN_TYPE_URL}/${id}/indicators`, data);
+  },
+  removeIndicator: async (id: string, indicatorId: string): Promise<void> => {
+    await api.delete(`${SPECIMEN_TYPE_URL}/${id}/indicators/${indicatorId}`);
+  },
+  toggleIndicatorActive: async (id: string, indicatorId: string): Promise<SpecimenTypeIndicatorDto> => {
+    const response = await api.post<SpecimenTypeIndicatorDto>(`${SPECIMEN_TYPE_URL}/${id}/indicators/${indicatorId}/toggle-active`);
+    return response.data;
   },
 };
 

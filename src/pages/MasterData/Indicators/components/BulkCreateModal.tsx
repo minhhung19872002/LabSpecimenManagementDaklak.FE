@@ -1,6 +1,7 @@
 import React from "react";
-import { Modal, Form, Input, Select, Button, Row, Col } from "antd";
-import { PlusOutlined, MinusCircleOutlined } from "@ant-design/icons";
+import { Modal, Form, Select, Button, Row, Col, Tooltip } from "antd";
+import Icon, { PlusOutlined, MinusCircleOutlined } from "../../../../components/common/Icon";
+import { RichTextEditor } from "../../../../components/common";
 import type { FormInstance } from "antd";
 
 interface GroupOption {
@@ -17,6 +18,22 @@ interface BulkCreateModalProps {
   onCancel: () => void;
 }
 
+// Custom component to wrap RichTextEditor for Form.Item
+const RichTextFormItem: React.FC<{
+  value?: { name: string; formattedName: string };
+  onChange?: (value: { name: string; formattedName: string }) => void;
+}> = ({ value, onChange }) => {
+  return (
+    <RichTextEditor
+      value={value?.formattedName || ""}
+      onChange={(html, plainText) => {
+        onChange?.({ name: plainText, formattedName: html });
+      }}
+      placeholder="Tên chỉ tiêu"
+    />
+  );
+};
+
 const BulkCreateModal: React.FC<BulkCreateModalProps> = ({
   open,
   loading,
@@ -27,7 +44,27 @@ const BulkCreateModal: React.FC<BulkCreateModalProps> = ({
 }) => {
   return (
     <Modal
-      title="Thêm nhiều chỉ tiêu"
+      title={
+        <span>
+          Thêm nhiều chỉ tiêu{" "}
+          <Tooltip
+            title={
+              <div>
+                <div>Phím tắt định dạng:</div>
+                <div>Ctrl+B: Đậm</div>
+                <div>Ctrl+I: Nghiêng</div>
+                <div>Ctrl+U: Gạch chân</div>
+                <div>Ctrl+,: Chỉ số dưới (x₂)</div>
+                <div>Ctrl+.: Chỉ số trên (x²)</div>
+              </div>
+            }
+          >
+            <span style={{ cursor: "help" }}>
+              <Icon name="info-circle" style={{ color: "#8c8c8c" }} />
+            </span>
+          </Tooltip>
+        </span>
+      }
       open={open}
       onOk={onOk}
       onCancel={onCancel}
@@ -57,23 +94,27 @@ const BulkCreateModal: React.FC<BulkCreateModalProps> = ({
           {(fields, { add, remove }) => (
             <>
               {fields.map(({ key, name, ...restField }) => (
-                <Row key={key} gutter={8} align="middle" wrap={false}>
+                <Row key={key} gutter={8} align="top" wrap={false}>
                   <Col flex="auto">
                     <Form.Item
                       {...restField}
-                      name={[name, "name"]}
+                      name={name}
                       rules={[
                         {
-                          required: true,
-                          message: "Nhập tên",
+                          validator: (_, value) => {
+                            if (!value?.name || value.name.trim() === "") {
+                              return Promise.reject("Nhập tên");
+                            }
+                            return Promise.resolve();
+                          },
                         },
                       ]}
                       style={{ marginBottom: 8 }}
                     >
-                      <Input placeholder="Tên chỉ tiêu" />
+                      <RichTextFormItem />
                     </Form.Item>
                   </Col>
-                  <Col flex="24px">
+                  <Col flex="24px" style={{ paddingTop: 4 }}>
                     {fields.length > 1 && (
                       <MinusCircleOutlined
                         onClick={() => remove(name)}
@@ -86,7 +127,7 @@ const BulkCreateModal: React.FC<BulkCreateModalProps> = ({
               <Form.Item>
                 <Button
                   type="dashed"
-                  onClick={() => add({ name: "" })}
+                  onClick={() => add({ name: "", formattedName: "" })}
                   block
                   icon={<PlusOutlined />}
                 >

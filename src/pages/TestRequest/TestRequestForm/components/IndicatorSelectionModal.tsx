@@ -1,13 +1,14 @@
 // @ts-nocheck
 import React, { useEffect, useMemo, useState } from "react";
 import { Modal, Button, Checkbox, Typography, Drawer } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { PlusOutlined } from "../../../../components/common/Icon";
 import { Icon } from "@iconify/react";
 import dayjs from "dayjs";
 import {
   IndicatorGroupDto,
   IndicatorDto,
 } from "../../../../services/masterDataService";
+import IndicatorName from "../../../../components/common/IndicatorName";
 import {
   IndicatorDateInfo,
   LaboratoryAssignment,
@@ -73,6 +74,11 @@ interface IndicatorSelectionModalProps {
   >;
   expandedLabGroups: string[];
   setExpandedLabGroups: React.Dispatch<React.SetStateAction<string[]>>;
+  // Filter theo loại mẫu
+  currentSampleSpecimenTypeName?: string;
+  specimenTypeIndicatorIds: string[];
+  specimenTypeFilterActive: boolean;
+  setSpecimenTypeFilterActive: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
@@ -107,6 +113,10 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
   setIndicatorLaboratoryMap,
   expandedLabGroups,
   setExpandedLabGroups,
+  currentSampleSpecimenTypeName,
+  specimenTypeIndicatorIds,
+  specimenTypeFilterActive,
+  setSpecimenTypeFilterActive,
 }) => {
   // Handle remove indicator method
   const handleRemoveIndicatorMethod = (key: IndicatorMethodKey) => {
@@ -162,13 +172,19 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     return sum + (method?.unitPrice || 0);
   }, 0);
 
-  // Get indicators that have active methods
+  // Get indicators that have active methods, filtered by specimen type if active
   const indicatorsWithMethods = useMemo(() => {
-    return indicators.filter(
+    let filtered = indicators.filter(
       (ind) =>
         ind.isActive && indicatorMethodsMap[ind.id]?.some((m) => m.isActive)
     );
-  }, [indicators, indicatorMethodsMap]);
+    // Apply specimen type filter if active
+    // Nếu filter active mà specimenTypeIndicatorIds rỗng -> hiện danh sách rỗng
+    if (specimenTypeFilterActive) {
+      filtered = filtered.filter((ind) => specimenTypeIndicatorIds.includes(ind.id));
+    }
+    return filtered;
+  }, [indicators, indicatorMethodsMap, specimenTypeFilterActive, specimenTypeIndicatorIds]);
 
   // Auto-expand all indicators when modal opens
   useEffect(() => {
@@ -192,8 +208,12 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
           padding: "12px 16px",
           borderBottom: "1px solid #f0f0f0",
           background: "#fafafa",
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
         }}
       >
+        {/* Filter theo nhóm chỉ tiêu */}
         <div
           onClick={() => setGroupSelectorVisible(true)}
           style={{
@@ -219,17 +239,59 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
           </span>
           <Icon icon="mdi:chevron-down" width={16} />
         </div>
+        {/* Filter theo loại mẫu */}
+        {currentSampleSpecimenTypeName && (
+          <Checkbox
+            checked={specimenTypeFilterActive}
+            onChange={(e) => setSpecimenTypeFilterActive(e.target.checked)}
+            style={{ fontSize: 13 }}
+          >
+            {currentSampleSpecimenTypeName}
+          </Checkbox>
+        )}
       </div>
       <div style={{ flex: 1, overflowY: "auto" }}>
-        {selectedGroupFilter === "all"
+        {/* Empty state khi filter theo loại mẫu nhưng không có chỉ tiêu */}
+        {specimenTypeFilterActive && indicatorsWithMethods.length === 0 ? (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "48px 24px",
+              color: "#999",
+            }}
+          >
+            <Icon
+              icon="mdi:flask-empty-outline"
+              width={48}
+              style={{ marginBottom: 12, color: "#d9d9d9" }}
+            />
+            <Text type="secondary" style={{ fontSize: 14, textAlign: "center" }}>
+              Loại mẫu "{currentSampleSpecimenTypeName}" chưa được cấu hình chỉ tiêu
+            </Text>
+            <Text type="secondary" style={{ fontSize: 12, marginTop: 4 }}>
+              Bỏ chọn filter để xem tất cả chỉ tiêu
+            </Text>
+          </div>
+        ) : selectedGroupFilter === "all"
           ? indicatorGroups.map((group) => {
               // Get indicators in this group that have active methods
-              const groupIndicators = indicators.filter(
+              let groupIndicators = indicators.filter(
                 (ind) =>
                   ind.indicatorGroupId === group.id &&
                   ind.isActive &&
                   indicatorMethodsMap[ind.id]?.some((m) => m.isActive)
               );
+
+              // Apply specimen type filter if active
+              if (specimenTypeFilterActive) {
+                groupIndicators = groupIndicators.filter((ind) =>
+                  specimenTypeIndicatorIds.includes(ind.id)
+                );
+              }
+
               if (groupIndicators.length === 0) return null;
 
               // Apply search filter
@@ -355,7 +417,9 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                               width={16}
                               style={{ color: "#595959", flexShrink: 0 }}
                             />
-                            <span
+                            <IndicatorName
+                              name={ind.name}
+                              formattedName={ind.formattedName}
                               style={{
                                 flex: 1,
                                 fontSize: 13,
@@ -363,9 +427,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                 textOverflow: "ellipsis",
                                 whiteSpace: "nowrap",
                               }}
-                            >
-                              {ind.name}
-                            </span>
+                            />
                             {selectedMethodsCount > 0 && (
                               <span
                                 style={{
@@ -440,7 +502,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                       whiteSpace: "nowrap",
                                     }}
                                   >
-                                    {method.testMethodName}
+                                    <IndicatorName name={method.testMethodName} formattedName={method.testMethodFormattedName} />
                                   </span>
                                   <span
                                     style={{
@@ -465,6 +527,12 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
             getFilteredIndicators()
               .filter((ind) =>
                 indicatorMethodsMap[ind.id]?.some((m) => m.isActive)
+              )
+              .filter((ind) =>
+                // Apply specimen type filter if active
+                // Nếu filter active mà specimenTypeIndicatorIds rỗng -> hiện danh sách rỗng
+                !specimenTypeFilterActive ||
+                specimenTypeIndicatorIds.includes(ind.id)
               )
               .map((ind) => {
                 const methods =
@@ -514,7 +582,9 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                         width={16}
                         style={{ color: "#595959", flexShrink: 0 }}
                       />
-                      <span
+                      <IndicatorName
+                        name={ind.name}
+                        formattedName={ind.formattedName}
                         style={{
                           flex: 1,
                           fontSize: 13,
@@ -522,9 +592,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
                         }}
-                      >
-                        {ind.name}
-                      </span>
+                      />
                       {selectedMethodsCount > 0 && (
                         <span
                           style={{
@@ -596,7 +664,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              {method.testMethodName}
+                              <IndicatorName name={method.testMethodName} formattedName={method.testMethodFormattedName} />
                             </span>
                             <span
                               style={{
@@ -772,6 +840,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                           isInGroup={false}
                           indicator={indicator}
                           methodName={method?.testMethodName || ""}
+                          methodFormattedName={method?.testMethodFormattedName}
                           unitPrice={method?.unitPrice || 0}
                           isChecked={checkedIndicators.includes(key)}
                           transferDate={
@@ -841,6 +910,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                     isInGroup={true}
                                     indicator={indicator}
                                     methodName={method?.testMethodName || ""}
+                                    methodFormattedName={method?.testMethodFormattedName}
                                     unitPrice={method?.unitPrice || 0}
                                     isChecked={checkedIndicators.includes(key)}
                                     transferDate={

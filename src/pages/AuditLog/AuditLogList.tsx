@@ -18,7 +18,7 @@ import {
   SearchOutlined,
   ReloadOutlined,
   HistoryOutlined,
-} from "@ant-design/icons";
+} from "../../components/common/Icon";
 import dayjs from "dayjs";
 import isToday from "dayjs/plugin/isToday";
 import { auditLogService, AuditLogDto } from "../../services/auditLogService";
@@ -190,7 +190,7 @@ const AuditLogList: React.FC = () => {
           </Space>
         }
         extra={
-          <Button icon={<ReloadOutlined />} onClick={handleRefresh}>Làm mới</Button>
+          <Button icon={<ReloadOutlined />} onClick={handleRefresh} />
         }
       >
         {/* Filters */}

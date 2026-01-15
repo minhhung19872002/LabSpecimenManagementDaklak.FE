@@ -16,7 +16,7 @@ import {
   DeleteOutlined,
   CopyOutlined,
   BarcodeOutlined,
-} from "@ant-design/icons";
+} from "../../../../components/common/Icon";
 import { Icon } from "@iconify/react";
 import {
   SampleFormData,
@@ -31,6 +31,7 @@ import {
 } from "../../../../services/masterDataService";
 import SampleImageUpload from "./SampleImageUpload";
 import BarcodeQRModal, { SampleCodeInfo } from "./BarcodeQRModal";
+import { IndicatorName } from "../../../../components/common";
 
 const { Text } = Typography;
 
@@ -414,7 +415,7 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
                         gap: 8,
                       }}
                     >
-                      <span style={{ flex: 1 }}>- {indicator.name}</span>
+                      <span style={{ flex: 1 }}>- <IndicatorName name={indicator.name} formattedName={indicator.formattedName} /></span>
                       <span style={{ color: "#1890ff", fontSize: 12 }}>
                         {method.testMethodName}
                       </span>
@@ -450,7 +451,7 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
                               gap: 8,
                             }}
                           >
-                            <span style={{ flex: 1 }}>- {indicator.name}</span>
+                            <span style={{ flex: 1 }}>- <IndicatorName name={indicator.name} formattedName={indicator.formattedName} /></span>
                             <span style={{ color: "#1890ff", fontSize: 12 }}>
                               {method.testMethodName}
                             </span>

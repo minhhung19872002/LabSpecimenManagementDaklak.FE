@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Modal, Timeline, Typography, Spin, message } from "antd";
-import { CheckCircleFilled, ClockCircleFilled, CloseCircleFilled } from "@ant-design/icons";
+import { CheckCircleFilled, ClockCircleFilled, CloseCircleFilled } from "../../../components/common/Icon";
 import { TestRequestTimelineDto, TimelineStepDto } from "../../../types/testRequest";
 import { testRequestService } from "../../../services/testRequestService";
 import { formatDateTime } from "../../../utils/formatters";

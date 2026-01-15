@@ -4,7 +4,7 @@ import {
   CameraOutlined,
   PictureOutlined,
   ClockCircleOutlined,
-} from '@ant-design/icons';
+} from '../../../components/common/Icon';
 import {
   SampleAttachmentDto,
   SampleTestingImageDto,

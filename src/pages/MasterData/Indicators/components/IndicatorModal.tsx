@@ -1,7 +1,9 @@
-import { Modal, Form, Input, Select } from "antd";
+import { Modal, Form, Select, Tooltip } from "antd";
 import { Controller, UseFormReturn } from "react-hook-form";
+import Icon from "../../../../components/common/Icon";
 import { IndicatorDto } from "../types";
 import { IndicatorFormData } from "../schemas/indicatorSchema";
+import { RichTextEditor } from "../../../../components/common";
 
 interface GroupOption {
   value: string;
@@ -30,6 +32,7 @@ const IndicatorModal: React.FC<IndicatorModalProps> = ({
   const {
     control,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = form;
 
@@ -42,7 +45,7 @@ const IndicatorModal: React.FC<IndicatorModalProps> = ({
       confirmLoading={loading}
       okText={editingIndicator ? "Cập nhật" : "Thêm mới"}
       cancelText="Hủy"
-      width={480}
+      width={520}
       centered
       styles={{ body: { paddingTop: 16 } }}
     >
@@ -68,16 +71,44 @@ const IndicatorModal: React.FC<IndicatorModalProps> = ({
           />
         </Form.Item>
         <Form.Item
-          label="Tên chỉ tiêu"
+          label={
+            <span>
+              Tên chỉ tiêu{" "}
+              <Tooltip
+                title={
+                  <div>
+                    <div>Phím tắt định dạng:</div>
+                    <div>Ctrl+B: Đậm</div>
+                    <div>Ctrl+I: Nghiêng</div>
+                    <div>Ctrl+U: Gạch chân</div>
+                    <div>Ctrl+,: Chỉ số dưới (x₂)</div>
+                    <div>Ctrl+.: Chỉ số trên (x²)</div>
+                  </div>
+                }
+              >
+                <span style={{ cursor: "help" }}>
+                  <Icon name="info-circle" style={{ color: "#8c8c8c" }} />
+                </span>
+              </Tooltip>
+            </span>
+          }
           required
           validateStatus={errors.name ? "error" : ""}
           help={errors.name?.message}
         >
           <Controller
-            name="name"
+            name="formattedName"
             control={control}
             render={({ field }) => (
-              <Input {...field} placeholder="Nhập tên chỉ tiêu" />
+              <RichTextEditor
+                value={field.value || ""}
+                onChange={(html, plainText) => {
+                  field.onChange(html);
+                  // Also update plain text name for search/display fallback
+                  setValue("name", plainText);
+                }}
+                placeholder="Tên chỉ tiêu"
+              />
             )}
           />
         </Form.Item>

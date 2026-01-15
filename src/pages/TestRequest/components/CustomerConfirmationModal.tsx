@@ -16,11 +16,13 @@ import {
   CloseOutlined,
   SwapOutlined,
   StopOutlined,
-} from "@ant-design/icons";
+  FileAddOutlined,
+} from "../../../components/common/Icon";
 import { testRequestService } from "../../../services/testRequestService";
 import { IndicatorPendingConfirmationDto } from "../../../types/testRequest";
 import { IndicatorApprovalStatus } from "../../../types/laboratoryTask";
 import { formatDate } from "../../../utils/formatters";
+import { IndicatorName } from "../../../components/common";
 
 const { Text, Title } = Typography;
 
@@ -164,6 +166,29 @@ const CustomerConfirmationModal: React.FC<CustomerConfirmationModalProps> = ({
       );
     }
 
+    if (
+      record.approvalStatus === IndicatorApprovalStatus.SupplementaryRequested
+    ) {
+      return (
+        <div>
+          <div style={{ marginBottom: 8 }}>
+            <Tag icon={<FileAddOutlined />} color="cyan">
+              Yêu cầu bổ sung
+            </Tag>
+          </div>
+          <Text type="secondary">Nội dung yêu cầu: </Text>
+          <Text>{record.supplementaryRequestReason || "-"}</Text>
+          {record.supplementaryRequestedByName && (
+            <>
+              <br />
+              <Text type="secondary">Người yêu cầu: </Text>
+              <Text>{record.supplementaryRequestedByName}</Text>
+            </>
+          )}
+        </div>
+      );
+    }
+
     return null;
   };
 
@@ -229,6 +254,37 @@ const CustomerConfirmationModal: React.FC<CustomerConfirmationModalProps> = ({
       );
     }
 
+    if (
+      record.approvalStatus === IndicatorApprovalStatus.SupplementaryRequested
+    ) {
+      return (
+        <Space size="small">
+          <Tooltip title="KH đồng ý cung cấp bổ sung, tiếp tục thử nghiệm">
+            <Button
+              type="primary"
+              size="small"
+              icon={<CheckOutlined />}
+              onClick={() => handleConfirmSingle(record.id, true)}
+              loading={actionLoading}
+            >
+              Đồng ý
+            </Button>
+          </Tooltip>
+          <Tooltip title="KH từ chối bổ sung, hủy chỉ tiêu này">
+            <Button
+              danger
+              size="small"
+              icon={<CloseOutlined />}
+              onClick={() => handleConfirmSingle(record.id, false)}
+              loading={actionLoading}
+            >
+              Từ chối
+            </Button>
+          </Tooltip>
+        </Space>
+      );
+    }
+
     return null;
   };
 
@@ -250,7 +306,7 @@ const CustomerConfirmationModal: React.FC<CustomerConfirmationModalProps> = ({
       width: 180,
       render: (_: unknown, record: IndicatorPendingConfirmationDto) => (
         <div>
-          <Text strong>{record.indicatorName}</Text>
+          <IndicatorName name={record.indicatorName || ""} formattedName={record.indicatorFormattedName} style={{ fontWeight: 600 }} />
           <br />
           <Text type="secondary" style={{ fontSize: 12 }}>
             {record.indicatorCode}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Image, Space, Tooltip, Modal } from 'antd';
-import { EyeOutlined, PictureOutlined } from '@ant-design/icons';
+import { EyeOutlined, PictureOutlined } from '../../../components/common/Icon';
 import { SampleAttachmentDto } from '../../../types/testing';
 
 interface SampleImagesDisplayProps {

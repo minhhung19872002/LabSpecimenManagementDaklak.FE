@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { DatePicker, InputNumber, Space, Tag, Typography, Tooltip } from 'antd';
-import { ClockCircleOutlined, CalendarOutlined, WarningOutlined } from '@ant-design/icons';
+import { ClockCircleOutlined, CalendarOutlined, WarningOutlined } from './Icon';
 import dayjs, { Dayjs } from 'dayjs';
 
 const { Text } = Typography;

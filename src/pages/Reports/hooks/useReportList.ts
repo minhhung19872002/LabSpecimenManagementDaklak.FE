@@ -292,6 +292,7 @@ export const useReportList = () => {
         content: `Bạn có chắc chắn muốn gửi báo cáo "${record.reportNumber}" để duyệt?`,
         okText: "Gửi duyệt",
         cancelText: "Hủy",
+        centered: true,
         onOk: async () => {
           setWorkflowLoading(true);
           try {
@@ -317,6 +318,7 @@ export const useReportList = () => {
         content: `Bạn có chắc chắn muốn duyệt báo cáo "${record.reportNumber}"?`,
         okText: "Duyệt",
         cancelText: "Hủy",
+        centered: true,
         onOk: async () => {
           setWorkflowLoading(true);
           try {
@@ -342,6 +344,7 @@ export const useReportList = () => {
         content: `Bạn có chắc chắn muốn phát hành báo cáo "${record.reportNumber}"? Sau khi phát hành, báo cáo sẽ có mã QR truy xuất.`,
         okText: "Phát hành",
         cancelText: "Hủy",
+        centered: true,
         onOk: async () => {
           setWorkflowLoading(true);
           try {

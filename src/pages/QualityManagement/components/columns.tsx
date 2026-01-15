@@ -1,6 +1,6 @@
 import React from "react";
 import { Button, Space, Tag } from "antd";
-import { HistoryOutlined, WarningOutlined, AuditOutlined } from "@ant-design/icons";
+import { HistoryOutlined, WarningOutlined, AuditOutlined } from "../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import {

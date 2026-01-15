@@ -1,6 +1,6 @@
 import React from "react";
 import { Table, Input, Row, Col, Spin } from "antd";
-import { SearchOutlined } from "@ant-design/icons";
+import { SearchOutlined } from "../../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import { MasterDataItem } from "../types";
 import { NO_PAGINATION_CATEGORIES, DEFAULT_PAGE_SIZE } from "../constants";

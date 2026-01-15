@@ -6,7 +6,7 @@ import {
   LockOutlined,
   MailOutlined,
   PhoneOutlined,
-} from "@ant-design/icons";
+} from "../../../components/common/Icon";
 import { UserDto } from "../../../services/userService";
 import { ROLES } from "../hooks";
 

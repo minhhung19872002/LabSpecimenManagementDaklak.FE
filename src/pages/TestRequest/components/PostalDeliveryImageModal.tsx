@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Modal, Alert, Upload, Button, Image, message } from "antd";
-import { UploadOutlined, CloseOutlined } from "@ant-design/icons";
+import { UploadOutlined, CloseOutlined } from "../../../components/common/Icon";
 import { fileService } from "../../../services/fileService";
 
 interface PostalImage {

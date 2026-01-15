@@ -12,7 +12,7 @@ import {
 } from "antd";
 import StatusTag from "../../../components/common/StatusTag";
 import type { TableRowSelection } from "antd/es/table/interface";
-import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
+import { CheckOutlined, CloseOutlined } from "../../../components/common/Icon";
 import { formatDate, parseResultToNumber } from "../../../utils/formatters";
 import {
   LaboratoryTaskIndicatorDto,
@@ -24,6 +24,7 @@ import {
   SampleStatus,
 } from "../../../types/laboratoryTask";
 import IndicatorImageCell from "../../../components/common/IndicatorImageCell";
+import { IndicatorName } from "../../../components/common";
 import {
   standardService,
   StandardWithIndicatorsDto,
@@ -37,13 +38,17 @@ interface IndicatorTableProps {
   technicians: UserLookupDto[];
   isAssigned: boolean; // true khi đã giao việc (lưu DB thành công)
   canEdit: boolean; // true khi task status cho phép edit (NotAssignedTechnician hoặc AssignedTechnician)
-  /** Permission theo Permission Matrix - chỉ QLKT có quyền giao KTV và edit Note */
+  /** Permission theo Permission Matrix - chỉ QLKT có quyền giao KTV */
   canAssignTechnician?: boolean;
   sampleStatus?: SampleStatus; // Sample status to determine selection mode
+  /** Sample ID - dùng cho NoteModal callback */
+  sampleId?: string;
   onMethodChange: (indicatorId: string, methodId: string) => void;
   onTechnicianChange: (indicatorId: string, technicianId: string) => void;
   onApprove: (indicatorId: string, approve: boolean, reason?: string, standardId?: string | null) => void;
   onUpdateNote?: (indicatorId: string, note: string | null) => Promise<void>;
+  /** Callback để mở NoteModal cho single indicator */
+  onOpenNoteModal?: (indicatorId: string, currentNote: string, sampleId: string) => void;
   loading?: boolean;
   // Bulk selection props
   showCheckbox?: boolean;
@@ -64,10 +69,12 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   canEdit: _canEdit,
   canAssignTechnician = true, // Default true để không break existing usage
   sampleStatus,
+  sampleId = "",
   onMethodChange,
   onTechnicianChange,
   onApprove,
-  onUpdateNote,
+  onUpdateNote: _onUpdateNote,
+  onOpenNoteModal,
   loading = false,
   showCheckbox = false,
   selectedIndicatorIds = [],
@@ -97,9 +104,6 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     visible: false,
   });
   const [rejectForm] = Form.useForm();
-
-  // State for saving note (track which indicator is being saved)
-  const [savingNoteId, setSavingNoteId] = useState<string | null>(null);
 
   // Load standards on mount
   useEffect(() => {
@@ -155,27 +159,78 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   };
 
   // Calculate pass/fail status
+  // Text không tính được sẽ được convert sang 0 để vẫn so sánh được
+  // Hỗ trợ cả single limit và range
   const calculatePassFail = (
     result: string | undefined,
     comparisonOperator: string | undefined,
-    allowedLimit: string | undefined
+    allowedLimit: string | undefined,
+    lowerOperator?: string,
+    lowerLimit?: string,
+    upperOperator?: string,
+    upperLimit?: string
   ): "pass" | "fail" | null => {
-    if (!comparisonOperator || !allowedLimit) return null;
     if (!result) return null;
 
-    // Parse result to number using parseResultToNumber (supports scientific notation like "2,0 x 10^2")
+    // Parse result to number using parseResultToNumber
+    // Supports: scientific notation ("2,0 x 10^2"), math expressions ("10^2*5+4"), plain numbers
+    // Text không tính được (như "Âm tính") sẽ trả về 0
     const resultValue = parseResultToNumber(result);
     if (resultValue === null) return null;
 
-    // Parse limit to number (also supports scientific notation)
+    // Check if it's a range comparison (both lowerLimit and upperLimit exist)
+    if (lowerLimit && upperLimit) {
+      const lowerValue = parseResultToNumber(lowerLimit);
+      const upperValue = parseResultToNumber(upperLimit);
+      if (lowerValue === null || upperValue === null) return null;
+
+      // Check lower bound
+      let passLower = false;
+      const lowerOp = lowerOperator || ">";
+      switch (lowerOp) {
+        case ">":
+        case "≥":
+          passLower = lowerOp === ">" ? resultValue > lowerValue : resultValue >= lowerValue;
+          break;
+        case ">=":
+          passLower = resultValue >= lowerValue;
+          break;
+        default:
+          passLower = resultValue > lowerValue;
+      }
+
+      // Check upper bound
+      let passUpper = false;
+      const upperOp = upperOperator || "<";
+      switch (upperOp) {
+        case "<":
+        case "≤":
+          passUpper = upperOp === "<" ? resultValue < upperValue : resultValue <= upperValue;
+          break;
+        case "<=":
+          passUpper = resultValue <= upperValue;
+          break;
+        default:
+          passUpper = resultValue < upperValue;
+      }
+
+      return passLower && passUpper ? "pass" : "fail";
+    }
+
+    // Single limit comparison
+    if (!comparisonOperator || !allowedLimit) return null;
+
+    // Parse limit to number (also supports scientific notation and math expressions)
     const limitValue = parseResultToNumber(allowedLimit);
     if (limitValue === null) return null;
 
-    // Compare based on operator
+    // Compare based on operator (support both <= and ≤ formats)
     switch (comparisonOperator) {
       case "<=":
+      case "≤":
         return resultValue <= limitValue ? "pass" : "fail";
       case ">=":
+      case "≥":
         return resultValue >= limitValue ? "pass" : "fail";
       case "<":
         return resultValue < limitValue ? "pass" : "fail";
@@ -206,23 +261,6 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     }
   };
 
-  // Handle save note on blur
-  const handleSaveNote = async (indicatorId: string, newValue: string, originalValue: string) => {
-    if (!onUpdateNote) return;
-
-    // Nếu không thay đổi thì không gọi API
-    if (newValue === originalValue) return;
-
-    setSavingNoteId(indicatorId);
-    try {
-      await onUpdateNote(indicatorId, newValue || null);
-    } catch (error) {
-      console.error("Error updating note:", error);
-    } finally {
-      setSavingNoteId(null);
-    }
-  };
-
   const columns = [
     {
       title: "Tên chỉ tiêu",
@@ -232,11 +270,15 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       fixed: "left" as const,
       render: (value: string, record: LaboratoryTaskIndicatorDto) => (
         <div>
-          <div>{value}</div>
+          <div>
+            <IndicatorName name={value} formattedName={record.indicatorFormattedName} />
+          </div>
           {record.indicatorGroupName && (
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              {record.indicatorGroupName}
-            </Text>
+            <div style={{ marginTop: 2 }}>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                {record.indicatorGroupName}
+              </Text>
+            </div>
           )}
         </div>
       ),
@@ -251,7 +293,9 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         if (record.methodName) {
           return (
             <Tooltip title={record.methodName}>
-              <Text
+              <IndicatorName
+                name={record.methodName}
+                formattedName={record.methodFormattedName}
                 style={{
                   display: "-webkit-box",
                   WebkitLineClamp: 2,
@@ -259,9 +303,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                 }}
-              >
-                {record.methodName}
-              </Text>
+              />
             </Tooltip>
           );
         }
@@ -308,39 +350,81 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     },
     {
       title: "Ghi chú",
-      dataIndex: "note",
       key: "note",
       width: 150,
-      render: (value: string, record: LaboratoryTaskIndicatorDto) => {
-        // Không cho edit khi đã duyệt hoặc KH hủy hoặc không có quyền assignTechnician
+      render: (_: unknown, record: LaboratoryTaskIndicatorDto) => {
+        // Tổng hợp note từ FreeTextNote và MasterDataNoteContents
+        const noteParts: string[] = [];
+        if (record.freeTextNote) {
+          noteParts.push(record.freeTextNote);
+        }
+        if (record.masterDataNoteContents && record.masterDataNoteContents.length > 0) {
+          noteParts.push(...record.masterDataNoteContents.map(c => `- ${c}`));
+        }
+        const displayNote = noteParts.join("\n");
+
+        // Chỉ không cho edit khi đã duyệt hoặc KH hủy (không phụ thuộc task status)
+        // Nếu chỉ tiêu chưa được QLKT phê duyệt KQ thì vẫn edit ghi chú được
         const isApproved = record.approvalStatus === IndicatorApprovalStatus.Approved;
         const isCancelled = record.approvalStatus === IndicatorApprovalStatus.CustomerCancelled;
-        const canEditNote = !isApproved && !isCancelled && onUpdateNote && canAssignTechnician;
-        const isSaving = savingNoteId === record.id;
+        const canEditNoteCell = !isApproved && !isCancelled && onOpenNoteModal;
 
-        // Read-only mode
-        if (!canEditNote) {
-          return value ? (
-            <Tooltip title={value}>
-              <Text>{value}</Text>
-            </Tooltip>
-          ) : (
-            <Text type="secondary">-</Text>
+        // Read-only mode - vẫn hiển thị dạng input nhưng disabled
+        if (!canEditNoteCell) {
+          return (
+            <div style={{ minHeight: 32, display: "flex", alignItems: "center" }}>
+              <Tooltip title={displayNote ? <div style={{ whiteSpace: "pre-line" }}>{displayNote}</div> : undefined}>
+                <div
+                  style={{
+                    width: "100%",
+                    height: 24,
+                    padding: "0 7px",
+                    border: "1px solid #d9d9d9",
+                    borderRadius: 4,
+                    backgroundColor: "#f5f5f5",
+                    fontSize: 14,
+                    lineHeight: "22px",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    color: displayNote ? "rgba(0, 0, 0, 0.65)" : "rgba(0, 0, 0, 0.25)",
+                    cursor: "not-allowed",
+                  }}
+                >
+                  {displayNote || "..."}
+                </div>
+              </Tooltip>
+            </div>
           );
         }
 
-        // Edit mode - always show Input
+        // Edit mode - click to open modal
         return (
-          <Input
-            size="small"
-            defaultValue={value || ""}
-            onBlur={(e) => handleSaveNote(record.id, e.target.value, value || "")}
-            onPressEnter={(e) => (e.target as HTMLInputElement).blur()}
-            disabled={isSaving}
-            maxLength={500}
-            placeholder="Nhập ghi chú..."
-            style={{ width: "100%" }}
-          />
+          <div
+            style={{ minHeight: 32, display: "flex", alignItems: "center", cursor: "pointer" }}
+            onClick={() => onOpenNoteModal(record.id, displayNote, sampleId)}
+          >
+            <Tooltip title={displayNote ? <div style={{ whiteSpace: "pre-line" }}>{displayNote}</div> : undefined}>
+              <div
+                style={{
+                  width: "100%",
+                  height: 24,
+                  padding: "0 7px",
+                  border: "1px solid #d9d9d9",
+                  borderRadius: 4,
+                  backgroundColor: "#fff",
+                  fontSize: 14,
+                  lineHeight: "22px",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  color: displayNote ? "rgba(0, 0, 0, 0.88)" : "rgba(0, 0, 0, 0.25)",
+                }}
+              >
+                {displayNote || "Click để nhập..."}
+              </div>
+            </Tooltip>
+          </div>
         );
       },
     },
@@ -375,34 +459,39 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           record.methodId
         );
 
-        // Chỉ cho phép chọn khi indicator ở trạng thái Entered (Chờ phê duyệt)
+        // Cho phép chọn tiêu chuẩn ở tất cả trạng thái trừ các trạng thái sau
         const canSelectStandard =
-          record.approvalStatus === IndicatorApprovalStatus.Entered;
+          record.approvalStatus !== IndicatorApprovalStatus.Approved &&
+          record.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled &&
+          record.approvalStatus !== IndicatorApprovalStatus.MethodChangeRequested &&
+          record.approvalStatus !== IndicatorApprovalStatus.TestingRejected;
 
         return (
-          <Select
-            style={{ width: "100%" }}
-            placeholder="Chọn tiêu chuẩn"
-            allowClear
-            value={selectedStandardId || undefined}
-            onChange={(value) => handleStandardChange(record.id, value)}
-            loading={loadingStandards}
-            disabled={!canSelectStandard}
-            size="small"
-          >
-            {availableStandards.map((s) => (
-              <Select.Option key={s.id} value={s.id}>
-                {s.name}
-              </Select.Option>
-            ))}
-          </Select>
+          <div style={{ minHeight: 32, display: "flex", alignItems: "center" }}>
+            <Select
+              style={{ width: "100%" }}
+              placeholder="Chọn tiêu chuẩn"
+              allowClear
+              value={selectedStandardId || undefined}
+              onChange={(value) => handleStandardChange(record.id, value)}
+              loading={loadingStandards}
+              disabled={!canSelectStandard}
+              size="small"
+            >
+              {availableStandards.map((s) => (
+                <Select.Option key={s.id} value={s.id}>
+                  {s.name}
+                </Select.Option>
+              ))}
+            </Select>
+          </div>
         );
       },
     },
     {
       title: "Giới hạn",
       key: "allowedLimit",
-      width: 120,
+      width: 180,
       render: (_: unknown, record: LaboratoryTaskIndicatorDto) => {
         // Ưu tiên lấy từ local state, nếu không có thì lấy từ DB
         const selectedStandardId = standardSelections[record.id] !== undefined
@@ -417,7 +506,18 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             record.methodId
           );
           if (standardInfo) {
-            const { comparisonOperator, allowedLimit } = standardInfo;
+            const { comparisonOperator, allowedLimit, lowerOperator, lowerLimit, upperOperator, upperLimit } = standardInfo;
+            // Range case: both lowerLimit and upperLimit have values
+            if (lowerLimit && upperLimit) {
+              const lower = lowerOperator || ">";
+              const upper = upperOperator || "<";
+              return (
+                <Text>
+                  {lower} {lowerLimit} và {upper} {upperLimit}
+                </Text>
+              );
+            }
+            // Single limit case
             if (comparisonOperator && allowedLimit) {
               return (
                 <Text>
@@ -427,12 +527,25 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             }
           }
           // Fallback to data from API if available (chỉ khi dùng standardId từ DB)
-          if (selectedStandardId === record.standardId && record.comparisonOperator && record.allowedLimit) {
-            return (
-              <Text>
-                {record.comparisonOperator} {record.allowedLimit}
-              </Text>
-            );
+          if (selectedStandardId === record.standardId) {
+            // Range case from API
+            if (record.lowerLimit && record.upperLimit) {
+              const lower = record.lowerOperator || ">";
+              const upper = record.upperOperator || "<";
+              return (
+                <Text>
+                  {lower} {record.lowerLimit} và {upper} {record.upperLimit}
+                </Text>
+              );
+            }
+            // Single limit case from API
+            if (record.comparisonOperator && record.allowedLimit) {
+              return (
+                <Text>
+                  {record.comparisonOperator} {record.allowedLimit}
+                </Text>
+              );
+            }
           }
         }
         return "-";
@@ -453,6 +566,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
 
         let comparisonOperator = record.comparisonOperator;
         let allowedLimit = record.allowedLimit;
+        let lowerOperator = record.lowerOperator;
+        let lowerLimit = record.lowerLimit;
+        let upperOperator = record.upperOperator;
+        let upperLimit = record.upperLimit;
 
         // Lấy từ standardIndicator
         const standardInfo = getStandardIndicatorInfo(
@@ -463,12 +580,20 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         if (standardInfo) {
           comparisonOperator = standardInfo.comparisonOperator;
           allowedLimit = standardInfo.allowedLimit;
+          lowerOperator = standardInfo.lowerOperator;
+          lowerLimit = standardInfo.lowerLimit;
+          upperOperator = standardInfo.upperOperator;
+          upperLimit = standardInfo.upperLimit;
         }
 
         const passFailStatus = calculatePassFail(
           record.result,
           comparisonOperator,
-          allowedLimit
+          allowedLimit,
+          lowerOperator,
+          lowerLimit,
+          upperOperator,
+          upperLimit
         );
 
         if (passFailStatus === "pass") {
@@ -502,19 +627,21 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           canAssignTechnician;
 
         return (
-          <Select
-            style={{ width: "100%" }}
-            size="small"
-            value={value}
-            placeholder="Chọn KTV"
-            onChange={(val) => onTechnicianChange(record.id, val)}
-            options={(technicians || []).map((t) => ({
-              value: t.id,
-              label: t.displayName || t.userName,
-            }))}
-            disabled={!canEditIndicator}
-            allowClear
-          />
+          <div style={{ minHeight: 32, display: "flex", alignItems: "center" }}>
+            <Select
+              style={{ width: "100%" }}
+              size="small"
+              value={value}
+              placeholder="Chọn KTV"
+              onChange={(val) => onTechnicianChange(record.id, val)}
+              options={(technicians || []).map((t) => ({
+                value: t.id,
+                label: t.displayName || t.userName,
+              }))}
+              disabled={!canEditIndicator}
+              allowClear
+            />
+          </div>
         );
       },
     },

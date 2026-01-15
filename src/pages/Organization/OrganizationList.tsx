@@ -1,6 +1,6 @@
 import React from "react";
 import { Card, Button, Space, Input, Row, Col } from "antd";
-import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
+import { PlusOutlined, ReloadOutlined } from "../../components/common/Icon";
 import { useOrganizationList } from "./hooks/useOrganizationList";
 import { OrganizationTable, OrganizationFormModal } from "./components";
 
@@ -46,9 +46,7 @@ const OrganizationList: React.FC = () => {
       title="Quản lý Cơ sở / Doanh nghiệp"
       extra={
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={loadData}>
-            Làm mới
-          </Button>
+          <Button icon={<ReloadOutlined />} onClick={loadData} />
           <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
             Thêm mới
           </Button>

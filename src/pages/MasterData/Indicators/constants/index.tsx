@@ -4,7 +4,8 @@ import {
   DeleteOutlined,
   StopOutlined,
   CheckCircleOutlined,
-} from "@ant-design/icons";
+} from "../../../../components/common/Icon";
+import { IndicatorName } from "../../../../components/common";
 import type { ColumnsType } from "antd/es/table";
 import { IndicatorDto, IndicatorGroupDto, GroupedIndicatorData } from "../types";
 
@@ -27,9 +28,14 @@ export const getIndicatorColumns = (
   },
   {
     title: "Tên chỉ tiêu",
-    dataIndex: "name",
     key: "name",
     width: 250,
+    render: (_, record) => (
+      <IndicatorName
+        name={record.name}
+        formattedName={record.formattedName}
+      />
+    ),
   },
   {
     title: "Trạng thái",

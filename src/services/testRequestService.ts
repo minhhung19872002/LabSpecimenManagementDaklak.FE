@@ -46,6 +46,8 @@ export interface PrintResultItem {
   laboratoryId: string;
   laboratoryName: string;
   templateName: string;
+  sampleCode?: string;
+  sampleName?: string;
 }
 
 // Print multi result output for batch print
@@ -342,12 +344,14 @@ export const testRequestService = {
     testRequestId: string,
     indicatorIds: string[],
     note?: string,
-    templateName?: string
+    templateName?: string,
+    vicePresidentId?: string
   ): Promise<{ fileName: string }> => {
     const response = await api.post<{ fileName: string }>(`${BASE_URL}/${testRequestId}/print-mixed`, {
       indicatorIds,
       note,
-      templateName
+      templateName,
+      vicePresidentId
     });
     return response.data;
   },
@@ -360,12 +364,14 @@ export const testRequestService = {
     testRequestId: string,
     indicatorIds: string[],
     templateNames: string[],
-    note?: string
+    note?: string,
+    vicePresidentId?: string
   ): Promise<PrintMultiResultOutput> => {
     const response = await api.post<PrintMultiResultOutput>(`${BASE_URL}/${testRequestId}/print-multi-single`, {
       indicatorIds,
       templateNames,
-      note
+      note,
+      vicePresidentId
     });
     return response.data;
   },

@@ -7,7 +7,7 @@ import {
   ImportOutlined,
   ExportOutlined,
   DownloadOutlined,
-} from "@ant-design/icons";
+} from "../../../components/common/Icon";
 import ImportExcelModal from "../../../components/common/ImportExcelModal";
 import IndicatorsTab from "../IndicatorsTab";
 import FormTemplatesTab from "../FormTemplatesTab";
@@ -15,6 +15,7 @@ import TestMethodsTab from "../TestMethods";
 import StandardsTab from "../Standards";
 import TestResultValuesTab from "../TestResultValues";
 import NotesTab from "../Notes";
+import SpecimenTypesTab from "../SpecimenTypes";
 import { useMasterDataState } from "./hooks";
 import { useMasterDataActions } from "./hooks/useMasterDataActions";
 import {
@@ -28,6 +29,7 @@ import {
   getColumns,
   getStatCount,
 } from "./constants";
+import { MasterDataItem } from "./types";
 
 const MasterDataList: React.FC = () => {
   const {
@@ -86,6 +88,7 @@ const MasterDataList: React.FC = () => {
   const [form] = Form.useForm();
   const [testMethodsRefreshKey, setTestMethodsRefreshKey] = useState(0);
   const [standardsRefreshKey, setStandardsRefreshKey] = useState(0);
+  const [specimenTypesRefreshKey, setSpecimenTypesRefreshKey] = useState(0);
 
   // Memoized columns
   const columns = useMemo(
@@ -131,7 +134,8 @@ const MasterDataList: React.FC = () => {
           activeCategory !== "testMethods" &&
           activeCategory !== "standards" &&
           activeCategory !== "testResultValues" &&
-          activeCategory !== "notes" && (
+          activeCategory !== "notes" &&
+          activeCategory !== "specimenTypes" && (
             <Space>
               {canImport && (
                 <Button
@@ -164,12 +168,15 @@ const MasterDataList: React.FC = () => {
           onChange={(key) => {
             setActiveCategory(key);
             setSearchText("");
-            // Trigger refresh when switching to testMethods or standards tab
+            // Trigger refresh when switching to testMethods, standards, or specimenTypes tab
             if (key === "testMethods") {
               setTestMethodsRefreshKey((prev) => prev + 1);
             }
             if (key === "standards") {
               setStandardsRefreshKey((prev) => prev + 1);
+            }
+            if (key === "specimenTypes") {
+              setSpecimenTypesRefreshKey((prev) => prev + 1);
             }
           }}
           tabPosition="left"
@@ -201,6 +208,11 @@ const MasterDataList: React.FC = () => {
                 <TestResultValuesTab onDataChange={() => fetchStatistics()} />
               ) : key === "notes" ? (
                 <NotesTab onDataChange={() => fetchStatistics()} />
+              ) : key === "specimenTypes" ? (
+                <SpecimenTypesTab
+                  onDataChange={() => fetchStatistics()}
+                  refreshKey={specimenTypesRefreshKey}
+                />
               ) : (
                 <MasterDataTable
                   activeCategory={activeCategory}

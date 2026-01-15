@@ -245,6 +245,7 @@ export interface TestRequestSampleIndicatorDto {
   indicatorId: string;
   indicatorCode?: string;
   indicatorName?: string;
+  indicatorFormattedName?: string;  // Tên chỉ tiêu có định dạng HTML
   indicatorGroupName?: string;
   /** Khoa phòng mặc định của nhóm chỉ tiêu (để auto-fill khi gửi QLKT) */
   indicatorGroupLaboratoryId?: string;
@@ -255,6 +256,7 @@ export interface TestRequestSampleIndicatorDto {
   testMethodId?: string;
   testMethodCode?: string;
   testMethodName?: string;
+  testMethodFormattedName?: string | null;
   transferDate?: string;
   requestDate?: string;
   sentToDepartment: boolean;
@@ -673,6 +675,7 @@ export interface IndicatorPendingConfirmationDto {
   sampleName?: string;
   indicatorCode?: string;
   indicatorName?: string;
+  indicatorFormattedName?: string;      // Tên chỉ tiêu có định dạng HTML
   laboratoryName?: string;
   approvalStatus: IndicatorApprovalStatus;
   testingRejectionReason?: string;      // Lý do từ chối TN (nếu có)
@@ -681,6 +684,10 @@ export interface IndicatorPendingConfirmationDto {
   methodChangeReason?: string;          // Lý do yêu cầu đổi PP (nếu có)
   requestedByName?: string;             // Người yêu cầu đổi PP / từ chối TN
   requestedDate?: string;               // Ngày yêu cầu
+  // Supplementary Request fields
+  supplementaryRequestReason?: string;  // Lý do yêu cầu bổ sung
+  supplementaryRequestDate?: string;    // Ngày yêu cầu bổ sung
+  supplementaryRequestedByName?: string; // Tên người yêu cầu bổ sung
 }
 
 // DTO for BPGN to confirm a single indicator

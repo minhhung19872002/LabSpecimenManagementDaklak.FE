@@ -15,7 +15,7 @@ import {
   Row,
   Col,
 } from "antd";
-import { SendOutlined } from "@ant-design/icons";
+import { SendOutlined } from "../../../components/common/Icon";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { laboratoryTaskService } from "../../../services/laboratoryTaskService";
@@ -26,6 +26,7 @@ import {
 } from "../../../types/laboratoryTask";
 import { sendToQualitySchema, SendToQualityFormData } from "../schemas";
 import { noteService } from "../../../services/noteService";
+import { IndicatorName } from "../../../components/common";
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -384,9 +385,9 @@ const SendToQualityModal: React.FC<SendToQualityModalProps> = ({
                             handleIndicatorToggle(indicator.id, e.target.checked)
                           }
                         >
-                          <Text>
-                            {indicator.indicatorCode} - {indicator.indicatorName}
-                          </Text>
+                          <span>
+                            {indicator.indicatorCode} - <IndicatorName name={indicator.indicatorName || ""} formattedName={indicator.indicatorFormattedName} />
+                          </span>
                           {indicator.result && (
                             <Text type="secondary" style={{ marginLeft: 8 }}>
                               (KQ: {indicator.result} {indicator.unit || ""})

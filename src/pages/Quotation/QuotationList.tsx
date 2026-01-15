@@ -15,7 +15,7 @@ import {
   EditOutlined,
   DeleteOutlined,
   ReloadOutlined,
-} from "@ant-design/icons";
+} from "../../components/common/Icon";
 import { useNavigate } from "react-router-dom";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
@@ -90,10 +90,12 @@ const QuotationList: React.FC = () => {
       key: "quotationNumber",
       width: 160,
       render: (text, record) => (
-        <a onClick={(e) => {
-          e.stopPropagation();
-          navigate(PATH_ROUTES.quotations.view(record.id));
-        }}>
+        <a
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(PATH_ROUTES.quotations.view(record.id));
+          }}
+        >
           {text}
         </a>
       ),
@@ -172,11 +174,18 @@ const QuotationList: React.FC = () => {
   return (
     <Card
       title="Danh sách báo giá"
+      styles={{
+        header: {
+          background: "#F0F5FF",
+          borderBottom: "1px solid #F0F0F0",
+        },
+        body: {
+          padding: 0,
+        },
+      }}
       extra={
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={fetchData}>
-            Làm mới
-          </Button>
+          <Button icon={<ReloadOutlined />} onClick={fetchData} />
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -188,20 +197,22 @@ const QuotationList: React.FC = () => {
       }
     >
       {/* Search */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col xs={24} sm={12} md={8}>
-          <Input.Search
-            placeholder="Tìm kiếm theo số báo giá, tên CS/DN..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onSearch={handleSearch}
-            onPressEnter={handleSearch}
-            allowClear
-            onClear={handleClearSearch}
-            enterButton
-          />
-        </Col>
-      </Row>
+      <div style={{ padding: "16px 16px 0" }}>
+        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+          <Col xs={24} sm={12} md={8}>
+            <Input.Search
+              placeholder="Tìm kiếm theo số báo giá, tên CS/DN..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onSearch={handleSearch}
+              onPressEnter={handleSearch}
+              allowClear
+              onClear={handleClearSearch}
+              enterButton
+            />
+          </Col>
+        </Row>
+      </div>
 
       <Table
         columns={columns}
@@ -214,14 +225,17 @@ const QuotationList: React.FC = () => {
           total: totalCount,
           pageSizeOptions: [50, 100, 150],
           showSizeChanger: true,
-          showTotal: (total) => `Tổng ${total} báo giá`,
+          showTotal: (total, range) =>
+            `Hiển thị ${range[0]}-${range[1]}/${total}`,
           onChange: handlePageChange,
         }}
         scroll={{ x: 900 }}
         onRow={(record) => ({
-          onClick: () => navigate(PATH_ROUTES.quotations.view(record.id)),
+          onDoubleClick: () => navigate(PATH_ROUTES.quotations.view(record.id)),
           style: { cursor: "pointer" },
         })}
+        style={{ borderRadius: 0 }}
+        className="no-border-radius-table"
       />
     </Card>
   );

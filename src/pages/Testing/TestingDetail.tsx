@@ -30,10 +30,10 @@ const TestingDetail: React.FC = () => {
 
   // Sử dụng hook để check permissions cho tất cả actions theo Permission Matrix
   // Testing: KTV (A), QLKT (V), Admin (V)
-  const actionPermissions = useMultipleActionPermissions('testing', [
-    'inputResult',
-    'editResult',
-    'sendResult',
+  const actionPermissions = useMultipleActionPermissions("testing", [
+    "inputResult",
+    "editResult",
+    "sendResult",
   ]);
 
   // KTV có quyền ALL = canAll = true, QLKT/Admin chỉ có View
@@ -47,7 +47,10 @@ const TestingDetail: React.FC = () => {
   // Helper function to update indicators optimistically (indicator-level only)
   // Task-level status is fetched from server to avoid duplicating BE logic
   const updateIndicatorsOptimistically = useCallback(
-    (indicatorIds: string[], indicatorUpdates: Partial<TestingIndicatorDto>) => {
+    (
+      indicatorIds: string[],
+      indicatorUpdates: Partial<TestingIndicatorDto>
+    ) => {
       setDetail((prev) => {
         if (!prev) return prev;
         return {
@@ -55,7 +58,9 @@ const TestingDetail: React.FC = () => {
           samples: prev.samples.map((sample) => ({
             ...sample,
             indicators: sample.indicators.map((ind) =>
-              indicatorIds.includes(ind.id) ? { ...ind, ...indicatorUpdates } : ind
+              indicatorIds.includes(ind.id)
+                ? { ...ind, ...indicatorUpdates }
+                : ind
             ),
           })),
         };
@@ -88,6 +93,7 @@ const TestingDetail: React.FC = () => {
                 methodId: ind.methodId,
                 unit: ind.unit,
                 result: existingResult?.result ?? ind.result,
+                testDate: existingResult?.testDate ?? ind.testDate, // Quan trọng: cần testDate để batch submit hoạt động
               };
             })
           );
@@ -120,6 +126,13 @@ const TestingDetail: React.FC = () => {
     indicatorName: "",
   });
 
+  // Cannot test modal
+  const [cannotTestModal, setCannotTestModal] = useState({
+    visible: false,
+    indicatorId: "",
+    indicatorName: "",
+  });
+
   const loadDetail = useCallback(async () => {
     if (!id) return;
     setLoading(true);
@@ -137,6 +150,7 @@ const TestingDetail: React.FC = () => {
             methodId: ind.methodId,
             unit: ind.unit,
             result: ind.result,
+            testDate: ind.testDate, // Quan trọng: cần testDate để batch submit hoạt động
           }))
         );
       });
@@ -196,7 +210,10 @@ const TestingDetail: React.FC = () => {
     setSelectedIndicators(newSelected);
   };
 
-  const handleSaveIndicator = async (indicatorId: string, directResult?: SaveIndicatorResultDto) => {
+  const handleSaveIndicator = async (
+    indicatorId: string,
+    directResult?: SaveIndicatorResultDto
+  ) => {
     if (!id) return;
 
     // Use directResult if provided (for immediate save like testDate change)
@@ -375,6 +392,29 @@ const TestingDetail: React.FC = () => {
     });
   };
 
+  const showCannotTestModal = (indicatorId: string, indicatorName: string) => {
+    setCannotTestModal({
+      visible: true,
+      indicatorId,
+      indicatorName,
+    });
+  };
+
+  const closeCannotTestModal = () => {
+    setCannotTestModal({
+      visible: false,
+      indicatorId: "",
+      indicatorName: "",
+    });
+  };
+
+  const handleCannotTestSuccess = async () => {
+    closeCannotTestModal();
+    // Reload data to get updated status
+    await reloadData();
+    message.success("Đã báo không thể thử nghiệm thành công");
+  };
+
   const handleSubmitSingleIndicator = async (indicatorId: string) => {
     if (!id || !detail) return;
 
@@ -516,6 +556,98 @@ const TestingDetail: React.FC = () => {
     }
   };
 
+  // Handler for bulk test date change (từ DatePicker trên SamplePanelHeader)
+  const handleBulkTestDateChange = async (
+    sampleId: string,
+    indicatorIds: string[],
+    date: string
+  ) => {
+    if (!id || indicatorIds.length === 0) return;
+
+    // Cập nhật local state (sampleResults)
+    setSampleResults((prev) => {
+      const newResults = new Map(prev);
+      const sampleResultList = newResults.get(sampleId) || [];
+
+      const updatedList = sampleResultList.map((result) => {
+        if (indicatorIds.includes(result.indicatorId)) {
+          return { ...result, testDate: date };
+        }
+        return result;
+      });
+
+      // Thêm result mới nếu chưa tồn tại trong sampleResults
+      indicatorIds.forEach((indicatorId) => {
+        if (!updatedList.find((r) => r.indicatorId === indicatorId)) {
+          const sample = detail?.samples.find((s) => s.sampleId === sampleId);
+          const indicator = sample?.indicators.find(
+            (i) => i.id === indicatorId
+          );
+          if (indicator) {
+            updatedList.push({
+              indicatorId,
+              methodId: indicator.methodId,
+              unit: indicator.unit,
+              result: indicator.result,
+              testDate: date,
+            });
+          }
+        }
+      });
+
+      newResults.set(sampleId, updatedList);
+      return newResults;
+    });
+
+    // Cập nhật detail state để UI hiển thị ngày mới ngay lập tức
+    setDetail((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        samples: prev.samples.map((sample) => {
+          if (sample.sampleId !== sampleId) return sample;
+          return {
+            ...sample,
+            indicators: sample.indicators.map((ind) =>
+              indicatorIds.includes(ind.id) ? { ...ind, testDate: date } : ind
+            ),
+          };
+        }),
+      };
+    });
+
+    // Lưu tất cả indicators với testDate mới lên server
+    try {
+      const sample = detail?.samples.find((s) => s.sampleId === sampleId);
+      if (!sample) return;
+
+      const resultsToSave: SaveIndicatorResultDto[] = indicatorIds.map(
+        (indicatorId) => {
+          const indicator = sample.indicators.find((i) => i.id === indicatorId);
+          const existingResult = sampleResults
+            .get(sampleId)
+            ?.find((r) => r.indicatorId === indicatorId);
+          return {
+            indicatorId,
+            methodId: indicator?.methodId,
+            unit: indicator?.unit,
+            result: existingResult?.result ?? indicator?.result,
+            testDate: date,
+          };
+        }
+      );
+
+      await testingService.saveResults(id, { results: resultsToSave });
+    } catch (error: any) {
+      console.error("Failed to save bulk test dates:", error);
+      message.error(
+        error.response?.data?.error?.message || "Không thể lưu ngày thử nghiệm"
+      );
+      // Reload lại data nếu có lỗi để sync với server
+      await reloadData();
+    }
+  };
+
   // Check if deadline is urgent (<=3 days)
   const isUrgent = detail?.requestCompletionDate
     ? (() => {
@@ -544,6 +676,7 @@ const TestingDetail: React.FC = () => {
       activeKeys={activeKeys}
       selectedIndicators={selectedIndicators}
       historyModal={historyModal}
+      cannotTestModal={cannotTestModal}
       resultOptions={resultOptions}
       canPerformActions={canPerformActions}
       onBack={() => navigate("/testing")}
@@ -556,10 +689,14 @@ const TestingDetail: React.FC = () => {
       onCloseHistoryModal={() =>
         setHistoryModal({ visible: false, indicatorId: "", indicatorName: "" })
       }
+      onShowCannotTestModal={showCannotTestModal}
+      onCloseCannotTestModal={closeCannotTestModal}
+      onCannotTestSuccess={handleCannotTestSuccess}
       onSaveIndicator={handleSaveIndicator}
       onSubmitIndicator={handleSubmitSingleIndicator}
       onUploadIndicatorImages={handleUploadIndicatorImages}
       onDeleteIndicatorImage={handleDeleteIndicatorImage}
+      onBulkTestDateChange={handleBulkTestDateChange}
     />
   );
 };

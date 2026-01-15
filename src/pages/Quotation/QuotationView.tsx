@@ -15,7 +15,7 @@ import {
   ArrowLeftOutlined,
   FileAddOutlined,
   EditOutlined,
-} from "@ant-design/icons";
+} from "../../components/common/Icon";
 import { useNavigate, useParams } from "react-router-dom";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
@@ -23,6 +23,7 @@ import { quotationService } from "../../services/quotationService";
 import { QuotationDto, QuotationItemDto } from "../../types/quotation";
 import { PATH_ROUTES } from "../../constants";
 import { formatCurrency } from "../../utils/formatters";
+import { IndicatorName } from "../../components/common";
 
 const { Text } = Typography;
 
@@ -71,12 +72,15 @@ const QuotationView: React.FC = () => {
       dataIndex: "indicatorName",
       key: "indicatorName",
       ellipsis: true,
+      render: (_, record) => <IndicatorName name={record.indicatorName} formattedName={record.indicatorFormattedName} />,
     },
     {
       title: "Phương pháp",
-      dataIndex: "testMethodName",
       key: "testMethodName",
       ellipsis: true,
+      render: (_, record) => (
+        <IndicatorName name={record.testMethodName} formattedName={record.testMethodFormattedName} />
+      ),
     },
     {
       title: "Số mẫu",

@@ -107,13 +107,13 @@ export const qualityManagementService = {
   },
 
   // Task Actions
-  printSingleResult: async (taskId: string, indicatorId: string, note?: string, templateName?: string): Promise<{ fileName: string }> => {
-    const response = await api.post<{ fileName: string }>(`${BASE_URL}/${taskId}/print-single`, { indicatorId, note, templateName });
+  printSingleResult: async (taskId: string, indicatorId: string, note?: string, templateName?: string, vicePresidentId?: string): Promise<{ fileName: string }> => {
+    const response = await api.post<{ fileName: string }>(`${BASE_URL}/${taskId}/print-single`, { indicatorId, note, templateName, vicePresidentId });
     return response.data;
   },
 
-  printMixedResult: async (taskId: string, indicatorIds: string[], note?: string, templateName?: string): Promise<{ fileName: string }> => {
-    const response = await api.post<{ fileName: string }>(`${BASE_URL}/${taskId}/print-mixed`, { indicatorIds, note, templateName });
+  printMixedResult: async (taskId: string, indicatorIds: string[], note?: string, templateName?: string, vicePresidentId?: string): Promise<{ fileName: string }> => {
+    const response = await api.post<{ fileName: string }>(`${BASE_URL}/${taskId}/print-mixed`, { indicatorIds, note, templateName, vicePresidentId });
     return response.data;
   },
 
@@ -122,11 +122,12 @@ export const qualityManagementService = {
     taskId: string,
     indicatorIds: string[],
     templateNames: string[],
-    note?: string
+    note?: string,
+    vicePresidentId?: string
   ): Promise<{ results: Array<{ fileName: string; laboratoryId: string; laboratoryName: string; templateName: string }> }> => {
     const response = await api.post<{ results: Array<{ fileName: string; laboratoryId: string; laboratoryName: string; templateName: string }> }>(
       `${BASE_URL}/${taskId}/print-multi-single`,
-      { indicatorIds, templateNames, note }
+      { indicatorIds, templateNames, note, vicePresidentId }
     );
     return response.data;
   },

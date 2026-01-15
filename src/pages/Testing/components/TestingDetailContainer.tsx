@@ -1,6 +1,6 @@
 import React from "react";
 import { Button, Collapse, Alert, Spin, Card } from "antd";
-import { ArrowLeftOutlined, WarningOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, WarningOutlined } from "../../../components/common/Icon";
 import {
   TestingDetailDto,
   TestingSampleDto,
@@ -11,6 +11,7 @@ import {
 } from "../../../types/testing";
 import IndicatorEditTable from "./IndicatorEditTable";
 import RejectionHistoryModal from "./RejectionHistoryModal";
+import CannotTestModal from "./CannotTestModal";
 import {
   TestingDetailHeader,
   TestingOverviewSection,
@@ -39,6 +40,11 @@ interface TestingDetailContainerProps {
     indicatorId: string;
     indicatorName: string;
   };
+  cannotTestModal: {
+    visible: boolean;
+    indicatorId: string;
+    indicatorName: string;
+  };
   resultOptions?: ResultOption[];
   /** Có quyền thực hiện thao tác (nhập/sửa/gửi kết quả) theo Permission Matrix */
   canPerformActions?: boolean;
@@ -54,10 +60,15 @@ interface TestingDetailContainerProps {
   ) => void;
   onShowRejectionHistory: (indicatorId: string, indicatorName: string) => void;
   onCloseHistoryModal: () => void;
+  onShowCannotTestModal: (indicatorId: string, indicatorName: string) => void;
+  onCloseCannotTestModal: () => void;
+  onCannotTestSuccess: () => void;
   onSaveIndicator: (indicatorId: string, result?: SaveIndicatorResultDto) => void;
   onSubmitIndicator: (indicatorId: string) => void;
   onUploadIndicatorImages?: (indicatorId: string, files: File[]) => Promise<IndicatorImageDto[]>;
   onDeleteIndicatorImage?: (imageId: string) => Promise<void>;
+  /** Callback khi chọn ngày thử nghiệm bulk cho các chỉ tiêu được select */
+  onBulkTestDateChange?: (sampleId: string, indicatorIds: string[], date: string) => void;
 }
 
 const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
@@ -70,6 +81,7 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
   activeKeys,
   selectedIndicators,
   historyModal,
+  cannotTestModal,
   resultOptions = [],
   canPerformActions = true,
   onBack,
@@ -80,10 +92,14 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
   onImagesChange,
   onShowRejectionHistory,
   onCloseHistoryModal,
+  onShowCannotTestModal,
+  onCloseCannotTestModal,
+  onCannotTestSuccess,
   onSaveIndicator,
   onSubmitIndicator,
   onUploadIndicatorImages,
   onDeleteIndicatorImage,
+  onBulkTestDateChange,
 }) => {
   if (loading) {
     return (
@@ -153,6 +169,7 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
                 submitting={submitting}
                 canPerformActions={canPerformActions}
                 onSubmitResults={onSubmitResults}
+                onBulkTestDateChange={onBulkTestDateChange}
               />
             }
             key={sample.sampleId}
@@ -185,6 +202,7 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
               onSubmitIndicator={onSubmitIndicator}
               onUploadIndicatorImages={onUploadIndicatorImages}
               onDeleteIndicatorImage={onDeleteIndicatorImage}
+              onShowCannotTestModal={onShowCannotTestModal}
             />
           </Panel>
         ))}
@@ -196,6 +214,16 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
         indicatorId={historyModal.indicatorId}
         indicatorName={historyModal.indicatorName}
         onClose={onCloseHistoryModal}
+      />
+
+      {/* Cannot Test Modal */}
+      <CannotTestModal
+        visible={cannotTestModal.visible}
+        taskId={taskId}
+        indicatorId={cannotTestModal.indicatorId}
+        indicatorName={cannotTestModal.indicatorName}
+        onCancel={onCloseCannotTestModal}
+        onSuccess={onCannotTestSuccess}
       />
     </div>
   );

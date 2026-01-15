@@ -60,11 +60,16 @@ code {
 }
 
 /* ===========================================
-   Responsive Component Heights for Tablet/Mobile
-   - Desktop (>992px): default 40px
-   - Tablet (768-992px): 36px
-   - Mobile (<768px): 32px
+   Responsive Component Heights
+   - Desktop (>992px): 40px (default), small: 32px
+   - Tablet (768-992px): 36px, small: 28px
+   - Mobile (<768px): 32px, small: 24px
    =========================================== */
+
+/* Desktop - ensure DatePicker small matches Button small */
+.ant-picker-small {
+  height: 32px !important;
+}
 
 /* Tablet breakpoint */
 @media screen and (max-width: 992px) {
@@ -389,5 +394,173 @@ code {
   }
   .ant-picker-small {
     height: 24px !important;
+  }
+}
+
+/* Table without border radius */
+.no-border-radius-table .ant-table,
+.no-border-radius-table .ant-table-container,
+.no-border-radius-table .ant-table-wrapper,
+.no-border-radius-table .ant-table-content,
+.no-border-radius-table .ant-table-thead > tr > th:first-child,
+.no-border-radius-table .ant-table-thead > tr > th:last-child,
+.no-border-radius-table .ant-table-tbody > tr:last-child > td:first-child,
+.no-border-radius-table .ant-table-tbody > tr:last-child > td:last-child {
+  border-radius: 0 !important;
+}
+
+/* Pagination padding for full-width table */
+.no-border-radius-table .ant-table-pagination {
+  padding: 16px !important;
+  margin: 0 !important;
+  display: flex !important;
+  flex-wrap: wrap;
+  justify-content: space-between !important;
+  align-items: center;
+}
+
+/* Move showTotal and page size selector to the left */
+.no-border-radius-table .ant-table-pagination .ant-pagination-total-text {
+  order: 1;
+  margin-right: 8px !important;
+}
+
+.no-border-radius-table .ant-table-pagination .ant-pagination-options {
+  order: 2;
+  margin-left: 0 !important;
+  margin-right: auto !important;
+}
+
+/* Keep pagination buttons on the right */
+.no-border-radius-table .ant-table-pagination .ant-pagination-prev,
+.no-border-radius-table .ant-table-pagination .ant-pagination-next,
+.no-border-radius-table .ant-table-pagination .ant-pagination-item,
+.no-border-radius-table .ant-table-pagination .ant-pagination-jump-prev,
+.no-border-radius-table .ant-table-pagination .ant-pagination-jump-next {
+  order: 3;
+}
+
+/* ==================== Statistics Page Filter Bar ==================== */
+.statistics-filter-bar {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0px 12px;
+  gap: 16px;
+  min-height: 64px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+}
+
+.statistics-filter-bar .statistics-title {
+  margin: 0;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 500;
+  font-size: 24px;
+  line-height: 32px;
+  color: #000000;
+}
+
+.statistics-filter-controls {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 12px;
+  gap: 12px;
+  background: #FFFFFF;
+  box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+}
+
+/* Period Tabs */
+.statistics-period-tabs {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  padding: 0px;
+}
+
+.statistics-period-tabs .ant-radio-group {
+  display: flex;
+}
+
+.statistics-period-tabs .ant-radio-button-wrapper {
+  height: 40px;
+  padding: 9px 16px;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 22px;
+  border-color: #F0F0F0;
+  background: #FAFAFA;
+}
+
+.statistics-period-tabs .ant-radio-button-wrapper:first-child {
+  border-radius: 8px 0px 0px 8px;
+}
+
+.statistics-period-tabs .ant-radio-button-wrapper:last-child {
+  border-radius: 0px 8px 8px 0px;
+}
+
+.statistics-period-tabs .ant-radio-button-wrapper-checked {
+  background: #096DD9 !important;
+  border-color: #096DD9 !important;
+  color: #FFFFFF !important;
+}
+
+.statistics-period-tabs .ant-radio-button-wrapper-checked::before {
+  background-color: #096DD9 !important;
+}
+
+/* Date Picker */
+.statistics-filter-controls .ant-picker {
+  height: 40px;
+  background: #FFFFFF;
+  border: 1px solid #D9D9D9;
+  border-radius: 8px;
+}
+
+/* Responsive - Small mobile */
+@media screen and (max-width: 575px) {
+  .statistics-filter-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    height: auto;
+    padding: 16px;
+  }
+
+  .statistics-filter-controls {
+    flex-direction: row;
+    width: 100%;
+    align-items: flex-start;
+  }
+}
+
+/* Chart Fullscreen Modal - 90% on desktop, 100% on mobile */
+.chart-fullscreen-modal .ant-modal {
+  max-width: 90% !important;
+}
+
+@media screen and (max-width: 768px) {
+  .chart-fullscreen-modal .ant-modal {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    top: 0 !important;
+  }
+
+  .chart-fullscreen-modal .ant-modal-content {
+    height: 100vh !important;
+    border-radius: 0 !important;
+  }
+
+  .chart-fullscreen-modal .ant-modal-body {
+    height: calc(100vh - 55px) !important;
+    max-height: none !important;
   }
 }

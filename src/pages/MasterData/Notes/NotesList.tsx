@@ -18,7 +18,7 @@ import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-} from "@ant-design/icons";
+} from "../../../components/common/Icon";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 import { noteService } from "../../../services/noteService";
 import { NoteDto, CreateNoteDto, UpdateNoteDto } from "../../../types/note";

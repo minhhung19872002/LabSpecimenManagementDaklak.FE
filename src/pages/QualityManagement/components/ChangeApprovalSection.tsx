@@ -13,7 +13,7 @@ import {
   CheckOutlined,
   CloseOutlined,
   EditOutlined,
-} from '@ant-design/icons';
+} from '../../../components/common/Icon';
 import dayjs from 'dayjs';
 import { qualityManagementService } from '../../../services/qualityManagementService';
 import {
