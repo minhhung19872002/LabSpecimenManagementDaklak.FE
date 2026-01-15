@@ -158,13 +158,23 @@ export const useStandardsActions = ({
       }
 
       const data: AddIndicatorsToStandardDto = {
-        indicators: validIndicators.map((item: any) => ({
-          indicatorId: item.indicatorId,
-          testMethodId: item.testMethodId,
-          unit: item.unit,
-          comparisonOperator: item.comparisonOperator || undefined,
-          allowedLimit: item.allowedLimit || undefined,
-        })),
+        indicators: validIndicators.map((item: any) => {
+          // Check if this is a range (comparisonOperator === "range")
+          const isRange = item.comparisonOperator === "range";
+          return {
+            indicatorId: item.indicatorId,
+            testMethodId: item.testMethodId,
+            unit: item.unit,
+            // For range mode, don't send comparisonOperator and allowedLimit
+            comparisonOperator: isRange ? undefined : item.comparisonOperator || undefined,
+            allowedLimit: isRange ? undefined : item.allowedLimit || undefined,
+            // Range fields
+            lowerOperator: isRange ? item.lowerOperator || undefined : undefined,
+            lowerLimit: isRange ? item.lowerLimit || undefined : undefined,
+            upperOperator: isRange ? item.upperOperator || undefined : undefined,
+            upperLimit: isRange ? item.upperLimit || undefined : undefined,
+          };
+        }),
       };
 
       await standardService.addIndicators(selectedStandardId, data);
@@ -219,9 +229,18 @@ export const useStandardsActions = ({
       setEditIndicatorLoading(true);
       const values = await form.validateFields();
 
+      // Check if this is a range (comparisonOperator === "range")
+      const isRange = values.comparisonOperator === "range";
+
       const data: UpdateStandardIndicatorDto = {
-        comparisonOperator: values.comparisonOperator || undefined,
-        allowedLimit: values.allowedLimit || undefined,
+        // For range mode, don't send comparisonOperator and allowedLimit
+        comparisonOperator: isRange ? undefined : values.comparisonOperator || undefined,
+        allowedLimit: isRange ? undefined : values.allowedLimit || undefined,
+        // Range fields
+        lowerOperator: isRange ? values.lowerOperator || undefined : undefined,
+        lowerLimit: isRange ? values.lowerLimit || undefined : undefined,
+        upperOperator: isRange ? values.upperOperator || undefined : undefined,
+        upperLimit: isRange ? values.upperLimit || undefined : undefined,
         isActive: values.isActive,
       };
 

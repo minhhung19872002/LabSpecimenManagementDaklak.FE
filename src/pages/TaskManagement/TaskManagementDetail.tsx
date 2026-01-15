@@ -25,6 +25,7 @@ import {
   TeamOutlined,
   CheckOutlined,
   CloseOutlined,
+  EditOutlined,
 } from "../../components/common/Icon";
 import { laboratoryTaskService } from "../../services/laboratoryTaskService";
 import { formatDate } from "../../utils/formatters";
@@ -53,6 +54,7 @@ import IndicatorTable from "./components/IndicatorTable";
 import EvaluationIndicatorTable from "./components/EvaluationIndicatorTable";
 import SupporterModal from "./components/SupporterModal";
 import SampleImagesDisplay from "./components/SampleImagesDisplay";
+import NoteModal, { NoteSaveInput } from "./components/NoteModal";
 import { PATH_ROUTES, STORAGE_KEYS } from "../../constants";
 import { useMultipleActionPermissions } from "../../hooks/useActionPermission";
 import { IndicatorName } from "../../components/common";
@@ -148,6 +150,16 @@ const TaskManagementDetail: React.FC = () => {
     null
   );
   const [rejectForm] = Form.useForm();
+
+  // Note modal state
+  const [noteModal, setNoteModal] = useState<{
+    visible: boolean;
+    selectedIndicatorIds: string[];
+    allIndicatorIds: string[];
+    sampleId: string;
+    initialFreeTextNote: string;
+    selectedIndicatorsMasterData: { indicatorId: string; masterDataNoteIds: string }[];
+  }>({ visible: false, selectedIndicatorIds: [], allIndicatorIds: [], sampleId: "", initialFreeTextNote: "", selectedIndicatorsMasterData: [] });
 
   // Tab state for switching between Evaluation and Sample List
   const [activeTab, setActiveTab] = useState<string>("samples");
@@ -694,7 +706,7 @@ const TaskManagementDetail: React.FC = () => {
     }
   };
 
-  // Handle update note
+  // Handle update note (for single indicator from modal)
   const handleUpdateNote = async (indicatorId: string, note: string | null) => {
     try {
       const updatedIndicator = await laboratoryTaskService.updateIndicatorNote(
@@ -703,7 +715,7 @@ const TaskManagementDetail: React.FC = () => {
       );
       // Optimistic update
       updateIndicatorsOptimistically([indicatorId], {
-        note: updatedIndicator.note,
+        freeTextNote: updatedIndicator.freeTextNote,
       });
     } catch (error: any) {
       console.error("Failed to update note:", error);
@@ -712,6 +724,87 @@ const TaskManagementDetail: React.FC = () => {
       );
       throw error;
     }
+  };
+
+  // Handle open note modal for single indicator (click từ cell)
+  const handleOpenNoteModal = (indicatorId: string, _currentNote: string, sampleId: string) => {
+    const sample = sampleList.find((s) => s.sampleId === sampleId);
+    const allIds = sample?.indicators.map((i) => i.id) || [];
+
+    // Lấy indicator hiện tại để auto-fill dữ liệu
+    const currentIndicator = sample?.indicators.find((i) => i.id === indicatorId);
+
+    setNoteModal({
+      visible: true,
+      selectedIndicatorIds: [indicatorId],
+      allIndicatorIds: allIds,
+      sampleId,
+      initialFreeTextNote: currentIndicator?.freeTextNote || "",
+      selectedIndicatorsMasterData: [{
+        indicatorId,
+        masterDataNoteIds: currentIndicator?.masterDataNoteIds || "",
+      }],
+    });
+  };
+
+  // Handle open note modal for bulk indicators (click button)
+  const handleOpenBulkNoteModal = (sampleId: string) => {
+    const sample = sampleList.find((s) => s.sampleId === sampleId);
+    const allIds = sample?.indicators.map((i) => i.id) || [];
+    const selectedIds = selectedIndicators[sampleId] || [];
+
+    if (selectedIds.length === 0) {
+      message.warning("Vui lòng chọn ít nhất một chỉ tiêu");
+      return;
+    }
+
+    // Lấy FreeTextNote từ indicator đầu tiên (vì FreeTextNote chung cho cả sample)
+    const firstIndicator = sample?.indicators.find((i) => selectedIds.includes(i.id));
+
+    // Lấy MasterDataNoteIds của tất cả các indicator được chọn để detect mixed data
+    const selectedIndicatorsMasterData = selectedIds.map((indicatorId) => {
+      const indicator = sample?.indicators.find((i) => i.id === indicatorId);
+      return {
+        indicatorId,
+        masterDataNoteIds: indicator?.masterDataNoteIds || "",
+      };
+    });
+
+    setNoteModal({
+      visible: true,
+      selectedIndicatorIds: selectedIds,
+      allIndicatorIds: allIds,
+      sampleId,
+      initialFreeTextNote: firstIndicator?.freeTextNote || "",
+      selectedIndicatorsMasterData,
+    });
+  };
+
+  // Handle save note from modal
+  const handleSaveNote = async (input: NoteSaveInput) => {
+    if (!id) return;
+
+    try {
+      // Gọi API mới với cấu trúc tách biệt FreeTextNote và MasterDataNoteIds
+      await laboratoryTaskService.bulkUpdateIndicatorNote(id, {
+        allIndicatorIds: noteModal.allIndicatorIds,
+        selectedIndicatorIds: noteModal.selectedIndicatorIds,
+        freeTextNote: input.freeText,
+        masterDataNoteIds: input.skipMasterDataUpdate ? null : (input.masterDataNoteIds.length > 0 ? input.masterDataNoteIds : []),
+        appendMode: false, // Replace mode - vì đây là modal nhập mới
+        skipMasterDataUpdate: input.skipMasterDataUpdate,
+      });
+
+      // Reload task data
+      await loadTask();
+      message.success("Đã cập nhật ghi chú");
+    } catch (error) {
+      console.error("Failed to save note:", error);
+      message.error("Không thể lưu ghi chú");
+      throw error;
+    }
+
+    setNoteModal({ visible: false, selectedIndicatorIds: [], allIndicatorIds: [], sampleId: "", initialFreeTextNote: "", selectedIndicatorsMasterData: [] });
   };
 
   // Handle selection change for bulk operations
@@ -1082,6 +1175,21 @@ const TaskManagementDetail: React.FC = () => {
                     </Button>
                   </>
                 )}
+              {/* Bulk note button - show when has selected indicators (không phụ thuộc task status) */}
+              {selectedCount > 0 &&
+                !sample.isApproved && (
+                  <Button
+                    size="small"
+                    icon={<EditOutlined />}
+                    loading={actionLoading}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenBulkNoteModal(sample.sampleId);
+                    }}
+                  >
+                    Ghi chú ({selectedCount})
+                  </Button>
+                )}
               {/* Assign button - show when sample has notStarted indicators VÀ có quyền assignTesting VÀ không trong giai đoạn đánh giá/hoàn thành */}
               {canAssignToIndicator &&
                 sample.sampleStatus === "notStarted" && (
@@ -1146,10 +1254,12 @@ const TaskManagementDetail: React.FC = () => {
             canEdit={canEditTask}
             canAssignTechnician={canAssignToIndicator}
             sampleStatus={sample.sampleStatus}
+            sampleId={sample.sampleId}
             onMethodChange={handleMethodChange}
             onTechnicianChange={handleTechnicianChange}
             onApprove={handleApprove}
             onUpdateNote={handleUpdateNote}
+            onOpenNoteModal={handleOpenNoteModal}
             loading={actionLoading}
             showCheckbox={true}
             selectedIndicatorIds={selectedIndicators[sample.sampleId] || []}
@@ -1356,6 +1466,19 @@ const TaskManagementDetail: React.FC = () => {
         taskId={task.id}
         currentSupporters={task.supporters || []}
         onSuccess={reloadData}
+      />
+
+      {/* Note Modal */}
+      <NoteModal
+        open={noteModal.visible}
+        onClose={() => setNoteModal({ visible: false, selectedIndicatorIds: [], allIndicatorIds: [], sampleId: "", initialFreeTextNote: "", selectedIndicatorsMasterData: [] })}
+        selectedIndicatorIds={noteModal.selectedIndicatorIds}
+        allIndicatorIds={noteModal.allIndicatorIds}
+        onSave={handleSaveNote}
+        loading={actionLoading}
+        title={noteModal.selectedIndicatorIds.length > 1 ? `Ghi chú cho ${noteModal.selectedIndicatorIds.length} chỉ tiêu` : "Ghi chú"}
+        initialFreeTextNote={noteModal.initialFreeTextNote}
+        selectedIndicatorsMasterData={noteModal.selectedIndicatorsMasterData}
       />
 
       {/* Bulk Reject Modal */}

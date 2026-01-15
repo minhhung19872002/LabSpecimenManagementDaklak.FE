@@ -156,6 +156,10 @@ export interface StandardIndicatorDto {
   unit: string;
   comparisonOperator?: string;
   allowedLimit?: string;
+  lowerOperator?: string;
+  lowerLimit?: string;
+  upperOperator?: string;
+  upperLimit?: string;
   isActive: boolean;
   sortOrder: number;
 }
@@ -171,12 +175,20 @@ export interface AddIndicatorsToStandardDto {
     unit: string;
     comparisonOperator?: string;
     allowedLimit?: string;
+    lowerOperator?: string;
+    lowerLimit?: string;
+    upperOperator?: string;
+    upperLimit?: string;
   }[];
 }
 
 export interface UpdateStandardIndicatorDto {
   comparisonOperator?: string;
   allowedLimit?: string;
+  lowerOperator?: string;
+  lowerLimit?: string;
+  upperOperator?: string;
+  upperLimit?: string;
   isActive: boolean;
 }
 

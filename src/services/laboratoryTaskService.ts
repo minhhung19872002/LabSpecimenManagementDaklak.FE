@@ -311,6 +311,26 @@ export const laboratoryTaskService = {
   },
 
   /**
+   * Cập nhật ghi chú cho nhiều chỉ tiêu cùng lúc
+   * - freeTextNote: Lưu cho TẤT CẢ indicators trong sample (allIndicatorIds)
+   * - masterDataNoteIds: Lưu cho CHỈ selected indicators (selectedIndicatorIds)
+   * - skipMasterDataUpdate: Nếu true, không cập nhật MasterDataNoteIds (giữ nguyên)
+   */
+  bulkUpdateIndicatorNote: async (
+    taskId: string,
+    input: {
+      allIndicatorIds: string[];
+      selectedIndicatorIds: string[];
+      freeTextNote: string | null;
+      masterDataNoteIds: string[] | null;
+      appendMode?: boolean;
+      skipMasterDataUpdate?: boolean;
+    }
+  ): Promise<void> => {
+    await api.put(`${BASE_URL}/${taskId}/indicators/bulk-note`, input);
+  },
+
+  /**
    * Cập nhật tiêu chuẩn so sánh cho chỉ tiêu
    */
   updateIndicatorStandard: async (indicatorId: string, standardId: string | null): Promise<LaboratoryTaskIndicatorDto> => {
