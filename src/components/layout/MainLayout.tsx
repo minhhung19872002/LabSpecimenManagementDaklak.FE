@@ -43,6 +43,7 @@ import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { authService, UserInfo } from "../../services/authService";
 import { signalRService } from "../../services/signalRService";
 import { NotificationBell } from "../Notification";
+import { OfflineIndicator } from "../common";
 import WorkReminderModal, {
   LabTechManagerReminderModal,
   LabTechnicianReminderModal,
@@ -604,6 +605,7 @@ const MainLayout: React.FC = () => {
           </div>
 
           <div className="header-right">
+            <OfflineIndicator />
             <NotificationBell />
             <Dropdown
               menu={{

@@ -1,0 +1,25 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="180" height="180" rx="30" fill="#1890ff"/>
+
+  <!-- Flask icon -->
+  <g transform="translate(30, 22)">
+    <!-- Flask body -->
+    <path d="M45 15V52.5L15 105C7.5 116.25 15 131.25 30 131.25H90C105 131.25 112.5 116.25 105 105L75 52.5V15"
+          stroke="white" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+    <!-- Flask top -->
+    <path d="M37.5 15H82.5" stroke="white" stroke-width="7.5" stroke-linecap="round"/>
+
+    <!-- Liquid line -->
+    <path d="M26.25 93.75H93.75" stroke="white" stroke-width="3.75" stroke-linecap="round" stroke-dasharray="7.5 7.5"/>
+
+    <!-- Bubbles -->
+    <circle cx="46.875" cy="103.125" r="5.625" fill="white" fill-opacity="0.6"/>
+    <circle cx="65.625" cy="112.5" r="3.75" fill="white" fill-opacity="0.6"/>
+    <circle cx="75" cy="98.4375" r="4.6875" fill="white" fill-opacity="0.6"/>
+  </g>
+
+  <!-- Star accent -->
+  <path d="M150 22.5L153.75 33.75L165 33.75L156 41.25L159.75 52.5L150 45L140.25 52.5L144 41.25L135 33.75L146.25 33.75Z" fill="#FFD700"/>
+</svg>
