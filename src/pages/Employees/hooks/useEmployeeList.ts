@@ -19,7 +19,7 @@ export const ROLE_OPTIONS = [
   { value: ROLES.LAB_TECHNICAL_MANAGER, label: "Quản lý kỹ thuật Lab", color: "purple" },
   { value: ROLES.SAMPLE_RECEIVER, label: "Giao nhận mẫu", color: "blue" },
   { value: ROLES.QUALITY_MANAGER, label: "Quản lý chất lượng", color: "green" },
-  { value: ROLES.LAB_TECHNICIAN, label: "Kỹ thuật viên", color: "orange" },
+  { value: ROLES.LAB_TECHNICIAN, label: "Thử nghiệm viên", color: "orange" },
 ];
 
 export const POSITION_OPTIONS = [
@@ -27,8 +27,8 @@ export const POSITION_OPTIONS = [
   "Phó Giám đốc",
   "Trưởng phòng",
   "Phó trưởng phòng",
-  "Kỹ thuật viên chính",
-  "Kỹ thuật viên",
+  "Thử nghiệm viên chính",
+  "Thử nghiệm viên",
   "Nhân viên",
 ];
 
