@@ -17,6 +17,7 @@ import TestResultValuesTab from "../TestResultValues";
 import NotesTab from "../Notes";
 import SpecimenTypesTab from "../SpecimenTypes";
 import SampleTypeCategoriesTab from "../SampleTypeCategoriesTab";
+import SampleConditionsTab from "../SampleStatuses";
 import { useMasterDataState } from "./hooks";
 import { useMasterDataActions } from "./hooks/useMasterDataActions";
 import {
@@ -91,6 +92,7 @@ const MasterDataList: React.FC = () => {
   const [standardsRefreshKey, setStandardsRefreshKey] = useState(0);
   const [specimenTypesRefreshKey, setSpecimenTypesRefreshKey] = useState(0);
   const [sampleTypeCategoriesRefreshKey, setSampleTypeCategoriesRefreshKey] = useState(0);
+  const [sampleConditionsRefreshKey, setSampleConditionsRefreshKey] = useState(0);
 
   // Memoized columns
   const columns = useMemo(
@@ -138,9 +140,10 @@ const MasterDataList: React.FC = () => {
           activeCategory !== "testResultValues" &&
           activeCategory !== "notes" &&
           activeCategory !== "specimenTypes" &&
-          activeCategory !== "sampleTypeCategories" && (
+          activeCategory !== "sampleTypeCategories" &&
+          activeCategory !== "sampleConditions" && (
             <Space>
-              {canImport && (
+              {/* {canImport && (
                 <Button
                   icon={<DownloadOutlined />}
                   onClick={handleDownloadTemplate}
@@ -154,7 +157,7 @@ const MasterDataList: React.FC = () => {
               </Button>
               <Button icon={<ExportOutlined />} onClick={handleExportExcel}>
                 Export Excel
-              </Button>
+              </Button> */}
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
@@ -183,6 +186,9 @@ const MasterDataList: React.FC = () => {
             }
             if (key === "sampleTypeCategories") {
               setSampleTypeCategoriesRefreshKey((prev) => prev + 1);
+            }
+            if (key === "sampleConditions") {
+              setSampleConditionsRefreshKey((prev) => prev + 1);
             }
           }}
           tabPosition="left"
@@ -223,6 +229,11 @@ const MasterDataList: React.FC = () => {
                 <SampleTypeCategoriesTab
                   onDataChange={() => fetchStatistics()}
                   refreshKey={sampleTypeCategoriesRefreshKey}
+                />
+              ) : key === "sampleConditions" ? (
+                <SampleConditionsTab
+                  onDataChange={() => fetchStatistics()}
+                  refreshKey={sampleConditionsRefreshKey}
                 />
               ) : (
                 <MasterDataTable

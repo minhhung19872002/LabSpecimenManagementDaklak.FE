@@ -8,6 +8,7 @@ export const categoryLabels: Record<string, string> = {
   departments: "Phòng ban",
   laboratories: "Khoa phòng",
   sampleTypeCategories: "Danh mục loại mẫu",
+  sampleConditions: "Tình trạng mẫu",
   specimenTypes: "Loại mẫu",
   testMethods: "Phương pháp thử",
   standards: "Tiêu chuẩn",
@@ -31,6 +32,7 @@ export const importTypeMap: Record<string, ImportType | null> = {
   departments: null,
   laboratories: null,
   sampleTypeCategories: null,
+  sampleConditions: null,
   specimenTypes: null,
   storageLocations: null,
   testResultValues: null,
@@ -205,6 +207,8 @@ export const getStatCount = (
       return statistics.laboratoryCount;
     case "sampleTypeCategories":
       return statistics.sampleTypeCategoryCount || 0;
+    case "sampleConditions":
+      return statistics.sampleConditionCount || 0;
     case "specimenTypes":
       return statistics.specimenTypeCount;
     case "testMethods":
