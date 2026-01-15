@@ -77,6 +77,7 @@ const TestRequestForm: React.FC = () => {
     handleOrganizationSelect,
     handlePhoneBlur,
     sampleConditionOptions,
+    sampleTypeCategories,
     totalSampleCost,
     indicatorModalVisible,
     setIndicatorModalVisible,
@@ -416,6 +417,9 @@ const TestRequestForm: React.FC = () => {
         setSpecimenTypeFilterActive={setSpecimenTypeFilterActive}
         specimenTypesWithIndicators={specimenTypesWithIndicators}
         indicatorToSpecimenTypesMap={indicatorToSpecimenTypesMap}
+        specimenTypes={specimenTypes}
+        sampleTypeCategories={sampleTypeCategories}
+        setIndicatorSearchText={setIndicatorSearchText}
       />
 
       {/* Laboratory Selection Modal */}

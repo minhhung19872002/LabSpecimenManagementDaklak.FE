@@ -12,6 +12,7 @@ import {
   testMethodService,
   specimenTypeService,
   sampleConditionService,
+  sampleTypeCategoryService,
   IndicatorDto,
   IndicatorGroupDto,
   StorageLocationDto,
@@ -20,6 +21,7 @@ import {
   SpecimenTypeDto,
   SpecimenTypeWithIndicatorsDto,
   SampleConditionDto,
+  SampleTypeCategoryDto,
 } from "../../../../services/masterDataService";
 import { userService, UserLookupDto } from "../../../../services/userService";
 import { organizationService } from "../../../../services/organizationService";
@@ -131,6 +133,9 @@ export const useTestRequestFormData = () => {
   const [sampleConditions, setSampleConditions] = useState<SampleConditionDto[]>([]);
   const [sampleConditionOptions, setSampleConditionOptions] = useState<{ value: string; label: string }[]>([]);
 
+  // Sample Type Categories (Danh mục loại mẫu)
+  const [sampleTypeCategories, setSampleTypeCategories] = useState<SampleTypeCategoryDto[]>([]);
+
   // Test methods and indicator-method mapping
   const [testMethods, setTestMethods] = useState<TestMethodWithIndicatorsDto[]>([]);
   const [indicatorMethodsMap, setIndicatorMethodsMap] = useState<Record<string, IndicatorMethodInfo[]>>({});
@@ -218,7 +223,7 @@ export const useTestRequestFormData = () => {
   // Load master data
   const loadMasterData = async () => {
     try {
-      const [groupsData, indicatorsData, locationsData, usersData, orgsData, labsData, methodsData, specimenTypesData, specimenTypesWithIndsData, sampleConditionsData] = await Promise.all([
+      const [groupsData, indicatorsData, locationsData, usersData, orgsData, labsData, methodsData, specimenTypesData, specimenTypesWithIndsData, sampleConditionsData, sampleTypeCategoriesData] = await Promise.all([
         indicatorGroupService.getActive(),
         indicatorService.getActive(),
         storageLocationService.getActive(),
@@ -229,6 +234,7 @@ export const useTestRequestFormData = () => {
         specimenTypeService.getActive(),
         specimenTypeService.getWithIndicators(),
         sampleConditionService.getActive(),
+        sampleTypeCategoryService.getActive(),
       ]);
       setIndicatorGroups(groupsData);
       setIndicators(indicatorsData);
@@ -240,6 +246,7 @@ export const useTestRequestFormData = () => {
       setSpecimenTypes(specimenTypesData.items || []);
       setSpecimenTypesWithIndicators(specimenTypesWithIndsData || []);
       setSampleConditions(sampleConditionsData || []);
+      setSampleTypeCategories(sampleTypeCategoriesData || []);
       // Build sampleConditionOptions for AutoComplete
       setSampleConditionOptions((sampleConditionsData || []).map((sc) => ({
         value: sc.name,
@@ -939,6 +946,9 @@ export const useTestRequestFormData = () => {
     // Sample Condition handlers
     sampleConditions,
     sampleConditionOptions,
+
+    // Sample Type Categories
+    sampleTypeCategories,
 
     // Costs
     totalSampleCost,

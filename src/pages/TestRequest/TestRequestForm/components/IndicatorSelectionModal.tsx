@@ -1,13 +1,15 @@
 // @ts-nocheck
 import React, { useEffect, useMemo, useState } from "react";
-import { Modal, Button, Checkbox, Typography, Drawer } from "antd";
-import { PlusOutlined } from "../../../../components/common/Icon";
+import { Modal, Button, Checkbox, Typography, Drawer, Input, Select, Tag } from "antd";
+import { PlusOutlined, SearchOutlined } from "../../../../components/common/Icon";
 import { Icon } from "@iconify/react";
 import dayjs from "dayjs";
 import {
   IndicatorGroupDto,
   IndicatorDto,
   SpecimenTypeWithIndicatorsDto,
+  SpecimenTypeDto,
+  SampleTypeCategoryDto,
 } from "../../../../services/masterDataService";
 import IndicatorName from "../../../../components/common/IndicatorName";
 import {
@@ -46,7 +48,6 @@ interface IndicatorSelectionModalProps {
   setExpandedGroups: React.Dispatch<React.SetStateAction<string[]>>;
   selectedGroupFilter: string;
   setGroupSelectorVisible: (visible: boolean) => void;
-  indicatorSearchText: string;
   getFilteredIndicators: () => IndicatorDto[];
   getIndicatorInfo: (indicatorId: string) => IndicatorDto | undefined;
   getIndicatorMethodInfo: (key: IndicatorMethodKey) => {
@@ -83,6 +84,11 @@ interface IndicatorSelectionModalProps {
   // Group theo loại mẫu (2 cấp)
   specimenTypesWithIndicators: SpecimenTypeWithIndicatorsDto[];
   indicatorToSpecimenTypesMap: Record<string, { id: string; name: string }[]>;
+  // Filter mới
+  specimenTypes: SpecimenTypeDto[];
+  sampleTypeCategories: SampleTypeCategoryDto[];
+  indicatorSearchText: string;
+  setIndicatorSearchText: React.Dispatch<React.SetStateAction<string>>;
 }
 
 const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
@@ -102,7 +108,6 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
   setExpandedGroups,
   selectedGroupFilter,
   setGroupSelectorVisible,
-  indicatorSearchText,
   getFilteredIndicators,
   getIndicatorInfo,
   getIndicatorMethodInfo,
@@ -123,6 +128,10 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
   setSpecimenTypeFilterActive,
   specimenTypesWithIndicators,
   indicatorToSpecimenTypesMap,
+  specimenTypes,
+  sampleTypeCategories,
+  indicatorSearchText,
+  setIndicatorSearchText,
 }) => {
   // Handle remove indicator method
   const handleRemoveIndicatorMethod = (key: IndicatorMethodKey) => {
@@ -206,18 +215,40 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
   // State for mobile indicator picker drawer
   const [indicatorPickerOpen, setIndicatorPickerOpen] = useState(false);
 
-  // State for group mode: "indicatorGroup" | "specimenType"
-  const [groupMode, setGroupMode] = useState<"indicatorGroup" | "specimenType">("specimenType");
-  // State for expanded specimen types (when groupMode = "specimenType")
+  // State for expanded specimen types (now used as level 2 within indicator groups)
   const [expandedSpecimenTypes, setExpandedSpecimenTypes] = useState<string[]>([]);
 
-  // Auto-expand all specimen types when modal opens and groupMode is specimenType
-  useEffect(() => {
-    if (visible && groupMode === "specimenType" && expandedSpecimenTypes.length === 0) {
-      const activeSpecimenTypes = specimenTypesWithIndicators.filter(st => st.isActive).map(st => st.id);
-      setExpandedSpecimenTypes([...activeSpecimenTypes, "others"]); // Include "others" for indicators without specimen type
+  // State for new filter fields
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [selectedSpecimenTypeIds, setSelectedSpecimenTypeIds] = useState<string[]>([]);
+
+  // Filtered specimen types based on selected categories
+  const filteredSpecimenTypeOptions = useMemo(() => {
+    if (selectedCategoryIds.length === 0) {
+      return specimenTypes.filter((st) => st.isActive);
     }
-  }, [visible, groupMode, specimenTypesWithIndicators]);
+    return specimenTypes.filter(
+      (st) => st.isActive && st.sampleTypeCategoryId && selectedCategoryIds.includes(st.sampleTypeCategoryId)
+    );
+  }, [specimenTypes, selectedCategoryIds]);
+
+  // Clear selected specimen types when categories change (if they're no longer valid)
+  useEffect(() => {
+    if (selectedCategoryIds.length > 0) {
+      const validSpecimenTypeIds = filteredSpecimenTypeOptions.map((st) => st.id);
+      setSelectedSpecimenTypeIds((prev) =>
+        prev.filter((id) => validSpecimenTypeIds.includes(id))
+      );
+    }
+  }, [selectedCategoryIds, filteredSpecimenTypeOptions]);
+
+  // Auto-expand all indicator groups when modal opens
+  useEffect(() => {
+    if (visible && expandedGroups.length === 0) {
+      const activeGroupIds = indicatorGroups.map(g => g.id);
+      setExpandedGroups(activeGroupIds);
+    }
+  }, [visible, indicatorGroups]);
 
   // Helper: Toggle all methods of an indicator
   const toggleAllMethodsOfIndicator = (indicatorId: string, select: boolean) => {
@@ -386,17 +417,24 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     );
   };
 
-  // Render content grouped by Specimen Type (2 levels: SpecimenType > IndicatorGroup > Indicator > Method)
+  // Render content grouped by: Nhóm CT → Loại mẫu → Chỉ tiêu → Phương pháp
   const renderBySpecimenType = () => {
     // Get all indicators with active methods
     let activeIndicators = indicators.filter(
       (ind) => ind.isActive && indicatorMethodsMap[ind.id]?.some((m) => m.isActive)
     );
 
-    // Apply specimen type filter if active
+    // Apply specimen type filter if active (from current sample)
     if (specimenTypeFilterActive) {
       activeIndicators = activeIndicators.filter((ind) =>
         specimenTypeIndicatorIds.includes(ind.id)
+      );
+    }
+
+    // Apply indicator group filter if selected
+    if (selectedGroupFilter !== "all") {
+      activeIndicators = activeIndicators.filter(
+        (ind) => ind.indicatorGroupId === selectedGroupFilter
       );
     }
 
@@ -410,93 +448,127 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
       );
     }
 
-    const activeIndicatorIds = new Set(activeIndicators.map((i) => i.id));
+    // Build map: indicatorId -> specimenTypeIds
+    const indicatorSpecimenTypesMap = new Map<string, string[]>();
+    specimenTypesWithIndicators.forEach((st) => {
+      if (st.isActive) {
+        st.indicators?.forEach((sti) => {
+          if (sti.isActive) {
+            if (!indicatorSpecimenTypesMap.has(sti.indicatorId)) {
+              indicatorSpecimenTypesMap.set(sti.indicatorId, []);
+            }
+            indicatorSpecimenTypesMap.get(sti.indicatorId)!.push(st.id);
+          }
+        });
+      }
+    });
 
-    // Group by specimen type
-    const specimenTypeGroups: {
+    // Get specimen type IDs to filter by (from selected categories and/or specimen types)
+    let specimenTypeIdsToFilter: string[] = [];
+    if (selectedSpecimenTypeIds.length > 0) {
+      // If specific specimen types selected, use them
+      specimenTypeIdsToFilter = selectedSpecimenTypeIds;
+    } else if (selectedCategoryIds.length > 0) {
+      // If only categories selected, get all specimen types in those categories
+      specimenTypeIdsToFilter = specimenTypes
+        .filter((st) => st.isActive && st.sampleTypeCategoryId && selectedCategoryIds.includes(st.sampleTypeCategoryId))
+        .map((st) => st.id);
+    }
+
+    // Apply specimen type filter from new filter fields
+    if (specimenTypeIdsToFilter.length > 0) {
+      activeIndicators = activeIndicators.filter((ind) => {
+        const indStIds = indicatorSpecimenTypesMap.get(ind.id) || [];
+        // Indicator must belong to at least one of the selected specimen types
+        return indStIds.some((stId) => specimenTypeIdsToFilter.includes(stId));
+      });
+    }
+
+    // Group structure: Nhóm CT → Loại mẫu → Chỉ tiêu[]
+    type IndicatorGroupData = {
       id: string;
       name: string;
-      indicatorsByGroup: Map<string, IndicatorDto[]>;
-    }[] = [];
+      specimenTypes: Map<string, { id: string; name: string; indicators: IndicatorDto[] }>;
+    };
 
-    // Process each active specimen type
-    specimenTypesWithIndicators
-      .filter((st) => st.isActive)
-      .forEach((st) => {
-        const stIndicatorIds = st.indicators
-          ?.filter((sti) => sti.isActive)
-          .map((sti) => sti.indicatorId) || [];
+    const groupedData: IndicatorGroupData[] = [];
 
-        // Get indicators that belong to this specimen type AND are active
-        const stIndicators = activeIndicators.filter((ind) =>
-          stIndicatorIds.includes(ind.id)
-        );
+    // Process each indicator group
+    indicatorGroups.forEach((group) => {
+      const groupIndicators = activeIndicators.filter(
+        (ind) => ind.indicatorGroupId === group.id
+      );
+      if (groupIndicators.length === 0) return;
 
-        if (stIndicators.length === 0) return;
+      // Group indicators by specimen type within this indicator group
+      const specimenTypesMap = new Map<string, { id: string; name: string; indicators: IndicatorDto[] }>();
 
-        // Group by indicator group within this specimen type
-        const indicatorsByGroup = new Map<string, IndicatorDto[]>();
-        stIndicators.forEach((ind) => {
-          const groupId = ind.indicatorGroupId;
-          if (!indicatorsByGroup.has(groupId)) {
-            indicatorsByGroup.set(groupId, []);
+      groupIndicators.forEach((ind) => {
+        const stIds = indicatorSpecimenTypesMap.get(ind.id) || [];
+        if (stIds.length === 0) {
+          // Indicator không thuộc loại mẫu nào -> nhóm "Khác"
+          if (!specimenTypesMap.has("others")) {
+            specimenTypesMap.set("others", { id: "others", name: "Khác", indicators: [] });
           }
-          indicatorsByGroup.get(groupId)!.push(ind);
-        });
-
-        specimenTypeGroups.push({
-          id: st.id,
-          name: st.name,
-          indicatorsByGroup,
-        });
+          specimenTypesMap.get("others")!.indicators.push(ind);
+        } else {
+          // Indicator thuộc một hoặc nhiều loại mẫu
+          stIds.forEach((stId) => {
+            const st = specimenTypesWithIndicators.find((s) => s.id === stId);
+            if (st) {
+              if (!specimenTypesMap.has(stId)) {
+                specimenTypesMap.set(stId, { id: stId, name: st.name, indicators: [] });
+              }
+              specimenTypesMap.get(stId)!.indicators.push(ind);
+            }
+          });
+        }
       });
 
-    // Find indicators without specimen type (or not in any active specimen type)
-    const indicatorsWithSpecimenType = new Set<string>();
-    specimenTypesWithIndicators.forEach((st) => {
-      st.indicators?.forEach((sti) => {
-        if (sti.isActive) {
-          indicatorsWithSpecimenType.add(sti.indicatorId);
-        }
+      groupedData.push({
+        id: group.id,
+        name: group.name,
+        specimenTypes: specimenTypesMap,
       });
     });
 
-    const othersIndicators = activeIndicators.filter(
-      (ind) => !indicatorsWithSpecimenType.has(ind.id)
-    );
+    // Debug: If no grouped data, show detailed message
+    if (groupedData.length === 0) {
+      const totalIndicators = indicators.length;
+      const activeCount = indicators.filter((i) => i.isActive).length;
+      const methodMapKeys = Object.keys(indicatorMethodsMap).length;
+      const withMethods = indicators.filter(
+        (i) => i.isActive && indicatorMethodsMap[i.id]?.some((m) => m.isActive)
+      ).length;
 
-    if (othersIndicators.length > 0) {
-      const indicatorsByGroup = new Map<string, IndicatorDto[]>();
-      othersIndicators.forEach((ind) => {
-        const groupId = ind.indicatorGroupId;
-        if (!indicatorsByGroup.has(groupId)) {
-          indicatorsByGroup.set(groupId, []);
-        }
-        indicatorsByGroup.get(groupId)!.push(ind);
-      });
-
-      specimenTypeGroups.push({
-        id: "others",
-        name: "Khác",
-        indicatorsByGroup,
-      });
+      return (
+        <div style={{ padding: 24, textAlign: "center", color: "#999" }}>
+          <Text type="secondary">
+            Không có chỉ tiêu nào phù hợp với bộ lọc
+          </Text>
+        </div>
+      );
     }
 
     return (
       <>
-        {specimenTypeGroups.map((stGroup) => {
-          const isSpecimenTypeExpanded = expandedSpecimenTypes.includes(stGroup.id);
-          // Get all indicator IDs in this specimen type group
+        {groupedData.map((groupData) => {
+          const isGroupExpanded = expandedGroups.includes(groupData.id);
+          // Get all indicator IDs in this group
           const allIndicatorIdsInGroup: string[] = [];
-          stGroup.indicatorsByGroup.forEach((inds) => {
-            inds.forEach((ind) => allIndicatorIdsInGroup.push(ind.id));
+          groupData.specimenTypes.forEach((stData) => {
+            stData.indicators.forEach((ind) => {
+              if (!allIndicatorIdsInGroup.includes(ind.id)) {
+                allIndicatorIdsInGroup.push(ind.id);
+              }
+            });
           });
-          const isAllSpecimenTypeSelected = areAllIndicatorsSelected(allIndicatorIdsInGroup);
-          const isSomeSpecimenTypeSelected = areSomeIndicatorsSelected(allIndicatorIdsInGroup);
+          const isAllGroupSelected = areAllIndicatorsSelected(allIndicatorIdsInGroup);
+          const isSomeGroupSelected = areSomeIndicatorsSelected(allIndicatorIdsInGroup);
 
           return (
-            <div key={stGroup.id}>
-              {/* Specimen Type header */}
+            <div key={groupData.id}>
+              {/* Nhóm CT header (Level 1) */}
               <div
                 style={{
                   padding: "8px 12px",
@@ -512,40 +584,37 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                 }}
               >
                 <Checkbox
-                  checked={isAllSpecimenTypeSelected}
-                  indeterminate={isSomeSpecimenTypeSelected}
+                  checked={isAllGroupSelected}
+                  indeterminate={isSomeGroupSelected}
                   onClick={(e) => e.stopPropagation()}
-                  onChange={() => toggleAllIndicatorsInGroup(allIndicatorIdsInGroup, !isAllSpecimenTypeSelected)}
+                  onChange={() => toggleAllIndicatorsInGroup(allIndicatorIdsInGroup, !isAllGroupSelected)}
                 />
-                <span style={{ flex: 1 }}>{stGroup.name}</span>
+                <span style={{ flex: 1 }}>{groupData.name}</span>
                 <Icon
-                  icon={isSpecimenTypeExpanded ? "mdi:chevron-up" : "mdi:chevron-down"}
+                  icon={isGroupExpanded ? "mdi:chevron-up" : "mdi:chevron-down"}
                   width={18}
                   style={{ color: "#595959", flexShrink: 0, cursor: "pointer" }}
                   onClick={() => {
-                    setExpandedSpecimenTypes((prev) =>
-                      prev.includes(stGroup.id)
-                        ? prev.filter((id) => id !== stGroup.id)
-                        : [...prev, stGroup.id]
+                    setExpandedGroups((prev) =>
+                      prev.includes(groupData.id)
+                        ? prev.filter((id) => id !== groupData.id)
+                        : [...prev, groupData.id]
                     );
                   }}
                 />
               </div>
 
-              {/* Indicator Groups within Specimen Type */}
-              {isSpecimenTypeExpanded &&
-                Array.from(stGroup.indicatorsByGroup.entries()).map(([groupId, groupInds]) => {
-                  const group = indicatorGroups.find((g) => g.id === groupId);
-                  if (!group) return null;
-
-                  const isGroupExpanded = expandedGroups.includes(`${stGroup.id}_${groupId}`);
-                  const groupIndicatorIds = groupInds.map((ind) => ind.id);
-                  const isAllGroupSelected = areAllIndicatorsSelected(groupIndicatorIds);
-                  const isSomeGroupSelected = areSomeIndicatorsSelected(groupIndicatorIds);
+              {/* Loại mẫu within Nhóm CT (Level 2) */}
+              {isGroupExpanded &&
+                Array.from(groupData.specimenTypes.values()).map((stData) => {
+                  const isSpecimenTypeExpanded = expandedSpecimenTypes.includes(`${groupData.id}_${stData.id}`);
+                  const stIndicatorIds = stData.indicators.map((ind) => ind.id);
+                  const isAllStSelected = areAllIndicatorsSelected(stIndicatorIds);
+                  const isSomeStSelected = areSomeIndicatorsSelected(stIndicatorIds);
 
                   return (
-                    <div key={`${stGroup.id}_${groupId}`}>
-                      {/* Indicator Group header */}
+                    <div key={`${groupData.id}_${stData.id}`}>
+                      {/* Loại mẫu header */}
                       <div
                         style={{
                           padding: "6px 12px 6px 24px",
@@ -561,19 +630,19 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                         }}
                       >
                         <Checkbox
-                          checked={isAllGroupSelected}
-                          indeterminate={isSomeGroupSelected}
+                          checked={isAllStSelected}
+                          indeterminate={isSomeStSelected}
                           onClick={(e) => e.stopPropagation()}
-                          onChange={() => toggleAllIndicatorsInGroup(groupIndicatorIds, !isAllGroupSelected)}
+                          onChange={() => toggleAllIndicatorsInGroup(stIndicatorIds, !isAllStSelected)}
                         />
-                        <span style={{ flex: 1 }}>{group.name}</span>
+                        <span style={{ flex: 1 }}>{stData.name}</span>
                         <Icon
-                          icon={isGroupExpanded ? "mdi:chevron-up" : "mdi:chevron-down"}
+                          icon={isSpecimenTypeExpanded ? "mdi:chevron-up" : "mdi:chevron-down"}
                           width={16}
                           style={{ color: "#595959", flexShrink: 0, cursor: "pointer" }}
                           onClick={() => {
-                            const key = `${stGroup.id}_${groupId}`;
-                            setExpandedGroups((prev) =>
+                            const key = `${groupData.id}_${stData.id}`;
+                            setExpandedSpecimenTypes((prev) =>
                               prev.includes(key)
                                 ? prev.filter((id) => id !== key)
                                 : [...prev, key]
@@ -582,9 +651,9 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                         />
                       </div>
 
-                      {/* Indicators within Group */}
-                      {isGroupExpanded &&
-                        groupInds.map((ind) => renderIndicatorWithMethods(ind, 2))}
+                      {/* Chỉ tiêu within Loại mẫu (Level 3) */}
+                      {isSpecimenTypeExpanded &&
+                        stData.indicators.map((ind) => renderIndicatorWithMethods(ind, 2))}
                     </div>
                   );
                 })}
@@ -608,61 +677,95 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
           gap: 8,
         }}
       >
-        {/* Toggle group mode */}
-        <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
-          <Button
-            type={groupMode === "specimenType" ? "primary" : "default"}
-            size="small"
-            onClick={() => setGroupMode("specimenType")}
-            icon={<Icon icon="mdi:flask-outline" width={14} />}
-          >
-            Loại mẫu
-          </Button>
-          <Button
-            type={groupMode === "indicatorGroup" ? "primary" : "default"}
-            size="small"
-            onClick={() => setGroupMode("indicatorGroup")}
-            icon={<Icon icon="mdi:folder-outline" width={14} />}
-          >
-            Nhóm CT
-          </Button>
-        </div>
-        {/* Filter theo nhóm chỉ tiêu - chỉ hiện khi groupMode = indicatorGroup */}
-        {groupMode === "indicatorGroup" && (
-          <div
-            onClick={() => setGroupSelectorVisible(true)}
-            style={{
-              padding: "6px 12px",
-              border: "1px solid #d9d9d9",
-              borderRadius: 4,
-              cursor: "pointer",
-              background: "#fff",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <span
-              style={{
-                color: selectedGroupFilter === "all" ? "#999" : "#000",
-              }}
-            >
-              {selectedGroupFilter === "all"
-                ? "--- Tất cả nhóm chỉ tiêu ---"
-                : indicatorGroups.find((g) => g.id === selectedGroupFilter)
-                    ?.name || "Chọn nhóm..."}
-            </span>
-            <Icon icon="mdi:chevron-down" width={16} />
-          </div>
-        )}
-        {/* Filter theo loại mẫu */}
+        {/* Từ khóa search */}
+        <Input
+          placeholder="Từ khóa..."
+          prefix={<SearchOutlined style={{ color: "#999" }} />}
+          value={indicatorSearchText}
+          onChange={(e) => setIndicatorSearchText(e.target.value)}
+          allowClear
+          size="small"
+        />
+        {/* Danh mục loại mẫu - Select multiple with tags */}
+        <Select
+          mode="multiple"
+          placeholder="Danh mục loại mẫu"
+          value={selectedCategoryIds}
+          onChange={setSelectedCategoryIds}
+          style={{ width: "100%" }}
+          size="small"
+          maxTagCount="responsive"
+          allowClear
+          options={sampleTypeCategories
+            .filter((cat) => cat.isActive)
+            .map((cat) => ({
+              value: cat.id,
+              label: cat.name,
+            }))}
+          tagRender={(props) => {
+            const { label, closable, onClose } = props;
+            return (
+              <Tag
+                color="blue"
+                closable={closable}
+                onClose={onClose}
+                style={{
+                  marginRight: 3,
+                  maxWidth: 120,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+                title={label as string}
+              >
+                {label}
+              </Tag>
+            );
+          }}
+        />
+        {/* Loại mẫu - Select multiple with tags */}
+        <Select
+          mode="multiple"
+          placeholder="Loại mẫu"
+          value={selectedSpecimenTypeIds}
+          onChange={setSelectedSpecimenTypeIds}
+          style={{ width: "100%" }}
+          size="small"
+          maxTagCount="responsive"
+          allowClear
+          options={filteredSpecimenTypeOptions.map((st) => ({
+            value: st.id,
+            label: st.name,
+          }))}
+          tagRender={(props) => {
+            const { label, closable, onClose } = props;
+            return (
+              <Tag
+                color="green"
+                closable={closable}
+                onClose={onClose}
+                style={{
+                  marginRight: 3,
+                  maxWidth: 120,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+                title={label as string}
+              >
+                {label}
+              </Tag>
+            );
+          }}
+        />
+        {/* Filter theo loại mẫu của sample hiện tại */}
         {currentSampleSpecimenTypeName && (
           <Checkbox
             checked={specimenTypeFilterActive}
             onChange={(e) => setSpecimenTypeFilterActive(e.target.checked)}
             style={{ fontSize: 13 }}
           >
-            {currentSampleSpecimenTypeName}
+            Chỉ hiện chỉ tiêu của: {currentSampleSpecimenTypeName}
           </Checkbox>
         )}
       </div>
@@ -691,104 +794,10 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
               Bỏ chọn filter để xem tất cả chỉ tiêu
             </Text>
           </div>
-        ) : groupMode === "specimenType" ? (
-          // Render grouped by Specimen Type
+        ) : (
+          // Always render grouped by Specimen Type
           renderBySpecimenType()
-        ) : selectedGroupFilter === "all"
-          ? indicatorGroups.map((group) => {
-              // Get indicators in this group that have active methods
-              let groupIndicators = indicators.filter(
-                (ind) =>
-                  ind.indicatorGroupId === group.id &&
-                  ind.isActive &&
-                  indicatorMethodsMap[ind.id]?.some((m) => m.isActive)
-              );
-
-              // Apply specimen type filter if active
-              if (specimenTypeFilterActive) {
-                groupIndicators = groupIndicators.filter((ind) =>
-                  specimenTypeIndicatorIds.includes(ind.id)
-                );
-              }
-
-              if (groupIndicators.length === 0) return null;
-
-              // Apply search filter
-              const filteredIndicators = indicatorSearchText.trim()
-                ? groupIndicators.filter(
-                    (ind) =>
-                      ind.name
-                        .toLowerCase()
-                        .includes(indicatorSearchText.toLowerCase().trim()) ||
-                      ind.code
-                        ?.toLowerCase()
-                        .includes(indicatorSearchText.toLowerCase().trim())
-                  )
-                : groupIndicators;
-
-              if (filteredIndicators.length === 0) return null;
-
-              const isGroupExpanded = expandedGroups.includes(group.id);
-              const groupIndicatorIds = filteredIndicators.map((ind) => ind.id);
-              const isAllGroupSelected = areAllIndicatorsSelected(groupIndicatorIds);
-              const isSomeGroupSelected = areSomeIndicatorsSelected(groupIndicatorIds);
-
-              return (
-                <div key={group.id}>
-                  {/* Group header */}
-                  <div
-                    style={{
-                      padding: "8px 12px",
-                      background: "#fafafa",
-                      borderBottom: "1px solid #f0f0f0",
-                      fontWeight: 600,
-                      fontSize: 13,
-                      color: "#000",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      userSelect: "none",
-                    }}
-                  >
-                    <Checkbox
-                      checked={isAllGroupSelected}
-                      indeterminate={isSomeGroupSelected}
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={() => toggleAllIndicatorsInGroup(groupIndicatorIds, !isAllGroupSelected)}
-                    />
-                    <span style={{ flex: 1 }}>{group.name}</span>
-                    <Icon
-                      icon={isGroupExpanded ? "mdi:chevron-up" : "mdi:chevron-down"}
-                      width={18}
-                      style={{ color: "#595959", flexShrink: 0, cursor: "pointer" }}
-                      onClick={() => {
-                        setExpandedGroups((prev) =>
-                          prev.includes(group.id)
-                            ? prev.filter((id) => id !== group.id)
-                            : [...prev, group.id]
-                        );
-                      }}
-                    />
-                  </div>
-
-                  {/* Indicators under group - reuse helper */}
-                  {isGroupExpanded &&
-                    filteredIndicators.map((ind) => renderIndicatorWithMethods(ind, 1))}
-                </div>
-              );
-            })
-          : // When a specific group is selected - reuse helper
-            getFilteredIndicators()
-              .filter((ind) =>
-                indicatorMethodsMap[ind.id]?.some((m) => m.isActive)
-              )
-              .filter((ind) =>
-                // Apply specimen type filter if active
-                // Nếu filter active mà specimenTypeIndicatorIds rỗng -> hiện danh sách rỗng
-                !specimenTypeFilterActive ||
-                specimenTypeIndicatorIds.includes(ind.id)
-              )
-              .map((ind) => renderIndicatorWithMethods(ind, 1))}
+        )}
       </div>
     </>
   );
