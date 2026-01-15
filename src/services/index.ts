@@ -100,3 +100,6 @@ export { default as qualityManagementServiceDefault } from './qualityManagementS
 export { fileService } from './fileService';
 export { default as fileServiceDefault } from './fileService';
 export type { FileUploadResultDto, SampleAttachmentDto } from './fileService';
+
+// Offline Services
+export * from './offline';

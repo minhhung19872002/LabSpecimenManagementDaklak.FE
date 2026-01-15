@@ -1,0 +1,28 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" rx="64" fill="#1890ff"/>
+
+  <!-- Flask icon -->
+  <g transform="translate(96, 64)">
+    <!-- Flask body -->
+    <path d="M120 40V140L40 280C20 310 40 350 80 350H240C280 350 300 310 280 280L200 140V40"
+          stroke="white" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+    <!-- Flask top -->
+    <path d="M100 40H220" stroke="white" stroke-width="20" stroke-linecap="round"/>
+
+    <!-- Liquid line -->
+    <path d="M70 250H250" stroke="white" stroke-width="10" stroke-linecap="round" stroke-dasharray="20 20"/>
+
+    <!-- Bubbles -->
+    <circle cx="125" cy="275" r="15" fill="white" fill-opacity="0.6"/>
+    <circle cx="175" cy="300" r="10" fill="white" fill-opacity="0.6"/>
+    <circle cx="200" cy="262" r="12" fill="white" fill-opacity="0.6"/>
+  </g>
+
+  <!-- Star accent -->
+  <path d="M420 60L432 96L468 96L438 120L450 156L420 132L390 156L402 120L372 96L408 96Z" fill="#FFD700"/>
+
+  <!-- Text -->
+  <text x="256" y="460" text-anchor="middle" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="white">StarLab</text>
+</svg>

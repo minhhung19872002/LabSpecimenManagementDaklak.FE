@@ -19,8 +19,19 @@ import {
   UpdateIndicatorLaboratoryInput
 } from '../types/testRequest';
 import { QualityManagementIndicatorDto } from '../types/qualityManagement';
+import { syncManager } from './offline/syncManager';
+import { cacheTestRequest, getCachedTestRequest, getOfflineTestRequests } from './offline/db';
 
 const BASE_URL = '/api/v1/test-requests';
+
+/**
+ * Response type for offline-aware operations
+ */
+export interface OfflineAwareResponse<T> {
+  data: T;
+  isOffline: boolean;
+  clientId?: string;
+}
 
 // Template DTO for result form templates
 export interface TemplateDto {
@@ -492,5 +503,157 @@ export interface SampleForSelectionDto {
   canGenerateResult: boolean;
   requestedCompletionDate?: string;
 }
+
+/**
+ * Offline-aware test request service
+ * Automatically queues operations when offline and syncs when back online
+ */
+export const offlineTestRequestService = {
+  /**
+   * Create a test request with offline support
+   * If offline, queues the operation and returns a temporary ID
+   */
+  create: async (data: CreateTestRequestDto): Promise<OfflineAwareResponse<TestRequestDto>> => {
+    if (navigator.onLine) {
+      try {
+        const result = await testRequestService.create(data);
+        // Cache the result for offline access
+        await cacheTestRequest(result.id, result, false);
+        return { data: result, isOffline: false };
+      } catch (error) {
+        // If network error, fall through to offline handling
+        if (!navigator.onLine) {
+          // Network went offline during request
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    // Offline: queue the operation
+    const clientId = await syncManager.queueTestRequest(data, 'create');
+
+    // Create a temporary DTO for UI display
+    const tempDto = {
+      id: clientId,
+      requestNumber: `OFFLINE-${clientId.substring(0, 8)}`,
+      requestDate: new Date().toISOString(),
+      status: TestRequestStatus.New,
+      customerName: data.customerName,
+      contractNumber: data.contractNumber,
+      totalSampleCount: data.totalSampleCount || 0,
+      totalCost: data.totalCost || 0,
+      samples: [],
+      // Mark as offline for UI indication
+      isOffline: true,
+      // Required fields with defaults for offline mode
+      sentToAccounting: false,
+      paymentReceived: false,
+      sentToDepartment: false,
+      resultReturned: false,
+      methodWestHighlandInstitute: data.methodWestHighlandInstitute || false,
+      methodCustomer: data.methodCustomer || false,
+      separatePassedResults: data.separatePassedResults || false,
+      deliveryDirectPickup: data.deliveryDirectPickup || false,
+      deliveryPostal: data.deliveryPostal || false,
+      returnStoredSample: data.returnStoredSample || false,
+      sampleTypeService: data.sampleTypeService || false,
+      sampleTypeContract: data.sampleTypeContract || false,
+      sampleTypeTask: data.sampleTypeTask || false,
+      sampleTypeSubContract: data.sampleTypeSubContract || false,
+      agreeTerms: data.agreeTerms || false,
+    } as unknown as TestRequestDto;
+
+    // Cache the temporary data
+    await cacheTestRequest(clientId, tempDto, true);
+
+    return { data: tempDto, isOffline: true, clientId };
+  },
+
+  /**
+   * Update a test request with offline support
+   * If offline, queues the operation
+   */
+  update: async (id: string, data: UpdateTestRequestDto): Promise<OfflineAwareResponse<TestRequestDto>> => {
+    if (navigator.onLine) {
+      try {
+        const result = await testRequestService.update(id, data);
+        // Update cache
+        await cacheTestRequest(result.id, result, false);
+        return { data: result, isOffline: false };
+      } catch (error) {
+        if (!navigator.onLine) {
+          // Network went offline during request
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    // Offline: queue the operation
+    const clientId = await syncManager.queueTestRequest(data, 'update', id);
+
+    // Get existing cached data and merge with updates
+    const cached = await getCachedTestRequest(id);
+    const mergedDto: TestRequestDto = {
+      ...(cached?.data as TestRequestDto || {}),
+      ...data,
+      id,
+      isOffline: true,
+    } as TestRequestDto & { isOffline: boolean };
+
+    // Update cache with merged data
+    await cacheTestRequest(id, mergedDto, true);
+
+    return { data: mergedDto, isOffline: true, clientId };
+  },
+
+  /**
+   * Get a test request with offline fallback
+   * Returns cached data if offline
+   */
+  get: async (id: string): Promise<TestRequestDto | null> => {
+    if (navigator.onLine) {
+      try {
+        const result = await testRequestService.get(id);
+        // Update cache
+        await cacheTestRequest(result.id, result, false);
+        return result;
+      } catch (error) {
+        // Fall through to cache
+      }
+    }
+
+    // Try to get from cache
+    const cached = await getCachedTestRequest(id);
+    if (cached) {
+      return cached.data as TestRequestDto;
+    }
+
+    return null;
+  },
+
+  /**
+   * Get all offline test requests (pending sync)
+   */
+  getOfflineItems: async (): Promise<TestRequestDto[]> => {
+    const offlineItems = await getOfflineTestRequests();
+    return offlineItems.map(item => item.data as TestRequestDto);
+  },
+
+  /**
+   * Force sync all pending items
+   */
+  syncNow: async () => {
+    return syncManager.sync();
+  },
+
+  /**
+   * Get pending sync count
+   */
+  getPendingSyncCount: async (): Promise<number> => {
+    return syncManager.getPendingCount();
+  },
+};
 
 export default testRequestService;
