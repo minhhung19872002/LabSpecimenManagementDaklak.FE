@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React from "react";
-import { Form, Input, Select, AutoComplete, Row, Col, Typography } from "antd";
+import { Form, Input, AutoComplete, Row, Col, Typography } from "antd";
 import { getWardsByProvince, Province, Ward } from "../../../../utils/vietnamLocations";
 
 const { Title } = Typography;
@@ -11,6 +11,10 @@ interface CustomerInfoSectionProps {
   provinces: Province[];
   wards: Ward[];
   setWards: React.Dispatch<React.SetStateAction<Ward[]>>;
+  selectedProvinceCode?: string;
+  setSelectedProvinceCode: (code: string | undefined) => void;
+  selectedWardCode?: string;
+  setSelectedWardCode: (code: string | undefined) => void;
   organizationOptions: { value: string; label: string }[];
   organizationSearching: boolean;
   handleOrganizationSearch: (searchText: string) => void;
@@ -24,6 +28,10 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
   provinces,
   wards,
   setWards,
+  selectedProvinceCode,
+  setSelectedProvinceCode,
+  selectedWardCode,
+  setSelectedWardCode,
   organizationOptions,
   organizationSearching,
   handleOrganizationSearch,
@@ -63,64 +71,68 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
         </Col>
         <Col xs={24} sm={8} lg={6}>
           <Form.Item
-            name="provinceCode"
+            name="province"
             label="Tỉnh thành"
-            rules={[{ required: true, message: "Vui lòng chọn tỉnh thành" }]}
+            rules={[{ required: true, message: "Vui lòng chọn hoặc nhập tỉnh thành" }]}
           >
-            <Select
-              placeholder="Chọn tỉnh thành"
+            <AutoComplete
+              placeholder="Chọn hoặc nhập tỉnh thành"
               allowClear
-              showSearch
-              optionFilterProp="children"
-              disabled={isFieldLocked("provinceCode")}
-              filterOption={(input, option) =>
-                (option?.children as unknown as string)
-                  ?.toLowerCase()
-                  .includes(input.toLowerCase())
-              }
-              onChange={(value) => {
+              disabled={isFieldLocked("province")}
+              options={provinces.map((p) => ({
+                value: p.name,
+                label: p.name,
+                code: p.code,
+              }))}
+              onSelect={(value, option) => {
+                // Khi chọn từ dropdown, lưu code để filter ward
                 form.setFieldsValue({
-                  wardCode: undefined,
+                  province: value,
+                  ward: undefined,
                 });
-                if (value) {
-                  setWards(getWardsByProvince(value));
-                } else {
+                setSelectedProvinceCode(option.code);
+                setSelectedWardCode(undefined);
+                setWards(getWardsByProvince(option.code));
+              }}
+              onChange={(value) => {
+                // Khi user gõ tự do (không chọn từ dropdown)
+                // Không clear ward nếu chỉ sửa text nhỏ
+                if (!value) {
+                  setSelectedProvinceCode(undefined);
+                  setSelectedWardCode(undefined);
                   setWards([]);
+                  form.setFieldsValue({ ward: undefined });
                 }
               }}
-            >
-              {provinces.map((p) => (
-                <Select.Option key={p.code} value={p.code}>
-                  {p.name}
-                </Select.Option>
-              ))}
-            </Select>
+              filterOption={(input, option) =>
+                (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
+              }
+            />
           </Form.Item>
         </Col>
         <Col xs={24} sm={8} lg={6}>
           <Form.Item
-            name="wardCode"
+            name="ward"
             label="Phường xã"
-            rules={[{ required: true, message: "Vui lòng chọn phường xã" }]}
+            rules={[{ required: true, message: "Vui lòng chọn hoặc nhập phường xã" }]}
           >
-            <Select
-              placeholder="Chọn phường/xã"
+            <AutoComplete
+              placeholder="Chọn hoặc nhập phường/xã"
               allowClear
-              showSearch
-              optionFilterProp="children"
+              disabled={!selectedProvinceCode || isFieldLocked("ward")}
+              options={wards.map((w) => ({
+                value: w.name,
+                label: w.name,
+                code: w.code,
+              }))}
+              onSelect={(value, option) => {
+                form.setFieldsValue({ ward: value });
+                setSelectedWardCode(option.code);
+              }}
               filterOption={(input, option) =>
-                (option?.children as unknown as string)
-                  ?.toLowerCase()
-                  .includes(input.toLowerCase())
+                (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
               }
-              disabled={wards.length === 0 || isFieldLocked("wardCode")}
-            >
-              {wards.map((w) => (
-                <Select.Option key={w.code} value={w.code}>
-                  {w.name}
-                </Select.Option>
-              ))}
-            </Select>
+            />
           </Form.Item>
         </Col>
       </Row>

@@ -176,6 +176,9 @@ export const useTestRequestFormData = () => {
   // Vietnam location states
   const [provinces] = useState<Province[]>(getAllProvinces());
   const [wards, setWards] = useState<Ward[]>([]);
+  // Track selected codes for cascade filtering (separate from text values for editable select)
+  const [selectedProvinceCode, setSelectedProvinceCode] = useState<string | undefined>();
+  const [selectedWardCode, setSelectedWardCode] = useState<string | undefined>();
 
   // Helper to check if a field should be disabled based on status
   const isFieldLocked = (fieldName: string): boolean => {
@@ -292,11 +295,20 @@ export const useTestRequestFormData = () => {
     if (selectedOrg) {
       if (selectedOrg.provinceCode) {
         setWards(getWardsByProvince(selectedOrg.provinceCode));
+        setSelectedProvinceCode(selectedOrg.provinceCode);
       }
+      if (selectedOrg.wardCode) {
+        setSelectedWardCode(selectedOrg.wardCode);
+      }
+      // Find province and ward names for editable fields
+      const provinceName = provinces.find(p => p.code === selectedOrg.provinceCode)?.name;
+      const wardName = selectedOrg.wardCode
+        ? getWardsByProvince(selectedOrg.provinceCode || '').find(w => w.code === selectedOrg.wardCode)?.name
+        : undefined;
       form.setFieldsValue({
         customerName: selectedOrg.name,
-        provinceCode: selectedOrg.provinceCode,
-        wardCode: selectedOrg.wardCode,
+        province: provinceName || '',
+        ward: wardName || '',
         address: selectedOrg.address,
         taxCode: selectedOrg.taxCode,
         contactPerson: selectedOrg.contactPerson,
@@ -314,11 +326,20 @@ export const useTestRequestFormData = () => {
     if (foundOrg) {
       if (foundOrg.provinceCode) {
         setWards(getWardsByProvince(foundOrg.provinceCode));
+        setSelectedProvinceCode(foundOrg.provinceCode);
       }
+      if (foundOrg.wardCode) {
+        setSelectedWardCode(foundOrg.wardCode);
+      }
+      // Find province and ward names for editable fields
+      const provinceName = provinces.find(p => p.code === foundOrg.provinceCode)?.name;
+      const wardName = foundOrg.wardCode
+        ? getWardsByProvince(foundOrg.provinceCode || '').find(w => w.code === foundOrg.wardCode)?.name
+        : undefined;
       form.setFieldsValue({
         customerName: foundOrg.name,
-        provinceCode: foundOrg.provinceCode,
-        wardCode: foundOrg.wardCode,
+        province: provinceName || '',
+        ward: wardName || '',
         address: foundOrg.address,
         taxCode: foundOrg.taxCode,
         contactPerson: foundOrg.contactPerson,
@@ -407,6 +428,10 @@ export const useTestRequestFormData = () => {
       if (data.provinceCode) {
         const loadedWards = getWardsByProvince(data.provinceCode);
         setWards(loadedWards);
+        setSelectedProvinceCode(data.provinceCode);
+      }
+      if (data.wardCode) {
+        setSelectedWardCode(data.wardCode);
       }
 
       form.setFieldsValue({
@@ -564,15 +589,28 @@ export const useTestRequestFormData = () => {
 
       // Find organization to get full info
       const org = organizations.find((o) => o.id === quotation.organizationId);
-      if (org?.provinceCode) {
-        setWards(getWardsByProvince(org.provinceCode));
+      const provinceCodeToUse = quotation.provinceCode || org?.provinceCode;
+      const wardCodeToUse = quotation.wardCode || org?.wardCode;
+
+      if (provinceCodeToUse) {
+        setWards(getWardsByProvince(provinceCodeToUse));
+        setSelectedProvinceCode(provinceCodeToUse);
       }
+      if (wardCodeToUse) {
+        setSelectedWardCode(wardCodeToUse);
+      }
+
+      // Get province and ward names for editable fields
+      const provinceName = provinces.find(p => p.code === provinceCodeToUse)?.name;
+      const wardName = provinceCodeToUse && wardCodeToUse
+        ? getWardsByProvince(provinceCodeToUse).find(w => w.code === wardCodeToUse)?.name
+        : undefined;
 
       // Fill customer info from quotation
       form.setFieldsValue({
         customerName: quotation.customerName,
-        provinceCode: quotation.provinceCode || org?.provinceCode,
-        wardCode: quotation.wardCode || org?.wardCode,
+        province: provinceName || '',
+        ward: wardName || '',
         address: quotation.address || org?.address,
         taxCode: quotation.taxCode || org?.taxCode,
         contactPerson: quotation.contactPerson || org?.contactPerson,
@@ -933,6 +971,10 @@ export const useTestRequestFormData = () => {
     provinces,
     wards,
     setWards,
+    selectedProvinceCode,
+    setSelectedProvinceCode,
+    selectedWardCode,
+    setSelectedWardCode,
 
     // Helpers
     getIndicatorInfo,
