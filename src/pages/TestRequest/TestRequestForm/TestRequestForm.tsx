@@ -128,6 +128,10 @@ const TestRequestForm: React.FC = () => {
     provinces,
     wards,
     setWards,
+    selectedProvinceCode,
+    setSelectedProvinceCode,
+    selectedWardCode,
+    setSelectedWardCode,
     getIndicatorInfo,
     getMethodsForIndicator,
     getIndicatorMethodInfo,
@@ -264,6 +268,10 @@ const TestRequestForm: React.FC = () => {
           provinces={provinces}
           wards={wards}
           setWards={setWards}
+          selectedProvinceCode={selectedProvinceCode}
+          setSelectedProvinceCode={setSelectedProvinceCode}
+          selectedWardCode={selectedWardCode}
+          setSelectedWardCode={setSelectedWardCode}
           organizationOptions={organizationOptions}
           organizationSearching={organizationSearching}
           handleOrganizationSearch={handleOrganizationSearch}

@@ -776,8 +776,10 @@ export const useTestRequestFormActions = ({
         };
       });
 
-      const selectedProvince = provinces.find((p) => p.code === values.provinceCode);
-      const selectedWard = wards.find((w) => w.code === values.wardCode);
+      // Province and Ward: use text from form directly (editable select)
+      // Code is stored separately for cascade filtering but text can be edited by user
+      const provinceCode = provinces.find((p) => p.name === values.province)?.code;
+      const wardCode = wards.find((w) => w.name === values.ward)?.code;
 
       const payload = {
         quotationId: sourceQuotationId || undefined,
@@ -788,10 +790,10 @@ export const useTestRequestFormActions = ({
         sentToDepartment: values.sentToDepartment || false,
         resultReturned: values.resultReturned || false,
         customerName: values.customerName,
-        provinceCode: values.provinceCode || undefined,
-        province: selectedProvince?.name || undefined,
-        wardCode: values.wardCode || undefined,
-        ward: selectedWard?.name || undefined,
+        provinceCode: provinceCode || undefined,
+        province: values.province || undefined,
+        wardCode: wardCode || undefined,
+        ward: values.ward || undefined,
         address: values.address || undefined,
         taxCode: values.taxCode || undefined,
         contactPerson: values.contactPerson || undefined,
@@ -922,18 +924,15 @@ export const useTestRequestFormActions = ({
         sentToDepartment: values.sentToDepartment || false,
         resultReturned: values.resultReturned || false,
         customerName: values.customerName || "",
-        provinceCode: values.provinceCode || undefined,
-        province: values.provinceCode
-          ? provinces.find((p: any) => p.code === values.provinceCode)?.name
-          : undefined,
+        // Use text from form directly (editable select)
+        provinceCode: provinces.find((p: any) => p.name === values.province)?.code || undefined,
+        province: values.province || undefined,
         districtCode: values.districtCode || undefined,
         district: values.districtCode
           ? wards.find((w: any) => w.code === values.districtCode)?.name
           : undefined,
-        wardCode: values.wardCode || undefined,
-        ward: values.wardCode
-          ? wards.find((w: any) => w.code === values.wardCode)?.name
-          : undefined,
+        wardCode: wards.find((w: any) => w.name === values.ward)?.code || undefined,
+        ward: values.ward || undefined,
         address: values.address || undefined,
         taxCode: values.taxCode || undefined,
         contactPerson: values.contactPerson || undefined,
