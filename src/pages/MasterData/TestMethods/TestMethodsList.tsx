@@ -20,6 +20,11 @@ const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshK
     setSearchText,
     setExpandedRowKeys,
     fetchData,
+    // Batch selection for indicators
+    selectedIndicatorKeys,
+    setSelectedIndicatorKeys,
+    batchLoading,
+    setBatchLoading,
   } = useTestMethodsData();
 
   // Refresh data when refreshKey changes (when switching to this tab)
@@ -51,15 +56,20 @@ const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshK
     handleAddIndicatorsCancel,
     handleRemoveIndicator,
     handleToggleActive,
+    // Batch remove indicators
+    handleBatchRemoveIndicators,
   } = useTestMethodsActions({
     fetchData,
     onDataChange,
     expandedRowKeys,
     setExpandedRowKeys,
+    selectedIndicatorKeys,
+    setSelectedIndicatorKeys,
+    setBatchLoading,
   });
 
   const form = useForm<TestMethodFormData>({
-    resolver: yupResolver(testMethodSchema),
+    resolver: yupResolver(testMethodSchema) as any,
     defaultValues: { name: "", unit: "", isActive: true },
   });
   const [addIndicatorsForm] = Form.useForm();
@@ -109,11 +119,17 @@ const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshK
       {/* Expandable Table */}
       <TestMethodsTable
         loading={loading}
+        batchLoading={batchLoading}
         groupedData={groupedData}
         methodColumns={methodColumns}
         indicatorColumns={indicatorColumns}
         expandedRowKeys={expandedRowKeys}
         searchText={searchText}
+        // Batch selection for indicators
+        selectedIndicatorKeys={selectedIndicatorKeys}
+        onSelectedIndicatorKeysChange={setSelectedIndicatorKeys}
+        onBatchRemoveIndicators={handleBatchRemoveIndicators}
+        // Handlers
         onSearchChange={setSearchText}
         onExpandedRowsChange={setExpandedRowKeys}
         onAddIndicators={(testMethodId) =>

@@ -24,6 +24,11 @@ const SpecimenTypesList: React.FC<SpecimenTypesTabProps> = ({ onDataChange, refr
     setSearchText,
     setExpandedSpecimenTypeKeys,
     fetchData,
+    // Batch selection for indicators
+    selectedIndicatorKeys,
+    setSelectedIndicatorKeys,
+    batchLoading,
+    setBatchLoading,
   } = useSpecimenTypesData();
 
   // Refresh data when refreshKey changes (when switching to this tab)
@@ -57,11 +62,16 @@ const SpecimenTypesList: React.FC<SpecimenTypesTabProps> = ({ onDataChange, refr
     handleAddIndicatorsCancel,
     handleRemoveIndicator,
     handleToggleIndicatorActive,
+    // Batch remove indicators
+    handleBatchRemoveIndicators,
   } = useSpecimenTypesActions({
     fetchData,
     onDataChange,
     expandedSpecimenTypeKeys,
     setExpandedSpecimenTypeKeys,
+    selectedIndicatorKeys,
+    setSelectedIndicatorKeys,
+    setBatchLoading,
   });
 
   const specimenTypeForm = useForm<SpecimenTypeFormData>({
@@ -111,11 +121,17 @@ const SpecimenTypesList: React.FC<SpecimenTypesTabProps> = ({ onDataChange, refr
       {/* SpecimenTypes Table with nested Indicators */}
       <SpecimenTypesTable
         loading={loading}
+        batchLoading={batchLoading}
         groupedData={groupedData}
         specimenTypeColumns={specimenTypeColumns}
         indicatorColumns={indicatorColumns}
         expandedSpecimenTypeKeys={expandedSpecimenTypeKeys}
         searchText={searchText}
+        // Batch selection for indicators
+        selectedIndicatorKeys={selectedIndicatorKeys}
+        onSelectedIndicatorKeysChange={setSelectedIndicatorKeys}
+        onBatchRemoveIndicators={handleBatchRemoveIndicators}
+        // Handlers
         onSearchChange={setSearchText}
         onExpandedSpecimenTypeKeysChange={setExpandedSpecimenTypeKeys}
         onAddIndicators={handleOpenAddIndicators}
