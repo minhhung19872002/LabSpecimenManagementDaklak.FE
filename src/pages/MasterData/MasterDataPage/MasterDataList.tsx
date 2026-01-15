@@ -16,6 +16,7 @@ import StandardsTab from "../Standards";
 import TestResultValuesTab from "../TestResultValues";
 import NotesTab from "../Notes";
 import SpecimenTypesTab from "../SpecimenTypes";
+import SampleTypeCategoriesTab from "../SampleTypeCategoriesTab";
 import { useMasterDataState } from "./hooks";
 import { useMasterDataActions } from "./hooks/useMasterDataActions";
 import {
@@ -89,6 +90,7 @@ const MasterDataList: React.FC = () => {
   const [testMethodsRefreshKey, setTestMethodsRefreshKey] = useState(0);
   const [standardsRefreshKey, setStandardsRefreshKey] = useState(0);
   const [specimenTypesRefreshKey, setSpecimenTypesRefreshKey] = useState(0);
+  const [sampleTypeCategoriesRefreshKey, setSampleTypeCategoriesRefreshKey] = useState(0);
 
   // Memoized columns
   const columns = useMemo(
@@ -135,7 +137,8 @@ const MasterDataList: React.FC = () => {
           activeCategory !== "standards" &&
           activeCategory !== "testResultValues" &&
           activeCategory !== "notes" &&
-          activeCategory !== "specimenTypes" && (
+          activeCategory !== "specimenTypes" &&
+          activeCategory !== "sampleTypeCategories" && (
             <Space>
               {canImport && (
                 <Button
@@ -178,6 +181,9 @@ const MasterDataList: React.FC = () => {
             if (key === "specimenTypes") {
               setSpecimenTypesRefreshKey((prev) => prev + 1);
             }
+            if (key === "sampleTypeCategories") {
+              setSampleTypeCategoriesRefreshKey((prev) => prev + 1);
+            }
           }}
           tabPosition="left"
           style={{ minHeight: 400 }}
@@ -212,6 +218,11 @@ const MasterDataList: React.FC = () => {
                 <SpecimenTypesTab
                   onDataChange={() => fetchStatistics()}
                   refreshKey={specimenTypesRefreshKey}
+                />
+              ) : key === "sampleTypeCategories" ? (
+                <SampleTypeCategoriesTab
+                  onDataChange={() => fetchStatistics()}
+                  refreshKey={sampleTypeCategoriesRefreshKey}
                 />
               ) : (
                 <MasterDataTable

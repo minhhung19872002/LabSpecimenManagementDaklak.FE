@@ -12,28 +12,30 @@ import { SpecimenTypeFormData } from "../schemas/specimenTypeSchema";
 interface UseSpecimenTypesActionsParams {
   fetchData: () => Promise<void>;
   onDataChange?: () => void;
-  expandedRowKeys: string[];
-  setExpandedRowKeys: React.Dispatch<React.SetStateAction<string[]>>;
+  expandedSpecimenTypeKeys: string[];
+  setExpandedSpecimenTypeKeys: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
 export const useSpecimenTypesActions = ({
   fetchData,
   onDataChange,
-  expandedRowKeys,
-  setExpandedRowKeys,
+  expandedSpecimenTypeKeys,
+  setExpandedSpecimenTypeKeys,
 }: UseSpecimenTypesActionsParams) => {
+  // SpecimenType modal states
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<GroupedSpecimenTypeData | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
 
+  // Add indicators modal states
   const [addIndicatorsModalOpen, setAddIndicatorsModalOpen] = useState(false);
   const [addIndicatorsLoading, setAddIndicatorsLoading] = useState(false);
   const [selectedSpecimenTypeId, setSelectedSpecimenTypeId] = useState<string | null>(null);
 
-  // SpecimenType CRUD
+  // ============= SpecimenType Actions =============
   const handleCreate = (form: UseFormReturn<SpecimenTypeFormData>) => {
     setEditingItem(null);
-    form.reset({ name: "", description: "", isActive: true });
+    form.reset({ name: "", description: "", isActive: true, sampleTypeCategoryId: "" });
     setModalOpen(true);
   };
 
@@ -46,6 +48,7 @@ export const useSpecimenTypesActions = ({
       name: record.name,
       description: record.description || "",
       isActive: record.isActive,
+      sampleTypeCategoryId: record.sampleTypeCategoryId || "",
     });
     setModalOpen(true);
   };
@@ -75,6 +78,7 @@ export const useSpecimenTypesActions = ({
         name: data.name,
         description: data.description,
         isActive: data.isActive,
+        sampleTypeCategoryId: data.sampleTypeCategoryId || undefined,
       };
 
       if (editingItem) {
@@ -104,7 +108,7 @@ export const useSpecimenTypesActions = ({
     form.reset();
   };
 
-  // Add Indicators to SpecimenType
+  // ============= Indicator Actions =============
   const handleOpenAddIndicators = (specimenTypeId: string) => {
     setSelectedSpecimenTypeId(specimenTypeId);
     setAddIndicatorsModalOpen(true);
@@ -129,8 +133,8 @@ export const useSpecimenTypesActions = ({
       message.success(`Thêm ${indicatorIds.length} chỉ tiêu thành công!`);
 
       // Keep the specimen type expanded after adding indicators
-      if (!expandedRowKeys.includes(selectedSpecimenTypeId)) {
-        setExpandedRowKeys([...expandedRowKeys, selectedSpecimenTypeId]);
+      if (!expandedSpecimenTypeKeys.includes(selectedSpecimenTypeId)) {
+        setExpandedSpecimenTypeKeys([...expandedSpecimenTypeKeys, selectedSpecimenTypeId]);
       }
 
       setAddIndicatorsModalOpen(false);
@@ -151,7 +155,6 @@ export const useSpecimenTypesActions = ({
     setSelectedSpecimenTypeId(null);
   };
 
-  // Remove Indicator from SpecimenType
   const handleRemoveIndicator = async (specimenTypeId: string, indicatorId: string) => {
     try {
       await specimenTypeService.removeIndicator(specimenTypeId, indicatorId);
@@ -166,7 +169,6 @@ export const useSpecimenTypesActions = ({
     }
   };
 
-  // Toggle indicator active status
   const handleToggleIndicatorActive = async (specimenTypeId: string, indicatorId: string) => {
     try {
       const result = await specimenTypeService.toggleIndicatorActive(specimenTypeId, indicatorId);
