@@ -71,6 +71,7 @@ interface SampleTableSectionProps {
   specimenTypeOptions: { value: string; label: string }[];
   handleSpecimenTypeSearch: (searchText: string) => void;
   handleSpecimenTypeSelect: (sampleKey: string, value: string) => void;
+  sampleConditionOptions: { value: string; label: string }[];
 }
 
 const SampleTableSection: React.FC<SampleTableSectionProps> = ({
@@ -89,6 +90,7 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
   specimenTypeOptions,
   handleSpecimenTypeSearch,
   handleSpecimenTypeSelect,
+  sampleConditionOptions,
 }) => {
   // Barcode/QR Modal state
   const [barcodeModalVisible, setBarcodeModalVisible] = useState(false);
@@ -347,13 +349,19 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
         columnKey: "statusText",
       }),
       render: (value: string, record: SampleFormData) => (
-        <Input
-          value={value}
-          onChange={(e) =>
-            updateSample(record.key, "statusText", e.target.value)
+        <AutoComplete
+          value={value || ""}
+          options={sampleConditionOptions}
+          onChange={(val) =>
+            updateSample(record.key, "statusText", val || "")
           }
-          placeholder="Tình trạng"
+          placeholder="Tình trạng mẫu..."
+          style={{ width: "100%" }}
           size="small"
+          filterOption={(inputValue, option) =>
+            (option?.label as string)?.toLowerCase().includes(inputValue.toLowerCase())
+          }
+          allowClear
         />
       ),
     },

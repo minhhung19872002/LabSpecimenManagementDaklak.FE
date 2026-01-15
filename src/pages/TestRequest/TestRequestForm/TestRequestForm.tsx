@@ -76,6 +76,7 @@ const TestRequestForm: React.FC = () => {
     handleOrganizationSearch,
     handleOrganizationSelect,
     handlePhoneBlur,
+    sampleConditionOptions,
     totalSampleCost,
     indicatorModalVisible,
     setIndicatorModalVisible,
@@ -298,6 +299,7 @@ const TestRequestForm: React.FC = () => {
           specimenTypeOptions={specimenTypeOptions}
           handleSpecimenTypeSearch={handleSpecimenTypeSearch}
           handleSpecimenTypeSelect={handleSpecimenTypeSelect}
+          sampleConditionOptions={sampleConditionOptions}
         />
 
         {/* Loại hình mẫu */}
