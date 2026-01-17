@@ -349,6 +349,8 @@ export interface TestRequestSampleDto {
   beforeTestingImages?: SampleTestingImageDto[];
   /** Hình ảnh sau thử nghiệm */
   afterTestingImages?: SampleTestingImageDto[];
+  /** Mẫu chung - Mẫu có chỉ tiêu ở cả Lab Vi Sinh và Lab Hóa */
+  isSharedSample?: boolean;
 }
 
 export interface AttachmentInputDto {

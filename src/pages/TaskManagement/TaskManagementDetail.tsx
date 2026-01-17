@@ -1008,6 +1008,65 @@ const TaskManagementDetail: React.FC = () => {
     }
   };
 
+  // ============= Shared Sample Handlers =============
+
+  // Handle send shared sample (Lab Vi Sinh -> Lab Hóa)
+  const handleSendSharedSample = async () => {
+    if (!task) return;
+
+    setActionLoading(true);
+    try {
+      await laboratoryTaskService.sendSharedSample(task.id);
+      message.success("Đã gửi mẫu chung cho Lab Hóa");
+      await reloadData();
+    } catch (error: any) {
+      console.error("Failed to send shared sample:", error);
+      message.error(getApiErrorMessage(error, "Không thể gửi mẫu chung"));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Handle receive shared sample (Lab Hóa nhận từ Vi Sinh)
+  const handleReceiveSharedSample = async () => {
+    if (!task) return;
+
+    setActionLoading(true);
+    try {
+      await laboratoryTaskService.receiveSharedSample(task.id);
+      message.success("Đã xác nhận nhận mẫu chung");
+      await reloadData();
+    } catch (error: any) {
+      console.error("Failed to receive shared sample:", error);
+      message.error(getApiErrorMessage(error, "Không thể xác nhận nhận mẫu"));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Check if task can send shared sample (Lab Vi Sinh, Approved/SentToQuality, not sent yet)
+  // Only Lab Vi Sinh (no priorLabTaskId) can send shared sample
+  const canSendSharedSample = useMemo(() => {
+    if (!task) return false;
+    return (
+      task.isSharedSampleTask === true &&
+      !task.priorLabTaskId && // Lab Vi Sinh has no prior lab, Lab Hóa has priorLabTaskId
+      (task.status === LaboratoryTaskStatus.Approved ||
+       task.status === LaboratoryTaskStatus.SentToQuality) &&
+      task.sampleSentToNextLab !== true
+    );
+  }, [task]);
+
+  // Check if task can receive shared sample (Lab Hóa, waiting, prior lab ALREADY sent)
+  const canReceiveSharedSample = useMemo(() => {
+    if (!task) return false;
+    return (
+      task.isWaitingForPriorLab === true &&
+      task.status === LaboratoryTaskStatus.WaitingSharedSample &&
+      task.priorLabSentSample === true // Prior Lab (Vi Sinh) đã gửi mẫu
+    );
+  }, [task]);
+
   // Load sample images (testing images + sample attachments from TestRequest)
   useEffect(() => {
     const loadSampleImages = async () => {
@@ -1101,6 +1160,11 @@ const TaskManagementDetail: React.FC = () => {
     task?.status === LaboratoryTaskStatus.UnderEvaluation ||
     task?.status === LaboratoryTaskStatus.WaitingCustomerResponse;
 
+  // Check if task is waiting for shared sample from prior lab (Lab Hóa chờ Vi Sinh)
+  const isWaitingSharedSample =
+    task?.status === LaboratoryTaskStatus.WaitingSharedSample ||
+    task?.isWaitingForPriorLab === true;
+
   // Check if task is in completed phase (Approved, Rejected, SentToQuality, TestingRejected)
   // During this phase, cannot assign/edit
   const isCompletedPhase =
@@ -1111,9 +1175,9 @@ const TaskManagementDetail: React.FC = () => {
 
   // Check if can assign technician to indicators
   // Allowed when: PartialAccepted, FullyAccepted, Assigned, InProgress, WaitingApproval
-  // NOT allowed when: UnderEvaluation, WaitingCustomerResponse, Approved, Rejected, SentToQuality, TestingRejected
+  // NOT allowed when: UnderEvaluation, WaitingCustomerResponse, Approved, Rejected, SentToQuality, TestingRejected, WaitingSharedSample
   const canAssignToIndicator =
-    !isInEvaluationPhase && !isCompletedPhase && canAssignTesting;
+    !isInEvaluationPhase && !isCompletedPhase && !isWaitingSharedSample && canAssignTesting;
 
   // Check if can upload images (same logic as canEditTask)
   // Allow upload during: Assigned, InProgress, WaitingApproval
@@ -1434,6 +1498,9 @@ const TaskManagementDetail: React.FC = () => {
               QLKT: <Text strong>{task.technicalManagerName || "-"}</Text>
             </Text>
             {getStatusTag(task.status)}
+            {task.isSharedSampleTask && (
+              <Tag color="purple">Mẫu chung</Tag>
+            )}
           </Space>
         </div>
         <div style={{ marginTop: 8 }}>
@@ -1470,6 +1537,79 @@ const TaskManagementDetail: React.FC = () => {
           showIcon
           style={{ marginBottom: 16 }}
         />
+      )}
+
+      {/* Alert và actions cho Shared Sample (Mẫu chung) */}
+      {task.isSharedSampleTask && (
+        <>
+          {/* Alert khi Lab Hóa đang chờ nhận mẫu từ Vi Sinh */}
+          {isWaitingSharedSample && (
+            <Alert
+              message="Đang chờ nhận mẫu chung từ Lab Vi Sinh"
+              description={
+                <>
+                  <div>
+                    Mẫu này là mẫu chung cần Lab Vi Sinh xử lý trước. Vui lòng chờ Lab Vi Sinh hoàn thành và gửi mẫu.
+                  </div>
+                  <div style={{ marginTop: 8 }}>
+                    Bạn có thể xem danh sách chỉ tiêu nhưng không thể thực hiện các thao tác cho đến khi nhận mẫu.
+                  </div>
+                  {canReceiveSharedSample && (
+                    <div style={{ marginTop: 12 }}>
+                      <Button
+                        type="primary"
+                        onClick={handleReceiveSharedSample}
+                        loading={actionLoading}
+                      >
+                        Xác nhận nhận mẫu
+                      </Button>
+                    </div>
+                  )}
+                </>
+              }
+              type="warning"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          )}
+
+          {/* Alert và button khi Lab Vi Sinh cần gửi mẫu cho Hóa */}
+          {canSendSharedSample && (
+            <Alert
+              message="Mẫu chung - Cần gửi cho Lab Hóa"
+              description={
+                <>
+                  <div>
+                    Đã hoàn thành xử lý mẫu chung. Vui lòng gửi mẫu cho Lab Hóa để tiếp tục quy trình.
+                  </div>
+                  <div style={{ marginTop: 12 }}>
+                    <Button
+                      type="primary"
+                      onClick={handleSendSharedSample}
+                      loading={actionLoading}
+                    >
+                      Gửi mẫu cho Lab Hóa
+                    </Button>
+                  </div>
+                </>
+              }
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          )}
+
+          {/* Badge hiển thị đây là mẫu chung (đã gửi) */}
+          {task.sampleSentToNextLab && (
+            <Alert
+              message="Đã gửi mẫu chung cho Lab Hóa"
+              description={`Ngày gửi: ${task.sampleSentDate ? formatDate(task.sampleSentDate) : "-"}`}
+              type="success"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          )}
+        </>
       )}
 
       {/* Tabs for Evaluation and Sample List */}
@@ -1524,12 +1664,14 @@ const TaskManagementDetail: React.FC = () => {
                     taskId={task.id}
                     canEvaluate={
                       canApproveResult &&
+                      !isWaitingSharedSample &&
                       (task.status === LaboratoryTaskStatus.UnderEvaluation ||
                         task.status ===
                           LaboratoryTaskStatus.WaitingCustomerResponse)
                     }
                     loading={loading}
                     onEvaluationComplete={reloadData}
+                    isSharedSampleTask={task.isSharedSampleTask}
                   />
                 </>
               ),

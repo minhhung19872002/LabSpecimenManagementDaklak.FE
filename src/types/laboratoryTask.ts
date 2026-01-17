@@ -12,7 +12,8 @@ export enum LaboratoryTaskStatus {
   WaitingApproval = 7,      // Chờ duyệt kết quả
   Approved = 8,             // Đã duyệt
   Rejected = 9,             // Từ chối (KQ không đạt)
-  SentToQuality = 10        // Đã gửi QL Chất lượng
+  SentToQuality = 10,       // Đã gửi QL Chất lượng
+  WaitingSharedSample = 11  // Chờ nhận mẫu chung - Task của Lab Hóa đang chờ Lab Vi Sinh
 }
 
 // Indicator Approval Status Enum (Phase 6 + Workflow Redesign)
@@ -42,7 +43,8 @@ export const LaboratoryTaskStatusLabels: Record<LaboratoryTaskStatus, string> = 
   [LaboratoryTaskStatus.WaitingApproval]: 'Chờ duyệt kết quả',
   [LaboratoryTaskStatus.Approved]: 'Đã duyệt',
   [LaboratoryTaskStatus.Rejected]: 'Từ chối KQ',
-  [LaboratoryTaskStatus.SentToQuality]: 'Đã gửi QLCL'
+  [LaboratoryTaskStatus.SentToQuality]: 'Đã gửi QLCL',
+  [LaboratoryTaskStatus.WaitingSharedSample]: 'Chờ Lab khác'
 };
 
 export const LaboratoryTaskStatusColors: Record<LaboratoryTaskStatus, string> = {
@@ -56,7 +58,8 @@ export const LaboratoryTaskStatusColors: Record<LaboratoryTaskStatus, string> = 
   [LaboratoryTaskStatus.WaitingApproval]: 'orange',
   [LaboratoryTaskStatus.Approved]: 'success',
   [LaboratoryTaskStatus.Rejected]: 'error',
-  [LaboratoryTaskStatus.SentToQuality]: 'purple'
+  [LaboratoryTaskStatus.SentToQuality]: 'purple',
+  [LaboratoryTaskStatus.WaitingSharedSample]: 'gold'
 };
 
 // Indicator Approval Status display helper (Phase 6 + Workflow Redesign)
@@ -190,6 +193,16 @@ export interface LaboratoryTaskDto {
   status: LaboratoryTaskStatus;
   notes?: string;
   resultRejectionReason?: string;  // Lý do QLCL từ chối KQ
+
+  // Shared Sample (Mẫu chung) fields
+  isSharedSampleTask?: boolean;     // Task này thuộc về mẫu chung
+  isWaitingForPriorLab?: boolean;   // Đang chờ lab trước hoàn thành (Lab Hóa chờ Vi Sinh)
+  sampleSentToNextLab?: boolean;    // Đã gửi mẫu cho lab tiếp theo
+  sampleSentDate?: string;          // Ngày gửi mẫu
+  sampleReceivedDate?: string;      // Ngày nhận mẫu từ lab trước
+  sampleReceivedNote?: string;      // Ghi chú khi nhận mẫu
+  priorLabTaskId?: string;          // ID của Task lab trước (Lab Hóa reference đến Task Vi Sinh)
+  priorLabSentSample?: boolean;     // Lab trước đã gửi mẫu chưa (true = Vi Sinh đã gửi, có thể nhận)
 
   // Navigation properties
   testRequestNumber?: string;

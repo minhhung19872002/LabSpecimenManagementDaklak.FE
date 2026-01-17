@@ -546,6 +546,7 @@ export const useTestRequestFormData = () => {
               fileSize: att.fileSize,
               url: fileService.getFileUrl(att.fileId),
             })),
+            isSharedSample: sample.isSharedSample || false, // Mẫu chung (Vi Sinh + Hóa)
           };
         });
         setSamples(sampleData);

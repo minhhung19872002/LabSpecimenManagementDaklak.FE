@@ -35,6 +35,12 @@ const QualityManagerReminderModal: React.FC<QualityManagerReminderModalProps> = 
       footer={
         <Button onClick={onClose}>Đóng</Button>
       }
+      styles={{
+        body: {
+          maxHeight: "calc(100vh - 200px)",
+          overflowY: "auto",
+        },
+      }}
     >
       <Table
         columns={columns}

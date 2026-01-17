@@ -66,8 +66,30 @@ code {
    - Mobile (<768px): 32px, small: 24px
    =========================================== */
 
-/* Desktop - ensure DatePicker small matches Button small */
+/* Desktop - ensure DatePicker small and Select small match Button small */
 .ant-picker-small {
+  height: 32px !important;
+}
+
+/* Desktop - Select small */
+.ant-select-sm:not(.ant-select-customize-input) {
+  height: 32px !important;
+  min-height: 32px !important;
+}
+.ant-select-sm:not(.ant-select-customize-input) .ant-select-selector,
+.ant-select-sm:not(.ant-select-customize-input) .ant-select-content {
+  height: 32px !important;
+  min-height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+.ant-select-sm .ant-select-selection-item,
+.ant-select-sm .ant-select-selection-placeholder,
+.ant-select-sm .ant-select-placeholder,
+.ant-select-sm .ant-select-content-value {
+  display: flex !important;
+  align-items: center !important;
+  line-height: 32px !important;
   height: 32px !important;
 }
 
