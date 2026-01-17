@@ -12,7 +12,6 @@ import {
 } from "../../types/testRequest";
 import { IndicatorApprovalStatus } from "../../types/laboratoryTask";
 import "./TestRequestDetail.css";
-import { API_BASE_URL } from "../../services/api";
 import { useMultipleActionPermissions } from "../../hooks/useActionPermission";
 
 // Components
@@ -116,13 +115,12 @@ const TestRequestDetail: React.FC = () => {
       const result = await testRequestService.generateTestRequestForm(id);
       message.success(`Đã tạo phiếu yêu cầu XN: ${result.contractNumber}`);
 
-      const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(
-        result.fileName
-      )}`;
+      // Open Word Editor (BE now returns .docx directly)
+      const editorUrl = `/document-editor?file=${encodeURIComponent(result.fileName)}`;
       if (newTab) {
-        newTab.location.href = pdfUrl;
+        newTab.location.href = editorUrl;
       } else {
-        window.open(pdfUrl, "_blank");
+        window.open(editorUrl, "_blank");
       }
 
       loadData(id);

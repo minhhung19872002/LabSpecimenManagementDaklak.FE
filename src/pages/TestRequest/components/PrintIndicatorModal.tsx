@@ -91,6 +91,18 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
   >(undefined);
   const [loadingVicePresidents, setLoadingVicePresidents] = useState(false);
 
+  // Get only approved indicators - must be defined before useEffects that use it
+  const approvedIndicators = useMemo(
+    () =>
+      indicators.filter(
+        (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Approved
+      ),
+    [indicators]
+  );
+
+  // Track previously selected IDs to detect new selections
+  const prevSelectedIdsRef = React.useRef<string[]>([]);
+
   // Load indicators when modal opens
   useEffect(() => {
     if (visible && testRequestId) {
@@ -109,8 +121,77 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
       setGeneratedResults([]);
       setShowResults(false);
       setSelectedVicePresidentId(undefined);
+      prevSelectedIdsRef.current = []; // Reset ref
     }
   }, [visible]);
+
+  // Auto-append notes when new indicators are selected
+  useEffect(() => {
+    const prevIds = prevSelectedIdsRef.current;
+    const newlySelectedIds = selectedIndicatorIds.filter(id => !prevIds.includes(id));
+
+    if (newlySelectedIds.length > 0) {
+      // Get newly selected indicators
+      const newIndicators = approvedIndicators.filter(ind => newlySelectedIds.includes(ind.id));
+
+      // Collect unique master data notes and free text notes
+      const existingNoteLines = note.split('\n').map(line => line.trim()).filter(Boolean);
+      const newNoteLines: string[] = [];
+
+      // First, collect all master data notes (deduplicated)
+      const allMasterDataNotes = new Set<string>();
+      newIndicators.forEach(ind => {
+        if (ind.masterDataNotes && ind.masterDataNotes.length > 0) {
+          ind.masterDataNotes.forEach(masterNote => {
+            if (masterNote && !existingNoteLines.some(line => line.includes(masterNote))) {
+              allMasterDataNotes.add(masterNote);
+            }
+          });
+        }
+      });
+
+      // Add master data notes first (comma-separated on one line if any)
+      if (allMasterDataNotes.size > 0) {
+        const masterNoteLine = `- ${Array.from(allMasterDataNotes).join(', ')}`;
+        if (!existingNoteLines.includes(masterNoteLine)) {
+          const existingMasterLineIndex = existingNoteLines.findIndex(line =>
+            line.startsWith('- ') && !line.includes('\n')
+          );
+          if (existingMasterLineIndex === -1) {
+            newNoteLines.push(masterNoteLine);
+          }
+        }
+      }
+
+      // Then collect free text notes (deduplicated)
+      const addedFreeTexts = new Set<string>();
+      newIndicators.forEach(ind => {
+        if (ind.freeTextNote && ind.freeTextNote.trim()) {
+          const freeText = ind.freeTextNote.trim();
+          // Check if this exact free text already exists (dedupe)
+          if (!addedFreeTexts.has(freeText) &&
+              !existingNoteLines.some(line => line.includes(freeText))) {
+            addedFreeTexts.add(freeText);
+            newNoteLines.push(`- ${freeText}`);
+          }
+        }
+      });
+
+      // Append new notes to existing note
+      if (newNoteLines.length > 0) {
+        setNote(prev => {
+          const trimmed = prev.trim();
+          if (trimmed) {
+            return `${trimmed}\n${newNoteLines.join('\n')}`;
+          }
+          return newNoteLines.join('\n');
+        });
+      }
+    }
+
+    // Update ref for next comparison
+    prevSelectedIdsRef.current = selectedIndicatorIds;
+  }, [selectedIndicatorIds, approvedIndicators, note]);
 
   const loadIndicators = async () => {
     setLoadingIndicators(true);
@@ -156,15 +237,6 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
       setLoadingVicePresidents(false);
     }
   };
-
-  // Get only approved indicators
-  const approvedIndicators = useMemo(
-    () =>
-      indicators.filter(
-        (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Approved
-      ),
-    [indicators]
-  );
 
   // Group indicators by laboratory, then by sample
   const labGroups: LabGroup[] = useMemo(() => {
@@ -284,7 +356,7 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
         setGeneratedResults(result.results);
         setShowResults(true);
       } else {
-        // Mixed mode - single PDF, open directly
+        // Mixed mode - single document, open Word Editor
         const result = await testRequestService.printMixedResult(
           testRequestId,
           selectedIndicatorIds,
@@ -295,12 +367,10 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
 
         message.success("Đã tạo phiếu kết quả");
 
-        const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(
-          result.fileName
-        )}`;
-        window.open(pdfUrl, "_blank");
+        // Open Word Editor (BE now returns .docx directly)
+        window.open(`/document-editor?file=${encodeURIComponent(result.fileName)}`, "_blank");
 
-        // Close modal for mixed mode (single PDF)
+        // Close modal for mixed mode
         setSelectedIndicatorIds([]);
         setNote("");
         onCancel();

@@ -157,6 +157,9 @@ const PrintModal: React.FC<PrintModalProps> = ({
     }
   }, [visible]);
 
+  // Track previously selected IDs to detect new selections
+  const prevSelectedIdsRef = React.useRef<string[]>([]);
+
   // Reset state when modal opens
   useEffect(() => {
     if (visible) {
@@ -167,8 +170,78 @@ const PrintModal: React.FC<PrintModalProps> = ({
       setShowResults(false);
       setViewedFiles(new Set());
       setSelectedVicePresidentId(undefined);
+      prevSelectedIdsRef.current = []; // Reset ref
     }
   }, [visible]);
+
+  // Auto-append notes when new indicators are selected
+  useEffect(() => {
+    const prevIds = prevSelectedIdsRef.current;
+    const newlySelectedIds = selectedIndicatorIds.filter(id => !prevIds.includes(id));
+
+    if (newlySelectedIds.length > 0) {
+      // Get newly selected indicators
+      const newIndicators = approvedIndicators.filter(ind => newlySelectedIds.includes(ind.id));
+
+      // Collect unique master data notes and free text notes
+      const existingNoteLines = note.split('\n').map(line => line.trim()).filter(Boolean);
+      const newNoteLines: string[] = [];
+
+      // First, collect all master data notes (deduplicated)
+      const allMasterDataNotes = new Set<string>();
+      newIndicators.forEach(ind => {
+        if (ind.masterDataNotes && ind.masterDataNotes.length > 0) {
+          ind.masterDataNotes.forEach(masterNote => {
+            if (masterNote && !existingNoteLines.some(line => line.includes(masterNote))) {
+              allMasterDataNotes.add(masterNote);
+            }
+          });
+        }
+      });
+
+      // Add master data notes first (comma-separated on one line if any)
+      if (allMasterDataNotes.size > 0) {
+        const masterNoteLine = `- ${Array.from(allMasterDataNotes).join(', ')}`;
+        if (!existingNoteLines.includes(masterNoteLine)) {
+          // Check if there's already a master data line and append to it
+          const existingMasterLineIndex = existingNoteLines.findIndex(line =>
+            line.startsWith('- ') && !line.includes('\n')
+          );
+          if (existingMasterLineIndex === -1) {
+            newNoteLines.push(masterNoteLine);
+          }
+        }
+      }
+
+      // Then collect free text notes (deduplicated)
+      const addedFreeTexts = new Set<string>();
+      newIndicators.forEach(ind => {
+        if (ind.freeTextNote && ind.freeTextNote.trim()) {
+          const freeText = ind.freeTextNote.trim();
+          // Check if this exact free text already exists (dedupe)
+          if (!addedFreeTexts.has(freeText) &&
+              !existingNoteLines.some(line => line.includes(freeText))) {
+            addedFreeTexts.add(freeText);
+            newNoteLines.push(`- ${freeText}`);
+          }
+        }
+      });
+
+      // Append new notes to existing note
+      if (newNoteLines.length > 0) {
+        setNote(prev => {
+          const trimmed = prev.trim();
+          if (trimmed) {
+            return `${trimmed}\n${newNoteLines.join('\n')}`;
+          }
+          return newNoteLines.join('\n');
+        });
+      }
+    }
+
+    // Update ref for next comparison
+    prevSelectedIdsRef.current = selectedIndicatorIds;
+  }, [selectedIndicatorIds, approvedIndicators]);
 
   const loadTemplates = async () => {
     setLoadingTemplates(true);
@@ -274,7 +347,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
         setGeneratedResults(result.results);
         setShowResults(true);
       } else {
-        // Mixed mode - single PDF, open directly
+        // Mixed mode - single document, open Word Editor
         const result = await qualityManagementService.printMixedResult(
           taskId,
           selectedIndicatorIds,
@@ -285,12 +358,10 @@ const PrintModal: React.FC<PrintModalProps> = ({
 
         message.success("Đã tạo phiếu kết quả");
 
-        const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(
-          result.fileName
-        )}`;
-        window.open(pdfUrl, "_blank");
+        // Open Word Editor (BE now returns .docx directly)
+        window.open(`/document-editor?file=${encodeURIComponent(result.fileName)}`, "_blank");
 
-        // Close modal for mixed mode (single PDF)
+        // Close modal for mixed mode
         setSelectedIndicatorIds([]);
         setNote("");
         onCancel();
