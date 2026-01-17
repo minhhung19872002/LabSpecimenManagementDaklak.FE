@@ -34,6 +34,7 @@ import { qualityManagementService } from "../../../services/qualityManagementSer
 import { API_BASE_URL } from "../../../services/api";
 import userService, { UserLookupDto } from "../../../services/userService";
 import { IndicatorName } from "../../../components/common";
+import { parseResultToNumber } from "../../../utils/formatters";
 
 const { Text } = Typography;
 
@@ -335,6 +336,38 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
     onCancel();
   };
 
+  // Calculate pass/fail status based on result and limits
+  const calculatePassFail = (
+    result: string | undefined,
+    comparisonOperator: string | undefined,
+    allowedLimit: string | undefined
+  ): "pass" | "fail" | null => {
+    if (!result || !comparisonOperator || !allowedLimit) return null;
+
+    const resultValue = parseResultToNumber(result);
+    if (resultValue === null) return null;
+
+    const limitValue = parseResultToNumber(allowedLimit);
+    if (limitValue === null) return null;
+
+    switch (comparisonOperator) {
+      case "<=":
+      case "≤":
+        return resultValue <= limitValue ? "pass" : "fail";
+      case ">=":
+      case "≥":
+        return resultValue >= limitValue ? "pass" : "fail";
+      case "<":
+        return resultValue < limitValue ? "pass" : "fail";
+      case ">":
+        return resultValue > limitValue ? "pass" : "fail";
+      case "=":
+        return resultValue === limitValue ? "pass" : "fail";
+      default:
+        return null;
+    }
+  };
+
   const columns: ColumnsType<QualityManagementIndicatorDto> = [
     {
       title: "Tên chỉ tiêu",
@@ -361,17 +394,67 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
       ),
     },
     {
-      title: "Kết quả",
-      dataIndex: "result",
-      key: "result",
-      width: 80,
-      render: (text: string) => <Text strong>{text || "-"}</Text>,
-    },
-    {
       title: "ĐVT",
       dataIndex: "unit",
       key: "unit",
-      width: 60,
+      width: 70,
+    },
+    {
+      title: "Kết quả",
+      dataIndex: "result",
+      key: "result",
+      width: 100,
+      render: (text: string) => <Text strong>{text || "-"}</Text>,
+    },
+    {
+      title: "Giới hạn",
+      key: "limit",
+      width: 100,
+      render: (_: any, record: QualityManagementIndicatorDto) => {
+        if (record.comparisonOperator && record.allowedLimit) {
+          return (
+            <Text>
+              {record.comparisonOperator} {record.allowedLimit}
+            </Text>
+          );
+        }
+        return "-";
+      },
+    },
+    {
+      title: "Tiêu chuẩn",
+      dataIndex: "standardName",
+      key: "standardName",
+      width: 120,
+      ellipsis: true,
+      render: (text: string) => text || "-",
+    },
+    {
+      title: "Kết luận",
+      key: "conclusion",
+      width: 100,
+      render: (_: any, record: QualityManagementIndicatorDto) => {
+        const passFailStatus = calculatePassFail(
+          record.result,
+          record.comparisonOperator,
+          record.allowedLimit
+        );
+
+        if (passFailStatus === "pass") {
+          return (
+            <Text strong style={{ color: "#52c41a" }}>
+              Đạt
+            </Text>
+          );
+        } else if (passFailStatus === "fail") {
+          return (
+            <Text strong style={{ color: "#ff4d4f" }}>
+              Không đạt
+            </Text>
+          );
+        }
+        return "-";
+      },
     },
   ];
 
