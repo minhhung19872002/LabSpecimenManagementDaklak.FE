@@ -52,6 +52,8 @@ export interface SampleFormData {
   indicatorMethods: IndicatorMethodKey[]; // NEW: array of "indicatorId_testMethodId"
   // Attachments (images)
   attachments: AttachmentInfo[];
+  // Shared sample - Mẫu chung (có chỉ tiêu ở cả Lab Vi Sinh và Lab Hóa)
+  isSharedSample?: boolean;
 }
 
 export interface IndicatorDateInfo {

@@ -10,6 +10,7 @@ import {
   Tooltip,
   Popover,
   AutoComplete,
+  Checkbox,
 } from "antd";
 import {
   PlusOutlined,
@@ -47,6 +48,7 @@ const DEFAULT_COLUMN_WIDTHS: Record<string, number> = {
   statusText: 140,
   indicatorMethods: 200,
   notes: 150,
+  isSharedSample: 90,
   actions: 100,
 };
 
@@ -297,6 +299,31 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
           }
           disabled={isSamplesLocked()}
         />
+      ),
+    },
+    {
+      title: (
+        <Tooltip title="Mẫu có chỉ tiêu ở cả Lab Vi Sinh và Lab Hóa">
+          <span style={{ whiteSpace: "nowrap" }}>Mẫu chung</span>
+        </Tooltip>
+      ),
+      dataIndex: "isSharedSample",
+      key: "isSharedSample",
+      width: getColumnWidth("isSharedSample"),
+      onHeaderCell: (column: any) => ({
+        width: column.width,
+        columnKey: "isSharedSample",
+      }),
+      render: (value: boolean, record: SampleFormData) => (
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <Checkbox
+            checked={value || false}
+            onChange={(e) =>
+              updateSample(record.key, "isSharedSample", e.target.checked)
+            }
+            disabled={isSamplesLocked()}
+          />
+        </div>
       ),
     },
     {

@@ -308,6 +308,7 @@ export const useTestRequestFormActions = ({
       indicatorIds: [],
       indicatorMethods: [],
       attachments: [],
+      isSharedSample: false,
     };
     setSamples([...samples, newSample]);
   };
@@ -766,6 +767,7 @@ export const useTestRequestFormActions = ({
           storageLocation: sample.storageLocation || undefined,
           specimenTypeId: sample.specimenTypeId || undefined,
           specimenTypeName: sample.specimenTypeName?.trim() || undefined, // Backend will resolve to ID
+          isSharedSample: sample.isSharedSample || false, // Mẫu chung (Vi Sinh + Hóa)
           indicators: indicatorsList,
           // Attachments: send full info (fileId, fileName, fileSize)
           attachments: sample.attachments?.map((a) => ({
