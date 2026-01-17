@@ -3,7 +3,6 @@ import { message } from "antd";
 import dayjs from "dayjs";
 import { testRequestService, PreviewTestRequestFormInput } from "../../../../services/testRequestService";
 import { specimenTypeService } from "../../../../services/masterDataService";
-import { API_BASE_URL } from "../../../../services/api";
 import {
   ResultLanguage,
   SamplingRequirement,
@@ -994,9 +993,9 @@ export const useTestRequestFormActions = ({
 
       const result = await testRequestService.previewTestRequestForm(previewInput);
 
-      // Open PDF in new tab (same as In phiếu XN pattern)
-      const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(result.fileName)}`;
-      window.open(pdfUrl, "_blank");
+      // Open Word Editor (BE now returns .docx directly)
+      const editorUrl = `/document-editor?file=${encodeURIComponent(result.fileName)}`;
+      window.open(editorUrl, "_blank");
 
       message.success("Đã tạo phiếu xem trước");
     } catch (error: any) {

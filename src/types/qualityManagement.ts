@@ -141,6 +141,8 @@ export interface QualityManagementIndicatorDto {
   approvedById?: string;
   approvedByName?: string;
   images?: IndicatorImageDto[];  // Hình ảnh chỉ tiêu (max 5)
+  freeTextNote?: string;  // Ghi chú tự do từ QLKT
+  masterDataNotes?: string[];  // Danh sách nội dung Master Data Notes
 }
 
 // Quality Indicator Status History DTO

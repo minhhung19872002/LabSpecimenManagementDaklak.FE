@@ -112,13 +112,12 @@ const MixedResultModal: React.FC<MixedResultModalProps> = ({
 
       handleClose();
 
-      const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(
-        result.fileName
-      )}`;
+      // Open Word Editor (BE now returns .docx directly)
+      const editorUrl = `/document-editor?file=${encodeURIComponent(result.fileName)}`;
       if (newTab) {
-        newTab.location.href = pdfUrl;
+        newTab.location.href = editorUrl;
       } else {
-        window.open(pdfUrl, "_blank");
+        window.open(editorUrl, "_blank");
       }
 
       onSuccess();
