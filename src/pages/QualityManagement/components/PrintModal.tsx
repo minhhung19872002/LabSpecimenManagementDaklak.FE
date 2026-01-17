@@ -32,7 +32,6 @@ import { API_BASE_URL } from "../../../services/api";
 import userService, { UserLookupDto } from "../../../services/userService";
 import { IndicatorName } from "../../../components/common";
 import { parseResultToNumber } from "../../../utils/formatters";
-import { OnlyOfficeEditor } from "../../../components/OnlyOfficeEditor";
 
 const { Text } = Typography;
 
@@ -91,8 +90,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
     []
   );
   const [showResults, setShowResults] = useState(false);
-  const [editorFileName, setEditorFileName] = useState<string | null>(null);
-  const [showEditor, setShowEditor] = useState(false);
+  const [viewedFiles, setViewedFiles] = useState<Set<string>>(new Set());
   const [vicePresidents, setVicePresidents] = useState<UserLookupDto[]>([]);
   const [selectedVicePresidentId, setSelectedVicePresidentId] = useState<
     string | undefined
@@ -167,8 +165,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
       setNote("");
       setGeneratedResults([]);
       setShowResults(false);
-      setEditorFileName(null);
-      setShowEditor(false);
+      setViewedFiles(new Set());
       setSelectedVicePresidentId(undefined);
     }
   }, [visible]);
@@ -314,8 +311,6 @@ const PrintModal: React.FC<PrintModalProps> = ({
     setGeneratedResults([]);
     setSelectedIndicatorIds([]);
     setNote("");
-    setEditorFileName(null);
-    setShowEditor(false);
     onCancel();
     onSuccess?.();
   };
@@ -326,24 +321,18 @@ const PrintModal: React.FC<PrintModalProps> = ({
     setNote("");
     setGeneratedResults([]);
     setShowResults(false);
-    setEditorFileName(null);
-    setShowEditor(false);
     setSelectedVicePresidentId(undefined);
     onCancel();
   };
 
-  // Open Word editor for a file
+  // Open Word editor in new tab
   const handleOpenEditor = (fileName: string) => {
     // Get the .docx file name (replace .pdf extension if any)
     const docxFileName = fileName.replace(/\.pdf$/i, ".docx");
-    setEditorFileName(docxFileName);
-    setShowEditor(true);
-  };
-
-  // Close editor and go back to results
-  const handleCloseEditor = () => {
-    setEditorFileName(null);
-    setShowEditor(false);
+    // Open in new tab with full screen editor
+    window.open(`/document-editor?file=${encodeURIComponent(docxFileName)}`, "_blank");
+    // Mark file as viewed
+    setViewedFiles((prev) => new Set(prev).add(fileName));
   };
 
   // Calculate pass/fail status based on result and limits
@@ -471,41 +460,6 @@ const PrintModal: React.FC<PrintModalProps> = ({
     },
   ];
 
-  // Render Word Editor view
-  if (showEditor && editorFileName) {
-    return (
-      <Modal
-        title={
-          <span>
-            <FileWordOutlined style={{ marginRight: 8, color: "#2b579a" }} />
-            Chỉnh sửa: {editorFileName}
-          </span>
-        }
-        open={visible}
-        onCancel={handleCloseEditor}
-        width="95vw"
-        centered
-        styles={{
-          body: { height: "calc(100vh - 150px)", padding: 0, overflow: "hidden" },
-        }}
-        footer={
-          <Space>
-            <Button onClick={handleCloseEditor}>Quay lại danh sách</Button>
-            <Button onClick={handleCloseResults}>Đóng</Button>
-          </Space>
-        }
-      >
-        <OnlyOfficeEditor
-          fileName={editorFileName}
-          height="100%"
-          onError={(error) => {
-            message.error(`Lỗi Editor: ${error}`);
-          }}
-        />
-      </Modal>
-    );
-  }
-
   // Render results view when documents are generated
   if (showResults) {
     return (
@@ -530,31 +484,35 @@ const PrintModal: React.FC<PrintModalProps> = ({
         <div style={{ maxHeight: "calc(100vh - 350px)", overflowY: "auto" }}>
           <List
             dataSource={generatedResults}
-            renderItem={(item, index) => (
-              <List.Item
-                actions={[
-                  <Button
-                    type="primary"
-                    icon={<FileWordOutlined />}
-                    onClick={() => handleOpenEditor(item.fileName)}
-                  >
-                    Xem
-                  </Button>,
-                ]}
-              >
-                <List.Item.Meta
-                  avatar={
-                    <FileWordOutlined
-                      style={{ fontSize: 24, color: "#2b579a" }}
-                    />
-                  }
-                  title={`File ${index + 1}: ${item.laboratoryName || "Document"}${
-                    item.sampleCode ? ` - ${item.sampleCode}` : ""
-                  }`}
-                  description={`Template: ${item.templateName || "BM01"}`}
-                />
-              </List.Item>
-            )}
+            renderItem={(item, index) => {
+              const isViewed = viewedFiles.has(item.fileName);
+              return (
+                <List.Item
+                  actions={[
+                    <Button
+                      type={isViewed ? "default" : "primary"}
+                      icon={<FileWordOutlined />}
+                      onClick={() => handleOpenEditor(item.fileName)}
+                      style={isViewed ? { color: "#52c41a", borderColor: "#52c41a" } : undefined}
+                    >
+                      {isViewed ? "Đã xem" : "Xem"}
+                    </Button>,
+                  ]}
+                >
+                  <List.Item.Meta
+                    avatar={
+                      <FileWordOutlined
+                        style={{ fontSize: 24, color: isViewed ? "#52c41a" : "#2b579a" }}
+                      />
+                    }
+                    title={`File ${index + 1}: ${item.laboratoryName || "Document"}${
+                      item.sampleCode ? ` - ${item.sampleCode}` : ""
+                    }`}
+                    description={`Template: ${item.templateName || "BM01"}`}
+                  />
+                </List.Item>
+              );
+            }}
           />
         </div>
       </Modal>

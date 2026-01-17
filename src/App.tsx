@@ -163,6 +163,9 @@ const NotFound = Loadable(lazy(() => import("./pages/NotFound/NotFound")));
 // 403 Forbidden
 const Forbidden = Loadable(lazy(() => import("./pages/Forbidden/Forbidden")));
 
+// Document Editor (OnlyOffice)
+const DocumentEditor = Loadable(lazy(() => import("./pages/DocumentEditor")));
+
 function App() {
   // Initialize grab-to-scroll for all tables
   useEffect(() => {
@@ -175,6 +178,7 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/403" element={<Forbidden />} />
+        <Route path="/document-editor" element={<DocumentEditor />} />
         <Route
           path="/"
           element={
