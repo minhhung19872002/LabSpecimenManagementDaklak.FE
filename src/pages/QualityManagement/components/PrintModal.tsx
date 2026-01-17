@@ -17,8 +17,7 @@ import {
 } from "antd";
 import {
   PrinterOutlined,
-  FilePdfOutlined,
-  FolderOpenOutlined,
+  FileWordOutlined,
 } from "../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -33,6 +32,7 @@ import { API_BASE_URL } from "../../../services/api";
 import userService, { UserLookupDto } from "../../../services/userService";
 import { IndicatorName } from "../../../components/common";
 import { parseResultToNumber } from "../../../utils/formatters";
+import { OnlyOfficeEditor } from "../../../components/OnlyOfficeEditor";
 
 const { Text } = Typography;
 
@@ -91,6 +91,8 @@ const PrintModal: React.FC<PrintModalProps> = ({
     []
   );
   const [showResults, setShowResults] = useState(false);
+  const [editorFileName, setEditorFileName] = useState<string | null>(null);
+  const [showEditor, setShowEditor] = useState(false);
   const [vicePresidents, setVicePresidents] = useState<UserLookupDto[]>([]);
   const [selectedVicePresidentId, setSelectedVicePresidentId] = useState<
     string | undefined
@@ -165,6 +167,8 @@ const PrintModal: React.FC<PrintModalProps> = ({
       setNote("");
       setGeneratedResults([]);
       setShowResults(false);
+      setEditorFileName(null);
+      setShowEditor(false);
       setSelectedVicePresidentId(undefined);
     }
   }, [visible]);
@@ -310,6 +314,8 @@ const PrintModal: React.FC<PrintModalProps> = ({
     setGeneratedResults([]);
     setSelectedIndicatorIds([]);
     setNote("");
+    setEditorFileName(null);
+    setShowEditor(false);
     onCancel();
     onSuccess?.();
   };
@@ -320,8 +326,24 @@ const PrintModal: React.FC<PrintModalProps> = ({
     setNote("");
     setGeneratedResults([]);
     setShowResults(false);
+    setEditorFileName(null);
+    setShowEditor(false);
     setSelectedVicePresidentId(undefined);
     onCancel();
+  };
+
+  // Open Word editor for a file
+  const handleOpenEditor = (fileName: string) => {
+    // Get the .docx file name (replace .pdf extension if any)
+    const docxFileName = fileName.replace(/\.pdf$/i, ".docx");
+    setEditorFileName(docxFileName);
+    setShowEditor(true);
+  };
+
+  // Close editor and go back to results
+  const handleCloseEditor = () => {
+    setEditorFileName(null);
+    setShowEditor(false);
   };
 
   // Calculate pass/fail status based on result and limits
@@ -449,39 +471,60 @@ const PrintModal: React.FC<PrintModalProps> = ({
     },
   ];
 
-  // Render results view when PDFs are generated
+  // Render Word Editor view
+  if (showEditor && editorFileName) {
+    return (
+      <Modal
+        title={
+          <span>
+            <FileWordOutlined style={{ marginRight: 8, color: "#2b579a" }} />
+            Chỉnh sửa: {editorFileName}
+          </span>
+        }
+        open={visible}
+        onCancel={handleCloseEditor}
+        width="95vw"
+        centered
+        styles={{
+          body: { height: "calc(100vh - 150px)", padding: 0, overflow: "hidden" },
+        }}
+        footer={
+          <Space>
+            <Button onClick={handleCloseEditor}>Quay lại danh sách</Button>
+            <Button onClick={handleCloseResults}>Đóng</Button>
+          </Space>
+        }
+      >
+        <OnlyOfficeEditor
+          fileName={editorFileName}
+          height="100%"
+          onError={(error) => {
+            message.error(`Lỗi Editor: ${error}`);
+          }}
+        />
+      </Modal>
+    );
+  }
+
+  // Render results view when documents are generated
   if (showResults) {
     return (
       <Modal
         title={
           <span>
-            <FilePdfOutlined style={{ marginRight: 8 }} />
+            <FileWordOutlined style={{ marginRight: 8, color: "#2b579a" }} />
             Kết quả đã tạo ({generatedResults.length} file)
           </span>
         }
         open={visible}
         onCancel={handleCloseResults}
-        width={600}
+        width={700}
         centered
-        footer={
-          <Space>
-            <Button onClick={handleCloseResults}>Đóng</Button>
-            {generatedResults.length > 0 && (
-              <Button
-                type="primary"
-                icon={<FolderOpenOutlined />}
-                onClick={handleOpenAllTabs}
-              >
-                Mở toàn bộ ({generatedResults.length} file)
-              </Button>
-            )}
-          </Space>
-        }
+        footer={null}
       >
         <div style={{ marginBottom: 16 }}>
           <Text type="secondary">
-            Click "Mở toàn bộ" để mở tất cả file PDF, hoặc click từng file bên
-            dưới.
+            Click "Xem" để mở tài liệu trong trình soạn thảo Word.
           </Text>
         </div>
         <div style={{ maxHeight: "calc(100vh - 350px)", overflowY: "auto" }}>
@@ -491,26 +534,21 @@ const PrintModal: React.FC<PrintModalProps> = ({
               <List.Item
                 actions={[
                   <Button
-                    type="link"
-                    icon={<FilePdfOutlined />}
-                    onClick={() => {
-                      const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(
-                        item.fileName
-                      )}`;
-                      window.open(pdfUrl, "_blank");
-                    }}
+                    type="primary"
+                    icon={<FileWordOutlined />}
+                    onClick={() => handleOpenEditor(item.fileName)}
                   >
-                    Xem PDF
+                    Xem
                   </Button>,
                 ]}
               >
                 <List.Item.Meta
                   avatar={
-                    <FilePdfOutlined
-                      style={{ fontSize: 24, color: "#f5222d" }}
+                    <FileWordOutlined
+                      style={{ fontSize: 24, color: "#2b579a" }}
                     />
                   }
-                  title={`File ${index + 1}: ${item.laboratoryName || "PDF"}${
+                  title={`File ${index + 1}: ${item.laboratoryName || "Document"}${
                     item.sampleCode ? ` - ${item.sampleCode}` : ""
                   }`}
                   description={`Template: ${item.templateName || "BM01"}`}
