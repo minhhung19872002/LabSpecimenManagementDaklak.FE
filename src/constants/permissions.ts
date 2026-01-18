@@ -59,7 +59,7 @@ export const ROUTE_PERMISSIONS: Record<string, string[]> = {
   // ============================================
   // Quản lý chất lượng - Admin, QLCL
   // ============================================
-  [PATH_ROUTES.qualityManagement]: [
+  [PATH_ROUTES.qualityManagement.index]: [
     ROLES.ADMIN,
     ROLES.QUALITY_MANAGER,
   ],

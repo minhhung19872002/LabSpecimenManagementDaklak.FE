@@ -118,7 +118,7 @@ const QualityManagementDetail: React.FC = () => {
 
   // Handlers
   const handleBack = () => {
-    navigate(PATH_ROUTES.qualityManagement);
+    navigate(PATH_ROUTES.qualityManagement.index);
   };
 
   const handleApproveIndicator = async (indicatorId: string) => {
