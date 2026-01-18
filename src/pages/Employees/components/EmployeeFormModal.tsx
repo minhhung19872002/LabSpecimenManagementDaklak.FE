@@ -11,6 +11,7 @@ import {
   Radio,
   Steps,
   Button,
+  DatePicker,
 } from "antd";
 import { Controller, UseFormReturn } from "react-hook-form";
 import {
@@ -19,7 +20,9 @@ import {
   PhoneOutlined,
   KeyOutlined,
   LockOutlined,
+  ClockCircleOutlined,
 } from "../../../components/common/Icon";
+import dayjs from "dayjs";
 import { EmployeeFormData } from "../schemas";
 import { Department, ROLE_OPTIONS, POSITION_OPTIONS } from "../hooks";
 
@@ -54,6 +57,7 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
 
   const [currentStep, setCurrentStep] = useState(0);
   const passwordMode = watch("passwordMode");
+  const isTemporaryAccount = watch("isTemporaryAccount");
 
   // Reset step when modal opens/closes
   useEffect(() => {
@@ -319,6 +323,76 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                 </Form.Item>
               </Col>
             </Row>
+
+            {/* Temporary Account Settings */}
+            <div
+              style={{
+                background: "#fafafa",
+                padding: 16,
+                borderRadius: 8,
+                marginTop: 8,
+              }}
+            >
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    label={
+                      <span>
+                        <ClockCircleOutlined style={{ marginRight: 8 }} />
+                        Tài khoản tạm thời
+                      </span>
+                    }
+                    style={{ marginBottom: isTemporaryAccount ? 16 : 0 }}
+                  >
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 8 }}>
+                      <Controller
+                        name="isTemporaryAccount"
+                        control={control}
+                        render={({ field }) => (
+                          <Switch
+                            checked={field.value}
+                            onChange={field.onChange}
+                            checkedChildren="Có"
+                            unCheckedChildren="Không"
+                          />
+                        )}
+                      />
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        Tài khoản sẽ tự động vô hiệu hóa khi hết hạn
+                      </Text>
+                    </div>
+                  </Form.Item>
+                </Col>
+                {isTemporaryAccount && (
+                  <Col span={12}>
+                    <Form.Item
+                      label="Ngày hết hạn"
+                      required
+                      validateStatus={errors.accountExpirationDate ? "error" : ""}
+                      help={errors.accountExpirationDate?.message}
+                      style={{ marginBottom: 0 }}
+                    >
+                      <Controller
+                        name="accountExpirationDate"
+                        control={control}
+                        render={({ field }) => (
+                          <DatePicker
+                            {...field}
+                            value={field.value ? dayjs(field.value) : null}
+                            onChange={(date) =>
+                              field.onChange(date ? date.endOf("day").toDate() : null)
+                            }
+                            format="DD/MM/YYYY"
+                            placeholder="Chọn ngày hết hạn"
+                            style={{ width: "100%" }}
+                          />
+                        )}
+                      />
+                    </Form.Item>
+                  </Col>
+                )}
+              </Row>
+            </div>
           </>
         )}
 

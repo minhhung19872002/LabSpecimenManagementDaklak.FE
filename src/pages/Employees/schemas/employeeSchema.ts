@@ -24,6 +24,15 @@ export const employeeSchema = yup.object({
   position: yup.string().optional().nullable().default(""),
   role: yup.string().required("Vui lòng chọn vai trò"),
   isActive: yup.boolean().default(true),
+  // Temporary account settings
+  isTemporaryAccount: yup.boolean().default(false),
+  accountExpirationDate: yup
+    .date()
+    .nullable()
+    .when("isTemporaryAccount", {
+      is: true,
+      then: (schema) => schema.required("Vui lòng chọn ngày hết hạn"),
+    }),
   // Password mode: 'auto' = auto-generate and send email, 'manual' = enter password manually
   passwordMode: yup
     .string()
@@ -74,6 +83,8 @@ export interface EmployeeFormData {
   position: string | null;
   role: string;
   isActive: boolean;
+  isTemporaryAccount: boolean;
+  accountExpirationDate?: Date | null;
   passwordMode: "auto" | "manual";
   password?: string;
   confirmPassword?: string;
