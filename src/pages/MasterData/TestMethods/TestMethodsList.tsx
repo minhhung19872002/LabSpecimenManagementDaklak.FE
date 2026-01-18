@@ -1,13 +1,27 @@
-import React, { useMemo, useEffect, useRef } from "react";
-import { Button, Space, Row, Col, Form } from "antd";
-import { PlusOutlined } from "../../../components/common/Icon";
+import React, { useMemo, useEffect, useRef, useState } from "react";
+import { Button, Space, Row, Col, Form, message } from "antd";
+import {
+  PlusOutlined,
+  DownloadOutlined,
+  UploadOutlined,
+} from "../../../components/common/Icon";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
+import type { UploadFile } from "antd/es/upload/interface";
 import { useTestMethodsData, useTestMethodsActions } from "./hooks";
-import { TestMethodsTable, TestMethodModal, AddIndicatorsModal } from "./components";
+import {
+  TestMethodsTable,
+  TestMethodModal,
+  AddIndicatorsModal,
+  ImportTestMethodModal,
+} from "./components";
 import { getTestMethodColumns, getIndicatorColumns } from "./constants";
-import { TestMethodsTabProps } from "./types";
-import { testMethodSchema, TestMethodFormData } from "./schemas/testMethodSchema";
+import { TestMethodsTabProps, TestMethodImportPreviewDto } from "./types";
+import {
+  testMethodSchema,
+  TestMethodFormData,
+} from "./schemas/testMethodSchema";
+import { API_BASE_URL, api } from "../../../services/api";
 
 const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshKey }) => {
   const {
@@ -74,6 +88,92 @@ const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshK
   });
   const [addIndicatorsForm] = Form.useForm();
 
+  // Import state
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
+  const [previewData, setPreviewData] =
+    useState<TestMethodImportPreviewDto | null>(null);
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
+
+  // Import handlers
+  const handleDownloadTemplate = () => {
+    window.open(
+      `${API_BASE_URL}/api/v1/import/test-methods-with-indicators/template`,
+      "_blank"
+    );
+  };
+
+  const handlePreviewImport = async () => {
+    if (!fileList.length || !fileList[0].originFileObj) return;
+
+    setImportLoading(true);
+    const formData = new FormData();
+    formData.append("file", fileList[0].originFileObj as Blob);
+
+    try {
+      const response = await api.upload<TestMethodImportPreviewDto>(
+        "/api/v1/import/test-methods-with-indicators/preview",
+        formData
+      );
+      setPreviewData(response.data);
+    } catch (error: any) {
+      message.error(
+        error?.response?.data?.message ||
+          error?.response?.data?.error?.message ||
+          "Lỗi khi đọc file"
+      );
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!fileList.length || !fileList[0].originFileObj) return;
+
+    setImportLoading(true);
+    const formData = new FormData();
+    formData.append("file", fileList[0].originFileObj as Blob);
+
+    try {
+      const response = await api.upload<{
+        success: boolean;
+        message?: string;
+      }>("/api/v1/import/test-methods-with-indicators", formData);
+
+      const result = response.data;
+
+      if (result.success) {
+        message.success(result.message);
+        setImportModalOpen(false);
+        setPreviewData(null);
+        setFileList([]);
+        fetchData();
+        onDataChange?.();
+      } else {
+        message.error(result.message || "Lỗi khi import");
+      }
+    } catch (error: any) {
+      message.error(
+        error?.response?.data?.message ||
+          error?.response?.data?.error?.message ||
+          "Lỗi khi import"
+      );
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleImportCancel = () => {
+    setImportModalOpen(false);
+    setPreviewData(null);
+    setFileList([]);
+  };
+
+  const handleImportReset = () => {
+    setPreviewData(null);
+    setFileList([]);
+  };
+
   // Get existing indicator IDs for the selected test method
   const existingIndicatorIds = useMemo(() => {
     if (!selectedTestMethodId) return [];
@@ -105,6 +205,15 @@ const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshK
         <Col flex="auto" />
         <Col>
           <Space>
+            <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
+              Download template
+            </Button>
+            <Button
+              icon={<UploadOutlined />}
+              onClick={() => setImportModalOpen(true)}
+            >
+              Import
+            </Button>
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -157,6 +266,19 @@ const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshK
         existingIndicatorIds={existingIndicatorIds}
         onOk={() => handleAddIndicatorsOk(addIndicatorsForm)}
         onCancel={() => handleAddIndicatorsCancel(addIndicatorsForm)}
+      />
+
+      {/* Import TestMethod Modal */}
+      <ImportTestMethodModal
+        open={importModalOpen}
+        loading={importLoading}
+        fileList={fileList}
+        previewData={previewData}
+        onFileListChange={setFileList}
+        onPreview={handlePreviewImport}
+        onConfirm={handleConfirmImport}
+        onCancel={handleImportCancel}
+        onReset={handleImportReset}
       />
     </>
   );
