@@ -24,6 +24,9 @@ export interface CreateEmployeeDto {
   departmentId: string;
   position?: string;
   isActive?: boolean;
+  useManualPassword?: boolean;
+  password?: string;
+  confirmPassword?: string;
 }
 
 export interface UpdateEmployeeDto {

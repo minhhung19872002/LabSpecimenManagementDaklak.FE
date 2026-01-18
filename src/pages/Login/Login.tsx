@@ -54,7 +54,7 @@ const Login: React.FC = () => {
     if (rememberedUsername) {
       form.setFieldsValue({
         username: rememberedUsername,
-        password: "1q2w3E*",
+        password: "",
         rememberMe: true,
       });
     }
@@ -104,7 +104,10 @@ const Login: React.FC = () => {
         message.success("Đăng nhập thành công!");
         // Store user info
         if (response.user) {
-          localStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(response.user));
+          localStorage.setItem(
+            STORAGE_KEYS.USER_INFO,
+            JSON.stringify(response.user),
+          );
         }
 
         // Determine redirect path based on user role
@@ -140,14 +143,14 @@ const Login: React.FC = () => {
           setError(
             errorData?.message ||
               errorData?.errorMessage ||
-              "Thông tin đăng nhập không hợp lệ."
+              "Thông tin đăng nhập không hợp lệ.",
           );
         }
       } else if (err.response?.status === 423) {
         setError("Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.");
       } else if (!err.response) {
         setError(
-          "Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng."
+          "Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.",
         );
       } else {
         setError("Đã xảy ra lỗi. Vui lòng thử lại sau.");
