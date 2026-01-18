@@ -280,7 +280,8 @@ export interface CreateUpdateCustomerDto {
 export interface LaboratoryDto {
   id: string;
   code: string;
-  name: string;
+  name: string;  // Computed from Department.Name
+  departmentId: string;
   technicalManagerId?: string;
   technicalManagerName?: string;
   isActive: boolean;
@@ -290,7 +291,7 @@ export interface LaboratoryDto {
 
 export interface CreateUpdateLaboratoryDto {
   code: string;
-  name: string;
+  departmentId: string;
   technicalManagerId?: string;
   isActive: boolean;
   sortOrder?: number;
