@@ -61,7 +61,7 @@ export const getColumns = (
       width: 120,
     },
     {
-      title: "Tên",
+      title: activeCategory === "laboratories" ? "Phòng ban" : "Tên",
       dataIndex: "name",
       key: "name",
       width: 250,

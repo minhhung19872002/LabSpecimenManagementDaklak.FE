@@ -66,7 +66,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
   isUrgent = false,
   submitting = false,
   resultOptions = [],
-  canPerformActions = true,
+  canPerformActions = false,
   onResultsChange,
   onSelectionChange,
   onShowRejectionHistory,
@@ -152,6 +152,9 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
 
   // Handle checkbox selection
   const handleCheckboxChange = (indicatorId: string, checked: boolean) => {
+    // Không cho select khi readonly mode
+    if (!canPerformActions) return;
+
     if (checked) {
       onSelectionChange([...selectedIndicatorIds, indicatorId]);
     } else {
@@ -163,6 +166,9 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
 
   // Handle select all
   const handleSelectAll = (checked: boolean) => {
+    // Không cho select khi readonly mode
+    if (!canPerformActions) return;
+
     if (checked) {
       // Select all indicators that are not Done or Cancelled
       // Cho phép chọn PendingApproval để TNV có thể gửi lại kết quả
@@ -226,15 +232,15 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
           checked={allSelected}
           indeterminate={someSelected && !allSelected}
           onChange={(e) => handleSelectAll(e.target.checked)}
-          disabled={selectableIndicators.length === 0}
+          disabled={!canPerformActions || selectableIndicators.length === 0}
         />
       ),
       key: "select",
       width: 40,
       fixed: "left" as const,
       render: (_, record) => {
-        // Disable checkbox cho chỉ tiêu đã Done hoặc đang chờ duyệt
-        const isDisabled = !canSelectIndicator(record);
+        // Disable checkbox khi readonly mode hoặc chỉ tiêu đã Done/Cancelled
+        const isDisabled = !canPerformActions || !canSelectIndicator(record);
         return (
           <Checkbox
             checked={selectedIndicatorIds.includes(record.id)}

@@ -36,6 +36,7 @@ import { MasterDataItem } from "./types";
 const MasterDataList: React.FC = () => {
   const {
     activeCategory,
+    data,
     totalCount,
     pagination,
     loading,
@@ -260,6 +261,7 @@ const MasterDataList: React.FC = () => {
         editingItem={editingItem}
         form={form}
         users={users}
+        departments={data.departments || []}
         onOk={() => handleModalOk(form)}
         onCancel={() => {
           setIsModalOpen(false);

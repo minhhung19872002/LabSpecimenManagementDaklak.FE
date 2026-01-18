@@ -28,24 +28,25 @@ const SamplePanelHeader: React.FC<SamplePanelHeaderProps> = ({
   sample,
   selectedIndicatorIds,
   submitting,
-  canPerformActions = true,
+  canPerformActions = false,
   onSubmitResults,
   onBulkTestDateChange,
 }) => {
   // Kiểm tra có chỉ tiêu nào được chọn có thể gửi duyệt không
-  // Có thể gửi khi: trạng thái Todo, Testing hoặc Rejected
+  // Có thể gửi khi: trạng thái Todo, Testing, Rejected hoặc PendingApproval (gửi lại)
   const hasSubmittableIndicators = selectedIndicatorIds.some((indicatorId) => {
     const indicator = sample.indicators.find((i) => i.id === indicatorId);
     return (
       indicator &&
       (indicator.testingStatus === IndicatorTestingStatus.Todo ||
         indicator.testingStatus === IndicatorTestingStatus.Testing ||
-        indicator.testingStatus === IndicatorTestingStatus.Rejected)
+        indicator.testingStatus === IndicatorTestingStatus.Rejected ||
+        indicator.testingStatus === IndicatorTestingStatus.PendingApproval)
     );
   });
 
   // Lọc các chỉ tiêu được select có thể thay đổi ngày thử nghiệm
-  // (trạng thái Todo, Testing hoặc Rejected)
+  // (trạng thái Todo, Testing, Rejected hoặc PendingApproval)
   const editableSelectedIds = selectedIndicatorIds.filter((indicatorId) => {
     const indicator = sample.indicators.find((i) => i.id === indicatorId);
     return (
@@ -53,7 +54,8 @@ const SamplePanelHeader: React.FC<SamplePanelHeaderProps> = ({
       indicator.canEdit &&
       (indicator.testingStatus === IndicatorTestingStatus.Todo ||
         indicator.testingStatus === IndicatorTestingStatus.Testing ||
-        indicator.testingStatus === IndicatorTestingStatus.Rejected)
+        indicator.testingStatus === IndicatorTestingStatus.Rejected ||
+        indicator.testingStatus === IndicatorTestingStatus.PendingApproval)
     );
   });
 

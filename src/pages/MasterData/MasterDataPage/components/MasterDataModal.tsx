@@ -11,6 +11,7 @@ interface MasterDataModalProps {
   editingItem: MasterDataItem | null;
   form: FormInstance;
   users: UserLookupDto[];
+  departments: MasterDataItem[];
   onOk: () => void;
   onCancel: () => void;
 }
@@ -22,6 +23,7 @@ const MasterDataModal: React.FC<MasterDataModalProps> = ({
   editingItem,
   form,
   users,
+  departments,
   onOk,
   onCancel,
 }) => {
@@ -42,7 +44,7 @@ const MasterDataModal: React.FC<MasterDataModalProps> = ({
       confirmLoading={loading}
     >
       <Form form={form} layout="vertical">
-        {activeCategory !== "customers" && (
+        {activeCategory !== "customers" && activeCategory !== "laboratories" && (
           <Row gutter={16}>
             <Col span={8}>
               <Form.Item
@@ -177,6 +179,53 @@ const MasterDataModal: React.FC<MasterDataModalProps> = ({
           )}
         {activeCategory === "laboratories" && (
           <>
+            <Row gutter={16}>
+              <Col span={8}>
+                <Form.Item
+                  name="code"
+                  label="Mã"
+                  rules={[
+                    {
+                      required: true,
+                      message: "Vui lòng nhập mã",
+                    },
+                  ]}
+                >
+                  <Input />
+                </Form.Item>
+              </Col>
+              <Col span={16}>
+                <Form.Item
+                  name="departmentId"
+                  label="Phòng ban"
+                  rules={[
+                    {
+                      required: true,
+                      message: "Vui lòng chọn phòng ban",
+                    },
+                  ]}
+                >
+                  <Select
+                    showSearch
+                    placeholder="Chọn phòng ban"
+                    optionFilterProp="children"
+                    filterOption={(input, option) =>
+                      (option?.children as unknown as string)
+                        ?.toLowerCase()
+                        .includes(input.toLowerCase())
+                    }
+                  >
+                    {departments
+                      .filter((d) => d.isActive)
+                      .map((dept) => (
+                        <Select.Option key={dept.id} value={dept.id}>
+                          {dept.name}
+                        </Select.Option>
+                      ))}
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
             <Form.Item name="technicalManagerId" label="Quản lý kỹ thuật">
               <Select
                 showSearch
