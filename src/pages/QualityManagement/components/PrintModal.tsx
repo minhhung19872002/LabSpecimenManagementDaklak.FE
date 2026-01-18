@@ -641,6 +641,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
               <Collapse
                 defaultActiveKey={labGroups.map((lg) => lg.laboratoryId)}
                 expandIconPosition="end"
+                collapsible="icon"
                 style={{ background: "transparent", border: "none" }}
                 items={labGroups.map((labGroup, labIndex) => {
                   const selectedInLab = labGroup.allIndicatorIds.filter((id) =>
@@ -705,6 +706,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
                             (sg) => sg.sampleId
                           )}
                           expandIconPosition="end"
+                          collapsible="icon"
                           style={{ background: "transparent", border: "none" }}
                           items={labGroup.sampleGroups.map(
                             (sampleGroup, sampleIndex) => {
