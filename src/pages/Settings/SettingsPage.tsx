@@ -473,6 +473,22 @@ const SettingsPage: React.FC = () => {
                     rules={[
                       { required: true, message: "Vui lòng nhập mật khẩu mới" },
                       { min: 6, message: "Mật khẩu phải có ít nhất 6 ký tự" },
+                      {
+                        pattern: /[A-Z]/,
+                        message: "Mật khẩu phải có ít nhất 1 chữ hoa",
+                      },
+                      {
+                        pattern: /[a-z]/,
+                        message: "Mật khẩu phải có ít nhất 1 chữ thường",
+                      },
+                      {
+                        pattern: /[0-9]/,
+                        message: "Mật khẩu phải có ít nhất 1 chữ số",
+                      },
+                      {
+                        pattern: /[!@#$%^&*(),.?":{}|<>]/,
+                        message: "Mật khẩu phải có ít nhất 1 ký tự đặc biệt",
+                      },
                     ]}
                   >
                     <Input.Password placeholder="Mật khẩu mới" />

@@ -62,9 +62,19 @@ export const useEmployeeList = () => {
 
   // React Hook Form
   const form = useForm<EmployeeFormData>({
-    resolver: yupResolver(employeeSchema),
+    resolver: yupResolver(employeeSchema) as any,
     defaultValues: {
+      username: "",
+      fullName: "",
+      email: "",
+      phone: null,
+      departmentId: "",
+      position: null,
+      role: "",
       isActive: true,
+      passwordMode: "auto",
+      password: "",
+      confirmPassword: "",
     },
   });
 
@@ -194,6 +204,9 @@ export const useEmployeeList = () => {
       position: null,
       role: "",
       isActive: true,
+      passwordMode: "auto",
+      password: "",
+      confirmPassword: "",
     });
     setIsModalOpen(true);
   }, [form]);
@@ -281,35 +294,83 @@ export const useEmployeeList = () => {
     async (formData: EmployeeFormData) => {
       setModalLoading(true);
       try {
-        const payload = {
-          username: formData.username,
-          fullName: formData.fullName,
-          email: formData.email,
-          phone: formData.phone || "",
-          role: formData.role,
-          departmentId: formData.departmentId,
-          position: formData.position || "",
-          isActive: formData.isActive ?? true,
-        };
-
         if (editingItem) {
-          await employeeService.update(editingItem.id, payload);
+          // Update employee
+          await employeeService.update(editingItem.id, {
+            fullName: formData.fullName,
+            email: formData.email,
+            phone: formData.phone || "",
+            role: formData.role,
+            departmentId: formData.departmentId,
+            position: formData.position || "",
+            isActive: formData.isActive ?? true,
+          });
           message.success("Đã cập nhật thông tin nhân viên");
           setIsModalOpen(false);
           loadData();
         } else {
-          await employeeService.create(payload);
+          // Create employee
+          const isManualPassword = formData.passwordMode === "manual";
+
+          await employeeService.create({
+            username: formData.username,
+            fullName: formData.fullName,
+            email: formData.email,
+            phone: formData.phone || "",
+            role: formData.role,
+            departmentId: formData.departmentId,
+            position: formData.position || "",
+            isActive: formData.isActive ?? true,
+            useManualPassword: isManualPassword,
+            password: isManualPassword ? formData.password || undefined : undefined,
+            confirmPassword: isManualPassword ? formData.confirmPassword || undefined : undefined,
+          });
           setIsModalOpen(false);
           loadData();
           loadStatistics();
-          setNewEmployeeInfo({ email: formData.email });
-          setIsPasswordModalOpen(true);
+
+          // Only show password sent modal if auto-generated
+          if (!isManualPassword) {
+            setNewEmployeeInfo({ email: formData.email });
+            setIsPasswordModalOpen(true);
+          } else {
+            message.success("Đã tạo nhân viên thành công");
+          }
         }
 
         form.reset();
-      } catch (error) {
+      } catch (error: unknown) {
         console.error("Error saving employee:", error);
-        message.error("Không thể lưu thông tin nhân viên. Vui lòng thử lại.");
+
+        // Parse error message from API response
+        let errorMessage = "Không thể lưu thông tin nhân viên. Vui lòng thử lại.";
+
+        if (error && typeof error === "object" && "response" in error) {
+          const response = (error as { response?: { data?: Record<string, string[]> | { message?: string } } }).response;
+          const errorData = response?.data;
+
+          if (errorData) {
+            // Check if errorData is validation errors object { field: ["message1", "message2"] }
+            if (typeof errorData === "object" && !("message" in errorData)) {
+              const errors = errorData as Record<string, string[]>;
+              const allMessages: string[] = [];
+
+              Object.values(errors).forEach((messages) => {
+                if (Array.isArray(messages)) {
+                  allMessages.push(...messages);
+                }
+              });
+
+              if (allMessages.length > 0) {
+                errorMessage = allMessages.join(". ");
+              }
+            } else if ("message" in errorData && errorData.message) {
+              errorMessage = String(errorData.message);
+            }
+          }
+        }
+
+        message.error(errorMessage);
       } finally {
         setModalLoading(false);
       }
