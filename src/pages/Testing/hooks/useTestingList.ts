@@ -150,9 +150,16 @@ export const useTestingList = () => {
   );
 
   const getRowClassName = useCallback((record: TestingListDto) => {
-    return record.isUrgent && record.testingStatus !== TestingStatus.Completed
-      ? "urgent-row"
-      : "";
+    // Highlight đỏ cho:
+    // 1. Hợp đồng khẩn cấp (isUrgent) và chưa hoàn thành
+    // 2. Trạng thái "Chưa bắt đầu" hoặc "Đang thử nghiệm"
+    const isUrgentAndNotCompleted =
+      record.isUrgent && record.testingStatus !== TestingStatus.Completed;
+    const isNotStartedOrInProgress =
+      record.testingStatus === TestingStatus.NotStarted ||
+      record.testingStatus === TestingStatus.InProgress;
+
+    return isUrgentAndNotCompleted || isNotStartedOrInProgress ? "urgent-row" : "";
   }, []);
 
   const columns = useMemo(() => getTestingColumns(), []);
