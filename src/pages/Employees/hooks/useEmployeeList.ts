@@ -52,10 +52,11 @@ export const useEmployeeList = () => {
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<EmployeeDto | null>(null);
+  const [resetPasswordEmployee, setResetPasswordEmployee] = useState<EmployeeDto | null>(null);
   const [newEmployeeInfo, setNewEmployeeInfo] = useState<{ email: string } | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
-  const [resetPasswordLoadingId, setResetPasswordLoadingId] = useState<string | null>(null);
 
   // Statistics state
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0 });
@@ -72,6 +73,8 @@ export const useEmployeeList = () => {
       position: null,
       role: "",
       isActive: true,
+      isTemporaryAccount: false,
+      accountExpirationDate: null,
       passwordMode: "auto",
       password: "",
       confirmPassword: "",
@@ -204,6 +207,8 @@ export const useEmployeeList = () => {
       position: null,
       role: "",
       isActive: true,
+      isTemporaryAccount: false,
+      accountExpirationDate: null,
       passwordMode: "auto",
       password: "",
       confirmPassword: "",
@@ -223,6 +228,10 @@ export const useEmployeeList = () => {
         position: record.position || null,
         role: record.role,
         isActive: record.isActive,
+        isTemporaryAccount: record.isTemporaryAccount || false,
+        accountExpirationDate: record.accountExpirationDate
+          ? new Date(record.accountExpirationDate)
+          : null,
       });
       setIsModalOpen(true);
     },
@@ -269,17 +278,24 @@ export const useEmployeeList = () => {
     []
   );
 
-  const handleResetPassword = useCallback(async (record: EmployeeDto) => {
-    setResetPasswordLoadingId(record.id);
-    try {
-      await employeeService.resetPassword(record.id);
-      setNewEmployeeInfo({ email: record.email });
+  const handleResetPassword = useCallback((record: EmployeeDto) => {
+    setResetPasswordEmployee(record);
+    setIsResetPasswordModalOpen(true);
+  }, []);
+
+  const handleResetPasswordModalCancel = useCallback(() => {
+    setIsResetPasswordModalOpen(false);
+    setResetPasswordEmployee(null);
+  }, []);
+
+  const handleResetPasswordSuccess = useCallback((email: string, isManual: boolean) => {
+    setIsResetPasswordModalOpen(false);
+    setResetPasswordEmployee(null);
+    if (isManual) {
+      message.success("Đã đặt lại mật khẩu thành công");
+    } else {
+      setNewEmployeeInfo({ email });
       setIsPasswordModalOpen(true);
-    } catch (error) {
-      console.error("Error resetting password:", error);
-      message.error("Không thể đặt lại mật khẩu. Vui lòng thử lại.");
-    } finally {
-      setResetPasswordLoadingId(null);
     }
   }, []);
 
@@ -304,6 +320,10 @@ export const useEmployeeList = () => {
             departmentId: formData.departmentId,
             position: formData.position || "",
             isActive: formData.isActive ?? true,
+            isTemporaryAccount: formData.isTemporaryAccount,
+            accountExpirationDate: formData.isTemporaryAccount && formData.accountExpirationDate
+              ? formData.accountExpirationDate.toISOString()
+              : null,
           });
           message.success("Đã cập nhật thông tin nhân viên");
           setIsModalOpen(false);
@@ -321,6 +341,10 @@ export const useEmployeeList = () => {
             departmentId: formData.departmentId,
             position: formData.position || "",
             isActive: formData.isActive ?? true,
+            isTemporaryAccount: formData.isTemporaryAccount,
+            accountExpirationDate: formData.isTemporaryAccount && formData.accountExpirationDate
+              ? formData.accountExpirationDate.toISOString()
+              : undefined,
             useManualPassword: isManualPassword,
             password: isManualPassword ? formData.password || undefined : undefined,
             confirmPassword: isManualPassword ? formData.confirmPassword || undefined : undefined,
@@ -391,10 +415,9 @@ export const useEmployeeList = () => {
         onDelete: handleDelete,
         onToggleActive: handleToggleActive,
         onResetPassword: handleResetPassword,
-        resetPasswordLoadingId,
         roles: ROLE_OPTIONS,
       }),
-    [handleEdit, handleDelete, handleToggleActive, handleResetPassword, resetPasswordLoadingId]
+    [handleEdit, handleDelete, handleToggleActive, handleResetPassword]
   );
 
   return {
@@ -417,7 +440,9 @@ export const useEmployeeList = () => {
     // Modal state
     isModalOpen,
     isPasswordModalOpen,
+    isResetPasswordModalOpen,
     editingItem,
+    resetPasswordEmployee,
     newEmployeeInfo,
     modalLoading,
     form,
@@ -438,5 +463,7 @@ export const useEmployeeList = () => {
     handleModalCancel,
     handleModalSubmit,
     handlePasswordModalClose,
+    handleResetPasswordModalCancel,
+    handleResetPasswordSuccess,
   };
 };
