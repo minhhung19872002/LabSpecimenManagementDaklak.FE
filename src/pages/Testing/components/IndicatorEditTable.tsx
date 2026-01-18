@@ -627,11 +627,33 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     return currentDate.diff(assignedDate, "day") > 1;
   };
 
+  // Check if indicator has no result yet (chưa nhập kết quả)
+  const hasNoResult = (record: TestingIndicatorDto): boolean => {
+    // Chỉ check cho các trạng thái chưa gửi phê duyệt
+    if (
+      record.testingStatus === IndicatorTestingStatus.Done ||
+      record.testingStatus === IndicatorTestingStatus.PendingApproval ||
+      record.testingStatus === IndicatorTestingStatus.Cancelled ||
+      record.testingStatus === IndicatorTestingStatus.CannotTest
+    ) {
+      return false;
+    }
+
+    // Kiểm tra cả edited result và original result
+    const editedResult = editedResults.get(record.id)?.result;
+    const currentResult = editedResult ?? record.result;
+    return !currentResult || currentResult.trim() === "";
+  };
+
   // Row class name for urgent/overdue highlighting
   const getRowClassName = (record: TestingIndicatorDto) => {
     // Highlight đỏ khi quá hạn (currentDate > assignedDate + 1 ngày)
     if (isOverdue(record)) {
       return "overdue-indicator-row";
+    }
+    // Highlight đỏ cho chỉ tiêu chưa nhập kết quả (Todo, Testing, Rejected)
+    if (hasNoResult(record)) {
+      return "no-result-indicator-row";
     }
     // Highlight đỏ nhạt hơn cho urgent (gấp)
     if (isUrgent && record.testingStatus !== IndicatorTestingStatus.Done) {
@@ -658,6 +680,21 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
           .overdue-indicator-row:hover > td.ant-table-cell-fix-left,
           .overdue-indicator-row:hover > td.ant-table-cell-fix-right {
             background-color: #ffa39e !important;
+          }
+          /* No result indicator - chưa nhập kết quả (đỏ nhạt) */
+          .no-result-indicator-row > td {
+            background-color: #fff2f0 !important;
+          }
+          .no-result-indicator-row > td.ant-table-cell-fix-left,
+          .no-result-indicator-row > td.ant-table-cell-fix-right {
+            background-color: #fff2f0 !important;
+          }
+          .no-result-indicator-row:hover > td {
+            background-color: #ffebe8 !important;
+          }
+          .no-result-indicator-row:hover > td.ant-table-cell-fix-left,
+          .no-result-indicator-row:hover > td.ant-table-cell-fix-right {
+            background-color: #ffebe8 !important;
           }
           /* Urgent indicator - gấp (đỏ nhạt) */
           .urgent-indicator-row > td {
