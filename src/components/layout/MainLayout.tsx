@@ -345,7 +345,7 @@ const MainLayout: React.FC = () => {
           key: "qualityManagement",
           icon: <Icon name="shield-check" />,
           label: menuLabel("Quản lý chất lượng"),
-          onClick: () => navigate(PATH_ROUTES.qualityManagement),
+          onClick: () => navigate(PATH_ROUTES.qualityManagement.index),
           roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
         },
         {

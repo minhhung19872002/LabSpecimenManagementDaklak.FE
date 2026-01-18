@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Badge, Popover, List, Typography, Button, Empty, Spin } from "antd";
 import { BellOutlined, CheckOutlined } from "../common/Icon";
 import dayjs from "dayjs";
+import { useNavigate } from "react-router-dom";
 import {
   notificationService,
   NotificationDto,
@@ -43,24 +44,33 @@ const parseMessage = (message: string) => {
   });
 };
 
-// Get route based on notification type and reference (reserved for future use)
-const _getNotificationRoute = (notification: NotificationDto): string | null => {
+// Get route based on notification type and reference
+// - QLKT (0-9): referenceType = "LaboratoryTask" -> navigate to /tasks/{taskId}
+// - QLCL (10-14): referenceType = "QualityManagement" -> navigate to /quality-management/{qualityTaskId}
+// - SampleReceiver (20-24): referenceType = "TestRequest" -> navigate to /test-requests/{testRequestId}
+// - KTV (30-35): referenceType = "Testing" -> navigate to /testing/{taskId}
+const getNotificationRoute = (notification: NotificationDto): string | null => {
   const { referenceType, referenceId } = notification;
 
   if (!referenceId) return null;
 
   switch (referenceType) {
     case "TestRequest":
+      // SampleReceiver notifications (20-24)
       return `/test-requests/${referenceId}`;
     case "LaboratoryTask":
-      return `/testing/${referenceId}`;
+      // QLKT notifications (0-9) - navigate to task management detail
+      return `/tasks/${referenceId}`;
     case "QualityManagement":
-      return `/quality-management`;
+      // QLCL notifications (10-14) - navigate to quality management detail
+      return `/quality-management/${referenceId}`;
+    case "Testing":
+      // KTV notifications (30-35) - navigate to testing detail
+      return `/testing/${referenceId}`;
     default:
       return null;
   }
 };
-void _getNotificationRoute; // Suppress unused warning
 
 // Check if notification is deadline-related
 const isDeadlineNotification = (type: NotificationType): boolean => {
@@ -71,6 +81,7 @@ const isDeadlineNotification = (type: NotificationType): boolean => {
 };
 
 const NotificationBell: React.FC = () => {
+  const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<NotificationDto[]>([]);
   const [loading, setLoading] = useState(false);
@@ -143,11 +154,11 @@ const NotificationBell: React.FC = () => {
     }
 
     // Navigate to related page
-    // const route = getNotificationRoute(notification);
-    // if (route) {
-    //   setPopoverVisible(false);
-    //   navigate(route);
-    // }
+    const route = getNotificationRoute(notification);
+    if (route) {
+      setPopoverVisible(false);
+      navigate(route);
+    }
   };
 
   // Mark all as read
