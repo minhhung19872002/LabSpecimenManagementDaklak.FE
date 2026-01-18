@@ -135,31 +135,29 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
       const newIndicators = approvedIndicators.filter(ind => newlySelectedIds.includes(ind.id));
 
       // Collect unique master data notes and free text notes
+      // Use exact match instead of includes() to avoid partial matching issues
       const existingNoteLines = note.split('\n').map(line => line.trim()).filter(Boolean);
       const newNoteLines: string[] = [];
 
       // First, collect all master data notes (deduplicated)
+      // Master data notes will be joined with ", " on a single line
       const allMasterDataNotes = new Set<string>();
       newIndicators.forEach(ind => {
         if (ind.masterDataNotes && ind.masterDataNotes.length > 0) {
           ind.masterDataNotes.forEach(masterNote => {
-            if (masterNote && !existingNoteLines.some(line => line.includes(masterNote))) {
+            if (masterNote) {
               allMasterDataNotes.add(masterNote);
             }
           });
         }
       });
 
-      // Add master data notes first (comma-separated on one line if any)
+      // Add master data notes as single line with ", " separator
       if (allMasterDataNotes.size > 0) {
-        const masterNoteLine = `- ${Array.from(allMasterDataNotes).join(', ')}`;
-        if (!existingNoteLines.includes(masterNoteLine)) {
-          const existingMasterLineIndex = existingNoteLines.findIndex(line =>
-            line.startsWith('- ') && !line.includes('\n')
-          );
-          if (existingMasterLineIndex === -1) {
-            newNoteLines.push(masterNoteLine);
-          }
+        const masterDataLine = `- ${Array.from(allMasterDataNotes).join(', ')}`;
+        // Check if this exact line already exists
+        if (!existingNoteLines.some(line => line === masterDataLine)) {
+          newNoteLines.push(masterDataLine);
         }
       }
 
@@ -168,9 +166,9 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
       newIndicators.forEach(ind => {
         if (ind.freeTextNote && ind.freeTextNote.trim()) {
           const freeText = ind.freeTextNote.trim();
-          // Check if this exact free text already exists (dedupe)
+          // Check exact match: `- ${freeText}` hoặc freeText không tồn tại trong existing lines
           if (!addedFreeTexts.has(freeText) &&
-              !existingNoteLines.some(line => line.includes(freeText))) {
+              !existingNoteLines.some(line => line === `- ${freeText}` || line === freeText)) {
             addedFreeTexts.add(freeText);
             newNoteLines.push(`- ${freeText}`);
           }
@@ -191,7 +189,7 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
 
     // Update ref for next comparison
     prevSelectedIdsRef.current = selectedIndicatorIds;
-  }, [selectedIndicatorIds, approvedIndicators, note]);
+  }, [selectedIndicatorIds, approvedIndicators]);
 
   const loadIndicators = async () => {
     setLoadingIndicators(true);
