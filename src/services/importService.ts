@@ -97,6 +97,44 @@ export interface OrganizationTestRequestImportPreviewDto {
   errorFileName?: string;
 }
 
+// ==================== IndicatorGroup + Indicator Import ====================
+
+export interface IndicatorGroupImportPreviewItem {
+  rowNumber: number;
+  // IndicatorGroup info
+  indicatorGroupName: string;
+  isNewIndicatorGroup: boolean;
+  existingIndicatorGroupId?: string;
+  // Department info
+  departmentName?: string;
+  departmentId?: string;
+  isDepartmentInvalid: boolean;
+  // Indicator info
+  indicatorName: string;
+  formattedIndicatorName?: string;
+  isNewIndicator: boolean;
+  existingIndicatorId?: string;
+  // Validation
+  isValid: boolean;
+  errors: string[];
+}
+
+export interface IndicatorGroupImportPreviewDto {
+  validationResult: ImportValidationResult;
+  items: IndicatorGroupImportPreviewItem[];
+  // Summary
+  totalRows: number;
+  validRows: number;
+  invalidRows: number;
+  newIndicatorGroups: number;
+  updateIndicatorGroups: number;
+  newIndicators: number;
+  updateIndicators: number;
+  // Error file
+  errorFileBase64?: string;
+  errorFileName?: string;
+}
+
 // ==================== Test Requests ====================
 
 export const importService = {
@@ -245,6 +283,36 @@ export const importService = {
    */
   downloadOrganizationTestRequestTemplate: async (): Promise<Blob> => {
     const response = await api.download(`${BASE_URL}/organization-test-requests/template`);
+    return response.data;
+  },
+
+  // ==================== IndicatorGroup + Indicator ====================
+
+  /**
+   * Preview IndicatorGroup + Indicator import (validate without importing)
+   */
+  previewIndicatorGroups: async (file: File): Promise<IndicatorGroupImportPreviewDto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<IndicatorGroupImportPreviewDto>(`${BASE_URL}/indicator-groups/preview`, formData);
+    return response.data;
+  },
+
+  /**
+   * Import IndicatorGroup + Indicator from Excel file
+   */
+  importIndicatorGroups: async (file: File): Promise<ImportResultDto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<ImportResultDto>(`${BASE_URL}/indicator-groups`, formData);
+    return response.data;
+  },
+
+  /**
+   * Download import template for IndicatorGroup + Indicator
+   */
+  downloadIndicatorGroupTemplate: async (): Promise<Blob> => {
+    const response = await api.download(`${BASE_URL}/indicator-groups/template`);
     return response.data;
   },
 };

@@ -2,7 +2,10 @@ import React from "react";
 import { Modal, Space, Alert, Upload } from "antd";
 import { UploadOutlined } from "../../../../components/common/Icon";
 import type { UploadFile } from "antd/es/upload/interface";
-import { ImportIndicatorsResultDto, ImportIndicatorGroupsResultDto } from "../types";
+import {
+  ImportIndicatorsResultDto,
+  ImportIndicatorGroupsResultDto,
+} from "../types";
 
 interface ImportIndicatorModalProps {
   open: boolean;
@@ -37,7 +40,7 @@ export const ImportIndicatorModal: React.FC<ImportIndicatorModalProps> = ({
       styles={{ body: { paddingTop: 16 } }}
     >
       <Space direction="vertical" style={{ width: "100%" }} size="middle">
-        <Alert
+        {/* <Alert
           message="Hướng dẫn"
           description={
             <ul style={{ marginBottom: 0, paddingLeft: 20 }}>
@@ -51,7 +54,7 @@ export const ImportIndicatorModal: React.FC<ImportIndicatorModalProps> = ({
           }
           type="info"
           showIcon
-        />
+        /> */}
 
         <Upload.Dragger
           fileList={fileList}
@@ -128,7 +131,7 @@ export const ImportGroupModal: React.FC<ImportGroupModalProps> = ({
       styles={{ body: { paddingTop: 16 } }}
     >
       <Space direction="vertical" style={{ width: "100%" }} size="middle">
-        <Alert
+        {/* <Alert
           message="Hướng dẫn"
           description={
             <ul style={{ marginBottom: 0, paddingLeft: 20 }}>
@@ -140,7 +143,7 @@ export const ImportGroupModal: React.FC<ImportGroupModalProps> = ({
           }
           type="info"
           showIcon
-        />
+        /> */}
 
         <Upload.Dragger
           fileList={fileList}
