@@ -43,6 +43,7 @@ export interface TestMethodIndicatorImportItem {
 
 export interface TestMethodImportPreviewGroup {
   testMethodName: string;
+  formattedName?: string;
   description?: string;
   unit: string;
   isNew: boolean;
