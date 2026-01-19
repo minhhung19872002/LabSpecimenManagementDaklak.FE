@@ -30,6 +30,73 @@ export interface PreviewResultDto {
   validData: any[];
 }
 
+// ==================== Import Validation ====================
+
+export interface ImportRowError {
+  rowNumber: number;
+  columnName?: string;
+  errorMessage: string;
+  value?: string;
+}
+
+export interface ImportValidationResult {
+  isValid: boolean;
+  totalRows: number;
+  validRows: number;
+  invalidRows: number;
+  errors: ImportRowError[];
+}
+
+// ==================== Organization + TestRequest Import ====================
+
+export interface OrganizationTestRequestPreviewItem {
+  rowNumber: number;
+  // Organization info
+  organizationName: string;
+  isNewOrganization: boolean;
+  existingOrganizationId?: string;
+  contactPerson: string;
+  phone?: string;
+  address: string;
+  province: string;
+  provinceCode?: string;
+  ward: string;
+  wardCode?: string;
+  taxCode: string;
+  // TestRequest info
+  contractNumber?: string;
+  isNewTestRequest: boolean;
+  existingTestRequestId?: string;
+  sampleName?: string;
+  sampleCode?: string;
+  sampleStatus?: string;
+  // Indicators
+  indicatorNames: string[];
+  indicatorIds: string[];
+  invalidIndicators: string[];
+  // Validation
+  isValid: boolean;
+  errors: string[];
+}
+
+export interface OrganizationTestRequestImportPreviewDto {
+  validationResult: ImportValidationResult;
+  items: OrganizationTestRequestPreviewItem[];
+  // Summary
+  totalRows: number;
+  validRows: number;
+  invalidRows: number;
+  newOrganizations: number;
+  updateOrganizations: number;
+  totalTestRequests: number;
+  newTestRequests: number;
+  updateTestRequests: number;
+  totalIndicators: number;
+  // Error file
+  errorFileBase64?: string;
+  errorFileName?: string;
+}
+
 // ==================== Test Requests ====================
 
 export const importService = {
@@ -148,6 +215,36 @@ export const importService = {
    */
   downloadTestMethodsTemplate: async (): Promise<Blob> => {
     const response = await api.download(`${BASE_URL}/test-methods/template`);
+    return response.data;
+  },
+
+  // ==================== Organization + TestRequest (Legacy Data) ====================
+
+  /**
+   * Preview Organization + TestRequest import (validate without importing)
+   */
+  previewOrganizationTestRequests: async (file: File): Promise<OrganizationTestRequestImportPreviewDto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<OrganizationTestRequestImportPreviewDto>(`${BASE_URL}/organization-test-requests/preview`, formData);
+    return response.data;
+  },
+
+  /**
+   * Import Organization + TestRequest from Excel file
+   */
+  importOrganizationTestRequests: async (file: File): Promise<ImportResultDto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<ImportResultDto>(`${BASE_URL}/organization-test-requests`, formData);
+    return response.data;
+  },
+
+  /**
+   * Download import template for Organization + TestRequest
+   */
+  downloadOrganizationTestRequestTemplate: async (): Promise<Blob> => {
+    const response = await api.download(`${BASE_URL}/organization-test-requests/template`);
     return response.data;
   },
 };
