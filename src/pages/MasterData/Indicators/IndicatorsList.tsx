@@ -4,6 +4,8 @@ import {
   PlusOutlined,
   SearchOutlined,
   FolderAddOutlined,
+  DownloadOutlined,
+  UploadOutlined,
 } from "../../../components/common/Icon";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -16,6 +18,7 @@ import {
   BulkCreateModal,
   ImportIndicatorModal,
   ImportGroupModal,
+  ImportIndicatorGroupModal,
 } from "./components";
 import { IndicatorsTabProps } from "./types";
 import {
@@ -86,6 +89,17 @@ const IndicatorsList: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
     // Import
     handleImportExcel,
     handleImportGroupExcel,
+    // Import nhóm chỉ tiêu mới (với preview)
+    importIndicatorGroupModalOpen,
+    setImportIndicatorGroupModalOpen,
+    importIndicatorGroupFileList,
+    setImportIndicatorGroupFileList,
+    importIndicatorGroupPreview,
+    setImportIndicatorGroupPreview,
+    handleDownloadIndicatorGroupTemplate,
+    handlePreviewIndicatorGroupImport,
+    handleConfirmIndicatorGroupImport,
+    handleResetIndicatorGroupImport,
   } = useIndicatorsActions({
     indicators,
     selectedRowKeys,
@@ -140,6 +154,18 @@ const IndicatorsList: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
         </Col>
         <Col xs={24} sm={12} md={16} style={{ textAlign: "right" }}>
           <Space wrap>
+            <Button
+              icon={<DownloadOutlined />}
+              onClick={handleDownloadIndicatorGroupTemplate}
+            >
+              Tải template mẫu
+            </Button>
+            <Button
+              icon={<UploadOutlined />}
+              onClick={() => setImportIndicatorGroupModalOpen(true)}
+            >
+              Nhập danh sách
+            </Button>
             <Button
               icon={<FolderAddOutlined />}
               onClick={() => handleCreateGroup(groupForm)}
@@ -242,6 +268,23 @@ const IndicatorsList: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
           setImportGroupResult(null);
           setGroupFileList([]);
         }}
+      />
+
+      {/* Import Nhóm Chỉ Tiêu Modal (với preview) */}
+      <ImportIndicatorGroupModal
+        open={importIndicatorGroupModalOpen}
+        loading={modalLoading}
+        fileList={importIndicatorGroupFileList}
+        previewData={importIndicatorGroupPreview}
+        onFileListChange={setImportIndicatorGroupFileList}
+        onPreview={handlePreviewIndicatorGroupImport}
+        onConfirm={handleConfirmIndicatorGroupImport}
+        onCancel={() => {
+          setImportIndicatorGroupModalOpen(false);
+          setImportIndicatorGroupPreview(null);
+          setImportIndicatorGroupFileList([]);
+        }}
+        onReset={handleResetIndicatorGroupImport}
       />
     </>
   );

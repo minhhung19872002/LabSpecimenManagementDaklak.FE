@@ -11,6 +11,8 @@ import {
   UpdateIndicatorDto,
   CreateBulkIndicatorsDto,
 } from "../../../../services/masterDataService";
+import { importService } from "../../../../services/importService";
+import type { IndicatorGroupImportPreviewDto } from "../../../../services/importService";
 import {
   IndicatorGroupDto,
   IndicatorDto,
@@ -58,6 +60,12 @@ export const useIndicatorsActions = ({
     useState<ImportIndicatorGroupsResultDto | null>(null);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [groupFileList, setGroupFileList] = useState<UploadFile[]>([]);
+
+  // State cho import nhóm chỉ tiêu mới (với preview)
+  const [importIndicatorGroupModalOpen, setImportIndicatorGroupModalOpen] = useState(false);
+  const [importIndicatorGroupFileList, setImportIndicatorGroupFileList] = useState<UploadFile[]>([]);
+  const [importIndicatorGroupPreview, setImportIndicatorGroupPreview] =
+    useState<IndicatorGroupImportPreviewDto | null>(null);
 
   // Handle Group CRUD
   const handleCreateGroup = (groupForm: UseFormReturn<IndicatorGroupFormData>) => {
@@ -413,6 +421,84 @@ export const useIndicatorsActions = ({
     }
   };
 
+  // Import nhóm chỉ tiêu mới (với preview)
+  const handleDownloadIndicatorGroupTemplate = async () => {
+    try {
+      const blob = await importService.downloadIndicatorGroupTemplate();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Template_NhomChiTieu.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      message.error("Không thể tải template");
+    }
+  };
+
+  const handlePreviewIndicatorGroupImport = async () => {
+    if (importIndicatorGroupFileList.length === 0) {
+      message.error("Vui lòng chọn file Excel");
+      return;
+    }
+
+    const file = importIndicatorGroupFileList[0].originFileObj;
+    if (!file) {
+      message.error("File không hợp lệ");
+      return;
+    }
+
+    try {
+      setModalLoading(true);
+      const result = await importService.previewIndicatorGroups(file);
+      setImportIndicatorGroupPreview(result);
+    } catch (error) {
+      message.error("Không thể đọc file Excel");
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const handleConfirmIndicatorGroupImport = async () => {
+    if (importIndicatorGroupFileList.length === 0) {
+      message.error("Vui lòng chọn file Excel");
+      return;
+    }
+
+    const file = importIndicatorGroupFileList[0].originFileObj;
+    if (!file) {
+      message.error("File không hợp lệ");
+      return;
+    }
+
+    try {
+      setModalLoading(true);
+      const result = await importService.importIndicatorGroups(file);
+
+      if (result.success) {
+        message.success(result.message || `Import thành công ${result.importedRows} dòng!`);
+        setImportIndicatorGroupModalOpen(false);
+        setImportIndicatorGroupFileList([]);
+        setImportIndicatorGroupPreview(null);
+        fetchData();
+        onDataChange?.();
+      } else {
+        message.error(result.message || "Import không thành công");
+      }
+    } catch (error) {
+      message.error("Không thể import dữ liệu");
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const handleResetIndicatorGroupImport = () => {
+    setImportIndicatorGroupFileList([]);
+    setImportIndicatorGroupPreview(null);
+  };
+
   return {
     // Modal states
     groupModalOpen,
@@ -458,5 +544,16 @@ export const useIndicatorsActions = ({
     // Import
     handleImportExcel,
     handleImportGroupExcel,
+    // Import nhóm chỉ tiêu mới (với preview)
+    importIndicatorGroupModalOpen,
+    setImportIndicatorGroupModalOpen,
+    importIndicatorGroupFileList,
+    setImportIndicatorGroupFileList,
+    importIndicatorGroupPreview,
+    setImportIndicatorGroupPreview,
+    handleDownloadIndicatorGroupTemplate,
+    handlePreviewIndicatorGroupImport,
+    handleConfirmIndicatorGroupImport,
+    handleResetIndicatorGroupImport,
   };
 };
