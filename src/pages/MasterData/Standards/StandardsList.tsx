@@ -1,20 +1,34 @@
-import React, { useMemo, useEffect, useRef } from "react";
-import { Button, Space, Row, Col, Form } from "antd";
-import { PlusOutlined } from "../../../components/common/Icon";
+import React, { useMemo, useEffect, useRef, useState } from "react";
+import { Button, Space, Row, Col, Form, message } from "antd";
+import {
+  PlusOutlined,
+  DownloadOutlined,
+  UploadOutlined,
+} from "../../../components/common/Icon";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
+import type { UploadFile } from "antd/es/upload/interface";
 import { useStandardsData, useStandardsActions } from "./hooks";
 import {
   StandardsTable,
   StandardModal,
   AddIndicatorsModal,
   EditIndicatorModal,
+  ImportStandardModal,
 } from "./components";
 import { getStandardColumns, getIndicatorColumns } from "./constants";
-import { StandardsTabProps, StandardIndicatorDto } from "./types";
+import {
+  StandardsTabProps,
+  StandardIndicatorDto,
+  StandardImportPreviewDto,
+} from "./types";
 import { standardSchema, StandardFormData } from "./schemas/standardSchema";
+import { API_BASE_URL, api } from "../../../services/api";
 
-const StandardsList: React.FC<StandardsTabProps> = ({ onDataChange, refreshKey }) => {
+const StandardsList: React.FC<StandardsTabProps> = ({
+  onDataChange,
+  refreshKey,
+}) => {
   const {
     loading,
     searchText,
@@ -92,6 +106,92 @@ const StandardsList: React.FC<StandardsTabProps> = ({ onDataChange, refreshKey }
   const [addIndicatorsForm] = Form.useForm();
   const [editIndicatorForm] = Form.useForm();
 
+  // Import state
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
+  const [previewData, setPreviewData] =
+    useState<StandardImportPreviewDto | null>(null);
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
+
+  // Import handlers
+  const handleDownloadTemplate = () => {
+    window.open(
+      `${API_BASE_URL}/api/v1/import/standards-with-indicators/template`,
+      "_blank"
+    );
+  };
+
+  const handlePreviewImport = async () => {
+    if (!fileList.length || !fileList[0].originFileObj) return;
+
+    setImportLoading(true);
+    const formData = new FormData();
+    formData.append("file", fileList[0].originFileObj as Blob);
+
+    try {
+      const response = await api.upload<StandardImportPreviewDto>(
+        "/api/v1/import/standards-with-indicators/preview",
+        formData
+      );
+      setPreviewData(response.data);
+    } catch (error: any) {
+      message.error(
+        error?.response?.data?.message ||
+          error?.response?.data?.error?.message ||
+          "Lỗi khi đọc file"
+      );
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!fileList.length || !fileList[0].originFileObj) return;
+
+    setImportLoading(true);
+    const formData = new FormData();
+    formData.append("file", fileList[0].originFileObj as Blob);
+
+    try {
+      const response = await api.upload<{
+        success: boolean;
+        message?: string;
+      }>("/api/v1/import/standards-with-indicators", formData);
+
+      const result = response.data;
+
+      if (result.success) {
+        message.success(result.message);
+        setImportModalOpen(false);
+        setPreviewData(null);
+        setFileList([]);
+        fetchData();
+        onDataChange?.();
+      } else {
+        message.error(result.message || "Lỗi khi import");
+      }
+    } catch (error: any) {
+      message.error(
+        error?.response?.data?.message ||
+          error?.response?.data?.error?.message ||
+          "Lỗi khi import"
+      );
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleImportCancel = () => {
+    setImportModalOpen(false);
+    setPreviewData(null);
+    setFileList([]);
+  };
+
+  const handleImportReset = () => {
+    setPreviewData(null);
+    setFileList([]);
+  };
+
   // Memoized columns for standards
   const standardColumns = useMemo(
     () =>
@@ -112,7 +212,12 @@ const StandardsList: React.FC<StandardsTabProps> = ({ onDataChange, refreshKey }
         handleRemoveIndicator,
         handleToggleIndicatorActive
       ),
-    [handleOpenEditIndicator, handleRemoveIndicator, handleToggleIndicatorActive, editIndicatorForm]
+    [
+      handleOpenEditIndicator,
+      handleRemoveIndicator,
+      handleToggleIndicatorActive,
+      editIndicatorForm,
+    ]
   );
 
   return (
@@ -122,6 +227,18 @@ const StandardsList: React.FC<StandardsTabProps> = ({ onDataChange, refreshKey }
         <Col flex="auto" />
         <Col>
           <Space>
+            <Button
+              icon={<DownloadOutlined />}
+              onClick={handleDownloadTemplate}
+            >
+              Tải template mẫu
+            </Button>
+            <Button
+              icon={<UploadOutlined />}
+              onClick={() => setImportModalOpen(true)}
+            >
+              Nhập danh sách
+            </Button>
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -194,6 +311,19 @@ const StandardsList: React.FC<StandardsTabProps> = ({ onDataChange, refreshKey }
         form={editIndicatorForm}
         onOk={() => handleEditIndicatorOk(editIndicatorForm)}
         onCancel={() => handleEditIndicatorCancel(editIndicatorForm)}
+      />
+
+      {/* Import Standard Modal */}
+      <ImportStandardModal
+        open={importModalOpen}
+        loading={importLoading}
+        fileList={fileList}
+        previewData={previewData}
+        onFileListChange={setFileList}
+        onPreview={handlePreviewImport}
+        onConfirm={handleConfirmImport}
+        onCancel={handleImportCancel}
+        onReset={handleImportReset}
       />
     </>
   );

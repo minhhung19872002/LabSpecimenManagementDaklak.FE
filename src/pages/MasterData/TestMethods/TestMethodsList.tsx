@@ -206,13 +206,13 @@ const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshK
         <Col>
           <Space>
             <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
-              Download template
+              Tải template mẫu
             </Button>
             <Button
               icon={<UploadOutlined />}
               onClick={() => setImportModalOpen(true)}
             >
-              Import
+              Nhập danh sách
             </Button>
             <Button
               type="primary"
