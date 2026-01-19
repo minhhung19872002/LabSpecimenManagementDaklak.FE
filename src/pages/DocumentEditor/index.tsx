@@ -3,6 +3,10 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { Spin, Button, message } from "antd";
 import { ArrowLeftOutlined } from "../../components/common/Icon";
 import { OnlyOfficeEditor } from "../../components/OnlyOfficeEditor";
+import { CollaboraEditor } from "../../components/CollaboraEditor";
+import { API_BASE_URL } from "../../services/api";
+
+type EditorProvider = "OnlyOffice" | "Collabora";
 
 const DocumentEditorPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -10,6 +14,29 @@ const DocumentEditorPage: React.FC = () => {
   const fileName = searchParams.get("file");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [provider, setProvider] = useState<EditorProvider | null>(null);
+
+  // Fetch editor provider config
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/config/document-editor`);
+        if (response.ok) {
+          const data = await response.json();
+          const providerValue = data.provider || data.data?.provider || "OnlyOffice";
+          setProvider(providerValue as EditorProvider);
+        } else {
+          // Default to OnlyOffice if config fetch fails
+          setProvider("OnlyOffice");
+        }
+      } catch {
+        // Default to OnlyOffice if config fetch fails
+        setProvider("OnlyOffice");
+      }
+    };
+
+    fetchConfig();
+  }, []);
 
   useEffect(() => {
     if (!fileName) {
@@ -47,7 +74,7 @@ const DocumentEditorPage: React.FC = () => {
     );
   }
 
-  if (!fileName) {
+  if (!fileName || !provider) {
     return (
       <div
         style={{
@@ -82,17 +109,34 @@ const DocumentEditorPage: React.FC = () => {
           <Spin size="large" tip="Đang tải tài liệu..." />
         </div>
       )}
-      <OnlyOfficeEditor
-        fileName={fileName}
-        height="100vh"
-        onReady={() => setLoading(false)}
-        onDocumentReady={() => setLoading(false)}
-        onError={(err) => {
-          setLoading(false);
-          setError(err);
-          message.error(`Lỗi: ${err}`);
-        }}
-      />
+
+      {provider === "OnlyOffice" && (
+        <OnlyOfficeEditor
+          fileName={fileName}
+          height="100vh"
+          onReady={() => setLoading(false)}
+          onDocumentReady={() => setLoading(false)}
+          onError={(err) => {
+            setLoading(false);
+            setError(err);
+            message.error(`Lỗi: ${err}`);
+          }}
+        />
+      )}
+
+      {provider === "Collabora" && (
+        <CollaboraEditor
+          fileName={fileName}
+          height="100vh"
+          onReady={() => setLoading(false)}
+          onDocumentReady={() => setLoading(false)}
+          onError={(err) => {
+            setLoading(false);
+            setError(err);
+            message.error(`Lỗi: ${err}`);
+          }}
+        />
+      )}
     </div>
   );
 };
