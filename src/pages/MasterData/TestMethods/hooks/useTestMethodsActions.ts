@@ -53,7 +53,7 @@ export const useTestMethodsActions = ({
     setEditingItem(record);
     form.reset({
       name: record.name,
-      formattedName: record.formattedName || "",
+      formattedName: record.formattedName || record.name,
       unit: record.unit,
       isActive: record.isActive,
     });
