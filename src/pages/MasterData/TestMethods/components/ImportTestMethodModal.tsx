@@ -95,12 +95,12 @@ const ImportTestMethodModal: React.FC<ImportTestMethodModalProps> = ({
     {
       title: "Trạng thái",
       key: "status",
-      width: 200,
+      width: 100,
       render: (_: unknown, record: TestMethodIndicatorImportItem) =>
         record.isValid ? (
           <Tag color="green">OK</Tag>
         ) : (
-          <Tag color="red">{record.errorMessage}</Tag>
+          <Tag color="red">Lỗi</Tag>
         ),
     },
   ];
