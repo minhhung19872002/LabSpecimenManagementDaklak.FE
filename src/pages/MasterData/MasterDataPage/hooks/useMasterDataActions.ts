@@ -296,7 +296,7 @@ export const useMasterDataActions = ({
   const handleDownloadTemplate = async () => {
     if (!canImport) {
       message.info(
-        `Download template chưa hỗ trợ cho ${categoryLabels[activeCategory]}`
+        `Tải template mẫu chưa hỗ trợ cho ${categoryLabels[activeCategory]}`
       );
       return;
     }

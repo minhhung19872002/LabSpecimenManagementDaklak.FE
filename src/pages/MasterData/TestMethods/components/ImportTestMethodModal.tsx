@@ -13,7 +13,10 @@ import {
   Row,
   Col,
 } from "antd";
-import { UploadOutlined, DownloadOutlined } from "../../../../components/common/Icon";
+import {
+  UploadOutlined,
+  DownloadOutlined,
+} from "../../../../components/common/Icon";
 import type { UploadFile } from "antd/es/upload/interface";
 import type {
   TestMethodImportPreviewDto,
@@ -45,6 +48,25 @@ const ImportTestMethodModal: React.FC<ImportTestMethodModalProps> = ({
 }) => {
   const hasErrors =
     previewData && previewData.validationResult.errors.length > 0;
+
+  // Group errors by row number
+  const groupedErrors = React.useMemo(() => {
+    if (!previewData?.validationResult.errors.length) return [];
+
+    const errorMap = new Map<number, string[]>();
+    previewData.validationResult.errors.forEach((err) => {
+      const messages = errorMap.get(err.rowNumber) || [];
+      const message = err.value
+        ? `${err.errorMessage} (${err.value})`
+        : err.errorMessage;
+      messages.push(message);
+      errorMap.set(err.rowNumber, messages);
+    });
+
+    return Array.from(errorMap.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([rowNumber, messages]) => ({ rowNumber, messages }));
+  }, [previewData?.validationResult.errors]);
 
   // Download error file from base64
   const handleDownloadErrorFile = () => {
@@ -142,17 +164,18 @@ const ImportTestMethodModal: React.FC<ImportTestMethodModalProps> = ({
       {/* Step 1: Upload file */}
       {!previewData && (
         <Space direction="vertical" style={{ width: "100%" }} size="middle">
-          <Alert
+          {/* <Alert
             message="Hướng dẫn"
             description={
               <ul style={{ marginBottom: 0, paddingLeft: 20 }}>
                 <li>
-                  Tải template Excel mẫu bằng nút "Download template" ở trang
+                  Tải template Excel mẫu bằng nút "Tải template mẫu" ở trang
                   trước
                 </li>
                 <li>Điền thông tin phương pháp và chỉ tiêu vào file Excel</li>
                 <li>
-                  Các cột: Tên phương pháp, Mô tả, Đơn vị tính, Chỉ tiêu, Đơn giá
+                  Các cột: Tên phương pháp, Mô tả, Đơn vị tính, Chỉ tiêu, Đơn
+                  giá
                 </li>
                 <li>
                   Cùng tên phương pháp = nhiều dòng sẽ gộp thành 1 phương pháp
@@ -169,7 +192,7 @@ const ImportTestMethodModal: React.FC<ImportTestMethodModalProps> = ({
             }
             type="info"
             showIcon
-          />
+          /> */}
 
           <Upload.Dragger
             fileList={fileList}
@@ -228,18 +251,24 @@ const ImportTestMethodModal: React.FC<ImportTestMethodModalProps> = ({
           {hasErrors && (
             <Alert
               type="error"
-              message={`Có ${previewData.validationResult.errors.length} lỗi - Không thể import`}
+              message={`Có ${groupedErrors.length} dòng lỗi - Không thể import`}
               description={
                 <Space direction="vertical" style={{ width: "100%" }}>
                   <div style={{ maxHeight: 150, overflow: "auto" }}>
-                    <ul style={{ marginBottom: 0, paddingLeft: 20 }}>
-                      {previewData.validationResult.errors.map((err, idx) => (
-                        <li key={idx} style={{ color: "#ff4d4f" }}>
-                          Dòng {err.rowNumber}: {err.errorMessage}
-                          {err.value && ` (${err.value})`}
-                        </li>
-                      ))}
-                    </ul>
+                    {groupedErrors.map((group, idx) => (
+                      <div key={idx} style={{ marginBottom: 8 }}>
+                        <div style={{ color: "#ff4d4f", fontWeight: 500 }}>
+                          Dòng {group.rowNumber}:
+                        </div>
+                        <ul style={{ marginBottom: 0, paddingLeft: 20, marginTop: 4 }}>
+                          {group.messages.map((msg, msgIdx) => (
+                            <li key={msgIdx} style={{ color: "#ff4d4f" }}>
+                              {msg}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
                   </div>
                   {previewData.errorFileBase64 && (
                     <Button
