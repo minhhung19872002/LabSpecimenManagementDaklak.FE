@@ -134,6 +134,7 @@ const ImportTestMethodModal: React.FC<ImportTestMethodModalProps> = ({
       onCancel={onCancel}
       width={900}
       centered
+      styles={{ body: { maxHeight: "calc(100vh - 200px)", overflowY: "auto" } }}
       footer={[
         <Button key="cancel" onClick={onCancel}>
           Đóng

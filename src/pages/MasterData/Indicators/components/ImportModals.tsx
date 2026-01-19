@@ -37,7 +37,7 @@ export const ImportIndicatorModal: React.FC<ImportIndicatorModalProps> = ({
       cancelText="Đóng"
       width={600}
       centered
-      styles={{ body: { paddingTop: 16 } }}
+      styles={{ body: { paddingTop: 16, maxHeight: "calc(100vh - 200px)", overflowY: "auto" } }}
     >
       <Space direction="vertical" style={{ width: "100%" }} size="middle">
         {/* <Alert
@@ -128,7 +128,7 @@ export const ImportGroupModal: React.FC<ImportGroupModalProps> = ({
       cancelText="Đóng"
       width={600}
       centered
-      styles={{ body: { paddingTop: 16 } }}
+      styles={{ body: { paddingTop: 16, maxHeight: "calc(100vh - 200px)", overflowY: "auto" } }}
     >
       <Space direction="vertical" style={{ width: "100%" }} size="middle">
         {/* <Alert
