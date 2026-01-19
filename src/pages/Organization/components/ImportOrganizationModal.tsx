@@ -229,6 +229,7 @@ const ImportOrganizationModal: React.FC<ImportOrganizationModalProps> = ({
       onCancel={onCancel}
       width={1200}
       centered
+      styles={{ body: { maxHeight: "calc(100vh - 200px)", overflowY: "auto" } }}
       footer={[
         <Button key="cancel" onClick={onCancel}>
           Đóng
