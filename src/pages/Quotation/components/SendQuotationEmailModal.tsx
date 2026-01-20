@@ -7,7 +7,6 @@ import {
   Space,
   message,
   Divider,
-  Typography,
 } from "antd";
 import {
   MailOutlined,
@@ -19,26 +18,14 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
-import { quotationService } from "../../../services/quotationService";
-import { formatCurrency } from "../../../utils/formatters";
+import { quotationService, QuotationPdfSampleDto } from "../../../services/quotationService";
 import { getApiErrorMessage } from "../../../utils/errorHandler";
-
-const { Text } = Typography;
-
-interface QuotationItemForEmail {
-  no: number;
-  indicatorName: string;
-  testMethodName: string;
-  sampleCount: number;
-  unitPrice: number;
-  totalPrice: number;
-}
 
 interface SendQuotationEmailModalProps {
   visible: boolean;
   onCancel: () => void;
   customerName: string;
-  items: QuotationItemForEmail[];
+  samples: QuotationPdfSampleDto[];
   totalCost: number;
 }
 
@@ -46,7 +33,7 @@ const SendQuotationEmailModal: React.FC<SendQuotationEmailModalProps> = ({
   visible,
   onCancel,
   customerName,
-  items,
+  samples,
   totalCost,
 }) => {
   const [form] = Form.useForm();
@@ -94,17 +81,6 @@ const SendQuotationEmailModal: React.FC<SendQuotationEmailModalProps> = ({
       }
     }
   }, [visible, form, editor]);
-
-  const getEmailItems = () => {
-    return items.map((item) => ({
-      no: item.no,
-      parameter: item.indicatorName,
-      testMethod: item.testMethodName,
-      numberOfSample: item.sampleCount,
-      unitPrice: item.unitPrice,
-      price: item.totalPrice,
-    }));
-  };
 
   const handlePreviewPdf = async () => {
     setLoadingPdfPreview(true);
@@ -162,7 +138,7 @@ const SendQuotationEmailModal: React.FC<SendQuotationEmailModalProps> = ({
     try {
       const pdfUrl = await quotationService.generatePdf({
         customerName: customerName,
-        items: getEmailItems(),
+        samples: samples,
         totalPrice: totalCost,
       });
 
@@ -229,7 +205,7 @@ const SendQuotationEmailModal: React.FC<SendQuotationEmailModalProps> = ({
         subject: values.subject,
         body: bodyHtml,
         customerName: customerName,
-        items: getEmailItems(),
+        samples: samples,
         totalPrice: totalCost,
       });
 
