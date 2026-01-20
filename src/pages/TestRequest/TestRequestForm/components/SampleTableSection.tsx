@@ -36,6 +36,7 @@ import SampleImageUpload from "./SampleImageUpload";
 import BarcodeQRModal, { SampleCodeInfo } from "./BarcodeQRModal";
 import { IndicatorName } from "../../../../components/common";
 import ImportSpecimenModal from "./ImportSpecimenModal";
+import { importService, downloadBlobAsFile } from "../../../../services/importService";
 
 const { Text } = Typography;
 
@@ -113,8 +114,13 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
   const [importModalVisible, setImportModalVisible] = useState(false);
 
   // Download template handler
-  const handleDownloadTemplate = () => {
-    window.open('/api/v1/import/specimens-for-test-request/template', '_blank');
+  const handleDownloadTemplate = async () => {
+    try {
+      const blob = await importService.downloadSpecimensForTestRequestTemplate();
+      downloadBlobAsFile(blob, "Template_PhieuThuNghiem.xlsx");
+    } catch (error) {
+      console.error("Failed to download template:", error);
+    }
   };
 
   // Import confirm handler
@@ -749,8 +755,6 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
         open={importModalVisible}
         onCancel={() => setImportModalVisible(false)}
         onConfirm={handleImportConfirm}
-        indicators={indicators}
-        indicatorMethodsMap={indicatorMethodsMap}
         existingSamplesCount={samples.length}
         sampleCodePrefix={sampleCodePrefix}
       />
