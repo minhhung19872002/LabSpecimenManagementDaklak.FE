@@ -32,7 +32,7 @@ export function parseAndValidateSpecimenExcel(
   const workbook = XLSX.read(fileBuffer, { type: 'array' });
   const sheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[sheetName];
-  const rows: SpecimenExcelRow[] = XLSX.utils.sheet_to_json(worksheet);
+  const rows = XLSX.utils.sheet_to_json<Record<string, string>>(worksheet, { defval: '' });
 
   // Create indicator lookup map (name.toLowerCase() -> indicator)
   const indicatorMap = new Map<string, IndicatorDto>();
@@ -46,8 +46,8 @@ export function parseAndValidateSpecimenExcel(
   // Process each row
   rows.forEach((row, idx) => {
     const rowNumber = idx + 2; // Excel row (1-indexed + header)
-    const sampleName = row["Tên mẫu"]?.toString().trim();
-    const indicatorName = row["Chỉ tiêu kiểm nghiệm"]?.toString().trim();
+    const sampleName = row["Tên mẫu"]?.trim();
+    const indicatorName = row["Chỉ tiêu kiểm nghiệm"]?.trim();
 
     // Validate required fields
     if (!sampleName) {
@@ -86,10 +86,10 @@ export function parseAndValidateSpecimenExcel(
     if (!specimenMap.has(specimenKey)) {
       specimenMap.set(specimenKey, {
         sampleName: sampleName,
-        specimenTypeName: row["Loại mẫu"]?.toString().trim(),
-        samplingAddress: row["Địa chỉ lấy mẫu"]?.toString().trim(),
-        sampleQuantity: row["Lượng mẫu"]?.toString().trim(),
-        statusText: row["Tình trạng mẫu"]?.toString().trim(),
+        specimenTypeName: row["Loại mẫu"]?.trim() || undefined,
+        samplingAddress: row["Địa chỉ lấy mẫu"]?.trim() || undefined,
+        sampleQuantity: row["Lượng mẫu"]?.trim() || undefined,
+        statusText: row["Tình trạng mẫu"]?.trim() || undefined,
         indicators: [],
         isValid: true,
         errors: []
@@ -188,7 +188,7 @@ export function convertToSampleFormData(
         specimenTypeName: item.specimenTypeName,
         samplingAddress: item.samplingAddress,
         sampleQuantity: item.sampleQuantity,
-        status: SampleStatus.Pending,
+        status: SampleStatus.Normal,
         statusText: item.statusText,
         indicatorIds: [], // deprecated
         indicatorMethods,

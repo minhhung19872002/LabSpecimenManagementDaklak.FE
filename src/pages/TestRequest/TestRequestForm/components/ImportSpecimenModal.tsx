@@ -1,38 +1,52 @@
-// @ts-nocheck
-import React, { useState } from 'react';
+import React, { useState, useMemo } from "react";
 import {
   Modal,
   Upload,
   Button,
   Table,
   Alert,
-  Space,
   Tag,
-  Collapse,
   Typography,
   Statistic,
   Row,
   Col,
-  message
-} from 'antd';
-import { InboxOutlined } from '@ant-design/icons';
-import type { UploadFile } from 'antd/es/upload';
-import { IndicatorDto } from '../../../../services/masterDataService';
+  Card,
+  message,
+} from "antd";
+import { UploadOutlined, DownloadOutlined } from "../../../../components/common/Icon";
+import type { UploadFile } from "antd/es/upload";
 import {
-  SpecimenImportPreviewResult,
-} from '../types/importTypes';
-import { parseAndValidateSpecimenExcel, convertToSampleFormData } from '../utils/importSpecimens';
-import { SampleFormData, IndicatorMethodInfo } from '../types';
+  importService,
+  type SpecimenForTestRequestImportPreviewDto,
+  type SpecimenImportPreviewItem,
+} from "../../../../services/importService";
+import { SampleFormData, createIndicatorMethodKey } from "../types";
+import { SampleStatus } from "../../../../types/testRequest";
 
 const { Text } = Typography;
-const { Panel } = Collapse;
+
+// Flattened row type for table display
+interface FlattenedPreviewRow {
+  key: string;
+  rowNumber: number;
+  sampleName: string;
+  specimenTypeName?: string;
+  samplingAddress?: string;
+  sampleQuantity?: string;
+  statusText?: string;
+  indicatorName: string;
+  testMethodName?: string;
+  isValid: boolean;
+  errorMessage?: string;
+  // For row span calculation
+  isFirstRowOfSample: boolean;
+  sampleRowSpan: number;
+}
 
 interface ImportSpecimenModalProps {
   open: boolean;
   onCancel: () => void;
   onConfirm: (newSamples: SampleFormData[]) => void;
-  indicators: IndicatorDto[];
-  indicatorMethodsMap: Record<string, IndicatorMethodInfo[]>;
   existingSamplesCount: number;
   sampleCodePrefix: string;
 }
@@ -41,14 +55,13 @@ export const ImportSpecimenModal: React.FC<ImportSpecimenModalProps> = ({
   open,
   onCancel,
   onConfirm,
-  indicators,
-  indicatorMethodsMap,
   existingSamplesCount,
-  sampleCodePrefix
+  sampleCodePrefix,
 }) => {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [loading, setLoading] = useState(false);
-  const [previewResult, setPreviewResult] = useState<SpecimenImportPreviewResult | null>(null);
+  const [previewResult, setPreviewResult] =
+    useState<SpecimenForTestRequestImportPreviewDto | null>(null);
 
   const handleFileChange = (info: { fileList: UploadFile[] }) => {
     setFileList(info.fileList.slice(-1)); // Only keep last file
@@ -60,11 +73,12 @@ export const ImportSpecimenModal: React.FC<ImportSpecimenModalProps> = ({
 
     setLoading(true);
     try {
-      const buffer = await fileList[0].originFileObj.arrayBuffer();
-      const result = parseAndValidateSpecimenExcel(buffer, indicators, indicatorMethodsMap);
+      const result = await importService.previewSpecimensForTestRequest(
+        fileList[0].originFileObj as File
+      );
       setPreviewResult(result);
-    } catch (error) {
-      message.error('Lỗi khi đọc file Excel');
+    } catch (error: any) {
+      message.error(error?.message || "Lỗi khi đọc file Excel");
       console.error(error);
     } finally {
       setLoading(false);
@@ -72,7 +86,7 @@ export const ImportSpecimenModal: React.FC<ImportSpecimenModalProps> = ({
   };
 
   const handleConfirmImport = () => {
-    if (!previewResult || !previewResult.isValid) return;
+    if (!previewResult || !previewResult.validationResult.isValid) return;
 
     const newSamples = convertToSampleFormData(
       previewResult.specimens,
@@ -91,7 +105,82 @@ export const ImportSpecimenModal: React.FC<ImportSpecimenModalProps> = ({
     onCancel();
   };
 
-  const hasErrors = previewResult && !previewResult.isValid;
+  const hasErrors = previewResult && !previewResult.validationResult.isValid;
+
+  // Handle download error file
+  const handleDownloadErrorFile = () => {
+    if (previewResult?.errorFileBase64 && previewResult?.errorFileName) {
+      try {
+        const byteCharacters = atob(previewResult.errorFileBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = previewResult.errorFileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error("Error downloading file:", error);
+        message.error("Lỗi khi tải file");
+      }
+    }
+  };
+
+  // Group errors by row number
+  const groupedErrors = React.useMemo(() => {
+    if (!previewResult?.validationResult.errors.length) return [];
+
+    const errorMap = new Map<number, string[]>();
+    previewResult.validationResult.errors.forEach((err) => {
+      const messages = errorMap.get(err.rowNumber) || [];
+      const msg = err.value
+        ? `${err.columnName}: ${err.errorMessage} (${err.value})`
+        : `${err.columnName}: ${err.errorMessage}`;
+      messages.push(msg);
+      errorMap.set(err.rowNumber, messages);
+    });
+
+    return Array.from(errorMap.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([rowNumber, messages]) => ({ rowNumber, messages }));
+  }, [previewResult?.validationResult.errors]);
+
+  // Flatten specimens and indicators into table rows
+  const flattenedRows = useMemo((): FlattenedPreviewRow[] => {
+    if (!previewResult?.specimens.length) return [];
+
+    const rows: FlattenedPreviewRow[] = [];
+    previewResult.specimens.forEach((specimen) => {
+      const indicatorCount = specimen.indicators.length;
+      specimen.indicators.forEach((indicator, idx) => {
+        rows.push({
+          key: `${specimen.sampleName}_${indicator.rowNumber}_${idx}`,
+          rowNumber: indicator.rowNumber,
+          sampleName: specimen.sampleName,
+          specimenTypeName: specimen.specimenTypeName,
+          samplingAddress: specimen.samplingAddress,
+          sampleQuantity: specimen.sampleQuantity,
+          statusText: specimen.statusText,
+          indicatorName: indicator.indicatorName,
+          testMethodName: indicator.testMethodName,
+          isValid: indicator.isValid,
+          errorMessage: indicator.errorMessage,
+          isFirstRowOfSample: idx === 0,
+          sampleRowSpan: indicatorCount,
+        });
+      });
+    });
+    return rows;
+  }, [previewResult?.specimens]);
 
   return (
     <Modal
@@ -99,6 +188,8 @@ export const ImportSpecimenModal: React.FC<ImportSpecimenModalProps> = ({
       open={open}
       onCancel={handleClose}
       width={900}
+      centered
+      styles={{ body: { maxHeight: "calc(100vh - 200px)", overflowY: "auto" } }}
       footer={[
         <Button key="cancel" onClick={handleClose}>
           Đóng
@@ -115,32 +206,15 @@ export const ImportSpecimenModal: React.FC<ImportSpecimenModalProps> = ({
           </Button>
         ),
         previewResult && !hasErrors && (
-          <Button
-            key="import"
-            type="primary"
-            onClick={handleConfirmImport}
-          >
+          <Button key="import" type="primary" onClick={handleConfirmImport}>
             Xác nhận thêm {previewResult.validSpecimens} mẫu
           </Button>
-        )
+        ),
       ].filter(Boolean)}
     >
       {/* Step 1: Upload file */}
       {!previewResult && (
-        <Space direction="vertical" style={{ width: '100%' }} size="middle">
-          <Alert
-            message="Hướng dẫn"
-            description={
-              <ul style={{ marginBottom: 0, paddingLeft: 20 }}>
-                <li>Tải template mẫu để xem cấu trúc file</li>
-                <li>Các mẫu có cùng "Tên mẫu" sẽ được gộp lại với nhiều chỉ tiêu</li>
-                <li>"Chỉ tiêu kiểm nghiệm" phải tồn tại trong danh mục hệ thống</li>
-                <li>Dữ liệu sẽ được thêm vào danh sách mẫu hiện tại (không thay thế)</li>
-              </ul>
-            }
-            type="info"
-            showIcon
-          />
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <Upload.Dragger
             fileList={fileList}
             onChange={handleFileChange}
@@ -149,139 +223,229 @@ export const ImportSpecimenModal: React.FC<ImportSpecimenModalProps> = ({
             maxCount={1}
           >
             <p className="ant-upload-drag-icon">
-              <InboxOutlined />
+              <UploadOutlined style={{ fontSize: 48, color: "#1890ff" }} />
             </p>
-            <p className="ant-upload-text">Click hoặc kéo file Excel vào đây</p>
-            <p className="ant-upload-hint">Hỗ trợ file .xlsx, .xls</p>
+            <p className="ant-upload-text">
+              Kéo thả file Excel hoặc click để chọn file
+            </p>
+            <p className="ant-upload-hint">Chỉ hỗ trợ file .xlsx, .xls</p>
           </Upload.Dragger>
-        </Space>
+        </div>
       )}
 
       {/* Step 2: Preview */}
       {previewResult && (
-        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {/* Summary Statistics */}
-          <Row gutter={16}>
-            <Col span={6}>
-              <Statistic title="Tổng dòng" value={previewResult.totalRows} />
-            </Col>
-            <Col span={6}>
-              <Statistic
-                title="Số mẫu"
-                value={previewResult.totalSpecimens}
-                valueStyle={{ color: '#1890ff' }}
-              />
-            </Col>
-            <Col span={6}>
-              <Statistic
-                title="Mẫu hợp lệ"
-                value={previewResult.validSpecimens}
-                valueStyle={{ color: '#52c41a' }}
-              />
-            </Col>
-            <Col span={6}>
-              <Statistic
-                title="Tổng chỉ tiêu"
-                value={previewResult.totalIndicators}
-              />
-            </Col>
-          </Row>
+          <Card size="small">
+            <Row gutter={16}>
+              <Col span={6}>
+                <Statistic title="Tổng dòng" value={previewResult.totalRows} />
+              </Col>
+              <Col span={6}>
+                <Statistic
+                  title="Số mẫu"
+                  value={previewResult.totalSpecimens}
+                  valueStyle={{ color: "#1890ff" }}
+                />
+              </Col>
+              <Col span={6}>
+                <Statistic
+                  title="Mẫu hợp lệ"
+                  value={previewResult.validSpecimens}
+                  valueStyle={{ color: "#52c41a" }}
+                />
+              </Col>
+              <Col span={6}>
+                <Statistic
+                  title="Tổng chỉ tiêu"
+                  value={previewResult.totalIndicators}
+                />
+              </Col>
+            </Row>
+          </Card>
 
           {/* Errors */}
           {hasErrors && (
             <Alert
               type="error"
-              message={`Có ${previewResult.errors.length} lỗi cần sửa`}
+              message={`Có ${groupedErrors.length} dòng lỗi - Không thể import`}
               description={
-                <ul style={{ maxHeight: 150, overflow: 'auto', marginBottom: 0 }}>
-                  {previewResult.errors.map((err, idx) => (
-                    <li key={idx}>
-                      Dòng {err.rowNumber}, cột "{err.columnName}": {err.errorMessage}
-                    </li>
-                  ))}
-                </ul>
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 8 }}
+                >
+                  <div style={{ maxHeight: 150, overflow: "auto" }}>
+                    {groupedErrors.map((group, idx) => (
+                      <div key={idx} style={{ marginBottom: 8 }}>
+                        <div style={{ color: "#ff4d4f", fontWeight: 500 }}>
+                          Dòng {group.rowNumber}:
+                        </div>
+                        <ul
+                          style={{
+                            marginBottom: 0,
+                            paddingLeft: 20,
+                            marginTop: 4,
+                          }}
+                        >
+                          {group.messages.map((msg, msgIdx) => (
+                            <li key={msgIdx} style={{ color: "#ff4d4f" }}>
+                              {msg}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                  {previewResult.errorFileBase64 && (
+                    <Button
+                      type="primary"
+                      danger
+                      icon={<DownloadOutlined />}
+                      onClick={handleDownloadErrorFile}
+                      style={{ marginTop: 8, alignSelf: "flex-start" }}
+                    >
+                      Tải file lỗi để sửa
+                    </Button>
+                  )}
+                </div>
               }
+              showIcon
             />
           )}
 
-          {/* Preview Table */}
-          <Collapse defaultActiveKey={['0']}>
-            {previewResult.specimens.map((specimen, idx) => (
-              <Panel
-                key={idx}
-                header={
-                  <Space>
-                    {specimen.isValid ? (
-                      <Tag color="green">Hợp lệ</Tag>
-                    ) : (
-                      <Tag color="red">Lỗi</Tag>
-                    )}
-                    <Text strong>{specimen.sampleName}</Text>
-                    <Text type="secondary">
-                      ({specimen.indicators.length} chỉ tiêu)
-                    </Text>
-                  </Space>
-                }
-              >
-                <div style={{ marginBottom: 8 }}>
-                  <Space size="large" wrap>
-                    {specimen.specimenTypeName && (
-                      <Text>Loại mẫu: <Text strong>{specimen.specimenTypeName}</Text></Text>
-                    )}
-                    {specimen.samplingAddress && (
-                      <Text>Địa chỉ: <Text strong>{specimen.samplingAddress}</Text></Text>
-                    )}
-                    {specimen.sampleQuantity && (
-                      <Text>Lượng mẫu: <Text strong>{specimen.sampleQuantity}</Text></Text>
-                    )}
-                    {specimen.statusText && (
-                      <Text>Tình trạng: <Text strong>{specimen.statusText}</Text></Text>
-                    )}
-                  </Space>
-                </div>
-                <Table
-                  size="small"
-                  dataSource={specimen.indicators}
-                  rowKey="rowNumber"
-                  pagination={false}
-                  columns={[
-                    {
-                      title: 'Dòng',
-                      dataIndex: 'rowNumber',
-                      width: 60
-                    },
-                    {
-                      title: 'Chỉ tiêu',
-                      dataIndex: 'indicatorName'
-                    },
-                    {
-                      title: 'Phương pháp',
-                      dataIndex: 'testMethodName',
-                      render: (val) => val || <Text type="secondary">-</Text>
-                    },
-                    {
-                      title: 'Trạng thái',
-                      width: 150,
-                      render: (_, record) =>
-                        record.isValid ? (
-                          <Tag color="green">OK</Tag>
-                        ) : (
-                          <Tag color="red">{record.errorMessage}</Tag>
-                        )
-                    }
-                  ]}
-                />
-              </Panel>
-            ))}
-          </Collapse>
+          {/* Preview Table - Flat view */}
+          <Table
+            size="small"
+            dataSource={flattenedRows}
+            rowKey="key"
+            pagination={false}
+            scroll={{ y: 400 }}
+            columns={[
+              {
+                title: "Dòng",
+                dataIndex: "rowNumber",
+                width: 60,
+                fixed: "left",
+              },
+              {
+                title: "Tên mẫu",
+                dataIndex: "sampleName",
+                width: 150,
+                onCell: (record) => ({
+                  rowSpan: record.isFirstRowOfSample ? record.sampleRowSpan : 0,
+                }),
+              },
+              {
+                title: "Loại mẫu",
+                dataIndex: "specimenTypeName",
+                width: 120,
+                onCell: (record) => ({
+                  rowSpan: record.isFirstRowOfSample ? record.sampleRowSpan : 0,
+                }),
+                render: (val) => val || <Text type="secondary">-</Text>,
+              },
+              {
+                title: "Địa chỉ lấy mẫu",
+                dataIndex: "samplingAddress",
+                width: 150,
+                onCell: (record) => ({
+                  rowSpan: record.isFirstRowOfSample ? record.sampleRowSpan : 0,
+                }),
+                render: (val) => val || <Text type="secondary">-</Text>,
+              },
+              {
+                title: "Lượng mẫu",
+                dataIndex: "sampleQuantity",
+                width: 100,
+                onCell: (record) => ({
+                  rowSpan: record.isFirstRowOfSample ? record.sampleRowSpan : 0,
+                }),
+                render: (val) => val || <Text type="secondary">-</Text>,
+              },
+              {
+                title: "Tình trạng",
+                dataIndex: "statusText",
+                width: 100,
+                onCell: (record) => ({
+                  rowSpan: record.isFirstRowOfSample ? record.sampleRowSpan : 0,
+                }),
+                render: (val) => val || <Text type="secondary">-</Text>,
+              },
+              {
+                title: "Chỉ tiêu",
+                dataIndex: "indicatorName",
+                width: 180,
+              },
+              {
+                title: "Phương pháp",
+                dataIndex: "testMethodName",
+                width: 150,
+                render: (val) => val || <Text type="secondary">-</Text>,
+              },
+              {
+                title: "Trạng thái",
+                width: 150,
+                fixed: "right",
+                render: (_, record) =>
+                  record.isValid ? (
+                    <Tag color="green">OK</Tag>
+                  ) : (
+                    <Tag color="red">{record.errorMessage}</Tag>
+                  ),
+              },
+            ]}
+          />
 
-          <Button onClick={() => setPreviewResult(null)}>
-            ← Chọn file khác
+          <Button
+            onClick={() => setPreviewResult(null)}
+            style={{ alignSelf: "flex-start" }}
+          >
+            Chọn file khác
           </Button>
-        </Space>
+        </div>
       )}
     </Modal>
   );
 };
+
+/**
+ * Convert preview items to SampleFormData for merging into form state
+ */
+function convertToSampleFormData(
+  previewItems: SpecimenImportPreviewItem[],
+  existingSamplesCount: number,
+  sampleCodePrefix: string
+): SampleFormData[] {
+  return previewItems
+    .filter((item) => item.isValid)
+    .map((item, idx) => {
+      const sortOrder = existingSamplesCount + idx + 1;
+      // Format: prefix + 2-digit order number (e.g., "2024-001-01")
+      const sampleCode = `${sampleCodePrefix}${String(sortOrder).padStart(2, "0")}`;
+
+      // Convert indicators to IndicatorMethodKey format
+      const indicatorMethods = item.indicators
+        .filter((ind) => ind.indicatorId && ind.testMethodId)
+        .map((ind) =>
+          createIndicatorMethodKey(ind.indicatorId!, ind.testMethodId!)
+        );
+
+      return {
+        key: `import_${Date.now()}_${idx}`,
+        sortOrder,
+        sampleCode,
+        sampleName: item.sampleName,
+        specimenTypeName: item.specimenTypeName,
+        samplingAddress: item.samplingAddress,
+        sampleQuantity: item.sampleQuantity,
+        status: SampleStatus.Normal,
+        statusText: item.statusText,
+        indicatorIds: [], // deprecated
+        indicatorMethods,
+        attachments: [],
+        isSharedSample: false,
+      } as SampleFormData;
+    });
+}
 
 export default ImportSpecimenModal;

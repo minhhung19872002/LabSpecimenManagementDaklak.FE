@@ -97,6 +97,42 @@ export interface OrganizationTestRequestImportPreviewDto {
   errorFileName?: string;
 }
 
+// ==================== Specimen for TestRequest Import ====================
+
+export interface SpecimenIndicatorImportItem {
+  rowNumber: number;
+  indicatorName: string;
+  indicatorId?: string;
+  testMethodId?: string;
+  testMethodName?: string;
+  isValid: boolean;
+  errorMessage?: string;
+}
+
+export interface SpecimenImportPreviewItem {
+  sampleName: string;
+  specimenTypeName?: string;
+  samplingAddress?: string;
+  sampleQuantity?: string;
+  statusText?: string;
+  indicators: SpecimenIndicatorImportItem[];
+  isValid: boolean;
+  errors: string[];
+}
+
+export interface SpecimenForTestRequestImportPreviewDto {
+  validationResult: ImportValidationResult;
+  specimens: SpecimenImportPreviewItem[];
+  // Summary
+  totalRows: number;
+  totalSpecimens: number;
+  validSpecimens: number;
+  totalIndicators: number;
+  // Error file
+  errorFileBase64?: string;
+  errorFileName?: string;
+}
+
 // ==================== IndicatorGroup + Indicator Import ====================
 
 export interface IndicatorGroupImportPreviewItem {
@@ -193,6 +229,26 @@ export const importService = {
    */
   downloadSpecimensTemplate: async (): Promise<Blob> => {
     const response = await api.download(`${BASE_URL}/specimens/template`);
+    return response.data;
+  },
+
+  /**
+   * Download import template for specimens in TestRequestForm
+   * Template columns: Tên mẫu, Loại mẫu, Địa chỉ lấy mẫu, Lượng mẫu, Tình trạng mẫu, Chỉ tiêu kiểm nghiệm
+   */
+  downloadSpecimensForTestRequestTemplate: async (): Promise<Blob> => {
+    const response = await api.download(`${BASE_URL}/specimens-for-test-request/template`);
+    return response.data;
+  },
+
+  /**
+   * Preview specimens for TestRequest from Excel file (validate without importing)
+   * Groups rows by SampleName, validates Indicators exist
+   */
+  previewSpecimensForTestRequest: async (file: File): Promise<SpecimenForTestRequestImportPreviewDto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<SpecimenForTestRequestImportPreviewDto>(`${BASE_URL}/specimens-for-test-request/preview`, formData);
     return response.data;
   },
 
