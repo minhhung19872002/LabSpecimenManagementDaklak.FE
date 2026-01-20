@@ -301,6 +301,9 @@ const TestRequestForm: React.FC = () => {
           handleSpecimenTypeSearch={handleSpecimenTypeSearch}
           handleSpecimenTypeSelect={handleSpecimenTypeSelect}
           sampleConditionOptions={sampleConditionOptions}
+          indicators={indicators}
+          indicatorMethodsMap={indicatorMethodsMap}
+          onImportSamples={(newSamples) => setSamples(prev => [...prev, ...newSamples])}
         />
 
         {/* Loại hình mẫu */}
