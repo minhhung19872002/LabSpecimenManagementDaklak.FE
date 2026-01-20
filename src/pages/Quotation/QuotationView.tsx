@@ -10,6 +10,7 @@ import {
   Descriptions,
   Row,
   Col,
+  Statistic,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -20,7 +21,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { quotationService } from "../../services/quotationService";
-import { QuotationDto, QuotationItemDto } from "../../types/quotation";
+import {
+  QuotationDto,
+  QuotationSampleIndicatorDto,
+} from "../../types/quotation";
 import { PATH_ROUTES } from "../../constants";
 import { formatCurrency } from "../../utils/formatters";
 import { IndicatorName } from "../../components/common";
@@ -59,11 +63,17 @@ const QuotationView: React.FC = () => {
     }
   };
 
-  const columns: ColumnsType<QuotationItemDto> = [
+  // Calculate totals
+  const totalSampleCount = quotation?.samples?.length || 0;
+  const totalIndicatorCount =
+    quotation?.samples?.reduce((sum, s) => sum + s.indicators.length, 0) || 0;
+
+  // Indicator table columns
+  const indicatorColumns: ColumnsType<QuotationSampleIndicatorDto> = [
     {
       title: "STT",
       key: "index",
-      width: 60,
+      width: 50,
       align: "center",
       render: (_, __, index) => index + 1,
     },
@@ -72,22 +82,23 @@ const QuotationView: React.FC = () => {
       dataIndex: "indicatorName",
       key: "indicatorName",
       ellipsis: true,
-      render: (_, record) => <IndicatorName name={record.indicatorName} formattedName={record.indicatorFormattedName} />,
+      render: (_, record) => (
+        <IndicatorName
+          name={record.indicatorName}
+          formattedName={record.indicatorFormattedName}
+        />
+      ),
     },
     {
       title: "Phương pháp",
       key: "testMethodName",
       ellipsis: true,
       render: (_, record) => (
-        <IndicatorName name={record.testMethodName} formattedName={record.testMethodFormattedName} />
+        <IndicatorName
+          name={record.testMethodName}
+          formattedName={record.testMethodFormattedName}
+        />
       ),
-    },
-    {
-      title: "Số mẫu",
-      dataIndex: "sampleCount",
-      key: "sampleCount",
-      width: 100,
-      align: "center",
     },
     {
       title: "Đơn giá",
@@ -96,14 +107,6 @@ const QuotationView: React.FC = () => {
       width: 130,
       align: "right",
       render: (value) => formatCurrency(value),
-    },
-    {
-      title: "Thành tiền",
-      dataIndex: "totalPrice",
-      key: "totalPrice",
-      width: 130,
-      align: "right",
-      render: (value) => <Text strong>{formatCurrency(value)}</Text>,
     },
   ];
 
@@ -119,10 +122,10 @@ const QuotationView: React.FC = () => {
   const sectionTitleStyle: React.CSSProperties = {
     fontSize: 14,
     fontWeight: 600,
-    color: '#262626',
+    color: "#262626",
     marginBottom: 12,
     paddingBottom: 8,
-    borderBottom: '1px solid #f0f0f0',
+    borderBottom: "1px solid #f0f0f0",
   };
 
   return (
@@ -161,11 +164,17 @@ const QuotationView: React.FC = () => {
               bordered
               size="small"
               column={1}
-              labelStyle={{ width: 150, fontWeight: 500, background: '#fafafa' }}
+              labelStyle={{
+                width: 150,
+                fontWeight: 500,
+                background: "#fafafa",
+              }}
               style={{ marginBottom: 24 }}
             >
               <Descriptions.Item label="Số báo giá">
-                <Text strong style={{ color: '#1890ff' }}>{quotation.quotationNumber}</Text>
+                <Text strong style={{ color: "#1890ff" }}>
+                  {quotation.quotationNumber}
+                </Text>
               </Descriptions.Item>
               <Descriptions.Item label="Ngày tạo">
                 {dayjs(quotation.quotationDate).format("DD/MM/YYYY")}
@@ -176,63 +185,152 @@ const QuotationView: React.FC = () => {
             <div style={sectionTitleStyle}>Thông tin khách hàng</div>
             <Row gutter={[24, 12]} style={{ marginBottom: 24 }}>
               <Col xs={24} sm={12}>
-                <Text type="secondary" style={{ fontSize: 13 }}>Tên CS/DN:</Text>
-                <div style={{ marginTop: 4 }}>{quotation.customerName || "-"}</div>
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                  Tên CS/DN:
+                </Text>
+                <div style={{ marginTop: 4 }}>
+                  {quotation.customerName || "-"}
+                </div>
               </Col>
               <Col xs={24} sm={12}>
-                <Text type="secondary" style={{ fontSize: 13 }}>Người đại diện:</Text>
-                <div style={{ marginTop: 4 }}>{quotation.contactPerson || "-"}</div>
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                  Người đại diện:
+                </Text>
+                <div style={{ marginTop: 4 }}>
+                  {quotation.contactPerson || "-"}
+                </div>
               </Col>
               <Col xs={24} sm={12}>
-                <Text type="secondary" style={{ fontSize: 13 }}>Mã số thuế:</Text>
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                  Mã số thuế:
+                </Text>
                 <div style={{ marginTop: 4 }}>{quotation.taxCode || "-"}</div>
               </Col>
               <Col xs={24} sm={12}>
-                <Text type="secondary" style={{ fontSize: 13 }}>Số điện thoại:</Text>
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                  Số điện thoại:
+                </Text>
                 <div style={{ marginTop: 4 }}>{quotation.phone || "-"}</div>
               </Col>
               <Col xs={24}>
-                <Text type="secondary" style={{ fontSize: 13 }}>Địa chỉ:</Text>
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                  Địa chỉ:
+                </Text>
                 <div style={{ marginTop: 4 }}>{quotation.address || "-"}</div>
               </Col>
             </Row>
 
-            {/* Section 3: Danh sách chỉ tiêu */}
-            <div style={sectionTitleStyle}>Danh sách chỉ tiêu ({quotation.items?.length || 0} chỉ tiêu)</div>
-            <Table
-              columns={columns}
-              dataSource={quotation.items}
-              rowKey="id"
-              pagination={false}
+            {/* Section 3: Danh sách mẫu */}
+            <div style={sectionTitleStyle}>
+              Danh sách mẫu ({totalSampleCount} mẫu, {totalIndicatorCount} chỉ
+              tiêu)
+            </div>
+
+            {quotation.samples.length === 0 ? (
+              <div
+                style={{
+                  padding: 24,
+                  textAlign: "center",
+                  background: "#fafafa",
+                  borderRadius: 4,
+                }}
+              >
+                <Text type="secondary">Chưa có mẫu nào</Text>
+              </div>
+            ) : (
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: 16 }}
+              >
+                {quotation.samples.map((sample) => (
+                  <Card
+                    key={sample.id}
+                    size="small"
+                    title={
+                      <Space>
+                        <Text strong>{sample.sampleName}</Text>
+                        <Text type="secondary">
+                          ({sample.indicators.length} chỉ tiêu)
+                        </Text>
+                      </Space>
+                    }
+                  >
+                    <Table
+                      size="small"
+                      dataSource={sample.indicators}
+                      rowKey="id"
+                      pagination={false}
+                      columns={indicatorColumns}
+                      bordered
+                      summary={() =>
+                        sample.indicators.length > 0 ? (
+                          <Table.Summary.Row>
+                            <Table.Summary.Cell
+                              index={0}
+                              colSpan={3}
+                              align="right"
+                            >
+                              <Text strong>Thành tiền mẫu:</Text>
+                            </Table.Summary.Cell>
+                            <Table.Summary.Cell index={1} align="right">
+                              <Text strong>
+                                {formatCurrency(sample.totalPrice)}
+                              </Text>
+                            </Table.Summary.Cell>
+                          </Table.Summary.Row>
+                        ) : null
+                      }
+                    />
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {/* Footer Summary */}
+            <Card
               size="small"
-              bordered
-              style={{ marginBottom: 16 }}
-              summary={() => (
-                <Table.Summary fixed>
-                  <Table.Summary.Row>
-                    <Table.Summary.Cell index={0} colSpan={5} align="right">
-                      <Text strong>TỔNG CỘNG</Text>
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={1} align="right">
-                      <Text strong style={{ fontSize: 15, color: '#1890ff' }}>
-                        {formatCurrency(quotation.totalCost)}
-                      </Text>
-                    </Table.Summary.Cell>
-                  </Table.Summary.Row>
-                </Table.Summary>
-              )}
-            />
+              style={{
+                marginTop: 16,
+                background: "#fafafa",
+              }}
+            >
+              <Row gutter={48}>
+                <Col>
+                  <Statistic title="Tổng số mẫu" value={totalSampleCount} />
+                </Col>
+                <Col>
+                  <Statistic
+                    title="Tổng số chỉ tiêu"
+                    value={totalIndicatorCount}
+                  />
+                </Col>
+                <Col flex="auto" style={{ textAlign: "right" }}>
+                  <Statistic
+                    title="Tổng cộng"
+                    value={quotation.totalCost}
+                    formatter={(val) => (
+                      <span style={{ color: "#1890ff", fontSize: 24 }}>
+                        {formatCurrency(val as number)}
+                      </span>
+                    )}
+                  />
+                </Col>
+              </Row>
+            </Card>
 
             {/* Section 4: Ghi chú (nếu có) */}
             {quotation.notes && (
               <>
-                <div style={sectionTitleStyle}>Ghi chú</div>
-                <div style={{
-                  padding: 12,
-                  background: '#fafafa',
-                  borderRadius: 4,
-                  border: '1px solid #f0f0f0',
-                }}>
+                <div style={{ ...sectionTitleStyle, marginTop: 24 }}>
+                  Ghi chú
+                </div>
+                <div
+                  style={{
+                    padding: 12,
+                    background: "#fafafa",
+                    borderRadius: 4,
+                    border: "1px solid #f0f0f0",
+                  }}
+                >
                   {quotation.notes}
                 </div>
               </>

@@ -4,17 +4,16 @@ import {
   Form,
   Input,
   Button,
-  Table,
   Space,
   Typography,
   AutoComplete,
-  InputNumber,
   Popconfirm,
   message,
   Spin,
   Row,
   Col,
   Divider,
+  Statistic,
 } from "antd";
 import {
   PlusOutlined,
@@ -22,9 +21,12 @@ import {
   ArrowLeftOutlined,
   SaveOutlined,
   MailOutlined,
+  CopyOutlined,
+  DownOutlined,
+  RightOutlined,
+  InboxOutlined,
 } from "../../components/common/Icon";
 import { useNavigate, useParams } from "react-router-dom";
-import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { quotationService } from "../../services/quotationService";
 import { organizationService } from "../../services/organizationService";
@@ -32,6 +34,8 @@ import { getApiErrorMessage } from "../../utils/errorHandler";
 import {
   CreateUpdateQuotationDto,
   QuotationStatus,
+  QuotationSampleFormData,
+  QuotationSampleIndicatorFormData,
 } from "../../types/quotation";
 import { PATH_ROUTES } from "../../constants";
 import { formatCurrency } from "../../utils/formatters";
@@ -42,21 +46,6 @@ import SendQuotationEmailModal from "./components/SendQuotationEmailModal";
 import { IndicatorName } from "../../components/common";
 
 const { Title, Text } = Typography;
-
-// Local item type for table
-interface QuotationItemRow {
-  key: string;
-  indicatorId: string;
-  testMethodId: string;
-  indicatorName: string;
-  indicatorFormattedName?: string | null;
-  testMethodName: string;
-  testMethodFormattedName?: string | null;
-  sampleCount: number;
-  unitPrice: number;
-  totalPrice: number;
-  sortOrder: number;
-}
 
 interface OrganizationOption {
   value: string;
@@ -72,9 +61,11 @@ const QuotationForm: React.FC = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [items, setItems] = useState<QuotationItemRow[]>([]);
+  const [samples, setSamples] = useState<QuotationSampleFormData[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [emailModalVisible, setEmailModalVisible] = useState(false);
+  const [currentSampleKey, setCurrentSampleKey] = useState<string | null>(null);
+  const [expandedSamples, setExpandedSamples] = useState<Set<string>>(new Set());
   const [organizationOptions, setOrganizationOptions] = useState<
     OrganizationOption[]
   >([]);
@@ -119,21 +110,30 @@ const QuotationForm: React.FC = () => {
       });
       setSelectedOrganizationId(data.organizationId);
 
-      // Map items
-      const mappedItems: QuotationItemRow[] = data.items.map((item, index) => ({
-        key: `${item.indicatorId}_${item.testMethodId}`,
-        indicatorId: item.indicatorId,
-        testMethodId: item.testMethodId,
-        indicatorName: item.indicatorName,
-        indicatorFormattedName: item.indicatorFormattedName,
-        testMethodName: item.testMethodName,
-        testMethodFormattedName: item.testMethodFormattedName,
-        sampleCount: item.sampleCount,
-        unitPrice: item.unitPrice,
-        totalPrice: item.totalPrice,
-        sortOrder: item.sortOrder || index,
-      }));
-      setItems(mappedItems);
+      // Map samples
+      const mappedSamples: QuotationSampleFormData[] = data.samples.map(
+        (sample) => ({
+          key: sample.id,
+          id: sample.id,
+          sortOrder: sample.sortOrder,
+          sampleName: sample.sampleName,
+          indicators: sample.indicators.map((ind) => ({
+            key: `${ind.indicatorId}_${ind.testMethodId}`,
+            id: ind.id,
+            indicatorId: ind.indicatorId,
+            testMethodId: ind.testMethodId,
+            indicatorName: ind.indicatorName,
+            indicatorFormattedName: ind.indicatorFormattedName,
+            testMethodName: ind.testMethodName,
+            testMethodFormattedName: ind.testMethodFormattedName,
+            unitPrice: ind.unitPrice,
+            sortOrder: ind.sortOrder,
+          })),
+        })
+      );
+      setSamples(mappedSamples);
+      // Expand all samples by default
+      setExpandedSamples(new Set(mappedSamples.map((s) => s.key)));
     } catch (error) {
       console.error("Failed to load quotation:", error);
       message.error("Không thể tải thông tin báo giá");
@@ -155,7 +155,6 @@ const QuotationForm: React.FC = () => {
 
   // Handle organization input change
   const handleOrganizationChange = (value: string) => {
-    // If user types manually, clear the organizationId
     const matchedOption = organizationOptions.find(
       (opt) => opt.value === value
     );
@@ -164,53 +163,148 @@ const QuotationForm: React.FC = () => {
     }
   };
 
-  // Handle add indicators from modal
-  const handleAddIndicators = (selectedMethods: SelectedMethodInfo[]) => {
-    const newItems: QuotationItemRow[] = selectedMethods.map(
-      (method, index) => ({
-        key: `${method.indicatorId}_${method.testMethodId}`,
-        indicatorId: method.indicatorId,
-        testMethodId: method.testMethodId,
-        indicatorName: method.indicatorName,
-        indicatorFormattedName: method.indicatorFormattedName,
-        testMethodName: method.testMethodName,
-        testMethodFormattedName: method.testMethodFormattedName,
-        sampleCount: 1,
-        unitPrice: method.unitPrice,
-        totalPrice: method.unitPrice,
-        sortOrder: items.length + index,
-      })
-    );
-
-    setItems((prev) => [...prev, ...newItems]);
-    setModalVisible(false);
+  // Toggle sample expand/collapse
+  const toggleSampleExpand = (sampleKey: string) => {
+    setExpandedSamples((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(sampleKey)) {
+        newSet.delete(sampleKey);
+      } else {
+        newSet.add(sampleKey);
+      }
+      return newSet;
+    });
   };
 
-  // Handle sample count change
-  const handleSampleCountChange = (key: string, value: number | null) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.key === key
-          ? {
-              ...item,
-              sampleCount: value || 1,
-              totalPrice: (value || 1) * item.unitPrice,
-            }
-          : item
+  // Add new sample
+  const handleAddSample = () => {
+    const nextNum = samples.length + 1;
+    const newSampleKey = `sample-${Date.now()}`;
+    const newSample: QuotationSampleFormData = {
+      key: newSampleKey,
+      sortOrder: nextNum,
+      sampleName: `Mẫu ${nextNum}`,
+      indicators: [],
+    };
+    setSamples([...samples, newSample]);
+    // Auto expand new sample
+    setExpandedSamples((prev) => new Set(prev).add(newSampleKey));
+  };
+
+  // Copy sample
+  const handleCopySample = (sampleKey: string) => {
+    const source = samples.find((s) => s.key === sampleKey);
+    if (!source) return;
+
+    const nextNum = samples.length + 1;
+    const newSampleKey = `sample-${Date.now()}`;
+    const newSample: QuotationSampleFormData = {
+      key: newSampleKey,
+      sortOrder: nextNum,
+      sampleName: `Mẫu ${nextNum}`,
+      indicators: source.indicators.map((ind) => ({
+        ...ind,
+        key: `${ind.indicatorId}_${ind.testMethodId}`,
+        id: undefined,
+      })),
+    };
+    setSamples([...samples, newSample]);
+    // Auto expand new sample
+    setExpandedSamples((prev) => new Set(prev).add(newSampleKey));
+  };
+
+  // Delete sample
+  const handleDeleteSample = (sampleKey: string) => {
+    setSamples(samples.filter((s) => s.key !== sampleKey));
+    setExpandedSamples((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(sampleKey);
+      return newSet;
+    });
+  };
+
+  // Update sample name
+  const handleUpdateSampleName = (sampleKey: string, newName: string) => {
+    setSamples(
+      samples.map((s) =>
+        s.key === sampleKey ? { ...s, sampleName: newName } : s
       )
     );
   };
 
-  // Handle remove item
-  const handleRemoveItem = (key: string) => {
-    setItems((prev) => prev.filter((item) => item.key !== key));
+  // Open indicator modal for a sample
+  const handleOpenIndicatorModal = (sampleKey: string) => {
+    setCurrentSampleKey(sampleKey);
+    setModalVisible(true);
   };
 
-  // Calculate total
-  const totalCost = items.reduce((sum, item) => sum + item.totalPrice, 0);
+  // Add indicators to sample
+  const handleAddIndicatorsToSample = (selectedMethods: SelectedMethodInfo[]) => {
+    if (!currentSampleKey) return;
 
-  // Get excluded method keys (already added)
-  const excludedMethods = items.map((item) => item.key);
+    setSamples(
+      samples.map((sample) => {
+        if (sample.key !== currentSampleKey) return sample;
+
+        const newIndicators = selectedMethods.map((method, idx) => ({
+          key: `${method.indicatorId}_${method.testMethodId}`,
+          indicatorId: method.indicatorId,
+          testMethodId: method.testMethodId,
+          indicatorName: method.indicatorName,
+          indicatorFormattedName: method.indicatorFormattedName,
+          testMethodName: method.testMethodName,
+          testMethodFormattedName: method.testMethodFormattedName,
+          unitPrice: method.unitPrice,
+          sortOrder: sample.indicators.length + idx + 1,
+        }));
+
+        return {
+          ...sample,
+          indicators: [...sample.indicators, ...newIndicators],
+        };
+      })
+    );
+
+    setModalVisible(false);
+    setCurrentSampleKey(null);
+  };
+
+  // Remove indicator from sample
+  const handleRemoveIndicator = (sampleKey: string, indicatorKey: string) => {
+    setSamples(
+      samples.map((sample) => {
+        if (sample.key !== sampleKey) return sample;
+        return {
+          ...sample,
+          indicators: sample.indicators.filter((ind) => ind.key !== indicatorKey),
+        };
+      })
+    );
+  };
+
+  // Calculate sample total
+  const calculateSampleTotal = (indicators: QuotationSampleIndicatorFormData[]) => {
+    return indicators.reduce((sum, ind) => sum + ind.unitPrice, 0);
+  };
+
+  // Calculate grand total
+  const totalCost = samples.reduce(
+    (sum, sample) => sum + calculateSampleTotal(sample.indicators),
+    0
+  );
+
+  // Calculate total indicator count
+  const totalIndicatorCount = samples.reduce(
+    (sum, sample) => sum + sample.indicators.length,
+    0
+  );
+
+  // Get excluded methods for current sample
+  const getExcludedMethods = () => {
+    if (!currentSampleKey) return [];
+    const currentSample = samples.find((s) => s.key === currentSampleKey);
+    return currentSample?.indicators.map((ind) => ind.key) || [];
+  };
 
   // Handle save
   const handleSave = async () => {
@@ -218,8 +312,14 @@ const QuotationForm: React.FC = () => {
       await form.validateFields();
       const values = form.getFieldsValue();
 
-      if (items.length === 0) {
-        message.warning("Vui lòng thêm ít nhất một chỉ tiêu");
+      if (samples.length === 0) {
+        message.warning("Vui lòng thêm ít nhất một mẫu");
+        return;
+      }
+
+      const hasEmptySample = samples.some((s) => s.indicators.length === 0);
+      if (hasEmptySample) {
+        message.warning("Mỗi mẫu phải có ít nhất một chỉ tiêu");
         return;
       }
 
@@ -231,14 +331,19 @@ const QuotationForm: React.FC = () => {
         customerName: values.customerName,
         notes: values.notes,
         status: QuotationStatus.Draft,
-        items: items.map((item, index) => ({
-          indicatorId: item.indicatorId,
-          testMethodId: item.testMethodId,
-          indicatorName: item.indicatorName,
-          testMethodName: item.testMethodName,
-          sampleCount: item.sampleCount,
-          unitPrice: item.unitPrice,
-          sortOrder: index,
+        samples: samples.map((sample, sampleIdx) => ({
+          id: sample.id,
+          sortOrder: sampleIdx + 1,
+          sampleName: sample.sampleName,
+          indicators: sample.indicators.map((ind, indIdx) => ({
+            id: ind.id,
+            indicatorId: ind.indicatorId,
+            testMethodId: ind.testMethodId,
+            indicatorName: ind.indicatorName,
+            testMethodName: ind.testMethodName,
+            unitPrice: ind.unitPrice,
+            sortOrder: indIdx + 1,
+          })),
         })),
       };
 
@@ -259,79 +364,179 @@ const QuotationForm: React.FC = () => {
     }
   };
 
-  // Table columns
-  const columns: ColumnsType<QuotationItemRow> = [
-    {
-      title: "STT",
-      key: "index",
-      width: 60,
-      align: "center",
-      render: (_, __, index) => index + 1,
-    },
-    {
-      title: "Chỉ tiêu",
-      dataIndex: "indicatorName",
-      key: "indicatorName",
-      ellipsis: true,
-      render: (_, record) => <IndicatorName name={record.indicatorName} formattedName={record.indicatorFormattedName} />,
-    },
-    {
-      title: "Phương pháp",
-      key: "testMethodName",
-      ellipsis: true,
-      render: (_, record) => (
-        <IndicatorName name={record.testMethodName} formattedName={record.testMethodFormattedName} />
-      ),
-    },
-    {
-      title: "Số mẫu",
-      dataIndex: "sampleCount",
-      key: "sampleCount",
-      width: 100,
-      align: "center",
-      render: (value, record) => (
-        <InputNumber
-          min={1}
-          value={value}
-          onChange={(val) => handleSampleCountChange(record.key, val)}
-          style={{ width: 70 }}
+  // Render indicator row
+  const renderIndicatorRow = (
+    indicator: QuotationSampleIndicatorFormData,
+    index: number,
+    sampleKey: string
+  ) => (
+    <tr key={indicator.key} style={{ borderBottom: "1px solid #f0f0f0" }}>
+      <td style={{ padding: "8px 12px", textAlign: "center", width: 50 }}>
+        {index + 1}
+      </td>
+      <td style={{ padding: "8px 12px" }}>
+        <IndicatorName
+          name={indicator.indicatorName}
+          formattedName={indicator.indicatorFormattedName}
         />
-      ),
-    },
-    {
-      title: "Đơn giá",
-      dataIndex: "unitPrice",
-      key: "unitPrice",
-      width: 130,
-      align: "right",
-      render: (value) => formatCurrency(value),
-    },
-    {
-      title: "Thành tiền",
-      dataIndex: "totalPrice",
-      key: "totalPrice",
-      width: 130,
-      align: "right",
-      render: (value) => <Text strong>{formatCurrency(value)}</Text>,
-    },
-    {
-      title: "",
-      key: "actions",
-      width: 60,
-      align: "center",
-      render: (_, record) => (
+      </td>
+      <td style={{ padding: "8px 12px" }}>
+        <IndicatorName
+          name={indicator.testMethodName}
+          formattedName={indicator.testMethodFormattedName}
+        />
+      </td>
+      <td style={{ padding: "8px 12px", textAlign: "right", width: 130 }}>
+        {formatCurrency(indicator.unitPrice)}
+      </td>
+      <td style={{ padding: "8px 12px", textAlign: "center", width: 50 }}>
         <Popconfirm
           title="Xóa chỉ tiêu này?"
-          onConfirm={() => handleRemoveItem(record.key)}
+          onConfirm={() => handleRemoveIndicator(sampleKey, indicator.key)}
           okText="Xóa"
           cancelText="Hủy"
           okButtonProps={{ danger: true }}
         >
           <Button type="text" danger icon={<DeleteOutlined />} size="small" />
         </Popconfirm>
-      ),
-    },
-  ];
+      </td>
+    </tr>
+  );
+
+  // Render empty indicator message
+  const renderEmptyIndicators = (sampleKey: string) => (
+    <tr>
+      <td
+        colSpan={5}
+        style={{
+          padding: "24px 12px",
+          textAlign: "center",
+          background: "#fafafa",
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+          <InboxOutlined style={{ fontSize: 32, color: "#d9d9d9" }} />
+          <div>
+            <Text type="secondary">Chưa có chỉ tiêu. </Text>
+            <Text
+              type="secondary"
+              style={{ cursor: "pointer", color: "#1890ff", fontWeight: 500 }}
+              onClick={() => handleOpenIndicatorModal(sampleKey)}
+            >
+              Thêm chỉ tiêu
+            </Text>
+            <Text type="secondary"> để thêm chỉ tiêu mới</Text>
+          </div>
+        </div>
+      </td>
+    </tr>
+  );
+
+  // Render add indicator button row
+  const renderAddIndicatorRow = (sampleKey: string) => (
+    <tr>
+      <td
+        colSpan={5}
+        style={{
+          padding: "8px 12px",
+          borderBottom: "1px solid #f0f0f0",
+        }}
+      >
+        <Button
+          type="dashed"
+          size="small"
+          icon={<PlusOutlined />}
+          onClick={() => handleOpenIndicatorModal(sampleKey)}
+        >
+          Thêm chỉ tiêu
+        </Button>
+      </td>
+    </tr>
+  );
+
+  // Render sample group
+  const renderSampleGroup = (sample: QuotationSampleFormData) => {
+    const isExpanded = expandedSamples.has(sample.key);
+    const sampleTotal = calculateSampleTotal(sample.indicators);
+    const hasIndicators = sample.indicators.length > 0;
+
+    return (
+      <React.Fragment key={sample.key}>
+        {/* Sample header row - collapsible */}
+        <tr
+          style={{
+            borderBottom: "1px solid #f0f0f0",
+            background: "#fafafa",
+          }}
+        >
+          <td
+            colSpan={5}
+            style={{ padding: "10px 12px" }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <Space>
+                <span
+                  onClick={() => toggleSampleExpand(sample.key)}
+                  style={{ cursor: "pointer", display: "inline-flex", alignItems: "center" }}
+                >
+                  {isExpanded ? <DownOutlined style={{ fontSize: 12 }} /> : <RightOutlined style={{ fontSize: 12 }} />}
+                </span>
+                <Input
+                  value={sample.sampleName}
+                  onChange={(e) => handleUpdateSampleName(sample.key, e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ width: 200 }}
+                />
+                <Text type="secondary">
+                  ({sample.indicators.length} chỉ tiêu - {formatCurrency(sampleTotal)})
+                </Text>
+              </Space>
+              <Space onClick={(e) => e.stopPropagation()}>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<CopyOutlined />}
+                  onClick={() => handleCopySample(sample.key)}
+                  title="Copy mẫu"
+                />
+                <Popconfirm
+                  title="Xóa mẫu này?"
+                  onConfirm={() => handleDeleteSample(sample.key)}
+                  okText="Xóa"
+                  cancelText="Hủy"
+                  okButtonProps={{ danger: true }}
+                >
+                  <Button
+                    type="text"
+                    size="small"
+                    danger
+                    icon={<DeleteOutlined />}
+                    title="Xóa mẫu"
+                  />
+                </Popconfirm>
+              </Space>
+            </div>
+          </td>
+        </tr>
+
+        {/* Indicator rows or empty message - show only when expanded */}
+        {isExpanded && (
+          <>
+            {hasIndicators ? (
+              <>
+                {sample.indicators.map((ind, idx) =>
+                  renderIndicatorRow(ind, idx, sample.key)
+                )}
+                {renderAddIndicatorRow(sample.key)}
+              </>
+            ) : (
+              renderEmptyIndicators(sample.key)
+            )}
+          </>
+        )}
+      </React.Fragment>
+    );
+  };
 
   return (
     <div style={{ padding: 24 }}>
@@ -361,8 +566,10 @@ const QuotationForm: React.FC = () => {
                 <Button
                   icon={<MailOutlined />}
                   onClick={() => {
-                    if (items.length === 0) {
-                      message.warning("Vui lòng thêm ít nhất một chỉ tiêu để gửi email");
+                    if (samples.length === 0 || totalIndicatorCount === 0) {
+                      message.warning(
+                        "Vui lòng thêm ít nhất một mẫu với chỉ tiêu để gửi email"
+                      );
                       return;
                     }
                     setEmailModalVisible(true);
@@ -409,7 +616,7 @@ const QuotationForm: React.FC = () => {
 
           <Divider style={{ margin: "16px 0" }} />
 
-          {/* Indicators Section */}
+          {/* Samples Section */}
           <div style={{ marginBottom: 16 }}>
             <Row justify="space-between" align="middle">
               <Col>
@@ -421,50 +628,134 @@ const QuotationForm: React.FC = () => {
                 <Button
                   type="primary"
                   icon={<PlusOutlined />}
-                  onClick={() => setModalVisible(true)}
+                  onClick={handleAddSample}
                 >
-                  Thêm chỉ tiêu
+                  Thêm mẫu
                 </Button>
               </Col>
             </Row>
           </div>
 
-          <Table
-            columns={columns}
-            dataSource={items}
-            rowKey="key"
-            pagination={false}
-            size="middle"
-            locale={{
-              emptyText: (
-                <div style={{ padding: 40 }}>
-                  <Text type="secondary">
-                    Chưa có chỉ tiêu nào. Nhấn "Thêm chỉ tiêu" để bắt đầu.
-                  </Text>
-                </div>
-              ),
-            }}
-          />
-
-          {/* Total */}
+          {/* Table */}
           <div
             style={{
-              marginTop: 16,
-              padding: 16,
-              background: "#fafafa",
+              border: "1px solid #f0f0f0",
               borderRadius: 4,
-              border: "1px solid #d9d9d9",
-              textAlign: "right",
+              overflow: "hidden",
             }}
           >
-            <Text style={{ fontSize: 16 }}>Tổng cộng: </Text>
-            <Text
-              strong
-              style={{ fontSize: 20, color: "#1890ff", marginLeft: 8 }}
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+              }}
             >
-              {formatCurrency(totalCost)}
-            </Text>
+              <thead>
+                <tr style={{ background: "#fafafa" }}>
+                  <th
+                    style={{
+                      padding: "12px",
+                      textAlign: "center",
+                      borderBottom: "1px solid #f0f0f0",
+                      fontWeight: 500,
+                      width: 50,
+                    }}
+                  >
+                    STT
+                  </th>
+                  <th
+                    style={{
+                      padding: "12px",
+                      textAlign: "left",
+                      borderBottom: "1px solid #f0f0f0",
+                      fontWeight: 500,
+                    }}
+                  >
+                    Chỉ tiêu
+                  </th>
+                  <th
+                    style={{
+                      padding: "12px",
+                      textAlign: "left",
+                      borderBottom: "1px solid #f0f0f0",
+                      fontWeight: 500,
+                    }}
+                  >
+                    Phương pháp
+                  </th>
+                  <th
+                    style={{
+                      padding: "12px",
+                      textAlign: "right",
+                      borderBottom: "1px solid #f0f0f0",
+                      fontWeight: 500,
+                      width: 130,
+                    }}
+                  >
+                    Đơn giá
+                  </th>
+                  <th
+                    style={{
+                      padding: "12px",
+                      textAlign: "center",
+                      borderBottom: "1px solid #f0f0f0",
+                      fontWeight: 500,
+                      width: 50,
+                    }}
+                  >
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {samples.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      style={{
+                        padding: 40,
+                        textAlign: "center",
+                      }}
+                    >
+                      <Text type="secondary">
+                        Chưa có mẫu nào. Nhấn "Thêm mẫu" để bắt đầu.
+                      </Text>
+                    </td>
+                  </tr>
+                ) : (
+                  samples.map((sample) => renderSampleGroup(sample))
+                )}
+              </tbody>
+            </table>
           </div>
+
+          {/* Footer Summary */}
+          <Card
+            size="small"
+            style={{
+              marginTop: 16,
+              background: "#fafafa",
+            }}
+          >
+            <Row gutter={48}>
+              <Col>
+                <Statistic title="Tổng số mẫu" value={samples.length} />
+              </Col>
+              <Col>
+                <Statistic title="Tổng số chỉ tiêu" value={totalIndicatorCount} />
+              </Col>
+              <Col flex="auto" style={{ textAlign: "right" }}>
+                <Statistic
+                  title="Tổng cộng"
+                  value={totalCost}
+                  formatter={(val) => (
+                    <span style={{ color: "#1890ff", fontSize: 24 }}>
+                      {formatCurrency(val as number)}
+                    </span>
+                  )}
+                />
+              </Col>
+            </Row>
+          </Card>
 
           {/* Notes */}
           <Form form={form} layout="vertical" style={{ marginTop: 24 }}>
@@ -478,9 +769,12 @@ const QuotationForm: React.FC = () => {
       {/* Indicator Selection Modal */}
       <QuotationIndicatorSelectionModal
         visible={modalVisible}
-        onCancel={() => setModalVisible(false)}
-        onOk={handleAddIndicators}
-        excludedMethods={excludedMethods}
+        onCancel={() => {
+          setModalVisible(false);
+          setCurrentSampleKey(null);
+        }}
+        onOk={handleAddIndicatorsToSample}
+        excludedMethods={getExcludedMethods()}
       />
 
       {/* Send Email Modal */}
@@ -488,14 +782,16 @@ const QuotationForm: React.FC = () => {
         visible={emailModalVisible}
         onCancel={() => setEmailModalVisible(false)}
         customerName={form.getFieldValue("customerName") || ""}
-        items={items.map((item, index) => ({
-          no: index + 1,
-          indicatorName: item.indicatorName,
-          testMethodName: item.testMethodName,
-          sampleCount: item.sampleCount,
-          unitPrice: item.unitPrice,
-          totalPrice: item.totalPrice,
-        }))}
+        items={samples.flatMap((sample) =>
+          sample.indicators.map((ind, idx) => ({
+            no: idx + 1,
+            indicatorName: ind.indicatorName,
+            testMethodName: ind.testMethodName,
+            sampleCount: 1,
+            unitPrice: ind.unitPrice,
+            totalPrice: ind.unitPrice,
+          }))
+        )}
         totalCost={totalCost}
       />
     </div>

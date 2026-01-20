@@ -15,20 +15,28 @@ export const QUOTATION_STATUS_CONFIG: Record<
   [QuotationStatus.Cancelled]: { label: "Đã hủy", color: "error" },
 };
 
-// Quotation Item DTO
-export interface QuotationItemDto {
+// Quotation Sample Indicator DTO
+export interface QuotationSampleIndicatorDto {
   id: string;
-  quotationId: string;
+  quotationSampleId: string;
   indicatorId: string;
   testMethodId: string;
   indicatorName: string;
   indicatorFormattedName?: string | null;
   testMethodName: string;
   testMethodFormattedName?: string | null;
-  sampleCount: number;
   unitPrice: number;
-  totalPrice: number;
   sortOrder: number;
+}
+
+// Quotation Sample DTO
+export interface QuotationSampleDto {
+  id: string;
+  quotationId: string;
+  sortOrder: number;
+  sampleName: string;
+  totalPrice: number;
+  indicators: QuotationSampleIndicatorDto[];
 }
 
 // Quotation DTO (full detail)
@@ -49,7 +57,7 @@ export interface QuotationDto {
   totalCost: number;
   notes?: string;
   status: QuotationStatus;
-  items: QuotationItemDto[];
+  samples: QuotationSampleDto[];
   creationTime: string;
   creatorId?: string;
   lastModificationTime?: string;
@@ -65,29 +73,36 @@ export interface QuotationListDto {
   phone?: string;
   totalCost: number;
   status: QuotationStatus;
-  itemCount: number;
   sampleCount: number;
+  indicatorCount: number;
   creationTime: string;
   creatorUserName?: string;
 }
 
-// Create/Update Quotation Item DTO
-export interface CreateUpdateQuotationItemDto {
+// Create/Update Quotation Sample Indicator DTO
+export interface CreateUpdateQuotationSampleIndicatorDto {
   id?: string;
   indicatorId: string;
   testMethodId: string;
   indicatorName: string;
   testMethodName: string;
-  sampleCount: number;
   unitPrice: number;
   sortOrder: number;
+}
+
+// Create/Update Quotation Sample DTO
+export interface CreateUpdateQuotationSampleDto {
+  id?: string;
+  sortOrder: number;
+  sampleName: string;
+  indicators: CreateUpdateQuotationSampleIndicatorDto[];
 }
 
 // Create/Update Quotation DTO
 export interface CreateUpdateQuotationDto {
   quotationDate: string;
   organizationId?: string;
-  customerName: string;
+  customerName?: string;
   provinceCode?: string;
   districtCode?: string;
   wardCode?: string;
@@ -97,7 +112,7 @@ export interface CreateUpdateQuotationDto {
   phone?: string;
   notes?: string;
   status: QuotationStatus;
-  items: CreateUpdateQuotationItemDto[];
+  samples: CreateUpdateQuotationSampleDto[];
 }
 
 // Get Quotation List Input
@@ -109,4 +124,26 @@ export interface GetQuotationListInput {
   sorting?: string;
   skipCount?: number;
   maxResultCount?: number;
+}
+
+// Form data types for frontend state management
+export interface QuotationSampleIndicatorFormData {
+  key: string; // indicatorId_testMethodId
+  id?: string;
+  indicatorId: string;
+  testMethodId: string;
+  indicatorName: string;
+  indicatorFormattedName?: string | null;
+  testMethodName: string;
+  testMethodFormattedName?: string | null;
+  unitPrice: number;
+  sortOrder: number;
+}
+
+export interface QuotationSampleFormData {
+  key: string;
+  id?: string;
+  sortOrder: number;
+  sampleName: string;
+  indicators: QuotationSampleIndicatorFormData[];
 }
