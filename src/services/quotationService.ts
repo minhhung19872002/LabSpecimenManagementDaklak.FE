@@ -8,13 +8,17 @@ import {
 
 const BASE_URL = "/api/v1/quotations";
 
-export interface SendQuotationEmailItemDto {
-  no: number;
-  parameter: string;
-  testMethod: string;
-  numberOfSample: number;
+// PDF generation DTOs
+export interface QuotationPdfIndicatorDto {
+  indicatorName: string;
+  quantity: number;
   unitPrice: number;
-  price: number;
+}
+
+export interface QuotationPdfSampleDto {
+  sampleName: string;
+  quantity: number;
+  indicators: QuotationPdfIndicatorDto[];
 }
 
 export interface SendQuotationEmailDto {
@@ -23,13 +27,13 @@ export interface SendQuotationEmailDto {
   subject: string;
   body: string;
   customerName: string;
-  items: SendQuotationEmailItemDto[];
+  samples: QuotationPdfSampleDto[];
   totalPrice: number;
 }
 
 export interface GenerateQuotationPdfDto {
   customerName?: string;
-  items: SendQuotationEmailItemDto[];
+  samples: QuotationPdfSampleDto[];
   totalPrice: number;
 }
 

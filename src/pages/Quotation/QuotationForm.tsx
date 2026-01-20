@@ -594,6 +594,7 @@ const QuotationForm: React.FC = () => {
             <Form.Item
               name="customerName"
               label="Tên CS/DN"
+              rules={[{ required: true, message: "Vui lòng nhập tên CS/DN" }]}
               style={{ marginBottom: 0 }}
             >
               <AutoComplete
@@ -782,16 +783,15 @@ const QuotationForm: React.FC = () => {
         visible={emailModalVisible}
         onCancel={() => setEmailModalVisible(false)}
         customerName={form.getFieldValue("customerName") || ""}
-        items={samples.flatMap((sample) =>
-          sample.indicators.map((ind, idx) => ({
-            no: idx + 1,
+        samples={samples.map((sample) => ({
+          sampleName: sample.sampleName,
+          quantity: 1,
+          indicators: sample.indicators.map((ind) => ({
             indicatorName: ind.indicatorName,
-            testMethodName: ind.testMethodName,
-            sampleCount: 1,
+            quantity: 1,
             unitPrice: ind.unitPrice,
-            totalPrice: ind.unitPrice,
-          }))
-        )}
+          })),
+        }))}
         totalCost={totalCost}
       />
     </div>
