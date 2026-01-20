@@ -660,41 +660,35 @@ export const useTestRequestFormData = () => {
         phone: quotation.phone || org?.phone,
       });
 
-      // Calculate max sample count from items
-      const maxSampleCount = Math.max(...quotation.items.map((item) => item.sampleCount), 1);
-
-      // Generate samples based on max sample count
+      // Generate samples from quotation samples (new structure)
       const generatedSamples: SampleFormData[] = [];
       const generatedDates: Record<string, IndicatorDateInfo> = {};
 
-      for (let i = 0; i < maxSampleCount; i++) {
-        const sampleKey = `quotation-sample-${Date.now()}-${i}`;
-        const sampleCode = generateSampleCode(sampleCodePrefix, i + 1);
+      quotation.samples.forEach((quotationSample, sampleIndex) => {
+        const sampleKey = `quotation-sample-${Date.now()}-${sampleIndex}`;
+        const sampleCode = generateSampleCode(sampleCodePrefix, sampleIndex + 1);
 
-        // Find indicators for this sample (all items with sampleCount > i)
+        // Get indicators from quotation sample
         const indicatorMethodsList: IndicatorMethodKey[] = [];
-        quotation.items.forEach((item) => {
-          if (item.sampleCount > i) {
-            // Handle case where testMethodId might be null/undefined
-            const testMethodId = item.testMethodId || "";
-            const methodKey = createIndicatorMethodKey(item.indicatorId, testMethodId);
-            indicatorMethodsList.push(methodKey);
+        quotationSample.indicators.forEach((indicator) => {
+          const testMethodId = indicator.testMethodId || "";
+          const methodKey = createIndicatorMethodKey(indicator.indicatorId, testMethodId);
+          indicatorMethodsList.push(methodKey);
 
-            // Set dates for indicators (requestDate để trống theo yêu cầu KH)
-            if (!generatedDates[methodKey]) {
-              generatedDates[methodKey] = {
-                transferDate: dayjs(),
-                requestDate: undefined,
-              };
-            }
+          // Set dates for indicators (requestDate để trống theo yêu cầu KH)
+          if (!generatedDates[methodKey]) {
+            generatedDates[methodKey] = {
+              transferDate: dayjs(),
+              requestDate: undefined,
+            };
           }
         });
 
         generatedSamples.push({
           key: sampleKey,
-          sortOrder: i + 1,
+          sortOrder: sampleIndex + 1,
           sampleCode,
-          sampleName: "",
+          sampleName: quotationSample.sampleName || "",
           samplingAddress: "",
           sampleQuantity: "",
           status: SampleStatus.Normal,
@@ -708,7 +702,7 @@ export const useTestRequestFormData = () => {
           indicatorMethods: indicatorMethodsList,
           attachments: [],
         });
-      }
+      });
 
       setSamples(generatedSamples);
       setSelectedIndicatorDates(generatedDates);
