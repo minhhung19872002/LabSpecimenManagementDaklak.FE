@@ -17,6 +17,8 @@ import {
   DeleteOutlined,
   CopyOutlined,
   BarcodeOutlined,
+  DownloadOutlined,
+  UploadOutlined,
 } from "../../../../components/common/Icon";
 import { Icon } from "@iconify/react";
 import {
@@ -33,6 +35,7 @@ import {
 import SampleImageUpload from "./SampleImageUpload";
 import BarcodeQRModal, { SampleCodeInfo } from "./BarcodeQRModal";
 import { IndicatorName } from "../../../../components/common";
+import ImportSpecimenModal from "./ImportSpecimenModal";
 
 const { Text } = Typography;
 
@@ -74,6 +77,10 @@ interface SampleTableSectionProps {
   handleSpecimenTypeSearch: (searchText: string) => void;
   handleSpecimenTypeSelect: (sampleKey: string, value: string) => void;
   sampleConditionOptions: { value: string; label: string }[];
+  // Props for import functionality
+  indicators?: IndicatorDto[];
+  indicatorMethodsMap?: Record<string, IndicatorMethodInfo[]>;
+  onImportSamples?: (newSamples: SampleFormData[]) => void;
 }
 
 const SampleTableSection: React.FC<SampleTableSectionProps> = ({
@@ -93,11 +100,29 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
   handleSpecimenTypeSearch,
   handleSpecimenTypeSelect,
   sampleConditionOptions,
+  indicators = [],
+  indicatorMethodsMap = {},
+  onImportSamples,
 }) => {
   // Barcode/QR Modal state
   const [barcodeModalVisible, setBarcodeModalVisible] = useState(false);
   const [selectedSampleForBarcode, setSelectedSampleForBarcode] =
     useState<SampleCodeInfo | null>(null);
+
+  // Import Modal state
+  const [importModalVisible, setImportModalVisible] = useState(false);
+
+  // Download template handler
+  const handleDownloadTemplate = () => {
+    window.open('/api/v1/import/specimens-for-test-request/template', '_blank');
+  };
+
+  // Import confirm handler
+  const handleImportConfirm = (newSamples: SampleFormData[]) => {
+    if (onImportSamples) {
+      onImportSamples(newSamples);
+    }
+  };
 
   // Column widths state for resizing
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(DEFAULT_COLUMN_WIDTHS);
@@ -641,18 +666,36 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
         >
           Thông tin mẫu ({samples.length} mẫu)
         </Typography.Title>
-        <Button
-          type="primary"
-          size="small"
-          icon={<PlusOutlined />}
-          onClick={addSample}
-          disabled={isSamplesLocked()}
-          title={
-            isSamplesLocked() ? "Không thể thêm mẫu khi đang thực hiện" : ""
-          }
-        >
-          Thêm mẫu
-        </Button>
+        <Space>
+          <Button
+            icon={<DownloadOutlined />}
+            onClick={handleDownloadTemplate}
+            disabled={isSamplesLocked()}
+            size="small"
+          >
+            Tải template mẫu
+          </Button>
+          <Button
+            icon={<UploadOutlined />}
+            onClick={() => setImportModalVisible(true)}
+            disabled={isSamplesLocked() || !onImportSamples}
+            size="small"
+          >
+            Nhập danh sách
+          </Button>
+          <Button
+            type="primary"
+            size="small"
+            icon={<PlusOutlined />}
+            onClick={addSample}
+            disabled={isSamplesLocked()}
+            title={
+              isSamplesLocked() ? "Không thể thêm mẫu khi đang thực hiện" : ""
+            }
+          >
+            Thêm mẫu
+          </Button>
+        </Space>
       </div>
 
       {isSamplesLocked() && (
@@ -699,6 +742,17 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
         visible={barcodeModalVisible}
         onClose={closeBarcodeModal}
         sampleInfo={selectedSampleForBarcode}
+      />
+
+      {/* Import Specimen Modal */}
+      <ImportSpecimenModal
+        open={importModalVisible}
+        onCancel={() => setImportModalVisible(false)}
+        onConfirm={handleImportConfirm}
+        indicators={indicators}
+        indicatorMethodsMap={indicatorMethodsMap}
+        existingSamplesCount={samples.length}
+        sampleCodePrefix={sampleCodePrefix}
       />
     </div>
   );
