@@ -1,34 +1,103 @@
 .sample-assignment-log-tab {
-  padding:  0;
+  padding: 0;
 }
 
 .sample-assignment-log-tab .toolbar {
   margin-bottom: 16px;
 }
 
-/* Row highlighting colors */
-.sample-assignment-log-tab .ant-table-tbody > tr.row-red > td {
+/* Disable default Ant Design hover - we handle hover manually */
+.sample-assignment-log-tab .ant-table-tbody > tr.ant-table-row:hover > td,
+.sample-assignment-log-tab .ant-table-tbody > tr.ant-table-row-hover > td,
+.sample-assignment-log-tab .ant-table-tbody .ant-table-row > .ant-table-cell-row-hover {
+  background: inherit !important;
+}
+
+/* Force base colors for rows in hover group (not the hovered row itself) */
+.sample-assignment-log-tab .ant-table-tbody > tr.row-in-hover-group.row-green > td {
+  background-color: #ffffff !important;
+}
+
+.sample-assignment-log-tab .ant-table-tbody > tr.row-in-hover-group.row-red > td {
   background-color: #FFCCC7 !important;
 }
 
-.sample-assignment-log-tab .ant-table-tbody > tr.row-red:hover > td {
-  background-color: #FFB8B0 !important;
+.sample-assignment-log-tab .ant-table-tbody > tr.row-in-hover-group.row-yellow > td {
+  background-color: #FFF7E6 !important;
+}
+
+.sample-assignment-log-tab .ant-table-tbody > tr.row-in-hover-group.row-purple > td {
+  background-color: #EFDBFF !important;
+}
+
+/* Normal rows (no color) - base state */
+.sample-assignment-log-tab .ant-table-tbody > tr.row-normal > td {
+  background-color: #ffffff !important;
+}
+
+/* Row highlighting colors - base state */
+.sample-assignment-log-tab .ant-table-tbody > tr.row-red > td {
+  background-color: #FFCCC7 !important;
 }
 
 .sample-assignment-log-tab .ant-table-tbody > tr.row-yellow > td {
   background-color: #FFF7E6 !important;
 }
 
-.sample-assignment-log-tab .ant-table-tbody > tr.row-yellow:hover > td {
-  background-color: #FFECCC !important;
-}
-
 .sample-assignment-log-tab .ant-table-tbody > tr.row-purple > td {
   background-color: #EFDBFF !important;
 }
 
-.sample-assignment-log-tab .ant-table-tbody > tr.row-purple:hover > td {
+.sample-assignment-log-tab .ant-table-tbody > tr.row-green > td {
+  background-color: #ffffff !important;
+}
+
+/* Hover state - using JS-added .row-hover class */
+.sample-assignment-log-tab .ant-table-tbody > tr.row-hover.row-red > td {
+  background-color: #FFB8B0 !important;
+}
+
+.sample-assignment-log-tab .ant-table-tbody > tr.row-hover.row-yellow > td {
+  background-color: #FFECCC !important;
+}
+
+.sample-assignment-log-tab .ant-table-tbody > tr.row-hover.row-purple > td {
   background-color: #E0C7F7 !important;
+}
+
+.sample-assignment-log-tab .ant-table-tbody > tr.row-hover.row-green > td {
+  background-color: #f5f5f5 !important;
+}
+
+/* Normal rows (no highlight) - hover state */
+.sample-assignment-log-tab .ant-table-tbody > tr.row-hover.row-normal > td {
+  background-color: #fafafa !important;
+}
+
+/* Merged cells (rowspan) hover - highlight only specific cells */
+.sample-assignment-log-tab .ant-table-tbody > tr > td.cell-hover {
+  background-color: #fafafa !important;
+}
+
+.sample-assignment-log-tab .ant-table-tbody > tr.row-red > td.cell-hover {
+  background-color: #FFB8B0 !important;
+}
+
+.sample-assignment-log-tab .ant-table-tbody > tr.row-yellow > td.cell-hover {
+  background-color: #FFECCC !important;
+}
+
+.sample-assignment-log-tab .ant-table-tbody > tr.row-purple > td.cell-hover {
+  background-color: #E0C7F7 !important;
+}
+
+.sample-assignment-log-tab .ant-table-tbody > tr.row-green > td.cell-hover {
+  background-color: #f5f5f5 !important;
+}
+
+/* Fix for merged cells (rowSpan) - ensure vertical alignment */
+.sample-assignment-log-tab .ant-table-tbody > tr > td[rowspan] {
+  vertical-align: middle;
 }
 
 /* Ensure proper borders for merged cells */
