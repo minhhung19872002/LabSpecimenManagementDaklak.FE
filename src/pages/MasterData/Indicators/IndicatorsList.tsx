@@ -114,7 +114,7 @@ const IndicatorsList: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
     defaultValues: { name: "", isActive: true, laboratoryId: undefined },
   });
   const indicatorForm = useForm<IndicatorFormData>({
-    resolver: yupResolver(indicatorSchema),
+    resolver: yupResolver(indicatorSchema) as any,
     defaultValues: { indicatorGroupId: "", name: "", isActive: true },
   });
   const [bulkForm] = Form.useForm();

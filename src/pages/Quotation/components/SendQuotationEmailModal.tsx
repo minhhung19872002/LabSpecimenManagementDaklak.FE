@@ -46,13 +46,13 @@ const SendQuotationEmailModal: React.FC<SendQuotationEmailModalProps> = ({
         heading: {
           levels: [1, 2, 3],
         },
-        bulletList: true,
-        orderedList: true,
+        bulletList: {},
+        orderedList: {},
         blockquote: false,
         codeBlock: false,
         code: false,
-        horizontalRule: true,
-        hardBreak: true,
+        horizontalRule: {},
+        hardBreak: {},
       }),
       Underline,
       Placeholder.configure({

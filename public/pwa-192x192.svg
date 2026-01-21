@@ -1,0 +1,25 @@
+<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="192" height="192" rx="32" fill="#1890ff"/>
+
+  <!-- Flask icon -->
+  <g transform="translate(32, 24)">
+    <!-- Flask body -->
+    <path d="M48 16V56L16 112C8 124 16 140 32 140H96C112 140 120 124 112 112L80 56V16"
+          stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+    <!-- Flask top -->
+    <path d="M40 16H88" stroke="white" stroke-width="8" stroke-linecap="round"/>
+
+    <!-- Liquid line -->
+    <path d="M28 100H100" stroke="white" stroke-width="4" stroke-linecap="round" stroke-dasharray="8 8"/>
+
+    <!-- Bubbles -->
+    <circle cx="50" cy="110" r="6" fill="white" fill-opacity="0.6"/>
+    <circle cx="70" cy="120" r="4" fill="white" fill-opacity="0.6"/>
+    <circle cx="80" cy="105" r="5" fill="white" fill-opacity="0.6"/>
+  </g>
+
+  <!-- Star accent -->
+  <path d="M160 24L164 36L176 36L166 44L170 56L160 48L150 56L154 44L144 36L156 36Z" fill="#FFD700"/>
+</svg>

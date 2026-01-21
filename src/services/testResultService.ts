@@ -1,5 +1,6 @@
 import api from './api';
 import { TestResultDto, CreateTestResultDto, UpdateTestResultDto, ResultApprovalStatus } from '../types/testResult';
+import { createOfflineService, BaseCrudService } from './offline/createOfflineService';
 
 export interface PagedResultDto<T> {
   items: T[];
@@ -36,42 +37,64 @@ export interface RejectResultDto {
 
 const BASE_URL = '/api/v1/test-results';
 
-export const testResultService = {
-  async getList(params?: GetTestResultListParams): Promise<PagedResultDto<TestResultDto>> {
+const testResultApiService = {
+  getList: async (params?: GetTestResultListParams): Promise<PagedResultDto<TestResultDto>> => {
     const response = await api.get<PagedResultDto<TestResultDto>>(BASE_URL, { params });
     return response.data;
   },
-
-  async get(id: string): Promise<TestResultDto> {
+  get: async (id: string): Promise<TestResultDto> => {
     const response = await api.get<TestResultDto>(`${BASE_URL}/${id}`);
     return response.data;
   },
+  create: async (data: CreateTestResultDto): Promise<TestResultDto> => {
+    const response = await api.post<TestResultDto>(BASE_URL, data);
+    return response.data;
+  },
+  update: async (id: string, data: UpdateTestResultDto): Promise<TestResultDto> => {
+    const response = await api.put<TestResultDto>(`${BASE_URL}/${id}`, data);
+    return response.data;
+  },
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`${BASE_URL}/${id}`);
+  },
+};
 
-  async getByTest(testId: string): Promise<TestResultDto[]> {
+const baseService: BaseCrudService<TestResultDto, CreateTestResultDto, UpdateTestResultDto, GetTestResultListParams> = {
+  getList: testResultApiService.getList,
+  get: testResultApiService.get,
+  create: testResultApiService.create,
+  update: testResultApiService.update,
+  delete: testResultApiService.delete,
+};
+
+const offlineEnabledService = createOfflineService<TestResultDto, CreateTestResultDto, UpdateTestResultDto, GetTestResultListParams>('TestResult', baseService);
+
+export const testResultService = {
+  // Offline-enabled CRUD operations
+  getList: offlineEnabledService.getList,
+  get: offlineEnabledService.get,
+  create: offlineEnabledService.create,
+  update: offlineEnabledService.update,
+  delete: offlineEnabledService.delete,
+  // Offline utilities
+  isOnline: offlineEnabledService.isOnline,
+  getPendingSyncCount: offlineEnabledService.getPendingSyncCount,
+  forceSync: offlineEnabledService.forceSync,
+  getCachedList: offlineEnabledService.getCachedList,
+  getCached: offlineEnabledService.getCached,
+
+  // Online-only methods (require server for workflow operations)
+  getByTest: async (testId: string): Promise<TestResultDto[]> => {
     const response = await api.get<TestResultDto[]>(`${BASE_URL}/by-test/${testId}`);
     return response.data;
   },
 
-  async create(data: CreateTestResultDto): Promise<TestResultDto> {
-    const response = await api.post<TestResultDto>(BASE_URL, data);
-    return response.data;
-  },
-
-  async update(id: string, data: UpdateTestResultDto): Promise<TestResultDto> {
-    const response = await api.put<TestResultDto>(`${BASE_URL}/${id}`, data);
-    return response.data;
-  },
-
-  async delete(id: string): Promise<void> {
-    await api.delete(`${BASE_URL}/${id}`);
-  },
-
-  // ==================== WORKFLOW METHODS ====================
+  // ==================== WORKFLOW METHODS (Online-only) ====================
 
   /**
    * KTV submit kết quả để chờ duyệt
    */
-  async submitForReview(id: string, data: SubmitForReviewDto = {}): Promise<TestResultDto> {
+  submitForReview: async (id: string, data: SubmitForReviewDto = {}): Promise<TestResultDto> => {
     const response = await api.post<TestResultDto>(`${BASE_URL}/${id}/submit`, data);
     return response.data;
   },
@@ -79,7 +102,7 @@ export const testResultService = {
   /**
    * Trưởng phòng duyệt kết quả (Step 1 - B1)
    */
-  async review(id: string, data: ReviewResultDto): Promise<TestResultDto> {
+  review: async (id: string, data: ReviewResultDto): Promise<TestResultDto> => {
     const response = await api.post<TestResultDto>(`${BASE_URL}/${id}/review`, data);
     return response.data;
   },
@@ -87,7 +110,7 @@ export const testResultService = {
   /**
    * Giám đốc phê duyệt kết quả (Step 2 - B2)
    */
-  async approve(id: string, data: ApproveResultDto): Promise<TestResultDto> {
+  approve: async (id: string, data: ApproveResultDto): Promise<TestResultDto> => {
     const response = await api.post<TestResultDto>(`${BASE_URL}/${id}/approve`, data);
     return response.data;
   },
@@ -95,7 +118,7 @@ export const testResultService = {
   /**
    * Từ chối kết quả
    */
-  async reject(id: string, data: RejectResultDto): Promise<TestResultDto> {
+  reject: async (id: string, data: RejectResultDto): Promise<TestResultDto> => {
     const response = await api.post<TestResultDto>(`${BASE_URL}/${id}/reject`, data);
     return response.data;
   },
@@ -103,7 +126,7 @@ export const testResultService = {
   /**
    * Lấy danh sách kết quả chờ duyệt B1 (cho Trưởng phòng)
    */
-  async getPendingReviewList(params?: { skipCount?: number; maxResultCount?: number; sorting?: string }): Promise<PagedResultDto<TestResultDto>> {
+  getPendingReviewList: async (params?: { skipCount?: number; maxResultCount?: number; sorting?: string }): Promise<PagedResultDto<TestResultDto>> => {
     const response = await api.get<PagedResultDto<TestResultDto>>(`${BASE_URL}/pending-review`, { params });
     return response.data;
   },
@@ -111,7 +134,7 @@ export const testResultService = {
   /**
    * Lấy danh sách kết quả chờ duyệt B2 (cho Giám đốc)
    */
-  async getPendingApprovalList(params?: { skipCount?: number; maxResultCount?: number; sorting?: string }): Promise<PagedResultDto<TestResultDto>> {
+  getPendingApprovalList: async (params?: { skipCount?: number; maxResultCount?: number; sorting?: string }): Promise<PagedResultDto<TestResultDto>> => {
     const response = await api.get<PagedResultDto<TestResultDto>>(`${BASE_URL}/pending-approval`, { params });
     return response.data;
   },
