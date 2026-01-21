@@ -21,6 +21,8 @@ import {
 import { NCRStatus } from "../../services/ncrService";
 import { useNCRList } from "./hooks";
 import { NCRFormModal, NCRDetailModal } from "./components";
+import { authService } from "../../services/authService";
+import { PERMISSIONS } from "../../constants/permissionMapping";
 
 const NCRList: React.FC = () => {
   const {
@@ -114,9 +116,11 @@ const NCRList: React.FC = () => {
               <Select.Option value={NCRStatus.Resolved}>Đã giải quyết</Select.Option>
               <Select.Option value={NCRStatus.Closed}>Đã đóng</Select.Option>
             </Select>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-              Tạo NCR
-            </Button>
+            {authService.hasPermission(PERMISSIONS.NCRs.Create) && (
+              <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+                Tạo NCR
+              </Button>
+            )}
           </Space>
         }
       >

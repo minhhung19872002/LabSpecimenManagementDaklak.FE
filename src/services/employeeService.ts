@@ -7,7 +7,10 @@ export interface EmployeeDto {
   fullName: string;
   email: string;
   phone: string;
-  role: string;
+  /** @deprecated Use roles instead */
+  role?: string;
+  /** Danh sách nhóm quyền của nhân viên */
+  roles: string[];
   department: string;
   departmentId: string;
   position: string;
@@ -24,7 +27,7 @@ export interface CreateEmployeeDto {
   fullName: string;
   email: string;
   phone?: string;
-  role: string;
+  // Note: role field removed - quản lý quyền thông qua "Quản lý phân quyền"
   departmentId: string;
   position?: string;
   isActive?: boolean;
@@ -39,7 +42,7 @@ export interface UpdateEmployeeDto {
   fullName?: string;
   email?: string;
   phone?: string;
-  role?: string;
+  // Note: role field removed - quản lý quyền thông qua "Quản lý phân quyền"
   departmentId?: string;
   position?: string;
   isActive?: boolean;

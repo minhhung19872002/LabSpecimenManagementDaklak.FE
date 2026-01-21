@@ -19,6 +19,8 @@ import {
 import { useEmployeeList, ROLE_OPTIONS } from "./hooks";
 import { EmployeeFormModal, PasswordSentModal } from "./components";
 import ResetPasswordModal from "./components/ResetPasswordModal";
+import { authService } from "../../services/authService";
+import { PERMISSIONS } from "../../constants/permissionMapping";
 
 const EmployeeList: React.FC = () => {
   const {
@@ -99,13 +101,15 @@ const EmployeeList: React.FC = () => {
         extra={
           <Space>
             <Button icon={<ReloadOutlined />} onClick={handleRefresh} />
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={handleCreate}
-            >
-              Thêm nhân viên
-            </Button>
+            {authService.hasPermission(PERMISSIONS.Users.Create) && (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleCreate}
+              >
+                Thêm nhân viên
+              </Button>
+            )}
           </Space>
         }
       >

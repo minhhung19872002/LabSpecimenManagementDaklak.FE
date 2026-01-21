@@ -11,6 +11,8 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import { EmployeeDto } from "../../../services/employeeService";
 import dayjs from "dayjs";
+import { authService } from "../../../services/authService";
+import { PERMISSIONS } from "../../../constants/permissionMapping";
 
 interface RoleOption {
   value: string;
@@ -29,12 +31,25 @@ interface GetColumnsOptions {
 export const getEmployeeColumns = (
   options: GetColumnsOptions
 ): ColumnsType<EmployeeDto> => {
-  const getRoleTag = (role: string) => {
-    const roleConfig = options.roles.find((r) => r.value === role);
+  const getRoleTags = (roles: string[] | string | undefined) => {
+    // Handle both array (new) and string (legacy) formats
+    const roleList = Array.isArray(roles) ? roles : roles ? [roles] : [];
+
+    if (roleList.length === 0) {
+      return <Tag color="default">Chưa phân quyền</Tag>;
+    }
+
     return (
-      <Tag color={roleConfig?.color || "default"}>
-        {roleConfig?.label || role}
-      </Tag>
+      <Space size={[0, 4]} wrap>
+        {roleList.map((role) => {
+          const roleConfig = options.roles.find((r) => r.value === role);
+          return (
+            <Tag key={role} color={roleConfig?.color || "default"}>
+              {roleConfig?.label || role}
+            </Tag>
+          );
+        })}
+      </Space>
     );
   };
 
@@ -96,11 +111,12 @@ export const getEmployeeColumns = (
       width: 140,
     },
     {
-      title: "Vai trò",
-      dataIndex: "role",
-      key: "role",
-      width: 140,
-      render: (role: string) => getRoleTag(role),
+      title: "Nhóm quyền",
+      dataIndex: "roles",
+      key: "roles",
+      width: 180,
+      render: (roles: string[] | string | undefined, record) =>
+        getRoleTags(roles || record.role),
     },
     {
       title: "Loại TK",
@@ -148,56 +164,71 @@ export const getEmployeeColumns = (
       dataIndex: "isActive",
       key: "isActive",
       width: 130,
-      render: (isActive: boolean, record) => (
-        <Switch
-          checked={isActive}
-          onChange={(checked) => options.onToggleActive(record.id, checked)}
-          checkedChildren="Hoạt động"
-          unCheckedChildren="Vô hiệu"
-        />
-      ),
+      render: (isActive: boolean, record) => {
+        const canEdit = authService.hasPermission(PERMISSIONS.Users.Edit);
+        return (
+          <Switch
+            checked={isActive}
+            onChange={(checked) => options.onToggleActive(record.id, checked)}
+            checkedChildren="Hoạt động"
+            unCheckedChildren="Vô hiệu"
+            disabled={!canEdit}
+          />
+        );
+      },
     },
     {
       title: "Thao tác",
       key: "actions",
       width: 150,
       fixed: "right",
-      render: (_, record) => (
-        <Space size="small">
-          <Tooltip title="Sửa">
-            <Button
-              type="link"
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() => options.onEdit(record)}
-            />
-          </Tooltip>
-          <Tooltip title="Đặt lại mật khẩu">
-            <Button
-              type="link"
-              size="small"
-              icon={<KeyOutlined />}
-              onClick={() => options.onResetPassword(record)}
-            />
-          </Tooltip>
-          <Popconfirm
-            title="Xóa nhân viên"
-            description="Bạn có chắc muốn xóa nhân viên này?"
-            onConfirm={() => options.onDelete(record.id)}
-            okText="Xóa"
-            cancelText="Hủy"
-          >
-            <Tooltip title="Xóa">
-              <Button
-                type="link"
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-              />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
-      ),
+      render: (_, record) => {
+        const canEdit = authService.hasPermission(PERMISSIONS.Users.Edit);
+        const canDelete = authService.hasPermission(PERMISSIONS.Users.Delete);
+
+        return (
+          <Space size="small">
+            {canEdit && (
+              <Tooltip title="Sửa">
+                <Button
+                  type="link"
+                  size="small"
+                  icon={<EditOutlined />}
+                  onClick={() => options.onEdit(record)}
+                />
+              </Tooltip>
+            )}
+            {canEdit && (
+              <Tooltip title="Đặt lại mật khẩu">
+                <Button
+                  type="link"
+                  size="small"
+                  icon={<KeyOutlined />}
+                  onClick={() => options.onResetPassword(record)}
+                />
+              </Tooltip>
+            )}
+            {canDelete && (
+              <Popconfirm
+                title="Xóa nhân viên"
+                description="Bạn có chắc muốn xóa nhân viên này?"
+                onConfirm={() => options.onDelete(record.id)}
+                okText="Xóa"
+                cancelText="Hủy"
+              >
+                <Tooltip title="Xóa">
+                  <Button
+                    type="link"
+                    size="small"
+                    danger
+                    icon={<DeleteOutlined />}
+                  />
+                </Tooltip>
+              </Popconfirm>
+            )}
+          </Space>
+        );
+      },
     },
   ];
 };

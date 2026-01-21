@@ -11,6 +11,8 @@ import {
   SubcontractorFormModal,
   SubcontractorDetailModal,
 } from "./components";
+import { authService } from "../../services/authService";
+import { PERMISSIONS } from "../../constants/permissionMapping";
 
 const SubcontractorList: React.FC = () => {
   const {
@@ -51,13 +53,15 @@ const SubcontractorList: React.FC = () => {
         extra={
           <Space>
             <Button icon={<ReloadOutlined />} onClick={handleRefresh} />
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={handleCreate}
-            >
-              Thêm nhà thầu phụ
-            </Button>
+            {authService.hasPermission(PERMISSIONS.Subcontractors.Create) && (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleCreate}
+              >
+                Thêm nhà thầu phụ
+              </Button>
+            )}
           </Space>
         }
       >

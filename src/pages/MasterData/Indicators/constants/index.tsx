@@ -8,6 +8,8 @@ import {
 import { IndicatorName } from "../../../../components/common";
 import type { ColumnsType } from "antd/es/table";
 import { IndicatorDto, IndicatorGroupDto, GroupedIndicatorData } from "../types";
+import { authService } from "../../../../services/authService";
+import { PERMISSIONS } from "../../../../constants/permissionMapping";
 
 export const getIndicatorColumns = (
   handleEditIndicator: (indicator: IndicatorDto) => void,
@@ -52,52 +54,63 @@ export const getIndicatorColumns = (
     title: "Thao tác",
     key: "actions",
     width: 150,
-    render: (_, record) => (
-      <Space size="small">
-        <Tooltip title="Sửa">
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEditIndicator(record)}
-          />
-        </Tooltip>
-        <Tooltip title={record.isActive ? "Tắt hoạt động" : "Bật hoạt động"}>
-          <Button
-            type="link"
-            size="small"
-            icon={
-              record.isActive ? <StopOutlined /> : <CheckCircleOutlined />
-            }
-            onClick={() => handleToggleActive(record.id)}
-          />
-        </Tooltip>
-        {record.canDelete ? (
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa?"
-            onConfirm={() => handleDeleteIndicator(record.id)}
-            okText="Có"
-            cancelText="Không"
-          >
-            <Button
-              type="link"
-              size="small"
-              danger
-              icon={<DeleteOutlined />}
-            />
-          </Popconfirm>
-        ) : (
-          <Tooltip title="Không thể xóa vì đã được sử dụng">
-            <Button
-              type="link"
-              size="small"
-              disabled
-              icon={<DeleteOutlined />}
-            />
-          </Tooltip>
-        )}
-      </Space>
-    ),
+    render: (_, record) => {
+      const canEdit = authService.hasPermission(PERMISSIONS.Indicators.Edit);
+      const canDelete = authService.hasPermission(PERMISSIONS.Indicators.Delete);
+
+      return (
+        <Space size="small">
+          {canEdit && (
+            <Tooltip title="Sửa">
+              <Button
+                type="link"
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => handleEditIndicator(record)}
+              />
+            </Tooltip>
+          )}
+          {canEdit && (
+            <Tooltip title={record.isActive ? "Tắt hoạt động" : "Bật hoạt động"}>
+              <Button
+                type="link"
+                size="small"
+                icon={
+                  record.isActive ? <StopOutlined /> : <CheckCircleOutlined />
+                }
+                onClick={() => handleToggleActive(record.id)}
+              />
+            </Tooltip>
+          )}
+          {canDelete && (
+            record.canDelete ? (
+              <Popconfirm
+                title="Bạn có chắc chắn muốn xóa?"
+                onConfirm={() => handleDeleteIndicator(record.id)}
+                okText="Có"
+                cancelText="Không"
+              >
+                <Button
+                  type="link"
+                  size="small"
+                  danger
+                  icon={<DeleteOutlined />}
+                />
+              </Popconfirm>
+            ) : (
+              <Tooltip title="Không thể xóa vì đã được sử dụng">
+                <Button
+                  type="link"
+                  size="small"
+                  disabled
+                  icon={<DeleteOutlined />}
+                />
+              </Tooltip>
+            )
+          )}
+        </Space>
+      );
+    },
   },
 ];
 
@@ -140,41 +153,50 @@ export const getGroupColumns = (
     title: "Thao tác",
     key: "actions",
     width: 100,
-    render: (_, record) => (
-      <Space size="small">
-        <Tooltip title="Sửa nhóm">
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEditGroup(record)}
-          />
-        </Tooltip>
-        {record.indicators.length === 0 ? (
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa nhóm này?"
-            onConfirm={() => handleDeleteGroup(record.id)}
-            okText="Có"
-            cancelText="Không"
-          >
-            <Button
-              type="link"
-              size="small"
-              danger
-              icon={<DeleteOutlined />}
-            />
-          </Popconfirm>
-        ) : (
-          <Tooltip title="Không thể xóa nhóm có chứa chỉ tiêu">
-            <Button
-              type="link"
-              size="small"
-              disabled
-              icon={<DeleteOutlined />}
-            />
-          </Tooltip>
-        )}
-      </Space>
-    ),
+    render: (_, record) => {
+      const canEdit = authService.hasPermission(PERMISSIONS.IndicatorGroups.Edit);
+      const canDelete = authService.hasPermission(PERMISSIONS.IndicatorGroups.Delete);
+
+      return (
+        <Space size="small">
+          {canEdit && (
+            <Tooltip title="Sửa nhóm">
+              <Button
+                type="link"
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => handleEditGroup(record)}
+              />
+            </Tooltip>
+          )}
+          {canDelete && (
+            record.indicators.length === 0 ? (
+              <Popconfirm
+                title="Bạn có chắc chắn muốn xóa nhóm này?"
+                onConfirm={() => handleDeleteGroup(record.id)}
+                okText="Có"
+                cancelText="Không"
+              >
+                <Button
+                  type="link"
+                  size="small"
+                  danger
+                  icon={<DeleteOutlined />}
+                />
+              </Popconfirm>
+            ) : (
+              <Tooltip title="Không thể xóa nhóm có chứa chỉ tiêu">
+                <Button
+                  type="link"
+                  size="small"
+                  disabled
+                  icon={<DeleteOutlined />}
+                />
+              </Tooltip>
+            )
+          )}
+        </Space>
+      );
+    },
   },
 ];

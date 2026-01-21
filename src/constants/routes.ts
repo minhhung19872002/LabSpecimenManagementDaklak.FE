@@ -87,6 +87,11 @@ export const PATH_ROUTES = {
 
   employees: '/employees',
 
+  roleManagement: {
+    index: '/role-management',
+    detail: (id: string) => `/role-management/${id}`,
+  },
+
   settings: '/settings',
 
   login: '/login',

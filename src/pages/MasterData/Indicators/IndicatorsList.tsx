@@ -27,6 +27,8 @@ import {
   IndicatorFormData,
   IndicatorGroupFormData,
 } from "./schemas/indicatorSchema";
+import { authService } from "../../../services/authService";
+import { PERMISSIONS } from "../../../constants/permissionMapping";
 
 const IndicatorsList: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
   const {
@@ -160,25 +162,31 @@ const IndicatorsList: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
             >
               Tải template mẫu
             </Button>
-            <Button
-              icon={<UploadOutlined />}
-              onClick={() => setImportIndicatorGroupModalOpen(true)}
-            >
-              Nhập danh sách
-            </Button>
-            <Button
-              icon={<FolderAddOutlined />}
-              onClick={() => handleCreateGroup(groupForm)}
-            >
-              Thêm nhóm
-            </Button>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => handleBulkCreate(bulkForm)}
-            >
-              Thêm chỉ tiêu
-            </Button>
+            {authService.hasPermission(PERMISSIONS.Indicators.Import) && (
+              <Button
+                icon={<UploadOutlined />}
+                onClick={() => setImportIndicatorGroupModalOpen(true)}
+              >
+                Nhập danh sách
+              </Button>
+            )}
+            {authService.hasPermission(PERMISSIONS.IndicatorGroups.Create) && (
+              <Button
+                icon={<FolderAddOutlined />}
+                onClick={() => handleCreateGroup(groupForm)}
+              >
+                Thêm nhóm
+              </Button>
+            )}
+            {authService.hasPermission(PERMISSIONS.Indicators.Create) && (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => handleBulkCreate(bulkForm)}
+              >
+                Thêm chỉ tiêu
+              </Button>
+            )}
           </Space>
         </Col>
       </Row>

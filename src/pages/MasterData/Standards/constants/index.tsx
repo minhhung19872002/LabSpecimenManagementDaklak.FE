@@ -3,6 +3,8 @@ import { EditOutlined, DeleteOutlined, StopOutlined, CheckCircleOutlined } from 
 import { IndicatorName } from "../../../../components/common";
 import type { ColumnsType } from "antd/es/table";
 import { GroupedStandardData, StandardIndicatorDto } from "../types";
+import { authService } from "../../../../services/authService";
+import { PERMISSIONS } from "../../../../constants/permissionMapping";
 
 export const DEFAULT_PAGE_SIZE = 50;
 
@@ -64,57 +66,68 @@ export const getStandardColumns = (
     title: "Thao tác",
     key: "actions",
     width: 120,
-    render: (_, record) => (
-      <Space size="small">
-        <Tooltip title={record.isActive ? "Tắt hoạt động" : "Bật hoạt động"}>
-          <Button
-            type="link"
-            size="small"
-            icon={record.isActive ? <StopOutlined /> : <CheckCircleOutlined />}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleToggleActive(record.id);
-            }}
-          />
-        </Tooltip>
-        <Tooltip title="Sửa">
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleEdit(record);
-            }}
-          />
-        </Tooltip>
-        <Popconfirm
-          title="Bạn có chắc chắn muốn xóa tiêu chuẩn này?"
-          description={
-            record.indicators?.length > 0
-              ? "Tiêu chuẩn này đang có chỉ tiêu. Vui lòng xóa hết chỉ tiêu trước."
-              : undefined
-          }
-          onConfirm={(e) => {
-            e?.stopPropagation();
-            handleDelete(record.id);
-          }}
-          onCancel={(e) => e?.stopPropagation()}
-          okText="Có"
-          cancelText="Không"
-          disabled={record.indicators?.length > 0}
-        >
-          <Button
-            type="link"
-            size="small"
-            danger
-            icon={<DeleteOutlined />}
-            disabled={record.indicators?.length > 0}
-            onClick={(e) => e.stopPropagation()}
-          />
-        </Popconfirm>
-      </Space>
-    ),
+    render: (_, record) => {
+      const canEdit = authService.hasPermission(PERMISSIONS.Standards.Edit);
+      const canDelete = authService.hasPermission(PERMISSIONS.Standards.Delete);
+
+      return (
+        <Space size="small">
+          {canEdit && (
+            <Tooltip title={record.isActive ? "Tắt hoạt động" : "Bật hoạt động"}>
+              <Button
+                type="link"
+                size="small"
+                icon={record.isActive ? <StopOutlined /> : <CheckCircleOutlined />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleToggleActive(record.id);
+                }}
+              />
+            </Tooltip>
+          )}
+          {canEdit && (
+            <Tooltip title="Sửa">
+              <Button
+                type="link"
+                size="small"
+                icon={<EditOutlined />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEdit(record);
+                }}
+              />
+            </Tooltip>
+          )}
+          {canDelete && (
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa tiêu chuẩn này?"
+              description={
+                record.indicators?.length > 0
+                  ? "Tiêu chuẩn này đang có chỉ tiêu. Vui lòng xóa hết chỉ tiêu trước."
+                  : undefined
+              }
+              onConfirm={(e) => {
+                e?.stopPropagation();
+                handleDelete(record.id);
+              }}
+              onCancel={(e) => e?.stopPropagation()}
+              okText="Có"
+              cancelText="Không"
+              disabled={record.indicators?.length > 0}
+            >
+              <Button
+                type="link"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                disabled={record.indicators?.length > 0}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </Popconfirm>
+          )}
+        </Space>
+      );
+    },
   },
 ];
 
@@ -186,33 +199,44 @@ export const getIndicatorColumns = (
     title: "Thao tác",
     key: "actions",
     width: 120,
-    render: (_, record) => (
-      <Space size="small">
-        <Tooltip title={record.isActive ? "Tắt hoạt động" : "Bật hoạt động"}>
-          <Button
-            type="link"
-            size="small"
-            icon={record.isActive ? <StopOutlined /> : <CheckCircleOutlined />}
-            onClick={() => handleToggleActive(record.standardId, record.id)}
-          />
-        </Tooltip>
-        <Tooltip title="Sửa">
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record.standardId, record)}
-          />
-        </Tooltip>
-        <Popconfirm
-          title="Bạn có chắc chắn muốn xóa chỉ tiêu này khỏi tiêu chuẩn?"
-          onConfirm={() => handleRemove(record.standardId, record.id)}
-          okText="Có"
-          cancelText="Không"
-        >
-          <Button type="link" size="small" danger icon={<DeleteOutlined />} />
-        </Popconfirm>
-      </Space>
-    ),
+    render: (_, record) => {
+      const canEdit = authService.hasPermission(PERMISSIONS.Standards.Edit);
+      const canDelete = authService.hasPermission(PERMISSIONS.Standards.Delete);
+
+      return (
+        <Space size="small">
+          {canEdit && (
+            <Tooltip title={record.isActive ? "Tắt hoạt động" : "Bật hoạt động"}>
+              <Button
+                type="link"
+                size="small"
+                icon={record.isActive ? <StopOutlined /> : <CheckCircleOutlined />}
+                onClick={() => handleToggleActive(record.standardId, record.id)}
+              />
+            </Tooltip>
+          )}
+          {canEdit && (
+            <Tooltip title="Sửa">
+              <Button
+                type="link"
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => handleEdit(record.standardId, record)}
+              />
+            </Tooltip>
+          )}
+          {canDelete && (
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa chỉ tiêu này khỏi tiêu chuẩn?"
+              onConfirm={() => handleRemove(record.standardId, record.id)}
+              okText="Có"
+              cancelText="Không"
+            >
+              <Button type="link" size="small" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          )}
+        </Space>
+      );
+    },
   },
 ];

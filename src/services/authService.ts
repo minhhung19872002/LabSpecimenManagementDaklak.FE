@@ -131,6 +131,71 @@ export const authService = {
   getRefreshToken: (): string | null => {
     return localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
   },
+
+  // Get stored user info
+  getUserInfo: (): UserInfo | null => {
+    const stored = localStorage.getItem(STORAGE_KEYS.USER_INFO);
+    if (!stored) return null;
+    try {
+      return JSON.parse(stored) as UserInfo;
+    } catch {
+      return null;
+    }
+  },
+
+  // Get user permissions from stored user info
+  getUserPermissions: (): string[] => {
+    const userInfo = authService.getUserInfo();
+    return userInfo?.permissions || [];
+  },
+
+  // Get user roles from stored user info
+  getUserRoles: (): string[] => {
+    const userInfo = authService.getUserInfo();
+    return userInfo?.roles || [];
+  },
+
+  // Check if user has a specific permission
+  hasPermission: (permissionName: string): boolean => {
+    const permissions = authService.getUserPermissions();
+    // Admin có tất cả quyền
+    if (permissions.includes('Role:admin')) {
+      return true;
+    }
+    return permissions.includes(permissionName);
+  },
+
+  // Check if user has ANY of the specified permissions
+  hasAnyPermission: (permissionNames: string[]): boolean => {
+    if (!permissionNames || permissionNames.length === 0) {
+      return true;
+    }
+    const permissions = authService.getUserPermissions();
+    // Admin có tất cả quyền
+    if (permissions.includes('Role:admin')) {
+      return true;
+    }
+    return permissionNames.some(name => permissions.includes(name));
+  },
+
+  // Check if user has ALL of the specified permissions
+  hasAllPermissions: (permissionNames: string[]): boolean => {
+    if (!permissionNames || permissionNames.length === 0) {
+      return true;
+    }
+    const permissions = authService.getUserPermissions();
+    // Admin có tất cả quyền
+    if (permissions.includes('Role:admin')) {
+      return true;
+    }
+    return permissionNames.every(name => permissions.includes(name));
+  },
+
+  // Check if user is admin
+  isAdmin: (): boolean => {
+    const roles = authService.getUserRoles();
+    return roles.includes('admin');
+  },
 };
 
 export default authService;

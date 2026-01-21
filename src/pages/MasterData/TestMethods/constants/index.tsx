@@ -3,6 +3,8 @@ import { EditOutlined, DeleteOutlined, StopOutlined, CheckCircleOutlined } from 
 import { IndicatorName } from "../../../../components/common";
 import type { ColumnsType } from "antd/es/table";
 import { GroupedTestMethodData, TestMethodIndicatorDto } from "../types";
+import { authService } from "../../../../services/authService";
+import { PERMISSIONS } from "../../../../constants/permissionMapping";
 
 export const DEFAULT_PAGE_SIZE = 50;
 
@@ -34,57 +36,68 @@ export const getTestMethodColumns = (
     title: "Thao tác",
     key: "actions",
     width: 120,
-    render: (_, record) => (
-      <Space size="small">
-        <Tooltip title={record.isActive ? "Tắt hoạt động" : "Bật hoạt động"}>
-          <Button
-            type="link"
-            size="small"
-            icon={record.isActive ? <StopOutlined /> : <CheckCircleOutlined />}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleToggleActive(record.id);
-            }}
-          />
-        </Tooltip>
-        <Tooltip title="Sửa">
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleEdit(record);
-            }}
-          />
-        </Tooltip>
-        <Popconfirm
-          title="Bạn có chắc chắn muốn xóa phương pháp này?"
-          description={
-            record.indicators?.length > 0
-              ? "Phương pháp này đang có chỉ tiêu. Vui lòng xóa hết chỉ tiêu trước."
-              : undefined
-          }
-          onConfirm={(e) => {
-            e?.stopPropagation();
-            handleDelete(record.id);
-          }}
-          onCancel={(e) => e?.stopPropagation()}
-          okText="Có"
-          cancelText="Không"
-          disabled={record.indicators?.length > 0}
-        >
-          <Button
-            type="link"
-            size="small"
-            danger
-            icon={<DeleteOutlined />}
-            disabled={record.indicators?.length > 0}
-            onClick={(e) => e.stopPropagation()}
-          />
-        </Popconfirm>
-      </Space>
-    ),
+    render: (_, record) => {
+      const canEdit = authService.hasPermission(PERMISSIONS.TestMethods.Edit);
+      const canDelete = authService.hasPermission(PERMISSIONS.TestMethods.Delete);
+
+      return (
+        <Space size="small">
+          {canEdit && (
+            <Tooltip title={record.isActive ? "Tắt hoạt động" : "Bật hoạt động"}>
+              <Button
+                type="link"
+                size="small"
+                icon={record.isActive ? <StopOutlined /> : <CheckCircleOutlined />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleToggleActive(record.id);
+                }}
+              />
+            </Tooltip>
+          )}
+          {canEdit && (
+            <Tooltip title="Sửa">
+              <Button
+                type="link"
+                size="small"
+                icon={<EditOutlined />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEdit(record);
+                }}
+              />
+            </Tooltip>
+          )}
+          {canDelete && (
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa phương pháp này?"
+              description={
+                record.indicators?.length > 0
+                  ? "Phương pháp này đang có chỉ tiêu. Vui lòng xóa hết chỉ tiêu trước."
+                  : undefined
+              }
+              onConfirm={(e) => {
+                e?.stopPropagation();
+                handleDelete(record.id);
+              }}
+              onCancel={(e) => e?.stopPropagation()}
+              okText="Có"
+              cancelText="Không"
+              disabled={record.indicators?.length > 0}
+            >
+              <Button
+                type="link"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                disabled={record.indicators?.length > 0}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </Popconfirm>
+          )}
+        </Space>
+      );
+    },
   },
 ];
 
@@ -133,15 +146,23 @@ export const getIndicatorColumns = (
     title: "Thao tác",
     key: "actions",
     width: 80,
-    render: (_, record) => (
-      <Popconfirm
-        title="Bạn có chắc chắn muốn xóa chỉ tiêu này khỏi phương pháp?"
-        onConfirm={() => handleRemove(record.testMethodId, record.indicatorId)}
-        okText="Có"
-        cancelText="Không"
-      >
-        <Button type="link" size="small" danger icon={<DeleteOutlined />} />
-      </Popconfirm>
-    ),
+    render: (_, record) => {
+      const canDelete = authService.hasPermission(PERMISSIONS.TestMethods.Delete);
+
+      if (!canDelete) {
+        return null;
+      }
+
+      return (
+        <Popconfirm
+          title="Bạn có chắc chắn muốn xóa chỉ tiêu này khỏi phương pháp?"
+          onConfirm={() => handleRemove(record.testMethodId, record.indicatorId)}
+          okText="Có"
+          cancelText="Không"
+        >
+          <Button type="link" size="small" danger icon={<DeleteOutlined />} />
+        </Popconfirm>
+      );
+    },
   },
 ];

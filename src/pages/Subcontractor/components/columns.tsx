@@ -4,6 +4,8 @@ import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { Subcontractor } from "../hooks";
 import StatusTag from "../../../components/common/StatusTag";
+import { authService } from "../../../services/authService";
+import { PERMISSIONS } from "../../../constants/permissionMapping";
 
 const { Text } = Typography;
 
@@ -96,29 +98,38 @@ export const getSubcontractorColumns = (
     key: "actions",
     width: 150,
     fixed: "right",
-    render: (_, record) => (
-      <Space size="small">
-        <Button
-          type="link"
-          size="small"
-          icon={<EyeOutlined />}
-          onClick={() => options.onView(record)}
-        />
-        <Button
-          type="link"
-          size="small"
-          icon={<EditOutlined />}
-          onClick={() => options.onEdit(record)}
-        />
-        <Popconfirm
-          title="Bạn có chắc chắn muốn xóa?"
-          onConfirm={() => options.onDelete(record.id)}
-          okText="Có"
-          cancelText="Không"
-        >
-          <Button type="link" size="small" danger icon={<DeleteOutlined />} />
-        </Popconfirm>
-      </Space>
-    ),
+    render: (_, record) => {
+      const canEdit = authService.hasPermission(PERMISSIONS.Subcontractors.Edit);
+      const canDelete = authService.hasPermission(PERMISSIONS.Subcontractors.Delete);
+
+      return (
+        <Space size="small">
+          <Button
+            type="link"
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => options.onView(record)}
+          />
+          {canEdit && (
+            <Button
+              type="link"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => options.onEdit(record)}
+            />
+          )}
+          {canDelete && (
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa?"
+              onConfirm={() => options.onDelete(record.id)}
+              okText="Có"
+              cancelText="Không"
+            >
+              <Button type="link" size="small" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          )}
+        </Space>
+      );
+    },
   },
 ];

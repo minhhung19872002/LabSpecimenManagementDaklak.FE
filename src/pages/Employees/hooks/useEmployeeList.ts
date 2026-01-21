@@ -71,7 +71,7 @@ export const useEmployeeList = () => {
       phone: null,
       departmentId: "",
       position: null,
-      role: "",
+      // Note: role field removed - quản lý quyền thông qua "Quản lý phân quyền"
       isActive: true,
       isTemporaryAccount: false,
       accountExpirationDate: null,
@@ -205,7 +205,7 @@ export const useEmployeeList = () => {
       phone: null,
       departmentId: "",
       position: null,
-      role: "",
+      // Note: role field removed - quản lý quyền thông qua "Quản lý phân quyền"
       isActive: true,
       isTemporaryAccount: false,
       accountExpirationDate: null,
@@ -226,7 +226,7 @@ export const useEmployeeList = () => {
         phone: record.phone || null,
         departmentId: record.departmentId,
         position: record.position || null,
-        role: record.role,
+        // Note: role field removed - quản lý quyền thông qua "Quản lý phân quyền"
         isActive: record.isActive,
         isTemporaryAccount: record.isTemporaryAccount || false,
         accountExpirationDate: record.accountExpirationDate
@@ -316,7 +316,7 @@ export const useEmployeeList = () => {
             fullName: formData.fullName,
             email: formData.email,
             phone: formData.phone || "",
-            role: formData.role,
+            // Note: role field removed - quản lý quyền thông qua "Quản lý phân quyền"
             departmentId: formData.departmentId,
             position: formData.position || "",
             isActive: formData.isActive ?? true,
@@ -337,7 +337,7 @@ export const useEmployeeList = () => {
             fullName: formData.fullName,
             email: formData.email,
             phone: formData.phone || "",
-            role: formData.role,
+            // Note: role field removed - quản lý quyền thông qua "Quản lý phân quyền"
             departmentId: formData.departmentId,
             position: formData.position || "",
             isActive: formData.isActive ?? true,

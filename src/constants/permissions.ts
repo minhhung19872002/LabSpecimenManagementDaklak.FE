@@ -1,8 +1,15 @@
 import { ROLES } from './roles';
 import { PATH_ROUTES } from './routes';
+import { ROUTE_PERMISSION_MAP, PERMISSIONS } from './permissionMapping';
+import { authService } from '../services/authService';
 
 /**
  * Route permissions configuration
+ *
+ * UPDATED: Hệ thống hiện sử dụng permission-based checking
+ * - hasRoutePermission() kiểm tra cả role-based (backward compatibility) và permission-based
+ * - ROUTE_PERMISSIONS: Role-based config (legacy)
+ * - ROUTE_PERMISSION_MAP: Permission-based config (new)
  *
  * Permission Matrix:
  * - Admin: Tất cả các chức năng
@@ -110,6 +117,9 @@ export const ROUTE_PERMISSIONS: Record<string, string[]> = {
   // Nhân viên
   [PATH_ROUTES.employees]: [ROLES.ADMIN],
 
+  // Quản lý phân quyền
+  [PATH_ROUTES.roleManagement.index]: [ROLES.ADMIN],
+
   // ============================================
   // Quản lý phiếu thu - Kế toán (A), Admin (A)
   // Theo Permission Matrix: Kế toán và Admin có full quyền
@@ -160,6 +170,7 @@ export const SUPPORTER_ALLOWED_ROUTES = [
 ];
 
 // Check if user has permission to access a route
+// Updated: Sử dụng permission-based checking với backward compatibility cho role-based
 export const hasRoutePermission = (pathname: string, userRoles: string[], isSupporter?: boolean): boolean => {
   if (!userRoles || userRoles.length === 0) {
     return false;
@@ -170,6 +181,36 @@ export const hasRoutePermission = (pathname: string, userRoles: string[], isSupp
     return true;
   }
 
+  // === NEW: Permission-based checking ===
+  // Check nếu user có permission tương ứng với route
+  const checkPermissionBased = (): boolean => {
+    // Get required permissions for this route
+    let requiredPermissions = ROUTE_PERMISSION_MAP[pathname];
+
+    // Check prefix match for nested routes
+    if (!requiredPermissions) {
+      for (const route of Object.keys(ROUTE_PERMISSION_MAP)) {
+        if (pathname.startsWith(route + '/') || pathname.startsWith(route + '?')) {
+          requiredPermissions = ROUTE_PERMISSION_MAP[route];
+          break;
+        }
+      }
+    }
+
+    // If route has required permissions, check if user has any of them
+    if (requiredPermissions && requiredPermissions.length > 0) {
+      return authService.hasAnyPermission(requiredPermissions);
+    }
+
+    return false;
+  };
+
+  // Try permission-based check first
+  if (checkPermissionBased()) {
+    return true;
+  }
+
+  // === LEGACY: Role-based checking (backward compatibility) ===
   // Check exact match first
   const allowedRoles = ROUTE_PERMISSIONS[pathname];
   if (allowedRoles) {
@@ -204,6 +245,9 @@ export const hasRoutePermission = (pathname: string, userRoles: string[], isSupp
   // If route is not in permissions config, only Admin can access
   return false;
 };
+
+// Re-export PERMISSIONS and ROUTE_PERMISSION_MAP for convenience
+export { PERMISSIONS, ROUTE_PERMISSION_MAP };
 
 // Get default route for user based on their roles
 export const getDefaultRouteForUser = (userRoles: string[]): string | null => {
