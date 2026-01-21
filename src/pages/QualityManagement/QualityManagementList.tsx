@@ -25,6 +25,8 @@ import ChangeApprovalModal from "./components/ChangeApprovalModal";
 import SampleAssignmentLogTab from "./components/SampleAssignmentLogTab";
 import { useQualityManagementList } from "./hooks";
 
+import "./components/ReportManagementTab.css";
+
 const { Title } = Typography;
 
 const QualityManagementList: React.FC = () => {
@@ -57,7 +59,7 @@ const QualityManagementList: React.FC = () => {
       key: "reports",
       label: "Quản lý báo cáo",
       children: (
-        <>
+        <div className="report-management-tab">
           {/* Filters */}
           <Card size="small" style={{ marginBottom: 16 }}>
             <Row gutter={[16, 16]} align="middle">
@@ -116,7 +118,7 @@ const QualityManagementList: React.FC = () => {
               size="small"
             />
           </Card>
-        </>
+        </div>
       ),
     },
     {
@@ -202,15 +204,6 @@ const QualityManagementList: React.FC = () => {
         onClose={closeChangeApprovalModal}
         onUpdated={loadData}
       />
-
-      <style>{`
-        .urgent-row {
-          background-color: #fff2f0 !important;
-        }
-        .urgent-row:hover > td {
-          background-color: #ffccc7 !important;
-        }
-      `}</style>
     </div>
   );
 };

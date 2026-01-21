@@ -1,0 +1,21 @@
+/* Styles for Report Management Tab (Quản lý báo cáo) */
+
+/* Urgent row - còn <= 2 ngày đến hạn */
+.report-management-tab .ant-table-tbody > tr.urgent-row > td {
+  background-color: #fff2f0 !important;
+}
+
+.report-management-tab .ant-table-tbody > tr.urgent-row:hover > td,
+.report-management-tab .ant-table-tbody > tr.urgent-row.ant-table-row-hover > td {
+  background-color: #ffccc7 !important;
+}
+
+/* Normal rows */
+.report-management-tab .ant-table-tbody > tr:not(.urgent-row) > td {
+  background-color: #ffffff;
+}
+
+.report-management-tab .ant-table-tbody > tr:not(.urgent-row):hover > td,
+.report-management-tab .ant-table-tbody > tr:not(.urgent-row).ant-table-row-hover > td {
+  background-color: #fafafa !important;
+}
