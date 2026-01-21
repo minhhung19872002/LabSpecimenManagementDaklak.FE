@@ -201,6 +201,7 @@ export const qualityManagementService = {
       TestRequestStatus: params.testRequestStatus !== undefined ? params.testRequestStatus : undefined,
       FromDate: params.fromDate,
       ToDate: params.toDate,
+      LaboratoryId: params.laboratoryId,
     };
 
     // Remove undefined values
