@@ -11,6 +11,8 @@ import {
   SpecimenStatus,
 } from "../../../types/specimenHistory";
 import StatusTag from "../../../components/common/StatusTag";
+import { authService } from "../../../services/authService";
+import { PERMISSIONS } from "../../../constants/permissionMapping";
 
 interface GetColumnsOptions {
   onView: (id: string) => void;
@@ -103,29 +105,38 @@ export const getSpecimenHistoryColumns = (options: GetColumnsOptions) => [
     key: "actions",
     width: 150,
     fixed: "right" as const,
-    render: (_: unknown, record: SpecimenHistoryDto) => (
-      <Space size="small">
-        <Button
-          type="link"
-          size="small"
-          icon={<EyeOutlined />}
-          onClick={() => options.onView(record.id)}
-        />
-        <Button
-          type="link"
-          size="small"
-          icon={<EditOutlined />}
-          onClick={() => options.onEdit(record)}
-        />
-        <Popconfirm
-          title="Bạn có chắc chắn muốn xóa?"
-          onConfirm={() => options.onDelete(record.id)}
-          okText="Có"
-          cancelText="Không"
-        >
-          <Button type="link" size="small" danger icon={<DeleteOutlined />} />
-        </Popconfirm>
-      </Space>
-    ),
+    render: (_: unknown, record: SpecimenHistoryDto) => {
+      const canEdit = authService.hasPermission(PERMISSIONS.Specimens.Edit);
+      const canDelete = authService.hasPermission(PERMISSIONS.Specimens.Delete);
+
+      return (
+        <Space size="small">
+          <Button
+            type="link"
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => options.onView(record.id)}
+          />
+          {canEdit && (
+            <Button
+              type="link"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => options.onEdit(record)}
+            />
+          )}
+          {canDelete && (
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa?"
+              onConfirm={() => options.onDelete(record.id)}
+              okText="Có"
+              cancelText="Không"
+            >
+              <Button type="link" size="small" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          )}
+        </Space>
+      );
+    },
   },
 ];

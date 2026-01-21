@@ -24,7 +24,7 @@ import {
 } from "../../../components/common/Icon";
 import dayjs from "dayjs";
 import { EmployeeFormData } from "../schemas";
-import { Department, ROLE_OPTIONS, POSITION_OPTIONS } from "../hooks";
+import { Department, POSITION_OPTIONS } from "../hooks";
 
 const { Text } = Typography;
 
@@ -73,7 +73,6 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
       "fullName",
       "email",
       "departmentId",
-      "role",
     ]);
     if (isValid) {
       setCurrentStep(1);
@@ -285,28 +284,6 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
 
             <Row gutter={16}>
               <Col span={12}>
-                <Form.Item
-                  label="Vai trò hệ thống"
-                  required
-                  validateStatus={errors.role ? "error" : ""}
-                  help={errors.role?.message}
-                >
-                  <Controller
-                    name="role"
-                    control={control}
-                    render={({ field }) => (
-                      <Select {...field} placeholder="Chọn vai trò">
-                        {ROLE_OPTIONS.map((r) => (
-                          <Select.Option key={r.value} value={r.value}>
-                            {r.label}
-                          </Select.Option>
-                        ))}
-                      </Select>
-                    )}
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
                 <Form.Item label="Trạng thái">
                   <Controller
                     name="isActive"
@@ -344,7 +321,14 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                     }
                     style={{ marginBottom: isTemporaryAccount ? 16 : 0 }}
                   >
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 8 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "flex-start",
+                        gap: 8,
+                      }}
+                    >
                       <Controller
                         name="isTemporaryAccount"
                         control={control}
@@ -368,7 +352,9 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                     <Form.Item
                       label="Ngày hết hạn"
                       required
-                      validateStatus={errors.accountExpirationDate ? "error" : ""}
+                      validateStatus={
+                        errors.accountExpirationDate ? "error" : ""
+                      }
                       help={errors.accountExpirationDate?.message}
                       style={{ marginBottom: 0 }}
                     >
@@ -380,7 +366,9 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                             {...field}
                             value={field.value ? dayjs(field.value) : null}
                             onChange={(date) =>
-                              field.onChange(date ? date.endOf("day").toDate() : null)
+                              field.onChange(
+                                date ? date.endOf("day").toDate() : null,
+                              )
                             }
                             format="DD/MM/YYYY"
                             placeholder="Chọn ngày hết hạn"

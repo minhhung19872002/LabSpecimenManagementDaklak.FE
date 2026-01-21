@@ -5,6 +5,8 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { OrganizationDto } from '../../../types/organization';
 import { getProvinceNameByCode } from '../../../utils/vietnamLocations';
+import { authService } from '../../../services/authService';
+import { PERMISSIONS } from '../../../constants/permissionMapping';
 
 interface OrganizationTableProps {
   data: OrganizationDto[];
@@ -102,24 +104,33 @@ const OrganizationTable: React.FC<OrganizationTableProps> = ({
       width: 100,
       align: 'center',
       fixed: 'right',
-      render: (_, record: OrganizationDto) => (
-        <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => onEdit(record)}
-          />
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa?"
-            onConfirm={() => onDelete(record.id)}
-            okText="Có"
-            cancelText="Không"
-          >
-            <Button type="link" size="small" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
-      ),
+      render: (_, record: OrganizationDto) => {
+        const canEdit = authService.hasPermission(PERMISSIONS.Customers.Edit);
+        const canDelete = authService.hasPermission(PERMISSIONS.Customers.Delete);
+
+        return (
+          <Space size="small">
+            {canEdit && (
+              <Button
+                type="link"
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => onEdit(record)}
+              />
+            )}
+            {canDelete && (
+              <Popconfirm
+                title="Bạn có chắc chắn muốn xóa?"
+                onConfirm={() => onDelete(record.id)}
+                okText="Có"
+                cancelText="Không"
+              >
+                <Button type="link" size="small" danger icon={<DeleteOutlined />} />
+              </Popconfirm>
+            )}
+          </Space>
+        );
+      },
     },
   ];
 

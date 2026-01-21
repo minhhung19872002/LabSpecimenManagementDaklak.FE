@@ -24,6 +24,8 @@ import QRCodeGenerator, { MiniQRCode } from "../../components/common/QRCodeGener
 import { useReportList, getStatusConfig } from "./hooks";
 import { ReportFormModal, getReportColumns } from "./components";
 import StatusTag from "../../components/common/StatusTag";
+import { authService } from "../../services/authService";
+import { PERMISSIONS } from "../../constants/permissionMapping";
 
 const { RangePicker } = DatePicker;
 
@@ -95,9 +97,11 @@ const ReportList: React.FC = () => {
         extra={
           <Space>
             <Button icon={<ReloadOutlined />} onClick={loadData} />
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreateModal}>
-              Tạo báo cáo
-            </Button>
+            {authService.hasPermission(PERMISSIONS.Reports.Create) && (
+              <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreateModal}>
+                Tạo báo cáo
+              </Button>
+            )}
           </Space>
         }
       >

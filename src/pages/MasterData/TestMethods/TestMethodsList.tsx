@@ -22,6 +22,8 @@ import {
   TestMethodFormData,
 } from "./schemas/testMethodSchema";
 import { API_BASE_URL, api } from "../../../services/api";
+import { authService } from "../../../services/authService";
+import { PERMISSIONS } from "../../../constants/permissionMapping";
 
 const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshKey }) => {
   const {
@@ -208,19 +210,23 @@ const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshK
             <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
               Tải template mẫu
             </Button>
-            <Button
-              icon={<UploadOutlined />}
-              onClick={() => setImportModalOpen(true)}
-            >
-              Nhập danh sách
-            </Button>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => handleCreate(form)}
-            >
-              Thêm phương pháp
-            </Button>
+            {authService.hasPermission(PERMISSIONS.TestMethods.Create) && (
+              <Button
+                icon={<UploadOutlined />}
+                onClick={() => setImportModalOpen(true)}
+              >
+                Nhập danh sách
+              </Button>
+            )}
+            {authService.hasPermission(PERMISSIONS.TestMethods.Create) && (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => handleCreate(form)}
+              >
+                Thêm phương pháp
+              </Button>
+            )}
           </Space>
         </Col>
       </Row>

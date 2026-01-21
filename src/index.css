@@ -125,6 +125,15 @@ code {
   .ant-input-affix-wrapper {
     height: 36px !important;
   }
+  .ant-input-affix-wrapper {
+    display: flex !important;
+    align-items: center !important;
+  }
+  .ant-input-affix-wrapper .ant-input-prefix,
+  .ant-input-affix-wrapper .ant-input-suffix {
+    display: flex !important;
+    align-items: center !important;
+  }
   .ant-input-lg:not(textarea),
   .ant-input-affix-wrapper-lg {
     height: 44px !important;
@@ -293,6 +302,15 @@ code {
   .ant-input:not(textarea),
   .ant-input-affix-wrapper {
     height: 32px !important;
+  }
+  .ant-input-affix-wrapper {
+    display: flex !important;
+    align-items: center !important;
+  }
+  .ant-input-affix-wrapper .ant-input-prefix,
+  .ant-input-affix-wrapper .ant-input-suffix {
+    display: flex !important;
+    align-items: center !important;
   }
   .ant-input-lg:not(textarea),
   .ant-input-affix-wrapper-lg {

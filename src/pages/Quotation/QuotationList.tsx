@@ -23,6 +23,8 @@ import { quotationService } from "../../services/quotationService";
 import { QuotationListDto } from "../../types/quotation";
 import { PATH_ROUTES } from "../../constants";
 import { formatCurrency } from "../../utils/formatters";
+import { authService } from "../../services/authService";
+import { PERMISSIONS } from "../../constants/permissionMapping";
 
 const QuotationList: React.FC = () => {
   const navigate = useNavigate();
@@ -141,33 +143,42 @@ const QuotationList: React.FC = () => {
       width: 120,
       align: "center",
       fixed: "right",
-      render: (_, record) => (
-        <Space size="small" onClick={(e) => e.stopPropagation()}>
-          <Button
-            type="text"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => navigate(PATH_ROUTES.quotations.edit(record.id))}
-            title="Chỉnh sửa"
-          />
-          <Popconfirm
-            title="Xóa báo giá"
-            description="Bạn có chắc chắn muốn xóa báo giá này?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Xóa"
-            cancelText="Hủy"
-            okButtonProps={{ danger: true }}
-          >
-            <Button
-              type="text"
-              size="small"
-              danger
-              icon={<DeleteOutlined />}
-              title="Xóa"
-            />
-          </Popconfirm>
-        </Space>
-      ),
+      render: (_, record) => {
+        const canEdit = authService.hasPermission(PERMISSIONS.Quotations.Edit);
+        const canDelete = authService.hasPermission(PERMISSIONS.Quotations.Delete);
+
+        return (
+          <Space size="small" onClick={(e) => e.stopPropagation()}>
+            {canEdit && (
+              <Button
+                type="text"
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => navigate(PATH_ROUTES.quotations.edit(record.id))}
+                title="Chỉnh sửa"
+              />
+            )}
+            {canDelete && (
+              <Popconfirm
+                title="Xóa báo giá"
+                description="Bạn có chắc chắn muốn xóa báo giá này?"
+                onConfirm={() => handleDelete(record.id)}
+                okText="Xóa"
+                cancelText="Hủy"
+                okButtonProps={{ danger: true }}
+              >
+                <Button
+                  type="text"
+                  size="small"
+                  danger
+                  icon={<DeleteOutlined />}
+                  title="Xóa"
+                />
+              </Popconfirm>
+            )}
+          </Space>
+        );
+      },
     },
   ];
 
@@ -186,13 +197,15 @@ const QuotationList: React.FC = () => {
       extra={
         <Space>
           <Button icon={<ReloadOutlined />} onClick={fetchData} />
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => navigate(PATH_ROUTES.quotations.create)}
-          >
-            Tạo mới
-          </Button>
+          {authService.hasPermission(PERMISSIONS.Quotations.Create) && (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => navigate(PATH_ROUTES.quotations.create)}
+            >
+              Tạo mới
+            </Button>
+          )}
         </Space>
       }
     >

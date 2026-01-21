@@ -14,6 +14,8 @@ import Icon, {
 } from "../../../components/common/Icon";
 import { ReportDisplay, getStatusConfig } from "../hooks";
 import StatusTag from "../../../components/common/StatusTag";
+import { authService } from "../../../services/authService";
+import { PERMISSIONS } from "../../../constants/permissionMapping";
 
 interface ColumnActions {
   onPreview: (record: ReportDisplay) => void;
@@ -153,7 +155,10 @@ export const getReportColumns = ({
     key: "workflow",
     width: 140,
     render: (_: unknown, record: ReportDisplay) => {
-      if (record.status === "Draft") {
+      const canEdit = authService.hasPermission(PERMISSIONS.Reports.Edit);
+      const canApprove = authService.hasPermission(PERMISSIONS.Reports.Approve);
+
+      if (record.status === "Draft" && canEdit) {
         return (
           <Button
             type="primary"
@@ -166,7 +171,7 @@ export const getReportColumns = ({
           </Button>
         );
       }
-      if (record.status === "PendingApproval") {
+      if (record.status === "PendingApproval" && canApprove) {
         return (
           <Button
             type="primary"
@@ -180,7 +185,7 @@ export const getReportColumns = ({
           </Button>
         );
       }
-      if (record.status === "Approved") {
+      if (record.status === "Approved" && canApprove) {
         return (
           <Button
             type="primary"
@@ -209,40 +214,51 @@ export const getReportColumns = ({
     key: "actions",
     width: 160,
     fixed: "right" as const,
-    render: (_: unknown, record: ReportDisplay) => (
-      <Space>
-        <Tooltip title="Xem">
-          <Button
-            type="text"
-            icon={<EyeOutlined />}
-            onClick={() => onPreview(record)}
-          />
-        </Tooltip>
-        <Tooltip title="Xuất PDF">
-          <Button
-            type="text"
-            icon={<DownloadOutlined />}
-            onClick={() => onExportPDF(record)}
-            disabled={record.status !== "Approved" && record.status !== "Issued"}
-          />
-        </Tooltip>
-        <Tooltip title="In">
-          <Button
-            type="text"
-            icon={<PrinterOutlined />}
-            onClick={() => onPrint(record)}
-            disabled={record.status !== "Approved" && record.status !== "Issued"}
-          />
-        </Tooltip>
-        <Tooltip title="Gửi email">
-          <Button
-            type="text"
-            icon={<MailOutlined />}
-            onClick={() => onSendEmail(record)}
-            disabled={record.status !== "Approved" && record.status !== "Issued"}
-          />
-        </Tooltip>
-      </Space>
-    ),
+    render: (_: unknown, record: ReportDisplay) => {
+      const canExport = authService.hasPermission(PERMISSIONS.Reports.Export);
+      const canSend = authService.hasPermission(PERMISSIONS.Reports.Send);
+
+      return (
+        <Space>
+          <Tooltip title="Xem">
+            <Button
+              type="text"
+              icon={<EyeOutlined />}
+              onClick={() => onPreview(record)}
+            />
+          </Tooltip>
+          {canExport && (
+            <Tooltip title="Xuất PDF">
+              <Button
+                type="text"
+                icon={<DownloadOutlined />}
+                onClick={() => onExportPDF(record)}
+                disabled={record.status !== "Approved" && record.status !== "Issued"}
+              />
+            </Tooltip>
+          )}
+          {canExport && (
+            <Tooltip title="In">
+              <Button
+                type="text"
+                icon={<PrinterOutlined />}
+                onClick={() => onPrint(record)}
+                disabled={record.status !== "Approved" && record.status !== "Issued"}
+              />
+            </Tooltip>
+          )}
+          {canSend && (
+            <Tooltip title="Gửi email">
+              <Button
+                type="text"
+                icon={<MailOutlined />}
+                onClick={() => onSendEmail(record)}
+                disabled={record.status !== "Approved" && record.status !== "Issued"}
+              />
+            </Tooltip>
+          )}
+        </Space>
+      );
+    },
   },
 ];

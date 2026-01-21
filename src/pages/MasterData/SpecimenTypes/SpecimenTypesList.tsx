@@ -11,6 +11,8 @@ import {
   specimenTypeSchema,
   SpecimenTypeFormData,
 } from "./schemas/specimenTypeSchema";
+import { authService } from "../../../services/authService";
+import { PERMISSIONS } from "../../../constants/permissionMapping";
 
 const SpecimenTypesList: React.FC<SpecimenTypesTabProps> = ({ onDataChange, refreshKey }) => {
   const {
@@ -108,13 +110,15 @@ const SpecimenTypesList: React.FC<SpecimenTypesTabProps> = ({ onDataChange, refr
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col flex="auto" />
         <Col>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => handleCreate(specimenTypeForm)}
-          >
-            Thêm loại mẫu
-          </Button>
+          {authService.hasPermission(PERMISSIONS.SpecimenTypes.Create) && (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => handleCreate(specimenTypeForm)}
+            >
+              Thêm loại mẫu
+            </Button>
+          )}
         </Col>
       </Row>
 

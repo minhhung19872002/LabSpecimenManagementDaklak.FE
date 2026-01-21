@@ -1,5 +1,5 @@
 import React from "react";
-import { Button, Space, Tag, Popconfirm } from "antd";
+import { Button, Space, Tag, Popconfirm, Tooltip } from "antd";
 import {
   EyeOutlined,
   EditOutlined,
@@ -13,6 +13,8 @@ import dayjs from "dayjs";
 import { NCRStatus } from "../../../services/ncrService";
 import { NCRDisplay, NCR_TYPES, SEVERITY_CONFIG, STATUS_CONFIG } from "../hooks";
 import StatusTag from "../../../components/common/StatusTag";
+import { authService } from "../../../services/authService";
+import { PERMISSIONS } from "../../../constants/permissionMapping";
 
 interface ColumnActions {
   onView: (record: NCRDisplay) => void;
@@ -125,38 +127,50 @@ export const getNCRColumns = ({ onView, onEdit, onDelete }: ColumnActions) => [
           : record.status === NCRStatus.Cancelled
           ? "Không thể chỉnh sửa NCR đã hủy"
           : "";
+
+      const canEdit = authService.hasPermission(PERMISSIONS.NCRs.Edit);
+      const canDelete = authService.hasPermission(PERMISSIONS.NCRs.Delete);
+
       return (
         <Space size="small">
-          <Button
-            type="text"
-            size="small"
-            icon={<EyeOutlined />}
-            onClick={() => onView(record)}
-          />
-          <Button
-            type="text"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => onEdit(record)}
-            disabled={isLocked}
-            title={lockedReason}
-          />
-          <Popconfirm
-            title="Xóa NCR?"
-            onConfirm={() => onDelete(record.id)}
-            okText="Xóa"
-            cancelText="Hủy"
-            disabled={isLocked}
-          >
+          <Tooltip title="Xem chi tiết">
             <Button
               type="text"
               size="small"
-              danger
-              icon={<DeleteOutlined />}
-              disabled={isLocked}
-              title={lockedReason}
+              icon={<EyeOutlined />}
+              onClick={() => onView(record)}
             />
-          </Popconfirm>
+          </Tooltip>
+          {canEdit && (
+            <Tooltip title={isLocked ? lockedReason : "Chỉnh sửa"}>
+              <Button
+                type="text"
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => onEdit(record)}
+                disabled={isLocked}
+              />
+            </Tooltip>
+          )}
+          {canDelete && (
+            <Popconfirm
+              title="Xóa NCR?"
+              onConfirm={() => onDelete(record.id)}
+              okText="Xóa"
+              cancelText="Hủy"
+              disabled={isLocked}
+            >
+              <Tooltip title={isLocked ? lockedReason : "Xóa"}>
+                <Button
+                  type="text"
+                  size="small"
+                  danger
+                  icon={<DeleteOutlined />}
+                  disabled={isLocked}
+                />
+              </Tooltip>
+            </Popconfirm>
+          )}
         </Space>
       );
     },

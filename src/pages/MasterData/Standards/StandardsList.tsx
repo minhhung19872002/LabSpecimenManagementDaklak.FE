@@ -24,6 +24,8 @@ import {
 } from "./types";
 import { standardSchema, StandardFormData } from "./schemas/standardSchema";
 import { API_BASE_URL, api } from "../../../services/api";
+import { authService } from "../../../services/authService";
+import { PERMISSIONS } from "../../../constants/permissionMapping";
 
 const StandardsList: React.FC<StandardsTabProps> = ({
   onDataChange,
@@ -233,19 +235,23 @@ const StandardsList: React.FC<StandardsTabProps> = ({
             >
               Tải template mẫu
             </Button>
-            <Button
-              icon={<UploadOutlined />}
-              onClick={() => setImportModalOpen(true)}
-            >
-              Nhập danh sách
-            </Button>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => handleCreate(form)}
-            >
-              Thêm tiêu chuẩn
-            </Button>
+            {authService.hasPermission(PERMISSIONS.Standards.Create) && (
+              <Button
+                icon={<UploadOutlined />}
+                onClick={() => setImportModalOpen(true)}
+              >
+                Nhập danh sách
+              </Button>
+            )}
+            {authService.hasPermission(PERMISSIONS.Standards.Create) && (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => handleCreate(form)}
+              >
+                Thêm tiêu chuẩn
+              </Button>
+            )}
           </Space>
         </Col>
       </Row>

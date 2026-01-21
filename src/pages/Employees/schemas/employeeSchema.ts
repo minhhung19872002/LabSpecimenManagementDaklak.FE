@@ -22,7 +22,7 @@ export const employeeSchema = yup.object({
   phone: yup.string().optional().nullable().default(""),
   departmentId: yup.string().required("Vui lòng chọn phòng ban"),
   position: yup.string().optional().nullable().default(""),
-  role: yup.string().required("Vui lòng chọn vai trò"),
+  // Note: role field removed - quản lý quyền thông qua "Quản lý phân quyền"
   isActive: yup.boolean().default(true),
   // Temporary account settings
   isTemporaryAccount: yup.boolean().default(false),
@@ -81,7 +81,7 @@ export interface EmployeeFormData {
   phone: string | null;
   departmentId: string;
   position: string | null;
-  role: string;
+  // Note: role field removed - quản lý quyền thông qua "Quản lý phân quyền"
   isActive: boolean;
   isTemporaryAccount: boolean;
   accountExpirationDate?: Date | null;

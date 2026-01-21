@@ -50,16 +50,18 @@ import {
   getRoleDisplayName,
   STORAGE_KEYS,
 } from "../../constants";
+import { MENU_PERMISSION_MAP } from "../../constants/permissionMapping";
 
 type MenuItem = Required<MenuProps>["items"][number];
 
-// Extended menu item type with roles
+// Extended menu item type with roles and permissions
 interface MenuItemWithRoles {
   key: string;
   icon: React.ReactNode;
   label: React.ReactNode;
   onClick?: () => void;
   roles: string[];
+  permissions?: string[]; // NEW: Optional permission-based access
   children?: MenuItemWithRoles[];
   supporterAllowed?: boolean; // If true, supporters can also access this menu item
 }
@@ -86,6 +88,7 @@ const routeToKeyMap: Record<string, string> = {
   "/audit-log": "auditLog",
   "/settings": "settings",
   "/employees": "employees",
+  "/role-management": "roleManagement",
 };
 
 const MainLayout: React.FC = () => {
@@ -427,6 +430,13 @@ const MainLayout: React.FC = () => {
           roles: [ROLES.ADMIN],
         },
         {
+          key: "roleManagement",
+          icon: <Icon name="shield-check" />,
+          label: menuLabel("Quản lý phân quyền"),
+          onClick: () => navigate(PATH_ROUTES.roleManagement.index),
+          roles: [ROLES.ADMIN],
+        },
+        {
           key: "settings",
           icon: <SettingOutlined />,
           label: menuLabel(t("menu.settings")),
@@ -437,22 +447,33 @@ const MainLayout: React.FC = () => {
     },
   ];
 
-  // Filter menu items based on user roles and supporter status
+  // Filter menu items based on user roles, permissions and supporter status
   const filterMenuByRoles = (items: MenuItemWithRoles[]): MenuItem[] => {
     const userRoles = userInfo?.roles || [];
     const result: MenuItem[] = [];
 
     for (const item of items) {
-      // Check if user has any of the required roles OR is a supporter (for supporterAllowed items)
+      // Check role-based access (legacy)
       const hasRoleAccess = item.roles.some((role) => userRoles.includes(role));
+
+      // Check permission-based access (new)
+      // Get permissions from item or from MENU_PERMISSION_MAP
+      const menuPermissions = MENU_PERMISSION_MAP[item.key as keyof typeof MENU_PERMISSION_MAP];
+      const itemPermissions = item.permissions || (menuPermissions ? [...menuPermissions] : undefined);
+      const hasPermissionAccess = itemPermissions
+        ? authService.hasAnyPermission(itemPermissions)
+        : false;
+
+      // Check supporter access
       const hasSupporterAccess = item.supporterAllowed && isSupporter;
 
-      if (!hasRoleAccess && !hasSupporterAccess) {
+      // User needs either role access, permission access, or supporter access
+      if (!hasRoleAccess && !hasPermissionAccess && !hasSupporterAccess) {
         continue;
       }
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { roles, children, supporterAllowed, ...rest } = item;
+      const { roles, children, supporterAllowed, permissions, ...rest } = item;
 
       if (children && children.length > 0) {
         const filteredChildren = filterMenuByRoles(children);
@@ -478,21 +499,24 @@ const MainLayout: React.FC = () => {
 
     return allMenuItems
       .map((group) => {
-        // Check if user has access to the group
-        const hasGroupAccess = group.roles.some((role) =>
-          userRoles.includes(role)
-        );
-        if (!hasGroupAccess) return null;
-
-        // Filter children based on user roles
+        // Filter children based on user roles and permissions
         const filteredChildren = (group.children || []).filter((child) => {
+          // Check role-based access
           const hasRoleAccess = child.roles.some((role) =>
             userRoles.includes(role)
           );
+          // Check supporter access
           const hasSupporterAccess = child.supporterAllowed && isSupporter;
-          return hasRoleAccess || hasSupporterAccess;
+          // Check permission-based access
+          const childPermissions = MENU_PERMISSION_MAP[child.key as keyof typeof MENU_PERMISSION_MAP];
+          const hasPermissionAccess = childPermissions
+            ? authService.hasAnyPermission([...childPermissions])
+            : false;
+
+          return hasRoleAccess || hasSupporterAccess || hasPermissionAccess;
         });
 
+        // Group is accessible if it has at least one accessible child
         if (filteredChildren.length === 0) return null;
 
         return {

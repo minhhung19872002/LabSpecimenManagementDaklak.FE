@@ -4,6 +4,8 @@ import { PlusOutlined, ReloadOutlined } from "../../components/common/Icon";
 import { SpecimenStatus } from "../../types/specimenHistory";
 import { useSpecimenHistoryList } from "./hooks";
 import SpecimenHistoryFormModal from "./components/SpecimenHistoryFormModal";
+import { authService } from "../../services/authService";
+import { PERMISSIONS } from "../../constants/permissionMapping";
 
 const SpecimenHistoryList: React.FC = () => {
   const {
@@ -38,9 +40,11 @@ const SpecimenHistoryList: React.FC = () => {
       extra={
         <Space>
           <Button icon={<ReloadOutlined />} onClick={loadData} />
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-            Thêm lịch sử
-          </Button>
+          {authService.hasPermission(PERMISSIONS.Specimens.Create) && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+              Thêm lịch sử
+            </Button>
+          )}
         </Space>
       }
     >

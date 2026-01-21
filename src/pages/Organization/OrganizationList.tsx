@@ -18,6 +18,8 @@ import {
   downloadBlobAsFile,
   type OrganizationTestRequestImportPreviewDto,
 } from "../../services/importService";
+import { authService } from "../../services/authService";
+import { PERMISSIONS } from "../../constants/permissionMapping";
 
 const OrganizationList: React.FC = () => {
   // Import modal state
@@ -153,15 +155,19 @@ const OrganizationList: React.FC = () => {
           >
             Tải template mẫu
           </Button>
-          <Button
-            icon={<UploadOutlined />}
-            onClick={() => setImportModalVisible(true)}
-          >
-            Nhập danh sách
-          </Button>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-            Thêm mới
-          </Button>
+          {authService.hasPermission(PERMISSIONS.Customers.Create) && (
+            <Button
+              icon={<UploadOutlined />}
+              onClick={() => setImportModalVisible(true)}
+            >
+              Nhập danh sách
+            </Button>
+          )}
+          {authService.hasPermission(PERMISSIONS.Customers.Create) && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+              Thêm mới
+            </Button>
+          )}
         </Space>
       }
     >

@@ -153,6 +153,12 @@ const AuditLogList = Loadable(
 const EmployeeList = Loadable(
   lazy(() => import("./pages/Employees/EmployeeList"))
 );
+const RoleManagementList = Loadable(
+  lazy(() => import("./pages/RoleManagement/RoleManagementList"))
+);
+const RoleManagementDetail = Loadable(
+  lazy(() => import("./pages/RoleManagement/RoleManagementDetail"))
+);
 const SettingsPage = Loadable(
   lazy(() => import("./pages/Settings/SettingsPage"))
 );
@@ -278,6 +284,8 @@ function App() {
 
           {/* Administration */}
           <Route path="employees" element={<EmployeeList />} />
+          <Route path="role-management" element={<RoleManagementList />} />
+          <Route path="role-management/:id" element={<RoleManagementDetail />} />
           <Route path="settings" element={<SettingsPage />} />
 
           {/* Legacy route - redirect to test-results */}
