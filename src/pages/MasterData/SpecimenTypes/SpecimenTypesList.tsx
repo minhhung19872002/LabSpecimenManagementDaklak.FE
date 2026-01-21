@@ -7,19 +7,28 @@ import { useSpecimenTypesData, useSpecimenTypesActions } from "./hooks";
 import { SpecimenTypesTable, SpecimenTypeModal, AddIndicatorsModal } from "./components";
 import { getSpecimenTypeColumns, getIndicatorColumns } from "./constants";
 import { SpecimenTypesTabProps } from "./types";
-import { specimenTypeSchema, SpecimenTypeFormData } from "./schemas/specimenTypeSchema";
+import {
+  specimenTypeSchema,
+  SpecimenTypeFormData,
+} from "./schemas/specimenTypeSchema";
 
 const SpecimenTypesList: React.FC<SpecimenTypesTabProps> = ({ onDataChange, refreshKey }) => {
   const {
     loading,
     searchText,
     groupedData,
-    expandedRowKeys,
+    expandedSpecimenTypeKeys,
     indicatorGroups,
     indicatorsByGroup,
+    categoryOptions,
     setSearchText,
-    setExpandedRowKeys,
+    setExpandedSpecimenTypeKeys,
     fetchData,
+    // Batch selection for indicators
+    selectedIndicatorKeys,
+    setSelectedIndicatorKeys,
+    batchLoading,
+    setBatchLoading,
   } = useSpecimenTypesData();
 
   // Refresh data when refreshKey changes (when switching to this tab)
@@ -35,32 +44,39 @@ const SpecimenTypesList: React.FC<SpecimenTypesTabProps> = ({ onDataChange, refr
   }, [refreshKey]);
 
   const {
+    // SpecimenType modal
     modalOpen,
     editingItem,
     modalLoading,
-    addIndicatorsModalOpen,
-    addIndicatorsLoading,
-    selectedSpecimenTypeId,
     handleCreate,
     handleEdit,
     handleDelete,
     handleModalOk,
     handleModalCancel,
+    // Add indicators modal
+    addIndicatorsModalOpen,
+    addIndicatorsLoading,
+    selectedSpecimenTypeId,
     handleOpenAddIndicators,
     handleAddIndicatorsOk,
     handleAddIndicatorsCancel,
     handleRemoveIndicator,
     handleToggleIndicatorActive,
+    // Batch remove indicators
+    handleBatchRemoveIndicators,
   } = useSpecimenTypesActions({
     fetchData,
     onDataChange,
-    expandedRowKeys,
-    setExpandedRowKeys,
+    expandedSpecimenTypeKeys,
+    setExpandedSpecimenTypeKeys,
+    selectedIndicatorKeys,
+    setSelectedIndicatorKeys,
+    setBatchLoading,
   });
 
-  const form = useForm<SpecimenTypeFormData>({
+  const specimenTypeForm = useForm<SpecimenTypeFormData>({
     resolver: yupResolver(specimenTypeSchema) as any,
-    defaultValues: { code: "", name: "", description: "", isActive: true },
+    defaultValues: { code: "", name: "", description: "", isActive: true, sampleTypeCategoryId: "" },
   });
 
   // Get existing indicator IDs for the selected specimen type
@@ -70,14 +86,14 @@ const SpecimenTypesList: React.FC<SpecimenTypesTabProps> = ({ onDataChange, refr
     return type?.indicators?.map((ind) => ind.indicatorId) || [];
   }, [selectedSpecimenTypeId, groupedData]);
 
-  // Memoized columns for specimen types
+  // Memoized columns for specimen types (with category column)
   const specimenTypeColumns = useMemo(
     () =>
       getSpecimenTypeColumns(
-        (record) => handleEdit(record, form),
+        (record) => handleEdit(record, specimenTypeForm),
         handleDelete
       ),
-    [handleEdit, handleDelete, form]
+    [handleEdit, handleDelete, specimenTypeForm]
   );
 
   // Memoized columns for indicators
@@ -95,23 +111,29 @@ const SpecimenTypesList: React.FC<SpecimenTypesTabProps> = ({ onDataChange, refr
           <Button
             type="primary"
             icon={<PlusOutlined />}
-            onClick={() => handleCreate(form)}
+            onClick={() => handleCreate(specimenTypeForm)}
           >
             Thêm loại mẫu
           </Button>
         </Col>
       </Row>
 
-      {/* Expandable Table */}
+      {/* SpecimenTypes Table with nested Indicators */}
       <SpecimenTypesTable
         loading={loading}
+        batchLoading={batchLoading}
         groupedData={groupedData}
         specimenTypeColumns={specimenTypeColumns}
         indicatorColumns={indicatorColumns}
-        expandedRowKeys={expandedRowKeys}
+        expandedSpecimenTypeKeys={expandedSpecimenTypeKeys}
         searchText={searchText}
+        // Batch selection for indicators
+        selectedIndicatorKeys={selectedIndicatorKeys}
+        onSelectedIndicatorKeysChange={setSelectedIndicatorKeys}
+        onBatchRemoveIndicators={handleBatchRemoveIndicators}
+        // Handlers
         onSearchChange={setSearchText}
-        onExpandedRowsChange={setExpandedRowKeys}
+        onExpandedSpecimenTypeKeysChange={setExpandedSpecimenTypeKeys}
         onAddIndicators={handleOpenAddIndicators}
       />
 
@@ -120,9 +142,10 @@ const SpecimenTypesList: React.FC<SpecimenTypesTabProps> = ({ onDataChange, refr
         open={modalOpen}
         loading={modalLoading}
         editingItem={editingItem}
-        form={form}
-        onOk={(data) => handleModalOk(data, form)}
-        onCancel={() => handleModalCancel(form)}
+        form={specimenTypeForm}
+        categoryOptions={categoryOptions}
+        onOk={(data) => handleModalOk(data, specimenTypeForm)}
+        onCancel={() => handleModalCancel(specimenTypeForm)}
       />
 
       {/* Add Indicators Modal */}

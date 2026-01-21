@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { message } from "antd";
+import { message, Modal } from "antd";
 import type { UseFormReturn } from "react-hook-form";
 import {
   specimenTypeService,
@@ -12,28 +12,37 @@ import { SpecimenTypeFormData } from "../schemas/specimenTypeSchema";
 interface UseSpecimenTypesActionsParams {
   fetchData: () => Promise<void>;
   onDataChange?: () => void;
-  expandedRowKeys: string[];
-  setExpandedRowKeys: React.Dispatch<React.SetStateAction<string[]>>;
+  expandedSpecimenTypeKeys: string[];
+  setExpandedSpecimenTypeKeys: React.Dispatch<React.SetStateAction<string[]>>;
+  // Batch selection for indicators
+  selectedIndicatorKeys: Record<string, string[]>;
+  setSelectedIndicatorKeys: (keys: Record<string, string[]>) => void;
+  setBatchLoading: (loading: boolean) => void;
 }
 
 export const useSpecimenTypesActions = ({
   fetchData,
   onDataChange,
-  expandedRowKeys,
-  setExpandedRowKeys,
+  expandedSpecimenTypeKeys,
+  setExpandedSpecimenTypeKeys,
+  selectedIndicatorKeys,
+  setSelectedIndicatorKeys,
+  setBatchLoading,
 }: UseSpecimenTypesActionsParams) => {
+  // SpecimenType modal states
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<GroupedSpecimenTypeData | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
 
+  // Add indicators modal states
   const [addIndicatorsModalOpen, setAddIndicatorsModalOpen] = useState(false);
   const [addIndicatorsLoading, setAddIndicatorsLoading] = useState(false);
   const [selectedSpecimenTypeId, setSelectedSpecimenTypeId] = useState<string | null>(null);
 
-  // SpecimenType CRUD
+  // ============= SpecimenType Actions =============
   const handleCreate = (form: UseFormReturn<SpecimenTypeFormData>) => {
     setEditingItem(null);
-    form.reset({ code: "", name: "", description: "", isActive: true });
+    form.reset({ code: "", name: "", description: "", isActive: true, sampleTypeCategoryId: "" });
     setModalOpen(true);
   };
 
@@ -47,6 +56,7 @@ export const useSpecimenTypesActions = ({
       name: record.name,
       description: record.description || "",
       isActive: record.isActive,
+      sampleTypeCategoryId: record.sampleTypeCategoryId || "",
     });
     setModalOpen(true);
   };
@@ -77,6 +87,7 @@ export const useSpecimenTypesActions = ({
         name: data.name,
         description: data.description,
         isActive: data.isActive,
+        sampleTypeCategoryId: data.sampleTypeCategoryId || undefined,
       };
 
       if (editingItem) {
@@ -106,7 +117,7 @@ export const useSpecimenTypesActions = ({
     form.reset();
   };
 
-  // Add Indicators to SpecimenType
+  // ============= Indicator Actions =============
   const handleOpenAddIndicators = (specimenTypeId: string) => {
     setSelectedSpecimenTypeId(specimenTypeId);
     setAddIndicatorsModalOpen(true);
@@ -131,8 +142,8 @@ export const useSpecimenTypesActions = ({
       message.success(`Thêm ${indicatorIds.length} chỉ tiêu thành công!`);
 
       // Keep the specimen type expanded after adding indicators
-      if (!expandedRowKeys.includes(selectedSpecimenTypeId)) {
-        setExpandedRowKeys([...expandedRowKeys, selectedSpecimenTypeId]);
+      if (!expandedSpecimenTypeKeys.includes(selectedSpecimenTypeId)) {
+        setExpandedSpecimenTypeKeys([...expandedSpecimenTypeKeys, selectedSpecimenTypeId]);
       }
 
       setAddIndicatorsModalOpen(false);
@@ -153,7 +164,6 @@ export const useSpecimenTypesActions = ({
     setSelectedSpecimenTypeId(null);
   };
 
-  // Remove Indicator from SpecimenType
   const handleRemoveIndicator = async (specimenTypeId: string, indicatorId: string) => {
     try {
       await specimenTypeService.removeIndicator(specimenTypeId, indicatorId);
@@ -168,7 +178,6 @@ export const useSpecimenTypesActions = ({
     }
   };
 
-  // Toggle indicator active status
   const handleToggleIndicatorActive = async (specimenTypeId: string, indicatorId: string) => {
     try {
       const result = await specimenTypeService.toggleIndicatorActive(specimenTypeId, indicatorId);
@@ -185,6 +194,42 @@ export const useSpecimenTypesActions = ({
         error?.response?.data?.error?.message || "Không thể thay đổi trạng thái";
       message.error(errorMsg);
     }
+  };
+
+  // ============= Batch Remove Indicators =============
+  const handleBatchRemoveIndicators = async (specimenTypeId: string) => {
+    const selectedIds = selectedIndicatorKeys[specimenTypeId] || [];
+    if (selectedIds.length === 0) {
+      message.warning("Vui lòng chọn ít nhất một chỉ tiêu");
+      return;
+    }
+
+    Modal.confirm({
+      title: "Xác nhận xóa",
+      content: `Bạn có chắc chắn muốn xóa ${selectedIds.length} chỉ tiêu đã chọn khỏi loại mẫu này?`,
+      okText: "Xóa",
+      okType: "danger",
+      cancelText: "Hủy",
+      centered: true,
+      onOk: async () => {
+        try {
+          setBatchLoading(true);
+          const count = await specimenTypeService.batchRemoveIndicators(specimenTypeId, selectedIds);
+          message.success(`Đã xóa ${count} chỉ tiêu thành công!`);
+          // Clear selection for this specimen type
+          setSelectedIndicatorKeys({
+            ...selectedIndicatorKeys,
+            [specimenTypeId]: [],
+          });
+          await fetchData();
+          onDataChange?.();
+        } catch (error) {
+          message.error("Không thể xóa chỉ tiêu");
+        } finally {
+          setBatchLoading(false);
+        }
+      },
+    });
   };
 
   return {
@@ -212,5 +257,8 @@ export const useSpecimenTypesActions = ({
 
     // Toggle indicator active
     handleToggleIndicatorActive,
+
+    // Batch remove indicators
+    handleBatchRemoveIndicators,
   };
 };

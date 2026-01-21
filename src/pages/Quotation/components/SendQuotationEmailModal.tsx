@@ -18,22 +18,14 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
-import { quotationService } from "../../../services/quotationService";
-
-interface QuotationItemForEmail {
-  no: number;
-  indicatorName: string;
-  testMethodName: string;
-  sampleCount: number;
-  unitPrice: number;
-  totalPrice: number;
-}
+import { quotationService, QuotationPdfSampleDto } from "../../../services/quotationService";
+import { getApiErrorMessage } from "../../../utils/errorHandler";
 
 interface SendQuotationEmailModalProps {
   visible: boolean;
   onCancel: () => void;
   customerName: string;
-  items: QuotationItemForEmail[];
+  samples: QuotationPdfSampleDto[];
   totalCost: number;
 }
 
@@ -41,7 +33,7 @@ const SendQuotationEmailModal: React.FC<SendQuotationEmailModalProps> = ({
   visible,
   onCancel,
   customerName,
-  items,
+  samples,
   totalCost,
 }) => {
   const [form] = Form.useForm();
@@ -89,17 +81,6 @@ const SendQuotationEmailModal: React.FC<SendQuotationEmailModalProps> = ({
       }
     }
   }, [visible, form, editor]);
-
-  const getEmailItems = () => {
-    return items.map((item) => ({
-      no: item.no,
-      parameter: item.indicatorName,
-      testMethod: item.testMethodName,
-      numberOfSample: item.sampleCount,
-      unitPrice: item.unitPrice,
-      price: item.totalPrice,
-    }));
-  };
 
   const handlePreviewPdf = async () => {
     setLoadingPdfPreview(true);
@@ -157,7 +138,7 @@ const SendQuotationEmailModal: React.FC<SendQuotationEmailModalProps> = ({
     try {
       const pdfUrl = await quotationService.generatePdf({
         customerName: customerName,
-        items: getEmailItems(),
+        samples: samples,
         totalPrice: totalCost,
       });
 
@@ -173,17 +154,12 @@ const SendQuotationEmailModal: React.FC<SendQuotationEmailModalProps> = ({
             <div style="text-align: center; color: #ff4d4f;">
               <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
               <div style="font-size: 18px;">Tạo PDF thất bại</div>
-              <div style="color: #666; margin-top: 8px;">${
-                error.response?.data?.error?.message || "Vui lòng thử lại."
-              }</div>
+              <div style="color: #666; margin-top: 8px;">${getApiErrorMessage(error, "Vui lòng thử lại.")}</div>
             </div>
           </div>
         `;
       }
-      message.error(
-        error.response?.data?.error?.message ||
-          "Tạo PDF thất bại. Vui lòng thử lại."
-      );
+      message.error(getApiErrorMessage(error, "Tạo PDF thất bại. Vui lòng thử lại."));
     } finally {
       setLoadingPdfPreview(false);
     }
@@ -229,7 +205,7 @@ const SendQuotationEmailModal: React.FC<SendQuotationEmailModalProps> = ({
         subject: values.subject,
         body: bodyHtml,
         customerName: customerName,
-        items: getEmailItems(),
+        samples: samples,
         totalPrice: totalCost,
       });
 
@@ -241,10 +217,7 @@ const SendQuotationEmailModal: React.FC<SendQuotationEmailModalProps> = ({
         return;
       }
       console.error("Failed to send email:", error);
-      message.error(
-        error.response?.data?.error?.message ||
-          "Gửi email thất bại. Vui lòng thử lại."
-      );
+      message.error(getApiErrorMessage(error, "Gửi email thất bại. Vui lòng thử lại."));
     } finally {
       setSending(false);
     }

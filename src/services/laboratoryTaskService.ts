@@ -111,7 +111,7 @@ export const laboratoryTaskService = {
   // ============= Phase 6 - Workflow Methods =============
 
   /**
-   * Gán phương pháp và kỹ thuật viên cho các chỉ tiêu của một mẫu
+   * Gán phương pháp và Thử nghiệm viên cho các chỉ tiêu của một mẫu
    */
   assignSampleIndicators: async (
     taskId: string,
@@ -176,7 +176,7 @@ export const laboratoryTaskService = {
   },
 
   /**
-   * Lấy danh sách kỹ thuật viên theo khoa phòng (nếu không truyền laboratoryId thì lấy tất cả)
+   * Lấy danh sách Thử nghiệm viên theo khoa phòng (nếu không truyền laboratoryId thì lấy tất cả)
    */
   getTechniciansByLaboratory: async (laboratoryId?: string): Promise<UserLookupDto[]> => {
     const params = laboratoryId ? { laboratoryId } : {};
@@ -185,6 +185,20 @@ export const laboratoryTaskService = {
       { params }
     );
     return response.data;
+  },
+
+  /**
+   * Lấy danh sách Thử nghiệm viên theo phòng ban của QLKT (role LabTechnician + cùng DepartmentId với QLKT của task)
+   */
+  getTechniciansByTask: async (taskId: string): Promise<UserLookupDto[]> => {
+    const response = await api.get<UserLookupDto[] | { items: UserLookupDto[] }>(
+      `${BASE_URL}/${taskId}/technicians`
+    );
+    // Handle both array response and { items: [] } response
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+    return response.data?.items || [];
   },
 
   // ============= Supporter Management =============
@@ -392,6 +406,46 @@ export const laboratoryTaskService = {
   approveAllRemainingIndicators: async (taskId: string): Promise<LaboratoryTaskDto> => {
     const response = await api.post<LaboratoryTaskDto>(
       `${BASE_URL}/${taskId}/approve-all-remaining`
+    );
+    return response.data;
+  },
+
+  // ============= Shared Sample (Mẫu chung) APIs =============
+
+  /**
+   * QLKT Vi Sinh gửi mẫu chung cho Lab Hóa
+   * Điều kiện: Task.Status = Approved, IsSharedSampleTask = true, SampleSentToNextLab = false
+   */
+  sendSharedSample: async (taskId: string, input?: { note?: string }): Promise<LaboratoryTaskDto> => {
+    const response = await api.post<LaboratoryTaskDto>(
+      `${BASE_URL}/${taskId}/send-shared-sample`,
+      input || {}
+    );
+    return response.data;
+  },
+
+  /**
+   * QLKT Lab Hóa xác nhận nhận mẫu chung từ Lab Vi Sinh
+   * Điều kiện: IsWaitingForPriorLab = true, PriorLab đã gửi mẫu
+   */
+  receiveSharedSample: async (
+    taskId: string,
+    input?: { receivedDate?: string; note?: string }
+  ): Promise<LaboratoryTaskDto> => {
+    const response = await api.post<LaboratoryTaskDto>(
+      `${BASE_URL}/${taskId}/receive-shared-sample`,
+      input || {}
+    );
+    return response.data;
+  },
+
+  /**
+   * Kiểm tra xem có cần ẩn nút từ chối cho task này không
+   * Task của Lab Hóa trong mẫu chung không được từ chối chỉ tiêu
+   */
+  shouldHideRejectButton: async (taskId: string): Promise<boolean> => {
+    const response = await api.get<boolean>(
+      `${BASE_URL}/${taskId}/should-hide-reject-button`
     );
     return response.data;
   }

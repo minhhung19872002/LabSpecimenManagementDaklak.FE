@@ -58,6 +58,10 @@ const parseMessage = (message: string) => {
 };
 
 // Get route based on notification type and reference
+// - QLKT (0-9): referenceType = "LaboratoryTask" -> navigate to /tasks/{taskId}
+// - QLCL (10-14): referenceType = "QualityManagement" -> navigate to /quality-management/{qualityTaskId}
+// - SampleReceiver (20-24): referenceType = "TestRequest" -> navigate to /test-requests/{testRequestId}
+// - KTV (30-35): referenceType = "Testing" -> navigate to /testing/{taskId}
 const getNotificationRoute = (notification: NotificationDto): string | null => {
   const { referenceType, referenceId } = notification;
 
@@ -65,11 +69,17 @@ const getNotificationRoute = (notification: NotificationDto): string | null => {
 
   switch (referenceType) {
     case 'TestRequest':
+      // SampleReceiver notifications (20-24)
       return `/test-requests/${referenceId}`;
     case 'LaboratoryTask':
-      return `/testing/${referenceId}`;
+      // QLKT notifications (0-9) - navigate to task management detail
+      return `/tasks/${referenceId}`;
     case 'QualityManagement':
-      return `/quality-management`;
+      // QLCL notifications (10-14) - navigate to quality management detail
+      return `/quality-management/${referenceId}`;
+    case 'Testing':
+      // KTV notifications (30-35) - navigate to testing detail
+      return `/testing/${referenceId}`;
     default:
       return null;
   }

@@ -47,7 +47,12 @@ const OrganizationTable: React.FC<OrganizationTableProps> = ({
       dataIndex: 'provinceCode',
       key: 'provinceCode',
       width: 150,
-      render: (code: string) => getProvinceNameByCode(code) || '-',
+      render: (code: string) => {
+        if (!code) return '-';
+        // Try to get name from code, if not found, display the value as-is (legacy import data)
+        const name = getProvinceNameByCode(code);
+        return name || code;
+      },
     },
     {
       title: 'Địa chỉ',

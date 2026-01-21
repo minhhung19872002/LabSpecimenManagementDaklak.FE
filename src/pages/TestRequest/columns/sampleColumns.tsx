@@ -46,6 +46,11 @@ export const getSampleColumns = ({
         }}
       >
         <span>{value}</span>
+        {record.isSharedSample && (
+          <StatusTag color="purple" style={{ fontSize: 10, minWidth: 55 }}>
+            Mẫu chung
+          </StatusTag>
+        )}
         {record.isCustomerCancelled && (
           <StatusTag color="volcano" style={{ fontSize: 10, minWidth: 50 }}>
             KH hủy

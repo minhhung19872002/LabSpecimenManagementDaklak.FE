@@ -13,6 +13,8 @@ import {
   BulkApproveIndicatorsResultDto,
   BulkRejectIndicatorsResultDto,
   ConfirmHandoverInput,
+  GetSampleAssignmentLogInput,
+  PagedSampleAssignmentLogResult,
 } from '../types/qualityManagement';
 
 const BASE_URL = '/api/v1/quality-management';
@@ -186,6 +188,29 @@ export const qualityManagementService = {
   // Templates
   getTemplates: async (): Promise<TemplateDto[]> => {
     const response = await api.get<TemplateDto[]>('/api/v1/result-forms/templates');
+    return response.data;
+  },
+
+  // Sample Assignment Log
+  getSampleAssignmentLog: async (params: GetSampleAssignmentLogInput): Promise<PagedSampleAssignmentLogResult> => {
+    const queryParams: Record<string, string | number | undefined> = {
+      SkipCount: params.skipCount,
+      MaxResultCount: params.maxResultCount,
+      Sorting: params.sorting,
+      Search: params.search,
+      TestRequestStatus: params.testRequestStatus !== undefined ? params.testRequestStatus : undefined,
+      FromDate: params.fromDate,
+      ToDate: params.toDate,
+    };
+
+    // Remove undefined values
+    Object.keys(queryParams).forEach(key => {
+      if (queryParams[key] === undefined) {
+        delete queryParams[key];
+      }
+    });
+
+    const response = await api.get<PagedSampleAssignmentLogResult>(`${BASE_URL}/sample-assignment-log`, { params: queryParams });
     return response.data;
   },
 };

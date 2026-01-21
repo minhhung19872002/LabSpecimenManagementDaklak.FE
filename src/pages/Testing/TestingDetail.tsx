@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { message } from "antd";
 import { testingService } from "../../services/testingService";
 import { testResultValueService } from "../../services/testResultValueService";
+import { getApiErrorMessage } from "../../utils/errorHandler";
 import {
   TestingDetailDto,
   TestingIndicatorDto,
@@ -23,10 +24,19 @@ interface ResultOption {
 const TestingDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [detail, setDetail] = useState<TestingDetailDto | null>(null);
   const [resultOptions, setResultOptions] = useState<ResultOption[]>([]);
+
+  // Check if viewing from "Công việc của Lab" tab (readonly mode)
+  // Valid viewMode values: "my" (default), "lab" (readonly)
+  const rawViewMode = searchParams.get("view");
+  const viewMode = rawViewMode === "lab" ? "lab" : "my"; // Validate: chỉ accept "lab", còn lại default "my"
+  const isLabView = viewMode === "lab";
+  // Map viewMode for API: "lab" -> "all", "my" -> "my"
+  const apiViewMode: "my" | "all" = isLabView ? "all" : "my";
 
   // Sử dụng hook để check permissions cho tất cả actions theo Permission Matrix
   // Testing: KTV (A), QLKT (V), Admin (V)
@@ -42,7 +52,8 @@ const TestingDetail: React.FC = () => {
   const canSendResult = actionPermissions.sendResult?.canAll || false;
 
   // Tổng hợp: có thể thao tác (nhập/sửa/gửi) nếu có bất kỳ quyền nào
-  const canPerformActions = canInputResult || canEditResult || canSendResult;
+  // Nhưng nếu đang xem từ tab "Công việc của Lab" thì chỉ readonly
+  const canPerformActions = !isLabView && (canInputResult || canEditResult || canSendResult);
 
   // Helper function to update indicators optimistically (indicator-level only)
   // Task-level status is fetched from server to avoid duplicating BE logic
@@ -73,7 +84,7 @@ const TestingDetail: React.FC = () => {
   const reloadData = useCallback(async () => {
     if (!id) return;
     try {
-      const result = await testingService.get(id, "my");
+      const result = await testingService.get(id, apiViewMode);
       setDetail(result);
 
       // Update sample results with new data (preserve any unsaved edits by merging)
@@ -104,7 +115,7 @@ const TestingDetail: React.FC = () => {
     } catch (error) {
       console.error("Failed to reload data:", error);
     }
-  }, [id]);
+  }, [id, apiViewMode]);
 
   // Edited results (per sample)
   const [sampleResults, setSampleResults] = useState<
@@ -137,7 +148,8 @@ const TestingDetail: React.FC = () => {
     if (!id) return;
     setLoading(true);
     try {
-      const result = await testingService.get(id, "my");
+      // Sử dụng apiViewMode để gọi API với đúng context (my hoặc all)
+      const result = await testingService.get(id, apiViewMode);
       setDetail(result);
 
       // Initialize sample results
@@ -171,7 +183,7 @@ const TestingDetail: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, apiViewMode]);
 
   useEffect(() => {
     loadDetail();
@@ -236,7 +248,7 @@ const TestingDetail: React.FC = () => {
     } catch (error: any) {
       console.error("Failed to save result:", error);
       message.error(
-        error.response?.data?.error?.message || "Không thể lưu kết quả"
+        getApiErrorMessage(error, "Không thể lưu kết quả")
       );
     }
   };
@@ -355,7 +367,7 @@ const TestingDetail: React.FC = () => {
     } catch (error: any) {
       console.error("Failed to submit results:", error);
       message.error(
-        error.response?.data?.error?.message || "Không thể gửi kết quả"
+        getApiErrorMessage(error, "Không thể gửi kết quả")
       );
       // Reload để sync lại với server nếu có lỗi
       await loadDetail();
@@ -485,7 +497,7 @@ const TestingDetail: React.FC = () => {
     } catch (error: any) {
       console.error("Failed to submit indicator result:", error);
       message.error(
-        error.response?.data?.error?.message || "Không thể gửi kết quả"
+        getApiErrorMessage(error, "Không thể gửi kết quả")
       );
       // Reload để sync lại với server nếu có lỗi
       await loadDetail();
@@ -641,7 +653,7 @@ const TestingDetail: React.FC = () => {
     } catch (error: any) {
       console.error("Failed to save bulk test dates:", error);
       message.error(
-        error.response?.data?.error?.message || "Không thể lưu ngày thử nghiệm"
+        getApiErrorMessage(error, "Không thể lưu ngày thử nghiệm")
       );
       // Reload lại data nếu có lỗi để sync với server
       await reloadData();

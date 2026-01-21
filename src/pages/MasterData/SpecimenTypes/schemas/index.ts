@@ -1,1 +1,4 @@
-export { specimenTypeSchema, type SpecimenTypeFormData } from "./specimenTypeSchema";
+export {
+  specimenTypeSchema,
+  type SpecimenTypeFormData,
+} from "./specimenTypeSchema";

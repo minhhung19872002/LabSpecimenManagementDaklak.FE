@@ -19,7 +19,7 @@ export const ROLE_OPTIONS = [
   { value: ROLES.LAB_TECHNICAL_MANAGER, label: "Quản lý kỹ thuật Lab", color: "purple" },
   { value: ROLES.SAMPLE_RECEIVER, label: "Giao nhận mẫu", color: "blue" },
   { value: ROLES.QUALITY_MANAGER, label: "Quản lý chất lượng", color: "green" },
-  { value: ROLES.LAB_TECHNICIAN, label: "Kỹ thuật viên", color: "orange" },
+  { value: ROLES.LAB_TECHNICIAN, label: "Thử nghiệm viên", color: "orange" },
 ];
 
 export const POSITION_OPTIONS = [
@@ -27,8 +27,8 @@ export const POSITION_OPTIONS = [
   "Phó Giám đốc",
   "Trưởng phòng",
   "Phó trưởng phòng",
-  "Kỹ thuật viên chính",
-  "Kỹ thuật viên",
+  "Thử nghiệm viên chính",
+  "Thử nghiệm viên",
   "Nhân viên",
 ];
 
@@ -52,19 +52,32 @@ export const useEmployeeList = () => {
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<EmployeeDto | null>(null);
+  const [resetPasswordEmployee, setResetPasswordEmployee] = useState<EmployeeDto | null>(null);
   const [newEmployeeInfo, setNewEmployeeInfo] = useState<{ email: string } | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
-  const [resetPasswordLoadingId, setResetPasswordLoadingId] = useState<string | null>(null);
 
   // Statistics state
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0 });
 
   // React Hook Form
   const form = useForm<EmployeeFormData>({
-    resolver: yupResolver(employeeSchema),
+    resolver: yupResolver(employeeSchema) as any,
     defaultValues: {
+      username: "",
+      fullName: "",
+      email: "",
+      phone: null,
+      departmentId: "",
+      position: null,
+      role: "",
       isActive: true,
+      isTemporaryAccount: false,
+      accountExpirationDate: null,
+      passwordMode: "auto",
+      password: "",
+      confirmPassword: "",
     },
   });
 
@@ -194,6 +207,11 @@ export const useEmployeeList = () => {
       position: null,
       role: "",
       isActive: true,
+      isTemporaryAccount: false,
+      accountExpirationDate: null,
+      passwordMode: "auto",
+      password: "",
+      confirmPassword: "",
     });
     setIsModalOpen(true);
   }, [form]);
@@ -210,6 +228,10 @@ export const useEmployeeList = () => {
         position: record.position || null,
         role: record.role,
         isActive: record.isActive,
+        isTemporaryAccount: record.isTemporaryAccount || false,
+        accountExpirationDate: record.accountExpirationDate
+          ? new Date(record.accountExpirationDate)
+          : null,
       });
       setIsModalOpen(true);
     },
@@ -256,17 +278,24 @@ export const useEmployeeList = () => {
     []
   );
 
-  const handleResetPassword = useCallback(async (record: EmployeeDto) => {
-    setResetPasswordLoadingId(record.id);
-    try {
-      await employeeService.resetPassword(record.id);
-      setNewEmployeeInfo({ email: record.email });
+  const handleResetPassword = useCallback((record: EmployeeDto) => {
+    setResetPasswordEmployee(record);
+    setIsResetPasswordModalOpen(true);
+  }, []);
+
+  const handleResetPasswordModalCancel = useCallback(() => {
+    setIsResetPasswordModalOpen(false);
+    setResetPasswordEmployee(null);
+  }, []);
+
+  const handleResetPasswordSuccess = useCallback((email: string, isManual: boolean) => {
+    setIsResetPasswordModalOpen(false);
+    setResetPasswordEmployee(null);
+    if (isManual) {
+      message.success("Đã đặt lại mật khẩu thành công");
+    } else {
+      setNewEmployeeInfo({ email });
       setIsPasswordModalOpen(true);
-    } catch (error) {
-      console.error("Error resetting password:", error);
-      message.error("Không thể đặt lại mật khẩu. Vui lòng thử lại.");
-    } finally {
-      setResetPasswordLoadingId(null);
     }
   }, []);
 
@@ -281,35 +310,91 @@ export const useEmployeeList = () => {
     async (formData: EmployeeFormData) => {
       setModalLoading(true);
       try {
-        const payload = {
-          username: formData.username,
-          fullName: formData.fullName,
-          email: formData.email,
-          phone: formData.phone || "",
-          role: formData.role,
-          departmentId: formData.departmentId,
-          position: formData.position || "",
-          isActive: formData.isActive ?? true,
-        };
-
         if (editingItem) {
-          await employeeService.update(editingItem.id, payload);
+          // Update employee
+          await employeeService.update(editingItem.id, {
+            fullName: formData.fullName,
+            email: formData.email,
+            phone: formData.phone || "",
+            role: formData.role,
+            departmentId: formData.departmentId,
+            position: formData.position || "",
+            isActive: formData.isActive ?? true,
+            isTemporaryAccount: formData.isTemporaryAccount,
+            accountExpirationDate: formData.isTemporaryAccount && formData.accountExpirationDate
+              ? formData.accountExpirationDate.toISOString()
+              : null,
+          });
           message.success("Đã cập nhật thông tin nhân viên");
           setIsModalOpen(false);
           loadData();
         } else {
-          await employeeService.create(payload);
+          // Create employee
+          const isManualPassword = formData.passwordMode === "manual";
+
+          await employeeService.create({
+            username: formData.username,
+            fullName: formData.fullName,
+            email: formData.email,
+            phone: formData.phone || "",
+            role: formData.role,
+            departmentId: formData.departmentId,
+            position: formData.position || "",
+            isActive: formData.isActive ?? true,
+            isTemporaryAccount: formData.isTemporaryAccount,
+            accountExpirationDate: formData.isTemporaryAccount && formData.accountExpirationDate
+              ? formData.accountExpirationDate.toISOString()
+              : undefined,
+            useManualPassword: isManualPassword,
+            password: isManualPassword ? formData.password || undefined : undefined,
+            confirmPassword: isManualPassword ? formData.confirmPassword || undefined : undefined,
+          });
           setIsModalOpen(false);
           loadData();
           loadStatistics();
-          setNewEmployeeInfo({ email: formData.email });
-          setIsPasswordModalOpen(true);
+
+          // Only show password sent modal if auto-generated
+          if (!isManualPassword) {
+            setNewEmployeeInfo({ email: formData.email });
+            setIsPasswordModalOpen(true);
+          } else {
+            message.success("Đã tạo nhân viên thành công");
+          }
         }
 
         form.reset();
-      } catch (error) {
+      } catch (error: unknown) {
         console.error("Error saving employee:", error);
-        message.error("Không thể lưu thông tin nhân viên. Vui lòng thử lại.");
+
+        // Parse error message from API response
+        let errorMessage = "Không thể lưu thông tin nhân viên. Vui lòng thử lại.";
+
+        if (error && typeof error === "object" && "response" in error) {
+          const response = (error as { response?: { data?: Record<string, string[]> | { message?: string } } }).response;
+          const errorData = response?.data;
+
+          if (errorData) {
+            // Check if errorData is validation errors object { field: ["message1", "message2"] }
+            if (typeof errorData === "object" && !("message" in errorData)) {
+              const errors = errorData as Record<string, string[]>;
+              const allMessages: string[] = [];
+
+              Object.values(errors).forEach((messages) => {
+                if (Array.isArray(messages)) {
+                  allMessages.push(...messages);
+                }
+              });
+
+              if (allMessages.length > 0) {
+                errorMessage = allMessages.join(". ");
+              }
+            } else if ("message" in errorData && errorData.message) {
+              errorMessage = String(errorData.message);
+            }
+          }
+        }
+
+        message.error(errorMessage);
       } finally {
         setModalLoading(false);
       }
@@ -330,10 +415,9 @@ export const useEmployeeList = () => {
         onDelete: handleDelete,
         onToggleActive: handleToggleActive,
         onResetPassword: handleResetPassword,
-        resetPasswordLoadingId,
         roles: ROLE_OPTIONS,
       }),
-    [handleEdit, handleDelete, handleToggleActive, handleResetPassword, resetPasswordLoadingId]
+    [handleEdit, handleDelete, handleToggleActive, handleResetPassword]
   );
 
   return {
@@ -356,7 +440,9 @@ export const useEmployeeList = () => {
     // Modal state
     isModalOpen,
     isPasswordModalOpen,
+    isResetPasswordModalOpen,
     editingItem,
+    resetPasswordEmployee,
     newEmployeeInfo,
     modalLoading,
     form,
@@ -377,5 +463,7 @@ export const useEmployeeList = () => {
     handleModalCancel,
     handleModalSubmit,
     handlePasswordModalClose,
+    handleResetPasswordModalCancel,
+    handleResetPasswordSuccess,
   };
 };

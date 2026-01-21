@@ -21,6 +21,11 @@ export const useTestingList = () => {
   );
   const [technicianFilter, setTechnicianFilter] = useState<string[]>([]);
 
+  // Active tab state
+  const [activeTab, setActiveTab] = useState<TestingTabType>(
+    TestingTabType.MyAssignments
+  );
+
   // Technicians for filter dropdown
   const [technicians, setTechnicians] = useState<UserLookupDto[]>([]);
   const [loadingTechnicians, setLoadingTechnicians] = useState(false);
@@ -54,7 +59,7 @@ export const useTestingList = () => {
       const result = await testingService.getList({
         skipCount: (pagination.current - 1) * pagination.pageSize,
         maxResultCount: pagination.pageSize,
-        tab: TestingTabType.MyAssignments,
+        tab: activeTab,
         search: searchText || undefined,
         statuses: statusFilter !== undefined ? [statusFilter] : undefined,
         technicianIds:
@@ -72,6 +77,7 @@ export const useTestingList = () => {
   }, [
     pagination.current,
     pagination.pageSize,
+    activeTab,
     searchText,
     statusFilter,
     technicianFilter,
@@ -123,6 +129,11 @@ export const useTestingList = () => {
     setPagination((prev) => ({ ...prev, current: 1 }));
   }, []);
 
+  const handleTabChange = useCallback((key: string) => {
+    setActiveTab(Number(key) as TestingTabType);
+    setPagination((prev) => ({ ...prev, current: 1 }));
+  }, []);
+
   const handleTableChange = useCallback(
     (paginationConfig: { current?: number; pageSize?: number }) => {
       setPagination((prev) => ({
@@ -144,15 +155,24 @@ export const useTestingList = () => {
 
   const handleRowDoubleClick = useCallback(
     (record: TestingListDto) => {
-      navigate(`/testing/${record.laboratoryTaskId}`);
+      // Truyền viewMode=lab khi xem từ tab "Công việc của Lab" (All)
+      const viewMode = activeTab === TestingTabType.All ? "lab" : "my";
+      navigate(`/testing/${record.laboratoryTaskId}?view=${viewMode}`);
     },
-    [navigate]
+    [navigate, activeTab]
   );
 
   const getRowClassName = useCallback((record: TestingListDto) => {
-    return record.isUrgent && record.testingStatus !== TestingStatus.Completed
-      ? "urgent-row"
-      : "";
+    // Highlight đỏ cho:
+    // 1. Hợp đồng khẩn cấp (isUrgent) và chưa hoàn thành
+    // 2. Trạng thái "Chưa bắt đầu" hoặc "Đang thử nghiệm"
+    const isUrgentAndNotCompleted =
+      record.isUrgent && record.testingStatus !== TestingStatus.Completed;
+    const isNotStartedOrInProgress =
+      record.testingStatus === TestingStatus.NotStarted ||
+      record.testingStatus === TestingStatus.InProgress;
+
+    return isUrgentAndNotCompleted || isNotStartedOrInProgress ? "urgent-row" : "";
   }, []);
 
   const columns = useMemo(() => getTestingColumns(), []);
@@ -169,6 +189,7 @@ export const useTestingList = () => {
     pagination,
     stats,
     columns,
+    activeTab,
 
     // Handlers
     loadData,
@@ -176,6 +197,7 @@ export const useTestingList = () => {
     handleSearchInputChange,
     handleStatusFilterChange,
     handleTechnicianFilterChange,
+    handleTabChange,
     handleTableChange,
     handleRefresh,
     handleRowDoubleClick,

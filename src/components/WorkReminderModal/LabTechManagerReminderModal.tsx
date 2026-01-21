@@ -35,6 +35,12 @@ const LabTechManagerReminderModal: React.FC<LabTechManagerReminderModalProps> = 
       footer={
         <Button onClick={onClose}>Đóng</Button>
       }
+      styles={{
+        body: {
+          maxHeight: "calc(100vh - 200px)",
+          overflowY: "auto",
+        },
+      }}
     >
       <Table
         columns={columns}

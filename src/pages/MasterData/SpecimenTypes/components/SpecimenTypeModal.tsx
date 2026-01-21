@@ -6,11 +6,18 @@ import { SpecimenTypeFormData } from "../schemas";
 
 const { TextArea } = Input;
 
+interface CategoryOption {
+  value: string;
+  label: string;
+  isActive: boolean;
+}
+
 interface SpecimenTypeModalProps {
   open: boolean;
   loading: boolean;
   editingItem: GroupedSpecimenTypeData | null;
   form: UseFormReturn<SpecimenTypeFormData>;
+  categoryOptions: CategoryOption[];
   onOk: (data: SpecimenTypeFormData) => void;
   onCancel: () => void;
 }
@@ -20,6 +27,7 @@ const SpecimenTypeModal: React.FC<SpecimenTypeModalProps> = ({
   loading,
   editingItem,
   form,
+  categoryOptions,
   onOk,
   onCancel,
 }) => {
@@ -43,6 +51,27 @@ const SpecimenTypeModal: React.FC<SpecimenTypeModalProps> = ({
       styles={{ body: { paddingTop: 16 } }}
     >
       <Form layout="vertical">
+        <Form.Item
+          label="Danh mục loại mẫu"
+          required
+          validateStatus={errors.sampleTypeCategoryId ? "error" : ""}
+          help={errors.sampleTypeCategoryId?.message}
+        >
+          <Controller
+            name="sampleTypeCategoryId"
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                showSearch
+                placeholder="Chọn danh mục loại mẫu"
+                optionFilterProp="label"
+                options={categoryOptions}
+              />
+            )}
+          />
+        </Form.Item>
+
         <Form.Item
           label="Mã loại mẫu"
           required

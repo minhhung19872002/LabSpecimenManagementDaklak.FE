@@ -68,12 +68,16 @@ const TestRequestForm: React.FC = () => {
     organizationSearching,
     laboratories,
     specimenTypes,
+    specimenTypesWithIndicators,
+    indicatorToSpecimenTypesMap,
     specimenTypeOptions,
     handleSpecimenTypeSearch,
     handleSpecimenTypeSelect,
     handleOrganizationSearch,
     handleOrganizationSelect,
     handlePhoneBlur,
+    sampleConditionOptions,
+    sampleTypeCategories,
     totalSampleCost,
     indicatorModalVisible,
     setIndicatorModalVisible,
@@ -128,6 +132,10 @@ const TestRequestForm: React.FC = () => {
     provinces,
     wards,
     setWards,
+    selectedProvinceCode,
+    setSelectedProvinceCode,
+    selectedWardCode,
+    setSelectedWardCode,
     getIndicatorInfo,
     getMethodsForIndicator,
     getIndicatorMethodInfo,
@@ -264,6 +272,10 @@ const TestRequestForm: React.FC = () => {
           provinces={provinces}
           wards={wards}
           setWards={setWards}
+          selectedProvinceCode={selectedProvinceCode}
+          setSelectedProvinceCode={setSelectedProvinceCode}
+          selectedWardCode={selectedWardCode}
+          setSelectedWardCode={setSelectedWardCode}
           organizationOptions={organizationOptions}
           organizationSearching={organizationSearching}
           handleOrganizationSearch={handleOrganizationSearch}
@@ -288,6 +300,10 @@ const TestRequestForm: React.FC = () => {
           specimenTypeOptions={specimenTypeOptions}
           handleSpecimenTypeSearch={handleSpecimenTypeSearch}
           handleSpecimenTypeSelect={handleSpecimenTypeSelect}
+          sampleConditionOptions={sampleConditionOptions}
+          indicators={indicators}
+          indicatorMethodsMap={indicatorMethodsMap}
+          onImportSamples={(newSamples) => setSamples(prev => [...prev, ...newSamples])}
         />
 
         {/* Loại hình mẫu */}
@@ -402,6 +418,11 @@ const TestRequestForm: React.FC = () => {
         specimenTypeIndicatorIds={specimenTypeIndicatorIds}
         specimenTypeFilterActive={specimenTypeFilterActive}
         setSpecimenTypeFilterActive={setSpecimenTypeFilterActive}
+        specimenTypesWithIndicators={specimenTypesWithIndicators}
+        indicatorToSpecimenTypesMap={indicatorToSpecimenTypesMap}
+        specimenTypes={specimenTypes}
+        sampleTypeCategories={sampleTypeCategories}
+        setIndicatorSearchText={setIndicatorSearchText}
       />
 
       {/* Laboratory Selection Modal */}

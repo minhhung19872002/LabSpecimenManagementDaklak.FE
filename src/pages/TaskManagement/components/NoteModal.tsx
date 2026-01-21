@@ -231,10 +231,7 @@ const NoteModal: React.FC<NoteModalProps> = ({
         {/* Left: Free Text Section */}
         <Col span={12}>
           <Text strong style={{ display: "block", marginBottom: 8 }}>
-            Ghi chú tự do{" "}
-            <Text type="secondary" style={{ fontWeight: "normal" }}>
-              ({allIndicatorIds.length} chỉ tiêu)
-            </Text>
+            Ghi chú tự do
           </Text>
           <TextArea
             value={freeText}
@@ -250,10 +247,7 @@ const NoteModal: React.FC<NoteModalProps> = ({
         {/* Right: Master Data Notes Section */}
         <Col span={12}>
           <Text strong style={{ display: "block", marginBottom: 8 }}>
-            Ghi chú từ danh sách{" "}
-            <Text type="secondary" style={{ fontWeight: "normal" }}>
-              ({selectedIndicatorIds.length} chỉ tiêu)
-            </Text>
+            Ghi chú từ danh sách
             {masterDataAnalysis.hasMixedData && (
               <Tooltip title="Các chỉ tiêu có ghi chú danh sách khác nhau">
                 <ExclamationCircleFilled
