@@ -1,4 +1,6 @@
-import { IndicatorImageDto } from './testing';
+import { IndicatorImageDto, TestingStatus } from './testing';
+import { TestRequestStatus } from './testRequest';
+import { IndicatorApprovalStatus } from './laboratoryTask';
 
 // Quality Management Status Enum
 export enum QualityManagementStatus {
@@ -141,6 +143,8 @@ export interface QualityManagementIndicatorDto {
   approvedById?: string;
   approvedByName?: string;
   images?: IndicatorImageDto[];  // Hình ảnh chỉ tiêu (max 5)
+  freeTextNote?: string;  // Ghi chú tự do từ QLKT
+  masterDataNotes?: string[];  // Danh sách nội dung Master Data Notes
 }
 
 // Quality Indicator Status History DTO
@@ -303,4 +307,66 @@ export interface BulkRejectIndicatorsResultDto {
 // Confirm Handover Input DTO
 export interface ConfirmHandoverInput {
   note?: string;
+}
+
+// =====================
+// Sample Assignment Log Types
+// =====================
+
+// Sample Assignment Log DTO - Flat indicator list for "Sổ nhận mẫu giao việc" tab
+export interface SampleAssignmentLogDto {
+  // TestRequest info
+  testRequestId: string;
+  qualityTaskId: string;
+  contractNumber?: string;
+  testRequestStatus: TestRequestStatus;
+  requestCompletionDate?: string;
+
+  // Sample info
+  sampleId: string;
+  sampleCode?: string;
+  sampleName?: string;
+  sampleQuantity?: string;
+  sampleStatusText?: string;
+
+  // Indicator info
+  indicatorId: string;
+  laboratoryTaskIndicatorId: string;
+  indicatorName?: string;
+  indicatorFormattedName?: string;
+  methodName?: string;
+  methodFormattedName?: string;
+  unit?: string;
+  transferDate?: string;
+  testDate?: string;
+  result?: string;
+
+  // Assignment info
+  technicalManagerName?: string;
+  technicianName?: string;
+  entryDate?: string;
+  qlktApprovalDate?: string;
+
+  // Status for highlighting
+  indicatorApprovalStatus: IndicatorApprovalStatus;
+  testingStatus?: TestingStatus;
+  qualityApprovalStatus?: QualityIndicatorApprovalStatus;
+  isReportPublished: boolean;
+}
+
+// Input DTO for getting Sample Assignment Log list
+export interface GetSampleAssignmentLogInput {
+  skipCount?: number;
+  maxResultCount?: number;
+  sorting?: string;
+  search?: string;
+  testRequestStatus?: TestRequestStatus;
+  fromDate?: string;
+  toDate?: string;
+}
+
+// Paged result for Sample Assignment Log
+export interface PagedSampleAssignmentLogResult {
+  items: SampleAssignmentLogDto[];
+  totalCount: number;
 }

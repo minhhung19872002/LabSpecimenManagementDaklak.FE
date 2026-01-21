@@ -16,6 +16,8 @@ import StandardsTab from "../Standards";
 import TestResultValuesTab from "../TestResultValues";
 import NotesTab from "../Notes";
 import SpecimenTypesTab from "../SpecimenTypes";
+import SampleTypeCategoriesTab from "../SampleTypeCategoriesTab";
+import SampleConditionsTab from "../SampleStatuses";
 import { useMasterDataState } from "./hooks";
 import { useMasterDataActions } from "./hooks/useMasterDataActions";
 import {
@@ -34,6 +36,7 @@ import { MasterDataItem } from "./types";
 const MasterDataList: React.FC = () => {
   const {
     activeCategory,
+    data,
     totalCount,
     pagination,
     loading,
@@ -89,6 +92,8 @@ const MasterDataList: React.FC = () => {
   const [testMethodsRefreshKey, setTestMethodsRefreshKey] = useState(0);
   const [standardsRefreshKey, setStandardsRefreshKey] = useState(0);
   const [specimenTypesRefreshKey, setSpecimenTypesRefreshKey] = useState(0);
+  const [sampleTypeCategoriesRefreshKey, setSampleTypeCategoriesRefreshKey] = useState(0);
+  const [sampleConditionsRefreshKey, setSampleConditionsRefreshKey] = useState(0);
 
   // Memoized columns
   const columns = useMemo(
@@ -135,9 +140,11 @@ const MasterDataList: React.FC = () => {
           activeCategory !== "standards" &&
           activeCategory !== "testResultValues" &&
           activeCategory !== "notes" &&
-          activeCategory !== "specimenTypes" && (
+          activeCategory !== "specimenTypes" &&
+          activeCategory !== "sampleTypeCategories" &&
+          activeCategory !== "sampleConditions" && (
             <Space>
-              {canImport && (
+              {/* {canImport && (
                 <Button
                   icon={<DownloadOutlined />}
                   onClick={handleDownloadTemplate}
@@ -151,7 +158,7 @@ const MasterDataList: React.FC = () => {
               </Button>
               <Button icon={<ExportOutlined />} onClick={handleExportExcel}>
                 Export Excel
-              </Button>
+              </Button> */}
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
@@ -177,6 +184,12 @@ const MasterDataList: React.FC = () => {
             }
             if (key === "specimenTypes") {
               setSpecimenTypesRefreshKey((prev) => prev + 1);
+            }
+            if (key === "sampleTypeCategories") {
+              setSampleTypeCategoriesRefreshKey((prev) => prev + 1);
+            }
+            if (key === "sampleConditions") {
+              setSampleConditionsRefreshKey((prev) => prev + 1);
             }
           }}
           tabPosition="left"
@@ -213,6 +226,16 @@ const MasterDataList: React.FC = () => {
                   onDataChange={() => fetchStatistics()}
                   refreshKey={specimenTypesRefreshKey}
                 />
+              ) : key === "sampleTypeCategories" ? (
+                <SampleTypeCategoriesTab
+                  onDataChange={() => fetchStatistics()}
+                  refreshKey={sampleTypeCategoriesRefreshKey}
+                />
+              ) : key === "sampleConditions" ? (
+                <SampleConditionsTab
+                  onDataChange={() => fetchStatistics()}
+                  refreshKey={sampleConditionsRefreshKey}
+                />
               ) : (
                 <MasterDataTable
                   activeCategory={activeCategory}
@@ -238,6 +261,7 @@ const MasterDataList: React.FC = () => {
         editingItem={editingItem}
         form={form}
         users={users}
+        departments={data.departments || []}
         onOk={() => handleModalOk(form)}
         onCancel={() => {
           setIsModalOpen(false);

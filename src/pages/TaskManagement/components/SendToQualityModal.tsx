@@ -27,6 +27,7 @@ import {
 import { sendToQualitySchema, SendToQualityFormData } from "../schemas";
 import { noteService } from "../../../services/noteService";
 import { IndicatorName } from "../../../components/common";
+import { getApiErrorMessage } from "../../../utils/errorHandler";
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -189,7 +190,7 @@ const SendToQualityModal: React.FC<SendToQualityModalProps> = ({
     } catch (error: any) {
       console.error("Failed to send to quality:", error);
       message.error(
-        error.response?.data?.error?.message || "Không thể gửi kết quả"
+        getApiErrorMessage(error, "Không thể gửi kết quả")
       );
     } finally {
       setSubmitting(false);

@@ -9,13 +9,16 @@ import {
   Col,
   Select,
   Statistic,
+  Tabs,
 } from "antd";
 import {
   ExperimentOutlined,
   SearchOutlined,
   ReloadOutlined,
+  UserOutlined,
+  TeamOutlined,
 } from "../../components/common/Icon";
-import { TestingStatus } from "../../types/testing";
+import { TestingStatus, TestingTabType } from "../../types/testing";
 import { useTestingList } from "./hooks";
 
 const TestingList: React.FC = () => {
@@ -30,15 +33,39 @@ const TestingList: React.FC = () => {
     pagination,
     stats,
     columns,
+    activeTab,
     handleSearch,
     handleSearchInputChange,
     handleStatusFilterChange,
     handleTechnicianFilterChange,
+    handleTabChange,
     handleTableChange,
     handleRefresh,
     handleRowDoubleClick,
     getRowClassName,
   } = useTestingList();
+
+  // Tab items
+  const tabItems = [
+    {
+      key: String(TestingTabType.MyAssignments),
+      label: (
+        <span>
+          <UserOutlined />
+          Công việc của tôi
+        </span>
+      ),
+    },
+    {
+      key: String(TestingTabType.All),
+      label: (
+        <span>
+          <TeamOutlined />
+          Công việc của Lab
+        </span>
+      ),
+    },
+  ];
 
   return (
     <div>
@@ -111,6 +138,14 @@ const TestingList: React.FC = () => {
           <Button icon={<ReloadOutlined />} onClick={handleRefresh} />
         }
       >
+        {/* Tabs */}
+        <Tabs
+          activeKey={String(activeTab)}
+          onChange={handleTabChange}
+          items={tabItems}
+          style={{ marginBottom: 16 }}
+        />
+
         {/* Search & Filter */}
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
           <Col xs={24} sm={12} md={8}>
@@ -153,7 +188,7 @@ const TestingList: React.FC = () => {
             <Select
               mode="multiple"
               style={{ width: "100%" }}
-              placeholder="Kỹ thuật viên"
+              placeholder="Thử nghiệm viên"
               value={technicianFilter}
               onChange={handleTechnicianFilterChange}
               allowClear

@@ -31,6 +31,37 @@ export interface CreateUpdateDepartmentDto {
   sortOrder?: number;
 }
 
+// SampleTypeCategory (Danh mục loại mẫu)
+export interface SampleTypeCategoryDto {
+  id: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
+  specimenTypeCount: number;
+  creationTime: string;
+}
+
+export interface CreateUpdateSampleTypeCategoryDto {
+  name: string;
+  description?: string;
+  isActive: boolean;
+}
+
+// SampleCondition (Tình trạng mẫu)
+export interface SampleConditionDto {
+  id: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
+  creationTime: string;
+}
+
+export interface CreateUpdateSampleConditionDto {
+  name: string;
+  description?: string;
+  isActive: boolean;
+}
+
 // SpecimenType
 export interface SpecimenTypeDto {
   id: string;
@@ -40,15 +71,18 @@ export interface SpecimenTypeDto {
   isActive: boolean;
   sortOrder: number;
   indicatorCount: number;
+  sampleTypeCategoryId?: string;
+  sampleTypeCategoryName?: string;
   creationTime: string;
 }
 
 export interface CreateUpdateSpecimenTypeDto {
-  code: string;
+  code?: string;
   name: string;
   description?: string;
   isActive: boolean;
   sortOrder?: number;
+  sampleTypeCategoryId?: string;
 }
 
 export interface SpecimenTypeIndicatorDto {
@@ -246,7 +280,8 @@ export interface CreateUpdateCustomerDto {
 export interface LaboratoryDto {
   id: string;
   code: string;
-  name: string;
+  name: string;  // Computed from Department.Name
+  departmentId: string;
   technicalManagerId?: string;
   technicalManagerName?: string;
   isActive: boolean;
@@ -256,7 +291,7 @@ export interface LaboratoryDto {
 
 export interface CreateUpdateLaboratoryDto {
   code: string;
-  name: string;
+  departmentId: string;
   technicalManagerId?: string;
   isActive: boolean;
   sortOrder?: number;
@@ -341,6 +376,8 @@ export interface MasterDataStatisticsDto {
 
 // Service implementations - Using new API v1 endpoints
 const DEPARTMENT_URL = '/api/v1/departments';
+const SAMPLE_TYPE_CATEGORY_URL = '/api/v1/sample-type-categories';
+const SAMPLE_CONDITION_URL = '/api/v1/sample-conditions';
 const SPECIMEN_TYPE_URL = '/api/v1/specimen-types';
 const TEST_METHOD_URL = '/api/v1/test-methods';
 const STANDARD_URL = '/api/v1/standards';
@@ -399,6 +436,79 @@ export const departmentService = {
   },
 };
 
+export const sampleTypeCategoryService = {
+  getList: async (params: PagedAndSortedResultRequestDto): Promise<PagedResultDto<SampleTypeCategoryDto>> => {
+    const response = await api.get<PagedResultDto<SampleTypeCategoryDto>>(SAMPLE_TYPE_CATEGORY_URL, { params: toApiParams(params) });
+    return response.data;
+  },
+  get: async (id: string): Promise<SampleTypeCategoryDto> => {
+    const response = await api.get<SampleTypeCategoryDto>(`${SAMPLE_TYPE_CATEGORY_URL}/${id}`);
+    return response.data;
+  },
+  create: async (data: CreateUpdateSampleTypeCategoryDto): Promise<SampleTypeCategoryDto> => {
+    const response = await api.post<SampleTypeCategoryDto>(SAMPLE_TYPE_CATEGORY_URL, data);
+    return response.data;
+  },
+  update: async (id: string, data: CreateUpdateSampleTypeCategoryDto): Promise<SampleTypeCategoryDto> => {
+    const response = await api.put<SampleTypeCategoryDto>(`${SAMPLE_TYPE_CATEGORY_URL}/${id}`, data);
+    return response.data;
+  },
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`${SAMPLE_TYPE_CATEGORY_URL}/${id}`);
+  },
+  getActive: async (): Promise<SampleTypeCategoryDto[]> => {
+    const response = await api.get<{ items: SampleTypeCategoryDto[] } | SampleTypeCategoryDto[]>(`${SAMPLE_TYPE_CATEGORY_URL}/active`);
+    // Handle both array and { items: [] } response formats
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+    return response.data?.items || [];
+  },
+  getWithCount: async (): Promise<SampleTypeCategoryDto[]> => {
+    const response = await api.get<{ items: SampleTypeCategoryDto[] } | SampleTypeCategoryDto[]>(`${SAMPLE_TYPE_CATEGORY_URL}/with-count`);
+    // Handle both array and { items: [] } response formats
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+    return response.data?.items || [];
+  },
+  toggleActive: async (id: string): Promise<void> => {
+    await api.post(`${SAMPLE_TYPE_CATEGORY_URL}/${id}/toggle-active`);
+  },
+};
+
+export const sampleConditionService = {
+  getList: async (params?: PagedAndSortedResultRequestDto): Promise<PagedResultDto<SampleConditionDto>> => {
+    const response = await api.get<PagedResultDto<SampleConditionDto>>(SAMPLE_CONDITION_URL, { params: params ? toApiParams(params) : {} });
+    return response.data;
+  },
+  get: async (id: string): Promise<SampleConditionDto> => {
+    const response = await api.get<SampleConditionDto>(`${SAMPLE_CONDITION_URL}/${id}`);
+    return response.data;
+  },
+  create: async (data: CreateUpdateSampleConditionDto): Promise<SampleConditionDto> => {
+    const response = await api.post<SampleConditionDto>(SAMPLE_CONDITION_URL, data);
+    return response.data;
+  },
+  update: async (id: string, data: CreateUpdateSampleConditionDto): Promise<SampleConditionDto> => {
+    const response = await api.put<SampleConditionDto>(`${SAMPLE_CONDITION_URL}/${id}`, data);
+    return response.data;
+  },
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`${SAMPLE_CONDITION_URL}/${id}`);
+  },
+  getActive: async (): Promise<SampleConditionDto[]> => {
+    const response = await api.get<{ items: SampleConditionDto[] } | SampleConditionDto[]>(`${SAMPLE_CONDITION_URL}/active`);
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+    return response.data?.items || [];
+  },
+  toggleActive: async (id: string): Promise<void> => {
+    await api.post(`${SAMPLE_CONDITION_URL}/${id}/toggle-active`);
+  },
+};
+
 export const specimenTypeService = {
   getList: async (params: PagedAndSortedResultRequestDto): Promise<PagedResultDto<SpecimenTypeDto>> => {
     const response = await api.get<PagedResultDto<SpecimenTypeDto>>(SPECIMEN_TYPE_URL, { params: toApiParams(params) });
@@ -444,6 +554,11 @@ export const specimenTypeService = {
   },
   toggleIndicatorActive: async (id: string, indicatorId: string): Promise<SpecimenTypeIndicatorDto> => {
     const response = await api.post<SpecimenTypeIndicatorDto>(`${SPECIMEN_TYPE_URL}/${id}/indicators/${indicatorId}/toggle-active`);
+    return response.data;
+  },
+  // Batch remove indicators from specimen type
+  batchRemoveIndicators: async (specimenTypeId: string, indicatorIds: string[]): Promise<number> => {
+    const response = await api.post<number>(`${SPECIMEN_TYPE_URL}/${specimenTypeId}/indicators/batch-remove`, { ids: indicatorIds });
     return response.data;
   },
 };
@@ -494,6 +609,11 @@ export const testMethodService = {
   },
   toggleActive: async (id: string): Promise<TestMethodDto> => {
     const response = await api.post<TestMethodDto>(`${TEST_METHOD_URL}/${id}/toggle-active`);
+    return response.data;
+  },
+  // Batch remove indicators
+  batchRemoveIndicators: async (testMethodId: string, indicatorIds: string[]): Promise<number> => {
+    const response = await api.post<number>(`${TEST_METHOD_URL}/${testMethodId}/indicators/batch-remove`, { ids: indicatorIds });
     return response.data;
   },
 };
@@ -552,6 +672,21 @@ export const standardService = {
   },
   toggleIndicatorActive: async (standardId: string, indicatorId: string): Promise<StandardIndicatorDto> => {
     const response = await api.post<StandardIndicatorDto>(`${STANDARD_URL}/${standardId}/indicators/${indicatorId}/toggle-active`);
+    return response.data;
+  },
+  // Batch remove indicators
+  batchRemoveIndicators: async (standardId: string, indicatorIds: string[]): Promise<number> => {
+    const response = await api.post<number>(`${STANDARD_URL}/${standardId}/indicators/batch-remove`, { ids: indicatorIds });
+    return response.data;
+  },
+  // Batch activate indicators
+  batchActivateIndicators: async (standardId: string, indicatorIds: string[]): Promise<number> => {
+    const response = await api.post<number>(`${STANDARD_URL}/${standardId}/indicators/batch-activate`, { ids: indicatorIds });
+    return response.data;
+  },
+  // Batch deactivate indicators
+  batchDeactivateIndicators: async (standardId: string, indicatorIds: string[]): Promise<number> => {
+    const response = await api.post<number>(`${STANDARD_URL}/${standardId}/indicators/batch-deactivate`, { ids: indicatorIds });
     return response.data;
   },
 };

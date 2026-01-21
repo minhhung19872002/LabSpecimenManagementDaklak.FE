@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { message } from "antd";
+import { message, Modal } from "antd";
 import type { FormInstance } from "antd";
 import type { UseFormReturn } from "react-hook-form";
 import {
@@ -16,6 +16,10 @@ interface UseTestMethodsActionsParams {
   onDataChange?: () => void;
   expandedRowKeys: string[];
   setExpandedRowKeys: React.Dispatch<React.SetStateAction<string[]>>;
+  // Batch selection for indicators
+  selectedIndicatorKeys: Record<string, string[]>;
+  setSelectedIndicatorKeys: (keys: Record<string, string[]>) => void;
+  setBatchLoading: (loading: boolean) => void;
 }
 
 export const useTestMethodsActions = ({
@@ -23,6 +27,9 @@ export const useTestMethodsActions = ({
   onDataChange,
   expandedRowKeys,
   setExpandedRowKeys,
+  selectedIndicatorKeys,
+  setSelectedIndicatorKeys,
+  setBatchLoading,
 }: UseTestMethodsActionsParams) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<GroupedTestMethodData | null>(null);
@@ -46,7 +53,7 @@ export const useTestMethodsActions = ({
     setEditingItem(record);
     form.reset({
       name: record.name,
-      formattedName: record.formattedName || "",
+      formattedName: record.formattedName || record.name,
       unit: record.unit,
       isActive: record.isActive,
     });
@@ -194,6 +201,42 @@ export const useTestMethodsActions = ({
     }
   };
 
+  // ============= Batch Remove Indicators =============
+  const handleBatchRemoveIndicators = async (testMethodId: string) => {
+    const selectedIds = selectedIndicatorKeys[testMethodId] || [];
+    if (selectedIds.length === 0) {
+      message.warning("Vui lòng chọn ít nhất một chỉ tiêu");
+      return;
+    }
+
+    Modal.confirm({
+      title: "Xác nhận xóa",
+      content: `Bạn có chắc chắn muốn xóa ${selectedIds.length} chỉ tiêu đã chọn khỏi phương pháp thử này?`,
+      okText: "Xóa",
+      okType: "danger",
+      cancelText: "Hủy",
+      centered: true,
+      onOk: async () => {
+        try {
+          setBatchLoading(true);
+          const count = await testMethodService.batchRemoveIndicators(testMethodId, selectedIds);
+          message.success(`Đã xóa ${count} chỉ tiêu thành công!`);
+          // Clear selection for this test method
+          setSelectedIndicatorKeys({
+            ...selectedIndicatorKeys,
+            [testMethodId]: [],
+          });
+          await fetchData();
+          onDataChange?.();
+        } catch (error) {
+          message.error("Không thể xóa chỉ tiêu");
+        } finally {
+          setBatchLoading(false);
+        }
+      },
+    });
+  };
+
   return {
     // TestMethod modal
     modalOpen,
@@ -219,5 +262,8 @@ export const useTestMethodsActions = ({
 
     // Toggle active
     handleToggleActive,
+
+    // Batch remove indicators
+    handleBatchRemoveIndicators,
   };
 };

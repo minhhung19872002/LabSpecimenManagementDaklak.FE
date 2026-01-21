@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Card,
   Table,
@@ -9,6 +9,7 @@ import {
   Col,
   Statistic,
   Typography,
+  Tabs,
 } from "antd";
 import {
   SafetyCertificateOutlined,
@@ -21,11 +22,14 @@ import {
 import { QualityManagementStatusLabels } from "../../types/qualityManagement";
 import HistoryModal from "./components/HistoryModal";
 import ChangeApprovalModal from "./components/ChangeApprovalModal";
+import SampleAssignmentLogTab from "./components/SampleAssignmentLogTab";
 import { useQualityManagementList } from "./hooks";
 
 const { Title } = Typography;
 
 const QualityManagementList: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<string>("reports");
+
   const {
     loading,
     tasks,
@@ -46,6 +50,81 @@ const QualityManagementList: React.FC = () => {
     closeHistoryModal,
     closeChangeApprovalModal,
   } = useQualityManagementList();
+
+  // Tab items
+  const tabItems = [
+    {
+      key: "reports",
+      label: "Quản lý báo cáo",
+      children: (
+        <>
+          {/* Filters */}
+          <Card size="small" style={{ marginBottom: 16 }}>
+            <Row gutter={[16, 16]} align="middle">
+              <Col xs={24} sm={12} md={8}>
+                <Input.Search
+                  placeholder="Tìm theo hợp đồng, QLKT..."
+                  prefix={<SearchOutlined />}
+                  allowClear
+                  onSearch={handleSearch}
+                  enterButton
+                />
+              </Col>
+              <Col xs={24} sm={8} md={6}>
+                <Select
+                  style={{ width: "100%" }}
+                  placeholder="Lọc theo trạng thái"
+                  allowClear
+                  value={statusFilter}
+                  onChange={handleStatusFilter}
+                >
+                  {Object.entries(QualityManagementStatusLabels).map(
+                    ([key, label]) => (
+                      <Select.Option key={key} value={Number(key)}>
+                        {label}
+                      </Select.Option>
+                    )
+                  )}
+                </Select>
+              </Col>
+              <Col>
+                <Button icon={<ReloadOutlined />} onClick={loadData} />
+              </Col>
+            </Row>
+          </Card>
+
+          {/* Table */}
+          <Card size="small">
+            <Table
+              columns={columns}
+              dataSource={tasks}
+              rowKey="id"
+              loading={loading}
+              pagination={{
+                ...pagination,
+                showSizeChanger: true,
+                showTotal: (total) => `Tổng ${total} bản ghi`,
+                pageSizeOptions: ["20", "50", "100"],
+              }}
+              onChange={handleTableChange}
+              scroll={{ x: 1200 }}
+              onRow={(record) => ({
+                onDoubleClick: () => handleRowDoubleClick(record),
+                style: { cursor: "pointer" },
+                className: isUrgent(record) ? "urgent-row" : "",
+              })}
+              size="small"
+            />
+          </Card>
+        </>
+      ),
+    },
+    {
+      key: "assignment-log",
+      label: "Sổ nhận mẫu giao việc",
+      children: <SampleAssignmentLogTab />,
+    },
+  ];
 
   return (
     <div style={{ padding: 24 }}>
@@ -101,64 +180,13 @@ const QualityManagementList: React.FC = () => {
         </Col>
       </Row>
 
-      {/* Filters */}
-      <Card size="small" style={{ marginBottom: 16 }}>
-        <Row gutter={[16, 16]} align="middle">
-          <Col xs={24} sm={12} md={8}>
-            <Input.Search
-              placeholder="Tìm theo hợp đồng, QLKT..."
-              prefix={<SearchOutlined />}
-              allowClear
-              onSearch={handleSearch}
-              enterButton
-            />
-          </Col>
-          <Col xs={24} sm={8} md={6}>
-            <Select
-              style={{ width: "100%" }}
-              placeholder="Lọc theo trạng thái"
-              allowClear
-              value={statusFilter}
-              onChange={handleStatusFilter}
-            >
-              {Object.entries(QualityManagementStatusLabels).map(
-                ([key, label]) => (
-                  <Select.Option key={key} value={Number(key)}>
-                    {label}
-                  </Select.Option>
-                )
-              )}
-            </Select>
-          </Col>
-          <Col>
-            <Button icon={<ReloadOutlined />} onClick={loadData} />
-          </Col>
-        </Row>
-      </Card>
-
-      {/* Table */}
-      <Card size="small">
-        <Table
-          columns={columns}
-          dataSource={tasks}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            ...pagination,
-            showSizeChanger: true,
-            showTotal: (total) => `Tổng ${total} bản ghi`,
-            pageSizeOptions: ["20", "50", "100"],
-          }}
-          onChange={handleTableChange}
-          scroll={{ x: 1200 }}
-          onRow={(record) => ({
-            onDoubleClick: () => handleRowDoubleClick(record),
-            style: { cursor: "pointer" },
-            className: isUrgent(record) ? "urgent-row" : "",
-          })}
-          size="small"
-        />
-      </Card>
+      {/* Tabs */}
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={tabItems}
+        size="large"
+      />
 
       {/* History Modal */}
       <HistoryModal

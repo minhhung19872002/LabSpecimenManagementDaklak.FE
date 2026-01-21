@@ -61,7 +61,10 @@ export const PATH_ROUTES = {
     detail: (id: string) => `/testing/${id}`,
   },
 
-  qualityManagement: '/quality-management',
+  qualityManagement: {
+    index: '/quality-management',
+    detail: (id: string) => `/quality-management/${id}`,
+  },
 
   reports: '/reports',
 

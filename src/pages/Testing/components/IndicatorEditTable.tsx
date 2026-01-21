@@ -66,7 +66,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
   isUrgent = false,
   submitting = false,
   resultOptions = [],
-  canPerformActions = true,
+  canPerformActions = false,
   onResultsChange,
   onSelectionChange,
   onShowRejectionHistory,
@@ -152,6 +152,9 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
 
   // Handle checkbox selection
   const handleCheckboxChange = (indicatorId: string, checked: boolean) => {
+    // Không cho select khi readonly mode
+    if (!canPerformActions) return;
+
     if (checked) {
       onSelectionChange([...selectedIndicatorIds, indicatorId]);
     } else {
@@ -163,13 +166,16 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
 
   // Handle select all
   const handleSelectAll = (checked: boolean) => {
+    // Không cho select khi readonly mode
+    if (!canPerformActions) return;
+
     if (checked) {
-      // Select all indicators that are not Done, PendingApproval, or Cancelled
+      // Select all indicators that are not Done or Cancelled
+      // Cho phép chọn PendingApproval để TNV có thể gửi lại kết quả
       const selectableIds = indicators
         .filter(
           (ind) =>
             ind.testingStatus !== IndicatorTestingStatus.Done &&
-            ind.testingStatus !== IndicatorTestingStatus.PendingApproval &&
             ind.testingStatus !== IndicatorTestingStatus.Cancelled
         )
         .map((ind) => ind.id);
@@ -179,11 +185,11 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     }
   };
 
-  // Check if indicator can be selected (not Done, PendingApproval, or Cancelled)
+  // Check if indicator can be selected (not Done or Cancelled)
+  // Cho phép chọn PendingApproval để TNV có thể gửi lại kết quả
   const canSelectIndicator = (indicator: TestingIndicatorDto) => {
     return (
       indicator.testingStatus !== IndicatorTestingStatus.Done &&
-      indicator.testingStatus !== IndicatorTestingStatus.PendingApproval &&
       indicator.testingStatus !== IndicatorTestingStatus.Cancelled
     );
   };
@@ -226,15 +232,15 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
           checked={allSelected}
           indeterminate={someSelected && !allSelected}
           onChange={(e) => handleSelectAll(e.target.checked)}
-          disabled={selectableIndicators.length === 0}
+          disabled={!canPerformActions || selectableIndicators.length === 0}
         />
       ),
       key: "select",
       width: 40,
       fixed: "left" as const,
       render: (_, record) => {
-        // Disable checkbox cho chỉ tiêu đã Done hoặc đang chờ duyệt
-        const isDisabled = !canSelectIndicator(record);
+        // Disable checkbox khi readonly mode hoặc chỉ tiêu đã Done/Cancelled
+        const isDisabled = !canPerformActions || !canSelectIndicator(record);
         return (
           <Checkbox
             checked={selectedIndicatorIds.includes(record.id)}
@@ -319,14 +325,14 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
         // Cho phép nhập kết quả khi:
         // - Có quyền từ Permission Matrix (canPerformActions)
         // - Có quyền edit từ server (canEdit)
-        // - Trạng thái = Todo, Testing hoặc Rejected (cho phép nhập ngay, không cần check-in)
+        // - Trạng thái = Todo, Testing, Rejected hoặc PendingApproval (cho phép gửi lại KQ)
+        // - Chỉ khóa khi Done hoặc Cancelled
 
         const isDisabled =
           !canPerformActions ||
           !record.canEdit ||
-          (record.testingStatus !== IndicatorTestingStatus.Todo &&
-            record.testingStatus !== IndicatorTestingStatus.Testing &&
-            record.testingStatus !== IndicatorTestingStatus.Rejected);
+          record.testingStatus === IndicatorTestingStatus.Done ||
+          record.testingStatus === IndicatorTestingStatus.Cancelled;
 
         return (
           <AutoComplete
@@ -357,13 +363,13 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       key: "images",
       width: 120,
       render: (_, record) => {
-        // Cho phép upload khi có quyền + trạng thái = Todo, Testing hoặc Rejected
+        // Cho phép upload khi có quyền + không phải Done hoặc Cancelled
+        // Bao gồm PendingApproval để TNV có thể gửi lại KQ
         const canUpload =
           canPerformActions &&
           record.canEdit &&
-          (record.testingStatus === IndicatorTestingStatus.Todo ||
-            record.testingStatus === IndicatorTestingStatus.Testing ||
-            record.testingStatus === IndicatorTestingStatus.Rejected) &&
+          record.testingStatus !== IndicatorTestingStatus.Done &&
+          record.testingStatus !== IndicatorTestingStatus.Cancelled &&
           !!onUploadIndicatorImages;
 
         return (
@@ -394,16 +400,17 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       width: 140,
       render: (_, record) => {
         // Chỉ cho chọn ngày khi có quyền thao tác và trạng thái cho phép
+        // Cho phép PendingApproval để TNV có thể gửi lại KQ
         const isDisabled =
           !canPerformActions ||
           !record.canEdit ||
           record.testingStatus === IndicatorTestingStatus.Done ||
-          record.testingStatus === IndicatorTestingStatus.PendingApproval ||
           record.testingStatus === IndicatorTestingStatus.Cancelled;
 
-        // Nếu indicator bị từ chối, không cho chọn ngày trước hôm nay
+        // Nếu indicator bị từ chối hoặc đang chờ duyệt (gửi lại), không cho chọn ngày trước hôm nay
         const disabledDate =
-          record.testingStatus === IndicatorTestingStatus.Rejected
+          record.testingStatus === IndicatorTestingStatus.Rejected ||
+          record.testingStatus === IndicatorTestingStatus.PendingApproval
             ? (current: dayjs.Dayjs) =>
                 current && current < dayjs().startOf("day")
             : undefined;
@@ -499,33 +506,35 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
         const hasTestDate = !!currentTestDate;
 
         // Có thể gửi duyệt khi: có kết quả + có ngày thử nghiệm + trạng thái cho phép
+        // Bao gồm PendingApproval để TNV có thể gửi lại KQ
         const canSubmit =
           (status === IndicatorTestingStatus.Todo ||
             status === IndicatorTestingStatus.Testing ||
-            status === IndicatorTestingStatus.Rejected) &&
+            status === IndicatorTestingStatus.Rejected ||
+            status === IndicatorTestingStatus.PendingApproval) &&
           hasResult &&
           hasTestDate;
 
-        // Không hiện gì nếu đã Done, PendingApproval, Cancelled, hoặc CannotTest
+        // Không hiện gì nếu đã Done, Cancelled, hoặc CannotTest
         if (
           status === IndicatorTestingStatus.Done ||
-          status === IndicatorTestingStatus.PendingApproval ||
           status === IndicatorTestingStatus.Cancelled ||
           status === IndicatorTestingStatus.CannotTest
         ) {
           return <Text type="secondary">-</Text>;
         }
 
-        // Có thể báo không TN được khi: Todo, Testing, Rejected
+        // Có thể báo không TN được khi: Todo, Testing, Rejected, PendingApproval
         const canMarkCannotTest =
           status === IndicatorTestingStatus.Todo ||
           status === IndicatorTestingStatus.Testing ||
-          status === IndicatorTestingStatus.Rejected;
+          status === IndicatorTestingStatus.Rejected ||
+          status === IndicatorTestingStatus.PendingApproval;
 
         return (
           <Space size={4}>
             {canSubmit && onSubmitIndicator && (
-              <Tooltip title="Gửi kết quả cho QLKT duyệt">
+              <Tooltip title={status === IndicatorTestingStatus.PendingApproval ? "Gửi lại kết quả cho QLKT duyệt" : "Gửi kết quả cho QLKT duyệt"}>
                 <Button
                   type="primary"
                   size="small"
@@ -536,7 +545,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
                   }}
                   disabled={submitting}
                 >
-                  Gửi duyệt
+                  {status === IndicatorTestingStatus.PendingApproval ? "Gửi lại" : "Gửi duyệt"}
                 </Button>
               </Tooltip>
             )}
@@ -605,8 +614,54 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     return a.id.localeCompare(b.id);
   });
 
-  // Row class name for urgent highlighting
+  // Check if indicator is overdue (currentDate > assignedDate + 1 day)
+  const isOverdue = (record: TestingIndicatorDto): boolean => {
+    if (!record.assignedDate) return false;
+
+    // Chỉ check overdue cho các trạng thái chưa hoàn thành
+    if (
+      record.testingStatus === IndicatorTestingStatus.Done ||
+      record.testingStatus === IndicatorTestingStatus.PendingApproval ||
+      record.testingStatus === IndicatorTestingStatus.Cancelled
+    ) {
+      return false;
+    }
+
+    const assignedDate = dayjs(record.assignedDate).startOf("day");
+    const currentDate = dayjs().startOf("day");
+    // Quá hạn khi ngày hiện tại > ngày giao việc + 1 ngày
+    return currentDate.diff(assignedDate, "day") > 1;
+  };
+
+  // Check if indicator has no result yet (chưa nhập kết quả)
+  const hasNoResult = (record: TestingIndicatorDto): boolean => {
+    // Chỉ check cho các trạng thái chưa gửi phê duyệt
+    if (
+      record.testingStatus === IndicatorTestingStatus.Done ||
+      record.testingStatus === IndicatorTestingStatus.PendingApproval ||
+      record.testingStatus === IndicatorTestingStatus.Cancelled ||
+      record.testingStatus === IndicatorTestingStatus.CannotTest
+    ) {
+      return false;
+    }
+
+    // Kiểm tra cả edited result và original result
+    const editedResult = editedResults.get(record.id)?.result;
+    const currentResult = editedResult ?? record.result;
+    return !currentResult || currentResult.trim() === "";
+  };
+
+  // Row class name for urgent/overdue highlighting
   const getRowClassName = (record: TestingIndicatorDto) => {
+    // Highlight đỏ khi quá hạn (currentDate > assignedDate + 1 ngày)
+    if (isOverdue(record)) {
+      return "overdue-indicator-row";
+    }
+    // Highlight đỏ cho chỉ tiêu chưa nhập kết quả (Todo, Testing, Rejected)
+    if (hasNoResult(record)) {
+      return "no-result-indicator-row";
+    }
+    // Highlight đỏ nhạt hơn cho urgent (gấp)
     if (isUrgent && record.testingStatus !== IndicatorTestingStatus.Done) {
       return "urgent-indicator-row";
     }
@@ -617,6 +672,37 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     <div>
       <style>
         {`
+          /* Overdue indicator - quá hạn (đỏ đậm hơn) */
+          .overdue-indicator-row > td {
+            background-color: #ffccc7 !important;
+          }
+          .overdue-indicator-row > td.ant-table-cell-fix-left,
+          .overdue-indicator-row > td.ant-table-cell-fix-right {
+            background-color: #ffccc7 !important;
+          }
+          .overdue-indicator-row:hover > td {
+            background-color: #ffa39e !important;
+          }
+          .overdue-indicator-row:hover > td.ant-table-cell-fix-left,
+          .overdue-indicator-row:hover > td.ant-table-cell-fix-right {
+            background-color: #ffa39e !important;
+          }
+          /* No result indicator - chưa nhập kết quả (đỏ nhạt) */
+          .no-result-indicator-row > td {
+            background-color: #fff2f0 !important;
+          }
+          .no-result-indicator-row > td.ant-table-cell-fix-left,
+          .no-result-indicator-row > td.ant-table-cell-fix-right {
+            background-color: #fff2f0 !important;
+          }
+          .no-result-indicator-row:hover > td {
+            background-color: #ffebe8 !important;
+          }
+          .no-result-indicator-row:hover > td.ant-table-cell-fix-left,
+          .no-result-indicator-row:hover > td.ant-table-cell-fix-right {
+            background-color: #ffebe8 !important;
+          }
+          /* Urgent indicator - gấp (đỏ nhạt) */
           .urgent-indicator-row > td {
             background-color: #fff2f0 !important;
           }

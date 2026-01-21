@@ -16,7 +16,7 @@ export const ROLE_DISPLAY_NAMES: Record<string, string> = {
   [ROLES.LAB_TECHNICAL_MANAGER]: "Quản lý kỹ thuật",
   [ROLES.SAMPLE_RECEIVER]: "Bộ phận giao nhận mẫu",
   [ROLES.QUALITY_MANAGER]: "Quản lý chất lượng",
-  [ROLES.LAB_TECHNICIAN]: "Kỹ thuật viên",
+  [ROLES.LAB_TECHNICIAN]: "Thử nghiệm viên",
   [ROLES.ACCOUNTANT]: "Kế toán",
 };
 
@@ -29,7 +29,7 @@ export const getRoleDisplayName = (role: string): string => {
 export const ROLE_OPTIONS = [
   { value: "Admin", label: "Quản trị viên", color: "red" },
   { value: "LabManager", label: "Trưởng phòng TN", color: "purple" },
-  { value: "Technician", label: "Kỹ thuật viên", color: "blue" },
+  { value: "Technician", label: "Thử nghiệm viên", color: "blue" },
   { value: "Reviewer", label: "Người duyệt B1", color: "orange" },
   { value: "Approver", label: "Người duyệt B2", color: "green" },
   { value: "Viewer", label: "Xem báo cáo", color: "default" },

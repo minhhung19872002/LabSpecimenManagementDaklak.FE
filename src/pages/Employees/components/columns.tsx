@@ -6,9 +6,11 @@ import {
   MailOutlined,
   PhoneOutlined,
   KeyOutlined,
+  ClockCircleOutlined,
 } from "../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import { EmployeeDto } from "../../../services/employeeService";
+import dayjs from "dayjs";
 
 interface RoleOption {
   value: string;
@@ -21,7 +23,6 @@ interface GetColumnsOptions {
   onDelete: (id: string) => void;
   onToggleActive: (id: string, checked: boolean) => void;
   onResetPassword: (record: EmployeeDto) => void;
-  resetPasswordLoadingId: string | null;
   roles: RoleOption[];
 }
 
@@ -102,6 +103,47 @@ export const getEmployeeColumns = (
       render: (role: string) => getRoleTag(role),
     },
     {
+      title: "Loại TK",
+      key: "accountType",
+      width: 150,
+      render: (_, record) => {
+        if (!record.isTemporaryAccount) {
+          return <Tag color="blue">Vĩnh viễn</Tag>;
+        }
+
+        const expirationDate = record.accountExpirationDate
+          ? dayjs(record.accountExpirationDate)
+          : null;
+        const isExpired = record.isExpired;
+        const daysLeft = expirationDate
+          ? expirationDate.diff(dayjs(), "day")
+          : 0;
+
+        return (
+          <Tooltip
+            title={
+              expirationDate
+                ? `Hết hạn: ${expirationDate.format("DD/MM/YYYY")}`
+                : "Không có ngày hết hạn"
+            }
+          >
+            <Space direction="vertical" size={0}>
+              <Tag
+                color={isExpired ? "red" : daysLeft <= 3 ? "orange" : "gold"}
+                icon={<ClockCircleOutlined />}
+              >
+                {isExpired
+                  ? "Đã hết hạn"
+                  : daysLeft <= 0
+                  ? "Hết hạn hôm nay"
+                  : `Còn ${daysLeft} ngày`}
+              </Tag>
+            </Space>
+          </Tooltip>
+        );
+      },
+    },
+    {
       title: "Trạng thái",
       dataIndex: "isActive",
       key: "isActive",
@@ -135,7 +177,6 @@ export const getEmployeeColumns = (
               type="link"
               size="small"
               icon={<KeyOutlined />}
-              loading={options.resetPasswordLoadingId === record.id}
               onClick={() => options.onResetPassword(record)}
             />
           </Tooltip>

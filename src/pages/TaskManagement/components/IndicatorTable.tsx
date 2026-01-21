@@ -45,10 +45,19 @@ interface IndicatorTableProps {
   sampleId?: string;
   onMethodChange: (indicatorId: string, methodId: string) => void;
   onTechnicianChange: (indicatorId: string, technicianId: string) => void;
-  onApprove: (indicatorId: string, approve: boolean, reason?: string, standardId?: string | null) => void;
+  onApprove: (
+    indicatorId: string,
+    approve: boolean,
+    reason?: string,
+    standardId?: string | null
+  ) => void;
   onUpdateNote?: (indicatorId: string, note: string | null) => Promise<void>;
   /** Callback để mở NoteModal cho single indicator */
-  onOpenNoteModal?: (indicatorId: string, currentNote: string, sampleId: string) => void;
+  onOpenNoteModal?: (
+    indicatorId: string,
+    currentNote: string,
+    sampleId: string
+  ) => void;
   loading?: boolean;
   // Bulk selection props
   showCheckbox?: boolean;
@@ -86,7 +95,9 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   // notStarted/assigned/pendingApproval → assignment mode (để chọn indicator giao việc)
   // Cho phép giao việc cho các chỉ tiêu chưa assign ngay cả khi có chỉ tiêu đang chờ duyệt
   const selectionMode: "approval" | "assignment" =
-    sampleStatus === "notStarted" || sampleStatus === "assigned" || sampleStatus === "pendingApproval"
+    sampleStatus === "notStarted" ||
+    sampleStatus === "assigned" ||
+    sampleStatus === "pendingApproval"
       ? "assignment"
       : "approval";
 
@@ -190,7 +201,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       switch (lowerOp) {
         case ">":
         case "≥":
-          passLower = lowerOp === ">" ? resultValue > lowerValue : resultValue >= lowerValue;
+          passLower =
+            lowerOp === ">"
+              ? resultValue > lowerValue
+              : resultValue >= lowerValue;
           break;
         case ">=":
           passLower = resultValue >= lowerValue;
@@ -205,7 +219,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       switch (upperOp) {
         case "<":
         case "≤":
-          passUpper = upperOp === "<" ? resultValue < upperValue : resultValue <= upperValue;
+          passUpper =
+            upperOp === "<"
+              ? resultValue < upperValue
+              : resultValue <= upperValue;
           break;
         case "<=":
           passUpper = resultValue <= upperValue;
@@ -248,11 +265,19 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       const values = await rejectForm.validateFields();
       if (rejectModal.indicatorId) {
         // Lấy standardId từ local state hoặc từ indicator
-        const indicator = indicators.find(i => i.id === rejectModal.indicatorId);
-        const selectedStandardId = standardSelections[rejectModal.indicatorId] !== undefined
-          ? standardSelections[rejectModal.indicatorId]
-          : indicator?.standardId;
-        onApprove(rejectModal.indicatorId, false, values.reason, selectedStandardId);
+        const indicator = indicators.find(
+          (i) => i.id === rejectModal.indicatorId
+        );
+        const selectedStandardId =
+          standardSelections[rejectModal.indicatorId] !== undefined
+            ? standardSelections[rejectModal.indicatorId]
+            : indicator?.standardId;
+        onApprove(
+          rejectModal.indicatorId,
+          false,
+          values.reason,
+          selectedStandardId
+        );
         setRejectModal({ visible: false });
         rejectForm.resetFields();
       }
@@ -271,7 +296,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       render: (value: string, record: LaboratoryTaskIndicatorDto) => (
         <div>
           <div>
-            <IndicatorName name={value} formattedName={record.indicatorFormattedName} />
+            <IndicatorName
+              name={value}
+              formattedName={record.indicatorFormattedName}
+            />
           </div>
           {record.indicatorGroupName && (
             <div style={{ marginTop: 2 }}>
@@ -358,22 +386,35 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         if (record.freeTextNote) {
           noteParts.push(record.freeTextNote);
         }
-        if (record.masterDataNoteContents && record.masterDataNoteContents.length > 0) {
-          noteParts.push(...record.masterDataNoteContents.map(c => `- ${c}`));
+        if (
+          record.masterDataNoteContents &&
+          record.masterDataNoteContents.length > 0
+        ) {
+          noteParts.push(...record.masterDataNoteContents.map((c) => `- ${c}`));
         }
         const displayNote = noteParts.join("\n");
 
         // Chỉ không cho edit khi đã duyệt hoặc KH hủy (không phụ thuộc task status)
         // Nếu chỉ tiêu chưa được QLKT phê duyệt KQ thì vẫn edit ghi chú được
-        const isApproved = record.approvalStatus === IndicatorApprovalStatus.Approved;
-        const isCancelled = record.approvalStatus === IndicatorApprovalStatus.CustomerCancelled;
+        const isApproved =
+          record.approvalStatus === IndicatorApprovalStatus.Approved;
+        const isCancelled =
+          record.approvalStatus === IndicatorApprovalStatus.CustomerCancelled;
         const canEditNoteCell = !isApproved && !isCancelled && onOpenNoteModal;
 
         // Read-only mode - vẫn hiển thị dạng input nhưng disabled
         if (!canEditNoteCell) {
           return (
-            <div style={{ minHeight: 32, display: "flex", alignItems: "center" }}>
-              <Tooltip title={displayNote ? <div style={{ whiteSpace: "pre-line" }}>{displayNote}</div> : undefined}>
+            <div
+              style={{ minHeight: 32, display: "flex", alignItems: "center" }}
+            >
+              <Tooltip
+                title={
+                  displayNote ? (
+                    <div style={{ whiteSpace: "pre-line" }}>{displayNote}</div>
+                  ) : undefined
+                }
+              >
                 <div
                   style={{
                     width: "100%",
@@ -387,7 +428,9 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
-                    color: displayNote ? "rgba(0, 0, 0, 0.65)" : "rgba(0, 0, 0, 0.25)",
+                    color: displayNote
+                      ? "rgba(0, 0, 0, 0.65)"
+                      : "rgba(0, 0, 0, 0.25)",
                     cursor: "not-allowed",
                   }}
                 >
@@ -401,10 +444,21 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         // Edit mode - click to open modal
         return (
           <div
-            style={{ minHeight: 32, display: "flex", alignItems: "center", cursor: "pointer" }}
+            style={{
+              minHeight: 32,
+              display: "flex",
+              alignItems: "center",
+              cursor: "pointer",
+            }}
             onClick={() => onOpenNoteModal(record.id, displayNote, sampleId)}
           >
-            <Tooltip title={displayNote ? <div style={{ whiteSpace: "pre-line" }}>{displayNote}</div> : undefined}>
+            <Tooltip
+              title={
+                displayNote ? (
+                  <div style={{ whiteSpace: "pre-line" }}>{displayNote}</div>
+                ) : undefined
+              }
+            >
               <div
                 style={{
                   width: "100%",
@@ -418,7 +472,9 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
-                  color: displayNote ? "rgba(0, 0, 0, 0.88)" : "rgba(0, 0, 0, 0.25)",
+                  color: displayNote
+                    ? "rgba(0, 0, 0, 0.88)"
+                    : "rgba(0, 0, 0, 0.25)",
                 }}
               >
                 {displayNote || "Click để nhập..."}
@@ -449,9 +505,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       width: 180,
       render: (_: unknown, record: LaboratoryTaskIndicatorDto) => {
         // Ưu tiên lấy từ local state, nếu không có thì lấy từ DB
-        const selectedStandardId = standardSelections[record.id] !== undefined
-          ? standardSelections[record.id]
-          : record.standardId;
+        const selectedStandardId =
+          standardSelections[record.id] !== undefined
+            ? standardSelections[record.id]
+            : record.standardId;
 
         // Lấy danh sách tiêu chuẩn phù hợp với chỉ tiêu và phương pháp
         const availableStandards = getStandardsForIndicator(
@@ -463,7 +520,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         const canSelectStandard =
           record.approvalStatus !== IndicatorApprovalStatus.Approved &&
           record.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled &&
-          record.approvalStatus !== IndicatorApprovalStatus.MethodChangeRequested &&
+          record.approvalStatus !==
+            IndicatorApprovalStatus.MethodChangeRequested &&
           record.approvalStatus !== IndicatorApprovalStatus.TestingRejected;
 
         return (
@@ -494,9 +552,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       width: 180,
       render: (_: unknown, record: LaboratoryTaskIndicatorDto) => {
         // Ưu tiên lấy từ local state, nếu không có thì lấy từ DB
-        const selectedStandardId = standardSelections[record.id] !== undefined
-          ? standardSelections[record.id]
-          : record.standardId;
+        const selectedStandardId =
+          standardSelections[record.id] !== undefined
+            ? standardSelections[record.id]
+            : record.standardId;
 
         // Nếu đã có standardId được chọn, lấy thông tin từ standardIndicator
         if (selectedStandardId) {
@@ -506,7 +565,14 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             record.methodId
           );
           if (standardInfo) {
-            const { comparisonOperator, allowedLimit, lowerOperator, lowerLimit, upperOperator, upperLimit } = standardInfo;
+            const {
+              comparisonOperator,
+              allowedLimit,
+              lowerOperator,
+              lowerLimit,
+              upperOperator,
+              upperLimit,
+            } = standardInfo;
             // Range case: both lowerLimit and upperLimit have values
             if (lowerLimit && upperLimit) {
               const lower = lowerOperator || ">";
@@ -557,9 +623,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       width: 120,
       render: (_: unknown, record: LaboratoryTaskIndicatorDto) => {
         // Ưu tiên lấy từ local state, nếu không có thì lấy từ DB
-        const selectedStandardId = standardSelections[record.id] !== undefined
-          ? standardSelections[record.id]
-          : record.standardId;
+        const selectedStandardId =
+          standardSelections[record.id] !== undefined
+            ? standardSelections[record.id]
+            : record.standardId;
 
         // Cần có standardId, kết quả, và thông tin giới hạn
         if (!selectedStandardId || !record.result) return null;
@@ -613,7 +680,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       },
     },
     {
-      title: "Kỹ thuật viên",
+      title: "Thử nghiệm viên",
       dataIndex: "technicianId",
       key: "technicianId",
       width: 150,
@@ -632,7 +699,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
               style={{ width: "100%" }}
               size="small"
               value={value}
-              placeholder="Chọn KTV"
+              placeholder="Chọn TNV"
               onChange={(val) => onTechnicianChange(record.id, val)}
               options={(technicians || []).map((t) => ({
                 value: t.id,
@@ -697,9 +764,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
 
           case IndicatorApprovalStatus.Entered: {
             // Lấy standardId từ local state hoặc DB
-            const selectedStandardIdForApprove = standardSelections[record.id] !== undefined
-              ? standardSelections[record.id]
-              : record.standardId;
+            const selectedStandardIdForApprove =
+              standardSelections[record.id] !== undefined
+                ? standardSelections[record.id]
+                : record.standardId;
             return (
               <Space size="small">
                 <Button
@@ -716,7 +784,14 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                   type="primary"
                   size="small"
                   icon={<CheckOutlined />}
-                  onClick={() => onApprove(record.id, true, undefined, selectedStandardIdForApprove)}
+                  onClick={() =>
+                    onApprove(
+                      record.id,
+                      true,
+                      undefined,
+                      selectedStandardIdForApprove
+                    )
+                  }
                 >
                   Duyệt
                 </Button>

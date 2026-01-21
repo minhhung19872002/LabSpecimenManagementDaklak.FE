@@ -17,8 +17,7 @@ import {
 } from "antd";
 import {
   PrinterOutlined,
-  FilePdfOutlined,
-  FolderOpenOutlined,
+  FileWordOutlined,
 } from "../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -32,6 +31,7 @@ import {
 import { API_BASE_URL } from "../../../services/api";
 import userService, { UserLookupDto } from "../../../services/userService";
 import { IndicatorName } from "../../../components/common";
+import { parseResultToNumber } from "../../../utils/formatters";
 
 const { Text } = Typography;
 
@@ -79,7 +79,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
   onSuccess,
 }) => {
   const [selectedIndicatorIds, setSelectedIndicatorIds] = useState<string[]>(
-    []
+    [],
   );
   const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -87,9 +87,10 @@ const PrintModal: React.FC<PrintModalProps> = ({
   const [templates, setTemplates] = useState<TemplateDto[]>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [generatedResults, setGeneratedResults] = useState<PrintResultItem[]>(
-    []
+    [],
   );
   const [showResults, setShowResults] = useState(false);
+  const [viewedFiles, setViewedFiles] = useState<Set<string>>(new Set());
   const [vicePresidents, setVicePresidents] = useState<UserLookupDto[]>([]);
   const [selectedVicePresidentId, setSelectedVicePresidentId] = useState<
     string | undefined
@@ -100,9 +101,9 @@ const PrintModal: React.FC<PrintModalProps> = ({
   const approvedIndicators = useMemo(
     () =>
       indicators.filter(
-        (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Approved
+        (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Approved,
       ),
-    [indicators]
+    [indicators],
   );
 
   // Group indicators by laboratory, then by sample
@@ -142,7 +143,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
     return Object.values(groups).map(({ lab, samples }) => {
       const sampleGroups = Object.values(samples);
       const allIndicatorIds = sampleGroups.flatMap((s) =>
-        s.indicators.map((i) => i.id)
+        s.indicators.map((i) => i.id),
       );
       return { ...lab, sampleGroups, allIndicatorIds };
     });
@@ -156,6 +157,9 @@ const PrintModal: React.FC<PrintModalProps> = ({
     }
   }, [visible]);
 
+  // Track previously selected IDs to detect new selections
+  const prevSelectedIdsRef = React.useRef<string[]>([]);
+
   // Reset state when modal opens
   useEffect(() => {
     if (visible) {
@@ -164,9 +168,88 @@ const PrintModal: React.FC<PrintModalProps> = ({
       setNote("");
       setGeneratedResults([]);
       setShowResults(false);
+      setViewedFiles(new Set());
       setSelectedVicePresidentId(undefined);
+      prevSelectedIdsRef.current = []; // Reset ref
     }
   }, [visible]);
+
+  // Auto-append notes when new indicators are selected
+  useEffect(() => {
+    const prevIds = prevSelectedIdsRef.current;
+    const newlySelectedIds = selectedIndicatorIds.filter(
+      (id) => !prevIds.includes(id),
+    );
+
+    if (newlySelectedIds.length > 0) {
+      // Get newly selected indicators
+      const newIndicators = approvedIndicators.filter((ind) =>
+        newlySelectedIds.includes(ind.id),
+      );
+
+      // Collect unique master data notes and free text notes
+      // Use exact match instead of includes() to avoid partial matching issues
+      const existingNoteLines = note
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean);
+      const newNoteLines: string[] = [];
+
+      // First, collect all master data notes (deduplicated)
+      // Master data notes will be joined with ", " on a single line
+      const allMasterDataNotes = new Set<string>();
+      newIndicators.forEach((ind) => {
+        if (ind.masterDataNotes && ind.masterDataNotes.length > 0) {
+          ind.masterDataNotes.forEach((masterNote) => {
+            if (masterNote) {
+              allMasterDataNotes.add(masterNote);
+            }
+          });
+        }
+      });
+
+      // Add master data notes as single line with ", " separator
+      if (allMasterDataNotes.size > 0) {
+        const masterDataLine = `- ${Array.from(allMasterDataNotes).join(", ")}`;
+        // Check if this exact line already exists
+        if (!existingNoteLines.some((line) => line === masterDataLine)) {
+          newNoteLines.push(masterDataLine);
+        }
+      }
+
+      // Then collect free text notes (deduplicated)
+      const addedFreeTexts = new Set<string>();
+      newIndicators.forEach((ind) => {
+        if (ind.freeTextNote && ind.freeTextNote.trim()) {
+          const freeText = ind.freeTextNote.trim();
+          // Check exact match: `- ${freeText}` hoặc freeText không tồn tại trong existing lines
+          if (
+            !addedFreeTexts.has(freeText) &&
+            !existingNoteLines.some(
+              (line) => line === `- ${freeText}` || line === freeText,
+            )
+          ) {
+            addedFreeTexts.add(freeText);
+            newNoteLines.push(`- ${freeText}`);
+          }
+        }
+      });
+
+      // Append new notes to existing note
+      if (newNoteLines.length > 0) {
+        setNote((prev) => {
+          const trimmed = prev.trim();
+          if (trimmed) {
+            return `${trimmed}\n${newNoteLines.join("\n")}`;
+          }
+          return newNoteLines.join("\n");
+        });
+      }
+    }
+
+    // Update ref for next comparison
+    prevSelectedIdsRef.current = selectedIndicatorIds;
+  }, [selectedIndicatorIds, approvedIndicators]);
 
   const loadTemplates = async () => {
     setLoadingTemplates(true);
@@ -204,7 +287,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
     // Try to open all PDFs
     generatedResults.forEach((item) => {
       const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(
-        item.fileName
+        item.fileName,
       )}`;
       const newWindow = window.open(pdfUrl, "_blank");
 
@@ -263,7 +346,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
           selectedIndicatorIds,
           selectedTemplates,
           note || undefined,
-          selectedVicePresidentId
+          selectedVicePresidentId,
         );
 
         message.success(`Đã tạo ${result.results.length} phiếu kết quả`);
@@ -272,23 +355,24 @@ const PrintModal: React.FC<PrintModalProps> = ({
         setGeneratedResults(result.results);
         setShowResults(true);
       } else {
-        // Mixed mode - single PDF, open directly
+        // Mixed mode - single document, open Word Editor
         const result = await qualityManagementService.printMixedResult(
           taskId,
           selectedIndicatorIds,
           note || undefined,
           undefined, // templateName
-          selectedVicePresidentId
+          selectedVicePresidentId,
         );
 
         message.success("Đã tạo phiếu kết quả");
 
-        const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(
-          result.fileName
-        )}`;
-        window.open(pdfUrl, "_blank");
+        // Open Word Editor (BE now returns .docx directly)
+        window.open(
+          `/document-editor?file=${encodeURIComponent(result.fileName)}`,
+          "_blank",
+        );
 
-        // Close modal for mixed mode (single PDF)
+        // Close modal for mixed mode
         setSelectedIndicatorIds([]);
         setNote("");
         onCancel();
@@ -297,7 +381,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
     } catch (error: any) {
       console.error("Error printing:", error);
       message.error(
-        error?.response?.data?.error?.message || "Không thể in kết quả"
+        error?.response?.data?.error?.message || "Không thể in kết quả",
       );
     } finally {
       setLoading(false);
@@ -321,6 +405,51 @@ const PrintModal: React.FC<PrintModalProps> = ({
     setShowResults(false);
     setSelectedVicePresidentId(undefined);
     onCancel();
+  };
+
+  // Open Word editor in new tab
+  const handleOpenEditor = (fileName: string) => {
+    // Get the .docx file name (replace .pdf extension if any)
+    const docxFileName = fileName.replace(/\.pdf$/i, ".docx");
+    // Open in new tab with full screen editor
+    window.open(
+      `/document-editor?file=${encodeURIComponent(docxFileName)}`,
+      "_blank",
+    );
+    // Mark file as viewed
+    setViewedFiles((prev) => new Set(prev).add(fileName));
+  };
+
+  // Calculate pass/fail status based on result and limits
+  const calculatePassFail = (
+    result: string | undefined,
+    comparisonOperator: string | undefined,
+    allowedLimit: string | undefined,
+  ): "pass" | "fail" | null => {
+    if (!result || !comparisonOperator || !allowedLimit) return null;
+
+    const resultValue = parseResultToNumber(result);
+    if (resultValue === null) return null;
+
+    const limitValue = parseResultToNumber(allowedLimit);
+    if (limitValue === null) return null;
+
+    switch (comparisonOperator) {
+      case "<=":
+      case "≤":
+        return resultValue <= limitValue ? "pass" : "fail";
+      case ">=":
+      case "≥":
+        return resultValue >= limitValue ? "pass" : "fail";
+      case "<":
+        return resultValue < limitValue ? "pass" : "fail";
+      case ">":
+        return resultValue > limitValue ? "pass" : "fail";
+      case "=":
+        return resultValue === limitValue ? "pass" : "fail";
+      default:
+        return null;
+    }
   };
 
   const columns: ColumnsType<QualityManagementIndicatorDto> = [
@@ -352,88 +481,130 @@ const PrintModal: React.FC<PrintModalProps> = ({
       ),
     },
     {
-      title: "Kết quả",
-      dataIndex: "result",
-      key: "result",
-      width: 80,
-      render: (text: string) => <Text strong>{text || "-"}</Text>,
-    },
-    {
       title: "ĐVT",
       dataIndex: "unit",
       key: "unit",
-      width: 60,
+      width: 70,
+    },
+    {
+      title: "Kết quả",
+      dataIndex: "result",
+      key: "result",
+      width: 100,
+      render: (text: string) => <Text strong>{text || "-"}</Text>,
+    },
+    {
+      title: "Giới hạn",
+      key: "limit",
+      width: 100,
+      render: (_: any, record: QualityManagementIndicatorDto) => {
+        if (record.comparisonOperator && record.allowedLimit) {
+          return (
+            <Text>
+              {record.comparisonOperator} {record.allowedLimit}
+            </Text>
+          );
+        }
+        return "-";
+      },
+    },
+    {
+      title: "Tiêu chuẩn",
+      dataIndex: "standardName",
+      key: "standardName",
+      width: 120,
+      ellipsis: true,
+      render: (text: string) => text || "-",
+    },
+    {
+      title: "Kết luận",
+      key: "conclusion",
+      width: 100,
+      render: (_: any, record: QualityManagementIndicatorDto) => {
+        const passFailStatus = calculatePassFail(
+          record.result,
+          record.comparisonOperator,
+          record.allowedLimit,
+        );
+
+        if (passFailStatus === "pass") {
+          return (
+            <Text strong style={{ color: "#52c41a" }}>
+              Đạt
+            </Text>
+          );
+        } else if (passFailStatus === "fail") {
+          return (
+            <Text strong style={{ color: "#ff4d4f" }}>
+              Không đạt
+            </Text>
+          );
+        }
+        return "-";
+      },
     },
   ];
 
-  // Render results view when PDFs are generated
+  // Render results view when documents are generated
   if (showResults) {
     return (
       <Modal
         title={
           <span>
-            <FilePdfOutlined style={{ marginRight: 8 }} />
+            <FileWordOutlined style={{ marginRight: 8, color: "#2b579a" }} />
             Kết quả đã tạo ({generatedResults.length} file)
           </span>
         }
         open={visible}
         onCancel={handleCloseResults}
-        width={600}
+        width={700}
         centered
-        footer={
-          <Space>
-            <Button onClick={handleCloseResults}>Đóng</Button>
-            {generatedResults.length > 0 && (
-              <Button
-                type="primary"
-                icon={<FolderOpenOutlined />}
-                onClick={handleOpenAllTabs}
-              >
-                Mở toàn bộ ({generatedResults.length} file)
-              </Button>
-            )}
-          </Space>
-        }
+        footer={null}
       >
         <div style={{ marginBottom: 16 }}>
           <Text type="secondary">
-            Click "Mở toàn bộ" để mở tất cả file PDF, hoặc click từng file bên
-            dưới.
+            Click "Xem" để mở tài liệu trong trình soạn thảo Word.
           </Text>
         </div>
         <div style={{ maxHeight: "calc(100vh - 350px)", overflowY: "auto" }}>
           <List
             dataSource={generatedResults}
-            renderItem={(item, index) => (
-              <List.Item
-                actions={[
-                  <Button
-                    type="link"
-                    icon={<FilePdfOutlined />}
-                    onClick={() => {
-                      const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(
-                        item.fileName
-                      )}`;
-                      window.open(pdfUrl, "_blank");
-                    }}
-                  >
-                    Xem PDF
-                  </Button>,
-                ]}
-              >
-                <List.Item.Meta
-                  avatar={
-                    <FilePdfOutlined
-                      style={{ fontSize: 24, color: "#f5222d" }}
-                    />
-                  }
-                  title={`File ${index + 1}: ${item.laboratoryName || "PDF"}${
-                    item.sampleCode ? ` - ${item.sampleCode}` : ""
-                  }`}
-                  description={`Template: ${item.templateName || "BM01"}`}
-                />
-              </List.Item>
-            )}
+            renderItem={(item, index) => {
+              const isViewed = viewedFiles.has(item.fileName);
+              return (
+                <List.Item
+                  actions={[
+                    <Button
+                      type={isViewed ? "default" : "primary"}
+                      icon={<FileWordOutlined />}
+                      onClick={() => handleOpenEditor(item.fileName)}
+                      style={
+                        isViewed
+                          ? { color: "#52c41a", borderColor: "#52c41a" }
+                          : undefined
+                      }
+                    >
+                      {isViewed ? "Đã xem" : "Xem"}
+                    </Button>,
+                  ]}
+                >
+                  <List.Item.Meta
+                    avatar={
+                      <FileWordOutlined
+                        style={{
+                          fontSize: 24,
+                          color: isViewed ? "#52c41a" : "#2b579a",
+                        }}
+                      />
+                    }
+                    title={`File ${index + 1}: ${item.laboratoryName || "Document"}${
+                      item.sampleCode ? ` - ${item.sampleCode}` : ""
+                    }`}
+                    description={`Template: ${item.templateName || "BM01"}`}
+                  />
+                </List.Item>
+              );
+            }}
           />
         </div>
       </Modal>
@@ -452,7 +623,13 @@ const PrintModal: React.FC<PrintModalProps> = ({
       onCancel={handleCancel}
       width={1200}
       centered
-      styles={{ body: { maxHeight: "calc(100vh - 200px)", overflowY: "auto", overflowX: "hidden" } }}
+      styles={{
+        body: {
+          maxHeight: "calc(100vh - 200px)",
+          overflowY: "auto",
+          overflowX: "hidden",
+        },
+      }}
       footer={
         <Space>
           <Button onClick={handleCancel}>Hủy</Button>
@@ -497,7 +674,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
                 style={{ background: "transparent", border: "none" }}
                 items={labGroups.map((labGroup, labIndex) => {
                   const selectedInLab = labGroup.allIndicatorIds.filter((id) =>
-                    selectedIndicatorIds.includes(id)
+                    selectedIndicatorIds.includes(id),
                   ).length;
                   const allLabSelected =
                     selectedInLab === labGroup.allIndicatorIds.length;
@@ -530,8 +707,9 @@ const PrintModal: React.FC<PrintModalProps> = ({
                             } else {
                               setSelectedIndicatorIds(
                                 selectedIndicatorIds.filter(
-                                  (id) => !labGroup.allIndicatorIds.includes(id)
-                                )
+                                  (id) =>
+                                    !labGroup.allIndicatorIds.includes(id),
+                                ),
                               );
                             }
                           }}
@@ -555,7 +733,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
                       <div style={{ margin: "-16px" }}>
                         <Collapse
                           defaultActiveKey={labGroup.sampleGroups.map(
-                            (sg) => sg.sampleId
+                            (sg) => sg.sampleId,
                           )}
                           expandIconPosition="end"
                           style={{ background: "transparent", border: "none" }}
@@ -565,13 +743,15 @@ const PrintModal: React.FC<PrintModalProps> = ({
                                 sampleGroup.indicators.map((i) => i.id);
                               const selectedInSample =
                                 sampleIndicatorIds.filter((id) =>
-                                  selectedIndicatorIds.includes(id)
+                                  selectedIndicatorIds.includes(id),
                                 ).length;
                               const allSampleSelected =
                                 selectedInSample === sampleIndicatorIds.length;
                               const someSampleSelected =
                                 selectedInSample > 0 && !allSampleSelected;
-                              const isLastSample = sampleIndex === labGroup.sampleGroups.length - 1;
+                              const isLastSample =
+                                sampleIndex ===
+                                labGroup.sampleGroups.length - 1;
 
                               return {
                                 key: sampleGroup.sampleId,
@@ -601,8 +781,10 @@ const PrintModal: React.FC<PrintModalProps> = ({
                                           setSelectedIndicatorIds(
                                             selectedIndicatorIds.filter(
                                               (id) =>
-                                                !sampleIndicatorIds.includes(id)
-                                            )
+                                                !sampleIndicatorIds.includes(
+                                                  id,
+                                                ),
+                                            ),
                                           );
                                         }
                                       }}
@@ -623,12 +805,22 @@ const PrintModal: React.FC<PrintModalProps> = ({
                                 style: {
                                   marginBottom: 0,
                                   background: "none",
-                                  borderRadius: isLastSample ? "0 0 8px 8px" : 0,
+                                  borderRadius: isLastSample
+                                    ? "0 0 8px 8px"
+                                    : 0,
                                   border: "none",
-                                  borderTop: sampleIndex > 0 ? "1px solid #e8e8e8" : "none",
+                                  borderTop:
+                                    sampleIndex > 0
+                                      ? "1px solid #e8e8e8"
+                                      : "none",
                                 },
                                 children: (
-                                  <div style={{ borderRadius: 8, overflow: "hidden" }}>
+                                  <div
+                                    style={{
+                                      borderRadius: 8,
+                                      overflow: "hidden",
+                                    }}
+                                  >
                                     <Table
                                       dataSource={sampleGroup.indicators}
                                       columns={columns}
@@ -638,26 +830,28 @@ const PrintModal: React.FC<PrintModalProps> = ({
                                       scroll={{ x: "max-content" }}
                                       bordered
                                       style={{ maxWidth: "100%" }}
-                                    rowSelection={{
-                                      selectedRowKeys: selectedIndicatorIds,
-                                      onChange: (keys) => {
-                                        const otherIds =
-                                          selectedIndicatorIds.filter(
-                                            (id) =>
-                                              !sampleIndicatorIds.includes(id)
-                                          );
-                                        setSelectedIndicatorIds([
-                                          ...otherIds,
-                                          ...(keys as string[]),
-                                        ]);
-                                      },
-                                      type: "checkbox",
-                                    }}
+                                      rowSelection={{
+                                        selectedRowKeys: selectedIndicatorIds,
+                                        onChange: (keys) => {
+                                          const otherIds =
+                                            selectedIndicatorIds.filter(
+                                              (id) =>
+                                                !sampleIndicatorIds.includes(
+                                                  id,
+                                                ),
+                                            );
+                                          setSelectedIndicatorIds([
+                                            ...otherIds,
+                                            ...(keys as string[]),
+                                          ]);
+                                        },
+                                        type: "checkbox",
+                                      }}
                                     />
                                   </div>
                                 ),
                               };
-                            }
+                            },
                           )}
                         />
                       </div>

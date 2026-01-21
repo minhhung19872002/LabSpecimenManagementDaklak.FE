@@ -34,6 +34,7 @@ import { qualityManagementService } from "../../../services/qualityManagementSer
 import { API_BASE_URL } from "../../../services/api";
 import userService, { UserLookupDto } from "../../../services/userService";
 import { IndicatorName } from "../../../components/common";
+import { parseResultToNumber } from "../../../utils/formatters";
 
 const { Text } = Typography;
 
@@ -69,7 +70,7 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
   onSuccess,
 }) => {
   const [selectedIndicatorIds, setSelectedIndicatorIds] = useState<string[]>(
-    []
+    [],
   );
   const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -78,10 +79,10 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
   const [templates, setTemplates] = useState<TemplateDto[]>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [indicators, setIndicators] = useState<QualityManagementIndicatorDto[]>(
-    []
+    [],
   );
   const [generatedResults, setGeneratedResults] = useState<PrintResultItem[]>(
-    []
+    [],
   );
   const [showResults, setShowResults] = useState(false);
   const [vicePresidents, setVicePresidents] = useState<UserLookupDto[]>([]);
@@ -89,6 +90,18 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
     string | undefined
   >(undefined);
   const [loadingVicePresidents, setLoadingVicePresidents] = useState(false);
+
+  // Get only approved indicators - must be defined before useEffects that use it
+  const approvedIndicators = useMemo(
+    () =>
+      indicators.filter(
+        (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Approved,
+      ),
+    [indicators],
+  );
+
+  // Track previously selected IDs to detect new selections
+  const prevSelectedIdsRef = React.useRef<string[]>([]);
 
   // Load indicators when modal opens
   useEffect(() => {
@@ -108,15 +121,92 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
       setGeneratedResults([]);
       setShowResults(false);
       setSelectedVicePresidentId(undefined);
+      prevSelectedIdsRef.current = []; // Reset ref
     }
   }, [visible]);
+
+  // Auto-append notes when new indicators are selected
+  useEffect(() => {
+    const prevIds = prevSelectedIdsRef.current;
+    const newlySelectedIds = selectedIndicatorIds.filter(
+      (id) => !prevIds.includes(id),
+    );
+
+    if (newlySelectedIds.length > 0) {
+      // Get newly selected indicators
+      const newIndicators = approvedIndicators.filter((ind) =>
+        newlySelectedIds.includes(ind.id),
+      );
+
+      // Collect unique master data notes and free text notes
+      // Use exact match instead of includes() to avoid partial matching issues
+      const existingNoteLines = note
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean);
+      const newNoteLines: string[] = [];
+
+      // First, collect all master data notes (deduplicated)
+      // Master data notes will be joined with ", " on a single line
+      const allMasterDataNotes = new Set<string>();
+      newIndicators.forEach((ind) => {
+        if (ind.masterDataNotes && ind.masterDataNotes.length > 0) {
+          ind.masterDataNotes.forEach((masterNote) => {
+            if (masterNote) {
+              allMasterDataNotes.add(masterNote);
+            }
+          });
+        }
+      });
+
+      // Add master data notes as single line with ", " separator
+      if (allMasterDataNotes.size > 0) {
+        const masterDataLine = `- ${Array.from(allMasterDataNotes).join(", ")}`;
+        // Check if this exact line already exists
+        if (!existingNoteLines.some((line) => line === masterDataLine)) {
+          newNoteLines.push(masterDataLine);
+        }
+      }
+
+      // Then collect free text notes (deduplicated)
+      const addedFreeTexts = new Set<string>();
+      newIndicators.forEach((ind) => {
+        if (ind.freeTextNote && ind.freeTextNote.trim()) {
+          const freeText = ind.freeTextNote.trim();
+          // Check exact match: `- ${freeText}` hoặc freeText không tồn tại trong existing lines
+          if (
+            !addedFreeTexts.has(freeText) &&
+            !existingNoteLines.some(
+              (line) => line === `- ${freeText}` || line === freeText,
+            )
+          ) {
+            addedFreeTexts.add(freeText);
+            newNoteLines.push(`- ${freeText}`);
+          }
+        }
+      });
+
+      // Append new notes to existing note
+      if (newNoteLines.length > 0) {
+        setNote((prev) => {
+          const trimmed = prev.trim();
+          if (trimmed) {
+            return `${trimmed}\n${newNoteLines.join("\n")}`;
+          }
+          return newNoteLines.join("\n");
+        });
+      }
+    }
+
+    // Update ref for next comparison
+    prevSelectedIdsRef.current = selectedIndicatorIds;
+  }, [selectedIndicatorIds, approvedIndicators]);
 
   const loadIndicators = async () => {
     setLoadingIndicators(true);
     try {
-      const result = await testRequestService.getApprovedIndicators(
-        testRequestId
-      );
+      const result =
+        await testRequestService.getApprovedIndicators(testRequestId);
       setIndicators(result);
     } catch (error) {
       console.error("Error loading indicators:", error);
@@ -156,15 +246,6 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
     }
   };
 
-  // Get only approved indicators
-  const approvedIndicators = useMemo(
-    () =>
-      indicators.filter(
-        (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Approved
-      ),
-    [indicators]
-  );
-
   // Group indicators by laboratory, then by sample
   const labGroups: LabGroup[] = useMemo(() => {
     const groups: Record<
@@ -202,7 +283,7 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
     return Object.values(groups).map(({ lab, samples }) => {
       const sampleGroups = Object.values(samples);
       const allIndicatorIds = sampleGroups.flatMap((s) =>
-        s.indicators.map((i) => i.id)
+        s.indicators.map((i) => i.id),
       );
       return { ...lab, sampleGroups, allIndicatorIds };
     });
@@ -215,7 +296,7 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
     // Try to open all PDFs
     generatedResults.forEach((item) => {
       const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(
-        item.fileName
+        item.fileName,
       )}`;
       const newWindow = window.open(pdfUrl, "_blank");
 
@@ -274,7 +355,7 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
           selectedIndicatorIds,
           selectedTemplates,
           note || undefined,
-          selectedVicePresidentId
+          selectedVicePresidentId,
         );
 
         message.success(`Đã tạo ${result.results.length} phiếu kết quả`);
@@ -283,23 +364,24 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
         setGeneratedResults(result.results);
         setShowResults(true);
       } else {
-        // Mixed mode - single PDF, open directly
+        // Mixed mode - single document, open Word Editor
         const result = await testRequestService.printMixedResult(
           testRequestId,
           selectedIndicatorIds,
           note || undefined,
           undefined, // templateName
-          selectedVicePresidentId
+          selectedVicePresidentId,
         );
 
         message.success("Đã tạo phiếu kết quả");
 
-        const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(
-          result.fileName
-        )}`;
-        window.open(pdfUrl, "_blank");
+        // Open Word Editor (BE now returns .docx directly)
+        window.open(
+          `/document-editor?file=${encodeURIComponent(result.fileName)}`,
+          "_blank",
+        );
 
-        // Close modal for mixed mode (single PDF)
+        // Close modal for mixed mode
         setSelectedIndicatorIds([]);
         setNote("");
         onCancel();
@@ -308,7 +390,7 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
     } catch (error: any) {
       console.error("Error printing:", error);
       message.error(
-        error?.response?.data?.error?.message || "Không thể in kết quả"
+        error?.response?.data?.error?.message || "Không thể in kết quả",
       );
     } finally {
       setLoading(false);
@@ -333,6 +415,38 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
     setShowResults(false);
     setSelectedVicePresidentId(undefined);
     onCancel();
+  };
+
+  // Calculate pass/fail status based on result and limits
+  const calculatePassFail = (
+    result: string | undefined,
+    comparisonOperator: string | undefined,
+    allowedLimit: string | undefined,
+  ): "pass" | "fail" | null => {
+    if (!result || !comparisonOperator || !allowedLimit) return null;
+
+    const resultValue = parseResultToNumber(result);
+    if (resultValue === null) return null;
+
+    const limitValue = parseResultToNumber(allowedLimit);
+    if (limitValue === null) return null;
+
+    switch (comparisonOperator) {
+      case "<=":
+      case "≤":
+        return resultValue <= limitValue ? "pass" : "fail";
+      case ">=":
+      case "≥":
+        return resultValue >= limitValue ? "pass" : "fail";
+      case "<":
+        return resultValue < limitValue ? "pass" : "fail";
+      case ">":
+        return resultValue > limitValue ? "pass" : "fail";
+      case "=":
+        return resultValue === limitValue ? "pass" : "fail";
+      default:
+        return null;
+    }
   };
 
   const columns: ColumnsType<QualityManagementIndicatorDto> = [
@@ -361,17 +475,67 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
       ),
     },
     {
-      title: "Kết quả",
-      dataIndex: "result",
-      key: "result",
-      width: 80,
-      render: (text: string) => <Text strong>{text || "-"}</Text>,
-    },
-    {
       title: "ĐVT",
       dataIndex: "unit",
       key: "unit",
-      width: 60,
+      width: 70,
+    },
+    {
+      title: "Kết quả",
+      dataIndex: "result",
+      key: "result",
+      width: 100,
+      render: (text: string) => <Text strong>{text || "-"}</Text>,
+    },
+    {
+      title: "Giới hạn",
+      key: "limit",
+      width: 100,
+      render: (_: any, record: QualityManagementIndicatorDto) => {
+        if (record.comparisonOperator && record.allowedLimit) {
+          return (
+            <Text>
+              {record.comparisonOperator} {record.allowedLimit}
+            </Text>
+          );
+        }
+        return "-";
+      },
+    },
+    {
+      title: "Tiêu chuẩn",
+      dataIndex: "standardName",
+      key: "standardName",
+      width: 120,
+      ellipsis: true,
+      render: (text: string) => text || "-",
+    },
+    {
+      title: "Kết luận",
+      key: "conclusion",
+      width: 100,
+      render: (_: any, record: QualityManagementIndicatorDto) => {
+        const passFailStatus = calculatePassFail(
+          record.result,
+          record.comparisonOperator,
+          record.allowedLimit,
+        );
+
+        if (passFailStatus === "pass") {
+          return (
+            <Text strong style={{ color: "#52c41a" }}>
+              Đạt
+            </Text>
+          );
+        } else if (passFailStatus === "fail") {
+          return (
+            <Text strong style={{ color: "#ff4d4f" }}>
+              Không đạt
+            </Text>
+          );
+        }
+        return "-";
+      },
     },
   ];
 
@@ -421,7 +585,7 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
                     icon={<FilePdfOutlined />}
                     onClick={() => {
                       const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(
-                        item.fileName
+                        item.fileName,
                       )}`;
                       window.open(pdfUrl, "_blank");
                     }}
@@ -432,7 +596,9 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
               >
                 <List.Item.Meta
                   avatar={
-                    <FilePdfOutlined style={{ fontSize: 24, color: "#f5222d" }} />
+                    <FilePdfOutlined
+                      style={{ fontSize: 24, color: "#f5222d" }}
+                    />
                   }
                   title={`File ${index + 1}: ${item.laboratoryName || "PDF"}${
                     item.sampleCode ? ` - ${item.sampleCode}` : ""
@@ -459,7 +625,13 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
       onCancel={handleCancel}
       width={1200}
       centered
-      styles={{ body: { maxHeight: "calc(100vh - 200px)", overflowY: "auto", overflowX: "hidden" } }}
+      styles={{
+        body: {
+          maxHeight: "calc(100vh - 200px)",
+          overflowY: "auto",
+          overflowX: "hidden",
+        },
+      }}
       footer={
         <Space>
           <Button onClick={handleCancel}>Hủy</Button>
@@ -491,14 +663,20 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
         <Row gutter={24}>
           {/* Left column - Indicators grouped by Lab > Sample */}
           <Col span={16} style={{ overflow: "hidden" }}>
-            <div style={{ maxHeight: "calc(100vh - 280px)", overflowY: "auto", overflowX: "hidden" }}>
+            <div
+              style={{
+                maxHeight: "calc(100vh - 280px)",
+                overflowY: "auto",
+                overflowX: "hidden",
+              }}
+            >
               <Collapse
                 defaultActiveKey={labGroups.map((lg) => lg.laboratoryId)}
                 expandIconPosition="end"
                 style={{ background: "transparent", border: "none" }}
                 items={labGroups.map((labGroup, labIndex) => {
                   const selectedInLab = labGroup.allIndicatorIds.filter((id) =>
-                    selectedIndicatorIds.includes(id)
+                    selectedIndicatorIds.includes(id),
                   ).length;
                   const allLabSelected =
                     selectedInLab === labGroup.allIndicatorIds.length;
@@ -509,7 +687,11 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
                     key: labGroup.laboratoryId,
                     label: (
                       <div
-                        style={{ display: "flex", alignItems: "center", gap: 8 }}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                        }}
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Checkbox
@@ -527,8 +709,9 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
                             } else {
                               setSelectedIndicatorIds(
                                 selectedIndicatorIds.filter(
-                                  (id) => !labGroup.allIndicatorIds.includes(id)
-                                )
+                                  (id) =>
+                                    !labGroup.allIndicatorIds.includes(id),
+                                ),
                               );
                             }
                           }}
@@ -537,7 +720,8 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
                           {labGroup.laboratoryName}
                         </Text>
                         <Text type="secondary" style={{ fontSize: 12 }}>
-                          ({selectedInLab}/{labGroup.allIndicatorIds.length} chỉ tiêu)
+                          ({selectedInLab}/{labGroup.allIndicatorIds.length} chỉ
+                          tiêu)
                         </Text>
                       </div>
                     ),
@@ -550,102 +734,138 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
                     children: (
                       <div style={{ margin: "-16px" }}>
                         <Collapse
-                          defaultActiveKey={labGroup.sampleGroups.map((sg) => sg.sampleId)}
+                          defaultActiveKey={labGroup.sampleGroups.map(
+                            (sg) => sg.sampleId,
+                          )}
                           expandIconPosition="end"
                           style={{ background: "transparent", border: "none" }}
-                          items={labGroup.sampleGroups.map((sampleGroup, sampleIndex) => {
-                          const sampleIndicatorIds = sampleGroup.indicators.map(
-                            (i) => i.id
-                          );
-                          const selectedInSample = sampleIndicatorIds.filter((id) =>
-                            selectedIndicatorIds.includes(id)
-                          ).length;
-                          const allSampleSelected =
-                            selectedInSample === sampleIndicatorIds.length;
-                          const someSampleSelected =
-                            selectedInSample > 0 && !allSampleSelected;
-                          const isLastSample = sampleIndex === labGroup.sampleGroups.length - 1;
+                          items={labGroup.sampleGroups.map(
+                            (sampleGroup, sampleIndex) => {
+                              const sampleIndicatorIds =
+                                sampleGroup.indicators.map((i) => i.id);
+                              const selectedInSample =
+                                sampleIndicatorIds.filter((id) =>
+                                  selectedIndicatorIds.includes(id),
+                                ).length;
+                              const allSampleSelected =
+                                selectedInSample === sampleIndicatorIds.length;
+                              const someSampleSelected =
+                                selectedInSample > 0 && !allSampleSelected;
+                              const isLastSample =
+                                sampleIndex ===
+                                labGroup.sampleGroups.length - 1;
 
-                          return {
-                            key: sampleGroup.sampleId,
-                            label: (
-                              <div
-                                style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <Checkbox
-                                  checked={allSampleSelected}
-                                  indeterminate={someSampleSelected}
-                                  onChange={(e) => {
-                                    e.stopPropagation();
-                                    if (e.target.checked) {
-                                      setSelectedIndicatorIds([
-                                        ...new Set([
-                                          ...selectedIndicatorIds,
-                                          ...sampleIndicatorIds,
-                                        ]),
-                                      ]);
-                                    } else {
-                                      setSelectedIndicatorIds(
-                                        selectedIndicatorIds.filter(
-                                          (id) => !sampleIndicatorIds.includes(id)
-                                        )
-                                      );
-                                    }
-                                  }}
-                                />
-                                <Text style={{ fontSize: 13 }}>
-                                  {sampleGroup.sampleCode}
-                                </Text>
-                                {sampleGroup.sampleName && (
-                                  <Text type="secondary" style={{ fontSize: 12 }}>
-                                    - {sampleGroup.sampleName}
-                                  </Text>
-                                )}
-                                <Text
-                                  type="secondary"
-                                  style={{ fontSize: 12, marginLeft: "auto", marginRight: 8 }}
-                                >
-                                  {selectedInSample}/{sampleIndicatorIds.length}
-                                </Text>
-                              </div>
-                            ),
-                            style: {
-                              marginBottom: 0,
-                              background: "none",
-                              borderRadius: isLastSample ? "0 0 8px 8px" : 0,
-                              border: "none",
-                              borderTop: sampleIndex > 0 ? "1px solid #e8e8e8" : "none",
+                              return {
+                                key: sampleGroup.sampleId,
+                                label: (
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 8,
+                                      flex: 1,
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Checkbox
+                                      checked={allSampleSelected}
+                                      indeterminate={someSampleSelected}
+                                      onChange={(e) => {
+                                        e.stopPropagation();
+                                        if (e.target.checked) {
+                                          setSelectedIndicatorIds([
+                                            ...new Set([
+                                              ...selectedIndicatorIds,
+                                              ...sampleIndicatorIds,
+                                            ]),
+                                          ]);
+                                        } else {
+                                          setSelectedIndicatorIds(
+                                            selectedIndicatorIds.filter(
+                                              (id) =>
+                                                !sampleIndicatorIds.includes(
+                                                  id,
+                                                ),
+                                            ),
+                                          );
+                                        }
+                                      }}
+                                    />
+                                    <Text style={{ fontSize: 13 }}>
+                                      {sampleGroup.sampleCode}
+                                    </Text>
+                                    {sampleGroup.sampleName && (
+                                      <Text
+                                        type="secondary"
+                                        style={{ fontSize: 12 }}
+                                      >
+                                        - {sampleGroup.sampleName}
+                                      </Text>
+                                    )}
+                                    <Text
+                                      type="secondary"
+                                      style={{
+                                        fontSize: 12,
+                                        marginLeft: "auto",
+                                        marginRight: 8,
+                                      }}
+                                    >
+                                      {selectedInSample}/
+                                      {sampleIndicatorIds.length}
+                                    </Text>
+                                  </div>
+                                ),
+                                style: {
+                                  marginBottom: 0,
+                                  background: "none",
+                                  borderRadius: isLastSample
+                                    ? "0 0 8px 8px"
+                                    : 0,
+                                  border: "none",
+                                  borderTop:
+                                    sampleIndex > 0
+                                      ? "1px solid #e8e8e8"
+                                      : "none",
+                                },
+                                children: (
+                                  <div
+                                    style={{
+                                      borderRadius: 8,
+                                      overflow: "hidden",
+                                    }}
+                                  >
+                                    <Table
+                                      dataSource={sampleGroup.indicators}
+                                      columns={columns}
+                                      rowKey="id"
+                                      size="small"
+                                      pagination={false}
+                                      scroll={{ x: "max-content" }}
+                                      bordered
+                                      style={{ maxWidth: "100%" }}
+                                      rowSelection={{
+                                        selectedRowKeys: selectedIndicatorIds,
+                                        onChange: (keys) => {
+                                          const otherIds =
+                                            selectedIndicatorIds.filter(
+                                              (id) =>
+                                                !sampleIndicatorIds.includes(
+                                                  id,
+                                                ),
+                                            );
+                                          setSelectedIndicatorIds([
+                                            ...otherIds,
+                                            ...(keys as string[]),
+                                          ]);
+                                        },
+                                        type: "checkbox",
+                                      }}
+                                    />
+                                  </div>
+                                ),
+                              };
                             },
-                            children: (
-                              <div style={{ borderRadius: 8, overflow: "hidden" }}>
-                                <Table
-                                  dataSource={sampleGroup.indicators}
-                                  columns={columns}
-                                  rowKey="id"
-                                  size="small"
-                                  pagination={false}
-                                  scroll={{ x: "max-content" }}
-                                  bordered
-                                  style={{ maxWidth: "100%" }}
-                                rowSelection={{
-                                  selectedRowKeys: selectedIndicatorIds,
-                                  onChange: (keys) => {
-                                    const otherIds = selectedIndicatorIds.filter(
-                                      (id) => !sampleIndicatorIds.includes(id)
-                                    );
-                                    setSelectedIndicatorIds([
-                                      ...otherIds,
-                                      ...(keys as string[]),
-                                    ]);
-                                  },
-                                  type: "checkbox",
-                                }}
-                                />
-                              </div>
-                            ),
-                          };
-                          })}
+                          )}
                         />
                       </div>
                     ),

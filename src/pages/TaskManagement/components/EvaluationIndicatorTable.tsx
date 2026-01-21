@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Table,
   Select,
@@ -62,6 +62,7 @@ interface EvaluationIndicatorTableProps {
   canEvaluate: boolean; // QLKT permission
   loading?: boolean;
   onEvaluationComplete: () => void; // Callback to refresh data after evaluation
+  isSharedSampleTask?: boolean; // Mẫu chung - cần check ẩn nút từ chối cho Lab Hóa
 }
 
 const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
@@ -71,6 +72,7 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
   canEvaluate,
   loading = false,
   onEvaluationComplete,
+  isSharedSampleTask = false,
 }) => {
   // State for selected indicators
   const [selectedIndicatorIds, setSelectedIndicatorIds] = useState<string[]>(
@@ -79,6 +81,26 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
 
   // State for action loading
   const [actionLoading, setActionLoading] = useState(false);
+
+  // State for hiding reject button (shared sample - Lab Hóa không được từ chối)
+  const [hideRejectButton, setHideRejectButton] = useState(false);
+
+  // Check if should hide reject button for shared sample task (Lab Hóa)
+  useEffect(() => {
+    if (isSharedSampleTask && taskId) {
+      laboratoryTaskService
+        .shouldHideRejectButton(taskId)
+        .then((shouldHide) => {
+          setHideRejectButton(shouldHide);
+        })
+        .catch((error) => {
+          console.error("Failed to check shouldHideRejectButton:", error);
+          setHideRejectButton(false);
+        });
+    } else {
+      setHideRejectButton(false);
+    }
+  }, [isSharedSampleTask, taskId]);
 
   // State for method change modal
   const [methodChangeModal, setMethodChangeModal] = useState<{
@@ -378,29 +400,33 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
                 Đổi PP
               </Button>
             </Tooltip>
-            <Tooltip title="Từ chối thử nghiệm">
-              <Button
-                danger
-                size="small"
-                icon={<CloseOutlined />}
-                onClick={() =>
-                  setRejectModal({
-                    visible: true,
-                    indicatorId: record.id,
-                    mode: "single",
-                  })
-                }
-                loading={actionLoading}
-              >
-                Từ chối TN
-              </Button>
-            </Tooltip>
+            {/* Ẩn nút Từ chối TN nếu là Lab Hóa trong mẫu chung */}
+            {!hideRejectButton && (
+              <Tooltip title="Từ chối thử nghiệm">
+                <Button
+                  danger
+                  size="small"
+                  icon={<CloseOutlined />}
+                  onClick={() =>
+                    setRejectModal({
+                      visible: true,
+                      indicatorId: record.id,
+                      mode: "single",
+                    })
+                  }
+                  loading={actionLoading}
+                >
+                  Từ chối TN
+                </Button>
+              </Tooltip>
+            )}
           </>
         )}
 
         {/* Buttons cho trạng thái CannotTest (KTV báo không TN được) */}
         {/* Chỉ hiển thị Từ chối TN - không hiển thị Chấp nhận (đã chấp nhận rồi) và Đổi PP */}
-        {isCannotTest && (
+        {/* Ẩn nút Từ chối TN nếu là Lab Hóa trong mẫu chung */}
+        {isCannotTest && !hideRejectButton && (
           <Tooltip title="Từ chối thử nghiệm">
             <Button
               danger
@@ -617,15 +643,18 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
             >
               Đổi PP ({selectedCount})
             </Button>
-            <Button
-              danger
-              icon={<CloseOutlined />}
-              onClick={() => setRejectModal({ visible: true, mode: "bulk" })}
-              disabled={selectedCount === 0}
-              loading={actionLoading}
-            >
-              Từ chối TN ({selectedCount})
-            </Button>
+            {/* Ẩn nút Từ chối TN bulk nếu là Lab Hóa trong mẫu chung */}
+            {!hideRejectButton && (
+              <Button
+                danger
+                icon={<CloseOutlined />}
+                onClick={() => setRejectModal({ visible: true, mode: "bulk" })}
+                disabled={selectedCount === 0}
+                loading={actionLoading}
+              >
+                Từ chối TN ({selectedCount})
+              </Button>
+            )}
           </Space>
         </div>
       )}

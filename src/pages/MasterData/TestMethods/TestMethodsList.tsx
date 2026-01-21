@@ -1,13 +1,27 @@
-import React, { useMemo, useEffect, useRef } from "react";
-import { Button, Space, Row, Col, Form } from "antd";
-import { PlusOutlined } from "../../../components/common/Icon";
+import React, { useMemo, useEffect, useRef, useState } from "react";
+import { Button, Space, Row, Col, Form, message } from "antd";
+import {
+  PlusOutlined,
+  DownloadOutlined,
+  UploadOutlined,
+} from "../../../components/common/Icon";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
+import type { UploadFile } from "antd/es/upload/interface";
 import { useTestMethodsData, useTestMethodsActions } from "./hooks";
-import { TestMethodsTable, TestMethodModal, AddIndicatorsModal } from "./components";
+import {
+  TestMethodsTable,
+  TestMethodModal,
+  AddIndicatorsModal,
+  ImportTestMethodModal,
+} from "./components";
 import { getTestMethodColumns, getIndicatorColumns } from "./constants";
-import { TestMethodsTabProps } from "./types";
-import { testMethodSchema, TestMethodFormData } from "./schemas/testMethodSchema";
+import { TestMethodsTabProps, TestMethodImportPreviewDto } from "./types";
+import {
+  testMethodSchema,
+  TestMethodFormData,
+} from "./schemas/testMethodSchema";
+import { API_BASE_URL, api } from "../../../services/api";
 
 const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshKey }) => {
   const {
@@ -20,6 +34,11 @@ const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshK
     setSearchText,
     setExpandedRowKeys,
     fetchData,
+    // Batch selection for indicators
+    selectedIndicatorKeys,
+    setSelectedIndicatorKeys,
+    batchLoading,
+    setBatchLoading,
   } = useTestMethodsData();
 
   // Refresh data when refreshKey changes (when switching to this tab)
@@ -51,11 +70,16 @@ const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshK
     handleAddIndicatorsCancel,
     handleRemoveIndicator,
     handleToggleActive,
+    // Batch remove indicators
+    handleBatchRemoveIndicators,
   } = useTestMethodsActions({
     fetchData,
     onDataChange,
     expandedRowKeys,
     setExpandedRowKeys,
+    selectedIndicatorKeys,
+    setSelectedIndicatorKeys,
+    setBatchLoading,
   });
 
   const form = useForm<TestMethodFormData>({
@@ -63,6 +87,92 @@ const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshK
     defaultValues: { name: "", unit: "", isActive: true },
   });
   const [addIndicatorsForm] = Form.useForm();
+
+  // Import state
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
+  const [previewData, setPreviewData] =
+    useState<TestMethodImportPreviewDto | null>(null);
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
+
+  // Import handlers
+  const handleDownloadTemplate = () => {
+    window.open(
+      `${API_BASE_URL}/api/v1/import/test-methods-with-indicators/template`,
+      "_blank"
+    );
+  };
+
+  const handlePreviewImport = async () => {
+    if (!fileList.length || !fileList[0].originFileObj) return;
+
+    setImportLoading(true);
+    const formData = new FormData();
+    formData.append("file", fileList[0].originFileObj as Blob);
+
+    try {
+      const response = await api.upload<TestMethodImportPreviewDto>(
+        "/api/v1/import/test-methods-with-indicators/preview",
+        formData
+      );
+      setPreviewData(response.data);
+    } catch (error: any) {
+      message.error(
+        error?.response?.data?.message ||
+          error?.response?.data?.error?.message ||
+          "Lỗi khi đọc file"
+      );
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!fileList.length || !fileList[0].originFileObj) return;
+
+    setImportLoading(true);
+    const formData = new FormData();
+    formData.append("file", fileList[0].originFileObj as Blob);
+
+    try {
+      const response = await api.upload<{
+        success: boolean;
+        message?: string;
+      }>("/api/v1/import/test-methods-with-indicators", formData);
+
+      const result = response.data;
+
+      if (result.success) {
+        message.success(result.message);
+        setImportModalOpen(false);
+        setPreviewData(null);
+        setFileList([]);
+        fetchData();
+        onDataChange?.();
+      } else {
+        message.error(result.message || "Lỗi khi import");
+      }
+    } catch (error: any) {
+      message.error(
+        error?.response?.data?.message ||
+          error?.response?.data?.error?.message ||
+          "Lỗi khi import"
+      );
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleImportCancel = () => {
+    setImportModalOpen(false);
+    setPreviewData(null);
+    setFileList([]);
+  };
+
+  const handleImportReset = () => {
+    setPreviewData(null);
+    setFileList([]);
+  };
 
   // Get existing indicator IDs for the selected test method
   const existingIndicatorIds = useMemo(() => {
@@ -95,6 +205,15 @@ const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshK
         <Col flex="auto" />
         <Col>
           <Space>
+            <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
+              Tải template mẫu
+            </Button>
+            <Button
+              icon={<UploadOutlined />}
+              onClick={() => setImportModalOpen(true)}
+            >
+              Nhập danh sách
+            </Button>
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -109,11 +228,17 @@ const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshK
       {/* Expandable Table */}
       <TestMethodsTable
         loading={loading}
+        batchLoading={batchLoading}
         groupedData={groupedData}
         methodColumns={methodColumns}
         indicatorColumns={indicatorColumns}
         expandedRowKeys={expandedRowKeys}
         searchText={searchText}
+        // Batch selection for indicators
+        selectedIndicatorKeys={selectedIndicatorKeys}
+        onSelectedIndicatorKeysChange={setSelectedIndicatorKeys}
+        onBatchRemoveIndicators={handleBatchRemoveIndicators}
+        // Handlers
         onSearchChange={setSearchText}
         onExpandedRowsChange={setExpandedRowKeys}
         onAddIndicators={(testMethodId) =>
@@ -141,6 +266,19 @@ const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshK
         existingIndicatorIds={existingIndicatorIds}
         onOk={() => handleAddIndicatorsOk(addIndicatorsForm)}
         onCancel={() => handleAddIndicatorsCancel(addIndicatorsForm)}
+      />
+
+      {/* Import TestMethod Modal */}
+      <ImportTestMethodModal
+        open={importModalOpen}
+        loading={importLoading}
+        fileList={fileList}
+        previewData={previewData}
+        onFileListChange={setFileList}
+        onPreview={handlePreviewImport}
+        onConfirm={handleConfirmImport}
+        onCancel={handleImportCancel}
+        onReset={handleImportReset}
       />
     </>
   );

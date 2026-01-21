@@ -83,7 +83,7 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
   historyModal,
   cannotTestModal,
   resultOptions = [],
-  canPerformActions = true,
+  canPerformActions = false,
   onBack,
   onCollapseChange,
   onSubmitResults,

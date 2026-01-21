@@ -11,12 +11,17 @@ import {
   laboratoryService,
   testMethodService,
   specimenTypeService,
+  sampleConditionService,
+  sampleTypeCategoryService,
   IndicatorDto,
   IndicatorGroupDto,
   StorageLocationDto,
   LaboratoryDto,
   TestMethodWithIndicatorsDto,
   SpecimenTypeDto,
+  SpecimenTypeWithIndicatorsDto,
+  SampleConditionDto,
+  SampleTypeCategoryDto,
 } from "../../../../services/masterDataService";
 import { userService, UserLookupDto } from "../../../../services/userService";
 import { organizationService } from "../../../../services/organizationService";
@@ -119,7 +124,17 @@ export const useTestRequestFormData = () => {
   const specimenTypeDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const [laboratories, setLaboratories] = useState<LaboratoryDto[]>([]);
   const [specimenTypes, setSpecimenTypes] = useState<SpecimenTypeDto[]>([]);
+  const [specimenTypesWithIndicators, setSpecimenTypesWithIndicators] = useState<SpecimenTypeWithIndicatorsDto[]>([]);
+  // Map: indicatorId -> list of specimenTypes that contain this indicator
+  const [indicatorToSpecimenTypesMap, setIndicatorToSpecimenTypesMap] = useState<Record<string, { id: string; name: string }[]>>({});
   const [specimenTypeOptions, setSpecimenTypeOptions] = useState<{ value: string; label: string }[]>([]);
+
+  // Sample Conditions (Tình trạng mẫu)
+  const [sampleConditions, setSampleConditions] = useState<SampleConditionDto[]>([]);
+  const [sampleConditionOptions, setSampleConditionOptions] = useState<{ value: string; label: string }[]>([]);
+
+  // Sample Type Categories (Danh mục loại mẫu)
+  const [sampleTypeCategories, setSampleTypeCategories] = useState<SampleTypeCategoryDto[]>([]);
 
   // Test methods and indicator-method mapping
   const [testMethods, setTestMethods] = useState<TestMethodWithIndicatorsDto[]>([]);
@@ -176,6 +191,9 @@ export const useTestRequestFormData = () => {
   // Vietnam location states
   const [provinces] = useState<Province[]>(getAllProvinces());
   const [wards, setWards] = useState<Ward[]>([]);
+  // Track selected codes for cascade filtering (separate from text values for editable select)
+  const [selectedProvinceCode, setSelectedProvinceCode] = useState<string | undefined>();
+  const [selectedWardCode, setSelectedWardCode] = useState<string | undefined>();
 
   // Helper to check if a field should be disabled based on status
   const isFieldLocked = (fieldName: string): boolean => {
@@ -205,7 +223,7 @@ export const useTestRequestFormData = () => {
   // Load master data
   const loadMasterData = async () => {
     try {
-      const [groupsData, indicatorsData, locationsData, usersData, orgsData, labsData, methodsData, specimenTypesData] = await Promise.all([
+      const [groupsData, indicatorsData, locationsData, usersData, orgsData, labsData, methodsData, specimenTypesData, specimenTypesWithIndsData, sampleConditionsData, sampleTypeCategoriesData] = await Promise.all([
         indicatorGroupService.getActive(),
         indicatorService.getActive(),
         storageLocationService.getActive(),
@@ -214,6 +232,9 @@ export const useTestRequestFormData = () => {
         laboratoryService.getActive(),
         testMethodService.getWithIndicators(),
         specimenTypeService.getActive(),
+        specimenTypeService.getWithIndicators(),
+        sampleConditionService.getActive(),
+        sampleTypeCategoryService.getActive(),
       ]);
       setIndicatorGroups(groupsData);
       setIndicators(indicatorsData);
@@ -223,6 +244,30 @@ export const useTestRequestFormData = () => {
       setLaboratories(labsData || []);
       setTestMethods(methodsData || []);
       setSpecimenTypes(specimenTypesData.items || []);
+      setSpecimenTypesWithIndicators(specimenTypesWithIndsData || []);
+      setSampleConditions(sampleConditionsData || []);
+      setSampleTypeCategories(sampleTypeCategoriesData || []);
+      // Build sampleConditionOptions for AutoComplete
+      setSampleConditionOptions((sampleConditionsData || []).map((sc) => ({
+        value: sc.name,
+        label: sc.name,
+      })));
+
+      // Build reverse map: indicatorId -> list of specimenTypes
+      const indToSpecMap: Record<string, { id: string; name: string }[]> = {};
+      (specimenTypesWithIndsData || []).forEach((st) => {
+        if (st.isActive && st.indicators) {
+          st.indicators.forEach((ind) => {
+            if (ind.isActive) {
+              if (!indToSpecMap[ind.indicatorId]) {
+                indToSpecMap[ind.indicatorId] = [];
+              }
+              indToSpecMap[ind.indicatorId].push({ id: st.id, name: st.name });
+            }
+          });
+        }
+      });
+      setIndicatorToSpecimenTypesMap(indToSpecMap);
 
       // Build map: indicatorId -> methods[]
       const methodMap: Record<string, IndicatorMethodInfo[]> = {};
@@ -292,11 +337,20 @@ export const useTestRequestFormData = () => {
     if (selectedOrg) {
       if (selectedOrg.provinceCode) {
         setWards(getWardsByProvince(selectedOrg.provinceCode));
+        setSelectedProvinceCode(selectedOrg.provinceCode);
       }
+      if (selectedOrg.wardCode) {
+        setSelectedWardCode(selectedOrg.wardCode);
+      }
+      // Find province and ward names for editable fields
+      const provinceName = provinces.find(p => p.code === selectedOrg.provinceCode)?.name;
+      const wardName = selectedOrg.wardCode
+        ? getWardsByProvince(selectedOrg.provinceCode || '').find(w => w.code === selectedOrg.wardCode)?.name
+        : undefined;
       form.setFieldsValue({
         customerName: selectedOrg.name,
-        provinceCode: selectedOrg.provinceCode,
-        wardCode: selectedOrg.wardCode,
+        province: provinceName || '',
+        ward: wardName || '',
         address: selectedOrg.address,
         taxCode: selectedOrg.taxCode,
         contactPerson: selectedOrg.contactPerson,
@@ -314,11 +368,20 @@ export const useTestRequestFormData = () => {
     if (foundOrg) {
       if (foundOrg.provinceCode) {
         setWards(getWardsByProvince(foundOrg.provinceCode));
+        setSelectedProvinceCode(foundOrg.provinceCode);
       }
+      if (foundOrg.wardCode) {
+        setSelectedWardCode(foundOrg.wardCode);
+      }
+      // Find province and ward names for editable fields
+      const provinceName = provinces.find(p => p.code === foundOrg.provinceCode)?.name;
+      const wardName = foundOrg.wardCode
+        ? getWardsByProvince(foundOrg.provinceCode || '').find(w => w.code === foundOrg.wardCode)?.name
+        : undefined;
       form.setFieldsValue({
         customerName: foundOrg.name,
-        provinceCode: foundOrg.provinceCode,
-        wardCode: foundOrg.wardCode,
+        province: provinceName || '',
+        ward: wardName || '',
         address: foundOrg.address,
         taxCode: foundOrg.taxCode,
         contactPerson: foundOrg.contactPerson,
@@ -407,6 +470,10 @@ export const useTestRequestFormData = () => {
       if (data.provinceCode) {
         const loadedWards = getWardsByProvince(data.provinceCode);
         setWards(loadedWards);
+        setSelectedProvinceCode(data.provinceCode);
+      }
+      if (data.wardCode) {
+        setSelectedWardCode(data.wardCode);
       }
 
       form.setFieldsValue({
@@ -479,6 +546,7 @@ export const useTestRequestFormData = () => {
               fileSize: att.fileSize,
               url: fileService.getFileUrl(att.fileId),
             })),
+            isSharedSample: sample.isSharedSample || false, // Mẫu chung (Vi Sinh + Hóa)
           };
         });
         setSamples(sampleData);
@@ -564,56 +632,63 @@ export const useTestRequestFormData = () => {
 
       // Find organization to get full info
       const org = organizations.find((o) => o.id === quotation.organizationId);
-      if (org?.provinceCode) {
-        setWards(getWardsByProvince(org.provinceCode));
+      const provinceCodeToUse = quotation.provinceCode || org?.provinceCode;
+      const wardCodeToUse = quotation.wardCode || org?.wardCode;
+
+      if (provinceCodeToUse) {
+        setWards(getWardsByProvince(provinceCodeToUse));
+        setSelectedProvinceCode(provinceCodeToUse);
       }
+      if (wardCodeToUse) {
+        setSelectedWardCode(wardCodeToUse);
+      }
+
+      // Get province and ward names for editable fields
+      const provinceName = provinces.find(p => p.code === provinceCodeToUse)?.name;
+      const wardName = provinceCodeToUse && wardCodeToUse
+        ? getWardsByProvince(provinceCodeToUse).find(w => w.code === wardCodeToUse)?.name
+        : undefined;
 
       // Fill customer info from quotation
       form.setFieldsValue({
         customerName: quotation.customerName,
-        provinceCode: quotation.provinceCode || org?.provinceCode,
-        wardCode: quotation.wardCode || org?.wardCode,
+        province: provinceName || '',
+        ward: wardName || '',
         address: quotation.address || org?.address,
         taxCode: quotation.taxCode || org?.taxCode,
         contactPerson: quotation.contactPerson || org?.contactPerson,
         phone: quotation.phone || org?.phone,
       });
 
-      // Calculate max sample count from items
-      const maxSampleCount = Math.max(...quotation.items.map((item) => item.sampleCount), 1);
-
-      // Generate samples based on max sample count
+      // Generate samples from quotation samples (new structure)
       const generatedSamples: SampleFormData[] = [];
       const generatedDates: Record<string, IndicatorDateInfo> = {};
 
-      for (let i = 0; i < maxSampleCount; i++) {
-        const sampleKey = `quotation-sample-${Date.now()}-${i}`;
-        const sampleCode = generateSampleCode(sampleCodePrefix, i + 1);
+      quotation.samples.forEach((quotationSample, sampleIndex) => {
+        const sampleKey = `quotation-sample-${Date.now()}-${sampleIndex}`;
+        const sampleCode = generateSampleCode(sampleCodePrefix, sampleIndex + 1);
 
-        // Find indicators for this sample (all items with sampleCount > i)
+        // Get indicators from quotation sample
         const indicatorMethodsList: IndicatorMethodKey[] = [];
-        quotation.items.forEach((item) => {
-          if (item.sampleCount > i) {
-            // Handle case where testMethodId might be null/undefined
-            const testMethodId = item.testMethodId || "";
-            const methodKey = createIndicatorMethodKey(item.indicatorId, testMethodId);
-            indicatorMethodsList.push(methodKey);
+        quotationSample.indicators.forEach((indicator) => {
+          const testMethodId = indicator.testMethodId || "";
+          const methodKey = createIndicatorMethodKey(indicator.indicatorId, testMethodId);
+          indicatorMethodsList.push(methodKey);
 
-            // Set dates for indicators (requestDate để trống theo yêu cầu KH)
-            if (!generatedDates[methodKey]) {
-              generatedDates[methodKey] = {
-                transferDate: dayjs(),
-                requestDate: undefined,
-              };
-            }
+          // Set dates for indicators (requestDate để trống theo yêu cầu KH)
+          if (!generatedDates[methodKey]) {
+            generatedDates[methodKey] = {
+              transferDate: dayjs(),
+              requestDate: undefined,
+            };
           }
         });
 
         generatedSamples.push({
           key: sampleKey,
-          sortOrder: i + 1,
+          sortOrder: sampleIndex + 1,
           sampleCode,
-          sampleName: "",
+          sampleName: quotationSample.sampleName || "",
           samplingAddress: "",
           sampleQuantity: "",
           status: SampleStatus.Normal,
@@ -627,7 +702,7 @@ export const useTestRequestFormData = () => {
           indicatorMethods: indicatorMethodsList,
           attachments: [],
         });
-      }
+      });
 
       setSamples(generatedSamples);
       setSelectedIndicatorDates(generatedDates);
@@ -848,6 +923,8 @@ export const useTestRequestFormData = () => {
     organizationSearching,
     laboratories,
     specimenTypes,
+    specimenTypesWithIndicators,
+    indicatorToSpecimenTypesMap,
     testMethods,
     indicatorMethodsMap,
 
@@ -860,6 +937,13 @@ export const useTestRequestFormData = () => {
     handleSpecimenTypeSelect,
     handleOrganizationSelect,
     handlePhoneBlur,
+
+    // Sample Condition handlers
+    sampleConditions,
+    sampleConditionOptions,
+
+    // Sample Type Categories
+    sampleTypeCategories,
 
     // Costs
     totalSampleCost,
@@ -933,6 +1017,10 @@ export const useTestRequestFormData = () => {
     provinces,
     wards,
     setWards,
+    selectedProvinceCode,
+    setSelectedProvinceCode,
+    selectedWardCode,
+    setSelectedWardCode,
 
     // Helpers
     getIndicatorInfo,

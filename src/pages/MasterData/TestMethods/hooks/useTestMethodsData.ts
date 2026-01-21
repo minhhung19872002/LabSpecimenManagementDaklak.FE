@@ -19,6 +19,9 @@ export const useTestMethodsData = () => {
   const [searchText, setSearchText] = useState("");
   const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  // Batch selection for indicators (keyed by testMethodId)
+  const [selectedIndicatorKeys, setSelectedIndicatorKeys] = useState<Record<string, string[]>>({});
+  const [batchLoading, setBatchLoading] = useState(false);
 
   // Fetch all data
   const fetchData = async () => {
@@ -115,5 +118,10 @@ export const useTestMethodsData = () => {
     setSearchText,
     setExpandedRowKeys,
     fetchData,
+    // Batch selection for indicators
+    selectedIndicatorKeys,
+    setSelectedIndicatorKeys,
+    batchLoading,
+    setBatchLoading,
   };
 };

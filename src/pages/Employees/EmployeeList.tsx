@@ -18,6 +18,7 @@ import {
 } from "../../components/common/Icon";
 import { useEmployeeList, ROLE_OPTIONS } from "./hooks";
 import { EmployeeFormModal, PasswordSentModal } from "./components";
+import ResetPasswordModal from "./components/ResetPasswordModal";
 
 const EmployeeList: React.FC = () => {
   const {
@@ -33,7 +34,9 @@ const EmployeeList: React.FC = () => {
     pageSize,
     isModalOpen,
     isPasswordModalOpen,
+    isResetPasswordModalOpen,
     editingItem,
+    resetPasswordEmployee,
     newEmployeeInfo,
     modalLoading,
     form,
@@ -49,6 +52,8 @@ const EmployeeList: React.FC = () => {
     handleModalCancel,
     handleModalSubmit,
     handlePasswordModalClose,
+    handleResetPasswordModalCancel,
+    handleResetPasswordSuccess,
   } = useEmployeeList();
 
   return (
@@ -184,6 +189,14 @@ const EmployeeList: React.FC = () => {
         open={isPasswordModalOpen}
         email={newEmployeeInfo?.email || null}
         onClose={handlePasswordModalClose}
+      />
+
+      {/* Reset Password Modal */}
+      <ResetPasswordModal
+        open={isResetPasswordModalOpen}
+        employee={resetPasswordEmployee}
+        onCancel={handleResetPasswordModalCancel}
+        onSuccess={handleResetPasswordSuccess}
       />
     </div>
   );

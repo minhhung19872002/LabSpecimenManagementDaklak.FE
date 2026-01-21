@@ -122,8 +122,8 @@ const QuotationList: React.FC = () => {
     },
     {
       title: "Số chỉ tiêu",
-      dataIndex: "itemCount",
-      key: "itemCount",
+      dataIndex: "indicatorCount",
+      key: "indicatorCount",
       width: 100,
       align: "center",
     },

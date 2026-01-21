@@ -226,6 +226,14 @@ export enum SampleStatus {
   Completed = 4
 }
 
+export const SampleStatusLabels: Record<SampleStatus, string> = {
+  [SampleStatus.Normal]: 'Bình thường',
+  [SampleStatus.Damaged]: 'Hư hỏng',
+  [SampleStatus.NotMeetRequirements]: 'Không đạt yêu cầu',
+  [SampleStatus.Testing]: 'Đang thử nghiệm',
+  [SampleStatus.Completed]: 'Hoàn thành'
+};
+
 // Sample Indicator DTOs
 /** Hình ảnh của chỉ tiêu (từ IndicatorImage) */
 export interface IndicatorImageDto {
@@ -349,6 +357,8 @@ export interface TestRequestSampleDto {
   beforeTestingImages?: SampleTestingImageDto[];
   /** Hình ảnh sau thử nghiệm */
   afterTestingImages?: SampleTestingImageDto[];
+  /** Mẫu chung - Mẫu có chỉ tiêu ở cả Lab Vi Sinh và Lab Hóa */
+  isSharedSample?: boolean;
 }
 
 export interface AttachmentInputDto {

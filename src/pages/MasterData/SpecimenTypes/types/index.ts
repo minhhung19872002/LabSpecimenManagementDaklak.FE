@@ -4,6 +4,8 @@ import {
   SpecimenTypeIndicatorDto,
   CreateUpdateSpecimenTypeDto,
   AddIndicatorsToSpecimenTypeDto,
+  SampleTypeCategoryDto,
+  CreateUpdateSampleTypeCategoryDto,
 } from "../../../../services/masterDataService";
 
 export interface SpecimenTypesTabProps {
@@ -21,4 +23,6 @@ export type {
   SpecimenTypeIndicatorDto,
   CreateUpdateSpecimenTypeDto,
   AddIndicatorsToSpecimenTypeDto,
+  SampleTypeCategoryDto,
+  CreateUpdateSampleTypeCategoryDto,
 };

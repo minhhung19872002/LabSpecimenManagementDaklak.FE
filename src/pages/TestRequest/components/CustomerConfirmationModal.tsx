@@ -23,6 +23,7 @@ import { IndicatorPendingConfirmationDto } from "../../../types/testRequest";
 import { IndicatorApprovalStatus } from "../../../types/laboratoryTask";
 import { formatDate } from "../../../utils/formatters";
 import { IndicatorName } from "../../../components/common";
+import { getApiErrorMessage } from "../../../utils/errorHandler";
 
 const { Text, Title } = Typography;
 
@@ -88,9 +89,7 @@ const CustomerConfirmationModal: React.FC<CustomerConfirmationModalProps> = ({
       onConfirmComplete();
     } catch (error: any) {
       console.error("Failed to confirm indicator:", error);
-      message.error(
-        error.response?.data?.error?.message || "Không thể xác nhận chỉ tiêu"
-      );
+      message.error(getApiErrorMessage(error, "Không thể xác nhận chỉ tiêu"));
     } finally {
       setActionLoading(false);
     }
@@ -118,9 +117,7 @@ const CustomerConfirmationModal: React.FC<CustomerConfirmationModalProps> = ({
       onConfirmComplete();
     } catch (error: any) {
       console.error("Failed to bulk confirm:", error);
-      message.error(
-        error.response?.data?.error?.message || "Không thể xác nhận chỉ tiêu"
-      );
+      message.error(getApiErrorMessage(error, "Không thể xác nhận chỉ tiêu"));
     } finally {
       setActionLoading(false);
     }

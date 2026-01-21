@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { message } from "antd";
+import { message, Modal } from "antd";
 import type { FormInstance } from "antd";
 import type { UseFormReturn } from "react-hook-form";
 import {
@@ -17,6 +17,10 @@ interface UseStandardsActionsParams {
   onDataChange?: () => void;
   expandedRowKeys: string[];
   setExpandedRowKeys: React.Dispatch<React.SetStateAction<string[]>>;
+  // Batch selection for indicators
+  selectedIndicatorKeys: Record<string, string[]>;
+  setSelectedIndicatorKeys: (keys: Record<string, string[]>) => void;
+  setBatchLoading: (loading: boolean) => void;
 }
 
 export const useStandardsActions = ({
@@ -24,6 +28,9 @@ export const useStandardsActions = ({
   onDataChange,
   expandedRowKeys,
   setExpandedRowKeys,
+  selectedIndicatorKeys,
+  setSelectedIndicatorKeys,
+  setBatchLoading,
 }: UseStandardsActionsParams) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<GroupedStandardData | null>(null);
@@ -306,6 +313,102 @@ export const useStandardsActions = ({
     }
   };
 
+  // ============= Batch Remove Indicators =============
+  const handleBatchRemoveIndicators = async (standardId: string) => {
+    const selectedIds = selectedIndicatorKeys[standardId] || [];
+    if (selectedIds.length === 0) {
+      message.warning("Vui lòng chọn ít nhất một chỉ tiêu");
+      return;
+    }
+
+    Modal.confirm({
+      title: "Xác nhận xóa",
+      content: `Bạn có chắc chắn muốn xóa ${selectedIds.length} chỉ tiêu đã chọn khỏi tiêu chuẩn này?`,
+      okText: "Xóa",
+      okType: "danger",
+      cancelText: "Hủy",
+      centered: true,
+      onOk: async () => {
+        try {
+          setBatchLoading(true);
+          const count = await standardService.batchRemoveIndicators(standardId, selectedIds);
+          message.success(`Đã xóa ${count} chỉ tiêu thành công!`);
+          // Clear selection for this standard
+          setSelectedIndicatorKeys({
+            ...selectedIndicatorKeys,
+            [standardId]: [],
+          });
+          await fetchData();
+          onDataChange?.();
+        } catch (error) {
+          message.error("Không thể xóa chỉ tiêu");
+        } finally {
+          setBatchLoading(false);
+        }
+      },
+    });
+  };
+
+  // ============= Batch Activate Indicators =============
+  const handleBatchActivateIndicators = async (standardId: string) => {
+    const selectedIds = selectedIndicatorKeys[standardId] || [];
+    if (selectedIds.length === 0) {
+      message.warning("Vui lòng chọn ít nhất một chỉ tiêu");
+      return;
+    }
+
+    try {
+      setBatchLoading(true);
+      const count = await standardService.batchActivateIndicators(standardId, selectedIds);
+      if (count > 0) {
+        message.success(`Đã kích hoạt ${count} chỉ tiêu thành công!`);
+      } else {
+        message.info("Tất cả chỉ tiêu đã được kích hoạt");
+      }
+      // Clear selection for this standard
+      setSelectedIndicatorKeys({
+        ...selectedIndicatorKeys,
+        [standardId]: [],
+      });
+      await fetchData();
+      onDataChange?.();
+    } catch (error) {
+      message.error("Không thể kích hoạt chỉ tiêu");
+    } finally {
+      setBatchLoading(false);
+    }
+  };
+
+  // ============= Batch Deactivate Indicators =============
+  const handleBatchDeactivateIndicators = async (standardId: string) => {
+    const selectedIds = selectedIndicatorKeys[standardId] || [];
+    if (selectedIds.length === 0) {
+      message.warning("Vui lòng chọn ít nhất một chỉ tiêu");
+      return;
+    }
+
+    try {
+      setBatchLoading(true);
+      const count = await standardService.batchDeactivateIndicators(standardId, selectedIds);
+      if (count > 0) {
+        message.success(`Đã ngừng kích hoạt ${count} chỉ tiêu thành công!`);
+      } else {
+        message.info("Tất cả chỉ tiêu đã ngừng kích hoạt");
+      }
+      // Clear selection for this standard
+      setSelectedIndicatorKeys({
+        ...selectedIndicatorKeys,
+        [standardId]: [],
+      });
+      await fetchData();
+      onDataChange?.();
+    } catch (error) {
+      message.error("Không thể ngừng kích hoạt chỉ tiêu");
+    } finally {
+      setBatchLoading(false);
+    }
+  };
+
   return {
     // Standard modal
     modalOpen,
@@ -341,5 +444,12 @@ export const useStandardsActions = ({
 
     // Toggle indicator active
     handleToggleIndicatorActive,
+
+    // Batch remove indicators
+    handleBatchRemoveIndicators,
+
+    // Batch activate/deactivate indicators
+    handleBatchActivateIndicators,
+    handleBatchDeactivateIndicators,
   };
 };

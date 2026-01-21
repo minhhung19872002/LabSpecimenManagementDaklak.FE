@@ -10,12 +10,15 @@ import {
   Tooltip,
   Popover,
   AutoComplete,
+  Checkbox,
 } from "antd";
 import {
   PlusOutlined,
   DeleteOutlined,
   CopyOutlined,
   BarcodeOutlined,
+  DownloadOutlined,
+  UploadOutlined,
 } from "../../../../components/common/Icon";
 import { Icon } from "@iconify/react";
 import {
@@ -32,6 +35,8 @@ import {
 import SampleImageUpload from "./SampleImageUpload";
 import BarcodeQRModal, { SampleCodeInfo } from "./BarcodeQRModal";
 import { IndicatorName } from "../../../../components/common";
+import ImportSpecimenModal from "./ImportSpecimenModal";
+import { importService, downloadBlobAsFile } from "../../../../services/importService";
 
 const { Text } = Typography;
 
@@ -47,6 +52,7 @@ const DEFAULT_COLUMN_WIDTHS: Record<string, number> = {
   statusText: 140,
   indicatorMethods: 200,
   notes: 150,
+  isSharedSample: 90,
   actions: 100,
 };
 
@@ -71,6 +77,11 @@ interface SampleTableSectionProps {
   specimenTypeOptions: { value: string; label: string }[];
   handleSpecimenTypeSearch: (searchText: string) => void;
   handleSpecimenTypeSelect: (sampleKey: string, value: string) => void;
+  sampleConditionOptions: { value: string; label: string }[];
+  // Props for import functionality
+  indicators?: IndicatorDto[];
+  indicatorMethodsMap?: Record<string, IndicatorMethodInfo[]>;
+  onImportSamples?: (newSamples: SampleFormData[]) => void;
 }
 
 const SampleTableSection: React.FC<SampleTableSectionProps> = ({
@@ -89,11 +100,35 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
   specimenTypeOptions,
   handleSpecimenTypeSearch,
   handleSpecimenTypeSelect,
+  sampleConditionOptions,
+  indicators = [],
+  indicatorMethodsMap = {},
+  onImportSamples,
 }) => {
   // Barcode/QR Modal state
   const [barcodeModalVisible, setBarcodeModalVisible] = useState(false);
   const [selectedSampleForBarcode, setSelectedSampleForBarcode] =
     useState<SampleCodeInfo | null>(null);
+
+  // Import Modal state
+  const [importModalVisible, setImportModalVisible] = useState(false);
+
+  // Download template handler
+  const handleDownloadTemplate = async () => {
+    try {
+      const blob = await importService.downloadSpecimensForTestRequestTemplate();
+      downloadBlobAsFile(blob, "Template_PhieuThuNghiem.xlsx");
+    } catch (error) {
+      console.error("Failed to download template:", error);
+    }
+  };
+
+  // Import confirm handler
+  const handleImportConfirm = (newSamples: SampleFormData[]) => {
+    if (onImportSamples) {
+      onImportSamples(newSamples);
+    }
+  };
 
   // Column widths state for resizing
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(DEFAULT_COLUMN_WIDTHS);
@@ -298,6 +333,31 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
       ),
     },
     {
+      title: (
+        <Tooltip title="Mẫu có chỉ tiêu ở cả Lab Vi Sinh và Lab Hóa">
+          <span style={{ whiteSpace: "nowrap" }}>Mẫu chung</span>
+        </Tooltip>
+      ),
+      dataIndex: "isSharedSample",
+      key: "isSharedSample",
+      width: getColumnWidth("isSharedSample"),
+      onHeaderCell: (column: any) => ({
+        width: column.width,
+        columnKey: "isSharedSample",
+      }),
+      render: (value: boolean, record: SampleFormData) => (
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <Checkbox
+            checked={value || false}
+            onChange={(e) =>
+              updateSample(record.key, "isSharedSample", e.target.checked)
+            }
+            disabled={isSamplesLocked()}
+          />
+        </div>
+      ),
+    },
+    {
       title: "Địa chỉ lấy mẫu",
       dataIndex: "samplingAddress",
       key: "samplingAddress",
@@ -347,13 +407,19 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
         columnKey: "statusText",
       }),
       render: (value: string, record: SampleFormData) => (
-        <Input
-          value={value}
-          onChange={(e) =>
-            updateSample(record.key, "statusText", e.target.value)
+        <AutoComplete
+          value={value || ""}
+          options={sampleConditionOptions}
+          onChange={(val) =>
+            updateSample(record.key, "statusText", val || "")
           }
-          placeholder="Tình trạng"
+          placeholder="Tình trạng mẫu..."
+          style={{ width: "100%" }}
           size="small"
+          filterOption={(inputValue, option) =>
+            (option?.label as string)?.toLowerCase().includes(inputValue.toLowerCase())
+          }
+          allowClear
         />
       ),
     },
@@ -606,18 +672,36 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
         >
           Thông tin mẫu ({samples.length} mẫu)
         </Typography.Title>
-        <Button
-          type="primary"
-          size="small"
-          icon={<PlusOutlined />}
-          onClick={addSample}
-          disabled={isSamplesLocked()}
-          title={
-            isSamplesLocked() ? "Không thể thêm mẫu khi đang thực hiện" : ""
-          }
-        >
-          Thêm mẫu
-        </Button>
+        <Space>
+          <Button
+            icon={<DownloadOutlined />}
+            onClick={handleDownloadTemplate}
+            disabled={isSamplesLocked()}
+            size="small"
+          >
+            Tải template mẫu
+          </Button>
+          <Button
+            icon={<UploadOutlined />}
+            onClick={() => setImportModalVisible(true)}
+            disabled={isSamplesLocked() || !onImportSamples}
+            size="small"
+          >
+            Nhập danh sách
+          </Button>
+          <Button
+            type="primary"
+            size="small"
+            icon={<PlusOutlined />}
+            onClick={addSample}
+            disabled={isSamplesLocked()}
+            title={
+              isSamplesLocked() ? "Không thể thêm mẫu khi đang thực hiện" : ""
+            }
+          >
+            Thêm mẫu
+          </Button>
+        </Space>
       </div>
 
       {isSamplesLocked() && (
@@ -664,6 +748,15 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
         visible={barcodeModalVisible}
         onClose={closeBarcodeModal}
         sampleInfo={selectedSampleForBarcode}
+      />
+
+      {/* Import Specimen Modal */}
+      <ImportSpecimenModal
+        open={importModalVisible}
+        onCancel={() => setImportModalVisible(false)}
+        onConfirm={handleImportConfirm}
+        existingSamplesCount={samples.length}
+        sampleCodePrefix={sampleCodePrefix}
       />
     </div>
   );

@@ -201,6 +201,23 @@ export const useMasterDataState = () => {
     loadUsers();
   }, []);
 
+  // Load departments for Laboratory form (needed for Department select dropdown)
+  useEffect(() => {
+    const loadDepartments = async () => {
+      if (data.departments.length === 0 && !loadedCategories.has("departments")) {
+        try {
+          const result = await departmentService.getList({ maxResultCount: 1000 });
+          setData((prev) => ({ ...prev, departments: result.items }));
+          setTotalCount((prev) => ({ ...prev, departments: result.totalCount }));
+          setLoadedCategories((prev) => new Set(prev).add("departments"));
+        } catch (err) {
+          console.error("Failed to load departments:", err);
+        }
+      }
+    };
+    loadDepartments();
+  }, []);
+
   // Load data when switching tabs (lazy load)
   useEffect(() => {
     const isPaginated = !NO_PAGINATION_CATEGORIES.includes(activeCategory);

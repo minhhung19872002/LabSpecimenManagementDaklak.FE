@@ -14,6 +14,9 @@ export interface EmployeeDto {
   isActive: boolean;
   createdAt: string;
   lastLogin: string | null;
+  accountExpirationDate: string | null;
+  isTemporaryAccount: boolean;
+  isExpired: boolean;
 }
 
 export interface CreateEmployeeDto {
@@ -25,6 +28,11 @@ export interface CreateEmployeeDto {
   departmentId: string;
   position?: string;
   isActive?: boolean;
+  isTemporaryAccount?: boolean;
+  accountExpirationDate?: string;
+  useManualPassword?: boolean;
+  password?: string;
+  confirmPassword?: string;
 }
 
 export interface UpdateEmployeeDto {
@@ -35,6 +43,14 @@ export interface UpdateEmployeeDto {
   departmentId?: string;
   position?: string;
   isActive?: boolean;
+  isTemporaryAccount?: boolean;
+  accountExpirationDate?: string | null;
+}
+
+export interface ResetPasswordDto {
+  useManualPassword?: boolean;
+  password?: string;
+  confirmPassword?: string;
 }
 
 export interface EmployeeListParams {
@@ -96,8 +112,8 @@ export const employeeService = {
     const response = await api.put<EmployeeDto>(`${BASE_URL}/${id}/toggle-active`, { isActive });
     return response.data;
   },
-  resetPassword: async (id: string) => {
-    const response = await api.post<{ password: string }>(`${BASE_URL}/${id}/reset-password`);
+  resetPassword: async (id: string, data: ResetPasswordDto = {}) => {
+    const response = await api.post<{ password: string }>(`${BASE_URL}/${id}/reset-password`, data);
     return response.data;
   },
 };

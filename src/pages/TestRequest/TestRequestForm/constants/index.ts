@@ -7,6 +7,6 @@ export const LOCKED_FIELDS = [
   "taxCode",
   "contactPerson",
   "phone",
-  "provinceCode",
-  "wardCode",
+  "province",
+  "ward",
 ];

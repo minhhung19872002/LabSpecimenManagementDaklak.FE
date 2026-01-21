@@ -3,7 +3,6 @@ import { message } from "antd";
 import dayjs from "dayjs";
 import { testRequestService, PreviewTestRequestFormInput } from "../../../../services/testRequestService";
 import { specimenTypeService } from "../../../../services/masterDataService";
-import { API_BASE_URL } from "../../../../services/api";
 import {
   ResultLanguage,
   SamplingRequirement,
@@ -22,6 +21,7 @@ import {
 } from "../types";
 import { generateSampleCode, getNextOrderNum, printBarcode as printBarcodeUtil, SampleBarcodeInfo } from "../utils";
 import { PATH_ROUTES } from "../../../../constants";
+import { getApiErrorMessage } from "../../../../utils/errorHandler";
 
 interface UseTestRequestFormActionsProps {
   form: any;
@@ -307,6 +307,7 @@ export const useTestRequestFormActions = ({
       indicatorIds: [],
       indicatorMethods: [],
       attachments: [],
+      isSharedSample: false,
     };
     setSamples([...samples, newSample]);
   };
@@ -765,6 +766,7 @@ export const useTestRequestFormActions = ({
           storageLocation: sample.storageLocation || undefined,
           specimenTypeId: sample.specimenTypeId || undefined,
           specimenTypeName: sample.specimenTypeName?.trim() || undefined, // Backend will resolve to ID
+          isSharedSample: sample.isSharedSample || false, // Mẫu chung (Vi Sinh + Hóa)
           indicators: indicatorsList,
           // Attachments: send full info (fileId, fileName, fileSize)
           attachments: sample.attachments?.map((a) => ({
@@ -775,8 +777,10 @@ export const useTestRequestFormActions = ({
         };
       });
 
-      const selectedProvince = provinces.find((p) => p.code === values.provinceCode);
-      const selectedWard = wards.find((w) => w.code === values.wardCode);
+      // Province and Ward: use text from form directly (editable select)
+      // Code is stored separately for cascade filtering but text can be edited by user
+      const provinceCode = provinces.find((p) => p.name === values.province)?.code;
+      const wardCode = wards.find((w) => w.name === values.ward)?.code;
 
       const payload = {
         quotationId: sourceQuotationId || undefined,
@@ -787,10 +791,10 @@ export const useTestRequestFormActions = ({
         sentToDepartment: values.sentToDepartment || false,
         resultReturned: values.resultReturned || false,
         customerName: values.customerName,
-        provinceCode: values.provinceCode || undefined,
-        province: selectedProvince?.name || undefined,
-        wardCode: values.wardCode || undefined,
-        ward: selectedWard?.name || undefined,
+        provinceCode: provinceCode || undefined,
+        province: values.province || undefined,
+        wardCode: wardCode || undefined,
+        ward: values.ward || undefined,
         address: values.address || undefined,
         taxCode: values.taxCode || undefined,
         contactPerson: values.contactPerson || undefined,
@@ -889,9 +893,7 @@ export const useTestRequestFormActions = ({
         }
       }
 
-      message.error(
-        error.response?.data?.error?.message || "Không thể lưu yêu cầu. Vui lòng thử lại."
-      );
+      message.error(getApiErrorMessage(error, "Không thể lưu yêu cầu. Vui lòng thử lại."));
     } finally {
       setLoading(false);
     }
@@ -923,18 +925,15 @@ export const useTestRequestFormActions = ({
         sentToDepartment: values.sentToDepartment || false,
         resultReturned: values.resultReturned || false,
         customerName: values.customerName || "",
-        provinceCode: values.provinceCode || undefined,
-        province: values.provinceCode
-          ? provinces.find((p: any) => p.code === values.provinceCode)?.name
-          : undefined,
+        // Use text from form directly (editable select)
+        provinceCode: provinces.find((p: any) => p.name === values.province)?.code || undefined,
+        province: values.province || undefined,
         districtCode: values.districtCode || undefined,
         district: values.districtCode
           ? wards.find((w: any) => w.code === values.districtCode)?.name
           : undefined,
-        wardCode: values.wardCode || undefined,
-        ward: values.wardCode
-          ? wards.find((w: any) => w.code === values.wardCode)?.name
-          : undefined,
+        wardCode: wards.find((w: any) => w.name === values.ward)?.code || undefined,
+        ward: values.ward || undefined,
         address: values.address || undefined,
         taxCode: values.taxCode || undefined,
         contactPerson: values.contactPerson || undefined,
@@ -994,16 +993,14 @@ export const useTestRequestFormActions = ({
 
       const result = await testRequestService.previewTestRequestForm(previewInput);
 
-      // Open PDF in new tab (same as In phiếu XN pattern)
-      const pdfUrl = `${API_BASE_URL}/api/v1/result-forms/view/${encodeURIComponent(result.fileName)}`;
-      window.open(pdfUrl, "_blank");
+      // Open Word Editor (BE now returns .docx directly)
+      const editorUrl = `/document-editor?file=${encodeURIComponent(result.fileName)}`;
+      window.open(editorUrl, "_blank");
 
       message.success("Đã tạo phiếu xem trước");
     } catch (error: any) {
       console.error("Error previewing form:", error);
-      message.error(
-        error.response?.data?.error?.message || "Không thể tạo phiếu xem trước. Vui lòng thử lại."
-      );
+      message.error(getApiErrorMessage(error, "Không thể tạo phiếu xem trước. Vui lòng thử lại."));
     } finally {
       setLoading(false);
     }
