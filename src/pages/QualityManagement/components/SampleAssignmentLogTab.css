@@ -1,0 +1,41 @@
+.sample-assignment-log-tab {
+  padding:  0;
+}
+
+.sample-assignment-log-tab .toolbar {
+  margin-bottom: 16px;
+}
+
+/* Row highlighting colors */
+.sample-assignment-log-tab .ant-table-tbody > tr.row-red > td {
+  background-color: #FFCCC7 !important;
+}
+
+.sample-assignment-log-tab .ant-table-tbody > tr.row-red:hover > td {
+  background-color: #FFB8B0 !important;
+}
+
+.sample-assignment-log-tab .ant-table-tbody > tr.row-yellow > td {
+  background-color: #FFF7E6 !important;
+}
+
+.sample-assignment-log-tab .ant-table-tbody > tr.row-yellow:hover > td {
+  background-color: #FFECCC !important;
+}
+
+.sample-assignment-log-tab .ant-table-tbody > tr.row-purple > td {
+  background-color: #EFDBFF !important;
+}
+
+.sample-assignment-log-tab .ant-table-tbody > tr.row-purple:hover > td {
+  background-color: #E0C7F7 !important;
+}
+
+/* Ensure proper borders for merged cells */
+.sample-assignment-log-tab .ant-table-bordered .ant-table-cell {
+  border-right: 1px solid #f0f0f0 !important;
+}
+
+.sample-assignment-log-tab .ant-table-bordered .ant-table-row > td:first-child {
+  border-left: 1px solid #f0f0f0 !important;
+}
