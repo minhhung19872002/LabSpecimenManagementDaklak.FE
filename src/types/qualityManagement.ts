@@ -318,6 +318,7 @@ export interface SampleAssignmentLogDto {
   // TestRequest info
   testRequestId: string;
   qualityTaskId: string;
+  laboratoryTaskId: string;
   contractNumber?: string;
   testRequestStatus: TestRequestStatus;
   requestCompletionDate?: string;
@@ -363,6 +364,7 @@ export interface GetSampleAssignmentLogInput {
   testRequestStatus?: TestRequestStatus;
   fromDate?: string;
   toDate?: string;
+  laboratoryId?: string;
 }
 
 // Paged result for Sample Assignment Log

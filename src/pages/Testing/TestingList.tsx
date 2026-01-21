@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Card,
   Table,
@@ -17,11 +17,19 @@ import {
   ReloadOutlined,
   UserOutlined,
   TeamOutlined,
+  FileTextOutlined,
 } from "../../components/common/Icon";
 import { TestingStatus, TestingTabType } from "../../types/testing";
 import { useTestingList } from "./hooks";
+import LabSampleAssignmentLogTab from "./components/LabSampleAssignmentLogTab";
+
+// Extended tab type to include sample assignment log
+type ExtendedTabType = TestingTabType | "sample-assignment-log";
 
 const TestingList: React.FC = () => {
+  // Tab state - now includes sample-assignment-log
+  const [currentTab, setCurrentTab] = useState<ExtendedTabType>(TestingTabType.MyAssignments);
+
   const {
     tasks,
     loading,
@@ -45,7 +53,18 @@ const TestingList: React.FC = () => {
     getRowClassName,
   } = useTestingList();
 
-  // Tab items
+  // Handle tab change - sync with useTestingList for testing tabs
+  const handleExtendedTabChange = (key: string) => {
+    if (key === "sample-assignment-log") {
+      setCurrentTab("sample-assignment-log");
+    } else {
+      const numericKey = Number(key) as TestingTabType;
+      setCurrentTab(numericKey);
+      handleTabChange(key);
+    }
+  };
+
+  // Tab items - all 3 tabs at the same level
   const tabItems = [
     {
       key: String(TestingTabType.MyAssignments),
@@ -65,67 +84,81 @@ const TestingList: React.FC = () => {
         </span>
       ),
     },
+    {
+      key: "sample-assignment-log",
+      label: (
+        <span>
+          <FileTextOutlined />
+          Sổ nhận mẫu giao việc
+        </span>
+      ),
+    },
   ];
+
+  // Determine if showing testing content or sample assignment log
+  const isShowingSampleAssignmentLog = currentTab === "sample-assignment-log";
 
   return (
     <div>
-      {/* Statistics Cards */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col xs={12} sm={6} md={4}>
-          <Card size="small">
-            <Statistic
-              title="Tổng xét nghiệm"
-              value={stats.total}
-              prefix={<ExperimentOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6} md={4}>
-          <Card size="small">
-            <Statistic
-              title="Chưa bắt đầu"
-              value={stats.notStarted}
-              valueStyle={{ color: "#8c8c8c" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6} md={4}>
-          <Card size="small">
-            <Statistic
-              title="Đang thử nghiệm"
-              value={stats.inProgress}
-              valueStyle={{ color: "#1890ff" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6} md={4}>
-          <Card size="small">
-            <Statistic
-              title="Chờ phê duyệt"
-              value={stats.pendingApproval}
-              valueStyle={{ color: "#faad14" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6} md={4}>
-          <Card size="small">
-            <Statistic
-              title="Bị từ chối"
-              value={stats.rejected}
-              valueStyle={{ color: "#ff4d4f" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6} md={4}>
-          <Card size="small">
-            <Statistic
-              title="Hoàn thành"
-              value={stats.completed}
-              valueStyle={{ color: "#52c41a" }}
-            />
-          </Card>
-        </Col>
-      </Row>
+      {/* Statistics Cards - only show for testing tabs */}
+      {!isShowingSampleAssignmentLog && (
+        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+          <Col xs={12} sm={6} md={4}>
+            <Card size="small">
+              <Statistic
+                title="Tổng xét nghiệm"
+                value={stats.total}
+                prefix={<ExperimentOutlined />}
+              />
+            </Card>
+          </Col>
+          <Col xs={12} sm={6} md={4}>
+            <Card size="small">
+              <Statistic
+                title="Chưa bắt đầu"
+                value={stats.notStarted}
+                valueStyle={{ color: "#8c8c8c" }}
+              />
+            </Card>
+          </Col>
+          <Col xs={12} sm={6} md={4}>
+            <Card size="small">
+              <Statistic
+                title="Đang thử nghiệm"
+                value={stats.inProgress}
+                valueStyle={{ color: "#1890ff" }}
+              />
+            </Card>
+          </Col>
+          <Col xs={12} sm={6} md={4}>
+            <Card size="small">
+              <Statistic
+                title="Chờ phê duyệt"
+                value={stats.pendingApproval}
+                valueStyle={{ color: "#faad14" }}
+              />
+            </Card>
+          </Col>
+          <Col xs={12} sm={6} md={4}>
+            <Card size="small">
+              <Statistic
+                title="Bị từ chối"
+                value={stats.rejected}
+                valueStyle={{ color: "#ff4d4f" }}
+              />
+            </Card>
+          </Col>
+          <Col xs={12} sm={6} md={4}>
+            <Card size="small">
+              <Statistic
+                title="Hoàn thành"
+                value={stats.completed}
+                valueStyle={{ color: "#52c41a" }}
+              />
+            </Card>
+          </Col>
+        </Row>
+      )}
 
       <Card
         title={
@@ -135,99 +168,108 @@ const TestingList: React.FC = () => {
           </Space>
         }
         extra={
-          <Button icon={<ReloadOutlined />} onClick={handleRefresh} />
+          !isShowingSampleAssignmentLog && (
+            <Button icon={<ReloadOutlined />} onClick={handleRefresh} />
+          )
         }
       >
         {/* Tabs */}
         <Tabs
-          activeKey={String(activeTab)}
-          onChange={handleTabChange}
+          activeKey={currentTab === "sample-assignment-log" ? "sample-assignment-log" : String(activeTab)}
+          onChange={handleExtendedTabChange}
           items={tabItems}
           style={{ marginBottom: 16 }}
         />
 
-        {/* Search & Filter */}
-        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          <Col xs={24} sm={12} md={8}>
-            <Input.Search
-              placeholder="Tìm theo số hợp đồng..."
-              prefix={<SearchOutlined />}
-              value={searchText}
-              onChange={(e) => handleSearchInputChange(e.target.value)}
-              onSearch={handleSearch}
-              allowClear
-              enterButton
-            />
-          </Col>
-          <Col xs={24} sm={6} md={4}>
-            <Select
-              style={{ width: "100%" }}
-              placeholder="Trạng thái"
-              value={statusFilter}
-              onChange={handleStatusFilterChange}
-              allowClear
-            >
-              <Select.Option value={TestingStatus.NotStarted}>
-                Chưa bắt đầu
-              </Select.Option>
-              <Select.Option value={TestingStatus.InProgress}>
-                Đang thử nghiệm
-              </Select.Option>
-              <Select.Option value={TestingStatus.PendingApproval}>
-                Chờ phê duyệt
-              </Select.Option>
-              <Select.Option value={TestingStatus.Rejected}>
-                Bị từ chối
-              </Select.Option>
-              <Select.Option value={TestingStatus.Completed}>
-                Hoàn thành
-              </Select.Option>
-            </Select>
-          </Col>
-          <Col xs={24} sm={6} md={4}>
-            <Select
-              mode="multiple"
-              style={{ width: "100%" }}
-              placeholder="Thử nghiệm viên"
-              value={technicianFilter}
-              onChange={handleTechnicianFilterChange}
-              allowClear
-              loading={loadingTechnicians}
-              maxTagCount={1}
-              optionFilterProp="children"
-              showSearch
-            >
-              {technicians.map((tech) => (
-                <Select.Option key={tech.id} value={tech.id}>
-                  {tech.displayName || tech.userName}
-                </Select.Option>
-              ))}
-            </Select>
-          </Col>
-        </Row>
+        {/* Content based on selected tab */}
+        {isShowingSampleAssignmentLog ? (
+          <LabSampleAssignmentLogTab />
+        ) : (
+          <>
+            {/* Search & Filter */}
+            <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+              <Col xs={24} sm={12} md={8}>
+                <Input.Search
+                  placeholder="Tìm theo số hợp đồng..."
+                  prefix={<SearchOutlined />}
+                  value={searchText}
+                  onChange={(e) => handleSearchInputChange(e.target.value)}
+                  onSearch={handleSearch}
+                  allowClear
+                  enterButton
+                />
+              </Col>
+              <Col xs={24} sm={6} md={4}>
+                <Select
+                  style={{ width: "100%" }}
+                  placeholder="Trạng thái"
+                  value={statusFilter}
+                  onChange={handleStatusFilterChange}
+                  allowClear
+                >
+                  <Select.Option value={TestingStatus.NotStarted}>
+                    Chưa bắt đầu
+                  </Select.Option>
+                  <Select.Option value={TestingStatus.InProgress}>
+                    Đang thử nghiệm
+                  </Select.Option>
+                  <Select.Option value={TestingStatus.PendingApproval}>
+                    Chờ phê duyệt
+                  </Select.Option>
+                  <Select.Option value={TestingStatus.Rejected}>
+                    Bị từ chối
+                  </Select.Option>
+                  <Select.Option value={TestingStatus.Completed}>
+                    Hoàn thành
+                  </Select.Option>
+                </Select>
+              </Col>
+              <Col xs={24} sm={6} md={4}>
+                <Select
+                  mode="multiple"
+                  style={{ width: "100%" }}
+                  placeholder="Thử nghiệm viên"
+                  value={technicianFilter}
+                  onChange={handleTechnicianFilterChange}
+                  allowClear
+                  loading={loadingTechnicians}
+                  maxTagCount={1}
+                  optionFilterProp="children"
+                  showSearch
+                >
+                  {technicians.map((tech) => (
+                    <Select.Option key={tech.id} value={tech.id}>
+                      {tech.displayName || tech.userName}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </Col>
+            </Row>
 
-        <Table
-          columns={columns}
-          dataSource={tasks}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            current: pagination.current,
-            pageSize: pagination.pageSize,
-            total: pagination.total,
-            pageSizeOptions: [20, 50, 100],
-            showSizeChanger: true,
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} của ${total} xét nghiệm`,
-          }}
-          onChange={handleTableChange}
-          scroll={{ x: 1000 }}
-          onRow={(record) => ({
-            onDoubleClick: () => handleRowDoubleClick(record),
-            style: { cursor: "pointer" },
-          })}
-          rowClassName={getRowClassName}
-        />
+            <Table
+              columns={columns}
+              dataSource={tasks}
+              rowKey="id"
+              loading={loading}
+              pagination={{
+                current: pagination.current,
+                pageSize: pagination.pageSize,
+                total: pagination.total,
+                pageSizeOptions: [20, 50, 100],
+                showSizeChanger: true,
+                showTotal: (total, range) =>
+                  `${range[0]}-${range[1]} của ${total} xét nghiệm`,
+              }}
+              onChange={handleTableChange}
+              scroll={{ x: 1000 }}
+              onRow={(record) => ({
+                onDoubleClick: () => handleRowDoubleClick(record),
+                style: { cursor: "pointer" },
+              })}
+              rowClassName={getRowClassName}
+            />
+          </>
+        )}
       </Card>
 
       <style>{`
