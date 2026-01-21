@@ -5,3 +5,4 @@ export * from './useWorkReminderPopup';
 export * from './useLabTechnicianReminderPopup';
 export * from './useLabTechManagerReminderPopup';
 export * from './useQualityManagerReminderPopup';
+export * from './useNetworkStatus';

@@ -42,7 +42,7 @@ export const useSpecimenTypesActions = ({
   // ============= SpecimenType Actions =============
   const handleCreate = (form: UseFormReturn<SpecimenTypeFormData>) => {
     setEditingItem(null);
-    form.reset({ name: "", description: "", isActive: true, sampleTypeCategoryId: "" });
+    form.reset({ code: "", name: "", description: "", isActive: true, sampleTypeCategoryId: "" });
     setModalOpen(true);
   };
 
@@ -52,6 +52,7 @@ export const useSpecimenTypesActions = ({
   ) => {
     setEditingItem(record);
     form.reset({
+      code: record.code,
       name: record.name,
       description: record.description || "",
       isActive: record.isActive,
@@ -82,6 +83,7 @@ export const useSpecimenTypesActions = ({
       setModalLoading(true);
 
       const submitData: CreateUpdateSpecimenTypeDto = {
+        code: data.code,
         name: data.name,
         description: data.description,
         isActive: data.isActive,
