@@ -6,6 +6,7 @@ import PrivateRoute from "./components/auth/PrivateRoute";
 import { initTableGrabScroll } from "./hooks/useTableGrabScroll";
 import { getDefaultRouteForUser, PATH_ROUTES, STORAGE_KEYS } from "./constants";
 import { UserInfo } from "./services/authService";
+import { prefetchMasterData } from "./services/offline/prefetchService";
 import "./App.css";
 
 // Helper component to redirect to user's default route based on their role
@@ -177,6 +178,19 @@ function App() {
   useEffect(() => {
     const cleanup = initTableGrabScroll();
     return cleanup;
+  }, []);
+
+  // Prefetch master data for offline use
+  useEffect(() => {
+    // Only prefetch if user is logged in
+    const storedUser = localStorage.getItem(STORAGE_KEYS.USER_INFO);
+    if (storedUser && navigator.onLine) {
+      // Delay prefetch slightly to not block initial render
+      const timer = setTimeout(() => {
+        prefetchMasterData();
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
   }, []);
 
   return (

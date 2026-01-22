@@ -304,7 +304,6 @@ const PermissionsTab: React.FC<PermissionsTabProps> = ({
                       indeterminate={isGroupPartiallySelected(group)}
                       onChange={(e) => handleGroupSelectAll(group.name, e.target.checked)}
                       disabled={isStatic || !canEdit}
-                      size="small"
                     >
                       <Text type="secondary" style={{ fontSize: 13 }}>Chọn tất cả</Text>
                     </Checkbox>

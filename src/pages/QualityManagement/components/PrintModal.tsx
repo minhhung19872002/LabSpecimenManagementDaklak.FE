@@ -280,8 +280,8 @@ const PrintModal: React.FC<PrintModalProps> = ({
     }
   };
 
-  // Function to open all tabs - triggered by user click
-  const handleOpenAllTabs = () => {
+  // Function to open all tabs - triggered by user click (available for future use)
+  const _handleOpenAllTabs = () => {
     let blockedCount = 0;
 
     // Try to open all PDFs
@@ -324,6 +324,9 @@ const PrintModal: React.FC<PrintModalProps> = ({
       });
     }
   };
+
+  // Suppress unused variable warning
+  void _handleOpenAllTabs;
 
   const handlePrint = async () => {
     if (selectedIndicatorIds.length === 0) {

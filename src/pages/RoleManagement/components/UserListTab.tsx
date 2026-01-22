@@ -23,7 +23,7 @@ interface UserListTabProps {
 }
 
 const UserListTab: React.FC<UserListTabProps> = ({
-  roleId,
+  roleId: _roleId,
   users,
   totalCount,
   loading,

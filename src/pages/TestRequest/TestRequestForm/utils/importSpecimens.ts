@@ -3,7 +3,6 @@
  */
 import * as XLSX from 'xlsx';
 import {
-  SpecimenExcelRow,
   SpecimenImportPreviewResult,
   SpecimenImportPreviewItem,
   SpecimenIndicatorImportItem,

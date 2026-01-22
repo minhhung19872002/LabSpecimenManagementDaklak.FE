@@ -17,6 +17,9 @@ import { specimenService, SpecimenListParams } from '../specimenService';
 import { subcontractorService } from '../subcontractorService';
 import { employeeService } from '../employeeService';
 import { laboratoryTaskService } from '../laboratoryTaskService';
+import { userService, UserLookupDto } from '../userService';
+import { organizationService } from '../organizationService';
+import type { OrganizationDto } from '../../types/organization';
 import {
   specimenTypeService,
   testMethodService,
@@ -27,6 +30,8 @@ import {
   customerService,
   storageLocationService,
   indicatorGroupService,
+  sampleConditionService,
+  sampleTypeCategoryService,
 } from '../masterDataService';
 
 // Import types
@@ -85,6 +90,11 @@ import type {
   IndicatorGroupDto,
   CreateUpdateIndicatorGroupDto,
   PagedAndSortedResultRequestDto,
+  PagedResultDto,
+  TestMethodWithIndicatorsDto,
+  SpecimenTypeWithIndicatorsDto,
+  SampleConditionDto,
+  SampleTypeCategoryDto,
 } from '../masterDataService';
 
 // ============ Quotation Service ============
@@ -343,6 +353,421 @@ export const offlineIndicatorService = createOfflineService<
   UpdateIndicatorDto,
   IndicatorFilterDto
 >('StandardIndicator', indicatorBaseService);
+
+// ============ Offline-Aware getActive Methods ============
+
+/**
+ * Get active indicator groups with offline support
+ * Caches results and returns cached data when offline
+ */
+export async function getActiveIndicatorGroupsOffline(): Promise<IndicatorGroupDto[]> {
+  const { cacheEntity, getCachedEntitiesByType } = await import('./db');
+
+  if (navigator.onLine) {
+    try {
+      const data = await indicatorGroupService.getActive();
+      // Cache each item
+      for (const item of data) {
+        await cacheEntity('IndicatorGroup', item.id, item, false);
+      }
+      // If API returns empty but we have cache, use cache instead
+      if (data.length === 0) {
+        const cachedEntities = await getCachedEntitiesByType('IndicatorGroup');
+        if (cachedEntities.length > 0) {
+          console.log(`API returned empty, using ${cachedEntities.length} cached indicator groups`);
+          return cachedEntities.map(e => e.data as IndicatorGroupDto);
+        }
+      }
+      return data;
+    } catch (error) {
+      console.warn('Online getActive failed for IndicatorGroup, returning cached data:', error);
+    }
+  }
+
+  // Return cached data
+  const cachedEntities = await getCachedEntitiesByType('IndicatorGroup');
+  console.log(`Returning ${cachedEntities.length} cached indicator groups`);
+  return cachedEntities.map(e => e.data as IndicatorGroupDto);
+}
+
+/**
+ * Get active indicators with offline support
+ * Caches results and returns cached data when offline
+ */
+export async function getActiveIndicatorsOffline(): Promise<IndicatorDto[]> {
+  const { cacheEntity, getCachedEntitiesByType } = await import('./db');
+
+  if (navigator.onLine) {
+    try {
+      const data = await indicatorService.getActive();
+      // Cache each item
+      for (const item of data) {
+        await cacheEntity('StandardIndicator', item.id, item, false);
+      }
+      // If API returns empty but we have cache, use cache instead
+      if (data.length === 0) {
+        const cachedEntities = await getCachedEntitiesByType('StandardIndicator');
+        if (cachedEntities.length > 0) {
+          console.log(`API returned empty, using ${cachedEntities.length} cached indicators`);
+          return cachedEntities.map(e => e.data as IndicatorDto);
+        }
+      }
+      return data;
+    } catch (error) {
+      console.warn('Online getActive failed for Indicator, returning cached data:', error);
+    }
+  }
+
+  // Return cached data
+  const cachedEntities = await getCachedEntitiesByType('StandardIndicator');
+  console.log(`Returning ${cachedEntities.length} cached indicators`);
+  return cachedEntities.map(e => e.data as IndicatorDto);
+}
+
+/**
+ * Get active storage locations with offline support
+ */
+export async function getActiveStorageLocationsOffline(): Promise<PagedResultDto<StorageLocationDto>> {
+  const { cacheEntity, getCachedEntitiesByType } = await import('./db');
+
+  if (navigator.onLine) {
+    try {
+      const data = await storageLocationService.getActive();
+      // Cache each item
+      for (const item of data.items) {
+        await cacheEntity('Receipt', item.id, item, false);
+      }
+      // If API returns empty but we have cache, use cache instead
+      if (data.items.length === 0) {
+        const cachedEntities = await getCachedEntitiesByType('Receipt');
+        if (cachedEntities.length > 0) {
+          const items = cachedEntities.map(e => e.data as StorageLocationDto);
+          console.log(`API returned empty, using ${items.length} cached storage locations`);
+          return { items, totalCount: items.length };
+        }
+      }
+      return data;
+    } catch (error) {
+      console.warn('Online getActive failed for StorageLocation, returning cached data:', error);
+    }
+  }
+
+  // Return cached data
+  const cachedEntities = await getCachedEntitiesByType('Receipt');
+  const items = cachedEntities.map(e => e.data as StorageLocationDto);
+  console.log(`Returning ${items.length} cached storage locations`);
+  return { items, totalCount: items.length };
+}
+
+/**
+ * Get active laboratories with offline support
+ */
+export async function getActiveLaboratoriesOffline(): Promise<LaboratoryDto[]> {
+  const { cacheEntity, getCachedEntitiesByType } = await import('./db');
+
+  if (navigator.onLine) {
+    try {
+      const data = await laboratoryService.getActive();
+      // Cache each item
+      for (const item of data) {
+        await cacheEntity('Laboratory', item.id, item, false);
+      }
+      // If API returns empty but we have cache, use cache instead
+      if (data.length === 0) {
+        const cachedEntities = await getCachedEntitiesByType('Laboratory');
+        if (cachedEntities.length > 0) {
+          console.log(`API returned empty, using ${cachedEntities.length} cached laboratories`);
+          return cachedEntities.map(e => e.data as LaboratoryDto);
+        }
+      }
+      return data;
+    } catch (error) {
+      console.warn('Online getActive failed for Laboratory, returning cached data:', error);
+    }
+  }
+
+  // Return cached data
+  const cachedEntities = await getCachedEntitiesByType('Laboratory');
+  console.log(`Returning ${cachedEntities.length} cached laboratories`);
+  return cachedEntities.map(e => e.data as LaboratoryDto);
+}
+
+/**
+ * Get active specimen types with offline support
+ */
+export async function getActiveSpecimenTypesOffline(): Promise<PagedResultDto<SpecimenTypeDto>> {
+  const { cacheEntity, getCachedEntitiesByType } = await import('./db');
+
+  if (navigator.onLine) {
+    try {
+      const data = await specimenTypeService.getActive();
+      // Cache each item
+      for (const item of data.items) {
+        await cacheEntity('SpecimenType', item.id, item, false);
+      }
+      // If API returns empty but we have cache, use cache instead
+      if (data.items.length === 0) {
+        const cachedEntities = await getCachedEntitiesByType('SpecimenType');
+        const cachedItems = cachedEntities
+          .filter(e => !(e.id as string).startsWith('SpecimenType:WithIndicators:'))
+          .map(e => e.data as SpecimenTypeDto);
+        if (cachedItems.length > 0) {
+          console.log(`API returned empty, using ${cachedItems.length} cached specimen types`);
+          return { items: cachedItems, totalCount: cachedItems.length };
+        }
+      }
+      return data;
+    } catch (error) {
+      console.warn('Online getActive failed for SpecimenType, returning cached data:', error);
+    }
+  }
+
+  // Return cached data - filter out items with special prefixes
+  // Note: cache key format is 'SpecimenType:id' or 'SpecimenType:WithIndicators:id'
+  const cachedEntities = await getCachedEntitiesByType('SpecimenType');
+  const items = cachedEntities
+    .filter(e => !(e.id as string).startsWith('SpecimenType:WithIndicators:'))
+    .map(e => e.data as SpecimenTypeDto);
+  console.log(`Returning ${items.length} cached specimen types`);
+  return { items, totalCount: items.length };
+}
+
+/**
+ * Get test methods with indicators (offline support)
+ */
+export async function getTestMethodsWithIndicatorsOffline(): Promise<TestMethodWithIndicatorsDto[]> {
+  const { cacheEntity, getCachedEntitiesByType } = await import('./db');
+
+  if (navigator.onLine) {
+    try {
+      const data = await testMethodService.getWithIndicators();
+      // Cache each item
+      for (const item of data) {
+        await cacheEntity('TestMethod', item.id, item, false);
+      }
+      // If API returns empty but we have cache, use cache instead
+      if (data.length === 0) {
+        const cachedEntities = await getCachedEntitiesByType('TestMethod');
+        if (cachedEntities.length > 0) {
+          console.log(`API returned empty, using ${cachedEntities.length} cached test methods`);
+          return cachedEntities.map(e => e.data as TestMethodWithIndicatorsDto);
+        }
+      }
+      return data;
+    } catch (error) {
+      console.warn('Online getWithIndicators failed for TestMethod, returning cached data:', error);
+    }
+  }
+
+  // Return cached data
+  const cachedEntities = await getCachedEntitiesByType('TestMethod');
+  console.log(`Returning ${cachedEntities.length} cached test methods`);
+  return cachedEntities.map(e => e.data as TestMethodWithIndicatorsDto);
+}
+
+/**
+ * Get specimen types with indicators (offline support)
+ */
+export async function getSpecimenTypesWithIndicatorsOffline(): Promise<SpecimenTypeWithIndicatorsDto[]> {
+  const { cacheEntity, getCachedEntitiesByType } = await import('./db');
+  const CACHE_KEY_PREFIX = 'WithIndicators:';
+
+  if (navigator.onLine) {
+    try {
+      const data = await specimenTypeService.getWithIndicators();
+      // Cache each item with a special key prefix
+      for (const item of data) {
+        await cacheEntity('SpecimenType', CACHE_KEY_PREFIX + item.id, item, false);
+      }
+      // If API returns empty but we have cache, use cache instead
+      if (data.length === 0) {
+        const cachedEntities = await getCachedEntitiesByType('SpecimenType');
+        const cachedItems = cachedEntities
+          .filter(e => (e.id as string).startsWith('SpecimenType:' + CACHE_KEY_PREFIX))
+          .map(e => e.data as SpecimenTypeWithIndicatorsDto);
+        if (cachedItems.length > 0) {
+          console.log(`API returned empty, using ${cachedItems.length} cached specimen types with indicators`);
+          return cachedItems;
+        }
+      }
+      return data;
+    } catch (error) {
+      console.warn('Online getWithIndicators failed for SpecimenType, returning cached data:', error);
+    }
+  }
+
+  // Return cached data
+  const cachedEntities = await getCachedEntitiesByType('SpecimenType');
+  const items = cachedEntities
+    .filter(e => (e.id as string).startsWith('SpecimenType:' + CACHE_KEY_PREFIX))
+    .map(e => e.data as SpecimenTypeWithIndicatorsDto);
+  console.log(`Returning ${items.length} cached specimen types with indicators`);
+  return items;
+}
+
+/**
+ * Get active sample conditions (offline support)
+ */
+export async function getActiveSampleConditionsOffline(): Promise<SampleConditionDto[]> {
+  const { cacheEntity, getCachedEntitiesByType } = await import('./db');
+  const CACHE_KEY_PREFIX = 'SampleCondition:';
+
+  if (navigator.onLine) {
+    try {
+      const data = await sampleConditionService.getActive();
+      // Cache each item with a prefix
+      for (const item of data) {
+        await cacheEntity('Testing', CACHE_KEY_PREFIX + item.id, item, false);
+      }
+      // If API returns empty but we have cache, use cache instead
+      if (data.length === 0) {
+        const cachedEntities = await getCachedEntitiesByType('Testing');
+        const cachedItems = cachedEntities
+          .filter(e => (e.id as string).startsWith('Testing:' + CACHE_KEY_PREFIX))
+          .map(e => e.data as SampleConditionDto);
+        if (cachedItems.length > 0) {
+          console.log(`API returned empty, using ${cachedItems.length} cached sample conditions`);
+          return cachedItems;
+        }
+      }
+      return data;
+    } catch (error) {
+      console.warn('Online getActive failed for SampleCondition, returning cached data:', error);
+    }
+  }
+
+  // Return cached data
+  // Note: cache key format is 'Testing:SampleCondition:id'
+  const cachedEntities = await getCachedEntitiesByType('Testing');
+  const items = cachedEntities
+    .filter(e => (e.id as string).startsWith('Testing:' + CACHE_KEY_PREFIX))
+    .map(e => e.data as SampleConditionDto);
+  console.log(`Returning ${items.length} cached sample conditions`);
+  return items;
+}
+
+/**
+ * Get active sample type categories (offline support)
+ */
+export async function getActiveSampleTypeCategoriesOffline(): Promise<SampleTypeCategoryDto[]> {
+  const { cacheEntity, getCachedEntitiesByType } = await import('./db');
+  const CACHE_KEY_PREFIX = 'SampleTypeCategory:';
+
+  if (navigator.onLine) {
+    try {
+      const data = await sampleTypeCategoryService.getActive();
+      // Cache each item with a prefix
+      for (const item of data) {
+        await cacheEntity('Testing', CACHE_KEY_PREFIX + item.id, item, false);
+      }
+      // If API returns empty but we have cache, use cache instead
+      if (data.length === 0) {
+        const cachedEntities = await getCachedEntitiesByType('Testing');
+        const cachedItems = cachedEntities
+          .filter(e => (e.id as string).startsWith('Testing:' + CACHE_KEY_PREFIX))
+          .map(e => e.data as SampleTypeCategoryDto);
+        if (cachedItems.length > 0) {
+          console.log(`API returned empty, using ${cachedItems.length} cached sample type categories`);
+          return cachedItems;
+        }
+      }
+      return data;
+    } catch (error) {
+      console.warn('Online getActive failed for SampleTypeCategory, returning cached data:', error);
+    }
+  }
+
+  // Return cached data
+  // Note: cache key format is 'Testing:SampleTypeCategory:id'
+  const cachedEntities = await getCachedEntitiesByType('Testing');
+  const items = cachedEntities
+    .filter(e => (e.id as string).startsWith('Testing:' + CACHE_KEY_PREFIX))
+    .map(e => e.data as SampleTypeCategoryDto);
+  console.log(`Returning ${items.length} cached sample type categories`);
+  return items;
+}
+
+/**
+ * Get user lookup with offline support
+ */
+export async function getUserLookupOffline(): Promise<UserLookupDto[]> {
+  const { cacheEntity, getCachedEntitiesByType } = await import('./db');
+  const CACHE_KEY_PREFIX = 'User:';
+
+  if (navigator.onLine) {
+    try {
+      const data = await userService.getLookup();
+      // Cache each item with a prefix
+      for (const item of data) {
+        await cacheEntity('Employee', CACHE_KEY_PREFIX + item.id, item, false);
+      }
+      // If API returns empty but we have cache, use cache instead
+      if (data.length === 0) {
+        const cachedEntities = await getCachedEntitiesByType('Employee');
+        const cachedItems = cachedEntities
+          .filter(e => (e.id as string).startsWith('Employee:' + CACHE_KEY_PREFIX))
+          .map(e => e.data as UserLookupDto);
+        if (cachedItems.length > 0) {
+          console.log(`API returned empty, using ${cachedItems.length} cached users`);
+          return cachedItems;
+        }
+      }
+      return data;
+    } catch (error) {
+      console.warn('Online getLookup failed for User, returning cached data:', error);
+    }
+  }
+
+  // Return cached data
+  // Note: cache key format is 'Employee:User:id'
+  const cachedEntities = await getCachedEntitiesByType('Employee');
+  const items = cachedEntities
+    .filter(e => (e.id as string).startsWith('Employee:' + CACHE_KEY_PREFIX))
+    .map(e => e.data as UserLookupDto);
+  console.log(`Returning ${items.length} cached users`);
+  return items;
+}
+
+/**
+ * Get active organizations with offline support
+ */
+export async function getActiveOrganizationsOffline(): Promise<OrganizationDto[]> {
+  const { cacheEntity, getCachedEntitiesByType } = await import('./db');
+  const CACHE_KEY_PREFIX = 'Organization:';
+
+  if (navigator.onLine) {
+    try {
+      const data = await organizationService.getAllActive();
+      // Cache each item with a prefix
+      for (const item of data) {
+        await cacheEntity('Subcontractor', CACHE_KEY_PREFIX + item.id, item, false);
+      }
+      // If API returns empty but we have cache, use cache instead
+      if (data.length === 0) {
+        const cachedEntities = await getCachedEntitiesByType('Subcontractor');
+        const cachedItems = cachedEntities
+          .filter(e => (e.id as string).startsWith('Subcontractor:' + CACHE_KEY_PREFIX))
+          .map(e => e.data as OrganizationDto);
+        if (cachedItems.length > 0) {
+          console.log(`API returned empty, using ${cachedItems.length} cached organizations`);
+          return cachedItems;
+        }
+      }
+      return data;
+    } catch (error) {
+      console.warn('Online getAllActive failed for Organization, returning cached data:', error);
+    }
+  }
+
+  // Return cached data
+  // Note: cache key format is 'Subcontractor:Organization:id'
+  const cachedEntities = await getCachedEntitiesByType('Subcontractor');
+  const items = cachedEntities
+    .filter(e => (e.id as string).startsWith('Subcontractor:' + CACHE_KEY_PREFIX))
+    .map(e => e.data as OrganizationDto);
+  console.log(`Returning ${items.length} cached organizations`);
+  return items;
+}
 
 // ============ Utility Functions ============
 

@@ -18,7 +18,9 @@ export type SyncEntityType =
   | 'TestMethod'
   | 'Laboratory'
   | 'SpecimenType'
-  | 'TestResult';
+  | 'TestResult'
+  | 'IndicatorGroup'
+  | 'File';
 
 /**
  * Sync queue item status
@@ -77,6 +79,23 @@ export interface SyncMetadata {
 }
 
 /**
+ * Pending file upload stored in IndexedDB
+ */
+export interface PendingFileUpload {
+  tempId: string;
+  blob: Blob;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  localUrl: string; // Blob URL for preview
+  status: 'pending' | 'uploading' | 'uploaded' | 'failed';
+  serverId?: string; // Server-assigned fileId after upload
+  createdAt: Date;
+  retryCount: number;
+  lastError?: string;
+}
+
+/**
  * IndexedDB schema definition
  */
 interface OfflineDB extends DBSchema {
@@ -110,10 +129,18 @@ interface OfflineDB extends DBSchema {
     key: string;
     value: SyncMetadata;
   };
+  pendingFileUploads: {
+    key: string;
+    value: PendingFileUpload;
+    indexes: {
+      'by-status': string;
+      'by-createdAt': Date;
+    };
+  };
 }
 
 const DB_NAME = 'lab-specimen-offline';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let dbInstance: IDBPDatabase<OfflineDB> | null = null;
 
@@ -154,6 +181,14 @@ export async function getDB(): Promise<IDBPDatabase<OfflineDB>> {
         db.createObjectStore('syncMetadata', {
           keyPath: 'key',
         });
+      }
+
+      if (!db.objectStoreNames.contains('pendingFileUploads')) {
+        const pendingUploadsStore = db.createObjectStore('pendingFileUploads', {
+          keyPath: 'tempId',
+        });
+        pendingUploadsStore.createIndex('by-status', 'status');
+        pendingUploadsStore.createIndex('by-createdAt', 'createdAt');
       }
     },
   });
@@ -234,6 +269,20 @@ export async function updateSyncItemStatus(
       item.retryCount += 1;
     }
 
+    await db.put('syncQueue', item);
+  }
+}
+
+export async function updateSyncItemData(
+  clientId: string,
+  data: unknown
+): Promise<void> {
+  const db = await getDB();
+  const item = await db.get('syncQueue', clientId);
+
+  if (item) {
+    item.data = data;
+    item.updatedAt = new Date();
     await db.put('syncQueue', item);
   }
 }
@@ -430,4 +479,114 @@ export async function getDeviceId(): Promise<string> {
   }
 
   return metadata.value as string;
+}
+
+// ============ Pending File Upload Operations ============
+
+export async function addPendingFileUpload(
+  blob: Blob,
+  fileName: string
+): Promise<PendingFileUpload> {
+  const db = await getDB();
+  const tempId = `offline-file-${crypto.randomUUID()}`;
+  const localUrl = URL.createObjectURL(blob);
+
+  const pendingUpload: PendingFileUpload = {
+    tempId,
+    blob,
+    fileName,
+    fileSize: blob.size,
+    mimeType: blob.type,
+    localUrl,
+    status: 'pending',
+    createdAt: new Date(),
+    retryCount: 0,
+  };
+
+  await db.add('pendingFileUploads', pendingUpload);
+  return pendingUpload;
+}
+
+export async function getPendingFileUpload(tempId: string): Promise<PendingFileUpload | undefined> {
+  const db = await getDB();
+  return db.get('pendingFileUploads', tempId);
+}
+
+export async function getPendingFileUploads(): Promise<PendingFileUpload[]> {
+  const db = await getDB();
+  return db.getAllFromIndex('pendingFileUploads', 'by-status', 'pending');
+}
+
+export async function getAllPendingFileUploads(): Promise<PendingFileUpload[]> {
+  const db = await getDB();
+  return db.getAll('pendingFileUploads');
+}
+
+export async function updatePendingFileUploadStatus(
+  tempId: string,
+  status: PendingFileUpload['status'],
+  serverId?: string,
+  error?: string
+): Promise<void> {
+  const db = await getDB();
+  const item = await db.get('pendingFileUploads', tempId);
+
+  if (item) {
+    item.status = status;
+    if (serverId) {
+      item.serverId = serverId;
+    }
+    if (error) {
+      item.lastError = error;
+      item.retryCount += 1;
+    }
+    await db.put('pendingFileUploads', item);
+  }
+}
+
+export async function removePendingFileUpload(tempId: string): Promise<void> {
+  const db = await getDB();
+  const item = await db.get('pendingFileUploads', tempId);
+  if (item?.localUrl) {
+    URL.revokeObjectURL(item.localUrl);
+  }
+  await db.delete('pendingFileUploads', tempId);
+}
+
+export async function clearUploadedFiles(): Promise<void> {
+  const db = await getDB();
+  const uploadedItems = await db.getAllFromIndex('pendingFileUploads', 'by-status', 'uploaded');
+
+  const tx = db.transaction('pendingFileUploads', 'readwrite');
+  await Promise.all([
+    ...uploadedItems.map(item => {
+      if (item.localUrl) {
+        URL.revokeObjectURL(item.localUrl);
+      }
+      return tx.store.delete(item.tempId);
+    }),
+    tx.done,
+  ]);
+}
+
+export async function getPendingFileUploadCount(): Promise<number> {
+  const db = await getDB();
+  return db.countFromIndex('pendingFileUploads', 'by-status', 'pending');
+}
+
+export async function regenerateLocalUrl(tempId: string): Promise<string | null> {
+  const db = await getDB();
+  const item = await db.get('pendingFileUploads', tempId);
+  if (item?.blob) {
+    // Revoke old URL if exists
+    if (item.localUrl) {
+      URL.revokeObjectURL(item.localUrl);
+    }
+    // Create new URL
+    const newUrl = URL.createObjectURL(item.blob);
+    item.localUrl = newUrl;
+    await db.put('pendingFileUploads', item);
+    return newUrl;
+  }
+  return null;
 }

@@ -9,6 +9,7 @@ export interface AttachmentInfo {
   fileName: string;
   fileSize: number;
   url: string;
+  isOffline?: boolean; // True if file is stored locally (pending upload)
 }
 
 // Thông tin phương pháp cho một chỉ tiêu

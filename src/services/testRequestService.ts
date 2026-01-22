@@ -527,12 +527,9 @@ export const offlineTestRequestService = {
         await cacheTestRequest(result.id, result, false);
         return { data: result, isOffline: false };
       } catch (error) {
-        // If network error, fall through to offline handling
-        if (!navigator.onLine) {
-          // Network went offline during request
-        } else {
-          throw error;
-        }
+        // Network error - fall through to offline handling
+        // Don't re-throw, queue for sync instead (same pattern as createOfflineService)
+        console.warn('Online create failed, queueing for sync:', error);
       }
     }
 
@@ -588,11 +585,9 @@ export const offlineTestRequestService = {
         await cacheTestRequest(result.id, result, false);
         return { data: result, isOffline: false };
       } catch (error) {
-        if (!navigator.onLine) {
-          // Network went offline during request
-        } else {
-          throw error;
-        }
+        // Network error - fall through to offline handling
+        // Don't re-throw, queue for sync instead (same pattern as createOfflineService)
+        console.warn('Online update failed, queueing for sync:', error);
       }
     }
 

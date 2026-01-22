@@ -43,6 +43,7 @@ const getStatusTag = (status: LaboratoryTaskStatus) => {
     [LaboratoryTaskStatus.Approved]: <CheckCircleOutlined />,
     [LaboratoryTaskStatus.Rejected]: <CloseCircleOutlined />,
     [LaboratoryTaskStatus.SentToQuality]: <SendOutlined />,
+    [LaboratoryTaskStatus.WaitingSharedSample]: <ClockCircleOutlined />,
   };
 
   return (
