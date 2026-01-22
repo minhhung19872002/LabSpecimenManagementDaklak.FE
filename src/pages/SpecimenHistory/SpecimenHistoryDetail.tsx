@@ -8,6 +8,8 @@ import { specimenHistoryService } from '../../services/specimenHistoryService';
 import { SpecimenHistoryDto, SpecimenStatus } from '../../types/specimenHistory';
 import { PATH_ROUTES } from '../../constants';
 import StatusTag from '../../components/common/StatusTag';
+import { authService } from '../../services/authService';
+import { PERMISSIONS } from '../../constants/permissionMapping';
 
 // Mock data fallback
 const getMockSpecimenHistory = (id: string): SpecimenHistoryDto => {
@@ -99,13 +101,15 @@ const SpecimenHistoryDetail: React.FC = () => {
             >
               {t('common.back')}
             </Button>
-            <Button
-              type="primary"
-              icon={<EditOutlined />}
-              onClick={() => navigate(PATH_ROUTES.specimenHistories.edit(id!))}
-            >
-              {t('common.edit')}
-            </Button>
+            {authService.hasPermission(PERMISSIONS.Specimens.Edit) && (
+              <Button
+                type="primary"
+                icon={<EditOutlined />}
+                onClick={() => navigate(PATH_ROUTES.specimenHistories.edit(id!))}
+              >
+                {t('common.edit')}
+              </Button>
+            )}
           </Space>
         }
       >

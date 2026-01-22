@@ -32,6 +32,8 @@ import {
   getStatCount,
 } from "./constants";
 import { MasterDataItem } from "./types";
+import { authService } from "../../../services/authService";
+import { PERMISSIONS } from "../../../constants/permissionMapping";
 
 const MasterDataList: React.FC = () => {
   const {
@@ -95,6 +97,11 @@ const MasterDataList: React.FC = () => {
   const [sampleTypeCategoriesRefreshKey, setSampleTypeCategoriesRefreshKey] = useState(0);
   const [sampleConditionsRefreshKey, setSampleConditionsRefreshKey] = useState(0);
 
+  // Permission check - All Master Data uses unified permissions now
+  const canCreate = authService.hasPermission(PERMISSIONS.MasterData.Create);
+  const canEdit = authService.hasPermission(PERMISSIONS.MasterData.Edit);
+  const canDelete = authService.hasPermission(PERMISSIONS.MasterData.Delete);
+
   // Memoized columns
   const columns = useMemo(
     () =>
@@ -142,7 +149,8 @@ const MasterDataList: React.FC = () => {
           activeCategory !== "notes" &&
           activeCategory !== "specimenTypes" &&
           activeCategory !== "sampleTypeCategories" &&
-          activeCategory !== "sampleConditions" && (
+          activeCategory !== "sampleConditions" &&
+          canCreate && (
             <Space>
               {/* {canImport && (
                 <Button

@@ -3,6 +3,8 @@ import { EditOutlined, DeleteOutlined } from "../../../../components/common/Icon
 import type { ColumnsType } from "antd/es/table";
 import { ImportType } from "../../../../components/common/ImportExcelModal";
 import { MasterDataItem, UserLookupDto } from "../types";
+import { authService } from "../../../../services/authService";
+import { PERMISSIONS } from "../../../../constants/permissionMapping";
 
 export const categoryLabels: Record<string, string> = {
   departments: "Phòng ban",
@@ -149,47 +151,57 @@ export const getColumns = (
     });
   }
 
-  baseColumns.push(
-    {
-      title: "Trạng thái",
-      dataIndex: "isActive",
-      key: "isActive",
-      width: 100,
-      render: (isActive: boolean) => (
-        <Tag color={isActive ? "green" : "red"}>
-          {isActive ? "Hoạt động" : "Ngừng"}
-        </Tag>
-      ),
-    },
-    {
+  baseColumns.push({
+    title: "Trạng thái",
+    dataIndex: "isActive",
+    key: "isActive",
+    width: 100,
+    render: (isActive: boolean) => (
+      <Tag color={isActive ? "green" : "red"}>
+        {isActive ? "Hoạt động" : "Ngừng"}
+      </Tag>
+    ),
+  });
+
+  // Check permissions for Edit and Delete - Use unified MasterData permissions
+  const canEdit = authService.hasPermission(PERMISSIONS.MasterData.Edit);
+  const canDelete = authService.hasPermission(PERMISSIONS.MasterData.Delete);
+
+  // Only show actions column if user has at least one permission
+  if (canEdit || canDelete) {
+    baseColumns.push({
       title: "Thao tác",
       key: "actions",
       width: 100,
       render: (_, record) => (
         <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          />
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Có"
-            cancelText="Không"
-          >
+          {canEdit && (
             <Button
               type="link"
               size="small"
-              danger
-              icon={<DeleteOutlined />}
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
             />
-          </Popconfirm>
+          )}
+          {canDelete && (
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa?"
+              onConfirm={() => handleDelete(record.id)}
+              okText="Có"
+              cancelText="Không"
+            >
+              <Button
+                type="link"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+              />
+            </Popconfirm>
+          )}
         </Space>
       ),
-    }
-  );
+    });
+  }
 
   return baseColumns;
 };

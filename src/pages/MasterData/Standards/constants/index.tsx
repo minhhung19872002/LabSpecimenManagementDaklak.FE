@@ -67,8 +67,8 @@ export const getStandardColumns = (
     key: "actions",
     width: 120,
     render: (_, record) => {
-      const canEdit = authService.hasPermission(PERMISSIONS.Standards.Edit);
-      const canDelete = authService.hasPermission(PERMISSIONS.Standards.Delete);
+      const canEdit = authService.hasPermission(PERMISSIONS.MasterData.Edit);
+      const canDelete = authService.hasPermission(PERMISSIONS.MasterData.Delete);
 
       return (
         <Space size="small">
@@ -200,8 +200,8 @@ export const getIndicatorColumns = (
     key: "actions",
     width: 120,
     render: (_, record) => {
-      const canEdit = authService.hasPermission(PERMISSIONS.Standards.Edit);
-      const canDelete = authService.hasPermission(PERMISSIONS.Standards.Delete);
+      const canEdit = authService.hasPermission(PERMISSIONS.MasterData.Edit);
+      const canDelete = authService.hasPermission(PERMISSIONS.MasterData.Delete);
 
       return (
         <Space size="small">

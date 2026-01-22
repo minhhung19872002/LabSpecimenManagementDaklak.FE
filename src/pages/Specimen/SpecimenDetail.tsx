@@ -8,6 +8,7 @@ import dayjs from 'dayjs';
 import './SpecimenDetail.css';
 import { PATH_ROUTES } from '../../constants';
 import StatusTag from '../../components/common/StatusTag';
+import { useActionPermission } from '../../hooks/useActionPermission';
 
 const SpecimenDetail: React.FC = () => {
   const { t } = useTranslation();
@@ -15,6 +16,9 @@ const SpecimenDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<SpecimenDto | null>(null);
+
+  // Permission check
+  const { canEdit } = useActionPermission('specimens', 'edit');
 
   useEffect(() => {
     if (id) {
@@ -70,9 +74,11 @@ const SpecimenDetail: React.FC = () => {
             <Button onClick={() => navigate(PATH_ROUTES.specimens.index)}>
               {t('common.back')}
             </Button>
-            <Button type="primary" onClick={() => navigate(PATH_ROUTES.specimens.edit(id!))}>
-              {t('common.edit')}
-            </Button>
+            {canEdit && (
+              <Button type="primary" onClick={() => navigate(PATH_ROUTES.specimens.edit(id!))}>
+                {t('common.edit')}
+              </Button>
+            )}
           </Space>
         }
       >

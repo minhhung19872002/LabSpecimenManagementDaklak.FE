@@ -34,7 +34,8 @@ import settingsService, {
   SecuritySettingsDto,
 } from "../../services/settingsService";
 import { ROLES, STORAGE_KEYS } from "../../constants";
-import { UserInfo } from "../../services/authService";
+import { UserInfo, authService } from "../../services/authService";
+import { PERMISSIONS } from "../../constants/permissionMapping";
 
 /**
  * Settings Tab Permission Matrix:
@@ -689,14 +690,16 @@ const SettingsPage: React.FC = () => {
                   <Select.Option value="sunday">Chủ nhật</Select.Option>
                 </Select>
               </Form.Item>
-              <Button
-                type="primary"
-                icon={<SaveOutlined />}
-                onClick={handleSaveSystem}
-                loading={systemLoading}
-              >
-                Lưu cài đặt
-              </Button>
+              {authService.hasPermission(PERMISSIONS.Settings.Edit) && (
+                <Button
+                  type="primary"
+                  icon={<SaveOutlined />}
+                  onClick={handleSaveSystem}
+                  loading={systemLoading}
+                >
+                  Lưu cài đặt
+                </Button>
+              )}
             </Form>
           </Card>
         </Spin>
@@ -765,23 +768,25 @@ const SettingsPage: React.FC = () => {
                   </Form.Item>
                 </Col>
               </Row>
-              <Space>
-                <Button
-                  type="primary"
-                  icon={<SaveOutlined />}
-                  onClick={handleSaveEmail}
-                  loading={emailLoading}
-                >
-                  Lưu cài đặt
-                </Button>
-                <Button
-                  icon={<MailOutlined />}
-                  onClick={handleTestEmail}
-                  loading={testEmailLoading}
-                >
-                  Gửi email test
-                </Button>
-              </Space>
+              {authService.hasPermission(PERMISSIONS.Settings.Edit) && (
+                <Space>
+                  <Button
+                    type="primary"
+                    icon={<SaveOutlined />}
+                    onClick={handleSaveEmail}
+                    loading={emailLoading}
+                  >
+                    Lưu cài đặt
+                  </Button>
+                  <Button
+                    icon={<MailOutlined />}
+                    onClick={handleTestEmail}
+                    loading={testEmailLoading}
+                  >
+                    Gửi email test
+                  </Button>
+                </Space>
+              )}
             </Form>
           </Card>
         </Spin>
@@ -844,16 +849,18 @@ const SettingsPage: React.FC = () => {
                   </Tag>
                 </Descriptions.Item>
               </Descriptions>
-              <div style={{ marginTop: 16 }}>
-                <Button
-                  type="primary"
-                  icon={<SaveOutlined />}
-                  onClick={handleSaveSecurity}
-                  loading={securityLoading}
-                >
-                  Lưu cài đặt
-                </Button>
-              </div>
+              {authService.hasPermission(PERMISSIONS.Settings.Edit) && (
+                <div style={{ marginTop: 16 }}>
+                  <Button
+                    type="primary"
+                    icon={<SaveOutlined />}
+                    onClick={handleSaveSecurity}
+                    loading={securityLoading}
+                  >
+                    Lưu cài đặt
+                  </Button>
+                </div>
+              )}
             </Form>
           </Card>
         </Spin>

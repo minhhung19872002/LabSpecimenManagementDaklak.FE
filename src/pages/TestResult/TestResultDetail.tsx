@@ -28,6 +28,8 @@ import dayjs from "dayjs";
 import "./TestResultDetail.css";
 import { PATH_ROUTES } from "../../constants";
 import StatusTag from "../../components/common/StatusTag";
+import { authService } from "../../services/authService";
+import { PERMISSIONS } from "../../constants/permissionMapping";
 
 const { TextArea } = Input;
 
@@ -38,6 +40,12 @@ const TestResultDetail: React.FC = () => {
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
   const [approveModalVisible, setApproveModalVisible] = useState(false);
   const [comment, setComment] = useState("");
+
+  // Check permissions
+  const canEdit = authService.hasPermission(PERMISSIONS.TestResults.Edit);
+  const canSubmit = authService.hasPermission(PERMISSIONS.TestResults.Submit);
+  const canReview = authService.hasPermission(PERMISSIONS.TestResults.Review);
+  const canApprove = authService.hasPermission(PERMISSIONS.TestResults.Approve);
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
@@ -236,7 +244,7 @@ const TestResultDetail: React.FC = () => {
         {/* Action Buttons */}
         <Space>
           {/* KTV: Submit for review (Draft -> Submitted) */}
-          {approvalStatus === ResultApprovalStatus.Draft && (
+          {canSubmit && approvalStatus === ResultApprovalStatus.Draft && (
             <Button
               type="primary"
               icon={<SendOutlined />}
@@ -248,7 +256,7 @@ const TestResultDetail: React.FC = () => {
           )}
 
           {/* Reviewer: Review (Submitted -> Step1Reviewed or Rejected) */}
-          {approvalStatus === ResultApprovalStatus.Submitted && (
+          {canReview && approvalStatus === ResultApprovalStatus.Submitted && (
             <Button
               type="primary"
               icon={<CheckCircleOutlined />}
@@ -261,7 +269,7 @@ const TestResultDetail: React.FC = () => {
           )}
 
           {/* Approver: Approve (Step1Reviewed -> Step2Approved or Rejected) */}
-          {approvalStatus === ResultApprovalStatus.Step1Reviewed && (
+          {canApprove && approvalStatus === ResultApprovalStatus.Step1Reviewed && (
             <Button
               type="primary"
               icon={<CheckCircleOutlined />}
@@ -314,7 +322,7 @@ const TestResultDetail: React.FC = () => {
             >
               {t("common.back")}
             </Button>
-            {testResult.approvalStatus === ResultApprovalStatus.Draft && (
+            {canEdit && testResult.approvalStatus === ResultApprovalStatus.Draft && (
               <Button
                 type="primary"
                 icon={<EditOutlined />}

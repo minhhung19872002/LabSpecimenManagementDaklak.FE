@@ -210,7 +210,7 @@ const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshK
             <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
               Tải template mẫu
             </Button>
-            {authService.hasPermission(PERMISSIONS.TestMethods.Create) && (
+            {authService.hasPermission(PERMISSIONS.MasterData.Create) && (
               <Button
                 icon={<UploadOutlined />}
                 onClick={() => setImportModalOpen(true)}
@@ -218,7 +218,7 @@ const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshK
                 Nhập danh sách
               </Button>
             )}
-            {authService.hasPermission(PERMISSIONS.TestMethods.Create) && (
+            {authService.hasPermission(PERMISSIONS.MasterData.Create) && (
               <Button
                 type="primary"
                 icon={<PlusOutlined />}

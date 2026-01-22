@@ -162,7 +162,7 @@ const IndicatorsList: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
             >
               Tải template mẫu
             </Button>
-            {authService.hasPermission(PERMISSIONS.Indicators.Import) && (
+            {authService.hasPermission(PERMISSIONS.MasterData.Import) && (
               <Button
                 icon={<UploadOutlined />}
                 onClick={() => setImportIndicatorGroupModalOpen(true)}
@@ -170,7 +170,7 @@ const IndicatorsList: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
                 Nhập danh sách
               </Button>
             )}
-            {authService.hasPermission(PERMISSIONS.IndicatorGroups.Create) && (
+            {authService.hasPermission(PERMISSIONS.MasterData.Create) && (
               <Button
                 icon={<FolderAddOutlined />}
                 onClick={() => handleCreateGroup(groupForm)}
@@ -178,7 +178,7 @@ const IndicatorsList: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
                 Thêm nhóm
               </Button>
             )}
-            {authService.hasPermission(PERMISSIONS.Indicators.Create) && (
+            {authService.hasPermission(PERMISSIONS.MasterData.Create) && (
               <Button
                 type="primary"
                 icon={<PlusOutlined />}

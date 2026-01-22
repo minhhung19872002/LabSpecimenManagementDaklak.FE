@@ -35,6 +35,8 @@ import {
   WorkloadByDepartmentDto,
   TATComplianceDto
 } from '../../services/statisticsService';
+import { authService } from '../../services/authService';
+import { PERMISSIONS } from '../../constants/permissionMapping';
 
 const { RangePicker } = DatePicker;
 
@@ -280,14 +282,16 @@ const StatisticsPage: React.FC = () => {
             onClick={fetchStatistics}
             loading={loading}
           />
-          <Button
-            type="primary"
-            icon={<DownloadOutlined />}
-            onClick={handleExport}
-            loading={exporting}
-          >
-            Xuất Excel
-          </Button>
+          {authService.hasPermission(PERMISSIONS.Statistics.Export) && (
+            <Button
+              type="primary"
+              icon={<DownloadOutlined />}
+              onClick={handleExport}
+              loading={exporting}
+            >
+              Xuất Excel
+            </Button>
+          )}
         </div>
       </div>
 

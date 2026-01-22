@@ -28,6 +28,8 @@ import {
 import { PATH_ROUTES } from "../../constants";
 import { formatCurrency } from "../../utils/formatters";
 import { IndicatorName } from "../../components/common";
+import { authService } from "../../services/authService";
+import { PERMISSIONS } from "../../constants/permissionMapping";
 
 const { Text } = Typography;
 
@@ -140,19 +142,23 @@ const QuotationView: React.FC = () => {
             >
               Quay lại
             </Button>
-            <Button
-              icon={<EditOutlined />}
-              onClick={() => navigate(PATH_ROUTES.quotations.edit(id!))}
-            >
-              Chỉnh sửa
-            </Button>
-            <Button
-              type="primary"
-              icon={<FileAddOutlined />}
-              onClick={handleCreateTestRequest}
-            >
-              Tạo phiếu thử nghiệm
-            </Button>
+            {authService.hasPermission(PERMISSIONS.Quotations.Edit) && (
+              <Button
+                icon={<EditOutlined />}
+                onClick={() => navigate(PATH_ROUTES.quotations.edit(id!))}
+              >
+                Chỉnh sửa
+              </Button>
+            )}
+            {authService.hasPermission(PERMISSIONS.TestRequests.Create) && (
+              <Button
+                type="primary"
+                icon={<FileAddOutlined />}
+                onClick={handleCreateTestRequest}
+              >
+                Tạo phiếu thử nghiệm
+              </Button>
+            )}
           </Space>
         }
       >

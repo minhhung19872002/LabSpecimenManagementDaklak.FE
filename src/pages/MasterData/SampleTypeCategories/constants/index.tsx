@@ -7,6 +7,8 @@ import {
 } from "../../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import { GroupedCategoryData, SpecimenTypeWithKey } from "../types";
+import { authService } from "../../../../services/authService";
+import { PERMISSIONS } from "../../../../constants/permissionMapping";
 
 export const getCategoryColumns = (
   handleEdit: (record: GroupedCategoryData) => void,
@@ -64,52 +66,62 @@ export const getCategoryColumns = (
       if (record.id === "uncategorized") {
         return <span style={{ color: "#999" }}>-</span>;
       }
+
+      const canEdit = authService.hasPermission(PERMISSIONS.SampleTypeCategories.Edit);
+      const canDelete = authService.hasPermission(PERMISSIONS.SampleTypeCategories.Delete);
+
       return (
         <Space size="small">
-          <Tooltip title="Sửa">
-            <Button
-              type="link"
-              size="small"
-              icon={<EditOutlined />}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleEdit(record);
+          {canEdit && (
+            <>
+              <Tooltip title="Sửa">
+                <Button
+                  type="link"
+                  size="small"
+                  icon={<EditOutlined />}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEdit(record);
+                  }}
+                />
+              </Tooltip>
+              <Tooltip title={record.isActive ? "Hủy kích hoạt" : "Kích hoạt"}>
+                <Button
+                  type="link"
+                  size="small"
+                  icon={record.isActive ? <StopOutlined /> : <CheckCircleOutlined />}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleToggleActive(record);
+                  }}
+                  style={{ color: record.isActive ? "#faad14" : "#52c41a" }}
+                />
+              </Tooltip>
+            </>
+          )}
+          {canDelete && (
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa danh mục này?"
+              description="Chỉ có thể xóa nếu không còn loại mẫu bên trong."
+              onConfirm={(e) => {
+                e?.stopPropagation();
+                handleDelete(record.id);
               }}
-            />
-          </Tooltip>
-          <Tooltip title={record.isActive ? "Hủy kích hoạt" : "Kích hoạt"}>
-            <Button
-              type="link"
-              size="small"
-              icon={record.isActive ? <StopOutlined /> : <CheckCircleOutlined />}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleToggleActive(record);
-              }}
-              style={{ color: record.isActive ? "#faad14" : "#52c41a" }}
-            />
-          </Tooltip>
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa danh mục này?"
-            description="Chỉ có thể xóa nếu không còn loại mẫu bên trong."
-            onConfirm={(e) => {
-              e?.stopPropagation();
-              handleDelete(record.id);
-            }}
-            onCancel={(e) => e?.stopPropagation()}
-            okText="Xóa"
-            cancelText="Hủy"
-          >
-            <Tooltip title="Xóa">
-              <Button
-                type="link"
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-                onClick={(e) => e.stopPropagation()}
-              />
-            </Tooltip>
-          </Popconfirm>
+              onCancel={(e) => e?.stopPropagation()}
+              okText="Xóa"
+              cancelText="Hủy"
+            >
+              <Tooltip title="Xóa">
+                <Button
+                  type="link"
+                  size="small"
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </Tooltip>
+            </Popconfirm>
+          )}
         </Space>
       );
     },

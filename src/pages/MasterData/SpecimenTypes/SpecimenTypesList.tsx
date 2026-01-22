@@ -110,7 +110,7 @@ const SpecimenTypesList: React.FC<SpecimenTypesTabProps> = ({ onDataChange, refr
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col flex="auto" />
         <Col>
-          {authService.hasPermission(PERMISSIONS.SpecimenTypes.Create) && (
+          {authService.hasPermission(PERMISSIONS.MasterData.Create) && (
             <Button
               type="primary"
               icon={<PlusOutlined />}

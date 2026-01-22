@@ -65,8 +65,8 @@ export const getSpecimenTypeColumns = (
     key: "actions",
     width: 100,
     render: (_, record) => {
-      const canEdit = authService.hasPermission(PERMISSIONS.SpecimenTypes.Edit);
-      const canDelete = authService.hasPermission(PERMISSIONS.SpecimenTypes.Delete);
+      const canEdit = authService.hasPermission(PERMISSIONS.MasterData.Edit);
+      const canDelete = authService.hasPermission(PERMISSIONS.MasterData.Delete);
 
       return (
         <Space size="small">
@@ -160,7 +160,7 @@ export const getIndicatorColumns = (
     key: "actions",
     width: 80,
     render: (_, record) => {
-      const canDelete = authService.hasPermission(PERMISSIONS.SpecimenTypes.Delete);
+      const canDelete = authService.hasPermission(PERMISSIONS.MasterData.Delete);
 
       if (!canDelete) {
         return null;

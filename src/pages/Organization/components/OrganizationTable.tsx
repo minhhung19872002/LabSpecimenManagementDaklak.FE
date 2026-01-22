@@ -105,8 +105,8 @@ const OrganizationTable: React.FC<OrganizationTableProps> = ({
       align: 'center',
       fixed: 'right',
       render: (_, record: OrganizationDto) => {
-        const canEdit = authService.hasPermission(PERMISSIONS.Customers.Edit);
-        const canDelete = authService.hasPermission(PERMISSIONS.Customers.Delete);
+        const canEdit = authService.hasPermission(PERMISSIONS.MasterData.Edit);
+        const canDelete = authService.hasPermission(PERMISSIONS.MasterData.Delete);
 
         return (
           <Space size="small">
