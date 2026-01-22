@@ -39,6 +39,16 @@ export {
   offlineStorageLocationService,
   offlineIndicatorGroupService,
   offlineIndicatorService,
+  // Offline-aware getActive methods
+  getActiveIndicatorGroupsOffline,
+  getActiveIndicatorsOffline,
+  getActiveStorageLocationsOffline,
+  getActiveLaboratoriesOffline,
+  getActiveSpecimenTypesOffline,
+  getTestMethodsWithIndicatorsOffline,
+  getSpecimenTypesWithIndicatorsOffline,
+  getActiveSampleConditionsOffline,
+  getActiveSampleTypeCategoriesOffline,
   // Utility functions
   initializeOfflineServices,
   getTotalPendingSyncCount,
@@ -46,3 +56,11 @@ export {
   isOnline,
   onStatusChange,
 } from './offlineServices';
+
+// Export prefetch service
+export {
+  prefetchMasterData,
+  forcePrefetch,
+  hasPrefetchedData,
+  getLastPrefetchTime,
+} from './prefetchService';

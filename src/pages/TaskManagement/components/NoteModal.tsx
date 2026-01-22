@@ -55,14 +55,18 @@ type MasterDataMode = "keep" | "replace";
 const NoteModal: React.FC<NoteModalProps> = ({
   open,
   onClose,
-  selectedIndicatorIds,
-  allIndicatorIds,
+  selectedIndicatorIds: _selectedIndicatorIds,
+  allIndicatorIds: _allIndicatorIds,
   onSave,
   loading = false,
   title = "Ghi chú",
   initialFreeTextNote = "",
   selectedIndicatorsMasterData = [],
 }) => {
+  // Props kept for API compatibility
+  void _selectedIndicatorIds;
+  void _allIndicatorIds;
+
   const [freeText, setFreeText] = useState<string>("");
   const [selectedMasterNoteIds, setSelectedMasterNoteIds] = useState<
     Set<string>

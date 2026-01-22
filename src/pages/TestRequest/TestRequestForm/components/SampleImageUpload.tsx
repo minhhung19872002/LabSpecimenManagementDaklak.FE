@@ -5,6 +5,7 @@ import {
   EyeOutlined,
   DeleteOutlined,
   LoadingOutlined,
+  CloudOutlined,
 } from "../../../../components/common/Icon";
 import type { UploadProps, RcFile } from "antd/es/upload/interface";
 import { fileService } from "../../../../services/fileService";
@@ -63,25 +64,40 @@ const SampleImageUpload: React.FC<SampleImageUploadProps> = ({
     return false; // Prevent default upload behavior
   };
 
-  // Upload all pending files
+  // Upload all pending files with offline support
   const uploadFiles = async (files: RcFile[]) => {
     if (files.length === 0) return;
 
     setUploading(true);
 
     try {
-      // Upload all files at once
-      const results = await fileService.uploadMultipleImages(files);
+      // Upload files with offline support
+      const results = await fileService.uploadMultipleImagesOffline(files);
 
       const newAttachments: AttachmentInfo[] = results.map((result) => ({
         fileId: result.fileId,
         fileName: result.fileName,
         fileSize: result.fileSize,
-        url: fileService.getFileUrl(result.fileId),
+        url: result.url,
+        isOffline: result.isOffline,
       }));
 
       onChange([...attachments, ...newAttachments]);
-      message.success(`Đã tải ${results.length} hình ảnh thành công`);
+
+      const offlineCount = results.filter((r) => r.isOffline).length;
+      const onlineCount = results.length - offlineCount;
+
+      if (offlineCount > 0 && onlineCount > 0) {
+        message.info(
+          `Đã tải ${onlineCount} hình ảnh. ${offlineCount} hình ảnh sẽ được đồng bộ khi có mạng.`
+        );
+      } else if (offlineCount > 0) {
+        message.info(
+          `${offlineCount} hình ảnh được lưu tạm. Sẽ đồng bộ khi có mạng.`
+        );
+      } else {
+        message.success(`Đã tải ${results.length} hình ảnh thành công`);
+      }
     } catch (error: any) {
       console.error("Upload error:", error);
       message.error(error?.response?.data?.message || "Không thể tải hình ảnh");
@@ -91,7 +107,11 @@ const SampleImageUpload: React.FC<SampleImageUploadProps> = ({
   };
 
   // Handle remove attachment
-  const handleRemove = (fileId: string) => {
+  const handleRemove = async (fileId: string) => {
+    // If it's an offline file, remove from IndexedDB
+    if (fileService.isOfflineFile(fileId)) {
+      await fileService.removePendingUpload(fileId);
+    }
     const newAttachments = attachments.filter((a) => a.fileId !== fileId);
     onChange(newAttachments);
   };
@@ -114,61 +134,83 @@ const SampleImageUpload: React.FC<SampleImageUploadProps> = ({
       <Image.PreviewGroup>
         <Space size={4}>
           {visibleThumbnails.map((attachment) => (
-            <div
+            <Tooltip
               key={attachment.fileId}
-              style={{
-                position: "relative",
-                width: 32,
-                height: 32,
-                borderRadius: 4,
-                overflow: "hidden",
-                border: "1px solid #d9d9d9",
-              }}
+              title={attachment.isOffline ? "Chờ đồng bộ khi có mạng" : undefined}
             >
-              <Image
-                src={attachment.url}
-                alt={attachment.fileName}
-                width={32}
-                height={32}
-                style={{ objectFit: "cover" }}
-                preview={false}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setPreviewVisible(true);
+              <div
+                style={{
+                  position: "relative",
+                  width: 32,
+                  height: 32,
+                  borderRadius: 4,
+                  overflow: "hidden",
+                  border: attachment.isOffline
+                    ? "1px solid #faad14"
+                    : "1px solid #d9d9d9",
                 }}
-              />
-              {!disabled && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    right: 0,
-                    bottom: 0,
-                    left: 0,
-                    background: "rgba(0,0,0,0.3)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    opacity: 0,
-                    transition: "opacity 0.2s",
-                    cursor: "pointer",
-                  }}
-                  className="thumbnail-overlay"
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLElement).style.opacity = "1";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.opacity = "0";
-                  }}
+              >
+                <Image
+                  src={attachment.url}
+                  alt={attachment.fileName}
+                  width={32}
+                  height={32}
+                  style={{ objectFit: "cover" }}
+                  preview={false}
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleRemove(attachment.fileId);
+                    setPreviewVisible(true);
                   }}
-                >
-                  <DeleteOutlined style={{ color: "#fff", fontSize: 12 }} />
-                </div>
-              )}
-            </div>
+                />
+                {/* Offline indicator */}
+                {attachment.isOffline && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      right: 0,
+                      background: "#faad14",
+                      borderBottomLeftRadius: 4,
+                      padding: "1px 2px",
+                      lineHeight: 1,
+                    }}
+                  >
+                    <CloudOutlined style={{ color: "#fff", fontSize: 8 }} />
+                  </div>
+                )}
+                {!disabled && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      right: 0,
+                      bottom: 0,
+                      left: 0,
+                      background: "rgba(0,0,0,0.3)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      opacity: 0,
+                      transition: "opacity 0.2s",
+                      cursor: "pointer",
+                    }}
+                    className="thumbnail-overlay"
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLElement).style.opacity = "1";
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLElement).style.opacity = "0";
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemove(attachment.fileId);
+                    }}
+                  >
+                    <DeleteOutlined style={{ color: "#fff", fontSize: 12 }} />
+                  </div>
+                )}
+              </div>
+            </Tooltip>
           ))}
 
           {/* Badge for remaining count */}

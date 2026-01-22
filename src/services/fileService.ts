@@ -1,4 +1,13 @@
 import { api } from './api';
+import {
+  addPendingFileUpload,
+  getPendingFileUpload,
+  getPendingFileUploads,
+  updatePendingFileUploadStatus,
+  removePendingFileUpload,
+  regenerateLocalUrl,
+  PendingFileUpload,
+} from './offline/db';
 
 const BASE_URL = '/api/v1/files';
 
@@ -17,6 +26,14 @@ export interface SampleAttachmentDto {
   fileName: string;
   fileSize: number;
   url: string;
+}
+
+export interface OfflineFileInfo {
+  fileId: string; // tempId for offline files, actual fileId for uploaded files
+  fileName: string;
+  fileSize: number;
+  url: string;
+  isOffline: boolean;
 }
 
 // ==================== File Service ====================
@@ -54,7 +71,7 @@ export const fileService = {
    * @returns Full URL to access the file
    */
   getFileUrl: (fileId: string): string => {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:44381';
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5002';
     return `${baseUrl}${BASE_URL}/${fileId}`;
   },
 
@@ -127,6 +144,149 @@ export const fileService = {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  },
+
+  // ==================== Offline-Aware Methods ====================
+
+  /**
+   * Check if online
+   */
+  isOnline: (): boolean => {
+    return navigator.onLine;
+  },
+
+  /**
+   * Upload image with offline support
+   * If offline, stores blob locally and returns a temp result
+   * @param file File to upload
+   * @returns Upload result (real or offline)
+   */
+  uploadImageOffline: async (file: File): Promise<OfflineFileInfo> => {
+    // Validate first
+    const error = fileService.getValidationError(file);
+    if (error) {
+      throw new Error(error);
+    }
+
+    if (navigator.onLine) {
+      try {
+        const result = await fileService.uploadImage(file);
+        return {
+          fileId: result.fileId,
+          fileName: result.fileName,
+          fileSize: result.fileSize,
+          url: fileService.getFileUrl(result.fileId),
+          isOffline: false,
+        };
+      } catch (error) {
+        console.warn('Online upload failed, storing offline:', error);
+      }
+    }
+
+    // Store offline
+    const pendingUpload = await addPendingFileUpload(file, file.name);
+    return {
+      fileId: pendingUpload.tempId,
+      fileName: pendingUpload.fileName,
+      fileSize: pendingUpload.fileSize,
+      url: pendingUpload.localUrl,
+      isOffline: true,
+    };
+  },
+
+  /**
+   * Upload multiple images with offline support
+   * @param files Array of files to upload
+   * @returns Array of upload results (real or offline)
+   */
+  uploadMultipleImagesOffline: async (files: File[]): Promise<OfflineFileInfo[]> => {
+    const results: OfflineFileInfo[] = [];
+
+    for (const file of files) {
+      const result = await fileService.uploadImageOffline(file);
+      results.push(result);
+    }
+
+    return results;
+  },
+
+  /**
+   * Get file URL - handles both online and offline files
+   * @param fileId File ID or temp ID
+   * @returns URL to access the file
+   */
+  getFileUrlOffline: async (fileId: string): Promise<string> => {
+    // Check if it's an offline file
+    if (fileId.startsWith('offline-file-')) {
+      const pending = await getPendingFileUpload(fileId);
+      if (pending) {
+        // Regenerate URL if blob exists (in case the URL was revoked)
+        if (pending.blob && (!pending.localUrl || !pending.localUrl.startsWith('blob:'))) {
+          const newUrl = await regenerateLocalUrl(fileId);
+          if (newUrl) return newUrl;
+        }
+        return pending.localUrl;
+      }
+    }
+    // Return online URL
+    return fileService.getFileUrl(fileId);
+  },
+
+  /**
+   * Check if a file ID is an offline file
+   */
+  isOfflineFile: (fileId: string): boolean => {
+    return fileId.startsWith('offline-file-');
+  },
+
+  /**
+   * Sync all pending file uploads
+   * @returns Array of synced results with mapping from tempId to serverId
+   */
+  syncPendingUploads: async (): Promise<Array<{ tempId: string; serverId: string; success: boolean }>> => {
+    if (!navigator.onLine) {
+      return [];
+    }
+
+    const pending = await getPendingFileUploads();
+    const results: Array<{ tempId: string; serverId: string; success: boolean }> = [];
+
+    for (const item of pending) {
+      try {
+        await updatePendingFileUploadStatus(item.tempId, 'uploading');
+
+        // Convert blob to File for upload
+        const file = new File([item.blob], item.fileName, { type: item.mimeType });
+        const uploadResult = await fileService.uploadImage(file);
+
+        await updatePendingFileUploadStatus(item.tempId, 'uploaded', uploadResult.fileId);
+        results.push({ tempId: item.tempId, serverId: uploadResult.fileId, success: true });
+      } catch (error: any) {
+        await updatePendingFileUploadStatus(
+          item.tempId,
+          item.retryCount >= 2 ? 'failed' : 'pending',
+          undefined,
+          error.message
+        );
+        results.push({ tempId: item.tempId, serverId: '', success: false });
+      }
+    }
+
+    return results;
+  },
+
+  /**
+   * Get pending upload info by temp ID
+   */
+  getPendingUpload: async (tempId: string): Promise<PendingFileUpload | undefined> => {
+    return getPendingFileUpload(tempId);
+  },
+
+  /**
+   * Remove a pending upload (e.g., when user removes the image)
+   */
+  removePendingUpload: async (tempId: string): Promise<void> => {
+    await removePendingFileUpload(tempId);
   },
 };
 

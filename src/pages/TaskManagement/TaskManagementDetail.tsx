@@ -848,8 +848,8 @@ const TaskManagementDetail: React.FC = () => {
     }));
 
     const technician = technicians.find((t) => t.id === technicianId);
-    const technicianName =
-      technician?.displayName || technician?.userName || "KTV";
+    // technicianName available for future use
+    void (technician?.displayName || technician?.userName || "KTV");
   };
 
   // Handle bulk approve

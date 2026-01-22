@@ -4,7 +4,6 @@ import {
   testRequestService,
   SampleForSelectionDto,
 } from "../../../services/testRequestService";
-import { API_BASE_URL } from "../../../services/api";
 import { getSampleSelectionColumns } from "../columns";
 
 interface MixedResultModalProps {
