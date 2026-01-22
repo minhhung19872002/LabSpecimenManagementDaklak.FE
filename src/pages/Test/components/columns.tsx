@@ -2,6 +2,8 @@ import { Button, Space, Popconfirm } from "antd";
 import { EditOutlined, DeleteOutlined, EyeOutlined } from "../../../components/common/Icon";
 import { TestDto, TestStatus } from "../../../types/test";
 import StatusTag from "../../../components/common/StatusTag";
+import { authService } from "../../../services/authService";
+import { PERMISSIONS } from "../../../constants/permissionMapping";
 
 interface GetColumnsOptions {
   onView: (id: string) => void;
@@ -47,7 +49,12 @@ const getStatusText = (status: TestStatus): string => {
   }
 };
 
-export const getTestColumns = (options: GetColumnsOptions) => [
+export const getTestColumns = (options: GetColumnsOptions) => {
+  // Check permissions
+  const canEdit = authService.hasPermission(PERMISSIONS.Tests.Edit);
+  const canDelete = authService.hasPermission(PERMISSIONS.Tests.Delete);
+
+  return [
   {
     title: "Mã phép thử",
     dataIndex: "code",
@@ -117,32 +124,37 @@ export const getTestColumns = (options: GetColumnsOptions) => [
             icon={<EyeOutlined />}
             onClick={() => options.onView(record.id)}
           />
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => options.onEdit(record)}
-            disabled={isLocked}
-            title={lockedReason}
-          />
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa?"
-            onConfirm={() => options.onDelete(record.id)}
-            okText="Có"
-            cancelText="Không"
-            disabled={isLocked}
-          >
+          {canEdit && (
             <Button
               type="link"
               size="small"
-              danger
-              icon={<DeleteOutlined />}
+              icon={<EditOutlined />}
+              onClick={() => options.onEdit(record)}
               disabled={isLocked}
               title={lockedReason}
             />
-          </Popconfirm>
+          )}
+          {canDelete && (
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa?"
+              onConfirm={() => options.onDelete(record.id)}
+              okText="Có"
+              cancelText="Không"
+              disabled={isLocked}
+            >
+              <Button
+                type="link"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                disabled={isLocked}
+                title={lockedReason}
+              />
+            </Popconfirm>
+          )}
         </Space>
       );
     },
   },
 ];
+};

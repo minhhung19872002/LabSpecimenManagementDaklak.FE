@@ -22,6 +22,8 @@ import {
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 import { noteService } from "../../../services/noteService";
 import { NoteDto, CreateNoteDto, UpdateNoteDto } from "../../../types/note";
+import { authService } from "../../../services/authService";
+import { PERMISSIONS } from "../../../constants/permissionMapping";
 
 interface NotesTabProps {
   onDataChange?: () => void;
@@ -196,6 +198,9 @@ const NotesList: React.FC<NotesTabProps> = ({ onDataChange }) => {
     form.resetFields();
   };
 
+  const canEdit = authService.hasPermission(PERMISSIONS.Notes.Edit);
+  const canDelete = authService.hasPermission(PERMISSIONS.Notes.Delete);
+
   const columns: ColumnsType<NoteDto> = [
     {
       title: "STT",
@@ -224,8 +229,8 @@ const NotesList: React.FC<NotesTabProps> = ({ onDataChange }) => {
       render: (isActive: boolean, record) => (
         <Tag
           color={isActive ? "green" : "default"}
-          style={{ cursor: "pointer" }}
-          onClick={() => handleToggleActive(record)}
+          style={{ cursor: canEdit ? "pointer" : "default" }}
+          onClick={() => canEdit && handleToggleActive(record)}
         >
           {isActive ? "Hoạt động" : "Không hoạt động"}
         </Tag>
@@ -237,20 +242,24 @@ const NotesList: React.FC<NotesTabProps> = ({ onDataChange }) => {
       width: 120,
       render: (_, record) => (
         <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          />
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Có"
-            cancelText="Không"
-          >
-            <Button type="link" size="small" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
+          {canEdit && (
+            <Button
+              type="link"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+            />
+          )}
+          {canDelete && (
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa?"
+              onConfirm={() => handleDelete(record.id)}
+              okText="Có"
+              cancelText="Không"
+            >
+              <Button type="link" size="small" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          )}
         </Space>
       ),
     },
@@ -286,9 +295,11 @@ const NotesList: React.FC<NotesTabProps> = ({ onDataChange }) => {
         </Col>
         <Col flex="auto" />
         <Col>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-            Thêm mới
-          </Button>
+          {authService.hasPermission(PERMISSIONS.Notes.Create) && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+              Thêm mới
+            </Button>
+          )}
         </Col>
       </Row>
 

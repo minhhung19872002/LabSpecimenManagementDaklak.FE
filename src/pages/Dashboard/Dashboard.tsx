@@ -296,6 +296,7 @@ const Dashboard: React.FC = () => {
       onRecentRequestsFilterChange={setRecentRequestsFilter}
       onSelectedCustomerChange={setSelectedCustomer}
       onNavigateToQualityManagement={() => navigate(PATH_ROUTES.qualityManagement.index)}
+      onNavigateToQualityManagementDetail={(id: string) => navigate(PATH_ROUTES.qualityManagement.detail(id))}
       onNavigateToTestRequests={() => navigate(PATH_ROUTES.testRequests.index)}
     />
   );

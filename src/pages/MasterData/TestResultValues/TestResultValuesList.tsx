@@ -22,6 +22,8 @@ import testResultValueService, {
   TestResultValueDto,
   CreateUpdateTestResultValueDto,
 } from "../../../services/testResultValueService";
+import { authService } from "../../../services/authService";
+import { PERMISSIONS } from "../../../constants/permissionMapping";
 
 interface TestResultValuesTabProps {
   onDataChange?: () => void;
@@ -172,6 +174,9 @@ const TestResultValuesList: React.FC<TestResultValuesTabProps> = ({
       )
     : data;
 
+  const canEdit = authService.hasPermission(PERMISSIONS.TestResultValues.Edit);
+  const canDelete = authService.hasPermission(PERMISSIONS.TestResultValues.Delete);
+
   const columns: ColumnsType<TestResultValueDto> = [
     {
       title: "STT",
@@ -203,20 +208,24 @@ const TestResultValuesList: React.FC<TestResultValuesTabProps> = ({
       width: 120,
       render: (_, record) => (
         <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          />
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Có"
-            cancelText="Không"
-          >
-            <Button type="link" size="small" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
+          {canEdit && (
+            <Button
+              type="link"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+            />
+          )}
+          {canDelete && (
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa?"
+              onConfirm={() => handleDelete(record.id)}
+              okText="Có"
+              cancelText="Không"
+            >
+              <Button type="link" size="small" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          )}
         </Space>
       ),
     },
@@ -237,9 +246,11 @@ const TestResultValuesList: React.FC<TestResultValuesTabProps> = ({
         </Col>
         <Col flex="auto" />
         <Col>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-            Thêm mới
-          </Button>
+          {authService.hasPermission(PERMISSIONS.TestResultValues.Create) && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+              Thêm mới
+            </Button>
+          )}
         </Col>
       </Row>
 

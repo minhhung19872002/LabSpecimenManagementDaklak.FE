@@ -8,6 +8,8 @@ import { StatusTable, StatusModal } from "./components";
 import { getConditionColumns } from "./constants";
 import { SampleConditionTabProps } from "./types";
 import { sampleConditionSchema, SampleConditionFormData } from "./schemas";
+import { authService } from "../../../services/authService";
+import { PERMISSIONS } from "../../../constants/permissionMapping";
 
 const SampleConditionList: React.FC<SampleConditionTabProps> = ({
   onDataChange,
@@ -70,13 +72,15 @@ const SampleConditionList: React.FC<SampleConditionTabProps> = ({
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col flex="auto" />
         <Col>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => handleCreate(form)}
-          >
-            Thêm tình trạng mẫu
-          </Button>
+          {authService.hasPermission(PERMISSIONS.MasterData.Create) && (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => handleCreate(form)}
+            >
+              Thêm tình trạng mẫu
+            </Button>
+          )}
         </Col>
       </Row>
 

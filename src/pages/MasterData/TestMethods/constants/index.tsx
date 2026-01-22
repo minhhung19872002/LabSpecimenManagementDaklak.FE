@@ -37,8 +37,8 @@ export const getTestMethodColumns = (
     key: "actions",
     width: 120,
     render: (_, record) => {
-      const canEdit = authService.hasPermission(PERMISSIONS.TestMethods.Edit);
-      const canDelete = authService.hasPermission(PERMISSIONS.TestMethods.Delete);
+      const canEdit = authService.hasPermission(PERMISSIONS.MasterData.Edit);
+      const canDelete = authService.hasPermission(PERMISSIONS.MasterData.Delete);
 
       return (
         <Space size="small">
@@ -147,7 +147,7 @@ export const getIndicatorColumns = (
     key: "actions",
     width: 80,
     render: (_, record) => {
-      const canDelete = authService.hasPermission(PERMISSIONS.TestMethods.Delete);
+      const canDelete = authService.hasPermission(PERMISSIONS.MasterData.Delete);
 
       if (!canDelete) {
         return null;

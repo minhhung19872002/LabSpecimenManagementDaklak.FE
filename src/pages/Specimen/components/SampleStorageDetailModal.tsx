@@ -25,6 +25,8 @@ import {
   SampleStorageStatusColors,
 } from "../../../types/sampleStorage";
 import SampleCard from "./SampleCard";
+import { authService } from "../../../services/authService";
+import { PERMISSIONS } from "../../../constants/permissionMapping";
 
 interface SampleStorageDetailModalProps {
   open: boolean;
@@ -42,6 +44,8 @@ const SampleStorageDetailModal: React.FC<SampleStorageDetailModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [detail, setDetail] = useState<SampleStorageDetailDto | null>(null);
   const [cancellingAll, setCancellingAll] = useState(false);
+
+  const canEdit = authService.hasPermission(PERMISSIONS.Specimens.Edit);
 
   // Load detail when modal opens
   useEffect(() => {
@@ -105,6 +109,7 @@ const SampleStorageDetailModal: React.FC<SampleStorageDetailModalProps> = ({
   // Get samples that are not cancelled (for cancel all confirmation)
   const uncancelledSamples = detail?.samples.filter((s) => !s.isCancelled) || [];
   const showCancelAllButton =
+    canEdit &&
     detail?.status === SampleStorageStatus.PendingDisposal &&
     uncancelledSamples.length > 0;
 
@@ -199,6 +204,7 @@ const SampleStorageDetailModal: React.FC<SampleStorageDetailModalProps> = ({
                       sample={sample}
                       parentStatus={detail.status}
                       onCancel={handleCancelSample}
+                      canEdit={canEdit}
                     />
                   ),
                 }))}

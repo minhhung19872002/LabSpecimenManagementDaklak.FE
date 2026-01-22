@@ -9,6 +9,8 @@ import {
   ReceiptStatusColors,
 } from "../../../types/receipt";
 import { formatCurrency } from "../../../utils/formatters";
+import { authService } from "../../../services/authService";
+import { PERMISSIONS } from "../../../constants/permissionMapping";
 
 interface GetColumnsOptions {
   onConfirmPayment?: (testRequestId: string) => void;
@@ -80,10 +82,14 @@ export const getColumns = (options?: GetColumnsOptions): ColumnsType<ReceiptDto>
     align: "center",
     fixed: "right",
     render: (_: unknown, record: ReceiptDto) => {
-      // Chỉ hiển thị button khi status là PendingPayment hoặc PartiallyPaid
+      // Check permission
+      const hasConfirmPermission = authService.hasPermission(PERMISSIONS.Receipts.Confirm);
+
+      // Chỉ hiển thị button khi có quyền và status là PendingPayment hoặc PartiallyPaid
       const canConfirmPayment =
-        record.status === ReceiptStatus.PendingPayment ||
-        record.status === ReceiptStatus.PartiallyPaid;
+        hasConfirmPermission &&
+        (record.status === ReceiptStatus.PendingPayment ||
+        record.status === ReceiptStatus.PartiallyPaid);
 
       if (!canConfirmPayment) {
         return null;

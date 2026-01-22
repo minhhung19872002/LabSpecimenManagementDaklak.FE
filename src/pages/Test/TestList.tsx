@@ -4,6 +4,8 @@ import { PlusOutlined, ReloadOutlined } from "../../components/common/Icon";
 import { TestStatus } from "../../types/test";
 import { useTestList } from "./hooks";
 import TestFormModal from "./components/TestFormModal";
+import { authService } from "../../services/authService";
+import { PERMISSIONS } from "../../constants/permissionMapping";
 
 const TestList: React.FC = () => {
   const {
@@ -39,9 +41,11 @@ const TestList: React.FC = () => {
       extra={
         <Space>
           <Button icon={<ReloadOutlined />} onClick={loadData} />
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-            Thêm phép thử
-          </Button>
+          {authService.hasPermission(PERMISSIONS.Tests.Create) && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+              Thêm phép thử
+            </Button>
+          )}
         </Space>
       }
     >

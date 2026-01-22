@@ -9,6 +9,8 @@ import dayjs from 'dayjs';
 import './TestDetail.css';
 import { PATH_ROUTES } from '../../constants';
 import StatusTag from '../../components/common/StatusTag';
+import { authService } from '../../services/authService';
+import { PERMISSIONS } from '../../constants/permissionMapping';
 
 const TestDetail: React.FC = () => {
   const [test, setTest] = useState<TestDto | null>(null);
@@ -81,9 +83,11 @@ const TestDetail: React.FC = () => {
             <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(PATH_ROUTES.tests.index)}>
               {t('common.back')}
             </Button>
-            <Button type="primary" icon={<EditOutlined />} onClick={() => navigate(PATH_ROUTES.tests.edit(id!))}>
-              {t('common.edit')}
-            </Button>
+            {authService.hasPermission(PERMISSIONS.Tests.Edit) && (
+              <Button type="primary" icon={<EditOutlined />} onClick={() => navigate(PATH_ROUTES.tests.edit(id!))}>
+                {t('common.edit')}
+              </Button>
+            )}
           </Space>
         }
       >

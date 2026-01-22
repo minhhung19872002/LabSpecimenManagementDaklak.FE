@@ -11,15 +11,19 @@ interface SampleCardProps {
   sample: SampleStorageItemDto;
   parentStatus: SampleStorageStatus;
   onCancel: (sampleId: string) => void;
+  canEdit?: boolean;
 }
 
 const SampleCard: React.FC<SampleCardProps> = ({
   sample,
   parentStatus,
   onCancel,
+  canEdit = true,
 }) => {
   const showCancelButton =
-    parentStatus === SampleStorageStatus.PendingDisposal && !sample.isCancelled;
+    canEdit &&
+    parentStatus === SampleStorageStatus.PendingDisposal &&
+    !sample.isCancelled;
 
   const InfoItem: React.FC<{ label: string; value: React.ReactNode }> = ({
     label,

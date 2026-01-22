@@ -37,6 +37,8 @@ import IndicatorTable from "./components/IndicatorTable";
 import PrintModal from "./components/PrintModal";
 import RejectModal from "./components/RejectModal";
 import { PATH_ROUTES } from "../../constants";
+import { authService } from "../../services/authService";
+import { PERMISSIONS } from "../../constants/permissionMapping";
 
 const { Title } = Typography;
 
@@ -47,6 +49,10 @@ const QualityManagementDetail: React.FC = () => {
   // Note: QualityManagement theo Permission Matrix chỉ có QLCL (A) và Admin (A)
   // Cả 2 đều có full quyền nên không cần check UI chi tiết
   // Route permission đã được config đúng trong permissions.ts
+
+  // Check permissions
+  const canApprove = authService.hasPermission(PERMISSIONS.TestResults.Approve);
+  const canReject = authService.hasPermission(PERMISSIONS.TestResults.Reject);
 
   // State
   const [loading, setLoading] = useState(false);
@@ -404,31 +410,35 @@ const QualityManagementDetail: React.FC = () => {
             </Col>
             <Col>
               <Space>
-                {/* Bulk action buttons - always visible, disabled when no selection */}
-                <Button
-                  danger
-                  icon={<CloseOutlined />}
-                  onClick={handleBulkRejectClick}
-                  loading={bulkRejecting}
-                  disabled={selectedPendingIds.length === 0}
-                >
-                  Từ chối{" "}
-                  {selectedPendingIds.length > 0
-                    ? `(${selectedPendingIds.length})`
-                    : ""}
-                </Button>
-                <Button
-                  type="primary"
-                  icon={<CheckOutlined />}
-                  onClick={handleBulkApprove}
-                  loading={bulkApproving}
-                  disabled={selectedPendingIds.length === 0}
-                >
-                  Duyệt{" "}
-                  {selectedPendingIds.length > 0
-                    ? `(${selectedPendingIds.length})`
-                    : ""}
-                </Button>
+                {/* Bulk action buttons - only visible if user has permission */}
+                {canReject && (
+                  <Button
+                    danger
+                    icon={<CloseOutlined />}
+                    onClick={handleBulkRejectClick}
+                    loading={bulkRejecting}
+                    disabled={selectedPendingIds.length === 0}
+                  >
+                    Từ chối{" "}
+                    {selectedPendingIds.length > 0
+                      ? `(${selectedPendingIds.length})`
+                      : ""}
+                  </Button>
+                )}
+                {canApprove && (
+                  <Button
+                    type="primary"
+                    icon={<CheckOutlined />}
+                    onClick={handleBulkApprove}
+                    loading={bulkApproving}
+                    disabled={selectedPendingIds.length === 0}
+                  >
+                    Duyệt{" "}
+                    {selectedPendingIds.length > 0
+                      ? `(${selectedPendingIds.length})`
+                      : ""}
+                  </Button>
+                )}
               </Space>
             </Col>
           </Row>

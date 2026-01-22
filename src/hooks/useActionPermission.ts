@@ -1,23 +1,48 @@
 import { useMemo } from 'react';
 import { STORAGE_KEYS } from '../constants/storage';
-import { ACTION_PERMISSIONS, PermissionLevel, ModuleName, ActionName } from '../constants/actionPermissions';
-import { ACTION_PERMISSION_MAP, ModuleName as NewModuleName, ActionName as NewActionName } from '../constants/permissionMapping';
+import { ACTION_PERMISSION_MAP, ModuleName, ActionName } from '../constants/permissionMapping';
 import { authService } from '../services/authService';
 
 /**
- * Hook để kiểm tra quyền action theo Permission Matrix
+ * Permission Level
+ * - NONE: Không có quyền
+ * - VIEW (V): Chỉ có quyền xem
+ * - EDIT (E): Có thể xem và sử dụng function trên page
+ * - ALL (A): Full quyền
+ */
+export enum PermissionLevel {
+  NONE = 0,
+  VIEW = 1,
+  EDIT = 2,
+  ALL = 3,
+}
+
+/**
+ * Action Permission Result type
+ */
+export interface ActionPermissionResult {
+  canView: boolean;
+  canEdit: boolean;
+  canAll: boolean;
+  permissionLevel: PermissionLevel;
+  hasNoPermission: boolean;
+}
+
+/**
+ * Hook để kiểm tra quyền action theo Permission-based system
  *
- * Hỗ trợ cả 2 cách kiểm tra:
- * 1. Permission-based (MỚI): Kiểm tra permission name từ ACTION_PERMISSION_MAP
- * 2. Role-based (LEGACY): Kiểm tra role từ ACTION_PERMISSIONS (backward compatibility)
+ * Kiểm tra permission name từ ACTION_PERMISSION_MAP
  *
- * @param module - Tên module (testRequests, tasks, testing, qualityManagement, receipts)
+ * @param module - Tên module (testRequests, tasks, testing, qualityManagement, receipts, specimens, reports, ncr, etc.)
  * @param action - Tên action trong module
  * @returns Object chứa các quyền canView, canEdit, canAll và permissionLevel
  *
  * @example
  * // Trong TestRequestDetail.tsx
  * const { canEdit, canAll } = useActionPermission('testRequests', 'edit');
+ *
+ * // Trong SpecimenDetail.tsx
+ * const { canEdit } = useActionPermission('specimens', 'edit');
  *
  * return (
  *   <>
@@ -28,7 +53,7 @@ import { authService } from '../services/authService';
 export const useActionPermission = <M extends ModuleName>(
   module: M,
   action: ActionName<M>
-) => {
+): ActionPermissionResult => {
   const permissionLevel = useMemo(() => {
     try {
       // Lấy thông tin user từ localStorage
@@ -44,38 +69,18 @@ export const useActionPermission = <M extends ModuleName>(
         return PermissionLevel.ALL;
       }
 
-      // === 1. KIỂM TRA PERMISSION-BASED (MỚI) ===
-      // Kiểm tra xem module và action có trong ACTION_PERMISSION_MAP không
-      const moduleMap = ACTION_PERMISSION_MAP[module as NewModuleName];
+      // Kiểm tra permission-based
+      const moduleMap = ACTION_PERMISSION_MAP[module];
       if (moduleMap) {
-        const requiredPermission = moduleMap[action as NewActionName<typeof module>];
-        if (requiredPermission && authService.hasPermission(requiredPermission)) {
+        const requiredPermission = moduleMap[action as keyof typeof moduleMap];
+        if (requiredPermission && typeof requiredPermission === 'string' && authService.hasPermission(requiredPermission)) {
           // User có permission cụ thể => ALL level
           return PermissionLevel.ALL;
         }
       }
 
-      // === 2. KIỂM TRA ROLE-BASED (LEGACY - backward compatibility) ===
-      if (!userRoles || userRoles.length === 0) return PermissionLevel.NONE;
-
-      // Lấy permissions cho module
-      const modulePermissions = ACTION_PERMISSIONS[module];
-      if (!modulePermissions) return PermissionLevel.NONE;
-
-      // Lấy permissions cho action
-      const actionPermissions = modulePermissions[action as keyof typeof modulePermissions];
-      if (!actionPermissions) return PermissionLevel.NONE;
-
-      // Tìm permission level cao nhất từ các role của user
-      let maxLevel = PermissionLevel.NONE;
-      for (const role of userRoles) {
-        const level = (actionPermissions as Record<string, PermissionLevel>)[role];
-        if (level !== undefined && level > maxLevel) {
-          maxLevel = level;
-        }
-      }
-
-      return maxLevel;
+      // Không có quyền
+      return PermissionLevel.NONE;
     } catch {
       return PermissionLevel.NONE;
     }
@@ -98,8 +103,6 @@ export const useActionPermission = <M extends ModuleName>(
 /**
  * Hook để kiểm tra nhiều action cùng lúc trong một module
  *
- * Hỗ trợ cả permission-based (mới) và role-based (legacy) checking.
- *
  * @param module - Tên module
  * @param actions - Mảng các action cần kiểm tra
  * @returns Object với key là action name và value là permission info
@@ -111,7 +114,7 @@ export const useActionPermission = <M extends ModuleName>(
 export const useMultipleActionPermissions = <M extends ModuleName>(
   module: M,
   actions: ActionName<M>[]
-) => {
+): Record<string, ActionPermissionResult> => {
   const results = useMemo(() => {
     try {
       const userInfoStr = localStorage.getItem(STORAGE_KEYS.USER_INFO);
@@ -125,13 +128,12 @@ export const useMultipleActionPermissions = <M extends ModuleName>(
             hasNoPermission: true,
           };
           return acc;
-        }, {} as Record<string, ReturnType<typeof useActionPermission>>);
+        }, {} as Record<string, ActionPermissionResult>);
       }
 
       const userInfo = JSON.parse(userInfoStr);
       const userRoles: string[] = userInfo.roles || [];
       const userPermissions: string[] = userInfo.permissions || [];
-      const modulePermissions = ACTION_PERMISSIONS[module];
 
       // Admin luôn có full quyền
       const isAdmin = userRoles.includes('admin') || userPermissions.includes('Role:admin');
@@ -143,25 +145,12 @@ export const useMultipleActionPermissions = <M extends ModuleName>(
         if (isAdmin) {
           maxLevel = PermissionLevel.ALL;
         } else {
-          // === 1. KIỂM TRA PERMISSION-BASED (MỚI) ===
-          const moduleMap = ACTION_PERMISSION_MAP[module as NewModuleName];
+          // Kiểm tra permission-based
+          const moduleMap = ACTION_PERMISSION_MAP[module];
           if (moduleMap) {
-            const requiredPermission = moduleMap[action as NewActionName<typeof module>];
-            if (requiredPermission && authService.hasPermission(requiredPermission)) {
+            const requiredPermission = moduleMap[action as keyof typeof moduleMap];
+            if (requiredPermission && typeof requiredPermission === 'string' && authService.hasPermission(requiredPermission)) {
               maxLevel = PermissionLevel.ALL;
-            }
-          }
-
-          // === 2. KIỂM TRA ROLE-BASED (LEGACY) nếu chưa có permission ===
-          if (maxLevel === PermissionLevel.NONE && modulePermissions && userRoles.length > 0) {
-            const actionPermissions = modulePermissions[action as keyof typeof modulePermissions];
-            if (actionPermissions) {
-              for (const role of userRoles) {
-                const level = (actionPermissions as Record<string, PermissionLevel>)[role];
-                if (level !== undefined && level > maxLevel) {
-                  maxLevel = level;
-                }
-              }
             }
           }
         }
@@ -174,7 +163,7 @@ export const useMultipleActionPermissions = <M extends ModuleName>(
           hasNoPermission: maxLevel === PermissionLevel.NONE,
         };
         return acc;
-      }, {} as Record<string, ReturnType<typeof useActionPermission>>);
+      }, {} as Record<string, ActionPermissionResult>);
     } catch {
       return actions.reduce((acc, action) => {
         acc[action as string] = {
@@ -185,7 +174,7 @@ export const useMultipleActionPermissions = <M extends ModuleName>(
           hasNoPermission: true,
         };
         return acc;
-      }, {} as Record<string, ReturnType<typeof useActionPermission>>);
+      }, {} as Record<string, ActionPermissionResult>);
     }
   }, [module, actions]);
 
@@ -211,8 +200,6 @@ export const useUserRoles = (): string[] => {
 
 /**
  * Utility function để check permission (dùng ngoài React component)
- *
- * Hỗ trợ cả permission-based (mới) và role-based (legacy) checking.
  */
 export const checkActionPermission = <M extends ModuleName>(
   module: M,
@@ -248,11 +235,11 @@ export const checkActionPermission = <M extends ModuleName>(
       };
     }
 
-    // === 1. KIỂM TRA PERMISSION-BASED (MỚI) ===
-    const moduleMap = ACTION_PERMISSION_MAP[module as NewModuleName];
+    // Kiểm tra permission-based
+    const moduleMap = ACTION_PERMISSION_MAP[module];
     if (moduleMap) {
-      const requiredPermission = moduleMap[action as NewActionName<typeof module>];
-      if (requiredPermission && authService.hasPermission(requiredPermission)) {
+      const requiredPermission = moduleMap[action as keyof typeof moduleMap];
+      if (requiredPermission && typeof requiredPermission === 'string' && authService.hasPermission(requiredPermission)) {
         return {
           canView: true,
           canEdit: true,
@@ -262,40 +249,12 @@ export const checkActionPermission = <M extends ModuleName>(
       }
     }
 
-    // === 2. KIỂM TRA ROLE-BASED (LEGACY) ===
-    const modulePermissions = ACTION_PERMISSIONS[module];
-    if (!modulePermissions) {
-      return {
-        canView: false,
-        canEdit: false,
-        canAll: false,
-        permissionLevel: PermissionLevel.NONE,
-      };
-    }
-
-    const actionPermissions = modulePermissions[action as keyof typeof modulePermissions];
-    if (!actionPermissions) {
-      return {
-        canView: false,
-        canEdit: false,
-        canAll: false,
-        permissionLevel: PermissionLevel.NONE,
-      };
-    }
-
-    let maxLevel = PermissionLevel.NONE;
-    for (const role of userRoles) {
-      const level = (actionPermissions as Record<string, PermissionLevel>)[role];
-      if (level !== undefined && level > maxLevel) {
-        maxLevel = level;
-      }
-    }
-
+    // Không có quyền
     return {
-      canView: maxLevel >= PermissionLevel.VIEW,
-      canEdit: maxLevel >= PermissionLevel.EDIT,
-      canAll: maxLevel >= PermissionLevel.ALL,
-      permissionLevel: maxLevel,
+      canView: false,
+      canEdit: false,
+      canAll: false,
+      permissionLevel: PermissionLevel.NONE,
     };
   } catch {
     return {

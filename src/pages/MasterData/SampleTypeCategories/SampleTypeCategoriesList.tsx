@@ -8,6 +8,8 @@ import { CategoriesTable, CategoryModal } from "./components";
 import { getCategoryColumns, getSpecimenTypeColumns } from "./constants";
 import { SampleTypeCategoriesTabProps } from "./types";
 import { sampleTypeCategorySchema, SampleTypeCategoryFormData } from "./schemas";
+import { authService } from "../../../services/authService";
+import { PERMISSIONS } from "../../../constants/permissionMapping";
 
 const SampleTypeCategoriesList: React.FC<SampleTypeCategoriesTabProps> = ({
   onDataChange,
@@ -74,13 +76,15 @@ const SampleTypeCategoriesList: React.FC<SampleTypeCategoriesTabProps> = ({
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col flex="auto" />
         <Col>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => handleCreate(form)}
-          >
-            Thêm danh mục
-          </Button>
+          {authService.hasPermission(PERMISSIONS.SampleTypeCategories.Create) && (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => handleCreate(form)}
+            >
+              Thêm danh mục
+            </Button>
+          )}
         </Col>
       </Row>
 

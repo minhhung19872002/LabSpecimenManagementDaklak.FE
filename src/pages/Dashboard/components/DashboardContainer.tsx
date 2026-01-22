@@ -81,6 +81,7 @@ interface DashboardContainerProps {
   onRecentRequestsFilterChange: (value: string | undefined) => void;
   onSelectedCustomerChange: (value: string | null) => void;
   onNavigateToQualityManagement: () => void;
+  onNavigateToQualityManagementDetail: (id: string) => void;
   onNavigateToTestRequests: () => void;
 }
 
@@ -166,6 +167,7 @@ const DashboardContainer: React.FC<DashboardContainerProps> = ({
   onDateRangeChange,
   onSelectedCustomerChange,
   onNavigateToQualityManagement,
+  onNavigateToQualityManagementDetail,
   onNavigateToTestRequests,
 }) => {
   const recentRequestsColumns = getRecentRequestsColumns();
@@ -274,7 +276,12 @@ const DashboardContainer: React.FC<DashboardContainerProps> = ({
                       {task.customerName || "Không có thông tin"}
                     </span>
                   </div>
-                  <Button size="small">Kết quả</Button>
+                  <Button
+                    size="small"
+                    onClick={() => onNavigateToQualityManagementDetail(task.testRequestId)}
+                  >
+                    Kết quả
+                  </Button>
                 </div>
               ))}
               {pendingTasks.length === 0 && (

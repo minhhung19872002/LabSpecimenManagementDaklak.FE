@@ -235,7 +235,7 @@ const StandardsList: React.FC<StandardsTabProps> = ({
             >
               Tải template mẫu
             </Button>
-            {authService.hasPermission(PERMISSIONS.Standards.Create) && (
+            {authService.hasPermission(PERMISSIONS.MasterData.Create) && (
               <Button
                 icon={<UploadOutlined />}
                 onClick={() => setImportModalOpen(true)}
@@ -243,7 +243,7 @@ const StandardsList: React.FC<StandardsTabProps> = ({
                 Nhập danh sách
               </Button>
             )}
-            {authService.hasPermission(PERMISSIONS.Standards.Create) && (
+            {authService.hasPermission(PERMISSIONS.MasterData.Create) && (
               <Button
                 type="primary"
                 icon={<PlusOutlined />}

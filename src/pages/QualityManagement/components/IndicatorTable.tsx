@@ -22,6 +22,8 @@ import {
 } from "../../../types/qualityManagement";
 import IndicatorImageCell from "../../../components/common/IndicatorImageCell";
 import { IndicatorName } from "../../../components/common";
+import { authService } from "../../../services/authService";
+import { PERMISSIONS } from "../../../constants/permissionMapping";
 
 const { Panel } = Collapse;
 const { Text } = Typography;
@@ -61,9 +63,13 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     </StatusTag>
   );
 
-  // Check if actions should be disabled based on task status
+  // Check permissions
+  const canApprove = authService.hasPermission(PERMISSIONS.TestResults.Approve);
+  const canReject = authService.hasPermission(PERMISSIONS.TestResults.Reject);
+
+  // Check if actions should be disabled based on task status and permissions
   // Allow approving pending indicators even after ResultSent (for partial send scenarios)
-  const actionsDisabled = false;
+  const actionsDisabled = !canApprove && !canReject;
 
   // Group indicators by sample
   const groupedData: SampleGroup[] = React.useMemo(() => {
@@ -261,26 +267,30 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           }
           return (
             <Space size="small">
-              <Tooltip title="Duyệt">
-                <Button
-                  type="primary"
-                  size="small"
-                  icon={<CheckOutlined />}
-                  onClick={() => onApprove(record.id)}
-                >
-                  Duyệt
-                </Button>
-              </Tooltip>
-              <Tooltip title="Từ chối">
-                <Button
-                  danger
-                  size="small"
-                  icon={<CloseOutlined />}
-                  onClick={() => onReject(record.id)}
-                >
-                  Từ chối
-                </Button>
-              </Tooltip>
+              {canApprove && (
+                <Tooltip title="Duyệt">
+                  <Button
+                    type="primary"
+                    size="small"
+                    icon={<CheckOutlined />}
+                    onClick={() => onApprove(record.id)}
+                  >
+                    Duyệt
+                  </Button>
+                </Tooltip>
+              )}
+              {canReject && (
+                <Tooltip title="Từ chối">
+                  <Button
+                    danger
+                    size="small"
+                    icon={<CloseOutlined />}
+                    onClick={() => onReject(record.id)}
+                  >
+                    Từ chối
+                  </Button>
+                </Tooltip>
+              )}
             </Space>
           );
         },

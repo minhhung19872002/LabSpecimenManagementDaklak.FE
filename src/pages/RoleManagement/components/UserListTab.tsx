@@ -4,6 +4,8 @@ import { PlusOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table';
 import { RoleUserDto, GetRoleUsersParams } from '../../../services/roleManagementService';
 import AddUserModal from './AddUserModal';
+import { authService } from '../../../services/authService';
+import { PERMISSIONS } from '../../../constants/permissionMapping';
 
 interface UserListTabProps {
   roleId: string;
@@ -36,6 +38,8 @@ const UserListTab: React.FC<UserListTabProps> = ({
 }) => {
   const [addUserModalOpen, setAddUserModalOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
+
+  const canEdit = authService.hasPermission(PERMISSIONS.RoleManagement.Edit);
 
   const columns: ColumnsType<RoleUserDto> = [
     {
@@ -85,23 +89,29 @@ const UserListTab: React.FC<UserListTabProps> = ({
       key: 'actions',
       width: 100,
       align: 'center',
-      render: (_, record) => (
-        <Popconfirm
-          title="Xóa người dùng khỏi nhóm"
-          description="Bạn có chắc chắn muốn xóa người dùng này khỏi nhóm quyền?"
-          onConfirm={() => onRemoveUser(record.id)}
-          okText="Xóa"
-          cancelText="Hủy"
-          okButtonProps={{ danger: true }}
-        >
-          <Button
-            type="text"
-            danger
-            icon={<DeleteOutlined />}
-            size="small"
-          />
-        </Popconfirm>
-      ),
+      render: (_, record) => {
+        if (!canEdit) {
+          return null;
+        }
+
+        return (
+          <Popconfirm
+            title="Xóa người dùng khỏi nhóm"
+            description="Bạn có chắc chắn muốn xóa người dùng này khỏi nhóm quyền?"
+            onConfirm={() => onRemoveUser(record.id)}
+            okText="Xóa"
+            cancelText="Hủy"
+            okButtonProps={{ danger: true }}
+          >
+            <Button
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
+              size="small"
+            />
+          </Popconfirm>
+        );
+      },
     },
   ];
 
@@ -135,13 +145,15 @@ const UserListTab: React.FC<UserListTabProps> = ({
             }
           />
         </Space>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => setAddUserModalOpen(true)}
-        >
-          Thêm người dùng
-        </Button>
+        {canEdit && (
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setAddUserModalOpen(true)}
+          >
+            Thêm người dùng
+          </Button>
+        )}
       </div>
 
       <Table

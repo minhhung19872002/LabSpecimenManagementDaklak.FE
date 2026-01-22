@@ -89,6 +89,17 @@ export const PERMISSIONS = {
     ViewAll: `${P}.LaboratoryTasks.ViewAll`,
   },
 
+  // Task Assignments
+  TaskAssignments: {
+    Default: `${P}.TaskAssignments`,
+    Create: `${P}.TaskAssignments.Create`,
+    Edit: `${P}.TaskAssignments.Edit`,
+    Delete: `${P}.TaskAssignments.Delete`,
+    Accept: `${P}.TaskAssignments.Accept`,
+    Reject: `${P}.TaskAssignments.Reject`,
+    Complete: `${P}.TaskAssignments.Complete`,
+  },
+
   // Quotations
   Quotations: {
     Default: `${P}.Quotations`,
@@ -112,7 +123,17 @@ export const PERMISSIONS = {
     Delete: `${P}.Subcontractors.Delete`,
   },
 
-  // Master Data
+  // Master Data - Unified Permissions (for all master data features)
+  MasterData: {
+    Default: `${P}.MasterData`,
+    View: `${P}.MasterData.View`,
+    Create: `${P}.MasterData.Create`,
+    Edit: `${P}.MasterData.Edit`,
+    Delete: `${P}.MasterData.Delete`,
+    Import: `${P}.MasterData.Import`,
+  },
+
+  // Master Data - Individual (DEPRECATED - use MasterData instead)
   Departments: {
     Default: `${P}.Departments`,
     Create: `${P}.Departments.Create`,
