@@ -13,6 +13,7 @@ import {
   Popover,
   Image,
   Tag,
+  Tooltip,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -36,8 +37,9 @@ import { TestRequestSampleDto } from "../../types/testRequest";
 import { PATH_ROUTES } from "../../constants";
 import StatusTag from "../../components/common/StatusTag";
 import { IndicatorName } from "../../components/common";
+import "../../styles/ListCard.css";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 // Helper components
 const BoolIcon: React.FC<{ value: boolean }> = ({ value }) => {
@@ -423,31 +425,27 @@ const ReceiptDetail: React.FC = () => {
     );
   }
 
+  // Section title style
+  const sectionTitleStyle: React.CSSProperties = {
+    fontSize: 14,
+    fontWeight: 600,
+    color: "#262626",
+    paddingBottom: 8,
+  };
+
   return (
-    <div style={{ padding: 0 }}>
-      {/* Header */}
-      <Card style={{ marginBottom: 16 }} bodyStyle={{ padding: "12px 24px" }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Space>
+    <div className="page-wrapper">
+      <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
+        <Col>
+          <Tooltip title="Quay lại">
             <Button
+              shape="circle"
               icon={<ArrowLeftOutlined />}
               onClick={() => navigate(PATH_ROUTES.receipts.index)}
-            >
-              Quay lại
-            </Button>
-            <Title level={4} style={{ marginBottom: 0 }}>
-              Thông tin phiếu thu
-            </Title>
-            <StatusTag color={ReceiptStatusColors[data.status]}>
-              {ReceiptStatusLabels[data.status]}
-            </StatusTag>
-          </Space>
+            />
+          </Tooltip>
+        </Col>
+        <Col>
           <Space>
             {hasChanges && !isReadOnly && (
               <Button
@@ -473,263 +471,296 @@ const ReceiptDetail: React.FC = () => {
                   onClick={handleMarkAsPaid}
                   loading={saving}
                   disabled={!canChangeStatus}
+                  style={
+                    canChangeStatus
+                      ? {
+                          background:
+                            "linear-gradient(to right, #1E63F8, #009AE3)",
+                          border: "none",
+                          color: "#fff",
+                        }
+                      : undefined
+                  }
                 >
                   Đã thanh toán
                 </Button>
               </>
             )}
           </Space>
-        </div>
-      </Card>
+        </Col>
+      </Row>
 
-      {/* Content */}
-      <Card>
-        {/* Section 1: Thông tin hợp đồng */}
-        <div className="detail-section">
-          <Title level={5} style={{ marginBottom: 12 }}>
-            Thông tin hợp đồng
-          </Title>
-          <Row gutter={[16, 12]}>
-            <Col xs={24} md={8}>
-              <div
-                className="detail-item"
-                style={{
-                  height: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                <Text type="secondary">Số HĐ:</Text>
-                <Text strong>{testRequest.contractNumber || "-"}</Text>
-              </div>
-            </Col>
-            <Col xs={24} md={8}>
-              <div
-                className="detail-item"
-                style={{
-                  height: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                <Text type="secondary">Ngày HĐ:</Text>
-                <Text strong>
-                  {testRequest.contractDate
-                    ? dayjs(testRequest.contractDate).format("DD/MM/YYYY")
-                    : "-"}
-                </Text>
-              </div>
-            </Col>
-            <Col xs={24} md={8}>
-              <div
-                className="detail-item"
-                style={{ display: "flex", alignItems: "center", gap: 8 }}
-              >
-                <Text type="secondary" style={{ whiteSpace: "nowrap" }}>
-                  Số phiếu thu:
-                </Text>
-                <Input
-                  value={receiptNumber}
-                  onChange={(e) =>
-                    handleNumberInput(e.target.value, setReceiptNumber)
-                  }
-                  placeholder="Nhập số phiếu thu"
-                  style={{ width: 180 }}
-                  disabled={isReadOnly}
-                />
-              </div>
-            </Col>
-          </Row>
-        </div>
-
-        {/* Section 2: Thông tin khách hàng */}
-        <div className="detail-section" style={{ marginTop: 24 }}>
-          <Title level={5} style={{ marginBottom: 12 }}>
-            Thông tin khách hàng
-          </Title>
-          <Row gutter={[16, 12]}>
-            <Col xs={24} xl={12}>
-              <div className="detail-item">
-                <Text type="secondary">Tên CS/DN:</Text>
-                <Text strong style={{ fontSize: 15 }}>
-                  {testRequest.customerName || "-"}
-                </Text>
-              </div>
-            </Col>
-            <Col xs={24} xl={12}>
-              <div className="detail-item">
-                <Text type="secondary">Mã số thuế:</Text>
-                <Text>{testRequest.taxCode || "-"}</Text>
-              </div>
-            </Col>
-          </Row>
-          <Row gutter={[16, 12]} style={{ marginTop: 8 }}>
-            <Col xs={24}>
-              <div className="detail-item">
-                <Text type="secondary">Địa chỉ:</Text>
-                <Text>
-                  {[
-                    testRequest.address,
-                    testRequest.ward,
-                    testRequest.district,
-                    testRequest.province,
-                  ]
-                    .filter(Boolean)
-                    .join(", ") || "-"}
-                </Text>
-              </div>
-            </Col>
-          </Row>
-          <Row gutter={[16, 12]} style={{ marginTop: 8 }}>
-            <Col xs={24} md={12}>
-              <div className="detail-item">
-                <Text type="secondary">Người liên hệ:</Text>
-                <Text strong>{testRequest.contactPerson || "-"}</Text>
-              </div>
-            </Col>
-          </Row>
-        </div>
-
-        {/* Section 3: Thông tin mẫu */}
-        <div className="detail-section" style={{ marginTop: 24 }}>
-          <Title level={5} style={{ marginBottom: 12 }}>
-            Thông tin mẫu ({testRequest.samples?.length || 0} mẫu)
-          </Title>
-          <Table
-            dataSource={testRequest.samples || []}
-            columns={sampleColumns}
-            rowKey="id"
-            pagination={false}
-            scroll={{ x: "max-content" }}
-            size="small"
-            bordered
-          />
-        </div>
-
-        {/* Section 4: Loại hình mẫu */}
-        <div className="detail-section" style={{ marginTop: 24 }}>
-          <Title level={5} style={{ marginBottom: 12 }}>
-            Loại hình mẫu
-          </Title>
-          <Row gutter={[16, 8]}>
-            <Col xs={24}>
-              <Space wrap size={[16, 8]}>
-                <BoolItem
-                  value={testRequest.sampleTypeService}
-                  label="Dịch vụ"
-                />
-                <BoolItem
-                  value={testRequest.sampleTypeContract}
-                  label="Hợp đồng"
-                />
-                <BoolItem value={testRequest.sampleTypeTask} label="Nhiệm vụ" />
-                <BoolItem
-                  value={testRequest.sampleTypeSubContract}
-                  label="Thầu phụ"
-                />
-              </Space>
-            </Col>
-          </Row>
-          {testRequest.subContract && (
-            <Row gutter={[16, 8]} style={{ marginTop: 8 }}>
-              <Col xs={24}>
-                <div className="detail-item">
-                  <Text type="secondary">Thầu phụ:</Text>
-                  <Text>{testRequest.subContract}</Text>
-                </div>
-              </Col>
-            </Row>
-          )}
-        </div>
-
-        {/* Section 5: Yêu cầu về phương pháp */}
-        <div className="detail-section" style={{ marginTop: 24 }}>
-          <Title level={5} style={{ marginBottom: 12 }}>
-            Yêu cầu về phương pháp
-          </Title>
-          <Row gutter={[16, 12]}>
-            <Col xs={24}>
-              <Space wrap size={[16, 8]}>
-                <BoolItem
-                  value={testRequest.methodWestHighlandInstitute}
-                  label="Theo Viện KHKT NN Tây Nguyên"
-                />
-                <BoolItem
-                  value={testRequest.methodCustomer}
-                  label="Theo yêu cầu khách hàng"
-                />
-              </Space>
-            </Col>
-            {testRequest.methodCustomerDetail && (
-              <Col xs={24}>
-                <div className="detail-item">
-                  <Text type="secondary">Chi tiết PP KH:</Text>
-                  <Text>{testRequest.methodCustomerDetail}</Text>
-                </div>
-              </Col>
-            )}
-          </Row>
-        </div>
-
-        {/* Section 6: Thông tin chi phí */}
-        <div className="detail-section" style={{ marginTop: 24 }}>
-          <Title level={5} style={{ marginBottom: 12 }}>
-            Thông tin chi phí
-          </Title>
-          <Row gutter={[16, 12]}>
-            <Col xs={24}>
-              <div
-                style={{
-                  background: "#e6f7ff",
-                  padding: "16px",
-                  borderRadius: 8,
-                  border: "1px solid #91d5ff",
-                  textAlign: "center",
-                }}
-              >
-                <Text
-                  type="secondary"
-                  style={{ display: "block", marginBottom: 4 }}
-                >
-                  Tổng chi phí:
-                </Text>
-                <Text strong style={{ fontSize: 24, color: "#1890ff" }}>
-                  {(testRequest.totalCost || 0).toLocaleString("vi-VN")} đ
-                </Text>
-              </div>
-            </Col>
-            {testRequest.totalCostInWords && (
-              <Col xs={24}>
-                <div className="detail-item">
-                  <Text type="secondary">Bằng chữ:</Text>
-                  <Text italic>{testRequest.totalCostInWords}</Text>
-                </div>
-              </Col>
-            )}
-          </Row>
-        </div>
-
-        {/* Payment info if paid */}
-        {data.status === ReceiptStatus.Paid && data.paidDate && (
-          <div className="detail-section" style={{ marginTop: 24 }}>
-            <Title level={5} style={{ marginBottom: 12 }}>
-              Thông tin thanh toán
-            </Title>
+      <Card
+        className="list-card"
+        title={
+          <Space>
+            Thông tin phiếu thu
+            <StatusTag
+              color={ReceiptStatusColors[data.status]}
+              style={{ border: "1px solid #fff" }}
+            >
+              {ReceiptStatusLabels[data.status]}
+            </StatusTag>
+          </Space>
+        }
+        styles={{ body: { paddingLeft: 0, paddingRight: 0 } }}
+      >
+        <div className="card-content-padding">
+          {/* Section 1: Thông tin hợp đồng */}
+          <div className="detail-section">
+            <div style={sectionTitleStyle}>Thông tin hợp đồng</div>
             <Row gutter={[16, 12]}>
-              <Col xs={24}>
-                <Tag
-                  color="green"
-                  style={{ fontSize: 14, padding: "4px 12px" }}
+              <Col xs={24} md={8}>
+                <div
+                  className="detail-item"
+                  style={{
+                    height: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
                 >
-                  Đã thanh toán ngày{" "}
-                  {dayjs(data.paidDate).format("DD/MM/YYYY HH:mm")}
-                </Tag>
+                  <Text type="secondary">Số HĐ:</Text>
+                  <Text strong>{testRequest.contractNumber || "-"}</Text>
+                </div>
+              </Col>
+              <Col xs={24} md={8}>
+                <div
+                  className="detail-item"
+                  style={{
+                    height: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  <Text type="secondary">Ngày HĐ:</Text>
+                  <Text strong>
+                    {testRequest.contractDate
+                      ? dayjs(testRequest.contractDate).format("DD/MM/YYYY")
+                      : "-"}
+                  </Text>
+                </div>
+              </Col>
+              <Col xs={24} md={8}>
+                <div
+                  className="detail-item"
+                  style={{ display: "flex", alignItems: "center", gap: 8 }}
+                >
+                  <Text type="secondary" style={{ whiteSpace: "nowrap" }}>
+                    Số phiếu thu:
+                  </Text>
+                  <Input
+                    value={receiptNumber}
+                    onChange={(e) =>
+                      handleNumberInput(e.target.value, setReceiptNumber)
+                    }
+                    placeholder="Nhập số phiếu thu"
+                    style={{ width: 180 }}
+                    disabled={isReadOnly}
+                  />
+                </div>
               </Col>
             </Row>
           </div>
-        )}
+
+          {/* Section 2: Thông tin khách hàng */}
+          <div className="detail-section" style={{ marginTop: 24 }}>
+            <div style={sectionTitleStyle}>Thông tin khách hàng</div>
+            <Row gutter={[16, 12]}>
+              <Col xs={24} xl={12}>
+                <div className="detail-item">
+                  <Text type="secondary">Tên CS/DN:</Text>
+                  <Text strong style={{ fontSize: 15 }}>
+                    {testRequest.customerName || "-"}
+                  </Text>
+                </div>
+              </Col>
+              <Col xs={24} xl={12}>
+                <div className="detail-item">
+                  <Text type="secondary">Mã số thuế:</Text>
+                  <Text>{testRequest.taxCode || "-"}</Text>
+                </div>
+              </Col>
+            </Row>
+            <Row gutter={[16, 12]} style={{ marginTop: 8 }}>
+              <Col xs={24}>
+                <div className="detail-item">
+                  <Text type="secondary">Địa chỉ:</Text>
+                  <Text>
+                    {[
+                      testRequest.address,
+                      testRequest.ward,
+                      testRequest.district,
+                      testRequest.province,
+                    ]
+                      .filter(Boolean)
+                      .join(", ") || "-"}
+                  </Text>
+                </div>
+              </Col>
+            </Row>
+            <Row gutter={[16, 12]} style={{ marginTop: 8 }}>
+              <Col xs={24} md={12}>
+                <div className="detail-item">
+                  <Text type="secondary">Người liên hệ:</Text>
+                  <Text strong>{testRequest.contactPerson || "-"}</Text>
+                </div>
+              </Col>
+            </Row>
+          </div>
+
+          {/* Section 3: Thông tin mẫu */}
+          <div
+            className="detail-section"
+            style={{
+              marginTop: 24,
+              paddingLeft: 0,
+              paddingRight: 0,
+              paddingBottom: 0,
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                ...sectionTitleStyle,
+                paddingLeft: 16,
+                paddingRight: 16,
+              }}
+            >
+              Thông tin mẫu ({testRequest.samples?.length || 0} mẫu)
+            </div>
+            <Table
+              dataSource={testRequest.samples || []}
+              columns={sampleColumns}
+              rowKey="id"
+              pagination={false}
+              scroll={{ x: "max-content" }}
+              size="small"
+              bordered
+            />
+          </div>
+        </div>
+
+        <div className="card-content-padding" style={{ paddingBottom: 16 }}>
+          {/* Section 4: Loại hình mẫu */}
+          <div className="detail-section" style={{ marginTop: 24 }}>
+            <div style={sectionTitleStyle}>Loại hình mẫu</div>
+            <Row gutter={[16, 8]}>
+              <Col xs={24}>
+                <Space wrap size={[16, 8]}>
+                  <BoolItem
+                    value={testRequest.sampleTypeService}
+                    label="Dịch vụ"
+                  />
+                  <BoolItem
+                    value={testRequest.sampleTypeContract}
+                    label="Hợp đồng"
+                  />
+                  <BoolItem
+                    value={testRequest.sampleTypeTask}
+                    label="Nhiệm vụ"
+                  />
+                  <BoolItem
+                    value={testRequest.sampleTypeSubContract}
+                    label="Thầu phụ"
+                  />
+                </Space>
+              </Col>
+            </Row>
+            {testRequest.subContract && (
+              <Row gutter={[16, 8]} style={{ marginTop: 8 }}>
+                <Col xs={24}>
+                  <div className="detail-item">
+                    <Text type="secondary">Thầu phụ:</Text>
+                    <Text>{testRequest.subContract}</Text>
+                  </div>
+                </Col>
+              </Row>
+            )}
+          </div>
+
+          {/* Section 5: Yêu cầu về phương pháp */}
+          <div className="detail-section" style={{ marginTop: 24 }}>
+            <div style={sectionTitleStyle}>Yêu cầu về phương pháp</div>
+            <Row gutter={[16, 12]}>
+              <Col xs={24}>
+                <Space wrap size={[16, 8]}>
+                  <BoolItem
+                    value={testRequest.methodWestHighlandInstitute}
+                    label="Theo Viện KHKT NN Tây Nguyên"
+                  />
+                  <BoolItem
+                    value={testRequest.methodCustomer}
+                    label="Theo yêu cầu khách hàng"
+                  />
+                </Space>
+              </Col>
+              {testRequest.methodCustomerDetail && (
+                <Col xs={24}>
+                  <div className="detail-item">
+                    <Text type="secondary">Chi tiết PP KH:</Text>
+                    <Text>{testRequest.methodCustomerDetail}</Text>
+                  </div>
+                </Col>
+              )}
+            </Row>
+          </div>
+
+          {/* Section 6: Thông tin chi phí */}
+          <div className="detail-section" style={{ marginTop: 24 }}>
+            <div style={sectionTitleStyle}>Thông tin chi phí</div>
+            <Row gutter={[16, 12]}>
+              <Col xs={24}>
+                <div
+                  style={{
+                    background: "#e6f7ff",
+                    padding: "16px",
+                    borderRadius: 8,
+                    border: "1px solid #91d5ff",
+                    textAlign: "center",
+                  }}
+                >
+                  <Text
+                    type="secondary"
+                    style={{ display: "block", marginBottom: 4 }}
+                  >
+                    Tổng chi phí:
+                  </Text>
+                  <Text strong style={{ fontSize: 24, color: "#1890ff" }}>
+                    {(testRequest.totalCost || 0).toLocaleString("vi-VN")} đ
+                  </Text>
+                </div>
+              </Col>
+              {testRequest.totalCostInWords && (
+                <Col xs={24}>
+                  <div className="detail-item">
+                    <Text type="secondary">Bằng chữ:</Text>
+                    <Text italic>{testRequest.totalCostInWords}</Text>
+                  </div>
+                </Col>
+              )}
+            </Row>
+          </div>
+
+          {/* Payment info if paid */}
+          {data.status === ReceiptStatus.Paid && data.paidDate && (
+            <div className="detail-section" style={{ marginTop: 24 }}>
+              <div style={sectionTitleStyle}>Thông tin thanh toán</div>
+              <Row gutter={[16, 12]}>
+                <Col xs={24}>
+                  <Tag
+                    color="green"
+                    style={{ fontSize: 14, padding: "4px 12px" }}
+                  >
+                    Đã thanh toán ngày{" "}
+                    {dayjs(data.paidDate).format("DD/MM/YYYY HH:mm")}
+                  </Tag>
+                </Col>
+              </Row>
+            </div>
+          )}
+        </div>
       </Card>
     </div>
   );
