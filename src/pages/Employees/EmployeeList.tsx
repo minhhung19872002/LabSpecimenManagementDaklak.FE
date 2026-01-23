@@ -7,12 +7,11 @@ import {
   Input,
   Row,
   Col,
-  Statistic,
+  Typography,
   Select,
 } from "antd";
-import {
+import Icon, {
   PlusOutlined,
-  SearchOutlined,
   ReloadOutlined,
   TeamOutlined,
 } from "../../components/common/Icon";
@@ -22,6 +21,9 @@ import ResetPasswordModal from "./components/ResetPasswordModal";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
 import "../../styles/ListCard.css";
+import "../Dashboard/Dashboard.css";
+
+const { Text } = Typography;
 
 const EmployeeList: React.FC = () => {
   const {
@@ -62,35 +64,41 @@ const EmployeeList: React.FC = () => {
   return (
     <div>
       {/* Statistics */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col xs={12} sm={6} md={4}>
-          <Card>
-            <Statistic
-              title="Tổng nhân viên"
-              value={stats.total}
-              prefix={<TeamOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6} md={4}>
-          <Card>
-            <Statistic
-              title="Đang hoạt động"
-              value={stats.active}
-              valueStyle={{ color: "#52c41a" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6} md={4}>
-          <Card>
-            <Statistic
-              title="Vô hiệu hóa"
-              value={stats.inactive}
-              valueStyle={{ color: "#ff4d4f" }}
-            />
-          </Card>
-        </Col>
-      </Row>
+      <div className="dashboard-stats-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+        <Card className="dashboard-stat-card" bordered={false}>
+          <div className="dashboard-stat-content">
+            <div className="dashboard-stat-info">
+              <Text className="dashboard-stat-title">Tổng nhân viên</Text>
+              <div className="dashboard-stat-value">{stats.total}</div>
+            </div>
+            <div className="dashboard-stat-icon contract">
+              <Icon name="people-fill" />
+            </div>
+          </div>
+        </Card>
+        <Card className="dashboard-stat-card" bordered={false}>
+          <div className="dashboard-stat-content">
+            <div className="dashboard-stat-info">
+              <Text className="dashboard-stat-title">Đang hoạt động</Text>
+              <div className="dashboard-stat-value" style={{ background: "#52C41A", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>{stats.active}</div>
+            </div>
+            <div className="dashboard-stat-icon green">
+              <Icon name="check-circle" />
+            </div>
+          </div>
+        </Card>
+        <Card className="dashboard-stat-card" bordered={false}>
+          <div className="dashboard-stat-content">
+            <div className="dashboard-stat-info">
+              <Text className="dashboard-stat-title">Vô hiệu hóa</Text>
+              <div className="dashboard-stat-value" style={{ background: "#F5222D", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>{stats.inactive}</div>
+            </div>
+            <div className="dashboard-stat-icon red">
+              <Icon name="x-circle" />
+            </div>
+          </div>
+        </Card>
+      </div>
 
       <Card
         className="list-card"
@@ -118,14 +126,15 @@ const EmployeeList: React.FC = () => {
         {/* Search & Filter */}
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
           <Col xs={24} sm={12} md={8}>
-            <Input
+            <Input.Search
               placeholder="Tìm kiếm theo tên, username, email, SĐT..."
-              prefix={<SearchOutlined />}
               value={searchInput}
               onChange={(e) => handleSearchInputChange(e.target.value)}
+              onSearch={handleSearch}
               onPressEnter={handleSearch}
               allowClear
               onClear={handleClearSearch}
+              enterButton
             />
           </Col>
           <Col xs={24} sm={6} md={4}>
