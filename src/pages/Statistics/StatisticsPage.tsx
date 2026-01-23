@@ -3,7 +3,6 @@ import {
   Card,
   Row,
   Col,
-  Statistic,
   Table,
   DatePicker,
   Button,
@@ -15,8 +14,11 @@ import {
   Empty,
   Modal,
   Tooltip,
-  Radio
+  Radio,
+  Typography
 } from 'antd';
+
+const { Text } = Typography;
 import {
   FileTextOutlined,
   ExperimentOutlined,
@@ -37,6 +39,8 @@ import {
 } from '../../services/statisticsService';
 import { authService } from '../../services/authService';
 import { PERMISSIONS } from '../../constants/permissionMapping';
+import '../Dashboard/Dashboard.css';
+import '../../styles/ListCard.css';
 
 const { RangePicker } = DatePicker;
 
@@ -85,6 +89,7 @@ const StatisticsPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [statisticsData, setStatisticsData] = useState<StatisticsDataDto | null>(null);
+  const [activeTab, setActiveTab] = useState('monthly');
   const [showFullscreen, setShowFullscreen] = useState<FullscreenState>(false);
   const [chartReady, setChartReady] = useState(false);
 
@@ -297,45 +302,57 @@ const StatisticsPage: React.FC = () => {
 
       <Spin spinning={loading}>
         {/* Summary Stats */}
-        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          <Col xs={24} sm={12} lg={8}>
-            <Card>
-              <Statistic
-                title="Tổng yêu cầu"
-                value={overview?.totalTestRequests ?? totalRequests}
-                prefix={<FileTextOutlined style={{ color: '#1890ff' }} />}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={8}>
-            <Card>
-              <Statistic
-                title="Tổng mẫu thử"
-                value={overview?.totalSpecimens ?? totalSpecimens}
-                prefix={<ExperimentOutlined style={{ color: '#722ed1' }} />}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={8}>
-            <Card>
-              <Statistic
-                title="Tổng phép thử"
-                value={overview?.totalTests ?? totalTests}
-                prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
-              />
-            </Card>
-          </Col>
-        </Row>
+        <div className="dashboard-stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+          <Card className="dashboard-stat-card" bordered={false}>
+            <div className="dashboard-stat-content">
+              <div className="dashboard-stat-info">
+                <Text className="dashboard-stat-title">Tổng yêu cầu</Text>
+                <div className="dashboard-stat-value">
+                  {overview?.totalTestRequests ?? totalRequests}
+                </div>
+              </div>
+              <div className="dashboard-stat-icon blue">
+                <FileTextOutlined />
+              </div>
+            </div>
+          </Card>
+          <Card className="dashboard-stat-card" bordered={false}>
+            <div className="dashboard-stat-content">
+              <div className="dashboard-stat-info">
+                <Text className="dashboard-stat-title">Tổng mẫu thử</Text>
+                <div className="dashboard-stat-value">
+                  {overview?.totalSpecimens ?? totalSpecimens}
+                </div>
+              </div>
+              <div className="dashboard-stat-icon purple">
+                <ExperimentOutlined />
+              </div>
+            </div>
+          </Card>
+          <Card className="dashboard-stat-card" bordered={false}>
+            <div className="dashboard-stat-content">
+              <div className="dashboard-stat-info">
+                <Text className="dashboard-stat-title">Tổng phép thử</Text>
+                <div className="dashboard-stat-value">
+                  {overview?.totalTests ?? totalTests}
+                </div>
+              </div>
+              <div className="dashboard-stat-icon green">
+                <CheckCircleOutlined />
+              </div>
+            </div>
+          </Card>
+        </div>
 
         {/* Charts Row 1: Monthly Trends & Sample Distribution */}
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
           <Col xs={24} lg={14}>
             <Card
+              className="list-card"
               title={<><BarChartOutlined /> Xu hướng theo tháng</>}
               extra={
                 <Tooltip title="Xem toàn màn hình">
                   <Button
-                    type="text"
                     size="small"
                     icon={<FullscreenOutlined />}
                     onClick={(e) => {
@@ -355,7 +372,7 @@ const StatisticsPage: React.FC = () => {
             </Card>
           </Col>
           <Col xs={24} lg={10}>
-            <Card title={<><PieChartOutlined /> Phân bố loại mẫu</>}>
+            <Card className="list-card" title={<><PieChartOutlined /> Phân bố loại mẫu</>}>
               {sampleMatrix.length > 0 ? (
                 <Pie
                   data={sampleMatrix.map(item => ({
@@ -386,7 +403,7 @@ const StatisticsPage: React.FC = () => {
         {/* Charts Row 2: Department Workload */}
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
           <Col xs={24}>
-            <Card title={<><BarChartOutlined /> Khối lượng công việc theo khoa phòng</>}>
+            <Card className="list-card" title={<><BarChartOutlined /> Khối lượng công việc theo khoa phòng</>}>
               {workloadByDepartment.length > 0 ? (
                 <Column
                   data={workloadByDepartment.flatMap(item => [
@@ -415,65 +432,67 @@ const StatisticsPage: React.FC = () => {
         </Row>
 
         {/* Tabs for detailed stats */}
-        <Card>
-          <Tabs
-            items={[
-              {
-                key: 'monthly',
-                label: 'Theo tháng',
-                children: monthlyTrends.length > 0 ? (
-                  <Table
-                    dataSource={monthlyTrends}
-                    columns={monthlyColumns}
-                    rowKey="month"
-                    pagination={false}
-                    scroll={{ x: 600 }}
-                    summary={() => (
-                      <Table.Summary fixed>
-                        <Table.Summary.Row style={{ backgroundColor: '#fafafa', fontWeight: 'bold' }}>
-                          <Table.Summary.Cell index={0}>Tổng cộng</Table.Summary.Cell>
-                          <Table.Summary.Cell index={1}>{totalRequests}</Table.Summary.Cell>
-                          <Table.Summary.Cell index={2}>{totalSpecimens}</Table.Summary.Cell>
-                          <Table.Summary.Cell index={3}>{totalTests}</Table.Summary.Cell>
-                          <Table.Summary.Cell index={4}>{totalReports}</Table.Summary.Cell>
-                        </Table.Summary.Row>
-                      </Table.Summary>
-                    )}
-                  />
-                ) : (
-                  <Empty description="Không có dữ liệu" />
-                ),
-              },
-              {
-                key: 'department',
-                label: 'Theo phòng ban',
-                children: workloadByDepartment.length > 0 ? (
-                  <Table
-                    dataSource={workloadByDepartment}
-                    columns={departmentColumns}
-                    rowKey="department"
-                    pagination={false}
-                  />
-                ) : (
-                  <Empty description="Không có dữ liệu" />
-                ),
-              },
-              {
-                key: 'tat',
-                label: 'TAT Compliance',
-                children: tatCompliance.length > 0 ? (
-                  <Table
-                    dataSource={tatCompliance}
-                    columns={tatColumns}
-                    rowKey="period"
-                    pagination={false}
-                  />
-                ) : (
-                  <Empty description="Không có dữ liệu" />
-                ),
-              },
-            ]}
-          />
+        <div className="statistics-detail-tabs">
+          <Radio.Group
+            value={activeTab}
+            onChange={(e) => setActiveTab(e.target.value)}
+            optionType="button"
+            buttonStyle="solid"
+          >
+            <Radio.Button value="monthly">Theo tháng</Radio.Button>
+            <Radio.Button value="department">Theo phòng ban</Radio.Button>
+            <Radio.Button value="tat">TAT Compliance</Radio.Button>
+          </Radio.Group>
+        </div>
+        <Card className="list-card statistics-detail-card">
+          {activeTab === 'monthly' && (
+            monthlyTrends.length > 0 ? (
+              <Table
+                dataSource={monthlyTrends}
+                columns={monthlyColumns}
+                rowKey="month"
+                pagination={false}
+                scroll={{ x: 600 }}
+                summary={() => (
+                  <Table.Summary fixed>
+                    <Table.Summary.Row style={{ backgroundColor: '#fafafa', fontWeight: 'bold' }}>
+                      <Table.Summary.Cell index={0}>Tổng cộng</Table.Summary.Cell>
+                      <Table.Summary.Cell index={1}>{totalRequests}</Table.Summary.Cell>
+                      <Table.Summary.Cell index={2}>{totalSpecimens}</Table.Summary.Cell>
+                      <Table.Summary.Cell index={3}>{totalTests}</Table.Summary.Cell>
+                      <Table.Summary.Cell index={4}>{totalReports}</Table.Summary.Cell>
+                    </Table.Summary.Row>
+                  </Table.Summary>
+                )}
+              />
+            ) : (
+              <Empty description="Không có dữ liệu" />
+            )
+          )}
+          {activeTab === 'department' && (
+            workloadByDepartment.length > 0 ? (
+              <Table
+                dataSource={workloadByDepartment}
+                columns={departmentColumns}
+                rowKey="department"
+                pagination={false}
+              />
+            ) : (
+              <Empty description="Không có dữ liệu" />
+            )
+          )}
+          {activeTab === 'tat' && (
+            tatCompliance.length > 0 ? (
+              <Table
+                dataSource={tatCompliance}
+                columns={tatColumns}
+                rowKey="period"
+                pagination={false}
+              />
+            ) : (
+              <Empty description="Không có dữ liệu" />
+            )
+          )}
         </Card>
       </Spin>
 
