@@ -1,0 +1,240 @@
+/* Settings Page - Sidebar Menu Card */
+.settings-menu-card {
+  background: #FFFFFF;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: none;
+}
+
+.settings-menu-card .ant-card-head {
+  border-bottom: none;
+  padding: 16px 16px 0;
+  min-height: unset;
+}
+
+.settings-menu-card .ant-card-head-title {
+  font-family: 'Roboto', sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  color: #262626;
+  padding: 0;
+}
+
+.settings-menu-card .ant-card-body {
+  padding: 12px;
+}
+
+/* Menu items */
+.settings-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 24px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 400;
+  color: #595959;
+  transition: all 0.2s ease;
+  margin-bottom: 4px;
+}
+
+.settings-menu-item:last-child {
+  margin-bottom: 0;
+}
+
+.settings-menu-item:hover {
+  background: #f5f5f5;
+  color: #262626;
+}
+
+.settings-menu-item.active {
+  background: var(--gradient-primary);
+  color: #FFFFFF;
+  font-weight: 500;
+}
+
+.settings-menu-item.active:hover {
+  background: var(--gradient-primary);
+  color: #FFFFFF;
+}
+
+.settings-menu-item .anticon {
+  font-size: 16px;
+}
+
+.settings-menu-item.active .anticon {
+  color: #FFFFFF;
+}
+
+/* Content area */
+.settings-content {
+  min-height: 400px;
+}
+
+/* Settings Form Card */
+.settings-form-card {
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: none;
+  overflow: hidden;
+}
+
+.settings-form-card > .ant-card-head {
+  background: #E6F7FF;
+  border-bottom: none;
+  padding: 13px 16px;
+  min-height: unset;
+}
+
+.settings-form-card > .ant-card-head .ant-card-head-title {
+  padding: 0;
+}
+
+.settings-form-card-title {
+  font-family: 'Roboto', sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  color: rgba(0, 0, 0, 0.85);
+  line-height: 24px;
+}
+
+.settings-form-card-subtitle {
+  font-family: 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.45);
+  line-height: 20px;
+  margin-top: 2px;
+}
+
+.settings-form-card > .ant-card-body {
+  padding: 24px;
+}
+
+/* No body padding variant */
+.settings-form-card--no-body-padding > .ant-card-body {
+  padding: 0;
+}
+
+/* Settings item row */
+.settings-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+}
+
+.settings-item-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-item-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 16px;
+  color: #8C8C8C;
+}
+
+.settings-item-label {
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.85);
+  line-height: 20px;
+}
+
+.settings-item-subtitle {
+  font-family: 'Roboto', sans-serif;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+  line-height: 18px;
+  margin-top: 1px;
+}
+
+/* Gradient primary button */
+.settings-btn-gradient {
+  background: var(--gradient-primary) !important;
+  border: none !important;
+  color: #FFFFFF !important;
+  font-weight: 500;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(30, 99, 248, 0.3);
+}
+
+.settings-btn-gradient:hover {
+  opacity: 0.9;
+  box-shadow: 0 4px 8px rgba(30, 99, 248, 0.4);
+}
+
+.settings-btn-gradient > span {
+  color: #FFFFFF !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+}
+
+/* Fix InputNumber height to match Input/Select */
+.settings-form-card .ant-input-number {
+  height: 40px;
+}
+
+.settings-form-card .ant-input-number .ant-input-number-input {
+  height: 38px;
+}
+
+/* Fix Select multiple height - allow grow */
+.settings-form-card .ant-select-multiple {
+  height: auto !important;
+  min-height: 40px;
+}
+
+.settings-form-card .ant-select-multiple .ant-select-selector {
+  height: auto !important;
+  min-height: 40px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+@media screen and (max-width: 992px) {
+  .settings-form-card .ant-input-number {
+    height: 36px;
+  }
+
+  .settings-form-card .ant-input-number .ant-input-number-input {
+    height: 34px;
+  }
+
+  .settings-form-card .ant-select-multiple {
+    min-height: 36px;
+  }
+
+  .settings-form-card .ant-select-multiple .ant-select-selector {
+    min-height: 36px;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .settings-form-card .ant-input-number {
+    height: 32px;
+  }
+
+  .settings-form-card .ant-input-number .ant-input-number-input {
+    height: 30px;
+  }
+
+  .settings-form-card .ant-select-multiple {
+    min-height: 32px;
+  }
+
+  .settings-form-card .ant-select-multiple .ant-select-selector {
+    min-height: 32px;
+  }
+}
