@@ -69,22 +69,26 @@
   color: rgba(0, 0, 0, 0.85);
 }
 
-/* Primary button - gradient background with white border/text/icon */
+/* Primary button - white background with gradient text/icon */
 .test-request-list-card .ant-card-extra .ant-btn-primary {
-  background: var(--gradient-primary);
-  color: #FFFFFF;
-  border: 1px solid #FFFFFF;
+  background: #FFFFFF !important;
+  border: 1px solid #FFFFFF !important;
 }
 
-.test-request-list-card .ant-card-extra .ant-btn-primary:hover {
+.test-request-list-card .ant-card-extra .ant-btn-primary > span {
   background: var(--gradient-primary);
-  opacity: 0.9;
-  color: #FFFFFF;
-  border-color: #FFFFFF;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .test-request-list-card .ant-card-extra .ant-btn-primary .anticon {
-  color: #FFFFFF;
+  color: #1E63F8 !important;
+}
+
+.test-request-list-card .ant-card-extra .ant-btn-primary:hover {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: #FFFFFF !important;
 }
 
 .test-request-list-card .ant-card-body {
