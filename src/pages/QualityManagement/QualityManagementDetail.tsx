@@ -304,7 +304,7 @@ const QualityManagementDetail: React.FC = () => {
 
   if (loading && !task) {
     return (
-      <div style={{ padding: 24, textAlign: "center" }}>
+      <div className="page-wrapper" style={{ textAlign: "center" }}>
         <Spin size="large" />
       </div>
     );
@@ -312,14 +312,14 @@ const QualityManagementDetail: React.FC = () => {
 
   if (!task) {
     return (
-      <div style={{ padding: 24 }}>
+      <div className="page-wrapper">
         <Alert type="error" message="Không tìm thấy dữ liệu" showIcon />
       </div>
     );
   }
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="page-wrapper">
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <Space style={{ marginBottom: 16 }}>

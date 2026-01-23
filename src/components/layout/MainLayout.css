@@ -1083,11 +1083,6 @@
 }
 
 @media (max-width: 767px) {
-  /* Reduce card body padding on mobile */
-  .ant-card-body {
-    padding: 12px !important;
-  }
-
   /* Increase row gap in forms on mobile */
   .ant-row {
     row-gap: 16px !important;

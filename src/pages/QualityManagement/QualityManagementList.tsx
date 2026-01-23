@@ -129,7 +129,7 @@ const QualityManagementList: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="page-wrapper">
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <Title level={4}>

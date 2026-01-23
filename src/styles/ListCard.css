@@ -7,7 +7,7 @@
 }
 
 /* Card header with gradient */
-.list-card .ant-card-head {
+.list-card > .ant-card-head {
   background: var(--gradient-primary);
   border-bottom: none;
   padding: 0 16px;
@@ -18,14 +18,14 @@
   border-radius: 16px 16px 0 0;
 }
 
-.list-card .ant-card-head-wrapper {
+.list-card > .ant-card-head .ant-card-head-wrapper {
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.list-card .ant-card-head-title {
+.list-card > .ant-card-head .ant-card-head-title {
   padding: 0;
   font-family: 'Roboto', sans-serif;
   font-weight: 500;
@@ -34,62 +34,62 @@
   color: #FFFFFF;
 }
 
-.list-card .ant-card-extra {
+.list-card > .ant-card-head .ant-card-extra {
   padding: 0;
 }
 
 /* Default buttons - white background with dark icon */
-.list-card .ant-card-extra .ant-btn-default {
+.list-card > .ant-card-head .ant-card-extra .ant-btn-default {
   background: #FFFFFF;
   color: rgba(0, 0, 0, 0.85);
   border-color: #FFFFFF;
 }
 
-.list-card .ant-card-extra .ant-btn-default:hover {
+.list-card > .ant-card-head .ant-card-extra .ant-btn-default:hover {
   color: rgba(0, 0, 0, 0.85);
   border-color: #FFFFFF;
   background: rgba(255, 255, 255, 0.9);
 }
 
-.list-card .ant-card-extra .ant-btn-default .anticon {
+.list-card > .ant-card-head .ant-card-extra .ant-btn-default .anticon {
   color: rgba(0, 0, 0, 0.85);
 }
 
 /* Icon-only button (Reload) */
-.list-card .ant-card-extra .ant-btn-icon-only {
+.list-card > .ant-card-head .ant-card-extra .ant-btn-icon-only {
   background: #FFFFFF;
   color: rgba(0, 0, 0, 0.85);
   border-color: #FFFFFF;
 }
 
-.list-card .ant-card-extra .ant-btn-icon-only:hover {
+.list-card > .ant-card-head .ant-card-extra .ant-btn-icon-only:hover {
   color: rgba(0, 0, 0, 0.85);
   border-color: #FFFFFF;
   background: rgba(255, 255, 255, 0.9);
 }
 
-.list-card .ant-card-extra .ant-btn-icon-only .anticon {
+.list-card > .ant-card-head .ant-card-extra .ant-btn-icon-only .anticon {
   color: rgba(0, 0, 0, 0.85);
 }
 
 /* Primary button - white background with gradient text/icon */
-.list-card .ant-card-extra .ant-btn-primary {
+.list-card > .ant-card-head .ant-card-extra .ant-btn-primary {
   background: #FFFFFF !important;
   border: 1px solid #FFFFFF !important;
 }
 
-.list-card .ant-card-extra .ant-btn-primary > span {
+.list-card > .ant-card-head .ant-card-extra .ant-btn-primary > span {
   background: var(--gradient-primary);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-.list-card .ant-card-extra .ant-btn-primary .anticon {
+.list-card > .ant-card-head .ant-card-extra .ant-btn-primary .anticon {
   color: #1E63F8 !important;
 }
 
-.list-card .ant-card-extra .ant-btn-primary:hover {
+.list-card > .ant-card-head .ant-card-extra .ant-btn-primary:hover {
   background: rgba(255, 255, 255, 0.9) !important;
   border-color: #FFFFFF !important;
 }

@@ -34,7 +34,7 @@ const RoleManagementDetail: React.FC = () => {
 
   if (loading && !roleDetail) {
     return (
-      <div style={{ padding: 24, textAlign: 'center' }}>
+      <div className="page-wrapper" style={{ textAlign: 'center' }}>
         <Spin size="large" />
       </div>
     );
@@ -42,7 +42,7 @@ const RoleManagementDetail: React.FC = () => {
 
   if (!roleDetail) {
     return (
-      <div style={{ padding: 24 }}>
+      <div className="page-wrapper">
         <Card>
           <div style={{ textAlign: 'center', padding: 48 }}>
             <Title level={4}>Không tìm thấy nhóm quyền</Title>
@@ -103,7 +103,7 @@ const RoleManagementDetail: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="page-wrapper">
       <Breadcrumb
         style={{ marginBottom: 16 }}
         items={[

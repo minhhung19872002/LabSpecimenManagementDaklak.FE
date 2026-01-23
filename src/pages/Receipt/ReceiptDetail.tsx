@@ -407,7 +407,7 @@ const ReceiptDetail: React.FC = () => {
 
   if (loading) {
     return (
-      <div style={{ padding: 24, textAlign: "center" }}>
+      <div className="page-wrapper" style={{ textAlign: "center" }}>
         <Spin size="large" />
       </div>
     );
