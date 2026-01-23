@@ -15,11 +15,11 @@ export interface Department {
 }
 
 export const ROLE_OPTIONS = [
-  { value: ROLES.ADMIN, label: "Quản trị viên", color: "red" },
-  { value: ROLES.LAB_TECHNICAL_MANAGER, label: "Quản lý kỹ thuật Lab", color: "purple" },
-  { value: ROLES.SAMPLE_RECEIVER, label: "Giao nhận mẫu", color: "blue" },
-  { value: ROLES.QUALITY_MANAGER, label: "Quản lý chất lượng", color: "green" },
-  { value: ROLES.LAB_TECHNICIAN, label: "Thử nghiệm viên", color: "orange" },
+  { value: ROLES.ADMIN, label: "Quản trị viên", color: "#F5222D" },
+  { value: ROLES.LAB_TECHNICAL_MANAGER, label: "Quản lý kỹ thuật Lab", color: "#722ED1" },
+  { value: ROLES.SAMPLE_RECEIVER, label: "Giao nhận mẫu", color: "#1890FF" },
+  { value: ROLES.QUALITY_MANAGER, label: "Quản lý chất lượng", color: "#52C41A" },
+  { value: ROLES.LAB_TECHNICIAN, label: "Thử nghiệm viên", color: "#FA8C16" },
 ];
 
 export const POSITION_OPTIONS = [

@@ -21,6 +21,7 @@ import { EmployeeFormModal, PasswordSentModal } from "./components";
 import ResetPasswordModal from "./components/ResetPasswordModal";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
+import "../../styles/ListCard.css";
 
 const EmployeeList: React.FC = () => {
   const {
@@ -92,6 +93,7 @@ const EmployeeList: React.FC = () => {
       </Row>
 
       <Card
+        className="list-card"
         title={
           <Space>
             <TeamOutlined />
@@ -169,8 +171,7 @@ const EmployeeList: React.FC = () => {
             total: totalCount,
             pageSizeOptions: [20, 50, 100],
             showSizeChanger: true,
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} của ${total} nhân viên`,
+            showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
             onChange: handlePageChange,
           }}
           scroll={{ x: 1400 }}

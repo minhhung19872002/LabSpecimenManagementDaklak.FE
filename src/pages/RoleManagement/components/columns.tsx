@@ -24,7 +24,7 @@ export const getColumns = ({ onDelete }: GetColumnsParams): ColumnsType<RoleDto>
     width: 150,
     align: 'center',
     render: (count: number) => (
-      <Tag color={count > 0 ? 'blue' : 'default'}>{count}</Tag>
+      <Tag style={{ backgroundColor: count > 0 ? "#1890FF" : "#8C8C8C", color: "#FFFFFF", border: "none", borderRadius: 18, padding: "2px 8px" }}>{count}</Tag>
     ),
   },
   {
@@ -34,11 +34,11 @@ export const getColumns = ({ onDelete }: GetColumnsParams): ColumnsType<RoleDto>
     align: 'center',
     render: (_, record) => (
       <Space>
-        {record.isStatic && <Tag color="orange">Hệ thống</Tag>}
-        {record.isDefault && <Tag color="green">Mặc định</Tag>}
-        {record.isPublic && <Tag color="blue">Công khai</Tag>}
+        {record.isStatic && <Tag style={{ backgroundColor: "#FA8C16", color: "#FFFFFF", border: "none", borderRadius: 18, padding: "2px 8px" }}>Hệ thống</Tag>}
+        {record.isDefault && <Tag style={{ backgroundColor: "#52C41A", color: "#FFFFFF", border: "none", borderRadius: 18, padding: "2px 8px" }}>Mặc định</Tag>}
+        {record.isPublic && <Tag style={{ backgroundColor: "#1890FF", color: "#FFFFFF", border: "none", borderRadius: 18, padding: "2px 8px" }}>Công khai</Tag>}
         {!record.isStatic && !record.isDefault && !record.isPublic && (
-          <Tag color="default">Tùy chỉnh</Tag>
+          <Tag style={{ backgroundColor: "#8C8C8C", color: "#FFFFFF", border: "none", borderRadius: 18, padding: "2px 8px" }}>Tùy chỉnh</Tag>
         )}
       </Space>
     ),

@@ -6,8 +6,33 @@ import {
   RevenueByCustomerDto,
 } from "../../../services/dashboardService";
 import { formatDate } from "../../../utils/formatters";
+import {
+  TestRequestStatus,
+  TestRequestStatusLabels,
+} from "../../../types/testRequest";
 
 const { Text } = Typography;
+
+// Solid background colors for Dashboard status tags
+const DashboardStatusColors: Record<TestRequestStatus, string> = {
+  [TestRequestStatus.New]: "#8C8C8C",
+  [TestRequestStatus.PendingPayment]: "#FAAD14",
+  [TestRequestStatus.Paid]: "#13C2C2",
+  [TestRequestStatus.SampleSent]: "#2F54EB",
+  [TestRequestStatus.InProgress]: "#1890FF",
+  [TestRequestStatus.PendingChangeApproval]: "#FA8C16",
+  [TestRequestStatus.PendingApproval]: "#FA8C16",
+  [TestRequestStatus.Approved]: "#52C41A",
+  [TestRequestStatus.ResultSent]: "#722ED1",
+  [TestRequestStatus.Completed]: "#52C41A",
+  [TestRequestStatus.Cancelled]: "#F5222D",
+  [TestRequestStatus.UnderReview]: "#1890FF",
+  [TestRequestStatus.WaitingCustomerConfirm]: "#FAAD14",
+  [TestRequestStatus.RequestApproved]: "#52C41A",
+  [TestRequestStatus.PartialResultSent]: "#FA541C",
+  [TestRequestStatus.ReportPublished]: "#EB2F96",
+  [TestRequestStatus.NoPaymentRequired]: "#52C41A",
+};
 
 export const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat("vi-VN", {
@@ -54,7 +79,15 @@ export const getPendingTasksColumns = (): ColumnsType<QualityManagementTaskDto> 
     key: "taskType",
     width: 100,
     render: (type: number) => (
-      <Tag color={type === 0 ? "blue" : "orange"}>
+      <Tag
+        style={{
+          backgroundColor: type === 0 ? "#1890FF" : "#FA8C16",
+          color: "#FFFFFF",
+          border: "none",
+          borderRadius: 18,
+          padding: "2px 8px",
+        }}
+      >
         {type === 0 ? "Kết quả" : "Thay đổi"}
       </Tag>
     ),
@@ -103,6 +136,25 @@ export const getRecentRequestsColumns = (): ColumnsType<DashboardRecentRequestDt
     width: 120,
     align: "right" as const,
     render: (value: number) => formatCurrency(value),
+  },
+  {
+    title: "Trạng thái",
+    dataIndex: "status",
+    key: "status",
+    width: 140,
+    render: (status: TestRequestStatus) => (
+      <Tag
+        style={{
+          backgroundColor: DashboardStatusColors[status],
+          color: "#FFFFFF",
+          border: "none",
+          borderRadius: "18px",
+          padding: "2px 8px",
+        }}
+      >
+        {TestRequestStatusLabels[status]}
+      </Tag>
+    ),
   },
 ];
 

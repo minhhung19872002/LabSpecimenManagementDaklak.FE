@@ -26,6 +26,7 @@ import { ReportFormModal, getReportColumns } from "./components";
 import StatusTag from "../../components/common/StatusTag";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
+import "../../styles/ListCard.css";
 
 const { RangePicker } = DatePicker;
 
@@ -93,6 +94,7 @@ const ReportList: React.FC = () => {
   return (
     <div>
       <Card
+        className="list-card"
         title="Báo cáo kết quả thử nghiệm"
         extra={
           <Space>
@@ -143,7 +145,7 @@ const ReportList: React.FC = () => {
             pageSize: 50,
             pageSizeOptions: [50, 100, 150],
             showSizeChanger: true,
-            showTotal: (total) => `Tổng ${total} báo cáo`,
+            showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
           }}
         />
       </Card>

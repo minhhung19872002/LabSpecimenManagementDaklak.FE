@@ -70,7 +70,15 @@ export const getColumns = (options?: GetColumnsOptions): ColumnsType<ReceiptDto>
     align: "center",
     fixed: "right",
     render: (status: ReceiptStatus) => (
-      <Tag color={ReceiptStatusColors[status]}>
+      <Tag
+        style={{
+          backgroundColor: ReceiptStatusColors[status],
+          color: "#FFFFFF",
+          border: "none",
+          borderRadius: 18,
+          padding: "2px 8px",
+        }}
+      >
         {ReceiptStatusLabels[status]}
       </Tag>
     ),

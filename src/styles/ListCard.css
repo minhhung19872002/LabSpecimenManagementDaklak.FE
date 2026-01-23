@@ -1,0 +1,228 @@
+/* Common ListCard Styling - Used for all list pages */
+
+/* Card base styling */
+.list-card {
+  border-radius: 16px;
+  box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Card header with gradient */
+.list-card .ant-card-head {
+  background: linear-gradient(to right, #1E63F8, #009AE3);
+  border-bottom: none;
+  padding: 0 16px;
+  min-height: 54px;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  border-radius: 16px 16px 0 0;
+}
+
+.list-card .ant-card-head-wrapper {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.list-card .ant-card-head-title {
+  padding: 0;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 24px;
+  color: #FFFFFF;
+}
+
+.list-card .ant-card-extra {
+  padding: 0;
+}
+
+/* Default buttons - white background with dark icon */
+.list-card .ant-card-extra .ant-btn-default {
+  background: #FFFFFF;
+  color: rgba(0, 0, 0, 0.85);
+  border-color: #FFFFFF;
+}
+
+.list-card .ant-card-extra .ant-btn-default:hover {
+  color: rgba(0, 0, 0, 0.85);
+  border-color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.list-card .ant-card-extra .ant-btn-default .anticon {
+  color: rgba(0, 0, 0, 0.85);
+}
+
+/* Icon-only button (Reload) */
+.list-card .ant-card-extra .ant-btn-icon-only {
+  background: #FFFFFF;
+  color: rgba(0, 0, 0, 0.85);
+  border-color: #FFFFFF;
+}
+
+.list-card .ant-card-extra .ant-btn-icon-only:hover {
+  color: rgba(0, 0, 0, 0.85);
+  border-color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.list-card .ant-card-extra .ant-btn-icon-only .anticon {
+  color: rgba(0, 0, 0, 0.85);
+}
+
+/* Primary button - gradient background with white border/text/icon */
+.list-card .ant-card-extra .ant-btn-primary {
+  background: linear-gradient(to right, #1E63F8, #009AE3);
+  color: #FFFFFF;
+  border: 1px solid #FFFFFF;
+}
+
+.list-card .ant-card-extra .ant-btn-primary:hover {
+  background: linear-gradient(to right, #1E63F8, #009AE3);
+  opacity: 0.9;
+  color: #FFFFFF;
+  border-color: #FFFFFF;
+}
+
+.list-card .ant-card-extra .ant-btn-primary .anticon {
+  color: #FFFFFF;
+}
+
+/* Card body - no padding for table to be full width */
+.list-card .ant-card-body {
+  padding: 16px;
+  padding-left: 0;
+  padding-right: 0;
+  padding-bottom: 0;
+}
+
+/* Search/Filter section padding */
+.list-card .ant-card-body > .ant-row:first-child {
+  padding: 0 16px;
+  margin-bottom: 16px;
+}
+
+/* Table full width, no border radius */
+.list-card .ant-table-wrapper {
+  width: 100%;
+}
+
+.list-card .ant-table {
+  border-radius: 0;
+}
+
+.list-card .ant-table-container {
+  border-radius: 0;
+}
+
+.list-card .ant-table-thead > tr > th:first-child,
+.list-card .ant-table-thead > tr > th:last-child {
+  border-radius: 0 !important;
+}
+
+.list-card .ant-table-tbody > tr:last-child > td:first-child,
+.list-card .ant-table-tbody > tr:last-child > td:last-child {
+  border-radius: 0 !important;
+}
+
+/* Table header styling */
+.list-card .ant-table-thead > tr > th {
+  background: #E6F7FF;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.85);
+  border-radius: 0 !important;
+}
+
+/* Pagination padding and layout */
+.list-card .ant-table-pagination {
+  padding: 0 16px 16px 16px;
+  margin: 16px 0 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.list-card .ant-table-wrapper .ant-table-pagination {
+  padding: 0 16px 16px 16px;
+  margin: 16px 0 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Move showTotal text and page size selector to the left */
+.list-card .ant-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.list-card .ant-pagination .ant-pagination-total-text {
+  order: 1;
+  margin-right: 8px;
+}
+
+.list-card .ant-pagination .ant-pagination-options {
+  order: 2;
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.list-card .ant-pagination > li:not(.ant-pagination-total-text):not(.ant-pagination-options) {
+  order: 3;
+}
+
+/* Remove sorted column background highlight */
+.list-card .ant-table-thead > tr > th.ant-table-column-sort {
+  background: #E6F7FF;
+}
+
+.list-card .ant-table-tbody > tr > td.ant-table-column-sort {
+  background: transparent;
+}
+
+/* Input search button in header */
+.list-card .ant-card-extra .ant-input-search .ant-input {
+  background: #FFFFFF;
+  border-color: #FFFFFF;
+}
+
+.list-card .ant-card-extra .ant-input-search .ant-input-search-button {
+  background: #FFFFFF;
+  border-color: #FFFFFF;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+.list-card .ant-card-extra .ant-input-search .ant-input-search-button:hover {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: #FFFFFF;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+/* Select in header */
+.list-card .ant-card-extra .ant-select .ant-select-selector {
+  background: #FFFFFF;
+  border-color: #FFFFFF;
+}
+
+.list-card .ant-card-extra .ant-select:hover .ant-select-selector {
+  border-color: #FFFFFF;
+}
+
+/* Input in header */
+.list-card .ant-card-extra .ant-input-affix-wrapper {
+  background: #FFFFFF;
+  border-color: #FFFFFF;
+}
+
+.list-card .ant-card-extra .ant-input-affix-wrapper:hover {
+  border-color: #FFFFFF;
+}
+
+.list-card .ant-card-extra .ant-input-affix-wrapper .ant-input {
+  background: #FFFFFF;
+}

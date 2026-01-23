@@ -3,22 +3,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   padding: 0;
   cursor: pointer;
   border-radius: 50%;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.2);
   transition: background 0.2s ease;
 }
 
 .notification-bell-wrapper:hover {
-  background: #F0F2F5;
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .notification-bell-icon {
   font-size: 20px;
-  color: #595959;
+  color: #FFFFFF;
 }
 
 /* Badge count styling */

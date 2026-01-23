@@ -23,6 +23,7 @@ import {
 import ImportExcelModal from "../../components/common/ImportExcelModal";
 import { useTestRequestList } from "./hooks";
 import { useActionPermission } from "../../hooks/useActionPermission";
+import "../../styles/ListCard.css";
 
 const TestRequestList: React.FC = () => {
   const {
@@ -59,6 +60,7 @@ const TestRequestList: React.FC = () => {
 
   return (
     <Card
+      className="list-card"
       title="Danh sách yêu cầu thử nghiệm"
       extra={
         <Space>
@@ -184,7 +186,7 @@ const TestRequestList: React.FC = () => {
           total: totalCount,
           pageSizeOptions: [50, 100, 150],
           showSizeChanger: true,
-          showTotal: (total) => `Tổng ${total} yêu cầu`,
+          showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
           onChange: handlePageChange,
         }}
         scroll={{ x: 1600 }}

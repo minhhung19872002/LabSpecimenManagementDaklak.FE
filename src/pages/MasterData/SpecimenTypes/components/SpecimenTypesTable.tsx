@@ -228,7 +228,9 @@ const SpecimenTypesTable: React.FC<SpecimenTypesTableProps> = ({
           }}
           pagination={{
             pageSize: 50,
-            showTotal: (total) => `Tổng ${total} loại mẫu`,
+            showSizeChanger: true,
+            pageSizeOptions: [50, 100, 150],
+            showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
           }}
         />
       </Spin>

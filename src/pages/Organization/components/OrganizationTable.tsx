@@ -146,7 +146,7 @@ const OrganizationTable: React.FC<OrganizationTableProps> = ({
         total: totalCount,
         pageSizeOptions: [20, 50, 100],
         showSizeChanger: true,
-        showTotal: (total) => `Tổng ${total} bản ghi`,
+        showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
         onChange: onPageChange,
       }}
       scroll={{ x: 1200 }}

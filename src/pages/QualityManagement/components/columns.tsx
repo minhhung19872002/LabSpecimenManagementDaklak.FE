@@ -44,7 +44,7 @@ export const getQualityManagementColumns = (
       <Space>
         <span style={{ fontWeight: 500 }}>{text}</span>
         {record.taskType === QualityTaskType.ChangeApproval && (
-          <Tag color="orange" style={{ fontSize: 10 }}>Thay đổi</Tag>
+          <Tag style={{ backgroundColor: "#FA8C16", color: "#FFFFFF", border: "none", borderRadius: 18, padding: "2px 8px", fontSize: 10 }}>Thay đổi</Tag>
         )}
       </Space>
     ),

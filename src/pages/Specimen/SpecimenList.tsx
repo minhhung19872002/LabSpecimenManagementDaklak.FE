@@ -7,7 +7,7 @@ import {
 } from "../../types/sampleStorage";
 import SampleStorageDetailModal from "./components/SampleStorageDetailModal";
 import { useSpecimenList } from "./hooks";
-import "./SpecimenList.css";
+import "../../styles/ListCard.css";
 
 const SpecimenList: React.FC = () => {
   const {
@@ -35,6 +35,7 @@ const SpecimenList: React.FC = () => {
 
   return (
     <Card
+      className="list-card"
       title="Quản lý mẫu"
       extra={
         <Space>
@@ -88,7 +89,7 @@ const SpecimenList: React.FC = () => {
           total: totalCount,
           pageSizeOptions: [50, 100, 150],
           showSizeChanger: true,
-          showTotal: (total) => `Tổng ${total} hợp đồng`,
+          showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
           onChange: handlePageChange,
         }}
         scroll={{ x: 1000 }}

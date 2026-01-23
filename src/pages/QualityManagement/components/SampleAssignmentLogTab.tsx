@@ -569,7 +569,7 @@ const SampleAssignmentLogTab: React.FC = () => {
             pageSize: pagination.pageSize,
             total: pagination.total,
             showSizeChanger: true,
-            showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} chỉ tiêu`,
+            showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
             pageSizeOptions: ['20', '50', '100'],
           }}
           onChange={(pag) => handleTableChange({

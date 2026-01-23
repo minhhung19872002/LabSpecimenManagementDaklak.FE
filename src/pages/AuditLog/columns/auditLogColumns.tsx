@@ -7,24 +7,48 @@ import { AuditLogDto } from "../../../services/auditLogService";
 const { Text } = Typography;
 
 export const getHttpMethodTag = (method: string) => {
-  const config: Record<string, { color: string }> = {
-    GET: { color: "blue" },
-    POST: { color: "green" },
-    PUT: { color: "orange" },
-    DELETE: { color: "red" },
-    PATCH: { color: "purple" },
+  const config: Record<string, string> = {
+    GET: "#1890FF",
+    POST: "#52C41A",
+    PUT: "#FA8C16",
+    DELETE: "#F5222D",
+    PATCH: "#722ED1",
   };
-  const c = config[method] || { color: "default" };
-  return <Tag color={c.color}>{method}</Tag>;
+  const bg = config[method] || "#8C8C8C";
+  return (
+    <Tag
+      style={{
+        backgroundColor: bg,
+        color: "#FFFFFF",
+        border: "none",
+        borderRadius: 18,
+        padding: "2px 8px",
+      }}
+    >
+      {method}
+    </Tag>
+  );
 };
 
 export const getStatusCodeTag = (code: number | undefined) => {
   if (!code) return null;
-  let color = "default";
-  if (code >= 200 && code < 300) color = "green";
-  else if (code >= 400 && code < 500) color = "orange";
-  else if (code >= 500) color = "red";
-  return <Tag color={color}>{code}</Tag>;
+  let bg = "#8C8C8C";
+  if (code >= 200 && code < 300) bg = "#52C41A";
+  else if (code >= 400 && code < 500) bg = "#FA8C16";
+  else if (code >= 500) bg = "#F5222D";
+  return (
+    <Tag
+      style={{
+        backgroundColor: bg,
+        color: "#FFFFFF",
+        border: "none",
+        borderRadius: 18,
+        padding: "2px 8px",
+      }}
+    >
+      {code}
+    </Tag>
+  );
 };
 
 interface AuditLogColumnsProps {
@@ -41,7 +65,7 @@ export const getAuditLogColumns = ({
     width: 160,
     render: (executionTime: string) => (
       <Tooltip title={dayjs(executionTime).format("DD/MM/YYYY HH:mm:ss")}>
-        <Text>{dayjs(executionTime).format("DD/MM/YYYY HH:mm")}</Text>
+        <span>{dayjs(executionTime).format("DD/MM/YYYY HH:mm")}</span>
       </Tooltip>
     ),
     sorter: (a, b) =>

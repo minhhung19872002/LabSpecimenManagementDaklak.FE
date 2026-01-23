@@ -17,6 +17,7 @@ import {
 } from "../../components/common/Icon";
 import { LaboratoryTaskStatus } from "../../types/laboratoryTask";
 import { useTaskManagementList } from "./hooks";
+import "../../styles/ListCard.css";
 
 const TaskManagementList: React.FC = () => {
   const {
@@ -106,6 +107,7 @@ const TaskManagementList: React.FC = () => {
       </Row>
 
       <Card
+        className="list-card"
         title={
           <Space>
             <ExperimentOutlined />
@@ -181,8 +183,7 @@ const TaskManagementList: React.FC = () => {
             total: pagination.total,
             pageSizeOptions: [20, 50, 100],
             showSizeChanger: true,
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} của ${total} công việc`,
+            showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
           }}
           onChange={handleTableChange}
           scroll={{ x: 1100 }}

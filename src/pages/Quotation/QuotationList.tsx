@@ -25,6 +25,7 @@ import { PATH_ROUTES } from "../../constants";
 import { formatCurrency } from "../../utils/formatters";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
+import "../../styles/ListCard.css";
 
 const QuotationList: React.FC = () => {
   const navigate = useNavigate();
@@ -184,16 +185,8 @@ const QuotationList: React.FC = () => {
 
   return (
     <Card
+      className="list-card"
       title="Danh sách báo giá"
-      styles={{
-        header: {
-          background: "#F0F5FF",
-          borderBottom: "1px solid #F0F0F0",
-        },
-        body: {
-          padding: 0,
-        },
-      }}
       extra={
         <Space>
           <Button icon={<ReloadOutlined />} onClick={fetchData} />
@@ -238,8 +231,7 @@ const QuotationList: React.FC = () => {
           total: totalCount,
           pageSizeOptions: [50, 100, 150],
           showSizeChanger: true,
-          showTotal: (total, range) =>
-            `Hiển thị ${range[0]}-${range[1]}/${total}`,
+          showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
           onChange: handlePageChange,
         }}
         scroll={{ x: 900 }}

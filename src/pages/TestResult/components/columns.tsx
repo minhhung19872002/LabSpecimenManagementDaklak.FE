@@ -108,11 +108,17 @@ export const getTestResultColumns = (options: GetColumnsOptions) => {
     render: (isPass?: boolean) => {
       if (isPass === undefined || isPass === null) return "-";
       return isPass ? (
-        <Tag color="green" icon={<CheckCircleOutlined />}>
+        <Tag
+          icon={<CheckCircleOutlined />}
+          style={{ backgroundColor: "#52C41A", color: "#FFFFFF", border: "none", borderRadius: 18, padding: "2px 8px" }}
+        >
           Đạt
         </Tag>
       ) : (
-        <Tag color="red" icon={<CloseCircleOutlined />}>
+        <Tag
+          icon={<CloseCircleOutlined />}
+          style={{ backgroundColor: "#F5222D", color: "#FFFFFF", border: "none", borderRadius: 18, padding: "2px 8px" }}
+        >
           Không đạt
         </Tag>
       );

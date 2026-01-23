@@ -23,6 +23,7 @@ import { PATH_ROUTES } from '../../constants';
 import { getColumns } from './components/columns';
 import PaymentConfirmationModal from '../TestRequest/components/PaymentConfirmationModal';
 import ExportReceiptModal from './components/ExportReceiptModal';
+import "../../styles/ListCard.css";
 
 const ReceiptList: React.FC = () => {
   const navigate = useNavigate();
@@ -139,6 +140,7 @@ const ReceiptList: React.FC = () => {
 
   return (
     <Card
+      className="list-card"
       title="Danh sách phiếu thu"
       extra={
         <Space>
@@ -193,7 +195,7 @@ const ReceiptList: React.FC = () => {
           total: totalCount,
           pageSizeOptions: [50, 100, 150],
           showSizeChanger: true,
-          showTotal: (total) => `Tổng ${total} phiếu thu`,
+          showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
         }}
         onChange={handleTableChange}
         scroll={{ x: 1200 }}

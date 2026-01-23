@@ -34,6 +34,7 @@ import {
 import { MasterDataItem } from "./types";
 import { authService } from "../../../services/authService";
 import { PERMISSIONS } from "../../../constants/permissionMapping";
+import "../../../styles/ListCard.css";
 
 const MasterDataList: React.FC = () => {
   const {
@@ -134,6 +135,7 @@ const MasterDataList: React.FC = () => {
       />
 
       <Card
+        className="list-card"
         title={
           <Space>
             <DatabaseOutlined />

@@ -22,6 +22,7 @@ import {
 import { TestingStatus, TestingTabType } from "../../types/testing";
 import { useTestingList } from "./hooks";
 import LabSampleAssignmentLogTab from "./components/LabSampleAssignmentLogTab";
+import "../../styles/ListCard.css";
 
 // Extended tab type to include sample assignment log
 type ExtendedTabType = TestingTabType | "sample-assignment-log";
@@ -161,6 +162,7 @@ const TestingList: React.FC = () => {
       )}
 
       <Card
+        className="list-card"
         title={
           <Space>
             <ExperimentOutlined />
@@ -257,8 +259,7 @@ const TestingList: React.FC = () => {
                 total: pagination.total,
                 pageSizeOptions: [20, 50, 100],
                 showSizeChanger: true,
-                showTotal: (total, range) =>
-                  `${range[0]}-${range[1]} của ${total} xét nghiệm`,
+                showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
               }}
               onChange={handleTableChange}
               scroll={{ x: 1000 }}

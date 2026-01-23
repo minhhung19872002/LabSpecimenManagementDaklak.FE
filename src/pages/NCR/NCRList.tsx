@@ -23,6 +23,7 @@ import { useNCRList } from "./hooks";
 import { NCRFormModal, NCRDetailModal } from "./components";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
+import "../../styles/ListCard.css";
 
 const NCRList: React.FC = () => {
   const {
@@ -94,6 +95,7 @@ const NCRList: React.FC = () => {
       )}
 
       <Card
+        className="list-card"
         title="Quản lý Công việc không phù hợp (NCR)"
         extra={
           <Space>
@@ -134,7 +136,7 @@ const NCRList: React.FC = () => {
             pageSize: 50,
             pageSizeOptions: [50, 100, 150],
             showSizeChanger: true,
-            showTotal: (total) => `Tổng ${total} NCR`,
+            showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
           }}
         />
       </Card>

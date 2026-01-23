@@ -263,7 +263,7 @@ const TestResultValuesList: React.FC<TestResultValuesTabProps> = ({
         pagination={{
           ...pagination,
           showSizeChanger: true,
-          showTotal: (total) => `Tổng ${total} kết quả`,
+          showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
           pageSizeOptions: ["10", "20", "50", "100"],
         }}
         onChange={handleTableChange}
