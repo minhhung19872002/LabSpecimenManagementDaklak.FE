@@ -71,7 +71,7 @@ const OnlyOfficeEditor: React.FC<OnlyOfficeEditorProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [scriptLoaded, setScriptLoaded] = useState(false);
+  const [, setScriptLoaded] = useState(false);
   const editorIdRef = useRef(`onlyoffice-editor-${Date.now()}`);
 
   // Wait for DocsAPI to be available with timeout

@@ -196,6 +196,24 @@ export const PERMISSIONS = {
     Edit: `${P}.SampleConditions.Edit`,
     Delete: `${P}.SampleConditions.Delete`,
   },
+  SampleTypeCategories: {
+    Default: `${P}.SampleTypeCategories`,
+    Create: `${P}.SampleTypeCategories.Create`,
+    Edit: `${P}.SampleTypeCategories.Edit`,
+    Delete: `${P}.SampleTypeCategories.Delete`,
+  },
+  Notes: {
+    Default: `${P}.Notes`,
+    Create: `${P}.Notes.Create`,
+    Edit: `${P}.Notes.Edit`,
+    Delete: `${P}.Notes.Delete`,
+  },
+  TestResultValues: {
+    Default: `${P}.TestResultValues`,
+    Create: `${P}.TestResultValues.Create`,
+    Edit: `${P}.TestResultValues.Edit`,
+    Delete: `${P}.TestResultValues.Delete`,
+  },
 
   // Users
   Users: {
