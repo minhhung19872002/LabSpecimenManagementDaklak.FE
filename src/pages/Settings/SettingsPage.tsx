@@ -1,31 +1,35 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Card,
-  Tabs,
+  Divider,
   Form,
   Input,
   Select,
   Switch,
   Button,
   message,
-  Divider,
   Row,
   Col,
   InputNumber,
   Space,
-  Tag,
   Avatar,
-  Descriptions,
   Spin,
   Modal,
 } from "antd";
-import {
+import Icon, {
   SettingOutlined,
   UserOutlined,
   BellOutlined,
   SafetyOutlined,
   MailOutlined,
   SaveOutlined,
+  InboxOutlined,
+  FileDoneOutlined,
+  ExclamationCircleOutlined,
+  ClockCircleOutlined,
+  CalendarOutlined,
+  LockOutlined,
+  KeyOutlined,
 } from "../../components/common/Icon";
 import settingsService, {
   UserProfileDto,
@@ -36,6 +40,7 @@ import settingsService, {
 import { ROLES, STORAGE_KEYS } from "../../constants";
 import { UserInfo, authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
+import "./SettingsPage.css";
 
 /**
  * Settings Tab Permission Matrix:
@@ -383,28 +388,37 @@ const SettingsPage: React.FC = () => {
       ),
       children: (
         <Spin spinning={loading}>
-          <Card title="Thông tin tài khoản">
+          {/* Card 1: Thông tin cá nhân */}
+          <Card
+            className="settings-form-card"
+            title={
+              <div>
+                <div className="settings-form-card-title">Thông tin cá nhân</div>
+                <div className="settings-form-card-subtitle">Cập nhật thông tin định danh của bạn trên hệ thống</div>
+              </div>
+            }
+          >
             <Row gutter={24}>
               <Col
                 xs={24}
-                md={8}
+                md={6}
                 style={{ textAlign: "center", marginBottom: 24 }}
               >
                 <Avatar
-                  size={120}
+                  size={100}
                   icon={<UserOutlined />}
                   style={{ backgroundColor: "#1890ff" }}
                 >
                   {userProfile?.fullName?.charAt(0).toUpperCase()}
                 </Avatar>
-                <div style={{ marginTop: 16 }}>
-                  <div style={{ fontWeight: "bold", fontSize: 16 }}>
+                <div style={{ marginTop: 12 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>
                     {userProfile?.fullName}
                   </div>
-                  <div style={{ color: "#666" }}>{userProfile?.userName}</div>
+                  <div style={{ color: "#8c8c8c", fontSize: 13 }}>{userProfile?.userName}</div>
                 </div>
               </Col>
-              <Col xs={24} md={16}>
+              <Col xs={24} md={18}>
                 <Form form={profileForm} layout="vertical">
                   <Form.Item
                     name="fullName"
@@ -413,33 +427,39 @@ const SettingsPage: React.FC = () => {
                       { required: true, message: "Vui lòng nhập họ tên" },
                     ]}
                   >
-                    <Input />
-                  </Form.Item>
-                  <Form.Item
-                    name="email"
-                    label="Email"
-                    rules={[
-                      {
-                        required: true,
-                        type: "email",
-                        message: "Email không hợp lệ",
-                      },
-                    ]}
-                  >
-                    <Input prefix={<MailOutlined />} />
-                  </Form.Item>
-                  <Form.Item name="phoneNumber" label="Số điện thoại">
-                    <Input />
+                    <Input placeholder="Nhập họ tên" />
                   </Form.Item>
                   <Row gutter={16}>
-                    <Col span={12}>
-                      <Form.Item name="department" label="Phòng ban">
-                        <Input disabled />
+                    <Col xs={24} md={12}>
+                      <Form.Item
+                        name="email"
+                        label="Email"
+                        rules={[
+                          {
+                            required: true,
+                            type: "email",
+                            message: "Email không hợp lệ",
+                          },
+                        ]}
+                      >
+                        <Input placeholder="Nhập email" />
                       </Form.Item>
                     </Col>
-                    <Col span={12}>
+                    <Col xs={24} md={12}>
+                      <Form.Item name="phoneNumber" label="Số điện thoại">
+                        <Input placeholder="Nhập số điện thoại" />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                  <Row gutter={16}>
+                    <Col xs={24} md={12}>
+                      <Form.Item name="department" label="Phòng ban">
+                        <Select disabled placeholder="Chọn" />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24} md={12}>
                       <Form.Item name="position" label="Chức vụ">
-                        <Input disabled />
+                        <Select disabled placeholder="Chọn" />
                       </Form.Item>
                     </Col>
                   </Row>
@@ -448,88 +468,100 @@ const SettingsPage: React.FC = () => {
                     icon={<SaveOutlined />}
                     onClick={handleSaveProfile}
                     loading={profileLoading}
+                    className="settings-btn-gradient"
                   >
                     Lưu thay đổi
                   </Button>
                 </Form>
-
-                <Divider>Đổi mật khẩu</Divider>
-
-                <Form form={passwordForm} layout="vertical">
-                  <Form.Item
-                    name="currentPassword"
-                    label="Mật khẩu hiện tại"
-                    rules={[
-                      {
-                        required: true,
-                        message: "Vui lòng nhập mật khẩu hiện tại",
-                      },
-                    ]}
-                  >
-                    <Input.Password placeholder="Mật khẩu hiện tại" />
-                  </Form.Item>
-                  <Form.Item
-                    name="newPassword"
-                    label="Mật khẩu mới"
-                    rules={[
-                      { required: true, message: "Vui lòng nhập mật khẩu mới" },
-                      { min: 6, message: "Mật khẩu phải có ít nhất 6 ký tự" },
-                      {
-                        pattern: /[A-Z]/,
-                        message: "Mật khẩu phải có ít nhất 1 chữ hoa",
-                      },
-                      {
-                        pattern: /[a-z]/,
-                        message: "Mật khẩu phải có ít nhất 1 chữ thường",
-                      },
-                      {
-                        pattern: /[0-9]/,
-                        message: "Mật khẩu phải có ít nhất 1 chữ số",
-                      },
-                      {
-                        pattern: /[!@#$%^&*(),.?":{}|<>]/,
-                        message: "Mật khẩu phải có ít nhất 1 ký tự đặc biệt",
-                      },
-                    ]}
-                  >
-                    <Input.Password placeholder="Mật khẩu mới" />
-                  </Form.Item>
-                  <Form.Item
-                    name="confirmPassword"
-                    label="Xác nhận mật khẩu mới"
-                    dependencies={["newPassword"]}
-                    rules={[
-                      {
-                        required: true,
-                        message: "Vui lòng xác nhận mật khẩu mới",
-                      },
-                      ({ getFieldValue }) => ({
-                        validator(_, value) {
-                          if (
-                            !value ||
-                            getFieldValue("newPassword") === value
-                          ) {
-                            return Promise.resolve();
-                          }
-                          return Promise.reject(
-                            new Error("Mật khẩu xác nhận không khớp")
-                          );
-                        },
-                      }),
-                    ]}
-                  >
-                    <Input.Password placeholder="Xác nhận mật khẩu mới" />
-                  </Form.Item>
-                  <Button
-                    type="primary"
-                    onClick={handleChangePassword}
-                    loading={passwordLoading}
-                  >
-                    Đổi mật khẩu
-                  </Button>
-                </Form>
               </Col>
             </Row>
+          </Card>
+
+          {/* Card 2: Đổi mật khẩu */}
+          <Card
+            className="settings-form-card"
+            style={{ marginTop: 24 }}
+            title={
+              <div>
+                <div className="settings-form-card-title">Đổi mật khẩu</div>
+                <div className="settings-form-card-subtitle">Bảo vệ tài khoản bằng mật khẩu mạnh</div>
+              </div>
+            }
+          >
+            <Form form={passwordForm} layout="vertical">
+              <Form.Item
+                name="currentPassword"
+                label="Mật khẩu hiện tại"
+                rules={[
+                  {
+                    required: true,
+                    message: "Vui lòng nhập mật khẩu hiện tại",
+                  },
+                ]}
+              >
+                <Input.Password placeholder="Nhập mật khẩu hiện tại" />
+              </Form.Item>
+              <Form.Item
+                name="newPassword"
+                label="Mật khẩu mới"
+                rules={[
+                  { required: true, message: "Vui lòng nhập mật khẩu mới" },
+                  { min: 6, message: "Mật khẩu phải có ít nhất 6 ký tự" },
+                  {
+                    pattern: /[A-Z]/,
+                    message: "Mật khẩu phải có ít nhất 1 chữ hoa",
+                  },
+                  {
+                    pattern: /[a-z]/,
+                    message: "Mật khẩu phải có ít nhất 1 chữ thường",
+                  },
+                  {
+                    pattern: /[0-9]/,
+                    message: "Mật khẩu phải có ít nhất 1 chữ số",
+                  },
+                  {
+                    pattern: /[!@#$%^&*(),.?":{}|<>]/,
+                    message: "Mật khẩu phải có ít nhất 1 ký tự đặc biệt",
+                  },
+                ]}
+              >
+                <Input.Password placeholder="Nhập mật khẩu mới" />
+              </Form.Item>
+              <Form.Item
+                name="confirmPassword"
+                label="Xác nhận mật khẩu mới"
+                dependencies={["newPassword"]}
+                rules={[
+                  {
+                    required: true,
+                    message: "Vui lòng xác nhận mật khẩu mới",
+                  },
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      if (
+                        !value ||
+                        getFieldValue("newPassword") === value
+                      ) {
+                        return Promise.resolve();
+                      }
+                      return Promise.reject(
+                        new Error("Mật khẩu xác nhận không khớp")
+                      );
+                    },
+                  }),
+                ]}
+              >
+                <Input.Password placeholder="Nhập lại mật khẩu mới" />
+              </Form.Item>
+              <Button
+                type="primary"
+                onClick={handleChangePassword}
+                loading={passwordLoading}
+                className="settings-btn-gradient"
+              >
+                Lưu thay đổi
+              </Button>
+            </Form>
           </Card>
         </Spin>
       ),
@@ -543,75 +575,114 @@ const SettingsPage: React.FC = () => {
       ),
       children: (
         <Spin spinning={loading}>
-          <Card title="Cài đặt thông báo">
-            <Form form={notificationForm} layout="vertical">
-              <Descriptions bordered column={1}>
-                <Descriptions.Item label="Thông báo qua email">
-                  <Form.Item
-                    name="emailEnabled"
-                    valuePropName="checked"
-                    noStyle
-                  >
-                    <Switch />
-                  </Form.Item>
-                </Descriptions.Item>
-                <Descriptions.Item label="Thông báo khi có yêu cầu mới">
-                  <Form.Item
-                    name="newRequestAlert"
-                    valuePropName="checked"
-                    noStyle
-                  >
-                    <Switch />
-                  </Form.Item>
-                </Descriptions.Item>
-                <Descriptions.Item label="Thông báo khi có kết quả cần duyệt">
-                  <Form.Item
-                    name="resultApprovalAlert"
-                    valuePropName="checked"
-                    noStyle
-                  >
-                    <Switch />
-                  </Form.Item>
-                </Descriptions.Item>
-                <Descriptions.Item label="Thông báo khi sắp hết hạn TAT">
-                  <Form.Item
-                    name="tatWarningAlert"
-                    valuePropName="checked"
-                    noStyle
-                  >
-                    <Switch />
-                  </Form.Item>
-                </Descriptions.Item>
-                <Descriptions.Item label="Thông báo NCR mới">
-                  <Form.Item name="ncrAlert" valuePropName="checked" noStyle>
-                    <Switch />
-                  </Form.Item>
-                </Descriptions.Item>
-                <Descriptions.Item label="Báo cáo hàng tuần">
-                  <Form.Item
-                    name="weeklyReport"
-                    valuePropName="checked"
-                    noStyle
-                  >
-                    <Switch />
-                  </Form.Item>
-                </Descriptions.Item>
-                <Descriptions.Item label="Báo cáo hàng tháng">
-                  <Form.Item
-                    name="monthlyReport"
-                    valuePropName="checked"
-                    noStyle
-                  >
-                    <Switch />
-                  </Form.Item>
-                </Descriptions.Item>
-              </Descriptions>
-              <div style={{ marginTop: 16 }}>
+          <Card
+            className="settings-form-card settings-form-card--no-body-padding"
+            title={
+              <div>
+                <div className="settings-form-card-title">Cài đặt thông báo</div>
+                <div className="settings-form-card-subtitle">Tùy chỉnh cách bạn nhận cập nhật từ hệ thống</div>
+              </div>
+            }
+          >
+            <Form form={notificationForm}>
+              <div className="settings-item">
+                <div className="settings-item-left">
+                  <div className="settings-item-icon"><MailOutlined /></div>
+                  <div>
+                    <div className="settings-item-label">Thông báo qua email</div>
+                    <div className="settings-item-subtitle">Gửi các cập nhật quan trọng trực tiếp đến hộp thư của bạn</div>
+                  </div>
+                </div>
+                <Form.Item name="emailEnabled" valuePropName="checked" noStyle>
+                  <Switch />
+                </Form.Item>
+              </div>
+              <Divider style={{ margin: 0 }} />
+              <div className="settings-item">
+                <div className="settings-item-left">
+                  <div className="settings-item-icon"><InboxOutlined /></div>
+                  <div>
+                    <div className="settings-item-label">Thông báo khi có yêu cầu mới</div>
+                    <div className="settings-item-subtitle">Gửi các cập nhật quan trọng trực tiếp đến hộp thư của bạn</div>
+                  </div>
+                </div>
+                <Form.Item name="newRequestAlert" valuePropName="checked" noStyle>
+                  <Switch />
+                </Form.Item>
+              </div>
+              <Divider style={{ margin: 0 }} />
+              <div className="settings-item">
+                <div className="settings-item-left">
+                  <div className="settings-item-icon"><FileDoneOutlined /></div>
+                  <div>
+                    <div className="settings-item-label">Thông báo khi có kết quả cần duyệt</div>
+                    <div className="settings-item-subtitle">Gửi các cập nhật quan trọng trực tiếp đến hộp thư của bạn</div>
+                  </div>
+                </div>
+                <Form.Item name="resultApprovalAlert" valuePropName="checked" noStyle>
+                  <Switch />
+                </Form.Item>
+              </div>
+              <Divider style={{ margin: 0 }} />
+              <div className="settings-item">
+                <div className="settings-item-left">
+                  <div className="settings-item-icon"><BellOutlined /></div>
+                  <div>
+                    <div className="settings-item-label">Thông báo khi sắp hết hạn TAT</div>
+                    <div className="settings-item-subtitle">Gửi các cập nhật quan trọng trực tiếp đến hộp thư của bạn</div>
+                  </div>
+                </div>
+                <Form.Item name="tatWarningAlert" valuePropName="checked" noStyle>
+                  <Switch />
+                </Form.Item>
+              </div>
+              <Divider style={{ margin: 0 }} />
+              <div className="settings-item">
+                <div className="settings-item-left">
+                  <div className="settings-item-icon"><ExclamationCircleOutlined /></div>
+                  <div>
+                    <div className="settings-item-label">Thông báo NCR mới</div>
+                    <div className="settings-item-subtitle">Gửi các cập nhật quan trọng trực tiếp đến hộp thư của bạn</div>
+                  </div>
+                </div>
+                <Form.Item name="ncrAlert" valuePropName="checked" noStyle>
+                  <Switch />
+                </Form.Item>
+              </div>
+              <Divider style={{ margin: 0 }} />
+              <div className="settings-item">
+                <div className="settings-item-left">
+                  <div className="settings-item-icon"><ClockCircleOutlined /></div>
+                  <div>
+                    <div className="settings-item-label">Báo cáo hàng tuần</div>
+                    <div className="settings-item-subtitle">Gửi các cập nhật quan trọng trực tiếp đến hộp thư của bạn</div>
+                  </div>
+                </div>
+                <Form.Item name="weeklyReport" valuePropName="checked" noStyle>
+                  <Switch />
+                </Form.Item>
+              </div>
+              <Divider style={{ margin: 0 }} />
+              <div className="settings-item">
+                <div className="settings-item-left">
+                  <div className="settings-item-icon"><CalendarOutlined /></div>
+                  <div>
+                    <div className="settings-item-label">Báo cáo hàng tháng</div>
+                    <div className="settings-item-subtitle">Gửi các cập nhật quan trọng trực tiếp đến hộp thư của bạn</div>
+                  </div>
+                </div>
+                <Form.Item name="monthlyReport" valuePropName="checked" noStyle>
+                  <Switch />
+                </Form.Item>
+              </div>
+              <Divider style={{ margin: 0 }} />
+              <div className="settings-item">
                 <Button
                   type="primary"
                   icon={<SaveOutlined />}
                   onClick={handleSaveNotification}
                   loading={notificationLoading}
+                  className="settings-btn-gradient"
                 >
                   Lưu cài đặt
                 </Button>
@@ -630,7 +701,15 @@ const SettingsPage: React.FC = () => {
       ),
       children: (
         <Spin spinning={loading}>
-          <Card title="Cài đặt hệ thống">
+          <Card
+            className="settings-form-card"
+            title={
+              <div>
+                <div className="settings-form-card-title">Cài đặt hệ thống</div>
+                <div className="settings-form-card-subtitle">Tùy chỉnh các thông số chung của hệ thống</div>
+              </div>
+            }
+          >
             <Form form={systemForm} layout="vertical">
               <Row gutter={16}>
                 <Col xs={24} md={12}>
@@ -656,12 +735,12 @@ const SettingsPage: React.FC = () => {
                 <Input.TextArea rows={2} />
               </Form.Item>
               <Row gutter={16}>
-                <Col xs={24} md={8}>
+                <Col xs={24} md={12}>
                   <Form.Item name="defaultTAT" label="TAT mặc định (ngày)">
                     <InputNumber min={1} max={30} style={{ width: "100%" }} />
                   </Form.Item>
                 </Col>
-                <Col xs={24} md={8}>
+                <Col xs={24} md={12}>
                   <Form.Item name="language" label="Ngôn ngữ">
                     <Select>
                       <Select.Option value="vi">Tiếng Việt</Select.Option>
@@ -669,7 +748,9 @@ const SettingsPage: React.FC = () => {
                     </Select>
                   </Form.Item>
                 </Col>
-                <Col xs={24} md={8}>
+              </Row>
+              <Row gutter={16}>
+                <Col xs={24} md={12}>
                   <Form.Item name="timezone" label="Múi giờ">
                     <Select>
                       <Select.Option value="Asia/Ho_Chi_Minh">
@@ -678,24 +759,27 @@ const SettingsPage: React.FC = () => {
                     </Select>
                   </Form.Item>
                 </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item name="workingDays" label="Ngày làm việc">
+                    <Select mode="multiple">
+                      <Select.Option value="monday">Thứ 2</Select.Option>
+                      <Select.Option value="tuesday">Thứ 3</Select.Option>
+                      <Select.Option value="wednesday">Thứ 4</Select.Option>
+                      <Select.Option value="thursday">Thứ 5</Select.Option>
+                      <Select.Option value="friday">Thứ 6</Select.Option>
+                      <Select.Option value="saturday">Thứ 7</Select.Option>
+                      <Select.Option value="sunday">Chủ nhật</Select.Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
               </Row>
-              <Form.Item name="workingDays" label="Ngày làm việc">
-                <Select mode="multiple">
-                  <Select.Option value="monday">Thứ 2</Select.Option>
-                  <Select.Option value="tuesday">Thứ 3</Select.Option>
-                  <Select.Option value="wednesday">Thứ 4</Select.Option>
-                  <Select.Option value="thursday">Thứ 5</Select.Option>
-                  <Select.Option value="friday">Thứ 6</Select.Option>
-                  <Select.Option value="saturday">Thứ 7</Select.Option>
-                  <Select.Option value="sunday">Chủ nhật</Select.Option>
-                </Select>
-              </Form.Item>
               {authService.hasPermission(PERMISSIONS.Settings.Edit) && (
                 <Button
                   type="primary"
                   icon={<SaveOutlined />}
                   onClick={handleSaveSystem}
                   loading={systemLoading}
+                  className="settings-btn-gradient"
                 >
                   Lưu cài đặt
                 </Button>
@@ -714,10 +798,18 @@ const SettingsPage: React.FC = () => {
       ),
       children: (
         <Spin spinning={loading}>
-          <Card title="Cài đặt SMTP">
+          <Card
+            className="settings-form-card"
+            title={
+              <div>
+                <div className="settings-form-card-title">Cài đặt SMTP</div>
+                <div className="settings-form-card-subtitle">Tùy chỉnh cách bạn nhận cập nhật từ hệ thống</div>
+              </div>
+            }
+          >
             <Form form={emailForm} layout="vertical">
-              <Row gutter={16}>
-                <Col xs={24} md={16}>
+              <Row gutter={24}>
+                <Col xs={24} md={12}>
                   <Form.Item
                     name="smtpHost"
                     label="SMTP Server"
@@ -725,8 +817,6 @@ const SettingsPage: React.FC = () => {
                   >
                     <Input placeholder="smtp.gmail.com" />
                   </Form.Item>
-                </Col>
-                <Col xs={24} md={8}>
                   <Form.Item
                     name="smtpPort"
                     label="Port"
@@ -734,44 +824,36 @@ const SettingsPage: React.FC = () => {
                   >
                     <InputNumber style={{ width: "100%" }} />
                   </Form.Item>
-                </Col>
-              </Row>
-              <Row gutter={16}>
-                <Col xs={24} md={12}>
                   <Form.Item name="smtpUsername" label="Username">
                     <Input />
                   </Form.Item>
-                </Col>
-                <Col xs={24} md={12}>
                   <Form.Item name="smtpPassword" label="Password">
                     <Input.Password placeholder="Để trống nếu không muốn thay đổi" />
                   </Form.Item>
-                </Col>
-              </Row>
-              <Form.Item
-                name="enableSsl"
-                label="SSL/TLS"
-                valuePropName="checked"
-              >
-                <Switch checkedChildren="Bật" unCheckedChildren="Tắt" />
-              </Form.Item>
-              <Divider>Thông tin người gửi</Divider>
-              <Row gutter={16}>
-                <Col xs={24} md={12}>
-                  <Form.Item name="fromName" label="Tên hiển thị">
-                    <Input />
+                  <Form.Item
+                    name="enableSsl"
+                    label="SSL/TLS"
+                    valuePropName="checked"
+                  >
+                    <Switch checkedChildren="Bật" unCheckedChildren="Tắt" />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
-                  <Form.Item name="fromEmail" label="Email gửi">
-                    <Input />
-                  </Form.Item>
+                  <div style={{ background: '#FAFAFA', borderRadius: 8, padding: '16px' }}>
+                    <Form.Item name="fromName" label="Tên hiển thị">
+                      <Input />
+                    </Form.Item>
+                    <Form.Item name="fromEmail" label="Email gửi">
+                      <Input />
+                    </Form.Item>
+                  </div>
                 </Col>
               </Row>
               {authService.hasPermission(PERMISSIONS.Settings.Edit) && (
                 <Space>
                   <Button
                     type="primary"
+                    className="settings-btn-gradient"
                     icon={<SaveOutlined />}
                     onClick={handleSaveEmail}
                     loading={emailLoading}
@@ -801,63 +883,102 @@ const SettingsPage: React.FC = () => {
       ),
       children: (
         <Spin spinning={loading}>
-          <Card title="Cài đặt bảo mật">
-            <Form form={securityForm} layout="vertical">
-              <Descriptions bordered column={1}>
-                <Descriptions.Item label="Yêu cầu mật khẩu mạnh">
-                  <Form.Item
-                    name="requireStrongPassword"
-                    valuePropName="checked"
-                    noStyle
-                  >
+          <Card
+            className="settings-form-card settings-form-card--no-body-padding"
+            title={
+              <div>
+                <div className="settings-form-card-title">Cài đặt bảo mật</div>
+                <div className="settings-form-card-subtitle">Tùy chỉnh các thiết lập bảo mật cho hệ thống</div>
+              </div>
+            }
+          >
+            <Form form={securityForm}>
+              <div className="settings-item">
+                <div className="settings-item-left">
+                  <div className="settings-item-icon"><SafetyOutlined /></div>
+                  <div>
+                    <div className="settings-item-label">Yêu cầu mật khẩu mạnh</div>
+                    <div className="settings-item-subtitle">Tối thiểu 8 ký tự, có chữ hoa, số và ký tự đặc biệt</div>
+                  </div>
+                </div>
+                <Form.Item name="requireStrongPassword" valuePropName="checked" noStyle>
+                  <Switch />
+                </Form.Item>
+              </div>
+              <Divider style={{ margin: 0 }} />
+              <div className="settings-item">
+                <div className="settings-item-left">
+                  <div className="settings-item-icon"><ClockCircleOutlined /></div>
+                  <div>
+                    <div className="settings-item-label">Thời gian hết hạn session (phút)</div>
+                  </div>
+                </div>
+                <Form.Item name="sessionTimeout" noStyle>
+                  <InputNumber min={5} max={120} />
+                </Form.Item>
+              </div>
+              <Divider style={{ margin: 0 }} />
+              <div className="settings-item">
+                <div className="settings-item-left">
+                  <div className="settings-item-icon"><Icon name="exclamation-diamond" /></div>
+                  <div>
+                    <div className="settings-item-label">Số lần đăng nhập sai tối đa</div>
+                  </div>
+                </div>
+                <Form.Item name="maxLoginAttempts" noStyle>
+                  <InputNumber min={3} max={10} />
+                </Form.Item>
+              </div>
+              <Divider style={{ margin: 0 }} />
+              <div className="settings-item">
+                <div className="settings-item-left">
+                  <div className="settings-item-icon"><LockOutlined /></div>
+                  <div>
+                    <div className="settings-item-label">Khóa tài khoản khi đăng nhập sai (phút)</div>
+                  </div>
+                </div>
+                <Form.Item name="lockoutDuration" noStyle>
+                  <InputNumber min={5} max={60} />
+                </Form.Item>
+              </div>
+              <Divider style={{ margin: 0 }} />
+              <div className="settings-item">
+                <div className="settings-item-left">
+                  <div className="settings-item-icon"><KeyOutlined /></div>
+                  <div>
+                    <div className="settings-item-label">Bắt buộc đổi mật khẩu định kỳ (ngày)</div>
+                  </div>
+                </div>
+                <Form.Item name="passwordExpiryDays" noStyle>
+                  <InputNumber min={30} max={365} />
+                </Form.Item>
+              </div>
+              <Divider style={{ margin: 0 }} />
+              <div className="settings-item">
+                <div className="settings-item-left">
+                  <div className="settings-item-icon"><Icon name="fingerprint" /></div>
+                  <div>
+                    <div className="settings-item-label">Xác thực 2 bước (2FA)</div>
+                  </div>
+                </div>
+                <Space>
+                  <span style={{ fontSize: 14, background: 'var(--gradient-primary)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Coming soon</span>
+                  <Form.Item name="twoFactorEnabled" valuePropName="checked" noStyle>
                     <Switch />
                   </Form.Item>
-                  <span style={{ marginLeft: 8, color: "#666" }}>
-                    Tối thiểu 8 ký tự, có chữ hoa, số và ký tự đặc biệt
-                  </span>
-                </Descriptions.Item>
-                <Descriptions.Item label="Thời gian hết hạn session (phút)">
-                  <Form.Item name="sessionTimeout" noStyle>
-                    <InputNumber min={5} max={120} />
-                  </Form.Item>
-                </Descriptions.Item>
-                <Descriptions.Item label="Số lần đăng nhập sai tối đa">
-                  <Form.Item name="maxLoginAttempts" noStyle>
-                    <InputNumber min={3} max={10} />
-                  </Form.Item>
-                </Descriptions.Item>
-                <Descriptions.Item label="Khóa tài khoản khi đăng nhập sai (phút)">
-                  <Form.Item name="lockoutDuration" noStyle>
-                    <InputNumber min={5} max={60} />
-                  </Form.Item>
-                </Descriptions.Item>
-                <Descriptions.Item label="Bắt buộc đổi mật khẩu định kỳ (ngày)">
-                  <Form.Item name="passwordExpiryDays" noStyle>
-                    <InputNumber min={30} max={365} />
-                  </Form.Item>
-                </Descriptions.Item>
-                <Descriptions.Item label="Xác thực 2 bước (2FA)">
-                  <Form.Item
-                    name="twoFactorEnabled"
-                    valuePropName="checked"
-                    noStyle
-                  >
-                    <Switch />
-                  </Form.Item>
-                  <Tag color="blue" style={{ marginLeft: 8 }}>
-                    Coming soon
-                  </Tag>
-                </Descriptions.Item>
-              </Descriptions>
+                </Space>
+              </div>
+              <Divider style={{ margin: 0 }} />
               {authService.hasPermission(PERMISSIONS.Settings.Edit) && (
-                <div style={{ marginTop: 16 }}>
+                <div className="settings-item">
                   <Button
                     type="primary"
                     icon={<SaveOutlined />}
                     onClick={handleSaveSecurity}
                     loading={securityLoading}
+                    className="settings-btn-gradient"
                   >
-                    Lưu cài đặt
+                    Lưu thay đổi
                   </Button>
                 </div>
               )}
@@ -871,18 +992,41 @@ const SettingsPage: React.FC = () => {
   // Filter tabs based on user permissions
   const visibleTabs = allTabs.filter((tab) => hasTabPermission(tab.key));
 
-  return (
-    <div>
-      <h2 style={{ marginBottom: 24 }}>
-        <SettingOutlined /> Cài đặt hệ thống
-      </h2>
+  // Menu items config
+  const menuItems = [
+    { key: "profile", icon: <UserOutlined />, label: "Thông tin cá nhân" },
+    { key: "notifications", icon: <BellOutlined />, label: "Thông báo" },
+    { key: "system", icon: <SettingOutlined />, label: "Cài đặt chung" },
+    { key: "email", icon: <MailOutlined />, label: "Email SMTP" },
+    { key: "security", icon: <SafetyOutlined />, label: "Bảo mật" },
+  ].filter((item) => hasTabPermission(item.key));
 
-      <Tabs
-        tabPosition="left"
-        activeKey={activeTab}
-        onChange={setActiveTab}
-        items={visibleTabs}
-      />
+  // Get active tab content
+  const activeTabContent = visibleTabs.find((tab) => tab.key === activeTab)?.children;
+
+  return (
+    <div className="page-wrapper">
+      <Row gutter={24}>
+        <Col xs={24} md={7} lg={6}>
+          <Card className="settings-menu-card" title="Cài đặt hệ thống">
+            {menuItems.map((item) => (
+              <div
+                key={item.key}
+                className={`settings-menu-item${activeTab === item.key ? " active" : ""}`}
+                onClick={() => setActiveTab(item.key)}
+              >
+                {item.icon}
+                {item.label}
+              </div>
+            ))}
+          </Card>
+        </Col>
+        <Col xs={24} md={17} lg={18}>
+          <div className="settings-content">
+            {activeTabContent}
+          </div>
+        </Col>
+      </Row>
     </div>
   );
 };
