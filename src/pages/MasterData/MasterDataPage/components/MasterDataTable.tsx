@@ -55,7 +55,7 @@ const MasterDataTable: React.FC<MasterDataTableProps> = ({
                   pageSize:
                     pagination[activeCategory]?.pageSize || DEFAULT_PAGE_SIZE,
                   total: totalCount[activeCategory] || 0,
-                  pageSizeOptions: ["50", "100", "150"],
+                  pageSizeOptions: [50, 100, 150],
                   showSizeChanger: true,
                   showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
                   onChange: onTableChange,

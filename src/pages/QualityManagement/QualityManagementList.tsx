@@ -26,6 +26,7 @@ import SampleAssignmentLogTab from "./components/SampleAssignmentLogTab";
 import { useQualityManagementList } from "./hooks";
 
 import "./components/ReportManagementTab.css";
+import "../../styles/ListCard.css";
 
 const { Title } = Typography;
 
@@ -60,9 +61,9 @@ const QualityManagementList: React.FC = () => {
       label: "Quản lý báo cáo",
       children: (
         <div className="report-management-tab">
-          {/* Filters */}
-          <Card size="small" style={{ marginBottom: 16 }}>
-            <Row gutter={[16, 16]} align="middle">
+          <Card className="list-card">
+            {/* Filters */}
+            <Row gutter={[16, 16]} align="middle" style={{ marginBottom: 16 }}>
               <Col xs={24} sm={12} md={8}>
                 <Input.Search
                   placeholder="Tìm theo hợp đồng, QLKT..."
@@ -93,10 +94,8 @@ const QualityManagementList: React.FC = () => {
                 <Button icon={<ReloadOutlined />} onClick={loadData} />
               </Col>
             </Row>
-          </Card>
 
-          {/* Table */}
-          <Card size="small">
+            {/* Table */}
             <Table
               columns={columns}
               dataSource={tasks}
@@ -106,7 +105,7 @@ const QualityManagementList: React.FC = () => {
                 ...pagination,
                 showSizeChanger: true,
                 showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
-                pageSizeOptions: ["20", "50", "100"],
+                pageSizeOptions: [50, 100, 150],
               }}
               onChange={handleTableChange}
               scroll={{ x: 1200 }}
