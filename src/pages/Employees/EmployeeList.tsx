@@ -9,23 +9,28 @@ import {
   Col,
   Typography,
   Select,
+  Modal,
+  Tag,
 } from "antd";
 import Icon, {
   PlusOutlined,
   ReloadOutlined,
   TeamOutlined,
 } from "../../components/common/Icon";
+import { useNavigate } from "react-router-dom";
 import { useEmployeeList, ROLE_OPTIONS } from "./hooks";
 import { EmployeeFormModal, PasswordSentModal } from "./components";
 import ResetPasswordModal from "./components/ResetPasswordModal";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
+import { PATH_ROUTES } from "../../constants/routes";
 import "../../styles/ListCard.css";
 import "../Dashboard/Dashboard.css";
 
 const { Text } = Typography;
 
 const EmployeeList: React.FC = () => {
+  const navigate = useNavigate();
   const {
     employees,
     departments,
@@ -40,6 +45,8 @@ const EmployeeList: React.FC = () => {
     isModalOpen,
     isPasswordModalOpen,
     isResetPasswordModalOpen,
+    isRolesModalOpen,
+    rolesModalEmployee,
     editingItem,
     resetPasswordEmployee,
     newEmployeeInfo,
@@ -59,6 +66,8 @@ const EmployeeList: React.FC = () => {
     handlePasswordModalClose,
     handleResetPasswordModalCancel,
     handleResetPasswordSuccess,
+    handleRolesModalClose,
+    getRoleId,
   } = useEmployeeList();
 
   return (
@@ -212,6 +221,51 @@ const EmployeeList: React.FC = () => {
         onCancel={handleResetPasswordModalCancel}
         onSuccess={handleResetPasswordSuccess}
       />
+
+      {/* Roles Modal */}
+      <Modal
+        title={`Nhóm quyền - ${rolesModalEmployee?.fullName || ""}`}
+        open={isRolesModalOpen}
+        onCancel={handleRolesModalClose}
+        footer={null}
+        centered
+      >
+        <Space direction="vertical" size={12} style={{ width: "100%" }}>
+          {(rolesModalEmployee?.roles || []).map((roleName) => {
+            const roleConfig = ROLE_OPTIONS.find((r) => r.value === roleName);
+            const roleId = getRoleId(roleName);
+            return (
+              <div
+                key={roleName}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "8px 12px",
+                  borderRadius: 8,
+                  border: "1px solid #f0f0f0",
+                }}
+              >
+                <Tag style={{ backgroundColor: roleConfig?.color || "#8C8C8C", color: "#FFFFFF", border: "none", borderRadius: 18, padding: "2px 12px", margin: 0 }}>
+                  {roleConfig?.label || roleName}
+                </Tag>
+                {roleId && authService.hasPermission(PERMISSIONS.RoleManagement.Default) && (
+                  <Button
+                    type="link"
+                    size="small"
+                    onClick={() => {
+                      handleRolesModalClose();
+                      navigate(PATH_ROUTES.roleManagement.detail(roleId));
+                    }}
+                  >
+                    Chi tiết
+                  </Button>
+                )}
+              </div>
+            );
+          })}
+        </Space>
+      </Modal>
     </div>
   );
 };

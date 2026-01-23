@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { employeeService, EmployeeDto } from "../../../services/employeeService";
 import { departmentService } from "../../../services/masterDataService";
+import roleManagementService, { RoleDto } from "../../../services/roleManagementService";
 import { ROLES } from "../../../constants";
 import { employeeSchema, EmployeeFormData } from "../schemas";
 import { getEmployeeColumns } from "../components/columns";
@@ -58,6 +59,11 @@ export const useEmployeeList = () => {
   const [newEmployeeInfo, setNewEmployeeInfo] = useState<{ email: string } | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
 
+  // Roles modal state
+  const [isRolesModalOpen, setIsRolesModalOpen] = useState(false);
+  const [rolesModalEmployee, setRolesModalEmployee] = useState<EmployeeDto | null>(null);
+  const [rolesList, setRolesList] = useState<RoleDto[]>([]);
+
   // Statistics state
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0 });
 
@@ -88,6 +94,16 @@ export const useEmployeeList = () => {
       setDepartments(result.items || []);
     } catch (error) {
       console.error("Error loading departments:", error);
+    }
+  }, []);
+
+  // Load roles list (for name-to-id mapping)
+  const loadRolesList = useCallback(async () => {
+    try {
+      const result = await roleManagementService.getList({ maxResultCount: 100 });
+      setRolesList(result.items || []);
+    } catch (error) {
+      console.error("Error loading roles:", error);
     }
   }, []);
 
@@ -144,7 +160,8 @@ export const useEmployeeList = () => {
   useEffect(() => {
     loadDepartments();
     loadStatistics();
-  }, [loadDepartments, loadStatistics]);
+    loadRolesList();
+  }, [loadDepartments, loadStatistics, loadRolesList]);
 
   useEffect(() => {
     if (departments.length > 0) {
@@ -407,6 +424,25 @@ export const useEmployeeList = () => {
     setNewEmployeeInfo(null);
   }, []);
 
+  // Roles modal handlers
+  const handleViewRoles = useCallback((record: EmployeeDto) => {
+    setRolesModalEmployee(record);
+    setIsRolesModalOpen(true);
+  }, []);
+
+  const handleRolesModalClose = useCallback(() => {
+    setIsRolesModalOpen(false);
+    setRolesModalEmployee(null);
+  }, []);
+
+  // Get role ID from role name
+  const getRoleId = useCallback((roleName: string) => {
+    const role = rolesList.find(
+      (r) => r.name.toLowerCase() === roleName.toLowerCase() || r.normalizedName === roleName.toUpperCase()
+    );
+    return role?.id;
+  }, [rolesList]);
+
   // Columns
   const columns = useMemo(
     () =>
@@ -415,9 +451,10 @@ export const useEmployeeList = () => {
         onDelete: handleDelete,
         onToggleActive: handleToggleActive,
         onResetPassword: handleResetPassword,
+        onViewRoles: handleViewRoles,
         roles: ROLE_OPTIONS,
       }),
-    [handleEdit, handleDelete, handleToggleActive, handleResetPassword]
+    [handleEdit, handleDelete, handleToggleActive, handleResetPassword, handleViewRoles]
   );
 
   return {
@@ -449,6 +486,13 @@ export const useEmployeeList = () => {
 
     // Table
     columns,
+
+    // Roles modal
+    isRolesModalOpen,
+    rolesModalEmployee,
+    handleViewRoles,
+    handleRolesModalClose,
+    getRoleId,
 
     // Handlers
     handleSearchInputChange,

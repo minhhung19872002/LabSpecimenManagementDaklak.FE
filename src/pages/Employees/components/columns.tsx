@@ -25,30 +25,69 @@ interface GetColumnsOptions {
   onDelete: (id: string) => void;
   onToggleActive: (id: string, checked: boolean) => void;
   onResetPassword: (record: EmployeeDto) => void;
+  onViewRoles: (record: EmployeeDto) => void;
   roles: RoleOption[];
 }
 
 export const getEmployeeColumns = (
-  options: GetColumnsOptions
+  options: GetColumnsOptions,
 ): ColumnsType<EmployeeDto> => {
-  const getRoleTags = (roles: string[] | string | undefined) => {
+  const getRoleTags = (
+    roles: string[] | string | undefined,
+    record: EmployeeDto,
+  ) => {
     // Handle both array (new) and string (legacy) formats
     const roleList = Array.isArray(roles) ? roles : roles ? [roles] : [];
 
     if (roleList.length === 0) {
-      return <Tag style={{ backgroundColor: "#8C8C8C", color: "#FFFFFF", border: "none", borderRadius: 18, padding: "2px 8px" }}>Chưa phân quyền</Tag>;
+      return (
+        <Tag
+          style={{
+            backgroundColor: "#8C8C8C",
+            color: "#FFFFFF",
+            border: "none",
+            borderRadius: 18,
+            padding: "2px 8px",
+          }}
+        >
+          Chưa phân quyền
+        </Tag>
+      );
     }
+
+    const visibleRoles = roleList.slice(0, 2);
+    const remaining = roleList.length - 2;
 
     return (
       <Space size={[0, 4]} wrap>
-        {roleList.map((role) => {
+        {visibleRoles.map((role) => {
           const roleConfig = options.roles.find((r) => r.value === role);
           return (
-            <Tag key={role} style={{ backgroundColor: roleConfig?.color || "#8C8C8C", color: "#FFFFFF", border: "none", borderRadius: 18, padding: "2px 8px" }}>
+            <Tag
+              key={role}
+              style={{
+                backgroundColor: roleConfig?.color || "#8C8C8C",
+                color: "#FFFFFF",
+                border: "none",
+                borderRadius: 18,
+                padding: "2px 8px",
+              }}
+            >
               {roleConfig?.label || role}
             </Tag>
           );
         })}
+        {remaining > 0 && (
+          <Tag
+            style={{ cursor: "pointer", borderRadius: 18, padding: "2px 8px" }}
+            onClick={(e) => {
+              e.stopPropagation();
+              options.onViewRoles(record);
+            }}
+          >
+            +{remaining}
+          </Tag>
+        )}
       </Space>
     );
   };
@@ -116,7 +155,7 @@ export const getEmployeeColumns = (
       key: "roles",
       width: 180,
       render: (roles: string[] | string | undefined, record) =>
-        getRoleTags(roles || record.role),
+        getRoleTags(roles || record.role, record),
     },
     {
       title: "Loại TK",
@@ -124,7 +163,19 @@ export const getEmployeeColumns = (
       width: 150,
       render: (_, record) => {
         if (!record.isTemporaryAccount) {
-          return <Tag style={{ backgroundColor: "#1890FF", color: "#FFFFFF", border: "none", borderRadius: 18, padding: "2px 8px" }}>Vĩnh viễn</Tag>;
+          return (
+            <Tag
+              style={{
+                backgroundColor: "#1890FF",
+                color: "#FFFFFF",
+                border: "none",
+                borderRadius: 18,
+                padding: "2px 8px",
+              }}
+            >
+              Vĩnh viễn
+            </Tag>
+          );
         }
 
         const expirationDate = record.accountExpirationDate
@@ -147,7 +198,11 @@ export const getEmployeeColumns = (
               <Tag
                 icon={<ClockCircleOutlined />}
                 style={{
-                  backgroundColor: isExpired ? "#F5222D" : daysLeft <= 3 ? "#FA8C16" : "#FAAD14",
+                  backgroundColor: isExpired
+                    ? "#F5222D"
+                    : daysLeft <= 3
+                      ? "#FA8C16"
+                      : "#FAAD14",
                   color: "#FFFFFF",
                   border: "none",
                   borderRadius: 18,
@@ -157,8 +212,8 @@ export const getEmployeeColumns = (
                 {isExpired
                   ? "Đã hết hạn"
                   : daysLeft <= 0
-                  ? "Hết hạn hôm nay"
-                  : `Còn ${daysLeft} ngày`}
+                    ? "Hết hạn hôm nay"
+                    : `Còn ${daysLeft} ngày`}
               </Tag>
             </Space>
           </Tooltip>
