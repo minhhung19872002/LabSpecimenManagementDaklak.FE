@@ -170,7 +170,9 @@ export const theme: ThemeConfig = {
     Table: {
       headerBg: colors.bgPage,
       headerColor: colors.textPrimary,
-      rowHoverBg: colors.primaryBg,
+      rowHoverBg: '#F5FAFF',
+      rowSelectedBg: '#EBF5FF',
+      rowSelectedHoverBg: '#E1F0FF',
       borderColor: colors.borderLight,
     },
     // Modal
