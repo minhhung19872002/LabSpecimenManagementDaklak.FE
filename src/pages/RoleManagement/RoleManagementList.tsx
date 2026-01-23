@@ -7,6 +7,7 @@ import { getColumns, CreateRoleModal } from './components';
 import { PATH_ROUTES } from '../../constants/routes';
 import { authService } from '../../services/authService';
 import { PERMISSIONS } from '../../constants/permissionMapping';
+import '../../styles/ListCard.css';
 
 const RoleManagementList: React.FC = () => {
   const navigate = useNavigate();
@@ -40,6 +41,7 @@ const RoleManagementList: React.FC = () => {
   return (
     <div style={{ padding: '24px' }}>
       <Card
+        className="list-card"
         title={
           <Space>
             <SafetyOutlined style={{ fontSize: 20 }} />
@@ -90,7 +92,7 @@ const RoleManagementList: React.FC = () => {
             total: totalCount,
             onChange: handlePageChange,
             showSizeChanger: true,
-            showTotal: (total) => `Tổng ${total} nhóm quyền`,
+            showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
             pageSizeOptions: ['10', '20', '50'],
           }}
           onRow={(record) => ({

@@ -167,7 +167,7 @@ const UserListTab: React.FC<UserListTabProps> = ({
           total: totalCount,
           onChange: onPageChange,
           showSizeChanger: true,
-          showTotal: (total) => `Tổng ${total} người dùng`,
+          showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
           pageSizeOptions: ['10', '20', '50'],
         }}
         scroll={{ x: 1050 }}

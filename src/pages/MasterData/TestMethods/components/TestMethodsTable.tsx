@@ -228,7 +228,7 @@ const TestMethodsTable: React.FC<TestMethodsTableProps> = ({
           }}
           pagination={{
             pageSize: 50,
-            showTotal: (total) => `Tổng ${total} phương pháp`,
+            showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
           }}
         />
       </Spin>

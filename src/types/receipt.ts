@@ -26,12 +26,12 @@ export const ReceiptStatusLabels: Record<ReceiptStatus, string> = {
  * Receipt status colors for Tag component
  */
 export const ReceiptStatusColors: Record<ReceiptStatus, string> = {
-  [ReceiptStatus.PendingPayment]: 'gold',
-  [ReceiptStatus.Unpaid]: 'orange',
-  [ReceiptStatus.Paid]: 'green',
-  [ReceiptStatus.Cancelled]: 'red',
-  [ReceiptStatus.NoPaymentRequired]: 'cyan',
-  [ReceiptStatus.PartiallyPaid]: 'blue',
+  [ReceiptStatus.PendingPayment]: '#FAAD14',
+  [ReceiptStatus.Unpaid]: '#FA8C16',
+  [ReceiptStatus.Paid]: '#52C41A',
+  [ReceiptStatus.Cancelled]: '#F5222D',
+  [ReceiptStatus.NoPaymentRequired]: '#13C2C2',
+  [ReceiptStatus.PartiallyPaid]: '#1890FF',
 };
 
 /**

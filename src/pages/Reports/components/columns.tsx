@@ -143,11 +143,16 @@ export const getReportColumns = ({
     width: 100,
     render: (sent: boolean) =>
       sent ? (
-        <Tag color="green" icon={<MailOutlined />}>
+        <Tag
+          icon={<MailOutlined />}
+          style={{ backgroundColor: "#52C41A", color: "#FFFFFF", border: "none", borderRadius: 18, padding: "2px 8px" }}
+        >
           Đã gửi
         </Tag>
       ) : (
-        <Tag color="default">Chưa gửi</Tag>
+        <Tag style={{ backgroundColor: "#8C8C8C", color: "#FFFFFF", border: "none", borderRadius: 18, padding: "2px 8px" }}>
+          Chưa gửi
+        </Tag>
       ),
   },
   {
@@ -201,7 +206,10 @@ export const getReportColumns = ({
       }
       if (record.status === "Issued") {
         return (
-          <Tag color="success" icon={<CheckCircleOutlined />}>
+          <Tag
+            icon={<CheckCircleOutlined />}
+            style={{ backgroundColor: "#52C41A", color: "#FFFFFF", border: "none", borderRadius: 18, padding: "2px 8px" }}
+          >
             Hoàn tất
           </Tag>
         );

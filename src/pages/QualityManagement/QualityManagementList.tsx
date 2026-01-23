@@ -105,7 +105,7 @@ const QualityManagementList: React.FC = () => {
               pagination={{
                 ...pagination,
                 showSizeChanger: true,
-                showTotal: (total) => `Tổng ${total} bản ghi`,
+                showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
                 pageSizeOptions: ["20", "50", "100"],
               }}
               onChange={handleTableChange}

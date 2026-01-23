@@ -312,7 +312,7 @@ const NotesList: React.FC<NotesTabProps> = ({ onDataChange }) => {
         pagination={{
           ...pagination,
           showSizeChanger: true,
-          showTotal: (total) => `Tổng ${total} ghi chú`,
+          showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
           pageSizeOptions: ["10", "20", "50", "100"],
         }}
         onChange={handleTableChange}

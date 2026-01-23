@@ -66,7 +66,11 @@ export const getNCRColumns = ({ onView, onEdit, onDelete }: ColumnActions) => [
     width: 140,
     render: (type: number) => {
       const config = NCR_TYPES.find((t) => t.value === type);
-      return <Tag color={config?.color}>{config?.label}</Tag>;
+      return (
+        <Tag style={{ backgroundColor: config?.color || "#8C8C8C", color: "#FFFFFF", border: "none", borderRadius: 18, padding: "2px 8px" }}>
+          {config?.label}
+        </Tag>
+      );
     },
   },
   {
@@ -75,7 +79,7 @@ export const getNCRColumns = ({ onView, onEdit, onDelete }: ColumnActions) => [
     key: "severity",
     width: 120,
     render: (severity: number) => (
-      <Tag color={SEVERITY_CONFIG[severity]?.color}>
+      <Tag style={{ backgroundColor: SEVERITY_CONFIG[severity]?.color || "#8C8C8C", color: "#FFFFFF", border: "none", borderRadius: 18, padding: "2px 8px" }}>
         {SEVERITY_CONFIG[severity]?.text}
       </Tag>
     ),

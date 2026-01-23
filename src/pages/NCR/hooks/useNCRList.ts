@@ -26,26 +26,26 @@ export interface NCRDisplay extends NCRDto {
 }
 
 export const NCR_TYPES = [
-  { value: NCRType.Equipment, label: "Thiết bị", color: "orange" },
-  { value: NCRType.Process, label: "Quy trình", color: "magenta" },
-  { value: NCRType.Personnel, label: "Nhân sự", color: "purple" },
-  { value: NCRType.Environment, label: "Môi trường", color: "cyan" },
-  { value: NCRType.Material, label: "Vật liệu", color: "blue" },
-  { value: NCRType.Other, label: "Khác", color: "default" },
+  { value: NCRType.Equipment, label: "Thiết bị", color: "#FA8C16" },
+  { value: NCRType.Process, label: "Quy trình", color: "#EB2F96" },
+  { value: NCRType.Personnel, label: "Nhân sự", color: "#722ED1" },
+  { value: NCRType.Environment, label: "Môi trường", color: "#13C2C2" },
+  { value: NCRType.Material, label: "Vật liệu", color: "#1890FF" },
+  { value: NCRType.Other, label: "Khác", color: "#8C8C8C" },
 ];
 
 export const SEVERITY_CONFIG: Record<number, { color: string; text: string }> = {
-  [NCRSeverity.Minor]: { color: "green", text: "Nhẹ" },
-  [NCRSeverity.Major]: { color: "orange", text: "Nghiêm trọng" },
-  [NCRSeverity.Critical]: { color: "red", text: "Rất nghiêm trọng" },
+  [NCRSeverity.Minor]: { color: "#52C41A", text: "Nhẹ" },
+  [NCRSeverity.Major]: { color: "#FA8C16", text: "Nghiêm trọng" },
+  [NCRSeverity.Critical]: { color: "#F5222D", text: "Rất nghiêm trọng" },
 };
 
 export const STATUS_CONFIG: Record<number, { color: string; text: string }> = {
-  [NCRStatus.Open]: { color: "red", text: "Mở" },
-  [NCRStatus.InProgress]: { color: "blue", text: "Đang xử lý" },
-  [NCRStatus.Resolved]: { color: "orange", text: "Đã giải quyết" },
-  [NCRStatus.Closed]: { color: "green", text: "Đã đóng" },
-  [NCRStatus.Cancelled]: { color: "default", text: "Đã hủy" },
+  [NCRStatus.Open]: { color: "#F5222D", text: "Mở" },
+  [NCRStatus.InProgress]: { color: "#1890FF", text: "Đang xử lý" },
+  [NCRStatus.Resolved]: { color: "#FA8C16", text: "Đã giải quyết" },
+  [NCRStatus.Closed]: { color: "#52C41A", text: "Đã đóng" },
+  [NCRStatus.Cancelled]: { color: "#8C8C8C", text: "Đã hủy" },
 };
 
 export const useNCRList = () => {

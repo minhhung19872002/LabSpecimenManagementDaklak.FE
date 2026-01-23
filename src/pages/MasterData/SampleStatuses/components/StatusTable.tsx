@@ -40,7 +40,9 @@ const StatusTable: React.FC<StatusTableProps> = ({
           rowKey="id"
           pagination={{
             pageSize: 50,
-            showTotal: (total) => `Tổng ${total} tình trạng mẫu`,
+            showSizeChanger: true,
+            pageSizeOptions: [50, 100, 150],
+            showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
           }}
         />
       </Spin>

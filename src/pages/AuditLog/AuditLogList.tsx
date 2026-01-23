@@ -24,6 +24,7 @@ import isToday from "dayjs/plugin/isToday";
 import { auditLogService, AuditLogDto } from "../../services/auditLogService";
 import { getAuditLogColumns } from "./columns";
 import AuditLogDetailModal from "./components/AuditLogDetailModal";
+import "../../styles/ListCard.css";
 
 dayjs.extend(isToday);
 
@@ -182,11 +183,12 @@ const AuditLogList: React.FC = () => {
       </Row>
 
       <Card
+        className="list-card"
         title={
           <Space>
             <HistoryOutlined />
             Lịch sử thay đổi dữ liệu (Audit Log)
-            <Tag color="blue">ISO/IEC 17025:2017 - 7.11</Tag>
+            <Tag color="blue" style={{ padding: "2px 8px", background: "#FFFFFF", borderRadius: 18, color: "#1890FF", border: "1px solid #1890FF" }}>ISO/IEC 17025:2017 - 7.11</Tag>
           </Space>
         }
         extra={
@@ -195,13 +197,15 @@ const AuditLogList: React.FC = () => {
       >
         {/* Filters */}
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          <Col xs={24} sm={12} md={6}>
-            <Input
+          <Col xs={24} sm={12} md={8}>
+            <Input.Search
               placeholder="Tìm kiếm URL, người dùng..."
-              prefix={<SearchOutlined />}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
+              onSearch={loadData}
+              onPressEnter={loadData}
               allowClear
+              enterButton
             />
           </Col>
           <Col xs={12} sm={6} md={3}>
@@ -241,7 +245,7 @@ const AuditLogList: React.FC = () => {
             total: pagination.total,
             pageSizeOptions: [20, 50, 100],
             showSizeChanger: true,
-            showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} bản ghi`,
+            showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
           }}
           onChange={handleTableChange}
           scroll={{ x: 1200 }}

@@ -16,7 +16,7 @@ import {
 import { DatePicker } from "antd";
 
 const { RangePicker } = DatePicker;
-import {
+import Icon, {
   FileTextOutlined,
   ExperimentOutlined,
   CheckCircleOutlined,
@@ -97,50 +97,53 @@ const getAllStats = (overview: DashboardOverviewDto | null) => {
     {
       title: "Tổng số hợp đồng",
       value: overview?.totalContracts || 0,
-      iconBg: "blue",
-      icon: <FileTextOutlined />,
+      iconBg: "contract",
+      icon: <Icon name="file-text" />,
     },
     {
       title: "Tổng số mẫu",
       value: (overview?.totalSamples || 0).toLocaleString(),
-      iconBg: "purple",
-      icon: <ExperimentOutlined />,
+      iconBg: "sample",
+      icon: <Icon name="flask" />,
+      valueColor: "#722ED1",
     },
     {
       title: "Tổng doanh thu",
       value: formatCurrency(overview?.totalRevenue || 0),
-      iconBg: "orange",
-      icon: <DollarOutlined />,
+      iconBg: "revenue",
+      icon: <Icon name="currency-dollar" />,
+      valueColor: "#FAAD14",
     },
     {
       title: "Báo cáo NCT",
       value: overview?.totalNCRs || 0,
-      iconBg: "red",
-      icon: <ExclamationCircleOutlined />,
+      iconBg: "ncr",
+      icon: <Icon name="exclamation-diamond" />,
+      valueColor: "#F5222D",
     },
     {
       title: "TN Đúng hạn",
       value: `${onTimePercent}%`,
-      iconBg: "green",
-      icon: <CheckCircleOutlined />,
+      iconBg: "ontime",
+      icon: <Icon name="check2-circle" />,
     },
     {
       title: "TN Trễ hạn",
       value: `${latePercent}%`,
-      iconBg: "orange",
-      icon: <ClockCircleOutlined />,
+      iconBg: "late",
+      icon: <Icon name="clock" />,
     },
     {
       title: "Chờ phê duyệt",
       value: overview?.pendingApproval || 0,
-      iconBg: "blue",
-      icon: <EditOutlined />,
+      iconBg: "pending",
+      icon: <Icon name="pencil-square" />,
     },
     {
       title: "Đang thực hiện",
       value: total,
-      iconBg: "purple",
-      icon: <SyncOutlined />,
+      iconBg: "inprogress",
+      icon: <Icon name="flask-florence" />,
     },
   ];
 };
@@ -229,7 +232,17 @@ const DashboardContainer: React.FC<DashboardContainerProps> = ({
               <div className="dashboard-stat-content">
                 <div className="dashboard-stat-info">
                   <Text className="dashboard-stat-title">{stat.title}</Text>
-                  <div className="dashboard-stat-value">{stat.value}</div>
+                  <div
+                    className="dashboard-stat-value"
+                    style={stat.valueColor ? {
+                      background: stat.valueColor,
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      backgroundClip: 'text'
+                    } : undefined}
+                  >
+                    {stat.value}
+                  </div>
                 </div>
                 <div className={`dashboard-stat-icon ${stat.iconBg}`}>
                   {stat.icon}

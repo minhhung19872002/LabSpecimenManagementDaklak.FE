@@ -268,7 +268,7 @@ const StandardsTable: React.FC<StandardsTableProps> = ({
           }}
           pagination={{
             pageSize: 50,
-            showTotal: (total) => `Tổng ${total} tiêu chuẩn`,
+            showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
           }}
         />
       </Spin>

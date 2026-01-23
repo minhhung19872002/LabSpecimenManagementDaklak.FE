@@ -20,6 +20,7 @@ import {
 } from "../../services/importService";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
+import "../../styles/ListCard.css";
 
 const OrganizationList: React.FC = () => {
   // Import modal state
@@ -144,6 +145,7 @@ const OrganizationList: React.FC = () => {
 
   return (
     <Card
+      className="list-card"
       title="Quản lý Cơ sở / Doanh nghiệp"
       extra={
         <Space>

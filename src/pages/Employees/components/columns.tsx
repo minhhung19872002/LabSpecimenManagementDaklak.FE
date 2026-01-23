@@ -36,7 +36,7 @@ export const getEmployeeColumns = (
     const roleList = Array.isArray(roles) ? roles : roles ? [roles] : [];
 
     if (roleList.length === 0) {
-      return <Tag color="default">Chưa phân quyền</Tag>;
+      return <Tag style={{ backgroundColor: "#8C8C8C", color: "#FFFFFF", border: "none", borderRadius: 18, padding: "2px 8px" }}>Chưa phân quyền</Tag>;
     }
 
     return (
@@ -44,7 +44,7 @@ export const getEmployeeColumns = (
         {roleList.map((role) => {
           const roleConfig = options.roles.find((r) => r.value === role);
           return (
-            <Tag key={role} color={roleConfig?.color || "default"}>
+            <Tag key={role} style={{ backgroundColor: roleConfig?.color || "#8C8C8C", color: "#FFFFFF", border: "none", borderRadius: 18, padding: "2px 8px" }}>
               {roleConfig?.label || role}
             </Tag>
           );
@@ -124,7 +124,7 @@ export const getEmployeeColumns = (
       width: 150,
       render: (_, record) => {
         if (!record.isTemporaryAccount) {
-          return <Tag color="blue">Vĩnh viễn</Tag>;
+          return <Tag style={{ backgroundColor: "#1890FF", color: "#FFFFFF", border: "none", borderRadius: 18, padding: "2px 8px" }}>Vĩnh viễn</Tag>;
         }
 
         const expirationDate = record.accountExpirationDate
@@ -145,8 +145,14 @@ export const getEmployeeColumns = (
           >
             <Space direction="vertical" size={0}>
               <Tag
-                color={isExpired ? "red" : daysLeft <= 3 ? "orange" : "gold"}
                 icon={<ClockCircleOutlined />}
+                style={{
+                  backgroundColor: isExpired ? "#F5222D" : daysLeft <= 3 ? "#FA8C16" : "#FAAD14",
+                  color: "#FFFFFF",
+                  border: "none",
+                  borderRadius: 18,
+                  padding: "2px 8px",
+                }}
               >
                 {isExpired
                   ? "Đã hết hạn"

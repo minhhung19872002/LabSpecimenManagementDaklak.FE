@@ -1,0 +1,134 @@
+/* TestRequestList Card Styling */
+.test-request-list-card {
+  border-radius: 16px;
+  box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.test-request-list-card .ant-card-head {
+  background: linear-gradient(to right, #1E63F8, #009AE3);
+  border-bottom: none;
+  padding: 0 16px;
+  min-height: 54px;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  border-radius: 16px 16px 0 0;
+}
+
+.test-request-list-card .ant-card-head-wrapper {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.test-request-list-card .ant-card-head-title {
+  padding: 0;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 24px;
+  color: #FFFFFF;
+}
+
+.test-request-list-card .ant-card-extra {
+  padding: 0;
+}
+
+/* Default buttons - white background with dark icon */
+.test-request-list-card .ant-card-extra .ant-btn-default {
+  background: #FFFFFF;
+  color: rgba(0, 0, 0, 0.85);
+  border-color: #FFFFFF;
+}
+
+.test-request-list-card .ant-card-extra .ant-btn-default:hover {
+  color: rgba(0, 0, 0, 0.85);
+  border-color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.test-request-list-card .ant-card-extra .ant-btn-default .anticon {
+  color: rgba(0, 0, 0, 0.85);
+}
+
+/* Icon-only button (Reload) */
+.test-request-list-card .ant-card-extra .ant-btn-icon-only {
+  background: #FFFFFF;
+  color: rgba(0, 0, 0, 0.85);
+  border-color: #FFFFFF;
+}
+
+.test-request-list-card .ant-card-extra .ant-btn-icon-only:hover {
+  color: rgba(0, 0, 0, 0.85);
+  border-color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.test-request-list-card .ant-card-extra .ant-btn-icon-only .anticon {
+  color: rgba(0, 0, 0, 0.85);
+}
+
+/* Primary button - gradient background with white border/text/icon */
+.test-request-list-card .ant-card-extra .ant-btn-primary {
+  background: linear-gradient(to right, #1E63F8, #009AE3);
+  color: #FFFFFF;
+  border: 1px solid #FFFFFF;
+}
+
+.test-request-list-card .ant-card-extra .ant-btn-primary:hover {
+  background: linear-gradient(to right, #1E63F8, #009AE3);
+  opacity: 0.9;
+  color: #FFFFFF;
+  border-color: #FFFFFF;
+}
+
+.test-request-list-card .ant-card-extra .ant-btn-primary .anticon {
+  color: #FFFFFF;
+}
+
+.test-request-list-card .ant-card-body {
+  padding: 16px;
+  padding-left: 0;
+  padding-right: 0;
+  padding-bottom: 0;
+}
+
+/* Search/Filter section padding */
+.test-request-list-card .ant-card-body > .ant-row:first-child {
+  padding: 0 16px;
+  margin-bottom: 16px;
+}
+
+/* Table full width, no border radius */
+.test-request-list-card .ant-table-wrapper {
+  width: 100%;
+}
+
+.test-request-list-card .ant-table {
+  border-radius: 0;
+}
+
+.test-request-list-card .ant-table-container {
+  border-radius: 0;
+}
+
+.test-request-list-card .ant-table-thead > tr > th:first-child,
+.test-request-list-card .ant-table-thead > tr > th:last-child {
+  border-radius: 0 !important;
+}
+
+.test-request-list-card .ant-table-tbody > tr:last-child > td:first-child,
+.test-request-list-card .ant-table-tbody > tr:last-child > td:last-child {
+  border-radius: 0 !important;
+}
+
+/* Table header styling */
+.test-request-list-card .ant-table-thead > tr > th {
+  background: #E6F7FF;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.85);
+  border-radius: 0 !important;
+}

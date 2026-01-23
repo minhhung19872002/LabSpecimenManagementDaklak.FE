@@ -6,6 +6,7 @@ import { useTestList } from "./hooks";
 import TestFormModal from "./components/TestFormModal";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
+import "../../styles/ListCard.css";
 
 const TestList: React.FC = () => {
   const {
@@ -37,6 +38,7 @@ const TestList: React.FC = () => {
 
   return (
     <Card
+      className="list-card"
       title="Danh sách phép thử"
       extra={
         <Space>
@@ -100,7 +102,7 @@ const TestList: React.FC = () => {
           total: totalCount,
           pageSizeOptions: [50, 100, 150],
           showSizeChanger: true,
-          showTotal: (total) => `Tổng ${total} phép thử`,
+          showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
           onChange: handlePageChange,
         }}
         scroll={{ x: 1400 }}

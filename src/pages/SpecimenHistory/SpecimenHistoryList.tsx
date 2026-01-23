@@ -6,6 +6,7 @@ import { useSpecimenHistoryList } from "./hooks";
 import SpecimenHistoryFormModal from "./components/SpecimenHistoryFormModal";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
+import "../../styles/ListCard.css";
 
 const SpecimenHistoryList: React.FC = () => {
   const {
@@ -36,6 +37,7 @@ const SpecimenHistoryList: React.FC = () => {
 
   return (
     <Card
+      className="list-card"
       title="Lịch sử mẫu thử nghiệm"
       extra={
         <Space>
@@ -103,7 +105,7 @@ const SpecimenHistoryList: React.FC = () => {
           total: totalCount,
           pageSizeOptions: [50, 100, 150],
           showSizeChanger: true,
-          showTotal: (total) => `Tổng ${total} bản ghi`,
+          showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
           onChange: handlePageChange,
         }}
         scroll={{ x: 1500 }}
