@@ -9,7 +9,7 @@ export const subcontractorSchema = yup.object({
   taxCode: yup.string().optional().nullable().default(""),
   address: yup.string().optional().nullable().default(""),
   capabilities: yup.array().of(yup.string().required()).optional().default([]),
-  status: yup.string().oneOf(["active", "inactive", "pending"]).default("pending"),
+  status: yup.string().oneOf(["active", "inactive"]).default("active"),
   contractStartDate: yup.date().optional().nullable().default(null),
   contractEndDate: yup.date().optional().nullable().default(null),
   notes: yup.string().optional().nullable().default(""),

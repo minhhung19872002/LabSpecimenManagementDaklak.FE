@@ -19,7 +19,7 @@ export interface Subcontractor {
   email: string;
   contactPerson: string;
   taxCode: string;
-  status: "active" | "inactive" | "pending";
+  status: "active" | "inactive";
   capabilities: string[];
   certifications: Certification[];
   evaluationScore: number;
@@ -93,7 +93,7 @@ export const useSubcontractorList = () => {
   const form = useForm<SubcontractorFormData>({
     resolver: yupResolver(subcontractorSchema),
     defaultValues: {
-      status: "pending",
+      status: "active",
       capabilities: [],
     },
   });
@@ -119,7 +119,7 @@ export const useSubcontractorList = () => {
         email: sub.email,
         contactPerson: sub.contactPerson,
         taxCode: sub.taxCode,
-        status: (sub.isActive === false ? "inactive" : "active") as "active" | "inactive" | "pending",
+        status: (sub.isActive === false ? "inactive" : "active") as "active" | "inactive",
         capabilities: parseCapabilities(sub.capabilities),
         certifications: sub.certifications || [],
         evaluationScore: sub.evaluationScore || 0,
@@ -183,7 +183,7 @@ export const useSubcontractorList = () => {
   const handleCreate = useCallback(() => {
     setEditingItem(null);
     form.reset({
-      code: `NTP-${String(data.length + 1).padStart(3, "0")}`,
+      code: `NTP-${dayjs().format("YYYYMMDD")}-${String(data.length + 1).padStart(3, "0")}`,
       name: "",
       contactPerson: "",
       phone: "",
@@ -191,7 +191,7 @@ export const useSubcontractorList = () => {
       taxCode: "",
       address: "",
       capabilities: [],
-      status: "pending",
+      status: "active",
       contractStartDate: new Date(),
       contractEndDate: dayjs().add(1, "year").toDate(),
       notes: "",

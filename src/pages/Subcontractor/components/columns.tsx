@@ -19,7 +19,6 @@ const getStatusTag = (status: string) => {
   const config: Record<string, { color: string; text: string }> = {
     active: { color: "green", text: "Đang hoạt động" },
     inactive: { color: "red", text: "Ngừng hoạt động" },
-    pending: { color: "orange", text: "Chờ đánh giá" },
   };
   const statusConfig = config[status] || { color: "default", text: status };
   return <StatusTag color={statusConfig.color}>{statusConfig.text}</StatusTag>;
@@ -32,7 +31,7 @@ export const getSubcontractorColumns = (
     title: "Mã NTP",
     dataIndex: "code",
     key: "code",
-    width: 100,
+    width: 180,
     fixed: "left",
   },
   {
