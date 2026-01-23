@@ -499,6 +499,28 @@ code {
   transition: none !important;
 }
 
+/* ==================== Button Gradient Text ==================== */
+.btn-gradient-text {
+  background: #FFFFFF !important;
+  border: 1px solid #FFFFFF !important;
+}
+
+.btn-gradient-text > span {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.btn-gradient-text .anticon {
+  color: #1E63F8 !important;
+}
+
+.btn-gradient-text:hover {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: #FFFFFF !important;
+}
+
 /* ==================== Statistics Page Filter Bar ==================== */
 .statistics-filter-bar {
   display: flex;
