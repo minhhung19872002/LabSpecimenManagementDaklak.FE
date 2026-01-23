@@ -4,6 +4,7 @@ import {
   addToSyncQueue,
   getPendingSyncItems,
   updateSyncItemStatus,
+  updateSyncItemData,
   removeSyncItem,
   clearSyncedItems,
   getPendingSyncCount,
@@ -12,6 +13,9 @@ import {
   SyncQueueItem,
   SyncOperationType,
   SyncEntityType,
+  getPendingFileUploads,
+  updatePendingFileUploadStatus,
+  clearUploadedFiles,
 } from './db';
 
 export interface GenericSyncItemDto {
@@ -204,16 +208,36 @@ class SyncManager {
       return null;
     }
 
-    const pendingItems = await getPendingSyncItems();
-    console.log('[SyncManager] Pending items count:', pendingItems.length);
-    if (pendingItems.length === 0) {
-      return null;
-    }
-
     this.isSyncing = true;
-    this.emit('syncStart', { itemCount: pendingItems.length });
+    let pendingItems: SyncQueueItem[] = [];
 
     try {
+      // Step 1: Sync pending file uploads first
+      const fileIdMappings = await this.syncPendingFileUploads();
+      console.log('[SyncManager] File sync complete, mappings:', fileIdMappings);
+
+      // Step 2: Get pending items and replace offline file IDs
+      pendingItems = await getPendingSyncItems();
+      console.log('[SyncManager] Pending items count:', pendingItems.length);
+
+      if (pendingItems.length === 0) {
+        this.isSyncing = false;
+        return null;
+      }
+
+      // Replace offline file IDs in pending items if we have mappings
+      if (Object.keys(fileIdMappings).length > 0) {
+        for (const item of pendingItems) {
+          const updatedData = this.replaceOfflineFileIds(item.data, fileIdMappings);
+          if (updatedData !== item.data) {
+            await updateSyncItemData(item.clientId, updatedData);
+            item.data = updatedData;
+          }
+        }
+      }
+
+      this.emit('syncStart', { itemCount: pendingItems.length });
+
       for (const item of pendingItems) {
         await updateSyncItemStatus(item.clientId, 'syncing');
       }
@@ -334,6 +358,92 @@ class SyncManager {
     }
 
     await this.notifyPendingCountChange();
+  }
+
+  /**
+   * Sync pending file uploads to server
+   * Returns a mapping of tempId -> serverId for successfully uploaded files
+   */
+  private async syncPendingFileUploads(): Promise<Record<string, string>> {
+    const mappings: Record<string, string> = {};
+
+    try {
+      const pendingFiles = await getPendingFileUploads();
+      console.log('[SyncManager] Pending files to sync:', pendingFiles.length);
+
+      if (pendingFiles.length === 0) {
+        return mappings;
+      }
+
+      for (const fileItem of pendingFiles) {
+        try {
+          await updatePendingFileUploadStatus(fileItem.tempId, 'uploading');
+
+          // Convert blob to File for upload
+          const file = new File([fileItem.blob], fileItem.fileName, { type: fileItem.mimeType });
+
+          // Upload the file
+          const formData = new FormData();
+          formData.append('file', file);
+          const response = await api.upload<{ fileId: string; fileName: string; fileSize: number; url: string }>(
+            '/api/v1/files/upload',
+            formData
+          );
+
+          const serverId = response.data.fileId;
+          mappings[fileItem.tempId] = serverId;
+
+          await updatePendingFileUploadStatus(fileItem.tempId, 'uploaded', serverId);
+          console.log(`[SyncManager] File uploaded: ${fileItem.tempId} -> ${serverId}`);
+        } catch (error: any) {
+          console.error(`[SyncManager] Failed to upload file ${fileItem.tempId}:`, error);
+          await updatePendingFileUploadStatus(
+            fileItem.tempId,
+            fileItem.retryCount >= 2 ? 'failed' : 'pending',
+            undefined,
+            error.message
+          );
+        }
+      }
+
+      // Clean up successfully uploaded files
+      await clearUploadedFiles();
+    } catch (error) {
+      console.error('[SyncManager] Error in syncPendingFileUploads:', error);
+    }
+
+    return mappings;
+  }
+
+  /**
+   * Recursively replace offline file IDs in data with server IDs
+   */
+  private replaceOfflineFileIds(data: unknown, mappings: Record<string, string>): unknown {
+    if (data === null || data === undefined) {
+      return data;
+    }
+
+    if (typeof data === 'string') {
+      // Check if this string is an offline file ID
+      if (data.startsWith('offline-file-') && mappings[data]) {
+        return mappings[data];
+      }
+      return data;
+    }
+
+    if (Array.isArray(data)) {
+      return data.map(item => this.replaceOfflineFileIds(item, mappings));
+    }
+
+    if (typeof data === 'object') {
+      const result: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
+        result[key] = this.replaceOfflineFileIds(value, mappings);
+      }
+      return result;
+    }
+
+    return data;
   }
 
   destroy(): void {

@@ -5,14 +5,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import dayjs from "dayjs";
 import { testRequestService } from "../../../../services/testRequestService";
 import {
-  indicatorGroupService,
-  indicatorService,
-  storageLocationService,
-  laboratoryService,
-  testMethodService,
   specimenTypeService,
-  sampleConditionService,
-  sampleTypeCategoryService,
   IndicatorDto,
   IndicatorGroupDto,
   StorageLocationDto,
@@ -23,8 +16,20 @@ import {
   SampleConditionDto,
   SampleTypeCategoryDto,
 } from "../../../../services/masterDataService";
-import { userService, UserLookupDto } from "../../../../services/userService";
-import { organizationService } from "../../../../services/organizationService";
+import {
+  getActiveIndicatorGroupsOffline,
+  getActiveIndicatorsOffline,
+  getActiveStorageLocationsOffline,
+  getActiveLaboratoriesOffline,
+  getActiveSpecimenTypesOffline,
+  getTestMethodsWithIndicatorsOffline,
+  getSpecimenTypesWithIndicatorsOffline,
+  getActiveSampleConditionsOffline,
+  getActiveSampleTypeCategoriesOffline,
+  getUserLookupOffline,
+  getActiveOrganizationsOffline,
+} from "../../../../services/offline/offlineServices";
+import { UserLookupDto } from "../../../../services/userService";
 import { OrganizationDto } from "../../../../types/organization";
 import { fileService } from "../../../../services/fileService";
 import {
@@ -220,21 +225,21 @@ export const useTestRequestFormData = () => {
     return canEditWithApproval(currentStatus);
   };
 
-  // Load master data
+  // Load master data with offline support
   const loadMasterData = async () => {
     try {
       const [groupsData, indicatorsData, locationsData, usersData, orgsData, labsData, methodsData, specimenTypesData, specimenTypesWithIndsData, sampleConditionsData, sampleTypeCategoriesData] = await Promise.all([
-        indicatorGroupService.getActive(),
-        indicatorService.getActive(),
-        storageLocationService.getActive(),
-        userService.getLookup(),
-        organizationService.getAllActive(),
-        laboratoryService.getActive(),
-        testMethodService.getWithIndicators(),
-        specimenTypeService.getActive(),
-        specimenTypeService.getWithIndicators(),
-        sampleConditionService.getActive(),
-        sampleTypeCategoryService.getActive(),
+        getActiveIndicatorGroupsOffline(),
+        getActiveIndicatorsOffline(),
+        getActiveStorageLocationsOffline(),
+        getUserLookupOffline(),
+        getActiveOrganizationsOffline(),
+        getActiveLaboratoriesOffline(),
+        getTestMethodsWithIndicatorsOffline(),
+        getActiveSpecimenTypesOffline(),
+        getSpecimenTypesWithIndicatorsOffline(),
+        getActiveSampleConditionsOffline(),
+        getActiveSampleTypeCategoriesOffline(),
       ]);
       setIndicatorGroups(groupsData);
       setIndicators(indicatorsData);

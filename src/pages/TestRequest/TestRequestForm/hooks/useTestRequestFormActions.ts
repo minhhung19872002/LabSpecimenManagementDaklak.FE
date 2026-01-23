@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { message } from "antd";
 import dayjs from "dayjs";
-import { testRequestService, PreviewTestRequestFormInput } from "../../../../services/testRequestService";
+import { testRequestService, offlineTestRequestService, PreviewTestRequestFormInput } from "../../../../services/testRequestService";
 import { specimenTypeService } from "../../../../services/masterDataService";
 import {
   ResultLanguage,
@@ -851,21 +851,37 @@ export const useTestRequestFormActions = ({
             return;
           }
 
-          // Send with change history
-          await testRequestService.update(id, {
+          // Send with change history - use offline service
+          const updateResponse = await offlineTestRequestService.update(id, {
             ...payload,
             changeHistory // Frontend sends the changes
           });
-          message.success("Yêu cầu thay đổi đã được gửi và đang chờ phê duyệt!");
+          if (updateResponse.isOffline) {
+            message.warning("Đã lưu thay đổi tạm thời (chế độ offline). Dữ liệu sẽ được đồng bộ khi có kết nối.");
+          } else {
+            message.success("Yêu cầu thay đổi đã được gửi và đang chờ phê duyệt!");
+          }
           navigate(PATH_ROUTES.testRequests.detail(id));
         } else {
-          await testRequestService.update(id, payload);
-          message.success("Cập nhật phiếu yêu cầu thành công!");
+          // Regular update - use offline service
+          const updateResponse = await offlineTestRequestService.update(id, payload);
+          if (updateResponse.isOffline) {
+            message.warning("Đã lưu cập nhật tạm thời (chế độ offline). Dữ liệu sẽ được đồng bộ khi có kết nối.");
+          } else {
+            message.success("Cập nhật phiếu yêu cầu thành công!");
+          }
           navigate(PATH_ROUTES.testRequests.detail(id));
         }
       } else {
-        const testRequest = await testRequestService.create(payload);
-        message.success(`Đã tạo phiếu yêu cầu XN: ${testRequest?.contractNumber}`);
+        // Use offline-aware service for create
+        const response = await offlineTestRequestService.create(payload);
+        const testRequest = response.data;
+
+        if (response.isOffline) {
+          message.warning(`Đã lưu phiếu yêu cầu tạm thời (chế độ offline). Dữ liệu sẽ được đồng bộ khi có kết nối.`);
+        } else {
+          message.success(`Đã tạo phiếu yêu cầu XN: ${testRequest?.contractNumber}`);
+        }
         navigate(PATH_ROUTES.testRequests.detail(testRequest.id));
       }
     } catch (error: any) {

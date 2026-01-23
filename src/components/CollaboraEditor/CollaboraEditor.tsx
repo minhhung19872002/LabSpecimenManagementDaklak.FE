@@ -135,8 +135,8 @@ const CollaboraEditor: React.FC<CollaboraEditorProps> = ({
     }
   };
 
-  // Public method to save document
-  const saveDocument = () => {
+  // Public method to save document (available for future use)
+  const _saveDocument = () => {
     sendMessage({
       MessageId: "Action_Save",
       Values: {
@@ -146,12 +146,16 @@ const CollaboraEditor: React.FC<CollaboraEditorProps> = ({
     });
   };
 
-  // Public method to close editor
-  const closeEditor = () => {
+  // Public method to close editor (available for future use)
+  const _closeEditor = () => {
     sendMessage({
       MessageId: "Action_Close",
     });
   };
+
+  // Suppress unused variable warnings
+  void _saveDocument;
+  void _closeEditor;
 
   if (error) {
     return (
