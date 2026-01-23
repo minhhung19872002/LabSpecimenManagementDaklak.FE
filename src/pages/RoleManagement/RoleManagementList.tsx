@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, Table, Input, Button, Space } from 'antd';
+import { Card, Table, Input, Button, Space, Row, Col } from 'antd';
 import { PlusOutlined, ReloadOutlined, SafetyOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useRoleManagementList } from './hooks';
@@ -69,17 +69,18 @@ const RoleManagementList: React.FC = () => {
           </Space>
         }
       >
-        <div style={{ marginBottom: 16 }}>
-          <Input.Search
-            placeholder="Tìm kiếm theo tên nhóm..."
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            onSearch={handleSearchSubmit}
-            style={{ width: 300 }}
-            allowClear
-            enterButton
-          />
-        </div>
+        <Row gutter={[16, 16]} align="middle">
+          <Col xs={24} sm={12} md={8}>
+            <Input.Search
+              placeholder="Tìm kiếm theo tên nhóm..."
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              onSearch={handleSearchSubmit}
+              allowClear
+              enterButton
+            />
+          </Col>
+        </Row>
 
         <Table
           columns={columns}
