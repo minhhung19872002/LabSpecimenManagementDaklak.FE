@@ -566,13 +566,59 @@ code {
 }
 
 .statistics-period-tabs .ant-radio-button-wrapper-checked {
-  background: #096DD9 !important;
-  border-color: #096DD9 !important;
+  background: var(--gradient-primary) !important;
+  border-color: transparent !important;
   color: #FFFFFF !important;
 }
 
 .statistics-period-tabs .ant-radio-button-wrapper-checked::before {
-  background-color: #096DD9 !important;
+  background-color: transparent !important;
+}
+
+/* Statistics Detail Tabs */
+.statistics-detail-tabs {
+  margin-bottom: 0;
+}
+
+.statistics-detail-tabs .ant-radio-group {
+  display: flex;
+  gap: 8px;
+}
+
+.statistics-detail-tabs .ant-radio-button-wrapper {
+  height: 40px;
+  padding: 9px 16px;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 22px;
+  border-color: #F0F0F0;
+  background: #FAFAFA;
+  border-radius: 8px 8px 0 0 !important;
+  border-bottom: none;
+}
+
+.statistics-detail-tabs .ant-radio-button-wrapper::before {
+  display: none !important;
+}
+
+.statistics-detail-tabs .ant-radio-button-wrapper-checked {
+  background: var(--gradient-primary) !important;
+  border: transparent !important;
+  color: #FFFFFF !important;
+}
+
+.statistics-detail-tabs .ant-radio-button-wrapper-checked::before {
+  background-color: transparent !important;
+}
+
+.statistics-detail-card {
+  border-radius: 0 16px 16px 16px !important;
+  overflow: hidden;
+}
+
+.statistics-detail-card .ant-card-body {
+  padding-top: 0 !important;
 }
 
 /* Date Picker */
