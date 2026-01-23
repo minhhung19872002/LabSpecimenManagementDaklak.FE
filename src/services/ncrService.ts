@@ -92,13 +92,20 @@ export interface PagedAndSortedResultRequestDto {
   sorting?: string;
 }
 
+export interface NCRListParams extends PagedAndSortedResultRequestDto {
+  search?: string;
+  status?: NCRStatus;
+}
+
 const BASE_URL = '/api/v1/ncrs';
 
-const toApiParams = (params: PagedAndSortedResultRequestDto) => {
+const toApiParams = (params: NCRListParams) => {
   const apiParams: Record<string, any> = {};
   if (params.skipCount !== undefined) apiParams.SkipCount = params.skipCount;
   if (params.maxResultCount !== undefined) apiParams.MaxResultCount = params.maxResultCount;
   if (params.sorting) apiParams.Sorting = params.sorting;
+  if (params.search) apiParams.Search = params.search;
+  if (params.status !== undefined) apiParams.Status = params.status;
   return apiParams;
 };
 
@@ -111,7 +118,7 @@ export interface AssignNCRDto {
 }
 
 const ncrApiService = {
-  getList: async (params: PagedAndSortedResultRequestDto): Promise<PagedResultDto<NCRDto>> => {
+  getList: async (params: NCRListParams): Promise<PagedResultDto<NCRDto>> => {
     const response = await api.get<PagedResultDto<NCRDto>>(BASE_URL, { params: toApiParams(params) });
     return response.data;
   },
@@ -132,7 +139,7 @@ const ncrApiService = {
   },
 };
 
-const baseService: BaseCrudService<NCRDto, CreateNCRDto, UpdateNCRDto, PagedAndSortedResultRequestDto> = {
+const baseService: BaseCrudService<NCRDto, CreateNCRDto, UpdateNCRDto, NCRListParams> = {
   getList: ncrApiService.getList,
   get: ncrApiService.get,
   create: ncrApiService.create,
@@ -140,7 +147,7 @@ const baseService: BaseCrudService<NCRDto, CreateNCRDto, UpdateNCRDto, PagedAndS
   delete: ncrApiService.delete,
 };
 
-const offlineEnabledService = createOfflineService<NCRDto, CreateNCRDto, UpdateNCRDto, PagedAndSortedResultRequestDto>('NCR', baseService);
+const offlineEnabledService = createOfflineService<NCRDto, CreateNCRDto, UpdateNCRDto, NCRListParams>('NCR', baseService);
 
 export const ncrService = {
   getList: offlineEnabledService.getList,

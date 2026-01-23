@@ -13,7 +13,7 @@ import {
 } from "antd";
 import {
   PlusOutlined,
-  SearchOutlined,
+  ReloadOutlined,
   ExclamationCircleOutlined,
   ClockCircleOutlined,
   CheckCircleOutlined,
@@ -30,10 +30,13 @@ const NCRList: React.FC = () => {
     data,
     departments,
     loading,
+    totalCount,
+    currentPage,
+    pageSize,
     openCount,
     inProgressCount,
     closedCount,
-    searchText,
+    searchInput,
     statusFilter,
     isModalOpen,
     isDetailOpen,
@@ -41,12 +44,16 @@ const NCRList: React.FC = () => {
     selectedItem,
     form,
     columns,
-    handleSearchChange,
+    handleSearch,
+    handleSearchInputChange,
+    handleClearSearch,
     handleStatusFilterChange,
+    handlePageChange,
     handleCreate,
     handleModalCancel,
     handleModalSubmit,
     handleDetailClose,
+    loadData,
   } = useNCRList();
 
   return (
@@ -99,17 +106,34 @@ const NCRList: React.FC = () => {
         title="Quản lý Công việc không phù hợp (NCR)"
         extra={
           <Space>
-            <Input
-              placeholder="Tìm kiếm..."
-              prefix={<SearchOutlined />}
-              value={searchText}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              style={{ width: 200 }}
+            {authService.hasPermission(PERMISSIONS.NCRs.Create) && (
+              <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+                Tạo NCR
+              </Button>
+            )}
+            <Button icon={<ReloadOutlined />} onClick={loadData} />
+          </Space>
+        }
+      >
+        {/* Filters */}
+        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+          <Col xs={24} sm={12} md={8}>
+            <Input.Search
+              placeholder="Tìm kiếm theo mã NCR, tiêu đề, phòng ban..."
+              value={searchInput}
+              onChange={(e) => handleSearchInputChange(e.target.value)}
+              onSearch={handleSearch}
+              onPressEnter={handleSearch}
+              allowClear
+              onClear={handleClearSearch}
+              enterButton
             />
+          </Col>
+          <Col xs={24} sm={12} md={6}>
             <Select
               placeholder="Trạng thái"
               allowClear
-              style={{ width: 140 }}
+              style={{ width: '100%' }}
               value={statusFilter}
               onChange={handleStatusFilterChange}
             >
@@ -118,14 +142,9 @@ const NCRList: React.FC = () => {
               <Select.Option value={NCRStatus.Resolved}>Đã giải quyết</Select.Option>
               <Select.Option value={NCRStatus.Closed}>Đã đóng</Select.Option>
             </Select>
-            {authService.hasPermission(PERMISSIONS.NCRs.Create) && (
-              <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-                Tạo NCR
-              </Button>
-            )}
-          </Space>
-        }
-      >
+          </Col>
+        </Row>
+
         <Table
           dataSource={data}
           columns={columns}
@@ -133,10 +152,13 @@ const NCRList: React.FC = () => {
           loading={loading}
           scroll={{ x: 1290 }}
           pagination={{
-            pageSize: 50,
+            current: currentPage,
+            pageSize: pageSize,
+            total: totalCount,
             pageSizeOptions: [50, 100, 150],
             showSizeChanger: true,
             showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
+            onChange: handlePageChange,
           }}
         />
       </Card>

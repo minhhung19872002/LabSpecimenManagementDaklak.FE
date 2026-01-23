@@ -53,10 +53,19 @@ export const useNCRList = () => {
   const [data, setData] = useState<NCRDisplay[]>([]);
   const [departments, setDepartments] = useState<DepartmentDto[]>([]);
   const [loading, setLoading] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
 
   // Search & filter
+  const [searchInput, setSearchInput] = useState("");
   const [searchText, setSearchText] = useState("");
-  const [statusFilter, setStatusFilter] = useState<number | null>(null);
+  const [statusFilter, setStatusFilter] = useState<NCRStatus | undefined>(undefined);
+
+  // Stats
+  const [openCount, setOpenCount] = useState(0);
+  const [inProgressCount, setInProgressCount] = useState(0);
+  const [closedCount, setClosedCount] = useState(0);
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -74,33 +83,41 @@ export const useNCRList = () => {
     },
   });
 
-  // Stats
-  const openCount = useMemo(
-    () => data.filter((n) => n.status === NCRStatus.Open).length,
-    [data]
-  );
-  const inProgressCount = useMemo(
-    () => data.filter((n) => n.status === NCRStatus.InProgress).length,
-    [data]
-  );
-  const closedCount = useMemo(
-    () => data.filter((n) => n.status === NCRStatus.Closed).length,
-    [data]
-  );
+  // Load stats (all NCRs without filter)
+  const loadStats = useCallback(async () => {
+    try {
+      const response = await ncrService.getList({ maxResultCount: 1000 });
+      const allData = response.items;
+      setOpenCount(allData.filter((n) => n.status === NCRStatus.Open).length);
+      setInProgressCount(allData.filter((n) => n.status === NCRStatus.InProgress).length);
+      setClosedCount(allData.filter((n) => n.status === NCRStatus.Closed).length);
+    } catch (error) {
+      console.error("Failed to load NCR stats:", error);
+    }
+  }, []);
 
-  // Load data
+  // Load data with filters
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await ncrService.getList({ maxResultCount: 1000 });
+      const response = await ncrService.getList({
+        skipCount: (currentPage - 1) * pageSize,
+        maxResultCount: pageSize,
+        sorting: "creationTime desc",
+        search: searchText || undefined,
+        status: statusFilter,
+      });
       setData(response.items);
+      setTotalCount(response.totalCount);
     } catch (error) {
       console.error("Failed to load NCRs:", error);
       message.error("Không thể tải danh sách NCR. Vui lòng thử lại.");
+      setData([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentPage, pageSize, searchText, statusFilter]);
 
   const loadDepartments = useCallback(async () => {
     try {
@@ -112,28 +129,38 @@ export const useNCRList = () => {
   }, []);
 
   useEffect(() => {
-    loadData();
+    loadStats();
     loadDepartments();
-  }, [loadData, loadDepartments]);
+  }, [loadStats, loadDepartments]);
 
-  // Filtered data
-  const filteredData = useMemo(() => {
-    return data.filter((n) => {
-      const matchSearch =
-        n.ncrNumber.toLowerCase().includes(searchText.toLowerCase()) ||
-        n.title.toLowerCase().includes(searchText.toLowerCase());
-      const matchStatus = statusFilter === null || n.status === statusFilter;
-      return matchSearch && matchStatus;
-    });
-  }, [data, searchText, statusFilter]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   // Handlers
-  const handleSearchChange = useCallback((value: string) => {
-    setSearchText(value);
+  const handleSearch = useCallback(() => {
+    setSearchText(searchInput);
+    setCurrentPage(1);
+  }, [searchInput]);
+
+  const handleSearchInputChange = useCallback((value: string) => {
+    setSearchInput(value);
   }, []);
 
-  const handleStatusFilterChange = useCallback((value: number | null) => {
+  const handleClearSearch = useCallback(() => {
+    setSearchInput("");
+    setSearchText("");
+    setCurrentPage(1);
+  }, []);
+
+  const handleStatusFilterChange = useCallback((value: NCRStatus | undefined) => {
     setStatusFilter(value);
+    setCurrentPage(1);
+  }, []);
+
+  const handlePageChange = useCallback((page: number, size: number) => {
+    setCurrentPage(page);
+    setPageSize(size);
   }, []);
 
   const handleCreate = useCallback(() => {
@@ -193,12 +220,13 @@ export const useNCRList = () => {
         await ncrService.delete(id);
         message.success("Đã xóa NCR");
         loadData();
+        loadStats();
       } catch (error) {
         console.error("Failed to delete NCR:", error);
         message.error("Không thể xóa NCR. Vui lòng thử lại.");
       }
     },
-    [loadData]
+    [loadData, loadStats]
   );
 
   const handleModalCancel = useCallback(() => {
@@ -246,12 +274,13 @@ export const useNCRList = () => {
         setIsModalOpen(false);
         form.reset();
         loadData();
+        loadStats();
       } catch (error) {
         console.error("Failed to save NCR:", error);
         message.error("Không thể lưu NCR. Vui lòng thử lại.");
       }
     },
-    [editingItem, form, loadData]
+    [editingItem, form, loadData, loadStats]
   );
 
   const handleDetailClose = useCallback(() => {
@@ -272,9 +301,12 @@ export const useNCRList = () => {
 
   return {
     // Data
-    data: filteredData,
+    data,
     departments,
     loading,
+    totalCount,
+    currentPage,
+    pageSize,
 
     // Stats
     openCount,
@@ -282,10 +314,13 @@ export const useNCRList = () => {
     closedCount,
 
     // Search & filter
-    searchText,
+    searchInput,
     statusFilter,
-    handleSearchChange,
+    handleSearch,
+    handleSearchInputChange,
+    handleClearSearch,
     handleStatusFilterChange,
+    handlePageChange,
 
     // Modal
     isModalOpen,
