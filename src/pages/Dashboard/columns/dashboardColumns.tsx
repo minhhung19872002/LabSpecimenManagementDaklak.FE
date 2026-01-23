@@ -122,13 +122,13 @@ export const getRecentRequestsColumns = (): ColumnsType<DashboardRecentRequestDt
     width: 60,
     align: "center" as const,
   },
-  {
-    title: "Chỉ tiêu",
-    dataIndex: "indicatorCount",
-    key: "indicatorCount",
-    width: 80,
-    align: "center" as const,
-  },
+  // {
+  //   title: "Chỉ tiêu",
+  //   dataIndex: "indicatorCount",
+  //   key: "indicatorCount",
+  //   width: 80,
+  //   align: "center" as const,
+  // },
   {
     title: "Tổng tiền",
     dataIndex: "totalCost",

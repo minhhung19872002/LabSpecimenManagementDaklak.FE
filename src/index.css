@@ -480,6 +480,25 @@ code {
   order: 3;
 }
 
+/* ==================== Pagination Styling ==================== */
+.ant-pagination .ant-pagination-item {
+  border: transparent !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.ant-pagination-item-active {
+  background: var(--gradient-primary) !important;
+  border: transparent !important;
+}
+
+.ant-pagination-item-active a,
+.ant-pagination-item-active a:hover {
+  color: #FFFFFF !important;
+  transition: none !important;
+}
+
 /* ==================== Statistics Page Filter Bar ==================== */
 .statistics-filter-bar {
   display: flex;

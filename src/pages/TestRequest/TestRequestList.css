@@ -5,7 +5,7 @@
 }
 
 .test-request-list-card .ant-card-head {
-  background: linear-gradient(to right, #1E63F8, #009AE3);
+  background: var(--gradient-primary);
   border-bottom: none;
   padding: 0 16px;
   min-height: 54px;
@@ -71,13 +71,13 @@
 
 /* Primary button - gradient background with white border/text/icon */
 .test-request-list-card .ant-card-extra .ant-btn-primary {
-  background: linear-gradient(to right, #1E63F8, #009AE3);
+  background: var(--gradient-primary);
   color: #FFFFFF;
   border: 1px solid #FFFFFF;
 }
 
 .test-request-list-card .ant-card-extra .ant-btn-primary:hover {
-  background: linear-gradient(to right, #1E63F8, #009AE3);
+  background: var(--gradient-primary);
   opacity: 0.9;
   color: #FFFFFF;
   border-color: #FFFFFF;

@@ -9,6 +9,9 @@
   --color-primary-bg: #E6F7FF;
   --color-primary-hover: #40a9ff;
 
+  /* Gradient */
+  --gradient-primary: linear-gradient(to right, #1E63F8, #009AE3);
+
   /* Neutral */
   --color-white: #FFFFFF;
   --color-bg-page: #F0F2F5;
