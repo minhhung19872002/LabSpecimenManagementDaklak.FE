@@ -144,7 +144,7 @@ const OrganizationTable: React.FC<OrganizationTableProps> = ({
         current: currentPage,
         pageSize: pageSize,
         total: totalCount,
-        pageSizeOptions: [20, 50, 100],
+        pageSizeOptions: [50, 100, 150],
         showSizeChanger: true,
         showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
         onChange: onPageChange,

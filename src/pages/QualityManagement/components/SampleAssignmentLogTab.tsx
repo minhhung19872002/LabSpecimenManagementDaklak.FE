@@ -16,6 +16,7 @@ import {
 import { IndicatorApprovalStatus } from '../../../types/laboratoryTask';
 import { TestingStatus } from '../../../types/testing';
 
+import '../../../styles/ListCard.css';
 import './SampleAssignmentLogTab.css';
 
 // Helper to format date
@@ -507,9 +508,9 @@ const SampleAssignmentLogTab: React.FC = () => {
 
   return (
     <div className="sample-assignment-log-tab">
-      {/* Toolbar */}
-      <Card size="small" style={{ marginBottom: 16 }}>
-        <Row gutter={[16, 16]} align="middle">
+      <Card className="list-card">
+        {/* Toolbar */}
+        <Row gutter={[16, 16]} align="middle" style={{ marginBottom: 16 }}>
           <Col xs={24} sm={12} md={8}>
             <Input.Search
               placeholder="Tìm theo số HĐ, mã mẫu, tên mẫu, chỉ tiêu..."
@@ -533,10 +534,8 @@ const SampleAssignmentLogTab: React.FC = () => {
             <Button icon={<ReloadOutlined />} onClick={handleReload} />
           </Col>
         </Row>
-      </Card>
 
-      {/* Table */}
-      <Card size="small">
+        {/* Table */}
         <Table<ProcessedLogItem>
           columns={columns}
           dataSource={processedData}
@@ -570,7 +569,7 @@ const SampleAssignmentLogTab: React.FC = () => {
             total: pagination.total,
             showSizeChanger: true,
             showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
-            pageSizeOptions: ['20', '50', '100'],
+            pageSizeOptions: [50, 100, 150],
           }}
           onChange={(pag) => handleTableChange({
             current: pag.current,
