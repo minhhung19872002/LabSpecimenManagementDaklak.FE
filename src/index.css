@@ -754,3 +754,36 @@ code {
 .ant-dropdown-menu::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.16);
 }
+
+/* ==================== Card Content Padding ==================== */
+.card-content-padding {
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+@media screen and (max-width: 767px) {
+  .card-content-padding {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
+/* ==================== Statistic ==================== */
+.ant-statistic-content-value {
+  font-weight: 500 !important;
+}
+
+/* ==================== Page Wrapper ==================== */
+.page-wrapper {
+  padding: 24px;
+}
+
+@media screen and (max-width: 767px) {
+  .page-wrapper {
+    padding: 12px;
+  }
+
+  .sample-group-info {
+    display: none;
+  }
+}

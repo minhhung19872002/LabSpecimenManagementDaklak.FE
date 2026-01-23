@@ -14,6 +14,7 @@ import {
   Col,
   Divider,
   Statistic,
+  Tooltip,
 } from "antd";
 import {
   PlusOutlined,
@@ -44,6 +45,7 @@ import QuotationIndicatorSelectionModal, {
 } from "./components/QuotationIndicatorSelectionModal";
 import SendQuotationEmailModal from "./components/SendQuotationEmailModal";
 import { IndicatorName } from "../../components/common";
+import "../../styles/ListCard.css";
 
 const { Title, Text } = Typography;
 
@@ -487,7 +489,7 @@ const QuotationForm: React.FC = () => {
                   onClick={(e) => e.stopPropagation()}
                   style={{ width: 200 }}
                 />
-                <Text type="secondary">
+                <Text type="secondary" className="sample-group-info">
                   ({sample.indicators.length} chỉ tiêu - {formatCurrency(sampleTotal)})
                 </Text>
               </Space>
@@ -539,102 +541,89 @@ const QuotationForm: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="page-wrapper">
       <Spin spinning={loading}>
-        <Card>
-          {/* Header */}
-          <Row
-            justify="space-between"
-            align="middle"
-            style={{ marginBottom: 24 }}
-          >
-            <Col>
-              <Space>
-                <Button
-                  icon={<ArrowLeftOutlined />}
-                  onClick={() => navigate(PATH_ROUTES.quotations.index)}
-                >
-                  Quay lại
-                </Button>
-                <Title level={4} style={{ margin: 0 }}>
-                  {isEdit ? "Chỉnh sửa báo giá" : "Tạo mới báo giá"}
-                </Title>
-              </Space>
-            </Col>
-            <Col>
-              <Space>
-                <Button
-                  icon={<MailOutlined />}
-                  onClick={() => {
-                    if (samples.length === 0 || totalIndicatorCount === 0) {
-                      message.warning(
-                        "Vui lòng thêm ít nhất một mẫu với chỉ tiêu để gửi email"
-                      );
-                      return;
-                    }
-                    setEmailModalVisible(true);
-                  }}
-                >
-                  Gửi email
-                </Button>
-                <Button
-                  type="primary"
-                  icon={<SaveOutlined />}
-                  onClick={handleSave}
-                  loading={saving}
-                >
-                  Lưu
-                </Button>
-              </Space>
-            </Col>
-          </Row>
+        <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
+          <Col>
+            <Tooltip title="Quay lại">
+              <Button
+                shape="circle"
+                icon={<ArrowLeftOutlined />}
+                onClick={() => navigate(PATH_ROUTES.quotations.index)}
+              />
+            </Tooltip>
+          </Col>
+          <Col>
+            <Space>
+              <Button
+                icon={<MailOutlined />}
+                onClick={() => {
+                  if (samples.length === 0 || totalIndicatorCount === 0) {
+                    message.warning(
+                      "Vui lòng thêm ít nhất một mẫu với chỉ tiêu để gửi email"
+                    );
+                    return;
+                  }
+                  setEmailModalVisible(true);
+                }}
+              >
+                Gửi email
+              </Button>
+              <Button
+                type="primary"
+                icon={<SaveOutlined />}
+                onClick={handleSave}
+                loading={saving}
+                style={{ background: 'linear-gradient(to right, #1E63F8, #009AE3)', border: 'none' }}
+              >
+                Lưu
+              </Button>
+            </Space>
+          </Col>
+        </Row>
+        <Card
+          className="list-card"
+          styles={{ body: { paddingLeft: 0, paddingRight: 0 } }}
+          title={isEdit ? "Chỉnh sửa báo giá" : "Tạo mới báo giá"}
+          extra={
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleAddSample}
+            >
+              Thêm mẫu
+            </Button>
+          }
+        >
 
           {/* Customer Info Form */}
-          <Form form={form} layout="vertical">
-            <Form.Item
-              name="customerName"
-              label="Tên CS/DN"
-              rules={[{ required: true, message: "Vui lòng nhập tên CS/DN" }]}
-              style={{ marginBottom: 0 }}
-            >
-              <AutoComplete
-                options={organizationOptions}
-                onSelect={(value, option) =>
-                  handleOrganizationSelect(value, option as OrganizationOption)
-                }
-                onChange={handleOrganizationChange}
-                placeholder="Nhập hoặc chọn tên CS/DN"
-                filterOption={(inputValue, option) =>
-                  option?.label
-                    ?.toString()
-                    .toLowerCase()
-                    .includes(inputValue.toLowerCase()) || false
-                }
-                size="large"
-              />
-            </Form.Item>
-          </Form>
+          <div className="card-content-padding">
+            <Form form={form} layout="vertical">
+              <Form.Item
+                name="customerName"
+                label="Tên CS/DN"
+                rules={[{ required: true, message: "Vui lòng nhập tên CS/DN" }]}
+                style={{ marginBottom: 0 }}
+              >
+                <AutoComplete
+                  options={organizationOptions}
+                  onSelect={(value, option) =>
+                    handleOrganizationSelect(value, option as OrganizationOption)
+                  }
+                  onChange={handleOrganizationChange}
+                  placeholder="Nhập hoặc chọn tên CS/DN"
+                  filterOption={(inputValue, option) =>
+                    option?.label
+                      ?.toString()
+                      .toLowerCase()
+                      .includes(inputValue.toLowerCase()) || false
+                  }
+                  size="large"
+                />
+              </Form.Item>
+            </Form>
 
-          <Divider style={{ margin: "16px 0" }} />
-
-          {/* Samples Section */}
-          <div style={{ marginBottom: 16 }}>
-            <Row justify="space-between" align="middle">
-              <Col>
-                <Title level={5} style={{ margin: 0 }}>
-                  Danh sách chỉ tiêu
-                </Title>
-              </Col>
-              <Col>
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={handleAddSample}
-                >
-                  Thêm mẫu
-                </Button>
-              </Col>
-            </Row>
+            <Divider style={{ margin: "16px 0" }} />
           </div>
 
           {/* Table */}
@@ -652,7 +641,7 @@ const QuotationForm: React.FC = () => {
               }}
             >
               <thead>
-                <tr style={{ background: "#fafafa" }}>
+                <tr style={{ background: "#E6F7FF" }}>
                   <th
                     style={{
                       padding: "12px",
@@ -730,40 +719,42 @@ const QuotationForm: React.FC = () => {
           </div>
 
           {/* Footer Summary */}
-          <Card
-            size="small"
-            style={{
-              marginTop: 16,
-              background: "#fafafa",
-            }}
-          >
-            <Row gutter={48}>
-              <Col>
-                <Statistic title="Tổng số mẫu" value={samples.length} />
-              </Col>
-              <Col>
-                <Statistic title="Tổng số chỉ tiêu" value={totalIndicatorCount} />
-              </Col>
-              <Col flex="auto" style={{ textAlign: "right" }}>
-                <Statistic
-                  title="Tổng cộng"
-                  value={totalCost}
-                  formatter={(val) => (
-                    <span style={{ color: "#1890ff", fontSize: 24 }}>
-                      {formatCurrency(val as number)}
-                    </span>
-                  )}
-                />
-              </Col>
-            </Row>
-          </Card>
+          <div className="card-content-padding">
+            <Card
+              size="small"
+              style={{
+                marginTop: 16,
+                background: "#fafafa",
+              }}
+            >
+              <Row gutter={48}>
+                <Col>
+                  <Statistic title="Tổng số mẫu" value={samples.length} />
+                </Col>
+                <Col>
+                  <Statistic title="Tổng số chỉ tiêu" value={totalIndicatorCount} />
+                </Col>
+                <Col flex="auto" style={{ textAlign: "right" }}>
+                  <Statistic
+                    title="Tổng cộng"
+                    value={totalCost}
+                    formatter={(val) => (
+                      <span style={{ color: "#1890ff", fontSize: 24 }}>
+                        {formatCurrency(val as number)}
+                      </span>
+                    )}
+                  />
+                </Col>
+              </Row>
+            </Card>
 
-          {/* Notes */}
-          <Form form={form} layout="vertical" style={{ marginTop: 24 }}>
-            <Form.Item name="notes" label="Ghi chú">
-              <Input.TextArea rows={3} placeholder="Nhập ghi chú (nếu có)" />
-            </Form.Item>
-          </Form>
+            {/* Notes */}
+            <Form form={form} layout="vertical" style={{ marginTop: 24 }}>
+              <Form.Item name="notes" label="Ghi chú">
+                <Input.TextArea rows={3} placeholder="Nhập ghi chú (nếu có)" />
+              </Form.Item>
+            </Form>
+          </div>
         </Card>
       </Spin>
 
