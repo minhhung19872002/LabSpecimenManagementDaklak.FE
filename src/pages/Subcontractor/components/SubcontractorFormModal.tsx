@@ -169,7 +169,6 @@ const SubcontractorFormModal: React.FC<SubcontractorFormModalProps> = ({
                 render={({ field }) => (
                   <Select {...field}>
                     <Select.Option value="active">Đang hoạt động</Select.Option>
-                    <Select.Option value="pending">Chờ đánh giá</Select.Option>
                     <Select.Option value="inactive">
                       Ngừng hoạt động
                     </Select.Option>
