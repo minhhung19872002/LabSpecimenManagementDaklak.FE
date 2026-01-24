@@ -13,6 +13,7 @@ import {
   Space,
   Alert,
   message,
+  Spin,
 } from "antd";
 import dayjs from "dayjs";
 import {
@@ -38,6 +39,7 @@ import {
   LaboratorySelectionModal,
 } from "./components";
 import "../TestRequestForm.css";
+import "../../../styles/ListCard.css";
 import { PATH_ROUTES } from "../../../constants";
 
 const TestRequestForm: React.FC = () => {
@@ -216,229 +218,241 @@ const TestRequestForm: React.FC = () => {
   });
 
   return (
+    <>
     <Card
-      className="test-request-form"
+      className="test-request-form list-card"
       title={
         isEditMode
           ? "Chỉnh sửa yêu cầu thử nghiệm"
           : "Tạo yêu cầu thử nghiệm mới"
       }
-      loading={loadingData}
     >
-      {/* Warning when edit requires QLCL approval */}
-      {isEditRequiresApproval() && (
-        <Alert
-          message="Lưu ý: Thay đổi cần phê duyệt"
-          description="Phiếu yêu cầu đang ở trạng thái Đã gửi mẫu hoặc Đang thử nghiệm. Bạn chỉ có thể chỉnh sửa Thông tin mẫu. Các thông tin như Số HĐ, Ngày HĐ, Thông tin khách hàng đã bị khóa. Thay đổi sẽ cần được QLCL phê duyệt trước khi được áp dụng."
-          type="warning"
-          showIcon
-          style={{ marginBottom: 16 }}
-        />
-      )}
+      <Spin spinning={loadingData}>
+        {/* Warning when edit requires QLCL approval */}
+        {isEditRequiresApproval() && (
+          <Alert
+            message="Lưu ý: Thay đổi cần phê duyệt"
+            description="Phiếu yêu cầu đang ở trạng thái Đã gửi mẫu hoặc Đang thử nghiệm. Bạn chỉ có thể chỉnh sửa Thông tin mẫu. Các thông tin như Số HĐ, Ngày HĐ, Thông tin khách hàng đã bị khóa. Thay đổi sẽ cần được QLCL phê duyệt trước khi được áp dụng."
+            type="warning"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
 
-      <Form
-        form={form}
-        layout="vertical"
-        onFinish={onFinish}
-        onFinishFailed={(errorInfo) => {
-          const firstError = errorInfo.errorFields[0];
-          if (firstError) {
-            message.error(firstError.errors[0] || "Vui lòng kiểm tra lại các trường bắt buộc");
-          } else {
-            message.error("Vui lòng kiểm tra lại các trường bắt buộc");
-          }
-        }}
-        initialValues={{
-          contractDate: dayjs(),
-          requestDate: dayjs(),
-          status: TestRequestStatus.Pending,
-          resultLanguage: ResultLanguage.Vietnamese,
-          samplingRequirement: SamplingRequirement.CustomerSampling,
-          sampleStorageOption: SampleStorageOption.No,
-        }}
-      >
-        {/* Thông tin hợp đồng */}
-        <ContractInfoSection
-          isEditMode={isEditMode}
-          isFieldLocked={isFieldLocked}
-          updateSampleCodesPrefix={updateSampleCodesPrefix}
-          currentStatus={currentStatus}
-        />
-
-        {/* Thông tin khách hàng */}
-        <CustomerInfoSection
+        <Form
           form={form}
-          isFieldLocked={isFieldLocked}
-          provinces={provinces}
-          wards={wards}
-          setWards={setWards}
-          selectedProvinceCode={selectedProvinceCode}
-          setSelectedProvinceCode={setSelectedProvinceCode}
-          selectedWardCode={selectedWardCode}
-          setSelectedWardCode={setSelectedWardCode}
-          organizationOptions={organizationOptions}
-          organizationSearching={organizationSearching}
-          handleOrganizationSearch={handleOrganizationSearch}
-          handleOrganizationSelect={handleOrganizationSelect}
-          handlePhoneBlur={handlePhoneBlur}
+          layout="vertical"
+          onFinish={onFinish}
+          onFinishFailed={(errorInfo) => {
+            const firstError = errorInfo.errorFields[0];
+            if (firstError) {
+              message.error(
+                firstError.errors[0] ||
+                  "Vui lòng kiểm tra lại các trường bắt buộc",
+              );
+            } else {
+              message.error("Vui lòng kiểm tra lại các trường bắt buộc");
+            }
+          }}
+          initialValues={{
+            contractDate: dayjs(),
+            requestDate: dayjs(),
+            status: TestRequestStatus.Pending,
+            resultLanguage: ResultLanguage.Vietnamese,
+            samplingRequirement: SamplingRequirement.CustomerSampling,
+            sampleStorageOption: SampleStorageOption.No,
+          }}
+        >
+          {/* Top sections row: Hợp đồng, Khách hàng, Loại hình mẫu */}
+          <div className="form-top-row">
+            <div className="form-top-col-left">
+              <ContractInfoSection
+                isEditMode={isEditMode}
+                isFieldLocked={isFieldLocked}
+                updateSampleCodesPrefix={updateSampleCodesPrefix}
+                currentStatus={currentStatus}
+              />
+            </div>
+            <div className="form-top-col-center">
+              <CustomerInfoSection
+                form={form}
+                isFieldLocked={isFieldLocked}
+                provinces={provinces}
+                wards={wards}
+                setWards={setWards}
+                selectedProvinceCode={selectedProvinceCode}
+                setSelectedProvinceCode={setSelectedProvinceCode}
+                selectedWardCode={selectedWardCode}
+                setSelectedWardCode={setSelectedWardCode}
+                organizationOptions={organizationOptions}
+                organizationSearching={organizationSearching}
+                handleOrganizationSearch={handleOrganizationSearch}
+                handleOrganizationSelect={handleOrganizationSelect}
+                handlePhoneBlur={handlePhoneBlur}
+              />
+            </div>
+            <div className="form-top-col-right">
+              <SampleTypeSection />
+            </div>
+          </div>
+
+          {/* Bảng thông tin mẫu */}
+          <SampleTableSection
+            samples={samples}
+            sampleCodePrefix={sampleCodePrefix}
+            isSamplesLocked={isSamplesLocked}
+            addSample={addSample}
+            removeSample={removeSample}
+            updateSample={updateSample}
+            duplicateSample={duplicateSample}
+            openIndicatorModal={openIndicatorModal}
+            getIndicatorInfo={getIndicatorInfo}
+            getIndicatorMethodInfo={getIndicatorMethodInfo}
+            indicatorLaboratoryMap={indicatorLaboratoryMap}
+            specimenTypes={specimenTypes}
+            specimenTypeOptions={specimenTypeOptions}
+            handleSpecimenTypeSearch={handleSpecimenTypeSearch}
+            handleSpecimenTypeSelect={handleSpecimenTypeSelect}
+            sampleConditionOptions={sampleConditionOptions}
+            indicators={indicators}
+            indicatorMethodsMap={indicatorMethodsMap}
+            onImportSamples={(newSamples) =>
+              setSamples((prev) => [...prev, ...newSamples])
+            }
+          />
+
+          <Row gutter={[16, 0]}>
+            {/* CỘT TRÁI */}
+            <Col xs={24} lg={12}>
+              {/* Yêu cầu về phương pháp */}
+              <MethodRequirementSection methodRequirement={methodRequirement} />
+
+              {/* Yêu cầu về kết quả */}
+              <ResultRequirementSection />
+
+              {/* Yêu cầu về lấy mẫu & giao trả */}
+              <SamplingDeliverySection />
+            </Col>
+
+            {/* CỘT PHẢI */}
+            <Col xs={24} lg={12}>
+              {/* Thông tin chi phí */}
+              <CostInfoSection
+                totalSampleCost={totalSampleCost}
+                sampleTypeTask={sampleTypeTask}
+                isEditMode={isEditMode}
+              />
+
+              {/* Thông tin khác */}
+              <OtherInfoSection />
+            </Col>
+          </Row>
+
+          {/* Hidden fields for legacy support */}
+          <Form.Item name="requestDate" hidden>
+            <DatePicker />
+          </Form.Item>
+          <Form.Item name="status" hidden>
+            <Select />
+          </Form.Item>
+          <Form.Item name="customerEmail" hidden>
+            <Input />
+          </Form.Item>
+
+        </Form>
+
+        {/* Group Selector Modal */}
+        <GroupSelectorModal
+          visible={groupSelectorVisible}
+          onClose={() => setGroupSelectorVisible(false)}
+          groupSearchText={groupSearchText}
+          setGroupSearchText={setGroupSearchText}
+          indicatorGroups={indicatorGroups}
+          indicators={indicators}
+          expandedGroupsInSelector={expandedGroupsInSelector}
+          setExpandedGroupsInSelector={setExpandedGroupsInSelector}
+          selectedGroupFilter={selectedGroupFilter}
+          getFilteredGroupsWithIndicators={getFilteredGroupsWithIndicators}
+          handleGroupSelect={handleGroupSelect}
+          setSelectedGroupFilter={setSelectedGroupFilter}
         />
 
-        {/* Bảng thông tin mẫu */}
-        <SampleTableSection
-          samples={samples}
-          sampleCodePrefix={sampleCodePrefix}
-          isSamplesLocked={isSamplesLocked}
-          addSample={addSample}
-          removeSample={removeSample}
-          updateSample={updateSample}
-          duplicateSample={duplicateSample}
-          openIndicatorModal={openIndicatorModal}
+        {/* Indicator Selection Modal */}
+        <IndicatorSelectionModal
+          visible={indicatorModalVisible}
+          onOk={handleIndicatorModalOk}
+          onCancel={handleIndicatorModalCancel}
+          currentSampleKey={currentSampleKey}
+          tempSelectedIndicators={tempSelectedIndicators}
+          setTempSelectedIndicators={setTempSelectedIndicators}
+          tempSelectedIndicatorMethods={tempSelectedIndicatorMethods}
+          setTempSelectedIndicatorMethods={setTempSelectedIndicatorMethods}
+          indicatorMethodsMap={indicatorMethodsMap}
+          expandedIndicators={expandedIndicators}
+          setExpandedIndicators={setExpandedIndicators}
+          toggleIndicatorMethod={toggleIndicatorMethod}
+          indicatorGroups={indicatorGroups}
+          indicators={indicators}
+          expandedGroups={expandedGroups}
+          setExpandedGroups={setExpandedGroups}
+          selectedGroupFilter={selectedGroupFilter}
+          setGroupSelectorVisible={setGroupSelectorVisible}
+          indicatorSearchText={indicatorSearchText}
+          getFilteredIndicators={getFilteredIndicators}
           getIndicatorInfo={getIndicatorInfo}
           getIndicatorMethodInfo={getIndicatorMethodInfo}
+          toggleIndicator={toggleIndicator}
+          selectedIndicatorDates={selectedIndicatorDates}
+          setSelectedIndicatorDates={setSelectedIndicatorDates}
+          checkedIndicators={checkedIndicators}
+          setCheckedIndicators={setCheckedIndicators}
+          handleIndicatorDateChange={handleIndicatorDateChange}
+          toggleCheckedIndicator={toggleCheckedIndicator}
+          handleSendToLaboratory={handleSendToLaboratory}
           indicatorLaboratoryMap={indicatorLaboratoryMap}
+          setIndicatorLaboratoryMap={setIndicatorLaboratoryMap}
+          expandedLabGroups={expandedLabGroups}
+          setExpandedLabGroups={setExpandedLabGroups}
+          currentSampleSpecimenTypeName={currentSampleSpecimenTypeName}
+          specimenTypeIndicatorIds={specimenTypeIndicatorIds}
+          specimenTypeFilterActive={specimenTypeFilterActive}
+          setSpecimenTypeFilterActive={setSpecimenTypeFilterActive}
+          specimenTypesWithIndicators={specimenTypesWithIndicators}
+          indicatorToSpecimenTypesMap={indicatorToSpecimenTypesMap}
           specimenTypes={specimenTypes}
-          specimenTypeOptions={specimenTypeOptions}
-          handleSpecimenTypeSearch={handleSpecimenTypeSearch}
-          handleSpecimenTypeSelect={handleSpecimenTypeSelect}
-          sampleConditionOptions={sampleConditionOptions}
-          indicators={indicators}
-          indicatorMethodsMap={indicatorMethodsMap}
-          onImportSamples={(newSamples) => setSamples(prev => [...prev, ...newSamples])}
+          sampleTypeCategories={sampleTypeCategories}
+          setIndicatorSearchText={setIndicatorSearchText}
         />
 
-        {/* Loại hình mẫu */}
-        <SampleTypeSection />
-
-        <Row gutter={[16, 0]}>
-          {/* CỘT TRÁI */}
-          <Col xs={24} lg={12}>
-            {/* Yêu cầu về phương pháp */}
-            <MethodRequirementSection methodRequirement={methodRequirement} />
-
-            {/* Yêu cầu về kết quả */}
-            <ResultRequirementSection />
-
-            {/* Yêu cầu về lấy mẫu & giao trả */}
-            <SamplingDeliverySection />
-          </Col>
-
-          {/* CỘT PHẢI */}
-          <Col xs={24} lg={12}>
-            {/* Thông tin chi phí */}
-            <CostInfoSection
-              totalSampleCost={totalSampleCost}
-              sampleTypeTask={sampleTypeTask}
-              isEditMode={isEditMode}
-            />
-
-            {/* Thông tin khác */}
-            <OtherInfoSection />
-          </Col>
-        </Row>
-
-        {/* Hidden fields for legacy support */}
-        <Form.Item name="requestDate" hidden>
-          <DatePicker />
-        </Form.Item>
-        <Form.Item name="status" hidden>
-          <Select />
-        </Form.Item>
-        <Form.Item name="customerEmail" hidden>
-          <Input />
-        </Form.Item>
-
-        <Divider />
-
-        <Form.Item>
-          <Space>
-            <Button type="primary" htmlType="submit" loading={loading}>
-              {isEditMode ? "Cập nhật" : "Tạo yêu cầu"}
-            </Button>
-            <Button onClick={handlePreviewForm} loading={loading}>
-              Xem phiếu
-            </Button>
-            <Button onClick={() => navigate(PATH_ROUTES.testRequests.index)}>Hủy</Button>
-          </Space>
-        </Form.Item>
-      </Form>
-
-      {/* Group Selector Modal */}
-      <GroupSelectorModal
-        visible={groupSelectorVisible}
-        onClose={() => setGroupSelectorVisible(false)}
-        groupSearchText={groupSearchText}
-        setGroupSearchText={setGroupSearchText}
-        indicatorGroups={indicatorGroups}
-        indicators={indicators}
-        expandedGroupsInSelector={expandedGroupsInSelector}
-        setExpandedGroupsInSelector={setExpandedGroupsInSelector}
-        selectedGroupFilter={selectedGroupFilter}
-        getFilteredGroupsWithIndicators={getFilteredGroupsWithIndicators}
-        handleGroupSelect={handleGroupSelect}
-        setSelectedGroupFilter={setSelectedGroupFilter}
-      />
-
-      {/* Indicator Selection Modal */}
-      <IndicatorSelectionModal
-        visible={indicatorModalVisible}
-        onOk={handleIndicatorModalOk}
-        onCancel={handleIndicatorModalCancel}
-        currentSampleKey={currentSampleKey}
-        tempSelectedIndicators={tempSelectedIndicators}
-        setTempSelectedIndicators={setTempSelectedIndicators}
-        tempSelectedIndicatorMethods={tempSelectedIndicatorMethods}
-        setTempSelectedIndicatorMethods={setTempSelectedIndicatorMethods}
-        indicatorMethodsMap={indicatorMethodsMap}
-        expandedIndicators={expandedIndicators}
-        setExpandedIndicators={setExpandedIndicators}
-        toggleIndicatorMethod={toggleIndicatorMethod}
-        indicatorGroups={indicatorGroups}
-        indicators={indicators}
-        expandedGroups={expandedGroups}
-        setExpandedGroups={setExpandedGroups}
-        selectedGroupFilter={selectedGroupFilter}
-        setGroupSelectorVisible={setGroupSelectorVisible}
-        indicatorSearchText={indicatorSearchText}
-        getFilteredIndicators={getFilteredIndicators}
-        getIndicatorInfo={getIndicatorInfo}
-        getIndicatorMethodInfo={getIndicatorMethodInfo}
-        toggleIndicator={toggleIndicator}
-        selectedIndicatorDates={selectedIndicatorDates}
-        setSelectedIndicatorDates={setSelectedIndicatorDates}
-        checkedIndicators={checkedIndicators}
-        setCheckedIndicators={setCheckedIndicators}
-        handleIndicatorDateChange={handleIndicatorDateChange}
-        toggleCheckedIndicator={toggleCheckedIndicator}
-        handleSendToLaboratory={handleSendToLaboratory}
-        indicatorLaboratoryMap={indicatorLaboratoryMap}
-        setIndicatorLaboratoryMap={setIndicatorLaboratoryMap}
-        expandedLabGroups={expandedLabGroups}
-        setExpandedLabGroups={setExpandedLabGroups}
-        currentSampleSpecimenTypeName={currentSampleSpecimenTypeName}
-        specimenTypeIndicatorIds={specimenTypeIndicatorIds}
-        specimenTypeFilterActive={specimenTypeFilterActive}
-        setSpecimenTypeFilterActive={setSpecimenTypeFilterActive}
-        specimenTypesWithIndicators={specimenTypesWithIndicators}
-        indicatorToSpecimenTypesMap={indicatorToSpecimenTypesMap}
-        specimenTypes={specimenTypes}
-        sampleTypeCategories={sampleTypeCategories}
-        setIndicatorSearchText={setIndicatorSearchText}
-      />
-
-      {/* Laboratory Selection Modal */}
-      <LaboratorySelectionModal
-        visible={laboratoryModalVisible}
-        onCancel={() => setLaboratoryModalVisible(false)}
-        laboratories={laboratories}
-        selectedLaboratoryId={selectedLaboratoryId}
-        setSelectedLaboratoryId={setSelectedLaboratoryId}
-        laboratoryRequestDate={laboratoryRequestDate}
-        setLaboratoryRequestDate={setLaboratoryRequestDate}
-        indicatorsToSend={indicatorsToSend}
-        getIndicatorMethodInfo={getIndicatorMethodInfo}
-        handleConfirmSendToLaboratory={handleConfirmSendToLaboratory}
-      />
+        {/* Laboratory Selection Modal */}
+        <LaboratorySelectionModal
+          visible={laboratoryModalVisible}
+          onCancel={() => setLaboratoryModalVisible(false)}
+          laboratories={laboratories}
+          selectedLaboratoryId={selectedLaboratoryId}
+          setSelectedLaboratoryId={setSelectedLaboratoryId}
+          laboratoryRequestDate={laboratoryRequestDate}
+          setLaboratoryRequestDate={setLaboratoryRequestDate}
+          indicatorsToSend={indicatorsToSend}
+          getIndicatorMethodInfo={getIndicatorMethodInfo}
+          handleConfirmSendToLaboratory={handleConfirmSendToLaboratory}
+        />
+      </Spin>
     </Card>
+    <Card style={{ marginTop: 16, textAlign: "right", boxShadow: "0px 2px 8px 0px rgba(0, 0, 0, 0.08)" }}>
+      <Space>
+        <Button onClick={() => navigate(PATH_ROUTES.testRequests.index)}>
+          Hủy
+        </Button>
+        <Button onClick={handlePreviewForm} loading={loading}>
+          Xem phiếu
+        </Button>
+        <Button type="primary" onClick={() => form.submit()} loading={loading}>
+          {isEditMode ? "Cập nhật" : "Tạo yêu cầu"}
+        </Button>
+      </Space>
+    </Card>
+    </>
   );
 };
 

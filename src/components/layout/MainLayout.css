@@ -1064,14 +1064,13 @@
 .form-field-mobile {
   display: flex;
   flex-direction: row;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
 }
 
 .form-field-mobile .form-field-label {
   min-width: 120px;
   flex-shrink: 0;
-  padding-top: 4px;
 }
 
 /* Delivery date inputs - inline on desktop */
@@ -1096,6 +1095,7 @@
   .form-field-mobile {
     display: flex;
     flex-direction: column;
+    align-items: flex-start;
     gap: 4px;
   }
 

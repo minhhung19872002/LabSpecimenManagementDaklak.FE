@@ -113,50 +113,44 @@ const SamplingDeliverySection: React.FC = () => {
         Yêu cầu về lấy mẫu & giao trả
       </Title>
       <Row gutter={[16, 12]}>
-        <Col xs={24} sm={12}>
-          <div className="form-field-mobile">
-            <Text className="form-field-label">Lấy mẫu:</Text>
-            <Form.Item name="samplingRequirement" style={{ marginBottom: 0 }}>
-              <Radio.Group
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "4px",
-                }}
-              >
-                <Radio value={SamplingRequirement.LabSampling}>
-                  TTKN lấy mẫu
-                </Radio>
-                <Radio value={SamplingRequirement.CustomerSampling}>
-                  KH tự lấy mẫu
-                </Radio>
-              </Radio.Group>
-            </Form.Item>
-          </div>
+        <Col xs={24} sm={8}>
+          <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>Lấy mẫu:</Text>
+          <Form.Item name="samplingRequirement" style={{ marginBottom: 0 }}>
+            <Radio.Group
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px",
+              }}
+            >
+              <Radio value={SamplingRequirement.LabSampling}>
+                TTKN lấy mẫu
+              </Radio>
+              <Radio value={SamplingRequirement.CustomerSampling}>
+                KH tự lấy mẫu
+              </Radio>
+            </Radio.Group>
+          </Form.Item>
         </Col>
-        <Col xs={24} sm={12}>
-          <div className="form-field-mobile">
-            <Text className="form-field-label">Lưu mẫu:</Text>
-            <Form.Item name="sampleStorageOption" style={{ marginBottom: 0 }}>
-              <Radio.Group
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "4px",
-                }}
-              >
-                <Radio value={SampleStorageOption.No}>Không</Radio>
-                <Radio value={SampleStorageOption.Yes}>
-                  Có (theo QĐ của TT)
-                </Radio>
-              </Radio.Group>
-            </Form.Item>
-          </div>
+        <Col xs={24} sm={8}>
+          <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>Lưu mẫu:</Text>
+          <Form.Item name="sampleStorageOption" style={{ marginBottom: 0 }}>
+            <Radio.Group
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px",
+              }}
+            >
+              <Radio value={SampleStorageOption.No}>Không</Radio>
+              <Radio value={SampleStorageOption.Yes}>
+                Có (theo QĐ của TT)
+              </Radio>
+            </Radio.Group>
+          </Form.Item>
         </Col>
-      </Row>
-      <Row gutter={[16, 8]} style={{ marginTop: 12 }}>
-        <Col xs={24}>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
+        <Col xs={24} sm={8}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
             <Form.Item
               name="deliveryDirectPickup"
               valuePropName="checked"

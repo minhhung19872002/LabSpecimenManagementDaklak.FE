@@ -11,6 +11,7 @@ import {
   Popover,
   AutoComplete,
   Checkbox,
+  Card,
 } from "antd";
 import {
   PlusOutlined,
@@ -688,26 +689,10 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
   ];
 
   return (
-    <div className="form-section">
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 16,
-        }}
-      >
-        <Typography.Title
-          level={5}
-          className="section-title"
-          style={{
-            marginBottom: 0,
-            borderBottom: "none",
-            paddingBottom: 0,
-          }}
-        >
-          Thông tin mẫu ({samples.length} mẫu)
-        </Typography.Title>
+    <Card
+      className="list-card"
+      title={`Thông tin mẫu (${samples.length} mẫu)`}
+      extra={
         <Space>
           <Button
             icon={<DownloadOutlined />}
@@ -738,12 +723,13 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
             Thêm mẫu
           </Button>
         </Space>
-      </div>
-
+      }
+      styles={{ body: { padding: 0 } }}
+    >
       {isSamplesLocked() && (
         <div
           style={{
-            marginBottom: 12,
+            margin: 12,
             padding: "8px 16px",
             background: "#fff7e6",
             borderRadius: 4,
@@ -794,7 +780,7 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
         existingSamplesCount={samples.length}
         sampleCodePrefix={sampleCodePrefix}
       />
-    </div>
+    </Card>
   );
 };
 
