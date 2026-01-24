@@ -58,10 +58,34 @@ const QualityManagementList: React.FC = () => {
       {/* Statistics Cards */}
       <div className="dashboard-stats-grid quality-stats-grid">
         {[
-          { title: "Chờ phê duyệt", value: statistics?.pendingApprovalCount || 0, iconBg: "late", icon: "clock", valueColor: "#FAAD14" },
-          { title: "Trễ hạn", value: statistics?.overdueCount || 0, iconBg: "red", icon: "exclamation-triangle", valueColor: "#FF4D4F" },
-          { title: "Chờ phát hành", value: statistics?.pendingPublishCount || 0, iconBg: "blue", icon: "file-text", valueColor: "#096DD9" },
-          { title: "Đã phát hành", value: statistics?.publishedCount || 0, iconBg: "cyan", icon: "file-earmark-check", valueColor: "#13C2C2" },
+          {
+            title: "Chờ phê duyệt",
+            value: statistics?.pendingApprovalCount || 0,
+            iconBg: "late",
+            icon: "clock",
+            valueColor: "#FAAD14",
+          },
+          {
+            title: "Trễ hạn",
+            value: statistics?.overdueCount || 0,
+            iconBg: "red",
+            icon: "exclamation-triangle",
+            valueColor: "#FF4D4F",
+          },
+          {
+            title: "Chờ phát hành",
+            value: statistics?.pendingPublishCount || 0,
+            iconBg: "blue",
+            icon: "file-text",
+            valueColor: "#096DD9",
+          },
+          {
+            title: "Đã phát hành",
+            value: statistics?.publishedCount || 0,
+            iconBg: "cyan",
+            icon: "file-earmark-check",
+            valueColor: "#13C2C2",
+          },
         ].map((stat, index) => (
           <Card key={index} className="dashboard-stat-card" bordered={false}>
             <div className="dashboard-stat-content">
@@ -109,7 +133,9 @@ const QualityManagementList: React.FC = () => {
             optionType="button"
           >
             <Radio.Button value="reports">Quản lý báo cáo</Radio.Button>
-            <Radio.Button value="assignment-log">Sổ nhận mẫu giao việc</Radio.Button>
+            <Radio.Button value="assignment-log">
+              Sổ nhận mẫu giao việc
+            </Radio.Button>
           </Radio.Group>
         </div>
         <div style={{ borderBottom: "1px solid #f0f0f0" }} />

@@ -234,3 +234,58 @@
 .quality-history-indicator-collapse .ant-collapse-item:last-child {
   border-bottom: none;
 }
+
+/* ChangeApprovalModal - Section card headers */
+.quality-change-approval-modal .ant-card > .ant-card-head {
+  background: #E6F7FF;
+  border-bottom: none;
+  min-height: 40px;
+}
+
+.quality-change-approval-modal .ant-card > .ant-card-head .ant-card-head-title {
+  font-family: 'Roboto', sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+/* ChangeApprovalModal - Sample changes card gradient header */
+.quality-change-sample-card.ant-card > .ant-card-head {
+  background: var(--gradient-primary);
+  border-radius: 8px 8px 0 0;
+}
+
+.quality-change-sample-card.ant-card > .ant-card-head .ant-card-head-title {
+  color: #FFFFFF;
+  font-size: 14px;
+}
+
+.quality-change-sample-card.ant-card > .ant-card-head .ant-tag {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  color: #FFFFFF !important;
+}
+
+/* ChangeApprovalModal - Table styling */
+.quality-change-approval-modal .ant-table-thead > tr > th,
+.quality-change-approval-modal .ant-table-thead > tr > td {
+  background: #E6F7FF !important;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+.quality-change-approval-modal .ant-table-container,
+.quality-change-approval-modal .ant-table-container table {
+  border-radius: 0 !important;
+}
+
+.quality-change-approval-modal .ant-table-thead > tr > th:first-child,
+.quality-change-approval-modal .ant-table-thead > tr > th:last-child {
+  border-radius: 0 !important;
+}
+
+.quality-change-approval-modal .ant-table-tbody > tr:last-child > td:first-child,
+.quality-change-approval-modal .ant-table-tbody > tr:last-child > td:last-child {
+  border-radius: 0 !important;
+}
