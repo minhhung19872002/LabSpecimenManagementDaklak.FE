@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback, useState } from 'react';
-import { Table, Input, Select, Button, Tag, Row, Col, Empty } from 'antd';
+import { Table, Input, Select, Button, Tag, Row, Col } from 'antd';
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
@@ -278,8 +278,6 @@ const LabSampleAssignmentLogTab: React.FC = () => {
   const {
     loading,
     data,
-    laboratoryId,
-    laboratoryName,
     statusFilter,
     pagination,
     handleSearch,
@@ -507,17 +505,6 @@ const LabSampleAssignmentLogTab: React.FC = () => {
     { value: TestRequestStatus.Completed, label: TestRequestStatusLabels[TestRequestStatus.Completed] },
   ], []);
 
-  // Show empty state if no laboratory found
-  if (!laboratoryId && !loading) {
-    return (
-      <div className="sample-assignment-log-tab" style={{ padding: 16 }}>
-        <Empty
-          description="Không tìm thấy phòng thí nghiệm của bạn. Vui lòng liên hệ quản trị viên."
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="sample-assignment-log-tab">
       {/* Toolbar */}
@@ -544,11 +531,6 @@ const LabSampleAssignmentLogTab: React.FC = () => {
         <Col>
           <Button icon={<ReloadOutlined />} onClick={handleReload} />
         </Col>
-        {laboratoryName && (
-          <Col>
-            <Tag color="blue">{laboratoryName}</Tag>
-          </Col>
-        )}
       </Row>
 
       {/* Table */}

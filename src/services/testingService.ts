@@ -15,6 +15,10 @@ import {
   IndicatorImageDto,
   CannotTestDto,
 } from '../types/testing';
+import {
+  GetSampleAssignmentLogInput,
+  PagedSampleAssignmentLogResult,
+} from '../types/qualityManagement';
 
 const BASE_URL = '/api/v1/testing';
 
@@ -47,6 +51,25 @@ export const testingService = {
    */
   getList: async (params: GetTestingListInput = {}): Promise<PagedTestingResult> => {
     const response = await api.get<PagedTestingResult>(BASE_URL, { params: toApiParams(params) });
+    return response.data;
+  },
+
+  /**
+   * Get sample assignment log for testing page
+   * Query from LaboratoryTaskIndicator (không yêu cầu QualityManagementTask)
+   */
+  getSampleAssignmentLog: async (input: GetSampleAssignmentLogInput): Promise<PagedSampleAssignmentLogResult> => {
+    const queryParams: Record<string, any> = {};
+    if (input.skipCount !== undefined) queryParams.SkipCount = input.skipCount;
+    if (input.maxResultCount !== undefined) queryParams.MaxResultCount = input.maxResultCount;
+    if (input.sorting) queryParams.Sorting = input.sorting;
+    if (input.search) queryParams.Search = input.search;
+    if (input.testRequestStatus !== undefined) queryParams.TestRequestStatus = input.testRequestStatus;
+    if (input.fromDate) queryParams.FromDate = input.fromDate;
+    if (input.toDate) queryParams.ToDate = input.toDate;
+    if (input.laboratoryId) queryParams.LaboratoryId = input.laboratoryId;
+
+    const response = await api.get<PagedSampleAssignmentLogResult>(`${BASE_URL}/sample-assignment-log`, { params: queryParams });
     return response.data;
   },
 

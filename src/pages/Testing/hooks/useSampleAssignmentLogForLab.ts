@@ -1,22 +1,17 @@
 import { useState, useCallback, useEffect } from 'react';
 import { message } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { qualityManagementService } from '../../../services/qualityManagementService';
-import { laboratoryService } from '../../../services/masterDataService';
+import { testingService } from '../../../services/testingService';
 import {
   SampleAssignmentLogDto,
   GetSampleAssignmentLogInput,
 } from '../../../types/qualityManagement';
 import { TestRequestStatus } from '../../../types/testRequest';
-import { STORAGE_KEYS } from '../../../constants';
-import { UserInfo } from '../../../services/authService';
 
 interface UseSampleAssignmentLogForLabResult {
   loading: boolean;
   data: SampleAssignmentLogDto[];
   totalCount: number;
-  laboratoryId: string | undefined;
-  laboratoryName: string | undefined;
 
   // Filters
   searchText: string;
@@ -39,7 +34,8 @@ interface UseSampleAssignmentLogForLabResult {
 
 /**
  * Hook để lấy dữ liệu Sổ nhận mẫu giao việc cho Lab của user hiện tại
- * Sử dụng cho trang Testing (Thử nghiệm viên)
+ * Sử dụng API /api/v1/testing/sample-assignment-log (query từ LaboratoryTaskIndicator)
+ * Backend tự xác định lab của user thông qua authentication token
  */
 export const useSampleAssignmentLogForLab = (): UseSampleAssignmentLogForLabResult => {
   const navigate = useNavigate();
@@ -52,70 +48,12 @@ export const useSampleAssignmentLogForLab = (): UseSampleAssignmentLogForLabResu
   const [statusFilter, setStatusFilter] = useState<TestRequestStatus | undefined>(undefined);
   const [pagination, setPagination] = useState({
     current: 1,
-    pageSize: 20,
+    pageSize: 50,
     total: 0,
   });
 
-  // Laboratory info
-  const [laboratoryId, setLaboratoryId] = useState<string | undefined>(undefined);
-  const [laboratoryName, setLaboratoryName] = useState<string | undefined>(undefined);
-  const [labReady, setLabReady] = useState(false);
-
-  // Get laboratory ID from current user's department
-  useEffect(() => {
-    const fetchUserLaboratory = async () => {
-      try {
-        // Get user info from localStorage
-        const userInfoStr = localStorage.getItem(STORAGE_KEYS.USER_INFO);
-        if (!userInfoStr) {
-          console.warn('User info not found in localStorage');
-          setLabReady(true);
-          return;
-        }
-
-        const userInfo: UserInfo = JSON.parse(userInfoStr);
-        const departmentId = userInfo.departmentId;
-
-        if (!departmentId) {
-          console.warn('User departmentId not found');
-          setLabReady(true);
-          return;
-        }
-
-        // Get all active laboratories
-        const laboratories = await laboratoryService.getActive();
-
-        // Find laboratory with matching departmentId
-        const userLab = laboratories.find(lab => lab.departmentId === departmentId);
-
-        if (userLab) {
-          setLaboratoryId(userLab.id);
-          setLaboratoryName(userLab.name);
-        } else {
-          console.warn('No laboratory found for user department:', departmentId);
-        }
-      } catch (error) {
-        console.error('Failed to fetch user laboratory:', error);
-      } finally {
-        setLabReady(true);
-      }
-    };
-
-    fetchUserLaboratory();
-  }, []);
-
-  // Load data
+  // Load data - backend tự filter theo lab của user hiện tại
   const loadData = useCallback(async () => {
-    // Wait for laboratory info to be ready
-    if (!labReady) return;
-
-    // If no laboratoryId found, don't load data
-    if (!laboratoryId) {
-      setData([]);
-      setTotalCount(0);
-      return;
-    }
-
     setLoading(true);
     try {
       const input: GetSampleAssignmentLogInput = {
@@ -124,10 +62,9 @@ export const useSampleAssignmentLogForLab = (): UseSampleAssignmentLogForLabResu
         sorting: 'RequestCompletionDate asc',
         search: searchText || undefined,
         testRequestStatus: statusFilter,
-        laboratoryId: laboratoryId,
       };
 
-      const result = await qualityManagementService.getSampleAssignmentLog(input);
+      const result = await testingService.getSampleAssignmentLog(input);
       setData(result.items);
       setTotalCount(result.totalCount);
       setPagination(prev => ({ ...prev, total: result.totalCount }));
@@ -137,7 +74,7 @@ export const useSampleAssignmentLogForLab = (): UseSampleAssignmentLogForLabResu
     } finally {
       setLoading(false);
     }
-  }, [pagination.current, pagination.pageSize, searchText, statusFilter, laboratoryId, labReady]);
+  }, [pagination.current, pagination.pageSize, searchText, statusFilter]);
 
   // Initial load and reload on filter changes
   useEffect(() => {
@@ -164,7 +101,6 @@ export const useSampleAssignmentLogForLab = (): UseSampleAssignmentLogForLabResu
   }, []);
 
   const handleRowDoubleClick = useCallback((record: SampleAssignmentLogDto) => {
-    // Navigate to Testing detail page (with lab view mode)
     navigate(`/testing/${record.laboratoryTaskId}?view=lab`);
   }, [navigate]);
 
@@ -176,8 +112,6 @@ export const useSampleAssignmentLogForLab = (): UseSampleAssignmentLogForLabResu
     loading,
     data,
     totalCount,
-    laboratoryId,
-    laboratoryName,
     searchText,
     statusFilter,
     pagination,
