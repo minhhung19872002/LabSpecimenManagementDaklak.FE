@@ -127,18 +127,23 @@ const IndicatorsList: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
       getIndicatorColumns(
         (indicator) => handleEditIndicator(indicator, indicatorForm),
         handleToggleActive,
-        handleDeleteIndicator
+        handleDeleteIndicator,
       ),
-    [handleEditIndicator, handleToggleActive, handleDeleteIndicator, indicatorForm]
+    [
+      handleEditIndicator,
+      handleToggleActive,
+      handleDeleteIndicator,
+      indicatorForm,
+    ],
   );
 
   const groupColumns = useMemo(
     () =>
       getGroupColumns(
         (group) => handleEditGroup(group, groupForm),
-        handleDeleteGroup
+        handleDeleteGroup,
       ),
-    [handleEditGroup, handleDeleteGroup, groupForm]
+    [handleEditGroup, handleDeleteGroup, groupForm],
   );
 
   return (
@@ -160,7 +165,7 @@ const IndicatorsList: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
               icon={<DownloadOutlined />}
               onClick={handleDownloadIndicatorGroupTemplate}
             >
-              Tải template mẫu
+              Tải template
             </Button>
             {authService.hasPermission(PERMISSIONS.MasterData.Import) && (
               <Button

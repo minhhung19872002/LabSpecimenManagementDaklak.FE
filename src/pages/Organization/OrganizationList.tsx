@@ -56,7 +56,7 @@ const OrganizationList: React.FC = () => {
     try {
       setImportLoading(true);
       const result = await importService.previewOrganizationTestRequests(
-        importFileList[0].originFileObj as File
+        importFileList[0].originFileObj as File,
       );
       setImportPreviewData(result);
     } catch (error: any) {
@@ -75,19 +75,19 @@ const OrganizationList: React.FC = () => {
     try {
       setImportLoading(true);
       const result = await importService.importOrganizationTestRequests(
-        importFileList[0].originFileObj as File
+        importFileList[0].originFileObj as File,
       );
 
       if (result.success) {
         message.success(
-          `Import thành công! Đã import ${result.importedRows} dòng.`
+          `Import thành công! Đã import ${result.importedRows} dòng.`,
         );
         handleImportReset();
         setImportModalVisible(false);
         loadData();
       } else {
         message.error(
-          result.message || "Import thất bại. Vui lòng kiểm tra lỗi."
+          result.message || "Import thất bại. Vui lòng kiểm tra lỗi.",
         );
       }
     } catch (error: any) {
@@ -155,7 +155,7 @@ const OrganizationList: React.FC = () => {
             onClick={handleDownloadTemplate}
             loading={downloadingTemplate}
           >
-            Tải template mẫu
+            Tải template
           </Button>
           {authService.hasPermission(PERMISSIONS.MasterData.Create) && (
             <Button
@@ -166,7 +166,11 @@ const OrganizationList: React.FC = () => {
             </Button>
           )}
           {authService.hasPermission(PERMISSIONS.MasterData.Create) && (
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleCreate}
+            >
               Thêm mới
             </Button>
           )}
