@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, Descriptions, Row, Col, Typography, Tooltip } from "antd";
+import { Card, Row, Col, Typography, Tooltip } from "antd";
 import { TestingDetailDto, TestingSampleDto } from "../../../../types/testing";
 
 const { Title, Text } = Typography;
@@ -16,66 +16,78 @@ const TestingOverviewSection: React.FC<TestingOverviewSectionProps> = ({
   isUrgent,
 }) => {
   return (
-    <Card title="Thông tin tổng quan" style={{ marginBottom: 16 }}>
-      <Descriptions column={{ xs: 1, sm: 2, md: 3 }}>
-        <Descriptions.Item label="Khách hàng">
-          {detail.customerName || "N/A"}
-        </Descriptions.Item>
-        <Descriptions.Item label="Quản lý kỹ thuật">
-          {detail.technicalManagerName || "N/A"}
-        </Descriptions.Item>
-        <Descriptions.Item label="Ngày YC hoàn thành">
-          <span
-            style={{
-              color: isUrgent ? "#ff4d4f" : undefined,
-              fontWeight: isUrgent ? "bold" : undefined,
-            }}
-          >
-            {detail.requestCompletionDate
-              ? new Date(detail.requestCompletionDate).toLocaleDateString("vi-VN")
-              : "N/A"}
-          </span>
-        </Descriptions.Item>
-      </Descriptions>
-
-      <Row gutter={[24, 16]} style={{ marginTop: 16 }}>
-        <Col span={12}>
-          <Title level={5}>Mẫu được phân công</Title>
-          <ul style={{ paddingLeft: 20, margin: 0 }}>
-            {sortedSamples.map((sample) => (
-              <li key={sample.sampleId} style={{ marginBottom: 4 }}>
-                <Text strong style={{ whiteSpace: "nowrap" }}>
-                  {sample.sampleCode}
+    <Card className="testing-detail-header" style={{ marginBottom: 16, background: "#FAFAFA", borderColor: "#D9D9D9" }}>
+      <Title level={5} className="testing-section-title" style={{ margin: "0 0 16px 0" }}>Thông tin tổng quan</Title>
+      <Row gutter={[48, 16]}>
+        <Col xs={24} md={12}>
+          <div className="testing-overview-items">
+            <Row className="testing-overview-row">
+              <Col flex="150px">
+                <Text type="secondary">Khách hàng:</Text>
+              </Col>
+              <Col flex="auto">
+                <Text>{detail.customerName || "N/A"}</Text>
+              </Col>
+            </Row>
+            <Row className="testing-overview-row">
+              <Col flex="150px">
+                <Text type="secondary">Quản lý kỹ thuật:</Text>
+              </Col>
+              <Col flex="auto">
+                <Text>{detail.technicalManagerName || "N/A"}</Text>
+              </Col>
+            </Row>
+            <Row className="testing-overview-row">
+              <Col flex="150px">
+                <Text type="secondary">Ngày YC hoàn thành:</Text>
+              </Col>
+              <Col flex="auto">
+                <Text
+                  style={{
+                    color: isUrgent ? "#ff4d4f" : undefined,
+                    fontWeight: isUrgent ? "bold" : undefined,
+                  }}
+                >
+                  {detail.requestCompletionDate
+                    ? new Date(detail.requestCompletionDate).toLocaleDateString("vi-VN")
+                    : "N/A"}
                 </Text>
-                <Text type="secondary"> - </Text>
-                <Tooltip title={sample.sampleName}>
-                  <Text
-                    type="secondary"
-                    style={{
-                      display: "inline-block",
-                      maxWidth: "calc(100% - 120px)",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                      verticalAlign: "bottom",
-                    }}
-                  >
-                    {sample.sampleName}
-                  </Text>
-                </Tooltip>
-              </li>
-            ))}
-          </ul>
+              </Col>
+            </Row>
+          </div>
         </Col>
-        <Col span={12}>
-          <Title level={5}>Số chỉ tiêu</Title>
-          <Text>
-            <Text strong style={{ fontSize: 18, color: "#52c41a" }}>
-              {detail.completedIndicatorCount}
-            </Text>
-            <Text type="secondary"> / {detail.totalIndicatorCount}</Text>
-            <Text type="secondary"> đã hoàn thành</Text>
-          </Text>
+        <Col xs={24} md={12}>
+          <div className="testing-overview-items">
+            <Row className="testing-overview-row">
+              <Col flex="150px">
+                <Text type="secondary">Mẫu được phân công:</Text>
+              </Col>
+              <Col flex="auto">
+                <ul style={{ paddingLeft: 20, margin: 0 }}>
+                  {sortedSamples.map((sample) => (
+                    <li key={sample.sampleId} style={{ marginBottom: 2 }}>
+                      <Text strong>{sample.sampleCode}</Text>
+                      <Text type="secondary"> - </Text>
+                      <Tooltip title={sample.sampleName}>
+                        <Text type="secondary">{sample.sampleName}</Text>
+                      </Tooltip>
+                    </li>
+                  ))}
+                </ul>
+              </Col>
+            </Row>
+            <Row className="testing-overview-row">
+              <Col flex="150px">
+                <Text type="secondary">Số chỉ tiêu:</Text>
+              </Col>
+              <Col flex="auto">
+                <Text strong style={{ color: "#52c41a" }}>
+                  {detail.completedIndicatorCount}
+                </Text>
+                <Text type="secondary"> / {detail.totalIndicatorCount} đã hoàn thành</Text>
+              </Col>
+            </Row>
+          </div>
         </Col>
       </Row>
     </Card>

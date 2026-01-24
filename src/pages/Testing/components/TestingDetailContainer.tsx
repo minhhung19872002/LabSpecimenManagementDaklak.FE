@@ -1,6 +1,9 @@
 import React from "react";
-import { Button, Collapse, Alert, Spin, Card } from "antd";
-import { ArrowLeftOutlined, WarningOutlined } from "../../../components/common/Icon";
+import { Button, Collapse, Alert, Spin, Card, Tooltip } from "antd";
+import {
+  ArrowLeftOutlined,
+  WarningOutlined,
+} from "../../../components/common/Icon";
 import {
   TestingDetailDto,
   TestingSampleDto,
@@ -51,24 +54,37 @@ interface TestingDetailContainerProps {
   onBack: () => void;
   onCollapseChange: (keys: string[]) => void;
   onSubmitResults: (sampleId: string) => void;
-  onResultsChange: (sampleId: string, results: SaveIndicatorResultDto[]) => void;
+  onResultsChange: (
+    sampleId: string,
+    results: SaveIndicatorResultDto[],
+  ) => void;
   onSelectionChange: (sampleId: string, indicatorIds: string[]) => void;
   onImagesChange: (
     sampleId: string,
     imageType: SampleTestingImageType,
-    images: SampleTestingImageDto[]
+    images: SampleTestingImageDto[],
   ) => void;
   onShowRejectionHistory: (indicatorId: string, indicatorName: string) => void;
   onCloseHistoryModal: () => void;
   onShowCannotTestModal: (indicatorId: string, indicatorName: string) => void;
   onCloseCannotTestModal: () => void;
   onCannotTestSuccess: () => void;
-  onSaveIndicator: (indicatorId: string, result?: SaveIndicatorResultDto) => void;
+  onSaveIndicator: (
+    indicatorId: string,
+    result?: SaveIndicatorResultDto,
+  ) => void;
   onSubmitIndicator: (indicatorId: string) => void;
-  onUploadIndicatorImages?: (indicatorId: string, files: File[]) => Promise<IndicatorImageDto[]>;
+  onUploadIndicatorImages?: (
+    indicatorId: string,
+    files: File[],
+  ) => Promise<IndicatorImageDto[]>;
   onDeleteIndicatorImage?: (imageId: string) => Promise<void>;
   /** Callback khi chọn ngày thử nghiệm bulk cho các chỉ tiêu được select */
-  onBulkTestDateChange?: (sampleId: string, indicatorIds: string[], date: string) => void;
+  onBulkTestDateChange?: (
+    sampleId: string,
+    indicatorIds: string[],
+    date: string,
+  ) => void;
 }
 
 const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
@@ -125,9 +141,13 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
     <div>
       {/* Back Button */}
       <div style={{ marginBottom: 16 }}>
-        <Button icon={<ArrowLeftOutlined />} onClick={onBack}>
-          Quay lại
-        </Button>
+        <Tooltip title="Quay lại">
+          <Button
+            shape="circle"
+            icon={<ArrowLeftOutlined />}
+            onClick={onBack}
+          />
+        </Tooltip>
       </div>
 
       {/* Urgent Alert */}
@@ -142,71 +162,74 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
         />
       )}
 
-      {/* Header */}
-      <TestingDetailHeader detail={detail} />
+      <Card>
+        {/* Header */}
+        <TestingDetailHeader detail={detail} />
 
-      {/* Overview Info */}
-      <TestingOverviewSection
-        detail={detail}
-        sortedSamples={sortedSamples}
-        isUrgent={isUrgent}
-      />
+        {/* Overview Info */}
+        <TestingOverviewSection
+          detail={detail}
+          sortedSamples={sortedSamples}
+          isUrgent={isUrgent}
+        />
 
-      {/* Sample Panels */}
-      <Collapse
-        activeKey={activeKeys}
-        onChange={(keys) => onCollapseChange(keys as string[])}
-        expandIconPosition="start"
-      >
-        {sortedSamples.map((sample) => (
-          <Panel
-            header={
-              <SamplePanelHeader
+        {/* Sample Panels */}
+        <Collapse
+          className="testing-detail-collapse"
+          activeKey={activeKeys}
+          onChange={(keys) => onCollapseChange(keys as string[])}
+          expandIconPosition="start"
+        >
+          {sortedSamples.map((sample) => (
+            <Panel
+              header={
+                <SamplePanelHeader
+                  sample={sample}
+                  selectedIndicatorIds={
+                    selectedIndicators.get(sample.sampleId) || []
+                  }
+                  submitting={submitting}
+                  canPerformActions={canPerformActions}
+                  onSubmitResults={onSubmitResults}
+                  onBulkTestDateChange={onBulkTestDateChange}
+                />
+              }
+              key={sample.sampleId}
+            >
+              {/* Images section */}
+              <SampleImagesRow
+                taskId={taskId}
                 sample={sample}
+                onImagesChange={onImagesChange}
+                canUpload={canPerformActions}
+              />
+              {/* Indicators table */}
+              <IndicatorEditTable
+                indicators={sample.indicators}
                 selectedIndicatorIds={
                   selectedIndicators.get(sample.sampleId) || []
                 }
+                isUrgent={isUrgent}
                 submitting={submitting}
+                resultOptions={resultOptions}
                 canPerformActions={canPerformActions}
-                onSubmitResults={onSubmitResults}
-                onBulkTestDateChange={onBulkTestDateChange}
+                onResultsChange={(results) =>
+                  onResultsChange(sample.sampleId, results)
+                }
+                onSelectionChange={(ids) =>
+                  onSelectionChange(sample.sampleId, ids)
+                }
+                onShowRejectionHistory={onShowRejectionHistory}
+                onSaveIndicator={onSaveIndicator}
+                onSubmitIndicator={onSubmitIndicator}
+                onUploadIndicatorImages={onUploadIndicatorImages}
+                onDeleteIndicatorImage={onDeleteIndicatorImage}
+                onShowCannotTestModal={onShowCannotTestModal}
               />
-            }
-            key={sample.sampleId}
-          >
-            {/* Images section */}
-            <SampleImagesRow
-              taskId={taskId}
-              sample={sample}
-              onImagesChange={onImagesChange}
-              canUpload={canPerformActions}
-            />
-            {/* Indicators table */}
-            <IndicatorEditTable
-              indicators={sample.indicators}
-              selectedIndicatorIds={
-                selectedIndicators.get(sample.sampleId) || []
-              }
-              isUrgent={isUrgent}
-              submitting={submitting}
-              resultOptions={resultOptions}
-              canPerformActions={canPerformActions}
-              onResultsChange={(results) =>
-                onResultsChange(sample.sampleId, results)
-              }
-              onSelectionChange={(ids) =>
-                onSelectionChange(sample.sampleId, ids)
-              }
-              onShowRejectionHistory={onShowRejectionHistory}
-              onSaveIndicator={onSaveIndicator}
-              onSubmitIndicator={onSubmitIndicator}
-              onUploadIndicatorImages={onUploadIndicatorImages}
-              onDeleteIndicatorImage={onDeleteIndicatorImage}
-              onShowCannotTestModal={onShowCannotTestModal}
-            />
-          </Panel>
-        ))}
-      </Collapse>
+            </Panel>
+          ))}
+        </Collapse>
+      </Card>
 
       {/* Rejection History Modal */}
       <RejectionHistoryModal

@@ -49,3 +49,182 @@
     min-height: 80px;
   }
 }
+
+/* Testing Detail - Header section padding */
+.testing-detail-header .ant-card-body {
+  padding: 24px;
+}
+
+@media (max-width: 991px) {
+  .testing-detail-header .ant-card-body {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 575px) {
+  .testing-detail-header .ant-card-body {
+    padding: 16px;
+  }
+}
+
+/* Testing Detail - Section title */
+.testing-section-title {
+  font-size: 20px !important;
+}
+
+@media (max-width: 991px) {
+  .testing-section-title {
+    font-size: 18px !important;
+  }
+}
+
+@media (max-width: 575px) {
+  .testing-section-title {
+    font-size: 16px !important;
+  }
+}
+
+/* Testing Detail - Overview items */
+.testing-overview-items {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (max-width: 575px) {
+  .testing-overview-row {
+    flex-direction: column;
+  }
+
+  .testing-overview-row > .ant-col {
+    flex: none !important;
+    max-width: 100%;
+  }
+}
+
+/* Testing Detail - Collapse panels with gradient header */
+.testing-detail-collapse.ant-collapse {
+  border: none;
+  background: transparent;
+}
+
+.testing-detail-collapse > .ant-collapse-item {
+  border: 1px solid #D9D9D9;
+  border-radius: 8px !important;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.testing-detail-collapse > .ant-collapse-item > .ant-collapse-header {
+  background: var(--gradient-primary);
+  color: #FFFFFF;
+  font-weight: 500;
+  border-radius: 0 !important;
+  padding: 12px 16px;
+}
+
+.testing-detail-collapse > .ant-collapse-item > .ant-collapse-header .ant-collapse-expand-icon {
+  color: #FFFFFF;
+}
+
+.testing-detail-collapse > .ant-collapse-item > .ant-collapse-header .ant-collapse-header-text {
+  color: #FFFFFF;
+}
+
+.testing-detail-collapse > .ant-collapse-item > .ant-collapse-content {
+  border-top: none;
+}
+
+.testing-detail-collapse .ant-collapse-body {
+  padding: 0 !important;
+}
+
+/* Collapse body - Table styling */
+.testing-detail-collapse .ant-table-thead > tr > th,
+.testing-detail-collapse .ant-table-thead > tr > td {
+  background: #E6F7FF !important;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.85);
+  border-radius: 0 !important;
+}
+
+.testing-detail-collapse .ant-table-container,
+.testing-detail-collapse .ant-table-container table {
+  border-radius: 0 !important;
+}
+
+.testing-detail-collapse .ant-table-thead > tr > th:first-child,
+.testing-detail-collapse .ant-table-thead > tr > th:last-child {
+  border-radius: 0 !important;
+}
+
+.testing-detail-collapse .ant-table-tbody > tr:last-child > td:first-child,
+.testing-detail-collapse .ant-table-tbody > tr:last-child > td:last-child {
+  border-radius: 0 !important;
+}
+
+/* Collapse header - Text elements */
+.testing-detail-collapse > .ant-collapse-item > .ant-collapse-header .ant-typography {
+  color: #FFFFFF;
+}
+
+.testing-detail-collapse > .ant-collapse-item > .ant-collapse-header .ant-typography-secondary {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* Collapse header - Primary button (white bg, gradient text) */
+.testing-detail-collapse > .ant-collapse-item > .ant-collapse-header .ant-btn-primary {
+  background: #FFFFFF !important;
+  border: 1px solid #FFFFFF !important;
+}
+
+.testing-detail-collapse > .ant-collapse-item > .ant-collapse-header .ant-btn-primary > span {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.testing-detail-collapse > .ant-collapse-item > .ant-collapse-header .ant-btn-primary .anticon {
+  color: #1E63F8 !important;
+}
+
+.testing-detail-collapse > .ant-collapse-item > .ant-collapse-header .ant-btn-primary:hover {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: #FFFFFF !important;
+}
+
+.testing-detail-collapse > .ant-collapse-item > .ant-collapse-header .ant-btn-primary:disabled {
+  background: #D9D9D9 !important;
+  border-color: #D9D9D9 !important;
+}
+
+.testing-detail-collapse > .ant-collapse-item > .ant-collapse-header .ant-btn-primary:disabled > span {
+  background: none;
+  -webkit-background-clip: unset;
+  -webkit-text-fill-color: rgba(0, 0, 0, 0.25);
+}
+
+.testing-detail-collapse > .ant-collapse-item > .ant-collapse-header .ant-btn-primary:disabled .anticon {
+  color: rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Collapse header - DatePicker (white bg) */
+.testing-detail-collapse > .ant-collapse-item > .ant-collapse-header .ant-picker {
+  background: #FFFFFF;
+  border-color: #FFFFFF;
+}
+
+.testing-detail-collapse > .ant-collapse-item > .ant-collapse-header .ant-picker:hover {
+  border-color: #FFFFFF;
+}
+
+.testing-detail-collapse > .ant-collapse-item > .ant-collapse-header .ant-picker .ant-picker-input > input::placeholder {
+  color: rgba(0, 0, 0, 0.4);
+}
+
+.testing-detail-collapse > .ant-collapse-item > .ant-collapse-header .ant-picker.ant-picker-disabled {
+  background: #D9D9D9;
+  border-color: #D9D9D9;
+}

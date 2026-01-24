@@ -15,6 +15,7 @@ import {
 } from "../../types/testing";
 import TestingDetailContainer from "./components/TestingDetailContainer";
 import { useMultipleActionPermissions } from "../../hooks/useActionPermission";
+import "./Testing.css";
 
 interface ResultOption {
   value: string;
