@@ -7,9 +7,6 @@ import {
   Tag,
   Space,
   Table,
-  Divider,
-  Row,
-  Col,
   Alert,
 } from "antd";
 import {
@@ -47,6 +44,7 @@ import {
   PostalImagesSection,
   getStatusTag,
 } from "./sections";
+import "../../../styles/ListCard.css";
 
 interface TestRequestDetailContainerProps {
   data: TestRequestDto;
@@ -341,11 +339,12 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
       </div>
 
       <Card
+        className="list-card"
         title={
           <div className="card-header-flex">
             <Space wrap>
               <span>Chi tiết yêu cầu thử nghiệm</span>
-              <Tag color="blue">{data.requestNumber}</Tag>
+              <Tag className="request-number-tag">{data.requestNumber}</Tag>
               {getStatusTag(data.status)}
             </Space>
             <Space wrap>
@@ -376,84 +375,78 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
           />
         )}
 
-        {/* Thông tin hợp đồng */}
-        <ContractInfoSection data={data} />
-
-        {/* Thông tin khách hàng */}
-        <CustomerInfoSection data={data} />
-
-        {/* Loại hình mẫu */}
-        <SampleTypeSection data={data} />
+        {/* Thông tin hợp đồng / Khách hàng / Loại hình mẫu */}
+        <div className="detail-sections-row">
+          <div className="detail-sections-flex">
+            <ContractInfoSection data={data} />
+          </div>
+          <div className="detail-sections-flex">
+            <CustomerInfoSection data={data} />
+          </div>
+          <div className="detail-sections-fixed">
+            <SampleTypeSection data={data} />
+          </div>
+        </div>
 
         {/* Bảng mẫu */}
-        <Divider orientation="left" style={{ marginTop: 24 }}>
-          <Space>
-            <span style={{ fontWeight: 600 }}>Thông tin mẫu</span>
-            <Tag color="blue">
-              {data.totalSampleCount || data.samples?.length || 0} mẫu
-            </Tag>
-          </Space>
-        </Divider>
-
-        <Table
-          dataSource={(data.samples || []).filter((s) => !s.isCancelled)}
-          columns={sampleColumns}
-          rowKey="id"
-          pagination={false}
-          scroll={{ x: 1600 }}
-          size="small"
-          bordered
+        <Card
+          className="list-card"
+          title={
+            <span>
+              Thông tin mẫu ({data.totalSampleCount || data.samples?.length || 0} mẫu)
+            </span>
+          }
           style={{ marginBottom: 24 }}
-          locale={{ emptyText: "Không có mẫu nào" }}
-        />
+          styles={{ body: { padding: 0 } }}
+        >
+          <Table
+            dataSource={(data.samples || []).filter((s) => !s.isCancelled)}
+            columns={sampleColumns}
+            rowKey="id"
+            pagination={false}
+            scroll={{ x: 1600 }}
+            size="small"
+            bordered
+            locale={{ emptyText: "Không có mẫu nào" }}
+          />
+        </Card>
 
-        {/* Layout: Desktop 2 cols, Mobile responsive wrap */}
-        <Row gutter={[24, 24]}>
-          {/* Yêu cầu về kết quả */}
-          <Col xs={{ span: 24, order: 1 }} lg={{ span: 12, order: 1 }}>
-            <ResultRequirementsSection data={data} />
-          </Col>
-
-          {/* Yêu cầu về lấy mẫu & giao trả */}
-          <Col xs={{ span: 24, order: 2 }} lg={{ span: 12, order: 2 }}>
-            <SamplingDeliverySection data={data} />
-          </Col>
-
-          {/* Yêu cầu về phương pháp */}
-          <Col xs={{ span: 24, order: 3 }} lg={{ span: 12, order: 3 }}>
+        {/* Layout: Yêu cầu bên trái, Chi phí bên phải */}
+        <div className="detail-bottom-row">
+          <div className="detail-bottom-left">
             <MethodRequirementsSection data={data} />
-          </Col>
-
-          {/* Thông tin chi phí */}
-          <Col xs={{ span: 24, order: 4 }} lg={{ span: 12, order: 4 }}>
+            <ResultRequirementsSection data={data} />
+            <SamplingDeliverySection data={data} />
+          </div>
+          <div className="detail-bottom-right">
             <CostInfoSection
               data={data}
               onViewCostHistory={onViewCostHistory}
             />
-          </Col>
-        </Row>
+          </div>
+        </div>
 
         {/* Hình ảnh gửi bưu điện */}
         <PostalImagesSection data={data} />
 
         {/* Thông tin hệ thống */}
-        <Divider />
-        <Descriptions
-          size="small"
-          column={{ xs: 1, md: 2 }}
-          style={{ marginTop: 16 }}
-        >
-          <Descriptions.Item label="Ngày tạo">
-            {data.creationTime
-              ? dayjs(data.creationTime).format("DD/MM/YYYY HH:mm:ss")
-              : "-"}
-          </Descriptions.Item>
-          <Descriptions.Item label="Cập nhật lần cuối">
-            {data.lastModificationTime
-              ? dayjs(data.lastModificationTime).format("DD/MM/YYYY HH:mm:ss")
-              : "-"}
-          </Descriptions.Item>
-        </Descriptions>
+        <div style={{ background: "#FAFAFA", borderRadius: 8, padding: 16 }}>
+          <Descriptions
+            size="small"
+            column={{ xs: 1, md: 2 }}
+          >
+            <Descriptions.Item label="Ngày tạo">
+              {data.creationTime
+                ? dayjs(data.creationTime).format("DD/MM/YYYY HH:mm:ss")
+                : "-"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Cập nhật lần cuối">
+              {data.lastModificationTime
+                ? dayjs(data.lastModificationTime).format("DD/MM/YYYY HH:mm:ss")
+                : "-"}
+            </Descriptions.Item>
+          </Descriptions>
+        </div>
       </Card>
     </div>
   );

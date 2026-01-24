@@ -187,7 +187,7 @@ const ImportExcelModal: React.FC<ImportExcelModalProps> = ({
   const [file, setFile] = useState<File | null>(null);
   const [previewData, setPreviewData] = useState<PreviewResultDto | null>(null);
   const [importResult, setImportResult] = useState<ImportResultDto | null>(
-    null
+    null,
   );
   const [loading, setLoading] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
@@ -234,7 +234,7 @@ const ImportExcelModal: React.FC<ImportExcelModalProps> = ({
       console.error("Preview error:", error);
       message.error(
         error.response?.data?.message ||
-          "Lỗi xử lý file. Vui lòng kiểm tra định dạng file."
+          "Lỗi xử lý file. Vui lòng kiểm tra định dạng file.",
       );
     } finally {
       setLoading(false);
@@ -262,7 +262,7 @@ const ImportExcelModal: React.FC<ImportExcelModalProps> = ({
 
       if (result.success) {
         message.success(
-          result.message || `Import thành công ${result.importedRows} dòng`
+          result.message || `Import thành công ${result.importedRows} dòng`,
         );
         onSuccess?.();
       }
@@ -291,7 +291,7 @@ const ImportExcelModal: React.FC<ImportExcelModalProps> = ({
       downloadBlobAsFile(blob, config.templateFilename);
       message.success({ content: "Tải file mẫu thành công!", key: "download" });
     } catch (error) {
-      console.error("Lỗi tải template mẫu:", error);
+      console.error("Lỗi tải template:", error);
       message.error({ content: "Lỗi tải file mẫu", key: "download" });
     }
   };

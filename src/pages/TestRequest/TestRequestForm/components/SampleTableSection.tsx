@@ -36,7 +36,10 @@ import SampleImageUpload from "./SampleImageUpload";
 import BarcodeQRModal, { SampleCodeInfo } from "./BarcodeQRModal";
 import { IndicatorName } from "../../../../components/common";
 import ImportSpecimenModal from "./ImportSpecimenModal";
-import { importService, downloadBlobAsFile } from "../../../../services/importService";
+import {
+  importService,
+  downloadBlobAsFile,
+} from "../../../../services/importService";
 
 const { Text } = Typography;
 
@@ -116,7 +119,8 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
   // Download template handler
   const handleDownloadTemplate = async () => {
     try {
-      const blob = await importService.downloadSpecimensForTestRequestTemplate();
+      const blob =
+        await importService.downloadSpecimensForTestRequestTemplate();
       downloadBlobAsFile(blob, "Template_PhieuThuNghiem.xlsx");
     } catch (error) {
       console.error("Failed to download template:", error);
@@ -131,54 +135,73 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
   };
 
   // Column widths state for resizing
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(DEFAULT_COLUMN_WIDTHS);
-  const resizingRef = useRef<{ column: string; startX: number; startWidth: number } | null>(null);
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(
+    DEFAULT_COLUMN_WIDTHS,
+  );
+  const resizingRef = useRef<{
+    column: string;
+    startX: number;
+    startWidth: number;
+  } | null>(null);
 
   // Handle column resize
-  const handleResize = useCallback((column: string) => (e: React.SyntheticEvent, { size }: { size: { width: number } }) => {
-    setColumnWidths((prev) => ({
-      ...prev,
-      [column]: size.width,
-    }));
-  }, []);
+  const handleResize = useCallback(
+    (column: string) =>
+      (e: React.SyntheticEvent, { size }: { size: { width: number } }) => {
+        setColumnWidths((prev) => ({
+          ...prev,
+          [column]: size.width,
+        }));
+      },
+    [],
+  );
 
   // Handle resize start
-  const handleResizeStart = useCallback((e: React.MouseEvent, column: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    resizingRef.current = {
-      column,
-      startX: e.clientX,
-      startWidth: columnWidths[column] || 100,
-    };
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent, column: string) => {
+      e.preventDefault();
+      e.stopPropagation();
+      resizingRef.current = {
+        column,
+        startX: e.clientX,
+        startWidth: columnWidths[column] || 100,
+      };
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      if (!resizingRef.current) return;
-      const { column: col, startX, startWidth } = resizingRef.current;
-      const diff = moveEvent.clientX - startX;
-      const newWidth = Math.max(50, startWidth + diff);
-      setColumnWidths((prev) => ({
-        ...prev,
-        [col]: newWidth,
-      }));
-    };
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        if (!resizingRef.current) return;
+        const { column: col, startX, startWidth } = resizingRef.current;
+        const diff = moveEvent.clientX - startX;
+        const newWidth = Math.max(50, startWidth + diff);
+        setColumnWidths((prev) => ({
+          ...prev,
+          [col]: newWidth,
+        }));
+      };
 
-    const handleMouseUp = () => {
-      resizingRef.current = null;
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
+      const handleMouseUp = () => {
+        resizingRef.current = null;
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      };
 
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-  }, [columnWidths]);
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    },
+    [columnWidths],
+  );
 
   // Resizable header cell component
-  const ResizableTitle = ({ onResize, width, columnKey, children, ...restProps }: any) => {
+  const ResizableTitle = ({
+    onResize,
+    width,
+    columnKey,
+    children,
+    ...restProps
+  }: any) => {
     if (!width || columnKey === "actions") {
       return <th {...restProps}>{children}</th>;
     }
@@ -226,7 +249,8 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
   };
 
   // Generate columns with dynamic widths and onHeaderCell
-  const getColumnWidth = (key: string) => columnWidths[key] || DEFAULT_COLUMN_WIDTHS[key] || 100;
+  const getColumnWidth = (key: string) =>
+    columnWidths[key] || DEFAULT_COLUMN_WIDTHS[key] || 100;
 
   const sampleColumns = [
     {
@@ -410,14 +434,14 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
         <AutoComplete
           value={value || ""}
           options={sampleConditionOptions}
-          onChange={(val) =>
-            updateSample(record.key, "statusText", val || "")
-          }
+          onChange={(val) => updateSample(record.key, "statusText", val || "")}
           placeholder="Tình trạng mẫu..."
           style={{ width: "100%" }}
           size="small"
           filterOption={(inputValue, option) =>
-            (option?.label as string)?.toLowerCase().includes(inputValue.toLowerCase())
+            (option?.label as string)
+              ?.toLowerCase()
+              .includes(inputValue.toLowerCase())
           }
           allowClear
         />
@@ -442,10 +466,10 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
         const hasData = methods.length > 0;
 
         const unsentMethods = methods.filter(
-          (key) => !indicatorLaboratoryMap[`${record.key}_${key}`]
+          (key) => !indicatorLaboratoryMap[`${record.key}_${key}`],
         );
         const sentMethods = methods.filter(
-          (key) => indicatorLaboratoryMap[`${record.key}_${key}`]
+          (key) => indicatorLaboratoryMap[`${record.key}_${key}`],
         );
         const groupedByLab: Record<
           string,
@@ -481,7 +505,13 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
                         gap: 8,
                       }}
                     >
-                      <span style={{ flex: 1 }}>- <IndicatorName name={indicator.name} formattedName={indicator.formattedName} /></span>
+                      <span style={{ flex: 1 }}>
+                        -{" "}
+                        <IndicatorName
+                          name={indicator.name}
+                          formattedName={indicator.formattedName}
+                        />
+                      </span>
                       <span style={{ color: "#1890ff", fontSize: 12 }}>
                         {method.testMethodName}
                       </span>
@@ -517,7 +547,13 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
                               gap: 8,
                             }}
                           >
-                            <span style={{ flex: 1 }}>- <IndicatorName name={indicator.name} formattedName={indicator.formattedName} /></span>
+                            <span style={{ flex: 1 }}>
+                              -{" "}
+                              <IndicatorName
+                                name={indicator.name}
+                                formattedName={indicator.formattedName}
+                              />
+                            </span>
                             <span style={{ color: "#1890ff", fontSize: 12 }}>
                               {method.testMethodName}
                             </span>
@@ -525,7 +561,7 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
                         ) : null;
                       })}
                     </div>
-                  )
+                  ),
                 )}
               </>
             )}
@@ -679,7 +715,7 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
             disabled={isSamplesLocked()}
             size="small"
           >
-            Tải template mẫu
+            Tải template
           </Button>
           <Button
             icon={<UploadOutlined />}

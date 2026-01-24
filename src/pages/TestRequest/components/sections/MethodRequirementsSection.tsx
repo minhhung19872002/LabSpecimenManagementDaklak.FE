@@ -1,13 +1,33 @@
 import React from "react";
-import { Row, Col, Space, Typography } from "antd";
+import { Tag, Typography } from "antd";
+import { CheckCircleOutlined, CloseCircleOutlined } from "../../../../components/common/Icon";
 import { TestRequestDto } from "../../../../types/testRequest";
-import { BoolItem } from "./shared";
 
 const { Title, Text } = Typography;
 
 interface MethodRequirementsSectionProps {
   data: TestRequestDto;
 }
+
+const MethodTag: React.FC<{ value: boolean; label: string }> = ({ value, label }) => (
+  <Tag
+    icon={value ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
+    style={{
+      backgroundColor: value ? "#F6FFED" : "#FFFFFF",
+      color: value ? "#52C41A" : "#8C8C8C",
+      border: value ? "1px solid #B7EB8F" : "1px solid #D9D9D9",
+      borderRadius: 18,
+      padding: "4px 12px",
+      margin: 0,
+      width: "fit-content",
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 4,
+    }}
+  >
+    {label}
+  </Tag>
+);
 
 const MethodRequirementsSection: React.FC<MethodRequirementsSectionProps> = ({
   data,
@@ -17,28 +37,24 @@ const MethodRequirementsSection: React.FC<MethodRequirementsSectionProps> = ({
       <Title level={5} style={{ marginBottom: 12 }}>
         Yêu cầu về phương pháp
       </Title>
-      <Row gutter={[16, 12]}>
-        <Col xs={24}>
-          <Space wrap size={[16, 8]}>
-            <BoolItem
-              value={data.methodWestHighlandInstitute}
-              label="Theo Viện KHKT NN Tây Nguyên"
-            />
-            <BoolItem
-              value={data.methodCustomer}
-              label="Theo yêu cầu khách hàng"
-            />
-          </Space>
-        </Col>
+      <div className="detail-column-list">
+        <div className="sample-type-tags" style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+          <MethodTag
+            value={data.methodWestHighlandInstitute}
+            label="Theo Viện KHKT NN Tây Nguyên"
+          />
+          <MethodTag
+            value={data.methodCustomer}
+            label="Theo yêu cầu khách hàng"
+          />
+        </div>
         {data.methodCustomerDetail && (
-          <Col xs={24}>
-            <div className="detail-item">
-              <Text type="secondary">Chi tiết PP KH:</Text>
-              <Text>{data.methodCustomerDetail}</Text>
-            </div>
-          </Col>
+          <div className="detail-item">
+            <Text type="secondary">Chi tiết PP KH:</Text>
+            <Text>{data.methodCustomerDetail}</Text>
+          </div>
         )}
-      </Row>
+      </div>
     </div>
   );
 };

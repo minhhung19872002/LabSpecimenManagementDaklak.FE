@@ -25,7 +25,10 @@ import { API_BASE_URL, api } from "../../../services/api";
 import { authService } from "../../../services/authService";
 import { PERMISSIONS } from "../../../constants/permissionMapping";
 
-const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshKey }) => {
+const TestMethodsList: React.FC<TestMethodsTabProps> = ({
+  onDataChange,
+  refreshKey,
+}) => {
   const {
     loading,
     searchText,
@@ -101,7 +104,7 @@ const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshK
   const handleDownloadTemplate = () => {
     window.open(
       `${API_BASE_URL}/api/v1/import/test-methods-with-indicators/template`,
-      "_blank"
+      "_blank",
     );
   };
 
@@ -115,14 +118,14 @@ const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshK
     try {
       const response = await api.upload<TestMethodImportPreviewDto>(
         "/api/v1/import/test-methods-with-indicators/preview",
-        formData
+        formData,
       );
       setPreviewData(response.data);
     } catch (error: any) {
       message.error(
         error?.response?.data?.message ||
           error?.response?.data?.error?.message ||
-          "Lỗi khi đọc file"
+          "Lỗi khi đọc file",
       );
     } finally {
       setImportLoading(false);
@@ -158,7 +161,7 @@ const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshK
       message.error(
         error?.response?.data?.message ||
           error?.response?.data?.error?.message ||
-          "Lỗi khi import"
+          "Lỗi khi import",
       );
     } finally {
       setImportLoading(false);
@@ -189,15 +192,15 @@ const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshK
       getTestMethodColumns(
         (record) => handleEdit(record, form),
         handleDelete,
-        handleToggleActive
+        handleToggleActive,
       ),
-    [handleEdit, handleDelete, handleToggleActive, form]
+    [handleEdit, handleDelete, handleToggleActive, form],
   );
 
   // Memoized columns for indicators
   const indicatorColumns = useMemo(
     () => getIndicatorColumns(handleRemoveIndicator),
-    [handleRemoveIndicator]
+    [handleRemoveIndicator],
   );
 
   return (
@@ -207,8 +210,11 @@ const TestMethodsList: React.FC<TestMethodsTabProps> = ({ onDataChange, refreshK
         <Col flex="auto" />
         <Col>
           <Space>
-            <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
-              Tải template mẫu
+            <Button
+              icon={<DownloadOutlined />}
+              onClick={handleDownloadTemplate}
+            >
+              Tải template
             </Button>
             {authService.hasPermission(PERMISSIONS.MasterData.Create) && (
               <Button

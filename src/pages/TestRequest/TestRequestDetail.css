@@ -20,6 +20,24 @@
   }
 }
 
+/* Card body padding (except table) */
+.test-request-detail .list-card > .ant-card-body {
+  padding: 24px;
+}
+
+
+@media (max-width: 991px) and (min-width: 577px) {
+  .test-request-detail .list-card > .ant-card-body {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 576px) {
+  .test-request-detail .list-card > .ant-card-body {
+    padding: 12px;
+  }
+}
+
 .loading-container {
   display: flex;
   justify-content: center;
@@ -32,10 +50,6 @@
   background-color: #fafafa;
 }
 
-.test-request-detail .ant-descriptions-item-content {
-  background-color: #ffffff;
-}
-
 /* Detail sections */
 .detail-section {
   background: #fafafa;
@@ -43,6 +57,100 @@
   margin-bottom: 16px;
   border-radius: 8px;
   border: 1px solid #f0f0f0;
+}
+
+/* Sections displayed in row */
+.detail-sections-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.detail-sections-row .detail-sections-flex {
+  flex: 1;
+  min-width: 0;
+}
+
+.detail-sections-row .detail-sections-fixed {
+  flex: 0 0 220px;
+}
+
+.detail-sections-row .detail-section {
+  height: 100%;
+  margin-bottom: 0;
+}
+
+@media (max-width: 991px) {
+  .detail-sections-row {
+    flex-direction: column;
+  }
+
+  .detail-sections-row .detail-sections-fixed {
+    flex: none;
+    width: 100%;
+  }
+
+  .sample-type-tags {
+    flex-direction: row !important;
+    flex-wrap: wrap;
+  }
+}
+
+/* Sample type tags layout */
+.sample-type-tags {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sample-type-tags .ant-tag > .anticon {
+  margin-inline-end: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Bottom sections layout: requirements left, cost right */
+.detail-bottom-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.detail-bottom-left {
+  flex: 3;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.detail-bottom-right {
+  flex: 2;
+  min-width: 0;
+}
+
+.detail-bottom-left .detail-section,
+.detail-bottom-right .detail-section {
+  margin-bottom: 0;
+}
+
+@media (max-width: 991px) {
+  .detail-bottom-row {
+    flex-direction: column;
+  }
+}
+
+/* Column list layout for section items */
+.detail-column-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.detail-item-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .detail-section .ant-typography h5 {
@@ -84,6 +192,13 @@
   line-height: 1.5;
 }
 
+/* Override list-card header height for detail page (has buttons) */
+.test-request-detail .list-card > .ant-card-head {
+  height: auto;
+  min-height: 54px;
+  padding: 12px 16px;
+}
+
 /* Card header flex container */
 .test-request-detail .card-header-flex {
   display: flex;
@@ -91,6 +206,54 @@
   gap: 12px 16px;
   align-items: center;
   justify-content: space-between;
+}
+
+/* Buttons in detail card header */
+.test-request-detail .list-card .card-header-flex .ant-btn-default {
+  background: #FFFFFF;
+  color: rgba(0, 0, 0, 0.85);
+  border-color: #FFFFFF;
+}
+
+.test-request-detail .list-card .card-header-flex .ant-btn-default:hover {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: #FFFFFF;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+.test-request-detail .list-card .card-header-flex .ant-btn-primary {
+  background: #FFFFFF !important;
+  border: 1px solid #FFFFFF !important;
+  color: #1E63F8;
+}
+
+.test-request-detail .list-card .card-header-flex .ant-btn-primary:hover {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: #FFFFFF !important;
+}
+
+.test-request-detail .list-card .card-header-flex .ant-btn-dangerous {
+  background: #FFFFFF !important;
+  border: 1px solid #FFFFFF !important;
+  color: #F5222D;
+}
+
+.test-request-detail .list-card .card-header-flex .ant-btn-dangerous:hover {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: #FFFFFF !important;
+}
+
+/* Tags in detail card header */
+.test-request-detail .list-card .card-header-flex .ant-tag {
+  border-radius: 18px;
+  padding: 2px 8px;
+  border: 1px solid #FFFFFF !important;
+}
+
+.test-request-detail .list-card .card-header-flex .ant-tag.request-number-tag {
+  background: #1890FF !important;
+  border: 1px solid #FFFFFF !important;
+  color: #FFFFFF;
 }
 
 @media (max-width: 767px) {
