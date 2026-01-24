@@ -179,11 +179,18 @@ export const getSampleColumns = ({
                 {ind.indicatorCode || ind.indicatorName}
               </Tag>
               <IndicatorName name={ind.indicatorName} formattedName={ind.indicatorFormattedName} style={{ fontSize: 11 }} />
-              {ind.unitPrice > 0 && (
+              {ind.originalUnitPrice ? (
+                <span style={{ fontSize: 11 }}>
+                  (<span style={{ textDecoration: "line-through", color: "#bbb" }}>
+                    {ind.originalUnitPrice.toLocaleString("vi-VN")}đ
+                  </span>{" "}
+                  <span style={{ color: "#52c41a", fontWeight: 600 }}>0đ</span>)
+                </span>
+              ) : ind.unitPrice > 0 ? (
                 <Text type="secondary" style={{ fontSize: 11 }}>
                   ({ind.unitPrice?.toLocaleString("vi-VN")}đ)
                 </Text>
-              )}
+              ) : null}
               {/* Trạng thái duyệt */}
               {hasApprovalStatus && approvalStatusLabel && (
                 <StatusTag

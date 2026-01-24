@@ -258,6 +258,8 @@ export interface TestRequestSampleIndicatorDto {
   /** Khoa phòng mặc định của nhóm chỉ tiêu (để auto-fill khi gửi QLKT) */
   indicatorGroupLaboratoryId?: string;
   unitPrice: number;
+  /** Giá gốc trước khi áp dụng combo giảm giá (chỉ có khi được miễn phí do combo kim loại nặng) */
+  originalUnitPrice?: number;
   notes?: string;
   laboratoryId?: string;
   laboratoryName?: string;
@@ -280,6 +282,7 @@ export interface CreateTestRequestSampleIndicatorDto {
   indicatorId: string;
   laboratoryId?: string;
   unitPrice?: number;
+  originalUnitPrice?: number;
   notes?: string;
   transferDate?: string;
   requestDate?: string;
@@ -291,6 +294,7 @@ export interface UpdateTestRequestSampleIndicatorDto {
   indicatorId: string;
   laboratoryId?: string;
   unitPrice?: number;
+  originalUnitPrice?: number;
   notes?: string;
   transferDate?: string;
   requestDate?: string;
