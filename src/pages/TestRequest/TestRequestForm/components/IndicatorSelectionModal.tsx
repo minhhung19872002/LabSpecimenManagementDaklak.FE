@@ -21,6 +21,7 @@ import {
   createIndicatorMethodKey,
 } from "../types";
 import IndicatorRow from "./IndicatorRow";
+import { HEAVY_METAL_COMBO_INDICATORS, HEAVY_METAL_FREE_INDICATOR } from "../constants";
 
 const { Text } = Typography;
 
@@ -181,10 +182,24 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     groupedByLab[labInfo.laboratoryId].methods.push(key);
   });
 
-  // Calculate total cost from selected methods
+  // Check combo kim loại nặng: nếu đủ 4 chỉ tiêu Pb, As, Cd, Hg thì Hg miễn phí
+  const isHeavyMetalComboMet = useMemo(() => {
+    const selectedNames = tempSelectedIndicatorMethods.map((key) => {
+      const { indicator } = getIndicatorMethodInfo(key);
+      return indicator?.name?.trim();
+    });
+    return HEAVY_METAL_COMBO_INDICATORS.every((name) => selectedNames.includes(name));
+  }, [tempSelectedIndicatorMethods, getIndicatorMethodInfo]);
+
+  const isHgIndicator = (indicator: IndicatorDto | undefined) => {
+    return indicator?.name?.trim() === HEAVY_METAL_FREE_INDICATOR;
+  };
+
+  // Calculate total cost from selected methods (Hg = 0 khi đủ combo)
   const totalCost = tempSelectedIndicatorMethods.reduce((sum, key) => {
-    const { method } = getIndicatorMethodInfo(key);
-    return sum + (method?.unitPrice || 0);
+    const { indicator, method } = getIndicatorMethodInfo(key);
+    const price = (isHeavyMetalComboMet && isHgIndicator(indicator)) ? 0 : (method?.unitPrice || 0);
+    return sum + price;
   }, 0);
 
   // Get indicators that have active methods, filtered by specimen type if active
@@ -928,7 +943,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                       Phương pháp
                     </span>
                     <span
-                      style={{ width: 70, flexShrink: 0, textAlign: "right" }}
+                      style={{ width: 90, flexShrink: 0, textAlign: "right" }}
                     >
                       Đơn giá
                     </span>
@@ -958,6 +973,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                           methodName={method?.testMethodName || ""}
                           methodFormattedName={method?.testMethodFormattedName}
                           unitPrice={method?.unitPrice || 0}
+                          isFree={isHeavyMetalComboMet && isHgIndicator(indicator)}
                           isChecked={checkedIndicators.includes(key)}
                           transferDate={
                             selectedIndicatorDates[key]?.transferDate
@@ -1028,6 +1044,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                     methodName={method?.testMethodName || ""}
                                     methodFormattedName={method?.testMethodFormattedName}
                                     unitPrice={method?.unitPrice || 0}
+                                    isFree={isHeavyMetalComboMet && isHgIndicator(indicator)}
                                     isChecked={checkedIndicators.includes(key)}
                                     transferDate={
                                       selectedIndicatorDates[key]?.transferDate

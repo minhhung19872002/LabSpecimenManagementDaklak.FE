@@ -15,6 +15,7 @@ interface IndicatorRowProps {
   methodName: string; // NEW: Phương pháp thử
   methodFormattedName?: string; // NEW: Phương pháp thử có định dạng HTML
   unitPrice: number; // NEW: Giá từ TestMethodIndicator
+  isFree?: boolean; // Miễn phí do combo kim loại nặng
   isChecked: boolean;
   transferDate?: dayjs.Dayjs;
   requestDate?: dayjs.Dayjs;
@@ -31,6 +32,7 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
   methodName,
   methodFormattedName,
   unitPrice,
+  isFree,
   isChecked,
   transferDate,
   requestDate,
@@ -100,12 +102,21 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
         style={{
           fontSize: 12,
           color: "#888",
-          width: 70,
+          width: 90,
           flexShrink: 0,
           textAlign: "right",
         }}
       >
-        {unitPrice?.toLocaleString("vi-VN")}đ
+        {isFree ? (
+          <>
+            <span style={{ textDecoration: "line-through", color: "#bbb", marginRight: 2, fontSize: 11 }}>
+              {unitPrice?.toLocaleString("vi-VN")}đ
+            </span>
+            <span style={{ color: "#52c41a", fontWeight: 600 }}>0đ</span>
+          </>
+        ) : (
+          <>{unitPrice?.toLocaleString("vi-VN")}đ</>
+        )}
       </span>
       {statusLabel && (
         <StatusTag color={statusColor} style={{ fontSize: 11, flexShrink: 0, minWidth: 60 }}>

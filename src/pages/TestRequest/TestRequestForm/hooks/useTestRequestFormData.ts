@@ -46,7 +46,7 @@ import {
   Province,
   Ward,
 } from "../../../../utils/vietnamLocations";
-import { LOCKED_FIELDS } from "../constants";
+import { LOCKED_FIELDS, HEAVY_METAL_COMBO_INDICATORS, HEAVY_METAL_FREE_INDICATOR } from "../constants";
 import {
   SampleFormData,
   IndicatorDateInfo,
@@ -726,6 +726,16 @@ export const useTestRequestFormData = () => {
   const calculateTotalCost = useCallback(() => {
     let total = 0;
     samples.forEach((sample) => {
+      // Check combo kim loại nặng cho sample này
+      const sampleIndicatorNames = (sample.indicatorMethods || []).map((methodKey) => {
+        const { indicatorId } = parseIndicatorMethodKey(methodKey);
+        const ind = indicators.find((i) => i.id === indicatorId);
+        return ind?.name?.trim();
+      });
+      const isSampleComboMet = HEAVY_METAL_COMBO_INDICATORS.every(
+        (name) => sampleIndicatorNames.includes(name)
+      );
+
       // New logic: use indicatorMethods if available
       if (sample.indicatorMethods && sample.indicatorMethods.length > 0) {
         sample.indicatorMethods.forEach((key) => {
@@ -733,18 +743,20 @@ export const useTestRequestFormData = () => {
           const methods = indicatorMethodsMap[indicatorId] || [];
           const method = methods.find((m) => m.testMethodId === testMethodId);
           if (method) {
-            total += method.unitPrice;
+            // Hg miễn phí khi đủ combo kim loại nặng
+            const ind = indicators.find((i) => i.id === indicatorId);
+            const isHgFree = isSampleComboMet && ind?.name?.trim() === HEAVY_METAL_FREE_INDICATOR;
+            total += isHgFree ? 0 : method.unitPrice;
           }
         });
       } else {
         // Fallback to old logic for backward compatibility
-        // Note: unitPrice is now in TestMethodIndicator, not in Indicator
-        // Old data without testMethodId will have no price calculated
         sample.indicatorIds.forEach((indId) => {
           const methods = indicatorMethodsMap[indId] || [];
           if (methods.length > 0) {
-            // Use first method's price as fallback
-            total += methods[0].unitPrice;
+            const ind = indicators.find((i) => i.id === indId);
+            const isHgFree = isSampleComboMet && ind?.name?.trim() === HEAVY_METAL_FREE_INDICATOR;
+            total += isHgFree ? 0 : methods[0].unitPrice;
           }
         });
       }

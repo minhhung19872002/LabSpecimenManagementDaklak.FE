@@ -22,6 +22,7 @@ import {
 import { generateSampleCode, getNextOrderNum, printBarcode as printBarcodeUtil, SampleBarcodeInfo } from "../utils";
 import { PATH_ROUTES } from "../../../../constants";
 import { getApiErrorMessage } from "../../../../utils/errorHandler";
+import { HEAVY_METAL_COMBO_INDICATORS, HEAVY_METAL_FREE_INDICATOR } from "../constants";
 
 interface UseTestRequestFormActionsProps {
   form: any;
@@ -707,6 +708,16 @@ export const useTestRequestFormActions = ({
         // Keep existing sampleCode (fixed, not regenerated)
         const sampleCode = sample.sampleCode;
 
+        // Check combo kim loại nặng cho sample này
+        const sampleIndicatorNames = (sample.indicatorMethods || []).map((methodKey) => {
+          const { indicatorId } = parseIndicatorMethodKey(methodKey);
+          const ind = indicators.find((i) => i.id === indicatorId);
+          return ind?.name?.trim();
+        });
+        const isSampleComboMet = HEAVY_METAL_COMBO_INDICATORS.every(
+          (name) => sampleIndicatorNames.includes(name)
+        );
+
         // Prefer indicatorMethods if available, fallback to indicatorIds
         const indicatorsList = sample.indicatorMethods && sample.indicatorMethods.length > 0
           ? sample.indicatorMethods.map((methodKey) => {
@@ -717,12 +728,15 @@ export const useTestRequestFormActions = ({
               const labAssignment = indicatorLaboratoryMap[`${sample.key}_${methodKey}`];
               // Get the TestRequestSampleIndicator.id if this indicator already exists
               const existingIndicatorId = sampleIndicatorIdMap[`${sample.key}_${methodKey}`];
+              // Hg miễn phí khi đủ combo kim loại nặng
+              const ind = indicators.find((i) => i.id === indicatorId);
+              const isHgFree = isSampleComboMet && ind?.name?.trim() === HEAVY_METAL_FREE_INDICATOR;
               return {
                 id: existingIndicatorId || undefined, // Include id for existing indicators
                 indicatorId,
                 testMethodId,
                 laboratoryId: labAssignment?.laboratoryId || undefined,
-                unitPrice: method?.unitPrice || 0,
+                unitPrice: isHgFree ? 0 : (method?.unitPrice || 0),
                 transferDate: indicatorDates?.transferDate?.format('YYYY-MM-DD') || undefined,
                 requestDate:
                   labAssignment?.requestDate?.format('YYYY-MM-DD') ||
@@ -737,12 +751,14 @@ export const useTestRequestFormActions = ({
               const labAssignment = indicatorLaboratoryMap[`${sample.key}_${indId}`];
               // Get the TestRequestSampleIndicator.id if this indicator already exists
               const existingIndicatorId = sampleIndicatorIdMap[`${sample.key}_${indId}`];
+              // Hg miễn phí khi đủ combo kim loại nặng (fallback logic)
+              const isHgFree = isSampleComboMet && indicator?.name?.trim() === HEAVY_METAL_FREE_INDICATOR;
               return {
                 id: existingIndicatorId || undefined, // Include id for existing indicators
                 indicatorId: indId,
                 testMethodId: undefined,
                 laboratoryId: labAssignment?.laboratoryId || undefined,
-                unitPrice: indicator?.unitPrice || 0,
+                unitPrice: isHgFree ? 0 : (indicator?.unitPrice || 0),
                 transferDate: indicatorDates?.transferDate?.format('YYYY-MM-DD') || undefined,
                 requestDate:
                   labAssignment?.requestDate?.format('YYYY-MM-DD') ||
@@ -984,27 +1000,38 @@ export const useTestRequestFormActions = ({
           ? values.requestDate.toISOString()
           : new Date().toISOString(),
         notes: values.notes || undefined,
-        samples: samples.map((sample, index) => ({
-          sortOrder: index + 1,
-          sampleCode: sample.sampleCode || "",
-          sampleName: sample.sampleName || "",
-          samplingAddress: sample.samplingAddress || undefined,
-          sampleQuantity: sample.sampleQuantity || undefined,
-          statusText: sample.statusText || undefined,
-          notes: sample.notes || undefined,
-          indicators: (sample.indicatorMethods || []).map((methodKey: IndicatorMethodKey) => {
-            const { indicatorId, testMethodId } = parseIndicatorMethodKey(methodKey);
-            const indicator = indicators.find((ind: any) => ind.id === indicatorId);
-            const method = indicatorMethodsMap[indicatorId]?.find(
-              (m: IndicatorMethodInfo) => m.testMethodId === testMethodId
-            );
-            return {
-              indicatorId,
-              indicatorName: indicator?.name || "",
-              unitPrice: method?.unitPrice || 0,
-            };
-          }),
-        })),
+        samples: samples.map((sample, index) => {
+          // Check combo kim loại nặng cho sample này (preview)
+          const previewSampleNames = (sample.indicatorMethods || []).map((mk) => {
+            const { indicatorId: iId } = parseIndicatorMethodKey(mk);
+            return indicators.find((i) => i.id === iId)?.name?.trim();
+          });
+          const isPreviewComboMet = HEAVY_METAL_COMBO_INDICATORS.every(
+            (name) => previewSampleNames.includes(name)
+          );
+          return {
+            sortOrder: index + 1,
+            sampleCode: sample.sampleCode || "",
+            sampleName: sample.sampleName || "",
+            samplingAddress: sample.samplingAddress || undefined,
+            sampleQuantity: sample.sampleQuantity || undefined,
+            statusText: sample.statusText || undefined,
+            notes: sample.notes || undefined,
+            indicators: (sample.indicatorMethods || []).map((methodKey: IndicatorMethodKey) => {
+              const { indicatorId, testMethodId } = parseIndicatorMethodKey(methodKey);
+              const indicator = indicators.find((ind: any) => ind.id === indicatorId);
+              const method = indicatorMethodsMap[indicatorId]?.find(
+                (m: IndicatorMethodInfo) => m.testMethodId === testMethodId
+              );
+              const isHgFree = isPreviewComboMet && indicator?.name?.trim() === HEAVY_METAL_FREE_INDICATOR;
+              return {
+                indicatorId,
+                indicatorName: indicator?.name || "",
+                unitPrice: isHgFree ? 0 : (method?.unitPrice || 0),
+              };
+            }),
+          };
+        }),
       };
 
       const result = await testRequestService.previewTestRequestForm(previewInput);
