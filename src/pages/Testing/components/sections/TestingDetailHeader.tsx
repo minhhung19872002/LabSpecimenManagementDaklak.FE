@@ -12,10 +12,10 @@ interface TestingDetailHeaderProps {
 
 const TestingDetailHeader: React.FC<TestingDetailHeaderProps> = ({ detail }) => {
   return (
-    <Card style={{ marginBottom: 16 }}>
+    <Card className="testing-detail-header" style={{ marginBottom: 16, background: "#FAFAFA", borderColor: "#D9D9D9" }}>
       <Row justify="space-between" align="middle">
         <Col>
-          <Space direction="vertical" size={0}>
+          <Space direction="vertical" size={8}>
             <Title level={4} style={{ margin: 0 }}>
               <ExperimentOutlined style={{ marginRight: 8 }} />
               Số hợp đồng: {detail.contractNumber || "N/A"}

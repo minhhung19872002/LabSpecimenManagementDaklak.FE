@@ -17,7 +17,7 @@ interface SampleImagesRowProps {
   onImagesChange: (
     sampleId: string,
     imageType: SampleTestingImageType,
-    images: SampleTestingImageDto[]
+    images: SampleTestingImageDto[],
   ) => void;
 }
 
@@ -31,7 +31,7 @@ const SampleImagesRow: React.FC<SampleImagesRowProps> = ({
   const isSampleCompleted =
     sample.indicators.length > 0 &&
     sample.indicators.every(
-      (ind) => ind.testingStatus === IndicatorTestingStatus.Done
+      (ind) => ind.testingStatus === IndicatorTestingStatus.Done,
     );
 
   // Kết hợp cả quyền Permission Matrix và trạng thái sample
@@ -40,9 +40,7 @@ const SampleImagesRow: React.FC<SampleImagesRowProps> = ({
   return (
     <div
       style={{
-        marginBottom: 16,
-        padding: "12px 0",
-        borderBottom: "1px solid #f0f0f0",
+        padding: "8px 12px",
       }}
     >
       <Space size={24} wrap>
@@ -61,7 +59,7 @@ const SampleImagesRow: React.FC<SampleImagesRowProps> = ({
             onImagesChange(
               sample.sampleId,
               SampleTestingImageType.BeforeTesting,
-              images
+              images,
             )
           }
         />
@@ -76,7 +74,7 @@ const SampleImagesRow: React.FC<SampleImagesRowProps> = ({
             onImagesChange(
               sample.sampleId,
               SampleTestingImageType.AfterTesting,
-              images
+              images,
             )
           }
         />
