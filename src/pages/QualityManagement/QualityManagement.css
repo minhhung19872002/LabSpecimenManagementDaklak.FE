@@ -1,0 +1,51 @@
+/* QualityManagement - Compact stat cards */
+.quality-stats-grid.dashboard-stats-grid {
+  grid-template-columns: repeat(4, 1fr);
+  margin-bottom: 16px;
+}
+
+.quality-stats-grid .dashboard-stat-card {
+  height: 100px;
+  padding: 12px;
+}
+
+.quality-stats-grid .dashboard-stat-value {
+  font-size: 24px;
+  line-height: 32px;
+}
+
+.quality-stats-grid .dashboard-stat-title {
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.quality-stats-grid .dashboard-stat-icon {
+  width: 32px;
+  height: 32px;
+  padding: 6px;
+  border-radius: 10px;
+}
+
+.quality-stats-grid .dashboard-stat-icon .anticon,
+.quality-stats-grid .dashboard-stat-icon i.bi {
+  font-size: 18px;
+}
+
+/* Responsive: 2 columns on medium screens */
+@media (max-width: 991px) {
+  .quality-stats-grid.dashboard-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Responsive: 2 columns on mobile */
+@media (max-width: 575px) {
+  .quality-stats-grid.dashboard-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .quality-stats-grid .dashboard-stat-card {
+    height: auto;
+    min-height: 80px;
+  }
+}

@@ -7,17 +7,14 @@ import {
   Select,
   Row,
   Col,
-  Statistic,
   Typography,
-  Tabs,
+  Radio,
+  Space,
 } from "antd";
-import {
+import Icon, {
   SafetyCertificateOutlined,
   SearchOutlined,
   ReloadOutlined,
-  ClockCircleOutlined,
-  FileTextOutlined,
-  WarningOutlined,
 } from "../../components/common/Icon";
 import { QualityManagementStatusLabels } from "../../types/qualityManagement";
 import HistoryModal from "./components/HistoryModal";
@@ -27,8 +24,10 @@ import { useQualityManagementList } from "./hooks";
 
 import "./components/ReportManagementTab.css";
 import "../../styles/ListCard.css";
+import "../Dashboard/Dashboard.css";
+import "./QualityManagement.css";
 
-const { Title } = Typography;
+const { Text } = Typography;
 
 const QualityManagementList: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("reports");
@@ -54,16 +53,74 @@ const QualityManagementList: React.FC = () => {
     closeChangeApprovalModal,
   } = useQualityManagementList();
 
-  // Tab items
-  const tabItems = [
-    {
-      key: "reports",
-      label: "Quản lý báo cáo",
-      children: (
-        <div className="report-management-tab">
-          <Card className="list-card">
+  return (
+    <div>
+      {/* Statistics Cards */}
+      <div className="dashboard-stats-grid quality-stats-grid">
+        {[
+          { title: "Chờ phê duyệt", value: statistics?.pendingApprovalCount || 0, iconBg: "late", icon: "clock", valueColor: "#FAAD14" },
+          { title: "Trễ hạn", value: statistics?.overdueCount || 0, iconBg: "red", icon: "exclamation-triangle", valueColor: "#FF4D4F" },
+          { title: "Chờ phát hành", value: statistics?.pendingPublishCount || 0, iconBg: "blue", icon: "file-text", valueColor: "#096DD9" },
+          { title: "Đã phát hành", value: statistics?.publishedCount || 0, iconBg: "cyan", icon: "file-earmark-check", valueColor: "#13C2C2" },
+        ].map((stat, index) => (
+          <Card key={index} className="dashboard-stat-card" bordered={false}>
+            <div className="dashboard-stat-content">
+              <div className="dashboard-stat-info">
+                <Text className="dashboard-stat-title">{stat.title}</Text>
+                <div
+                  className="dashboard-stat-value"
+                  style={{
+                    background: stat.valueColor,
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text",
+                  }}
+                >
+                  {stat.value}
+                </div>
+              </div>
+              <div className={`dashboard-stat-icon ${stat.iconBg}`}>
+                <Icon name={stat.icon} />
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      <Card
+        className="list-card"
+        title={
+          <Space>
+            <SafetyCertificateOutlined />
+            Quản lý chất lượng
+          </Space>
+        }
+        extra={
+          activeTab === "reports" && (
+            <Button icon={<ReloadOutlined />} onClick={loadData} />
+          )
+        }
+      >
+        {/* Tabs */}
+        <div className="statistics-detail-tabs" style={{ padding: "0 16px" }}>
+          <Radio.Group
+            value={activeTab}
+            onChange={(e) => setActiveTab(e.target.value)}
+            optionType="button"
+          >
+            <Radio.Button value="reports">Quản lý báo cáo</Radio.Button>
+            <Radio.Button value="assignment-log">Sổ nhận mẫu giao việc</Radio.Button>
+          </Radio.Group>
+        </div>
+        <div style={{ borderBottom: "1px solid #f0f0f0" }} />
+
+        {/* Content */}
+        {activeTab === "assignment-log" ? (
+          <SampleAssignmentLogTab />
+        ) : (
+          <>
             {/* Filters */}
-            <Row gutter={[16, 16]} align="middle" style={{ marginBottom: 16 }}>
+            <Row gutter={[16, 16]} align="middle" style={{ padding: 16 }}>
               <Col xs={24} sm={12} md={8}>
                 <Input.Search
                   placeholder="Tìm theo hợp đồng, QLKT..."
@@ -86,12 +143,9 @@ const QualityManagementList: React.FC = () => {
                       <Select.Option key={key} value={Number(key)}>
                         {label}
                       </Select.Option>
-                    )
+                    ),
                   )}
                 </Select>
-              </Col>
-              <Col>
-                <Button icon={<ReloadOutlined />} onClick={loadData} />
               </Col>
             </Row>
 
@@ -104,7 +158,14 @@ const QualityManagementList: React.FC = () => {
               pagination={{
                 ...pagination,
                 showSizeChanger: true,
-                showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
+                showTotal: (total, range) => (
+                  <>
+                    Hiển thị{" "}
+                    <b>
+                      {range[0]}-{range[1]}/{total}
+                    </b>
+                  </>
+                ),
                 pageSizeOptions: [50, 100, 150],
               }}
               onChange={handleTableChange}
@@ -116,78 +177,9 @@ const QualityManagementList: React.FC = () => {
               })}
               size="small"
             />
-          </Card>
-        </div>
-      ),
-    },
-    {
-      key: "assignment-log",
-      label: "Sổ nhận mẫu giao việc",
-      children: <SampleAssignmentLogTab />,
-    },
-  ];
-
-  return (
-    <div className="page-wrapper">
-      {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <Title level={4}>
-          <SafetyCertificateOutlined style={{ marginRight: 8 }} />
-          Quản lý chất lượng
-        </Title>
-      </div>
-
-      {/* Statistics Cards */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={6}>
-          <Card size="small">
-            <Statistic
-              title="Chờ phê duyệt"
-              value={statistics?.pendingApprovalCount || 0}
-              prefix={<ClockCircleOutlined />}
-              valueStyle={{ color: "#faad14" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={6}>
-          <Card size="small">
-            <Statistic
-              title="Trễ hạn"
-              value={statistics?.overdueCount || 0}
-              prefix={<WarningOutlined />}
-              valueStyle={{ color: "#ff4d4f" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={6}>
-          <Card size="small">
-            <Statistic
-              title="Chờ phát hành"
-              value={statistics?.pendingPublishCount || 0}
-              prefix={<FileTextOutlined />}
-              valueStyle={{ color: "#1677ff" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={6}>
-          <Card size="small">
-            <Statistic
-              title="Đã phát hành"
-              value={statistics?.publishedCount || 0}
-              prefix={<FileTextOutlined />}
-              valueStyle={{ color: "#13c2c2" }}
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      {/* Tabs */}
-      <Tabs
-        activeKey={activeTab}
-        onChange={setActiveTab}
-        items={tabItems}
-        size="large"
-      />
+          </>
+        )}
+      </Card>
 
       {/* History Modal */}
       <HistoryModal
