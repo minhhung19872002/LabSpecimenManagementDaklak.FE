@@ -1,0 +1,124 @@
+/* Task Management - Compact stat cards */
+.task-stats-grid.dashboard-stats-grid {
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 16px;
+}
+
+.task-stats-grid .dashboard-stat-card {
+  height: 100px;
+  padding: 12px;
+}
+
+.task-stats-grid .dashboard-stat-value {
+  font-size: 24px;
+  line-height: 32px;
+}
+
+.task-stats-grid .dashboard-stat-title {
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.task-stats-grid .dashboard-stat-icon {
+  width: 32px;
+  height: 32px;
+  padding: 6px;
+  border-radius: 10px;
+}
+
+.task-stats-grid .dashboard-stat-icon .anticon,
+.task-stats-grid .dashboard-stat-icon i.bi {
+  font-size: 18px;
+}
+
+/* Responsive: 4 columns on medium screens */
+@media (max-width: 1200px) {
+  .task-stats-grid.dashboard-stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Responsive: 3 columns on tablets */
+@media (max-width: 991px) {
+  .task-stats-grid.dashboard-stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Responsive: 2 columns on mobile */
+@media (max-width: 575px) {
+  .task-stats-grid.dashboard-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .task-stats-grid .dashboard-stat-card {
+    height: auto;
+    min-height: 80px;
+  }
+}
+
+/* Task Detail - Tab content card */
+.task-detail-card.statistics-detail-card > .ant-card-body {
+  padding: 0 !important;
+}
+
+/* Evaluation tab: spacing for alerts */
+.task-detail-card .task-tab-evaluation {
+  padding-top: 16px;
+}
+
+.task-detail-card .ant-alert {
+  margin-left: 16px;
+  margin-right: 16px;
+}
+
+/* Table header styling like list-card */
+.task-detail-card .ant-table-thead > tr > th,
+.task-detail-card .ant-table-thead > tr > td {
+  background: #E6F7FF !important;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+/* Remove table border-radius */
+.task-detail-card .ant-table-container,
+.task-detail-card .ant-table-container table {
+  border-radius: 0 !important;
+}
+
+.task-detail-card .ant-table-thead > tr > th:first-child,
+.task-detail-card .ant-table-thead > tr > th:last-child {
+  border-radius: 0 !important;
+}
+
+.task-detail-card .ant-table-tbody > tr:last-child > td:first-child,
+.task-detail-card .ant-table-tbody > tr:last-child > td:last-child {
+  border-radius: 0 !important;
+}
+
+/* Collapse styling for samples tab */
+.task-detail-card .ant-collapse {
+  border-radius: 0 !important;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+}
+
+.task-detail-card .ant-collapse > .ant-collapse-item {
+  border-radius: 0 !important;
+}
+
+.task-detail-card .ant-collapse > .ant-collapse-item > .ant-collapse-header {
+  background: #E6F7FF;
+  border-radius: 0 !important;
+}
+
+.task-detail-card .ant-collapse > .ant-collapse-item:last-child {
+  border-radius: 0 !important;
+}
+
+.task-detail-card .ant-collapse-body {
+  padding: 0 !important;
+}

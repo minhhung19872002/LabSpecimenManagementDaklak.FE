@@ -8,28 +8,31 @@ import {
   Row,
   Col,
   Select,
-  Statistic,
-  Tabs,
+  Radio,
+  Typography,
 } from "antd";
-import {
+import Icon, {
   ExperimentOutlined,
   SearchOutlined,
   ReloadOutlined,
-  UserOutlined,
-  TeamOutlined,
-  FileTextOutlined,
 } from "../../components/common/Icon";
 import { TestingStatus, TestingTabType } from "../../types/testing";
 import { useTestingList } from "./hooks";
 import LabSampleAssignmentLogTab from "./components/LabSampleAssignmentLogTab";
 import "../../styles/ListCard.css";
+import "../Dashboard/Dashboard.css";
+import "./Testing.css";
+
+const { Text } = Typography;
 
 // Extended tab type to include sample assignment log
 type ExtendedTabType = TestingTabType | "sample-assignment-log";
 
 const TestingList: React.FC = () => {
   // Tab state - now includes sample-assignment-log
-  const [currentTab, setCurrentTab] = useState<ExtendedTabType>(TestingTabType.MyAssignments);
+  const [currentTab, setCurrentTab] = useState<ExtendedTabType>(
+    TestingTabType.MyAssignments,
+  );
 
   const {
     tasks,
@@ -55,46 +58,15 @@ const TestingList: React.FC = () => {
   } = useTestingList();
 
   // Handle tab change - sync with useTestingList for testing tabs
-  const handleExtendedTabChange = (key: string) => {
-    if (key === "sample-assignment-log") {
+  const handleExtendedTabChange = (value: string) => {
+    if (value === "sample-assignment-log") {
       setCurrentTab("sample-assignment-log");
     } else {
-      const numericKey = Number(key) as TestingTabType;
+      const numericKey = Number(value) as TestingTabType;
       setCurrentTab(numericKey);
-      handleTabChange(key);
+      handleTabChange(value);
     }
   };
-
-  // Tab items - all 3 tabs at the same level
-  const tabItems = [
-    {
-      key: String(TestingTabType.MyAssignments),
-      label: (
-        <span>
-          <UserOutlined />
-          Công việc của tôi
-        </span>
-      ),
-    },
-    {
-      key: String(TestingTabType.All),
-      label: (
-        <span>
-          <TeamOutlined />
-          Công việc của Lab
-        </span>
-      ),
-    },
-    {
-      key: "sample-assignment-log",
-      label: (
-        <span>
-          <FileTextOutlined />
-          Sổ nhận mẫu giao việc
-        </span>
-      ),
-    },
-  ];
 
   // Determine if showing testing content or sample assignment log
   const isShowingSampleAssignmentLog = currentTab === "sample-assignment-log";
@@ -103,62 +75,77 @@ const TestingList: React.FC = () => {
     <div>
       {/* Statistics Cards - only show for testing tabs */}
       {!isShowingSampleAssignmentLog && (
-        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          <Col xs={12} sm={6} md={4}>
-            <Card size="small">
-              <Statistic
-                title="Tổng xét nghiệm"
-                value={stats.total}
-                prefix={<ExperimentOutlined />}
-              />
+        <div className="dashboard-stats-grid testing-stats-grid">
+          {[
+            {
+              title: "Tổng xét nghiệm",
+              value: stats.total,
+              iconBg: "contract",
+              icon: "flask",
+            },
+            {
+              title: "Chưa bắt đầu",
+              value: stats.notStarted,
+              iconBg: "pending",
+              icon: "hourglass",
+              valueColor: "#8C8C8C",
+            },
+            {
+              title: "Đang thử nghiệm",
+              value: stats.inProgress,
+              iconBg: "blue",
+              icon: "arrow-repeat",
+              valueColor: "#1890FF",
+            },
+            {
+              title: "Chờ phê duyệt",
+              value: stats.pendingApproval,
+              iconBg: "late",
+              icon: "clock",
+              valueColor: "#FAAD14",
+            },
+            {
+              title: "Bị từ chối",
+              value: stats.rejected,
+              iconBg: "red",
+              icon: "x-circle",
+              valueColor: "#FF4D4F",
+            },
+            {
+              title: "Hoàn thành",
+              value: stats.completed,
+              iconBg: "green",
+              icon: "check-circle",
+              valueColor: "#52C41A",
+            },
+          ].map((stat, index) => (
+            <Card key={index} className="dashboard-stat-card" bordered={false}>
+              <div className="dashboard-stat-content">
+                <div className="dashboard-stat-info">
+                  <Text className="dashboard-stat-title">{stat.title}</Text>
+                  <div
+                    className="dashboard-stat-value"
+                    style={
+                      stat.valueColor
+                        ? {
+                            background: stat.valueColor,
+                            WebkitBackgroundClip: "text",
+                            WebkitTextFillColor: "transparent",
+                            backgroundClip: "text",
+                          }
+                        : undefined
+                    }
+                  >
+                    {stat.value}
+                  </div>
+                </div>
+                <div className={`dashboard-stat-icon ${stat.iconBg}`}>
+                  <Icon name={stat.icon} />
+                </div>
+              </div>
             </Card>
-          </Col>
-          <Col xs={12} sm={6} md={4}>
-            <Card size="small">
-              <Statistic
-                title="Chưa bắt đầu"
-                value={stats.notStarted}
-                valueStyle={{ color: "#8c8c8c" }}
-              />
-            </Card>
-          </Col>
-          <Col xs={12} sm={6} md={4}>
-            <Card size="small">
-              <Statistic
-                title="Đang thử nghiệm"
-                value={stats.inProgress}
-                valueStyle={{ color: "#1890ff" }}
-              />
-            </Card>
-          </Col>
-          <Col xs={12} sm={6} md={4}>
-            <Card size="small">
-              <Statistic
-                title="Chờ phê duyệt"
-                value={stats.pendingApproval}
-                valueStyle={{ color: "#faad14" }}
-              />
-            </Card>
-          </Col>
-          <Col xs={12} sm={6} md={4}>
-            <Card size="small">
-              <Statistic
-                title="Bị từ chối"
-                value={stats.rejected}
-                valueStyle={{ color: "#ff4d4f" }}
-              />
-            </Card>
-          </Col>
-          <Col xs={12} sm={6} md={4}>
-            <Card size="small">
-              <Statistic
-                title="Hoàn thành"
-                value={stats.completed}
-                valueStyle={{ color: "#52c41a" }}
-              />
-            </Card>
-          </Col>
-        </Row>
+          ))}
+        </div>
       )}
 
       <Card
@@ -176,12 +163,28 @@ const TestingList: React.FC = () => {
         }
       >
         {/* Tabs */}
-        <Tabs
-          activeKey={currentTab === "sample-assignment-log" ? "sample-assignment-log" : String(activeTab)}
-          onChange={handleExtendedTabChange}
-          items={tabItems}
-          style={{ marginBottom: 16 }}
-        />
+        <div className="statistics-detail-tabs" style={{ padding: "0 16px" }}>
+          <Radio.Group
+            value={
+              currentTab === "sample-assignment-log"
+                ? "sample-assignment-log"
+                : String(activeTab)
+            }
+            onChange={(e) => handleExtendedTabChange(e.target.value)}
+            optionType="button"
+          >
+            <Radio.Button value={String(TestingTabType.MyAssignments)}>
+              Công việc của tôi
+            </Radio.Button>
+            <Radio.Button value={String(TestingTabType.All)}>
+              Công việc của Lab
+            </Radio.Button>
+            <Radio.Button value="sample-assignment-log">
+              Sổ nhận mẫu giao việc
+            </Radio.Button>
+          </Radio.Group>
+        </div>
+        <div style={{ borderBottom: "1px solid #f0f0f0" }} />
 
         {/* Content based on selected tab */}
         {isShowingSampleAssignmentLog ? (
@@ -189,7 +192,7 @@ const TestingList: React.FC = () => {
         ) : (
           <>
             {/* Search & Filter */}
-            <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+            <Row gutter={[16, 16]} style={{ marginBottom: 0, padding: 16 }}>
               <Col xs={24} sm={12} md={8}>
                 <Input.Search
                   placeholder="Tìm theo số hợp đồng..."
@@ -259,7 +262,14 @@ const TestingList: React.FC = () => {
                 total: pagination.total,
                 pageSizeOptions: [50, 100, 150],
                 showSizeChanger: true,
-                showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
+                showTotal: (total, range) => (
+                  <>
+                    Hiển thị{" "}
+                    <b>
+                      {range[0]}-{range[1]}/{total}
+                    </b>
+                  </>
+                ),
               }}
               onChange={handleTableChange}
               scroll={{ x: 1000 }}

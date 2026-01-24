@@ -156,7 +156,7 @@ const UploadableImageGroup: React.FC<{
 
     if (imageFiles.length > remainingSlots) {
       message.warning(
-        `Chỉ upload được ${remainingSlots} hình (còn lại ${remainingSlots}/${maxImages} slot)`
+        `Chỉ upload được ${remainingSlots} hình (còn lại ${remainingSlots}/${maxImages} slot)`,
       );
     }
 
@@ -168,7 +168,7 @@ const UploadableImageGroup: React.FC<{
         taskId,
         sampleId,
         imageType,
-        filesToUpload
+        filesToUpload,
       );
 
       if (newImages.length > 0) {
@@ -179,7 +179,7 @@ const UploadableImageGroup: React.FC<{
     } catch (error: any) {
       console.error("Batch upload failed:", error);
       message.error(
-        error?.response?.data?.error?.message || "Upload hình ảnh thất bại"
+        error?.response?.data?.error?.message || "Upload hình ảnh thất bại",
       );
     }
 
@@ -203,7 +203,7 @@ const UploadableImageGroup: React.FC<{
           message.success("Xóa hình ảnh thành công");
         } catch (error: any) {
           message.error(
-            error?.response?.data?.error?.message || "Xóa hình ảnh thất bại"
+            error?.response?.data?.error?.message || "Xóa hình ảnh thất bại",
           );
         }
       },
@@ -358,9 +358,6 @@ const SampleImagesDisplay: React.FC<SampleImagesDisplayProps> = ({
     <div
       style={{
         padding: "8px 12px",
-        backgroundColor: "#fafafa",
-        borderRadius: 4,
-        marginBottom: 12,
       }}
     >
       <Space size={24} align="start" wrap>

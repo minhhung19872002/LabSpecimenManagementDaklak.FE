@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback, useState } from 'react';
-import { Table, Input, Select, Button, Tag, Card, Row, Col, Empty } from 'antd';
+import { Table, Input, Select, Button, Tag, Row, Col, Empty } from 'antd';
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
@@ -510,12 +510,10 @@ const LabSampleAssignmentLogTab: React.FC = () => {
   // Show empty state if no laboratory found
   if (!laboratoryId && !loading) {
     return (
-      <div className="sample-assignment-log-tab">
-        <Card size="small">
-          <Empty
-            description="Không tìm thấy phòng thí nghiệm của bạn. Vui lòng liên hệ quản trị viên."
-          />
-        </Card>
+      <div className="sample-assignment-log-tab" style={{ padding: 16 }}>
+        <Empty
+          description="Không tìm thấy phòng thí nghiệm của bạn. Vui lòng liên hệ quản trị viên."
+        />
       </div>
     );
   }
@@ -523,84 +521,77 @@ const LabSampleAssignmentLogTab: React.FC = () => {
   return (
     <div className="sample-assignment-log-tab">
       {/* Toolbar */}
-      <Card size="small" style={{ marginBottom: 16 }}>
-        <Row gutter={[16, 16]} align="middle">
-          <Col xs={24} sm={12} md={8}>
-            <Input.Search
-              placeholder="Tìm theo số HĐ, mã mẫu, tên mẫu, chỉ tiêu..."
-              prefix={<SearchOutlined />}
-              allowClear
-              onSearch={handleSearch}
-              enterButton
-            />
-          </Col>
-          <Col xs={24} sm={8} md={6}>
-            <Select
-              style={{ width: '100%' }}
-              placeholder="Lọc trạng thái"
-              allowClear
-              value={statusFilter}
-              onChange={handleStatusFilter}
-              options={statusOptions}
-            />
-          </Col>
+      <Row gutter={[16, 16]} align="middle" style={{ padding: 16 }}>
+        <Col xs={24} sm={12} md={8}>
+          <Input.Search
+            placeholder="Tìm theo số HĐ, mã mẫu, tên mẫu, chỉ tiêu..."
+            prefix={<SearchOutlined />}
+            allowClear
+            onSearch={handleSearch}
+            enterButton
+          />
+        </Col>
+        <Col xs={24} sm={8} md={6}>
+          <Select
+            style={{ width: '100%' }}
+            placeholder="Lọc trạng thái"
+            allowClear
+            value={statusFilter}
+            onChange={handleStatusFilter}
+            options={statusOptions}
+          />
+        </Col>
+        <Col>
+          <Button icon={<ReloadOutlined />} onClick={handleReload} />
+        </Col>
+        {laboratoryName && (
           <Col>
-            <Button icon={<ReloadOutlined />} onClick={handleReload} />
+            <Tag color="blue">{laboratoryName}</Tag>
           </Col>
-          {laboratoryName && (
-            <Col>
-              <Tag color="blue">{laboratoryName}</Tag>
-            </Col>
-          )}
-        </Row>
-      </Card>
+        )}
+      </Row>
 
       {/* Table */}
-      <Card size="small">
-        <Table<ProcessedLogItem>
-          columns={columns}
-          dataSource={processedData}
-          loading={loading}
-          rowKey="_rowKey"
-          rowClassName={(record) => {
-            const colorClass = getRowColorClass(record);
-            const hoverClass = hoveredRowIndex === record._rowIndex ? 'row-hover' : '';
-            // Add row-green class for rows without color (completed/published)
-            const normalClass = !colorClass ? 'row-green' : '';
-            // Add row-in-hover-group for rows in same contract group when another row is hovered
-            // This forces base colors to override Ant Design's inherit hover
-            const inHoverGroupClass =
-              hoveredRowIndex !== null &&
-              hoveredRowIndex !== record._rowIndex &&
-              record._contractGroupStart <= hoveredRowIndex &&
-              hoveredRowIndex <= record._contractGroupEnd
-                ? 'row-in-hover-group'
-                : '';
-            return `${colorClass} ${normalClass} ${hoverClass} ${inHoverGroupClass}`.trim();
-          }}
-          onRow={(record) => ({
-            onDoubleClick: () => handleRowDoubleClick(record),
-            onMouseEnter: () => handleRowMouseEnter(record),
-            onMouseLeave: handleRowMouseLeave,
-            style: { cursor: 'pointer' },
-          })}
-          pagination={{
-            current: pagination.current,
-            pageSize: pagination.pageSize,
-            total: pagination.total,
-            showSizeChanger: true,
-            showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
-            pageSizeOptions: [50, 100, 150],
-          }}
-          onChange={(pag) => handleTableChange({
-            current: pag.current,
-            pageSize: pag.pageSize,
-          })}
-          scroll={{ x: 2200 }}
-          size="small"
-          bordered
-        />
-      </Card>
+      <Table<ProcessedLogItem>
+        columns={columns}
+        dataSource={processedData}
+        loading={loading}
+        rowKey="_rowKey"
+        rowClassName={(record) => {
+          const colorClass = getRowColorClass(record);
+          const hoverClass = hoveredRowIndex === record._rowIndex ? 'row-hover' : '';
+          const normalClass = !colorClass ? 'row-green' : '';
+          const inHoverGroupClass =
+            hoveredRowIndex !== null &&
+            hoveredRowIndex !== record._rowIndex &&
+            record._contractGroupStart <= hoveredRowIndex &&
+            hoveredRowIndex <= record._contractGroupEnd
+              ? 'row-in-hover-group'
+              : '';
+          return `${colorClass} ${normalClass} ${hoverClass} ${inHoverGroupClass}`.trim();
+        }}
+        onRow={(record) => ({
+          onDoubleClick: () => handleRowDoubleClick(record),
+          onMouseEnter: () => handleRowMouseEnter(record),
+          onMouseLeave: handleRowMouseLeave,
+          style: { cursor: 'pointer' },
+        })}
+        pagination={{
+          current: pagination.current,
+          pageSize: pagination.pageSize,
+          total: pagination.total,
+          showSizeChanger: true,
+          showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
+          pageSizeOptions: [50, 100, 150],
+        }}
+        onChange={(pag) => handleTableChange({
+          current: pag.current,
+          pageSize: pag.pageSize,
+        })}
+        scroll={{ x: 2200 }}
+        size="small"
+        bordered
+      />
     </div>
   );
 };
