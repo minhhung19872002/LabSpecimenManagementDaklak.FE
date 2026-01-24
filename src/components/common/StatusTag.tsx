@@ -114,6 +114,9 @@ const StatusTag: React.FC<StatusTagProps> = ({
         minWidth: 70,
         textAlign: "center",
         margin: 0,
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
         ...style,
       }}
     >

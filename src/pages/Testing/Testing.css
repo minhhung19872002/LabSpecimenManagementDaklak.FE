@@ -1,0 +1,51 @@
+/* Testing - Compact stat cards */
+.testing-stats-grid.dashboard-stats-grid {
+  grid-template-columns: repeat(6, 1fr);
+  margin-bottom: 16px;
+}
+
+.testing-stats-grid .dashboard-stat-card {
+  height: 100px;
+  padding: 12px;
+}
+
+.testing-stats-grid .dashboard-stat-value {
+  font-size: 24px;
+  line-height: 32px;
+}
+
+.testing-stats-grid .dashboard-stat-title {
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.testing-stats-grid .dashboard-stat-icon {
+  width: 32px;
+  height: 32px;
+  padding: 6px;
+  border-radius: 10px;
+}
+
+.testing-stats-grid .dashboard-stat-icon .anticon,
+.testing-stats-grid .dashboard-stat-icon i.bi {
+  font-size: 18px;
+}
+
+/* Responsive: 3 columns on medium screens */
+@media (max-width: 1200px) {
+  .testing-stats-grid.dashboard-stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Responsive: 2 columns on mobile */
+@media (max-width: 575px) {
+  .testing-stats-grid.dashboard-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .testing-stats-grid .dashboard-stat-card {
+    height: auto;
+    min-height: 80px;
+  }
+}

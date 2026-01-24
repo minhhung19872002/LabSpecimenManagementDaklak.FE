@@ -36,6 +36,7 @@ const SubcontractorFormModal: React.FC<SubcontractorFormModalProps> = ({
       okText={isEditing ? "Cập nhật" : "Thêm mới"}
       cancelText="Hủy"
       centered
+      styles={{ body: { maxHeight: "calc(100vh - 200px)", overflowY: "auto", overflowX: "hidden" } }}
     >
       <Form layout="vertical">
         <Row gutter={16}>

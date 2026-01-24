@@ -8,9 +8,9 @@ import {
   Row,
   Col,
   Select,
-  Statistic,
+  Typography,
 } from "antd";
-import {
+import Icon, {
   ExperimentOutlined,
   SearchOutlined,
   ReloadOutlined,
@@ -18,6 +18,10 @@ import {
 import { LaboratoryTaskStatus } from "../../types/laboratoryTask";
 import { useTaskManagementList } from "./hooks";
 import "../../styles/ListCard.css";
+import "../Dashboard/Dashboard.css";
+import "./TaskManagement.css";
+
+const { Text } = Typography;
 
 const TaskManagementList: React.FC = () => {
   const {
@@ -40,71 +44,39 @@ const TaskManagementList: React.FC = () => {
   return (
     <div>
       {/* Statistics Cards */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col xs={12} sm={8} md={4}>
-          <Card size="small">
-            <Statistic
-              title="Tổng công việc"
-              value={stats.total}
-              prefix={<ExperimentOutlined />}
-            />
+      <div className="dashboard-stats-grid task-stats-grid">
+        {[
+          { title: "Tổng công việc", value: stats.total, iconBg: "contract", icon: "flask" },
+          { title: "Đánh giá TN", value: stats.underEvaluation, iconBg: "pending", icon: "clipboard-check", valueColor: "#13C2C2" },
+          { title: "Chấp nhận TN", value: stats.accepted, iconBg: "green", icon: "check-circle", valueColor: "#389E0D" },
+          { title: "Đang TN", value: stats.inProgress, iconBg: "orange", icon: "arrow-repeat", valueColor: "#D46B08" },
+          { title: "Chờ duyệt", value: stats.waitingApproval, iconBg: "late", icon: "clock", valueColor: "#FAAD14" },
+          { title: "Đã duyệt", value: stats.approved, iconBg: "ontime", icon: "check2-circle", valueColor: "#52C41A" },
+          { title: "Đã gửi QLCL", value: stats.sentToQuality, iconBg: "purple", icon: "send", valueColor: "#531DAB" },
+        ].map((stat, index) => (
+          <Card key={index} className="dashboard-stat-card" bordered={false}>
+            <div className="dashboard-stat-content">
+              <div className="dashboard-stat-info">
+                <Text className="dashboard-stat-title">{stat.title}</Text>
+                <div
+                  className="dashboard-stat-value"
+                  style={stat.valueColor ? {
+                    background: stat.valueColor,
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text",
+                  } : undefined}
+                >
+                  {stat.value}
+                </div>
+              </div>
+              <div className={`dashboard-stat-icon ${stat.iconBg}`}>
+                <Icon name={stat.icon} />
+              </div>
+            </div>
           </Card>
-        </Col>
-        <Col xs={12} sm={8} md={4}>
-          <Card size="small">
-            <Statistic
-              title="Đánh giá thử nghiệm"
-              value={stats.underEvaluation}
-              valueStyle={{ color: "#8c8c8c" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={8} md={4}>
-          <Card size="small">
-            <Statistic
-              title="Chấp nhận TN"
-              value={stats.accepted}
-              valueStyle={{ color: "#52c41a" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={8} md={4}>
-          <Card size="small">
-            <Statistic
-              title="Đang TN"
-              value={stats.inProgress}
-              valueStyle={{ color: "#faad14" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={8} md={4}>
-          <Card size="small">
-            <Statistic
-              title="Chờ duyệt"
-              value={stats.waitingApproval}
-              valueStyle={{ color: "#fa8c16" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={8} md={4}>
-          <Card size="small">
-            <Statistic
-              title="Đã duyệt"
-              value={stats.approved}
-              valueStyle={{ color: "#52c41a" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={8} md={4}>
-          <Card size="small">
-            <Statistic
-              title="Đã gửi QLCL"
-              value={stats.sentToQuality}
-              valueStyle={{ color: "#722ed1" }}
-            />
-          </Card>
-        </Col>
-      </Row>
+        ))}
+      </div>
 
       <Card
         className="list-card"
@@ -117,9 +89,10 @@ const TaskManagementList: React.FC = () => {
         extra={
           <Button icon={<ReloadOutlined />} onClick={handleRefresh} />
         }
+        styles={{ body: { padding: 0 } }}
       >
         {/* Search & Filter */}
-        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+        <Row gutter={[16, 16]} style={{ marginBottom: 0, padding: 16 }}>
           <Col xs={24} sm={12} md={8}>
             <Input.Search
               placeholder="Tìm theo số hợp đồng, quản lý kỹ thuật..."

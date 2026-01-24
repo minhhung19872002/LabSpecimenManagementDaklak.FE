@@ -6,6 +6,7 @@ import {
   Space,
   List,
   Avatar,
+  Tag,
   Typography,
   message,
   Spin,
@@ -16,6 +17,7 @@ import {
   UserOutlined,
   DeleteOutlined,
   PlusOutlined,
+  CloseOutlined,
 } from "../../../components/common/Icon";
 import { laboratoryTaskService } from "../../../services/laboratoryTaskService";
 import { STORAGE_KEYS } from "../../../constants";
@@ -169,6 +171,24 @@ const SupporterModal: React.FC<SupporterModalProps> = ({
                 .includes(input.toLowerCase())
             }
             allowClear
+            tagRender={({ label, onClose }) => (
+              <Tag
+                closable
+                onClose={onClose}
+                closeIcon={<CloseOutlined style={{ fontSize: 10 }} />}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  margin: "2px 4px 2px 0",
+                  padding: "2px 8px",
+                  borderRadius: 4,
+                  background: "#F5F5F5",
+                  border: "1px solid #D9D9D9",
+                }}
+              >
+                {label}
+              </Tag>
+            )}
             notFoundContent={
               loadingUsers ? (
                 <Spin size="small" />

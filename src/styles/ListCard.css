@@ -96,7 +96,7 @@
 
 /* Card body - no padding for table to be full width */
 .list-card .ant-card-body {
-  padding: 16px;
+  /* padding: 16px; */
   padding-left: 0;
   padding-right: 0;
   padding-bottom: 0;
@@ -132,8 +132,9 @@
 }
 
 /* Table header styling */
-.list-card .ant-table-thead > tr > th {
-  background: #E6F7FF;
+.list-card .ant-table-thead > tr > th,
+.list-card .ant-table-thead > tr > td {
+  background: #E6F7FF !important;
   font-family: 'Roboto', sans-serif;
   font-weight: 500;
   font-size: 14px;
