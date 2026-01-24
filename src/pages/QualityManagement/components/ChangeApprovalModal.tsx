@@ -1104,6 +1104,7 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
 
     return (
       <Card
+        className="quality-change-sample-card"
         title={
           <Space>
             <span>Thay đổi mẫu & chỉ tiêu</span>
@@ -1247,6 +1248,7 @@ const ChangeApprovalModal: React.FC<ChangeApprovalModalProps> = ({
         onCancel={onClose}
         width={800}
         centered
+        className="quality-change-approval-modal"
         styles={{ body: { maxHeight: 'calc(100vh - 200px)', overflow: 'auto', padding: '16px 24px' } }}
         footer={(readonly || isBatchDataMode || !hasChanges) ? [
           <Button key="close" onClick={onClose}>
