@@ -6,13 +6,14 @@ import {
   Space,
   Tag,
   Typography,
-  Descriptions,
   Spin,
   message,
   Row,
   Col,
   Alert,
+  Tooltip,
 } from "antd";
+
 import StatusTag from "../../components/common/StatusTag";
 import {
   ArrowLeftOutlined,
@@ -40,7 +41,10 @@ import { PATH_ROUTES } from "../../constants";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
 
-const { Title } = Typography;
+import "../../styles/ListCard.css";
+import "./QualityManagement.css";
+
+const { Title, Text } = Typography;
 
 const QualityManagementDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -76,19 +80,19 @@ const QualityManagementDetail: React.FC = () => {
   const updateIndicatorsOptimistically = useCallback(
     (
       indicatorIds: string[],
-      updates: Partial<QualityManagementIndicatorDto>
+      updates: Partial<QualityManagementIndicatorDto>,
     ) => {
       setTask((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
           indicators: prev.indicators?.map((ind) =>
-            indicatorIds.includes(ind.id) ? { ...ind, ...updates } : ind
+            indicatorIds.includes(ind.id) ? { ...ind, ...updates } : ind,
           ),
         };
       });
     },
-    []
+    [],
   );
 
   // Load data
@@ -160,7 +164,7 @@ const QualityManagementDetail: React.FC = () => {
     try {
       await qualityManagementService.rejectIndicator(
         rejectingIndicatorId,
-        reason
+        reason,
       );
 
       // Optimistic update: cập nhật approvalStatus thành Rejected
@@ -191,9 +195,10 @@ const QualityManagementDetail: React.FC = () => {
     }
     setBulkApproving(true);
     try {
-      const result = await qualityManagementService.bulkApproveIndicators(
-        selectedPendingIds
-      );
+      const result =
+        await qualityManagementService.bulkApproveIndicators(
+          selectedPendingIds,
+        );
 
       // Optimistic update: cập nhật approvalStatus thành Approved cho tất cả
       const now = new Date().toISOString();
@@ -235,7 +240,7 @@ const QualityManagementDetail: React.FC = () => {
     try {
       const result = await qualityManagementService.bulkRejectIndicators(
         selectedPendingIds,
-        reason
+        reason,
       );
 
       // Optimistic update: cập nhật approvalStatus thành Rejected cho tất cả
@@ -278,19 +283,22 @@ const QualityManagementDetail: React.FC = () => {
   // Computed
   const indicators = task?.indicators || [];
   const approvedCount = indicators.filter(
-    (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Approved
+    (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Approved,
   ).length;
   const pendingCount = indicators.filter(
     (ind) =>
-      ind.approvalStatus === QualityIndicatorApprovalStatus.PendingApproval
+      ind.approvalStatus === QualityIndicatorApprovalStatus.PendingApproval,
   ).length;
   const rejectedCount = indicators.filter(
-    (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Rejected
+    (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Rejected,
   ).length;
 
   // Button states
   // In KQ: chỉ khi có chỉ tiêu đã duyệt và status >= PendingPublish
-  const canPrint = approvedCount > 0 && task?.status !== QualityManagementStatus.PendingApproval && task?.status !== QualityManagementStatus.Rejected;
+  const canPrint =
+    approvedCount > 0 &&
+    task?.status !== QualityManagementStatus.PendingApproval &&
+    task?.status !== QualityManagementStatus.Rejected;
 
   // Status tag
   const getStatusTag = (status: QualityManagementStatus) => (
@@ -319,172 +327,256 @@ const QualityManagementDetail: React.FC = () => {
   }
 
   return (
-    <div className="page-wrapper">
-      {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <Space style={{ marginBottom: 16 }}>
-          <Button icon={<ArrowLeftOutlined />} onClick={handleBack}>
-            Quay lại
-          </Button>
-        </Space>
-
-        <Row justify="space-between" align="middle">
-          <Col>
-            <Space align="center">
-              <Title level={4} style={{ margin: 0 }}>
-                <SafetyCertificateOutlined style={{ marginRight: 8 }} />
-                Quản lý chất lượng: {task.contractNumber}
-              </Title>
-              {getStatusTag(task.status)}
-              {task.taskType === QualityTaskType.ChangeApproval && (
-                <Tag color="orange">Phê duyệt thay đổi</Tag>
-              )}
-            </Space>
-          </Col>
-          <Col>
-            <Space>
-              <Button
-                icon={<PrinterOutlined />}
-                onClick={handlePrintSingle}
-                disabled={!canPrint}
-              >
-                In KQ
-              </Button>
-              <Button
-                icon={<PrinterOutlined />}
-                onClick={handlePrintMixed}
-                disabled={!canPrint}
-              >
-                In KQ Hỗn hợp
-              </Button>
-            </Space>
-          </Col>
-        </Row>
+    <div>
+      {/* Back Button */}
+      <div style={{ marginBottom: 16 }}>
+        <Tooltip title="Quay lại">
+          <Button
+            shape="circle"
+            icon={<ArrowLeftOutlined />}
+            onClick={handleBack}
+          />
+        </Tooltip>
       </div>
 
-      {/* Task Info */}
-      <Card size="small" style={{ marginBottom: 16 }}>
-        <Descriptions column={4} size="small">
-          <Descriptions.Item label="Khách hàng">
-            {task.customerName || "-"}
-          </Descriptions.Item>
-          <Descriptions.Item label="Tổng mẫu">
-            {task.totalSampleCount}
-          </Descriptions.Item>
-          <Descriptions.Item label="Tổng chỉ tiêu">
-            {task.totalIndicatorCount}
-          </Descriptions.Item>
-          <Descriptions.Item label="Khoa phòng">
-            {task.laboratoryNames || "-"}
-          </Descriptions.Item>
-          <Descriptions.Item label="Ngày chuyển đi">
-            {formatDate(task.transferDate)}
-          </Descriptions.Item>
-          <Descriptions.Item label="Ngày YC xong">
-            {formatDate(task.requestCompletionDate)}
-          </Descriptions.Item>
-          <Descriptions.Item label="Ngày giao BPGN">
-            {formatDate(task.handoverDate)}
-          </Descriptions.Item>
-          <Descriptions.Item label="Người giao BPGN">
-            {task.handoverByUserName || "-"}
-          </Descriptions.Item>
-          <Descriptions.Item label="QLKT">
-            {task.technicalManagerNames || "-"}
-          </Descriptions.Item>
-        </Descriptions>
-      </Card>
-
-      {/* Indicator Statistics */}
-      {task.taskType === QualityTaskType.ResultApproval && (
-        <Card size="small" style={{ marginBottom: 16 }}>
-          <Row gutter={24} justify="space-between" align="middle">
-            <Col>
-              <Space>
-                <Tag color="warning">{pendingCount} Chờ duyệt</Tag>
-                <Tag color="success">{approvedCount} Đã duyệt</Tag>
-                {rejectedCount > 0 && (
-                  <Tag color="error">{rejectedCount} Từ chối</Tag>
-                )}
-              </Space>
+      <Card
+        className="list-card quality-detail-card"
+        title={
+          <Space align="center">
+            <SafetyCertificateOutlined />
+            Quản lý chất lượng: {task.contractNumber}
+            {getStatusTag(task.status)}
+            {task.taskType === QualityTaskType.ChangeApproval && (
+              <Tag color="orange">Phê duyệt thay đổi</Tag>
+            )}
+          </Space>
+        }
+        extra={
+          <Space>
+            <Button
+              icon={<PrinterOutlined />}
+              onClick={handlePrintSingle}
+              disabled={!canPrint}
+            >
+              In KQ
+            </Button>
+            <Button
+              icon={<PrinterOutlined />}
+              onClick={handlePrintMixed}
+              disabled={!canPrint}
+            >
+              In KQ Hỗn hợp
+            </Button>
+          </Space>
+        }
+      >
+        {/* Task Info */}
+        <Card
+          size="small"
+          style={{
+            marginBottom: 16,
+            background: "#FAFAFA",
+            borderColor: "#D9D9D9",
+          }}
+        >
+          <Title level={5} style={{ margin: "0 0 16px 0" }}>
+            Thông tin hợp đồng
+          </Title>
+          <Row gutter={[48, 12]}>
+            <Col xs={24} md={12}>
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: 12 }}
+              >
+                <Row>
+                  <Col flex="150px">
+                    <Text type="secondary">Khách hàng:</Text>
+                  </Col>
+                  <Col flex="auto">
+                    <Text>{task.customerName || "-"}</Text>
+                  </Col>
+                </Row>
+                <Row>
+                  <Col flex="150px">
+                    <Text type="secondary">Tổng mẫu:</Text>
+                  </Col>
+                  <Col flex="auto">
+                    <Text>{task.totalSampleCount}</Text>
+                  </Col>
+                </Row>
+                <Row>
+                  <Col flex="150px">
+                    <Text type="secondary">Tổng chỉ tiêu:</Text>
+                  </Col>
+                  <Col flex="auto">
+                    <Text>{task.totalIndicatorCount}</Text>
+                  </Col>
+                </Row>
+                <Row>
+                  <Col flex="150px">
+                    <Text type="secondary">Khoa phòng:</Text>
+                  </Col>
+                  <Col flex="auto">
+                    <Text>{task.laboratoryNames || "-"}</Text>
+                  </Col>
+                </Row>
+                <Row>
+                  <Col flex="150px">
+                    <Text type="secondary">Ngày chuyển đi:</Text>
+                  </Col>
+                  <Col flex="auto">
+                    <Text>{formatDate(task.transferDate)}</Text>
+                  </Col>
+                </Row>
+              </div>
             </Col>
-            <Col>
-              <Space>
-                {/* Bulk action buttons - only visible if user has permission */}
-                {canReject && (
-                  <Button
-                    danger
-                    icon={<CloseOutlined />}
-                    onClick={handleBulkRejectClick}
-                    loading={bulkRejecting}
-                    disabled={selectedPendingIds.length === 0}
-                  >
-                    Từ chối{" "}
-                    {selectedPendingIds.length > 0
-                      ? `(${selectedPendingIds.length})`
-                      : ""}
-                  </Button>
-                )}
-                {canApprove && (
-                  <Button
-                    type="primary"
-                    icon={<CheckOutlined />}
-                    onClick={handleBulkApprove}
-                    loading={bulkApproving}
-                    disabled={selectedPendingIds.length === 0}
-                  >
-                    Duyệt{" "}
-                    {selectedPendingIds.length > 0
-                      ? `(${selectedPendingIds.length})`
-                      : ""}
-                  </Button>
-                )}
-              </Space>
+            <Col xs={24} md={12}>
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: 12 }}
+              >
+                <Row>
+                  <Col flex="150px">
+                    <Text type="secondary">Ngày YC xong:</Text>
+                  </Col>
+                  <Col flex="auto">
+                    <Text>{formatDate(task.requestCompletionDate)}</Text>
+                  </Col>
+                </Row>
+                <Row>
+                  <Col flex="150px">
+                    <Text type="secondary">Ngày giao BPGN:</Text>
+                  </Col>
+                  <Col flex="auto">
+                    <Text>{formatDate(task.handoverDate)}</Text>
+                  </Col>
+                </Row>
+                <Row>
+                  <Col flex="150px">
+                    <Text type="secondary">Người giao BPGN:</Text>
+                  </Col>
+                  <Col flex="auto">
+                    <Text>{task.handoverByUserName || "-"}</Text>
+                  </Col>
+                </Row>
+                <Row>
+                  <Col flex="150px">
+                    <Text type="secondary">QLKT:</Text>
+                  </Col>
+                  <Col flex="auto">
+                    <Text>{task.technicalManagerNames || "-"}</Text>
+                  </Col>
+                </Row>
+              </div>
             </Col>
           </Row>
-          {task.status === QualityManagementStatus.PendingPublish && (
-            <Row style={{ marginTop: 8 }}>
-              <Col>
-                <Alert
-                  type="success"
-                  message="Tất cả chỉ tiêu đã được duyệt - Chờ phát hành"
-                  showIcon
-                  icon={<CheckCircleOutlined />}
-                  style={{ padding: "4px 12px" }}
-                />
-              </Col>
-            </Row>
-          )}
-          {task.status === QualityManagementStatus.HandedOver && (
-            <Row style={{ marginTop: 8 }}>
-              <Col>
-                <Alert
-                  type="info"
-                  message={`Đã giao BPGN${task.handoverNote ? ` - Ghi chú: ${task.handoverNote}` : ''}`}
-                  showIcon
-                  icon={<CheckCircleOutlined />}
-                  style={{ padding: "4px 12px" }}
-                />
-              </Col>
-            </Row>
-          )}
         </Card>
-      )}
 
-      {/* Indicator Table (for ResultApproval tasks) */}
-      {task.taskType === QualityTaskType.ResultApproval && (
-        <Card size="small" title="Danh sách chỉ tiêu">
-          <IndicatorTable
-            indicators={indicators}
-            taskStatus={task.status}
-            onApprove={handleApproveIndicator}
-            onReject={handleRejectIndicator}
-            onIndicatorUpdate={loadData}
-            selectedPendingIds={selectedPendingIds}
-            onPendingSelectChange={setSelectedPendingIds}
-          />
-        </Card>
-      )}
+        {/* Indicator Statistics */}
+        {task.taskType === QualityTaskType.ResultApproval && (
+          <div
+            style={{
+              marginBottom: 16,
+              padding: "10px 16px",
+              boxShadow: "0px 2px 8px 0px rgba(0, 0, 0, 0.08)",
+              borderRadius: "12px",
+            }}
+          >
+            <Row gutter={24} justify="space-between" align="middle">
+              <Col>
+                <Space>
+                  <StatusTag color="warning">
+                    {pendingCount} Chờ duyệt
+                  </StatusTag>
+                  <StatusTag color="success">
+                    {approvedCount} Đã duyệt
+                  </StatusTag>
+                  {rejectedCount > 0 && (
+                    <StatusTag color="error">{rejectedCount} Từ chối</StatusTag>
+                  )}
+                </Space>
+              </Col>
+              <Col>
+                <Space>
+                  {/* Bulk action buttons - only visible if user has permission */}
+                  {canReject && (
+                    <Button
+                      danger
+                      icon={<CloseOutlined />}
+                      onClick={handleBulkRejectClick}
+                      loading={bulkRejecting}
+                      disabled={selectedPendingIds.length === 0}
+                    >
+                      Từ chối{" "}
+                      {selectedPendingIds.length > 0
+                        ? `(${selectedPendingIds.length})`
+                        : ""}
+                    </Button>
+                  )}
+                  {canApprove && (
+                    <Button
+                      type="primary"
+                      icon={<CheckOutlined />}
+                      onClick={handleBulkApprove}
+                      loading={bulkApproving}
+                      disabled={selectedPendingIds.length === 0}
+                    >
+                      Duyệt{" "}
+                      {selectedPendingIds.length > 0
+                        ? `(${selectedPendingIds.length})`
+                        : ""}
+                    </Button>
+                  )}
+                </Space>
+              </Col>
+            </Row>
+            {task.status === QualityManagementStatus.PendingPublish && (
+              <Row style={{ marginTop: 8 }}>
+                <Col>
+                  <Alert
+                    type="success"
+                    message="Tất cả chỉ tiêu đã được duyệt - Chờ phát hành"
+                    showIcon
+                    icon={<CheckCircleOutlined />}
+                    style={{ padding: "4px 12px" }}
+                  />
+                </Col>
+              </Row>
+            )}
+            {task.status === QualityManagementStatus.HandedOver && (
+              <Row style={{ marginTop: 8 }}>
+                <Col>
+                  <Alert
+                    type="info"
+                    message={`Đã giao BPGN${task.handoverNote ? ` - Ghi chú: ${task.handoverNote}` : ""}`}
+                    showIcon
+                    icon={<CheckCircleOutlined />}
+                    style={{ padding: "4px 12px" }}
+                  />
+                </Col>
+              </Row>
+            )}
+          </div>
+        )}
+
+        {/* Indicator Table (for ResultApproval tasks) */}
+        {task.taskType === QualityTaskType.ResultApproval && (
+          <Card
+            size="small"
+            className="quality-indicator-card"
+            style={{ overflow: "hidden" }}
+            title="Danh sách chỉ tiêu"
+          >
+            <IndicatorTable
+              indicators={indicators}
+              taskStatus={task.status}
+              onApprove={handleApproveIndicator}
+              onReject={handleRejectIndicator}
+              onIndicatorUpdate={loadData}
+              selectedPendingIds={selectedPendingIds}
+              onPendingSelectChange={setSelectedPendingIds}
+            />
+          </Card>
+        )}
+      </Card>
 
       {/* Modals */}
       <PrintModal

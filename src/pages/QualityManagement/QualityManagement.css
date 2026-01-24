@@ -1,3 +1,8 @@
+/* QualityManagement Detail - Card body padding */
+.quality-detail-card.list-card .ant-card-body {
+  padding: 16px;
+}
+
 /* QualityManagement - Compact stat cards */
 .quality-stats-grid.dashboard-stats-grid {
   grid-template-columns: repeat(4, 1fr);
@@ -48,4 +53,133 @@
     height: auto;
     min-height: 80px;
   }
+}
+
+/* QualityManagement Detail - Indicator table card gradient header */
+.quality-indicator-card > .ant-card-head {
+  background: var(--gradient-primary);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  min-height: 44px;
+}
+
+.quality-indicator-card > .ant-card-head .ant-card-head-title {
+  color: #FFFFFF;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 500;
+  font-size: 15px;
+}
+
+.quality-indicator-card > .ant-card-body {
+  padding: 0 !important;
+}
+
+/* Reset table styles from .list-card to antd defaults */
+.quality-indicator-card .ant-table-thead > tr > th,
+.quality-indicator-card .ant-table-thead > tr > td {
+  background: #fafafa !important;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: inherit;
+  border-radius: revert !important;
+}
+
+.quality-indicator-card .ant-table-thead > tr > th:first-child,
+.quality-indicator-card .ant-table-thead > tr > th:last-child {
+  border-radius: revert !important;
+}
+
+.quality-indicator-card .ant-table-tbody > tr:last-child > td:first-child,
+.quality-indicator-card .ant-table-tbody > tr:last-child > td:last-child {
+  border-radius: revert !important;
+}
+
+.quality-indicator-card .ant-table {
+  border-radius: revert;
+}
+
+.quality-indicator-card .ant-table-container {
+  border-radius: revert;
+}
+
+.quality-indicator-card .ant-collapse-header {
+  background: #E6F7FF;
+  border-radius: 0 !important;
+}
+
+/* Tags in collapse header - light bordered style */
+.quality-indicator-card .ant-collapse-header .ant-tag {
+  border-radius: 20px;
+  font-size: 13px;
+  padding: 2px 8px;
+  line-height: 20px;
+  margin: 0;
+}
+
+.quality-indicator-card .ant-collapse-header .ant-tag-blue {
+  background: #E6F4FF !important;
+  border-color: #91CAFF !important;
+  color: #1677FF !important;
+}
+
+.quality-indicator-card .ant-collapse-header .ant-tag-success {
+  background: #F6FFED !important;
+  border-color: #B7EB8F !important;
+  color: #52C41A !important;
+}
+
+.quality-indicator-card .ant-collapse-header .ant-tag-warning {
+  background: #FFFBE6 !important;
+  border-color: #FFE58F !important;
+  color: #FAAD14 !important;
+}
+
+/* PrintModal - Table border-radius removal */
+.quality-print-modal .ant-table-container,
+.quality-print-modal .ant-table-container table {
+  border-radius: 0 !important;
+}
+
+.quality-print-modal .ant-table-thead > tr > th:first-child,
+.quality-print-modal .ant-table-thead > tr > th:last-child {
+  border-radius: 0 !important;
+}
+
+.quality-print-modal .ant-table-tbody > tr:last-child > td:first-child,
+.quality-print-modal .ant-table-tbody > tr:last-child > td:last-child {
+  border-radius: 0 !important;
+}
+
+/* PrintModal - Lab-level collapse header gradient */
+.quality-print-lab-collapse > .ant-collapse-item > .ant-collapse-header {
+  background: var(--gradient-primary) !important;
+  color: #FFFFFF;
+  font-weight: 500;
+  border-radius: 8px 8px 0 0 !important;
+}
+
+.quality-print-lab-collapse > .ant-collapse-item > .ant-collapse-header .ant-collapse-expand-icon {
+  color: #FFFFFF;
+}
+
+.quality-print-lab-collapse > .ant-collapse-item > .ant-collapse-header .ant-typography {
+  color: #FFFFFF !important;
+}
+
+.quality-print-lab-collapse > .ant-collapse-item > .ant-collapse-header .ant-typography-secondary {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.quality-print-lab-collapse > .ant-collapse-item > .ant-collapse-header .ant-checkbox-wrapper {
+  color: #FFFFFF;
+}
+
+/* PrintModal - Table header background */
+.quality-print-modal .ant-table-thead > tr > th,
+.quality-print-modal .ant-table-thead > tr > td {
+  background: #E6F7FF !important;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.85);
 }

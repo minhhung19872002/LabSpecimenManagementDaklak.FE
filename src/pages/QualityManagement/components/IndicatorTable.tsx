@@ -8,6 +8,7 @@ import {
   Tooltip,
   Checkbox,
   Typography,
+  Card,
 } from "antd";
 import StatusTag from "../../../components/common/StatusTag";
 import { CheckOutlined, CloseOutlined } from "../../../components/common/Icon";
@@ -91,21 +92,23 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   }, [indicators]);
 
   // Handle select all PENDING in a sample group (for bulk approve/reject)
-  const handleSelectAllPendingInGroup = (group: SampleGroup, checked: boolean) => {
+  const handleSelectAllPendingInGroup = (
+    group: SampleGroup,
+    checked: boolean,
+  ) => {
     const pendingIds = group.indicators
       .filter(
-        (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.PendingApproval
+        (ind) =>
+          ind.approvalStatus === QualityIndicatorApprovalStatus.PendingApproval,
       )
       .map((ind) => ind.id);
 
     if (checked) {
-      const newSelected = [
-        ...new Set([...selectedPendingIds, ...pendingIds]),
-      ];
+      const newSelected = [...new Set([...selectedPendingIds, ...pendingIds])];
       onPendingSelectChange(newSelected);
     } else {
       const newSelected = selectedPendingIds.filter(
-        (id) => !pendingIds.includes(id)
+        (id) => !pendingIds.includes(id),
       );
       onPendingSelectChange(newSelected);
     }
@@ -115,7 +118,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   const isAllPendingSelectedInGroup = (group: SampleGroup): boolean => {
     const pendingIds = group.indicators
       .filter(
-        (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.PendingApproval
+        (ind) =>
+          ind.approvalStatus === QualityIndicatorApprovalStatus.PendingApproval,
       )
       .map((ind) => ind.id);
     if (pendingIds.length === 0) return false;
@@ -123,7 +127,9 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   };
 
   // Generate columns based on whether group has pending indicators
-  const getColumns = (hasPendingIndicators: boolean): ColumnsType<QualityManagementIndicatorDto> => {
+  const getColumns = (
+    hasPendingIndicators: boolean,
+  ): ColumnsType<QualityManagementIndicatorDto> => {
     const cols: ColumnsType<QualityManagementIndicatorDto> = [];
 
     // Only show checkbox column if there are pending indicators
@@ -135,7 +141,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         width: 50,
         render: (_, record) => {
           const isPending =
-            record.approvalStatus === QualityIndicatorApprovalStatus.PendingApproval;
+            record.approvalStatus ===
+            QualityIndicatorApprovalStatus.PendingApproval;
 
           if (isPending) {
             return (
@@ -146,7 +153,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                     onPendingSelectChange([...selectedPendingIds, record.id]);
                   } else {
                     onPendingSelectChange(
-                      selectedPendingIds.filter((id) => id !== record.id)
+                      selectedPendingIds.filter((id) => id !== record.id),
                     );
                   }
                 }}
@@ -166,7 +173,15 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         key: "indicatorName",
         width: 200,
         ellipsis: true,
-        render: (value: string, record) => value ? <IndicatorName name={value} formattedName={record.indicatorFormattedName} /> : "-",
+        render: (value: string, record) =>
+          value ? (
+            <IndicatorName
+              name={value}
+              formattedName={record.indicatorFormattedName}
+            />
+          ) : (
+            "-"
+          ),
       },
       {
         title: "Phương pháp",
@@ -174,9 +189,15 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         key: "methodName",
         width: 150,
         ellipsis: true,
-        render: (value: string, record) => value ? (
-          <IndicatorName name={value} formattedName={record.methodFormattedName} />
-        ) : "-",
+        render: (value: string, record) =>
+          value ? (
+            <IndicatorName
+              name={value}
+              formattedName={record.methodFormattedName}
+            />
+          ) : (
+            "-"
+          ),
       },
       {
         title: "ĐVT",
@@ -247,7 +268,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         width: 120,
         render: (status: QualityIndicatorApprovalStatus) =>
           getApprovalStatusTag(status),
-      }
+      },
     );
 
     // Only show actions column if there are pending indicators
@@ -305,12 +326,12 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       {groupedData.map((group) => {
         const approvedCount = group.indicators.filter(
           (ind) =>
-            ind.approvalStatus === QualityIndicatorApprovalStatus.Approved
+            ind.approvalStatus === QualityIndicatorApprovalStatus.Approved,
         ).length;
         const pendingCount = group.indicators.filter(
           (ind) =>
             ind.approvalStatus ===
-            QualityIndicatorApprovalStatus.PendingApproval
+            QualityIndicatorApprovalStatus.PendingApproval,
         ).length;
 
         // Build sample display name
@@ -351,14 +372,20 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
               </div>
             }
           >
-            <Table
-              columns={getColumns(pendingCount > 0)}
-              dataSource={group.indicators}
-              rowKey="id"
-              pagination={false}
+            <Card
               size="small"
-              scroll={{ x: 1320 }}
-            />
+              style={{ margin: 0, boxShadow: "none", overflow: "hidden" }}
+              bodyStyle={{ padding: 0 }}
+            >
+              <Table
+                columns={getColumns(pendingCount > 0)}
+                dataSource={group.indicators}
+                rowKey="id"
+                pagination={false}
+                size="small"
+                scroll={{ x: 1320 }}
+              />
+            </Card>
           </Panel>
         );
       })}
