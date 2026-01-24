@@ -1,6 +1,23 @@
+/* Card body padding - override .list-card defaults */
+.test-request-form.list-card > .ant-card-body {
+  padding: 24px;
+}
+
+@media (max-width: 991px) {
+  .test-request-form.list-card > .ant-card-body {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 576px) {
+  .test-request-form.list-card > .ant-card-body {
+    padding: 12px;
+  }
+}
+
 /* Detail sections for TestRequestForm - matching TestRequestDetail style */
 .test-request-form .form-section {
-  background: #fafafa;
+  /* background: #fafafa; */
   padding: 16px;
   margin-bottom: 16px;
   border-radius: 8px;
@@ -21,6 +38,39 @@
   }
 }
 
+/* Top sections row: 3 columns (contract, customer, sample type) */
+.test-request-form .form-top-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.test-request-form .form-top-row .form-section {
+  margin-bottom: 0;
+  height: 100%;
+}
+
+.test-request-form .form-top-col-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.test-request-form .form-top-col-center {
+  flex: 2;
+  min-width: 0;
+}
+
+.test-request-form .form-top-col-right {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 991px) {
+  .test-request-form .form-top-row {
+    flex-direction: column;
+  }
+}
+
 /* Form row alignment */
 .test-request-form .form-row {
   margin-bottom: 8px;
@@ -29,6 +79,32 @@
 .test-request-form .form-row .ant-col {
   display: flex;
   align-items: center;
+}
+
+/* Sample table card: full width on mobile */
+.test-request-form .list-card {
+  margin-bottom: 16px;
+}
+
+@media (max-width: 576px) {
+  .test-request-form .list-card {
+    margin-left: -12px;
+    margin-right: -12px;
+    border-radius: 0;
+  }
+}
+
+/* Sample table: ensure horizontal scroll */
+.test-request-form .sample-table-fixed-height .ant-table-wrapper {
+  overflow-x: auto;
+}
+
+/* Sample table: remove border radius */
+.test-request-form .sample-table-fixed-height .ant-table-container,
+.test-request-form .sample-table-fixed-height .ant-table-container table,
+.test-request-form .sample-table-fixed-height .ant-table .ant-table-title,
+.test-request-form .sample-table-fixed-height .ant-table .ant-table-header {
+  border-radius: 0 !important;
 }
 
 /* Sample table fixed height - minimum 5 rows, expand when more */
