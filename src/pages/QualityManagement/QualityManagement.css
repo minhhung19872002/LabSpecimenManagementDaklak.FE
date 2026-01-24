@@ -183,3 +183,54 @@
   font-size: 14px;
   color: rgba(0, 0, 0, 0.85);
 }
+
+/* HistoryModal - Sample header with gradient */
+.quality-history-sample-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--gradient-primary);
+  border-radius: 8px 8px 0 0;
+  color: #FFFFFF;
+}
+
+.quality-history-sample-header .anticon {
+  color: #FFFFFF;
+}
+
+.quality-history-sample-header .ant-typography {
+  color: #FFFFFF !important;
+}
+
+.quality-history-sample-header .ant-typography-secondary {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.quality-history-sample-header .ant-tag-blue {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  color: #FFFFFF !important;
+}
+
+/* HistoryModal - Indicators wrapper */
+.quality-history-indicators-wrapper {
+  border: 1px solid #d9d9d9;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  overflow: hidden;
+}
+
+/* HistoryModal - Indicator collapse panel headers */
+.quality-history-indicator-collapse .ant-collapse-header {
+  background: #E6F7FF !important;
+  border-radius: 0 !important;
+}
+
+.quality-history-indicator-collapse .ant-collapse-item {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.quality-history-indicator-collapse .ant-collapse-item:last-child {
+  border-bottom: none;
+}

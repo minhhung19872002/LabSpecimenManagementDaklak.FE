@@ -413,17 +413,8 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ visible, task, onClose }) =
         {sampleGroups.map((group, groupIndex) => (
           <div key={groupIndex}>
             {/* Sample Header */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '8px 12px',
-              background: '#f5f5f5',
-              border: '1px solid #d9d9d9',
-              borderBottom: 'none',
-              borderRadius: '6px 6px 0 0'
-            }}>
-              <ExperimentOutlined style={{ color: '#1890ff' }} />
+            <div className="quality-history-sample-header">
+              <ExperimentOutlined />
               <Text strong>{group.sampleCode}</Text>
               {group.sampleName && (
                 <Text type="secondary">- {group.sampleName}</Text>
@@ -434,23 +425,16 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ visible, task, onClose }) =
             </div>
 
             {/* Indicators Collapse */}
-            <div style={{
-              border: '1px solid #d9d9d9',
-              borderTop: 'none',
-              borderRadius: '0 0 6px 6px',
-              overflow: 'hidden'
-            }}>
+            <div className="quality-history-indicators-wrapper">
               <Collapse
                 defaultActiveKey={group.indicators.map((_, i) => `${groupIndex}-${i}`)}
+                className="quality-history-indicator-collapse"
                 style={{ background: '#fff', border: 'none' }}
                 ghost
               >
                 {group.indicators.map((indicatorHistory, index) => (
                   <Panel
                     key={`${groupIndex}-${index}`}
-                    style={{
-                      borderBottom: index < group.indicators.length - 1 ? '1px solid #f0f0f0' : 'none'
-                    }}
                     header={
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <Text strong style={{ color: '#1890ff' }}>{indicatorHistory.indicatorCode}</Text>
@@ -498,6 +482,7 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ visible, task, onClose }) =
         footer={null}
         width={800}
         centered
+        className="quality-history-modal"
         getContainer={() => document.body}
         styles={{
           body: { maxHeight: '70vh', overflowY: 'auto' },
