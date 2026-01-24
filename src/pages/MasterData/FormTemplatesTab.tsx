@@ -60,15 +60,9 @@ const FormTemplatesTab: React.FC = () => {
     }
   };
 
-  const handleViewPdf = (template: FormTemplateDto) => {
-    // Open PDF in new browser tab
-    const pdfUrl = `${API_BASE_URL}/api/v1/form-templates/view-pdf/${encodeURIComponent(template.fileName)}`;
-    window.open(pdfUrl, "_blank");
-  };
-
   const filteredTemplates = searchText
     ? templates.filter((t) =>
-        t.name.toLowerCase().includes(searchText.toLowerCase())
+        t.name.toLowerCase().includes(searchText.toLowerCase()),
       )
     : templates;
 
@@ -96,12 +90,6 @@ const FormTemplatesTab: React.FC = () => {
       width: 220,
       render: (_, record) => (
         <Space>
-          <Button
-            icon={<FilePdfOutlined />}
-            onClick={() => handleViewPdf(record)}
-          >
-            Xem PDF
-          </Button>
           <Button
             type="primary"
             icon={<DownloadOutlined />}

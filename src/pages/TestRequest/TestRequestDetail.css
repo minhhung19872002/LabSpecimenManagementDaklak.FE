@@ -331,3 +331,53 @@
     page-break-inside: avoid;
   }
 }
+
+/* PrintIndicatorModal - Table border-radius removal */
+.testrequest-print-modal .ant-table-container,
+.testrequest-print-modal .ant-table-container table {
+  border-radius: 0 !important;
+}
+
+.testrequest-print-modal .ant-table-thead > tr > th:first-child,
+.testrequest-print-modal .ant-table-thead > tr > th:last-child {
+  border-radius: 0 !important;
+}
+
+.testrequest-print-modal .ant-table-tbody > tr:last-child > td:first-child,
+.testrequest-print-modal .ant-table-tbody > tr:last-child > td:last-child {
+  border-radius: 0 !important;
+}
+
+/* PrintIndicatorModal - Lab-level collapse header gradient */
+.testrequest-print-lab-collapse > .ant-collapse-item > .ant-collapse-header {
+  background: var(--gradient-primary) !important;
+  color: #FFFFFF;
+  font-weight: 500;
+  border-radius: 8px 8px 0 0 !important;
+}
+
+.testrequest-print-lab-collapse > .ant-collapse-item > .ant-collapse-header .ant-collapse-expand-icon {
+  color: #FFFFFF;
+}
+
+.testrequest-print-lab-collapse > .ant-collapse-item > .ant-collapse-header .ant-typography {
+  color: #FFFFFF !important;
+}
+
+.testrequest-print-lab-collapse > .ant-collapse-item > .ant-collapse-header .ant-typography-secondary {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.testrequest-print-lab-collapse > .ant-collapse-item > .ant-collapse-header .ant-checkbox-wrapper {
+  color: #FFFFFF;
+}
+
+/* PrintIndicatorModal - Table header background */
+.testrequest-print-modal .ant-table-thead > tr > th,
+.testrequest-print-modal .ant-table-thead > tr > td {
+  background: #E6F7FF !important;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.85);
+}
