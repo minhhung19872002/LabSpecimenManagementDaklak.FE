@@ -14,6 +14,7 @@ import {
   Row,
   Col,
   Collapse,
+  Card,
 } from "antd";
 import {
   PrinterOutlined,
@@ -616,6 +617,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
 
   return (
     <Modal
+      className="quality-print-modal"
       title={
         <span>
           <PrinterOutlined style={{ marginRight: 8 }} />
@@ -672,6 +674,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
               }}
             >
               <Collapse
+                className="quality-print-lab-collapse"
                 defaultActiveKey={labGroups.map((lg) => lg.laboratoryId)}
                 expandIconPosition="end"
                 style={{ background: "transparent", border: "none" }}
@@ -818,11 +821,14 @@ const PrintModal: React.FC<PrintModalProps> = ({
                                       : "none",
                                 },
                                 children: (
-                                  <div
+                                  <Card
+                                    size="small"
                                     style={{
                                       borderRadius: 8,
                                       overflow: "hidden",
+                                      boxShadow: "none",
                                     }}
+                                    bodyStyle={{ padding: 0 }}
                                   >
                                     <Table
                                       dataSource={sampleGroup.indicators}
@@ -851,7 +857,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
                                         type: "checkbox",
                                       }}
                                     />
-                                  </div>
+                                  </Card>
                                 ),
                               };
                             },
