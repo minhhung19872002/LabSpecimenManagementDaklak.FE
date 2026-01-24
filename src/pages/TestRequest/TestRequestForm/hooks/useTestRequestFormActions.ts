@@ -737,6 +737,7 @@ export const useTestRequestFormActions = ({
                 testMethodId,
                 laboratoryId: labAssignment?.laboratoryId || undefined,
                 unitPrice: isHgFree ? 0 : (method?.unitPrice || 0),
+                originalUnitPrice: isHgFree ? (method?.unitPrice || 0) : undefined,
                 transferDate: indicatorDates?.transferDate?.format('YYYY-MM-DD') || undefined,
                 requestDate:
                   labAssignment?.requestDate?.format('YYYY-MM-DD') ||
@@ -759,6 +760,7 @@ export const useTestRequestFormActions = ({
                 testMethodId: undefined,
                 laboratoryId: labAssignment?.laboratoryId || undefined,
                 unitPrice: isHgFree ? 0 : (indicator?.unitPrice || 0),
+                originalUnitPrice: isHgFree ? (indicator?.unitPrice || 0) : undefined,
                 transferDate: indicatorDates?.transferDate?.format('YYYY-MM-DD') || undefined,
                 requestDate:
                   labAssignment?.requestDate?.format('YYYY-MM-DD') ||
@@ -1028,6 +1030,7 @@ export const useTestRequestFormActions = ({
                 indicatorId,
                 indicatorName: indicator?.name || "",
                 unitPrice: isHgFree ? 0 : (method?.unitPrice || 0),
+                originalUnitPrice: isHgFree ? (method?.unitPrice || 0) : undefined,
               };
             }),
           };
