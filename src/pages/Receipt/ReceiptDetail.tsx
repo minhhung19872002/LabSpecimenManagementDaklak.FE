@@ -38,26 +38,29 @@ import { PATH_ROUTES } from "../../constants";
 import StatusTag from "../../components/common/StatusTag";
 import { IndicatorName } from "../../components/common";
 import "../../styles/ListCard.css";
+import "../TestRequest/TestRequestDetail.css";
 
-const { Text } = Typography;
+const { Title, Text } = Typography;
 
-// Helper components
-const BoolIcon: React.FC<{ value: boolean }> = ({ value }) => {
-  return value ? (
-    <CheckCircleOutlined style={{ color: "#52c41a", fontSize: 16 }} />
-  ) : (
-    <CloseCircleOutlined style={{ color: "#d9d9d9", fontSize: 16 }} />
-  );
-};
-
-const BoolItem: React.FC<{ value: boolean; label: string }> = ({
-  value,
-  label,
-}) => (
-  <Space size={4}>
-    <BoolIcon value={value} />
-    <Text style={{ fontSize: 13 }}>{label}</Text>
-  </Space>
+// BoolTag component - same style as TestRequest detail
+const BoolTag: React.FC<{ value: boolean; label: string }> = ({ value, label }) => (
+  <Tag
+    icon={value ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
+    style={{
+      backgroundColor: value ? "#F6FFED" : "#FFFFFF",
+      color: value ? "#52C41A" : "#8C8C8C",
+      border: value ? "1px solid #B7EB8F" : "1px solid #D9D9D9",
+      borderRadius: 18,
+      padding: "4px 12px",
+      margin: 0,
+      width: "fit-content",
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 4,
+    }}
+  >
+    {label}
+  </Tag>
 );
 
 const ReceiptDetail: React.FC = () => {
@@ -425,16 +428,8 @@ const ReceiptDetail: React.FC = () => {
     );
   }
 
-  // Section title style
-  const sectionTitleStyle: React.CSSProperties = {
-    fontSize: 14,
-    fontWeight: 600,
-    color: "#262626",
-    paddingBottom: 8,
-  };
-
   return (
-    <div className="page-wrapper">
+    <div className="page-wrapper test-request-detail">
       <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
         <Col>
           <Tooltip title="Quay lại">
@@ -506,130 +501,81 @@ const ReceiptDetail: React.FC = () => {
         styles={{ body: { paddingLeft: 0, paddingRight: 0 } }}
       >
         <div className="card-content-padding">
-          {/* Section 1: Thông tin hợp đồng */}
-          <div className="detail-section">
-            <div style={sectionTitleStyle}>Thông tin hợp đồng</div>
-            <Row gutter={[16, 12]}>
-              <Col xs={24} md={8}>
-                <div
-                  className="detail-item"
-                  style={{
-                    height: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                  }}
-                >
-                  <Text type="secondary">Số HĐ:</Text>
-                  <Text strong>{testRequest.contractNumber || "-"}</Text>
+          <div className="detail-sections-row">
+            {/* Section 1: Thông tin hợp đồng */}
+            <div className="detail-sections-flex">
+              <div className="detail-section">
+                <Title level={5} style={{ marginBottom: 12 }}>Thông tin hợp đồng</Title>
+                <div className="detail-column-list">
+                  <div className="detail-item">
+                    <Text type="secondary">Số HĐ:</Text>
+                    <Text strong>{testRequest.contractNumber || "-"}</Text>
+                  </div>
+                  <div className="detail-item">
+                    <Text type="secondary">Ngày HĐ:</Text>
+                    <Text strong>
+                      {testRequest.contractDate
+                        ? dayjs(testRequest.contractDate).format("DD/MM/YYYY")
+                        : "-"}
+                    </Text>
+                  </div>
+                  <div className="detail-item">
+                    <Text type="secondary">Số phiếu thu:</Text>
+                    <Input
+                      value={receiptNumber}
+                      onChange={(e) =>
+                        handleNumberInput(e.target.value, setReceiptNumber)
+                      }
+                      placeholder="Nhập số phiếu thu"
+                      style={{ width: 180 }}
+                      disabled={isReadOnly}
+                    />
+                  </div>
                 </div>
-              </Col>
-              <Col xs={24} md={8}>
-                <div
-                  className="detail-item"
-                  style={{
-                    height: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                  }}
-                >
-                  <Text type="secondary">Ngày HĐ:</Text>
-                  <Text strong>
-                    {testRequest.contractDate
-                      ? dayjs(testRequest.contractDate).format("DD/MM/YYYY")
-                      : "-"}
-                  </Text>
-                </div>
-              </Col>
-              <Col xs={24} md={8}>
-                <div
-                  className="detail-item"
-                  style={{ display: "flex", alignItems: "center", gap: 8 }}
-                >
-                  <Text type="secondary" style={{ whiteSpace: "nowrap" }}>
-                    Số phiếu thu:
-                  </Text>
-                  <Input
-                    value={receiptNumber}
-                    onChange={(e) =>
-                      handleNumberInput(e.target.value, setReceiptNumber)
-                    }
-                    placeholder="Nhập số phiếu thu"
-                    style={{ width: 180 }}
-                    disabled={isReadOnly}
-                  />
-                </div>
-              </Col>
-            </Row>
-          </div>
+              </div>
+            </div>
 
-          {/* Section 2: Thông tin khách hàng */}
-          <div className="detail-section" style={{ marginTop: 24 }}>
-            <div style={sectionTitleStyle}>Thông tin khách hàng</div>
-            <Row gutter={[16, 12]}>
-              <Col xs={24} xl={12}>
-                <div className="detail-item">
-                  <Text type="secondary">Tên CS/DN:</Text>
-                  <Text strong style={{ fontSize: 15 }}>
-                    {testRequest.customerName || "-"}
-                  </Text>
+            {/* Section 2: Thông tin khách hàng */}
+            <div className="detail-sections-flex">
+              <div className="detail-section">
+                <Title level={5} style={{ marginBottom: 12 }}>Thông tin khách hàng</Title>
+                <div className="detail-column-list">
+                  <div className="detail-item">
+                    <Text type="secondary">Tên CS/DN:</Text>
+                    <Text strong>{testRequest.customerName || "-"}</Text>
+                  </div>
+                  <div className="detail-item">
+                    <Text type="secondary">Mã số thuế:</Text>
+                    <Text>{testRequest.taxCode || "-"}</Text>
+                  </div>
+                  <div className="detail-item">
+                    <Text type="secondary">Địa chỉ:</Text>
+                    <Text>
+                      {[
+                        testRequest.address,
+                        testRequest.ward,
+                        testRequest.district,
+                        testRequest.province,
+                      ]
+                        .filter(Boolean)
+                        .join(", ") || "-"}
+                    </Text>
+                  </div>
+                  <div className="detail-item">
+                    <Text type="secondary">Người liên hệ:</Text>
+                    <Text strong>{testRequest.contactPerson || "-"}</Text>
+                  </div>
                 </div>
-              </Col>
-              <Col xs={24} xl={12}>
-                <div className="detail-item">
-                  <Text type="secondary">Mã số thuế:</Text>
-                  <Text>{testRequest.taxCode || "-"}</Text>
-                </div>
-              </Col>
-            </Row>
-            <Row gutter={[16, 12]} style={{ marginTop: 8 }}>
-              <Col xs={24}>
-                <div className="detail-item">
-                  <Text type="secondary">Địa chỉ:</Text>
-                  <Text>
-                    {[
-                      testRequest.address,
-                      testRequest.ward,
-                      testRequest.district,
-                      testRequest.province,
-                    ]
-                      .filter(Boolean)
-                      .join(", ") || "-"}
-                  </Text>
-                </div>
-              </Col>
-            </Row>
-            <Row gutter={[16, 12]} style={{ marginTop: 8 }}>
-              <Col xs={24} md={12}>
-                <div className="detail-item">
-                  <Text type="secondary">Người liên hệ:</Text>
-                  <Text strong>{testRequest.contactPerson || "-"}</Text>
-                </div>
-              </Col>
-            </Row>
+              </div>
+            </div>
           </div>
 
           {/* Section 3: Thông tin mẫu */}
-          <div
-            className="detail-section"
-            style={{
-              marginTop: 24,
-              paddingLeft: 0,
-              paddingRight: 0,
-              paddingBottom: 0,
-              overflow: "hidden",
-            }}
+          <Card
+            className="list-card"
+            title={<span>Thông tin mẫu ({testRequest.samples?.length || 0} mẫu)</span>}
+            styles={{ body: { padding: 0 } }}
           >
-            <div
-              style={{
-                ...sectionTitleStyle,
-                paddingLeft: 16,
-                paddingRight: 16,
-              }}
-            >
-              Thông tin mẫu ({testRequest.samples?.length || 0} mẫu)
-            </div>
             <Table
               dataSource={testRequest.samples || []}
               columns={sampleColumns}
@@ -639,125 +585,95 @@ const ReceiptDetail: React.FC = () => {
               size="small"
               bordered
             />
-          </div>
+          </Card>
         </div>
 
         <div className="card-content-padding" style={{ paddingBottom: 16 }}>
-          {/* Section 4: Loại hình mẫu */}
-          <div className="detail-section" style={{ marginTop: 24 }}>
-            <div style={sectionTitleStyle}>Loại hình mẫu</div>
-            <Row gutter={[16, 8]}>
-              <Col xs={24}>
-                <Space wrap size={[16, 8]}>
-                  <BoolItem
-                    value={testRequest.sampleTypeService}
-                    label="Dịch vụ"
-                  />
-                  <BoolItem
-                    value={testRequest.sampleTypeContract}
-                    label="Hợp đồng"
-                  />
-                  <BoolItem
-                    value={testRequest.sampleTypeTask}
-                    label="Nhiệm vụ"
-                  />
-                  <BoolItem
-                    value={testRequest.sampleTypeSubContract}
-                    label="Thầu phụ"
-                  />
-                </Space>
-              </Col>
-            </Row>
-            {testRequest.subContract && (
-              <Row gutter={[16, 8]} style={{ marginTop: 8 }}>
-                <Col xs={24}>
-                  <div className="detail-item">
-                    <Text type="secondary">Thầu phụ:</Text>
-                    <Text>{testRequest.subContract}</Text>
+          <div className="detail-bottom-row" style={{ marginTop: 24 }}>
+            <div className="detail-bottom-left">
+              {/* Section 4: Loại hình mẫu */}
+              <div className="detail-section">
+                <Title level={5} style={{ marginBottom: 12 }}>Loại hình mẫu</Title>
+                <div className="detail-column-list">
+                  <div className="sample-type-tags" style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+                    <BoolTag value={testRequest.sampleTypeService} label="Dịch vụ" />
+                    <BoolTag value={testRequest.sampleTypeContract} label="Hợp đồng" />
+                    <BoolTag value={testRequest.sampleTypeTask} label="Nhiệm vụ" />
+                    <BoolTag value={testRequest.sampleTypeSubContract} label="Thầu phụ" />
                   </div>
-                </Col>
-              </Row>
-            )}
-          </div>
-
-          {/* Section 5: Yêu cầu về phương pháp */}
-          <div className="detail-section" style={{ marginTop: 24 }}>
-            <div style={sectionTitleStyle}>Yêu cầu về phương pháp</div>
-            <Row gutter={[16, 12]}>
-              <Col xs={24}>
-                <Space wrap size={[16, 8]}>
-                  <BoolItem
-                    value={testRequest.methodWestHighlandInstitute}
-                    label="Theo Viện KHKT NN Tây Nguyên"
-                  />
-                  <BoolItem
-                    value={testRequest.methodCustomer}
-                    label="Theo yêu cầu khách hàng"
-                  />
-                </Space>
-              </Col>
-              {testRequest.methodCustomerDetail && (
-                <Col xs={24}>
-                  <div className="detail-item">
-                    <Text type="secondary">Chi tiết PP KH:</Text>
-                    <Text>{testRequest.methodCustomerDetail}</Text>
-                  </div>
-                </Col>
-              )}
-            </Row>
-          </div>
-
-          {/* Section 6: Thông tin chi phí */}
-          <div className="detail-section" style={{ marginTop: 24 }}>
-            <div style={sectionTitleStyle}>Thông tin chi phí</div>
-            <Row gutter={[16, 12]}>
-              <Col xs={24}>
-                <div
-                  style={{
-                    background: "#e6f7ff",
-                    padding: "16px",
-                    borderRadius: 8,
-                    border: "1px solid #91d5ff",
-                    textAlign: "center",
-                  }}
-                >
-                  <Text
-                    type="secondary"
-                    style={{ display: "block", marginBottom: 4 }}
-                  >
-                    Tổng chi phí:
-                  </Text>
-                  <Text strong style={{ fontSize: 24, color: "#1890ff" }}>
-                    {(testRequest.totalCost || 0).toLocaleString("vi-VN")} đ
-                  </Text>
+                  {testRequest.subContract && (
+                    <div className="detail-item">
+                      <Text type="secondary">Thầu phụ:</Text>
+                      <Text>{testRequest.subContract}</Text>
+                    </div>
+                  )}
                 </div>
-              </Col>
-              {testRequest.totalCostInWords && (
-                <Col xs={24}>
-                  <div className="detail-item">
-                    <Text type="secondary">Bằng chữ:</Text>
-                    <Text italic>{testRequest.totalCostInWords}</Text>
+              </div>
+
+              {/* Section 5: Yêu cầu về phương pháp */}
+              <div className="detail-section">
+                <Title level={5} style={{ marginBottom: 12 }}>Yêu cầu về phương pháp</Title>
+                <div className="detail-column-list">
+                  <div className="sample-type-tags" style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+                    <BoolTag value={testRequest.methodWestHighlandInstitute} label="Theo Viện KHKT NN Tây Nguyên" />
+                    <BoolTag value={testRequest.methodCustomer} label="Theo yêu cầu khách hàng" />
                   </div>
-                </Col>
-              )}
-            </Row>
+                  {testRequest.methodCustomerDetail && (
+                    <div className="detail-item">
+                      <Text type="secondary">Chi tiết PP KH:</Text>
+                      <Text>{testRequest.methodCustomerDetail}</Text>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="detail-bottom-right">
+              {/* Section 6: Thông tin chi phí */}
+              <div className="detail-section">
+                <Title level={5} style={{ marginBottom: 12 }}>Thông tin chi phí</Title>
+                <div className="detail-column-list">
+                  <div
+                    style={{
+                      background: "#e6f7ff",
+                      padding: "16px",
+                      borderRadius: 8,
+                      border: "1px solid #91d5ff",
+                      textAlign: "center",
+                    }}
+                  >
+                    <Text
+                      type="secondary"
+                      style={{ display: "block", marginBottom: 4 }}
+                    >
+                      Tổng chi phí:
+                    </Text>
+                    <Text strong style={{ fontSize: 24, color: "#1890ff" }}>
+                      {(testRequest.totalCost || 0).toLocaleString("vi-VN")} đ
+                    </Text>
+                  </div>
+                  {testRequest.totalCostInWords && (
+                    <div className="detail-item">
+                      <Text type="secondary">Bằng chữ:</Text>
+                      <Text italic>{testRequest.totalCostInWords}</Text>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Payment info if paid */}
           {data.status === ReceiptStatus.Paid && data.paidDate && (
-            <div className="detail-section" style={{ marginTop: 24 }}>
-              <div style={sectionTitleStyle}>Thông tin thanh toán</div>
-              <Row gutter={[16, 12]}>
-                <Col xs={24}>
-                  <Tag
-                    color="green"
-                    style={{ fontSize: 14, padding: "4px 12px" }}
-                  >
-                    Đã thanh toán ngày{" "}
-                    {dayjs(data.paidDate).format("DD/MM/YYYY HH:mm")}
-                  </Tag>
-                </Col>
-              </Row>
+            <div className="detail-section">
+              <Title level={5} style={{ marginBottom: 12 }}>Thông tin thanh toán</Title>
+              <Tag
+                color="green"
+                style={{ fontSize: 14, padding: "4px 12px" }}
+              >
+                Đã thanh toán ngày{" "}
+                {dayjs(data.paidDate).format("DD/MM/YYYY HH:mm")}
+              </Tag>
             </div>
           )}
         </div>
