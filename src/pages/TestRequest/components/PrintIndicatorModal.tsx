@@ -14,6 +14,7 @@ import {
   Row,
   Col,
   Collapse,
+  Card,
 } from "antd";
 import {
   PrinterOutlined,
@@ -625,6 +626,7 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
       onCancel={handleCancel}
       width={1200}
       centered
+      className="testrequest-print-modal"
       styles={{
         body: {
           maxHeight: "calc(100vh - 200px)",
@@ -673,6 +675,7 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
               <Collapse
                 defaultActiveKey={labGroups.map((lg) => lg.laboratoryId)}
                 expandIconPosition="end"
+                className="testrequest-print-lab-collapse"
                 style={{ background: "transparent", border: "none" }}
                 items={labGroups.map((labGroup, labIndex) => {
                   const selectedInLab = labGroup.allIndicatorIds.filter((id) =>
@@ -828,11 +831,14 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
                                       : "none",
                                 },
                                 children: (
-                                  <div
+                                  <Card
+                                    size="small"
                                     style={{
                                       borderRadius: 8,
                                       overflow: "hidden",
+                                      boxShadow: "none",
                                     }}
+                                    bodyStyle={{ padding: 0 }}
                                   >
                                     <Table
                                       dataSource={sampleGroup.indicators}
@@ -861,7 +867,7 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
                                         type: "checkbox",
                                       }}
                                     />
-                                  </div>
+                                  </Card>
                                 ),
                               };
                             },

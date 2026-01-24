@@ -15,7 +15,7 @@ export const categoryLabels: Record<string, string> = {
   testMethods: "Phương pháp thử",
   standards: "Tiêu chuẩn",
   storageLocations: "Vị trí lưu kho",
-  customers: "Khách hàng",
+  // customers: "Khách hàng",
   indicators: "Nhóm chỉ tiêu",
   formTemplates: "Form mẫu",
   testResultValues: "Quản lý kết quả",
@@ -28,7 +28,7 @@ export const DEFAULT_PAGE_SIZE = 50;
 
 // Map category to import type (only customers and testMethods support import)
 export const importTypeMap: Record<string, ImportType | null> = {
-  customers: "customers",
+  // customers: "customers",
   testMethods: "test-methods",
   standards: null,
   departments: null,
