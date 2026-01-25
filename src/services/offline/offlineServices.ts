@@ -429,21 +429,24 @@ export async function getActiveIndicatorsOffline(): Promise<IndicatorDto[]> {
  */
 export async function getActiveStorageLocationsOffline(): Promise<PagedResultDto<StorageLocationDto>> {
   const { cacheEntity, getCachedEntitiesByType } = await import('./db');
+  const CACHE_KEY_PREFIX = 'StorageLocation:';
 
   if (navigator.onLine) {
     try {
       const data = await storageLocationService.getActive();
-      // Cache each item
+      // Cache each item with StorageLocation prefix to distinguish from actual receipts
       for (const item of data.items) {
-        await cacheEntity('Receipt', item.id, item, false);
+        await cacheEntity('Receipt', CACHE_KEY_PREFIX + item.id, item, false);
       }
       // If API returns empty but we have cache, use cache instead
       if (data.items.length === 0) {
         const cachedEntities = await getCachedEntitiesByType('Receipt');
-        if (cachedEntities.length > 0) {
-          const items = cachedEntities.map(e => e.data as StorageLocationDto);
-          console.log(`API returned empty, using ${items.length} cached storage locations`);
-          return { items, totalCount: items.length };
+        const cachedItems = cachedEntities
+          .filter(e => (e.id as string).startsWith('Receipt:' + CACHE_KEY_PREFIX))
+          .map(e => e.data as StorageLocationDto);
+        if (cachedItems.length > 0) {
+          console.log(`API returned empty, using ${cachedItems.length} cached storage locations`);
+          return { items: cachedItems, totalCount: cachedItems.length };
         }
       }
       return data;
@@ -452,9 +455,12 @@ export async function getActiveStorageLocationsOffline(): Promise<PagedResultDto
     }
   }
 
-  // Return cached data
+  // Return cached data - filter by StorageLocation prefix
+  // Note: cache key format is 'Receipt:StorageLocation:id'
   const cachedEntities = await getCachedEntitiesByType('Receipt');
-  const items = cachedEntities.map(e => e.data as StorageLocationDto);
+  const items = cachedEntities
+    .filter(e => (e.id as string).startsWith('Receipt:' + CACHE_KEY_PREFIX))
+    .map(e => e.data as StorageLocationDto);
   console.log(`Returning ${items.length} cached storage locations`);
   return { items, totalCount: items.length };
 }

@@ -1,4 +1,5 @@
 import { Suspense, ComponentType } from "react";
+import ErrorBoundary from "./ErrorBoundary";
 
 // Loading fallback component using custom SVG spinner
 const LoadingFallback = () => (
@@ -27,12 +28,14 @@ const LoadingFallback = () => (
   </div>
 );
 
-// Loadable HOC for lazy loading pages
+// Loadable HOC for lazy loading pages with error boundary for offline support
 const Loadable = <P extends object>(Component: ComponentType<P>) => {
   const LoadableComponent = (props: P) => (
-    <Suspense fallback={<LoadingFallback />}>
-      <Component {...props} />
-    </Suspense>
+    <ErrorBoundary>
+      <Suspense fallback={<LoadingFallback />}>
+        <Component {...props} />
+      </Suspense>
+    </ErrorBoundary>
   );
 
   return LoadableComponent;

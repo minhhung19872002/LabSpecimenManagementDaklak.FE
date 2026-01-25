@@ -3,6 +3,92 @@ import { STORAGE_KEYS } from '../constants';
 
 const AUTH_URL = '/api/v1/auth';
 
+/**
+ * Cached credentials structure for offline login
+ */
+interface OfflineCredentials {
+  userNameOrEmail: string;
+  passwordHash: string; // SHA-256 hash of the password
+  accessToken: string;
+  refreshToken: string;
+  user: UserInfo;
+  cachedAt: string; // ISO timestamp
+}
+
+/**
+ * Hash a password using SHA-256 (Web Crypto API)
+ */
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Cache credentials for offline login after successful online login
+ */
+async function cacheCredentialsForOffline(
+  userNameOrEmail: string,
+  password: string,
+  accessToken: string,
+  refreshToken: string,
+  user: UserInfo
+): Promise<void> {
+  try {
+    const passwordHash = await hashPassword(password);
+    const credentials: OfflineCredentials = {
+      userNameOrEmail: userNameOrEmail.toLowerCase(), // Normalize for comparison
+      passwordHash,
+      accessToken,
+      refreshToken,
+      user,
+      cachedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(STORAGE_KEYS.OFFLINE_AUTH_CREDENTIALS, JSON.stringify(credentials));
+  } catch (error) {
+    console.error('Failed to cache credentials for offline:', error);
+  }
+}
+
+/**
+ * Get cached offline credentials
+ */
+function getOfflineCredentials(): OfflineCredentials | null {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.OFFLINE_AUTH_CREDENTIALS);
+    if (!stored) return null;
+    return JSON.parse(stored) as OfflineCredentials;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Validate credentials offline against cached credentials
+ */
+async function validateOfflineCredentials(
+  userNameOrEmail: string,
+  password: string
+): Promise<OfflineCredentials | null> {
+  const cached = getOfflineCredentials();
+  if (!cached) return null;
+
+  // Check if username matches (case-insensitive)
+  if (cached.userNameOrEmail !== userNameOrEmail.toLowerCase()) {
+    return null;
+  }
+
+  // Verify password hash
+  const passwordHash = await hashPassword(password);
+  if (cached.passwordHash !== passwordHash) {
+    return null;
+  }
+
+  return cached;
+}
+
 export interface LoginRequest {
   userNameOrEmail: string;
   password: string;
@@ -67,7 +153,63 @@ export const authService = {
       localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
     }
 
+    // Cache credentials for offline login on successful login
+    if (data.success && accessToken && refreshToken && data.user) {
+      await cacheCredentialsForOffline(
+        credentials.userNameOrEmail,
+        credentials.password,
+        accessToken,
+        refreshToken,
+        data.user
+      );
+    }
+
     return data;
+  },
+
+  /**
+   * Login offline using cached credentials
+   * Returns LoginResponse if credentials match cached data
+   * Throws error if no cached credentials or credentials don't match
+   */
+  loginOffline: async (credentials: LoginRequest): Promise<LoginResponse> => {
+    const cached = await validateOfflineCredentials(
+      credentials.userNameOrEmail,
+      credentials.password
+    );
+
+    if (!cached) {
+      throw new Error('OFFLINE_AUTH_FAILED');
+    }
+
+    // Restore session from cached data
+    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, cached.accessToken);
+    localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, cached.refreshToken);
+    localStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(cached.user));
+
+    return {
+      success: true,
+      accessToken: cached.accessToken,
+      refreshToken: cached.refreshToken,
+      expiresIn: 0, // Unknown in offline mode
+      tokenType: 'Bearer',
+      user: cached.user,
+    };
+  },
+
+  /**
+   * Check if offline login is available (has cached credentials)
+   */
+  hasOfflineCredentials: (): boolean => {
+    return getOfflineCredentials() !== null;
+  },
+
+  /**
+   * Get the cached offline username (for display purposes)
+   */
+  getOfflineUsername: (): string | null => {
+    const cached = getOfflineCredentials();
+    return cached?.userNameOrEmail || null;
   },
 
   // Logout
