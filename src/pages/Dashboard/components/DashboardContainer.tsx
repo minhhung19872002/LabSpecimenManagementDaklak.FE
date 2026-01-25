@@ -17,15 +17,7 @@ import { DatePicker } from "antd";
 
 const { RangePicker } = DatePicker;
 import Icon, {
-  FileTextOutlined,
-  ExperimentOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  DollarOutlined,
-  EditOutlined,
-  SyncOutlined,
   RightOutlined,
-  ExclamationCircleOutlined,
 } from "../../../components/common/Icon";
 import { Column } from "@ant-design/charts";
 import { Dayjs } from "dayjs";

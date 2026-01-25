@@ -4,6 +4,7 @@ import { syncManager } from '../services/offline/syncManager';
 export interface NetworkStatus {
   isOnline: boolean;
   pendingCount: number;
+  failedCount: number;
   isSyncing: boolean;
 }
 
@@ -13,17 +14,21 @@ export interface NetworkStatus {
 export function useNetworkStatus(): NetworkStatus & {
   sync: () => Promise<void>;
   retryFailed: () => Promise<void>;
+  clearFailed: () => Promise<void>;
+  resetFailed: () => Promise<void>;
 } {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [pendingCount, setPendingCount] = useState(0);
+  const [failedCount, setFailedCount] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
-    // Initialize sync manager
+    // Initialize sync manager (safe to call multiple times due to guard)
     syncManager.init();
 
-    // Get initial pending count
+    // Get initial counts
     syncManager.getPendingCount().then(setPendingCount);
+    syncManager.getFailedCount().then(setFailedCount);
 
     // Listen for status changes
     const handleStatusChange = (data: unknown) => {
@@ -33,6 +38,8 @@ export function useNetworkStatus(): NetworkStatus & {
 
     const handlePendingCountChange = (count: unknown) => {
       setPendingCount(count as number);
+      // Also refresh failed count when pending count changes
+      syncManager.getFailedCount().then(setFailedCount);
     };
 
     const handleSyncStart = () => {
@@ -82,12 +89,26 @@ export function useNetworkStatus(): NetworkStatus & {
     await syncManager.retryFailed();
   }, []);
 
+  const clearFailed = useCallback(async () => {
+    await syncManager.clearFailedItems();
+    setFailedCount(0);
+  }, []);
+
+  const resetFailed = useCallback(async () => {
+    await syncManager.resetFailedItems();
+    const count = await syncManager.getFailedCount();
+    setFailedCount(count);
+  }, []);
+
   return {
     isOnline,
     pendingCount,
+    failedCount,
     isSyncing,
     sync,
     retryFailed,
+    clearFailed,
+    resetFailed,
   };
 }
 
