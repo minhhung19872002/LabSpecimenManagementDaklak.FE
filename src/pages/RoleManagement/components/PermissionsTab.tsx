@@ -483,7 +483,6 @@ const PermissionsTab: React.FC<PermissionsTabProps> = ({
             expandIconPosition="start"
             style={{
               backgroundColor: "#fff",
-              // border: "1px solid #d9d9d9",
             }}
           />
         )}

@@ -7,6 +7,10 @@ import {
   notificationService,
   NotificationDto,
   NotificationType,
+  getNotificationIcon,
+  getNotificationIconColor,
+  getNotificationIconBgColor,
+  parseNotificationAdditionalData,
 } from "../../services/notificationService";
 import { signalRService } from "../../services/signalRService";
 import NotificationModal from "./NotificationModal";
@@ -177,6 +181,16 @@ const NotificationBell: React.FC = () => {
     const isUnread = !notification.isRead;
     const daysRemaining = notification.daysRemaining;
     const isDeadline = isDeadlineNotification(notification.type);
+    const additionalData = parseNotificationAdditionalData(notification.additionalData);
+    const iconClass = getNotificationIcon(notification.type);
+    const iconColor = getNotificationIconColor(notification.type);
+    const iconBgColor = getNotificationIconBgColor(notification.type);
+
+    // Build title with contract number
+    const contractNumber = additionalData?.contractNumber;
+    const displayTitle = contractNumber
+      ? `${notification.title} - HĐ: ${contractNumber}`
+      : notification.title;
 
     return (
       <List.Item
@@ -184,30 +198,36 @@ const NotificationBell: React.FC = () => {
         onClick={() => handleNotificationClick(notification)}
       >
         <div className="notification-item-content">
-          {/* Creation time */}
-          <div className="notification-time">
-            {dayjs(notification.creationTime).format("HH:mm [ngày] DD/MM/YYYY")}
+          {/* Icon on the left */}
+          <div className="notification-icon-wrapper" style={{ backgroundColor: iconBgColor }}>
+            <i className={`notification-icon ${iconClass}`} style={{ color: iconColor }} />
           </div>
 
-          {/* Message content - max 3 lines */}
-          <div className="notification-message">
-            {parseMessage(notification.message)}
-          </div>
-
-          {/* Days remaining for deadline notifications */}
-          {daysRemaining !== null && daysRemaining !== undefined && (
-            <div
-              className={`notification-deadline ${
-                daysRemaining <= 0 ? "overdue" : ""
-              } ${isDeadline ? "is-deadline-type" : ""}`}
-            >
-              {daysRemaining > 0
-                ? `Còn ${daysRemaining} ngày`
-                : daysRemaining === 0
-                ? "Hôm nay"
-                : `Quá hạn ${Math.abs(daysRemaining)} ngày`}
+          {/* Content on the right */}
+          <div className="notification-content">
+            <div className="notification-title">{displayTitle}</div>
+            <div className="notification-message">
+              {parseMessage(notification.message)}
             </div>
-          )}
+            <div className="notification-footer">
+              <span className="notification-time">
+                {dayjs(notification.creationTime).format("DD/MM/YYYY HH:mm")}
+              </span>
+              {daysRemaining !== null && daysRemaining !== undefined && (
+                <span
+                  className={`notification-deadline ${
+                    daysRemaining <= 0 ? "overdue" : ""
+                  } ${isDeadline ? "is-deadline-type" : ""}`}
+                >
+                  {daysRemaining > 0
+                    ? `Còn ${daysRemaining} ngày`
+                    : daysRemaining === 0
+                    ? "Hôm nay"
+                    : `Quá hạn ${Math.abs(daysRemaining)} ngày`}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       </List.Item>
     );
