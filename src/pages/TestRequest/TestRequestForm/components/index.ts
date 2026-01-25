@@ -1,7 +1,6 @@
 export { default as ContractInfoSection } from './ContractInfoSection';
 export { default as CustomerInfoSection } from './CustomerInfoSection';
 export { default as SampleTableSection } from './SampleTableSection';
-export { default as SampleTypeSection } from './SampleTypeSection';
 export { default as MethodRequirementSection } from './MethodRequirementSection';
 export { default as ResultRequirementSection } from './ResultRequirementSection';
 export { default as SamplingDeliverySection } from './SamplingDeliverySection';

@@ -43,8 +43,9 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
       <Title level={5} className="section-title">
         Thông tin khách hàng
       </Title>
+      {/* Row 1: Tên CS/DN | Tỉnh thành | Phường xã */}
       <Row gutter={[16, 0]}>
-        <Col xs={24} sm={12}>
+        <Col xs={24} sm={8}>
           <Form.Item
             name="customerName"
             label="Tên CS/DN"
@@ -56,7 +57,7 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
               options={organizationOptions}
               onSearch={handleOrganizationSearch}
               onSelect={handleOrganizationSelect}
-              placeholder="Nhập tên cơ sở / doanh nghiệp..."
+              placeholder="Nhập tên CS/DN"
               filterOption={false}
               disabled={isFieldLocked("customerName")}
               notFoundContent={
@@ -69,52 +70,14 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
             />
           </Form.Item>
         </Col>
-        <Col xs={24} sm={12}>
-          <Form.Item
-            name="contactPerson"
-            label="Người đại diện"
-            rules={[
-              { required: true, message: "Vui lòng nhập người đại diện" },
-            ]}
-          >
-            <Input
-              placeholder="Người đại diện"
-              disabled={isFieldLocked("contactPerson")}
-            />
-          </Form.Item>
-        </Col>
-        <Col xs={24} sm={12}>
-          <Form.Item
-            name="phone"
-            label="Điện thoại"
-            rules={[
-              { required: true, message: "Vui lòng nhập số điện thoại" },
-              {
-                pattern: /^(0|\+84)[0-9]{9,10}$/,
-                message: "Số điện thoại không hợp lệ",
-              },
-            ]}
-          >
-            <Input
-              placeholder="SĐT"
-              disabled={isFieldLocked("phone")}
-              onBlur={handlePhoneBlur}
-            />
-          </Form.Item>
-        </Col>
-        <Col xs={24} sm={12}>
-          <Form.Item name="taxCode" label="Mã số thuế">
-            <Input placeholder="MST" disabled={isFieldLocked("taxCode")} />
-          </Form.Item>
-        </Col>
-        <Col xs={24} sm={12}>
+        <Col xs={24} sm={8}>
           <Form.Item
             name="province"
             label="Tỉnh thành"
-            rules={[{ required: true, message: "Vui lòng chọn hoặc nhập tỉnh thành" }]}
+            rules={[{ required: true, message: "Vui lòng chọn tỉnh thành" }]}
           >
             <AutoComplete
-              placeholder="Chọn hoặc nhập tỉnh thành"
+              placeholder="Chọn"
               allowClear
               disabled={isFieldLocked("province")}
               options={provinces.map((p) => ({
@@ -145,14 +108,14 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
             />
           </Form.Item>
         </Col>
-        <Col xs={24} sm={12}>
+        <Col xs={24} sm={8}>
           <Form.Item
             name="ward"
-            label="Phường/Xã"
-            rules={[{ required: true, message: "Vui lòng chọn hoặc nhập phường xã" }]}
+            label="Phường xã"
+            rules={[{ required: true, message: "Vui lòng chọn phường xã" }]}
           >
             <AutoComplete
-              placeholder="Chọn hoặc nhập phường/xã"
+              placeholder="Chọn"
               allowClear
               disabled={!selectedProvinceCode || isFieldLocked("ward")}
               options={wards.map((w) => ({
@@ -170,15 +133,59 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
             />
           </Form.Item>
         </Col>
-        <Col xs={24}>
+      </Row>
+      {/* Row 2: Địa chỉ (full width) */}
+      <Form.Item
+        name="address"
+        label="Địa chỉ"
+        rules={[{ required: true, message: "Vui lòng nhập địa chỉ" }]}
+      >
+        <Input
+          placeholder="Nhập địa chỉ"
+          disabled={isFieldLocked("address")}
+        />
+      </Form.Item>
+      {/* Row 3: Mã số thuế | Người liên hệ | Điện thoại */}
+      <Row gutter={[16, 0]}>
+        <Col xs={24} sm={8}>
+          <Form.Item name="taxCode" label="Mã số thuế" style={{ marginBottom: 0 }}>
+            <Input placeholder="Nhập mã số thuế" disabled={isFieldLocked("taxCode")} />
+          </Form.Item>
+        </Col>
+        <Col xs={24} sm={8}>
           <Form.Item
-            name="address"
-            label="Địa chỉ"
-            rules={[{ required: true, message: "Vui lòng nhập địa chỉ" }]}
+            name="contactPerson"
+            label="Người liên hệ"
+            style={{ marginBottom: 0 }}
+            rules={[
+              { required: true, message: "Vui lòng nhập người liên hệ" },
+            ]}
+          >
+            <AutoComplete
+              placeholder="Chọn"
+              allowClear
+              disabled={isFieldLocked("contactPerson")}
+              options={[]}
+            />
+          </Form.Item>
+        </Col>
+        <Col xs={24} sm={8}>
+          <Form.Item
+            name="phone"
+            label="Điện thoại"
+            style={{ marginBottom: 0 }}
+            rules={[
+              { required: true, message: "Vui lòng nhập số điện thoại" },
+              {
+                pattern: /^(0|\+84)[0-9]{9,10}$/,
+                message: "Số điện thoại không hợp lệ",
+              },
+            ]}
           >
             <Input
-              placeholder="Địa chỉ chi tiết"
-              disabled={isFieldLocked("address")}
+              placeholder="Nhập điện thoại"
+              disabled={isFieldLocked("phone")}
+              onBlur={handlePhoneBlur}
             />
           </Form.Item>
         </Col>
