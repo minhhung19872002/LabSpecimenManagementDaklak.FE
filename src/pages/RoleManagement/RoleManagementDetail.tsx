@@ -1,10 +1,20 @@
-import React from 'react';
-import { Card, Tabs, Spin, Button, Space, Breadcrumb, Typography, Tag } from 'antd';
-import { ArrowLeftOutlined, UserOutlined, LockOutlined } from '@ant-design/icons';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useRoleManagementDetail } from './hooks';
-import { UserListTab, PermissionsTab } from './components';
-import { PATH_ROUTES } from '../../constants/routes';
+import React, { useState } from "react";
+import {
+  Card,
+  Radio,
+  Spin,
+  Button,
+  Space,
+  Typography,
+  Tag,
+  Tooltip,
+} from "antd";
+import { ArrowLeftOutlined } from "@ant-design/icons";
+import { useParams, useNavigate } from "react-router-dom";
+import { useRoleManagementDetail } from "./hooks";
+import { UserListTab, PermissionsTab } from "./components";
+import { PATH_ROUTES } from "../../constants/routes";
+import "./RoleManagementDetail.css";
 
 const { Title } = Typography;
 
@@ -20,21 +30,21 @@ const RoleManagementDetail: React.FC = () => {
     saving,
     users,
     usersTotalCount,
-    usersParams,
     permissionGroups,
     availableUsers,
     availableUsersLoading,
-    handleUsersPageChange,
     handleUsersSearch,
     handleAddUser,
     handleRemoveUser,
     handleSearchAvailableUsers,
     handleSavePermissions,
-  } = useRoleManagementDetail(id || '');
+  } = useRoleManagementDetail(id || "");
+
+  const [activeTab, setActiveTab] = useState<string>("users");
 
   if (loading && !roleDetail) {
     return (
-      <div className="page-wrapper" style={{ textAlign: 'center' }}>
+      <div className="page-wrapper" style={{ textAlign: "center" }}>
         <Spin size="large" />
       </div>
     );
@@ -44,9 +54,12 @@ const RoleManagementDetail: React.FC = () => {
     return (
       <div className="page-wrapper">
         <Card>
-          <div style={{ textAlign: 'center', padding: 48 }}>
+          <div style={{ textAlign: "center", padding: 48 }}>
             <Title level={4}>Không tìm thấy nhóm quyền</Title>
-            <Button type="primary" onClick={() => navigate(PATH_ROUTES.roleManagement.index)}>
+            <Button
+              type="primary"
+              onClick={() => navigate(PATH_ROUTES.roleManagement.index)}
+            >
               Quay lại danh sách
             </Button>
           </div>
@@ -55,24 +68,43 @@ const RoleManagementDetail: React.FC = () => {
     );
   }
 
-  const tabItems = [
-    {
-      key: 'users',
-      label: (
+  return (
+    <div className="page-wrapper role-management-detail">
+      <div style={{ marginBottom: 16 }}>
         <Space>
-          <UserOutlined />
-          Danh sách người dùng
-          <Tag color="blue">{roleDetail.userCount}</Tag>
+          <Tooltip title="Quay lại">
+            <Button
+              shape="circle"
+              icon={<ArrowLeftOutlined />}
+              onClick={() => navigate(PATH_ROUTES.roleManagement.index)}
+            />
+          </Tooltip>
+          <Title level={4} style={{ margin: 0 }}>
+            {roleDetail.name}
+          </Title>
+          {roleDetail.isStatic && <Tag color="orange">Hệ thống</Tag>}
+          {roleDetail.isDefault && <Tag color="green">Mặc định</Tag>}
         </Space>
-      ),
-      children: (
+      </div>
+
+      <div className="statistics-detail-tabs">
+        <Radio.Group
+          value={activeTab}
+          onChange={(e) => setActiveTab(e.target.value)}
+          optionType="button"
+        >
+          <Radio.Button value="users">Danh sách người dùng</Radio.Button>
+          <Radio.Button value="permissions">Quyền truy cập</Radio.Button>
+        </Radio.Group>
+      </div>
+      <div style={{ borderBottom: "1px solid #f0f0f0" }} />
+
+      {activeTab === "users" ? (
         <UserListTab
-          roleId={id || ''}
+          roleId={id || ""}
           users={users}
           totalCount={usersTotalCount}
           loading={usersLoading}
-          params={usersParams}
-          onPageChange={handleUsersPageChange}
           onSearch={handleUsersSearch}
           onRemoveUser={handleRemoveUser}
           onAddUser={handleAddUser}
@@ -80,17 +112,7 @@ const RoleManagementDetail: React.FC = () => {
           availableUsersLoading={availableUsersLoading}
           onSearchAvailableUsers={handleSearchAvailableUsers}
         />
-      ),
-    },
-    {
-      key: 'permissions',
-      label: (
-        <Space>
-          <LockOutlined />
-          Quyền truy cập
-        </Space>
-      ),
-      children: (
+      ) : (
         <PermissionsTab
           permissionGroups={permissionGroups}
           loading={permissionsLoading}
@@ -98,46 +120,7 @@ const RoleManagementDetail: React.FC = () => {
           onSave={handleSavePermissions}
           isStatic={roleDetail.isStatic}
         />
-      ),
-    },
-  ];
-
-  return (
-    <div className="page-wrapper">
-      <Breadcrumb
-        style={{ marginBottom: 16 }}
-        items={[
-          {
-            title: <Link to={PATH_ROUTES.roleManagement.index}>Quản lý truy cập</Link>,
-          },
-          {
-            title: roleDetail.name,
-          },
-        ]}
-      />
-
-      <Card
-        title={
-          <Space>
-            <Button
-              type="text"
-              icon={<ArrowLeftOutlined />}
-              onClick={() => navigate(PATH_ROUTES.roleManagement.index)}
-            />
-            <Title level={4} style={{ margin: 0 }}>
-              {roleDetail.name}
-            </Title>
-            {roleDetail.isStatic && <Tag color="orange">Hệ thống</Tag>}
-            {roleDetail.isDefault && <Tag color="green">Mặc định</Tag>}
-          </Space>
-        }
-      >
-        <Tabs
-          defaultActiveKey="users"
-          items={tabItems}
-          destroyInactiveTabPane={false}
-        />
-      </Card>
+      )}
     </div>
   );
 };

@@ -1,11 +1,14 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { message } from 'antd';
 import roleManagementService, {
   RoleDetailDto,
   RoleUserDto,
   PermissionGroupDto,
-  GetRoleUsersParams,
 } from '../../../services/roleManagementService';
+
+export interface UsersLocalParams {
+  filter: string;
+}
 
 interface UseRoleManagementDetailReturn {
   roleDetail: RoleDetailDto | null;
@@ -15,14 +18,12 @@ interface UseRoleManagementDetailReturn {
   saving: boolean;
   users: RoleUserDto[];
   usersTotalCount: number;
-  usersParams: GetRoleUsersParams;
-  setUsersParams: React.Dispatch<React.SetStateAction<GetRoleUsersParams>>;
+  usersParams: UsersLocalParams;
   permissionGroups: PermissionGroupDto[];
   availableUsers: RoleUserDto[];
   availableUsersLoading: boolean;
   refresh: () => Promise<void>;
   refreshUsers: () => Promise<void>;
-  handleUsersPageChange: (page: number, pageSize: number) => void;
   handleUsersSearch: (value: string) => void;
   handleAddUser: (userId: string) => Promise<boolean>;
   handleRemoveUser: (userId: string) => Promise<boolean>;
@@ -31,10 +32,7 @@ interface UseRoleManagementDetailReturn {
   handleUpdateRole: (name: string) => Promise<boolean>;
 }
 
-const DEFAULT_USERS_PARAMS: GetRoleUsersParams = {
-  skipCount: 0,
-  maxResultCount: 10,
-  sorting: 'userName',
+const DEFAULT_USERS_PARAMS: UsersLocalParams = {
   filter: '',
 };
 
@@ -44,12 +42,29 @@ export const useRoleManagementDetail = (roleId: string): UseRoleManagementDetail
   const [usersLoading, setUsersLoading] = useState(false);
   const [permissionsLoading, setPermissionsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [users, setUsers] = useState<RoleUserDto[]>([]);
-  const [usersTotalCount, setUsersTotalCount] = useState(0);
-  const [usersParams, setUsersParams] = useState<GetRoleUsersParams>(DEFAULT_USERS_PARAMS);
+  const [allUsers, setAllUsers] = useState<RoleUserDto[]>([]);
+  const [usersParams, setUsersParams] = useState<UsersLocalParams>(DEFAULT_USERS_PARAMS);
   const [permissionGroups, setPermissionGroups] = useState<PermissionGroupDto[]>([]);
   const [availableUsers, setAvailableUsers] = useState<RoleUserDto[]>([]);
   const [availableUsersLoading, setAvailableUsersLoading] = useState(false);
+
+  // Local filtering and pagination
+  const filteredUsers = useMemo(() => {
+    if (!usersParams.filter.trim()) {
+      return allUsers;
+    }
+    const lowerFilter = usersParams.filter.toLowerCase();
+    return allUsers.filter(user =>
+      user.userName?.toLowerCase().includes(lowerFilter) ||
+      user.fullName?.toLowerCase().includes(lowerFilter) ||
+      user.email?.toLowerCase().includes(lowerFilter) ||
+      user.departmentName?.toLowerCase().includes(lowerFilter) ||
+      user.position?.toLowerCase().includes(lowerFilter)
+    );
+  }, [allUsers, usersParams.filter]);
+
+  const usersTotalCount = filteredUsers.length;
+  const users = filteredUsers;
 
   const fetchRoleDetail = useCallback(async () => {
     if (!roleId) return;
@@ -70,16 +85,15 @@ export const useRoleManagementDetail = (roleId: string): UseRoleManagementDetail
     if (!roleId) return;
     setUsersLoading(true);
     try {
-      const result = await roleManagementService.getRoleUsers(roleId, usersParams);
-      setUsers(result.items);
-      setUsersTotalCount(result.totalCount);
+      const users = await roleManagementService.getRoleUsers(roleId);
+      setAllUsers(users);
     } catch (error: unknown) {
       console.error('Error fetching role users:', error);
       message.error('Không thể tải danh sách người dùng');
     } finally {
       setUsersLoading(false);
     }
-  }, [roleId, usersParams]);
+  }, [roleId]);
 
   const fetchPermissions = useCallback(async () => {
     if (!roleDetail?.name) return;
@@ -113,20 +127,8 @@ export const useRoleManagementDetail = (roleId: string): UseRoleManagementDetail
     await fetchUsers();
   }, [fetchUsers]);
 
-  const handleUsersPageChange = useCallback((page: number, pageSize: number) => {
-    setUsersParams(prev => ({
-      ...prev,
-      skipCount: (page - 1) * pageSize,
-      maxResultCount: pageSize,
-    }));
-  }, []);
-
   const handleUsersSearch = useCallback((value: string) => {
-    setUsersParams(prev => ({
-      ...prev,
-      filter: value,
-      skipCount: 0,
-    }));
+    setUsersParams({ filter: value });
   }, []);
 
   const handleAddUser = useCallback(async (userId: string): Promise<boolean> => {
@@ -225,13 +227,11 @@ export const useRoleManagementDetail = (roleId: string): UseRoleManagementDetail
     users,
     usersTotalCount,
     usersParams,
-    setUsersParams,
     permissionGroups,
     availableUsers,
     availableUsersLoading,
     refresh,
     refreshUsers,
-    handleUsersPageChange,
     handleUsersSearch,
     handleAddUser,
     handleRemoveUser,
