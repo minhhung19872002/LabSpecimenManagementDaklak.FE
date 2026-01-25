@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { Button, Checkbox, DatePicker, Tooltip } from "antd";
 import { CloseOutlined, LockOutlined } from "../../../../components/common/Icon";
 import dayjs from "dayjs";
@@ -7,6 +7,42 @@ import { IndicatorDto } from "../../../../services/masterDataService";
 import { IndicatorApprovalStatus, IndicatorApprovalStatusLabels, IndicatorApprovalStatusColors } from "../../../../types/laboratoryTask";
 import StatusTag from "../../../../components/common/StatusTag";
 import { IndicatorName } from "../../../../components/common";
+
+// Component hiển thị tooltip chỉ khi text bị cắt (ellipsis)
+interface TruncateTooltipProps {
+  title: string;
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+}
+
+const TruncateTooltip: React.FC<TruncateTooltipProps> = ({ title, children, style }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const containerRef = useRef<HTMLSpanElement>(null);
+
+  const handleMouseEnter = useCallback(() => {
+    if (containerRef.current) {
+      const { scrollWidth, clientWidth } = containerRef.current;
+      setShowTooltip(scrollWidth > clientWidth);
+    }
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setShowTooltip(false);
+  }, []);
+
+  return (
+    <Tooltip title={title} open={showTooltip} placement="topLeft">
+      <span
+        ref={containerRef}
+        style={style}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        {children}
+      </span>
+    </Tooltip>
+  );
+};
 
 interface IndicatorRowProps {
   id: string; // IndicatorMethodKey: indicatorId_testMethodId
@@ -68,36 +104,40 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
         style={{ width: 24, flexShrink: 0 }}
         disabled={!canDelete}
       />
-      <Tooltip title={indicator.name}>
+      <TruncateTooltip
+        title={indicator.name}
+        style={{
+          flex: 1,
+          minWidth: 80,
+          fontSize: 13,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          color: canDelete ? "inherit" : "#666",
+        }}
+      >
         <IndicatorName
           name={indicator.name}
           formattedName={indicator.formattedName}
-          style={{
-            flex: 1,
-            minWidth: 80,
-            fontSize: 13,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-            color: canDelete ? "inherit" : "#666",
-          }}
         />
-      </Tooltip>
-      <Tooltip title={methodName}>
+      </TruncateTooltip>
+      <TruncateTooltip
+        title={methodName}
+        style={{
+          width: 120,
+          flexShrink: 0,
+          fontSize: 12,
+          color: canDelete ? "#1890ff" : "#999",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
         <IndicatorName
           name={methodName}
           formattedName={methodFormattedName}
-          style={{
-            width: 120,
-            flexShrink: 0,
-            fontSize: 12,
-            color: canDelete ? "#1890ff" : "#999",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
         />
-      </Tooltip>
+      </TruncateTooltip>
       <span
         style={{
           fontSize: 12,
