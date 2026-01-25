@@ -1,9 +1,23 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Button, Checkbox, Collapse, Space, Spin, Typography, Row, Col, Input, Badge, Empty } from 'antd';
-import { SaveOutlined, SearchOutlined } from '@ant-design/icons';
-import { PermissionGroupDto } from '../../../services/roleManagementService';
-import { authService } from '../../../services/authService';
-import { PERMISSIONS } from '../../../constants/permissionMapping';
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  Button,
+  Checkbox,
+  Collapse,
+  Space,
+  Spin,
+  Typography,
+  Row,
+  Col,
+  Input,
+  Badge,
+  Empty,
+  Card,
+} from "antd";
+import "../RoleManagementDetail.css";
+import { SaveOutlined, CheckOutlined } from "@ant-design/icons";
+import { PermissionGroupDto } from "../../../services/roleManagementService";
+import { authService } from "../../../services/authService";
+import { PERMISSIONS } from "../../../constants/permissionMapping";
 
 const { Text } = Typography;
 
@@ -22,17 +36,19 @@ const PermissionsTab: React.FC<PermissionsTabProps> = ({
   onSave,
   isStatic = false,
 }) => {
-  const [selectedPermissions, setSelectedPermissions] = useState<Set<string>>(new Set());
+  const [selectedPermissions, setSelectedPermissions] = useState<Set<string>>(
+    new Set(),
+  );
   const [hasChanges, setHasChanges] = useState(false);
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState("");
 
   const canEdit = authService.hasPermission(PERMISSIONS.RoleManagement.Edit);
 
   // Initialize selected permissions from props
   useEffect(() => {
     const initialPermissions = new Set<string>();
-    permissionGroups.forEach(group => {
-      group.permissions.forEach(perm => {
+    permissionGroups.forEach((group) => {
+      group.permissions.forEach((perm) => {
         if (perm.isGranted) {
           initialPermissions.add(perm.name);
         }
@@ -45,8 +61,8 @@ const PermissionsTab: React.FC<PermissionsTabProps> = ({
   // Calculate original permissions for change detection
   const originalPermissions = useMemo(() => {
     const original = new Set<string>();
-    permissionGroups.forEach(group => {
-      group.permissions.forEach(perm => {
+    permissionGroups.forEach((group) => {
+      group.permissions.forEach((perm) => {
         if (perm.isGranted) {
           original.add(perm.name);
         }
@@ -67,17 +83,17 @@ const PermissionsTab: React.FC<PermissionsTabProps> = ({
     // Check if there are changes
     const hasChanges =
       newSelected.size !== originalPermissions.size ||
-      [...newSelected].some(p => !originalPermissions.has(p)) ||
-      [...originalPermissions].some(p => !newSelected.has(p));
+      [...newSelected].some((p) => !originalPermissions.has(p)) ||
+      [...originalPermissions].some((p) => !newSelected.has(p));
     setHasChanges(hasChanges);
   };
 
   const handleGroupSelectAll = (groupName: string, checked: boolean) => {
-    const group = permissionGroups.find(g => g.name === groupName);
+    const group = permissionGroups.find((g) => g.name === groupName);
     if (!group) return;
 
     const newSelected = new Set(selectedPermissions);
-    group.permissions.forEach(perm => {
+    group.permissions.forEach((perm) => {
       if (checked) {
         newSelected.add(perm.name);
       } else {
@@ -89,18 +105,15 @@ const PermissionsTab: React.FC<PermissionsTabProps> = ({
     // Check if there are changes
     const hasChanges =
       newSelected.size !== originalPermissions.size ||
-      [...newSelected].some(p => !originalPermissions.has(p)) ||
-      [...originalPermissions].some(p => !newSelected.has(p));
+      [...newSelected].some((p) => !originalPermissions.has(p)) ||
+      [...originalPermissions].some((p) => !newSelected.has(p));
     setHasChanges(hasChanges);
   };
 
   const isGroupAllSelected = (group: PermissionGroupDto): boolean => {
-    return group.permissions.every(perm => selectedPermissions.has(perm.name));
-  };
-
-  const isGroupPartiallySelected = (group: PermissionGroupDto): boolean => {
-    const selectedCount = group.permissions.filter(perm => selectedPermissions.has(perm.name)).length;
-    return selectedCount > 0 && selectedCount < group.permissions.length;
+    return group.permissions.every((perm) =>
+      selectedPermissions.has(perm.name),
+    );
   };
 
   const handleSave = async () => {
@@ -112,20 +125,22 @@ const PermissionsTab: React.FC<PermissionsTabProps> = ({
 
   // Master Data group names (these are deprecated, now use MasterData unified permission)
   const deprecatedMasterDataGroupNames = [
-    'Departments',
-    'SpecimenTypes',
-    'TestMethods',
-    'Standards',
-    'StorageLocations',
-    'Customers',
-    'IndicatorGroups',
-    'Indicators',
-    'Laboratories',
-    'SampleConditions',
+    "Departments",
+    "SpecimenTypes",
+    "TestMethods",
+    "Standards",
+    "StorageLocations",
+    "Customers",
+    "IndicatorGroups",
+    "Indicators",
+    "Laboratories",
+    "SampleConditions",
   ];
 
   // Check if using new unified MasterData permission
-  const hasUnifiedMasterData = permissionGroups.some(g => g.name === 'MasterData');
+  const hasUnifiedMasterData = permissionGroups.some(
+    (g) => g.name === "MasterData",
+  );
 
   // Filter permission groups based on search text and restructure Master Data
   const filteredGroups = useMemo(() => {
@@ -135,10 +150,11 @@ const PermissionsTab: React.FC<PermissionsTabProps> = ({
     if (searchText.trim()) {
       const lowerSearch = searchText.toLowerCase();
       groups = permissionGroups
-        .map(group => {
-          const matchingPermissions = group.permissions.filter(perm =>
-            perm.displayName.toLowerCase().includes(lowerSearch) ||
-            group.displayName.toLowerCase().includes(lowerSearch)
+        .map((group) => {
+          const matchingPermissions = group.permissions.filter(
+            (perm) =>
+              perm.displayName.toLowerCase().includes(lowerSearch) ||
+              group.displayName.toLowerCase().includes(lowerSearch),
           );
 
           if (matchingPermissions.length === 0) {
@@ -161,9 +177,12 @@ const PermissionsTab: React.FC<PermissionsTabProps> = ({
     const masterData: PermissionGroupDto[] = [];
     const others: PermissionGroupDto[] = [];
 
-    filteredGroups.forEach(group => {
+    filteredGroups.forEach((group) => {
       // If using new unified MasterData permission, don't nest old individual permissions
-      if (hasUnifiedMasterData && deprecatedMasterDataGroupNames.includes(group.name)) {
+      if (
+        hasUnifiedMasterData &&
+        deprecatedMasterDataGroupNames.includes(group.name)
+      ) {
         // Skip deprecated individual master data groups
         return;
       }
@@ -181,13 +200,15 @@ const PermissionsTab: React.FC<PermissionsTabProps> = ({
   // Calculate statistics for each group
   const getGroupStats = (group: PermissionGroupDto) => {
     const total = group.permissions.length;
-    const selected = group.permissions.filter(perm => selectedPermissions.has(perm.name)).length;
+    const selected = group.permissions.filter((perm) =>
+      selectedPermissions.has(perm.name),
+    ).length;
     return { total, selected };
   };
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: 48 }}>
+      <div style={{ textAlign: "center", padding: 48 }}>
         <Spin size="large" />
       </div>
     );
@@ -200,40 +221,56 @@ const PermissionsTab: React.FC<PermissionsTabProps> = ({
     return {
       key: group.name,
       label: (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 16 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            width: "100%",
+            gap: 16,
+          }}
+        >
           <Space size="small">
             <Text strong>{group.displayName}</Text>
             <Badge
               count={`${selected}/${total}`}
               style={{
-                backgroundColor: selected === total ? '#52c41a' : selected > 0 ? '#1890ff' : '#d9d9d9',
+                backgroundColor:
+                  selected === total
+                    ? "#52c41a"
+                    : selected > 0
+                      ? "#1890ff"
+                      : "#d9d9d9",
                 fontSize: 12,
               }}
             />
           </Space>
-          <Checkbox
-            checked={isGroupAllSelected(group)}
-            indeterminate={isGroupPartiallySelected(group)}
-            onChange={(e) => {
-              e.stopPropagation();
-              handleGroupSelectAll(group.name, e.target.checked);
-            }}
+          <Button
+            type="primary"
+            size="small"
+            icon={<CheckOutlined />}
+            className="select-all-btn"
             disabled={isStatic || !canEdit}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleGroupSelectAll(group.name, !isGroupAllSelected(group));
+            }}
           >
-            Chọn tất cả
-          </Checkbox>
+            {isGroupAllSelected(group) ? "Bỏ chọn" : "Chọn tất cả"}
+          </Button>
         </div>
       ),
       children: (
         <Row gutter={[16, 8]}>
-          {group.permissions.map(perm => (
-            <Col key={perm.name} xs={24} sm={12} md={8} lg={6} xl={4}>
+          {group.permissions.map((perm) => (
+            <Col key={perm.name} xs={24} sm={12} md={8}>
               <Checkbox
                 checked={selectedPermissions.has(perm.name)}
-                onChange={(e) => handlePermissionChange(perm.name, e.target.checked)}
+                onChange={(e) =>
+                  handlePermissionChange(perm.name, e.target.checked)
+                }
                 disabled={isStatic || !canEdit}
-                style={{ width: '100%' }}
+                style={{ width: "100%" }}
               >
                 <Text
                   style={{
@@ -256,28 +293,46 @@ const PermissionsTab: React.FC<PermissionsTabProps> = ({
     const items = [];
 
     // Add regular groups first
-    otherGroups.forEach(group => {
+    otherGroups.forEach((group) => {
       items.push(renderGroupItem(group));
     });
 
     // Add Master Data parent group if there are any master data groups
     if (masterDataGroups.length > 0) {
-      const totalMasterDataPerms = masterDataGroups.reduce((sum, g) => sum + g.permissions.length, 0);
+      const totalMasterDataPerms = masterDataGroups.reduce(
+        (sum, g) => sum + g.permissions.length,
+        0,
+      );
       const selectedMasterDataPerms = masterDataGroups.reduce(
-        (sum, g) => sum + g.permissions.filter(p => selectedPermissions.has(p.name)).length,
-        0
+        (sum, g) =>
+          sum +
+          g.permissions.filter((p) => selectedPermissions.has(p.name)).length,
+        0,
       );
 
       items.push({
-        key: 'MasterData',
+        key: "MasterData",
         label: (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 16 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              width: "100%",
+              gap: 16,
+            }}
+          >
             <Space size="small">
               <Text strong>Dữ liệu chủ</Text>
               <Badge
                 count={`${selectedMasterDataPerms}/${totalMasterDataPerms}`}
                 style={{
-                  backgroundColor: selectedMasterDataPerms === totalMasterDataPerms ? '#52c41a' : selectedMasterDataPerms > 0 ? '#1890ff' : '#d9d9d9',
+                  backgroundColor:
+                    selectedMasterDataPerms === totalMasterDataPerms
+                      ? "#52c41a"
+                      : selectedMasterDataPerms > 0
+                        ? "#1890ff"
+                        : "#d9d9d9",
                   fontSize: 12,
                 }}
               />
@@ -286,41 +341,66 @@ const PermissionsTab: React.FC<PermissionsTabProps> = ({
         ),
         children: (
           <div style={{ paddingLeft: 24 }}>
-            {masterDataGroups.map(group => {
+            {masterDataGroups.map((group) => {
               const { total, selected } = getGroupStats(group);
               return (
                 <div key={group.name} style={{ marginBottom: 16 }}>
-                  <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <Text strong style={{ fontSize: 15 }}>{group.displayName}</Text>
+                  <div
+                    style={{
+                      marginBottom: 8,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                    }}
+                  >
+                    <Text strong style={{ fontSize: 15 }}>
+                      {group.displayName}
+                    </Text>
                     <Badge
                       count={`${selected}/${total}`}
                       style={{
-                        backgroundColor: selected === total ? '#52c41a' : selected > 0 ? '#1890ff' : '#d9d9d9',
+                        backgroundColor:
+                          selected === total
+                            ? "#52c41a"
+                            : selected > 0
+                              ? "#1890ff"
+                              : "#d9d9d9",
                         fontSize: 11,
                       }}
                     />
-                    <Checkbox
-                      checked={isGroupAllSelected(group)}
-                      indeterminate={isGroupPartiallySelected(group)}
-                      onChange={(e) => handleGroupSelectAll(group.name, e.target.checked)}
+                    <Button
+                      type="primary"
+                      size="small"
+                      icon={<CheckOutlined />}
+                      className="select-all-btn"
                       disabled={isStatic || !canEdit}
+                      onClick={() =>
+                        handleGroupSelectAll(
+                          group.name,
+                          !isGroupAllSelected(group),
+                        )
+                      }
                     >
-                      <Text type="secondary" style={{ fontSize: 13 }}>Chọn tất cả</Text>
-                    </Checkbox>
+                      {isGroupAllSelected(group) ? "Bỏ chọn" : "Chọn tất cả"}
+                    </Button>
                   </div>
                   <Row gutter={[16, 8]}>
-                    {group.permissions.map(perm => (
-                      <Col key={perm.name} xs={24} sm={12} md={8} lg={6} xl={4}>
+                    {group.permissions.map((perm) => (
+                      <Col key={perm.name} xs={24} sm={12} md={8}>
                         <Checkbox
                           checked={selectedPermissions.has(perm.name)}
-                          onChange={(e) => handlePermissionChange(perm.name, e.target.checked)}
+                          onChange={(e) =>
+                            handlePermissionChange(perm.name, e.target.checked)
+                          }
                           disabled={isStatic || !canEdit}
-                          style={{ width: '100%' }}
+                          style={{ width: "100%" }}
                         >
                           <Text
                             style={{
                               fontSize: 13,
-                              fontWeight: selectedPermissions.has(perm.name) ? 500 : 400,
+                              fontWeight: selectedPermissions.has(perm.name)
+                                ? 500
+                                : 400,
                             }}
                           >
                             {perm.displayName}
@@ -341,69 +421,74 @@ const PermissionsTab: React.FC<PermissionsTabProps> = ({
   }, [otherGroups, masterDataGroups, selectedPermissions, isStatic, canEdit]);
 
   return (
-    <div>
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col xs={24} md={12} lg={14}>
-          <Input
-            placeholder="Tìm kiếm quyền truy cập..."
-            prefix={<SearchOutlined />}
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            allowClear
-            size="large"
+    <Card style={{ borderTopLeftRadius: 0 }} styles={{ body: { padding: 0 } }}>
+      <div className="role-permissions-toolbar">
+        <Input.Search
+          placeholder="Tìm kiếm quyền truy cập..."
+          allowClear
+          enterButton
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          style={{ width: 250 }}
+        />
+        <Space>
+          {hasChanges && (
+            <Badge dot>
+              <Text type="warning">Có thay đổi chưa được lưu</Text>
+            </Badge>
+          )}
+          <Button
+            type="primary"
+            icon={<SaveOutlined />}
+            onClick={handleSave}
+            loading={saving}
+            disabled={!hasChanges || isStatic || !canEdit}
+          >
+            Lưu thay đổi
+          </Button>
+        </Space>
+      </div>
+      <div className="role-permissions-body">
+        {isStatic && (
+          <div
+            style={{
+              marginBottom: 16,
+              padding: 12,
+              backgroundColor: "#fff7e6",
+              border: "1px solid #ffd591",
+              borderRadius: 6,
+            }}
+          >
+            <Text type="warning">
+              <strong>Lưu ý:</strong> Đây là nhóm quyền hệ thống, không thể
+              chỉnh sửa quyền truy cập.
+            </Text>
+          </div>
+        )}
+
+        {collapseItems.length === 0 ? (
+          <Empty
+            description={
+              searchText
+                ? `Không tìm thấy quyền nào phù hợp với "${searchText}"`
+                : "Không có quyền nào"
+            }
+            style={{ marginTop: 48 }}
           />
-        </Col>
-        <Col xs={24} md={12} lg={10} style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-          <Space>
-            {hasChanges && (
-              <Badge dot>
-                <Text type="warning">Có thay đổi chưa được lưu</Text>
-              </Badge>
-            )}
-            <Button
-              type="primary"
-              icon={<SaveOutlined />}
-              onClick={handleSave}
-              loading={saving}
-              disabled={!hasChanges || isStatic || !canEdit}
-              size="large"
-            >
-              Lưu thay đổi
-            </Button>
-          </Space>
-        </Col>
-      </Row>
-
-      {isStatic && (
-        <div style={{ marginBottom: 16, padding: 12, backgroundColor: '#fff7e6', border: '1px solid #ffd591', borderRadius: 6 }}>
-          <Text type="warning">
-            <strong>Lưu ý:</strong> Đây là nhóm quyền hệ thống, không thể chỉnh sửa quyền truy cập.
-          </Text>
-        </div>
-      )}
-
-      {collapseItems.length === 0 ? (
-        <Empty
-          description={
-            searchText
-              ? `Không tìm thấy quyền nào phù hợp với "${searchText}"`
-              : 'Không có quyền nào'
-          }
-          style={{ marginTop: 48 }}
-        />
-      ) : (
-        <Collapse
-          items={collapseItems}
-          activeKey={collapseItems.map(item => item.key)}
-          expandIconPosition="start"
-          style={{
-            backgroundColor: '#fff',
-            border: '1px solid #d9d9d9',
-            borderRadius: 8,
-          }}
-        />
-      )}
-    </div>
+        ) : (
+          <Collapse
+            className="role-permission-collapse"
+            items={collapseItems}
+            activeKey={collapseItems.map((item) => item.key)}
+            expandIconPosition="start"
+            style={{
+              backgroundColor: "#fff",
+              // border: "1px solid #d9d9d9",
+            }}
+          />
+        )}
+      </div>
+    </Card>
   );
 };
 

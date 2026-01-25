@@ -1,0 +1,184 @@
+/* RoleManagement Detail Page */
+
+/* UserListTab - toolbar */
+.role-management-detail .role-user-toolbar {
+  padding: 16px 16px 16px;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* PermissionsTab - toolbar */
+.role-management-detail .role-permissions-toolbar {
+  padding: 16px 16px 16px;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* PermissionsTab - body padding */
+.role-management-detail .role-permissions-body {
+  padding: 0 16px 16px;
+}
+
+/* Permission Collapse headers - #E6F7FF background */
+.role-permission-collapse .ant-collapse-header {
+  background: #E6F7FF !important;
+}
+
+/* Select all button - gradient */
+.role-permission-collapse .select-all-btn,
+.role-permissions-body .select-all-btn {
+  background: var(--gradient-primary) !important;
+  border: none !important;
+  color: #fff !important;
+  box-shadow: 0 2px 4px rgba(30, 99, 248, 0.3);
+}
+
+.role-permission-collapse .select-all-btn .anticon,
+.role-permissions-body .select-all-btn .anticon {
+  color: #fff !important;
+}
+
+.role-permission-collapse .select-all-btn:hover,
+.role-permissions-body .select-all-btn:hover {
+  opacity: 0.9;
+}
+
+.role-permission-collapse .select-all-btn:disabled,
+.role-permissions-body .select-all-btn:disabled {
+  background: #d9d9d9 !important;
+  color: rgba(0, 0, 0, 0.25) !important;
+  box-shadow: none;
+}
+
+.role-permission-collapse .select-all-btn:disabled .anticon,
+.role-permissions-body .select-all-btn:disabled .anticon {
+  color: rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Permission Collapse - grid layout on desktop */
+.role-permission-collapse.ant-collapse {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  border: none;
+  background: transparent;
+}
+
+.role-permission-collapse.ant-collapse > .ant-collapse-item {
+  border: 1px solid #d9d9d9;
+  border-radius: 8px !important;
+  overflow: hidden;
+}
+
+.role-permission-collapse.ant-collapse > .ant-collapse-item > .ant-collapse-header {
+  border-radius: 8px 8px 0 0 !important;
+}
+
+.role-permission-collapse.ant-collapse > .ant-collapse-item:last-child {
+  border-bottom: 1px solid #d9d9d9;
+}
+
+/* Responsive - single column on mobile/tablet */
+@media (max-width: 992px) {
+  .role-permission-collapse.ant-collapse {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Toolbar primary button - gradient */
+.role-management-detail .role-user-toolbar .ant-btn-primary,
+.role-management-detail .role-permissions-toolbar .ant-btn-primary {
+  background: var(--gradient-primary) !important;
+  border: none !important;
+  box-shadow: 0 2px 4px rgba(30, 99, 248, 0.3);
+  color: #fff !important;
+}
+
+.role-management-detail .role-user-toolbar .ant-btn-primary .anticon,
+.role-management-detail .role-permissions-toolbar .ant-btn-primary .anticon {
+  color: #fff !important;
+}
+
+.role-management-detail .role-user-toolbar .ant-btn-primary:hover,
+.role-management-detail .role-permissions-toolbar .ant-btn-primary:hover {
+  opacity: 0.9;
+}
+
+.role-management-detail .role-user-toolbar .ant-btn-primary:disabled,
+.role-management-detail .role-permissions-toolbar .ant-btn-primary:disabled {
+  background: #d9d9d9 !important;
+  color: rgba(0, 0, 0, 0.25) !important;
+  box-shadow: none;
+}
+
+.role-management-detail .role-user-toolbar .ant-btn-primary:disabled .anticon,
+.role-management-detail .role-permissions-toolbar .ant-btn-primary:disabled .anticon {
+  color: rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Table styling - no border radius */
+.role-management-detail .ant-table {
+  border-radius: 0;
+}
+
+.role-management-detail .ant-table-container {
+  border-radius: 0;
+}
+
+.role-management-detail .ant-table-thead > tr > th:first-child,
+.role-management-detail .ant-table-thead > tr > th:last-child {
+  border-radius: 0 !important;
+}
+
+.role-management-detail .ant-table-tbody > tr:last-child > td:first-child,
+.role-management-detail .ant-table-tbody > tr:last-child > td:last-child {
+  border-radius: 0 !important;
+}
+
+.role-management-detail .ant-table-thead > tr > th,
+.role-management-detail .ant-table-thead > tr > td {
+  background: #E6F7FF !important;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+/* Pagination - match list-card layout (total + pageSize left, pages right) */
+.role-management-detail .ant-table-pagination {
+  padding: 0 16px 16px;
+  margin: 16px 0 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.role-management-detail .ant-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.role-management-detail .ant-pagination .ant-pagination-total-text {
+  order: 1;
+  margin-right: 8px;
+}
+
+.role-management-detail .ant-pagination .ant-pagination-options {
+  order: 2;
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.role-management-detail .ant-pagination > li:not(.ant-pagination-total-text):not(.ant-pagination-options) {
+  order: 3;
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+  .role-management-detail .role-user-toolbar,
+  .role-management-detail .role-permissions-toolbar {
+    flex-direction: column;
+    gap: 12px;
+  }
+}

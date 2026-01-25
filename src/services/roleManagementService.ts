@@ -65,13 +65,6 @@ export interface GetRolesParams {
   filter?: string;
 }
 
-export interface GetRoleUsersParams {
-  skipCount?: number;
-  maxResultCount?: number;
-  sorting?: string;
-  filter?: string;
-}
-
 export interface PagedResult<T> {
   items: T[];
   totalCount: number;
@@ -151,10 +144,10 @@ const roleManagementService = {
   // ============ Users ============
 
   /**
-   * Get paginated list of users in a role
+   * Get list of users in a role
    */
-  getRoleUsers: async (roleId: string, params?: GetRoleUsersParams): Promise<PagedResult<RoleUserDto>> => {
-    const response = await api.get<PagedResult<RoleUserDto>>(`${BASE_URL}/${roleId}/users`, { params });
+  getRoleUsers: async (roleId: string): Promise<RoleUserDto[]> => {
+    const response = await api.get<RoleUserDto[]>(`${BASE_URL}/${roleId}/users`);
     return response.data;
   },
 

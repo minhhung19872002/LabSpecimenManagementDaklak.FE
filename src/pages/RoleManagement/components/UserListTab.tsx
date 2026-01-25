@@ -1,19 +1,17 @@
-import React, { useState } from 'react';
-import { Table, Button, Space, Input, Popconfirm, Tag } from 'antd';
-import { PlusOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
-import { RoleUserDto, GetRoleUsersParams } from '../../../services/roleManagementService';
-import AddUserModal from './AddUserModal';
-import { authService } from '../../../services/authService';
-import { PERMISSIONS } from '../../../constants/permissionMapping';
+import React, { useState } from "react";
+import { Table, Button, Input, Popconfirm, Tag, Card } from "antd";
+import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
+import type { ColumnsType } from "antd/es/table";
+import { RoleUserDto } from "../../../services/roleManagementService";
+import AddUserModal from "./AddUserModal";
+import { authService } from "../../../services/authService";
+import { PERMISSIONS } from "../../../constants/permissionMapping";
 
 interface UserListTabProps {
   roleId: string;
   users: RoleUserDto[];
   totalCount: number;
   loading: boolean;
-  params: GetRoleUsersParams;
-  onPageChange: (page: number, pageSize: number) => void;
   onSearch: (value: string) => void;
   onRemoveUser: (userId: string) => Promise<boolean>;
   onAddUser: (userId: string) => Promise<boolean>;
@@ -25,10 +23,8 @@ interface UserListTabProps {
 const UserListTab: React.FC<UserListTabProps> = ({
   roleId: _roleId,
   users,
-  totalCount,
+  totalCount: _totalCount,
   loading,
-  params,
-  onPageChange,
   onSearch,
   onRemoveUser,
   onAddUser,
@@ -37,58 +33,59 @@ const UserListTab: React.FC<UserListTabProps> = ({
   onSearchAvailableUsers,
 }) => {
   const [addUserModalOpen, setAddUserModalOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState('');
+  const [searchValue, setSearchValue] = useState("");
 
   const canEdit = authService.hasPermission(PERMISSIONS.RoleManagement.Edit);
 
   const columns: ColumnsType<RoleUserDto> = [
     {
-      title: 'Tên đăng nhập',
-      dataIndex: 'userName',
-      key: 'userName',
+      title: "Tên đăng nhập",
+      dataIndex: "userName",
+      key: "userName",
       width: 150,
     },
     {
-      title: 'Họ tên',
-      dataIndex: 'fullName',
-      key: 'fullName',
+      title: "Họ tên",
+      dataIndex: "fullName",
+      key: "fullName",
       width: 200,
     },
     {
-      title: 'Email',
-      dataIndex: 'email',
-      key: 'email',
+      title: "Email",
+      dataIndex: "email",
+      key: "email",
       width: 200,
     },
     {
-      title: 'Phòng ban',
-      dataIndex: 'departmentName',
-      key: 'departmentName',
+      title: "Phòng ban",
+      dataIndex: "departmentName",
+      key: "departmentName",
       width: 150,
     },
     {
-      title: 'Chức vụ',
-      dataIndex: 'position',
-      key: 'position',
+      title: "Chức vụ",
+      dataIndex: "position",
+      key: "position",
       width: 150,
     },
     {
-      title: 'Trạng thái',
-      dataIndex: 'isActive',
-      key: 'isActive',
+      title: "Trạng thái",
+      dataIndex: "isActive",
+      key: "isActive",
       width: 100,
-      align: 'center',
+      align: "center",
       render: (isActive: boolean) => (
-        <Tag color={isActive ? 'green' : 'red'}>
-          {isActive ? 'Hoạt động' : 'Vô hiệu'}
+        <Tag color={isActive ? "green" : "red"}>
+          {isActive ? "Hoạt động" : "Vô hiệu"}
         </Tag>
       ),
     },
     {
-      title: 'Thao tác',
-      key: 'actions',
+      title: "Thao tác",
+      key: "actions",
       width: 100,
-      align: 'center',
+      align: "center",
+      fixed: "right",
       render: (_, record) => {
         if (!canEdit) {
           return null;
@@ -103,12 +100,7 @@ const UserListTab: React.FC<UserListTabProps> = ({
             cancelText="Hủy"
             okButtonProps={{ danger: true }}
           >
-            <Button
-              type="text"
-              danger
-              icon={<DeleteOutlined />}
-              size="small"
-            />
+            <Button type="text" danger icon={<DeleteOutlined />} size="small" />
           </Popconfirm>
         );
       },
@@ -128,23 +120,17 @@ const UserListTab: React.FC<UserListTabProps> = ({
   };
 
   return (
-    <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-        <Space>
-          <Input
-            placeholder="Tìm kiếm người dùng..."
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            onPressEnter={handleSearch}
-            style={{ width: 250 }}
-            suffix={
-              <SearchOutlined
-                style={{ cursor: 'pointer', color: '#1890ff' }}
-                onClick={handleSearch}
-              />
-            }
-          />
-        </Space>
+    <Card style={{ borderTopLeftRadius: 0 }} styles={{ body: { padding: 0 } }}>
+      <div className="role-user-toolbar">
+        <Input.Search
+          placeholder="Tìm kiếm người dùng..."
+          allowClear
+          enterButton
+          value={searchValue}
+          onChange={(e) => setSearchValue(e.target.value)}
+          onSearch={handleSearch}
+          style={{ width: 250 }}
+        />
         {canEdit && (
           <Button
             type="primary"
@@ -161,15 +147,7 @@ const UserListTab: React.FC<UserListTabProps> = ({
         dataSource={users}
         rowKey="id"
         loading={loading}
-        pagination={{
-          current: Math.floor((params.skipCount || 0) / (params.maxResultCount || 10)) + 1,
-          pageSize: params.maxResultCount || 10,
-          total: totalCount,
-          onChange: onPageChange,
-          showSizeChanger: true,
-          showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
-          pageSizeOptions: [50, 100, 150],
-        }}
+        pagination={false}
         scroll={{ x: 1050 }}
         size="middle"
       />
@@ -182,7 +160,7 @@ const UserListTab: React.FC<UserListTabProps> = ({
         loading={availableUsersLoading}
         onSearch={onSearchAvailableUsers}
       />
-    </div>
+    </Card>
   );
 };
 
