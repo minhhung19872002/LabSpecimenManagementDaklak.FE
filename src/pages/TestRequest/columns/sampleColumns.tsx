@@ -1,21 +1,9 @@
-import { Tag, Typography } from "antd";
+import { Tag } from "antd";
 import { ColumnsType } from "antd/es/table";
-import {
-  TestRequestSampleDto,
-  IndicatorImageDto,
-} from "../../../types/testRequest";
-import {
-  IndicatorApprovalStatus,
-  IndicatorApprovalStatusLabels,
-  IndicatorApprovalStatusColors,
-} from "../../../types/laboratoryTask";
-import { formatDate } from "../../../utils/formatters";
+import { TestRequestSampleDto } from "../../../types/testRequest";
 import SampleImagesButton from "../components/SampleImagesButton";
-import IndicatorImageCell from "../../../components/common/IndicatorImageCell";
 import StatusTag from "../../../components/common/StatusTag";
-import { IndicatorName } from "../../../components/common";
-
-const { Text } = Typography;
+import IndicatorCollapsibleCell from "../components/IndicatorCollapsibleCell";
 
 interface SampleColumnsProps {
   onViewImages: (sample: TestRequestSampleDto) => void;
@@ -119,145 +107,7 @@ export const getSampleColumns = ({
     width: 350,
     render: (indicators: any[]) => {
       if (!indicators || indicators.length === 0) return "-";
-
-      // Group indicators by laboratory
-      const unsentIndicators = indicators.filter((ind) => !ind.laboratoryId);
-      const sentIndicators = indicators.filter((ind) => ind.laboratoryId);
-      const groupedByLab: Record<
-        string,
-        { labName: string; indicators: any[] }
-      > = {};
-
-      sentIndicators.forEach((ind) => {
-        const labId = ind.laboratoryId;
-        if (!groupedByLab[labId]) {
-          groupedByLab[labId] = {
-            labName: ind.laboratoryName || "Khoa phòng",
-            indicators: [],
-          };
-        }
-        groupedByLab[labId].indicators.push(ind);
-      });
-
-      const renderIndicator = (ind: any, idx: number) => {
-        // Get approval status info
-        const hasApprovalStatus =
-          ind.approvalStatus !== undefined && ind.approvalStatus !== null;
-        const approvalStatusLabel = hasApprovalStatus
-          ? IndicatorApprovalStatusLabels[
-              ind.approvalStatus as IndicatorApprovalStatus
-            ]
-          : null;
-        const approvalStatusColor = hasApprovalStatus
-          ? IndicatorApprovalStatusColors[
-              ind.approvalStatus as IndicatorApprovalStatus
-            ]
-          : null;
-
-        // Get indicator images
-        const indicatorImages: IndicatorImageDto[] = ind.images || [];
-
-        return (
-          <div
-            key={idx}
-            style={{
-              marginBottom: 4,
-              padding: "4px 8px",
-              background: "#f5f5f5",
-              borderRadius: 4,
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                flexWrap: "wrap",
-              }}
-            >
-              <Tag color="blue" style={{ margin: 0, fontSize: 11 }}>
-                {ind.indicatorCode || ind.indicatorName}
-              </Tag>
-              <IndicatorName name={ind.indicatorName} formattedName={ind.indicatorFormattedName} style={{ fontSize: 11 }} />
-              {ind.originalUnitPrice ? (
-                <span style={{ fontSize: 11 }}>
-                  (<span style={{ textDecoration: "line-through", color: "#bbb" }}>
-                    {ind.originalUnitPrice.toLocaleString("vi-VN")}đ
-                  </span>{" "}
-                  <span style={{ color: "#52c41a", fontWeight: 600 }}>0đ</span>)
-                </span>
-              ) : ind.unitPrice > 0 ? (
-                <Text type="secondary" style={{ fontSize: 11 }}>
-                  ({ind.unitPrice?.toLocaleString("vi-VN")}đ)
-                </Text>
-              ) : null}
-              {/* Trạng thái duyệt */}
-              {hasApprovalStatus && approvalStatusLabel && (
-                <StatusTag
-                  color={approvalStatusColor || "default"}
-                  style={{ fontSize: 10, minWidth: 55 }}
-                >
-                  {approvalStatusLabel}
-                </StatusTag>
-              )}
-            </div>
-            <div style={{ fontSize: 10, color: "#888", marginTop: 2 }}>
-              {ind.requestDate && (
-                <span>YC xong: {formatDate(ind.requestDate)}</span>
-              )}
-              {ind.requestDate && ind.testDate && (
-                <span style={{ margin: "0 4px" }}>|</span>
-              )}
-              {ind.testDate && <span>Ngày TN: {formatDate(ind.testDate)}</span>}
-            </div>
-            {/* Hình ảnh của chỉ tiêu */}
-            {indicatorImages.length > 0 && (
-              <div style={{ marginTop: 4 }}>
-                <IndicatorImageCell
-                  images={indicatorImages}
-                  canUpload={false}
-                  maxImages={5}
-                />
-              </div>
-            )}
-          </div>
-        );
-      };
-
-      return (
-        <div style={{ maxHeight: 300, overflowY: "auto" }}>
-          {/* Unsent indicators */}
-          {unsentIndicators.length > 0 && (
-            <div style={{ marginBottom: 8 }}>
-              {unsentIndicators.map((ind, idx) => renderIndicator(ind, idx))}
-            </div>
-          )}
-
-          {/* Grouped by laboratory */}
-          {Object.entries(groupedByLab).map(
-            ([labId, { labName, indicators: labIndicators }]) => (
-              <div key={labId} style={{ marginBottom: 8 }}>
-                <div
-                  style={{
-                    padding: "4px 8px",
-                    fontWeight: 600,
-                    fontSize: 12,
-                    color: "#000",
-                    background: "#e6e6e6",
-                    borderRadius: 4,
-                    marginBottom: 4,
-                  }}
-                >
-                  {labName} ({labIndicators.length})
-                </div>
-                <div style={{ paddingLeft: 8 }}>
-                  {labIndicators.map((ind, idx) => renderIndicator(ind, idx))}
-                </div>
-              </div>
-            )
-          )}
-        </div>
-      );
+      return <IndicatorCollapsibleCell indicators={indicators} />;
     },
   },
   {

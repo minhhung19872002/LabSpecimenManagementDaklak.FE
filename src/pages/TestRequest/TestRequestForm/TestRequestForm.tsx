@@ -28,7 +28,6 @@ import {
   ContractInfoSection,
   CustomerInfoSection,
   SampleTableSection,
-  SampleTypeSection,
   MethodRequirementSection,
   ResultRequirementSection,
   SamplingDeliverySection,
@@ -263,8 +262,8 @@ const TestRequestForm: React.FC = () => {
             sampleStorageOption: SampleStorageOption.No,
           }}
         >
-          {/* Top sections row: Hợp đồng, Khách hàng, Loại hình mẫu */}
-          <div className="form-top-row">
+          {/* Top sections row: Hợp đồng (bao gồm Loại hình mẫu), Khách hàng */}
+          <div className="form-top-row form-top-row-2cols">
             <div className="form-top-col-left">
               <ContractInfoSection
                 isEditMode={isEditMode}
@@ -273,7 +272,7 @@ const TestRequestForm: React.FC = () => {
                 currentStatus={currentStatus}
               />
             </div>
-            <div className="form-top-col-center">
+            <div className="form-top-col-right">
               <CustomerInfoSection
                 form={form}
                 isFieldLocked={isFieldLocked}
@@ -290,9 +289,6 @@ const TestRequestForm: React.FC = () => {
                 handleOrganizationSelect={handleOrganizationSelect}
                 handlePhoneBlur={handlePhoneBlur}
               />
-            </div>
-            <div className="form-top-col-right">
-              <SampleTypeSection />
             </div>
           </div>
 
@@ -447,7 +443,15 @@ const TestRequestForm: React.FC = () => {
         <Button onClick={handlePreviewForm} loading={loading}>
           Xem phiếu
         </Button>
-        <Button type="primary" onClick={() => form.submit()} loading={loading}>
+        <Button
+          type="primary"
+          onClick={() => form.submit()}
+          loading={loading}
+          style={{
+            background: "linear-gradient(135deg, #1890ff 0%, #096dd9 100%)",
+            borderColor: "transparent",
+          }}
+        >
           {isEditMode ? "Cập nhật" : "Tạo yêu cầu"}
         </Button>
       </Space>

@@ -38,7 +38,7 @@
   }
 }
 
-/* Top sections row: 3 columns (contract, customer, sample type) */
+/* Top sections row: 2 columns (contract+sampleType, customer) */
 .test-request-form .form-top-row {
   display: flex;
   gap: 16px;
@@ -65,9 +65,23 @@
   min-width: 0;
 }
 
+/* 2 columns layout: left smaller, right bigger */
+.test-request-form .form-top-row-2cols .form-top-col-left {
+  flex: 1;
+  max-width: 520px;
+}
+
+.test-request-form .form-top-row-2cols .form-top-col-right {
+  flex: 2;
+}
+
 @media (max-width: 991px) {
   .test-request-form .form-top-row {
     flex-direction: column;
+  }
+
+  .test-request-form .form-top-row-2cols .form-top-col-left {
+    max-width: 100%;
   }
 }
 
