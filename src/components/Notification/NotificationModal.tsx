@@ -18,6 +18,10 @@ import {
   NotificationDto,
   NotificationType,
   NotificationTypeLabels,
+  getNotificationIcon,
+  getNotificationIconColor,
+  getNotificationIconBgColor,
+  parseNotificationAdditionalData,
 } from '../../services/notificationService';
 import './NotificationModal.css';
 
@@ -244,6 +248,16 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
     const isUnread = !notification.isRead;
     const daysRemaining = notification.daysRemaining;
     const isDeadline = isDeadlineNotification(notification.type);
+    const additionalData = parseNotificationAdditionalData(notification.additionalData);
+    const iconClass = getNotificationIcon(notification.type);
+    const iconColor = getNotificationIconColor(notification.type);
+    const iconBgColor = getNotificationIconBgColor(notification.type);
+
+    // Build title with contract number
+    const contractNumber = additionalData?.contractNumber;
+    const displayTitle = contractNumber
+      ? `${notification.title} - HĐ: ${contractNumber}`
+      : notification.title;
 
     return (
       <List.Item
@@ -251,33 +265,42 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
         onClick={() => handleNotificationClick(notification)}
       >
         <div className="notification-modal-item-content">
-          <div className="notification-modal-item-header">
-            {/* Creation time */}
-            <Text type="secondary" className="notification-modal-time">
-              {dayjs(notification.creationTime).format('HH:mm [ngày] DD/MM/YYYY')}
-            </Text>
-
-            {/* Type tag */}
-            <Tag color={isUnread ? 'blue' : 'default'} className="notification-modal-type">
-              {NotificationTypeLabels[notification.type] || 'Thông báo'}
-            </Tag>
+          {/* Icon on the left */}
+          <div className="notification-modal-icon-wrapper" style={{ backgroundColor: iconBgColor }}>
+            <i className={`notification-modal-icon ${iconClass}`} style={{ color: iconColor }} />
           </div>
 
-          {/* Message content */}
-          <div className="notification-modal-message">
-            {parseMessage(notification.message)}
-          </div>
-
-          {/* Days remaining for deadline notifications */}
-          {daysRemaining !== null && daysRemaining !== undefined && (
-            <div className={`notification-modal-deadline ${daysRemaining <= 0 ? 'overdue' : ''} ${isDeadline ? 'is-deadline-type' : ''}`}>
-              {daysRemaining > 0
-                ? `Còn ${daysRemaining} ngày`
-                : daysRemaining === 0
-                  ? 'Hết hạn hôm nay'
-                  : `Quá hạn ${Math.abs(daysRemaining)} ngày`}
+          {/* Content on the right */}
+          <div className="notification-modal-content">
+            {/* Header: Title + Type Tag */}
+            <div className="notification-modal-header">
+              <span className="notification-modal-title">{displayTitle}</span>
+              <Tag color={isUnread ? 'blue' : 'default'} className="notification-modal-type">
+                {NotificationTypeLabels[notification.type] || 'Thông báo'}
+              </Tag>
             </div>
-          )}
+
+            {/* Message content (description) */}
+            <div className="notification-modal-message">
+              {parseMessage(notification.message)}
+            </div>
+
+            {/* Footer: Time + Days remaining */}
+            <div className="notification-modal-footer">
+              <Text type="secondary" className="notification-modal-time">
+                {dayjs(notification.creationTime).format('DD/MM/YYYY HH:mm')}
+              </Text>
+              {daysRemaining !== null && daysRemaining !== undefined && (
+                <span className={`notification-modal-deadline ${daysRemaining <= 0 ? 'overdue' : ''} ${isDeadline ? 'is-deadline-type' : ''}`}>
+                  {daysRemaining > 0
+                    ? `Còn ${daysRemaining} ngày`
+                    : daysRemaining === 0
+                    ? 'Hôm nay'
+                    : `Quá hạn ${Math.abs(daysRemaining)} ngày`}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       </List.Item>
     );

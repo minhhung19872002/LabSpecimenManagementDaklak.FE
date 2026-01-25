@@ -8,8 +8,8 @@
   border-bottom: 1px solid #f0f0f0;
 }
 
-/* Modal Header */
-.notification-modal-header {
+/* Modal Title Header (in ant-modal-header) */
+.notification-modal-title-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -74,42 +74,83 @@
 
 .notification-modal-item-content {
   width: 100%;
+  display: flex;
+  gap: 12px;
 }
 
-/* Item Header */
-.notification-modal-item-header {
+/* Icon on the left */
+.notification-modal-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.notification-modal-icon {
+  font-size: 18px;
+}
+
+/* Content on the right */
+.notification-modal-content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Header: Title + Type Tag */
+.notification-modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
+  gap: 12px;
 }
 
-.notification-modal-time {
-  font-size: 12px;
+.notification-modal-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #000000;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.notification-modal-item.unread .notification-modal-title {
+  color: #000000;
 }
 
 .notification-modal-type {
   font-size: 11px;
+  flex-shrink: 0;
 }
 
 /* Message */
 .notification-modal-message {
   line-height: 1.6;
   font-size: 14px;
-  color: #262626;
+  color: #595959;
   white-space: pre-wrap;
+  margin-bottom: 6px;
 }
 
-.notification-modal-item.unread .notification-modal-message {
-  font-weight: 500;
+/* Footer: Time + Deadline */
+.notification-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.notification-modal-time {
+  font-size: 12px;
 }
 
 /* Deadline */
 .notification-modal-deadline {
-  text-align: right;
-  font-size: 13px;
+  font-size: 12px;
   color: #52c41a;
-  margin-top: 10px;
   font-weight: 500;
 }
 

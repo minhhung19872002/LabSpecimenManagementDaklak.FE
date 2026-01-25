@@ -1,7 +1,20 @@
 // @ts-nocheck
 import React, { useState, useEffect } from "react";
-import { Form, Radio, Checkbox, DatePicker, Row, Col, Typography, InputNumber, Space } from "antd";
-import { SamplingRequirement, SampleStorageOption } from "../../../../types/testRequest";
+import {
+  Form,
+  Radio,
+  Checkbox,
+  DatePicker,
+  Row,
+  Col,
+  Typography,
+  InputNumber,
+  Space,
+} from "antd";
+import {
+  SamplingRequirement,
+  SampleStorageOption,
+} from "../../../../types/testRequest";
 import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
@@ -114,7 +127,9 @@ const SamplingDeliverySection: React.FC = () => {
       </Title>
       <Row gutter={[16, 12]}>
         <Col xs={24} sm={8}>
-          <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>Lấy mẫu:</Text>
+          <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>
+            Lấy mẫu:
+          </Text>
           <Form.Item name="samplingRequirement" style={{ marginBottom: 0 }}>
             <Radio.Group
               style={{
@@ -133,7 +148,9 @@ const SamplingDeliverySection: React.FC = () => {
           </Form.Item>
         </Col>
         <Col xs={24} sm={8}>
-          <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>Lưu mẫu:</Text>
+          <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>
+            Lưu mẫu:
+          </Text>
           <Form.Item name="sampleStorageOption" style={{ marginBottom: 0 }}>
             <Radio.Group
               style={{
@@ -143,9 +160,7 @@ const SamplingDeliverySection: React.FC = () => {
               }}
             >
               <Radio value={SampleStorageOption.No}>Không</Radio>
-              <Radio value={SampleStorageOption.Yes}>
-                Có (theo QĐ của TT)
-              </Radio>
+              <Radio value={SampleStorageOption.Yes}>Có (theo QĐ của TT)</Radio>
             </Radio.Group>
           </Form.Item>
         </Col>
@@ -176,32 +191,32 @@ const SamplingDeliverySection: React.FC = () => {
         </Col>
       </Row>
       <Row gutter={[16, 8]} style={{ marginTop: 12 }}>
-        <Col xs={24}>
-          <div className="form-field-mobile">
-            <Text className="form-field-label">Ngày trả KQ:</Text>
-            <div className="delivery-date-inputs">
-              <Space size={4}>
-                <InputNumber
-                  min={1}
-                  max={999}
-                  maxLength={3}
-                  placeholder="Số"
-                  style={{ width: 70 }}
-                  value={workingDaysValue}
-                  onChange={handleWorkingDaysChange}
-                  controls={false}
-                />
-                <Text>ngày</Text>
-              </Space>
-              <Form.Item name="expectedCompletionDate" style={{ marginBottom: 0 }}>
-                <DatePicker
-                  format="DD/MM/YYYY"
-                  style={{ width: 130 }}
-                  onChange={handleDateChange}
-                />
-              </Form.Item>
-            </div>
-          </div>
+        <Col xs={12} sm={8} md={5}>
+          <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>
+            Số ngày:
+          </Text>
+          <InputNumber
+            min={1}
+            max={999}
+            maxLength={3}
+            type="number"
+            placeholder="Nhập"
+            style={{ width: "100%", height: 32 }}
+            value={workingDaysValue}
+            onChange={handleWorkingDaysChange}
+          />
+        </Col>
+        <Col xs={12} sm={8} md={7}>
+          <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>
+            Ngày trả KQ:
+          </Text>
+          <Form.Item name="expectedCompletionDate" style={{ marginBottom: 0 }}>
+            <DatePicker
+              format="DD/MM/YYYY"
+              style={{ width: "100%", height: 32 }}
+              onChange={handleDateChange}
+            />
+          </Form.Item>
         </Col>
       </Row>
     </div>
