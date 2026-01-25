@@ -1,4 +1,9 @@
 /* Notification Modal */
+.notification-modal .ant-modal-container {
+  padding: 0;
+  overflow: hidden;
+}
+
 .notification-modal .ant-modal-body {
   padding: 0;
 }
@@ -20,7 +25,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 24px;
+  padding: 12px 16px;
   border-bottom: 1px solid #f0f0f0;
   background-color: #fafafa;
 }
@@ -50,7 +55,7 @@
 
 /* Notification Item */
 .notification-modal-item {
-  padding: 16px 24px !important;
+  padding: 12px 16px !important;
   cursor: pointer;
   transition: background-color 0.2s;
   border-bottom: 1px solid #f0f0f0 !important;
@@ -66,6 +71,7 @@
 
 .notification-modal-item.unread {
   background-color: #e6f7ff;
+  border-bottom: 1px solid #F0F0F0 !important;
 }
 
 .notification-modal-item.unread:hover {
@@ -83,14 +89,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
 .notification-modal-icon {
-  font-size: 18px;
+  font-size: 16px;
 }
 
 /* Content on the right */
@@ -104,12 +110,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 6px;
-  gap: 12px;
+  margin-bottom: 4px;
+  gap: 8px;
 }
 
 .notification-modal-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: #000000;
   overflow: hidden;
@@ -129,11 +135,17 @@
 
 /* Message */
 .notification-modal-message {
-  line-height: 1.6;
-  font-size: 14px;
-  color: #595959;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.5;
+  font-size: 13px;
+  color: #434343;
   white-space: pre-wrap;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 /* Footer: Time + Deadline */
@@ -145,6 +157,7 @@
 
 .notification-modal-time {
   font-size: 12px;
+  color: #8c8c8c;
 }
 
 /* Deadline */
@@ -165,13 +178,13 @@
 
 /* Load More Button */
 .notification-modal-load-more {
-  padding: 16px 24px;
+  padding: 12px 16px;
   border-top: 1px solid #f0f0f0;
 }
 
 .notification-modal-load-more .ant-btn {
-  height: 40px;
-  font-size: 14px;
+  height: 36px;
+  font-size: 13px;
 }
 
 /* Scrollbar */
