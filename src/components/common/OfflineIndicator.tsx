@@ -1,6 +1,6 @@
 import React from 'react';
 import { Badge, Tooltip, Button, Space, Popover, Typography, Spin } from 'antd';
-import { WifiOutlined, CloudSyncOutlined, SyncOutlined } from '@ant-design/icons';
+import { WifiOutlined, CloudSyncOutlined, SyncOutlined, WarningOutlined } from '@ant-design/icons';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 
 const { Text } = Typography;
@@ -16,10 +16,10 @@ interface OfflineIndicatorProps {
 export const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({
   showSyncButton = true,
 }) => {
-  const { isOnline, pendingCount, isSyncing, sync, retryFailed } = useNetworkStatus();
+  const { isOnline, pendingCount, failedCount, isSyncing, sync, retryFailed, clearFailed, resetFailed } = useNetworkStatus();
 
-  // Don't show anything if online with no pending items
-  if (isOnline && pendingCount === 0 && !isSyncing) {
+  // Don't show anything if online with no pending/failed items and not syncing
+  if (isOnline && pendingCount === 0 && failedCount === 0 && !isSyncing) {
     return null;
   }
 
@@ -31,8 +31,16 @@ export const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({
     await retryFailed();
   };
 
+  const handleClearFailed = async () => {
+    await clearFailed();
+  };
+
+  const handleResetFailed = async () => {
+    await resetFailed();
+  };
+
   const popoverContent = (
-    <Space direction="vertical" size="small" style={{ width: 200 }}>
+    <Space direction="vertical" size="small" style={{ width: 220 }}>
       <Space>
         {isOnline ? (
           <Badge status="success" text="Online" />
@@ -47,6 +55,12 @@ export const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({
         </Text>
       )}
 
+      {failedCount > 0 && (
+        <Text type="danger">
+          {failedCount} item(s) failed to sync
+        </Text>
+      )}
+
       {isSyncing && (
         <Space>
           <Spin size="small" />
@@ -55,7 +69,7 @@ export const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({
       )}
 
       {showSyncButton && isOnline && pendingCount > 0 && !isSyncing && (
-        <Space>
+        <Space wrap>
           <Button
             type="primary"
             size="small"
@@ -69,6 +83,26 @@ export const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({
             onClick={handleRetry}
           >
             Retry Failed
+          </Button>
+        </Space>
+      )}
+
+      {failedCount > 0 && isOnline && !isSyncing && (
+        <Space wrap>
+          <Button
+            size="small"
+            onClick={handleResetFailed}
+            title="Reset retry count and try again"
+          >
+            Reset & Retry
+          </Button>
+          <Button
+            size="small"
+            danger
+            onClick={handleClearFailed}
+            title="Permanently remove failed items"
+          >
+            Clear Failed
           </Button>
         </Space>
       )}
@@ -101,11 +135,13 @@ export const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({
           </Tooltip>
         )}
 
-        {pendingCount > 0 && (
-          <Tooltip title={`${pendingCount} pending sync item(s)`}>
-            <Badge count={pendingCount} size="small" offset={[-3, 3]}>
+        {(pendingCount > 0 || failedCount > 0) && (
+          <Tooltip title={`${pendingCount} pending, ${failedCount} failed`}>
+            <Badge count={pendingCount + failedCount} size="small" offset={[-3, 3]}>
               {isSyncing ? (
                 <SyncOutlined spin style={{ fontSize: 18, color: '#1890ff' }} />
+              ) : failedCount > 0 ? (
+                <WarningOutlined style={{ fontSize: 18, color: '#ff4d4f' }} />
               ) : (
                 <CloudSyncOutlined style={{ fontSize: 18, color: '#faad14' }} />
               )}
@@ -113,7 +149,7 @@ export const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({
           </Tooltip>
         )}
 
-        {isOnline && pendingCount === 0 && isSyncing && (
+        {isOnline && pendingCount === 0 && failedCount === 0 && isSyncing && (
           <Tooltip title="Syncing...">
             <SyncOutlined spin style={{ fontSize: 18, color: '#1890ff' }} />
           </Tooltip>

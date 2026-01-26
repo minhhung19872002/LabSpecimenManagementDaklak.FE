@@ -96,15 +96,27 @@ class SyncManager {
   private isSyncing: boolean = false;
   private syncInterval: number | null = null;
   private eventListeners: Map<SyncEventType, Set<SyncEventCallback>> = new Map();
+  private isInitialized: boolean = false;
+
+  // Store bound handlers as class properties so they can be removed properly
+  private boundHandleOnline = this.handleOnline.bind(this);
+  private boundHandleOffline = this.handleOffline.bind(this);
 
   constructor() {
-    window.addEventListener('online', this.handleOnline.bind(this));
-    window.addEventListener('offline', this.handleOffline.bind(this));
+    window.addEventListener('online', this.boundHandleOnline);
+    window.addEventListener('offline', this.boundHandleOffline);
     this.isOnline = navigator.onLine;
   }
 
   async init(): Promise<void> {
+    // Prevent multiple initializations
+    if (this.isInitialized) {
+      console.log('[SyncManager] Already initialized, skipping');
+      return;
+    }
+
     console.log('[SyncManager] Initializing, online status:', this.isOnline);
+    this.isInitialized = true;
     await getDB();
     if (this.isOnline) {
       this.startPeriodicSync();
@@ -446,11 +458,55 @@ class SyncManager {
     return data;
   }
 
+  /**
+   * Clear all permanently failed items (retryCount >= 3)
+   */
+  async clearFailedItems(): Promise<void> {
+    const db = await getDB();
+    const failedItems = await db.getAllFromIndex('syncQueue', 'by-status', 'failed');
+
+    for (const item of failedItems) {
+      await removeSyncItem(item.clientId);
+    }
+
+    await this.notifyPendingCountChange();
+  }
+
+  /**
+   * Reset retry count for all failed items so they can be retried again
+   */
+  async resetFailedItems(): Promise<void> {
+    const db = await getDB();
+    const failedItems = await db.getAllFromIndex('syncQueue', 'by-status', 'failed');
+
+    for (const item of failedItems) {
+      item.retryCount = 0;
+      item.status = 'pending';
+      item.updatedAt = new Date();
+      await db.put('syncQueue', item);
+    }
+
+    await this.notifyPendingCountChange();
+
+    if (this.isOnline) {
+      await this.sync();
+    }
+  }
+
+  /**
+   * Get count of failed items
+   */
+  async getFailedCount(): Promise<number> {
+    const db = await getDB();
+    return db.countFromIndex('syncQueue', 'by-status', 'failed');
+  }
+
   destroy(): void {
     this.stopPeriodicSync();
-    window.removeEventListener('online', this.handleOnline.bind(this));
-    window.removeEventListener('offline', this.handleOffline.bind(this));
+    window.removeEventListener('online', this.boundHandleOnline);
+    window.removeEventListener('offline', this.boundHandleOffline);
     this.eventListeners.clear();
+    this.isInitialized = false;
   }
 }
 

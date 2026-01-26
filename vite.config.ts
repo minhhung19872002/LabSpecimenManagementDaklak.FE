@@ -39,9 +39,9 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
-        // Exclude large files from precache
+        // Exclude very large files from precache (will be cached on first use via runtime caching)
         globIgnores: ['**/vietnamLocations*.js'],
-        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3MB limit
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB limit for precache
         // Navigate fallback for SPA - serves index.html for all navigation requests when offline
         navigateFallback: 'index.html',
         navigateFallbackDenylist: [/^\/api\//],
@@ -49,6 +49,21 @@ export default defineConfig({
         skipWaiting: true,
         clientsClaim: true,
         runtimeCaching: [
+          {
+            // Cache JS chunks that weren't precached (large files like vietnamLocations)
+            urlPattern: /\.js$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'js-chunks-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          },
           {
             // Cache API responses with NetworkFirst strategy
             urlPattern: /^https?:\/\/.*\/api\/v1\/.*/i,

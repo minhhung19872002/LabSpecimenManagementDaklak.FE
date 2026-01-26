@@ -3,6 +3,186 @@ import { STORAGE_KEYS } from '../constants';
 
 const AUTH_URL = '/api/v1/auth';
 
+/**
+ * Cached credentials structure for offline login
+ */
+interface OfflineCredentials {
+  userNameOrEmail: string;
+  passwordHash: string; // Hash of the password
+  hashMethod: 'sha256' | 'simple'; // Which hash method was used
+  accessToken: string;
+  refreshToken: string;
+  user: UserInfo;
+  cachedAt: string; // ISO timestamp
+}
+
+/**
+ * Simple hash function as fallback when Web Crypto API is not available
+ * Uses a basic string hashing algorithm (djb2 variant with multiple passes)
+ * Note: This is less secure than SHA-256 but works in all contexts
+ */
+function simpleHash(str: string): string {
+  let hash1 = 5381;
+  let hash2 = 52711;
+
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash1 = ((hash1 << 5) + hash1) ^ char;
+    hash2 = ((hash2 << 5) + hash2) ^ char;
+  }
+
+  // Combine hashes and convert to hex string
+  const combined = (hash1 >>> 0).toString(16).padStart(8, '0') +
+                   (hash2 >>> 0).toString(16).padStart(8, '0');
+
+  // Additional passes for more entropy
+  let result = combined;
+  for (let i = 0; i < 3; i++) {
+    let h = 0;
+    for (let j = 0; j < result.length; j++) {
+      h = ((h << 5) - h) + result.charCodeAt(j);
+      h = h & h;
+    }
+    result = (h >>> 0).toString(16).padStart(8, '0') + result;
+  }
+
+  return result.slice(0, 64); // Return 64 char hash similar to SHA-256
+}
+
+/**
+ * Hash a password using SHA-256 (Web Crypto API) with fallback
+ * Web Crypto API requires secure context (HTTPS or localhost)
+ * Returns both the hash and the method used for consistent validation
+ */
+async function hashPassword(password: string): Promise<{ hash: string; method: 'sha256' | 'simple' }> {
+  // Check if Web Crypto API is available (requires secure context)
+  if (typeof crypto !== 'undefined' && crypto.subtle) {
+    try {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(password);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      return { hash, method: 'sha256' };
+    } catch (error) {
+      console.warn('Web Crypto API failed, using fallback hash:', error);
+    }
+  } else {
+    console.warn('Web Crypto API not available (requires HTTPS), using fallback hash');
+  }
+
+  // Fallback to simple hash
+  return { hash: simpleHash(password), method: 'simple' };
+}
+
+/**
+ * Hash a password using a specific method (for validation against cached credentials)
+ */
+async function hashPasswordWithMethod(password: string, method: 'sha256' | 'simple'): Promise<string> {
+  if (method === 'sha256') {
+    // Try SHA-256, but fall back to simple if not available
+    if (typeof crypto !== 'undefined' && crypto.subtle) {
+      try {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(password);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      } catch (error) {
+        console.warn('Web Crypto API failed during validation:', error);
+        // Can't validate SHA-256 hash without crypto API
+        throw new Error('CRYPTO_UNAVAILABLE');
+      }
+    } else {
+      throw new Error('CRYPTO_UNAVAILABLE');
+    }
+  }
+
+  // Simple hash method
+  return simpleHash(password);
+}
+
+/**
+ * Cache credentials for offline login after successful online login
+ */
+async function cacheCredentialsForOffline(
+  userNameOrEmail: string,
+  password: string,
+  accessToken: string,
+  refreshToken: string,
+  user: UserInfo
+): Promise<void> {
+  try {
+    const { hash: passwordHash, method: hashMethod } = await hashPassword(password);
+    const credentials: OfflineCredentials = {
+      userNameOrEmail: userNameOrEmail.toLowerCase(), // Normalize for comparison
+      passwordHash,
+      hashMethod,
+      accessToken,
+      refreshToken,
+      user,
+      cachedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(STORAGE_KEYS.OFFLINE_AUTH_CREDENTIALS, JSON.stringify(credentials));
+    console.log('[Offline Auth] Credentials cached successfully using', hashMethod, 'hash method');
+  } catch (error) {
+    console.error('[Offline Auth] Failed to cache credentials:', error);
+  }
+}
+
+/**
+ * Get cached offline credentials
+ */
+function getOfflineCredentials(): OfflineCredentials | null {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.OFFLINE_AUTH_CREDENTIALS);
+    if (!stored) return null;
+    return JSON.parse(stored) as OfflineCredentials;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Validate credentials offline against cached credentials
+ */
+async function validateOfflineCredentials(
+  userNameOrEmail: string,
+  password: string
+): Promise<OfflineCredentials | null> {
+  const cached = getOfflineCredentials();
+  if (!cached) {
+    console.log('[Offline Auth] No cached credentials found');
+    return null;
+  }
+
+  // Check if username matches (case-insensitive)
+  if (cached.userNameOrEmail !== userNameOrEmail.toLowerCase()) {
+    console.log('[Offline Auth] Username does not match cached credentials');
+    return null;
+  }
+
+  // Verify password hash using the same method that was used to cache
+  const hashMethod = cached.hashMethod || 'simple'; // Default to simple for old cached data
+  try {
+    const passwordHash = await hashPasswordWithMethod(password, hashMethod);
+    if (cached.passwordHash !== passwordHash) {
+      console.log('[Offline Auth] Password hash does not match');
+      return null;
+    }
+  } catch (error) {
+    // If crypto is unavailable and the cached hash was SHA-256, we can't validate
+    if ((error as Error).message === 'CRYPTO_UNAVAILABLE') {
+      console.warn('[Offline Auth] Cannot validate SHA-256 hash without crypto API. User needs to re-login online.');
+      return null;
+    }
+    throw error;
+  }
+
+  console.log('[Offline Auth] Credentials validated successfully');
+  return cached;
+}
+
 export interface LoginRequest {
   userNameOrEmail: string;
   password: string;
@@ -67,7 +247,63 @@ export const authService = {
       localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
     }
 
+    // Cache credentials for offline login on successful login
+    if (data.success && accessToken && refreshToken && data.user) {
+      await cacheCredentialsForOffline(
+        credentials.userNameOrEmail,
+        credentials.password,
+        accessToken,
+        refreshToken,
+        data.user
+      );
+    }
+
     return data;
+  },
+
+  /**
+   * Login offline using cached credentials
+   * Returns LoginResponse if credentials match cached data
+   * Throws error if no cached credentials or credentials don't match
+   */
+  loginOffline: async (credentials: LoginRequest): Promise<LoginResponse> => {
+    const cached = await validateOfflineCredentials(
+      credentials.userNameOrEmail,
+      credentials.password
+    );
+
+    if (!cached) {
+      throw new Error('OFFLINE_AUTH_FAILED');
+    }
+
+    // Restore session from cached data
+    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, cached.accessToken);
+    localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, cached.refreshToken);
+    localStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(cached.user));
+
+    return {
+      success: true,
+      accessToken: cached.accessToken,
+      refreshToken: cached.refreshToken,
+      expiresIn: 0, // Unknown in offline mode
+      tokenType: 'Bearer',
+      user: cached.user,
+    };
+  },
+
+  /**
+   * Check if offline login is available (has cached credentials)
+   */
+  hasOfflineCredentials: (): boolean => {
+    return getOfflineCredentials() !== null;
+  },
+
+  /**
+   * Get the cached offline username (for display purposes)
+   */
+  getOfflineUsername: (): string | null => {
+    const cached = getOfflineCredentials();
+    return cached?.userNameOrEmail || null;
   },
 
   // Logout
