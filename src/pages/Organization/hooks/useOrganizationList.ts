@@ -108,13 +108,14 @@ export const useOrganizationList = () => {
   }, [form]);
 
   const handleEdit = useCallback(
-    (record: OrganizationDto) => {
+    async (record: OrganizationDto) => {
       setModalMode("edit");
       setEditingRecord(record);
 
       // Load wards based on provinceCode
       if (record.provinceCode) {
-        setWards(getWardsByProvince(record.provinceCode));
+        const loadedWards = await getWardsByProvince(record.provinceCode);
+        setWards(loadedWards);
       } else {
         setWards([]);
       }
@@ -141,9 +142,10 @@ export const useOrganizationList = () => {
   }, [form]);
 
   const handleProvinceChange = useCallback(
-    (value: string) => {
+    async (value: string) => {
       if (value) {
-        setWards(getWardsByProvince(value));
+        const loadedWards = await getWardsByProvince(value);
+        setWards(loadedWards);
       } else {
         setWards([]);
       }

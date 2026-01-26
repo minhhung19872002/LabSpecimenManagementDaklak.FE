@@ -195,11 +195,25 @@ export const useTestRequestFormData = () => {
   const quotationLoadedRef = useRef(false);
 
   // Vietnam location states
-  const [provinces] = useState<Province[]>(getAllProvinces());
+  const [provinces, setProvinces] = useState<Province[]>([]);
   const [wards, setWards] = useState<Ward[]>([]);
   // Track selected codes for cascade filtering (separate from text values for editable select)
   const [selectedProvinceCode, setSelectedProvinceCode] = useState<string | undefined>();
   const [selectedWardCode, setSelectedWardCode] = useState<string | undefined>();
+
+  // Load provinces on mount
+  useEffect(() => {
+    const loadProvinces = async () => {
+      try {
+        const loadedProvinces = await getAllProvinces();
+        setProvinces(loadedProvinces);
+      } catch (error) {
+        console.error('Failed to load provinces:', error);
+        message.error('Không thể tải danh sách tỉnh thành');
+      }
+    };
+    loadProvinces();
+  }, []);
 
   // Helper to check if a field should be disabled based on status
   const isFieldLocked = (fieldName: string): boolean => {
@@ -356,21 +370,27 @@ export const useTestRequestFormData = () => {
   };
 
   // Handle organization selection - auto fill customer info
-  const handleOrganizationSelect = (value: string) => {
+  const handleOrganizationSelect = async (value: string) => {
     const selectedOrg = organizations.find((org) => org.name === value);
     if (selectedOrg) {
+      let wardName: string | undefined = undefined;
+
       if (selectedOrg.provinceCode) {
-        setWards(getWardsByProvince(selectedOrg.provinceCode));
+        const loadedWards = await getWardsByProvince(selectedOrg.provinceCode);
+        setWards(loadedWards);
         setSelectedProvinceCode(selectedOrg.provinceCode);
+
+        // Find ward name if wardCode exists
+        if (selectedOrg.wardCode) {
+          wardName = loadedWards.find(w => w.code === selectedOrg.wardCode)?.name;
+        }
       }
       if (selectedOrg.wardCode) {
         setSelectedWardCode(selectedOrg.wardCode);
       }
-      // Find province and ward names for editable fields
+      // Find province name for editable fields
       const provinceName = provinces.find(p => p.code === selectedOrg.provinceCode)?.name;
-      const wardName = selectedOrg.wardCode
-        ? getWardsByProvince(selectedOrg.provinceCode || '').find(w => w.code === selectedOrg.wardCode)?.name
-        : undefined;
+
       form.setFieldsValue({
         customerName: selectedOrg.name,
         province: provinceName || '',
@@ -384,24 +404,30 @@ export const useTestRequestFormData = () => {
   };
 
   // Handle phone blur - search organization by phone
-  const handlePhoneBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+  const handlePhoneBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
     const phoneValue = e.target.value?.trim();
     if (!phoneValue) return;
 
     const foundOrg = organizations.find((org) => org.phone === phoneValue);
     if (foundOrg) {
+      let wardName: string | undefined = undefined;
+
       if (foundOrg.provinceCode) {
-        setWards(getWardsByProvince(foundOrg.provinceCode));
+        const loadedWards = await getWardsByProvince(foundOrg.provinceCode);
+        setWards(loadedWards);
         setSelectedProvinceCode(foundOrg.provinceCode);
+
+        // Find ward name if wardCode exists
+        if (foundOrg.wardCode) {
+          wardName = loadedWards.find(w => w.code === foundOrg.wardCode)?.name;
+        }
       }
       if (foundOrg.wardCode) {
         setSelectedWardCode(foundOrg.wardCode);
       }
-      // Find province and ward names for editable fields
+      // Find province name for editable fields
       const provinceName = provinces.find(p => p.code === foundOrg.provinceCode)?.name;
-      const wardName = foundOrg.wardCode
-        ? getWardsByProvince(foundOrg.provinceCode || '').find(w => w.code === foundOrg.wardCode)?.name
-        : undefined;
+
       form.setFieldsValue({
         customerName: foundOrg.name,
         province: provinceName || '',
@@ -499,7 +525,7 @@ export const useTestRequestFormData = () => {
       }
 
       if (data.provinceCode) {
-        const loadedWards = getWardsByProvince(data.provinceCode);
+        const loadedWards = await getWardsByProvince(data.provinceCode);
         setWards(loadedWards);
         setSelectedProvinceCode(data.provinceCode);
       }
@@ -667,19 +693,23 @@ export const useTestRequestFormData = () => {
       const provinceCodeToUse = quotation.provinceCode || org?.provinceCode;
       const wardCodeToUse = quotation.wardCode || org?.wardCode;
 
+      let wardName: string | undefined = undefined;
       if (provinceCodeToUse) {
-        setWards(getWardsByProvince(provinceCodeToUse));
+        const loadedWards = await getWardsByProvince(provinceCodeToUse);
+        setWards(loadedWards);
         setSelectedProvinceCode(provinceCodeToUse);
+
+        // Find ward name if wardCode exists
+        if (wardCodeToUse) {
+          wardName = loadedWards.find(w => w.code === wardCodeToUse)?.name;
+        }
       }
       if (wardCodeToUse) {
         setSelectedWardCode(wardCodeToUse);
       }
 
-      // Get province and ward names for editable fields
+      // Get province name for editable fields
       const provinceName = provinces.find(p => p.code === provinceCodeToUse)?.name;
-      const wardName = provinceCodeToUse && wardCodeToUse
-        ? getWardsByProvince(provinceCodeToUse).find(w => w.code === wardCodeToUse)?.name
-        : undefined;
 
       // Fill customer info from quotation
       form.setFieldsValue({

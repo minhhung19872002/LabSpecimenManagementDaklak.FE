@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Table, Button, Space, Tag, Popconfirm } from 'antd';
 import { EditOutlined, DeleteOutlined } from '../../../components/common/Icon';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { OrganizationDto } from '../../../types/organization';
-import { getProvinceNameByCode } from '../../../utils/vietnamLocations';
+import { getAllProvinces } from '../../../utils/vietnamLocations';
 import { authService } from '../../../services/authService';
 import { PERMISSIONS } from '../../../constants/permissionMapping';
 
@@ -29,7 +29,19 @@ const OrganizationTable: React.FC<OrganizationTableProps> = ({
   onEdit,
   onDelete,
 }) => {
-  const columns: ColumnsType<OrganizationDto> = [
+  const [provinceMap, setProvinceMap] = useState<Map<string, string>>(new Map());
+
+  // Load provinces on mount and create a lookup map
+  useEffect(() => {
+    const loadProvinces = async () => {
+      const provinces = await getAllProvinces();
+      const map = new Map(provinces.map(p => [p.code, p.name]));
+      setProvinceMap(map);
+    };
+    loadProvinces();
+  }, []);
+
+  const columns: ColumnsType<OrganizationDto> = useMemo(() => [
     {
       title: 'STT',
       key: 'index',
@@ -52,7 +64,7 @@ const OrganizationTable: React.FC<OrganizationTableProps> = ({
       render: (code: string) => {
         if (!code) return '-';
         // Try to get name from code, if not found, display the value as-is (legacy import data)
-        const name = getProvinceNameByCode(code);
+        const name = provinceMap.get(code);
         return name || code;
       },
     },
@@ -132,7 +144,7 @@ const OrganizationTable: React.FC<OrganizationTableProps> = ({
         );
       },
     },
-  ];
+  ], [provinceMap, currentPage, pageSize, onEdit, onDelete]);
 
   return (
     <Table

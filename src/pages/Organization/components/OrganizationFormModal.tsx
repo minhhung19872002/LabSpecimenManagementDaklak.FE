@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Modal, Form, Input, Select, Switch, Row, Col } from "antd";
 import { Controller, UseFormReturn } from "react-hook-form";
-import { getAllProvinces, Ward } from "../../../utils/vietnamLocations";
+import { getAllProvinces, Ward, Province } from "../../../utils/vietnamLocations";
 import { OrganizationFormData } from "../schemas";
 
 interface OrganizationFormModalProps {
@@ -25,7 +25,16 @@ const OrganizationFormModal: React.FC<OrganizationFormModalProps> = ({
   onSave,
   onClose,
 }) => {
-  const provinces = getAllProvinces();
+  const [provinces, setProvinces] = useState<Province[]>([]);
+
+  // Load provinces on mount
+  useEffect(() => {
+    const loadProvinces = async () => {
+      const loadedProvinces = await getAllProvinces();
+      setProvinces(loadedProvinces);
+    };
+    loadProvinces();
+  }, []);
   const {
     control,
     handleSubmit,
