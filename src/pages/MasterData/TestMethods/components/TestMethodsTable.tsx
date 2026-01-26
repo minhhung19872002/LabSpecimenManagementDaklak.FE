@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Table,
   Input,
@@ -18,6 +18,75 @@ import {
 } from "../../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import { GroupedTestMethodData, TestMethodIndicatorDto } from "../types";
+import "./TestMethodsTable.css";
+
+// Extended type with position flags for tree line rendering
+interface TestMethodIndicatorWithPosition extends TestMethodIndicatorDto {
+  _isFirstSub?: boolean;
+  _isLastSub?: boolean;
+}
+
+// Utility function to sort indicators by parent-child relationship
+// Parents first, then their sub-indicators grouped together
+// Also adds _isFirstSub and _isLastSub flags for tree line rendering
+const sortIndicatorsByHierarchy = (indicators: TestMethodIndicatorDto[]): TestMethodIndicatorWithPosition[] => {
+  if (!indicators || indicators.length === 0) return [];
+
+  // Separate parent indicators and sub-indicators
+  const parents = indicators.filter(ind => !ind.parentIndicatorId);
+  const subs = indicators.filter(ind => ind.parentIndicatorId);
+
+  // Group sub-indicators by parentIndicatorId
+  const subsByParent = new Map<string, TestMethodIndicatorDto[]>();
+  subs.forEach(sub => {
+    const parentId = sub.parentIndicatorId!;
+    if (!subsByParent.has(parentId)) {
+      subsByParent.set(parentId, []);
+    }
+    subsByParent.get(parentId)!.push(sub);
+  });
+
+  // Sort subs within each group by sortOrder
+  subsByParent.forEach((subList) => {
+    subList.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  });
+
+  // Build sorted result with position flags
+  const result: TestMethodIndicatorWithPosition[] = [];
+
+  // First add parents with their subs (sorted by sortOrder)
+  const sortedParents = [...parents].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  sortedParents.forEach(parent => {
+    result.push(parent);
+    const childSubs = subsByParent.get(parent.indicatorId);
+    if (childSubs) {
+      childSubs.forEach((sub, index) => {
+        result.push({
+          ...sub,
+          _isFirstSub: index === 0,
+          _isLastSub: index === childSubs.length - 1,
+        });
+      });
+      subsByParent.delete(parent.indicatorId);
+    }
+  });
+
+  // Then add orphaned sub-indicators (whose parent is not in the list)
+  // Group them together by parentIndicatorId
+  const orphanedParentIds = Array.from(subsByParent.keys());
+  orphanedParentIds.forEach(parentId => {
+    const orphanedSubs = subsByParent.get(parentId)!;
+    orphanedSubs.forEach((sub, index) => {
+      result.push({
+        ...sub,
+        _isFirstSub: index === 0,
+        _isLastSub: index === orphanedSubs.length - 1,
+      });
+    });
+  });
+
+  return result;
+};
 
 interface TestMethodsTableProps {
   loading: boolean;
@@ -76,9 +145,9 @@ const TestMethodsTable: React.FC<TestMethodsTableProps> = ({
           rowKey="id"
           expandable={{
             expandedRowRender: (testMethodRecord) => {
-              const hasIndicators =
-                testMethodRecord.indicators &&
-                testMethodRecord.indicators.length > 0;
+              // Sort indicators by hierarchy: parents first, then their sub-indicators
+              const sortedIndicators = sortIndicatorsByHierarchy(testMethodRecord.indicators || []);
+              const hasIndicators = sortedIndicators.length > 0;
               const selectedKeys =
                 selectedIndicatorKeys[testMethodRecord.id] || [];
 
@@ -88,7 +157,7 @@ const TestMethodsTable: React.FC<TestMethodsTableProps> = ({
                     <>
                       {/* Indicator table with overlay header when selected */}
                       {(() => {
-                        const indicatorIds = testMethodRecord.indicators.map(
+                        const indicatorIds = sortedIndicators.map(
                           (ind) => ind.indicatorId,
                         );
                         const allSelected =
@@ -183,10 +252,13 @@ const TestMethodsTable: React.FC<TestMethodsTableProps> = ({
                             )}
                             <Table
                               columns={indicatorColumns}
-                              dataSource={testMethodRecord.indicators}
+                              dataSource={sortedIndicators}
                               rowKey="indicatorId"
                               pagination={false}
                               size="small"
+                              rowClassName={(record) =>
+                                record.parentIndicatorId ? "sub-indicator-row" : ""
+                              }
                               rowSelection={{
                                 selectedRowKeys: selectedKeys,
                                 onChange: (keys) => {
