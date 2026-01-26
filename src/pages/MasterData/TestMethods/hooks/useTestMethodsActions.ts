@@ -112,7 +112,7 @@ export const useTestMethodsActions = ({
   const handleOpenAddIndicators = (testMethodId: string, form: FormInstance) => {
     setSelectedTestMethodId(testMethodId);
     form.resetFields();
-    form.setFieldsValue({ indicators: [{ indicatorId: undefined, unitPrice: 0 }] });
+    form.setFieldsValue({ indicators: [{ indicatorId: undefined, unitPrice: 0, subIndicators: [] }] });
     setAddIndicatorsModalOpen(true);
   };
 
@@ -123,24 +123,40 @@ export const useTestMethodsActions = ({
       setAddIndicatorsLoading(true);
       const values = await form.validateFields();
 
-      const validIndicators = values.indicators?.filter(
-        (item: any) => item.indicatorId && item.unitPrice !== undefined
-      );
+      // Flatten nested structure: parent + subIndicators -> flat array
+      const flatIndicators: Array<{ indicatorId: string; unitPrice: number }> = [];
 
-      if (!validIndicators || validIndicators.length === 0) {
+      (values.indicators || []).forEach((parent: any) => {
+        // Add parent indicator
+        if (parent.indicatorId && parent.unitPrice !== undefined) {
+          flatIndicators.push({
+            indicatorId: parent.indicatorId,
+            unitPrice: parent.unitPrice,
+          });
+        }
+
+        // Add sub-indicators
+        (parent.subIndicators || []).forEach((sub: any) => {
+          if (sub.indicatorId) {
+            flatIndicators.push({
+              indicatorId: sub.indicatorId,
+              unitPrice: sub.unitPrice ?? 0, // Use 0 if unitPrice is null/undefined for sub-indicators
+            });
+          }
+        });
+      });
+
+      if (flatIndicators.length === 0) {
         message.warning("Vui lòng chọn ít nhất một chỉ tiêu");
         return;
       }
 
       const data: AddIndicatorsToTestMethodDto = {
-        indicators: validIndicators.map((item: any) => ({
-          indicatorId: item.indicatorId,
-          unitPrice: item.unitPrice,
-        })),
+        indicators: flatIndicators,
       };
 
       await testMethodService.addIndicators(selectedTestMethodId, data);
-      message.success(`Thêm ${validIndicators.length} chỉ tiêu thành công!`);
+      message.success(`Thêm ${flatIndicators.length} chỉ tiêu thành công!`);
 
       // Keep the test method expanded after adding indicators
       if (!expandedRowKeys.includes(selectedTestMethodId)) {

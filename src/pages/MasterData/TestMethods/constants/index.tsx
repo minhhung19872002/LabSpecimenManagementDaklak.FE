@@ -122,7 +122,19 @@ export const getIndicatorColumns = (
     dataIndex: "indicatorName",
     key: "indicatorName",
     width: 250,
-    render: (_, record) => <IndicatorName name={record.indicatorName} formattedName={record.indicatorFormattedName} />,
+    render: (_, record) => (
+      <div style={{
+        paddingLeft: record.parentIndicatorId ? 24 : 0,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8
+      }}>
+        {record.parentIndicatorId && (
+          <span style={{ color: '#8c8c8c', fontSize: 12 }}>└─</span>
+        )}
+        <IndicatorName name={record.indicatorName} formattedName={record.indicatorFormattedName} />
+      </div>
+    ),
   },
   {
     title: "Đơn giá",
