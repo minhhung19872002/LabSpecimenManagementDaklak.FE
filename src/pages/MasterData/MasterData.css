@@ -92,7 +92,3 @@
 .ant-tabs-content-holder .ant-tabs-tabpane {
   padding: 0 !important;
 }
-
-.ant-popconfirm.ant-popover .ant-popover-container{
-  padding: 4px 6px !important;
-}
