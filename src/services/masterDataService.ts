@@ -329,6 +329,14 @@ export interface IndicatorDto {
   sortOrder: number;
   canDelete: boolean;
   creationTime: string;
+  /** ID chỉ tiêu cha (null nếu là chỉ tiêu gốc) */
+  parentIndicatorId?: string;
+  /** Mã chỉ tiêu cha */
+  parentIndicatorCode?: string;
+  /** Danh sách chỉ tiêu phụ */
+  subIndicators?: IndicatorDto[];
+  /** Có chỉ tiêu phụ hay không */
+  hasSubIndicators?: boolean;
 }
 
 export interface CreateIndicatorDto {
@@ -349,9 +357,20 @@ export interface UpdateIndicatorDto {
   sortOrder?: number;
 }
 
+export interface BulkSubIndicatorItemDto {
+  name: string;
+  formattedName?: string;
+}
+
+export interface BulkIndicatorItemDto {
+  name: string;
+  formattedName?: string;
+  subIndicators: BulkSubIndicatorItemDto[];
+}
+
 export interface CreateBulkIndicatorsDto {
   indicatorGroupId: string;
-  indicators: { name: string; formattedName?: string }[];
+  indicators: BulkIndicatorItemDto[];
 }
 
 export interface IndicatorFilterDto extends PagedAndSortedResultRequestDto {

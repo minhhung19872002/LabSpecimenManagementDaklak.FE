@@ -8,6 +8,7 @@ import {
 } from "../../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import { IndicatorDto, GroupedIndicatorData } from "../types";
+import "./IndicatorsTable.css";
 
 interface IndicatorsTableProps {
   loading: boolean;
@@ -176,6 +177,9 @@ const IndicatorsTable: React.FC<IndicatorsTableProps> = ({
                   rowKey="id"
                   pagination={false}
                   size="small"
+                  rowClassName={(record) =>
+                    record.parentIndicatorId ? "sub-indicator-row" : ""
+                  }
                   rowSelection={{
                     selectedRowKeys,
                     onChange: (keys) => onSelectedRowsChange(keys as string[]),
