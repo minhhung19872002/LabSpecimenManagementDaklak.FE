@@ -85,14 +85,15 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
                 label: p.name,
                 code: p.code,
               }))}
-              onSelect={(value, option) => {
+              onSelect={async (value, option) => {
                 form.setFieldsValue({
                   province: value,
                   ward: undefined,
                 });
                 setSelectedProvinceCode(option.code);
                 setSelectedWardCode(undefined);
-                setWards(getWardsByProvince(option.code));
+                const loadedWards = await getWardsByProvince(option.code);
+                setWards(loadedWards);
               }}
               onChange={(value) => {
                 if (!value) {
