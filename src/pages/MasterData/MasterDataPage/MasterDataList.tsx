@@ -13,11 +13,17 @@ import IndicatorsTab, { type IndicatorsActions } from "../Indicators";
 import FormTemplatesTab from "../FormTemplatesTab";
 import TestMethodsTab, { type TestMethodsActions } from "../TestMethods";
 import StandardsTab, { type StandardsActions } from "../Standards";
-import TestResultValuesTab, { type TestResultValuesActions } from "../TestResultValues";
+import TestResultValuesTab, {
+  type TestResultValuesActions,
+} from "../TestResultValues";
 import NotesTab, { type NotesActions } from "../Notes";
 import SpecimenTypesTab, { type SpecimenTypesActions } from "../SpecimenTypes";
-import SampleTypeCategoriesTab, { type SampleTypeCategoriesActions } from "../SampleTypeCategories";
-import SampleConditionsTab, { type SampleConditionActions } from "../SampleStatuses";
+import SampleTypeCategoriesTab, {
+  type SampleTypeCategoriesActions,
+} from "../SampleTypeCategories";
+import SampleConditionsTab, {
+  type SampleConditionActions,
+} from "../SampleStatuses";
 import { useMasterDataState } from "./hooks";
 import { useMasterDataActions } from "./hooks/useMasterDataActions";
 import {
@@ -96,9 +102,12 @@ const MasterDataList: React.FC = () => {
   const [testMethodsRefreshKey, setTestMethodsRefreshKey] = useState(0);
   const [standardsRefreshKey, setStandardsRefreshKey] = useState(0);
   const [specimenTypesRefreshKey, setSpecimenTypesRefreshKey] = useState(0);
-  const [sampleTypeCategoriesRefreshKey, setSampleTypeCategoriesRefreshKey] = useState(0);
-  const [sampleConditionsRefreshKey, setSampleConditionsRefreshKey] = useState(0);
-  const [testResultValuesRefreshKey, setTestResultValuesRefreshKey] = useState(0);
+  const [sampleTypeCategoriesRefreshKey, setSampleTypeCategoriesRefreshKey] =
+    useState(0);
+  const [sampleConditionsRefreshKey, setSampleConditionsRefreshKey] =
+    useState(0);
+  const [testResultValuesRefreshKey, setTestResultValuesRefreshKey] =
+    useState(0);
   const [notesRefreshKey, setNotesRefreshKey] = useState(0);
 
   // Refs for tab actions
@@ -123,9 +132,9 @@ const MasterDataList: React.FC = () => {
         activeCategory,
         users,
         (record) => handleEdit(record, form),
-        handleDelete
+        handleDelete,
       ),
-    [activeCategory, users, handleEdit, handleDelete, form]
+    [activeCategory, users, handleEdit, handleDelete, form],
   );
 
   return (
@@ -160,21 +169,35 @@ const MasterDataList: React.FC = () => {
             <Space>
               {/* Sample Conditions Tab */}
               {activeCategory === "sampleConditions" && (
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => sampleConditionsRef.current?.handleCreate()}>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => sampleConditionsRef.current?.handleCreate()}
+                >
                   Thêm tình trạng mẫu
                 </Button>
               )}
 
               {/* Sample Type Categories Tab */}
               {activeCategory === "sampleTypeCategories" && (
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => sampleTypeCategoriesRef.current?.handleCreate()}>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() =>
+                    sampleTypeCategoriesRef.current?.handleCreate()
+                  }
+                >
                   Thêm danh mục
                 </Button>
               )}
 
               {/* Specimen Types Tab */}
               {activeCategory === "specimenTypes" && (
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => specimenTypesRef.current?.handleCreate()}>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => specimenTypesRef.current?.handleCreate()}
+                >
                   Thêm loại mẫu
                 </Button>
               )}
@@ -182,13 +205,25 @@ const MasterDataList: React.FC = () => {
               {/* Test Methods Tab */}
               {activeCategory === "testMethods" && (
                 <>
-                  <Button icon={<DownloadOutlined />} onClick={() => testMethodsRef.current?.handleDownloadTemplate()}>
+                  <Button
+                    icon={<DownloadOutlined />}
+                    onClick={() =>
+                      testMethodsRef.current?.handleDownloadTemplate()
+                    }
+                  >
                     Tải template
                   </Button>
-                  <Button icon={<UploadOutlined />} onClick={() => testMethodsRef.current?.handleImport()}>
+                  <Button
+                    icon={<UploadOutlined />}
+                    onClick={() => testMethodsRef.current?.handleImport()}
+                  >
                     Nhập danh sách
                   </Button>
-                  <Button type="primary" icon={<PlusOutlined />} onClick={() => testMethodsRef.current?.handleCreate()}>
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => testMethodsRef.current?.handleCreate()}
+                  >
                     Thêm phương pháp
                   </Button>
                 </>
@@ -197,13 +232,25 @@ const MasterDataList: React.FC = () => {
               {/* Standards Tab */}
               {activeCategory === "standards" && (
                 <>
-                  <Button icon={<DownloadOutlined />} onClick={() => standardsRef.current?.handleDownloadTemplate()}>
+                  <Button
+                    icon={<DownloadOutlined />}
+                    onClick={() =>
+                      standardsRef.current?.handleDownloadTemplate()
+                    }
+                  >
                     Tải template mẫu
                   </Button>
-                  <Button icon={<UploadOutlined />} onClick={() => standardsRef.current?.handleImport()}>
+                  <Button
+                    icon={<UploadOutlined />}
+                    onClick={() => standardsRef.current?.handleImport()}
+                  >
                     Nhập danh sách
                   </Button>
-                  <Button type="primary" icon={<PlusOutlined />} onClick={() => standardsRef.current?.handleCreate()}>
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => standardsRef.current?.handleCreate()}
+                  >
                     Thêm tiêu chuẩn
                   </Button>
                 </>
@@ -212,16 +259,31 @@ const MasterDataList: React.FC = () => {
               {/* Indicators Tab */}
               {activeCategory === "indicators" && (
                 <>
-                  <Button icon={<DownloadOutlined />} onClick={() => indicatorsRef.current?.handleDownloadTemplate()}>
+                  <Button
+                    icon={<DownloadOutlined />}
+                    onClick={() =>
+                      indicatorsRef.current?.handleDownloadTemplate()
+                    }
+                  >
                     Tải template
                   </Button>
-                  <Button icon={<UploadOutlined />} onClick={() => indicatorsRef.current?.handleImport()}>
+                  <Button
+                    icon={<UploadOutlined />}
+                    onClick={() => indicatorsRef.current?.handleImport()}
+                  >
                     Nhập danh sách
                   </Button>
-                  <Button icon={<FolderAddOutlined />} onClick={() => indicatorsRef.current?.handleCreateGroup()}>
+                  <Button
+                    icon={<FolderAddOutlined />}
+                    onClick={() => indicatorsRef.current?.handleCreateGroup()}
+                  >
                     Thêm nhóm
                   </Button>
-                  <Button type="primary" icon={<PlusOutlined />} onClick={() => indicatorsRef.current?.handleBulkCreate()}>
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => indicatorsRef.current?.handleBulkCreate()}
+                  >
                     Thêm chỉ tiêu
                   </Button>
                 </>
@@ -229,14 +291,22 @@ const MasterDataList: React.FC = () => {
 
               {/* Test Result Values Tab */}
               {activeCategory === "testResultValues" && (
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => testResultValuesRef.current?.handleCreate()}>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => testResultValuesRef.current?.handleCreate()}
+                >
                   Thêm kết quả
                 </Button>
               )}
 
               {/* Notes Tab */}
               {activeCategory === "notes" && (
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => notesRef.current?.handleCreate()}>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => notesRef.current?.handleCreate()}
+                >
                   Thêm ghi chú
                 </Button>
               )}
@@ -251,7 +321,11 @@ const MasterDataList: React.FC = () => {
                 activeCategory !== "specimenTypes" &&
                 activeCategory !== "sampleTypeCategories" &&
                 activeCategory !== "sampleConditions" && (
-                  <Button type="primary" icon={<PlusOutlined />} onClick={() => handleCreate(form)}>
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => handleCreate(form)}
+                  >
                     Thêm mới
                   </Button>
                 )}
@@ -299,7 +373,10 @@ const MasterDataList: React.FC = () => {
             ),
             children:
               key === "indicators" ? (
-                <IndicatorsTab ref={indicatorsRef} onDataChange={() => fetchStatistics()} />
+                <IndicatorsTab
+                  ref={indicatorsRef}
+                  onDataChange={() => fetchStatistics()}
+                />
               ) : key === "formTemplates" ? (
                 <FormTemplatesTab />
               ) : key === "testMethods" ? (
