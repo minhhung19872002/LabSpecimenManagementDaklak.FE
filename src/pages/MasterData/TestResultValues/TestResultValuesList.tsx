@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, forwardRef, useImperativeHandle, useRef } from "react";
 import {
   Table,
   Button,
@@ -24,16 +24,14 @@ import testResultValueService, {
 } from "../../../services/testResultValueService";
 import { authService } from "../../../services/authService";
 import { PERMISSIONS } from "../../../constants/permissionMapping";
-
-interface TestResultValuesTabProps {
-  onDataChange?: () => void;
-}
+import { TestResultValuesTabProps, TestResultValuesActions } from "./types";
 
 const DEFAULT_PAGE_SIZE = 50;
 
-const TestResultValuesList: React.FC<TestResultValuesTabProps> = ({
+const TestResultValuesList = forwardRef<TestResultValuesActions, TestResultValuesTabProps>(({
   onDataChange,
-}) => {
+  refreshKey,
+}, ref) => {
   const [data, setData] = useState<TestResultValueDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
@@ -50,6 +48,18 @@ const TestResultValuesList: React.FC<TestResultValuesTabProps> = ({
     null
   );
   const [form] = Form.useForm();
+
+  // Refresh data when refreshKey changes
+  const isFirstMount = useRef(true);
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
+    if (refreshKey !== undefined) {
+      fetchData();
+    }
+  }, [refreshKey]);
 
   const fetchData = useCallback(
     async (page = 1, pageSize = DEFAULT_PAGE_SIZE) => {
@@ -165,6 +175,11 @@ const TestResultValuesList: React.FC<TestResultValuesTabProps> = ({
     form.resetFields();
   };
 
+  // Expose actions to parent
+  useImperativeHandle(ref, () => ({
+    handleCreate,
+  }));
+
   // Filter data by search text
   const filteredData = searchText
     ? data.filter(
@@ -233,27 +248,6 @@ const TestResultValuesList: React.FC<TestResultValuesTabProps> = ({
 
   return (
     <>
-      {/* Header Actions */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col xs={24} sm={12} md={8}>
-          <Input
-            placeholder="Tìm kiếm theo tên hoặc mã..."
-            prefix={<SearchOutlined />}
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            allowClear
-          />
-        </Col>
-        <Col flex="auto" />
-        <Col>
-          {authService.hasPermission(PERMISSIONS.TestResultValues.Create) && (
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-              Thêm mới
-            </Button>
-          )}
-        </Col>
-      </Row>
-
       {/* Table */}
       <Table
         columns={columns}
@@ -311,6 +305,8 @@ const TestResultValuesList: React.FC<TestResultValuesTabProps> = ({
       </Modal>
     </>
   );
-};
+});
+
+TestResultValuesList.displayName = "TestResultValuesList";
 
 export default TestResultValuesList;

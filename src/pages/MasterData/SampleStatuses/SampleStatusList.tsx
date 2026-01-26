@@ -1,20 +1,16 @@
-import React, { useMemo, useEffect, useRef } from "react";
-import { Button, Row, Col } from "antd";
-import { PlusOutlined } from "../../../components/common/Icon";
+import { useMemo, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useSampleConditionData, useSampleConditionActions } from "./hooks";
 import { StatusTable, StatusModal } from "./components";
 import { getConditionColumns } from "./constants";
-import { SampleConditionTabProps } from "./types";
+import { SampleConditionTabProps, SampleConditionActions } from "./types";
 import { sampleConditionSchema, SampleConditionFormData } from "./schemas";
-import { authService } from "../../../services/authService";
-import { PERMISSIONS } from "../../../constants/permissionMapping";
 
-const SampleConditionList: React.FC<SampleConditionTabProps> = ({
+const SampleConditionList = forwardRef<SampleConditionActions, SampleConditionTabProps>(({
   onDataChange,
   refreshKey,
-}) => {
+}, ref) => {
   const {
     loading,
     searchText,
@@ -66,23 +62,13 @@ const SampleConditionList: React.FC<SampleConditionTabProps> = ({
     [handleEdit, handleDelete, handleToggleActive, form]
   );
 
+  // Expose actions to parent
+  useImperativeHandle(ref, () => ({
+    handleCreate: () => handleCreate(form),
+  }));
+
   return (
     <>
-      {/* Header Actions */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col flex="auto" />
-        <Col>
-          {authService.hasPermission(PERMISSIONS.MasterData.Create) && (
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => handleCreate(form)}
-            >
-              Thêm tình trạng mẫu
-            </Button>
-          )}
-        </Col>
-      </Row>
 
       {/* Condition Table */}
       <StatusTable
@@ -104,6 +90,8 @@ const SampleConditionList: React.FC<SampleConditionTabProps> = ({
       />
     </>
   );
-};
+});
+
+SampleConditionList.displayName = "SampleConditionList";
 
 export default SampleConditionList;

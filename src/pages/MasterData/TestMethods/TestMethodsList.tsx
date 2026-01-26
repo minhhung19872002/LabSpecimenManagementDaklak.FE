@@ -1,10 +1,5 @@
-import React, { useMemo, useEffect, useRef, useState } from "react";
-import { Button, Space, Row, Col, Form, message } from "antd";
-import {
-  PlusOutlined,
-  DownloadOutlined,
-  UploadOutlined,
-} from "../../../components/common/Icon";
+import { useMemo, useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
+import { Form, message } from "antd";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import type { UploadFile } from "antd/es/upload/interface";
@@ -16,19 +11,17 @@ import {
   ImportTestMethodModal,
 } from "./components";
 import { getTestMethodColumns, getIndicatorColumns } from "./constants";
-import { TestMethodsTabProps, TestMethodImportPreviewDto } from "./types";
+import { TestMethodsTabProps, TestMethodsActions, TestMethodImportPreviewDto } from "./types";
 import {
   testMethodSchema,
   TestMethodFormData,
 } from "./schemas/testMethodSchema";
 import { API_BASE_URL, api } from "../../../services/api";
-import { authService } from "../../../services/authService";
-import { PERMISSIONS } from "../../../constants/permissionMapping";
 
-const TestMethodsList: React.FC<TestMethodsTabProps> = ({
+const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
   onDataChange,
   refreshKey,
-}) => {
+}, ref) => {
   const {
     loading,
     searchText,
@@ -203,39 +196,15 @@ const TestMethodsList: React.FC<TestMethodsTabProps> = ({
     [handleRemoveIndicator],
   );
 
+  // Expose actions to parent
+  useImperativeHandle(ref, () => ({
+    handleCreate: () => handleCreate(form),
+    handleDownloadTemplate,
+    handleImport: () => setImportModalOpen(true),
+  }));
+
   return (
     <>
-      {/* Header Actions */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col flex="auto" />
-        <Col>
-          <Space>
-            <Button
-              icon={<DownloadOutlined />}
-              onClick={handleDownloadTemplate}
-            >
-              Tải template
-            </Button>
-            {authService.hasPermission(PERMISSIONS.MasterData.Create) && (
-              <Button
-                icon={<UploadOutlined />}
-                onClick={() => setImportModalOpen(true)}
-              >
-                Nhập danh sách
-              </Button>
-            )}
-            {authService.hasPermission(PERMISSIONS.MasterData.Create) && (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => handleCreate(form)}
-              >
-                Thêm phương pháp
-              </Button>
-            )}
-          </Space>
-        </Col>
-      </Row>
 
       {/* Expandable Table */}
       <TestMethodsTable
@@ -294,6 +263,8 @@ const TestMethodsList: React.FC<TestMethodsTabProps> = ({
       />
     </>
   );
-};
+});
+
+TestMethodsList.displayName = "TestMethodsList";
 
 export default TestMethodsList;

@@ -1,20 +1,16 @@
-import React, { useMemo, useEffect, useRef } from "react";
-import { Button, Row, Col } from "antd";
-import { PlusOutlined } from "../../../components/common/Icon";
+import { useMemo, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useSampleTypeCategoriesData, useSampleTypeCategoriesActions } from "./hooks";
 import { CategoriesTable, CategoryModal } from "./components";
 import { getCategoryColumns, getSpecimenTypeColumns } from "./constants";
-import { SampleTypeCategoriesTabProps } from "./types";
+import { SampleTypeCategoriesTabProps, SampleTypeCategoriesActions } from "./types";
 import { sampleTypeCategorySchema, SampleTypeCategoryFormData } from "./schemas";
-import { authService } from "../../../services/authService";
-import { PERMISSIONS } from "../../../constants/permissionMapping";
 
-const SampleTypeCategoriesList: React.FC<SampleTypeCategoriesTabProps> = ({
+const SampleTypeCategoriesList = forwardRef<SampleTypeCategoriesActions, SampleTypeCategoriesTabProps>(({
   onDataChange,
   refreshKey,
-}) => {
+}, ref) => {
   const {
     loading,
     searchText,
@@ -70,23 +66,13 @@ const SampleTypeCategoriesList: React.FC<SampleTypeCategoriesTabProps> = ({
 
   const specimenTypeColumns = useMemo(() => getSpecimenTypeColumns(), []);
 
+  // Expose actions to parent
+  useImperativeHandle(ref, () => ({
+    handleCreate: () => handleCreate(form),
+  }));
+
   return (
     <>
-      {/* Header Actions */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col flex="auto" />
-        <Col>
-          {authService.hasPermission(PERMISSIONS.SampleTypeCategories.Create) && (
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => handleCreate(form)}
-            >
-              Thêm danh mục
-            </Button>
-          )}
-        </Col>
-      </Row>
 
       {/* Categories Table with nested SpecimenTypes */}
       <CategoriesTable
@@ -111,6 +97,8 @@ const SampleTypeCategoriesList: React.FC<SampleTypeCategoriesTabProps> = ({
       />
     </>
   );
-};
+});
+
+SampleTypeCategoriesList.displayName = "SampleTypeCategoriesList";
 
 export default SampleTypeCategoriesList;

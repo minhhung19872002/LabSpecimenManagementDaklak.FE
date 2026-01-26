@@ -10,6 +10,13 @@ export interface IndicatorsTabProps {
   onDataChange?: () => void;
 }
 
+export interface IndicatorsActions {
+  handleBulkCreate: () => void;
+  handleCreateGroup: () => void;
+  handleDownloadTemplate: () => void;
+  handleImport: () => void;
+}
+
 export interface GroupedIndicatorData extends IndicatorGroupDto {
   key: string;
   indicators: IndicatorDto[];

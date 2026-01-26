@@ -1,5 +1,15 @@
 import React from "react";
-import { Table, Input, Row, Col, Spin, Button, Empty, Space, Checkbox } from "antd";
+import {
+  Table,
+  Input,
+  Row,
+  Col,
+  Spin,
+  Button,
+  Empty,
+  Space,
+  Checkbox,
+} from "antd";
 import {
   SearchOutlined,
   PlusOutlined,
@@ -50,7 +60,10 @@ const StandardsTable: React.FC<StandardsTableProps> = ({
 }) => {
   return (
     <>
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+      <Row
+        gutter={[16, 16]}
+        style={{ marginBottom: 16, padding: "16px 16px 0" }}
+      >
         <Col xs={24} sm={12} md={8}>
           <Input
             placeholder="Tìm kiếm theo mã, tên, giới hạn, chỉ tiêu..."
@@ -69,8 +82,11 @@ const StandardsTable: React.FC<StandardsTableProps> = ({
           rowKey="id"
           expandable={{
             expandedRowRender: (standardRecord) => {
-              const hasIndicators = standardRecord.indicators && standardRecord.indicators.length > 0;
-              const selectedKeys = selectedIndicatorKeys[standardRecord.id] || [];
+              const hasIndicators =
+                standardRecord.indicators &&
+                standardRecord.indicators.length > 0;
+              const selectedKeys =
+                selectedIndicatorKeys[standardRecord.id] || [];
 
               return (
                 <div style={{ padding: "8px 0", marginLeft: 16 }}>
@@ -79,26 +95,27 @@ const StandardsTable: React.FC<StandardsTableProps> = ({
                       {/* Indicator table with overlay header when selected */}
                       {(() => {
                         const indicatorIds = standardRecord.indicators.map(
-                          (ind) => ind.id
+                          (ind) => ind.id,
                         );
                         const allSelected =
                           indicatorIds.length > 0 &&
                           indicatorIds.every((id) => selectedKeys.includes(id));
                         const someSelected = indicatorIds.some((id) =>
-                          selectedKeys.includes(id)
+                          selectedKeys.includes(id),
                         );
 
                         // Lấy danh sách các chỉ tiêu đã được chọn trong standard này
-                        const selectedIndicators = standardRecord.indicators.filter(
-                          (ind) => selectedKeys.includes(ind.id)
-                        );
+                        const selectedIndicators =
+                          standardRecord.indicators.filter((ind) =>
+                            selectedKeys.includes(ind.id),
+                          );
                         // Kiểm tra có chỉ tiêu nào đang ngừng hoạt động không (để hiện nút Kích hoạt)
                         const hasInactiveSelected = selectedIndicators.some(
-                          (ind) => !ind.isActive
+                          (ind) => !ind.isActive,
                         );
                         // Kiểm tra có chỉ tiêu nào đang hoạt động không (để hiện nút Ngưng)
                         const hasActiveSelected = selectedIndicators.some(
-                          (ind) => ind.isActive
+                          (ind) => ind.isActive,
                         );
 
                         return (
@@ -122,7 +139,12 @@ const StandardsTable: React.FC<StandardsTableProps> = ({
                                   borderBottom: "1px solid #f0f0f0",
                                 }}
                               >
-                                <div style={{ display: "flex", alignItems: "center" }}>
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                  }}
+                                >
                                   <Checkbox
                                     checked={allSelected}
                                     indeterminate={someSelected && !allSelected}
@@ -157,7 +179,11 @@ const StandardsTable: React.FC<StandardsTableProps> = ({
                                       size="small"
                                       type="primary"
                                       icon={<CheckCircleOutlined />}
-                                      onClick={() => onBatchActivateIndicators(standardRecord.id)}
+                                      onClick={() =>
+                                        onBatchActivateIndicators(
+                                          standardRecord.id,
+                                        )
+                                      }
                                       loading={batchLoading}
                                     >
                                       Kích hoạt
@@ -167,7 +193,11 @@ const StandardsTable: React.FC<StandardsTableProps> = ({
                                     <Button
                                       size="small"
                                       icon={<StopOutlined />}
-                                      onClick={() => onBatchDeactivateIndicators(standardRecord.id)}
+                                      onClick={() =>
+                                        onBatchDeactivateIndicators(
+                                          standardRecord.id,
+                                        )
+                                      }
                                       loading={batchLoading}
                                     >
                                       Ngưng
@@ -177,7 +207,9 @@ const StandardsTable: React.FC<StandardsTableProps> = ({
                                     size="small"
                                     danger
                                     icon={<DeleteOutlined />}
-                                    onClick={() => onBatchRemoveIndicators(standardRecord.id)}
+                                    onClick={() =>
+                                      onBatchRemoveIndicators(standardRecord.id)
+                                    }
                                     loading={batchLoading}
                                   >
                                     Xóa
@@ -239,7 +271,12 @@ const StandardsTable: React.FC<StandardsTableProps> = ({
                           type="dashed"
                           size="small"
                           icon={<PlusOutlined />}
-                          onClick={() => onAddIndicators(standardRecord.id, standardRecord.name)}
+                          onClick={() =>
+                            onAddIndicators(
+                              standardRecord.id,
+                              standardRecord.name,
+                            )
+                          }
                         >
                           Thêm chỉ tiêu
                         </Button>
@@ -253,7 +290,12 @@ const StandardsTable: React.FC<StandardsTableProps> = ({
                       <Button
                         type="primary"
                         icon={<PlusOutlined />}
-                        onClick={() => onAddIndicators(standardRecord.id, standardRecord.name)}
+                        onClick={() =>
+                          onAddIndicators(
+                            standardRecord.id,
+                            standardRecord.name,
+                          )
+                        }
                       >
                         Thêm chỉ tiêu
                       </Button>
@@ -264,11 +306,19 @@ const StandardsTable: React.FC<StandardsTableProps> = ({
             },
             rowExpandable: () => true,
             expandedRowKeys,
-            onExpandedRowsChange: (keys) => onExpandedRowsChange(keys as string[]),
+            onExpandedRowsChange: (keys) =>
+              onExpandedRowsChange(keys as string[]),
           }}
           pagination={{
             pageSize: 50,
-            showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
+            showTotal: (total, range) => (
+              <>
+                Hiển thị{" "}
+                <b>
+                  {range[0]}-{range[1]}/{total}
+                </b>
+              </>
+            ),
           }}
         />
       </Spin>

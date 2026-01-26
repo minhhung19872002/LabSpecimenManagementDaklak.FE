@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, forwardRef, useImperativeHandle, useRef } from "react";
 import {
   Table,
   Button,
@@ -24,14 +24,11 @@ import { noteService } from "../../../services/noteService";
 import { NoteDto, CreateNoteDto, UpdateNoteDto } from "../../../types/note";
 import { authService } from "../../../services/authService";
 import { PERMISSIONS } from "../../../constants/permissionMapping";
-
-interface NotesTabProps {
-  onDataChange?: () => void;
-}
+import { NotesTabProps, NotesActions } from "./types";
 
 const DEFAULT_PAGE_SIZE = 50;
 
-const NotesList: React.FC<NotesTabProps> = ({ onDataChange }) => {
+const NotesList = forwardRef<NotesActions, NotesTabProps>(({ onDataChange, refreshKey }, ref) => {
   const [data, setData] = useState<NoteDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
@@ -48,6 +45,18 @@ const NotesList: React.FC<NotesTabProps> = ({ onDataChange }) => {
   const [modalLoading, setModalLoading] = useState(false);
   const [editingItem, setEditingItem] = useState<NoteDto | null>(null);
   const [form] = Form.useForm();
+
+  // Refresh data when refreshKey changes
+  const isFirstMount = useRef(true);
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
+    if (refreshKey !== undefined) {
+      fetchData();
+    }
+  }, [refreshKey]);
 
   const fetchData = useCallback(
     async (
@@ -198,6 +207,11 @@ const NotesList: React.FC<NotesTabProps> = ({ onDataChange }) => {
     form.resetFields();
   };
 
+  // Expose actions to parent
+  useImperativeHandle(ref, () => ({
+    handleCreate,
+  }));
+
   const canEdit = authService.hasPermission(PERMISSIONS.Notes.Edit);
   const canDelete = authService.hasPermission(PERMISSIONS.Notes.Delete);
 
@@ -267,42 +281,6 @@ const NotesList: React.FC<NotesTabProps> = ({ onDataChange }) => {
 
   return (
     <>
-      {/* Header Actions */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col xs={24} sm={12} md={8}>
-          <Input.Search
-            placeholder="Tìm kiếm theo nội dung hoặc mã..."
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            onSearch={handleSearch}
-            onPressEnter={handleSearch}
-            allowClear
-            enterButton
-          />
-        </Col>
-        <Col xs={12} sm={6} md={4}>
-          <Select
-            placeholder="Trạng thái"
-            style={{ width: "100%" }}
-            allowClear
-            value={statusFilter}
-            onChange={(value) => setStatusFilter(value)}
-            options={[
-              { value: true, label: "Hoạt động" },
-              { value: false, label: "Không hoạt động" },
-            ]}
-          />
-        </Col>
-        <Col flex="auto" />
-        <Col>
-          {authService.hasPermission(PERMISSIONS.Notes.Create) && (
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-              Thêm mới
-            </Button>
-          )}
-        </Col>
-      </Row>
-
       {/* Table */}
       <Table
         columns={columns}
@@ -365,6 +343,8 @@ const NotesList: React.FC<NotesTabProps> = ({ onDataChange }) => {
       </Modal>
     </>
   );
-};
+});
+
+NotesList.displayName = "NotesList";
 
 export default NotesList;

@@ -1,10 +1,5 @@
-import React, { useMemo, useEffect, useRef, useState } from "react";
-import { Button, Space, Row, Col, Form, message } from "antd";
-import {
-  PlusOutlined,
-  DownloadOutlined,
-  UploadOutlined,
-} from "../../../components/common/Icon";
+import { useMemo, useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
+import { Form, message } from "antd";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import type { UploadFile } from "antd/es/upload/interface";
@@ -19,18 +14,17 @@ import {
 import { getStandardColumns, getIndicatorColumns } from "./constants";
 import {
   StandardsTabProps,
+  StandardsActions,
   StandardIndicatorDto,
   StandardImportPreviewDto,
 } from "./types";
 import { standardSchema, StandardFormData } from "./schemas/standardSchema";
 import { API_BASE_URL, api } from "../../../services/api";
-import { authService } from "../../../services/authService";
-import { PERMISSIONS } from "../../../constants/permissionMapping";
 
-const StandardsList: React.FC<StandardsTabProps> = ({
+const StandardsList = forwardRef<StandardsActions, StandardsTabProps>(({
   onDataChange,
   refreshKey,
-}) => {
+}, ref) => {
   const {
     loading,
     searchText,
@@ -222,39 +216,15 @@ const StandardsList: React.FC<StandardsTabProps> = ({
     ]
   );
 
+  // Expose actions to parent
+  useImperativeHandle(ref, () => ({
+    handleCreate: () => handleCreate(form),
+    handleDownloadTemplate,
+    handleImport: () => setImportModalOpen(true),
+  }));
+
   return (
     <>
-      {/* Header Actions */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col flex="auto" />
-        <Col>
-          <Space>
-            <Button
-              icon={<DownloadOutlined />}
-              onClick={handleDownloadTemplate}
-            >
-              Tải template mẫu
-            </Button>
-            {authService.hasPermission(PERMISSIONS.MasterData.Create) && (
-              <Button
-                icon={<UploadOutlined />}
-                onClick={() => setImportModalOpen(true)}
-              >
-                Nhập danh sách
-              </Button>
-            )}
-            {authService.hasPermission(PERMISSIONS.MasterData.Create) && (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => handleCreate(form)}
-              >
-                Thêm tiêu chuẩn
-              </Button>
-            )}
-          </Space>
-        </Col>
-      </Row>
 
       {/* Expandable Table */}
       <StandardsTable
@@ -333,6 +303,8 @@ const StandardsList: React.FC<StandardsTabProps> = ({
       />
     </>
   );
-};
+});
+
+StandardsList.displayName = "StandardsList";
 
 export default StandardsList;

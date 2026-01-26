@@ -27,7 +27,10 @@ const CategoriesTable: React.FC<CategoriesTableProps> = ({
 }) => {
   return (
     <>
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+      <Row
+        gutter={[16, 16]}
+        style={{ marginBottom: 16, padding: "16px 16px 0" }}
+      >
         <Col xs={24} sm={12} md={8}>
           <Input
             placeholder="Tìm kiếm theo tên danh mục, loại mẫu..."
@@ -46,7 +49,8 @@ const CategoriesTable: React.FC<CategoriesTableProps> = ({
           rowKey="id"
           expandable={{
             expandedRowRender: (record) => {
-              const hasSpecimenTypes = record.specimenTypes && record.specimenTypes.length > 0;
+              const hasSpecimenTypes =
+                record.specimenTypes && record.specimenTypes.length > 0;
 
               return (
                 <div style={{ padding: "8px 0", marginLeft: 16 }}>
@@ -69,13 +73,21 @@ const CategoriesTable: React.FC<CategoriesTableProps> = ({
             },
             rowExpandable: () => true,
             expandedRowKeys,
-            onExpandedRowsChange: (keys) => onExpandedRowsChange(keys as string[]),
+            onExpandedRowsChange: (keys) =>
+              onExpandedRowsChange(keys as string[]),
           }}
           pagination={{
             pageSize: 50,
             showSizeChanger: true,
             pageSizeOptions: [50, 100, 150],
-            showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
+            showTotal: (total, range) => (
+              <>
+                Hiển thị{" "}
+                <b>
+                  {range[0]}-{range[1]}/{total}
+                </b>
+              </>
+            ),
           }}
         />
       </Spin>

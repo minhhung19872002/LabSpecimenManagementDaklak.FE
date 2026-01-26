@@ -1,20 +1,17 @@
-import React, { useMemo, useEffect, useRef } from "react";
-import { Button, Row, Col } from "antd";
-import { PlusOutlined } from "../../../components/common/Icon";
+import { useMemo, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
+import { Form } from "antd";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useSpecimenTypesData, useSpecimenTypesActions } from "./hooks";
 import { SpecimenTypesTable, SpecimenTypeModal, AddIndicatorsModal } from "./components";
 import { getSpecimenTypeColumns, getIndicatorColumns } from "./constants";
-import { SpecimenTypesTabProps } from "./types";
+import { SpecimenTypesTabProps, SpecimenTypesActions } from "./types";
 import {
   specimenTypeSchema,
   SpecimenTypeFormData,
 } from "./schemas/specimenTypeSchema";
-import { authService } from "../../../services/authService";
-import { PERMISSIONS } from "../../../constants/permissionMapping";
 
-const SpecimenTypesList: React.FC<SpecimenTypesTabProps> = ({ onDataChange, refreshKey }) => {
+const SpecimenTypesList = forwardRef<SpecimenTypesActions, SpecimenTypesTabProps>(({ onDataChange, refreshKey }, ref) => {
   const {
     loading,
     searchText,
@@ -104,23 +101,16 @@ const SpecimenTypesList: React.FC<SpecimenTypesTabProps> = ({ onDataChange, refr
     [handleRemoveIndicator, handleToggleIndicatorActive]
   );
 
+  // Need to use Form for addIndicators modal
+  const [addIndicatorsForm] = Form.useForm();
+
+  // Expose actions to parent
+  useImperativeHandle(ref, () => ({
+    handleCreate: () => handleCreate(specimenTypeForm),
+  }));
+
   return (
     <>
-      {/* Header Actions */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col flex="auto" />
-        <Col>
-          {authService.hasPermission(PERMISSIONS.MasterData.Create) && (
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => handleCreate(specimenTypeForm)}
-            >
-              Thêm loại mẫu
-            </Button>
-          )}
-        </Col>
-      </Row>
 
       {/* SpecimenTypes Table with nested Indicators */}
       <SpecimenTypesTable
@@ -159,11 +149,14 @@ const SpecimenTypesList: React.FC<SpecimenTypesTabProps> = ({ onDataChange, refr
         indicatorGroups={indicatorGroups}
         indicatorsByGroup={indicatorsByGroup}
         existingIndicatorIds={existingIndicatorIds}
+        form={addIndicatorsForm}
         onOk={handleAddIndicatorsOk}
         onCancel={handleAddIndicatorsCancel}
       />
     </>
   );
-};
+});
+
+SpecimenTypesList.displayName = "SpecimenTypesList";
 
 export default SpecimenTypesList;
