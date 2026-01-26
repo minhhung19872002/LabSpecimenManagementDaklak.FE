@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
-import { Modal, Form, Input, Button, Typography, Select, Divider } from "antd";
+import React, { useState, useCallback } from "react";
+import { Modal, Form, Input, Button, Typography, Select, Divider, Tooltip, message } from "antd";
 import { PlusOutlined, MinusCircleOutlined } from "../../../../components/common/Icon";
+import Icon from "../../../../components/common/Icon";
 import type { FormInstance } from "antd";
 import { NumericFormat } from "react-number-format";
 import {
@@ -10,8 +11,34 @@ import {
 } from "../../../../services/masterDataService";
 import IndicatorName from "../../../../components/common/IndicatorName";
 import { COMPARISON_OPERATORS, LOWER_OPERATORS, UPPER_OPERATORS } from "../constants";
+import "./AddIndicatorsModal.css";
 
 const { Text } = Typography;
+
+interface IndicatorFormItem {
+  indicatorId?: string;
+  testMethodId?: string;
+  unit?: string;
+  comparisonOperator?: string;
+  allowedLimit?: string;
+  lowerOperator?: string;
+  lowerLimit?: string;
+  upperOperator?: string;
+  upperLimit?: string;
+  subIndicators?: SubIndicatorFormItem[];
+}
+
+interface SubIndicatorFormItem {
+  indicatorId?: string;
+  testMethodId?: string;
+  unit?: string;
+  comparisonOperator?: string;
+  allowedLimit?: string;
+  lowerOperator?: string;
+  lowerLimit?: string;
+  upperOperator?: string;
+  upperLimit?: string;
+}
 
 interface AddIndicatorsModalProps {
   open: boolean;
@@ -20,9 +47,12 @@ interface AddIndicatorsModalProps {
   standardName: string;
   indicatorGroups: IndicatorGroupDto[];
   indicatorsByGroup: Record<string, IndicatorDto[]>;
-  existingIndicatorIds: string[]; // Indicator IDs already in this standard
+  existingIndicatorIds: string[];
   getMethodsForIndicator: (indicatorId: string) => TestMethodWithIndicatorsDto[];
-  onOk: () => void;
+  onOk: (
+    selectedIndicators: Record<number, string>,
+    selectedMethods: Record<number, { id: string; unit: string }>
+  ) => void;
   onCancel: () => void;
 }
 
@@ -38,184 +68,449 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   onOk,
   onCancel,
 }) => {
-  // Track selected indicators for each row (needed for cascading select)
+  // Track selected indicators for enabling method select
   const [selectedIndicators, setSelectedIndicators] = useState<Record<number, string>>({});
-  // Track selected methods for each row (to prevent duplicate indicator+method combinations)
-  const [selectedMethods, setSelectedMethods] = useState<Record<number, string>>({});
-  // Track comparison mode for each row (single or range)
-  const [comparisonModes, setComparisonModes] = useState<Record<number, "single" | "range">>({});
+  // Track selected methods (source of truth since Form.List can lose parent values)
+  const [selectedMethods, setSelectedMethods] = useState<Record<number, { id: string; unit: string }>>({});
+  // Track comparison modes (key: "parent-{index}" or "sub-{parentIndex}-{subIndex}")
+  const [comparisonModes, setComparisonModes] = useState<Record<string, "single" | "range">>({});
+  // Track which parents have sub-indicators explicitly added (by clicking + button)
+  // This is the SOURCE OF TRUTH for showing sub-indicator container, NOT subFields.length
+  const [subIndicatorsAddedCount, setSubIndicatorsAddedCount] = useState<Record<number, number>>({});
 
-  // Reset state when modal closes
-  useEffect(() => {
-    if (!open) {
-      setSelectedIndicators({});
-      setSelectedMethods({});
-      setComparisonModes({});
+  // Watch form indicators for controlled updates (like TestMethods)
+  const indicators: IndicatorFormItem[] = Form.useWatch("indicators", form) || [];
+
+  // Find indicator by ID
+  const findIndicatorById = useCallback((indicatorId: string): IndicatorDto | undefined => {
+    const allIndicators = Object.values(indicatorsByGroup).flat();
+    const parent = allIndicators.find((ind) => ind.id === indicatorId);
+    if (parent) return parent;
+    for (const ind of allIndicators) {
+      const sub = ind.subIndicators?.find((s) => s.id === indicatorId);
+      if (sub) return sub as IndicatorDto;
     }
-  }, [open]);
+    return undefined;
+  }, [indicatorsByGroup]);
 
-  // Get used methods for a specific indicator (across all rows except current)
-  const getUsedMethodsForIndicator = (indicatorId: string, excludeFieldName: number): string[] => {
-    const usedMethods: string[] = [];
-    Object.entries(selectedIndicators).forEach(([fn, indId]) => {
-      if (indId === indicatorId && Number(fn) !== excludeFieldName) {
-        const methodId = selectedMethods[Number(fn)];
-        if (methodId) {
-          usedMethods.push(methodId);
-        }
-      }
-    });
-    return usedMethods;
+  // Check if indicator has sub-indicators defined in master data
+  const hasSubIndicatorsDefined = useCallback((indicatorId: string): boolean => {
+    const indicator = findIndicatorById(indicatorId);
+    return !!(indicator?.subIndicators && indicator.subIndicators.length > 0);
+  }, [findIndicatorById]);
+
+  // Check if indicator is already selected in another row
+  const isIndicatorAlreadySelected = useCallback((indicatorId: string, excludeIndex?: number): boolean => {
+    return indicators.some((item, idx) =>
+      idx !== excludeIndex && item?.indicatorId === indicatorId
+    );
+  }, [indicators]);
+
+  // Render indicator label for Select
+  const renderIndicatorLabel = (indicatorId: string) => {
+    const indicator = findIndicatorById(indicatorId);
+    if (!indicator) return indicatorId;
+    return (
+      <span>
+        {indicator.code} - <IndicatorName name={indicator.name} formattedName={indicator.formattedName} />
+      </span>
+    );
   };
 
-  // Build grouped options for indicator Select
-  // Only show indicators that have at least one available test method
-  const buildIndicatorOptions = (fieldName: number) => {
+  // Build parent indicator options
+  const buildParentOptions = useCallback((currentIndicatorId?: string) => {
     return indicatorGroups
       .filter((group) => group.isActive && indicatorsByGroup[group.id]?.length > 0)
       .map((group) => {
-        const availableIndicators = (indicatorsByGroup[group.id] || []).filter(
-          (ind) => {
-            // Check if not already exists in standard
-            if (existingIndicatorIds.includes(ind.id)) return false;
-
-            // Get all methods for this indicator
-            const allMethods = getMethodsForIndicator(ind.id);
-            if (allMethods.length === 0) return false;
-
-            // Get methods already used in other rows for this indicator
-            const usedMethods = getUsedMethodsForIndicator(ind.id, fieldName);
-
-            // Check if there are any available methods left
-            const availableMethods = allMethods.filter(m => !usedMethods.includes(m.id));
-            return availableMethods.length > 0;
-          }
+        const parentIndicators = (indicatorsByGroup[group.id] || []).filter(
+          (ind) => !ind.parentIndicatorId && ind.isActive
         );
 
-        if (availableIndicators.length === 0) return null;
+        const availableParents = parentIndicators.filter((ind) => {
+          if (ind.id === currentIndicatorId) return true;
+          if (existingIndicatorIds.includes(ind.id)) return false;
+          if (isIndicatorAlreadySelected(ind.id)) return false;
+          const methods = getMethodsForIndicator(ind.id);
+          return methods.length > 0;
+        });
+
+        if (availableParents.length === 0) return null;
 
         return {
           label: <Text strong>{group.name}</Text>,
-          options: availableIndicators.map((ind) => ({
+          options: availableParents.map((ind) => ({
             value: ind.id,
             label: (
               <span>
-                {ind.code} -{" "}
-                <IndicatorName name={ind.name} formattedName={ind.formattedName} />
+                {ind.code} - <IndicatorName name={ind.name} formattedName={ind.formattedName} />
               </span>
             ),
             searchText: `${ind.code} - ${ind.name}`,
-            indicator: ind,
           })),
         };
       })
       .filter(Boolean) as {
       label: React.ReactNode;
-      options: { value: string; label: React.ReactNode; searchText: string; indicator: IndicatorDto }[];
+      options: { value: string; label: React.ReactNode; searchText: string }[];
     }[];
-  };
+  }, [indicatorGroups, indicatorsByGroup, existingIndicatorIds, getMethodsForIndicator, isIndicatorAlreadySelected]);
 
-  // Build method options for the selected indicator (excluding already used methods)
-  const buildMethodOptions = (fieldName: number) => {
-    const indicatorId = selectedIndicators[fieldName];
+  // Build method options for parent
+  const buildMethodOptions = useCallback((parentIndex: number) => {
+    const indicatorId = selectedIndicators[parentIndex] || indicators[parentIndex]?.indicatorId;
     if (!indicatorId) return [];
 
-    const allMethods = getMethodsForIndicator(indicatorId);
-
-    // Get methods already used for this indicator in other rows
-    const usedMethods = getUsedMethodsForIndicator(indicatorId, fieldName);
-
-    // Filter out used methods
-    const availableMethods = allMethods.filter(m => !usedMethods.includes(m.id));
-
-    return availableMethods.map((method) => ({
+    const methods = getMethodsForIndicator(indicatorId);
+    return methods.map((method) => ({
       value: method.id,
-      label: (
-        <IndicatorName name={method.name} formattedName={method.formattedName} />
-      ),
+      label: <IndicatorName name={method.name} formattedName={method.formattedName} />,
       searchText: method.name,
       unit: method.unit,
     }));
-  };
+  }, [selectedIndicators, indicators, getMethodsForIndicator]);
 
-  // Handle indicator selection
-  const handleSelectIndicator = (value: string, fieldName: number) => {
-    // Clear the method selection when indicator changes
-    const indicators = form.getFieldValue("indicators") || [];
-    indicators[fieldName] = {
-      ...indicators[fieldName],
-      indicatorId: value,
-      testMethodId: undefined,
-      unit: "",
-    };
-    form.setFieldsValue({ indicators });
+  // Build sub-indicator options
+  const buildSubOptions = useCallback((parentIndex: number, subIndex?: number) => {
+    // Use selectedIndicators as primary source, fallback to form data
+    const parentIndicatorId = selectedIndicators[parentIndex] || indicators[parentIndex]?.indicatorId;
+    if (!parentIndicatorId) return [];
 
-    setSelectedIndicators((prev) => ({
-      ...prev,
-      [fieldName]: value,
+    const parentIndicator = findIndicatorById(parentIndicatorId);
+    if (!parentIndicator?.subIndicators?.length) return [];
+
+    const currentSubId = subIndex !== undefined
+      ? indicators[parentIndex]?.subIndicators?.[subIndex]?.indicatorId
+      : undefined;
+
+    const selectedSubIds = (indicators[parentIndex]?.subIndicators || [])
+      .map((sub) => sub?.indicatorId)
+      .filter(Boolean);
+
+    const availableSubs = parentIndicator.subIndicators.filter(
+      (sub) =>
+        sub.id === currentSubId ||
+        (!selectedSubIds.includes(sub.id) &&
+          sub.isActive &&
+          !existingIndicatorIds.includes(sub.id))
+    );
+
+    return availableSubs.map((sub) => ({
+      value: sub.id,
+      label: (
+        <span>
+          {sub.code} - <IndicatorName name={sub.name} formattedName={sub.formattedName} />
+        </span>
+      ),
+      searchText: `${sub.code} - ${sub.name}`,
     }));
+  }, [selectedIndicators, indicators, findIndicatorById, existingIndicatorIds]);
 
-    // Clear selected method for this row
+  // Handle parent indicator change
+  const handleParentChange = (parentId: string | undefined, parentIndex: number) => {
+    const currentIndicators = form.getFieldValue("indicators") || [];
+
+    if (parentId) {
+      // Reset all fields when indicator changes
+      // IMPORTANT: Always include subIndicators: [] to prevent Form.List auto-initialization issues
+      currentIndicators[parentIndex] = {
+        indicatorId: parentId,
+        testMethodId: undefined,
+        unit: "",
+        comparisonOperator: undefined,
+        allowedLimit: undefined,
+        subIndicators: [], // Explicit empty array
+      };
+      // Track selected indicator for enabling method select
+      setSelectedIndicators((prev) => ({ ...prev, [parentIndex]: parentId }));
+    } else {
+      currentIndicators[parentIndex] = {
+        indicatorId: undefined,
+        testMethodId: undefined,
+        unit: "",
+        subIndicators: [], // Explicit empty array
+      };
+      // Clear selected indicator
+      setSelectedIndicators((prev) => {
+        const newState = { ...prev };
+        delete newState[parentIndex];
+        return newState;
+      });
+    }
+
+    form.setFieldsValue({ indicators: currentIndicators });
+
+    // Clear comparison mode
+    setComparisonModes((prev) => {
+      const newState = { ...prev };
+      delete newState[`parent-${parentIndex}`];
+      return newState;
+    });
+
+    // Clear sub-indicator count when parent changes
+    setSubIndicatorsAddedCount((prev) => {
+      const newState = { ...prev };
+      delete newState[parentIndex];
+      return newState;
+    });
+
+    // Clear selected method when indicator changes
     setSelectedMethods((prev) => {
       const newState = { ...prev };
-      delete newState[fieldName];
+      delete newState[parentIndex];
       return newState;
     });
   };
 
-  // Handle method selection - auto-fill unit and track selected method
-  const handleSelectMethod = (
-    value: string,
-    option: { unit: string },
-    fieldName: number
+  // Handle method change
+  const handleMethodChange = (
+    methodId: string | undefined,
+    option: { unit?: string } | undefined,
+    parentIndex: number
   ) => {
-    const indicators = form.getFieldValue("indicators") || [];
-    indicators[fieldName] = {
-      ...indicators[fieldName],
-      testMethodId: value,
-      unit: option.unit,
-    };
-    form.setFieldsValue({ indicators });
+    const currentIndicators = form.getFieldValue("indicators") || [];
+    const current = currentIndicators[parentIndex] || {};
+    // Use selectedIndicators as source of truth for indicatorId
+    const indicatorId = selectedIndicators[parentIndex] || current.indicatorId;
 
-    // Track selected method
-    setSelectedMethods((prev) => ({
-      ...prev,
-      [fieldName]: value,
-    }));
+    // Preserve existing subIndicators array (only if it has actual items)
+    const existingSubs = Array.isArray(current.subIndicators) ? current.subIndicators : [];
+
+    if (methodId && option?.unit) {
+      const unit = option.unit; // Capture for type safety
+      // Track method in state (source of truth)
+      setSelectedMethods((prev) => ({
+        ...prev,
+        [parentIndex]: { id: methodId, unit },
+      }));
+
+      // Build new indicator object explicitly (no blind spread)
+      currentIndicators[parentIndex] = {
+        indicatorId: indicatorId, // Use state as source of truth
+        testMethodId: methodId,
+        unit: option.unit,
+        comparisonOperator: current.comparisonOperator,
+        allowedLimit: current.allowedLimit,
+        lowerOperator: current.lowerOperator,
+        lowerLimit: current.lowerLimit,
+        upperOperator: current.upperOperator,
+        upperLimit: current.upperLimit,
+        // Keep existing sub-indicators and update their testMethodId AND unit
+        subIndicators: existingSubs.map((sub: any) => ({
+          ...sub,
+          testMethodId: methodId,
+          unit: option.unit, // Inherit unit from parent's method
+        })),
+      };
+    } else {
+      // Clear method from state
+      setSelectedMethods((prev) => {
+        const newState = { ...prev };
+        delete newState[parentIndex];
+        return newState;
+      });
+
+      currentIndicators[parentIndex] = {
+        indicatorId: indicatorId, // Use state as source of truth
+        testMethodId: undefined,
+        unit: "",
+        comparisonOperator: current.comparisonOperator,
+        allowedLimit: current.allowedLimit,
+        lowerOperator: current.lowerOperator,
+        lowerLimit: current.lowerLimit,
+        upperOperator: current.upperOperator,
+        upperLimit: current.upperLimit,
+        // Clear sub-indicators' testMethodId and unit when parent method is cleared
+        subIndicators: existingSubs.map((sub: any) => ({
+          ...sub,
+          testMethodId: undefined,
+          unit: "",
+        })),
+      };
+    }
+
+    form.setFieldsValue({ indicators: currentIndicators });
   };
 
-  // Handle comparison operator change
-  const handleComparisonChange = (value: string | undefined, fieldName: number) => {
+  // Handle comparison change for parent
+  const handleComparisonChange = (value: string | undefined, parentIndex: number) => {
     const isRange = value === "range";
+    const modeKey = `parent-${parentIndex}`;
+
     setComparisonModes((prev) => ({
       ...prev,
-      [fieldName]: isRange ? "range" : "single",
+      [modeKey]: isRange ? "range" : "single",
     }));
 
-    // Update form fields based on mode
-    const indicators = form.getFieldValue("indicators") || [];
-    if (!isRange) {
-      // Single mode: clear range fields
-      indicators[fieldName] = {
-        ...indicators[fieldName],
+    const currentIndicators = form.getFieldValue("indicators") || [];
+    const current = currentIndicators[parentIndex] || {};
+    const existingSubs = Array.isArray(current.subIndicators) ? current.subIndicators : [];
+
+    if (isRange) {
+      currentIndicators[parentIndex] = {
+        indicatorId: current.indicatorId,
+        testMethodId: current.testMethodId,
+        unit: current.unit,
+        comparisonOperator: "range",
+        allowedLimit: undefined,
+        lowerOperator: ">",
+        lowerLimit: current.lowerLimit,
+        upperOperator: "<",
+        upperLimit: current.upperLimit,
+        subIndicators: existingSubs,
+      };
+    } else {
+      currentIndicators[parentIndex] = {
+        indicatorId: current.indicatorId,
+        testMethodId: current.testMethodId,
+        unit: current.unit,
+        comparisonOperator: value,
+        allowedLimit: current.allowedLimit,
+        lowerOperator: undefined,
+        lowerLimit: undefined,
+        upperOperator: undefined,
+        upperLimit: undefined,
+        subIndicators: existingSubs,
+      };
+    }
+    form.setFieldsValue({ indicators: currentIndicators });
+  };
+
+  // Handle comparison change for sub-indicator
+  const handleSubComparisonChange = (value: string | undefined, parentIndex: number, subIndex: number) => {
+    const isRange = value === "range";
+    const modeKey = `sub-${parentIndex}-${subIndex}`;
+
+    setComparisonModes((prev) => ({
+      ...prev,
+      [modeKey]: isRange ? "range" : "single",
+    }));
+
+    const currentIndicators = form.getFieldValue("indicators") || [];
+    const subs = currentIndicators[parentIndex]?.subIndicators || [];
+
+    if (isRange) {
+      subs[subIndex] = {
+        ...subs[subIndex],
+        comparisonOperator: "range",
+        allowedLimit: undefined,
+        lowerOperator: ">",
+        upperOperator: "<",
+      };
+    } else {
+      subs[subIndex] = {
+        ...subs[subIndex],
         comparisonOperator: value,
         lowerOperator: undefined,
         lowerLimit: undefined,
         upperOperator: undefined,
         upperLimit: undefined,
       };
-    } else {
-      // Range mode: keep comparisonOperator as "range" for state tracking,
-      // clear single limit field, set default range operators
-      indicators[fieldName] = {
-        ...indicators[fieldName],
-        comparisonOperator: "range",
-        allowedLimit: undefined,
-        lowerOperator: ">",
-        upperOperator: "<",
-      };
     }
-    form.setFieldsValue({ indicators });
+
+    currentIndicators[parentIndex].subIndicators = subs;
+    form.setFieldsValue({ indicators: currentIndicators });
+  };
+
+  // Handle adding sub-indicator - ONLY when clicking + button
+  // IMPORTANT: Don't use addSub() from Form.List as it can reset parent fields!
+  // Instead, manually set form values to preserve all parent data.
+  const handleAddSubIndicator = (parentIndex: number) => {
+    const parentIndicatorId = selectedIndicators[parentIndex] || indicators[parentIndex]?.indicatorId;
+    const parentMethodId = form.getFieldValue(["indicators", parentIndex, "testMethodId"]);
+    const parentUnit = form.getFieldValue(["indicators", parentIndex, "unit"]);
+
+    if (!parentIndicatorId) {
+      message.warning("Vui lòng chọn chỉ tiêu trước");
+      return;
+    }
+
+    if (!parentMethodId) {
+      message.warning("Vui lòng chọn phương pháp trước");
+      return;
+    }
+
+    if (!hasSubIndicatorsDefined(parentIndicatorId)) {
+      message.warning("Chỉ tiêu này không có chỉ tiêu phụ");
+      return;
+    }
+
+    // Get current indicators from form
+    const currentIndicators = form.getFieldValue("indicators") || [];
+    const currentParent = currentIndicators[parentIndex] || {};
+
+    // Get existing sub-indicators
+    const existingSubs = Array.isArray(currentParent.subIndicators) ? currentParent.subIndicators : [];
+
+    // Create new sub-indicator
+    const newSub = {
+      indicatorId: undefined,
+      testMethodId: parentMethodId,
+      unit: parentUnit || "",
+      comparisonOperator: undefined,
+      allowedLimit: undefined,
+    };
+
+    // IMPORTANT: Preserve ALL parent fields when adding sub-indicator
+    currentIndicators[parentIndex] = {
+      indicatorId: parentIndicatorId, // Use selectedIndicators as source of truth
+      testMethodId: parentMethodId,
+      unit: parentUnit || "",
+      comparisonOperator: currentParent.comparisonOperator,
+      allowedLimit: currentParent.allowedLimit,
+      lowerOperator: currentParent.lowerOperator,
+      lowerLimit: currentParent.lowerLimit,
+      upperOperator: currentParent.upperOperator,
+      upperLimit: currentParent.upperLimit,
+      subIndicators: [...existingSubs, newSub],
+    };
+
+    // Set form values - this preserves all parent fields
+    form.setFieldsValue({ indicators: currentIndicators });
+
+    // Track that we explicitly added a sub-indicator
+    const currentCount = subIndicatorsAddedCount[parentIndex] || 0;
+    setSubIndicatorsAddedCount((prev) => ({
+      ...prev,
+      [parentIndex]: currentCount + 1,
+    }));
+  };
+
+  // Handle removing sub-indicator
+  // IMPORTANT: Don't use removeSub() from Form.List as it can reset parent fields!
+  // Instead, manually set form values to preserve all parent data.
+  const handleRemoveSubIndicator = (parentIndex: number, subIndex: number) => {
+    const parentIndicatorId = selectedIndicators[parentIndex] || indicators[parentIndex]?.indicatorId;
+
+    // Get current indicators from form
+    const currentIndicators = form.getFieldValue("indicators") || [];
+    const currentParent = currentIndicators[parentIndex] || {};
+
+    // Get existing sub-indicators and remove the one at subIndex
+    const existingSubs = Array.isArray(currentParent.subIndicators) ? [...currentParent.subIndicators] : [];
+    existingSubs.splice(subIndex, 1);
+
+    // IMPORTANT: Preserve ALL parent fields when removing sub-indicator
+    currentIndicators[parentIndex] = {
+      indicatorId: parentIndicatorId,
+      testMethodId: currentParent.testMethodId,
+      unit: currentParent.unit || "",
+      comparisonOperator: currentParent.comparisonOperator,
+      allowedLimit: currentParent.allowedLimit,
+      lowerOperator: currentParent.lowerOperator,
+      lowerLimit: currentParent.lowerLimit,
+      upperOperator: currentParent.upperOperator,
+      upperLimit: currentParent.upperLimit,
+      subIndicators: existingSubs,
+    };
+
+    // Set form values - this preserves all parent fields
+    form.setFieldsValue({ indicators: currentIndicators });
+
+    // Decrement count
+    setSubIndicatorsAddedCount((prev) => ({
+      ...prev,
+      [parentIndex]: Math.max(0, (prev[parentIndex] || 0) - 1),
+    }));
   };
 
   // Handle cancel
@@ -223,68 +518,81 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
     setSelectedIndicators({});
     setSelectedMethods({});
     setComparisonModes({});
+    setSubIndicatorsAddedCount({});
     onCancel();
   };
 
-  // Handle remove row
-  const handleRemoveRow = (fieldName: number, remove: (index: number) => void) => {
-    remove(fieldName);
-    setSelectedIndicators((prev) => {
-      const newState = { ...prev };
-      delete newState[fieldName];
-      return newState;
-    });
-    setSelectedMethods((prev) => {
-      const newState = { ...prev };
-      delete newState[fieldName];
-      return newState;
-    });
-    setComparisonModes((prev) => {
-      const newState = { ...prev };
-      delete newState[fieldName];
-      return newState;
-    });
+  // Handle OK - pass state values directly to onOk
+  // This bypasses Form.List issues by using state as source of truth
+  const handleOk = () => {
+    // Pass state values directly - the hook will use these as source of truth
+    onOk(selectedIndicators, selectedMethods);
   };
 
-  // Custom validation for range
-  const validateRange = (_: unknown, _value: unknown, fieldName: number) => {
-    const indicators = form.getFieldValue("indicators") || [];
-    const indicator = indicators[fieldName];
-
-    if (comparisonModes[fieldName] !== "range") {
-      return Promise.resolve();
+  // Render limit fields
+  const renderLimitFields = (isRangeMode: boolean, pathPrefix: (string | number)[]) => {
+    if (isRangeMode) {
+      return (
+        <div style={{ display: "flex", gap: 4, flex: 1 }}>
+          <Form.Item name={[...pathPrefix, "lowerOperator"]} style={{ marginBottom: 0, width: 60 }}>
+            <Select options={LOWER_OPERATORS} defaultValue=">" />
+          </Form.Item>
+          <Form.Item
+            name={[...pathPrefix, "lowerLimit"]}
+            rules={[{ required: true, message: "Bắt buộc" }]}
+            style={{ marginBottom: 0, width: 80 }}
+          >
+            <NumericFormat
+              placeholder="Cận dưới"
+              allowNegative={false}
+              decimalScale={4}
+              customInput={Input}
+            />
+          </Form.Item>
+          <Form.Item name={[...pathPrefix, "upperOperator"]} style={{ marginBottom: 0, width: 60 }}>
+            <Select options={UPPER_OPERATORS} defaultValue="<" />
+          </Form.Item>
+          <Form.Item
+            name={[...pathPrefix, "upperLimit"]}
+            rules={[{ required: true, message: "Bắt buộc" }]}
+            style={{ marginBottom: 0, width: 80 }}
+          >
+            <NumericFormat
+              placeholder="Cận trên"
+              allowNegative={false}
+              decimalScale={4}
+              customInput={Input}
+            />
+          </Form.Item>
+        </div>
+      );
     }
 
-    const lowerLimit = parseFloat(indicator?.lowerLimit || "");
-    const upperLimit = parseFloat(indicator?.upperLimit || "");
-
-    if (isNaN(lowerLimit) || isNaN(upperLimit)) {
-      return Promise.resolve();
-    }
-
-    if (lowerLimit > upperLimit) {
-      return Promise.reject("Cận dưới không được lớn hơn cận trên");
-    }
-
-    if (lowerLimit === upperLimit) {
-      return Promise.reject("Cận dưới không được bằng cận trên");
-    }
-
-    return Promise.resolve();
+    return (
+      <Form.Item name={[...pathPrefix, "allowedLimit"]} style={{ marginBottom: 0, flex: 1 }}>
+        <NumericFormat
+          placeholder="Giới hạn"
+          allowNegative={false}
+          decimalScale={4}
+          customInput={Input}
+        />
+      </Form.Item>
+    );
   };
 
   return (
     <Modal
+      className="standards-add-indicators-modal"
       title={<span style={{ fontSize: 18, fontWeight: 600 }}>Thêm chỉ tiêu so sánh</span>}
       open={open}
-      onOk={onOk}
+      onOk={handleOk}
       onCancel={handleCancel}
       confirmLoading={loading}
       okText="Thêm"
       cancelText="Hủy"
       width={1100}
       centered
-      forceRender
+      destroyOnClose
     >
       <Text style={{ fontSize: 14 }}>
         Tiêu chuẩn so sánh: <Text strong>{standardName}</Text>
@@ -292,264 +600,230 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
       <Divider style={{ marginTop: 12, marginBottom: 16 }} />
 
       <Form form={form} layout="vertical" requiredMark>
-        {/* Header row */}
+        {/* Header */}
         <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-          <Text strong style={{ width: 250 }}>
-            Chỉ tiêu <Text type="danger">*</Text>
-          </Text>
-          <Text strong style={{ width: 220 }}>
-            Phương pháp <Text type="danger">*</Text>
-          </Text>
-          <Text strong style={{ width: 80 }}>
-            Đơn vị <Text type="danger">*</Text>
-          </Text>
-          <Text strong style={{ width: 90 }}>
-            So sánh
-          </Text>
-          <Text strong style={{ flex: 1 }}>
-            Giới hạn
-          </Text>
+          <div style={{ width: 32 }} />
+          <Text strong style={{ width: 220 }}>Chỉ tiêu <Text type="danger">*</Text></Text>
+          <Text strong style={{ width: 200 }}>Phương pháp <Text type="danger">*</Text></Text>
+          <Text strong style={{ width: 80 }}>Đơn vị <Text type="danger">*</Text></Text>
+          <Text strong style={{ width: 90 }}>So sánh <Text type="danger">*</Text></Text>
+          <Text strong style={{ flex: 1 }}>Giới hạn</Text>
           <div style={{ width: 14 }} />
         </div>
 
         <Form.List name="indicators">
-          {(fields, { add, remove }) => (
+          {(parentFields, { add: addParent, remove: removeParent }) => (
             <>
-              {fields.map(({ key, name, ...restField }) => {
-                const indicatorOptions = buildIndicatorOptions(name);
-                const methodOptions = buildMethodOptions(name);
-                const isRangeMode = comparisonModes[name] === "range";
+              {parentFields.map(({ key: parentKey, name: parentName }) => {
+                const parentIndicatorId = selectedIndicators[parentName] || indicators[parentName]?.indicatorId;
+                const parentHasSubs = parentIndicatorId && hasSubIndicatorsDefined(parentIndicatorId);
+                const parentModeKey = `parent-${parentName}`;
+                const isParentRangeMode = comparisonModes[parentModeKey] === "range";
+
+                // CRITICAL: Use our state-based count, NOT subFields.length
+                // This is because Form.List can have internal state that doesn't match our explicit adds
+                const hasSubsAdded = (subIndicatorsAddedCount[parentName] || 0) > 0;
 
                 return (
-                  <div
-                    key={key}
-                    style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "flex-start" }}
-                  >
-                    {/* Indicator Select */}
-                    <Form.Item
-                      {...restField}
-                      name={[name, "indicatorId"]}
-                      rules={[{ required: true, message: "Chọn" }]}
-                      style={{ marginBottom: 0, width: 250 }}
-                    >
-                      <Select
-                        options={indicatorOptions}
-                        placeholder="Chọn chỉ tiêu"
-                        showSearch
-                        filterOption={(inputValue, option) => {
-                          const searchText = (option as { searchText?: string })?.searchText;
-                          if (!searchText) return false;
-                          return searchText.toLowerCase().includes(inputValue.toLowerCase());
-                        }}
-                        onSelect={(value) => handleSelectIndicator(value, name)}
-                        onChange={(value) => {
-                          if (!value) {
-                            setSelectedIndicators((prev) => {
-                              const newState = { ...prev };
-                              delete newState[name];
-                              return newState;
-                            });
-                            setSelectedMethods((prev) => {
-                              const newState = { ...prev };
-                              delete newState[name];
-                              return newState;
-                            });
-                            // Clear method and unit
-                            const indicators = form.getFieldValue("indicators") || [];
-                            indicators[name] = {
-                              ...indicators[name],
-                              testMethodId: undefined,
-                              unit: "",
-                            };
-                            form.setFieldsValue({ indicators });
-                          }
-                        }}
-                        allowClear
-                      />
-                    </Form.Item>
-
-                    {/* Method Select */}
-                    <Form.Item
-                      {...restField}
-                      name={[name, "testMethodId"]}
-                      rules={[{ required: true, message: "Chọn" }]}
-                      style={{ marginBottom: 0, width: 220 }}
-                    >
-                      <Select
-                        options={methodOptions}
-                        placeholder="Chọn phương pháp"
-                        showSearch
-                        filterOption={(inputValue, option) => {
-                          const searchText = (option as { searchText?: string })?.searchText;
-                          if (!searchText) return false;
-                          return searchText.toLowerCase().includes(inputValue.toLowerCase());
-                        }}
-                        onSelect={(value, option) =>
-                          handleSelectMethod(value, option as { unit: string }, name)
-                        }
-                        onChange={(value) => {
-                          if (!value) {
-                            // Clear method tracking and unit when method is cleared
-                            setSelectedMethods((prev) => {
-                              const newState = { ...prev };
-                              delete newState[name];
-                              return newState;
-                            });
-                            const indicators = form.getFieldValue("indicators") || [];
-                            indicators[name] = {
-                              ...indicators[name],
-                              unit: "",
-                            };
-                            form.setFieldsValue({ indicators });
-                          }
-                        }}
-                        disabled={!selectedIndicators[name]}
-                        allowClear
-                      />
-                    </Form.Item>
-
-                    {/* Unit (auto-filled, disabled) */}
-                    <Form.Item
-                      {...restField}
-                      name={[name, "unit"]}
-                      rules={[{ required: true, message: "Chọn PP" }]}
-                      style={{ marginBottom: 0, width: 80 }}
-                    >
-                      <Input placeholder="ĐVT" disabled />
-                    </Form.Item>
-
-                    {/* Comparison Operator Selector */}
-                    <Form.Item
-                      {...restField}
-                      name={[name, "comparisonOperator"]}
-                      style={{ marginBottom: 0, width: 90 }}
-                    >
-                      <Select
-                        options={COMPARISON_OPERATORS}
-                        placeholder="--"
-                        allowClear
-                        onChange={(value) => handleComparisonChange(value, name)}
-                      />
-                    </Form.Item>
-
-                    {/* Limit fields - conditional rendering */}
-                    {isRangeMode ? (
-                      // Range mode: 4 fields
-                      <div style={{ display: "flex", gap: 4, flex: 1 }}>
-                        {/* Lower Operator */}
-                        <Form.Item
-                          {...restField}
-                          name={[name, "lowerOperator"]}
-                          style={{ marginBottom: 0, width: 60 }}
-                          initialValue=">"
-                        >
-                          <Select options={LOWER_OPERATORS} />
-                        </Form.Item>
-
-                        {/* Lower Limit */}
-                        <Form.Item
-                          {...restField}
-                          name={[name, "lowerLimit"]}
-                          rules={[
-                            { required: true, message: "Bắt buộc" },
-                            { validator: (_, value) => validateRange(_, value, name) }
-                          ]}
-                          style={{ marginBottom: 0, width: 80 }}
-                        >
-                          <NumericFormat
-                            placeholder="Cận dưới"
-                            allowNegative={false}
-                            decimalScale={4}
-                            customInput={Input}
-                            onValueChange={(values) => {
-                              const indicators = form.getFieldValue("indicators") || [];
-                              indicators[name] = {
-                                ...indicators[name],
-                                lowerLimit: values.value,
-                              };
-                              form.setFieldsValue({ indicators });
-                            }}
-                          />
-                        </Form.Item>
-
-                        {/* Upper Operator */}
-                        <Form.Item
-                          {...restField}
-                          name={[name, "upperOperator"]}
-                          style={{ marginBottom: 0, width: 60 }}
-                          initialValue="<"
-                        >
-                          <Select options={UPPER_OPERATORS} />
-                        </Form.Item>
-
-                        {/* Upper Limit */}
-                        <Form.Item
-                          {...restField}
-                          name={[name, "upperLimit"]}
-                          rules={[
-                            { required: true, message: "Bắt buộc" },
-                            { validator: (_, value) => validateRange(_, value, name) }
-                          ]}
-                          style={{ marginBottom: 0, width: 80 }}
-                        >
-                          <NumericFormat
-                            placeholder="Cận trên"
-                            allowNegative={false}
-                            decimalScale={4}
-                            customInput={Input}
-                            onValueChange={(values) => {
-                              const indicators = form.getFieldValue("indicators") || [];
-                              indicators[name] = {
-                                ...indicators[name],
-                                upperLimit: values.value,
-                              };
-                              form.setFieldsValue({ indicators });
-                            }}
-                          />
-                        </Form.Item>
+                  <div key={parentKey} style={{ marginBottom: 16 }}>
+                    {/* Parent row - MUST be OUTSIDE nested Form.List to preserve form field paths */}
+                    <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                      {/* Add sub button - only show if indicator has subs defined in master data */}
+                      <div style={{ width: 32, paddingTop: 4 }}>
+                        {parentHasSubs && (
+                          <Tooltip title="Thêm chỉ tiêu phụ">
+                            <Icon
+                              name="plus-lg"
+                              onClick={() => handleAddSubIndicator(parentName)}
+                              style={{ fontSize: 16, color: "#1890ff", cursor: "pointer" }}
+                            />
+                          </Tooltip>
+                        )}
                       </div>
-                    ) : (
-                      // Single mode: 1 field (giới hạn)
+
+                      {/* Indicator Select */}
                       <Form.Item
-                        {...restField}
-                        name={[name, "allowedLimit"]}
-                        style={{ marginBottom: 0, flex: 1 }}
+                        name={[parentName, "indicatorId"]}
+                        rules={[{ required: true, message: "Chọn" }]}
+                        style={{ marginBottom: 0, width: 220 }}
                       >
-                        <NumericFormat
-                          placeholder="Giới hạn"
-                          allowNegative={false}
-                          decimalScale={4}
-                          customInput={Input}
-                          onValueChange={(values) => {
-                            const indicators = form.getFieldValue("indicators") || [];
-                            indicators[name] = {
-                              ...indicators[name],
-                              allowedLimit: values.value,
-                            };
-                            form.setFieldsValue({ indicators });
+                        <Select
+                          options={buildParentOptions(parentIndicatorId)}
+                          placeholder="Chọn chỉ tiêu"
+                          showSearch
+                          allowClear
+                          popupMatchSelectWidth={400}
+                          labelRender={() => {
+                            if (!parentIndicatorId) return null;
+                            return renderIndicatorLabel(parentIndicatorId);
                           }}
+                          filterOption={(input, option) => {
+                            const searchText = (option as { searchText?: string })?.searchText;
+                            return searchText?.toLowerCase().includes(input.toLowerCase()) || false;
+                          }}
+                          onChange={(value) => handleParentChange(value, parentName)}
                         />
                       </Form.Item>
-                    )}
 
-                    {/* Remove button */}
-                    <MinusCircleOutlined
-                      onClick={() => handleRemoveRow(name, remove)}
-                      style={{
-                        color: fields.length > 1 ? "#ff4d4f" : "#d9d9d9",
-                        marginTop: 8,
-                        cursor: fields.length > 1 ? "pointer" : "not-allowed",
-                        visibility: fields.length > 1 ? "visible" : "hidden",
-                      }}
-                    />
+                      {/* Method Select */}
+                      <Form.Item
+                        name={[parentName, "testMethodId"]}
+                        rules={[{ required: true, message: "Chọn" }]}
+                        style={{ marginBottom: 0, width: 200 }}
+                      >
+                        <Select
+                          options={buildMethodOptions(parentName)}
+                          placeholder="Chọn phương pháp"
+                          showSearch
+                          allowClear
+                          disabled={!selectedIndicators[parentName]}
+                          filterOption={(input, option) => {
+                            const searchText = (option as { searchText?: string })?.searchText;
+                            return searchText?.toLowerCase().includes(input.toLowerCase()) || false;
+                          }}
+                          onChange={(value, option) =>
+                            handleMethodChange(value, option as { unit?: string }, parentName)
+                          }
+                        />
+                      </Form.Item>
+
+                      {/* Unit/Comparison/Limit - hide when has sub-indicators added */}
+                      {!hasSubsAdded ? (
+                        <>
+                          <Form.Item
+                            name={[parentName, "unit"]}
+                            rules={[{ required: true, message: "Chọn PP" }]}
+                            style={{ marginBottom: 0, width: 80 }}
+                          >
+                            <Input placeholder="ĐVT" disabled />
+                          </Form.Item>
+
+                          <Form.Item
+                            name={[parentName, "comparisonOperator"]}
+                            rules={[{ required: true, message: "Chọn" }]}
+                            style={{ marginBottom: 0, width: 90 }}
+                          >
+                            <Select
+                              options={COMPARISON_OPERATORS}
+                              placeholder="--"
+                              allowClear
+                              onChange={(value) => handleComparisonChange(value, parentName)}
+                            />
+                          </Form.Item>
+
+                          {renderLimitFields(isParentRangeMode, [parentName])}
+                        </>
+                      ) : (
+                        <div style={{ flex: 1 }} />
+                      )}
+
+                      {/* Remove button */}
+                      <MinusCircleOutlined
+                        onClick={() => removeParent(parentName)}
+                        style={{
+                          color: parentFields.length > 1 ? "#ff4d4f" : "#d9d9d9",
+                          marginTop: 8,
+                          cursor: parentFields.length > 1 ? "pointer" : "not-allowed",
+                          visibility: parentFields.length > 1 ? "visible" : "hidden",
+                        }}
+                      />
+                    </div>
+
+                    {/* Sub-indicators container - ONLY render when explicitly added via + button */}
+                    {hasSubsAdded && (
+                      <div style={{ marginTop: 8, marginLeft: 32 }}>
+                        <div className="standards-sub-container">
+                          <Form.List name={[parentName, "subIndicators"]}>
+                            {(subFields) => (
+                              <>
+                                {subFields.map(({ key: subKey, name: subName }, index) => {
+                                  const subModeKey = `sub-${parentName}-${subName}`;
+                                  const isSubRangeMode = comparisonModes[subModeKey] === "range";
+
+                                  return (
+                                    <div
+                                      key={subKey}
+                                      className={`standards-sub-row ${index === 0 ? "is-first" : ""} ${index === subFields.length - 1 ? "is-last" : ""}`}
+                                      style={{
+                                        display: "flex",
+                                        gap: 8,
+                                        marginBottom: index === subFields.length - 1 ? 0 : 12,
+                                        alignItems: "flex-start",
+                                      }}
+                                    >
+                                      {/* Sub-indicator Select */}
+                                      <Form.Item
+                                        name={[subName, "indicatorId"]}
+                                        rules={[{ required: true, message: "Chọn" }]}
+                                        style={{ marginBottom: 0, width: 160 }}
+                                      >
+                                        <Select
+                                          options={buildSubOptions(parentName, subName)}
+                                          placeholder="Chỉ tiêu phụ"
+                                          showSearch
+                                          allowClear
+                                          filterOption={(input, option) => {
+                                            const searchText = (option as { searchText?: string })?.searchText;
+                                            return searchText?.toLowerCase().includes(input.toLowerCase()) || false;
+                                          }}
+                                        />
+                                      </Form.Item>
+
+                                      {/* Method - disabled */}
+                                      <Form.Item
+                                        name={[subName, "testMethodId"]}
+                                        style={{ marginBottom: 0, width: 160 }}
+                                      >
+                                        <Select placeholder="(Theo cha)" disabled options={buildMethodOptions(parentName)} />
+                                      </Form.Item>
+
+                                      {/* Unit - auto-filled from parent, disabled */}
+                                      <Form.Item
+                                        name={[subName, "unit"]}
+                                        rules={[{ required: true, message: "Chọn PP" }]}
+                                        style={{ marginBottom: 0, width: 80 }}
+                                      >
+                                        <Input placeholder="ĐVT" disabled />
+                                      </Form.Item>
+
+                                      {/* Comparison */}
+                                      <Form.Item
+                                        name={[subName, "comparisonOperator"]}
+                                        rules={[{ required: true, message: "Chọn" }]}
+                                        style={{ marginBottom: 0, width: 90 }}
+                                      >
+                                        <Select
+                                          options={COMPARISON_OPERATORS}
+                                          placeholder="--"
+                                          allowClear
+                                          onChange={(value) => handleSubComparisonChange(value, parentName, subName)}
+                                        />
+                                      </Form.Item>
+
+                                      {/* Limit fields */}
+                                      {renderLimitFields(isSubRangeMode, [subName])}
+
+                                      {/* Remove sub button */}
+                                      <MinusCircleOutlined
+                                        onClick={() => handleRemoveSubIndicator(parentName, subName)}
+                                        style={{ color: "#ff4d4f", marginTop: 8, cursor: "pointer" }}
+                                      />
+                                    </div>
+                                  );
+                                })}
+                              </>
+                            )}
+                          </Form.List>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
+
               <Button
                 type="dashed"
-                onClick={() =>
-                  add({ indicatorId: undefined, testMethodId: undefined, unit: "" })
-                }
+                onClick={() => addParent({ indicatorId: undefined, testMethodId: undefined, unit: "", subIndicators: [] })}
                 block
                 icon={<PlusOutlined />}
                 style={{ marginTop: 8 }}

@@ -20,13 +20,77 @@ import {
 } from "../../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import { GroupedStandardData, StandardIndicatorDto } from "../types";
+import { StandardIndicatorWithPosition } from "../constants";
+import "./StandardsTable.css";
+
+// Utility function to sort indicators by parent-child relationship
+// Parents first, then their sub-indicators grouped together
+// Also adds _isFirstSub and _isLastSub flags for tree line rendering
+const sortIndicatorsByHierarchy = (indicators: StandardIndicatorDto[]): StandardIndicatorWithPosition[] => {
+  if (!indicators || indicators.length === 0) return [];
+
+  // Separate parent indicators and sub-indicators
+  const parents = indicators.filter(ind => !ind.parentIndicatorId);
+  const subs = indicators.filter(ind => ind.parentIndicatorId);
+
+  // Group sub-indicators by parentIndicatorId
+  const subsByParent = new Map<string, StandardIndicatorDto[]>();
+  subs.forEach(sub => {
+    const parentId = sub.parentIndicatorId!;
+    if (!subsByParent.has(parentId)) {
+      subsByParent.set(parentId, []);
+    }
+    subsByParent.get(parentId)!.push(sub);
+  });
+
+  // Sort subs within each group by sortOrder
+  subsByParent.forEach((subList) => {
+    subList.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  });
+
+  // Build sorted result with position flags
+  const result: StandardIndicatorWithPosition[] = [];
+
+  // First add parents with their subs (sorted by sortOrder)
+  const sortedParents = [...parents].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  sortedParents.forEach(parent => {
+    result.push(parent);
+    const childSubs = subsByParent.get(parent.indicatorId);
+    if (childSubs) {
+      childSubs.forEach((sub, index) => {
+        result.push({
+          ...sub,
+          _isFirstSub: index === 0,
+          _isLastSub: index === childSubs.length - 1,
+        });
+      });
+      subsByParent.delete(parent.indicatorId);
+    }
+  });
+
+  // Then add orphaned sub-indicators (whose parent is not in the list)
+  // Group them together by parentIndicatorId
+  const orphanedParentIds = Array.from(subsByParent.keys());
+  orphanedParentIds.forEach(parentId => {
+    const orphanedSubs = subsByParent.get(parentId)!;
+    orphanedSubs.forEach((sub, index) => {
+      result.push({
+        ...sub,
+        _isFirstSub: index === 0,
+        _isLastSub: index === orphanedSubs.length - 1,
+      });
+    });
+  });
+
+  return result;
+};
 
 interface StandardsTableProps {
   loading: boolean;
   batchLoading: boolean;
   groupedData: GroupedStandardData[];
   standardColumns: ColumnsType<GroupedStandardData>;
-  indicatorColumns: ColumnsType<StandardIndicatorDto>;
+  indicatorColumns: ColumnsType<StandardIndicatorWithPosition>;
   expandedRowKeys: string[];
   searchText: string;
   // Batch selection for indicators
@@ -94,7 +158,10 @@ const StandardsTable: React.FC<StandardsTableProps> = ({
                     <>
                       {/* Indicator table with overlay header when selected */}
                       {(() => {
-                        const indicatorIds = standardRecord.indicators.map(
+                        // Sort indicators by hierarchy (parent-child relationship)
+                        const sortedIndicators = sortIndicatorsByHierarchy(standardRecord.indicators);
+
+                        const indicatorIds = sortedIndicators.map(
                           (ind) => ind.id,
                         );
                         const allSelected =
@@ -230,10 +297,13 @@ const StandardsTable: React.FC<StandardsTableProps> = ({
                             )}
                             <Table
                               columns={indicatorColumns}
-                              dataSource={standardRecord.indicators}
+                              dataSource={sortedIndicators}
                               rowKey="id"
                               pagination={false}
                               size="small"
+                              rowClassName={(record) =>
+                                record.parentIndicatorId ? "sub-indicator-row" : ""
+                              }
                               rowSelection={{
                                 selectedRowKeys: selectedKeys,
                                 onChange: (keys) => {

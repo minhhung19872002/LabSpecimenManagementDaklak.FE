@@ -184,6 +184,7 @@ export interface StandardIndicatorDto {
   indicatorCode: string;
   indicatorName: string;
   indicatorFormattedName?: string;  // Tên chỉ tiêu có định dạng HTML
+  parentIndicatorId?: string;  // ID của chỉ tiêu cha (nếu là chỉ tiêu phụ)
   testMethodId: string;
   testMethodCode: string;
   testMethodName: string;

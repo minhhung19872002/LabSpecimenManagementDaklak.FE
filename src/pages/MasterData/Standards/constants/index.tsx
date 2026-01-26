@@ -131,12 +131,18 @@ export const getStandardColumns = (
   },
 ];
 
+// Extended type with position flags for tree line rendering (used in columns)
+export interface StandardIndicatorWithPosition extends StandardIndicatorDto {
+  _isFirstSub?: boolean;
+  _isLastSub?: boolean;
+}
+
 // Columns cho bảng chỉ tiêu trong tiêu chuẩn (indicator level)
 export const getIndicatorColumns = (
   handleEdit: (standardId: string, indicator: StandardIndicatorDto) => void,
   handleRemove: (standardId: string, indicatorId: string) => void,
   handleToggleActive: (standardId: string, indicatorId: string) => void
-): ColumnsType<StandardIndicatorDto> => [
+): ColumnsType<StandardIndicatorWithPosition> => [
   {
     title: "STT",
     key: "index",
@@ -144,11 +150,39 @@ export const getIndicatorColumns = (
     render: (_, __, index) => index + 1,
   },
   {
+    title: "Mã chỉ tiêu",
+    dataIndex: "indicatorCode",
+    key: "indicatorCode",
+    width: 120,
+    render: (code, record) => {
+      // Don't show code for sub-indicators
+      if (record.parentIndicatorId) return null;
+      return <span style={{ fontWeight: 500 }}>{code}</span>;
+    },
+  },
+  {
     title: "Tên chỉ tiêu",
     dataIndex: "indicatorName",
     key: "indicatorName",
     width: 200,
-    render: (_, record) => <IndicatorName name={record.indicatorName} formattedName={record.indicatorFormattedName} />,
+    render: (_, record) => {
+      const isSubIndicator = !!record.parentIndicatorId;
+      const isFirstSub = record._isFirstSub || false;
+      const isLastSub = record._isLastSub || false;
+
+      return (
+        <div
+          className={`indicator-name-wrapper ${isSubIndicator ? "has-tree-line" : ""} ${isFirstSub ? "is-first-sub" : ""} ${isLastSub ? "is-last-sub" : ""}`}
+          style={{
+            paddingLeft: isSubIndicator ? 24 : 0,
+            display: "flex",
+            alignItems: "center",
+          }}
+        >
+          <IndicatorName name={record.indicatorName} formattedName={record.indicatorFormattedName} />
+        </div>
+      );
+    },
   },
   {
     title: "Tên phương pháp",

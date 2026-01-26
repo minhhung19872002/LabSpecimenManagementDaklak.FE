@@ -143,49 +143,140 @@ export const useStandardsActions = ({
     setSelectedStandardName(standardName);
     form.resetFields();
     form.setFieldsValue({
-      indicators: [{ indicatorId: undefined, testMethodId: undefined, unit: "" }],
+      indicators: [{ indicatorId: undefined, testMethodId: undefined, unit: "", subIndicators: [] }],
     });
     setAddIndicatorsModalOpen(true);
   };
 
-  const handleAddIndicatorsOk = async (form: FormInstance) => {
+  const handleAddIndicatorsOk = async (
+    form: FormInstance,
+    selectedIndicators: Record<number, string>,
+    selectedMethods: Record<number, { id: string; unit: string }>
+  ) => {
     if (!selectedStandardId) return;
 
     try {
       setAddIndicatorsLoading(true);
-      const values = await form.validateFields();
 
-      const validIndicators = values.indicators?.filter(
-        (item: any) => item.indicatorId && item.testMethodId && item.unit
-      );
+      // Get form values directly (don't use validateFields as it has issues with nested Form.List)
+      const formIndicators = form.getFieldValue("indicators") || [];
 
-      if (!validIndicators || validIndicators.length === 0) {
+      // Flatten nested structure: parent indicators + their sub-indicators
+      const flatIndicators: any[] = [];
+      const errors: string[] = [];
+
+      // Iterate through selected indicators (source of truth for parent data)
+      Object.keys(selectedIndicators).forEach((indexStr) => {
+        const index = parseInt(indexStr, 10);
+        const indicatorId = selectedIndicators[index];
+        const method = selectedMethods[index];
+
+        // Validate parent fields
+        if (!indicatorId) {
+          errors.push(`Dòng ${index + 1}: Vui lòng chọn chỉ tiêu`);
+          return;
+        }
+        if (!method) {
+          errors.push(`Dòng ${index + 1}: Vui lòng chọn phương pháp`);
+          return;
+        }
+
+        const formParent = formIndicators[index] || {};
+        // Filter only sub-indicators that have actual data (indicatorId selected)
+        const subIndicators = (formParent.subIndicators || []).filter(
+          (sub: any) => sub && sub.indicatorId
+        );
+        const hasSubIndicators = subIndicators.length > 0;
+
+        if (hasSubIndicators) {
+          // Parent with sub-indicators: only send indicatorId, testMethodId, unit
+          flatIndicators.push({
+            indicatorId: indicatorId,
+            testMethodId: method.id,
+            unit: method.unit || "",
+          });
+
+          // Add all sub-indicators with full fields
+          subIndicators.forEach((sub: any, subIndex: number) => {
+            if (!sub.indicatorId) {
+              errors.push(`Dòng ${index + 1}, chỉ tiêu phụ ${subIndex + 1}: Vui lòng chọn chỉ tiêu phụ`);
+              return;
+            }
+            if (!sub.comparisonOperator) {
+              errors.push(`Dòng ${index + 1}, chỉ tiêu phụ ${subIndex + 1}: Vui lòng chọn phép so sánh`);
+              return;
+            }
+
+            const isRange = sub.comparisonOperator === "range";
+
+            // Validate limits
+            if (isRange) {
+              if (!sub.lowerLimit && !sub.upperLimit) {
+                errors.push(`Dòng ${index + 1}, chỉ tiêu phụ ${subIndex + 1}: Vui lòng nhập giới hạn`);
+                return;
+              }
+            }
+
+            flatIndicators.push({
+              indicatorId: sub.indicatorId,
+              testMethodId: method.id, // Inherit from parent
+              unit: sub.unit || method.unit || "",
+              comparisonOperator: isRange ? undefined : sub.comparisonOperator,
+              allowedLimit: isRange ? undefined : sub.allowedLimit || undefined,
+              lowerOperator: isRange ? sub.lowerOperator || ">" : undefined,
+              lowerLimit: isRange ? sub.lowerLimit || undefined : undefined,
+              upperOperator: isRange ? sub.upperOperator || "<" : undefined,
+              upperLimit: isRange ? sub.upperLimit || undefined : undefined,
+            });
+          });
+        } else {
+          // Parent without sub-indicators: send full fields
+          if (!formParent.comparisonOperator) {
+            errors.push(`Dòng ${index + 1}: Vui lòng chọn phép so sánh`);
+            return;
+          }
+
+          const isRange = formParent.comparisonOperator === "range";
+
+          // Validate limits
+          if (isRange) {
+            if (!formParent.lowerLimit && !formParent.upperLimit) {
+              errors.push(`Dòng ${index + 1}: Vui lòng nhập giới hạn`);
+              return;
+            }
+          }
+
+          flatIndicators.push({
+            indicatorId: indicatorId,
+            testMethodId: method.id,
+            unit: method.unit || "",
+            comparisonOperator: isRange ? undefined : formParent.comparisonOperator,
+            allowedLimit: isRange ? undefined : formParent.allowedLimit || undefined,
+            lowerOperator: isRange ? formParent.lowerOperator || ">" : undefined,
+            lowerLimit: isRange ? formParent.lowerLimit || undefined : undefined,
+            upperOperator: isRange ? formParent.upperOperator || "<" : undefined,
+            upperLimit: isRange ? formParent.upperLimit || undefined : undefined,
+          });
+        }
+      });
+
+      // Show first error if any
+      if (errors.length > 0) {
+        message.warning(errors[0]);
+        return;
+      }
+
+      if (flatIndicators.length === 0) {
         message.warning("Vui lòng chọn ít nhất một chỉ tiêu");
         return;
       }
 
       const data: AddIndicatorsToStandardDto = {
-        indicators: validIndicators.map((item: any) => {
-          // Check if this is a range (comparisonOperator === "range")
-          const isRange = item.comparisonOperator === "range";
-          return {
-            indicatorId: item.indicatorId,
-            testMethodId: item.testMethodId,
-            unit: item.unit,
-            // For range mode, don't send comparisonOperator and allowedLimit
-            comparisonOperator: isRange ? undefined : item.comparisonOperator || undefined,
-            allowedLimit: isRange ? undefined : item.allowedLimit || undefined,
-            // Range fields
-            lowerOperator: isRange ? item.lowerOperator || undefined : undefined,
-            lowerLimit: isRange ? item.lowerLimit || undefined : undefined,
-            upperOperator: isRange ? item.upperOperator || undefined : undefined,
-            upperLimit: isRange ? item.upperLimit || undefined : undefined,
-          };
-        }),
+        indicators: flatIndicators,
       };
 
       await standardService.addIndicators(selectedStandardId, data);
-      message.success(`Thêm ${validIndicators.length} chỉ tiêu thành công!`);
+      message.success(`Thêm ${flatIndicators.length} chỉ tiêu thành công!`);
 
       // Keep the standard expanded after adding indicators
       if (!expandedRowKeys.includes(selectedStandardId)) {
