@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -19,6 +19,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   placeholder = "Nhập nội dung...",
   disabled = false,
 }) => {
+  // Track if we're syncing from prop to avoid triggering onChange
+  const isSyncingFromProp = useRef(false);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -42,6 +45,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     content: value || "",
     editable: !disabled,
     onUpdate: ({ editor }) => {
+      // Skip onChange if we're syncing from prop
+      if (isSyncingFromProp.current) {
+        return;
+      }
       const html = editor.getHTML();
       const plainText = editor.getText();
       onChange?.(html, plainText);
@@ -51,7 +58,12 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   // Update editor content when value prop changes
   React.useEffect(() => {
     if (editor && value !== undefined && editor.getHTML() !== value) {
+      isSyncingFromProp.current = true;
       editor.commands.setContent(value);
+      // Reset flag after a microtask to ensure onUpdate has been processed
+      Promise.resolve().then(() => {
+        isSyncingFromProp.current = false;
+      });
     }
   }, [value, editor]);
 
