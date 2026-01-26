@@ -1,0 +1,106 @@
+.add-indicators-modal .ant-modal-header {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.add-indicators-modal .ant-modal-body {
+  padding: 0 14px !important;
+}
+
+.add-indicators-modal .ant-modal-footer {
+  padding: 12px 14px;
+  margin: 0;
+  border-top: 1px solid #f0f0f0;
+}
+
+/* Gradient primary button */
+.add-indicators-modal .ant-modal-footer .ant-btn-primary {
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  border: none;
+}
+
+.add-indicators-modal .ant-modal-footer .ant-btn-primary:hover {
+  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
+}
+
+.add-indicators-modal .ant-modal-footer .ant-btn-primary:active {
+  background: linear-gradient(135deg, #096dd9 0%, #0050b3 100%);
+}
+
+/* Style for "Thêm dòng" button */
+.add-indicators-modal .ant-btn-default {
+  border: 1px solid #009AE3 !important;
+  color: #009AE3 !important;
+  background-color: #fff !important;
+  transition: all 0.3s;
+}
+
+.add-indicators-modal .ant-btn-default .anticon,
+.add-indicators-modal .ant-btn-default i,
+.add-indicators-modal .ant-btn-default svg {
+  color: #009AE3 !important;
+}
+
+.add-indicators-modal .ant-btn-default:hover {
+  background-color: rgba(0, 154, 227, 0.1) !important;
+  border-color: #009AE3 !important;
+  color: #009AE3 !important;
+}
+
+.add-indicators-modal .ant-btn-default:active {
+  background-color: rgba(0, 154, 227, 0.2) !important;
+}
+
+/* Parent indicator wrapper for tree line origin */
+.add-indicators-parent-wrapper {
+  position: relative;
+}
+
+/* Vertical line extending down from parent to children */
+.add-indicators-parent-wrapper.has-children::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 100%;
+  height: 32px;
+  width: 1px;
+  background-color: #d9d9d9;
+  z-index: 1;
+}
+
+/* Tree line styles for individual sub-indicators */
+.add-indicators-sub-wrapper {
+  position: relative;
+}
+
+/* Vertical line connecting sub-indicators */
+.add-indicators-sub-wrapper::before {
+  content: '';
+  position: absolute;
+  left: -20px;
+  top: -100%;
+  bottom: -100%;
+  width: 1px;
+  background-color: #d9d9d9;
+}
+
+/* Horizontal line from vertical to indicator field */
+.add-indicators-sub-wrapper::after {
+  content: '';
+  position: absolute;
+  left: -20px;
+  top: 20px;
+  width: 16px;
+  height: 1px;
+  background-color: #d9d9d9;
+}
+
+/* For first sub-indicator, vertical line starts from top of the field */
+.add-indicators-sub-wrapper.is-first::before {
+  top: 0;
+}
+
+/* For last sub-indicator, vertical line ends at the middle (creates the └ corner) */
+.add-indicators-sub-wrapper.is-last::before {
+  bottom: calc(100% - 20px);
+}

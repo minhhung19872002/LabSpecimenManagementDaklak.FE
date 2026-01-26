@@ -312,7 +312,7 @@ export const useIndicatorsActions = ({
   const handleBulkCreate = (bulkForm: FormInstance) => {
     console.log("handleBulkCreate");
     bulkForm.resetFields();
-    bulkForm.setFieldsValue({ indicators: [{ name: "", formattedName: "" }] });
+    bulkForm.setFieldsValue({ indicators: [{ name: "", formattedName: "", subIndicators: [] }] });
     setBulkModalOpen(true);
   };
 

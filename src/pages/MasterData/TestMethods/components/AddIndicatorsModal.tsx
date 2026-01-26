@@ -9,17 +9,16 @@ import {
   Row,
   Col,
   Tooltip,
+  Card,
 } from "antd";
-import {
-  PlusOutlined,
-  MinusCircleOutlined,
-} from "../../../../components/common/Icon";
+import Icon from "../../../../components/common/Icon";
 import type { FormInstance } from "antd";
 import {
   IndicatorDto,
   IndicatorGroupDto,
 } from "../../../../services/masterDataService";
 import IndicatorName from "../../../../components/common/IndicatorName";
+import "./AddIndicatorsModal.css";
 
 const { Text } = Typography;
 
@@ -47,16 +46,6 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   const [selectedParentIds, setSelectedParentIds] = useState<Set<string>>(
     new Set(),
   );
-
-  // DEBUG: Log indicatorsByGroup when modal opens
-  React.useEffect(() => {
-    if (open) {
-      console.log('🔍 AddIndicatorsModal - indicatorsByGroup:', indicatorsByGroup);
-      const allIndicators = Object.values(indicatorsByGroup).flat();
-      console.log('🔍 All indicators flattened:', allIndicators);
-      console.log('🔍 Indicators with subIndicators:', allIndicators.filter(ind => ind.subIndicators && ind.subIndicators.length > 0));
-    }
-  }, [open, indicatorsByGroup]);
 
   // Check if indicator is already selected
   const isIndicatorAlreadySelected = (indicatorId: string) => {
@@ -116,26 +105,16 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
       parentFieldName,
       "indicatorId",
     ]);
-    console.log('🔍 buildSubOptions - parentIndicatorId:', parentIndicatorId);
 
     if (!parentIndicatorId) return [];
 
     // Find parent indicator from all groups
     const allIndicators = Object.values(indicatorsByGroup).flat();
-    console.log('🔍 buildSubOptions - searching in', allIndicators.length, 'indicators');
-
     const parentIndicator = allIndicators.find((ind) => ind.id === parentIndicatorId);
-    console.log('🔍 buildSubOptions - found parentIndicator:', parentIndicator);
 
-    if (!parentIndicator) {
-      console.warn('❌ Parent indicator not found:', parentIndicatorId);
-      return [];
-    }
-
-    console.log('🔍 buildSubOptions - parentIndicator.subIndicators:', parentIndicator.subIndicators);
+    if (!parentIndicator) return [];
 
     if (!parentIndicator.subIndicators || parentIndicator.subIndicators.length === 0) {
-      console.log('⚠️ No sub-indicators for parent:', parentIndicator.code, parentIndicator.name);
       return [];
     }
 
@@ -154,9 +133,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
         !existingIndicatorIds.includes(sub.id),
     );
 
-    console.log('🔍 buildSubOptions - available subs after filtering:', availableSubs);
-
-    const options = availableSubs.map((sub) => ({
+    return availableSubs.map((sub) => ({
       value: sub.id,
       label: (
         <span>
@@ -166,15 +143,10 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
       ),
       searchText: `${sub.code} - ${sub.name}`,
     }));
-
-    console.log('✅ buildSubOptions - returning', options.length, 'options');
-    return options;
   };
 
   // Handle parent indicator selection
   const handleParentChange = (parentId: string, parentFieldName: number) => {
-    console.log('🔍 handleParentChange - parentId:', parentId, 'fieldName:', parentFieldName);
-
     // Clear sub-indicators when parent changes
     const indicators = form.getFieldValue("indicators") || [];
     if (indicators[parentFieldName]) {
@@ -185,16 +157,12 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
     form.setFieldsValue({
       indicators: {
         [parentFieldName]: {
-          indicatorId: parentId,  // MUST set this explicitly
+          indicatorId: parentId,
           unitPrice: 0,
           subIndicators: [],
         },
       },
     });
-
-    // Verify form value was set
-    const updatedValue = form.getFieldValue(["indicators", parentFieldName, "indicatorId"]);
-    console.log('✅ handleParentChange - updated indicatorId:', updatedValue);
 
     // Update selected parent IDs
     setSelectedParentIds((prev) => {
@@ -212,6 +180,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
 
   return (
     <Modal
+      className="add-indicators-modal"
       title="Thêm chỉ tiêu"
       open={open}
       onOk={onOk}
@@ -222,6 +191,9 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
       width={700}
       centered
       forceRender
+      styles={{
+        body: { paddingTop: 16, maxHeight: "70vh", overflowY: "auto" },
+      }}
     >
       <Form
         form={form}
@@ -232,19 +204,26 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
         <Form.List name="indicators">
           {(parentFields, { add: addParent, remove: removeParent }) => (
             <>
-              {parentFields.map(
-                ({ key: parentKey, name: parentName, ...restField }) => (
-                  <div key={parentKey} style={{ marginBottom: 16 }}>
-                    {/* Nested Form.List for sub-indicators */}
-                    <Form.List name={[parentName, "subIndicators"]}>
-                      {(subFields, { add: addSub, remove: removeSub }) => (
-                        <>
-                          {/* Parent indicator row */}
-                          <Row gutter={8} align="middle" wrap={false}>
-                            <Col flex="32px">
-                              <Tooltip title="Thêm chỉ tiêu phụ">
-                                <span>
-                                  <PlusOutlined
+              <Card size="small" style={{ marginBottom: 16 }}>
+                {parentFields.map(
+                  ({ key: parentKey, name: parentName, ...restField }) => (
+                    <div
+                      key={parentKey}
+                      style={{
+                        marginBottom:
+                          parentName === parentFields.length - 1 ? 0 : 24,
+                      }}
+                    >
+                      {/* Nested Form.List for sub-indicators */}
+                      <Form.List name={[parentName, "subIndicators"]}>
+                        {(subFields, { add: addSub, remove: removeSub }) => (
+                          <>
+                            {/* Parent indicator row */}
+                            <Row gutter={8} align="middle" wrap={false}>
+                              <Col flex="32px">
+                                <Tooltip title="Thêm chỉ tiêu phụ">
+                                  <Icon
+                                    name="plus-lg"
                                     onClick={() =>
                                       addSub({
                                         indicatorId: undefined,
@@ -253,47 +232,50 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                                     }
                                     style={{
                                       fontSize: 16,
-                                      color: "#1890ff",
+                                      color: "#8C8C8C",
                                       cursor: "pointer",
                                     }}
                                   />
-                                </span>
-                              </Tooltip>
-                            </Col>
-                            <Col flex="auto">
-                              <Form.Item
-                                {...restField}
-                                name={[parentName, "indicatorId"]}
-                                rules={[
-                                  { required: true, message: "Chọn chỉ tiêu" },
-                                ]}
-                                style={{ marginBottom: 0 }}
-                              >
+                                </Tooltip>
+                              </Col>
+                              <Col flex="auto">
+                                <div
+                                  className={`add-indicators-parent-wrapper ${subFields.length > 0 ? "has-children" : ""}`}
+                                >
+                                  <Form.Item
+                                    {...restField}
+                                    name={[parentName, "indicatorId"]}
+                                    rules={[
+                                      { required: true, message: "Chọn chỉ tiêu" },
+                                    ]}
+                                    style={{ marginBottom: 0 }}
+                                  >
                                 <Select
-                                  options={buildParentOptions()}
-                                  placeholder="Tìm và chọn chỉ tiêu cha"
-                                  showSearch
-                                  popupMatchSelectWidth={400}
-                                  optionLabelProp="label"
-                                  filterOption={(inputValue, option) => {
-                                    const searchText = (
-                                      option as { searchText?: string }
-                                    )?.searchText;
-                                    if (!searchText) return false;
-                                    return searchText
-                                      .toLowerCase()
-                                      .includes(inputValue.toLowerCase());
-                                  }}
-                                  onChange={(value) => {
-                                    if (value) {
-                                      handleParentChange(value, parentName);
-                                    }
-                                  }}
-                                  allowClear
-                                />
-                              </Form.Item>
-                            </Col>
-                            <Col flex="140px">
+                                      options={buildParentOptions()}
+                                      placeholder="Tìm và chọn chỉ tiêu cha"
+                                      showSearch
+                                      popupMatchSelectWidth={400}
+                                      optionLabelProp="label"
+                                      filterOption={(inputValue, option) => {
+                                        const searchText = (
+                                          option as { searchText?: string }
+                                        )?.searchText;
+                                        if (!searchText) return false;
+                                        return searchText
+                                          .toLowerCase()
+                                          .includes(inputValue.toLowerCase());
+                                      }}
+                                      onChange={(value) => {
+                                        if (value) {
+                                          handleParentChange(value, parentName);
+                                        }
+                                      }}
+                                      allowClear
+                                    />
+                                  </Form.Item>
+                                </div>
+                              </Col>
+                              <Col flex="140px">
                               <Form.Item
                                 {...restField}
                                 name={[parentName, "unitPrice"]}
@@ -345,184 +327,195 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                               </Form.Item>
                             </Col>
                             <Col flex="32px">
-                              {parentFields.length > 1 && (
-                                <MinusCircleOutlined
-                                  onClick={() => removeParent(parentName)}
-                                  style={{
-                                    fontSize: 16,
-                                    color: "#ff4d4f",
-                                    cursor: "pointer",
-                                  }}
-                                />
-                              )}
-                            </Col>
-                          </Row>
-
-                          {/* Sub-indicators container */}
-                          {subFields.length > 0 && (
-                            <Row gutter={8} style={{ marginTop: 12 }}>
-                              <Col flex="32px" />
-                              <Col flex="auto">
-                                <div
-                                  style={{
-                                    padding: "12px",
-                                    background: "#fafafa",
-                                    borderRadius: "8px",
-                                  }}
-                                >
-                                  {subFields.map(
-                                    ({ key: subKey, name: subName }, index) => (
-                                      <Row
-                                        key={subKey}
-                                        gutter={8}
-                                        align="middle"
-                                        wrap={false}
-                                        style={{
-                                          marginBottom:
-                                            index === subFields.length - 1
-                                              ? 0
-                                              : 8,
-                                        }}
-                                      >
-                                        <Col flex="auto">
-                                          <Form.Item
-                                            name={[subName, "indicatorId"]}
-                                            dependencies={[[parentName, "indicatorId"]]}
-                                            rules={[
-                                              {
-                                                required: true,
-                                                message: "Chọn chỉ tiêu phụ",
-                                              },
-                                            ]}
-                                            style={{ marginBottom: 0 }}
-                                          >
-                                            <Select
-                                              key={form.getFieldValue([
-                                                "indicators",
-                                                parentName,
-                                                "indicatorId",
-                                              ])}
-                                              options={buildSubOptions(
-                                                parentName,
-                                              )}
-                                              placeholder="Chọn chỉ tiêu phụ"
-                                              showSearch
-                                              popupMatchSelectWidth={400}
-                                              optionLabelProp="label"
-                                              filterOption={(
-                                                inputValue,
-                                                option,
-                                              ) => {
-                                                const searchText = (
-                                                  option as {
-                                                    searchText?: string;
-                                                  }
-                                                )?.searchText;
-                                                if (!searchText) return false;
-                                                return searchText
-                                                  .toLowerCase()
-                                                  .includes(
-                                                    inputValue.toLowerCase(),
-                                                  );
-                                              }}
-                                              allowClear
-                                            />
-                                          </Form.Item>
-                                        </Col>
-                                        <Col flex="140px">
-                                          <Form.Item
-                                            name={[subName, "unitPrice"]}
-                                            rules={[
-                                              {
-                                                type: "number",
-                                                min: 0,
-                                                message: "Giá >= 0",
-                                              },
-                                              // No required rule for sub-indicators
-                                            ]}
-                                            style={{ marginBottom: 0 }}
-                                          >
-                                            <InputNumber<number>
-                                              placeholder="Đơn giá (tùy chọn)"
-                                              min={0}
-                                              precision={0}
-                                              controls={false}
-                                              style={{ width: "100%" }}
-                                              formatter={(value) =>
-                                                `${value}`.replace(
-                                                  /\B(?=(\d{3})+(?!\d))/g,
-                                                  ",",
-                                                )
-                                              }
-                                              parser={(value) => {
-                                                const parsed = parseInt(
-                                                  value?.replace(
-                                                    /[^\d]/g,
-                                                    "",
-                                                  ) || "0",
-                                                  10,
-                                                );
-                                                return Math.max(0, parsed);
-                                              }}
-                                              addonAfter="đ"
-                                              onKeyDown={(e) => {
-                                                if (
-                                                  !/[\d]/.test(e.key) &&
-                                                  ![
-                                                    "Backspace",
-                                                    "Delete",
-                                                    "ArrowLeft",
-                                                    "ArrowRight",
-                                                    "Tab",
-                                                  ].includes(e.key)
-                                                ) {
-                                                  e.preventDefault();
-                                                }
-                                              }}
-                                            />
-                                          </Form.Item>
-                                        </Col>
-                                        <Col flex="32px">
-                                          <MinusCircleOutlined
-                                            onClick={() => removeSub(subName)}
-                                            style={{
-                                              fontSize: 16,
-                                              color: "#ff4d4f",
-                                              cursor: "pointer",
-                                            }}
-                                          />
-                                        </Col>
-                                      </Row>
-                                    ),
-                                  )}
-                                </div>
+                                {parentFields.length > 1 && (
+                                  <Tooltip title="Xóa chỉ tiêu">
+                                    <Icon
+                                      name="trash3"
+                                      onClick={() => removeParent(parentName)}
+                                      style={{
+                                        fontSize: 16,
+                                        color: "#CF1322",
+                                        cursor: "pointer",
+                                      }}
+                                    />
+                                  </Tooltip>
+                                )}
                               </Col>
-                              <Col flex="32px" />
                             </Row>
-                          )}
-                        </>
-                      )}
-                    </Form.List>
-                  </div>
-                ),
-              )}
+
+                            {/* Sub-indicators container */}
+                            {subFields.length > 0 && (
+                              <Row gutter={8} style={{ marginTop: 12 }}>
+                                <Col flex="32px" />
+                                <Col flex="auto">
+                                  <div
+                                    style={{
+                                      padding: "12px 12px 12px 32px",
+                                      background: "#F5F5F5",
+                                      borderRadius: "12px",
+                                      position: "relative",
+                                    }}
+                                  >
+                                    {subFields.map(
+                                      ({ key: subKey, name: subName }, index) => (
+                                        <Row
+                                          key={subKey}
+                                          gutter={8}
+                                          align="middle"
+                                          wrap={false}
+                                          style={{
+                                            marginBottom:
+                                              index === subFields.length - 1
+                                                ? 0
+                                                : 12,
+                                          }}
+                                        >
+                                          <Col flex="auto">
+                                            <div
+                                              className={`add-indicators-sub-wrapper ${index === 0 ? "is-first" : ""} ${index === subFields.length - 1 ? "is-last" : ""}`}
+                                            >
+                                              <Form.Item
+                                                name={[subName, "indicatorId"]}
+                                                dependencies={[[parentName, "indicatorId"]]}
+                                                rules={[
+                                                  {
+                                                    required: true,
+                                                    message: "Chọn chỉ tiêu phụ",
+                                                  },
+                                                ]}
+                                                style={{ marginBottom: 0 }}
+                                              >
+                                                <Select
+                                                  key={form.getFieldValue([
+                                                    "indicators",
+                                                    parentName,
+                                                    "indicatorId",
+                                                  ])}
+                                                  options={buildSubOptions(
+                                                    parentName,
+                                                  )}
+                                                  placeholder="Chọn chỉ tiêu phụ"
+                                                  showSearch
+                                                  popupMatchSelectWidth={400}
+                                                  optionLabelProp="label"
+                                                  filterOption={(
+                                                    inputValue,
+                                                    option,
+                                                  ) => {
+                                                    const searchText = (
+                                                      option as {
+                                                        searchText?: string;
+                                                      }
+                                                    )?.searchText;
+                                                    if (!searchText) return false;
+                                                    return searchText
+                                                      .toLowerCase()
+                                                      .includes(
+                                                        inputValue.toLowerCase(),
+                                                      );
+                                                  }}
+                                                  allowClear
+                                                />
+                                              </Form.Item>
+                                            </div>
+                                          </Col>
+                                          <Col flex="140px">
+                                            <Form.Item
+                                              name={[subName, "unitPrice"]}
+                                              rules={[
+                                                {
+                                                  type: "number",
+                                                  min: 0,
+                                                  message: "Giá >= 0",
+                                                },
+                                              ]}
+                                              style={{ marginBottom: 0 }}
+                                            >
+                                              <InputNumber<number>
+                                                placeholder="Đơn giá (tùy chọn)"
+                                                min={0}
+                                                precision={0}
+                                                controls={false}
+                                                style={{ width: "100%" }}
+                                                formatter={(value) =>
+                                                  `${value}`.replace(
+                                                    /\B(?=(\d{3})+(?!\d))/g,
+                                                    ",",
+                                                  )
+                                                }
+                                                parser={(value) => {
+                                                  const parsed = parseInt(
+                                                    value?.replace(
+                                                      /[^\d]/g,
+                                                      "",
+                                                    ) || "0",
+                                                    10,
+                                                  );
+                                                  return Math.max(0, parsed);
+                                                }}
+                                                addonAfter="đ"
+                                                onKeyDown={(e) => {
+                                                  if (
+                                                    !/[\d]/.test(e.key) &&
+                                                    ![
+                                                      "Backspace",
+                                                      "Delete",
+                                                      "ArrowLeft",
+                                                      "ArrowRight",
+                                                      "Tab",
+                                                    ].includes(e.key)
+                                                  ) {
+                                                    e.preventDefault();
+                                                  }
+                                                }}
+                                              />
+                                            </Form.Item>
+                                          </Col>
+                                          <Col flex="32px">
+                                            <Tooltip title="Xóa chỉ tiêu phụ">
+                                              <Icon
+                                                name="trash3"
+                                                onClick={() => removeSub(subName)}
+                                                style={{
+                                                  fontSize: 16,
+                                                  color: "#CF1322",
+                                                  cursor: "pointer",
+                                                }}
+                                              />
+                                            </Tooltip>
+                                          </Col>
+                                        </Row>
+                                      ),
+                                    )}
+                                  </div>
+                                </Col>
+                                <Col flex="32px" />
+                              </Row>
+                            )}
+                          </>
+                        )}
+                      </Form.List>
+                    </div>
+                  ),
+                )}
+              </Card>
 
               {/* Add parent button */}
-              <Button
-                type="dashed"
-                onClick={() =>
-                  addParent({
-                    indicatorId: undefined,
-                    unitPrice: 0,
-                    subIndicators: [],
-                  })
-                }
-                block
-                icon={<PlusOutlined />}
-                style={{ marginTop: 8 }}
-              >
-                Thêm dòng
-              </Button>
+              <Form.Item style={{ margin: "12px 0px" }}>
+                <Button
+                  type="default"
+                  onClick={() =>
+                    addParent({
+                      indicatorId: undefined,
+                      unitPrice: 0,
+                      subIndicators: [],
+                    })
+                  }
+                  icon={<Icon name="plus-lg" />}
+                >
+                  Thêm dòng
+                </Button>
+              </Form.Item>
             </>
           )}
         </Form.List>

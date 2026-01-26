@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { Modal, Form, Select, Button, Row, Col, Tooltip, Card } from "antd";
 import Icon from "../../../../components/common/Icon";
 import { RichTextEditor } from "../../../../components/common";
@@ -19,22 +19,16 @@ interface BulkCreateModalProps {
   onCancel: () => void;
 }
 
-// Custom component to wrap RichTextEditor for Form.Item
-const RichTextFormItem: React.FC<{
-  value?: { name: string; formattedName: string };
-  onChange?: (value: { name: string; formattedName: string }) => void;
-  placeholder?: string;
-}> = ({ value, onChange, placeholder }) => {
-  return (
-    <RichTextEditor
-      value={value?.formattedName || ""}
-      onChange={(html, plainText) => {
-        onChange?.({ name: plainText, formattedName: html });
-      }}
-      placeholder={placeholder || "Nhập tên"}
-    />
-  );
-};
+interface SubIndicator {
+  name: string;
+  formattedName: string;
+}
+
+interface IndicatorItem {
+  name: string;
+  formattedName: string;
+  subIndicators: SubIndicator[];
+}
 
 const BulkCreateModal: React.FC<BulkCreateModalProps> = ({
   open,
@@ -44,6 +38,88 @@ const BulkCreateModal: React.FC<BulkCreateModalProps> = ({
   onOk,
   onCancel,
 }) => {
+  // Watch entire indicators array
+  const indicators: IndicatorItem[] = Form.useWatch('indicators', form) || [];
+
+  // Add sub-indicator to a specific parent
+  const handleAddSubIndicator = useCallback((parentIndex: number) => {
+    const currentIndicators = form.getFieldValue('indicators') || [];
+    const updatedIndicators = currentIndicators.map((ind: IndicatorItem, idx: number) => {
+      if (idx === parentIndex) {
+        return {
+          ...ind,
+          subIndicators: [...(ind.subIndicators || []), { name: "", formattedName: "" }]
+        };
+      }
+      return ind;
+    });
+    form.setFieldsValue({ indicators: updatedIndicators });
+  }, [form]);
+
+  // Remove sub-indicator from a specific parent
+  const handleRemoveSubIndicator = useCallback((parentIndex: number, subIndex: number) => {
+    const currentIndicators = form.getFieldValue('indicators') || [];
+    const updatedIndicators = currentIndicators.map((ind: IndicatorItem, idx: number) => {
+      if (idx === parentIndex) {
+        return {
+          ...ind,
+          subIndicators: ind.subIndicators.filter((_: SubIndicator, sIdx: number) => sIdx !== subIndex)
+        };
+      }
+      return ind;
+    });
+    form.setFieldsValue({ indicators: updatedIndicators });
+  }, [form]);
+
+  // Update parent indicator name
+  const handleUpdateParentName = useCallback((parentIndex: number, html: string, plainText: string) => {
+    const currentIndicators = form.getFieldValue('indicators') || [];
+    const updatedIndicators = currentIndicators.map((ind: IndicatorItem, idx: number) => {
+      if (idx === parentIndex) {
+        return {
+          ...ind,
+          name: plainText,
+          formattedName: html
+        };
+      }
+      return ind;
+    });
+    form.setFieldsValue({ indicators: updatedIndicators });
+  }, [form]);
+
+  // Update sub-indicator name
+  const handleUpdateSubName = useCallback((parentIndex: number, subIndex: number, html: string, plainText: string) => {
+    const currentIndicators = form.getFieldValue('indicators') || [];
+    const updatedIndicators = currentIndicators.map((ind: IndicatorItem, idx: number) => {
+      if (idx === parentIndex) {
+        const newSubs = [...ind.subIndicators];
+        newSubs[subIndex] = { name: plainText, formattedName: html };
+        return {
+          ...ind,
+          subIndicators: newSubs
+        };
+      }
+      return ind;
+    });
+    form.setFieldsValue({ indicators: updatedIndicators });
+  }, [form]);
+
+  // Add new parent indicator
+  const handleAddParent = useCallback(() => {
+    const currentIndicators = form.getFieldValue('indicators') || [];
+    form.setFieldsValue({
+      indicators: [...currentIndicators, { name: "", formattedName: "", subIndicators: [] }]
+    });
+  }, [form]);
+
+  // Remove parent indicator
+  const handleRemoveParent = useCallback((parentIndex: number) => {
+    const currentIndicators = form.getFieldValue('indicators') || [];
+    form.setFieldsValue({
+      indicators: currentIndicators.filter((_: IndicatorItem, idx: number) => idx !== parentIndex)
+    });
+  }, [form]);
+
   return (
     <Modal
       className="bulk-create-modal"
@@ -95,181 +171,142 @@ const BulkCreateModal: React.FC<BulkCreateModalProps> = ({
           />
         </Form.Item>
 
-        <Form.List name="indicators">
-          {(parentFields, { add: addParent, remove: removeParent }) => (
-            <>
-              <Card size="small" style={{ marginBottom: 16 }}>
-                {parentFields.map(({ key: parentKey, name: parentName }) => (
+        {/* Hidden field to store indicators data */}
+        <Form.Item name="indicators" hidden>
+          <input type="hidden" />
+        </Form.Item>
+
+        <Card size="small" style={{ marginBottom: 16 }}>
+          {indicators.map((indicator, parentIndex) => (
+            <div
+              key={parentIndex}
+              style={{
+                marginBottom: parentIndex === indicators.length - 1 ? 0 : 24,
+              }}
+            >
+              {/* Parent indicator row */}
+              <Row gutter={8} align="middle" wrap={false}>
+                <Col flex="32px">
+                  <Tooltip title="Thêm chỉ tiêu phụ">
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<Icon name="plus-lg" />}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleAddSubIndicator(parentIndex);
+                      }}
+                      style={{
+                        color: "#8C8C8C",
+                        padding: 0,
+                        width: 24,
+                        height: 24,
+                      }}
+                    />
+                  </Tooltip>
+                </Col>
+                <Col flex="auto">
                   <div
-                    key={parentKey}
-                    style={{
-                      marginBottom:
-                        parentName === parentFields.length - 1 ? 0 : 24,
-                    }}
+                    className={`bulk-modal-parent-wrapper ${(indicator.subIndicators || []).length > 0 ? "has-children" : ""}`}
                   >
-                    {/* Parent indicator row with add sub button */}
-                    <Form.List name={[parentName, "subIndicators"]}>
-                      {(subFields, { add: addSub, remove: removeSub }) => (
-                        <>
-                          <Row gutter={8} align="middle" wrap={false}>
-                            <Col flex="32px">
-                              <Tooltip title="Thêm chỉ tiêu phụ">
-                                <Icon
-                                  name="plus-lg"
-                                  onClick={() =>
-                                    addSub({ name: "", formattedName: "" })
-                                  }
-                                  style={{
-                                    fontSize: 16,
-                                    color: "#8C8C8C",
-                                    cursor: "pointer",
-                                  }}
-                                />
-                              </Tooltip>
-                            </Col>
-                            <Col flex="auto">
-                              <div
-                                className={`bulk-modal-parent-wrapper ${subFields.length > 0 ? "has-children" : ""}`}
-                              >
-                                <Form.Item
-                                  name={[parentName]}
-                                  rules={[
-                                    {
-                                      validator: (_, value) => {
-                                        if (
-                                          !value?.name ||
-                                          value.name.trim() === ""
-                                        ) {
-                                          return Promise.reject(
-                                            "Vui lòng nhập tên chỉ tiêu",
-                                          );
-                                        }
-                                        return Promise.resolve();
-                                      },
-                                    },
-                                  ]}
-                                  style={{ marginBottom: 0 }}
-                                >
-                                  <RichTextFormItem placeholder="Nhập tên chỉ tiêu cha" />
-                                </Form.Item>
-                              </div>
-                            </Col>
-                            <Col flex="32px">
-                              {parentFields.length > 1 && (
-                                <Tooltip title="Xóa chỉ tiêu">
-                                  <Icon
-                                    name="trash3"
-                                    onClick={() => removeParent(parentName)}
-                                    style={{
-                                      fontSize: 16,
-                                      color: "#CF1322",
-                                      cursor: "pointer",
-                                    }}
-                                  />
-                                </Tooltip>
-                              )}
-                            </Col>
-                          </Row>
-
-                          {/* Sub-indicators box */}
-                          {subFields.length > 0 && (
-                            <Row gutter={8} style={{ marginTop: 12 }}>
-                              <Col flex="32px" />
-                              <Col flex="auto">
-                                <div
-                                  style={{
-                                    padding: "12px 12px 12px 32px",
-                                    background: "#F5F5F5",
-                                    borderRadius: "12px",
-                                    position: "relative",
-                                  }}
-                                >
-                                  {subFields.map(
-                                    ({ key: subKey, name: subName }, index) => (
-                                      <Row
-                                        key={subKey}
-                                        gutter={16}
-                                        align="middle"
-                                        wrap={false}
-                                        style={{
-                                          marginBottom:
-                                            index === subFields.length - 1
-                                              ? 0
-                                              : 12,
-                                        }}
-                                      >
-                                        <Col flex="auto">
-                                          <div
-                                            className={`bulk-modal-sub-wrapper ${index === 0 ? "is-first" : ""} ${index === subFields.length - 1 ? "is-last" : ""}`}
-                                          >
-                                            <Form.Item
-                                              name={[subName]}
-                                              rules={[
-                                                {
-                                                  validator: (_, value) => {
-                                                    if (
-                                                      !value?.name ||
-                                                      value.name.trim() === ""
-                                                    ) {
-                                                      return Promise.reject(
-                                                        "Vui lòng nhập tên chỉ tiêu phụ",
-                                                      );
-                                                    }
-                                                    return Promise.resolve();
-                                                  },
-                                                },
-                                              ]}
-                                              style={{ marginBottom: 0 }}
-                                            >
-                                              <RichTextFormItem placeholder="Nhập tên chỉ tiêu phụ" />
-                                            </Form.Item>
-                                          </div>
-                                        </Col>
-                                        <Col flex="32px">
-                                          <Tooltip title="Xóa chỉ tiêu phụ">
-                                            <Icon
-                                              name="trash3"
-                                              onClick={() => removeSub(subName)}
-                                              style={{
-                                                fontSize: 16,
-                                                color: "#CF1322",
-                                                cursor: "pointer",
-                                              }}
-                                            />
-                                          </Tooltip>
-                                        </Col>
-                                      </Row>
-                                    ),
-                                  )}
-                                </div>
-                              </Col>
-                              <Col flex="32px" />
-                            </Row>
-                          )}
-                        </>
-                      )}
-                    </Form.List>
+                    <RichTextEditor
+                      value={indicator.formattedName || ""}
+                      onChange={(html, plainText) => handleUpdateParentName(parentIndex, html, plainText)}
+                      placeholder="Nhập tên chỉ tiêu cha"
+                    />
                   </div>
-                ))}
-              </Card>
+                </Col>
+                <Col flex="32px">
+                  {indicators.length > 1 && (
+                    <Tooltip title="Xóa chỉ tiêu">
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<Icon name="trash3" />}
+                        onClick={() => handleRemoveParent(parentIndex)}
+                        style={{
+                          color: "#CF1322",
+                          padding: 0,
+                          width: 24,
+                          height: 24,
+                        }}
+                      />
+                    </Tooltip>
+                  )}
+                </Col>
+              </Row>
 
-              <Form.Item style={{ margin: "12px 0px" }}>
-                <Button
-                  type="default"
-                  onClick={() =>
-                    addParent({
-                      name: "",
-                      formattedName: "",
-                    })
-                  }
-                  icon={<Icon name="plus-lg" />}
-                >
-                  Thêm dòng
-                </Button>
-              </Form.Item>
-            </>
-          )}
-        </Form.List>
+              {/* Sub-indicators */}
+              {(indicator.subIndicators || []).length > 0 && (
+                <Row gutter={8} style={{ marginTop: 12 }}>
+                  <Col flex="32px" />
+                  <Col flex="auto">
+                    <div
+                      style={{
+                        padding: "12px 12px 12px 32px",
+                        background: "#F5F5F5",
+                        borderRadius: "12px",
+                        position: "relative",
+                      }}
+                    >
+                      {indicator.subIndicators.map((sub, subIndex) => (
+                        <Row
+                          key={subIndex}
+                          gutter={16}
+                          align="middle"
+                          wrap={false}
+                          style={{
+                            marginBottom: subIndex === indicator.subIndicators.length - 1 ? 0 : 12,
+                          }}
+                        >
+                          <Col flex="auto">
+                            <div
+                              className={`bulk-modal-sub-wrapper ${subIndex === 0 ? "is-first" : ""} ${subIndex === indicator.subIndicators.length - 1 ? "is-last" : ""}`}
+                            >
+                              <RichTextEditor
+                                value={sub.formattedName || ""}
+                                onChange={(html, plainText) => handleUpdateSubName(parentIndex, subIndex, html, plainText)}
+                                placeholder="Nhập tên chỉ tiêu phụ"
+                              />
+                            </div>
+                          </Col>
+                          <Col flex="32px">
+                            <Tooltip title="Xóa chỉ tiêu phụ">
+                              <Button
+                                type="text"
+                                size="small"
+                                icon={<Icon name="trash3" />}
+                                onClick={() => handleRemoveSubIndicator(parentIndex, subIndex)}
+                                style={{
+                                  color: "#CF1322",
+                                  padding: 0,
+                                  width: 24,
+                                  height: 24,
+                                }}
+                              />
+                            </Tooltip>
+                          </Col>
+                        </Row>
+                      ))}
+                    </div>
+                  </Col>
+                  <Col flex="32px" />
+                </Row>
+              )}
+            </div>
+          ))}
+        </Card>
+
+        <Form.Item style={{ margin: "12px 0px" }}>
+          <Button
+            type="default"
+            onClick={handleAddParent}
+            icon={<Icon name="plus-lg" />}
+          >
+            Thêm dòng
+          </Button>
+        </Form.Item>
       </Form>
     </Modal>
   );
