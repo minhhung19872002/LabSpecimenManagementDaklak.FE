@@ -321,13 +321,24 @@ export const useIndicatorsActions = ({
       setModalLoading(true);
       const values = await bulkForm.validateFields();
 
-      // Map form values to DTO format
+      // Map form values to DTO format (with sub-indicators support)
       const indicators = values.indicators
         .filter((item: any) => item?.name?.trim())
-        .map((item: any) => ({
-          name: item.name.trim(),
-          formattedName: item.formattedName || item.name.trim(),
-        }));
+        .map((item: any) => {
+          // Process sub-indicators if any
+          const subIndicators = (item.subIndicators || [])
+            .filter((sub: any) => sub?.name?.trim())
+            .map((sub: any) => ({
+              name: sub.name.trim(),
+              formattedName: sub.formattedName || sub.name.trim(),
+            }));
+
+          return {
+            name: item.name.trim(),
+            formattedName: item.formattedName || item.name.trim(),
+            subIndicators,
+          };
+        });
 
       const data: CreateBulkIndicatorsDto = {
         indicatorGroupId: values.indicatorGroupId,
@@ -339,8 +350,14 @@ export const useIndicatorsActions = ({
         return;
       }
 
+      // Count total indicators (parent + sub)
+      const totalCount = data.indicators.reduce(
+        (sum, ind) => sum + 1 + ind.subIndicators.length,
+        0
+      );
+
       await indicatorService.createBulk(data);
-      message.success(`Thêm ${data.indicators.length} chỉ tiêu thành công!`);
+      message.success(`Thêm ${totalCount} chỉ tiêu thành công!`);
 
       setBulkModalOpen(false);
       bulkForm.resetFields();

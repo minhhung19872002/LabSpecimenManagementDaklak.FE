@@ -65,26 +65,62 @@ export const useIndicatorsData = () => {
     fetchData();
   }, []);
 
-  // Filter indicators by search
+  // Filter indicators by search (including sub-indicators)
   const filteredIndicators = searchText
-    ? (indicators || []).filter(
-        (item) =>
-          item.code?.toLowerCase().includes(searchText.toLowerCase()) ||
-          item.name?.toLowerCase().includes(searchText.toLowerCase()) ||
-          item.indicatorGroupName
-            ?.toLowerCase()
-            .includes(searchText.toLowerCase())
-      )
+    ? (indicators || []).filter((item) => {
+        const searchLower = searchText.toLowerCase();
+
+        // Check parent indicator
+        const parentMatch =
+          item.code?.toLowerCase().includes(searchLower) ||
+          item.name?.toLowerCase().includes(searchLower) ||
+          item.indicatorGroupName?.toLowerCase().includes(searchLower);
+
+        // Check sub-indicators
+        const subMatch = item.subIndicators?.some(
+          (sub) =>
+            sub.code?.toLowerCase().includes(searchLower) ||
+            sub.name?.toLowerCase().includes(searchLower)
+        );
+
+        return parentMatch || subMatch;
+      })
     : indicators || [];
 
   // Group indicators by group for expandable table
-  const groupedData: GroupedIndicatorData[] = (groups || []).map((group) => ({
-    ...group,
-    key: group.id,
-    indicators: filteredIndicators.filter(
-      (ind) => ind.indicatorGroupId === group.id
-    ),
-  }));
+  // Flatten parent indicators with their sub-indicators for display
+  const groupedData: GroupedIndicatorData[] = (groups || []).map((group) => {
+    // Filter only parent indicators (not sub-indicators) for this group
+    const parentIndicators = filteredIndicators.filter(
+      (ind) => ind.indicatorGroupId === group.id && !ind.parentIndicatorId
+    );
+
+    // Flatten: for each parent, add it followed by its sub-indicators
+    const flatIndicators: IndicatorDto[] = [];
+    parentIndicators.forEach((parent) => {
+      flatIndicators.push(parent);
+      // Add sub-indicators if any (null-safe)
+      if (parent.subIndicators?.length > 0) {
+        parent.subIndicators.forEach((sub, index) => {
+          // Add metadata for tree line rendering
+          const enhancedSub = {
+            ...sub,
+            _isFirstSub: index === 0,
+            _isLastSub: index === parent.subIndicators.length - 1,
+            _subIndex: index,
+            _totalSubs: parent.subIndicators.length,
+          };
+          flatIndicators.push(enhancedSub as any);
+        });
+      }
+    });
+
+    return {
+      ...group,
+      key: group.id,
+      indicators: flatIndicators,
+    };
+  });
 
   return {
     // State
