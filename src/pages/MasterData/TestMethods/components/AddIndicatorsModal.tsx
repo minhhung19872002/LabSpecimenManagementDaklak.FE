@@ -33,6 +33,12 @@ interface AddIndicatorsModalProps {
   onCancel: () => void;
 }
 
+interface IndicatorFormItem {
+  indicatorId?: string;
+  unitPrice?: number;
+  subIndicators?: { indicatorId?: string; unitPrice?: number }[];
+}
+
 const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   open,
   loading,
@@ -47,6 +53,69 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
     new Set(),
   );
 
+  // Watch indicators array for controlled updates
+  const indicators: IndicatorFormItem[] = Form.useWatch('indicators', form) || [];
+
+  // Update parent unit price
+  const handleParentUnitPriceChange = (parentIndex: number, value: number | null) => {
+    const currentIndicators = form.getFieldValue('indicators') || [];
+    const updatedIndicators = [...currentIndicators];
+    if (updatedIndicators[parentIndex]) {
+      updatedIndicators[parentIndex] = {
+        ...updatedIndicators[parentIndex],
+        unitPrice: value ?? undefined,
+      };
+    }
+    form.setFieldsValue({ indicators: updatedIndicators });
+  };
+
+  // Update sub-indicator unit price
+  const handleSubUnitPriceChange = (parentIndex: number, subIndex: number, value: number | null) => {
+    const currentIndicators = form.getFieldValue('indicators') || [];
+    const updatedIndicators = [...currentIndicators];
+    if (updatedIndicators[parentIndex]?.subIndicators?.[subIndex]) {
+      const newSubs = [...updatedIndicators[parentIndex].subIndicators];
+      newSubs[subIndex] = {
+        ...newSubs[subIndex],
+        unitPrice: value ?? undefined,
+      };
+      updatedIndicators[parentIndex] = {
+        ...updatedIndicators[parentIndex],
+        subIndicators: newSubs,
+      };
+    }
+    form.setFieldsValue({ indicators: updatedIndicators });
+  };
+
+  // Helper to find indicator by ID (for rendering selected label)
+  const findIndicatorById = (indicatorId: string): IndicatorDto | undefined => {
+    const allIndicators = Object.values(indicatorsByGroup).flat();
+    // Check parent indicators
+    const parent = allIndicators.find((ind) => ind.id === indicatorId);
+    if (parent) return parent;
+    // Check sub-indicators
+    for (const ind of allIndicators) {
+      const sub = ind.subIndicators?.find((s) => s.id === indicatorId);
+      if (sub) return sub as IndicatorDto;
+    }
+    return undefined;
+  };
+
+  // Render label for selected indicator (used by labelRender)
+  const renderIndicatorLabel = (indicatorId: string) => {
+    const indicator = findIndicatorById(indicatorId);
+    if (!indicator) return indicatorId;
+    return (
+      <span>
+        {indicator.code} -{" "}
+        <IndicatorName
+          name={indicator.name}
+          formattedName={indicator.formattedName}
+        />
+      </span>
+    );
+  };
+
   // Check if indicator is already selected
   const isIndicatorAlreadySelected = (indicatorId: string) => {
     const allIndicators = form.getFieldValue("indicators") || [];
@@ -54,7 +123,8 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   };
 
   // Build parent-only options for Select
-  const buildParentOptions = () => {
+  // currentIndicatorId: the currently selected indicator for this field (to keep it in options)
+  const buildParentOptions = (currentIndicatorId?: string) => {
     return indicatorGroups
       .filter(
         (group) => group.isActive && indicatorsByGroup[group.id]?.length > 0,
@@ -66,10 +136,12 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
         );
 
         // Filter out already selected parents and existing indicators
+        // But keep the current indicator so Select can display its label
         const availableParents = parentIndicators.filter(
           (ind) =>
-            !isIndicatorAlreadySelected(ind.id) &&
-            !existingIndicatorIds.includes(ind.id),
+            ind.id === currentIndicatorId ||
+            (!isIndicatorAlreadySelected(ind.id) &&
+              !existingIndicatorIds.includes(ind.id)),
         );
 
         if (availableParents.length === 0) return null;
@@ -98,7 +170,8 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   };
 
   // Build sub-indicator options for a specific parent
-  const buildSubOptions = (parentFieldName: number) => {
+  // currentSubIndicatorId: the currently selected sub-indicator for this field (to keep it in options)
+  const buildSubOptions = (parentFieldName: number, subFieldName?: number) => {
     // Get selected parent indicator ID
     const parentIndicatorId = form.getFieldValue([
       "indicators",
@@ -118,6 +191,11 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
       return [];
     }
 
+    // Get current sub-indicator ID for this field
+    const currentSubIndicatorId = subFieldName !== undefined
+      ? form.getFieldValue(["indicators", parentFieldName, "subIndicators", subFieldName, "indicatorId"])
+      : undefined;
+
     // Get already selected sub-indicator IDs for this parent
     const selectedSubIds = (
       form.getFieldValue(["indicators", parentFieldName, "subIndicators"]) || []
@@ -126,11 +204,13 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
       .filter(Boolean);
 
     // Filter available sub-indicators
+    // But keep the current sub-indicator so Select can display its label
     const availableSubs = parentIndicator.subIndicators.filter(
       (sub) =>
-        !selectedSubIds.includes(sub.id) &&
-        sub.isActive &&
-        !existingIndicatorIds.includes(sub.id),
+        sub.id === currentSubIndicatorId ||
+        (!selectedSubIds.includes(sub.id) &&
+          sub.isActive &&
+          !existingIndicatorIds.includes(sub.id)),
     );
 
     return availableSubs.map((sub) => ({
@@ -206,7 +286,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
             <>
               <Card size="small" style={{ marginBottom: 16 }}>
                 {parentFields.map(
-                  ({ key: parentKey, name: parentName, ...restField }) => (
+                  ({ key: parentKey, name: parentName }) => (
                     <div
                       key={parentKey}
                       style={{
@@ -243,7 +323,6 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                                   className={`add-indicators-parent-wrapper ${subFields.length > 0 ? "has-children" : ""}`}
                                 >
                                   <Form.Item
-                                    {...restField}
                                     name={[parentName, "indicatorId"]}
                                     rules={[
                                       { required: true, message: "Chọn chỉ tiêu" },
@@ -251,11 +330,16 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                                     style={{ marginBottom: 0 }}
                                   >
                                 <Select
-                                      options={buildParentOptions()}
+                                      options={buildParentOptions(form.getFieldValue(["indicators", parentName, "indicatorId"]))}
                                       placeholder="Tìm và chọn chỉ tiêu cha"
                                       showSearch
                                       popupMatchSelectWidth={400}
                                       optionLabelProp="label"
+                                      labelRender={() => {
+                                        const indicatorId = form.getFieldValue(["indicators", parentName, "indicatorId"]);
+                                        if (!indicatorId) return null;
+                                        return renderIndicatorLabel(indicatorId);
+                                      }}
                                       filterOption={(inputValue, option) => {
                                         const searchText = (
                                           option as { searchText?: string }
@@ -276,20 +360,9 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                                 </div>
                               </Col>
                               <Col flex="140px">
-                              <Form.Item
-                                {...restField}
-                                name={[parentName, "unitPrice"]}
-                                rules={[
-                                  { required: true, message: "Nhập giá" },
-                                  {
-                                    type: "number",
-                                    min: 0,
-                                    message: "Giá >= 0",
-                                  },
-                                ]}
-                                style={{ marginBottom: 0 }}
-                              >
                                 <InputNumber<number>
+                                  value={indicators[parentName]?.unitPrice}
+                                  onChange={(value) => handleParentUnitPriceChange(parentName, value)}
                                   placeholder="Đơn giá"
                                   min={0}
                                   precision={0}
@@ -324,7 +397,6 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                                     }
                                   }}
                                 />
-                              </Form.Item>
                             </Col>
                             <Col flex="32px">
                                 {parentFields.length > 1 && (
@@ -393,11 +465,17 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                                                   ])}
                                                   options={buildSubOptions(
                                                     parentName,
+                                                    subName,
                                                   )}
                                                   placeholder="Chọn chỉ tiêu phụ"
                                                   showSearch
                                                   popupMatchSelectWidth={400}
                                                   optionLabelProp="label"
+                                                  labelRender={() => {
+                                                    const indicatorId = form.getFieldValue(["indicators", parentName, "subIndicators", subName, "indicatorId"]);
+                                                    if (!indicatorId) return null;
+                                                    return renderIndicatorLabel(indicatorId);
+                                                  }}
                                                   filterOption={(
                                                     inputValue,
                                                     option,
@@ -420,18 +498,9 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                                             </div>
                                           </Col>
                                           <Col flex="140px">
-                                            <Form.Item
-                                              name={[subName, "unitPrice"]}
-                                              rules={[
-                                                {
-                                                  type: "number",
-                                                  min: 0,
-                                                  message: "Giá >= 0",
-                                                },
-                                              ]}
-                                              style={{ marginBottom: 0 }}
-                                            >
                                               <InputNumber<number>
+                                                value={indicators[parentName]?.subIndicators?.[subName]?.unitPrice}
+                                                onChange={(value) => handleSubUnitPriceChange(parentName, subName, value)}
                                                 placeholder="Đơn giá (tùy chọn)"
                                                 min={0}
                                                 precision={0}
@@ -469,7 +538,6 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                                                   }
                                                 }}
                                               />
-                                            </Form.Item>
                                           </Col>
                                           <Col flex="32px">
                                             <Tooltip title="Xóa chỉ tiêu phụ">

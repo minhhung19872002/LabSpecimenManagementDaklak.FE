@@ -116,25 +116,35 @@ export const getIndicatorColumns = (
     dataIndex: "indicatorCode",
     key: "indicatorCode",
     width: 120,
+    render: (code, record) => {
+      // Don't show code for sub-indicators
+      if (record.parentIndicatorId) return null;
+      return <span style={{ fontWeight: 500 }}>{code}</span>;
+    },
   },
   {
     title: "Tên chỉ tiêu",
     dataIndex: "indicatorName",
     key: "indicatorName",
     width: 250,
-    render: (_, record) => (
-      <div style={{
-        paddingLeft: record.parentIndicatorId ? 24 : 0,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8
-      }}>
-        {record.parentIndicatorId && (
-          <span style={{ color: '#8c8c8c', fontSize: 12 }}>└─</span>
-        )}
-        <IndicatorName name={record.indicatorName} formattedName={record.indicatorFormattedName} />
-      </div>
-    ),
+    render: (_, record: any) => {
+      const isSubIndicator = !!record.parentIndicatorId;
+      const isFirstSub = record._isFirstSub || false;
+      const isLastSub = record._isLastSub || false;
+
+      return (
+        <div
+          className={`indicator-name-wrapper ${isSubIndicator ? "has-tree-line" : ""} ${isFirstSub ? "is-first-sub" : ""} ${isLastSub ? "is-last-sub" : ""}`}
+          style={{
+            paddingLeft: isSubIndicator ? 24 : 0,
+            display: "flex",
+            alignItems: "center",
+          }}
+        >
+          <IndicatorName name={record.indicatorName} formattedName={record.indicatorFormattedName} />
+        </div>
+      );
+    },
   },
   {
     title: "Đơn giá",

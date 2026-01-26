@@ -121,17 +121,22 @@ export const useTestMethodsActions = ({
 
     try {
       setAddIndicatorsLoading(true);
-      const values = await form.validateFields();
+      // Validate required fields (indicatorId)
+      await form.validateFields();
+
+      // Use getFieldValue to get the full indicator data including unitPrice
+      // (unitPrice is controlled manually via form.setFieldsValue, not via Form.Item binding)
+      const indicators = form.getFieldValue('indicators') || [];
 
       // Flatten nested structure: parent + subIndicators -> flat array
       const flatIndicators: Array<{ indicatorId: string; unitPrice: number }> = [];
 
-      (values.indicators || []).forEach((parent: any) => {
+      indicators.forEach((parent: any) => {
         // Add parent indicator
-        if (parent.indicatorId && parent.unitPrice !== undefined) {
+        if (parent.indicatorId) {
           flatIndicators.push({
             indicatorId: parent.indicatorId,
-            unitPrice: parent.unitPrice,
+            unitPrice: parent.unitPrice ?? 0,
           });
         }
 
@@ -140,7 +145,7 @@ export const useTestMethodsActions = ({
           if (sub.indicatorId) {
             flatIndicators.push({
               indicatorId: sub.indicatorId,
-              unitPrice: sub.unitPrice ?? 0, // Use 0 if unitPrice is null/undefined for sub-indicators
+              unitPrice: sub.unitPrice ?? 0,
             });
           }
         });
