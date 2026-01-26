@@ -275,7 +275,9 @@ const StandardsList = forwardRef<StandardsActions, StandardsTabProps>(({
             : []
         }
         getMethodsForIndicator={getMethodsForIndicator}
-        onOk={() => handleAddIndicatorsOk(addIndicatorsForm)}
+        onOk={(selectedIndicators, selectedMethods) =>
+          handleAddIndicatorsOk(addIndicatorsForm, selectedIndicators, selectedMethods)
+        }
         onCancel={() => handleAddIndicatorsCancel(addIndicatorsForm)}
       />
 
