@@ -138,7 +138,7 @@ const MasterDataList: React.FC = () => {
   );
 
   return (
-    <div>
+    <div className="master-data-page">
       {error && (
         <Alert
           message="Error"

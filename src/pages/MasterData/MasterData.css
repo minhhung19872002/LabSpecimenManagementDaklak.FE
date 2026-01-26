@@ -1,17 +1,17 @@
 /* MasterData page specific styles */
-.list-card .ant-card-body {
+.master-data-page .list-card .ant-card-body {
   padding: 0;
 }
 
 /* Card header - allow wrapping for buttons when overflow */
-.list-card .ant-card-head {
+.master-data-page .list-card .ant-card-head {
   min-height: auto;
   height: auto;
   padding-top: 12px;
   padding-bottom: 12px;
 }
 
-.list-card .ant-card-head-wrapper {
+.master-data-page .list-card .ant-card-head-wrapper {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
@@ -20,12 +20,12 @@
   height: auto;
 }
 
-.list-card .ant-card-head-title {
+.master-data-page .list-card .ant-card-head-title {
   flex: 0 1 auto;
   min-width: fit-content;
 }
 
-.list-card .ant-card-extra {
+.master-data-page .list-card .ant-card-extra {
   flex: 0 1 auto;
   display: flex;
   justify-content: flex-end;
@@ -34,22 +34,22 @@
 }
 
 /* Left tabs styling - active tab with background */
-.list-card .ant-tabs-left > .ant-tabs-nav {
+.master-data-page .list-card .ant-tabs-left > .ant-tabs-nav {
   margin: 0 8px;
   padding: 16px 0;
 }
 
-.list-card .ant-tabs-left > .ant-tabs-nav .ant-tabs-tab {
+.master-data-page .list-card .ant-tabs-left > .ant-tabs-nav .ant-tabs-tab {
   border-radius: 8px;
   transition: background 0.3s;
 }
 
-.list-card .ant-tabs-left > .ant-tabs-nav .ant-tabs-tab-active {
+.master-data-page .list-card .ant-tabs-left > .ant-tabs-nav .ant-tabs-tab-active {
   background: #E6F7FF;
   border-radius: 8px;
 }
 
-.list-card .ant-tabs-left > .ant-tabs-nav .ant-tabs-tab-active .ant-tabs-tab-btn {
+.master-data-page.list-card .ant-tabs-left > .ant-tabs-nav .ant-tabs-tab-active .ant-tabs-tab-btn {
   font-weight: 500;
   background: var(--gradient-primary);
   -webkit-background-clip: text;
@@ -57,12 +57,12 @@
   background-clip: text;
 }
 
-.list-card .ant-tabs-left > .ant-tabs-nav .ant-tabs-ink-bar {
+.master-data-page .list-card .ant-tabs-left > .ant-tabs-nav .ant-tabs-ink-bar {
   display: none;
 }
 
 /* Tab count tag - normal state */
-.list-card .ant-tabs-left > .ant-tabs-nav .ant-tabs-tab .ant-tag {
+.master-data-page .list-card .ant-tabs-left > .ant-tabs-nav .ant-tabs-tab .ant-tag {
   min-width: 24px;
   height: 24px;
   line-height: 22px;
@@ -76,7 +76,7 @@
 }
 
 /* Tab count tag - active state */
-.list-card .ant-tabs-left > .ant-tabs-nav .ant-tabs-tab-active .ant-tag {
+.master-data-page .list-card .ant-tabs-left > .ant-tabs-nav .ant-tabs-tab-active .ant-tag {
   border: 1px solid #FFD591;
   background: #FFF7E6;
   color: #FA8C16;
@@ -85,10 +85,10 @@
 
 
 /* Panel right */
-.ant-tabs-content-holder {
+.master-data-page .ant-tabs-content-holder {
   padding: 0 0 16px;
 }
 
-.ant-tabs-content-holder .ant-tabs-tabpane {
+.master-data-page .ant-tabs-content-holder .ant-tabs-tabpane {
   padding: 0 !important;
 }
