@@ -114,7 +114,8 @@ async function prefetchStorageLocations(): Promise<void> {
   try {
     const data = await storageLocationService.getActive();
     for (const item of data.items) {
-      await cacheEntity('Receipt', item.id, item, false);
+      // Use 'Receipt' type with 'StorageLocation:' prefix to distinguish from actual receipts
+      await cacheEntity('Receipt', `StorageLocation:${item.id}`, item, false);
     }
     console.log(`Cached ${data.items.length} storage locations`);
   } catch (error) {

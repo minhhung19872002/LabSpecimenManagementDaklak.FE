@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Form, message } from "antd";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import dayjs from "dayjs";
-import { testRequestService } from "../../../../services/testRequestService";
+import { testRequestService, offlineTestRequestService } from "../../../../services/testRequestService";
 import {
   specimenTypeService,
   IndicatorDto,
@@ -59,6 +59,7 @@ import {
 import { extractOrderNum, generateSampleCode } from "../utils";
 import { PATH_ROUTES } from "../../../../constants";
 import { quotationService } from "../../../../services/quotationService";
+import { offlineQuotationService } from "../../../../services/offline/offlineServices";
 import { checkActionPermission } from "../../../../hooks/useActionPermission";
 
 export const useTestRequestFormData = () => {
@@ -298,11 +299,29 @@ export const useTestRequestFormData = () => {
       // Auto-generate contract number for new test request (create mode only)
       if (!id) {
         try {
-          const contractNumber = await testRequestService.generateContractNumber();
-          form.setFieldValue('contractNumber', contractNumber);
-          setSampleCodePrefix(contractNumber);
+          if (navigator.onLine) {
+            const contractNumber = await testRequestService.generateContractNumber();
+            form.setFieldValue('contractNumber', contractNumber);
+            setSampleCodePrefix(contractNumber);
+          } else {
+            // Offline fallback: generate temporary contract number
+            // Format: OFFLINE-YYYYMMDD-XXXX (will be replaced by server on sync)
+            const now = new Date();
+            const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+            const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+            const offlineContractNumber = `OFFLINE-${dateStr}-${randomSuffix}`;
+            form.setFieldValue('contractNumber', offlineContractNumber);
+            setSampleCodePrefix(offlineContractNumber);
+          }
         } catch (error) {
           console.error("Failed to generate contract number:", error);
+          // Fallback on error: generate offline contract number
+          const now = new Date();
+          const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+          const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+          const offlineContractNumber = `OFFLINE-${dateStr}-${randomSuffix}`;
+          form.setFieldValue('contractNumber', offlineContractNumber);
+          setSampleCodePrefix(offlineContractNumber);
         }
       }
     } catch (error) {
@@ -444,7 +463,14 @@ export const useTestRequestFormData = () => {
 
     setLoadingData(true);
     try {
-      const data = await testRequestService.get(id);
+      // Use offline-aware service for loading test request data
+      const data = await offlineTestRequestService.get(id);
+
+      if (!data) {
+        message.error("Không thể tải dữ liệu yêu cầu (dữ liệu không có trong bộ nhớ đệm offline)");
+        navigate(PATH_ROUTES.testRequests.index);
+        return;
+      }
 
       // Lưu snapshot data gốc để so sánh thay đổi sau này
       // IMPORTANT: Filter out cancelled samples and CustomerCancelled indicators
@@ -633,7 +659,8 @@ export const useTestRequestFormData = () => {
   const loadFromQuotation = async (quotationIdToLoad: string) => {
     setLoadingData(true);
     try {
-      const quotation = await quotationService.get(quotationIdToLoad);
+      // Use offline-aware service for loading quotation data
+      const quotation = await offlineQuotationService.get(quotationIdToLoad);
 
       // Find organization to get full info
       const org = organizations.find((o) => o.id === quotation.organizationId);

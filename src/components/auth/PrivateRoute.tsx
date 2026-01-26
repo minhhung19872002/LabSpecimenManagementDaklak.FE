@@ -42,10 +42,33 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
     route => location.pathname === route || location.pathname.startsWith(route + '/')
   );
 
-  // If checking supporter status for supporter-allowed routes, wait for loading
+  // If checking supporter status for supporter-allowed routes, show loading indicator
   if (isSupporterRoute && supporterLoading) {
-    // Return null or loading indicator while checking supporter status
-    return null;
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          background: 'rgba(255,255,255,0.9)',
+          zIndex: 1000,
+        }}
+      >
+        <img
+          src="/spinner.svg"
+          alt="Loading..."
+          style={{
+            width: 120,
+            height: 60,
+          }}
+        />
+      </div>
+    );
   }
 
   // Check route permission (including supporter status)

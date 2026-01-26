@@ -8,7 +8,6 @@ import {
   Button,
   Space,
   Progress,
-  Tabs,
   Spin,
   message,
   Empty,

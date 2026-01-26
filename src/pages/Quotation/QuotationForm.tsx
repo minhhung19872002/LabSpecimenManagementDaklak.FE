@@ -47,7 +47,7 @@ import SendQuotationEmailModal from "./components/SendQuotationEmailModal";
 import { IndicatorName } from "../../components/common";
 import "../../styles/ListCard.css";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 interface OrganizationOption {
   value: string;
