@@ -35,6 +35,7 @@ import { MasterDataItem } from "./types";
 import { authService } from "../../../services/authService";
 import { PERMISSIONS } from "../../../constants/permissionMapping";
 import "../../../styles/ListCard.css";
+import "../MasterData.css";
 
 const MasterDataList: React.FC = () => {
   const {

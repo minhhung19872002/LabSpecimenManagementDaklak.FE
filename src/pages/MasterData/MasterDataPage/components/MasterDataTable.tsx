@@ -30,7 +30,7 @@ const MasterDataTable: React.FC<MasterDataTableProps> = ({
 }) => {
   return (
     <>
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+      <Row gutter={[16, 16]} style={{ marginBottom: 16, padding: "0 16px" }}>
         <Col xs={24} sm={12} md={8}>
           <Input
             placeholder="Tìm kiếm theo mã, tên..."
@@ -57,7 +57,14 @@ const MasterDataTable: React.FC<MasterDataTableProps> = ({
                   total: totalCount[activeCategory] || 0,
                   pageSizeOptions: [50, 100, 150],
                   showSizeChanger: true,
-                  showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
+                  showTotal: (total, range) => (
+                    <>
+                      Hiển thị{" "}
+                      <b>
+                        {range[0]}-{range[1]}/{total}
+                      </b>
+                    </>
+                  ),
                   onChange: onTableChange,
                   onShowSizeChange: onTableChange,
                 }
