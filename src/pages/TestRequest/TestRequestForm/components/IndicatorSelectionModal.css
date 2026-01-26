@@ -133,6 +133,39 @@
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
+  position: relative;
+}
+
+/* Sub-indicator styling */
+.indicator-table-row.is-sub-indicator {
+  background-color: #fafafa !important;
+}
+
+/* Tree line - vertical */
+.indicator-table-row.is-sub-indicator::before {
+  content: '';
+  position: absolute;
+  left: 28px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: #d9d9d9;
+}
+
+/* Tree line - horizontal */
+.indicator-table-row.is-sub-indicator::after {
+  content: '';
+  position: absolute;
+  left: 28px;
+  top: 50%;
+  width: 12px;
+  height: 1px;
+  background-color: #d9d9d9;
+}
+
+/* Last sub - vertical line ends at middle */
+.indicator-table-row.is-sub-indicator.is-last-sub::before {
+  bottom: 50%;
 }
 
 /* Add button - hidden by default on desktop */

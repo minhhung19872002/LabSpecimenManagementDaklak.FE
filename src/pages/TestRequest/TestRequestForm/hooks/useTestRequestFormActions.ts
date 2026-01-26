@@ -493,28 +493,85 @@ export const useTestRequestFormActions = ({
     });
   };
 
+  // Helper: Get all sub-indicator keys for a parent indicator + method
+  const getSubIndicatorKeysForParent = (
+    parentIndicatorId: string,
+    testMethodId: string
+  ): IndicatorMethodKey[] => {
+    const subKeys: IndicatorMethodKey[] = [];
+    Object.entries(indicatorMethodsMap).forEach(([indId, methods]) => {
+      methods.forEach((method) => {
+        if (
+          method.testMethodId === testMethodId &&
+          method.parentIndicatorId === parentIndicatorId &&
+          method.isActive
+        ) {
+          subKeys.push(createIndicatorMethodKey(indId, testMethodId));
+        }
+      });
+    });
+    return subKeys;
+  };
+
+  // Helper: Check if an indicator is a sub-indicator for a given method
+  const isSubIndicatorForMethod = (
+    indicatorId: string,
+    testMethodId: string
+  ): boolean => {
+    const methods = indicatorMethodsMap[indicatorId];
+    if (!methods) return false;
+    const methodInfo = methods.find((m) => m.testMethodId === testMethodId);
+    return !!methodInfo?.parentIndicatorId;
+  };
+
   // NEW: Toggle indicator method (indicatorId + testMethodId)
+  // Auto-adds sub-indicators when selecting a parent indicator
   const toggleIndicatorMethod = (indicatorId: string, testMethodId: string) => {
     const key = createIndicatorMethodKey(indicatorId, testMethodId);
+    const isCurrentlySelected = tempSelectedIndicatorMethods.includes(key);
+
+    // Check if this is a sub-indicator (has parentIndicatorId)
+    const isSub = isSubIndicatorForMethod(indicatorId, testMethodId);
+
+    // Get sub-indicator keys if this is a parent
+    const subKeys = isSub ? [] : getSubIndicatorKeysForParent(indicatorId, testMethodId);
+
     setTempSelectedIndicatorMethods((prev) => {
-      if (prev.includes(key)) {
-        // Remove and clear dates
+      if (isCurrentlySelected) {
+        // REMOVE: If removing parent, also remove all its subs
+        const keysToRemove = [key, ...subKeys];
+
+        // Clear dates for all removed keys
         setSelectedIndicatorDates((dates) => {
           const updated = { ...dates };
-          delete updated[key];
+          keysToRemove.forEach((k) => {
+            delete updated[k];
+          });
           return updated;
         });
-        return prev.filter((k) => k !== key);
+
+        return prev.filter((k) => !keysToRemove.includes(k));
       } else {
-        // Add with auto-set transfer date to today, requestDate is empty by default
-        setSelectedIndicatorDates((dates) => ({
-          ...dates,
-          [key]: {
-            transferDate: dayjs(),
-            requestDate: undefined, // Để trống theo yêu cầu KH
-          },
-        }));
-        return [...prev, key];
+        // ADD: If adding parent, also auto-add all its subs
+        const keysToAdd = [key, ...subKeys];
+
+        // Set dates for all added keys
+        setSelectedIndicatorDates((dates) => {
+          const updated = { ...dates };
+          keysToAdd.forEach((k) => {
+            if (!updated[k]) {
+              updated[k] = {
+                transferDate: dayjs(),
+                requestDate: undefined, // Để trống theo yêu cầu KH
+              };
+            }
+          });
+          return updated;
+        });
+
+        // Filter out keys that are already in prev to avoid duplicates
+        const newKeys = keysToAdd.filter((k) => !prev.includes(k));
+        return [...prev, ...newKeys];
       }
     });
   };
@@ -579,10 +636,20 @@ export const useTestRequestFormActions = ({
 
   const handleSelectAllIndicators = (checked: boolean) => {
     if (checked) {
-      // Select all unsent indicator methods
-      const unsentMethods = tempSelectedIndicatorMethods.filter(
-        (key) => !indicatorLaboratoryMap[`${currentSampleKey}_${key}`]
-      );
+      // Select all unsent indicator methods, excluding sub-indicators
+      // (sub-indicators follow their parent automatically)
+      const unsentMethods = tempSelectedIndicatorMethods.filter((key) => {
+        // Check if already sent
+        if (indicatorLaboratoryMap[`${currentSampleKey}_${key}`]) {
+          return false;
+        }
+        // Check if this is a sub-indicator (has parentIndicatorId)
+        const { indicatorId, testMethodId } = parseIndicatorMethodKey(key);
+        if (isSubIndicatorForMethod(indicatorId, testMethodId)) {
+          return false;
+        }
+        return true;
+      });
       setCheckedIndicators([...unsentMethods]);
     } else {
       setCheckedIndicators([]);
@@ -600,7 +667,26 @@ export const useTestRequestFormActions = ({
       message.warning("Vui lòng chọn ít nhất một chỉ tiêu để gửi khoa phòng");
       return;
     }
-    setIndicatorsToSend([...checkedIndicators]);
+
+    // Include sub-indicators automatically when parent is checked
+    const indicatorsWithSubs: string[] = [];
+    checkedIndicators.forEach((key) => {
+      indicatorsWithSubs.push(key);
+      // Get sub-indicator keys for this indicator
+      const { indicatorId, testMethodId } = parseIndicatorMethodKey(key as IndicatorMethodKey);
+      const subKeys = getSubIndicatorKeysForParent(indicatorId, testMethodId);
+      // Add subs that are in tempSelectedIndicatorMethods
+      subKeys.forEach((subKey) => {
+        if (
+          tempSelectedIndicatorMethods.includes(subKey) &&
+          !indicatorsWithSubs.includes(subKey)
+        ) {
+          indicatorsWithSubs.push(subKey);
+        }
+      });
+    });
+
+    setIndicatorsToSend(indicatorsWithSubs);
 
     // Get request date from the first checked indicator if available
     const firstCheckedIndicator = checkedIndicators[0];

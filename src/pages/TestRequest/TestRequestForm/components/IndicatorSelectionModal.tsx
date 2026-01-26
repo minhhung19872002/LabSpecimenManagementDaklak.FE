@@ -11,6 +11,7 @@ import {
   Tag,
   Card,
   Tooltip,
+  message,
 } from "antd";
 import {
   PlusOutlined,
@@ -212,6 +213,166 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     return tempSelectedIndicatorMethods.includes(key);
   };
 
+  // ==================== Sub-indicator Helper Functions ====================
+
+  // Check if a key is a sub-indicator (has parentIndicatorId)
+  const isSubIndicator = useCallback(
+    (key: IndicatorMethodKey): boolean => {
+      const { indicatorId, testMethodId } = parseIndicatorMethodKey(key);
+      const methods = indicatorMethodsMap[indicatorId];
+      if (!methods) return false;
+      const methodInfo = methods.find((m) => m.testMethodId === testMethodId);
+      return !!methodInfo?.parentIndicatorId;
+    },
+    [indicatorMethodsMap]
+  );
+
+  // Get parent key of a sub-indicator
+  const getParentKey = useCallback(
+    (subKey: IndicatorMethodKey): IndicatorMethodKey | null => {
+      const { indicatorId, testMethodId } = parseIndicatorMethodKey(subKey);
+      const methods = indicatorMethodsMap[indicatorId];
+      if (!methods) return null;
+      const methodInfo = methods.find((m) => m.testMethodId === testMethodId);
+      if (!methodInfo?.parentIndicatorId) return null;
+      return createIndicatorMethodKey(methodInfo.parentIndicatorId, testMethodId);
+    },
+    [indicatorMethodsMap]
+  );
+
+  // Get all sub-indicator keys for a parent indicator + method
+  const getSubIndicatorKeys = useCallback(
+    (parentIndicatorId: string, testMethodId: string): IndicatorMethodKey[] => {
+      const subKeys: IndicatorMethodKey[] = [];
+      // Find all indicators that have this parentIndicatorId and testMethodId
+      Object.entries(indicatorMethodsMap).forEach(([indId, methods]) => {
+        methods.forEach((method) => {
+          if (
+            method.testMethodId === testMethodId &&
+            method.parentIndicatorId === parentIndicatorId &&
+            method.isActive
+          ) {
+            subKeys.push(createIndicatorMethodKey(indId, testMethodId));
+          }
+        });
+      });
+      return subKeys;
+    },
+    [indicatorMethodsMap]
+  );
+
+  // Group selected methods by parent-child relationship
+  const groupedSelectedMethods = useMemo(() => {
+    const parentMethods: IndicatorMethodKey[] = [];
+    const subMethodsMap: Record<string, IndicatorMethodKey[]> = {};
+    const independentMethods: IndicatorMethodKey[] = [];
+
+    tempSelectedIndicatorMethods.forEach((key) => {
+      if (isSubIndicator(key)) {
+        const parentKey = getParentKey(key);
+        if (parentKey) {
+          if (!subMethodsMap[parentKey]) {
+            subMethodsMap[parentKey] = [];
+          }
+          subMethodsMap[parentKey].push(key);
+        }
+      } else {
+        // Check if this indicator has any sub-indicators in the same method
+        const { indicatorId, testMethodId } = parseIndicatorMethodKey(key);
+        const subKeys = getSubIndicatorKeys(indicatorId, testMethodId);
+        if (subKeys.length > 0) {
+          // This is a parent indicator
+          parentMethods.push(key);
+        } else {
+          // This is an independent indicator (no subs)
+          independentMethods.push(key);
+        }
+      }
+    });
+
+    return { parentMethods, subMethodsMap, independentMethods };
+  }, [tempSelectedIndicatorMethods, isSubIndicator, getParentKey, getSubIndicatorKeys]);
+
+  // Get pricing mode for a parent indicator
+  // 'parent' = all subs have price 0, show price on parent
+  // 'subs' = at least one sub has price > 0, show price on each sub
+  const getPricingMode = useCallback(
+    (parentKey: IndicatorMethodKey): "parent" | "subs" => {
+      const subs = groupedSelectedMethods.subMethodsMap[parentKey] || [];
+      if (subs.length === 0) return "parent";
+
+      // Check if any sub has price > 0
+      const hasSubWithPrice = subs.some((subKey) => {
+        const { method } = getIndicatorMethodInfo(subKey);
+        return (method?.unitPrice || 0) > 0;
+      });
+
+      return hasSubWithPrice ? "subs" : "parent";
+    },
+    [groupedSelectedMethods.subMethodsMap, getIndicatorMethodInfo]
+  );
+
+  // Handle remove sub-indicator with validation
+  const handleRemoveSubIndicator = useCallback(
+    (subKey: IndicatorMethodKey) => {
+      const parentKey = getParentKey(subKey);
+      if (!parentKey) return;
+
+      const currentSubs = groupedSelectedMethods.subMethodsMap[parentKey] || [];
+
+      // Don't allow removing if only 1 sub remains
+      if (currentSubs.length <= 1) {
+        message.error("Cần ít nhất 1 chỉ tiêu để tiến hành thử nghiệm");
+        return;
+      }
+
+      // Remove the sub-indicator
+      const { indicatorId, testMethodId } = parseIndicatorMethodKey(subKey);
+      toggleIndicatorMethod(indicatorId, testMethodId);
+    },
+    [getParentKey, groupedSelectedMethods.subMethodsMap, toggleIndicatorMethod]
+  );
+
+  // Handle remove parent indicator (removes all subs too)
+  const handleRemoveParentIndicator = useCallback(
+    (parentKey: IndicatorMethodKey) => {
+      const { indicatorId, testMethodId } = parseIndicatorMethodKey(parentKey);
+
+      // Get all sub-indicator keys for this parent
+      const subKeys = groupedSelectedMethods.subMethodsMap[parentKey] || [];
+
+      // Remove all subs first
+      subKeys.forEach((subKey) => {
+        const { indicatorId: subIndId, testMethodId: subMethodId } =
+          parseIndicatorMethodKey(subKey);
+        if (tempSelectedIndicatorMethods.includes(subKey)) {
+          toggleIndicatorMethod(subIndId, subMethodId);
+        }
+      });
+
+      // Remove the parent
+      toggleIndicatorMethod(indicatorId, testMethodId);
+
+      // Clean up laboratory map for parent
+      const labMapKey = `${currentSampleKey}_${parentKey}`;
+      if (indicatorLaboratoryMap[labMapKey]) {
+        setIndicatorLaboratoryMap((prev) => {
+          const updated = { ...prev };
+          delete updated[labMapKey];
+          return updated;
+        });
+      }
+    },
+    [
+      groupedSelectedMethods.subMethodsMap,
+      tempSelectedIndicatorMethods,
+      toggleIndicatorMethod,
+      currentSampleKey,
+      indicatorLaboratoryMap,
+      setIndicatorLaboratoryMap,
+    ]
+  );
+
   // Separate sent and unsent indicator methods
   const unsentMethods = tempSelectedIndicatorMethods.filter(
     (key) => !indicatorLaboratoryMap[`${currentSampleKey}_${key}`],
@@ -219,6 +380,12 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
   const sentMethods = tempSelectedIndicatorMethods.filter(
     (key) => indicatorLaboratoryMap[`${currentSampleKey}_${key}`],
   );
+
+  // Unsent methods excluding sub-indicators (for "Chọn tất cả" checkbox)
+  // Sub-indicators follow their parent automatically, so we don't count them separately
+  const unsentParentMethods = useMemo(() => {
+    return unsentMethods.filter((key) => !isSubIndicator(key));
+  }, [unsentMethods, isSubIndicator]);
 
   // Group sent methods by laboratory
   const groupedByLab: Record<
@@ -252,15 +419,54 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     return indicator?.name?.trim() === HEAVY_METAL_FREE_INDICATOR;
   };
 
-  // Calculate total cost from selected methods (Hg = 0 khi đủ combo)
-  const totalCost = tempSelectedIndicatorMethods.reduce((sum, key) => {
-    const { indicator, method } = getIndicatorMethodInfo(key);
-    const price =
-      isHeavyMetalComboMet && isHgIndicator(indicator)
-        ? 0
-        : method?.unitPrice || 0;
-    return sum + price;
-  }, 0);
+  // Calculate total cost from selected methods with sub-indicator pricing logic
+  const totalCost = useMemo(() => {
+    let total = 0;
+
+    // 1. Parent indicators with subs
+    groupedSelectedMethods.parentMethods.forEach((parentKey) => {
+      const { indicator, method } = getIndicatorMethodInfo(parentKey);
+      const subs = groupedSelectedMethods.subMethodsMap[parentKey] || [];
+      const pricingMode = getPricingMode(parentKey);
+
+      if (pricingMode === "parent") {
+        // Calculate by parent price
+        const price =
+          isHeavyMetalComboMet && isHgIndicator(indicator)
+            ? 0
+            : method?.unitPrice || 0;
+        total += price;
+      } else {
+        // Calculate by sum of sub prices
+        subs.forEach((subKey) => {
+          const { indicator: subInd, method: subMethod } =
+            getIndicatorMethodInfo(subKey);
+          const price =
+            isHeavyMetalComboMet && isHgIndicator(subInd)
+              ? 0
+              : subMethod?.unitPrice || 0;
+          total += price;
+        });
+      }
+    });
+
+    // 2. Independent indicators (no subs)
+    groupedSelectedMethods.independentMethods.forEach((key) => {
+      const { indicator, method } = getIndicatorMethodInfo(key);
+      const price =
+        isHeavyMetalComboMet && isHgIndicator(indicator)
+          ? 0
+          : method?.unitPrice || 0;
+      total += price;
+    });
+
+    return total;
+  }, [
+    groupedSelectedMethods,
+    getIndicatorMethodInfo,
+    getPricingMode,
+    isHeavyMetalComboMet,
+  ]);
 
   // Get indicators that have active methods, filtered by specimen type if active
   const indicatorsWithMethods = useMemo(() => {
@@ -1085,17 +1291,17 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                   </Text>
                   <Checkbox
                     checked={
-                      checkedIndicators.length === unsentMethods.length &&
-                      unsentMethods.length > 0
+                      checkedIndicators.length === unsentParentMethods.length &&
+                      unsentParentMethods.length > 0
                     }
                     indeterminate={
                       checkedIndicators.length > 0 &&
-                      checkedIndicators.length < unsentMethods.length
+                      checkedIndicators.length < unsentParentMethods.length
                     }
-                    disabled={unsentMethods.length === 0}
+                    disabled={unsentParentMethods.length === 0}
                     onChange={(e) => {
                       if (e.target.checked) {
-                        setCheckedIndicators([...unsentMethods]);
+                        setCheckedIndicators([...unsentParentMethods]);
                       } else {
                         setCheckedIndicators([]);
                       }
@@ -1104,8 +1310,8 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                   >
                     <span style={{ color: "#fff" }}>
                       Chọn tất cả{" "}
-                      {unsentMethods.length > 0
-                        ? `(${unsentMethods.length})`
+                      {unsentParentMethods.length > 0
+                        ? `(${unsentParentMethods.length})`
                         : "(Không có chỉ tiêu chưa gửi)"}
                     </span>
                   </Checkbox>
@@ -1166,37 +1372,132 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                     </div>
                     {/* Table body */}
                     <div className="indicator-table-body">
-                      {/* Unsent indicator methods */}
-                      {unsentMethods.map((key) => {
-                        const { indicator, method } =
-                          getIndicatorMethodInfo(key);
-                        return (
-                          <IndicatorRow
-                            key={key}
-                            id={key}
-                            isInGroup={false}
-                            indicator={indicator}
-                            methodName={method?.testMethodName || ""}
-                            methodFormattedName={
-                              method?.testMethodFormattedName
-                            }
-                            unitPrice={method?.unitPrice || 0}
-                            isFree={
-                              isHeavyMetalComboMet && isHgIndicator(indicator)
-                            }
-                            isChecked={checkedIndicators.includes(key)}
-                            transferDate={
-                              selectedIndicatorDates[key]?.transferDate
-                            }
-                            requestDate={
-                              selectedIndicatorDates[key]?.requestDate
-                            }
-                            onCheckChange={toggleCheckedIndicator}
-                            onDateChange={handleIndicatorDateChange}
-                            onRemove={handleRemoveIndicatorMethod}
-                          />
-                        );
-                      })}
+                      {/* 1. Parent indicators with their sub-indicators (unsent only) */}
+                      {groupedSelectedMethods.parentMethods
+                        .filter((key) => unsentMethods.includes(key))
+                        .map((parentKey) => {
+                          const { indicator, method } =
+                            getIndicatorMethodInfo(parentKey);
+                          const subs =
+                            groupedSelectedMethods.subMethodsMap[parentKey] ||
+                            [];
+                          const unsentSubs = subs.filter((s) =>
+                            unsentMethods.includes(s)
+                          );
+                          const pricingMode = getPricingMode(parentKey);
+
+                          return (
+                            <React.Fragment key={parentKey}>
+                              {/* Parent row */}
+                              <IndicatorRow
+                                id={parentKey}
+                                isInGroup={false}
+                                indicator={indicator}
+                                methodName={method?.testMethodName || ""}
+                                methodFormattedName={
+                                  method?.testMethodFormattedName
+                                }
+                                unitPrice={method?.unitPrice || 0}
+                                hidePrice={pricingMode === "subs"}
+                                isFree={
+                                  isHeavyMetalComboMet &&
+                                  isHgIndicator(indicator)
+                                }
+                                isChecked={checkedIndicators.includes(
+                                  parentKey
+                                )}
+                                transferDate={
+                                  selectedIndicatorDates[parentKey]
+                                    ?.transferDate
+                                }
+                                requestDate={
+                                  selectedIndicatorDates[parentKey]?.requestDate
+                                }
+                                onCheckChange={toggleCheckedIndicator}
+                                onDateChange={handleIndicatorDateChange}
+                                onRemove={handleRemoveParentIndicator}
+                              />
+
+                              {/* Sub-indicator rows */}
+                              {unsentSubs.map((subKey, index) => {
+                                const {
+                                  indicator: subInd,
+                                  method: subMethod,
+                                } = getIndicatorMethodInfo(subKey);
+                                return (
+                                  <IndicatorRow
+                                    key={subKey}
+                                    id={subKey}
+                                    isInGroup={false}
+                                    indicator={subInd}
+                                    methodName={subMethod?.testMethodName || ""}
+                                    methodFormattedName={
+                                      subMethod?.testMethodFormattedName
+                                    }
+                                    unitPrice={subMethod?.unitPrice || 0}
+                                    isSubIndicator={true}
+                                    isFirstSub={index === 0}
+                                    isLastSub={index === unsentSubs.length - 1}
+                                    hidePrice={pricingMode === "parent"}
+                                    hideDates={true}
+                                    isFree={
+                                      isHeavyMetalComboMet &&
+                                      isHgIndicator(subInd)
+                                    }
+                                    isChecked={checkedIndicators.includes(
+                                      subKey
+                                    )}
+                                    transferDate={
+                                      selectedIndicatorDates[subKey]
+                                        ?.transferDate
+                                    }
+                                    requestDate={
+                                      selectedIndicatorDates[subKey]
+                                        ?.requestDate
+                                    }
+                                    onCheckChange={toggleCheckedIndicator}
+                                    onDateChange={handleIndicatorDateChange}
+                                    onRemoveSub={handleRemoveSubIndicator}
+                                  />
+                                );
+                              })}
+                            </React.Fragment>
+                          );
+                        })}
+
+                      {/* 2. Independent indicators (no subs, unsent only) */}
+                      {groupedSelectedMethods.independentMethods
+                        .filter((key) => unsentMethods.includes(key))
+                        .map((key) => {
+                          const { indicator, method } =
+                            getIndicatorMethodInfo(key);
+                          return (
+                            <IndicatorRow
+                              key={key}
+                              id={key}
+                              isInGroup={false}
+                              indicator={indicator}
+                              methodName={method?.testMethodName || ""}
+                              methodFormattedName={
+                                method?.testMethodFormattedName
+                              }
+                              unitPrice={method?.unitPrice || 0}
+                              isFree={
+                                isHeavyMetalComboMet && isHgIndicator(indicator)
+                              }
+                              isChecked={checkedIndicators.includes(key)}
+                              transferDate={
+                                selectedIndicatorDates[key]?.transferDate
+                              }
+                              requestDate={
+                                selectedIndicatorDates[key]?.requestDate
+                              }
+                              onCheckChange={toggleCheckedIndicator}
+                              onDateChange={handleIndicatorDateChange}
+                              onRemove={handleRemoveIndicatorMethod}
+                            />
+                          );
+                        })}
 
                       {/* Sent indicator methods grouped by laboratory */}
                       {Object.entries(groupedByLab).map(
