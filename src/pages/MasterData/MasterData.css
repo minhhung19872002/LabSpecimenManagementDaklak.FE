@@ -3,6 +3,35 @@
   padding: 0;
 }
 
+/* Card header - allow wrapping for buttons when overflow */
+.list-card .ant-card-head {
+  min-height: auto;
+  height: auto;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.list-card .ant-card-head-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  min-height: auto;
+  height: auto;
+}
+
+.list-card .ant-card-head-title {
+  flex: 0 1 auto;
+  min-width: fit-content;
+}
+
+.list-card .ant-card-extra {
+  flex: 0 1 auto;
+  display: flex;
+  justify-content: flex-end;
+  min-width: fit-content;
+  margin-left: auto;
+}
 
 /* Left tabs styling - active tab with background */
 .list-card .ant-tabs-left > .ant-tabs-nav {
