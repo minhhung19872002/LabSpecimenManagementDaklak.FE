@@ -59,6 +59,13 @@ interface IndicatorRowProps {
   onCheckChange: (id: string) => void;
   onDateChange: (id: string, field: "transferDate" | "requestDate", value: dayjs.Dayjs | null) => void;
   onRemove: (id: string) => void;
+  // Sub-indicator props
+  isSubIndicator?: boolean;
+  isFirstSub?: boolean;
+  isLastSub?: boolean;
+  hidePrice?: boolean;
+  hideDates?: boolean;
+  onRemoveSub?: (id: string) => void;
 }
 
 const IndicatorRow: React.FC<IndicatorRowProps> = ({
@@ -76,6 +83,13 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
   onCheckChange,
   onDateChange,
   onRemove,
+  // Sub-indicator props
+  isSubIndicator = false,
+  isFirstSub = false,
+  isLastSub = false,
+  hidePrice = false,
+  hideDates = false,
+  onRemoveSub,
 }) => {
   if (!indicator) return null;
 
@@ -89,21 +103,34 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
     ? IndicatorApprovalStatusColors[approvalStatus]
     : null;
 
+  // Build class names for tree-line styling
+  const classNames = ["indicator-table-row"];
+  if (isSubIndicator) {
+    classNames.push("is-sub-indicator");
+    if (isFirstSub) classNames.push("is-first-sub");
+    if (isLastSub) classNames.push("is-last-sub");
+  }
+
   return (
     <div
-      className="indicator-table-row"
+      className={classNames.join(" ")}
       style={{
-        paddingLeft: isInGroup ? 36 : 12,
+        paddingLeft: isSubIndicator ? 48 : isInGroup ? 36 : 12,
         borderBottom: "1px solid #f5f5f5",
-        background: canDelete ? "#fff" : "#fafafa",
+        background: isSubIndicator ? "#fafafa" : canDelete ? "#fff" : "#fafafa",
       }}
     >
-      <Checkbox
-        checked={isChecked}
-        onChange={() => onCheckChange(id)}
-        style={{ width: 24, flexShrink: 0 }}
-        disabled={!canDelete}
-      />
+      {/* Checkbox - hidden for sub-indicators (they follow parent) */}
+      {isSubIndicator ? (
+        <span style={{ width: 24, flexShrink: 0 }} />
+      ) : (
+        <Checkbox
+          checked={isChecked}
+          onChange={() => onCheckChange(id)}
+          style={{ width: 24, flexShrink: 0 }}
+          disabled={!canDelete}
+        />
+      )}
       <TruncateTooltip
         title={indicator.name}
         style={{
@@ -138,53 +165,66 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
           formattedName={methodFormattedName}
         />
       </TruncateTooltip>
-      <span
-        style={{
-          fontSize: 12,
-          color: "#888",
-          width: 90,
-          flexShrink: 0,
-          textAlign: "right",
-        }}
-      >
-        {isFree ? (
-          <>
-            <span style={{ textDecoration: "line-through", color: "#bbb", marginRight: 2, fontSize: 11 }}>
-              {unitPrice?.toLocaleString("vi-VN")}đ
-            </span>
-            <span style={{ color: "#52c41a", fontWeight: 600 }}>0đ</span>
-          </>
-        ) : (
-          <>{unitPrice?.toLocaleString("vi-VN")}đ</>
-        )}
-      </span>
+      {/* Đơn giá - ẩn nếu hidePrice */}
+      {!hidePrice ? (
+        <span
+          style={{
+            fontSize: 12,
+            color: "#888",
+            width: 90,
+            flexShrink: 0,
+            textAlign: "right",
+          }}
+        >
+          {isFree ? (
+            <>
+              <span style={{ textDecoration: "line-through", color: "#bbb", marginRight: 2, fontSize: 11 }}>
+                {unitPrice?.toLocaleString("vi-VN")}đ
+              </span>
+              <span style={{ color: "#52c41a", fontWeight: 600 }}>0đ</span>
+            </>
+          ) : (
+            <>{unitPrice?.toLocaleString("vi-VN")}đ</>
+          )}
+        </span>
+      ) : (
+        <span style={{ width: 90, flexShrink: 0 }} />
+      )}
       {statusLabel && (
         <StatusTag color={statusColor} style={{ fontSize: 11, flexShrink: 0, minWidth: 60 }}>
           {statusLabel}
         </StatusTag>
       )}
-      <DatePicker
-        value={transferDate}
-        onChange={(date) => onDateChange(id, "transferDate", date)}
-        format="DD/MM/YYYY"
-        size="small"
-        style={{ width: 100, flexShrink: 0 }}
-        placeholder="CG"
-        disabled // Ngày chuyển giao disabled, auto-set ngày hiện tại
-      />
-      <DatePicker
-        value={requestDate}
-        onChange={(date) => onDateChange(id, "requestDate", date)}
-        format="DD/MM/YYYY"
-        size="small"
-        style={{ width: 100, flexShrink: 0 }}
-        placeholder="YC"
-        disabled={!canDelete}
-        disabledDate={(current) => {
-          // Không cho chọn ngày quá khứ
-          return current && current.isBefore(dayjs().startOf("day"));
-        }}
-      />
+      {/* Ngày CG/YC - ẩn nếu hideDates */}
+      {!hideDates ? (
+        <>
+          <DatePicker
+            value={transferDate}
+            onChange={(date) => onDateChange(id, "transferDate", date)}
+            format="DD/MM/YYYY"
+            size="small"
+            style={{ width: 100, flexShrink: 0 }}
+            placeholder="CG"
+            disabled // Ngày chuyển giao disabled, auto-set ngày hiện tại
+          />
+          <DatePicker
+            value={requestDate}
+            onChange={(date) => onDateChange(id, "requestDate", date)}
+            format="DD/MM/YYYY"
+            size="small"
+            style={{ width: 100, flexShrink: 0 }}
+            placeholder="YC"
+            disabled={!canDelete}
+            disabledDate={(current) => {
+              // Không cho chọn ngày quá khứ
+              return current && current.isBefore(dayjs().startOf("day"));
+            }}
+          />
+        </>
+      ) : (
+        <span style={{ width: 200, flexShrink: 0 }} />
+      )}
+      {/* Nút xóa - dùng onRemoveSub cho sub-indicator */}
       {canDelete ? (
         <Button
           type="text"
@@ -192,7 +232,7 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
           danger
           icon={<CloseOutlined />}
           style={{ width: 32, flexShrink: 0 }}
-          onClick={() => onRemove(id)}
+          onClick={() => isSubIndicator && onRemoveSub ? onRemoveSub(id) : onRemove(id)}
         />
       ) : (
         <Tooltip title="Không thể xóa chỉ tiêu đang thử nghiệm hoặc đã có kết quả">

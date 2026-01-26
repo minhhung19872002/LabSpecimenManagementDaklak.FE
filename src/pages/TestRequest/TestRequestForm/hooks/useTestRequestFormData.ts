@@ -304,6 +304,7 @@ export const useTestRequestFormData = () => {
               testMethodFormattedName: method.formattedName || undefined,
               unitPrice: ind.unitPrice,
               isActive: ind.isActive,
+              parentIndicatorId: ind.parentIndicatorId,
             });
           }
         });
@@ -834,9 +835,28 @@ export const useTestRequestFormData = () => {
   // Get indicator and method info from IndicatorMethodKey
   const getIndicatorMethodInfo = (key: IndicatorMethodKey) => {
     const { indicatorId, testMethodId } = parseIndicatorMethodKey(key);
-    const indicator = indicators.find((i) => i.id === indicatorId);
+    let indicator = indicators.find((i) => i.id === indicatorId);
     const methods = indicatorMethodsMap[indicatorId] || [];
     const method = methods.find((m) => m.testMethodId === testMethodId);
+
+    // Fallback: If indicator not found in indicators list (e.g., sub-indicators),
+    // create indicator-like object from testMethods data
+    if (!indicator && testMethodId) {
+      const testMethod = testMethods.find((tm) => tm.id === testMethodId);
+      const tmIndicator = testMethod?.indicators?.find((ind) => ind.indicatorId === indicatorId);
+      if (tmIndicator) {
+        indicator = {
+          id: tmIndicator.indicatorId,
+          code: tmIndicator.indicatorCode,
+          name: tmIndicator.indicatorName,
+          formattedName: tmIndicator.indicatorFormattedName,
+          isActive: tmIndicator.isActive,
+          indicatorGroupId: "", // Not available in test method data
+          sortOrder: tmIndicator.sortOrder,
+        } as IndicatorDto;
+      }
+    }
+
     return { indicator, method, indicatorId, testMethodId };
   };
 

@@ -20,6 +20,7 @@ export interface IndicatorMethodInfo {
   testMethodFormattedName?: string;  // Tên phương pháp có định dạng HTML
   unitPrice: number;
   isActive: boolean;
+  parentIndicatorId?: string;  // ID của chỉ tiêu cha nếu là sub-indicator
 }
 
 // Key duy nhất cho mỗi lựa chọn: indicatorId_testMethodId
