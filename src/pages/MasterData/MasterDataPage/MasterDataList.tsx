@@ -161,7 +161,7 @@ const MasterDataList: React.FC = () => {
         title={
           <Space>
             <DatabaseOutlined />
-            Ngân hàng dữ liệu (Master Data)
+            Ngân hàng dữ liệu
           </Space>
         }
         extra={
