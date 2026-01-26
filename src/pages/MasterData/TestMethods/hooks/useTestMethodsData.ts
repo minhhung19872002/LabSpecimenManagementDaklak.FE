@@ -37,6 +37,10 @@ export const useTestMethodsData = () => {
       setIndicatorGroups(groupsData || []);
       setIndicators(indicatorsData || []);
 
+      // DEBUG: Check if indicators have subIndicators
+      console.log('🔍 Indicators from API:', indicatorsData);
+      console.log('🔍 Sample indicator with subs:', indicatorsData?.find(ind => ind.subIndicators && ind.subIndicators.length > 0));
+
       // Only collapse all on initial load
       if (isInitialLoad) {
         setExpandedRowKeys([]);
@@ -73,11 +77,36 @@ export const useTestMethodsData = () => {
     );
   }, [testMethods, searchText]);
 
+  // Helper function to sort indicators in tree order (parent followed by its children)
+  const sortIndicatorsInTreeOrder = (indicators: any[]) => {
+    if (!indicators || indicators.length === 0) return indicators;
+
+    const result: any[] = [];
+    const parentIndicators = indicators.filter(ind => !ind.parentIndicatorId);
+    const childIndicators = indicators.filter(ind => ind.parentIndicatorId);
+
+    // For each parent, add it first, then add its children
+    parentIndicators.forEach(parent => {
+      result.push(parent);
+      const children = childIndicators.filter(child => child.parentIndicatorId === parent.indicatorId);
+      result.push(...children);
+    });
+
+    // Add any orphan children (children whose parent is not in the list)
+    const addedChildIds = new Set(result.filter(ind => ind.parentIndicatorId).map(ind => ind.indicatorId));
+    const orphanChildren = childIndicators.filter(child => !addedChildIds.has(child.indicatorId));
+    result.push(...orphanChildren);
+
+    return result;
+  };
+
   // Convert to grouped data for table
   const groupedData: GroupedTestMethodData[] = useMemo(() => {
     return filteredData.map((method) => ({
       ...method,
       key: method.id,
+      // Sort indicators so sub-indicators appear right after their parent
+      indicators: sortIndicatorsInTreeOrder(method.indicators || []),
     }));
   }, [filteredData]);
 

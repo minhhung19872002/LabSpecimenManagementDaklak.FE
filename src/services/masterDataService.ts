@@ -142,6 +142,7 @@ export interface TestMethodIndicatorDto {
   unitPrice: number;
   isActive: boolean;
   sortOrder: number;
+  parentIndicatorId?: string;  // ID chỉ tiêu cha (null nếu là chỉ tiêu gốc)
 }
 
 export interface TestMethodWithIndicatorsDto extends TestMethodDto {
