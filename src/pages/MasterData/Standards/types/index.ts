@@ -13,6 +13,12 @@ export interface StandardsTabProps {
   refreshKey?: number;
 }
 
+export interface StandardsActions {
+  handleCreate: () => void;
+  handleDownloadTemplate: () => void;
+  handleImport: () => void;
+}
+
 export interface GroupedStandardData extends StandardWithIndicatorsDto {
   key: string;
 }

@@ -12,6 +12,12 @@ export interface TestMethodsTabProps {
   refreshKey?: number;
 }
 
+export interface TestMethodsActions {
+  handleCreate: () => void;
+  handleDownloadTemplate: () => void;
+  handleImport: () => void;
+}
+
 export interface GroupedTestMethodData extends TestMethodWithIndicatorsDto {
   key: string;
 }

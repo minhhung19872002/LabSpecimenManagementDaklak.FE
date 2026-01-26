@@ -1,12 +1,5 @@
-import React, { useMemo } from "react";
-import { Button, Space, Input, Row, Col, Form } from "antd";
-import {
-  PlusOutlined,
-  SearchOutlined,
-  FolderAddOutlined,
-  DownloadOutlined,
-  UploadOutlined,
-} from "../../../components/common/Icon";
+import { useMemo, forwardRef, useImperativeHandle } from "react";
+import { Form } from "antd";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useIndicatorsData, useIndicatorsActions } from "./hooks";
@@ -20,17 +13,15 @@ import {
   ImportGroupModal,
   ImportIndicatorGroupModal,
 } from "./components";
-import { IndicatorsTabProps } from "./types";
+import { IndicatorsTabProps, IndicatorsActions } from "./types";
 import {
   indicatorSchema,
   indicatorGroupSchema,
   IndicatorFormData,
   IndicatorGroupFormData,
 } from "./schemas/indicatorSchema";
-import { authService } from "../../../services/authService";
-import { PERMISSIONS } from "../../../constants/permissionMapping";
 
-const IndicatorsList: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
+const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDataChange }, ref) => {
   const {
     indicators,
     loading,
@@ -146,55 +137,16 @@ const IndicatorsList: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
     [handleEditGroup, handleDeleteGroup, groupForm],
   );
 
+  // Expose actions to parent
+  useImperativeHandle(ref, () => ({
+    handleBulkCreate: () => handleBulkCreate(bulkForm),
+    handleCreateGroup: () => handleCreateGroup(groupForm),
+    handleDownloadTemplate: handleDownloadIndicatorGroupTemplate,
+    handleImport: () => setImportIndicatorGroupModalOpen(true),
+  }));
+
   return (
     <>
-      {/* Search and Actions */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col xs={24} sm={12} md={8}>
-          <Input
-            placeholder="Tìm kiếm theo mã, tên, tên nhóm..."
-            prefix={<SearchOutlined />}
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            allowClear
-          />
-        </Col>
-        <Col xs={24} sm={12} md={16} style={{ textAlign: "right" }}>
-          <Space wrap>
-            <Button
-              icon={<DownloadOutlined />}
-              onClick={handleDownloadIndicatorGroupTemplate}
-            >
-              Tải template
-            </Button>
-            {authService.hasPermission(PERMISSIONS.MasterData.Import) && (
-              <Button
-                icon={<UploadOutlined />}
-                onClick={() => setImportIndicatorGroupModalOpen(true)}
-              >
-                Nhập danh sách
-              </Button>
-            )}
-            {authService.hasPermission(PERMISSIONS.MasterData.Create) && (
-              <Button
-                icon={<FolderAddOutlined />}
-                onClick={() => handleCreateGroup(groupForm)}
-              >
-                Thêm nhóm
-              </Button>
-            )}
-            {authService.hasPermission(PERMISSIONS.MasterData.Create) && (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => handleBulkCreate(bulkForm)}
-              >
-                Thêm chỉ tiêu
-              </Button>
-            )}
-          </Space>
-        </Col>
-      </Row>
 
       <IndicatorsTable
         loading={loading}
@@ -301,6 +253,8 @@ const IndicatorsList: React.FC<IndicatorsTabProps> = ({ onDataChange }) => {
       />
     </>
   );
-};
+});
+
+IndicatorsList.displayName = "IndicatorsList";
 
 export default IndicatorsList;

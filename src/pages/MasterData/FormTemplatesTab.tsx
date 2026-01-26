@@ -103,7 +103,10 @@ const FormTemplatesTab: React.FC = () => {
 
   return (
     <>
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+      <Row
+        gutter={[16, 16]}
+        style={{ marginBottom: 16, padding: "16px 16px 0" }}
+      >
         <Col xs={24} sm={12} md={8}>
           <Input
             placeholder="Tìm kiếm theo tên..."

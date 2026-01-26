@@ -13,6 +13,10 @@ export interface SpecimenTypesTabProps {
   refreshKey?: number;
 }
 
+export interface SpecimenTypesActions {
+  handleCreate: () => void;
+}
+
 export interface GroupedSpecimenTypeData extends SpecimenTypeWithIndicatorsDto {
   key: string;
 }

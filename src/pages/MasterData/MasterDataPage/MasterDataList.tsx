@@ -1,23 +1,23 @@
 // @ts-nocheck
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useRef } from "react";
 import { Card, Button, Space, Tag, Alert, Tabs, Form } from "antd";
 import {
   PlusOutlined,
   DatabaseOutlined,
-  ImportOutlined,
-  ExportOutlined,
   DownloadOutlined,
+  UploadOutlined,
+  FolderAddOutlined,
 } from "../../../components/common/Icon";
 import ImportExcelModal from "../../../components/common/ImportExcelModal";
-import IndicatorsTab from "../IndicatorsTab";
+import IndicatorsTab, { type IndicatorsActions } from "../Indicators";
 import FormTemplatesTab from "../FormTemplatesTab";
-import TestMethodsTab from "../TestMethods";
-import StandardsTab from "../Standards";
-import TestResultValuesTab from "../TestResultValues";
-import NotesTab from "../Notes";
-import SpecimenTypesTab from "../SpecimenTypes";
-import SampleTypeCategoriesTab from "../SampleTypeCategoriesTab";
-import SampleConditionsTab from "../SampleStatuses";
+import TestMethodsTab, { type TestMethodsActions } from "../TestMethods";
+import StandardsTab, { type StandardsActions } from "../Standards";
+import TestResultValuesTab, { type TestResultValuesActions } from "../TestResultValues";
+import NotesTab, { type NotesActions } from "../Notes";
+import SpecimenTypesTab, { type SpecimenTypesActions } from "../SpecimenTypes";
+import SampleTypeCategoriesTab, { type SampleTypeCategoriesActions } from "../SampleTypeCategories";
+import SampleConditionsTab, { type SampleConditionActions } from "../SampleStatuses";
 import { useMasterDataState } from "./hooks";
 import { useMasterDataActions } from "./hooks/useMasterDataActions";
 import {
@@ -98,6 +98,18 @@ const MasterDataList: React.FC = () => {
   const [specimenTypesRefreshKey, setSpecimenTypesRefreshKey] = useState(0);
   const [sampleTypeCategoriesRefreshKey, setSampleTypeCategoriesRefreshKey] = useState(0);
   const [sampleConditionsRefreshKey, setSampleConditionsRefreshKey] = useState(0);
+  const [testResultValuesRefreshKey, setTestResultValuesRefreshKey] = useState(0);
+  const [notesRefreshKey, setNotesRefreshKey] = useState(0);
+
+  // Refs for tab actions
+  const sampleConditionsRef = useRef<SampleConditionActions>(null);
+  const sampleTypeCategoriesRef = useRef<SampleTypeCategoriesActions>(null);
+  const specimenTypesRef = useRef<SpecimenTypesActions>(null);
+  const testMethodsRef = useRef<TestMethodsActions>(null);
+  const standardsRef = useRef<StandardsActions>(null);
+  const indicatorsRef = useRef<IndicatorsActions>(null);
+  const testResultValuesRef = useRef<TestResultValuesActions>(null);
+  const notesRef = useRef<NotesActions>(null);
 
   // Permission check - All Master Data uses unified permissions now
   const canCreate = authService.hasPermission(PERMISSIONS.MasterData.Create);
@@ -144,39 +156,105 @@ const MasterDataList: React.FC = () => {
           </Space>
         }
         extra={
-          activeCategory !== "indicators" &&
-          activeCategory !== "formTemplates" &&
-          activeCategory !== "testMethods" &&
-          activeCategory !== "standards" &&
-          activeCategory !== "testResultValues" &&
-          activeCategory !== "notes" &&
-          activeCategory !== "specimenTypes" &&
-          activeCategory !== "sampleTypeCategories" &&
-          activeCategory !== "sampleConditions" &&
           canCreate && (
             <Space>
-              {/* {canImport && (
-                <Button
-                  icon={<DownloadOutlined />}
-                  onClick={handleDownloadTemplate}
-                  loading={downloadingTemplate}
-                >
-                  Tải Template
+              {/* Sample Conditions Tab */}
+              {activeCategory === "sampleConditions" && (
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => sampleConditionsRef.current?.handleCreate()}>
+                  Thêm tình trạng mẫu
                 </Button>
               )}
-              <Button icon={<ImportOutlined />} onClick={handleImportExcel}>
-                Import Excel
-              </Button>
-              <Button icon={<ExportOutlined />} onClick={handleExportExcel}>
-                Export Excel
-              </Button> */}
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => handleCreate(form)}
-              >
-                Thêm mới
-              </Button>
+
+              {/* Sample Type Categories Tab */}
+              {activeCategory === "sampleTypeCategories" && (
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => sampleTypeCategoriesRef.current?.handleCreate()}>
+                  Thêm danh mục
+                </Button>
+              )}
+
+              {/* Specimen Types Tab */}
+              {activeCategory === "specimenTypes" && (
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => specimenTypesRef.current?.handleCreate()}>
+                  Thêm loại mẫu
+                </Button>
+              )}
+
+              {/* Test Methods Tab */}
+              {activeCategory === "testMethods" && (
+                <>
+                  <Button icon={<DownloadOutlined />} onClick={() => testMethodsRef.current?.handleDownloadTemplate()}>
+                    Tải template
+                  </Button>
+                  <Button icon={<UploadOutlined />} onClick={() => testMethodsRef.current?.handleImport()}>
+                    Nhập danh sách
+                  </Button>
+                  <Button type="primary" icon={<PlusOutlined />} onClick={() => testMethodsRef.current?.handleCreate()}>
+                    Thêm phương pháp
+                  </Button>
+                </>
+              )}
+
+              {/* Standards Tab */}
+              {activeCategory === "standards" && (
+                <>
+                  <Button icon={<DownloadOutlined />} onClick={() => standardsRef.current?.handleDownloadTemplate()}>
+                    Tải template mẫu
+                  </Button>
+                  <Button icon={<UploadOutlined />} onClick={() => standardsRef.current?.handleImport()}>
+                    Nhập danh sách
+                  </Button>
+                  <Button type="primary" icon={<PlusOutlined />} onClick={() => standardsRef.current?.handleCreate()}>
+                    Thêm tiêu chuẩn
+                  </Button>
+                </>
+              )}
+
+              {/* Indicators Tab */}
+              {activeCategory === "indicators" && (
+                <>
+                  <Button icon={<DownloadOutlined />} onClick={() => indicatorsRef.current?.handleDownloadTemplate()}>
+                    Tải template
+                  </Button>
+                  <Button icon={<UploadOutlined />} onClick={() => indicatorsRef.current?.handleImport()}>
+                    Nhập danh sách
+                  </Button>
+                  <Button icon={<FolderAddOutlined />} onClick={() => indicatorsRef.current?.handleCreateGroup()}>
+                    Thêm nhóm
+                  </Button>
+                  <Button type="primary" icon={<PlusOutlined />} onClick={() => indicatorsRef.current?.handleBulkCreate()}>
+                    Thêm chỉ tiêu
+                  </Button>
+                </>
+              )}
+
+              {/* Test Result Values Tab */}
+              {activeCategory === "testResultValues" && (
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => testResultValuesRef.current?.handleCreate()}>
+                  Thêm kết quả
+                </Button>
+              )}
+
+              {/* Notes Tab */}
+              {activeCategory === "notes" && (
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => notesRef.current?.handleCreate()}>
+                  Thêm ghi chú
+                </Button>
+              )}
+
+              {/* Other tabs (departments, laboratories, etc.) - use old handleCreate */}
+              {activeCategory !== "indicators" &&
+                activeCategory !== "formTemplates" &&
+                activeCategory !== "testMethods" &&
+                activeCategory !== "standards" &&
+                activeCategory !== "testResultValues" &&
+                activeCategory !== "notes" &&
+                activeCategory !== "specimenTypes" &&
+                activeCategory !== "sampleTypeCategories" &&
+                activeCategory !== "sampleConditions" && (
+                  <Button type="primary" icon={<PlusOutlined />} onClick={() => handleCreate(form)}>
+                    Thêm mới
+                  </Button>
+                )}
             </Space>
           )
         }
@@ -202,6 +280,12 @@ const MasterDataList: React.FC = () => {
             if (key === "sampleConditions") {
               setSampleConditionsRefreshKey((prev) => prev + 1);
             }
+            if (key === "testResultValues") {
+              setTestResultValuesRefreshKey((prev) => prev + 1);
+            }
+            if (key === "notes") {
+              setNotesRefreshKey((prev) => prev + 1);
+            }
           }}
           tabPosition="left"
           style={{ minHeight: 400 }}
@@ -215,35 +299,48 @@ const MasterDataList: React.FC = () => {
             ),
             children:
               key === "indicators" ? (
-                <IndicatorsTab onDataChange={() => fetchStatistics()} />
+                <IndicatorsTab ref={indicatorsRef} onDataChange={() => fetchStatistics()} />
               ) : key === "formTemplates" ? (
                 <FormTemplatesTab />
               ) : key === "testMethods" ? (
                 <TestMethodsTab
+                  ref={testMethodsRef}
                   onDataChange={() => fetchStatistics()}
                   refreshKey={testMethodsRefreshKey}
                 />
               ) : key === "standards" ? (
                 <StandardsTab
+                  ref={standardsRef}
                   onDataChange={() => fetchStatistics()}
                   refreshKey={standardsRefreshKey}
                 />
               ) : key === "testResultValues" ? (
-                <TestResultValuesTab onDataChange={() => fetchStatistics()} />
+                <TestResultValuesTab
+                  ref={testResultValuesRef}
+                  onDataChange={() => fetchStatistics()}
+                  refreshKey={testResultValuesRefreshKey}
+                />
               ) : key === "notes" ? (
-                <NotesTab onDataChange={() => fetchStatistics()} />
+                <NotesTab
+                  ref={notesRef}
+                  onDataChange={() => fetchStatistics()}
+                  refreshKey={notesRefreshKey}
+                />
               ) : key === "specimenTypes" ? (
                 <SpecimenTypesTab
+                  ref={specimenTypesRef}
                   onDataChange={() => fetchStatistics()}
                   refreshKey={specimenTypesRefreshKey}
                 />
               ) : key === "sampleTypeCategories" ? (
                 <SampleTypeCategoriesTab
+                  ref={sampleTypeCategoriesRef}
                   onDataChange={() => fetchStatistics()}
                   refreshKey={sampleTypeCategoriesRefreshKey}
                 />
               ) : key === "sampleConditions" ? (
                 <SampleConditionsTab
+                  ref={sampleConditionsRef}
                   onDataChange={() => fetchStatistics()}
                   refreshKey={sampleConditionsRefreshKey}
                 />

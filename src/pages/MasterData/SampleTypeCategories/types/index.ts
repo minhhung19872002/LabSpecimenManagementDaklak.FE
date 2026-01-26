@@ -5,6 +5,10 @@ export interface SampleTypeCategoriesTabProps {
   refreshKey?: number;
 }
 
+export interface SampleTypeCategoriesActions {
+  handleCreate: () => void;
+}
+
 export interface GroupedCategoryData extends SampleTypeCategoryDto {
   key: string;
   specimenTypes: SpecimenTypeWithKey[];

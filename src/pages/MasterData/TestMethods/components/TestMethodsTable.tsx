@@ -1,5 +1,15 @@
 import React from "react";
-import { Table, Input, Row, Col, Spin, Button, Empty, Space, Checkbox } from "antd";
+import {
+  Table,
+  Input,
+  Row,
+  Col,
+  Spin,
+  Button,
+  Empty,
+  Space,
+  Checkbox,
+} from "antd";
 import {
   SearchOutlined,
   PlusOutlined,
@@ -44,7 +54,10 @@ const TestMethodsTable: React.FC<TestMethodsTableProps> = ({
 }) => {
   return (
     <>
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+      <Row
+        gutter={[16, 16]}
+        style={{ marginBottom: 16, padding: "16px 16px 0" }}
+      >
         <Col xs={24} sm={12} md={8}>
           <Input
             placeholder="Tìm kiếm theo mã, tên, đơn vị, chỉ tiêu..."
@@ -63,8 +76,11 @@ const TestMethodsTable: React.FC<TestMethodsTableProps> = ({
           rowKey="id"
           expandable={{
             expandedRowRender: (testMethodRecord) => {
-              const hasIndicators = testMethodRecord.indicators && testMethodRecord.indicators.length > 0;
-              const selectedKeys = selectedIndicatorKeys[testMethodRecord.id] || [];
+              const hasIndicators =
+                testMethodRecord.indicators &&
+                testMethodRecord.indicators.length > 0;
+              const selectedKeys =
+                selectedIndicatorKeys[testMethodRecord.id] || [];
 
               return (
                 <div style={{ padding: "8px 0", marginLeft: 16 }}>
@@ -73,13 +89,13 @@ const TestMethodsTable: React.FC<TestMethodsTableProps> = ({
                       {/* Indicator table with overlay header when selected */}
                       {(() => {
                         const indicatorIds = testMethodRecord.indicators.map(
-                          (ind) => ind.indicatorId
+                          (ind) => ind.indicatorId,
                         );
                         const allSelected =
                           indicatorIds.length > 0 &&
                           indicatorIds.every((id) => selectedKeys.includes(id));
                         const someSelected = indicatorIds.some((id) =>
-                          selectedKeys.includes(id)
+                          selectedKeys.includes(id),
                         );
 
                         return (
@@ -103,7 +119,12 @@ const TestMethodsTable: React.FC<TestMethodsTableProps> = ({
                                   borderBottom: "1px solid #f0f0f0",
                                 }}
                               >
-                                <div style={{ display: "flex", alignItems: "center" }}>
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                  }}
+                                >
                                   <Checkbox
                                     checked={allSelected}
                                     indeterminate={someSelected && !allSelected}
@@ -137,7 +158,11 @@ const TestMethodsTable: React.FC<TestMethodsTableProps> = ({
                                     size="small"
                                     danger
                                     icon={<DeleteOutlined />}
-                                    onClick={() => onBatchRemoveIndicators(testMethodRecord.id)}
+                                    onClick={() =>
+                                      onBatchRemoveIndicators(
+                                        testMethodRecord.id,
+                                      )
+                                    }
                                     loading={batchLoading}
                                   >
                                     Xóa
@@ -224,11 +249,19 @@ const TestMethodsTable: React.FC<TestMethodsTableProps> = ({
             },
             rowExpandable: () => true,
             expandedRowKeys,
-            onExpandedRowsChange: (keys) => onExpandedRowsChange(keys as string[]),
+            onExpandedRowsChange: (keys) =>
+              onExpandedRowsChange(keys as string[]),
           }}
           pagination={{
             pageSize: 50,
-            showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
+            showTotal: (total, range) => (
+              <>
+                Hiển thị{" "}
+                <b>
+                  {range[0]}-{range[1]}/{total}
+                </b>
+              </>
+            ),
           }}
         />
       </Spin>

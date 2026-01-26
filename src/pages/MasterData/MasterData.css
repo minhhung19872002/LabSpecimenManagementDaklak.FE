@@ -57,9 +57,13 @@
 
 /* Panel right */
 .ant-tabs-content-holder {
-  padding: 16px 0;
+  padding: 0 0 16px;
 }
 
 .ant-tabs-content-holder .ant-tabs-tabpane {
   padding: 0 !important;
+}
+
+.ant-popconfirm.ant-popover .ant-popover-container{
+  padding: 4px 6px !important;
 }
