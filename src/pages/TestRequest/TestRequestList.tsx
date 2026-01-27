@@ -9,12 +9,14 @@ import {
   Col,
   Select,
   DatePicker,
+  Alert,
 } from "antd";
 import {
   PlusOutlined,
   ReloadOutlined,
   ImportOutlined,
   DownloadOutlined,
+  CloudOutlined,
 } from "../../components/common/Icon";
 import {
   TestRequestStatus,
@@ -38,6 +40,7 @@ const TestRequestList: React.FC = () => {
     importModalOpen,
     downloadingTemplate,
     columns,
+    isOfflineData,
     loadData,
     handleDownloadTemplate,
     handleSearch,
@@ -86,6 +89,21 @@ const TestRequestList: React.FC = () => {
         </Space>
       }
     >
+      {/* Offline data alert */}
+      {isOfflineData && (
+        <Alert
+          message={
+            <Space>
+              <CloudOutlined />
+              <span>Đang xem dữ liệu đã lưu trong bộ nhớ đệm. Một số thông tin có thể không được cập nhật.</span>
+            </Space>
+          }
+          type="warning"
+          showIcon={false}
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
       {/* Search & Filter */}
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} sm={12} md={8}>
