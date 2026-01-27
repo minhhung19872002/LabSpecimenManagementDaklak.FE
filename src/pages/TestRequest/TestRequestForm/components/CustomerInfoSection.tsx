@@ -1,7 +1,11 @@
 // @ts-nocheck
 import React from "react";
 import { Form, Input, AutoComplete, Row, Col, Typography } from "antd";
-import { getWardsByProvince, Province, Ward } from "../../../../utils/vietnamLocations";
+import {
+  getWardsByProvince,
+  Province,
+  Ward,
+} from "../../../../utils/vietnamLocations";
 
 const { Title } = Typography;
 
@@ -104,7 +108,9 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
                 }
               }}
               filterOption={(input, option) =>
-                (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
+                (option?.label as string)
+                  ?.toLowerCase()
+                  .includes(input.toLowerCase())
               }
             />
           </Form.Item>
@@ -118,7 +124,7 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
             <AutoComplete
               placeholder="Chọn"
               allowClear
-              disabled={!selectedProvinceCode || isFieldLocked("ward")}
+              disabled={isFieldLocked("ward")}
               options={wards.map((w) => ({
                 value: w.name,
                 label: w.name,
@@ -129,7 +135,9 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
                 setSelectedWardCode(option.code);
               }}
               filterOption={(input, option) =>
-                (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
+                (option?.label as string)
+                  ?.toLowerCase()
+                  .includes(input.toLowerCase())
               }
             />
           </Form.Item>
@@ -141,16 +149,20 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
         label="Địa chỉ"
         rules={[{ required: true, message: "Vui lòng nhập địa chỉ" }]}
       >
-        <Input
-          placeholder="Nhập địa chỉ"
-          disabled={isFieldLocked("address")}
-        />
+        <Input placeholder="Nhập địa chỉ" disabled={isFieldLocked("address")} />
       </Form.Item>
       {/* Row 3: Mã số thuế | Người liên hệ | Điện thoại */}
       <Row gutter={[16, 0]}>
         <Col xs={24} sm={8}>
-          <Form.Item name="taxCode" label="Mã số thuế" style={{ marginBottom: 0 }}>
-            <Input placeholder="Nhập mã số thuế" disabled={isFieldLocked("taxCode")} />
+          <Form.Item
+            name="taxCode"
+            label="Mã số thuế"
+            style={{ marginBottom: 0 }}
+          >
+            <Input
+              placeholder="Nhập mã số thuế"
+              disabled={isFieldLocked("taxCode")}
+            />
           </Form.Item>
         </Col>
         <Col xs={24} sm={8}>
@@ -158,9 +170,7 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
             name="contactPerson"
             label="Người liên hệ"
             style={{ marginBottom: 0 }}
-            rules={[
-              { required: true, message: "Vui lòng nhập người liên hệ" },
-            ]}
+            rules={[{ required: true, message: "Vui lòng nhập người liên hệ" }]}
           >
             <AutoComplete
               placeholder="Chọn"
