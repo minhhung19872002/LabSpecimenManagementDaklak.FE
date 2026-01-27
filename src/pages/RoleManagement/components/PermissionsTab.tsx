@@ -47,7 +47,7 @@ const PermissionsTab: React.FC<PermissionsTabProps> = ({
   // Initialize selected permissions from props
   useEffect(() => {
     const initialPermissions = new Set<string>();
-    permissionGroups.forEach((group) => {
+    (permissionGroups || []).forEach((group) => {
       group.permissions.forEach((perm) => {
         if (perm.isGranted) {
           initialPermissions.add(perm.name);
@@ -61,7 +61,7 @@ const PermissionsTab: React.FC<PermissionsTabProps> = ({
   // Calculate original permissions for change detection
   const originalPermissions = useMemo(() => {
     const original = new Set<string>();
-    permissionGroups.forEach((group) => {
+    (permissionGroups || []).forEach((group) => {
       group.permissions.forEach((perm) => {
         if (perm.isGranted) {
           original.add(perm.name);
@@ -89,7 +89,7 @@ const PermissionsTab: React.FC<PermissionsTabProps> = ({
   };
 
   const handleGroupSelectAll = (groupName: string, checked: boolean) => {
-    const group = permissionGroups.find((g) => g.name === groupName);
+    const group = (permissionGroups || []).find((g) => g.name === groupName);
     if (!group) return;
 
     const newSelected = new Set(selectedPermissions);
@@ -138,12 +138,17 @@ const PermissionsTab: React.FC<PermissionsTabProps> = ({
   ];
 
   // Check if using new unified MasterData permission
-  const hasUnifiedMasterData = permissionGroups.some(
+  const hasUnifiedMasterData = (permissionGroups || []).some(
     (g) => g.name === "MasterData",
   );
 
   // Filter permission groups based on search text and restructure Master Data
   const filteredGroups = useMemo(() => {
+    // Guard against null/undefined permissionGroups
+    if (!permissionGroups || !Array.isArray(permissionGroups)) {
+      return [];
+    }
+
     let groups = permissionGroups;
 
     // Apply search filter
