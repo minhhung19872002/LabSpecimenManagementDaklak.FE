@@ -1,5 +1,5 @@
 import { useMemo, useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
-import { Form, message } from "antd";
+import { message } from "antd";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import type { UploadFile } from "antd/es/upload/interface";
@@ -84,7 +84,6 @@ const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
     resolver: yupResolver(testMethodSchema) as any,
     defaultValues: { name: "", unit: "", isActive: true },
   });
-  const [addIndicatorsForm] = Form.useForm();
 
   // Import state
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -222,9 +221,7 @@ const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
         // Handlers
         onSearchChange={setSearchText}
         onExpandedRowsChange={setExpandedRowKeys}
-        onAddIndicators={(testMethodId) =>
-          handleOpenAddIndicators(testMethodId, addIndicatorsForm)
-        }
+        onAddIndicators={handleOpenAddIndicators}
       />
 
       {/* Create/Edit TestMethod Modal */}
@@ -241,12 +238,11 @@ const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
       <AddIndicatorsModal
         open={addIndicatorsModalOpen}
         loading={addIndicatorsLoading}
-        form={addIndicatorsForm}
         indicatorGroups={indicatorGroups}
         indicatorsByGroup={indicatorsByGroup}
         existingIndicatorIds={existingIndicatorIds}
-        onOk={() => handleAddIndicatorsOk(addIndicatorsForm)}
-        onCancel={() => handleAddIndicatorsCancel(addIndicatorsForm)}
+        onOk={handleAddIndicatorsOk}
+        onCancel={handleAddIndicatorsCancel}
       />
 
       {/* Import TestMethod Modal */}

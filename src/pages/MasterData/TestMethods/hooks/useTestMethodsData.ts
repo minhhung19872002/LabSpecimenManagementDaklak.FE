@@ -37,10 +37,6 @@ export const useTestMethodsData = () => {
       setIndicatorGroups(groupsData || []);
       setIndicators(indicatorsData || []);
 
-      // DEBUG: Check if indicators have subIndicators
-      console.log('🔍 Indicators from API:', indicatorsData);
-      console.log('🔍 Sample indicator with subs:', indicatorsData?.find(ind => ind.subIndicators && ind.subIndicators.length > 0));
-
       // Only collapse all on initial load
       if (isInitialLoad) {
         setExpandedRowKeys([]);
