@@ -72,7 +72,14 @@ export const useRoleManagementDetail = (roleId: string): UseRoleManagementDetail
     try {
       const detail = await roleManagementService.get(roleId);
       setRoleDetail(detail);
-      setPermissionGroups(detail.permissionGroups);
+      // Only update permissionGroups if data is valid array
+      // For initial load, use empty array as fallback since there's no previous state
+      const groups = detail?.permissionGroups;
+      if (groups && Array.isArray(groups)) {
+        setPermissionGroups(groups);
+      } else {
+        setPermissionGroups([]);
+      }
     } catch (error: unknown) {
       console.error('Error fetching role detail:', error);
       message.error('Không thể tải thông tin nhóm quyền');
@@ -100,10 +107,17 @@ export const useRoleManagementDetail = (roleId: string): UseRoleManagementDetail
     setPermissionsLoading(true);
     try {
       const permissions = await roleManagementService.getRolePermissions(roleDetail.name);
-      setPermissionGroups(permissions);
+      // Only update state if API returns valid data
+      // Keep current state if API returns null/undefined to preserve saved data on UI
+      if (permissions && Array.isArray(permissions)) {
+        setPermissionGroups(permissions);
+      } else {
+        console.warn('API returned invalid permissions data, keeping current state');
+      }
     } catch (error: unknown) {
       console.error('Error fetching permissions:', error);
       message.error('Không thể tải danh sách quyền');
+      // Don't clear permissionGroups on error - keep current state
     } finally {
       setPermissionsLoading(false);
     }
