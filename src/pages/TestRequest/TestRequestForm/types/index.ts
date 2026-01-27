@@ -117,6 +117,7 @@ export interface TestRequestFormContextValue {
   handleOrganizationSearch: (searchText: string) => void;
   handleOrganizationSelect: (value: string) => void;
   handlePhoneBlur: (e: React.FocusEvent<HTMLInputElement>) => void;
+  handlePhoneEnter: () => void;
 
   // Costs
   totalSampleCost: number;
