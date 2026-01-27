@@ -253,6 +253,13 @@ const TestRequestForm: React.FC = () => {
               message.error("Vui lòng kiểm tra lại các trường bắt buộc");
             }
           }}
+          onKeyDown={(e) => {
+            // Prevent form submission on Enter key press in input fields
+            // Only submit form when clicking the Submit button
+            if (e.key === "Enter" && (e.target as HTMLElement).tagName === "INPUT") {
+              e.preventDefault();
+            }
+          }}
           initialValues={{
             contractDate: dayjs(),
             requestDate: dayjs(),
