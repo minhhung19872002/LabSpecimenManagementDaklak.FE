@@ -420,8 +420,8 @@ function convertToSampleFormData(
     .filter((item) => item.isValid)
     .map((item, idx) => {
       const sortOrder = existingSamplesCount + idx + 1;
-      // Format: prefix + 2-digit order number (e.g., "2024-001-01")
-      const sampleCode = `${sampleCodePrefix}${String(sortOrder).padStart(2, "0")}`;
+      // Format: prefix/orderNum (e.g., "HD20260127001/01")
+      const sampleCode = `${sampleCodePrefix}/${String(sortOrder).padStart(2, "0")}`;
 
       // Convert indicators to IndicatorMethodKey format
       const indicatorMethods = item.indicators
