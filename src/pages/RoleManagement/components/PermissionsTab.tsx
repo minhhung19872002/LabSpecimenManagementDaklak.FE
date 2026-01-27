@@ -211,14 +211,6 @@ const PermissionsTab: React.FC<PermissionsTabProps> = ({
     return { total, selected };
   };
 
-  if (loading) {
-    return (
-      <div style={{ textAlign: "center", padding: 48 }}>
-        <Spin size="large" />
-      </div>
-    );
-  }
-
   // Render function for a regular permission group
   const renderGroupItem = (group: PermissionGroupDto) => {
     const { total, selected } = getGroupStats(group);
@@ -294,6 +286,7 @@ const PermissionsTab: React.FC<PermissionsTabProps> = ({
   };
 
   // Build collapse items with Master Data as nested group
+  // NOTE: This useMemo MUST be before any early returns to maintain consistent hook count
   const collapseItems = useMemo(() => {
     const items = [];
 
@@ -424,6 +417,15 @@ const PermissionsTab: React.FC<PermissionsTabProps> = ({
 
     return items;
   }, [otherGroups, masterDataGroups, selectedPermissions, isStatic, canEdit]);
+
+  // Early return AFTER all hooks to prevent "Rendered fewer hooks than expected" error
+  if (loading) {
+    return (
+      <div style={{ textAlign: "center", padding: 48 }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   return (
     <Card style={{ borderTopLeftRadius: 0 }} styles={{ body: { padding: 0 } }}>
