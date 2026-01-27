@@ -128,7 +128,7 @@ const IndicatorCollapsibleCell: React.FC<IndicatorCollapsibleCellProps> = ({
     });
   };
 
-  const renderIndicator = (ind: any, idx: number, isSubIndicator: boolean = false, isLastSub: boolean = false) => {
+  const renderIndicator = (ind: any, idx: number, isSubIndicator: boolean = false, isLastSub: boolean = false, hasChildren: boolean = false) => {
     const hasApprovalStatus =
       ind.approvalStatus !== undefined && ind.approvalStatus !== null;
     const approvalStatusLabel = hasApprovalStatus
@@ -156,16 +156,29 @@ const IndicatorCollapsibleCell: React.FC<IndicatorCollapsibleCellProps> = ({
           position: "relative",
         }}
       >
+        {/* Tree line connector from parent to children */}
+        {hasChildren && !isSubIndicator && (
+          <div
+            style={{
+              position: "absolute",
+              left: 8,
+              top: "50%",
+              bottom: -4, // Extend down to connect with first child
+              width: 1,
+              backgroundColor: "#d9d9d9",
+            }}
+          />
+        )}
         {/* Tree line cho sub-indicator */}
         {isSubIndicator && (
           <>
-            {/* Vertical line */}
+            {/* Vertical line - extends above to connect with previous item's line */}
             <div
               style={{
                 position: "absolute",
                 left: 8,
-                top: 0,
-                bottom: isLastSub ? "50%" : 0,
+                top: -4, // Extend up to cover the marginBottom gap
+                bottom: isLastSub ? "50%" : -4, // Extend down for non-last items
                 width: 1,
                 backgroundColor: "#d9d9d9",
               }}
@@ -242,17 +255,19 @@ const IndicatorCollapsibleCell: React.FC<IndicatorCollapsibleCellProps> = ({
 
   // Render một nhóm parent-child
   const renderGroupedIndicator = (grouped: GroupedIndicator, idx: number) => {
+    const hasChildren = grouped.children.length > 0;
     return (
       <div key={idx}>
         {/* Parent indicator */}
-        {renderIndicator(grouped.indicator, idx, false, false)}
+        {renderIndicator(grouped.indicator, idx, false, false, hasChildren)}
         {/* Sub-indicators */}
         {grouped.children.map((child, childIdx) =>
           renderIndicator(
             child,
             `${idx}-${childIdx}` as any,
             true,
-            childIdx === grouped.children.length - 1
+            childIdx === grouped.children.length - 1,
+            false
           )
         )}
       </div>
