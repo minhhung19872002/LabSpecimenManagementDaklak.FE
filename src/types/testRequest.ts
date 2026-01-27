@@ -276,6 +276,8 @@ export interface TestRequestSampleIndicatorDto {
   testDate?: string;
   /** Hình ảnh của chỉ tiêu */
   images?: IndicatorImageDto[];
+  /** ID chỉ tiêu cha (null nếu là chỉ tiêu gốc) - dùng để nhóm sub-indicators */
+  parentIndicatorId?: string;
 }
 
 export interface CreateTestRequestSampleIndicatorDto {

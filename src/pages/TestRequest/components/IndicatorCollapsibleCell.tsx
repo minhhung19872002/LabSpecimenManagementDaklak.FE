@@ -18,7 +18,54 @@ interface IndicatorCollapsibleCellProps {
   indicators: any[];
 }
 
+// Cấu trúc để nhóm parent-child
+interface GroupedIndicator {
+  indicator: any;
+  children: any[];
+}
+
 const UNSENT_GROUP_KEY = "__unsent__";
+
+/**
+ * Nhóm indicators theo quan hệ cha-con
+ * - Parent indicators (parentIndicatorId = null) -> hiển thị trước
+ * - Sub-indicators -> hiển thị dưới parent tương ứng
+ */
+const groupByParentChild = (indicators: any[]): GroupedIndicator[] => {
+  const result: GroupedIndicator[] = [];
+  const parentMap: Record<string, GroupedIndicator> = {};
+  const orphanSubs: any[] = [];
+
+  // Bước 1: Tách parent và sub-indicators
+  indicators.forEach((ind) => {
+    if (!ind.parentIndicatorId) {
+      // Đây là parent indicator
+      const grouped: GroupedIndicator = { indicator: ind, children: [] };
+      parentMap[ind.indicatorId] = grouped;
+      result.push(grouped);
+    }
+  });
+
+  // Bước 2: Gán sub-indicators cho parent
+  indicators.forEach((ind) => {
+    if (ind.parentIndicatorId) {
+      const parent = parentMap[ind.parentIndicatorId];
+      if (parent) {
+        parent.children.push(ind);
+      } else {
+        // Parent không có trong list (edge case) -> hiển thị như indicator độc lập
+        orphanSubs.push(ind);
+      }
+    }
+  });
+
+  // Bước 3: Thêm orphan subs như là indicators độc lập
+  orphanSubs.forEach((ind) => {
+    result.push({ indicator: ind, children: [] });
+  });
+
+  return result;
+};
 
 const IndicatorCollapsibleCell: React.FC<IndicatorCollapsibleCellProps> = ({
   indicators,
@@ -81,7 +128,7 @@ const IndicatorCollapsibleCell: React.FC<IndicatorCollapsibleCellProps> = ({
     });
   };
 
-  const renderIndicator = (ind: any, idx: number) => {
+  const renderIndicator = (ind: any, idx: number, isSubIndicator: boolean = false, isLastSub: boolean = false) => {
     const hasApprovalStatus =
       ind.approvalStatus !== undefined && ind.approvalStatus !== null;
     const approvalStatusLabel = hasApprovalStatus
@@ -103,10 +150,39 @@ const IndicatorCollapsibleCell: React.FC<IndicatorCollapsibleCellProps> = ({
         style={{
           marginBottom: 4,
           padding: "8px 12px",
-          background: "#FAFAFA",
+          paddingLeft: isSubIndicator ? 28 : 12,
+          background: isSubIndicator ? "#f5f5f5" : "#FAFAFA",
           borderRadius: 8,
+          position: "relative",
         }}
       >
+        {/* Tree line cho sub-indicator */}
+        {isSubIndicator && (
+          <>
+            {/* Vertical line */}
+            <div
+              style={{
+                position: "absolute",
+                left: 8,
+                top: 0,
+                bottom: isLastSub ? "50%" : 0,
+                width: 1,
+                backgroundColor: "#d9d9d9",
+              }}
+            />
+            {/* Horizontal line */}
+            <div
+              style={{
+                position: "absolute",
+                left: 8,
+                top: "50%",
+                width: 12,
+                height: 1,
+                backgroundColor: "#d9d9d9",
+              }}
+            />
+          </>
+        )}
         <div
           style={{
             display: "flex",
@@ -164,6 +240,25 @@ const IndicatorCollapsibleCell: React.FC<IndicatorCollapsibleCellProps> = ({
     );
   };
 
+  // Render một nhóm parent-child
+  const renderGroupedIndicator = (grouped: GroupedIndicator, idx: number) => {
+    return (
+      <div key={idx}>
+        {/* Parent indicator */}
+        {renderIndicator(grouped.indicator, idx, false, false)}
+        {/* Sub-indicators */}
+        {grouped.children.map((child, childIdx) =>
+          renderIndicator(
+            child,
+            `${idx}-${childIdx}` as any,
+            true,
+            childIdx === grouped.children.length - 1
+          )
+        )}
+      </div>
+    );
+  };
+
   return (
     <div style={{ maxHeight: 300, overflowY: "auto" }}>
       {allGroups.map((group) => {
@@ -202,7 +297,9 @@ const IndicatorCollapsibleCell: React.FC<IndicatorCollapsibleCellProps> = ({
             {/* Group content - collapsible */}
             {isExpanded && (
               <div style={{ paddingLeft: 8 }}>
-                {group.indicators.map((ind, idx) => renderIndicator(ind, idx))}
+                {groupByParentChild(group.indicators).map((grouped, idx) =>
+                  renderGroupedIndicator(grouped, idx)
+                )}
               </div>
             )}
           </div>
