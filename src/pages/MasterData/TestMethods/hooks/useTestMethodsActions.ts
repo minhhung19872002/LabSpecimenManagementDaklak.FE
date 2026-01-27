@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { message, Modal } from "antd";
-import type { FormInstance } from "antd";
 import type { UseFormReturn } from "react-hook-form";
 import {
   testMethodService,
@@ -108,60 +107,26 @@ export const useTestMethodsActions = ({
     form.reset();
   };
 
-  // Add Indicators to TestMethod (still uses Ant Design Form for dynamic fields)
-  const handleOpenAddIndicators = (testMethodId: string, form: FormInstance) => {
+  // Add Indicators to TestMethod
+  const handleOpenAddIndicators = (testMethodId: string) => {
     setSelectedTestMethodId(testMethodId);
-    form.resetFields();
-    form.setFieldsValue({ indicators: [{ indicatorId: undefined, unitPrice: 0, subIndicators: [] }] });
     setAddIndicatorsModalOpen(true);
   };
 
-  const handleAddIndicatorsOk = async (form: FormInstance) => {
+  const handleAddIndicatorsOk = async (
+    indicators: Array<{ indicatorId: string; unitPrice: number }>
+  ) => {
     if (!selectedTestMethodId) return;
 
     try {
       setAddIndicatorsLoading(true);
-      // Validate required fields (indicatorId)
-      await form.validateFields();
-
-      // Use getFieldValue to get the full indicator data including unitPrice
-      // (unitPrice is controlled manually via form.setFieldsValue, not via Form.Item binding)
-      const indicators = form.getFieldValue('indicators') || [];
-
-      // Flatten nested structure: parent + subIndicators -> flat array
-      const flatIndicators: Array<{ indicatorId: string; unitPrice: number }> = [];
-
-      indicators.forEach((parent: any) => {
-        // Add parent indicator
-        if (parent.indicatorId) {
-          flatIndicators.push({
-            indicatorId: parent.indicatorId,
-            unitPrice: parent.unitPrice ?? 0,
-          });
-        }
-
-        // Add sub-indicators
-        (parent.subIndicators || []).forEach((sub: any) => {
-          if (sub.indicatorId) {
-            flatIndicators.push({
-              indicatorId: sub.indicatorId,
-              unitPrice: sub.unitPrice ?? 0,
-            });
-          }
-        });
-      });
-
-      if (flatIndicators.length === 0) {
-        message.warning("Vui lòng chọn ít nhất một chỉ tiêu");
-        return;
-      }
 
       const data: AddIndicatorsToTestMethodDto = {
-        indicators: flatIndicators,
+        indicators,
       };
 
       await testMethodService.addIndicators(selectedTestMethodId, data);
-      message.success(`Thêm ${flatIndicators.length} chỉ tiêu thành công!`);
+      message.success(`Thêm ${indicators.length} chỉ tiêu thành công!`);
 
       // Keep the test method expanded after adding indicators
       if (!expandedRowKeys.includes(selectedTestMethodId)) {
@@ -169,7 +134,6 @@ export const useTestMethodsActions = ({
       }
 
       setAddIndicatorsModalOpen(false);
-      form.resetFields();
       fetchData();
       onDataChange?.();
     } catch (error: any) {
@@ -182,9 +146,8 @@ export const useTestMethodsActions = ({
     }
   };
 
-  const handleAddIndicatorsCancel = (form: FormInstance) => {
+  const handleAddIndicatorsCancel = () => {
     setAddIndicatorsModalOpen(false);
-    form.resetFields();
     setSelectedTestMethodId(null);
   };
 

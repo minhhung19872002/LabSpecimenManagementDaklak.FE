@@ -1,7 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Modal,
-  Form,
   InputNumber,
   Button,
   Typography,
@@ -10,9 +9,9 @@ import {
   Col,
   Tooltip,
   Card,
+  message,
 } from "antd";
 import Icon from "../../../../components/common/Icon";
-import type { FormInstance } from "antd";
 import {
   IndicatorDto,
   IndicatorGroupDto,
@@ -25,75 +24,83 @@ const { Text } = Typography;
 interface AddIndicatorsModalProps {
   open: boolean;
   loading: boolean;
-  form: FormInstance;
   indicatorGroups: IndicatorGroupDto[];
   indicatorsByGroup: Record<string, IndicatorDto[]>;
   existingIndicatorIds?: string[];
-  onOk: () => void;
+  onOk: (data: { indicatorId: string; unitPrice: number }[]) => void;
   onCancel: () => void;
 }
 
-interface IndicatorFormItem {
-  indicatorId?: string;
-  unitPrice?: number;
-  subIndicators?: { indicatorId?: string; unitPrice?: number }[];
+// Internal state for each indicator row
+interface IndicatorRow {
+  id: string; // unique key for React
+  indicatorId: string | undefined;
+  unitPrice: number;
+  subIndicators: SubIndicatorRow[];
 }
+
+interface SubIndicatorRow {
+  id: string;
+  indicatorId: string | undefined;
+  unitPrice: number | undefined;
+}
+
+// Generate unique ID
+const generateId = () => crypto.randomUUID();
 
 const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   open,
   loading,
-  form,
   indicatorGroups,
   indicatorsByGroup,
   existingIndicatorIds = [],
   onOk,
   onCancel,
 }) => {
-  const [selectedParentIds, setSelectedParentIds] = useState<Set<string>>(
-    new Set(),
-  );
+  // Controlled state for all indicator rows
+  const [rows, setRows] = useState<IndicatorRow[]>([]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Watch indicators array for controlled updates
-  const indicators: IndicatorFormItem[] = Form.useWatch('indicators', form) || [];
-
-  // Update parent unit price
-  const handleParentUnitPriceChange = (parentIndex: number, value: number | null) => {
-    const currentIndicators = form.getFieldValue('indicators') || [];
-    const updatedIndicators = [...currentIndicators];
-    if (updatedIndicators[parentIndex]) {
-      updatedIndicators[parentIndex] = {
-        ...updatedIndicators[parentIndex],
-        unitPrice: value ?? undefined,
-      };
+  // Reset state when modal opens
+  useEffect(() => {
+    if (open) {
+      setRows([createEmptyRow()]);
+      setErrors({});
     }
-    form.setFieldsValue({ indicators: updatedIndicators });
-  };
+  }, [open]);
 
-  // Update sub-indicator unit price
-  const handleSubUnitPriceChange = (parentIndex: number, subIndex: number, value: number | null) => {
-    const currentIndicators = form.getFieldValue('indicators') || [];
-    const updatedIndicators = [...currentIndicators];
-    if (updatedIndicators[parentIndex]?.subIndicators?.[subIndex]) {
-      const newSubs = [...updatedIndicators[parentIndex].subIndicators];
-      newSubs[subIndex] = {
-        ...newSubs[subIndex],
-        unitPrice: value ?? undefined,
-      };
-      updatedIndicators[parentIndex] = {
-        ...updatedIndicators[parentIndex],
-        subIndicators: newSubs,
-      };
-    }
-    form.setFieldsValue({ indicators: updatedIndicators });
-  };
+  // Create empty row
+  const createEmptyRow = (): IndicatorRow => ({
+    id: generateId(),
+    indicatorId: undefined,
+    unitPrice: 0,
+    subIndicators: [],
+  });
 
-  // Helper to find indicator by ID (for rendering selected label)
+  // Create empty sub-indicator row
+  const createEmptySubRow = (): SubIndicatorRow => ({
+    id: generateId(),
+    indicatorId: undefined,
+    unitPrice: undefined,
+  });
+
+  // Get all selected indicator IDs (to filter out from options)
+  const selectedIndicatorIds = useMemo(() => {
+    const ids = new Set<string>();
+    rows.forEach((row) => {
+      if (row.indicatorId) ids.add(row.indicatorId);
+      row.subIndicators.forEach((sub) => {
+        if (sub.indicatorId) ids.add(sub.indicatorId);
+      });
+    });
+    return ids;
+  }, [rows]);
+
+  // Find indicator by ID
   const findIndicatorById = (indicatorId: string): IndicatorDto | undefined => {
     const allIndicators = Object.values(indicatorsByGroup).flat();
-    // Check parent indicators
     const parent = allIndicators.find((ind) => ind.id === indicatorId);
     if (parent) return parent;
-    // Check sub-indicators
     for (const ind of allIndicators) {
       const sub = ind.subIndicators?.find((s) => s.id === indicatorId);
       if (sub) return sub as IndicatorDto;
@@ -101,47 +108,29 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
     return undefined;
   };
 
-  // Render label for selected indicator (used by labelRender)
-  const renderIndicatorLabel = (indicatorId: string) => {
-    const indicator = findIndicatorById(indicatorId);
-    if (!indicator) return indicatorId;
-    return (
-      <span>
-        {indicator.code} -{" "}
-        <IndicatorName
-          name={indicator.name}
-          formattedName={indicator.formattedName}
-        />
-      </span>
-    );
+  // Check if parent indicator has sub-indicators
+  const getParentSubIndicators = (parentIndicatorId: string): IndicatorDto[] => {
+    const allIndicators = Object.values(indicatorsByGroup).flat();
+    const parent = allIndicators.find((ind) => ind.id === parentIndicatorId);
+    return parent?.subIndicators?.filter((sub) => sub.isActive) || [];
   };
 
-  // Check if indicator is already selected
-  const isIndicatorAlreadySelected = (indicatorId: string) => {
-    const allIndicators = form.getFieldValue("indicators") || [];
-    return allIndicators.some((item: any) => item?.indicatorId === indicatorId);
-  };
-
-  // Build parent-only options for Select
-  // currentIndicatorId: the currently selected indicator for this field (to keep it in options)
+  // Build parent options for Select
   const buildParentOptions = (currentIndicatorId?: string) => {
     return indicatorGroups
       .filter(
-        (group) => group.isActive && indicatorsByGroup[group.id]?.length > 0,
+        (group) => group.isActive && indicatorsByGroup[group.id]?.length > 0
       )
       .map((group) => {
-        // Filter: Only PARENT indicators (no parentIndicatorId)
         const parentIndicators = (indicatorsByGroup[group.id] || []).filter(
-          (ind) => !ind.parentIndicatorId && ind.isActive,
+          (ind) => !ind.parentIndicatorId && ind.isActive
         );
 
-        // Filter out already selected parents and existing indicators
-        // But keep the current indicator so Select can display its label
         const availableParents = parentIndicators.filter(
           (ind) =>
             ind.id === currentIndicatorId ||
-            (!isIndicatorAlreadySelected(ind.id) &&
-              !existingIndicatorIds.includes(ind.id)),
+            (!selectedIndicatorIds.has(ind.id) &&
+              !existingIndicatorIds.includes(ind.id))
         );
 
         if (availableParents.length === 0) return null;
@@ -163,98 +152,219 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
           })),
         };
       })
-      .filter(Boolean) as {
-      label: React.ReactNode;
-      options: { value: string; label: React.ReactNode; searchText: string }[];
-    }[];
+      .filter((item): item is NonNullable<typeof item> => item !== null);
   };
 
-  // Build sub-indicator options for a specific parent
-  // currentSubIndicatorId: the currently selected sub-indicator for this field (to keep it in options)
-  const buildSubOptions = (parentFieldName: number, subFieldName?: number) => {
-    // Get selected parent indicator ID
-    const parentIndicatorId = form.getFieldValue([
-      "indicators",
-      parentFieldName,
-      "indicatorId",
-    ]);
+  // Build sub-indicator options
+  const buildSubOptions = (
+    parentIndicatorId: string,
+    rowIndex: number,
+    currentSubIndicatorId?: string
+  ) => {
+    const availableSubs = getParentSubIndicators(parentIndicatorId);
+    const row = rows[rowIndex];
+    const selectedSubIds = row.subIndicators
+      .map((sub) => sub.indicatorId)
+      .filter(Boolean) as string[];
 
-    if (!parentIndicatorId) return [];
+    return availableSubs
+      .filter(
+        (sub) =>
+          sub.id === currentSubIndicatorId ||
+          (!selectedSubIds.includes(sub.id) &&
+            !existingIndicatorIds.includes(sub.id))
+      )
+      .map((sub) => ({
+        value: sub.id,
+        label: (
+          <span>
+            {sub.code} -{" "}
+            <IndicatorName name={sub.name} formattedName={sub.formattedName} />
+          </span>
+        ),
+        searchText: `${sub.code} - ${sub.name}`,
+      }));
+  };
 
-    // Find parent indicator from all groups
-    const allIndicators = Object.values(indicatorsByGroup).flat();
-    const parentIndicator = allIndicators.find((ind) => ind.id === parentIndicatorId);
-
-    if (!parentIndicator) return [];
-
-    if (!parentIndicator.subIndicators || parentIndicator.subIndicators.length === 0) {
-      return [];
-    }
-
-    // Get current sub-indicator ID for this field
-    const currentSubIndicatorId = subFieldName !== undefined
-      ? form.getFieldValue(["indicators", parentFieldName, "subIndicators", subFieldName, "indicatorId"])
-      : undefined;
-
-    // Get already selected sub-indicator IDs for this parent
-    const selectedSubIds = (
-      form.getFieldValue(["indicators", parentFieldName, "subIndicators"]) || []
-    )
-      .map((sub: any) => sub?.indicatorId)
-      .filter(Boolean);
-
-    // Filter available sub-indicators
-    // But keep the current sub-indicator so Select can display its label
-    const availableSubs = parentIndicator.subIndicators.filter(
-      (sub) =>
-        sub.id === currentSubIndicatorId ||
-        (!selectedSubIds.includes(sub.id) &&
-          sub.isActive &&
-          !existingIndicatorIds.includes(sub.id)),
+  // Render label for selected indicator
+  const renderIndicatorLabel = (indicatorId: string) => {
+    const indicator = findIndicatorById(indicatorId);
+    if (!indicator) return indicatorId;
+    return (
+      <span>
+        {indicator.code} -{" "}
+        <IndicatorName
+          name={indicator.name}
+          formattedName={indicator.formattedName}
+        />
+      </span>
     );
-
-    return availableSubs.map((sub) => ({
-      value: sub.id,
-      label: (
-        <span>
-          {sub.code} -{" "}
-          <IndicatorName name={sub.name} formattedName={sub.formattedName} />
-        </span>
-      ),
-      searchText: `${sub.code} - ${sub.name}`,
-    }));
   };
 
-  // Handle parent indicator selection
-  const handleParentChange = (parentId: string, parentFieldName: number) => {
-    // Clear sub-indicators when parent changes
-    const indicators = form.getFieldValue("indicators") || [];
-    if (indicators[parentFieldName]) {
-      indicators[parentFieldName].subIndicators = [];
+  // Handle parent indicator change
+  const handleParentChange = (rowIndex: number, indicatorId: string | undefined) => {
+    setRows((prev) => {
+      const updated = [...prev];
+      updated[rowIndex] = {
+        ...updated[rowIndex],
+        indicatorId,
+        subIndicators: [], // Clear sub-indicators when parent changes
+      };
+      return updated;
+    });
+    // Clear error for this row
+    setErrors((prev) => {
+      const updated = { ...prev };
+      delete updated[`row-${rowIndex}`];
+      return updated;
+    });
+  };
+
+  // Handle parent unit price change
+  const handleParentPriceChange = (rowIndex: number, price: number | null) => {
+    setRows((prev) => {
+      const updated = [...prev];
+      updated[rowIndex] = {
+        ...updated[rowIndex],
+        unitPrice: price ?? 0,
+      };
+      return updated;
+    });
+  };
+
+  // Add sub-indicator row
+  const handleAddSubIndicator = (rowIndex: number) => {
+    setRows((prev) => {
+      const updated = [...prev];
+      updated[rowIndex] = {
+        ...updated[rowIndex],
+        subIndicators: [...updated[rowIndex].subIndicators, createEmptySubRow()],
+      };
+      return updated;
+    });
+  };
+
+  // Remove sub-indicator row
+  const handleRemoveSubIndicator = (rowIndex: number, subIndex: number) => {
+    setRows((prev) => {
+      const updated = [...prev];
+      updated[rowIndex] = {
+        ...updated[rowIndex],
+        subIndicators: updated[rowIndex].subIndicators.filter(
+          (_, i) => i !== subIndex
+        ),
+      };
+      return updated;
+    });
+  };
+
+  // Handle sub-indicator change
+  const handleSubIndicatorChange = (
+    rowIndex: number,
+    subIndex: number,
+    indicatorId: string | undefined
+  ) => {
+    setRows((prev) => {
+      const updated = [...prev];
+      const subIndicators = [...updated[rowIndex].subIndicators];
+      subIndicators[subIndex] = {
+        ...subIndicators[subIndex],
+        indicatorId,
+      };
+      updated[rowIndex] = {
+        ...updated[rowIndex],
+        subIndicators,
+      };
+      return updated;
+    });
+    // Clear error
+    setErrors((prev) => {
+      const updated = { ...prev };
+      delete updated[`row-${rowIndex}-sub-${subIndex}`];
+      return updated;
+    });
+  };
+
+  // Handle sub-indicator price change
+  const handleSubPriceChange = (
+    rowIndex: number,
+    subIndex: number,
+    price: number | null
+  ) => {
+    setRows((prev) => {
+      const updated = [...prev];
+      const subIndicators = [...updated[rowIndex].subIndicators];
+      subIndicators[subIndex] = {
+        ...subIndicators[subIndex],
+        unitPrice: price ?? undefined,
+      };
+      updated[rowIndex] = {
+        ...updated[rowIndex],
+        subIndicators,
+      };
+      return updated;
+    });
+  };
+
+  // Add new parent row
+  const handleAddRow = () => {
+    setRows((prev) => [...prev, createEmptyRow()]);
+  };
+
+  // Remove parent row
+  const handleRemoveRow = (rowIndex: number) => {
+    setRows((prev) => prev.filter((_, i) => i !== rowIndex));
+  };
+
+  // Validate and submit
+  const handleSubmit = () => {
+    const newErrors: Record<string, string> = {};
+    const flatIndicators: { indicatorId: string; unitPrice: number }[] = [];
+
+    rows.forEach((row, rowIndex) => {
+      // Validate parent indicator
+      if (!row.indicatorId) {
+        newErrors[`row-${rowIndex}`] = "Chọn chỉ tiêu";
+        return;
+      }
+
+      // Add parent indicator
+      flatIndicators.push({
+        indicatorId: row.indicatorId,
+        unitPrice: row.unitPrice,
+      });
+
+      // Validate and add sub-indicators
+      row.subIndicators.forEach((sub, subIndex) => {
+        if (!sub.indicatorId) {
+          newErrors[`row-${rowIndex}-sub-${subIndex}`] = "Chọn chỉ tiêu phụ";
+        } else {
+          flatIndicators.push({
+            indicatorId: sub.indicatorId,
+            unitPrice: sub.unitPrice ?? 0,
+          });
+        }
+      });
+    });
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      message.error("Vui lòng điền đầy đủ thông tin");
+      return;
     }
 
-    // Set default unit price while keeping indicatorId
-    form.setFieldsValue({
-      indicators: {
-        [parentFieldName]: {
-          indicatorId: parentId,
-          unitPrice: 0,
-          subIndicators: [],
-        },
-      },
-    });
+    if (flatIndicators.length === 0) {
+      message.warning("Vui lòng chọn ít nhất một chỉ tiêu");
+      return;
+    }
 
-    // Update selected parent IDs
-    setSelectedParentIds((prev) => {
-      const newSet = new Set(prev);
-      newSet.add(parentId);
-      return newSet;
-    });
+    onOk(flatIndicators);
   };
 
-  // Reset state when modal closes
+  // Handle cancel
   const handleCancel = () => {
-    setSelectedParentIds(new Set());
+    setRows([]);
+    setErrors({});
     onCancel();
   };
 
@@ -263,331 +373,264 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
       className="add-indicators-modal"
       title="Thêm chỉ tiêu"
       open={open}
-      onOk={onOk}
+      onOk={handleSubmit}
       onCancel={handleCancel}
       confirmLoading={loading}
       okText="Thêm"
       cancelText="Hủy"
       width={700}
       centered
-      forceRender
+      destroyOnHidden
       styles={{
         body: { paddingTop: 16, maxHeight: "70vh", overflowY: "auto" },
       }}
     >
-      <Form
-        form={form}
-        layout="vertical"
-        style={{ marginTop: 16 }}
-        requiredMark
-      >
-        <Form.List name="indicators">
-          {(parentFields, { add: addParent, remove: removeParent }) => (
-            <>
-              <Card size="small" style={{ marginBottom: 16 }}>
-                {parentFields.map(
-                  ({ key: parentKey, name: parentName }) => (
+      <Card size="small" style={{ marginBottom: 16 }}>
+        {rows.map((row, rowIndex) => {
+          const parentSubs = row.indicatorId
+            ? getParentSubIndicators(row.indicatorId)
+            : [];
+          const hasAvailableSubs = parentSubs.length > 0;
+          const hasSubRows = row.subIndicators.length > 0;
+
+          return (
+            <div
+              key={row.id}
+              style={{
+                marginBottom: rowIndex === rows.length - 1 ? 0 : 24,
+              }}
+            >
+              {/* Parent indicator row */}
+              <Row gutter={8} align="top" wrap={false}>
+                <Col flex="32px">
+                  {hasAvailableSubs ? (
+                    <Tooltip title="Thêm chỉ tiêu phụ">
+                      <Icon
+                        name="plus-lg"
+                        onClick={() => handleAddSubIndicator(rowIndex)}
+                        style={{
+                          fontSize: 16,
+                          color: "#8C8C8C",
+                          cursor: "pointer",
+                          marginTop: 8,
+                        }}
+                      />
+                    </Tooltip>
+                  ) : (
+                    <div style={{ width: 16 }} />
+                  )}
+                </Col>
+                <Col flex="auto">
+                  <div
+                    className={`add-indicators-parent-wrapper ${hasSubRows ? "has-children" : ""}`}
+                  >
+                    <Select
+                      value={row.indicatorId}
+                      onChange={(value) => handleParentChange(rowIndex, value)}
+                      options={buildParentOptions(row.indicatorId)}
+                      placeholder="Tìm và chọn chỉ tiêu"
+                      showSearch
+                      popupMatchSelectWidth={400}
+                      optionLabelProp="label"
+                      labelRender={({ value }) => {
+                        if (!value) return null;
+                        return renderIndicatorLabel(value as string);
+                      }}
+                      filterOption={(inputValue, option) => {
+                        const searchText = (option as { searchText?: string })
+                          ?.searchText;
+                        if (!searchText) return false;
+                        return searchText
+                          .toLowerCase()
+                          .includes(inputValue.toLowerCase());
+                      }}
+                      allowClear
+                      status={errors[`row-${rowIndex}`] ? "error" : undefined}
+                      style={{ width: "100%" }}
+                    />
+                    {errors[`row-${rowIndex}`] && (
+                      <div style={{ color: "#ff4d4f", fontSize: 12, marginTop: 4 }}>
+                        {errors[`row-${rowIndex}`]}
+                      </div>
+                    )}
+                  </div>
+                </Col>
+                <Col flex="140px">
+                  <InputNumber<number>
+                    value={row.unitPrice}
+                    onChange={(value) => handleParentPriceChange(rowIndex, value)}
+                    placeholder="Đơn giá"
+                    min={0}
+                    precision={0}
+                    controls={false}
+                    style={{ width: "100%" }}
+                    formatter={(value) =>
+                      `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                    }
+                    parser={(value) => {
+                      const parsed = parseInt(
+                        value?.replace(/[^\d]/g, "") || "0",
+                        10
+                      );
+                      return Math.max(0, parsed);
+                    }}
+                    addonAfter="đ"
+                  />
+                </Col>
+                <Col flex="32px">
+                  {rows.length > 1 && (
+                    <Tooltip title="Xóa chỉ tiêu">
+                      <Icon
+                        name="trash3"
+                        onClick={() => handleRemoveRow(rowIndex)}
+                        style={{
+                          fontSize: 16,
+                          color: "#CF1322",
+                          cursor: "pointer",
+                          marginTop: 8,
+                        }}
+                      />
+                    </Tooltip>
+                  )}
+                </Col>
+              </Row>
+
+              {/* Sub-indicators */}
+              {hasSubRows && (
+                <Row gutter={8} style={{ marginTop: 12 }}>
+                  <Col flex="32px" />
+                  <Col flex="auto">
                     <div
-                      key={parentKey}
                       style={{
-                        marginBottom:
-                          parentName === parentFields.length - 1 ? 0 : 24,
+                        padding: "12px 12px 12px 32px",
+                        background: "#F5F5F5",
+                        borderRadius: "12px",
                       }}
                     >
-                      {/* Nested Form.List for sub-indicators */}
-                      <Form.List name={[parentName, "subIndicators"]}>
-                        {(subFields, { add: addSub, remove: removeSub }) => (
-                          <>
-                            {/* Parent indicator row */}
-                            <Row gutter={8} align="middle" wrap={false}>
-                              <Col flex="32px">
-                                <Tooltip title="Thêm chỉ tiêu phụ">
-                                  <Icon
-                                    name="plus-lg"
-                                    onClick={() =>
-                                      addSub({
-                                        indicatorId: undefined,
-                                        unitPrice: undefined,
-                                      })
-                                    }
-                                    style={{
-                                      fontSize: 16,
-                                      color: "#8C8C8C",
-                                      cursor: "pointer",
-                                    }}
-                                  />
-                                </Tooltip>
-                              </Col>
-                              <Col flex="auto">
-                                <div
-                                  className={`add-indicators-parent-wrapper ${subFields.length > 0 ? "has-children" : ""}`}
-                                >
-                                  <Form.Item
-                                    name={[parentName, "indicatorId"]}
-                                    rules={[
-                                      { required: true, message: "Chọn chỉ tiêu" },
-                                    ]}
-                                    style={{ marginBottom: 0 }}
-                                  >
-                                <Select
-                                      options={buildParentOptions(form.getFieldValue(["indicators", parentName, "indicatorId"]))}
-                                      placeholder="Tìm và chọn chỉ tiêu cha"
-                                      showSearch
-                                      popupMatchSelectWidth={400}
-                                      optionLabelProp="label"
-                                      labelRender={() => {
-                                        const indicatorId = form.getFieldValue(["indicators", parentName, "indicatorId"]);
-                                        if (!indicatorId) return null;
-                                        return renderIndicatorLabel(indicatorId);
-                                      }}
-                                      filterOption={(inputValue, option) => {
-                                        const searchText = (
-                                          option as { searchText?: string }
-                                        )?.searchText;
-                                        if (!searchText) return false;
-                                        return searchText
-                                          .toLowerCase()
-                                          .includes(inputValue.toLowerCase());
-                                      }}
-                                      onChange={(value) => {
-                                        if (value) {
-                                          handleParentChange(value, parentName);
-                                        }
-                                      }}
-                                      allowClear
-                                    />
-                                  </Form.Item>
-                                </div>
-                              </Col>
-                              <Col flex="140px">
-                                <InputNumber<number>
-                                  value={indicators[parentName]?.unitPrice}
-                                  onChange={(value) => handleParentUnitPriceChange(parentName, value)}
-                                  placeholder="Đơn giá"
-                                  min={0}
-                                  precision={0}
-                                  controls={false}
-                                  style={{ width: "100%" }}
-                                  formatter={(value) =>
-                                    `${value}`.replace(
-                                      /\B(?=(\d{3})+(?!\d))/g,
-                                      ",",
-                                    )
-                                  }
-                                  parser={(value) => {
-                                    const parsed = parseInt(
-                                      value?.replace(/[^\d]/g, "") || "0",
-                                      10,
-                                    );
-                                    return Math.max(0, parsed);
-                                  }}
-                                  addonAfter="đ"
-                                  onKeyDown={(e) => {
-                                    if (
-                                      !/[\d]/.test(e.key) &&
-                                      ![
-                                        "Backspace",
-                                        "Delete",
-                                        "ArrowLeft",
-                                        "ArrowRight",
-                                        "Tab",
-                                      ].includes(e.key)
-                                    ) {
-                                      e.preventDefault();
-                                    }
-                                  }}
-                                />
-                            </Col>
-                            <Col flex="32px">
-                                {parentFields.length > 1 && (
-                                  <Tooltip title="Xóa chỉ tiêu">
-                                    <Icon
-                                      name="trash3"
-                                      onClick={() => removeParent(parentName)}
-                                      style={{
-                                        fontSize: 16,
-                                        color: "#CF1322",
-                                        cursor: "pointer",
-                                      }}
-                                    />
-                                  </Tooltip>
+                      {row.subIndicators.map((sub, subIndex) => (
+                        <Row
+                          key={sub.id}
+                          gutter={8}
+                          align="top"
+                          wrap={false}
+                          style={{
+                            marginBottom:
+                              subIndex === row.subIndicators.length - 1 ? 0 : 12,
+                          }}
+                        >
+                          <Col flex="auto">
+                            <div
+                              className={`add-indicators-sub-wrapper ${subIndex === 0 ? "is-first" : ""} ${subIndex === row.subIndicators.length - 1 ? "is-last" : ""}`}
+                            >
+                              <Select
+                                value={sub.indicatorId}
+                                onChange={(value) =>
+                                  handleSubIndicatorChange(rowIndex, subIndex, value)
+                                }
+                                options={buildSubOptions(
+                                  row.indicatorId!,
+                                  rowIndex,
+                                  sub.indicatorId
                                 )}
-                              </Col>
-                            </Row>
-
-                            {/* Sub-indicators container */}
-                            {subFields.length > 0 && (
-                              <Row gutter={8} style={{ marginTop: 12 }}>
-                                <Col flex="32px" />
-                                <Col flex="auto">
-                                  <div
-                                    style={{
-                                      padding: "12px 12px 12px 32px",
-                                      background: "#F5F5F5",
-                                      borderRadius: "12px",
-                                      position: "relative",
-                                    }}
-                                  >
-                                    {subFields.map(
-                                      ({ key: subKey, name: subName }, index) => (
-                                        <Row
-                                          key={subKey}
-                                          gutter={8}
-                                          align="middle"
-                                          wrap={false}
-                                          style={{
-                                            marginBottom:
-                                              index === subFields.length - 1
-                                                ? 0
-                                                : 12,
-                                          }}
-                                        >
-                                          <Col flex="auto">
-                                            <div
-                                              className={`add-indicators-sub-wrapper ${index === 0 ? "is-first" : ""} ${index === subFields.length - 1 ? "is-last" : ""}`}
-                                            >
-                                              <Form.Item
-                                                name={[subName, "indicatorId"]}
-                                                dependencies={[[parentName, "indicatorId"]]}
-                                                rules={[
-                                                  {
-                                                    required: true,
-                                                    message: "Chọn chỉ tiêu phụ",
-                                                  },
-                                                ]}
-                                                style={{ marginBottom: 0 }}
-                                              >
-                                                <Select
-                                                  key={form.getFieldValue([
-                                                    "indicators",
-                                                    parentName,
-                                                    "indicatorId",
-                                                  ])}
-                                                  options={buildSubOptions(
-                                                    parentName,
-                                                    subName,
-                                                  )}
-                                                  placeholder="Chọn chỉ tiêu phụ"
-                                                  showSearch
-                                                  popupMatchSelectWidth={400}
-                                                  optionLabelProp="label"
-                                                  labelRender={() => {
-                                                    const indicatorId = form.getFieldValue(["indicators", parentName, "subIndicators", subName, "indicatorId"]);
-                                                    if (!indicatorId) return null;
-                                                    return renderIndicatorLabel(indicatorId);
-                                                  }}
-                                                  filterOption={(
-                                                    inputValue,
-                                                    option,
-                                                  ) => {
-                                                    const searchText = (
-                                                      option as {
-                                                        searchText?: string;
-                                                      }
-                                                    )?.searchText;
-                                                    if (!searchText) return false;
-                                                    return searchText
-                                                      .toLowerCase()
-                                                      .includes(
-                                                        inputValue.toLowerCase(),
-                                                      );
-                                                  }}
-                                                  allowClear
-                                                />
-                                              </Form.Item>
-                                            </div>
-                                          </Col>
-                                          <Col flex="140px">
-                                              <InputNumber<number>
-                                                value={indicators[parentName]?.subIndicators?.[subName]?.unitPrice}
-                                                onChange={(value) => handleSubUnitPriceChange(parentName, subName, value)}
-                                                placeholder="Đơn giá (tùy chọn)"
-                                                min={0}
-                                                precision={0}
-                                                controls={false}
-                                                style={{ width: "100%" }}
-                                                formatter={(value) =>
-                                                  `${value}`.replace(
-                                                    /\B(?=(\d{3})+(?!\d))/g,
-                                                    ",",
-                                                  )
-                                                }
-                                                parser={(value) => {
-                                                  const parsed = parseInt(
-                                                    value?.replace(
-                                                      /[^\d]/g,
-                                                      "",
-                                                    ) || "0",
-                                                    10,
-                                                  );
-                                                  return Math.max(0, parsed);
-                                                }}
-                                                addonAfter="đ"
-                                                onKeyDown={(e) => {
-                                                  if (
-                                                    !/[\d]/.test(e.key) &&
-                                                    ![
-                                                      "Backspace",
-                                                      "Delete",
-                                                      "ArrowLeft",
-                                                      "ArrowRight",
-                                                      "Tab",
-                                                    ].includes(e.key)
-                                                  ) {
-                                                    e.preventDefault();
-                                                  }
-                                                }}
-                                              />
-                                          </Col>
-                                          <Col flex="32px">
-                                            <Tooltip title="Xóa chỉ tiêu phụ">
-                                              <Icon
-                                                name="trash3"
-                                                onClick={() => removeSub(subName)}
-                                                style={{
-                                                  fontSize: 16,
-                                                  color: "#CF1322",
-                                                  cursor: "pointer",
-                                                }}
-                                              />
-                                            </Tooltip>
-                                          </Col>
-                                        </Row>
-                                      ),
-                                    )}
-                                  </div>
-                                </Col>
-                                <Col flex="32px" />
-                              </Row>
-                            )}
-                          </>
-                        )}
-                      </Form.List>
+                                placeholder="Chọn chỉ tiêu phụ"
+                                showSearch
+                                popupMatchSelectWidth={400}
+                                optionLabelProp="label"
+                                labelRender={({ value }) => {
+                                  if (!value) return null;
+                                  return renderIndicatorLabel(value as string);
+                                }}
+                                filterOption={(inputValue, option) => {
+                                  const searchText = (
+                                    option as { searchText?: string }
+                                  )?.searchText;
+                                  if (!searchText) return false;
+                                  return searchText
+                                    .toLowerCase()
+                                    .includes(inputValue.toLowerCase());
+                                }}
+                                allowClear
+                                status={
+                                  errors[`row-${rowIndex}-sub-${subIndex}`]
+                                    ? "error"
+                                    : undefined
+                                }
+                                style={{ width: "100%" }}
+                              />
+                              {errors[`row-${rowIndex}-sub-${subIndex}`] && (
+                                <div
+                                  style={{
+                                    color: "#ff4d4f",
+                                    fontSize: 12,
+                                    marginTop: 4,
+                                  }}
+                                >
+                                  {errors[`row-${rowIndex}-sub-${subIndex}`]}
+                                </div>
+                              )}
+                            </div>
+                          </Col>
+                          <Col flex="140px">
+                            <InputNumber<number>
+                              value={sub.unitPrice}
+                              onChange={(value) =>
+                                handleSubPriceChange(rowIndex, subIndex, value)
+                              }
+                              placeholder="Đơn giá (tùy chọn)"
+                              min={0}
+                              precision={0}
+                              controls={false}
+                              style={{ width: "100%" }}
+                              formatter={(value) =>
+                                `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                              }
+                              parser={(value) => {
+                                const parsed = parseInt(
+                                  value?.replace(/[^\d]/g, "") || "0",
+                                  10
+                                );
+                                return Math.max(0, parsed);
+                              }}
+                              addonAfter="đ"
+                            />
+                          </Col>
+                          <Col flex="32px">
+                            <Tooltip title="Xóa chỉ tiêu phụ">
+                              <Icon
+                                name="trash3"
+                                onClick={() =>
+                                  handleRemoveSubIndicator(rowIndex, subIndex)
+                                }
+                                style={{
+                                  fontSize: 16,
+                                  color: "#CF1322",
+                                  cursor: "pointer",
+                                  marginTop: 8,
+                                }}
+                              />
+                            </Tooltip>
+                          </Col>
+                        </Row>
+                      ))}
                     </div>
-                  ),
-                )}
-              </Card>
+                  </Col>
+                  <Col flex="32px" />
+                </Row>
+              )}
+            </div>
+          );
+        })}
+      </Card>
 
-              {/* Add parent button */}
-              <Form.Item style={{ margin: "12px 0px" }}>
-                <Button
-                  type="default"
-                  onClick={() =>
-                    addParent({
-                      indicatorId: undefined,
-                      unitPrice: 0,
-                      subIndicators: [],
-                    })
-                  }
-                  icon={<Icon name="plus-lg" />}
-                >
-                  Thêm dòng
-                </Button>
-              </Form.Item>
-            </>
-          )}
-        </Form.List>
-      </Form>
+      {/* Add row button */}
+      <Button
+        type="default"
+        onClick={handleAddRow}
+        icon={<Icon name="plus-lg" />}
+        style={{ marginBottom: 12 }}
+      >
+        Thêm dòng
+      </Button>
     </Modal>
   );
 };

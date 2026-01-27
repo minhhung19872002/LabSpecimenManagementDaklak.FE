@@ -1,5 +1,4 @@
 import { useMemo, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
-import { Form } from "antd";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useSpecimenTypesData, useSpecimenTypesActions } from "./hooks";
@@ -101,9 +100,6 @@ const SpecimenTypesList = forwardRef<SpecimenTypesActions, SpecimenTypesTabProps
     [handleRemoveIndicator, handleToggleIndicatorActive]
   );
 
-  // Need to use Form for addIndicators modal
-  const [addIndicatorsForm] = Form.useForm();
-
   // Expose actions to parent
   useImperativeHandle(ref, () => ({
     handleCreate: () => handleCreate(specimenTypeForm),
@@ -149,7 +145,6 @@ const SpecimenTypesList = forwardRef<SpecimenTypesActions, SpecimenTypesTabProps
         indicatorGroups={indicatorGroups}
         indicatorsByGroup={indicatorsByGroup}
         existingIndicatorIds={existingIndicatorIds}
-        form={addIndicatorsForm}
         onOk={handleAddIndicatorsOk}
         onCancel={handleAddIndicatorsCancel}
       />
