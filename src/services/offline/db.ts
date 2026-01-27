@@ -1,5 +1,17 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 
+// UUID generator - tries crypto.randomUUID() first, falls back to crypto.getRandomValues()
+function generateUUID(): string {
+  try {
+    return crypto.randomUUID();
+  } catch {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = (crypto.getRandomValues(new Uint8Array(1))[0] & 15) >> (c === 'x' ? 0 : 3);
+      return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+    });
+  }
+}
+
 /**
  * Sync entity types - matches BE SyncEntityType enum
  */
@@ -210,7 +222,7 @@ export async function addToSyncQueue(
   item: Omit<SyncQueueItem, 'clientId' | 'status' | 'retryCount' | 'createdAt' | 'updatedAt'>
 ): Promise<string> {
   const db = await getDB();
-  const clientId = crypto.randomUUID();
+  const clientId = generateUUID();
   const now = new Date();
 
   const queueItem: SyncQueueItem = {
@@ -470,7 +482,7 @@ export async function getDeviceId(): Promise<string> {
   let metadata = await db.get('syncMetadata', 'deviceId');
 
   if (!metadata) {
-    const deviceId = crypto.randomUUID();
+    const deviceId = generateUUID();
     await db.put('syncMetadata', {
       key: 'deviceId',
       value: deviceId,
@@ -488,7 +500,7 @@ export async function addPendingFileUpload(
   fileName: string
 ): Promise<PendingFileUpload> {
   const db = await getDB();
-  const tempId = `offline-file-${crypto.randomUUID()}`;
+  const tempId = `offline-file-${generateUUID()}`;
   const localUrl = URL.createObjectURL(blob);
 
   const pendingUpload: PendingFileUpload = {

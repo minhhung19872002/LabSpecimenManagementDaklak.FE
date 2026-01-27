@@ -8,6 +8,18 @@ import {
   getPendingSyncCountByType,
 } from './db';
 
+// UUID generator - tries crypto.randomUUID() first, falls back to crypto.getRandomValues()
+function generateUUID(): string {
+  try {
+    return crypto.randomUUID();
+  } catch {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = (crypto.getRandomValues(new Uint8Array(1))[0] & 15) >> (c === 'x' ? 0 : 3);
+      return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+    });
+  }
+}
+
 export interface BaseCrudService<TDto, TCreateDto, TUpdateDto = TCreateDto, TListParams = Record<string, unknown>> {
   getList: (params: TListParams) => Promise<{ items: TDto[]; totalCount: number }>;
   get: (id: string) => Promise<TDto>;
@@ -105,7 +117,7 @@ export function createOfflineService<
           console.warn('Online create failed, queueing for sync:', error);
         }
       }
-      const tempId = crypto.randomUUID();
+      const tempId = generateUUID();
       await syncManager.queueEntity(entityType, data, 'create');
       const tempRecord = { ...data, id: tempId, _isOffline: true } as unknown as TDto;
       await cacheEntity(entityType, tempId, tempRecord, true);
