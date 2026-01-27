@@ -1487,9 +1487,91 @@ const TaskManagementDetail: React.FC = () => {
         </Tooltip>
       </div>
 
+      {/* Alert và actions cho Shared Sample (Mẫu chung) */}
+      {task.isSharedSampleTask && (
+        <div style={{ marginBottom: 8 }}>
+          {/* Alert khi Lab Hóa đang chờ nhận mẫu từ Vi Sinh */}
+          {isWaitingSharedSample && (
+            <Alert
+              message="Đang chờ nhận mẫu chung từ Lab Vi Sinh"
+              description={
+                <>
+                  <div>
+                    Mẫu này là mẫu chung cần Lab Vi Sinh xử lý trước. Vui lòng
+                    chờ Lab Vi Sinh hoàn thành và gửi mẫu.
+                  </div>
+                  <div style={{ marginTop: 8 }}>
+                    Bạn có thể xem danh sách chỉ tiêu nhưng không thể thực hiện
+                    các thao tác cho đến khi nhận mẫu.
+                  </div>
+                  {canReceiveSharedSample && (
+                    <div style={{ marginTop: 12 }}>
+                      <Button
+                        type="primary"
+                        onClick={handleReceiveSharedSample}
+                        loading={actionLoading}
+                      >
+                        Xác nhận nhận mẫu
+                      </Button>
+                    </div>
+                  )}
+                </>
+              }
+              type="warning"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          )}
+
+          {/* Alert và button khi Lab Vi Sinh cần gửi mẫu cho Hóa */}
+          {canSendSharedSample && (
+            <Alert
+              message="Mẫu chung - Cần gửi cho Lab Hóa"
+              description={
+                <>
+                  <div>
+                    Đã hoàn thành xử lý mẫu chung. Vui lòng gửi mẫu cho Lab Hóa
+                    để tiếp tục quy trình.
+                  </div>
+                  <div style={{ marginTop: 12 }}>
+                    <Button
+                      type="primary"
+                      onClick={handleSendSharedSample}
+                      loading={actionLoading}
+                    >
+                      Gửi mẫu cho Lab Hóa
+                    </Button>
+                  </div>
+                </>
+              }
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          )}
+
+          {/* Badge hiển thị đây là mẫu chung (đã gửi) */}
+          {task.sampleSentToNextLab && (
+            <Alert
+              message="Đã gửi mẫu chung cho Lab Hóa"
+              description={`Ngày gửi: ${task.sampleSentDate ? formatDate(task.sampleSentDate) : "-"}`}
+              type="success"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          )}
+        </div>
+      )}
+
       <Card>
         {/* Header Card */}
-        <Card style={{ marginBottom: 16, background: "#FAFAFA", border: "1px solid #D9D9D9" }}>
+        <Card
+          style={{
+            marginBottom: 16,
+            background: "#FAFAFA",
+            border: "1px solid #D9D9D9",
+          }}
+        >
           <Row
             justify="space-between"
             align="middle"
@@ -1606,24 +1688,20 @@ const TaskManagementDetail: React.FC = () => {
             <div className="task-tab-evaluation">
               {/* Alert based on task status */}
               {task.status === LaboratoryTaskStatus.UnderEvaluation ||
-              task.status ===
-                LaboratoryTaskStatus.WaitingCustomerResponse ? (
+              task.status === LaboratoryTaskStatus.WaitingCustomerResponse ? (
                 <Alert
                   message={
-                    task.status ===
-                    LaboratoryTaskStatus.WaitingCustomerResponse
+                    task.status === LaboratoryTaskStatus.WaitingCustomerResponse
                       ? "Chờ khách hàng xác nhận"
                       : "Chế độ đánh giá thử nghiệm"
                   }
                   description={
-                    task.status ===
-                    LaboratoryTaskStatus.WaitingCustomerResponse
+                    task.status === LaboratoryTaskStatus.WaitingCustomerResponse
                       ? "Có chỉ tiêu đang chờ KH xác nhận (đổi PP hoặc từ chối TN). QLKT vẫn có thể đánh giá các chỉ tiêu Pending còn lại."
                       : "QLKT đánh giá từng chỉ tiêu: Chấp nhận, Yêu cầu đổi phương pháp, hoặc Từ chối thử nghiệm."
                   }
                   type={
-                    task.status ===
-                    LaboratoryTaskStatus.WaitingCustomerResponse
+                    task.status === LaboratoryTaskStatus.WaitingCustomerResponse
                       ? "warning"
                       : "info"
                   }
@@ -1687,82 +1765,6 @@ const TaskManagementDetail: React.FC = () => {
           showIcon
           style={{ marginBottom: 16 }}
         />
-      )}
-
-      {/* Alert và actions cho Shared Sample (Mẫu chung) */}
-      {task.isSharedSampleTask && (
-        <>
-          {/* Alert khi Lab Hóa đang chờ nhận mẫu từ Vi Sinh */}
-          {isWaitingSharedSample && (
-            <Alert
-              message="Đang chờ nhận mẫu chung từ Lab Vi Sinh"
-              description={
-                <>
-                  <div>
-                    Mẫu này là mẫu chung cần Lab Vi Sinh xử lý trước. Vui lòng
-                    chờ Lab Vi Sinh hoàn thành và gửi mẫu.
-                  </div>
-                  <div style={{ marginTop: 8 }}>
-                    Bạn có thể xem danh sách chỉ tiêu nhưng không thể thực hiện
-                    các thao tác cho đến khi nhận mẫu.
-                  </div>
-                  {canReceiveSharedSample && (
-                    <div style={{ marginTop: 12 }}>
-                      <Button
-                        type="primary"
-                        onClick={handleReceiveSharedSample}
-                        loading={actionLoading}
-                      >
-                        Xác nhận nhận mẫu
-                      </Button>
-                    </div>
-                  )}
-                </>
-              }
-              type="warning"
-              showIcon
-              style={{ marginBottom: 16 }}
-            />
-          )}
-
-          {/* Alert và button khi Lab Vi Sinh cần gửi mẫu cho Hóa */}
-          {canSendSharedSample && (
-            <Alert
-              message="Mẫu chung - Cần gửi cho Lab Hóa"
-              description={
-                <>
-                  <div>
-                    Đã hoàn thành xử lý mẫu chung. Vui lòng gửi mẫu cho Lab Hóa
-                    để tiếp tục quy trình.
-                  </div>
-                  <div style={{ marginTop: 12 }}>
-                    <Button
-                      type="primary"
-                      onClick={handleSendSharedSample}
-                      loading={actionLoading}
-                    >
-                      Gửi mẫu cho Lab Hóa
-                    </Button>
-                  </div>
-                </>
-              }
-              type="info"
-              showIcon
-              style={{ marginBottom: 16 }}
-            />
-          )}
-
-          {/* Badge hiển thị đây là mẫu chung (đã gửi) */}
-          {task.sampleSentToNextLab && (
-            <Alert
-              message="Đã gửi mẫu chung cho Lab Hóa"
-              description={`Ngày gửi: ${task.sampleSentDate ? formatDate(task.sampleSentDate) : "-"}`}
-              type="success"
-              showIcon
-              style={{ marginBottom: 16 }}
-            />
-          )}
-        </>
       )}
 
       {/* Supporter Modal */}
