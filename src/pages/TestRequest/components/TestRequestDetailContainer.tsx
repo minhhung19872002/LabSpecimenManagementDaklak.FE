@@ -8,6 +8,7 @@ import {
   Space,
   Table,
   Alert,
+  Tooltip,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -15,6 +16,7 @@ import {
   FileTextOutlined,
   HistoryOutlined,
   PrinterOutlined,
+  CloudOutlined,
 } from "../../../components/common/Icon";
 import { useNavigate } from "react-router-dom";
 import {
@@ -77,6 +79,9 @@ interface TestRequestDetailContainerProps {
   canSendSampleAction: boolean;
   canCancelAction: boolean;
   canSendToAccountingAction: boolean;
+  // Offline support
+  isOnline?: boolean;
+  isOfflineData?: boolean;
 }
 
 const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
@@ -110,6 +115,9 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
   canSendSampleAction,
   canCancelAction,
   canSendToAccountingAction,
+  // Offline support
+  isOnline = true,
+  isOfflineData = false,
 }) => {
   const navigate = useNavigate();
 
@@ -155,28 +163,44 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
       onOpenPaymentConfirmation;
 
     if (canShowPaymentButton) {
-      buttons.push(
+      const paymentButton = (
         <Button
           key="payment-confirmation"
           type={isPaid ? "default" : "primary"}
           onClick={onOpenPaymentConfirmation}
+          disabled={!isOnline && !isPaid}
         >
           {isPaid ? "Lịch sử thanh toán" : "Xác nhận thanh toán"}
         </Button>
+      );
+      buttons.push(
+        !isOnline && !isPaid ? (
+          <Tooltip key="payment-confirmation-tooltip" title="Không khả dụng khi offline">
+            {paymentButton}
+          </Tooltip>
+        ) : paymentButton
       );
     }
 
     // Gửi QLKT - khi status = Paid VÀ có quyền sendToAccounting (BPGN)
     if (canSendToQLKT(data.status) && canSendToAccountingAction) {
-      buttons.push(
+      const sendToQLKTButton = (
         <Button
           key="send-to-qlkt"
           type="primary"
           onClick={onSendToQLKT}
           loading={sendingToQLKT}
+          disabled={!isOnline}
         >
           Gửi QLKT
         </Button>
+      );
+      buttons.push(
+        !isOnline ? (
+          <Tooltip key="send-to-qlkt-tooltip" title="Không khả dụng khi offline">
+            {sendToQLKTButton}
+          </Tooltip>
+        ) : sendToQLKTButton
       );
     }
 
@@ -185,46 +209,76 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
       data.status === TestRequestStatus.WaitingCustomerConfirm &&
       canSendToAccountingAction
     ) {
-      buttons.push(
+      const confirmCustomerButton = (
         <Button
           key="confirm-customer"
           type="primary"
           onClick={onOpenCustomerConfirmation}
+          disabled={!isOnline}
         >
           Xác nhận KH
         </Button>
+      );
+      buttons.push(
+        !isOnline ? (
+          <Tooltip key="confirm-customer-tooltip" title="Không khả dụng khi offline">
+            {confirmCustomerButton}
+          </Tooltip>
+        ) : confirmCustomerButton
       );
     }
 
     // Gửi mẫu - khi status = RequestApproved (Đã duyệt yêu cầu)
     if (canSendSample(data.status) && canSendSampleAction) {
-      buttons.push(
+      const sendSampleButton = (
         <Button
           key="send-sample"
           type="primary"
           onClick={onSendSample}
           loading={sendingSample}
+          disabled={!isOnline}
         >
           Gửi mẫu
         </Button>
+      );
+      buttons.push(
+        !isOnline ? (
+          <Tooltip key="send-sample-tooltip" title="Không khả dụng khi offline">
+            {sendSampleButton}
+          </Tooltip>
+        ) : sendSampleButton
       );
     }
 
     // Gửi kết quả - khi status = Approved
     if (data.status === TestRequestStatus.Approved) {
-      buttons.push(
-        <Button key="send-result" type="primary" onClick={onSendResult}>
+      const sendResultButton = (
+        <Button key="send-result" type="primary" onClick={onSendResult} disabled={!isOnline}>
           Gửi kết quả
         </Button>
+      );
+      buttons.push(
+        !isOnline ? (
+          <Tooltip key="send-result-tooltip" title="Không khả dụng khi offline">
+            {sendResultButton}
+          </Tooltip>
+        ) : sendResultButton
       );
     }
 
     // Hoàn thành - khi status = ResultSent
     if (canComplete(data.status)) {
-      buttons.push(
-        <Button key="complete" type="primary" onClick={onComplete}>
+      const completeButton = (
+        <Button key="complete" type="primary" onClick={onComplete} disabled={!isOnline}>
           Hoàn thành
         </Button>
+      );
+      buttons.push(
+        !isOnline ? (
+          <Tooltip key="complete-tooltip" title="Không khả dụng khi offline">
+            {completeButton}
+          </Tooltip>
+        ) : completeButton
       );
     }
 
@@ -234,15 +288,23 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
         data.status === TestRequestStatus.PartialResultSent) &&
       onConfirmDelivery
     ) {
-      buttons.push(
+      const confirmDeliveryButton = (
         <Button
           key="confirm-delivery"
           type="primary"
           onClick={onConfirmDelivery}
           loading={confirmingDelivery}
+          disabled={!isOnline}
         >
           Xác nhận bàn giao KH
         </Button>
+      );
+      buttons.push(
+        !isOnline ? (
+          <Tooltip key="confirm-delivery-tooltip" title="Không khả dụng khi offline">
+            {confirmDeliveryButton}
+          </Tooltip>
+        ) : confirmDeliveryButton
       );
     }
 
@@ -250,15 +312,23 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
 
     // In phiếu XN - chỉ admin hoặc SampleReceiver mới thấy
     if (canPrintTestRequest) {
-      buttons.push(
+      const printButton = (
         <Button
           key="print"
           icon={<FileTextOutlined />}
           onClick={onPrintTestRequest}
           loading={printingTestRequest}
+          disabled={!isOnline}
         >
           In phiếu XN
         </Button>
+      );
+      buttons.push(
+        !isOnline ? (
+          <Tooltip key="print-tooltip" title="Không khả dụng khi offline">
+            {printButton}
+          </Tooltip>
+        ) : printButton
       );
     }
 
@@ -271,25 +341,40 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
       data.status === TestRequestStatus.ResultSent ||
       data.status === TestRequestStatus.Completed
     ) {
-      buttons.push(
+      const printSingleButton = (
         <Button
           key="print-single"
           icon={<PrinterOutlined />}
           onClick={onPrintSingle}
-          disabled={!canPrint}
+          disabled={!canPrint || !isOnline}
         >
           In KQ
         </Button>
       );
       buttons.push(
+        !isOnline ? (
+          <Tooltip key="print-single-tooltip" title="Không khả dụng khi offline">
+            {printSingleButton}
+          </Tooltip>
+        ) : printSingleButton
+      );
+
+      const printMixedButton = (
         <Button
           key="print-mixed"
           icon={<PrinterOutlined />}
           onClick={onPrintMixed}
-          disabled={!canPrint}
+          disabled={!canPrint || !isOnline}
         >
           In KQ Hỗn hợp
         </Button>
+      );
+      buttons.push(
+        !isOnline ? (
+          <Tooltip key="print-mixed-tooltip" title="Không khả dụng khi offline">
+            {printMixedButton}
+          </Tooltip>
+        ) : printMixedButton
       );
     }
 
@@ -297,15 +382,23 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
 
     // Hủy yêu cầu - hiển thị ở tất cả status trừ Completed, ResultSent và Cancelled VÀ có quyền cancel
     if (canCancelRequest(data.status) && canCancelAction) {
-      buttons.push(
+      const cancelButton = (
         <Button
           key="cancel-request"
           danger
           onClick={onCancelRequest}
           loading={cancellingRequest}
+          disabled={!isOnline}
         >
           Hủy yêu cầu
         </Button>
+      );
+      buttons.push(
+        !isOnline ? (
+          <Tooltip key="cancel-request-tooltip" title="Không khả dụng khi offline">
+            {cancelButton}
+          </Tooltip>
+        ) : cancelButton
       );
     }
 
@@ -371,6 +464,35 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
             description="Dữ liệu hiển thị bên dưới là dữ liệu gốc trước khi thay đổi. Vui lòng vào trang 'Quản lý chất lượng' để phê duyệt hoặc từ chối các thay đổi."
             type="warning"
             showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
+
+        {/* Thông báo khi đang offline hoặc xem dữ liệu cache */}
+        {!isOnline && (
+          <Alert
+            message={
+              <Space>
+                <CloudOutlined />
+                <span>Bạn đang offline. Một số thao tác sẽ không khả dụng.</span>
+              </Space>
+            }
+            type="warning"
+            showIcon={false}
+            style={{ marginBottom: 16 }}
+          />
+        )}
+
+        {isOfflineData && isOnline && (
+          <Alert
+            message={
+              <Space>
+                <CloudOutlined />
+                <span>Đang xem dữ liệu đã lưu trong bộ nhớ đệm. Thông tin có thể chưa được cập nhật.</span>
+              </Space>
+            }
+            type="info"
+            showIcon={false}
             style={{ marginBottom: 16 }}
           />
         )}

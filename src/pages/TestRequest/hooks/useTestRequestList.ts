@@ -3,7 +3,7 @@ import { message } from "antd";
 import { useNavigate } from "react-router-dom";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
-import { testRequestService } from "../../../services/testRequestService";
+import { testRequestService, offlineTestRequestService } from "../../../services/testRequestService";
 import {
   importService,
   downloadBlobAsFile,
@@ -15,9 +15,13 @@ import {
 } from "../../../types/testRequest";
 import { getTestRequestColumns } from "../components/columns";
 import { useActionPermission } from "../../../hooks/useActionPermission";
+import { useNetworkStatus } from "../../../hooks/useNetworkStatus";
 
 export const useTestRequestList = () => {
   const navigate = useNavigate();
+
+  // Network status for offline support
+  const { isOnline } = useNetworkStatus();
 
   // Check quyền edit theo Permission Matrix (bao gồm cả quyền xóa)
   const { canAll: canEditPermission } = useActionPermission('testRequests', 'edit');
@@ -37,11 +41,13 @@ export const useTestRequestList = () => {
   const [dateRange, setDateRange] = useState<
     [Dayjs | null, Dayjs | null] | null
   >(null);
+  // Track if data is from offline cache
+  const [isOfflineData, setIsOfflineData] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await testRequestService.getList({
+      const response = await offlineTestRequestService.getList({
         skipCount: (currentPage - 1) * pageSize,
         maxResultCount: pageSize,
         sorting: "creationTime desc",
@@ -52,9 +58,10 @@ export const useTestRequestList = () => {
         expectedCompletionDateTo:
           dateRange?.[1]?.format("YYYY-MM-DD") || undefined,
       });
-      const items = result.items || [];
+      const items = response.data.items || [];
       setData(items);
-      setTotalCount(result.totalCount || 0);
+      setTotalCount(response.data.totalCount || 0);
+      setIsOfflineData(response.isOfflineData);
     } catch (error: unknown) {
       console.error("Error loading test requests:", error);
       message.error(
@@ -62,6 +69,7 @@ export const useTestRequestList = () => {
       );
       setData([]);
       setTotalCount(0);
+      setIsOfflineData(false);
     } finally {
       setLoading(false);
     }
@@ -195,6 +203,9 @@ export const useTestRequestList = () => {
     importModalOpen,
     downloadingTemplate,
     columns,
+    // Offline support
+    isOnline,
+    isOfflineData,
 
     // Handlers
     loadData,
