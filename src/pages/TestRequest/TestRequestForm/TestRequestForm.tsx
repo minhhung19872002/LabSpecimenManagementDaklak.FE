@@ -77,6 +77,7 @@ const TestRequestForm: React.FC = () => {
     handleOrganizationSearch,
     handleOrganizationSelect,
     handlePhoneBlur,
+    handlePhoneEnter,
     sampleConditionOptions,
     sampleTypeCategories,
     totalSampleCost,
@@ -295,6 +296,7 @@ const TestRequestForm: React.FC = () => {
                 handleOrganizationSearch={handleOrganizationSearch}
                 handleOrganizationSelect={handleOrganizationSelect}
                 handlePhoneBlur={handlePhoneBlur}
+                handlePhoneEnter={handlePhoneEnter}
               />
             </div>
           </div>

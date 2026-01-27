@@ -24,6 +24,7 @@ interface CustomerInfoSectionProps {
   handleOrganizationSearch: (searchText: string) => void;
   handleOrganizationSelect: (value: string) => void;
   handlePhoneBlur: (e: React.FocusEvent<HTMLInputElement>) => void;
+  handlePhoneEnter: () => void;
 }
 
 const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
@@ -41,6 +42,7 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
   handleOrganizationSearch,
   handleOrganizationSelect,
   handlePhoneBlur,
+  handlePhoneEnter,
 }) => {
   return (
     <div className="form-section">
@@ -197,6 +199,7 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
               placeholder="Nhập điện thoại"
               disabled={isFieldLocked("phone")}
               onBlur={handlePhoneBlur}
+              onPressEnter={handlePhoneEnter}
             />
           </Form.Item>
         </Col>
