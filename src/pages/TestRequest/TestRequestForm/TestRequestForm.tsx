@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React from "react";
+import React, { useRef, useEffect, useState } from "react";
 import {
   Form,
   Input,
@@ -36,6 +36,7 @@ import {
   GroupSelectorModal,
   IndicatorSelectionModal,
   LaboratorySelectionModal,
+  StickySummaryBar,
 } from "./components";
 import "../TestRequestForm.css";
 import "../../../styles/ListCard.css";
@@ -217,8 +218,82 @@ const TestRequestForm: React.FC = () => {
     sourceQuotationId,
   });
 
+  // Ref to form sections to detect when scrolled past
+  const formSectionsRef = useRef<HTMLDivElement>(null);
+  const [showSummaryBar, setShowSummaryBar] = useState(false);
+
+  // Watch specific form values for sticky summary bar
+  const watchedCustomerName = Form.useWatch('customerName', form);
+  const watchedContactPerson = Form.useWatch('contactPerson', form);
+  const watchedTaxCode = Form.useWatch('taxCode', form);
+  const watchedPhone = Form.useWatch('phone', form);
+  const watchedAddress = Form.useWatch('address', form);
+  const watchedWard = Form.useWatch('ward', form);
+  const watchedProvince = Form.useWatch('province', form);
+  const watchedContractNumber = Form.useWatch('contractNumber', form);
+  const watchedContractDate = Form.useWatch('contractDate', form);
+  const watchedSampleTypeService = Form.useWatch('sampleTypeService', form);
+  const watchedSampleTypeContract = Form.useWatch('sampleTypeContract', form);
+  const watchedSampleTypeTask = Form.useWatch('sampleTypeTask', form);
+  const watchedSampleTypeSubContract = Form.useWatch('sampleTypeSubContract', form);
+  const watchedSubContract = Form.useWatch('subContract', form);
+
+  useEffect(() => {
+    const formSections = formSectionsRef.current;
+    if (!formSections) return;
+
+    // Get header height based on screen size
+    const getHeaderHeight = () => {
+      const width = window.innerWidth;
+      if (width <= 767) return 0; // Mobile - no fixed summary
+      if (width <= 1100) return 113; // Tablet
+      return 64; // Desktop
+    };
+
+    const handleScroll = () => {
+      if (formSections) {
+        const rect = formSections.getBoundingClientRect();
+        const headerHeight = getHeaderHeight();
+        // Show summary bar when scrolled past ~25% of the section
+        const threshold = rect.height * 0.75;
+        setShowSummaryBar(headerHeight > 0 && rect.bottom < headerHeight + threshold);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleScroll, { passive: true });
+    handleScroll(); // Check initial state
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+    };
+  }, []);
+
   return (
     <>
+    {/* Fixed summary bar - appears when scrolled past form sections */}
+    {showSummaryBar && (
+      <div className="fixed-summary-bar-wrapper">
+        <StickySummaryBar
+          customerName={watchedCustomerName}
+          contactPerson={watchedContactPerson}
+          taxCode={watchedTaxCode}
+          phone={watchedPhone}
+          address={watchedAddress}
+          ward={watchedWard}
+          province={watchedProvince}
+          contractNumber={watchedContractNumber}
+          contractDate={watchedContractDate}
+          sampleTypeService={watchedSampleTypeService}
+          sampleTypeContract={watchedSampleTypeContract}
+          sampleTypeTask={watchedSampleTypeTask}
+          sampleTypeSubContract={watchedSampleTypeSubContract}
+          subContract={watchedSubContract}
+        />
+      </div>
+    )}
+
     <Card
       className="test-request-form list-card"
       title={
@@ -271,7 +346,7 @@ const TestRequestForm: React.FC = () => {
           }}
         >
           {/* Top sections row: Hợp đồng (bao gồm Loại hình mẫu), Khách hàng */}
-          <div className="form-top-row form-top-row-2cols">
+          <div ref={formSectionsRef} className="form-top-row form-top-row-2cols">
             <div className="form-top-col-left">
               <ContractInfoSection
                 isEditMode={isEditMode}
