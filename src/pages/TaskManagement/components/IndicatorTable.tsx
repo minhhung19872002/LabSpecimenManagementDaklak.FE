@@ -745,6 +745,15 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           );
         }
 
+        // Hiển thị "Chờ mẫu chung" nếu chỉ tiêu đang đợi mẫu từ Lab Vi Sinh
+        if (record.isWaitingForSharedSample) {
+          return (
+            <Tooltip title="Chỉ tiêu này thuộc mẫu chung, đang chờ Lab Vi Sinh hoàn thành">
+              <StatusTag color="gold">Chờ mẫu chung</StatusTag>
+            </Tooltip>
+          );
+        }
+
         // Kiểm tra indicator đã được giao việc (lưu vào DB) chưa
         // Dựa vào assignedDate - chỉ có khi đã lưu DB thành công
         const indicatorAssigned = !!record.assignedDate;
@@ -839,6 +848,14 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         onSelectionChange(selectedRowKeys as string[]);
       },
       getCheckboxProps: (record: LaboratoryTaskIndicatorDto) => {
+        // Disable selection cho chỉ tiêu đang chờ mẫu chung từ Lab Vi Sinh
+        if (record.isWaitingForSharedSample) {
+          return {
+            disabled: true,
+            name: record.id,
+          };
+        }
+
         if (selectionMode === "assignment") {
           // Assignment mode: chỉ disable cho Approved và CustomerCancelled
           // Các trạng thái khác (Pending, Entered, Rejected) đều có thể chọn để giao việc
