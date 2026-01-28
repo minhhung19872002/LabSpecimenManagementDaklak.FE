@@ -702,7 +702,7 @@ const SampleAssignmentLogTab: React.FC = () => {
                 </b>
               </>
             ),
-            pageSizeOptions: [50, 100, 150],
+            pageSizeOptions: [20, 50, 100],
           }}
           onChange={(pag) =>
             handleTableChange({
