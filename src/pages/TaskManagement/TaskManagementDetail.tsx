@@ -1051,6 +1051,14 @@ const TaskManagementDetail: React.FC = () => {
   // Only Lab Vi Sinh (no priorLabTaskId) can send shared sample
   const canSendSharedSample = useMemo(() => {
     if (!task) return false;
+
+    // If any indicator is waiting for shared sample, this is Lab Hóa (receiver), not Vi Sinh (sender)
+    // This handles mixed tasks where priorLabTaskId might be null but task still has waiting indicators
+    const hasWaitingIndicators = task.indicators?.some(
+      (ind) => ind.isWaitingForSharedSample
+    );
+    if (hasWaitingIndicators) return false;
+
     return (
       task.isSharedSampleTask === true &&
       !task.priorLabTaskId && // Lab Vi Sinh has no prior lab, Lab Hóa has priorLabTaskId
@@ -1063,11 +1071,21 @@ const TaskManagementDetail: React.FC = () => {
   // Check if task can receive shared sample (Lab Hóa, waiting, prior lab ALREADY sent)
   const canReceiveSharedSample = useMemo(() => {
     if (!task) return false;
-    return (
+
+    // Case 1: Task chỉ có shared indicators - check task-level flags
+    const isFullyWaitingTask =
       task.isWaitingForPriorLab === true &&
       task.status === LaboratoryTaskStatus.WaitingSharedSample &&
-      task.priorLabSentSample === true // Prior Lab (Vi Sinh) đã gửi mẫu
+      task.priorLabSentSample === true;
+
+    // Case 2: Mixed task - có indicator đang chờ mẫu chung và prior lab đã gửi
+    const hasWaitingIndicators = task.indicators?.some(
+      (ind) => ind.isWaitingForSharedSample
     );
+    const isMixedTaskReadyToReceive =
+      hasWaitingIndicators && task.priorLabSentSample === true;
+
+    return isFullyWaitingTask || isMixedTaskReadyToReceive;
   }, [task]);
 
   // Load sample images (testing images + sample attachments from TestRequest)
@@ -1163,10 +1181,17 @@ const TaskManagementDetail: React.FC = () => {
     task?.status === LaboratoryTaskStatus.UnderEvaluation ||
     task?.status === LaboratoryTaskStatus.WaitingCustomerResponse;
 
-  // Check if task is waiting for shared sample from prior lab (Lab Hóa chờ Vi Sinh)
-  const isWaitingSharedSample =
+  // Check if task is FULLY waiting for shared sample (all indicators waiting, task blocked)
+  // This is used for blocking task-level actions like assignment
+  const isFullyWaitingSharedSample =
     task?.status === LaboratoryTaskStatus.WaitingSharedSample ||
     task?.isWaitingForPriorLab === true;
+
+  // Check if task has ANY indicators waiting for shared sample (for showing alert)
+  // This includes mixed tasks where some indicators can proceed
+  const isWaitingSharedSample =
+    isFullyWaitingSharedSample ||
+    task?.indicators?.some((ind) => ind.isWaitingForSharedSample);
 
   // Check if task is in completed phase (Approved, Rejected, SentToQuality, TestingRejected)
   // During this phase, cannot assign/edit
@@ -1176,13 +1201,23 @@ const TaskManagementDetail: React.FC = () => {
     task?.status === LaboratoryTaskStatus.SentToQuality ||
     task?.status === LaboratoryTaskStatus.TestingRejected;
 
+  // Check if task has any indicators that have been accepted for testing
+  // These indicators can be assigned even during evaluation phase
+  const hasAcceptedIndicators = task?.indicators?.some(
+    (ind) =>
+      ind.approvalStatus === IndicatorApprovalStatus.AcceptedForTesting &&
+      !ind.isWaitingForSharedSample
+  );
+
   // Check if can assign technician to indicators
   // Allowed when: PartialAccepted, FullyAccepted, Assigned, InProgress, WaitingApproval
-  // NOT allowed when: UnderEvaluation, WaitingCustomerResponse, Approved, Rejected, SentToQuality, TestingRejected, WaitingSharedSample
+  // Also allowed during UnderEvaluation/WaitingCustomerResponse if some indicators are already AcceptedForTesting
+  // NOT allowed when: Approved, Rejected, SentToQuality, TestingRejected, WaitingSharedSample (fully)
+  // For mixed tasks (isFullyWaitingSharedSample=false), allow assignment - individual indicators will be disabled
   const canAssignToIndicator =
-    !isInEvaluationPhase &&
+    (!isInEvaluationPhase || hasAcceptedIndicators) &&
     !isCompletedPhase &&
-    !isWaitingSharedSample &&
+    !isFullyWaitingSharedSample &&
     canAssignTesting;
 
   // Check if can upload images (same logic as canEditTask)
@@ -1726,7 +1761,15 @@ const TaskManagementDetail: React.FC = () => {
                   (task.status === LaboratoryTaskStatus.UnderEvaluation ||
                     task.status === LaboratoryTaskStatus.WaitingCustomerResponse ||
                     // Cho phép evaluate khi task đang chờ mẫu chung - indicator nào cần chờ sẽ bị disable riêng
-                    task.status === LaboratoryTaskStatus.WaitingSharedSample)
+                    task.status === LaboratoryTaskStatus.WaitingSharedSample ||
+                    // Mixed task đã gửi QLCL nhưng có indicator mới nhận mẫu cần evaluate
+                    (task.status === LaboratoryTaskStatus.SentToQuality &&
+                      task.indicators?.some(
+                        (ind) =>
+                          !ind.isWaitingForSharedSample &&
+                          (ind.approvalStatus === IndicatorApprovalStatus.Pending ||
+                            ind.approvalStatus === IndicatorApprovalStatus.CannotTest)
+                      )))
                 }
                 loading={loading}
                 onEvaluationComplete={reloadData}

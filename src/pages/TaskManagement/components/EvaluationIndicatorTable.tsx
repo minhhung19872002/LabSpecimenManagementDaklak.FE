@@ -134,11 +134,13 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
   const [supplementaryForm] = Form.useForm();
 
   // Filter indicators that need evaluation (Pending or CannotTest status)
+  // Exclude indicators waiting for shared sample - they cannot be evaluated yet
   const pendingIndicators = useMemo(() => {
     return indicators.filter(
       (ind) =>
-        ind.approvalStatus === IndicatorApprovalStatus.Pending ||
-        ind.approvalStatus === IndicatorApprovalStatus.CannotTest
+        !ind.isWaitingForSharedSample &&
+        (ind.approvalStatus === IndicatorApprovalStatus.Pending ||
+          ind.approvalStatus === IndicatorApprovalStatus.CannotTest)
     );
   }, [indicators]);
 
