@@ -151,7 +151,11 @@ export const getIndicatorColumns = (
     dataIndex: "unitPrice",
     key: "unitPrice",
     width: 150,
-    render: (price: number) => `${price?.toLocaleString("vi-VN")} đ`,
+    render: (price: number, record) => {
+      // Don't show price for sub-indicators
+      if (record.parentIndicatorId) return null;
+      return `${price?.toLocaleString("vi-VN")} đ`;
+    },
   },
   {
     title: "Trạng thái",
@@ -169,6 +173,9 @@ export const getIndicatorColumns = (
     key: "actions",
     width: 80,
     render: (_, record) => {
+      // Don't show delete button for sub-indicators (they follow parent)
+      if (record.parentIndicatorId) return null;
+
       const canDelete = authService.hasPermission(PERMISSIONS.MasterData.Delete);
 
       if (!canDelete) {
