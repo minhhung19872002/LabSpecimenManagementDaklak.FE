@@ -140,3 +140,164 @@
   right: 0 !important;
   inset-inline-end: 0 !important;
 }
+
+/* ============================================
+   Fixed Summary Bar - Appears when scrolled past form sections
+   ============================================ */
+
+/* Fixed wrapper - positioned below header + main layout padding */
+.fixed-summary-bar-wrapper {
+  position: fixed;
+  top: 88px; /* Header top (24px) + header height (64px) */
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: #fff;
+  padding: 18px 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
+  border-bottom: 1px solid #e8e8e8;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Tablet: header top (20px) + header height (113px) = 133px */
+@media (max-width: 1100px) and (min-width: 768px) {
+  .fixed-summary-bar-wrapper {
+    top: 133px;
+    padding: 18px 20px;
+  }
+}
+
+/* Mobile: no fixed summary */
+@media (max-width: 767px) {
+  .fixed-summary-bar-wrapper {
+    display: none;
+  }
+}
+
+/* Summary bar content - 2 column layout */
+.sticky-summary-bar {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  font-size: 13px;
+  color: var(--color-text-primary);
+  line-height: 1.4;
+}
+
+.sticky-summary-section {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sticky-summary-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  line-height: 1;
+}
+
+.sticky-summary-section-title .anticon {
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+
+.sticky-summary-content {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 4px;
+}
+
+.sticky-summary-primary {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.sticky-summary-secondary {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.sticky-summary-details {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-top: 2px;
+}
+
+.sticky-summary-detail {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.sticky-summary-detail .anticon {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.sticky-summary-address {
+  flex: 1;
+  min-width: 0;
+}
+
+.sticky-summary-tags {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sticky-summary-tags .ant-tag {
+  margin: 0;
+  font-size: 11px;
+  line-height: 18px;
+  padding: 0 6px;
+}
+
+.sticky-summary-divider.ant-divider {
+  height: auto;
+  align-self: stretch;
+  margin: 0 20px;
+  border-color: var(--color-border-light);
+}
+
+/* Tablet adjustments for summary bar */
+@media (max-width: 1100px) and (min-width: 768px) {
+  .sticky-summary-bar {
+    font-size: 12px;
+  }
+
+  .sticky-summary-primary {
+    font-size: 13px;
+  }
+
+  .sticky-summary-divider.ant-divider {
+    margin: 0 12px;
+  }
+}
+

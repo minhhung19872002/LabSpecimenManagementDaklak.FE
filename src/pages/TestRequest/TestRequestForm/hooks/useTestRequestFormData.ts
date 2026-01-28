@@ -404,9 +404,8 @@ export const useTestRequestFormData = () => {
     }
   };
 
-  // Handle phone blur - search organization by phone
-  const handlePhoneBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
-    const phoneValue = e.target.value?.trim();
+  // Shared function to auto-fill customer info by phone number
+  const autoFillByPhone = async (phoneValue: string) => {
     if (!phoneValue) return;
 
     const foundOrg = organizations.find((org) => org.phone === phoneValue);
@@ -439,6 +438,18 @@ export const useTestRequestFormData = () => {
         phone: foundOrg.phone,
       });
     }
+  };
+
+  // Handle phone blur - search organization by phone
+  const handlePhoneBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
+    const phoneValue = e.target.value?.trim();
+    await autoFillByPhone(phoneValue);
+  };
+
+  // Handle phone Enter key press - search organization by phone
+  const handlePhoneEnter = async () => {
+    const phoneValue = form.getFieldValue('phone')?.trim();
+    await autoFillByPhone(phoneValue);
   };
 
   // Handle specimen type search for autocomplete with debounce (case-insensitive)
@@ -1031,6 +1042,7 @@ export const useTestRequestFormData = () => {
     handleSpecimenTypeSelect,
     handleOrganizationSelect,
     handlePhoneBlur,
+    handlePhoneEnter,
 
     // Sample Condition handlers
     sampleConditions,

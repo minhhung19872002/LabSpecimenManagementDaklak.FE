@@ -134,11 +134,13 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
   const [supplementaryForm] = Form.useForm();
 
   // Filter indicators that need evaluation (Pending or CannotTest status)
+  // Exclude indicators waiting for shared sample - they cannot be evaluated yet
   const pendingIndicators = useMemo(() => {
     return indicators.filter(
       (ind) =>
-        ind.approvalStatus === IndicatorApprovalStatus.Pending ||
-        ind.approvalStatus === IndicatorApprovalStatus.CannotTest
+        !ind.isWaitingForSharedSample &&
+        (ind.approvalStatus === IndicatorApprovalStatus.Pending ||
+          ind.approvalStatus === IndicatorApprovalStatus.CannotTest)
     );
   }, [indicators]);
 
@@ -316,6 +318,15 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
   const getStatusTag = (record: LaboratoryTaskIndicatorDto) => {
     const status = record.approvalStatus;
 
+    // Hiển thị "Chờ mẫu chung" nếu chỉ tiêu đang đợi mẫu từ Lab Vi Sinh
+    if (record.isWaitingForSharedSample) {
+      return (
+        <Tooltip title="Chỉ tiêu này thuộc mẫu chung, đang chờ Lab Vi Sinh hoàn thành">
+          <Tag color="gold">Chờ mẫu chung</Tag>
+        </Tooltip>
+      );
+    }
+
     if (status === IndicatorApprovalStatus.CannotTest) {
       return <Tag color="orange">KTV báo không TN được</Tag>;
     }
@@ -340,6 +351,11 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
     const status = record.approvalStatus;
 
     if (!canEvaluate) {
+      return <></>;
+    }
+
+    // Không hiển thị button nào khi chỉ tiêu đang chờ mẫu chung từ Lab Vi Sinh
+    if (record.isWaitingForSharedSample) {
       return <></>;
     }
 
@@ -607,10 +623,11 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
         setSelectedIndicatorIds(selectedRowKeys as string[]);
       },
       getCheckboxProps: (record: LaboratoryTaskIndicatorDto) => ({
-        // Only allow selecting indicators that need evaluation (Pending or CannotTest)
+        // Disable selection cho chỉ tiêu đang chờ mẫu chung hoặc không cần đánh giá
         disabled:
-          record.approvalStatus !== IndicatorApprovalStatus.Pending &&
-          record.approvalStatus !== IndicatorApprovalStatus.CannotTest,
+          record.isWaitingForSharedSample ||
+          (record.approvalStatus !== IndicatorApprovalStatus.Pending &&
+            record.approvalStatus !== IndicatorApprovalStatus.CannotTest),
         name: record.id,
       }),
     };

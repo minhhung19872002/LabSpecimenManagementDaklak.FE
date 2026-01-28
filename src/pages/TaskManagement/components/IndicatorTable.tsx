@@ -686,11 +686,20 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       width: 150,
       render: (value: string, record: LaboratoryTaskIndicatorDto) => {
         // Cho phép chỉnh sửa KTV nếu:
-        // 1. Indicator chưa được duyệt (Approved) và chưa bị hủy (CustomerCancelled)
-        // 2. Có quyền assignTechnician theo Permission Matrix (chỉ QLKT)
+        // 1. Indicator không đang chờ mẫu chung từ Lab Vi Sinh
+        // 2. Indicator đã được chấp nhận TN (AcceptedForTesting) hoặc các trạng thái có thể assign
+        //    (Entered, Rejected - cần giao lại cho KTV khác)
+        // 3. Indicator chưa được duyệt KQ (Approved) và chưa bị hủy (CustomerCancelled)
+        // 4. Có quyền assignTechnician theo Permission Matrix (chỉ QLKT)
+        const isAssignableStatus =
+          record.approvalStatus === IndicatorApprovalStatus.AcceptedForTesting ||
+          record.approvalStatus === IndicatorApprovalStatus.Entered ||
+          record.approvalStatus === IndicatorApprovalStatus.Rejected ||
+          record.approvalStatus === IndicatorApprovalStatus.CannotTest;
+
         const canEditIndicator =
-          record.approvalStatus !== IndicatorApprovalStatus.Approved &&
-          record.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled &&
+          !record.isWaitingForSharedSample &&
+          isAssignableStatus &&
           canAssignTechnician;
 
         return (
@@ -742,6 +751,15 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             <StatusTag color={IndicatorApprovalStatusColors[status]}>
               {IndicatorApprovalStatusLabels[status]}
             </StatusTag>
+          );
+        }
+
+        // Hiển thị "Chờ mẫu chung" nếu chỉ tiêu đang đợi mẫu từ Lab Vi Sinh
+        if (record.isWaitingForSharedSample) {
+          return (
+            <Tooltip title="Chỉ tiêu này thuộc mẫu chung, đang chờ Lab Vi Sinh hoàn thành">
+              <StatusTag color="gold">Chờ mẫu chung</StatusTag>
+            </Tooltip>
           );
         }
 
@@ -839,6 +857,14 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         onSelectionChange(selectedRowKeys as string[]);
       },
       getCheckboxProps: (record: LaboratoryTaskIndicatorDto) => {
+        // Disable selection cho chỉ tiêu đang chờ mẫu chung từ Lab Vi Sinh
+        if (record.isWaitingForSharedSample) {
+          return {
+            disabled: true,
+            name: record.id,
+          };
+        }
+
         if (selectionMode === "assignment") {
           // Assignment mode: chỉ disable cho Approved và CustomerCancelled
           // Các trạng thái khác (Pending, Entered, Rejected) đều có thể chọn để giao việc
