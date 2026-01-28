@@ -578,6 +578,9 @@ const MainLayout: React.FC = () => {
 
       {/* Main Content Area */}
       <div className="main-content-wrapper">
+        {/* Header background strip - full width white when scrolled */}
+        {isScrolled && <div className="header-scroll-bg" />}
+
         {/* Header */}
         <header className={`main-header ${isScrolled ? "scrolled" : ""}`}>
           <div className="header-left">
