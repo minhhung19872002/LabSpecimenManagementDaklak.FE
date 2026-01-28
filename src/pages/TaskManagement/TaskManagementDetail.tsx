@@ -1723,10 +1723,10 @@ const TaskManagementDetail: React.FC = () => {
                 taskId={task.id}
                 canEvaluate={
                   canApproveResult &&
-                  !isWaitingSharedSample &&
                   (task.status === LaboratoryTaskStatus.UnderEvaluation ||
-                    task.status ===
-                      LaboratoryTaskStatus.WaitingCustomerResponse)
+                    task.status === LaboratoryTaskStatus.WaitingCustomerResponse ||
+                    // Cho phép evaluate khi task đang chờ mẫu chung - indicator nào cần chờ sẽ bị disable riêng
+                    task.status === LaboratoryTaskStatus.WaitingSharedSample)
                 }
                 loading={loading}
                 onEvaluationComplete={reloadData}
