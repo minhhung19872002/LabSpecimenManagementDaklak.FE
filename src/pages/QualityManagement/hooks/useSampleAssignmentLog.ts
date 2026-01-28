@@ -43,7 +43,7 @@ export const useSampleAssignmentLog = (): UseSampleAssignmentLogResult => {
   const [statusFilter, setStatusFilter] = useState<TestRequestStatus | undefined>(undefined);
   const [pagination, setPagination] = useState({
     current: 1,
-    pageSize: 20,
+    pageSize: 50,
     total: 0,
   });
 
@@ -54,7 +54,7 @@ export const useSampleAssignmentLog = (): UseSampleAssignmentLogResult => {
       const input: GetSampleAssignmentLogInput = {
         skipCount: (pagination.current - 1) * pagination.pageSize,
         maxResultCount: pagination.pageSize,
-        sorting: 'RequestCompletionDate asc',
+        sorting: 'ContractNumber desc',
         search: searchText || undefined,
         testRequestStatus: statusFilter,
       };
