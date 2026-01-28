@@ -34,6 +34,10 @@ import { laboratoryTaskService } from "../../services/laboratoryTaskService";
 import { formatDate } from "../../utils/formatters";
 import { testingService } from "../../services/testingService";
 import {
+  standardService,
+  StandardWithIndicatorsDto,
+} from "../../services/masterDataService";
+import {
   LaboratoryTaskDto,
   LaboratoryTaskStatus,
   LaboratoryTaskStatusLabels,
@@ -127,6 +131,11 @@ const TaskManagementDetail: React.FC = () => {
   const [standardSelections, setStandardSelections] = useState<
     Record<string, string | null>
   >({});
+
+  // Standards data for auto-set feature
+  const [standardsData, setStandardsData] = useState<
+    StandardWithIndicatorsDto[]
+  >([]);
 
   // Bulk reject modal state
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
@@ -252,6 +261,82 @@ const TaskManagementDetail: React.FC = () => {
   useEffect(() => {
     loadTask();
   }, [loadTask]);
+
+  // Track which indicators have been processed for auto-set standard (to avoid duplicate API calls)
+  const processedIndicatorsRef = React.useRef<Set<string>>(new Set());
+
+  // Auto-set StandardId for indicators that don't have one
+  // Load standards and check which indicators need auto-set
+  useEffect(() => {
+    const autoSetStandards = async () => {
+      if (!task?.indicators || task.indicators.length === 0) return;
+
+      // Load standards if not loaded yet
+      let standards = standardsData;
+      if (standards.length === 0) {
+        try {
+          standards = await standardService.getWithIndicators();
+          setStandardsData(standards);
+        } catch (error) {
+          console.error("Failed to load standards for auto-set:", error);
+          return;
+        }
+      }
+
+      // Find indicators without standardId that haven't been processed yet
+      const indicatorsNeedingStandard = task.indicators.filter(
+        (ind) =>
+          !ind.standardId &&
+          !processedIndicatorsRef.current.has(ind.id) &&
+          ind.approvalStatus !== IndicatorApprovalStatus.Approved &&
+          ind.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled
+      );
+
+      if (indicatorsNeedingStandard.length === 0) return;
+
+      // Auto-set first matching standard for each indicator
+      for (const indicator of indicatorsNeedingStandard) {
+        // Mark as processed immediately to avoid duplicate calls
+        processedIndicatorsRef.current.add(indicator.id);
+
+        // Find matching standards for this indicator (and method if available)
+        // Only consider active StandardIndicators
+        const matchingStandards = standards.filter((standard) =>
+          standard.indicators.some(
+            (si) =>
+              si.indicatorId === indicator.indicatorId &&
+              si.isActive === true &&
+              (!indicator.methodId || si.testMethodId === indicator.methodId)
+          )
+        );
+
+        if (matchingStandards.length > 0) {
+          const firstStandard = matchingStandards[0];
+          try {
+            // Call API to update standardId
+            await laboratoryTaskService.updateIndicatorStandard(
+              indicator.id,
+              firstStandard.id
+            );
+            // Update local state
+            setStandardSelections((prev) => ({
+              ...prev,
+              [indicator.id]: firstStandard.id,
+            }));
+          } catch (error) {
+            console.error(
+              `Failed to auto-set standard for indicator ${indicator.id}:`,
+              error
+            );
+            // Remove from processed set so it can be retried
+            processedIndicatorsRef.current.delete(indicator.id);
+          }
+        }
+      }
+    };
+
+    autoSetStandards();
+  }, [task?.indicators, standardsData]);
 
   // Set default active tab based on task status
   useEffect(() => {
@@ -1762,8 +1847,11 @@ const TaskManagementDetail: React.FC = () => {
                     task.status === LaboratoryTaskStatus.WaitingCustomerResponse ||
                     // Cho phép evaluate khi task đang chờ mẫu chung - indicator nào cần chờ sẽ bị disable riêng
                     task.status === LaboratoryTaskStatus.WaitingSharedSample ||
-                    // Mixed task đã gửi QLCL nhưng có indicator mới nhận mẫu cần evaluate
-                    (task.status === LaboratoryTaskStatus.SentToQuality &&
+                    // Cho phép evaluate khi task đã ở trạng thái sau nhưng còn indicator Pending (gửi QLKT sau)
+                    ((task.status === LaboratoryTaskStatus.FullyAccepted ||
+                      task.status === LaboratoryTaskStatus.PartialAccepted ||
+                      task.status === LaboratoryTaskStatus.Assigned ||
+                      task.status === LaboratoryTaskStatus.SentToQuality) &&
                       task.indicators?.some(
                         (ind) =>
                           !ind.isWaitingForSharedSample &&
