@@ -278,6 +278,8 @@ export interface TestRequestSampleIndicatorDto {
   images?: IndicatorImageDto[];
   /** ID chỉ tiêu cha (null nếu là chỉ tiêu gốc) - dùng để nhóm sub-indicators */
   parentIndicatorId?: string;
+  /** Đã gửi đến QLKT (true = đã gửi, không thể gửi lại) */
+  isSentToQLKT?: boolean;
 }
 
 export interface CreateTestRequestSampleIndicatorDto {
