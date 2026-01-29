@@ -104,3 +104,64 @@
 .add-indicators-sub-wrapper.is-last::before {
   bottom: calc(100% - 20px);
 }
+
+/* InputNumber height to match Select - Desktop (default) */
+.add-indicators-modal .ant-space-compact {
+  height: 40px !important;
+}
+
+.add-indicators-modal .ant-space-compact .ant-input-number {
+  height: 40px !important;
+}
+
+.add-indicators-modal .ant-space-compact .ant-input-number-input {
+  height: 38px !important;
+}
+
+.add-indicators-modal .ant-space-compact .ant-input-number-addon,
+.add-indicators-modal .ant-space-compact .ant-space-addon {
+  height: 40px !important;
+  line-height: 38px !important;
+}
+
+/* InputNumber height - Tablet */
+@media (max-width: 1024px) {
+  .add-indicators-modal .ant-space-compact {
+    height: 36px !important;
+  }
+
+  .add-indicators-modal .ant-space-compact .ant-input-number {
+    height: 36px !important;
+  }
+
+  .add-indicators-modal .ant-space-compact .ant-input-number-input {
+    height: 34px !important;
+  }
+
+  .add-indicators-modal .ant-space-compact .ant-input-number-addon,
+  .add-indicators-modal .ant-space-compact .ant-space-addon {
+    height: 36px !important;
+    line-height: 34px !important;
+  }
+}
+
+/* InputNumber height - Mobile */
+@media (max-width: 768px) {
+  .add-indicators-modal .ant-space-compact {
+    height: 32px !important;
+  }
+
+  .add-indicators-modal .ant-space-compact .ant-input-number {
+    height: 32px !important;
+  }
+
+  .add-indicators-modal .ant-space-compact .ant-input-number-input {
+    height: 30px !important;
+  }
+
+  .add-indicators-modal .ant-space-compact .ant-input-number-addon,
+  .add-indicators-modal .ant-space-compact .ant-space-addon {
+    height: 32px !important;
+    line-height: 30px !important;
+  }
+}

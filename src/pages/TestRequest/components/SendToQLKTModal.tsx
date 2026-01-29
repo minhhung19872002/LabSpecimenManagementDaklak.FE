@@ -81,6 +81,7 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
 
   // Initialize indicator states when modal opens
   // Auto-fill laboratoryId from indicator's existing value or from indicator group's default laboratory
+  // Chỉ lấy các chỉ tiêu CHƯA gửi QLKT (isSentToQLKT = false)
   useEffect(() => {
     if (visible && testRequest?.samples) {
       const states: Record<string, IndicatorState> = {};
@@ -88,9 +89,14 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
 
       testRequest.samples.forEach((sample) => {
         if (sample.isCancelled || sample.isCustomerCancelled) return;
+
+        // Chỉ lấy indicators chưa gửi QLKT
+        const unsent = sample.indicators?.filter((ind) => !ind.isSentToQLKT) || [];
+        if (unsent.length === 0) return; // Bỏ qua sample không còn indicator chưa gửi
+
         panelKeys.push(sample.id);
 
-        sample.indicators?.forEach((indicator) => {
+        unsent.forEach((indicator) => {
           // Priority: existing laboratoryId > indicatorGroupLaboratoryId > undefined
           const autoFilledLabId =
             indicator.laboratoryId ||
@@ -128,17 +134,26 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
       .map(([id]) => id);
   }, [indicatorStates]);
 
-  // Check if all indicators have laboratory assigned
-  const allHaveLaboratory = useMemo(() => {
-    return Object.values(indicatorStates).every(
-      (state) => state.laboratoryId && state.laboratoryId !== ""
+  // Check if all SELECTED (checked) indicators have laboratory AND request date
+  const selectedIndicatorsValid = useMemo(() => {
+    const selectedStates = Object.values(indicatorStates).filter((s) => s.isChecked);
+    if (selectedStates.length === 0) return false; // Phải chọn ít nhất 1
+    return selectedStates.every(
+      (state) => state.laboratoryId && state.laboratoryId !== "" && state.requestDate
     );
   }, [indicatorStates]);
 
-  // Get indicators missing laboratory
-  const indicatorsMissingLab = useMemo(() => {
+  // Get selected indicators missing laboratory
+  const selectedMissingLab = useMemo(() => {
     return Object.entries(indicatorStates)
-      .filter(([_, state]) => !state.laboratoryId)
+      .filter(([_, state]) => state.isChecked && !state.laboratoryId)
+      .map(([id]) => id);
+  }, [indicatorStates]);
+
+  // Get selected indicators missing request date
+  const selectedMissingDate = useMemo(() => {
+    return Object.entries(indicatorStates)
+      .filter(([_, state]) => state.isChecked && !state.requestDate)
       .map(([id]) => id);
   }, [indicatorStates]);
 
@@ -232,24 +247,41 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
 
   // Handle submit
   const handleSubmit = async () => {
-    // Validate all indicators have laboratory
-    if (!allHaveLaboratory) {
+    // Phải chọn ít nhất 1 indicator
+    if (checkedIndicatorIds.length === 0) {
+      message.error("Vui lòng chọn ít nhất 1 chỉ tiêu để gửi QLKT");
+      return;
+    }
+
+    // Validate selected indicators have laboratory
+    if (selectedMissingLab.length > 0) {
       message.error(
-        `Còn ${indicatorsMissingLab.length} chỉ tiêu chưa được chọn khoa phòng`
+        `Còn ${selectedMissingLab.length} chỉ tiêu đã chọn chưa có khoa phòng`
+      );
+      return;
+    }
+
+    // Validate selected indicators have request date
+    if (selectedMissingDate.length > 0) {
+      message.error(
+        `Còn ${selectedMissingDate.length} chỉ tiêu đã chọn chưa có ngày yêu cầu`
       );
       return;
     }
 
     setSubmitting(true);
     try {
-      // Prepare data for API
-      const indicators: UpdateIndicatorLaboratoryInput[] = Object.values(
-        indicatorStates
-      ).map((state) => ({
-        sampleIndicatorId: state.sampleIndicatorId,
-        laboratoryId: state.laboratoryId!,
-        requestDate: state.requestDate?.toISOString(),
-      }));
+      // Chỉ gửi các indicators ĐÃ CHỌN (isChecked = true)
+      const selectedStates = Object.values(indicatorStates).filter(
+        (state) => state.isChecked
+      );
+      const indicators: UpdateIndicatorLaboratoryInput[] = selectedStates.map(
+        (state) => ({
+          sampleIndicatorId: state.sampleIndicatorId,
+          laboratoryId: state.laboratoryId!,
+          requestDate: state.requestDate?.toISOString(),
+        })
+      );
 
       // Call API to update indicators laboratory
       await testRequestService.updateIndicatorsLaboratory(
@@ -260,7 +292,7 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
       // Call API to send to QLKT
       await testRequestService.sendToQLKT(testRequest.id);
 
-      message.success("Đã gửi QLKT thành công");
+      message.success(`Đã gửi ${selectedStates.length} chỉ tiêu đến QLKT thành công`);
       onSuccess();
     } catch (error: any) {
       console.error("Error sending to QLKT:", error);
@@ -274,30 +306,31 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
     }
   };
 
-  // Check if all indicators in a sample are checked
-  const isSampleAllChecked = (sample: TestRequestSampleDto) => {
-    if (!sample.indicators?.length) return false;
-    return sample.indicators.every((ind) => indicatorStates[ind.id]?.isChecked);
+  // Lấy danh sách chỉ tiêu chưa gửi của sample
+  const getUnsentIndicators = (sample: TestRequestSampleDto) => {
+    return sample.indicators?.filter((ind) => !ind.isSentToQLKT) || [];
   };
 
-  // Check if some (but not all) indicators in a sample are checked
+  // Check if all UNSENT indicators in a sample are checked
+  const isSampleAllChecked = (sample: TestRequestSampleDto) => {
+    const unsent = getUnsentIndicators(sample);
+    if (unsent.length === 0) return false;
+    return unsent.every((ind) => indicatorStates[ind.id]?.isChecked);
+  };
+
+  // Check if some (but not all) UNSENT indicators in a sample are checked
   const isSampleIndeterminate = (sample: TestRequestSampleDto) => {
-    if (!sample.indicators?.length) return false;
-    const checkedCount = sample.indicators.filter(
+    const unsent = getUnsentIndicators(sample);
+    if (unsent.length === 0) return false;
+    const checkedCount = unsent.filter(
       (ind) => indicatorStates[ind.id]?.isChecked
     ).length;
-    return checkedCount > 0 && checkedCount < sample.indicators.length;
+    return checkedCount > 0 && checkedCount < unsent.length;
   };
 
-  // Calculate total cost
-  const totalCost = useMemo(() => {
-    let sum = 0;
-    activeSamples.forEach((sample) => {
-      sample.indicators?.forEach((ind) => {
-        sum += ind.unitPrice || 0;
-      });
-    });
-    return sum;
+  // Samples có ít nhất 1 chỉ tiêu chưa gửi
+  const samplesWithUnsentIndicators = useMemo(() => {
+    return activeSamples.filter((s) => getUnsentIndicators(s).length > 0);
   }, [activeSamples]);
 
   // Render indicator row
@@ -425,13 +458,18 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
             alignItems: "center",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <Text type="secondary">
-              Tổng: <Text strong>{totalCost.toLocaleString("vi-VN")}đ</Text>
+          <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+            <Text>
+              Đã chọn: <Text strong>{checkedIndicatorIds.length}</Text> chỉ tiêu
             </Text>
-            {indicatorsMissingLab.length > 0 && (
+            {checkedIndicatorIds.length > 0 && selectedMissingLab.length > 0 && (
               <Text type="danger">
-                Còn {indicatorsMissingLab.length} chỉ tiêu chưa chọn khoa phòng
+                ({selectedMissingLab.length} chưa có khoa phòng)
+              </Text>
+            )}
+            {checkedIndicatorIds.length > 0 && selectedMissingDate.length > 0 && (
+              <Text type="danger">
+                ({selectedMissingDate.length} chưa có ngày YC)
               </Text>
             )}
           </div>
@@ -441,9 +479,9 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
               type="primary"
               onClick={handleSubmit}
               loading={submitting}
-              disabled={!allHaveLaboratory}
+              disabled={!selectedIndicatorsValid}
             >
-              Xác nhận gửi QLKT
+              Gửi QLKT ({checkedIndicatorIds.length})
             </Button>
           </Space>
         </div>
@@ -521,48 +559,57 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
                 <div style={{ width: 150, flexShrink: 0 }}>Khoa phòng</div>
               </div>
 
-              {/* Samples grouped by Collapse */}
-              <Collapse
-                activeKey={expandedPanels}
-                onChange={(keys) => setExpandedPanels(keys as string[])}
-                bordered={false}
-                style={{ background: "#fff" }}
-              >
-                {activeSamples.map((sample) => (
-                  <Panel
-                    key={sample.id}
-                    header={
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 12,
-                        }}
+              {/* Samples grouped by Collapse - chỉ hiển thị samples có chỉ tiêu chưa gửi */}
+              {samplesWithUnsentIndicators.length === 0 ? (
+                <div style={{ padding: 40, textAlign: "center" }}>
+                  <Text type="secondary">Tất cả chỉ tiêu đã được gửi QLKT</Text>
+                </div>
+              ) : (
+                <Collapse
+                  activeKey={expandedPanels}
+                  onChange={(keys) => setExpandedPanels(keys as string[])}
+                  bordered={false}
+                  style={{ background: "#fff" }}
+                >
+                  {samplesWithUnsentIndicators.map((sample) => {
+                    const unsentIndicators = getUnsentIndicators(sample);
+                    return (
+                      <Panel
+                        key={sample.id}
+                        header={
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 12,
+                            }}
+                          >
+                            <Checkbox
+                              checked={isSampleAllChecked(sample)}
+                              indeterminate={isSampleIndeterminate(sample)}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                handleSelectAllSample(sample.id, e.target.checked);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <Text strong>
+                              {sample.sampleCode} - {sample.sampleName}
+                            </Text>
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                              ({unsentIndicators.length} chỉ tiêu chưa gửi)
+                            </Text>
+                          </div>
+                        }
                       >
-                        <Checkbox
-                          checked={isSampleAllChecked(sample)}
-                          indeterminate={isSampleIndeterminate(sample)}
-                          onChange={(e) => {
-                            e.stopPropagation();
-                            handleSelectAllSample(sample.id, e.target.checked);
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                        <Text strong>
-                          {sample.sampleCode} - {sample.sampleName}
-                        </Text>
-                        <Text type="secondary" style={{ fontSize: 12 }}>
-                          ({sample.indicators?.length || 0} chỉ tiêu)
-                        </Text>
-                      </div>
-                    }
-                  >
-                    {sample.indicators?.map((indicator) =>
-                      renderIndicatorRow(indicator, false)
-                    )}
-                  </Panel>
-                ))}
-              </Collapse>
+                        {unsentIndicators.map((indicator) =>
+                          renderIndicatorRow(indicator, false)
+                        )}
+                      </Panel>
+                    );
+                  })}
+                </Collapse>
+              )}
             </div>
           </div>
         </div>
