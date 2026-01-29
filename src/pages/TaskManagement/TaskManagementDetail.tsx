@@ -782,6 +782,23 @@ const TaskManagementDetail: React.FC = () => {
     }
   };
 
+  // Handle unit change - lưu silent (không loading, không thông báo)
+  const handleUnitChange = async (indicatorId: string, unit: string | null) => {
+    try {
+      const updatedIndicator = await laboratoryTaskService.updateIndicatorUnit(
+        indicatorId,
+        unit,
+      );
+      // Optimistic update
+      updateIndicatorsOptimistically([indicatorId], {
+        unit: updatedIndicator.unit,
+      });
+    } catch (error: any) {
+      console.error("Failed to update unit:", error);
+      // Silent fail - không hiển thị error message theo yêu cầu
+    }
+  };
+
   // Handle update note (for single indicator from modal)
   const handleUpdateNote = async (indicatorId: string, note: string | null) => {
     try {
@@ -1558,6 +1575,7 @@ const TaskManagementDetail: React.FC = () => {
             onApprove={handleApprove}
             onUpdateNote={handleUpdateNote}
             onOpenNoteModal={handleOpenNoteModal}
+            onUnitChange={handleUnitChange}
             loading={actionLoading}
             showCheckbox={true}
             selectedIndicatorIds={selectedIndicators[sample.sampleId] || []}
