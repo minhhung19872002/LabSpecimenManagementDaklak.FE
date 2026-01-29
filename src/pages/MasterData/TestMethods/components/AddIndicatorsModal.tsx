@@ -369,7 +369,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                         style={{
                           display: "flex",
                           alignItems: "center",
-                          fontSize: 13,
+                          fontSize: 14,
                           paddingTop: 4,
                           paddingBottom: 4,
                           position: "relative",
@@ -397,10 +397,15 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                             backgroundColor: "#D9D9D9",
                           }}
                         />
-                        <span style={{ color: "#595959", marginRight: 6 }}>
+                        <span
+                          style={{
+                            marginRight: 6,
+                            paddingLeft: 8,
+                          }}
+                        >
                           {sub.code}
                         </span>
-                        <span style={{ color: "#8C8C8C" }}>
+                        <span>
                           <IndicatorName
                             name={sub.name}
                             formattedName={sub.formattedName}
