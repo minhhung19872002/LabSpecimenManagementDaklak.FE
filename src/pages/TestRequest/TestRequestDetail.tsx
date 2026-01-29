@@ -1,9 +1,10 @@
 // @ts-nocheck
 import React, { useState, useEffect, useMemo } from "react";
-import { Card, message, Spin, Modal, Input, Form } from "antd";
+import { Card, message, Spin, Modal, Input, Form, Alert, Space } from "antd";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { testRequestService } from "../../services/testRequestService";
+import { testRequestService, offlineTestRequestService } from "../../services/testRequestService";
+import { useNetworkStatus } from "../../hooks/useNetworkStatus";
 import {
   TestRequestDto,
   TestRequestStatus,
@@ -31,6 +32,10 @@ const TestRequestDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<TestRequestDto | null>(null);
+
+  // Network status for offline support
+  const { isOnline } = useNetworkStatus();
+  const [isOfflineData, setIsOfflineData] = useState(false);
 
   // Modal states
   const [printIndicatorModalVisible, setPrintIndicatorModalVisible] =
@@ -75,12 +80,14 @@ const TestRequestDetail: React.FC = () => {
   const loadData = async (requestId: string) => {
     setLoading(true);
     try {
-      const result = await testRequestService.get(requestId);
-      setData(result);
+      const response = await offlineTestRequestService.getWithStatus(requestId);
+      setData(response.data);
+      setIsOfflineData(response.isOfflineData);
     } catch (error: any) {
       console.error("Error loading test request:", error);
       message.error("Không thể tải thông tin yêu cầu thử nghiệm");
       setData(null);
+      setIsOfflineData(false);
     } finally {
       setLoading(false);
     }
@@ -89,6 +96,10 @@ const TestRequestDetail: React.FC = () => {
   // Handle print test request form
   const handlePrintTestRequest = async () => {
     if (!id) return;
+    if (!isOnline) {
+      message.warning("Không thể in phiếu khi đang offline");
+      return;
+    }
     setPrintingTestRequest(true);
 
     const newTab = window.open("about:blank", "_blank");
@@ -141,6 +152,10 @@ const TestRequestDetail: React.FC = () => {
   // Handle send sample
   const handleSendSample = () => {
     if (!id) return;
+    if (!isOnline) {
+      message.warning("Không thể gửi mẫu khi đang offline");
+      return;
+    }
     Modal.confirm({
       title: "Xác nhận gửi mẫu",
       content: "Bạn có chắc chắn muốn gửi mẫu không?",
@@ -169,6 +184,10 @@ const TestRequestDetail: React.FC = () => {
   // Handle send to accounting (Gửi kế toán)
   const handleSendToAccounting = async () => {
     if (!id) return;
+    if (!isOnline) {
+      message.warning("Không thể gửi kế toán khi đang offline");
+      return;
+    }
     setSendingToAccounting(true);
     try {
       const receiptId = await testRequestService.sendToAccounting(id);
@@ -188,6 +207,10 @@ const TestRequestDetail: React.FC = () => {
   // Handle send to QLKT (Gửi QLKT) - open modal to select laboratory
   const handleSendToQLKT = () => {
     if (!id || !data) return;
+    if (!isOnline) {
+      message.warning("Không thể gửi QLKT khi đang offline");
+      return;
+    }
     setSendToQLKTModalVisible(true);
   };
 
@@ -200,6 +223,10 @@ const TestRequestDetail: React.FC = () => {
   // Handle cancel request - open modal to enter reason
   const handleCancelRequest = () => {
     if (!id) return;
+    if (!isOnline) {
+      message.warning("Không thể hủy yêu cầu khi đang offline");
+      return;
+    }
     cancelForm.resetFields();
     setCancelModalVisible(true);
   };
@@ -251,6 +278,10 @@ const TestRequestDetail: React.FC = () => {
   // Handle complete test request
   const handleComplete = async () => {
     if (!id || !data) return;
+    if (!isOnline) {
+      message.warning("Không thể hoàn thành yêu cầu khi đang offline");
+      return;
+    }
 
     if (data.deliveryPostal) {
       setPostalImageModalVisible(true);
@@ -282,6 +313,10 @@ const TestRequestDetail: React.FC = () => {
   // Handle complete with postal images
   const handleCompleteWithImage = async (imageFileIds: string[]) => {
     if (!id) return;
+    if (!isOnline) {
+      message.warning("Không thể hoàn thành yêu cầu khi đang offline");
+      return;
+    }
 
     try {
       await testRequestService.completeWithImage(id, imageFileIds);
@@ -316,6 +351,10 @@ const TestRequestDetail: React.FC = () => {
   // Handle confirm delivery to customer (BPGN)
   const handleConfirmDelivery = async () => {
     if (!id) return;
+    if (!isOnline) {
+      message.warning("Không thể xác nhận bàn giao khi đang offline");
+      return;
+    }
 
     Modal.confirm({
       title: "Xác nhận bàn giao kết quả",
@@ -451,6 +490,9 @@ const TestRequestDetail: React.FC = () => {
         canSendSampleAction={canSendSampleAction}
         canCancelAction={canCancelAction}
         canSendToAccountingAction={canSendToAccountingAction}
+        // Offline support
+        isOnline={isOnline}
+        isOfflineData={isOfflineData}
       />
 
       {/* Print Indicator Modal (In KQ / In KQ hỗn hợp) */}

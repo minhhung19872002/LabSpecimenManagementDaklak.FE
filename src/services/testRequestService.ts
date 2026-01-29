@@ -20,7 +20,7 @@ import {
 } from '../types/testRequest';
 import { QualityManagementIndicatorDto } from '../types/qualityManagement';
 import { syncManager } from './offline/syncManager';
-import { cacheTestRequest, getCachedTestRequest, getOfflineTestRequests } from './offline/db';
+import { cacheTestRequest, getCachedTestRequest, getOfflineTestRequests, getCachedEntitiesByType, getCachedEntity } from './offline/db';
 
 const BASE_URL = '/api/v1/test-requests';
 
@@ -31,6 +31,14 @@ export interface OfflineAwareResponse<T> {
   data: T;
   isOffline: boolean;
   clientId?: string;
+}
+
+/**
+ * Extended response type for list operations with offline support
+ */
+export interface OfflineAwareListResponse<T> {
+  data: PagedResultDto<T>;
+  isOfflineData: boolean;
 }
 
 // Template DTO for result form templates
@@ -537,16 +545,60 @@ export const offlineTestRequestService = {
     const clientId = await syncManager.queueTestRequest(data, 'create');
 
     // Create a temporary DTO for UI display
+    // Convert CreateTestRequestSampleDto[] to TestRequestSampleDto[] with temporary IDs
+    const tempSamples = (data.samples || []).map((sample, index) => ({
+      id: `${clientId}-sample-${index}`,
+      testRequestId: clientId,
+      sortOrder: sample.sortOrder,
+      sampleCode: sample.sampleCode,
+      sampleName: sample.sampleName,
+      samplingAddress: sample.samplingAddress,
+      sampleQuantity: sample.sampleQuantity,
+      status: sample.status,
+      statusText: sample.statusText,
+      processingStatus: sample.processingStatus,
+      notes: sample.notes,
+      storageLocation: sample.storageLocation,
+      specimenTypeId: sample.specimenTypeId,
+      totalIndicatorCost: 0,
+      indicators: (sample.indicators || []).map((ind, indIndex) => ({
+        id: `${clientId}-sample-${index}-ind-${indIndex}`,
+        testRequestSampleId: `${clientId}-sample-${index}`,
+        indicatorId: ind.indicatorId,
+        unitPrice: ind.unitPrice || 0,
+        notes: ind.notes,
+        laboratoryId: ind.laboratoryId,
+        sentToDepartment: ind.sentToDepartment || false,
+      })),
+      attachments: sample.attachments || [],
+    }));
+
     const tempDto = {
       id: clientId,
       requestNumber: `OFFLINE-${clientId.substring(0, 8)}`,
-      requestDate: new Date().toISOString(),
+      requestDate: data.requestDate || new Date().toISOString(),
       status: TestRequestStatus.New,
       customerName: data.customerName,
       contractNumber: data.contractNumber,
-      totalSampleCount: data.totalSampleCount || 0,
+      contractDate: data.contractDate,
+      totalSampleCount: data.totalSampleCount || tempSamples.length,
       totalCost: data.totalCost || 0,
-      samples: [],
+      samples: tempSamples,
+      // Copy additional fields from input data
+      province: data.province,
+      ward: data.ward,
+      address: data.address,
+      taxCode: data.taxCode,
+      contactPerson: data.contactPerson,
+      phone: data.phone,
+      notes: data.notes,
+      expectedCompletionDate: data.expectedCompletionDate,
+      resultLanguage: data.resultLanguage,
+      resultCopyCount: data.resultCopyCount,
+      conformityDeclaration: data.conformityDeclaration,
+      otherRequirements: data.otherRequirements,
+      samplingRequirement: data.samplingRequirement,
+      sampleStorage: data.sampleStorage,
       // Mark as offline for UI indication
       isOffline: true,
       // Required fields with defaults for offline mode
@@ -654,6 +706,116 @@ export const offlineTestRequestService = {
    */
   getPendingSyncCount: async (): Promise<number> => {
     return syncManager.getPendingCount();
+  },
+
+  /**
+   * Get list of test requests with offline support
+   * - Online: Calls API, caches each item, returns with isOfflineData: false
+   * - Offline: Returns cached items with client-side filtering/pagination
+   */
+  getList: async (params: TestRequestListParams): Promise<OfflineAwareListResponse<TestRequestDto>> => {
+    if (navigator.onLine) {
+      try {
+        const result = await testRequestService.getList(params);
+        // Cache each item for offline access
+        for (const item of result.items || []) {
+          await cacheTestRequest(item.id, item, false);
+        }
+        return { data: result, isOfflineData: false };
+      } catch (error) {
+        // Network error - fall through to offline handling
+        console.warn('Online getList failed, returning cached data:', error);
+      }
+    }
+
+    // Offline: Return cached items with client-side filtering/pagination
+    const cachedEntities = await getCachedEntitiesByType('TestRequest');
+    let items = cachedEntities.map(entity => entity.data as TestRequestDto);
+
+    // Apply search filter (customerName, contractNumber, requestNumber)
+    if (params.search) {
+      const searchLower = params.search.toLowerCase();
+      items = items.filter(item =>
+        (item.customerName?.toLowerCase().includes(searchLower)) ||
+        (item.contractNumber?.toLowerCase().includes(searchLower)) ||
+        (item.requestNumber?.toLowerCase().includes(searchLower)) ||
+        (item.contactPerson?.toLowerCase().includes(searchLower)) ||
+        (item.phone?.toLowerCase().includes(searchLower))
+      );
+    }
+
+    // Apply status filter
+    if (params.status !== undefined) {
+      items = items.filter(item => item.status === params.status);
+    }
+
+    // Apply date range filter for expectedCompletionDate
+    if (params.expectedCompletionDateFrom) {
+      const fromDate = new Date(params.expectedCompletionDateFrom);
+      items = items.filter(item =>
+        item.expectedCompletionDate && new Date(item.expectedCompletionDate) >= fromDate
+      );
+    }
+    if (params.expectedCompletionDateTo) {
+      const toDate = new Date(params.expectedCompletionDateTo);
+      items = items.filter(item =>
+        item.expectedCompletionDate && new Date(item.expectedCompletionDate) <= toDate
+      );
+    }
+
+    // Sort by creationTime desc (default)
+    items.sort((a, b) => {
+      const dateA = a.creationTime ? new Date(a.creationTime).getTime() : 0;
+      const dateB = b.creationTime ? new Date(b.creationTime).getTime() : 0;
+      return dateB - dateA;
+    });
+
+    const totalCount = items.length;
+
+    // Apply pagination
+    const skipCount = params.skipCount || 0;
+    const maxResultCount = params.maxResultCount || 50;
+    items = items.slice(skipCount, skipCount + maxResultCount);
+
+    return {
+      data: { items, totalCount },
+      isOfflineData: true,
+    };
+  },
+
+  /**
+   * Get a test request with offline fallback - returns response with offline status
+   */
+  getWithStatus: async (id: string): Promise<{ data: TestRequestDto | null; isOfflineData: boolean }> => {
+    // Always check cache first to handle offline-created items
+    const cached = await getCachedTestRequest(id);
+
+    // If we're online, try to get fresh data from API
+    if (navigator.onLine) {
+      try {
+        const result = await testRequestService.get(id);
+        // Update cache with fresh data
+        await cacheTestRequest(result.id, result, false);
+        return { data: result, isOfflineData: false };
+      } catch (error: any) {
+        // API call failed - could be 404 for offline-created items or network error
+        // Fall through to return cached data if available
+        console.warn('Online get failed, returning cached data:', error);
+      }
+    }
+
+    // Return cached data if available (for both offline mode and API failure cases)
+    if (cached) {
+      return { data: cached.data as TestRequestDto, isOfflineData: true };
+    }
+
+    // Also try entityCache as fallback (data is written to both stores)
+    const entityCached = await getCachedEntity('TestRequest', id);
+    if (entityCached) {
+      return { data: entityCached.data as TestRequestDto, isOfflineData: true };
+    }
+
+    return { data: null, isOfflineData: true };
   },
 };
 

@@ -31,18 +31,11 @@ interface AddIndicatorsModalProps {
   onCancel: () => void;
 }
 
-// Internal state for each indicator row
+// Internal state for each indicator row - chỉ lưu parent, sub-indicators tự động hiển thị read-only
 interface IndicatorRow {
   id: string; // unique key for React
   indicatorId: string | undefined;
   unitPrice: number;
-  subIndicators: SubIndicatorRow[];
-}
-
-interface SubIndicatorRow {
-  id: string;
-  indicatorId: string | undefined;
-  unitPrice: number | undefined;
 }
 
 // Generate unique ID
@@ -74,14 +67,6 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
     id: generateId(),
     indicatorId: undefined,
     unitPrice: 0,
-    subIndicators: [],
-  });
-
-  // Create empty sub-indicator row
-  const createEmptySubRow = (): SubIndicatorRow => ({
-    id: generateId(),
-    indicatorId: undefined,
-    unitPrice: undefined,
   });
 
   // Get all selected indicator IDs (to filter out from options)
@@ -89,9 +74,6 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
     const ids = new Set<string>();
     rows.forEach((row) => {
       if (row.indicatorId) ids.add(row.indicatorId);
-      row.subIndicators.forEach((sub) => {
-        if (sub.indicatorId) ids.add(sub.indicatorId);
-      });
     });
     return ids;
   }, [rows]);
@@ -108,8 +90,10 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
     return undefined;
   };
 
-  // Check if parent indicator has sub-indicators
-  const getParentSubIndicators = (parentIndicatorId: string): IndicatorDto[] => {
+  // Get active sub-indicators of a parent indicator
+  const getParentSubIndicators = (
+    parentIndicatorId: string,
+  ): IndicatorDto[] => {
     const allIndicators = Object.values(indicatorsByGroup).flat();
     const parent = allIndicators.find((ind) => ind.id === parentIndicatorId);
     return parent?.subIndicators?.filter((sub) => sub.isActive) || [];
@@ -119,18 +103,18 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   const buildParentOptions = (currentIndicatorId?: string) => {
     return indicatorGroups
       .filter(
-        (group) => group.isActive && indicatorsByGroup[group.id]?.length > 0
+        (group) => group.isActive && indicatorsByGroup[group.id]?.length > 0,
       )
       .map((group) => {
         const parentIndicators = (indicatorsByGroup[group.id] || []).filter(
-          (ind) => !ind.parentIndicatorId && ind.isActive
+          (ind) => !ind.parentIndicatorId && ind.isActive,
         );
 
         const availableParents = parentIndicators.filter(
           (ind) =>
             ind.id === currentIndicatorId ||
             (!selectedIndicatorIds.has(ind.id) &&
-              !existingIndicatorIds.includes(ind.id))
+              !existingIndicatorIds.includes(ind.id)),
         );
 
         if (availableParents.length === 0) return null;
@@ -155,37 +139,6 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
       .filter((item): item is NonNullable<typeof item> => item !== null);
   };
 
-  // Build sub-indicator options
-  const buildSubOptions = (
-    parentIndicatorId: string,
-    rowIndex: number,
-    currentSubIndicatorId?: string
-  ) => {
-    const availableSubs = getParentSubIndicators(parentIndicatorId);
-    const row = rows[rowIndex];
-    const selectedSubIds = row.subIndicators
-      .map((sub) => sub.indicatorId)
-      .filter(Boolean) as string[];
-
-    return availableSubs
-      .filter(
-        (sub) =>
-          sub.id === currentSubIndicatorId ||
-          (!selectedSubIds.includes(sub.id) &&
-            !existingIndicatorIds.includes(sub.id))
-      )
-      .map((sub) => ({
-        value: sub.id,
-        label: (
-          <span>
-            {sub.code} -{" "}
-            <IndicatorName name={sub.name} formattedName={sub.formattedName} />
-          </span>
-        ),
-        searchText: `${sub.code} - ${sub.name}`,
-      }));
-  };
-
   // Render label for selected indicator
   const renderIndicatorLabel = (indicatorId: string) => {
     const indicator = findIndicatorById(indicatorId);
@@ -202,13 +155,15 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   };
 
   // Handle parent indicator change
-  const handleParentChange = (rowIndex: number, indicatorId: string | undefined) => {
+  const handleParentChange = (
+    rowIndex: number,
+    indicatorId: string | undefined,
+  ) => {
     setRows((prev) => {
       const updated = [...prev];
       updated[rowIndex] = {
         ...updated[rowIndex],
         indicatorId,
-        subIndicators: [], // Clear sub-indicators when parent changes
       };
       return updated;
     });
@@ -232,80 +187,6 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
     });
   };
 
-  // Add sub-indicator row
-  const handleAddSubIndicator = (rowIndex: number) => {
-    setRows((prev) => {
-      const updated = [...prev];
-      updated[rowIndex] = {
-        ...updated[rowIndex],
-        subIndicators: [...updated[rowIndex].subIndicators, createEmptySubRow()],
-      };
-      return updated;
-    });
-  };
-
-  // Remove sub-indicator row
-  const handleRemoveSubIndicator = (rowIndex: number, subIndex: number) => {
-    setRows((prev) => {
-      const updated = [...prev];
-      updated[rowIndex] = {
-        ...updated[rowIndex],
-        subIndicators: updated[rowIndex].subIndicators.filter(
-          (_, i) => i !== subIndex
-        ),
-      };
-      return updated;
-    });
-  };
-
-  // Handle sub-indicator change
-  const handleSubIndicatorChange = (
-    rowIndex: number,
-    subIndex: number,
-    indicatorId: string | undefined
-  ) => {
-    setRows((prev) => {
-      const updated = [...prev];
-      const subIndicators = [...updated[rowIndex].subIndicators];
-      subIndicators[subIndex] = {
-        ...subIndicators[subIndex],
-        indicatorId,
-      };
-      updated[rowIndex] = {
-        ...updated[rowIndex],
-        subIndicators,
-      };
-      return updated;
-    });
-    // Clear error
-    setErrors((prev) => {
-      const updated = { ...prev };
-      delete updated[`row-${rowIndex}-sub-${subIndex}`];
-      return updated;
-    });
-  };
-
-  // Handle sub-indicator price change
-  const handleSubPriceChange = (
-    rowIndex: number,
-    subIndex: number,
-    price: number | null
-  ) => {
-    setRows((prev) => {
-      const updated = [...prev];
-      const subIndicators = [...updated[rowIndex].subIndicators];
-      subIndicators[subIndex] = {
-        ...subIndicators[subIndex],
-        unitPrice: price ?? undefined,
-      };
-      updated[rowIndex] = {
-        ...updated[rowIndex],
-        subIndicators,
-      };
-      return updated;
-    });
-  };
-
   // Add new parent row
   const handleAddRow = () => {
     setRows((prev) => [...prev, createEmptyRow()]);
@@ -316,7 +197,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
     setRows((prev) => prev.filter((_, i) => i !== rowIndex));
   };
 
-  // Validate and submit
+  // Validate and submit - chỉ gửi parent indicators, không gửi sub-indicators
   const handleSubmit = () => {
     const newErrors: Record<string, string> = {};
     const flatIndicators: { indicatorId: string; unitPrice: number }[] = [];
@@ -328,22 +209,10 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
         return;
       }
 
-      // Add parent indicator
+      // Add parent indicator only
       flatIndicators.push({
         indicatorId: row.indicatorId,
         unitPrice: row.unitPrice,
-      });
-
-      // Validate and add sub-indicators
-      row.subIndicators.forEach((sub, subIndex) => {
-        if (!sub.indicatorId) {
-          newErrors[`row-${rowIndex}-sub-${subIndex}`] = "Chọn chỉ tiêu phụ";
-        } else {
-          flatIndicators.push({
-            indicatorId: sub.indicatorId,
-            unitPrice: sub.unitPrice ?? 0,
-          });
-        }
       });
     });
 
@@ -387,11 +256,11 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
     >
       <Card size="small" style={{ marginBottom: 16 }}>
         {rows.map((row, rowIndex) => {
-          const parentSubs = row.indicatorId
+          // Lấy danh sách sub-indicators của parent đã chọn (nếu có)
+          const subIndicators = row.indicatorId
             ? getParentSubIndicators(row.indicatorId)
             : [];
-          const hasAvailableSubs = parentSubs.length > 0;
-          const hasSubRows = row.subIndicators.length > 0;
+          const hasSubIndicators = subIndicators.length > 0;
 
           return (
             <div
@@ -402,63 +271,45 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
             >
               {/* Parent indicator row */}
               <Row gutter={8} align="top" wrap={false}>
-                <Col flex="32px">
-                  {hasAvailableSubs ? (
-                    <Tooltip title="Thêm chỉ tiêu phụ">
-                      <Icon
-                        name="plus-lg"
-                        onClick={() => handleAddSubIndicator(rowIndex)}
-                        style={{
-                          fontSize: 16,
-                          color: "#8C8C8C",
-                          cursor: "pointer",
-                          marginTop: 8,
-                        }}
-                      />
-                    </Tooltip>
-                  ) : (
-                    <div style={{ width: 16 }} />
-                  )}
-                </Col>
                 <Col flex="auto">
-                  <div
-                    className={`add-indicators-parent-wrapper ${hasSubRows ? "has-children" : ""}`}
-                  >
-                    <Select
-                      value={row.indicatorId}
-                      onChange={(value) => handleParentChange(rowIndex, value)}
-                      options={buildParentOptions(row.indicatorId)}
-                      placeholder="Tìm và chọn chỉ tiêu"
-                      showSearch
-                      popupMatchSelectWidth={400}
-                      optionLabelProp="label"
-                      labelRender={({ value }) => {
-                        if (!value) return null;
-                        return renderIndicatorLabel(value as string);
-                      }}
-                      filterOption={(inputValue, option) => {
-                        const searchText = (option as { searchText?: string })
-                          ?.searchText;
-                        if (!searchText) return false;
-                        return searchText
-                          .toLowerCase()
-                          .includes(inputValue.toLowerCase());
-                      }}
-                      allowClear
-                      status={errors[`row-${rowIndex}`] ? "error" : undefined}
-                      style={{ width: "100%" }}
-                    />
-                    {errors[`row-${rowIndex}`] && (
-                      <div style={{ color: "#ff4d4f", fontSize: 12, marginTop: 4 }}>
-                        {errors[`row-${rowIndex}`]}
-                      </div>
-                    )}
-                  </div>
+                  <Select
+                    value={row.indicatorId}
+                    onChange={(value) => handleParentChange(rowIndex, value)}
+                    options={buildParentOptions(row.indicatorId)}
+                    placeholder="Tìm và chọn chỉ tiêu"
+                    showSearch
+                    popupMatchSelectWidth={400}
+                    optionLabelProp="label"
+                    labelRender={({ value }) => {
+                      if (!value) return null;
+                      return renderIndicatorLabel(value as string);
+                    }}
+                    filterOption={(inputValue, option) => {
+                      const searchText = (option as { searchText?: string })
+                        ?.searchText;
+                      if (!searchText) return false;
+                      return searchText
+                        .toLowerCase()
+                        .includes(inputValue.toLowerCase());
+                    }}
+                    allowClear
+                    status={errors[`row-${rowIndex}`] ? "error" : undefined}
+                    style={{ width: "100%" }}
+                  />
+                  {errors[`row-${rowIndex}`] && (
+                    <div
+                      style={{ color: "#ff4d4f", fontSize: 12, marginTop: 4 }}
+                    >
+                      {errors[`row-${rowIndex}`]}
+                    </div>
+                  )}
                 </Col>
                 <Col flex="140px">
                   <InputNumber<number>
                     value={row.unitPrice}
-                    onChange={(value) => handleParentPriceChange(rowIndex, value)}
+                    onChange={(value) =>
+                      handleParentPriceChange(rowIndex, value)
+                    }
                     placeholder="Đơn giá"
                     min={0}
                     precision={0}
@@ -470,7 +321,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                     parser={(value) => {
                       const parsed = parseInt(
                         value?.replace(/[^\d]/g, "") || "0",
-                        10
+                        10,
                       );
                       return Math.max(0, parsed);
                     }}
@@ -495,127 +346,70 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                 </Col>
               </Row>
 
-              {/* Sub-indicators */}
-              {hasSubRows && (
-                <Row gutter={8} style={{ marginTop: 12 }}>
-                  <Col flex="32px" />
-                  <Col flex="auto">
-                    <div
-                      style={{
-                        padding: "12px 12px 12px 32px",
-                        background: "#F5F5F5",
-                        borderRadius: "12px",
-                      }}
-                    >
-                      {row.subIndicators.map((sub, subIndex) => (
-                        <Row
-                          key={sub.id}
-                          gutter={8}
-                          align="top"
-                          wrap={false}
+              {/* Sub-indicators - Auto display, read-only */}
+              {hasSubIndicators && (
+                <div
+                  style={{
+                    marginTop: 8,
+                    paddingLeft: 20,
+                    paddingTop: 8,
+                    paddingBottom: 8,
+                    paddingRight: 8,
+                    position: "relative",
+                    backgroundColor: "#FAFAFA",
+                    borderRadius: 4,
+                  }}
+                >
+                  {subIndicators.map((sub, idx) => {
+                    const isFirst = idx === 0;
+                    const isLast = idx === subIndicators.length - 1;
+                    return (
+                      <div
+                        key={sub.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          fontSize: 13,
+                          paddingTop: 4,
+                          paddingBottom: 4,
+                          position: "relative",
+                        }}
+                      >
+                        {/* Vertical line segment */}
+                        <div
                           style={{
-                            marginBottom:
-                              subIndex === row.subIndicators.length - 1 ? 0 : 12,
+                            position: "absolute",
+                            left: -12,
+                            top: isFirst ? -16 : 0,
+                            bottom: isLast ? "50%" : 0,
+                            width: 1,
+                            backgroundColor: "#D9D9D9",
                           }}
-                        >
-                          <Col flex="auto">
-                            <div
-                              className={`add-indicators-sub-wrapper ${subIndex === 0 ? "is-first" : ""} ${subIndex === row.subIndicators.length - 1 ? "is-last" : ""}`}
-                            >
-                              <Select
-                                value={sub.indicatorId}
-                                onChange={(value) =>
-                                  handleSubIndicatorChange(rowIndex, subIndex, value)
-                                }
-                                options={buildSubOptions(
-                                  row.indicatorId!,
-                                  rowIndex,
-                                  sub.indicatorId
-                                )}
-                                placeholder="Chọn chỉ tiêu phụ"
-                                showSearch
-                                popupMatchSelectWidth={400}
-                                optionLabelProp="label"
-                                labelRender={({ value }) => {
-                                  if (!value) return null;
-                                  return renderIndicatorLabel(value as string);
-                                }}
-                                filterOption={(inputValue, option) => {
-                                  const searchText = (
-                                    option as { searchText?: string }
-                                  )?.searchText;
-                                  if (!searchText) return false;
-                                  return searchText
-                                    .toLowerCase()
-                                    .includes(inputValue.toLowerCase());
-                                }}
-                                allowClear
-                                status={
-                                  errors[`row-${rowIndex}-sub-${subIndex}`]
-                                    ? "error"
-                                    : undefined
-                                }
-                                style={{ width: "100%" }}
-                              />
-                              {errors[`row-${rowIndex}-sub-${subIndex}`] && (
-                                <div
-                                  style={{
-                                    color: "#ff4d4f",
-                                    fontSize: 12,
-                                    marginTop: 4,
-                                  }}
-                                >
-                                  {errors[`row-${rowIndex}-sub-${subIndex}`]}
-                                </div>
-                              )}
-                            </div>
-                          </Col>
-                          <Col flex="140px">
-                            <InputNumber<number>
-                              value={sub.unitPrice}
-                              onChange={(value) =>
-                                handleSubPriceChange(rowIndex, subIndex, value)
-                              }
-                              placeholder="Đơn giá (tùy chọn)"
-                              min={0}
-                              precision={0}
-                              controls={false}
-                              style={{ width: "100%" }}
-                              formatter={(value) =>
-                                `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                              }
-                              parser={(value) => {
-                                const parsed = parseInt(
-                                  value?.replace(/[^\d]/g, "") || "0",
-                                  10
-                                );
-                                return Math.max(0, parsed);
-                              }}
-                              addonAfter="đ"
-                            />
-                          </Col>
-                          <Col flex="32px">
-                            <Tooltip title="Xóa chỉ tiêu phụ">
-                              <Icon
-                                name="trash3"
-                                onClick={() =>
-                                  handleRemoveSubIndicator(rowIndex, subIndex)
-                                }
-                                style={{
-                                  fontSize: 16,
-                                  color: "#CF1322",
-                                  cursor: "pointer",
-                                  marginTop: 8,
-                                }}
-                              />
-                            </Tooltip>
-                          </Col>
-                        </Row>
-                      ))}
-                    </div>
-                  </Col>
-                  <Col flex="32px" />
-                </Row>
+                        />
+                        {/* Horizontal connector */}
+                        <div
+                          style={{
+                            position: "absolute",
+                            left: -12,
+                            top: "50%",
+                            width: 12,
+                            height: 1,
+                            backgroundColor: "#D9D9D9",
+                          }}
+                        />
+                        <span style={{ color: "#595959", marginRight: 6 }}>
+                          {sub.code}
+                        </span>
+                        <span style={{ color: "#8C8C8C" }}>
+                          <IndicatorName
+                            name={sub.name}
+                            formattedName={sub.formattedName}
+                          />
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           );
