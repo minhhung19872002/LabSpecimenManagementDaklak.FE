@@ -1418,7 +1418,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                 onRemove={handleRemoveParentIndicator}
                               />
 
-                              {/* Sub-indicator rows */}
+                              {/* Sub-indicator rows - only show name (no method, price, dates, remove button) */}
                               {unsentSubs.map((subKey, index) => {
                                 const {
                                   indicator: subInd,
@@ -1431,33 +1431,14 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                     isInGroup={false}
                                     indicator={subInd}
                                     methodName={subMethod?.testMethodName || ""}
-                                    methodFormattedName={
-                                      subMethod?.testMethodFormattedName
-                                    }
                                     unitPrice={subMethod?.unitPrice || 0}
                                     isSubIndicator={true}
                                     isFirstSub={index === 0}
                                     isLastSub={index === unsentSubs.length - 1}
-                                    hidePrice={pricingMode === "parent"}
-                                    hideDates={true}
-                                    isFree={
-                                      isHeavyMetalComboMet &&
-                                      isHgIndicator(subInd)
-                                    }
-                                    isChecked={checkedIndicators.includes(
-                                      subKey
-                                    )}
-                                    transferDate={
-                                      selectedIndicatorDates[subKey]
-                                        ?.transferDate
-                                    }
-                                    requestDate={
-                                      selectedIndicatorDates[subKey]
-                                        ?.requestDate
-                                    }
-                                    onCheckChange={toggleCheckedIndicator}
-                                    onDateChange={handleIndicatorDateChange}
-                                    onRemoveSub={handleRemoveSubIndicator}
+                                    isChecked={false}
+                                    onCheckChange={() => {}}
+                                    onDateChange={() => {}}
+                                    onRemove={() => {}}
                                   />
                                 );
                               })}
