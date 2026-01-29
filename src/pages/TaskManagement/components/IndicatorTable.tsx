@@ -58,6 +58,8 @@ interface IndicatorTableProps {
     currentNote: string,
     sampleId: string
   ) => void;
+  /** Callback để cập nhật đơn vị tính (auto-save on blur) */
+  onUnitChange?: (indicatorId: string, unit: string | null) => void;
   loading?: boolean;
   // Bulk selection props
   showCheckbox?: boolean;
@@ -84,6 +86,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   onApprove,
   onUpdateNote: _onUpdateNote,
   onOpenNoteModal,
+  onUnitChange,
   loading = false,
   showCheckbox = false,
   selectedIndicatorIds = [],
@@ -115,6 +118,9 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     visible: false,
   });
   const [rejectForm] = Form.useForm();
+
+  // State for local unit edits (optimistic update before API call)
+  const [unitEdits, setUnitEdits] = useState<Record<string, string>>({});
 
   // Load standards on mount
   useEffect(() => {
@@ -363,8 +369,47 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       dataIndex: "unit",
       key: "unit",
       width: 120,
-      render: (value: string) => {
-        return <Text>{value || "-"}</Text>;
+      render: (value: string, record: LaboratoryTaskIndicatorDto) => {
+        // Cho phép chỉnh sửa nếu chưa duyệt và chưa bị hủy
+        const canEditUnit =
+          record.approvalStatus !== IndicatorApprovalStatus.Approved &&
+          record.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled &&
+          onUnitChange;
+
+        // Lấy giá trị từ local state nếu có, nếu không thì từ server
+        const displayValue = unitEdits[record.id] !== undefined ? unitEdits[record.id] : (value || "");
+
+        if (!canEditUnit) {
+          return <Text>{value || "-"}</Text>;
+        }
+
+        return (
+          <Input
+            size="small"
+            value={displayValue}
+            placeholder="-"
+            onChange={(e) => {
+              setUnitEdits((prev) => ({
+                ...prev,
+                [record.id]: e.target.value,
+              }));
+            }}
+            onBlur={(e) => {
+              const newValue = e.target.value.trim();
+              // Chỉ gọi API nếu giá trị thay đổi
+              if (newValue !== (value || "")) {
+                onUnitChange(record.id, newValue || null);
+              }
+              // Clear local state sau khi save
+              setUnitEdits((prev) => {
+                const newState = { ...prev };
+                delete newState[record.id];
+                return newState;
+              });
+            }}
+            style={{ width: "100%" }}
+          />
+        );
       },
     },
     {
