@@ -864,6 +864,7 @@ export const useTestRequestFormData = () => {
           isActive: tmIndicator.isActive,
           indicatorGroupId: "", // Not available in test method data
           sortOrder: tmIndicator.sortOrder,
+          parentIndicatorId: tmIndicator.parentIndicatorId, // For sub-indicator detection
         } as IndicatorDto;
       }
     }

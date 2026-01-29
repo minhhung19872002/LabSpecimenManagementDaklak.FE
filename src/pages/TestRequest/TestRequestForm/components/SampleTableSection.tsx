@@ -37,6 +37,7 @@ import SampleImageUpload from "./SampleImageUpload";
 import BarcodeQRModal, { SampleCodeInfo } from "./BarcodeQRModal";
 import { IndicatorName } from "../../../../components/common";
 import ImportSpecimenModal from "./ImportSpecimenModal";
+import "./IndicatorSelectionModal.css"; // For tree-line styles
 import {
   importService,
   downloadBlobAsFile,
@@ -487,82 +488,183 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
           groupedByLab[labInfo.laboratoryId].methods.push(key);
         });
 
+        // Helper to organize methods with sub-indicators grouped after their parent
+        const organizeMethodsWithSubIndicators = (
+          methodKeys: IndicatorMethodKey[],
+        ) => {
+          const result: {
+            key: IndicatorMethodKey;
+            isSubIndicator: boolean;
+            isFirstSub: boolean;
+            isLastSub: boolean;
+          }[] = [];
+
+          // Get all method info and separate parents from subs
+          const methodInfos = methodKeys.map((key) => ({
+            key,
+            ...getIndicatorMethodInfo(key),
+          }));
+
+          const parents = methodInfos.filter(
+            (m) => m.indicator && !m.indicator.parentIndicatorId,
+          );
+          const subs = methodInfos.filter(
+            (m) => m.indicator && m.indicator.parentIndicatorId,
+          );
+
+          // For each parent, add it then its sub-indicators
+          parents.forEach((parent) => {
+            result.push({
+              key: parent.key,
+              isSubIndicator: false,
+              isFirstSub: false,
+              isLastSub: false,
+            });
+
+            // Find sub-indicators for this parent
+            const parentSubs = subs.filter(
+              (s) => s.indicator?.parentIndicatorId === parent.indicator?.id,
+            );
+
+            parentSubs.forEach((sub, index) => {
+              result.push({
+                key: sub.key,
+                isSubIndicator: true,
+                isFirstSub: index === 0,
+                isLastSub: index === parentSubs.length - 1,
+              });
+            });
+          });
+
+          // Add orphan sub-indicators (whose parent is not in the list)
+          const handledSubKeys = new Set(
+            result.filter((r) => r.isSubIndicator).map((r) => r.key),
+          );
+          const orphanSubs = subs.filter((s) => !handledSubKeys.has(s.key));
+          orphanSubs.forEach((sub, index) => {
+            result.push({
+              key: sub.key,
+              isSubIndicator: true,
+              isFirstSub: index === 0,
+              isLastSub: index === orphanSubs.length - 1,
+            });
+          });
+
+          return result;
+        };
+
+        const organizedUnsent = organizeMethodsWithSubIndicators(unsentMethods);
+
         const popoverContent = (
           <div style={{ maxHeight: 300, overflowY: "auto", minWidth: 320 }}>
             {!hasData ? (
               <Text type="secondary">Chưa chọn chỉ tiêu nào</Text>
             ) : (
               <>
-                {unsentMethods.map((key) => {
-                  const { indicator, method } = getIndicatorMethodInfo(key);
-                  return indicator && method ? (
-                    <div
-                      key={key}
-                      style={{
-                        padding: "4px 0",
-                        borderBottom: "1px solid #f0f0f0",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        gap: 8,
-                      }}
-                    >
-                      <span style={{ flex: 1 }}>
-                        -{" "}
-                        <IndicatorName
-                          name={indicator.name}
-                          formattedName={indicator.formattedName}
-                        />
-                      </span>
-                      <span style={{ color: "#1890ff", fontSize: 12 }}>
-                        {method.testMethodName}
-                      </span>
-                    </div>
-                  ) : null;
-                })}
-                {Object.entries(groupedByLab).map(
-                  ([labId, { labName, methods: labMethods }]) => (
-                    <div key={labId}>
+                {organizedUnsent.map(
+                  ({ key, isSubIndicator, isFirstSub, isLastSub }) => {
+                    const { indicator, method } = getIndicatorMethodInfo(key);
+                    const classNames = ["indicator-table-row"];
+                    if (isSubIndicator) {
+                      classNames.push("is-sub-indicator");
+                      if (isFirstSub) classNames.push("is-first-sub");
+                      if (isLastSub) classNames.push("is-last-sub");
+                    }
+                    return indicator && method ? (
                       <div
+                        key={key}
+                        className={classNames.join(" ")}
                         style={{
-                          padding: "6px 0 4px 0",
-                          fontWeight: 600,
-                          fontSize: 13,
-                          color: "#000",
+                          padding: "4px 8px",
+                          paddingLeft: isSubIndicator ? 38 : 8,
                           borderBottom: "1px solid #f0f0f0",
-                          marginTop: unsentMethods.length > 0 ? 8 : 0,
+                          display: "flex",
+                          justifyContent: "space-between",
+                          gap: 8,
                         }}
                       >
-                        {labName} ({labMethods.length})
+                        <span
+                          style={{
+                            flex: 1,
+                          }}
+                        >
+                          {!isSubIndicator && "- "}
+                          <IndicatorName
+                            name={indicator.name}
+                            formattedName={indicator.formattedName}
+                          />
+                        </span>
+                        {!isSubIndicator && (
+                          <span style={{ color: "#1890ff", fontSize: 12 }}>
+                            {method.testMethodName}
+                          </span>
+                        )}
                       </div>
-                      {labMethods.map((key) => {
-                        const { indicator, method } =
-                          getIndicatorMethodInfo(key);
-                        return indicator && method ? (
-                          <div
-                            key={key}
-                            style={{
-                              padding: "4px 0 4px 12px",
-                              borderBottom: "1px solid #f0f0f0",
-                              display: "flex",
-                              justifyContent: "space-between",
-                              gap: 8,
-                            }}
-                          >
-                            <span style={{ flex: 1 }}>
-                              -{" "}
-                              <IndicatorName
-                                name={indicator.name}
-                                formattedName={indicator.formattedName}
-                              />
-                            </span>
-                            <span style={{ color: "#1890ff", fontSize: 12 }}>
-                              {method.testMethodName}
-                            </span>
-                          </div>
-                        ) : null;
-                      })}
-                    </div>
-                  ),
+                    ) : null;
+                  },
+                )}
+                {Object.entries(groupedByLab).map(
+                  ([labId, { labName, methods: labMethods }]) => {
+                    const organizedLabMethods =
+                      organizeMethodsWithSubIndicators(labMethods);
+                    return (
+                      <div key={labId}>
+                        <div
+                          style={{
+                            padding: "6px 0 4px 0",
+                            fontWeight: 600,
+                            fontSize: 13,
+                            color: "#000",
+                            borderBottom: "1px solid #f0f0f0",
+                            marginTop: unsentMethods.length > 0 ? 8 : 0,
+                          }}
+                        >
+                          {labName} ({labMethods.length})
+                        </div>
+                        {organizedLabMethods.map(
+                          ({ key, isSubIndicator, isFirstSub, isLastSub }) => {
+                            const { indicator, method } =
+                              getIndicatorMethodInfo(key);
+                            const classNames = ["indicator-table-row"];
+                            if (isSubIndicator) {
+                              classNames.push("is-sub-indicator");
+                              if (isFirstSub) classNames.push("is-first-sub");
+                              if (isLastSub) classNames.push("is-last-sub");
+                            }
+                            return indicator && method ? (
+                              <div
+                                key={key}
+                                className={classNames.join(" ")}
+                                style={{
+                                  padding: "4px 8px 4px 12px",
+                                  paddingLeft: isSubIndicator ? 38 : 12,
+                                  borderBottom: "1px solid #f0f0f0",
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  gap: 8,
+                                }}
+                              >
+                                <span>
+                                  {!isSubIndicator && "- "}
+                                  <IndicatorName
+                                    name={indicator.name}
+                                    formattedName={indicator.formattedName}
+                                  />
+                                </span>
+                                {!isSubIndicator && (
+                                  <span
+                                    style={{ color: "#1890ff", fontSize: 12 }}
+                                  >
+                                    {method.testMethodName}
+                                  </span>
+                                )}
+                              </div>
+                            ) : null;
+                          },
+                        )}
+                      </div>
+                    );
+                  },
                 )}
               </>
             )}
