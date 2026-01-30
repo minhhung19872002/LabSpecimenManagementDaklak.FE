@@ -29,8 +29,16 @@ import {
   standardService,
   StandardWithIndicatorsDto,
 } from "../../../services/masterDataService";
+import "./IndicatorTable.css";
 
 const { Text } = Typography;
+
+// Extended type with position flags for tree line rendering
+interface IndicatorWithPosition extends LaboratoryTaskIndicatorDto {
+  _isFirstSub?: boolean;
+  _isLastSub?: boolean;
+  _isParentWithSubs?: boolean;
+}
 
 interface IndicatorTableProps {
   indicators: LaboratoryTaskIndicatorDto[];
@@ -292,6 +300,59 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     }
   };
 
+  // Check if parent has sub-indicators in the current list
+  const hasSubIndicatorsInList = useMemo(() => {
+    const parentIds = new Set<string>();
+    indicators.forEach((ind) => {
+      if (ind.parentIndicatorId) {
+        parentIds.add(ind.parentIndicatorId);
+      }
+    });
+    return (indicatorId: string) => parentIds.has(indicatorId);
+  }, [indicators]);
+
+  // Sort indicators to group parent/sub together and add position flags
+  const sortedIndicators = useMemo((): IndicatorWithPosition[] => {
+    const sorted = [...indicators].sort((a, b) => {
+      // Group by parent/sub relationship
+      // Group key: for parent use its indicatorId, for sub use its parentIndicatorId
+      const aGroupKey = a.parentIndicatorId || a.indicatorId;
+      const bGroupKey = b.parentIndicatorId || b.indicatorId;
+
+      if (aGroupKey !== bGroupKey) {
+        return (aGroupKey || "").localeCompare(bGroupKey || "");
+      }
+
+      // Same group: parent first, then sub-indicators
+      if (!a.parentIndicatorId && b.parentIndicatorId) return -1;
+      if (a.parentIndicatorId && !b.parentIndicatorId) return 1;
+
+      return 0;
+    });
+
+    // Add position flags for tree line rendering
+    return sorted.map((item, _index, arr): IndicatorWithPosition => {
+      const isParentWithSubs =
+        !item.parentIndicatorId && hasSubIndicatorsInList(item.indicatorId);
+
+      if (!item.parentIndicatorId) {
+        return { ...item, _isParentWithSubs: isParentWithSubs };
+      }
+
+      // Find siblings (sub-indicators with same parent)
+      const siblings = arr.filter(
+        (i) => i.parentIndicatorId === item.parentIndicatorId
+      );
+      const siblingIndex = siblings.findIndex((s) => s.id === item.id);
+
+      return {
+        ...item,
+        _isFirstSub: siblingIndex === 0,
+        _isLastSub: siblingIndex === siblings.length - 1,
+      };
+    });
+  }, [indicators, hasSubIndicatorsInList]);
+
   const columns = [
     {
       title: "Tên chỉ tiêu",
@@ -299,23 +360,36 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       key: "indicatorName",
       width: 200,
       fixed: "left" as const,
-      render: (value: string, record: LaboratoryTaskIndicatorDto) => (
-        <div>
-          <div>
-            <IndicatorName
-              name={value}
-              formattedName={record.indicatorFormattedName}
-            />
-          </div>
-          {record.indicatorGroupName && (
-            <div style={{ marginTop: 2 }}>
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                {record.indicatorGroupName}
-              </Text>
+      render: (value: string, record: IndicatorWithPosition) => {
+        const isSubIndicator = !!record.parentIndicatorId;
+        const isFirstSub = record._isFirstSub || false;
+        const isLastSub = record._isLastSub || false;
+
+        return (
+          <div
+            className={`indicator-table-name-wrapper ${isSubIndicator ? "has-tree-line" : ""} ${isFirstSub ? "is-first-sub" : ""} ${isLastSub ? "is-last-sub" : ""}`}
+            style={{
+              paddingLeft: isSubIndicator ? 24 : 0,
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            <div>
+              <IndicatorName
+                name={value}
+                formattedName={record.indicatorFormattedName}
+              />
+              {record.indicatorGroupName && !isSubIndicator && (
+                <div style={{ marginTop: 2 }}>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    {record.indicatorGroupName}
+                  </Text>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      ),
+          </div>
+        );
+      },
     },
     {
       title: "Phương pháp",
@@ -369,7 +443,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       dataIndex: "unit",
       key: "unit",
       width: 120,
-      render: (value: string, record: LaboratoryTaskIndicatorDto) => {
+      render: (value: string, record: IndicatorWithPosition) => {
+        // Hide for parent indicators that have sub-indicators
+        if (record._isParentWithSubs) return null;
+
         // Cho phép chỉnh sửa nếu chưa duyệt và chưa bị hủy
         const canEditUnit =
           record.approvalStatus !== IndicatorApprovalStatus.Approved &&
@@ -417,7 +494,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       dataIndex: "result",
       key: "result",
       width: 200,
-      render: (value: string) => {
+      render: (value: string, record: IndicatorWithPosition) => {
+        // Hide for parent indicators that have sub-indicators
+        if (record._isParentWithSubs) return null;
+
         return <Text>{value || "-"}</Text>;
       },
     },
@@ -425,7 +505,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       title: "Ghi chú",
       key: "note",
       width: 150,
-      render: (_: unknown, record: LaboratoryTaskIndicatorDto) => {
+      render: (_: unknown, record: IndicatorWithPosition) => {
+        // Hide for parent indicators that have sub-indicators
+        if (record._isParentWithSubs) return null;
+
         // Tổng hợp note từ FreeTextNote và MasterDataNoteContents
         const noteParts: string[] = [];
         if (record.freeTextNote) {
@@ -533,7 +616,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       title: "Hình ảnh",
       key: "images",
       width: 120,
-      render: (_: unknown, record: LaboratoryTaskIndicatorDto) => {
+      render: (_: unknown, record: IndicatorWithPosition) => {
+        // Hide for parent indicators that have sub-indicators
+        if (record._isParentWithSubs) return null;
+
         return (
           <IndicatorImageCell
             images={record.images || []}
@@ -548,7 +634,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       dataIndex: "standardId",
       key: "standardId",
       width: 180,
-      render: (_: unknown, record: LaboratoryTaskIndicatorDto) => {
+      render: (_: unknown, record: IndicatorWithPosition) => {
+        // Hide for parent indicators that have sub-indicators
+        if (record._isParentWithSubs) return null;
+
         // Ưu tiên lấy từ local state, nếu không có thì lấy từ DB
         const selectedStandardId =
           standardSelections[record.id] !== undefined
@@ -595,7 +684,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       title: "Giới hạn",
       key: "allowedLimit",
       width: 180,
-      render: (_: unknown, record: LaboratoryTaskIndicatorDto) => {
+      render: (_: unknown, record: IndicatorWithPosition) => {
+        // Hide for parent indicators that have sub-indicators
+        if (record._isParentWithSubs) return null;
+
         // Ưu tiên lấy từ local state, nếu không có thì lấy từ DB
         const selectedStandardId =
           standardSelections[record.id] !== undefined
@@ -666,7 +758,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       title: "Đạt/Không đạt",
       key: "passFailStatus",
       width: 120,
-      render: (_: unknown, record: LaboratoryTaskIndicatorDto) => {
+      render: (_: unknown, record: IndicatorWithPosition) => {
+        // Hide for parent indicators that have sub-indicators
+        if (record._isParentWithSubs) return null;
+
         // Ưu tiên lấy từ local state, nếu không có thì lấy từ DB
         const selectedStandardId =
           standardSelections[record.id] !== undefined
@@ -729,7 +824,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       dataIndex: "technicianId",
       key: "technicianId",
       width: 150,
-      render: (value: string, record: LaboratoryTaskIndicatorDto) => {
+      render: (value: string, record: IndicatorWithPosition) => {
+        // Hide for parent indicators that have sub-indicators
+        if (record._isParentWithSubs) return null;
+
         // Cho phép chỉnh sửa KTV nếu:
         // 1. Indicator không đang chờ mẫu chung từ Lab Vi Sinh
         // 2. Indicator đã được chấp nhận TN (AcceptedForTesting) hoặc các trạng thái có thể assign
@@ -771,14 +869,24 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       dataIndex: "entryDate",
       key: "entryDate",
       width: 100,
-      render: (date: string) => formatDate(date),
+      render: (date: string, record: IndicatorWithPosition) => {
+        // Hide for parent indicators that have sub-indicators
+        if (record._isParentWithSubs) return null;
+
+        return formatDate(date);
+      },
     },
     {
       title: "Ngày duyệt",
       dataIndex: "approvalDate",
       key: "approvalDate",
       width: 100,
-      render: (date: string) => formatDate(date),
+      render: (date: string, record: IndicatorWithPosition) => {
+        // Hide for parent indicators that have sub-indicators
+        if (record._isParentWithSubs) return null;
+
+        return formatDate(date);
+      },
     },
     {
       title: "Trạng thái",
@@ -788,8 +896,11 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       fixed: "right" as const,
       render: (
         status: IndicatorApprovalStatus,
-        record: LaboratoryTaskIndicatorDto
+        record: IndicatorWithPosition
       ) => {
+        // Hide for parent indicators that have sub-indicators
+        if (record._isParentWithSubs) return null;
+
         // Ưu tiên hiển thị "KH hủy" trước - bất kể đã giao việc hay chưa
         if (status === IndicatorApprovalStatus.CustomerCancelled) {
           return (
@@ -885,23 +996,55 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     },
   ];
 
-  // Sort indicators theo id để cố định vị trí
-  const sortedIndicators = [...indicators].sort((a, b) =>
-    a.id.localeCompare(b.id)
-  );
-
   // Row selection configuration for bulk operations
+  // When selecting a parent indicator with subs, auto-select all sub-indicators
   const rowSelection:
-    | TableRowSelection<LaboratoryTaskIndicatorDto>
+    | TableRowSelection<IndicatorWithPosition>
     | undefined = useMemo(() => {
     if (!showCheckbox || !onSelectionChange) return undefined;
 
     return {
       selectedRowKeys: selectedIndicatorIds,
-      onChange: (selectedRowKeys: React.Key[]) => {
-        onSelectionChange(selectedRowKeys as string[]);
+      onChange: (
+        selectedRowKeys: React.Key[],
+        selectedRows: IndicatorWithPosition[]
+      ) => {
+        let newSelection = [...selectedRowKeys] as string[];
+
+        // If selecting a parent with subs, auto-select all its sub-indicators
+        selectedRows.forEach((row) => {
+          if (row._isParentWithSubs) {
+            const subIds = sortedIndicators
+              .filter((ind) => ind.parentIndicatorId === row.indicatorId)
+              .map((ind) => ind.id);
+            subIds.forEach((id) => {
+              if (!newSelection.includes(id)) {
+                newSelection.push(id);
+              }
+            });
+          }
+        });
+
+        // If deselecting a parent, auto-deselect all its sub-indicators
+        // (Check previously selected parents that are now deselected)
+        const deselectedParents = selectedIndicatorIds.filter(
+          (id) =>
+            !selectedRowKeys.includes(id) &&
+            sortedIndicators.find((i) => i.id === id)?._isParentWithSubs
+        );
+        deselectedParents.forEach((parentId) => {
+          const parent = sortedIndicators.find((i) => i.id === parentId);
+          if (parent) {
+            const subIds = sortedIndicators
+              .filter((ind) => ind.parentIndicatorId === parent.indicatorId)
+              .map((ind) => ind.id);
+            newSelection = newSelection.filter((id) => !subIds.includes(id));
+          }
+        });
+
+        onSelectionChange(newSelection);
       },
-      getCheckboxProps: (record: LaboratoryTaskIndicatorDto) => {
+      getCheckboxProps: (record: IndicatorWithPosition) => {
         // Disable selection cho chỉ tiêu đang chờ mẫu chung từ Lab Vi Sinh
         if (record.isWaitingForSharedSample) {
           return {
@@ -932,7 +1075,13 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         };
       },
     };
-  }, [showCheckbox, selectedIndicatorIds, onSelectionChange, selectionMode]);
+  }, [
+    showCheckbox,
+    selectedIndicatorIds,
+    onSelectionChange,
+    selectionMode,
+    sortedIndicators,
+  ]);
 
   return (
     <>
@@ -945,6 +1094,9 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         scroll={{ x: 2170 }}
         loading={loading}
         rowSelection={rowSelection}
+        rowClassName={(record: IndicatorWithPosition) =>
+          record.parentIndicatorId ? "sub-indicator-row" : ""
+        }
       />
 
       {/* Reject Reason Modal */}

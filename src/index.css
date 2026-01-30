@@ -640,7 +640,7 @@ code {
 }
 
 .statistics-detail-card .ant-card-body {
-  padding-top: 0 !important;
+  /* padding-top: 0 !important; */
 }
 
 /* Date Picker */
