@@ -60,7 +60,7 @@ export const useSampleAssignmentLogForQLKT = (): UseSampleAssignmentLogForQLKTRe
       const input: GetSampleAssignmentLogInput = {
         skipCount: (pagination.current - 1) * pagination.pageSize,
         maxResultCount: pagination.pageSize,
-        sorting: 'RequestCompletionDate asc',
+        sorting: 'ContractNumber desc',
         search: searchText || undefined,
         testRequestStatus: statusFilter,
       };
