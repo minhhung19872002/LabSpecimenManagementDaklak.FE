@@ -460,6 +460,39 @@ export const laboratoryTaskService = {
       `${BASE_URL}/${taskId}/should-hide-reject-button`
     );
     return response.data;
+  },
+
+  // ============= Sample Assignment Log (Sổ nhận mẫu giao việc) =============
+
+  /**
+   * Lấy danh sách Sổ nhận mẫu giao việc cho QLKT - hiển thị tất cả công việc của Lab mà user quản lý
+   */
+  getSampleAssignmentLog: async (input: {
+    skipCount?: number;
+    maxResultCount?: number;
+    sorting?: string;
+    search?: string;
+    testRequestStatus?: number;
+    fromDate?: string;
+    toDate?: string;
+    laboratoryId?: string;
+  }): Promise<{ items: any[]; totalCount: number }> => {
+    const response = await api.get<{ items: any[]; totalCount: number }>(
+      `${BASE_URL}/sample-assignment-log`,
+      {
+        params: {
+          SkipCount: input.skipCount,
+          MaxResultCount: input.maxResultCount,
+          Sorting: input.sorting,
+          Search: input.search,
+          TestRequestStatus: input.testRequestStatus,
+          FromDate: input.fromDate,
+          ToDate: input.toDate,
+          LaboratoryId: input.laboratoryId
+        }
+      }
+    );
+    return response.data;
   }
 };
 
