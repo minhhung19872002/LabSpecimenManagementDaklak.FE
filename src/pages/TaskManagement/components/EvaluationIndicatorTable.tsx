@@ -134,10 +134,11 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
   const [supplementaryForm] = Form.useForm();
 
   // Filter indicators that need evaluation (Pending or CannotTest status)
-  // Exclude indicators waiting for shared sample - they cannot be evaluated yet
+  // Exclude sub-indicators and indicators waiting for shared sample
   const pendingIndicators = useMemo(() => {
     return indicators.filter(
       (ind) =>
+        !ind.parentIndicatorId && // Chỉ đánh giá cho chỉ tiêu cha
         !ind.isWaitingForSharedSample &&
         (ind.approvalStatus === IndicatorApprovalStatus.Pending ||
           ind.approvalStatus === IndicatorApprovalStatus.CannotTest)
@@ -354,6 +355,12 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
       return <></>;
     }
 
+    // Không hiển thị button nào cho chỉ tiêu phụ (chỉ hiển thị thông tin)
+    // Chỉ đánh giá cho chỉ tiêu cha
+    if (record.parentIndicatorId) {
+      return <></>;
+    }
+
     // Không hiển thị button nào khi chỉ tiêu đang chờ mẫu chung từ Lab Vi Sinh
     if (record.isWaitingForSharedSample) {
       return <></>;
@@ -482,12 +489,14 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
   };
 
   // Check if there are any indicators that need action (for showing/hiding action column)
+  // Only parent indicators can have actions (sub-indicators are display-only)
   const hasActionableIndicators = useMemo(() => {
     if (!canEvaluate) return false;
     return indicators.some(
       (ind) =>
-        ind.approvalStatus === IndicatorApprovalStatus.Pending ||
-        ind.approvalStatus === IndicatorApprovalStatus.CannotTest
+        !ind.parentIndicatorId && // Chỉ tiêu cha mới có thể đánh giá
+        (ind.approvalStatus === IndicatorApprovalStatus.Pending ||
+          ind.approvalStatus === IndicatorApprovalStatus.CannotTest)
     );
   }, [indicators, canEvaluate]);
 
@@ -531,37 +540,46 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
         dataIndex: "methodName",
         key: "methodName",
         width: 200,
-        render: (value: string, record: LaboratoryTaskIndicatorDto) => (
-          <Tooltip title={value}>
-            <IndicatorName
-              name={value || "-"}
-              formattedName={record.methodFormattedName}
-              style={{
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            />
-          </Tooltip>
-        ),
+        render: (value: string, record: LaboratoryTaskIndicatorDto) => {
+          // Không hiển thị phương pháp cho chỉ tiêu phụ
+          if (record.parentIndicatorId) return null;
+          return (
+            <Tooltip title={value}>
+              <IndicatorName
+                name={value || "-"}
+                formattedName={record.methodFormattedName}
+                style={{
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              />
+            </Tooltip>
+          );
+        },
       },
       {
         title: "Đơn giá",
         dataIndex: "unitPrice",
         key: "unitPrice",
         width: 120,
-        render: (value: number) => (
-          <Text>{value?.toLocaleString("vi-VN")} đ</Text>
-        ),
+        render: (value: number, record: LaboratoryTaskIndicatorDto) => {
+          // Không hiển thị đơn giá cho chỉ tiêu phụ
+          if (record.parentIndicatorId) return null;
+          return <Text>{value?.toLocaleString("vi-VN")} đ</Text>;
+        },
       },
       {
         title: "Trạng thái",
         key: "status",
         width: 150,
-        render: (_: unknown, record: LaboratoryTaskIndicatorDto) =>
-          getStatusTag(record),
+        render: (_: unknown, record: LaboratoryTaskIndicatorDto) => {
+          // Không hiển thị trạng thái cho chỉ tiêu phụ
+          if (record.parentIndicatorId) return null;
+          return getStatusTag(record);
+        },
       },
       // Cột Hành động - sẽ được filter ra nếu không có chỉ tiêu cần action
       {
@@ -623,8 +641,12 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
         setSelectedIndicatorIds(selectedRowKeys as string[]);
       },
       getCheckboxProps: (record: LaboratoryTaskIndicatorDto) => ({
-        // Disable selection cho chỉ tiêu đang chờ mẫu chung hoặc không cần đánh giá
+        // Disable selection cho:
+        // - Chỉ tiêu phụ (chỉ đánh giá cho chỉ tiêu cha)
+        // - Chỉ tiêu đang chờ mẫu chung
+        // - Chỉ tiêu không cần đánh giá
         disabled:
+          !!record.parentIndicatorId ||
           record.isWaitingForSharedSample ||
           (record.approvalStatus !== IndicatorApprovalStatus.Pending &&
             record.approvalStatus !== IndicatorApprovalStatus.CannotTest),

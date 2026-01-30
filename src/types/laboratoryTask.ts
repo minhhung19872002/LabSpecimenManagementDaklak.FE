@@ -103,6 +103,7 @@ export interface LaboratoryTaskIndicatorDto {
   indicatorName?: string;
   indicatorFormattedName?: string;  // Tên chỉ tiêu có định dạng HTML
   indicatorGroupName?: string;
+  parentIndicatorId?: string;  // ID chỉ tiêu cha (null nếu là chỉ tiêu gốc)
   unitPrice: number;
 
   // Phase 6 workflow fields
