@@ -29,8 +29,15 @@ import {
 } from "../../../types/laboratoryTask";
 import { laboratoryTaskService } from "../../../services/laboratoryTaskService";
 import { IndicatorName } from "../../../components/common";
+import "./EvaluationIndicatorTable.css";
 
 const { Text } = Typography;
+
+// Extended type with position flags for tree line rendering
+interface IndicatorWithPosition extends LaboratoryTaskIndicatorDto {
+  _isFirstSub?: boolean;
+  _isLastSub?: boolean;
+}
 
 // Helper to extract error message from API response
 // API trả về format: { errors: { fieldName: ["message1", "message2"] } }
@@ -520,20 +527,33 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
         dataIndex: "indicatorName",
         key: "indicatorName",
         width: 200,
-        render: (value: string, record: LaboratoryTaskIndicatorDto) => (
-          <div>
-            <div>
-              <IndicatorName name={value} formattedName={record.indicatorFormattedName} />
-            </div>
-            {record.indicatorGroupName && (
-              <div style={{ marginTop: 2 }}>
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  {record.indicatorGroupName}
-                </Text>
+        render: (value: string, record: IndicatorWithPosition) => {
+          const isSubIndicator = !!record.parentIndicatorId;
+          const isFirstSub = record._isFirstSub || false;
+          const isLastSub = record._isLastSub || false;
+
+          return (
+            <div
+              className={`evaluation-indicator-name-wrapper ${isSubIndicator ? "has-tree-line" : ""} ${isFirstSub ? "is-first-sub" : ""} ${isLastSub ? "is-last-sub" : ""}`}
+              style={{
+                paddingLeft: isSubIndicator ? 24 : 0,
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <div>
+                <IndicatorName name={value} formattedName={record.indicatorFormattedName} />
+                {record.indicatorGroupName && !isSubIndicator && (
+                  <div style={{ marginTop: 2 }}>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      {record.indicatorGroupName}
+                    </Text>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        ),
+            </div>
+          );
+        },
       },
       {
         title: "Phương pháp hiện tại",
@@ -596,36 +616,99 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
     return baseColumns;
   }, [hasActionableIndicators]);
 
-  // Sort indicators: Needs evaluation (Pending, CannotTest) first, then by sample code
-  const sortedIndicators = useMemo(() => {
+  // Sort indicators: Group by sample, then by parent/sub indicator groups
+  // Within each sample, parent and sub-indicators are kept together
+  // Also add position flags for tree line rendering
+  const sortedIndicators = useMemo((): IndicatorWithPosition[] => {
     const needsEvaluation = (status: IndicatorApprovalStatus) =>
       status === IndicatorApprovalStatus.Pending ||
       status === IndicatorApprovalStatus.CannotTest;
 
-    return [...indicators].sort((a, b) => {
-      // Needs evaluation first (CannotTest before Pending for visibility)
-      const aNeedsEval = needsEvaluation(a.approvalStatus);
-      const bNeedsEval = needsEvaluation(b.approvalStatus);
+    const sorted = [...indicators].sort((a, b) => {
+      // First, sort by sample code
+      const sampleCompare = (a.sampleCode || "").localeCompare(b.sampleCode || "");
+      if (sampleCompare !== 0) return sampleCompare;
 
-      if (aNeedsEval && !bNeedsEval) return -1;
-      if (!aNeedsEval && bNeedsEval) return 1;
+      // Same sample - now group by parent/sub relationship
+      // Group key: for parent use its indicatorId, for sub use its parentIndicatorId
+      const aGroupKey = a.parentIndicatorId || a.indicatorId;
+      const bGroupKey = b.parentIndicatorId || b.indicatorId;
 
-      // CannotTest before Pending (more urgent)
-      if (
-        a.approvalStatus === IndicatorApprovalStatus.CannotTest &&
-        b.approvalStatus === IndicatorApprovalStatus.Pending
-      ) {
-        return -1;
+      // If they are in different groups within the same sample
+      if (aGroupKey !== bGroupKey) {
+        // Find the parent indicator of each group to determine priority
+        const aParent = a.parentIndicatorId
+          ? indicators.find(
+              (i) =>
+                i.indicatorId === a.parentIndicatorId && i.sampleId === a.sampleId
+            )
+          : a;
+        const bParent = b.parentIndicatorId
+          ? indicators.find(
+              (i) =>
+                i.indicatorId === b.parentIndicatorId && i.sampleId === b.sampleId
+            )
+          : b;
+
+        // Sort groups by needs evaluation priority (parent's status determines group priority)
+        const aParentNeedsEval = aParent
+          ? needsEvaluation(aParent.approvalStatus)
+          : false;
+        const bParentNeedsEval = bParent
+          ? needsEvaluation(bParent.approvalStatus)
+          : false;
+
+        if (aParentNeedsEval && !bParentNeedsEval) return -1;
+        if (!aParentNeedsEval && bParentNeedsEval) return 1;
+
+        // CannotTest groups before Pending groups (more urgent)
+        if (aParent && bParent) {
+          if (
+            aParent.approvalStatus === IndicatorApprovalStatus.CannotTest &&
+            bParent.approvalStatus === IndicatorApprovalStatus.Pending
+          ) {
+            return -1;
+          }
+          if (
+            aParent.approvalStatus === IndicatorApprovalStatus.Pending &&
+            bParent.approvalStatus === IndicatorApprovalStatus.CannotTest
+          ) {
+            return 1;
+          }
+        }
+
+        // Same priority, maintain original relative order by group key
+        return (aGroupKey || "").localeCompare(bGroupKey || "");
       }
-      if (
-        a.approvalStatus === IndicatorApprovalStatus.Pending &&
-        b.approvalStatus === IndicatorApprovalStatus.CannotTest
-      ) {
-        return 1;
+
+      // Same group - parent first, then sub-indicators
+      if (!a.parentIndicatorId && b.parentIndicatorId) return -1;
+      if (a.parentIndicatorId && !b.parentIndicatorId) return 1;
+
+      // Both are sub-indicators in same group, keep original order
+      return 0;
+    });
+
+    // Add position flags for tree line rendering
+    return sorted.map((item, index, arr): IndicatorWithPosition => {
+      if (!item.parentIndicatorId) {
+        return item; // Parent indicator, no flags needed
       }
 
-      // Then by sample code
-      return (a.sampleCode || "").localeCompare(b.sampleCode || "");
+      // Find siblings (sub-indicators with same parent AND same sample)
+      // Because the same parent indicator can appear in different samples
+      const parentId = item.parentIndicatorId;
+      const sampleId = item.sampleId;
+      const siblings = arr.filter(
+        (i) => i.parentIndicatorId === parentId && i.sampleId === sampleId
+      );
+      const siblingIndex = siblings.findIndex((s) => s.id === item.id);
+
+      return {
+        ...item,
+        _isFirstSub: siblingIndex === 0,
+        _isLastSub: siblingIndex === siblings.length - 1,
+      };
     });
   }, [indicators]);
 
@@ -707,6 +790,9 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
         scroll={{ x: 950 }}
         loading={loading || actionLoading}
         rowSelection={rowSelection}
+        rowClassName={(record: IndicatorWithPosition) =>
+          record.parentIndicatorId ? "sub-indicator-row" : ""
+        }
       />
 
       {/* Method Change Modal */}
