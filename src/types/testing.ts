@@ -198,6 +198,7 @@ export interface TestingIndicatorDto {
   referenceLimit?: string;      // Giới hạn tham chiếu
   comparisonOperator?: string;  // Ký hiệu so sánh (<=, >=, <, >, =)
   allowedLimit?: string;        // Giới hạn cho phép (giá trị cụ thể)
+  parentIndicatorId?: string;   // ID chỉ tiêu cha (null nếu là chỉ tiêu gốc)
 }
 
 // Save Indicator Result DTO

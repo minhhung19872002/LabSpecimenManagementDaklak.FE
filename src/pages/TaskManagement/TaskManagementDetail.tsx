@@ -1311,6 +1311,29 @@ const TaskManagementDetail: React.FC = () => {
       !ind.isWaitingForSharedSample
   );
 
+  // Helper function: check if an indicator is a parent with children in the list
+  // Parent with children = không có parentIndicatorId VÀ có sub-indicators trong list
+  const isParentWithChildren = useCallback(
+    (indicator: LaboratoryTaskIndicatorDto): boolean => {
+      if (indicator.parentIndicatorId) return false; // Đây là sub-indicator
+      // Kiểm tra xem có sub-indicators nào có parentIndicatorId === indicator.indicatorId AND cùng methodId
+      return (
+        task?.indicators?.some(
+          (ind) =>
+            ind.parentIndicatorId === indicator.indicatorId &&
+            ind.methodId === indicator.methodId
+        ) ?? false
+      );
+    },
+    [task?.indicators]
+  );
+
+  // Count indicators excluding parent indicators with children (for display purposes)
+  const activeIndicatorCount = useMemo(() => {
+    if (!task?.indicators) return 0;
+    return task.indicators.filter((ind) => !isParentWithChildren(ind)).length;
+  }, [task?.indicators, isParentWithChildren]);
+
   // Check if can assign technician to indicators
   // Allowed when: PartialAccepted, FullyAccepted, Assigned, InProgress, WaitingApproval
   // Also allowed during UnderEvaluation/WaitingCustomerResponse if some indicators are already AcceptedForTesting
@@ -1814,7 +1837,7 @@ const TaskManagementDetail: React.FC = () => {
             optionType="button"
           >
             <Radio.Button value="evaluation">
-              Đánh giá chỉ tiêu ({task.indicators?.length || 0})
+              Đánh giá chỉ tiêu ({activeIndicatorCount})
             </Radio.Button>
             <Radio.Button value="samples">
               Danh sách mẫu ({sampleList.length})
@@ -1870,12 +1893,12 @@ const TaskManagementDetail: React.FC = () => {
                       task.status === LaboratoryTaskStatus.PartialAccepted ||
                       task.status === LaboratoryTaskStatus.Assigned ||
                       task.status === LaboratoryTaskStatus.SentToQuality) &&
-                      task.indicators?.some(
+                      (task.indicators?.some(
                         (ind) =>
                           !ind.isWaitingForSharedSample &&
                           (ind.approvalStatus === IndicatorApprovalStatus.Pending ||
                             ind.approvalStatus === IndicatorApprovalStatus.CannotTest)
-                      )))
+                      ) ?? false)))
                 }
                 loading={loading}
                 onEvaluationComplete={reloadData}
