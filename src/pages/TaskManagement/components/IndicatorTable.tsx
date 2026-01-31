@@ -300,27 +300,37 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     }
   };
 
-  // Check if parent has sub-indicators in the current list
+  // Helper: tạo composite key từ indicatorId + methodId
+  const makeGroupKey = (indicatorId: string, methodId: string | null | undefined) =>
+    `${indicatorId}_${methodId || 'no-method'}`;
+
+  // Check if parent has sub-indicators in the current list (considering methodId)
   const hasSubIndicatorsInList = useMemo(() => {
-    const parentIds = new Set<string>();
+    const parentKeys = new Set<string>();
     indicators.forEach((ind) => {
       if (ind.parentIndicatorId) {
-        parentIds.add(ind.parentIndicatorId);
+        // Sub-indicator references parent by parentIndicatorId + same methodId
+        parentKeys.add(makeGroupKey(ind.parentIndicatorId, ind.methodId));
       }
     });
-    return (indicatorId: string) => parentIds.has(indicatorId);
+    return (indicatorId: string, methodId: string | null | undefined) =>
+      parentKeys.has(makeGroupKey(indicatorId, methodId));
   }, [indicators]);
 
   // Sort indicators to group parent/sub together and add position flags
   const sortedIndicators = useMemo((): IndicatorWithPosition[] => {
     const sorted = [...indicators].sort((a, b) => {
-      // Group by parent/sub relationship
-      // Group key: for parent use its indicatorId, for sub use its parentIndicatorId
-      const aGroupKey = a.parentIndicatorId || a.indicatorId;
-      const bGroupKey = b.parentIndicatorId || b.indicatorId;
+      // Group by parent/sub relationship + methodId
+      // Group key: for parent use indicatorId+methodId, for sub use parentIndicatorId+methodId
+      const aGroupKey = a.parentIndicatorId
+        ? makeGroupKey(a.parentIndicatorId, a.methodId)
+        : makeGroupKey(a.indicatorId, a.methodId);
+      const bGroupKey = b.parentIndicatorId
+        ? makeGroupKey(b.parentIndicatorId, b.methodId)
+        : makeGroupKey(b.indicatorId, b.methodId);
 
       if (aGroupKey !== bGroupKey) {
-        return (aGroupKey || "").localeCompare(bGroupKey || "");
+        return aGroupKey.localeCompare(bGroupKey);
       }
 
       // Same group: parent first, then sub-indicators
@@ -333,15 +343,17 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     // Add position flags for tree line rendering
     return sorted.map((item, _index, arr): IndicatorWithPosition => {
       const isParentWithSubs =
-        !item.parentIndicatorId && hasSubIndicatorsInList(item.indicatorId);
+        !item.parentIndicatorId && hasSubIndicatorsInList(item.indicatorId, item.methodId);
 
       if (!item.parentIndicatorId) {
         return { ...item, _isParentWithSubs: isParentWithSubs };
       }
 
-      // Find siblings (sub-indicators with same parent)
+      // Find siblings (sub-indicators with same parent AND same methodId)
       const siblings = arr.filter(
-        (i) => i.parentIndicatorId === item.parentIndicatorId
+        (i) =>
+          i.parentIndicatorId === item.parentIndicatorId &&
+          i.methodId === item.methodId
       );
       const siblingIndex = siblings.findIndex((s) => s.id === item.id);
 
@@ -1011,11 +1023,15 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       ) => {
         let newSelection = [...selectedRowKeys] as string[];
 
-        // If selecting a parent with subs, auto-select all its sub-indicators
+        // If selecting a parent with subs, auto-select all its sub-indicators (same methodId)
         selectedRows.forEach((row) => {
           if (row._isParentWithSubs) {
             const subIds = sortedIndicators
-              .filter((ind) => ind.parentIndicatorId === row.indicatorId)
+              .filter(
+                (ind) =>
+                  ind.parentIndicatorId === row.indicatorId &&
+                  ind.methodId === row.methodId
+              )
               .map((ind) => ind.id);
             subIds.forEach((id) => {
               if (!newSelection.includes(id)) {
@@ -1036,7 +1052,11 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           const parent = sortedIndicators.find((i) => i.id === parentId);
           if (parent) {
             const subIds = sortedIndicators
-              .filter((ind) => ind.parentIndicatorId === parent.indicatorId)
+              .filter(
+                (ind) =>
+                  ind.parentIndicatorId === parent.indicatorId &&
+                  ind.methodId === parent.methodId
+              )
               .map((ind) => ind.id);
             newSelection = newSelection.filter((id) => !subIds.includes(id));
           }

@@ -617,6 +617,10 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
   }, [hasActionableIndicators]);
 
   // Sort indicators: Group by sample, then by parent/sub indicator groups
+  // Helper: tạo composite key từ indicatorId + methodId
+  const makeGroupKey = (indicatorId: string, methodId: string | null | undefined) =>
+    `${indicatorId}_${methodId || 'no-method'}`;
+
   // Within each sample, parent and sub-indicators are kept together
   // Also add position flags for tree line rendering
   const sortedIndicators = useMemo((): IndicatorWithPosition[] => {
@@ -629,10 +633,14 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
       const sampleCompare = (a.sampleCode || "").localeCompare(b.sampleCode || "");
       if (sampleCompare !== 0) return sampleCompare;
 
-      // Same sample - now group by parent/sub relationship
-      // Group key: for parent use its indicatorId, for sub use its parentIndicatorId
-      const aGroupKey = a.parentIndicatorId || a.indicatorId;
-      const bGroupKey = b.parentIndicatorId || b.indicatorId;
+      // Same sample - now group by parent/sub relationship + methodId
+      // Group key: for parent use indicatorId+methodId, for sub use parentIndicatorId+methodId
+      const aGroupKey = a.parentIndicatorId
+        ? makeGroupKey(a.parentIndicatorId, a.methodId)
+        : makeGroupKey(a.indicatorId, a.methodId);
+      const bGroupKey = b.parentIndicatorId
+        ? makeGroupKey(b.parentIndicatorId, b.methodId)
+        : makeGroupKey(b.indicatorId, b.methodId);
 
       // If they are in different groups within the same sample
       if (aGroupKey !== bGroupKey) {
@@ -640,13 +648,17 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
         const aParent = a.parentIndicatorId
           ? indicators.find(
               (i) =>
-                i.indicatorId === a.parentIndicatorId && i.sampleId === a.sampleId
+                i.indicatorId === a.parentIndicatorId &&
+                i.sampleId === a.sampleId &&
+                i.methodId === a.methodId
             )
           : a;
         const bParent = b.parentIndicatorId
           ? indicators.find(
               (i) =>
-                i.indicatorId === b.parentIndicatorId && i.sampleId === b.sampleId
+                i.indicatorId === b.parentIndicatorId &&
+                i.sampleId === b.sampleId &&
+                i.methodId === b.methodId
             )
           : b;
 
@@ -678,7 +690,7 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
         }
 
         // Same priority, maintain original relative order by group key
-        return (aGroupKey || "").localeCompare(bGroupKey || "");
+        return aGroupKey.localeCompare(bGroupKey);
       }
 
       // Same group - parent first, then sub-indicators
@@ -690,17 +702,21 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
     });
 
     // Add position flags for tree line rendering
-    return sorted.map((item, index, arr): IndicatorWithPosition => {
+    return sorted.map((item, _index, arr): IndicatorWithPosition => {
       if (!item.parentIndicatorId) {
         return item; // Parent indicator, no flags needed
       }
 
-      // Find siblings (sub-indicators with same parent AND same sample)
-      // Because the same parent indicator can appear in different samples
+      // Find siblings (sub-indicators with same parent AND same sample AND same methodId)
+      // Because the same parent indicator can appear in different samples/methods
       const parentId = item.parentIndicatorId;
       const sampleId = item.sampleId;
+      const methodId = item.methodId;
       const siblings = arr.filter(
-        (i) => i.parentIndicatorId === parentId && i.sampleId === sampleId
+        (i) =>
+          i.parentIndicatorId === parentId &&
+          i.sampleId === sampleId &&
+          i.methodId === methodId
       );
       const siblingIndex = siblings.findIndex((s) => s.id === item.id);
 
