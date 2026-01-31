@@ -161,13 +161,14 @@ const StandardsTable: React.FC<StandardsTableProps> = ({
                         // Sort indicators by hierarchy (parent-child relationship)
                         const sortedIndicators = sortIndicatorsByHierarchy(standardRecord.indicators);
 
-                        const indicatorIds = sortedIndicators.map(
-                          (ind) => ind.id,
-                        );
+                        // Only parent indicators can be selected (not sub-indicators)
+                        const selectableIndicatorIds = sortedIndicators
+                          .filter((ind) => !ind.parentIndicatorId)
+                          .map((ind) => ind.id);
                         const allSelected =
-                          indicatorIds.length > 0 &&
-                          indicatorIds.every((id) => selectedKeys.includes(id));
-                        const someSelected = indicatorIds.some((id) =>
+                          selectableIndicatorIds.length > 0 &&
+                          selectableIndicatorIds.every((id) => selectedKeys.includes(id));
+                        const someSelected = selectableIndicatorIds.some((id) =>
                           selectedKeys.includes(id),
                         );
 
@@ -219,7 +220,7 @@ const StandardsTable: React.FC<StandardsTableProps> = ({
                                       if (e.target.checked) {
                                         onSelectedIndicatorKeysChange({
                                           ...selectedIndicatorKeys,
-                                          [standardRecord.id]: indicatorIds,
+                                          [standardRecord.id]: selectableIndicatorIds,
                                         });
                                       } else {
                                         onSelectedIndicatorKeysChange({
@@ -312,6 +313,11 @@ const StandardsTable: React.FC<StandardsTableProps> = ({
                                     [standardRecord.id]: keys as string[],
                                   });
                                 },
+                                // Hide checkbox for sub-indicators
+                                getCheckboxProps: (record) => ({
+                                  style: record.parentIndicatorId ? { display: 'none' } : undefined,
+                                  disabled: !!record.parentIndicatorId,
+                                }),
                                 columnTitle: (
                                   <Checkbox
                                     checked={allSelected}
@@ -320,7 +326,7 @@ const StandardsTable: React.FC<StandardsTableProps> = ({
                                       if (e.target.checked) {
                                         onSelectedIndicatorKeysChange({
                                           ...selectedIndicatorKeys,
-                                          [standardRecord.id]: indicatorIds,
+                                          [standardRecord.id]: selectableIndicatorIds,
                                         });
                                       } else {
                                         onSelectedIndicatorKeysChange({
