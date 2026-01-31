@@ -38,8 +38,8 @@ import {
 } from "../types";
 import IndicatorRow from "./IndicatorRow";
 import {
-  HEAVY_METAL_COMBO_INDICATORS,
-  HEAVY_METAL_FREE_INDICATOR,
+  isHeavyMetalComboMet,
+  isHgIndicator,
 } from "../constants";
 import "./IndicatorSelectionModal.css";
 
@@ -405,18 +405,16 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
   });
 
   // Check combo kim loại nặng: nếu đủ 4 chỉ tiêu Pb, As, Cd, Hg thì Hg miễn phí
-  const isHeavyMetalComboMet = useMemo(() => {
+  const isComboMet = useMemo(() => {
     const selectedNames = tempSelectedIndicatorMethods.map((key) => {
       const { indicator } = getIndicatorMethodInfo(key);
-      return indicator?.name?.trim();
+      return indicator?.name;
     });
-    return HEAVY_METAL_COMBO_INDICATORS.every((name) =>
-      selectedNames.includes(name),
-    );
+    return isHeavyMetalComboMet(selectedNames);
   }, [tempSelectedIndicatorMethods, getIndicatorMethodInfo]);
 
-  const isHgIndicator = (indicator: IndicatorDto | undefined) => {
-    return indicator?.name?.trim() === HEAVY_METAL_FREE_INDICATOR;
+  const checkIsHgIndicator = (indicator: IndicatorDto | undefined) => {
+    return isHgIndicator(indicator?.name);
   };
 
   // Calculate total cost from selected methods with sub-indicator pricing logic
@@ -432,7 +430,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
       if (pricingMode === "parent") {
         // Calculate by parent price
         const price =
-          isHeavyMetalComboMet && isHgIndicator(indicator)
+          isComboMet && checkIsHgIndicator(indicator)
             ? 0
             : method?.unitPrice || 0;
         total += price;
@@ -442,7 +440,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
           const { indicator: subInd, method: subMethod } =
             getIndicatorMethodInfo(subKey);
           const price =
-            isHeavyMetalComboMet && isHgIndicator(subInd)
+            isComboMet && checkIsHgIndicator(subInd)
               ? 0
               : subMethod?.unitPrice || 0;
           total += price;
@@ -454,7 +452,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     groupedSelectedMethods.independentMethods.forEach((key) => {
       const { indicator, method } = getIndicatorMethodInfo(key);
       const price =
-        isHeavyMetalComboMet && isHgIndicator(indicator)
+        isComboMet && checkIsHgIndicator(indicator)
           ? 0
           : method?.unitPrice || 0;
       total += price;
@@ -465,7 +463,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     groupedSelectedMethods,
     getIndicatorMethodInfo,
     getPricingMode,
-    isHeavyMetalComboMet,
+    isComboMet,
   ]);
 
   // Get indicators that have active methods, filtered by specimen type if active
@@ -1400,8 +1398,8 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                 unitPrice={method?.unitPrice || 0}
                                 hidePrice={pricingMode === "subs"}
                                 isFree={
-                                  isHeavyMetalComboMet &&
-                                  isHgIndicator(indicator)
+                                  isComboMet &&
+                                  checkIsHgIndicator(indicator)
                                 }
                                 isChecked={checkedIndicators.includes(
                                   parentKey
@@ -1464,7 +1462,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                               }
                               unitPrice={method?.unitPrice || 0}
                               isFree={
-                                isHeavyMetalComboMet && isHgIndicator(indicator)
+                                isComboMet && checkIsHgIndicator(indicator)
                               }
                               isChecked={checkedIndicators.includes(key)}
                               transferDate={
@@ -1541,8 +1539,8 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                       }
                                       unitPrice={method?.unitPrice || 0}
                                       isFree={
-                                        isHeavyMetalComboMet &&
-                                        isHgIndicator(indicator)
+                                        isComboMet &&
+                                        checkIsHgIndicator(indicator)
                                       }
                                       isChecked={checkedIndicators.includes(
                                         key,
