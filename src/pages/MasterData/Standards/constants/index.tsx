@@ -277,7 +277,8 @@ export const getIndicatorColumns = (
 
       return (
         <Space size="small">
-          {canEdit && (
+          {/* Hide toggle active button for sub-indicators - they follow parent's status */}
+          {canEdit && !isSubIndicator && (
             <Tooltip
               title={record.isActive ? "Tắt hoạt động" : "Bật hoạt động"}
             >
