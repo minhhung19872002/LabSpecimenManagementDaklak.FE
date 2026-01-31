@@ -52,9 +52,15 @@ interface IndicatorEditTableProps {
   onResultsChange: (results: SaveIndicatorResultDto[]) => void;
   onSelectionChange: (indicatorIds: string[]) => void;
   onShowRejectionHistory: (indicatorId: string, indicatorName: string) => void;
-  onSaveIndicator: (indicatorId: string, result?: SaveIndicatorResultDto) => void;
+  onSaveIndicator: (
+    indicatorId: string,
+    result?: SaveIndicatorResultDto,
+  ) => void;
   onSubmitIndicator?: (indicatorId: string) => void;
-  onUploadIndicatorImages?: (indicatorId: string, files: File[]) => Promise<IndicatorImageDto[]>;
+  onUploadIndicatorImages?: (
+    indicatorId: string,
+    files: File[],
+  ) => Promise<IndicatorImageDto[]>;
   onDeleteIndicatorImage?: (imageId: string) => Promise<void>;
   /** Callback khi click button "Không TN được" */
   onShowCannotTestModal?: (indicatorId: string, indicatorName: string) => void;
@@ -62,24 +68,31 @@ interface IndicatorEditTableProps {
 
 // Extended indicator with parent-child metadata
 interface ProcessedIndicator extends TestingIndicatorDto {
-  _isParentWithChildren: boolean;  // Parent có children -> chỉ hiển thị tên + PP
-  _isSubIndicator: boolean;        // Sub-indicator -> hiển thị đầy đủ với thụt lề
-  _isLastSubIndicator: boolean;    // Last sub-indicator trong group (để vẽ tree line đúng)
-  _rowKey: string;                 // Unique row key
+  _isParentWithChildren: boolean; // Parent có children -> chỉ hiển thị tên + PP
+  _isSubIndicator: boolean; // Sub-indicator -> hiển thị đầy đủ với thụt lề
+  _isLastSubIndicator: boolean; // Last sub-indicator trong group (để vẽ tree line đúng)
+  _rowKey: string; // Unique row key
 }
 
 // Helper: tạo composite key từ indicatorId + methodId
-const makeGroupKey = (indicatorId: string, methodId: string | null | undefined) =>
-  `${indicatorId}_${methodId || 'no-method'}`;
+const makeGroupKey = (
+  indicatorId: string,
+  methodId: string | null | undefined,
+) => `${indicatorId}_${methodId || "no-method"}`;
 
 // Group và flatten indicators theo quan hệ parent-child
-const processIndicatorsForDisplay = (indicators: TestingIndicatorDto[]): ProcessedIndicator[] => {
+const processIndicatorsForDisplay = (
+  indicators: TestingIndicatorDto[],
+): ProcessedIndicator[] => {
   const result: ProcessedIndicator[] = [];
-  const parentMap = new Map<string, { parent: TestingIndicatorDto; children: TestingIndicatorDto[] }>();
+  const parentMap = new Map<
+    string,
+    { parent: TestingIndicatorDto; children: TestingIndicatorDto[] }
+  >();
   const orphans: TestingIndicatorDto[] = [];
 
   // Step 1: Find all parents (parentIndicatorId = null/undefined)
-  indicators.forEach(ind => {
+  indicators.forEach((ind) => {
     if (!ind.parentIndicatorId) {
       const key = makeGroupKey(ind.indicatorId, ind.methodId);
       parentMap.set(key, { parent: ind, children: [] });
@@ -87,7 +100,7 @@ const processIndicatorsForDisplay = (indicators: TestingIndicatorDto[]): Process
   });
 
   // Step 2: Assign children to parents
-  indicators.forEach(ind => {
+  indicators.forEach((ind) => {
     if (ind.parentIndicatorId) {
       const key = makeGroupKey(ind.parentIndicatorId, ind.methodId);
       const group = parentMap.get(key);
@@ -126,11 +139,11 @@ const processIndicatorsForDisplay = (indicators: TestingIndicatorDto[]): Process
   });
 
   // Step 4: Add orphans as standalone indicators
-  orphans.forEach(ind => {
+  orphans.forEach((ind) => {
     result.push({
       ...ind,
       _isParentWithChildren: false,
-      _isSubIndicator: true,  // Hiển thị như sub vì có parentIndicatorId
+      _isSubIndicator: true, // Hiển thị như sub vì có parentIndicatorId
       _isLastSubIndicator: true, // Orphan luôn là "last" trong group của nó
       _rowKey: `orphan_${ind.id}`,
     });
@@ -214,7 +227,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     const groups: ProcessedIndicator[][] = [];
     let currentGroup: ProcessedIndicator[] = [];
 
-    processedIndicators.forEach(ind => {
+    processedIndicators.forEach((ind) => {
       if (!ind._isSubIndicator) {
         // New parent starts a new group
         if (currentGroup.length > 0) {
@@ -245,7 +258,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
   const handleFieldChange = (
     indicatorId: string,
     field: keyof SaveIndicatorResultDto,
-    value: string | undefined
+    value: string | undefined,
   ) => {
     const newResults = new Map(editedResults);
     const current = newResults.get(indicatorId) || {
@@ -264,7 +277,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
 
   const handleTestDateChange = (
     indicatorId: string,
-    date: dayjs.Dayjs | null
+    date: dayjs.Dayjs | null,
   ) => {
     const dateStr = date ? date.format("YYYY-MM-DD") : undefined;
 
@@ -275,7 +288,10 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       result: undefined,
       testDate: undefined,
     };
-    const updatedResult: SaveIndicatorResultDto = { ...current, testDate: dateStr };
+    const updatedResult: SaveIndicatorResultDto = {
+      ...current,
+      testDate: dateStr,
+    };
 
     const newResults = new Map(editedResults);
     newResults.set(indicatorId, updatedResult);
@@ -286,7 +302,10 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
   };
 
   // Handle checkbox selection - không cho chọn parent có children
-  const handleCheckboxChange = (record: ProcessedIndicator, checked: boolean) => {
+  const handleCheckboxChange = (
+    record: ProcessedIndicator,
+    checked: boolean,
+  ) => {
     if (!canPerformActions) return;
     if (record._isParentWithChildren) return; // Parent có children -> không cho chọn
 
@@ -307,7 +326,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
           (ind) =>
             !ind._isParentWithChildren && // Không phải parent có children
             ind.testingStatus !== IndicatorTestingStatus.Done &&
-            ind.testingStatus !== IndicatorTestingStatus.Cancelled
+            ind.testingStatus !== IndicatorTestingStatus.Cancelled,
         )
         .map((ind) => ind.id);
       onSelectionChange(selectableIds);
@@ -331,7 +350,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     selectableIndicators.length > 0 &&
     selectableIndicators.every((ind) => selectedIndicatorIds.includes(ind.id));
   const someSelected = selectableIndicators.some((ind) =>
-    selectedIndicatorIds.includes(ind.id)
+    selectedIndicatorIds.includes(ind.id),
   );
 
   // Get testing status tag
@@ -392,7 +411,10 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       fixed: "left" as const,
       render: (value: string, record) => {
         const content = value ? (
-          <IndicatorName name={value} formattedName={record.indicatorFormattedName} />
+          <IndicatorName
+            name={value}
+            formattedName={record.indicatorFormattedName}
+          />
         ) : (
           "-"
         );
@@ -419,11 +441,15 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       dataIndex: "methodName",
       key: "method",
       width: 180,
-      render: (value: string, record) => value ? (
-        <IndicatorName name={value} formattedName={record.methodFormattedName} />
-      ) : (
-        <Text type="secondary">-</Text>
-      ),
+      render: (value: string, record) =>
+        value ? (
+          <IndicatorName
+            name={value}
+            formattedName={record.methodFormattedName}
+          />
+        ) : (
+          <Text type="secondary">-</Text>
+        ),
     },
     {
       title: "ĐVT",
@@ -486,7 +512,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     {
       title: "Kết quả",
       key: "result",
-      width: 120,
+      width: 190,
       render: (_, record) => {
         // Parent có children -> không hiển thị input
         if (record._isParentWithChildren) {
@@ -729,7 +755,13 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
         return (
           <Space size={4}>
             {canSubmit && onSubmitIndicator && (
-              <Tooltip title={status === IndicatorTestingStatus.PendingApproval ? "Gửi lại kết quả cho QLKT duyệt" : "Gửi kết quả cho QLKT duyệt"}>
+              <Tooltip
+                title={
+                  status === IndicatorTestingStatus.PendingApproval
+                    ? "Gửi lại kết quả cho QLKT duyệt"
+                    : "Gửi kết quả cho QLKT duyệt"
+                }
+              >
                 <Button
                   type="primary"
                   size="small"
@@ -740,7 +772,9 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
                   }}
                   disabled={submitting}
                 >
-                  {status === IndicatorTestingStatus.PendingApproval ? "Gửi lại" : "Gửi duyệt"}
+                  {status === IndicatorTestingStatus.PendingApproval
+                    ? "Gửi lại"
+                    : "Gửi duyệt"}
                 </Button>
               </Tooltip>
             )}
@@ -753,7 +787,10 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
                   icon={<StopOutlined />}
                   onClick={(e) => {
                     e.stopPropagation();
-                    onShowCannotTestModal(record.id, record.indicatorName || '');
+                    onShowCannotTestModal(
+                      record.id,
+                      record.indicatorName || "",
+                    );
                   }}
                   disabled={submitting}
                 />
@@ -831,7 +868,10 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
         classes.push("overdue-indicator-row");
       } else if (hasNoResult(record)) {
         classes.push("no-result-indicator-row");
-      } else if (isUrgent && record.testingStatus !== IndicatorTestingStatus.Done) {
+      } else if (
+        isUrgent &&
+        record.testingStatus !== IndicatorTestingStatus.Done
+      ) {
         classes.push("urgent-indicator-row");
       }
     }
@@ -966,7 +1006,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
         dataSource={sortedIndicators}
         rowKey="_rowKey"
         pagination={false}
-        scroll={{ x: 2270 }}
+        scroll={{ x: 2340 }}
         size="small"
         rowClassName={getRowClassName}
       />
