@@ -32,8 +32,14 @@ export const useRoleManagementList = (): UseRoleManagementListReturn => {
     setLoading(true);
     try {
       const result = await roleManagementService.getList(params);
-      setRoles(result.items);
-      setTotalCount(result.totalCount);
+      // Filter out admin role - không hiển thị trên UI
+      const filteredRoles = result.items.filter(
+        (role) => role.name.toLowerCase() !== 'admin'
+      );
+      setRoles(filteredRoles);
+      // Adjust total count to exclude admin role
+      const adminCount = result.items.length - filteredRoles.length;
+      setTotalCount(result.totalCount - adminCount);
     } catch (error: unknown) {
       console.error('Error fetching roles:', error);
       message.error('Không thể tải danh sách nhóm quyền');
