@@ -1,8 +1,11 @@
 import React from "react";
-import { Row, Col, Card, Statistic } from "antd";
-import { DatabaseOutlined } from "../../../../components/common/Icon";
+import { Card, Typography } from "antd";
+import Icon from "../../../../components/common/Icon";
 import { MasterDataStatisticsDto } from "../types";
-import { categoryLabels, getStatCount } from "../constants";
+import { categoryLabels } from "../constants";
+import "../../../Dashboard/Dashboard.css";
+
+const { Text } = Typography;
 
 interface StatisticsCardsProps {
   statistics: MasterDataStatisticsDto | null;
@@ -11,55 +14,78 @@ interface StatisticsCardsProps {
 
 const StatisticsCards: React.FC<StatisticsCardsProps> = ({
   statistics,
-  statisticsLoading,
 }) => {
   // Calculate total items from statistics
   const totalItems = statistics
-    ? statistics.departmentCount +
-      statistics.laboratoryCount +
-      statistics.specimenTypeCount +
-      statistics.testMethodCount +
-      statistics.storageLocationCount +
-      statistics.customerCount +
-      statistics.indicatorCount +
-      statistics.formTemplateCount
+    ? (statistics.departmentCount || 0) +
+      (statistics.laboratoryCount || 0) +
+      (statistics.specimenTypeCount || 0) +
+      (statistics.testMethodCount || 0) +
+      (statistics.storageLocationCount || 0) +
+      (statistics.customerCount || 0) +
+      (statistics.indicatorCount || 0) +
+      (statistics.formTemplateCount || 0) +
+      (statistics.standardCount || 0) +
+      (statistics.indicatorGroupCount || 0)
     : 0;
 
+  const statsData = [
+    {
+      title: "Tổng danh mục",
+      value: Object.keys(categoryLabels).length,
+      iconBg: "blue",
+      icon: "grid-fill",
+      valueColor: "#096DD9",
+    },
+    {
+      title: "Tổng dữ liệu",
+      value: totalItems,
+      iconBg: "purple",
+      icon: "database-fill",
+      valueColor: "#531DAB",
+    },
+    {
+      title: "Phương pháp thử",
+      value: statistics?.testMethodCount || 0,
+      iconBg: "cyan",
+      icon: "clipboard2-data-fill",
+      valueColor: "#13C2C2",
+    },
+    {
+      title: "Tiêu chuẩn",
+      value: statistics?.standardCount || 0,
+      iconBg: "green",
+      icon: "check2-square",
+      valueColor: "#389E0D",
+    },
+  ];
+
   return (
-    <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-      <Col xs={12} sm={8} md={6}>
-        <Card>
-          <Statistic
-            title="Tổng danh mục"
-            value={Object.keys(categoryLabels).length}
-            prefix={<DatabaseOutlined />}
-            loading={statisticsLoading}
-          />
+    <div className="dashboard-stats-grid">
+      {statsData.map((stat, index) => (
+        <Card key={index} className="dashboard-stat-card" bordered={false}>
+          <div className="dashboard-stat-content">
+            <div className="dashboard-stat-info">
+              <Text className="dashboard-stat-title">{stat.title}</Text>
+              <div
+                className="dashboard-stat-value"
+                style={{
+                  background: stat.valueColor,
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                }}
+              >
+                {stat.value}
+              </div>
+            </div>
+            <div className={`dashboard-stat-icon ${stat.iconBg}`}>
+              <Icon name={stat.icon} style={{ fontSize: 24 }} />
+            </div>
+          </div>
         </Card>
-      </Col>
-      <Col xs={12} sm={8} md={6}>
-        <Card>
-          <Statistic
-            title="Tổng dữ liệu"
-            value={totalItems}
-            loading={statisticsLoading}
-          />
-        </Card>
-      </Col>
-      {Object.entries(categoryLabels)
-        .slice(0, 3)
-        .map(([key, label]) => (
-          <Col xs={12} sm={8} md={4} key={key}>
-            <Card>
-              <Statistic
-                title={label}
-                value={getStatCount(key, statistics)}
-                loading={statisticsLoading}
-              />
-            </Card>
-          </Col>
-        ))}
-    </Row>
+      ))}
+    </div>
   );
 };
 
