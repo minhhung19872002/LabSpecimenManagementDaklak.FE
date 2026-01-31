@@ -30,26 +30,34 @@ const UNSENT_GROUP_KEY = "__unsent__";
  * Nhóm indicators theo quan hệ cha-con
  * - Parent indicators (parentIndicatorId = null) -> hiển thị trước
  * - Sub-indicators -> hiển thị dưới parent tương ứng
+ * - Group key = indicatorId + testMethodId để xử lý trường hợp cùng chỉ tiêu nhưng khác phương pháp
  */
 const groupByParentChild = (indicators: any[]): GroupedIndicator[] => {
   const result: GroupedIndicator[] = [];
   const parentMap: Record<string, GroupedIndicator> = {};
   const orphanSubs: any[] = [];
 
+  // Helper: tạo key từ indicatorId + testMethodId
+  const makeKey = (indicatorId: string, testMethodId: string | null) =>
+    `${indicatorId}_${testMethodId || 'no-method'}`;
+
   // Bước 1: Tách parent và sub-indicators
   indicators.forEach((ind) => {
     if (!ind.parentIndicatorId) {
-      // Đây là parent indicator
+      // Đây là parent indicator - dùng composite key
+      const key = makeKey(ind.indicatorId, ind.testMethodId);
       const grouped: GroupedIndicator = { indicator: ind, children: [] };
-      parentMap[ind.indicatorId] = grouped;
+      parentMap[key] = grouped;
       result.push(grouped);
     }
   });
 
-  // Bước 2: Gán sub-indicators cho parent
+  // Bước 2: Gán sub-indicators cho parent có cùng testMethodId
   indicators.forEach((ind) => {
     if (ind.parentIndicatorId) {
-      const parent = parentMap[ind.parentIndicatorId];
+      // Tìm parent có cùng parentIndicatorId VÀ testMethodId
+      const key = makeKey(ind.parentIndicatorId, ind.testMethodId);
+      const parent = parentMap[key];
       if (parent) {
         parent.children.push(ind);
       } else {
