@@ -33,7 +33,7 @@ const MethodRequirementSection: React.FC<MethodRequirementSectionProps> = ({
                 }}
               >
                 <Radio value="westHighlandInstitute">
-                  Viện KHKT NN Tây Nguyên
+                  Viện VS DT Tây Nguyên
                 </Radio>
                 <span
                   style={{
