@@ -46,6 +46,99 @@ interface IndicatorState {
   isChecked: boolean;
 }
 
+// Extended indicator with parent-child metadata
+interface ProcessedIndicator extends TestRequestSampleIndicatorDto {
+  _isParentWithChildren: boolean;
+  _isSubIndicator: boolean;
+  _isFirstSubIndicator: boolean;
+  _isLastSubIndicator: boolean;
+}
+
+// Helper: tạo composite key từ indicatorId + methodId
+const makeGroupKey = (indicatorId: string, methodId: string | null | undefined) =>
+  `${indicatorId}_${methodId || 'no-method'}`;
+
+// Group và flatten indicators theo quan hệ parent-child
+const processIndicatorsWithHierarchy = (
+  indicators: TestRequestSampleIndicatorDto[]
+): ProcessedIndicator[] => {
+  if (!indicators?.length) return [];
+
+  // Step 1: Tách thành parents và subs
+  const parents: TestRequestSampleIndicatorDto[] = [];
+  const subs: TestRequestSampleIndicatorDto[] = [];
+
+  indicators.forEach((ind) => {
+    if (ind.parentIndicatorId) {
+      subs.push(ind);
+    } else {
+      parents.push(ind);
+    }
+  });
+
+  // Step 2: Xây dựng map parent -> children
+  // Key = parentIndicatorId_methodId
+  const parentMap = new Map<
+    string,
+    { parent: TestRequestSampleIndicatorDto; children: TestRequestSampleIndicatorDto[] }
+  >();
+  const orphans: TestRequestSampleIndicatorDto[] = [];
+
+  // Initialize parents
+  parents.forEach((parent) => {
+    const key = makeGroupKey(parent.indicatorId, parent.testMethodId);
+    parentMap.set(key, { parent, children: [] });
+  });
+
+  // Assign subs to their parents
+  subs.forEach((sub) => {
+    const parentKey = makeGroupKey(sub.parentIndicatorId!, sub.testMethodId);
+    if (parentMap.has(parentKey)) {
+      parentMap.get(parentKey)!.children.push(sub);
+    } else {
+      orphans.push(sub);
+    }
+  });
+
+  // Step 3: Flatten với metadata
+  const result: ProcessedIndicator[] = [];
+
+  parentMap.forEach(({ parent, children }) => {
+    const hasChildren = children.length > 0;
+
+    result.push({
+      ...parent,
+      _isParentWithChildren: hasChildren,
+      _isSubIndicator: false,
+      _isFirstSubIndicator: false,
+      _isLastSubIndicator: false,
+    });
+
+    children.forEach((child, idx) => {
+      result.push({
+        ...child,
+        _isParentWithChildren: false,
+        _isSubIndicator: true,
+        _isFirstSubIndicator: idx === 0,
+        _isLastSubIndicator: idx === children.length - 1,
+      });
+    });
+  });
+
+  // Add orphans
+  orphans.forEach((ind) => {
+    result.push({
+      ...ind,
+      _isParentWithChildren: false,
+      _isSubIndicator: true,
+      _isFirstSubIndicator: true,
+      _isLastSubIndicator: true,
+    });
+  });
+
+  return result;
+};
+
 const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
   visible,
   testRequest,
@@ -134,38 +227,102 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
       .map(([id]) => id);
   }, [indicatorStates]);
 
-  // Check if all SELECTED (checked) indicators have laboratory AND request date
-  const selectedIndicatorsValid = useMemo(() => {
-    const selectedStates = Object.values(indicatorStates).filter((s) => s.isChecked);
-    if (selectedStates.length === 0) return false; // Phải chọn ít nhất 1
-    return selectedStates.every(
-      (state) => state.laboratoryId && state.laboratoryId !== "" && state.requestDate
-    );
-  }, [indicatorStates]);
+  // Get all parent (non-sub) indicators for validation
+  // Sub-indicators inherit from parent, so we only validate parents
+  const getParentIndicatorIds = useMemo(() => {
+    const parentIds = new Set<string>();
+    activeSamples.forEach((sample) => {
+      sample.indicators?.forEach((ind) => {
+        if (!ind.parentIndicatorId && !ind.isSentToQLKT) {
+          parentIds.add(ind.id);
+        }
+      });
+    });
+    return parentIds;
+  }, [activeSamples]);
 
-  // Get selected indicators missing laboratory
+  // Check if all SELECTED parent indicators have laboratory AND request date
+  // Sub-indicators don't need validation as they inherit from parent
+  const selectedIndicatorsValid = useMemo(() => {
+    const selectedParentStates = Object.entries(indicatorStates)
+      .filter(([id, state]) => state.isChecked && getParentIndicatorIds.has(id));
+    if (selectedParentStates.length === 0) return false; // Phải chọn ít nhất 1 parent
+    return selectedParentStates.every(
+      ([_, state]) => state.laboratoryId && state.laboratoryId !== "" && state.requestDate
+    );
+  }, [indicatorStates, getParentIndicatorIds]);
+
+  // Get selected PARENT indicators missing laboratory (sub-indicators inherit from parent)
   const selectedMissingLab = useMemo(() => {
     return Object.entries(indicatorStates)
-      .filter(([_, state]) => state.isChecked && !state.laboratoryId)
+      .filter(([id, state]) => state.isChecked && getParentIndicatorIds.has(id) && !state.laboratoryId)
       .map(([id]) => id);
-  }, [indicatorStates]);
+  }, [indicatorStates, getParentIndicatorIds]);
 
-  // Get selected indicators missing request date
+  // Get selected PARENT indicators missing request date (sub-indicators inherit from parent)
   const selectedMissingDate = useMemo(() => {
     return Object.entries(indicatorStates)
-      .filter(([_, state]) => state.isChecked && !state.requestDate)
+      .filter(([id, state]) => state.isChecked && getParentIndicatorIds.has(id) && !state.requestDate)
       .map(([id]) => id);
-  }, [indicatorStates]);
+  }, [indicatorStates, getParentIndicatorIds]);
+
+  // Count only parent indicators for display
+  const checkedParentCount = useMemo(() => {
+    return Object.entries(indicatorStates)
+      .filter(([id, state]) => state.isChecked && getParentIndicatorIds.has(id))
+      .length;
+  }, [indicatorStates, getParentIndicatorIds]);
+
+  // Get parent indicator key for a sub-indicator
+  const getParentKey = (indicator: TestRequestSampleIndicatorDto, sample: TestRequestSampleDto): string | null => {
+    if (!indicator.parentIndicatorId) return null;
+    const parentKey = makeGroupKey(indicator.parentIndicatorId, indicator.testMethodId);
+    // Find parent in same sample
+    const parent = sample.indicators?.find(
+      (ind) => makeGroupKey(ind.indicatorId, ind.testMethodId) === parentKey && !ind.parentIndicatorId
+    );
+    return parent?.id || null;
+  };
+
+  // Get sub-indicators of a parent
+  const getSubIndicatorIds = (parentIndicator: TestRequestSampleIndicatorDto, sample: TestRequestSampleDto): string[] => {
+    const parentKey = makeGroupKey(parentIndicator.indicatorId, parentIndicator.testMethodId);
+    return (sample.indicators || [])
+      .filter((ind) => {
+        if (!ind.parentIndicatorId) return false;
+        const subParentKey = makeGroupKey(ind.parentIndicatorId, ind.testMethodId);
+        return subParentKey === parentKey;
+      })
+      .map((ind) => ind.id);
+  };
 
   // Handle checkbox change for individual indicator
-  const handleCheckChange = (indicatorId: string) => {
-    setIndicatorStates((prev) => ({
-      ...prev,
-      [indicatorId]: {
-        ...prev[indicatorId],
-        isChecked: !prev[indicatorId]?.isChecked,
-      },
-    }));
+  const handleCheckChange = (indicatorId: string, sample: TestRequestSampleDto) => {
+    const indicator = sample.indicators?.find((ind) => ind.id === indicatorId);
+    if (!indicator) return;
+
+    const newChecked = !indicatorStates[indicatorId]?.isChecked;
+
+    setIndicatorStates((prev) => {
+      const updated = { ...prev };
+
+      // Update this indicator
+      if (updated[indicatorId]) {
+        updated[indicatorId] = { ...updated[indicatorId], isChecked: newChecked };
+      }
+
+      // If this is a parent with children, sync check state to children
+      if (!indicator.parentIndicatorId) {
+        const subIds = getSubIndicatorIds(indicator, sample);
+        subIds.forEach((subId) => {
+          if (updated[subId]) {
+            updated[subId] = { ...updated[subId], isChecked: newChecked };
+          }
+        });
+      }
+
+      return updated;
+    });
   };
 
   // Handle select all in a sample
@@ -184,32 +341,57 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
     });
   };
 
-  // Handle laboratory change for individual indicator
-  const handleLabChange = (indicatorId: string, labId: string) => {
-    setIndicatorStates((prev) => ({
-      ...prev,
-      [indicatorId]: {
-        ...prev[indicatorId],
-        laboratoryId: labId,
-      },
-    }));
+  // Handle laboratory change for individual indicator (and sync to sub-indicators)
+  const handleLabChange = (indicatorId: string, labId: string, sample: TestRequestSampleDto) => {
+    const indicator = sample.indicators?.find((ind) => ind.id === indicatorId);
+    if (!indicator) return;
+
+    setIndicatorStates((prev) => {
+      const updated = { ...prev };
+      updated[indicatorId] = { ...updated[indicatorId], laboratoryId: labId };
+
+      // If this is a parent, sync to sub-indicators
+      if (!indicator.parentIndicatorId) {
+        const subIds = getSubIndicatorIds(indicator, sample);
+        subIds.forEach((subId) => {
+          if (updated[subId]) {
+            updated[subId] = { ...updated[subId], laboratoryId: labId };
+          }
+        });
+      }
+
+      return updated;
+    });
   };
 
-  // Handle request date change for individual indicator
+  // Handle request date change for individual indicator (and sync to sub-indicators)
   const handleRequestDateChange = (
     indicatorId: string,
-    date: dayjs.Dayjs | null
+    date: dayjs.Dayjs | null,
+    sample: TestRequestSampleDto
   ) => {
-    setIndicatorStates((prev) => ({
-      ...prev,
-      [indicatorId]: {
-        ...prev[indicatorId],
-        requestDate: date || undefined,
-      },
-    }));
+    const indicator = sample.indicators?.find((ind) => ind.id === indicatorId);
+    if (!indicator) return;
+
+    setIndicatorStates((prev) => {
+      const updated = { ...prev };
+      updated[indicatorId] = { ...updated[indicatorId], requestDate: date || undefined };
+
+      // If this is a parent, sync to sub-indicators
+      if (!indicator.parentIndicatorId) {
+        const subIds = getSubIndicatorIds(indicator, sample);
+        subIds.forEach((subId) => {
+          if (updated[subId]) {
+            updated[subId] = { ...updated[subId], requestDate: date || undefined };
+          }
+        });
+      }
+
+      return updated;
+    });
   };
 
-  // Apply laboratory to all checked indicators
+  // Apply laboratory to all checked parent indicators (and their sub-indicators)
   const handleApplyLabToChecked = (labId: string) => {
     if (checkedIndicatorIds.length === 0) {
       message.warning("Vui lòng chọn ít nhất 1 chỉ tiêu");
@@ -218,6 +400,7 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
 
     setIndicatorStates((prev) => {
       const updated = { ...prev };
+      // Apply to all checked indicators (both parent and sub)
       checkedIndicatorIds.forEach((id) => {
         if (updated[id]) {
           updated[id] = { ...updated[id], laboratoryId: labId };
@@ -227,7 +410,7 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
     });
   };
 
-  // Apply request date to all checked indicators
+  // Apply request date to all checked parent indicators (and their sub-indicators)
   const handleApplyRequestDateToChecked = (date: dayjs.Dayjs | null) => {
     if (checkedIndicatorIds.length === 0) {
       message.warning("Vui lòng chọn ít nhất 1 chỉ tiêu");
@@ -236,6 +419,7 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
 
     setIndicatorStates((prev) => {
       const updated = { ...prev };
+      // Apply to all checked indicators (both parent and sub)
       checkedIndicatorIds.forEach((id) => {
         if (updated[id]) {
           updated[id] = { ...updated[id], requestDate: date || undefined };
@@ -333,13 +517,23 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
     return activeSamples.filter((s) => getUnsentIndicators(s).length > 0);
   }, [activeSamples]);
 
-  // Render indicator row
+  // Render indicator row with parent-child hierarchy
   const renderIndicatorRow = (
-    indicator: TestRequestSampleIndicatorDto,
-    isInGroup: boolean = false
+    indicator: ProcessedIndicator,
+    sample: TestRequestSampleDto
   ) => {
     const state = indicatorStates[indicator.id];
     if (!state) return null;
+
+    const isSubIndicator = indicator._isSubIndicator;
+    const isLastSub = indicator._isLastSubIndicator;
+
+    // Build tree line CSS classes
+    const treeLineClasses = ["indicator-name-cell"];
+    if (isSubIndicator) {
+      treeLineClasses.push("has-tree-line");
+      if (isLastSub) treeLineClasses.push("is-last-sub");
+    }
 
     return (
       <div
@@ -348,103 +542,169 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
           display: "flex",
           alignItems: "center",
           gap: 8,
-          padding: "8px 12px",
-          paddingLeft: isInGroup ? 36 : 12,
+          padding: isSubIndicator ? "4px 12px" : "8px 12px",
           borderBottom: "1px solid #f5f5f5",
-          background: "#fff",
+          background: isSubIndicator ? "#fafafa" : "#fff",
+          minHeight: isSubIndicator ? 28 : 40,
         }}
       >
-        <Checkbox
-          checked={state.isChecked}
-          onChange={() => handleCheckChange(indicator.id)}
-          style={{ width: 24, flexShrink: 0 }}
-        />
-        <Tooltip title={indicator.indicatorName}>
-          <IndicatorName
-            name={indicator.indicatorName}
-            formattedName={indicator.indicatorFormattedName}
-            style={{
-              flex: 1,
-              minWidth: 80,
-              fontSize: 13,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
+        {/* Checkbox - hidden for sub-indicators (they follow parent) */}
+        {isSubIndicator ? (
+          <div style={{ width: 24, flexShrink: 0 }} />
+        ) : (
+          <Checkbox
+            checked={state.isChecked}
+            onChange={() => handleCheckChange(indicator.id, sample)}
+            style={{ width: 24, flexShrink: 0 }}
           />
-        </Tooltip>
-        <Tooltip title={indicator.testMethodName}>
-          <IndicatorName
-            name={indicator.testMethodName || "-"}
-            formattedName={indicator.testMethodFormattedName}
-            style={{
-              width: 140,
-              flexShrink: 0,
-              fontSize: 12,
-              color: "#1890ff",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          />
-        </Tooltip>
-        <span
+        )}
+        {/* Indicator name with tree line */}
+        <div
+          className={treeLineClasses.join(" ")}
           style={{
-            fontSize: 12,
-            color: "#888",
-            width: 70,
-            flexShrink: 0,
-            textAlign: "right",
+            flex: 1,
+            minWidth: 80,
+            paddingLeft: isSubIndicator ? 24 : 0,
+            position: "relative",
           }}
         >
-          {indicator.unitPrice?.toLocaleString("vi-VN")}đ
-        </span>
-        <DatePicker
-          value={
-            indicator.transferDate ? dayjs(indicator.transferDate) : undefined
-          }
-          format="DD/MM/YYYY"
-          size="small"
-          style={{ width: 110, flexShrink: 0 }}
-          placeholder="Ngày CG"
-          disabled
-        />
-        <DatePicker
-          value={state.requestDate}
-          onChange={(date) => handleRequestDateChange(indicator.id, date)}
-          format="DD/MM/YYYY"
-          size="small"
-          style={{ width: 110, flexShrink: 0 }}
-          placeholder="Ngày YC"
-          disabledDate={(current) => {
-            return current && current.isBefore(dayjs().startOf("day"));
-          }}
-        />
-        <Select
-          value={state.laboratoryId}
-          onChange={(value) => handleLabChange(indicator.id, value)}
-          size="small"
-          style={{ width: 150, flexShrink: 0 }}
-          placeholder="Chọn khoa phòng"
-          loading={loadingLabs}
-          options={laboratories.map((lab) => ({
-            value: lab.id,
-            label: lab.name,
-          }))}
-          status={!state.laboratoryId ? "error" : undefined}
-        />
+          <Tooltip title={indicator.indicatorName}>
+            <IndicatorName
+              name={indicator.indicatorName}
+              formattedName={indicator.indicatorFormattedName}
+              style={{
+                fontSize: 13,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                color: isSubIndicator ? "#666" : undefined,
+              }}
+            />
+          </Tooltip>
+        </div>
+        {/* Method name - hidden for sub-indicators */}
+        {!isSubIndicator && (
+          <Tooltip title={indicator.testMethodName}>
+            <IndicatorName
+              name={indicator.testMethodName || "-"}
+              formattedName={indicator.testMethodFormattedName}
+              style={{
+                width: 140,
+                flexShrink: 0,
+                fontSize: 12,
+                color: "#1890ff",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            />
+          </Tooltip>
+        )}
+        {/* Unit price - hidden for sub-indicators */}
+        {!isSubIndicator && (
+          <span
+            style={{
+              fontSize: 12,
+              color: "#888",
+              width: 70,
+              flexShrink: 0,
+              textAlign: "right",
+            }}
+          >
+            {indicator.unitPrice?.toLocaleString("vi-VN")}đ
+          </span>
+        )}
+        {/* Transfer date - hidden for sub-indicators */}
+        {!isSubIndicator && (
+          <DatePicker
+            value={
+              indicator.transferDate ? dayjs(indicator.transferDate) : undefined
+            }
+            format="DD/MM/YYYY"
+            size="small"
+            style={{ width: 110, flexShrink: 0 }}
+            placeholder="Ngày CG"
+            disabled
+          />
+        )}
+        {/* Request date - hidden for sub-indicators */}
+        {!isSubIndicator && (
+          <DatePicker
+            value={state.requestDate}
+            onChange={(date) => handleRequestDateChange(indicator.id, date, sample)}
+            format="DD/MM/YYYY"
+            size="small"
+            style={{ width: 110, flexShrink: 0 }}
+            placeholder="Ngày YC"
+            disabledDate={(current) => {
+              return current && current.isBefore(dayjs().startOf("day"));
+            }}
+          />
+        )}
+        {/* Laboratory select - hidden for sub-indicators */}
+        {!isSubIndicator && (
+          <Select
+            value={state.laboratoryId}
+            onChange={(value) => handleLabChange(indicator.id, value, sample)}
+            size="small"
+            style={{ width: 150, flexShrink: 0 }}
+            placeholder="Chọn khoa phòng"
+            loading={loadingLabs}
+            options={laboratories.map((lab) => ({
+              value: lab.id,
+              label: lab.name,
+            }))}
+            status={!state.laboratoryId ? "error" : undefined}
+          />
+        )}
       </div>
     );
   };
 
   return (
-    <Modal
-      title={
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <Icon icon="mdi:send" width={20} />
-          <span>Gửi QLKT - Chọn khoa phòng</span>
-        </div>
-      }
+    <>
+      <style>
+        {`
+          /* Tree line styles for sub-indicators */
+          .indicator-name-cell {
+            position: relative;
+          }
+
+          /* Vertical line connecting sub-indicators */
+          .indicator-name-cell.has-tree-line::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: -100%;
+            bottom: -100%;
+            width: 1px;
+            background-color: #d9d9d9;
+          }
+
+          /* Horizontal line from vertical to indicator name */
+          .indicator-name-cell.has-tree-line::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            width: 16px;
+            height: 1px;
+            background-color: #d9d9d9;
+          }
+
+          /* For last sub-indicator, vertical line ends at the middle */
+          .indicator-name-cell.has-tree-line.is-last-sub::before {
+            bottom: 50%;
+          }
+        `}
+      </style>
+      <Modal
+        title={
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Icon icon="mdi:send" width={20} />
+            <span>Gửi QLKT - Chọn khoa phòng</span>
+          </div>
+        }
       open={visible}
       onCancel={onCancel}
       width="90vw"
@@ -460,14 +720,17 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
         >
           <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
             <Text>
-              Đã chọn: <Text strong>{checkedIndicatorIds.length}</Text> chỉ tiêu
+              Đã chọn: <Text strong>{checkedParentCount}</Text> chỉ tiêu cha
+              {checkedIndicatorIds.length > checkedParentCount && (
+                <Text type="secondary"> (+{checkedIndicatorIds.length - checkedParentCount} chỉ tiêu phụ)</Text>
+              )}
             </Text>
-            {checkedIndicatorIds.length > 0 && selectedMissingLab.length > 0 && (
+            {checkedParentCount > 0 && selectedMissingLab.length > 0 && (
               <Text type="danger">
                 ({selectedMissingLab.length} chưa có khoa phòng)
               </Text>
             )}
-            {checkedIndicatorIds.length > 0 && selectedMissingDate.length > 0 && (
+            {checkedParentCount > 0 && selectedMissingDate.length > 0 && (
               <Text type="danger">
                 ({selectedMissingDate.length} chưa có ngày YC)
               </Text>
@@ -506,7 +769,7 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
             }}
           >
             <Text type="secondary" style={{ fontSize: 12 }}>
-              Gán cho các chỉ tiêu đã chọn ({checkedIndicatorIds.length}):
+              Gán cho các chỉ tiêu cha đã chọn ({checkedParentCount}):
             </Text>
             <Select
               size="small"
@@ -517,7 +780,7 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
                 value: lab.id,
                 label: lab.name,
               }))}
-              disabled={checkedIndicatorIds.length === 0}
+              disabled={checkedParentCount === 0}
             />
             <DatePicker
               size="small"
@@ -525,7 +788,7 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
               placeholder="Chọn ngày YC"
               format="DD/MM/YYYY"
               onChange={handleApplyRequestDateToChecked}
-              disabled={checkedIndicatorIds.length === 0}
+              disabled={checkedParentCount === 0}
               disabledDate={(current) => {
                 return current && current.isBefore(dayjs().startOf("day"));
               }}
@@ -602,8 +865,8 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
                           </div>
                         }
                       >
-                        {unsentIndicators.map((indicator) =>
-                          renderIndicatorRow(indicator, false)
+                        {processIndicatorsWithHierarchy(unsentIndicators).map((indicator) =>
+                          renderIndicatorRow(indicator, sample)
                         )}
                       </Panel>
                     );
@@ -614,7 +877,8 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
           </div>
         </div>
       )}
-    </Modal>
+      </Modal>
+    </>
   );
 };
 
