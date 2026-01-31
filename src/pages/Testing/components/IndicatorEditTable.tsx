@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Table,
   Input,
@@ -60,6 +60,85 @@ interface IndicatorEditTableProps {
   onShowCannotTestModal?: (indicatorId: string, indicatorName: string) => void;
 }
 
+// Extended indicator with parent-child metadata
+interface ProcessedIndicator extends TestingIndicatorDto {
+  _isParentWithChildren: boolean;  // Parent có children -> chỉ hiển thị tên + PP
+  _isSubIndicator: boolean;        // Sub-indicator -> hiển thị đầy đủ với thụt lề
+  _isLastSubIndicator: boolean;    // Last sub-indicator trong group (để vẽ tree line đúng)
+  _rowKey: string;                 // Unique row key
+}
+
+// Helper: tạo composite key từ indicatorId + methodId
+const makeGroupKey = (indicatorId: string, methodId: string | null | undefined) =>
+  `${indicatorId}_${methodId || 'no-method'}`;
+
+// Group và flatten indicators theo quan hệ parent-child
+const processIndicatorsForDisplay = (indicators: TestingIndicatorDto[]): ProcessedIndicator[] => {
+  const result: ProcessedIndicator[] = [];
+  const parentMap = new Map<string, { parent: TestingIndicatorDto; children: TestingIndicatorDto[] }>();
+  const orphans: TestingIndicatorDto[] = [];
+
+  // Step 1: Find all parents (parentIndicatorId = null/undefined)
+  indicators.forEach(ind => {
+    if (!ind.parentIndicatorId) {
+      const key = makeGroupKey(ind.indicatorId, ind.methodId);
+      parentMap.set(key, { parent: ind, children: [] });
+    }
+  });
+
+  // Step 2: Assign children to parents
+  indicators.forEach(ind => {
+    if (ind.parentIndicatorId) {
+      const key = makeGroupKey(ind.parentIndicatorId, ind.methodId);
+      const group = parentMap.get(key);
+      if (group) {
+        group.children.push(ind);
+      } else {
+        // Parent không có trong list -> hiển thị như indicator độc lập
+        orphans.push(ind);
+      }
+    }
+  });
+
+  // Step 3: Flatten với metadata
+  parentMap.forEach(({ parent, children }) => {
+    const hasChildren = children.length > 0;
+
+    // Add parent
+    result.push({
+      ...parent,
+      _isParentWithChildren: hasChildren,
+      _isSubIndicator: false,
+      _isLastSubIndicator: false,
+      _rowKey: parent.id,
+    });
+
+    // Add children (if any)
+    children.forEach((child, idx) => {
+      result.push({
+        ...child,
+        _isParentWithChildren: false,
+        _isSubIndicator: true,
+        _isLastSubIndicator: idx === children.length - 1, // Last child in group
+        _rowKey: `${parent.id}_sub_${idx}`,
+      });
+    });
+  });
+
+  // Step 4: Add orphans as standalone indicators
+  orphans.forEach(ind => {
+    result.push({
+      ...ind,
+      _isParentWithChildren: false,
+      _isSubIndicator: true,  // Hiển thị như sub vì có parentIndicatorId
+      _isLastSubIndicator: true, // Orphan luôn là "last" trong group của nó
+      _rowKey: `orphan_${ind.id}`,
+    });
+  });
+
+  return result;
+};
+
 const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
   indicators,
   selectedIndicatorIds,
@@ -102,6 +181,67 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [indicatorDataKey]);
 
+  // Process indicators for display (group parent-child)
+  const processedIndicators = useMemo(() => {
+    return processIndicatorsForDisplay(indicators);
+  }, [indicators]);
+
+  // Get status priority for sorting
+  const getStatusPriority = (status: IndicatorTestingStatus): number => {
+    switch (status) {
+      case IndicatorTestingStatus.Rejected:
+        return 0;
+      case IndicatorTestingStatus.CannotTest:
+        return 1;
+      case IndicatorTestingStatus.PendingApproval:
+        return 2;
+      case IndicatorTestingStatus.Testing:
+        return 3;
+      case IndicatorTestingStatus.Todo:
+        return 4;
+      case IndicatorTestingStatus.Done:
+        return 5;
+      case IndicatorTestingStatus.Cancelled:
+        return 6;
+      default:
+        return 7;
+    }
+  };
+
+  // Sort processed indicators - keep parent-child grouping, sort by status within groups
+  const sortedIndicators = useMemo(() => {
+    // Group by parent first
+    const groups: ProcessedIndicator[][] = [];
+    let currentGroup: ProcessedIndicator[] = [];
+
+    processedIndicators.forEach(ind => {
+      if (!ind._isSubIndicator) {
+        // New parent starts a new group
+        if (currentGroup.length > 0) {
+          groups.push(currentGroup);
+        }
+        currentGroup = [ind];
+      } else {
+        // Sub-indicator belongs to current group
+        currentGroup.push(ind);
+      }
+    });
+    if (currentGroup.length > 0) {
+      groups.push(currentGroup);
+    }
+
+    // Sort groups by parent's status priority
+    groups.sort((a, b) => {
+      const priorityA = getStatusPriority(a[0].testingStatus);
+      const priorityB = getStatusPriority(b[0].testingStatus);
+      if (priorityA !== priorityB) return priorityA - priorityB;
+      return a[0].id.localeCompare(b[0].id);
+    });
+
+    // Flatten back
+    return groups.flat();
+  }, [processedIndicators]);
+
   const handleFieldChange = (
     indicatorId: string,
     field: keyof SaveIndicatorResultDto,
@@ -128,7 +268,6 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
   ) => {
     const dateStr = date ? date.format("YYYY-MM-DD") : undefined;
 
-    // Build the updated result with new testDate
     const current = editedResults.get(indicatorId) || {
       indicatorId,
       methodId: undefined,
@@ -138,43 +277,35 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     };
     const updatedResult: SaveIndicatorResultDto = { ...current, testDate: dateStr };
 
-    // Update local state
     const newResults = new Map(editedResults);
     newResults.set(indicatorId, updatedResult);
     setEditedResults(newResults);
 
-    // Notify parent of changes
     onResultsChange(Array.from(newResults.values()));
-
-    // Auto-save with the new value directly (don't rely on state)
     onSaveIndicator(indicatorId, updatedResult);
   };
 
-  // Handle checkbox selection
-  const handleCheckboxChange = (indicatorId: string, checked: boolean) => {
-    // Không cho select khi readonly mode
+  // Handle checkbox selection - không cho chọn parent có children
+  const handleCheckboxChange = (record: ProcessedIndicator, checked: boolean) => {
     if (!canPerformActions) return;
+    if (record._isParentWithChildren) return; // Parent có children -> không cho chọn
 
     if (checked) {
-      onSelectionChange([...selectedIndicatorIds, indicatorId]);
+      onSelectionChange([...selectedIndicatorIds, record.id]);
     } else {
-      onSelectionChange(
-        selectedIndicatorIds.filter((id) => id !== indicatorId)
-      );
+      onSelectionChange(selectedIndicatorIds.filter((id) => id !== record.id));
     }
   };
 
-  // Handle select all
+  // Handle select all - chỉ chọn các indicator có thể select (không phải parent có children)
   const handleSelectAll = (checked: boolean) => {
-    // Không cho select khi readonly mode
     if (!canPerformActions) return;
 
     if (checked) {
-      // Select all indicators that are not Done or Cancelled
-      // Cho phép chọn PendingApproval để TNV có thể gửi lại kết quả
-      const selectableIds = indicators
+      const selectableIds = sortedIndicators
         .filter(
           (ind) =>
+            !ind._isParentWithChildren && // Không phải parent có children
             ind.testingStatus !== IndicatorTestingStatus.Done &&
             ind.testingStatus !== IndicatorTestingStatus.Cancelled
         )
@@ -185,17 +316,17 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     }
   };
 
-  // Check if indicator can be selected (not Done or Cancelled)
-  // Cho phép chọn PendingApproval để TNV có thể gửi lại kết quả
-  const canSelectIndicator = (indicator: TestingIndicatorDto) => {
+  // Check if indicator can be selected
+  const canSelectIndicator = (record: ProcessedIndicator) => {
+    if (record._isParentWithChildren) return false; // Parent có children -> không cho chọn
     return (
-      indicator.testingStatus !== IndicatorTestingStatus.Done &&
-      indicator.testingStatus !== IndicatorTestingStatus.Cancelled
+      record.testingStatus !== IndicatorTestingStatus.Done &&
+      record.testingStatus !== IndicatorTestingStatus.Cancelled
     );
   };
 
-  // Check if all selectable are selected
-  const selectableIndicators = indicators.filter(canSelectIndicator);
+  // Selectable indicators (không phải parent có children)
+  const selectableIndicators = sortedIndicators.filter(canSelectIndicator);
   const allSelected =
     selectableIndicators.length > 0 &&
     selectableIndicators.every((ind) => selectedIndicatorIds.includes(ind.id));
@@ -225,7 +356,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     );
   };
 
-  const columns: ColumnsType<TestingIndicatorDto> = [
+  const columns: ColumnsType<ProcessedIndicator> = [
     {
       title: (
         <Checkbox
@@ -239,12 +370,15 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       width: 40,
       fixed: "left" as const,
       render: (_, record) => {
-        // Disable checkbox khi readonly mode hoặc chỉ tiêu đã Done/Cancelled
+        // Parent có children -> không hiện checkbox
+        if (record._isParentWithChildren) {
+          return null;
+        }
         const isDisabled = !canPerformActions || !canSelectIndicator(record);
         return (
           <Checkbox
             checked={selectedIndicatorIds.includes(record.id)}
-            onChange={(e) => handleCheckboxChange(record.id, e.target.checked)}
+            onChange={(e) => handleCheckboxChange(record, e.target.checked)}
             disabled={isDisabled}
           />
         );
@@ -256,7 +390,29 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       key: "indicatorName",
       width: 200,
       fixed: "left" as const,
-      render: (value: string, record) => value ? <IndicatorName name={value} formattedName={record.indicatorFormattedName} /> : "-",
+      render: (value: string, record) => {
+        const content = value ? (
+          <IndicatorName name={value} formattedName={record.indicatorFormattedName} />
+        ) : (
+          "-"
+        );
+
+        const isSubIndicator = record._isSubIndicator;
+        const isLastSub = record._isLastSubIndicator;
+
+        // Sử dụng wrapper div với CSS class cho tree line (giống TaskManagement)
+        return (
+          <div
+            className={`indicator-name-wrapper ${isSubIndicator ? "has-tree-line" : ""} ${isLastSub ? "is-last-sub" : ""}`}
+            style={{
+              paddingLeft: isSubIndicator ? 24 : 0,
+              position: "relative",
+            }}
+          >
+            {content}
+          </div>
+        );
+      },
     },
     {
       title: "Phương pháp",
@@ -274,7 +430,10 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       key: "unit",
       width: 100,
       render: (_, record) => {
-        // ĐVT lấy từ phương pháp thử, không cho sửa
+        // Parent có children -> không hiển thị
+        if (record._isParentWithChildren) {
+          return <Text type="secondary">-</Text>;
+        }
         const unitValue = record.unit ?? "";
         return (
           <Input
@@ -291,20 +450,29 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       dataIndex: "standardName",
       key: "standardName",
       width: 150,
-      render: (value: string | undefined) => (
-        <Tooltip title={value}>
-          <Text ellipsis style={{ maxWidth: 140 }}>
-            {value || <Text type="secondary">-</Text>}
-          </Text>
-        </Tooltip>
-      ),
+      render: (value: string | undefined, record) => {
+        // Parent có children -> không hiển thị
+        if (record._isParentWithChildren) {
+          return <Text type="secondary">-</Text>;
+        }
+        return (
+          <Tooltip title={value}>
+            <Text ellipsis style={{ maxWidth: 140 }}>
+              {value || <Text type="secondary">-</Text>}
+            </Text>
+          </Tooltip>
+        );
+      },
     },
     {
       title: "Giới hạn",
       key: "allowedLimit",
       width: 120,
       render: (_, record) => {
-        // Hiển thị giới hạn với ký hiệu so sánh nếu có (giống TaskManagement)
+        // Parent có children -> không hiển thị
+        if (record._isParentWithChildren) {
+          return <Text type="secondary">-</Text>;
+        }
         if (record.comparisonOperator && record.allowedLimit) {
           return (
             <Text>
@@ -320,13 +488,13 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       key: "result",
       width: 120,
       render: (_, record) => {
+        // Parent có children -> không hiển thị input
+        if (record._isParentWithChildren) {
+          return <Text type="secondary">-</Text>;
+        }
+
         const currentValue =
           editedResults.get(record.id)?.result ?? record.result ?? "";
-        // Cho phép nhập kết quả khi:
-        // - Có quyền từ Permission Matrix (canPerformActions)
-        // - Có quyền edit từ server (canEdit)
-        // - Trạng thái = Todo, Testing, Rejected hoặc PendingApproval (cho phép gửi lại KQ)
-        // - Chỉ khóa khi Done hoặc Cancelled
 
         const isDisabled =
           !canPerformActions ||
@@ -363,8 +531,11 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       key: "images",
       width: 120,
       render: (_, record) => {
-        // Cho phép upload khi có quyền + không phải Done hoặc Cancelled
-        // Bao gồm PendingApproval để TNV có thể gửi lại KQ
+        // Parent có children -> không hiển thị
+        if (record._isParentWithChildren) {
+          return <Text type="secondary">-</Text>;
+        }
+
         const canUpload =
           canPerformActions &&
           record.canEdit &&
@@ -392,22 +563,30 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       dataIndex: "assignedDate",
       key: "assignedDate",
       width: 110,
-      render: (date: string) => formatDate(date),
+      render: (date: string, record) => {
+        // Parent có children -> không hiển thị
+        if (record._isParentWithChildren) {
+          return <Text type="secondary">-</Text>;
+        }
+        return formatDate(date);
+      },
     },
     {
       title: "Ngày thử nghiệm",
       key: "testDate",
       width: 140,
       render: (_, record) => {
-        // Chỉ cho chọn ngày khi có quyền thao tác và trạng thái cho phép
-        // Cho phép PendingApproval để TNV có thể gửi lại KQ
+        // Parent có children -> không hiển thị
+        if (record._isParentWithChildren) {
+          return <Text type="secondary">-</Text>;
+        }
+
         const isDisabled =
           !canPerformActions ||
           !record.canEdit ||
           record.testingStatus === IndicatorTestingStatus.Done ||
           record.testingStatus === IndicatorTestingStatus.Cancelled;
 
-        // Nếu indicator bị từ chối hoặc đang chờ duyệt (gửi lại), không cho chọn ngày trước hôm nay
         const disabledDate =
           record.testingStatus === IndicatorTestingStatus.Rejected ||
           record.testingStatus === IndicatorTestingStatus.PendingApproval
@@ -415,7 +594,6 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
                 current && current < dayjs().startOf("day")
             : undefined;
 
-        // Lấy giá trị testDate từ editedResults hoặc từ record
         const currentTestDate = editedResults.get(record.id)?.testDate;
         const dateValue = currentTestDate ? dayjs(currentTestDate) : null;
 
@@ -437,19 +615,36 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       dataIndex: "submitDate",
       key: "submitDate",
       width: 110,
-      render: (date: string) => formatDate(date),
+      render: (date: string, record) => {
+        // Parent có children -> không hiển thị
+        if (record._isParentWithChildren) {
+          return <Text type="secondary">-</Text>;
+        }
+        return formatDate(date);
+      },
     },
     {
       title: "Trạng thái",
       key: "testingStatus",
       width: 130,
-      render: (_, record) => getTestingStatusTag(record.testingStatus),
+      render: (_, record) => {
+        // Parent có children -> không hiển thị status
+        if (record._isParentWithChildren) {
+          return <Text type="secondary">-</Text>;
+        }
+        return getTestingStatusTag(record.testingStatus);
+      },
     },
     {
       title: "Lý do từ chối",
       key: "rejectionReason",
       width: 180,
       render: (_, record) => {
+        // Parent có children -> không hiển thị
+        if (record._isParentWithChildren) {
+          return <Text type="secondary">-</Text>;
+        }
+
         const hasHistory = record.rejectionHistoryCount > 0;
         const latestReason = record.latestRejectionReason;
 
@@ -493,7 +688,11 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       width: 120,
       fixed: "right" as const,
       render: (_, record) => {
-        // Nếu không có quyền thao tác, hiện dấu "-"
+        // Parent có children -> không hiển thị actions
+        if (record._isParentWithChildren) {
+          return <Text type="secondary">-</Text>;
+        }
+
         if (!canPerformActions) {
           return <Text type="secondary">-</Text>;
         }
@@ -505,8 +704,6 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
         const currentTestDate = editedResults.get(record.id)?.testDate;
         const hasTestDate = !!currentTestDate;
 
-        // Có thể gửi duyệt khi: có kết quả + có ngày thử nghiệm + trạng thái cho phép
-        // Bao gồm PendingApproval để TNV có thể gửi lại KQ
         const canSubmit =
           (status === IndicatorTestingStatus.Todo ||
             status === IndicatorTestingStatus.Testing ||
@@ -515,7 +712,6 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
           hasResult &&
           hasTestDate;
 
-        // Không hiện gì nếu đã Done, Cancelled, hoặc CannotTest
         if (
           status === IndicatorTestingStatus.Done ||
           status === IndicatorTestingStatus.Cancelled ||
@@ -524,7 +720,6 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
           return <Text type="secondary">-</Text>;
         }
 
-        // Có thể báo không TN được khi: Todo, Testing, Rejected, PendingApproval
         const canMarkCannotTest =
           status === IndicatorTestingStatus.Todo ||
           status === IndicatorTestingStatus.Testing ||
@@ -580,45 +775,11 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     },
   ];
 
-  // Sort indicators theo thứ tự ưu tiên trạng thái, sau đó theo id
-  // Ưu tiên: Bị từ chối > Không TN được > Chờ phê duyệt > Đang TN > Cần làm > Đã xong > KH hủy
-  const getStatusPriority = (status: IndicatorTestingStatus): number => {
-    switch (status) {
-      case IndicatorTestingStatus.Rejected:
-        return 0; // Cao nhất
-      case IndicatorTestingStatus.CannotTest:
-        return 1; // Không TN được - cần xử lý
-      case IndicatorTestingStatus.PendingApproval:
-        return 2;
-      case IndicatorTestingStatus.Testing:
-        return 3;
-      case IndicatorTestingStatus.Todo:
-        return 4;
-      case IndicatorTestingStatus.Done:
-        return 5;
-      case IndicatorTestingStatus.Cancelled:
-        return 6; // Thấp nhất - KH hủy hiển thị cuối cùng
-      default:
-        return 7;
-    }
-  };
-
-  const sortedIndicators = [...indicators].sort((a, b) => {
-    const priorityA = getStatusPriority(a.testingStatus);
-    const priorityB = getStatusPriority(b.testingStatus);
-
-    // Nếu cùng priority thì sort theo id
-    if (priorityA !== priorityB) {
-      return priorityA - priorityB;
-    }
-    return a.id.localeCompare(b.id);
-  });
-
-  // Check if indicator is overdue (currentDate > assignedDate + 1 day)
-  const isOverdue = (record: TestingIndicatorDto): boolean => {
+  // Check if indicator is overdue
+  const isOverdue = (record: ProcessedIndicator): boolean => {
+    if (record._isParentWithChildren) return false; // Parent row không check overdue
     if (!record.assignedDate) return false;
 
-    // Chỉ check overdue cho các trạng thái chưa hoàn thành
     if (
       record.testingStatus === IndicatorTestingStatus.Done ||
       record.testingStatus === IndicatorTestingStatus.PendingApproval ||
@@ -629,13 +790,13 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
 
     const assignedDate = dayjs(record.assignedDate).startOf("day");
     const currentDate = dayjs().startOf("day");
-    // Quá hạn khi ngày hiện tại > ngày giao việc + 1 ngày
     return currentDate.diff(assignedDate, "day") > 1;
   };
 
-  // Check if indicator has no result yet (chưa nhập kết quả)
-  const hasNoResult = (record: TestingIndicatorDto): boolean => {
-    // Chỉ check cho các trạng thái chưa gửi phê duyệt
+  // Check if indicator has no result yet
+  const hasNoResult = (record: ProcessedIndicator): boolean => {
+    if (record._isParentWithChildren) return false; // Parent row không check
+
     if (
       record.testingStatus === IndicatorTestingStatus.Done ||
       record.testingStatus === IndicatorTestingStatus.PendingApproval ||
@@ -645,33 +806,114 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       return false;
     }
 
-    // Kiểm tra cả edited result và original result
     const editedResult = editedResults.get(record.id)?.result;
     const currentResult = editedResult ?? record.result;
     return !currentResult || currentResult.trim() === "";
   };
 
-  // Row class name for urgent/overdue highlighting
-  const getRowClassName = (record: TestingIndicatorDto) => {
-    // Highlight đỏ khi quá hạn (currentDate > assignedDate + 1 ngày)
-    if (isOverdue(record)) {
-      return "overdue-indicator-row";
+  // Row class name for styling
+  const getRowClassName = (record: ProcessedIndicator) => {
+    const classes: string[] = [];
+
+    // Parent với children -> background xám nhạt
+    if (record._isParentWithChildren) {
+      classes.push("parent-indicator-row");
     }
-    // Highlight đỏ cho chỉ tiêu chưa nhập kết quả (Todo, Testing, Rejected)
-    if (hasNoResult(record)) {
-      return "no-result-indicator-row";
+
+    // Sub-indicator -> thụt lề nhẹ
+    if (record._isSubIndicator) {
+      classes.push("sub-indicator-row");
     }
-    // Highlight đỏ nhạt hơn cho urgent (gấp)
-    if (isUrgent && record.testingStatus !== IndicatorTestingStatus.Done) {
-      return "urgent-indicator-row";
+
+    // Highlight cho overdue/no-result/urgent (chỉ cho non-parent rows)
+    if (!record._isParentWithChildren) {
+      if (isOverdue(record)) {
+        classes.push("overdue-indicator-row");
+      } else if (hasNoResult(record)) {
+        classes.push("no-result-indicator-row");
+      } else if (isUrgent && record.testingStatus !== IndicatorTestingStatus.Done) {
+        classes.push("urgent-indicator-row");
+      }
     }
-    return "";
+
+    return classes.join(" ");
   };
 
   return (
-    <div>
+    <div className="indicator-edit-table-wrapper">
       <style>
         {`
+          /* Tree line styles for sub-indicators (giống TaskManagement) */
+          .indicator-name-wrapper {
+            position: relative;
+          }
+
+          /* Vertical line connecting sub-indicators */
+          .indicator-name-wrapper.has-tree-line::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: -100%;
+            bottom: -100%;
+            width: 1px;
+            background-color: #d9d9d9;
+          }
+
+          /* Horizontal line from vertical to indicator name */
+          .indicator-name-wrapper.has-tree-line::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            width: 16px;
+            height: 1px;
+            background-color: #d9d9d9;
+          }
+
+          /* For last sub-indicator, vertical line ends at the middle (creates the corner) */
+          .indicator-name-wrapper.has-tree-line.is-last-sub::before {
+            bottom: 50%;
+          }
+
+          /* Parent indicator row - có children, chỉ hiển thị tên + PP */
+          .parent-indicator-row > td {
+            background-color: #f5f5f5 !important;
+            font-weight: 500;
+          }
+          .parent-indicator-row > td.ant-table-cell-fix-left,
+          .parent-indicator-row > td.ant-table-cell-fix-right {
+            background-color: #f5f5f5 !important;
+          }
+          .parent-indicator-row:hover > td {
+            background-color: #e8e8e8 !important;
+          }
+          .parent-indicator-row:hover > td.ant-table-cell-fix-left,
+          .parent-indicator-row:hover > td.ant-table-cell-fix-right {
+            background-color: #e8e8e8 !important;
+          }
+
+          /* Sub-indicator row */
+          .sub-indicator-row > td {
+            background-color: #fafafa !important;
+          }
+          .sub-indicator-row > td.ant-table-cell-fix-left,
+          .sub-indicator-row > td.ant-table-cell-fix-right {
+            background-color: #fafafa !important;
+          }
+          .sub-indicator-row:hover > td {
+            background-color: #f0f0f0 !important;
+          }
+          .sub-indicator-row:hover > td.ant-table-cell-fix-left,
+          .sub-indicator-row:hover > td.ant-table-cell-fix-right {
+            background-color: #f0f0f0 !important;
+          }
+
+          /* Ensure tree cell overflow is visible */
+          .parent-indicator-row > td,
+          .sub-indicator-row > td {
+            overflow: visible !important;
+          }
+
           /* Overdue indicator - quá hạn (đỏ đậm hơn) */
           .overdue-indicator-row > td {
             background-color: #ffccc7 !important;
@@ -722,7 +964,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       <Table
         columns={columns}
         dataSource={sortedIndicators}
-        rowKey="id"
+        rowKey="_rowKey"
         pagination={false}
         scroll={{ x: 2270 }}
         size="small"
