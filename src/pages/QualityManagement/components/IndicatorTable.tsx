@@ -13,7 +13,7 @@ import {
 import StatusTag from "../../../components/common/StatusTag";
 import { CheckOutlined, CloseOutlined } from "../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
-import { formatDate } from "../../../utils/formatters";
+import { formatDate, parseResultToNumber } from "../../../utils/formatters";
 import {
   QualityManagementIndicatorDto,
   QualityIndicatorApprovalStatus,
@@ -148,6 +148,94 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   selectedPendingIds,
   onPendingSelectChange,
 }) => {
+  // Calculate pass/fail status based on result and limits
+  // Supports both single limit and range comparisons
+  const calculatePassFail = (
+    result: string | undefined,
+    comparisonOperator: string | undefined,
+    allowedLimit: string | undefined,
+    lowerOperator?: string,
+    lowerLimit?: string,
+    upperOperator?: string,
+    upperLimit?: string
+  ): "pass" | "fail" | null => {
+    if (!result) return null;
+
+    // Parse result to number using parseResultToNumber
+    const resultValue = parseResultToNumber(result);
+    if (resultValue === null) return null;
+
+    // Check if it's a range comparison (both lowerLimit and upperLimit exist)
+    if (lowerLimit && upperLimit) {
+      const lowerValue = parseResultToNumber(lowerLimit);
+      const upperValue = parseResultToNumber(upperLimit);
+      if (lowerValue === null || upperValue === null) return null;
+
+      // Check lower bound
+      let passLower = false;
+      const lowerOp = lowerOperator || ">";
+      switch (lowerOp) {
+        case ">":
+        case "≥":
+          passLower =
+            lowerOp === ">"
+              ? resultValue > lowerValue
+              : resultValue >= lowerValue;
+          break;
+        case ">=":
+          passLower = resultValue >= lowerValue;
+          break;
+        default:
+          passLower = resultValue > lowerValue;
+      }
+
+      // Check upper bound
+      let passUpper = false;
+      const upperOp = upperOperator || "<";
+      switch (upperOp) {
+        case "<":
+        case "≤":
+          passUpper =
+            upperOp === "<"
+              ? resultValue < upperValue
+              : resultValue <= upperValue;
+          break;
+        case "<=":
+          passUpper = resultValue <= upperValue;
+          break;
+        default:
+          passUpper = resultValue < upperValue;
+      }
+
+      return passLower && passUpper ? "pass" : "fail";
+    }
+
+    // Single limit comparison
+    if (!comparisonOperator || !allowedLimit) return null;
+
+    // Parse limit to number
+    const limitValue = parseResultToNumber(allowedLimit);
+    if (limitValue === null) return null;
+
+    // Compare based on operator (support both <= and ≤ formats)
+    switch (comparisonOperator) {
+      case "<=":
+      case "≤":
+        return resultValue <= limitValue ? "pass" : "fail";
+      case ">=":
+      case "≥":
+        return resultValue >= limitValue ? "pass" : "fail";
+      case "<":
+        return resultValue < limitValue ? "pass" : "fail";
+      case ">":
+        return resultValue > limitValue ? "pass" : "fail";
+      case "=":
+        return resultValue === limitValue ? "pass" : "fail";
+      default:
+        return null;
+    }
+  };
+
   const getApprovalStatusTag = (status: QualityIndicatorApprovalStatus) => (
     <StatusTag color={QualityIndicatorApprovalStatusColors[status]}>
       {QualityIndicatorApprovalStatusLabels[status]}
@@ -398,6 +486,41 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         },
       },
       {
+        title: "Đạt/Không đạt",
+        key: "passFailStatus",
+        width: 120,
+        align: "center" as const,
+        render: (_, record) => {
+          // Hide for parent indicators with children
+          if (record._isParentWithChildren) return "-";
+
+          // Need result and limit info to calculate
+          if (!record.result) return null;
+          if (!record.comparisonOperator || !record.allowedLimit) return null;
+
+          const passFailStatus = calculatePassFail(
+            record.result,
+            record.comparisonOperator,
+            record.allowedLimit
+          );
+
+          if (passFailStatus === "pass") {
+            return (
+              <Text strong style={{ color: "#52c41a" }}>
+                Đạt
+              </Text>
+            );
+          } else if (passFailStatus === "fail") {
+            return (
+              <Text strong style={{ color: "#ff4d4f" }}>
+                Không đạt
+              </Text>
+            );
+          }
+          return null;
+        },
+      },
+      {
         title: "Trạng thái",
         dataIndex: "approvalStatus",
         key: "approvalStatus",
@@ -617,7 +740,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                   rowClassName={getRowClassName}
                   pagination={false}
                   size="small"
-                  scroll={{ x: 1320 }}
+                  scroll={{ x: 1440 }}
                 />
               </Card>
             </Panel>
