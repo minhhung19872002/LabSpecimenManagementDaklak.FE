@@ -180,15 +180,31 @@ const MasterDataList: React.FC = () => {
 
               {/* Sample Type Categories Tab */}
               {activeCategory === "sampleTypeCategories" && (
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() =>
-                    sampleTypeCategoriesRef.current?.handleCreate()
-                  }
-                >
-                  Thêm danh mục
-                </Button>
+                <>
+                  <Button
+                    icon={<DownloadOutlined />}
+                    onClick={() =>
+                      sampleTypeCategoriesRef.current?.handleDownloadTemplate()
+                    }
+                  >
+                    Tải template
+                  </Button>
+                  <Button
+                    icon={<UploadOutlined />}
+                    onClick={() => sampleTypeCategoriesRef.current?.handleImport()}
+                  >
+                    Nhập danh sách
+                  </Button>
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() =>
+                      sampleTypeCategoriesRef.current?.handleCreate()
+                    }
+                  >
+                    Thêm danh mục
+                  </Button>
+                </>
               )}
 
               {/* Specimen Types Tab */}
