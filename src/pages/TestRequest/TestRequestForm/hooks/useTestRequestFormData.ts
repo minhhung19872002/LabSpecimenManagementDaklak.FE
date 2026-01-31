@@ -46,7 +46,7 @@ import {
   Province,
   Ward,
 } from "../../../../utils/vietnamLocations";
-import { LOCKED_FIELDS, HEAVY_METAL_COMBO_INDICATORS, HEAVY_METAL_FREE_INDICATOR } from "../constants";
+import { LOCKED_FIELDS, isHeavyMetalComboMet, isHgIndicator } from "../constants";
 import {
   SampleFormData,
   IndicatorDateInfo,
@@ -799,11 +799,9 @@ export const useTestRequestFormData = () => {
       const sampleIndicatorNames = (sample.indicatorMethods || []).map((methodKey) => {
         const { indicatorId } = parseIndicatorMethodKey(methodKey);
         const ind = indicators.find((i) => i.id === indicatorId);
-        return ind?.name?.trim();
+        return ind?.name;
       });
-      const isSampleComboMet = HEAVY_METAL_COMBO_INDICATORS.every(
-        (name) => sampleIndicatorNames.includes(name)
-      );
+      const isSampleComboMet = isHeavyMetalComboMet(sampleIndicatorNames);
 
       // New logic: use indicatorMethods if available
       if (sample.indicatorMethods && sample.indicatorMethods.length > 0) {
@@ -814,7 +812,7 @@ export const useTestRequestFormData = () => {
           if (method) {
             // Hg miễn phí khi đủ combo kim loại nặng
             const ind = indicators.find((i) => i.id === indicatorId);
-            const isHgFree = isSampleComboMet && ind?.name?.trim() === HEAVY_METAL_FREE_INDICATOR;
+            const isHgFree = isSampleComboMet && isHgIndicator(ind?.name);
             total += isHgFree ? 0 : method.unitPrice;
           }
         });
@@ -824,7 +822,7 @@ export const useTestRequestFormData = () => {
           const methods = indicatorMethodsMap[indId] || [];
           if (methods.length > 0) {
             const ind = indicators.find((i) => i.id === indId);
-            const isHgFree = isSampleComboMet && ind?.name?.trim() === HEAVY_METAL_FREE_INDICATOR;
+            const isHgFree = isSampleComboMet && isHgIndicator(ind?.name);
             total += isHgFree ? 0 : methods[0].unitPrice;
           }
         });

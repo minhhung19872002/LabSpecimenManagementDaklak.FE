@@ -22,7 +22,7 @@ import {
 import { generateSampleCode, getNextOrderNum, printBarcode as printBarcodeUtil, SampleBarcodeInfo } from "../utils";
 import { PATH_ROUTES } from "../../../../constants";
 import { getApiErrorMessage } from "../../../../utils/errorHandler";
-import { HEAVY_METAL_COMBO_INDICATORS, HEAVY_METAL_FREE_INDICATOR } from "../constants";
+import { isHeavyMetalComboMet, isHgIndicator } from "../constants";
 
 interface UseTestRequestFormActionsProps {
   form: any;
@@ -798,11 +798,9 @@ export const useTestRequestFormActions = ({
         const sampleIndicatorNames = (sample.indicatorMethods || []).map((methodKey) => {
           const { indicatorId } = parseIndicatorMethodKey(methodKey);
           const ind = indicators.find((i) => i.id === indicatorId);
-          return ind?.name?.trim();
+          return ind?.name;
         });
-        const isSampleComboMet = HEAVY_METAL_COMBO_INDICATORS.every(
-          (name) => sampleIndicatorNames.includes(name)
-        );
+        const isSampleComboMet = isHeavyMetalComboMet(sampleIndicatorNames);
 
         // Prefer indicatorMethods if available, fallback to indicatorIds
         const indicatorsList = sample.indicatorMethods && sample.indicatorMethods.length > 0
@@ -816,7 +814,7 @@ export const useTestRequestFormActions = ({
               const existingIndicatorId = sampleIndicatorIdMap[`${sample.key}_${methodKey}`];
               // Hg miễn phí khi đủ combo kim loại nặng
               const ind = indicators.find((i) => i.id === indicatorId);
-              const isHgFree = isSampleComboMet && ind?.name?.trim() === HEAVY_METAL_FREE_INDICATOR;
+              const isHgFree = isSampleComboMet && isHgIndicator(ind?.name);
               return {
                 id: existingIndicatorId || undefined, // Include id for existing indicators
                 indicatorId,
@@ -839,7 +837,7 @@ export const useTestRequestFormActions = ({
               // Get the TestRequestSampleIndicator.id if this indicator already exists
               const existingIndicatorId = sampleIndicatorIdMap[`${sample.key}_${indId}`];
               // Hg miễn phí khi đủ combo kim loại nặng (fallback logic)
-              const isHgFree = isSampleComboMet && indicator?.name?.trim() === HEAVY_METAL_FREE_INDICATOR;
+              const isHgFree = isSampleComboMet && isHgIndicator(indicator?.name);
               return {
                 id: existingIndicatorId || undefined, // Include id for existing indicators
                 indicatorId: indId,
@@ -1092,11 +1090,9 @@ export const useTestRequestFormActions = ({
           // Check combo kim loại nặng cho sample này (preview)
           const previewSampleNames = (sample.indicatorMethods || []).map((mk) => {
             const { indicatorId: iId } = parseIndicatorMethodKey(mk);
-            return indicators.find((i) => i.id === iId)?.name?.trim();
+            return indicators.find((i) => i.id === iId)?.name;
           });
-          const isPreviewComboMet = HEAVY_METAL_COMBO_INDICATORS.every(
-            (name) => previewSampleNames.includes(name)
-          );
+          const isPreviewComboMet = isHeavyMetalComboMet(previewSampleNames);
           return {
             sortOrder: index + 1,
             sampleCode: sample.sampleCode || "",
@@ -1111,7 +1107,7 @@ export const useTestRequestFormActions = ({
               const method = indicatorMethodsMap[indicatorId]?.find(
                 (m: IndicatorMethodInfo) => m.testMethodId === testMethodId
               );
-              const isHgFree = isPreviewComboMet && indicator?.name?.trim() === HEAVY_METAL_FREE_INDICATOR;
+              const isHgFree = isPreviewComboMet && isHgIndicator(indicator?.name);
               return {
                 indicatorId,
                 indicatorName: indicator?.name || "",
