@@ -852,10 +852,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           record.approvalStatus === IndicatorApprovalStatus.Rejected ||
           record.approvalStatus === IndicatorApprovalStatus.CannotTest;
 
-        const canEditIndicator =
-          !record.isWaitingForSharedSample &&
-          isAssignableStatus &&
-          canAssignTechnician;
+        const canEditIndicator = isAssignableStatus && canAssignTechnician;
 
         return (
           <div style={{ minHeight: 32, display: "flex", alignItems: "center" }}>
@@ -1065,14 +1062,6 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         onSelectionChange(newSelection);
       },
       getCheckboxProps: (record: IndicatorWithPosition) => {
-        // Disable selection cho chỉ tiêu đang chờ mẫu chung từ Lab Vi Sinh
-        if (record.isWaitingForSharedSample) {
-          return {
-            disabled: true,
-            name: record.id,
-          };
-        }
-
         if (selectionMode === "assignment") {
           // Assignment mode: chỉ disable cho Approved và CustomerCancelled
           // Các trạng thái khác (Pending, Entered, Rejected) đều có thể chọn để giao việc

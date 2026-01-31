@@ -141,12 +141,11 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
   const [supplementaryForm] = Form.useForm();
 
   // Filter indicators that need evaluation (Pending or CannotTest status)
-  // Exclude sub-indicators and indicators waiting for shared sample
+  // Exclude sub-indicators only - Lab Hóa can work in parallel now
   const pendingIndicators = useMemo(() => {
     return indicators.filter(
       (ind) =>
         !ind.parentIndicatorId && // Chỉ đánh giá cho chỉ tiêu cha
-        !ind.isWaitingForSharedSample &&
         (ind.approvalStatus === IndicatorApprovalStatus.Pending ||
           ind.approvalStatus === IndicatorApprovalStatus.CannotTest)
     );
@@ -365,11 +364,6 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
     // Không hiển thị button nào cho chỉ tiêu phụ (chỉ hiển thị thông tin)
     // Chỉ đánh giá cho chỉ tiêu cha
     if (record.parentIndicatorId) {
-      return <></>;
-    }
-
-    // Không hiển thị button nào khi chỉ tiêu đang chờ mẫu chung từ Lab Vi Sinh
-    if (record.isWaitingForSharedSample) {
       return <></>;
     }
 
@@ -746,7 +740,6 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
         // - Chỉ tiêu không cần đánh giá
         disabled:
           !!record.parentIndicatorId ||
-          record.isWaitingForSharedSample ||
           (record.approvalStatus !== IndicatorApprovalStatus.Pending &&
             record.approvalStatus !== IndicatorApprovalStatus.CannotTest),
         name: record.id,
