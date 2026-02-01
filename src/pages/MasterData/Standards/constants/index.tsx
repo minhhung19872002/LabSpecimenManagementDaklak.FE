@@ -292,7 +292,8 @@ export const getIndicatorColumns = (
               />
             </Tooltip>
           )}
-          {canEdit && (
+          {/* Only show edit button for sub-indicators - parent indicators don't have limits to edit */}
+          {canEdit && isSubIndicator && (
             <Tooltip title="Sửa">
               <Button
                 type="link"
