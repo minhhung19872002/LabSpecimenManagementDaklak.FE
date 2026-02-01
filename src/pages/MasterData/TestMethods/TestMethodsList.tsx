@@ -30,6 +30,7 @@ const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
     expandedRowKeys,
     indicatorGroups,
     indicatorsByGroup,
+    specimenTypes,
     setSearchText,
     setExpandedRowKeys,
     fetchData,
@@ -164,11 +165,16 @@ const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
     setFileList([]);
   };
 
-  // Get existing indicator IDs for the selected test method
-  const existingIndicatorIds = useMemo(() => {
+  // Get existing indicator keys (indicatorId + specimenTypeId) for the selected test method
+  const existingIndicatorKeys = useMemo(() => {
     if (!selectedTestMethodId) return [];
     const method = groupedData.find((m) => m.id === selectedTestMethodId);
-    return method?.indicators?.map((ind) => ind.indicatorId) || [];
+    return method?.indicators
+      ?.filter((ind) => !ind.parentIndicatorId) // Only parent indicators
+      ?.map((ind) => ({
+        indicatorId: ind.indicatorId,
+        specimenTypeId: ind.specimenTypeId,
+      })) || [];
   }, [selectedTestMethodId, groupedData]);
 
   // Memoized columns for test methods
@@ -233,7 +239,8 @@ const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
         loading={addIndicatorsLoading}
         indicatorGroups={indicatorGroups}
         indicatorsByGroup={indicatorsByGroup}
-        existingIndicatorIds={existingIndicatorIds}
+        specimenTypes={specimenTypes}
+        existingIndicatorKeys={existingIndicatorKeys}
         onOk={handleAddIndicatorsOk}
         onCancel={handleAddIndicatorsCancel}
       />
