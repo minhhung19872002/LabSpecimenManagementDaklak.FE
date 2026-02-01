@@ -103,10 +103,23 @@ const ImportStandardModal: React.FC<ImportStandardModalProps> = ({
       width: 60,
     },
     {
+      title: "Nền mẫu",
+      dataIndex: "specimenTypeName",
+      key: "specimenTypeName",
+      width: 120,
+    },
+    {
       title: "Chỉ tiêu",
       dataIndex: "indicatorName",
       key: "indicatorName",
       width: 150,
+    },
+    {
+      title: "Chỉ tiêu phụ",
+      dataIndex: "subIndicatorName",
+      key: "subIndicatorName",
+      width: 120,
+      render: (value: string) => value || "-",
     },
     {
       title: "Phương pháp",
@@ -132,7 +145,7 @@ const ImportStandardModal: React.FC<ImportStandardModalProps> = ({
       width: 150,
       render: (_: unknown, record: StandardIndicatorImportItem) => {
         if (record.comparisonOperator?.toLowerCase() === "khoảng") {
-          return `${record.lowerOperator || ""} ${record.lowerLimit || ""} - ${
+          return `${record.lowerOperator || ""} ${record.lowerLimit || ""} và ${
             record.upperOperator || ""
           } ${record.upperLimit || ""}`;
         }
@@ -349,7 +362,7 @@ const ImportStandardModal: React.FC<ImportStandardModalProps> = ({
                     }))}
                     columns={indicatorColumns}
                     pagination={false}
-                    scroll={{ x: 800 }}
+                    scroll={{ x: 1000 }}
                   />
                 </Collapse.Panel>
               ))}
