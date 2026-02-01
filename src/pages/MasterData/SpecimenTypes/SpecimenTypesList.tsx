@@ -12,6 +12,7 @@ import {
   SpecimenTypeFormData,
 } from "./schemas/specimenTypeSchema";
 import { API_BASE_URL, api } from "../../../services/api";
+import { getApiErrorMessage } from "../../../utils/errorHandler";
 
 const SpecimenTypesList = forwardRef<SpecimenTypesActions, SpecimenTypesTabProps>(({ onDataChange, refreshKey }, ref) => {
   const {
@@ -108,12 +109,8 @@ const SpecimenTypesList = forwardRef<SpecimenTypesActions, SpecimenTypesTabProps
         formData,
       );
       setPreviewData(response.data);
-    } catch (error: any) {
-      message.error(
-        error?.response?.data?.message ||
-          error?.response?.data?.error?.message ||
-          "Lỗi khi đọc file",
-      );
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Lỗi khi đọc file"));
     } finally {
       setImportLoading(false);
     }
@@ -144,12 +141,8 @@ const SpecimenTypesList = forwardRef<SpecimenTypesActions, SpecimenTypesTabProps
       } else {
         message.error(result.message || "Lỗi khi import");
       }
-    } catch (error: any) {
-      message.error(
-        error?.response?.data?.message ||
-          error?.response?.data?.error?.message ||
-          "Lỗi khi import",
-      );
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Lỗi khi import"));
     } finally {
       setImportLoading(false);
     }

@@ -9,6 +9,7 @@ import {
 } from "../../../../services/masterDataService";
 import { GroupedTestMethodData } from "../types";
 import { TestMethodFormData } from "../schemas/testMethodSchema";
+import { getApiErrorMessage } from "../../../../utils/errorHandler";
 
 interface UseTestMethodsActionsParams {
   fetchData: () => Promise<void>;
@@ -65,11 +66,9 @@ export const useTestMethodsActions = ({
       message.success("Xóa phương pháp thử thành công!");
       fetchData();
       onDataChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to delete:", error);
-      const errorMsg =
-        error?.response?.data?.error?.message || "Không thể xóa phương pháp thử";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể xóa phương pháp thử"));
     }
   };
 
@@ -92,11 +91,9 @@ export const useTestMethodsActions = ({
       form.reset();
       fetchData();
       onDataChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to save:", error);
-      const errorMsg =
-        error?.response?.data?.error?.message || "Không thể lưu phương pháp thử";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể lưu phương pháp thử"));
     } finally {
       setModalLoading(false);
     }
@@ -136,11 +133,9 @@ export const useTestMethodsActions = ({
       setAddIndicatorsModalOpen(false);
       fetchData();
       onDataChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to add indicators:", error);
-      const errorMsg =
-        error?.response?.data?.error?.message || "Không thể thêm chỉ tiêu";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể thêm chỉ tiêu"));
     } finally {
       setAddIndicatorsLoading(false);
     }
@@ -158,11 +153,9 @@ export const useTestMethodsActions = ({
       message.success("Xóa chỉ tiêu khỏi phương pháp thành công!");
       fetchData();
       onDataChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to remove indicator:", error);
-      const errorMsg =
-        error?.response?.data?.error?.message || "Không thể xóa chỉ tiêu";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể xóa chỉ tiêu"));
     }
   };
 
@@ -177,11 +170,9 @@ export const useTestMethodsActions = ({
       );
       fetchData();
       onDataChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to toggle active:", error);
-      const errorMsg =
-        error?.response?.data?.error?.message || "Không thể thay đổi trạng thái";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể thay đổi trạng thái"));
     }
   };
 
@@ -212,8 +203,8 @@ export const useTestMethodsActions = ({
           });
           await fetchData();
           onDataChange?.();
-        } catch (error) {
-          message.error("Không thể xóa chỉ tiêu");
+        } catch (error: unknown) {
+          message.error(getApiErrorMessage(error, "Không thể xóa chỉ tiêu"));
         } finally {
           setBatchLoading(false);
         }

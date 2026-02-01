@@ -17,6 +17,7 @@ import {
   TestMethodFormData,
 } from "./schemas/testMethodSchema";
 import { API_BASE_URL, api } from "../../../services/api";
+import { getApiErrorMessage } from "../../../utils/errorHandler";
 
 const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
   onDataChange,
@@ -113,12 +114,8 @@ const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
         formData,
       );
       setPreviewData(response.data);
-    } catch (error: any) {
-      message.error(
-        error?.response?.data?.message ||
-          error?.response?.data?.error?.message ||
-          "Lỗi khi đọc file",
-      );
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Lỗi khi đọc file"));
     } finally {
       setImportLoading(false);
     }
@@ -149,12 +146,8 @@ const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
       } else {
         message.error(result.message || "Lỗi khi import");
       }
-    } catch (error: any) {
-      message.error(
-        error?.response?.data?.message ||
-          error?.response?.data?.error?.message ||
-          "Lỗi khi import",
-      );
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Lỗi khi import"));
     } finally {
       setImportLoading(false);
     }
