@@ -164,14 +164,19 @@ export const getIndicatorColumns = (
     render: (_, __, index) => index + 1,
   },
   {
-    title: "Mã chỉ tiêu",
-    dataIndex: "indicatorCode",
-    key: "indicatorCode",
-    width: 120,
-    render: (code, record) => {
-      // Don't show code for sub-indicators
+    title: "Nền mẫu",
+    dataIndex: "specimenTypeName",
+    key: "specimenTypeName",
+    width: 150,
+    render: (_, record) => {
+      // Don't show for sub-indicators
       if (record.parentIndicatorId) return null;
-      return <span style={{ fontWeight: 500 }}>{code}</span>;
+      if (!record.specimenTypeName) return <span style={{ color: '#999' }}>-</span>;
+      return (
+        <span style={{ fontWeight: 500 }}>
+          {record.specimenTypeCode} - {record.specimenTypeName}
+        </span>
+      );
     },
   },
   {

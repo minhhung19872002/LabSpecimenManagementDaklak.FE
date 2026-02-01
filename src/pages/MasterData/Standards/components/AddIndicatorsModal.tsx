@@ -19,6 +19,7 @@ import {
   IndicatorDto,
   IndicatorGroupDto,
   TestMethodWithIndicatorsDto,
+  SpecimenTypeDto,
 } from "../../../../services/masterDataService";
 import IndicatorName from "../../../../components/common/IndicatorName";
 import {
@@ -31,6 +32,7 @@ import "./AddIndicatorsModal.css";
 const { Text } = Typography;
 
 interface IndicatorFormItem {
+  specimenTypeId?: string;  // Nền mẫu - bắt buộc
   indicatorId?: string;
   testMethodId?: string;
   unit?: string;
@@ -55,6 +57,11 @@ interface SubIndicatorFormItem {
   upperLimit?: string;
 }
 
+interface ExistingIndicatorKey {
+  indicatorId: string;
+  specimenTypeId?: string;
+}
+
 interface AddIndicatorsModalProps {
   open: boolean;
   loading: boolean;
@@ -62,13 +69,16 @@ interface AddIndicatorsModalProps {
   standardName: string;
   indicatorGroups: IndicatorGroupDto[];
   indicatorsByGroup: Record<string, IndicatorDto[]>;
-  existingIndicatorIds: string[];
+  specimenTypes: SpecimenTypeDto[];
+  existingIndicatorKeys: ExistingIndicatorKey[];
   getMethodsForIndicator: (
     indicatorId: string,
   ) => TestMethodWithIndicatorsDto[];
+  getIndicatorsBySpecimenType: (specimenTypeId: string) => IndicatorDto[];
   onOk: (
     selectedIndicators: Record<number, string>,
     selectedMethods: Record<number, { id: string; unit: string }>,
+    selectedSpecimenTypes: Record<number, string>,
   ) => void;
   onCancel: () => void;
 }
@@ -80,11 +90,17 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   standardName,
   indicatorGroups,
   indicatorsByGroup,
-  existingIndicatorIds,
+  specimenTypes,
+  existingIndicatorKeys,
   getMethodsForIndicator,
+  getIndicatorsBySpecimenType,
   onOk,
   onCancel,
 }) => {
+  // Track selected specimen types for filtering indicators
+  const [selectedSpecimenTypes, setSelectedSpecimenTypes] = useState<
+    Record<number, string>
+  >({});
   // Track selected indicators for enabling method select
   const [selectedIndicators, setSelectedIndicators] = useState<
     Record<number, string>
@@ -107,6 +123,16 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   const indicators: IndicatorFormItem[] =
     Form.useWatch("indicators", form) || [];
 
+  // Build specimen type options
+  const specimenTypeOptions = React.useMemo(() => {
+    return specimenTypes
+      .filter(st => st.isActive)
+      .map(st => ({
+        value: st.id,
+        label: `${st.code} - ${st.name}`,
+      }));
+  }, [specimenTypes]);
+
   // Find indicator by ID
   const findIndicatorById = useCallback(
     (indicatorId: string): IndicatorDto | undefined => {
@@ -122,15 +148,28 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
     [indicatorsByGroup],
   );
 
-  // Check if indicator is already selected in another row
+  // Check if indicator + specimenType combination is already selected in another row
   const isIndicatorAlreadySelected = useCallback(
-    (indicatorId: string, excludeIndex?: number): boolean => {
+    (indicatorId: string, specimenTypeId: string | undefined, excludeIndex?: number): boolean => {
       return indicators.some(
         (item, idx) =>
-          idx !== excludeIndex && item?.indicatorId === indicatorId,
+          idx !== excludeIndex &&
+          item?.indicatorId === indicatorId &&
+          (item?.specimenTypeId || null) === (specimenTypeId || null),
       );
     },
     [indicators],
+  );
+
+  // Check if indicator + specimenType combination already exists in the standard
+  const isKeyExisting = useCallback(
+    (indicatorId: string, specimenTypeId: string | undefined): boolean => {
+      return existingIndicatorKeys.some(
+        (key) => key.indicatorId === indicatorId &&
+          (key.specimenTypeId || null) === (specimenTypeId || null)
+      );
+    },
+    [existingIndicatorKeys],
   );
 
   // Render indicator label for Select
@@ -148,22 +187,31 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
     );
   };
 
-  // Build parent indicator options
+  // Build parent indicator options - filtered by specimenType
   const buildParentOptions = useCallback(
-    (currentIndicatorId?: string) => {
+    (specimenTypeId?: string, currentIndicatorId?: string) => {
+      // If no specimen type selected, return empty
+      if (!specimenTypeId) return [];
+
+      // Get indicators that belong to this specimen type
+      const indicatorsForSpecimenType = getIndicatorsBySpecimenType(specimenTypeId);
+      const indicatorIdsForSpecimenType = new Set(indicatorsForSpecimenType.map(ind => ind.id));
+
       return indicatorGroups
         .filter(
           (group) => group.isActive && indicatorsByGroup[group.id]?.length > 0,
         )
         .map((group) => {
           const parentIndicators = (indicatorsByGroup[group.id] || []).filter(
-            (ind) => !ind.parentIndicatorId && ind.isActive,
+            (ind) => !ind.parentIndicatorId && ind.isActive && indicatorIdsForSpecimenType.has(ind.id),
           );
 
           const availableParents = parentIndicators.filter((ind) => {
             if (ind.id === currentIndicatorId) return true;
-            if (existingIndicatorIds.includes(ind.id)) return false;
-            if (isIndicatorAlreadySelected(ind.id)) return false;
+            // Check if this indicator + specimenType combo already exists in standard
+            if (isKeyExisting(ind.id, specimenTypeId)) return false;
+            // Check if already selected in another row with same specimenType
+            if (isIndicatorAlreadySelected(ind.id, specimenTypeId)) return false;
             const methods = getMethodsForIndicator(ind.id);
             return methods.length > 0;
           });
@@ -199,9 +247,10 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
     [
       indicatorGroups,
       indicatorsByGroup,
-      existingIndicatorIds,
-      getMethodsForIndicator,
+      getIndicatorsBySpecimenType,
+      isKeyExisting,
       isIndicatorAlreadySelected,
+      getMethodsForIndicator,
     ],
   );
 
@@ -236,6 +285,8 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
         selectedIndicators[parentIndex] || indicators[parentIndex]?.indicatorId;
       if (!parentIndicatorId) return [];
 
+      const specimenTypeId = selectedSpecimenTypes[parentIndex] || indicators[parentIndex]?.specimenTypeId;
+
       const parentIndicator = findIndicatorById(parentIndicatorId);
       if (!parentIndicator?.subIndicators?.length) return [];
 
@@ -253,7 +304,8 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
           sub.id === currentSubId ||
           (!selectedSubIds.includes(sub.id) &&
             sub.isActive &&
-            !existingIndicatorIds.includes(sub.id)),
+            // Only check existing if specimenType is selected
+            (!specimenTypeId || !isKeyExisting(sub.id, specimenTypeId))),
       );
 
       return availableSubs.map((sub) => ({
@@ -267,8 +319,62 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
         searchText: `${sub.code} - ${sub.name}`,
       }));
     },
-    [selectedIndicators, indicators, findIndicatorById, existingIndicatorIds],
+    [selectedIndicators, selectedSpecimenTypes, indicators, findIndicatorById, isKeyExisting],
   );
+
+  // Handle specimen type change
+  const handleSpecimenTypeChange = (
+    specimenTypeId: string | undefined,
+    parentIndex: number,
+  ) => {
+    const currentIndicators = form.getFieldValue("indicators") || [];
+
+    // Update specimen type and reset indicator/method fields
+    currentIndicators[parentIndex] = {
+      specimenTypeId: specimenTypeId,
+      indicatorId: undefined,
+      testMethodId: undefined,
+      unit: "",
+      comparisonOperator: undefined,
+      allowedLimit: undefined,
+      subIndicators: [],
+    };
+
+    form.setFieldsValue({ indicators: currentIndicators });
+
+    // Track selected specimen type
+    if (specimenTypeId) {
+      setSelectedSpecimenTypes((prev) => ({ ...prev, [parentIndex]: specimenTypeId }));
+    } else {
+      setSelectedSpecimenTypes((prev) => {
+        const newState = { ...prev };
+        delete newState[parentIndex];
+        return newState;
+      });
+    }
+
+    // Clear selected indicator and method when specimen type changes
+    setSelectedIndicators((prev) => {
+      const newState = { ...prev };
+      delete newState[parentIndex];
+      return newState;
+    });
+    setSelectedMethods((prev) => {
+      const newState = { ...prev };
+      delete newState[parentIndex];
+      return newState;
+    });
+    setSubIndicatorsAddedCount((prev) => {
+      const newState = { ...prev };
+      delete newState[parentIndex];
+      return newState;
+    });
+    setComparisonModes((prev) => {
+      const newState = { ...prev };
+      delete newState[`parent-${parentIndex}`];
+      return newState;
+    });
+  };
 
   // Handle parent indicator change
   // When parent has sub-indicators, automatically add ALL sub-indicators
@@ -277,15 +383,16 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
     parentIndex: number,
   ) => {
     const currentIndicators = form.getFieldValue("indicators") || [];
+    const specimenTypeId = selectedSpecimenTypes[parentIndex] || currentIndicators[parentIndex]?.specimenTypeId;
 
     if (parentId) {
       // Check if this parent has sub-indicators defined
       const parentIndicator = findIndicatorById(parentId);
       const subIndicators = parentIndicator?.subIndicators || [];
 
-      // Filter out sub-indicators that are already in existing standards
+      // Filter out sub-indicators that are already in existing standards (with same specimenType)
       const availableSubs = subIndicators.filter(
-        (sub) => sub.isActive && !existingIndicatorIds.includes(sub.id),
+        (sub) => sub.isActive && !isKeyExisting(sub.id, specimenTypeId),
       );
 
       // Auto-add all available sub-indicators
@@ -297,8 +404,9 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
         allowedLimit: undefined,
       }));
 
-      // Reset all fields when indicator changes
+      // Reset all fields when indicator changes, preserve specimenTypeId
       currentIndicators[parentIndex] = {
+        specimenTypeId: specimenTypeId,
         indicatorId: parentId,
         testMethodId: undefined,
         unit: "",
@@ -325,6 +433,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
       }
     } else {
       currentIndicators[parentIndex] = {
+        specimenTypeId: specimenTypeId,
         indicatorId: undefined,
         testMethodId: undefined,
         unit: "",
@@ -371,6 +480,8 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
     const current = currentIndicators[parentIndex] || {};
     // Use selectedIndicators as source of truth for indicatorId
     const indicatorId = selectedIndicators[parentIndex] || current.indicatorId;
+    // Use selectedSpecimenTypes as source of truth for specimenTypeId
+    const specimenTypeId = selectedSpecimenTypes[parentIndex] || current.specimenTypeId;
 
     // Preserve existing subIndicators array (only if it has actual items)
     const existingSubs = Array.isArray(current.subIndicators)
@@ -387,6 +498,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
 
       // Build new indicator object explicitly (no blind spread)
       currentIndicators[parentIndex] = {
+        specimenTypeId: specimenTypeId, // Preserve specimenTypeId
         indicatorId: indicatorId, // Use state as source of truth
         testMethodId: methodId,
         unit: option.unit,
@@ -412,6 +524,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
       });
 
       currentIndicators[parentIndex] = {
+        specimenTypeId: specimenTypeId, // Preserve specimenTypeId
         indicatorId: indicatorId, // Use state as source of truth
         testMethodId: undefined,
         unit: "",
@@ -451,9 +564,12 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
     const existingSubs = Array.isArray(current.subIndicators)
       ? current.subIndicators
       : [];
+    // Preserve specimenTypeId from state or form
+    const specimenTypeId = selectedSpecimenTypes[parentIndex] || current.specimenTypeId;
 
     if (isRange) {
       currentIndicators[parentIndex] = {
+        specimenTypeId: specimenTypeId,
         indicatorId: current.indicatorId,
         testMethodId: current.testMethodId,
         unit: current.unit,
@@ -467,6 +583,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
       };
     } else {
       currentIndicators[parentIndex] = {
+        specimenTypeId: specimenTypeId,
         indicatorId: current.indicatorId,
         testMethodId: current.testMethodId,
         unit: current.unit,
@@ -565,6 +682,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
 
   // Handle cancel
   const handleCancel = () => {
+    setSelectedSpecimenTypes({});
     setSelectedIndicators({});
     setSelectedMethods({});
     setComparisonModes({});
@@ -578,7 +696,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
       // Validate all form fields including range validation
       await form.validateFields();
       // Pass state values directly - the hook will use these as source of truth
-      onOk(selectedIndicators, selectedMethods);
+      onOk(selectedIndicators, selectedMethods, selectedSpecimenTypes);
     } catch (error) {
       // Form validation failed - errors will be shown on fields
       console.log("Form validation failed:", error);
@@ -724,10 +842,13 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                 {/* Header */}
                 <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
                   <div style={{ width: 32 }} />
-                  <Text strong style={{ width: 220 }}>
-                    Chỉ tiêu <Text type="danger">*</Text>
+                  <Text strong style={{ width: 160 }}>
+                    Nền mẫu <Text type="danger">*</Text>
                   </Text>
                   <Text strong style={{ width: 200 }}>
+                    Chỉ tiêu <Text type="danger">*</Text>
+                  </Text>
+                  <Text strong style={{ width: 180 }}>
                     Phương pháp <Text type="danger">*</Text>
                   </Text>
                   <Text strong style={{ width: 80 }}>
@@ -743,6 +864,9 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                 </div>
 
                 {parentFields.map(({ key: parentKey, name: parentName }) => {
+                  const parentSpecimenTypeId =
+                    selectedSpecimenTypes[parentName] ||
+                    indicators[parentName]?.specimenTypeId;
                   const parentIndicatorId =
                     selectedIndicators[parentName] ||
                     indicators[parentName]?.indicatorId;
@@ -768,17 +892,38 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                         {/* Spacer - sub-indicators are auto-added when parent is selected */}
                         <div style={{ width: 32 }} />
 
+                        {/* Specimen Type Select */}
+                        <Form.Item
+                          name={[parentName, "specimenTypeId"]}
+                          rules={[{ required: true, message: "Chọn" }]}
+                          style={{ marginBottom: 0, width: 160 }}
+                        >
+                          <Select
+                            options={specimenTypeOptions}
+                            placeholder="Chọn nền mẫu"
+                            showSearch
+                            allowClear
+                            filterOption={(input, option) =>
+                              (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                            }
+                            onChange={(value) =>
+                              handleSpecimenTypeChange(value, parentName)
+                            }
+                          />
+                        </Form.Item>
+
                         {/* Indicator Select */}
                         <Form.Item
                           name={[parentName, "indicatorId"]}
                           rules={[{ required: true, message: "Chọn" }]}
-                          style={{ marginBottom: 0, width: 220 }}
+                          style={{ marginBottom: 0, width: 200 }}
                         >
                           <Select
-                            options={buildParentOptions(parentIndicatorId)}
+                            options={buildParentOptions(parentSpecimenTypeId, parentIndicatorId)}
                             placeholder="Chọn chỉ tiêu"
                             showSearch
                             allowClear
+                            disabled={!parentSpecimenTypeId}
                             popupMatchSelectWidth={400}
                             labelRender={() => {
                               if (!parentIndicatorId) return null;
@@ -804,7 +949,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                         <Form.Item
                           name={[parentName, "testMethodId"]}
                           rules={[{ required: true, message: "Chọn" }]}
-                          style={{ marginBottom: 0, width: 200 }}
+                          style={{ marginBottom: 0, width: 180 }}
                         >
                           <Select
                             options={buildMethodOptions(parentName)}
@@ -1027,6 +1172,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                 type="dashed"
                 onClick={() =>
                   addParent({
+                    specimenTypeId: undefined,
                     indicatorId: undefined,
                     testMethodId: undefined,
                     unit: "",

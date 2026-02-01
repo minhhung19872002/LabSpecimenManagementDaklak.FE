@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { message } from "antd";
 import {
   testMethodService,
@@ -10,13 +10,14 @@ import {
   TestMethodWithIndicatorsDto,
   GroupedTestMethodData,
 } from "../types";
-import { IndicatorDto, IndicatorGroupDto, SpecimenTypeDto } from "../../../../services/masterDataService";
+import { IndicatorDto, IndicatorGroupDto, SpecimenTypeDto, SpecimenTypeWithIndicatorsDto } from "../../../../services/masterDataService";
 
 export const useTestMethodsData = () => {
   const [testMethods, setTestMethods] = useState<TestMethodWithIndicatorsDto[]>([]);
   const [indicatorGroups, setIndicatorGroups] = useState<IndicatorGroupDto[]>([]);
   const [indicators, setIndicators] = useState<IndicatorDto[]>([]);
   const [specimenTypes, setSpecimenTypes] = useState<SpecimenTypeDto[]>([]);
+  const [specimenTypesWithIndicators, setSpecimenTypesWithIndicators] = useState<SpecimenTypeWithIndicatorsDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
@@ -29,17 +30,19 @@ export const useTestMethodsData = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [methodsData, groupsData, indicatorsData, specimenTypesData] = await Promise.all([
+      const [methodsData, groupsData, indicatorsData, specimenTypesData, specimenTypesWithIndsData] = await Promise.all([
         testMethodService.getWithIndicators(),
         indicatorGroupService.getActive(),
         indicatorService.getActive(),
         specimenTypeService.getActive(),
+        specimenTypeService.getWithIndicators(),
       ]);
 
       setTestMethods(methodsData || []);
       setIndicatorGroups(groupsData || []);
       setIndicators(indicatorsData || []);
       setSpecimenTypes(specimenTypesData?.items || []);
+      setSpecimenTypesWithIndicators(specimenTypesWithIndsData || []);
 
       // Only collapse all on initial load
       if (isInitialLoad) {
@@ -145,6 +148,25 @@ export const useTestMethodsData = () => {
     return grouped;
   }, [indicators]);
 
+  // Get specimen types that have a specific indicator linked
+  // Returns only active specimen types that have this indicator in their SpecimenTypeIndicator list
+  const getSpecimenTypesByIndicator = useCallback((indicatorId: string): SpecimenTypeDto[] => {
+    // Find all specimen types that have this indicator linked
+    const specimenTypeIds = new Set<string>();
+
+    specimenTypesWithIndicators.forEach(st => {
+      const hasIndicator = st.indicators?.some(
+        sti => sti.indicatorId === indicatorId && sti.isActive
+      );
+      if (hasIndicator && st.isActive) {
+        specimenTypeIds.add(st.id);
+      }
+    });
+
+    // Return active specimen types that are in the set
+    return specimenTypes.filter(st => st.isActive && specimenTypeIds.has(st.id));
+  }, [specimenTypesWithIndicators, specimenTypes]);
+
   return {
     testMethods,
     loading,
@@ -154,8 +176,10 @@ export const useTestMethodsData = () => {
     indicatorGroups,
     indicators,
     specimenTypes,
+    specimenTypesWithIndicators,
     groupOptions,
     indicatorsByGroup,
+    getSpecimenTypesByIndicator,
     setSearchText,
     setExpandedRowKeys,
     fetchData,

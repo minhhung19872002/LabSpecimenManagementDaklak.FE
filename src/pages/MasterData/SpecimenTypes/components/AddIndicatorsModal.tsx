@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Modal, Select, Button, Typography, Space } from "antd";
 import { PlusOutlined, MinusCircleOutlined } from "../../../../components/common/Icon";
 import { IndicatorDto, IndicatorGroupDto } from "../../../../services/masterDataService";
@@ -26,6 +26,13 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   onCancel,
 }) => {
   const [selectedIndicators, setSelectedIndicators] = useState<string[]>([""]);
+
+  // Reset state when modal opens
+  useEffect(() => {
+    if (open) {
+      setSelectedIndicators([""]);
+    }
+  }, [open]);
 
   // Build grouped options for Select
   const buildGroupedOptions = (currentIndex: number) => {

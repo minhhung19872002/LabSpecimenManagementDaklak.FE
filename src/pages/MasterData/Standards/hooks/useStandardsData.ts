@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { message } from "antd";
 import {
   standardService,
   testMethodService,
   indicatorGroupService,
   indicatorService,
+  specimenTypeService,
 } from "../../../../services/masterDataService";
 import {
   StandardWithIndicatorsDto,
@@ -14,6 +15,8 @@ import {
   IndicatorDto,
   IndicatorGroupDto,
   TestMethodWithIndicatorsDto,
+  SpecimenTypeDto,
+  SpecimenTypeWithIndicatorsDto,
 } from "../../../../services/masterDataService";
 
 export const useStandardsData = () => {
@@ -21,6 +24,8 @@ export const useStandardsData = () => {
   const [indicatorGroups, setIndicatorGroups] = useState<IndicatorGroupDto[]>([]);
   const [indicators, setIndicators] = useState<IndicatorDto[]>([]);
   const [testMethods, setTestMethods] = useState<TestMethodWithIndicatorsDto[]>([]);
+  const [specimenTypes, setSpecimenTypes] = useState<SpecimenTypeDto[]>([]);
+  const [specimenTypesWithIndicators, setSpecimenTypesWithIndicators] = useState<SpecimenTypeWithIndicatorsDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
@@ -33,17 +38,21 @@ export const useStandardsData = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [standardsData, groupsData, indicatorsData, methodsData] = await Promise.all([
+      const [standardsData, groupsData, indicatorsData, methodsData, specimenTypesActiveData, specimenTypesWithIndsData] = await Promise.all([
         standardService.getWithIndicators(),
         indicatorGroupService.getActive(),
         indicatorService.getActive(),
         testMethodService.getWithIndicators(),
+        specimenTypeService.getActive(),
+        specimenTypeService.getWithIndicators(),
       ]);
 
       setStandards(standardsData || []);
       setIndicatorGroups(groupsData || []);
       setIndicators(indicatorsData || []);
       setTestMethods(methodsData || []);
+      setSpecimenTypes(specimenTypesActiveData?.items || []);
+      setSpecimenTypesWithIndicators(specimenTypesWithIndsData || []);
 
       // Only collapse all on initial load
       if (isInitialLoad) {
@@ -114,6 +123,25 @@ export const useStandardsData = () => {
     );
   };
 
+  // Get indicators belonging to a specific specimen type (nền mẫu)
+  // Returns only active parent indicators that are linked to this specimen type
+  const getIndicatorsBySpecimenType = useCallback((specimenTypeId: string): IndicatorDto[] => {
+    const specimenType = specimenTypesWithIndicators.find(st => st.id === specimenTypeId);
+    if (!specimenType) return [];
+
+    // Get indicator IDs that are linked to this specimen type and active
+    const linkedIndicatorIds = new Set(
+      specimenType.indicators
+        ?.filter(sti => sti.isActive)
+        ?.map(sti => sti.indicatorId) || []
+    );
+
+    // Return active parent indicators that are in the linked set
+    return indicators.filter(
+      ind => ind.isActive && !ind.parentIndicatorId && linkedIndicatorIds.has(ind.id)
+    );
+  }, [specimenTypesWithIndicators, indicators]);
+
   return {
     standards,
     loading,
@@ -123,8 +151,11 @@ export const useStandardsData = () => {
     indicatorGroups,
     indicators,
     testMethods,
+    specimenTypes,
+    specimenTypesWithIndicators,
     indicatorsByGroup,
     getMethodsForIndicator,
+    getIndicatorsBySpecimenType,
     setSearchText,
     setExpandedRowKeys,
     fetchData,

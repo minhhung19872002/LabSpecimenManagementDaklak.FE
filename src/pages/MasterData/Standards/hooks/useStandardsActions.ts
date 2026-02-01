@@ -138,7 +138,7 @@ export const useStandardsActions = ({
     setSelectedStandardName(standardName);
     form.resetFields();
     form.setFieldsValue({
-      indicators: [{ indicatorId: undefined, testMethodId: undefined, unit: "", subIndicators: [] }],
+      indicators: [{ specimenTypeId: undefined, indicatorId: undefined, testMethodId: undefined, unit: "", subIndicators: [] }],
     });
     setAddIndicatorsModalOpen(true);
   };
@@ -146,7 +146,8 @@ export const useStandardsActions = ({
   const handleAddIndicatorsOk = async (
     form: FormInstance,
     selectedIndicators: Record<number, string>,
-    selectedMethods: Record<number, { id: string; unit: string }>
+    selectedMethods: Record<number, { id: string; unit: string }>,
+    selectedSpecimenTypes: Record<number, string>
   ) => {
     if (!selectedStandardId) return;
 
@@ -165,8 +166,13 @@ export const useStandardsActions = ({
         const index = parseInt(indexStr, 10);
         const indicatorId = selectedIndicators[index];
         const method = selectedMethods[index];
+        const specimenTypeId = selectedSpecimenTypes[index];
 
         // Validate parent fields
+        if (!specimenTypeId) {
+          errors.push(`Dòng ${index + 1}: Vui lòng chọn nền mẫu`);
+          return;
+        }
         if (!indicatorId) {
           errors.push(`Dòng ${index + 1}: Vui lòng chọn chỉ tiêu`);
           return;
@@ -184,14 +190,15 @@ export const useStandardsActions = ({
         const hasSubIndicators = subIndicators.length > 0;
 
         if (hasSubIndicators) {
-          // Parent with sub-indicators: only send indicatorId, testMethodId, unit
+          // Parent with sub-indicators: only send indicatorId, testMethodId, unit, specimenTypeId
           flatIndicators.push({
             indicatorId: indicatorId,
             testMethodId: method.id,
             unit: method.unit || "",
+            specimenTypeId: specimenTypeId,
           });
 
-          // Add all sub-indicators with full fields
+          // Add all sub-indicators with full fields (inherit specimenTypeId from parent)
           subIndicators.forEach((sub: any, subIndex: number) => {
             if (!sub.indicatorId) {
               errors.push(`Dòng ${index + 1}, chỉ tiêu phụ ${subIndex + 1}: Vui lòng chọn chỉ tiêu phụ`);
@@ -216,6 +223,7 @@ export const useStandardsActions = ({
               indicatorId: sub.indicatorId,
               testMethodId: method.id, // Inherit from parent
               unit: sub.unit || method.unit || "",
+              specimenTypeId: specimenTypeId, // Inherit from parent
               comparisonOperator: isRange ? undefined : sub.comparisonOperator,
               allowedLimit: isRange ? undefined : sub.allowedLimit || undefined,
               lowerOperator: isRange ? sub.lowerOperator || ">" : undefined,
@@ -245,6 +253,7 @@ export const useStandardsActions = ({
             indicatorId: indicatorId,
             testMethodId: method.id,
             unit: method.unit || "",
+            specimenTypeId: specimenTypeId,
             comparisonOperator: isRange ? undefined : formParent.comparisonOperator,
             allowedLimit: isRange ? undefined : formParent.allowedLimit || undefined,
             lowerOperator: isRange ? formParent.lowerOperator || ">" : undefined,
