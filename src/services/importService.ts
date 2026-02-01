@@ -150,6 +150,12 @@ export interface IndicatorGroupImportPreviewItem {
   formattedIndicatorName?: string;
   isNewIndicator: boolean;
   existingIndicatorId?: string;
+  // Sub-Indicator info
+  subIndicatorName?: string;
+  formattedSubIndicatorName?: string;
+  isNewSubIndicator: boolean;
+  existingSubIndicatorId?: string;
+  hasSubIndicator: boolean;
   // Validation
   isValid: boolean;
   errors: string[];
@@ -166,6 +172,8 @@ export interface IndicatorGroupImportPreviewDto {
   updateIndicatorGroups: number;
   newIndicators: number;
   updateIndicators: number;
+  newSubIndicators: number;
+  updateSubIndicators: number;
   // Error file
   errorFileBase64?: string;
   errorFileName?: string;
