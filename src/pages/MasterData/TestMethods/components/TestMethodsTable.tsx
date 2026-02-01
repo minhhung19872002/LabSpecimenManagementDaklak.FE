@@ -157,13 +157,17 @@ const TestMethodsTable: React.FC<TestMethodsTableProps> = ({
                     <>
                       {/* Indicator table with overlay header when selected */}
                       {(() => {
-                        const indicatorIds = sortedIndicators.map(
+                        // Only parent indicators can be selected (not sub-indicators)
+                        const selectableIndicators = sortedIndicators.filter(
+                          (ind) => !ind.parentIndicatorId
+                        );
+                        const selectableIds = selectableIndicators.map(
                           (ind) => ind.indicatorId,
                         );
                         const allSelected =
-                          indicatorIds.length > 0 &&
-                          indicatorIds.every((id) => selectedKeys.includes(id));
-                        const someSelected = indicatorIds.some((id) =>
+                          selectableIds.length > 0 &&
+                          selectableIds.every((id) => selectedKeys.includes(id));
+                        const someSelected = selectableIds.some((id) =>
                           selectedKeys.includes(id),
                         );
 
@@ -201,7 +205,7 @@ const TestMethodsTable: React.FC<TestMethodsTableProps> = ({
                                       if (e.target.checked) {
                                         onSelectedIndicatorKeysChange({
                                           ...selectedIndicatorKeys,
-                                          [testMethodRecord.id]: indicatorIds,
+                                          [testMethodRecord.id]: selectableIds,
                                         });
                                       } else {
                                         onSelectedIndicatorKeysChange({
@@ -267,6 +271,11 @@ const TestMethodsTable: React.FC<TestMethodsTableProps> = ({
                                     [testMethodRecord.id]: keys as string[],
                                   });
                                 },
+                                // Hide checkbox for sub-indicators
+                                getCheckboxProps: (record: TestMethodIndicatorDto) => ({
+                                  style: record.parentIndicatorId ? { display: 'none' } : {},
+                                  disabled: !!record.parentIndicatorId,
+                                }),
                                 columnTitle: (
                                   <Checkbox
                                     checked={allSelected}
@@ -275,7 +284,7 @@ const TestMethodsTable: React.FC<TestMethodsTableProps> = ({
                                       if (e.target.checked) {
                                         onSelectedIndicatorKeysChange({
                                           ...selectedIndicatorKeys,
-                                          [testMethodRecord.id]: indicatorIds,
+                                          [testMethodRecord.id]: selectableIds,
                                         });
                                       } else {
                                         onSelectedIndicatorKeysChange({
