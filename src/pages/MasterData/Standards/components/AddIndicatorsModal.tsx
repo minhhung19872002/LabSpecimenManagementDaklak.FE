@@ -609,13 +609,18 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
               { required: true, message: "Bắt buộc" },
               ({ getFieldValue }) => ({
                 validator(_, value) {
-                  const upperLimit = getFieldValue([...fullPathPrefix, "upperLimit"]);
+                  const upperLimit = getFieldValue([
+                    ...fullPathPrefix,
+                    "upperLimit",
+                  ]);
                   if (!value || !upperLimit) return Promise.resolve();
                   const lower = parseFloat(value);
                   const upper = parseFloat(upperLimit);
                   if (isNaN(lower) || isNaN(upper)) return Promise.resolve();
                   if (lower >= upper) {
-                    return Promise.reject(new Error("Cận dưới phải < cận trên"));
+                    return Promise.reject(
+                      new Error("Cận dưới phải < cận trên"),
+                    );
                   }
                   return Promise.resolve();
                 },
@@ -643,13 +648,18 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
               { required: true, message: "Bắt buộc" },
               ({ getFieldValue }) => ({
                 validator(_, value) {
-                  const lowerLimit = getFieldValue([...fullPathPrefix, "lowerLimit"]);
+                  const lowerLimit = getFieldValue([
+                    ...fullPathPrefix,
+                    "lowerLimit",
+                  ]);
                   if (!value || !lowerLimit) return Promise.resolve();
                   const upper = parseFloat(value);
                   const lower = parseFloat(lowerLimit);
                   if (isNaN(lower) || isNaN(upper)) return Promise.resolve();
                   if (upper <= lower) {
-                    return Promise.reject(new Error("Cận trên phải > cận dưới"));
+                    return Promise.reject(
+                      new Error("Cận trên phải > cận dưới"),
+                    );
                   }
                   return Promise.resolve();
                 },
@@ -822,17 +832,17 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                           />
                         </Form.Item>
 
-                        {/* Unit/Comparison/Limit - hide when has sub-indicators added */}
+                        <Form.Item
+                          name={[parentName, "unit"]}
+                          rules={[{ required: true, message: "Chọn PP" }]}
+                          style={{ marginBottom: 0, width: 80 }}
+                        >
+                          <Input placeholder="ĐVT" disabled />
+                        </Form.Item>
+
+                        {/* Comparison/Limit - hide when has sub-indicators added */}
                         {!hasSubsAdded ? (
                           <>
-                            <Form.Item
-                              name={[parentName, "unit"]}
-                              rules={[{ required: true, message: "Chọn PP" }]}
-                              style={{ marginBottom: 0, width: 80 }}
-                            >
-                              <Input placeholder="ĐVT" disabled />
-                            </Form.Item>
-
                             <Form.Item
                               name={[parentName, "comparisonOperator"]}
                               rules={[{ required: true, message: "Chọn" }]}
