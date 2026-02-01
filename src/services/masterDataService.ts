@@ -188,6 +188,9 @@ export interface StandardIndicatorDto {
   indicatorName: string;
   indicatorFormattedName?: string;  // Tên chỉ tiêu có định dạng HTML
   parentIndicatorId?: string;  // ID của chỉ tiêu cha (nếu là chỉ tiêu phụ)
+  specimenTypeId?: string;  // ID nền mẫu
+  specimenTypeCode?: string;  // Mã nền mẫu
+  specimenTypeName?: string;  // Tên nền mẫu
   testMethodId: string;
   testMethodCode: string;
   testMethodName: string;
@@ -210,6 +213,7 @@ export interface StandardWithIndicatorsDto extends StandardDto {
 export interface AddIndicatorsToStandardDto {
   indicators: {
     indicatorId: string;
+    specimenTypeId: string;  // Nền mẫu - bắt buộc chọn
     testMethodId: string;
     unit: string;
     comparisonOperator?: string;
@@ -635,9 +639,9 @@ export const testMethodService = {
     const response = await api.post<TestMethodDto>(`${TEST_METHOD_URL}/${id}/toggle-active`);
     return response.data;
   },
-  // Batch remove indicators
-  batchRemoveIndicators: async (testMethodId: string, indicatorIds: string[]): Promise<number> => {
-    const response = await api.post<number>(`${TEST_METHOD_URL}/${testMethodId}/indicators/batch-remove`, { ids: indicatorIds });
+  // Batch remove indicators - uses composite key (indicatorId + specimenTypeId)
+  batchRemoveIndicators: async (testMethodId: string, keys: Array<{ indicatorId: string; specimenTypeId?: string }>): Promise<number> => {
+    const response = await api.post<number>(`${TEST_METHOD_URL}/${testMethodId}/indicators/batch-remove`, { keys });
     return response.data;
   },
 };

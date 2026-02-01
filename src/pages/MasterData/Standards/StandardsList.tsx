@@ -33,7 +33,9 @@ const StandardsList = forwardRef<StandardsActions, StandardsTabProps>(({
     expandedRowKeys,
     indicatorGroups,
     indicatorsByGroup,
+    specimenTypes,
     getMethodsForIndicator,
+    getIndicatorsBySpecimenType,
     setSearchText,
     setExpandedRowKeys,
     fetchData,
@@ -260,16 +262,21 @@ const StandardsList = forwardRef<StandardsActions, StandardsTabProps>(({
         standardName={selectedStandardName}
         indicatorGroups={indicatorGroups}
         indicatorsByGroup={indicatorsByGroup}
-        existingIndicatorIds={
+        specimenTypes={specimenTypes}
+        existingIndicatorKeys={
           selectedStandardId
             ? groupedData
                 .find((s) => s.id === selectedStandardId)
-                ?.indicators?.map((ind) => ind.indicatorId) || []
+                ?.indicators?.map((ind) => ({
+                  indicatorId: ind.indicatorId,
+                  specimenTypeId: ind.specimenTypeId,
+                })) || []
             : []
         }
         getMethodsForIndicator={getMethodsForIndicator}
-        onOk={(selectedIndicators, selectedMethods) =>
-          handleAddIndicatorsOk(addIndicatorsForm, selectedIndicators, selectedMethods)
+        getIndicatorsBySpecimenType={getIndicatorsBySpecimenType}
+        onOk={(selectedIndicators, selectedMethods, selectedSpecimenTypes) =>
+          handleAddIndicatorsOk(addIndicatorsForm, selectedIndicators, selectedMethods, selectedSpecimenTypes)
         }
         onCancel={() => handleAddIndicatorsCancel(addIndicatorsForm)}
       />

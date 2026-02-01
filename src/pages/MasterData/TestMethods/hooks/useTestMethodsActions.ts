@@ -178,15 +178,24 @@ export const useTestMethodsActions = ({
 
   // ============= Batch Remove Indicators =============
   const handleBatchRemoveIndicators = async (testMethodId: string) => {
-    const selectedIds = selectedIndicatorKeys[testMethodId] || [];
-    if (selectedIds.length === 0) {
+    const selectedCompositeKeys = selectedIndicatorKeys[testMethodId] || [];
+    if (selectedCompositeKeys.length === 0) {
       message.warning("Vui lòng chọn ít nhất một chỉ tiêu");
       return;
     }
 
+    // Parse composite keys (format: "indicatorId|specimenTypeId") into objects
+    const indicatorKeys = selectedCompositeKeys.map((compositeKey) => {
+      const [indicatorId, specimenTypeId] = compositeKey.split("|");
+      return {
+        indicatorId,
+        specimenTypeId: specimenTypeId || undefined,
+      };
+    });
+
     Modal.confirm({
       title: "Xác nhận xóa",
-      content: `Bạn có chắc chắn muốn xóa ${selectedIds.length} chỉ tiêu đã chọn khỏi phương pháp thử này?`,
+      content: `Bạn có chắc chắn muốn xóa ${indicatorKeys.length} chỉ tiêu đã chọn khỏi phương pháp thử này?`,
       okText: "Xóa",
       okType: "danger",
       cancelText: "Hủy",
@@ -194,7 +203,7 @@ export const useTestMethodsActions = ({
       onOk: async () => {
         try {
           setBatchLoading(true);
-          const count = await testMethodService.batchRemoveIndicators(testMethodId, selectedIds);
+          const count = await testMethodService.batchRemoveIndicators(testMethodId, indicatorKeys);
           message.success(`Đã xóa ${count} chỉ tiêu thành công!`);
           // Clear selection for this test method
           setSelectedIndicatorKeys({

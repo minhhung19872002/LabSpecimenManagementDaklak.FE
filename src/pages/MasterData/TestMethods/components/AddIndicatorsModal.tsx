@@ -35,6 +35,7 @@ interface AddIndicatorsModalProps {
   indicatorsByGroup: Record<string, IndicatorDto[]>;
   specimenTypes: SpecimenTypeDto[];
   existingIndicatorKeys?: ExistingIndicatorKey[];
+  getSpecimenTypesByIndicator: (indicatorId: string) => SpecimenTypeDto[];
   onOk: (data: { indicatorId: string; specimenTypeId?: string; unitPrice: number }[]) => void;
   onCancel: () => void;
 }
@@ -71,6 +72,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   indicatorsByGroup,
   specimenTypes,
   existingIndicatorKeys = [],
+  getSpecimenTypesByIndicator,
   onOk,
   onCancel,
 }) => {
@@ -78,15 +80,17 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   const [rows, setRows] = useState<IndicatorRow[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Build active specimen type options
-  const specimenTypeOptions = useMemo(() => {
-    return specimenTypes
-      .filter(st => st.isActive)
-      .map(st => ({
-        value: st.id,
-        label: `${st.code} - ${st.name}`,
-      }));
-  }, [specimenTypes]);
+  // Build specimen type options for a specific indicator
+  // Only returns specimen types that have this indicator linked (from SpecimenTypeIndicator)
+  const buildSpecimenTypeOptions = (indicatorId: string | undefined) => {
+    if (!indicatorId) return [];
+
+    const availableSpecimenTypes = getSpecimenTypesByIndicator(indicatorId);
+    return availableSpecimenTypes.map(st => ({
+      value: st.id,
+      label: `${st.code} - ${st.name}`,
+    }));
+  };
 
   // Reset state when modal opens
   useEffect(() => {
@@ -203,9 +207,24 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   ) => {
     setRows((prev) => {
       const updated = [...prev];
+      const currentRow = updated[rowIndex];
+
+      // Check if current specimenType is still valid for the new indicator
+      let newSpecimenTypeId = currentRow.specimenTypeId;
+      if (indicatorId && newSpecimenTypeId) {
+        const availableSpecimenTypes = getSpecimenTypesByIndicator(indicatorId);
+        const isStillValid = availableSpecimenTypes.some(st => st.id === newSpecimenTypeId);
+        if (!isStillValid) {
+          newSpecimenTypeId = undefined; // Clear if not valid
+        }
+      } else if (!indicatorId) {
+        newSpecimenTypeId = undefined; // Clear if no indicator selected
+      }
+
       updated[rowIndex] = {
-        ...updated[rowIndex],
+        ...currentRow,
         indicatorId,
+        specimenTypeId: newSpecimenTypeId,
       };
       return updated;
     });
@@ -384,13 +403,14 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                   <Select
                     value={row.specimenTypeId}
                     onChange={(value) => handleSpecimenTypeChange(rowIndex, value)}
-                    options={specimenTypeOptions}
-                    placeholder="Chọn nền mẫu"
+                    options={buildSpecimenTypeOptions(row.indicatorId)}
+                    placeholder={row.indicatorId ? "Chọn nền mẫu" : "Chọn chỉ tiêu trước"}
                     showSearch
                     filterOption={(input, option) =>
                       (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
                     }
                     allowClear
+                    disabled={!row.indicatorId}
                     style={{ width: "100%" }}
                   />
                 </Col>
