@@ -104,8 +104,19 @@ export const useSpecimenTypesActions = ({
       onDataChange?.();
     } catch (error: any) {
       console.error("Failed to save:", error);
+      // API interceptor unwraps errors, so error.response.data is directly the errors object
+      // e.g., { name: ["Tên loại mẫu đã tồn tại"] }
+      const responseData = error?.response?.data;
+      if (responseData && typeof responseData === "object" && !responseData.message) {
+        // Get first error message from validation errors
+        const firstFieldErrors = Object.values(responseData)[0] as string[];
+        if (Array.isArray(firstFieldErrors) && firstFieldErrors.length > 0) {
+          message.error(firstFieldErrors[0]);
+          return;
+        }
+      }
       const errorMsg =
-        error?.response?.data?.error?.message || "Không thể lưu loại mẫu";
+        responseData?.message || error?.response?.data?.error?.message || "Không thể lưu loại mẫu";
       message.error(errorMsg);
     } finally {
       setModalLoading(false);

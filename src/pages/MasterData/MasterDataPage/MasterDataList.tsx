@@ -209,13 +209,29 @@ const MasterDataList: React.FC = () => {
 
               {/* Specimen Types Tab */}
               {activeCategory === "specimenTypes" && (
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => specimenTypesRef.current?.handleCreate()}
-                >
-                  Thêm loại mẫu
-                </Button>
+                <>
+                  <Button
+                    icon={<DownloadOutlined />}
+                    onClick={() =>
+                      specimenTypesRef.current?.handleDownloadTemplate()
+                    }
+                  >
+                    Tải template
+                  </Button>
+                  <Button
+                    icon={<UploadOutlined />}
+                    onClick={() => specimenTypesRef.current?.handleImport()}
+                  >
+                    Nhập danh sách
+                  </Button>
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => specimenTypesRef.current?.handleCreate()}
+                  >
+                    Thêm loại mẫu
+                  </Button>
+                </>
               )}
 
               {/* Test Methods Tab */}

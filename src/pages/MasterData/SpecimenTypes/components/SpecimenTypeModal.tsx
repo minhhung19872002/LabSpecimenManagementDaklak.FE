@@ -73,21 +73,6 @@ const SpecimenTypeModal: React.FC<SpecimenTypeModalProps> = ({
         </Form.Item>
 
         <Form.Item
-          label="Mã loại mẫu"
-          required
-          validateStatus={errors.code ? "error" : ""}
-          help={errors.code?.message}
-        >
-          <Controller
-            name="code"
-            control={control}
-            render={({ field }) => (
-              <Input {...field} placeholder="Nhập mã loại mẫu" disabled={!!editingItem} />
-            )}
-          />
-        </Form.Item>
-
-        <Form.Item
           label="Tên loại mẫu"
           required
           validateStatus={errors.name ? "error" : ""}
