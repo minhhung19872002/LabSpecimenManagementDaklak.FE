@@ -168,6 +168,7 @@ export const getIndicatorColumns = (
     dataIndex: "specimenTypeName",
     key: "specimenTypeName",
     width: 150,
+    sorter: true, // Sorting handled in sortIndicatorsByHierarchy to maintain parent-child grouping
     render: (_, record) => {
       // Don't show for sub-indicators
       if (record.parentIndicatorId) return null;
