@@ -11,6 +11,7 @@ import {
 } from "../../../../services/masterDataService";
 import { GroupedStandardData, StandardIndicatorDto } from "../types";
 import { StandardFormData } from "../schemas/standardSchema";
+import { getApiErrorMessage } from "../../../../utils/errorHandler";
 
 interface UseStandardsActionsParams {
   fetchData: () => Promise<void>;
@@ -72,11 +73,9 @@ export const useStandardsActions = ({
       message.success("Xóa tiêu chuẩn thành công!");
       fetchData();
       onDataChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to delete:", error);
-      const errorMsg =
-        error?.response?.data?.error?.message || "Không thể xóa tiêu chuẩn";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể xóa tiêu chuẩn"));
     }
   };
 
@@ -99,11 +98,9 @@ export const useStandardsActions = ({
       form.reset();
       fetchData();
       onDataChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to save:", error);
-      const errorMsg =
-        error?.response?.data?.error?.message || "Không thể lưu tiêu chuẩn";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể lưu tiêu chuẩn"));
     } finally {
       setModalLoading(false);
     }
@@ -125,11 +122,9 @@ export const useStandardsActions = ({
       );
       fetchData();
       onDataChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to toggle active:", error);
-      const errorMsg =
-        error?.response?.data?.error?.message || "Không thể thay đổi trạng thái";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể thay đổi trạng thái"));
     }
   };
 
@@ -287,11 +282,9 @@ export const useStandardsActions = ({
       form.resetFields();
       fetchData();
       onDataChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to add indicators:", error);
-      const errorMsg =
-        error?.response?.data?.error?.message || "Không thể thêm chỉ tiêu";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể thêm chỉ tiêu"));
     } finally {
       setAddIndicatorsLoading(false);
     }
@@ -353,11 +346,9 @@ export const useStandardsActions = ({
       form.resetFields();
       fetchData();
       onDataChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to update indicator:", error);
-      const errorMsg =
-        error?.response?.data?.error?.message || "Không thể cập nhật chỉ tiêu";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể cập nhật chỉ tiêu"));
     } finally {
       setEditIndicatorLoading(false);
     }
@@ -377,11 +368,9 @@ export const useStandardsActions = ({
       message.success("Xóa chỉ tiêu khỏi tiêu chuẩn thành công!");
       fetchData();
       onDataChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to remove indicator:", error);
-      const errorMsg =
-        error?.response?.data?.error?.message || "Không thể xóa chỉ tiêu";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể xóa chỉ tiêu"));
     }
   };
 
@@ -396,11 +385,9 @@ export const useStandardsActions = ({
       );
       fetchData();
       onDataChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to toggle indicator active:", error);
-      const errorMsg =
-        error?.response?.data?.error?.message || "Không thể thay đổi trạng thái";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể thay đổi trạng thái"));
     }
   };
 
@@ -431,8 +418,8 @@ export const useStandardsActions = ({
           });
           await fetchData();
           onDataChange?.();
-        } catch (error) {
-          message.error("Không thể xóa chỉ tiêu");
+        } catch (error: unknown) {
+          message.error(getApiErrorMessage(error, "Không thể xóa chỉ tiêu"));
         } finally {
           setBatchLoading(false);
         }
@@ -463,8 +450,8 @@ export const useStandardsActions = ({
       });
       await fetchData();
       onDataChange?.();
-    } catch (error) {
-      message.error("Không thể kích hoạt chỉ tiêu");
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Không thể kích hoạt chỉ tiêu"));
     } finally {
       setBatchLoading(false);
     }
@@ -493,8 +480,8 @@ export const useStandardsActions = ({
       });
       await fetchData();
       onDataChange?.();
-    } catch (error) {
-      message.error("Không thể ngừng kích hoạt chỉ tiêu");
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Không thể ngừng kích hoạt chỉ tiêu"));
     } finally {
       setBatchLoading(false);
     }

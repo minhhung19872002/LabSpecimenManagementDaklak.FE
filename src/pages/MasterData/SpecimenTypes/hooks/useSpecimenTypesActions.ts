@@ -8,6 +8,7 @@ import {
 } from "../../../../services/masterDataService";
 import { GroupedSpecimenTypeData } from "../types";
 import { SpecimenTypeFormData } from "../schemas/specimenTypeSchema";
+import { getApiErrorMessage } from "../../../../utils/errorHandler";
 
 interface UseSpecimenTypesActionsParams {
   fetchData: () => Promise<void>;
@@ -67,11 +68,9 @@ export const useSpecimenTypesActions = ({
       message.success("Xóa loại mẫu thành công!");
       fetchData();
       onDataChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to delete:", error);
-      const errorMsg =
-        error?.response?.data?.error?.message || "Không thể xóa loại mẫu";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể xóa loại mẫu"));
     }
   };
 
@@ -102,22 +101,9 @@ export const useSpecimenTypesActions = ({
       form.reset();
       fetchData();
       onDataChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to save:", error);
-      // API interceptor unwraps errors, so error.response.data is directly the errors object
-      // e.g., { name: ["Tên loại mẫu đã tồn tại"] }
-      const responseData = error?.response?.data;
-      if (responseData && typeof responseData === "object" && !responseData.message) {
-        // Get first error message from validation errors
-        const firstFieldErrors = Object.values(responseData)[0] as string[];
-        if (Array.isArray(firstFieldErrors) && firstFieldErrors.length > 0) {
-          message.error(firstFieldErrors[0]);
-          return;
-        }
-      }
-      const errorMsg =
-        responseData?.message || error?.response?.data?.error?.message || "Không thể lưu loại mẫu";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể lưu loại mẫu"));
     } finally {
       setModalLoading(false);
     }
@@ -160,11 +146,9 @@ export const useSpecimenTypesActions = ({
       setAddIndicatorsModalOpen(false);
       fetchData();
       onDataChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to add indicators:", error);
-      const errorMsg =
-        error?.response?.data?.error?.message || "Không thể thêm chỉ tiêu";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể thêm chỉ tiêu"));
     } finally {
       setAddIndicatorsLoading(false);
     }
@@ -181,11 +165,9 @@ export const useSpecimenTypesActions = ({
       message.success("Xóa chỉ tiêu khỏi loại mẫu thành công!");
       fetchData();
       onDataChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to remove indicator:", error);
-      const errorMsg =
-        error?.response?.data?.error?.message || "Không thể xóa chỉ tiêu";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể xóa chỉ tiêu"));
     }
   };
 
@@ -199,11 +181,9 @@ export const useSpecimenTypesActions = ({
       );
       fetchData();
       onDataChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to toggle indicator active:", error);
-      const errorMsg =
-        error?.response?.data?.error?.message || "Không thể thay đổi trạng thái";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể thay đổi trạng thái"));
     }
   };
 
@@ -234,8 +214,8 @@ export const useSpecimenTypesActions = ({
           });
           await fetchData();
           onDataChange?.();
-        } catch (error) {
-          message.error("Không thể xóa chỉ tiêu");
+        } catch (error: unknown) {
+          message.error(getApiErrorMessage(error, "Không thể xóa chỉ tiêu"));
         } finally {
           setBatchLoading(false);
         }
