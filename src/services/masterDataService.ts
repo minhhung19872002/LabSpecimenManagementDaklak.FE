@@ -143,6 +143,9 @@ export interface TestMethodIndicatorDto {
   isActive: boolean;
   sortOrder: number;
   parentIndicatorId?: string;  // ID chỉ tiêu cha (null nếu là chỉ tiêu gốc)
+  specimenTypeId?: string;     // Nền mẫu (Loại mẫu) - ID
+  specimenTypeCode?: string;   // Mã nền mẫu
+  specimenTypeName?: string;   // Tên nền mẫu
 }
 
 export interface TestMethodWithIndicatorsDto extends TestMethodDto {
@@ -150,7 +153,7 @@ export interface TestMethodWithIndicatorsDto extends TestMethodDto {
 }
 
 export interface AddIndicatorsToTestMethodDto {
-  indicators: { indicatorId: string; unitPrice: number }[];
+  indicators: { indicatorId: string; specimenTypeId?: string; unitPrice: number }[];
 }
 
 // Standard

@@ -111,7 +111,7 @@ export const useTestMethodsActions = ({
   };
 
   const handleAddIndicatorsOk = async (
-    indicators: Array<{ indicatorId: string; unitPrice: number }>
+    indicators: Array<{ indicatorId: string; specimenTypeId?: string; unitPrice: number }>
   ) => {
     if (!selectedTestMethodId) return;
 

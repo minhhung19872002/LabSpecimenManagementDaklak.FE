@@ -15,19 +15,27 @@ import Icon from "../../../../components/common/Icon";
 import {
   IndicatorDto,
   IndicatorGroupDto,
+  SpecimenTypeDto,
 } from "../../../../services/masterDataService";
 import IndicatorName from "../../../../components/common/IndicatorName";
 import "./AddIndicatorsModal.css";
 
 const { Text } = Typography;
 
+// Existing indicator key for duplicate check
+interface ExistingIndicatorKey {
+  indicatorId: string;
+  specimenTypeId?: string;
+}
+
 interface AddIndicatorsModalProps {
   open: boolean;
   loading: boolean;
   indicatorGroups: IndicatorGroupDto[];
   indicatorsByGroup: Record<string, IndicatorDto[]>;
-  existingIndicatorIds?: string[];
-  onOk: (data: { indicatorId: string; unitPrice: number }[]) => void;
+  specimenTypes: SpecimenTypeDto[];
+  existingIndicatorKeys?: ExistingIndicatorKey[];
+  onOk: (data: { indicatorId: string; specimenTypeId?: string; unitPrice: number }[]) => void;
   onCancel: () => void;
 }
 
@@ -35,6 +43,7 @@ interface AddIndicatorsModalProps {
 interface IndicatorRow {
   id: string; // unique key for React
   indicatorId: string | undefined;
+  specimenTypeId: string | undefined;
   unitPrice: number;
 }
 
@@ -60,13 +69,24 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   loading,
   indicatorGroups,
   indicatorsByGroup,
-  existingIndicatorIds = [],
+  specimenTypes,
+  existingIndicatorKeys = [],
   onOk,
   onCancel,
 }) => {
   // Controlled state for all indicator rows
   const [rows, setRows] = useState<IndicatorRow[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Build active specimen type options
+  const specimenTypeOptions = useMemo(() => {
+    return specimenTypes
+      .filter(st => st.isActive)
+      .map(st => ({
+        value: st.id,
+        label: `${st.code} - ${st.name}`,
+      }));
+  }, [specimenTypes]);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -80,17 +100,31 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   const createEmptyRow = (): IndicatorRow => ({
     id: generateId(),
     indicatorId: undefined,
+    specimenTypeId: undefined,
     unitPrice: 0,
   });
 
-  // Get all selected indicator IDs (to filter out from options)
-  const selectedIndicatorIds = useMemo(() => {
-    const ids = new Set<string>();
-    rows.forEach((row) => {
-      if (row.indicatorId) ids.add(row.indicatorId);
-    });
-    return ids;
+  // Get all selected indicator keys (indicatorId + specimenTypeId) to filter out from options
+  // Now we allow same indicator with different specimenType
+  const selectedIndicatorKeys = useMemo(() => {
+    return rows
+      .filter((row) => row.indicatorId)
+      .map((row) => ({
+        indicatorId: row.indicatorId!,
+        specimenTypeId: row.specimenTypeId,
+      }));
   }, [rows]);
+
+  // Check if an indicator + specimenType combination already exists in the test method
+  // Note: Only check in existingIndicatorKeys, not in current rows (that's handled separately in handleSubmit)
+  const isKeyExisting = (indicatorId: string, specimenTypeId?: string): boolean => {
+    // Check in existing indicators from test method
+    // Need to handle null vs undefined comparison
+    return existingIndicatorKeys.some(
+      (key) => key.indicatorId === indicatorId &&
+        (key.specimenTypeId || null) === (specimenTypeId || null)
+    );
+  };
 
   // Find indicator by ID
   const findIndicatorById = (indicatorId: string): IndicatorDto | undefined => {
@@ -114,7 +148,8 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   };
 
   // Build parent options for Select
-  const buildParentOptions = (currentIndicatorId?: string) => {
+  // Now we don't filter out indicators - same indicator can be added with different specimenType
+  const buildParentOptions = () => {
     return indicatorGroups
       .filter(
         (group) => group.isActive && indicatorsByGroup[group.id]?.length > 0,
@@ -124,18 +159,11 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
           (ind) => !ind.parentIndicatorId && ind.isActive,
         );
 
-        const availableParents = parentIndicators.filter(
-          (ind) =>
-            ind.id === currentIndicatorId ||
-            (!selectedIndicatorIds.has(ind.id) &&
-              !existingIndicatorIds.includes(ind.id)),
-        );
-
-        if (availableParents.length === 0) return null;
+        if (parentIndicators.length === 0) return null;
 
         return {
           label: <Text strong>{group.name}</Text>,
-          options: availableParents.map((ind) => ({
+          options: parentIndicators.map((ind) => ({
             value: ind.id,
             label: (
               <span>
@@ -201,6 +229,24 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
     });
   };
 
+  // Handle specimen type change
+  const handleSpecimenTypeChange = (rowIndex: number, specimenTypeId: string | undefined) => {
+    setRows((prev) => {
+      const updated = [...prev];
+      updated[rowIndex] = {
+        ...updated[rowIndex],
+        specimenTypeId,
+      };
+      return updated;
+    });
+    // Clear error for this row
+    setErrors((prev) => {
+      const updated = { ...prev };
+      delete updated[`row-${rowIndex}`];
+      return updated;
+    });
+  };
+
   // Add new parent row
   const handleAddRow = () => {
     setRows((prev) => [...prev, createEmptyRow()]);
@@ -214,7 +260,8 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   // Validate and submit - chỉ gửi parent indicators, không gửi sub-indicators
   const handleSubmit = () => {
     const newErrors: Record<string, string> = {};
-    const flatIndicators: { indicatorId: string; unitPrice: number }[] = [];
+    const flatIndicators: { indicatorId: string; specimenTypeId?: string; unitPrice: number }[] = [];
+    const addedKeys = new Set<string>();
 
     rows.forEach((row, rowIndex) => {
       // Validate parent indicator
@@ -223,16 +270,31 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
         return;
       }
 
+      // Check duplicate in existing indicators
+      if (isKeyExisting(row.indicatorId, row.specimenTypeId)) {
+        newErrors[`row-${rowIndex}`] = "Chỉ tiêu với nền mẫu này đã tồn tại";
+        return;
+      }
+
+      // Check duplicate in current submission
+      const key = `${row.indicatorId}|${row.specimenTypeId || ''}`;
+      if (addedKeys.has(key)) {
+        newErrors[`row-${rowIndex}`] = "Trùng với dòng khác";
+        return;
+      }
+      addedKeys.add(key);
+
       // Add parent indicator only
       flatIndicators.push({
         indicatorId: row.indicatorId,
+        specimenTypeId: row.specimenTypeId,
         unitPrice: row.unitPrice,
       });
     });
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      message.error("Vui lòng điền đầy đủ thông tin");
+      message.error("Vui lòng kiểm tra lại thông tin");
       return;
     }
 
@@ -261,7 +323,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
       confirmLoading={loading}
       okText="Thêm"
       cancelText="Hủy"
-      width={700}
+      width={900}
       centered
       destroyOnHidden
       styles={{
@@ -285,11 +347,11 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
             >
               {/* Parent indicator row */}
               <Row gutter={8} align="top" wrap={false}>
-                <Col flex="auto">
+                <Col flex="1 1 40%">
                   <Select
                     value={row.indicatorId}
                     onChange={(value) => handleParentChange(rowIndex, value)}
-                    options={buildParentOptions(row.indicatorId)}
+                    options={buildParentOptions()}
                     placeholder="Tìm và chọn chỉ tiêu"
                     showSearch
                     popupMatchSelectWidth={400}
@@ -318,7 +380,21 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                     </div>
                   )}
                 </Col>
-                <Col flex="140px">
+                <Col flex="0 0 180px">
+                  <Select
+                    value={row.specimenTypeId}
+                    onChange={(value) => handleSpecimenTypeChange(rowIndex, value)}
+                    options={specimenTypeOptions}
+                    placeholder="Chọn nền mẫu"
+                    showSearch
+                    filterOption={(input, option) =>
+                      (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                    }
+                    allowClear
+                    style={{ width: "100%" }}
+                  />
+                </Col>
+                <Col flex="0 0 140px">
                   <InputNumber<number>
                     value={row.unitPrice}
                     onChange={(value) =>

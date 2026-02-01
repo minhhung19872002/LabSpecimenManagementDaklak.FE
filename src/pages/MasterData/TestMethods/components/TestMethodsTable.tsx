@@ -29,6 +29,7 @@ interface TestMethodIndicatorWithPosition extends TestMethodIndicatorDto {
 // Utility function to sort indicators by parent-child relationship
 // Parents first, then their sub-indicators grouped together
 // Also adds _isFirstSub and _isLastSub flags for tree line rendering
+// Sub-indicators are matched by BOTH parentIndicatorId AND specimenTypeId
 const sortIndicatorsByHierarchy = (indicators: TestMethodIndicatorDto[]): TestMethodIndicatorWithPosition[] => {
   if (!indicators || indicators.length === 0) return [];
 
@@ -36,18 +37,19 @@ const sortIndicatorsByHierarchy = (indicators: TestMethodIndicatorDto[]): TestMe
   const parents = indicators.filter(ind => !ind.parentIndicatorId);
   const subs = indicators.filter(ind => ind.parentIndicatorId);
 
-  // Group sub-indicators by parentIndicatorId
-  const subsByParent = new Map<string, TestMethodIndicatorDto[]>();
+  // Group sub-indicators by parentIndicatorId + specimenTypeId (composite key)
+  const subsByParentKey = new Map<string, TestMethodIndicatorDto[]>();
   subs.forEach(sub => {
-    const parentId = sub.parentIndicatorId!;
-    if (!subsByParent.has(parentId)) {
-      subsByParent.set(parentId, []);
+    // Composite key: parentIndicatorId|specimenTypeId
+    const key = `${sub.parentIndicatorId}|${sub.specimenTypeId || ''}`;
+    if (!subsByParentKey.has(key)) {
+      subsByParentKey.set(key, []);
     }
-    subsByParent.get(parentId)!.push(sub);
+    subsByParentKey.get(key)!.push(sub);
   });
 
   // Sort subs within each group by sortOrder
-  subsByParent.forEach((subList) => {
+  subsByParentKey.forEach((subList) => {
     subList.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
   });
 
@@ -58,7 +60,9 @@ const sortIndicatorsByHierarchy = (indicators: TestMethodIndicatorDto[]): TestMe
   const sortedParents = [...parents].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
   sortedParents.forEach(parent => {
     result.push(parent);
-    const childSubs = subsByParent.get(parent.indicatorId);
+    // Match children by BOTH indicatorId AND specimenTypeId
+    const parentKey = `${parent.indicatorId}|${parent.specimenTypeId || ''}`;
+    const childSubs = subsByParentKey.get(parentKey);
     if (childSubs) {
       childSubs.forEach((sub, index) => {
         result.push({
@@ -67,15 +71,14 @@ const sortIndicatorsByHierarchy = (indicators: TestMethodIndicatorDto[]): TestMe
           _isLastSub: index === childSubs.length - 1,
         });
       });
-      subsByParent.delete(parent.indicatorId);
+      subsByParentKey.delete(parentKey);
     }
   });
 
   // Then add orphaned sub-indicators (whose parent is not in the list)
-  // Group them together by parentIndicatorId
-  const orphanedParentIds = Array.from(subsByParent.keys());
-  orphanedParentIds.forEach(parentId => {
-    const orphanedSubs = subsByParent.get(parentId)!;
+  const orphanedKeys = Array.from(subsByParentKey.keys());
+  orphanedKeys.forEach(key => {
+    const orphanedSubs = subsByParentKey.get(key)!;
     orphanedSubs.forEach((sub, index) => {
       result.push({
         ...sub,
@@ -161,14 +164,15 @@ const TestMethodsTable: React.FC<TestMethodsTableProps> = ({
                         const selectableIndicators = sortedIndicators.filter(
                           (ind) => !ind.parentIndicatorId
                         );
-                        const selectableIds = selectableIndicators.map(
-                          (ind) => ind.indicatorId,
+                        // Use composite key: indicatorId|specimenTypeId
+                        const selectableKeys = selectableIndicators.map(
+                          (ind) => `${ind.indicatorId}|${ind.specimenTypeId || ''}`,
                         );
                         const allSelected =
-                          selectableIds.length > 0 &&
-                          selectableIds.every((id) => selectedKeys.includes(id));
-                        const someSelected = selectableIds.some((id) =>
-                          selectedKeys.includes(id),
+                          selectableKeys.length > 0 &&
+                          selectableKeys.every((key) => selectedKeys.includes(key));
+                        const someSelected = selectableKeys.some((key) =>
+                          selectedKeys.includes(key),
                         );
 
                         return (
@@ -205,7 +209,7 @@ const TestMethodsTable: React.FC<TestMethodsTableProps> = ({
                                       if (e.target.checked) {
                                         onSelectedIndicatorKeysChange({
                                           ...selectedIndicatorKeys,
-                                          [testMethodRecord.id]: selectableIds,
+                                          [testMethodRecord.id]: selectableKeys,
                                         });
                                       } else {
                                         onSelectedIndicatorKeysChange({
@@ -257,7 +261,7 @@ const TestMethodsTable: React.FC<TestMethodsTableProps> = ({
                             <Table
                               columns={indicatorColumns}
                               dataSource={sortedIndicators}
-                              rowKey="indicatorId"
+                              rowKey={(record) => `${record.indicatorId}|${record.specimenTypeId || ''}`}
                               pagination={false}
                               size="small"
                               rowClassName={(record) =>
@@ -284,7 +288,7 @@ const TestMethodsTable: React.FC<TestMethodsTableProps> = ({
                                       if (e.target.checked) {
                                         onSelectedIndicatorKeysChange({
                                           ...selectedIndicatorKeys,
-                                          [testMethodRecord.id]: selectableIds,
+                                          [testMethodRecord.id]: selectableKeys,
                                         });
                                       } else {
                                         onSelectedIndicatorKeysChange({
