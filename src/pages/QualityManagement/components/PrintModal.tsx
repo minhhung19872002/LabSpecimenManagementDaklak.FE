@@ -1032,6 +1032,13 @@ const PrintModal: React.FC<PrintModalProps> = ({
                                     >
                                       <style>
                                         {`
+                                          /* Ensure sub/sup tags inherit text color properly */
+                                          .ant-table sub,
+                                          .ant-table sup,
+                                          .ant-table-cell sub,
+                                          .ant-table-cell sup {
+                                            color: inherit !important;
+                                          }
                                           /* Tree line styles for sub-indicators in print modal */
                                           .print-indicator-name-wrapper {
                                             position: relative;
