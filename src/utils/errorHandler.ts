@@ -1,11 +1,28 @@
 /**
+ * Extract first error message from an errors object
+ * Format: { fieldName: ["error message 1", "error message 2"] }
+ */
+const extractFirstErrorFromObject = (obj: unknown): string | null => {
+  if (!obj || typeof obj !== "object") return null;
+
+  const values = Object.values(obj);
+  for (const value of values) {
+    if (Array.isArray(value) && value.length > 0 && typeof value[0] === "string") {
+      return value[0];
+    }
+  }
+  return null;
+};
+
+/**
  * Extract error message from API error response
  * API interceptor unwraps errors into response.data directly
  *
  * Handles multiple formats:
  * 1. Validation errors: { fieldName: ["error message 1", "error message 2"] }
- * 2. Direct message: { message: "error message" }
- * 3. String message: "error message"
+ * 2. Wrapped errors: { errors: { fieldName: ["error message"] } }
+ * 3. Direct message: { message: "error message" }
+ * 4. String message: "error message"
  */
 export const getApiErrorMessage = (
   error: unknown,
@@ -30,16 +47,38 @@ export const getApiErrorMessage = (
       return responseData.message;
     }
 
-    // Handle validation errors format: { fieldName: ["error message"] }
-    const errorValues = Object.values(responseData);
-    for (const value of errorValues) {
-      if (Array.isArray(value) && value.length > 0 && typeof value[0] === "string") {
-        return value[0];
-      }
+    // Check for nested errors object: { errors: { fieldName: ["..."] } }
+    if (responseData.errors && typeof responseData.errors === "object") {
+      const errorMsg = extractFirstErrorFromObject(responseData.errors);
+      if (errorMsg) return errorMsg;
     }
+
+    // Handle validation errors format: { fieldName: ["error message"] }
+    const errorMsg = extractFirstErrorFromObject(responseData);
+    if (errorMsg) return errorMsg;
   }
 
   return defaultMessage;
+};
+
+/**
+ * Extract all error messages from an errors object
+ */
+const extractAllErrorsFromObject = (obj: unknown): string[] => {
+  const messages: string[] = [];
+  if (!obj || typeof obj !== "object") return messages;
+
+  const values = Object.values(obj);
+  for (const value of values) {
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        if (typeof item === "string") {
+          messages.push(item);
+        }
+      }
+    }
+  }
+  return messages;
 };
 
 /**
@@ -49,17 +88,17 @@ export const getApiErrorMessage = (
 export const getAllApiErrorMessages = (error: unknown): string[] => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const err = error as any;
-  const serverErrors = err?.response?.data;
-  const messages: string[] = [];
+  const responseData = err?.response?.data;
 
-  if (serverErrors && typeof serverErrors === "object") {
-    const errorValues = Object.values(serverErrors);
-    for (const errorArray of errorValues) {
-      if (Array.isArray(errorArray)) {
-        messages.push(...errorArray);
-      }
-    }
+  if (!responseData || typeof responseData !== "object") {
+    return [];
   }
 
-  return messages;
+  // Check for nested errors object: { errors: { fieldName: ["..."] } }
+  if (responseData.errors && typeof responseData.errors === "object") {
+    return extractAllErrorsFromObject(responseData.errors);
+  }
+
+  // Handle direct format: { fieldName: ["..."] }
+  return extractAllErrorsFromObject(responseData);
 };
