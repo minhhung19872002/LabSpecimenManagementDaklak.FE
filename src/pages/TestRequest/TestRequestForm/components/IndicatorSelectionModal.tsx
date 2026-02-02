@@ -53,12 +53,14 @@ interface TruncateTooltipProps {
   title: string;
   children: React.ReactNode;
   style?: React.CSSProperties;
+  className?: string;
 }
 
 const TruncateTooltip: React.FC<TruncateTooltipProps> = ({
   title,
   children,
   style,
+  className,
 }) => {
   const [showTooltip, setShowTooltip] = useState(false);
   const containerRef = useRef<HTMLSpanElement>(null);
@@ -78,6 +80,7 @@ const TruncateTooltip: React.FC<TruncateTooltipProps> = ({
     <Tooltip title={title} open={showTooltip} placement="topLeft">
       <span
         ref={containerRef}
+        className={className}
         style={style}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
@@ -858,19 +861,13 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
           />
           <TruncateTooltip
             title={ind.name}
+            className={isIndicatorExpanded ? "indicator-name-gradient" : undefined}
             style={{
               flex: 1,
               fontSize: 14,
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
-              ...(isIndicatorExpanded && {
-                background:
-                  "linear-gradient(135deg, rgb(24, 144, 255) 0%, rgb(9, 109, 217) 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-              }),
             }}
           >
             <IndicatorName name={ind.name} formattedName={ind.formattedName} />
