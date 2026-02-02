@@ -245,7 +245,10 @@ export const useTestRequestFormActions = ({
       Indicators: (s.indicators || []).map((ind: any) => {
         // Find test method info from indicatorMethodsMap
         const methods = indicatorMethodsMap[ind.indicatorId] || [];
-        const method = methods.find((m) => m.testMethodId === ind.testMethodId);
+        // Must match both testMethodId AND specimenTypeId to get correct method info
+        const method = methods.find(
+          (m) => m.testMethodId === ind.testMethodId && (m.specimenTypeId || null) === (ind.specimenTypeId || null)
+        );
         return {
           Id: ind.id || null,
           IndicatorId: ind.indicatorId,
@@ -815,10 +818,13 @@ export const useTestRequestFormActions = ({
         // Prefer indicatorMethods if available, fallback to indicatorIds
         const indicatorsList = sample.indicatorMethods && sample.indicatorMethods.length > 0
           ? sample.indicatorMethods.map((methodKey) => {
-              const { indicatorId, testMethodId } = parseIndicatorMethodKey(methodKey);
+              const { indicatorId, testMethodId, specimenTypeId } = parseIndicatorMethodKey(methodKey);
               const indicatorDates = selectedIndicatorDates[methodKey];
               const methods = indicatorMethodsMap[indicatorId] || [];
-              const method = methods.find((m) => m.testMethodId === testMethodId);
+              // Must match both testMethodId AND specimenTypeId to get correct price
+              const method = methods.find(
+                (m) => m.testMethodId === testMethodId && (m.specimenTypeId || null) === specimenTypeId
+              );
               const labAssignment = indicatorLaboratoryMap[`${sample.key}_${methodKey}`];
               // Get the TestRequestSampleIndicator.id if this indicator already exists
               const existingIndicatorId = sampleIndicatorIdMap[`${sample.key}_${methodKey}`];
@@ -829,6 +835,7 @@ export const useTestRequestFormActions = ({
                 id: existingIndicatorId || undefined, // Include id for existing indicators
                 indicatorId,
                 testMethodId,
+                specimenTypeId: specimenTypeId || undefined, // Include specimenTypeId to correctly identify price
                 laboratoryId: labAssignment?.laboratoryId || undefined,
                 unitPrice: isHgFree ? 0 : (method?.unitPrice || 0),
                 originalUnitPrice: isHgFree ? (method?.unitPrice || 0) : undefined,
@@ -1112,15 +1119,19 @@ export const useTestRequestFormActions = ({
             statusText: sample.statusText || undefined,
             notes: sample.notes || undefined,
             indicators: (sample.indicatorMethods || []).map((methodKey: IndicatorMethodKey) => {
-              const { indicatorId, testMethodId } = parseIndicatorMethodKey(methodKey);
+              const { indicatorId, testMethodId, specimenTypeId } = parseIndicatorMethodKey(methodKey);
               const indicator = indicators.find((ind: any) => ind.id === indicatorId);
-              const method = indicatorMethodsMap[indicatorId]?.find(
-                (m: IndicatorMethodInfo) => m.testMethodId === testMethodId
+              const methods = indicatorMethodsMap[indicatorId] || [];
+              const method = methods.find(
+                (m: IndicatorMethodInfo) => m.testMethodId === testMethodId && (m.specimenTypeId || null) === specimenTypeId
               );
               const isHgFree = isPreviewComboMet && isHgIndicator(indicator?.name);
               return {
                 indicatorId,
+                testMethodId: testMethodId || undefined,
+                specimenTypeId: specimenTypeId || undefined,
                 indicatorName: indicator?.name || "",
+                indicatorFormattedName: indicator?.formattedName || undefined,
                 unitPrice: isHgFree ? 0 : (method?.unitPrice || 0),
                 originalUnitPrice: isHgFree ? (method?.unitPrice || 0) : undefined,
               };

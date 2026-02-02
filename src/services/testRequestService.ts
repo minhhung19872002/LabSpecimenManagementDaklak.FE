@@ -66,7 +66,10 @@ export interface PrintMultiResultOutput {
 // Preview test request form input - matches BE PreviewTestRequestFormInput
 export interface PreviewSampleIndicatorDto {
   indicatorId: string;
+  testMethodId?: string;
+  specimenTypeId?: string;
   indicatorName: string;
+  indicatorFormattedName?: string;
   unitPrice: number;
 }
 

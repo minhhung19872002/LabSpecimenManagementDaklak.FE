@@ -588,13 +588,12 @@ export const useTestRequestFormData = () => {
           ) || [];
 
           // Build indicatorMethods from active indicators (indicatorId + testMethodId + specimenTypeId)
-          // Note: specimenTypeId comes from the sample, not the indicator
-          const sampleSpecimenTypeId = sample.specimenTypeId;
+          // Note: specimenTypeId now comes from the indicator itself (stored when user selects from specific specimen type)
           const indicatorMethods: IndicatorMethodKey[] = [];
           activeIndicators.forEach((ind) => {
             if (ind.indicatorId && ind.testMethodId) {
-              // Use sample's specimenTypeId for the key
-              indicatorMethods.push(createIndicatorMethodKey(ind.indicatorId, ind.testMethodId, sampleSpecimenTypeId));
+              // Use indicator's specimenTypeId for the key (to correctly identify which specimen type price was selected)
+              indicatorMethods.push(createIndicatorMethodKey(ind.indicatorId, ind.testMethodId, ind.specimenTypeId));
             }
           });
 
@@ -656,9 +655,9 @@ export const useTestRequestFormData = () => {
           ) || [];
 
           activeIndicators.forEach((ind) => {
-            // Create IndicatorMethodKey for each indicator (include sample's specimenTypeId)
+            // Create IndicatorMethodKey for each indicator (include indicator's specimenTypeId)
             const methodKey = ind.testMethodId
-              ? createIndicatorMethodKey(ind.indicatorId, ind.testMethodId, sample.specimenTypeId)
+              ? createIndicatorMethodKey(ind.indicatorId, ind.testMethodId, ind.specimenTypeId)
               : ind.indicatorId; // Fallback for old data without testMethodId
 
             // Store the TestRequestSampleIndicator.id for this indicator
@@ -815,9 +814,12 @@ export const useTestRequestFormData = () => {
       // New logic: use indicatorMethods if available
       if (sample.indicatorMethods && sample.indicatorMethods.length > 0) {
         sample.indicatorMethods.forEach((key) => {
-          const { indicatorId, testMethodId } = parseIndicatorMethodKey(key);
+          const { indicatorId, testMethodId, specimenTypeId } = parseIndicatorMethodKey(key);
           const methods = indicatorMethodsMap[indicatorId] || [];
-          const method = methods.find((m) => m.testMethodId === testMethodId);
+          // Must match both testMethodId AND specimenTypeId to get correct price
+          const method = methods.find(
+            (m) => m.testMethodId === testMethodId && (m.specimenTypeId || null) === specimenTypeId
+          );
           if (method) {
             // Hg miễn phí khi đủ combo kim loại nặng
             const ind = indicators.find((i) => i.id === indicatorId);
@@ -852,10 +854,13 @@ export const useTestRequestFormData = () => {
 
   // Get indicator and method info from IndicatorMethodKey
   const getIndicatorMethodInfo = (key: IndicatorMethodKey) => {
-    const { indicatorId, testMethodId } = parseIndicatorMethodKey(key);
+    const { indicatorId, testMethodId, specimenTypeId } = parseIndicatorMethodKey(key);
     let indicator = indicators.find((i) => i.id === indicatorId);
     const methods = indicatorMethodsMap[indicatorId] || [];
-    const method = methods.find((m) => m.testMethodId === testMethodId);
+    // Must match both testMethodId AND specimenTypeId to get correct price for each specimen type
+    const method = methods.find(
+      (m) => m.testMethodId === testMethodId && (m.specimenTypeId || null) === specimenTypeId
+    );
 
     // Fallback: If indicator not found in indicators list (e.g., sub-indicators),
     // create indicator-like object from testMethods data
