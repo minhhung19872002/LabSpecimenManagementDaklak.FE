@@ -42,6 +42,8 @@ export interface TestMethodIndicatorImportItem {
   rowNumber: number;
   indicatorName: string;
   indicatorId?: string;
+  specimenTypeName?: string;
+  specimenTypeId?: string;
   unitPrice: number;
   isValid: boolean;
   errorMessage?: string;
