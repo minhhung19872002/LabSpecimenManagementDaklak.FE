@@ -8,6 +8,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: 'auto',
       includeAssets: ['favicon.svg', 'apple-touch-icon.svg', 'pwa-192x192.svg', 'pwa-512x512.svg'],
       manifest: {
         name: 'Lab Specimen Management',
@@ -48,6 +49,8 @@ export default defineConfig({
         // Take control immediately without waiting for tabs to close
         skipWaiting: true,
         clientsClaim: true,
+        // Clean old caches on activation
+        cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
             // Cache JS chunks that weren't precached (large files like vietnamLocations)

@@ -114,23 +114,18 @@ const Login: React.FC = () => {
       let response;
       let loginMethod: 'online' | 'offline' = 'online';
 
-      // If offline, try offline login directly
-      if (!navigator.onLine) {
-        loginMethod = 'offline';
-        response = await authService.loginOffline(credentials);
-      } else {
-        // Try online login first
-        try {
-          response = await authService.login(credentials);
-        } catch (onlineErr: any) {
-          // If network error (no response), try offline login as fallback
-          if (!onlineErr.response && hasOfflineCredentials) {
-            console.log('Online login failed, attempting offline login...');
-            loginMethod = 'offline';
-            response = await authService.loginOffline(credentials);
-          } else {
-            throw onlineErr; // Re-throw if it's not a network error
-          }
+      // Always try online login first, regardless of navigator.onLine
+      // navigator.onLine is unreliable in many browsers
+      try {
+        response = await authService.login(credentials);
+      } catch (onlineErr: any) {
+        // If network error (no response), try offline login as fallback
+        if (!onlineErr.response && hasOfflineCredentials) {
+          console.log('Online login failed, attempting offline login...');
+          loginMethod = 'offline';
+          response = await authService.loginOffline(credentials);
+        } else {
+          throw onlineErr; // Re-throw if it's not a network error
         }
       }
 
