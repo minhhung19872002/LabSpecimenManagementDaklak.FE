@@ -350,3 +350,20 @@
 .indicator-picker-drawer .indicator-filter-selects {
   flex-direction: column;
 }
+
+/* Gradient text effect for expanded indicator names */
+.indicator-name-gradient {
+  background: linear-gradient(135deg, rgb(24, 144, 255) 0%, rgb(9, 109, 217) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Ensure sub/sup elements in gradient text also show the gradient */
+.indicator-name-gradient sub,
+.indicator-name-gradient sup {
+  background: linear-gradient(135deg, rgb(24, 144, 255) 0%, rgb(9, 109, 217) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

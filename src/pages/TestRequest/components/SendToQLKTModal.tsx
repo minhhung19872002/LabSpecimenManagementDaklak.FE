@@ -172,13 +172,15 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
     }
   }, [visible]);
 
-  // Initialize indicator states when modal opens
+  // Initialize indicator states when modal opens and laboratories are loaded
   // Auto-fill laboratoryId from indicator's existing value or from indicator group's default laboratory
   // Chỉ lấy các chỉ tiêu CHƯA gửi QLKT (isSentToQLKT = false)
+  // Only auto-fill if laboratory exists in active laboratories list
   useEffect(() => {
-    if (visible && testRequest?.samples) {
+    if (visible && testRequest?.samples && laboratories.length > 0) {
       const states: Record<string, IndicatorState> = {};
       const panelKeys: string[] = [];
+      const labIds = new Set(laboratories.map((lab) => lab.id));
 
       testRequest.samples.forEach((sample) => {
         if (sample.isCancelled || sample.isCustomerCancelled) return;
@@ -190,11 +192,11 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
         panelKeys.push(sample.id);
 
         unsent.forEach((indicator) => {
-          // Priority: existing laboratoryId > indicatorGroupLaboratoryId > undefined
+          // Only use existing laboratoryId if it exists in active list
           const autoFilledLabId =
-            indicator.laboratoryId ||
-            indicator.indicatorGroupLaboratoryId ||
-            undefined;
+            indicator.laboratoryId && labIds.has(indicator.laboratoryId)
+              ? indicator.laboratoryId
+              : undefined;
 
           states[indicator.id] = {
             sampleIndicatorId: indicator.id,
@@ -210,7 +212,7 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
       setIndicatorStates(states);
       setExpandedPanels(panelKeys);
     }
-  }, [visible, testRequest]);
+  }, [visible, testRequest, laboratories]);
 
   // Get active samples (not cancelled)
   const activeSamples = useMemo(() => {
