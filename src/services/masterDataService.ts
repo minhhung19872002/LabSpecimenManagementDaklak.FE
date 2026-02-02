@@ -153,7 +153,7 @@ export interface TestMethodWithIndicatorsDto extends TestMethodDto {
 }
 
 export interface AddIndicatorsToTestMethodDto {
-  indicators: { indicatorId: string; specimenTypeId?: string; unitPrice: number }[];
+  indicators: { indicatorId: string; specimenTypeId: string; unitPrice: number }[];
 }
 
 // Standard
