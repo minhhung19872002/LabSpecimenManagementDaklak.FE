@@ -97,7 +97,7 @@ interface IndicatorSelectionModalProps {
   indicatorMethodsMap: Record<string, IndicatorMethodInfo[]>;
   expandedIndicators: string[];
   setExpandedIndicators: React.Dispatch<React.SetStateAction<string[]>>;
-  toggleIndicatorMethod: (indicatorId: string, testMethodId: string) => void;
+  toggleIndicatorMethod: (indicatorId: string, testMethodId: string, specimenTypeId?: string) => void;
   // Existing props
   indicatorGroups: IndicatorGroupDto[];
   indicators: IndicatorDto[];
@@ -134,6 +134,7 @@ interface IndicatorSelectionModalProps {
   expandedLabGroups: string[];
   setExpandedLabGroups: React.Dispatch<React.SetStateAction<string[]>>;
   // Filter theo loại mẫu
+  currentSampleSpecimenTypeId?: string;
   currentSampleSpecimenTypeName?: string;
   specimenTypeIndicatorIds: string[];
   specimenTypeFilterActive: boolean;
@@ -179,6 +180,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
   setIndicatorLaboratoryMap,
   expandedLabGroups,
   setExpandedLabGroups,
+  currentSampleSpecimenTypeId,
   currentSampleSpecimenTypeName,
   specimenTypeIndicatorIds,
   specimenTypeFilterActive,
@@ -192,8 +194,8 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
 }) => {
   // Handle remove indicator method
   const handleRemoveIndicatorMethod = (key: IndicatorMethodKey) => {
-    const { indicatorId, testMethodId } = parseIndicatorMethodKey(key);
-    toggleIndicatorMethod(indicatorId, testMethodId);
+    const { indicatorId, testMethodId, specimenTypeId } = parseIndicatorMethodKey(key);
+    toggleIndicatorMethod(indicatorId, testMethodId, specimenTypeId || undefined);
     const labMapKey = `${currentSampleKey}_${key}`;
     if (indicatorLaboratoryMap[labMapKey]) {
       setIndicatorLaboratoryMap((prev) => {
@@ -204,12 +206,13 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     }
   };
 
-  // Check if a method is selected
+  // Check if a method is selected (now includes specimenTypeId)
   const isMethodSelected = (
     indicatorId: string,
     testMethodId: string,
+    specimenTypeId?: string,
   ): boolean => {
-    const key = createIndicatorMethodKey(indicatorId, testMethodId);
+    const key = createIndicatorMethodKey(indicatorId, testMethodId, specimenTypeId);
     return tempSelectedIndicatorMethods.includes(key);
   };
 
@@ -218,10 +221,13 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
   // Check if a key is a sub-indicator (has parentIndicatorId)
   const isSubIndicator = useCallback(
     (key: IndicatorMethodKey): boolean => {
-      const { indicatorId, testMethodId } = parseIndicatorMethodKey(key);
+      const { indicatorId, testMethodId, specimenTypeId } = parseIndicatorMethodKey(key);
       const methods = indicatorMethodsMap[indicatorId];
       if (!methods) return false;
-      const methodInfo = methods.find((m) => m.testMethodId === testMethodId);
+      const methodInfo = methods.find(
+        (m) => m.testMethodId === testMethodId &&
+          (m.specimenTypeId || null) === (specimenTypeId || null)
+      );
       return !!methodInfo?.parentIndicatorId;
     },
     [indicatorMethodsMap]
@@ -230,29 +236,37 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
   // Get parent key of a sub-indicator
   const getParentKey = useCallback(
     (subKey: IndicatorMethodKey): IndicatorMethodKey | null => {
-      const { indicatorId, testMethodId } = parseIndicatorMethodKey(subKey);
+      const { indicatorId, testMethodId, specimenTypeId } = parseIndicatorMethodKey(subKey);
       const methods = indicatorMethodsMap[indicatorId];
       if (!methods) return null;
-      const methodInfo = methods.find((m) => m.testMethodId === testMethodId);
+      const methodInfo = methods.find(
+        (m) => m.testMethodId === testMethodId &&
+          (m.specimenTypeId || null) === (specimenTypeId || null)
+      );
       if (!methodInfo?.parentIndicatorId) return null;
-      return createIndicatorMethodKey(methodInfo.parentIndicatorId, testMethodId);
+      return createIndicatorMethodKey(methodInfo.parentIndicatorId, testMethodId, methodInfo.specimenTypeId);
     },
     [indicatorMethodsMap]
   );
 
-  // Get all sub-indicator keys for a parent indicator + method
+  // Get all sub-indicator keys for a parent indicator + method + specimenType
   const getSubIndicatorKeys = useCallback(
-    (parentIndicatorId: string, testMethodId: string): IndicatorMethodKey[] => {
+    (parentIndicatorId: string, testMethodId: string, specimenTypeId?: string | null): IndicatorMethodKey[] => {
       const subKeys: IndicatorMethodKey[] = [];
-      // Find all indicators that have this parentIndicatorId and testMethodId
+      // Normalize specimenTypeId: treat null, undefined, and empty string as equivalent
+      const normalizedSpecimenTypeId = specimenTypeId || null;
+      // Find all indicators that have this parentIndicatorId, testMethodId, and specimenTypeId
       Object.entries(indicatorMethodsMap).forEach(([indId, methods]) => {
         methods.forEach((method) => {
+          // Normalize method's specimenTypeId the same way
+          const methodSpecimenTypeId = method.specimenTypeId || null;
           if (
             method.testMethodId === testMethodId &&
             method.parentIndicatorId === parentIndicatorId &&
-            method.isActive
+            method.isActive &&
+            methodSpecimenTypeId === normalizedSpecimenTypeId
           ) {
-            subKeys.push(createIndicatorMethodKey(indId, testMethodId));
+            subKeys.push(createIndicatorMethodKey(indId, testMethodId, method.specimenTypeId));
           }
         });
       });
@@ -277,9 +291,9 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
           subMethodsMap[parentKey].push(key);
         }
       } else {
-        // Check if this indicator has any sub-indicators in the same method
-        const { indicatorId, testMethodId } = parseIndicatorMethodKey(key);
-        const subKeys = getSubIndicatorKeys(indicatorId, testMethodId);
+        // Check if this indicator has any sub-indicators in the same method + specimenType
+        const { indicatorId, testMethodId, specimenTypeId } = parseIndicatorMethodKey(key);
+        const subKeys = getSubIndicatorKeys(indicatorId, testMethodId, specimenTypeId);
         if (subKeys.length > 0) {
           // This is a parent indicator
           parentMethods.push(key);
@@ -327,8 +341,8 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
       }
 
       // Remove the sub-indicator
-      const { indicatorId, testMethodId } = parseIndicatorMethodKey(subKey);
-      toggleIndicatorMethod(indicatorId, testMethodId);
+      const { indicatorId, testMethodId, specimenTypeId } = parseIndicatorMethodKey(subKey);
+      toggleIndicatorMethod(indicatorId, testMethodId, specimenTypeId || undefined);
     },
     [getParentKey, groupedSelectedMethods.subMethodsMap, toggleIndicatorMethod]
   );
@@ -336,22 +350,22 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
   // Handle remove parent indicator (removes all subs too)
   const handleRemoveParentIndicator = useCallback(
     (parentKey: IndicatorMethodKey) => {
-      const { indicatorId, testMethodId } = parseIndicatorMethodKey(parentKey);
+      const { indicatorId, testMethodId, specimenTypeId } = parseIndicatorMethodKey(parentKey);
 
       // Get all sub-indicator keys for this parent
       const subKeys = groupedSelectedMethods.subMethodsMap[parentKey] || [];
 
       // Remove all subs first
       subKeys.forEach((subKey) => {
-        const { indicatorId: subIndId, testMethodId: subMethodId } =
+        const { indicatorId: subIndId, testMethodId: subMethodId, specimenTypeId: subSpecimenTypeId } =
           parseIndicatorMethodKey(subKey);
         if (tempSelectedIndicatorMethods.includes(subKey)) {
-          toggleIndicatorMethod(subIndId, subMethodId);
+          toggleIndicatorMethod(subIndId, subMethodId, subSpecimenTypeId || undefined);
         }
       });
 
       // Remove the parent
-      toggleIndicatorMethod(indicatorId, testMethodId);
+      toggleIndicatorMethod(indicatorId, testMethodId, specimenTypeId || undefined);
 
       // Clean up laboratory map for parent
       const labMapKey = `${currentSampleKey}_${parentKey}`;
@@ -546,21 +560,29 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
   }, [visible, indicatorGroups]);
 
   // Helper: Toggle all methods of an indicator
+  // filterSpecimenTypeId: nếu có, chỉ toggle methods có specimenTypeId matching
   const toggleAllMethodsOfIndicator = (
     indicatorId: string,
     select: boolean,
+    filterSpecimenTypeId?: string,
   ) => {
-    const methods =
-      indicatorMethodsMap[indicatorId]?.filter((m) => m.isActive) || [];
+    let methods = indicatorMethodsMap[indicatorId]?.filter((m) => m.isActive) || [];
+    // Filter theo specimenTypeId nếu có (loại bỏ methods không có nền mẫu)
+    if (filterSpecimenTypeId) {
+      methods = methods.filter((m) =>
+        m.specimenTypeId && m.specimenTypeName && m.specimenTypeId === filterSpecimenTypeId
+      );
+    }
     methods.forEach((method) => {
       const isCurrentlySelected = isMethodSelected(
         indicatorId,
         method.testMethodId,
+        method.specimenTypeId,
       );
       if (select && !isCurrentlySelected) {
-        toggleIndicatorMethod(indicatorId, method.testMethodId);
+        toggleIndicatorMethod(indicatorId, method.testMethodId, method.specimenTypeId);
       } else if (!select && isCurrentlySelected) {
-        toggleIndicatorMethod(indicatorId, method.testMethodId);
+        toggleIndicatorMethod(indicatorId, method.testMethodId, method.specimenTypeId);
       }
     });
   };
@@ -569,64 +591,109 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
   const toggleAllIndicatorsInGroup = (
     indicatorIds: string[],
     select: boolean,
+    filterSpecimenTypeId?: string,
   ) => {
     indicatorIds.forEach((indId) => {
-      toggleAllMethodsOfIndicator(indId, select);
+      toggleAllMethodsOfIndicator(indId, select, filterSpecimenTypeId);
     });
   };
 
   // Helper: Check if all methods of an indicator are selected
-  const areAllMethodsSelected = (indicatorId: string): boolean => {
-    const methods =
-      indicatorMethodsMap[indicatorId]?.filter((m) => m.isActive) || [];
+  // filterSpecimenTypeId: nếu có, chỉ check methods có specimenTypeId matching (loại bỏ methods không có nền mẫu)
+  const areAllMethodsSelected = (indicatorId: string, filterSpecimenTypeId?: string): boolean => {
+    let methods = indicatorMethodsMap[indicatorId]?.filter((m) => m.isActive) || [];
+    if (filterSpecimenTypeId) {
+      methods = methods.filter((m) =>
+        m.specimenTypeId && m.specimenTypeName && m.specimenTypeId === filterSpecimenTypeId
+      );
+    }
     if (methods.length === 0) return false;
-    return methods.every((m) => isMethodSelected(indicatorId, m.testMethodId));
+    return methods.every((m) => isMethodSelected(indicatorId, m.testMethodId, m.specimenTypeId));
   };
 
   // Helper: Check if some (but not all) methods of an indicator are selected
-  const areSomeMethodsSelected = (indicatorId: string): boolean => {
-    const methods =
-      indicatorMethodsMap[indicatorId]?.filter((m) => m.isActive) || [];
+  // filterSpecimenTypeId: nếu có, chỉ check methods có specimenTypeId matching (loại bỏ methods không có nền mẫu)
+  const areSomeMethodsSelected = (indicatorId: string, filterSpecimenTypeId?: string): boolean => {
+    let methods = indicatorMethodsMap[indicatorId]?.filter((m) => m.isActive) || [];
+    if (filterSpecimenTypeId) {
+      methods = methods.filter((m) =>
+        m.specimenTypeId && m.specimenTypeName && m.specimenTypeId === filterSpecimenTypeId
+      );
+    }
     if (methods.length === 0) return false;
     const selectedCount = methods.filter((m) =>
-      isMethodSelected(indicatorId, m.testMethodId),
+      isMethodSelected(indicatorId, m.testMethodId, m.specimenTypeId),
     ).length;
     return selectedCount > 0 && selectedCount < methods.length;
   };
 
   // Helper: Check if all indicators in a list are fully selected
-  const areAllIndicatorsSelected = (indicatorIds: string[]): boolean => {
+  // filterSpecimenTypeId: nếu có, chỉ check methods có specimenTypeId matching
+  const areAllIndicatorsSelected = (indicatorIds: string[], filterSpecimenTypeId?: string): boolean => {
     if (indicatorIds.length === 0) return false;
-    return indicatorIds.every((indId) => areAllMethodsSelected(indId));
+    return indicatorIds.every((indId) => areAllMethodsSelected(indId, filterSpecimenTypeId));
   };
 
   // Helper: Check if some indicators in a list are selected (partial)
-  const areSomeIndicatorsSelected = (indicatorIds: string[]): boolean => {
+  // filterSpecimenTypeId: nếu có, chỉ check methods có specimenTypeId matching (loại bỏ methods không có nền mẫu)
+  const areSomeIndicatorsSelected = (indicatorIds: string[], filterSpecimenTypeId?: string): boolean => {
     if (indicatorIds.length === 0) return false;
+    let methods: IndicatorMethodInfo[];
     const hasAnySelected = indicatorIds.some((indId) => {
-      const methods =
-        indicatorMethodsMap[indId]?.filter((m) => m.isActive) || [];
-      return methods.some((m) => isMethodSelected(indId, m.testMethodId));
+      methods = indicatorMethodsMap[indId]?.filter((m) => m.isActive) || [];
+      if (filterSpecimenTypeId) {
+        methods = methods.filter((m) =>
+          m.specimenTypeId && m.specimenTypeName && m.specimenTypeId === filterSpecimenTypeId
+        );
+      }
+      return methods.some((m) => isMethodSelected(indId, m.testMethodId, m.specimenTypeId));
     });
-    return hasAnySelected && !areAllIndicatorsSelected(indicatorIds);
+    return hasAnySelected && !areAllIndicatorsSelected(indicatorIds, filterSpecimenTypeId);
   };
 
   // Helper: Render indicator with methods (reusable)
+  // filterSpecimenTypeId: khi render trong context của một group nền mẫu cụ thể,
+  // chỉ hiển thị methods có specimenTypeId matching với group đó
   const renderIndicatorWithMethods = (
     ind: IndicatorDto,
     indentLevel: number = 1,
+    filterSpecimenTypeId?: string,
   ) => {
-    const methods =
-      indicatorMethodsMap[ind.id]?.filter((m) => m.isActive) || [];
+    // Filter methods
+    const allMethods = indicatorMethodsMap[ind.id]?.filter((m) => m.isActive) || [];
+    let methods = allMethods;
+
+    // 1. Nếu có filterSpecimenTypeId (từ group nền mẫu), chỉ hiển thị methods có specimenTypeId matching
+    // Loại bỏ hoàn toàn các methods không có nền mẫu (check cả specimenTypeName để đảm bảo)
+    if (filterSpecimenTypeId) {
+      methods = allMethods.filter((m) =>
+        m.specimenTypeId &&
+        m.specimenTypeName &&
+        m.specimenTypeId === filterSpecimenTypeId
+      );
+    }
+    // 2. Nếu specimenTypeFilterActive và sample có specimenTypeId, filter theo sample
+    else if (specimenTypeFilterActive && currentSampleSpecimenTypeId) {
+      methods = allMethods.filter((m) =>
+        m.specimenTypeId &&
+        m.specimenTypeName &&
+        m.specimenTypeId === currentSampleSpecimenTypeId
+      );
+    }
+
+    // Nếu không có method nào sau khi filter, không render indicator này
+    if (methods.length === 0) return null;
+
     const isIndicatorExpanded = expandedIndicators.includes(ind.id);
     const selectedMethodsCount = methods.filter((m) =>
-      isMethodSelected(ind.id, m.testMethodId),
+      isMethodSelected(ind.id, m.testMethodId, m.specimenTypeId),
     ).length;
     const paddingLeft = indentLevel === 1 ? 12 : indentLevel === 2 ? 28 : 12;
     const methodPaddingLeft =
       indentLevel === 1 ? 32 : indentLevel === 2 ? 48 : 32;
-    const isAllSelected = areAllMethodsSelected(ind.id);
-    const isSomeSelected = areSomeMethodsSelected(ind.id);
+    // Pass filterSpecimenTypeId to helper functions
+    const isAllSelected = areAllMethodsSelected(ind.id, filterSpecimenTypeId);
+    const isSomeSelected = areSomeMethodsSelected(ind.id, filterSpecimenTypeId);
 
     return (
       <div key={ind.id}>
@@ -646,7 +713,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
             checked={isAllSelected}
             indeterminate={isSomeSelected}
             onClick={(e) => e.stopPropagation()}
-            onChange={() => toggleAllMethodsOfIndicator(ind.id, !isAllSelected)}
+            onChange={() => toggleAllMethodsOfIndicator(ind.id, !isAllSelected, filterSpecimenTypeId)}
           />
           <TruncateTooltip
             title={ind.name}
@@ -680,12 +747,14 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
         {/* Methods under indicator */}
         {isIndicatorExpanded &&
           methods.map((method) => {
-            const isSelected = isMethodSelected(ind.id, method.testMethodId);
+            // Use specimenTypeId for unique key and selection
+            const methodUniqueKey = `${method.testMethodId}_${method.specimenTypeId || 'null'}`;
+            const isSelected = isMethodSelected(ind.id, method.testMethodId, method.specimenTypeId);
             return (
               <div
-                key={method.testMethodId}
+                key={methodUniqueKey}
                 onClick={() =>
-                  toggleIndicatorMethod(ind.id, method.testMethodId)
+                  toggleIndicatorMethod(ind.id, method.testMethodId, method.specimenTypeId)
                 }
                 style={{
                   padding: `5px 12px 5px ${methodPaddingLeft}px`,
@@ -710,9 +779,9 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                 <Checkbox
                   checked={isSelected}
                   onClick={(e) => e.stopPropagation()}
-                  onChange={() =>
-                    toggleIndicatorMethod(ind.id, method.testMethodId)
-                  }
+                  onChange={() => {
+                    toggleIndicatorMethod(ind.id, method.testMethodId, method.specimenTypeId);
+                  }}
                 />
                 <TruncateTooltip
                   title={method.testMethodName}
@@ -779,18 +848,26 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
       );
     }
 
-    // Build map: indicatorId -> specimenTypeIds
-    const indicatorSpecimenTypesMap = new Map<string, string[]>();
-    specimenTypesWithIndicators.forEach((st) => {
-      if (st.isActive) {
-        st.indicators?.forEach((sti) => {
-          if (sti.isActive) {
-            if (!indicatorSpecimenTypesMap.has(sti.indicatorId)) {
-              indicatorSpecimenTypesMap.set(sti.indicatorId, []);
-            }
-            indicatorSpecimenTypesMap.get(sti.indicatorId)!.push(st.id);
-          }
-        });
+    // Build map: indicatorId -> specimenTypeIds (từ indicatorMethodsMap thay vì specimenTypesWithIndicators)
+    // Điều này đảm bảo chỉ group dựa trên methods thực sự có specimenTypeId
+    const indicatorSpecimenTypesMap = new Map<string, { id: string; name: string }[]>();
+    Object.entries(indicatorMethodsMap).forEach(([indicatorId, methods]) => {
+      const specimenTypesForIndicator: { id: string; name: string }[] = [];
+      const seenIds = new Set<string>();
+
+      methods.forEach((method) => {
+        // Chỉ lấy methods có specimenTypeId và specimenTypeName (có nền mẫu thực sự)
+        if (method.isActive && method.specimenTypeId && method.specimenTypeName && !seenIds.has(method.specimenTypeId)) {
+          seenIds.add(method.specimenTypeId);
+          specimenTypesForIndicator.push({
+            id: method.specimenTypeId,
+            name: method.specimenTypeName,
+          });
+        }
+      });
+
+      if (specimenTypesForIndicator.length > 0) {
+        indicatorSpecimenTypesMap.set(indicatorId, specimenTypesForIndicator);
       }
     });
 
@@ -814,9 +891,9 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     // Apply specimen type filter from new filter fields
     if (specimenTypeIdsToFilter.length > 0) {
       activeIndicators = activeIndicators.filter((ind) => {
-        const indStIds = indicatorSpecimenTypesMap.get(ind.id) || [];
+        const indStList = indicatorSpecimenTypesMap.get(ind.id) || [];
         // Indicator must belong to at least one of the selected specimen types
-        return indStIds.some((stId) => specimenTypeIdsToFilter.includes(stId));
+        return indStList.some((st) => specimenTypeIdsToFilter.includes(st.id));
       });
     }
 
@@ -846,31 +923,36 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
       >();
 
       groupIndicators.forEach((ind) => {
-        const stIds = indicatorSpecimenTypesMap.get(ind.id) || [];
-        if (stIds.length === 0) {
-          // Indicator không thuộc loại mẫu nào -> nhóm "Khác"
-          if (!specimenTypesMap.has("others")) {
-            specimenTypesMap.set("others", {
-              id: "others",
-              name: "Khác",
-              indicators: [],
-            });
-          }
-          specimenTypesMap.get("others")!.indicators.push(ind);
-        } else {
-          // Indicator thuộc một hoặc nhiều loại mẫu
-          stIds.forEach((stId) => {
-            const st = specimenTypesWithIndicators.find((s) => s.id === stId);
-            if (st) {
-              if (!specimenTypesMap.has(stId)) {
-                specimenTypesMap.set(stId, {
-                  id: stId,
-                  name: st.name,
-                  indicators: [],
-                });
-              }
-              specimenTypesMap.get(stId)!.indicators.push(ind);
+        const stList = indicatorSpecimenTypesMap.get(ind.id) || [];
+        if (stList.length === 0) {
+          // Indicator không có method nào với nền mẫu -> nhóm "Khác"
+          // Chỉ hiển thị group "Khác" khi không có filter loại mẫu
+          if (specimenTypeIdsToFilter.length === 0) {
+            if (!specimenTypesMap.has("others")) {
+              specimenTypesMap.set("others", {
+                id: "others",
+                name: "Khác",
+                indicators: [],
+              });
             }
+            specimenTypesMap.get("others")!.indicators.push(ind);
+          }
+        } else {
+          // Indicator có methods với nền mẫu - group theo từng nền mẫu
+          // Chỉ group vào các specimen type đang được filter (nếu có filter)
+          stList.forEach((st) => {
+            // Nếu có filter và specimen type này không nằm trong filter -> bỏ qua
+            if (specimenTypeIdsToFilter.length > 0 && !specimenTypeIdsToFilter.includes(st.id)) {
+              return;
+            }
+            if (!specimenTypesMap.has(st.id)) {
+              specimenTypesMap.set(st.id, {
+                id: st.id,
+                name: st.name,
+                indicators: [],
+              });
+            }
+            specimenTypesMap.get(st.id)!.indicators.push(ind);
           });
         }
       });
@@ -968,10 +1050,12 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                     `${groupData.id}_${stData.id}`,
                   );
                   const stIndicatorIds = stData.indicators.map((ind) => ind.id);
+                  // Filter theo specimenTypeId của group (trừ group "others")
+                  const filterStId = stData.id === "others" ? undefined : stData.id;
                   const isAllStSelected =
-                    areAllIndicatorsSelected(stIndicatorIds);
+                    areAllIndicatorsSelected(stIndicatorIds, filterStId);
                   const isSomeStSelected =
-                    areSomeIndicatorsSelected(stIndicatorIds);
+                    areSomeIndicatorsSelected(stIndicatorIds, filterStId);
 
                   return (
                     <div key={`${groupData.id}_${stData.id}`}>
@@ -998,6 +1082,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                             toggleAllIndicatorsInGroup(
                               stIndicatorIds,
                               !isAllStSelected,
+                              filterStId,
                             )
                           }
                         />
@@ -1028,7 +1113,9 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                       {/* Chỉ tiêu within Loại mẫu (Level 3) */}
                       {isSpecimenTypeExpanded &&
                         stData.indicators.map((ind) =>
-                          renderIndicatorWithMethods(ind, 2),
+                          // Truyền specimenTypeId của group để chỉ hiển thị methods matching
+                          // "others" group không filter theo specimenType
+                          renderIndicatorWithMethods(ind, 2, stData.id === "others" ? undefined : stData.id),
                         )}
                     </div>
                   );

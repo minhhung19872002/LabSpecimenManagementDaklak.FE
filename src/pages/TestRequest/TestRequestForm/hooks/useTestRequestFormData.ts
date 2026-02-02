@@ -290,6 +290,7 @@ export const useTestRequestFormData = () => {
       setIndicatorToSpecimenTypesMap(indToSpecMap);
 
       // Build map: indicatorId -> methods[]
+      // Cùng 1 chỉ tiêu + phương pháp có thể có nhiều nền mẫu khác nhau
       const methodMap: Record<string, IndicatorMethodInfo[]> = {};
       (methodsData || []).forEach((method) => {
         method.indicators?.forEach((ind) => {
@@ -305,6 +306,10 @@ export const useTestRequestFormData = () => {
               unitPrice: ind.unitPrice,
               isActive: ind.isActive,
               parentIndicatorId: ind.parentIndicatorId,
+              // Include specimen type info for proper differentiation
+              specimenTypeId: ind.specimenTypeId,
+              specimenTypeCode: ind.specimenTypeCode,
+              specimenTypeName: ind.specimenTypeName,
             });
           }
         });
@@ -582,11 +587,14 @@ export const useTestRequestFormData = () => {
             (ind) => ind.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled
           ) || [];
 
-          // Build indicatorMethods from active indicators (indicatorId + testMethodId)
+          // Build indicatorMethods from active indicators (indicatorId + testMethodId + specimenTypeId)
+          // Note: specimenTypeId comes from the sample, not the indicator
+          const sampleSpecimenTypeId = sample.specimenTypeId;
           const indicatorMethods: IndicatorMethodKey[] = [];
           activeIndicators.forEach((ind) => {
             if (ind.indicatorId && ind.testMethodId) {
-              indicatorMethods.push(createIndicatorMethodKey(ind.indicatorId, ind.testMethodId));
+              // Use sample's specimenTypeId for the key
+              indicatorMethods.push(createIndicatorMethodKey(ind.indicatorId, ind.testMethodId, sampleSpecimenTypeId));
             }
           });
 
@@ -648,9 +656,9 @@ export const useTestRequestFormData = () => {
           ) || [];
 
           activeIndicators.forEach((ind) => {
-            // Create IndicatorMethodKey for each indicator
+            // Create IndicatorMethodKey for each indicator (include sample's specimenTypeId)
             const methodKey = ind.testMethodId
-              ? createIndicatorMethodKey(ind.indicatorId, ind.testMethodId)
+              ? createIndicatorMethodKey(ind.indicatorId, ind.testMethodId, sample.specimenTypeId)
               : ind.indicatorId; // Fallback for old data without testMethodId
 
             // Store the TestRequestSampleIndicator.id for this indicator
@@ -743,10 +751,11 @@ export const useTestRequestFormData = () => {
         const sampleCode = generateSampleCode(sampleCodePrefix, sampleIndex + 1);
 
         // Get indicators from quotation sample
+        // Note: Quotation samples don't have specimenTypeId yet, it will be set later
         const indicatorMethodsList: IndicatorMethodKey[] = [];
         quotationSample.indicators.forEach((indicator) => {
           const testMethodId = indicator.testMethodId || "";
-          const methodKey = createIndicatorMethodKey(indicator.indicatorId, testMethodId);
+          const methodKey = createIndicatorMethodKey(indicator.indicatorId, testMethodId, undefined);
           indicatorMethodsList.push(methodKey);
 
           // Set dates for indicators (requestDate để trống theo yêu cầu KH)
