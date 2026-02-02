@@ -32,6 +32,12 @@ code {
     monospace;
 }
 
+/* Ensure sub/sup tags inherit text color in Ant Design tables */
+.ant-table sub,
+.ant-table sup {
+  color: inherit;
+}
+
 /* Center all Ant Design Modals */
 .ant-modal {
   display: flex;
