@@ -1,5 +1,11 @@
 // @ts-nocheck
-import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+  useRef,
+  useCallback,
+} from "react";
 import {
   Modal,
   Button,
@@ -37,10 +43,7 @@ import {
   createIndicatorMethodKey,
 } from "../types";
 import IndicatorRow from "./IndicatorRow";
-import {
-  isHeavyMetalComboMet,
-  isHgIndicator,
-} from "../constants";
+import { isHeavyMetalComboMet, isHgIndicator } from "../constants";
 import "./IndicatorSelectionModal.css";
 
 const { Text } = Typography;
@@ -52,7 +55,11 @@ interface TruncateTooltipProps {
   style?: React.CSSProperties;
 }
 
-const TruncateTooltip: React.FC<TruncateTooltipProps> = ({ title, children, style }) => {
+const TruncateTooltip: React.FC<TruncateTooltipProps> = ({
+  title,
+  children,
+  style,
+}) => {
   const [showTooltip, setShowTooltip] = useState(false);
   const containerRef = useRef<HTMLSpanElement>(null);
 
@@ -97,7 +104,11 @@ interface IndicatorSelectionModalProps {
   indicatorMethodsMap: Record<string, IndicatorMethodInfo[]>;
   expandedIndicators: string[];
   setExpandedIndicators: React.Dispatch<React.SetStateAction<string[]>>;
-  toggleIndicatorMethod: (indicatorId: string, testMethodId: string, specimenTypeId?: string) => void;
+  toggleIndicatorMethod: (
+    indicatorId: string,
+    testMethodId: string,
+    specimenTypeId?: string,
+  ) => void;
   // Existing props
   indicatorGroups: IndicatorGroupDto[];
   indicators: IndicatorDto[];
@@ -194,8 +205,13 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
 }) => {
   // Handle remove indicator method
   const handleRemoveIndicatorMethod = (key: IndicatorMethodKey) => {
-    const { indicatorId, testMethodId, specimenTypeId } = parseIndicatorMethodKey(key);
-    toggleIndicatorMethod(indicatorId, testMethodId, specimenTypeId || undefined);
+    const { indicatorId, testMethodId, specimenTypeId } =
+      parseIndicatorMethodKey(key);
+    toggleIndicatorMethod(
+      indicatorId,
+      testMethodId,
+      specimenTypeId || undefined,
+    );
     const labMapKey = `${currentSampleKey}_${key}`;
     if (indicatorLaboratoryMap[labMapKey]) {
       setIndicatorLaboratoryMap((prev) => {
@@ -212,7 +228,11 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     testMethodId: string,
     specimenTypeId?: string,
   ): boolean => {
-    const key = createIndicatorMethodKey(indicatorId, testMethodId, specimenTypeId);
+    const key = createIndicatorMethodKey(
+      indicatorId,
+      testMethodId,
+      specimenTypeId,
+    );
     return tempSelectedIndicatorMethods.includes(key);
   };
 
@@ -221,37 +241,49 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
   // Check if a key is a sub-indicator (has parentIndicatorId)
   const isSubIndicator = useCallback(
     (key: IndicatorMethodKey): boolean => {
-      const { indicatorId, testMethodId, specimenTypeId } = parseIndicatorMethodKey(key);
+      const { indicatorId, testMethodId, specimenTypeId } =
+        parseIndicatorMethodKey(key);
       const methods = indicatorMethodsMap[indicatorId];
       if (!methods) return false;
       const methodInfo = methods.find(
-        (m) => m.testMethodId === testMethodId &&
-          (m.specimenTypeId || null) === (specimenTypeId || null)
+        (m) =>
+          m.testMethodId === testMethodId &&
+          (m.specimenTypeId || null) === (specimenTypeId || null),
       );
       return !!methodInfo?.parentIndicatorId;
     },
-    [indicatorMethodsMap]
+    [indicatorMethodsMap],
   );
 
   // Get parent key of a sub-indicator
   const getParentKey = useCallback(
     (subKey: IndicatorMethodKey): IndicatorMethodKey | null => {
-      const { indicatorId, testMethodId, specimenTypeId } = parseIndicatorMethodKey(subKey);
+      const { indicatorId, testMethodId, specimenTypeId } =
+        parseIndicatorMethodKey(subKey);
       const methods = indicatorMethodsMap[indicatorId];
       if (!methods) return null;
       const methodInfo = methods.find(
-        (m) => m.testMethodId === testMethodId &&
-          (m.specimenTypeId || null) === (specimenTypeId || null)
+        (m) =>
+          m.testMethodId === testMethodId &&
+          (m.specimenTypeId || null) === (specimenTypeId || null),
       );
       if (!methodInfo?.parentIndicatorId) return null;
-      return createIndicatorMethodKey(methodInfo.parentIndicatorId, testMethodId, methodInfo.specimenTypeId);
+      return createIndicatorMethodKey(
+        methodInfo.parentIndicatorId,
+        testMethodId,
+        methodInfo.specimenTypeId,
+      );
     },
-    [indicatorMethodsMap]
+    [indicatorMethodsMap],
   );
 
   // Get all sub-indicator keys for a parent indicator + method + specimenType
   const getSubIndicatorKeys = useCallback(
-    (parentIndicatorId: string, testMethodId: string, specimenTypeId?: string | null): IndicatorMethodKey[] => {
+    (
+      parentIndicatorId: string,
+      testMethodId: string,
+      specimenTypeId?: string | null,
+    ): IndicatorMethodKey[] => {
       const subKeys: IndicatorMethodKey[] = [];
       // Normalize specimenTypeId: treat null, undefined, and empty string as equivalent
       const normalizedSpecimenTypeId = specimenTypeId || null;
@@ -266,13 +298,19 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
             method.isActive &&
             methodSpecimenTypeId === normalizedSpecimenTypeId
           ) {
-            subKeys.push(createIndicatorMethodKey(indId, testMethodId, method.specimenTypeId));
+            subKeys.push(
+              createIndicatorMethodKey(
+                indId,
+                testMethodId,
+                method.specimenTypeId,
+              ),
+            );
           }
         });
       });
       return subKeys;
     },
-    [indicatorMethodsMap]
+    [indicatorMethodsMap],
   );
 
   // Group selected methods by parent-child relationship
@@ -292,8 +330,13 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
         }
       } else {
         // Check if this indicator has any sub-indicators in the same method + specimenType
-        const { indicatorId, testMethodId, specimenTypeId } = parseIndicatorMethodKey(key);
-        const subKeys = getSubIndicatorKeys(indicatorId, testMethodId, specimenTypeId);
+        const { indicatorId, testMethodId, specimenTypeId } =
+          parseIndicatorMethodKey(key);
+        const subKeys = getSubIndicatorKeys(
+          indicatorId,
+          testMethodId,
+          specimenTypeId,
+        );
         if (subKeys.length > 0) {
           // This is a parent indicator
           parentMethods.push(key);
@@ -305,7 +348,12 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     });
 
     return { parentMethods, subMethodsMap, independentMethods };
-  }, [tempSelectedIndicatorMethods, isSubIndicator, getParentKey, getSubIndicatorKeys]);
+  }, [
+    tempSelectedIndicatorMethods,
+    isSubIndicator,
+    getParentKey,
+    getSubIndicatorKeys,
+  ]);
 
   // Get pricing mode for a parent indicator
   // 'parent' = all subs have price 0, show price on parent
@@ -323,7 +371,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
 
       return hasSubWithPrice ? "subs" : "parent";
     },
-    [groupedSelectedMethods.subMethodsMap, getIndicatorMethodInfo]
+    [groupedSelectedMethods.subMethodsMap, getIndicatorMethodInfo],
   );
 
   // Handle remove sub-indicator with validation
@@ -341,31 +389,48 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
       }
 
       // Remove the sub-indicator
-      const { indicatorId, testMethodId, specimenTypeId } = parseIndicatorMethodKey(subKey);
-      toggleIndicatorMethod(indicatorId, testMethodId, specimenTypeId || undefined);
+      const { indicatorId, testMethodId, specimenTypeId } =
+        parseIndicatorMethodKey(subKey);
+      toggleIndicatorMethod(
+        indicatorId,
+        testMethodId,
+        specimenTypeId || undefined,
+      );
     },
-    [getParentKey, groupedSelectedMethods.subMethodsMap, toggleIndicatorMethod]
+    [getParentKey, groupedSelectedMethods.subMethodsMap, toggleIndicatorMethod],
   );
 
   // Handle remove parent indicator (removes all subs too)
   const handleRemoveParentIndicator = useCallback(
     (parentKey: IndicatorMethodKey) => {
-      const { indicatorId, testMethodId, specimenTypeId } = parseIndicatorMethodKey(parentKey);
+      const { indicatorId, testMethodId, specimenTypeId } =
+        parseIndicatorMethodKey(parentKey);
 
       // Get all sub-indicator keys for this parent
       const subKeys = groupedSelectedMethods.subMethodsMap[parentKey] || [];
 
       // Remove all subs first
       subKeys.forEach((subKey) => {
-        const { indicatorId: subIndId, testMethodId: subMethodId, specimenTypeId: subSpecimenTypeId } =
-          parseIndicatorMethodKey(subKey);
+        const {
+          indicatorId: subIndId,
+          testMethodId: subMethodId,
+          specimenTypeId: subSpecimenTypeId,
+        } = parseIndicatorMethodKey(subKey);
         if (tempSelectedIndicatorMethods.includes(subKey)) {
-          toggleIndicatorMethod(subIndId, subMethodId, subSpecimenTypeId || undefined);
+          toggleIndicatorMethod(
+            subIndId,
+            subMethodId,
+            subSpecimenTypeId || undefined,
+          );
         }
       });
 
       // Remove the parent
-      toggleIndicatorMethod(indicatorId, testMethodId, specimenTypeId || undefined);
+      toggleIndicatorMethod(
+        indicatorId,
+        testMethodId,
+        specimenTypeId || undefined,
+      );
 
       // Clean up laboratory map for parent
       const labMapKey = `${currentSampleKey}_${parentKey}`;
@@ -384,7 +449,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
       currentSampleKey,
       indicatorLaboratoryMap,
       setIndicatorLaboratoryMap,
-    ]
+    ],
   );
 
   // Separate sent and unsent indicator methods
@@ -566,11 +631,15 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     select: boolean,
     filterSpecimenTypeId?: string,
   ) => {
-    let methods = indicatorMethodsMap[indicatorId]?.filter((m) => m.isActive) || [];
+    let methods =
+      indicatorMethodsMap[indicatorId]?.filter((m) => m.isActive) || [];
     // Filter theo specimenTypeId nếu có (loại bỏ methods không có nền mẫu)
     if (filterSpecimenTypeId) {
-      methods = methods.filter((m) =>
-        m.specimenTypeId && m.specimenTypeName && m.specimenTypeId === filterSpecimenTypeId
+      methods = methods.filter(
+        (m) =>
+          m.specimenTypeId &&
+          m.specimenTypeName &&
+          m.specimenTypeId === filterSpecimenTypeId,
       );
     }
     methods.forEach((method) => {
@@ -580,9 +649,17 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
         method.specimenTypeId,
       );
       if (select && !isCurrentlySelected) {
-        toggleIndicatorMethod(indicatorId, method.testMethodId, method.specimenTypeId);
+        toggleIndicatorMethod(
+          indicatorId,
+          method.testMethodId,
+          method.specimenTypeId,
+        );
       } else if (!select && isCurrentlySelected) {
-        toggleIndicatorMethod(indicatorId, method.testMethodId, method.specimenTypeId);
+        toggleIndicatorMethod(
+          indicatorId,
+          method.testMethodId,
+          method.specimenTypeId,
+        );
       }
     });
   };
@@ -600,24 +677,40 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
 
   // Helper: Check if all methods of an indicator are selected
   // filterSpecimenTypeId: nếu có, chỉ check methods có specimenTypeId matching (loại bỏ methods không có nền mẫu)
-  const areAllMethodsSelected = (indicatorId: string, filterSpecimenTypeId?: string): boolean => {
-    let methods = indicatorMethodsMap[indicatorId]?.filter((m) => m.isActive) || [];
+  const areAllMethodsSelected = (
+    indicatorId: string,
+    filterSpecimenTypeId?: string,
+  ): boolean => {
+    let methods =
+      indicatorMethodsMap[indicatorId]?.filter((m) => m.isActive) || [];
     if (filterSpecimenTypeId) {
-      methods = methods.filter((m) =>
-        m.specimenTypeId && m.specimenTypeName && m.specimenTypeId === filterSpecimenTypeId
+      methods = methods.filter(
+        (m) =>
+          m.specimenTypeId &&
+          m.specimenTypeName &&
+          m.specimenTypeId === filterSpecimenTypeId,
       );
     }
     if (methods.length === 0) return false;
-    return methods.every((m) => isMethodSelected(indicatorId, m.testMethodId, m.specimenTypeId));
+    return methods.every((m) =>
+      isMethodSelected(indicatorId, m.testMethodId, m.specimenTypeId),
+    );
   };
 
   // Helper: Check if some (but not all) methods of an indicator are selected
   // filterSpecimenTypeId: nếu có, chỉ check methods có specimenTypeId matching (loại bỏ methods không có nền mẫu)
-  const areSomeMethodsSelected = (indicatorId: string, filterSpecimenTypeId?: string): boolean => {
-    let methods = indicatorMethodsMap[indicatorId]?.filter((m) => m.isActive) || [];
+  const areSomeMethodsSelected = (
+    indicatorId: string,
+    filterSpecimenTypeId?: string,
+  ): boolean => {
+    let methods =
+      indicatorMethodsMap[indicatorId]?.filter((m) => m.isActive) || [];
     if (filterSpecimenTypeId) {
-      methods = methods.filter((m) =>
-        m.specimenTypeId && m.specimenTypeName && m.specimenTypeId === filterSpecimenTypeId
+      methods = methods.filter(
+        (m) =>
+          m.specimenTypeId &&
+          m.specimenTypeName &&
+          m.specimenTypeId === filterSpecimenTypeId,
       );
     }
     if (methods.length === 0) return false;
@@ -629,55 +722,76 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
 
   // Helper: Check if all indicators in a list are fully selected
   // filterSpecimenTypeId: nếu có, chỉ check methods có specimenTypeId matching
-  const areAllIndicatorsSelected = (indicatorIds: string[], filterSpecimenTypeId?: string): boolean => {
+  const areAllIndicatorsSelected = (
+    indicatorIds: string[],
+    filterSpecimenTypeId?: string,
+  ): boolean => {
     if (indicatorIds.length === 0) return false;
-    return indicatorIds.every((indId) => areAllMethodsSelected(indId, filterSpecimenTypeId));
+    return indicatorIds.every((indId) =>
+      areAllMethodsSelected(indId, filterSpecimenTypeId),
+    );
   };
 
   // Helper: Check if some indicators in a list are selected (partial)
   // filterSpecimenTypeId: nếu có, chỉ check methods có specimenTypeId matching (loại bỏ methods không có nền mẫu)
-  const areSomeIndicatorsSelected = (indicatorIds: string[], filterSpecimenTypeId?: string): boolean => {
+  const areSomeIndicatorsSelected = (
+    indicatorIds: string[],
+    filterSpecimenTypeId?: string,
+  ): boolean => {
     if (indicatorIds.length === 0) return false;
     let methods: IndicatorMethodInfo[];
     const hasAnySelected = indicatorIds.some((indId) => {
       methods = indicatorMethodsMap[indId]?.filter((m) => m.isActive) || [];
       if (filterSpecimenTypeId) {
-        methods = methods.filter((m) =>
-          m.specimenTypeId && m.specimenTypeName && m.specimenTypeId === filterSpecimenTypeId
+        methods = methods.filter(
+          (m) =>
+            m.specimenTypeId &&
+            m.specimenTypeName &&
+            m.specimenTypeId === filterSpecimenTypeId,
         );
       }
-      return methods.some((m) => isMethodSelected(indId, m.testMethodId, m.specimenTypeId));
+      return methods.some((m) =>
+        isMethodSelected(indId, m.testMethodId, m.specimenTypeId),
+      );
     });
-    return hasAnySelected && !areAllIndicatorsSelected(indicatorIds, filterSpecimenTypeId);
+    return (
+      hasAnySelected &&
+      !areAllIndicatorsSelected(indicatorIds, filterSpecimenTypeId)
+    );
   };
 
   // Helper: Render indicator with methods (reusable)
   // filterSpecimenTypeId: khi render trong context của một group nền mẫu cụ thể,
   // chỉ hiển thị methods có specimenTypeId matching với group đó
+  // isLastIndicator: true nếu đây là indicator cuối cùng trong group (để vẽ tree line)
   const renderIndicatorWithMethods = (
     ind: IndicatorDto,
     indentLevel: number = 1,
     filterSpecimenTypeId?: string,
+    isLastIndicator: boolean = false,
   ) => {
     // Filter methods
-    const allMethods = indicatorMethodsMap[ind.id]?.filter((m) => m.isActive) || [];
+    const allMethods =
+      indicatorMethodsMap[ind.id]?.filter((m) => m.isActive) || [];
     let methods = allMethods;
 
     // 1. Nếu có filterSpecimenTypeId (từ group nền mẫu), chỉ hiển thị methods có specimenTypeId matching
     // Loại bỏ hoàn toàn các methods không có nền mẫu (check cả specimenTypeName để đảm bảo)
     if (filterSpecimenTypeId) {
-      methods = allMethods.filter((m) =>
-        m.specimenTypeId &&
-        m.specimenTypeName &&
-        m.specimenTypeId === filterSpecimenTypeId
+      methods = allMethods.filter(
+        (m) =>
+          m.specimenTypeId &&
+          m.specimenTypeName &&
+          m.specimenTypeId === filterSpecimenTypeId,
       );
     }
     // 2. Nếu specimenTypeFilterActive và sample có specimenTypeId, filter theo sample
     else if (specimenTypeFilterActive && currentSampleSpecimenTypeId) {
-      methods = allMethods.filter((m) =>
-        m.specimenTypeId &&
-        m.specimenTypeName &&
-        m.specimenTypeId === currentSampleSpecimenTypeId
+      methods = allMethods.filter(
+        (m) =>
+          m.specimenTypeId &&
+          m.specimenTypeName &&
+          m.specimenTypeId === currentSampleSpecimenTypeId,
       );
     }
 
@@ -688,20 +802,27 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     const selectedMethodsCount = methods.filter((m) =>
       isMethodSelected(ind.id, m.testMethodId, m.specimenTypeId),
     ).length;
-    const paddingLeft = indentLevel === 1 ? 12 : indentLevel === 2 ? 28 : 12;
+    const paddingLeft = indentLevel === 1 ? 0 : indentLevel === 2 ? 36 : 0;
+    // Method padding must align checkbox with indicator checkbox
+    // Indicator has: paddingLeft + Arrow (18px) + gap (8px) before checkbox
+    // So method needs: paddingLeft + 18 + 8 = paddingLeft + 26
     const methodPaddingLeft =
-      indentLevel === 1 ? 32 : indentLevel === 2 ? 48 : 32;
+      indentLevel === 1 ? 26 : indentLevel === 2 ? 62 : 26;
     // Pass filterSpecimenTypeId to helper functions
     const isAllSelected = areAllMethodsSelected(ind.id, filterSpecimenTypeId);
     const isSomeSelected = areSomeMethodsSelected(ind.id, filterSpecimenTypeId);
 
+    // Tree classes for Level 3 (Indicator)
+    const level3ClassName = indentLevel === 2
+      ? `tree-item tree-level-3${isLastIndicator ? " is-last" : ""}`
+      : "";
+
     return (
-      <div key={ind.id}>
+      <div key={ind.id} className={level3ClassName}>
         {/* Indicator header */}
         <div
           style={{
             padding: `6px 12px 6px ${paddingLeft}px`,
-            borderBottom: "1px solid #f5f5f5",
             display: "flex",
             alignItems: "center",
             gap: 8,
@@ -709,29 +830,10 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
               selectedMethodsCount > 0 ? "#e6f7ff" : "rgb(250, 250, 250)",
           }}
         >
-          <Checkbox
-            checked={isAllSelected}
-            indeterminate={isSomeSelected}
-            onClick={(e) => e.stopPropagation()}
-            onChange={() => toggleAllMethodsOfIndicator(ind.id, !isAllSelected, filterSpecimenTypeId)}
-          />
-          <TruncateTooltip
-            title={ind.name}
-            style={{
-              flex: 1,
-              fontSize: 13,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            <IndicatorName
-              name={ind.name}
-              formattedName={ind.formattedName}
-            />
-          </TruncateTooltip>
           <Icon
-            icon={isIndicatorExpanded ? "mdi:chevron-up" : "mdi:chevron-down"}
+            icon={
+              isIndicatorExpanded ? "mdi:chevron-down" : "mdi:chevron-right"
+            }
             width={18}
             style={{ color: "#595959", flexShrink: 0, cursor: "pointer" }}
             onClick={() => {
@@ -742,76 +844,125 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
               );
             }}
           />
+          <Checkbox
+            checked={isAllSelected}
+            indeterminate={isSomeSelected}
+            onClick={(e) => e.stopPropagation()}
+            onChange={() =>
+              toggleAllMethodsOfIndicator(
+                ind.id,
+                !isAllSelected,
+                filterSpecimenTypeId,
+              )
+            }
+          />
+          <TruncateTooltip
+            title={ind.name}
+            style={{
+              flex: 1,
+              fontSize: 14,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              ...(isIndicatorExpanded && {
+                background:
+                  "linear-gradient(135deg, rgb(24, 144, 255) 0%, rgb(9, 109, 217) 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }),
+            }}
+          >
+            <IndicatorName name={ind.name} formattedName={ind.formattedName} />
+          </TruncateTooltip>
         </div>
 
         {/* Methods under indicator */}
-        {isIndicatorExpanded &&
-          methods.map((method) => {
-            // Use specimenTypeId for unique key and selection
-            const methodUniqueKey = `${method.testMethodId}_${method.specimenTypeId || 'null'}`;
-            const isSelected = isMethodSelected(ind.id, method.testMethodId, method.specimenTypeId);
-            return (
-              <div
-                key={methodUniqueKey}
-                onClick={() =>
-                  toggleIndicatorMethod(ind.id, method.testMethodId, method.specimenTypeId)
-                }
-                style={{
-                  padding: `5px 12px 5px ${methodPaddingLeft}px`,
-                  borderBottom: "1px solid #f8f8f8",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  cursor: "pointer",
-                  background: isSelected ? "#bae7ff" : "rgb(250, 250, 250)",
-                }}
-                onMouseEnter={(e) => {
-                  if (!isSelected) {
-                    e.currentTarget.style.background = "#f0f0f0";
+        {isIndicatorExpanded && (
+          <div>
+            {methods.map((method, methodIndex) => {
+              // Use specimenTypeId for unique key and selection
+              const methodUniqueKey = `${method.testMethodId}_${method.specimenTypeId || "null"}`;
+              const isSelected = isMethodSelected(
+                ind.id,
+                method.testMethodId,
+                method.specimenTypeId,
+              );
+              const isLastMethod = methodIndex === methods.length - 1;
+              const methodClassName = `tree-item tree-level-4${isLastMethod ? " is-last" : ""}${indentLevel === 2 ? " indent-level-2" : ""}`;
+              return (
+                <div
+                  key={methodUniqueKey}
+                  className={methodClassName}
+                  onClick={() =>
+                    toggleIndicatorMethod(
+                      ind.id,
+                      method.testMethodId,
+                      method.specimenTypeId,
+                    )
                   }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = isSelected
-                    ? "#bae7ff"
-                    : "rgb(250, 250, 250)";
-                }}
-              >
-                <Checkbox
-                  checked={isSelected}
-                  onClick={(e) => e.stopPropagation()}
-                  onChange={() => {
-                    toggleIndicatorMethod(ind.id, method.testMethodId, method.specimenTypeId);
-                  }}
-                />
-                <TruncateTooltip
-                  title={method.testMethodName}
                   style={{
-                    flex: 1,
-                    fontSize: 12,
-                    color: "#595959",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
+                    padding: `5px 12px 5px ${methodPaddingLeft}px`,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    cursor: "pointer",
+                    background: isSelected ? "#bae7ff" : "rgb(250, 250, 250)",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.background = "#f0f0f0";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = isSelected
+                      ? "#bae7ff"
+                      : "rgb(250, 250, 250)";
                   }}
                 >
-                  <IndicatorName
-                    name={method.testMethodName}
-                    formattedName={method.testMethodFormattedName}
+                  <Checkbox
+                    checked={isSelected}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={() => {
+                      toggleIndicatorMethod(
+                        ind.id,
+                        method.testMethodId,
+                        method.specimenTypeId,
+                      );
+                    }}
                   />
-                </TruncateTooltip>
-                <span
-                  style={{
-                    fontSize: 12,
-                    color: "#888",
-                    fontWeight: 500,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {method.unitPrice?.toLocaleString("vi-VN")}đ
-                </span>
-              </div>
-            );
-          })}
+                  <TruncateTooltip
+                    title={method.testMethodName}
+                    style={{
+                      flex: 1,
+                      fontSize: 14,
+                      fontWeight: 500,
+                      color: "#1F1F1F",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    <IndicatorName
+                      name={method.testMethodName}
+                      formattedName={method.testMethodFormattedName}
+                    />
+                  </TruncateTooltip>
+                  <span
+                    style={{
+                      fontSize: 14,
+                      color: "#1F1F1F",
+                      fontWeight: 400,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {method.unitPrice?.toLocaleString("vi-VN")}đ
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     );
   };
@@ -850,14 +1001,22 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
 
     // Build map: indicatorId -> specimenTypeIds (từ indicatorMethodsMap thay vì specimenTypesWithIndicators)
     // Điều này đảm bảo chỉ group dựa trên methods thực sự có specimenTypeId
-    const indicatorSpecimenTypesMap = new Map<string, { id: string; name: string }[]>();
+    const indicatorSpecimenTypesMap = new Map<
+      string,
+      { id: string; name: string }[]
+    >();
     Object.entries(indicatorMethodsMap).forEach(([indicatorId, methods]) => {
       const specimenTypesForIndicator: { id: string; name: string }[] = [];
       const seenIds = new Set<string>();
 
       methods.forEach((method) => {
         // Chỉ lấy methods có specimenTypeId và specimenTypeName (có nền mẫu thực sự)
-        if (method.isActive && method.specimenTypeId && method.specimenTypeName && !seenIds.has(method.specimenTypeId)) {
+        if (
+          method.isActive &&
+          method.specimenTypeId &&
+          method.specimenTypeName &&
+          !seenIds.has(method.specimenTypeId)
+        ) {
           seenIds.add(method.specimenTypeId);
           specimenTypesForIndicator.push({
             id: method.specimenTypeId,
@@ -942,7 +1101,10 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
           // Chỉ group vào các specimen type đang được filter (nếu có filter)
           stList.forEach((st) => {
             // Nếu có filter và specimen type này không nằm trong filter -> bỏ qua
-            if (specimenTypeIdsToFilter.length > 0 && !specimenTypeIdsToFilter.includes(st.id)) {
+            if (
+              specimenTypeIdsToFilter.length > 0 &&
+              !specimenTypeIdsToFilter.includes(st.id)
+            ) {
               return;
             }
             if (!specimenTypesMap.has(st.id)) {
@@ -982,8 +1144,9 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
 
     return (
       <>
-        {groupedData.map((groupData) => {
+        {groupedData.map((groupData, groupIndex) => {
           const isGroupExpanded = expandedGroups.includes(groupData.id);
+          const isLastGroup = groupIndex === groupedData.length - 1;
           // Get all indicator IDs in this group
           const allIndicatorIdsInGroup: string[] = [];
           groupData.specimenTypes.forEach((stData) => {
@@ -1001,15 +1164,21 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
           );
 
           return (
-            <div key={groupData.id}>
+            <div
+              key={groupData.id}
+              style={{
+                borderBottom: isLastGroup ? "none" : "1px solid #e8e8e8",
+                paddingBottom: isLastGroup ? 0 : 8,
+                marginBottom: isLastGroup ? 0 : 8,
+              }}
+            >
               {/* Nhóm CT header (Level 1) */}
               <div
                 style={{
-                  padding: "8px 12px",
+                  padding: "8px 0",
                   background: "#fafafa",
-                  borderBottom: "1px solid #f0f0f0",
-                  fontWeight: 600,
-                  fontSize: 13,
+                  fontWeight: 400,
+                  fontSize: 14,
                   color: "#000",
                   display: "flex",
                   alignItems: "center",
@@ -1017,6 +1186,20 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                   userSelect: "none",
                 }}
               >
+                <Icon
+                  icon={
+                    isGroupExpanded ? "mdi:chevron-down" : "mdi:chevron-right"
+                  }
+                  width={18}
+                  style={{ color: "#595959", flexShrink: 0, cursor: "pointer" }}
+                  onClick={() => {
+                    setExpandedGroups((prev) =>
+                      prev.includes(groupData.id)
+                        ? prev.filter((id) => id !== groupData.id)
+                        : [...prev, groupData.id],
+                    );
+                  }}
+                />
                 <Checkbox
                   checked={isAllGroupSelected}
                   indeterminate={isSomeGroupSelected}
@@ -1028,45 +1211,55 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                     )
                   }
                 />
-                <span style={{ flex: 1 }}>{groupData.name}</span>
-                <Icon
-                  icon={isGroupExpanded ? "mdi:chevron-up" : "mdi:chevron-down"}
-                  width={18}
-                  style={{ color: "#595959", flexShrink: 0, cursor: "pointer" }}
-                  onClick={() => {
-                    setExpandedGroups((prev) =>
-                      prev.includes(groupData.id)
-                        ? prev.filter((id) => id !== groupData.id)
-                        : [...prev, groupData.id],
-                    );
+                <span
+                  style={{
+                    flex: 1,
+                    ...(isGroupExpanded && {
+                      background:
+                        "linear-gradient(135deg, rgb(24, 144, 255) 0%, rgb(9, 109, 217) 100%)",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      backgroundClip: "text",
+                    }),
                   }}
-                />
+                >
+                  {groupData.name}
+                </span>
               </div>
 
               {/* Loại mẫu within Nhóm CT (Level 2) */}
-              {isGroupExpanded &&
-                Array.from(groupData.specimenTypes.values()).map((stData) => {
+              {isGroupExpanded && (() => {
+                const specimenTypesArray = Array.from(groupData.specimenTypes.values());
+                return specimenTypesArray.map((stData, stIndex) => {
                   const isSpecimenTypeExpanded = expandedSpecimenTypes.includes(
                     `${groupData.id}_${stData.id}`,
                   );
                   const stIndicatorIds = stData.indicators.map((ind) => ind.id);
                   // Filter theo specimenTypeId của group (trừ group "others")
-                  const filterStId = stData.id === "others" ? undefined : stData.id;
-                  const isAllStSelected =
-                    areAllIndicatorsSelected(stIndicatorIds, filterStId);
-                  const isSomeStSelected =
-                    areSomeIndicatorsSelected(stIndicatorIds, filterStId);
+                  const filterStId =
+                    stData.id === "others" ? undefined : stData.id;
+                  const isAllStSelected = areAllIndicatorsSelected(
+                    stIndicatorIds,
+                    filterStId,
+                  );
+                  const isSomeStSelected = areSomeIndicatorsSelected(
+                    stIndicatorIds,
+                    filterStId,
+                  );
+                  const isLastLevel2 = stIndex === specimenTypesArray.length - 1;
 
                   return (
-                    <div key={`${groupData.id}_${stData.id}`}>
+                    <div
+                      key={`${groupData.id}_${stData.id}`}
+                      className={`tree-item tree-level-2${isLastLevel2 ? " is-last" : ""}`}
+                    >
                       {/* Loại mẫu header */}
                       <div
                         style={{
-                          padding: "6px 12px 6px 24px",
+                          padding: "6px 0 6px 20px",
                           background: "#fafafa",
-                          borderBottom: "1px solid #f0f0f0",
-                          fontWeight: 500,
-                          fontSize: 13,
+                          fontWeight: 400,
+                          fontSize: 14,
                           color: "#000",
                           display: "flex",
                           alignItems: "center",
@@ -1074,24 +1267,11 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                           userSelect: "none",
                         }}
                       >
-                        <Checkbox
-                          checked={isAllStSelected}
-                          indeterminate={isSomeStSelected}
-                          onClick={(e) => e.stopPropagation()}
-                          onChange={() =>
-                            toggleAllIndicatorsInGroup(
-                              stIndicatorIds,
-                              !isAllStSelected,
-                              filterStId,
-                            )
-                          }
-                        />
-                        <span style={{ flex: 1 }}>{stData.name}</span>
                         <Icon
                           icon={
                             isSpecimenTypeExpanded
-                              ? "mdi:chevron-up"
-                              : "mdi:chevron-down"
+                              ? "mdi:chevron-down"
+                              : "mdi:chevron-right"
                           }
                           width={16}
                           style={{
@@ -1108,18 +1288,50 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                             );
                           }}
                         />
+                        <Checkbox
+                          checked={isAllStSelected}
+                          indeterminate={isSomeStSelected}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={() =>
+                            toggleAllIndicatorsInGroup(
+                              stIndicatorIds,
+                              !isAllStSelected,
+                              filterStId,
+                            )
+                          }
+                        />
+                        <span
+                          style={{
+                            flex: 1,
+                            ...(isSpecimenTypeExpanded && {
+                              background:
+                                "linear-gradient(135deg, rgb(24, 144, 255) 0%, rgb(9, 109, 217) 100%)",
+                              WebkitBackgroundClip: "text",
+                              WebkitTextFillColor: "transparent",
+                              backgroundClip: "text",
+                            }),
+                          }}
+                        >
+                          {stData.name}
+                        </span>
                       </div>
 
                       {/* Chỉ tiêu within Loại mẫu (Level 3) */}
                       {isSpecimenTypeExpanded &&
-                        stData.indicators.map((ind) =>
+                        stData.indicators.map((ind, indIndex) =>
                           // Truyền specimenTypeId của group để chỉ hiển thị methods matching
                           // "others" group không filter theo specimenType
-                          renderIndicatorWithMethods(ind, 2, stData.id === "others" ? undefined : stData.id),
+                          renderIndicatorWithMethods(
+                            ind,
+                            2,
+                            stData.id === "others" ? undefined : stData.id,
+                            indIndex === stData.indicators.length - 1,
+                          ),
                         )}
                     </div>
                   );
-                })}
+                });
+              })()}
             </div>
           );
         })}
@@ -1133,7 +1345,6 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
       <div
         style={{
           padding: "12px 16px",
-          borderBottom: "1px solid #f0f0f0",
           background: "#fafafa",
           display: "flex",
           flexDirection: "column",
@@ -1170,15 +1381,16 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
               const { label, closable, onClose } = props;
               return (
                 <Tag
-                  color="blue"
                   closable={closable}
                   onClose={onClose}
                   style={{
-                    marginRight: 3,
-                    maxWidth: 120,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
+                    marginRight: 4,
+                    borderRadius: 6,
+                    border: "1px solid #d9d9d9",
+                    background: "#fff",
+                    color: "#262626",
+                    padding: "0 8px",
+                    lineHeight: "22px",
                   }}
                   title={label as string}
                 >
@@ -1204,15 +1416,16 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
               const { label, closable, onClose } = props;
               return (
                 <Tag
-                  color="green"
                   closable={closable}
                   onClose={onClose}
                   style={{
-                    marginRight: 3,
-                    maxWidth: 120,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
+                    marginRight: 4,
+                    borderRadius: 6,
+                    border: "1px solid #d9d9d9",
+                    background: "#fff",
+                    color: "#262626",
+                    padding: "0 8px",
+                    lineHeight: "22px",
                   }}
                   title={label as string}
                 >
@@ -1233,7 +1446,14 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
           </Checkbox>
         )}
       </div>
-      <div style={{ flex: 1, overflowY: "auto" }}>
+      <div
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: "0 6px 12px 12px",
+          background: "rgb(250, 250, 250)",
+        }}
+      >
         {/* Empty state khi filter theo loại mẫu nhưng không có chỉ tiêu */}
         {specimenTypeFilterActive && indicatorsWithMethods.length === 0 ? (
           <div
@@ -1318,11 +1538,21 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
         open={visible}
         onOk={onOk}
         onCancel={onCancel}
-        width={1200}
+        width={1400}
         centered
         closable={false}
         okText="Chọn"
-        cancelText="Thoát"
+        cancelText="Hủy"
+        okButtonProps={{
+          style: {
+            minWidth: 100,
+            background: "linear-gradient(135deg, #1890ff 0%, #096dd9 100%)",
+            borderColor: "transparent",
+          },
+        }}
+        cancelButtonProps={{
+          style: { minWidth: 100 },
+        }}
         styles={{ body: { padding: 0 } }}
         className="indicator-selection-modal"
       >
@@ -1363,47 +1593,12 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                   gap: 8,
                 }}
               >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <Text strong style={{ color: "#fff" }}>
-                    Danh sách đã chọn
-                  </Text>
-                  <Checkbox
-                    checked={
-                      checkedIndicators.length === unsentParentMethods.length &&
-                      unsentParentMethods.length > 0
-                    }
-                    indeterminate={
-                      checkedIndicators.length > 0 &&
-                      checkedIndicators.length < unsentParentMethods.length
-                    }
-                    disabled={unsentParentMethods.length === 0}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setCheckedIndicators([...unsentParentMethods]);
-                      } else {
-                        setCheckedIndicators([]);
-                      }
-                    }}
-                    style={{ color: "#fff" }}
-                  >
-                    <span style={{ color: "#fff" }}>
-                      Chọn tất cả{" "}
-                      {unsentParentMethods.length > 0
-                        ? `(${unsentParentMethods.length})`
-                        : "(Không có chỉ tiêu chưa gửi)"}
-                    </span>
-                  </Checkbox>
-                </div>
+                <Text strong style={{ color: "#fff" }}>
+                  Danh sách đã chọn
+                </Text>
                 <Button
                   size="small"
-                  icon={<Icon icon="mdi:send" width={14} />}
+                  icon={<Icon icon="bi:send" width={14} />}
                   onClick={handleSendToLaboratory}
                   style={{
                     background: "#fff",
@@ -1425,13 +1620,32 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                         fontSize: 13,
                       }}
                     >
-                      <span style={{ width: 24, flexShrink: 0 }}>[X]</span>
-                      <span style={{ flex: 1, minWidth: 80 }}>Chỉ tiêu</span>
-                      <span style={{ width: 120, flexShrink: 0 }}>
+                      <Checkbox
+                        checked={
+                          checkedIndicators.length ===
+                            unsentParentMethods.length &&
+                          unsentParentMethods.length > 0
+                        }
+                        indeterminate={
+                          checkedIndicators.length > 0 &&
+                          checkedIndicators.length < unsentParentMethods.length
+                        }
+                        disabled={unsentParentMethods.length === 0}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setCheckedIndicators([...unsentParentMethods]);
+                          } else {
+                            setCheckedIndicators([]);
+                          }
+                        }}
+                        style={{ flexShrink: 0, paddingRight: 8, borderRight: "1px solid #d9d9d9" }}
+                      />
+                      <span style={{ flex: 1, minWidth: 80, paddingLeft: 8, paddingRight: 8, borderRight: "1px solid #d9d9d9" }}>Chỉ tiêu</span>
+                      <span style={{ width: 120, flexShrink: 0, paddingLeft: 8, paddingRight: 8, borderRight: "1px solid #d9d9d9" }}>
                         Phương pháp
                       </span>
                       <span
-                        style={{ width: 90, flexShrink: 0, textAlign: "right" }}
+                        style={{ width: 90, flexShrink: 0, textAlign: "right", paddingLeft: 8, paddingRight: 8, borderRight: "1px solid #d9d9d9" }}
                       >
                         Đơn giá
                       </span>
@@ -1440,6 +1654,9 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                           width: 100,
                           flexShrink: 0,
                           textAlign: "center",
+                          paddingLeft: 8,
+                          paddingRight: 8,
+                          borderRight: "1px solid #d9d9d9",
                         }}
                       >
                         Ngày CG
@@ -1449,11 +1666,14 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                           width: 100,
                           flexShrink: 0,
                           textAlign: "center",
+                          paddingLeft: 8,
+                          paddingRight: 8,
+                          borderRight: "1px solid #d9d9d9",
                         }}
                       >
                         Ngày YC
                       </span>
-                      <span style={{ width: 32, flexShrink: 0 }}>Xóa</span>
+                      <span style={{ width: 32, flexShrink: 0, paddingLeft: 8 }}>Xóa</span>
                     </div>
                     {/* Table body */}
                     <div className="indicator-table-body">
@@ -1467,7 +1687,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                             groupedSelectedMethods.subMethodsMap[parentKey] ||
                             [];
                           const unsentSubs = subs.filter((s) =>
-                            unsentMethods.includes(s)
+                            unsentMethods.includes(s),
                           );
                           const pricingMode = getPricingMode(parentKey);
 
@@ -1485,11 +1705,10 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                 unitPrice={method?.unitPrice || 0}
                                 hidePrice={pricingMode === "subs"}
                                 isFree={
-                                  isComboMet &&
-                                  checkIsHgIndicator(indicator)
+                                  isComboMet && checkIsHgIndicator(indicator)
                                 }
                                 isChecked={checkedIndicators.includes(
-                                  parentKey
+                                  parentKey,
                                 )}
                                 transferDate={
                                   selectedIndicatorDates[parentKey]
@@ -1505,10 +1724,8 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
 
                               {/* Sub-indicator rows - only show name (no method, price, dates, remove button) */}
                               {unsentSubs.map((subKey, index) => {
-                                const {
-                                  indicator: subInd,
-                                  method: subMethod,
-                                } = getIndicatorMethodInfo(subKey);
+                                const { indicator: subInd, method: subMethod } =
+                                  getIndicatorMethodInfo(subKey);
                                 return (
                                   <IndicatorRow
                                     key={subKey}
