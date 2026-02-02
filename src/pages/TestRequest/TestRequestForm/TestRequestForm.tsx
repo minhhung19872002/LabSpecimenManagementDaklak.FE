@@ -493,6 +493,7 @@ const TestRequestForm: React.FC = () => {
           setIndicatorLaboratoryMap={setIndicatorLaboratoryMap}
           expandedLabGroups={expandedLabGroups}
           setExpandedLabGroups={setExpandedLabGroups}
+          currentSampleSpecimenTypeId={currentSampleSpecimenTypeId}
           currentSampleSpecimenTypeName={currentSampleSpecimenTypeName}
           specimenTypeIndicatorIds={specimenTypeIndicatorIds}
           specimenTypeFilterActive={specimenTypeFilterActive}

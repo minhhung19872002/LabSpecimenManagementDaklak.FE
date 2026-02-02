@@ -21,18 +21,38 @@ export interface IndicatorMethodInfo {
   unitPrice: number;
   isActive: boolean;
   parentIndicatorId?: string;  // ID của chỉ tiêu cha nếu là sub-indicator
+  // Specimen type info - cùng chỉ tiêu + phương pháp có thể có nhiều nền mẫu khác nhau
+  specimenTypeId?: string;
+  specimenTypeCode?: string;
+  specimenTypeName?: string;
 }
 
-// Key duy nhất cho mỗi lựa chọn: indicatorId_testMethodId
-export type IndicatorMethodKey = `${string}_${string}`;
+// Key duy nhất cho mỗi lựa chọn: indicatorId_testMethodId_specimenTypeId
+// specimenTypeId có thể là "null" nếu không có nền mẫu
+export type IndicatorMethodKey = `${string}_${string}_${string}`;
 
 // Helper để tạo và parse IndicatorMethodKey
-export const createIndicatorMethodKey = (indicatorId: string, testMethodId: string): IndicatorMethodKey =>
-  `${indicatorId}_${testMethodId}` as IndicatorMethodKey;
+export const createIndicatorMethodKey = (
+  indicatorId: string,
+  testMethodId: string,
+  specimenTypeId?: string
+): IndicatorMethodKey =>
+  `${indicatorId}_${testMethodId}_${specimenTypeId || 'null'}` as IndicatorMethodKey;
 
-export const parseIndicatorMethodKey = (key: IndicatorMethodKey): { indicatorId: string; testMethodId: string } => {
-  const [indicatorId, testMethodId] = key.split('_');
-  return { indicatorId, testMethodId };
+export const parseIndicatorMethodKey = (key: IndicatorMethodKey): {
+  indicatorId: string;
+  testMethodId: string;
+  specimenTypeId: string | null;
+} => {
+  const parts = key.split('_');
+  // Handle case where key has 2 parts (old format) or 3 parts (new format)
+  if (parts.length === 2) {
+    // Old format: indicatorId_testMethodId
+    return { indicatorId: parts[0], testMethodId: parts[1], specimenTypeId: null };
+  }
+  // New format: indicatorId_testMethodId_specimenTypeId
+  const [indicatorId, testMethodId, specimenTypeId] = parts;
+  return { indicatorId, testMethodId, specimenTypeId: specimenTypeId === 'null' ? null : specimenTypeId };
 };
 
 export interface SampleFormData {
