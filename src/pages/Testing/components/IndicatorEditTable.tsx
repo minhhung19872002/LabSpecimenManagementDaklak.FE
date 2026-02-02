@@ -81,40 +81,70 @@ const makeGroupKey = (
 ) => `${indicatorId}_${methodId || "no-method"}`;
 
 // Group và flatten indicators theo quan hệ parent-child
+// FIX: Xử lý trường hợp có nhiều parents cùng indicatorId+methodId
 const processIndicatorsForDisplay = (
   indicators: TestingIndicatorDto[],
 ): ProcessedIndicator[] => {
   const result: ProcessedIndicator[] = [];
-  const parentMap = new Map<
-    string,
-    { parent: TestingIndicatorDto; children: TestingIndicatorDto[] }
-  >();
   const orphans: TestingIndicatorDto[] = [];
 
-  // Step 1: Find all parents (parentIndicatorId = null/undefined)
-  indicators.forEach((ind) => {
-    if (!ind.parentIndicatorId) {
-      const key = makeGroupKey(ind.indicatorId, ind.methodId);
-      parentMap.set(key, { parent: ind, children: [] });
+  // Separate parents and subs
+  const parents = indicators.filter((ind) => !ind.parentIndicatorId);
+  const subs = indicators.filter((ind) => ind.parentIndicatorId);
+
+  // Group parents by indicatorId+methodId -> array of parents (handle multiple parents with same key)
+  const parentsByKey: Record<string, TestingIndicatorDto[]> = {};
+  parents.forEach((p) => {
+    const key = makeGroupKey(p.indicatorId, p.methodId);
+    if (!parentsByKey[key]) {
+      parentsByKey[key] = [];
+    }
+    parentsByKey[key].push(p);
+  });
+
+  // Group subs by parentIndicatorId+methodId
+  const subsByKey: Record<string, TestingIndicatorDto[]> = {};
+  subs.forEach((s) => {
+    const key = makeGroupKey(s.parentIndicatorId!, s.methodId);
+    if (!subsByKey[key]) {
+      subsByKey[key] = [];
+    }
+    subsByKey[key].push(s);
+  });
+
+  // Create sub-to-parent mapping: distribute subs evenly among parents with same key
+  const subToParentMapping: Record<string, string> = {}; // sub.id -> parent.id
+
+  Object.entries(subsByKey).forEach(([key, subList]) => {
+    const parentList = parentsByKey[key] || [];
+    if (parentList.length === 0) {
+      // Orphan subs - mark for later
+      subList.forEach((sub) => {
+        subToParentMapping[sub.id] = "";
+        orphans.push(sub);
+      });
+    } else if (parentList.length === 1) {
+      // Single parent - all subs go to it
+      subList.forEach((sub) => {
+        subToParentMapping[sub.id] = parentList[0].id;
+      });
+    } else {
+      // Multiple parents with same indicatorId+methodId - distribute evenly
+      const subsPerParent = Math.ceil(subList.length / parentList.length);
+      subList.forEach((sub, idx) => {
+        const parentIdx = Math.floor(idx / subsPerParent);
+        const safeParentIdx = Math.min(parentIdx, parentList.length - 1);
+        subToParentMapping[sub.id] = parentList[safeParentIdx].id;
+      });
     }
   });
 
-  // Step 2: Assign children to parents
-  indicators.forEach((ind) => {
-    if (ind.parentIndicatorId) {
-      const key = makeGroupKey(ind.parentIndicatorId, ind.methodId);
-      const group = parentMap.get(key);
-      if (group) {
-        group.children.push(ind);
-      } else {
-        // Parent không có trong list -> hiển thị như indicator độc lập
-        orphans.push(ind);
-      }
-    }
-  });
-
-  // Step 3: Flatten với metadata
-  parentMap.forEach(({ parent, children }) => {
+  // Build result: for each parent, add it and its assigned children
+  parents.forEach((parent) => {
+    // Find children assigned to this specific parent
+    const children = subs.filter(
+      (sub) => subToParentMapping[sub.id] === parent.id,
+    );
     const hasChildren = children.length > 0;
 
     // Add parent
@@ -132,21 +162,27 @@ const processIndicatorsForDisplay = (
         ...child,
         _isParentWithChildren: false,
         _isSubIndicator: true,
-        _isLastSubIndicator: idx === children.length - 1, // Last child in group
+        _isLastSubIndicator: idx === children.length - 1,
         _rowKey: `${parent.id}_sub_${idx}`,
       });
     });
   });
 
-  // Step 4: Add orphans as standalone indicators
-  orphans.forEach((ind) => {
-    result.push({
-      ...ind,
-      _isParentWithChildren: false,
-      _isSubIndicator: true, // Hiển thị như sub vì có parentIndicatorId
-      _isLastSubIndicator: true, // Orphan luôn là "last" trong group của nó
-      _rowKey: `orphan_${ind.id}`,
-    });
+  // Add orphan subs as standalone indicators (subs whose parent is not in list)
+  const orphanSubs = subs.filter(
+    (sub) => !subToParentMapping[sub.id] || subToParentMapping[sub.id] === "",
+  );
+  orphanSubs.forEach((ind, idx) => {
+    // Check if already added to result
+    if (!result.some((r) => r.id === ind.id)) {
+      result.push({
+        ...ind,
+        _isParentWithChildren: false,
+        _isSubIndicator: true,
+        _isLastSubIndicator: true,
+        _rowKey: `orphan_${ind.id}_${idx}`,
+      });
+    }
   });
 
   return result;
