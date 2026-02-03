@@ -55,13 +55,10 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
-// Clear tokens and redirect to login
-const handleAuthFailure = () => {
-  localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
-  localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
-  localStorage.removeItem(STORAGE_KEYS.USER_INFO);
-  if (!window.location.pathname.includes('/login')) {
-    window.location.href = '/login';
+// Handle 401 Unauthorized - redirect to 401 page (let user decide to logout)
+const handleUnauthorized = () => {
+  if (!window.location.pathname.includes('/401') && !window.location.pathname.includes('/login')) {
+    window.location.href = '/401';
   }
 };
 
@@ -160,13 +157,13 @@ apiClient.interceptors.response.use(
     if (error.response?.status === HTTP_STATUS.UNAUTHORIZED) {
       // Skip refresh for login/refresh endpoints
       if (originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/refresh-token')) {
-        handleAuthFailure();
+        handleUnauthorized();
         return Promise.reject(error);
       }
 
       // If this request was already retried, fail
       if (originalRequest._retry) {
-        handleAuthFailure();
+        handleUnauthorized();
         return Promise.reject(error);
       }
 
@@ -184,7 +181,7 @@ apiClient.interceptors.response.use(
 
       if (!refreshToken) {
         isRefreshing = false;
-        handleAuthFailure();
+        handleUnauthorized();
         return Promise.reject(error);
       }
 
@@ -220,7 +217,7 @@ apiClient.interceptors.response.use(
         // Refresh failed - clear tokens and redirect to login
         processQueue(refreshError, null);
         isRefreshing = false;
-        handleAuthFailure();
+        handleUnauthorized();
         return Promise.reject(refreshError);
       }
     }
