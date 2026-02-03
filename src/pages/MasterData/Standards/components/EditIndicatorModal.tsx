@@ -169,7 +169,6 @@ const EditIndicatorModal: React.FC<EditIndicatorModalProps> = ({
                 <Form.Item
                   name="lowerOperator"
                   label="Ký hiệu cận dưới"
-                  rules={[{ required: true, message: "Chọn ký hiệu" }]}
                 >
                   <Select options={LOWER_OPERATORS} placeholder=">" />
                 </Form.Item>
@@ -178,10 +177,7 @@ const EditIndicatorModal: React.FC<EditIndicatorModalProps> = ({
                 <Form.Item
                   name="lowerLimit"
                   label="Cận dưới"
-                  rules={[
-                    { required: true, message: "Nhập cận dưới" },
-                    { validator: validateRange },
-                  ]}
+                  rules={[{ validator: validateRange }]}
                 >
                   <NumericFormat
                     placeholder="VD: 5"
@@ -202,7 +198,6 @@ const EditIndicatorModal: React.FC<EditIndicatorModalProps> = ({
                 <Form.Item
                   name="upperOperator"
                   label="Ký hiệu cận trên"
-                  rules={[{ required: true, message: "Chọn ký hiệu" }]}
                 >
                   <Select options={UPPER_OPERATORS} placeholder="<" />
                 </Form.Item>
@@ -211,10 +206,7 @@ const EditIndicatorModal: React.FC<EditIndicatorModalProps> = ({
                 <Form.Item
                   name="upperLimit"
                   label="Cận trên"
-                  rules={[
-                    { required: true, message: "Nhập cận trên" },
-                    { validator: validateRange },
-                  ]}
+                  rules={[{ validator: validateRange }]}
                 >
                   <NumericFormat
                     placeholder="VD: 10"

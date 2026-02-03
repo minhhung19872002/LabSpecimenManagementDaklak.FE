@@ -204,27 +204,15 @@ export const useStandardsActions = ({
               errors.push(`Dòng ${index + 1}, chỉ tiêu phụ ${subIndex + 1}: Vui lòng chọn chỉ tiêu phụ`);
               return;
             }
-            if (!sub.comparisonOperator) {
-              errors.push(`Dòng ${index + 1}, chỉ tiêu phụ ${subIndex + 1}: Vui lòng chọn phép so sánh`);
-              return;
-            }
 
             const isRange = sub.comparisonOperator === "range";
-
-            // Validate limits
-            if (isRange) {
-              if (!sub.lowerLimit && !sub.upperLimit) {
-                errors.push(`Dòng ${index + 1}, chỉ tiêu phụ ${subIndex + 1}: Vui lòng nhập giới hạn`);
-                return;
-              }
-            }
 
             flatIndicators.push({
               indicatorId: sub.indicatorId,
               testMethodId: method.id, // Inherit from parent
               unit: sub.unit || method.unit || "",
               specimenTypeId: specimenTypeId, // Inherit from parent
-              comparisonOperator: isRange ? undefined : sub.comparisonOperator,
+              comparisonOperator: isRange ? undefined : sub.comparisonOperator || undefined,
               allowedLimit: isRange ? undefined : sub.allowedLimit || undefined,
               lowerOperator: isRange ? sub.lowerOperator || ">" : undefined,
               lowerLimit: isRange ? sub.lowerLimit || undefined : undefined,
@@ -234,27 +222,14 @@ export const useStandardsActions = ({
           });
         } else {
           // Parent without sub-indicators: send full fields
-          if (!formParent.comparisonOperator) {
-            errors.push(`Dòng ${index + 1}: Vui lòng chọn phép so sánh`);
-            return;
-          }
-
           const isRange = formParent.comparisonOperator === "range";
-
-          // Validate limits
-          if (isRange) {
-            if (!formParent.lowerLimit && !formParent.upperLimit) {
-              errors.push(`Dòng ${index + 1}: Vui lòng nhập giới hạn`);
-              return;
-            }
-          }
 
           flatIndicators.push({
             indicatorId: indicatorId,
             testMethodId: method.id,
             unit: method.unit || "",
             specimenTypeId: specimenTypeId,
-            comparisonOperator: isRange ? undefined : formParent.comparisonOperator,
+            comparisonOperator: isRange ? undefined : formParent.comparisonOperator || undefined,
             allowedLimit: isRange ? undefined : formParent.allowedLimit || undefined,
             lowerOperator: isRange ? formParent.lowerOperator || ">" : undefined,
             lowerLimit: isRange ? formParent.lowerLimit || undefined : undefined,

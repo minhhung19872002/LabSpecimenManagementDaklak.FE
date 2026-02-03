@@ -116,20 +116,11 @@ apiClient.interceptors.response.use(
       });
     }
 
-    // Check if response has the new wrapper format
+    // Check if response has the wrapper format
     const data = response.data;
     if (data && typeof data === 'object' && 'success' in data && 'data' in data) {
-      // New API format - unwrap data
-      if (!data.success) {
-        // Field validation errors are in data.errors (e.g., { code: ["Mã đã tồn tại"], name: ["Tên đã tồn tại"] })
-        // Other errors might be in data.data
-        return Promise.reject({
-          response: {
-            status: data.statusCode,
-            data: data.errors || data.data || { message: 'An error occurred' }
-          }
-        });
-      }
+      // Unwrap API response - BE now returns proper HTTP status codes
+      // so we don't need to check data.success here (non-2xx will go to error handler)
       // Convert paginated response to legacy format if needed
       if (data.data && data.data.items && data.data.meta) {
         response.data = {
@@ -144,6 +135,17 @@ apiClient.interceptors.response.use(
   },
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+    // Unwrap errors from wrapper format if present
+    // BE returns: { data: null, success: false, statusCode: xxx, errors: {...} }
+    // We need to extract errors so errorHandler.ts can process them
+    if (error.response?.data) {
+      const data = error.response.data as Record<string, unknown>;
+      if (data && typeof data === 'object' && 'errors' in data && data.errors) {
+        // Keep errors in response.data for errorHandler.ts to extract
+        error.response.data = data.errors;
+      }
+    }
 
     // Handle 403 Forbidden - redirect to forbidden page (not logout)
     if (error.response?.status === HTTP_STATUS.FORBIDDEN) {
