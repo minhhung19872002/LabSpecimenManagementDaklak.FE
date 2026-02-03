@@ -170,6 +170,9 @@ const NotFound = Loadable(lazy(() => import("./pages/NotFound/NotFound")));
 // 403 Forbidden
 const Forbidden = Loadable(lazy(() => import("./pages/Forbidden/Forbidden")));
 
+// 401 Unauthorized
+const Unauthorized = Loadable(lazy(() => import("./pages/Unauthorized/Unauthorized")));
+
 // Document Editor (OnlyOffice)
 const DocumentEditor = Loadable(lazy(() => import("./pages/DocumentEditor")));
 
@@ -197,6 +200,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/401" element={<Unauthorized />} />
         <Route path="/403" element={<Forbidden />} />
         <Route path="/document-editor" element={<DocumentEditor />} />
         <Route

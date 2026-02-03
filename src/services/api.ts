@@ -109,10 +109,13 @@ apiClient.interceptors.response.use(
     // Check if response is HTML (redirect to login page)
     const contentType = response.headers['content-type'] || '';
     if (contentType.includes('text/html')) {
-      // Backend redirected to login page - treat as 401
-      handleAuthFailure();
+      // Backend returned HTML (possibly error page or redirect)
+      // Redirect to 401 page - let user decide to logout manually
+      if (!window.location.pathname.includes('/401')) {
+        window.location.href = '/401';
+      }
       return Promise.reject({
-        response: { status: 401, data: { message: 'Session expired' } }
+        response: { status: 401, data: { message: 'Phiên đăng nhập đã hết hạn' } }
       });
     }
 
