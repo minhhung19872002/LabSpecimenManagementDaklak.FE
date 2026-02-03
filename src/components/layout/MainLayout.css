@@ -1018,3 +1018,69 @@
   background: transparent;
   min-height: 360px;
 }
+
+/* ==================== Floating Chat Button ==================== */
+.floating-chat-btn {
+  position: fixed;
+  bottom: 40px;
+  right: 10px;
+  width: 47px;
+  height: 47px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 1000;
+}
+
+.floating-chat-btn:hover {
+  transform: scale(1.1);
+}
+
+.floating-chat-btn:active {
+  transform: scale(0.95);
+}
+
+.floating-chat-img {
+  width: 47px;
+  height: 47px;
+  border-radius: 50%;
+}
+
+.floating-chat-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 23px;
+  height: 23px;
+  background: #F5222D;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 400;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+}
+
+/* Hide on mobile if screen is too small */
+@media (max-width: 576px) {
+  .floating-chat-btn {
+    width: 40px;
+    height: 40px;
+    bottom: 20px;
+    right: 10px;
+  }
+
+  .floating-chat-img {
+    width: 40px;
+    height: 40px;
+  }
+
+  .floating-chat-badge {
+    min-width: 18px;
+    height: 18px;
+    font-size: 10px;
+    top: -4px;
+    right: -4px;
+  }
+}

@@ -366,6 +366,7 @@ export const MailOutlined: React.FC<Omit<IconProps, 'name'>> = (props) => <Icon 
 export const PhoneOutlined: React.FC<Omit<IconProps, 'name'>> = (props) => <Icon name="telephone" {...props} />;
 export const BellOutlined: React.FC<Omit<IconProps, 'name'>> = (props) => <Icon name="bell" {...props} />;
 export const SendOutlined: React.FC<Omit<IconProps, 'name'>> = (props) => <Icon name="send" {...props} />;
+export const MessageOutlined: React.FC<Omit<IconProps, 'name'>> = (props) => <Icon name="chat-dots" {...props} />;
 
 export const PictureOutlined: React.FC<Omit<IconProps, 'name'>> = (props) => <Icon name="image" {...props} />;
 export const CameraOutlined: React.FC<Omit<IconProps, 'name'>> = (props) => <Icon name="camera" {...props} />;

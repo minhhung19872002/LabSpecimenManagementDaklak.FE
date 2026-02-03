@@ -23,6 +23,7 @@ import Icon, {
   DownOutlined,
   MenuOutlined,
   CloseOutlined,
+  MessageOutlined,
 } from "../common/Icon";
 import { useTranslation } from "react-i18next";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
@@ -89,6 +90,7 @@ const routeToKeyMap: Record<string, string> = {
   "/settings": "settings",
   "/employees": "employees",
   "/role-management": "roleManagement",
+  "/chat": "chat",
 };
 
 const MainLayout: React.FC = () => {
@@ -377,6 +379,13 @@ const MainLayout: React.FC = () => {
           label: menuLabel("Báo cáo NCR"),
           onClick: () => navigate(PATH_ROUTES.ncr),
           roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
+        },
+        {
+          key: "chat",
+          icon: <Icon name="chat-dots" />,
+          label: menuLabel("Chat CSKH"),
+          onClick: () => navigate(PATH_ROUTES.chat),
+          roles: [ROLES.ADMIN, ROLES.SAMPLE_RECEIVER],
         },
       ],
     },
@@ -833,6 +842,20 @@ const MainLayout: React.FC = () => {
           tasks={qualityManagerReminderTasks}
           onClose={closeQualityManagerReminder}
         />
+
+        {/* Floating Chat Button - visible for ADMIN and SAMPLE_RECEIVER */}
+        {userInfo?.roles?.some((role) =>
+          [ROLES.ADMIN, ROLES.SAMPLE_RECEIVER].includes(role)
+        ) && (
+          <div
+            className="floating-chat-btn"
+            onClick={() => navigate(PATH_ROUTES.chat)}
+            title="Chat CSKH"
+          >
+            <img src="/zalo_img.png" alt="Chat" className="floating-chat-img" />
+            <span className="floating-chat-badge">20</span>
+          </div>
+        )}
       </div>
     </div>
   );

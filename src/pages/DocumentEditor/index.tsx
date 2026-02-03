@@ -20,18 +20,22 @@ const DocumentEditorPage: React.FC = () => {
   useEffect(() => {
     const fetchConfig = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/config/document-editor`);
+        const response = await fetch(
+          `${API_BASE_URL}/api/v1/config/document-editor`,
+        );
+        console.log("Config response:", response);
         if (response.ok) {
           const data = await response.json();
-          const providerValue = data.provider || data.data?.provider || "OnlyOffice";
+          const providerValue =
+            data.provider || data.data?.provider || "Collabora";
           setProvider(providerValue as EditorProvider);
         } else {
-          // Default to OnlyOffice if config fetch fails
-          setProvider("OnlyOffice");
+          // Default to Collabora if config fetch fails
+          setProvider("Collabora");
         }
       } catch {
-        // Default to OnlyOffice if config fetch fails
-        setProvider("OnlyOffice");
+        // Default to Collabora if config fetch fails
+        setProvider("Collabora");
       }
     };
 

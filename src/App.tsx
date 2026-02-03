@@ -176,6 +176,9 @@ const Unauthorized = Loadable(lazy(() => import("./pages/Unauthorized/Unauthoriz
 // Document Editor (OnlyOffice)
 const DocumentEditor = Loadable(lazy(() => import("./pages/DocumentEditor")));
 
+// Chat - CSKH Agent
+const ChatPage = Loadable(lazy(() => import("./pages/Chat")));
+
 function App() {
   // Initialize grab-to-scroll for all tables
   useEffect(() => {
@@ -305,6 +308,9 @@ function App() {
           <Route path="role-management" element={<RoleManagementList />} />
           <Route path="role-management/:id" element={<RoleManagementDetail />} />
           <Route path="settings" element={<SettingsPage />} />
+
+          {/* Chat - CSKH Agent */}
+          <Route path="chat" element={<ChatPage />} />
 
           {/* Legacy route - redirect to test-results */}
           <Route

@@ -94,6 +94,8 @@ export const PATH_ROUTES = {
 
   settings: '/settings',
 
+  chat: '/chat',
+
   login: '/login',
 
   forbidden: '/403',
