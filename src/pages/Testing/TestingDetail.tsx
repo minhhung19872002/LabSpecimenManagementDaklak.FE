@@ -577,7 +577,31 @@ const TestingDetail: React.FC = () => {
   ) => {
     if (!id || indicatorIds.length === 0) return;
 
-    // Cập nhật local state (sampleResults)
+    const sample = detail?.samples.find((s) => s.sampleId === sampleId);
+    if (!sample) return;
+
+    // Lấy current sampleResults để giữ lại kết quả đã nhập
+    const currentSampleResults = sampleResults.get(sampleId) || [];
+
+    // Tạo resultsToSave TRƯỚC KHI update state để tránh race condition
+    // Ưu tiên lấy result từ sampleResults (đã nhập), fallback sang indicator.result
+    const resultsToSave: SaveIndicatorResultDto[] = indicatorIds.map(
+      (indicatorId) => {
+        const indicator = sample.indicators.find((i) => i.id === indicatorId);
+        const existingResult = currentSampleResults.find(
+          (r) => r.indicatorId === indicatorId
+        );
+        return {
+          indicatorId,
+          methodId: existingResult?.methodId ?? indicator?.methodId,
+          unit: existingResult?.unit ?? indicator?.unit,
+          result: existingResult?.result ?? indicator?.result,
+          testDate: date,
+        };
+      }
+    );
+
+    // Cập nhật local state (sampleResults) - giữ lại result đã nhập
     setSampleResults((prev) => {
       const newResults = new Map(prev);
       const sampleResultList = newResults.get(sampleId) || [];
@@ -592,8 +616,7 @@ const TestingDetail: React.FC = () => {
       // Thêm result mới nếu chưa tồn tại trong sampleResults
       indicatorIds.forEach((indicatorId) => {
         if (!updatedList.find((r) => r.indicatorId === indicatorId)) {
-          const sample = detail?.samples.find((s) => s.sampleId === sampleId);
-          const indicator = sample?.indicators.find(
+          const indicator = sample.indicators.find(
             (i) => i.id === indicatorId
           );
           if (indicator) {
@@ -617,11 +640,11 @@ const TestingDetail: React.FC = () => {
       if (!prev) return prev;
       return {
         ...prev,
-        samples: prev.samples.map((sample) => {
-          if (sample.sampleId !== sampleId) return sample;
+        samples: prev.samples.map((s) => {
+          if (s.sampleId !== sampleId) return s;
           return {
-            ...sample,
-            indicators: sample.indicators.map((ind) =>
+            ...s,
+            indicators: s.indicators.map((ind) =>
               indicatorIds.includes(ind.id) ? { ...ind, testDate: date } : ind
             ),
           };
@@ -631,25 +654,6 @@ const TestingDetail: React.FC = () => {
 
     // Lưu tất cả indicators với testDate mới lên server
     try {
-      const sample = detail?.samples.find((s) => s.sampleId === sampleId);
-      if (!sample) return;
-
-      const resultsToSave: SaveIndicatorResultDto[] = indicatorIds.map(
-        (indicatorId) => {
-          const indicator = sample.indicators.find((i) => i.id === indicatorId);
-          const existingResult = sampleResults
-            .get(sampleId)
-            ?.find((r) => r.indicatorId === indicatorId);
-          return {
-            indicatorId,
-            methodId: indicator?.methodId,
-            unit: indicator?.unit,
-            result: existingResult?.result ?? indicator?.result,
-            testDate: date,
-          };
-        }
-      );
-
       await testingService.saveResults(id, { results: resultsToSave });
     } catch (error: any) {
       console.error("Failed to save bulk test dates:", error);

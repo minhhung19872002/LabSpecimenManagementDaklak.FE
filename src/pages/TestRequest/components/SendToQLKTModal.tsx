@@ -55,12 +55,14 @@ interface ProcessedIndicator extends TestRequestSampleIndicatorDto {
 }
 
 // Helper: tạo composite key từ indicatorId + methodId
-const makeGroupKey = (indicatorId: string, methodId: string | null | undefined) =>
-  `${indicatorId}_${methodId || 'no-method'}`;
+const makeGroupKey = (
+  indicatorId: string,
+  methodId: string | null | undefined,
+) => `${indicatorId}_${methodId || "no-method"}`;
 
 // Group và flatten indicators theo quan hệ parent-child
 const processIndicatorsWithHierarchy = (
-  indicators: TestRequestSampleIndicatorDto[]
+  indicators: TestRequestSampleIndicatorDto[],
 ): ProcessedIndicator[] => {
   if (!indicators?.length) return [];
 
@@ -80,7 +82,10 @@ const processIndicatorsWithHierarchy = (
   // Key = parentIndicatorId_methodId
   const parentMap = new Map<
     string,
-    { parent: TestRequestSampleIndicatorDto; children: TestRequestSampleIndicatorDto[] }
+    {
+      parent: TestRequestSampleIndicatorDto;
+      children: TestRequestSampleIndicatorDto[];
+    }
   >();
   const orphans: TestRequestSampleIndicatorDto[] = [];
 
@@ -186,17 +191,27 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
         if (sample.isCancelled || sample.isCustomerCancelled) return;
 
         // Chỉ lấy indicators chưa gửi QLKT
-        const unsent = sample.indicators?.filter((ind) => !ind.isSentToQLKT) || [];
+        const unsent =
+          sample.indicators?.filter((ind) => !ind.isSentToQLKT) || [];
         if (unsent.length === 0) return; // Bỏ qua sample không còn indicator chưa gửi
 
         panelKeys.push(sample.id);
 
         unsent.forEach((indicator) => {
-          // Only use existing laboratoryId if it exists in active list
-          const autoFilledLabId =
-            indicator.laboratoryId && labIds.has(indicator.laboratoryId)
-              ? indicator.laboratoryId
-              : undefined;
+          // Auto-fill laboratoryId: ưu tiên laboratoryId đã có, fallback sang indicatorGroupLaboratoryId
+          let autoFilledLabId: string | undefined = undefined;
+
+          // 1. Ưu tiên laboratoryId đã được gán cho indicator
+          if (indicator.laboratoryId && labIds.has(indicator.laboratoryId)) {
+            autoFilledLabId = indicator.laboratoryId;
+          }
+          // 2. Fallback: lấy từ nhóm chỉ tiêu (indicatorGroupLaboratoryId)
+          else if (
+            indicator.indicatorGroupLaboratoryId &&
+            labIds.has(indicator.indicatorGroupLaboratoryId)
+          ) {
+            autoFilledLabId = indicator.indicatorGroupLaboratoryId;
+          }
 
           states[indicator.id] = {
             sampleIndicatorId: indicator.id,
@@ -218,7 +233,7 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
   const activeSamples = useMemo(() => {
     if (!testRequest?.samples) return [];
     return testRequest.samples.filter(
-      (s) => !s.isCancelled && !s.isCustomerCancelled
+      (s) => !s.isCancelled && !s.isCustomerCancelled,
     );
   }, [testRequest?.samples]);
 
@@ -246,60 +261,92 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
   // Check if all SELECTED parent indicators have laboratory AND request date
   // Sub-indicators don't need validation as they inherit from parent
   const selectedIndicatorsValid = useMemo(() => {
-    const selectedParentStates = Object.entries(indicatorStates)
-      .filter(([id, state]) => state.isChecked && getParentIndicatorIds.has(id));
+    const selectedParentStates = Object.entries(indicatorStates).filter(
+      ([id, state]) => state.isChecked && getParentIndicatorIds.has(id),
+    );
     if (selectedParentStates.length === 0) return false; // Phải chọn ít nhất 1 parent
     return selectedParentStates.every(
-      ([_, state]) => state.laboratoryId && state.laboratoryId !== "" && state.requestDate
+      ([_, state]) =>
+        state.laboratoryId && state.laboratoryId !== "" && state.requestDate,
     );
   }, [indicatorStates, getParentIndicatorIds]);
 
   // Get selected PARENT indicators missing laboratory (sub-indicators inherit from parent)
   const selectedMissingLab = useMemo(() => {
     return Object.entries(indicatorStates)
-      .filter(([id, state]) => state.isChecked && getParentIndicatorIds.has(id) && !state.laboratoryId)
+      .filter(
+        ([id, state]) =>
+          state.isChecked &&
+          getParentIndicatorIds.has(id) &&
+          !state.laboratoryId,
+      )
       .map(([id]) => id);
   }, [indicatorStates, getParentIndicatorIds]);
 
   // Get selected PARENT indicators missing request date (sub-indicators inherit from parent)
   const selectedMissingDate = useMemo(() => {
     return Object.entries(indicatorStates)
-      .filter(([id, state]) => state.isChecked && getParentIndicatorIds.has(id) && !state.requestDate)
+      .filter(
+        ([id, state]) =>
+          state.isChecked &&
+          getParentIndicatorIds.has(id) &&
+          !state.requestDate,
+      )
       .map(([id]) => id);
   }, [indicatorStates, getParentIndicatorIds]);
 
   // Count only parent indicators for display
   const checkedParentCount = useMemo(() => {
-    return Object.entries(indicatorStates)
-      .filter(([id, state]) => state.isChecked && getParentIndicatorIds.has(id))
-      .length;
+    return Object.entries(indicatorStates).filter(
+      ([id, state]) => state.isChecked && getParentIndicatorIds.has(id),
+    ).length;
   }, [indicatorStates, getParentIndicatorIds]);
 
   // Get parent indicator key for a sub-indicator
-  const getParentKey = (indicator: TestRequestSampleIndicatorDto, sample: TestRequestSampleDto): string | null => {
+  const getParentKey = (
+    indicator: TestRequestSampleIndicatorDto,
+    sample: TestRequestSampleDto,
+  ): string | null => {
     if (!indicator.parentIndicatorId) return null;
-    const parentKey = makeGroupKey(indicator.parentIndicatorId, indicator.testMethodId);
+    const parentKey = makeGroupKey(
+      indicator.parentIndicatorId,
+      indicator.testMethodId,
+    );
     // Find parent in same sample
     const parent = sample.indicators?.find(
-      (ind) => makeGroupKey(ind.indicatorId, ind.testMethodId) === parentKey && !ind.parentIndicatorId
+      (ind) =>
+        makeGroupKey(ind.indicatorId, ind.testMethodId) === parentKey &&
+        !ind.parentIndicatorId,
     );
     return parent?.id || null;
   };
 
   // Get sub-indicators of a parent
-  const getSubIndicatorIds = (parentIndicator: TestRequestSampleIndicatorDto, sample: TestRequestSampleDto): string[] => {
-    const parentKey = makeGroupKey(parentIndicator.indicatorId, parentIndicator.testMethodId);
+  const getSubIndicatorIds = (
+    parentIndicator: TestRequestSampleIndicatorDto,
+    sample: TestRequestSampleDto,
+  ): string[] => {
+    const parentKey = makeGroupKey(
+      parentIndicator.indicatorId,
+      parentIndicator.testMethodId,
+    );
     return (sample.indicators || [])
       .filter((ind) => {
         if (!ind.parentIndicatorId) return false;
-        const subParentKey = makeGroupKey(ind.parentIndicatorId, ind.testMethodId);
+        const subParentKey = makeGroupKey(
+          ind.parentIndicatorId,
+          ind.testMethodId,
+        );
         return subParentKey === parentKey;
       })
       .map((ind) => ind.id);
   };
 
   // Handle checkbox change for individual indicator
-  const handleCheckChange = (indicatorId: string, sample: TestRequestSampleDto) => {
+  const handleCheckChange = (
+    indicatorId: string,
+    sample: TestRequestSampleDto,
+  ) => {
     const indicator = sample.indicators?.find((ind) => ind.id === indicatorId);
     if (!indicator) return;
 
@@ -310,7 +357,10 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
 
       // Update this indicator
       if (updated[indicatorId]) {
-        updated[indicatorId] = { ...updated[indicatorId], isChecked: newChecked };
+        updated[indicatorId] = {
+          ...updated[indicatorId],
+          isChecked: newChecked,
+        };
       }
 
       // If this is a parent with children, sync check state to children
@@ -344,7 +394,11 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
   };
 
   // Handle laboratory change for individual indicator (and sync to sub-indicators)
-  const handleLabChange = (indicatorId: string, labId: string, sample: TestRequestSampleDto) => {
+  const handleLabChange = (
+    indicatorId: string,
+    labId: string,
+    sample: TestRequestSampleDto,
+  ) => {
     const indicator = sample.indicators?.find((ind) => ind.id === indicatorId);
     if (!indicator) return;
 
@@ -370,21 +424,27 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
   const handleRequestDateChange = (
     indicatorId: string,
     date: dayjs.Dayjs | null,
-    sample: TestRequestSampleDto
+    sample: TestRequestSampleDto,
   ) => {
     const indicator = sample.indicators?.find((ind) => ind.id === indicatorId);
     if (!indicator) return;
 
     setIndicatorStates((prev) => {
       const updated = { ...prev };
-      updated[indicatorId] = { ...updated[indicatorId], requestDate: date || undefined };
+      updated[indicatorId] = {
+        ...updated[indicatorId],
+        requestDate: date || undefined,
+      };
 
       // If this is a parent, sync to sub-indicators
       if (!indicator.parentIndicatorId) {
         const subIds = getSubIndicatorIds(indicator, sample);
         subIds.forEach((subId) => {
           if (updated[subId]) {
-            updated[subId] = { ...updated[subId], requestDate: date || undefined };
+            updated[subId] = {
+              ...updated[subId],
+              requestDate: date || undefined,
+            };
           }
         });
       }
@@ -442,7 +502,7 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
     // Validate selected indicators have laboratory
     if (selectedMissingLab.length > 0) {
       message.error(
-        `Còn ${selectedMissingLab.length} chỉ tiêu đã chọn chưa có khoa phòng`
+        `Còn ${selectedMissingLab.length} chỉ tiêu đã chọn chưa có khoa phòng`,
       );
       return;
     }
@@ -450,7 +510,7 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
     // Validate selected indicators have request date
     if (selectedMissingDate.length > 0) {
       message.error(
-        `Còn ${selectedMissingDate.length} chỉ tiêu đã chọn chưa có ngày yêu cầu`
+        `Còn ${selectedMissingDate.length} chỉ tiêu đã chọn chưa có ngày yêu cầu`,
       );
       return;
     }
@@ -459,33 +519,35 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
     try {
       // Chỉ gửi các indicators ĐÃ CHỌN (isChecked = true)
       const selectedStates = Object.values(indicatorStates).filter(
-        (state) => state.isChecked
+        (state) => state.isChecked,
       );
       const indicators: UpdateIndicatorLaboratoryInput[] = selectedStates.map(
         (state) => ({
           sampleIndicatorId: state.sampleIndicatorId,
           laboratoryId: state.laboratoryId!,
           requestDate: state.requestDate?.toISOString(),
-        })
+        }),
       );
 
       // Call API to update indicators laboratory
       await testRequestService.updateIndicatorsLaboratory(
         testRequest.id,
-        indicators
+        indicators,
       );
 
       // Call API to send to QLKT
       await testRequestService.sendToQLKT(testRequest.id);
 
-      message.success(`Đã gửi ${selectedStates.length} chỉ tiêu đến QLKT thành công`);
+      message.success(
+        `Đã gửi ${selectedStates.length} chỉ tiêu đến QLKT thành công`,
+      );
       onSuccess();
     } catch (error: any) {
       console.error("Error sending to QLKT:", error);
       message.error(
         error?.response?.data?.general?.[0] ||
           error?.response?.data?.message ||
-          "Không thể gửi QLKT. Vui lòng thử lại."
+          "Không thể gửi QLKT. Vui lòng thử lại.",
       );
     } finally {
       setSubmitting(false);
@@ -509,7 +571,7 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
     const unsent = getUnsentIndicators(sample);
     if (unsent.length === 0) return false;
     const checkedCount = unsent.filter(
-      (ind) => indicatorStates[ind.id]?.isChecked
+      (ind) => indicatorStates[ind.id]?.isChecked,
     ).length;
     return checkedCount > 0 && checkedCount < unsent.length;
   };
@@ -522,7 +584,7 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
   // Render indicator row with parent-child hierarchy
   const renderIndicatorRow = (
     indicator: ProcessedIndicator,
-    sample: TestRequestSampleDto
+    sample: TestRequestSampleDto,
   ) => {
     const state = indicatorStates[indicator.id];
     if (!state) return null;
@@ -542,22 +604,22 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
         key={indicator.id}
         style={{
           display: "flex",
-          alignItems: "center",
+          alignItems: "flex-start",
           gap: 8,
-          padding: isSubIndicator ? "4px 12px" : "8px 12px",
+          padding: isSubIndicator ? "6px 12px" : "8px 12px",
           borderBottom: "1px solid #f5f5f5",
           background: isSubIndicator ? "#fafafa" : "#fff",
-          minHeight: isSubIndicator ? 28 : 40,
+          minHeight: isSubIndicator ? 32 : 48,
         }}
       >
         {/* Checkbox - hidden for sub-indicators (they follow parent) */}
         {isSubIndicator ? (
-          <div style={{ width: 24, flexShrink: 0 }} />
+          <div style={{ width: 24, flexShrink: 0, paddingTop: 2 }} />
         ) : (
           <Checkbox
             checked={state.isChecked}
             onChange={() => handleCheckChange(indicator.id, sample)}
-            style={{ width: 24, flexShrink: 0 }}
+            style={{ width: 24, flexShrink: 0, paddingTop: 2 }}
           />
         )}
         {/* Indicator name with tree line */}
@@ -565,41 +627,60 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
           className={treeLineClasses.join(" ")}
           style={{
             flex: 1,
-            minWidth: 80,
+            minWidth: 120,
+            maxWidth: 220,
             paddingLeft: isSubIndicator ? 24 : 0,
             position: "relative",
           }}
         >
           <Tooltip title={indicator.indicatorName}>
-            <IndicatorName
-              name={indicator.indicatorName}
-              formattedName={indicator.indicatorFormattedName}
+            <div
               style={{
-                fontSize: 13,
+                display: "-webkit-box",
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: "vertical",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-                color: isSubIndicator ? "#666" : undefined,
+                wordBreak: "break-word",
+                lineHeight: "1.4",
               }}
-            />
+            >
+              <IndicatorName
+                name={indicator.indicatorName}
+                formattedName={indicator.indicatorFormattedName}
+                style={{
+                  fontSize: 13,
+                  color: isSubIndicator ? "#666" : undefined,
+                }}
+              />
+            </div>
           </Tooltip>
         </div>
         {/* Method name - hidden for sub-indicators */}
         {!isSubIndicator && (
           <Tooltip title={indicator.testMethodName}>
-            <IndicatorName
-              name={indicator.testMethodName || "-"}
-              formattedName={indicator.testMethodFormattedName}
+            <div
               style={{
-                width: 140,
+                width: 160,
                 flexShrink: 0,
-                fontSize: 12,
-                color: "#1890ff",
+                display: "-webkit-box",
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: "vertical",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
+                wordBreak: "break-word",
+                lineHeight: "1.4",
               }}
-            />
+            >
+              <IndicatorName
+                name={indicator.testMethodName || "-"}
+                formattedName={indicator.testMethodFormattedName}
+                style={{
+                  fontSize: 12,
+                  color: "#1890ff",
+                }}
+              />
+            </div>
           </Tooltip>
         )}
         {/* Unit price - hidden for sub-indicators */}
@@ -611,6 +692,7 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
               width: 70,
               flexShrink: 0,
               textAlign: "right",
+              paddingTop: 4,
             }}
           >
             {indicator.unitPrice?.toLocaleString("vi-VN")}đ
@@ -624,7 +706,7 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
             }
             format="DD/MM/YYYY"
             size="small"
-            style={{ width: 110, flexShrink: 0 }}
+            style={{ width: 110, flexShrink: 0, marginTop: 2 }}
             placeholder="Ngày CG"
             disabled
           />
@@ -633,10 +715,12 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
         {!isSubIndicator && (
           <DatePicker
             value={state.requestDate}
-            onChange={(date) => handleRequestDateChange(indicator.id, date, sample)}
+            onChange={(date) =>
+              handleRequestDateChange(indicator.id, date, sample)
+            }
             format="DD/MM/YYYY"
             size="small"
-            style={{ width: 110, flexShrink: 0 }}
+            style={{ width: 110, flexShrink: 0, marginTop: 2 }}
             placeholder="Ngày YC"
             disabledDate={(current) => {
               return current && current.isBefore(dayjs().startOf("day"));
@@ -649,7 +733,7 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
             value={state.laboratoryId}
             onChange={(value) => handleLabChange(indicator.id, value, sample)}
             size="small"
-            style={{ width: 150, flexShrink: 0 }}
+            style={{ width: 150, flexShrink: 0, marginTop: 2 }}
             placeholder="Chọn khoa phòng"
             loading={loadingLabs}
             options={laboratories.map((lab) => ({
@@ -707,178 +791,197 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
             <span>Gửi QLKT - Chọn khoa phòng</span>
           </div>
         }
-      open={visible}
-      onCancel={onCancel}
-      width="90vw"
-      style={{ maxWidth: 900 }}
-      centered
-      footer={
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-            <Text>
-              Đã chọn: <Text strong>{checkedParentCount}</Text> chỉ tiêu cha
-              {checkedIndicatorIds.length > checkedParentCount && (
-                <Text type="secondary"> (+{checkedIndicatorIds.length - checkedParentCount} chỉ tiêu phụ)</Text>
-              )}
-            </Text>
-            {checkedParentCount > 0 && selectedMissingLab.length > 0 && (
-              <Text type="danger">
-                ({selectedMissingLab.length} chưa có khoa phòng)
-              </Text>
-            )}
-            {checkedParentCount > 0 && selectedMissingDate.length > 0 && (
-              <Text type="danger">
-                ({selectedMissingDate.length} chưa có ngày YC)
-              </Text>
-            )}
-          </div>
-          <Space>
-            <Button onClick={onCancel}>Hủy</Button>
-            <Button
-              type="primary"
-              onClick={handleSubmit}
-              loading={submitting}
-              disabled={!selectedIndicatorsValid}
-            >
-              Gửi QLKT ({checkedIndicatorIds.length})
-            </Button>
-          </Space>
-        </div>
-      }
-    >
-      {loadingLabs ? (
-        <div style={{ textAlign: "center", padding: 40 }}>
-          <Spin />
-        </div>
-      ) : (
-        <div style={{ maxHeight: "60vh", overflowY: "auto" }}>
-          {/* Bulk action bar */}
+        open={visible}
+        onCancel={onCancel}
+        width="90vw"
+        style={{ maxWidth: 1000 }}
+        centered
+        footer={
           <div
             style={{
-              padding: "8px 12px",
-              background: "#fafafa",
-              borderBottom: "1px solid #f0f0f0",
               display: "flex",
+              justifyContent: "space-between",
               alignItems: "center",
-              gap: 12,
-              flexWrap: "wrap",
             }}
           >
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              Gán cho các chỉ tiêu cha đã chọn ({checkedParentCount}):
-            </Text>
-            <Select
-              size="small"
-              style={{ width: 180 }}
-              placeholder="Chọn khoa phòng"
-              onChange={handleApplyLabToChecked}
-              options={laboratories.map((lab) => ({
-                value: lab.id,
-                label: lab.name,
-              }))}
-              disabled={checkedParentCount === 0}
-            />
-            <DatePicker
-              size="small"
-              style={{ width: 130 }}
-              placeholder="Chọn ngày YC"
-              format="DD/MM/YYYY"
-              onChange={handleApplyRequestDateToChecked}
-              disabled={checkedParentCount === 0}
-              disabledDate={(current) => {
-                return current && current.isBefore(dayjs().startOf("day"));
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 16,
+                flexWrap: "wrap",
               }}
-            />
-          </div>
-
-          {/* Scrollable table container */}
-          <div style={{ overflowX: "auto" }}>
-            <div style={{ minWidth: 700 }}>
-              {/* Table header */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "8px 12px",
-                  background: "#f5f5f5",
-                  borderBottom: "1px solid #e8e8e8",
-                  fontWeight: 600,
-                  fontSize: 12,
-                }}
-              >
-                <div style={{ width: 24, flexShrink: 0 }}></div>
-                <div style={{ flex: 1, minWidth: 80 }}>Chỉ tiêu</div>
-                <div style={{ width: 140, flexShrink: 0 }}>Phương pháp</div>
-                <div style={{ width: 70, flexShrink: 0, textAlign: "right" }}>
-                  Đơn giá
-                </div>
-                <div style={{ width: 110, flexShrink: 0 }}>Ngày CG</div>
-                <div style={{ width: 110, flexShrink: 0 }}>Ngày YC</div>
-                <div style={{ width: 150, flexShrink: 0 }}>Khoa phòng</div>
-              </div>
-
-              {/* Samples grouped by Collapse - chỉ hiển thị samples có chỉ tiêu chưa gửi */}
-              {samplesWithUnsentIndicators.length === 0 ? (
-                <div style={{ padding: 40, textAlign: "center" }}>
-                  <Text type="secondary">Tất cả chỉ tiêu đã được gửi QLKT</Text>
-                </div>
-              ) : (
-                <Collapse
-                  activeKey={expandedPanels}
-                  onChange={(keys) => setExpandedPanels(keys as string[])}
-                  bordered={false}
-                  style={{ background: "#fff" }}
-                >
-                  {samplesWithUnsentIndicators.map((sample) => {
-                    const unsentIndicators = getUnsentIndicators(sample);
-                    return (
-                      <Panel
-                        key={sample.id}
-                        header={
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 12,
-                            }}
-                          >
-                            <Checkbox
-                              checked={isSampleAllChecked(sample)}
-                              indeterminate={isSampleIndeterminate(sample)}
-                              onChange={(e) => {
-                                e.stopPropagation();
-                                handleSelectAllSample(sample.id, e.target.checked);
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                            <Text strong>
-                              {sample.sampleCode} - {sample.sampleName}
-                            </Text>
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                              ({unsentIndicators.length} chỉ tiêu chưa gửi)
-                            </Text>
-                          </div>
-                        }
-                      >
-                        {processIndicatorsWithHierarchy(unsentIndicators).map((indicator) =>
-                          renderIndicatorRow(indicator, sample)
-                        )}
-                      </Panel>
-                    );
-                  })}
-                </Collapse>
+            >
+              <Text>
+                Đã chọn: <Text strong>{checkedParentCount}</Text> chỉ tiêu cha
+                {checkedIndicatorIds.length > checkedParentCount && (
+                  <Text type="secondary">
+                    {" "}
+                    (+{checkedIndicatorIds.length - checkedParentCount} chỉ tiêu
+                    phụ)
+                  </Text>
+                )}
+              </Text>
+              {checkedParentCount > 0 && selectedMissingLab.length > 0 && (
+                <Text type="danger">
+                  ({selectedMissingLab.length} chưa có khoa phòng)
+                </Text>
+              )}
+              {checkedParentCount > 0 && selectedMissingDate.length > 0 && (
+                <Text type="danger">
+                  ({selectedMissingDate.length} chưa có ngày YC)
+                </Text>
               )}
             </div>
+            <Space>
+              <Button onClick={onCancel}>Hủy</Button>
+              <Button
+                type="primary"
+                onClick={handleSubmit}
+                loading={submitting}
+                disabled={!selectedIndicatorsValid}
+              >
+                Gửi QLKT ({checkedIndicatorIds.length})
+              </Button>
+            </Space>
           </div>
-        </div>
-      )}
+        }
+      >
+        {loadingLabs ? (
+          <div style={{ textAlign: "center", padding: 40 }}>
+            <Spin />
+          </div>
+        ) : (
+          <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
+            {/* Bulk action bar */}
+            <div
+              style={{
+                padding: "8px 12px",
+                background: "#fafafa",
+                borderBottom: "1px solid #f0f0f0",
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                flexWrap: "wrap",
+              }}
+            >
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Gán cho các chỉ tiêu cha đã chọn ({checkedParentCount}):
+              </Text>
+              <Select
+                size="small"
+                style={{ width: 180 }}
+                placeholder="Chọn khoa phòng"
+                onChange={handleApplyLabToChecked}
+                options={laboratories.map((lab) => ({
+                  value: lab.id,
+                  label: lab.name,
+                }))}
+                disabled={checkedParentCount === 0}
+              />
+              <DatePicker
+                size="small"
+                style={{ width: 130 }}
+                placeholder="Chọn ngày YC"
+                format="DD/MM/YYYY"
+                onChange={handleApplyRequestDateToChecked}
+                disabled={checkedParentCount === 0}
+                disabledDate={(current) => {
+                  return current && current.isBefore(dayjs().startOf("day"));
+                }}
+              />
+            </div>
+
+            {/* Scrollable table container */}
+            <div style={{ overflowX: "auto" }}>
+              <div style={{ minWidth: 700 }}>
+                {/* Table header */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "8px 12px",
+                    background: "#f5f5f5",
+                    borderBottom: "1px solid #e8e8e8",
+                    fontWeight: 600,
+                    fontSize: 12,
+                  }}
+                >
+                  <div style={{ width: 24, flexShrink: 0 }}></div>
+                  <div style={{ flex: 1, minWidth: 120, maxWidth: 220 }}>
+                    Chỉ tiêu
+                  </div>
+                  <div style={{ width: 160, flexShrink: 0 }}>Phương pháp</div>
+                  <div style={{ width: 70, flexShrink: 0, textAlign: "right" }}>
+                    Đơn giá
+                  </div>
+                  <div style={{ width: 110, flexShrink: 0 }}>Ngày CG</div>
+                  <div style={{ width: 110, flexShrink: 0 }}>Ngày YC</div>
+                  <div style={{ width: 150, flexShrink: 0 }}>Khoa phòng</div>
+                </div>
+
+                {/* Samples grouped by Collapse - chỉ hiển thị samples có chỉ tiêu chưa gửi */}
+                {samplesWithUnsentIndicators.length === 0 ? (
+                  <div style={{ padding: 40, textAlign: "center" }}>
+                    <Text type="secondary">
+                      Tất cả chỉ tiêu đã được gửi QLKT
+                    </Text>
+                  </div>
+                ) : (
+                  <Collapse
+                    activeKey={expandedPanels}
+                    onChange={(keys) => setExpandedPanels(keys as string[])}
+                    bordered={false}
+                    style={{ background: "#fff" }}
+                  >
+                    {samplesWithUnsentIndicators.map((sample) => {
+                      const unsentIndicators = getUnsentIndicators(sample);
+                      return (
+                        <Panel
+                          key={sample.id}
+                          header={
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 12,
+                              }}
+                            >
+                              <Checkbox
+                                checked={isSampleAllChecked(sample)}
+                                indeterminate={isSampleIndeterminate(sample)}
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  handleSelectAllSample(
+                                    sample.id,
+                                    e.target.checked,
+                                  );
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                              <Text strong>
+                                {sample.sampleCode} - {sample.sampleName}
+                              </Text>
+                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                ({unsentIndicators.length} chỉ tiêu chưa gửi)
+                              </Text>
+                            </div>
+                          }
+                        >
+                          {processIndicatorsWithHierarchy(unsentIndicators).map(
+                            (indicator) =>
+                              renderIndicatorRow(indicator, sample),
+                          )}
+                        </Panel>
+                      );
+                    })}
+                  </Collapse>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </Modal>
     </>
   );
