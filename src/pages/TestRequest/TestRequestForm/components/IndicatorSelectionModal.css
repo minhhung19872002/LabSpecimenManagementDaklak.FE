@@ -55,9 +55,26 @@
   margin-top: 0;
 }
 
+/* OK button hover effect */
+.indicator-selection-modal .ant-modal-footer .ant-btn-primary:hover {
+  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.4);
+}
+
+.indicator-selection-modal .ant-modal-footer .ant-btn-primary:active {
+  background: linear-gradient(135deg, #096dd9 0%, #0050b3 100%) !important;
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.3);
+}
+
+.indicator-selection-modal .ant-modal-footer .ant-btn-primary {
+  transition: all 0.2s ease;
+}
+
 /* Left panel - indicator tree */
 .indicator-modal-left {
-  width: 400px;
+  width: 480px;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -93,6 +110,9 @@
   flex-direction: column;
   overflow: hidden;
   position: relative;
+  margin: 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 12px;
 }
 
 /* Table scroll wrapper - scrolls both directions */
@@ -250,6 +270,75 @@
   }
 }
 
+/* ==================== Left Panel Tree Lines ==================== */
+
+/* Generic tree item - base styles */
+.tree-item {
+  position: relative;
+}
+
+/* Tree line - vertical */
+.tree-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: #d9d9d9;
+  z-index: 1; /* Above child backgrounds */
+}
+
+/* Tree line - horizontal */
+.tree-item::after {
+  content: '';
+  position: absolute;
+  top: 15px; /* Points to first row (header), not middle of element */
+  height: 1px;
+  background-color: #d9d9d9;
+  z-index: 1; /* Above child backgrounds */
+}
+
+/* Last item - vertical line ends at first row */
+.tree-item.is-last::before {
+  bottom: calc(100% - 15px); /* Ends at horizontal line position */
+}
+
+/* Level 2 (Loại mẫu) - under Level 1's arrow (center at 9px) */
+.tree-item.tree-level-2::before,
+.tree-item.tree-level-2::after {
+  left: 9px;
+}
+.tree-item.tree-level-2::after {
+  width: 11px; /* connects to padding-left: 20px */
+}
+
+/* Level 3 (Chỉ tiêu) - under Level 2's arrow (20px + 8px = 28px) */
+.tree-item.tree-level-3::before,
+.tree-item.tree-level-3::after {
+  left: 28px;
+}
+.tree-item.tree-level-3::after {
+  width: 8px; /* connects to padding-left: 36px */
+}
+
+/* Level 4 (Phương pháp) - for indentLevel 1 (under Level 3 arrow at 9px) */
+.tree-item.tree-level-4::before,
+.tree-item.tree-level-4::after {
+  left: 9px;
+}
+.tree-item.tree-level-4::after {
+  width: 8px; /* shorter line, gap before checkbox */
+}
+
+/* Level 4 with indentLevel 2 - under Level 3's arrow (36px + 9px = 45px) */
+.tree-item.tree-level-4.indent-level-2::before,
+.tree-item.tree-level-4.indent-level-2::after {
+  left: 45px;
+}
+.tree-item.tree-level-4.indent-level-2::after {
+  width: 8px; /* shorter line, gap before checkbox */
+}
+
 /* Indicator picker drawer */
 .indicator-picker-drawer .ant-drawer-body {
   display: flex;
@@ -260,4 +349,21 @@
 /* Filter selects stack vertically in drawer (tablet/mobile) */
 .indicator-picker-drawer .indicator-filter-selects {
   flex-direction: column;
+}
+
+/* Gradient text effect for expanded indicator names */
+.indicator-name-gradient {
+  background: linear-gradient(135deg, rgb(24, 144, 255) 0%, rgb(9, 109, 217) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Ensure sub/sup elements in gradient text also show the gradient */
+.indicator-name-gradient sub,
+.indicator-name-gradient sup {
+  background: linear-gradient(135deg, rgb(24, 144, 255) 0%, rgb(9, 109, 217) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }

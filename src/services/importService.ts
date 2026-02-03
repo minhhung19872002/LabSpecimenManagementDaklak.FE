@@ -105,6 +105,7 @@ export interface SpecimenIndicatorImportItem {
   indicatorId?: string;
   testMethodId?: string;
   testMethodName?: string;
+  specimenTypeId?: string; // Specimen type ID (resolved from master data)
   isValid: boolean;
   errorMessage?: string;
 }
