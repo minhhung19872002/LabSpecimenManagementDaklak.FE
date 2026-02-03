@@ -245,7 +245,10 @@ export const useTestRequestFormActions = ({
       Indicators: (s.indicators || []).map((ind: any) => {
         // Find test method info from indicatorMethodsMap
         const methods = indicatorMethodsMap[ind.indicatorId] || [];
-        const method = methods.find((m) => m.testMethodId === ind.testMethodId);
+        // Must match both testMethodId AND specimenTypeId to get correct method info
+        const method = methods.find(
+          (m) => m.testMethodId === ind.testMethodId && (m.specimenTypeId || null) === (ind.specimenTypeId || null)
+        );
         return {
           Id: ind.id || null,
           IndicatorId: ind.indicatorId,
@@ -493,48 +496,58 @@ export const useTestRequestFormActions = ({
     });
   };
 
-  // Helper: Get all sub-indicator keys for a parent indicator + method
+  // Helper: Get all sub-indicator keys for a parent indicator + method + specimenType
   const getSubIndicatorKeysForParent = (
     parentIndicatorId: string,
-    testMethodId: string
+    testMethodId: string,
+    specimenTypeId?: string | null
   ): IndicatorMethodKey[] => {
     const subKeys: IndicatorMethodKey[] = [];
+    // Normalize specimenTypeId: treat null, undefined, and empty string as equivalent
+    const normalizedSpecimenTypeId = specimenTypeId || null;
     Object.entries(indicatorMethodsMap).forEach(([indId, methods]) => {
       methods.forEach((method) => {
+        // Normalize method's specimenTypeId the same way
+        const methodSpecimenTypeId = method.specimenTypeId || null;
         if (
           method.testMethodId === testMethodId &&
           method.parentIndicatorId === parentIndicatorId &&
-          method.isActive
+          method.isActive &&
+          methodSpecimenTypeId === normalizedSpecimenTypeId
         ) {
-          subKeys.push(createIndicatorMethodKey(indId, testMethodId));
+          subKeys.push(createIndicatorMethodKey(indId, testMethodId, method.specimenTypeId));
         }
       });
     });
     return subKeys;
   };
 
-  // Helper: Check if an indicator is a sub-indicator for a given method
+  // Helper: Check if an indicator is a sub-indicator for a given method + specimenType
   const isSubIndicatorForMethod = (
     indicatorId: string,
-    testMethodId: string
+    testMethodId: string,
+    specimenTypeId?: string
   ): boolean => {
     const methods = indicatorMethodsMap[indicatorId];
     if (!methods) return false;
-    const methodInfo = methods.find((m) => m.testMethodId === testMethodId);
+    const methodInfo = methods.find(
+      (m) => m.testMethodId === testMethodId &&
+        (m.specimenTypeId || null) === (specimenTypeId || null)
+    );
     return !!methodInfo?.parentIndicatorId;
   };
 
-  // NEW: Toggle indicator method (indicatorId + testMethodId)
+  // Toggle indicator method (indicatorId + testMethodId + specimenTypeId)
   // Auto-adds sub-indicators when selecting a parent indicator
-  const toggleIndicatorMethod = (indicatorId: string, testMethodId: string) => {
-    const key = createIndicatorMethodKey(indicatorId, testMethodId);
+  const toggleIndicatorMethod = (indicatorId: string, testMethodId: string, specimenTypeId?: string) => {
+    const key = createIndicatorMethodKey(indicatorId, testMethodId, specimenTypeId);
     const isCurrentlySelected = tempSelectedIndicatorMethods.includes(key);
 
     // Check if this is a sub-indicator (has parentIndicatorId)
-    const isSub = isSubIndicatorForMethod(indicatorId, testMethodId);
+    const isSub = isSubIndicatorForMethod(indicatorId, testMethodId, specimenTypeId);
 
     // Get sub-indicator keys if this is a parent
-    const subKeys = isSub ? [] : getSubIndicatorKeysForParent(indicatorId, testMethodId);
+    const subKeys = isSub ? [] : getSubIndicatorKeysForParent(indicatorId, testMethodId, specimenTypeId);
 
     setTempSelectedIndicatorMethods((prev) => {
       if (isCurrentlySelected) {
@@ -672,9 +685,9 @@ export const useTestRequestFormActions = ({
     const indicatorsWithSubs: string[] = [];
     checkedIndicators.forEach((key) => {
       indicatorsWithSubs.push(key);
-      // Get sub-indicator keys for this indicator
-      const { indicatorId, testMethodId } = parseIndicatorMethodKey(key as IndicatorMethodKey);
-      const subKeys = getSubIndicatorKeysForParent(indicatorId, testMethodId);
+      // Get sub-indicator keys for this indicator (including specimenTypeId)
+      const { indicatorId, testMethodId, specimenTypeId } = parseIndicatorMethodKey(key as IndicatorMethodKey);
+      const subKeys = getSubIndicatorKeysForParent(indicatorId, testMethodId, specimenTypeId || undefined);
       // Add subs that are in tempSelectedIndicatorMethods
       subKeys.forEach((subKey) => {
         if (
@@ -805,10 +818,13 @@ export const useTestRequestFormActions = ({
         // Prefer indicatorMethods if available, fallback to indicatorIds
         const indicatorsList = sample.indicatorMethods && sample.indicatorMethods.length > 0
           ? sample.indicatorMethods.map((methodKey) => {
-              const { indicatorId, testMethodId } = parseIndicatorMethodKey(methodKey);
+              const { indicatorId, testMethodId, specimenTypeId } = parseIndicatorMethodKey(methodKey);
               const indicatorDates = selectedIndicatorDates[methodKey];
               const methods = indicatorMethodsMap[indicatorId] || [];
-              const method = methods.find((m) => m.testMethodId === testMethodId);
+              // Must match both testMethodId AND specimenTypeId to get correct price
+              const method = methods.find(
+                (m) => m.testMethodId === testMethodId && (m.specimenTypeId || null) === specimenTypeId
+              );
               const labAssignment = indicatorLaboratoryMap[`${sample.key}_${methodKey}`];
               // Get the TestRequestSampleIndicator.id if this indicator already exists
               const existingIndicatorId = sampleIndicatorIdMap[`${sample.key}_${methodKey}`];
@@ -819,6 +835,7 @@ export const useTestRequestFormActions = ({
                 id: existingIndicatorId || undefined, // Include id for existing indicators
                 indicatorId,
                 testMethodId,
+                specimenTypeId: specimenTypeId || undefined, // Include specimenTypeId to correctly identify price
                 laboratoryId: labAssignment?.laboratoryId || undefined,
                 unitPrice: isHgFree ? 0 : (method?.unitPrice || 0),
                 originalUnitPrice: isHgFree ? (method?.unitPrice || 0) : undefined,
@@ -1102,15 +1119,19 @@ export const useTestRequestFormActions = ({
             statusText: sample.statusText || undefined,
             notes: sample.notes || undefined,
             indicators: (sample.indicatorMethods || []).map((methodKey: IndicatorMethodKey) => {
-              const { indicatorId, testMethodId } = parseIndicatorMethodKey(methodKey);
+              const { indicatorId, testMethodId, specimenTypeId } = parseIndicatorMethodKey(methodKey);
               const indicator = indicators.find((ind: any) => ind.id === indicatorId);
-              const method = indicatorMethodsMap[indicatorId]?.find(
-                (m: IndicatorMethodInfo) => m.testMethodId === testMethodId
+              const methods = indicatorMethodsMap[indicatorId] || [];
+              const method = methods.find(
+                (m: IndicatorMethodInfo) => m.testMethodId === testMethodId && (m.specimenTypeId || null) === specimenTypeId
               );
               const isHgFree = isPreviewComboMet && isHgIndicator(indicator?.name);
               return {
                 indicatorId,
+                testMethodId: testMethodId || undefined,
+                specimenTypeId: specimenTypeId || undefined,
                 indicatorName: indicator?.name || "",
+                indicatorFormattedName: indicator?.formattedName || undefined,
                 unitPrice: isHgFree ? 0 : (method?.unitPrice || 0),
                 originalUnitPrice: isHgFree ? (method?.unitPrice || 0) : undefined,
               };

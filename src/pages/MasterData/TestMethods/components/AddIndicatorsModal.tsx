@@ -36,7 +36,7 @@ interface AddIndicatorsModalProps {
   specimenTypes: SpecimenTypeDto[];
   existingIndicatorKeys?: ExistingIndicatorKey[];
   getSpecimenTypesByIndicator: (indicatorId: string) => SpecimenTypeDto[];
-  onOk: (data: { indicatorId: string; specimenTypeId?: string; unitPrice: number }[]) => void;
+  onOk: (data: { indicatorId: string; specimenTypeId: string; unitPrice: number }[]) => void;
   onCancel: () => void;
 }
 
@@ -279,13 +279,19 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   // Validate and submit - chỉ gửi parent indicators, không gửi sub-indicators
   const handleSubmit = () => {
     const newErrors: Record<string, string> = {};
-    const flatIndicators: { indicatorId: string; specimenTypeId?: string; unitPrice: number }[] = [];
+    const flatIndicators: { indicatorId: string; specimenTypeId: string; unitPrice: number }[] = [];
     const addedKeys = new Set<string>();
 
     rows.forEach((row, rowIndex) => {
       // Validate parent indicator
       if (!row.indicatorId) {
         newErrors[`row-${rowIndex}`] = "Chọn chỉ tiêu";
+        return;
+      }
+
+      // Validate specimen type - bắt buộc
+      if (!row.specimenTypeId) {
+        newErrors[`row-${rowIndex}-specimenType`] = "Chọn nền mẫu";
         return;
       }
 
@@ -296,7 +302,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
       }
 
       // Check duplicate in current submission
-      const key = `${row.indicatorId}|${row.specimenTypeId || ''}`;
+      const key = `${row.indicatorId}|${row.specimenTypeId}`;
       if (addedKeys.has(key)) {
         newErrors[`row-${rowIndex}`] = "Trùng với dòng khác";
         return;
@@ -404,15 +410,23 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                     value={row.specimenTypeId}
                     onChange={(value) => handleSpecimenTypeChange(rowIndex, value)}
                     options={buildSpecimenTypeOptions(row.indicatorId)}
-                    placeholder={row.indicatorId ? "Chọn nền mẫu" : "Chọn chỉ tiêu trước"}
+                    placeholder={row.indicatorId ? "Chọn nền mẫu *" : "Chọn chỉ tiêu trước"}
                     showSearch
                     filterOption={(input, option) =>
                       (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
                     }
                     allowClear
                     disabled={!row.indicatorId}
+                    status={errors[`row-${rowIndex}-specimenType`] ? "error" : undefined}
                     style={{ width: "100%" }}
                   />
+                  {errors[`row-${rowIndex}-specimenType`] && (
+                    <div
+                      style={{ color: "#ff4d4f", fontSize: 12, marginTop: 4 }}
+                    >
+                      {errors[`row-${rowIndex}-specimenType`]}
+                    </div>
+                  )}
                 </Col>
                 <Col flex="0 0 140px">
                   <InputNumber<number>

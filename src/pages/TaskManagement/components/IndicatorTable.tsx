@@ -304,36 +304,90 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   const makeGroupKey = (indicatorId: string, methodId: string | null | undefined) =>
     `${indicatorId}_${methodId || 'no-method'}`;
 
-  // Check if parent has sub-indicators in the current list (considering methodId)
-  const hasSubIndicatorsInList = useMemo(() => {
-    const parentKeys = new Set<string>();
-    indicators.forEach((ind) => {
-      if (ind.parentIndicatorId) {
-        // Sub-indicator references parent by parentIndicatorId + same methodId
-        parentKeys.add(makeGroupKey(ind.parentIndicatorId, ind.methodId));
+  // Compute sub-to-parent mapping: assigns each sub-indicator to a specific parent's unique id
+  // This handles the case where multiple parents have the same indicatorId+methodId
+  const subToParentMapping = useMemo(() => {
+    const mapping: Record<string, string> = {}; // sub.id -> parent.id (unique)
+
+    // Separate parents and subs
+    const parents = indicators.filter((ind) => !ind.parentIndicatorId);
+    const subs = indicators.filter((ind) => ind.parentIndicatorId);
+
+    // Group parents by indicatorId+methodId -> array of unique parent ids
+    const parentsByKey: Record<string, string[]> = {};
+    parents.forEach((p) => {
+      const key = makeGroupKey(p.indicatorId, p.methodId);
+      if (!parentsByKey[key]) {
+        parentsByKey[key] = [];
+      }
+      parentsByKey[key].push(p.id);
+    });
+
+    // Group subs by parentIndicatorId+methodId
+    const subsByKey: Record<string, LaboratoryTaskIndicatorDto[]> = {};
+    subs.forEach((s) => {
+      const key = makeGroupKey(s.parentIndicatorId!, s.methodId);
+      if (!subsByKey[key]) {
+        subsByKey[key] = [];
+      }
+      subsByKey[key].push(s);
+    });
+
+    // Distribute subs to parents evenly
+    Object.entries(subsByKey).forEach(([key, subList]) => {
+      const parentUniqueIds = parentsByKey[key] || [];
+      if (parentUniqueIds.length === 0) {
+        // Orphan subs - mark with empty string
+        subList.forEach((sub) => {
+          mapping[sub.id] = "";
+        });
+      } else if (parentUniqueIds.length === 1) {
+        // Single parent - all subs go to it
+        subList.forEach((sub) => {
+          mapping[sub.id] = parentUniqueIds[0];
+        });
+      } else {
+        // Multiple parents with same indicatorId+methodId - distribute evenly
+        // Example: 4 subs, 2 parents -> sub0,sub1 -> parent0; sub2,sub3 -> parent1
+        const subsPerParent = Math.ceil(subList.length / parentUniqueIds.length);
+        subList.forEach((sub, idx) => {
+          const parentIdx = Math.floor(idx / subsPerParent);
+          const safeParentIdx = Math.min(parentIdx, parentUniqueIds.length - 1);
+          mapping[sub.id] = parentUniqueIds[safeParentIdx];
+        });
       }
     });
-    return (indicatorId: string, methodId: string | null | undefined) =>
-      parentKeys.has(makeGroupKey(indicatorId, methodId));
+
+    return mapping;
   }, [indicators]);
+
+  // Check if a specific parent (by unique id) has sub-indicators
+  const hasSubIndicatorsInList = useMemo(() => {
+    const parentIdsWithSubs = new Set<string>();
+    Object.values(subToParentMapping).forEach((parentId) => {
+      if (parentId) {
+        parentIdsWithSubs.add(parentId);
+      }
+    });
+    return (parentUniqueId: string) => parentIdsWithSubs.has(parentUniqueId);
+  }, [subToParentMapping]);
 
   // Sort indicators to group parent/sub together and add position flags
   const sortedIndicators = useMemo((): IndicatorWithPosition[] => {
     const sorted = [...indicators].sort((a, b) => {
-      // Group by parent/sub relationship + methodId
-      // Group key: for parent use indicatorId+methodId, for sub use parentIndicatorId+methodId
-      const aGroupKey = a.parentIndicatorId
-        ? makeGroupKey(a.parentIndicatorId, a.methodId)
-        : makeGroupKey(a.indicatorId, a.methodId);
-      const bGroupKey = b.parentIndicatorId
-        ? makeGroupKey(b.parentIndicatorId, b.methodId)
-        : makeGroupKey(b.indicatorId, b.methodId);
+      // Use parent's unique id for grouping (handles multiple parents with same indicatorId+methodId)
+      const aParentUniqueId = a.parentIndicatorId
+        ? subToParentMapping[a.id] || ""
+        : a.id;
+      const bParentUniqueId = b.parentIndicatorId
+        ? subToParentMapping[b.id] || ""
+        : b.id;
 
-      if (aGroupKey !== bGroupKey) {
-        return aGroupKey.localeCompare(bGroupKey);
+      if (aParentUniqueId !== bParentUniqueId) {
+        return aParentUniqueId.localeCompare(bParentUniqueId);
       }
 
-      // Same group: parent first, then sub-indicators
+      // Same parent group: parent first, then sub-indicators
       if (!a.parentIndicatorId && b.parentIndicatorId) return -1;
       if (a.parentIndicatorId && !b.parentIndicatorId) return 1;
 
@@ -342,18 +396,18 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
 
     // Add position flags for tree line rendering
     return sorted.map((item, _index, arr): IndicatorWithPosition => {
+      // Check using parent's unique id
       const isParentWithSubs =
-        !item.parentIndicatorId && hasSubIndicatorsInList(item.indicatorId, item.methodId);
+        !item.parentIndicatorId && hasSubIndicatorsInList(item.id);
 
       if (!item.parentIndicatorId) {
         return { ...item, _isParentWithSubs: isParentWithSubs };
       }
 
-      // Find siblings (sub-indicators with same parent AND same methodId)
+      // Find siblings - subs that belong to the same parent (by unique id mapping)
+      const myParentUniqueId = subToParentMapping[item.id];
       const siblings = arr.filter(
-        (i) =>
-          i.parentIndicatorId === item.parentIndicatorId &&
-          i.methodId === item.methodId
+        (i) => i.parentIndicatorId && subToParentMapping[i.id] === myParentUniqueId
       );
       const siblingIndex = siblings.findIndex((s) => s.id === item.id);
 
@@ -363,7 +417,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         _isLastSub: siblingIndex === siblings.length - 1,
       };
     });
-  }, [indicators, hasSubIndicatorsInList]);
+  }, [indicators, hasSubIndicatorsInList, subToParentMapping]);
 
   const columns = [
     {
@@ -1020,14 +1074,14 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       ) => {
         let newSelection = [...selectedRowKeys] as string[];
 
-        // If selecting a parent with subs, auto-select all its sub-indicators (same methodId)
+        // If selecting a parent with subs, auto-select all its sub-indicators
+        // Use subToParentMapping to find subs that belong to this specific parent
         selectedRows.forEach((row) => {
           if (row._isParentWithSubs) {
             const subIds = sortedIndicators
               .filter(
                 (ind) =>
-                  ind.parentIndicatorId === row.indicatorId &&
-                  ind.methodId === row.methodId
+                  ind.parentIndicatorId && subToParentMapping[ind.id] === row.id
               )
               .map((ind) => ind.id);
             subIds.forEach((id) => {
@@ -1046,17 +1100,13 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             sortedIndicators.find((i) => i.id === id)?._isParentWithSubs
         );
         deselectedParents.forEach((parentId) => {
-          const parent = sortedIndicators.find((i) => i.id === parentId);
-          if (parent) {
-            const subIds = sortedIndicators
-              .filter(
-                (ind) =>
-                  ind.parentIndicatorId === parent.indicatorId &&
-                  ind.methodId === parent.methodId
-              )
-              .map((ind) => ind.id);
-            newSelection = newSelection.filter((id) => !subIds.includes(id));
-          }
+          const subIds = sortedIndicators
+            .filter(
+              (ind) =>
+                ind.parentIndicatorId && subToParentMapping[ind.id] === parentId
+            )
+            .map((ind) => ind.id);
+          newSelection = newSelection.filter((id) => !subIds.includes(id));
         });
 
         onSelectionChange(newSelection);
@@ -1090,6 +1140,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     onSelectionChange,
     selectionMode,
     sortedIndicators,
+    subToParentMapping,
   ]);
 
   return (
