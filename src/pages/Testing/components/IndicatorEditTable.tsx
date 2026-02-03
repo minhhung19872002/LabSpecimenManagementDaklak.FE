@@ -208,27 +208,55 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     Map<string, SaveIndicatorResultDto>
   >(new Map());
 
-  // Track indicator data to detect actual changes (IDs + testDates)
-  const indicatorDataKey = indicators
-    .map((ind) => `${ind.id}:${ind.testDate || ""}`)
-    .join(",");
+  // Track indicator IDs to detect when indicator list changes (not testDate)
+  const indicatorIdsKey = indicators.map((ind) => ind.id).join(",");
 
-  // Initialize edited results from indicators - when indicator list or testDate changes
+  // Initialize edited results from indicators - only when indicator list changes
+  // Merge with existing results to preserve user edits (especially 'result' field)
   useEffect(() => {
-    const initialResults = new Map<string, SaveIndicatorResultDto>();
-    indicators.forEach((ind) => {
-      initialResults.set(ind.id, {
-        indicatorId: ind.id,
-        methodId: ind.methodId,
-        unit: ind.unit,
-        result: ind.result,
-        note: ind.note,
-        testDate: ind.testDate,
+    setEditedResults((prev) => {
+      const newResults = new Map<string, SaveIndicatorResultDto>();
+      indicators.forEach((ind) => {
+        const existing = prev.get(ind.id);
+        newResults.set(ind.id, {
+          indicatorId: ind.id,
+          methodId: ind.methodId,
+          unit: ind.unit,
+          // Giữ lại result đã nhập nếu có, nếu không thì lấy từ indicator
+          result: existing?.result ?? ind.result,
+          note: existing?.note ?? ind.note,
+          // Lấy testDate từ indicator (có thể đã được update từ bulk change)
+          testDate: ind.testDate,
+        });
       });
+      return newResults;
     });
-    setEditedResults(initialResults);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [indicatorDataKey]);
+  }, [indicatorIdsKey]);
+
+  // Sync testDate from props when it changes (e.g., from bulk date change)
+  // This runs on every indicators change but only updates testDate, preserving result
+  useEffect(() => {
+    setEditedResults((prev) => {
+      let hasChanges = false;
+      const newResults = new Map(prev);
+
+      indicators.forEach((ind) => {
+        const existing = newResults.get(ind.id);
+        // Chỉ update nếu testDate thay đổi từ props
+        if (existing && existing.testDate !== ind.testDate) {
+          newResults.set(ind.id, {
+            ...existing,
+            testDate: ind.testDate,
+          });
+          hasChanges = true;
+        }
+      });
+
+      // Chỉ return new Map nếu có changes để tránh re-render không cần thiết
+      return hasChanges ? newResults : prev;
+    });
+  }, [indicators]);
 
   // Process indicators for display (group parent-child)
   const processedIndicators = useMemo(() => {

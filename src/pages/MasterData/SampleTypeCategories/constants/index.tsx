@@ -19,24 +19,9 @@ export const getCategoryColumns = (
     title: "Tên danh mục",
     dataIndex: "name",
     key: "name",
-    width: 250,
-    ellipsis: true,
     render: (name: string, record) => (
-      <Space style={{ maxWidth: "100%" }}>
-        <Tooltip title={name}>
-          <span
-            style={{
-              fontWeight: 500,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              maxWidth: 150,
-              display: "inline-block",
-            }}
-          >
-            {name}
-          </span>
-        </Tooltip>
+      <Space wrap style={{ maxWidth: "100%" }}>
+        <span style={{ fontWeight: 500 }}>{name}</span>
         <Tag color="blue">{record.specimenTypeCount || record.specimenTypes?.length || 0} loại mẫu</Tag>
       </Space>
     ),
@@ -45,6 +30,7 @@ export const getCategoryColumns = (
     title: "Mô tả",
     dataIndex: "description",
     key: "description",
+    width: 280,
     ellipsis: true,
   },
   {
