@@ -44,6 +44,8 @@ import {
   useSupporterStatus,
   clearSupporterCache,
 } from "../../hooks/useSupporterStatus";
+import { useUnreadChatCount } from "../../hooks/useUnreadChatCount";
+import { useDraggable } from "../../hooks/useDraggable";
 import "./MainLayout.css";
 import {
   PATH_ROUTES,
@@ -135,6 +137,20 @@ const MainLayout: React.FC = () => {
 
   // Check if current user is a supporter for any incomplete task
   const { isSupporter } = useSupporterStatus();
+
+  // Get unread chat count for floating button
+  const { unreadCount: chatUnreadCount } = useUnreadChatCount();
+
+  // Draggable floating chat button
+  const {
+    ref: floatingBtnRef,
+    style: floatingBtnStyle,
+    onMouseDown: floatingBtnMouseDown,
+    onTouchStart: floatingBtnTouchStart,
+  } = useDraggable({
+    storageKey: 'chat-floating-btn-position',
+    defaultPosition: { x: 10, y: 40 },
+  });
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -848,12 +864,20 @@ const MainLayout: React.FC = () => {
           [ROLES.ADMIN, ROLES.SAMPLE_RECEIVER].includes(role)
         ) && (
           <div
+            ref={floatingBtnRef}
             className="floating-chat-btn"
+            style={floatingBtnStyle}
             onClick={() => navigate(PATH_ROUTES.chat)}
-            title="Chat CSKH"
+            onMouseDown={floatingBtnMouseDown}
+            onTouchStart={floatingBtnTouchStart}
+            title="Chat CSKH - Kéo để di chuyển"
           >
-            <img src="/zalo_img.png" alt="Chat" className="floating-chat-img" />
-            <span className="floating-chat-badge">20</span>
+            <img src="/zalo_img.png" alt="Chat" className="floating-chat-img" draggable={false} />
+            {chatUnreadCount > 0 && (
+              <span className="floating-chat-badge">
+                {chatUnreadCount > 99 ? '99+' : chatUnreadCount}
+              </span>
+            )}
           </div>
         )}
       </div>
