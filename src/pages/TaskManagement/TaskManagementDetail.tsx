@@ -1402,9 +1402,20 @@ const TaskManagementDetail: React.FC = () => {
     return (selectedIndicators[sampleId] || []).length;
   };
 
+  // Get count of selected indicators that need approval (Entered status only)
+  const getApprovalCount = (sampleId: string) => {
+    const ids = selectedIndicators[sampleId] || [];
+    const sample = sampleList.find((s) => s.sampleId === sampleId);
+    return ids.filter((id) => {
+      const ind = sample?.indicators.find((i) => i.id === id);
+      return ind?.approvalStatus === IndicatorApprovalStatus.Entered;
+    }).length;
+  };
+
   // Generate Collapse items
   const collapseItems = sampleList.map((sample) => {
     const selectedCount = getSampleSelectedCount(sample.sampleId);
+    const approvalCount = getApprovalCount(sample.sampleId); // Chỉ đếm chỉ tiêu cần phê duyệt (Entered)
     const sampleImagesData = sampleImages[sample.sampleId];
 
     return {
@@ -1433,26 +1444,26 @@ const TaskManagementDetail: React.FC = () => {
                       size="small"
                       icon={<CloseOutlined />}
                       loading={actionLoading}
-                      disabled={selectedCount === 0}
+                      disabled={approvalCount === 0}
                       onClick={(e) => {
                         e.stopPropagation();
                         openRejectModal(sample.sampleId);
                       }}
                     >
-                      Từ chối{selectedCount > 0 ? ` (${selectedCount})` : ""}
+                      Từ chối{approvalCount > 0 ? ` (${approvalCount})` : ""}
                     </Button>
                     <Button
                       type="primary"
                       size="small"
                       icon={<CheckOutlined />}
                       loading={actionLoading}
-                      disabled={selectedCount === 0}
+                      disabled={approvalCount === 0}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleBulkApprove(sample.sampleId);
                       }}
                     >
-                      Duyệt{selectedCount > 0 ? ` (${selectedCount})` : ""}
+                      Duyệt{approvalCount > 0 ? ` (${approvalCount})` : ""}
                     </Button>
                   </>
                 )}
