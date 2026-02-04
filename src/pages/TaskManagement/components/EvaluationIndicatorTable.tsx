@@ -290,6 +290,61 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
     });
   };
 
+  // Get count of selected indicators that are pending (can be accepted)
+  const selectedPendingCount = useMemo(() => {
+    return selectedIndicatorIds.filter((id) =>
+      pendingIndicators.some((ind) => ind.id === id)
+    ).length;
+  }, [selectedIndicatorIds, pendingIndicators]);
+
+  // Handle accept selected indicators
+  const handleAcceptSelected = async () => {
+    // Filter only pending indicators from selection
+    const pendingIds = selectedIndicatorIds.filter((id) =>
+      pendingIndicators.some((ind) => ind.id === id)
+    );
+
+    if (pendingIds.length === 0) {
+      Modal.warning({
+        title: "Không có chỉ tiêu cần chấp nhận",
+        content: "Vui lòng chọn các chỉ tiêu đang chờ đánh giá",
+      });
+      return;
+    }
+
+    Modal.confirm({
+      title: "Xác nhận chấp nhận",
+      content: `Bạn có chắc muốn chấp nhận thử nghiệm cho ${pendingIds.length} chỉ tiêu đã chọn?`,
+      okText: "Chấp nhận",
+      cancelText: "Hủy",
+      centered: true,
+      onOk: async () => {
+        setActionLoading(true);
+        try {
+          // Accept each indicator sequentially
+          for (const indicatorId of pendingIds) {
+            await laboratoryTaskService.evaluateIndicator(indicatorId, {
+              action: IndicatorEvaluationAction.Accept,
+            });
+          }
+          setSelectedIndicatorIds([]);
+          onEvaluationComplete();
+        } catch (error: any) {
+          console.error("Failed to accept selected indicators:", error);
+          Modal.error({
+            title: "Lỗi",
+            content: getApiErrorMessage(
+              error,
+              "Không thể chấp nhận các chỉ tiêu đã chọn"
+            ),
+          });
+        } finally {
+          setActionLoading(false);
+        }
+      },
+    });
+  };
+
   // Handle supplementary request
   const handleSupplementaryRequest = async () => {
     try {
@@ -758,11 +813,11 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
             <Button
               type="primary"
               icon={<CheckOutlined />}
-              onClick={handleApproveAllRemaining}
-              disabled={!hasPendingIndicators}
+              onClick={handleAcceptSelected}
+              disabled={selectedPendingCount === 0}
               loading={actionLoading}
             >
-              Chấp nhận tất cả ({pendingIndicators.length})
+              Chấp nhận ({selectedPendingCount})
             </Button>
             <Button
               icon={<SwapOutlined />}
