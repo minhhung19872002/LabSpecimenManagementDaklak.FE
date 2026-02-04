@@ -200,17 +200,61 @@ const evaluateMathExpression = (expr: string): number | null => {
 };
 
 /**
+ * Special text values that represent "negative" or "not detected" results
+ * These are treated as <= 0 for comparison purposes
+ */
+const NEGATIVE_RESULT_TEXTS = [
+  "âm tính",
+  "không phát hiện",
+  "am tinh",
+  "khong phat hien",
+  "negative",
+  "not detected",
+  "nd", // Not Detected abbreviation
+];
+
+/**
+ * Large positive number used for "positive" or "detected" text results
+ * when exact value is unknown. This ensures they fail upper limit checks.
+ */
+export const POSITIVE_TEXT_VALUE = Number.MAX_SAFE_INTEGER;
+
+/**
+ * Check if a parsed value represents a "positive/detected" text result
+ * @param value - Parsed numeric value
+ * @returns true if the value represents a positive text result
+ */
+export const isPositiveTextValue = (value: number | null): boolean => {
+  return value === POSITIVE_TEXT_VALUE;
+};
+
+/**
+ * Check if a text result represents a negative/not detected result
+ * @param text - Text to check (will be trimmed and lowercased)
+ * @returns true if the text represents a negative result
+ */
+export const isNegativeResultText = (text: string): boolean => {
+  const lowerText = text.toLowerCase().trim();
+  return NEGATIVE_RESULT_TEXTS.some(
+    (negText) => lowerText === negText || lowerText.includes(negText)
+  );
+};
+
+/**
  * Parse result string to number
  * Supports formats:
  * - Plain number: "200", "0.5", "1,5", ".5", "5."
  * - Scientific notation: "2,0 x 10^2", "1.5 x 10^-3", "2,0x10^2", "1.5e3", "2E-2"
  * - Mathematical expressions: "10^2*5+4^9-9/10^2", "2+3*4"
  * - With multiplication sign variations: "x", "×", "*"
+ * - Text results: "Âm tính", "Không phát hiện" → 0; "Dương tính" → large positive number
  *
  * @param result - Result string to parse
  * @param decimalPlaces - Number of decimal places (default: 4)
- * @param returnZeroForText - If true, returns 0 for non-parseable text (default: true)
- * @returns Parsed number rounded to specified decimal places, or 0 if cannot parse (when returnZeroForText is true)
+ * @param returnZeroForText - If true, returns semantic value for text (default: true)
+ *   - "Âm tính"/"Không phát hiện" → 0
+ *   - Other text → large positive number (MAX_SAFE_INTEGER)
+ * @returns Parsed number rounded to specified decimal places, or semantic value for text
  *
  * @example
  * parseResultToNumber("2,0 x 10^2") // returns 200.0000
@@ -219,7 +263,9 @@ const evaluateMathExpression = (expr: string): number | null => {
  * parseResultToNumber("200") // returns 200.0000
  * parseResultToNumber(".5") // returns 0.5000
  * parseResultToNumber("10^2*5+4") // returns 504.0000
- * parseResultToNumber("Âm tính") // returns 0 (text cannot be calculated)
+ * parseResultToNumber("Âm tính") // returns 0 (negative/not detected = 0)
+ * parseResultToNumber("Không phát hiện") // returns 0 (negative/not detected = 0)
+ * parseResultToNumber("Dương tính") // returns MAX_SAFE_INTEGER (positive = large number)
  * parseResultToNumber("Âm tính", 4, false) // returns null (legacy behavior)
  */
 export const parseResultToNumber = (
@@ -241,6 +287,24 @@ export const parseResultToNumber = (
   // Giới hạn độ dài expression để tránh DoS
   if (normalized.length > 100) {
     return returnZeroForText ? 0 : null;
+  }
+
+  // Check for special text results first (before any normalization that might affect text matching)
+  if (returnZeroForText) {
+    // Check if it's a negative/not detected result → return 0
+    if (isNegativeResultText(normalized)) {
+      return 0;
+    }
+
+    // Check if it looks like text (contains letters but not a valid number format)
+    // If it's unparseable text that's NOT negative, return large positive number
+    const hasLetters = /[a-zA-ZÀ-ỹ]/.test(normalized);
+    const looksLikeScientific = /^\d.*[eExX×].*\d/i.test(normalized);
+    if (hasLetters && !looksLikeScientific) {
+      // It's text that doesn't look like scientific notation
+      // and is not a negative result → treat as positive (detected)
+      return POSITIVE_TEXT_VALUE;
+    }
   }
 
   // Replace Vietnamese decimal separator (comma) with dot
@@ -299,17 +363,26 @@ export const parseResultToNumber = (
     return parseFloat(evalResult.toFixed(decimalPlaces));
   }
 
-  // Cannot parse - return 0 for text (or null if legacy behavior requested)
-  return returnZeroForText ? 0 : null;
+  // Cannot parse - check original text for semantic meaning
+  if (returnZeroForText) {
+    // Re-check original result (before normalization) for negative text
+    if (isNegativeResultText(result.trim())) {
+      return 0;
+    }
+    // Other unparseable values are treated as positive (detected)
+    return POSITIVE_TEXT_VALUE;
+  }
+
+  return null;
 };
 
 /**
  * Compare result value with limit
- * @param result - Result string (can be scientific notation)
+ * @param result - Result string (can be scientific notation or text like "Âm tính")
  * @param limit - Limit value (number)
  * @param decimalPlaces - Decimal places for comparison (default: 4)
  * @returns Object with comparison result:
- *   - parsedValue: The parsed numeric value (or null if not parseable)
+ *   - parsedValue: The parsed numeric value (0 for "Âm tính", MAX_SAFE_INTEGER for other text)
  *   - isWithinLimit: true if result <= limit, false if result > limit, null if cannot compare
  *   - canCompare: true if both values are numeric and can be compared
  *
@@ -321,7 +394,10 @@ export const parseResultToNumber = (
  * // returns { parsedValue: 2000, isWithinLimit: false, canCompare: true }
  *
  * compareResultWithLimit("Âm tính", 500)
- * // returns { parsedValue: null, isWithinLimit: null, canCompare: false }
+ * // returns { parsedValue: 0, isWithinLimit: true, canCompare: true }
+ *
+ * compareResultWithLimit("Dương tính", 500)
+ * // returns { parsedValue: MAX_SAFE_INTEGER, isWithinLimit: false, canCompare: true }
  */
 export const compareResultWithLimit = (
   result: string | null | undefined,
