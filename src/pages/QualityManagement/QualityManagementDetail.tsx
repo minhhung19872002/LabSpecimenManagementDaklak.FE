@@ -312,11 +312,9 @@ const QualityManagementDetail: React.FC = () => {
   ).length;
 
   // Button states
-  // In KQ: chỉ khi có chỉ tiêu đã duyệt và status >= PendingPublish
-  const canPrint =
-    approvedCount > 0 &&
-    task?.status !== QualityManagementStatus.PendingApproval &&
-    task?.status !== QualityManagementStatus.Rejected;
+  // In KQ: cho phép in nếu có ÍT NHẤT 1 chỉ tiêu đã được duyệt
+  // (không cần quan tâm task.status - có thể vẫn đang PendingApproval nếu còn chỉ tiêu chưa duyệt)
+  const canPrint = approvedCount > 0;
 
   // Status tag
   const getStatusTag = (status: QualityManagementStatus) => (

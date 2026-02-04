@@ -208,50 +208,91 @@ const PrintModal: React.FC<PrintModalProps> = ({
 
   // Get approved indicators AND their parent indicators
   // Parent indicators don't have approvalStatus but need to be shown for hierarchy
+  // RULE: Chỉ hiển thị parent indicator khi TẤT CẢ sub-indicators của nó đều đã được duyệt
   const approvedIndicatorsWithParents = useMemo(() => {
-    // First get all approved sub-indicators
-    const approved = indicators.filter(
-      (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Approved,
-    );
+    // Separate parents and sub-indicators
+    const parents = indicators.filter((ind) => !ind.parentIndicatorId);
+    const subs = indicators.filter((ind) => ind.parentIndicatorId);
 
-    // Collect parent indicator keys that have approved children
-    const neededParentKeys = new Set<string>();
-    approved.forEach((ind) => {
-      if (ind.parentIndicatorId) {
-        const parentKey = makeGroupKey(ind.parentIndicatorId, ind.methodId);
-        neededParentKeys.add(parentKey);
+    // Group sub-indicators by parentKey (parentIndicatorId + methodId)
+    const subsByParentKey: Record<string, QualityManagementIndicatorDto[]> = {};
+    subs.forEach((sub) => {
+      const parentKey = makeGroupKey(sub.parentIndicatorId!, sub.methodId);
+      if (!subsByParentKey[parentKey]) {
+        subsByParentKey[parentKey] = [];
+      }
+      subsByParentKey[parentKey].push(sub);
+    });
+
+    // Find parent keys where ALL sub-indicators are approved
+    const fullyApprovedParentKeys = new Set<string>();
+    Object.entries(subsByParentKey).forEach(([parentKey, subList]) => {
+      const allSubsApproved = subList.every(
+        (sub) => sub.approvalStatus === QualityIndicatorApprovalStatus.Approved,
+      );
+      if (allSubsApproved) {
+        fullyApprovedParentKeys.add(parentKey);
       }
     });
 
-    // Find parent indicators that match the needed keys
-    const parentIndicators = indicators.filter((ind) => {
-      if (ind.parentIndicatorId) return false; // Skip non-parents
-      const key = makeGroupKey(ind.indicatorId, ind.methodId);
-      return neededParentKeys.has(key);
+    // Build result:
+    // 1. Include parent indicators whose ALL subs are approved
+    // 2. Include sub-indicators whose parent has ALL subs approved
+    // 3. Include standalone approved indicators (no parent, no children)
+    const result: QualityManagementIndicatorDto[] = [];
+
+    // Add parent indicators that have ALL subs approved
+    parents.forEach((parent) => {
+      const parentKey = makeGroupKey(parent.indicatorId, parent.methodId);
+      const hasSubIndicators = subsByParentKey[parentKey]?.length > 0;
+
+      if (hasSubIndicators) {
+        // Parent has sub-indicators -> only include if ALL subs are approved
+        if (fullyApprovedParentKeys.has(parentKey)) {
+          result.push(parent);
+          // Also add all its sub-indicators
+          subsByParentKey[parentKey].forEach((sub) => result.push(sub));
+        }
+        // If not all subs approved -> don't include parent or any subs
+      } else {
+        // Standalone parent (no sub-indicators) -> include if approved
+        if (parent.approvalStatus === QualityIndicatorApprovalStatus.Approved) {
+          result.push(parent);
+        }
+      }
     });
 
-    // Combine: approved indicators + their parent indicators
-    const approvedIds = new Set(approved.map((a) => a.id));
-    const result = [...approved];
-    parentIndicators.forEach((parent) => {
-      if (!approvedIds.has(parent.id)) {
-        result.push(parent);
+    // Add orphan sub-indicators (parent not in list) that are approved
+    subs.forEach((sub) => {
+      const parentKey = makeGroupKey(sub.parentIndicatorId!, sub.methodId);
+      const parentExists = parents.some(
+        (p) => makeGroupKey(p.indicatorId, p.methodId) === parentKey,
+      );
+      if (
+        !parentExists &&
+        sub.approvalStatus === QualityIndicatorApprovalStatus.Approved
+      ) {
+        // Check if already added
+        if (!result.some((r) => r.id === sub.id)) {
+          result.push(sub);
+        }
       }
     });
 
     return result;
   }, [indicators]);
 
-  // Get only approved indicator IDs (for selection - excludes parents)
+  // Get only approved indicator IDs (for selection - excludes parents with children)
+  // Only includes indicators that are in approvedIndicatorsWithParents AND have approvalStatus = Approved
   const approvedIndicatorIds = useMemo(
     () =>
-      indicators
+      approvedIndicatorsWithParents
         .filter(
           (ind) =>
             ind.approvalStatus === QualityIndicatorApprovalStatus.Approved,
         )
         .map((ind) => ind.id),
-    [indicators],
+    [approvedIndicatorsWithParents],
   );
 
   // Group indicators by laboratory, then by sample
