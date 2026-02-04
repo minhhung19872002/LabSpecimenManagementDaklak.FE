@@ -569,16 +569,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     specimenTypeIndicatorIds,
   ]);
 
-  // Auto-expand all indicators when modal opens
-  useEffect(() => {
-    if (
-      visible &&
-      indicatorsWithMethods.length > 0 &&
-      expandedIndicators.length === 0
-    ) {
-      setExpandedIndicators(indicatorsWithMethods.map((ind) => ind.id));
-    }
-  }, [visible, indicatorsWithMethods]);
+  // Level 3 (Chỉ tiêu) - default collapsed, không auto-expand
 
   // State for mobile indicator picker drawer
   const [indicatorPickerOpen, setIndicatorPickerOpen] = useState(false);
