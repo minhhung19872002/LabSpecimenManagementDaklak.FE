@@ -310,15 +310,20 @@ export const parseResultToNumber = (
   // Replace Vietnamese decimal separator (comma) with dot
   normalized = normalized.replace(/,/g, ".");
 
-  // Normalize multiplication signs: × and x (lowercase) to *
-  // But only when followed/preceded by numbers or expressions
-  normalized = normalized.replace(/×/g, "*");
-  // Replace 'x' with '*' only when it looks like multiplication (number x number or x 10^)
-  normalized = normalized.replace(/(\d)\s*x\s*(\d)/gi, "$1*$2");
-  normalized = normalized.replace(/(\d)\s*x\s*(10\^)/gi, "$1*$2");
+  // Normalize multiplication signs: ×, x, X, ✕, ✖, ⨉ to *
+  // Replace all Unicode multiplication-like characters with *
+  normalized = normalized.replace(/[×✕✖⨉·•]/g, "*");
 
-  // Remove spaces
-  normalized = normalized.replace(/\s/g, "");
+  // Remove all whitespace (including Unicode whitespace like &nbsp;)
+  normalized = normalized.replace(/[\s\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, "");
+
+  // Replace 'x' or 'X' with '*' when it looks like multiplication (after spaces removed)
+  // Pattern: (digit or closing paren) + x/X + (digit or opening paren or ^)
+  normalized = normalized.replace(/(\d|\))[xX](\d|\(|\^)/g, "$1*$2");
+  // Also handle x followed by 10^ pattern
+  normalized = normalized.replace(/(\d)[xX](10\^)/gi, "$1*$2");
+  // Fallback: replace any remaining x/X with * when between digits
+  normalized = normalized.replace(/(\d)[xX](\d)/g, "$1*$2");
 
   // Support scientific notation with e/E: "1.5e3", "2E-2", "1e+5"
   const sciEPattern = /^([+-]?(\d+(\.\d*)?|\.\d+))[eE]([+-]?\d+)$/;
