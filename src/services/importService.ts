@@ -380,6 +380,36 @@ export const importService = {
     const response = await api.download(`${BASE_URL}/indicator-groups/template`);
     return response.data;
   },
+
+  // ==================== Notes ====================
+
+  /**
+   * Preview Notes import (validate without importing)
+   */
+  previewNotes: async (file: File): Promise<any> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<any>(`${BASE_URL}/notes/preview`, formData);
+    return response.data;
+  },
+
+  /**
+   * Import Notes from Excel file
+   */
+  importNotes: async (file: File): Promise<ImportResultDto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<ImportResultDto>(`${BASE_URL}/notes`, formData);
+    return response.data;
+  },
+
+  /**
+   * Download import template for Notes
+   */
+  downloadNoteTemplate: () => {
+    const url = `${import.meta.env.VITE_API_URL || ''}${BASE_URL}/notes/template`;
+    window.open(url, '_blank');
+  },
 };
 
 // ==================== Helper Functions ====================

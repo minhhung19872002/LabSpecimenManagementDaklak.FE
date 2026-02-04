@@ -334,13 +334,27 @@ const MasterDataList: React.FC = () => {
 
               {/* Notes Tab */}
               {activeCategory === "notes" && (
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => notesRef.current?.handleCreate()}
-                >
-                  Thêm ghi chú
-                </Button>
+                <>
+                  <Button
+                    icon={<DownloadOutlined />}
+                    onClick={() => notesRef.current?.handleDownloadTemplate()}
+                  >
+                    Tải template
+                  </Button>
+                  <Button
+                    icon={<UploadOutlined />}
+                    onClick={() => notesRef.current?.handleImport()}
+                  >
+                    Nhập danh sách
+                  </Button>
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => notesRef.current?.handleCreate()}
+                  >
+                    Thêm ghi chú
+                  </Button>
+                </>
               )}
 
               {/* Other tabs (departments, laboratories, etc.) - use old handleCreate */}

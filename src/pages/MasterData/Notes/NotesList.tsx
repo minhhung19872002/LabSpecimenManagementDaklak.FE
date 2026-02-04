@@ -20,11 +20,15 @@ import {
   DeleteOutlined,
 } from "../../../components/common/Icon";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
+import type { UploadFile } from "antd/es/upload/interface";
 import { noteService } from "../../../services/noteService";
+import { importService } from "../../../services/importService";
+import { API_BASE_URL } from "../../../services/api";
 import { NoteDto, CreateNoteDto, UpdateNoteDto } from "../../../types/note";
 import { authService } from "../../../services/authService";
 import { PERMISSIONS } from "../../../constants/permissionMapping";
-import { NotesTabProps, NotesActions } from "./types";
+import { NotesTabProps, NotesActions, NoteImportPreviewDto } from "./types";
+import ImportNoteModal from "./components/ImportNoteModal";
 
 const DEFAULT_PAGE_SIZE = 50;
 
@@ -45,6 +49,12 @@ const NotesList = forwardRef<NotesActions, NotesTabProps>(({ onDataChange, refre
   const [modalLoading, setModalLoading] = useState(false);
   const [editingItem, setEditingItem] = useState<NoteDto | null>(null);
   const [form] = Form.useForm();
+
+  // Import state
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importFileList, setImportFileList] = useState<UploadFile[]>([]);
+  const [importPreviewData, setImportPreviewData] = useState<NoteImportPreviewDto | null>(null);
 
   // Refresh data when refreshKey changes
   const isFirstMount = useRef(true);
@@ -207,9 +217,79 @@ const NotesList = forwardRef<NotesActions, NotesTabProps>(({ onDataChange, refre
     form.resetFields();
   };
 
+  // Import handlers
+  const handleDownloadTemplate = () => {
+    window.open(
+      `${API_BASE_URL}/api/v1/import/notes/template`,
+      "_blank"
+    );
+  };
+
+  const handleImport = () => {
+    setImportModalOpen(true);
+  };
+
+  const handleImportPreview = async () => {
+    if (!importFileList.length || !importFileList[0].originFileObj) {
+      message.error("Vui lòng chọn file");
+      return;
+    }
+
+    setImportLoading(true);
+    try {
+      const result = await importService.previewNotes(importFileList[0].originFileObj);
+      setImportPreviewData(result);
+    } catch (err: unknown) {
+      console.error("Failed to preview import:", err);
+      message.error("Không thể xem trước dữ liệu import");
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleImportConfirm = async () => {
+    if (!importFileList.length || !importFileList[0].originFileObj) {
+      message.error("Vui lòng chọn file");
+      return;
+    }
+
+    setImportLoading(true);
+    try {
+      const result = await importService.importNotes(importFileList[0].originFileObj);
+      if (result.success) {
+        message.success(result.message || "Import thành công");
+        setImportModalOpen(false);
+        setImportFileList([]);
+        setImportPreviewData(null);
+        fetchData(1, pagination.pageSize, appliedSearch, statusFilter);
+        onDataChange?.();
+      } else {
+        message.error(result.message || "Import thất bại");
+      }
+    } catch (err: unknown) {
+      console.error("Failed to import:", err);
+      message.error("Không thể import dữ liệu");
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleImportCancel = () => {
+    setImportModalOpen(false);
+    setImportFileList([]);
+    setImportPreviewData(null);
+  };
+
+  const handleImportReset = () => {
+    setImportFileList([]);
+    setImportPreviewData(null);
+  };
+
   // Expose actions to parent
   useImperativeHandle(ref, () => ({
     handleCreate,
+    handleDownloadTemplate,
+    handleImport,
   }));
 
   const canEdit = authService.hasPermission(PERMISSIONS.Notes.Edit);
@@ -341,6 +421,19 @@ const NotesList = forwardRef<NotesActions, NotesTabProps>(({ onDataChange, refre
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* Import Modal */}
+      <ImportNoteModal
+        open={importModalOpen}
+        loading={importLoading}
+        fileList={importFileList}
+        previewData={importPreviewData}
+        onFileListChange={setImportFileList}
+        onPreview={handleImportPreview}
+        onConfirm={handleImportConfirm}
+        onCancel={handleImportCancel}
+        onReset={handleImportReset}
+      />
     </>
   );
 });
