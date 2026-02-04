@@ -35,6 +35,99 @@ export const formatNumber = (value: number): string => {
 };
 
 /**
+ * Strip <p> tags from HTML string but keep inner HTML content
+ * Useful for rendering limit values with subscript/superscript from rich text editor
+ * @param html - HTML string that may contain <p> wrapper tags
+ * @returns HTML string without <p> wrapper tags
+ *
+ * @example
+ * stripPTags("<p>10<sup>2</sup></p>") // returns "10<sup>2</sup>"
+ * stripPTags("<p>H<sub>2</sub>O</p>") // returns "H<sub>2</sub>O"
+ * stripPTags("plain text") // returns "plain text"
+ */
+export const stripPTags = (html: string | undefined | null): string => {
+  if (!html) return "";
+  return html.replace(/^<p>|<\/p>$/gi, "").trim();
+};
+
+/**
+ * Convert HTML superscript/subscript to mathematical expression
+ * - <sup>n</sup> becomes ^n (power)
+ * - <sub>n</sub> is removed (subscript is not used in calculations)
+ * - Unicode superscript characters (⁰¹²³⁴⁵⁶⁷⁸⁹) are converted to ^n
+ *
+ * @param html - HTML string containing <sup>/<sub> tags or Unicode superscripts
+ * @returns Plain text mathematical expression
+ *
+ * @example
+ * convertHtmlToMathExpression("2<sup>3</sup>") // returns "2^3"
+ * convertHtmlToMathExpression("3<sup>2</sup> x 4") // returns "3^2 x 4"
+ * convertHtmlToMathExpression("10<sup>-2</sup>") // returns "10^-2"
+ * convertHtmlToMathExpression("H<sub>2</sub>O") // returns "H2O"
+ * convertHtmlToMathExpression("2³") // returns "2^3"
+ * convertHtmlToMathExpression("3² x 4") // returns "3^2 x 4"
+ */
+export const convertHtmlToMathExpression = (html: string | undefined | null): string => {
+  if (!html) return "";
+
+  let result = html;
+
+  // First strip p tags
+  result = result.replace(/^<p>|<\/p>$/gi, "").trim();
+
+  // Convert <sup>content</sup> to ^(content)
+  // Handle nested content and negative numbers
+  result = result.replace(/<sup>([^<]*)<\/sup>/gi, (_, content) => {
+    const trimmed = content.trim();
+    // If content has operators or multiple digits, wrap in parentheses
+    if (trimmed.length > 1 || trimmed.startsWith("-")) {
+      return `^(${trimmed})`;
+    }
+    return `^${trimmed}`;
+  });
+
+  // Remove <sub>content</sub> (subscript is not used in math calculations)
+  result = result.replace(/<sub>([^<]*)<\/sub>/gi, "$1");
+
+  // Remove any remaining HTML tags
+  result = result.replace(/<[^>]+>/g, "");
+
+  // Convert Unicode superscript characters to ^n
+  const superscriptMap: Record<string, string> = {
+    "⁰": "0", "¹": "1", "²": "2", "³": "3", "⁴": "4",
+    "⁵": "5", "⁶": "6", "⁷": "7", "⁸": "8", "⁹": "9",
+    "⁻": "-", "⁺": "+",
+  };
+
+  // Find sequences of Unicode superscript characters and convert them
+  result = result.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹⁻⁺]+/g, (match) => {
+    const converted = match.split("").map(c => superscriptMap[c] || c).join("");
+    // If the superscript is more than one character or starts with minus, wrap in parentheses
+    if (converted.length > 1 || converted.startsWith("-")) {
+      return `^(${converted})`;
+    }
+    return `^${converted}`;
+  });
+
+  // Convert Unicode subscript characters (just remove the subscript notation)
+  const subscriptMap: Record<string, string> = {
+    "₀": "0", "₁": "1", "₂": "2", "₃": "3", "₄": "4",
+    "₅": "5", "₆": "6", "₇": "7", "₈": "8", "₉": "9",
+  };
+  result = result.replace(/[₀₁₂₃₄₅₆₇₈₉]+/g, (match) => {
+    return match.split("").map(c => subscriptMap[c] || c).join("");
+  });
+
+  // Decode HTML entities
+  result = result.replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&nbsp;/g, " ");
+
+  return result.trim();
+};
+
+/**
  * Safely evaluate a mathematical expression string
  * Supports: +, -, *, /, ^ (power), parentheses
  * Does NOT use eval() for security reasons

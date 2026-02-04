@@ -13,7 +13,7 @@ import {
 import StatusTag from "../../../components/common/StatusTag";
 import { CheckOutlined, CloseOutlined } from "../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
-import { formatDate, parseResultToNumber } from "../../../utils/formatters";
+import { formatDate, parseResultToNumber, stripPTags, convertHtmlToMathExpression } from "../../../utils/formatters";
 import {
   QualityManagementIndicatorDto,
   QualityIndicatorApprovalStatus,
@@ -197,8 +197,9 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
 
     // Check if it's a range comparison (both lowerLimit and upperLimit exist)
     if (lowerLimit && upperLimit) {
-      const lowerValue = parseResultToNumber(lowerLimit);
-      const upperValue = parseResultToNumber(upperLimit);
+      // Convert HTML superscript/subscript to math expression before parsing
+      const lowerValue = parseResultToNumber(convertHtmlToMathExpression(lowerLimit));
+      const upperValue = parseResultToNumber(convertHtmlToMathExpression(upperLimit));
       if (lowerValue === null || upperValue === null) return null;
 
       // Check lower bound
@@ -243,8 +244,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     // Single limit comparison
     if (!comparisonOperator || !allowedLimit) return null;
 
-    // Parse limit to number
-    const limitValue = parseResultToNumber(allowedLimit);
+    // Convert HTML superscript/subscript to math expression and parse limit to number
+    const limitValue = parseResultToNumber(convertHtmlToMathExpression(allowedLimit));
     if (limitValue === null) return null;
 
     // Compare based on operator (support both <= and ≤ formats)
@@ -509,10 +510,34 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         width: 120,
         render: (_, record) => {
           if (record._isParentWithChildren) return "-";
-          if (record.comparisonOperator && record.allowedLimit) {
-            return `${record.comparisonOperator} ${record.allowedLimit}`;
+          // Range case: both lowerLimit and upperLimit have values
+          if (record.lowerLimit && record.upperLimit) {
+            const lower = record.lowerOperator || ">";
+            const upper = record.upperOperator || "<";
+            const lowerHtml = stripPTags(record.lowerLimit);
+            const upperHtml = stripPTags(record.upperLimit);
+            return (
+              <span>
+                {lower} <span dangerouslySetInnerHTML={{ __html: lowerHtml }} />
+                {" và "}
+                {upper} <span dangerouslySetInnerHTML={{ __html: upperHtml }} />
+              </span>
+            );
           }
-          return record.referenceLimit || "-";
+          // Single limit case
+          if (record.comparisonOperator && record.allowedLimit) {
+            const limitHtml = stripPTags(record.allowedLimit);
+            return (
+              <span>
+                {record.comparisonOperator} <span dangerouslySetInnerHTML={{ __html: limitHtml }} />
+              </span>
+            );
+          }
+          if (record.referenceLimit) {
+            const refHtml = stripPTags(record.referenceLimit);
+            return <span dangerouslySetInnerHTML={{ __html: refHtml }} />;
+          }
+          return "-";
         },
       },
       {
@@ -524,14 +549,21 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           // Hide for parent indicators with children
           if (record._isParentWithChildren) return "-";
 
-          // Need result and limit info to calculate
+          // Need result to calculate
           if (!record.result) return null;
-          if (!record.comparisonOperator || !record.allowedLimit) return null;
+          // Need either single limit or range limits
+          const hasSingleLimit = record.comparisonOperator && record.allowedLimit;
+          const hasRangeLimit = record.lowerLimit && record.upperLimit;
+          if (!hasSingleLimit && !hasRangeLimit) return null;
 
           const passFailStatus = calculatePassFail(
             record.result,
             record.comparisonOperator,
-            record.allowedLimit
+            record.allowedLimit,
+            record.lowerOperator,
+            record.lowerLimit,
+            record.upperOperator,
+            record.upperLimit
           );
 
           if (passFailStatus === "pass") {
