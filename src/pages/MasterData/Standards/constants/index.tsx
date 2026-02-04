@@ -149,6 +149,7 @@ export const getStandardColumns = (
 export interface StandardIndicatorWithPosition extends StandardIndicatorDto {
   _isFirstSub?: boolean;
   _isLastSub?: boolean;
+  _hasSubIndicators?: boolean; // Flag to indicate if parent has sub-indicators
 }
 
 // Columns cho bảng chỉ tiêu trong tiêu chuẩn (indicator level)
@@ -298,8 +299,8 @@ export const getIndicatorColumns = (
               />
             </Tooltip>
           )}
-          {/* Only show edit button for sub-indicators - parent indicators don't have limits to edit */}
-          {canEdit && isSubIndicator && (
+          {/* Show edit button for: sub-indicators OR parent indicators without sub-indicators */}
+          {canEdit && (isSubIndicator || !record._hasSubIndicators) && (
             <Tooltip title="Sửa">
               <Button
                 type="link"

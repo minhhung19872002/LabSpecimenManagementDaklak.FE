@@ -78,10 +78,17 @@ const sortIndicatorsByHierarchy = (
   }
 
   sortedParents.forEach(parent => {
-    result.push(parent);
     // Match by both indicatorId AND specimenTypeId
     const key = `${parent.indicatorId}|${parent.specimenTypeId || ""}`;
     const childSubs = subsByParentAndSpecimen.get(key);
+    const hasSubIndicators = !!childSubs && childSubs.length > 0;
+
+    // Add parent with _hasSubIndicators flag
+    result.push({
+      ...parent,
+      _hasSubIndicators: hasSubIndicators,
+    });
+
     if (childSubs) {
       childSubs.forEach((sub, index) => {
         result.push({
