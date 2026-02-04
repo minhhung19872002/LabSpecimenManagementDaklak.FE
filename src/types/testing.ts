@@ -146,6 +146,7 @@ export interface TestingDetailDto {
   completedIndicatorCount: number;
   totalIndicatorCount: number;
   samples: TestingSampleDto[];
+  isMy: boolean;  // Có phải công việc của user hiện tại hay không
 }
 
 // Testing Sample DTO
