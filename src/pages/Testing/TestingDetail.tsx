@@ -53,9 +53,8 @@ const TestingDetail: React.FC = () => {
   const canSendResult = actionPermissions.sendResult?.canAll || false;
 
   // Tổng hợp: có thể thao tác (nhập/sửa/gửi) nếu có bất kỳ quyền nào
-  // Nhưng nếu đang xem từ tab "Công việc của Lab" thì chỉ readonly
-  // Thêm check: task phải là của user hiện tại (isMy = true)
-  const canPerformActions = !isLabView && detail?.isMy && (canInputResult || canEditResult || canSendResult);
+  // Ưu tiên isMy: nếu task là của user hiện tại thì cho phép thao tác bất kể view mode
+  const canPerformActions = detail?.isMy && (canInputResult || canEditResult || canSendResult);
 
   // Helper function to update indicators optimistically (indicator-level only)
   // Task-level status is fetched from server to avoid duplicating BE logic
