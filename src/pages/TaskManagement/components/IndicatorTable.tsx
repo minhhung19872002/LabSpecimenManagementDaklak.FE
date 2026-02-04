@@ -1124,13 +1124,11 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       },
       getCheckboxProps: (record: IndicatorWithPosition) => {
         if (selectionMode === "assignment") {
-          // Assignment mode: chỉ disable cho Approved và CustomerCancelled
-          // Các trạng thái khác (Pending, Entered, Rejected) đều có thể chọn để giao việc
+          // Assignment mode: chỉ cho phép giao việc cho chỉ tiêu đã được "Chấp nhận TN" (AcceptedForTesting)
+          // Các chỉ tiêu chưa được phê duyệt sẽ bị disable
           return {
             disabled:
-              record.approvalStatus === IndicatorApprovalStatus.Approved ||
-              record.approvalStatus ===
-                IndicatorApprovalStatus.CustomerCancelled,
+              record.approvalStatus !== IndicatorApprovalStatus.AcceptedForTesting,
             name: record.id,
           };
         }
