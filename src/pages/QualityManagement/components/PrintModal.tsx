@@ -32,7 +32,7 @@ import {
 import { API_BASE_URL } from "../../../services/api";
 import userService, { UserLookupDto } from "../../../services/userService";
 import { IndicatorName } from "../../../components/common";
-import { parseResultToNumber } from "../../../utils/formatters";
+import { parseResultToNumber, convertHtmlToMathExpression } from "../../../utils/formatters";
 
 const { Text } = Typography;
 
@@ -637,7 +637,8 @@ const PrintModal: React.FC<PrintModalProps> = ({
     const resultValue = parseResultToNumber(result);
     if (resultValue === null) return null;
 
-    const limitValue = parseResultToNumber(allowedLimit);
+    // Convert HTML superscript/subscript to math expression and parse limit
+    const limitValue = parseResultToNumber(convertHtmlToMathExpression(allowedLimit));
     if (limitValue === null) return null;
 
     switch (comparisonOperator) {

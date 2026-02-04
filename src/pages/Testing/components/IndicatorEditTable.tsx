@@ -21,7 +21,7 @@ import {
   StopOutlined,
 } from "../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
-import { formatDate } from "../../../utils/formatters";
+import { formatDate, stripPTags } from "../../../utils/formatters";
 import {
   TestingIndicatorDto,
   SaveIndicatorResultDto,
@@ -557,16 +557,32 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     {
       title: "Giới hạn",
       key: "allowedLimit",
-      width: 120,
+      width: 150,
       render: (_, record) => {
         // Parent có children -> không hiển thị
         if (record._isParentWithChildren) {
           return <Text type="secondary">-</Text>;
         }
-        if (record.comparisonOperator && record.allowedLimit) {
+        // Range case: both lowerLimit and upperLimit have values
+        if (record.lowerLimit && record.upperLimit) {
+          const lower = record.lowerOperator || ">";
+          const upper = record.upperOperator || "<";
+          const lowerHtml = stripPTags(record.lowerLimit);
+          const upperHtml = stripPTags(record.upperLimit);
           return (
             <Text>
-              {record.comparisonOperator} {record.allowedLimit}
+              {lower} <span dangerouslySetInnerHTML={{ __html: lowerHtml }} />
+              {" và "}
+              {upper} <span dangerouslySetInnerHTML={{ __html: upperHtml }} />
+            </Text>
+          );
+        }
+        // Single limit case
+        if (record.comparisonOperator && record.allowedLimit) {
+          const limitHtml = stripPTags(record.allowedLimit);
+          return (
+            <Text>
+              {record.comparisonOperator} <span dangerouslySetInnerHTML={{ __html: limitHtml }} />
             </Text>
           );
         }

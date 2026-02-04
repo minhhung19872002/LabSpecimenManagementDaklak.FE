@@ -133,6 +133,10 @@ export interface QualityManagementIndicatorDto {
   referenceLimit?: string;
   comparisonOperator?: string;  // Ký hiệu so sánh (<=, >=, <, >, =)
   allowedLimit?: string;  // Giới hạn cho phép
+  lowerOperator?: string;       // Ký hiệu cận dưới (>, >=) - cho khoảng
+  lowerLimit?: string;          // Giá trị cận dưới - cho khoảng
+  upperOperator?: string;       // Ký hiệu cận trên (<, <=) - cho khoảng
+  upperLimit?: string;          // Giá trị cận trên - cho khoảng
   approvalStatus: QualityIndicatorApprovalStatus;
   rejectionReason?: string;
   isResultSent: boolean;  // DEPRECATED

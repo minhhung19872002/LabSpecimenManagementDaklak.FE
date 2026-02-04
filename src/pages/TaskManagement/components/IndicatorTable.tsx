@@ -13,7 +13,7 @@ import {
 import StatusTag from "../../../components/common/StatusTag";
 import type { TableRowSelection } from "antd/es/table/interface";
 import { CheckOutlined, CloseOutlined } from "../../../components/common/Icon";
-import { formatDate, parseResultToNumber } from "../../../utils/formatters";
+import { formatDate, parseResultToNumber, stripPTags, convertHtmlToMathExpression } from "../../../utils/formatters";
 import {
   LaboratoryTaskIndicatorDto,
   IndicatorApprovalStatus,
@@ -205,8 +205,9 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
 
     // Check if it's a range comparison (both lowerLimit and upperLimit exist)
     if (lowerLimit && upperLimit) {
-      const lowerValue = parseResultToNumber(lowerLimit);
-      const upperValue = parseResultToNumber(upperLimit);
+      // Convert HTML superscript/subscript to math expression before parsing
+      const lowerValue = parseResultToNumber(convertHtmlToMathExpression(lowerLimit));
+      const upperValue = parseResultToNumber(convertHtmlToMathExpression(upperLimit));
       if (lowerValue === null || upperValue === null) return null;
 
       // Check lower bound
@@ -251,8 +252,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     // Single limit comparison
     if (!comparisonOperator || !allowedLimit) return null;
 
-    // Parse limit to number (also supports scientific notation and math expressions)
-    const limitValue = parseResultToNumber(allowedLimit);
+    // Convert HTML superscript/subscript to math expression and parse limit to number
+    const limitValue = parseResultToNumber(convertHtmlToMathExpression(allowedLimit));
     if (limitValue === null) return null;
 
     // Compare based on operator (support both <= and ≤ formats)
@@ -780,17 +781,22 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             if (lowerLimit && upperLimit) {
               const lower = lowerOperator || ">";
               const upper = upperOperator || "<";
+              const lowerHtml = stripPTags(lowerLimit);
+              const upperHtml = stripPTags(upperLimit);
               return (
                 <Text>
-                  {lower} {lowerLimit} và {upper} {upperLimit}
+                  {lower} <span dangerouslySetInnerHTML={{ __html: lowerHtml }} />
+                  {" và "}
+                  {upper} <span dangerouslySetInnerHTML={{ __html: upperHtml }} />
                 </Text>
               );
             }
             // Single limit case
             if (comparisonOperator && allowedLimit) {
+              const limitHtml = stripPTags(allowedLimit);
               return (
                 <Text>
-                  {comparisonOperator} {allowedLimit}
+                  {comparisonOperator} <span dangerouslySetInnerHTML={{ __html: limitHtml }} />
                 </Text>
               );
             }
@@ -801,17 +807,22 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             if (record.lowerLimit && record.upperLimit) {
               const lower = record.lowerOperator || ">";
               const upper = record.upperOperator || "<";
+              const lowerHtml = stripPTags(record.lowerLimit);
+              const upperHtml = stripPTags(record.upperLimit);
               return (
                 <Text>
-                  {lower} {record.lowerLimit} và {upper} {record.upperLimit}
+                  {lower} <span dangerouslySetInnerHTML={{ __html: lowerHtml }} />
+                  {" và "}
+                  {upper} <span dangerouslySetInnerHTML={{ __html: upperHtml }} />
                 </Text>
               );
             }
             // Single limit case from API
             if (record.comparisonOperator && record.allowedLimit) {
+              const limitHtml = stripPTags(record.allowedLimit);
               return (
                 <Text>
-                  {record.comparisonOperator} {record.allowedLimit}
+                  {record.comparisonOperator} <span dangerouslySetInnerHTML={{ __html: limitHtml }} />
                 </Text>
               );
             }
