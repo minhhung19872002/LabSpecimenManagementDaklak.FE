@@ -6,6 +6,7 @@ import {
   CreateTestMethodDto,
   UpdateTestMethodDto,
   AddIndicatorsToTestMethodDto,
+  TestMethodIndicatorDto,
 } from "../../../../services/masterDataService";
 import { GroupedTestMethodData } from "../types";
 import { TestMethodFormData } from "../schemas/testMethodSchema";
@@ -38,6 +39,11 @@ export const useTestMethodsActions = ({
   const [addIndicatorsModalOpen, setAddIndicatorsModalOpen] = useState(false);
   const [addIndicatorsLoading, setAddIndicatorsLoading] = useState(false);
   const [selectedTestMethodId, setSelectedTestMethodId] = useState<string | null>(null);
+
+  // Edit Indicator modal state
+  const [editIndicatorModalOpen, setEditIndicatorModalOpen] = useState(false);
+  const [editIndicatorLoading, setEditIndicatorLoading] = useState(false);
+  const [editingIndicator, setEditingIndicator] = useState<TestMethodIndicatorDto | null>(null);
 
   // TestMethod CRUD
   const handleCreate = (form: UseFormReturn<TestMethodFormData>) => {
@@ -159,6 +165,41 @@ export const useTestMethodsActions = ({
     }
   };
 
+  // Edit Indicator in TestMethod
+  const handleOpenEditIndicator = (indicator: TestMethodIndicatorDto) => {
+    setEditingIndicator(indicator);
+    setEditIndicatorModalOpen(true);
+  };
+
+  const handleEditIndicatorOk = async (data: { unitPrice: number }) => {
+    if (!editingIndicator) return;
+
+    try {
+      setEditIndicatorLoading(true);
+      await testMethodService.updateIndicator(
+        editingIndicator.testMethodId,
+        editingIndicator.indicatorId,
+        editingIndicator.specimenTypeId || undefined,
+        data
+      );
+      message.success("Cập nhật chỉ tiêu thành công!");
+      setEditIndicatorModalOpen(false);
+      setEditingIndicator(null);
+      fetchData();
+      onDataChange?.();
+    } catch (error: unknown) {
+      console.error("Failed to update indicator:", error);
+      message.error(getApiErrorMessage(error, "Không thể cập nhật chỉ tiêu"));
+    } finally {
+      setEditIndicatorLoading(false);
+    }
+  };
+
+  const handleEditIndicatorCancel = () => {
+    setEditIndicatorModalOpen(false);
+    setEditingIndicator(null);
+  };
+
   // Toggle active status
   const handleToggleActive = async (id: string) => {
     try {
@@ -243,6 +284,14 @@ export const useTestMethodsActions = ({
 
     // Remove indicator
     handleRemoveIndicator,
+
+    // Edit indicator modal
+    editIndicatorModalOpen,
+    editIndicatorLoading,
+    editingIndicator,
+    handleOpenEditIndicator,
+    handleEditIndicatorOk,
+    handleEditIndicatorCancel,
 
     // Toggle active
     handleToggleActive,

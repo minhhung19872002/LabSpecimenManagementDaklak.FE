@@ -635,6 +635,20 @@ export const testMethodService = {
   removeIndicator: async (testMethodId: string, indicatorId: string): Promise<void> => {
     await api.delete(`${TEST_METHOD_URL}/${testMethodId}/indicators/${indicatorId}`);
   },
+  updateIndicator: async (
+    testMethodId: string,
+    indicatorId: string,
+    specimenTypeId: string | undefined,
+    data: { unitPrice: number }
+  ): Promise<TestMethodIndicatorDto> => {
+    const params = specimenTypeId ? { specimenTypeId } : {};
+    const response = await api.put<TestMethodIndicatorDto>(
+      `${TEST_METHOD_URL}/${testMethodId}/indicators/${indicatorId}`,
+      data,
+      { params }
+    );
+    return response.data;
+  },
   toggleActive: async (id: string): Promise<TestMethodDto> => {
     const response = await api.post<TestMethodDto>(`${TEST_METHOD_URL}/${id}/toggle-active`);
     return response.data;
