@@ -132,10 +132,8 @@ const TaskManagementDetail: React.FC = () => {
     Record<string, string | null>
   >({});
 
-  // Standards data for auto-set feature
-  const [standardsData, setStandardsData] = useState<
-    StandardWithIndicatorsDto[]
-  >([]);
+  // Standards data for auto-set feature (use ref to avoid re-renders and infinite loops)
+  const standardsDataRef = React.useRef<StandardWithIndicatorsDto[]>([]);
 
   // Bulk reject modal state
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
@@ -265,20 +263,25 @@ const TaskManagementDetail: React.FC = () => {
   // Track which indicators have been processed for auto-set standard (to avoid duplicate API calls)
   const processedIndicatorsRef = React.useRef<Set<string>>(new Set());
 
+  // Track if standards have been loaded (to prevent infinite loop)
+  const standardsLoadedRef = React.useRef<boolean>(false);
+
   // Auto-set StandardId for indicators that don't have one
   // Load standards and check which indicators need auto-set
   useEffect(() => {
     const autoSetStandards = async () => {
       if (!task?.indicators || task.indicators.length === 0) return;
 
-      // Load standards if not loaded yet
-      let standards = standardsData;
-      if (standards.length === 0) {
+      // Load standards if not loaded yet (use ref to prevent infinite loop)
+      let standards = standardsDataRef.current;
+      if (!standardsLoadedRef.current) {
         try {
+          standardsLoadedRef.current = true; // Set flag before API call to prevent duplicate calls
           standards = await standardService.getWithIndicators();
-          setStandardsData(standards);
+          standardsDataRef.current = standards;
         } catch (error) {
           console.error("Failed to load standards for auto-set:", error);
+          standardsLoadedRef.current = false; // Reset flag on error to allow retry
           return;
         }
       }
@@ -336,7 +339,7 @@ const TaskManagementDetail: React.FC = () => {
     };
 
     autoSetStandards();
-  }, [task?.indicators, standardsData]);
+  }, [task?.indicators]);
 
   // Set default active tab based on task status
   useEffect(() => {
@@ -1905,6 +1908,8 @@ const TaskManagementDetail: React.FC = () => {
                     ((task.status === LaboratoryTaskStatus.FullyAccepted ||
                       task.status === LaboratoryTaskStatus.PartialAccepted ||
                       task.status === LaboratoryTaskStatus.Assigned ||
+                      task.status === LaboratoryTaskStatus.InProgress ||
+                      task.status === LaboratoryTaskStatus.WaitingApproval ||
                       task.status === LaboratoryTaskStatus.SentToQuality) &&
                       (task.indicators?.some(
                         (ind) =>
