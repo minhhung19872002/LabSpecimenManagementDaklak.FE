@@ -48,6 +48,8 @@ const processQueue = (error: any, token: string | null = null) => {
     if (error) {
       request.reject(error);
     } else if (token) {
+      // Mark as retried to prevent infinite loop
+      (request.config as InternalAxiosRequestConfig & { _retry?: boolean })._retry = true;
       request.config.headers.Authorization = `Bearer ${token}`;
       request.resolve(apiClient(request.config));
     }
@@ -66,6 +68,59 @@ const handleUnauthorized = () => {
 const handleForbidden = () => {
   if (!window.location.pathname.includes('/403')) {
     window.location.href = '/403';
+  }
+};
+
+// Try to refresh token and retry the request
+const tryRefreshTokenAndRetry = async (originalConfig: InternalAxiosRequestConfig): Promise<AxiosResponse | null> => {
+  // If we're already refreshing, queue this request
+  if (isRefreshing) {
+    return new Promise((resolve, reject) => {
+      failedQueue.push({ resolve, reject, config: originalConfig });
+    });
+  }
+
+  isRefreshing = true;
+  const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+
+  if (!refreshToken) {
+    isRefreshing = false;
+    processQueue(new Error('No refresh token'), null);
+    return null;
+  }
+
+  try {
+    const response = await axios.post(`${API_BASE_URL}/api/v1/auth/refresh-token`, {
+      refreshToken
+    });
+
+    const newAccessToken = response.data?.accessToken || response.data?.data?.accessToken;
+    const newRefreshToken = response.data?.refreshToken || response.data?.data?.refreshToken;
+
+    if (newAccessToken) {
+      localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
+      if (newRefreshToken) {
+        localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
+      }
+
+      // Update authorization header for the original request
+      originalConfig.headers.Authorization = `Bearer ${newAccessToken}`;
+
+      // Process queued requests with new token
+      processQueue(null, newAccessToken);
+      isRefreshing = false;
+
+      // Retry the original request
+      return apiClient(originalConfig);
+    } else {
+      // API returned success but no token - treat as error
+      throw new Error('No access token in refresh response');
+    }
+  } catch (refreshError) {
+    // Process queued requests with error
+    processQueue(refreshError, null);
+    isRefreshing = false;
+    return null;
   }
 };
 
@@ -97,20 +152,38 @@ apiClient.interceptors.request.use(
 
 // Response interceptor - unwrap API response
 apiClient.interceptors.response.use(
-  (response: AxiosResponse) => {
+  async (response: AxiosResponse) => {
     // Skip processing for blob responses (file downloads)
     if (response.config.responseType === 'blob') {
       return response;
     }
 
-    // Check if response is HTML (redirect to login page)
+    // Check if response is HTML (redirect to login page after 302)
+    // This happens when backend returns 302 redirect and axios follows it
     const contentType = response.headers['content-type'] || '';
     if (contentType.includes('text/html')) {
-      // Backend returned HTML (possibly error page or redirect)
-      // Redirect to 401 page - let user decide to logout manually
-      if (!window.location.pathname.includes('/401')) {
-        window.location.href = '/401';
+      // Try to refresh token and retry the request
+      const originalConfig = response.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+      // Skip if already retried or is auth endpoint
+      if (originalConfig._retry ||
+          originalConfig.url?.includes('/auth/login') ||
+          originalConfig.url?.includes('/auth/refresh-token')) {
+        handleUnauthorized();
+        return Promise.reject({
+          response: { status: 401, data: { message: 'Phiên đăng nhập đã hết hạn' } }
+        });
       }
+
+      originalConfig._retry = true;
+      const retryResult = await tryRefreshTokenAndRetry(originalConfig);
+
+      if (retryResult) {
+        return retryResult;
+      }
+
+      // Refresh failed, redirect to 401 page
+      handleUnauthorized();
       return Promise.reject({
         response: { status: 401, data: { message: 'Phiên đăng nhập đã hết hạn' } }
       });
@@ -134,7 +207,7 @@ apiClient.interceptors.response.use(
     return response;
   },
   async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean } | undefined;
 
     // Unwrap errors from wrapper format if present
     // BE returns: { data: null, success: false, statusCode: xxx, errors: {...} }
@@ -155,6 +228,12 @@ apiClient.interceptors.response.use(
 
     // Handle 401 Unauthorized
     if (error.response?.status === HTTP_STATUS.UNAUTHORIZED) {
+      // If no config (network error), just redirect
+      if (!originalRequest) {
+        handleUnauthorized();
+        return Promise.reject(error);
+      }
+
       // Skip refresh for login/refresh endpoints
       if (originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/refresh-token')) {
         handleUnauthorized();
@@ -167,59 +246,16 @@ apiClient.interceptors.response.use(
         return Promise.reject(error);
       }
 
-      // If we're already refreshing, queue this request
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject, config: originalRequest });
-        });
-      }
-
       originalRequest._retry = true;
-      isRefreshing = true;
+      const retryResult = await tryRefreshTokenAndRetry(originalRequest);
 
-      const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
-
-      if (!refreshToken) {
-        isRefreshing = false;
-        handleUnauthorized();
-        return Promise.reject(error);
+      if (retryResult) {
+        return retryResult;
       }
 
-      try {
-        // Call refresh token API directly (not through apiClient to avoid interceptor loop)
-        const response = await axios.post(`${API_BASE_URL}/api/v1/auth/refresh-token`, {
-          refreshToken
-        });
-
-        const newAccessToken = response.data?.accessToken || response.data?.data?.accessToken;
-        const newRefreshToken = response.data?.refreshToken || response.data?.data?.refreshToken;
-
-        if (newAccessToken) {
-          localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
-          if (newRefreshToken) {
-            localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
-          }
-
-          // Update authorization header for the original request
-          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-
-          // Process queued requests
-          processQueue(null, newAccessToken);
-
-          isRefreshing = false;
-
-          // Retry the original request
-          return apiClient(originalRequest);
-        } else {
-          throw new Error('No access token in refresh response');
-        }
-      } catch (refreshError) {
-        // Refresh failed - clear tokens and redirect to login
-        processQueue(refreshError, null);
-        isRefreshing = false;
-        handleUnauthorized();
-        return Promise.reject(refreshError);
-      }
+      // Refresh failed, redirect to 401 page
+      handleUnauthorized();
+      return Promise.reject(error);
     }
 
     return Promise.reject(error);
