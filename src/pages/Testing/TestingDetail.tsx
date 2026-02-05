@@ -15,6 +15,7 @@ import {
 } from "../../types/testing";
 import TestingDetailContainer from "./components/TestingDetailContainer";
 import { useMultipleActionPermissions } from "../../hooks/useActionPermission";
+import { PATH_ROUTES } from "../../constants";
 import "./Testing.css";
 
 interface ResultOption {
@@ -55,10 +56,14 @@ const TestingDetail: React.FC = () => {
   // Sử dụng hook để check permissions cho tất cả actions theo Permission Matrix
   // Testing: KTV (A), QLKT (V), Admin (V)
   const actionPermissions = useMultipleActionPermissions("testing", [
+    "viewDetail",
     "inputResult",
     "editResult",
     "sendResult",
   ]);
+
+  // Check quyền xem chi tiết từ Permission Matrix
+  const hasViewDetailPermission = actionPermissions.viewDetail?.canAll || actionPermissions.viewDetail?.canView || false;
 
   // KTV có quyền ALL = canAll = true, QLKT/Admin chỉ có View
   const canInputResult = actionPermissions.inputResult?.canAll || false;
@@ -68,6 +73,19 @@ const TestingDetail: React.FC = () => {
   // Tổng hợp: có thể thao tác (nhập/sửa/gửi) nếu có bất kỳ quyền nào
   // Ưu tiên isMy: nếu task là của user hiện tại thì cho phép thao tác bất kể view mode
   const canPerformActions = detail?.isMy && (canInputResult || canEditResult || canSendResult);
+
+  // Kiểm tra quyền xem chi tiết:
+  // - Có quyền viewDetail từ Permission Matrix (QLKT, Admin)
+  // - Hoặc task là của user hiện tại (isMy)
+  const canViewTestingDetail = hasViewDetailPermission || detail?.isMy;
+
+  // Redirect đến 403 nếu không có quyền xem (sau khi đã load detail xong)
+  useEffect(() => {
+    // Chỉ check sau khi đã load (loading = false và detail !== null)
+    if (!loading && detail !== null && !canViewTestingDetail) {
+      navigate(PATH_ROUTES.forbidden, { replace: true });
+    }
+  }, [loading, detail, canViewTestingDetail, navigate]);
 
   // Helper function to update indicators optimistically (indicator-level only)
   // Task-level status is fetched from server to avoid duplicating BE logic
@@ -191,13 +209,18 @@ const TestingDetail: React.FC = () => {
 
       // Open all sample panels by default
       setActiveKeys(result.samples.map((s) => s.sampleId));
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to load testing detail:", error);
+      // Nếu API trả về 403 (Forbidden) hoặc 401 (Unauthorized), redirect đến trang 403
+      if (error?.response?.status === 403 || error?.response?.status === 401) {
+        navigate(PATH_ROUTES.forbidden, { replace: true });
+        return;
+      }
       message.error("Không thể tải thông tin xét nghiệm");
     } finally {
       setLoading(false);
     }
-  }, [id, apiViewMode]);
+  }, [id, apiViewMode, navigate]);
 
   useEffect(() => {
     loadDetail();
