@@ -48,6 +48,27 @@ import "./IndicatorSelectionModal.css";
 
 const { Text } = Typography;
 
+// Helper function to normalize indicator name for sorting
+// Strips HTML tags and normalizes Unicode for proper alphabetical comparison
+const normalizeForSort = (name: string): string => {
+  // Remove HTML tags (e.g., <sub>, <sup>, <i>, etc.)
+  const withoutHtml = name.replace(/<[^>]*>/g, "");
+  // Normalize Unicode (NFD) and remove combining diacritical marks for base comparison
+  // But keep the original for locale-aware sorting
+  return withoutHtml.normalize("NFC").toLowerCase();
+};
+
+// Sort indicators alphabetically by name with proper Unicode handling
+const sortIndicatorsAlphabetically = (
+  indicators: IndicatorDto[]
+): IndicatorDto[] => {
+  return [...indicators].sort((a, b) => {
+    const nameA = normalizeForSort(a.name);
+    const nameB = normalizeForSort(b.name);
+    return nameA.localeCompare(nameB, "vi", { sensitivity: "base" });
+  });
+};
+
 // Component hiển thị tooltip chỉ khi text bị cắt (ellipsis)
 interface TruncateTooltipProps {
   title: string;
@@ -1218,12 +1239,22 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                 </span>
               </div>
 
-              {/* Loại mẫu within Nhóm CT (Level 2) */}
+              {/* Loại mẫu within Nhóm CT (Level 2) - sorted alphabetically */}
               {isGroupExpanded &&
                 (() => {
                   const specimenTypesArray = Array.from(
                     groupData.specimenTypes.values(),
-                  );
+                  ).sort((a, b) => {
+                    // "Khác" (others) always goes last
+                    if (a.id === "others") return 1;
+                    if (b.id === "others") return -1;
+                    // Sort alphabetically by name
+                    return normalizeForSort(a.name).localeCompare(
+                      normalizeForSort(b.name),
+                      "vi",
+                      { sensitivity: "base" }
+                    );
+                  });
                   return specimenTypesArray.map((stData, stIndex) => {
                     const isSpecimenTypeExpanded =
                       expandedSpecimenTypes.includes(
@@ -1314,18 +1345,21 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                           </span>
                         </div>
 
-                        {/* Chỉ tiêu within Loại mẫu (Level 3) */}
+                        {/* Chỉ tiêu within Loại mẫu (Level 3) - sorted alphabetically */}
                         {isSpecimenTypeExpanded &&
-                          stData.indicators.map((ind, indIndex) =>
-                            // Truyền specimenTypeId của group để chỉ hiển thị methods matching
-                            // "others" group không filter theo specimenType
-                            renderIndicatorWithMethods(
-                              ind,
-                              2,
-                              stData.id === "others" ? undefined : stData.id,
-                              indIndex === stData.indicators.length - 1,
-                            ),
-                          )}
+                          (() => {
+                            const sortedIndicators = sortIndicatorsAlphabetically(stData.indicators);
+                            return sortedIndicators.map((ind, indIndex) =>
+                              // Truyền specimenTypeId của group để chỉ hiển thị methods matching
+                              // "others" group không filter theo specimenType
+                              renderIndicatorWithMethods(
+                                ind,
+                                2,
+                                stData.id === "others" ? undefined : stData.id,
+                                indIndex === sortedIndicators.length - 1,
+                              ),
+                            );
+                          })()}
                       </div>
                     );
                   });
