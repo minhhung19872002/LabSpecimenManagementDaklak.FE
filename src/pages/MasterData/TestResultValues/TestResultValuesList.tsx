@@ -1,311 +1,208 @@
-import React, { useState, useEffect, useCallback, forwardRef, useImperativeHandle, useRef } from "react";
-import {
-  Table,
-  Button,
-  Space,
-  message,
-  Input,
-  Row,
-  Col,
-  Modal,
-  Form,
-  Popconfirm,
-} from "antd";
-import {
-  PlusOutlined,
-  SearchOutlined,
-  EditOutlined,
-  DeleteOutlined,
-} from "../../../components/common/Icon";
-import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
-import testResultValueService, {
-  TestResultValueDto,
-  CreateUpdateTestResultValueDto,
-} from "../../../services/testResultValueService";
-import { authService } from "../../../services/authService";
-import { PERMISSIONS } from "../../../constants/permissionMapping";
+import { useMemo, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
+import { Modal, Form, Input } from "antd";
+import { useForm, Controller } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
+import { useTestResultValuesData, useTestResultValuesActions, TestResultValueFormData } from "./hooks";
+import { TestResultValuesTable, AddIndicatorsModal } from "./components";
+import { getTestResultValueColumns, getIndicatorColumns } from "./constants";
 import { TestResultValuesTabProps, TestResultValuesActions } from "./types";
 
-const DEFAULT_PAGE_SIZE = 50;
+// Form validation schema
+const testResultValueSchema = yup.object({
+  name: yup
+    .string()
+    .required("Vui lòng nhập tên kết quả")
+    .max(200, "Tên kết quả tối đa 200 ký tự"),
+  description: yup.string().max(500, "Mô tả tối đa 500 ký tự"),
+});
 
-const TestResultValuesList = forwardRef<TestResultValuesActions, TestResultValuesTabProps>(({
-  onDataChange,
-  refreshKey,
-}, ref) => {
-  const [data, setData] = useState<TestResultValueDto[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searchText, setSearchText] = useState("");
-  const [pagination, setPagination] = useState({
-    current: 1,
-    pageSize: DEFAULT_PAGE_SIZE,
-    total: 0,
-  });
+const TestResultValuesList = forwardRef<TestResultValuesActions, TestResultValuesTabProps>(
+  ({ onDataChange, refreshKey }, ref) => {
+    const {
+      loading,
+      searchText,
+      groupedData,
+      expandedKeys,
+      indicatorGroups,
+      specimenTypes,
+      indicatorsByGroup,
+      setSearchText,
+      setExpandedKeys,
+      fetchData,
+      // Batch selection for indicators
+      selectedIndicatorKeys,
+      setSelectedIndicatorKeys,
+      batchLoading,
+      setBatchLoading,
+      // Helper functions
+      getIndicatorCompositeKey,
+      parseIndicatorCompositeKey,
+    } = useTestResultValuesData();
 
-  // Modal state
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalLoading, setModalLoading] = useState(false);
-  const [editingItem, setEditingItem] = useState<TestResultValueDto | null>(
-    null
-  );
-  const [form] = Form.useForm();
-
-  // Refresh data when refreshKey changes
-  const isFirstMount = useRef(true);
-  useEffect(() => {
-    if (isFirstMount.current) {
-      isFirstMount.current = false;
-      return;
-    }
-    if (refreshKey !== undefined) {
-      fetchData();
-    }
-  }, [refreshKey]);
-
-  const fetchData = useCallback(
-    async (page = 1, pageSize = DEFAULT_PAGE_SIZE) => {
-      try {
-        setLoading(true);
-        const result = await testResultValueService.getList({
-          skipCount: (page - 1) * pageSize,
-          maxResultCount: pageSize,
-          sorting: "creationTime desc",
-        });
-        setData(result.items);
-        setPagination({
-          current: page,
-          pageSize: pageSize,
-          total: result.totalCount,
-        });
-      } catch (err: any) {
-        console.error("Failed to fetch test result values:", err);
-        message.error("Không thể tải danh sách kết quả");
-      } finally {
-        setLoading(false);
-      }
-    },
-    []
-  );
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const handleTableChange = (paginationConfig: TablePaginationConfig) => {
-    fetchData(paginationConfig.current || 1, paginationConfig.pageSize);
-  };
-
-  const handleCreate = () => {
-    setEditingItem(null);
-    form.resetFields();
-    setModalOpen(true);
-  };
-
-  const handleEdit = (record: TestResultValueDto) => {
-    setEditingItem(record);
-    form.setFieldsValue({
-      name: record.name,
-      description: record.description,
-    });
-    setModalOpen(true);
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      await testResultValueService.delete(id);
-      message.success("Đã xóa kết quả");
-      fetchData(pagination.current, pagination.pageSize);
-      onDataChange?.();
-    } catch (err: any) {
-      console.error("Failed to delete:", err);
-      message.error("Không thể xóa kết quả");
-    }
-  };
-
-  const handleModalOk = async () => {
-    try {
-      const values = await form.validateFields();
-      setModalLoading(true);
-
-      const input: CreateUpdateTestResultValueDto = {
-        name: values.name,
-        description: values.description,
-      };
-
-      if (editingItem) {
-        await testResultValueService.update(editingItem.id, input);
-        message.success("Đã cập nhật kết quả");
-      } else {
-        await testResultValueService.create(input);
-        message.success("Đã thêm kết quả mới");
-      }
-
-      setModalOpen(false);
-      form.resetFields();
-      fetchData(pagination.current, pagination.pageSize);
-      onDataChange?.();
-    } catch (err: any) {
-      console.error("Failed to save:", err);
-      if (err.errorFields) {
-        // Form validation error
+    // Refresh data when refreshKey changes (when switching to this tab)
+    const isFirstMount = useRef(true);
+    useEffect(() => {
+      if (isFirstMount.current) {
+        isFirstMount.current = false;
         return;
       }
-      // Extract error message from API response
-      // API interceptor unwraps: err.response.data = { general: ["..."], server: ["..."] }
-      const responseData = err?.response?.data;
-      let errorMessage = "Không thể lưu kết quả";
-
-      if (responseData?.general?.[0]) {
-        errorMessage = responseData.general[0];
-      } else if (responseData?.server?.[0]) {
-        errorMessage = responseData.server[0];
-      } else if (responseData?.message) {
-        errorMessage = responseData.message;
-      } else if (err?.message) {
-        errorMessage = err.message;
+      if (refreshKey !== undefined) {
+        fetchData();
       }
+    }, [refreshKey]);
 
-      message.error(errorMessage);
-    } finally {
-      setModalLoading(false);
-    }
-  };
+    const {
+      // TestResultValue modal
+      modalOpen,
+      editingItem,
+      modalLoading,
+      handleCreate,
+      handleEdit,
+      handleDelete,
+      handleModalOk,
+      handleModalCancel,
+      // Add indicators modal
+      addIndicatorsModalOpen,
+      addIndicatorsLoading,
+      selectedTestResultValueId,
+      handleOpenAddIndicators,
+      handleAddIndicatorsOk,
+      handleAddIndicatorsCancel,
+      handleRemoveIndicator,
+      handleToggleIndicatorActive,
+      // Batch remove indicators
+      handleBatchRemoveIndicators,
+    } = useTestResultValuesActions({
+      fetchData,
+      onDataChange,
+      expandedKeys,
+      setExpandedKeys,
+      selectedIndicatorKeys,
+      setSelectedIndicatorKeys,
+      setBatchLoading,
+      parseIndicatorCompositeKey,
+    });
 
-  const handleModalCancel = () => {
-    setModalOpen(false);
-    form.resetFields();
-  };
+    const form = useForm<TestResultValueFormData>({
+      resolver: yupResolver(testResultValueSchema) as any,
+      defaultValues: { name: "", description: "" },
+    });
 
-  // Expose actions to parent
-  useImperativeHandle(ref, () => ({
-    handleCreate,
-  }));
+    // Get existing indicators for the selected test result value
+    const existingIndicators = useMemo(() => {
+      if (!selectedTestResultValueId) return [];
+      const item = groupedData.find((t) => t.id === selectedTestResultValueId);
+      return item?.indicators || [];
+    }, [selectedTestResultValueId, groupedData]);
 
-  // Filter data by search text
-  const filteredData = searchText
-    ? data.filter(
-        (item) =>
-          item.name.toLowerCase().includes(searchText.toLowerCase()) ||
-          item.code.toLowerCase().includes(searchText.toLowerCase())
-      )
-    : data;
+    // Memoized columns for test result values
+    const testResultValueColumns = useMemo(
+      () =>
+        getTestResultValueColumns(
+          (record) => handleEdit(record, form),
+          handleDelete
+        ),
+      [handleEdit, handleDelete, form]
+    );
 
-  const canEdit = authService.hasPermission(PERMISSIONS.TestResultValues.Edit);
-  const canDelete = authService.hasPermission(PERMISSIONS.TestResultValues.Delete);
+    // Memoized columns for indicators
+    const indicatorColumns = useMemo(
+      () => getIndicatorColumns(handleRemoveIndicator, handleToggleIndicatorActive),
+      [handleRemoveIndicator, handleToggleIndicatorActive]
+    );
 
-  const columns: ColumnsType<TestResultValueDto> = [
-    {
-      title: "STT",
-      key: "index",
-      width: 60,
-      render: (_, __, index) =>
-        (pagination.current - 1) * pagination.pageSize + index + 1,
-    },
-    {
-      title: "Mã",
-      dataIndex: "code",
-      key: "code",
-      width: 180,
-    },
-    {
-      title: "Tên kết quả",
-      dataIndex: "name",
-      key: "name",
-    },
-    {
-      title: "Mô tả",
-      dataIndex: "description",
-      key: "description",
-      ellipsis: true,
-    },
-    {
-      title: "Thao tác",
-      key: "actions",
-      width: 120,
-      render: (_, record) => (
-        <Space size="small">
-          {canEdit && (
-            <Button
-              type="link"
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() => handleEdit(record)}
-            />
-          )}
-          {canDelete && (
-            <Popconfirm
-              title="Bạn có chắc chắn muốn xóa?"
-              onConfirm={() => handleDelete(record.id)}
-              okText="Có"
-              cancelText="Không"
+    // Expose actions to parent
+    useImperativeHandle(ref, () => ({
+      handleCreate: () => handleCreate(form),
+    }));
+
+    return (
+      <>
+        {/* TestResultValues Table with nested Indicators */}
+        <TestResultValuesTable
+          loading={loading}
+          batchLoading={batchLoading}
+          groupedData={groupedData}
+          testResultValueColumns={testResultValueColumns}
+          indicatorColumns={indicatorColumns}
+          expandedKeys={expandedKeys}
+          searchText={searchText}
+          // Batch selection for indicators
+          selectedIndicatorKeys={selectedIndicatorKeys}
+          onSelectedIndicatorKeysChange={setSelectedIndicatorKeys}
+          onBatchRemoveIndicators={handleBatchRemoveIndicators}
+          // Handlers
+          onSearchChange={setSearchText}
+          onExpandedKeysChange={setExpandedKeys}
+          onAddIndicators={handleOpenAddIndicators}
+          getIndicatorCompositeKey={getIndicatorCompositeKey}
+        />
+
+        {/* Create/Edit TestResultValue Modal */}
+        <Modal
+          title={editingItem ? "Chỉnh sửa kết quả" : "Thêm kết quả mới"}
+          open={modalOpen}
+          onOk={form.handleSubmit((data) => handleModalOk(data, form))}
+          onCancel={() => handleModalCancel(form)}
+          confirmLoading={modalLoading}
+          okText={editingItem ? "Cập nhật" : "Thêm"}
+          cancelText="Hủy"
+          destroyOnClose
+          centered
+          width={500}
+        >
+          <Form layout="vertical" style={{ marginTop: 16 }}>
+            <Form.Item
+              label="Tên kết quả"
+              required
+              validateStatus={form.formState.errors.name ? "error" : undefined}
+              help={form.formState.errors.name?.message}
             >
-              <Button type="link" size="small" danger icon={<DeleteOutlined />} />
-            </Popconfirm>
-          )}
-        </Space>
-      ),
-    },
-  ];
+              <Controller
+                name="name"
+                control={form.control}
+                render={({ field }) => (
+                  <Input {...field} placeholder="Ví dụ: Đạt, Không đạt, Phù hợp..." />
+                )}
+              />
+            </Form.Item>
 
-  return (
-    <>
-      {/* Table */}
-      <Table
-        columns={columns}
-        dataSource={filteredData}
-        rowKey="id"
-        loading={loading}
-        pagination={{
-          ...pagination,
-          showSizeChanger: true,
-          showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
-          pageSizeOptions: [50, 100, 150],
-        }}
-        onChange={handleTableChange}
-        locale={{
-          emptyText: "Không có kết quả nào",
-        }}
-      />
+            <Form.Item
+              label="Mô tả"
+              validateStatus={form.formState.errors.description ? "error" : undefined}
+              help={form.formState.errors.description?.message}
+            >
+              <Controller
+                name="description"
+                control={form.control}
+                render={({ field }) => (
+                  <Input.TextArea
+                    {...field}
+                    rows={3}
+                    placeholder="Mô tả thêm về kết quả (không bắt buộc)"
+                  />
+                )}
+              />
+            </Form.Item>
+          </Form>
+        </Modal>
 
-      {/* Create/Edit Modal */}
-      <Modal
-        title={editingItem ? "Chỉnh sửa kết quả" : "Thêm kết quả mới"}
-        open={modalOpen}
-        onOk={handleModalOk}
-        onCancel={handleModalCancel}
-        confirmLoading={modalLoading}
-        okText={editingItem ? "Cập nhật" : "Thêm"}
-        cancelText="Hủy"
-        destroyOnHidden
-        centered
-        width={500}
-      >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            name="name"
-            label="Tên kết quả"
-            rules={[
-              { required: true, message: "Vui lòng nhập tên kết quả" },
-              { max: 200, message: "Tên kết quả tối đa 200 ký tự" },
-            ]}
-          >
-            <Input placeholder="Ví dụ: Đạt, Không đạt, Phù hợp..." />
-          </Form.Item>
-
-          <Form.Item
-            name="description"
-            label="Mô tả"
-            rules={[{ max: 500, message: "Mô tả tối đa 500 ký tự" }]}
-          >
-            <Input.TextArea
-              rows={3}
-              placeholder="Mô tả thêm về kết quả (không bắt buộc)"
-            />
-          </Form.Item>
-        </Form>
-      </Modal>
-    </>
-  );
-});
+        {/* Add Indicators Modal */}
+        <AddIndicatorsModal
+          open={addIndicatorsModalOpen}
+          loading={addIndicatorsLoading}
+          indicatorGroups={indicatorGroups}
+          indicatorsByGroup={indicatorsByGroup}
+          specimenTypes={specimenTypes}
+          existingIndicators={existingIndicators}
+          onOk={handleAddIndicatorsOk}
+          onCancel={handleAddIndicatorsCancel}
+        />
+      </>
+    );
+  }
+);
 
 TestResultValuesList.displayName = "TestResultValuesList";
 

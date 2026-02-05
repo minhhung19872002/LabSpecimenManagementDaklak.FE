@@ -1,5 +1,19 @@
 import api from './api';
 
+export interface TestResultValueIndicatorDto {
+  id: string;
+  testResultValueId: string;
+  indicatorId: string;
+  indicatorCode: string;
+  indicatorName: string;
+  indicatorFormattedName?: string;
+  specimenTypeId: string;
+  specimenTypeCode: string;
+  specimenTypeName: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
 export interface TestResultValueDto {
   id: string;
   code: string;
@@ -7,11 +21,21 @@ export interface TestResultValueDto {
   description?: string;
   isActive: boolean;
   sortOrder: number;
+  indicatorCount: number;
+  indicators?: TestResultValueIndicatorDto[];
 }
 
 export interface CreateUpdateTestResultValueDto {
   name: string;
   description?: string;
+}
+
+export interface AddIndicatorsDto {
+  indicators: { indicatorId: string; specimenTypeId: string }[];
+}
+
+export interface BatchRemoveIndicatorsDto {
+  keys: { indicatorId: string; specimenTypeId: string }[];
 }
 
 export interface PagedResultDto<T> {
@@ -60,6 +84,56 @@ export const testResultValueService = {
   async getActive(): Promise<TestResultValueDto[]> {
     const response = await api.get(`${BASE_URL}/active`);
     return response.data.items || response.data;
+  },
+
+  /**
+   * Lấy danh sách kết quả recommend cho chỉ tiêu
+   * - Nếu chỉ tiêu có kết quả riêng: chỉ trả về kết quả của chỉ tiêu đó
+   * - Nếu chỉ tiêu không có kết quả riêng: trả về tất cả kết quả không gắn chỉ tiêu
+   */
+  async getResultsForIndicator(indicatorId: string): Promise<TestResultValueDto[]> {
+    const response = await api.get(`${BASE_URL}/for-indicator/${indicatorId}`);
+    return response.data.items || response.data;
+  },
+
+  // Indicator management methods
+
+  /**
+   * Lấy danh sách kết quả kèm theo danh sách chỉ tiêu
+   */
+  async getWithIndicators(): Promise<TestResultValueDto[]> {
+    const response = await api.get(`${BASE_URL}/with-indicators`);
+    return response.data.items || response.data;
+  },
+
+  /**
+   * Thêm chỉ tiêu vào kết quả thử nghiệm
+   */
+  async addIndicators(id: string, data: AddIndicatorsDto): Promise<void> {
+    await api.post(`${BASE_URL}/${id}/indicators`, data);
+  },
+
+  /**
+   * Xóa một chỉ tiêu khỏi kết quả thử nghiệm
+   */
+  async removeIndicator(id: string, indicatorId: string, specimenTypeId: string): Promise<void> {
+    await api.delete(`${BASE_URL}/${id}/indicators/${indicatorId}?specimenTypeId=${specimenTypeId}`);
+  },
+
+  /**
+   * Toggle trạng thái active của chỉ tiêu trong kết quả thử nghiệm
+   */
+  async toggleIndicatorActive(id: string, indicatorId: string, specimenTypeId: string): Promise<TestResultValueIndicatorDto> {
+    const response = await api.post(`${BASE_URL}/${id}/indicators/${indicatorId}/toggle-active?specimenTypeId=${specimenTypeId}`);
+    return response.data;
+  },
+
+  /**
+   * Xóa nhiều chỉ tiêu khỏi kết quả thử nghiệm (batch)
+   */
+  async batchRemoveIndicators(id: string, data: BatchRemoveIndicatorsDto): Promise<number> {
+    const response = await api.post(`${BASE_URL}/${id}/indicators/batch-remove`, data);
+    return response.data;
   },
 };
 

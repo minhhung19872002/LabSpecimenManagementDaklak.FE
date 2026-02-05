@@ -167,6 +167,29 @@ export const useTestMethodsData = () => {
     return specimenTypes.filter(st => st.isActive && specimenTypeIds.has(st.id));
   }, [specimenTypesWithIndicators, specimenTypes]);
 
+  // Get indicators that are linked to a specific specimen type
+  // Returns only active indicators that have this specimen type in their SpecimenTypeIndicator list
+  const getIndicatorsBySpecimenType = useCallback((specimenTypeId: string): IndicatorDto[] => {
+    // Find the specimen type with its indicators
+    const specimenTypeWithIndicators = specimenTypesWithIndicators.find(
+      st => st.id === specimenTypeId && st.isActive
+    );
+
+    if (!specimenTypeWithIndicators?.indicators) {
+      return [];
+    }
+
+    // Get indicator IDs that are linked to this specimen type
+    const indicatorIds = new Set(
+      specimenTypeWithIndicators.indicators
+        .filter(sti => sti.isActive)
+        .map(sti => sti.indicatorId)
+    );
+
+    // Return active indicators that are in the set
+    return indicators.filter(ind => ind.isActive && indicatorIds.has(ind.id));
+  }, [specimenTypesWithIndicators, indicators]);
+
   return {
     testMethods,
     loading,
@@ -180,6 +203,7 @@ export const useTestMethodsData = () => {
     groupOptions,
     indicatorsByGroup,
     getSpecimenTypesByIndicator,
+    getIndicatorsBySpecimenType,
     setSearchText,
     setExpandedRowKeys,
     fetchData,

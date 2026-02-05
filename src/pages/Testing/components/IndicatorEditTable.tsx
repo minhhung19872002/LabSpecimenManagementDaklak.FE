@@ -47,6 +47,8 @@ interface IndicatorEditTableProps {
   isUrgent?: boolean;
   submitting?: boolean;
   resultOptions?: ResultOption[];
+  /** Function to get result options filtered by indicator */
+  getResultOptionsForIndicator?: (indicatorId: string) => ResultOption[];
   /** Có quyền thực hiện thao tác (nhập/sửa/gửi kết quả) theo Permission Matrix */
   canPerformActions?: boolean;
   onResultsChange: (results: SaveIndicatorResultDto[]) => void;
@@ -194,6 +196,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
   isUrgent = false,
   submitting = false,
   resultOptions = [],
+  getResultOptionsForIndicator,
   canPerformActions = false,
   onResultsChange,
   onSelectionChange,
@@ -608,10 +611,15 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
           record.testingStatus === IndicatorTestingStatus.Done ||
           record.testingStatus === IndicatorTestingStatus.Cancelled;
 
+        // Get filtered options for this specific indicator
+        const filteredOptions = getResultOptionsForIndicator
+          ? getResultOptionsForIndicator(record.indicatorId)
+          : resultOptions;
+
         return (
           <AutoComplete
             value={currentValue}
-            options={resultOptions}
+            options={filteredOptions}
             onChange={(value) => {
               handleFieldChange(record.id, "result", value);
             }}
