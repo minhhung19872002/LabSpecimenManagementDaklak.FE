@@ -1,6 +1,6 @@
 import { IndicatorImageDto, TestingStatus } from './testing';
 import { TestRequestStatus } from './testRequest';
-import { IndicatorApprovalStatus } from './laboratoryTask';
+import { IndicatorApprovalStatus, QLKTDisplayStatus } from './laboratoryTask';
 
 // Quality Management Status Enum
 export enum QualityManagementStatus {
@@ -356,6 +356,7 @@ export interface SampleAssignmentLogDto {
   // Status for highlighting
   indicatorApprovalStatus: IndicatorApprovalStatus;
   testingStatus?: TestingStatus;
+  qlktDisplayStatus?: QLKTDisplayStatus;
   qualityApprovalStatus?: QualityIndicatorApprovalStatus;
   isReportPublished: boolean;
 }
