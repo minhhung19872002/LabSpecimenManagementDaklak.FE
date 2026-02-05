@@ -191,7 +191,9 @@ const MasterDataList: React.FC = () => {
                   </Button>
                   <Button
                     icon={<UploadOutlined />}
-                    onClick={() => sampleTypeCategoriesRef.current?.handleImport()}
+                    onClick={() =>
+                      sampleTypeCategoriesRef.current?.handleImport()
+                    }
                   >
                     Nhập danh sách
                   </Button>
@@ -270,7 +272,7 @@ const MasterDataList: React.FC = () => {
                       standardsRef.current?.handleDownloadTemplate()
                     }
                   >
-                    Tải template mẫu
+                    Tải template
                   </Button>
                   <Button
                     icon={<UploadOutlined />}
@@ -323,13 +325,29 @@ const MasterDataList: React.FC = () => {
 
               {/* Test Result Values Tab */}
               {activeCategory === "testResultValues" && (
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => testResultValuesRef.current?.handleCreate()}
-                >
-                  Thêm kết quả
-                </Button>
+                <>
+                  <Button
+                    icon={<DownloadOutlined />}
+                    onClick={() =>
+                      testResultValuesRef.current?.handleDownloadTemplate()
+                    }
+                  >
+                    Tải template
+                  </Button>
+                  <Button
+                    icon={<UploadOutlined />}
+                    onClick={() => testResultValuesRef.current?.handleImport()}
+                  >
+                    Nhập danh sách
+                  </Button>
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => testResultValuesRef.current?.handleCreate()}
+                  >
+                    Thêm kết quả
+                  </Button>
+                </>
               )}
 
               {/* Notes Tab */}

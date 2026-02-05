@@ -22,6 +22,18 @@ interface ResultOption {
   label: string;
 }
 
+interface IndicatorSpecimenTypePair {
+  indicatorId: string;
+  specimenTypeId: string;
+}
+
+interface TestResultValueWithIndicator {
+  id: string;
+  name: string;
+  // List of (indicatorId, specimenTypeId) pairs this result value is associated with
+  indicatorSpecimenTypePairs: IndicatorSpecimenTypePair[];
+}
+
 const TestingDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -30,6 +42,7 @@ const TestingDetail: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [detail, setDetail] = useState<TestingDetailDto | null>(null);
   const [resultOptions, setResultOptions] = useState<ResultOption[]>([]);
+  const [allResultValues, setAllResultValues] = useState<TestResultValueWithIndicator[]>([]);
 
   // Check if viewing from "Công việc của Lab" tab (readonly mode)
   // Valid viewMode values: "my" (default), "lab" (readonly)
@@ -194,7 +207,20 @@ const TestingDetail: React.FC = () => {
   useEffect(() => {
     const loadResultOptions = async () => {
       try {
-        const data = await testResultValueService.getActive();
+        // Use getWithIndicators to get full data including indicators array
+        const data = await testResultValueService.getWithIndicators();
+        // Store full data for filtering by (indicatorId + specimenTypeId) pair
+        setAllResultValues(
+          data.map((item) => ({
+            id: item.id,
+            name: item.name,
+            indicatorSpecimenTypePairs: item.indicators?.map((ind) => ({
+              indicatorId: ind.indicatorId,
+              specimenTypeId: ind.specimenTypeId,
+            })) || [],
+          }))
+        );
+        // Default options (all results) - will be filtered per indicator
         setResultOptions(
           data.map((item) => ({
             value: item.name,
@@ -207,6 +233,33 @@ const TestingDetail: React.FC = () => {
     };
     loadResultOptions();
   }, []);
+
+  // Function to get result options filtered by (indicatorId + specimenTypeId)
+  // - If (indicatorId + specimenTypeId) has specific results declared, return only those
+  // - Otherwise, return ALL results
+  const getResultOptionsForIndicator = useCallback((indicatorId: string, specimenTypeId?: string): ResultOption[] => {
+    // Check if there are results specific to this (indicatorId + specimenTypeId) pair
+    const specificResults = allResultValues.filter(r =>
+      r.indicatorSpecimenTypePairs.some(pair =>
+        pair.indicatorId === indicatorId &&
+        (!specimenTypeId || pair.specimenTypeId === specimenTypeId)
+      )
+    );
+
+    if (specificResults.length > 0) {
+      // Has specific results - return only those
+      return specificResults.map(item => ({
+        value: item.name,
+        label: item.name,
+      }));
+    }
+
+    // No specific results for this (indicatorId + specimenTypeId) - return ALL results
+    return allResultValues.map(item => ({
+      value: item.name,
+      label: item.name,
+    }));
+  }, [allResultValues]);
 
   const handleResultsChange = (
     sampleId: string,
@@ -695,6 +748,7 @@ const TestingDetail: React.FC = () => {
       historyModal={historyModal}
       cannotTestModal={cannotTestModal}
       resultOptions={resultOptions}
+      getResultOptionsForIndicator={getResultOptionsForIndicator}
       canPerformActions={canPerformActions}
       onBack={() => navigate("/testing")}
       onCollapseChange={setActiveKeys}

@@ -13,8 +13,12 @@ import {
   TestRequestStatusLabels,
   TestRequestStatusColors,
 } from "../../../types/testRequest";
-import { IndicatorApprovalStatus } from "../../../types/laboratoryTask";
-import { TestingStatus } from "../../../types/testing";
+import {
+  IndicatorApprovalStatus,
+  QLKTDisplayStatus,
+  QLKTDisplayStatusLabels,
+  QLKTDisplayStatusColors,
+} from "../../../types/laboratoryTask";
 
 import "../../QualityManagement/components/SampleAssignmentLogTab.css";
 
@@ -322,12 +326,12 @@ const getRowColorClass = (record: ProcessedLogItem): string => {
     return "row-yellow";
   }
 
-  // Red: New/UnderReview OR Pending OR TestingStatus=InProgress
+  // Red: New/UnderReview OR Pending OR Testing in progress
   if (
     record.testRequestStatus === TestRequestStatus.New ||
     record.testRequestStatus === TestRequestStatus.UnderReview ||
     record.indicatorApprovalStatus === IndicatorApprovalStatus.Pending ||
-    record.testingStatus === TestingStatus.InProgress
+    record.qlktDisplayStatus === QLKTDisplayStatus.Testing
   ) {
     return "row-red";
   }
@@ -596,15 +600,19 @@ const LabSampleAssignmentLogTab: React.FC = () => {
       },
       {
         title: "Tình trạng",
-        dataIndex: "testRequestStatus",
-        key: "testRequestStatus",
-        width: 130,
+        dataIndex: "qlktDisplayStatus",
+        key: "qlktDisplayStatus",
+        width: 150,
         fixed: "right",
-        render: (status: TestRequestStatus) => (
-          <Tag color={TestRequestStatusColors[status] || "default"}>
-            {TestRequestStatusLabels[status] || "Không xác định"}
-          </Tag>
-        ),
+        render: (status: QLKTDisplayStatus | null | undefined) => {
+          // Default to UnderReview if null/undefined
+          const effectiveStatus = status ?? QLKTDisplayStatus.UnderReview;
+          return (
+            <Tag color={QLKTDisplayStatusColors[effectiveStatus] || "default"}>
+              {QLKTDisplayStatusLabels[effectiveStatus]}
+            </Tag>
+          );
+        },
       },
     ],
     [isCellHovered],
