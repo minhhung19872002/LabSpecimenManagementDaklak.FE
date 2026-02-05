@@ -47,8 +47,8 @@ interface IndicatorEditTableProps {
   isUrgent?: boolean;
   submitting?: boolean;
   resultOptions?: ResultOption[];
-  /** Function to get result options filtered by indicator */
-  getResultOptionsForIndicator?: (indicatorId: string) => ResultOption[];
+  /** Function to get result options filtered by (indicatorId + specimenTypeId) */
+  getResultOptionsForIndicator?: (indicatorId: string, specimenTypeId?: string) => ResultOption[];
   /** Có quyền thực hiện thao tác (nhập/sửa/gửi kết quả) theo Permission Matrix */
   canPerformActions?: boolean;
   onResultsChange: (results: SaveIndicatorResultDto[]) => void;
@@ -611,9 +611,9 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
           record.testingStatus === IndicatorTestingStatus.Done ||
           record.testingStatus === IndicatorTestingStatus.Cancelled;
 
-        // Get filtered options for this specific indicator
+        // Get filtered options for this specific (indicatorId + specimenTypeId) pair
         const filteredOptions = getResultOptionsForIndicator
-          ? getResultOptionsForIndicator(record.indicatorId)
+          ? getResultOptionsForIndicator(record.indicatorId, record.specimenTypeId)
           : resultOptions;
 
         return (

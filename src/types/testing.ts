@@ -169,6 +169,7 @@ export interface TestingIndicatorDto {
   id: string;
   testRequestSampleIndicatorId: string;
   indicatorId: string;
+  specimenTypeId?: string;  // Nền mẫu (để filter kết quả recommend theo indicator+specimenType)
   indicatorName?: string;
   indicatorFormattedName?: string;  // Tên chỉ tiêu có định dạng HTML
   methodId?: string;

@@ -38,6 +38,7 @@ const TestResultValuesList = forwardRef<TestResultValuesActions, TestResultValue
       // Helper functions
       getIndicatorCompositeKey,
       parseIndicatorCompositeKey,
+      getIndicatorsBySpecimenType,
     } = useTestResultValuesData();
 
     // Refresh data when refreshKey changes (when switching to this tab)
@@ -196,6 +197,7 @@ const TestResultValuesList = forwardRef<TestResultValuesActions, TestResultValue
           indicatorsByGroup={indicatorsByGroup}
           specimenTypes={specimenTypes}
           existingIndicators={existingIndicators}
+          getIndicatorsBySpecimenType={getIndicatorsBySpecimenType}
           onOk={handleAddIndicatorsOk}
           onCancel={handleAddIndicatorsCancel}
         />
