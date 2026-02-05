@@ -410,6 +410,36 @@ export const importService = {
     const url = `${import.meta.env.VITE_API_URL || ''}${BASE_URL}/notes/template`;
     window.open(url, '_blank');
   },
+
+  // ==================== TestResultValues ====================
+
+  /**
+   * Preview TestResultValues import (validate without importing)
+   */
+  previewTestResultValues: async (file: File): Promise<any> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<any>(`${BASE_URL}/test-result-values/preview`, formData);
+    return response.data;
+  },
+
+  /**
+   * Import TestResultValues from Excel file
+   */
+  importTestResultValues: async (file: File): Promise<ImportResultDto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<ImportResultDto>(`${BASE_URL}/test-result-values`, formData);
+    return response.data;
+  },
+
+  /**
+   * Download import template for TestResultValues
+   */
+  downloadTestResultValueTemplate: () => {
+    const url = `${import.meta.env.VITE_API_URL || ''}${BASE_URL}/test-result-values/template`;
+    window.open(url, '_blank');
+  },
 };
 
 // ==================== Helper Functions ====================

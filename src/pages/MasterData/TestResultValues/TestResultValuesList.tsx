@@ -1,12 +1,15 @@
-import { useMemo, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
-import { Modal, Form, Input } from "antd";
+import { useMemo, useEffect, useRef, forwardRef, useImperativeHandle, useState } from "react";
+import { Modal, Form, Input, message } from "antd";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
+import type { UploadFile } from "antd/es/upload/interface";
 import { useTestResultValuesData, useTestResultValuesActions, TestResultValueFormData } from "./hooks";
-import { TestResultValuesTable, AddIndicatorsModal } from "./components";
+import { TestResultValuesTable, AddIndicatorsModal, ImportTestResultValueModal } from "./components";
 import { getTestResultValueColumns, getIndicatorColumns } from "./constants";
-import { TestResultValuesTabProps, TestResultValuesActions } from "./types";
+import { TestResultValuesTabProps, TestResultValuesActions, TestResultValueImportPreviewDto } from "./types";
+import { importService } from "../../../services/importService";
+import { API_BASE_URL } from "../../../services/api";
 
 // Form validation schema
 const testResultValueSchema = yup.object({
@@ -40,6 +43,12 @@ const TestResultValuesList = forwardRef<TestResultValuesActions, TestResultValue
       parseIndicatorCompositeKey,
       getIndicatorsBySpecimenType,
     } = useTestResultValuesData();
+
+    // Import state
+    const [importModalOpen, setImportModalOpen] = useState(false);
+    const [importLoading, setImportLoading] = useState(false);
+    const [importFileList, setImportFileList] = useState<UploadFile[]>([]);
+    const [importPreviewData, setImportPreviewData] = useState<TestResultValueImportPreviewDto | null>(null);
 
     // Refresh data when refreshKey changes (when switching to this tab)
     const isFirstMount = useRef(true);
@@ -113,9 +122,79 @@ const TestResultValuesList = forwardRef<TestResultValuesActions, TestResultValue
       [handleRemoveIndicator, handleToggleIndicatorActive]
     );
 
+    // Import handlers
+    const handleDownloadTemplate = () => {
+      window.open(
+        `${API_BASE_URL}/api/v1/import/test-result-values/template`,
+        "_blank"
+      );
+    };
+
+    const handleImport = () => {
+      setImportModalOpen(true);
+    };
+
+    const handleImportPreview = async () => {
+      if (!importFileList.length || !importFileList[0].originFileObj) {
+        message.error("Vui lòng chọn file");
+        return;
+      }
+
+      setImportLoading(true);
+      try {
+        const result = await importService.previewTestResultValues(importFileList[0].originFileObj);
+        setImportPreviewData(result);
+      } catch (err: unknown) {
+        console.error("Failed to preview import:", err);
+        message.error("Không thể xem trước dữ liệu import");
+      } finally {
+        setImportLoading(false);
+      }
+    };
+
+    const handleImportConfirm = async () => {
+      if (!importFileList.length || !importFileList[0].originFileObj) {
+        message.error("Vui lòng chọn file");
+        return;
+      }
+
+      setImportLoading(true);
+      try {
+        const result = await importService.importTestResultValues(importFileList[0].originFileObj);
+        if (result.success) {
+          message.success(result.message || "Import thành công");
+          setImportModalOpen(false);
+          setImportFileList([]);
+          setImportPreviewData(null);
+          fetchData();
+          onDataChange?.();
+        } else {
+          message.error(result.message || "Import thất bại");
+        }
+      } catch (err: unknown) {
+        console.error("Failed to import:", err);
+        message.error("Không thể import dữ liệu");
+      } finally {
+        setImportLoading(false);
+      }
+    };
+
+    const handleImportCancel = () => {
+      setImportModalOpen(false);
+      setImportFileList([]);
+      setImportPreviewData(null);
+    };
+
+    const handleImportReset = () => {
+      setImportFileList([]);
+      setImportPreviewData(null);
+    };
+
     // Expose actions to parent
     useImperativeHandle(ref, () => ({
       handleCreate: () => handleCreate(form),
+      handleDownloadTemplate,
+      handleImport,
     }));
 
     return (
@@ -200,6 +279,19 @@ const TestResultValuesList = forwardRef<TestResultValuesActions, TestResultValue
           getIndicatorsBySpecimenType={getIndicatorsBySpecimenType}
           onOk={handleAddIndicatorsOk}
           onCancel={handleAddIndicatorsCancel}
+        />
+
+        {/* Import Modal */}
+        <ImportTestResultValueModal
+          open={importModalOpen}
+          loading={importLoading}
+          fileList={importFileList}
+          previewData={importPreviewData}
+          onFileListChange={setImportFileList}
+          onPreview={handleImportPreview}
+          onConfirm={handleImportConfirm}
+          onCancel={handleImportCancel}
+          onReset={handleImportReset}
         />
       </>
     );
