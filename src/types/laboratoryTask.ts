@@ -457,3 +457,63 @@ export interface RejectIndicatorsForTestingInput {
   indicatorIds: string[];
   reason: string;
 }
+
+// ============= QLKT Display Status (Sổ nhận việc - Cột Tình trạng) =============
+
+/**
+ * Trạng thái hiển thị tại cột "Tình trạng" trong tab Sổ nhận việc QLKT
+ * Mapping từ IndicatorApprovalStatus + các field khác
+ */
+export enum QLKTDisplayStatus {
+  UnderReview = 0,              // Đang xem xét YC
+  MethodChangeRequested = 1,    // Yêu cầu đổi PP
+  MethodChanged = 2,            // Đã đổi PP
+  TestingRejected = 3,          // Từ chối TN
+  SupplementaryRequested = 4,   // YC bổ sung
+  CustomerCancelled = 5,        // KH hủy
+  CannotTest = 6,               // Không TN được
+  WaitingForAssignment = 7,     // Chờ giao việc
+  ToDo = 8,                     // Cần làm
+  Testing = 9,                  // Đang thử nghiệm
+  WaitingQLKTApproval = 10,     // Chờ QLKT phê duyệt
+  ResultRejected = 11,          // Từ chối KQ
+  WaitingQLCLApproval = 12,     // Chờ QLCL Duyệt
+  QLCLRejected = 13,            // QLCL từ chối
+  Completed = 14                // Hoàn thành
+}
+
+export const QLKTDisplayStatusLabels: Record<QLKTDisplayStatus, string> = {
+  [QLKTDisplayStatus.UnderReview]: 'Đang xem xét YC',
+  [QLKTDisplayStatus.MethodChangeRequested]: 'Yêu cầu đổi PP',
+  [QLKTDisplayStatus.MethodChanged]: 'Đã đổi PP',
+  [QLKTDisplayStatus.TestingRejected]: 'Từ chối TN',
+  [QLKTDisplayStatus.SupplementaryRequested]: 'YC bổ sung',
+  [QLKTDisplayStatus.CustomerCancelled]: 'KH hủy',
+  [QLKTDisplayStatus.CannotTest]: 'Không TN được',
+  [QLKTDisplayStatus.WaitingForAssignment]: 'Chờ giao việc',
+  [QLKTDisplayStatus.ToDo]: 'Cần làm',
+  [QLKTDisplayStatus.Testing]: 'Đang thử nghiệm',
+  [QLKTDisplayStatus.WaitingQLKTApproval]: 'Chờ QLKT phê duyệt',
+  [QLKTDisplayStatus.ResultRejected]: 'Từ chối KQ',
+  [QLKTDisplayStatus.WaitingQLCLApproval]: 'Chờ QLCL Duyệt',
+  [QLKTDisplayStatus.QLCLRejected]: 'QLCL từ chối',
+  [QLKTDisplayStatus.Completed]: 'Hoàn thành'
+};
+
+export const QLKTDisplayStatusColors: Record<QLKTDisplayStatus, string> = {
+  [QLKTDisplayStatus.UnderReview]: 'processing',       // Xanh dương nhạt - đang xử lý
+  [QLKTDisplayStatus.MethodChangeRequested]: 'gold',   // Vàng - chờ xác nhận
+  [QLKTDisplayStatus.MethodChanged]: 'cyan',           // Xanh cyan - đã thay đổi
+  [QLKTDisplayStatus.TestingRejected]: 'red',          // Đỏ - từ chối
+  [QLKTDisplayStatus.SupplementaryRequested]: 'orange', // Cam - yêu cầu bổ sung
+  [QLKTDisplayStatus.CustomerCancelled]: 'volcano',    // Đỏ cam - KH hủy
+  [QLKTDisplayStatus.CannotTest]: 'magenta',           // Hồng - không TN được
+  [QLKTDisplayStatus.WaitingForAssignment]: 'default', // Xám - chờ giao việc
+  [QLKTDisplayStatus.ToDo]: 'blue',                    // Xanh - cần làm
+  [QLKTDisplayStatus.Testing]: 'processing',           // Xanh dương nhạt - đang TN
+  [QLKTDisplayStatus.WaitingQLKTApproval]: 'warning',  // Vàng cam - chờ duyệt
+  [QLKTDisplayStatus.ResultRejected]: 'error',         // Đỏ - từ chối KQ
+  [QLKTDisplayStatus.WaitingQLCLApproval]: 'purple',   // Tím - chờ QLCL
+  [QLKTDisplayStatus.QLCLRejected]: 'error',           // Đỏ - QLCL từ chối
+  [QLKTDisplayStatus.Completed]: 'success'             // Xanh lá - hoàn thành
+};

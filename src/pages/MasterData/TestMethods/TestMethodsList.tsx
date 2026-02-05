@@ -33,6 +33,7 @@ const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
     indicatorsByGroup,
     specimenTypes,
     getSpecimenTypesByIndicator,
+    getIndicatorsBySpecimenType,
     setSearchText,
     setExpandedRowKeys,
     fetchData,
@@ -251,6 +252,7 @@ const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
         specimenTypes={specimenTypes}
         existingIndicatorKeys={existingIndicatorKeys}
         getSpecimenTypesByIndicator={getSpecimenTypesByIndicator}
+        getIndicatorsBySpecimenType={getIndicatorsBySpecimenType}
         onOk={handleAddIndicatorsOk}
         onCancel={handleAddIndicatorsCancel}
       />
