@@ -49,8 +49,8 @@ interface TestingDetailContainerProps {
     indicatorName: string;
   };
   resultOptions?: ResultOption[];
-  /** Function to get result options filtered by indicator */
-  getResultOptionsForIndicator?: (indicatorId: string) => ResultOption[];
+  /** Function to get result options filtered by (indicatorId + specimenTypeId) */
+  getResultOptionsForIndicator?: (indicatorId: string, specimenTypeId?: string) => ResultOption[];
   /** Có quyền thực hiện thao tác (nhập/sửa/gửi kết quả) theo Permission Matrix */
   canPerformActions?: boolean;
   onBack: () => void;

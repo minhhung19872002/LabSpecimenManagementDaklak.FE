@@ -19,13 +19,14 @@ interface AddIndicatorsModalProps {
   indicatorsByGroup: Record<string, IndicatorDto[]>;
   specimenTypes: SpecimenTypeDto[];
   existingIndicators?: TestResultValueIndicatorDto[];
+  getIndicatorsBySpecimenType: (specimenTypeId: string) => IndicatorDto[];
   onOk: (indicators: IndicatorSpecimenTypePair[]) => void;
   onCancel: () => void;
 }
 
 interface RowData {
-  indicatorId: string;
   specimenTypeId: string;
+  indicatorId: string;
 }
 
 const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
@@ -35,15 +36,16 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   indicatorsByGroup,
   specimenTypes,
   existingIndicators = [],
+  getIndicatorsBySpecimenType,
   onOk,
   onCancel,
 }) => {
-  const [rows, setRows] = useState<RowData[]>([{ indicatorId: "", specimenTypeId: "" }]);
+  const [rows, setRows] = useState<RowData[]>([{ specimenTypeId: "", indicatorId: "" }]);
 
   // Reset state when modal opens
   useEffect(() => {
     if (open) {
-      setRows([{ indicatorId: "", specimenTypeId: "" }]);
+      setRows([{ specimenTypeId: "", indicatorId: "" }]);
     }
   }, [open]);
 
@@ -56,29 +58,37 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
     return pairs;
   }, [existingIndicators]);
 
-  // Build grouped options for Indicator Select
+  // Build grouped options for Indicator Select - filtered by specimen type
   const buildIndicatorOptions = (currentIndex: number) => {
     const currentRow = rows[currentIndex];
     const currentSpecimenTypeId = currentRow.specimenTypeId;
+
+    // If no specimen type selected, return empty
+    if (!currentSpecimenTypeId) return [];
+
+    // Get indicators that belong to this specimen type
+    const indicatorsForSpecimenType = getIndicatorsBySpecimenType(currentSpecimenTypeId);
+    const indicatorIdsForSpecimenType = new Set(indicatorsForSpecimenType.map(ind => ind.id));
 
     return indicatorGroups
       .filter((group) => group.isActive && indicatorsByGroup[group.id]?.length > 0)
       .map((group) => {
         const availableIndicators = (indicatorsByGroup[group.id] || []).filter((ind) => {
-          // If specimen type is already selected, check if this combination already exists
-          if (currentSpecimenTypeId) {
-            const pairKey = `${ind.id}_${currentSpecimenTypeId}`;
-            // Check if this pair already exists in the database
-            if (existingPairs.has(pairKey)) return false;
-            // Check if this pair is already selected in other rows
-            const alreadySelectedInOtherRow = rows.some(
-              (row, idx) =>
-                idx !== currentIndex &&
-                row.indicatorId === ind.id &&
-                row.specimenTypeId === currentSpecimenTypeId
-            );
-            if (alreadySelectedInOtherRow) return false;
-          }
+          // Only show indicators that belong to selected specimen type
+          if (!indicatorIdsForSpecimenType.has(ind.id)) return false;
+
+          const pairKey = `${ind.id}_${currentSpecimenTypeId}`;
+          // Check if this pair already exists in the database
+          if (existingPairs.has(pairKey)) return false;
+          // Check if this pair is already selected in other rows
+          const alreadySelectedInOtherRow = rows.some(
+            (row, idx) =>
+              idx !== currentIndex &&
+              row.indicatorId === ind.id &&
+              row.specimenTypeId === currentSpecimenTypeId
+          );
+          if (alreadySelectedInOtherRow) return false;
+
           return true;
         });
 
@@ -104,30 +114,10 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
     }[];
   };
 
-  // Build options for SpecimenType Select
-  const buildSpecimenTypeOptions = (currentIndex: number) => {
-    const currentRow = rows[currentIndex];
-    const currentIndicatorId = currentRow.indicatorId;
-
+  // Build options for SpecimenType Select - show all active specimen types
+  const buildSpecimenTypeOptions = () => {
     return specimenTypes
       .filter((st) => st.isActive)
-      .filter((st) => {
-        // If indicator is already selected, check if this combination already exists
-        if (currentIndicatorId) {
-          const pairKey = `${currentIndicatorId}_${st.id}`;
-          // Check if this pair already exists in the database
-          if (existingPairs.has(pairKey)) return false;
-          // Check if this pair is already selected in other rows
-          const alreadySelectedInOtherRow = rows.some(
-            (row, idx) =>
-              idx !== currentIndex &&
-              row.indicatorId === currentIndicatorId &&
-              row.specimenTypeId === st.id
-          );
-          if (alreadySelectedInOtherRow) return false;
-        }
-        return true;
-      })
       .map((st) => ({
         value: st.id,
         label: `${st.code} - ${st.name}`,
@@ -136,12 +126,12 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   };
 
   const handleAddRow = () => {
-    setRows([...rows, { indicatorId: "", specimenTypeId: "" }]);
+    setRows([...rows, { specimenTypeId: "", indicatorId: "" }]);
   };
 
   const handleRemoveRow = (index: number) => {
     const newRows = rows.filter((_, idx) => idx !== index);
-    setRows(newRows.length > 0 ? newRows : [{ indicatorId: "", specimenTypeId: "" }]);
+    setRows(newRows.length > 0 ? newRows : [{ specimenTypeId: "", indicatorId: "" }]);
   };
 
   const handleIndicatorChange = (value: string, index: number) => {
@@ -152,7 +142,8 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
 
   const handleSpecimenTypeChange = (value: string, index: number) => {
     const newRows = [...rows];
-    newRows[index] = { ...newRows[index], specimenTypeId: value };
+    // Clear indicatorId when specimenTypeId changes
+    newRows[index] = { ...newRows[index], specimenTypeId: value, indicatorId: "" };
     setRows(newRows);
   };
 
@@ -168,7 +159,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   };
 
   const handleCancel = () => {
-    setRows([{ indicatorId: "", specimenTypeId: "" }]);
+    setRows([{ specimenTypeId: "", indicatorId: "" }]);
     onCancel();
   };
 
@@ -185,7 +176,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
       okText="Thêm"
       cancelText="Hủy"
       okButtonProps={{ disabled: !hasValidData }}
-      width={700}
+      width={650}
       centered
       styles={{
         body: {
@@ -197,38 +188,21 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
     >
       <div style={{ marginTop: 16 }}>
         <div style={{ display: "flex", marginBottom: 8 }}>
-          <Text strong style={{ flex: 1, marginRight: 8 }}>
-            Chỉ tiêu <Text type="danger">*</Text>
-          </Text>
-          <Text strong style={{ width: 200 }}>
+          <Text strong style={{ width: 200, marginRight: 8 }}>
             Nền mẫu <Text type="danger">*</Text>
+          </Text>
+          <Text strong style={{ flex: 1 }}>
+            Chỉ tiêu <Text type="danger">*</Text>
           </Text>
           <div style={{ width: 32 }} />
         </div>
 
         {rows.map((row, index) => {
+          const specimenTypeOptions = buildSpecimenTypeOptions();
           const indicatorOptions = buildIndicatorOptions(index);
-          const specimenTypeOptions = buildSpecimenTypeOptions(index);
 
           return (
             <Space key={index} style={{ display: "flex", marginBottom: 8 }} align="start">
-              <Select
-                value={row.indicatorId || undefined}
-                options={indicatorOptions}
-                placeholder="Chọn chỉ tiêu"
-                style={{ flex: 1, minWidth: 350 }}
-                showSearch
-                popupMatchSelectWidth={400}
-                optionLabelProp="label"
-                filterOption={(inputValue, option) => {
-                  const searchText = (option as { searchText?: string })?.searchText;
-                  if (!searchText) return false;
-                  return searchText.toLowerCase().includes(inputValue.toLowerCase());
-                }}
-                onChange={(value) => handleIndicatorChange(value, index)}
-                allowClear
-                onClear={() => handleIndicatorChange("", index)}
-              />
               <Select
                 value={row.specimenTypeId || undefined}
                 options={specimenTypeOptions}
@@ -244,6 +218,24 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                 onChange={(value) => handleSpecimenTypeChange(value, index)}
                 allowClear
                 onClear={() => handleSpecimenTypeChange("", index)}
+              />
+              <Select
+                value={row.indicatorId || undefined}
+                options={indicatorOptions}
+                placeholder="Chọn chỉ tiêu"
+                style={{ flex: 1, minWidth: 350 }}
+                showSearch
+                popupMatchSelectWidth={400}
+                optionLabelProp="label"
+                disabled={!row.specimenTypeId}
+                filterOption={(inputValue, option) => {
+                  const searchText = (option as { searchText?: string })?.searchText;
+                  if (!searchText) return false;
+                  return searchText.toLowerCase().includes(inputValue.toLowerCase());
+                }}
+                onChange={(value) => handleIndicatorChange(value, index)}
+                allowClear
+                onClear={() => handleIndicatorChange("", index)}
               />
               <MinusCircleOutlined
                 onClick={() => handleRemoveRow(index)}

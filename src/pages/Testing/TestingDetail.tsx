@@ -22,10 +22,16 @@ interface ResultOption {
   label: string;
 }
 
+interface IndicatorSpecimenTypePair {
+  indicatorId: string;
+  specimenTypeId: string;
+}
+
 interface TestResultValueWithIndicator {
   id: string;
   name: string;
-  indicatorIds: string[]; // List of indicator IDs this result value is associated with
+  // List of (indicatorId, specimenTypeId) pairs this result value is associated with
+  indicatorSpecimenTypePairs: IndicatorSpecimenTypePair[];
 }
 
 const TestingDetail: React.FC = () => {
@@ -203,13 +209,15 @@ const TestingDetail: React.FC = () => {
       try {
         // Use getWithIndicators to get full data including indicators array
         const data = await testResultValueService.getWithIndicators();
-        // Store full data for filtering by indicator
-        // Extract indicator IDs from the indicators array
+        // Store full data for filtering by (indicatorId + specimenTypeId) pair
         setAllResultValues(
           data.map((item) => ({
             id: item.id,
             name: item.name,
-            indicatorIds: item.indicators?.map((ind) => ind.indicatorId) || [],
+            indicatorSpecimenTypePairs: item.indicators?.map((ind) => ({
+              indicatorId: ind.indicatorId,
+              specimenTypeId: ind.specimenTypeId,
+            })) || [],
           }))
         );
         // Default options (all results) - will be filtered per indicator
@@ -226,12 +234,17 @@ const TestingDetail: React.FC = () => {
     loadResultOptions();
   }, []);
 
-  // Function to get result options filtered by indicator
-  // - If indicator has specific results declared, return only those
-  // - Otherwise, return all generic results (no indicatorIds)
-  const getResultOptionsForIndicator = useCallback((indicatorId: string): ResultOption[] => {
-    // Check if there are results specific to this indicator
-    const specificResults = allResultValues.filter(r => r.indicatorIds.includes(indicatorId));
+  // Function to get result options filtered by (indicatorId + specimenTypeId)
+  // - If (indicatorId + specimenTypeId) has specific results declared, return only those
+  // - Otherwise, return ALL results
+  const getResultOptionsForIndicator = useCallback((indicatorId: string, specimenTypeId?: string): ResultOption[] => {
+    // Check if there are results specific to this (indicatorId + specimenTypeId) pair
+    const specificResults = allResultValues.filter(r =>
+      r.indicatorSpecimenTypePairs.some(pair =>
+        pair.indicatorId === indicatorId &&
+        (!specimenTypeId || pair.specimenTypeId === specimenTypeId)
+      )
+    );
 
     if (specificResults.length > 0) {
       // Has specific results - return only those
@@ -241,9 +254,8 @@ const TestingDetail: React.FC = () => {
       }));
     }
 
-    // No specific results - return all generic results (no indicatorIds)
-    const genericResults = allResultValues.filter(r => r.indicatorIds.length === 0);
-    return genericResults.map(item => ({
+    // No specific results for this (indicatorId + specimenTypeId) - return ALL results
+    return allResultValues.map(item => ({
       value: item.name,
       label: item.name,
     }));

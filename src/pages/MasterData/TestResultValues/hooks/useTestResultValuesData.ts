@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { message } from "antd";
 import testResultValueService, {
   TestResultValueDto,
@@ -10,6 +10,7 @@ import {
   SpecimenTypeDto,
   IndicatorDto,
   IndicatorGroupDto,
+  SpecimenTypeWithIndicatorsDto,
 } from "../../../../services/masterDataService";
 
 export interface GroupedTestResultValueData extends TestResultValueDto {
@@ -19,6 +20,7 @@ export interface GroupedTestResultValueData extends TestResultValueDto {
 export const useTestResultValuesData = () => {
   const [testResultValues, setTestResultValues] = useState<TestResultValueDto[]>([]);
   const [specimenTypes, setSpecimenTypes] = useState<SpecimenTypeDto[]>([]);
+  const [specimenTypesWithIndicators, setSpecimenTypesWithIndicators] = useState<SpecimenTypeWithIndicatorsDto[]>([]);
   const [indicatorGroups, setIndicatorGroups] = useState<IndicatorGroupDto[]>([]);
   const [indicators, setIndicators] = useState<IndicatorDto[]>([]);
   const [loading, setLoading] = useState(false);
@@ -32,15 +34,17 @@ export const useTestResultValuesData = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [valuesData, specimenTypesData, groupsData, indicatorsData] = await Promise.all([
+      const [valuesData, specimenTypesData, specimenTypesWithIndData, groupsData, indicatorsData] = await Promise.all([
         testResultValueService.getWithIndicators(),
         specimenTypeService.getActive(),
+        specimenTypeService.getWithIndicators(),
         indicatorGroupService.getActive(),
         indicatorService.getActive(),
       ]);
 
       setTestResultValues(valuesData || []);
       setSpecimenTypes(specimenTypesData?.items || []);
+      setSpecimenTypesWithIndicators(specimenTypesWithIndData || []);
       setIndicatorGroups(groupsData || []);
       setIndicators(indicatorsData || []);
     } catch (error) {
@@ -119,6 +123,25 @@ export const useTestResultValuesData = () => {
     return { indicatorId, specimenTypeId };
   };
 
+  // Get indicators belonging to a specific specimen type (nền mẫu)
+  // Returns only active parent indicators that are linked to this specimen type
+  const getIndicatorsBySpecimenType = useCallback((specimenTypeId: string): IndicatorDto[] => {
+    const specimenType = specimenTypesWithIndicators.find(st => st.id === specimenTypeId);
+    if (!specimenType) return [];
+
+    // Get indicator IDs that are linked to this specimen type and active
+    const linkedIndicatorIds = new Set(
+      specimenType.indicators
+        ?.filter(sti => sti.isActive)
+        ?.map(sti => sti.indicatorId) || []
+    );
+
+    // Return active parent indicators that are in the linked set
+    return indicators.filter(
+      ind => ind.isActive && !ind.parentIndicatorId && linkedIndicatorIds.has(ind.id)
+    );
+  }, [specimenTypesWithIndicators, indicators]);
+
   return {
     testResultValues,
     specimenTypes,
@@ -141,5 +164,6 @@ export const useTestResultValuesData = () => {
     // Helper functions
     getIndicatorCompositeKey,
     parseIndicatorCompositeKey,
+    getIndicatorsBySpecimenType,
   };
 };
