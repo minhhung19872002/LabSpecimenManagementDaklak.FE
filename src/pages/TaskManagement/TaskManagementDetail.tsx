@@ -179,11 +179,15 @@ const TaskManagementDetail: React.FC = () => {
 
   // Sử dụng hook để check permissions cho tất cả actions theo Permission Matrix
   const actionPermissions = useMultipleActionPermissions("tasks", [
+    "viewDetail",
     "assignTesting",
     "addSupporter",
     "editMethod",
     "approveResult",
   ]);
+
+  // Check quyền xem chi tiết task từ Permission Matrix
+  const hasViewDetailPermission = actionPermissions.viewDetail?.canAll || actionPermissions.viewDetail?.canView || false;
 
   // Check if current user is a supporter of this task
   const isCurrentUserSupporter = useMemo(() => {
@@ -197,6 +201,20 @@ const TaskManagementDetail: React.FC = () => {
       return false;
     }
   }, [task?.supporters]);
+
+  // Kiểm tra quyền xem chi tiết task:
+  // - Có quyền viewDetail từ Permission Matrix (QLKT, Admin)
+  // - Hoặc là supporter của task
+  // - Hoặc là QLKT sở hữu task (isCurrentUserTechnicalManager)
+  const canViewTaskDetail = hasViewDetailPermission || isCurrentUserSupporter || task?.isCurrentUserTechnicalManager;
+
+  // Redirect đến 403 nếu không có quyền xem (sau khi đã load task xong)
+  useEffect(() => {
+    // Chỉ check sau khi đã load task (loading = false và task !== null hoặc task load thất bại)
+    if (!loading && task !== null && !canViewTaskDetail) {
+      navigate(PATH_ROUTES.forbidden, { replace: true });
+    }
+  }, [loading, task, canViewTaskDetail, navigate]);
 
   // Check quyền từ Permission Matrix + supporter status
   // QLKT (A) = canAll, Admin (V) = canView, Supporter = same as QLKT (except addSupporter)
@@ -236,13 +254,18 @@ const TaskManagementDetail: React.FC = () => {
         setMethods(methodsResult || []);
         setTechnicians(techniciansResult || []);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to load task:", error);
+      // Nếu API trả về 403 (Forbidden) hoặc 401 (Unauthorized), redirect đến trang 403
+      if (error?.response?.status === 403 || error?.response?.status === 401) {
+        navigate(PATH_ROUTES.forbidden, { replace: true });
+        return;
+      }
       message.error("Không thể tải thông tin công việc");
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, navigate]);
 
   // Reload full data from server (preserving UI states like selection, activeKeys)
   const reloadData = useCallback(async () => {
