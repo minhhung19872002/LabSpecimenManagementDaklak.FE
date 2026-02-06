@@ -1861,7 +1861,7 @@ const TaskManagementDetail: React.FC = () => {
                   Ngày TN:
                 </Text>
                 <Text>
-                  {task.testDate ? formatDate(task.testDate) : "Chưa đặt"}
+                  {task.testDateRange || (task.testDate ? formatDate(task.testDate) : "Chưa đặt")}
                 </Text>
               </div>
             </Col>
