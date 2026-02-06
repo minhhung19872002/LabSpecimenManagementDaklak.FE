@@ -1752,11 +1752,22 @@ const TaskManagementDetail: React.FC = () => {
             />
           )}
 
-          {/* Badge hiển thị đây là mẫu chung (đã gửi) */}
-          {task.sampleSentToNextLab && (
+          {/* Badge hiển thị đây là mẫu chung (đã gửi) - Lab Vi Sinh */}
+          {task.sampleSentToNextLab && !task.priorLabTaskId && (
             <Alert
               message="Đã gửi mẫu chung cho Lab Hóa"
               description={`Ngày gửi: ${task.sampleSentDate ? formatDate(task.sampleSentDate) : "-"}`}
+              type="success"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          )}
+
+          {/* Badge hiển thị đã xác nhận nhận mẫu chung - Lab Hóa */}
+          {task.priorLabTaskId && task.sampleReceivedDate && (
+            <Alert
+              message="Đã xác nhận nhận mẫu chung"
+              description={`Ngày xác nhận: ${formatDate(task.sampleReceivedDate)}`}
               type="success"
               showIcon
               style={{ marginBottom: 16 }}
