@@ -21,7 +21,7 @@ interface RoleOption {
 }
 
 interface GetColumnsOptions {
-  onEdit: (record: EmployeeDto) => void;
+  onNavigateToDetail: (id: string) => void;
   onDelete: (id: string) => void;
   onToggleActive: (id: string, checked: boolean) => void;
   onResetPassword: (record: EmployeeDto) => void;
@@ -255,7 +255,7 @@ export const getEmployeeColumns = (
                   type="link"
                   size="small"
                   icon={<EditOutlined />}
-                  onClick={() => options.onEdit(record)}
+                  onClick={() => options.onNavigateToDetail(record.id)}
                 />
               </Tooltip>
             )}

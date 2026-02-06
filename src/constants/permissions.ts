@@ -115,7 +115,7 @@ export const ROUTE_PERMISSIONS: Record<string, string[]> = {
   [PATH_ROUTES.auditLog]: [ROLES.ADMIN],
 
   // Nhân viên
-  [PATH_ROUTES.employees]: [ROLES.ADMIN],
+  [PATH_ROUTES.employees.index]: [ROLES.ADMIN],
 
   // Quản lý phân quyền
   [PATH_ROUTES.roleManagement.index]: [ROLES.ADMIN],
@@ -285,7 +285,7 @@ const DEFAULT_ROUTE_PRIORITY = [
   PATH_ROUTES.subcontractors,
   PATH_ROUTES.masterData,
   PATH_ROUTES.organizations,
-  PATH_ROUTES.employees,
+  PATH_ROUTES.employees.index,
   PATH_ROUTES.roleManagement.index,
   PATH_ROUTES.auditLog,
   PATH_ROUTES.settings,

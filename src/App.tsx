@@ -154,6 +154,9 @@ const AuditLogList = Loadable(
 const EmployeeList = Loadable(
   lazy(() => import("./pages/Employees/EmployeeList"))
 );
+const EmployeeDetail = Loadable(
+  lazy(() => import("./pages/Employees/EmployeeDetail"))
+);
 const RoleManagementList = Loadable(
   lazy(() => import("./pages/RoleManagement/RoleManagementList"))
 );
@@ -302,6 +305,7 @@ function App() {
 
           {/* Administration */}
           <Route path="employees" element={<EmployeeList />} />
+          <Route path="employees/:id" element={<EmployeeDetail />} />
           <Route path="role-management" element={<RoleManagementList />} />
           <Route path="role-management/:id" element={<RoleManagementDetail />} />
           <Route path="settings" element={<SettingsPage />} />
