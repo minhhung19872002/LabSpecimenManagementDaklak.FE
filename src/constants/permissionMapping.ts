@@ -328,6 +328,51 @@ export const ROUTE_PERMISSION_MAP: Record<string, string[]> = {
 };
 
 /**
+ * Detail Route Permission Map - Map route patterns cho detail pages với required permissions
+ * Sử dụng cho các trang chi tiết (có ID trong URL như /tasks/:id, /testing/:id)
+ * User cần có ÍT NHẤT 1 trong các permissions để truy cập route
+ *
+ * Format: baseRoute -> permissions required for detail page
+ */
+export const ROUTE_DETAIL_PERMISSION_MAP: Record<string, string[]> = {
+  // Task detail - yêu cầu ViewAll permission
+  '/tasks': [PERMISSIONS.LaboratoryTasks.ViewAll],
+
+  // Testing detail - yêu cầu Execute permission
+  '/testing': [PERMISSIONS.Tests.Execute],
+
+  // Quality Management detail
+  '/quality-management': [PERMISSIONS.TestResults.Review, PERMISSIONS.TestResults.Approve],
+
+  // Role Management detail
+  '/role-management': [PERMISSIONS.RoleManagement.Edit, PERMISSIONS.RoleManagement.ManagePermissions],
+};
+
+/**
+ * Helper để check xem pathname có phải là detail route không
+ * Detail route là route có ID (UUID hoặc số) sau base path
+ * Ví dụ: /tasks/123, /tasks/abc-def-ghi, /testing/456
+ */
+export const isDetailRoute = (pathname: string): { isDetail: boolean; baseRoute: string | null } => {
+  // Pattern: /base-route/:id hoặc /base-route/:id/sub-path
+  // ID có thể là UUID hoặc số
+  const detailPattern = /^(\/[a-z-]+)\/([a-f0-9-]+|[0-9]+)(\/.*)?$/i;
+  const match = pathname.match(detailPattern);
+
+  if (match) {
+    const baseRoute = match[1];
+    // Kiểm tra không phải là các sub-routes đặc biệt như /create, /edit
+    const idPart = match[2];
+    const specialSubRoutes = ['create', 'edit', 'new', 'add'];
+    if (!specialSubRoutes.includes(idPart.toLowerCase())) {
+      return { isDetail: true, baseRoute };
+    }
+  }
+
+  return { isDetail: false, baseRoute: null };
+};
+
+/**
  * Action Permission Map - Map module actions với specific permissions
  */
 export const ACTION_PERMISSION_MAP = {
