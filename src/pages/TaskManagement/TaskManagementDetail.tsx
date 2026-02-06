@@ -1795,24 +1795,6 @@ const TaskManagementDetail: React.FC = () => {
                 Số nhận mẫu giao việc
               </Title>
             </Col>
-            <Col>
-              <Space>
-                {/* Button "Thêm người hỗ trợ" - chỉ hiển thị cho QLKT (có quyền addSupporter) hoặc là QLKT của task này */}
-                {canManageSupporters && (
-                  <Button
-                    icon={<TeamOutlined />}
-                    onClick={() => setSupporterModalOpen(true)}
-                  >
-                    Thêm người hỗ trợ
-                    {task.supporters && task.supporters.length > 0 && (
-                      <span style={{ marginLeft: 4 }}>
-                        ({task.supporters.length})
-                      </span>
-                    )}
-                  </Button>
-                )}
-              </Space>
-            </Col>
           </Row>
           <Row gutter={[48, 10]}>
             <Col xs={24} sm={12}>
