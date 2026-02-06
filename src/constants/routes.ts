@@ -85,7 +85,10 @@ export const PATH_ROUTES = {
 
   auditLog: '/audit-log',
 
-  employees: '/employees',
+  employees: {
+    index: '/employees',
+    detail: (id: string) => `/employees/${id}`,
+  },
 
   roleManagement: {
     index: '/role-management',

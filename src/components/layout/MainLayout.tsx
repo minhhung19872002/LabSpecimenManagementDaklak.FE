@@ -426,7 +426,7 @@ const MainLayout: React.FC = () => {
           key: "employees",
           icon: <TeamOutlined />,
           label: menuLabel(t("menu.employees")),
-          onClick: () => navigate(PATH_ROUTES.employees),
+          onClick: () => navigate(PATH_ROUTES.employees.index),
           roles: [ROLES.ADMIN],
         },
         {

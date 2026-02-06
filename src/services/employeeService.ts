@@ -66,6 +66,40 @@ export interface EmployeeListParams {
   isActive?: boolean;
 }
 
+// Permission DTOs
+export interface PermissionDto {
+  name: string;
+  displayName: string;
+  isGranted: boolean;
+}
+
+export interface PermissionGroupDto {
+  name: string;
+  displayName: string;
+  permissions: PermissionDto[];
+}
+
+export interface UserPermissionsDto {
+  userId: string;
+  fullName: string;
+  userPermissions: PermissionGroupDto[];
+  rolePermissions: PermissionGroupDto[];
+  effectivePermissions: string[];
+}
+
+export interface UpdateUserPermissionsInput {
+  permissions: string[];
+}
+
+// Role DTOs
+export interface UserRoleDto {
+  id: string;
+  name: string;
+  permissionCount: number;
+  isAssigned: boolean;
+  isStatic: boolean;
+}
+
 const BASE_URL = '/api/app/employee';
 
 const employeeApiService = {
@@ -118,6 +152,35 @@ export const employeeService = {
   resetPassword: async (id: string, data: ResetPasswordDto = {}) => {
     const response = await api.post<{ password: string }>(`${BASE_URL}/${id}/reset-password`, data);
     return response.data;
+  },
+
+  // Permission management
+  getAllPermissions: async () => {
+    const response = await api.get<PermissionGroupDto[]>(`${BASE_URL}/permissions/all`);
+    return response.data;
+  },
+  getUserPermissions: async (id: string) => {
+    const response = await api.get<PermissionGroupDto[]>(`${BASE_URL}/${id}/permissions`);
+    return response.data;
+  },
+  updateUserPermissions: async (id: string, data: UpdateUserPermissionsInput) => {
+    await api.put(`${BASE_URL}/${id}/permissions`, data);
+  },
+  getUserFullPermissions: async (id: string) => {
+    const response = await api.get<UserPermissionsDto>(`${BASE_URL}/${id}/permissions/full`);
+    return response.data;
+  },
+
+  // Role management
+  getUserRoles: async (id: string) => {
+    const response = await api.get<UserRoleDto[]>(`${BASE_URL}/${id}/roles`);
+    return response.data;
+  },
+  addRoleToUser: async (id: string, roleName: string) => {
+    await api.post(`${BASE_URL}/${id}/roles/${encodeURIComponent(roleName)}`);
+  },
+  removeRoleFromUser: async (id: string, roleName: string) => {
+    await api.delete(`${BASE_URL}/${id}/roles/${encodeURIComponent(roleName)}`);
   },
 };
 
