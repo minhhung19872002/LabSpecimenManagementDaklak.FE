@@ -192,6 +192,7 @@ export interface LaboratoryTaskDto {
   transferDate?: string;
   requestCompletionDate?: string;
   testDate?: string;
+  testDateRange?: string;  // Khoảng ngày thử nghiệm: "dd/MM/yyyy - dd/MM/yyyy" (Min - Max từ indicators)
   status: LaboratoryTaskStatus;
   notes?: string;
   resultRejectionReason?: string;  // Lý do QLCL từ chối KQ
