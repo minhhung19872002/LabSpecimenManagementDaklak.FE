@@ -102,6 +102,7 @@ export const useOrganizationList = () => {
       taxCode: null,
       contactPerson: "",
       phone: "",
+      secondaryPhone: null,
       isActive: true,
     });
     setModalVisible(true);
@@ -128,6 +129,7 @@ export const useOrganizationList = () => {
         taxCode: record.taxCode || null,
         contactPerson: record.contactPerson,
         phone: record.phone,
+        secondaryPhone: record.secondaryPhone || null,
         isActive: record.isActive,
       });
       setModalVisible(true);
@@ -168,6 +170,7 @@ export const useOrganizationList = () => {
           taxCode: formData.taxCode || undefined,
           contactPerson: formData.contactPerson,
           phone: formData.phone,
+          secondaryPhone: formData.secondaryPhone || undefined,
           isActive: formData.isActive,
         };
 

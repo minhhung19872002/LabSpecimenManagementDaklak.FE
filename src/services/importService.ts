@@ -47,6 +47,14 @@ export interface ImportValidationResult {
   errors: ImportRowError[];
 }
 
+// ==================== Location Code Override (FE-resolved) ====================
+
+export interface LocationCodeOverride {
+  rowNumber: number;
+  provinceCode?: string | null;
+  wardCode?: string | null;
+}
+
 // ==================== Organization + TestRequest Import ====================
 
 export interface OrganizationTestRequestPreviewItem {
@@ -57,6 +65,7 @@ export interface OrganizationTestRequestPreviewItem {
   existingOrganizationId?: string;
   contactPerson: string;
   phone?: string;
+  secondaryPhone?: string;
   address: string;
   province: string;
   provinceCode?: string;
@@ -336,9 +345,12 @@ export const importService = {
   /**
    * Import Organization + TestRequest from Excel file
    */
-  importOrganizationTestRequests: async (file: File): Promise<ImportResultDto> => {
+  importOrganizationTestRequests: async (file: File, codeOverrides?: LocationCodeOverride[]): Promise<ImportResultDto> => {
     const formData = new FormData();
     formData.append('file', file);
+    if (codeOverrides?.length) {
+      formData.append('codeOverrides', JSON.stringify(codeOverrides));
+    }
     const response = await api.upload<ImportResultDto>(`${BASE_URL}/organization-test-requests`, formData);
     return response.data;
   },

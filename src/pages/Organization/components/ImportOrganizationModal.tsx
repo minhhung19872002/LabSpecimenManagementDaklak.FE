@@ -102,10 +102,10 @@ const ImportOrganizationModal: React.FC<ImportOrganizationModalProps> = ({
       width: 60,
     },
     {
-      title: "Tên cơ sở",
+      title: "Tên cơ sở/DN",
       dataIndex: "organizationName",
       key: "organizationName",
-      width: 180,
+      width: 200,
       render: (text: string, record: OrganizationTestRequestPreviewItem) => (
         <Space>
           <span>{text}</span>
@@ -118,96 +118,51 @@ const ImportOrganizationModal: React.FC<ImportOrganizationModalProps> = ({
       ),
     },
     {
+      title: "Địa chỉ",
+      dataIndex: "address",
+      key: "address",
+      width: 200,
+      ellipsis: true,
+    },
+    {
+      title: "Tỉnh thành",
+      dataIndex: "province",
+      key: "province",
+      width: 120,
+      render: (value: string) => value || "-",
+    },
+    {
+      title: "Phường xã",
+      dataIndex: "ward",
+      key: "ward",
+      width: 120,
+      render: (value: string) => value || "-",
+    },
+    {
       title: "Người liên hệ",
       dataIndex: "contactPerson",
       key: "contactPerson",
       width: 130,
     },
     {
-      title: "Điện thoại",
+      title: "Số điện thoại",
       dataIndex: "phone",
       key: "phone",
-      width: 110,
-    },
-    {
-      title: "Địa chỉ",
-      dataIndex: "address",
-      key: "address",
-      width: 150,
-      ellipsis: true,
-    },
-    {
-      title: "Tỉnh/thành",
-      dataIndex: "province",
-      key: "province",
       width: 120,
     },
     {
-      title: "Phường/xã",
-      dataIndex: "ward",
-      key: "ward",
+      title: "SĐT phụ",
+      dataIndex: "secondaryPhone",
+      key: "secondaryPhone",
       width: 120,
+      render: (value: string) => value || "-",
     },
     {
       title: "Mã số thuế",
       dataIndex: "taxCode",
       key: "taxCode",
-      width: 110,
-    },
-    {
-      title: "Số hợp đồng",
-      dataIndex: "contractNumber",
-      key: "contractNumber",
-      width: 140,
-      render: (text: string, record: OrganizationTestRequestPreviewItem) => (
-        <Space>
-          <span>{text || "-"}</span>
-          {text && (
-            record.isNewTestRequest ? (
-              <Tag color="green">Mới</Tag>
-            ) : (
-              <Tag color="orange">Cập nhật</Tag>
-            )
-          )}
-        </Space>
-      ),
-    },
-    {
-      title: "Tên mẫu",
-      dataIndex: "sampleName",
-      key: "sampleName",
       width: 120,
-    },
-    {
-      title: "Mã số mẫu",
-      dataIndex: "sampleCode",
-      key: "sampleCode",
-      width: 100,
-    },
-    {
-      title: "Tình trạng",
-      dataIndex: "sampleStatus",
-      key: "sampleStatus",
-      width: 100,
-    },
-    {
-      title: "Chỉ tiêu",
-      key: "indicators",
-      width: 150,
-      render: (_: unknown, record: OrganizationTestRequestPreviewItem) => (
-        <Space direction="vertical" size={0}>
-          {record.indicatorNames?.map((name, idx) => (
-            <Tag key={idx} color="blue" style={{ marginBottom: 2 }}>
-              {name}
-            </Tag>
-          ))}
-          {record.invalidIndicators?.map((name, idx) => (
-            <Tag key={`invalid-${idx}`} color="red" style={{ marginBottom: 2 }}>
-              {name} (không tồn tại)
-            </Tag>
-          ))}
-        </Space>
-      ),
+      render: (value: string) => value || "-",
     },
     {
       title: "Trạng thái",
@@ -224,7 +179,7 @@ const ImportOrganizationModal: React.FC<ImportOrganizationModalProps> = ({
 
   return (
     <Modal
-      title="Import Cơ sở + Yêu cầu thử nghiệm từ Excel"
+      title="Import Cơ sở / Doanh nghiệp từ Excel"
       open={open}
       onCancel={onCancel}
       width={1200}
@@ -284,47 +239,27 @@ const ImportOrganizationModal: React.FC<ImportOrganizationModalProps> = ({
           {/* Summary */}
           <Card size="small">
             <Row gutter={16}>
-              <Col span={3}>
+              <Col span={6}>
                 <Statistic
                   title="Tổng dòng"
                   value={previewData.totalRows}
                 />
               </Col>
-              <Col span={3}>
+              <Col span={6}>
                 <Statistic
                   title="Cơ sở mới"
                   value={previewData.newOrganizations}
                   valueStyle={{ color: "#52c41a" }}
                 />
               </Col>
-              <Col span={3}>
+              <Col span={6}>
                 <Statistic
                   title="Cơ sở cập nhật"
                   value={previewData.updateOrganizations}
                   valueStyle={{ color: "#1890ff" }}
                 />
               </Col>
-              <Col span={3}>
-                <Statistic
-                  title="Yêu cầu mới"
-                  value={previewData.newTestRequests}
-                  valueStyle={{ color: "#52c41a" }}
-                />
-              </Col>
-              <Col span={3}>
-                <Statistic
-                  title="Yêu cầu cập nhật"
-                  value={previewData.updateTestRequests}
-                  valueStyle={{ color: "#fa8c16" }}
-                />
-              </Col>
-              <Col span={3}>
-                <Statistic
-                  title="Tổng chỉ tiêu"
-                  value={previewData.totalIndicators}
-                />
-              </Col>
-              <Col span={3}>
+              <Col span={6}>
                 <Statistic
                   title="Lỗi"
                   value={previewData.invalidRows}
@@ -383,7 +318,7 @@ const ImportOrganizationModal: React.FC<ImportOrganizationModalProps> = ({
               }))}
               columns={columns}
               pagination={false}
-              scroll={{ x: 1600 }}
+              scroll={{ x: 1150 }}
               rowClassName={(record) =>
                 record.isValid ? "" : "ant-table-row-error"
               }
