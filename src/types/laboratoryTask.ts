@@ -218,6 +218,7 @@ export interface LaboratoryTaskDto {
   // Current user role flags
   isCurrentUserTechnicalManager?: boolean;  // Current user là QLKT của task này
   isCurrentUserSupporter?: boolean;  // Current user là Supporter của task này
+  isCurrentUserDepartmentSupporter?: boolean;  // Current user là Department Supporter của khoa phòng
 
   // Audit fields
   creationTime?: string;
@@ -359,6 +360,28 @@ export interface LaboratoryTaskSupporterDto {
 
 export interface ManageSupportersInput {
   userIds: string[];
+}
+
+// ============= Department Supporter DTOs =============
+
+export interface LaboratoryDepartmentSupporterDto {
+  id: string;
+  laboratoryId: string;
+  userId: string;
+  userName?: string;
+  fullName?: string;
+  email?: string;
+  expirationDate: string;
+  creationTime: string;
+}
+
+export interface DepartmentSupporterEntry {
+  userId: string;
+  expirationDate: string;
+}
+
+export interface AddDepartmentSupportersInput {
+  entries: DepartmentSupporterEntry[];
 }
 
 // ============= Bulk Approval DTOs =============
