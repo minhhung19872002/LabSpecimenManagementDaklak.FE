@@ -55,7 +55,7 @@ export interface LocationCodeOverride {
   wardCode?: string | null;
 }
 
-// ==================== Organization + TestRequest Import ====================
+// ==================== Organization Import (CS/DN) ====================
 
 export interface OrganizationTestRequestPreviewItem {
   rowNumber: number;
@@ -72,17 +72,6 @@ export interface OrganizationTestRequestPreviewItem {
   ward: string;
   wardCode?: string;
   taxCode: string;
-  // TestRequest info
-  contractNumber?: string;
-  isNewTestRequest: boolean;
-  existingTestRequestId?: string;
-  sampleName?: string;
-  sampleCode?: string;
-  sampleStatus?: string;
-  // Indicators
-  indicatorNames: string[];
-  indicatorIds: string[];
-  invalidIndicators: string[];
   // Validation
   isValid: boolean;
   errors: string[];
@@ -97,10 +86,6 @@ export interface OrganizationTestRequestImportPreviewDto {
   invalidRows: number;
   newOrganizations: number;
   updateOrganizations: number;
-  totalTestRequests: number;
-  newTestRequests: number;
-  updateTestRequests: number;
-  totalIndicators: number;
   // Error file
   errorFileBase64?: string;
   errorFileName?: string;
@@ -330,10 +315,10 @@ export const importService = {
     return response.data;
   },
 
-  // ==================== Organization + TestRequest (Legacy Data) ====================
+  // ==================== Organization Import (CS/DN) ====================
 
   /**
-   * Preview Organization + TestRequest import (validate without importing)
+   * Preview Organization import (validate without importing)
    */
   previewOrganizationTestRequests: async (file: File): Promise<OrganizationTestRequestImportPreviewDto> => {
     const formData = new FormData();
@@ -343,7 +328,7 @@ export const importService = {
   },
 
   /**
-   * Import Organization + TestRequest from Excel file
+   * Import Organizations from Excel file
    */
   importOrganizationTestRequests: async (file: File, codeOverrides?: LocationCodeOverride[]): Promise<ImportResultDto> => {
     const formData = new FormData();
@@ -356,7 +341,7 @@ export const importService = {
   },
 
   /**
-   * Download import template for Organization + TestRequest
+   * Download import template for Organization (CS/DN)
    */
   downloadOrganizationTestRequestTemplate: async (): Promise<Blob> => {
     const response = await api.download(`${BASE_URL}/organization-test-requests/template`);
