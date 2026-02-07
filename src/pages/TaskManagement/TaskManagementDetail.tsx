@@ -205,8 +205,10 @@ const TaskManagementDetail: React.FC = () => {
   // Kiểm tra quyền xem chi tiết task:
   // - Có quyền viewDetail từ Permission Matrix (QLKT, Admin)
   // - Hoặc là supporter của task
+  // - Hoặc là department supporter của khoa phòng
   // - Hoặc là QLKT sở hữu task (isCurrentUserTechnicalManager)
-  const canViewTaskDetail = hasViewDetailPermission || isCurrentUserSupporter || task?.isCurrentUserTechnicalManager;
+  const isCurrentUserDeptSupporter = task?.isCurrentUserDepartmentSupporter || false;
+  const canViewTaskDetail = hasViewDetailPermission || isCurrentUserSupporter || isCurrentUserDeptSupporter || task?.isCurrentUserTechnicalManager;
 
   // Redirect đến 403 nếu không có quyền xem (sau khi đã load task xong)
   useEffect(() => {
@@ -218,15 +220,16 @@ const TaskManagementDetail: React.FC = () => {
 
   // Check quyền từ Permission Matrix + supporter status
   // QLKT (A) = canAll, Admin (V) = canView, Supporter = same as QLKT (except addSupporter)
-  // Người hỗ trợ có quyền: giao KTV, duyệt/từ chối, gửi QLCL
+  // Người hỗ trợ (per-task + department) có quyền: giao KTV, duyệt/từ chối, gửi QLCL
   // Người hỗ trợ KHÔNG có quyền: xóa task, thêm supporter khác
+  const isSupporterOrDeptSupporter = isCurrentUserSupporter || isCurrentUserDeptSupporter;
   const canAssignTesting =
-    actionPermissions.assignTesting?.canAll || isCurrentUserSupporter || false;
+    actionPermissions.assignTesting?.canAll || isSupporterOrDeptSupporter || false;
   const canAddSupporter = actionPermissions.addSupporter?.canAll || false; // Supporter KHÔNG có quyền thêm supporter khác
   const canEditMethod =
-    actionPermissions.editMethod?.canAll || isCurrentUserSupporter || false;
+    actionPermissions.editMethod?.canAll || isSupporterOrDeptSupporter || false;
   const canApproveResult =
-    actionPermissions.approveResult?.canAll || isCurrentUserSupporter || false;
+    actionPermissions.approveResult?.canAll || isSupporterOrDeptSupporter || false;
 
   // Check if current user can manage supporters (chỉ QLKT của task hoặc có quyền addSupporter)
   // Supporter KHÔNG có quyền này

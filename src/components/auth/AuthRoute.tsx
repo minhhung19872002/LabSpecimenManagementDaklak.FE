@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { Spin } from 'antd';
-import { hasRoutePermission, getDefaultRouteForUser, PATH_ROUTES, STORAGE_KEYS, SUPPORTER_ALLOWED_ROUTES } from '../../constants';
+import { hasRoutePermission, PATH_ROUTES, STORAGE_KEYS, SUPPORTER_ALLOWED_ROUTES } from '../../constants';
 import { UserInfo } from '../../services/authService';
 import { laboratoryTaskService } from '../../services/laboratoryTaskService';
 
@@ -14,7 +14,6 @@ const AuthRoute: React.FC<AuthRouteProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
-  const [userRoles, setUserRoles] = useState<string[]>([]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -30,7 +29,6 @@ const AuthRoute: React.FC<AuthRouteProps> = ({ children }) => {
       try {
         const userInfo: UserInfo = JSON.parse(storedUser);
         const roles = userInfo.roles || [];
-        setUserRoles(roles);
         setIsAuthenticated(true);
 
         // Check if this is a supporter-allowed route
@@ -87,16 +85,8 @@ const AuthRoute: React.FC<AuthRouteProps> = ({ children }) => {
     return <Navigate to={PATH_ROUTES.login} state={{ from: location }} replace />;
   }
 
-  // Authenticated but no permission - redirect to 403 or default route
+  // Authenticated but no permission - redirect to 403
   if (!hasPermission) {
-    const defaultRoute = getDefaultRouteForUser(userRoles);
-
-    // If current path is not the default route and user has a default route, redirect there
-    if (defaultRoute && location.pathname !== defaultRoute) {
-      return <Navigate to={defaultRoute} replace />;
-    }
-
-    // Otherwise redirect to 403
     return <Navigate to={PATH_ROUTES.forbidden} replace />;
   }
 

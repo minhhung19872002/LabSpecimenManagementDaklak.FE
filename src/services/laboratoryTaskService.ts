@@ -20,7 +20,9 @@ import {
   LabTechnicianPendingTaskDto,
   EvaluateIndicatorInput,
   RequestMethodChangeInput,
-  RejectIndicatorsForTestingInput
+  RejectIndicatorsForTestingInput,
+  LaboratoryDepartmentSupporterDto,
+  AddDepartmentSupportersInput
 } from '../types/laboratoryTask';
 
 const BASE_URL = '/api/v1/laboratory-tasks';
@@ -248,6 +250,42 @@ export const laboratoryTaskService = {
   isCurrentUserSupporter: async (): Promise<boolean> => {
     const response = await api.get<boolean>(`${BASE_URL}/is-supporter`);
     return response.data;
+  },
+
+  // ============= Department Supporter Management =============
+
+  /**
+   * Get department supporters for current user's managed labs
+   */
+  getDepartmentSupporters: async (): Promise<LaboratoryDepartmentSupporterDto[]> => {
+    const response = await api.get<any>('/api/v1/department-supporters');
+    const data = response.data;
+    if (Array.isArray(data)) return data;
+    if (data?.items) return data.items;
+    if (data?.data && Array.isArray(data.data)) return data.data;
+    return [];
+  },
+
+  /**
+   * Add department supporters (with expiration date)
+   */
+  addDepartmentSupporters: async (input: AddDepartmentSupportersInput): Promise<LaboratoryDepartmentSupporterDto[]> => {
+    const response = await api.post<any>(
+      '/api/v1/department-supporters',
+      input
+    );
+    const data = response.data;
+    if (Array.isArray(data)) return data;
+    if (data?.items) return data.items;
+    if (data?.data && Array.isArray(data.data)) return data.data;
+    return [];
+  },
+
+  /**
+   * Remove a department supporter
+   */
+  removeDepartmentSupporter: async (supporterId: string): Promise<void> => {
+    await api.delete(`/api/v1/department-supporters/${supporterId}`);
   },
 
   // ============= Bulk Approval =============

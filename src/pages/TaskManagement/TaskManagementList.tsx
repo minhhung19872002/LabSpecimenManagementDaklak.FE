@@ -15,10 +15,13 @@ import Icon, {
   ExperimentOutlined,
   SearchOutlined,
   ReloadOutlined,
+  TeamOutlined,
 } from "../../components/common/Icon";
 import { LaboratoryTaskStatus } from "../../types/laboratoryTask";
 import { useTaskManagementList } from "./hooks";
+import { useActionPermission } from "../../hooks/useActionPermission";
 import LabSampleAssignmentLogTab from "./components/LabSampleAssignmentLogTab";
+import DepartmentSupporterModal from "./components/DepartmentSupporterModal";
 import "../../styles/ListCard.css";
 import "../Dashboard/Dashboard.css";
 import "./TaskManagement.css";
@@ -31,6 +34,13 @@ type TaskManagementTabType = "tasks" | "sample-assignment-log";
 const TaskManagementList: React.FC = () => {
   // Tab state
   const [currentTab, setCurrentTab] = useState<TaskManagementTabType>("tasks");
+  const [deptSupporterModalOpen, setDeptSupporterModalOpen] = useState(false);
+
+  // Permission: only QLKT/Admin can add department supporters
+  const { canAll: canAddDeptSupporter } = useActionPermission(
+    "tasks",
+    "addSupporter",
+  );
 
   const {
     tasks,
@@ -151,7 +161,17 @@ const TaskManagementList: React.FC = () => {
         }
         extra={
           !isShowingSampleAssignmentLog && (
-            <Button icon={<ReloadOutlined />} onClick={handleRefresh} />
+            <Space>
+              {canAddDeptSupporter && (
+                <Button
+                  icon={<TeamOutlined />}
+                  onClick={() => setDeptSupporterModalOpen(true)}
+                >
+                  Thêm người hỗ trợ
+                </Button>
+              )}
+              <Button icon={<ReloadOutlined />} onClick={handleRefresh} />
+            </Space>
           )
         }
         styles={{ body: { padding: 0 } }}
@@ -293,6 +313,13 @@ const TaskManagementList: React.FC = () => {
           background-color: #ffe7ba !important;
         }
       `}</style>
+
+      {/* Department Supporter Modal */}
+      <DepartmentSupporterModal
+        open={deptSupporterModalOpen}
+        onClose={() => setDeptSupporterModalOpen(false)}
+        onSuccess={handleRefresh}
+      />
     </div>
   );
 };
