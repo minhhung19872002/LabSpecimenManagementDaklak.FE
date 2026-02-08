@@ -351,11 +351,12 @@ const TestingDetail: React.FC = () => {
       const indicator = sample.indicators.find((i) => i.id === indicatorId);
       if (!indicator) return;
 
-      // Chỉ xử lý các chỉ tiêu có trạng thái cho phép gửi (Todo, Testing, Rejected)
+      // Chỉ xử lý các chỉ tiêu có trạng thái cho phép gửi (Todo, Testing, Rejected, PendingApproval)
       if (
         indicator.testingStatus !== IndicatorTestingStatus.Todo &&
         indicator.testingStatus !== IndicatorTestingStatus.Testing &&
-        indicator.testingStatus !== IndicatorTestingStatus.Rejected
+        indicator.testingStatus !== IndicatorTestingStatus.Rejected &&
+        indicator.testingStatus !== IndicatorTestingStatus.PendingApproval
       ) {
         return;
       }
@@ -520,11 +521,12 @@ const TestingDetail: React.FC = () => {
 
     if (!sampleId || !indicator) return;
 
-    // Cho phép gửi khi trạng thái = Todo, Testing hoặc Rejected
+    // Cho phép gửi khi trạng thái = Todo, Testing, Rejected hoặc PendingApproval (gửi lại khi QLKT chưa duyệt)
     if (
       indicator.testingStatus !== IndicatorTestingStatus.Todo &&
       indicator.testingStatus !== IndicatorTestingStatus.Testing &&
-      indicator.testingStatus !== IndicatorTestingStatus.Rejected
+      indicator.testingStatus !== IndicatorTestingStatus.Rejected &&
+      indicator.testingStatus !== IndicatorTestingStatus.PendingApproval
     ) {
       message.warning("Chỉ tiêu này không thể gửi kết quả");
       return;
