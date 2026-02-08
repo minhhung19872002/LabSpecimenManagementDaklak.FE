@@ -606,7 +606,7 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
           display: "flex",
           alignItems: "flex-start",
           gap: 8,
-          padding: isSubIndicator ? "6px 12px" : "8px 12px",
+          padding: isSubIndicator ? "6px 0" : "8px 0",
           borderBottom: "1px solid #f5f5f5",
           background: isSubIndicator ? "#fafafa" : "#fff",
           minHeight: isSubIndicator ? 32 : 48,
@@ -628,7 +628,6 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
           style={{
             flex: 1,
             minWidth: 120,
-            maxWidth: 220,
             paddingLeft: isSubIndicator ? 24 : 0,
             position: "relative",
           }}
@@ -661,8 +660,8 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
           <Tooltip title={indicator.testMethodName}>
             <div
               style={{
-                width: 160,
-                flexShrink: 0,
+                flex: 1,
+                minWidth: 120,
                 display: "-webkit-box",
                 WebkitLineClamp: 3,
                 WebkitBoxOrient: "vertical",
@@ -697,19 +696,6 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
           >
             {indicator.unitPrice?.toLocaleString("vi-VN")}đ
           </span>
-        )}
-        {/* Transfer date - hidden for sub-indicators */}
-        {!isSubIndicator && (
-          <DatePicker
-            value={
-              indicator.transferDate ? dayjs(indicator.transferDate) : undefined
-            }
-            format="DD/MM/YYYY"
-            size="small"
-            style={{ width: 110, flexShrink: 0, marginTop: 2 }}
-            placeholder="Ngày CG"
-            disabled
-          />
         )}
         {/* Request date - hidden for sub-indicators */}
         {!isSubIndicator && (
@@ -782,6 +768,37 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
           .indicator-name-cell.has-tree-line.is-last-sub::before {
             bottom: 50%;
           }
+
+          /* Reset ALL Collapse padding/margin/border so rows align with header */
+          .send-qlkt-collapse,
+          .send-qlkt-collapse .ant-collapse-item,
+          .send-qlkt-collapse .ant-collapse-content,
+          .send-qlkt-collapse .ant-collapse-content-box,
+          .send-qlkt-collapse .ant-collapse-panel,
+          .send-qlkt-collapse .ant-collapse-body,
+          .send-qlkt-collapse.ant-collapse-borderless > .ant-collapse-item > .ant-collapse-content > .ant-collapse-content-box,
+          .send-qlkt-collapse.ant-collapse-borderless > .ant-collapse-item > .ant-collapse-panel > .ant-collapse-body {
+            padding: 0 !important;
+            padding-inline: 0 !important;
+            margin: 0 !important;
+            border: none !important;
+          }
+          .send-qlkt-collapse .ant-collapse-header {
+            padding: 8px 0 !important;
+            padding-inline: 0 !important;
+          }
+          .send-qlkt-collapse .ant-collapse-expand-icon {
+            padding-inline-end: 8px !important;
+            margin: 0 !important;
+          }
+          /* Align body content with expand icon offset so checkboxes line up */
+          .send-qlkt-collapse .ant-collapse-content-box,
+          .send-qlkt-collapse .ant-collapse-body,
+          .send-qlkt-collapse.ant-collapse-borderless > .ant-collapse-item > .ant-collapse-content > .ant-collapse-content-box,
+          .send-qlkt-collapse.ant-collapse-borderless > .ant-collapse-item > .ant-collapse-panel > .ant-collapse-body {
+            padding-left: 20px !important;
+            padding-inline-start: 20px !important;
+          }
         `}
       </style>
       <Modal
@@ -852,7 +869,7 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
             <Spin />
           </div>
         ) : (
-          <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
+          <div style={{ maxHeight: "70vh", overflowY: "auto", overflowX: "hidden" }}>
             {/* Bulk action bar */}
             <div
               style={{
@@ -894,14 +911,14 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
 
             {/* Scrollable table container */}
             <div style={{ overflowX: "auto" }}>
-              <div style={{ minWidth: 700 }}>
+              <div style={{ width: "fit-content", minWidth: "100%" }}>
                 {/* Table header */}
                 <div
                   style={{
                     display: "flex",
                     alignItems: "center",
                     gap: 8,
-                    padding: "8px 12px",
+                    padding: "8px 0 8px 20px",
                     background: "#f5f5f5",
                     borderBottom: "1px solid #e8e8e8",
                     fontWeight: 600,
@@ -909,14 +926,13 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
                   }}
                 >
                   <div style={{ width: 24, flexShrink: 0 }}></div>
-                  <div style={{ flex: 1, minWidth: 120, maxWidth: 220 }}>
+                  <div style={{ flex: 1, minWidth: 120 }}>
                     Chỉ tiêu
                   </div>
-                  <div style={{ width: 160, flexShrink: 0 }}>Phương pháp</div>
+                  <div style={{ flex: 1, minWidth: 120 }}>Phương pháp</div>
                   <div style={{ width: 70, flexShrink: 0, textAlign: "right" }}>
                     Đơn giá
                   </div>
-                  <div style={{ width: 110, flexShrink: 0 }}>Ngày CG</div>
                   <div style={{ width: 110, flexShrink: 0 }}>Ngày YC</div>
                   <div style={{ width: 150, flexShrink: 0 }}>Khoa phòng</div>
                 </div>
@@ -930,6 +946,7 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
                   </div>
                 ) : (
                   <Collapse
+                    className="send-qlkt-collapse"
                     activeKey={expandedPanels}
                     onChange={(keys) => setExpandedPanels(keys as string[])}
                     bordered={false}
