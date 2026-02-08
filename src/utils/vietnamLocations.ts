@@ -122,7 +122,7 @@ export const getWardsByDistrict = async (districtCode: string): Promise<Ward[]> 
  * Get districts by province code
  * @deprecated District level is not available in new-vn-provinces
  */
-export const getDistrictsByProvince = (provinceCode: string): District[] => {
+export const getDistrictsByProvince = (_provinceCode: string): District[] => {
   console.warn('getDistrictsByProvince is deprecated: District level is not available in new-vn-provinces');
   return [];
 };
@@ -141,7 +141,7 @@ export const getProvinceNameByCode = async (code: string): Promise<string> => {
  * Get district name by code
  * @deprecated District level is not available in new-vn-provinces
  */
-export const getDistrictNameByCode = (provinceCode: string, districtCode: string): string => {
+export const getDistrictNameByCode = (_provinceCode: string, _districtCode: string): string => {
   console.warn('getDistrictNameByCode is deprecated: District level is not available in new-vn-provinces');
   return '';
 };

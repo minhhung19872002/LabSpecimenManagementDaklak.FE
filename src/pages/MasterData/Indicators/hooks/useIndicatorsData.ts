@@ -100,15 +100,16 @@ export const useIndicatorsData = () => {
     parentIndicators.forEach((parent) => {
       flatIndicators.push(parent);
       // Add sub-indicators if any (null-safe)
-      if (parent.subIndicators?.length > 0) {
-        parent.subIndicators.forEach((sub, index) => {
+      const subs = parent.subIndicators;
+      if (subs && subs.length > 0) {
+        subs.forEach((sub, index) => {
           // Add metadata for tree line rendering
           const enhancedSub = {
             ...sub,
             _isFirstSub: index === 0,
-            _isLastSub: index === parent.subIndicators.length - 1,
+            _isLastSub: index === subs.length - 1,
             _subIndex: index,
-            _totalSubs: parent.subIndicators.length,
+            _totalSubs: subs.length,
           };
           flatIndicators.push(enhancedSub as any);
         });

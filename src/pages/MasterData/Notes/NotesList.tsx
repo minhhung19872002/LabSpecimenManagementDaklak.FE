@@ -1,21 +1,17 @@
-import React, { useState, useEffect, useCallback, forwardRef, useImperativeHandle, useRef } from "react";
+import { useState, useEffect, useCallback, forwardRef, useImperativeHandle, useRef } from "react";
 import {
   Table,
   Button,
   Space,
   message,
   Input,
-  Row,
-  Col,
   Modal,
   Form,
   Popconfirm,
   Tag,
   Switch,
-  Select,
 } from "antd";
 import {
-  PlusOutlined,
   EditOutlined,
   DeleteOutlined,
 } from "../../../components/common/Icon";
@@ -35,9 +31,9 @@ const DEFAULT_PAGE_SIZE = 50;
 const NotesList = forwardRef<NotesActions, NotesTabProps>(({ onDataChange, refreshKey }, ref) => {
   const [data, setData] = useState<NoteDto[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchText, setSearchText] = useState("");
-  const [appliedSearch, setAppliedSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<boolean | undefined>(undefined);
+  const [_searchText, _setSearchText] = useState("");
+  const [appliedSearch, _setAppliedSearch] = useState("");
+  const [statusFilter, _setStatusFilter] = useState<boolean | undefined>(undefined);
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: DEFAULT_PAGE_SIZE,
@@ -104,9 +100,9 @@ const NotesList = forwardRef<NotesActions, NotesTabProps>(({ onDataChange, refre
     fetchData(1, pagination.pageSize, appliedSearch, statusFilter);
   }, [appliedSearch, statusFilter]);
 
-  const handleSearch = () => {
-    setAppliedSearch(searchText);
-  };
+  // const _handleSearch = () => {
+  //   _setAppliedSearch(_searchText);
+  // };
 
   const handleTableChange = (paginationConfig: TablePaginationConfig) => {
     fetchData(

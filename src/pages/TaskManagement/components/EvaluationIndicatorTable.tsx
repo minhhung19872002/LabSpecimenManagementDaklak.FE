@@ -152,7 +152,8 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
   }, [indicators]);
 
   // Check if there are pending indicators for "Approve All" button
-  const hasPendingIndicators = pendingIndicators.length > 0;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _hasPendingIndicators = pendingIndicators.length > 0; void _hasPendingIndicators;
 
   // Handle single indicator accept
   const handleAccept = async (indicatorId: string) => {
@@ -261,8 +262,9 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
     }
   };
 
-  // Handle approve all remaining
-  const handleApproveAllRemaining = async () => {
+  // Handle approve all remaining - currently unused but kept for future use
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  void async function _handleApproveAllRemaining() {
     Modal.confirm({
       title: "Xác nhận chấp nhận tất cả",
       content: `Bạn có chắc muốn chấp nhận thử nghiệm cho ${pendingIndicators.length} chỉ tiêu còn lại?`,

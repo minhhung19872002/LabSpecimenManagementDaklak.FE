@@ -666,10 +666,11 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
     form.setFieldsValue({ indicators: currentIndicators });
   };
 
-  // Handle removing sub-indicator
+  // Handle removing sub-indicator - currently unused but kept for future use
   // IMPORTANT: Don't use removeSub() from Form.List as it can reset parent fields!
   // Instead, manually set form values to preserve all parent data.
-  const handleRemoveSubIndicator = (parentIndex: number, subIndex: number) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  void function _handleRemoveSubIndicator(parentIndex: number, subIndex: number) {
     const parentIndicatorId =
       selectedIndicators[parentIndex] || indicators[parentIndex]?.indicatorId;
 
