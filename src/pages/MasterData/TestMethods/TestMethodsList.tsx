@@ -8,6 +8,7 @@ import {
   TestMethodsTable,
   TestMethodModal,
   AddIndicatorsModal,
+  EditIndicatorModal,
   ImportTestMethodModal,
 } from "./components";
 import { getTestMethodColumns, getIndicatorColumns } from "./constants";
@@ -17,6 +18,7 @@ import {
   TestMethodFormData,
 } from "./schemas/testMethodSchema";
 import { API_BASE_URL, api } from "../../../services/api";
+import { getApiErrorMessage } from "../../../utils/errorHandler";
 
 const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
   onDataChange,
@@ -29,6 +31,9 @@ const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
     expandedRowKeys,
     indicatorGroups,
     indicatorsByGroup,
+    specimenTypes,
+    getSpecimenTypesByIndicator,
+    getIndicatorsBySpecimenType,
     setSearchText,
     setExpandedRowKeys,
     fetchData,
@@ -67,6 +72,13 @@ const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
     handleAddIndicatorsOk,
     handleAddIndicatorsCancel,
     handleRemoveIndicator,
+    // Edit indicator
+    editIndicatorModalOpen,
+    editIndicatorLoading,
+    editingIndicator,
+    handleOpenEditIndicator,
+    handleEditIndicatorOk,
+    handleEditIndicatorCancel,
     handleToggleActive,
     // Batch remove indicators
     handleBatchRemoveIndicators,
@@ -113,12 +125,8 @@ const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
         formData,
       );
       setPreviewData(response.data);
-    } catch (error: any) {
-      message.error(
-        error?.response?.data?.message ||
-          error?.response?.data?.error?.message ||
-          "Lỗi khi đọc file",
-      );
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Lỗi khi đọc file"));
     } finally {
       setImportLoading(false);
     }
@@ -149,12 +157,8 @@ const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
       } else {
         message.error(result.message || "Lỗi khi import");
       }
-    } catch (error: any) {
-      message.error(
-        error?.response?.data?.message ||
-          error?.response?.data?.error?.message ||
-          "Lỗi khi import",
-      );
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Lỗi khi import"));
     } finally {
       setImportLoading(false);
     }
@@ -171,11 +175,16 @@ const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
     setFileList([]);
   };
 
-  // Get existing indicator IDs for the selected test method
-  const existingIndicatorIds = useMemo(() => {
+  // Get existing indicator keys (indicatorId + specimenTypeId) for the selected test method
+  const existingIndicatorKeys = useMemo(() => {
     if (!selectedTestMethodId) return [];
     const method = groupedData.find((m) => m.id === selectedTestMethodId);
-    return method?.indicators?.map((ind) => ind.indicatorId) || [];
+    return method?.indicators
+      ?.filter((ind) => !ind.parentIndicatorId) // Only parent indicators
+      ?.map((ind) => ({
+        indicatorId: ind.indicatorId,
+        specimenTypeId: ind.specimenTypeId,
+      })) || [];
   }, [selectedTestMethodId, groupedData]);
 
   // Memoized columns for test methods
@@ -191,8 +200,8 @@ const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
 
   // Memoized columns for indicators
   const indicatorColumns = useMemo(
-    () => getIndicatorColumns(handleRemoveIndicator),
-    [handleRemoveIndicator],
+    () => getIndicatorColumns(handleRemoveIndicator, handleOpenEditIndicator),
+    [handleRemoveIndicator, handleOpenEditIndicator],
   );
 
   // Expose actions to parent
@@ -240,9 +249,21 @@ const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
         loading={addIndicatorsLoading}
         indicatorGroups={indicatorGroups}
         indicatorsByGroup={indicatorsByGroup}
-        existingIndicatorIds={existingIndicatorIds}
+        specimenTypes={specimenTypes}
+        existingIndicatorKeys={existingIndicatorKeys}
+        getSpecimenTypesByIndicator={getSpecimenTypesByIndicator}
+        getIndicatorsBySpecimenType={getIndicatorsBySpecimenType}
         onOk={handleAddIndicatorsOk}
         onCancel={handleAddIndicatorsCancel}
+      />
+
+      {/* Edit Indicator Modal */}
+      <EditIndicatorModal
+        open={editIndicatorModalOpen}
+        loading={editIndicatorLoading}
+        indicator={editingIndicator}
+        onOk={handleEditIndicatorOk}
+        onCancel={handleEditIndicatorCancel}
       />
 
       {/* Import TestMethod Modal */}

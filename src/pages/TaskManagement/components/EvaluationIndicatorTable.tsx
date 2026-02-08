@@ -29,8 +29,15 @@ import {
 } from "../../../types/laboratoryTask";
 import { laboratoryTaskService } from "../../../services/laboratoryTaskService";
 import { IndicatorName } from "../../../components/common";
+import "./EvaluationIndicatorTable.css";
 
 const { Text } = Typography;
+
+// Extended type with position flags for tree line rendering
+interface IndicatorWithPosition extends LaboratoryTaskIndicatorDto {
+  _isFirstSub?: boolean;
+  _isLastSub?: boolean;
+}
 
 // Helper to extract error message from API response
 // API trả về format: { errors: { fieldName: ["message1", "message2"] } }
@@ -134,11 +141,13 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
   const [supplementaryForm] = Form.useForm();
 
   // Filter indicators that need evaluation (Pending or CannotTest status)
+  // Exclude sub-indicators only - Lab Hóa can work in parallel now
   const pendingIndicators = useMemo(() => {
     return indicators.filter(
       (ind) =>
-        ind.approvalStatus === IndicatorApprovalStatus.Pending ||
-        ind.approvalStatus === IndicatorApprovalStatus.CannotTest
+        !ind.parentIndicatorId && // Chỉ đánh giá cho chỉ tiêu cha
+        (ind.approvalStatus === IndicatorApprovalStatus.Pending ||
+          ind.approvalStatus === IndicatorApprovalStatus.CannotTest)
     );
   }, [indicators]);
 
@@ -281,6 +290,61 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
     });
   };
 
+  // Get count of selected indicators that are pending (can be accepted)
+  const selectedPendingCount = useMemo(() => {
+    return selectedIndicatorIds.filter((id) =>
+      pendingIndicators.some((ind) => ind.id === id)
+    ).length;
+  }, [selectedIndicatorIds, pendingIndicators]);
+
+  // Handle accept selected indicators
+  const handleAcceptSelected = async () => {
+    // Filter only pending indicators from selection
+    const pendingIds = selectedIndicatorIds.filter((id) =>
+      pendingIndicators.some((ind) => ind.id === id)
+    );
+
+    if (pendingIds.length === 0) {
+      Modal.warning({
+        title: "Không có chỉ tiêu cần chấp nhận",
+        content: "Vui lòng chọn các chỉ tiêu đang chờ đánh giá",
+      });
+      return;
+    }
+
+    Modal.confirm({
+      title: "Xác nhận chấp nhận",
+      content: `Bạn có chắc muốn chấp nhận thử nghiệm cho ${pendingIds.length} chỉ tiêu đã chọn?`,
+      okText: "Chấp nhận",
+      cancelText: "Hủy",
+      centered: true,
+      onOk: async () => {
+        setActionLoading(true);
+        try {
+          // Accept each indicator sequentially
+          for (const indicatorId of pendingIds) {
+            await laboratoryTaskService.evaluateIndicator(indicatorId, {
+              action: IndicatorEvaluationAction.Accept,
+            });
+          }
+          setSelectedIndicatorIds([]);
+          onEvaluationComplete();
+        } catch (error: any) {
+          console.error("Failed to accept selected indicators:", error);
+          Modal.error({
+            title: "Lỗi",
+            content: getApiErrorMessage(
+              error,
+              "Không thể chấp nhận các chỉ tiêu đã chọn"
+            ),
+          });
+        } finally {
+          setActionLoading(false);
+        }
+      },
+    });
+  };
+
   // Handle supplementary request
   const handleSupplementaryRequest = async () => {
     try {
@@ -316,6 +380,15 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
   const getStatusTag = (record: LaboratoryTaskIndicatorDto) => {
     const status = record.approvalStatus;
 
+    // Hiển thị "Chờ mẫu chung" nếu chỉ tiêu đang đợi mẫu từ Lab Vi Sinh
+    if (record.isWaitingForSharedSample) {
+      return (
+        <Tooltip title="Chỉ tiêu này thuộc mẫu chung, đang chờ Lab Vi Sinh hoàn thành">
+          <Tag color="gold">Chờ mẫu chung</Tag>
+        </Tooltip>
+      );
+    }
+
     if (status === IndicatorApprovalStatus.CannotTest) {
       return <Tag color="orange">KTV báo không TN được</Tag>;
     }
@@ -340,6 +413,12 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
     const status = record.approvalStatus;
 
     if (!canEvaluate) {
+      return <></>;
+    }
+
+    // Không hiển thị button nào cho chỉ tiêu phụ (chỉ hiển thị thông tin)
+    // Chỉ đánh giá cho chỉ tiêu cha
+    if (record.parentIndicatorId) {
       return <></>;
     }
 
@@ -466,12 +545,14 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
   };
 
   // Check if there are any indicators that need action (for showing/hiding action column)
+  // Only parent indicators can have actions (sub-indicators are display-only)
   const hasActionableIndicators = useMemo(() => {
     if (!canEvaluate) return false;
     return indicators.some(
       (ind) =>
-        ind.approvalStatus === IndicatorApprovalStatus.Pending ||
-        ind.approvalStatus === IndicatorApprovalStatus.CannotTest
+        !ind.parentIndicatorId && // Chỉ tiêu cha mới có thể đánh giá
+        (ind.approvalStatus === IndicatorApprovalStatus.Pending ||
+          ind.approvalStatus === IndicatorApprovalStatus.CannotTest)
     );
   }, [indicators, canEvaluate]);
 
@@ -495,57 +576,79 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
         dataIndex: "indicatorName",
         key: "indicatorName",
         width: 200,
-        render: (value: string, record: LaboratoryTaskIndicatorDto) => (
-          <div>
-            <div>
-              <IndicatorName name={value} formattedName={record.indicatorFormattedName} />
-            </div>
-            {record.indicatorGroupName && (
-              <div style={{ marginTop: 2 }}>
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  {record.indicatorGroupName}
-                </Text>
+        render: (value: string, record: IndicatorWithPosition) => {
+          const isSubIndicator = !!record.parentIndicatorId;
+          const isFirstSub = record._isFirstSub || false;
+          const isLastSub = record._isLastSub || false;
+
+          return (
+            <div
+              className={`evaluation-indicator-name-wrapper ${isSubIndicator ? "has-tree-line" : ""} ${isFirstSub ? "is-first-sub" : ""} ${isLastSub ? "is-last-sub" : ""}`}
+              style={{
+                paddingLeft: isSubIndicator ? 24 : 0,
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <div>
+                <IndicatorName name={value} formattedName={record.indicatorFormattedName} />
+                {record.indicatorGroupName && !isSubIndicator && (
+                  <div style={{ marginTop: 2 }}>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      {record.indicatorGroupName}
+                    </Text>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        ),
+            </div>
+          );
+        },
       },
       {
         title: "Phương pháp hiện tại",
         dataIndex: "methodName",
         key: "methodName",
         width: 200,
-        render: (value: string, record: LaboratoryTaskIndicatorDto) => (
-          <Tooltip title={value}>
-            <IndicatorName
-              name={value || "-"}
-              formattedName={record.methodFormattedName}
-              style={{
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            />
-          </Tooltip>
-        ),
+        render: (value: string, record: LaboratoryTaskIndicatorDto) => {
+          // Không hiển thị phương pháp cho chỉ tiêu phụ
+          if (record.parentIndicatorId) return null;
+          return (
+            <Tooltip title={value}>
+              <IndicatorName
+                name={value || "-"}
+                formattedName={record.methodFormattedName}
+                style={{
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              />
+            </Tooltip>
+          );
+        },
       },
       {
         title: "Đơn giá",
         dataIndex: "unitPrice",
         key: "unitPrice",
         width: 120,
-        render: (value: number) => (
-          <Text>{value?.toLocaleString("vi-VN")} đ</Text>
-        ),
+        render: (value: number, record: LaboratoryTaskIndicatorDto) => {
+          // Không hiển thị đơn giá cho chỉ tiêu phụ
+          if (record.parentIndicatorId) return null;
+          return <Text>{value?.toLocaleString("vi-VN")} đ</Text>;
+        },
       },
       {
         title: "Trạng thái",
         key: "status",
         width: 150,
-        render: (_: unknown, record: LaboratoryTaskIndicatorDto) =>
-          getStatusTag(record),
+        render: (_: unknown, record: LaboratoryTaskIndicatorDto) => {
+          // Không hiển thị trạng thái cho chỉ tiêu phụ
+          if (record.parentIndicatorId) return null;
+          return getStatusTag(record);
+        },
       },
       // Cột Hành động - sẽ được filter ra nếu không có chỉ tiêu cần action
       {
@@ -562,36 +665,115 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
     return baseColumns;
   }, [hasActionableIndicators]);
 
-  // Sort indicators: Needs evaluation (Pending, CannotTest) first, then by sample code
-  const sortedIndicators = useMemo(() => {
+  // Sort indicators: Group by sample, then by parent/sub indicator groups
+  // Helper: tạo composite key từ indicatorId + methodId
+  const makeGroupKey = (indicatorId: string, methodId: string | null | undefined) =>
+    `${indicatorId}_${methodId || 'no-method'}`;
+
+  // Within each sample, parent and sub-indicators are kept together
+  // Also add position flags for tree line rendering
+  const sortedIndicators = useMemo((): IndicatorWithPosition[] => {
     const needsEvaluation = (status: IndicatorApprovalStatus) =>
       status === IndicatorApprovalStatus.Pending ||
       status === IndicatorApprovalStatus.CannotTest;
 
-    return [...indicators].sort((a, b) => {
-      // Needs evaluation first (CannotTest before Pending for visibility)
-      const aNeedsEval = needsEvaluation(a.approvalStatus);
-      const bNeedsEval = needsEvaluation(b.approvalStatus);
+    const sorted = [...indicators].sort((a, b) => {
+      // First, sort by sample code
+      const sampleCompare = (a.sampleCode || "").localeCompare(b.sampleCode || "");
+      if (sampleCompare !== 0) return sampleCompare;
 
-      if (aNeedsEval && !bNeedsEval) return -1;
-      if (!aNeedsEval && bNeedsEval) return 1;
+      // Same sample - now group by parent/sub relationship + methodId
+      // Group key: for parent use indicatorId+methodId, for sub use parentIndicatorId+methodId
+      const aGroupKey = a.parentIndicatorId
+        ? makeGroupKey(a.parentIndicatorId, a.methodId)
+        : makeGroupKey(a.indicatorId, a.methodId);
+      const bGroupKey = b.parentIndicatorId
+        ? makeGroupKey(b.parentIndicatorId, b.methodId)
+        : makeGroupKey(b.indicatorId, b.methodId);
 
-      // CannotTest before Pending (more urgent)
-      if (
-        a.approvalStatus === IndicatorApprovalStatus.CannotTest &&
-        b.approvalStatus === IndicatorApprovalStatus.Pending
-      ) {
-        return -1;
+      // If they are in different groups within the same sample
+      if (aGroupKey !== bGroupKey) {
+        // Find the parent indicator of each group to determine priority
+        const aParent = a.parentIndicatorId
+          ? indicators.find(
+              (i) =>
+                i.indicatorId === a.parentIndicatorId &&
+                i.sampleId === a.sampleId &&
+                i.methodId === a.methodId
+            )
+          : a;
+        const bParent = b.parentIndicatorId
+          ? indicators.find(
+              (i) =>
+                i.indicatorId === b.parentIndicatorId &&
+                i.sampleId === b.sampleId &&
+                i.methodId === b.methodId
+            )
+          : b;
+
+        // Sort groups by needs evaluation priority (parent's status determines group priority)
+        const aParentNeedsEval = aParent
+          ? needsEvaluation(aParent.approvalStatus)
+          : false;
+        const bParentNeedsEval = bParent
+          ? needsEvaluation(bParent.approvalStatus)
+          : false;
+
+        if (aParentNeedsEval && !bParentNeedsEval) return -1;
+        if (!aParentNeedsEval && bParentNeedsEval) return 1;
+
+        // CannotTest groups before Pending groups (more urgent)
+        if (aParent && bParent) {
+          if (
+            aParent.approvalStatus === IndicatorApprovalStatus.CannotTest &&
+            bParent.approvalStatus === IndicatorApprovalStatus.Pending
+          ) {
+            return -1;
+          }
+          if (
+            aParent.approvalStatus === IndicatorApprovalStatus.Pending &&
+            bParent.approvalStatus === IndicatorApprovalStatus.CannotTest
+          ) {
+            return 1;
+          }
+        }
+
+        // Same priority, maintain original relative order by group key
+        return aGroupKey.localeCompare(bGroupKey);
       }
-      if (
-        a.approvalStatus === IndicatorApprovalStatus.Pending &&
-        b.approvalStatus === IndicatorApprovalStatus.CannotTest
-      ) {
-        return 1;
+
+      // Same group - parent first, then sub-indicators
+      if (!a.parentIndicatorId && b.parentIndicatorId) return -1;
+      if (a.parentIndicatorId && !b.parentIndicatorId) return 1;
+
+      // Both are sub-indicators in same group, keep original order
+      return 0;
+    });
+
+    // Add position flags for tree line rendering
+    return sorted.map((item, _index, arr): IndicatorWithPosition => {
+      if (!item.parentIndicatorId) {
+        return item; // Parent indicator, no flags needed
       }
 
-      // Then by sample code
-      return (a.sampleCode || "").localeCompare(b.sampleCode || "");
+      // Find siblings (sub-indicators with same parent AND same sample AND same methodId)
+      // Because the same parent indicator can appear in different samples/methods
+      const parentId = item.parentIndicatorId;
+      const sampleId = item.sampleId;
+      const methodId = item.methodId;
+      const siblings = arr.filter(
+        (i) =>
+          i.parentIndicatorId === parentId &&
+          i.sampleId === sampleId &&
+          i.methodId === methodId
+      );
+      const siblingIndex = siblings.findIndex((s) => s.id === item.id);
+
+      return {
+        ...item,
+        _isFirstSub: siblingIndex === 0,
+        _isLastSub: siblingIndex === siblings.length - 1,
+      };
     });
   }, [indicators]);
 
@@ -607,10 +789,14 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
         setSelectedIndicatorIds(selectedRowKeys as string[]);
       },
       getCheckboxProps: (record: LaboratoryTaskIndicatorDto) => ({
-        // Only allow selecting indicators that need evaluation (Pending or CannotTest)
+        // Disable selection cho:
+        // - Chỉ tiêu phụ (chỉ đánh giá cho chỉ tiêu cha)
+        // - Chỉ tiêu đang chờ mẫu chung
+        // - Chỉ tiêu không cần đánh giá
         disabled:
-          record.approvalStatus !== IndicatorApprovalStatus.Pending &&
-          record.approvalStatus !== IndicatorApprovalStatus.CannotTest,
+          !!record.parentIndicatorId ||
+          (record.approvalStatus !== IndicatorApprovalStatus.Pending &&
+            record.approvalStatus !== IndicatorApprovalStatus.CannotTest),
         name: record.id,
       }),
     };
@@ -627,11 +813,11 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
             <Button
               type="primary"
               icon={<CheckOutlined />}
-              onClick={handleApproveAllRemaining}
-              disabled={!hasPendingIndicators}
+              onClick={handleAcceptSelected}
+              disabled={selectedPendingCount === 0}
               loading={actionLoading}
             >
-              Chấp nhận tất cả ({pendingIndicators.length})
+              Chấp nhận ({selectedPendingCount})
             </Button>
             <Button
               icon={<SwapOutlined />}
@@ -668,6 +854,9 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
         scroll={{ x: 950 }}
         loading={loading || actionLoading}
         rowSelection={rowSelection}
+        rowClassName={(record: IndicatorWithPosition) =>
+          record.parentIndicatorId ? "sub-indicator-row" : ""
+        }
       />
 
       {/* Method Change Modal */}

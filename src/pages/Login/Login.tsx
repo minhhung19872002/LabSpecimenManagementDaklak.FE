@@ -4,7 +4,7 @@ import { UserOutlined, LockOutlined, WifiOutlined } from "../../components/commo
 import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import { authService, UserInfo } from "../../services/authService";
-import { PATH_ROUTES, ROLES, STORAGE_KEYS } from "../../constants";
+import { STORAGE_KEYS, getDefaultRouteForUser } from "../../constants";
 import "./Login.css";
 
 interface LoginFormValues {
@@ -14,28 +14,6 @@ interface LoginFormValues {
 }
 
 const REMEMBERED_USERNAME_KEY = "remembered_username";
-
-// Role-based default routes
-const getDefaultRouteByRole = (roles: string[]): string => {
-  // Check roles in order of priority
-  if (roles.includes(ROLES.ADMIN)) {
-    return PATH_ROUTES.dashboard;
-  }
-  if (roles.includes(ROLES.QUALITY_MANAGER)) {
-    return PATH_ROUTES.dashboard;
-  }
-  if (roles.includes(ROLES.LAB_TECHNICAL_MANAGER)) {
-    return PATH_ROUTES.dashboard;
-  }
-  if (roles.includes(ROLES.SAMPLE_RECEIVER)) {
-    return PATH_ROUTES.testRequests.index;
-  }
-  if (roles.includes(ROLES.LAB_TECHNICIAN)) {
-    return PATH_ROUTES.testing.index;
-  }
-  // Default fallback
-  return PATH_ROUTES.dashboard;
-};
 
 const Login: React.FC = () => {
   const { t } = useTranslation();
@@ -88,9 +66,11 @@ const Login: React.FC = () => {
         try {
           const userInfo: UserInfo = JSON.parse(storedUser);
           if (userInfo.roles && userInfo.roles.length > 0) {
-            const defaultRoute = getDefaultRouteByRole(userInfo.roles);
-            navigate(defaultRoute, { replace: true });
-            return;
+            const defaultRoute = getDefaultRouteForUser(userInfo.roles);
+            if (defaultRoute) {
+              navigate(defaultRoute, { replace: true });
+              return;
+            }
           }
         } catch {
           // Ignore parsing errors
@@ -114,23 +94,18 @@ const Login: React.FC = () => {
       let response;
       let loginMethod: 'online' | 'offline' = 'online';
 
-      // If offline, try offline login directly
-      if (!navigator.onLine) {
-        loginMethod = 'offline';
-        response = await authService.loginOffline(credentials);
-      } else {
-        // Try online login first
-        try {
-          response = await authService.login(credentials);
-        } catch (onlineErr: any) {
-          // If network error (no response), try offline login as fallback
-          if (!onlineErr.response && hasOfflineCredentials) {
-            console.log('Online login failed, attempting offline login...');
-            loginMethod = 'offline';
-            response = await authService.loginOffline(credentials);
-          } else {
-            throw onlineErr; // Re-throw if it's not a network error
-          }
+      // Always try online login first, regardless of navigator.onLine
+      // navigator.onLine is unreliable in many browsers
+      try {
+        response = await authService.login(credentials);
+      } catch (onlineErr: any) {
+        // If network error (no response), try offline login as fallback
+        if (!onlineErr.response && hasOfflineCredentials) {
+          console.log('Online login failed, attempting offline login...');
+          loginMethod = 'offline';
+          response = await authService.loginOffline(credentials);
+        } else {
+          throw onlineErr; // Re-throw if it's not a network error
         }
       }
 
@@ -158,12 +133,12 @@ const Login: React.FC = () => {
           );
         }
 
-        // Determine redirect path based on user role
+        // Determine redirect path based on user permissions
         let redirectPath = from;
         if (response.user?.roles && response.user.roles.length > 0) {
-          // If coming from login directly (not redirected), use role-based route
+          // If coming from login directly (not redirected), use permission-based route
           if (from === "/dashboard" || from === "/") {
-            redirectPath = getDefaultRouteByRole(response.user.roles);
+            redirectPath = getDefaultRouteForUser(response.user.roles) || "/";
           }
         }
 

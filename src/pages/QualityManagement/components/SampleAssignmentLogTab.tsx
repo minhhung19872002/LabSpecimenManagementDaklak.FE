@@ -1,20 +1,20 @@
 import React, { useMemo, useCallback, useState } from "react";
-import { Table, Input, Select, Button, Tag, Row, Col } from "antd";
+import { Table, Input, Select, Button, Tag, Row, Col, Pagination } from "antd";
 import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { useSampleAssignmentLog } from "../hooks/useSampleAssignmentLog";
 import {
   SampleAssignmentLogDto,
-  QualityIndicatorApprovalStatus,
+  QLCLDisplayStatus,
+  QLCLDisplayStatusLabels,
+  QLCLDisplayStatusColors,
 } from "../../../types/qualityManagement";
 import {
   TestRequestStatus,
   TestRequestStatusLabels,
-  TestRequestStatusColors,
 } from "../../../types/testRequest";
 import { IndicatorApprovalStatus } from "../../../types/laboratoryTask";
-import { TestingStatus } from "../../../types/testing";
 
 import "../../../styles/ListCard.css";
 import "./SampleAssignmentLogTab.css";
@@ -300,35 +300,34 @@ const processDataForRowSpan = (
   return result;
 };
 
-// Determine row color class based on highlighting rules
+// Determine row color class based on highlighting rules (QLCL page)
 const getRowColorClass = (record: ProcessedLogItem): string => {
   // Skip if report published or completed
   if (
     record.isReportPublished ||
-    record.testRequestStatus === TestRequestStatus.Completed
+    record.qlclDisplayStatus === QLCLDisplayStatus.Published ||
+    record.qlclDisplayStatus === QLCLDisplayStatus.WaitingForPublishing
   ) {
     return "";
   }
 
-  // Purple: QLCL pending approval
-  if (
-    record.qualityApprovalStatus ===
-    QualityIndicatorApprovalStatus.PendingApproval
-  ) {
+  // Purple: Chờ QLCL duyệt
+  if (record.qlclDisplayStatus === QLCLDisplayStatus.WaitingQLCLApproval) {
     return "row-purple";
   }
 
-  // Yellow: Waiting for result approval (Entered)
-  if (record.indicatorApprovalStatus === IndicatorApprovalStatus.Entered) {
+  // Yellow: Chờ QLKT duyệt hoặc đã nhập KQ chờ duyệt
+  if (
+    record.qlclDisplayStatus === QLCLDisplayStatus.WaitingQLKTApproval ||
+    record.indicatorApprovalStatus === IndicatorApprovalStatus.Entered
+  ) {
     return "row-yellow";
   }
 
-  // Red: New/UnderReview OR Pending OR TestingStatus=InProgress
+  // Red: Đang TN hoặc cần làm
   if (
-    record.testRequestStatus === TestRequestStatus.New ||
-    record.testRequestStatus === TestRequestStatus.UnderReview ||
-    record.indicatorApprovalStatus === IndicatorApprovalStatus.Pending ||
-    record.testingStatus === TestingStatus.InProgress
+    record.qlclDisplayStatus === QLCLDisplayStatus.ToDo ||
+    record.qlclDisplayStatus === QLCLDisplayStatus.Testing
   ) {
     return "row-red";
   }
@@ -351,6 +350,12 @@ const SampleAssignmentLogTab: React.FC = () => {
 
   // Process data for row spanning
   const processedData = useMemo(() => processDataForRowSpan(data), [data]);
+
+  // Count unique contracts in current page for display
+  const uniqueContractCount = useMemo(() => {
+    const contracts = new Set(data.map((item) => item.contractNumber));
+    return contracts.size;
+  }, [data]);
 
   // State for hover - track which row index is being hovered
   const [hoveredRowIndex, setHoveredRowIndex] = useState<number | null>(null);
@@ -594,15 +599,19 @@ const SampleAssignmentLogTab: React.FC = () => {
       },
       {
         title: "Tình trạng",
-        dataIndex: "testRequestStatus",
-        key: "testRequestStatus",
-        width: 130,
+        dataIndex: "qlclDisplayStatus",
+        key: "qlclDisplayStatus",
+        width: 150,
         fixed: "right",
-        render: (status: TestRequestStatus) => (
-          <Tag color={TestRequestStatusColors[status] || "default"}>
-            {TestRequestStatusLabels[status] || "Không xác định"}
-          </Tag>
-        ),
+        render: (status: QLCLDisplayStatus | null | undefined) => {
+          // Default to New if null/undefined
+          const effectiveStatus = status ?? QLCLDisplayStatus.New;
+          return (
+            <Tag color={QLCLDisplayStatusColors[effectiveStatus] || "default"}>
+              {QLCLDisplayStatusLabels[effectiveStatus] || "Không xác định"}
+            </Tag>
+          );
+        },
       },
     ],
     [isCellHovered],
@@ -660,7 +669,7 @@ const SampleAssignmentLogTab: React.FC = () => {
         </Col>
       </Row>
 
-      {/* Table */}
+      {/* Table - pagination disabled because we do server-side contract pagination */}
       <Table<ProcessedLogItem>
           columns={columns}
           dataSource={processedData}
@@ -689,31 +698,37 @@ const SampleAssignmentLogTab: React.FC = () => {
             onMouseLeave: handleRowMouseLeave,
             style: { cursor: "pointer" },
           })}
-          pagination={{
-            current: pagination.current,
-            pageSize: pagination.pageSize,
-            total: pagination.total,
-            showSizeChanger: true,
-            showTotal: (total, range) => (
-              <>
-                Hiển thị{" "}
-                <b>
-                  {range[0]}-{range[1]}/{total}
-                </b>
-              </>
-            ),
-            pageSizeOptions: [50, 100, 150],
-          }}
-          onChange={(pag) =>
-            handleTableChange({
-              current: pag.current,
-              pageSize: pag.pageSize,
-            })
-          }
+          pagination={false}
           scroll={{ x: 2200 }}
           size="small"
           bordered
       />
+
+      {/* Pagination - server-side contract pagination */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <span>
+            Hiển thị <b>{uniqueContractCount}/{pagination.total}</b> hợp đồng
+          </span>
+          <Select
+            value={pagination.pageSize}
+            onChange={(value) => handleTableChange({ current: 1, pageSize: value })}
+            options={[
+              { value: 20, label: '20 / trang' },
+              { value: 50, label: '50 / trang' },
+              { value: 100, label: '100 / trang' },
+            ]}
+            style={{ width: 110 }}
+          />
+        </div>
+        <Pagination
+          current={pagination.current}
+          pageSize={pagination.pageSize}
+          total={pagination.total}
+          showSizeChanger={false}
+          onChange={(page) => handleTableChange({ current: page, pageSize: pagination.pageSize })}
+        />
+      </div>
     </div>
   );
 };

@@ -316,6 +316,7 @@ export const authService = {
     localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.USER_INFO);
+    localStorage.removeItem(STORAGE_KEYS.OFFLINE_AUTH_CREDENTIALS); // Clear cached offline credentials on logout
     localStorage.removeItem(STORAGE_KEYS.WORK_REMINDER_LAST_SHOWN); // Clear SampleReceiver work reminder state on logout
     localStorage.removeItem(STORAGE_KEYS.LAB_TECH_MANAGER_REMINDER_LAST_SHOWN); // Clear LabTechManager work reminder state on logout
     localStorage.removeItem(STORAGE_KEYS.LAB_TECHNICIAN_REMINDER_LAST_SHOWN); // Clear LabTechnician work reminder state on logout

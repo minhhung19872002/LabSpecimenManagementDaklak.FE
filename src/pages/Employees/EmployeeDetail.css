@@ -1,0 +1,101 @@
+/* EmployeeDetail Page */
+
+.employee-detail {
+  padding: 24px;
+}
+
+/* UserListTab - toolbar */
+.employee-detail .role-user-toolbar {
+  padding: 16px 16px 16px;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* PermissionsTab - toolbar */
+.employee-detail .role-permissions-toolbar {
+  padding: 16px 16px 16px;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* PermissionsTab - body padding */
+.employee-detail .role-permissions-body {
+  padding: 0 16px 16px;
+}
+
+/* Toolbar primary button - gradient */
+.employee-detail .role-user-toolbar .ant-btn-primary,
+.employee-detail .role-permissions-toolbar .ant-btn-primary {
+  background: var(--gradient-primary) !important;
+  border: none !important;
+  box-shadow: 0 2px 4px rgba(30, 99, 248, 0.3);
+  color: #fff !important;
+}
+
+.employee-detail .role-user-toolbar .ant-btn-primary .anticon,
+.employee-detail .role-permissions-toolbar .ant-btn-primary .anticon {
+  color: #fff !important;
+}
+
+.employee-detail .role-user-toolbar .ant-btn-primary:hover,
+.employee-detail .role-permissions-toolbar .ant-btn-primary:hover {
+  opacity: 0.9;
+}
+
+.employee-detail .role-user-toolbar .ant-btn-primary:disabled,
+.employee-detail .role-permissions-toolbar .ant-btn-primary:disabled {
+  background: #d9d9d9 !important;
+  color: rgba(0, 0, 0, 0.25) !important;
+  box-shadow: none;
+}
+
+.employee-detail .role-user-toolbar .ant-btn-primary:disabled .anticon,
+.employee-detail .role-permissions-toolbar .ant-btn-primary:disabled .anticon {
+  color: rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Table styling - no border radius */
+.employee-detail .ant-table {
+  border-radius: 0;
+}
+
+.employee-detail .ant-table-container {
+  border-radius: 0 !important;
+}
+
+.employee-detail .ant-table-wrapper .ant-table-container table > thead > tr:first-child > *:first-child {
+  border-start-start-radius: 0;
+}
+
+.employee-detail .ant-table-wrapper .ant-table-container table > thead > tr:first-child > *:last-child {
+  border-start-end-radius: 0;
+}
+
+.employee-detail .ant-table-thead > tr > th:first-child,
+.employee-detail .ant-table-thead > tr > th:last-child {
+  border-radius: 0 !important;
+}
+
+.employee-detail .ant-table-tbody > tr:last-child > td:first-child,
+.employee-detail .ant-table-tbody > tr:last-child > td:last-child {
+  border-radius: 0 !important;
+}
+
+/* Table header - light blue background */
+.employee-detail .ant-table-thead > tr > th,
+.employee-detail .ant-table-thead > tr > td {
+  background: #E6F7FF !important;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+  .employee-detail .role-user-toolbar,
+  .employee-detail .role-permissions-toolbar {
+    flex-direction: column;
+    gap: 12px;
+  }
+}

@@ -180,26 +180,60 @@ const MasterDataList: React.FC = () => {
 
               {/* Sample Type Categories Tab */}
               {activeCategory === "sampleTypeCategories" && (
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() =>
-                    sampleTypeCategoriesRef.current?.handleCreate()
-                  }
-                >
-                  Thêm danh mục
-                </Button>
+                <>
+                  <Button
+                    icon={<DownloadOutlined />}
+                    onClick={() =>
+                      sampleTypeCategoriesRef.current?.handleDownloadTemplate()
+                    }
+                  >
+                    Tải template
+                  </Button>
+                  <Button
+                    icon={<UploadOutlined />}
+                    onClick={() =>
+                      sampleTypeCategoriesRef.current?.handleImport()
+                    }
+                  >
+                    Nhập danh sách
+                  </Button>
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() =>
+                      sampleTypeCategoriesRef.current?.handleCreate()
+                    }
+                  >
+                    Thêm danh mục
+                  </Button>
+                </>
               )}
 
               {/* Specimen Types Tab */}
               {activeCategory === "specimenTypes" && (
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => specimenTypesRef.current?.handleCreate()}
-                >
-                  Thêm loại mẫu
-                </Button>
+                <>
+                  <Button
+                    icon={<DownloadOutlined />}
+                    onClick={() =>
+                      specimenTypesRef.current?.handleDownloadTemplate()
+                    }
+                  >
+                    Tải template
+                  </Button>
+                  <Button
+                    icon={<UploadOutlined />}
+                    onClick={() => specimenTypesRef.current?.handleImport()}
+                  >
+                    Nhập danh sách
+                  </Button>
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => specimenTypesRef.current?.handleCreate()}
+                  >
+                    Thêm loại mẫu
+                  </Button>
+                </>
               )}
 
               {/* Test Methods Tab */}
@@ -238,7 +272,7 @@ const MasterDataList: React.FC = () => {
                       standardsRef.current?.handleDownloadTemplate()
                     }
                   >
-                    Tải template mẫu
+                    Tải template
                   </Button>
                   <Button
                     icon={<UploadOutlined />}
@@ -291,24 +325,54 @@ const MasterDataList: React.FC = () => {
 
               {/* Test Result Values Tab */}
               {activeCategory === "testResultValues" && (
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => testResultValuesRef.current?.handleCreate()}
-                >
-                  Thêm kết quả
-                </Button>
+                <>
+                  <Button
+                    icon={<DownloadOutlined />}
+                    onClick={() =>
+                      testResultValuesRef.current?.handleDownloadTemplate()
+                    }
+                  >
+                    Tải template
+                  </Button>
+                  <Button
+                    icon={<UploadOutlined />}
+                    onClick={() => testResultValuesRef.current?.handleImport()}
+                  >
+                    Nhập danh sách
+                  </Button>
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => testResultValuesRef.current?.handleCreate()}
+                  >
+                    Thêm kết quả
+                  </Button>
+                </>
               )}
 
               {/* Notes Tab */}
               {activeCategory === "notes" && (
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => notesRef.current?.handleCreate()}
-                >
-                  Thêm ghi chú
-                </Button>
+                <>
+                  <Button
+                    icon={<DownloadOutlined />}
+                    onClick={() => notesRef.current?.handleDownloadTemplate()}
+                  >
+                    Tải template
+                  </Button>
+                  <Button
+                    icon={<UploadOutlined />}
+                    onClick={() => notesRef.current?.handleImport()}
+                  >
+                    Nhập danh sách
+                  </Button>
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => notesRef.current?.handleCreate()}
+                  >
+                    Thêm ghi chú
+                  </Button>
+                </>
               )}
 
               {/* Other tabs (departments, laboratories, etc.) - use old handleCreate */}

@@ -1,10 +1,17 @@
 // @ts-nocheck
 import React, { useState, useRef, useCallback } from "react";
 import { Button, Checkbox, DatePicker, Tooltip } from "antd";
-import { CloseOutlined, LockOutlined } from "../../../../components/common/Icon";
+import {
+  CloseOutlined,
+  LockOutlined,
+} from "../../../../components/common/Icon";
 import dayjs from "dayjs";
 import { IndicatorDto } from "../../../../services/masterDataService";
-import { IndicatorApprovalStatus, IndicatorApprovalStatusLabels, IndicatorApprovalStatusColors } from "../../../../types/laboratoryTask";
+import {
+  IndicatorApprovalStatus,
+  IndicatorApprovalStatusLabels,
+  IndicatorApprovalStatusColors,
+} from "../../../../types/laboratoryTask";
 import StatusTag from "../../../../components/common/StatusTag";
 import { IndicatorName } from "../../../../components/common";
 
@@ -15,7 +22,11 @@ interface TruncateTooltipProps {
   style?: React.CSSProperties;
 }
 
-const TruncateTooltip: React.FC<TruncateTooltipProps> = ({ title, children, style }) => {
+const TruncateTooltip: React.FC<TruncateTooltipProps> = ({
+  title,
+  children,
+  style,
+}) => {
   const [showTooltip, setShowTooltip] = useState(false);
   const containerRef = useRef<HTMLSpanElement>(null);
 
@@ -57,7 +68,11 @@ interface IndicatorRowProps {
   requestDate?: dayjs.Dayjs;
   approvalStatus?: IndicatorApprovalStatus; // Trạng thái duyệt từ LaboratoryTaskIndicator
   onCheckChange: (id: string) => void;
-  onDateChange: (id: string, field: "transferDate" | "requestDate", value: dayjs.Dayjs | null) => void;
+  onDateChange: (
+    id: string,
+    field: "transferDate" | "requestDate",
+    value: dayjs.Dayjs | null,
+  ) => void;
   onRemove: (id: string) => void;
   // Sub-indicator props
   isSubIndicator?: boolean;
@@ -95,13 +110,18 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
 
   // Kiểm tra xem có thể xóa indicator không
   // Không thể xóa nếu đang thử nghiệm hoặc đã có kết quả (Entered, Approved, Rejected)
-  const canDelete = approvalStatus === undefined || approvalStatus === null || approvalStatus === IndicatorApprovalStatus.Pending;
-  const statusLabel = approvalStatus !== undefined && approvalStatus !== null
-    ? IndicatorApprovalStatusLabels[approvalStatus]
-    : null;
-  const statusColor = approvalStatus !== undefined && approvalStatus !== null
-    ? IndicatorApprovalStatusColors[approvalStatus]
-    : null;
+  const canDelete =
+    approvalStatus === undefined ||
+    approvalStatus === null ||
+    approvalStatus === IndicatorApprovalStatus.Pending;
+  const statusLabel =
+    approvalStatus !== undefined && approvalStatus !== null
+      ? IndicatorApprovalStatusLabels[approvalStatus]
+      : null;
+  const statusColor =
+    approvalStatus !== undefined && approvalStatus !== null
+      ? IndicatorApprovalStatusColors[approvalStatus]
+      : null;
 
   // Build class names for tree-line styling
   const classNames = ["indicator-table-row"];
@@ -122,7 +142,7 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
     >
       {/* Checkbox - hidden for sub-indicators (they follow parent) */}
       {isSubIndicator ? (
-        <span style={{ width: 24, flexShrink: 0 }} />
+        <span />
       ) : (
         <Checkbox
           checked={isChecked}
@@ -148,102 +168,118 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
           formattedName={indicator.formattedName}
         />
       </TruncateTooltip>
-      <TruncateTooltip
-        title={methodName}
-        style={{
-          width: 120,
-          flexShrink: 0,
-          fontSize: 12,
-          color: canDelete ? "#1890ff" : "#999",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
-      >
-        <IndicatorName
-          name={methodName}
-          formattedName={methodFormattedName}
-        />
-      </TruncateTooltip>
-      {/* Đơn giá - ẩn nếu hidePrice */}
-      {!hidePrice ? (
-        <span
+      {/* Method name - hidden for sub-indicators (only show name) */}
+      {!isSubIndicator && (
+        <TruncateTooltip
+          title={methodName}
           style={{
-            fontSize: 12,
-            color: "#888",
-            width: 90,
+            width: 120,
             flexShrink: 0,
-            textAlign: "right",
+            fontSize: 12,
+            color: canDelete ? "#1890ff" : "#999",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
           }}
         >
-          {isFree ? (
-            <>
-              <span style={{ textDecoration: "line-through", color: "#bbb", marginRight: 2, fontSize: 11 }}>
-                {unitPrice?.toLocaleString("vi-VN")}đ
-              </span>
-              <span style={{ color: "#52c41a", fontWeight: 600 }}>0đ</span>
-            </>
-          ) : (
-            <>{unitPrice?.toLocaleString("vi-VN")}đ</>
-          )}
-        </span>
-      ) : (
-        <span style={{ width: 90, flexShrink: 0 }} />
+          <IndicatorName name={methodName} formattedName={methodFormattedName} />
+        </TruncateTooltip>
+      )}
+      {/* Đơn giá - hidden for sub-indicators (only show name) */}
+      {!isSubIndicator && (
+        !hidePrice ? (
+          <span
+            style={{
+              fontSize: 12,
+              color: "#888",
+              width: 90,
+              flexShrink: 0,
+              textAlign: "right",
+            }}
+          >
+            {isFree ? (
+              <>
+                <span
+                  style={{
+                    textDecoration: "line-through",
+                    color: "#bbb",
+                    marginRight: 2,
+                    fontSize: 11,
+                  }}
+                >
+                  {unitPrice?.toLocaleString("vi-VN")}đ
+                </span>
+                <span style={{ color: "#52c41a", fontWeight: 600 }}>0đ</span>
+              </>
+            ) : (
+              <>{unitPrice?.toLocaleString("vi-VN")}đ</>
+            )}
+          </span>
+        ) : (
+          <span style={{ width: 90, flexShrink: 0 }} />
+        )
       )}
       {statusLabel && (
-        <StatusTag color={statusColor} style={{ fontSize: 11, flexShrink: 0, minWidth: 60 }}>
+        <StatusTag
+          color={statusColor}
+          style={{ fontSize: 11, flexShrink: 0, minWidth: 60 }}
+        >
           {statusLabel}
         </StatusTag>
       )}
-      {/* Ngày CG/YC - ẩn nếu hideDates */}
-      {!hideDates ? (
-        <>
-          <DatePicker
-            value={transferDate}
-            onChange={(date) => onDateChange(id, "transferDate", date)}
-            format="DD/MM/YYYY"
-            size="small"
-            style={{ width: 100, flexShrink: 0 }}
-            placeholder="CG"
-            disabled // Ngày chuyển giao disabled, auto-set ngày hiện tại
-          />
-          <DatePicker
-            value={requestDate}
-            onChange={(date) => onDateChange(id, "requestDate", date)}
-            format="DD/MM/YYYY"
-            size="small"
-            style={{ width: 100, flexShrink: 0 }}
-            placeholder="YC"
-            disabled={!canDelete}
-            disabledDate={(current) => {
-              // Không cho chọn ngày quá khứ
-              return current && current.isBefore(dayjs().startOf("day"));
-            }}
-          />
-        </>
-      ) : (
-        <span style={{ width: 200, flexShrink: 0 }} />
+      {/* Ngày CG/YC - hidden for sub-indicators (only show name) */}
+      {!isSubIndicator && (
+        !hideDates ? (
+          <>
+            <DatePicker
+              value={transferDate}
+              onChange={(date) => onDateChange(id, "transferDate", date)}
+              format="DD/MM/YYYY"
+              size="small"
+              style={{ width: 100, flexShrink: 0 }}
+              placeholder="CG"
+              disabled // Ngày chuyển giao disabled, auto-set ngày hiện tại
+            />
+            <DatePicker
+              value={requestDate}
+              onChange={(date) => onDateChange(id, "requestDate", date)}
+              format="DD/MM/YYYY"
+              size="small"
+              style={{ width: 100, flexShrink: 0 }}
+              placeholder="YC"
+              disabled={!canDelete}
+              disabledDate={(current) => {
+                // Không cho chọn ngày quá khứ
+                return current && current.isBefore(dayjs().startOf("day"));
+              }}
+            />
+          </>
+        ) : (
+          <span style={{ width: 200, flexShrink: 0 }} />
+        )
       )}
-      {/* Nút xóa - dùng onRemoveSub cho sub-indicator */}
-      {canDelete ? (
-        <Button
-          type="text"
-          size="small"
-          danger
-          icon={<CloseOutlined />}
-          style={{ width: 32, flexShrink: 0 }}
-          onClick={() => isSubIndicator && onRemoveSub ? onRemoveSub(id) : onRemove(id)}
-        />
-      ) : (
-        <Tooltip title="Không thể xóa chỉ tiêu đang thử nghiệm hoặc đã có kết quả">
+      {/* Nút xóa - hidden for sub-indicators (only parent can be removed) */}
+      {!isSubIndicator && (
+        canDelete ? (
           <Button
             type="text"
             size="small"
-            icon={<LockOutlined />}
-            style={{ width: 32, flexShrink: 0, color: "#999" }}
-            disabled
+            danger
+            icon={<CloseOutlined />}
+            style={{ width: 32, flexShrink: 0 }}
+            onClick={() => onRemove(id)}
           />
-        </Tooltip>
+        ) : (
+          <Tooltip title="Không thể xóa chỉ tiêu đang thử nghiệm hoặc đã có kết quả">
+            <Button
+              type="text"
+              size="small"
+              icon={<LockOutlined />}
+              style={{ width: 32, flexShrink: 0, color: "#999" }}
+              disabled
+            />
+          </Tooltip>
+        )
       )}
     </div>
   );

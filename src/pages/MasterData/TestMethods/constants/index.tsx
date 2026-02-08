@@ -103,7 +103,8 @@ export const getTestMethodColumns = (
 
 // Columns cho bảng chỉ tiêu trong phương pháp (indicator level)
 export const getIndicatorColumns = (
-  handleRemove: (testMethodId: string, indicatorId: string) => void
+  handleRemove: (testMethodId: string, indicatorId: string) => void,
+  handleEdit?: (indicator: TestMethodIndicatorDto) => void
 ): ColumnsType<TestMethodIndicatorDto> => [
   {
     title: "STT",
@@ -112,14 +113,20 @@ export const getIndicatorColumns = (
     render: (_, __, index) => index + 1,
   },
   {
-    title: "Mã chỉ tiêu",
-    dataIndex: "indicatorCode",
-    key: "indicatorCode",
-    width: 120,
-    render: (code, record) => {
-      // Don't show code for sub-indicators
+    title: "Nền mẫu",
+    dataIndex: "specimenTypeName",
+    key: "specimenTypeName",
+    width: 150,
+    sorter: true, // Sorting handled in sortIndicatorsByHierarchy to maintain parent-child grouping
+    render: (_, record) => {
+      // Don't show specimen type for sub-indicators
       if (record.parentIndicatorId) return null;
-      return <span style={{ fontWeight: 500 }}>{code}</span>;
+      if (!record.specimenTypeName) return <span style={{ color: '#999' }}>-</span>;
+      return (
+        <span style={{ fontWeight: 500 }}>
+          {record.specimenTypeCode} - {record.specimenTypeName}
+        </span>
+      );
     },
   },
   {
@@ -151,7 +158,11 @@ export const getIndicatorColumns = (
     dataIndex: "unitPrice",
     key: "unitPrice",
     width: 150,
-    render: (price: number) => `${price?.toLocaleString("vi-VN")} đ`,
+    render: (price: number, record) => {
+      // Don't show price for sub-indicators
+      if (record.parentIndicatorId) return null;
+      return `${price?.toLocaleString("vi-VN")} đ`;
+    },
   },
   {
     title: "Trạng thái",
@@ -167,23 +178,41 @@ export const getIndicatorColumns = (
   {
     title: "Thao tác",
     key: "actions",
-    width: 80,
+    width: 100,
     render: (_, record) => {
+      // Don't show actions for sub-indicators (they follow parent)
+      if (record.parentIndicatorId) return null;
+
+      const canEdit = authService.hasPermission(PERMISSIONS.MasterData.Edit);
       const canDelete = authService.hasPermission(PERMISSIONS.MasterData.Delete);
 
-      if (!canDelete) {
+      if (!canEdit && !canDelete) {
         return null;
       }
 
       return (
-        <Popconfirm
-          title="Bạn có chắc chắn muốn xóa chỉ tiêu này khỏi phương pháp?"
-          onConfirm={() => handleRemove(record.testMethodId, record.indicatorId)}
-          okText="Có"
-          cancelText="Không"
-        >
-          <Button type="link" size="small" danger icon={<DeleteOutlined />} />
-        </Popconfirm>
+        <Space size="small">
+          {canEdit && handleEdit && (
+            <Tooltip title="Sửa đơn giá">
+              <Button
+                type="link"
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => handleEdit(record)}
+              />
+            </Tooltip>
+          )}
+          {canDelete && (
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa chỉ tiêu này khỏi phương pháp?"
+              onConfirm={() => handleRemove(record.testMethodId, record.indicatorId)}
+              okText="Có"
+              cancelText="Không"
+            >
+              <Button type="link" size="small" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          )}
+        </Space>
       );
     },
   },

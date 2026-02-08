@@ -20,7 +20,9 @@ import {
   LabTechnicianPendingTaskDto,
   EvaluateIndicatorInput,
   RequestMethodChangeInput,
-  RejectIndicatorsForTestingInput
+  RejectIndicatorsForTestingInput,
+  LaboratoryDepartmentSupporterDto,
+  AddDepartmentSupportersInput
 } from '../types/laboratoryTask';
 
 const BASE_URL = '/api/v1/laboratory-tasks';
@@ -250,6 +252,42 @@ export const laboratoryTaskService = {
     return response.data;
   },
 
+  // ============= Department Supporter Management =============
+
+  /**
+   * Get department supporters for current user's managed labs
+   */
+  getDepartmentSupporters: async (): Promise<LaboratoryDepartmentSupporterDto[]> => {
+    const response = await api.get<any>('/api/v1/department-supporters');
+    const data = response.data;
+    if (Array.isArray(data)) return data;
+    if (data?.items) return data.items;
+    if (data?.data && Array.isArray(data.data)) return data.data;
+    return [];
+  },
+
+  /**
+   * Add department supporters (with expiration date)
+   */
+  addDepartmentSupporters: async (input: AddDepartmentSupportersInput): Promise<LaboratoryDepartmentSupporterDto[]> => {
+    const response = await api.post<any>(
+      '/api/v1/department-supporters',
+      input
+    );
+    const data = response.data;
+    if (Array.isArray(data)) return data;
+    if (data?.items) return data.items;
+    if (data?.data && Array.isArray(data.data)) return data.data;
+    return [];
+  },
+
+  /**
+   * Remove a department supporter
+   */
+  removeDepartmentSupporter: async (supporterId: string): Promise<void> => {
+    await api.delete(`/api/v1/department-supporters/${supporterId}`);
+  },
+
   // ============= Bulk Approval =============
 
   /**
@@ -356,6 +394,18 @@ export const laboratoryTaskService = {
     return response.data;
   },
 
+  /**
+   * Cập nhật đơn vị tính cho chỉ tiêu (không cập nhật ngược master data)
+   */
+  updateIndicatorUnit: async (indicatorId: string, unit: string | null): Promise<LaboratoryTaskIndicatorDto> => {
+    const response = await api.put<LaboratoryTaskIndicatorDto>(
+      `${BASE_URL}/indicators/${indicatorId}/unit`,
+      JSON.stringify(unit),
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+    return response.data;
+  },
+
   // ============= Workflow Redesign - QLKT Evaluation (Per-Indicator) =============
 
   /**
@@ -446,6 +496,39 @@ export const laboratoryTaskService = {
   shouldHideRejectButton: async (taskId: string): Promise<boolean> => {
     const response = await api.get<boolean>(
       `${BASE_URL}/${taskId}/should-hide-reject-button`
+    );
+    return response.data;
+  },
+
+  // ============= Sample Assignment Log (Sổ nhận mẫu giao việc) =============
+
+  /**
+   * Lấy danh sách Sổ nhận mẫu giao việc cho QLKT - hiển thị tất cả công việc của Lab mà user quản lý
+   */
+  getSampleAssignmentLog: async (input: {
+    skipCount?: number;
+    maxResultCount?: number;
+    sorting?: string;
+    search?: string;
+    testRequestStatus?: number;
+    fromDate?: string;
+    toDate?: string;
+    laboratoryId?: string;
+  }): Promise<{ items: any[]; totalCount: number }> => {
+    const response = await api.get<{ items: any[]; totalCount: number }>(
+      `${BASE_URL}/sample-assignment-log`,
+      {
+        params: {
+          SkipCount: input.skipCount,
+          MaxResultCount: input.maxResultCount,
+          Sorting: input.sorting,
+          Search: input.search,
+          TestRequestStatus: input.testRequestStatus,
+          FromDate: input.fromDate,
+          ToDate: input.toDate,
+          LaboratoryId: input.laboratoryId
+        }
+      }
     );
     return response.data;
   }

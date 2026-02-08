@@ -34,6 +34,10 @@ import { laboratoryTaskService } from "../../services/laboratoryTaskService";
 import { formatDate } from "../../utils/formatters";
 import { testingService } from "../../services/testingService";
 import {
+  standardService,
+  StandardWithIndicatorsDto,
+} from "../../services/masterDataService";
+import {
   LaboratoryTaskDto,
   LaboratoryTaskStatus,
   LaboratoryTaskStatusLabels,
@@ -128,6 +132,9 @@ const TaskManagementDetail: React.FC = () => {
     Record<string, string | null>
   >({});
 
+  // Standards data for auto-set feature (use ref to avoid re-renders and infinite loops)
+  const standardsDataRef = React.useRef<StandardWithIndicatorsDto[]>([]);
+
   // Bulk reject modal state
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectingSampleId, setRejectingSampleId] = useState<string | null>(
@@ -172,11 +179,15 @@ const TaskManagementDetail: React.FC = () => {
 
   // Sử dụng hook để check permissions cho tất cả actions theo Permission Matrix
   const actionPermissions = useMultipleActionPermissions("tasks", [
+    "viewDetail",
     "assignTesting",
     "addSupporter",
     "editMethod",
     "approveResult",
   ]);
+
+  // Check quyền xem chi tiết task từ Permission Matrix
+  const hasViewDetailPermission = actionPermissions.viewDetail?.canAll || actionPermissions.viewDetail?.canView || false;
 
   // Check if current user is a supporter of this task
   const isCurrentUserSupporter = useMemo(() => {
@@ -191,17 +202,34 @@ const TaskManagementDetail: React.FC = () => {
     }
   }, [task?.supporters]);
 
+  // Kiểm tra quyền xem chi tiết task:
+  // - Có quyền viewDetail từ Permission Matrix (QLKT, Admin)
+  // - Hoặc là supporter của task
+  // - Hoặc là department supporter của khoa phòng
+  // - Hoặc là QLKT sở hữu task (isCurrentUserTechnicalManager)
+  const isCurrentUserDeptSupporter = task?.isCurrentUserDepartmentSupporter || false;
+  const canViewTaskDetail = hasViewDetailPermission || isCurrentUserSupporter || isCurrentUserDeptSupporter || task?.isCurrentUserTechnicalManager;
+
+  // Redirect đến 403 nếu không có quyền xem (sau khi đã load task xong)
+  useEffect(() => {
+    // Chỉ check sau khi đã load task (loading = false và task !== null hoặc task load thất bại)
+    if (!loading && task !== null && !canViewTaskDetail) {
+      navigate(PATH_ROUTES.forbidden, { replace: true });
+    }
+  }, [loading, task, canViewTaskDetail, navigate]);
+
   // Check quyền từ Permission Matrix + supporter status
   // QLKT (A) = canAll, Admin (V) = canView, Supporter = same as QLKT (except addSupporter)
-  // Người hỗ trợ có quyền: giao KTV, duyệt/từ chối, gửi QLCL
+  // Người hỗ trợ (per-task + department) có quyền: giao KTV, duyệt/từ chối, gửi QLCL
   // Người hỗ trợ KHÔNG có quyền: xóa task, thêm supporter khác
+  const isSupporterOrDeptSupporter = isCurrentUserSupporter || isCurrentUserDeptSupporter;
   const canAssignTesting =
-    actionPermissions.assignTesting?.canAll || isCurrentUserSupporter || false;
+    actionPermissions.assignTesting?.canAll || isSupporterOrDeptSupporter || false;
   const canAddSupporter = actionPermissions.addSupporter?.canAll || false; // Supporter KHÔNG có quyền thêm supporter khác
   const canEditMethod =
-    actionPermissions.editMethod?.canAll || isCurrentUserSupporter || false;
+    actionPermissions.editMethod?.canAll || isSupporterOrDeptSupporter || false;
   const canApproveResult =
-    actionPermissions.approveResult?.canAll || isCurrentUserSupporter || false;
+    actionPermissions.approveResult?.canAll || isSupporterOrDeptSupporter || false;
 
   // Check if current user can manage supporters (chỉ QLKT của task hoặc có quyền addSupporter)
   // Supporter KHÔNG có quyền này
@@ -229,13 +257,18 @@ const TaskManagementDetail: React.FC = () => {
         setMethods(methodsResult || []);
         setTechnicians(techniciansResult || []);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to load task:", error);
+      // Nếu API trả về 403 (Forbidden) hoặc 401 (Unauthorized), redirect đến trang 403
+      if (error?.response?.status === 403 || error?.response?.status === 401) {
+        navigate(PATH_ROUTES.forbidden, { replace: true });
+        return;
+      }
       message.error("Không thể tải thông tin công việc");
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, navigate]);
 
   // Reload full data from server (preserving UI states like selection, activeKeys)
   const reloadData = useCallback(async () => {
@@ -252,6 +285,88 @@ const TaskManagementDetail: React.FC = () => {
   useEffect(() => {
     loadTask();
   }, [loadTask]);
+
+  // Track which indicators have been processed for auto-set standard (to avoid duplicate API calls)
+  const processedIndicatorsRef = React.useRef<Set<string>>(new Set());
+
+  // Track if standards have been loaded (to prevent infinite loop)
+  const standardsLoadedRef = React.useRef<boolean>(false);
+
+  // Auto-set StandardId for indicators that don't have one
+  // Load standards and check which indicators need auto-set
+  useEffect(() => {
+    const autoSetStandards = async () => {
+      if (!task?.indicators || task.indicators.length === 0) return;
+
+      // Load standards if not loaded yet (use ref to prevent infinite loop)
+      let standards = standardsDataRef.current;
+      if (!standardsLoadedRef.current) {
+        try {
+          standardsLoadedRef.current = true; // Set flag before API call to prevent duplicate calls
+          standards = await standardService.getWithIndicators();
+          standardsDataRef.current = standards;
+        } catch (error) {
+          console.error("Failed to load standards for auto-set:", error);
+          standardsLoadedRef.current = false; // Reset flag on error to allow retry
+          return;
+        }
+      }
+
+      // Find indicators without standardId that haven't been processed yet
+      const indicatorsNeedingStandard = task.indicators.filter(
+        (ind) =>
+          !ind.standardId &&
+          !processedIndicatorsRef.current.has(ind.id) &&
+          ind.approvalStatus !== IndicatorApprovalStatus.Approved &&
+          ind.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled
+      );
+
+      if (indicatorsNeedingStandard.length === 0) return;
+
+      // Auto-set first matching standard for each indicator
+      for (const indicator of indicatorsNeedingStandard) {
+        // Mark as processed immediately to avoid duplicate calls
+        processedIndicatorsRef.current.add(indicator.id);
+
+        // Find matching standards for this indicator (and method + specimenType if available)
+        // Only consider active StandardIndicators
+        const matchingStandards = standards.filter((standard) =>
+          standard.indicators.some(
+            (si) =>
+              si.indicatorId === indicator.indicatorId &&
+              si.isActive === true &&
+              (!indicator.methodId || si.testMethodId === indicator.methodId) &&
+              (!indicator.specimenTypeId || !si.specimenTypeId || si.specimenTypeId === indicator.specimenTypeId)
+          )
+        );
+
+        if (matchingStandards.length > 0) {
+          const firstStandard = matchingStandards[0];
+          try {
+            // Call API to update standardId
+            await laboratoryTaskService.updateIndicatorStandard(
+              indicator.id,
+              firstStandard.id
+            );
+            // Update local state
+            setStandardSelections((prev) => ({
+              ...prev,
+              [indicator.id]: firstStandard.id,
+            }));
+          } catch (error) {
+            console.error(
+              `Failed to auto-set standard for indicator ${indicator.id}:`,
+              error
+            );
+            // Remove from processed set so it can be retried
+            processedIndicatorsRef.current.delete(indicator.id);
+          }
+        }
+      }
+    };
+
+    autoSetStandards();
+  }, [task?.indicators]);
 
   // Set default active tab based on task status
   useEffect(() => {
@@ -697,6 +812,23 @@ const TaskManagementDetail: React.FC = () => {
     }
   };
 
+  // Handle unit change - lưu silent (không loading, không thông báo)
+  const handleUnitChange = async (indicatorId: string, unit: string | null) => {
+    try {
+      const updatedIndicator = await laboratoryTaskService.updateIndicatorUnit(
+        indicatorId,
+        unit,
+      );
+      // Optimistic update
+      updateIndicatorsOptimistically([indicatorId], {
+        unit: updatedIndicator.unit,
+      });
+    } catch (error: any) {
+      console.error("Failed to update unit:", error);
+      // Silent fail - không hiển thị error message theo yêu cầu
+    }
+  };
+
   // Handle update note (for single indicator from modal)
   const handleUpdateNote = async (indicatorId: string, note: string | null) => {
     try {
@@ -1047,27 +1179,41 @@ const TaskManagementDetail: React.FC = () => {
     }
   };
 
-  // Check if task can send shared sample (Lab Vi Sinh, Approved/SentToQuality, not sent yet)
+  // Check if task can send shared sample (Lab Vi Sinh, all indicators approved, not sent yet)
   // Only Lab Vi Sinh (no priorLabTaskId) can send shared sample
   const canSendSharedSample = useMemo(() => {
     if (!task) return false;
-    return (
-      task.isSharedSampleTask === true &&
-      !task.priorLabTaskId && // Lab Vi Sinh has no prior lab, Lab Hóa has priorLabTaskId
-      (task.status === LaboratoryTaskStatus.Approved ||
-        task.status === LaboratoryTaskStatus.SentToQuality) &&
-      task.sampleSentToNextLab !== true
+
+    // Must be shared sample task
+    if (!task.isSharedSampleTask) return false;
+
+    // Lab Vi Sinh has no priorLabTaskId, Lab Hóa has priorLabTaskId
+    if (task.priorLabTaskId) return false;
+
+    // Not sent yet
+    if (task.sampleSentToNextLab === true) return false;
+
+    // Check if all indicators are Approved (QLKT đã duyệt hết)
+    const allApproved = task.indicators?.every(
+      (ind) => ind.approvalStatus === IndicatorApprovalStatus.Approved
     );
+    return allApproved === true;
   }, [task]);
 
-  // Check if task can receive shared sample (Lab Hóa, waiting, prior lab ALREADY sent)
+  // Check if task can receive shared sample (Lab Hóa, prior lab sent, not received yet)
   const canReceiveSharedSample = useMemo(() => {
     if (!task) return false;
-    return (
-      task.isWaitingForPriorLab === true &&
-      task.status === LaboratoryTaskStatus.WaitingSharedSample &&
-      task.priorLabSentSample === true // Prior Lab (Vi Sinh) đã gửi mẫu
-    );
+
+    // Must be shared sample task with priorLabTaskId (Lab Hóa)
+    if (!task.isSharedSampleTask || !task.priorLabTaskId) return false;
+
+    // Prior lab must have sent sample
+    if (task.priorLabSentSample !== true) return false;
+
+    // Not received yet (check sampleReceivedDate)
+    if (task.sampleReceivedDate) return false;
+
+    return true;
   }, [task]);
 
   // Load sample images (testing images + sample attachments from TestRequest)
@@ -1163,10 +1309,15 @@ const TaskManagementDetail: React.FC = () => {
     task?.status === LaboratoryTaskStatus.UnderEvaluation ||
     task?.status === LaboratoryTaskStatus.WaitingCustomerResponse;
 
-  // Check if task is waiting for shared sample from prior lab (Lab Hóa chờ Vi Sinh)
+  // Lab Hóa can now work in parallel with Lab Vi Sinh - no blocking
+  // These flags are kept for compatibility but always false
+  const isFullyWaitingSharedSample = false;
+
+  // Show alert only when prior lab hasn't sent sample yet (for informational purposes)
   const isWaitingSharedSample =
-    task?.status === LaboratoryTaskStatus.WaitingSharedSample ||
-    task?.isWaitingForPriorLab === true;
+    task?.isSharedSampleTask === true &&
+    task?.priorLabTaskId != null &&
+    task?.priorLabSentSample !== true;
 
   // Check if task is in completed phase (Approved, Rejected, SentToQuality, TestingRejected)
   // During this phase, cannot assign/edit
@@ -1176,22 +1327,49 @@ const TaskManagementDetail: React.FC = () => {
     task?.status === LaboratoryTaskStatus.SentToQuality ||
     task?.status === LaboratoryTaskStatus.TestingRejected;
 
+  // Check if task has any indicators that have been accepted for testing
+  // These indicators can be assigned even during evaluation phase
+  const hasAcceptedIndicators = task?.indicators?.some(
+    (ind) => ind.approvalStatus === IndicatorApprovalStatus.AcceptedForTesting
+  );
+
+  // Helper function: check if an indicator is a parent with children in the list
+  // Parent with children = không có parentIndicatorId VÀ có sub-indicators trong list
+  const isParentWithChildren = useCallback(
+    (indicator: LaboratoryTaskIndicatorDto): boolean => {
+      if (indicator.parentIndicatorId) return false; // Đây là sub-indicator
+      // Kiểm tra xem có sub-indicators nào có parentIndicatorId === indicator.indicatorId AND cùng methodId
+      return (
+        task?.indicators?.some(
+          (ind) =>
+            ind.parentIndicatorId === indicator.indicatorId &&
+            ind.methodId === indicator.methodId
+        ) ?? false
+      );
+    },
+    [task?.indicators]
+  );
+
+  // Count indicators excluding parent indicators with children (for display purposes)
+  const activeIndicatorCount = useMemo(() => {
+    if (!task?.indicators) return 0;
+    return task.indicators.filter((ind) => !isParentWithChildren(ind)).length;
+  }, [task?.indicators, isParentWithChildren]);
+
   // Check if can assign technician to indicators
   // Allowed when: PartialAccepted, FullyAccepted, Assigned, InProgress, WaitingApproval
-  // NOT allowed when: UnderEvaluation, WaitingCustomerResponse, Approved, Rejected, SentToQuality, TestingRejected, WaitingSharedSample
+  // Also allowed during UnderEvaluation/WaitingCustomerResponse if some indicators are already AcceptedForTesting
+  // NOT allowed when: Approved, Rejected, SentToQuality, TestingRejected, WaitingSharedSample (fully)
+  // For mixed tasks (isFullyWaitingSharedSample=false), allow assignment - individual indicators will be disabled
   const canAssignToIndicator =
-    !isInEvaluationPhase &&
+    (!isInEvaluationPhase || hasAcceptedIndicators) &&
     !isCompletedPhase &&
-    !isWaitingSharedSample &&
+    !isFullyWaitingSharedSample &&
     canAssignTesting;
 
-  // Check if can upload images (same logic as canEditTask)
-  // Allow upload during: Assigned, InProgress, WaitingApproval
-  const canUploadImages =
-    !isInEvaluationPhase &&
-    (task?.status === LaboratoryTaskStatus.Assigned ||
-      task?.status === LaboratoryTaskStatus.InProgress ||
-      task?.status === LaboratoryTaskStatus.WaitingApproval);
+  // Check if can upload images
+  // Cho phép QLKT upload ảnh ở mọi giai đoạn trừ khi đã hoàn thành (Approved, Rejected, SentToQuality, TestingRejected)
+  const canUploadImages = !isCompletedPhase;
 
   // Get status tag
   const getStatusTag = (status: LaboratoryTaskStatus) => {
@@ -1250,9 +1428,20 @@ const TaskManagementDetail: React.FC = () => {
     return (selectedIndicators[sampleId] || []).length;
   };
 
+  // Get count of selected indicators that need approval (Entered status only)
+  const getApprovalCount = (sampleId: string) => {
+    const ids = selectedIndicators[sampleId] || [];
+    const sample = sampleList.find((s) => s.sampleId === sampleId);
+    return ids.filter((id) => {
+      const ind = sample?.indicators.find((i) => i.id === id);
+      return ind?.approvalStatus === IndicatorApprovalStatus.Entered;
+    }).length;
+  };
+
   // Generate Collapse items
   const collapseItems = sampleList.map((sample) => {
     const selectedCount = getSampleSelectedCount(sample.sampleId);
+    const approvalCount = getApprovalCount(sample.sampleId); // Chỉ đếm chỉ tiêu cần phê duyệt (Entered)
     const sampleImagesData = sampleImages[sample.sampleId];
 
     return {
@@ -1281,26 +1470,26 @@ const TaskManagementDetail: React.FC = () => {
                       size="small"
                       icon={<CloseOutlined />}
                       loading={actionLoading}
-                      disabled={selectedCount === 0}
+                      disabled={approvalCount === 0}
                       onClick={(e) => {
                         e.stopPropagation();
                         openRejectModal(sample.sampleId);
                       }}
                     >
-                      Từ chối{selectedCount > 0 ? ` (${selectedCount})` : ""}
+                      Từ chối{approvalCount > 0 ? ` (${approvalCount})` : ""}
                     </Button>
                     <Button
                       type="primary"
                       size="small"
                       icon={<CheckOutlined />}
                       loading={actionLoading}
-                      disabled={selectedCount === 0}
+                      disabled={approvalCount === 0}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleBulkApprove(sample.sampleId);
                       }}
                     >
-                      Duyệt{selectedCount > 0 ? ` (${selectedCount})` : ""}
+                      Duyệt{approvalCount > 0 ? ` (${approvalCount})` : ""}
                     </Button>
                   </>
                 )}
@@ -1438,6 +1627,7 @@ const TaskManagementDetail: React.FC = () => {
             onApprove={handleApprove}
             onUpdateNote={handleUpdateNote}
             onOpenNoteModal={handleOpenNoteModal}
+            onUnitChange={handleUnitChange}
             loading={actionLoading}
             showCheckbox={true}
             selectedIndicatorIds={selectedIndicators[sample.sampleId] || []}
@@ -1490,34 +1680,46 @@ const TaskManagementDetail: React.FC = () => {
       {/* Alert và actions cho Shared Sample (Mẫu chung) */}
       {task.isSharedSampleTask && (
         <div style={{ marginBottom: 8 }}>
-          {/* Alert khi Lab Hóa đang chờ nhận mẫu từ Vi Sinh */}
+          {/* Alert thông báo mẫu chung - Lab Hóa có thể làm việc song song */}
           {isWaitingSharedSample && (
             <Alert
-              message="Đang chờ nhận mẫu chung từ Lab Vi Sinh"
+              message="Mẫu chung - Lab Vi Sinh chưa gửi mẫu"
               description={
                 <>
                   <div>
-                    Mẫu này là mẫu chung cần Lab Vi Sinh xử lý trước. Vui lòng
-                    chờ Lab Vi Sinh hoàn thành và gửi mẫu.
+                    Đây là mẫu chung. Lab Vi Sinh chưa gửi mẫu vật lý.
+                    Bạn vẫn có thể đánh giá và phân công công việc song song.
                   </div>
-                  <div style={{ marginTop: 8 }}>
-                    Bạn có thể xem danh sách chỉ tiêu nhưng không thể thực hiện
-                    các thao tác cho đến khi nhận mẫu.
-                  </div>
-                  {canReceiveSharedSample && (
-                    <div style={{ marginTop: 12 }}>
-                      <Button
-                        type="primary"
-                        onClick={handleReceiveSharedSample}
-                        loading={actionLoading}
-                      >
-                        Xác nhận nhận mẫu
-                      </Button>
-                    </div>
-                  )}
                 </>
               }
-              type="warning"
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          )}
+
+          {/* Button xác nhận nhận mẫu khi Lab Vi Sinh đã gửi */}
+          {canReceiveSharedSample && (
+            <Alert
+              message="Lab Vi Sinh đã gửi mẫu chung"
+              description={
+                <>
+                  <div>
+                    Lab Vi Sinh đã gửi mẫu vật lý. Nhấn nút bên dưới để xác nhận
+                    nhận mẫu và ghi nhận ngày nhận.
+                  </div>
+                  <div style={{ marginTop: 12 }}>
+                    <Button
+                      type="primary"
+                      onClick={handleReceiveSharedSample}
+                      loading={actionLoading}
+                    >
+                      Xác nhận nhận mẫu
+                    </Button>
+                  </div>
+                </>
+              }
+              type="success"
               showIcon
               style={{ marginBottom: 16 }}
             />
@@ -1550,11 +1752,22 @@ const TaskManagementDetail: React.FC = () => {
             />
           )}
 
-          {/* Badge hiển thị đây là mẫu chung (đã gửi) */}
-          {task.sampleSentToNextLab && (
+          {/* Badge hiển thị đây là mẫu chung (đã gửi) - Lab Vi Sinh */}
+          {task.sampleSentToNextLab && !task.priorLabTaskId && (
             <Alert
               message="Đã gửi mẫu chung cho Lab Hóa"
               description={`Ngày gửi: ${task.sampleSentDate ? formatDate(task.sampleSentDate) : "-"}`}
+              type="success"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          )}
+
+          {/* Badge hiển thị đã xác nhận nhận mẫu chung - Lab Hóa */}
+          {task.priorLabTaskId && task.sampleReceivedDate && (
+            <Alert
+              message="Đã xác nhận nhận mẫu chung"
+              description={`Ngày xác nhận: ${formatDate(task.sampleReceivedDate)}`}
               type="success"
               showIcon
               style={{ marginBottom: 16 }}
@@ -1581,24 +1794,6 @@ const TaskManagementDetail: React.FC = () => {
               <Title level={5} style={{ margin: 0 }}>
                 Số nhận mẫu giao việc
               </Title>
-            </Col>
-            <Col>
-              <Space>
-                {/* Button "Thêm người hỗ trợ" - chỉ hiển thị cho QLKT (có quyền addSupporter) hoặc là QLKT của task này */}
-                {canManageSupporters && (
-                  <Button
-                    icon={<TeamOutlined />}
-                    onClick={() => setSupporterModalOpen(true)}
-                  >
-                    Thêm người hỗ trợ
-                    {task.supporters && task.supporters.length > 0 && (
-                      <span style={{ marginLeft: 4 }}>
-                        ({task.supporters.length})
-                      </span>
-                    )}
-                  </Button>
-                )}
-              </Space>
             </Col>
           </Row>
           <Row gutter={[48, 10]}>
@@ -1648,7 +1843,7 @@ const TaskManagementDetail: React.FC = () => {
                   Ngày TN:
                 </Text>
                 <Text>
-                  {task.testDate ? formatDate(task.testDate) : "Chưa đặt"}
+                  {task.testDateRange || (task.testDate ? formatDate(task.testDate) : "Chưa đặt")}
                 </Text>
               </div>
             </Col>
@@ -1676,7 +1871,7 @@ const TaskManagementDetail: React.FC = () => {
             optionType="button"
           >
             <Radio.Button value="evaluation">
-              Đánh giá chỉ tiêu ({task.indicators?.length || 0})
+              Đánh giá chỉ tiêu ({activeIndicatorCount})
             </Radio.Button>
             <Radio.Button value="samples">
               Danh sách mẫu ({sampleList.length})
@@ -1723,10 +1918,20 @@ const TaskManagementDetail: React.FC = () => {
                 taskId={task.id}
                 canEvaluate={
                   canApproveResult &&
-                  !isWaitingSharedSample &&
                   (task.status === LaboratoryTaskStatus.UnderEvaluation ||
-                    task.status ===
-                      LaboratoryTaskStatus.WaitingCustomerResponse)
+                    task.status === LaboratoryTaskStatus.WaitingCustomerResponse ||
+                    // Cho phép evaluate khi task đã ở trạng thái sau nhưng còn indicator Pending (gửi QLKT sau)
+                    ((task.status === LaboratoryTaskStatus.FullyAccepted ||
+                      task.status === LaboratoryTaskStatus.PartialAccepted ||
+                      task.status === LaboratoryTaskStatus.Assigned ||
+                      task.status === LaboratoryTaskStatus.InProgress ||
+                      task.status === LaboratoryTaskStatus.WaitingApproval ||
+                      task.status === LaboratoryTaskStatus.SentToQuality) &&
+                      (task.indicators?.some(
+                        (ind) =>
+                          ind.approvalStatus === IndicatorApprovalStatus.Pending ||
+                          ind.approvalStatus === IndicatorApprovalStatus.CannotTest
+                      ) ?? false)))
                 }
                 loading={loading}
                 onEvaluationComplete={reloadData}

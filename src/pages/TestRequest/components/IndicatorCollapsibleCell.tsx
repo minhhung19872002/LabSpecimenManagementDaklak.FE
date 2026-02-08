@@ -30,26 +30,47 @@ const UNSENT_GROUP_KEY = "__unsent__";
  * Nhóm indicators theo quan hệ cha-con
  * - Parent indicators (parentIndicatorId = null) -> hiển thị trước
  * - Sub-indicators -> hiển thị dưới parent tương ứng
+ * - Group key = indicatorId + testMethodId + specimenTypeId để xử lý trường hợp
+ *   cùng chỉ tiêu + phương pháp nhưng khác nền mẫu (có giá khác nhau)
  */
 const groupByParentChild = (indicators: any[]): GroupedIndicator[] => {
   const result: GroupedIndicator[] = [];
   const parentMap: Record<string, GroupedIndicator> = {};
   const orphanSubs: any[] = [];
 
+  // Helper: tạo key từ indicatorId + testMethodId + specimenTypeId
+  const makeKey = (
+    indicatorId: string,
+    testMethodId: string | null,
+    specimenTypeId: string | null,
+  ) =>
+    `${indicatorId}_${testMethodId || "no-method"}_${specimenTypeId || "no-specimen"}`;
+
   // Bước 1: Tách parent và sub-indicators
   indicators.forEach((ind) => {
     if (!ind.parentIndicatorId) {
-      // Đây là parent indicator
+      // Đây là parent indicator - dùng composite key (bao gồm specimenTypeId)
+      const key = makeKey(
+        ind.indicatorId,
+        ind.testMethodId,
+        ind.specimenTypeId,
+      );
       const grouped: GroupedIndicator = { indicator: ind, children: [] };
-      parentMap[ind.indicatorId] = grouped;
+      parentMap[key] = grouped;
       result.push(grouped);
     }
   });
 
-  // Bước 2: Gán sub-indicators cho parent
+  // Bước 2: Gán sub-indicators cho parent có cùng testMethodId VÀ specimenTypeId
   indicators.forEach((ind) => {
     if (ind.parentIndicatorId) {
-      const parent = parentMap[ind.parentIndicatorId];
+      // Tìm parent có cùng parentIndicatorId, testMethodId VÀ specimenTypeId
+      const key = makeKey(
+        ind.parentIndicatorId,
+        ind.testMethodId,
+        ind.specimenTypeId,
+      );
+      const parent = parentMap[key];
       if (parent) {
         parent.children.push(ind);
       } else {
@@ -128,7 +149,13 @@ const IndicatorCollapsibleCell: React.FC<IndicatorCollapsibleCellProps> = ({
     });
   };
 
-  const renderIndicator = (ind: any, idx: number, isSubIndicator: boolean = false, isLastSub: boolean = false, hasChildren: boolean = false) => {
+  const renderIndicator = (
+    ind: any,
+    idx: number,
+    isSubIndicator: boolean = false,
+    isLastSub: boolean = false,
+    hasChildren: boolean = false,
+  ) => {
     const hasApprovalStatus =
       ind.approvalStatus !== undefined && ind.approvalStatus !== null;
     const approvalStatusLabel = hasApprovalStatus
@@ -267,8 +294,8 @@ const IndicatorCollapsibleCell: React.FC<IndicatorCollapsibleCellProps> = ({
             `${idx}-${childIdx}` as any,
             true,
             childIdx === grouped.children.length - 1,
-            false
-          )
+            false,
+          ),
         )}
       </div>
     );
@@ -313,7 +340,7 @@ const IndicatorCollapsibleCell: React.FC<IndicatorCollapsibleCellProps> = ({
             {isExpanded && (
               <div style={{ paddingLeft: 8 }}>
                 {groupByParentChild(group.indicators).map((grouped, idx) =>
-                  renderGroupedIndicator(grouped, idx)
+                  renderGroupedIndicator(grouped, idx),
                 )}
               </div>
             )}

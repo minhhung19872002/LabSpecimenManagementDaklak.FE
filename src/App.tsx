@@ -154,6 +154,9 @@ const AuditLogList = Loadable(
 const EmployeeList = Loadable(
   lazy(() => import("./pages/Employees/EmployeeList"))
 );
+const EmployeeDetail = Loadable(
+  lazy(() => import("./pages/Employees/EmployeeDetail"))
+);
 const RoleManagementList = Loadable(
   lazy(() => import("./pages/RoleManagement/RoleManagementList"))
 );
@@ -169,6 +172,9 @@ const NotFound = Loadable(lazy(() => import("./pages/NotFound/NotFound")));
 
 // 403 Forbidden
 const Forbidden = Loadable(lazy(() => import("./pages/Forbidden/Forbidden")));
+
+// 401 Unauthorized
+const Unauthorized = Loadable(lazy(() => import("./pages/Unauthorized/Unauthorized")));
 
 // Document Editor (OnlyOffice)
 const DocumentEditor = Loadable(lazy(() => import("./pages/DocumentEditor")));
@@ -197,6 +203,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/401" element={<Unauthorized />} />
         <Route path="/403" element={<Forbidden />} />
         <Route path="/document-editor" element={<DocumentEditor />} />
         <Route
@@ -298,6 +305,7 @@ function App() {
 
           {/* Administration */}
           <Route path="employees" element={<EmployeeList />} />
+          <Route path="employees/:id" element={<EmployeeDetail />} />
           <Route path="role-management" element={<RoleManagementList />} />
           <Route path="role-management/:id" element={<RoleManagementDetail />} />
           <Route path="settings" element={<SettingsPage />} />

@@ -23,6 +23,7 @@ import {
   IndicatorFormData,
   IndicatorGroupFormData,
 } from "../schemas/indicatorSchema";
+import { getApiErrorMessage } from "../../../../utils/errorHandler";
 
 interface UseIndicatorsActionsParams {
   indicators: IndicatorDto[];
@@ -100,8 +101,8 @@ export const useIndicatorsActions = ({
       message.success("Xóa nhóm thành công!");
       fetchData();
       onDataChange?.();
-    } catch (error) {
-      message.error("Không thể xóa nhóm");
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Không thể xóa nhóm"));
     }
   };
 
@@ -127,8 +128,8 @@ export const useIndicatorsActions = ({
       groupForm.reset();
       fetchData();
       onDataChange?.();
-    } catch (error) {
-      message.error("Không thể lưu nhóm");
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Không thể lưu nhóm"));
     } finally {
       setModalLoading(false);
     }
@@ -162,8 +163,8 @@ export const useIndicatorsActions = ({
       message.success("Xóa chỉ tiêu thành công!");
       fetchData();
       onDataChange?.();
-    } catch (error) {
-      message.error("Không thể xóa chỉ tiêu");
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Không thể xóa chỉ tiêu"));
     }
   };
 
@@ -172,8 +173,8 @@ export const useIndicatorsActions = ({
       await indicatorService.toggleActive(id);
       message.success("Cập nhật trạng thái thành công!");
       fetchData();
-    } catch (error) {
-      message.error("Không thể cập nhật trạng thái");
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Không thể cập nhật trạng thái"));
     }
   };
 
@@ -209,8 +210,8 @@ export const useIndicatorsActions = ({
           setSelectedRowKeys([]);
           fetchData();
           onDataChange?.();
-        } catch (error) {
-          message.error("Không thể xóa chỉ tiêu");
+        } catch (error: unknown) {
+          message.error(getApiErrorMessage(error, "Không thể xóa chỉ tiêu"));
         } finally {
           setBatchLoading(false);
         }
@@ -242,8 +243,8 @@ export const useIndicatorsActions = ({
           );
           setSelectedRowKeys([]);
           fetchData();
-        } catch (error) {
-          message.error("Không thể ngưng hoạt động chỉ tiêu");
+        } catch (error: unknown) {
+          message.error(getApiErrorMessage(error, "Không thể ngưng hoạt động chỉ tiêu"));
         } finally {
           setBatchLoading(false);
         }
@@ -270,8 +271,8 @@ export const useIndicatorsActions = ({
           message.success(`Đã kích hoạt ${result.successCount} chỉ tiêu!`);
           setSelectedRowKeys([]);
           fetchData();
-        } catch (error) {
-          message.error("Không thể kích hoạt chỉ tiêu");
+        } catch (error: unknown) {
+          message.error(getApiErrorMessage(error, "Không thể kích hoạt chỉ tiêu"));
         } finally {
           setBatchLoading(false);
         }
@@ -301,8 +302,8 @@ export const useIndicatorsActions = ({
       indicatorForm.reset();
       fetchData();
       onDataChange?.();
-    } catch (error) {
-      message.error("Không thể lưu chỉ tiêu");
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Không thể lưu chỉ tiêu"));
     } finally {
       setModalLoading(false);
     }
@@ -363,8 +364,8 @@ export const useIndicatorsActions = ({
       bulkForm.resetFields();
       fetchData();
       onDataChange?.();
-    } catch (error) {
-      message.error("Không thể thêm chỉ tiêu");
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Không thể thêm chỉ tiêu"));
     } finally {
       setModalLoading(false);
     }
@@ -396,8 +397,8 @@ export const useIndicatorsActions = ({
       if (result.errorCount > 0) {
         message.warning(`Có ${result.errorCount} lỗi khi import`);
       }
-    } catch (error) {
-      message.error("Không thể import file");
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Không thể import file"));
     } finally {
       setModalLoading(false);
     }
@@ -431,8 +432,8 @@ export const useIndicatorsActions = ({
       if (result.errorCount > 0) {
         message.warning(`Có ${result.errorCount} lỗi khi import`);
       }
-    } catch (error) {
-      message.error("Không thể import file");
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Không thể import file"));
     } finally {
       setModalLoading(false);
     }
@@ -450,8 +451,8 @@ export const useIndicatorsActions = ({
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
-    } catch (error) {
-      message.error("Không thể tải template");
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Không thể tải template"));
     }
   };
 
@@ -471,8 +472,8 @@ export const useIndicatorsActions = ({
       setModalLoading(true);
       const result = await importService.previewIndicatorGroups(file);
       setImportIndicatorGroupPreview(result);
-    } catch (error) {
-      message.error("Không thể đọc file Excel");
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Không thể đọc file Excel"));
     } finally {
       setModalLoading(false);
     }
@@ -504,8 +505,8 @@ export const useIndicatorsActions = ({
       } else {
         message.error(result.message || "Import không thành công");
       }
-    } catch (error) {
-      message.error("Không thể import dữ liệu");
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Không thể import dữ liệu"));
     } finally {
       setModalLoading(false);
     }

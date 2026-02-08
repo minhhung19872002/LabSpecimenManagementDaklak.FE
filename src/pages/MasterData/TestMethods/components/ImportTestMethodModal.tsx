@@ -28,6 +28,7 @@ interface TestMethodImportTableItem {
   isNewTestMethod: boolean;
   description?: string;
   unit?: string;
+  specimenTypeName?: string;
   indicatorName: string;
   unitPrice: number;
   isValid: boolean;
@@ -120,6 +121,7 @@ const ImportTestMethodModal: React.FC<ImportTestMethodModalProps> = ({
           isNewTestMethod: group.isNew,
           description: group.description,
           unit: group.unit,
+          specimenTypeName: indicator.specimenTypeName,
           indicatorName: indicator.indicatorName,
           unitPrice: indicator.unitPrice,
           isValid: indicator.isValid,
@@ -161,6 +163,13 @@ const ImportTestMethodModal: React.FC<ImportTestMethodModalProps> = ({
       dataIndex: "unit",
       key: "unit",
       width: 100,
+      render: (text: string) => text || "-",
+    },
+    {
+      title: "Nền mẫu",
+      dataIndex: "specimenTypeName",
+      key: "specimenTypeName",
+      width: 150,
       render: (text: string) => text || "-",
     },
     {
@@ -356,7 +365,7 @@ const ImportTestMethodModal: React.FC<ImportTestMethodModalProps> = ({
               dataSource={tableItems}
               columns={columns}
               pagination={false}
-              scroll={{ x: 800 }}
+              scroll={{ x: 950 }}
               rowClassName={(record) =>
                 record.isValid ? "" : "ant-table-row-error"
               }

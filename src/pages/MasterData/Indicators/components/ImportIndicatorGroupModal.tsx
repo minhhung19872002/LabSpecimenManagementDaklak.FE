@@ -152,6 +152,31 @@ const ImportIndicatorGroupModal: React.FC<ImportIndicatorGroupModalProps> = ({
       ),
     },
     {
+      title: "Chỉ tiêu phụ",
+      dataIndex: "subIndicatorName",
+      key: "subIndicatorName",
+      width: 200,
+      render: (text: string, record: IndicatorGroupImportPreviewItem) => {
+        if (!record.hasSubIndicator || !text) {
+          return <span style={{ color: "#999" }}>-</span>;
+        }
+        return (
+          <Space>
+            {record.formattedSubIndicatorName ? (
+              <span dangerouslySetInnerHTML={{ __html: record.formattedSubIndicatorName }} />
+            ) : (
+              <span>{text}</span>
+            )}
+            {record.isNewSubIndicator ? (
+              <Tag color="green">Mới</Tag>
+            ) : (
+              <Tag color="orange">Cập nhật</Tag>
+            )}
+          </Space>
+        );
+      },
+    },
+    {
       title: "Trạng thái",
       key: "status",
       width: 80,
@@ -169,7 +194,7 @@ const ImportIndicatorGroupModal: React.FC<ImportIndicatorGroupModalProps> = ({
       title="Import Nhóm chỉ tiêu + Chỉ tiêu từ Excel"
       open={open}
       onCancel={onCancel}
-      width={1000}
+      width={1200}
       centered
       styles={{ body: { maxHeight: "calc(100vh - 200px)", overflowY: "auto" } }}
       footer={[
@@ -239,7 +264,7 @@ const ImportIndicatorGroupModal: React.FC<ImportIndicatorGroupModalProps> = ({
         <Space direction="vertical" style={{ width: "100%" }} size="middle">
           {/* Summary */}
           <Card size="small">
-            <Row gutter={16}>
+            <Row gutter={[16, 8]}>
               <Col span={4}>
                 <Statistic
                   title="Tổng dòng"
@@ -281,6 +306,25 @@ const ImportIndicatorGroupModal: React.FC<ImportIndicatorGroupModalProps> = ({
                   valueStyle={{ color: previewData.invalidRows > 0 ? "#ff4d4f" : undefined }}
                 />
               </Col>
+              {/* Sub-indicators row */}
+              {(previewData.newSubIndicators > 0 || previewData.updateSubIndicators > 0) && (
+                <>
+                  <Col span={4} offset={8}>
+                    <Statistic
+                      title="Chỉ tiêu phụ mới"
+                      value={previewData.newSubIndicators}
+                      valueStyle={{ color: "#52c41a" }}
+                    />
+                  </Col>
+                  <Col span={4}>
+                    <Statistic
+                      title="Chỉ tiêu phụ cập nhật"
+                      value={previewData.updateSubIndicators}
+                      valueStyle={{ color: "#fa8c16" }}
+                    />
+                  </Col>
+                </>
+              )}
             </Row>
           </Card>
 
@@ -333,7 +377,7 @@ const ImportIndicatorGroupModal: React.FC<ImportIndicatorGroupModalProps> = ({
               }))}
               columns={columns}
               pagination={false}
-              scroll={{ x: 800 }}
+              scroll={{ x: 1000 }}
               rowClassName={(record) =>
                 record.isValid ? "" : "ant-table-row-error"
               }

@@ -6,9 +6,11 @@ import {
   CreateTestMethodDto,
   UpdateTestMethodDto,
   AddIndicatorsToTestMethodDto,
+  TestMethodIndicatorDto,
 } from "../../../../services/masterDataService";
 import { GroupedTestMethodData } from "../types";
 import { TestMethodFormData } from "../schemas/testMethodSchema";
+import { getApiErrorMessage } from "../../../../utils/errorHandler";
 
 interface UseTestMethodsActionsParams {
   fetchData: () => Promise<void>;
@@ -38,6 +40,11 @@ export const useTestMethodsActions = ({
   const [addIndicatorsLoading, setAddIndicatorsLoading] = useState(false);
   const [selectedTestMethodId, setSelectedTestMethodId] = useState<string | null>(null);
 
+  // Edit Indicator modal state
+  const [editIndicatorModalOpen, setEditIndicatorModalOpen] = useState(false);
+  const [editIndicatorLoading, setEditIndicatorLoading] = useState(false);
+  const [editingIndicator, setEditingIndicator] = useState<TestMethodIndicatorDto | null>(null);
+
   // TestMethod CRUD
   const handleCreate = (form: UseFormReturn<TestMethodFormData>) => {
     setEditingItem(null);
@@ -65,11 +72,9 @@ export const useTestMethodsActions = ({
       message.success("Xóa phương pháp thử thành công!");
       fetchData();
       onDataChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to delete:", error);
-      const errorMsg =
-        error?.response?.data?.error?.message || "Không thể xóa phương pháp thử";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể xóa phương pháp thử"));
     }
   };
 
@@ -92,11 +97,9 @@ export const useTestMethodsActions = ({
       form.reset();
       fetchData();
       onDataChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to save:", error);
-      const errorMsg =
-        error?.response?.data?.error?.message || "Không thể lưu phương pháp thử";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể lưu phương pháp thử"));
     } finally {
       setModalLoading(false);
     }
@@ -114,7 +117,7 @@ export const useTestMethodsActions = ({
   };
 
   const handleAddIndicatorsOk = async (
-    indicators: Array<{ indicatorId: string; unitPrice: number }>
+    indicators: Array<{ indicatorId: string; specimenTypeId: string; unitPrice: number }>
   ) => {
     if (!selectedTestMethodId) return;
 
@@ -136,11 +139,9 @@ export const useTestMethodsActions = ({
       setAddIndicatorsModalOpen(false);
       fetchData();
       onDataChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to add indicators:", error);
-      const errorMsg =
-        error?.response?.data?.error?.message || "Không thể thêm chỉ tiêu";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể thêm chỉ tiêu"));
     } finally {
       setAddIndicatorsLoading(false);
     }
@@ -158,12 +159,45 @@ export const useTestMethodsActions = ({
       message.success("Xóa chỉ tiêu khỏi phương pháp thành công!");
       fetchData();
       onDataChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to remove indicator:", error);
-      const errorMsg =
-        error?.response?.data?.error?.message || "Không thể xóa chỉ tiêu";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể xóa chỉ tiêu"));
     }
+  };
+
+  // Edit Indicator in TestMethod
+  const handleOpenEditIndicator = (indicator: TestMethodIndicatorDto) => {
+    setEditingIndicator(indicator);
+    setEditIndicatorModalOpen(true);
+  };
+
+  const handleEditIndicatorOk = async (data: { unitPrice: number }) => {
+    if (!editingIndicator) return;
+
+    try {
+      setEditIndicatorLoading(true);
+      await testMethodService.updateIndicator(
+        editingIndicator.testMethodId,
+        editingIndicator.indicatorId,
+        editingIndicator.specimenTypeId || undefined,
+        data
+      );
+      message.success("Cập nhật chỉ tiêu thành công!");
+      setEditIndicatorModalOpen(false);
+      setEditingIndicator(null);
+      fetchData();
+      onDataChange?.();
+    } catch (error: unknown) {
+      console.error("Failed to update indicator:", error);
+      message.error(getApiErrorMessage(error, "Không thể cập nhật chỉ tiêu"));
+    } finally {
+      setEditIndicatorLoading(false);
+    }
+  };
+
+  const handleEditIndicatorCancel = () => {
+    setEditIndicatorModalOpen(false);
+    setEditingIndicator(null);
   };
 
   // Toggle active status
@@ -177,25 +211,32 @@ export const useTestMethodsActions = ({
       );
       fetchData();
       onDataChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to toggle active:", error);
-      const errorMsg =
-        error?.response?.data?.error?.message || "Không thể thay đổi trạng thái";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể thay đổi trạng thái"));
     }
   };
 
   // ============= Batch Remove Indicators =============
   const handleBatchRemoveIndicators = async (testMethodId: string) => {
-    const selectedIds = selectedIndicatorKeys[testMethodId] || [];
-    if (selectedIds.length === 0) {
+    const selectedCompositeKeys = selectedIndicatorKeys[testMethodId] || [];
+    if (selectedCompositeKeys.length === 0) {
       message.warning("Vui lòng chọn ít nhất một chỉ tiêu");
       return;
     }
 
+    // Parse composite keys (format: "indicatorId|specimenTypeId") into objects
+    const indicatorKeys = selectedCompositeKeys.map((compositeKey) => {
+      const [indicatorId, specimenTypeId] = compositeKey.split("|");
+      return {
+        indicatorId,
+        specimenTypeId: specimenTypeId || undefined,
+      };
+    });
+
     Modal.confirm({
       title: "Xác nhận xóa",
-      content: `Bạn có chắc chắn muốn xóa ${selectedIds.length} chỉ tiêu đã chọn khỏi phương pháp thử này?`,
+      content: `Bạn có chắc chắn muốn xóa ${indicatorKeys.length} chỉ tiêu đã chọn khỏi phương pháp thử này?`,
       okText: "Xóa",
       okType: "danger",
       cancelText: "Hủy",
@@ -203,7 +244,7 @@ export const useTestMethodsActions = ({
       onOk: async () => {
         try {
           setBatchLoading(true);
-          const count = await testMethodService.batchRemoveIndicators(testMethodId, selectedIds);
+          const count = await testMethodService.batchRemoveIndicators(testMethodId, indicatorKeys);
           message.success(`Đã xóa ${count} chỉ tiêu thành công!`);
           // Clear selection for this test method
           setSelectedIndicatorKeys({
@@ -212,8 +253,8 @@ export const useTestMethodsActions = ({
           });
           await fetchData();
           onDataChange?.();
-        } catch (error) {
-          message.error("Không thể xóa chỉ tiêu");
+        } catch (error: unknown) {
+          message.error(getApiErrorMessage(error, "Không thể xóa chỉ tiêu"));
         } finally {
           setBatchLoading(false);
         }
@@ -243,6 +284,14 @@ export const useTestMethodsActions = ({
 
     // Remove indicator
     handleRemoveIndicator,
+
+    // Edit indicator modal
+    editIndicatorModalOpen,
+    editIndicatorLoading,
+    editingIndicator,
+    handleOpenEditIndicator,
+    handleEditIndicatorOk,
+    handleEditIndicatorCancel,
 
     // Toggle active
     handleToggleActive,

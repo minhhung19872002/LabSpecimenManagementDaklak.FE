@@ -201,9 +201,9 @@ const OrganizationFormModal: React.FC<OrganizationFormModalProps> = ({
           </Col>
         </Row>
 
-        {/* Row 4: Người liên hệ, Số điện thoại */}
+        {/* Row 4: Người liên hệ, Số điện thoại, SĐT phụ */}
         <Row gutter={16}>
-          <Col span={12}>
+          <Col span={8}>
             <Form.Item
               label="Người liên hệ"
               required
@@ -219,7 +219,7 @@ const OrganizationFormModal: React.FC<OrganizationFormModalProps> = ({
               />
             </Form.Item>
           </Col>
-          <Col span={12}>
+          <Col span={8}>
             <Form.Item
               label="Số điện thoại"
               required
@@ -231,6 +231,25 @@ const OrganizationFormModal: React.FC<OrganizationFormModalProps> = ({
                 control={control}
                 render={({ field }) => (
                   <Input {...field} placeholder="Số điện thoại" />
+                )}
+              />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item
+              label="SĐT phụ"
+              validateStatus={errors.secondaryPhone ? "error" : ""}
+              help={errors.secondaryPhone?.message}
+            >
+              <Controller
+                name="secondaryPhone"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    value={field.value || ""}
+                    placeholder="SĐT phụ (không bắt buộc)"
+                  />
                 )}
               />
             </Form.Item>

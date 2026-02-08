@@ -35,6 +35,99 @@ export const formatNumber = (value: number): string => {
 };
 
 /**
+ * Strip <p> tags from HTML string but keep inner HTML content
+ * Useful for rendering limit values with subscript/superscript from rich text editor
+ * @param html - HTML string that may contain <p> wrapper tags
+ * @returns HTML string without <p> wrapper tags
+ *
+ * @example
+ * stripPTags("<p>10<sup>2</sup></p>") // returns "10<sup>2</sup>"
+ * stripPTags("<p>H<sub>2</sub>O</p>") // returns "H<sub>2</sub>O"
+ * stripPTags("plain text") // returns "plain text"
+ */
+export const stripPTags = (html: string | undefined | null): string => {
+  if (!html) return "";
+  return html.replace(/^<p>|<\/p>$/gi, "").trim();
+};
+
+/**
+ * Convert HTML superscript/subscript to mathematical expression
+ * - <sup>n</sup> becomes ^n (power)
+ * - <sub>n</sub> is removed (subscript is not used in calculations)
+ * - Unicode superscript characters (⁰¹²³⁴⁵⁶⁷⁸⁹) are converted to ^n
+ *
+ * @param html - HTML string containing <sup>/<sub> tags or Unicode superscripts
+ * @returns Plain text mathematical expression
+ *
+ * @example
+ * convertHtmlToMathExpression("2<sup>3</sup>") // returns "2^3"
+ * convertHtmlToMathExpression("3<sup>2</sup> x 4") // returns "3^2 x 4"
+ * convertHtmlToMathExpression("10<sup>-2</sup>") // returns "10^-2"
+ * convertHtmlToMathExpression("H<sub>2</sub>O") // returns "H2O"
+ * convertHtmlToMathExpression("2³") // returns "2^3"
+ * convertHtmlToMathExpression("3² x 4") // returns "3^2 x 4"
+ */
+export const convertHtmlToMathExpression = (html: string | undefined | null): string => {
+  if (!html) return "";
+
+  let result = html;
+
+  // First strip p tags
+  result = result.replace(/^<p>|<\/p>$/gi, "").trim();
+
+  // Convert <sup>content</sup> to ^(content)
+  // Handle nested content and negative numbers
+  result = result.replace(/<sup>([^<]*)<\/sup>/gi, (_, content) => {
+    const trimmed = content.trim();
+    // If content has operators or multiple digits, wrap in parentheses
+    if (trimmed.length > 1 || trimmed.startsWith("-")) {
+      return `^(${trimmed})`;
+    }
+    return `^${trimmed}`;
+  });
+
+  // Remove <sub>content</sub> (subscript is not used in math calculations)
+  result = result.replace(/<sub>([^<]*)<\/sub>/gi, "$1");
+
+  // Remove any remaining HTML tags
+  result = result.replace(/<[^>]+>/g, "");
+
+  // Convert Unicode superscript characters to ^n
+  const superscriptMap: Record<string, string> = {
+    "⁰": "0", "¹": "1", "²": "2", "³": "3", "⁴": "4",
+    "⁵": "5", "⁶": "6", "⁷": "7", "⁸": "8", "⁹": "9",
+    "⁻": "-", "⁺": "+",
+  };
+
+  // Find sequences of Unicode superscript characters and convert them
+  result = result.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹⁻⁺]+/g, (match) => {
+    const converted = match.split("").map(c => superscriptMap[c] || c).join("");
+    // If the superscript is more than one character or starts with minus, wrap in parentheses
+    if (converted.length > 1 || converted.startsWith("-")) {
+      return `^(${converted})`;
+    }
+    return `^${converted}`;
+  });
+
+  // Convert Unicode subscript characters (just remove the subscript notation)
+  const subscriptMap: Record<string, string> = {
+    "₀": "0", "₁": "1", "₂": "2", "₃": "3", "₄": "4",
+    "₅": "5", "₆": "6", "₇": "7", "₈": "8", "₉": "9",
+  };
+  result = result.replace(/[₀₁₂₃₄₅₆₇₈₉]+/g, (match) => {
+    return match.split("").map(c => subscriptMap[c] || c).join("");
+  });
+
+  // Decode HTML entities
+  result = result.replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&nbsp;/g, " ");
+
+  return result.trim();
+};
+
+/**
  * Safely evaluate a mathematical expression string
  * Supports: +, -, *, /, ^ (power), parentheses
  * Does NOT use eval() for security reasons
@@ -200,17 +293,61 @@ const evaluateMathExpression = (expr: string): number | null => {
 };
 
 /**
+ * Special text values that represent "negative" or "not detected" results
+ * These are treated as <= 0 for comparison purposes
+ */
+const NEGATIVE_RESULT_TEXTS = [
+  "âm tính",
+  "không phát hiện",
+  "am tinh",
+  "khong phat hien",
+  "negative",
+  "not detected",
+  "nd", // Not Detected abbreviation
+];
+
+/**
+ * Large positive number used for "positive" or "detected" text results
+ * when exact value is unknown. This ensures they fail upper limit checks.
+ */
+export const POSITIVE_TEXT_VALUE = Number.MAX_SAFE_INTEGER;
+
+/**
+ * Check if a parsed value represents a "positive/detected" text result
+ * @param value - Parsed numeric value
+ * @returns true if the value represents a positive text result
+ */
+export const isPositiveTextValue = (value: number | null): boolean => {
+  return value === POSITIVE_TEXT_VALUE;
+};
+
+/**
+ * Check if a text result represents a negative/not detected result
+ * @param text - Text to check (will be trimmed and lowercased)
+ * @returns true if the text represents a negative result
+ */
+export const isNegativeResultText = (text: string): boolean => {
+  const lowerText = text.toLowerCase().trim();
+  return NEGATIVE_RESULT_TEXTS.some(
+    (negText) => lowerText === negText || lowerText.includes(negText)
+  );
+};
+
+/**
  * Parse result string to number
  * Supports formats:
  * - Plain number: "200", "0.5", "1,5", ".5", "5."
  * - Scientific notation: "2,0 x 10^2", "1.5 x 10^-3", "2,0x10^2", "1.5e3", "2E-2"
  * - Mathematical expressions: "10^2*5+4^9-9/10^2", "2+3*4"
  * - With multiplication sign variations: "x", "×", "*"
+ * - Text results: "Âm tính", "Không phát hiện" → 0; "Dương tính" → large positive number
  *
  * @param result - Result string to parse
  * @param decimalPlaces - Number of decimal places (default: 4)
- * @param returnZeroForText - If true, returns 0 for non-parseable text (default: true)
- * @returns Parsed number rounded to specified decimal places, or 0 if cannot parse (when returnZeroForText is true)
+ * @param returnZeroForText - If true, returns semantic value for text (default: true)
+ *   - "Âm tính"/"Không phát hiện" → 0
+ *   - Other text → large positive number (MAX_SAFE_INTEGER)
+ * @returns Parsed number rounded to specified decimal places, or semantic value for text
  *
  * @example
  * parseResultToNumber("2,0 x 10^2") // returns 200.0000
@@ -219,7 +356,9 @@ const evaluateMathExpression = (expr: string): number | null => {
  * parseResultToNumber("200") // returns 200.0000
  * parseResultToNumber(".5") // returns 0.5000
  * parseResultToNumber("10^2*5+4") // returns 504.0000
- * parseResultToNumber("Âm tính") // returns 0 (text cannot be calculated)
+ * parseResultToNumber("Âm tính") // returns 0 (negative/not detected = 0)
+ * parseResultToNumber("Không phát hiện") // returns 0 (negative/not detected = 0)
+ * parseResultToNumber("Dương tính") // returns MAX_SAFE_INTEGER (positive = large number)
  * parseResultToNumber("Âm tính", 4, false) // returns null (legacy behavior)
  */
 export const parseResultToNumber = (
@@ -243,18 +382,41 @@ export const parseResultToNumber = (
     return returnZeroForText ? 0 : null;
   }
 
+  // Check for special text results first (before any normalization that might affect text matching)
+  if (returnZeroForText) {
+    // Check if it's a negative/not detected result → return 0
+    if (isNegativeResultText(normalized)) {
+      return 0;
+    }
+
+    // Check if it looks like text (contains letters but not a valid number format)
+    // If it's unparseable text that's NOT negative, return large positive number
+    const hasLetters = /[a-zA-ZÀ-ỹ]/.test(normalized);
+    const looksLikeScientific = /^\d.*[eExX×].*\d/i.test(normalized);
+    if (hasLetters && !looksLikeScientific) {
+      // It's text that doesn't look like scientific notation
+      // and is not a negative result → treat as positive (detected)
+      return POSITIVE_TEXT_VALUE;
+    }
+  }
+
   // Replace Vietnamese decimal separator (comma) with dot
   normalized = normalized.replace(/,/g, ".");
 
-  // Normalize multiplication signs: × and x (lowercase) to *
-  // But only when followed/preceded by numbers or expressions
-  normalized = normalized.replace(/×/g, "*");
-  // Replace 'x' with '*' only when it looks like multiplication (number x number or x 10^)
-  normalized = normalized.replace(/(\d)\s*x\s*(\d)/gi, "$1*$2");
-  normalized = normalized.replace(/(\d)\s*x\s*(10\^)/gi, "$1*$2");
+  // Normalize multiplication signs: ×, x, X, ✕, ✖, ⨉ to *
+  // Replace all Unicode multiplication-like characters with *
+  normalized = normalized.replace(/[×✕✖⨉·•]/g, "*");
 
-  // Remove spaces
-  normalized = normalized.replace(/\s/g, "");
+  // Remove all whitespace (including Unicode whitespace like &nbsp;)
+  normalized = normalized.replace(/[\s\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, "");
+
+  // Replace 'x' or 'X' with '*' when it looks like multiplication (after spaces removed)
+  // Pattern: (digit or closing paren) + x/X + (digit or opening paren or ^)
+  normalized = normalized.replace(/(\d|\))[xX](\d|\(|\^)/g, "$1*$2");
+  // Also handle x followed by 10^ pattern
+  normalized = normalized.replace(/(\d)[xX](10\^)/gi, "$1*$2");
+  // Fallback: replace any remaining x/X with * when between digits
+  normalized = normalized.replace(/(\d)[xX](\d)/g, "$1*$2");
 
   // Support scientific notation with e/E: "1.5e3", "2E-2", "1e+5"
   const sciEPattern = /^([+-]?(\d+(\.\d*)?|\.\d+))[eE]([+-]?\d+)$/;
@@ -299,17 +461,26 @@ export const parseResultToNumber = (
     return parseFloat(evalResult.toFixed(decimalPlaces));
   }
 
-  // Cannot parse - return 0 for text (or null if legacy behavior requested)
-  return returnZeroForText ? 0 : null;
+  // Cannot parse - check original text for semantic meaning
+  if (returnZeroForText) {
+    // Re-check original result (before normalization) for negative text
+    if (isNegativeResultText(result.trim())) {
+      return 0;
+    }
+    // Other unparseable values are treated as positive (detected)
+    return POSITIVE_TEXT_VALUE;
+  }
+
+  return null;
 };
 
 /**
  * Compare result value with limit
- * @param result - Result string (can be scientific notation)
+ * @param result - Result string (can be scientific notation or text like "Âm tính")
  * @param limit - Limit value (number)
  * @param decimalPlaces - Decimal places for comparison (default: 4)
  * @returns Object with comparison result:
- *   - parsedValue: The parsed numeric value (or null if not parseable)
+ *   - parsedValue: The parsed numeric value (0 for "Âm tính", MAX_SAFE_INTEGER for other text)
  *   - isWithinLimit: true if result <= limit, false if result > limit, null if cannot compare
  *   - canCompare: true if both values are numeric and can be compared
  *
@@ -321,7 +492,10 @@ export const parseResultToNumber = (
  * // returns { parsedValue: 2000, isWithinLimit: false, canCompare: true }
  *
  * compareResultWithLimit("Âm tính", 500)
- * // returns { parsedValue: null, isWithinLimit: null, canCompare: false }
+ * // returns { parsedValue: 0, isWithinLimit: true, canCompare: true }
+ *
+ * compareResultWithLimit("Dương tính", 500)
+ * // returns { parsedValue: MAX_SAFE_INTEGER, isWithinLimit: false, canCompare: true }
  */
 export const compareResultWithLimit = (
   result: string | null | undefined,

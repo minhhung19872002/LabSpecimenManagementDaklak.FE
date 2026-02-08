@@ -1,21 +1,38 @@
 import React, { useState, useCallback } from "react";
-import { Modal, Form, Input, Button, Typography, Select, Divider, Tooltip, message } from "antd";
-import { PlusOutlined, MinusCircleOutlined } from "../../../../components/common/Icon";
-import Icon from "../../../../components/common/Icon";
+import {
+  Modal,
+  Form,
+  Input,
+  Button,
+  Typography,
+  Select,
+  Divider,
+  Card,
+} from "antd";
+import {
+  PlusOutlined,
+  MinusCircleOutlined,
+} from "../../../../components/common/Icon";
 import type { FormInstance } from "antd";
-import { NumericFormat } from "react-number-format";
 import {
   IndicatorDto,
   IndicatorGroupDto,
   TestMethodWithIndicatorsDto,
+  SpecimenTypeDto,
 } from "../../../../services/masterDataService";
-import IndicatorName from "../../../../components/common/IndicatorName";
-import { COMPARISON_OPERATORS, LOWER_OPERATORS, UPPER_OPERATORS } from "../constants";
+import { IndicatorName, LimitInput, extractPlainTextFromLimit } from "../../../../components/common";
+import { parseResultToNumber } from "../../../../utils/formatters";
+import {
+  COMPARISON_OPERATORS,
+  LOWER_OPERATORS,
+  UPPER_OPERATORS,
+} from "../constants";
 import "./AddIndicatorsModal.css";
 
 const { Text } = Typography;
 
 interface IndicatorFormItem {
+  specimenTypeId?: string; // Nền mẫu - bắt buộc
   indicatorId?: string;
   testMethodId?: string;
   unit?: string;
@@ -40,6 +57,11 @@ interface SubIndicatorFormItem {
   upperLimit?: string;
 }
 
+interface ExistingIndicatorKey {
+  indicatorId: string;
+  specimenTypeId?: string;
+}
+
 interface AddIndicatorsModalProps {
   open: boolean;
   loading: boolean;
@@ -47,11 +69,16 @@ interface AddIndicatorsModalProps {
   standardName: string;
   indicatorGroups: IndicatorGroupDto[];
   indicatorsByGroup: Record<string, IndicatorDto[]>;
-  existingIndicatorIds: string[];
-  getMethodsForIndicator: (indicatorId: string) => TestMethodWithIndicatorsDto[];
+  specimenTypes: SpecimenTypeDto[];
+  existingIndicatorKeys: ExistingIndicatorKey[];
+  getMethodsForIndicator: (
+    indicatorId: string,
+  ) => TestMethodWithIndicatorsDto[];
+  getIndicatorsBySpecimenType: (specimenTypeId: string) => IndicatorDto[];
   onOk: (
     selectedIndicators: Record<number, string>,
-    selectedMethods: Record<number, { id: string; unit: string }>
+    selectedMethods: Record<number, { id: string; unit: string }>,
+    selectedSpecimenTypes: Record<number, string>,
   ) => void;
   onCancel: () => void;
 }
@@ -63,48 +90,92 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   standardName,
   indicatorGroups,
   indicatorsByGroup,
-  existingIndicatorIds,
+  specimenTypes,
+  existingIndicatorKeys,
   getMethodsForIndicator,
+  getIndicatorsBySpecimenType,
   onOk,
   onCancel,
 }) => {
+  // Track selected specimen types for filtering indicators
+  const [selectedSpecimenTypes, setSelectedSpecimenTypes] = useState<
+    Record<number, string>
+  >({});
   // Track selected indicators for enabling method select
-  const [selectedIndicators, setSelectedIndicators] = useState<Record<number, string>>({});
+  const [selectedIndicators, setSelectedIndicators] = useState<
+    Record<number, string>
+  >({});
   // Track selected methods (source of truth since Form.List can lose parent values)
-  const [selectedMethods, setSelectedMethods] = useState<Record<number, { id: string; unit: string }>>({});
+  const [selectedMethods, setSelectedMethods] = useState<
+    Record<number, { id: string; unit: string }>
+  >({});
   // Track comparison modes (key: "parent-{index}" or "sub-{parentIndex}-{subIndex}")
-  const [comparisonModes, setComparisonModes] = useState<Record<string, "single" | "range">>({});
+  const [comparisonModes, setComparisonModes] = useState<
+    Record<string, "single" | "range">
+  >({});
   // Track which parents have sub-indicators explicitly added (by clicking + button)
   // This is the SOURCE OF TRUTH for showing sub-indicator container, NOT subFields.length
-  const [subIndicatorsAddedCount, setSubIndicatorsAddedCount] = useState<Record<number, number>>({});
+  const [subIndicatorsAddedCount, setSubIndicatorsAddedCount] = useState<
+    Record<number, number>
+  >({});
 
   // Watch form indicators for controlled updates (like TestMethods)
-  const indicators: IndicatorFormItem[] = Form.useWatch("indicators", form) || [];
+  const indicators: IndicatorFormItem[] =
+    Form.useWatch("indicators", form) || [];
+
+  // Build specimen type options
+  const specimenTypeOptions = React.useMemo(() => {
+    return specimenTypes
+      .filter((st) => st.isActive)
+      .map((st) => ({
+        value: st.id,
+        label: `${st.code} - ${st.name}`,
+      }));
+  }, [specimenTypes]);
 
   // Find indicator by ID
-  const findIndicatorById = useCallback((indicatorId: string): IndicatorDto | undefined => {
-    const allIndicators = Object.values(indicatorsByGroup).flat();
-    const parent = allIndicators.find((ind) => ind.id === indicatorId);
-    if (parent) return parent;
-    for (const ind of allIndicators) {
-      const sub = ind.subIndicators?.find((s) => s.id === indicatorId);
-      if (sub) return sub as IndicatorDto;
-    }
-    return undefined;
-  }, [indicatorsByGroup]);
+  const findIndicatorById = useCallback(
+    (indicatorId: string): IndicatorDto | undefined => {
+      const allIndicators = Object.values(indicatorsByGroup).flat();
+      const parent = allIndicators.find((ind) => ind.id === indicatorId);
+      if (parent) return parent;
+      for (const ind of allIndicators) {
+        const sub = ind.subIndicators?.find((s) => s.id === indicatorId);
+        if (sub) return sub as IndicatorDto;
+      }
+      return undefined;
+    },
+    [indicatorsByGroup],
+  );
 
-  // Check if indicator has sub-indicators defined in master data
-  const hasSubIndicatorsDefined = useCallback((indicatorId: string): boolean => {
-    const indicator = findIndicatorById(indicatorId);
-    return !!(indicator?.subIndicators && indicator.subIndicators.length > 0);
-  }, [findIndicatorById]);
+  // Check if indicator + specimenType combination is already selected in another row
+  const isIndicatorAlreadySelected = useCallback(
+    (
+      indicatorId: string,
+      specimenTypeId: string | undefined,
+      excludeIndex?: number,
+    ): boolean => {
+      return indicators.some(
+        (item, idx) =>
+          idx !== excludeIndex &&
+          item?.indicatorId === indicatorId &&
+          (item?.specimenTypeId || null) === (specimenTypeId || null),
+      );
+    },
+    [indicators],
+  );
 
-  // Check if indicator is already selected in another row
-  const isIndicatorAlreadySelected = useCallback((indicatorId: string, excludeIndex?: number): boolean => {
-    return indicators.some((item, idx) =>
-      idx !== excludeIndex && item?.indicatorId === indicatorId
-    );
-  }, [indicators]);
+  // Check if indicator + specimenType combination already exists in the standard
+  const isKeyExisting = useCallback(
+    (indicatorId: string, specimenTypeId: string | undefined): boolean => {
+      return existingIndicatorKeys.some(
+        (key) =>
+          key.indicatorId === indicatorId &&
+          (key.specimenTypeId || null) === (specimenTypeId || null),
+      );
+    },
+    [existingIndicatorKeys],
+  );
 
   // Render indicator label for Select
   const renderIndicatorLabel = (indicatorId: string) => {
@@ -112,118 +183,282 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
     if (!indicator) return indicatorId;
     return (
       <span>
-        {indicator.code} - <IndicatorName name={indicator.name} formattedName={indicator.formattedName} />
+        {indicator.code} -{" "}
+        <IndicatorName
+          name={indicator.name}
+          formattedName={indicator.formattedName}
+        />
       </span>
     );
   };
 
-  // Build parent indicator options
-  const buildParentOptions = useCallback((currentIndicatorId?: string) => {
-    return indicatorGroups
-      .filter((group) => group.isActive && indicatorsByGroup[group.id]?.length > 0)
-      .map((group) => {
-        const parentIndicators = (indicatorsByGroup[group.id] || []).filter(
-          (ind) => !ind.parentIndicatorId && ind.isActive
-        );
+  // Build parent indicator options - filtered by specimenType
+  const buildParentOptions = useCallback(
+    (specimenTypeId?: string, currentIndicatorId?: string) => {
+      // If no specimen type selected, return empty
+      if (!specimenTypeId) return [];
 
-        const availableParents = parentIndicators.filter((ind) => {
-          if (ind.id === currentIndicatorId) return true;
-          if (existingIndicatorIds.includes(ind.id)) return false;
-          if (isIndicatorAlreadySelected(ind.id)) return false;
-          const methods = getMethodsForIndicator(ind.id);
-          return methods.length > 0;
-        });
+      // Get indicators that belong to this specimen type
+      const indicatorsForSpecimenType =
+        getIndicatorsBySpecimenType(specimenTypeId);
+      const indicatorIdsForSpecimenType = new Set(
+        indicatorsForSpecimenType.map((ind) => ind.id),
+      );
 
-        if (availableParents.length === 0) return null;
+      return indicatorGroups
+        .filter(
+          (group) => group.isActive && indicatorsByGroup[group.id]?.length > 0,
+        )
+        .map((group) => {
+          const parentIndicators = (indicatorsByGroup[group.id] || []).filter(
+            (ind) =>
+              !ind.parentIndicatorId &&
+              ind.isActive &&
+              indicatorIdsForSpecimenType.has(ind.id),
+          );
 
-        return {
-          label: <Text strong>{group.name}</Text>,
-          options: availableParents.map((ind) => ({
-            value: ind.id,
-            label: (
-              <span>
-                {ind.code} - <IndicatorName name={ind.name} formattedName={ind.formattedName} />
-              </span>
-            ),
-            searchText: `${ind.code} - ${ind.name}`,
-          })),
-        };
-      })
-      .filter(Boolean) as {
-      label: React.ReactNode;
-      options: { value: string; label: React.ReactNode; searchText: string }[];
-    }[];
-  }, [indicatorGroups, indicatorsByGroup, existingIndicatorIds, getMethodsForIndicator, isIndicatorAlreadySelected]);
+          const availableParents = parentIndicators.filter((ind) => {
+            if (ind.id === currentIndicatorId) return true;
+            // Check if this indicator + specimenType combo already exists in standard
+            if (isKeyExisting(ind.id, specimenTypeId)) return false;
+            // Check if already selected in another row with same specimenType
+            if (isIndicatorAlreadySelected(ind.id, specimenTypeId))
+              return false;
+            const methods = getMethodsForIndicator(ind.id);
+            return methods.length > 0;
+          });
+
+          if (availableParents.length === 0) return null;
+
+          return {
+            label: <Text strong>{group.name}</Text>,
+            options: availableParents.map((ind) => ({
+              value: ind.id,
+              label: (
+                <span>
+                  {ind.code} -{" "}
+                  <IndicatorName
+                    name={ind.name}
+                    formattedName={ind.formattedName}
+                  />
+                </span>
+              ),
+              searchText: `${ind.code} - ${ind.name}`,
+            })),
+          };
+        })
+        .filter(Boolean) as {
+        label: React.ReactNode;
+        options: {
+          value: string;
+          label: React.ReactNode;
+          searchText: string;
+        }[];
+      }[];
+    },
+    [
+      indicatorGroups,
+      indicatorsByGroup,
+      getIndicatorsBySpecimenType,
+      isKeyExisting,
+      isIndicatorAlreadySelected,
+      getMethodsForIndicator,
+    ],
+  );
 
   // Build method options for parent
-  const buildMethodOptions = useCallback((parentIndex: number) => {
-    const indicatorId = selectedIndicators[parentIndex] || indicators[parentIndex]?.indicatorId;
-    if (!indicatorId) return [];
+  const buildMethodOptions = useCallback(
+    (parentIndex: number) => {
+      const indicatorId =
+        selectedIndicators[parentIndex] || indicators[parentIndex]?.indicatorId;
+      if (!indicatorId) return [];
 
-    const methods = getMethodsForIndicator(indicatorId);
-    return methods.map((method) => ({
-      value: method.id,
-      label: <IndicatorName name={method.name} formattedName={method.formattedName} />,
-      searchText: method.name,
-      unit: method.unit,
-    }));
-  }, [selectedIndicators, indicators, getMethodsForIndicator]);
+      const methods = getMethodsForIndicator(indicatorId);
+      return methods.map((method) => ({
+        value: method.id,
+        label: (
+          <IndicatorName
+            name={method.name}
+            formattedName={method.formattedName}
+          />
+        ),
+        searchText: method.name,
+        unit: method.unit,
+      }));
+    },
+    [selectedIndicators, indicators, getMethodsForIndicator],
+  );
 
   // Build sub-indicator options
-  const buildSubOptions = useCallback((parentIndex: number, subIndex?: number) => {
-    // Use selectedIndicators as primary source, fallback to form data
-    const parentIndicatorId = selectedIndicators[parentIndex] || indicators[parentIndex]?.indicatorId;
-    if (!parentIndicatorId) return [];
+  const buildSubOptions = useCallback(
+    (parentIndex: number, subIndex?: number) => {
+      // Use selectedIndicators as primary source, fallback to form data
+      const parentIndicatorId =
+        selectedIndicators[parentIndex] || indicators[parentIndex]?.indicatorId;
+      if (!parentIndicatorId) return [];
 
-    const parentIndicator = findIndicatorById(parentIndicatorId);
-    if (!parentIndicator?.subIndicators?.length) return [];
+      const specimenTypeId =
+        selectedSpecimenTypes[parentIndex] ||
+        indicators[parentIndex]?.specimenTypeId;
 
-    const currentSubId = subIndex !== undefined
-      ? indicators[parentIndex]?.subIndicators?.[subIndex]?.indicatorId
-      : undefined;
+      const parentIndicator = findIndicatorById(parentIndicatorId);
+      if (!parentIndicator?.subIndicators?.length) return [];
 
-    const selectedSubIds = (indicators[parentIndex]?.subIndicators || [])
-      .map((sub) => sub?.indicatorId)
-      .filter(Boolean);
+      const currentSubId =
+        subIndex !== undefined
+          ? indicators[parentIndex]?.subIndicators?.[subIndex]?.indicatorId
+          : undefined;
 
-    const availableSubs = parentIndicator.subIndicators.filter(
-      (sub) =>
-        sub.id === currentSubId ||
-        (!selectedSubIds.includes(sub.id) &&
-          sub.isActive &&
-          !existingIndicatorIds.includes(sub.id))
-    );
+      const selectedSubIds = (indicators[parentIndex]?.subIndicators || [])
+        .map((sub) => sub?.indicatorId)
+        .filter(Boolean);
 
-    return availableSubs.map((sub) => ({
-      value: sub.id,
-      label: (
-        <span>
-          {sub.code} - <IndicatorName name={sub.name} formattedName={sub.formattedName} />
-        </span>
-      ),
-      searchText: `${sub.code} - ${sub.name}`,
-    }));
-  }, [selectedIndicators, indicators, findIndicatorById, existingIndicatorIds]);
+      const availableSubs = parentIndicator.subIndicators.filter(
+        (sub) =>
+          sub.id === currentSubId ||
+          (!selectedSubIds.includes(sub.id) &&
+            sub.isActive &&
+            // Only check existing if specimenType is selected
+            (!specimenTypeId || !isKeyExisting(sub.id, specimenTypeId))),
+      );
 
-  // Handle parent indicator change
-  const handleParentChange = (parentId: string | undefined, parentIndex: number) => {
+      return availableSubs.map((sub) => ({
+        value: sub.id,
+        label: (
+          <span>
+            {sub.code} -{" "}
+            <IndicatorName name={sub.name} formattedName={sub.formattedName} />
+          </span>
+        ),
+        searchText: `${sub.code} - ${sub.name}`,
+      }));
+    },
+    [
+      selectedIndicators,
+      selectedSpecimenTypes,
+      indicators,
+      findIndicatorById,
+      isKeyExisting,
+    ],
+  );
+
+  // Handle specimen type change
+  const handleSpecimenTypeChange = (
+    specimenTypeId: string | undefined,
+    parentIndex: number,
+  ) => {
     const currentIndicators = form.getFieldValue("indicators") || [];
 
+    // Update specimen type and reset indicator/method fields
+    currentIndicators[parentIndex] = {
+      specimenTypeId: specimenTypeId,
+      indicatorId: undefined,
+      testMethodId: undefined,
+      unit: "",
+      comparisonOperator: undefined,
+      allowedLimit: undefined,
+      subIndicators: [],
+    };
+
+    form.setFieldsValue({ indicators: currentIndicators });
+
+    // Track selected specimen type
+    if (specimenTypeId) {
+      setSelectedSpecimenTypes((prev) => ({
+        ...prev,
+        [parentIndex]: specimenTypeId,
+      }));
+    } else {
+      setSelectedSpecimenTypes((prev) => {
+        const newState = { ...prev };
+        delete newState[parentIndex];
+        return newState;
+      });
+    }
+
+    // Clear selected indicator and method when specimen type changes
+    setSelectedIndicators((prev) => {
+      const newState = { ...prev };
+      delete newState[parentIndex];
+      return newState;
+    });
+    setSelectedMethods((prev) => {
+      const newState = { ...prev };
+      delete newState[parentIndex];
+      return newState;
+    });
+    setSubIndicatorsAddedCount((prev) => {
+      const newState = { ...prev };
+      delete newState[parentIndex];
+      return newState;
+    });
+    setComparisonModes((prev) => {
+      const newState = { ...prev };
+      delete newState[`parent-${parentIndex}`];
+      return newState;
+    });
+  };
+
+  // Handle parent indicator change
+  // When parent has sub-indicators, automatically add ALL sub-indicators
+  const handleParentChange = (
+    parentId: string | undefined,
+    parentIndex: number,
+  ) => {
+    const currentIndicators = form.getFieldValue("indicators") || [];
+    const specimenTypeId =
+      selectedSpecimenTypes[parentIndex] ||
+      currentIndicators[parentIndex]?.specimenTypeId;
+
     if (parentId) {
-      // Reset all fields when indicator changes
-      // IMPORTANT: Always include subIndicators: [] to prevent Form.List auto-initialization issues
+      // Check if this parent has sub-indicators defined
+      const parentIndicator = findIndicatorById(parentId);
+      const subIndicators = parentIndicator?.subIndicators || [];
+
+      // Filter out sub-indicators that are already in existing standards (with same specimenType)
+      const availableSubs = subIndicators.filter(
+        (sub) => sub.isActive && !isKeyExisting(sub.id, specimenTypeId),
+      );
+
+      // Auto-add all available sub-indicators
+      const autoAddedSubs = availableSubs.map((sub) => ({
+        indicatorId: sub.id,
+        testMethodId: undefined, // Will be set when parent method is selected
+        unit: "",
+        comparisonOperator: undefined,
+        allowedLimit: undefined,
+      }));
+
+      // Reset all fields when indicator changes, preserve specimenTypeId
       currentIndicators[parentIndex] = {
+        specimenTypeId: specimenTypeId,
         indicatorId: parentId,
         testMethodId: undefined,
         unit: "",
         comparisonOperator: undefined,
         allowedLimit: undefined,
-        subIndicators: [], // Explicit empty array
+        subIndicators: autoAddedSubs, // Auto-add sub-indicators
       };
+
       // Track selected indicator for enabling method select
       setSelectedIndicators((prev) => ({ ...prev, [parentIndex]: parentId }));
+
+      // Track sub-indicator count (for showing sub-indicator container)
+      if (autoAddedSubs.length > 0) {
+        setSubIndicatorsAddedCount((prev) => ({
+          ...prev,
+          [parentIndex]: autoAddedSubs.length,
+        }));
+      } else {
+        setSubIndicatorsAddedCount((prev) => {
+          const newState = { ...prev };
+          delete newState[parentIndex];
+          return newState;
+        });
+      }
     } else {
       currentIndicators[parentIndex] = {
+        specimenTypeId: specimenTypeId,
         indicatorId: undefined,
         testMethodId: undefined,
         unit: "",
@@ -231,6 +466,12 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
       };
       // Clear selected indicator
       setSelectedIndicators((prev) => {
+        const newState = { ...prev };
+        delete newState[parentIndex];
+        return newState;
+      });
+      // Clear sub-indicator count
+      setSubIndicatorsAddedCount((prev) => {
         const newState = { ...prev };
         delete newState[parentIndex];
         return newState;
@@ -246,13 +487,6 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
       return newState;
     });
 
-    // Clear sub-indicator count when parent changes
-    setSubIndicatorsAddedCount((prev) => {
-      const newState = { ...prev };
-      delete newState[parentIndex];
-      return newState;
-    });
-
     // Clear selected method when indicator changes
     setSelectedMethods((prev) => {
       const newState = { ...prev };
@@ -265,15 +499,20 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   const handleMethodChange = (
     methodId: string | undefined,
     option: { unit?: string } | undefined,
-    parentIndex: number
+    parentIndex: number,
   ) => {
     const currentIndicators = form.getFieldValue("indicators") || [];
     const current = currentIndicators[parentIndex] || {};
     // Use selectedIndicators as source of truth for indicatorId
     const indicatorId = selectedIndicators[parentIndex] || current.indicatorId;
+    // Use selectedSpecimenTypes as source of truth for specimenTypeId
+    const specimenTypeId =
+      selectedSpecimenTypes[parentIndex] || current.specimenTypeId;
 
     // Preserve existing subIndicators array (only if it has actual items)
-    const existingSubs = Array.isArray(current.subIndicators) ? current.subIndicators : [];
+    const existingSubs = Array.isArray(current.subIndicators)
+      ? current.subIndicators
+      : [];
 
     if (methodId && option?.unit) {
       const unit = option.unit; // Capture for type safety
@@ -285,6 +524,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
 
       // Build new indicator object explicitly (no blind spread)
       currentIndicators[parentIndex] = {
+        specimenTypeId: specimenTypeId, // Preserve specimenTypeId
         indicatorId: indicatorId, // Use state as source of truth
         testMethodId: methodId,
         unit: option.unit,
@@ -310,6 +550,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
       });
 
       currentIndicators[parentIndex] = {
+        specimenTypeId: specimenTypeId, // Preserve specimenTypeId
         indicatorId: indicatorId, // Use state as source of truth
         testMethodId: undefined,
         unit: "",
@@ -332,7 +573,10 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   };
 
   // Handle comparison change for parent
-  const handleComparisonChange = (value: string | undefined, parentIndex: number) => {
+  const handleComparisonChange = (
+    value: string | undefined,
+    parentIndex: number,
+  ) => {
     const isRange = value === "range";
     const modeKey = `parent-${parentIndex}`;
 
@@ -343,10 +587,16 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
 
     const currentIndicators = form.getFieldValue("indicators") || [];
     const current = currentIndicators[parentIndex] || {};
-    const existingSubs = Array.isArray(current.subIndicators) ? current.subIndicators : [];
+    const existingSubs = Array.isArray(current.subIndicators)
+      ? current.subIndicators
+      : [];
+    // Preserve specimenTypeId from state or form
+    const specimenTypeId =
+      selectedSpecimenTypes[parentIndex] || current.specimenTypeId;
 
     if (isRange) {
       currentIndicators[parentIndex] = {
+        specimenTypeId: specimenTypeId,
         indicatorId: current.indicatorId,
         testMethodId: current.testMethodId,
         unit: current.unit,
@@ -360,6 +610,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
       };
     } else {
       currentIndicators[parentIndex] = {
+        specimenTypeId: specimenTypeId,
         indicatorId: current.indicatorId,
         testMethodId: current.testMethodId,
         unit: current.unit,
@@ -376,7 +627,11 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   };
 
   // Handle comparison change for sub-indicator
-  const handleSubComparisonChange = (value: string | undefined, parentIndex: number, subIndex: number) => {
+  const handleSubComparisonChange = (
+    value: string | undefined,
+    parentIndex: number,
+    subIndex: number,
+  ) => {
     const isRange = value === "range";
     const modeKey = `sub-${parentIndex}-${subIndex}`;
 
@@ -411,82 +666,21 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
     form.setFieldsValue({ indicators: currentIndicators });
   };
 
-  // Handle adding sub-indicator - ONLY when clicking + button
-  // IMPORTANT: Don't use addSub() from Form.List as it can reset parent fields!
-  // Instead, manually set form values to preserve all parent data.
-  const handleAddSubIndicator = (parentIndex: number) => {
-    const parentIndicatorId = selectedIndicators[parentIndex] || indicators[parentIndex]?.indicatorId;
-    const parentMethodId = form.getFieldValue(["indicators", parentIndex, "testMethodId"]);
-    const parentUnit = form.getFieldValue(["indicators", parentIndex, "unit"]);
-
-    if (!parentIndicatorId) {
-      message.warning("Vui lòng chọn chỉ tiêu trước");
-      return;
-    }
-
-    if (!parentMethodId) {
-      message.warning("Vui lòng chọn phương pháp trước");
-      return;
-    }
-
-    if (!hasSubIndicatorsDefined(parentIndicatorId)) {
-      message.warning("Chỉ tiêu này không có chỉ tiêu phụ");
-      return;
-    }
-
-    // Get current indicators from form
-    const currentIndicators = form.getFieldValue("indicators") || [];
-    const currentParent = currentIndicators[parentIndex] || {};
-
-    // Get existing sub-indicators
-    const existingSubs = Array.isArray(currentParent.subIndicators) ? currentParent.subIndicators : [];
-
-    // Create new sub-indicator
-    const newSub = {
-      indicatorId: undefined,
-      testMethodId: parentMethodId,
-      unit: parentUnit || "",
-      comparisonOperator: undefined,
-      allowedLimit: undefined,
-    };
-
-    // IMPORTANT: Preserve ALL parent fields when adding sub-indicator
-    currentIndicators[parentIndex] = {
-      indicatorId: parentIndicatorId, // Use selectedIndicators as source of truth
-      testMethodId: parentMethodId,
-      unit: parentUnit || "",
-      comparisonOperator: currentParent.comparisonOperator,
-      allowedLimit: currentParent.allowedLimit,
-      lowerOperator: currentParent.lowerOperator,
-      lowerLimit: currentParent.lowerLimit,
-      upperOperator: currentParent.upperOperator,
-      upperLimit: currentParent.upperLimit,
-      subIndicators: [...existingSubs, newSub],
-    };
-
-    // Set form values - this preserves all parent fields
-    form.setFieldsValue({ indicators: currentIndicators });
-
-    // Track that we explicitly added a sub-indicator
-    const currentCount = subIndicatorsAddedCount[parentIndex] || 0;
-    setSubIndicatorsAddedCount((prev) => ({
-      ...prev,
-      [parentIndex]: currentCount + 1,
-    }));
-  };
-
   // Handle removing sub-indicator
   // IMPORTANT: Don't use removeSub() from Form.List as it can reset parent fields!
   // Instead, manually set form values to preserve all parent data.
   const handleRemoveSubIndicator = (parentIndex: number, subIndex: number) => {
-    const parentIndicatorId = selectedIndicators[parentIndex] || indicators[parentIndex]?.indicatorId;
+    const parentIndicatorId =
+      selectedIndicators[parentIndex] || indicators[parentIndex]?.indicatorId;
 
     // Get current indicators from form
     const currentIndicators = form.getFieldValue("indicators") || [];
     const currentParent = currentIndicators[parentIndex] || {};
 
     // Get existing sub-indicators and remove the one at subIndex
-    const existingSubs = Array.isArray(currentParent.subIndicators) ? [...currentParent.subIndicators] : [];
+    const existingSubs = Array.isArray(currentParent.subIndicators)
+      ? [...currentParent.subIndicators]
+      : [];
     existingSubs.splice(subIndex, 1);
 
     // IMPORTANT: Preserve ALL parent fields when removing sub-indicator
@@ -515,6 +709,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
 
   // Handle cancel
   const handleCancel = () => {
+    setSelectedSpecimenTypes({});
     setSelectedIndicators({});
     setSelectedMethods({});
     setComparisonModes({});
@@ -522,60 +717,112 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
     onCancel();
   };
 
-  // Handle OK - pass state values directly to onOk
-  // This bypasses Form.List issues by using state as source of truth
-  const handleOk = () => {
-    // Pass state values directly - the hook will use these as source of truth
-    onOk(selectedIndicators, selectedMethods);
+  // Handle OK - validate form first, then pass state values to onOk
+  const handleOk = async () => {
+    try {
+      // Validate all form fields including range validation
+      await form.validateFields();
+      // Pass state values directly - the hook will use these as source of truth
+      onOk(selectedIndicators, selectedMethods, selectedSpecimenTypes);
+    } catch (error) {
+      // Form validation failed - errors will be shown on fields
+      console.log("Form validation failed:", error);
+    }
   };
 
   // Render limit fields
-  const renderLimitFields = (isRangeMode: boolean, pathPrefix: (string | number)[]) => {
+  // fieldNamePrefix: relative path for Form.Item name (inside Form.List context)
+  // fullPathPrefix: absolute path for getFieldValue (from form root)
+  const renderLimitFields = (
+    isRangeMode: boolean,
+    fieldNamePrefix: (string | number)[],
+    fullPathPrefix: (string | number)[],
+  ) => {
     if (isRangeMode) {
       return (
         <div style={{ display: "flex", gap: 4, flex: 1 }}>
-          <Form.Item name={[...pathPrefix, "lowerOperator"]} style={{ marginBottom: 0, width: 60 }}>
+          <Form.Item
+            name={[...fieldNamePrefix, "lowerOperator"]}
+            style={{ marginBottom: 0, width: 60 }}
+          >
             <Select options={LOWER_OPERATORS} defaultValue=">" />
           </Form.Item>
           <Form.Item
-            name={[...pathPrefix, "lowerLimit"]}
-            rules={[{ required: true, message: "Bắt buộc" }]}
-            style={{ marginBottom: 0, width: 80 }}
+            name={[...fieldNamePrefix, "lowerLimit"]}
+            dependencies={[[...fullPathPrefix, "upperLimit"]]}
+            rules={[
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  const upperLimit = getFieldValue([
+                    ...fullPathPrefix,
+                    "upperLimit",
+                  ]);
+                  if (!value || !upperLimit) return Promise.resolve();
+                  // Extract plain text from HTML and parse mathematical expressions
+                  const lowerText = extractPlainTextFromLimit(value);
+                  const upperText = extractPlainTextFromLimit(upperLimit);
+                  const lower = parseResultToNumber(lowerText, 4, false);
+                  const upper = parseResultToNumber(upperText, 4, false);
+                  if (lower === null || upper === null) return Promise.resolve();
+                  if (lower >= upper) {
+                    return Promise.reject(
+                      new Error("Cận dưới phải < cận trên"),
+                    );
+                  }
+                  return Promise.resolve();
+                },
+              }),
+            ]}
+            style={{ marginBottom: 0, width: 100 }}
           >
-            <NumericFormat
-              placeholder="Cận dưới"
-              allowNegative={false}
-              decimalScale={4}
-              customInput={Input}
-            />
+            <LimitInput placeholder="Cận dưới" />
           </Form.Item>
-          <Form.Item name={[...pathPrefix, "upperOperator"]} style={{ marginBottom: 0, width: 60 }}>
+          <Form.Item
+            name={[...fieldNamePrefix, "upperOperator"]}
+            style={{ marginBottom: 0, width: 60 }}
+          >
             <Select options={UPPER_OPERATORS} defaultValue="<" />
           </Form.Item>
           <Form.Item
-            name={[...pathPrefix, "upperLimit"]}
-            rules={[{ required: true, message: "Bắt buộc" }]}
-            style={{ marginBottom: 0, width: 80 }}
+            name={[...fieldNamePrefix, "upperLimit"]}
+            dependencies={[[...fullPathPrefix, "lowerLimit"]]}
+            rules={[
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  const lowerLimit = getFieldValue([
+                    ...fullPathPrefix,
+                    "lowerLimit",
+                  ]);
+                  if (!value || !lowerLimit) return Promise.resolve();
+                  // Extract plain text from HTML and parse mathematical expressions
+                  const upperText = extractPlainTextFromLimit(value);
+                  const lowerText = extractPlainTextFromLimit(lowerLimit);
+                  const upper = parseResultToNumber(upperText, 4, false);
+                  const lower = parseResultToNumber(lowerText, 4, false);
+                  if (lower === null || upper === null) return Promise.resolve();
+                  if (upper <= lower) {
+                    return Promise.reject(
+                      new Error("Cận trên phải > cận dưới"),
+                    );
+                  }
+                  return Promise.resolve();
+                },
+              }),
+            ]}
+            style={{ marginBottom: 0, width: 100 }}
           >
-            <NumericFormat
-              placeholder="Cận trên"
-              allowNegative={false}
-              decimalScale={4}
-              customInput={Input}
-            />
+            <LimitInput placeholder="Cận trên" />
           </Form.Item>
         </div>
       );
     }
 
     return (
-      <Form.Item name={[...pathPrefix, "allowedLimit"]} style={{ marginBottom: 0, flex: 1 }}>
-        <NumericFormat
-          placeholder="Giới hạn"
-          allowNegative={false}
-          decimalScale={4}
-          customInput={Input}
-        />
+      <Form.Item
+        name={[...fieldNamePrefix, "allowedLimit"]}
+        style={{ marginBottom: 0, flex: 1 }}
+      >
+        <LimitInput placeholder="Giới hạn" />
       </Form.Item>
     );
   };
@@ -583,7 +830,11 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
   return (
     <Modal
       className="standards-add-indicators-modal"
-      title={<span style={{ fontSize: 18, fontWeight: 600 }}>Thêm chỉ tiêu so sánh</span>}
+      title={
+        <span style={{ fontSize: 18, fontWeight: 600 }}>
+          Thêm chỉ tiêu so sánh
+        </span>
+      }
       open={open}
       onOk={handleOk}
       onCancel={handleCancel}
@@ -600,233 +851,336 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
       <Divider style={{ marginTop: 12, marginBottom: 16 }} />
 
       <Form form={form} layout="vertical" requiredMark>
-        {/* Header */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-          <div style={{ width: 32 }} />
-          <Text strong style={{ width: 220 }}>Chỉ tiêu <Text type="danger">*</Text></Text>
-          <Text strong style={{ width: 200 }}>Phương pháp <Text type="danger">*</Text></Text>
-          <Text strong style={{ width: 80 }}>Đơn vị <Text type="danger">*</Text></Text>
-          <Text strong style={{ width: 90 }}>So sánh <Text type="danger">*</Text></Text>
-          <Text strong style={{ flex: 1 }}>Giới hạn</Text>
-          <div style={{ width: 14 }} />
-        </div>
-
         <Form.List name="indicators">
           {(parentFields, { add: addParent, remove: removeParent }) => (
             <>
-              {parentFields.map(({ key: parentKey, name: parentName }) => {
-                const parentIndicatorId = selectedIndicators[parentName] || indicators[parentName]?.indicatorId;
-                const parentHasSubs = parentIndicatorId && hasSubIndicatorsDefined(parentIndicatorId);
-                const parentModeKey = `parent-${parentName}`;
-                const isParentRangeMode = comparisonModes[parentModeKey] === "range";
+              <Card>
+                {/* Header */}
+                <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                  <div style={{ width: 32 }} />
+                  <Text strong style={{ width: 160 }}>
+                    Nền mẫu <Text type="danger">*</Text>
+                  </Text>
+                  <Text strong style={{ width: 200 }}>
+                    Chỉ tiêu <Text type="danger">*</Text>
+                  </Text>
+                  <Text strong style={{ width: 180 }}>
+                    Phương pháp <Text type="danger">*</Text>
+                  </Text>
+                  <Text strong style={{ width: 80 }}>
+                    Đơn vị <Text type="danger">*</Text>
+                  </Text>
+                  <Text strong style={{ width: 90 }}>
+                    So sánh
+                  </Text>
+                  <Text strong style={{ flex: 1 }}>
+                    Giới hạn
+                  </Text>
+                  <div style={{ width: 14 }} />
+                </div>
 
-                // CRITICAL: Use our state-based count, NOT subFields.length
-                // This is because Form.List can have internal state that doesn't match our explicit adds
-                const hasSubsAdded = (subIndicatorsAddedCount[parentName] || 0) > 0;
+                {parentFields.map(({ key: parentKey, name: parentName }) => {
+                  const parentSpecimenTypeId =
+                    selectedSpecimenTypes[parentName] ||
+                    indicators[parentName]?.specimenTypeId;
+                  const parentIndicatorId =
+                    selectedIndicators[parentName] ||
+                    indicators[parentName]?.indicatorId;
+                  const parentModeKey = `parent-${parentName}`;
+                  const isParentRangeMode =
+                    comparisonModes[parentModeKey] === "range";
 
-                return (
-                  <div key={parentKey} style={{ marginBottom: 16 }}>
-                    {/* Parent row - MUST be OUTSIDE nested Form.List to preserve form field paths */}
-                    <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                      {/* Add sub button - only show if indicator has subs defined in master data */}
-                      <div style={{ width: 32, paddingTop: 4 }}>
-                        {parentHasSubs && (
-                          <Tooltip title="Thêm chỉ tiêu phụ">
-                            <Icon
-                              name="plus-lg"
-                              onClick={() => handleAddSubIndicator(parentName)}
-                              style={{ fontSize: 16, color: "#1890ff", cursor: "pointer" }}
-                            />
-                          </Tooltip>
-                        )}
-                      </div>
+                  // CRITICAL: Use our state-based count, NOT subFields.length
+                  // This is because Form.List can have internal state that doesn't match our explicit adds
+                  const hasSubsAdded =
+                    (subIndicatorsAddedCount[parentName] || 0) > 0;
 
-                      {/* Indicator Select */}
-                      <Form.Item
-                        name={[parentName, "indicatorId"]}
-                        rules={[{ required: true, message: "Chọn" }]}
-                        style={{ marginBottom: 0, width: 220 }}
-                      >
-                        <Select
-                          options={buildParentOptions(parentIndicatorId)}
-                          placeholder="Chọn chỉ tiêu"
-                          showSearch
-                          allowClear
-                          popupMatchSelectWidth={400}
-                          labelRender={() => {
-                            if (!parentIndicatorId) return null;
-                            return renderIndicatorLabel(parentIndicatorId);
-                          }}
-                          filterOption={(input, option) => {
-                            const searchText = (option as { searchText?: string })?.searchText;
-                            return searchText?.toLowerCase().includes(input.toLowerCase()) || false;
-                          }}
-                          onChange={(value) => handleParentChange(value, parentName)}
-                        />
-                      </Form.Item>
-
-                      {/* Method Select */}
-                      <Form.Item
-                        name={[parentName, "testMethodId"]}
-                        rules={[{ required: true, message: "Chọn" }]}
-                        style={{ marginBottom: 0, width: 200 }}
-                      >
-                        <Select
-                          options={buildMethodOptions(parentName)}
-                          placeholder="Chọn phương pháp"
-                          showSearch
-                          allowClear
-                          disabled={!selectedIndicators[parentName]}
-                          filterOption={(input, option) => {
-                            const searchText = (option as { searchText?: string })?.searchText;
-                            return searchText?.toLowerCase().includes(input.toLowerCase()) || false;
-                          }}
-                          onChange={(value, option) =>
-                            handleMethodChange(value, option as { unit?: string }, parentName)
-                          }
-                        />
-                      </Form.Item>
-
-                      {/* Unit/Comparison/Limit - hide when has sub-indicators added */}
-                      {!hasSubsAdded ? (
-                        <>
-                          <Form.Item
-                            name={[parentName, "unit"]}
-                            rules={[{ required: true, message: "Chọn PP" }]}
-                            style={{ marginBottom: 0, width: 80 }}
-                          >
-                            <Input placeholder="ĐVT" disabled />
-                          </Form.Item>
-
-                          <Form.Item
-                            name={[parentName, "comparisonOperator"]}
-                            rules={[{ required: true, message: "Chọn" }]}
-                            style={{ marginBottom: 0, width: 90 }}
-                          >
-                            <Select
-                              options={COMPARISON_OPERATORS}
-                              placeholder="--"
-                              allowClear
-                              onChange={(value) => handleComparisonChange(value, parentName)}
-                            />
-                          </Form.Item>
-
-                          {renderLimitFields(isParentRangeMode, [parentName])}
-                        </>
-                      ) : (
-                        <div style={{ flex: 1 }} />
-                      )}
-
-                      {/* Remove button */}
-                      <MinusCircleOutlined
-                        onClick={() => removeParent(parentName)}
+                  return (
+                    <div key={parentKey} style={{ marginBottom: 16 }}>
+                      {/* Parent row - MUST be OUTSIDE nested Form.List to preserve form field paths */}
+                      <div
                         style={{
-                          color: parentFields.length > 1 ? "#ff4d4f" : "#d9d9d9",
-                          marginTop: 8,
-                          cursor: parentFields.length > 1 ? "pointer" : "not-allowed",
-                          visibility: parentFields.length > 1 ? "visible" : "hidden",
+                          display: "flex",
+                          gap: 8,
+                          alignItems: "flex-start",
                         }}
-                      />
-                    </div>
+                      >
+                        {/* Spacer - sub-indicators are auto-added when parent is selected */}
+                        <div style={{ width: 32 }} />
 
-                    {/* Sub-indicators container - ONLY render when explicitly added via + button */}
-                    {hasSubsAdded && (
-                      <div style={{ marginTop: 8, marginLeft: 32 }}>
-                        <div className="standards-sub-container">
-                          <Form.List name={[parentName, "subIndicators"]}>
-                            {(subFields) => (
-                              <>
-                                {subFields.map(({ key: subKey, name: subName }, index) => {
-                                  const subModeKey = `sub-${parentName}-${subName}`;
-                                  const isSubRangeMode = comparisonModes[subModeKey] === "range";
+                        {/* Specimen Type Select */}
+                        <Form.Item
+                          name={[parentName, "specimenTypeId"]}
+                          rules={[{ required: true, message: "Chọn" }]}
+                          style={{ marginBottom: 0, width: 160 }}
+                        >
+                          <Select
+                            options={specimenTypeOptions}
+                            placeholder="Chọn nền mẫu"
+                            showSearch
+                            allowClear
+                            filterOption={(input, option) =>
+                              (option?.label ?? "")
+                                .toLowerCase()
+                                .includes(input.toLowerCase())
+                            }
+                            onChange={(value) =>
+                              handleSpecimenTypeChange(value, parentName)
+                            }
+                          />
+                        </Form.Item>
 
-                                  return (
-                                    <div
-                                      key={subKey}
-                                      className={`standards-sub-row ${index === 0 ? "is-first" : ""} ${index === subFields.length - 1 ? "is-last" : ""}`}
-                                      style={{
-                                        display: "flex",
-                                        gap: 8,
-                                        marginBottom: index === subFields.length - 1 ? 0 : 12,
-                                        alignItems: "flex-start",
-                                      }}
-                                    >
-                                      {/* Sub-indicator Select */}
-                                      <Form.Item
-                                        name={[subName, "indicatorId"]}
-                                        rules={[{ required: true, message: "Chọn" }]}
-                                        style={{ marginBottom: 0, width: 160 }}
-                                      >
-                                        <Select
-                                          options={buildSubOptions(parentName, subName)}
-                                          placeholder="Chỉ tiêu phụ"
-                                          showSearch
-                                          allowClear
-                                          filterOption={(input, option) => {
-                                            const searchText = (option as { searchText?: string })?.searchText;
-                                            return searchText?.toLowerCase().includes(input.toLowerCase()) || false;
-                                          }}
-                                        />
-                                      </Form.Item>
-
-                                      {/* Method - disabled */}
-                                      <Form.Item
-                                        name={[subName, "testMethodId"]}
-                                        style={{ marginBottom: 0, width: 160 }}
-                                      >
-                                        <Select placeholder="(Theo cha)" disabled options={buildMethodOptions(parentName)} />
-                                      </Form.Item>
-
-                                      {/* Unit - auto-filled from parent, disabled */}
-                                      <Form.Item
-                                        name={[subName, "unit"]}
-                                        rules={[{ required: true, message: "Chọn PP" }]}
-                                        style={{ marginBottom: 0, width: 80 }}
-                                      >
-                                        <Input placeholder="ĐVT" disabled />
-                                      </Form.Item>
-
-                                      {/* Comparison */}
-                                      <Form.Item
-                                        name={[subName, "comparisonOperator"]}
-                                        rules={[{ required: true, message: "Chọn" }]}
-                                        style={{ marginBottom: 0, width: 90 }}
-                                      >
-                                        <Select
-                                          options={COMPARISON_OPERATORS}
-                                          placeholder="--"
-                                          allowClear
-                                          onChange={(value) => handleSubComparisonChange(value, parentName, subName)}
-                                        />
-                                      </Form.Item>
-
-                                      {/* Limit fields */}
-                                      {renderLimitFields(isSubRangeMode, [subName])}
-
-                                      {/* Remove sub button */}
-                                      <MinusCircleOutlined
-                                        onClick={() => handleRemoveSubIndicator(parentName, subName)}
-                                        style={{ color: "#ff4d4f", marginTop: 8, cursor: "pointer" }}
-                                      />
-                                    </div>
-                                  );
-                                })}
-                              </>
+                        {/* Indicator Select */}
+                        <Form.Item
+                          name={[parentName, "indicatorId"]}
+                          rules={[{ required: true, message: "Chọn" }]}
+                          style={{ marginBottom: 0, width: 200 }}
+                        >
+                          <Select
+                            options={buildParentOptions(
+                              parentSpecimenTypeId,
+                              parentIndicatorId,
                             )}
-                          </Form.List>
-                        </div>
+                            placeholder="Chọn chỉ tiêu"
+                            showSearch
+                            allowClear
+                            disabled={!parentSpecimenTypeId}
+                            popupMatchSelectWidth={400}
+                            labelRender={() => {
+                              if (!parentIndicatorId) return null;
+                              return renderIndicatorLabel(parentIndicatorId);
+                            }}
+                            filterOption={(input, option) => {
+                              const searchText = (
+                                option as { searchText?: string }
+                              )?.searchText;
+                              return (
+                                searchText
+                                  ?.toLowerCase()
+                                  .includes(input.toLowerCase()) || false
+                              );
+                            }}
+                            onChange={(value) =>
+                              handleParentChange(value, parentName)
+                            }
+                          />
+                        </Form.Item>
+
+                        {/* Method Select */}
+                        <Form.Item
+                          name={[parentName, "testMethodId"]}
+                          rules={[{ required: true, message: "Chọn" }]}
+                          style={{ marginBottom: 0, width: 180 }}
+                        >
+                          <Select
+                            options={buildMethodOptions(parentName)}
+                            placeholder="Chọn phương pháp"
+                            showSearch
+                            allowClear
+                            disabled={!selectedIndicators[parentName]}
+                            filterOption={(input, option) => {
+                              const searchText = (
+                                option as { searchText?: string }
+                              )?.searchText;
+                              return (
+                                searchText
+                                  ?.toLowerCase()
+                                  .includes(input.toLowerCase()) || false
+                              );
+                            }}
+                            onChange={(value, option) =>
+                              handleMethodChange(
+                                value,
+                                option as { unit?: string },
+                                parentName,
+                              )
+                            }
+                          />
+                        </Form.Item>
+
+                        <Form.Item
+                          name={[parentName, "unit"]}
+                          rules={[{ required: true, message: "Chọn PP" }]}
+                          style={{ marginBottom: 0, width: 80 }}
+                        >
+                          <Input placeholder="ĐVT" disabled />
+                        </Form.Item>
+
+                        {/* Comparison/Limit - hide when has sub-indicators added */}
+                        {!hasSubsAdded ? (
+                          <>
+                            <Form.Item
+                              name={[parentName, "comparisonOperator"]}
+                              style={{ marginBottom: 0, width: 90 }}
+                            >
+                              <Select
+                                options={COMPARISON_OPERATORS}
+                                placeholder="--"
+                                allowClear
+                                onChange={(value) =>
+                                  handleComparisonChange(value, parentName)
+                                }
+                              />
+                            </Form.Item>
+
+                            {renderLimitFields(
+                              isParentRangeMode,
+                              [parentName],
+                              ["indicators", parentName],
+                            )}
+                          </>
+                        ) : (
+                          <div style={{ flex: 1 }} />
+                        )}
+
+                        {/* Remove button */}
+                        <MinusCircleOutlined
+                          onClick={() => removeParent(parentName)}
+                          style={{
+                            color:
+                              parentFields.length > 1 ? "#ff4d4f" : "#d9d9d9",
+                            marginTop: 8,
+                            cursor:
+                              parentFields.length > 1
+                                ? "pointer"
+                                : "not-allowed",
+                            visibility:
+                              parentFields.length > 1 ? "visible" : "hidden",
+                          }}
+                        />
                       </div>
-                    )}
-                  </div>
-                );
-              })}
+
+                      {/* Sub-indicators container - ONLY render when explicitly added via + button */}
+                      {hasSubsAdded && (
+                        <div style={{ marginTop: 8, marginLeft: 32 }}>
+                          <div className="standards-sub-container">
+                            <Form.List name={[parentName, "subIndicators"]}>
+                              {(subFields) => (
+                                <>
+                                  {subFields.map(
+                                    ({ key: subKey, name: subName }, index) => {
+                                      const subModeKey = `sub-${parentName}-${subName}`;
+                                      const isSubRangeMode =
+                                        comparisonModes[subModeKey] === "range";
+
+                                      return (
+                                        <div
+                                          key={subKey}
+                                          className={`standards-sub-row ${index === 0 ? "is-first" : ""} ${index === subFields.length - 1 ? "is-last" : ""}`}
+                                          style={{
+                                            display: "flex",
+                                            gap: 8,
+                                            marginBottom:
+                                              index === subFields.length - 1
+                                                ? 0
+                                                : 12,
+                                            alignItems: "flex-start",
+                                          }}
+                                        >
+                                          {/* Sub-indicator Select - wider since method/unit follow parent */}
+                                          <Form.Item
+                                            name={[subName, "indicatorId"]}
+                                            rules={[
+                                              {
+                                                required: true,
+                                                message: "Chọn",
+                                              },
+                                            ]}
+                                            style={{
+                                              marginBottom: 0,
+                                              width: 480,
+                                            }}
+                                          >
+                                            <Select
+                                              options={buildSubOptions(
+                                                parentName,
+                                                subName,
+                                              )}
+                                              placeholder="Chỉ tiêu phụ"
+                                              showSearch
+                                              allowClear
+                                              filterOption={(input, option) => {
+                                                const searchText = (
+                                                  option as {
+                                                    searchText?: string;
+                                                  }
+                                                )?.searchText;
+                                                return (
+                                                  searchText
+                                                    ?.toLowerCase()
+                                                    .includes(
+                                                      input.toLowerCase(),
+                                                    ) || false
+                                                );
+                                              }}
+                                            />
+                                          </Form.Item>
+
+                                          {/* Comparison */}
+                                          <Form.Item
+                                            name={[
+                                              subName,
+                                              "comparisonOperator",
+                                            ]}
+                                            style={{
+                                              marginBottom: 0,
+                                              width: 90,
+                                            }}
+                                          >
+                                            <Select
+                                              options={COMPARISON_OPERATORS}
+                                              placeholder="--"
+                                              allowClear
+                                              onChange={(value) =>
+                                                handleSubComparisonChange(
+                                                  value,
+                                                  parentName,
+                                                  subName,
+                                                )
+                                              }
+                                            />
+                                          </Form.Item>
+
+                                          {/* Limit fields */}
+                                          {renderLimitFields(
+                                            isSubRangeMode,
+                                            [subName],
+                                            [
+                                              "indicators",
+                                              parentName,
+                                              "subIndicators",
+                                              subName,
+                                            ],
+                                          )}
+                                        </div>
+                                      );
+                                    },
+                                  )}
+                                </>
+                              )}
+                            </Form.List>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </Card>
 
               <Button
                 type="dashed"
-                onClick={() => addParent({ indicatorId: undefined, testMethodId: undefined, unit: "", subIndicators: [] })}
+                onClick={() =>
+                  addParent({
+                    specimenTypeId: undefined,
+                    indicatorId: undefined,
+                    testMethodId: undefined,
+                    unit: "",
+                    subIndicators: [],
+                  })
+                }
                 block
                 icon={<PlusOutlined />}
-                style={{ marginTop: 8 }}
+                style={{ marginTop: 12 }}
               >
                 Thêm dòng
               </Button>

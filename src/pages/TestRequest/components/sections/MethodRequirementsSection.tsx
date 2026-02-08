@@ -1,6 +1,9 @@
 import React from "react";
 import { Tag, Typography } from "antd";
-import { CheckCircleOutlined, CloseCircleOutlined } from "../../../../components/common/Icon";
+import {
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+} from "../../../../components/common/Icon";
 import { TestRequestDto } from "../../../../types/testRequest";
 
 const { Title, Text } = Typography;
@@ -9,7 +12,10 @@ interface MethodRequirementsSectionProps {
   data: TestRequestDto;
 }
 
-const MethodTag: React.FC<{ value: boolean; label: string }> = ({ value, label }) => (
+const MethodTag: React.FC<{ value: boolean; label: string }> = ({
+  value,
+  label,
+}) => (
   <Tag
     icon={value ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
     style={{
@@ -38,10 +44,13 @@ const MethodRequirementsSection: React.FC<MethodRequirementsSectionProps> = ({
         Yêu cầu về phương pháp
       </Title>
       <div className="detail-column-list">
-        <div className="sample-type-tags" style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+        <div
+          className="sample-type-tags"
+          style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}
+        >
           <MethodTag
             value={data.methodWestHighlandInstitute}
-            label="Theo Viện KHKT NN Tây Nguyên"
+            label="Theo Viện VS DT Tây Nguyên"
           />
           <MethodTag
             value={data.methodCustomer}

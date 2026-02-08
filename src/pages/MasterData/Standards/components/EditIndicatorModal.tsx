@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Modal, Form, Input, Select, Typography, Row, Col } from "antd";
+import { Modal, Form, Select, Typography, Row, Col } from "antd";
 import type { FormInstance } from "antd";
-import { NumericFormat } from "react-number-format";
 import { StandardIndicatorDto } from "../types";
-import { IndicatorName } from "../../../../components/common";
+import { IndicatorName, LimitInput, extractPlainTextFromLimit } from "../../../../components/common";
+import { parseResultToNumber } from "../../../../utils/formatters";
 import {
   COMPARISON_OPERATORS,
   LOWER_OPERATORS,
@@ -87,15 +87,21 @@ const EditIndicatorModal: React.FC<EditIndicatorModalProps> = ({
   const validateRange = () => {
     if (!isRangeMode) return Promise.resolve();
 
-    const lowerLimit = form.getFieldValue("lowerLimit");
-    const upperLimit = form.getFieldValue("upperLimit");
+    const lowerLimitHtml = form.getFieldValue("lowerLimit");
+    const upperLimitHtml = form.getFieldValue("upperLimit");
 
-    if (!lowerLimit || !upperLimit) return Promise.resolve();
+    if (!lowerLimitHtml || !upperLimitHtml) return Promise.resolve();
 
-    const lower = parseFloat(lowerLimit);
-    const upper = parseFloat(upperLimit);
+    // Extract plain text from HTML and parse mathematical expressions
+    const lowerText = extractPlainTextFromLimit(lowerLimitHtml);
+    const upperText = extractPlainTextFromLimit(upperLimitHtml);
 
-    if (isNaN(lower) || isNaN(upper)) return Promise.resolve();
+    if (!lowerText || !upperText) return Promise.resolve();
+
+    const lower = parseResultToNumber(lowerText, 4, false);
+    const upper = parseResultToNumber(upperText, 4, false);
+
+    if (lower === null || upper === null) return Promise.resolve();
 
     if (lower > upper) {
       return Promise.reject("Cận dưới không được lớn hơn cận trên");
@@ -169,7 +175,6 @@ const EditIndicatorModal: React.FC<EditIndicatorModalProps> = ({
                 <Form.Item
                   name="lowerOperator"
                   label="Ký hiệu cận dưới"
-                  rules={[{ required: true, message: "Chọn ký hiệu" }]}
                 >
                   <Select options={LOWER_OPERATORS} placeholder=">" />
                 </Form.Item>
@@ -178,21 +183,12 @@ const EditIndicatorModal: React.FC<EditIndicatorModalProps> = ({
                 <Form.Item
                   name="lowerLimit"
                   label="Cận dưới"
-                  rules={[
-                    { required: true, message: "Nhập cận dưới" },
-                    { validator: validateRange },
-                  ]}
+                  dependencies={["upperLimit"]}
+                  rules={[{ validator: validateRange }]}
                 >
-                  <NumericFormat
+                  <LimitInput
                     placeholder="VD: 5"
-                    allowNegative={false}
-                    decimalScale={4}
-                    customInput={Input}
-                    onValueChange={(values) => {
-                      form.setFieldValue("lowerLimit", values.value);
-                      // Trigger validation on upperLimit
-                      form.validateFields(["upperLimit"]);
-                    }}
+                    style={{ width: 100 }}
                   />
                 </Form.Item>
               </Col>
@@ -202,7 +198,6 @@ const EditIndicatorModal: React.FC<EditIndicatorModalProps> = ({
                 <Form.Item
                   name="upperOperator"
                   label="Ký hiệu cận trên"
-                  rules={[{ required: true, message: "Chọn ký hiệu" }]}
                 >
                   <Select options={UPPER_OPERATORS} placeholder="<" />
                 </Form.Item>
@@ -211,21 +206,12 @@ const EditIndicatorModal: React.FC<EditIndicatorModalProps> = ({
                 <Form.Item
                   name="upperLimit"
                   label="Cận trên"
-                  rules={[
-                    { required: true, message: "Nhập cận trên" },
-                    { validator: validateRange },
-                  ]}
+                  dependencies={["lowerLimit"]}
+                  rules={[{ validator: validateRange }]}
                 >
-                  <NumericFormat
+                  <LimitInput
                     placeholder="VD: 10"
-                    allowNegative={false}
-                    decimalScale={4}
-                    customInput={Input}
-                    onValueChange={(values) => {
-                      form.setFieldValue("upperLimit", values.value);
-                      // Trigger validation on lowerLimit
-                      form.validateFields(["lowerLimit"]);
-                    }}
+                    style={{ width: 100 }}
                   />
                 </Form.Item>
               </Col>
@@ -234,15 +220,7 @@ const EditIndicatorModal: React.FC<EditIndicatorModalProps> = ({
         ) : (
           // Single limit mode
           <Form.Item name="allowedLimit" label="Giới hạn cho phép">
-            <NumericFormat
-              placeholder="Nhập giới hạn (VD: 0.0001)"
-              allowNegative={false}
-              decimalScale={4}
-              customInput={Input}
-              onValueChange={(values) => {
-                form.setFieldValue("allowedLimit", values.value);
-              }}
-            />
+            <LimitInput placeholder="Nhập giới hạn (VD: 0.0001)" />
           </Form.Item>
         )}
 

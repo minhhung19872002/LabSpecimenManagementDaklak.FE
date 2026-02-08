@@ -3,7 +3,10 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Card, message, Spin, Modal, Input, Form, Alert, Space } from "antd";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { testRequestService, offlineTestRequestService } from "../../services/testRequestService";
+import {
+  testRequestService,
+  offlineTestRequestService,
+} from "../../services/testRequestService";
 import { useNetworkStatus } from "../../hooks/useNetworkStatus";
 import {
   generateTestRequestFormOffline,
@@ -31,6 +34,7 @@ import CustomerConfirmationModal from "./components/CustomerConfirmationModal";
 import CostChangeHistoryModal from "./components/CostChangeHistoryModal";
 import SendToQLKTModal from "./components/SendToQLKTModal";
 import PaymentConfirmationModal from "./components/PaymentConfirmationModal";
+import { getApiErrorMessage } from "../../utils/errorHandler";
 
 const TestRequestDetail: React.FC = () => {
   const { t } = useTranslation();
@@ -212,7 +216,7 @@ const TestRequestDetail: React.FC = () => {
           console.error("Error sending sample:", error);
           message.error(
             error?.response?.data?.error?.message ||
-              "Không thể gửi mẫu. Vui lòng thử lại."
+              "Không thể gửi mẫu. Vui lòng thử lại.",
           );
         } finally {
           setSendingSample(false);
@@ -237,7 +241,7 @@ const TestRequestDetail: React.FC = () => {
       console.error("Error sending to accounting:", error);
       message.error(
         error?.response?.data?.error?.message ||
-          "Không thể gửi kế toán. Vui lòng thử lại."
+          "Không thể gửi kế toán. Vui lòng thử lại.",
       );
     } finally {
       setSendingToAccounting(false);
@@ -292,7 +296,7 @@ const TestRequestDetail: React.FC = () => {
       console.error("Error cancelling request:", error);
       message.error(
         error?.response?.data?.error?.message ||
-          "Không thể hủy yêu cầu. Vui lòng thử lại."
+          "Không thể hủy yêu cầu. Vui lòng thử lại.",
       );
     } finally {
       setCancellingRequest(false);
@@ -310,7 +314,7 @@ const TestRequestDetail: React.FC = () => {
       console.error("Error sending result:", error);
       message.error(
         error?.response?.data?.error?.message ||
-          "Không thể gửi kết quả. Vui lòng thử lại."
+          "Không thể gửi kết quả. Vui lòng thử lại.",
       );
     }
   };
@@ -338,14 +342,14 @@ const TestRequestDetail: React.FC = () => {
       } else {
         const statusLabel = TestRequestStatusLabels[updatedData.status];
         message.warning(
-          `Chưa hoàn thành tất cả chỉ tiêu. Trạng thái đã cập nhật về: ${statusLabel}`
+          `Chưa hoàn thành tất cả chỉ tiêu. Trạng thái đã cập nhật về: ${statusLabel}`,
         );
       }
     } catch (error: any) {
       console.error("Error completing test request:", error);
       message.error(
         error?.response?.data?.error?.message ||
-          "Không thể hoàn thành. Vui lòng thử lại."
+          "Không thể hoàn thành. Vui lòng thử lại.",
       );
     }
   };
@@ -370,14 +374,14 @@ const TestRequestDetail: React.FC = () => {
       } else {
         const statusLabel = TestRequestStatusLabels[updatedData.status];
         message.warning(
-          `Chưa hoàn thành tất cả chỉ tiêu. Trạng thái đã cập nhật về: ${statusLabel}`
+          `Chưa hoàn thành tất cả chỉ tiêu. Trạng thái đã cập nhật về: ${statusLabel}`,
         );
       }
     } catch (error: any) {
       console.error("Error completing with image:", error);
       message.error(
         error?.response?.data?.error?.message ||
-          "Không thể hoàn thành. Vui lòng thử lại."
+          "Không thể hoàn thành. Vui lòng thử lại.",
       );
     }
   };
@@ -413,7 +417,7 @@ const TestRequestDetail: React.FC = () => {
           console.error("Error confirming delivery:", error);
           message.error(
             error?.response?.data?.error?.message ||
-              "Không thể xác nhận bàn giao. Vui lòng thử lại."
+              "Không thể xác nhận bàn giao. Vui lòng thử lại.",
           );
         } finally {
           setConfirmingDelivery(false);
@@ -643,6 +647,7 @@ const TestRequestDetail: React.FC = () => {
         onClose={() => setPaymentConfirmationModalVisible(false)}
         testRequestId={id!}
         onSuccess={() => loadData(id!)}
+        alreadyPaid={data?.paymentReceived === true || data?.sampleTypeTask === true}
       />
     </>
   );

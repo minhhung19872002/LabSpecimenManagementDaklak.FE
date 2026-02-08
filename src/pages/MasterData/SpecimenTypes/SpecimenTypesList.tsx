@@ -1,14 +1,18 @@
-import { useMemo, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
+import { useMemo, useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
+import { message } from "antd";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
+import type { UploadFile } from "antd/es/upload/interface";
 import { useSpecimenTypesData, useSpecimenTypesActions } from "./hooks";
-import { SpecimenTypesTable, SpecimenTypeModal, AddIndicatorsModal } from "./components";
+import { SpecimenTypesTable, SpecimenTypeModal, AddIndicatorsModal, ImportSpecimenTypeModal } from "./components";
 import { getSpecimenTypeColumns, getIndicatorColumns } from "./constants";
-import { SpecimenTypesTabProps, SpecimenTypesActions } from "./types";
+import { SpecimenTypesTabProps, SpecimenTypesActions, SpecimenTypeImportPreviewDto } from "./types";
 import {
   specimenTypeSchema,
   SpecimenTypeFormData,
 } from "./schemas/specimenTypeSchema";
+import { API_BASE_URL, api } from "../../../services/api";
+import { getApiErrorMessage } from "../../../utils/errorHandler";
 
 const SpecimenTypesList = forwardRef<SpecimenTypesActions, SpecimenTypesTabProps>(({ onDataChange, refreshKey }, ref) => {
   const {
@@ -77,6 +81,84 @@ const SpecimenTypesList = forwardRef<SpecimenTypesActions, SpecimenTypesTabProps
     defaultValues: { code: "", name: "", description: "", isActive: true, sampleTypeCategoryId: "" },
   });
 
+  // Import state
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
+  const [previewData, setPreviewData] =
+    useState<SpecimenTypeImportPreviewDto | null>(null);
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
+
+  // Import handlers
+  const handleDownloadTemplate = () => {
+    window.open(
+      `${API_BASE_URL}/api/v1/import/specimen-types/template`,
+      "_blank",
+    );
+  };
+
+  const handlePreviewImport = async () => {
+    if (!fileList.length || !fileList[0].originFileObj) return;
+
+    setImportLoading(true);
+    const formData = new FormData();
+    formData.append("file", fileList[0].originFileObj as Blob);
+
+    try {
+      const response = await api.upload<SpecimenTypeImportPreviewDto>(
+        "/api/v1/import/specimen-types/preview",
+        formData,
+      );
+      setPreviewData(response.data);
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Lỗi khi đọc file"));
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!fileList.length || !fileList[0].originFileObj) return;
+
+    setImportLoading(true);
+    const formData = new FormData();
+    formData.append("file", fileList[0].originFileObj as Blob);
+
+    try {
+      const response = await api.upload<{
+        success: boolean;
+        message?: string;
+      }>("/api/v1/import/specimen-types", formData);
+
+      const result = response.data;
+
+      if (result.success) {
+        message.success(result.message);
+        setImportModalOpen(false);
+        setPreviewData(null);
+        setFileList([]);
+        fetchData();
+        onDataChange?.();
+      } else {
+        message.error(result.message || "Lỗi khi import");
+      }
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Lỗi khi import"));
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleImportCancel = () => {
+    setImportModalOpen(false);
+    setPreviewData(null);
+    setFileList([]);
+  };
+
+  const handleImportReset = () => {
+    setPreviewData(null);
+    setFileList([]);
+  };
+
   // Get existing indicator IDs for the selected specimen type
   const existingIndicatorIds = useMemo(() => {
     if (!selectedSpecimenTypeId) return [];
@@ -103,6 +185,8 @@ const SpecimenTypesList = forwardRef<SpecimenTypesActions, SpecimenTypesTabProps
   // Expose actions to parent
   useImperativeHandle(ref, () => ({
     handleCreate: () => handleCreate(specimenTypeForm),
+    handleDownloadTemplate,
+    handleImport: () => setImportModalOpen(true),
   }));
 
   return (
@@ -147,6 +231,19 @@ const SpecimenTypesList = forwardRef<SpecimenTypesActions, SpecimenTypesTabProps
         existingIndicatorIds={existingIndicatorIds}
         onOk={handleAddIndicatorsOk}
         onCancel={handleAddIndicatorsCancel}
+      />
+
+      {/* Import Modal */}
+      <ImportSpecimenTypeModal
+        open={importModalOpen}
+        loading={importLoading}
+        fileList={fileList}
+        previewData={previewData}
+        onFileListChange={setFileList}
+        onPreview={handlePreviewImport}
+        onConfirm={handleConfirmImport}
+        onCancel={handleImportCancel}
+        onReset={handleImportReset}
       />
     </>
   );
