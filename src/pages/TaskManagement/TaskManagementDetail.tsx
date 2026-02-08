@@ -1367,13 +1367,9 @@ const TaskManagementDetail: React.FC = () => {
     !isFullyWaitingSharedSample &&
     canAssignTesting;
 
-  // Check if can upload images (same logic as canEditTask)
-  // Allow upload during: Assigned, InProgress, WaitingApproval
-  const canUploadImages =
-    !isInEvaluationPhase &&
-    (task?.status === LaboratoryTaskStatus.Assigned ||
-      task?.status === LaboratoryTaskStatus.InProgress ||
-      task?.status === LaboratoryTaskStatus.WaitingApproval);
+  // Check if can upload images
+  // Cho phép QLKT upload ảnh ở mọi giai đoạn trừ khi đã hoàn thành (Approved, Rejected, SentToQuality, TestingRejected)
+  const canUploadImages = !isCompletedPhase;
 
   // Get status tag
   const getStatusTag = (status: LaboratoryTaskStatus) => {
