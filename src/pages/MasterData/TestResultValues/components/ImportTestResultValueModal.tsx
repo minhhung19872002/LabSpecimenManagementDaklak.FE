@@ -20,7 +20,6 @@ import {
 import type { UploadFile } from "antd/es/upload/interface";
 import type {
   TestResultValueImportPreviewDto,
-  TestResultValueImportPreviewGroup,
 } from "../types";
 
 const { Text } = Typography;

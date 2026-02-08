@@ -24,7 +24,6 @@ import StatusTag from "../../components/common/StatusTag";
 import {
   ArrowLeftOutlined,
   CaretRightOutlined,
-  TeamOutlined,
   CheckOutlined,
   CloseOutlined,
   EditOutlined,
@@ -233,9 +232,10 @@ const TaskManagementDetail: React.FC = () => {
 
   // Check if current user can manage supporters (chỉ QLKT của task hoặc có quyền addSupporter)
   // Supporter KHÔNG có quyền này
-  const canManageSupporters = useMemo(() => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _canManageSupporters = useMemo(() => {
     return canAddSupporter || (task?.isCurrentUserTechnicalManager ?? false);
-  }, [canAddSupporter, task?.isCurrentUserTechnicalManager]);
+  }, [canAddSupporter, task?.isCurrentUserTechnicalManager]); void _canManageSupporters;
 
   // Load task data
   const loadTask = useCallback(async () => {

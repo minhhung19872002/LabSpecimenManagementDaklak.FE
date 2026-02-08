@@ -35,7 +35,7 @@ const EmployeeDetail: React.FC = () => {
     handleUpdateEmployee,
     handleSavePermissions,
     handleAddRole,
-    handleRemoveRole,
+    handleRemoveRole: _handleRemoveRole,
   } = useEmployeeDetail(id || "");
 
   const [activeTab, setActiveTab] = useState<string>("info");

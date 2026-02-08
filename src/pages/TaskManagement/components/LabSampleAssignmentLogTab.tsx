@@ -11,7 +11,6 @@ import {
 import {
   TestRequestStatus,
   TestRequestStatusLabels,
-  TestRequestStatusColors,
 } from "../../../types/testRequest";
 import {
   IndicatorApprovalStatus,
