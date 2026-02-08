@@ -606,6 +606,7 @@ const TestRequestDetail: React.FC = () => {
         onClose={() => setPaymentConfirmationModalVisible(false)}
         testRequestId={id!}
         onSuccess={() => loadData(id!)}
+        alreadyPaid={data?.paymentReceived === true || data?.sampleTypeTask === true}
       />
     </>
   );

@@ -48,6 +48,7 @@ interface PaymentConfirmationModalProps {
   onClose: () => void;
   testRequestId: string;
   onSuccess: () => void;
+  alreadyPaid?: boolean;
 }
 
 const PaymentConfirmationModal: React.FC<PaymentConfirmationModalProps> = ({
@@ -55,6 +56,7 @@ const PaymentConfirmationModal: React.FC<PaymentConfirmationModalProps> = ({
   onClose,
   testRequestId,
   onSuccess,
+  alreadyPaid,
 }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
@@ -123,6 +125,10 @@ const PaymentConfirmationModal: React.FC<PaymentConfirmationModalProps> = ({
 
   const handleCancel = () => {
     form.resetFields();
+    // Chỉ gọi onSuccess lần đầu khi auto-pay vừa xảy ra (parent chưa biết đã thanh toán)
+    if (paymentInfo && paymentInfo.remainingAmount <= 0 && !alreadyPaid) {
+      onSuccess();
+    }
     onClose();
   };
 
