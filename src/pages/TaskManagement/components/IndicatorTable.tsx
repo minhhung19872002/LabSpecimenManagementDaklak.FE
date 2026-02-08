@@ -147,14 +147,15 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     }
   };
 
-  // Get standards that contain a specific indicator AND method
+  // Get standards that contain a specific indicator AND method AND specimenType (if available)
   const getStandardsForIndicator = useMemo(() => {
-    return (indicatorId: string, methodId?: string) => {
+    return (indicatorId: string, methodId?: string, specimenTypeId?: string) => {
       return standardsWithIndicators.filter((standard) =>
         standard.indicators.some(
           (si) =>
             si.indicatorId === indicatorId &&
-            (!methodId || si.testMethodId === methodId)
+            (!methodId || si.testMethodId === methodId) &&
+            (!specimenTypeId || !si.specimenTypeId || si.specimenTypeId === specimenTypeId)
         )
       );
     };
@@ -164,14 +165,16 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   const getStandardIndicatorInfo = (
     standardId: string,
     indicatorId: string,
-    methodId?: string
+    methodId?: string,
+    specimenTypeId?: string
   ) => {
     const standard = standardsWithIndicators.find((s) => s.id === standardId);
     if (!standard) return null;
     return standard.indicators.find(
       (si) =>
         si.indicatorId === indicatorId &&
-        (!methodId || si.testMethodId === methodId)
+        (!methodId || si.testMethodId === methodId) &&
+        (!specimenTypeId || !si.specimenTypeId || si.specimenTypeId === specimenTypeId)
     );
   };
 
@@ -711,10 +714,11 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             ? standardSelections[record.id]
             : record.standardId;
 
-        // Lấy danh sách tiêu chuẩn phù hợp với chỉ tiêu và phương pháp
+        // Lấy danh sách tiêu chuẩn phù hợp với chỉ tiêu, phương pháp và nền mẫu
         const availableStandards = getStandardsForIndicator(
           record.indicatorId,
-          record.methodId
+          record.methodId,
+          record.specimenTypeId
         );
 
         // Cho phép chọn tiêu chuẩn ở tất cả trạng thái trừ các trạng thái sau
@@ -766,7 +770,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           const standardInfo = getStandardIndicatorInfo(
             selectedStandardId,
             record.indicatorId,
-            record.methodId
+            record.methodId,
+            record.specimenTypeId
           );
           if (standardInfo) {
             const {
@@ -859,7 +864,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         const standardInfo = getStandardIndicatorInfo(
           selectedStandardId,
           record.indicatorId,
-          record.methodId
+          record.methodId,
+          record.specimenTypeId
         );
         if (standardInfo) {
           comparisonOperator = standardInfo.comparisonOperator;
