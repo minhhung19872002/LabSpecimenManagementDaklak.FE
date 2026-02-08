@@ -500,6 +500,12 @@ const PaymentConfirmationModal: React.FC<PaymentConfirmationModalProps> = ({
       centered
       destroyOnClose
       maskClosable={false}
+      styles={{
+        body: {
+          maxHeight: "calc(100vh - 200px)",
+          overflowY: "auto",
+        },
+      }}
     >
       {renderContent()}
     </Modal>
