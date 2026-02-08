@@ -145,17 +145,15 @@
    Fixed Summary Bar - Appears when scrolled past form sections
    ============================================ */
 
-/* Fixed wrapper - positioned below header + main layout padding */
+/* Fixed wrapper - positioned below header, width matches content wrapper */
 .fixed-summary-bar-wrapper {
   position: fixed;
   top: 88px; /* Header top (24px) + header height (64px) */
-  left: 0;
-  right: 0;
   z-index: 100;
   background: #fff;
   padding: 18px 24px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
-  border-bottom: 1px solid #e8e8e8;
+  border-radius: 12px;
   animation: slideDown 0.2s ease;
 }
 
@@ -190,9 +188,9 @@
   display: flex;
   align-items: stretch;
   gap: 0;
-  font-size: 13px;
+  font-size: 15px;
   color: var(--color-text-primary);
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
 .sticky-summary-section {
@@ -200,23 +198,23 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .sticky-summary-section-title {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   line-height: 1;
 }
 
 .sticky-summary-section-title .anticon {
-  font-size: 12px;
+  font-size: 14px;
   display: inline-flex;
   align-items: center;
   vertical-align: middle;
@@ -226,17 +224,17 @@
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: 0 4px;
+  gap: 0 6px;
 }
 
 .sticky-summary-primary {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--color-text-primary);
 }
 
 .sticky-summary-secondary {
-  font-size: 13px;
+  font-size: 15px;
   color: var(--color-text-secondary);
 }
 
@@ -251,13 +249,13 @@
 .sticky-summary-detail {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 12px;
+  gap: 5px;
+  font-size: 14px;
   color: var(--color-text-secondary);
 }
 
 .sticky-summary-detail .anticon {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--color-text-muted);
 }
 
@@ -274,9 +272,9 @@
 
 .sticky-summary-tags .ant-tag {
   margin: 0;
-  font-size: 11px;
-  line-height: 18px;
-  padding: 0 6px;
+  font-size: 13px;
+  line-height: 22px;
+  padding: 0 8px;
 }
 
 .sticky-summary-divider.ant-divider {
@@ -289,10 +287,14 @@
 /* Tablet adjustments for summary bar */
 @media (max-width: 1100px) and (min-width: 768px) {
   .sticky-summary-bar {
-    font-size: 12px;
+    font-size: 14px;
   }
 
   .sticky-summary-primary {
+    font-size: 15px;
+  }
+
+  .sticky-summary-detail {
     font-size: 13px;
   }
 
