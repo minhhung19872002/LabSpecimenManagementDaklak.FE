@@ -108,6 +108,17 @@ export interface PendingFileUpload {
 }
 
 /**
+ * Cached document template for offline printing
+ */
+export interface CachedDocumentTemplate {
+  templateName: string;
+  fileName: string;
+  blob: Blob;
+  version: string;
+  cachedAt: Date;
+}
+
+/**
  * IndexedDB schema definition
  */
 interface OfflineDB extends DBSchema {
@@ -149,10 +160,17 @@ interface OfflineDB extends DBSchema {
       'by-createdAt': Date;
     };
   };
+  documentTemplates: {
+    key: string;
+    value: CachedDocumentTemplate;
+    indexes: {
+      'by-cachedAt': Date;
+    };
+  };
 }
 
 const DB_NAME = 'lab-specimen-offline';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 let dbInstance: IDBPDatabase<OfflineDB> | null = null;
 
@@ -201,6 +219,13 @@ export async function getDB(): Promise<IDBPDatabase<OfflineDB>> {
         });
         pendingUploadsStore.createIndex('by-status', 'status');
         pendingUploadsStore.createIndex('by-createdAt', 'createdAt');
+      }
+
+      if (!db.objectStoreNames.contains('documentTemplates')) {
+        const templateStore = db.createObjectStore('documentTemplates', {
+          keyPath: 'templateName',
+        });
+        templateStore.createIndex('by-cachedAt', 'cachedAt');
       }
     },
   });
@@ -601,4 +626,72 @@ export async function regenerateLocalUrl(tempId: string): Promise<string | null>
     return newUrl;
   }
   return null;
+}
+
+// ============ Document Template Cache Operations ============
+
+/**
+ * Cache a document template for offline use
+ */
+export async function cacheDocumentTemplate(
+  templateName: string,
+  fileName: string,
+  blob: Blob,
+  version: string = ''
+): Promise<void> {
+  const db = await getDB();
+  await db.put('documentTemplates', {
+    templateName,
+    fileName,
+    blob,
+    version,
+    cachedAt: new Date(),
+  });
+}
+
+/**
+ * Get a cached document template by name
+ */
+export async function getCachedDocumentTemplate(
+  templateName: string
+): Promise<CachedDocumentTemplate | undefined> {
+  const db = await getDB();
+  return db.get('documentTemplates', templateName);
+}
+
+/**
+ * Check if a document template is cached
+ */
+export async function hasDocumentTemplate(
+  templateName: string
+): Promise<boolean> {
+  const db = await getDB();
+  const template = await db.get('documentTemplates', templateName);
+  return !!template;
+}
+
+/**
+ * Get all cached document templates
+ */
+export async function getAllDocumentTemplates(): Promise<CachedDocumentTemplate[]> {
+  const db = await getDB();
+  return db.getAll('documentTemplates');
+}
+
+/**
+ * Remove a cached document template
+ */
+export async function removeDocumentTemplate(templateName: string): Promise<void> {
+  const db = await getDB();
+  await db.delete('documentTemplates', templateName);
+}
+
+/**
+ * Clear all cached document templates
+ */
+export async function clearDocumentTemplates(): Promise<void> {
+  const db = await getDB();
+  const tx = db.transaction('documentTemplates', 'readwrite');
+  await tx.store.clear();
+  await tx.done;
 }
