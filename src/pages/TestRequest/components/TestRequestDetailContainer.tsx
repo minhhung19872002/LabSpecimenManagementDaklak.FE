@@ -175,10 +175,15 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
       );
       buttons.push(
         !isOnline && !isPaid ? (
-          <Tooltip key="payment-confirmation-tooltip" title="Không khả dụng khi offline">
+          <Tooltip
+            key="payment-confirmation-tooltip"
+            title="Không khả dụng khi offline"
+          >
             {paymentButton}
           </Tooltip>
-        ) : paymentButton
+        ) : (
+          paymentButton
+        ),
       );
     }
 
@@ -197,10 +202,15 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
       );
       buttons.push(
         !isOnline ? (
-          <Tooltip key="send-to-qlkt-tooltip" title="Không khả dụng khi offline">
+          <Tooltip
+            key="send-to-qlkt-tooltip"
+            title="Không khả dụng khi offline"
+          >
             {sendToQLKTButton}
           </Tooltip>
-        ) : sendToQLKTButton
+        ) : (
+          sendToQLKTButton
+        ),
       );
     }
 
@@ -221,10 +231,15 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
       );
       buttons.push(
         !isOnline ? (
-          <Tooltip key="confirm-customer-tooltip" title="Không khả dụng khi offline">
+          <Tooltip
+            key="confirm-customer-tooltip"
+            title="Không khả dụng khi offline"
+          >
             {confirmCustomerButton}
           </Tooltip>
-        ) : confirmCustomerButton
+        ) : (
+          confirmCustomerButton
+        ),
       );
     }
 
@@ -246,14 +261,21 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
           <Tooltip key="send-sample-tooltip" title="Không khả dụng khi offline">
             {sendSampleButton}
           </Tooltip>
-        ) : sendSampleButton
+        ) : (
+          sendSampleButton
+        ),
       );
     }
 
     // Gửi kết quả - khi status = Approved
     if (data.status === TestRequestStatus.Approved) {
       const sendResultButton = (
-        <Button key="send-result" type="primary" onClick={onSendResult} disabled={!isOnline}>
+        <Button
+          key="send-result"
+          type="primary"
+          onClick={onSendResult}
+          disabled={!isOnline}
+        >
           Gửi kết quả
         </Button>
       );
@@ -262,14 +284,21 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
           <Tooltip key="send-result-tooltip" title="Không khả dụng khi offline">
             {sendResultButton}
           </Tooltip>
-        ) : sendResultButton
+        ) : (
+          sendResultButton
+        ),
       );
     }
 
     // Hoàn thành - khi status = ResultSent
     if (canComplete(data.status)) {
       const completeButton = (
-        <Button key="complete" type="primary" onClick={onComplete} disabled={!isOnline}>
+        <Button
+          key="complete"
+          type="primary"
+          onClick={onComplete}
+          disabled={!isOnline}
+        >
           Hoàn thành
         </Button>
       );
@@ -278,7 +307,9 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
           <Tooltip key="complete-tooltip" title="Không khả dụng khi offline">
             {completeButton}
           </Tooltip>
-        ) : completeButton
+        ) : (
+          completeButton
+        ),
       );
     }
 
@@ -301,16 +332,21 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
       );
       buttons.push(
         !isOnline ? (
-          <Tooltip key="confirm-delivery-tooltip" title="Không khả dụng khi offline">
+          <Tooltip
+            key="confirm-delivery-tooltip"
+            title="Không khả dụng khi offline"
+          >
             {confirmDeliveryButton}
           </Tooltip>
-        ) : confirmDeliveryButton
+        ) : (
+          confirmDeliveryButton
+        ),
       );
     }
 
-    // === 2. IN PHIẾU XN (ưu tiên trung bình) ===
+    // === 2. IN PHIẾU TN (ưu tiên trung bình) ===
 
-    // In phiếu XN - chỉ admin hoặc SampleReceiver mới thấy
+    // In phiếu TN - chỉ admin hoặc SampleReceiver mới thấy
     if (canPrintTestRequest) {
       const printButton = (
         <Button
@@ -320,7 +356,7 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
           loading={printingTestRequest}
           disabled={!isOnline}
         >
-          In phiếu XN
+          In phiếu TN
         </Button>
       );
       buttons.push(
@@ -328,7 +364,9 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
           <Tooltip key="print-tooltip" title="Không khả dụng khi offline">
             {printButton}
           </Tooltip>
-        ) : printButton
+        ) : (
+          printButton
+        ),
       );
     }
 
@@ -353,10 +391,15 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
       );
       buttons.push(
         !isOnline ? (
-          <Tooltip key="print-single-tooltip" title="Không khả dụng khi offline">
+          <Tooltip
+            key="print-single-tooltip"
+            title="Không khả dụng khi offline"
+          >
             {printSingleButton}
           </Tooltip>
-        ) : printSingleButton
+        ) : (
+          printSingleButton
+        ),
       );
 
       const printMixedButton = (
@@ -374,7 +417,9 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
           <Tooltip key="print-mixed-tooltip" title="Không khả dụng khi offline">
             {printMixedButton}
           </Tooltip>
-        ) : printMixedButton
+        ) : (
+          printMixedButton
+        ),
       );
     }
 
@@ -395,10 +440,15 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
       );
       buttons.push(
         !isOnline ? (
-          <Tooltip key="cancel-request-tooltip" title="Không khả dụng khi offline">
+          <Tooltip
+            key="cancel-request-tooltip"
+            title="Không khả dụng khi offline"
+          >
             {cancelButton}
           </Tooltip>
-        ) : cancelButton
+        ) : (
+          cancelButton
+        ),
       );
     }
 
@@ -474,7 +524,9 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
             message={
               <Space>
                 <CloudOutlined />
-                <span>Bạn đang offline. Một số thao tác sẽ không khả dụng.</span>
+                <span>
+                  Bạn đang offline. Một số thao tác sẽ không khả dụng.
+                </span>
               </Space>
             }
             type="warning"
@@ -488,7 +540,10 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
             message={
               <Space>
                 <CloudOutlined />
-                <span>Đang xem dữ liệu đã lưu trong bộ nhớ đệm. Thông tin có thể chưa được cập nhật.</span>
+                <span>
+                  Đang xem dữ liệu đã lưu trong bộ nhớ đệm. Thông tin có thể
+                  chưa được cập nhật.
+                </span>
               </Space>
             }
             type="info"
@@ -515,7 +570,8 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
           className="list-card"
           title={
             <span>
-              Thông tin mẫu ({data.totalSampleCount || data.samples?.length || 0} mẫu)
+              Thông tin mẫu (
+              {data.totalSampleCount || data.samples?.length || 0} mẫu)
             </span>
           }
           style={{ marginBottom: 24 }}
@@ -553,10 +609,7 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
 
         {/* Thông tin hệ thống */}
         <div style={{ background: "#FAFAFA", borderRadius: 8, padding: 16 }}>
-          <Descriptions
-            size="small"
-            column={{ xs: 1, md: 2 }}
-          >
+          <Descriptions size="small" column={{ xs: 1, md: 2 }}>
             <Descriptions.Item label="Ngày tạo">
               {data.creationTime
                 ? dayjs(data.creationTime).format("DD/MM/YYYY HH:mm:ss")
