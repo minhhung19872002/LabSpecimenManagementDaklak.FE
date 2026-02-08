@@ -452,7 +452,7 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
     {
       title: (
         <span style={{ whiteSpace: "nowrap" }}>
-          Chỉ tiêu kiểm nghiệm <span style={{ color: "#ff4d4f" }}>*</span>
+          Chỉ tiêu thử nghiệm <span style={{ color: "#ff4d4f" }}>*</span>
         </span>
       ),
       dataIndex: "indicatorMethods",
@@ -556,7 +556,13 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
         const organizedUnsent = organizeMethodsWithSubIndicators(unsentMethods);
 
         const popoverContent = (
-          <div style={{ maxHeight: 300, overflowY: "auto", minWidth: 320 }}>
+          <div
+            style={{
+              maxHeight: 300,
+              overflowY: "auto",
+              minWidth: getColumnWidth("indicatorMethods") || 320,
+            }}
+          >
             {!hasData ? (
               <Text type="secondary">Chưa chọn chỉ tiêu nào</Text>
             ) : (
@@ -676,7 +682,7 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
             {hasData ? (
               <Popover
                 content={popoverContent}
-                title={`Chỉ tiêu kiểm nghiệm (${methods.length})`}
+                title={`Chỉ tiêu thử nghiệm (${methods.length})`}
                 trigger="click"
                 placement="bottomLeft"
               >

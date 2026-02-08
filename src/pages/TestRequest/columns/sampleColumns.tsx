@@ -101,7 +101,7 @@ export const getSampleColumns = ({
     render: (value: string) => (value ? <Tag color="blue">{value}</Tag> : "-"),
   },
   {
-    title: "Chỉ tiêu kiểm nghiệm",
+    title: "Chỉ tiêu thử nghiệm",
     dataIndex: "indicators",
     key: "indicators",
     width: 350,
