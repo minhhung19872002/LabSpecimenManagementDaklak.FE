@@ -143,6 +143,9 @@ export interface TestMethodIndicatorDto {
   isActive: boolean;
   sortOrder: number;
   parentIndicatorId?: string;  // ID chỉ tiêu cha (null nếu là chỉ tiêu gốc)
+  specimenTypeId?: string;     // Nền mẫu (Loại mẫu) - ID
+  specimenTypeCode?: string;   // Mã nền mẫu
+  specimenTypeName?: string;   // Tên nền mẫu
 }
 
 export interface TestMethodWithIndicatorsDto extends TestMethodDto {
@@ -150,7 +153,7 @@ export interface TestMethodWithIndicatorsDto extends TestMethodDto {
 }
 
 export interface AddIndicatorsToTestMethodDto {
-  indicators: { indicatorId: string; unitPrice: number }[];
+  indicators: { indicatorId: string; specimenTypeId: string; unitPrice: number }[];
 }
 
 // Standard
@@ -185,6 +188,9 @@ export interface StandardIndicatorDto {
   indicatorName: string;
   indicatorFormattedName?: string;  // Tên chỉ tiêu có định dạng HTML
   parentIndicatorId?: string;  // ID của chỉ tiêu cha (nếu là chỉ tiêu phụ)
+  specimenTypeId?: string;  // ID nền mẫu
+  specimenTypeCode?: string;  // Mã nền mẫu
+  specimenTypeName?: string;  // Tên nền mẫu
   testMethodId: string;
   testMethodCode: string;
   testMethodName: string;
@@ -207,6 +213,7 @@ export interface StandardWithIndicatorsDto extends StandardDto {
 export interface AddIndicatorsToStandardDto {
   indicators: {
     indicatorId: string;
+    specimenTypeId: string;  // Nền mẫu - bắt buộc chọn
     testMethodId: string;
     unit: string;
     comparisonOperator?: string;
@@ -628,13 +635,27 @@ export const testMethodService = {
   removeIndicator: async (testMethodId: string, indicatorId: string): Promise<void> => {
     await api.delete(`${TEST_METHOD_URL}/${testMethodId}/indicators/${indicatorId}`);
   },
+  updateIndicator: async (
+    testMethodId: string,
+    indicatorId: string,
+    specimenTypeId: string | undefined,
+    data: { unitPrice: number }
+  ): Promise<TestMethodIndicatorDto> => {
+    const params = specimenTypeId ? { specimenTypeId } : {};
+    const response = await api.put<TestMethodIndicatorDto>(
+      `${TEST_METHOD_URL}/${testMethodId}/indicators/${indicatorId}`,
+      data,
+      { params }
+    );
+    return response.data;
+  },
   toggleActive: async (id: string): Promise<TestMethodDto> => {
     const response = await api.post<TestMethodDto>(`${TEST_METHOD_URL}/${id}/toggle-active`);
     return response.data;
   },
-  // Batch remove indicators
-  batchRemoveIndicators: async (testMethodId: string, indicatorIds: string[]): Promise<number> => {
-    const response = await api.post<number>(`${TEST_METHOD_URL}/${testMethodId}/indicators/batch-remove`, { ids: indicatorIds });
+  // Batch remove indicators - uses composite key (indicatorId + specimenTypeId)
+  batchRemoveIndicators: async (testMethodId: string, keys: Array<{ indicatorId: string; specimenTypeId?: string }>): Promise<number> => {
+    const response = await api.post<number>(`${TEST_METHOD_URL}/${testMethodId}/indicators/batch-remove`, { keys });
     return response.data;
   },
 };

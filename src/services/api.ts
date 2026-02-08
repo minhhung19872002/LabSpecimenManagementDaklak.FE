@@ -48,6 +48,8 @@ const processQueue = (error: any, token: string | null = null) => {
     if (error) {
       request.reject(error);
     } else if (token) {
+      // Mark as retried to prevent infinite loop
+      (request.config as InternalAxiosRequestConfig & { _retry?: boolean })._retry = true;
       request.config.headers.Authorization = `Bearer ${token}`;
       request.resolve(apiClient(request.config));
     }
@@ -55,13 +57,10 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
-// Clear tokens and redirect to login
-const handleAuthFailure = () => {
-  localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
-  localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
-  localStorage.removeItem(STORAGE_KEYS.USER_INFO);
-  if (!window.location.pathname.includes('/login')) {
-    window.location.href = '/login';
+// Handle 401 Unauthorized - redirect to 401 page (let user decide to logout)
+const handleUnauthorized = () => {
+  if (!window.location.pathname.includes('/401') && !window.location.pathname.includes('/login')) {
+    window.location.href = '/401';
   }
 };
 
@@ -69,6 +68,59 @@ const handleAuthFailure = () => {
 const handleForbidden = () => {
   if (!window.location.pathname.includes('/403')) {
     window.location.href = '/403';
+  }
+};
+
+// Try to refresh token and retry the request
+const tryRefreshTokenAndRetry = async (originalConfig: InternalAxiosRequestConfig): Promise<AxiosResponse | null> => {
+  // If we're already refreshing, queue this request
+  if (isRefreshing) {
+    return new Promise((resolve, reject) => {
+      failedQueue.push({ resolve, reject, config: originalConfig });
+    });
+  }
+
+  isRefreshing = true;
+  const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+
+  if (!refreshToken) {
+    isRefreshing = false;
+    processQueue(new Error('No refresh token'), null);
+    return null;
+  }
+
+  try {
+    const response = await axios.post(`${API_BASE_URL}/api/v1/auth/refresh-token`, {
+      refreshToken
+    });
+
+    const newAccessToken = response.data?.accessToken || response.data?.data?.accessToken;
+    const newRefreshToken = response.data?.refreshToken || response.data?.data?.refreshToken;
+
+    if (newAccessToken) {
+      localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
+      if (newRefreshToken) {
+        localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
+      }
+
+      // Update authorization header for the original request
+      originalConfig.headers.Authorization = `Bearer ${newAccessToken}`;
+
+      // Process queued requests with new token
+      processQueue(null, newAccessToken);
+      isRefreshing = false;
+
+      // Retry the original request
+      return apiClient(originalConfig);
+    } else {
+      // API returned success but no token - treat as error
+      throw new Error('No access token in refresh response');
+    }
+  } catch (refreshError) {
+    // Process queued requests with error
+    processQueue(refreshError, null);
+    isRefreshing = false;
+    return null;
   }
 };
 
@@ -100,36 +152,48 @@ apiClient.interceptors.request.use(
 
 // Response interceptor - unwrap API response
 apiClient.interceptors.response.use(
-  (response: AxiosResponse) => {
+  async (response: AxiosResponse) => {
     // Skip processing for blob responses (file downloads)
     if (response.config.responseType === 'blob') {
       return response;
     }
 
-    // Check if response is HTML (redirect to login page)
+    // Check if response is HTML (redirect to login page after 302)
+    // This happens when backend returns 302 redirect and axios follows it
     const contentType = response.headers['content-type'] || '';
     if (contentType.includes('text/html')) {
-      // Backend redirected to login page - treat as 401
-      handleAuthFailure();
+      // Try to refresh token and retry the request
+      const originalConfig = response.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+      // Skip if already retried or is auth endpoint
+      if (originalConfig._retry ||
+          originalConfig.url?.includes('/auth/login') ||
+          originalConfig.url?.includes('/auth/refresh-token')) {
+        handleUnauthorized();
+        return Promise.reject({
+          response: { status: 401, data: { message: 'Phiên đăng nhập đã hết hạn' } }
+        });
+      }
+
+      originalConfig._retry = true;
+      const retryResult = await tryRefreshTokenAndRetry(originalConfig);
+
+      if (retryResult) {
+        return retryResult;
+      }
+
+      // Refresh failed, redirect to 401 page
+      handleUnauthorized();
       return Promise.reject({
-        response: { status: 401, data: { message: 'Session expired' } }
+        response: { status: 401, data: { message: 'Phiên đăng nhập đã hết hạn' } }
       });
     }
 
-    // Check if response has the new wrapper format
+    // Check if response has the wrapper format
     const data = response.data;
     if (data && typeof data === 'object' && 'success' in data && 'data' in data) {
-      // New API format - unwrap data
-      if (!data.success) {
-        // Field validation errors are in data.errors (e.g., { code: ["Mã đã tồn tại"], name: ["Tên đã tồn tại"] })
-        // Other errors might be in data.data
-        return Promise.reject({
-          response: {
-            status: data.statusCode,
-            data: data.errors || data.data || { message: 'An error occurred' }
-          }
-        });
-      }
+      // Unwrap API response - BE now returns proper HTTP status codes
+      // so we don't need to check data.success here (non-2xx will go to error handler)
       // Convert paginated response to legacy format if needed
       if (data.data && data.data.items && data.data.meta) {
         response.data = {
@@ -143,7 +207,18 @@ apiClient.interceptors.response.use(
     return response;
   },
   async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean } | undefined;
+
+    // Unwrap errors from wrapper format if present
+    // BE returns: { data: null, success: false, statusCode: xxx, errors: {...} }
+    // We need to extract errors so errorHandler.ts can process them
+    if (error.response?.data) {
+      const data = error.response.data as Record<string, unknown>;
+      if (data && typeof data === 'object' && 'errors' in data && data.errors) {
+        // Keep errors in response.data for errorHandler.ts to extract
+        error.response.data = data.errors;
+      }
+    }
 
     // Handle 403 Forbidden - redirect to forbidden page (not logout)
     if (error.response?.status === HTTP_STATUS.FORBIDDEN) {
@@ -153,71 +228,34 @@ apiClient.interceptors.response.use(
 
     // Handle 401 Unauthorized
     if (error.response?.status === HTTP_STATUS.UNAUTHORIZED) {
+      // If no config (network error), just redirect
+      if (!originalRequest) {
+        handleUnauthorized();
+        return Promise.reject(error);
+      }
+
       // Skip refresh for login/refresh endpoints
       if (originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/refresh-token')) {
-        handleAuthFailure();
+        handleUnauthorized();
         return Promise.reject(error);
       }
 
       // If this request was already retried, fail
       if (originalRequest._retry) {
-        handleAuthFailure();
+        handleUnauthorized();
         return Promise.reject(error);
-      }
-
-      // If we're already refreshing, queue this request
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject, config: originalRequest });
-        });
       }
 
       originalRequest._retry = true;
-      isRefreshing = true;
+      const retryResult = await tryRefreshTokenAndRetry(originalRequest);
 
-      const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
-
-      if (!refreshToken) {
-        isRefreshing = false;
-        handleAuthFailure();
-        return Promise.reject(error);
+      if (retryResult) {
+        return retryResult;
       }
 
-      try {
-        // Call refresh token API directly (not through apiClient to avoid interceptor loop)
-        const response = await axios.post(`${API_BASE_URL}/api/v1/auth/refresh-token`, {
-          refreshToken
-        });
-
-        const newAccessToken = response.data?.accessToken || response.data?.data?.accessToken;
-        const newRefreshToken = response.data?.refreshToken || response.data?.data?.refreshToken;
-
-        if (newAccessToken) {
-          localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
-          if (newRefreshToken) {
-            localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
-          }
-
-          // Update authorization header for the original request
-          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-
-          // Process queued requests
-          processQueue(null, newAccessToken);
-
-          isRefreshing = false;
-
-          // Retry the original request
-          return apiClient(originalRequest);
-        } else {
-          throw new Error('No access token in refresh response');
-        }
-      } catch (refreshError) {
-        // Refresh failed - clear tokens and redirect to login
-        processQueue(refreshError, null);
-        isRefreshing = false;
-        handleAuthFailure();
-        return Promise.reject(refreshError);
-      }
+      // Refresh failed, redirect to 401 page
+      handleUnauthorized();
+      return Promise.reject(error);
     }
 
     return Promise.reject(error);

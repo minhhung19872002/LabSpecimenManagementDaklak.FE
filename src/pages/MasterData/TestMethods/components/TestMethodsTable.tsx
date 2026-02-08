@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useState } from "react";
 import {
   Table,
   Input,
@@ -10,6 +10,7 @@ import {
   Space,
   Checkbox,
 } from "antd";
+import type { SorterResult } from "antd/es/table/interface";
 import {
   SearchOutlined,
   PlusOutlined,
@@ -20,6 +21,12 @@ import type { ColumnsType } from "antd/es/table";
 import { GroupedTestMethodData, TestMethodIndicatorDto } from "../types";
 import "./TestMethodsTable.css";
 
+// Sort config type for indicator tables
+interface IndicatorSortConfig {
+  field: string | null;
+  order: "ascend" | "descend" | null;
+}
+
 // Extended type with position flags for tree line rendering
 interface TestMethodIndicatorWithPosition extends TestMethodIndicatorDto {
   _isFirstSub?: boolean;
@@ -29,36 +36,55 @@ interface TestMethodIndicatorWithPosition extends TestMethodIndicatorDto {
 // Utility function to sort indicators by parent-child relationship
 // Parents first, then their sub-indicators grouped together
 // Also adds _isFirstSub and _isLastSub flags for tree line rendering
-const sortIndicatorsByHierarchy = (indicators: TestMethodIndicatorDto[]): TestMethodIndicatorWithPosition[] => {
+// Sub-indicators are matched by BOTH parentIndicatorId AND specimenTypeId
+const sortIndicatorsByHierarchy = (
+  indicators: TestMethodIndicatorDto[],
+  sortConfig?: IndicatorSortConfig
+): TestMethodIndicatorWithPosition[] => {
   if (!indicators || indicators.length === 0) return [];
 
   // Separate parent indicators and sub-indicators
   const parents = indicators.filter(ind => !ind.parentIndicatorId);
   const subs = indicators.filter(ind => ind.parentIndicatorId);
 
-  // Group sub-indicators by parentIndicatorId
-  const subsByParent = new Map<string, TestMethodIndicatorDto[]>();
+  // Group sub-indicators by parentIndicatorId + specimenTypeId (composite key)
+  const subsByParentKey = new Map<string, TestMethodIndicatorDto[]>();
   subs.forEach(sub => {
-    const parentId = sub.parentIndicatorId!;
-    if (!subsByParent.has(parentId)) {
-      subsByParent.set(parentId, []);
+    // Composite key: parentIndicatorId|specimenTypeId
+    const key = `${sub.parentIndicatorId}|${sub.specimenTypeId || ''}`;
+    if (!subsByParentKey.has(key)) {
+      subsByParentKey.set(key, []);
     }
-    subsByParent.get(parentId)!.push(sub);
+    subsByParentKey.get(key)!.push(sub);
   });
 
   // Sort subs within each group by sortOrder
-  subsByParent.forEach((subList) => {
+  subsByParentKey.forEach((subList) => {
     subList.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
   });
 
   // Build sorted result with position flags
   const result: TestMethodIndicatorWithPosition[] = [];
 
-  // First add parents with their subs (sorted by sortOrder)
-  const sortedParents = [...parents].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  // Sort parents based on sortConfig or default to sortOrder
+  let sortedParents = [...parents];
+  if (sortConfig?.field === "specimenTypeName" && sortConfig.order) {
+    const multiplier = sortConfig.order === "ascend" ? 1 : -1;
+    sortedParents.sort((a, b) => {
+      const codeA = a.specimenTypeCode || "";
+      const codeB = b.specimenTypeCode || "";
+      return multiplier * codeA.localeCompare(codeB, "vi");
+    });
+  } else {
+    // Default sort by sortOrder
+    sortedParents.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  }
+
   sortedParents.forEach(parent => {
     result.push(parent);
-    const childSubs = subsByParent.get(parent.indicatorId);
+    // Match children by BOTH indicatorId AND specimenTypeId
+    const parentKey = `${parent.indicatorId}|${parent.specimenTypeId || ''}`;
+    const childSubs = subsByParentKey.get(parentKey);
     if (childSubs) {
       childSubs.forEach((sub, index) => {
         result.push({
@@ -67,15 +93,14 @@ const sortIndicatorsByHierarchy = (indicators: TestMethodIndicatorDto[]): TestMe
           _isLastSub: index === childSubs.length - 1,
         });
       });
-      subsByParent.delete(parent.indicatorId);
+      subsByParentKey.delete(parentKey);
     }
   });
 
   // Then add orphaned sub-indicators (whose parent is not in the list)
-  // Group them together by parentIndicatorId
-  const orphanedParentIds = Array.from(subsByParent.keys());
-  orphanedParentIds.forEach(parentId => {
-    const orphanedSubs = subsByParent.get(parentId)!;
+  const orphanedKeys = Array.from(subsByParentKey.keys());
+  orphanedKeys.forEach(key => {
+    const orphanedSubs = subsByParentKey.get(key)!;
     orphanedSubs.forEach((sub, index) => {
       result.push({
         ...sub,
@@ -121,6 +146,26 @@ const TestMethodsTable: React.FC<TestMethodsTableProps> = ({
   onExpandedRowsChange,
   onAddIndicators,
 }) => {
+  // Sort config for each test method's indicator table
+  const [indicatorSortConfigs, setIndicatorSortConfigs] = useState<
+    Record<string, IndicatorSortConfig>
+  >({});
+
+  // Handle sort change for indicator table
+  const handleIndicatorSortChange = (
+    testMethodId: string,
+    sorter: SorterResult<TestMethodIndicatorWithPosition> | SorterResult<TestMethodIndicatorWithPosition>[]
+  ) => {
+    const singleSorter = Array.isArray(sorter) ? sorter[0] : sorter;
+    setIndicatorSortConfigs(prev => ({
+      ...prev,
+      [testMethodId]: {
+        field: singleSorter.field as string || null,
+        order: singleSorter.order || null,
+      },
+    }));
+  };
+
   return (
     <>
       <Row
@@ -145,8 +190,10 @@ const TestMethodsTable: React.FC<TestMethodsTableProps> = ({
           rowKey="id"
           expandable={{
             expandedRowRender: (testMethodRecord) => {
+              // Get sort config for this test method
+              const sortConfig = indicatorSortConfigs[testMethodRecord.id];
               // Sort indicators by hierarchy: parents first, then their sub-indicators
-              const sortedIndicators = sortIndicatorsByHierarchy(testMethodRecord.indicators || []);
+              const sortedIndicators = sortIndicatorsByHierarchy(testMethodRecord.indicators || [], sortConfig);
               const hasIndicators = sortedIndicators.length > 0;
               const selectedKeys =
                 selectedIndicatorKeys[testMethodRecord.id] || [];
@@ -157,14 +204,19 @@ const TestMethodsTable: React.FC<TestMethodsTableProps> = ({
                     <>
                       {/* Indicator table with overlay header when selected */}
                       {(() => {
-                        const indicatorIds = sortedIndicators.map(
-                          (ind) => ind.indicatorId,
+                        // Only parent indicators can be selected (not sub-indicators)
+                        const selectableIndicators = sortedIndicators.filter(
+                          (ind) => !ind.parentIndicatorId
+                        );
+                        // Use composite key: indicatorId|specimenTypeId
+                        const selectableKeys = selectableIndicators.map(
+                          (ind) => `${ind.indicatorId}|${ind.specimenTypeId || ''}`,
                         );
                         const allSelected =
-                          indicatorIds.length > 0 &&
-                          indicatorIds.every((id) => selectedKeys.includes(id));
-                        const someSelected = indicatorIds.some((id) =>
-                          selectedKeys.includes(id),
+                          selectableKeys.length > 0 &&
+                          selectableKeys.every((key) => selectedKeys.includes(key));
+                        const someSelected = selectableKeys.some((key) =>
+                          selectedKeys.includes(key),
                         );
 
                         return (
@@ -201,7 +253,7 @@ const TestMethodsTable: React.FC<TestMethodsTableProps> = ({
                                       if (e.target.checked) {
                                         onSelectedIndicatorKeysChange({
                                           ...selectedIndicatorKeys,
-                                          [testMethodRecord.id]: indicatorIds,
+                                          [testMethodRecord.id]: selectableKeys,
                                         });
                                       } else {
                                         onSelectedIndicatorKeysChange({
@@ -251,11 +303,23 @@ const TestMethodsTable: React.FC<TestMethodsTableProps> = ({
                               </div>
                             )}
                             <Table
-                              columns={indicatorColumns}
+                              columns={indicatorColumns.map(col => {
+                                // Add sortOrder to specimenTypeName column
+                                if (col.key === "specimenTypeName") {
+                                  return {
+                                    ...col,
+                                    sortOrder: sortConfig?.field === "specimenTypeName" ? sortConfig.order : null,
+                                  };
+                                }
+                                return col;
+                              })}
                               dataSource={sortedIndicators}
-                              rowKey="indicatorId"
+                              rowKey={(record) => `${record.indicatorId}|${record.specimenTypeId || ''}`}
                               pagination={false}
                               size="small"
+                              onChange={(_pagination, _filters, sorter) => {
+                                handleIndicatorSortChange(testMethodRecord.id, sorter);
+                              }}
                               rowClassName={(record) =>
                                 record.parentIndicatorId ? "sub-indicator-row" : ""
                               }
@@ -267,6 +331,11 @@ const TestMethodsTable: React.FC<TestMethodsTableProps> = ({
                                     [testMethodRecord.id]: keys as string[],
                                   });
                                 },
+                                // Hide checkbox for sub-indicators
+                                getCheckboxProps: (record: TestMethodIndicatorDto) => ({
+                                  style: record.parentIndicatorId ? { display: 'none' } : {},
+                                  disabled: !!record.parentIndicatorId,
+                                }),
                                 columnTitle: (
                                   <Checkbox
                                     checked={allSelected}
@@ -275,7 +344,7 @@ const TestMethodsTable: React.FC<TestMethodsTableProps> = ({
                                       if (e.target.checked) {
                                         onSelectedIndicatorKeysChange({
                                           ...selectedIndicatorKeys,
-                                          [testMethodRecord.id]: indicatorIds,
+                                          [testMethodRecord.id]: selectableKeys,
                                         });
                                       } else {
                                         onSelectedIndicatorKeysChange({

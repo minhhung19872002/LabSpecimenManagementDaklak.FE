@@ -1,10 +1,14 @@
+.standards-add-indicators-modal .ant-modal-container {
+  padding: 0;
+}
+
 .standards-add-indicators-modal .ant-modal-header {
   padding: 12px 14px;
   border-bottom: 1px solid #f0f0f0;
 }
 
 .standards-add-indicators-modal .ant-modal-body {
-  padding: 0 14px !important;
+  padding: 0 14px 12px !important;
 }
 
 .standards-add-indicators-modal .ant-modal-footer {
@@ -29,10 +33,12 @@
 
 /* Style for "Thêm dòng" button */
 .standards-add-indicators-modal .ant-btn-dashed {
-  border: 1px dashed #009AE3 !important;
+  border: 1px solid #009AE3 !important;
   color: #009AE3 !important;
   background-color: #fff !important;
   transition: all 0.3s;
+  align-self: flex-start;
+  width: fit-content;
 }
 
 .standards-add-indicators-modal .ant-btn-dashed .anticon,
@@ -52,7 +58,12 @@
 }
 
 /* Sub-indicators container */
+.standards-add-indicators-modal .ant-card-body {
+  padding: 12px 12px 0 0;
+}
+
 .standards-sub-container {
+  position: relative;
   padding: 12px;
   background: #fafafa;
   border-radius: 8px;
@@ -62,16 +73,16 @@
 /* Sub-indicator row */
 .standards-sub-row {
   position: relative;
-  padding-left: 20px;
+  padding-left: 24px;
 }
 
-/* Tree line - vertical */
+/* Tree line - vertical (extends past row to connect with next) */
 .standards-sub-row::before {
   content: '';
   position: absolute;
   left: 0;
-  top: 0;
-  bottom: 0;
+  top: -12px; /* Extend up to connect with previous row's gap */
+  bottom: -12px; /* Extend down to connect with next row's gap */
   width: 1px;
   background-color: #d9d9d9;
 }
@@ -82,24 +93,25 @@
   position: absolute;
   left: 0;
   top: 16px;
-  width: 16px;
+  width: 20px;
   height: 1px;
   background-color: #d9d9d9;
 }
 
-/* First sub-indicator - vertical line starts from middle */
+/* First sub-indicator - vertical line starts from top of row */
 .standards-sub-row.is-first::before {
-  top: 16px;
+  top: 0;
 }
 
-/* Last sub-indicator - vertical line ends at middle */
+/* Last sub-indicator - vertical line ends at horizontal line position */
 .standards-sub-row.is-last::before {
-  bottom: calc(100% - 16px);
+  bottom: calc(100% - 17px);
 }
 
-/* Only child - no vertical line extension */
+/* Only child - just show short vertical line to horizontal */
 .standards-sub-row.is-first.is-last::before {
-  display: none;
+  top: 0;
+  bottom: calc(100% - 17px);
 }
 
 /* Sub-indicator row background on hover */

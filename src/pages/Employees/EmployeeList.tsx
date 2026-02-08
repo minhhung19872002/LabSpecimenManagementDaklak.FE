@@ -193,6 +193,10 @@ const EmployeeList: React.FC = () => {
             onChange: handlePageChange,
           }}
           scroll={{ x: 1400 }}
+          onRow={(record) => ({
+            onDoubleClick: () => navigate(PATH_ROUTES.employees.detail(record.id)),
+            style: { cursor: "pointer" },
+          })}
         />
       </Card>
 

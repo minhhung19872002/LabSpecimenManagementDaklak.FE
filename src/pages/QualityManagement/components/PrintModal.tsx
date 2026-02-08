@@ -32,7 +32,7 @@ import {
 import { API_BASE_URL } from "../../../services/api";
 import userService, { UserLookupDto } from "../../../services/userService";
 import { IndicatorName } from "../../../components/common";
-import { parseResultToNumber } from "../../../utils/formatters";
+import { parseResultToNumber, convertHtmlToMathExpression } from "../../../utils/formatters";
 
 const { Text } = Typography;
 
@@ -62,6 +62,114 @@ interface SampleGroup {
   sampleName: string;
   indicators: QualityManagementIndicatorDto[];
 }
+
+// Extended indicator with parent-child metadata for display
+interface ProcessedIndicator extends QualityManagementIndicatorDto {
+  _isParentWithChildren: boolean;
+  _isSubIndicator: boolean;
+  _isLastSubIndicator: boolean;
+  _rowKey: string;
+}
+
+// Helper: tạo composite key từ indicatorId + methodId
+const makeGroupKey = (indicatorId: string, methodId: string | null | undefined) =>
+  `${indicatorId}_${methodId || "no-method"}`;
+
+// Process indicators with parent-child hierarchy
+// FIX: Xử lý trường hợp có nhiều parents cùng indicatorId+methodId
+const processIndicatorsWithHierarchy = (
+  indicators: QualityManagementIndicatorDto[]
+): ProcessedIndicator[] => {
+  const result: ProcessedIndicator[] = [];
+
+  // Separate parents and subs
+  const parents = indicators.filter((ind) => !ind.parentIndicatorId);
+  const subs = indicators.filter((ind) => ind.parentIndicatorId);
+
+  // Group parents by indicatorId+methodId -> array of parents
+  const parentsByKey: Record<string, QualityManagementIndicatorDto[]> = {};
+  parents.forEach((p) => {
+    const key = makeGroupKey(p.indicatorId, p.methodId);
+    if (!parentsByKey[key]) {
+      parentsByKey[key] = [];
+    }
+    parentsByKey[key].push(p);
+  });
+
+  // Group subs by parentIndicatorId+methodId
+  const subsByKey: Record<string, QualityManagementIndicatorDto[]> = {};
+  subs.forEach((s) => {
+    const key = makeGroupKey(s.parentIndicatorId!, s.methodId);
+    if (!subsByKey[key]) {
+      subsByKey[key] = [];
+    }
+    subsByKey[key].push(s);
+  });
+
+  // Create sub-to-parent mapping: distribute subs evenly among parents with same key
+  const subToParentMapping: Record<string, string> = {};
+  const orphans: QualityManagementIndicatorDto[] = [];
+
+  Object.entries(subsByKey).forEach(([key, subList]) => {
+    const parentList = parentsByKey[key] || [];
+    if (parentList.length === 0) {
+      subList.forEach((sub) => {
+        subToParentMapping[sub.id] = "";
+        orphans.push(sub);
+      });
+    } else if (parentList.length === 1) {
+      subList.forEach((sub) => {
+        subToParentMapping[sub.id] = parentList[0].id;
+      });
+    } else {
+      const subsPerParent = Math.ceil(subList.length / parentList.length);
+      subList.forEach((sub, idx) => {
+        const parentIdx = Math.floor(idx / subsPerParent);
+        const safeParentIdx = Math.min(parentIdx, parentList.length - 1);
+        subToParentMapping[sub.id] = parentList[safeParentIdx].id;
+      });
+    }
+  });
+
+  // Build result: for each parent, add it and its assigned children
+  parents.forEach((parent) => {
+    const children = subs.filter((sub) => subToParentMapping[sub.id] === parent.id);
+    const hasChildren = children.length > 0;
+
+    result.push({
+      ...parent,
+      _isParentWithChildren: hasChildren,
+      _isSubIndicator: false,
+      _isLastSubIndicator: false,
+      _rowKey: parent.id,
+    });
+
+    children.forEach((child, idx) => {
+      result.push({
+        ...child,
+        _isParentWithChildren: false,
+        _isSubIndicator: true,
+        _isLastSubIndicator: idx === children.length - 1,
+        _rowKey: child.id, // Use actual id for selection to work with API
+      });
+    });
+  });
+
+  // Add orphans
+  orphans.forEach((ind) => {
+    if (!result.some((r) => r.id === ind.id)) {
+      result.push({
+        ...ind,
+        _isParentWithChildren: false,
+        _isSubIndicator: true,
+        _isLastSubIndicator: true,
+        _rowKey: ind.id, // Use actual id for selection to work with API
+      });
+    }
+  });
+
+  return result;
+};
 
 // Group indicators by laboratory, then by sample
 interface LabGroup {
@@ -98,13 +206,93 @@ const PrintModal: React.FC<PrintModalProps> = ({
   >(undefined);
   const [loadingVicePresidents, setLoadingVicePresidents] = useState(false);
 
-  // Get only approved indicators
-  const approvedIndicators = useMemo(
+  // Get approved indicators AND their parent indicators
+  // Parent indicators don't have approvalStatus but need to be shown for hierarchy
+  // RULE: Chỉ hiển thị parent indicator khi TẤT CẢ sub-indicators của nó đều đã được duyệt
+  const approvedIndicatorsWithParents = useMemo(() => {
+    // Separate parents and sub-indicators
+    const parents = indicators.filter((ind) => !ind.parentIndicatorId);
+    const subs = indicators.filter((ind) => ind.parentIndicatorId);
+
+    // Group sub-indicators by parentKey (parentIndicatorId + methodId)
+    const subsByParentKey: Record<string, QualityManagementIndicatorDto[]> = {};
+    subs.forEach((sub) => {
+      const parentKey = makeGroupKey(sub.parentIndicatorId!, sub.methodId);
+      if (!subsByParentKey[parentKey]) {
+        subsByParentKey[parentKey] = [];
+      }
+      subsByParentKey[parentKey].push(sub);
+    });
+
+    // Find parent keys where ALL sub-indicators are approved
+    const fullyApprovedParentKeys = new Set<string>();
+    Object.entries(subsByParentKey).forEach(([parentKey, subList]) => {
+      const allSubsApproved = subList.every(
+        (sub) => sub.approvalStatus === QualityIndicatorApprovalStatus.Approved,
+      );
+      if (allSubsApproved) {
+        fullyApprovedParentKeys.add(parentKey);
+      }
+    });
+
+    // Build result:
+    // 1. Include parent indicators whose ALL subs are approved
+    // 2. Include sub-indicators whose parent has ALL subs approved
+    // 3. Include standalone approved indicators (no parent, no children)
+    const result: QualityManagementIndicatorDto[] = [];
+
+    // Add parent indicators that have ALL subs approved
+    parents.forEach((parent) => {
+      const parentKey = makeGroupKey(parent.indicatorId, parent.methodId);
+      const hasSubIndicators = subsByParentKey[parentKey]?.length > 0;
+
+      if (hasSubIndicators) {
+        // Parent has sub-indicators -> only include if ALL subs are approved
+        if (fullyApprovedParentKeys.has(parentKey)) {
+          result.push(parent);
+          // Also add all its sub-indicators
+          subsByParentKey[parentKey].forEach((sub) => result.push(sub));
+        }
+        // If not all subs approved -> don't include parent or any subs
+      } else {
+        // Standalone parent (no sub-indicators) -> include if approved
+        if (parent.approvalStatus === QualityIndicatorApprovalStatus.Approved) {
+          result.push(parent);
+        }
+      }
+    });
+
+    // Add orphan sub-indicators (parent not in list) that are approved
+    subs.forEach((sub) => {
+      const parentKey = makeGroupKey(sub.parentIndicatorId!, sub.methodId);
+      const parentExists = parents.some(
+        (p) => makeGroupKey(p.indicatorId, p.methodId) === parentKey,
+      );
+      if (
+        !parentExists &&
+        sub.approvalStatus === QualityIndicatorApprovalStatus.Approved
+      ) {
+        // Check if already added
+        if (!result.some((r) => r.id === sub.id)) {
+          result.push(sub);
+        }
+      }
+    });
+
+    return result;
+  }, [indicators]);
+
+  // Get only approved indicator IDs (for selection - excludes parents with children)
+  // Only includes indicators that are in approvedIndicatorsWithParents AND have approvalStatus = Approved
+  const approvedIndicatorIds = useMemo(
     () =>
-      indicators.filter(
-        (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Approved,
-      ),
-    [indicators],
+      approvedIndicatorsWithParents
+        .filter(
+          (ind) =>
+            ind.approvalStatus === QualityIndicatorApprovalStatus.Approved,
+        )
+        .map((ind) => ind.id),
+    [approvedIndicatorsWithParents],
   );
 
   // Group indicators by laboratory, then by sample
@@ -117,7 +305,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
       }
     > = {};
 
-    approvedIndicators.forEach((indicator) => {
+    approvedIndicatorsWithParents.forEach((indicator) => {
       const labId = indicator.laboratoryId || "unknown";
       const labName = indicator.laboratoryName || "Không xác định";
       const sampleId = indicator.sampleId || "unknown";
@@ -143,12 +331,15 @@ const PrintModal: React.FC<PrintModalProps> = ({
 
     return Object.values(groups).map(({ lab, samples }) => {
       const sampleGroups = Object.values(samples);
+      // allIndicatorIds only includes approved indicators (for selection)
       const allIndicatorIds = sampleGroups.flatMap((s) =>
-        s.indicators.map((i) => i.id),
+        s.indicators
+          .filter((i) => approvedIndicatorIds.includes(i.id))
+          .map((i) => i.id),
       );
       return { ...lab, sampleGroups, allIndicatorIds };
     });
-  }, [approvedIndicators]);
+  }, [approvedIndicatorsWithParents, approvedIndicatorIds]);
 
   // Load templates when modal opens
   useEffect(() => {
@@ -183,8 +374,8 @@ const PrintModal: React.FC<PrintModalProps> = ({
     );
 
     if (newlySelectedIds.length > 0) {
-      // Get newly selected indicators
-      const newIndicators = approvedIndicators.filter((ind) =>
+      // Get newly selected indicators (use full list to get notes from approved indicators)
+      const newIndicators = approvedIndicatorsWithParents.filter((ind) =>
         newlySelectedIds.includes(ind.id),
       );
 
@@ -250,7 +441,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
 
     // Update ref for next comparison
     prevSelectedIdsRef.current = selectedIndicatorIds;
-  }, [selectedIndicatorIds, approvedIndicators]);
+  }, [selectedIndicatorIds, approvedIndicatorsWithParents]);
 
   const loadTemplates = async () => {
     setLoadingTemplates(true);
@@ -329,6 +520,14 @@ const PrintModal: React.FC<PrintModalProps> = ({
   // Suppress unused variable warning
   void _handleOpenAllTabs;
 
+  // Get indicator IDs to send to API
+  // NOTE: Only send approved indicator IDs (sub-indicators with results)
+  // Parents are NOT approved (no results), backend should handle grouping using parentIndicatorId
+  const getIndicatorIdsForPrint = (): string[] => {
+    // Only return selected indicator IDs (which are already filtered to approved only)
+    return [...selectedIndicatorIds];
+  };
+
   const handlePrint = async () => {
     if (selectedIndicatorIds.length === 0) {
       message.warning("Vui lòng chọn ít nhất một chỉ tiêu để in");
@@ -342,12 +541,15 @@ const PrintModal: React.FC<PrintModalProps> = ({
 
     setLoading(true);
 
+    // Get indicator IDs including parents
+    const indicatorIdsForPrint = getIndicatorIdsForPrint();
+
     try {
       if (mode === "single") {
         // Call API to generate PDFs (batch processing)
         const result = await qualityManagementService.printMultiSingleResult(
           taskId,
-          selectedIndicatorIds,
+          indicatorIdsForPrint,
           selectedTemplates,
           note || undefined,
           selectedVicePresidentId,
@@ -362,7 +564,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
         // Mixed mode - single document, open Word Editor
         const result = await qualityManagementService.printMixedResult(
           taskId,
-          selectedIndicatorIds,
+          indicatorIdsForPrint,
           note || undefined,
           undefined, // templateName
           selectedVicePresidentId,
@@ -435,7 +637,8 @@ const PrintModal: React.FC<PrintModalProps> = ({
     const resultValue = parseResultToNumber(result);
     if (resultValue === null) return null;
 
-    const limitValue = parseResultToNumber(allowedLimit);
+    // Convert HTML superscript/subscript to math expression and parse limit
+    const limitValue = parseResultToNumber(convertHtmlToMathExpression(allowedLimit));
     if (limitValue === null) return null;
 
     switch (comparisonOperator) {
@@ -456,28 +659,48 @@ const PrintModal: React.FC<PrintModalProps> = ({
     }
   };
 
-  const columns: ColumnsType<QualityManagementIndicatorDto> = [
+  const columns: ColumnsType<ProcessedIndicator> = [
     {
       title: "Tên chỉ tiêu",
       dataIndex: "indicatorName",
       key: "indicatorName",
       ellipsis: true,
-      render: (value: string, record) =>
-        value ? (
+      render: (value: string, record: ProcessedIndicator) => {
+        const content = value ? (
           <IndicatorName
             name={value}
             formattedName={record.indicatorFormattedName}
           />
         ) : (
           "-"
-        ),
+        );
+
+        // Tree line for sub-indicators
+        const classNames = ["print-indicator-name-wrapper"];
+        if (record._isSubIndicator) {
+          classNames.push("has-tree-line");
+          if (record._isLastSubIndicator) classNames.push("is-last-sub");
+        }
+
+        return (
+          <div
+            className={classNames.join(" ")}
+            style={{
+              paddingLeft: record._isSubIndicator ? 24 : 0,
+              position: "relative",
+            }}
+          >
+            {content}
+          </div>
+        );
+      },
     },
     {
       title: "Phương pháp",
       dataIndex: "methodName",
       key: "methodName",
       ellipsis: true,
-      render: (_: any, record: QualityManagementIndicatorDto) => (
+      render: (_: any, record: ProcessedIndicator) => (
         <IndicatorName
           name={record.methodName || ""}
           formattedName={record.methodFormattedName}
@@ -489,19 +712,27 @@ const PrintModal: React.FC<PrintModalProps> = ({
       dataIndex: "unit",
       key: "unit",
       width: 70,
+      render: (text: string, record: ProcessedIndicator) => {
+        if (record._isParentWithChildren) return "-";
+        return text || "-";
+      },
     },
     {
       title: "Kết quả",
       dataIndex: "result",
       key: "result",
       width: 100,
-      render: (text: string) => <Text strong>{text || "-"}</Text>,
+      render: (text: string, record: ProcessedIndicator) => {
+        if (record._isParentWithChildren) return "-";
+        return <Text strong>{text || "-"}</Text>;
+      },
     },
     {
       title: "Giới hạn",
       key: "limit",
       width: 100,
-      render: (_: any, record: QualityManagementIndicatorDto) => {
+      render: (_: any, record: ProcessedIndicator) => {
+        if (record._isParentWithChildren) return "-";
         if (record.comparisonOperator && record.allowedLimit) {
           return (
             <Text>
@@ -518,13 +749,18 @@ const PrintModal: React.FC<PrintModalProps> = ({
       key: "standardName",
       width: 120,
       ellipsis: true,
-      render: (text: string) => text || "-",
+      render: (text: string, record: ProcessedIndicator) => {
+        if (record._isParentWithChildren) return "-";
+        return text || "-";
+      },
     },
     {
       title: "Kết luận",
       key: "conclusion",
       width: 100,
-      render: (_: any, record: QualityManagementIndicatorDto) => {
+      render: (_: any, record: ProcessedIndicator) => {
+        if (record._isParentWithChildren) return "-";
+
         const passFailStatus = calculatePassFail(
           record.result,
           record.comparisonOperator,
@@ -658,7 +894,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
         <div style={{ textAlign: "center", padding: 40 }}>
           <Spin tip="Đang tải dữ liệu..." />
         </div>
-      ) : approvedIndicators.length === 0 ? (
+      ) : approvedIndicatorIds.length === 0 ? (
         <div style={{ textAlign: "center", padding: 40 }}>
           <Text type="secondary">Không có chỉ tiêu nào đã được duyệt</Text>
         </div>
@@ -745,8 +981,10 @@ const PrintModal: React.FC<PrintModalProps> = ({
                           style={{ background: "transparent", border: "none" }}
                           items={labGroup.sampleGroups.map(
                             (sampleGroup, sampleIndex) => {
-                              const sampleIndicatorIds =
-                                sampleGroup.indicators.map((i) => i.id);
+                              // Only include approved indicator IDs (exclude parents which have approvalStatus: 0)
+                              const sampleIndicatorIds = sampleGroup.indicators
+                                .filter((i) => approvedIndicatorIds.includes(i.id))
+                                .map((i) => i.id);
                               const selectedInSample =
                                 sampleIndicatorIds.filter((id) =>
                                   selectedIndicatorIds.includes(id),
@@ -820,45 +1058,102 @@ const PrintModal: React.FC<PrintModalProps> = ({
                                       ? "1px solid #e8e8e8"
                                       : "none",
                                 },
-                                children: (
-                                  <Card
-                                    size="small"
-                                    style={{
-                                      borderRadius: 8,
-                                      overflow: "hidden",
-                                      boxShadow: "none",
-                                    }}
-                                    bodyStyle={{ padding: 0 }}
-                                  >
-                                    <Table
-                                      dataSource={sampleGroup.indicators}
-                                      columns={columns}
-                                      rowKey="id"
+                                children: (() => {
+                                  // Process indicators with parent-child hierarchy
+                                  const processedIndicators = processIndicatorsWithHierarchy(sampleGroup.indicators);
+
+                                  return (
+                                    <Card
                                       size="small"
-                                      pagination={false}
-                                      scroll={{ x: "max-content" }}
-                                      bordered
-                                      style={{ maxWidth: "100%" }}
-                                      rowSelection={{
-                                        selectedRowKeys: selectedIndicatorIds,
-                                        onChange: (keys) => {
-                                          const otherIds =
-                                            selectedIndicatorIds.filter(
-                                              (id) =>
-                                                !sampleIndicatorIds.includes(
-                                                  id,
-                                                ),
-                                            );
-                                          setSelectedIndicatorIds([
-                                            ...otherIds,
-                                            ...(keys as string[]),
-                                          ]);
-                                        },
-                                        type: "checkbox",
+                                      style={{
+                                        borderRadius: 8,
+                                        overflow: "hidden",
+                                        boxShadow: "none",
                                       }}
-                                    />
-                                  </Card>
-                                ),
+                                      bodyStyle={{ padding: 0 }}
+                                    >
+                                      <style>
+                                        {`
+                                          /* Ensure sub/sup tags inherit text color properly */
+                                          .ant-table sub,
+                                          .ant-table sup,
+                                          .ant-table-cell sub,
+                                          .ant-table-cell sup {
+                                            color: inherit !important;
+                                          }
+                                          /* Tree line styles for sub-indicators in print modal */
+                                          .print-indicator-name-wrapper {
+                                            position: relative;
+                                          }
+                                          .print-indicator-name-wrapper.has-tree-line::before {
+                                            content: '';
+                                            position: absolute;
+                                            left: 0;
+                                            top: -100%;
+                                            bottom: -100%;
+                                            width: 1px;
+                                            background-color: #d9d9d9;
+                                          }
+                                          .print-indicator-name-wrapper.has-tree-line::after {
+                                            content: '';
+                                            position: absolute;
+                                            left: 0;
+                                            top: 50%;
+                                            width: 16px;
+                                            height: 1px;
+                                            background-color: #d9d9d9;
+                                          }
+                                          .print-indicator-name-wrapper.has-tree-line.is-last-sub::before {
+                                            bottom: 50%;
+                                          }
+                                          .print-parent-row > td {
+                                            background-color: #f5f5f5 !important;
+                                            font-weight: 500;
+                                          }
+                                          .print-sub-row > td {
+                                            background-color: #fafafa !important;
+                                          }
+                                        `}
+                                      </style>
+                                      <Table
+                                        dataSource={processedIndicators}
+                                        columns={columns}
+                                        rowKey="_rowKey"
+                                        size="small"
+                                        pagination={false}
+                                        scroll={{ x: "max-content" }}
+                                        bordered
+                                        style={{ maxWidth: "100%" }}
+                                        rowClassName={(record: ProcessedIndicator) => {
+                                          if (record._isParentWithChildren) return "print-parent-row";
+                                          if (record._isSubIndicator) return "print-sub-row";
+                                          return "";
+                                        }}
+                                        rowSelection={{
+                                          selectedRowKeys: selectedIndicatorIds,
+                                          onChange: (keys) => {
+                                            const otherIds =
+                                              selectedIndicatorIds.filter(
+                                                (id) =>
+                                                  !sampleIndicatorIds.includes(
+                                                    id,
+                                                  ),
+                                              );
+                                            setSelectedIndicatorIds([
+                                              ...otherIds,
+                                              ...(keys as string[]),
+                                            ]);
+                                          },
+                                          type: "checkbox",
+                                          getCheckboxProps: (record: ProcessedIndicator) => ({
+                                            // Disable checkbox for parent indicators with children
+                                            disabled: record._isParentWithChildren,
+                                          }),
+                                        }}
+                                      />
+                                    </Card>
+                                  );
+                                })(),
                               };
                             },
                           )}

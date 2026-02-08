@@ -11,6 +11,7 @@ import {
 } from "../../../../services/masterDataService";
 import { GroupedStandardData, StandardIndicatorDto } from "../types";
 import { StandardFormData } from "../schemas/standardSchema";
+import { getApiErrorMessage } from "../../../../utils/errorHandler";
 
 interface UseStandardsActionsParams {
   fetchData: () => Promise<void>;
@@ -72,11 +73,9 @@ export const useStandardsActions = ({
       message.success("Xóa tiêu chuẩn thành công!");
       fetchData();
       onDataChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to delete:", error);
-      const errorMsg =
-        error?.response?.data?.error?.message || "Không thể xóa tiêu chuẩn";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể xóa tiêu chuẩn"));
     }
   };
 
@@ -99,11 +98,9 @@ export const useStandardsActions = ({
       form.reset();
       fetchData();
       onDataChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to save:", error);
-      const errorMsg =
-        error?.response?.data?.error?.message || "Không thể lưu tiêu chuẩn";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể lưu tiêu chuẩn"));
     } finally {
       setModalLoading(false);
     }
@@ -125,11 +122,9 @@ export const useStandardsActions = ({
       );
       fetchData();
       onDataChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to toggle active:", error);
-      const errorMsg =
-        error?.response?.data?.error?.message || "Không thể thay đổi trạng thái";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể thay đổi trạng thái"));
     }
   };
 
@@ -143,7 +138,7 @@ export const useStandardsActions = ({
     setSelectedStandardName(standardName);
     form.resetFields();
     form.setFieldsValue({
-      indicators: [{ indicatorId: undefined, testMethodId: undefined, unit: "", subIndicators: [] }],
+      indicators: [{ specimenTypeId: undefined, indicatorId: undefined, testMethodId: undefined, unit: "", subIndicators: [] }],
     });
     setAddIndicatorsModalOpen(true);
   };
@@ -151,7 +146,8 @@ export const useStandardsActions = ({
   const handleAddIndicatorsOk = async (
     form: FormInstance,
     selectedIndicators: Record<number, string>,
-    selectedMethods: Record<number, { id: string; unit: string }>
+    selectedMethods: Record<number, { id: string; unit: string }>,
+    selectedSpecimenTypes: Record<number, string>
   ) => {
     if (!selectedStandardId) return;
 
@@ -170,8 +166,13 @@ export const useStandardsActions = ({
         const index = parseInt(indexStr, 10);
         const indicatorId = selectedIndicators[index];
         const method = selectedMethods[index];
+        const specimenTypeId = selectedSpecimenTypes[index];
 
         // Validate parent fields
+        if (!specimenTypeId) {
+          errors.push(`Dòng ${index + 1}: Vui lòng chọn nền mẫu`);
+          return;
+        }
         if (!indicatorId) {
           errors.push(`Dòng ${index + 1}: Vui lòng chọn chỉ tiêu`);
           return;
@@ -189,39 +190,29 @@ export const useStandardsActions = ({
         const hasSubIndicators = subIndicators.length > 0;
 
         if (hasSubIndicators) {
-          // Parent with sub-indicators: only send indicatorId, testMethodId, unit
+          // Parent with sub-indicators: only send indicatorId, testMethodId, unit, specimenTypeId
           flatIndicators.push({
             indicatorId: indicatorId,
             testMethodId: method.id,
             unit: method.unit || "",
+            specimenTypeId: specimenTypeId,
           });
 
-          // Add all sub-indicators with full fields
+          // Add all sub-indicators with full fields (inherit specimenTypeId from parent)
           subIndicators.forEach((sub: any, subIndex: number) => {
             if (!sub.indicatorId) {
               errors.push(`Dòng ${index + 1}, chỉ tiêu phụ ${subIndex + 1}: Vui lòng chọn chỉ tiêu phụ`);
               return;
             }
-            if (!sub.comparisonOperator) {
-              errors.push(`Dòng ${index + 1}, chỉ tiêu phụ ${subIndex + 1}: Vui lòng chọn phép so sánh`);
-              return;
-            }
 
             const isRange = sub.comparisonOperator === "range";
-
-            // Validate limits
-            if (isRange) {
-              if (!sub.lowerLimit && !sub.upperLimit) {
-                errors.push(`Dòng ${index + 1}, chỉ tiêu phụ ${subIndex + 1}: Vui lòng nhập giới hạn`);
-                return;
-              }
-            }
 
             flatIndicators.push({
               indicatorId: sub.indicatorId,
               testMethodId: method.id, // Inherit from parent
               unit: sub.unit || method.unit || "",
-              comparisonOperator: isRange ? undefined : sub.comparisonOperator,
+              specimenTypeId: specimenTypeId, // Inherit from parent
+              comparisonOperator: isRange ? undefined : sub.comparisonOperator || undefined,
               allowedLimit: isRange ? undefined : sub.allowedLimit || undefined,
               lowerOperator: isRange ? sub.lowerOperator || ">" : undefined,
               lowerLimit: isRange ? sub.lowerLimit || undefined : undefined,
@@ -231,26 +222,14 @@ export const useStandardsActions = ({
           });
         } else {
           // Parent without sub-indicators: send full fields
-          if (!formParent.comparisonOperator) {
-            errors.push(`Dòng ${index + 1}: Vui lòng chọn phép so sánh`);
-            return;
-          }
-
           const isRange = formParent.comparisonOperator === "range";
-
-          // Validate limits
-          if (isRange) {
-            if (!formParent.lowerLimit && !formParent.upperLimit) {
-              errors.push(`Dòng ${index + 1}: Vui lòng nhập giới hạn`);
-              return;
-            }
-          }
 
           flatIndicators.push({
             indicatorId: indicatorId,
             testMethodId: method.id,
             unit: method.unit || "",
-            comparisonOperator: isRange ? undefined : formParent.comparisonOperator,
+            specimenTypeId: specimenTypeId,
+            comparisonOperator: isRange ? undefined : formParent.comparisonOperator || undefined,
             allowedLimit: isRange ? undefined : formParent.allowedLimit || undefined,
             lowerOperator: isRange ? formParent.lowerOperator || ">" : undefined,
             lowerLimit: isRange ? formParent.lowerLimit || undefined : undefined,
@@ -287,11 +266,9 @@ export const useStandardsActions = ({
       form.resetFields();
       fetchData();
       onDataChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to add indicators:", error);
-      const errorMsg =
-        error?.response?.data?.error?.message || "Không thể thêm chỉ tiêu";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể thêm chỉ tiêu"));
     } finally {
       setAddIndicatorsLoading(false);
     }
@@ -353,11 +330,9 @@ export const useStandardsActions = ({
       form.resetFields();
       fetchData();
       onDataChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to update indicator:", error);
-      const errorMsg =
-        error?.response?.data?.error?.message || "Không thể cập nhật chỉ tiêu";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể cập nhật chỉ tiêu"));
     } finally {
       setEditIndicatorLoading(false);
     }
@@ -377,11 +352,9 @@ export const useStandardsActions = ({
       message.success("Xóa chỉ tiêu khỏi tiêu chuẩn thành công!");
       fetchData();
       onDataChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to remove indicator:", error);
-      const errorMsg =
-        error?.response?.data?.error?.message || "Không thể xóa chỉ tiêu";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể xóa chỉ tiêu"));
     }
   };
 
@@ -396,11 +369,9 @@ export const useStandardsActions = ({
       );
       fetchData();
       onDataChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to toggle indicator active:", error);
-      const errorMsg =
-        error?.response?.data?.error?.message || "Không thể thay đổi trạng thái";
-      message.error(errorMsg);
+      message.error(getApiErrorMessage(error, "Không thể thay đổi trạng thái"));
     }
   };
 
@@ -431,8 +402,8 @@ export const useStandardsActions = ({
           });
           await fetchData();
           onDataChange?.();
-        } catch (error) {
-          message.error("Không thể xóa chỉ tiêu");
+        } catch (error: unknown) {
+          message.error(getApiErrorMessage(error, "Không thể xóa chỉ tiêu"));
         } finally {
           setBatchLoading(false);
         }
@@ -463,8 +434,8 @@ export const useStandardsActions = ({
       });
       await fetchData();
       onDataChange?.();
-    } catch (error) {
-      message.error("Không thể kích hoạt chỉ tiêu");
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Không thể kích hoạt chỉ tiêu"));
     } finally {
       setBatchLoading(false);
     }
@@ -493,8 +464,8 @@ export const useStandardsActions = ({
       });
       await fetchData();
       onDataChange?.();
-    } catch (error) {
-      message.error("Không thể ngừng kích hoạt chỉ tiêu");
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Không thể ngừng kích hoạt chỉ tiêu"));
     } finally {
       setBatchLoading(false);
     }

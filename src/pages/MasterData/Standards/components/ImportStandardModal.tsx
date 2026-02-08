@@ -22,6 +22,13 @@ import type {
   StandardImportPreviewDto,
   StandardIndicatorImportItem,
 } from "../types";
+import { convertOperatorSymbol } from "../constants";
+
+// Helper to strip <p> tags but keep inner HTML (for rendering in table)
+const stripPTags = (html: string | undefined | null): string => {
+  if (!html) return "";
+  return html.replace(/^<p>|<\/p>$/gi, "").trim();
+};
 
 interface ImportStandardModalProps {
   open: boolean;
@@ -103,10 +110,23 @@ const ImportStandardModal: React.FC<ImportStandardModalProps> = ({
       width: 60,
     },
     {
+      title: "Nền mẫu",
+      dataIndex: "specimenTypeName",
+      key: "specimenTypeName",
+      width: 120,
+    },
+    {
       title: "Chỉ tiêu",
       dataIndex: "indicatorName",
       key: "indicatorName",
       width: 150,
+    },
+    {
+      title: "Chỉ tiêu phụ",
+      dataIndex: "subIndicatorName",
+      key: "subIndicatorName",
+      width: 120,
+      render: (value: string) => value || "-",
     },
     {
       title: "Phương pháp",
@@ -131,12 +151,31 @@ const ImportStandardModal: React.FC<ImportStandardModalProps> = ({
       key: "limit",
       width: 150,
       render: (_: unknown, record: StandardIndicatorImportItem) => {
+        // Range case: comparison operator is "Khoảng"
         if (record.comparisonOperator?.toLowerCase() === "khoảng") {
-          return `${record.lowerOperator || ""} ${record.lowerLimit || ""} - ${
-            record.upperOperator || ""
-          } ${record.upperLimit || ""}`;
+          const lower = convertOperatorSymbol(record.lowerOperator) || ">";
+          const upper = convertOperatorSymbol(record.upperOperator) || "<";
+          const lowerHtml = stripPTags(record.lowerLimit);
+          const upperHtml = stripPTags(record.upperLimit);
+          return (
+            <span>
+              {lower} <span dangerouslySetInnerHTML={{ __html: lowerHtml }} />
+              {" và "}
+              {upper} <span dangerouslySetInnerHTML={{ __html: upperHtml }} />
+            </span>
+          );
         }
-        return record.allowedLimit || "";
+        // Single limit case
+        if (record.allowedLimit) {
+          const op = convertOperatorSymbol(record.comparisonOperator);
+          const limitHtml = stripPTags(record.allowedLimit);
+          return (
+            <span>
+              {op} <span dangerouslySetInnerHTML={{ __html: limitHtml }} />
+            </span>
+          );
+        }
+        return "";
       },
     },
     {
@@ -349,7 +388,7 @@ const ImportStandardModal: React.FC<ImportStandardModalProps> = ({
                     }))}
                     columns={indicatorColumns}
                     pagination={false}
-                    scroll={{ x: 800 }}
+                    scroll={{ x: 1000 }}
                   />
                 </Collapse.Panel>
               ))}

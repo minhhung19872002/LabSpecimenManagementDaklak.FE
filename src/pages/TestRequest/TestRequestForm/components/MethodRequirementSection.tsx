@@ -33,31 +33,21 @@ const MethodRequirementSection: React.FC<MethodRequirementSectionProps> = ({
                 }}
               >
                 <Radio value="westHighlandInstitute">
-                  Viện KHKT NN Tây Nguyên
+                  Viện VS DT Tây Nguyên
                 </Radio>
-                <span
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                    gap: 8,
-                  }}
-                >
-                  <Radio value="customerRequest">Theo yêu cầu KH</Radio>
-                  <Form.Item
-                    name="methodCustomerDetail"
-                    style={{ marginBottom: 0 }}
-                  >
-                    <Input
-                      placeholder="Chi tiết..."
-                      disabled={methodRequirement !== "customerRequest"}
-                      style={{ width: 150 }}
-                      size="small"
-                    />
-                  </Form.Item>
-                </span>
+                <Radio value="customerRequest">Theo yêu cầu KH</Radio>
               </div>
             </Radio.Group>
+          </Form.Item>
+          <Form.Item
+            name="methodCustomerDetail"
+            style={{ marginBottom: 0, marginTop: 12 }}
+          >
+            <Input.TextArea
+              placeholder="Chi tiết yêu cầu về phương pháp..."
+              disabled={methodRequirement !== "customerRequest"}
+              autoSize={{ minRows: 2, maxRows: 4 }}
+            />
           </Form.Item>
         </Col>
       </Row>

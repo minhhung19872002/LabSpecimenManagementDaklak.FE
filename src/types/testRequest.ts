@@ -267,6 +267,10 @@ export interface TestRequestSampleIndicatorDto {
   testMethodCode?: string;
   testMethodName?: string;
   testMethodFormattedName?: string | null;
+  /** Nền mẫu ID - để phân biệt giá của cùng indicator+method ở các nền mẫu khác nhau */
+  specimenTypeId?: string;
+  /** Tên nền mẫu (để hiển thị) */
+  specimenTypeName?: string;
   transferDate?: string;
   requestDate?: string;
   sentToDepartment: boolean;
@@ -278,10 +282,15 @@ export interface TestRequestSampleIndicatorDto {
   images?: IndicatorImageDto[];
   /** ID chỉ tiêu cha (null nếu là chỉ tiêu gốc) - dùng để nhóm sub-indicators */
   parentIndicatorId?: string;
+  /** Đã gửi đến QLKT (true = đã gửi, không thể gửi lại) */
+  isSentToQLKT?: boolean;
 }
 
 export interface CreateTestRequestSampleIndicatorDto {
   indicatorId: string;
+  testMethodId?: string;
+  /** Nền mẫu ID - để phân biệt giá của cùng indicator+method ở các nền mẫu khác nhau */
+  specimenTypeId?: string;
   laboratoryId?: string;
   unitPrice?: number;
   originalUnitPrice?: number;
@@ -294,6 +303,9 @@ export interface CreateTestRequestSampleIndicatorDto {
 export interface UpdateTestRequestSampleIndicatorDto {
   id?: string;
   indicatorId: string;
+  testMethodId?: string;
+  /** Nền mẫu ID - để phân biệt giá của cùng indicator+method ở các nền mẫu khác nhau */
+  specimenTypeId?: string;
   laboratoryId?: string;
   unitPrice?: number;
   originalUnitPrice?: number;

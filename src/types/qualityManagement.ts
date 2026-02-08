@@ -1,6 +1,6 @@
 import { IndicatorImageDto, TestingStatus } from './testing';
 import { TestRequestStatus } from './testRequest';
-import { IndicatorApprovalStatus } from './laboratoryTask';
+import { IndicatorApprovalStatus, QLKTDisplayStatus } from './laboratoryTask';
 
 // Quality Management Status Enum
 export enum QualityManagementStatus {
@@ -61,6 +61,60 @@ export const QualityIndicatorApprovalStatusColors: Record<QualityIndicatorApprov
 export const QualityTaskTypeLabels: Record<QualityTaskType, string> = {
   [QualityTaskType.ResultApproval]: 'Phê duyệt kết quả',
   [QualityTaskType.ChangeApproval]: 'Phê duyệt thay đổi'
+};
+
+// ============= QLCL Display Status (Sổ nhận việc QLCL - Cột Tình trạng) =============
+
+/**
+ * Trạng thái hiển thị tại cột "Tình trạng" trong tab Sổ nhận việc QLCL
+ * Mapping từ TestRequestStatus + IndicatorApprovalStatus + QualityIndicatorApprovalStatus + các field khác
+ */
+export enum QLCLDisplayStatus {
+  New = 0,                        // Mới
+  WaitingForPayment = 1,          // Chờ thanh toán
+  UnderReview = 2,                // Đang xem xét YC
+  Rejected = 3,                   // Từ chối (QLCL từ chối YC)
+  WaitingForAssignment = 4,       // Chờ giao việc
+  ToDo = 5,                       // Cần làm
+  Testing = 6,                    // Đang thử nghiệm
+  WaitingQLKTApproval = 7,        // Chờ QLKT phê duyệt
+  ResultRejected = 8,             // Từ chối KQ
+  WaitingQLCLApproval = 9,        // Chờ QLCL Duyệt
+  QLCLRejected = 10,              // QLCL từ chối
+  WaitingForPublishing = 11,      // Chờ phát hành
+  Published = 12                  // Đã phát hành báo cáo
+}
+
+export const QLCLDisplayStatusLabels: Record<QLCLDisplayStatus, string> = {
+  [QLCLDisplayStatus.New]: 'Mới',
+  [QLCLDisplayStatus.WaitingForPayment]: 'Chờ thanh toán',
+  [QLCLDisplayStatus.UnderReview]: 'Đang xem xét YC',
+  [QLCLDisplayStatus.Rejected]: 'Từ chối',
+  [QLCLDisplayStatus.WaitingForAssignment]: 'Chờ giao việc',
+  [QLCLDisplayStatus.ToDo]: 'Cần làm',
+  [QLCLDisplayStatus.Testing]: 'Đang thử nghiệm',
+  [QLCLDisplayStatus.WaitingQLKTApproval]: 'Chờ QLKT phê duyệt',
+  [QLCLDisplayStatus.ResultRejected]: 'Từ chối KQ',
+  [QLCLDisplayStatus.WaitingQLCLApproval]: 'Chờ QLCL Duyệt',
+  [QLCLDisplayStatus.QLCLRejected]: 'QLCL từ chối',
+  [QLCLDisplayStatus.WaitingForPublishing]: 'Chờ phát hành',
+  [QLCLDisplayStatus.Published]: 'Đã phát hành'
+};
+
+export const QLCLDisplayStatusColors: Record<QLCLDisplayStatus, string> = {
+  [QLCLDisplayStatus.New]: 'default',                    // Xám - mới
+  [QLCLDisplayStatus.WaitingForPayment]: 'gold',         // Vàng - chờ thanh toán
+  [QLCLDisplayStatus.UnderReview]: 'processing',         // Xanh dương nhạt - đang xử lý
+  [QLCLDisplayStatus.Rejected]: 'red',                   // Đỏ - từ chối
+  [QLCLDisplayStatus.WaitingForAssignment]: 'default',   // Xám - chờ giao việc
+  [QLCLDisplayStatus.ToDo]: 'blue',                      // Xanh - cần làm
+  [QLCLDisplayStatus.Testing]: 'processing',             // Xanh dương nhạt - đang TN
+  [QLCLDisplayStatus.WaitingQLKTApproval]: 'warning',    // Vàng cam - chờ QLKT duyệt
+  [QLCLDisplayStatus.ResultRejected]: 'error',           // Đỏ - từ chối KQ
+  [QLCLDisplayStatus.WaitingQLCLApproval]: 'purple',     // Tím - chờ QLCL
+  [QLCLDisplayStatus.QLCLRejected]: 'error',             // Đỏ - QLCL từ chối
+  [QLCLDisplayStatus.WaitingForPublishing]: 'cyan',      // Xanh cyan - chờ phát hành
+  [QLCLDisplayStatus.Published]: 'success'               // Xanh lá - đã phát hành
 };
 
 // Change History DTO (for ChangeApproval tasks)
@@ -133,6 +187,10 @@ export interface QualityManagementIndicatorDto {
   referenceLimit?: string;
   comparisonOperator?: string;  // Ký hiệu so sánh (<=, >=, <, >, =)
   allowedLimit?: string;  // Giới hạn cho phép
+  lowerOperator?: string;       // Ký hiệu cận dưới (>, >=) - cho khoảng
+  lowerLimit?: string;          // Giá trị cận dưới - cho khoảng
+  upperOperator?: string;       // Ký hiệu cận trên (<, <=) - cho khoảng
+  upperLimit?: string;          // Giá trị cận trên - cho khoảng
   approvalStatus: QualityIndicatorApprovalStatus;
   rejectionReason?: string;
   isResultSent: boolean;  // DEPRECATED
@@ -145,6 +203,7 @@ export interface QualityManagementIndicatorDto {
   images?: IndicatorImageDto[];  // Hình ảnh chỉ tiêu (max 5)
   freeTextNote?: string;  // Ghi chú tự do từ QLKT
   masterDataNotes?: string[];  // Danh sách nội dung Master Data Notes
+  parentIndicatorId?: string;  // ID chỉ tiêu cha (null nếu là chỉ tiêu gốc)
 }
 
 // Quality Indicator Status History DTO
@@ -351,6 +410,8 @@ export interface SampleAssignmentLogDto {
   // Status for highlighting
   indicatorApprovalStatus: IndicatorApprovalStatus;
   testingStatus?: TestingStatus;
+  qlktDisplayStatus?: QLKTDisplayStatus;
+  qlclDisplayStatus?: QLCLDisplayStatus;
   qualityApprovalStatus?: QualityIndicatorApprovalStatus;
   isReportPublished: boolean;
 }

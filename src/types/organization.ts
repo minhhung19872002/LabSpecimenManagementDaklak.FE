@@ -7,6 +7,7 @@ export interface OrganizationDto {
   taxCode?: string;
   contactPerson: string;
   phone: string;
+  secondaryPhone?: string;
   isActive: boolean;
   sortOrder: number;
   creationTime?: string;
@@ -21,6 +22,7 @@ export interface CreateUpdateOrganizationDto {
   taxCode?: string;
   contactPerson: string;
   phone: string;
+  secondaryPhone?: string;
   isActive: boolean;
   sortOrder?: number;
 }

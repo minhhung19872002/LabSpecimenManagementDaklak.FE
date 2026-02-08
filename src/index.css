@@ -32,6 +32,12 @@ code {
     monospace;
 }
 
+/* Ensure sub/sup tags inherit text color in Ant Design tables */
+.ant-table sub,
+.ant-table sup {
+  color: inherit;
+}
+
 /* Center all Ant Design Modals */
 .ant-modal {
   display: flex;
@@ -521,6 +527,35 @@ code {
   border-color: #FFFFFF !important;
 }
 
+/* ==================== Gradient Primary Button ==================== */
+.gradient-primary-btn {
+  background: var(--gradient-primary) !important;
+  border: none !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 2px 4px rgba(30, 99, 248, 0.3);
+}
+
+.gradient-primary-btn:hover {
+  opacity: 0.9;
+  box-shadow: 0 4px 8px rgba(30, 99, 248, 0.4);
+}
+
+.gradient-primary-btn > span,
+.gradient-primary-btn .anticon {
+  color: #FFFFFF !important;
+}
+
+.gradient-primary-btn:disabled {
+  background: #d9d9d9 !important;
+  color: rgba(0, 0, 0, 0.25) !important;
+  box-shadow: none;
+}
+
+.gradient-primary-btn:disabled > span,
+.gradient-primary-btn:disabled .anticon {
+  color: rgba(0, 0, 0, 0.25) !important;
+}
+
 /* ==================== Statistics Page Filter Bar ==================== */
 .statistics-filter-bar {
   display: flex;
@@ -640,7 +675,7 @@ code {
 }
 
 .statistics-detail-card .ant-card-body {
-  padding-top: 0 !important;
+  /* padding-top: 0 !important; */
 }
 
 /* Date Picker */

@@ -20,6 +20,7 @@ import {
 } from "./types";
 import { standardSchema, StandardFormData } from "./schemas/standardSchema";
 import { API_BASE_URL, api } from "../../../services/api";
+import { getApiErrorMessage } from "../../../utils/errorHandler";
 
 const StandardsList = forwardRef<StandardsActions, StandardsTabProps>(({
   onDataChange,
@@ -32,7 +33,9 @@ const StandardsList = forwardRef<StandardsActions, StandardsTabProps>(({
     expandedRowKeys,
     indicatorGroups,
     indicatorsByGroup,
+    specimenTypes,
     getMethodsForIndicator,
+    getIndicatorsBySpecimenType,
     setSearchText,
     setExpandedRowKeys,
     fetchData,
@@ -130,12 +133,8 @@ const StandardsList = forwardRef<StandardsActions, StandardsTabProps>(({
         formData
       );
       setPreviewData(response.data);
-    } catch (error: any) {
-      message.error(
-        error?.response?.data?.message ||
-          error?.response?.data?.error?.message ||
-          "Lỗi khi đọc file"
-      );
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Lỗi khi đọc file"));
     } finally {
       setImportLoading(false);
     }
@@ -166,12 +165,8 @@ const StandardsList = forwardRef<StandardsActions, StandardsTabProps>(({
       } else {
         message.error(result.message || "Lỗi khi import");
       }
-    } catch (error: any) {
-      message.error(
-        error?.response?.data?.message ||
-          error?.response?.data?.error?.message ||
-          "Lỗi khi import"
-      );
+    } catch (error: unknown) {
+      message.error(getApiErrorMessage(error, "Lỗi khi import"));
     } finally {
       setImportLoading(false);
     }
@@ -267,16 +262,21 @@ const StandardsList = forwardRef<StandardsActions, StandardsTabProps>(({
         standardName={selectedStandardName}
         indicatorGroups={indicatorGroups}
         indicatorsByGroup={indicatorsByGroup}
-        existingIndicatorIds={
+        specimenTypes={specimenTypes}
+        existingIndicatorKeys={
           selectedStandardId
             ? groupedData
                 .find((s) => s.id === selectedStandardId)
-                ?.indicators?.map((ind) => ind.indicatorId) || []
+                ?.indicators?.map((ind) => ({
+                  indicatorId: ind.indicatorId,
+                  specimenTypeId: ind.specimenTypeId,
+                })) || []
             : []
         }
         getMethodsForIndicator={getMethodsForIndicator}
-        onOk={(selectedIndicators, selectedMethods) =>
-          handleAddIndicatorsOk(addIndicatorsForm, selectedIndicators, selectedMethods)
+        getIndicatorsBySpecimenType={getIndicatorsBySpecimenType}
+        onOk={(selectedIndicators, selectedMethods, selectedSpecimenTypes) =>
+          handleAddIndicatorsOk(addIndicatorsForm, selectedIndicators, selectedMethods, selectedSpecimenTypes)
         }
         onCancel={() => handleAddIndicatorsCancel(addIndicatorsForm)}
       />

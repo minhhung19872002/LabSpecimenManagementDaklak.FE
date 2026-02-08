@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Table,
   Input,
@@ -10,6 +10,7 @@ import {
   Space,
   Checkbox,
 } from "antd";
+import type { SorterResult } from "antd/es/table/interface";
 import {
   SearchOutlined,
   PlusOutlined,
@@ -23,39 +24,71 @@ import { GroupedStandardData, StandardIndicatorDto } from "../types";
 import { StandardIndicatorWithPosition } from "../constants";
 import "./StandardsTable.css";
 
+// Sort config type for indicator tables
+interface IndicatorSortConfig {
+  field: string | null;
+  order: "ascend" | "descend" | null;
+}
+
 // Utility function to sort indicators by parent-child relationship
 // Parents first, then their sub-indicators grouped together
 // Also adds _isFirstSub and _isLastSub flags for tree line rendering
-const sortIndicatorsByHierarchy = (indicators: StandardIndicatorDto[]): StandardIndicatorWithPosition[] => {
+// IMPORTANT: Group by both parentIndicatorId AND specimenTypeId
+const sortIndicatorsByHierarchy = (
+  indicators: StandardIndicatorDto[],
+  sortConfig?: IndicatorSortConfig
+): StandardIndicatorWithPosition[] => {
   if (!indicators || indicators.length === 0) return [];
 
   // Separate parent indicators and sub-indicators
   const parents = indicators.filter(ind => !ind.parentIndicatorId);
   const subs = indicators.filter(ind => ind.parentIndicatorId);
 
-  // Group sub-indicators by parentIndicatorId
-  const subsByParent = new Map<string, StandardIndicatorDto[]>();
+  // Group sub-indicators by parentIndicatorId + specimenTypeId
+  // Key format: "parentIndicatorId|specimenTypeId"
+  const subsByParentAndSpecimen = new Map<string, StandardIndicatorDto[]>();
   subs.forEach(sub => {
-    const parentId = sub.parentIndicatorId!;
-    if (!subsByParent.has(parentId)) {
-      subsByParent.set(parentId, []);
+    const key = `${sub.parentIndicatorId}|${sub.specimenTypeId || ""}`;
+    if (!subsByParentAndSpecimen.has(key)) {
+      subsByParentAndSpecimen.set(key, []);
     }
-    subsByParent.get(parentId)!.push(sub);
+    subsByParentAndSpecimen.get(key)!.push(sub);
   });
 
   // Sort subs within each group by sortOrder
-  subsByParent.forEach((subList) => {
+  subsByParentAndSpecimen.forEach((subList) => {
     subList.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
   });
 
   // Build sorted result with position flags
   const result: StandardIndicatorWithPosition[] = [];
 
-  // First add parents with their subs (sorted by sortOrder)
-  const sortedParents = [...parents].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  // Sort parents based on sortConfig or default to sortOrder
+  let sortedParents = [...parents];
+  if (sortConfig?.field === "specimenTypeName" && sortConfig.order) {
+    const multiplier = sortConfig.order === "ascend" ? 1 : -1;
+    sortedParents.sort((a, b) => {
+      const codeA = a.specimenTypeCode || "";
+      const codeB = b.specimenTypeCode || "";
+      return multiplier * codeA.localeCompare(codeB, "vi");
+    });
+  } else {
+    // Default sort by sortOrder
+    sortedParents.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  }
+
   sortedParents.forEach(parent => {
-    result.push(parent);
-    const childSubs = subsByParent.get(parent.indicatorId);
+    // Match by both indicatorId AND specimenTypeId
+    const key = `${parent.indicatorId}|${parent.specimenTypeId || ""}`;
+    const childSubs = subsByParentAndSpecimen.get(key);
+    const hasSubIndicators = !!childSubs && childSubs.length > 0;
+
+    // Add parent with _hasSubIndicators flag
+    result.push({
+      ...parent,
+      _hasSubIndicators: hasSubIndicators,
+    });
+
     if (childSubs) {
       childSubs.forEach((sub, index) => {
         result.push({
@@ -64,15 +97,15 @@ const sortIndicatorsByHierarchy = (indicators: StandardIndicatorDto[]): Standard
           _isLastSub: index === childSubs.length - 1,
         });
       });
-      subsByParent.delete(parent.indicatorId);
+      subsByParentAndSpecimen.delete(key);
     }
   });
 
   // Then add orphaned sub-indicators (whose parent is not in the list)
-  // Group them together by parentIndicatorId
-  const orphanedParentIds = Array.from(subsByParent.keys());
-  orphanedParentIds.forEach(parentId => {
-    const orphanedSubs = subsByParent.get(parentId)!;
+  // Group them together by parentIndicatorId + specimenTypeId
+  const orphanedKeys = Array.from(subsByParentAndSpecimen.keys());
+  orphanedKeys.forEach(key => {
+    const orphanedSubs = subsByParentAndSpecimen.get(key)!;
     orphanedSubs.forEach((sub, index) => {
       result.push({
         ...sub,
@@ -122,6 +155,26 @@ const StandardsTable: React.FC<StandardsTableProps> = ({
   onExpandedRowsChange,
   onAddIndicators,
 }) => {
+  // Sort config for each standard's indicator table
+  const [indicatorSortConfigs, setIndicatorSortConfigs] = useState<
+    Record<string, IndicatorSortConfig>
+  >({});
+
+  // Handle sort change for indicator table
+  const handleIndicatorSortChange = (
+    standardId: string,
+    sorter: SorterResult<StandardIndicatorWithPosition> | SorterResult<StandardIndicatorWithPosition>[]
+  ) => {
+    const singleSorter = Array.isArray(sorter) ? sorter[0] : sorter;
+    setIndicatorSortConfigs(prev => ({
+      ...prev,
+      [standardId]: {
+        field: singleSorter.field as string || null,
+        order: singleSorter.order || null,
+      },
+    }));
+  };
+
   return (
     <>
       <Row
@@ -158,16 +211,19 @@ const StandardsTable: React.FC<StandardsTableProps> = ({
                     <>
                       {/* Indicator table with overlay header when selected */}
                       {(() => {
+                        // Get sort config for this standard
+                        const sortConfig = indicatorSortConfigs[standardRecord.id];
                         // Sort indicators by hierarchy (parent-child relationship)
-                        const sortedIndicators = sortIndicatorsByHierarchy(standardRecord.indicators);
+                        const sortedIndicators = sortIndicatorsByHierarchy(standardRecord.indicators, sortConfig);
 
-                        const indicatorIds = sortedIndicators.map(
-                          (ind) => ind.id,
-                        );
+                        // Only parent indicators can be selected (not sub-indicators)
+                        const selectableIndicatorIds = sortedIndicators
+                          .filter((ind) => !ind.parentIndicatorId)
+                          .map((ind) => ind.id);
                         const allSelected =
-                          indicatorIds.length > 0 &&
-                          indicatorIds.every((id) => selectedKeys.includes(id));
-                        const someSelected = indicatorIds.some((id) =>
+                          selectableIndicatorIds.length > 0 &&
+                          selectableIndicatorIds.every((id) => selectedKeys.includes(id));
+                        const someSelected = selectableIndicatorIds.some((id) =>
                           selectedKeys.includes(id),
                         );
 
@@ -219,7 +275,7 @@ const StandardsTable: React.FC<StandardsTableProps> = ({
                                       if (e.target.checked) {
                                         onSelectedIndicatorKeysChange({
                                           ...selectedIndicatorKeys,
-                                          [standardRecord.id]: indicatorIds,
+                                          [standardRecord.id]: selectableIndicatorIds,
                                         });
                                       } else {
                                         onSelectedIndicatorKeysChange({
@@ -296,11 +352,23 @@ const StandardsTable: React.FC<StandardsTableProps> = ({
                               </div>
                             )}
                             <Table
-                              columns={indicatorColumns}
+                              columns={indicatorColumns.map(col => {
+                                // Add sortOrder to specimenTypeName column
+                                if (col.key === "specimenTypeName") {
+                                  return {
+                                    ...col,
+                                    sortOrder: sortConfig?.field === "specimenTypeName" ? sortConfig.order : null,
+                                  };
+                                }
+                                return col;
+                              })}
                               dataSource={sortedIndicators}
                               rowKey="id"
                               pagination={false}
                               size="small"
+                              onChange={(_pagination, _filters, sorter) => {
+                                handleIndicatorSortChange(standardRecord.id, sorter);
+                              }}
                               rowClassName={(record) =>
                                 record.parentIndicatorId ? "sub-indicator-row" : ""
                               }
@@ -312,6 +380,11 @@ const StandardsTable: React.FC<StandardsTableProps> = ({
                                     [standardRecord.id]: keys as string[],
                                   });
                                 },
+                                // Hide checkbox for sub-indicators
+                                getCheckboxProps: (record) => ({
+                                  style: record.parentIndicatorId ? { display: 'none' } : undefined,
+                                  disabled: !!record.parentIndicatorId,
+                                }),
                                 columnTitle: (
                                   <Checkbox
                                     checked={allSelected}
@@ -320,7 +393,7 @@ const StandardsTable: React.FC<StandardsTableProps> = ({
                                       if (e.target.checked) {
                                         onSelectedIndicatorKeysChange({
                                           ...selectedIndicatorKeys,
-                                          [standardRecord.id]: indicatorIds,
+                                          [standardRecord.id]: selectableIndicatorIds,
                                         });
                                       } else {
                                         onSelectedIndicatorKeysChange({

@@ -424,10 +424,11 @@ function convertToSampleFormData(
       const sampleCode = `${sampleCodePrefix}/${String(sortOrder).padStart(2, "0")}`;
 
       // Convert indicators to IndicatorMethodKey format
+      // Note: specimenTypeId from imported Excel might be resolved later
       const indicatorMethods = item.indicators
         .filter((ind) => ind.indicatorId && ind.testMethodId)
         .map((ind) =>
-          createIndicatorMethodKey(ind.indicatorId!, ind.testMethodId!)
+          createIndicatorMethodKey(ind.indicatorId!, ind.testMethodId!, ind.specimenTypeId)
         );
 
       return {

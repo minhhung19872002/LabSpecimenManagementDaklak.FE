@@ -430,6 +430,18 @@
               0px 4px 8px rgba(0, 154, 227, 0.15);
 }
 
+/* Full-width white background strip when header is scrolled */
+.header-scroll-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 88px; /* Header top (24px) + header height (~64px) */
+  background: rgba(255, 255, 255, 0.95);
+  z-index: 99; /* Below header (100) */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
 .header-left {
   display: flex;
   flex-direction: row;
@@ -510,7 +522,7 @@
   border: 1px solid transparent;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 16px;
   color: #FFFFFF;
   transition: all 0.2s ease;
   white-space: nowrap;
@@ -581,7 +593,7 @@
   border-radius: 24px;
   border: 2px solid transparent;
   transition: all 0.2s ease;
-  font-size: 14px;
+  font-size: 16px;
   color: #262626;
   white-space: nowrap;
 }
@@ -826,6 +838,11 @@
   .header-right {
     gap: 4px;
   }
+
+  /* Adjust header background strip on mobile */
+  .header-scroll-bg {
+    height: 60px; /* Mobile: header top (12px) + header height (~48px) */
+  }
 }
 
 /* Tablet adjustments - header 2 rows when narrow */
@@ -859,6 +876,11 @@
     justify-content: center;
     padding-top: 4px;
     border-top: 1px solid #F0F0F0;
+  }
+
+  /* Adjust header background strip on tablet */
+  .header-scroll-bg {
+    height: 133px; /* Tablet: header top (20px) + header height (~113px with 2 rows) */
   }
 
   /* Adjust dropdown width on tablet */

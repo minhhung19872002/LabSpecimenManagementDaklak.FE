@@ -54,7 +54,7 @@ export const useSampleAssignmentLog = (): UseSampleAssignmentLogResult => {
       const input: GetSampleAssignmentLogInput = {
         skipCount: (pagination.current - 1) * pagination.pageSize,
         maxResultCount: pagination.pageSize,
-        sorting: 'RequestCompletionDate asc',
+        sorting: 'ContractNumber desc',
         search: searchText || undefined,
         testRequestStatus: statusFilter,
       };
@@ -96,8 +96,17 @@ export const useSampleAssignmentLog = (): UseSampleAssignmentLogResult => {
   }, []);
 
   const handleRowDoubleClick = useCallback((record: SampleAssignmentLogDto) => {
-    // Navigate to QualityManagement detail page
-    navigate(`/quality-management/${record.qualityTaskId}`);
+    // Navigate based on available IDs
+    if (record.qualityTaskId) {
+      // Đã gửi QLCL → trang chi tiết QLCL
+      navigate(`/quality-management/${record.qualityTaskId}`);
+    } else if (record.laboratoryTaskId) {
+      // Đã gửi Lab nhưng chưa gửi QLCL → trang chi tiết Lab task
+      navigate(`/testing/${record.laboratoryTaskId}`);
+    } else {
+      // Chưa gửi Lab → trang chi tiết phiếu yêu cầu
+      navigate(`/test-requests/${record.testRequestId}`);
+    }
   }, [navigate]);
 
   const handleReload = useCallback(() => {

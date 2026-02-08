@@ -282,23 +282,39 @@ const QualityManagementDetail: React.FC = () => {
 
   // Computed
   const indicators = task?.indicators || [];
-  const approvedCount = indicators.filter(
+
+  // Helper: check if an indicator is a parent with children in the list
+  const isParentWithChildren = useCallback(
+    (indicator: QualityManagementIndicatorDto): boolean => {
+      if (indicator.parentIndicatorId) return false; // Đây là sub-indicator
+      // Kiểm tra xem có sub-indicators nào có parentIndicatorId === indicator.indicatorId AND cùng methodId
+      return indicators.some(
+        (ind) =>
+          ind.parentIndicatorId === indicator.indicatorId &&
+          ind.methodId === indicator.methodId
+      );
+    },
+    [indicators]
+  );
+
+  // Filter out parent indicators with children for counting
+  const activeIndicators = indicators.filter((ind) => !isParentWithChildren(ind));
+
+  const approvedCount = activeIndicators.filter(
     (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Approved,
   ).length;
-  const pendingCount = indicators.filter(
+  const pendingCount = activeIndicators.filter(
     (ind) =>
       ind.approvalStatus === QualityIndicatorApprovalStatus.PendingApproval,
   ).length;
-  const rejectedCount = indicators.filter(
+  const rejectedCount = activeIndicators.filter(
     (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Rejected,
   ).length;
 
   // Button states
-  // In KQ: chỉ khi có chỉ tiêu đã duyệt và status >= PendingPublish
-  const canPrint =
-    approvedCount > 0 &&
-    task?.status !== QualityManagementStatus.PendingApproval &&
-    task?.status !== QualityManagementStatus.Rejected;
+  // In KQ: cho phép in nếu có ÍT NHẤT 1 chỉ tiêu đã được duyệt
+  // (không cần quan tâm task.status - có thể vẫn đang PendingApproval nếu còn chỉ tiêu chưa duyệt)
+  const canPrint = approvedCount > 0;
 
   // Status tag
   const getStatusTag = (status: QualityManagementStatus) => (

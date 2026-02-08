@@ -46,7 +46,7 @@ import {
   Province,
   Ward,
 } from "../../../../utils/vietnamLocations";
-import { LOCKED_FIELDS, HEAVY_METAL_COMBO_INDICATORS, HEAVY_METAL_FREE_INDICATOR } from "../constants";
+import { LOCKED_FIELDS, isHeavyMetalComboMet, isHgIndicator } from "../constants";
 import {
   SampleFormData,
   IndicatorDateInfo,
@@ -290,6 +290,7 @@ export const useTestRequestFormData = () => {
       setIndicatorToSpecimenTypesMap(indToSpecMap);
 
       // Build map: indicatorId -> methods[]
+      // Cùng 1 chỉ tiêu + phương pháp có thể có nhiều nền mẫu khác nhau
       const methodMap: Record<string, IndicatorMethodInfo[]> = {};
       (methodsData || []).forEach((method) => {
         method.indicators?.forEach((ind) => {
@@ -305,6 +306,10 @@ export const useTestRequestFormData = () => {
               unitPrice: ind.unitPrice,
               isActive: ind.isActive,
               parentIndicatorId: ind.parentIndicatorId,
+              // Include specimen type info for proper differentiation
+              specimenTypeId: ind.specimenTypeId,
+              specimenTypeCode: ind.specimenTypeCode,
+              specimenTypeName: ind.specimenTypeName,
             });
           }
         });
@@ -404,9 +409,8 @@ export const useTestRequestFormData = () => {
     }
   };
 
-  // Handle phone blur - search organization by phone
-  const handlePhoneBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
-    const phoneValue = e.target.value?.trim();
+  // Shared function to auto-fill customer info by phone number
+  const autoFillByPhone = async (phoneValue: string) => {
     if (!phoneValue) return;
 
     const foundOrg = organizations.find((org) => org.phone === phoneValue);
@@ -439,6 +443,18 @@ export const useTestRequestFormData = () => {
         phone: foundOrg.phone,
       });
     }
+  };
+
+  // Handle phone blur - search organization by phone
+  const handlePhoneBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
+    const phoneValue = e.target.value?.trim();
+    await autoFillByPhone(phoneValue);
+  };
+
+  // Handle phone Enter key press - search organization by phone
+  const handlePhoneEnter = async () => {
+    const phoneValue = form.getFieldValue('phone')?.trim();
+    await autoFillByPhone(phoneValue);
   };
 
   // Handle specimen type search for autocomplete with debounce (case-insensitive)
@@ -571,11 +587,13 @@ export const useTestRequestFormData = () => {
             (ind) => ind.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled
           ) || [];
 
-          // Build indicatorMethods from active indicators (indicatorId + testMethodId)
+          // Build indicatorMethods from active indicators (indicatorId + testMethodId + specimenTypeId)
+          // Note: specimenTypeId now comes from the indicator itself (stored when user selects from specific specimen type)
           const indicatorMethods: IndicatorMethodKey[] = [];
           activeIndicators.forEach((ind) => {
             if (ind.indicatorId && ind.testMethodId) {
-              indicatorMethods.push(createIndicatorMethodKey(ind.indicatorId, ind.testMethodId));
+              // Use indicator's specimenTypeId for the key (to correctly identify which specimen type price was selected)
+              indicatorMethods.push(createIndicatorMethodKey(ind.indicatorId, ind.testMethodId, ind.specimenTypeId));
             }
           });
 
@@ -637,9 +655,9 @@ export const useTestRequestFormData = () => {
           ) || [];
 
           activeIndicators.forEach((ind) => {
-            // Create IndicatorMethodKey for each indicator
+            // Create IndicatorMethodKey for each indicator (include indicator's specimenTypeId)
             const methodKey = ind.testMethodId
-              ? createIndicatorMethodKey(ind.indicatorId, ind.testMethodId)
+              ? createIndicatorMethodKey(ind.indicatorId, ind.testMethodId, ind.specimenTypeId)
               : ind.indicatorId; // Fallback for old data without testMethodId
 
             // Store the TestRequestSampleIndicator.id for this indicator
@@ -732,10 +750,11 @@ export const useTestRequestFormData = () => {
         const sampleCode = generateSampleCode(sampleCodePrefix, sampleIndex + 1);
 
         // Get indicators from quotation sample
+        // Note: Quotation samples don't have specimenTypeId yet, it will be set later
         const indicatorMethodsList: IndicatorMethodKey[] = [];
         quotationSample.indicators.forEach((indicator) => {
           const testMethodId = indicator.testMethodId || "";
-          const methodKey = createIndicatorMethodKey(indicator.indicatorId, testMethodId);
+          const methodKey = createIndicatorMethodKey(indicator.indicatorId, testMethodId, undefined);
           indicatorMethodsList.push(methodKey);
 
           // Set dates for indicators (requestDate để trống theo yêu cầu KH)
@@ -788,22 +807,23 @@ export const useTestRequestFormData = () => {
       const sampleIndicatorNames = (sample.indicatorMethods || []).map((methodKey) => {
         const { indicatorId } = parseIndicatorMethodKey(methodKey);
         const ind = indicators.find((i) => i.id === indicatorId);
-        return ind?.name?.trim();
+        return ind?.name;
       });
-      const isSampleComboMet = HEAVY_METAL_COMBO_INDICATORS.every(
-        (name) => sampleIndicatorNames.includes(name)
-      );
+      const isSampleComboMet = isHeavyMetalComboMet(sampleIndicatorNames);
 
       // New logic: use indicatorMethods if available
       if (sample.indicatorMethods && sample.indicatorMethods.length > 0) {
         sample.indicatorMethods.forEach((key) => {
-          const { indicatorId, testMethodId } = parseIndicatorMethodKey(key);
+          const { indicatorId, testMethodId, specimenTypeId } = parseIndicatorMethodKey(key);
           const methods = indicatorMethodsMap[indicatorId] || [];
-          const method = methods.find((m) => m.testMethodId === testMethodId);
+          // Must match both testMethodId AND specimenTypeId to get correct price
+          const method = methods.find(
+            (m) => m.testMethodId === testMethodId && (m.specimenTypeId || null) === specimenTypeId
+          );
           if (method) {
             // Hg miễn phí khi đủ combo kim loại nặng
             const ind = indicators.find((i) => i.id === indicatorId);
-            const isHgFree = isSampleComboMet && ind?.name?.trim() === HEAVY_METAL_FREE_INDICATOR;
+            const isHgFree = isSampleComboMet && isHgIndicator(ind?.name);
             total += isHgFree ? 0 : method.unitPrice;
           }
         });
@@ -813,7 +833,7 @@ export const useTestRequestFormData = () => {
           const methods = indicatorMethodsMap[indId] || [];
           if (methods.length > 0) {
             const ind = indicators.find((i) => i.id === indId);
-            const isHgFree = isSampleComboMet && ind?.name?.trim() === HEAVY_METAL_FREE_INDICATOR;
+            const isHgFree = isSampleComboMet && isHgIndicator(ind?.name);
             total += isHgFree ? 0 : methods[0].unitPrice;
           }
         });
@@ -834,10 +854,13 @@ export const useTestRequestFormData = () => {
 
   // Get indicator and method info from IndicatorMethodKey
   const getIndicatorMethodInfo = (key: IndicatorMethodKey) => {
-    const { indicatorId, testMethodId } = parseIndicatorMethodKey(key);
+    const { indicatorId, testMethodId, specimenTypeId } = parseIndicatorMethodKey(key);
     let indicator = indicators.find((i) => i.id === indicatorId);
     const methods = indicatorMethodsMap[indicatorId] || [];
-    const method = methods.find((m) => m.testMethodId === testMethodId);
+    // Must match both testMethodId AND specimenTypeId to get correct price for each specimen type
+    const method = methods.find(
+      (m) => m.testMethodId === testMethodId && (m.specimenTypeId || null) === specimenTypeId
+    );
 
     // Fallback: If indicator not found in indicators list (e.g., sub-indicators),
     // create indicator-like object from testMethods data
@@ -853,6 +876,7 @@ export const useTestRequestFormData = () => {
           isActive: tmIndicator.isActive,
           indicatorGroupId: "", // Not available in test method data
           sortOrder: tmIndicator.sortOrder,
+          parentIndicatorId: tmIndicator.parentIndicatorId, // For sub-indicator detection
         } as IndicatorDto;
       }
     }
@@ -1031,6 +1055,7 @@ export const useTestRequestFormData = () => {
     handleSpecimenTypeSelect,
     handleOrganizationSelect,
     handlePhoneBlur,
+    handlePhoneEnter,
 
     // Sample Condition handlers
     sampleConditions,

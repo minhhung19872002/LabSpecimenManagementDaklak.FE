@@ -43,7 +43,10 @@ import "../TestRequest/TestRequestDetail.css";
 const { Title, Text } = Typography;
 
 // BoolTag component - same style as TestRequest detail
-const BoolTag: React.FC<{ value: boolean; label: string }> = ({ value, label }) => (
+const BoolTag: React.FC<{ value: boolean; label: string }> = ({
+  value,
+  label,
+}) => (
   <Tag
     icon={value ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
     style={{
@@ -325,7 +328,7 @@ const ReceiptDetail: React.FC = () => {
       render: (text: string | undefined) => text || "-",
     },
     {
-      title: "Chỉ tiêu kiểm nghiệm",
+      title: "Chỉ tiêu thử nghiệm",
       dataIndex: "indicators",
       key: "indicators",
       width: 150,
@@ -372,7 +375,7 @@ const ReceiptDetail: React.FC = () => {
         return (
           <Popover
             content={popoverContent}
-            title={`Chỉ tiêu kiểm nghiệm (${indicators.length})`}
+            title={`Chỉ tiêu thử nghiệm (${indicators.length})`}
             trigger="click"
             placement="bottomLeft"
           >
@@ -505,7 +508,9 @@ const ReceiptDetail: React.FC = () => {
             {/* Section 1: Thông tin hợp đồng */}
             <div className="detail-sections-flex">
               <div className="detail-section">
-                <Title level={5} style={{ marginBottom: 12 }}>Thông tin hợp đồng</Title>
+                <Title level={5} style={{ marginBottom: 12 }}>
+                  Thông tin hợp đồng
+                </Title>
                 <div className="detail-column-list">
                   <div className="detail-item">
                     <Text type="secondary">Số HĐ:</Text>
@@ -538,7 +543,9 @@ const ReceiptDetail: React.FC = () => {
             {/* Section 2: Thông tin khách hàng */}
             <div className="detail-sections-flex">
               <div className="detail-section">
-                <Title level={5} style={{ marginBottom: 12 }}>Thông tin khách hàng</Title>
+                <Title level={5} style={{ marginBottom: 12 }}>
+                  Thông tin khách hàng
+                </Title>
                 <div className="detail-column-list">
                   <div className="detail-item">
                     <Text type="secondary">Tên CS/DN:</Text>
@@ -573,7 +580,11 @@ const ReceiptDetail: React.FC = () => {
           {/* Section 3: Thông tin mẫu */}
           <Card
             className="list-card"
-            title={<span>Thông tin mẫu ({testRequest.samples?.length || 0} mẫu)</span>}
+            title={
+              <span>
+                Thông tin mẫu ({testRequest.samples?.length || 0} mẫu)
+              </span>
+            }
             styles={{ body: { padding: 0 } }}
           >
             <Table
@@ -593,13 +604,30 @@ const ReceiptDetail: React.FC = () => {
             <div className="detail-bottom-left">
               {/* Section 4: Loại hình mẫu */}
               <div className="detail-section">
-                <Title level={5} style={{ marginBottom: 12 }}>Loại hình mẫu</Title>
+                <Title level={5} style={{ marginBottom: 12 }}>
+                  Loại hình mẫu
+                </Title>
                 <div className="detail-column-list">
-                  <div className="sample-type-tags" style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-                    <BoolTag value={testRequest.sampleTypeService} label="Dịch vụ" />
-                    <BoolTag value={testRequest.sampleTypeContract} label="Hợp đồng" />
-                    <BoolTag value={testRequest.sampleTypeTask} label="Nhiệm vụ" />
-                    <BoolTag value={testRequest.sampleTypeSubContract} label="Thầu phụ" />
+                  <div
+                    className="sample-type-tags"
+                    style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}
+                  >
+                    <BoolTag
+                      value={testRequest.sampleTypeService}
+                      label="Dịch vụ"
+                    />
+                    <BoolTag
+                      value={testRequest.sampleTypeContract}
+                      label="Hợp đồng"
+                    />
+                    <BoolTag
+                      value={testRequest.sampleTypeTask}
+                      label="Nhiệm vụ"
+                    />
+                    <BoolTag
+                      value={testRequest.sampleTypeSubContract}
+                      label="Thầu phụ"
+                    />
                   </div>
                   {testRequest.subContract && (
                     <div className="detail-item">
@@ -612,11 +640,22 @@ const ReceiptDetail: React.FC = () => {
 
               {/* Section 5: Yêu cầu về phương pháp */}
               <div className="detail-section">
-                <Title level={5} style={{ marginBottom: 12 }}>Yêu cầu về phương pháp</Title>
+                <Title level={5} style={{ marginBottom: 12 }}>
+                  Yêu cầu về phương pháp
+                </Title>
                 <div className="detail-column-list">
-                  <div className="sample-type-tags" style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-                    <BoolTag value={testRequest.methodWestHighlandInstitute} label="Theo Viện KHKT NN Tây Nguyên" />
-                    <BoolTag value={testRequest.methodCustomer} label="Theo yêu cầu khách hàng" />
+                  <div
+                    className="sample-type-tags"
+                    style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}
+                  >
+                    <BoolTag
+                      value={testRequest.methodWestHighlandInstitute}
+                      label="Theo Viện VS DT Tây Nguyên"
+                    />
+                    <BoolTag
+                      value={testRequest.methodCustomer}
+                      label="Theo yêu cầu khách hàng"
+                    />
                   </div>
                   {testRequest.methodCustomerDetail && (
                     <div className="detail-item">
@@ -631,7 +670,9 @@ const ReceiptDetail: React.FC = () => {
             <div className="detail-bottom-right">
               {/* Section 6: Thông tin chi phí */}
               <div className="detail-section">
-                <Title level={5} style={{ marginBottom: 12 }}>Thông tin chi phí</Title>
+                <Title level={5} style={{ marginBottom: 12 }}>
+                  Thông tin chi phí
+                </Title>
                 <div className="detail-column-list">
                   <div
                     style={{
@@ -666,11 +707,10 @@ const ReceiptDetail: React.FC = () => {
           {/* Payment info if paid */}
           {data.status === ReceiptStatus.Paid && data.paidDate && (
             <div className="detail-section">
-              <Title level={5} style={{ marginBottom: 12 }}>Thông tin thanh toán</Title>
-              <Tag
-                color="green"
-                style={{ fontSize: 14, padding: "4px 12px" }}
-              >
+              <Title level={5} style={{ marginBottom: 12 }}>
+                Thông tin thanh toán
+              </Title>
+              <Tag color="green" style={{ fontSize: 14, padding: "4px 12px" }}>
                 Đã thanh toán ngày{" "}
                 {dayjs(data.paidDate).format("DD/MM/YYYY HH:mm")}
               </Tag>

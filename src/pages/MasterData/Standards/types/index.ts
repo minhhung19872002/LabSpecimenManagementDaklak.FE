@@ -41,8 +41,12 @@ export interface ImportValidationResult {
 
 export interface StandardIndicatorImportItem {
   rowNumber: number;
+  specimenTypeName: string;
+  specimenTypeId?: string;
   indicatorName: string;
   indicatorId?: string;
+  subIndicatorName?: string;
+  subIndicatorId?: string;
   testMethodName: string;
   testMethodId?: string;
   unit: string;
