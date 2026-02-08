@@ -14,10 +14,12 @@ import {
   specimenTypeService,
   sampleConditionService,
   sampleTypeCategoryService,
+  formTemplateService,
 } from '../masterDataService';
 import { userService } from '../userService';
 import { organizationService } from '../organizationService';
-import { cacheEntity, getDB } from './db';
+import { cacheEntity, cacheDocumentTemplate, hasDocumentTemplate, getDB } from './db';
+import { TEMPLATE_NAMES, TEMPLATE_FILE_NAMES } from './offlinePrintService';
 
 // Track prefetch status
 let isPrefetching = false;
@@ -62,6 +64,7 @@ export async function prefetchMasterData(): Promise<void> {
       prefetchSampleTypeCategories(),
       prefetchUsers(),
       prefetchOrganizations(),
+      prefetchDocumentTemplates(),
     ]);
 
     // Log results
@@ -224,6 +227,37 @@ async function prefetchOrganizations(): Promise<void> {
     console.log(`Cached ${data.length} organizations`);
   } catch (error) {
     console.error('Failed to prefetch organizations:', error);
+    throw error;
+  }
+}
+
+/**
+ * Prefetch document templates for offline printing
+ */
+async function prefetchDocumentTemplates(): Promise<void> {
+  try {
+    // Check if already cached (to avoid re-downloading large files)
+    const alreadyCached = await hasDocumentTemplate(TEMPLATE_NAMES.TEST_REQUEST_FORM);
+    if (alreadyCached) {
+      console.log('Document templates already cached, skipping');
+      return;
+    }
+
+    // Download the test request form template (BM05)
+    const templateFileName = TEMPLATE_FILE_NAMES[TEMPLATE_NAMES.TEST_REQUEST_FORM];
+    const templateBlob = await formTemplateService.download(templateFileName);
+
+    // Cache the template
+    await cacheDocumentTemplate(
+      TEMPLATE_NAMES.TEST_REQUEST_FORM,
+      templateFileName,
+      templateBlob,
+      new Date().toISOString() // Simple version tracking
+    );
+
+    console.log('Cached test request form template for offline printing');
+  } catch (error) {
+    console.error('Failed to prefetch document templates:', error);
     throw error;
   }
 }
