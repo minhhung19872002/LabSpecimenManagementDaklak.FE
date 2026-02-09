@@ -1004,11 +1004,18 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     // Apply search filter (normalize Unicode to handle different compositions of Vietnamese diacritics)
     if (indicatorSearchText.trim()) {
       const searchNorm = indicatorSearchText.trim().normalize("NFC").toLowerCase();
-      activeIndicators = activeIndicators.filter(
-        (ind) =>
-          ind.name.normalize("NFC").toLowerCase().includes(searchNorm) ||
-          ind.code?.normalize("NFC").toLowerCase().includes(searchNorm),
-      );
+      activeIndicators = activeIndicators.filter((ind) => {
+        const nameNorm = ind.name.normalize("NFC").toLowerCase();
+        const codeNorm = ind.code?.normalize("NFC").toLowerCase();
+        if (nameNorm.includes(searchNorm) || codeNorm?.includes(searchNorm)) {
+          return true;
+        }
+        // Search theo tên phương pháp
+        const methods = indicatorMethodsMap[ind.id]?.filter((m) => m.isActive) || [];
+        return methods.some((m) =>
+          m.testMethodName?.normalize("NFC").toLowerCase().includes(searchNorm),
+        );
+      });
     }
 
     // Build map: indicatorId -> specimenTypeIds (từ indicatorMethodsMap thay vì specimenTypesWithIndicators)
