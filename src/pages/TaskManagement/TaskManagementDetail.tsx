@@ -186,7 +186,10 @@ const TaskManagementDetail: React.FC = () => {
   ]);
 
   // Check quyền xem chi tiết task từ Permission Matrix
-  const hasViewDetailPermission = actionPermissions.viewDetail?.canAll || actionPermissions.viewDetail?.canView || false;
+  const hasViewDetailPermission =
+    actionPermissions.viewDetail?.canAll ||
+    actionPermissions.viewDetail?.canView ||
+    false;
 
   // Check if current user is a supporter of this task
   const isCurrentUserSupporter = useMemo(() => {
@@ -206,8 +209,13 @@ const TaskManagementDetail: React.FC = () => {
   // - Hoặc là supporter của task
   // - Hoặc là department supporter của khoa phòng
   // - Hoặc là QLKT sở hữu task (isCurrentUserTechnicalManager)
-  const isCurrentUserDeptSupporter = task?.isCurrentUserDepartmentSupporter || false;
-  const canViewTaskDetail = hasViewDetailPermission || isCurrentUserSupporter || isCurrentUserDeptSupporter || task?.isCurrentUserTechnicalManager;
+  const isCurrentUserDeptSupporter =
+    task?.isCurrentUserDepartmentSupporter || false;
+  const canViewTaskDetail =
+    hasViewDetailPermission ||
+    isCurrentUserSupporter ||
+    isCurrentUserDeptSupporter ||
+    task?.isCurrentUserTechnicalManager;
 
   // Redirect đến 403 nếu không có quyền xem (sau khi đã load task xong)
   useEffect(() => {
@@ -221,21 +229,27 @@ const TaskManagementDetail: React.FC = () => {
   // QLKT (A) = canAll, Admin (V) = canView, Supporter = same as QLKT (except addSupporter)
   // Người hỗ trợ (per-task + department) có quyền: giao KTV, duyệt/từ chối, gửi QLCL
   // Người hỗ trợ KHÔNG có quyền: xóa task, thêm supporter khác
-  const isSupporterOrDeptSupporter = isCurrentUserSupporter || isCurrentUserDeptSupporter;
+  const isSupporterOrDeptSupporter =
+    isCurrentUserSupporter || isCurrentUserDeptSupporter;
   const canAssignTesting =
-    actionPermissions.assignTesting?.canAll || isSupporterOrDeptSupporter || false;
+    actionPermissions.assignTesting?.canAll ||
+    isSupporterOrDeptSupporter ||
+    false;
   const canAddSupporter = actionPermissions.addSupporter?.canAll || false; // Supporter KHÔNG có quyền thêm supporter khác
   const canEditMethod =
     actionPermissions.editMethod?.canAll || isSupporterOrDeptSupporter || false;
   const canApproveResult =
-    actionPermissions.approveResult?.canAll || isSupporterOrDeptSupporter || false;
+    actionPermissions.approveResult?.canAll ||
+    isSupporterOrDeptSupporter ||
+    false;
 
   // Check if current user can manage supporters (chỉ QLKT của task hoặc có quyền addSupporter)
   // Supporter KHÔNG có quyền này
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _canManageSupporters = useMemo(() => {
     return canAddSupporter || (task?.isCurrentUserTechnicalManager ?? false);
-  }, [canAddSupporter, task?.isCurrentUserTechnicalManager]); void _canManageSupporters;
+  }, [canAddSupporter, task?.isCurrentUserTechnicalManager]);
+  void _canManageSupporters;
 
   // Load task data
   const loadTask = useCallback(async () => {
@@ -318,7 +332,7 @@ const TaskManagementDetail: React.FC = () => {
           !ind.standardId &&
           !processedIndicatorsRef.current.has(ind.id) &&
           ind.approvalStatus !== IndicatorApprovalStatus.Approved &&
-          ind.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled
+          ind.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled,
       );
 
       if (indicatorsNeedingStandard.length === 0) return;
@@ -336,8 +350,10 @@ const TaskManagementDetail: React.FC = () => {
               si.indicatorId === indicator.indicatorId &&
               si.isActive === true &&
               (!indicator.methodId || si.testMethodId === indicator.methodId) &&
-              (!indicator.specimenTypeId || !si.specimenTypeId || si.specimenTypeId === indicator.specimenTypeId)
-          )
+              (!indicator.specimenTypeId ||
+                !si.specimenTypeId ||
+                si.specimenTypeId === indicator.specimenTypeId),
+          ),
         );
 
         if (matchingStandards.length > 0) {
@@ -346,7 +362,7 @@ const TaskManagementDetail: React.FC = () => {
             // Call API to update standardId
             await laboratoryTaskService.updateIndicatorStandard(
               indicator.id,
-              firstStandard.id
+              firstStandard.id,
             );
             // Update local state
             setStandardSelections((prev) => ({
@@ -356,7 +372,7 @@ const TaskManagementDetail: React.FC = () => {
           } catch (error) {
             console.error(
               `Failed to auto-set standard for indicator ${indicator.id}:`,
-              error
+              error,
             );
             // Remove from processed set so it can be retried
             processedIndicatorsRef.current.delete(indicator.id);
@@ -1195,7 +1211,7 @@ const TaskManagementDetail: React.FC = () => {
 
     // Check if all indicators are Approved (QLKT đã duyệt hết)
     const allApproved = task.indicators?.every(
-      (ind) => ind.approvalStatus === IndicatorApprovalStatus.Approved
+      (ind) => ind.approvalStatus === IndicatorApprovalStatus.Approved,
     );
     return allApproved === true;
   }, [task]);
@@ -1330,7 +1346,7 @@ const TaskManagementDetail: React.FC = () => {
   // Check if task has any indicators that have been accepted for testing
   // These indicators can be assigned even during evaluation phase
   const hasAcceptedIndicators = task?.indicators?.some(
-    (ind) => ind.approvalStatus === IndicatorApprovalStatus.AcceptedForTesting
+    (ind) => ind.approvalStatus === IndicatorApprovalStatus.AcceptedForTesting,
   );
 
   // Helper function: check if an indicator is a parent with children in the list
@@ -1343,11 +1359,11 @@ const TaskManagementDetail: React.FC = () => {
         task?.indicators?.some(
           (ind) =>
             ind.parentIndicatorId === indicator.indicatorId &&
-            ind.methodId === indicator.methodId
+            ind.methodId === indicator.methodId,
         ) ?? false
       );
     },
-    [task?.indicators]
+    [task?.indicators],
   );
 
   // Count indicators excluding parent indicators with children (for display purposes)
@@ -1687,8 +1703,8 @@ const TaskManagementDetail: React.FC = () => {
               description={
                 <>
                   <div>
-                    Đây là mẫu chung. Lab Vi Sinh chưa gửi mẫu vật lý.
-                    Bạn vẫn có thể đánh giá và phân công công việc song song.
+                    Đây là mẫu chung. Lab Vi Sinh chưa gửi mẫu vật lý. Bạn vẫn
+                    có thể đánh giá và phân công công việc song song.
                   </div>
                 </>
               }
@@ -1725,7 +1741,7 @@ const TaskManagementDetail: React.FC = () => {
             />
           )}
 
-          {/* Alert và button khi Lab Vi Sinh cần gửi mẫu cho Hóa */}
+          {/* Alert và button khi Lab Vi Sinh cần gửi mẫu cho Lab Hóa */}
           {canSendSharedSample && (
             <Alert
               message="Mẫu chung - Cần gửi cho Lab Hóa"
@@ -1843,7 +1859,8 @@ const TaskManagementDetail: React.FC = () => {
                   Ngày TN:
                 </Text>
                 <Text>
-                  {task.testDateRange || (task.testDate ? formatDate(task.testDate) : "Chưa đặt")}
+                  {task.testDateRange ||
+                    (task.testDate ? formatDate(task.testDate) : "Chưa đặt")}
                 </Text>
               </div>
             </Col>
@@ -1919,7 +1936,8 @@ const TaskManagementDetail: React.FC = () => {
                 canEvaluate={
                   canApproveResult &&
                   (task.status === LaboratoryTaskStatus.UnderEvaluation ||
-                    task.status === LaboratoryTaskStatus.WaitingCustomerResponse ||
+                    task.status ===
+                      LaboratoryTaskStatus.WaitingCustomerResponse ||
                     // Cho phép evaluate khi task đã ở trạng thái sau nhưng còn indicator Pending (gửi QLKT sau)
                     ((task.status === LaboratoryTaskStatus.FullyAccepted ||
                       task.status === LaboratoryTaskStatus.PartialAccepted ||
@@ -1929,9 +1947,12 @@ const TaskManagementDetail: React.FC = () => {
                       task.status === LaboratoryTaskStatus.SentToQuality) &&
                       (task.indicators?.some(
                         (ind) =>
-                          ind.approvalStatus === IndicatorApprovalStatus.Pending ||
-                          ind.approvalStatus === IndicatorApprovalStatus.CannotTest
-                      ) ?? false)))
+                          ind.approvalStatus ===
+                            IndicatorApprovalStatus.Pending ||
+                          ind.approvalStatus ===
+                            IndicatorApprovalStatus.CannotTest,
+                      ) ??
+                        false)))
                 }
                 loading={loading}
                 onEvaluationComplete={reloadData}
