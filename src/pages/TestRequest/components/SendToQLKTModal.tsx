@@ -708,9 +708,9 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
             size="small"
             style={{ width: 110, flexShrink: 0, marginTop: 2 }}
             placeholder="Ngày YC"
-            disabledDate={(current) => {
-              return current && current.isBefore(dayjs().startOf("day"));
-            }}
+            // disabledDate={(current) => {
+            //   return current && current.isBefore(dayjs().startOf("day"));
+            // }}
           />
         )}
         {/* Laboratory select - hidden for sub-indicators */}
@@ -869,7 +869,13 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
             <Spin />
           </div>
         ) : (
-          <div style={{ maxHeight: "70vh", overflowY: "auto", overflowX: "hidden" }}>
+          <div
+            style={{
+              maxHeight: "70vh",
+              overflowY: "auto",
+              overflowX: "hidden",
+            }}
+          >
             {/* Bulk action bar */}
             <div
               style={{
@@ -903,9 +909,9 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
                 format="DD/MM/YYYY"
                 onChange={handleApplyRequestDateToChecked}
                 disabled={checkedParentCount === 0}
-                disabledDate={(current) => {
-                  return current && current.isBefore(dayjs().startOf("day"));
-                }}
+                // disabledDate={(current) => {
+                //   return current && current.isBefore(dayjs().startOf("day"));
+                // }}
               />
             </div>
 
@@ -926,9 +932,7 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
                   }}
                 >
                   <div style={{ width: 24, flexShrink: 0 }}></div>
-                  <div style={{ flex: 1, minWidth: 120 }}>
-                    Chỉ tiêu
-                  </div>
+                  <div style={{ flex: 1, minWidth: 120 }}>Chỉ tiêu</div>
                   <div style={{ flex: 1, minWidth: 120 }}>Phương pháp</div>
                   <div style={{ width: 70, flexShrink: 0, textAlign: "right" }}>
                     Đơn giá
