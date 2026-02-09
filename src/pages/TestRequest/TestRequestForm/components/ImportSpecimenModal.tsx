@@ -20,6 +20,7 @@ import {
   type SpecimenForTestRequestImportPreviewDto,
   type SpecimenImportPreviewItem,
 } from "../../../../services/importService";
+import { SpecimenTypeDto } from "../../../../services/masterDataService";
 import { SampleFormData, createIndicatorMethodKey } from "../types";
 import { SampleStatus } from "../../../../types/testRequest";
 
@@ -49,6 +50,7 @@ interface ImportSpecimenModalProps {
   onConfirm: (newSamples: SampleFormData[]) => void;
   existingSamplesCount: number;
   sampleCodePrefix: string;
+  specimenTypes: SpecimenTypeDto[];
 }
 
 export const ImportSpecimenModal: React.FC<ImportSpecimenModalProps> = ({
@@ -57,6 +59,7 @@ export const ImportSpecimenModal: React.FC<ImportSpecimenModalProps> = ({
   onConfirm,
   existingSamplesCount,
   sampleCodePrefix,
+  specimenTypes,
 }) => {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -91,7 +94,8 @@ export const ImportSpecimenModal: React.FC<ImportSpecimenModalProps> = ({
     const newSamples = convertToSampleFormData(
       previewResult.specimens,
       existingSamplesCount,
-      sampleCodePrefix
+      sampleCodePrefix,
+      specimenTypes
     );
 
     onConfirm(newSamples);
@@ -414,17 +418,27 @@ export const ImportSpecimenModal: React.FC<ImportSpecimenModalProps> = ({
 function convertToSampleFormData(
   previewItems: SpecimenImportPreviewItem[],
   existingSamplesCount: number,
-  sampleCodePrefix: string
+  sampleCodePrefix: string,
+  specimenTypes: SpecimenTypeDto[]
 ): SampleFormData[] {
   return previewItems
     .filter((item) => item.isValid)
     .map((item, idx) => {
       const sortOrder = existingSamplesCount + idx + 1;
       // Format: prefix/orderNum (e.g., "HD20260127001/01")
-      const sampleCode = `${sampleCodePrefix}/${String(sortOrder).padStart(2, "0")}`;
+      const sampleCode = `${sampleCodePrefix}/${String(sortOrder).padStart(3, "0")}`;
+
+      // Resolve specimenTypeName → specimenTypeId from master data
+      let specimenTypeId: string | undefined;
+      if (item.specimenTypeName) {
+        const normalizedName = item.specimenTypeName.trim().toLowerCase();
+        const matched = specimenTypes.find(
+          (st) => st.name.trim().toLowerCase() === normalizedName
+        );
+        specimenTypeId = matched?.id;
+      }
 
       // Convert indicators to IndicatorMethodKey format
-      // Note: specimenTypeId from imported Excel might be resolved later
       const indicatorMethods = item.indicators
         .filter((ind) => ind.indicatorId && ind.testMethodId)
         .map((ind) =>
@@ -436,6 +450,7 @@ function convertToSampleFormData(
         sortOrder,
         sampleCode,
         sampleName: item.sampleName,
+        specimenTypeId,
         specimenTypeName: item.specimenTypeName,
         samplingAddress: item.samplingAddress,
         sampleQuantity: item.sampleQuantity,

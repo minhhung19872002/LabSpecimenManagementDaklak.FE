@@ -887,6 +887,7 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
         onConfirm={handleImportConfirm}
         existingSamplesCount={samples.length}
         sampleCodePrefix={sampleCodePrefix}
+        specimenTypes={specimenTypes}
       />
     </Card>
   );
