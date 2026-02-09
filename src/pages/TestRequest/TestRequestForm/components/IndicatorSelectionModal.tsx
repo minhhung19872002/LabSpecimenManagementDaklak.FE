@@ -1430,6 +1430,10 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                     color: "#262626",
                     padding: "0 8px",
                     lineHeight: "22px",
+                    maxWidth: 150,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
                   }}
                   title={label as string}
                 >
@@ -1465,6 +1469,10 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                     color: "#262626",
                     padding: "0 8px",
                     lineHeight: "22px",
+                    maxWidth: 150,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
                   }}
                   title={label as string}
                 >
