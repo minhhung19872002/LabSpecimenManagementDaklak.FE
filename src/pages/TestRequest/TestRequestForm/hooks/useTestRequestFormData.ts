@@ -893,11 +893,11 @@ export const useTestRequestFormData = () => {
     }
 
     if (indicatorSearchText.trim()) {
-      const searchLower = indicatorSearchText.toLowerCase().trim();
+      const searchNorm = indicatorSearchText.trim().normalize("NFC").toLowerCase();
       filtered = filtered.filter(
         (ind) =>
-          ind.name.toLowerCase().includes(searchLower) ||
-          ind.code?.toLowerCase().includes(searchLower)
+          ind.name.normalize("NFC").toLowerCase().includes(searchNorm) ||
+          ind.code?.normalize("NFC").toLowerCase().includes(searchNorm)
       );
     }
 

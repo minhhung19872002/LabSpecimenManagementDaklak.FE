@@ -1001,13 +1001,13 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
       );
     }
 
-    // Apply search filter
+    // Apply search filter (normalize Unicode to handle different compositions of Vietnamese diacritics)
     if (indicatorSearchText.trim()) {
-      const searchLower = indicatorSearchText.toLowerCase().trim();
+      const searchNorm = indicatorSearchText.trim().normalize("NFC").toLowerCase();
       activeIndicators = activeIndicators.filter(
         (ind) =>
-          ind.name.toLowerCase().includes(searchLower) ||
-          ind.code?.toLowerCase().includes(searchLower),
+          ind.name.normalize("NFC").toLowerCase().includes(searchNorm) ||
+          ind.code?.normalize("NFC").toLowerCase().includes(searchNorm),
       );
     }
 
