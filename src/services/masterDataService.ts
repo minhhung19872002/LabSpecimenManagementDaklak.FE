@@ -1071,4 +1071,14 @@ export const formTemplateService = {
     const response = await api.get<OnlyOfficeEditorConfigDto>(`${FORM_TEMPLATE_URL}/editor-config/${encodeURIComponent(fileName)}`);
     return response.data;
   },
+  checkExists: async (fileName: string): Promise<{ fileName: string; exists: boolean }> => {
+    const response = await api.get<{ fileName: string; exists: boolean }>(`${FORM_TEMPLATE_URL}/check-exists`, { params: { fileName } });
+    return response.data;
+  },
+  upload: async (file: File): Promise<{ fileName: string; isReplacing: boolean; success: boolean }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<{ fileName: string; isReplacing: boolean; success: boolean }>(`${FORM_TEMPLATE_URL}/upload`, formData);
+    return response.data;
+  },
 };
