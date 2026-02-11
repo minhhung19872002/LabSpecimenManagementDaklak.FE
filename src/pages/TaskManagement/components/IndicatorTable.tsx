@@ -927,7 +927,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           record.approvalStatus === IndicatorApprovalStatus.AcceptedForTesting ||
           record.approvalStatus === IndicatorApprovalStatus.Entered ||
           record.approvalStatus === IndicatorApprovalStatus.Rejected ||
-          record.approvalStatus === IndicatorApprovalStatus.CannotTest;
+          record.approvalStatus === IndicatorApprovalStatus.CannotTest ||
+          record.approvalStatus === IndicatorApprovalStatus.MethodChanged;
 
         const canEditIndicator = !forceDisableAll && isAssignableStatus && canAssignTechnician;
 
@@ -1144,12 +1145,12 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       },
       getCheckboxProps: (record: IndicatorWithPosition) => {
         if (selectionMode === "assignment") {
-          // Assignment mode: chỉ enable cho AcceptedForTesting (để giao việc) hoặc Entered (để phê duyệt)
-          // Chỉ tiêu phải được "Chấp nhận TN" rồi mới enable checkbox
+          // Assignment mode: chỉ enable cho AcceptedForTesting, Entered, MethodChanged (đã đổi PP, cần giao lại KTV)
           return {
             disabled:
               record.approvalStatus !== IndicatorApprovalStatus.AcceptedForTesting &&
-              record.approvalStatus !== IndicatorApprovalStatus.Entered,
+              record.approvalStatus !== IndicatorApprovalStatus.Entered &&
+              record.approvalStatus !== IndicatorApprovalStatus.MethodChanged,
             name: record.id,
           };
         }
