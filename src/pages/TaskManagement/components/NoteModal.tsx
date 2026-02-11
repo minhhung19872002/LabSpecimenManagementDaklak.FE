@@ -208,10 +208,9 @@ const NoteModal: React.FC<NoteModalProps> = ({
     onClose();
   };
 
-  // Get selected master note contents for preview
-  const selectedMasterNoteContents = masterNotes
-    .filter((note) => selectedMasterNoteIds.has(note.id))
-    .map((note) => `- ${note.content}`);
+  // Get selected master notes for preview
+  const selectedMasterNotes = masterNotes
+    .filter((note) => selectedMasterNoteIds.has(note.id));
 
   const isMasterDataDisabled =
     masterDataAnalysis.hasMixedData && masterDataMode === "keep";
@@ -325,11 +324,11 @@ const NoteModal: React.FC<NoteModalProps> = ({
                         }}
                       >
                         <Checkbox checked={isSelected} />
-                        <Text
-                          style={{ color: isSelected ? "#1890ff" : "inherit" }}
-                        >
-                          {note.content}
-                        </Text>
+                        <span
+                          style={{ color: isSelected ? "#1890ff" : "inherit", flex: 1 }}
+                          className="note-item-content"
+                          dangerouslySetInnerHTML={{ __html: note.content }}
+                        />
                       </div>
                     );
                   })}
@@ -374,6 +373,15 @@ const NoteModal: React.FC<NoteModalProps> = ({
                   .note-preview-content p {
                     margin: 0;
                   }
+                  .note-item-content p {
+                    margin: 0;
+                    display: inline;
+                  }
+                  .note-item-content ul,
+                  .note-item-content ol {
+                    margin: 2px 0;
+                    padding-left: 20px;
+                  }
                 `}</style>
               </div>
             )}
@@ -382,11 +390,17 @@ const NoteModal: React.FC<NoteModalProps> = ({
                 (Ghi chú danh sách giữ nguyên)
               </Text>
             ) : (
-              selectedMasterNoteContents.length > 0 && (
-                <div>
-                  <div style={{ whiteSpace: "pre-line", marginTop: 4 }}>
-                    <Text>{selectedMasterNoteContents.join("\n")}</Text>
-                  </div>
+              selectedMasterNotes.length > 0 && (
+                <div style={{ marginTop: 4 }}>
+                  {selectedMasterNotes.map((note) => (
+                    <div key={note.id} style={{ display: "flex", gap: 4 }}>
+                      <span>-</span>
+                      <span
+                        className="note-preview-content"
+                        dangerouslySetInnerHTML={{ __html: note.content }}
+                      />
+                    </div>
+                  ))}
                 </div>
               )
             )}
