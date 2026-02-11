@@ -144,29 +144,25 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
       const existingPlainText = stripHtmlTags(note);
       const newHtmlParts: string[] = [];
 
-      // First, collect all master data notes (deduplicated)
-      // Strip HTML from individual notes, join with ", " on a single line
-      const allMasterDataNotes = new Set<string>();
+      // First, collect all master data notes (deduplicated by plain text)
+      const addedMasterNotes = new Set<string>();
       newIndicators.forEach((ind) => {
         if (ind.masterDataNotes && ind.masterDataNotes.length > 0) {
           ind.masterDataNotes.forEach((masterNote) => {
             if (masterNote) {
               const plainNote = stripHtmlTags(masterNote);
-              if (plainNote) {
-                allMasterDataNotes.add(plainNote);
+              if (
+                plainNote &&
+                !addedMasterNotes.has(plainNote) &&
+                !existingPlainText.includes(plainNote)
+              ) {
+                addedMasterNotes.add(plainNote);
+                newHtmlParts.push(masterNote);
               }
             }
           });
         }
       });
-
-      // Add master data notes as single line with ", " separator
-      if (allMasterDataNotes.size > 0) {
-        const masterDataLine = Array.from(allMasterDataNotes).join(", ");
-        if (!existingPlainText.includes(masterDataLine)) {
-          newHtmlParts.push(`<p>${masterDataLine}</p>`);
-        }
-      }
 
       // Then collect free text notes (deduplicated)
       // Keep original HTML from freeTextNote
