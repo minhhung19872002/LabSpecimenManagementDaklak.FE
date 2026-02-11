@@ -402,7 +402,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
 
       // Add master data notes as single line with ", " separator
       if (allMasterDataNotes.size > 0) {
-        const masterDataLine = `- ${Array.from(allMasterDataNotes).join(", ")}`;
+        const masterDataLine = Array.from(allMasterDataNotes).join(", ");
         // Check if this exact line already exists
         if (!existingNoteLines.some((line) => line === masterDataLine)) {
           newNoteLines.push(masterDataLine);
@@ -414,15 +414,15 @@ const PrintModal: React.FC<PrintModalProps> = ({
       newIndicators.forEach((ind) => {
         if (ind.freeTextNote && ind.freeTextNote.trim()) {
           const freeText = ind.freeTextNote.trim();
-          // Check exact match: `- ${freeText}` hoặc freeText không tồn tại trong existing lines
+          // Check exact match: freeText không tồn tại trong existing lines
           if (
             !addedFreeTexts.has(freeText) &&
             !existingNoteLines.some(
-              (line) => line === `- ${freeText}` || line === freeText,
+              (line) => line === freeText,
             )
           ) {
             addedFreeTexts.add(freeText);
-            newNoteLines.push(`- ${freeText}`);
+            newNoteLines.push(freeText);
           }
         }
       });
