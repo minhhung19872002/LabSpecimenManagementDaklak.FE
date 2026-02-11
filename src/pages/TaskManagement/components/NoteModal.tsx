@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Modal,
-  Input,
   Typography,
   Spin,
   Empty,
@@ -16,9 +15,10 @@ import {
 import { ExclamationCircleFilled } from "@ant-design/icons";
 import { noteService } from "../../../services/noteService";
 import { NoteDto } from "../../../types/note";
+import RichTextEditor from "../../../components/common/RichTextEditor";
+import { stripPTags } from "../../../utils/formatters";
 
 const { Text } = Typography;
-const { TextArea } = Input;
 
 export interface NoteSaveInput {
   freeText: string | null;
@@ -163,17 +163,24 @@ const NoteModal: React.FC<NoteModalProps> = ({
     });
   };
 
+  // Check if HTML content has actual text (not just empty <p></p>)
+  const hasContent = (html: string) => {
+    const plain = stripPTags(html).replace(/<[^>]*>/g, "").trim();
+    return plain.length > 0;
+  };
+
   const handleSave = async () => {
     const skipMasterData = masterDataAnalysis.hasMixedData && masterDataMode === "keep";
+    const hasFreeText = hasContent(freeText);
 
     // Validate: at least one input (nếu không skip MasterData)
-    if (!freeText.trim() && !skipMasterData && selectedMasterNoteIds.size === 0) {
+    if (!hasFreeText && !skipMasterData && selectedMasterNoteIds.size === 0) {
       message.warning("Vui lòng nhập ghi chú hoặc chọn từ danh sách");
       return;
     }
 
     // Nếu skip MasterData nhưng không có FreeText thì cũng không cho lưu
-    if (skipMasterData && !freeText.trim()) {
+    if (skipMasterData && !hasFreeText) {
       message.warning("Vui lòng nhập ghi chú tự do");
       return;
     }
@@ -181,7 +188,7 @@ const NoteModal: React.FC<NoteModalProps> = ({
     setSaving(true);
     try {
       await onSave({
-        freeText: freeText.trim() || null,
+        freeText: hasFreeText ? freeText : null,
         masterDataNoteIds: skipMasterData ? [] : Array.from(selectedMasterNoteIds),
         skipMasterDataUpdate: skipMasterData,
       });
@@ -237,14 +244,11 @@ const NoteModal: React.FC<NoteModalProps> = ({
           <Text strong style={{ display: "block", marginBottom: 8 }}>
             Ghi chú tự do
           </Text>
-          <TextArea
+          <RichTextEditor
             value={freeText}
-            onChange={(e) => setFreeText(e.target.value)}
+            onChange={(html) => setFreeText(html)}
             placeholder="Nhập ghi chú tự do..."
-            rows={8}
-            maxLength={2000}
-            showCount
-            style={{ resize: "none" }}
+            showToolbar
           />
         </Col>
 
@@ -351,11 +355,26 @@ const NoteModal: React.FC<NoteModalProps> = ({
             Xem trước:
           </Text>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {freeText.trim() && (
+            {hasContent(freeText) && (
               <div>
-                <div style={{ whiteSpace: "pre-line", marginTop: 4 }}>
-                  <Text>{freeText.trim()}</Text>
-                </div>
+                <div
+                  style={{ marginTop: 4 }}
+                  className="note-preview-content"
+                  dangerouslySetInnerHTML={{ __html: freeText }}
+                />
+                <style>{`
+                  .note-preview-content ul,
+                  .note-preview-content ol {
+                    margin: 4px 0;
+                    padding-left: 24px;
+                  }
+                  .note-preview-content li {
+                    line-height: 22px;
+                  }
+                  .note-preview-content p {
+                    margin: 0;
+                  }
+                `}</style>
               </div>
             )}
             {isMasterDataDisabled ? (

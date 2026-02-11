@@ -585,17 +585,20 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         if (record._isParentWithSubs) return null;
 
         // Tổng hợp note từ FreeTextNote và MasterDataNoteContents
+        // FreeTextNote có thể là HTML (rich text)
         const noteParts: string[] = [];
         if (record.freeTextNote) {
-          noteParts.push(record.freeTextNote);
+          noteParts.push(stripPTags(record.freeTextNote));
         }
         if (
           record.masterDataNoteContents &&
           record.masterDataNoteContents.length > 0
         ) {
-          noteParts.push(...record.masterDataNoteContents.map((c) => `- ${c}`));
+          noteParts.push(...record.masterDataNoteContents);
         }
-        const displayNote = noteParts.join("\n");
+        const displayNoteHtml = noteParts.join("<br/>");
+        // Plain text for tooltip and empty check
+        const displayNotePlain = noteParts.join("").replace(/<[^>]*>/g, "").trim();
 
         // Chỉ không cho edit khi đã duyệt hoặc KH hủy (không phụ thuộc task status)
         // Nếu chỉ tiêu chưa được QLKT phê duyệt KQ thì vẫn edit ghi chú được
@@ -613,8 +616,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             >
               <Tooltip
                 title={
-                  displayNote ? (
-                    <div style={{ whiteSpace: "pre-line" }}>{displayNote}</div>
+                  displayNotePlain ? (
+                    <div dangerouslySetInnerHTML={{ __html: displayNoteHtml }} />
                   ) : undefined
                 }
               >
@@ -631,14 +634,13 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
-                    color: displayNote
+                    color: displayNotePlain
                       ? "rgba(0, 0, 0, 0.65)"
                       : "rgba(0, 0, 0, 0.25)",
                     cursor: "not-allowed",
                   }}
-                >
-                  {displayNote || "..."}
-                </div>
+                  dangerouslySetInnerHTML={{ __html: displayNotePlain ? displayNoteHtml : "..." }}
+                />
               </Tooltip>
             </div>
           );
@@ -653,12 +655,12 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
               alignItems: "center",
               cursor: "pointer",
             }}
-            onClick={() => onOpenNoteModal(record.id, displayNote, sampleId)}
+            onClick={() => onOpenNoteModal(record.id, displayNoteHtml, sampleId)}
           >
             <Tooltip
               title={
-                displayNote ? (
-                  <div style={{ whiteSpace: "pre-line" }}>{displayNote}</div>
+                displayNotePlain ? (
+                  <div dangerouslySetInnerHTML={{ __html: displayNoteHtml }} />
                 ) : undefined
               }
             >
@@ -675,13 +677,12 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
-                  color: displayNote
+                  color: displayNotePlain
                     ? "rgba(0, 0, 0, 0.88)"
                     : "rgba(0, 0, 0, 0.25)",
                 }}
-              >
-                {displayNote || "Click để nhập..."}
-              </div>
+                dangerouslySetInnerHTML={{ __html: displayNotePlain ? displayNoteHtml : "Click để nhập..." }}
+              />
             </Tooltip>
           </div>
         );
