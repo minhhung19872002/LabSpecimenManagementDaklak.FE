@@ -16,7 +16,7 @@ import { ExclamationCircleFilled } from "@ant-design/icons";
 import { noteService } from "../../../services/noteService";
 import { NoteDto } from "../../../types/note";
 import RichTextEditor from "../../../components/common/RichTextEditor";
-import { stripPTags } from "../../../utils/formatters";
+import { stripPTags, stripHtmlTags } from "../../../utils/formatters";
 
 const { Text } = Typography;
 
@@ -302,34 +302,46 @@ const NoteModal: React.FC<NoteModalProps> = ({
                   image={Empty.PRESENTED_IMAGE_SIMPLE}
                 />
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 300, overflowY: "auto" }}>
                   {masterNotes.map((note) => {
                     const isSelected = selectedMasterNoteIds.has(note.id);
                     return (
-                      <div
+                      <Tooltip
                         key={note.id}
-                        onClick={() => handleToggleMasterNote(note.id)}
-                        style={{
-                          cursor: "pointer",
-                          padding: "8px 12px",
-                          borderRadius: 4,
-                          backgroundColor: isSelected ? "#e6f7ff" : "transparent",
-                          border: isSelected
-                            ? "1px solid #91d5ff"
-                            : "1px solid #f0f0f0",
-                          transition: "all 0.2s",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                        }}
+                        title={<div dangerouslySetInnerHTML={{ __html: note.content }} className="note-item-content" />}
+                        placement="left"
+                        overlayStyle={{ maxWidth: 400 }}
                       >
-                        <Checkbox checked={isSelected} />
-                        <span
-                          style={{ color: isSelected ? "#1890ff" : "inherit", flex: 1 }}
-                          className="note-item-content"
-                          dangerouslySetInnerHTML={{ __html: note.content }}
-                        />
-                      </div>
+                        <div
+                          onClick={() => handleToggleMasterNote(note.id)}
+                          style={{
+                            cursor: "pointer",
+                            padding: "8px 12px",
+                            borderRadius: 4,
+                            backgroundColor: isSelected ? "#e6f7ff" : "transparent",
+                            border: isSelected
+                              ? "1px solid #91d5ff"
+                              : "1px solid #f0f0f0",
+                            transition: "all 0.2s",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                          }}
+                        >
+                          <Checkbox checked={isSelected} />
+                          <span
+                            style={{
+                              color: isSelected ? "#1890ff" : "inherit",
+                              flex: 1,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                            className="note-item-inline"
+                            dangerouslySetInnerHTML={{ __html: note.content }}
+                          />
+                        </div>
+                      </Tooltip>
                     );
                   })}
                 </div>
@@ -353,37 +365,42 @@ const NoteModal: React.FC<NoteModalProps> = ({
           <Text strong style={{ display: "block", marginBottom: 8 }}>
             Xem trước:
           </Text>
+          <style>{`
+            .note-preview-content ul,
+            .note-preview-content ol {
+              margin: 4px 0;
+              padding-left: 24px;
+            }
+            .note-preview-content li {
+              line-height: 22px;
+            }
+            .note-preview-content p {
+              margin: 0;
+            }
+            .note-item-content p {
+              margin: 0;
+              display: inline;
+            }
+            .note-item-content ul,
+            .note-item-content ol {
+              margin: 2px 0;
+              padding-left: 20px;
+            }
+            .note-item-inline > *:first-child {
+              display: inline;
+              margin: 0;
+            }
+            .note-item-inline > *:not(:first-child) {
+              display: none;
+            }
+          `}</style>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {hasContent(freeText) && (
-              <div>
-                <div
-                  style={{ marginTop: 4 }}
-                  className="note-preview-content"
-                  dangerouslySetInnerHTML={{ __html: freeText }}
-                />
-                <style>{`
-                  .note-preview-content ul,
-                  .note-preview-content ol {
-                    margin: 4px 0;
-                    padding-left: 24px;
-                  }
-                  .note-preview-content li {
-                    line-height: 22px;
-                  }
-                  .note-preview-content p {
-                    margin: 0;
-                  }
-                  .note-item-content p {
-                    margin: 0;
-                    display: inline;
-                  }
-                  .note-item-content ul,
-                  .note-item-content ol {
-                    margin: 2px 0;
-                    padding-left: 20px;
-                  }
-                `}</style>
-              </div>
+              <div
+                style={{ marginTop: 4 }}
+                className="note-preview-content"
+                dangerouslySetInnerHTML={{ __html: freeText }}
+              />
             )}
             {isMasterDataDisabled ? (
               <Text type="secondary" italic>

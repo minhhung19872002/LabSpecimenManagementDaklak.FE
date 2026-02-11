@@ -9,6 +9,7 @@ import {
   Popconfirm,
   Tag,
   Switch,
+  Tooltip,
 } from "antd";
 import {
   EditOutlined,
@@ -310,8 +311,13 @@ const NotesList = forwardRef<NotesActions, NotesTabProps>(({ onDataChange, refre
       title: "Nội dung",
       dataIndex: "content",
       key: "content",
-      ellipsis: true,
-      render: (content: string) => stripHtmlTags(content),
+      render: (content: string) => (
+        <div
+          dangerouslySetInnerHTML={{ __html: content }}
+          style={{ wordBreak: "break-word" }}
+          className="note-content-cell"
+        />
+      ),
     },
     {
       title: "Trạng thái",
@@ -423,6 +429,12 @@ const NotesList = forwardRef<NotesActions, NotesTabProps>(({ onDataChange, refre
           </Form.Item>
         </Form>
       </Modal>
+
+      <style>{`
+        .note-content-cell p { margin: 0; }
+        .note-content-cell ul, .note-content-cell ol { margin: 2px 0; padding-left: 20px; }
+        .note-content-cell li { line-height: 22px; }
+      `}</style>
 
       {/* Import Modal */}
       <ImportNoteModal

@@ -617,7 +617,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
               <Tooltip
                 title={
                   displayNotePlain ? (
-                    <div dangerouslySetInnerHTML={{ __html: displayNoteHtml }} />
+                    <div dangerouslySetInnerHTML={{ __html: displayNoteHtml }} className="note-tooltip-content" />
                   ) : undefined
                 }
               >
@@ -660,7 +660,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             <Tooltip
               title={
                 displayNotePlain ? (
-                  <div dangerouslySetInnerHTML={{ __html: displayNoteHtml }} />
+                  <div dangerouslySetInnerHTML={{ __html: displayNoteHtml }} className="note-tooltip-content" />
                 ) : undefined
               }
             >
@@ -1196,6 +1196,13 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           record.parentIndicatorId ? "sub-indicator-row" : ""
         }
       />
+
+      <style>{`
+        .note-tooltip-content p { margin: 0; }
+        .note-tooltip-content ol { margin: 4px 0; padding-left: 24px; list-style-type: decimal; }
+        .note-tooltip-content ul { margin: 4px 0; padding-left: 24px; list-style-type: disc; }
+        .note-tooltip-content li { line-height: 22px; }
+      `}</style>
 
       {/* Reject Reason Modal */}
       <Modal
