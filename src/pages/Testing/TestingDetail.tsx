@@ -15,6 +15,7 @@ import {
 } from "../../types/testing";
 import TestingDetailContainer from "./components/TestingDetailContainer";
 import { useMultipleActionPermissions } from "../../hooks/useActionPermission";
+import { TestRequestStatus } from "../../types/testRequest";
 import { PATH_ROUTES } from "../../constants";
 import "./Testing.css";
 
@@ -70,9 +71,13 @@ const TestingDetail: React.FC = () => {
   const canEditResult = actionPermissions.editResult?.canAll || false;
   const canSendResult = actionPermissions.sendResult?.canAll || false;
 
+  // Check if test request is cancelled - disable all actions
+  const isTestRequestCancelled = detail?.testRequestStatus === TestRequestStatus.Cancelled;
+
   // Tổng hợp: có thể thao tác (nhập/sửa/gửi) nếu có bất kỳ quyền nào
   // Ưu tiên isMy: nếu task là của user hiện tại thì cho phép thao tác bất kể view mode
-  const canPerformActions = detail?.isMy && (canInputResult || canEditResult || canSendResult);
+  // Disable tất cả khi phiếu yêu cầu đã bị hủy
+  const canPerformActions = !isTestRequestCancelled && detail?.isMy && (canInputResult || canEditResult || canSendResult);
 
   // Kiểm tra quyền xem chi tiết:
   // - Có quyền viewDetail từ Permission Matrix (QLKT, Admin)

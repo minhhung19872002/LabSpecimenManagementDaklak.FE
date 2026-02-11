@@ -29,7 +29,6 @@ export const POSITION_OPTIONS = [
   "Phó Giám đốc",
   "Trưởng phòng",
   "Phó trưởng phòng",
-  "Thử nghiệm viên chính",
   "Thử nghiệm viên",
   "Nhân viên",
 ];

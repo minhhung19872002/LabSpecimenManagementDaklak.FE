@@ -1,4 +1,5 @@
 import { IndicatorApprovalStatus } from './laboratoryTask';
+import { TestRequestStatus } from './testRequest';
 
 // Testing Status Enum (Task level - 6 statuses)
 export enum TestingStatus {
@@ -147,6 +148,7 @@ export interface TestingDetailDto {
   totalIndicatorCount: number;
   samples: TestingSampleDto[];
   isMy: boolean;  // Có phải công việc của user hiện tại hay không
+  testRequestStatus?: TestRequestStatus;  // Trạng thái phiếu yêu cầu
 }
 
 // Testing Sample DTO

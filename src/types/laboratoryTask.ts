@@ -1,4 +1,5 @@
 import { IndicatorImageDto } from './testing';
+import { TestRequestStatus } from './testRequest';
 
 // Laboratory Task Status Enum
 export enum LaboratoryTaskStatus {
@@ -210,6 +211,7 @@ export interface LaboratoryTaskDto {
 
   // Navigation properties
   testRequestNumber?: string;
+  testRequestStatus?: TestRequestStatus;
   laboratoryName?: string;
   laboratoryCode?: string;
   customerName?: string;

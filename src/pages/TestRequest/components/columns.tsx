@@ -28,7 +28,7 @@ const getStatusTag = (status: TestRequestStatus) => {
 };
 
 export const getTestRequestColumns = (
-  options: GetColumnsOptions
+  options: GetColumnsOptions,
 ): ColumnsType<TestRequestDto> => [
   {
     title: "Số hợp đồng",
@@ -41,13 +41,12 @@ export const getTestRequestColumns = (
       (a.contractNumber || "").localeCompare(b.contractNumber || ""),
   },
   {
-    title: "Ngày yêu cầu",
+    title: "Ngày HĐ",
     dataIndex: "requestDate",
     key: "requestDate",
     width: 130,
     render: (date: string) => formatDate(date),
-    sorter: (a, b) =>
-      dayjs(a.requestDate).unix() - dayjs(b.requestDate).unix(),
+    sorter: (a, b) => dayjs(a.requestDate).unix() - dayjs(b.requestDate).unix(),
   },
   {
     title: "Ngày hoàn thành dự kiến",
@@ -111,7 +110,8 @@ export const getTestRequestColumns = (
       const canEditByStatus = canEditTestRequest(record.status);
       const canEditByPermission = options.canEditPermission !== false; // default true for backward compatibility
       const canEdit = canEditByStatus && canEditByPermission;
-      const canDelete = canDeleteTestRequest(record.status) && canEditByPermission;
+      const canDelete =
+        canDeleteTestRequest(record.status) && canEditByPermission;
       const showActions = showActionsForTestRequest(record.status);
 
       // Nếu không có quyền theo Permission Matrix, ẩn luôn cột thao tác

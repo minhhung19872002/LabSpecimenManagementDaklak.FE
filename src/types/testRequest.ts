@@ -88,20 +88,29 @@ export const ChangeApprovalStatusColors: Record<ChangeApprovalStatus, string> = 
 
 /**
  * Kiểm tra có thể chỉnh sửa toàn bộ thông tin không
- * Full edit: New, PendingPayment, Paid
+ * [TEMPORARY] KH yêu cầu cho phép edit tất cả trạng thái trừ Completed & Cancelled
  */
 export const canEditFullInfo = (status: TestRequestStatus): boolean => {
-  return status === TestRequestStatus.New ||
-         status === TestRequestStatus.PendingPayment ||
-         status === TestRequestStatus.Paid;
+  // [OLD LOGIC] Full edit: New, PendingPayment, Paid
+  // return status === TestRequestStatus.New ||
+  //        status === TestRequestStatus.PendingPayment ||
+  //        status === TestRequestStatus.Paid;
+
+  // [TEMPORARY] Cho phép edit tất cả trạng thái trừ Completed & Cancelled
+  return status !== TestRequestStatus.Completed &&
+         status !== TestRequestStatus.Cancelled;
 };
 
 /**
  * Kiểm tra có thể chỉnh sửa với phê duyệt (limited edit + cần QLCL duyệt)
- * Limited edit: SampleSent, InProgress
+ * [TEMPORARY] Tạm tắt - không cần approval, edit trực tiếp
  */
-export const canEditWithApproval = (status: TestRequestStatus): boolean => {
-  return status === TestRequestStatus.SampleSent || status === TestRequestStatus.InProgress;
+export const canEditWithApproval = (_status: TestRequestStatus): boolean => {
+  // [OLD LOGIC] Limited edit: SampleSent, InProgress
+  // return status === TestRequestStatus.SampleSent || status === TestRequestStatus.InProgress;
+
+  // [TEMPORARY] Không cần approval nữa
+  return false;
 };
 
 /**

@@ -78,6 +78,8 @@ interface IndicatorTableProps {
   // Callback để set standardIds từ parent
   standardSelections?: Record<string, string | null>;
   onStandardChange?: (indicatorId: string, standardId: string | null) => void;
+  // Force disable tất cả input/select (khi phiếu yêu cầu bị hủy)
+  forceDisableAll?: boolean;
 }
 
 const IndicatorTable: React.FC<IndicatorTableProps> = ({
@@ -101,6 +103,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   onSelectionChange,
   standardSelections = {},
   onStandardChange,
+  forceDisableAll = false,
 }) => {
   // Determine selection mode based on sample status
   // notStarted/assigned/pendingApproval → assignment mode (để chọn indicator giao việc)
@@ -488,6 +491,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         // Chưa có phương pháp - hiển thị dropdown để chọn
         // Cho phép chỉnh sửa nếu indicator chưa được duyệt hoặc chưa bị hủy
         const canEditMethod =
+          !forceDisableAll &&
           record.approvalStatus !== IndicatorApprovalStatus.Approved &&
           record.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled;
 
@@ -519,6 +523,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
 
         // Cho phép chỉnh sửa nếu chưa duyệt và chưa bị hủy
         const canEditUnit =
+          !forceDisableAll &&
           record.approvalStatus !== IndicatorApprovalStatus.Approved &&
           record.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled &&
           onUnitChange;
@@ -598,7 +603,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           record.approvalStatus === IndicatorApprovalStatus.Approved;
         const isCancelled =
           record.approvalStatus === IndicatorApprovalStatus.CustomerCancelled;
-        const canEditNoteCell = !isApproved && !isCancelled && onOpenNoteModal;
+        const canEditNoteCell = !forceDisableAll && !isApproved && !isCancelled && onOpenNoteModal;
 
         // Read-only mode - vẫn hiển thị dạng input nhưng disabled
         if (!canEditNoteCell) {
@@ -723,6 +728,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
 
         // Cho phép chọn tiêu chuẩn ở tất cả trạng thái trừ các trạng thái sau
         const canSelectStandard =
+          !forceDisableAll &&
           record.approvalStatus !== IndicatorApprovalStatus.Approved &&
           record.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled &&
           record.approvalStatus !==
@@ -923,7 +929,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           record.approvalStatus === IndicatorApprovalStatus.Rejected ||
           record.approvalStatus === IndicatorApprovalStatus.CannotTest;
 
-        const canEditIndicator = isAssignableStatus && canAssignTechnician;
+        const canEditIndicator = !forceDisableAll && isAssignableStatus && canAssignTechnician;
 
         return (
           <div style={{ minHeight: 32, display: "flex", alignItems: "center" }}>
@@ -1017,6 +1023,14 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             );
 
           case IndicatorApprovalStatus.Entered: {
+            // Khi phiếu yêu cầu bị hủy, chỉ hiển thị status tag
+            if (forceDisableAll) {
+              return (
+                <StatusTag color={IndicatorApprovalStatusColors[status]}>
+                  {IndicatorApprovalStatusLabels[status]}
+                </StatusTag>
+              );
+            }
             // Lấy standardId từ local state hoặc DB
             const selectedStandardIdForApprove =
               standardSelections[record.id] !== undefined
