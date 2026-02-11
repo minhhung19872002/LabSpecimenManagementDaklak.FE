@@ -35,37 +35,72 @@ export const formatNumber = (value: number): string => {
 };
 
 /**
- * Strip all HTML tags from a string, returning plain text
- * Handles: block elements (p, li, br → add space), HTML entities (decode), whitespace collapse
+ * Strip all HTML tags from a string, returning plain text (using DOMParser)
+ * Handles: block elements (p, br → newline), list items (ul→"- ", ol→"1. "), HTML entities auto-decoded
  * @param html - HTML string
  * @returns Plain text without any HTML tags
  *
  * @example
  * stripHtmlTags("<p>Hello <b>world</b></p>") // returns "Hello world"
- * stripHtmlTags("<p>Line 1</p><p>Line 2</p>") // returns "Line 1 Line 2"
- * stripHtmlTags("<ul><li>Item 1</li><li>Item 2</li></ul>") // returns "Item 1 Item 2"
- * stripHtmlTags("A&nbsp;B &amp; C") // returns "A B & C"
+ * stripHtmlTags("<p>Line 1</p><p>Line 2</p>") // returns "Line 1\nLine 2"
+ * stripHtmlTags("<ul><li>Item 1</li><li>Item 2</li></ul>") // returns "- Item 1\n- Item 2"
+ * stripHtmlTags("<ol><li>A</li><li>B</li></ol>") // returns "1. A\n2. B"
  */
 export const stripHtmlTags = (html: string | undefined | null): string => {
   if (!html) return "";
-  let result = html;
-  // Add space before closing block-level tags so text doesn't run together
-  result = result.replace(/<\/(p|li|div|h[1-6]|tr|blockquote)>/gi, " ");
-  // Replace <br> / <br/> with space
-  result = result.replace(/<br\s*\/?>/gi, " ");
-  // Remove all remaining HTML tags
-  result = result.replace(/<[^>]*>/g, "");
-  // Decode common HTML entities
-  result = result.replace(/&nbsp;/g, " ");
-  result = result.replace(/&amp;/g, "&");
-  result = result.replace(/&lt;/g, "<");
-  result = result.replace(/&gt;/g, ">");
-  result = result.replace(/&quot;/g, '"');
-  result = result.replace(/&apos;/g, "'");
-  result = result.replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
-  result = result.replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)));
-  // Collapse multiple whitespace into single space
-  result = result.replace(/\s+/g, " ");
+
+  const doc = new DOMParser().parseFromString(html, "text/html");
+
+  const walk = (
+    node: Node,
+    listType?: "ul" | "ol",
+    listIndex?: { value: number },
+  ): string => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      return node.textContent || "";
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return "";
+
+    const el = node as Element;
+    const tag = el.tagName.toLowerCase();
+
+    // Track list context for children
+    let childListType = listType;
+    let childListIndex = listIndex;
+    if (tag === "ul") {
+      childListType = "ul";
+      childListIndex = { value: 0 };
+    } else if (tag === "ol") {
+      childListType = "ol";
+      childListIndex = { value: 0 };
+    }
+
+    // Recurse children
+    let content = "";
+    for (const child of Array.from(node.childNodes)) {
+      content += walk(child, childListType, childListIndex);
+    }
+
+    if (tag === "li") {
+      const prefix =
+        listType === "ol" && listIndex ? `${++listIndex.value}. ` : "- ";
+      return `\n${prefix}${content.trim()}`;
+    }
+    if (tag === "ul" || tag === "ol") {
+      return `${content}\n`;
+    }
+    if (tag === "p" || tag === "div" || /^h[1-6]$/.test(tag)) {
+      return `${content}\n`;
+    }
+    if (tag === "br") {
+      return "\n";
+    }
+
+    return content;
+  };
+
+  let result = walk(doc.body);
+  result = result.replace(/\n{3,}/g, "\n\n");
   return result.trim();
 };
 
