@@ -20,6 +20,7 @@ import {
 } from '../types/testRequest';
 import { QualityManagementIndicatorDto } from '../types/qualityManagement';
 import { syncManager } from './offline/syncManager';
+import { isNetworkError } from './offline/createOfflineService';
 import { cacheTestRequest, getCachedTestRequest, getOfflineTestRequests, getCachedEntitiesByType, getCachedEntity } from './offline/db';
 
 const BASE_URL = '/api/v1/test-requests';
@@ -538,9 +539,8 @@ export const offlineTestRequestService = {
         await cacheTestRequest(result.id, result, false);
         return { data: result, isOffline: false };
       } catch (error) {
-        // Network error - fall through to offline handling
-        // Don't re-throw, queue for sync instead (same pattern as createOfflineService)
-        console.warn('Online create failed, queueing for sync:', error);
+        if (!isNetworkError(error)) throw error;
+        console.warn('Network error in create, queueing for sync:', error);
       }
     }
 
@@ -640,9 +640,8 @@ export const offlineTestRequestService = {
         await cacheTestRequest(result.id, result, false);
         return { data: result, isOffline: false };
       } catch (error) {
-        // Network error - fall through to offline handling
-        // Don't re-throw, queue for sync instead (same pattern as createOfflineService)
-        console.warn('Online update failed, queueing for sync:', error);
+        if (!isNetworkError(error)) throw error;
+        console.warn('Network error in update, queueing for sync:', error);
       }
     }
 
@@ -676,7 +675,8 @@ export const offlineTestRequestService = {
         await cacheTestRequest(result.id, result, false);
         return result;
       } catch (error) {
-        // Fall through to cache
+        if (!isNetworkError(error)) throw error;
+        // Network error - fall through to cache
       }
     }
 
@@ -726,8 +726,8 @@ export const offlineTestRequestService = {
         }
         return { data: result, isOfflineData: false };
       } catch (error) {
-        // Network error - fall through to offline handling
-        console.warn('Online getList failed, returning cached data:', error);
+        if (!isNetworkError(error)) throw error;
+        console.warn('Network error in getList, returning cached data:', error);
       }
     }
 
@@ -801,9 +801,9 @@ export const offlineTestRequestService = {
         await cacheTestRequest(result.id, result, false);
         return { data: result, isOfflineData: false };
       } catch (error: any) {
-        // API call failed - could be 404 for offline-created items or network error
-        // Fall through to return cached data if available
-        console.warn('Online get failed, returning cached data:', error);
+        if (!isNetworkError(error)) throw error;
+        // Network error - fall through to return cached data if available
+        console.warn('Network error in getWithStatus, returning cached data:', error);
       }
     }
 
