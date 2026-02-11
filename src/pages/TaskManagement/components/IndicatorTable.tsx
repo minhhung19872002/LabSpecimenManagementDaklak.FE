@@ -726,6 +726,12 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           record.specimenTypeId
         );
 
+        // Nếu standardId hiện tại không nằm trong danh sách options (ví dụ: PP đã đổi), không hiển thị
+        const isStandardAvailable = selectedStandardId
+          ? availableStandards.some((s) => s.id === selectedStandardId)
+          : false;
+        const displayStandardId = isStandardAvailable ? selectedStandardId : undefined;
+
         // Cho phép chọn tiêu chuẩn ở tất cả trạng thái trừ các trạng thái sau
         const canSelectStandard =
           !forceDisableAll &&
@@ -741,7 +747,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
               style={{ width: "100%" }}
               placeholder="Chọn tiêu chuẩn"
               allowClear
-              value={selectedStandardId || undefined}
+              value={displayStandardId}
               onChange={(value) => handleStandardChange(record.id, value)}
               loading={loadingStandards}
               disabled={!canSelectStandard}
