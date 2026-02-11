@@ -315,7 +315,8 @@ const TestRequestForm: React.FC = () => {
       }
     >
       <Spin spinning={loadingData}>
-        {/* Warning when edit requires QLCL approval */}
+        {/* [TEMPORARY] Tạm tắt alert cảnh báo cần phê duyệt - KH cho phép edit trực tiếp */}
+        {/* [OLD LOGIC]
         {isEditRequiresApproval() && (
           <Alert
             message="Lưu ý: Thay đổi cần phê duyệt"
@@ -325,6 +326,7 @@ const TestRequestForm: React.FC = () => {
             style={{ marginBottom: 16 }}
           />
         )}
+        */}
 
         <Form
           form={form}

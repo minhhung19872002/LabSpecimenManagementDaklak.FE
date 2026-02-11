@@ -959,30 +959,29 @@ export const useTestRequestFormActions = ({
       };
 
       if (isEditMode && id) {
-        // Check if this edit requires approval
-        if (isEditRequiresApproval()) {
-          // Build change history from frontend comparison
-          const changeHistory = buildChangeHistory(payload, sampleDtos);
+        // [TEMPORARY] Tạm tắt approval flow - luôn update trực tiếp
+        // [OLD LOGIC] Check if this edit requires approval
+        // if (isEditRequiresApproval()) {
+        //   const changeHistory = buildChangeHistory(payload, sampleDtos);
+        //   if (changeHistory.length === 0) {
+        //     message.info("Không có thay đổi nào cần lưu");
+        //     navigate(PATH_ROUTES.testRequests.detail(id));
+        //     return;
+        //   }
+        //   const updateResponse = await offlineTestRequestService.update(id, {
+        //     ...payload,
+        //     changeHistory
+        //   });
+        //   if (updateResponse.isOffline) {
+        //     message.warning("Đã lưu thay đổi tạm thời (chế độ offline). Dữ liệu sẽ được đồng bộ khi có kết nối.");
+        //   } else {
+        //     message.success("Yêu cầu thay đổi đã được gửi và đang chờ phê duyệt!");
+        //   }
+        //   navigate(PATH_ROUTES.testRequests.detail(id));
+        // } else {
 
-          if (changeHistory.length === 0) {
-            message.info("Không có thay đổi nào cần lưu");
-            navigate(PATH_ROUTES.testRequests.detail(id));
-            return;
-          }
-
-          // Send with change history - use offline service
-          const updateResponse = await offlineTestRequestService.update(id, {
-            ...payload,
-            changeHistory // Frontend sends the changes
-          });
-          if (updateResponse.isOffline) {
-            message.warning("Đã lưu thay đổi tạm thời (chế độ offline). Dữ liệu sẽ được đồng bộ khi có kết nối.");
-          } else {
-            message.success("Yêu cầu thay đổi đã được gửi và đang chờ phê duyệt!");
-          }
-          navigate(PATH_ROUTES.testRequests.detail(id));
-        } else {
-          // Regular update - use offline service
+        // [TEMPORARY] Luôn update trực tiếp không cần approval
+        {
           const updateResponse = await offlineTestRequestService.update(id, payload);
           if (updateResponse.isOffline) {
             message.warning("Đã lưu cập nhật tạm thời (chế độ offline). Dữ liệu sẽ được đồng bộ khi có kết nối.");
