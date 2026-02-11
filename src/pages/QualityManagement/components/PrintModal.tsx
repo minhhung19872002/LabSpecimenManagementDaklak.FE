@@ -32,7 +32,7 @@ import {
 import { API_BASE_URL } from "../../../services/api";
 import userService, { UserLookupDto } from "../../../services/userService";
 import { IndicatorName } from "../../../components/common";
-import { parseResultToNumber, convertHtmlToMathExpression } from "../../../utils/formatters";
+import { parseResultToNumber, convertHtmlToMathExpression, stripHtmlTags } from "../../../utils/formatters";
 
 const { Text } = Typography;
 
@@ -389,12 +389,16 @@ const PrintModal: React.FC<PrintModalProps> = ({
 
       // First, collect all master data notes (deduplicated)
       // Master data notes will be joined with ", " on a single line
+      // Strip HTML since note content may now contain rich text formatting
       const allMasterDataNotes = new Set<string>();
       newIndicators.forEach((ind) => {
         if (ind.masterDataNotes && ind.masterDataNotes.length > 0) {
           ind.masterDataNotes.forEach((masterNote) => {
             if (masterNote) {
-              allMasterDataNotes.add(masterNote);
+              const plainNote = stripHtmlTags(masterNote);
+              if (plainNote) {
+                allMasterDataNotes.add(plainNote);
+              }
             }
           });
         }
@@ -410,12 +414,14 @@ const PrintModal: React.FC<PrintModalProps> = ({
       }
 
       // Then collect free text notes (deduplicated)
+      // Strip HTML since freeTextNote may contain rich text formatting
       const addedFreeTexts = new Set<string>();
       newIndicators.forEach((ind) => {
         if (ind.freeTextNote && ind.freeTextNote.trim()) {
-          const freeText = ind.freeTextNote.trim();
+          const freeText = stripHtmlTags(ind.freeTextNote);
           // Check exact match: freeText không tồn tại trong existing lines
           if (
+            freeText &&
             !addedFreeTexts.has(freeText) &&
             !existingNoteLines.some(
               (line) => line === freeText,
