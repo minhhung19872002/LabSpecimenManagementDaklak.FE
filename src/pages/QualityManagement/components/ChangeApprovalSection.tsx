@@ -20,6 +20,7 @@ import {
   QualityManagementTaskDto,
   QualityManagementStatus,
 } from '../../../types/qualityManagement';
+import { TestRequestStatus } from '../../../types/testRequest';
 import RejectModal from './RejectModal';
 
 const { Text } = Typography;
@@ -54,7 +55,8 @@ const ChangeApprovalSection: React.FC<ChangeApprovalSectionProps> = ({
     );
   }
 
-  const isPending = task.status === QualityManagementStatus.PendingApproval;
+  const isTestRequestCancelled = task.testRequestStatus === TestRequestStatus.Cancelled;
+  const isPending = !isTestRequestCancelled && task.status === QualityManagementStatus.PendingApproval;
 
   const handleApprove = async () => {
     setApproving(true);

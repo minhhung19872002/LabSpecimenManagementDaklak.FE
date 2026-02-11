@@ -38,6 +38,8 @@ interface IndicatorTableProps {
   // Bulk action selection props (for pending indicators)
   selectedPendingIds: string[];
   onPendingSelectChange: (ids: string[]) => void;
+  // Force disable all actions (e.g., when test request is cancelled)
+  forceDisableActions?: boolean;
 }
 
 // Group indicators by sample
@@ -177,6 +179,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   onIndicatorUpdate: _onIndicatorUpdate,
   selectedPendingIds,
   onPendingSelectChange,
+  forceDisableActions = false,
 }) => {
   // Calculate pass/fail status based on result and limits
   // Supports both single limit and range comparisons
@@ -279,7 +282,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
 
   // Check if actions should be disabled based on task status and permissions
   // Allow approving pending indicators even after ResultSent (for partial send scenarios)
-  const actionsDisabled = !canApprove && !canReject;
+  // Also disable when test request is cancelled (forceDisableActions)
+  const actionsDisabled = forceDisableActions || (!canApprove && !canReject);
 
   // Group indicators by sample
   const groupedData: SampleGroup[] = React.useMemo(() => {

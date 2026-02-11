@@ -51,6 +51,7 @@ import {
   SampleStatusColors,
   AssignIndicatorInput,
 } from "../../types/laboratoryTask";
+import { TestRequestStatus } from "../../types/testRequest";
 import {
   SampleTestingImageDto,
   SampleTestingImageType,
@@ -1199,6 +1200,7 @@ const TaskManagementDetail: React.FC = () => {
   // Only Lab Vi Sinh (no priorLabTaskId) can send shared sample
   const canSendSharedSample = useMemo(() => {
     if (!task) return false;
+    if (task.testRequestStatus === TestRequestStatus.Cancelled) return false;
 
     // Must be shared sample task
     if (!task.isSharedSampleTask) return false;
@@ -1219,6 +1221,7 @@ const TaskManagementDetail: React.FC = () => {
   // Check if task can receive shared sample (Lab Hóa, prior lab sent, not received yet)
   const canReceiveSharedSample = useMemo(() => {
     if (!task) return false;
+    if (task.testRequestStatus === TestRequestStatus.Cancelled) return false;
 
     // Must be shared sample task with priorLabTaskId (Lab Hóa)
     if (!task.isSharedSampleTask || !task.priorLabTaskId) return false;
@@ -1335,9 +1338,15 @@ const TaskManagementDetail: React.FC = () => {
     task?.priorLabTaskId != null &&
     task?.priorLabSentSample !== true;
 
+  // Check if test request is cancelled - disable all actions
+  const isTestRequestCancelled =
+    task?.testRequestStatus === TestRequestStatus.Cancelled;
+
   // Check if task is in completed phase (Approved, Rejected, SentToQuality, TestingRejected)
   // During this phase, cannot assign/edit
+  // Also treat cancelled test request as completed phase
   const isCompletedPhase =
+    isTestRequestCancelled ||
     task?.status === LaboratoryTaskStatus.Approved ||
     task?.status === LaboratoryTaskStatus.Rejected ||
     task?.status === LaboratoryTaskStatus.SentToQuality ||
@@ -1560,8 +1569,8 @@ const TaskManagementDetail: React.FC = () => {
                     </Button>
                   </Popover>
                 )}
-              {/* Bulk note button - show when has selected indicators (không phụ thuộc task status) */}
-              {selectedCount > 0 && !sample.isApproved && (
+              {/* Bulk note button - show when has selected indicators, not in completed/cancelled phase */}
+              {selectedCount > 0 && !sample.isApproved && !isCompletedPhase && (
                 <Button
                   size="small"
                   icon={<EditOutlined />}
@@ -1652,6 +1661,7 @@ const TaskManagementDetail: React.FC = () => {
             }
             standardSelections={standardSelections}
             onStandardChange={handleStandardChange}
+            forceDisableAll={isTestRequestCancelled}
           />
         </>
       ),
@@ -1692,6 +1702,17 @@ const TaskManagementDetail: React.FC = () => {
           />
         </Tooltip>
       </div>
+
+      {/* Alert khi phiếu yêu cầu đã bị hủy */}
+      {isTestRequestCancelled && (
+        <Alert
+          message="Phiếu yêu cầu đã bị hủy"
+          description="Phiếu yêu cầu đã bị hủy. Không thể thực hiện bất kỳ thao tác nào trên task này."
+          type="error"
+          showIcon
+          style={{ marginBottom: 8 }}
+        />
+      )}
 
       {/* Alert và actions cho Shared Sample (Mẫu chung) */}
       {task.isSharedSampleTask && (
@@ -1934,6 +1955,7 @@ const TaskManagementDetail: React.FC = () => {
                 methods={methods}
                 taskId={task.id}
                 canEvaluate={
+                  !isTestRequestCancelled &&
                   canApproveResult &&
                   (task.status === LaboratoryTaskStatus.UnderEvaluation ||
                     task.status ===

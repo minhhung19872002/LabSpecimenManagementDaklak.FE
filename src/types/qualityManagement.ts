@@ -152,6 +152,7 @@ export interface QualityManagementTaskDto {
   assignedQualityManagerId?: string;
   assignedQualityManagerName?: string;
   changeHistory?: ChangeHistoryDto;
+  testRequestStatus?: TestRequestStatus;
   indicators?: QualityManagementIndicatorDto[];
 
   // Audit fields
