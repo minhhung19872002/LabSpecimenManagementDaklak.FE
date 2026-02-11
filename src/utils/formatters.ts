@@ -36,16 +36,37 @@ export const formatNumber = (value: number): string => {
 
 /**
  * Strip all HTML tags from a string, returning plain text
+ * Handles: block elements (p, li, br → add space), HTML entities (decode), whitespace collapse
  * @param html - HTML string
  * @returns Plain text without any HTML tags
  *
  * @example
  * stripHtmlTags("<p>Hello <b>world</b></p>") // returns "Hello world"
- * stripHtmlTags("<ul><li>Item 1</li></ul>") // returns "Item 1"
+ * stripHtmlTags("<p>Line 1</p><p>Line 2</p>") // returns "Line 1 Line 2"
+ * stripHtmlTags("<ul><li>Item 1</li><li>Item 2</li></ul>") // returns "Item 1 Item 2"
+ * stripHtmlTags("A&nbsp;B &amp; C") // returns "A B & C"
  */
 export const stripHtmlTags = (html: string | undefined | null): string => {
   if (!html) return "";
-  return html.replace(/<[^>]*>/g, "").trim();
+  let result = html;
+  // Add space before closing block-level tags so text doesn't run together
+  result = result.replace(/<\/(p|li|div|h[1-6]|tr|blockquote)>/gi, " ");
+  // Replace <br> / <br/> with space
+  result = result.replace(/<br\s*\/?>/gi, " ");
+  // Remove all remaining HTML tags
+  result = result.replace(/<[^>]*>/g, "");
+  // Decode common HTML entities
+  result = result.replace(/&nbsp;/g, " ");
+  result = result.replace(/&amp;/g, "&");
+  result = result.replace(/&lt;/g, "<");
+  result = result.replace(/&gt;/g, ">");
+  result = result.replace(/&quot;/g, '"');
+  result = result.replace(/&apos;/g, "'");
+  result = result.replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+  result = result.replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)));
+  // Collapse multiple whitespace into single space
+  result = result.replace(/\s+/g, " ");
+  return result.trim();
 };
 
 /**
