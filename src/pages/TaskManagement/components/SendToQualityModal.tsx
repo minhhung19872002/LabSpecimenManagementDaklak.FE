@@ -28,6 +28,7 @@ import { sendToQualitySchema, SendToQualityFormData } from "../schemas";
 import { noteService } from "../../../services/noteService";
 import { IndicatorName } from "../../../components/common";
 import { getApiErrorMessage } from "../../../utils/errorHandler";
+import { stripHtmlTags } from "../../../utils/formatters";
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -432,7 +433,7 @@ const SendToQualityModal: React.FC<SendToQualityModalProps> = ({
                 style={{ width: "100%" }}
                 options={(masterNotes || []).map((note) => ({
                   value: note.id,
-                  label: note.content,
+                  label: stripHtmlTags(note.content),
                 }))}
                 filterOption={(input, option) =>
                   (option?.label as string)
@@ -479,10 +480,18 @@ const SendToQualityModal: React.FC<SendToQualityModalProps> = ({
                     {masterNotes
                       .filter((note) => selectedNoteIds.includes(note.id))
                       .map((note) => (
-                        <div key={note.id} style={{ marginBottom: 4 }}>
-                          <Text>- {note.content}</Text>
+                        <div key={note.id} style={{ display: "flex", gap: 4, marginBottom: 4 }}>
+                          <span>-</span>
+                          <span
+                            className="note-preview-content"
+                            dangerouslySetInnerHTML={{ __html: note.content }}
+                          />
                         </div>
                       ))}
+                    <style>{`
+                      .note-preview-content p { margin: 0; }
+                      .note-preview-content ul, .note-preview-content ol { margin: 2px 0; padding-left: 20px; }
+                    `}</style>
                   </div>
                 )}
               </div>
