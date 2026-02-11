@@ -4,7 +4,6 @@ import {
   Button,
   Space,
   message,
-  Input,
   Modal,
   Form,
   Popconfirm,
@@ -25,6 +24,8 @@ import { authService } from "../../../services/authService";
 import { PERMISSIONS } from "../../../constants/permissionMapping";
 import { NotesTabProps, NotesActions, NoteImportPreviewDto } from "./types";
 import ImportNoteModal from "./components/ImportNoteModal";
+import RichTextEditor from "../../../components/common/RichTextEditor";
+import { stripHtmlTags } from "../../../utils/formatters";
 
 const DEFAULT_PAGE_SIZE = 50;
 
@@ -310,6 +311,7 @@ const NotesList = forwardRef<NotesActions, NotesTabProps>(({ onDataChange, refre
       dataIndex: "content",
       key: "content",
       ellipsis: true,
+      render: (content: string) => stripHtmlTags(content),
     },
     {
       title: "Trạng thái",
@@ -393,15 +395,19 @@ const NotesList = forwardRef<NotesActions, NotesTabProps>(({ onDataChange, refre
             name="content"
             label="Nội dung ghi chú"
             rules={[
-              { required: true, message: "Vui lòng nhập nội dung ghi chú" },
-              { max: 1000, message: "Nội dung ghi chú tối đa 1000 ký tự" },
+              {
+                validator: (_, value) => {
+                  if (!value || !stripHtmlTags(value)) {
+                    return Promise.reject("Vui lòng nhập nội dung ghi chú");
+                  }
+                  return Promise.resolve();
+                },
+              },
             ]}
           >
-            <Input.TextArea
-              rows={4}
+            <RichTextEditor
               placeholder="Nhập nội dung ghi chú..."
-              showCount
-              maxLength={1000}
+              showToolbar
             />
           </Form.Item>
 

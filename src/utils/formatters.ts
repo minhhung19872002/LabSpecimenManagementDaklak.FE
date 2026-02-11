@@ -35,6 +35,20 @@ export const formatNumber = (value: number): string => {
 };
 
 /**
+ * Strip all HTML tags from a string, returning plain text
+ * @param html - HTML string
+ * @returns Plain text without any HTML tags
+ *
+ * @example
+ * stripHtmlTags("<p>Hello <b>world</b></p>") // returns "Hello world"
+ * stripHtmlTags("<ul><li>Item 1</li></ul>") // returns "Item 1"
+ */
+export const stripHtmlTags = (html: string | undefined | null): string => {
+  if (!html) return "";
+  return html.replace(/<[^>]*>/g, "").trim();
+};
+
+/**
  * Strip <p> tags from HTML string but keep inner HTML content
  * Useful for rendering limit values with subscript/superscript from rich text editor
  * @param html - HTML string that may contain <p> wrapper tags
