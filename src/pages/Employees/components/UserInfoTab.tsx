@@ -15,7 +15,7 @@ import { UserOutlined, SaveOutlined } from "@ant-design/icons";
 import { EmployeeDto, UpdateEmployeeDto } from "../../../services/employeeService";
 import { authService } from "../../../services/authService";
 import { PERMISSIONS } from "../../../constants/permissionMapping";
-import { Department } from "../hooks/useEmployeeList";
+import { Department, POSITION_OPTIONS } from "../hooks/useEmployeeList";
 import { departmentService } from "../../../services/masterDataService";
 
 const { Text, Title } = Typography;
@@ -180,12 +180,11 @@ const UserInfoTab: React.FC<UserInfoTabProps> = ({
                     showSearch
                     optionFilterProp="children"
                   >
-                    <Select.Option value="Giám đốc">Giám đốc</Select.Option>
-                    <Select.Option value="Phó Giám đốc">Phó Giám đốc</Select.Option>
-                    <Select.Option value="Trưởng phòng">Trưởng phòng</Select.Option>
-                    <Select.Option value="Phó phòng">Phó phòng</Select.Option>
-                    <Select.Option value="Nhân viên">Nhân viên</Select.Option>
-                    <Select.Option value="Thực tập sinh">Thực tập sinh</Select.Option>
+                    {POSITION_OPTIONS.map((p) => (
+                      <Select.Option key={p} value={p}>
+                        {p}
+                      </Select.Option>
+                    ))}
                   </Select>
                 </Form.Item>
               </Col>
