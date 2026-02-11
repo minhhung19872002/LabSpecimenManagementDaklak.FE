@@ -328,9 +328,10 @@ const TaskManagementDetail: React.FC = () => {
       }
 
       // Find indicators without standardId that haven't been processed yet
+      // Cũng bao gồm indicators có MethodChanged (PP đã đổi, cần set lại tiêu chuẩn theo PP mới)
       const indicatorsNeedingStandard = task.indicators.filter(
         (ind) =>
-          !ind.standardId &&
+          (!ind.standardId || ind.approvalStatus === IndicatorApprovalStatus.MethodChanged) &&
           !processedIndicatorsRef.current.has(ind.id) &&
           ind.approvalStatus !== IndicatorApprovalStatus.Approved &&
           ind.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled,
