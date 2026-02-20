@@ -1,3 +1,4 @@
+// UAT deployment test - 2026-02-20
 import { createRoot } from "react-dom/client";
 import { App as AntApp, ConfigProvider } from "antd";
 import viVN from "antd/locale/vi_VN";
