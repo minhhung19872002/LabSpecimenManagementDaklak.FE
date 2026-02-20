@@ -1,9 +1,20 @@
-import React, { useState, useEffect } from "react";
-import { Table, Button, Space, message, Spin, Input, Row, Col } from "antd";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  Table,
+  Button,
+  Space,
+  message,
+  Spin,
+  Input,
+  Row,
+  Col,
+  Modal,
+} from "antd";
 import {
   DownloadOutlined,
   SearchOutlined,
   FileWordOutlined,
+  UploadOutlined,
 } from "../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -16,6 +27,8 @@ const FormTemplatesTab: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchTemplates = async () => {
     try {
@@ -33,6 +46,60 @@ const FormTemplatesTab: React.FC = () => {
   useEffect(() => {
     fetchTemplates();
   }, []);
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const doUpload = async (file: File) => {
+    try {
+      setUploading(true);
+      const result = await formTemplateService.upload(file);
+      if (result.success) {
+        message.success(
+          result.isReplacing
+            ? `Đã thay thế file "${result.fileName}"`
+            : `Đã tải lên file "${result.fileName}"`,
+        );
+        fetchTemplates();
+      }
+    } catch (err: any) {
+      console.error("Failed to upload template:", err);
+      message.error("Không thể tải lên file. Vui lòng thử lại.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Reset input so same file can be selected again
+    e.target.value = "";
+
+    try {
+      // Check if file already exists on server
+      const checkResult = await formTemplateService.checkExists(file.name);
+      if (checkResult.exists) {
+        Modal.confirm({
+          title: "File đã tồn tại",
+          content: `File "${file.name}" đã tồn tại trong hệ thống. Bạn có muốn thay thế file hiện tại không?`,
+          centered: true,
+          okText: "Thay thế",
+          cancelText: "Hủy",
+          okButtonProps: { danger: true },
+          onOk: () => doUpload(file),
+        });
+      } else {
+        await doUpload(file);
+      }
+    } catch (err: any) {
+      console.error("Failed to check file existence:", err);
+      // If check fails, still allow upload
+      await doUpload(file);
+    }
+  };
 
   const handleDownload = async (template: FormTemplateDto) => {
     try {
@@ -106,6 +173,7 @@ const FormTemplatesTab: React.FC = () => {
       <Row
         gutter={[16, 16]}
         style={{ marginBottom: 16, padding: "16px 16px 0" }}
+        align="middle"
       >
         <Col xs={24} sm={12} md={8}>
           <Input
@@ -114,6 +182,28 @@ const FormTemplatesTab: React.FC = () => {
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             allowClear
+          />
+        </Col>
+        <Col flex="auto" style={{ textAlign: "right" }}>
+          <Button
+            icon={<UploadOutlined />}
+            onClick={handleUploadClick}
+            loading={uploading}
+            style={{
+              background: "linear-gradient(135deg, #1890ff 0%, #096dd9 100%)",
+              color: "#fff",
+              border: "none",
+              fontWeight: 500,
+            }}
+          >
+            Tải lên template
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".docx,.doc,.xlsx,.xls,.pdf"
+            style={{ display: "none" }}
+            onChange={handleFileSelected}
           />
         </Col>
       </Row>

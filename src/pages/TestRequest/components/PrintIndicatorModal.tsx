@@ -6,7 +6,6 @@ import {
   Space,
   Typography,
   message,
-  Input,
   Spin,
   Checkbox,
   List,
@@ -35,7 +34,8 @@ import { qualityManagementService } from "../../../services/qualityManagementSer
 import { API_BASE_URL } from "../../../services/api";
 import userService, { UserLookupDto } from "../../../services/userService";
 import { IndicatorName } from "../../../components/common";
-import { parseResultToNumber } from "../../../utils/formatters";
+import RichTextEditor from "../../../components/common/RichTextEditor";
+import { parseResultToNumber, convertHtmlToMathExpression, stripHtmlTags } from "../../../utils/formatters";
 
 const { Text } = Typography;
 
@@ -140,61 +140,55 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
       );
 
       // Collect unique master data notes and free text notes
-      // Use exact match instead of includes() to avoid partial matching issues
-      const existingNoteLines = note
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean);
-      const newNoteLines: string[] = [];
+      // Note content is HTML (rich text) - use plain text for deduplication
+      const existingPlainText = stripHtmlTags(note);
+      const newHtmlParts: string[] = [];
 
-      // First, collect all master data notes (deduplicated)
-      // Master data notes will be joined with ", " on a single line
-      const allMasterDataNotes = new Set<string>();
+      // First, collect all master data notes (deduplicated by plain text)
+      const addedMasterNotes = new Set<string>();
       newIndicators.forEach((ind) => {
         if (ind.masterDataNotes && ind.masterDataNotes.length > 0) {
           ind.masterDataNotes.forEach((masterNote) => {
             if (masterNote) {
-              allMasterDataNotes.add(masterNote);
+              const plainNote = stripHtmlTags(masterNote);
+              if (
+                plainNote &&
+                !addedMasterNotes.has(plainNote) &&
+                !existingPlainText.includes(plainNote)
+              ) {
+                addedMasterNotes.add(plainNote);
+                newHtmlParts.push(masterNote);
+              }
             }
           });
         }
       });
 
-      // Add master data notes as single line with ", " separator
-      if (allMasterDataNotes.size > 0) {
-        const masterDataLine = `- ${Array.from(allMasterDataNotes).join(", ")}`;
-        // Check if this exact line already exists
-        if (!existingNoteLines.some((line) => line === masterDataLine)) {
-          newNoteLines.push(masterDataLine);
-        }
-      }
-
       // Then collect free text notes (deduplicated)
+      // Keep original HTML from freeTextNote
       const addedFreeTexts = new Set<string>();
       newIndicators.forEach((ind) => {
         if (ind.freeTextNote && ind.freeTextNote.trim()) {
-          const freeText = ind.freeTextNote.trim();
-          // Check exact match: `- ${freeText}` hoặc freeText không tồn tại trong existing lines
+          const plainFreeText = stripHtmlTags(ind.freeTextNote);
           if (
-            !addedFreeTexts.has(freeText) &&
-            !existingNoteLines.some(
-              (line) => line === `- ${freeText}` || line === freeText,
-            )
+            plainFreeText &&
+            !addedFreeTexts.has(plainFreeText) &&
+            !existingPlainText.includes(plainFreeText)
           ) {
-            addedFreeTexts.add(freeText);
-            newNoteLines.push(`- ${freeText}`);
+            addedFreeTexts.add(plainFreeText);
+            newHtmlParts.push(ind.freeTextNote);
           }
         }
       });
 
-      // Append new notes to existing note
-      if (newNoteLines.length > 0) {
+      // Append new notes as HTML
+      if (newHtmlParts.length > 0) {
         setNote((prev) => {
-          const trimmed = prev.trim();
-          if (trimmed) {
-            return `${trimmed}\n${newNoteLines.join("\n")}`;
+          const trimmedPrev = stripHtmlTags(prev);
+          if (trimmedPrev) {
+            return prev + newHtmlParts.join("");
           }
-          return newNoteLines.join("\n");
+          return newHtmlParts.join("");
         });
       }
     }
@@ -429,7 +423,8 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
     const resultValue = parseResultToNumber(result);
     if (resultValue === null) return null;
 
-    const limitValue = parseResultToNumber(allowedLimit);
+    // Convert HTML superscript/subscript to math expression and parse limit
+    const limitValue = parseResultToNumber(convertHtmlToMathExpression(allowedLimit));
     if (limitValue === null) return null;
 
     switch (comparisonOperator) {
@@ -935,13 +930,12 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
               <Text strong style={{ display: "block", marginBottom: 8 }}>
                 Ghi chú (không bắt buộc)
               </Text>
-              <Input.TextArea
+              <RichTextEditor
                 value={note}
-                onChange={(e) => setNote(e.target.value)}
+                onChange={(html) => setNote(html)}
                 placeholder="Nhập ghi chú sẽ được đưa vào phần cuối của báo cáo..."
-                rows={3}
-                maxLength={500}
-                showCount
+                showToolbar
+                minHeight={100}
               />
             </div>
           </Col>

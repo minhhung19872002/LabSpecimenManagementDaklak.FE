@@ -8,6 +8,7 @@ import {
   TestMethodsTable,
   TestMethodModal,
   AddIndicatorsModal,
+  EditIndicatorModal,
   ImportTestMethodModal,
 } from "./components";
 import { getTestMethodColumns, getIndicatorColumns } from "./constants";
@@ -32,6 +33,7 @@ const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
     indicatorsByGroup,
     specimenTypes,
     getSpecimenTypesByIndicator,
+    getIndicatorsBySpecimenType,
     setSearchText,
     setExpandedRowKeys,
     fetchData,
@@ -70,6 +72,13 @@ const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
     handleAddIndicatorsOk,
     handleAddIndicatorsCancel,
     handleRemoveIndicator,
+    // Edit indicator
+    editIndicatorModalOpen,
+    editIndicatorLoading,
+    editingIndicator,
+    handleOpenEditIndicator,
+    handleEditIndicatorOk,
+    handleEditIndicatorCancel,
     handleToggleActive,
     // Batch remove indicators
     handleBatchRemoveIndicators,
@@ -191,8 +200,8 @@ const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
 
   // Memoized columns for indicators
   const indicatorColumns = useMemo(
-    () => getIndicatorColumns(handleRemoveIndicator),
-    [handleRemoveIndicator],
+    () => getIndicatorColumns(handleRemoveIndicator, handleOpenEditIndicator),
+    [handleRemoveIndicator, handleOpenEditIndicator],
   );
 
   // Expose actions to parent
@@ -243,8 +252,18 @@ const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
         specimenTypes={specimenTypes}
         existingIndicatorKeys={existingIndicatorKeys}
         getSpecimenTypesByIndicator={getSpecimenTypesByIndicator}
+        getIndicatorsBySpecimenType={getIndicatorsBySpecimenType}
         onOk={handleAddIndicatorsOk}
         onCancel={handleAddIndicatorsCancel}
+      />
+
+      {/* Edit Indicator Modal */}
+      <EditIndicatorModal
+        open={editIndicatorModalOpen}
+        loading={editIndicatorLoading}
+        indicator={editingIndicator}
+        onOk={handleEditIndicatorOk}
+        onCancel={handleEditIndicatorCancel}
       />
 
       {/* Import TestMethod Modal */}

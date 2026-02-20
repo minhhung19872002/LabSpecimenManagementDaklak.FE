@@ -91,18 +91,28 @@ const ProcessTimelineModal: React.FC<ProcessTimelineModalProps> = ({
     switch (title) {
       case "Mới":
         return "Ngày tạo";
-      case "Chờ xử lý":
-        return "Ngày tạo";
+      case "Chờ thanh toán":
+      case "Không cần thanh toán":
+        return "Ngày gửi";
+      case "Đã thanh toán":
+        return "Ngày thanh toán";
+      case "Đang xem xét YC":
+        return "Ngày gửi QLKT";
+      case "Đã duyệt yêu cầu":
+        return "Ngày duyệt";
       case "Đã gửi mẫu":
         return "Ngày gửi";
       case "Đang thử nghiệm":
-        return "Ngày tạo";
+        return "Ngày bắt đầu";
       case "Chờ phê duyệt KQ":
-        return "Ngày tạo";
+        return "Ngày gửi duyệt";
+      case "Đã duyệt KQ":
       case "Đã phê duyệt":
         return "Ngày duyệt";
+      case "Đã phát hành BC":
+        return "Ngày phát hành";
       case "Đã gửi kết quả":
-        return "Ngày tạo";
+        return "Ngày gửi";
       case "Hoàn thành":
         return "Ngày hoàn thành";
       case "Đã hủy":
@@ -117,20 +127,30 @@ const ProcessTimelineModal: React.FC<ProcessTimelineModalProps> = ({
     switch (title) {
       case "Mới":
         return "Người tạo";
-      case "Chờ xử lý":
-        return "Người tạo";
+      case "Chờ thanh toán":
+      case "Không cần thanh toán":
+        return "Người gửi";
+      case "Đã thanh toán":
+        return "Người xác nhận";
+      case "Đang xem xét YC":
+        return "Người gửi";
+      case "Đã duyệt yêu cầu":
+        return ""; // No user - auto when all labs approve
       case "Đã gửi mẫu":
         return ""; // No user label, shows laboratories instead
       case "Đang thử nghiệm":
         return ""; // No user label for this step
       case "Chờ phê duyệt KQ":
-        return "Người duyệt";
+        return "Người gửi";
+      case "Đã duyệt KQ":
       case "Đã phê duyệt":
         return "Người duyệt";
+      case "Đã phát hành BC":
+        return "Người phát hành";
       case "Đã gửi kết quả":
         return "Người gửi";
       case "Hoàn thành":
-        return ""; // No user label for completion
+        return "Người xác nhận";
       case "Đã hủy":
         return "Người hủy";
       default:
@@ -198,6 +218,7 @@ const ProcessTimelineModal: React.FC<ProcessTimelineModalProps> = ({
       styles={{
         mask: { width: "100%" },
         wrapper: { width: "100%" },
+        body: { maxHeight: "calc(100vh - 100px)", overflowY: "auto" },
       }}
     >
       {loading ? (

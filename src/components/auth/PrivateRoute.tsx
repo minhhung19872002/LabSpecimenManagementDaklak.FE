@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation, Outlet } from 'react-router-dom';
 import { authService, UserInfo } from '../../services/authService';
-import { hasRoutePermission, getDefaultRouteForUser, PATH_ROUTES, STORAGE_KEYS, SUPPORTER_ALLOWED_ROUTES } from '../../constants';
+import { hasRoutePermission, PATH_ROUTES, STORAGE_KEYS, SUPPORTER_ALLOWED_ROUTES } from '../../constants';
 import { useSupporterStatus } from '../../hooks/useSupporterStatus';
 
 interface PrivateRouteProps {
@@ -75,15 +75,6 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
   const hasPermission = hasRoutePermission(location.pathname, userRoles, isSupporter);
 
   if (!hasPermission) {
-    // Get default route for user
-    const defaultRoute = getDefaultRouteForUser(userRoles);
-
-    // If user has a default route and it's different from current path, redirect there
-    if (defaultRoute && location.pathname !== defaultRoute) {
-      return <Navigate to={defaultRoute} replace />;
-    }
-
-    // Otherwise redirect to 403
     return <Navigate to={PATH_ROUTES.forbidden} replace />;
   }
 

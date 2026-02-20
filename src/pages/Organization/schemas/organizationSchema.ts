@@ -25,6 +25,12 @@ export const organizationSchema = yup.object({
     .string()
     .required("Vui lòng nhập số điện thoại!")
     .matches(/^(0|\+84)[0-9]{9,10}$/, "Số điện thoại không hợp lệ!"),
+  secondaryPhone: yup
+    .string()
+    .optional()
+    .nullable()
+    .default("")
+    .max(20, "SĐT phụ không được quá 20 ký tự!"),
   isActive: yup.boolean().default(true),
 });
 

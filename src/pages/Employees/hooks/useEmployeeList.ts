@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { message } from "antd";
 import { useForm } from "react-hook-form";
+import { useNavigate } from "react-router-dom";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { employeeService, EmployeeDto } from "../../../services/employeeService";
 import { departmentService } from "../../../services/masterDataService";
 import roleManagementService, { RoleDto } from "../../../services/roleManagementService";
-import { ROLES } from "../../../constants";
+import { ROLES, PATH_ROUTES } from "../../../constants";
 import { employeeSchema, EmployeeFormData } from "../schemas";
 import { getEmployeeColumns } from "../components/columns";
 
@@ -28,12 +29,13 @@ export const POSITION_OPTIONS = [
   "Phó Giám đốc",
   "Trưởng phòng",
   "Phó trưởng phòng",
-  "Thử nghiệm viên chính",
   "Thử nghiệm viên",
   "Nhân viên",
 ];
 
 export const useEmployeeList = () => {
+  const navigate = useNavigate();
+
   // List state
   const [employees, setEmployees] = useState<EmployeeDto[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -443,18 +445,23 @@ export const useEmployeeList = () => {
     return role?.id;
   }, [rolesList]);
 
+  // Navigate to detail handler
+  const handleNavigateToDetail = useCallback((id: string) => {
+    navigate(PATH_ROUTES.employees.detail(id));
+  }, [navigate]);
+
   // Columns
   const columns = useMemo(
     () =>
       getEmployeeColumns({
-        onEdit: handleEdit,
+        onNavigateToDetail: handleNavigateToDetail,
         onDelete: handleDelete,
         onToggleActive: handleToggleActive,
         onResetPassword: handleResetPassword,
         onViewRoles: handleViewRoles,
         roles: ROLE_OPTIONS,
       }),
-    [handleEdit, handleDelete, handleToggleActive, handleResetPassword, handleViewRoles]
+    [handleNavigateToDetail, handleDelete, handleToggleActive, handleResetPassword, handleViewRoles]
   );
 
   return {

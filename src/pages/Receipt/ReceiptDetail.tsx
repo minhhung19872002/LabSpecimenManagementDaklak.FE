@@ -328,7 +328,7 @@ const ReceiptDetail: React.FC = () => {
       render: (text: string | undefined) => text || "-",
     },
     {
-      title: "Chỉ tiêu kiểm nghiệm",
+      title: "Chỉ tiêu thử nghiệm",
       dataIndex: "indicators",
       key: "indicators",
       width: 150,
@@ -375,7 +375,7 @@ const ReceiptDetail: React.FC = () => {
         return (
           <Popover
             content={popoverContent}
-            title={`Chỉ tiêu kiểm nghiệm (${indicators.length})`}
+            title={`Chỉ tiêu thử nghiệm (${indicators.length})`}
             trigger="click"
             placement="bottomLeft"
           >

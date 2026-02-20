@@ -103,7 +103,8 @@ export const getTestMethodColumns = (
 
 // Columns cho bảng chỉ tiêu trong phương pháp (indicator level)
 export const getIndicatorColumns = (
-  handleRemove: (testMethodId: string, indicatorId: string) => void
+  handleRemove: (testMethodId: string, indicatorId: string) => void,
+  handleEdit?: (indicator: TestMethodIndicatorDto) => void
 ): ColumnsType<TestMethodIndicatorDto> => [
   {
     title: "STT",
@@ -177,26 +178,41 @@ export const getIndicatorColumns = (
   {
     title: "Thao tác",
     key: "actions",
-    width: 80,
+    width: 100,
     render: (_, record) => {
-      // Don't show delete button for sub-indicators (they follow parent)
+      // Don't show actions for sub-indicators (they follow parent)
       if (record.parentIndicatorId) return null;
 
+      const canEdit = authService.hasPermission(PERMISSIONS.MasterData.Edit);
       const canDelete = authService.hasPermission(PERMISSIONS.MasterData.Delete);
 
-      if (!canDelete) {
+      if (!canEdit && !canDelete) {
         return null;
       }
 
       return (
-        <Popconfirm
-          title="Bạn có chắc chắn muốn xóa chỉ tiêu này khỏi phương pháp?"
-          onConfirm={() => handleRemove(record.testMethodId, record.indicatorId)}
-          okText="Có"
-          cancelText="Không"
-        >
-          <Button type="link" size="small" danger icon={<DeleteOutlined />} />
-        </Popconfirm>
+        <Space size="small">
+          {canEdit && handleEdit && (
+            <Tooltip title="Sửa đơn giá">
+              <Button
+                type="link"
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => handleEdit(record)}
+              />
+            </Tooltip>
+          )}
+          {canDelete && (
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa chỉ tiêu này khỏi phương pháp?"
+              onConfirm={() => handleRemove(record.testMethodId, record.indicatorId)}
+              okText="Có"
+              cancelText="Không"
+            >
+              <Button type="link" size="small" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          )}
+        </Space>
       );
     },
   },

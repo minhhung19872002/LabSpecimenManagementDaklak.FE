@@ -149,6 +149,7 @@ export const getStandardColumns = (
 export interface StandardIndicatorWithPosition extends StandardIndicatorDto {
   _isFirstSub?: boolean;
   _isLastSub?: boolean;
+  _hasSubIndicators?: boolean; // Flag to indicate if parent has sub-indicators
 }
 
 // Columns cho bảng chỉ tiêu trong tiêu chuẩn (indicator level)
@@ -231,17 +232,36 @@ export const getIndicatorColumns = (
     render: (_, record) => {
       const isSubIndicator = !!record.parentIndicatorId;
 
+      // Helper to strip <p> tags but keep inner HTML (for rendering in table)
+      const stripPTags = (html: string) => {
+        if (!html) return html;
+        return html.replace(/^<p>|<\/p>$/gi, "").trim();
+      };
+
       // Range case: both lowerLimit and upperLimit have values
       if (record.lowerLimit && record.upperLimit) {
         const lower = convertOperatorSymbol(record.lowerOperator) || ">";
         const upper = convertOperatorSymbol(record.upperOperator) || "<";
-        return `${lower} ${record.lowerLimit} và ${upper} ${record.upperLimit}`;
+        const lowerHtml = stripPTags(record.lowerLimit);
+        const upperHtml = stripPTags(record.upperLimit);
+        return (
+          <span>
+            {lower} <span dangerouslySetInnerHTML={{ __html: lowerHtml }} />
+            {" và "}
+            {upper} <span dangerouslySetInnerHTML={{ __html: upperHtml }} />
+          </span>
+        );
       }
 
       // Single limit with value
       if (record.allowedLimit && record.allowedLimit !== "0") {
         const op = convertOperatorSymbol(record.comparisonOperator);
-        return `${op} ${record.allowedLimit}`.trim();
+        const limitHtml = stripPTags(record.allowedLimit);
+        return (
+          <span>
+            {op} <span dangerouslySetInnerHTML={{ __html: limitHtml }} />
+          </span>
+        );
       }
 
       // allowedLimit is "0"
@@ -298,8 +318,8 @@ export const getIndicatorColumns = (
               />
             </Tooltip>
           )}
-          {/* Only show edit button for sub-indicators - parent indicators don't have limits to edit */}
-          {canEdit && isSubIndicator && (
+          {/* Show edit button for: sub-indicators OR parent indicators without sub-indicators */}
+          {canEdit && (isSubIndicator || !record._hasSubIndicators) && (
             <Tooltip title="Sửa">
               <Button
                 type="link"

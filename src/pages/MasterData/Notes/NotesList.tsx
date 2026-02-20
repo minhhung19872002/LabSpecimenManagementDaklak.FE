@@ -1,39 +1,41 @@
-import React, { useState, useEffect, useCallback, forwardRef, useImperativeHandle, useRef } from "react";
+import { useState, useEffect, useCallback, forwardRef, useImperativeHandle, useRef } from "react";
 import {
   Table,
   Button,
   Space,
   message,
-  Input,
-  Row,
-  Col,
   Modal,
   Form,
   Popconfirm,
   Tag,
   Switch,
-  Select,
+  Tooltip,
 } from "antd";
 import {
-  PlusOutlined,
   EditOutlined,
   DeleteOutlined,
 } from "../../../components/common/Icon";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
+import type { UploadFile } from "antd/es/upload/interface";
 import { noteService } from "../../../services/noteService";
+import { importService } from "../../../services/importService";
+import { API_BASE_URL } from "../../../services/api";
 import { NoteDto, CreateNoteDto, UpdateNoteDto } from "../../../types/note";
 import { authService } from "../../../services/authService";
 import { PERMISSIONS } from "../../../constants/permissionMapping";
-import { NotesTabProps, NotesActions } from "./types";
+import { NotesTabProps, NotesActions, NoteImportPreviewDto } from "./types";
+import ImportNoteModal from "./components/ImportNoteModal";
+import RichTextEditor from "../../../components/common/RichTextEditor";
+import { stripHtmlTags } from "../../../utils/formatters";
 
 const DEFAULT_PAGE_SIZE = 50;
 
 const NotesList = forwardRef<NotesActions, NotesTabProps>(({ onDataChange, refreshKey }, ref) => {
   const [data, setData] = useState<NoteDto[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchText, setSearchText] = useState("");
-  const [appliedSearch, setAppliedSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<boolean | undefined>(undefined);
+  const [_searchText, _setSearchText] = useState("");
+  const [appliedSearch, _setAppliedSearch] = useState("");
+  const [statusFilter, _setStatusFilter] = useState<boolean | undefined>(undefined);
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: DEFAULT_PAGE_SIZE,
@@ -45,6 +47,12 @@ const NotesList = forwardRef<NotesActions, NotesTabProps>(({ onDataChange, refre
   const [modalLoading, setModalLoading] = useState(false);
   const [editingItem, setEditingItem] = useState<NoteDto | null>(null);
   const [form] = Form.useForm();
+
+  // Import state
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importFileList, setImportFileList] = useState<UploadFile[]>([]);
+  const [importPreviewData, setImportPreviewData] = useState<NoteImportPreviewDto | null>(null);
 
   // Refresh data when refreshKey changes
   const isFirstMount = useRef(true);
@@ -94,9 +102,9 @@ const NotesList = forwardRef<NotesActions, NotesTabProps>(({ onDataChange, refre
     fetchData(1, pagination.pageSize, appliedSearch, statusFilter);
   }, [appliedSearch, statusFilter]);
 
-  const handleSearch = () => {
-    setAppliedSearch(searchText);
-  };
+  // const _handleSearch = () => {
+  //   _setAppliedSearch(_searchText);
+  // };
 
   const handleTableChange = (paginationConfig: TablePaginationConfig) => {
     fetchData(
@@ -207,9 +215,79 @@ const NotesList = forwardRef<NotesActions, NotesTabProps>(({ onDataChange, refre
     form.resetFields();
   };
 
+  // Import handlers
+  const handleDownloadTemplate = () => {
+    window.open(
+      `${API_BASE_URL}/api/v1/import/notes/template`,
+      "_blank"
+    );
+  };
+
+  const handleImport = () => {
+    setImportModalOpen(true);
+  };
+
+  const handleImportPreview = async () => {
+    if (!importFileList.length || !importFileList[0].originFileObj) {
+      message.error("Vui lòng chọn file");
+      return;
+    }
+
+    setImportLoading(true);
+    try {
+      const result = await importService.previewNotes(importFileList[0].originFileObj);
+      setImportPreviewData(result);
+    } catch (err: unknown) {
+      console.error("Failed to preview import:", err);
+      message.error("Không thể xem trước dữ liệu import");
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleImportConfirm = async () => {
+    if (!importFileList.length || !importFileList[0].originFileObj) {
+      message.error("Vui lòng chọn file");
+      return;
+    }
+
+    setImportLoading(true);
+    try {
+      const result = await importService.importNotes(importFileList[0].originFileObj);
+      if (result.success) {
+        message.success(result.message || "Import thành công");
+        setImportModalOpen(false);
+        setImportFileList([]);
+        setImportPreviewData(null);
+        fetchData(1, pagination.pageSize, appliedSearch, statusFilter);
+        onDataChange?.();
+      } else {
+        message.error(result.message || "Import thất bại");
+      }
+    } catch (err: unknown) {
+      console.error("Failed to import:", err);
+      message.error("Không thể import dữ liệu");
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleImportCancel = () => {
+    setImportModalOpen(false);
+    setImportFileList([]);
+    setImportPreviewData(null);
+  };
+
+  const handleImportReset = () => {
+    setImportFileList([]);
+    setImportPreviewData(null);
+  };
+
   // Expose actions to parent
   useImperativeHandle(ref, () => ({
     handleCreate,
+    handleDownloadTemplate,
+    handleImport,
   }));
 
   const canEdit = authService.hasPermission(PERMISSIONS.Notes.Edit);
@@ -233,7 +311,13 @@ const NotesList = forwardRef<NotesActions, NotesTabProps>(({ onDataChange, refre
       title: "Nội dung",
       dataIndex: "content",
       key: "content",
-      ellipsis: true,
+      render: (content: string) => (
+        <div
+          dangerouslySetInnerHTML={{ __html: content }}
+          style={{ wordBreak: "break-word" }}
+          className="note-content-cell"
+        />
+      ),
     },
     {
       title: "Trạng thái",
@@ -317,15 +401,19 @@ const NotesList = forwardRef<NotesActions, NotesTabProps>(({ onDataChange, refre
             name="content"
             label="Nội dung ghi chú"
             rules={[
-              { required: true, message: "Vui lòng nhập nội dung ghi chú" },
-              { max: 1000, message: "Nội dung ghi chú tối đa 1000 ký tự" },
+              {
+                validator: (_, value) => {
+                  if (!value || !stripHtmlTags(value)) {
+                    return Promise.reject("Vui lòng nhập nội dung ghi chú");
+                  }
+                  return Promise.resolve();
+                },
+              },
             ]}
           >
-            <Input.TextArea
-              rows={4}
+            <RichTextEditor
               placeholder="Nhập nội dung ghi chú..."
-              showCount
-              maxLength={1000}
+              showToolbar
             />
           </Form.Item>
 
@@ -341,6 +429,25 @@ const NotesList = forwardRef<NotesActions, NotesTabProps>(({ onDataChange, refre
           </Form.Item>
         </Form>
       </Modal>
+
+      <style>{`
+        .note-content-cell p { margin: 0; }
+        .note-content-cell ul, .note-content-cell ol { margin: 2px 0; padding-left: 20px; }
+        .note-content-cell li { line-height: 22px; }
+      `}</style>
+
+      {/* Import Modal */}
+      <ImportNoteModal
+        open={importModalOpen}
+        loading={importLoading}
+        fileList={importFileList}
+        previewData={importPreviewData}
+        onFileListChange={setImportFileList}
+        onPreview={handleImportPreview}
+        onConfirm={handleImportConfirm}
+        onCancel={handleImportCancel}
+        onReset={handleImportReset}
+      />
     </>
   );
 });

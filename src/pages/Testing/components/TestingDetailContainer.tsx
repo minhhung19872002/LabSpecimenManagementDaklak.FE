@@ -12,6 +12,7 @@ import {
   SampleTestingImageDto,
   IndicatorImageDto,
 } from "../../../types/testing";
+import { TestRequestStatus } from "../../../types/testRequest";
 import IndicatorEditTable from "./IndicatorEditTable";
 import RejectionHistoryModal from "./RejectionHistoryModal";
 import CannotTestModal from "./CannotTestModal";
@@ -49,6 +50,8 @@ interface TestingDetailContainerProps {
     indicatorName: string;
   };
   resultOptions?: ResultOption[];
+  /** Function to get result options filtered by (indicatorId + specimenTypeId) */
+  getResultOptionsForIndicator?: (indicatorId: string, specimenTypeId?: string) => ResultOption[];
   /** Có quyền thực hiện thao tác (nhập/sửa/gửi kết quả) theo Permission Matrix */
   canPerformActions?: boolean;
   onBack: () => void;
@@ -99,6 +102,7 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
   historyModal,
   cannotTestModal,
   resultOptions = [],
+  getResultOptionsForIndicator,
   canPerformActions = false,
   onBack,
   onCollapseChange,
@@ -149,6 +153,17 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
           />
         </Tooltip>
       </div>
+
+      {/* Alert khi phiếu yêu cầu đã bị hủy */}
+      {detail.testRequestStatus === TestRequestStatus.Cancelled && (
+        <Alert
+          message="Phiếu yêu cầu đã bị hủy"
+          description="Phiếu yêu cầu đã bị hủy. Không thể thực hiện bất kỳ thao tác nào."
+          type="error"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      )}
 
       {/* Urgent Alert */}
       {isUrgent && (
@@ -212,6 +227,7 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
                 isUrgent={isUrgent}
                 submitting={submitting}
                 resultOptions={resultOptions}
+                getResultOptionsForIndicator={getResultOptionsForIndicator}
                 canPerformActions={canPerformActions}
                 onResultsChange={(results) =>
                   onResultsChange(sample.sampleId, results)

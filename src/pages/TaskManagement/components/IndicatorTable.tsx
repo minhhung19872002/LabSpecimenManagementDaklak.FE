@@ -13,7 +13,7 @@ import {
 import StatusTag from "../../../components/common/StatusTag";
 import type { TableRowSelection } from "antd/es/table/interface";
 import { CheckOutlined, CloseOutlined } from "../../../components/common/Icon";
-import { formatDate, parseResultToNumber } from "../../../utils/formatters";
+import { formatDate, parseResultToNumber, stripPTags, convertHtmlToMathExpression } from "../../../utils/formatters";
 import {
   LaboratoryTaskIndicatorDto,
   IndicatorApprovalStatus,
@@ -78,6 +78,8 @@ interface IndicatorTableProps {
   // Callback để set standardIds từ parent
   standardSelections?: Record<string, string | null>;
   onStandardChange?: (indicatorId: string, standardId: string | null) => void;
+  // Force disable tất cả input/select (khi phiếu yêu cầu bị hủy)
+  forceDisableAll?: boolean;
 }
 
 const IndicatorTable: React.FC<IndicatorTableProps> = ({
@@ -101,6 +103,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   onSelectionChange,
   standardSelections = {},
   onStandardChange,
+  forceDisableAll = false,
 }) => {
   // Determine selection mode based on sample status
   // notStarted/assigned/pendingApproval → assignment mode (để chọn indicator giao việc)
@@ -147,14 +150,15 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     }
   };
 
-  // Get standards that contain a specific indicator AND method
+  // Get standards that contain a specific indicator AND method AND specimenType (if available)
   const getStandardsForIndicator = useMemo(() => {
-    return (indicatorId: string, methodId?: string) => {
+    return (indicatorId: string, methodId?: string, specimenTypeId?: string) => {
       return standardsWithIndicators.filter((standard) =>
         standard.indicators.some(
           (si) =>
             si.indicatorId === indicatorId &&
-            (!methodId || si.testMethodId === methodId)
+            (!methodId || si.testMethodId === methodId) &&
+            (!specimenTypeId || !si.specimenTypeId || si.specimenTypeId === specimenTypeId)
         )
       );
     };
@@ -164,14 +168,16 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   const getStandardIndicatorInfo = (
     standardId: string,
     indicatorId: string,
-    methodId?: string
+    methodId?: string,
+    specimenTypeId?: string
   ) => {
     const standard = standardsWithIndicators.find((s) => s.id === standardId);
     if (!standard) return null;
     return standard.indicators.find(
       (si) =>
         si.indicatorId === indicatorId &&
-        (!methodId || si.testMethodId === methodId)
+        (!methodId || si.testMethodId === methodId) &&
+        (!specimenTypeId || !si.specimenTypeId || si.specimenTypeId === specimenTypeId)
     );
   };
 
@@ -205,8 +211,9 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
 
     // Check if it's a range comparison (both lowerLimit and upperLimit exist)
     if (lowerLimit && upperLimit) {
-      const lowerValue = parseResultToNumber(lowerLimit);
-      const upperValue = parseResultToNumber(upperLimit);
+      // Convert HTML superscript/subscript to math expression before parsing
+      const lowerValue = parseResultToNumber(convertHtmlToMathExpression(lowerLimit));
+      const upperValue = parseResultToNumber(convertHtmlToMathExpression(upperLimit));
       if (lowerValue === null || upperValue === null) return null;
 
       // Check lower bound
@@ -251,8 +258,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     // Single limit comparison
     if (!comparisonOperator || !allowedLimit) return null;
 
-    // Parse limit to number (also supports scientific notation and math expressions)
-    const limitValue = parseResultToNumber(allowedLimit);
+    // Convert HTML superscript/subscript to math expression and parse limit to number
+    const limitValue = parseResultToNumber(convertHtmlToMathExpression(allowedLimit));
     if (limitValue === null) return null;
 
     // Compare based on operator (support both <= and ≤ formats)
@@ -484,6 +491,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         // Chưa có phương pháp - hiển thị dropdown để chọn
         // Cho phép chỉnh sửa nếu indicator chưa được duyệt hoặc chưa bị hủy
         const canEditMethod =
+          !forceDisableAll &&
           record.approvalStatus !== IndicatorApprovalStatus.Approved &&
           record.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled;
 
@@ -515,6 +523,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
 
         // Cho phép chỉnh sửa nếu chưa duyệt và chưa bị hủy
         const canEditUnit =
+          !forceDisableAll &&
           record.approvalStatus !== IndicatorApprovalStatus.Approved &&
           record.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled &&
           onUnitChange;
@@ -576,17 +585,20 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         if (record._isParentWithSubs) return null;
 
         // Tổng hợp note từ FreeTextNote và MasterDataNoteContents
+        // FreeTextNote có thể là HTML (rich text)
         const noteParts: string[] = [];
         if (record.freeTextNote) {
-          noteParts.push(record.freeTextNote);
+          noteParts.push(stripPTags(record.freeTextNote));
         }
         if (
           record.masterDataNoteContents &&
           record.masterDataNoteContents.length > 0
         ) {
-          noteParts.push(...record.masterDataNoteContents.map((c) => `- ${c}`));
+          noteParts.push(...record.masterDataNoteContents);
         }
-        const displayNote = noteParts.join("\n");
+        const displayNoteHtml = noteParts.join("<br/>");
+        // Plain text for tooltip and empty check
+        const displayNotePlain = noteParts.join("").replace(/<[^>]*>/g, "").trim();
 
         // Chỉ không cho edit khi đã duyệt hoặc KH hủy (không phụ thuộc task status)
         // Nếu chỉ tiêu chưa được QLKT phê duyệt KQ thì vẫn edit ghi chú được
@@ -594,7 +606,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           record.approvalStatus === IndicatorApprovalStatus.Approved;
         const isCancelled =
           record.approvalStatus === IndicatorApprovalStatus.CustomerCancelled;
-        const canEditNoteCell = !isApproved && !isCancelled && onOpenNoteModal;
+        const canEditNoteCell = !forceDisableAll && !isApproved && !isCancelled && onOpenNoteModal;
 
         // Read-only mode - vẫn hiển thị dạng input nhưng disabled
         if (!canEditNoteCell) {
@@ -604,8 +616,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             >
               <Tooltip
                 title={
-                  displayNote ? (
-                    <div style={{ whiteSpace: "pre-line" }}>{displayNote}</div>
+                  displayNotePlain ? (
+                    <div dangerouslySetInnerHTML={{ __html: displayNoteHtml }} className="note-tooltip-content" />
                   ) : undefined
                 }
               >
@@ -622,14 +634,13 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
-                    color: displayNote
+                    color: displayNotePlain
                       ? "rgba(0, 0, 0, 0.65)"
                       : "rgba(0, 0, 0, 0.25)",
                     cursor: "not-allowed",
                   }}
-                >
-                  {displayNote || "..."}
-                </div>
+                  dangerouslySetInnerHTML={{ __html: displayNotePlain ? displayNoteHtml : "..." }}
+                />
               </Tooltip>
             </div>
           );
@@ -644,12 +655,12 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
               alignItems: "center",
               cursor: "pointer",
             }}
-            onClick={() => onOpenNoteModal(record.id, displayNote, sampleId)}
+            onClick={() => onOpenNoteModal(record.id, displayNoteHtml, sampleId)}
           >
             <Tooltip
               title={
-                displayNote ? (
-                  <div style={{ whiteSpace: "pre-line" }}>{displayNote}</div>
+                displayNotePlain ? (
+                  <div dangerouslySetInnerHTML={{ __html: displayNoteHtml }} className="note-tooltip-content" />
                 ) : undefined
               }
             >
@@ -666,13 +677,12 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
-                  color: displayNote
+                  color: displayNotePlain
                     ? "rgba(0, 0, 0, 0.88)"
                     : "rgba(0, 0, 0, 0.25)",
                 }}
-              >
-                {displayNote || "Click để nhập..."}
-              </div>
+                dangerouslySetInnerHTML={{ __html: displayNotePlain ? displayNoteHtml : "Click để nhập..." }}
+              />
             </Tooltip>
           </div>
         );
@@ -710,14 +720,22 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             ? standardSelections[record.id]
             : record.standardId;
 
-        // Lấy danh sách tiêu chuẩn phù hợp với chỉ tiêu và phương pháp
+        // Lấy danh sách tiêu chuẩn phù hợp với chỉ tiêu, phương pháp và nền mẫu
         const availableStandards = getStandardsForIndicator(
           record.indicatorId,
-          record.methodId
+          record.methodId,
+          record.specimenTypeId
         );
+
+        // Nếu standardId hiện tại không nằm trong danh sách options (ví dụ: PP đã đổi), không hiển thị
+        const isStandardAvailable = selectedStandardId
+          ? availableStandards.some((s) => s.id === selectedStandardId)
+          : false;
+        const displayStandardId = isStandardAvailable ? selectedStandardId : undefined;
 
         // Cho phép chọn tiêu chuẩn ở tất cả trạng thái trừ các trạng thái sau
         const canSelectStandard =
+          !forceDisableAll &&
           record.approvalStatus !== IndicatorApprovalStatus.Approved &&
           record.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled &&
           record.approvalStatus !==
@@ -730,7 +748,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
               style={{ width: "100%" }}
               placeholder="Chọn tiêu chuẩn"
               allowClear
-              value={selectedStandardId || undefined}
+              value={displayStandardId}
               onChange={(value) => handleStandardChange(record.id, value)}
               loading={loadingStandards}
               disabled={!canSelectStandard}
@@ -765,7 +783,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           const standardInfo = getStandardIndicatorInfo(
             selectedStandardId,
             record.indicatorId,
-            record.methodId
+            record.methodId,
+            record.specimenTypeId
           );
           if (standardInfo) {
             const {
@@ -780,17 +799,22 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             if (lowerLimit && upperLimit) {
               const lower = lowerOperator || ">";
               const upper = upperOperator || "<";
+              const lowerHtml = stripPTags(lowerLimit);
+              const upperHtml = stripPTags(upperLimit);
               return (
                 <Text>
-                  {lower} {lowerLimit} và {upper} {upperLimit}
+                  {lower} <span dangerouslySetInnerHTML={{ __html: lowerHtml }} />
+                  {" và "}
+                  {upper} <span dangerouslySetInnerHTML={{ __html: upperHtml }} />
                 </Text>
               );
             }
             // Single limit case
             if (comparisonOperator && allowedLimit) {
+              const limitHtml = stripPTags(allowedLimit);
               return (
                 <Text>
-                  {comparisonOperator} {allowedLimit}
+                  {comparisonOperator} <span dangerouslySetInnerHTML={{ __html: limitHtml }} />
                 </Text>
               );
             }
@@ -801,17 +825,22 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             if (record.lowerLimit && record.upperLimit) {
               const lower = record.lowerOperator || ">";
               const upper = record.upperOperator || "<";
+              const lowerHtml = stripPTags(record.lowerLimit);
+              const upperHtml = stripPTags(record.upperLimit);
               return (
                 <Text>
-                  {lower} {record.lowerLimit} và {upper} {record.upperLimit}
+                  {lower} <span dangerouslySetInnerHTML={{ __html: lowerHtml }} />
+                  {" và "}
+                  {upper} <span dangerouslySetInnerHTML={{ __html: upperHtml }} />
                 </Text>
               );
             }
             // Single limit case from API
             if (record.comparisonOperator && record.allowedLimit) {
+              const limitHtml = stripPTags(record.allowedLimit);
               return (
                 <Text>
-                  {record.comparisonOperator} {record.allowedLimit}
+                  {record.comparisonOperator} <span dangerouslySetInnerHTML={{ __html: limitHtml }} />
                 </Text>
               );
             }
@@ -848,7 +877,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         const standardInfo = getStandardIndicatorInfo(
           selectedStandardId,
           record.indicatorId,
-          record.methodId
+          record.methodId,
+          record.specimenTypeId
         );
         if (standardInfo) {
           comparisonOperator = standardInfo.comparisonOperator;
@@ -904,9 +934,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           record.approvalStatus === IndicatorApprovalStatus.AcceptedForTesting ||
           record.approvalStatus === IndicatorApprovalStatus.Entered ||
           record.approvalStatus === IndicatorApprovalStatus.Rejected ||
-          record.approvalStatus === IndicatorApprovalStatus.CannotTest;
+          record.approvalStatus === IndicatorApprovalStatus.CannotTest ||
+          record.approvalStatus === IndicatorApprovalStatus.MethodChanged;
 
-        const canEditIndicator = isAssignableStatus && canAssignTechnician;
+        const canEditIndicator = !forceDisableAll && isAssignableStatus && canAssignTechnician;
 
         return (
           <div style={{ minHeight: 32, display: "flex", alignItems: "center" }}>
@@ -1000,6 +1031,14 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             );
 
           case IndicatorApprovalStatus.Entered: {
+            // Khi phiếu yêu cầu bị hủy, chỉ hiển thị status tag
+            if (forceDisableAll) {
+              return (
+                <StatusTag color={IndicatorApprovalStatusColors[status]}>
+                  {IndicatorApprovalStatusLabels[status]}
+                </StatusTag>
+              );
+            }
             // Lấy standardId từ local state hoặc DB
             const selectedStandardIdForApprove =
               standardSelections[record.id] !== undefined
@@ -1113,13 +1152,12 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       },
       getCheckboxProps: (record: IndicatorWithPosition) => {
         if (selectionMode === "assignment") {
-          // Assignment mode: chỉ disable cho Approved và CustomerCancelled
-          // Các trạng thái khác (Pending, Entered, Rejected) đều có thể chọn để giao việc
+          // Assignment mode: chỉ enable cho AcceptedForTesting, Entered, MethodChanged (đã đổi PP, cần giao lại KTV)
           return {
             disabled:
-              record.approvalStatus === IndicatorApprovalStatus.Approved ||
-              record.approvalStatus ===
-                IndicatorApprovalStatus.CustomerCancelled,
+              record.approvalStatus !== IndicatorApprovalStatus.AcceptedForTesting &&
+              record.approvalStatus !== IndicatorApprovalStatus.Entered &&
+              record.approvalStatus !== IndicatorApprovalStatus.MethodChanged,
             name: record.id,
           };
         }
@@ -1158,6 +1196,13 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           record.parentIndicatorId ? "sub-indicator-row" : ""
         }
       />
+
+      <style>{`
+        .note-tooltip-content p { margin: 0; }
+        .note-tooltip-content ol { margin: 4px 0; padding-left: 24px; list-style-type: decimal; }
+        .note-tooltip-content ul { margin: 4px 0; padding-left: 24px; list-style-type: disc; }
+        .note-tooltip-content li { line-height: 22px; }
+      `}</style>
 
       {/* Reject Reason Modal */}
       <Modal

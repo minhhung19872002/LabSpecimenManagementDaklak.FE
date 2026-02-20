@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Modal,
-  Input,
   Typography,
   Spin,
   Empty,
@@ -16,9 +15,10 @@ import {
 import { ExclamationCircleFilled } from "@ant-design/icons";
 import { noteService } from "../../../services/noteService";
 import { NoteDto } from "../../../types/note";
+import RichTextEditor from "../../../components/common/RichTextEditor";
+import { stripPTags, stripHtmlTags } from "../../../utils/formatters";
 
 const { Text } = Typography;
-const { TextArea } = Input;
 
 export interface NoteSaveInput {
   freeText: string | null;
@@ -163,17 +163,24 @@ const NoteModal: React.FC<NoteModalProps> = ({
     });
   };
 
+  // Check if HTML content has actual text (not just empty <p></p>)
+  const hasContent = (html: string) => {
+    const plain = stripPTags(html).replace(/<[^>]*>/g, "").trim();
+    return plain.length > 0;
+  };
+
   const handleSave = async () => {
     const skipMasterData = masterDataAnalysis.hasMixedData && masterDataMode === "keep";
+    const hasFreeText = hasContent(freeText);
 
     // Validate: at least one input (nếu không skip MasterData)
-    if (!freeText.trim() && !skipMasterData && selectedMasterNoteIds.size === 0) {
+    if (!hasFreeText && !skipMasterData && selectedMasterNoteIds.size === 0) {
       message.warning("Vui lòng nhập ghi chú hoặc chọn từ danh sách");
       return;
     }
 
     // Nếu skip MasterData nhưng không có FreeText thì cũng không cho lưu
-    if (skipMasterData && !freeText.trim()) {
+    if (skipMasterData && !hasFreeText) {
       message.warning("Vui lòng nhập ghi chú tự do");
       return;
     }
@@ -181,7 +188,7 @@ const NoteModal: React.FC<NoteModalProps> = ({
     setSaving(true);
     try {
       await onSave({
-        freeText: freeText.trim() || null,
+        freeText: hasFreeText ? freeText : null,
         masterDataNoteIds: skipMasterData ? [] : Array.from(selectedMasterNoteIds),
         skipMasterDataUpdate: skipMasterData,
       });
@@ -201,10 +208,9 @@ const NoteModal: React.FC<NoteModalProps> = ({
     onClose();
   };
 
-  // Get selected master note contents for preview
-  const selectedMasterNoteContents = masterNotes
-    .filter((note) => selectedMasterNoteIds.has(note.id))
-    .map((note) => `- ${note.content}`);
+  // Get selected master notes for preview
+  const selectedMasterNotes = masterNotes
+    .filter((note) => selectedMasterNoteIds.has(note.id));
 
   const isMasterDataDisabled =
     masterDataAnalysis.hasMixedData && masterDataMode === "keep";
@@ -237,14 +243,11 @@ const NoteModal: React.FC<NoteModalProps> = ({
           <Text strong style={{ display: "block", marginBottom: 8 }}>
             Ghi chú tự do
           </Text>
-          <TextArea
+          <RichTextEditor
             value={freeText}
-            onChange={(e) => setFreeText(e.target.value)}
+            onChange={(html) => setFreeText(html)}
             placeholder="Nhập ghi chú tự do..."
-            rows={8}
-            maxLength={2000}
-            showCount
-            style={{ resize: "none" }}
+            showToolbar
           />
         </Col>
 
@@ -299,34 +302,46 @@ const NoteModal: React.FC<NoteModalProps> = ({
                   image={Empty.PRESENTED_IMAGE_SIMPLE}
                 />
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 300, overflowY: "auto" }}>
                   {masterNotes.map((note) => {
                     const isSelected = selectedMasterNoteIds.has(note.id);
                     return (
-                      <div
+                      <Tooltip
                         key={note.id}
-                        onClick={() => handleToggleMasterNote(note.id)}
-                        style={{
-                          cursor: "pointer",
-                          padding: "8px 12px",
-                          borderRadius: 4,
-                          backgroundColor: isSelected ? "#e6f7ff" : "transparent",
-                          border: isSelected
-                            ? "1px solid #91d5ff"
-                            : "1px solid #f0f0f0",
-                          transition: "all 0.2s",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                        }}
+                        title={<div dangerouslySetInnerHTML={{ __html: note.content }} className="note-item-content" />}
+                        placement="left"
+                        overlayStyle={{ maxWidth: 400 }}
                       >
-                        <Checkbox checked={isSelected} />
-                        <Text
-                          style={{ color: isSelected ? "#1890ff" : "inherit" }}
+                        <div
+                          onClick={() => handleToggleMasterNote(note.id)}
+                          style={{
+                            cursor: "pointer",
+                            padding: "8px 12px",
+                            borderRadius: 4,
+                            backgroundColor: isSelected ? "#e6f7ff" : "transparent",
+                            border: isSelected
+                              ? "1px solid #91d5ff"
+                              : "1px solid #f0f0f0",
+                            transition: "all 0.2s",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                          }}
                         >
-                          {note.content}
-                        </Text>
-                      </div>
+                          <Checkbox checked={isSelected} />
+                          <span
+                            style={{
+                              color: isSelected ? "#1890ff" : "inherit",
+                              flex: 1,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                            className="note-item-inline"
+                            dangerouslySetInnerHTML={{ __html: note.content }}
+                          />
+                        </div>
+                      </Tooltip>
                     );
                   })}
                 </div>
@@ -350,24 +365,59 @@ const NoteModal: React.FC<NoteModalProps> = ({
           <Text strong style={{ display: "block", marginBottom: 8 }}>
             Xem trước:
           </Text>
+          <style>{`
+            .note-preview-content ul,
+            .note-preview-content ol {
+              margin: 4px 0;
+              padding-left: 24px;
+            }
+            .note-preview-content li {
+              line-height: 22px;
+            }
+            .note-preview-content p {
+              margin: 0;
+            }
+            .note-item-content p {
+              margin: 0;
+              display: inline;
+            }
+            .note-item-content ul,
+            .note-item-content ol {
+              margin: 2px 0;
+              padding-left: 20px;
+            }
+            .note-item-inline > *:first-child {
+              display: inline;
+              margin: 0;
+            }
+            .note-item-inline > *:not(:first-child) {
+              display: none;
+            }
+          `}</style>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {freeText.trim() && (
-              <div>
-                <div style={{ whiteSpace: "pre-line", marginTop: 4 }}>
-                  <Text>{freeText.trim()}</Text>
-                </div>
-              </div>
+            {hasContent(freeText) && (
+              <div
+                style={{ marginTop: 4 }}
+                className="note-preview-content"
+                dangerouslySetInnerHTML={{ __html: freeText }}
+              />
             )}
             {isMasterDataDisabled ? (
               <Text type="secondary" italic>
                 (Ghi chú danh sách giữ nguyên)
               </Text>
             ) : (
-              selectedMasterNoteContents.length > 0 && (
-                <div>
-                  <div style={{ whiteSpace: "pre-line", marginTop: 4 }}>
-                    <Text>{selectedMasterNoteContents.join("\n")}</Text>
-                  </div>
+              selectedMasterNotes.length > 0 && (
+                <div style={{ marginTop: 4 }}>
+                  {selectedMasterNotes.map((note) => (
+                    <div key={note.id} style={{ display: "flex", gap: 4 }}>
+                      <span>-</span>
+                      <span
+                        className="note-preview-content"
+                        dangerouslySetInnerHTML={{ __html: note.content }}
+                      />
+                    </div>
+                  ))}
                 </div>
               )
             )}

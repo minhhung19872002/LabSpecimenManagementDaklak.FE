@@ -47,7 +47,15 @@ export interface ImportValidationResult {
   errors: ImportRowError[];
 }
 
-// ==================== Organization + TestRequest Import ====================
+// ==================== Location Code Override (FE-resolved) ====================
+
+export interface LocationCodeOverride {
+  rowNumber: number;
+  provinceCode?: string | null;
+  wardCode?: string | null;
+}
+
+// ==================== Organization Import (CS/DN) ====================
 
 export interface OrganizationTestRequestPreviewItem {
   rowNumber: number;
@@ -57,23 +65,13 @@ export interface OrganizationTestRequestPreviewItem {
   existingOrganizationId?: string;
   contactPerson: string;
   phone?: string;
+  secondaryPhone?: string;
   address: string;
   province: string;
   provinceCode?: string;
   ward: string;
   wardCode?: string;
   taxCode: string;
-  // TestRequest info
-  contractNumber?: string;
-  isNewTestRequest: boolean;
-  existingTestRequestId?: string;
-  sampleName?: string;
-  sampleCode?: string;
-  sampleStatus?: string;
-  // Indicators
-  indicatorNames: string[];
-  indicatorIds: string[];
-  invalidIndicators: string[];
   // Validation
   isValid: boolean;
   errors: string[];
@@ -88,10 +86,6 @@ export interface OrganizationTestRequestImportPreviewDto {
   invalidRows: number;
   newOrganizations: number;
   updateOrganizations: number;
-  totalTestRequests: number;
-  newTestRequests: number;
-  updateTestRequests: number;
-  totalIndicators: number;
   // Error file
   errorFileBase64?: string;
   errorFileName?: string;
@@ -321,10 +315,10 @@ export const importService = {
     return response.data;
   },
 
-  // ==================== Organization + TestRequest (Legacy Data) ====================
+  // ==================== Organization Import (CS/DN) ====================
 
   /**
-   * Preview Organization + TestRequest import (validate without importing)
+   * Preview Organization import (validate without importing)
    */
   previewOrganizationTestRequests: async (file: File): Promise<OrganizationTestRequestImportPreviewDto> => {
     const formData = new FormData();
@@ -334,17 +328,20 @@ export const importService = {
   },
 
   /**
-   * Import Organization + TestRequest from Excel file
+   * Import Organizations from Excel file
    */
-  importOrganizationTestRequests: async (file: File): Promise<ImportResultDto> => {
+  importOrganizationTestRequests: async (file: File, codeOverrides?: LocationCodeOverride[]): Promise<ImportResultDto> => {
     const formData = new FormData();
     formData.append('file', file);
+    if (codeOverrides?.length) {
+      formData.append('codeOverrides', JSON.stringify(codeOverrides));
+    }
     const response = await api.upload<ImportResultDto>(`${BASE_URL}/organization-test-requests`, formData);
     return response.data;
   },
 
   /**
-   * Download import template for Organization + TestRequest
+   * Download import template for Organization (CS/DN)
    */
   downloadOrganizationTestRequestTemplate: async (): Promise<Blob> => {
     const response = await api.download(`${BASE_URL}/organization-test-requests/template`);
@@ -379,6 +376,66 @@ export const importService = {
   downloadIndicatorGroupTemplate: async (): Promise<Blob> => {
     const response = await api.download(`${BASE_URL}/indicator-groups/template`);
     return response.data;
+  },
+
+  // ==================== Notes ====================
+
+  /**
+   * Preview Notes import (validate without importing)
+   */
+  previewNotes: async (file: File): Promise<any> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<any>(`${BASE_URL}/notes/preview`, formData);
+    return response.data;
+  },
+
+  /**
+   * Import Notes from Excel file
+   */
+  importNotes: async (file: File): Promise<ImportResultDto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<ImportResultDto>(`${BASE_URL}/notes`, formData);
+    return response.data;
+  },
+
+  /**
+   * Download import template for Notes
+   */
+  downloadNoteTemplate: () => {
+    const url = `${import.meta.env.VITE_API_URL || ''}${BASE_URL}/notes/template`;
+    window.open(url, '_blank');
+  },
+
+  // ==================== TestResultValues ====================
+
+  /**
+   * Preview TestResultValues import (validate without importing)
+   */
+  previewTestResultValues: async (file: File): Promise<any> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<any>(`${BASE_URL}/test-result-values/preview`, formData);
+    return response.data;
+  },
+
+  /**
+   * Import TestResultValues from Excel file
+   */
+  importTestResultValues: async (file: File): Promise<ImportResultDto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<ImportResultDto>(`${BASE_URL}/test-result-values`, formData);
+    return response.data;
+  },
+
+  /**
+   * Download import template for TestResultValues
+   */
+  downloadTestResultValueTemplate: () => {
+    const url = `${import.meta.env.VITE_API_URL || ''}${BASE_URL}/test-result-values/template`;
+    window.open(url, '_blank');
   },
 };
 

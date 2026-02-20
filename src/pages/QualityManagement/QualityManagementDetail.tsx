@@ -34,6 +34,7 @@ import {
   QualityTaskType,
   QualityIndicatorApprovalStatus,
 } from "../../types/qualityManagement";
+import { TestRequestStatus } from "../../types/testRequest";
 import IndicatorTable from "./components/IndicatorTable";
 import PrintModal from "./components/PrintModal";
 import RejectModal from "./components/RejectModal";
@@ -311,12 +312,13 @@ const QualityManagementDetail: React.FC = () => {
     (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Rejected,
   ).length;
 
+  // Check if test request is cancelled - disable all actions (except print)
+  const isTestRequestCancelled = task?.testRequestStatus === TestRequestStatus.Cancelled;
+
   // Button states
-  // In KQ: chỉ khi có chỉ tiêu đã duyệt và status >= PendingPublish
-  const canPrint =
-    approvedCount > 0 &&
-    task?.status !== QualityManagementStatus.PendingApproval &&
-    task?.status !== QualityManagementStatus.Rejected;
+  // In KQ: cho phép in nếu có ÍT NHẤT 1 chỉ tiêu đã được duyệt
+  // (không cần quan tâm task.status - có thể vẫn đang PendingApproval nếu còn chỉ tiêu chưa duyệt)
+  const canPrint = approvedCount > 0;
 
   // Status tag
   const getStatusTag = (status: QualityManagementStatus) => (
@@ -488,6 +490,17 @@ const QualityManagementDetail: React.FC = () => {
           </Row>
         </Card>
 
+        {/* Alert khi phiếu yêu cầu đã bị hủy */}
+        {isTestRequestCancelled && (
+          <Alert
+            message="Phiếu yêu cầu đã bị hủy"
+            description="Phiếu yêu cầu đã bị hủy. Không thể thực hiện bất kỳ thao tác nào."
+            type="error"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
+
         {/* Indicator Statistics */}
         {task.taskType === QualityTaskType.ResultApproval && (
           <div
@@ -515,7 +528,7 @@ const QualityManagementDetail: React.FC = () => {
               <Col>
                 <Space>
                   {/* Bulk action buttons - only visible if user has permission */}
-                  {canReject && (
+                  {canReject && !isTestRequestCancelled && (
                     <Button
                       danger
                       icon={<CloseOutlined />}
@@ -529,7 +542,7 @@ const QualityManagementDetail: React.FC = () => {
                         : ""}
                     </Button>
                   )}
-                  {canApprove && (
+                  {canApprove && !isTestRequestCancelled && (
                     <Button
                       type="primary"
                       icon={<CheckOutlined />}
@@ -591,6 +604,7 @@ const QualityManagementDetail: React.FC = () => {
               onIndicatorUpdate={loadData}
               selectedPendingIds={selectedPendingIds}
               onPendingSelectChange={setSelectedPendingIds}
+              forceDisableActions={isTestRequestCancelled}
             />
           </Card>
         )}

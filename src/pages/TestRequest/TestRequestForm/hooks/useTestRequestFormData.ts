@@ -216,11 +216,13 @@ export const useTestRequestFormData = () => {
   }, []);
 
   // Helper to check if a field should be disabled based on status
-  const isFieldLocked = (fieldName: string): boolean => {
-    if (!isEditMode || currentStatus === null) return false;
-    if (!canEditFullInfo(currentStatus)) {
-      return LOCKED_FIELDS.includes(fieldName);
-    }
+  // [TEMPORARY] Tạm tắt field lock - cho phép edit tất cả fields
+  const isFieldLocked = (_fieldName: string): boolean => {
+    // [OLD LOGIC]
+    // if (!isEditMode || currentStatus === null) return false;
+    // if (!canEditFullInfo(currentStatus)) {
+    //   return LOCKED_FIELDS.includes(fieldName);
+    // }
     return false;
   };
 
@@ -235,9 +237,14 @@ export const useTestRequestFormData = () => {
   };
 
   // Check if this edit requires QLCL approval (SampleSent/InProgress status)
+  // [TEMPORARY] Tạm tắt - không cần approval, edit trực tiếp
   const isEditRequiresApproval = (): boolean => {
-    if (!isEditMode || currentStatus === null) return false;
-    return canEditWithApproval(currentStatus);
+    // [OLD LOGIC]
+    // if (!isEditMode || currentStatus === null) return false;
+    // return canEditWithApproval(currentStatus);
+
+    // [TEMPORARY] Không cần approval
+    return false;
   };
 
   // Load master data with offline support
@@ -893,11 +900,11 @@ export const useTestRequestFormData = () => {
     }
 
     if (indicatorSearchText.trim()) {
-      const searchLower = indicatorSearchText.toLowerCase().trim();
+      const searchNorm = indicatorSearchText.trim().normalize("NFC").toLowerCase();
       filtered = filtered.filter(
         (ind) =>
-          ind.name.toLowerCase().includes(searchLower) ||
-          ind.code?.toLowerCase().includes(searchLower)
+          ind.name.normalize("NFC").toLowerCase().includes(searchNorm) ||
+          ind.code?.normalize("NFC").toLowerCase().includes(searchNorm)
       );
     }
 

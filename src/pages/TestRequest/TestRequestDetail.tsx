@@ -9,6 +9,11 @@ import {
 } from "../../services/testRequestService";
 import { useNetworkStatus } from "../../hooks/useNetworkStatus";
 import {
+  generateTestRequestFormOffline,
+  downloadDocument,
+  isOfflinePrintAvailable,
+} from "../../services/offline/offlinePrintService";
+import {
   TestRequestDto,
   TestRequestStatus,
   TestRequestStatusLabels,
@@ -100,52 +105,88 @@ const TestRequestDetail: React.FC = () => {
   // Handle print test request form
   const handlePrintTestRequest = async () => {
     if (!id) return;
-    if (!isOnline) {
-      message.warning("Không thể in phiếu khi đang offline");
+
+    // ONLINE MODE: Use existing backend flow
+    if (isOnline) {
+      setPrintingTestRequest(true);
+
+      const newTab = window.open("about:blank", "_blank");
+
+      if (newTab) {
+        newTab.document.write(`
+          <html>
+            <head>
+              <title>Đang tạo phiếu...</title>
+              <style>
+                body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
+                .loader { text-align: center; }
+                .spinner { width: 40px; height: 40px; border: 4px solid #e0e0e0; border-top: 4px solid #1890ff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+                @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                p { color: #666; font-size: 16px; }
+              </style>
+            </head>
+            <body><div class="loader"><div class="spinner"></div><p>Đang tạo phiếu yêu cầu...</p></div></body>
+          </html>
+        `);
+      }
+
+      try {
+        const result = await testRequestService.generateTestRequestForm(id);
+        message.success(`Đã tạo phiếu yêu cầu XN: ${result.contractNumber}`);
+
+        // Open Word Editor (BE now returns .docx directly)
+        const editorUrl = `/document-editor?file=${encodeURIComponent(result.fileName)}`;
+        if (newTab) {
+          newTab.location.href = editorUrl;
+        } else {
+          window.open(editorUrl, "_blank");
+        }
+
+        loadData(id);
+      } catch (error: any) {
+        console.error("Error printing test request:", error);
+        if (newTab) {
+          newTab.close();
+        }
+        message.error(
+          error?.response?.data?.error?.message ||
+            "Không thể tạo phiếu. Vui lòng thử lại."
+        );
+      } finally {
+        setPrintingTestRequest(false);
+      }
       return;
     }
+
+    // OFFLINE MODE: Generate document client-side
     setPrintingTestRequest(true);
 
-    const newTab = window.open("about:blank", "_blank");
-
-    if (newTab) {
-      newTab.document.write(`
-        <html>
-          <head>
-            <title>Đang tạo phiếu...</title>
-            <style>
-              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
-              .loader { text-align: center; }
-              .spinner { width: 40px; height: 40px; border: 4px solid #e0e0e0; border-top: 4px solid #1890ff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
-              @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-              p { color: #666; font-size: 16px; }
-            </style>
-          </head>
-          <body><div class="loader"><div class="spinner"></div><p>Đang tạo phiếu yêu cầu...</p></div></body>
-        </html>
-      `);
-    }
-
     try {
-      const result = await testRequestService.generateTestRequestForm(id);
-      message.success(`Đã tạo phiếu yêu cầu XN: ${result.contractNumber}`);
-
-      // Open Word Editor (BE now returns .docx directly)
-      const editorUrl = `/document-editor?file=${encodeURIComponent(result.fileName)}`;
-      if (newTab) {
-        newTab.location.href = editorUrl;
-      } else {
-        window.open(editorUrl, "_blank");
+      // Check if offline printing is available
+      const canPrintOffline = await isOfflinePrintAvailable();
+      if (!canPrintOffline) {
+        message.warning(
+          "Template chưa được tải về. Vui lòng kết nối mạng để tải template trước."
+        );
+        return;
       }
 
-      loadData(id);
+      // Generate document offline
+      const result = await generateTestRequestFormOffline(id);
+
+      if (!result.success) {
+        message.error(result.error || "Không thể tạo phiếu. Vui lòng thử lại.");
+        return;
+      }
+
+      // Download the generated document
+      downloadDocument(result.blob!, result.fileName!);
+      message.success(`Đã tạo phiếu yêu cầu (offline): ${result.fileName}`);
+
     } catch (error: any) {
-      console.error("Error printing test request:", error);
-      if (newTab) {
-        newTab.close();
-      }
+      console.error("Error printing test request offline:", error);
       message.error(
-        getApiErrorMessage(error, "Không thể tạo phiếu. Vui lòng thử lại."),
+        error?.message || "Không thể tạo phiếu. Vui lòng thử lại."
       );
     } finally {
       setPrintingTestRequest(false);
@@ -606,6 +647,7 @@ const TestRequestDetail: React.FC = () => {
         onClose={() => setPaymentConfirmationModalVisible(false)}
         testRequestId={id!}
         onSuccess={() => loadData(id!)}
+        alreadyPaid={data?.paymentReceived === true || data?.sampleTypeTask === true}
       />
     </>
   );

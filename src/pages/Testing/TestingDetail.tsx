@@ -15,11 +15,25 @@ import {
 } from "../../types/testing";
 import TestingDetailContainer from "./components/TestingDetailContainer";
 import { useMultipleActionPermissions } from "../../hooks/useActionPermission";
+import { TestRequestStatus } from "../../types/testRequest";
+import { PATH_ROUTES } from "../../constants";
 import "./Testing.css";
 
 interface ResultOption {
   value: string;
   label: string;
+}
+
+interface IndicatorSpecimenTypePair {
+  indicatorId: string;
+  specimenTypeId: string;
+}
+
+interface TestResultValueWithIndicator {
+  id: string;
+  name: string;
+  // List of (indicatorId, specimenTypeId) pairs this result value is associated with
+  indicatorSpecimenTypePairs: IndicatorSpecimenTypePair[];
 }
 
 const TestingDetail: React.FC = () => {
@@ -30,6 +44,7 @@ const TestingDetail: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [detail, setDetail] = useState<TestingDetailDto | null>(null);
   const [resultOptions, setResultOptions] = useState<ResultOption[]>([]);
+  const [allResultValues, setAllResultValues] = useState<TestResultValueWithIndicator[]>([]);
 
   // Check if viewing from "Công việc của Lab" tab (readonly mode)
   // Valid viewMode values: "my" (default), "lab" (readonly)
@@ -42,19 +57,40 @@ const TestingDetail: React.FC = () => {
   // Sử dụng hook để check permissions cho tất cả actions theo Permission Matrix
   // Testing: KTV (A), QLKT (V), Admin (V)
   const actionPermissions = useMultipleActionPermissions("testing", [
+    "viewDetail",
     "inputResult",
     "editResult",
     "sendResult",
   ]);
+
+  // Check quyền xem chi tiết từ Permission Matrix
+  const hasViewDetailPermission = actionPermissions.viewDetail?.canAll || actionPermissions.viewDetail?.canView || false;
 
   // KTV có quyền ALL = canAll = true, QLKT/Admin chỉ có View
   const canInputResult = actionPermissions.inputResult?.canAll || false;
   const canEditResult = actionPermissions.editResult?.canAll || false;
   const canSendResult = actionPermissions.sendResult?.canAll || false;
 
+  // Check if test request is cancelled - disable all actions
+  const isTestRequestCancelled = detail?.testRequestStatus === TestRequestStatus.Cancelled;
+
   // Tổng hợp: có thể thao tác (nhập/sửa/gửi) nếu có bất kỳ quyền nào
-  // Nhưng nếu đang xem từ tab "Công việc của Lab" thì chỉ readonly
-  const canPerformActions = !isLabView && (canInputResult || canEditResult || canSendResult);
+  // Ưu tiên isMy: nếu task là của user hiện tại thì cho phép thao tác bất kể view mode
+  // Disable tất cả khi phiếu yêu cầu đã bị hủy
+  const canPerformActions = !isTestRequestCancelled && detail?.isMy && (canInputResult || canEditResult || canSendResult);
+
+  // Kiểm tra quyền xem chi tiết:
+  // - Có quyền viewDetail từ Permission Matrix (QLKT, Admin)
+  // - Hoặc task là của user hiện tại (isMy)
+  const canViewTestingDetail = hasViewDetailPermission || detail?.isMy;
+
+  // Redirect đến 403 nếu không có quyền xem (sau khi đã load detail xong)
+  useEffect(() => {
+    // Chỉ check sau khi đã load (loading = false và detail !== null)
+    if (!loading && detail !== null && !canViewTestingDetail) {
+      navigate(PATH_ROUTES.forbidden, { replace: true });
+    }
+  }, [loading, detail, canViewTestingDetail, navigate]);
 
   // Helper function to update indicators optimistically (indicator-level only)
   // Task-level status is fetched from server to avoid duplicating BE logic
@@ -178,13 +214,18 @@ const TestingDetail: React.FC = () => {
 
       // Open all sample panels by default
       setActiveKeys(result.samples.map((s) => s.sampleId));
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to load testing detail:", error);
+      // Nếu API trả về 403 (Forbidden) hoặc 401 (Unauthorized), redirect đến trang 403
+      if (error?.response?.status === 403 || error?.response?.status === 401) {
+        navigate(PATH_ROUTES.forbidden, { replace: true });
+        return;
+      }
       message.error("Không thể tải thông tin xét nghiệm");
     } finally {
       setLoading(false);
     }
-  }, [id, apiViewMode]);
+  }, [id, apiViewMode, navigate]);
 
   useEffect(() => {
     loadDetail();
@@ -194,7 +235,20 @@ const TestingDetail: React.FC = () => {
   useEffect(() => {
     const loadResultOptions = async () => {
       try {
-        const data = await testResultValueService.getActive();
+        // Use getWithIndicators to get full data including indicators array
+        const data = await testResultValueService.getWithIndicators();
+        // Store full data for filtering by (indicatorId + specimenTypeId) pair
+        setAllResultValues(
+          data.map((item) => ({
+            id: item.id,
+            name: item.name,
+            indicatorSpecimenTypePairs: item.indicators?.map((ind) => ({
+              indicatorId: ind.indicatorId,
+              specimenTypeId: ind.specimenTypeId,
+            })) || [],
+          }))
+        );
+        // Default options (all results) - will be filtered per indicator
         setResultOptions(
           data.map((item) => ({
             value: item.name,
@@ -207,6 +261,33 @@ const TestingDetail: React.FC = () => {
     };
     loadResultOptions();
   }, []);
+
+  // Function to get result options filtered by (indicatorId + specimenTypeId)
+  // - If (indicatorId + specimenTypeId) has specific results declared, return only those
+  // - Otherwise, return ALL results
+  const getResultOptionsForIndicator = useCallback((indicatorId: string, specimenTypeId?: string): ResultOption[] => {
+    // Check if there are results specific to this (indicatorId + specimenTypeId) pair
+    const specificResults = allResultValues.filter(r =>
+      r.indicatorSpecimenTypePairs.some(pair =>
+        pair.indicatorId === indicatorId &&
+        (!specimenTypeId || pair.specimenTypeId === specimenTypeId)
+      )
+    );
+
+    if (specificResults.length > 0) {
+      // Has specific results - return only those
+      return specificResults.map(item => ({
+        value: item.name,
+        label: item.name,
+      }));
+    }
+
+    // No specific results for this (indicatorId + specimenTypeId) - return ALL results
+    return allResultValues.map(item => ({
+      value: item.name,
+      label: item.name,
+    }));
+  }, [allResultValues]);
 
   const handleResultsChange = (
     sampleId: string,
@@ -275,11 +356,12 @@ const TestingDetail: React.FC = () => {
       const indicator = sample.indicators.find((i) => i.id === indicatorId);
       if (!indicator) return;
 
-      // Chỉ xử lý các chỉ tiêu có trạng thái cho phép gửi (Todo, Testing, Rejected)
+      // Chỉ xử lý các chỉ tiêu có trạng thái cho phép gửi (Todo, Testing, Rejected, PendingApproval)
       if (
         indicator.testingStatus !== IndicatorTestingStatus.Todo &&
         indicator.testingStatus !== IndicatorTestingStatus.Testing &&
-        indicator.testingStatus !== IndicatorTestingStatus.Rejected
+        indicator.testingStatus !== IndicatorTestingStatus.Rejected &&
+        indicator.testingStatus !== IndicatorTestingStatus.PendingApproval
       ) {
         return;
       }
@@ -444,11 +526,12 @@ const TestingDetail: React.FC = () => {
 
     if (!sampleId || !indicator) return;
 
-    // Cho phép gửi khi trạng thái = Todo, Testing hoặc Rejected
+    // Cho phép gửi khi trạng thái = Todo, Testing, Rejected hoặc PendingApproval (gửi lại khi QLKT chưa duyệt)
     if (
       indicator.testingStatus !== IndicatorTestingStatus.Todo &&
       indicator.testingStatus !== IndicatorTestingStatus.Testing &&
-      indicator.testingStatus !== IndicatorTestingStatus.Rejected
+      indicator.testingStatus !== IndicatorTestingStatus.Rejected &&
+      indicator.testingStatus !== IndicatorTestingStatus.PendingApproval
     ) {
       message.warning("Chỉ tiêu này không thể gửi kết quả");
       return;
@@ -577,7 +660,31 @@ const TestingDetail: React.FC = () => {
   ) => {
     if (!id || indicatorIds.length === 0) return;
 
-    // Cập nhật local state (sampleResults)
+    const sample = detail?.samples.find((s) => s.sampleId === sampleId);
+    if (!sample) return;
+
+    // Lấy current sampleResults để giữ lại kết quả đã nhập
+    const currentSampleResults = sampleResults.get(sampleId) || [];
+
+    // Tạo resultsToSave TRƯỚC KHI update state để tránh race condition
+    // Ưu tiên lấy result từ sampleResults (đã nhập), fallback sang indicator.result
+    const resultsToSave: SaveIndicatorResultDto[] = indicatorIds.map(
+      (indicatorId) => {
+        const indicator = sample.indicators.find((i) => i.id === indicatorId);
+        const existingResult = currentSampleResults.find(
+          (r) => r.indicatorId === indicatorId
+        );
+        return {
+          indicatorId,
+          methodId: existingResult?.methodId ?? indicator?.methodId,
+          unit: existingResult?.unit ?? indicator?.unit,
+          result: existingResult?.result ?? indicator?.result,
+          testDate: date,
+        };
+      }
+    );
+
+    // Cập nhật local state (sampleResults) - giữ lại result đã nhập
     setSampleResults((prev) => {
       const newResults = new Map(prev);
       const sampleResultList = newResults.get(sampleId) || [];
@@ -592,8 +699,7 @@ const TestingDetail: React.FC = () => {
       // Thêm result mới nếu chưa tồn tại trong sampleResults
       indicatorIds.forEach((indicatorId) => {
         if (!updatedList.find((r) => r.indicatorId === indicatorId)) {
-          const sample = detail?.samples.find((s) => s.sampleId === sampleId);
-          const indicator = sample?.indicators.find(
+          const indicator = sample.indicators.find(
             (i) => i.id === indicatorId
           );
           if (indicator) {
@@ -617,11 +723,11 @@ const TestingDetail: React.FC = () => {
       if (!prev) return prev;
       return {
         ...prev,
-        samples: prev.samples.map((sample) => {
-          if (sample.sampleId !== sampleId) return sample;
+        samples: prev.samples.map((s) => {
+          if (s.sampleId !== sampleId) return s;
           return {
-            ...sample,
-            indicators: sample.indicators.map((ind) =>
+            ...s,
+            indicators: s.indicators.map((ind) =>
               indicatorIds.includes(ind.id) ? { ...ind, testDate: date } : ind
             ),
           };
@@ -631,25 +737,6 @@ const TestingDetail: React.FC = () => {
 
     // Lưu tất cả indicators với testDate mới lên server
     try {
-      const sample = detail?.samples.find((s) => s.sampleId === sampleId);
-      if (!sample) return;
-
-      const resultsToSave: SaveIndicatorResultDto[] = indicatorIds.map(
-        (indicatorId) => {
-          const indicator = sample.indicators.find((i) => i.id === indicatorId);
-          const existingResult = sampleResults
-            .get(sampleId)
-            ?.find((r) => r.indicatorId === indicatorId);
-          return {
-            indicatorId,
-            methodId: indicator?.methodId,
-            unit: indicator?.unit,
-            result: existingResult?.result ?? indicator?.result,
-            testDate: date,
-          };
-        }
-      );
-
       await testingService.saveResults(id, { results: resultsToSave });
     } catch (error: any) {
       console.error("Failed to save bulk test dates:", error);
@@ -691,6 +778,7 @@ const TestingDetail: React.FC = () => {
       historyModal={historyModal}
       cannotTestModal={cannotTestModal}
       resultOptions={resultOptions}
+      getResultOptionsForIndicator={getResultOptionsForIndicator}
       canPerformActions={canPerformActions}
       onBack={() => navigate("/testing")}
       onCollapseChange={setActiveKeys}

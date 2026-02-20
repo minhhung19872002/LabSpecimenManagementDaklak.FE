@@ -1,4 +1,5 @@
 import { IndicatorApprovalStatus } from './laboratoryTask';
+import { TestRequestStatus } from './testRequest';
 
 // Testing Status Enum (Task level - 6 statuses)
 export enum TestingStatus {
@@ -146,6 +147,8 @@ export interface TestingDetailDto {
   completedIndicatorCount: number;
   totalIndicatorCount: number;
   samples: TestingSampleDto[];
+  isMy: boolean;  // Có phải công việc của user hiện tại hay không
+  testRequestStatus?: TestRequestStatus;  // Trạng thái phiếu yêu cầu
 }
 
 // Testing Sample DTO
@@ -168,6 +171,7 @@ export interface TestingIndicatorDto {
   id: string;
   testRequestSampleIndicatorId: string;
   indicatorId: string;
+  specimenTypeId?: string;  // Nền mẫu (để filter kết quả recommend theo indicator+specimenType)
   indicatorName?: string;
   indicatorFormattedName?: string;  // Tên chỉ tiêu có định dạng HTML
   methodId?: string;
@@ -198,6 +202,10 @@ export interface TestingIndicatorDto {
   referenceLimit?: string;      // Giới hạn tham chiếu
   comparisonOperator?: string;  // Ký hiệu so sánh (<=, >=, <, >, =)
   allowedLimit?: string;        // Giới hạn cho phép (giá trị cụ thể)
+  lowerOperator?: string;       // Ký hiệu cận dưới (>, >=) - cho khoảng
+  lowerLimit?: string;          // Giá trị cận dưới - cho khoảng
+  upperOperator?: string;       // Ký hiệu cận trên (<, <=) - cho khoảng
+  upperLimit?: string;          // Giá trị cận trên - cho khoảng
   parentIndicatorId?: string;   // ID chỉ tiêu cha (null nếu là chỉ tiêu gốc)
 }
 

@@ -221,6 +221,7 @@ const TestRequestForm: React.FC = () => {
   // Ref to form sections to detect when scrolled past
   const formSectionsRef = useRef<HTMLDivElement>(null);
   const [showSummaryBar, setShowSummaryBar] = useState(false);
+  const [summaryBarStyle, setSummaryBarStyle] = useState<React.CSSProperties>({});
 
   // Watch specific form values for sticky summary bar
   const watchedCustomerName = Form.useWatch('customerName', form);
@@ -257,6 +258,17 @@ const TestRequestForm: React.FC = () => {
         // Show summary bar when scrolled past ~25% of the section
         const threshold = rect.height * 0.75;
         setShowSummaryBar(headerHeight > 0 && rect.bottom < headerHeight + threshold);
+
+        // Match summary bar width to the content wrapper (same as header)
+        const contentWrapper = document.querySelector('.main-content-wrapper');
+        if (contentWrapper) {
+          const wrapperRect = contentWrapper.getBoundingClientRect();
+          setSummaryBarStyle({
+            left: wrapperRect.left,
+            right: window.innerWidth - wrapperRect.right,
+            width: wrapperRect.width,
+          });
+        }
       }
     };
 
@@ -274,7 +286,7 @@ const TestRequestForm: React.FC = () => {
     <>
     {/* Fixed summary bar - appears when scrolled past form sections */}
     {showSummaryBar && (
-      <div className="fixed-summary-bar-wrapper">
+      <div className="fixed-summary-bar-wrapper" style={summaryBarStyle}>
         <StickySummaryBar
           customerName={watchedCustomerName}
           contactPerson={watchedContactPerson}
@@ -303,7 +315,8 @@ const TestRequestForm: React.FC = () => {
       }
     >
       <Spin spinning={loadingData}>
-        {/* Warning when edit requires QLCL approval */}
+        {/* [TEMPORARY] Tạm tắt alert cảnh báo cần phê duyệt - KH cho phép edit trực tiếp */}
+        {/* [OLD LOGIC]
         {isEditRequiresApproval() && (
           <Alert
             message="Lưu ý: Thay đổi cần phê duyệt"
@@ -313,6 +326,7 @@ const TestRequestForm: React.FC = () => {
             style={{ marginBottom: 16 }}
           />
         )}
+        */}
 
         <Form
           form={form}

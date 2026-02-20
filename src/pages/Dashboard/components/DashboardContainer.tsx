@@ -283,7 +283,7 @@ const DashboardContainer: React.FC<DashboardContainerProps> = ({
                   </div>
                   <Button
                     size="small"
-                    onClick={() => onNavigateToQualityManagementDetail(task.testRequestId)}
+                    onClick={() => onNavigateToQualityManagementDetail(task.id)}
                   >
                     Kết quả
                   </Button>

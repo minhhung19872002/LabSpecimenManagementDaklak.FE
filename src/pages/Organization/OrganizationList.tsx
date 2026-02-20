@@ -17,7 +17,9 @@ import {
   importService,
   downloadBlobAsFile,
   type OrganizationTestRequestImportPreviewDto,
+  type LocationCodeOverride,
 } from "../../services/importService";
+import { resolveLocationCodes } from "../../utils/vietnamLocations";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
 import "../../styles/ListCard.css";
@@ -37,7 +39,7 @@ const OrganizationList: React.FC = () => {
       setDownloadingTemplate(true);
       const blob =
         await importService.downloadOrganizationTestRequestTemplate();
-      downloadBlobAsFile(blob, "Template_CoSo_YeuCau.xlsx");
+      downloadBlobAsFile(blob, "CNDN.xlsx");
       message.success("Tải template thành công!");
     } catch (error) {
       message.error("Không thể tải template. Vui lòng thử lại.");
@@ -58,6 +60,10 @@ const OrganizationList: React.FC = () => {
       const result = await importService.previewOrganizationTestRequests(
         importFileList[0].originFileObj as File,
       );
+
+      // Resolve province/ward codes using FE library (new-vn-provinces)
+      await resolveLocationCodes(result.items);
+
       setImportPreviewData(result);
     } catch (error: any) {
       message.error(error?.message || "Không thể xem trước dữ liệu.");
@@ -74,8 +80,21 @@ const OrganizationList: React.FC = () => {
 
     try {
       setImportLoading(true);
+
+      // Build code overrides from FE-resolved preview data
+      const codeOverrides: LocationCodeOverride[] = importPreviewData?.items
+        ?.filter((item) => item.provinceCode || item.wardCode)
+        .map((item) => ({
+          rowNumber: item.rowNumber,
+          provinceCode: item.provinceCode,
+          wardCode: item.wardCode,
+        })) || [];
+
+      console.log('[Import] codeOverrides:', JSON.stringify(codeOverrides));
+
       const result = await importService.importOrganizationTestRequests(
         importFileList[0].originFileObj as File,
+        codeOverrides,
       );
 
       if (result.success) {
@@ -139,7 +158,6 @@ const OrganizationList: React.FC = () => {
 
     // Actions
     handleSave,
-    handleDelete,
     loadData,
   } = useOrganizationList();
 
@@ -200,7 +218,6 @@ const OrganizationList: React.FC = () => {
         totalCount={totalCount}
         onPageChange={handlePageChange}
         onEdit={handleEdit}
-        onDelete={handleDelete}
       />
 
       <OrganizationFormModal

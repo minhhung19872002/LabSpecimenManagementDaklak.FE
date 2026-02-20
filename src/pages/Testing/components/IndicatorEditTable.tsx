@@ -21,7 +21,7 @@ import {
   StopOutlined,
 } from "../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
-import { formatDate } from "../../../utils/formatters";
+import { formatDate, stripPTags } from "../../../utils/formatters";
 import {
   TestingIndicatorDto,
   SaveIndicatorResultDto,
@@ -47,6 +47,8 @@ interface IndicatorEditTableProps {
   isUrgent?: boolean;
   submitting?: boolean;
   resultOptions?: ResultOption[];
+  /** Function to get result options filtered by (indicatorId + specimenTypeId) */
+  getResultOptionsForIndicator?: (indicatorId: string, specimenTypeId?: string) => ResultOption[];
   /** Có quyền thực hiện thao tác (nhập/sửa/gửi kết quả) theo Permission Matrix */
   canPerformActions?: boolean;
   onResultsChange: (results: SaveIndicatorResultDto[]) => void;
@@ -194,6 +196,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
   isUrgent = false,
   submitting = false,
   resultOptions = [],
+  getResultOptionsForIndicator,
   canPerformActions = false,
   onResultsChange,
   onSelectionChange,
@@ -208,27 +211,55 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     Map<string, SaveIndicatorResultDto>
   >(new Map());
 
-  // Track indicator data to detect actual changes (IDs + testDates)
-  const indicatorDataKey = indicators
-    .map((ind) => `${ind.id}:${ind.testDate || ""}`)
-    .join(",");
+  // Track indicator IDs to detect when indicator list changes (not testDate)
+  const indicatorIdsKey = indicators.map((ind) => ind.id).join(",");
 
-  // Initialize edited results from indicators - when indicator list or testDate changes
+  // Initialize edited results from indicators - only when indicator list changes
+  // Merge with existing results to preserve user edits (especially 'result' field)
   useEffect(() => {
-    const initialResults = new Map<string, SaveIndicatorResultDto>();
-    indicators.forEach((ind) => {
-      initialResults.set(ind.id, {
-        indicatorId: ind.id,
-        methodId: ind.methodId,
-        unit: ind.unit,
-        result: ind.result,
-        note: ind.note,
-        testDate: ind.testDate,
+    setEditedResults((prev) => {
+      const newResults = new Map<string, SaveIndicatorResultDto>();
+      indicators.forEach((ind) => {
+        const existing = prev.get(ind.id);
+        newResults.set(ind.id, {
+          indicatorId: ind.id,
+          methodId: ind.methodId,
+          unit: ind.unit,
+          // Giữ lại result đã nhập nếu có, nếu không thì lấy từ indicator
+          result: existing?.result ?? ind.result,
+          note: existing?.note ?? ind.note,
+          // Lấy testDate từ indicator (có thể đã được update từ bulk change)
+          testDate: ind.testDate,
+        });
       });
+      return newResults;
     });
-    setEditedResults(initialResults);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [indicatorDataKey]);
+  }, [indicatorIdsKey]);
+
+  // Sync testDate from props when it changes (e.g., from bulk date change)
+  // This runs on every indicators change but only updates testDate, preserving result
+  useEffect(() => {
+    setEditedResults((prev) => {
+      let hasChanges = false;
+      const newResults = new Map(prev);
+
+      indicators.forEach((ind) => {
+        const existing = newResults.get(ind.id);
+        // Chỉ update nếu testDate thay đổi từ props
+        if (existing && existing.testDate !== ind.testDate) {
+          newResults.set(ind.id, {
+            ...existing,
+            testDate: ind.testDate,
+          });
+          hasChanges = true;
+        }
+      });
+
+      // Chỉ return new Map nếu có changes để tránh re-render không cần thiết
+      return hasChanges ? newResults : prev;
+    });
+  }, [indicators]);
 
   // Process indicators for display (group parent-child)
   const processedIndicators = useMemo(() => {
@@ -529,16 +560,32 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     {
       title: "Giới hạn",
       key: "allowedLimit",
-      width: 120,
+      width: 150,
       render: (_, record) => {
         // Parent có children -> không hiển thị
         if (record._isParentWithChildren) {
           return <Text type="secondary">-</Text>;
         }
-        if (record.comparisonOperator && record.allowedLimit) {
+        // Range case: both lowerLimit and upperLimit have values
+        if (record.lowerLimit && record.upperLimit) {
+          const lower = record.lowerOperator || ">";
+          const upper = record.upperOperator || "<";
+          const lowerHtml = stripPTags(record.lowerLimit);
+          const upperHtml = stripPTags(record.upperLimit);
           return (
             <Text>
-              {record.comparisonOperator} {record.allowedLimit}
+              {lower} <span dangerouslySetInnerHTML={{ __html: lowerHtml }} />
+              {" và "}
+              {upper} <span dangerouslySetInnerHTML={{ __html: upperHtml }} />
+            </Text>
+          );
+        }
+        // Single limit case
+        if (record.comparisonOperator && record.allowedLimit) {
+          const limitHtml = stripPTags(record.allowedLimit);
+          return (
+            <Text>
+              {record.comparisonOperator} <span dangerouslySetInnerHTML={{ __html: limitHtml }} />
             </Text>
           );
         }
@@ -564,10 +611,15 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
           record.testingStatus === IndicatorTestingStatus.Done ||
           record.testingStatus === IndicatorTestingStatus.Cancelled;
 
+        // Get filtered options for this specific (indicatorId + specimenTypeId) pair
+        const filteredOptions = getResultOptionsForIndicator
+          ? getResultOptionsForIndicator(record.indicatorId, record.specimenTypeId)
+          : resultOptions;
+
         return (
           <AutoComplete
             value={currentValue}
-            options={resultOptions}
+            options={filteredOptions}
             onChange={(value) => {
               handleFieldChange(record.id, "result", value);
             }}

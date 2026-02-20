@@ -21,16 +21,30 @@ export const HEAVY_METAL_COMBO_INDICATORS = [
 
 export const HEAVY_METAL_FREE_INDICATOR = "Hàm lượng Thủy ngân (Hg)";
 
-// Helper: Normalize tên chỉ tiêu để so sánh (trim + lowercase)
+// Helper: Strip HTML tags từ string
+const stripHtmlTags = (str: string): string => {
+  return str.replace(/<[^>]*>/g, '');
+};
+
+// Helper: Normalize tên chỉ tiêu để so sánh
+// - Strip HTML tags
+// - Normalize Unicode (NFC form) - giống BE để đảm bảo consistent
+// - Trim + lowercase
 const normalizeIndicatorName = (name: string | undefined | null): string => {
-  return (name || "").trim().toLowerCase();
+  const stripped = stripHtmlTags(name || "");
+  // Normalize Unicode to NFC form (same as BE: NormalizationForm.FormC)
+  // This ensures "Hàm lượng" from different sources compare equal
+  const normalized = stripped.normalize('NFC');
+  return normalized.trim().toLowerCase();
 };
 
 // Helper: Kiểm tra xem một list tên chỉ tiêu có đủ combo kim loại nặng không
 export const isHeavyMetalComboMet = (indicatorNames: (string | undefined | null)[]): boolean => {
   const normalizedNames = indicatorNames.map(normalizeIndicatorName);
-  return HEAVY_METAL_COMBO_INDICATORS.every((comboName) =>
-    normalizedNames.includes(normalizeIndicatorName(comboName))
+  const normalizedComboNames = HEAVY_METAL_COMBO_INDICATORS.map(normalizeIndicatorName);
+
+  return normalizedComboNames.every((comboName) =>
+    normalizedNames.includes(comboName)
   );
 };
 

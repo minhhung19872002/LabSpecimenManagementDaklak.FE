@@ -6,7 +6,6 @@ import {
   Space,
   Typography,
   message,
-  Input,
   Spin,
   Checkbox,
   List,
@@ -32,7 +31,8 @@ import {
 import { API_BASE_URL } from "../../../services/api";
 import userService, { UserLookupDto } from "../../../services/userService";
 import { IndicatorName } from "../../../components/common";
-import { parseResultToNumber } from "../../../utils/formatters";
+import RichTextEditor from "../../../components/common/RichTextEditor";
+import { parseResultToNumber, convertHtmlToMathExpression, stripHtmlTags } from "../../../utils/formatters";
 
 const { Text } = Typography;
 
@@ -208,50 +208,91 @@ const PrintModal: React.FC<PrintModalProps> = ({
 
   // Get approved indicators AND their parent indicators
   // Parent indicators don't have approvalStatus but need to be shown for hierarchy
+  // RULE: Chỉ hiển thị parent indicator khi TẤT CẢ sub-indicators của nó đều đã được duyệt
   const approvedIndicatorsWithParents = useMemo(() => {
-    // First get all approved sub-indicators
-    const approved = indicators.filter(
-      (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Approved,
-    );
+    // Separate parents and sub-indicators
+    const parents = indicators.filter((ind) => !ind.parentIndicatorId);
+    const subs = indicators.filter((ind) => ind.parentIndicatorId);
 
-    // Collect parent indicator keys that have approved children
-    const neededParentKeys = new Set<string>();
-    approved.forEach((ind) => {
-      if (ind.parentIndicatorId) {
-        const parentKey = makeGroupKey(ind.parentIndicatorId, ind.methodId);
-        neededParentKeys.add(parentKey);
+    // Group sub-indicators by parentKey (parentIndicatorId + methodId)
+    const subsByParentKey: Record<string, QualityManagementIndicatorDto[]> = {};
+    subs.forEach((sub) => {
+      const parentKey = makeGroupKey(sub.parentIndicatorId!, sub.methodId);
+      if (!subsByParentKey[parentKey]) {
+        subsByParentKey[parentKey] = [];
+      }
+      subsByParentKey[parentKey].push(sub);
+    });
+
+    // Find parent keys where ALL sub-indicators are approved
+    const fullyApprovedParentKeys = new Set<string>();
+    Object.entries(subsByParentKey).forEach(([parentKey, subList]) => {
+      const allSubsApproved = subList.every(
+        (sub) => sub.approvalStatus === QualityIndicatorApprovalStatus.Approved,
+      );
+      if (allSubsApproved) {
+        fullyApprovedParentKeys.add(parentKey);
       }
     });
 
-    // Find parent indicators that match the needed keys
-    const parentIndicators = indicators.filter((ind) => {
-      if (ind.parentIndicatorId) return false; // Skip non-parents
-      const key = makeGroupKey(ind.indicatorId, ind.methodId);
-      return neededParentKeys.has(key);
+    // Build result:
+    // 1. Include parent indicators whose ALL subs are approved
+    // 2. Include sub-indicators whose parent has ALL subs approved
+    // 3. Include standalone approved indicators (no parent, no children)
+    const result: QualityManagementIndicatorDto[] = [];
+
+    // Add parent indicators that have ALL subs approved
+    parents.forEach((parent) => {
+      const parentKey = makeGroupKey(parent.indicatorId, parent.methodId);
+      const hasSubIndicators = subsByParentKey[parentKey]?.length > 0;
+
+      if (hasSubIndicators) {
+        // Parent has sub-indicators -> only include if ALL subs are approved
+        if (fullyApprovedParentKeys.has(parentKey)) {
+          result.push(parent);
+          // Also add all its sub-indicators
+          subsByParentKey[parentKey].forEach((sub) => result.push(sub));
+        }
+        // If not all subs approved -> don't include parent or any subs
+      } else {
+        // Standalone parent (no sub-indicators) -> include if approved
+        if (parent.approvalStatus === QualityIndicatorApprovalStatus.Approved) {
+          result.push(parent);
+        }
+      }
     });
 
-    // Combine: approved indicators + their parent indicators
-    const approvedIds = new Set(approved.map((a) => a.id));
-    const result = [...approved];
-    parentIndicators.forEach((parent) => {
-      if (!approvedIds.has(parent.id)) {
-        result.push(parent);
+    // Add orphan sub-indicators (parent not in list) that are approved
+    subs.forEach((sub) => {
+      const parentKey = makeGroupKey(sub.parentIndicatorId!, sub.methodId);
+      const parentExists = parents.some(
+        (p) => makeGroupKey(p.indicatorId, p.methodId) === parentKey,
+      );
+      if (
+        !parentExists &&
+        sub.approvalStatus === QualityIndicatorApprovalStatus.Approved
+      ) {
+        // Check if already added
+        if (!result.some((r) => r.id === sub.id)) {
+          result.push(sub);
+        }
       }
     });
 
     return result;
   }, [indicators]);
 
-  // Get only approved indicator IDs (for selection - excludes parents)
+  // Get only approved indicator IDs (for selection - excludes parents with children)
+  // Only includes indicators that are in approvedIndicatorsWithParents AND have approvalStatus = Approved
   const approvedIndicatorIds = useMemo(
     () =>
-      indicators
+      approvedIndicatorsWithParents
         .filter(
           (ind) =>
             ind.approvalStatus === QualityIndicatorApprovalStatus.Approved,
         )
         .map((ind) => ind.id),
-    [indicators],
+    [approvedIndicatorsWithParents],
   );
 
   // Group indicators by laboratory, then by sample
@@ -339,61 +380,55 @@ const PrintModal: React.FC<PrintModalProps> = ({
       );
 
       // Collect unique master data notes and free text notes
-      // Use exact match instead of includes() to avoid partial matching issues
-      const existingNoteLines = note
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean);
-      const newNoteLines: string[] = [];
+      // Note content is HTML (rich text) - use plain text for deduplication
+      const existingPlainText = stripHtmlTags(note);
+      const newHtmlParts: string[] = [];
 
-      // First, collect all master data notes (deduplicated)
-      // Master data notes will be joined with ", " on a single line
-      const allMasterDataNotes = new Set<string>();
+      // First, collect all master data notes (deduplicated by plain text)
+      const addedMasterNotes = new Set<string>();
       newIndicators.forEach((ind) => {
         if (ind.masterDataNotes && ind.masterDataNotes.length > 0) {
           ind.masterDataNotes.forEach((masterNote) => {
             if (masterNote) {
-              allMasterDataNotes.add(masterNote);
+              const plainNote = stripHtmlTags(masterNote);
+              if (
+                plainNote &&
+                !addedMasterNotes.has(plainNote) &&
+                !existingPlainText.includes(plainNote)
+              ) {
+                addedMasterNotes.add(plainNote);
+                newHtmlParts.push(masterNote);
+              }
             }
           });
         }
       });
 
-      // Add master data notes as single line with ", " separator
-      if (allMasterDataNotes.size > 0) {
-        const masterDataLine = `- ${Array.from(allMasterDataNotes).join(", ")}`;
-        // Check if this exact line already exists
-        if (!existingNoteLines.some((line) => line === masterDataLine)) {
-          newNoteLines.push(masterDataLine);
-        }
-      }
-
       // Then collect free text notes (deduplicated)
+      // Keep original HTML from freeTextNote
       const addedFreeTexts = new Set<string>();
       newIndicators.forEach((ind) => {
         if (ind.freeTextNote && ind.freeTextNote.trim()) {
-          const freeText = ind.freeTextNote.trim();
-          // Check exact match: `- ${freeText}` hoặc freeText không tồn tại trong existing lines
+          const plainFreeText = stripHtmlTags(ind.freeTextNote);
           if (
-            !addedFreeTexts.has(freeText) &&
-            !existingNoteLines.some(
-              (line) => line === `- ${freeText}` || line === freeText,
-            )
+            plainFreeText &&
+            !addedFreeTexts.has(plainFreeText) &&
+            !existingPlainText.includes(plainFreeText)
           ) {
-            addedFreeTexts.add(freeText);
-            newNoteLines.push(`- ${freeText}`);
+            addedFreeTexts.add(plainFreeText);
+            newHtmlParts.push(ind.freeTextNote);
           }
         }
       });
 
-      // Append new notes to existing note
-      if (newNoteLines.length > 0) {
+      // Append new notes as HTML
+      if (newHtmlParts.length > 0) {
         setNote((prev) => {
-          const trimmed = prev.trim();
-          if (trimmed) {
-            return `${trimmed}\n${newNoteLines.join("\n")}`;
+          const trimmedPrev = stripHtmlTags(prev);
+          if (trimmedPrev) {
+            return prev + newHtmlParts.join("");
           }
-          return newNoteLines.join("\n");
+          return newHtmlParts.join("");
         });
       }
     }
@@ -596,7 +631,8 @@ const PrintModal: React.FC<PrintModalProps> = ({
     const resultValue = parseResultToNumber(result);
     if (resultValue === null) return null;
 
-    const limitValue = parseResultToNumber(allowedLimit);
+    // Convert HTML superscript/subscript to math expression and parse limit
+    const limitValue = parseResultToNumber(convertHtmlToMathExpression(allowedLimit));
     if (limitValue === null) return null;
 
     switch (comparisonOperator) {
@@ -1178,13 +1214,12 @@ const PrintModal: React.FC<PrintModalProps> = ({
               <Text strong style={{ display: "block", marginBottom: 8 }}>
                 Ghi chú (không bắt buộc)
               </Text>
-              <Input.TextArea
+              <RichTextEditor
                 value={note}
-                onChange={(e) => setNote(e.target.value)}
+                onChange={(html) => setNote(html)}
                 placeholder="Nhập ghi chú sẽ được đưa vào phần cuối của báo cáo..."
-                rows={3}
-                maxLength={500}
-                showCount
+                showToolbar
+                minHeight={100}
               />
             </div>
           </Col>

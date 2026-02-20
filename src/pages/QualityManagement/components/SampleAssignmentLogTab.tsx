@@ -6,15 +6,15 @@ import dayjs from "dayjs";
 import { useSampleAssignmentLog } from "../hooks/useSampleAssignmentLog";
 import {
   SampleAssignmentLogDto,
-  QualityIndicatorApprovalStatus,
+  QLCLDisplayStatus,
+  QLCLDisplayStatusLabels,
+  QLCLDisplayStatusColors,
 } from "../../../types/qualityManagement";
 import {
   TestRequestStatus,
   TestRequestStatusLabels,
-  TestRequestStatusColors,
 } from "../../../types/testRequest";
 import { IndicatorApprovalStatus } from "../../../types/laboratoryTask";
-import { TestingStatus } from "../../../types/testing";
 
 import "../../../styles/ListCard.css";
 import "./SampleAssignmentLogTab.css";
@@ -300,35 +300,34 @@ const processDataForRowSpan = (
   return result;
 };
 
-// Determine row color class based on highlighting rules
+// Determine row color class based on highlighting rules (QLCL page)
 const getRowColorClass = (record: ProcessedLogItem): string => {
   // Skip if report published or completed
   if (
     record.isReportPublished ||
-    record.testRequestStatus === TestRequestStatus.Completed
+    record.qlclDisplayStatus === QLCLDisplayStatus.Published ||
+    record.qlclDisplayStatus === QLCLDisplayStatus.WaitingForPublishing
   ) {
     return "";
   }
 
-  // Purple: QLCL pending approval
-  if (
-    record.qualityApprovalStatus ===
-    QualityIndicatorApprovalStatus.PendingApproval
-  ) {
+  // Purple: Chờ QLCL duyệt
+  if (record.qlclDisplayStatus === QLCLDisplayStatus.WaitingQLCLApproval) {
     return "row-purple";
   }
 
-  // Yellow: Waiting for result approval (Entered)
-  if (record.indicatorApprovalStatus === IndicatorApprovalStatus.Entered) {
+  // Yellow: Chờ QLKT duyệt hoặc đã nhập KQ chờ duyệt
+  if (
+    record.qlclDisplayStatus === QLCLDisplayStatus.WaitingQLKTApproval ||
+    record.indicatorApprovalStatus === IndicatorApprovalStatus.Entered
+  ) {
     return "row-yellow";
   }
 
-  // Red: New/UnderReview OR Pending OR TestingStatus=InProgress
+  // Red: Đang TN hoặc cần làm
   if (
-    record.testRequestStatus === TestRequestStatus.New ||
-    record.testRequestStatus === TestRequestStatus.UnderReview ||
-    record.indicatorApprovalStatus === IndicatorApprovalStatus.Pending ||
-    record.testingStatus === TestingStatus.InProgress
+    record.qlclDisplayStatus === QLCLDisplayStatus.ToDo ||
+    record.qlclDisplayStatus === QLCLDisplayStatus.Testing
   ) {
     return "row-red";
   }
@@ -600,15 +599,19 @@ const SampleAssignmentLogTab: React.FC = () => {
       },
       {
         title: "Tình trạng",
-        dataIndex: "testRequestStatus",
-        key: "testRequestStatus",
-        width: 130,
+        dataIndex: "qlclDisplayStatus",
+        key: "qlclDisplayStatus",
+        width: 150,
         fixed: "right",
-        render: (status: TestRequestStatus) => (
-          <Tag color={TestRequestStatusColors[status] || "default"}>
-            {TestRequestStatusLabels[status] || "Không xác định"}
-          </Tag>
-        ),
+        render: (status: QLCLDisplayStatus | null | undefined) => {
+          // Default to New if null/undefined
+          const effectiveStatus = status ?? QLCLDisplayStatus.New;
+          return (
+            <Tag color={QLCLDisplayStatusColors[effectiveStatus] || "default"}>
+              {QLCLDisplayStatusLabels[effectiveStatus] || "Không xác định"}
+            </Tag>
+          );
+        },
       },
     ],
     [isCellHovered],

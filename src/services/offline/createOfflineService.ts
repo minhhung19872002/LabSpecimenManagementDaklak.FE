@@ -52,6 +52,20 @@ const defaultOptions: OfflineServiceOptions = {
 };
 
 
+/**
+ * Check if an error is a true network error (no response from server).
+ * - Network error: error.response is undefined (DNS failure, connection refused, no internet)
+ * - Server error: error.response exists with status code (400, 401, 500, etc.) — server is reachable
+ */
+export function isNetworkError(error: unknown): boolean {
+  if (error && typeof error === 'object' && 'response' in error) {
+    // Axios error with a server response = server is reachable, NOT a network error
+    return (error as any).response == null;
+  }
+  // Non-axios errors or errors without response = treat as network error
+  return true;
+}
+
 export function createOfflineService<
   TDto,
   TCreateDto,
@@ -77,7 +91,8 @@ export function createOfflineService<
           }
           return result;
         } catch (error) {
-          console.warn('Online getList failed, returning cached data:', error);
+          if (!isNetworkError(error)) throw error;
+          console.warn('Network error in getList, returning cached data:', error);
         }
       }
       const cachedEntities = await getCachedEntitiesByType(entityType);
@@ -94,7 +109,8 @@ export function createOfflineService<
           }
           return result;
         } catch (error) {
-          console.warn('Online get failed, returning cached data:', error);
+          if (!isNetworkError(error)) throw error;
+          console.warn('Network error in get, returning cached data:', error);
         }
       }
       const cached = await getCachedEntity(entityType, id);
@@ -114,7 +130,8 @@ export function createOfflineService<
           }
           return result;
         } catch (error) {
-          console.warn('Online create failed, queueing for sync:', error);
+          if (!isNetworkError(error)) throw error;
+          console.warn('Network error in create, queueing for sync:', error);
         }
       }
       const tempId = generateUUID();
@@ -133,7 +150,8 @@ export function createOfflineService<
           }
           return result;
         } catch (error) {
-          console.warn('Online update failed, queueing for sync:', error);
+          if (!isNetworkError(error)) throw error;
+          console.warn('Network error in update, queueing for sync:', error);
         }
       }
       await syncManager.queueEntity(entityType, data, 'update', id);
@@ -149,7 +167,8 @@ export function createOfflineService<
           await removeCachedEntity(entityType, id);
           return;
         } catch (error) {
-          console.warn('Online delete failed, queueing for sync:', error);
+          if (!isNetworkError(error)) throw error;
+          console.warn('Network error in delete, queueing for sync:', error);
         }
       }
       await syncManager.queueEntity(entityType, { id }, 'delete', id);

@@ -1,4 +1,5 @@
 import { IndicatorImageDto } from './testing';
+import { TestRequestStatus } from './testRequest';
 
 // Laboratory Task Status Enum
 export enum LaboratoryTaskStatus {
@@ -98,6 +99,7 @@ export interface LaboratoryTaskIndicatorDto {
   sampleId: string;
   sampleCode?: string;
   sampleName?: string;
+  specimenTypeId?: string;  // ID nền mẫu (loại mẫu)
   indicatorId: string;
   indicatorCode?: string;
   indicatorName?: string;
@@ -192,6 +194,7 @@ export interface LaboratoryTaskDto {
   transferDate?: string;
   requestCompletionDate?: string;
   testDate?: string;
+  testDateRange?: string;  // Khoảng ngày thử nghiệm: "dd/MM/yyyy - dd/MM/yyyy" (Min - Max từ indicators)
   status: LaboratoryTaskStatus;
   notes?: string;
   resultRejectionReason?: string;  // Lý do QLCL từ chối KQ
@@ -208,6 +211,7 @@ export interface LaboratoryTaskDto {
 
   // Navigation properties
   testRequestNumber?: string;
+  testRequestStatus?: TestRequestStatus;
   laboratoryName?: string;
   laboratoryCode?: string;
   customerName?: string;
@@ -217,6 +221,7 @@ export interface LaboratoryTaskDto {
   // Current user role flags
   isCurrentUserTechnicalManager?: boolean;  // Current user là QLKT của task này
   isCurrentUserSupporter?: boolean;  // Current user là Supporter của task này
+  isCurrentUserDepartmentSupporter?: boolean;  // Current user là Department Supporter của khoa phòng
 
   // Audit fields
   creationTime?: string;
@@ -360,6 +365,28 @@ export interface ManageSupportersInput {
   userIds: string[];
 }
 
+// ============= Department Supporter DTOs =============
+
+export interface LaboratoryDepartmentSupporterDto {
+  id: string;
+  laboratoryId: string;
+  userId: string;
+  userName?: string;
+  fullName?: string;
+  email?: string;
+  expirationDate: string;
+  creationTime: string;
+}
+
+export interface DepartmentSupporterEntry {
+  userId: string;
+  expirationDate: string;
+}
+
+export interface AddDepartmentSupportersInput {
+  entries: DepartmentSupporterEntry[];
+}
+
 // ============= Bulk Approval DTOs =============
 
 export interface BulkApproveIndicatorsInput {
@@ -457,3 +484,63 @@ export interface RejectIndicatorsForTestingInput {
   indicatorIds: string[];
   reason: string;
 }
+
+// ============= QLKT Display Status (Sổ nhận việc - Cột Tình trạng) =============
+
+/**
+ * Trạng thái hiển thị tại cột "Tình trạng" trong tab Sổ nhận việc QLKT
+ * Mapping từ IndicatorApprovalStatus + các field khác
+ */
+export enum QLKTDisplayStatus {
+  UnderReview = 0,              // Đang xem xét YC
+  MethodChangeRequested = 1,    // Yêu cầu đổi PP
+  MethodChanged = 2,            // Đã đổi PP
+  TestingRejected = 3,          // Từ chối TN
+  SupplementaryRequested = 4,   // YC bổ sung
+  CustomerCancelled = 5,        // KH hủy
+  CannotTest = 6,               // Không TN được
+  WaitingForAssignment = 7,     // Chờ giao việc
+  ToDo = 8,                     // Cần làm
+  Testing = 9,                  // Đang thử nghiệm
+  WaitingQLKTApproval = 10,     // Chờ QLKT phê duyệt
+  ResultRejected = 11,          // Từ chối KQ
+  WaitingQLCLApproval = 12,     // Chờ QLCL Duyệt
+  QLCLRejected = 13,            // QLCL từ chối
+  Completed = 14                // Hoàn thành
+}
+
+export const QLKTDisplayStatusLabels: Record<QLKTDisplayStatus, string> = {
+  [QLKTDisplayStatus.UnderReview]: 'Đang xem xét YC',
+  [QLKTDisplayStatus.MethodChangeRequested]: 'Yêu cầu đổi PP',
+  [QLKTDisplayStatus.MethodChanged]: 'Đã đổi PP',
+  [QLKTDisplayStatus.TestingRejected]: 'Từ chối TN',
+  [QLKTDisplayStatus.SupplementaryRequested]: 'YC bổ sung',
+  [QLKTDisplayStatus.CustomerCancelled]: 'KH hủy',
+  [QLKTDisplayStatus.CannotTest]: 'Không TN được',
+  [QLKTDisplayStatus.WaitingForAssignment]: 'Chờ giao việc',
+  [QLKTDisplayStatus.ToDo]: 'Cần làm',
+  [QLKTDisplayStatus.Testing]: 'Đang thử nghiệm',
+  [QLKTDisplayStatus.WaitingQLKTApproval]: 'Chờ QLKT phê duyệt',
+  [QLKTDisplayStatus.ResultRejected]: 'Từ chối KQ',
+  [QLKTDisplayStatus.WaitingQLCLApproval]: 'Chờ QLCL Duyệt',
+  [QLKTDisplayStatus.QLCLRejected]: 'QLCL từ chối',
+  [QLKTDisplayStatus.Completed]: 'Hoàn thành'
+};
+
+export const QLKTDisplayStatusColors: Record<QLKTDisplayStatus, string> = {
+  [QLKTDisplayStatus.UnderReview]: 'processing',       // Xanh dương nhạt - đang xử lý
+  [QLKTDisplayStatus.MethodChangeRequested]: 'gold',   // Vàng - chờ xác nhận
+  [QLKTDisplayStatus.MethodChanged]: 'cyan',           // Xanh cyan - đã thay đổi
+  [QLKTDisplayStatus.TestingRejected]: 'red',          // Đỏ - từ chối
+  [QLKTDisplayStatus.SupplementaryRequested]: 'orange', // Cam - yêu cầu bổ sung
+  [QLKTDisplayStatus.CustomerCancelled]: 'volcano',    // Đỏ cam - KH hủy
+  [QLKTDisplayStatus.CannotTest]: 'magenta',           // Hồng - không TN được
+  [QLKTDisplayStatus.WaitingForAssignment]: 'default', // Xám - chờ giao việc
+  [QLKTDisplayStatus.ToDo]: 'blue',                    // Xanh - cần làm
+  [QLKTDisplayStatus.Testing]: 'processing',           // Xanh dương nhạt - đang TN
+  [QLKTDisplayStatus.WaitingQLKTApproval]: 'warning',  // Vàng cam - chờ duyệt
+  [QLKTDisplayStatus.ResultRejected]: 'error',         // Đỏ - từ chối KQ
+  [QLKTDisplayStatus.WaitingQLCLApproval]: 'purple',   // Tím - chờ QLCL
+  [QLKTDisplayStatus.QLCLRejected]: 'error',           // Đỏ - QLCL từ chối
+  [QLKTDisplayStatus.Completed]: 'success'             // Xanh lá - hoàn thành
+};

@@ -14,14 +14,14 @@ import {
   MinusCircleOutlined,
 } from "../../../../components/common/Icon";
 import type { FormInstance } from "antd";
-import { NumericFormat } from "react-number-format";
 import {
   IndicatorDto,
   IndicatorGroupDto,
   TestMethodWithIndicatorsDto,
   SpecimenTypeDto,
 } from "../../../../services/masterDataService";
-import IndicatorName from "../../../../components/common/IndicatorName";
+import { IndicatorName, LimitInput, extractPlainTextFromLimit } from "../../../../components/common";
+import { parseResultToNumber } from "../../../../utils/formatters";
 import {
   COMPARISON_OPERATORS,
   LOWER_OPERATORS,
@@ -666,10 +666,11 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
     form.setFieldsValue({ indicators: currentIndicators });
   };
 
-  // Handle removing sub-indicator
+  // Handle removing sub-indicator - currently unused but kept for future use
   // IMPORTANT: Don't use removeSub() from Form.List as it can reset parent fields!
   // Instead, manually set form values to preserve all parent data.
-  const handleRemoveSubIndicator = (parentIndex: number, subIndex: number) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  void function _handleRemoveSubIndicator(parentIndex: number, subIndex: number) {
     const parentIndicatorId =
       selectedIndicators[parentIndex] || indicators[parentIndex]?.indicatorId;
 
@@ -758,9 +759,12 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                     "upperLimit",
                   ]);
                   if (!value || !upperLimit) return Promise.resolve();
-                  const lower = parseFloat(value);
-                  const upper = parseFloat(upperLimit);
-                  if (isNaN(lower) || isNaN(upper)) return Promise.resolve();
+                  // Extract plain text from HTML and parse mathematical expressions
+                  const lowerText = extractPlainTextFromLimit(value);
+                  const upperText = extractPlainTextFromLimit(upperLimit);
+                  const lower = parseResultToNumber(lowerText, 4, false);
+                  const upper = parseResultToNumber(upperText, 4, false);
+                  if (lower === null || upper === null) return Promise.resolve();
                   if (lower >= upper) {
                     return Promise.reject(
                       new Error("Cận dưới phải < cận trên"),
@@ -770,14 +774,9 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                 },
               }),
             ]}
-            style={{ marginBottom: 0, width: 80 }}
+            style={{ marginBottom: 0, width: 100 }}
           >
-            <NumericFormat
-              placeholder="Cận dưới"
-              allowNegative={false}
-              decimalScale={4}
-              customInput={Input}
-            />
+            <LimitInput placeholder="Cận dưới" />
           </Form.Item>
           <Form.Item
             name={[...fieldNamePrefix, "upperOperator"]}
@@ -796,9 +795,12 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                     "lowerLimit",
                   ]);
                   if (!value || !lowerLimit) return Promise.resolve();
-                  const upper = parseFloat(value);
-                  const lower = parseFloat(lowerLimit);
-                  if (isNaN(lower) || isNaN(upper)) return Promise.resolve();
+                  // Extract plain text from HTML and parse mathematical expressions
+                  const upperText = extractPlainTextFromLimit(value);
+                  const lowerText = extractPlainTextFromLimit(lowerLimit);
+                  const upper = parseResultToNumber(upperText, 4, false);
+                  const lower = parseResultToNumber(lowerText, 4, false);
+                  if (lower === null || upper === null) return Promise.resolve();
                   if (upper <= lower) {
                     return Promise.reject(
                       new Error("Cận trên phải > cận dưới"),
@@ -808,14 +810,9 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
                 },
               }),
             ]}
-            style={{ marginBottom: 0, width: 80 }}
+            style={{ marginBottom: 0, width: 100 }}
           >
-            <NumericFormat
-              placeholder="Cận trên"
-              allowNegative={false}
-              decimalScale={4}
-              customInput={Input}
-            />
+            <LimitInput placeholder="Cận trên" />
           </Form.Item>
         </div>
       );
@@ -826,12 +823,7 @@ const AddIndicatorsModal: React.FC<AddIndicatorsModalProps> = ({
         name={[...fieldNamePrefix, "allowedLimit"]}
         style={{ marginBottom: 0, flex: 1 }}
       >
-        <NumericFormat
-          placeholder="Giới hạn"
-          allowNegative={false}
-          decimalScale={4}
-          customInput={Input}
-        />
+        <LimitInput placeholder="Giới hạn" />
       </Form.Item>
     );
   };

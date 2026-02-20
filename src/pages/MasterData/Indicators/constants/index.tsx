@@ -5,7 +5,6 @@ import {
   StopOutlined,
   CheckCircleOutlined,
 } from "../../../../components/common/Icon";
-import Icon from "../../../../components/common/Icon";
 import { IndicatorName } from "../../../../components/common";
 import type { ColumnsType } from "antd/es/table";
 import { IndicatorDto, IndicatorGroupDto, GroupedIndicatorData } from "../types";

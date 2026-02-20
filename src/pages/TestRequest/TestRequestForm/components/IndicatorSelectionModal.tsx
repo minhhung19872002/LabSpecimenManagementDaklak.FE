@@ -48,6 +48,27 @@ import "./IndicatorSelectionModal.css";
 
 const { Text } = Typography;
 
+// Helper function to normalize indicator name for sorting
+// Strips HTML tags and normalizes Unicode for proper alphabetical comparison
+const normalizeForSort = (name: string): string => {
+  // Remove HTML tags (e.g., <sub>, <sup>, <i>, etc.)
+  const withoutHtml = name.replace(/<[^>]*>/g, "");
+  // Normalize Unicode (NFD) and remove combining diacritical marks for base comparison
+  // But keep the original for locale-aware sorting
+  return withoutHtml.normalize("NFC").toLowerCase();
+};
+
+// Sort indicators alphabetically by name with proper Unicode handling
+const sortIndicatorsAlphabetically = (
+  indicators: IndicatorDto[]
+): IndicatorDto[] => {
+  return [...indicators].sort((a, b) => {
+    const nameA = normalizeForSort(a.name);
+    const nameB = normalizeForSort(b.name);
+    return nameA.localeCompare(nameB, "vi", { sensitivity: "base" });
+  });
+};
+
 // Component hiển thị tooltip chỉ khi text bị cắt (ellipsis)
 interface TruncateTooltipProps {
   title: string;
@@ -569,16 +590,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     specimenTypeIndicatorIds,
   ]);
 
-  // Auto-expand all indicators when modal opens
-  useEffect(() => {
-    if (
-      visible &&
-      indicatorsWithMethods.length > 0 &&
-      expandedIndicators.length === 0
-    ) {
-      setExpandedIndicators(indicatorsWithMethods.map((ind) => ind.id));
-    }
-  }, [visible, indicatorsWithMethods]);
+  // Level 3 (Chỉ tiêu) - default collapsed, không auto-expand
 
   // State for mobile indicator picker drawer
   const [indicatorPickerOpen, setIndicatorPickerOpen] = useState(false);
@@ -816,9 +828,10 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     const isSomeSelected = areSomeMethodsSelected(ind.id, filterSpecimenTypeId);
 
     // Tree classes for Level 3 (Indicator)
-    const level3ClassName = indentLevel === 2
-      ? `tree-item tree-level-3${isLastIndicator ? " is-last" : ""}`
-      : "";
+    const level3ClassName =
+      indentLevel === 2
+        ? `tree-item tree-level-3${isLastIndicator ? " is-last" : ""}`
+        : "";
 
     return (
       <div key={ind.id} className={level3ClassName}>
@@ -861,7 +874,9 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
           />
           <TruncateTooltip
             title={ind.name}
-            className={isIndicatorExpanded ? "indicator-name-gradient" : undefined}
+            className={
+              isIndicatorExpanded ? "indicator-name-gradient" : undefined
+            }
             style={{
               flex: 1,
               fontSize: 14,
@@ -986,14 +1001,21 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
       );
     }
 
-    // Apply search filter
+    // Apply search filter (normalize Unicode to handle different compositions of Vietnamese diacritics)
     if (indicatorSearchText.trim()) {
-      const searchLower = indicatorSearchText.toLowerCase().trim();
-      activeIndicators = activeIndicators.filter(
-        (ind) =>
-          ind.name.toLowerCase().includes(searchLower) ||
-          ind.code?.toLowerCase().includes(searchLower),
-      );
+      const searchNorm = indicatorSearchText.trim().normalize("NFC").toLowerCase();
+      activeIndicators = activeIndicators.filter((ind) => {
+        const nameNorm = ind.name.normalize("NFC").toLowerCase();
+        const codeNorm = ind.code?.normalize("NFC").toLowerCase();
+        if (nameNorm.includes(searchNorm) || codeNorm?.includes(searchNorm)) {
+          return true;
+        }
+        // Search theo tên phương pháp
+        const methods = indicatorMethodsMap[ind.id]?.filter((m) => m.isActive) || [];
+        return methods.some((m) =>
+          m.testMethodName?.normalize("NFC").toLowerCase().includes(searchNorm),
+        );
+      });
     }
 
     // Build map: indicatorId -> specimenTypeIds (từ indicatorMethodsMap thay vì specimenTypesWithIndicators)
@@ -1224,111 +1246,131 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                 </span>
               </div>
 
-              {/* Loại mẫu within Nhóm CT (Level 2) */}
-              {isGroupExpanded && (() => {
-                const specimenTypesArray = Array.from(groupData.specimenTypes.values());
-                return specimenTypesArray.map((stData, stIndex) => {
-                  const isSpecimenTypeExpanded = expandedSpecimenTypes.includes(
-                    `${groupData.id}_${stData.id}`,
-                  );
-                  const stIndicatorIds = stData.indicators.map((ind) => ind.id);
-                  // Filter theo specimenTypeId của group (trừ group "others")
-                  const filterStId =
-                    stData.id === "others" ? undefined : stData.id;
-                  const isAllStSelected = areAllIndicatorsSelected(
-                    stIndicatorIds,
-                    filterStId,
-                  );
-                  const isSomeStSelected = areSomeIndicatorsSelected(
-                    stIndicatorIds,
-                    filterStId,
-                  );
-                  const isLastLevel2 = stIndex === specimenTypesArray.length - 1;
+              {/* Loại mẫu within Nhóm CT (Level 2) - sorted alphabetically */}
+              {isGroupExpanded &&
+                (() => {
+                  const specimenTypesArray = Array.from(
+                    groupData.specimenTypes.values(),
+                  ).sort((a, b) => {
+                    // "Khác" (others) always goes last
+                    if (a.id === "others") return 1;
+                    if (b.id === "others") return -1;
+                    // Sort alphabetically by name
+                    return normalizeForSort(a.name).localeCompare(
+                      normalizeForSort(b.name),
+                      "vi",
+                      { sensitivity: "base" }
+                    );
+                  });
+                  return specimenTypesArray.map((stData, stIndex) => {
+                    const isSpecimenTypeExpanded =
+                      expandedSpecimenTypes.includes(
+                        `${groupData.id}_${stData.id}`,
+                      );
+                    const stIndicatorIds = stData.indicators.map(
+                      (ind) => ind.id,
+                    );
+                    // Filter theo specimenTypeId của group (trừ group "others")
+                    const filterStId =
+                      stData.id === "others" ? undefined : stData.id;
+                    const isAllStSelected = areAllIndicatorsSelected(
+                      stIndicatorIds,
+                      filterStId,
+                    );
+                    const isSomeStSelected = areSomeIndicatorsSelected(
+                      stIndicatorIds,
+                      filterStId,
+                    );
+                    const isLastLevel2 =
+                      stIndex === specimenTypesArray.length - 1;
 
-                  return (
-                    <div
-                      key={`${groupData.id}_${stData.id}`}
-                      className={`tree-item tree-level-2${isLastLevel2 ? " is-last" : ""}`}
-                    >
-                      {/* Loại mẫu header */}
+                    return (
                       <div
-                        style={{
-                          padding: "6px 0 6px 20px",
-                          background: "#fafafa",
-                          fontWeight: 400,
-                          fontSize: 14,
-                          color: "#000",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                          userSelect: "none",
-                        }}
+                        key={`${groupData.id}_${stData.id}`}
+                        className={`tree-item tree-level-2${isLastLevel2 ? " is-last" : ""}`}
                       >
-                        <Icon
-                          icon={
-                            isSpecimenTypeExpanded
-                              ? "mdi:chevron-down"
-                              : "mdi:chevron-right"
-                          }
-                          width={16}
+                        {/* Loại mẫu header */}
+                        <div
                           style={{
-                            color: "#595959",
-                            flexShrink: 0,
-                            cursor: "pointer",
-                          }}
-                          onClick={() => {
-                            const key = `${groupData.id}_${stData.id}`;
-                            setExpandedSpecimenTypes((prev) =>
-                              prev.includes(key)
-                                ? prev.filter((id) => id !== key)
-                                : [...prev, key],
-                            );
-                          }}
-                        />
-                        <Checkbox
-                          checked={isAllStSelected}
-                          indeterminate={isSomeStSelected}
-                          onClick={(e) => e.stopPropagation()}
-                          onChange={() =>
-                            toggleAllIndicatorsInGroup(
-                              stIndicatorIds,
-                              !isAllStSelected,
-                              filterStId,
-                            )
-                          }
-                        />
-                        <span
-                          style={{
-                            flex: 1,
-                            ...(isSpecimenTypeExpanded && {
-                              background:
-                                "linear-gradient(135deg, rgb(24, 144, 255) 0%, rgb(9, 109, 217) 100%)",
-                              WebkitBackgroundClip: "text",
-                              WebkitTextFillColor: "transparent",
-                              backgroundClip: "text",
-                            }),
+                            padding: "6px 0 6px 20px",
+                            background: "#fafafa",
+                            fontWeight: 400,
+                            fontSize: 14,
+                            color: "#000",
+                            display: "flex",
+                            alignItems: "flex-start",
+                            gap: 8,
+                            userSelect: "none",
                           }}
                         >
-                          {stData.name}
-                        </span>
-                      </div>
+                          <Icon
+                            icon={
+                              isSpecimenTypeExpanded
+                                ? "mdi:chevron-down"
+                                : "mdi:chevron-right"
+                            }
+                            width={16}
+                            style={{
+                              color: "#595959",
+                              flexShrink: 0,
+                              cursor: "pointer",
+                            }}
+                            onClick={() => {
+                              const key = `${groupData.id}_${stData.id}`;
+                              setExpandedSpecimenTypes((prev) =>
+                                prev.includes(key)
+                                  ? prev.filter((id) => id !== key)
+                                  : [...prev, key],
+                              );
+                            }}
+                          />
+                          <Checkbox
+                            checked={isAllStSelected}
+                            indeterminate={isSomeStSelected}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={() =>
+                              toggleAllIndicatorsInGroup(
+                                stIndicatorIds,
+                                !isAllStSelected,
+                                filterStId,
+                              )
+                            }
+                          />
+                          <span
+                            style={{
+                              flex: 1,
+                              ...(isSpecimenTypeExpanded && {
+                                background:
+                                  "linear-gradient(135deg, rgb(24, 144, 255) 0%, rgb(9, 109, 217) 100%)",
+                                WebkitBackgroundClip: "text",
+                                WebkitTextFillColor: "transparent",
+                                backgroundClip: "text",
+                              }),
+                            }}
+                          >
+                            {stData.name}
+                          </span>
+                        </div>
 
-                      {/* Chỉ tiêu within Loại mẫu (Level 3) */}
-                      {isSpecimenTypeExpanded &&
-                        stData.indicators.map((ind, indIndex) =>
-                          // Truyền specimenTypeId của group để chỉ hiển thị methods matching
-                          // "others" group không filter theo specimenType
-                          renderIndicatorWithMethods(
-                            ind,
-                            2,
-                            stData.id === "others" ? undefined : stData.id,
-                            indIndex === stData.indicators.length - 1,
-                          ),
-                        )}
-                    </div>
-                  );
-                });
-              })()}
+                        {/* Chỉ tiêu within Loại mẫu (Level 3) - sorted alphabetically */}
+                        {isSpecimenTypeExpanded &&
+                          (() => {
+                            const sortedIndicators = sortIndicatorsAlphabetically(stData.indicators);
+                            return sortedIndicators.map((ind, indIndex) =>
+                              // Truyền specimenTypeId của group để chỉ hiển thị methods matching
+                              // "others" group không filter theo specimenType
+                              renderIndicatorWithMethods(
+                                ind,
+                                2,
+                                stData.id === "others" ? undefined : stData.id,
+                                indIndex === sortedIndicators.length - 1,
+                              ),
+                            );
+                          })()}
+                      </div>
+                    );
+                  });
+                })()}
             </div>
           );
         })}
@@ -1388,6 +1430,10 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                     color: "#262626",
                     padding: "0 8px",
                     lineHeight: "22px",
+                    maxWidth: 150,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
                   }}
                   title={label as string}
                 >
@@ -1423,6 +1469,10 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                     color: "#262626",
                     padding: "0 8px",
                     lineHeight: "22px",
+                    maxWidth: 150,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
                   }}
                   title={label as string}
                 >
@@ -1635,14 +1685,43 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                             setCheckedIndicators([]);
                           }
                         }}
-                        style={{ flexShrink: 0, paddingRight: 8, borderRight: "1px solid #d9d9d9" }}
+                        style={{
+                          flexShrink: 0,
+                          paddingRight: 8,
+                          borderRight: "1px solid #d9d9d9",
+                        }}
                       />
-                      <span style={{ flex: 1, minWidth: 80, paddingLeft: 8, paddingRight: 8, borderRight: "1px solid #d9d9d9" }}>Chỉ tiêu</span>
-                      <span style={{ width: 120, flexShrink: 0, paddingLeft: 8, paddingRight: 8, borderRight: "1px solid #d9d9d9" }}>
+                      <span
+                        style={{
+                          flex: 1,
+                          minWidth: 80,
+                          paddingLeft: 8,
+                          paddingRight: 8,
+                          borderRight: "1px solid #d9d9d9",
+                        }}
+                      >
+                        Chỉ tiêu
+                      </span>
+                      <span
+                        style={{
+                          width: 120,
+                          flexShrink: 0,
+                          paddingLeft: 8,
+                          paddingRight: 8,
+                          borderRight: "1px solid #d9d9d9",
+                        }}
+                      >
                         Phương pháp
                       </span>
                       <span
-                        style={{ width: 90, flexShrink: 0, textAlign: "right", paddingLeft: 8, paddingRight: 8, borderRight: "1px solid #d9d9d9" }}
+                        style={{
+                          width: 90,
+                          flexShrink: 0,
+                          textAlign: "right",
+                          paddingLeft: 8,
+                          paddingRight: 8,
+                          borderRight: "1px solid #d9d9d9",
+                        }}
                       >
                         Đơn giá
                       </span>
@@ -1670,7 +1749,11 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                       >
                         Ngày YC
                       </span>
-                      <span style={{ width: 32, flexShrink: 0, paddingLeft: 8 }}>Xóa</span>
+                      <span
+                        style={{ width: 32, flexShrink: 0, paddingLeft: 8 }}
+                      >
+                        Xóa
+                      </span>
                     </div>
                     {/* Table body */}
                     <div className="indicator-table-body">
