@@ -126,8 +126,7 @@ export const canEditTestRequest = (status: TestRequestStatus): boolean => {
 export const canDeleteTestRequest = (status: TestRequestStatus): boolean => {
   return status === TestRequestStatus.New ||
          status === TestRequestStatus.PendingPayment ||
-         status === TestRequestStatus.Paid ||
-         status === TestRequestStatus.Cancelled;
+         status === TestRequestStatus.Paid;
 };
 
 /**
