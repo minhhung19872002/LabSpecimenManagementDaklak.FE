@@ -20,10 +20,7 @@ interface StickySummaryBarProps {
   province?: string;
   contractNumber?: string;
   contractDate?: dayjs.Dayjs;
-  sampleTypeService?: boolean;
-  sampleTypeContract?: boolean;
-  sampleTypeTask?: boolean;
-  sampleTypeSubContract?: boolean;
+  sampleType?: string;
   subContract?: string;
 }
 
@@ -37,19 +34,19 @@ const StickySummaryBar: React.FC<StickySummaryBarProps> = ({
   province,
   contractNumber,
   contractDate,
-  sampleTypeService,
-  sampleTypeContract,
-  sampleTypeTask,
-  sampleTypeSubContract,
+  sampleType,
   subContract,
 }) => {
-  // Build sample type tags
-  const sampleTypeTags = [
-    sampleTypeService && { label: "Dịch vụ", color: "blue" },
-    sampleTypeContract && { label: "Hợp đồng", color: "green" },
-    sampleTypeTask && { label: "Nhiệm vụ", color: "orange" },
-    sampleTypeSubContract && { label: "HĐ phụ", color: "purple" },
-  ].filter(Boolean);
+  // Build sample type tag
+  const sampleTypeMap: Record<string, { label: string; color: string }> = {
+    service: { label: "Dịch vụ", color: "blue" },
+    contract: { label: "Hợp đồng", color: "green" },
+    task: { label: "Nhiệm vụ", color: "orange" },
+    subContract: { label: "HĐ phụ", color: "purple" },
+  };
+  const sampleTypeTags = sampleType && sampleTypeMap[sampleType]
+    ? [sampleTypeMap[sampleType]]
+    : [];
 
   // Build full address
   const fullAddress = [address, ward, province].filter(Boolean).join(", ");

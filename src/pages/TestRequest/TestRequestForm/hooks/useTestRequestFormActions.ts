@@ -36,7 +36,6 @@ interface UseTestRequestFormActionsProps {
   wards: any[];
   sampleCodePrefix: string;
   totalSampleCost: number;
-  sampleTypeTask: boolean;
   selectedIndicatorDates: Record<string, IndicatorDateInfo>;
   setSelectedIndicatorDates: React.Dispatch<React.SetStateAction<Record<string, IndicatorDateInfo>>>;
   checkedIndicators: string[];
@@ -103,7 +102,6 @@ export const useTestRequestFormActions = ({
   wards,
   sampleCodePrefix,
   totalSampleCost,
-  sampleTypeTask,
   selectedIndicatorDates,
   setSelectedIndicatorDates,
   checkedIndicators,
@@ -155,8 +153,7 @@ export const useTestRequestFormActions = ({
       'province', 'ward', 'methodWestHighlandInstitute', 'methodCustomer', 'methodCustomerDetail',
       'resultLanguage', 'resultCopyCount', 'separatePassedResults', 'conformityDeclaration',
       'otherRequirements', 'subContract', 'samplingRequirement', 'deliveryDirectPickup',
-      'deliveryPostal', 'returnStoredSample', 'sampleTypeService', 'sampleTypeContract',
-      'sampleTypeTask', 'sampleTypeSubContract', 'sampleStorage', 'totalCost', 'totalCostInWords',
+      'deliveryPostal', 'returnStoredSample', 'sampleType', 'sampleStorage', 'totalCost', 'totalCostInWords',
       'receiptNumber', 'notes', 'changeRequest', 'agreeTerms', 'sentToAccounting',
       'paymentReceived', 'sentToDepartment', 'resultReturned', 'subcontractor'
     ];
@@ -933,17 +930,17 @@ export const useTestRequestFormActions = ({
         deliveryDirectPickup: values.deliveryDirectPickup || false,
         deliveryPostal: values.deliveryPostal || false,
         returnStoredSample: values.returnStoredSample || false,
-        sampleTypeService: values.sampleTypeService || false,
-        sampleTypeContract: values.sampleTypeContract || false,
-        sampleTypeTask: values.sampleTypeTask || false,
-        sampleTypeSubContract: values.sampleTypeSubContract || false,
+        sampleTypeService: values.sampleType === "service",
+        sampleTypeContract: values.sampleType === "contract",
+        sampleTypeTask: values.sampleType === "task",
+        sampleTypeSubContract: values.sampleType === "subContract",
         resultDeliveryDate: values.expectedCompletionDate
           ? values.expectedCompletionDate.format('YYYY-MM-DD')
           : undefined,
         sampleStorage: values.sampleStorageOption ?? SampleStorageOption.No,
-        totalCost: values.sampleTypeTask ? 0 : totalSampleCost,
+        totalCost: values.sampleType === "task" ? 0 : totalSampleCost,
         totalCostInWords:
-          values.sampleTypeTask || totalSampleCost === 0
+          values.sampleType === "task" || totalSampleCost === 0
             ? ""
             : numberToVietnameseWords(totalSampleCost),
         receiptNumber: values.receiptNumber || undefined,
@@ -1086,10 +1083,10 @@ export const useTestRequestFormActions = ({
         deliveryDirectPickup: values.deliveryDirectPickup || false,
         deliveryPostal: values.deliveryPostal || false,
         returnStoredSample: values.returnStoredSample || false,
-        sampleTypeService: values.sampleTypeService || false,
-        sampleTypeContract: values.sampleTypeContract || false,
-        sampleTypeTask: values.sampleTypeTask || false,
-        sampleTypeSubContract: values.sampleTypeSubContract || false,
+        sampleTypeService: values.sampleType === "service",
+        sampleTypeContract: values.sampleType === "contract",
+        sampleTypeTask: values.sampleType === "task",
+        sampleTypeSubContract: values.sampleType === "subContract",
         resultDeliveryDate: values.resultDeliveryDate
           ? values.resultDeliveryDate.toISOString()
           : undefined,

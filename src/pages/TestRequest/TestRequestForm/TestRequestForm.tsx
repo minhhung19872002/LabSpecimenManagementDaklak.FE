@@ -178,7 +178,6 @@ const TestRequestForm: React.FC = () => {
     wards,
     sampleCodePrefix,
     totalSampleCost,
-    sampleTypeTask,
     selectedIndicatorDates,
     setSelectedIndicatorDates,
     checkedIndicators,
@@ -233,10 +232,7 @@ const TestRequestForm: React.FC = () => {
   const watchedProvince = Form.useWatch('province', form);
   const watchedContractNumber = Form.useWatch('contractNumber', form);
   const watchedContractDate = Form.useWatch('contractDate', form);
-  const watchedSampleTypeService = Form.useWatch('sampleTypeService', form);
-  const watchedSampleTypeContract = Form.useWatch('sampleTypeContract', form);
-  const watchedSampleTypeTask = Form.useWatch('sampleTypeTask', form);
-  const watchedSampleTypeSubContract = Form.useWatch('sampleTypeSubContract', form);
+  const watchedSampleType = Form.useWatch('sampleType', form);
   const watchedSubContract = Form.useWatch('subContract', form);
 
   useEffect(() => {
@@ -297,10 +293,7 @@ const TestRequestForm: React.FC = () => {
           province={watchedProvince}
           contractNumber={watchedContractNumber}
           contractDate={watchedContractDate}
-          sampleTypeService={watchedSampleTypeService}
-          sampleTypeContract={watchedSampleTypeContract}
-          sampleTypeTask={watchedSampleTypeTask}
-          sampleTypeSubContract={watchedSampleTypeSubContract}
+          sampleType={watchedSampleType}
           subContract={watchedSubContract}
         />
       </div>
@@ -357,6 +350,7 @@ const TestRequestForm: React.FC = () => {
             resultLanguage: ResultLanguage.Vietnamese,
             samplingRequirement: SamplingRequirement.CustomerSampling,
             sampleStorageOption: SampleStorageOption.No,
+            sampleType: "service",
           }}
         >
           {/* Top sections row: Hợp đồng (bao gồm Loại hình mẫu), Khách hàng */}

@@ -91,7 +91,8 @@ export const useTestRequestFormData = () => {
   }, [isEditMode, navigate]);
 
   // Watch form fields
-  const sampleTypeTask = Form.useWatch("sampleTypeTask", form);
+  const sampleType = Form.useWatch("sampleType", form);
+  const sampleTypeTask = sampleType === "task";
   const methodRequirement = Form.useWatch("methodRequirement", form);
 
   // Contract number for sample codes
@@ -570,6 +571,14 @@ export const useTestRequestFormData = () => {
       if (data.contractNumber) {
         setSampleCodePrefix(data.contractNumber);
       }
+
+      // Convert 4 boolean sampleType fields to single radio value
+      const sampleType = data.sampleTypeTask ? "task"
+        : data.sampleTypeSubContract ? "subContract"
+        : data.sampleTypeContract ? "contract"
+        : data.sampleTypeService ? "service"
+        : "service"; // default
+      form.setFieldsValue({ sampleType });
 
       if (data.methodCustomer) {
         form.setFieldsValue({ methodRequirement: "customerRequest" });
