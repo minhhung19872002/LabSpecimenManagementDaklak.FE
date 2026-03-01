@@ -11,7 +11,9 @@ const SampleTypeSection: React.FC = () => {
         Loại hình mẫu
       </Title>
       <Form.Item name="sampleType" style={{ marginBottom: 0 }}>
-        <Radio.Group style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <Radio.Group
+          style={{ display: "flex", flexDirection: "column", gap: 8 }}
+        >
           <Radio value="service">Dịch vụ</Radio>
           <Radio value="contract">Hợp đồng</Radio>
           <Radio value="task">Mẫu nhiệm vụ</Radio>
@@ -19,7 +21,9 @@ const SampleTypeSection: React.FC = () => {
         </Radio.Group>
       </Form.Item>
       <div style={{ marginTop: 12 }}>
-        <Text type="secondary" style={{ marginBottom: 4, display: "block" }}>Hợp đồng phụ:</Text>
+        <Text type="secondary" style={{ marginBottom: 4, display: "block" }}>
+          Hợp đồng phụ:
+        </Text>
         <Form.Item name="subContract" style={{ marginBottom: 0 }}>
           <Input size="small" placeholder="Nhập số hợp đồng" />
         </Form.Item>

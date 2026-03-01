@@ -77,8 +77,8 @@ jobs:
       - name: Logout from Azure
         if: always()
         run: |
-          az logout
-          docker logout ${{ steps.acr.outputs.login_server }}
+          az logout || true
+          docker logout ${{ steps.acr.outputs.login_server }} || true
 
   deploy:
     name: Deploy to AKS
@@ -112,4 +112,4 @@ jobs:
       - name: Logout from Azure
         if: always()
         run: |
-          az logout
+          az logout || true

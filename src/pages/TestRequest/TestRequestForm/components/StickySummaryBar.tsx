@@ -44,9 +44,8 @@ const StickySummaryBar: React.FC<StickySummaryBarProps> = ({
     task: { label: "Nhiệm vụ", color: "orange" },
     subContract: { label: "HĐ phụ", color: "purple" },
   };
-  const sampleTypeTags = sampleType && sampleTypeMap[sampleType]
-    ? [sampleTypeMap[sampleType]]
-    : [];
+  const sampleTypeTags =
+    sampleType && sampleTypeMap[sampleType] ? [sampleTypeMap[sampleType]] : [];
 
   // Build full address
   const fullAddress = [address, ward, province].filter(Boolean).join(", ");
@@ -91,10 +90,13 @@ const StickySummaryBar: React.FC<StickySummaryBarProps> = ({
           <FileTextOutlined /> Hợp đồng
         </div>
         <div className="sticky-summary-content">
-          <span className="sticky-summary-primary">{contractNumber || "—"}</span>
+          <span className="sticky-summary-primary">
+            {contractNumber || "—"}
+          </span>
           {contractDate && (
             <span className="sticky-summary-secondary">
-              {" "}• {contractDate.format("DD/MM/YYYY")}
+              {" "}
+              • {contractDate.format("DD/MM/YYYY")}
             </span>
           )}
         </div>
@@ -109,9 +111,7 @@ const StickySummaryBar: React.FC<StickySummaryBarProps> = ({
             </span>
           )}
           {subContract && (
-            <span className="sticky-summary-detail">
-              HĐ phụ: {subContract}
-            </span>
+            <span className="sticky-summary-detail">HĐ phụ: {subContract}</span>
           )}
         </div>
       </div>

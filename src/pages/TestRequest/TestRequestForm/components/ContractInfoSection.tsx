@@ -57,7 +57,9 @@ const ContractInfoSection: React.FC<ContractInfoSectionProps> = ({
         </Col>
       </Row>
       {/* Loại hình mẫu */}
-      <Text strong style={{ display: "block", marginBottom: 8 }}>Loại hình mẫu</Text>
+      <Text strong style={{ display: "block", marginBottom: 8 }}>
+        Loại hình mẫu
+      </Text>
       <Form.Item name="sampleType" style={{ marginBottom: 12 }}>
         <Radio.Group>
           <Radio value="service">Dịch vụ</Radio>
