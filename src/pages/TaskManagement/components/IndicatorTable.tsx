@@ -923,30 +923,52 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       key: "technicianId",
       width: 150,
       render: (value: string, record: IndicatorWithPosition) => {
-        // Hide for parent indicators that have sub-indicators
-        if (record._isParentWithSubs) return null;
+        // For parent with subs: show Select at parent level, hide at sub level
+        if (record.parentIndicatorId) return null;
 
-        // Cho phép chỉnh sửa KTV nếu:
-        // 1. Indicator không đang chờ mẫu chung từ Lab Vi Sinh
-        // 2. Indicator đã được chấp nhận TN (AcceptedForTesting) hoặc các trạng thái có thể assign
-        //    (Entered, Rejected - cần giao lại cho KTV khác)
-        // 3. Indicator chưa được duyệt KQ (Approved) và chưa bị hủy (CustomerCancelled)
-        // 4. Có quyền assignTechnician theo Permission Matrix (chỉ QLKT)
-        const isAssignableStatus =
-          record.approvalStatus === IndicatorApprovalStatus.AcceptedForTesting ||
-          record.approvalStatus === IndicatorApprovalStatus.Entered ||
-          record.approvalStatus === IndicatorApprovalStatus.Rejected ||
-          record.approvalStatus === IndicatorApprovalStatus.CannotTest ||
-          record.approvalStatus === IndicatorApprovalStatus.MethodChanged;
+        // For parent with subs: check assignable based on any sub's status
+        let isAssignableStatus = false;
+        if (record._isParentWithSubs) {
+          const subIds = Object.entries(subToParentMapping)
+            .filter(([, parentId]) => parentId === record.id)
+            .map(([subId]) => subId);
+          const subIndicators = indicators.filter((ind) => subIds.includes(ind.id));
+          isAssignableStatus = subIndicators.some(
+            (sub) =>
+              sub.approvalStatus === IndicatorApprovalStatus.AcceptedForTesting ||
+              sub.approvalStatus === IndicatorApprovalStatus.Entered ||
+              sub.approvalStatus === IndicatorApprovalStatus.Rejected ||
+              sub.approvalStatus === IndicatorApprovalStatus.CannotTest ||
+              sub.approvalStatus === IndicatorApprovalStatus.MethodChanged
+          );
+        } else {
+          isAssignableStatus =
+            record.approvalStatus === IndicatorApprovalStatus.AcceptedForTesting ||
+            record.approvalStatus === IndicatorApprovalStatus.Entered ||
+            record.approvalStatus === IndicatorApprovalStatus.Rejected ||
+            record.approvalStatus === IndicatorApprovalStatus.CannotTest ||
+            record.approvalStatus === IndicatorApprovalStatus.MethodChanged;
+        }
 
         const canEditIndicator = !forceDisableAll && isAssignableStatus && canAssignTechnician;
+
+        // For parent with subs: show technician from first sub
+        let displayValue = value;
+        if (record._isParentWithSubs) {
+          const firstSubId = Object.entries(subToParentMapping)
+            .find(([, parentId]) => parentId === record.id)?.[0];
+          if (firstSubId) {
+            const firstSub = indicators.find((ind) => ind.id === firstSubId);
+            displayValue = firstSub?.technicianId || value;
+          }
+        }
 
         return (
           <div style={{ minHeight: 32, display: "flex", alignItems: "center" }}>
             <Select
               style={{ width: "100%" }}
               size="small"
-              value={value}
+              value={displayValue}
               placeholder="Chọn TNV"
               onChange={(val) => onTechnicianChange(record.id, val)}
               options={(technicians || []).map((t) => ({

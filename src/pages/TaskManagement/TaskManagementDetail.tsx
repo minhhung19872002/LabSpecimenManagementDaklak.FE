@@ -521,6 +521,27 @@ const TaskManagementDetail: React.FC = () => {
     indicatorId: string,
     technicianId: string,
   ) => {
+    // Check if this is a parent with sub-indicators
+    const indicator = task?.indicators?.find((ind) => ind.id === indicatorId);
+    if (indicator && !indicator.parentIndicatorId) {
+      // Find all sub-indicators that belong to this parent
+      const subIndicators = task?.indicators?.filter(
+        (ind) => ind.parentIndicatorId === indicator.indicatorId &&
+                 ind.methodId === indicator.methodId
+      ) || [];
+      if (subIndicators.length > 0) {
+        // Propagate technician to all sub-indicators
+        setIndicatorChanges((prev) => {
+          const updated = { ...prev };
+          subIndicators.forEach((sub) => {
+            updated[sub.id] = { ...updated[sub.id], technicianId };
+          });
+          return updated;
+        });
+        return;
+      }
+    }
+    // Normal indicator (no subs) - set directly
     setIndicatorChanges((prev) => ({
       ...prev,
       [indicatorId]: {
