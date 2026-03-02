@@ -151,9 +151,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   };
 
   // Get standards that contain a specific indicator AND method AND specimenType (if available)
+  // Fallback: if no standards match all conditions, return full list
   const getStandardsForIndicator = useMemo(() => {
     return (indicatorId: string, methodId?: string, specimenTypeId?: string) => {
-      return standardsWithIndicators.filter((standard) =>
+      const filtered = standardsWithIndicators.filter((standard) =>
         standard.indicators.some(
           (si) =>
             si.indicatorId === indicatorId &&
@@ -161,6 +162,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             (!specimenTypeId || !si.specimenTypeId || si.specimenTypeId === specimenTypeId)
         )
       );
+      return filtered.length > 0 ? filtered : standardsWithIndicators;
     };
   }, [standardsWithIndicators]);
 
