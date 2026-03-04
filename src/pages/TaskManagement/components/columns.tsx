@@ -69,7 +69,7 @@ const getLockedMessage = (status: LaboratoryTaskStatus) => {
 };
 
 export const getTaskManagementColumns = (
-  options: GetColumnsOptions
+  options: GetColumnsOptions,
 ): ColumnsType<LaboratoryTaskDto> => [
   {
     title: "Số hợp đồng",
@@ -148,11 +148,7 @@ export const getTaskManagementColumns = (
     key: "testDate",
     width: 140,
     render: (date: string) =>
-      date ? (
-        formatDate(date)
-      ) : (
-        <Text type="secondary">Chưa đặt</Text>
-      ),
+      date ? formatDate(date) : <Text type="secondary">Chưa đặt</Text>,
   },
   {
     title: "Trạng thái",
@@ -161,40 +157,40 @@ export const getTaskManagementColumns = (
     width: 180,
     render: (status: LaboratoryTaskStatus) => getStatusTag(status),
   },
-  {
-    title: "Thao tác",
-    key: "action",
-    width: 100,
-    fixed: "right",
-    render: (_: unknown, record: LaboratoryTaskDto) => {
-      // Check permission - nếu không có quyền xóa, ẩn luôn cột thao tác
-      const canDeleteByPermission = options.canDeletePermission !== false;
-      if (!canDeleteByPermission) {
-        return null;
-      }
+  // {
+  //   title: "Thao tác",
+  //   key: "action",
+  //   width: 100,
+  //   fixed: "right",
+  //   render: (_: unknown, record: LaboratoryTaskDto) => {
+  //     // Check permission - nếu không có quyền xóa, ẩn luôn cột thao tác
+  //     const canDeleteByPermission = options.canDeletePermission !== false;
+  //     if (!canDeleteByPermission) {
+  //       return null;
+  //     }
 
-      const canEdit =
-        record.status === LaboratoryTaskStatus.UnderEvaluation ||
-        record.status === LaboratoryTaskStatus.FullyAccepted ||
-        record.status === LaboratoryTaskStatus.PartialAccepted ||
-        record.status === LaboratoryTaskStatus.Assigned;
+  //     const canEdit =
+  //       record.status === LaboratoryTaskStatus.UnderEvaluation ||
+  //       record.status === LaboratoryTaskStatus.FullyAccepted ||
+  //       record.status === LaboratoryTaskStatus.PartialAccepted ||
+  //       record.status === LaboratoryTaskStatus.Assigned;
 
-      const lockedReason = getLockedMessage(record.status);
+  //     const lockedReason = getLockedMessage(record.status);
 
-      return (
-        <Space size="small">
-          <Tooltip title={!canEdit ? lockedReason : "Xóa"}>
-            <Button
-              type="text"
-              size="small"
-              danger
-              icon={<DeleteOutlined />}
-              onClick={() => options.onDelete(record.id)}
-              disabled={!canEdit}
-            />
-          </Tooltip>
-        </Space>
-      );
-    },
-  },
+  //     return (
+  //       <Space size="small">
+  //         {/* <Tooltip title={!canEdit ? lockedReason : "Xóa"}>
+  //           <Button
+  //             type="text"
+  //             size="small"
+  //             danger
+  //             icon={<DeleteOutlined />}
+  //             onClick={() => options.onDelete(record.id)}
+  //             disabled={!canEdit}
+  //           />
+  //         </Tooltip> */}
+  //       </Space>
+  //     );
+  //   },
+  // },
 ];
