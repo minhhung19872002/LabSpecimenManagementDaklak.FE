@@ -67,6 +67,8 @@ interface IndicatorRowProps {
   transferDate?: dayjs.Dayjs;
   requestDate?: dayjs.Dayjs;
   approvalStatus?: IndicatorApprovalStatus; // Trạng thái duyệt từ LaboratoryTaskIndicator
+  isSentToQLKT?: boolean; // Đã gửi đến QLKT
+  sentToDepartment?: boolean; // Đã gửi đến khoa phòng
   onCheckChange: (id: string) => void;
   onDateChange: (
     id: string,
@@ -95,6 +97,8 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
   transferDate,
   requestDate,
   approvalStatus,
+  isSentToQLKT,
+  sentToDepartment,
   onCheckChange,
   onDateChange,
   onRemove,
@@ -108,12 +112,12 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
 }) => {
   if (!indicator) return null;
 
-  // Kiểm tra xem có thể xóa indicator không
-  // Không thể xóa nếu đang thử nghiệm hoặc đã có kết quả (Entered, Approved, Rejected)
+  // Kiểm tra xem có thể xóa/sửa indicator không
+  // Lock nếu đã gửi tới khoa phòng (có approvalStatus hoặc isSentToQLKT)
   const canDelete =
-    approvalStatus === undefined ||
-    approvalStatus === null ||
-    approvalStatus === IndicatorApprovalStatus.Pending;
+    (approvalStatus === undefined || approvalStatus === null) &&
+    !isSentToQLKT &&
+    !sentToDepartment;
   const statusLabel =
     approvalStatus !== undefined && approvalStatus !== null
       ? IndicatorApprovalStatusLabels[approvalStatus]
@@ -270,7 +274,7 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
             onClick={() => onRemove(id)}
           />
         ) : (
-          <Tooltip title="Không thể xóa chỉ tiêu đang thử nghiệm hoặc đã có kết quả">
+          <Tooltip title="Không thể xóa chỉ tiêu đã gửi tới khoa phòng">
             <Button
               type="text"
               size="small"

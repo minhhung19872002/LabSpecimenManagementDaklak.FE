@@ -535,7 +535,7 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
         indicators,
       );
 
-      // Call API to send to QLKT
+      // Gửi QLKT - BE tự xử lý logic status phù hợp
       await testRequestService.sendToQLKT(testRequest.id);
 
       message.success(
@@ -554,7 +554,7 @@ const SendToQLKTModal: React.FC<SendToQLKTModalProps> = ({
     }
   };
 
-  // Lấy danh sách chỉ tiêu chưa gửi của sample
+  // Lấy danh sách chỉ tiêu chưa gửi của sample (chưa gửi QLKT)
   const getUnsentIndicators = (sample: TestRequestSampleDto) => {
     return sample.indicators?.filter((ind) => !ind.isSentToQLKT) || [];
   };

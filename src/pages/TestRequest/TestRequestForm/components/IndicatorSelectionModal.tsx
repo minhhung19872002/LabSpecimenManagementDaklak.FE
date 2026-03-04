@@ -41,6 +41,7 @@ import {
   IndicatorMethodInfo,
   parseIndicatorMethodKey,
   createIndicatorMethodKey,
+  isIndicatorLocked,
 } from "../types";
 import IndicatorRow from "./IndicatorRow";
 import { isHeavyMetalComboMet, isHgIndicator } from "../constants";
@@ -229,6 +230,13 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
 }) => {
   // Handle remove indicator method
   const handleRemoveIndicatorMethod = (key: IndicatorMethodKey) => {
+    // Không cho xóa chỉ tiêu đã gửi tới khoa phòng
+    const labMapKey = `${currentSampleKey}_${key}`;
+    const labInfo = indicatorLaboratoryMap[labMapKey];
+    if (isIndicatorLocked(labInfo)) {
+      return;
+    }
+
     const { indicatorId, testMethodId, specimenTypeId } =
       parseIndicatorMethodKey(key);
     toggleIndicatorMethod(
@@ -236,7 +244,6 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
       testMethodId,
       specimenTypeId || undefined,
     );
-    const labMapKey = `${currentSampleKey}_${key}`;
     if (indicatorLaboratoryMap[labMapKey]) {
       setIndicatorLaboratoryMap((prev) => {
         const updated = { ...prev };
@@ -427,6 +434,13 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
   // Handle remove parent indicator (removes all subs too)
   const handleRemoveParentIndicator = useCallback(
     (parentKey: IndicatorMethodKey) => {
+      // Không cho xóa chỉ tiêu đã gửi tới khoa phòng
+      const parentLabMapKey = `${currentSampleKey}_${parentKey}`;
+      const labInfo = indicatorLaboratoryMap[parentLabMapKey];
+      if (isIndicatorLocked(labInfo)) {
+        return;
+      }
+
       const { indicatorId, testMethodId, specimenTypeId } =
         parseIndicatorMethodKey(parentKey);
 
@@ -900,6 +914,11 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                 method.testMethodId,
                 method.specimenTypeId,
               );
+              // Check if this method is sent to department (locked)
+              const methodKey = createIndicatorMethodKey(ind.id, method.testMethodId, method.specimenTypeId);
+              const methodLabInfo = indicatorLaboratoryMap[`${currentSampleKey}_${methodKey}`];
+              const isMethodLocked = isIndicatorLocked(methodLabInfo);
+
               const isLastMethod = methodIndex === methods.length - 1;
               const methodClassName = `tree-item tree-level-4${isLastMethod ? " is-last" : ""}${indentLevel === 2 ? " indent-level-2" : ""}`;
               return (
@@ -907,7 +926,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                   key={methodUniqueKey}
                   className={methodClassName}
                   onClick={() =>
-                    toggleIndicatorMethod(
+                    !isMethodLocked && toggleIndicatorMethod(
                       ind.id,
                       method.testMethodId,
                       method.specimenTypeId,
@@ -918,29 +937,33 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                     display: "flex",
                     alignItems: "center",
                     gap: 8,
-                    cursor: "pointer",
-                    background: isSelected ? "#bae7ff" : "rgb(250, 250, 250)",
+                    cursor: isMethodLocked ? "not-allowed" : "pointer",
+                    background: isSelected ? (isMethodLocked ? "#e6f7e6" : "#bae7ff") : "rgb(250, 250, 250)",
+                    opacity: isMethodLocked ? 0.7 : 1,
                   }}
                   onMouseEnter={(e) => {
-                    if (!isSelected) {
+                    if (!isSelected && !isMethodLocked) {
                       e.currentTarget.style.background = "#f0f0f0";
                     }
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = isSelected
-                      ? "#bae7ff"
+                      ? (isMethodLocked ? "#e6f7e6" : "#bae7ff")
                       : "rgb(250, 250, 250)";
                   }}
                 >
                   <Checkbox
                     checked={isSelected}
+                    disabled={isMethodLocked}
                     onClick={(e) => e.stopPropagation()}
                     onChange={() => {
-                      toggleIndicatorMethod(
-                        ind.id,
-                        method.testMethodId,
-                        method.specimenTypeId,
-                      );
+                      if (!isMethodLocked) {
+                        toggleIndicatorMethod(
+                          ind.id,
+                          method.testMethodId,
+                          method.specimenTypeId,
+                        );
+                      }
                     }}
                   />
                   <TruncateTooltip
@@ -1937,6 +1960,8 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                         selectedIndicatorDates[key]?.requestDate
                                       }
                                       approvalStatus={labInfo?.approvalStatus}
+                                      isSentToQLKT={labInfo?.isSentToQLKT}
+                                      sentToDepartment={labInfo?.sentToDepartment}
                                       onCheckChange={toggleCheckedIndicator}
                                       onDateChange={handleIndicatorDateChange}
                                       onRemove={handleRemoveIndicatorMethod}

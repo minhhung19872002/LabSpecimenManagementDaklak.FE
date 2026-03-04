@@ -694,6 +694,8 @@ export const useTestRequestFormData = () => {
                 laboratoryName: ind.laboratoryName,
                 requestDate: parseDate(ind.requestDate) || dayjs(),
                 approvalStatus: ind.approvalStatus,
+                isSentToQLKT: ind.isSentToQLKT,
+                sentToDepartment: ind.sentToDepartment,
               };
               if (!expandedLabs.includes(ind.laboratoryId)) {
                 expandedLabs.push(ind.laboratoryId);

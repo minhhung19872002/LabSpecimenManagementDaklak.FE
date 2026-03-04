@@ -18,6 +18,7 @@ import {
   IndicatorMethodInfo,
   createIndicatorMethodKey,
   parseIndicatorMethodKey,
+  isIndicatorLocked,
 } from "../types";
 import { generateSampleCode, getNextOrderNum, printBarcode as printBarcodeUtil, SampleBarcodeInfo } from "../utils";
 import { PATH_ROUTES } from "../../../../constants";
@@ -319,6 +320,20 @@ export const useTestRequestFormActions = ({
       return;
     }
 
+    // Không cho xóa mẫu có chỉ tiêu đã gửi tới khoa phòng
+    const sample = samples.find((s) => s.key === key);
+    if (sample) {
+      const hasSentIndicator = (sample.indicatorMethods || []).some((methodKey) => {
+        const labMapKey = `${key}_${methodKey}`;
+        const labInfo = indicatorLaboratoryMap[labMapKey];
+        return isIndicatorLocked(labInfo);
+      });
+      if (hasSentIndicator) {
+        message.warning("Không thể xóa mẫu có chỉ tiêu đã gửi tới khoa phòng");
+        return;
+      }
+    }
+
     const newSamples = samples.filter((s) => s.key !== key);
 
     // Nếu là form tạo mới (không phải edit), đánh lại số mẫu liên tục
@@ -379,7 +394,12 @@ export const useTestRequestFormActions = ({
       const sourceLabKey = `${key}_${methodKey}`;
       const newLabKey = `${newSample.key}_${methodKey}`;
       if (indicatorLaboratoryMap[sourceLabKey]) {
-        newLabMap[newLabKey] = { ...indicatorLaboratoryMap[sourceLabKey] };
+        newLabMap[newLabKey] = {
+          ...indicatorLaboratoryMap[sourceLabKey],
+          approvalStatus: undefined,
+          isSentToQLKT: false,
+          sentToDepartment: false,
+        };
       }
     });
     // Backward compatible: also copy for indicatorIds
@@ -387,7 +407,12 @@ export const useTestRequestFormActions = ({
       const sourceLabKey = `${key}_${indId}`;
       const newLabKey = `${newSample.key}_${indId}`;
       if (indicatorLaboratoryMap[sourceLabKey]) {
-        newLabMap[newLabKey] = { ...indicatorLaboratoryMap[sourceLabKey] };
+        newLabMap[newLabKey] = {
+          ...indicatorLaboratoryMap[sourceLabKey],
+          approvalStatus: undefined,
+          isSentToQLKT: false,
+          sentToDepartment: false,
+        };
       }
     });
     setIndicatorLaboratoryMap(newLabMap);
@@ -539,6 +564,15 @@ export const useTestRequestFormActions = ({
   const toggleIndicatorMethod = (indicatorId: string, testMethodId: string, specimenTypeId?: string) => {
     const key = createIndicatorMethodKey(indicatorId, testMethodId, specimenTypeId);
     const isCurrentlySelected = tempSelectedIndicatorMethods.includes(key);
+
+    // Không cho bỏ chọn chỉ tiêu đã gửi tới khoa phòng
+    if (isCurrentlySelected && currentSampleKey) {
+      const labMapKey = `${currentSampleKey}_${key}`;
+      const labInfo = indicatorLaboratoryMap[labMapKey];
+      if (isIndicatorLocked(labInfo)) {
+        return; // Chỉ tiêu đã gửi, không cho bỏ chọn
+      }
+    }
 
     // Check if this is a sub-indicator (has parentIndicatorId)
     const isSub = isSubIndicatorForMethod(indicatorId, testMethodId, specimenTypeId);
@@ -841,7 +875,7 @@ export const useTestRequestFormActions = ({
                   labAssignment?.requestDate?.format('YYYY-MM-DD') ||
                   indicatorDates?.requestDate?.format('YYYY-MM-DD') ||
                   undefined,
-                sentToDepartment: !!labAssignment || checkedIndicators.includes(methodKey),
+                sentToDepartment: (!!labAssignment && labAssignment.sentToDepartment === true) || checkedIndicators.includes(methodKey),
               };
             })
           : sample.indicatorIds.map((indId) => {
@@ -864,7 +898,7 @@ export const useTestRequestFormActions = ({
                   labAssignment?.requestDate?.format('YYYY-MM-DD') ||
                   indicatorDates?.requestDate?.format('YYYY-MM-DD') ||
                   undefined,
-                sentToDepartment: !!labAssignment || checkedIndicators.includes(indId),
+                sentToDepartment: (!!labAssignment && labAssignment.sentToDepartment === true) || checkedIndicators.includes(indId),
               };
             });
 

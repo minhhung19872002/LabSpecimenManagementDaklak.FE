@@ -89,7 +89,23 @@ export interface LaboratoryAssignment {
   requestDate: dayjs.Dayjs;
   /** Trạng thái duyệt của chỉ tiêu (null nếu mới thêm, chưa lưu) */
   approvalStatus?: IndicatorApprovalStatus;
+  /** Đã gửi đến QLKT (tồn tại LaboratoryTaskIndicator) */
+  isSentToQLKT?: boolean;
+  /** Đã gửi tới khoa phòng (sentToDepartment trên TestRequestSampleIndicator) */
+  sentToDepartment?: boolean;
 }
+
+/**
+ * Kiểm tra chỉ tiêu đã gửi tới khoa phòng (locked, không cho sửa/xóa)
+ * Lock khi: có approvalStatus HOẶC isSentToQLKT = true HOẶC sentToDepartment = true (đã lưu với lab assignment)
+ */
+export const isIndicatorLocked = (labInfo?: LaboratoryAssignment | null): boolean => {
+  if (!labInfo) return false;
+  if (labInfo.approvalStatus !== undefined && labInfo.approvalStatus !== null) return true;
+  if (labInfo.isSentToQLKT === true) return true;
+  if (labInfo.sentToDepartment === true) return true;
+  return false;
+};
 
 // Map để lưu TestRequestSampleIndicator.id cho mỗi indicator trong sample
 // Key format: "sampleKey_indicatorMethodKey" -> TestRequestSampleIndicator.id

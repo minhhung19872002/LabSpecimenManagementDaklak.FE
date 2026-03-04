@@ -28,6 +28,7 @@ import {
   IndicatorMethodKey,
   IndicatorMethodInfo,
   AttachmentInfo,
+  isIndicatorLocked,
 } from "../types";
 import {
   IndicatorDto,
@@ -301,16 +302,18 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
         width: column.width,
         columnKey: "sampleName",
       }),
-      render: (value: string, record: SampleFormData) => (
-        <Input
-          value={value}
-          onChange={(e) =>
-            updateSample(record.key, "sampleName", e.target.value)
-          }
-          placeholder="Tên mẫu"
-          size="small"
-        />
-      ),
+      render: (value: string, record: SampleFormData) => {
+        return (
+          <Input
+            value={value}
+            onChange={(e) =>
+              updateSample(record.key, "sampleName", e.target.value)
+            }
+            placeholder="Tên mẫu"
+            size="small"
+          />
+        );
+      },
     },
     {
       title: "Loại mẫu",
@@ -321,23 +324,24 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
         width: column.width,
         columnKey: "specimenTypeName",
       }),
-      render: (value: string, record: SampleFormData) => (
-        <AutoComplete
-          value={value || ""}
-          options={specimenTypeOptions}
-          onSearch={handleSpecimenTypeSearch}
-          onSelect={(val) => handleSpecimenTypeSelect(record.key, val)}
-          onChange={(val) =>
-            updateSample(record.key, "specimenTypeName", val || "")
-          }
-          placeholder="Nhập loại mẫu..."
-          style={{ width: "100%" }}
-          size="small"
-          disabled={isSamplesLocked()}
-          filterOption={false}
-          allowClear
-        />
-      ),
+      render: (value: string, record: SampleFormData) => {
+        return (
+          <AutoComplete
+            value={value || ""}
+            options={specimenTypeOptions}
+            onSearch={handleSpecimenTypeSearch}
+            onSelect={(val) => handleSpecimenTypeSelect(record.key, val)}
+            onChange={(val) =>
+              updateSample(record.key, "specimenTypeName", val || "")
+            }
+            placeholder="Nhập loại mẫu..."
+            style={{ width: "100%" }}
+            size="small"
+            filterOption={false}
+            allowClear
+          />
+        );
+      },
     },
     {
       title: "Hình ảnh",
@@ -348,15 +352,16 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
         width: column.width,
         columnKey: "attachments",
       }),
-      render: (_: AttachmentInfo[], record: SampleFormData) => (
-        <SampleImageUpload
-          attachments={record.attachments || []}
-          onChange={(attachments) =>
-            updateSample(record.key, "attachments", attachments)
-          }
-          disabled={isSamplesLocked()}
-        />
-      ),
+      render: (_: AttachmentInfo[], record: SampleFormData) => {
+        return (
+          <SampleImageUpload
+            attachments={record.attachments || []}
+            onChange={(attachments) =>
+              updateSample(record.key, "attachments", attachments)
+            }
+          />
+        );
+      },
     },
     {
       title: (
@@ -371,17 +376,18 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
         width: column.width,
         columnKey: "isSharedSample",
       }),
-      render: (value: boolean, record: SampleFormData) => (
-        <div style={{ display: "flex", justifyContent: "center" }}>
-          <Checkbox
-            checked={value || false}
-            onChange={(e) =>
-              updateSample(record.key, "isSharedSample", e.target.checked)
-            }
-            disabled={isSamplesLocked()}
-          />
-        </div>
-      ),
+      render: (value: boolean, record: SampleFormData) => {
+        return (
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <Checkbox
+              checked={value || false}
+              onChange={(e) =>
+                updateSample(record.key, "isSharedSample", e.target.checked)
+              }
+            />
+          </div>
+        );
+      },
     },
     {
       title: "Địa chỉ lấy mẫu",
@@ -392,16 +398,18 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
         width: column.width,
         columnKey: "samplingAddress",
       }),
-      render: (value: string, record: SampleFormData) => (
-        <Input
-          value={value}
-          onChange={(e) =>
-            updateSample(record.key, "samplingAddress", e.target.value)
-          }
-          placeholder="Địa chỉ"
-          size="small"
-        />
-      ),
+      render: (value: string, record: SampleFormData) => {
+        return (
+          <Input
+            value={value}
+            onChange={(e) =>
+              updateSample(record.key, "samplingAddress", e.target.value)
+            }
+            placeholder="Địa chỉ"
+            size="small"
+          />
+        );
+      },
     },
     {
       title: <span style={{ whiteSpace: "nowrap" }}>Lượng mẫu</span>,
@@ -412,16 +420,18 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
         width: column.width,
         columnKey: "sampleQuantity",
       }),
-      render: (value: string, record: SampleFormData) => (
-        <Input
-          value={value}
-          onChange={(e) =>
-            updateSample(record.key, "sampleQuantity", e.target.value)
-          }
-          placeholder="Số lượng"
-          size="small"
-        />
-      ),
+      render: (value: string, record: SampleFormData) => {
+        return (
+          <Input
+            value={value}
+            onChange={(e) =>
+              updateSample(record.key, "sampleQuantity", e.target.value)
+            }
+            placeholder="Số lượng"
+            size="small"
+          />
+        );
+      },
     },
     {
       title: "Tình trạng mẫu",
@@ -432,22 +442,24 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
         width: column.width,
         columnKey: "statusText",
       }),
-      render: (value: string, record: SampleFormData) => (
-        <AutoComplete
-          value={value || ""}
-          options={sampleConditionOptions}
-          onChange={(val) => updateSample(record.key, "statusText", val || "")}
-          placeholder="Tình trạng mẫu..."
-          style={{ width: "100%" }}
-          size="small"
-          filterOption={(inputValue, option) =>
-            (option?.label as string)
-              ?.toLowerCase()
-              .includes(inputValue.toLowerCase())
-          }
-          allowClear
-        />
-      ),
+      render: (value: string, record: SampleFormData) => {
+        return (
+          <AutoComplete
+            value={value || ""}
+            options={sampleConditionOptions}
+            onChange={(val) => updateSample(record.key, "statusText", val || "")}
+            placeholder="Tình trạng mẫu..."
+            style={{ width: "100%" }}
+            size="small"
+            filterOption={(inputValue, option) =>
+              (option?.label as string)
+                ?.toLowerCase()
+                .includes(inputValue.toLowerCase())
+            }
+            allowClear
+          />
+        );
+      },
     },
     {
       title: (
@@ -730,14 +742,16 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
         width: column.width,
         columnKey: "notes",
       }),
-      render: (value: string, record: SampleFormData) => (
-        <Input
-          value={value}
-          onChange={(e) => updateSample(record.key, "notes", e.target.value)}
-          placeholder="Ghi chú"
-          size="small"
-        />
-      ),
+      render: (value: string, record: SampleFormData) => {
+        return (
+          <Input
+            value={value}
+            onChange={(e) => updateSample(record.key, "notes", e.target.value)}
+            placeholder="Ghi chú"
+            size="small"
+          />
+        );
+      },
     },
     {
       title: "",
@@ -751,6 +765,14 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
       render: (_: any, record: SampleFormData) => {
         // Sử dụng sampleCode từ record (đã được lưu cố định)
         const sampleCode = record.sampleCode || "--";
+
+        // Kiểm tra mẫu có chỉ tiêu đã gửi tới khoa phòng không
+        const hasSentIndicator = (record.indicatorMethods || []).some((methodKey) => {
+          const labMapKey = `${record.key}_${methodKey}`;
+          const labInfo = indicatorLaboratoryMap[labMapKey];
+          return isIndicatorLocked(labInfo);
+        });
+
         return (
           <Space size={0}>
             <Tooltip title="Nhân đôi">
@@ -777,19 +799,31 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
                 }
               />
             </Tooltip>
-            <Popconfirm
-              title="Xóa mẫu này?"
-              onConfirm={() => removeSample(record.key)}
-              okText="Xóa"
-              cancelText="Hủy"
-            >
-              <Button
-                type="link"
-                danger
-                icon={<DeleteOutlined />}
-                size="small"
-              />
-            </Popconfirm>
+            {hasSentIndicator ? (
+              <Tooltip title="Không thể xóa mẫu có chỉ tiêu đã gửi tới khoa phòng">
+                <Button
+                  type="link"
+                  icon={<DeleteOutlined />}
+                  size="small"
+                  disabled
+                  style={{ color: "#ccc" }}
+                />
+              </Tooltip>
+            ) : (
+              <Popconfirm
+                title="Xóa mẫu này?"
+                onConfirm={() => removeSample(record.key)}
+                okText="Xóa"
+                cancelText="Hủy"
+              >
+                <Button
+                  type="link"
+                  danger
+                  icon={<DeleteOutlined />}
+                  size="small"
+                />
+              </Popconfirm>
+            )}
           </Space>
         );
       },
