@@ -140,28 +140,13 @@ const UserPermissionsTab: React.FC<UserPermissionsTabProps> = ({
     (g) => g.name === "MasterData",
   );
 
-  // Permissions to hide from the UI (data from migration, not needed for role management)
-  const hiddenPermissions = useMemo(
-    () => new Set(["LabSpecimenManagement.Specimens.Edit"]),
-    [],
-  );
-
   // Filter permission groups based on search text and restructure Master Data
   const filteredGroups = useMemo(() => {
     if (!permissionGroups || !Array.isArray(permissionGroups)) {
       return [];
     }
 
-    // Filter out hidden permissions from each group
-    let groups = permissionGroups
-      .map((group) => {
-        const visiblePermissions = group.permissions.filter(
-          (perm) => !hiddenPermissions.has(perm.name),
-        );
-        if (visiblePermissions.length === 0) return null;
-        return { ...group, permissions: visiblePermissions };
-      })
-      .filter(Boolean) as PermissionGroupDto[];
+    let groups = permissionGroups;
 
     // Apply search filter
     if (searchText.trim()) {
