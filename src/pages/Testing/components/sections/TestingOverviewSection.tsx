@@ -16,19 +16,24 @@ const TestingOverviewSection: React.FC<TestingOverviewSectionProps> = ({
   isUrgent,
 }) => {
   return (
-    <Card className="testing-detail-header" style={{ marginBottom: 16, background: "#FAFAFA", borderColor: "#D9D9D9" }}>
-      <Title level={5} className="testing-section-title" style={{ margin: "0 0 16px 0" }}>Thông tin tổng quan</Title>
+    <Card
+      className="testing-detail-header"
+      style={{
+        marginBottom: 16,
+        background: "#FAFAFA",
+        borderColor: "#D9D9D9",
+      }}
+    >
+      <Title
+        level={5}
+        className="testing-section-title"
+        style={{ margin: "0 0 16px 0" }}
+      >
+        Thông tin tổng quan
+      </Title>
       <Row gutter={[48, 16]}>
         <Col xs={24} md={12}>
           <div className="testing-overview-items">
-            <Row className="testing-overview-row">
-              <Col flex="150px">
-                <Text type="secondary">Khách hàng:</Text>
-              </Col>
-              <Col flex="auto">
-                <Text>{detail.customerName || "N/A"}</Text>
-              </Col>
-            </Row>
             <Row className="testing-overview-row">
               <Col flex="150px">
                 <Text type="secondary">Quản lý kỹ thuật:</Text>
@@ -49,7 +54,9 @@ const TestingOverviewSection: React.FC<TestingOverviewSectionProps> = ({
                   }}
                 >
                   {detail.requestCompletionDate
-                    ? new Date(detail.requestCompletionDate).toLocaleDateString("vi-VN")
+                    ? new Date(detail.requestCompletionDate).toLocaleDateString(
+                        "vi-VN",
+                      )
                     : "N/A"}
                 </Text>
               </Col>
@@ -84,7 +91,10 @@ const TestingOverviewSection: React.FC<TestingOverviewSectionProps> = ({
                 <Text strong style={{ color: "#52c41a" }}>
                   {detail.completedIndicatorCount}
                 </Text>
-                <Text type="secondary"> / {detail.totalIndicatorCount} đã hoàn thành</Text>
+                <Text type="secondary">
+                  {" "}
+                  / {detail.totalIndicatorCount} đã hoàn thành
+                </Text>
               </Col>
             </Row>
           </div>
