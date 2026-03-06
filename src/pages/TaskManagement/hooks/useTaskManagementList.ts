@@ -7,6 +7,7 @@ import {
   LaboratoryTaskDto,
   LaboratoryTaskStatus,
   GetLaboratoryTaskListDto,
+  TaskStatusStatisticsDto,
 } from "../../../types/laboratoryTask";
 import { PATH_ROUTES, STORAGE_KEYS } from "../../../constants";
 import { getTaskManagementColumns } from "../components/columns";
@@ -78,35 +79,41 @@ export const useTaskManagementList = () => {
     loadData();
   }, [loadData]);
 
-  // Statistics
-  const stats = useMemo(
-    () => ({
-      total: pagination.total,
-      underEvaluation: tasks.filter(
-        (t) => t.status === LaboratoryTaskStatus.UnderEvaluation
-      ).length,
-      waitingCustomerResponse: tasks.filter(
-        (t) => t.status === LaboratoryTaskStatus.WaitingCustomerResponse
-      ).length,
-      accepted: tasks.filter(
-        (t) => t.status === LaboratoryTaskStatus.FullyAccepted ||
-               t.status === LaboratoryTaskStatus.PartialAccepted
-      ).length,
-      assigned: tasks.filter((t) => t.status === LaboratoryTaskStatus.Assigned)
-        .length,
-      inProgress: tasks.filter((t) => t.status === LaboratoryTaskStatus.InProgress)
-        .length,
-      waitingApproval: tasks.filter(
-        (t) => t.status === LaboratoryTaskStatus.WaitingApproval
-      ).length,
-      approved: tasks.filter((t) => t.status === LaboratoryTaskStatus.Approved)
-        .length,
-      sentToQuality: tasks.filter(
-        (t) => t.status === LaboratoryTaskStatus.SentToQuality
-      ).length,
-    }),
-    [tasks, pagination.total]
-  );
+  // Statistics - loaded separately from API (not affected by filters)
+  const [stats, setStats] = useState({
+    total: 0,
+    underEvaluation: 0,
+    waitingCustomerResponse: 0,
+    accepted: 0,
+    assigned: 0,
+    inProgress: 0,
+    waitingApproval: 0,
+    approved: 0,
+    sentToQuality: 0,
+  });
+
+  const loadStats = useCallback(async () => {
+    try {
+      const result: TaskStatusStatisticsDto = await laboratoryTaskService.getTaskStatusStatistics();
+      setStats({
+        total: result.total,
+        underEvaluation: result.underEvaluation,
+        waitingCustomerResponse: result.waitingCustomerResponse,
+        accepted: result.fullyAccepted + result.partialAccepted,
+        assigned: result.assigned,
+        inProgress: result.inProgress,
+        waitingApproval: result.waitingApproval,
+        approved: result.approved,
+        sentToQuality: result.sentToQuality,
+      });
+    } catch (error) {
+      console.error("Failed to load task statistics:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
 
   const handleSearch = useCallback((value: string) => {
     setSearchText(value);
@@ -140,7 +147,8 @@ export const useTaskManagementList = () => {
     setStatusFilter(undefined);
     setPagination((prev) => ({ ...prev, current: 1 }));
     loadData();
-  }, [loadData]);
+    loadStats();
+  }, [loadData, loadStats]);
 
   const handleDelete = useCallback(
     (id: string) => {
@@ -156,6 +164,7 @@ export const useTaskManagementList = () => {
             await laboratoryTaskService.delete(id);
             message.success("Xóa công việc thành công");
             loadData();
+            loadStats();
           } catch (error) {
             console.error("Failed to delete task:", error);
             message.error("Không thể xóa công việc. Vui lòng thử lại.");
@@ -163,7 +172,7 @@ export const useTaskManagementList = () => {
         },
       });
     },
-    [loadData]
+    [loadData, loadStats]
   );
 
   const handleRowDoubleClick = useCallback(

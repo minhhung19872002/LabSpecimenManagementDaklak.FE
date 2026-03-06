@@ -256,6 +256,20 @@ export interface PagedLaboratoryTaskResult {
   totalCount: number;
 }
 
+// Task status statistics (counts per status, no filter)
+export interface TaskStatusStatisticsDto {
+  total: number;
+  underEvaluation: number;
+  waitingCustomerResponse: number;
+  partialAccepted: number;
+  fullyAccepted: number;
+  assigned: number;
+  inProgress: number;
+  waitingApproval: number;
+  approved: number;
+  sentToQuality: number;
+}
+
 // List result (for non-paged endpoints)
 export interface ListLaboratoryTaskResult {
   items: LaboratoryTaskDto[];

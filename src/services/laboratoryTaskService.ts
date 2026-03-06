@@ -22,7 +22,8 @@ import {
   RequestMethodChangeInput,
   RejectIndicatorsForTestingInput,
   LaboratoryDepartmentSupporterDto,
-  AddDepartmentSupportersInput
+  AddDepartmentSupportersInput,
+  TaskStatusStatisticsDto
 } from '../types/laboratoryTask';
 
 const BASE_URL = '/api/v1/laboratory-tasks';
@@ -48,6 +49,14 @@ export const laboratoryTaskService = {
    */
   getList: async (params: GetLaboratoryTaskListDto = {}): Promise<PagedLaboratoryTaskResult> => {
     const response = await api.get<PagedLaboratoryTaskResult>(BASE_URL, { params: toApiParams(params) });
+    return response.data;
+  },
+
+  /**
+   * Get task status statistics (counts per status, no filter)
+   */
+  getTaskStatusStatistics: async (): Promise<TaskStatusStatisticsDto> => {
+    const response = await api.get<TaskStatusStatisticsDto>(`${BASE_URL}/task-status-statistics`);
     return response.data;
   },
 
