@@ -212,31 +212,15 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
       {!isSubIndicator && (
         !hidePrice ? (
           <div style={{ width: 110, flexShrink: 0 }}>
-            {isFree ? (
-              <span style={{ fontSize: 12 }}>
-                <span
-                  style={{
-                    textDecoration: "line-through",
-                    color: "#bbb",
-                    marginRight: 2,
-                    fontSize: 11,
-                  }}
-                >
-                  {unitPrice?.toLocaleString("vi-VN")}đ
-                </span>
-                <span style={{ color: "#52c41a", fontWeight: 600 }}>0đ</span>
-              </span>
-            ) : (
-              <InputNumber
-                value={unitPrice}
-                min={0}
-                size="small"
-                style={{ width: "100%", height: 32 }}
-                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                parser={(value) => Number(value?.replace(/,/g, '') || 0)}
-                onChange={(value) => onPriceChange?.(id, value ?? 0)}
-              />
-            )}
+            <InputNumber
+              value={unitPrice}
+              min={0}
+              size="small"
+              style={{ width: "100%", height: 32 }}
+              formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+              parser={(value) => Number(value?.replace(/,/g, '') || 0)}
+              onChange={(value) => onPriceChange?.(id, value ?? 0)}
+            />
           </div>
         ) : (
           <span style={{ width: 110, flexShrink: 0 }} />

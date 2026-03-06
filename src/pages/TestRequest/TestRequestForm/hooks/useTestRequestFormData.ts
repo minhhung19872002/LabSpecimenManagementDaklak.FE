@@ -832,28 +832,26 @@ export const useTestRequestFormData = () => {
   const calculateTotalCost = useCallback(() => {
     let total = 0;
     samples.forEach((sample) => {
-      // Check combo kim loại nặng cho sample này
+      // Check combo kim loại nặng PER specimen type trong sample
       const sampleIndicatorNames = (sample.indicatorMethods || []).map((methodKey) => {
         const { indicatorId } = parseIndicatorMethodKey(methodKey);
         const ind = indicators.find((i) => i.id === indicatorId);
         return ind?.name;
       });
-      // Lấy tên nền mẫu từ specimenType để check mẫu Nước
-      // Ưu tiên sample.specimenTypeId, fallback từ specimenTypeId trong method keys
-      let costSpecimenType = sample.specimenTypeId
-        ? specimenTypes.find((st) => st.id === sample.specimenTypeId)
-        : null;
-      if (!costSpecimenType) {
-        for (const mk of (sample.indicatorMethods || [])) {
-          const { specimenTypeId: stId } = parseIndicatorMethodKey(mk);
-          if (stId) {
-            costSpecimenType = specimenTypes.find((st) => st.id === stId) || null;
-            if (costSpecimenType) break;
-          }
-        }
+      // Group indicator names by specimenTypeId để check combo riêng từng loại mẫu
+      const groupedBySpecimenType: Record<string, (string | undefined)[]> = {};
+      for (const mk of (sample.indicatorMethods || [])) {
+        const { indicatorId, specimenTypeId: stId } = parseIndicatorMethodKey(mk);
+        const ind = indicators.find((i) => i.id === indicatorId);
+        const gKey = stId || '_none';
+        if (!groupedBySpecimenType[gKey]) groupedBySpecimenType[gKey] = [];
+        groupedBySpecimenType[gKey].push(ind?.name);
       }
-      const costCategoryName = costSpecimenType?.sampleTypeCategoryName || null;
-      const isSampleComboMet = isHeavyMetalComboMet(sampleIndicatorNames, costCategoryName, costSpecimenType?.name);
+      const comboMetBySpecimenType: Record<string, boolean> = {};
+      for (const [stId, names] of Object.entries(groupedBySpecimenType)) {
+        const st = stId !== '_none' ? specimenTypes.find((s) => s.id === stId) : null;
+        comboMetBySpecimenType[stId] = isHeavyMetalComboMet(names, st?.sampleTypeCategoryName, st?.name);
+      }
       const isSampleEcoliCombo = isEcoliColiformComboMet(sampleIndicatorNames);
 
       // New logic: use indicatorMethods if available
@@ -866,9 +864,10 @@ export const useTestRequestFormData = () => {
             (m) => m.testMethodId === testMethodId && (m.specimenTypeId || null) === specimenTypeId
           );
           if (method) {
-            // Combo miễn phí: Hg (kim loại nặng) hoặc E.Coli (E.Coli + Coliform)
+            // Combo miễn phí: Hg (kim loại nặng, per specimen type) hoặc E.Coli (E.Coli + Coliform)
             const ind = indicators.find((i) => i.id === indicatorId);
-            const isComboFree = (isSampleComboMet && isHgIndicator(ind?.name)) ||
+            const stComboKey = specimenTypeId || '_none';
+            const isComboFree = (comboMetBySpecimenType[stComboKey] && isHgIndicator(ind?.name)) ||
               (isSampleEcoliCombo && isEcoliIndicator(ind?.name));
             const customPriceKey = `${sample.key}_${key}`;
             const price = customPrices[customPriceKey] !== undefined ? customPrices[customPriceKey] : method.unitPrice;
@@ -881,7 +880,7 @@ export const useTestRequestFormData = () => {
           const methods = indicatorMethodsMap[indId] || [];
           if (methods.length > 0) {
             const ind = indicators.find((i) => i.id === indId);
-            const isComboFree = (isSampleComboMet && isHgIndicator(ind?.name)) ||
+            const isComboFree = (comboMetBySpecimenType['_none'] && isHgIndicator(ind?.name)) ||
               (isSampleEcoliCombo && isEcoliIndicator(ind?.name));
             total += isComboFree ? 0 : methods[0].unitPrice;
           }
