@@ -130,6 +130,8 @@ const TestRequestForm: React.FC = () => {
     expandedLabGroups,
     setExpandedLabGroups,
     sampleIndicatorIdMap,
+    customPrices,
+    setCustomPrices,
     originalData,
     sourceQuotationId,
     provinces,
@@ -215,6 +217,7 @@ const TestRequestForm: React.FC = () => {
     isEditRequiresApproval,
     specimenTypes,
     sourceQuotationId,
+    customPrices,
   });
 
   // Ref to form sections to detect when scrolled past
@@ -522,6 +525,8 @@ const TestRequestForm: React.FC = () => {
             specimenTypes={specimenTypes}
             sampleTypeCategories={sampleTypeCategories}
             setIndicatorSearchText={setIndicatorSearchText}
+            customPrices={customPrices}
+            onPriceChange={(key, price) => setCustomPrices(prev => ({ ...prev, [key]: price }))}
           />
 
           {/* Laboratory Selection Modal */}

@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useState, useRef, useCallback } from "react";
-import { Button, Checkbox, DatePicker, Tooltip } from "antd";
+import { Button, Checkbox, DatePicker, InputNumber, Tooltip } from "antd";
 import {
   CloseOutlined,
   LockOutlined,
@@ -76,6 +76,7 @@ interface IndicatorRowProps {
     value: dayjs.Dayjs | null,
   ) => void;
   onRemove: (id: string) => void;
+  onPriceChange?: (id: string, price: number) => void;
   // Sub-indicator props
   isSubIndicator?: boolean;
   isFirstSub?: boolean;
@@ -102,6 +103,7 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
   onCheckChange,
   onDateChange,
   onRemove,
+  onPriceChange,
   // Sub-indicator props
   isSubIndicator = false,
   isFirstSub = false,
@@ -192,17 +194,9 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
       {/* Đơn giá - hidden for sub-indicators (only show name) */}
       {!isSubIndicator && (
         !hidePrice ? (
-          <span
-            style={{
-              fontSize: 12,
-              color: "#888",
-              width: 90,
-              flexShrink: 0,
-              textAlign: "right",
-            }}
-          >
+          <div style={{ width: 110, flexShrink: 0 }}>
             {isFree ? (
-              <>
+              <span style={{ fontSize: 12 }}>
                 <span
                   style={{
                     textDecoration: "line-through",
@@ -214,13 +208,22 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
                   {unitPrice?.toLocaleString("vi-VN")}đ
                 </span>
                 <span style={{ color: "#52c41a", fontWeight: 600 }}>0đ</span>
-              </>
+              </span>
             ) : (
-              <>{unitPrice?.toLocaleString("vi-VN")}đ</>
+              <InputNumber
+                value={unitPrice}
+                min={0}
+                size="small"
+                style={{ width: "100%", height: 32 }}
+                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                parser={(value) => Number(value?.replace(/,/g, '') || 0)}
+                onChange={(value) => onPriceChange?.(id, value ?? 0)}
+                disabled={!canDelete}
+              />
             )}
-          </span>
+          </div>
         ) : (
-          <span style={{ width: 90, flexShrink: 0 }} />
+          <span style={{ width: 110, flexShrink: 0 }} />
         )
       )}
       {statusLabel && (

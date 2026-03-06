@@ -182,6 +182,10 @@ export const useTestRequestFormData = () => {
   const [indicatorLaboratoryMap, setIndicatorLaboratoryMap] = useState<Record<string, LaboratoryAssignment>>({});
   const [expandedLabGroups, setExpandedLabGroups] = useState<string[]>([]);
 
+  // Custom prices per indicator method (overrides master data price, only for this test request)
+  // Key format: "sampleKey_indicatorMethodKey" -> custom price
+  const [customPrices, setCustomPrices] = useState<Record<string, number>>({});
+
   // Store TestRequestSampleIndicator.id for each indicator
   // Key format: "sampleKey_indicatorMethodKey" -> TestRequestSampleIndicator.id
   const [sampleIndicatorIdMap, setSampleIndicatorIdMap] = useState<Record<string, string>>({});
@@ -650,6 +654,7 @@ export const useTestRequestFormData = () => {
         const restoredLabMap: Record<string, LaboratoryAssignment> = {};
         const expandedLabs: string[] = [];
         const restoredIndicatorIds: Record<string, string> = {}; // Store TestRequestSampleIndicator.id
+        const restoredCustomPrices: Record<string, number> = {}; // Store saved unitPrice as custom price
 
         // Parse dates helper - handle both UTC formats
         const parseDate = (dateStr: string | null | undefined): dayjs.Dayjs | undefined => {
@@ -681,6 +686,11 @@ export const useTestRequestFormData = () => {
               restoredIndicatorIds[`${sampleKey}_${methodKey}`] = ind.id;
             }
 
+            // Restore saved unitPrice as custom price
+            if (ind.unitPrice !== undefined && ind.unitPrice !== null) {
+              restoredCustomPrices[`${sampleKey}_${methodKey}`] = ind.unitPrice;
+            }
+
             restoredDates[methodKey] = {
               transferDate: parseDate(ind.transferDate),
               requestDate: parseDate(ind.requestDate),
@@ -709,6 +719,7 @@ export const useTestRequestFormData = () => {
         setIndicatorLaboratoryMap(restoredLabMap);
         setExpandedLabGroups(expandedLabs);
         setSampleIndicatorIdMap(restoredIndicatorIds);
+        setCustomPrices(restoredCustomPrices);
       }
     } catch (error) {
       message.error("Không thể tải dữ liệu yêu cầu");
@@ -842,7 +853,9 @@ export const useTestRequestFormData = () => {
             // Hg miễn phí khi đủ combo kim loại nặng
             const ind = indicators.find((i) => i.id === indicatorId);
             const isHgFree = isSampleComboMet && isHgIndicator(ind?.name);
-            total += isHgFree ? 0 : method.unitPrice;
+            const customPriceKey = `${sample.key}_${key}`;
+            const price = customPrices[customPriceKey] !== undefined ? customPrices[customPriceKey] : method.unitPrice;
+            total += isHgFree ? 0 : price;
           }
         });
       } else {
@@ -858,7 +871,7 @@ export const useTestRequestFormData = () => {
       }
     });
     setTotalSampleCost(total);
-  }, [samples, indicators, indicatorMethodsMap]);
+  }, [samples, indicators, indicatorMethodsMap, customPrices]);
 
   // Get indicator info by id
   const getIndicatorInfo = (indicatorId: string) => {
@@ -1139,6 +1152,10 @@ export const useTestRequestFormData = () => {
     setIndicatorLaboratoryMap,
     expandedLabGroups,
     setExpandedLabGroups,
+
+    // Custom prices (per-indicator override, only for this test request)
+    customPrices,
+    setCustomPrices,
 
     // Sample indicator IDs for update
     sampleIndicatorIdMap,

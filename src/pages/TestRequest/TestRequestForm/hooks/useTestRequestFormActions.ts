@@ -89,6 +89,9 @@ interface UseTestRequestFormActionsProps {
 
   // Quotation source (when creating from quotation)
   sourceQuotationId: string | null;
+
+  // Custom prices override (per sample + indicator method)
+  customPrices: Record<string, number>;
 }
 
 export const useTestRequestFormActions = ({
@@ -140,6 +143,7 @@ export const useTestRequestFormActions = ({
   isEditRequiresApproval,
   specimenTypes,
   sourceQuotationId,
+  customPrices,
 }: UseTestRequestFormActionsProps) => {
 
   // Helper: Build change history by comparing original and new data
@@ -862,14 +866,17 @@ export const useTestRequestFormActions = ({
               // Hg miễn phí khi đủ combo kim loại nặng
               const ind = indicators.find((i) => i.id === indicatorId);
               const isHgFree = isSampleComboMet && isHgIndicator(ind?.name);
+              const customPriceKey = `${sample.key}_${methodKey}`;
+              const masterPrice = method?.unitPrice || 0;
+              const effectivePrice = customPrices[customPriceKey] !== undefined ? customPrices[customPriceKey] : masterPrice;
               return {
                 id: existingIndicatorId || undefined, // Include id for existing indicators
                 indicatorId,
                 testMethodId,
                 specimenTypeId: specimenTypeId || undefined, // Include specimenTypeId to correctly identify price
                 laboratoryId: labAssignment?.laboratoryId || undefined,
-                unitPrice: isHgFree ? 0 : (method?.unitPrice || 0),
-                originalUnitPrice: isHgFree ? (method?.unitPrice || 0) : undefined,
+                unitPrice: isHgFree ? 0 : effectivePrice,
+                originalUnitPrice: isHgFree ? masterPrice : undefined,
                 transferDate: indicatorDates?.transferDate?.format('YYYY-MM-DD') || undefined,
                 requestDate:
                   labAssignment?.requestDate?.format('YYYY-MM-DD') ||
@@ -886,13 +893,16 @@ export const useTestRequestFormActions = ({
               const existingIndicatorId = sampleIndicatorIdMap[`${sample.key}_${indId}`];
               // Hg miễn phí khi đủ combo kim loại nặng (fallback logic)
               const isHgFree = isSampleComboMet && isHgIndicator(indicator?.name);
+              const fallbackCustomKey = `${sample.key}_${indId}`;
+              const fallbackMasterPrice = indicator?.unitPrice || 0;
+              const fallbackEffectivePrice = customPrices[fallbackCustomKey] !== undefined ? customPrices[fallbackCustomKey] : fallbackMasterPrice;
               return {
                 id: existingIndicatorId || undefined, // Include id for existing indicators
                 indicatorId: indId,
                 testMethodId: undefined,
                 laboratoryId: labAssignment?.laboratoryId || undefined,
-                unitPrice: isHgFree ? 0 : (indicator?.unitPrice || 0),
-                originalUnitPrice: isHgFree ? (indicator?.unitPrice || 0) : undefined,
+                unitPrice: isHgFree ? 0 : fallbackEffectivePrice,
+                originalUnitPrice: isHgFree ? fallbackMasterPrice : undefined,
                 transferDate: indicatorDates?.transferDate?.format('YYYY-MM-DD') || undefined,
                 requestDate:
                   labAssignment?.requestDate?.format('YYYY-MM-DD') ||
@@ -1156,14 +1166,17 @@ export const useTestRequestFormActions = ({
                 (m: IndicatorMethodInfo) => m.testMethodId === testMethodId && (m.specimenTypeId || null) === specimenTypeId
               );
               const isHgFree = isPreviewComboMet && isHgIndicator(indicator?.name);
+              const previewCustomKey = `${sample.key}_${methodKey}`;
+              const previewMasterPrice = method?.unitPrice || 0;
+              const previewEffectivePrice = customPrices[previewCustomKey] !== undefined ? customPrices[previewCustomKey] : previewMasterPrice;
               return {
                 indicatorId,
                 testMethodId: testMethodId || undefined,
                 specimenTypeId: specimenTypeId || undefined,
                 indicatorName: indicator?.name || "",
                 indicatorFormattedName: indicator?.formattedName || undefined,
-                unitPrice: isHgFree ? 0 : (method?.unitPrice || 0),
-                originalUnitPrice: isHgFree ? (method?.unitPrice || 0) : undefined,
+                unitPrice: isHgFree ? 0 : previewEffectivePrice,
+                originalUnitPrice: isHgFree ? previewMasterPrice : undefined,
               };
             }),
           };

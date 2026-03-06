@@ -183,6 +183,9 @@ interface IndicatorSelectionModalProps {
   sampleTypeCategories: SampleTypeCategoryDto[];
   indicatorSearchText: string;
   setIndicatorSearchText: React.Dispatch<React.SetStateAction<string>>;
+  // Custom prices
+  customPrices: Record<string, number>;
+  onPriceChange: (key: string, price: number) => void;
 }
 
 const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
@@ -227,7 +230,15 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
   sampleTypeCategories,
   indicatorSearchText,
   setIndicatorSearchText,
+  customPrices,
+  onPriceChange,
 }) => {
+  // Get effective price for a method key (custom price or master data price)
+  const getEffectivePrice = (key: IndicatorMethodKey, masterPrice: number): number => {
+    const customKey = `${currentSampleKey}_${key}`;
+    return customPrices[customKey] !== undefined ? customPrices[customKey] : masterPrice;
+  };
+
   // Handle remove indicator method
   const handleRemoveIndicatorMethod = (key: IndicatorMethodKey) => {
     // Không cho xóa chỉ tiêu đã gửi tới khoa phòng
@@ -545,21 +556,21 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
       const pricingMode = getPricingMode(parentKey);
 
       if (pricingMode === "parent") {
-        // Calculate by parent price
+        const masterPrice = method?.unitPrice || 0;
         const price =
           isComboMet && checkIsHgIndicator(indicator)
             ? 0
-            : method?.unitPrice || 0;
+            : getEffectivePrice(parentKey, masterPrice);
         total += price;
       } else {
-        // Calculate by sum of sub prices
         subs.forEach((subKey) => {
           const { indicator: subInd, method: subMethod } =
             getIndicatorMethodInfo(subKey);
+          const masterPrice = subMethod?.unitPrice || 0;
           const price =
             isComboMet && checkIsHgIndicator(subInd)
               ? 0
-              : subMethod?.unitPrice || 0;
+              : getEffectivePrice(subKey, masterPrice);
           total += price;
         });
       }
@@ -568,10 +579,11 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     // 2. Independent indicators (no subs)
     groupedSelectedMethods.independentMethods.forEach((key) => {
       const { indicator, method } = getIndicatorMethodInfo(key);
+      const masterPrice = method?.unitPrice || 0;
       const price =
         isComboMet && checkIsHgIndicator(indicator)
           ? 0
-          : method?.unitPrice || 0;
+          : getEffectivePrice(key, masterPrice);
       total += price;
     });
 
@@ -581,6 +593,8 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     getIndicatorMethodInfo,
     getPricingMode,
     isComboMet,
+    customPrices,
+    currentSampleKey,
   ]);
 
   // Get indicators that have active methods, filtered by specimen type if active
@@ -1608,7 +1622,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
         open={visible}
         onOk={onOk}
         onCancel={onCancel}
-        width={1400}
+        width={1500}
         centered
         closable={false}
         okText="Chọn"
@@ -1709,18 +1723,14 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                           }
                         }}
                         style={{
+                          width: 24,
                           flexShrink: 0,
-                          paddingRight: 8,
-                          borderRight: "1px solid #d9d9d9",
                         }}
                       />
                       <span
                         style={{
                           flex: 1,
                           minWidth: 80,
-                          paddingLeft: 8,
-                          paddingRight: 8,
-                          borderRight: "1px solid #d9d9d9",
                         }}
                       >
                         Chỉ tiêu
@@ -1729,21 +1739,14 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                         style={{
                           width: 120,
                           flexShrink: 0,
-                          paddingLeft: 8,
-                          paddingRight: 8,
-                          borderRight: "1px solid #d9d9d9",
                         }}
                       >
                         Phương pháp
                       </span>
                       <span
                         style={{
-                          width: 90,
+                          width: 110,
                           flexShrink: 0,
-                          textAlign: "right",
-                          paddingLeft: 8,
-                          paddingRight: 8,
-                          borderRight: "1px solid #d9d9d9",
                         }}
                       >
                         Đơn giá
@@ -1753,9 +1756,6 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                           width: 100,
                           flexShrink: 0,
                           textAlign: "center",
-                          paddingLeft: 8,
-                          paddingRight: 8,
-                          borderRight: "1px solid #d9d9d9",
                         }}
                       >
                         Ngày CG
@@ -1765,15 +1765,12 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                           width: 100,
                           flexShrink: 0,
                           textAlign: "center",
-                          paddingLeft: 8,
-                          paddingRight: 8,
-                          borderRight: "1px solid #d9d9d9",
                         }}
                       >
                         Ngày YC
                       </span>
                       <span
-                        style={{ width: 32, flexShrink: 0, paddingLeft: 8 }}
+                        style={{ width: 32, flexShrink: 0 }}
                       >
                         Xóa
                       </span>
@@ -1805,7 +1802,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                 methodFormattedName={
                                   method?.testMethodFormattedName
                                 }
-                                unitPrice={method?.unitPrice || 0}
+                                unitPrice={getEffectivePrice(parentKey, method?.unitPrice || 0)}
                                 hidePrice={pricingMode === "subs"}
                                 isFree={
                                   isComboMet && checkIsHgIndicator(indicator)
@@ -1823,6 +1820,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                 onCheckChange={toggleCheckedIndicator}
                                 onDateChange={handleIndicatorDateChange}
                                 onRemove={handleRemoveParentIndicator}
+                                onPriceChange={(id, price) => onPriceChange(`${currentSampleKey}_${id}`, price)}
                               />
 
                               {/* Sub-indicator rows - only show name (no method, price, dates, remove button) */}
@@ -1836,7 +1834,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                     isInGroup={false}
                                     indicator={subInd}
                                     methodName={subMethod?.testMethodName || ""}
-                                    unitPrice={subMethod?.unitPrice || 0}
+                                    unitPrice={getEffectivePrice(subKey, subMethod?.unitPrice || 0)}
                                     isSubIndicator={true}
                                     isFirstSub={index === 0}
                                     isLastSub={index === unsentSubs.length - 1}
@@ -1867,7 +1865,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                               methodFormattedName={
                                 method?.testMethodFormattedName
                               }
-                              unitPrice={method?.unitPrice || 0}
+                              unitPrice={getEffectivePrice(key, method?.unitPrice || 0)}
                               isFree={
                                 isComboMet && checkIsHgIndicator(indicator)
                               }
@@ -1881,6 +1879,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                               onCheckChange={toggleCheckedIndicator}
                               onDateChange={handleIndicatorDateChange}
                               onRemove={handleRemoveIndicatorMethod}
+                              onPriceChange={(id, price) => onPriceChange(`${currentSampleKey}_${id}`, price)}
                             />
                           );
                         })}
@@ -1944,7 +1943,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                       methodFormattedName={
                                         method?.testMethodFormattedName
                                       }
-                                      unitPrice={method?.unitPrice || 0}
+                                      unitPrice={getEffectivePrice(key, method?.unitPrice || 0)}
                                       isFree={
                                         isComboMet &&
                                         checkIsHgIndicator(indicator)
@@ -1965,6 +1964,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                       onCheckChange={toggleCheckedIndicator}
                                       onDateChange={handleIndicatorDateChange}
                                       onRemove={handleRemoveIndicatorMethod}
+                                      onPriceChange={(id, price) => onPriceChange(`${currentSampleKey}_${id}`, price)}
                                     />
                                   );
                                 })}
