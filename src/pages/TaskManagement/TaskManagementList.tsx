@@ -78,6 +78,7 @@ const TaskManagementList: React.FC = () => {
               value: stats.total,
               iconBg: "contract",
               icon: "flask",
+              filterValue: "all",
             },
             {
               title: "Đánh giá TN",
@@ -85,6 +86,7 @@ const TaskManagementList: React.FC = () => {
               iconBg: "pending",
               icon: "clipboard-check",
               valueColor: "#13C2C2",
+              filterValue: String(LaboratoryTaskStatus.UnderEvaluation),
             },
             {
               title: "Chấp nhận TN",
@@ -92,6 +94,7 @@ const TaskManagementList: React.FC = () => {
               iconBg: "green",
               icon: "check-circle",
               valueColor: "#389E0D",
+              filterValue: String(LaboratoryTaskStatus.FullyAccepted),
             },
             {
               title: "Đang TN",
@@ -99,6 +102,7 @@ const TaskManagementList: React.FC = () => {
               iconBg: "orange",
               icon: "arrow-repeat",
               valueColor: "#D46B08",
+              filterValue: String(LaboratoryTaskStatus.InProgress),
             },
             {
               title: "Chờ duyệt",
@@ -106,6 +110,7 @@ const TaskManagementList: React.FC = () => {
               iconBg: "late",
               icon: "clock",
               valueColor: "#FAAD14",
+              filterValue: String(LaboratoryTaskStatus.WaitingApproval),
             },
             {
               title: "Đã duyệt",
@@ -113,6 +118,7 @@ const TaskManagementList: React.FC = () => {
               iconBg: "ontime",
               icon: "check2-circle",
               valueColor: "#52C41A",
+              filterValue: String(LaboratoryTaskStatus.Approved),
             },
             {
               title: "Đã gửi QLCL",
@@ -120,34 +126,47 @@ const TaskManagementList: React.FC = () => {
               iconBg: "purple",
               icon: "send",
               valueColor: "#531DAB",
+              filterValue: String(LaboratoryTaskStatus.SentToQuality),
             },
-          ].map((stat, index) => (
-            <Card key={index} className="dashboard-stat-card" bordered={false}>
-              <div className="dashboard-stat-content">
-                <div className="dashboard-stat-info">
-                  <Text className="dashboard-stat-title">{stat.title}</Text>
-                  <div
-                    className="dashboard-stat-value"
-                    style={
-                      stat.valueColor
-                        ? {
-                            background: stat.valueColor,
-                            WebkitBackgroundClip: "text",
-                            WebkitTextFillColor: "transparent",
-                            backgroundClip: "text",
-                          }
-                        : undefined
-                    }
-                  >
-                    {stat.value}
+          ].map((stat, index) => {
+            const isActive =
+              stat.filterValue === "all"
+                ? statusFilter === undefined
+                : statusFilter === Number(stat.filterValue);
+
+            return (
+              <Card
+                key={index}
+                className={`dashboard-stat-card task-stat-clickable${isActive ? " task-stat-active" : ""}`}
+                bordered={false}
+                onClick={() => handleStatusFilterChange(stat.filterValue)}
+              >
+                <div className="dashboard-stat-content">
+                  <div className="dashboard-stat-info">
+                    <Text className="dashboard-stat-title">{stat.title}</Text>
+                    <div
+                      className="dashboard-stat-value"
+                      style={
+                        stat.valueColor
+                          ? {
+                              background: stat.valueColor,
+                              WebkitBackgroundClip: "text",
+                              WebkitTextFillColor: "transparent",
+                              backgroundClip: "text",
+                            }
+                          : undefined
+                      }
+                    >
+                      {stat.value}
+                    </div>
+                  </div>
+                  <div className={`dashboard-stat-icon ${stat.iconBg}`}>
+                    <Icon name={stat.icon} />
                   </div>
                 </div>
-                <div className={`dashboard-stat-icon ${stat.iconBg}`}>
-                  <Icon name={stat.icon} />
-                </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
       )}
 
