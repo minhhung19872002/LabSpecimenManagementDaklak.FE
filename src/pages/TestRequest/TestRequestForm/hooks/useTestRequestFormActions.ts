@@ -23,7 +23,7 @@ import {
 import { generateSampleCode, getNextOrderNum, printBarcode as printBarcodeUtil, SampleBarcodeInfo } from "../utils";
 import { PATH_ROUTES } from "../../../../constants";
 import { getApiErrorMessage } from "../../../../utils/errorHandler";
-import { isHeavyMetalComboMet, isHgIndicator } from "../constants";
+import { isHeavyMetalComboMet, isHgIndicator, isEcoliColiformComboMet, isEcoliIndicator } from "../constants";
 
 interface UseTestRequestFormActionsProps {
   form: any;
@@ -848,7 +848,13 @@ export const useTestRequestFormActions = ({
           const ind = indicators.find((i) => i.id === indicatorId);
           return ind?.name;
         });
-        const isSampleComboMet = isHeavyMetalComboMet(sampleIndicatorNames);
+        // Lấy tên nền mẫu từ specimenType để check mẫu Nước
+        const sampleSpecimenType = sample.specimenTypeId
+          ? specimenTypes.find((st: any) => st.id === sample.specimenTypeId)
+          : null;
+        const sampleCategoryName = sampleSpecimenType?.sampleTypeCategoryName || null;
+        const isSampleComboMet = isHeavyMetalComboMet(sampleIndicatorNames, sampleCategoryName);
+        const isSampleEcoliCombo = isEcoliColiformComboMet(sampleIndicatorNames);
 
         // Prefer indicatorMethods if available, fallback to indicatorIds
         const indicatorsList = sample.indicatorMethods && sample.indicatorMethods.length > 0
@@ -863,9 +869,10 @@ export const useTestRequestFormActions = ({
               const labAssignment = indicatorLaboratoryMap[`${sample.key}_${methodKey}`];
               // Get the TestRequestSampleIndicator.id if this indicator already exists
               const existingIndicatorId = sampleIndicatorIdMap[`${sample.key}_${methodKey}`];
-              // Hg miễn phí khi đủ combo kim loại nặng
+              // Combo miễn phí: Hg (kim loại nặng) hoặc E.Coli (E.Coli + Coliform)
               const ind = indicators.find((i) => i.id === indicatorId);
-              const isHgFree = isSampleComboMet && isHgIndicator(ind?.name);
+              const isComboFree = (isSampleComboMet && isHgIndicator(ind?.name)) ||
+                (isSampleEcoliCombo && isEcoliIndicator(ind?.name));
               const customPriceKey = `${sample.key}_${methodKey}`;
               const masterPrice = method?.unitPrice || 0;
               const effectivePrice = customPrices[customPriceKey] !== undefined ? customPrices[customPriceKey] : masterPrice;
@@ -875,8 +882,8 @@ export const useTestRequestFormActions = ({
                 testMethodId,
                 specimenTypeId: specimenTypeId || undefined, // Include specimenTypeId to correctly identify price
                 laboratoryId: labAssignment?.laboratoryId || undefined,
-                unitPrice: isHgFree ? 0 : effectivePrice,
-                originalUnitPrice: isHgFree ? masterPrice : undefined,
+                unitPrice: isComboFree ? 0 : effectivePrice,
+                originalUnitPrice: isComboFree ? masterPrice : undefined,
                 transferDate: indicatorDates?.transferDate?.format('YYYY-MM-DD') || undefined,
                 requestDate:
                   labAssignment?.requestDate?.format('YYYY-MM-DD') ||
@@ -891,8 +898,9 @@ export const useTestRequestFormActions = ({
               const labAssignment = indicatorLaboratoryMap[`${sample.key}_${indId}`];
               // Get the TestRequestSampleIndicator.id if this indicator already exists
               const existingIndicatorId = sampleIndicatorIdMap[`${sample.key}_${indId}`];
-              // Hg miễn phí khi đủ combo kim loại nặng (fallback logic)
-              const isHgFree = isSampleComboMet && isHgIndicator(indicator?.name);
+              // Combo miễn phí (fallback logic)
+              const isComboFree = (isSampleComboMet && isHgIndicator(indicator?.name)) ||
+                (isSampleEcoliCombo && isEcoliIndicator(indicator?.name));
               const fallbackCustomKey = `${sample.key}_${indId}`;
               const fallbackMasterPrice = indicator?.unitPrice || 0;
               const fallbackEffectivePrice = customPrices[fallbackCustomKey] !== undefined ? customPrices[fallbackCustomKey] : fallbackMasterPrice;
@@ -901,8 +909,8 @@ export const useTestRequestFormActions = ({
                 indicatorId: indId,
                 testMethodId: undefined,
                 laboratoryId: labAssignment?.laboratoryId || undefined,
-                unitPrice: isHgFree ? 0 : fallbackEffectivePrice,
-                originalUnitPrice: isHgFree ? fallbackMasterPrice : undefined,
+                unitPrice: isComboFree ? 0 : fallbackEffectivePrice,
+                originalUnitPrice: isComboFree ? fallbackMasterPrice : undefined,
                 transferDate: indicatorDates?.transferDate?.format('YYYY-MM-DD') || undefined,
                 requestDate:
                   labAssignment?.requestDate?.format('YYYY-MM-DD') ||
@@ -1149,7 +1157,12 @@ export const useTestRequestFormActions = ({
             const { indicatorId: iId } = parseIndicatorMethodKey(mk);
             return indicators.find((i) => i.id === iId)?.name;
           });
-          const isPreviewComboMet = isHeavyMetalComboMet(previewSampleNames);
+          const previewSpecimenType = sample.specimenTypeId
+            ? specimenTypes.find((st: any) => st.id === sample.specimenTypeId)
+            : null;
+          const previewCategoryName = previewSpecimenType?.sampleTypeCategoryName || null;
+          const isPreviewComboMet = isHeavyMetalComboMet(previewSampleNames, previewCategoryName);
+          const isPreviewEcoliCombo = isEcoliColiformComboMet(previewSampleNames);
           return {
             sortOrder: index + 1,
             sampleCode: sample.sampleCode || "",
@@ -1165,7 +1178,8 @@ export const useTestRequestFormActions = ({
               const method = methods.find(
                 (m: IndicatorMethodInfo) => m.testMethodId === testMethodId && (m.specimenTypeId || null) === specimenTypeId
               );
-              const isHgFree = isPreviewComboMet && isHgIndicator(indicator?.name);
+              const isComboFree = (isPreviewComboMet && isHgIndicator(indicator?.name)) ||
+                (isPreviewEcoliCombo && isEcoliIndicator(indicator?.name));
               const previewCustomKey = `${sample.key}_${methodKey}`;
               const previewMasterPrice = method?.unitPrice || 0;
               const previewEffectivePrice = customPrices[previewCustomKey] !== undefined ? customPrices[previewCustomKey] : previewMasterPrice;
@@ -1175,8 +1189,8 @@ export const useTestRequestFormActions = ({
                 specimenTypeId: specimenTypeId || undefined,
                 indicatorName: indicator?.name || "",
                 indicatorFormattedName: indicator?.formattedName || undefined,
-                unitPrice: isHgFree ? 0 : previewEffectivePrice,
-                originalUnitPrice: isHgFree ? previewMasterPrice : undefined,
+                unitPrice: isComboFree ? 0 : previewEffectivePrice,
+                originalUnitPrice: isComboFree ? previewMasterPrice : undefined,
               };
             }),
           };

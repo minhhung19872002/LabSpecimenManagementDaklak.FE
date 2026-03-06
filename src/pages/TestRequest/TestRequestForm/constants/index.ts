@@ -39,7 +39,16 @@ const normalizeIndicatorName = (name: string | undefined | null): string => {
 };
 
 // Helper: Kiểm tra xem một list tên chỉ tiêu có đủ combo kim loại nặng không
-export const isHeavyMetalComboMet = (indicatorNames: (string | undefined | null)[]): boolean => {
+// Nếu nền mẫu là "Nước" (chứa từ "Nước") thì không áp dụng combo
+export const isHeavyMetalComboMet = (
+  indicatorNames: (string | undefined | null)[],
+  sampleTypeCategoryName?: string | null,
+): boolean => {
+  // Mẫu nước không được khuyến mãi combo kim loại nặng
+  if (sampleTypeCategoryName && sampleTypeCategoryName.toLowerCase().includes('nước')) {
+    return false;
+  }
+
   const normalizedNames = indicatorNames.map(normalizeIndicatorName);
   const normalizedComboNames = HEAVY_METAL_COMBO_INDICATORS.map(normalizeIndicatorName);
 
@@ -51,4 +60,42 @@ export const isHeavyMetalComboMet = (indicatorNames: (string | undefined | null)
 // Helper: Kiểm tra xem một chỉ tiêu có phải là Hg (được miễn phí khi có combo) không
 export const isHgIndicator = (indicatorName: string | undefined | null): boolean => {
   return normalizeIndicatorName(indicatorName) === normalizeIndicatorName(HEAVY_METAL_FREE_INDICATOR);
+};
+
+// ============================================================
+// Combo E.Coli + Coliform: khi cả 2 cùng có trong 1 sample thì E.Coli miễn phí
+// ============================================================
+
+// Các tên khác nhau của Coliform (Coliforms = Coliform Tổng số)
+const COLIFORM_NAMES = ["Coliforms", "Coliform Tổng số"];
+// Các tên khác nhau của E.Coli (E.Coli = Escherichia coli)
+const ECOLI_NAMES = ["E.Coli", "Escherichia coli"];
+
+// Helper: Kiểm tra tên chỉ tiêu có match với 1 trong các tên cho trước không
+const matchesAnyName = (
+  indicatorName: string | undefined | null,
+  names: string[],
+): boolean => {
+  const normalized = normalizeIndicatorName(indicatorName);
+  return names.some((n) => normalizeIndicatorName(n) === normalized);
+};
+
+// Helper: Kiểm tra xem một chỉ tiêu có phải là Coliform không
+export const isColiformIndicator = (indicatorName: string | undefined | null): boolean => {
+  return matchesAnyName(indicatorName, COLIFORM_NAMES);
+};
+
+// Helper: Kiểm tra xem một chỉ tiêu có phải là E.Coli không
+export const isEcoliIndicator = (indicatorName: string | undefined | null): boolean => {
+  return matchesAnyName(indicatorName, ECOLI_NAMES);
+};
+
+// Helper: Kiểm tra xem sample có đủ combo E.Coli + Coliform không
+// Cần ít nhất 1 chỉ tiêu E.Coli VÀ 1 chỉ tiêu Coliform
+export const isEcoliColiformComboMet = (
+  indicatorNames: (string | undefined | null)[],
+): boolean => {
+  const hasColiform = indicatorNames.some((name) => isColiformIndicator(name));
+  const hasEcoli = indicatorNames.some((name) => isEcoliIndicator(name));
+  return hasColiform && hasEcoli;
 };

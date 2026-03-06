@@ -46,7 +46,7 @@ import {
   Province,
   Ward,
 } from "../../../../utils/vietnamLocations";
-import { LOCKED_FIELDS, isHeavyMetalComboMet, isHgIndicator } from "../constants";
+import { LOCKED_FIELDS, isHeavyMetalComboMet, isHgIndicator, isEcoliColiformComboMet, isEcoliIndicator } from "../constants";
 import {
   SampleFormData,
   IndicatorDateInfo,
@@ -838,7 +838,13 @@ export const useTestRequestFormData = () => {
         const ind = indicators.find((i) => i.id === indicatorId);
         return ind?.name;
       });
-      const isSampleComboMet = isHeavyMetalComboMet(sampleIndicatorNames);
+      // Lấy tên nền mẫu từ specimenType để check mẫu Nước
+      const costSpecimenType = sample.specimenTypeId
+        ? specimenTypes.find((st) => st.id === sample.specimenTypeId)
+        : null;
+      const costCategoryName = costSpecimenType?.sampleTypeCategoryName || null;
+      const isSampleComboMet = isHeavyMetalComboMet(sampleIndicatorNames, costCategoryName);
+      const isSampleEcoliCombo = isEcoliColiformComboMet(sampleIndicatorNames);
 
       // New logic: use indicatorMethods if available
       if (sample.indicatorMethods && sample.indicatorMethods.length > 0) {
@@ -850,12 +856,13 @@ export const useTestRequestFormData = () => {
             (m) => m.testMethodId === testMethodId && (m.specimenTypeId || null) === specimenTypeId
           );
           if (method) {
-            // Hg miễn phí khi đủ combo kim loại nặng
+            // Combo miễn phí: Hg (kim loại nặng) hoặc E.Coli (E.Coli + Coliform)
             const ind = indicators.find((i) => i.id === indicatorId);
-            const isHgFree = isSampleComboMet && isHgIndicator(ind?.name);
+            const isComboFree = (isSampleComboMet && isHgIndicator(ind?.name)) ||
+              (isSampleEcoliCombo && isEcoliIndicator(ind?.name));
             const customPriceKey = `${sample.key}_${key}`;
             const price = customPrices[customPriceKey] !== undefined ? customPrices[customPriceKey] : method.unitPrice;
-            total += isHgFree ? 0 : price;
+            total += isComboFree ? 0 : price;
           }
         });
       } else {
@@ -864,14 +871,15 @@ export const useTestRequestFormData = () => {
           const methods = indicatorMethodsMap[indId] || [];
           if (methods.length > 0) {
             const ind = indicators.find((i) => i.id === indId);
-            const isHgFree = isSampleComboMet && isHgIndicator(ind?.name);
-            total += isHgFree ? 0 : methods[0].unitPrice;
+            const isComboFree = (isSampleComboMet && isHgIndicator(ind?.name)) ||
+              (isSampleEcoliCombo && isEcoliIndicator(ind?.name));
+            total += isComboFree ? 0 : methods[0].unitPrice;
           }
         });
       }
     });
     setTotalSampleCost(total);
-  }, [samples, indicators, indicatorMethodsMap, customPrices]);
+  }, [samples, indicators, indicatorMethodsMap, customPrices, specimenTypes]);
 
   // Get indicator info by id
   const getIndicatorInfo = (indicatorId: string) => {

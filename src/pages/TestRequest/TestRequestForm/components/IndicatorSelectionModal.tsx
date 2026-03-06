@@ -44,7 +44,7 @@ import {
   isIndicatorLocked,
 } from "../types";
 import IndicatorRow from "./IndicatorRow";
-import { isHeavyMetalComboMet, isHgIndicator } from "../constants";
+import { isHeavyMetalComboMet, isHgIndicator, isEcoliColiformComboMet, isEcoliIndicator } from "../constants";
 import "./IndicatorSelectionModal.css";
 
 const { Text } = Typography;
@@ -532,17 +532,44 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     groupedByLab[labInfo.laboratoryId].methods.push(key);
   });
 
+  // Lấy tên nền mẫu (sample type category) từ specimen type hiện tại
+  const currentSampleTypeCategoryName = useMemo(() => {
+    if (!currentSampleSpecimenTypeId) return null;
+    const st = specimenTypes.find((s) => s.id === currentSampleSpecimenTypeId);
+    return st?.sampleTypeCategoryName || null;
+  }, [currentSampleSpecimenTypeId, specimenTypes]);
+
   // Check combo kim loại nặng: nếu đủ 4 chỉ tiêu Pb, As, Cd, Hg thì Hg miễn phí
+  // Mẫu nước không áp dụng combo
   const isComboMet = useMemo(() => {
     const selectedNames = tempSelectedIndicatorMethods.map((key) => {
       const { indicator } = getIndicatorMethodInfo(key);
       return indicator?.name;
     });
-    return isHeavyMetalComboMet(selectedNames);
-  }, [tempSelectedIndicatorMethods, getIndicatorMethodInfo]);
+    return isHeavyMetalComboMet(selectedNames, currentSampleTypeCategoryName);
+  }, [tempSelectedIndicatorMethods, getIndicatorMethodInfo, currentSampleTypeCategoryName]);
 
   const checkIsHgIndicator = (indicator: IndicatorDto | undefined) => {
     return isHgIndicator(indicator?.name);
+  };
+
+  // Check combo E.Coli + Coliform: nếu cả 2 cùng có thì E.Coli miễn phí
+  const isEcoliCombo = useMemo(() => {
+    const selectedNames = tempSelectedIndicatorMethods.map((key) => {
+      const { indicator } = getIndicatorMethodInfo(key);
+      return indicator?.name;
+    });
+    return isEcoliColiformComboMet(selectedNames);
+  }, [tempSelectedIndicatorMethods, getIndicatorMethodInfo]);
+
+  const checkIsEcoliIndicator = (indicator: IndicatorDto | undefined) => {
+    return isEcoliIndicator(indicator?.name);
+  };
+
+  // Helper: check if indicator is free by any combo
+  const isIndicatorFree = (indicator: IndicatorDto | undefined) => {
+    return (isComboMet && checkIsHgIndicator(indicator)) ||
+      (isEcoliCombo && checkIsEcoliIndicator(indicator));
   };
 
   // Calculate total cost from selected methods with sub-indicator pricing logic
@@ -557,20 +584,18 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
 
       if (pricingMode === "parent") {
         const masterPrice = method?.unitPrice || 0;
-        const price =
-          isComboMet && checkIsHgIndicator(indicator)
-            ? 0
-            : getEffectivePrice(parentKey, masterPrice);
+        const price = isIndicatorFree(indicator)
+          ? 0
+          : getEffectivePrice(parentKey, masterPrice);
         total += price;
       } else {
         subs.forEach((subKey) => {
           const { indicator: subInd, method: subMethod } =
             getIndicatorMethodInfo(subKey);
           const masterPrice = subMethod?.unitPrice || 0;
-          const price =
-            isComboMet && checkIsHgIndicator(subInd)
-              ? 0
-              : getEffectivePrice(subKey, masterPrice);
+          const price = isIndicatorFree(subInd)
+            ? 0
+            : getEffectivePrice(subKey, masterPrice);
           total += price;
         });
       }
@@ -580,10 +605,9 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     groupedSelectedMethods.independentMethods.forEach((key) => {
       const { indicator, method } = getIndicatorMethodInfo(key);
       const masterPrice = method?.unitPrice || 0;
-      const price =
-        isComboMet && checkIsHgIndicator(indicator)
-          ? 0
-          : getEffectivePrice(key, masterPrice);
+      const price = isIndicatorFree(indicator)
+        ? 0
+        : getEffectivePrice(key, masterPrice);
       total += price;
     });
 
@@ -593,6 +617,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     getIndicatorMethodInfo,
     getPricingMode,
     isComboMet,
+    isEcoliCombo,
     customPrices,
     currentSampleKey,
   ]);
@@ -1804,9 +1829,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                 }
                                 unitPrice={getEffectivePrice(parentKey, method?.unitPrice || 0)}
                                 hidePrice={pricingMode === "subs"}
-                                isFree={
-                                  isComboMet && checkIsHgIndicator(indicator)
-                                }
+                                isFree={isIndicatorFree(indicator)}
                                 isChecked={checkedIndicators.includes(
                                   parentKey,
                                 )}
@@ -1866,9 +1889,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                 method?.testMethodFormattedName
                               }
                               unitPrice={getEffectivePrice(key, method?.unitPrice || 0)}
-                              isFree={
-                                isComboMet && checkIsHgIndicator(indicator)
-                              }
+                              isFree={isIndicatorFree(indicator)}
                               isChecked={checkedIndicators.includes(key)}
                               transferDate={
                                 selectedIndicatorDates[key]?.transferDate
@@ -1944,10 +1965,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                         method?.testMethodFormattedName
                                       }
                                       unitPrice={getEffectivePrice(key, method?.unitPrice || 0)}
-                                      isFree={
-                                        isComboMet &&
-                                        checkIsHgIndicator(indicator)
-                                      }
+                                      isFree={isIndicatorFree(indicator)}
                                       isChecked={checkedIndicators.includes(
                                         key,
                                       )}
