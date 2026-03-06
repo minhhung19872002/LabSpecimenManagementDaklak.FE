@@ -708,7 +708,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
       width: 70,
       render: (text: string, record: ProcessedIndicator) => {
         if (record._isParentWithChildren) return "-";
-        return text || "-";
+        return text ? <IndicatorName name={text} /> : "-";
       },
     },
     {

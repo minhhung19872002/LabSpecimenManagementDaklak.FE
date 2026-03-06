@@ -392,7 +392,7 @@ const SendToQualityModal: React.FC<SendToQualityModalProps> = ({
                           </span>
                           {indicator.result && (
                             <Text type="secondary" style={{ marginLeft: 8 }}>
-                              (KQ: {indicator.result} {indicator.unit || ""})
+                              (KQ: {indicator.result} {indicator.unit ? <IndicatorName name={indicator.unit} style={{ display: "inline" }} /> : ""})
                             </Text>
                           )}
                         </Checkbox>

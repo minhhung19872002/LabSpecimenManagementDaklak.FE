@@ -24,7 +24,7 @@ import {
   SampleStatus,
 } from "../../../types/laboratoryTask";
 import IndicatorImageCell from "../../../components/common/IndicatorImageCell";
-import { IndicatorName } from "../../../components/common";
+import { IndicatorName, RichTextEditor } from "../../../components/common";
 import {
   standardService,
   StandardWithIndicatorsDto,
@@ -523,46 +523,49 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         // Hide for parent indicators that have sub-indicators
         if (record._isParentWithSubs) return null;
 
-        // Cho phép chỉnh sửa nếu chưa duyệt và chưa bị hủy
+        // Cho phép chỉnh sửa trừ khi bị hủy hoặc forceDisable
         const canEditUnit =
           !forceDisableAll &&
-          record.approvalStatus !== IndicatorApprovalStatus.Approved &&
           record.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled &&
           onUnitChange;
+
+        if (!canEditUnit) {
+          return value ? <IndicatorName name={value} /> : <Text>-</Text>;
+        }
 
         // Lấy giá trị từ local state nếu có, nếu không thì từ server
         const displayValue = unitEdits[record.id] !== undefined ? unitEdits[record.id] : (value || "");
 
-        if (!canEditUnit) {
-          return <Text>{value || "-"}</Text>;
-        }
-
         return (
-          <Input
-            size="small"
-            value={displayValue}
-            placeholder="-"
-            onChange={(e) => {
-              setUnitEdits((prev) => ({
-                ...prev,
-                [record.id]: e.target.value,
-              }));
-            }}
+          <div
             onBlur={(e) => {
-              const newValue = e.target.value.trim();
-              // Chỉ gọi API nếu giá trị thay đổi
-              if (newValue !== (value || "")) {
-                onUnitChange(record.id, newValue || null);
+              // Only trigger save when focus leaves the entire editor
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                const newValue = unitEdits[record.id];
+                if (newValue !== undefined && newValue !== (value || "")) {
+                  onUnitChange(record.id, newValue || null);
+                }
+                // Clear local state sau khi save
+                setUnitEdits((prev) => {
+                  const newState = { ...prev };
+                  delete newState[record.id];
+                  return newState;
+                });
               }
-              // Clear local state sau khi save
-              setUnitEdits((prev) => {
-                const newState = { ...prev };
-                delete newState[record.id];
-                return newState;
-              });
             }}
-            style={{ width: "100%" }}
-          />
+          >
+            <RichTextEditor
+              value={displayValue}
+              onChange={(html) => {
+                setUnitEdits((prev) => ({
+                  ...prev,
+                  [record.id]: html,
+                }));
+              }}
+              placeholder="-"
+              minHeight={24}
+            />
+          </div>
         );
       },
     },

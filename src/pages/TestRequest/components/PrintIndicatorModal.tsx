@@ -475,6 +475,7 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
       dataIndex: "unit",
       key: "unit",
       width: 70,
+      render: (text: string) => text ? <IndicatorName name={text} /> : "-",
     },
     {
       title: "Kết quả",

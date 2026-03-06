@@ -112,6 +112,7 @@ export interface TestMethodDto {
   name: string;
   formattedName?: string | null;
   unit: string;
+  formattedUnit?: string | null;
   isActive: boolean;
   sortOrder: number;
   indicatorCount: number;
@@ -122,6 +123,7 @@ export interface CreateTestMethodDto {
   name: string;
   formattedName?: string | null;
   unit: string;
+  formattedUnit?: string | null;
   isActive?: boolean;
 }
 
@@ -129,6 +131,7 @@ export interface UpdateTestMethodDto {
   name: string;
   formattedName?: string | null;
   unit: string;
+  formattedUnit?: string | null;
   isActive: boolean;
 }
 

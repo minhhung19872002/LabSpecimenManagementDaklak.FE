@@ -530,7 +530,8 @@ const SampleAssignmentLogTab: React.FC = () => {
         dataIndex: "unit",
         key: "unit",
         width: 80,
-        render: (text: string) => text || "-",
+        render: (text: string) =>
+          text ? <span dangerouslySetInnerHTML={{ __html: text }} /> : "-",
       },
       {
         title: "Kết quả",

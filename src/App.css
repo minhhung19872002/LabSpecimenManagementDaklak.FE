@@ -28,6 +28,11 @@
   cursor: pointer;
 }
 
+.has-horizontal-scroll .tiptap,
+.has-horizontal-scroll .rich-text-editor-wrapper {
+  cursor: text;
+}
+
 /* Fixed columns should have default cursor */
 .has-horizontal-scroll .ant-table-cell-fix-left,
 .has-horizontal-scroll .ant-table-cell-fix-right {

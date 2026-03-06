@@ -446,7 +446,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         render: (text: string, record) => {
           // Don't show for parent indicators with children
           if (record._isParentWithChildren) return "-";
-          return text || "-";
+          return text ? <IndicatorName name={text} /> : "-";
         },
       },
       {
