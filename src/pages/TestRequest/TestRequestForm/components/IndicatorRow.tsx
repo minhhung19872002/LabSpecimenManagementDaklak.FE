@@ -157,23 +157,40 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
           disabled={!canDelete}
         />
       )}
-      <TruncateTooltip
-        title={indicator.name}
+      <div
         style={{
           flex: 1,
           minWidth: 80,
-          fontSize: 13,
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
           overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          color: canDelete ? "inherit" : "#666",
         }}
       >
-        <IndicatorName
-          name={indicator.name}
-          formattedName={indicator.formattedName}
-        />
-      </TruncateTooltip>
+        <TruncateTooltip
+          title={indicator.name}
+          style={{
+            fontSize: 13,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            color: canDelete ? "inherit" : "#666",
+          }}
+        >
+          <IndicatorName
+            name={indicator.name}
+            formattedName={indicator.formattedName}
+          />
+        </TruncateTooltip>
+        {statusLabel && (
+          <StatusTag
+            color={statusColor}
+            style={{ fontSize: 11, flexShrink: 0 }}
+          >
+            {statusLabel}
+          </StatusTag>
+        )}
+      </div>
       {/* Method name - hidden for sub-indicators (only show name) */}
       {!isSubIndicator && (
         <TruncateTooltip
@@ -218,21 +235,12 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
                 formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                 parser={(value) => Number(value?.replace(/,/g, '') || 0)}
                 onChange={(value) => onPriceChange?.(id, value ?? 0)}
-                disabled={!canDelete}
               />
             )}
           </div>
         ) : (
           <span style={{ width: 110, flexShrink: 0 }} />
         )
-      )}
-      {statusLabel && (
-        <StatusTag
-          color={statusColor}
-          style={{ fontSize: 11, flexShrink: 0, minWidth: 60 }}
-        >
-          {statusLabel}
-        </StatusTag>
       )}
       {/* Ngày CG/YC - hidden for sub-indicators (only show name) */}
       {!isSubIndicator && (
