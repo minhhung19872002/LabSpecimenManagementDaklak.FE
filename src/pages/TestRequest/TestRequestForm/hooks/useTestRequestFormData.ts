@@ -839,9 +839,19 @@ export const useTestRequestFormData = () => {
         return ind?.name;
       });
       // Lấy tên nền mẫu từ specimenType để check mẫu Nước
-      const costSpecimenType = sample.specimenTypeId
+      // Ưu tiên sample.specimenTypeId, fallback từ specimenTypeId trong method keys
+      let costSpecimenType = sample.specimenTypeId
         ? specimenTypes.find((st) => st.id === sample.specimenTypeId)
         : null;
+      if (!costSpecimenType) {
+        for (const mk of (sample.indicatorMethods || [])) {
+          const { specimenTypeId: stId } = parseIndicatorMethodKey(mk);
+          if (stId) {
+            costSpecimenType = specimenTypes.find((st) => st.id === stId) || null;
+            if (costSpecimenType) break;
+          }
+        }
+      }
       const costCategoryName = costSpecimenType?.sampleTypeCategoryName || null;
       const isSampleComboMet = isHeavyMetalComboMet(sampleIndicatorNames, costCategoryName, costSpecimenType?.name);
       const isSampleEcoliCombo = isEcoliColiformComboMet(sampleIndicatorNames);

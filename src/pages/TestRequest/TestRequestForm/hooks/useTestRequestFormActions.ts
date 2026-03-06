@@ -849,9 +849,19 @@ export const useTestRequestFormActions = ({
           return ind?.name;
         });
         // Lấy tên nền mẫu từ specimenType để check mẫu Nước
-        const sampleSpecimenType = sample.specimenTypeId
+        // Ưu tiên sample.specimenTypeId, fallback từ specimenTypeId trong method keys
+        let sampleSpecimenType = sample.specimenTypeId
           ? specimenTypes.find((st: any) => st.id === sample.specimenTypeId)
           : null;
+        if (!sampleSpecimenType) {
+          for (const mk of (sample.indicatorMethods || [])) {
+            const { specimenTypeId: stId } = parseIndicatorMethodKey(mk);
+            if (stId) {
+              sampleSpecimenType = specimenTypes.find((st: any) => st.id === stId) || null;
+              if (sampleSpecimenType) break;
+            }
+          }
+        }
         const sampleCategoryName = sampleSpecimenType?.sampleTypeCategoryName || null;
         const isSampleComboMet = isHeavyMetalComboMet(sampleIndicatorNames, sampleCategoryName, sampleSpecimenType?.name);
         const isSampleEcoliCombo = isEcoliColiformComboMet(sampleIndicatorNames);
@@ -1157,9 +1167,18 @@ export const useTestRequestFormActions = ({
             const { indicatorId: iId } = parseIndicatorMethodKey(mk);
             return indicators.find((i) => i.id === iId)?.name;
           });
-          const previewSpecimenType = sample.specimenTypeId
+          let previewSpecimenType = sample.specimenTypeId
             ? specimenTypes.find((st: any) => st.id === sample.specimenTypeId)
             : null;
+          if (!previewSpecimenType) {
+            for (const mk of (sample.indicatorMethods || [])) {
+              const { specimenTypeId: stId } = parseIndicatorMethodKey(mk);
+              if (stId) {
+                previewSpecimenType = specimenTypes.find((st: any) => st.id === stId) || null;
+                if (previewSpecimenType) break;
+              }
+            }
+          }
           const previewCategoryName = previewSpecimenType?.sampleTypeCategoryName || null;
           const isPreviewComboMet = isHeavyMetalComboMet(previewSampleNames, previewCategoryName, previewSpecimenType?.name);
           const isPreviewEcoliCombo = isEcoliColiformComboMet(previewSampleNames);

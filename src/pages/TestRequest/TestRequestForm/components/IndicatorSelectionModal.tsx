@@ -533,10 +533,36 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
   });
 
   // Lấy thông tin loại mẫu hiện tại (tên + tên danh mục)
+  // Ưu tiên từ currentSampleSpecimenTypeId (sample form), fallback từ specimenTypeId trong method keys
   const currentSpecimenType = useMemo(() => {
-    if (!currentSampleSpecimenTypeId) return null;
-    return specimenTypes.find((s) => s.id === currentSampleSpecimenTypeId) || null;
-  }, [currentSampleSpecimenTypeId, specimenTypes]);
+    // 1. Từ sample form
+    if (currentSampleSpecimenTypeId) {
+      const found = specimenTypes.find((s) => s.id === currentSampleSpecimenTypeId);
+      if (found) {
+        console.log('[COMBO DEBUG] currentSpecimenType from sample form:', {
+          id: found.id, name: found.name, categoryName: found.sampleTypeCategoryName,
+        });
+        return found;
+      }
+    }
+    // 2. Fallback: lấy specimenTypeId từ method key đầu tiên có specimenTypeId
+    for (const key of tempSelectedIndicatorMethods) {
+      const { specimenTypeId } = parseIndicatorMethodKey(key);
+      if (specimenTypeId) {
+        const found = specimenTypes.find((s) => s.id === specimenTypeId);
+        if (found) {
+          console.log('[COMBO DEBUG] currentSpecimenType from method key fallback:', {
+            id: found.id, name: found.name, categoryName: found.sampleTypeCategoryName,
+          });
+          return found;
+        }
+      }
+    }
+    console.log('[COMBO DEBUG] currentSpecimenType: NULL (no match found)', {
+      currentSampleSpecimenTypeId, specimenTypesCount: specimenTypes.length,
+    });
+    return null;
+  }, [currentSampleSpecimenTypeId, specimenTypes, tempSelectedIndicatorMethods]);
 
   // Check combo kim loại nặng: nếu đủ 4 chỉ tiêu Pb, As, Cd, Hg thì Hg miễn phí
   // Mẫu nước không áp dụng combo (check cả tên loại mẫu và tên danh mục)
@@ -545,11 +571,18 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
       const { indicator } = getIndicatorMethodInfo(key);
       return indicator?.name;
     });
-    return isHeavyMetalComboMet(
+    const result = isHeavyMetalComboMet(
       selectedNames,
       currentSpecimenType?.sampleTypeCategoryName,
       currentSpecimenType?.name,
     );
+    console.log('[COMBO DEBUG] Heavy Metal combo check:', {
+      isComboMet: result,
+      selectedNames,
+      categoryName: currentSpecimenType?.sampleTypeCategoryName,
+      specimenTypeName: currentSpecimenType?.name,
+    });
+    return result;
   }, [tempSelectedIndicatorMethods, getIndicatorMethodInfo, currentSpecimenType]);
 
   const checkIsHgIndicator = (indicator: IndicatorDto | undefined) => {
@@ -562,7 +595,12 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
       const { indicator } = getIndicatorMethodInfo(key);
       return indicator?.name;
     });
-    return isEcoliColiformComboMet(selectedNames);
+    const result = isEcoliColiformComboMet(selectedNames);
+    console.log('[COMBO DEBUG] E.Coli+Coliform combo check:', {
+      isEcoliCombo: result,
+      selectedNames,
+    });
+    return result;
   }, [tempSelectedIndicatorMethods, getIndicatorMethodInfo]);
 
   const checkIsEcoliIndicator = (indicator: IndicatorDto | undefined) => {
