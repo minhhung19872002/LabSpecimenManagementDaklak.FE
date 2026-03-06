@@ -853,7 +853,7 @@ export const useTestRequestFormActions = ({
           ? specimenTypes.find((st: any) => st.id === sample.specimenTypeId)
           : null;
         const sampleCategoryName = sampleSpecimenType?.sampleTypeCategoryName || null;
-        const isSampleComboMet = isHeavyMetalComboMet(sampleIndicatorNames, sampleCategoryName);
+        const isSampleComboMet = isHeavyMetalComboMet(sampleIndicatorNames, sampleCategoryName, sampleSpecimenType?.name);
         const isSampleEcoliCombo = isEcoliColiformComboMet(sampleIndicatorNames);
 
         // Prefer indicatorMethods if available, fallback to indicatorIds
@@ -1161,7 +1161,7 @@ export const useTestRequestFormActions = ({
             ? specimenTypes.find((st: any) => st.id === sample.specimenTypeId)
             : null;
           const previewCategoryName = previewSpecimenType?.sampleTypeCategoryName || null;
-          const isPreviewComboMet = isHeavyMetalComboMet(previewSampleNames, previewCategoryName);
+          const isPreviewComboMet = isHeavyMetalComboMet(previewSampleNames, previewCategoryName, previewSpecimenType?.name);
           const isPreviewEcoliCombo = isEcoliColiformComboMet(previewSampleNames);
           return {
             sortOrder: index + 1,

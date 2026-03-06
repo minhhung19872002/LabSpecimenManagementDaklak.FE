@@ -38,14 +38,24 @@ const normalizeIndicatorName = (name: string | undefined | null): string => {
   return normalized.trim().toLowerCase();
 };
 
+// Helper: Kiểm tra tên có chứa "Nước" không (case-insensitive, NFC normalized)
+const containsNuoc = (name?: string | null): boolean => {
+  if (!name) return false;
+  const normalized = name.normalize('NFC').toLowerCase();
+  const target = 'nước'.normalize('NFC');
+  return normalized.includes(target);
+};
+
 // Helper: Kiểm tra xem một list tên chỉ tiêu có đủ combo kim loại nặng không
-// Nếu nền mẫu là "Nước" (chứa từ "Nước") thì không áp dụng combo
+// Nếu nền mẫu là "Nước" (chứa từ "Nước" trong tên loại mẫu hoặc tên danh mục) thì không áp dụng combo
 export const isHeavyMetalComboMet = (
   indicatorNames: (string | undefined | null)[],
   sampleTypeCategoryName?: string | null,
+  specimenTypeName?: string | null,
 ): boolean => {
   // Mẫu nước không được khuyến mãi combo kim loại nặng
-  if (sampleTypeCategoryName && sampleTypeCategoryName.toLowerCase().includes('nước')) {
+  // Check cả tên danh mục loại mẫu (category) và tên loại mẫu (specimen type)
+  if (containsNuoc(sampleTypeCategoryName) || containsNuoc(specimenTypeName)) {
     return false;
   }
 

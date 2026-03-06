@@ -532,22 +532,25 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     groupedByLab[labInfo.laboratoryId].methods.push(key);
   });
 
-  // Lấy tên nền mẫu (sample type category) từ specimen type hiện tại
-  const currentSampleTypeCategoryName = useMemo(() => {
+  // Lấy thông tin loại mẫu hiện tại (tên + tên danh mục)
+  const currentSpecimenType = useMemo(() => {
     if (!currentSampleSpecimenTypeId) return null;
-    const st = specimenTypes.find((s) => s.id === currentSampleSpecimenTypeId);
-    return st?.sampleTypeCategoryName || null;
+    return specimenTypes.find((s) => s.id === currentSampleSpecimenTypeId) || null;
   }, [currentSampleSpecimenTypeId, specimenTypes]);
 
   // Check combo kim loại nặng: nếu đủ 4 chỉ tiêu Pb, As, Cd, Hg thì Hg miễn phí
-  // Mẫu nước không áp dụng combo
+  // Mẫu nước không áp dụng combo (check cả tên loại mẫu và tên danh mục)
   const isComboMet = useMemo(() => {
     const selectedNames = tempSelectedIndicatorMethods.map((key) => {
       const { indicator } = getIndicatorMethodInfo(key);
       return indicator?.name;
     });
-    return isHeavyMetalComboMet(selectedNames, currentSampleTypeCategoryName);
-  }, [tempSelectedIndicatorMethods, getIndicatorMethodInfo, currentSampleTypeCategoryName]);
+    return isHeavyMetalComboMet(
+      selectedNames,
+      currentSpecimenType?.sampleTypeCategoryName,
+      currentSpecimenType?.name,
+    );
+  }, [tempSelectedIndicatorMethods, getIndicatorMethodInfo, currentSpecimenType]);
 
   const checkIsHgIndicator = (indicator: IndicatorDto | undefined) => {
     return isHgIndicator(indicator?.name);

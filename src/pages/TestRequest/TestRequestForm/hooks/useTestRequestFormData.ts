@@ -843,7 +843,7 @@ export const useTestRequestFormData = () => {
         ? specimenTypes.find((st) => st.id === sample.specimenTypeId)
         : null;
       const costCategoryName = costSpecimenType?.sampleTypeCategoryName || null;
-      const isSampleComboMet = isHeavyMetalComboMet(sampleIndicatorNames, costCategoryName);
+      const isSampleComboMet = isHeavyMetalComboMet(sampleIndicatorNames, costCategoryName, costSpecimenType?.name);
       const isSampleEcoliCombo = isEcoliColiformComboMet(sampleIndicatorNames);
 
       // New logic: use indicatorMethods if available
