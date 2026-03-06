@@ -153,9 +153,9 @@ export const useTestMethodsActions = ({
   };
 
   // Remove Indicator from TestMethod
-  const handleRemoveIndicator = async (testMethodId: string, indicatorId: string) => {
+  const handleRemoveIndicator = async (testMethodId: string, indicatorId: string, specimenTypeId?: string) => {
     try {
-      await testMethodService.removeIndicator(testMethodId, indicatorId);
+      await testMethodService.removeIndicator(testMethodId, indicatorId, specimenTypeId);
       message.success("Xóa chỉ tiêu khỏi phương pháp thành công!");
       fetchData();
       onDataChange?.();
