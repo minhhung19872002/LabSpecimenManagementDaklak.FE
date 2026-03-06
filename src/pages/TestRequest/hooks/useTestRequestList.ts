@@ -112,8 +112,8 @@ export const useTestRequestList = () => {
   );
 
   const handleCreate = useCallback(() => {
-    navigate(PATH_ROUTES.testRequests.create);
-  }, [navigate]);
+    window.open(PATH_ROUTES.testRequests.create, "_blank");
+  }, []);
 
   const handleEdit = useCallback(
     (record: TestRequestDto) => {
