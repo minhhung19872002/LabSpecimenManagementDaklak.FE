@@ -124,9 +124,9 @@ export const useTestRequestList = () => {
 
   const handleRowDoubleClick = useCallback(
     (record: TestRequestDto) => {
-      navigate(PATH_ROUTES.testRequests.detail(record.id));
+      window.open(PATH_ROUTES.testRequests.detail(record.id), "_blank");
     },
-    [navigate]
+    []
   );
 
   const isUrgentRow = useCallback((record: TestRequestDto): boolean => {
