@@ -427,6 +427,8 @@ export interface GetSampleAssignmentLogInput {
   fromDate?: string;
   toDate?: string;
   laboratoryId?: string;
+  indicatorIds?: string[];
+  technicianIds?: string[];
 }
 
 // Paged result for Sample Assignment Log

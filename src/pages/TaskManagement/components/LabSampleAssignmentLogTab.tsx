@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback, useState } from "react";
-import { Table, Input, Select, Button, Tag, Row, Col, Pagination } from "antd";
-import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
+import { Table, Input, Select, Button, Tag, Row, Col, Pagination, DatePicker } from "antd";
+import { ReloadOutlined, SearchOutlined, FilterOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { useSampleAssignmentLogForQLKT } from "../hooks/useSampleAssignmentLogForQLKT";
@@ -342,10 +342,21 @@ const LabSampleAssignmentLogTab: React.FC = () => {
   const {
     loading,
     data,
+    searchText,
     statusFilter,
+    dateFrom,
+    dateTo,
+    selectedIndicatorIds,
+    selectedTechnicianIds,
+    indicators,
+    technicians,
     pagination,
-    handleSearch,
+    handleSearchInputChange,
     handleStatusFilter,
+    handleDateFromChange,
+    handleDateToChange,
+    handleIndicatorChange,
+    handleTechnicianChange,
     handleTableChange,
     handleRowDoubleClick,
     handleReload,
@@ -359,6 +370,9 @@ const LabSampleAssignmentLogTab: React.FC = () => {
     const contracts = new Set(data.map((item) => item.contractNumber));
     return contracts.size;
   }, [data]);
+
+  // State for expandable filters
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
 
   // State for hover - track which row index is being hovered
   const [hoveredRowIndex, setHoveredRowIndex] = useState<number | null>(null);
@@ -645,30 +659,105 @@ const LabSampleAssignmentLogTab: React.FC = () => {
   return (
     <div className="sample-assignment-log-tab">
       {/* Toolbar */}
-      <Row gutter={[16, 16]} align="middle" style={{ padding: 16 }}>
-        <Col xs={24} sm={12} md={8}>
-          <Input.Search
-            placeholder="Tìm theo số HĐ, mã mẫu, tên mẫu, chỉ tiêu..."
-            prefix={<SearchOutlined />}
-            allowClear
-            onSearch={handleSearch}
-            enterButton
-          />
-        </Col>
-        <Col xs={24} sm={8} md={6}>
-          <Select
-            style={{ width: "100%" }}
-            placeholder="Lọc trạng thái"
-            allowClear
-            value={statusFilter}
-            onChange={handleStatusFilter}
-            options={statusOptions}
-          />
-        </Col>
-        <Col>
-          <Button icon={<ReloadOutlined />} onClick={handleReload} />
-        </Col>
-      </Row>
+      <div style={{ padding: 16 }}>
+        {/* Row 1: Search + Status + Reload */}
+        <Row gutter={[12, 12]} align="middle">
+          <Col xs={24} sm={12} md={8}>
+            <Input
+              placeholder="Tìm theo số HĐ, mã mẫu, tên mẫu, chỉ tiêu, phương pháp..."
+              prefix={<SearchOutlined />}
+              value={searchText}
+              onChange={(e) => handleSearchInputChange(e.target.value)}
+              allowClear
+            />
+          </Col>
+          <Col xs={24} sm={8} md={4}>
+            <Select
+              style={{ width: "100%" }}
+              placeholder="Lọc trạng thái"
+              allowClear
+              value={statusFilter}
+              onChange={handleStatusFilter}
+              options={statusOptions}
+            />
+          </Col>
+          <Col>
+            <Button
+              icon={<FilterOutlined />}
+              type={filtersExpanded ? "primary" : "default"}
+              onClick={() => setFiltersExpanded((prev) => !prev)}
+            >
+              Bộ lọc
+            </Button>
+          </Col>
+          <Col>
+            <Button icon={<ReloadOutlined />} onClick={handleReload} />
+          </Col>
+        </Row>
+        {/* Row 2: Date range + Indicator + Technician (collapsible) */}
+        {filtersExpanded && (
+          <Row gutter={[12, 12]} style={{ marginTop: 12 }}>
+            <Col xs={12} sm={6} md={3}>
+              <DatePicker
+                value={dateFrom}
+                onChange={handleDateFromChange}
+                format="DD/MM/YYYY"
+                placeholder="Từ ngày"
+                style={{ width: "100%" }}
+                allowClear
+              />
+            </Col>
+            <Col xs={12} sm={6} md={3}>
+              <DatePicker
+                value={dateTo}
+                onChange={handleDateToChange}
+                format="DD/MM/YYYY"
+                placeholder="Đến ngày"
+                style={{ width: "100%" }}
+                allowClear
+              />
+            </Col>
+            <Col xs={24} sm={12} md={6}>
+              <Select
+                mode="multiple"
+                style={{ width: "100%" }}
+                placeholder="Chọn chỉ tiêu"
+                value={selectedIndicatorIds}
+                onChange={handleIndicatorChange}
+                showSearch
+                filterOption={(input, option) =>
+                  (option?.label as string ?? "").toLowerCase().includes(input.toLowerCase())
+                }
+                options={indicators.map((ind) => ({
+                  value: ind.id,
+                  label: ind.name,
+                }))}
+                maxTagCount="responsive"
+                allowClear
+              />
+            </Col>
+            <Col xs={24} sm={12} md={6}>
+              <Select
+                mode="multiple"
+                style={{ width: "100%" }}
+                placeholder="Chọn thử nghiệm viên"
+                value={selectedTechnicianIds}
+                onChange={handleTechnicianChange}
+                showSearch
+                filterOption={(input, option) =>
+                  (option?.label as string ?? "").toLowerCase().includes(input.toLowerCase())
+                }
+                options={technicians.map((tech) => ({
+                  value: tech.id,
+                  label: tech.displayName || `${tech.name || ""} ${tech.surname || ""}`.trim(),
+                }))}
+                maxTagCount="responsive"
+                allowClear
+              />
+            </Col>
+          </Row>
+        )}
+      </div>
 
       {/* Table - pagination disabled because we do server-side contract pagination */}
       <Table<ProcessedLogItem>

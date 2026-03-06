@@ -514,21 +514,32 @@ export const laboratoryTaskService = {
     fromDate?: string;
     toDate?: string;
     laboratoryId?: string;
+    indicatorIds?: string[];
+    technicianIds?: string[];
   }): Promise<{ items: any[]; totalCount: number }> => {
+    const params: Record<string, any> = {
+      SkipCount: input.skipCount,
+      MaxResultCount: input.maxResultCount,
+      Sorting: input.sorting,
+      Search: input.search,
+      TestRequestStatus: input.testRequestStatus,
+      FromDate: input.fromDate,
+      ToDate: input.toDate,
+      LaboratoryId: input.laboratoryId,
+    };
+    if (input.indicatorIds && input.indicatorIds.length > 0) {
+      input.indicatorIds.forEach((id, index) => {
+        params[`IndicatorIds[${index}]`] = id;
+      });
+    }
+    if (input.technicianIds && input.technicianIds.length > 0) {
+      input.technicianIds.forEach((id, index) => {
+        params[`TechnicianIds[${index}]`] = id;
+      });
+    }
     const response = await api.get<{ items: any[]; totalCount: number }>(
       `${BASE_URL}/sample-assignment-log`,
-      {
-        params: {
-          SkipCount: input.skipCount,
-          MaxResultCount: input.maxResultCount,
-          Sorting: input.sorting,
-          Search: input.search,
-          TestRequestStatus: input.testRequestStatus,
-          FromDate: input.fromDate,
-          ToDate: input.toDate,
-          LaboratoryId: input.laboratoryId
-        }
-      }
+      { params }
     );
     return response.data;
   }
