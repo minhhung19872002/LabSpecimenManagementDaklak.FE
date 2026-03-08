@@ -398,6 +398,7 @@ const TestingList: React.FC = () => {
                 ),
               }}
               onChange={handleTableChange}
+              sticky={{ offsetHeader: 80 }}
               scroll={{ x: 1000 }}
               onRow={(record) => ({
                 onDoubleClick: () => handleRowDoubleClick(record),

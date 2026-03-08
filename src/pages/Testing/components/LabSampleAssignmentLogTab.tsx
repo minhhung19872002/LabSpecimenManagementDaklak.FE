@@ -614,6 +614,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
           style: { cursor: 'pointer' },
         })}
         pagination={false}
+        sticky={{ offsetHeader: 80 }}
         scroll={{ x: 2200 }}
         size="small"
         bordered
