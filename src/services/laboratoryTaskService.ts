@@ -25,6 +25,7 @@ import {
   AddDepartmentSupportersInput,
   TaskStatusStatisticsDto
 } from '../types/laboratoryTask';
+import { SampleAssignmentLogStatisticsDto } from '../types/qualityManagement';
 
 const BASE_URL = '/api/v1/laboratory-tasks';
 
@@ -551,7 +552,17 @@ export const laboratoryTaskService = {
       { params }
     );
     return response.data;
-  }
+  },
+
+  /**
+   * Thống kê Sổ nhận mẫu giao việc cho QLKT theo QLKTDisplayStatus
+   */
+  getSampleAssignmentLogStatistics: async (): Promise<SampleAssignmentLogStatisticsDto> => {
+    const response = await api.get<SampleAssignmentLogStatisticsDto>(
+      `${BASE_URL}/sample-assignment-log/statistics`
+    );
+    return response.data;
+  },
 };
 
 export default laboratoryTaskService;

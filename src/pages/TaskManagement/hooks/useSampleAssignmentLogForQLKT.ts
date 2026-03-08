@@ -8,9 +8,12 @@ import {
   SampleAssignmentLogDto,
   GetSampleAssignmentLogInput,
 } from '../../../types/qualityManagement';
-import { UserLookupDto } from '../../../types/laboratoryTask';
-import { TestRequestStatus } from '../../../types/testRequest';
+import { UserLookupDto, QLKTDisplayStatus } from '../../../types/laboratoryTask';
 import { PATH_ROUTES } from '../../../constants';
+
+interface UseSampleAssignmentLogForQLKTOptions {
+  displayStatusFilter?: QLKTDisplayStatus;
+}
 
 interface UseSampleAssignmentLogForQLKTResult {
   loading: boolean;
@@ -19,9 +22,7 @@ interface UseSampleAssignmentLogForQLKTResult {
 
   // Filters
   searchText: string;
-  statusFilter: TestRequestStatus | undefined;
-  dateFrom: dayjs.Dayjs | null;
-  dateTo: dayjs.Dayjs | null;
+  dateRange: [dayjs.Dayjs, dayjs.Dayjs] | null;
   selectedIndicatorIds: string[];
   selectedTechnicianIds: string[];
 
@@ -38,9 +39,7 @@ interface UseSampleAssignmentLogForQLKTResult {
 
   // Handlers
   handleSearchInputChange: (value: string) => void;
-  handleStatusFilter: (status: TestRequestStatus | undefined) => void;
-  handleDateFromChange: (date: dayjs.Dayjs | null) => void;
-  handleDateToChange: (date: dayjs.Dayjs | null) => void;
+  handleDateRangeChange: (dates: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null) => void;
   handleIndicatorChange: (values: string[]) => void;
   handleTechnicianChange: (values: string[]) => void;
   handleTableChange: (pagination: { current?: number; pageSize?: number }) => void;
@@ -53,8 +52,11 @@ interface UseSampleAssignmentLogForQLKTResult {
  * Sử dụng API /api/v1/laboratory-tasks/sample-assignment-log
  * Backend tự xác định lab của user thông qua authentication token
  */
-export const useSampleAssignmentLogForQLKT = (): UseSampleAssignmentLogForQLKTResult => {
+export const useSampleAssignmentLogForQLKT = (
+  options?: UseSampleAssignmentLogForQLKTOptions
+): UseSampleAssignmentLogForQLKTResult => {
   const navigate = useNavigate();
+  const displayStatusFilter = options?.displayStatusFilter;
 
   // State
   const [loading, setLoading] = useState(false);
@@ -62,9 +64,7 @@ export const useSampleAssignmentLogForQLKT = (): UseSampleAssignmentLogForQLKTRe
   const [totalCount, setTotalCount] = useState(0);
   const [searchText, setSearchText] = useState('');
   const [debouncedSearchText, setDebouncedSearchText] = useState('');
-  const [statusFilter, setStatusFilter] = useState<TestRequestStatus | undefined>(undefined);
-  const [dateFrom, setDateFrom] = useState<dayjs.Dayjs | null>(null);
-  const [dateTo, setDateTo] = useState<dayjs.Dayjs | null>(null);
+  const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
   const [selectedIndicatorIds, setSelectedIndicatorIds] = useState<string[]>([]);
   const [selectedTechnicianIds, setSelectedTechnicianIds] = useState<string[]>([]);
 
@@ -108,24 +108,32 @@ export const useSampleAssignmentLogForQLKT = (): UseSampleAssignmentLogForQLKTRe
     loadMasterData();
   }, []);
 
-  // Load data - backend tự filter theo lab của user hiện tại (QLKT)
+  // Load data
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const input: GetSampleAssignmentLogInput = {
         skipCount: (pagination.current - 1) * pagination.pageSize,
         maxResultCount: pagination.pageSize,
-        sorting: 'ContractNumber desc',
+        sorting: dateRange ? 'RequestCompletionDate asc' : 'ContractNumber desc',
         search: debouncedSearchText || undefined,
-        testRequestStatus: statusFilter,
-        fromDate: dateFrom?.startOf('day').format('YYYY-MM-DD') || undefined,
-        toDate: dateTo?.endOf('day').format('YYYY-MM-DD') || undefined,
+        fromDate: dateRange?.[0]?.startOf('day').format('YYYY-MM-DD') || undefined,
+        toDate: dateRange?.[1]?.endOf('day').format('YYYY-MM-DD') || undefined,
         indicatorIds: selectedIndicatorIds.length > 0 ? selectedIndicatorIds : undefined,
         technicianIds: selectedTechnicianIds.length > 0 ? selectedTechnicianIds : undefined,
       };
 
       const result = await laboratoryTaskService.getSampleAssignmentLog(input);
-      setData(result.items);
+
+      // Client-side filter by QLKTDisplayStatus if set
+      if (displayStatusFilter !== undefined) {
+        const filtered = result.items.filter(
+          (item) => item.qlktDisplayStatus === displayStatusFilter
+        );
+        setData(filtered);
+      } else {
+        setData(result.items);
+      }
       setTotalCount(result.totalCount);
       setPagination(prev => ({ ...prev, total: result.totalCount }));
     } catch (error) {
@@ -134,7 +142,7 @@ export const useSampleAssignmentLogForQLKT = (): UseSampleAssignmentLogForQLKTRe
     } finally {
       setLoading(false);
     }
-  }, [pagination.current, pagination.pageSize, debouncedSearchText, statusFilter, dateFrom, dateTo, selectedIndicatorIds, selectedTechnicianIds]);
+  }, [pagination.current, pagination.pageSize, debouncedSearchText, displayStatusFilter, dateRange, selectedIndicatorIds, selectedTechnicianIds]);
 
   // Initial load and reload on filter changes
   useEffect(() => {
@@ -146,18 +154,12 @@ export const useSampleAssignmentLogForQLKT = (): UseSampleAssignmentLogForQLKTRe
     setSearchText(value);
   }, []);
 
-  const handleStatusFilter = useCallback((status: TestRequestStatus | undefined) => {
-    setStatusFilter(status);
-    setPagination(prev => ({ ...prev, current: 1 }));
-  }, []);
-
-  const handleDateFromChange = useCallback((date: dayjs.Dayjs | null) => {
-    setDateFrom(date);
-    setPagination(prev => ({ ...prev, current: 1 }));
-  }, []);
-
-  const handleDateToChange = useCallback((date: dayjs.Dayjs | null) => {
-    setDateTo(date);
+  const handleDateRangeChange = useCallback((dates: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null) => {
+    if (dates && dates[0] && dates[1]) {
+      setDateRange([dates[0], dates[1]]);
+    } else {
+      setDateRange(null);
+    }
     setPagination(prev => ({ ...prev, current: 1 }));
   }, []);
 
@@ -187,9 +189,7 @@ export const useSampleAssignmentLogForQLKT = (): UseSampleAssignmentLogForQLKTRe
   const handleReload = useCallback(() => {
     setSearchText('');
     setDebouncedSearchText('');
-    setStatusFilter(undefined);
-    setDateFrom(null);
-    setDateTo(null);
+    setDateRange(null);
     setSelectedIndicatorIds([]);
     setSelectedTechnicianIds([]);
     setPagination(prev => ({ ...prev, current: 1 }));
@@ -200,18 +200,14 @@ export const useSampleAssignmentLogForQLKT = (): UseSampleAssignmentLogForQLKTRe
     data,
     totalCount,
     searchText,
-    statusFilter,
-    dateFrom,
-    dateTo,
+    dateRange,
     selectedIndicatorIds,
     selectedTechnicianIds,
     indicators,
     technicians,
     pagination,
     handleSearchInputChange,
-    handleStatusFilter,
-    handleDateFromChange,
-    handleDateToChange,
+    handleDateRangeChange,
     handleIndicatorChange,
     handleTechnicianChange,
     handleTableChange,
