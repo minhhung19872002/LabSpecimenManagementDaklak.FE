@@ -42,10 +42,36 @@ const toApiParams = (params: GetTestingListInput) => {
     });
   }
   if (params.laboratoryId) apiParams.LaboratoryId = params.laboratoryId;
+  if (params.requestCompletionDateFrom) apiParams.RequestCompletionDateFrom = params.requestCompletionDateFrom;
+  if (params.requestCompletionDateTo) apiParams.RequestCompletionDateTo = params.requestCompletionDateTo;
+  if (params.indicatorIds && params.indicatorIds.length > 0) {
+    params.indicatorIds.forEach((id, index) => {
+      apiParams[`IndicatorIds[${index}]`] = id;
+    });
+  }
   return apiParams;
 };
 
+export interface TestingStatusStatisticsDto {
+  total: number;
+  notStarted: number;
+  inProgress: number;
+  pendingApproval: number;
+  rejected: number;
+  completed: number;
+}
+
 export const testingService = {
+  /**
+   * Get status statistics for testing tasks
+   */
+  getStatusStatistics: async (tab: number): Promise<TestingStatusStatisticsDto> => {
+    const response = await api.get<TestingStatusStatisticsDto>(`${BASE_URL}/statistics`, {
+      params: { Tab: tab }
+    });
+    return response.data;
+  },
+
   /**
    * Get filtered and paged list of testing tasks
    */

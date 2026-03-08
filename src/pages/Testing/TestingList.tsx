@@ -10,7 +10,9 @@ import {
   Select,
   Radio,
   Typography,
+  DatePicker,
 } from "antd";
+const { RangePicker } = DatePicker;
 import Icon, {
   ExperimentOutlined,
   SearchOutlined,
@@ -46,10 +48,15 @@ const TestingList: React.FC = () => {
     stats,
     columns,
     activeTab,
+    dateRange,
+    selectedIndicatorIds,
+    indicators,
     handleSearch,
     handleSearchInputChange,
     handleStatusFilterChange,
     handleTechnicianFilterChange,
+    handleDateRangeChange,
+    handleIndicatorChange,
     handleTabChange,
     handleTableChange,
     handleRefresh,
@@ -71,6 +78,9 @@ const TestingList: React.FC = () => {
   // Determine if showing testing content or sample assignment log
   const isShowingSampleAssignmentLog = currentTab === "sample-assignment-log";
 
+  // Show extra filters only for "Công việc của Lab" tab
+  const isAllTab = activeTab === TestingTabType.All;
+
   return (
     <div>
       {/* Statistics Cards - only show for testing tabs */}
@@ -82,6 +92,7 @@ const TestingList: React.FC = () => {
               value: stats.total,
               iconBg: "contract",
               icon: "flask",
+              filterValue: "all",
             },
             {
               title: "Chưa bắt đầu",
@@ -89,6 +100,7 @@ const TestingList: React.FC = () => {
               iconBg: "pending",
               icon: "hourglass",
               valueColor: "#8C8C8C",
+              filterValue: String(TestingStatus.NotStarted),
             },
             {
               title: "Đang thử nghiệm",
@@ -96,6 +108,7 @@ const TestingList: React.FC = () => {
               iconBg: "blue",
               icon: "arrow-repeat",
               valueColor: "#1890FF",
+              filterValue: String(TestingStatus.InProgress),
             },
             {
               title: "Chờ phê duyệt",
@@ -103,6 +116,7 @@ const TestingList: React.FC = () => {
               iconBg: "late",
               icon: "clock",
               valueColor: "#FAAD14",
+              filterValue: String(TestingStatus.PendingApproval),
             },
             {
               title: "Bị từ chối",
@@ -110,6 +124,7 @@ const TestingList: React.FC = () => {
               iconBg: "red",
               icon: "x-circle",
               valueColor: "#FF4D4F",
+              filterValue: String(TestingStatus.Rejected),
             },
             {
               title: "Hoàn thành",
@@ -117,34 +132,47 @@ const TestingList: React.FC = () => {
               iconBg: "green",
               icon: "check-circle",
               valueColor: "#52C41A",
+              filterValue: String(TestingStatus.Completed),
             },
-          ].map((stat, index) => (
-            <Card key={index} className="dashboard-stat-card" bordered={false}>
-              <div className="dashboard-stat-content">
-                <div className="dashboard-stat-info">
-                  <Text className="dashboard-stat-title">{stat.title}</Text>
-                  <div
-                    className="dashboard-stat-value"
-                    style={
-                      stat.valueColor
-                        ? {
-                            background: stat.valueColor,
-                            WebkitBackgroundClip: "text",
-                            WebkitTextFillColor: "transparent",
-                            backgroundClip: "text",
-                          }
-                        : undefined
-                    }
-                  >
-                    {stat.value}
+          ].map((stat, index) => {
+            const isActive =
+              stat.filterValue === "all"
+                ? statusFilter === undefined
+                : statusFilter === Number(stat.filterValue);
+
+            return (
+              <Card
+                key={index}
+                className={`dashboard-stat-card testing-stat-clickable${isActive ? " testing-stat-active" : ""}`}
+                bordered={false}
+                onClick={() => handleStatusFilterChange(stat.filterValue)}
+              >
+                <div className="dashboard-stat-content">
+                  <div className="dashboard-stat-info">
+                    <Text className="dashboard-stat-title">{stat.title}</Text>
+                    <div
+                      className="dashboard-stat-value"
+                      style={
+                        stat.valueColor
+                          ? {
+                              background: stat.valueColor,
+                              WebkitBackgroundClip: "text",
+                              WebkitTextFillColor: "transparent",
+                              backgroundClip: "text",
+                            }
+                          : undefined
+                      }
+                    >
+                      {stat.value}
+                    </div>
+                  </div>
+                  <div className={`dashboard-stat-icon ${stat.iconBg}`}>
+                    <Icon name={stat.icon} />
                   </div>
                 </div>
-                <div className={`dashboard-stat-icon ${stat.iconBg}`}>
-                  <Icon name={stat.icon} />
-                </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
       )}
 
@@ -193,7 +221,7 @@ const TestingList: React.FC = () => {
           <>
             {/* Search & Filter */}
             <Row gutter={[16, 16]} style={{ marginBottom: 0, padding: 16 }}>
-              <Col xs={24} sm={12} md={8}>
+              <Col xs={24} sm={12} md={isAllTab ? 6 : 8}>
                 <Input.Search
                   placeholder="Tìm theo số hợp đồng..."
                   prefix={<SearchOutlined />}
@@ -204,32 +232,41 @@ const TestingList: React.FC = () => {
                   enterButton
                 />
               </Col>
-              <Col xs={24} sm={6} md={4}>
-                <Select
-                  style={{ width: "100%" }}
-                  placeholder="Trạng thái"
-                  value={statusFilter}
-                  onChange={handleStatusFilterChange}
-                  allowClear
-                >
-                  <Select.Option value={TestingStatus.NotStarted}>
-                    Chưa bắt đầu
-                  </Select.Option>
-                  <Select.Option value={TestingStatus.InProgress}>
-                    Đang thử nghiệm
-                  </Select.Option>
-                  <Select.Option value={TestingStatus.PendingApproval}>
-                    Chờ phê duyệt
-                  </Select.Option>
-                  <Select.Option value={TestingStatus.Rejected}>
-                    Bị từ chối
-                  </Select.Option>
-                  <Select.Option value={TestingStatus.Completed}>
-                    Hoàn thành
-                  </Select.Option>
-                </Select>
-              </Col>
-              <Col xs={24} sm={6} md={4}>
+              {isAllTab && (
+                <>
+                  <Col xs={24} sm={12} md={5}>
+                    <RangePicker
+                      value={dateRange}
+                      onChange={handleDateRangeChange}
+                      style={{ width: "100%" }}
+                      format="DD/MM/YY"
+                      allowClear
+                    />
+                  </Col>
+                  <Col xs={24} sm={12} md={7}>
+                    <Select
+                      mode="multiple"
+                      style={{ width: "100%" }}
+                      placeholder="Chọn chỉ tiêu"
+                      value={selectedIndicatorIds}
+                      onChange={handleIndicatorChange}
+                      showSearch
+                      filterOption={(input, option) =>
+                        ((option?.label as string) ?? "")
+                          .toLowerCase()
+                          .includes(input.toLowerCase())
+                      }
+                      options={indicators.map((ind) => ({
+                        value: ind.id,
+                        label: ind.name,
+                      }))}
+                      maxTagCount="responsive"
+                      allowClear
+                    />
+                  </Col>
+                </>
+              )}
+              <Col xs={24} sm={6} md={isAllTab ? 6 : 4}>
                 <Select
                   mode="multiple"
                   style={{ width: "100%" }}

@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { message } from "antd";
+import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
 import { testingService } from "../../../services/testingService";
 import { laboratoryTaskService } from "../../../services/laboratoryTaskService";
+import { indicatorService, IndicatorDto } from "../../../services/masterDataService";
 import {
   TestingListDto,
   TestingStatus,
@@ -21,6 +23,12 @@ export const useTestingList = () => {
   );
   const [technicianFilter, setTechnicianFilter] = useState<string[]>([]);
 
+  // Date range filter (Ngày yêu cầu xong)
+  const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
+
+  // Indicator filter (Chọn chỉ tiêu)
+  const [selectedIndicatorIds, setSelectedIndicatorIds] = useState<string[]>([]);
+
   // Active tab state
   const [activeTab, setActiveTab] = useState<TestingTabType>(
     TestingTabType.MyAssignments
@@ -29,6 +37,9 @@ export const useTestingList = () => {
   // Technicians for filter dropdown
   const [technicians, setTechnicians] = useState<UserLookupDto[]>([]);
   const [loadingTechnicians, setLoadingTechnicians] = useState(false);
+
+  // Indicators for filter dropdown
+  const [indicators, setIndicators] = useState<IndicatorDto[]>([]);
 
   // Pagination state
   const [pagination, setPagination] = useState({
@@ -53,6 +64,19 @@ export const useTestingList = () => {
     loadTechnicians();
   }, []);
 
+  // Load indicators for filter dropdown
+  useEffect(() => {
+    const loadIndicators = async () => {
+      try {
+        const result = await indicatorService.getActive();
+        setIndicators(result || []);
+      } catch (error) {
+        console.error("Failed to load indicators:", error);
+      }
+    };
+    loadIndicators();
+  }, []);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -64,6 +88,10 @@ export const useTestingList = () => {
         statuses: statusFilter !== undefined ? [statusFilter] : undefined,
         technicianIds:
           technicianFilter.length > 0 ? technicianFilter : undefined,
+        requestCompletionDateFrom: dateRange?.[0]?.startOf('day').format('YYYY-MM-DD') || undefined,
+        requestCompletionDateTo: dateRange?.[1]?.endOf('day').format('YYYY-MM-DD') || undefined,
+        indicatorIds: selectedIndicatorIds.length > 0 ? selectedIndicatorIds : undefined,
+        sorting: dateRange ? 'requestcompletiondate' : undefined,
       });
 
       setTasks(result.items);
@@ -81,31 +109,43 @@ export const useTestingList = () => {
     searchText,
     statusFilter,
     technicianFilter,
+    dateRange,
+    selectedIndicatorIds,
   ]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  // Statistics
-  const stats = useMemo(
-    () => ({
-      total: pagination.total,
-      notStarted: tasks.filter((t) => t.testingStatus === TestingStatus.NotStarted)
-        .length,
-      inProgress: tasks.filter(
-        (t) => t.testingStatus === TestingStatus.InProgress
-      ).length,
-      pendingApproval: tasks.filter(
-        (t) => t.testingStatus === TestingStatus.PendingApproval
-      ).length,
-      rejected: tasks.filter((t) => t.testingStatus === TestingStatus.Rejected)
-        .length,
-      completed: tasks.filter((t) => t.testingStatus === TestingStatus.Completed)
-        .length,
-    }),
-    [tasks, pagination.total]
-  );
+  // Statistics - loaded separately from API (not affected by filters)
+  const [stats, setStats] = useState({
+    total: 0,
+    notStarted: 0,
+    inProgress: 0,
+    pendingApproval: 0,
+    rejected: 0,
+    completed: 0,
+  });
+
+  const loadStats = useCallback(async () => {
+    try {
+      const result = await testingService.getStatusStatistics(activeTab);
+      setStats({
+        total: result.total,
+        notStarted: result.notStarted,
+        inProgress: result.inProgress,
+        pendingApproval: result.pendingApproval,
+        rejected: result.rejected,
+        completed: result.completed,
+      });
+    } catch (error) {
+      console.error("Failed to load testing statistics:", error);
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
 
   const handleSearch = useCallback((value: string) => {
     setSearchText(value);
@@ -117,8 +157,10 @@ export const useTestingList = () => {
   }, []);
 
   const handleStatusFilterChange = useCallback(
-    (value: TestingStatus | undefined) => {
-      setStatusFilter(value);
+    (value: string) => {
+      setStatusFilter(
+        value === "all" ? undefined : (Number(value) as TestingStatus)
+      );
       setPagination((prev) => ({ ...prev, current: 1 }));
     },
     []
@@ -126,6 +168,20 @@ export const useTestingList = () => {
 
   const handleTechnicianFilterChange = useCallback((values: string[]) => {
     setTechnicianFilter(values);
+    setPagination((prev) => ({ ...prev, current: 1 }));
+  }, []);
+
+  const handleDateRangeChange = useCallback((dates: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null) => {
+    if (dates && dates[0] && dates[1]) {
+      setDateRange([dates[0], dates[1]]);
+    } else {
+      setDateRange(null);
+    }
+    setPagination((prev) => ({ ...prev, current: 1 }));
+  }, []);
+
+  const handleIndicatorChange = useCallback((values: string[]) => {
+    setSelectedIndicatorIds(values);
     setPagination((prev) => ({ ...prev, current: 1 }));
   }, []);
 
@@ -149,9 +205,12 @@ export const useTestingList = () => {
     setSearchText("");
     setStatusFilter(undefined);
     setTechnicianFilter([]);
+    setDateRange(null);
+    setSelectedIndicatorIds([]);
     setPagination((prev) => ({ ...prev, current: 1 }));
     loadData();
-  }, [loadData]);
+    loadStats();
+  }, [loadData, loadStats]);
 
   const handleRowDoubleClick = useCallback(
     (record: TestingListDto) => {
@@ -190,6 +249,9 @@ export const useTestingList = () => {
     stats,
     columns,
     activeTab,
+    dateRange,
+    selectedIndicatorIds,
+    indicators,
 
     // Handlers
     loadData,
@@ -197,6 +259,8 @@ export const useTestingList = () => {
     handleSearchInputChange,
     handleStatusFilterChange,
     handleTechnicianFilterChange,
+    handleDateRangeChange,
+    handleIndicatorChange,
     handleTabChange,
     handleTableChange,
     handleRefresh,

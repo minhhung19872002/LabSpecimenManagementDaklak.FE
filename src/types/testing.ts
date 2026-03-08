@@ -101,6 +101,9 @@ export interface GetTestingListInput {
   statuses?: TestingStatus[];
   technicianIds?: string[];
   laboratoryId?: string;
+  requestCompletionDateFrom?: string;
+  requestCompletionDateTo?: string;
+  indicatorIds?: string[];
 }
 
 // Paged result
