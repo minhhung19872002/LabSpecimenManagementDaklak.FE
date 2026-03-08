@@ -273,7 +273,13 @@ const getRowColorClass = (record: ProcessedLogItem): string => {
   return '';
 };
 
-const LabSampleAssignmentLogTab: React.FC = () => {
+interface LabSampleAssignmentLogTabProps {
+  displayStatusFilter?: QLKTDisplayStatus;
+}
+
+const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
+  displayStatusFilter,
+}) => {
   const {
     loading,
     data,
@@ -292,7 +298,7 @@ const LabSampleAssignmentLogTab: React.FC = () => {
     handleTechnicianFilterChange,
     handleTableChange,
     handleRowDoubleClick,
-  } = useSampleAssignmentLogForLab();
+  } = useSampleAssignmentLogForLab({ displayStatusFilter });
 
   // Process data for row spanning
   const processedData = useMemo(() => processDataForRowSpan(data), [data]);

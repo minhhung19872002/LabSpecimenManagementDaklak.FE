@@ -8,18 +8,24 @@ import { indicatorService, IndicatorDto } from '../../../services/masterDataServ
 import {
   SampleAssignmentLogDto,
   GetSampleAssignmentLogInput,
+  SampleAssignmentLogStatisticsDto,
 } from '../../../types/qualityManagement';
-import { TestRequestStatus } from '../../../types/testRequest';
-import { UserLookupDto } from '../../../types/laboratoryTask';
+import { UserLookupDto, QLKTDisplayStatus } from '../../../types/laboratoryTask';
+
+interface UseSampleAssignmentLogForLabOptions {
+  displayStatusFilter?: QLKTDisplayStatus;
+}
 
 interface UseSampleAssignmentLogForLabResult {
   loading: boolean;
   data: SampleAssignmentLogDto[];
   totalCount: number;
 
+  // Statistics
+  stats: SampleAssignmentLogStatisticsDto;
+
   // Filters
   searchText: string;
-  statusFilter: TestRequestStatus | undefined;
   dateRange: [dayjs.Dayjs, dayjs.Dayjs] | null;
   selectedIndicatorIds: string[];
   indicators: IndicatorDto[];
@@ -37,7 +43,6 @@ interface UseSampleAssignmentLogForLabResult {
   // Handlers
   handleSearch: (value: string) => void;
   handleSearchInputChange: (value: string) => void;
-  handleStatusFilter: (status: TestRequestStatus | undefined) => void;
   handleDateRangeChange: (dates: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null) => void;
   handleIndicatorChange: (values: string[]) => void;
   handleTechnicianFilterChange: (values: string[]) => void;
@@ -51,15 +56,17 @@ interface UseSampleAssignmentLogForLabResult {
  * Sử dụng API /api/v1/testing/sample-assignment-log (query từ LaboratoryTaskIndicator)
  * Backend tự xác định lab của user thông qua authentication token
  */
-export const useSampleAssignmentLogForLab = (): UseSampleAssignmentLogForLabResult => {
+export const useSampleAssignmentLogForLab = (
+  options?: UseSampleAssignmentLogForLabOptions
+): UseSampleAssignmentLogForLabResult => {
   const navigate = useNavigate();
+  const displayStatusFilter = options?.displayStatusFilter;
 
   // State
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<SampleAssignmentLogDto[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [searchText, setSearchText] = useState('');
-  const [statusFilter, setStatusFilter] = useState<TestRequestStatus | undefined>(undefined);
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
   const [selectedIndicatorIds, setSelectedIndicatorIds] = useState<string[]>([]);
   const [technicianFilter, setTechnicianFilter] = useState<string[]>([]);
@@ -67,6 +74,17 @@ export const useSampleAssignmentLogForLab = (): UseSampleAssignmentLogForLabResu
     current: 1,
     pageSize: 50,
     total: 0,
+  });
+
+  // Statistics
+  const [stats, setStats] = useState<SampleAssignmentLogStatisticsDto>({
+    total: 0,
+    underReview: 0,
+    toDo: 0,
+    testing: 0,
+    waitingApproval: 0,
+    resultRejected: 0,
+    completed: 0,
   });
 
   // Master data
@@ -103,6 +121,20 @@ export const useSampleAssignmentLogForLab = (): UseSampleAssignmentLogForLabResu
     loadIndicators();
   }, []);
 
+  // Load statistics (independent of filters)
+  const loadStats = useCallback(async () => {
+    try {
+      const result = await testingService.getSampleAssignmentLogStatistics();
+      setStats(result);
+    } catch (error) {
+      console.error('Failed to load sample assignment log statistics:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
+
   // Load data
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -112,7 +144,6 @@ export const useSampleAssignmentLogForLab = (): UseSampleAssignmentLogForLabResu
         maxResultCount: pagination.pageSize,
         sorting: dateRange ? 'RequestCompletionDate asc' : 'ContractNumber desc',
         search: searchText || undefined,
-        testRequestStatus: statusFilter,
         fromDate: dateRange?.[0]?.startOf('day').format('YYYY-MM-DD') || undefined,
         toDate: dateRange?.[1]?.endOf('day').format('YYYY-MM-DD') || undefined,
         indicatorIds: selectedIndicatorIds.length > 0 ? selectedIndicatorIds : undefined,
@@ -120,7 +151,16 @@ export const useSampleAssignmentLogForLab = (): UseSampleAssignmentLogForLabResu
       };
 
       const result = await testingService.getSampleAssignmentLog(input);
-      setData(result.items);
+
+      // Client-side filter by QLKTDisplayStatus if set
+      if (displayStatusFilter !== undefined) {
+        const filtered = result.items.filter(
+          (item) => item.qlktDisplayStatus === displayStatusFilter
+        );
+        setData(filtered);
+      } else {
+        setData(result.items);
+      }
       setTotalCount(result.totalCount);
       setPagination(prev => ({ ...prev, total: result.totalCount }));
     } catch (error) {
@@ -129,7 +169,7 @@ export const useSampleAssignmentLogForLab = (): UseSampleAssignmentLogForLabResu
     } finally {
       setLoading(false);
     }
-  }, [pagination.current, pagination.pageSize, searchText, statusFilter, dateRange, selectedIndicatorIds, technicianFilter]);
+  }, [pagination.current, pagination.pageSize, searchText, displayStatusFilter, dateRange, selectedIndicatorIds, technicianFilter]);
 
   useEffect(() => {
     loadData();
@@ -143,11 +183,6 @@ export const useSampleAssignmentLogForLab = (): UseSampleAssignmentLogForLabResu
 
   const handleSearchInputChange = useCallback((value: string) => {
     setSearchText(value);
-  }, []);
-
-  const handleStatusFilter = useCallback((status: TestRequestStatus | undefined) => {
-    setStatusFilter(status);
-    setPagination(prev => ({ ...prev, current: 1 }));
   }, []);
 
   const handleDateRangeChange = useCallback((dates: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null) => {
@@ -183,20 +218,20 @@ export const useSampleAssignmentLogForLab = (): UseSampleAssignmentLogForLabResu
 
   const handleReload = useCallback(() => {
     setSearchText('');
-    setStatusFilter(undefined);
     setDateRange(null);
     setSelectedIndicatorIds([]);
     setTechnicianFilter([]);
     setPagination(prev => ({ ...prev, current: 1 }));
     loadData();
-  }, [loadData]);
+    loadStats();
+  }, [loadData, loadStats]);
 
   return {
     loading,
     data,
     totalCount,
+    stats,
     searchText,
-    statusFilter,
     dateRange,
     selectedIndicatorIds,
     indicators,
@@ -206,7 +241,6 @@ export const useSampleAssignmentLogForLab = (): UseSampleAssignmentLogForLabResu
     pagination,
     handleSearch,
     handleSearchInputChange,
-    handleStatusFilter,
     handleDateRangeChange,
     handleIndicatorChange,
     handleTechnicianFilterChange,

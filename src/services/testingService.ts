@@ -18,6 +18,7 @@ import {
 import {
   GetSampleAssignmentLogInput,
   PagedSampleAssignmentLogResult,
+  SampleAssignmentLogStatisticsDto,
 } from '../types/qualityManagement';
 
 const BASE_URL = '/api/v1/testing';
@@ -106,6 +107,14 @@ export const testingService = {
     }
 
     const response = await api.get<PagedSampleAssignmentLogResult>(`${BASE_URL}/sample-assignment-log`, { params: queryParams });
+    return response.data;
+  },
+
+  /**
+   * Get statistics for sample assignment log (by QLKTDisplayStatus)
+   */
+  getSampleAssignmentLogStatistics: async (): Promise<SampleAssignmentLogStatisticsDto> => {
+    const response = await api.get<SampleAssignmentLogStatisticsDto>(`${BASE_URL}/sample-assignment-log/statistics`);
     return response.data;
   },
 

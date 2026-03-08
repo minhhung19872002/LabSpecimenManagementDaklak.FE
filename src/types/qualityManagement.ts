@@ -436,3 +436,14 @@ export interface PagedSampleAssignmentLogResult {
   items: SampleAssignmentLogDto[];
   totalCount: number;
 }
+
+// Statistics for Sample Assignment Log (by QLKTDisplayStatus)
+export interface SampleAssignmentLogStatisticsDto {
+  total: number;
+  underReview: number;
+  toDo: number;
+  testing: number;
+  waitingApproval: number;
+  resultRejected: number;
+  completed: number;
+}
