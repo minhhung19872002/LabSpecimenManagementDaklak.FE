@@ -94,6 +94,16 @@ export const testingService = {
     if (input.fromDate) queryParams.FromDate = input.fromDate;
     if (input.toDate) queryParams.ToDate = input.toDate;
     if (input.laboratoryId) queryParams.LaboratoryId = input.laboratoryId;
+    if (input.indicatorIds && input.indicatorIds.length > 0) {
+      input.indicatorIds.forEach((id, index) => {
+        queryParams[`IndicatorIds[${index}]`] = id;
+      });
+    }
+    if (input.technicianIds && input.technicianIds.length > 0) {
+      input.technicianIds.forEach((id, index) => {
+        queryParams[`TechnicianIds[${index}]`] = id;
+      });
+    }
 
     const response = await api.get<PagedSampleAssignmentLogResult>(`${BASE_URL}/sample-assignment-log`, { params: queryParams });
     return response.data;

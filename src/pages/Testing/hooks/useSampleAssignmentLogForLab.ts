@@ -1,12 +1,16 @@
 import { useState, useCallback, useEffect } from 'react';
 import { message } from 'antd';
+import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
 import { testingService } from '../../../services/testingService';
+import { laboratoryTaskService } from '../../../services/laboratoryTaskService';
+import { indicatorService, IndicatorDto } from '../../../services/masterDataService';
 import {
   SampleAssignmentLogDto,
   GetSampleAssignmentLogInput,
 } from '../../../types/qualityManagement';
 import { TestRequestStatus } from '../../../types/testRequest';
+import { UserLookupDto } from '../../../types/laboratoryTask';
 
 interface UseSampleAssignmentLogForLabResult {
   loading: boolean;
@@ -16,6 +20,12 @@ interface UseSampleAssignmentLogForLabResult {
   // Filters
   searchText: string;
   statusFilter: TestRequestStatus | undefined;
+  dateRange: [dayjs.Dayjs, dayjs.Dayjs] | null;
+  selectedIndicatorIds: string[];
+  indicators: IndicatorDto[];
+  technicianFilter: string[];
+  technicians: UserLookupDto[];
+  loadingTechnicians: boolean;
 
   // Pagination
   pagination: {
@@ -26,7 +36,11 @@ interface UseSampleAssignmentLogForLabResult {
 
   // Handlers
   handleSearch: (value: string) => void;
+  handleSearchInputChange: (value: string) => void;
   handleStatusFilter: (status: TestRequestStatus | undefined) => void;
+  handleDateRangeChange: (dates: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null) => void;
+  handleIndicatorChange: (values: string[]) => void;
+  handleTechnicianFilterChange: (values: string[]) => void;
   handleTableChange: (pagination: { current?: number; pageSize?: number }) => void;
   handleRowDoubleClick: (record: SampleAssignmentLogDto) => void;
   handleReload: () => void;
@@ -46,22 +60,63 @@ export const useSampleAssignmentLogForLab = (): UseSampleAssignmentLogForLabResu
   const [totalCount, setTotalCount] = useState(0);
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<TestRequestStatus | undefined>(undefined);
+  const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
+  const [selectedIndicatorIds, setSelectedIndicatorIds] = useState<string[]>([]);
+  const [technicianFilter, setTechnicianFilter] = useState<string[]>([]);
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 50,
     total: 0,
   });
 
-  // Load data - backend tự filter theo lab của user hiện tại
+  // Master data
+  const [technicians, setTechnicians] = useState<UserLookupDto[]>([]);
+  const [loadingTechnicians, setLoadingTechnicians] = useState(false);
+  const [indicators, setIndicators] = useState<IndicatorDto[]>([]);
+
+  // Load technicians
+  useEffect(() => {
+    const loadTechnicians = async () => {
+      setLoadingTechnicians(true);
+      try {
+        const result = await laboratoryTaskService.getTechniciansByLaboratory();
+        setTechnicians(result || []);
+      } catch (error) {
+        console.error('Failed to load technicians:', error);
+      } finally {
+        setLoadingTechnicians(false);
+      }
+    };
+    loadTechnicians();
+  }, []);
+
+  // Load indicators
+  useEffect(() => {
+    const loadIndicators = async () => {
+      try {
+        const result = await indicatorService.getActive();
+        setIndicators(result || []);
+      } catch (error) {
+        console.error('Failed to load indicators:', error);
+      }
+    };
+    loadIndicators();
+  }, []);
+
+  // Load data
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const input: GetSampleAssignmentLogInput = {
         skipCount: (pagination.current - 1) * pagination.pageSize,
         maxResultCount: pagination.pageSize,
-        sorting: 'ContractNumber desc',
+        sorting: dateRange ? 'RequestCompletionDate asc' : 'ContractNumber desc',
         search: searchText || undefined,
         testRequestStatus: statusFilter,
+        fromDate: dateRange?.[0]?.startOf('day').format('YYYY-MM-DD') || undefined,
+        toDate: dateRange?.[1]?.endOf('day').format('YYYY-MM-DD') || undefined,
+        indicatorIds: selectedIndicatorIds.length > 0 ? selectedIndicatorIds : undefined,
+        technicianIds: technicianFilter.length > 0 ? technicianFilter : undefined,
       };
 
       const result = await testingService.getSampleAssignmentLog(input);
@@ -74,9 +129,8 @@ export const useSampleAssignmentLogForLab = (): UseSampleAssignmentLogForLabResu
     } finally {
       setLoading(false);
     }
-  }, [pagination.current, pagination.pageSize, searchText, statusFilter]);
+  }, [pagination.current, pagination.pageSize, searchText, statusFilter, dateRange, selectedIndicatorIds, technicianFilter]);
 
-  // Initial load and reload on filter changes
   useEffect(() => {
     loadData();
   }, [loadData]);
@@ -87,8 +141,31 @@ export const useSampleAssignmentLogForLab = (): UseSampleAssignmentLogForLabResu
     setPagination(prev => ({ ...prev, current: 1 }));
   }, []);
 
+  const handleSearchInputChange = useCallback((value: string) => {
+    setSearchText(value);
+  }, []);
+
   const handleStatusFilter = useCallback((status: TestRequestStatus | undefined) => {
     setStatusFilter(status);
+    setPagination(prev => ({ ...prev, current: 1 }));
+  }, []);
+
+  const handleDateRangeChange = useCallback((dates: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null) => {
+    if (dates && dates[0] && dates[1]) {
+      setDateRange([dates[0], dates[1]]);
+    } else {
+      setDateRange(null);
+    }
+    setPagination(prev => ({ ...prev, current: 1 }));
+  }, []);
+
+  const handleIndicatorChange = useCallback((values: string[]) => {
+    setSelectedIndicatorIds(values);
+    setPagination(prev => ({ ...prev, current: 1 }));
+  }, []);
+
+  const handleTechnicianFilterChange = useCallback((values: string[]) => {
+    setTechnicianFilter(values);
     setPagination(prev => ({ ...prev, current: 1 }));
   }, []);
 
@@ -105,6 +182,12 @@ export const useSampleAssignmentLogForLab = (): UseSampleAssignmentLogForLabResu
   }, [navigate]);
 
   const handleReload = useCallback(() => {
+    setSearchText('');
+    setStatusFilter(undefined);
+    setDateRange(null);
+    setSelectedIndicatorIds([]);
+    setTechnicianFilter([]);
+    setPagination(prev => ({ ...prev, current: 1 }));
     loadData();
   }, [loadData]);
 
@@ -114,9 +197,19 @@ export const useSampleAssignmentLogForLab = (): UseSampleAssignmentLogForLabResu
     totalCount,
     searchText,
     statusFilter,
+    dateRange,
+    selectedIndicatorIds,
+    indicators,
+    technicianFilter,
+    technicians,
+    loadingTechnicians,
     pagination,
     handleSearch,
+    handleSearchInputChange,
     handleStatusFilter,
+    handleDateRangeChange,
+    handleIndicatorChange,
+    handleTechnicianFilterChange,
     handleTableChange,
     handleRowDoubleClick,
     handleReload,

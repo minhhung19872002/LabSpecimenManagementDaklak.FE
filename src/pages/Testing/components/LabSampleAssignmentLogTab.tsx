@@ -1,13 +1,12 @@
 import React, { useMemo, useCallback, useState } from 'react';
-import { Table, Input, Select, Button, Tag, Row, Col, Pagination } from 'antd';
-import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
+import { Table, Input, Select, Tag, Row, Col, Pagination, DatePicker } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useSampleAssignmentLogForLab } from '../hooks/useSampleAssignmentLogForLab';
 import { SampleAssignmentLogDto } from '../../../types/qualityManagement';
 import {
   TestRequestStatus,
-  TestRequestStatusLabels,
 } from '../../../types/testRequest';
 import {
   IndicatorApprovalStatus,
@@ -15,6 +14,8 @@ import {
   QLKTDisplayStatusLabels,
   QLKTDisplayStatusColors,
 } from '../../../types/laboratoryTask';
+
+const { RangePicker } = DatePicker;
 
 import '../../QualityManagement/components/SampleAssignmentLogTab.css';
 
@@ -276,13 +277,21 @@ const LabSampleAssignmentLogTab: React.FC = () => {
   const {
     loading,
     data,
-    statusFilter,
+    searchText,
+    dateRange,
+    selectedIndicatorIds,
+    indicators,
+    technicianFilter,
+    technicians,
+    loadingTechnicians,
     pagination,
     handleSearch,
-    handleStatusFilter,
+    handleSearchInputChange,
+    handleDateRangeChange,
+    handleIndicatorChange,
+    handleTechnicianFilterChange,
     handleTableChange,
     handleRowDoubleClick,
-    handleReload,
   } = useSampleAssignmentLogForLab();
 
   // Process data for row spanning
@@ -505,40 +514,71 @@ const LabSampleAssignmentLogTab: React.FC = () => {
     },
   ], [isCellHovered]);
 
-  // Status filter options
-  const statusOptions = useMemo(() => [
-    { value: undefined, label: 'Tất cả' },
-    { value: TestRequestStatus.New, label: TestRequestStatusLabels[TestRequestStatus.New] },
-    { value: TestRequestStatus.UnderReview, label: TestRequestStatusLabels[TestRequestStatus.UnderReview] },
-    { value: TestRequestStatus.InProgress, label: TestRequestStatusLabels[TestRequestStatus.InProgress] },
-    { value: TestRequestStatus.Completed, label: TestRequestStatusLabels[TestRequestStatus.Completed] },
-  ], []);
 
   return (
     <div className="sample-assignment-log-tab">
       {/* Toolbar */}
-      <Row gutter={[16, 16]} align="middle" style={{ padding: 16 }}>
-        <Col xs={24} sm={12} md={8}>
+      <Row gutter={[16, 16]} style={{ marginBottom: 0, padding: 16 }}>
+        <Col xs={24} sm={12} md={6}>
           <Input.Search
             placeholder="Tìm theo số HĐ, mã mẫu, tên mẫu, chỉ tiêu..."
             prefix={<SearchOutlined />}
-            allowClear
+            value={searchText}
+            onChange={(e) => handleSearchInputChange(e.target.value)}
             onSearch={handleSearch}
+            allowClear
             enterButton
           />
         </Col>
-        <Col xs={24} sm={8} md={6}>
-          <Select
+        <Col xs={24} sm={12} md={5}>
+          <RangePicker
+            value={dateRange}
+            onChange={handleDateRangeChange}
             style={{ width: '100%' }}
-            placeholder="Lọc trạng thái"
+            format="DD/MM/YY"
             allowClear
-            value={statusFilter}
-            onChange={handleStatusFilter}
-            options={statusOptions}
           />
         </Col>
-        <Col>
-          <Button icon={<ReloadOutlined />} onClick={handleReload} />
+        <Col xs={24} sm={12} md={7}>
+          <Select
+            mode="multiple"
+            style={{ width: '100%' }}
+            placeholder="Chọn chỉ tiêu"
+            value={selectedIndicatorIds}
+            onChange={handleIndicatorChange}
+            showSearch
+            filterOption={(input, option) =>
+              ((option?.label as string) ?? '')
+                .toLowerCase()
+                .includes(input.toLowerCase())
+            }
+            options={indicators.map((ind) => ({
+              value: ind.id,
+              label: ind.name,
+            }))}
+            maxTagCount="responsive"
+            allowClear
+          />
+        </Col>
+        <Col xs={24} sm={6} md={6}>
+          <Select
+            mode="multiple"
+            style={{ width: '100%' }}
+            placeholder="Thử nghiệm viên"
+            value={technicianFilter}
+            onChange={handleTechnicianFilterChange}
+            allowClear
+            loading={loadingTechnicians}
+            maxTagCount={1}
+            optionFilterProp="children"
+            showSearch
+          >
+            {technicians.map((tech) => (
+              <Select.Option key={tech.id} value={tech.id}>
+                {tech.displayName || tech.userName}
+              </Select.Option>
+            ))}
+          </Select>
         </Col>
       </Row>
 
