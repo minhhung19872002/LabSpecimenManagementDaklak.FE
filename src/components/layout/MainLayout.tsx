@@ -404,7 +404,7 @@ const MainLayout: React.FC = () => {
           key: "organizations",
           icon: <Icon name="building" />,
           label: menuLabel("Cơ sở/Doanh nghiệp"),
-          onClick: () => navigate(PATH_ROUTES.organizations),
+          onClick: () => navigate(PATH_ROUTES.organizations.index),
           roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
         },
         {

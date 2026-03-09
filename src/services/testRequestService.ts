@@ -138,6 +138,9 @@ export interface TestRequestListParams extends PagedAndSortedResultRequestDto {
   status?: TestRequestStatus;
   expectedCompletionDateFrom?: string;
   expectedCompletionDateTo?: string;
+  customerName?: string;
+  fromDate?: string;
+  toDate?: string;
 }
 
 // Helper to convert params for API (ABP Framework uses SkipCount, MaxResultCount, Sorting)
@@ -150,6 +153,9 @@ const toApiParams = (params: TestRequestListParams) => {
   if (params.status !== undefined) apiParams.Status = params.status;
   if (params.expectedCompletionDateFrom) apiParams.ExpectedCompletionDateFrom = params.expectedCompletionDateFrom;
   if (params.expectedCompletionDateTo) apiParams.ExpectedCompletionDateTo = params.expectedCompletionDateTo;
+  if (params.customerName) apiParams.CustomerName = params.customerName;
+  if (params.fromDate) apiParams.FromDate = params.fromDate;
+  if (params.toDate) apiParams.ToDate = params.toDate;
   return apiParams;
 };
 

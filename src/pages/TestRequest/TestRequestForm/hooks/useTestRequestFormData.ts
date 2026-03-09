@@ -67,6 +67,7 @@ export const useTestRequestFormData = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const quotationId = searchParams.get("quotationId");
+  const testRequestId = searchParams.get("testRequestId");
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
@@ -196,8 +197,9 @@ export const useTestRequestFormData = () => {
   // Store quotationId when creating from quotation
   const [sourceQuotationId, setSourceQuotationId] = useState<string | null>(quotationId);
 
-  // Track if quotation has been loaded (to prevent re-loading)
+  // Track if quotation/testRequest has been loaded (to prevent re-loading)
   const quotationLoadedRef = useRef(false);
+  const testRequestLoadedRef = useRef(false);
 
   // Vietnam location states
   const [provinces, setProvinces] = useState<Province[]>([]);
@@ -835,6 +837,101 @@ export const useTestRequestFormData = () => {
     }
   };
 
+  // Load data from existing test request (when creating new from old contract)
+  const loadFromTestRequest = async (sourceTestRequestId: string) => {
+    setLoadingData(true);
+    try {
+      const data = await offlineTestRequestService.get(sourceTestRequestId);
+      if (!data) {
+        message.error("Không thể tải dữ liệu hợp đồng gốc");
+        return;
+      }
+
+      // Fill customer info
+      if (data.provinceCode) {
+        const loadedWards = await getWardsByProvince(data.provinceCode);
+        setWards(loadedWards);
+        setSelectedProvinceCode(data.provinceCode);
+        if (data.wardCode) {
+          setSelectedWardCode(data.wardCode);
+        }
+      }
+
+      const provinceName = provinces.find(p => p.code === data.provinceCode)?.name;
+      const wardName = data.wardCode
+        ? (await getWardsByProvince(data.provinceCode || "")).find(w => w.code === data.wardCode)?.name
+        : undefined;
+
+      form.setFieldsValue({
+        customerName: data.customerName,
+        province: provinceName || data.province || "",
+        ward: wardName || data.ward || "",
+        address: data.address || "",
+        taxCode: data.taxCode || "",
+        contactPerson: data.contactPerson || "",
+        phone: data.phone || "",
+      });
+
+      // Generate samples from test request samples
+      const activeSamples = (data.samples || []).filter(s => !s.isCancelled);
+      const generatedSamples: SampleFormData[] = [];
+      const generatedDates: Record<string, IndicatorDateInfo> = {};
+
+      activeSamples.forEach((sample, sampleIndex) => {
+        const sampleKey = `tr-sample-${Date.now()}-${sampleIndex}`;
+        const sampleCode = generateSampleCode(sampleCodePrefix, sampleIndex + 1);
+
+        const activeIndicators = (sample.indicators || []).filter(
+          (ind) => ind.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled
+        );
+
+        const indicatorMethodsList: IndicatorMethodKey[] = [];
+        activeIndicators.forEach((ind) => {
+          if (ind.indicatorId && ind.testMethodId) {
+            const methodKey = createIndicatorMethodKey(ind.indicatorId, ind.testMethodId, ind.specimenTypeId);
+            indicatorMethodsList.push(methodKey);
+
+            if (!generatedDates[methodKey]) {
+              generatedDates[methodKey] = {
+                transferDate: dayjs(),
+                requestDate: undefined,
+              };
+            }
+          }
+        });
+
+        generatedSamples.push({
+          key: sampleKey,
+          sortOrder: sampleIndex + 1,
+          sampleCode,
+          sampleName: sample.sampleName || "",
+          samplingAddress: sample.samplingAddress || "",
+          sampleQuantity: sample.sampleQuantity || "",
+          status: SampleStatus.Normal,
+          statusText: "",
+          processingStatus: "",
+          notes: "",
+          storageLocation: "",
+          specimenTypeId: sample.specimenTypeId,
+          specimenTypeName: sample.specimenTypeName || "",
+          indicatorIds: indicatorMethodsList.map((k) => parseIndicatorMethodKey(k).indicatorId),
+          indicatorMethods: indicatorMethodsList,
+          attachments: [],
+        });
+      });
+
+      setSamples(generatedSamples);
+      setSelectedIndicatorDates(generatedDates);
+
+      message.success(`Đã tải dữ liệu từ hợp đồng ${data.contractNumber || data.requestNumber}`);
+    } catch (error) {
+      console.error("Failed to load test request:", error);
+      message.error("Không thể tải dữ liệu từ hợp đồng");
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
   // Calculate total cost - now based on indicatorMethods with prices from TestMethodIndicator
   const calculateTotalCost = useCallback(() => {
     let total = 0;
@@ -1020,6 +1117,22 @@ export const useTestRequestFormData = () => {
       loadFromQuotation(quotationId);
     }
   }, [quotationId, organizations, sampleCodePrefix, isEditMode, indicators, indicatorMethodsMap]);
+
+  // Load from test request when testRequestId is present (create from existing contract)
+  useEffect(() => {
+    if (
+      !isEditMode &&
+      testRequestId &&
+      !quotationId &&
+      sampleCodePrefix &&
+      indicators.length > 0 &&
+      Object.keys(indicatorMethodsMap).length > 0 &&
+      !testRequestLoadedRef.current
+    ) {
+      testRequestLoadedRef.current = true;
+      loadFromTestRequest(testRequestId);
+    }
+  }, [testRequestId, sampleCodePrefix, isEditMode, indicators, indicatorMethodsMap]);
 
   useEffect(() => {
     if (indicatorGroups.length > 0 && indicators.length > 0) {

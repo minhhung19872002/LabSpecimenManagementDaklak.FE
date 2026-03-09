@@ -1,0 +1,234 @@
+.org-detail-container {
+  padding: 16px 24px;
+}
+
+.org-detail-layout {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.org-detail-left {
+  width: 360px;
+  min-width: 360px;
+  position: sticky;
+  top: 88px;
+}
+
+.org-detail-right {
+  flex: 1;
+  min-width: 0;
+}
+
+.org-info-card .ant-card-body {
+  padding: 16px 20px;
+}
+
+.org-info-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.org-info-row > div {
+  flex: 1;
+}
+
+.org-info-label {
+  font-size: 12px;
+  color: #8c8c8c;
+  margin-bottom: 2px;
+}
+
+.org-info-value {
+  font-size: 13px;
+  color: #262626;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.org-info-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #262626;
+}
+
+.org-info-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1E63F8;
+  margin-bottom: 12px;
+  word-break: break-word;
+}
+
+.org-info-divider {
+  margin: 12px 0;
+  border-top: 1px solid #f0f0f0;
+}
+
+.org-info-edit-btn {
+  margin-top: 12px;
+  text-align: right;
+}
+
+/* Right panel */
+.org-history-filter {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  align-items: center;
+}
+
+.org-history-filter .ant-picker {
+  flex: 1;
+}
+
+.org-history-card .ant-card-body {
+  padding: 0;
+}
+
+/* Collapse panels */
+.org-history-collapse.ant-collapse {
+  border-radius: 0 !important;
+  border-left: none !important;
+  border-right: none !important;
+}
+
+.org-history-collapse > .ant-collapse-item:first-child {
+  border-start-start-radius: 0 !important;
+  border-start-end-radius: 0 !important;
+}
+
+.org-history-collapse > .ant-collapse-item:first-child > .ant-collapse-header {
+  border-start-start-radius: 0 !important;
+  border-start-end-radius: 0 !important;
+}
+
+.org-history-collapse > .ant-collapse-item:last-child {
+  border-end-start-radius: 0 !important;
+  border-end-end-radius: 0 !important;
+}
+
+.org-history-collapse > .ant-collapse-item:last-child > .ant-collapse-header {
+  border-end-start-radius: 0 !important;
+  border-end-end-radius: 0 !important;
+}
+
+.org-history-collapse .ant-collapse-header {
+  padding: 10px 16px !important;
+  align-items: center !important;
+}
+
+.org-history-collapse .ant-collapse-content-box {
+  padding: 0 !important;
+}
+
+.org-history-collapse .ant-collapse-content {
+  padding: 0 !important;
+}
+
+.org-history-collapse .ant-collapse-item > .ant-collapse-content > .ant-collapse-content-box {
+  padding: 0 !important;
+}
+
+.org-history-collapse .ant-collapse-body {
+  padding: 0 !important;
+}
+
+.org-collapse-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.org-collapse-header .contract-number {
+  font-size: 13px;
+}
+
+.org-collapse-header .contract-number-highlight {
+  font-weight: 600;
+  color: #1E63F8;
+}
+
+.org-collapse-create-btn {
+  margin-left: auto;
+  font-size: 12px;
+  padding: 0 8px;
+}
+
+.org-collapse-header .request-number {
+  font-size: 12px;
+  color: #595959;
+}
+
+/* Sample table inside collapse */
+.org-sample-table {
+  padding: 0;
+}
+
+.org-sample-table .ant-table {
+  margin: 0 !important;
+  border-radius: 0 !important;
+}
+
+.org-sample-table .ant-table-container {
+  border-radius: 0 !important;
+}
+
+.org-sample-table .ant-table-content table {
+  border-radius: 0 !important;
+}
+
+.org-sample-table .ant-table-container table > thead > tr:first-child > *:first-child {
+  border-start-start-radius: 0 !important;
+}
+
+.org-sample-table .ant-table-container table > thead > tr:first-child > *:last-child {
+  border-start-end-radius: 0 !important;
+}
+
+.org-sample-table .ant-table-thead > tr > th {
+  background: #E6F7FF !important;
+  font-weight: 500;
+  font-size: 12px;
+  padding: 6px 8px;
+}
+
+.org-sample-table .ant-table-tbody > tr > td {
+  font-size: 12px;
+  padding: 6px 8px;
+}
+
+/* Pagination */
+.org-history-pagination {
+  padding: 12px 16px;
+  text-align: right;
+}
+
+/* Back button */
+.org-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.org-detail-header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .org-detail-layout {
+    flex-direction: column;
+  }
+
+  .org-detail-left {
+    width: 100%;
+    min-width: unset;
+    position: static;
+  }
+}

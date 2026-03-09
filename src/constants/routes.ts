@@ -81,7 +81,10 @@ export const PATH_ROUTES = {
 
   masterData: '/master-data',
 
-  organizations: '/organizations',
+  organizations: {
+    index: '/organizations',
+    detail: (id: string) => `/organizations/${id}`,
+  },
 
   auditLog: '/audit-log',
 

@@ -144,6 +144,9 @@ const MasterDataList = Loadable(
 const OrganizationList = Loadable(
   lazy(() => import("./pages/Organization/OrganizationList"))
 );
+const OrganizationDetail = Loadable(
+  lazy(() => import("./pages/Organization/OrganizationDetail"))
+);
 
 // Audit Log
 const AuditLogList = Loadable(
@@ -299,6 +302,7 @@ function App() {
 
           {/* Organization - Cơ sở/Doanh nghiệp */}
           <Route path="organizations" element={<OrganizationList />} />
+          <Route path="organizations/:id" element={<OrganizationDetail />} />
 
           {/* Audit Log - Lịch sử thay đổi */}
           <Route path="audit-log" element={<AuditLogList />} />
