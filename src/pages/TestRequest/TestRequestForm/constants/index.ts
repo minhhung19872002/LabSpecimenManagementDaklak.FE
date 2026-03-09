@@ -82,12 +82,11 @@ const COLIFORM_NAMES = ["Coliforms", "Coliform Tổng số"];
 // Các tên khác nhau của E.Coli (E.Coli = Escherichia coli)
 const ECOLI_NAMES = ["E.Coli", "Escherichia coli"];
 
-// Danh sách loại mẫu được áp dụng combo E.Coli + Coliform
-// Match bằng cách normalize + so sánh (case-insensitive, trim, NFC)
-const ECOLI_COMBO_ELIGIBLE_SPECIMEN_TYPES = [
-  "Nước uống đóng chai",
-  "Nước khoáng thiên nhiên đóng chai",
-  "Nước khoáng thiên nhiên, nước uống đóng chai",
+// Từ khóa loại mẫu được áp dụng combo E.Coli + Coliform
+// Match bằng contains, case-insensitive, NFC normalized
+const ECOLI_COMBO_ELIGIBLE_KEYWORDS = [
+  "nước uống đóng chai",
+  "nước khoáng thiên nhiên đóng chai",
 ];
 
 // Helper: Kiểm tra tên chỉ tiêu có match với 1 trong các tên cho trước không
@@ -100,21 +99,20 @@ const matchesAnyName = (
 };
 
 // Helper: Kiểm tra xem loại mẫu có được áp dụng combo E.Coli không
-// Check cả tên specimen type và tên category
+// Check contains (case-insensitive) cả tên specimen type và tên category
 const isEcoliComboEligibleSpecimenType = (
   sampleTypeCategoryName?: string | null,
   specimenTypeName?: string | null,
 ): boolean => {
-  const normalizedEligible = ECOLI_COMBO_ELIGIBLE_SPECIMEN_TYPES.map(
+  const normalizedKeywords = ECOLI_COMBO_ELIGIBLE_KEYWORDS.map(
     (n) => n.normalize('NFC').trim().toLowerCase()
   );
-  if (specimenTypeName) {
-    const normalized = specimenTypeName.normalize('NFC').trim().toLowerCase();
-    if (normalizedEligible.includes(normalized)) return true;
-  }
-  if (sampleTypeCategoryName) {
-    const normalized = sampleTypeCategoryName.normalize('NFC').trim().toLowerCase();
-    if (normalizedEligible.includes(normalized)) return true;
+  const namesToCheck = [specimenTypeName, sampleTypeCategoryName].filter(Boolean) as string[];
+  for (const name of namesToCheck) {
+    const normalized = name.normalize('NFC').trim().toLowerCase();
+    if (normalizedKeywords.some((keyword) => normalized.includes(keyword))) {
+      return true;
+    }
   }
   return false;
 };
