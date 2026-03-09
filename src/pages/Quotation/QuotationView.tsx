@@ -108,10 +108,17 @@ const QuotationView: React.FC = () => {
       key: "indicatorName",
       ellipsis: true,
       render: (_, record) => (
-        <IndicatorName
-          name={record.indicatorName}
-          formattedName={record.indicatorFormattedName}
-        />
+        <>
+          <IndicatorName
+            name={record.indicatorName}
+            formattedName={record.indicatorFormattedName}
+          />
+          {record.specimenTypeName && (
+            <div style={{ fontSize: 11, color: "#8c8c8c", marginTop: 2 }}>
+              {record.specimenTypeName}
+            </div>
+          )}
+        </>
       ),
     },
     {

@@ -779,11 +779,18 @@ export const useTestRequestFormData = () => {
         const sampleCode = generateSampleCode(sampleCodePrefix, sampleIndex + 1);
 
         // Get indicators from quotation sample
-        // Note: Quotation samples don't have specimenTypeId yet, it will be set later
+        // Use specimenTypeId from quotation API if available, fallback to master data resolution
         const indicatorMethodsList: IndicatorMethodKey[] = [];
         quotationSample.indicators.forEach((indicator) => {
           const testMethodId = indicator.testMethodId || "";
-          const methodKey = createIndicatorMethodKey(indicator.indicatorId, testMethodId, undefined);
+          // Prefer specimenTypeId stored in quotation, fallback to master data
+          let resolvedSpecimenTypeId = indicator.specimenTypeId || undefined;
+          if (!resolvedSpecimenTypeId) {
+            const methods = indicatorMethodsMap[indicator.indicatorId] || [];
+            const matchedMethod = methods.find((m) => m.testMethodId === testMethodId);
+            resolvedSpecimenTypeId = matchedMethod?.specimenTypeId || undefined;
+          }
+          const methodKey = createIndicatorMethodKey(indicator.indicatorId, testMethodId, resolvedSpecimenTypeId);
           indicatorMethodsList.push(methodKey);
 
           // Set dates for indicators (requestDate để trống theo yêu cầu KH)

@@ -27,6 +27,8 @@ export interface QuotationSampleIndicatorDto {
   testMethodFormattedName?: string | null;
   unitPrice: number;
   sortOrder: number;
+  specimenTypeId?: string | null;
+  specimenTypeName?: string | null;
 }
 
 // Quotation Sample DTO
@@ -88,6 +90,8 @@ export interface CreateUpdateQuotationSampleIndicatorDto {
   testMethodName: string;
   unitPrice: number;
   sortOrder: number;
+  specimenTypeId?: string | null;
+  specimenTypeName?: string | null;
 }
 
 // Create/Update Quotation Sample DTO
@@ -128,7 +132,7 @@ export interface GetQuotationListInput {
 
 // Form data types for frontend state management
 export interface QuotationSampleIndicatorFormData {
-  key: string; // indicatorId_testMethodId
+  key: string; // indicatorId_testMethodId_specimenTypeId
   id?: string;
   indicatorId: string;
   testMethodId: string;
@@ -138,6 +142,8 @@ export interface QuotationSampleIndicatorFormData {
   testMethodFormattedName?: string | null;
   unitPrice: number;
   sortOrder: number;
+  specimenTypeId?: string;
+  specimenTypeName?: string;
 }
 
 export interface QuotationSampleFormData {

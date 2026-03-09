@@ -42,6 +42,7 @@ import { PATH_ROUTES } from "../../constants";
 import { formatCurrency } from "../../utils/formatters";
 import QuotationIndicatorSelectionModal, {
   SelectedMethodInfo,
+  ExistingMethodInfo,
 } from "./components/QuotationIndicatorSelectionModal";
 import SendQuotationEmailModal from "./components/SendQuotationEmailModal";
 import { IndicatorName } from "../../components/common";
@@ -120,7 +121,7 @@ const QuotationForm: React.FC = () => {
           sortOrder: sample.sortOrder,
           sampleName: sample.sampleName,
           indicators: sample.indicators.map((ind) => ({
-            key: `${ind.indicatorId}_${ind.testMethodId}`,
+            key: `${ind.indicatorId}_${ind.testMethodId}_${ind.specimenTypeId || "null"}`,
             id: ind.id,
             indicatorId: ind.indicatorId,
             testMethodId: ind.testMethodId,
@@ -130,6 +131,8 @@ const QuotationForm: React.FC = () => {
             testMethodFormattedName: ind.testMethodFormattedName,
             unitPrice: ind.unitPrice,
             sortOrder: ind.sortOrder,
+            specimenTypeId: ind.specimenTypeId || undefined,
+            specimenTypeName: ind.specimenTypeName || undefined,
           })),
         })
       );
@@ -206,7 +209,6 @@ const QuotationForm: React.FC = () => {
       sampleName: `Mẫu ${nextNum}`,
       indicators: source.indicators.map((ind) => ({
         ...ind,
-        key: `${ind.indicatorId}_${ind.testMethodId}`,
         id: undefined,
       })),
     };
@@ -240,7 +242,7 @@ const QuotationForm: React.FC = () => {
     setModalVisible(true);
   };
 
-  // Add indicators to sample
+  // Add/replace indicators for sample
   const handleAddIndicatorsToSample = (selectedMethods: SelectedMethodInfo[]) => {
     if (!currentSampleKey) return;
 
@@ -248,21 +250,29 @@ const QuotationForm: React.FC = () => {
       samples.map((sample) => {
         if (sample.key !== currentSampleKey) return sample;
 
-        const newIndicators = selectedMethods.map((method, idx) => ({
-          key: `${method.indicatorId}_${method.testMethodId}`,
-          indicatorId: method.indicatorId,
-          testMethodId: method.testMethodId,
-          indicatorName: method.indicatorName,
-          indicatorFormattedName: method.indicatorFormattedName,
-          testMethodName: method.testMethodName,
-          testMethodFormattedName: method.testMethodFormattedName,
-          unitPrice: method.unitPrice,
-          sortOrder: sample.indicators.length + idx + 1,
-        }));
+        const newIndicators = selectedMethods.map((method, idx) => {
+          const key = `${method.indicatorId}_${method.testMethodId}_${method.specimenTypeId || "null"}`;
+          // Preserve existing indicator id if it was already saved
+          const existing = sample.indicators.find((ind) => ind.key === key);
+          return {
+            key,
+            id: existing?.id,
+            indicatorId: method.indicatorId,
+            testMethodId: method.testMethodId,
+            indicatorName: method.indicatorName,
+            indicatorFormattedName: method.indicatorFormattedName,
+            testMethodName: method.testMethodName,
+            testMethodFormattedName: method.testMethodFormattedName,
+            unitPrice: method.unitPrice,
+            sortOrder: idx + 1,
+            specimenTypeId: method.specimenTypeId,
+            specimenTypeName: method.specimenTypeName,
+          };
+        });
 
         return {
           ...sample,
-          indicators: [...sample.indicators, ...newIndicators],
+          indicators: newIndicators,
         };
       })
     );
@@ -301,11 +311,22 @@ const QuotationForm: React.FC = () => {
     0
   );
 
-  // Get excluded methods for current sample
-  const getExcludedMethods = () => {
+  // Get existing methods for current sample to pre-select in modal
+  const getExistingMethods = (): ExistingMethodInfo[] => {
     if (!currentSampleKey) return [];
     const currentSample = samples.find((s) => s.key === currentSampleKey);
-    return currentSample?.indicators.map((ind) => ind.key) || [];
+    return currentSample?.indicators.map((ind) => ({
+      key: ind.key,
+      indicatorId: ind.indicatorId,
+      testMethodId: ind.testMethodId,
+      indicatorName: ind.indicatorName,
+      indicatorFormattedName: ind.indicatorFormattedName,
+      testMethodName: ind.testMethodName,
+      testMethodFormattedName: ind.testMethodFormattedName,
+      unitPrice: ind.unitPrice,
+      specimenTypeId: ind.specimenTypeId,
+      specimenTypeName: ind.specimenTypeName,
+    })) || [];
   };
 
   // Handle save
@@ -345,6 +366,8 @@ const QuotationForm: React.FC = () => {
             testMethodName: ind.testMethodName,
             unitPrice: ind.unitPrice,
             sortOrder: indIdx + 1,
+            specimenTypeId: ind.specimenTypeId || null,
+            specimenTypeName: ind.specimenTypeName || null,
           })),
         })),
       };
@@ -381,6 +404,11 @@ const QuotationForm: React.FC = () => {
           name={indicator.indicatorName}
           formattedName={indicator.indicatorFormattedName}
         />
+        {indicator.specimenTypeName && (
+          <div style={{ fontSize: 11, color: "#8c8c8c", marginTop: 2 }}>
+            {indicator.specimenTypeName}
+          </div>
+        )}
       </td>
       <td style={{ padding: "8px 12px" }}>
         <IndicatorName
@@ -766,7 +794,7 @@ const QuotationForm: React.FC = () => {
           setCurrentSampleKey(null);
         }}
         onOk={handleAddIndicatorsToSample}
-        excludedMethods={getExcludedMethods()}
+        existingMethods={getExistingMethods()}
       />
 
       {/* Send Email Modal */}
