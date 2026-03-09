@@ -554,14 +554,26 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     return result;
   }, [tempSelectedIndicatorMethods, getIndicatorMethodInfo, specimenTypes]);
 
-  // Check combo E.Coli + Coliform: nếu cả 2 cùng có thì E.Coli miễn phí
-  const isEcoliCombo = useMemo(() => {
-    const selectedNames = tempSelectedIndicatorMethods.map((key) => {
+  // Check combo E.Coli + Coliform PER specimen type:
+  // Chỉ áp dụng cho loại mẫu nước uống/nước khoáng đóng chai
+  const ecoliComboMetBySpecimenType = useMemo(() => {
+    // Group indicator names by specimenTypeId
+    const grouped: Record<string, (string | undefined)[]> = {};
+    for (const key of tempSelectedIndicatorMethods) {
+      const { specimenTypeId } = parseIndicatorMethodKey(key);
       const { indicator } = getIndicatorMethodInfo(key);
-      return indicator?.name;
-    });
-    return isEcoliColiformComboMet(selectedNames);
-  }, [tempSelectedIndicatorMethods, getIndicatorMethodInfo]);
+      const stId = specimenTypeId || '_none';
+      if (!grouped[stId]) grouped[stId] = [];
+      grouped[stId].push(indicator?.name);
+    }
+    // Check combo for each specimen type group
+    const result: Record<string, boolean> = {};
+    for (const [stId, names] of Object.entries(grouped)) {
+      const st = stId !== '_none' ? specimenTypes.find((s) => s.id === stId) : null;
+      result[stId] = isEcoliColiformComboMet(names, st?.sampleTypeCategoryName, st?.name);
+    }
+    return result;
+  }, [tempSelectedIndicatorMethods, getIndicatorMethodInfo, specimenTypes]);
 
   // Helper: check if indicator is free by any combo
   const isIndicatorFree = (indicator: IndicatorDto | undefined, methodKey: IndicatorMethodKey) => {
@@ -569,48 +581,73 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     const { specimenTypeId } = parseIndicatorMethodKey(methodKey);
     const stId = specimenTypeId || '_none';
     const isHgFree = comboMetBySpecimenType[stId] && isHgIndicator(indicator?.name);
-    // E.Coli combo: check toàn sample
-    const isEcoliFree = isEcoliCombo && isEcoliIndicator(indicator?.name);
+    // E.Coli combo: check per specimen type
+    const isEcoliFree = ecoliComboMetBySpecimenType[stId] && isEcoliIndicator(indicator?.name);
     return isHgFree || isEcoliFree;
   };
 
+  // Track previous combo-free indicator keys to detect combo changes
+  const prevComboFreeKeysRef = useRef<Set<string>>(new Set());
+
+  // Auto-set/revert custom price textbox when combo state changes
+  useEffect(() => {
+    const currentFreeKeys = new Set<string>();
+    for (const methodKey of tempSelectedIndicatorMethods) {
+      const { indicator } = getIndicatorMethodInfo(methodKey);
+      if (isIndicatorFree(indicator, methodKey)) {
+        currentFreeKeys.add(methodKey);
+      }
+    }
+
+    const prevFreeKeys = prevComboFreeKeysRef.current;
+
+    // Newly free indicators: set custom price = 0
+    for (const key of currentFreeKeys) {
+      if (!prevFreeKeys.has(key)) {
+        const fullKey = `${currentSampleKey}_${key}`;
+        onPriceChange(fullKey, 0);
+      }
+    }
+
+    // No longer free indicators: remove custom price to revert to master price
+    for (const key of prevFreeKeys) {
+      if (!currentFreeKeys.has(key) && tempSelectedIndicatorMethods.includes(key as IndicatorMethodKey)) {
+        const fullKey = `${currentSampleKey}_${key}`;
+        const { method } = getIndicatorMethodInfo(key as IndicatorMethodKey);
+        // Revert to master price
+        onPriceChange(fullKey, method?.unitPrice || 0);
+      }
+    }
+
+    prevComboFreeKeysRef.current = currentFreeKeys;
+  }, [comboMetBySpecimenType, ecoliComboMetBySpecimenType, tempSelectedIndicatorMethods]);
+
   // Calculate total cost from selected methods with sub-indicator pricing logic
+  // Tổng tiền = sum đơn giá từ textbox (effective price), không tự check combo
+  // Combo logic đã được xử lý ở useEffect auto-set/revert customPrices
   const totalCost = useMemo(() => {
     let total = 0;
 
     // 1. Parent indicators with subs
     groupedSelectedMethods.parentMethods.forEach((parentKey) => {
-      const { indicator, method } = getIndicatorMethodInfo(parentKey);
+      const { method } = getIndicatorMethodInfo(parentKey);
       const subs = groupedSelectedMethods.subMethodsMap[parentKey] || [];
       const pricingMode = getPricingMode(parentKey);
 
       if (pricingMode === "parent") {
-        const masterPrice = method?.unitPrice || 0;
-        const price = isIndicatorFree(indicator, parentKey)
-          ? 0
-          : getEffectivePrice(parentKey, masterPrice);
-        total += price;
+        total += getEffectivePrice(parentKey, method?.unitPrice || 0);
       } else {
         subs.forEach((subKey) => {
-          const { indicator: subInd, method: subMethod } =
-            getIndicatorMethodInfo(subKey);
-          const masterPrice = subMethod?.unitPrice || 0;
-          const price = isIndicatorFree(subInd, subKey)
-            ? 0
-            : getEffectivePrice(subKey, masterPrice);
-          total += price;
+          const { method: subMethod } = getIndicatorMethodInfo(subKey);
+          total += getEffectivePrice(subKey, subMethod?.unitPrice || 0);
         });
       }
     });
 
     // 2. Independent indicators (no subs)
     groupedSelectedMethods.independentMethods.forEach((key) => {
-      const { indicator, method } = getIndicatorMethodInfo(key);
-      const masterPrice = method?.unitPrice || 0;
-      const price = isIndicatorFree(indicator, key)
-        ? 0
-        : getEffectivePrice(key, masterPrice);
-      total += price;
+      const { method } = getIndicatorMethodInfo(key);
+      total += getEffectivePrice(key, method?.unitPrice || 0);
     });
 
     return total;
@@ -618,8 +655,6 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     groupedSelectedMethods,
     getIndicatorMethodInfo,
     getPricingMode,
-    comboMetBySpecimenType,
-    isEcoliCombo,
     customPrices,
     currentSampleKey,
   ]);

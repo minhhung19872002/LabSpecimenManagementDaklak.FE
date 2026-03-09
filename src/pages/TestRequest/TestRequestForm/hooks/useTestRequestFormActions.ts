@@ -842,12 +842,6 @@ export const useTestRequestFormActions = ({
         // Keep existing sampleCode (fixed, not regenerated)
         const sampleCode = sample.sampleCode;
 
-        // Check combo kim loại nặng PER specimen type trong sample
-        const sampleIndicatorNames = (sample.indicatorMethods || []).map((methodKey) => {
-          const { indicatorId } = parseIndicatorMethodKey(methodKey);
-          const ind = indicators.find((i) => i.id === indicatorId);
-          return ind?.name;
-        });
         // Group indicator names by specimenTypeId để check combo riêng từng loại mẫu
         const groupedBySpecimenType: Record<string, (string | undefined)[]> = {};
         for (const mk of (sample.indicatorMethods || [])) {
@@ -858,11 +852,12 @@ export const useTestRequestFormActions = ({
           groupedBySpecimenType[key].push(ind?.name);
         }
         const comboMetBySpecimenType: Record<string, boolean> = {};
+        const ecoliComboMetBySpecimenType: Record<string, boolean> = {};
         for (const [stId, names] of Object.entries(groupedBySpecimenType)) {
           const st = stId !== '_none' ? specimenTypes.find((s: any) => s.id === stId) : null;
           comboMetBySpecimenType[stId] = isHeavyMetalComboMet(names, st?.sampleTypeCategoryName, st?.name);
+          ecoliComboMetBySpecimenType[stId] = isEcoliColiformComboMet(names, st?.sampleTypeCategoryName, st?.name);
         }
-        const isSampleEcoliCombo = isEcoliColiformComboMet(sampleIndicatorNames);
 
         // Prefer indicatorMethods if available, fallback to indicatorIds
         const indicatorsList = sample.indicatorMethods && sample.indicatorMethods.length > 0
@@ -877,11 +872,11 @@ export const useTestRequestFormActions = ({
               const labAssignment = indicatorLaboratoryMap[`${sample.key}_${methodKey}`];
               // Get the TestRequestSampleIndicator.id if this indicator already exists
               const existingIndicatorId = sampleIndicatorIdMap[`${sample.key}_${methodKey}`];
-              // Combo miễn phí: Hg (kim loại nặng, per specimen type) hoặc E.Coli (E.Coli + Coliform)
+              // Combo miễn phí: Hg (kim loại nặng, per specimen type) hoặc E.Coli (E.Coli + Coliform, per specimen type)
               const ind = indicators.find((i) => i.id === indicatorId);
               const stComboKey = specimenTypeId || '_none';
               const isComboFree = (comboMetBySpecimenType[stComboKey] && isHgIndicator(ind?.name)) ||
-                (isSampleEcoliCombo && isEcoliIndicator(ind?.name));
+                (ecoliComboMetBySpecimenType[stComboKey] && isEcoliIndicator(ind?.name));
               const customPriceKey = `${sample.key}_${methodKey}`;
               const masterPrice = method?.unitPrice || 0;
               const effectivePrice = customPrices[customPriceKey] !== undefined ? customPrices[customPriceKey] : masterPrice;
@@ -909,7 +904,7 @@ export const useTestRequestFormActions = ({
               const existingIndicatorId = sampleIndicatorIdMap[`${sample.key}_${indId}`];
               // Combo miễn phí (fallback logic - no specimenTypeId, check _none group)
               const isComboFree = (comboMetBySpecimenType['_none'] && isHgIndicator(indicator?.name)) ||
-                (isSampleEcoliCombo && isEcoliIndicator(indicator?.name));
+                (ecoliComboMetBySpecimenType['_none'] && isEcoliIndicator(indicator?.name));
               const fallbackCustomKey = `${sample.key}_${indId}`;
               const fallbackMasterPrice = indicator?.unitPrice || 0;
               const fallbackEffectivePrice = customPrices[fallbackCustomKey] !== undefined ? customPrices[fallbackCustomKey] : fallbackMasterPrice;
@@ -1161,11 +1156,6 @@ export const useTestRequestFormActions = ({
           : new Date().toISOString(),
         notes: values.notes || undefined,
         samples: samples.map((sample, index) => {
-          // Check combo kim loại nặng PER specimen type cho sample này (preview)
-          const previewSampleNames = (sample.indicatorMethods || []).map((mk) => {
-            const { indicatorId: iId } = parseIndicatorMethodKey(mk);
-            return indicators.find((i) => i.id === iId)?.name;
-          });
           // Group by specimenTypeId để check combo riêng từng loại mẫu
           const previewGrouped: Record<string, (string | undefined)[]> = {};
           for (const mk of (sample.indicatorMethods || [])) {
@@ -1176,11 +1166,12 @@ export const useTestRequestFormActions = ({
             previewGrouped[gKey].push(ind?.name);
           }
           const previewComboByType: Record<string, boolean> = {};
+          const previewEcoliComboByType: Record<string, boolean> = {};
           for (const [stId, names] of Object.entries(previewGrouped)) {
             const st = stId !== '_none' ? specimenTypes.find((s: any) => s.id === stId) : null;
             previewComboByType[stId] = isHeavyMetalComboMet(names, st?.sampleTypeCategoryName, st?.name);
+            previewEcoliComboByType[stId] = isEcoliColiformComboMet(names, st?.sampleTypeCategoryName, st?.name);
           }
-          const isPreviewEcoliCombo = isEcoliColiformComboMet(previewSampleNames);
           return {
             sortOrder: index + 1,
             sampleCode: sample.sampleCode || "",
@@ -1198,7 +1189,7 @@ export const useTestRequestFormActions = ({
               );
               const previewStKey = specimenTypeId || '_none';
               const isComboFree = (previewComboByType[previewStKey] && isHgIndicator(indicator?.name)) ||
-                (isPreviewEcoliCombo && isEcoliIndicator(indicator?.name));
+                (previewEcoliComboByType[previewStKey] && isEcoliIndicator(indicator?.name));
               const previewCustomKey = `${sample.key}_${methodKey}`;
               const previewMasterPrice = method?.unitPrice || 0;
               const previewEffectivePrice = customPrices[previewCustomKey] !== undefined ? customPrices[previewCustomKey] : previewMasterPrice;

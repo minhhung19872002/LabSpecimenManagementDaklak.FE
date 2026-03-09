@@ -936,12 +936,6 @@ export const useTestRequestFormData = () => {
   const calculateTotalCost = useCallback(() => {
     let total = 0;
     samples.forEach((sample) => {
-      // Check combo kim loại nặng PER specimen type trong sample
-      const sampleIndicatorNames = (sample.indicatorMethods || []).map((methodKey) => {
-        const { indicatorId } = parseIndicatorMethodKey(methodKey);
-        const ind = indicators.find((i) => i.id === indicatorId);
-        return ind?.name;
-      });
       // Group indicator names by specimenTypeId để check combo riêng từng loại mẫu
       const groupedBySpecimenType: Record<string, (string | undefined)[]> = {};
       for (const mk of (sample.indicatorMethods || [])) {
@@ -952,11 +946,12 @@ export const useTestRequestFormData = () => {
         groupedBySpecimenType[gKey].push(ind?.name);
       }
       const comboMetBySpecimenType: Record<string, boolean> = {};
+      const ecoliComboMetBySpecimenType: Record<string, boolean> = {};
       for (const [stId, names] of Object.entries(groupedBySpecimenType)) {
         const st = stId !== '_none' ? specimenTypes.find((s) => s.id === stId) : null;
         comboMetBySpecimenType[stId] = isHeavyMetalComboMet(names, st?.sampleTypeCategoryName, st?.name);
+        ecoliComboMetBySpecimenType[stId] = isEcoliColiformComboMet(names, st?.sampleTypeCategoryName, st?.name);
       }
-      const isSampleEcoliCombo = isEcoliColiformComboMet(sampleIndicatorNames);
 
       // New logic: use indicatorMethods if available
       if (sample.indicatorMethods && sample.indicatorMethods.length > 0) {
@@ -968,11 +963,11 @@ export const useTestRequestFormData = () => {
             (m) => m.testMethodId === testMethodId && (m.specimenTypeId || null) === specimenTypeId
           );
           if (method) {
-            // Combo miễn phí: Hg (kim loại nặng, per specimen type) hoặc E.Coli (E.Coli + Coliform)
+            // Combo miễn phí: Hg (kim loại nặng, per specimen type) hoặc E.Coli (E.Coli + Coliform, per specimen type)
             const ind = indicators.find((i) => i.id === indicatorId);
             const stComboKey = specimenTypeId || '_none';
             const isComboFree = (comboMetBySpecimenType[stComboKey] && isHgIndicator(ind?.name)) ||
-              (isSampleEcoliCombo && isEcoliIndicator(ind?.name));
+              (ecoliComboMetBySpecimenType[stComboKey] && isEcoliIndicator(ind?.name));
             const customPriceKey = `${sample.key}_${key}`;
             const price = customPrices[customPriceKey] !== undefined ? customPrices[customPriceKey] : method.unitPrice;
             total += isComboFree ? 0 : price;
@@ -985,7 +980,7 @@ export const useTestRequestFormData = () => {
           if (methods.length > 0) {
             const ind = indicators.find((i) => i.id === indId);
             const isComboFree = (comboMetBySpecimenType['_none'] && isHgIndicator(ind?.name)) ||
-              (isSampleEcoliCombo && isEcoliIndicator(ind?.name));
+              (ecoliComboMetBySpecimenType['_none'] && isEcoliIndicator(ind?.name));
             total += isComboFree ? 0 : methods[0].unitPrice;
           }
         });
