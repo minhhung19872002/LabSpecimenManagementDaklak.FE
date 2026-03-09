@@ -15,7 +15,7 @@ import {
   ArrowLeftOutlined,
   EditOutlined,
   CalendarOutlined,
-  CopyOutlined,
+  FileAddOutlined,
 } from "../../components/common/Icon";
 import { useParams, useNavigate } from "react-router-dom";
 import dayjs, { Dayjs } from "dayjs";
@@ -218,15 +218,13 @@ const OrganizationDetail: React.FC = () => {
                     ? dayjs(tr.requestDate).format("DD/MM/YYYY")
                     : ""}
               </span>
-              <Tag
-                color={TestRequestStatusColors[tr.status]}
-              >
+              <Tag color={TestRequestStatusColors[tr.status]}>
                 {TestRequestStatusLabels[tr.status]}
               </Tag>
               <Button
                 type="link"
                 size="small"
-                icon={<CopyOutlined />}
+                icon={<FileAddOutlined />}
                 className="org-collapse-create-btn"
                 onClick={(e) => {
                   e.stopPropagation();

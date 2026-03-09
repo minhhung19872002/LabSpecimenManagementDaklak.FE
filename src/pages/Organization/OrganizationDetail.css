@@ -85,39 +85,37 @@
 }
 
 .org-history-card .ant-card-body {
-  padding: 0;
+  padding: 12px;
 }
 
-/* Collapse panels */
+/* Collapse panels - gradient header like testing-detail-collapse */
 .org-history-collapse.ant-collapse {
+  border: none;
+  background: transparent;
+}
+
+.org-history-collapse > .ant-collapse-item {
+  border: 1px solid #D9D9D9;
+  border-radius: 8px !important;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.org-history-collapse > .ant-collapse-item > .ant-collapse-header {
+  background: var(--gradient-primary);
+  color: #FFFFFF;
+  font-weight: 500;
   border-radius: 0 !important;
-  border-left: none !important;
-  border-right: none !important;
-}
-
-.org-history-collapse > .ant-collapse-item:first-child {
-  border-start-start-radius: 0 !important;
-  border-start-end-radius: 0 !important;
-}
-
-.org-history-collapse > .ant-collapse-item:first-child > .ant-collapse-header {
-  border-start-start-radius: 0 !important;
-  border-start-end-radius: 0 !important;
-}
-
-.org-history-collapse > .ant-collapse-item:last-child {
-  border-end-start-radius: 0 !important;
-  border-end-end-radius: 0 !important;
-}
-
-.org-history-collapse > .ant-collapse-item:last-child > .ant-collapse-header {
-  border-end-start-radius: 0 !important;
-  border-end-end-radius: 0 !important;
-}
-
-.org-history-collapse .ant-collapse-header {
   padding: 10px 16px !important;
   align-items: center !important;
+}
+
+.org-history-collapse > .ant-collapse-item > .ant-collapse-header .ant-collapse-expand-icon {
+  color: #FFFFFF;
+}
+
+.org-history-collapse > .ant-collapse-item > .ant-collapse-content {
+  border-top: none;
 }
 
 .org-history-collapse .ant-collapse-content-box {
@@ -145,22 +143,52 @@
 
 .org-collapse-header .contract-number {
   font-size: 13px;
+  color: #FFFFFF;
 }
 
 .org-collapse-header .contract-number-highlight {
   font-weight: 600;
-  color: #1E63F8;
+  color: #FFFFFF;
 }
 
-.org-collapse-create-btn {
+.org-collapse-create-btn.ant-btn {
   margin-left: auto;
   font-size: 12px;
-  padding: 0 8px;
+  background: #FFFFFF !important;
+  border: 1px solid #FFFFFF !important;
+  border-radius: 6px;
+  padding: 2px 12px;
+  height: 28px;
+  line-height: 1;
+}
+
+.org-collapse-create-btn.ant-btn > span {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.org-collapse-create-btn.ant-btn:hover {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: #FFFFFF !important;
+}
+
+.org-collapse-create-btn.ant-btn .anticon {
+  color: #1E63F8 !important;
 }
 
 .org-collapse-header .request-number {
   font-size: 12px;
-  color: #595959;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* Tag inside gradient header */
+.org-history-collapse .ant-collapse-header .ant-tag {
+  border-radius: 20px;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  color: #FFFFFF !important;
 }
 
 /* Sample table inside collapse */
