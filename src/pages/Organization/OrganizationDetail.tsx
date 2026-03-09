@@ -9,6 +9,7 @@ import {
   Pagination,
   DatePicker,
   Empty,
+  Tooltip,
   message,
 } from "antd";
 import {
@@ -19,12 +20,14 @@ import {
 } from "../../components/common/Icon";
 import { useParams, useNavigate } from "react-router-dom";
 import dayjs, { Dayjs } from "dayjs";
+import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
 import { organizationService } from "../../services/organizationService";
 import {
   testRequestService,
   TestRequestListParams,
 } from "../../services/testRequestService";
-import { OrganizationDto } from "../../types/organization";
+import { OrganizationDto, CreateUpdateOrganizationDto } from "../../types/organization";
 import {
   TestRequestDto,
   TestRequestStatusLabels,
@@ -37,6 +40,8 @@ import {
 } from "../../utils/vietnamLocations";
 import { getSampleColumns } from "../TestRequest/columns/sampleColumns";
 import SampleImagesModal from "../TestRequest/components/SampleImagesModal";
+import OrganizationFormModal from "./components/OrganizationFormModal";
+import { organizationSchema, OrganizationFormData } from "./schemas";
 import { TestRequestSampleDto } from "../../types/testRequest";
 import { PATH_ROUTES } from "../../constants/routes";
 import "./OrganizationDetail.css";
@@ -79,6 +84,15 @@ const OrganizationDetail: React.FC = () => {
   const [imagesModalVisible, setImagesModalVisible] = useState(false);
   const [selectedSample, setSelectedSample] =
     useState<TestRequestSampleDto | null>(null);
+
+  // Edit modal state
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editWards, setEditWards] = useState<Ward[]>([]);
+  const editForm = useForm<OrganizationFormData>({
+    resolver: yupResolver(organizationSchema),
+    defaultValues: { isActive: true },
+  });
 
   // Load organization detail
   useEffect(() => {
@@ -191,11 +205,95 @@ const OrganizationDetail: React.FC = () => {
     [],
   );
 
-  // Handle edit - navigate to organization list with edit modal
-  const handleEdit = () => {
-    // Open list page and trigger edit - for now just navigate back
-    navigate(PATH_ROUTES.organizations.index);
-  };
+  // Handle edit - open modal
+  const handleEdit = useCallback(async () => {
+    if (!organization) return;
+    if (organization.provinceCode) {
+      const loadedWards = await getWardsByProvince(organization.provinceCode);
+      setEditWards(loadedWards);
+    } else {
+      setEditWards([]);
+    }
+    editForm.reset({
+      name: organization.name,
+      provinceCode: organization.provinceCode,
+      wardCode: organization.wardCode,
+      address: organization.address,
+      taxCode: organization.taxCode || null,
+      contactPerson: organization.contactPerson,
+      phone: organization.phone,
+      secondaryPhone: organization.secondaryPhone || null,
+      isActive: organization.isActive,
+    });
+    setEditModalVisible(true);
+  }, [organization, editForm]);
+
+  const handleEditClose = useCallback(() => {
+    setEditModalVisible(false);
+    editForm.reset();
+  }, [editForm]);
+
+  const handleEditProvinceChange = useCallback(
+    async (value: string) => {
+      if (value) {
+        const loadedWards = await getWardsByProvince(value);
+        setEditWards(loadedWards);
+      } else {
+        setEditWards([]);
+      }
+      editForm.setValue("wardCode", "");
+    },
+    [editForm],
+  );
+
+  const handleEditSave = useCallback(
+    async (formData: OrganizationFormData) => {
+      if (!organization) return;
+      setEditSubmitting(true);
+      try {
+        const payload: CreateUpdateOrganizationDto = {
+          name: formData.name,
+          provinceCode: formData.provinceCode,
+          wardCode: formData.wardCode,
+          address: formData.address,
+          taxCode: formData.taxCode || undefined,
+          contactPerson: formData.contactPerson,
+          phone: formData.phone,
+          secondaryPhone: formData.secondaryPhone || undefined,
+          isActive: formData.isActive,
+        };
+        await organizationService.update(organization.id, payload);
+        message.success("Cập nhật thành công!");
+        setEditModalVisible(false);
+        editForm.reset();
+        // Reload organization data
+        const data = await organizationService.get(organization.id);
+        setOrganization(data);
+        // Re-resolve location names
+        if (data.provinceCode) {
+          const provinces = await getAllProvinces();
+          const prov = provinces.find((p) => p.code === data.provinceCode);
+          setProvinceName(prov?.name || data.provinceCode);
+          if (data.wardCode) {
+            const wards = await getWardsByProvince(data.provinceCode);
+            const w = wards.find((wd: Ward) => wd.code === data.wardCode);
+            setWardName(w?.name || data.wardCode);
+          } else {
+            setWardName("");
+          }
+        } else {
+          setProvinceName("");
+          setWardName("");
+        }
+      } catch (error) {
+        console.error("Error saving:", error);
+        message.error("Không thể lưu. Vui lòng thử lại.");
+      } finally {
+        setEditSubmitting(false);
+      }
+    },
+    [organization, editForm],
+  );
 
   // Collapse items
   const collapseItems = useMemo(
@@ -282,11 +380,13 @@ const OrganizationDetail: React.FC = () => {
   return (
     <div className="org-detail-container">
       <div className="org-detail-header">
-        <Button
-          icon={<ArrowLeftOutlined />}
-          onClick={() => navigate(PATH_ROUTES.organizations.index)}
-          type="text"
-        />
+        <Tooltip title="Quay lại">
+          <Button
+            shape="circle"
+            icon={<ArrowLeftOutlined />}
+            onClick={() => navigate(PATH_ROUTES.organizations.index)}
+          />
+        </Tooltip>
         <h2>Chi tiết Cơ sở/Doanh nghiệp</h2>
       </div>
 
@@ -345,8 +445,7 @@ const OrganizationDetail: React.FC = () => {
               </div>
             </div>
 
-            <div className="org-info-divider" />
-            <div className="org-info-edit-btn">
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
               <Button
                 type="primary"
                 icon={<EditOutlined />}
@@ -360,28 +459,26 @@ const OrganizationDetail: React.FC = () => {
 
         {/* Right panel - transaction history */}
         <div className="org-detail-right">
-          {/* Filter */}
-          <div className="org-history-filter">
-            <CalendarOutlined style={{ color: "#8c8c8c" }} />
-            <span
-              style={{ fontSize: 13, color: "#595959", whiteSpace: "nowrap" }}
-            >
-              Ngày hợp đồng:
-            </span>
-            <RangePicker
-              value={dateRange}
-              onChange={handleDateRangeChange}
-              format="DD/MM/YYYY"
-              placeholder={["Từ ngày", "Đến ngày"]}
-              allowClear
-              style={{ maxWidth: 300 }}
-            />
-          </div>
-
           {/* History card */}
           <Card
             className="org-history-card"
             title={<span>Lịch sử giao dịch ({totalCount} phiếu yêu cầu)</span>}
+            extra={
+              <div className="org-history-filter">
+                <CalendarOutlined style={{ color: "#8c8c8c" }} />
+                <span style={{ fontSize: 13, color: "#595959", whiteSpace: "nowrap" }}>
+                  Ngày hợp đồng:
+                </span>
+                <RangePicker
+                  value={dateRange}
+                  onChange={handleDateRangeChange}
+                  format="DD/MM/YYYY"
+                  placeholder={["Từ ngày", "Đến ngày"]}
+                  allowClear
+                  style={{ maxWidth: 280 }}
+                />
+              </div>
+            }
             size="small"
           >
             <Spin spinning={loadingRequests}>
@@ -434,6 +531,18 @@ const OrganizationDetail: React.FC = () => {
           }}
         />
       )}
+
+      {/* Edit Organization Modal */}
+      <OrganizationFormModal
+        visible={editModalVisible}
+        mode="edit"
+        form={editForm}
+        submitting={editSubmitting}
+        wards={editWards}
+        onProvinceChange={handleEditProvinceChange}
+        onSave={handleEditSave}
+        onClose={handleEditClose}
+      />
     </div>
   );
 };
