@@ -369,14 +369,31 @@ const QuotationIndicatorSelectionModal: React.FC<
     return result;
   }, [selectedKeys, indicators, specimenTypes]);
 
-  // Check E.Coli + Coliform combo (not per specimen type)
-  const isEcoliCombo = useMemo(() => {
-    const allNames = selectedKeys.map((key) => {
-      const { indicatorId } = parseMethodKey(key);
-      return indicators.find((i) => i.id === indicatorId)?.name;
-    });
-    return isEcoliColiformComboMet(allNames);
-  }, [selectedKeys, indicators]);
+  // Check E.Coli + Coliform combo per specimen type (same as TestRequest)
+  const ecoliComboMetBySpecimenType = useMemo(() => {
+    const grouped: Record<string, (string | undefined)[]> = {};
+    for (const key of selectedKeys) {
+      const { indicatorId, specimenTypeId } = parseMethodKey(key);
+      const indicator = indicators.find((i) => i.id === indicatorId);
+      const stId = specimenTypeId || "_none";
+      if (!grouped[stId]) grouped[stId] = [];
+      grouped[stId].push(indicator?.name);
+    }
+    const result: Record<string, boolean> = {};
+    for (const [stId, names] of Object.entries(grouped)) {
+      if (stId === "_none") {
+        result[stId] = isEcoliColiformComboMet(names);
+      } else {
+        const st = specimenTypes.find((s) => s.id === stId);
+        result[stId] = isEcoliColiformComboMet(
+          names,
+          st?.sampleTypeCategoryName,
+          st?.name,
+        );
+      }
+    }
+    return result;
+  }, [selectedKeys, indicators, specimenTypes]);
 
   // Check if an indicator is free due to combo
   const isIndicatorFree = (
@@ -388,9 +405,49 @@ const QuotationIndicatorSelectionModal: React.FC<
     const stId = specimenTypeId || "_none";
     const isHgFree =
       comboMetBySpecimenType[stId] && isHgIndicator(indicator?.name);
-    const isEcoliFree = isEcoliCombo && isEcoliIndicator(indicator?.name);
+    const isEcoliFree =
+      ecoliComboMetBySpecimenType[stId] && isEcoliIndicator(indicator?.name);
     return isHgFree || isEcoliFree;
   };
+
+  // Track previous combo-free keys to detect combo changes
+  const prevComboFreeKeysRef = useRef<Set<string>>(new Set());
+
+  // Auto-set/revert custom price textbox when combo state changes
+  useEffect(() => {
+    const currentFreeKeys = new Set<string>();
+    for (const key of selectedKeys) {
+      const { indicatorId } = parseMethodKey(key);
+      if (isIndicatorFree(indicatorId, key)) {
+        currentFreeKeys.add(key);
+      }
+    }
+
+    const prevFreeKeys = prevComboFreeKeysRef.current;
+
+    // Newly free indicators: set custom price = 0
+    for (const key of currentFreeKeys) {
+      if (!prevFreeKeys.has(key)) {
+        setCustomPrices((prev) => ({ ...prev, [key]: 0 }));
+      }
+    }
+
+    // No longer free indicators: revert to master price
+    for (const key of prevFreeKeys) {
+      if (!currentFreeKeys.has(key) && selectedKeys.includes(key)) {
+        const { indicatorId, testMethodId, specimenTypeId } = parseMethodKey(key);
+        const methods = indicatorMethodsMap[indicatorId] || [];
+        const method = methods.find(
+          (m) =>
+            m.testMethodId === testMethodId &&
+            (m.specimenTypeId || null) === (specimenTypeId || null),
+        );
+        setCustomPrices((prev) => ({ ...prev, [key]: method?.unitPrice || 0 }));
+      }
+    }
+
+    prevComboFreeKeysRef.current = currentFreeKeys;
+  }, [comboMetBySpecimenType, ecoliComboMetBySpecimenType, selectedKeys]);
 
   // ========== Selection Helpers ==========
 
@@ -518,10 +575,10 @@ const QuotationIndicatorSelectionModal: React.FC<
 
   // ========== Price handling ==========
 
+  // Effective price = custom price if set, else master price
+  // Combo logic is handled by useEffect auto-set/revert customPrices
   const getEffectivePrice = (key: MethodKey, masterPrice: number): number => {
     if (customPrices[key] !== undefined) return customPrices[key];
-    const { indicatorId } = parseMethodKey(key);
-    if (isIndicatorFree(indicatorId, key)) return 0;
     return masterPrice;
   };
 
@@ -575,8 +632,6 @@ const QuotationIndicatorSelectionModal: React.FC<
     selectedKeys,
     indicatorMethodsMap,
     customPrices,
-    comboMetBySpecimenType,
-    isEcoliCombo,
   ]);
 
   // ========== Left Panel: Tree Rendering ==========
