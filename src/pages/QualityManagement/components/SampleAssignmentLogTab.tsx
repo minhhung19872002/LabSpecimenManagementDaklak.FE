@@ -1,6 +1,6 @@
-import React, { useMemo, useCallback, useState } from "react";
-import { Table, Input, Select, Button, Tag, Row, Col, Pagination } from "antd";
-import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
+import React, { useMemo, useCallback, useState, useEffect } from "react";
+import { Table, Input, Select, Tag, Row, Col, Pagination } from "antd";
+import { SearchOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { useSampleAssignmentLog } from "../hooks/useSampleAssignmentLog";
@@ -335,7 +335,11 @@ const getRowColorClass = (record: ProcessedLogItem): string => {
   return "";
 };
 
-const SampleAssignmentLogTab: React.FC = () => {
+interface SampleAssignmentLogTabProps {
+  onRegisterReload?: (fn: () => void) => void;
+}
+
+const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegisterReload }) => {
   const {
     loading,
     data,
@@ -347,6 +351,11 @@ const SampleAssignmentLogTab: React.FC = () => {
     handleRowDoubleClick,
     handleReload,
   } = useSampleAssignmentLog();
+
+  // Register reload function to parent
+  useEffect(() => {
+    onRegisterReload?.(handleReload);
+  }, [onRegisterReload, handleReload]);
 
   // Process data for row spanning
   const processedData = useMemo(() => processDataForRowSpan(data), [data]);
@@ -655,7 +664,7 @@ const SampleAssignmentLogTab: React.FC = () => {
             enterButton
           />
         </Col>
-        <Col xs={24} sm={8} md={6}>
+        {/* <Col xs={24} sm={8} md={6}>
           <Select
             style={{ width: "100%" }}
             placeholder="Lọc trạng thái"
@@ -664,60 +673,70 @@ const SampleAssignmentLogTab: React.FC = () => {
             onChange={handleStatusFilter}
             options={statusOptions}
           />
-        </Col>
-        <Col>
-          <Button icon={<ReloadOutlined />} onClick={handleReload} />
-        </Col>
+        </Col> */}
       </Row>
 
       {/* Table - pagination disabled because we do server-side contract pagination */}
       <Table<ProcessedLogItem>
-          columns={columns}
-          dataSource={processedData}
-          loading={loading}
-          rowKey="_rowKey"
-          rowClassName={(record) => {
-            const colorClass = getRowColorClass(record);
-            const hoverClass =
-              hoveredRowIndex === record._rowIndex ? "row-hover" : "";
-            // Add row-green class for rows without color (completed/published)
-            const normalClass = !colorClass ? "row-green" : "";
-            // Add row-in-hover-group for rows in same contract group when another row is hovered
-            // This forces base colors to override Ant Design's inherit hover
-            const inHoverGroupClass =
-              hoveredRowIndex !== null &&
-              hoveredRowIndex !== record._rowIndex &&
-              record._contractGroupStart <= hoveredRowIndex &&
-              hoveredRowIndex <= record._contractGroupEnd
-                ? "row-in-hover-group"
-                : "";
-            return `${colorClass} ${normalClass} ${hoverClass} ${inHoverGroupClass}`.trim();
-          }}
-          onRow={(record) => ({
-            onDoubleClick: () => handleRowDoubleClick(record),
-            onMouseEnter: () => handleRowMouseEnter(record),
-            onMouseLeave: handleRowMouseLeave,
-            style: { cursor: "pointer" },
-          })}
-          pagination={false}
-          scroll={{ x: 2200 }}
-          size="small"
-          bordered
+        columns={columns}
+        dataSource={processedData}
+        loading={loading}
+        rowKey="_rowKey"
+        rowClassName={(record) => {
+          const colorClass = getRowColorClass(record);
+          const hoverClass =
+            hoveredRowIndex === record._rowIndex ? "row-hover" : "";
+          // Add row-green class for rows without color (completed/published)
+          const normalClass = !colorClass ? "row-green" : "";
+          // Add row-in-hover-group for rows in same contract group when another row is hovered
+          // This forces base colors to override Ant Design's inherit hover
+          const inHoverGroupClass =
+            hoveredRowIndex !== null &&
+            hoveredRowIndex !== record._rowIndex &&
+            record._contractGroupStart <= hoveredRowIndex &&
+            hoveredRowIndex <= record._contractGroupEnd
+              ? "row-in-hover-group"
+              : "";
+          return `${colorClass} ${normalClass} ${hoverClass} ${inHoverGroupClass}`.trim();
+        }}
+        onRow={(record) => ({
+          onDoubleClick: () => handleRowDoubleClick(record),
+          onMouseEnter: () => handleRowMouseEnter(record),
+          onMouseLeave: handleRowMouseLeave,
+          style: { cursor: "pointer" },
+        })}
+        pagination={false}
+        scroll={{ x: 2200 }}
+        size="small"
+        bordered
       />
 
       {/* Pagination - server-side contract pagination */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "16px 8px",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
           <span>
-            Hiển thị <b>{uniqueContractCount}/{pagination.total}</b> hợp đồng
+            Hiển thị{" "}
+            <b>
+              {uniqueContractCount}/{pagination.total}
+            </b>{" "}
+            hợp đồng
           </span>
           <Select
             value={pagination.pageSize}
-            onChange={(value) => handleTableChange({ current: 1, pageSize: value })}
+            onChange={(value) =>
+              handleTableChange({ current: 1, pageSize: value })
+            }
             options={[
-              { value: 20, label: '20 / trang' },
-              { value: 50, label: '50 / trang' },
-              { value: 100, label: '100 / trang' },
+              { value: 20, label: "20 / trang" },
+              { value: 50, label: "50 / trang" },
+              { value: 100, label: "100 / trang" },
             ]}
             style={{ width: 110 }}
           />
@@ -727,7 +746,9 @@ const SampleAssignmentLogTab: React.FC = () => {
           pageSize={pagination.pageSize}
           total={pagination.total}
           showSizeChanger={false}
-          onChange={(page) => handleTableChange({ current: page, pageSize: pagination.pageSize })}
+          onChange={(page) =>
+            handleTableChange({ current: page, pageSize: pagination.pageSize })
+          }
         />
       </div>
     </div>

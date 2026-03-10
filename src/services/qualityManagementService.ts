@@ -31,6 +31,7 @@ export const qualityManagementService = {
       TaskType: params.taskType !== undefined ? params.taskType : undefined,
       FromDate: params.fromDate,
       ToDate: params.toDate,
+      IsOverdue: params.isOverdue,
     };
 
     // Remove undefined values

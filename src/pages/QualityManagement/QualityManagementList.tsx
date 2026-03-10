@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   Card,
   Table,
@@ -16,7 +16,7 @@ import Icon, {
   SearchOutlined,
   ReloadOutlined,
 } from "../../components/common/Icon";
-import { QualityManagementStatusLabels } from "../../types/qualityManagement";
+import { QualityManagementStatus, QualityManagementStatusLabels } from "../../types/qualityManagement";
 import HistoryModal from "./components/HistoryModal";
 import ChangeApprovalModal from "./components/ChangeApprovalModal";
 import SampleAssignmentLogTab from "./components/SampleAssignmentLogTab";
@@ -31,12 +31,14 @@ const { Text } = Typography;
 
 const QualityManagementList: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("reports");
+  const assignmentLogReloadRef = useRef<(() => void) | null>(null);
 
   const {
     loading,
     tasks,
     statistics,
     statusFilter,
+    overdueFilter,
     pagination,
     historyModalVisible,
     selectedTask,
@@ -46,6 +48,7 @@ const QualityManagementList: React.FC = () => {
     loadData,
     handleSearch,
     handleStatusFilter,
+    handleOverdueFilter,
     handleTableChange,
     handleRowDoubleClick,
     isUrgent,
@@ -64,6 +67,7 @@ const QualityManagementList: React.FC = () => {
             iconBg: "late",
             icon: "clock",
             valueColor: "#FAAD14",
+            filterValue: QualityManagementStatus.PendingApproval,
           },
           {
             title: "Trễ hạn",
@@ -71,6 +75,8 @@ const QualityManagementList: React.FC = () => {
             iconBg: "red",
             icon: "exclamation-triangle",
             valueColor: "#FF4D4F",
+            filterValue: undefined,
+            isOverdue: true,
           },
           {
             title: "Chờ phát hành",
@@ -78,6 +84,7 @@ const QualityManagementList: React.FC = () => {
             iconBg: "blue",
             icon: "file-text",
             valueColor: "#096DD9",
+            filterValue: QualityManagementStatus.PendingPublish,
           },
           {
             title: "Đã phát hành",
@@ -85,30 +92,48 @@ const QualityManagementList: React.FC = () => {
             iconBg: "cyan",
             icon: "file-earmark-check",
             valueColor: "#13C2C2",
+            filterValue: QualityManagementStatus.FullyPublished,
           },
-        ].map((stat, index) => (
-          <Card key={index} className="dashboard-stat-card" bordered={false}>
-            <div className="dashboard-stat-content">
-              <div className="dashboard-stat-info">
-                <Text className="dashboard-stat-title">{stat.title}</Text>
-                <div
-                  className="dashboard-stat-value"
-                  style={{
-                    background: stat.valueColor,
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    backgroundClip: "text",
-                  }}
-                >
-                  {stat.value}
+        ].map((stat, index) => {
+          const isActive = stat.isOverdue
+            ? overdueFilter
+            : stat.filterValue !== undefined && statusFilter === stat.filterValue;
+          return (
+            <Card
+              key={index}
+              className={`dashboard-stat-card quality-stat-clickable${isActive ? " quality-stat-active" : ""}`}
+              bordered={false}
+              onClick={() => {
+                if (activeTab !== "reports") return;
+                if (stat.isOverdue) {
+                  handleOverdueFilter(!overdueFilter);
+                } else if (stat.filterValue !== undefined) {
+                  handleStatusFilter(isActive ? undefined : stat.filterValue as any);
+                }
+              }}
+            >
+              <div className="dashboard-stat-content">
+                <div className="dashboard-stat-info">
+                  <Text className="dashboard-stat-title">{stat.title}</Text>
+                  <div
+                    className="dashboard-stat-value"
+                    style={{
+                      background: stat.valueColor,
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      backgroundClip: "text",
+                    }}
+                  >
+                    {stat.value}
+                  </div>
+                </div>
+                <div className={`dashboard-stat-icon ${stat.iconBg}`}>
+                  <Icon name={stat.icon} />
                 </div>
               </div>
-              <div className={`dashboard-stat-icon ${stat.iconBg}`}>
-                <Icon name={stat.icon} />
-              </div>
-            </div>
-          </Card>
-        ))}
+            </Card>
+          );
+        })}
       </div>
 
       <Card
@@ -120,9 +145,14 @@ const QualityManagementList: React.FC = () => {
           </Space>
         }
         extra={
-          activeTab === "reports" && (
-            <Button icon={<ReloadOutlined />} onClick={loadData} />
-          )
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={
+              activeTab === "reports"
+                ? loadData
+                : () => assignmentLogReloadRef.current?.()
+            }
+          />
         }
       >
         {/* Tabs */}
@@ -142,7 +172,7 @@ const QualityManagementList: React.FC = () => {
 
         {/* Content */}
         {activeTab === "assignment-log" ? (
-          <SampleAssignmentLogTab />
+          <SampleAssignmentLogTab onRegisterReload={(fn) => { assignmentLogReloadRef.current = fn; }} />
         ) : (
           <>
             {/* Filters */}

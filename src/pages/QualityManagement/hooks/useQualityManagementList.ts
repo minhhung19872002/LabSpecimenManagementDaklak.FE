@@ -23,6 +23,7 @@ export const useQualityManagementList = () => {
   const [statusFilter, setStatusFilter] = useState<
     QualityManagementStatus | undefined
   >(undefined);
+  const [overdueFilter, setOverdueFilter] = useState(false);
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 20,
@@ -50,6 +51,7 @@ export const useQualityManagementList = () => {
           maxResultCount: pagination.pageSize,
           search: searchText || undefined,
           status: statusFilter,
+          isOverdue: overdueFilter || undefined,
         }),
         qualityManagementService.getStatistics(),
       ]);
@@ -63,7 +65,7 @@ export const useQualityManagementList = () => {
     } finally {
       setLoading(false);
     }
-  }, [pagination.current, pagination.pageSize, searchText, statusFilter]);
+  }, [pagination.current, pagination.pageSize, searchText, statusFilter, overdueFilter]);
 
   useEffect(() => {
     loadData();
@@ -78,6 +80,16 @@ export const useQualityManagementList = () => {
   const handleStatusFilter = useCallback(
     (value: QualityManagementStatus | undefined) => {
       setStatusFilter(value);
+      setOverdueFilter(false);
+      setPagination((prev) => ({ ...prev, current: 1 }));
+    },
+    []
+  );
+
+  const handleOverdueFilter = useCallback(
+    (value: boolean) => {
+      setOverdueFilter(value);
+      if (value) setStatusFilter(undefined);
       setPagination((prev) => ({ ...prev, current: 1 }));
     },
     []
@@ -162,6 +174,7 @@ export const useQualityManagementList = () => {
     statistics,
     searchText,
     statusFilter,
+    overdueFilter,
     pagination,
     historyModalVisible,
     selectedTask,
@@ -173,6 +186,7 @@ export const useQualityManagementList = () => {
     loadData,
     handleSearch,
     handleStatusFilter,
+    handleOverdueFilter,
     handleTableChange,
     handleRowDoubleClick,
     handleViewHistory,

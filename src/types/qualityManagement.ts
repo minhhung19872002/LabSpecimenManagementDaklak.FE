@@ -239,6 +239,7 @@ export interface GetQualityManagementListInput {
   taskType?: QualityTaskType;
   fromDate?: string;
   toDate?: string;
+  isOverdue?: boolean;
 }
 
 // Paged result
