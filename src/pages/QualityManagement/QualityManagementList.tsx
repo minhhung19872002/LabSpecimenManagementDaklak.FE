@@ -10,16 +10,24 @@ import {
   Typography,
   Radio,
   Space,
+  DatePicker,
 } from "antd";
 import Icon, {
   SafetyCertificateOutlined,
   SearchOutlined,
   ReloadOutlined,
 } from "../../components/common/Icon";
-import { QualityManagementStatus, QualityManagementStatusLabels, QLCLDisplayStatus, QLCLSampleAssignmentLogStatisticsDto } from "../../types/qualityManagement";
+import {
+  QualityManagementStatus,
+  QualityManagementStatusLabels,
+  QLCLDisplayStatus,
+  QLCLSampleAssignmentLogStatisticsDto,
+} from "../../types/qualityManagement";
 import HistoryModal from "./components/HistoryModal";
 import ChangeApprovalModal from "./components/ChangeApprovalModal";
-import SampleAssignmentLogTab, { AssignmentLogControls } from "./components/SampleAssignmentLogTab";
+import SampleAssignmentLogTab, {
+  AssignmentLogControls,
+} from "./components/SampleAssignmentLogTab";
 import { useQualityManagementList } from "./hooks";
 
 import "./components/ReportManagementTab.css";
@@ -28,20 +36,29 @@ import "../Dashboard/Dashboard.css";
 import "./QualityManagement.css";
 
 const { Text } = Typography;
+const { RangePicker } = DatePicker;
 
 const QualityManagementList: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("reports");
   const assignmentLogControlsRef = useRef<AssignmentLogControls | null>(null);
-  const [assignmentLogStats, setAssignmentLogStats] = useState<QLCLSampleAssignmentLogStatisticsDto | null>(null);
-  const [assignmentLogQlclStatuses, setAssignmentLogQlclStatuses] = useState<number[] | undefined>(undefined);
-  const [assignmentLogFilterHandler, setAssignmentLogFilterHandler] = useState<((s: number[] | undefined) => void) | null>(null);
+  const [assignmentLogStats, setAssignmentLogStats] =
+    useState<QLCLSampleAssignmentLogStatisticsDto | null>(null);
+  const [assignmentLogQlclStatuses, setAssignmentLogQlclStatuses] = useState<
+    number[] | undefined
+  >(undefined);
+  const [assignmentLogFilterHandler, setAssignmentLogFilterHandler] = useState<
+    ((s: number[] | undefined) => void) | null
+  >(null);
 
-  const handleRegisterControls = useCallback((controls: AssignmentLogControls) => {
-    assignmentLogControlsRef.current = controls;
-    setAssignmentLogStats(controls.statistics);
-    setAssignmentLogQlclStatuses(controls.qlclDisplayStatuses);
-    setAssignmentLogFilterHandler(() => controls.handleQlclStatusFilter);
-  }, []);
+  const handleRegisterControls = useCallback(
+    (controls: AssignmentLogControls) => {
+      assignmentLogControlsRef.current = controls;
+      setAssignmentLogStats(controls.statistics);
+      setAssignmentLogQlclStatuses(controls.qlclDisplayStatuses);
+      setAssignmentLogFilterHandler(() => controls.handleQlclStatusFilter);
+    },
+    [],
+  );
 
   const {
     loading,
@@ -49,6 +66,9 @@ const QualityManagementList: React.FC = () => {
     statistics,
     statusFilter,
     overdueFilter,
+    dateRange,
+    laboratoryIds,
+    laboratories,
     pagination,
     historyModalVisible,
     selectedTask,
@@ -59,6 +79,8 @@ const QualityManagementList: React.FC = () => {
     handleSearch,
     handleStatusFilter,
     handleOverdueFilter,
+    handleDateRangeChange,
+    handleLaboratoryChange,
     handleTableChange,
     handleRowDoubleClick,
     isUrgent,
@@ -78,8 +100,14 @@ const QualityManagementList: React.FC = () => {
                 iconBg: "late",
                 icon: "clock",
                 valueColor: "#FAAD14",
-                isActive: statusFilter === QualityManagementStatus.PendingApproval,
-                onClick: () => handleStatusFilter(statusFilter === QualityManagementStatus.PendingApproval ? undefined : QualityManagementStatus.PendingApproval),
+                isActive:
+                  statusFilter === QualityManagementStatus.PendingApproval,
+                onClick: () =>
+                  handleStatusFilter(
+                    statusFilter === QualityManagementStatus.PendingApproval
+                      ? undefined
+                      : QualityManagementStatus.PendingApproval,
+                  ),
               },
               {
                 title: "Trễ hạn",
@@ -96,8 +124,14 @@ const QualityManagementList: React.FC = () => {
                 iconBg: "blue",
                 icon: "file-text",
                 valueColor: "#096DD9",
-                isActive: statusFilter === QualityManagementStatus.PendingPublish,
-                onClick: () => handleStatusFilter(statusFilter === QualityManagementStatus.PendingPublish ? undefined : QualityManagementStatus.PendingPublish),
+                isActive:
+                  statusFilter === QualityManagementStatus.PendingPublish,
+                onClick: () =>
+                  handleStatusFilter(
+                    statusFilter === QualityManagementStatus.PendingPublish
+                      ? undefined
+                      : QualityManagementStatus.PendingPublish,
+                  ),
               },
               {
                 title: "Đã phát hành",
@@ -105,8 +139,14 @@ const QualityManagementList: React.FC = () => {
                 iconBg: "cyan",
                 icon: "file-earmark-check",
                 valueColor: "#13C2C2",
-                isActive: statusFilter === QualityManagementStatus.FullyPublished,
-                onClick: () => handleStatusFilter(statusFilter === QualityManagementStatus.FullyPublished ? undefined : QualityManagementStatus.FullyPublished),
+                isActive:
+                  statusFilter === QualityManagementStatus.FullyPublished,
+                onClick: () =>
+                  handleStatusFilter(
+                    statusFilter === QualityManagementStatus.FullyPublished
+                      ? undefined
+                      : QualityManagementStatus.FullyPublished,
+                  ),
               },
             ]
           : [
@@ -116,10 +156,17 @@ const QualityManagementList: React.FC = () => {
                 iconBg: "red",
                 icon: "flask",
                 valueColor: "#FF4D4F",
-                isActive: assignmentLogQlclStatuses?.includes(QLCLDisplayStatus.ToDo) ?? false,
+                isActive:
+                  assignmentLogQlclStatuses?.includes(QLCLDisplayStatus.ToDo) ??
+                  false,
                 onClick: () => {
-                  const statuses = [QLCLDisplayStatus.ToDo, QLCLDisplayStatus.Testing];
-                  const isActive = assignmentLogQlclStatuses?.includes(QLCLDisplayStatus.ToDo);
+                  const statuses = [
+                    QLCLDisplayStatus.ToDo,
+                    QLCLDisplayStatus.Testing,
+                  ];
+                  const isActive = assignmentLogQlclStatuses?.includes(
+                    QLCLDisplayStatus.ToDo,
+                  );
                   assignmentLogFilterHandler?.(isActive ? undefined : statuses);
                 },
               },
@@ -129,10 +176,19 @@ const QualityManagementList: React.FC = () => {
                 iconBg: "late",
                 icon: "clock",
                 valueColor: "#FAAD14",
-                isActive: assignmentLogQlclStatuses?.includes(QLCLDisplayStatus.WaitingQLKTApproval) ?? false,
+                isActive:
+                  assignmentLogQlclStatuses?.includes(
+                    QLCLDisplayStatus.WaitingQLKTApproval,
+                  ) ?? false,
                 onClick: () => {
-                  const isActive = assignmentLogQlclStatuses?.includes(QLCLDisplayStatus.WaitingQLKTApproval);
-                  assignmentLogFilterHandler?.(isActive ? undefined : [QLCLDisplayStatus.WaitingQLKTApproval]);
+                  const isActive = assignmentLogQlclStatuses?.includes(
+                    QLCLDisplayStatus.WaitingQLKTApproval,
+                  );
+                  assignmentLogFilterHandler?.(
+                    isActive
+                      ? undefined
+                      : [QLCLDisplayStatus.WaitingQLKTApproval],
+                  );
                 },
               },
               {
@@ -141,10 +197,19 @@ const QualityManagementList: React.FC = () => {
                 iconBg: "purple",
                 icon: "shield-check",
                 valueColor: "#722ED1",
-                isActive: assignmentLogQlclStatuses?.includes(QLCLDisplayStatus.WaitingQLCLApproval) ?? false,
+                isActive:
+                  assignmentLogQlclStatuses?.includes(
+                    QLCLDisplayStatus.WaitingQLCLApproval,
+                  ) ?? false,
                 onClick: () => {
-                  const isActive = assignmentLogQlclStatuses?.includes(QLCLDisplayStatus.WaitingQLCLApproval);
-                  assignmentLogFilterHandler?.(isActive ? undefined : [QLCLDisplayStatus.WaitingQLCLApproval]);
+                  const isActive = assignmentLogQlclStatuses?.includes(
+                    QLCLDisplayStatus.WaitingQLCLApproval,
+                  );
+                  assignmentLogFilterHandler?.(
+                    isActive
+                      ? undefined
+                      : [QLCLDisplayStatus.WaitingQLCLApproval],
+                  );
                 },
               },
               {
@@ -153,10 +218,19 @@ const QualityManagementList: React.FC = () => {
                 iconBg: "blue",
                 icon: "file-text",
                 valueColor: "#096DD9",
-                isActive: assignmentLogQlclStatuses?.includes(QLCLDisplayStatus.WaitingForPublishing) ?? false,
+                isActive:
+                  assignmentLogQlclStatuses?.includes(
+                    QLCLDisplayStatus.WaitingForPublishing,
+                  ) ?? false,
                 onClick: () => {
-                  const isActive = assignmentLogQlclStatuses?.includes(QLCLDisplayStatus.WaitingForPublishing);
-                  assignmentLogFilterHandler?.(isActive ? undefined : [QLCLDisplayStatus.WaitingForPublishing]);
+                  const isActive = assignmentLogQlclStatuses?.includes(
+                    QLCLDisplayStatus.WaitingForPublishing,
+                  );
+                  assignmentLogFilterHandler?.(
+                    isActive
+                      ? undefined
+                      : [QLCLDisplayStatus.WaitingForPublishing],
+                  );
                 },
               },
             ]
@@ -240,10 +314,10 @@ const QualityManagementList: React.FC = () => {
                   enterButton
                 />
               </Col>
-              <Col xs={24} sm={8} md={6}>
+              {/* <Col xs={24} sm={8} md={4}>
                 <Select
                   style={{ width: "100%" }}
-                  placeholder="Lọc theo trạng thái"
+                  placeholder="Trạng thái"
                   allowClear
                   value={statusFilter}
                   onChange={handleStatusFilter}
@@ -256,6 +330,37 @@ const QualityManagementList: React.FC = () => {
                     ),
                   )}
                 </Select>
+              </Col> */}
+              <Col xs={24} sm={8} md={6}>
+                <RangePicker
+                  value={dateRange}
+                  onChange={handleDateRangeChange}
+                  style={{ width: "100%" }}
+                  format="DD/MM/YY"
+                  placeholder={["Ngày YC xong từ", "Đến ngày"]}
+                  allowClear
+                />
+              </Col>
+              <Col xs={24} sm={8} md={6}>
+                <Select
+                  mode="multiple"
+                  style={{ width: "100%" }}
+                  placeholder="Chọn phòng lab"
+                  value={laboratoryIds}
+                  onChange={handleLaboratoryChange}
+                  showSearch
+                  filterOption={(input, option) =>
+                    ((option?.label as string) ?? "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                  options={laboratories.map((lab) => ({
+                    value: lab.id,
+                    label: lab.name,
+                  }))}
+                  maxTagCount="responsive"
+                  allowClear
+                />
               </Col>
             </Row>
 

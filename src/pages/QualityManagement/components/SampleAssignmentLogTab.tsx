@@ -1,8 +1,10 @@
 import React, { useMemo, useCallback, useState, useEffect } from "react";
-import { Table, Input, Select, Tag, Row, Col, Pagination } from "antd";
+import { Table, Input, Select, Tag, Row, Col, Pagination, DatePicker } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
+
+const { RangePicker } = DatePicker;
 import { useSampleAssignmentLog } from "../hooks/useSampleAssignmentLog";
 import {
   SampleAssignmentLogDto,
@@ -337,6 +339,11 @@ export interface AssignmentLogControls {
   statistics: import("../../../types/qualityManagement").QLCLSampleAssignmentLogStatisticsDto | null;
   qlclDisplayStatuses: number[] | undefined;
   handleQlclStatusFilter: (statuses: number[] | undefined) => void;
+  dateRange: [dayjs.Dayjs, dayjs.Dayjs] | null;
+  laboratoryIds: string[];
+  laboratories: import("../../../services/masterDataService").LaboratoryDto[];
+  handleDateRangeChange: (dates: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null) => void;
+  handleLaboratoryChange: (values: string[]) => void;
 }
 
 interface SampleAssignmentLogTabProps {
@@ -350,8 +357,13 @@ const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegis
     statistics,
     pagination,
     qlclDisplayStatuses,
+    dateRange,
+    laboratoryIds,
+    laboratories,
     handleSearch,
     handleQlclStatusFilter,
+    handleDateRangeChange,
+    handleLaboratoryChange,
     handleTableChange,
     handleRowDoubleClick,
     handleReload,
@@ -364,8 +376,13 @@ const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegis
       statistics,
       qlclDisplayStatuses,
       handleQlclStatusFilter,
+      dateRange,
+      laboratoryIds,
+      laboratories,
+      handleDateRangeChange,
+      handleLaboratoryChange,
     });
-  }, [onRegisterControls, handleReload, statistics, qlclDisplayStatuses, handleQlclStatusFilter]);
+  }, [onRegisterControls, handleReload, statistics, qlclDisplayStatuses, handleQlclStatusFilter, dateRange, laboratoryIds, laboratories, handleDateRangeChange, handleLaboratoryChange]);
 
   // Process data for row spanning
   const processedData = useMemo(() => processDataForRowSpan(data), [data]);
@@ -648,6 +665,37 @@ const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegis
             allowClear
             onSearch={handleSearch}
             enterButton
+          />
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <RangePicker
+            value={dateRange}
+            onChange={handleDateRangeChange}
+            style={{ width: "100%" }}
+            format="DD/MM/YY"
+            placeholder={["Ngày YC xong từ", "Đến ngày"]}
+            allowClear
+          />
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Select
+            mode="multiple"
+            style={{ width: "100%" }}
+            placeholder="Chọn phòng lab"
+            value={laboratoryIds}
+            onChange={handleLaboratoryChange}
+            showSearch
+            filterOption={(input, option) =>
+              ((option?.label as string) ?? "")
+                .toLowerCase()
+                .includes(input.toLowerCase())
+            }
+            options={laboratories.map((lab) => ({
+              value: lab.id,
+              label: lab.name,
+            }))}
+            maxTagCount="responsive"
+            allowClear
           />
         </Col>
       </Row>

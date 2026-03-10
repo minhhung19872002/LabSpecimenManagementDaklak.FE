@@ -33,6 +33,8 @@ export const qualityManagementService = {
       FromDate: params.fromDate,
       ToDate: params.toDate,
       IsOverdue: params.isOverdue,
+      RequestCompletionDateFrom: params.requestCompletionDateFrom,
+      RequestCompletionDateTo: params.requestCompletionDateTo,
     };
 
     // Remove undefined values
@@ -42,7 +44,18 @@ export const qualityManagementService = {
       }
     });
 
-    const response = await api.get<PagedQualityManagementResult>(BASE_URL, { params: queryParams });
+    // Handle array params (LaboratoryIds)
+    const arrayParams: Record<string, string[]> = {};
+    if (params.laboratoryIds?.length) {
+      arrayParams.LaboratoryIds = params.laboratoryIds;
+    }
+
+    const response = await api.get<PagedQualityManagementResult>(BASE_URL, {
+      params: { ...queryParams, ...arrayParams },
+      paramsSerializer: {
+        indexes: null,
+      },
+    });
     return response.data;
   },
 
@@ -203,7 +216,6 @@ export const qualityManagementService = {
       TestRequestStatus: params.testRequestStatus !== undefined ? params.testRequestStatus : undefined,
       FromDate: params.fromDate,
       ToDate: params.toDate,
-      LaboratoryId: params.laboratoryId,
     };
 
     // Remove undefined values
@@ -213,16 +225,19 @@ export const qualityManagementService = {
       }
     });
 
-    // Handle array params (QlclDisplayStatuses)
-    const arrayParams: Record<string, number[]> = {};
+    // Handle array params (QlclDisplayStatuses, LaboratoryIds)
+    const arrayParams: Record<string, (number | string)[]> = {};
     if (params.qlclDisplayStatuses?.length) {
       arrayParams.QlclDisplayStatuses = params.qlclDisplayStatuses;
+    }
+    if (params.laboratoryIds?.length) {
+      arrayParams.LaboratoryIds = params.laboratoryIds;
     }
 
     const response = await api.get<PagedSampleAssignmentLogResult>(`${BASE_URL}/sample-assignment-log`, {
       params: { ...queryParams, ...arrayParams },
       paramsSerializer: {
-        indexes: null, // ABP expects QlclDisplayStatuses=5&QlclDisplayStatuses=6 format
+        indexes: null, // ABP expects repeated param format
       },
     });
     return response.data;

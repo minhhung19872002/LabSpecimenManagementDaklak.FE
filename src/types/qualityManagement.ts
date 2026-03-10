@@ -240,6 +240,9 @@ export interface GetQualityManagementListInput {
   fromDate?: string;
   toDate?: string;
   isOverdue?: boolean;
+  requestCompletionDateFrom?: string;
+  requestCompletionDateTo?: string;
+  laboratoryIds?: string[];
 }
 
 // Paged result
@@ -427,7 +430,7 @@ export interface GetSampleAssignmentLogInput {
   testRequestStatus?: TestRequestStatus;
   fromDate?: string;
   toDate?: string;
-  laboratoryId?: string;
+  laboratoryIds?: string[];
   indicatorIds?: string[];
   technicianIds?: string[];
   qlclDisplayStatuses?: number[];
