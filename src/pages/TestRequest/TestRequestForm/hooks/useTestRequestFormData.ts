@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Form, message } from "antd";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import dayjs from "dayjs";
@@ -728,6 +728,7 @@ export const useTestRequestFormData = () => {
       console.error("Failed to load test request:", error);
     } finally {
       setLoadingData(false);
+      setEditDataLoaded(true);
     }
   };
 
@@ -1165,6 +1166,177 @@ export const useTestRequestFormData = () => {
     };
   }, []);
 
+  // ==================== Auto-save Draft (Create + Edit mode) ====================
+  // Key format: "test_request_draft_new" for create, "test_request_draft_{id}" for edit
+  const DRAFT_KEY_PREFIX = "test_request_draft";
+  const draftKey = useMemo(
+    () => isEditMode && id ? `${DRAFT_KEY_PREFIX}_${id}` : `${DRAFT_KEY_PREFIX}_new`,
+    [isEditMode, id]
+  );
+  const draftSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const draftRestoredRef = useRef(false);
+  const [editDataLoaded, setEditDataLoaded] = useState(false);
+
+  // Save draft to localStorage (debounced)
+  const saveDraft = useCallback(() => {
+    const formValues = form.getFieldsValue();
+    // Convert dayjs to ISO string for serialization
+    const serializableValues: Record<string, any> = {};
+    Object.entries(formValues).forEach(([key, value]) => {
+      if (dayjs.isDayjs(value)) {
+        serializableValues[key] = (value as dayjs.Dayjs).toISOString();
+        serializableValues[`__dayjs_${key}`] = true;
+      } else {
+        serializableValues[key] = value;
+      }
+    });
+
+    const draft = {
+      formValues: serializableValues,
+      samples: samples.map(s => ({ ...s, attachments: [] })), // Don't save file blobs
+      selectedIndicatorDates: Object.fromEntries(
+        Object.entries(selectedIndicatorDates).map(([k, v]) => [
+          k,
+          {
+            transferDate: v.transferDate?.toISOString() || null,
+            requestDate: v.requestDate?.toISOString() || null,
+          },
+        ])
+      ),
+      sampleCodePrefix,
+      selectedProvinceCode,
+      selectedWardCode,
+      savedAt: new Date().toISOString(),
+    };
+
+    try {
+      localStorage.setItem(draftKey, JSON.stringify(draft));
+    } catch (e) {
+      // localStorage full or unavailable - silently ignore
+    }
+  }, [form, samples, selectedIndicatorDates, sampleCodePrefix, selectedProvinceCode, selectedWardCode, draftKey]);
+
+  // Auto-save every 3 seconds when form data changes
+  useEffect(() => {
+    // Skip auto-save when loading from quotation/testRequest source (create mode only)
+    if (!isEditMode && (quotationId || testRequestId)) return;
+
+    if (draftSaveTimerRef.current) {
+      clearTimeout(draftSaveTimerRef.current);
+    }
+    draftSaveTimerRef.current = setTimeout(() => {
+      // Only save if there's meaningful data
+      if (samples.length > 0 || form.getFieldValue("customerName")) {
+        saveDraft();
+      }
+    }, 3000);
+
+    return () => {
+      if (draftSaveTimerRef.current) {
+        clearTimeout(draftSaveTimerRef.current);
+      }
+    };
+  }, [samples, selectedIndicatorDates, sampleCodePrefix, isEditMode, quotationId, testRequestId, saveDraft]);
+
+  // Restore draft on mount
+  // - Create mode: restore if no quotation/testRequest source
+  // - Edit mode: restore after loadData completes
+  useEffect(() => {
+    if (draftRestoredRef.current) return;
+    // Create mode: skip if loading from quotation/testRequest
+    if (!isEditMode && (quotationId || testRequestId)) return;
+    // Edit mode: wait until loadData has actually completed
+    if (isEditMode && !editDataLoaded) return;
+
+    draftRestoredRef.current = true;
+
+    try {
+      const saved = localStorage.getItem(draftKey);
+      if (!saved) return;
+
+      const draft = JSON.parse(saved);
+      // Check if draft is less than 24 hours old
+      const savedAt = new Date(draft.savedAt);
+      const hoursDiff = (Date.now() - savedAt.getTime()) / (1000 * 60 * 60);
+      if (hoursDiff > 24) {
+        localStorage.removeItem(draftKey);
+        return;
+      }
+
+      // Ask user if they want to restore
+      const savedTime = dayjs(draft.savedAt).format("HH:mm DD/MM/YYYY");
+      const label = isEditMode ? "chỉnh sửa" : "tạo mới";
+      const shouldRestore = window.confirm(
+        `Có bản nháp ${label} chưa lưu (lúc ${savedTime}). Bạn có muốn khôi phục không?`
+      );
+
+      if (!shouldRestore) {
+        localStorage.removeItem(draftKey);
+        return;
+      }
+
+      // Restore form values
+      const formValues = draft.formValues || {};
+      const restoredValues: Record<string, any> = {};
+      Object.entries(formValues).forEach(([key, value]) => {
+        if (key.startsWith("__dayjs_")) return;
+        if (formValues[`__dayjs_${key}`] && value) {
+          restoredValues[key] = dayjs(value as string);
+        } else {
+          restoredValues[key] = value;
+        }
+      });
+      form.setFieldsValue(restoredValues);
+
+      // Restore sample code prefix (create mode only - edit mode keeps from API)
+      if (!isEditMode && draft.sampleCodePrefix) {
+        setSampleCodePrefix(draft.sampleCodePrefix);
+      }
+
+      // Restore province/ward codes
+      if (draft.selectedProvinceCode) {
+        setSelectedProvinceCode(draft.selectedProvinceCode);
+        getWardsByProvince(draft.selectedProvinceCode).then(loadedWards => {
+          setWards(loadedWards);
+        });
+      }
+      if (draft.selectedWardCode) {
+        setSelectedWardCode(draft.selectedWardCode);
+      }
+
+      // Restore samples
+      if (draft.samples && draft.samples.length > 0) {
+        setSamples(draft.samples);
+      }
+
+      // Restore indicator dates
+      if (draft.selectedIndicatorDates) {
+        const restoredDates: Record<string, IndicatorDateInfo> = {};
+        Object.entries(draft.selectedIndicatorDates).forEach(([key, val]: [string, any]) => {
+          restoredDates[key] = {
+            transferDate: val.transferDate ? dayjs(val.transferDate) : undefined,
+            requestDate: val.requestDate ? dayjs(val.requestDate) : undefined,
+          };
+        });
+        setSelectedIndicatorDates(restoredDates);
+      }
+
+      message.success("Đã khôi phục bản nháp");
+    } catch (e) {
+      console.error("Failed to restore draft:", e);
+      localStorage.removeItem(draftKey);
+    }
+  }, [isEditMode, quotationId, testRequestId, editDataLoaded, draftKey]);
+
+  // Clear draft function (call after successful save)
+  const clearDraft = useCallback(() => {
+    try {
+      localStorage.removeItem(draftKey);
+    } catch (e) {
+      // ignore
+    }
+  }, [draftKey]);
+
   return {
     // Form
     form,
@@ -1314,6 +1486,9 @@ export const useTestRequestFormData = () => {
     getIndicatorMethodInfo,
     getFilteredIndicators,
     getFilteredGroupsWithIndicators,
+
+    // Draft
+    clearDraft,
 
     // Navigation
     navigate,

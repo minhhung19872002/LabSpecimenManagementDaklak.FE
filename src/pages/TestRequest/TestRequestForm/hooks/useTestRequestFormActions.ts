@@ -92,6 +92,9 @@ interface UseTestRequestFormActionsProps {
 
   // Custom prices override (per sample + indicator method)
   customPrices: Record<string, number>;
+
+  // Draft management
+  clearDraft: () => void;
 }
 
 export const useTestRequestFormActions = ({
@@ -144,6 +147,7 @@ export const useTestRequestFormActions = ({
   specimenTypes,
   sourceQuotationId,
   customPrices,
+  clearDraft,
 }: UseTestRequestFormActionsProps) => {
 
   // Helper: Build change history by comparing original and new data
@@ -1041,6 +1045,7 @@ export const useTestRequestFormActions = ({
           } else {
             message.success("Cập nhật phiếu yêu cầu thành công!");
           }
+          clearDraft();
           navigate(PATH_ROUTES.testRequests.detail(id));
         }
       } else {
@@ -1053,6 +1058,7 @@ export const useTestRequestFormActions = ({
         } else {
           message.success(`Đã tạo phiếu yêu cầu XN: ${testRequest?.contractNumber}`);
         }
+        clearDraft();
         navigate(PATH_ROUTES.testRequests.detail(testRequest.id));
       }
     } catch (error: any) {

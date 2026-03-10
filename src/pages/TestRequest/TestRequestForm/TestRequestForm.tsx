@@ -146,6 +146,7 @@ const TestRequestForm: React.FC = () => {
     getIndicatorMethodInfo,
     getFilteredIndicators,
     getFilteredGroupsWithIndicators,
+    clearDraft,
     navigate,
   } = useTestRequestFormData();
 
@@ -218,6 +219,7 @@ const TestRequestForm: React.FC = () => {
     specimenTypes,
     sourceQuotationId,
     customPrices,
+    clearDraft,
   });
 
   // Ref to form sections to detect when scrolled past
