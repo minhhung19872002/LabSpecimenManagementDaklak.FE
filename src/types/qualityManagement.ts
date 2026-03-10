@@ -430,6 +430,7 @@ export interface GetSampleAssignmentLogInput {
   laboratoryId?: string;
   indicatorIds?: string[];
   technicianIds?: string[];
+  qlclDisplayStatuses?: number[];
 }
 
 // Paged result for Sample Assignment Log
@@ -447,4 +448,14 @@ export interface SampleAssignmentLogStatisticsDto {
   waitingApproval: number;
   resultRejected: number;
   completed: number;
+}
+
+// Statistics for QLCL Sample Assignment Log (by QLCLDisplayStatus)
+export interface QLCLSampleAssignmentLogStatisticsDto {
+  total: number;
+  toDo: number;                // ToDo + Testing
+  waitingQLKTApproval: number;
+  waitingQLCLApproval: number;
+  waitingForPublishing: number;
+  published: number;
 }

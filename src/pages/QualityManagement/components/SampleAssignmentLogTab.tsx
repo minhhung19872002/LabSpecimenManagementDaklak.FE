@@ -10,10 +10,7 @@ import {
   QLCLDisplayStatusLabels,
   QLCLDisplayStatusColors,
 } from "../../../types/qualityManagement";
-import {
-  TestRequestStatus,
-  TestRequestStatusLabels,
-} from "../../../types/testRequest";
+
 import { IndicatorApprovalStatus } from "../../../types/laboratoryTask";
 
 import "../../../styles/ListCard.css";
@@ -335,27 +332,40 @@ const getRowColorClass = (record: ProcessedLogItem): string => {
   return "";
 };
 
-interface SampleAssignmentLogTabProps {
-  onRegisterReload?: (fn: () => void) => void;
+export interface AssignmentLogControls {
+  reload: () => void;
+  statistics: import("../../../types/qualityManagement").QLCLSampleAssignmentLogStatisticsDto | null;
+  qlclDisplayStatuses: number[] | undefined;
+  handleQlclStatusFilter: (statuses: number[] | undefined) => void;
 }
 
-const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegisterReload }) => {
+interface SampleAssignmentLogTabProps {
+  onRegisterControls?: (controls: AssignmentLogControls) => void;
+}
+
+const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegisterControls }) => {
   const {
     loading,
     data,
-    statusFilter,
+    statistics,
     pagination,
+    qlclDisplayStatuses,
     handleSearch,
-    handleStatusFilter,
+    handleQlclStatusFilter,
     handleTableChange,
     handleRowDoubleClick,
     handleReload,
   } = useSampleAssignmentLog();
 
-  // Register reload function to parent
+  // Register controls to parent
   useEffect(() => {
-    onRegisterReload?.(handleReload);
-  }, [onRegisterReload, handleReload]);
+    onRegisterControls?.({
+      reload: handleReload,
+      statistics,
+      qlclDisplayStatuses,
+      handleQlclStatusFilter,
+    });
+  }, [onRegisterControls, handleReload, statistics, qlclDisplayStatuses, handleQlclStatusFilter]);
 
   // Process data for row spanning
   const processedData = useMemo(() => processDataForRowSpan(data), [data]);
@@ -627,30 +637,6 @@ const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegis
     [isCellHovered],
   );
 
-  // Status filter options
-  const statusOptions = useMemo(
-    () => [
-      { value: undefined, label: "Tất cả" },
-      {
-        value: TestRequestStatus.New,
-        label: TestRequestStatusLabels[TestRequestStatus.New],
-      },
-      {
-        value: TestRequestStatus.UnderReview,
-        label: TestRequestStatusLabels[TestRequestStatus.UnderReview],
-      },
-      {
-        value: TestRequestStatus.InProgress,
-        label: TestRequestStatusLabels[TestRequestStatus.InProgress],
-      },
-      {
-        value: TestRequestStatus.Completed,
-        label: TestRequestStatusLabels[TestRequestStatus.Completed],
-      },
-    ],
-    [],
-  );
-
   return (
     <div className="sample-assignment-log-tab">
       {/* Toolbar */}
@@ -664,16 +650,6 @@ const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegis
             enterButton
           />
         </Col>
-        {/* <Col xs={24} sm={8} md={6}>
-          <Select
-            style={{ width: "100%" }}
-            placeholder="Lọc trạng thái"
-            allowClear
-            value={statusFilter}
-            onChange={handleStatusFilter}
-            options={statusOptions}
-          />
-        </Col> */}
       </Row>
 
       {/* Table - pagination disabled because we do server-side contract pagination */}

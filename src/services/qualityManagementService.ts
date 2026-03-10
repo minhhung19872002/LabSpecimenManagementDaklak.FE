@@ -15,6 +15,7 @@ import {
   ConfirmHandoverInput,
   GetSampleAssignmentLogInput,
   PagedSampleAssignmentLogResult,
+  QLCLSampleAssignmentLogStatisticsDto,
 } from '../types/qualityManagement';
 
 const BASE_URL = '/api/v1/quality-management';
@@ -212,7 +213,23 @@ export const qualityManagementService = {
       }
     });
 
-    const response = await api.get<PagedSampleAssignmentLogResult>(`${BASE_URL}/sample-assignment-log`, { params: queryParams });
+    // Handle array params (QlclDisplayStatuses)
+    const arrayParams: Record<string, number[]> = {};
+    if (params.qlclDisplayStatuses?.length) {
+      arrayParams.QlclDisplayStatuses = params.qlclDisplayStatuses;
+    }
+
+    const response = await api.get<PagedSampleAssignmentLogResult>(`${BASE_URL}/sample-assignment-log`, {
+      params: { ...queryParams, ...arrayParams },
+      paramsSerializer: {
+        indexes: null, // ABP expects QlclDisplayStatuses=5&QlclDisplayStatuses=6 format
+      },
+    });
+    return response.data;
+  },
+
+  getSampleAssignmentLogStatistics: async (): Promise<QLCLSampleAssignmentLogStatisticsDto> => {
+    const response = await api.get<QLCLSampleAssignmentLogStatisticsDto>(`${BASE_URL}/sample-assignment-log/statistics`);
     return response.data;
   },
 };

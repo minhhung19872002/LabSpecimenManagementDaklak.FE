@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import {
   Card,
   Table,
@@ -16,10 +16,10 @@ import Icon, {
   SearchOutlined,
   ReloadOutlined,
 } from "../../components/common/Icon";
-import { QualityManagementStatus, QualityManagementStatusLabels } from "../../types/qualityManagement";
+import { QualityManagementStatus, QualityManagementStatusLabels, QLCLDisplayStatus, QLCLSampleAssignmentLogStatisticsDto } from "../../types/qualityManagement";
 import HistoryModal from "./components/HistoryModal";
 import ChangeApprovalModal from "./components/ChangeApprovalModal";
-import SampleAssignmentLogTab from "./components/SampleAssignmentLogTab";
+import SampleAssignmentLogTab, { AssignmentLogControls } from "./components/SampleAssignmentLogTab";
 import { useQualityManagementList } from "./hooks";
 
 import "./components/ReportManagementTab.css";
@@ -31,7 +31,17 @@ const { Text } = Typography;
 
 const QualityManagementList: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("reports");
-  const assignmentLogReloadRef = useRef<(() => void) | null>(null);
+  const assignmentLogControlsRef = useRef<AssignmentLogControls | null>(null);
+  const [assignmentLogStats, setAssignmentLogStats] = useState<QLCLSampleAssignmentLogStatisticsDto | null>(null);
+  const [assignmentLogQlclStatuses, setAssignmentLogQlclStatuses] = useState<number[] | undefined>(undefined);
+  const [assignmentLogFilterHandler, setAssignmentLogFilterHandler] = useState<((s: number[] | undefined) => void) | null>(null);
+
+  const handleRegisterControls = useCallback((controls: AssignmentLogControls) => {
+    assignmentLogControlsRef.current = controls;
+    setAssignmentLogStats(controls.statistics);
+    setAssignmentLogQlclStatuses(controls.qlclDisplayStatuses);
+    setAssignmentLogFilterHandler(() => controls.handleQlclStatusFilter);
+  }, []);
 
   const {
     loading,
@@ -58,82 +68,126 @@ const QualityManagementList: React.FC = () => {
 
   return (
     <div>
-      {/* Statistics Cards */}
+      {/* Statistics Cards - switch based on active tab */}
       <div className="dashboard-stats-grid quality-stats-grid">
-        {[
-          {
-            title: "Chờ phê duyệt",
-            value: statistics?.pendingApprovalCount || 0,
-            iconBg: "late",
-            icon: "clock",
-            valueColor: "#FAAD14",
-            filterValue: QualityManagementStatus.PendingApproval,
-          },
-          {
-            title: "Trễ hạn",
-            value: statistics?.overdueCount || 0,
-            iconBg: "red",
-            icon: "exclamation-triangle",
-            valueColor: "#FF4D4F",
-            filterValue: undefined,
-            isOverdue: true,
-          },
-          {
-            title: "Chờ phát hành",
-            value: statistics?.pendingPublishCount || 0,
-            iconBg: "blue",
-            icon: "file-text",
-            valueColor: "#096DD9",
-            filterValue: QualityManagementStatus.PendingPublish,
-          },
-          {
-            title: "Đã phát hành",
-            value: statistics?.publishedCount || 0,
-            iconBg: "cyan",
-            icon: "file-earmark-check",
-            valueColor: "#13C2C2",
-            filterValue: QualityManagementStatus.FullyPublished,
-          },
-        ].map((stat, index) => {
-          const isActive = stat.isOverdue
-            ? overdueFilter
-            : stat.filterValue !== undefined && statusFilter === stat.filterValue;
-          return (
-            <Card
-              key={index}
-              className={`dashboard-stat-card quality-stat-clickable${isActive ? " quality-stat-active" : ""}`}
-              bordered={false}
-              onClick={() => {
-                if (activeTab !== "reports") return;
-                if (stat.isOverdue) {
-                  handleOverdueFilter(!overdueFilter);
-                } else if (stat.filterValue !== undefined) {
-                  handleStatusFilter(isActive ? undefined : stat.filterValue as any);
-                }
-              }}
-            >
-              <div className="dashboard-stat-content">
-                <div className="dashboard-stat-info">
-                  <Text className="dashboard-stat-title">{stat.title}</Text>
-                  <div
-                    className="dashboard-stat-value"
-                    style={{
-                      background: stat.valueColor,
-                      WebkitBackgroundClip: "text",
-                      WebkitTextFillColor: "transparent",
-                      backgroundClip: "text",
-                    }}
-                  >
-                    {stat.value}
-                  </div>
-                </div>
-                <div className={`dashboard-stat-icon ${stat.iconBg}`}>
-                  <Icon name={stat.icon} />
+        {(activeTab === "reports"
+          ? [
+              {
+                title: "Chờ phê duyệt",
+                value: statistics?.pendingApprovalCount || 0,
+                iconBg: "late",
+                icon: "clock",
+                valueColor: "#FAAD14",
+                isActive: statusFilter === QualityManagementStatus.PendingApproval,
+                onClick: () => handleStatusFilter(statusFilter === QualityManagementStatus.PendingApproval ? undefined : QualityManagementStatus.PendingApproval),
+              },
+              {
+                title: "Trễ hạn",
+                value: statistics?.overdueCount || 0,
+                iconBg: "red",
+                icon: "exclamation-triangle",
+                valueColor: "#FF4D4F",
+                isActive: overdueFilter,
+                onClick: () => handleOverdueFilter(!overdueFilter),
+              },
+              {
+                title: "Chờ phát hành",
+                value: statistics?.pendingPublishCount || 0,
+                iconBg: "blue",
+                icon: "file-text",
+                valueColor: "#096DD9",
+                isActive: statusFilter === QualityManagementStatus.PendingPublish,
+                onClick: () => handleStatusFilter(statusFilter === QualityManagementStatus.PendingPublish ? undefined : QualityManagementStatus.PendingPublish),
+              },
+              {
+                title: "Đã phát hành",
+                value: statistics?.publishedCount || 0,
+                iconBg: "cyan",
+                icon: "file-earmark-check",
+                valueColor: "#13C2C2",
+                isActive: statusFilter === QualityManagementStatus.FullyPublished,
+                onClick: () => handleStatusFilter(statusFilter === QualityManagementStatus.FullyPublished ? undefined : QualityManagementStatus.FullyPublished),
+              },
+            ]
+          : [
+              {
+                title: "Đang thực hiện",
+                value: assignmentLogStats?.toDo || 0,
+                iconBg: "red",
+                icon: "flask",
+                valueColor: "#FF4D4F",
+                isActive: assignmentLogQlclStatuses?.includes(QLCLDisplayStatus.ToDo) ?? false,
+                onClick: () => {
+                  const statuses = [QLCLDisplayStatus.ToDo, QLCLDisplayStatus.Testing];
+                  const isActive = assignmentLogQlclStatuses?.includes(QLCLDisplayStatus.ToDo);
+                  assignmentLogFilterHandler?.(isActive ? undefined : statuses);
+                },
+              },
+              {
+                title: "Chờ QLKT duyệt",
+                value: assignmentLogStats?.waitingQLKTApproval || 0,
+                iconBg: "late",
+                icon: "clock",
+                valueColor: "#FAAD14",
+                isActive: assignmentLogQlclStatuses?.includes(QLCLDisplayStatus.WaitingQLKTApproval) ?? false,
+                onClick: () => {
+                  const isActive = assignmentLogQlclStatuses?.includes(QLCLDisplayStatus.WaitingQLKTApproval);
+                  assignmentLogFilterHandler?.(isActive ? undefined : [QLCLDisplayStatus.WaitingQLKTApproval]);
+                },
+              },
+              {
+                title: "Chờ QLCL duyệt",
+                value: assignmentLogStats?.waitingQLCLApproval || 0,
+                iconBg: "purple",
+                icon: "shield-check",
+                valueColor: "#722ED1",
+                isActive: assignmentLogQlclStatuses?.includes(QLCLDisplayStatus.WaitingQLCLApproval) ?? false,
+                onClick: () => {
+                  const isActive = assignmentLogQlclStatuses?.includes(QLCLDisplayStatus.WaitingQLCLApproval);
+                  assignmentLogFilterHandler?.(isActive ? undefined : [QLCLDisplayStatus.WaitingQLCLApproval]);
+                },
+              },
+              {
+                title: "Chờ phát hành",
+                value: assignmentLogStats?.waitingForPublishing || 0,
+                iconBg: "blue",
+                icon: "file-text",
+                valueColor: "#096DD9",
+                isActive: assignmentLogQlclStatuses?.includes(QLCLDisplayStatus.WaitingForPublishing) ?? false,
+                onClick: () => {
+                  const isActive = assignmentLogQlclStatuses?.includes(QLCLDisplayStatus.WaitingForPublishing);
+                  assignmentLogFilterHandler?.(isActive ? undefined : [QLCLDisplayStatus.WaitingForPublishing]);
+                },
+              },
+            ]
+        ).map((stat, index) => (
+          <Card
+            key={`${activeTab}-${index}`}
+            className={`dashboard-stat-card quality-stat-clickable${stat.isActive ? " quality-stat-active" : ""}`}
+            bordered={false}
+            onClick={stat.onClick}
+          >
+            <div className="dashboard-stat-content">
+              <div className="dashboard-stat-info">
+                <Text className="dashboard-stat-title">{stat.title}</Text>
+                <div
+                  className="dashboard-stat-value"
+                  style={{
+                    background: stat.valueColor,
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text",
+                  }}
+                >
+                  {stat.value}
                 </div>
               </div>
-            </Card>
-          );
-        })}
+              <div className={`dashboard-stat-icon ${stat.iconBg}`}>
+                <Icon name={stat.icon} />
+              </div>
+            </div>
+          </Card>
+        ))}
       </div>
 
       <Card
@@ -150,7 +204,7 @@ const QualityManagementList: React.FC = () => {
             onClick={
               activeTab === "reports"
                 ? loadData
-                : () => assignmentLogReloadRef.current?.()
+                : () => assignmentLogControlsRef.current?.reload()
             }
           />
         }
@@ -172,7 +226,7 @@ const QualityManagementList: React.FC = () => {
 
         {/* Content */}
         {activeTab === "assignment-log" ? (
-          <SampleAssignmentLogTab onRegisterReload={(fn) => { assignmentLogReloadRef.current = fn; }} />
+          <SampleAssignmentLogTab onRegisterControls={handleRegisterControls} />
         ) : (
           <>
             {/* Filters */}
