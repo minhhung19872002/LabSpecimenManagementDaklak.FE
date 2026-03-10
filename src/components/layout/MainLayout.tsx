@@ -51,6 +51,8 @@ import {
   STORAGE_KEYS,
 } from "../../constants";
 import { MENU_PERMISSION_MAP } from "../../constants/permissionMapping";
+import { Helmet } from "react-helmet-async";
+import { usePageTitle } from "../../hooks/usePageTitle";
 
 type MenuItem = Required<MenuProps>["items"][number];
 
@@ -102,6 +104,9 @@ const MainLayout: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Dynamic page title
+  const pageTitle = usePageTitle();
 
   // Work reminder popup for SampleReceiver
   const {
@@ -560,6 +565,9 @@ const MainLayout: React.FC = () => {
 
   return (
     <div className="main-layout">
+      <Helmet>
+        <title>{pageTitle}</title>
+      </Helmet>
       {/* Mobile Drawer */}
       <Drawer
         placement="left"
