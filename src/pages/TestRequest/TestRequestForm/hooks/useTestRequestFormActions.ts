@@ -92,6 +92,7 @@ interface UseTestRequestFormActionsProps {
 
   // Custom prices override (per sample + indicator method)
   customPrices: Record<string, number>;
+  setCustomPrices: React.Dispatch<React.SetStateAction<Record<string, number>>>;
 
   // Draft management
   clearDraft: () => void;
@@ -147,6 +148,7 @@ export const useTestRequestFormActions = ({
   specimenTypes,
   sourceQuotationId,
   customPrices,
+  setCustomPrices,
   clearDraft,
 }: UseTestRequestFormActionsProps) => {
 
@@ -320,6 +322,63 @@ export const useTestRequestFormActions = ({
       isSharedSample: false,
     };
     setSamples([...samples, newSample]);
+  };
+
+  const addExistingSample = (existingSample: any, selectedIndicators: any[]) => {
+    if (isSamplesLocked()) {
+      message.warning("Không thể thêm mẫu khi phiếu đang thực hiện");
+      return;
+    }
+
+    const existingSampleCodes = samples.map((s) => s.sampleCode);
+    const nextOrderNum = getNextOrderNum(existingSampleCodes);
+    const contractNumber = form.getFieldValue("contractNumber") || "";
+
+    const indicatorMethods: IndicatorMethodKey[] = selectedIndicators.map((ind) =>
+      createIndicatorMethodKey(ind.indicatorId, ind.testMethodId || "null", ind.specimenTypeId)
+    );
+
+    const newSampleKey = `new-${Date.now()}`;
+    const newSample: SampleFormData = {
+      key: newSampleKey,
+      sortOrder: samples.length + 1,
+      sampleCode: generateSampleCode(contractNumber, nextOrderNum),
+      sampleName: existingSample.sampleName || "",
+      samplingAddress: "",
+      sampleQuantity: existingSample.sampleQuantity || "",
+      status: existingSample.status ?? SampleStatus.Normal,
+      statusText: existingSample.statusText || "",
+      processingStatus: "",
+      notes: "",
+      storageLocation: "",
+      specimenTypeId: existingSample.specimenTypeId,
+      specimenTypeName: existingSample.specimenTypeName || "",
+      indicatorIds: [],
+      indicatorMethods,
+      attachments: [],
+      isSharedSample: false,
+    };
+
+    // Set dates and custom prices from modal selections
+    const now = dayjs();
+    const newDates: Record<string, IndicatorDateInfo> = {};
+    const newPrices: Record<string, number> = {};
+
+    selectedIndicators.forEach((ind) => {
+      const methodKey = createIndicatorMethodKey(ind.indicatorId, ind.testMethodId || "null", ind.specimenTypeId);
+      const dateKey = `${newSampleKey}_${methodKey}`;
+      newDates[dateKey] = {
+        transferDate: ind.transferDate || now,
+        requestDate: ind.requestDate || undefined,
+      };
+      // Set custom price from modal (user may have edited it)
+      newPrices[dateKey] = ind.unitPrice;
+    });
+
+    setSelectedIndicatorDates((prev) => ({ ...prev, ...newDates }));
+    setCustomPrices((prev) => ({ ...prev, ...newPrices }));
+    setSamples([...samples, newSample]);
+    message.success(`Đã thêm mẫu "${newSample.sampleName}" với ${selectedIndicators.length} chỉ tiêu`);
   };
 
   const removeSample = (key: string) => {
@@ -1231,6 +1290,7 @@ export const useTestRequestFormActions = ({
   return {
     // Sample actions
     addSample,
+    addExistingSample,
     removeSample,
     updateSample,
     duplicateSample,
