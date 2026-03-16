@@ -32,7 +32,7 @@ import { API_BASE_URL } from "../../../services/api";
 import userService, { UserLookupDto } from "../../../services/userService";
 import { IndicatorName } from "../../../components/common";
 import RichTextEditor from "../../../components/common/RichTextEditor";
-import { parseResultToNumber, convertHtmlToMathExpression, stripHtmlTags } from "../../../utils/formatters";
+import { evaluatePassFail, stripHtmlTags } from "../../../utils/formatters";
 
 const { Text } = Typography;
 
@@ -620,39 +620,6 @@ const PrintModal: React.FC<PrintModalProps> = ({
     setViewedFiles((prev) => new Set(prev).add(fileName));
   };
 
-  // Calculate pass/fail status based on result and limits
-  const calculatePassFail = (
-    result: string | undefined,
-    comparisonOperator: string | undefined,
-    allowedLimit: string | undefined,
-  ): "pass" | "fail" | null => {
-    if (!result || !comparisonOperator || !allowedLimit) return null;
-
-    const resultValue = parseResultToNumber(result);
-    if (resultValue === null) return null;
-
-    // Convert HTML superscript/subscript to math expression and parse limit
-    const limitValue = parseResultToNumber(convertHtmlToMathExpression(allowedLimit));
-    if (limitValue === null) return null;
-
-    switch (comparisonOperator) {
-      case "<=":
-      case "≤":
-        return resultValue <= limitValue ? "pass" : "fail";
-      case ">=":
-      case "≥":
-        return resultValue >= limitValue ? "pass" : "fail";
-      case "<":
-        return resultValue < limitValue ? "pass" : "fail";
-      case ">":
-        return resultValue > limitValue ? "pass" : "fail";
-      case "=":
-        return resultValue === limitValue ? "pass" : "fail";
-      default:
-        return null;
-    }
-  };
-
   const columns: ColumnsType<ProcessedIndicator> = [
     {
       title: "Tên chỉ tiêu",
@@ -755,7 +722,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
       render: (_: any, record: ProcessedIndicator) => {
         if (record._isParentWithChildren) return "-";
 
-        const passFailStatus = calculatePassFail(
+        const passFailStatus = evaluatePassFail(
           record.result,
           record.comparisonOperator,
           record.allowedLimit,

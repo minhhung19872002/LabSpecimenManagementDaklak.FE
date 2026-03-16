@@ -13,7 +13,7 @@ import {
 import StatusTag from "../../../components/common/StatusTag";
 import type { TableRowSelection } from "antd/es/table/interface";
 import { CheckOutlined, CloseOutlined } from "../../../components/common/Icon";
-import { formatDate, parseResultToNumber, stripPTags, convertHtmlToMathExpression } from "../../../utils/formatters";
+import { formatDate, stripPTags, evaluatePassFail } from "../../../utils/formatters";
 import {
   LaboratoryTaskIndicatorDto,
   IndicatorApprovalStatus,
@@ -192,97 +192,6 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   };
 
   // Calculate pass/fail status
-  // Text không tính được sẽ được convert sang 0 để vẫn so sánh được
-  // Hỗ trợ cả single limit và range
-  const calculatePassFail = (
-    result: string | undefined,
-    comparisonOperator: string | undefined,
-    allowedLimit: string | undefined,
-    lowerOperator?: string,
-    lowerLimit?: string,
-    upperOperator?: string,
-    upperLimit?: string
-  ): "pass" | "fail" | null => {
-    if (!result) return null;
-
-    // Parse result to number using parseResultToNumber
-    // Supports: scientific notation ("2,0 x 10^2"), math expressions ("10^2*5+4"), plain numbers
-    // Text không tính được (như "Âm tính") sẽ trả về 0
-    const resultValue = parseResultToNumber(result);
-    if (resultValue === null) return null;
-
-    // Check if it's a range comparison (both lowerLimit and upperLimit exist)
-    if (lowerLimit && upperLimit) {
-      // Convert HTML superscript/subscript to math expression before parsing
-      const lowerValue = parseResultToNumber(convertHtmlToMathExpression(lowerLimit));
-      const upperValue = parseResultToNumber(convertHtmlToMathExpression(upperLimit));
-      if (lowerValue === null || upperValue === null) return null;
-
-      // Check lower bound
-      let passLower = false;
-      const lowerOp = lowerOperator || ">";
-      switch (lowerOp) {
-        case ">":
-        case "≥":
-          passLower =
-            lowerOp === ">"
-              ? resultValue > lowerValue
-              : resultValue >= lowerValue;
-          break;
-        case ">=":
-          passLower = resultValue >= lowerValue;
-          break;
-        default:
-          passLower = resultValue > lowerValue;
-      }
-
-      // Check upper bound
-      let passUpper = false;
-      const upperOp = upperOperator || "<";
-      switch (upperOp) {
-        case "<":
-        case "≤":
-          passUpper =
-            upperOp === "<"
-              ? resultValue < upperValue
-              : resultValue <= upperValue;
-          break;
-        case "<=":
-          passUpper = resultValue <= upperValue;
-          break;
-        default:
-          passUpper = resultValue < upperValue;
-      }
-
-      return passLower && passUpper ? "pass" : "fail";
-    }
-
-    // Single limit comparison
-    if (!comparisonOperator || !allowedLimit) return null;
-
-    // Convert HTML superscript/subscript to math expression and parse limit to number
-    const limitValue = parseResultToNumber(convertHtmlToMathExpression(allowedLimit));
-    if (limitValue === null) return null;
-
-    // Compare based on operator (support both <= and ≤ formats)
-    switch (comparisonOperator) {
-      case "<=":
-      case "≤":
-        return resultValue <= limitValue ? "pass" : "fail";
-      case ">=":
-      case "≥":
-        return resultValue >= limitValue ? "pass" : "fail";
-      case "<":
-        return resultValue < limitValue ? "pass" : "fail";
-      case ">":
-        return resultValue > limitValue ? "pass" : "fail";
-      case "=":
-        return resultValue === limitValue ? "pass" : "fail";
-      default:
-        return null;
-    }
-  };
-
   const handleReject = async () => {
     try {
       const values = await rejectForm.validateFields();
@@ -894,7 +803,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           upperLimit = standardInfo.upperLimit;
         }
 
-        const passFailStatus = calculatePassFail(
+        const passFailStatus = evaluatePassFail(
           record.result,
           comparisonOperator,
           allowedLimit,

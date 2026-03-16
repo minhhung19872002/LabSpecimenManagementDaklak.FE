@@ -545,63 +545,200 @@ export const parseResultToNumber = (
 };
 
 /**
- * Compare result value with limit
- * @param result - Result string (can be scientific notation or text like "Âm tính")
- * @param limit - Limit value (number)
- * @param decimalPlaces - Decimal places for comparison (default: 4)
- * @returns Object with comparison result:
- *   - parsedValue: The parsed numeric value (0 for "Âm tính", MAX_SAFE_INTEGER for other text)
- *   - isWithinLimit: true if result <= limit, false if result > limit, null if cannot compare
- *   - canCompare: true if both values are numeric and can be compared
- *
- * @example
- * compareResultWithLimit("2,0 x 10^2", 500)
- * // returns { parsedValue: 200, isWithinLimit: true, canCompare: true }
- *
- * compareResultWithLimit("2,0 x 10^3", 500)
- * // returns { parsedValue: 2000, isWithinLimit: false, canCompare: true }
- *
- * compareResultWithLimit("Âm tính", 500)
- * // returns { parsedValue: 0, isWithinLimit: true, canCompare: true }
- *
- * compareResultWithLimit("Dương tính", 500)
- * // returns { parsedValue: MAX_SAFE_INTEGER, isWithinLimit: false, canCompare: true }
+ * Parse result string and extract prefix comparison operator if present.
+ * e.g. "< 5" → { operator: "<", value: 5 }
+ *      "200" → { operator: null, value: 200 }
+ *      "Âm tính" → { operator: null, value: 0 }
  */
-export const compareResultWithLimit = (
+export const parseResultWithOperator = (
   result: string | null | undefined,
-  limit: number | string | null | undefined,
   decimalPlaces: number = 4
-): {
-  parsedValue: number | null;
-  isWithinLimit: boolean | null;
-  canCompare: boolean;
-} => {
-  const parsedValue = parseResultToNumber(result, decimalPlaces);
-
-  // Cannot compare if result is not a number
-  if (parsedValue === null) {
-    return {
-      parsedValue: null,
-      isWithinLimit: null,
-      canCompare: false,
-    };
+): { operator: string | null; value: number | null } => {
+  if (!result || typeof result !== "string") {
+    return { operator: null, value: null };
   }
 
-  // Convert limit to number (handle string input)
-  const numericLimit = typeof limit === "string" ? parseFloat(limit) : limit;
-
-  // Cannot compare if limit is not defined or not a valid number
-  if (numericLimit === null || numericLimit === undefined || isNaN(numericLimit)) {
-    return {
-      parsedValue,
-      isWithinLimit: null,
-      canCompare: false,
-    };
+  const trimmed = result.trim();
+  if (trimmed === "") {
+    return { operator: null, value: null };
   }
 
-  return {
-    parsedValue,
-    isWithinLimit: parsedValue <= numericLimit,
-    canCompare: true,
-  };
+  // Match prefix operators: "<", ">", "<=", ">=", "≤", "≥"
+  const prefixMatch = trimmed.match(/^([<>≤≥]=?)\s*(.+)$/);
+  if (prefixMatch) {
+    const op = prefixMatch[1];
+    const rest = prefixMatch[2];
+    const value = parseResultToNumber(rest, decimalPlaces);
+    if (value !== null) {
+      // Normalize operator symbols
+      const normalizedOp = op === "≤" ? "<=" : op === "≥" ? ">=" : op;
+      return { operator: normalizedOp, value };
+    }
+  }
+
+  // No prefix operator — parse as plain value
+  const value = parseResultToNumber(result, decimalPlaces);
+  return { operator: null, value };
+};
+
+/**
+ * Normalize comparison operator to standard form.
+ * "≤" → "<=", "≥" → ">="
+ */
+const normalizeOperator = (op: string): string => {
+  if (op === "≤") return "<=";
+  if (op === "≥") return ">=";
+  return op;
+};
+
+/**
+ * Check if operator is an upper-bound type (result must be ≤ or < limit)
+ */
+const isUpperBoundOp = (op: string): boolean => {
+  const n = normalizeOperator(op);
+  return n === "<=" || n === "<";
+};
+
+/**
+ * Check if operator is a lower-bound type (result must be ≥ or > limit)
+ */
+const isLowerBoundOp = (op: string): boolean => {
+  const n = normalizeOperator(op);
+  return n === ">=" || n === ">";
+};
+
+/**
+ * Compare a plain numeric result against a single limit with an operator.
+ */
+const comparePlainValue = (
+  resultValue: number,
+  op: string,
+  limitValue: number
+): boolean => {
+  switch (normalizeOperator(op)) {
+    case "<=": return resultValue <= limitValue;
+    case ">=": return resultValue >= limitValue;
+    case "<":  return resultValue < limitValue;
+    case ">":  return resultValue > limitValue;
+    case "=":  return resultValue === limitValue;
+    default:   return false;
+  }
+};
+
+/**
+ * Handle result with prefix operator (e.g. "< 5") against a single limit.
+ * Principle: if we can't prove the result meets the standard → fail (conservative/compliance).
+ *
+ * When result = "< V" (actual value is somewhere in [0, V)):
+ *   - Limit "≤ L" or "< L": if V ≤ L → pass; if V > L → fail (can't prove ≤ L)
+ *   - Limit "≥ L" or "> L": always fail (value < V, can't guarantee ≥ L)
+ *   - Limit "= L": fail (can't prove exact equality)
+ *
+ * When result = "> V" (actual value is somewhere in (V, ∞)):
+ *   - Limit "≥ L" or "> L": if V ≥ L → pass; if V < L → fail (can't prove ≥ L)
+ *   - Limit "≤ L" or "< L": always fail (value > V, can't guarantee ≤ L)
+ *   - Limit "= L": fail (can't prove exact equality)
+ */
+const comparePrefixedValue = (
+  resultOp: string,
+  resultValue: number,
+  limitOp: string,
+  limitValue: number
+): "pass" | "fail" => {
+  const nResultOp = normalizeOperator(resultOp);
+  const nLimitOp = normalizeOperator(limitOp);
+
+  // Result "< V" or "<= V" — actual value is below V (or at V)
+  if (nResultOp === "<" || nResultOp === "<=") {
+    if (isUpperBoundOp(nLimitOp)) {
+      // Limit says value must be ≤ L (or < L)
+      // If V ≤ L → actual value < V ≤ L → definitely passes
+      // If V > L → can't prove actual value ≤ L → fail
+      return resultValue <= limitValue ? "pass" : "fail";
+    }
+    // Limit says value must be ≥ L or > L or = L
+    // Value < V → can't guarantee it meets a lower bound or exact match
+    return "fail";
+  }
+
+  // Result "> V" or ">= V" — actual value is above V (or at V)
+  if (nResultOp === ">" || nResultOp === ">=") {
+    if (isLowerBoundOp(nLimitOp)) {
+      // Limit says value must be ≥ L (or > L)
+      // If V ≥ L → actual value > V ≥ L → definitely passes
+      // If V < L → can't prove actual value ≥ L → fail
+      return resultValue >= limitValue ? "pass" : "fail";
+    }
+    // Limit says value must be ≤ L or < L or = L
+    // Value > V → can't guarantee it meets an upper bound or exact match
+    return "fail";
+  }
+
+  return "fail";
+};
+
+/**
+ * Evaluate pass/fail for a test result against standard limits.
+ * Handles: plain numbers, scientific notation, math expressions,
+ * text results ("Âm tính"/"Dương tính"), and prefixed results ("< 5", "> 10").
+ * Supports both single limit and range (lowerLimit + upperLimit) comparisons.
+ *
+ * @returns "pass" | "fail" | null (null = cannot determine)
+ */
+export const evaluatePassFail = (
+  result: string | undefined,
+  comparisonOperator: string | undefined,
+  allowedLimit: string | undefined,
+  lowerOperator?: string,
+  lowerLimit?: string,
+  upperOperator?: string,
+  upperLimit?: string,
+): "pass" | "fail" | null => {
+  if (!result) return null;
+
+  // Parse result (may have prefix operator like "< 5")
+  const parsed = parseResultWithOperator(result);
+  if (parsed.value === null) return null;
+
+  const { operator: resultOp, value: resultValue } = parsed;
+
+  // --- Range comparison ---
+  if (lowerLimit && upperLimit) {
+    const lowerVal = parseResultToNumber(convertHtmlToMathExpression(lowerLimit));
+    const upperVal = parseResultToNumber(convertHtmlToMathExpression(upperLimit));
+    if (lowerVal === null || upperVal === null) return null;
+
+    const lowerOp = lowerOperator || ">";
+    const upperOp = upperOperator || "<";
+
+    if (resultOp) {
+      // Prefixed result against range — evaluate each bound separately
+      const lowerResult = comparePrefixedValue(resultOp, resultValue, lowerOp, lowerVal);
+      const upperResult = comparePrefixedValue(resultOp, resultValue, upperOp, upperVal);
+
+      // Both must pass; if either is null (indeterminate), overall is null
+      if (lowerResult === "fail" || upperResult === "fail") return "fail";
+      if (lowerResult === "pass" && upperResult === "pass") return "pass";
+      return null;
+    }
+
+    // Plain value against range
+    const passLower = comparePlainValue(resultValue, lowerOp, lowerVal);
+    const passUpper = comparePlainValue(resultValue, upperOp, upperVal);
+    return passLower && passUpper ? "pass" : "fail";
+  }
+
+  // --- Single limit comparison ---
+  if (!comparisonOperator || !allowedLimit) return null;
+
+  const limitValue = parseResultToNumber(convertHtmlToMathExpression(allowedLimit));
+  if (limitValue === null) return null;
+
+  if (resultOp) {
+    // Prefixed result against single limit
+    return comparePrefixedValue(resultOp, resultValue, comparisonOperator, limitValue);
+  }
+
+  // Plain value against single limit
+  return comparePlainValue(resultValue, comparisonOperator, limitValue) ? "pass" : "fail";
 };
