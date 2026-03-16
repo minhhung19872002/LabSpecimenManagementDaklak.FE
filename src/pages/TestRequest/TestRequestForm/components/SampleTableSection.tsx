@@ -20,6 +20,7 @@ import {
   BarcodeOutlined,
   DownloadOutlined,
   UploadOutlined,
+  DatabaseOutlined,
 } from "../../../../components/common/Icon";
 import { Icon } from "@iconify/react";
 import {
@@ -38,6 +39,7 @@ import SampleImageUpload from "./SampleImageUpload";
 import BarcodeQRModal, { SampleCodeInfo } from "./BarcodeQRModal";
 import { IndicatorName } from "../../../../components/common";
 import ImportSpecimenModal from "./ImportSpecimenModal";
+import ExistingSampleSelectionModal from "./ExistingSampleSelectionModal";
 import "./IndicatorSelectionModal.css"; // For tree-line styles
 import {
   importService,
@@ -88,6 +90,8 @@ interface SampleTableSectionProps {
   indicators?: IndicatorDto[];
   indicatorMethodsMap?: Record<string, IndicatorMethodInfo[]>;
   onImportSamples?: (newSamples: SampleFormData[]) => void;
+  // Props for existing sample selection
+  onAddExistingSample?: (sample: any, indicators: any[]) => void;
 }
 
 const SampleTableSection: React.FC<SampleTableSectionProps> = ({
@@ -110,6 +114,7 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
   indicators = [],
   indicatorMethodsMap = {},
   onImportSamples,
+  onAddExistingSample,
 }) => {
   // Barcode/QR Modal state
   const [barcodeModalVisible, setBarcodeModalVisible] = useState(false);
@@ -118,6 +123,9 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
 
   // Import Modal state
   const [importModalVisible, setImportModalVisible] = useState(false);
+
+  // Existing Sample Selection Modal state
+  const [existingSampleModalVisible, setExistingSampleModalVisible] = useState(false);
 
   // Download template handler
   const handleDownloadTemplate = async () => {
@@ -853,6 +861,14 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
             Nhập danh sách
           </Button>
           <Button
+            icon={<DatabaseOutlined />}
+            onClick={() => setExistingSampleModalVisible(true)}
+            disabled={isSamplesLocked()}
+            size="small"
+          >
+            Thêm mẫu có sẵn
+          </Button>
+          <Button
             type="primary"
             size="small"
             icon={<PlusOutlined />}
@@ -922,6 +938,18 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
         existingSamplesCount={samples.length}
         sampleCodePrefix={sampleCodePrefix}
         specimenTypes={specimenTypes}
+      />
+
+      {/* Existing Sample Selection Modal */}
+      <ExistingSampleSelectionModal
+        visible={existingSampleModalVisible}
+        onCancel={() => setExistingSampleModalVisible(false)}
+        onOk={(sample, indicators) => {
+          setExistingSampleModalVisible(false);
+          if (onAddExistingSample) {
+            onAddExistingSample(sample, indicators);
+          }
+        }}
       />
     </Card>
   );

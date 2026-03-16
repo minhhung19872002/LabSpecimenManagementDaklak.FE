@@ -153,6 +153,7 @@ const TestRequestForm: React.FC = () => {
   // Actions hook
   const {
     addSample,
+    addExistingSample,
     removeSample,
     updateSample,
     duplicateSample,
@@ -219,6 +220,7 @@ const TestRequestForm: React.FC = () => {
     specimenTypes,
     sourceQuotationId,
     customPrices,
+    setCustomPrices,
     clearDraft,
   });
 
@@ -422,6 +424,7 @@ const TestRequestForm: React.FC = () => {
               onImportSamples={(newSamples) =>
                 setSamples((prev) => [...prev, ...newSamples])
               }
+              onAddExistingSample={addExistingSample}
             />
 
             <Row gutter={[16, 0]}>
