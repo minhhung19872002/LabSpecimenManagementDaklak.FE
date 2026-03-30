@@ -24,6 +24,7 @@ import SampleTypeCategoriesTab, {
 import SampleConditionsTab, {
   type SampleConditionActions,
 } from "../SampleStatuses";
+import UnitsTab, { type UnitActions } from "../Units";
 import { useMasterDataState } from "./hooks";
 import { useMasterDataActions } from "./hooks/useMasterDataActions";
 import {
@@ -109,6 +110,7 @@ const MasterDataList: React.FC = () => {
   const [testResultValuesRefreshKey, setTestResultValuesRefreshKey] =
     useState(0);
   const [notesRefreshKey, setNotesRefreshKey] = useState(0);
+  const [unitsRefreshKey, setUnitsRefreshKey] = useState(0);
 
   // Refs for tab actions
   const sampleConditionsRef = useRef<SampleConditionActions>(null);
@@ -119,6 +121,7 @@ const MasterDataList: React.FC = () => {
   const indicatorsRef = useRef<IndicatorsActions>(null);
   const testResultValuesRef = useRef<TestResultValuesActions>(null);
   const notesRef = useRef<NotesActions>(null);
+  const unitsRef = useRef<UnitActions>(null);
 
   // Permission check - All Master Data uses unified permissions now
   const canCreate = authService.hasPermission(PERMISSIONS.MasterData.Create);
@@ -350,6 +353,17 @@ const MasterDataList: React.FC = () => {
                 </>
               )}
 
+              {/* Units Tab */}
+              {activeCategory === "units" && (
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => unitsRef.current?.handleCreate()}
+                >
+                  Thêm đơn vị
+                </Button>
+              )}
+
               {/* Notes Tab */}
               {activeCategory === "notes" && (
                 <>
@@ -384,7 +398,8 @@ const MasterDataList: React.FC = () => {
                 activeCategory !== "notes" &&
                 activeCategory !== "specimenTypes" &&
                 activeCategory !== "sampleTypeCategories" &&
-                activeCategory !== "sampleConditions" && (
+                activeCategory !== "sampleConditions" &&
+                activeCategory !== "units" && (
                   <Button
                     type="primary"
                     icon={<PlusOutlined />}
@@ -423,6 +438,9 @@ const MasterDataList: React.FC = () => {
             }
             if (key === "notes") {
               setNotesRefreshKey((prev) => prev + 1);
+            }
+            if (key === "units") {
+              setUnitsRefreshKey((prev) => prev + 1);
             }
           }}
           tabPosition="left"
@@ -484,6 +502,12 @@ const MasterDataList: React.FC = () => {
                   ref={sampleConditionsRef}
                   onDataChange={() => fetchStatistics()}
                   refreshKey={sampleConditionsRefreshKey}
+                />
+              ) : key === "units" ? (
+                <UnitsTab
+                  ref={unitsRef}
+                  onDataChange={() => fetchStatistics()}
+                  refreshKey={unitsRefreshKey}
                 />
               ) : (
                 <MasterDataTable

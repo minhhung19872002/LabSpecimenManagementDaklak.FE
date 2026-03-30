@@ -408,6 +408,7 @@ export interface MasterDataStatisticsDto {
 // Service implementations - Using new API v1 endpoints
 const DEPARTMENT_URL = '/api/v1/departments';
 const SAMPLE_TYPE_CATEGORY_URL = '/api/v1/sample-type-categories';
+const UNIT_URL = '/api/v1/units';
 const SAMPLE_CONDITION_URL = '/api/v1/sample-conditions';
 const SPECIMEN_TYPE_URL = '/api/v1/specimen-types';
 const TEST_METHOD_URL = '/api/v1/test-methods';
@@ -933,6 +934,61 @@ export const indicatorService = {
   },
   batchActivate: async (ids: string[]): Promise<BatchOperationResultDto> => {
     const response = await api.post<BatchOperationResultDto>(`${INDICATOR_URL}/batch-activate`, { ids });
+    return response.data;
+  },
+};
+
+// Unit DTOs
+export interface UnitDto {
+  id: string;
+  code: string;
+  name: string;
+  isActive: boolean;
+  creationTime: string;
+}
+
+export interface CreateUpdateUnitDto {
+  code: string;
+  name: string;
+  isActive: boolean;
+}
+
+export const unitService = {
+  getList: async (params?: PagedAndSortedResultRequestDto): Promise<PagedResultDto<UnitDto>> => {
+    const response = await api.get<PagedResultDto<UnitDto>>(UNIT_URL, { params: params ? toApiParams(params) : {} });
+    return response.data;
+  },
+  get: async (id: string): Promise<UnitDto> => {
+    const response = await api.get<UnitDto>(`${UNIT_URL}/${id}`);
+    return response.data;
+  },
+  create: async (data: CreateUpdateUnitDto): Promise<UnitDto> => {
+    const response = await api.post<UnitDto>(UNIT_URL, data);
+    return response.data;
+  },
+  update: async (id: string, data: CreateUpdateUnitDto): Promise<UnitDto> => {
+    const response = await api.put<UnitDto>(`${UNIT_URL}/${id}`, data);
+    return response.data;
+  },
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`${UNIT_URL}/${id}`);
+  },
+  getActive: async (): Promise<UnitDto[]> => {
+    const response = await api.get<{ items: UnitDto[] } | UnitDto[]>(`${UNIT_URL}/active`);
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+    return response.data?.items || [];
+  },
+  toggleActive: async (id: string): Promise<void> => {
+    await api.post(`${UNIT_URL}/${id}/toggle-active`);
+  },
+  batchDelete: async (ids: string[]): Promise<number> => {
+    const response = await api.post<number>(`${UNIT_URL}/batch-delete`, { ids });
+    return response.data;
+  },
+  batchToggleActive: async (ids: string[], isActive: boolean): Promise<number> => {
+    const response = await api.post<number>(`${UNIT_URL}/batch-toggle-active`, { ids, isActive });
     return response.data;
   },
 };

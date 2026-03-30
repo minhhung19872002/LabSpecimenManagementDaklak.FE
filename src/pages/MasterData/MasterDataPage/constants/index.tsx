@@ -20,6 +20,7 @@ export const categoryLabels: Record<string, string> = {
   formTemplates: "Form mẫu",
   testResultValues: "Quản lý kết quả",
   notes: "Quản lý ghi chú",
+  units: "Đơn vị hàng hóa",
 };
 
 // Categories that don't use server-side pagination (load all at once)
