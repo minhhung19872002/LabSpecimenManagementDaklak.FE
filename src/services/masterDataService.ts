@@ -112,6 +112,7 @@ export interface TestMethodDto {
   name: string;
   formattedName?: string | null;
   unit: string;
+  formattedUnit?: string | null;
   isActive: boolean;
   sortOrder: number;
   indicatorCount: number;
@@ -122,6 +123,7 @@ export interface CreateTestMethodDto {
   name: string;
   formattedName?: string | null;
   unit: string;
+  formattedUnit?: string | null;
   isActive?: boolean;
 }
 
@@ -129,6 +131,7 @@ export interface UpdateTestMethodDto {
   name: string;
   formattedName?: string | null;
   unit: string;
+  formattedUnit?: string | null;
   isActive: boolean;
 }
 
@@ -632,8 +635,9 @@ export const testMethodService = {
   addIndicators: async (testMethodId: string, data: AddIndicatorsToTestMethodDto): Promise<void> => {
     await api.post(`${TEST_METHOD_URL}/${testMethodId}/indicators`, data);
   },
-  removeIndicator: async (testMethodId: string, indicatorId: string): Promise<void> => {
-    await api.delete(`${TEST_METHOD_URL}/${testMethodId}/indicators/${indicatorId}`);
+  removeIndicator: async (testMethodId: string, indicatorId: string, specimenTypeId?: string): Promise<void> => {
+    const params = specimenTypeId ? { specimenTypeId } : {};
+    await api.delete(`${TEST_METHOD_URL}/${testMethodId}/indicators/${indicatorId}`, { params });
   },
   updateIndicator: async (
     testMethodId: string,

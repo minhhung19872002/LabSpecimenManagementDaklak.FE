@@ -7,6 +7,7 @@ import { OrganizationDto } from "../../../types/organization";
 import { getAllProvinces } from "../../../utils/vietnamLocations";
 import { authService } from "../../../services/authService";
 import { PERMISSIONS } from "../../../constants/permissionMapping";
+import { PATH_ROUTES } from "../../../constants/routes";
 
 interface OrganizationTableProps {
   data: OrganizationDto[];
@@ -161,6 +162,12 @@ const OrganizationTable: React.FC<OrganizationTableProps> = ({
       dataSource={data}
       rowKey="id"
       loading={loading}
+      onRow={(record) => ({
+        onDoubleClick: () => {
+          window.open(PATH_ROUTES.organizations.detail(record.id), '_blank');
+        },
+        style: { cursor: 'pointer' },
+      })}
       pagination={{
         current: currentPage,
         pageSize: pageSize,

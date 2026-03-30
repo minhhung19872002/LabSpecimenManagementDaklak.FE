@@ -59,7 +59,7 @@ const TestRequestList: React.FC = () => {
 
   // Check permission cho action "create" theo Permission Matrix
   // Chỉ BP Giao nhận và Admin có quyền tạo mới, QLCL chỉ có quyền View
-  const { canAll: canCreate } = useActionPermission('testRequests', 'create');
+  const { canAll: canCreate } = useActionPermission("testRequests", "create");
 
   return (
     <Card
@@ -71,7 +71,7 @@ const TestRequestList: React.FC = () => {
           {/* Chỉ hiển thị buttons tạo mới/import khi có quyền create */}
           {canCreate && (
             <>
-              <Button
+              {/* <Button
                 icon={<DownloadOutlined />}
                 onClick={handleDownloadTemplate}
                 loading={downloadingTemplate}
@@ -80,8 +80,12 @@ const TestRequestList: React.FC = () => {
               </Button>
               <Button icon={<ImportOutlined />} onClick={openImportModal}>
                 Import Excel
-              </Button>
-              <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+              </Button> */}
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleCreate}
+              >
                 Tạo mới
               </Button>
             </>
@@ -95,7 +99,10 @@ const TestRequestList: React.FC = () => {
           message={
             <Space>
               <CloudOutlined />
-              <span>Đang xem dữ liệu đã lưu trong bộ nhớ đệm. Một số thông tin có thể không được cập nhật.</span>
+              <span>
+                Đang xem dữ liệu đã lưu trong bộ nhớ đệm. Một số thông tin có
+                thể không được cập nhật.
+              </span>
             </Space>
           }
           type="warning"
@@ -154,7 +161,11 @@ const TestRequestList: React.FC = () => {
               {TestRequestStatusLabels[TestRequestStatus.UnderReview]}
             </Select.Option>
             <Select.Option value={TestRequestStatus.WaitingCustomerConfirm}>
-              {TestRequestStatusLabels[TestRequestStatus.WaitingCustomerConfirm]}
+              {
+                TestRequestStatusLabels[
+                  TestRequestStatus.WaitingCustomerConfirm
+                ]
+              }
             </Select.Option>
             <Select.Option value={TestRequestStatus.RequestApproved}>
               {TestRequestStatusLabels[TestRequestStatus.RequestApproved]}
@@ -204,7 +215,14 @@ const TestRequestList: React.FC = () => {
           total: totalCount,
           pageSizeOptions: [50, 100, 150],
           showSizeChanger: true,
-          showTotal: (total, range) => <>Hiển thị <b>{range[0]}-{range[1]}/{total}</b></>,
+          showTotal: (total, range) => (
+            <>
+              Hiển thị{" "}
+              <b>
+                {range[0]}-{range[1]}/{total}
+              </b>
+            </>
+          ),
           onChange: handlePageChange,
         }}
         scroll={{ x: 1600 }}

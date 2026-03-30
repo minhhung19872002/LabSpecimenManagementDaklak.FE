@@ -187,8 +187,22 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
       );
     }
 
-    // Gửi QLKT - khi status = Paid VÀ có quyền sendToAccounting (BPGN)
-    if (canSendToQLKT(data.status) && canSendToAccountingAction) {
+    // Gửi QLKT - khi status cho phép gửi lần đầu, hoặc khi có chỉ tiêu chưa gửi khoa phòng
+    const hasUnsentIndicators = data.samples?.some((sample) =>
+      sample.indicators?.some(
+        (ind) =>
+          (ind.approvalStatus === undefined || ind.approvalStatus === null) &&
+          !ind.isSentToQLKT &&
+          !ind.sentToDepartment,
+      ),
+    );
+    const showSendToQLKT =
+      (canSendToQLKT(data.status) && canSendToAccountingAction) ||
+      (hasUnsentIndicators &&
+        data.status !== TestRequestStatus.Completed &&
+        data.status !== TestRequestStatus.Cancelled);
+
+    if (showSendToQLKT) {
       const sendToQLKTButton = (
         <Button
           key="send-to-qlkt"

@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback, useState } from "react";
-import { Table, Input, Select, Button, Tag, Row, Col, Pagination } from "antd";
-import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
+import { Table, Input, Select, Tag, Row, Col, Pagination, DatePicker } from "antd";
+import { SearchOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { useSampleAssignmentLogForQLKT } from "../hooks/useSampleAssignmentLogForQLKT";
@@ -10,7 +10,6 @@ import {
 } from "../../../types/qualityManagement";
 import {
   TestRequestStatus,
-  TestRequestStatusLabels,
 } from "../../../types/testRequest";
 import {
   IndicatorApprovalStatus,
@@ -18,6 +17,8 @@ import {
   QLKTDisplayStatusLabels,
   QLKTDisplayStatusColors,
 } from "../../../types/laboratoryTask";
+
+const { RangePicker } = DatePicker;
 
 import "../../QualityManagement/components/SampleAssignmentLogTab.css";
 
@@ -338,18 +339,42 @@ const getRowColorClass = (record: ProcessedLogItem): string => {
   return "";
 };
 
-const LabSampleAssignmentLogTab: React.FC = () => {
+interface LabSampleAssignmentLogTabProps {
+  displayStatusFilter?: QLKTDisplayStatus;
+  onReloadRef?: React.MutableRefObject<(() => void) | null>;
+}
+
+const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({ displayStatusFilter, onReloadRef }) => {
   const {
     loading,
     data,
-    statusFilter,
+    searchText,
+    dateRange,
+    selectedIndicatorIds,
+    selectedTechnicianIds,
+    indicators,
+    technicians,
     pagination,
-    handleSearch,
-    handleStatusFilter,
+    handleSearchInputChange,
+    handleDateRangeChange,
+    handleIndicatorChange,
+    handleTechnicianChange,
     handleTableChange,
     handleRowDoubleClick,
     handleReload,
-  } = useSampleAssignmentLogForQLKT();
+  } = useSampleAssignmentLogForQLKT({ displayStatusFilter });
+
+  // Expose reload to parent
+  React.useEffect(() => {
+    if (onReloadRef) {
+      onReloadRef.current = handleReload;
+    }
+    return () => {
+      if (onReloadRef) {
+        onReloadRef.current = null;
+      }
+    };
+  }, [onReloadRef, handleReload]);
 
   // Process data for row spanning
   const processedData = useMemo(() => processDataForRowSpan(data), [data]);
@@ -530,7 +555,8 @@ const LabSampleAssignmentLogTab: React.FC = () => {
         dataIndex: "unit",
         key: "unit",
         width: 80,
-        render: (text: string) => text || "-",
+        render: (text: string) =>
+          text ? <span dangerouslySetInnerHTML={{ __html: text }} /> : "-",
       },
       {
         title: "Kết quả",
@@ -617,55 +643,69 @@ const LabSampleAssignmentLogTab: React.FC = () => {
     [isCellHovered],
   );
 
-  // Status filter options
-  const statusOptions = useMemo(
-    () => [
-      { value: undefined, label: "Tất cả" },
-      {
-        value: TestRequestStatus.New,
-        label: TestRequestStatusLabels[TestRequestStatus.New],
-      },
-      {
-        value: TestRequestStatus.UnderReview,
-        label: TestRequestStatusLabels[TestRequestStatus.UnderReview],
-      },
-      {
-        value: TestRequestStatus.InProgress,
-        label: TestRequestStatusLabels[TestRequestStatus.InProgress],
-      },
-      {
-        value: TestRequestStatus.Completed,
-        label: TestRequestStatusLabels[TestRequestStatus.Completed],
-      },
-    ],
-    [],
-  );
-
   return (
     <div className="sample-assignment-log-tab">
       {/* Toolbar */}
-      <Row gutter={[16, 16]} align="middle" style={{ padding: 16 }}>
-        <Col xs={24} sm={12} md={8}>
-          <Input.Search
-            placeholder="Tìm theo số HĐ, mã mẫu, tên mẫu, chỉ tiêu..."
+      <Row gutter={[16, 16]} style={{ marginBottom: 0, padding: 16 }}>
+        <Col xs={24} sm={12} md={6}>
+          <Input
+            placeholder="Tìm theo Số HĐ, Chỉ tiêu, Phương pháp"
             prefix={<SearchOutlined />}
+            value={searchText}
+            onChange={(e) => handleSearchInputChange(e.target.value)}
             allowClear
-            onSearch={handleSearch}
-            enterButton
           />
         </Col>
-        <Col xs={24} sm={8} md={6}>
-          <Select
+        <Col xs={24} sm={12} md={5}>
+          <RangePicker
+            value={dateRange}
+            onChange={handleDateRangeChange}
             style={{ width: "100%" }}
-            placeholder="Lọc trạng thái"
+            format="DD/MM/YY"
             allowClear
-            value={statusFilter}
-            onChange={handleStatusFilter}
-            options={statusOptions}
           />
         </Col>
-        <Col>
-          <Button icon={<ReloadOutlined />} onClick={handleReload} />
+        <Col xs={24} sm={12} md={7}>
+          <Select
+            mode="multiple"
+            style={{ width: "100%" }}
+            placeholder="Chọn chỉ tiêu"
+            value={selectedIndicatorIds}
+            onChange={handleIndicatorChange}
+            showSearch
+            filterOption={(input, option) =>
+              ((option?.label as string) ?? "")
+                .toLowerCase()
+                .includes(input.toLowerCase())
+            }
+            options={indicators.map((ind) => ({
+              value: ind.id,
+              label: ind.name,
+            }))}
+            maxTagCount="responsive"
+            allowClear
+          />
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Select
+            mode="multiple"
+            style={{ width: "100%" }}
+            placeholder="Thử nghiệm viên"
+            value={selectedTechnicianIds}
+            onChange={handleTechnicianChange}
+            showSearch
+            filterOption={(input, option) =>
+              ((option?.label as string) ?? "")
+                .toLowerCase()
+                .includes(input.toLowerCase())
+            }
+            options={technicians.map((tech) => ({
+              value: tech.id,
+              label: tech.displayName || `${tech.name || ""} ${tech.surname || ""}`.trim(),
+            }))}
+            maxTagCount="responsive"
+            allowClear
+          />
         </Col>
       </Row>
 
@@ -696,6 +736,7 @@ const LabSampleAssignmentLogTab: React.FC = () => {
           style: { cursor: "pointer" },
         })}
         pagination={false}
+        sticky={{ offsetHeader: 80 }}
         scroll={{ x: 2200 }}
         size="small"
         bordered

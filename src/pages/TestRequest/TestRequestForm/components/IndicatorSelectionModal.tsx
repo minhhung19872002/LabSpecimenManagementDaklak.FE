@@ -41,9 +41,10 @@ import {
   IndicatorMethodInfo,
   parseIndicatorMethodKey,
   createIndicatorMethodKey,
+  isIndicatorLocked,
 } from "../types";
 import IndicatorRow from "./IndicatorRow";
-import { isHeavyMetalComboMet, isHgIndicator } from "../constants";
+import { isHeavyMetalComboMet, isHgIndicator, isEcoliColiformComboMet, isEcoliIndicator } from "../constants";
 import "./IndicatorSelectionModal.css";
 
 const { Text } = Typography;
@@ -182,6 +183,9 @@ interface IndicatorSelectionModalProps {
   sampleTypeCategories: SampleTypeCategoryDto[];
   indicatorSearchText: string;
   setIndicatorSearchText: React.Dispatch<React.SetStateAction<string>>;
+  // Custom prices
+  customPrices: Record<string, number>;
+  onPriceChange: (key: string, price: number) => void;
 }
 
 const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
@@ -226,9 +230,24 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
   sampleTypeCategories,
   indicatorSearchText,
   setIndicatorSearchText,
+  customPrices,
+  onPriceChange,
 }) => {
+  // Get effective price for a method key (custom price or master data price)
+  const getEffectivePrice = (key: IndicatorMethodKey, masterPrice: number): number => {
+    const customKey = `${currentSampleKey}_${key}`;
+    return customPrices[customKey] !== undefined ? customPrices[customKey] : masterPrice;
+  };
+
   // Handle remove indicator method
   const handleRemoveIndicatorMethod = (key: IndicatorMethodKey) => {
+    // Không cho xóa chỉ tiêu đã gửi tới khoa phòng
+    const labMapKey = `${currentSampleKey}_${key}`;
+    const labInfo = indicatorLaboratoryMap[labMapKey];
+    if (isIndicatorLocked(labInfo)) {
+      return;
+    }
+
     const { indicatorId, testMethodId, specimenTypeId } =
       parseIndicatorMethodKey(key);
     toggleIndicatorMethod(
@@ -236,7 +255,6 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
       testMethodId,
       specimenTypeId || undefined,
     );
-    const labMapKey = `${currentSampleKey}_${key}`;
     if (indicatorLaboratoryMap[labMapKey]) {
       setIndicatorLaboratoryMap((prev) => {
         const updated = { ...prev };
@@ -427,6 +445,13 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
   // Handle remove parent indicator (removes all subs too)
   const handleRemoveParentIndicator = useCallback(
     (parentKey: IndicatorMethodKey) => {
+      // Không cho xóa chỉ tiêu đã gửi tới khoa phòng
+      const parentLabMapKey = `${currentSampleKey}_${parentKey}`;
+      const labInfo = indicatorLaboratoryMap[parentLabMapKey];
+      if (isIndicatorLocked(labInfo)) {
+        return;
+      }
+
       const { indicatorId, testMethodId, specimenTypeId } =
         parseIndicatorMethodKey(parentKey);
 
@@ -507,58 +532,122 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     groupedByLab[labInfo.laboratoryId].methods.push(key);
   });
 
-  // Check combo kim loại nặng: nếu đủ 4 chỉ tiêu Pb, As, Cd, Hg thì Hg miễn phí
-  const isComboMet = useMemo(() => {
-    const selectedNames = tempSelectedIndicatorMethods.map((key) => {
+  // Check combo kim loại nặng PER specimen type:
+  // 1 sample có thể chứa chỉ tiêu từ nhiều loại mẫu (Nước + Cà phê),
+  // combo phải check riêng cho từng loại mẫu
+  const comboMetBySpecimenType = useMemo(() => {
+    // Group indicator names by specimenTypeId
+    const grouped: Record<string, (string | undefined)[]> = {};
+    for (const key of tempSelectedIndicatorMethods) {
+      const { specimenTypeId } = parseIndicatorMethodKey(key);
       const { indicator } = getIndicatorMethodInfo(key);
-      return indicator?.name;
-    });
-    return isHeavyMetalComboMet(selectedNames);
-  }, [tempSelectedIndicatorMethods, getIndicatorMethodInfo]);
+      const stId = specimenTypeId || '_none';
+      if (!grouped[stId]) grouped[stId] = [];
+      grouped[stId].push(indicator?.name);
+    }
+    // Check combo for each specimen type group
+    const result: Record<string, boolean> = {};
+    for (const [stId, names] of Object.entries(grouped)) {
+      const st = stId !== '_none' ? specimenTypes.find((s) => s.id === stId) : null;
+      result[stId] = isHeavyMetalComboMet(names, st?.sampleTypeCategoryName, st?.name);
+    }
+    return result;
+  }, [tempSelectedIndicatorMethods, getIndicatorMethodInfo, specimenTypes]);
 
-  const checkIsHgIndicator = (indicator: IndicatorDto | undefined) => {
-    return isHgIndicator(indicator?.name);
+  // Check combo E.Coli + Coliform PER specimen type:
+  // Chỉ áp dụng cho loại mẫu nước uống/nước khoáng đóng chai
+  const ecoliComboMetBySpecimenType = useMemo(() => {
+    // Group indicator names by specimenTypeId
+    const grouped: Record<string, (string | undefined)[]> = {};
+    for (const key of tempSelectedIndicatorMethods) {
+      const { specimenTypeId } = parseIndicatorMethodKey(key);
+      const { indicator } = getIndicatorMethodInfo(key);
+      const stId = specimenTypeId || '_none';
+      if (!grouped[stId]) grouped[stId] = [];
+      grouped[stId].push(indicator?.name);
+    }
+    // Check combo for each specimen type group
+    const result: Record<string, boolean> = {};
+    for (const [stId, names] of Object.entries(grouped)) {
+      const st = stId !== '_none' ? specimenTypes.find((s) => s.id === stId) : null;
+      result[stId] = isEcoliColiformComboMet(names, st?.sampleTypeCategoryName, st?.name);
+    }
+    return result;
+  }, [tempSelectedIndicatorMethods, getIndicatorMethodInfo, specimenTypes]);
+
+  // Helper: check if indicator is free by any combo
+  const isIndicatorFree = (indicator: IndicatorDto | undefined, methodKey: IndicatorMethodKey) => {
+    // Heavy metal combo: check per specimen type
+    const { specimenTypeId } = parseIndicatorMethodKey(methodKey);
+    const stId = specimenTypeId || '_none';
+    const isHgFree = comboMetBySpecimenType[stId] && isHgIndicator(indicator?.name);
+    // E.Coli combo: check per specimen type
+    const isEcoliFree = ecoliComboMetBySpecimenType[stId] && isEcoliIndicator(indicator?.name);
+    return isHgFree || isEcoliFree;
   };
 
+  // Track previous combo-free indicator keys to detect combo changes
+  const prevComboFreeKeysRef = useRef<Set<string>>(new Set());
+
+  // Auto-set/revert custom price textbox when combo state changes
+  useEffect(() => {
+    const currentFreeKeys = new Set<string>();
+    for (const methodKey of tempSelectedIndicatorMethods) {
+      const { indicator } = getIndicatorMethodInfo(methodKey);
+      if (isIndicatorFree(indicator, methodKey)) {
+        currentFreeKeys.add(methodKey);
+      }
+    }
+
+    const prevFreeKeys = prevComboFreeKeysRef.current;
+
+    // Newly free indicators: set custom price = 0
+    for (const key of currentFreeKeys) {
+      if (!prevFreeKeys.has(key)) {
+        const fullKey = `${currentSampleKey}_${key}`;
+        onPriceChange(fullKey, 0);
+      }
+    }
+
+    // No longer free indicators: remove custom price to revert to master price
+    for (const key of prevFreeKeys) {
+      if (!currentFreeKeys.has(key) && tempSelectedIndicatorMethods.includes(key as IndicatorMethodKey)) {
+        const fullKey = `${currentSampleKey}_${key}`;
+        const { method } = getIndicatorMethodInfo(key as IndicatorMethodKey);
+        // Revert to master price
+        onPriceChange(fullKey, method?.unitPrice || 0);
+      }
+    }
+
+    prevComboFreeKeysRef.current = currentFreeKeys;
+  }, [comboMetBySpecimenType, ecoliComboMetBySpecimenType, tempSelectedIndicatorMethods]);
+
   // Calculate total cost from selected methods with sub-indicator pricing logic
+  // Tổng tiền = sum đơn giá từ textbox (effective price), không tự check combo
+  // Combo logic đã được xử lý ở useEffect auto-set/revert customPrices
   const totalCost = useMemo(() => {
     let total = 0;
 
     // 1. Parent indicators with subs
     groupedSelectedMethods.parentMethods.forEach((parentKey) => {
-      const { indicator, method } = getIndicatorMethodInfo(parentKey);
+      const { method } = getIndicatorMethodInfo(parentKey);
       const subs = groupedSelectedMethods.subMethodsMap[parentKey] || [];
       const pricingMode = getPricingMode(parentKey);
 
       if (pricingMode === "parent") {
-        // Calculate by parent price
-        const price =
-          isComboMet && checkIsHgIndicator(indicator)
-            ? 0
-            : method?.unitPrice || 0;
-        total += price;
+        total += getEffectivePrice(parentKey, method?.unitPrice || 0);
       } else {
-        // Calculate by sum of sub prices
         subs.forEach((subKey) => {
-          const { indicator: subInd, method: subMethod } =
-            getIndicatorMethodInfo(subKey);
-          const price =
-            isComboMet && checkIsHgIndicator(subInd)
-              ? 0
-              : subMethod?.unitPrice || 0;
-          total += price;
+          const { method: subMethod } = getIndicatorMethodInfo(subKey);
+          total += getEffectivePrice(subKey, subMethod?.unitPrice || 0);
         });
       }
     });
 
     // 2. Independent indicators (no subs)
     groupedSelectedMethods.independentMethods.forEach((key) => {
-      const { indicator, method } = getIndicatorMethodInfo(key);
-      const price =
-        isComboMet && checkIsHgIndicator(indicator)
-          ? 0
-          : method?.unitPrice || 0;
-      total += price;
+      const { method } = getIndicatorMethodInfo(key);
+      total += getEffectivePrice(key, method?.unitPrice || 0);
     });
 
     return total;
@@ -566,7 +655,8 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     groupedSelectedMethods,
     getIndicatorMethodInfo,
     getPricingMode,
-    isComboMet,
+    customPrices,
+    currentSampleKey,
   ]);
 
   // Get indicators that have active methods, filtered by specimen type if active
@@ -900,6 +990,11 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                 method.testMethodId,
                 method.specimenTypeId,
               );
+              // Check if this method is sent to department (locked)
+              const methodKey = createIndicatorMethodKey(ind.id, method.testMethodId, method.specimenTypeId);
+              const methodLabInfo = indicatorLaboratoryMap[`${currentSampleKey}_${methodKey}`];
+              const isMethodLocked = isIndicatorLocked(methodLabInfo);
+
               const isLastMethod = methodIndex === methods.length - 1;
               const methodClassName = `tree-item tree-level-4${isLastMethod ? " is-last" : ""}${indentLevel === 2 ? " indent-level-2" : ""}`;
               return (
@@ -907,7 +1002,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                   key={methodUniqueKey}
                   className={methodClassName}
                   onClick={() =>
-                    toggleIndicatorMethod(
+                    !isMethodLocked && toggleIndicatorMethod(
                       ind.id,
                       method.testMethodId,
                       method.specimenTypeId,
@@ -918,29 +1013,33 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                     display: "flex",
                     alignItems: "center",
                     gap: 8,
-                    cursor: "pointer",
-                    background: isSelected ? "#bae7ff" : "rgb(250, 250, 250)",
+                    cursor: isMethodLocked ? "not-allowed" : "pointer",
+                    background: isSelected ? (isMethodLocked ? "#e6f7e6" : "#bae7ff") : "rgb(250, 250, 250)",
+                    opacity: isMethodLocked ? 0.7 : 1,
                   }}
                   onMouseEnter={(e) => {
-                    if (!isSelected) {
+                    if (!isSelected && !isMethodLocked) {
                       e.currentTarget.style.background = "#f0f0f0";
                     }
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = isSelected
-                      ? "#bae7ff"
+                      ? (isMethodLocked ? "#e6f7e6" : "#bae7ff")
                       : "rgb(250, 250, 250)";
                   }}
                 >
                   <Checkbox
                     checked={isSelected}
+                    disabled={isMethodLocked}
                     onClick={(e) => e.stopPropagation()}
                     onChange={() => {
-                      toggleIndicatorMethod(
-                        ind.id,
-                        method.testMethodId,
-                        method.specimenTypeId,
-                      );
+                      if (!isMethodLocked) {
+                        toggleIndicatorMethod(
+                          ind.id,
+                          method.testMethodId,
+                          method.specimenTypeId,
+                        );
+                      }
                     }}
                   />
                   <TruncateTooltip
@@ -1585,7 +1684,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
         open={visible}
         onOk={onOk}
         onCancel={onCancel}
-        width={1400}
+        width={1500}
         centered
         closable={false}
         okText="Chọn"
@@ -1686,18 +1785,14 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                           }
                         }}
                         style={{
+                          width: 24,
                           flexShrink: 0,
-                          paddingRight: 8,
-                          borderRight: "1px solid #d9d9d9",
                         }}
                       />
                       <span
                         style={{
                           flex: 1,
                           minWidth: 80,
-                          paddingLeft: 8,
-                          paddingRight: 8,
-                          borderRight: "1px solid #d9d9d9",
                         }}
                       >
                         Chỉ tiêu
@@ -1706,21 +1801,14 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                         style={{
                           width: 120,
                           flexShrink: 0,
-                          paddingLeft: 8,
-                          paddingRight: 8,
-                          borderRight: "1px solid #d9d9d9",
                         }}
                       >
                         Phương pháp
                       </span>
                       <span
                         style={{
-                          width: 90,
+                          width: 110,
                           flexShrink: 0,
-                          textAlign: "right",
-                          paddingLeft: 8,
-                          paddingRight: 8,
-                          borderRight: "1px solid #d9d9d9",
                         }}
                       >
                         Đơn giá
@@ -1730,9 +1818,6 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                           width: 100,
                           flexShrink: 0,
                           textAlign: "center",
-                          paddingLeft: 8,
-                          paddingRight: 8,
-                          borderRight: "1px solid #d9d9d9",
                         }}
                       >
                         Ngày CG
@@ -1742,15 +1827,12 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                           width: 100,
                           flexShrink: 0,
                           textAlign: "center",
-                          paddingLeft: 8,
-                          paddingRight: 8,
-                          borderRight: "1px solid #d9d9d9",
                         }}
                       >
                         Ngày YC
                       </span>
                       <span
-                        style={{ width: 32, flexShrink: 0, paddingLeft: 8 }}
+                        style={{ width: 32, flexShrink: 0 }}
                       >
                         Xóa
                       </span>
@@ -1782,11 +1864,9 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                 methodFormattedName={
                                   method?.testMethodFormattedName
                                 }
-                                unitPrice={method?.unitPrice || 0}
+                                unitPrice={getEffectivePrice(parentKey, method?.unitPrice || 0)}
                                 hidePrice={pricingMode === "subs"}
-                                isFree={
-                                  isComboMet && checkIsHgIndicator(indicator)
-                                }
+                                isFree={isIndicatorFree(indicator, parentKey)}
                                 isChecked={checkedIndicators.includes(
                                   parentKey,
                                 )}
@@ -1800,6 +1880,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                 onCheckChange={toggleCheckedIndicator}
                                 onDateChange={handleIndicatorDateChange}
                                 onRemove={handleRemoveParentIndicator}
+                                onPriceChange={(id, price) => onPriceChange(`${currentSampleKey}_${id}`, price)}
                               />
 
                               {/* Sub-indicator rows - only show name (no method, price, dates, remove button) */}
@@ -1813,7 +1894,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                     isInGroup={false}
                                     indicator={subInd}
                                     methodName={subMethod?.testMethodName || ""}
-                                    unitPrice={subMethod?.unitPrice || 0}
+                                    unitPrice={getEffectivePrice(subKey, subMethod?.unitPrice || 0)}
                                     isSubIndicator={true}
                                     isFirstSub={index === 0}
                                     isLastSub={index === unsentSubs.length - 1}
@@ -1844,10 +1925,8 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                               methodFormattedName={
                                 method?.testMethodFormattedName
                               }
-                              unitPrice={method?.unitPrice || 0}
-                              isFree={
-                                isComboMet && checkIsHgIndicator(indicator)
-                              }
+                              unitPrice={getEffectivePrice(key, method?.unitPrice || 0)}
+                              isFree={isIndicatorFree(indicator, key)}
                               isChecked={checkedIndicators.includes(key)}
                               transferDate={
                                 selectedIndicatorDates[key]?.transferDate
@@ -1858,6 +1937,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                               onCheckChange={toggleCheckedIndicator}
                               onDateChange={handleIndicatorDateChange}
                               onRemove={handleRemoveIndicatorMethod}
+                              onPriceChange={(id, price) => onPriceChange(`${currentSampleKey}_${id}`, price)}
                             />
                           );
                         })}
@@ -1921,11 +2001,8 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                       methodFormattedName={
                                         method?.testMethodFormattedName
                                       }
-                                      unitPrice={method?.unitPrice || 0}
-                                      isFree={
-                                        isComboMet &&
-                                        checkIsHgIndicator(indicator)
-                                      }
+                                      unitPrice={getEffectivePrice(key, method?.unitPrice || 0)}
+                                      isFree={isIndicatorFree(indicator, key)}
                                       isChecked={checkedIndicators.includes(
                                         key,
                                       )}
@@ -1937,9 +2014,12 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                         selectedIndicatorDates[key]?.requestDate
                                       }
                                       approvalStatus={labInfo?.approvalStatus}
+                                      isSentToQLKT={labInfo?.isSentToQLKT}
+                                      sentToDepartment={labInfo?.sentToDepartment}
                                       onCheckChange={toggleCheckedIndicator}
                                       onDateChange={handleIndicatorDateChange}
                                       onRemove={handleRemoveIndicatorMethod}
+                                      onPriceChange={(id, price) => onPriceChange(`${currentSampleKey}_${id}`, price)}
                                     />
                                   );
                                 })}

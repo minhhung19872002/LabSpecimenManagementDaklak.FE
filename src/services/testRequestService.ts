@@ -138,6 +138,9 @@ export interface TestRequestListParams extends PagedAndSortedResultRequestDto {
   status?: TestRequestStatus;
   expectedCompletionDateFrom?: string;
   expectedCompletionDateTo?: string;
+  customerName?: string;
+  fromDate?: string;
+  toDate?: string;
 }
 
 // Helper to convert params for API (ABP Framework uses SkipCount, MaxResultCount, Sorting)
@@ -150,6 +153,9 @@ const toApiParams = (params: TestRequestListParams) => {
   if (params.status !== undefined) apiParams.Status = params.status;
   if (params.expectedCompletionDateFrom) apiParams.ExpectedCompletionDateFrom = params.expectedCompletionDateFrom;
   if (params.expectedCompletionDateTo) apiParams.ExpectedCompletionDateTo = params.expectedCompletionDateTo;
+  if (params.customerName) apiParams.CustomerName = params.customerName;
+  if (params.fromDate) apiParams.FromDate = params.fromDate;
+  if (params.toDate) apiParams.ToDate = params.toDate;
   return apiParams;
 };
 
@@ -510,7 +516,46 @@ export const testRequestService = {
     return response.data;
   },
 
+  /**
+   * Lấy danh sách tất cả mẫu từ tất cả phiếu yêu cầu (dùng cho "Thêm mẫu có sẵn")
+   * Sắp xếp giảm dần theo số hợp đồng
+   */
+  getAllSamples: async (params: { search?: string; skipCount?: number; maxResultCount?: number }): Promise<PagedResultDto<ExistingSampleDto>> => {
+    const apiParams: Record<string, any> = {};
+    if (params.search) apiParams.Search = params.search;
+    if (params.skipCount !== undefined) apiParams.SkipCount = params.skipCount;
+    if (params.maxResultCount !== undefined) apiParams.MaxResultCount = params.maxResultCount;
+    const response = await api.get<PagedResultDto<ExistingSampleDto>>(`${BASE_URL}/all-samples`, { params: apiParams });
+    return response.data;
+  },
+
 };
+
+// Existing sample DTOs (for "Thêm mẫu có sẵn" feature)
+export interface ExistingSampleIndicatorDto {
+  indicatorId: string;
+  indicatorName?: string;
+  indicatorFormattedName?: string;
+  testMethodId?: string;
+  testMethodName?: string;
+  testMethodFormattedName?: string;
+  specimenTypeId?: string;
+  specimenTypeName?: string;
+  unitPrice: number;
+}
+
+export interface ExistingSampleDto {
+  sampleId: string;
+  sampleCode: string;
+  sampleName: string;
+  sampleQuantity?: string;
+  specimenTypeId?: string;
+  specimenTypeName?: string;
+  status: number;
+  statusText?: string;
+  contractNumber?: string;
+  indicators: ExistingSampleIndicatorDto[];
+}
 
 // Sample selection DTO for BM01 result form
 export interface SampleForSelectionDto {

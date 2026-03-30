@@ -103,7 +103,7 @@ export const getTestMethodColumns = (
 
 // Columns cho bảng chỉ tiêu trong phương pháp (indicator level)
 export const getIndicatorColumns = (
-  handleRemove: (testMethodId: string, indicatorId: string) => void,
+  handleRemove: (testMethodId: string, indicatorId: string, specimenTypeId?: string) => void,
   handleEdit?: (indicator: TestMethodIndicatorDto) => void
 ): ColumnsType<TestMethodIndicatorDto> => [
   {
@@ -205,7 +205,7 @@ export const getIndicatorColumns = (
           {canDelete && (
             <Popconfirm
               title="Bạn có chắc chắn muốn xóa chỉ tiêu này khỏi phương pháp?"
-              onConfirm={() => handleRemove(record.testMethodId, record.indicatorId)}
+              onConfirm={() => handleRemove(record.testMethodId, record.indicatorId, record.specimenTypeId)}
               okText="Có"
               cancelText="Không"
             >

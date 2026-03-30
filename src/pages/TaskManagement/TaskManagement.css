@@ -57,6 +57,23 @@
   }
 }
 
+/* Clickable stat cards */
+.task-stat-clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 2px solid transparent !important;
+}
+
+.task-stat-clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.task-stat-active {
+  border-color: #096DD9 !important;
+  box-shadow: 0 2px 8px rgba(9, 109, 217, 0.2);
+}
+
 /* Task Detail - Tab content card */
 .task-detail-card.statistics-detail-card > .ant-card-body {
   padding: 0 !important;

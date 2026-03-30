@@ -54,6 +54,7 @@ export interface TestMethodImportPreviewGroup {
   formattedName?: string;
   description?: string;
   unit: string;
+  formattedUnit?: string;
   isNew: boolean;
   existingId?: string;
   indicators: TestMethodIndicatorImportItem[];

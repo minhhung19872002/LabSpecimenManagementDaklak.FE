@@ -1,6 +1,7 @@
 // UAT deployment test - 2026-02-21 (SSH Key Authentication Test)
 import { createRoot } from "react-dom/client";
 import { App as AntApp, ConfigProvider } from "antd";
+import { HelmetProvider } from "react-helmet-async";
 import viVN from "antd/locale/vi_VN";
 import "antd/dist/reset.css";
 import "./styles/variables.css";
@@ -39,9 +40,11 @@ const updateSW = registerSW({
 });
 
 createRoot(document.getElementById("root")!).render(
-  <ConfigProvider theme={theme} locale={viVN}>
-    <AntApp>
-      <App />
-    </AntApp>
-  </ConfigProvider>
+  <HelmetProvider>
+    <ConfigProvider theme={theme} locale={viVN}>
+      <AntApp>
+        <App />
+      </AntApp>
+    </ConfigProvider>
+  </HelmetProvider>
 );

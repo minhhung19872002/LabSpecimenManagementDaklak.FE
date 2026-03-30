@@ -18,11 +18,12 @@ import {
   IndicatorMethodInfo,
   createIndicatorMethodKey,
   parseIndicatorMethodKey,
+  isIndicatorLocked,
 } from "../types";
 import { generateSampleCode, getNextOrderNum, printBarcode as printBarcodeUtil, SampleBarcodeInfo } from "../utils";
 import { PATH_ROUTES } from "../../../../constants";
 import { getApiErrorMessage } from "../../../../utils/errorHandler";
-import { isHeavyMetalComboMet, isHgIndicator } from "../constants";
+import { isHeavyMetalComboMet, isHgIndicator, isEcoliColiformComboMet, isEcoliIndicator } from "../constants";
 
 interface UseTestRequestFormActionsProps {
   form: any;
@@ -36,7 +37,6 @@ interface UseTestRequestFormActionsProps {
   wards: any[];
   sampleCodePrefix: string;
   totalSampleCost: number;
-  sampleTypeTask: boolean;
   selectedIndicatorDates: Record<string, IndicatorDateInfo>;
   setSelectedIndicatorDates: React.Dispatch<React.SetStateAction<Record<string, IndicatorDateInfo>>>;
   checkedIndicators: string[];
@@ -89,6 +89,13 @@ interface UseTestRequestFormActionsProps {
 
   // Quotation source (when creating from quotation)
   sourceQuotationId: string | null;
+
+  // Custom prices override (per sample + indicator method)
+  customPrices: Record<string, number>;
+  setCustomPrices: React.Dispatch<React.SetStateAction<Record<string, number>>>;
+
+  // Draft management
+  clearDraft: () => void;
 }
 
 export const useTestRequestFormActions = ({
@@ -103,7 +110,6 @@ export const useTestRequestFormActions = ({
   wards,
   sampleCodePrefix,
   totalSampleCost,
-  sampleTypeTask,
   selectedIndicatorDates,
   setSelectedIndicatorDates,
   checkedIndicators,
@@ -141,6 +147,9 @@ export const useTestRequestFormActions = ({
   isEditRequiresApproval,
   specimenTypes,
   sourceQuotationId,
+  customPrices,
+  setCustomPrices,
+  clearDraft,
 }: UseTestRequestFormActionsProps) => {
 
   // Helper: Build change history by comparing original and new data
@@ -155,8 +164,7 @@ export const useTestRequestFormActions = ({
       'province', 'ward', 'methodWestHighlandInstitute', 'methodCustomer', 'methodCustomerDetail',
       'resultLanguage', 'resultCopyCount', 'separatePassedResults', 'conformityDeclaration',
       'otherRequirements', 'subContract', 'samplingRequirement', 'deliveryDirectPickup',
-      'deliveryPostal', 'returnStoredSample', 'sampleTypeService', 'sampleTypeContract',
-      'sampleTypeTask', 'sampleTypeSubContract', 'sampleStorage', 'totalCost', 'totalCostInWords',
+      'deliveryPostal', 'returnStoredSample', 'sampleType', 'sampleStorage', 'totalCost', 'totalCostInWords',
       'receiptNumber', 'notes', 'changeRequest', 'agreeTerms', 'sentToAccounting',
       'paymentReceived', 'sentToDepartment', 'resultReturned', 'subcontractor'
     ];
@@ -316,10 +324,81 @@ export const useTestRequestFormActions = ({
     setSamples([...samples, newSample]);
   };
 
+  const addExistingSample = (existingSample: any, selectedIndicators: any[]) => {
+    if (isSamplesLocked()) {
+      message.warning("Không thể thêm mẫu khi phiếu đang thực hiện");
+      return;
+    }
+
+    const existingSampleCodes = samples.map((s) => s.sampleCode);
+    const nextOrderNum = getNextOrderNum(existingSampleCodes);
+    const contractNumber = form.getFieldValue("contractNumber") || "";
+
+    const indicatorMethods: IndicatorMethodKey[] = selectedIndicators.map((ind) =>
+      createIndicatorMethodKey(ind.indicatorId, ind.testMethodId || "null", ind.specimenTypeId)
+    );
+
+    const newSampleKey = `new-${Date.now()}`;
+    const newSample: SampleFormData = {
+      key: newSampleKey,
+      sortOrder: samples.length + 1,
+      sampleCode: generateSampleCode(contractNumber, nextOrderNum),
+      sampleName: existingSample.sampleName || "",
+      samplingAddress: "",
+      sampleQuantity: existingSample.sampleQuantity || "",
+      status: existingSample.status ?? SampleStatus.Normal,
+      statusText: existingSample.statusText || "",
+      processingStatus: "",
+      notes: "",
+      storageLocation: "",
+      specimenTypeId: existingSample.specimenTypeId,
+      specimenTypeName: existingSample.specimenTypeName || "",
+      indicatorIds: [],
+      indicatorMethods,
+      attachments: [],
+      isSharedSample: false,
+    };
+
+    // Set dates and custom prices from modal selections
+    const now = dayjs();
+    const newDates: Record<string, IndicatorDateInfo> = {};
+    const newPrices: Record<string, number> = {};
+
+    selectedIndicators.forEach((ind) => {
+      const methodKey = createIndicatorMethodKey(ind.indicatorId, ind.testMethodId || "null", ind.specimenTypeId);
+      const dateKey = `${newSampleKey}_${methodKey}`;
+      newDates[dateKey] = {
+        transferDate: ind.transferDate || now,
+        requestDate: ind.requestDate || undefined,
+      };
+      // Set custom price from modal (user may have edited it)
+      newPrices[dateKey] = ind.unitPrice;
+    });
+
+    setSelectedIndicatorDates((prev) => ({ ...prev, ...newDates }));
+    setCustomPrices((prev) => ({ ...prev, ...newPrices }));
+    setSamples([...samples, newSample]);
+    message.success(`Đã thêm mẫu "${newSample.sampleName}" với ${selectedIndicators.length} chỉ tiêu`);
+  };
+
   const removeSample = (key: string) => {
     if (isSamplesLocked()) {
       message.warning("Không thể xóa mẫu khi phiếu đang thực hiện");
       return;
+    }
+
+    // Không cho xóa mẫu có chỉ tiêu đã gửi tới khoa phòng
+    const sample = samples.find((s) => s.key === key);
+    if (sample) {
+      const hasSentIndicator = (sample.indicatorMethods || []).some((methodKey) => {
+        const labMapKey = `${key}_${methodKey}`;
+        const labInfo = indicatorLaboratoryMap[labMapKey];
+        return isIndicatorLocked(labInfo);
+      });
+      if (hasSentIndicator) {
+        message.warning("Không thể xóa mẫu có chỉ tiêu đã gửi tới khoa phòng");
+        return;
+      }
     }
 
     const newSamples = samples.filter((s) => s.key !== key);
@@ -382,7 +461,12 @@ export const useTestRequestFormActions = ({
       const sourceLabKey = `${key}_${methodKey}`;
       const newLabKey = `${newSample.key}_${methodKey}`;
       if (indicatorLaboratoryMap[sourceLabKey]) {
-        newLabMap[newLabKey] = { ...indicatorLaboratoryMap[sourceLabKey] };
+        newLabMap[newLabKey] = {
+          ...indicatorLaboratoryMap[sourceLabKey],
+          approvalStatus: undefined,
+          isSentToQLKT: false,
+          sentToDepartment: false,
+        };
       }
     });
     // Backward compatible: also copy for indicatorIds
@@ -390,7 +474,12 @@ export const useTestRequestFormActions = ({
       const sourceLabKey = `${key}_${indId}`;
       const newLabKey = `${newSample.key}_${indId}`;
       if (indicatorLaboratoryMap[sourceLabKey]) {
-        newLabMap[newLabKey] = { ...indicatorLaboratoryMap[sourceLabKey] };
+        newLabMap[newLabKey] = {
+          ...indicatorLaboratoryMap[sourceLabKey],
+          approvalStatus: undefined,
+          isSentToQLKT: false,
+          sentToDepartment: false,
+        };
       }
     });
     setIndicatorLaboratoryMap(newLabMap);
@@ -542,6 +631,15 @@ export const useTestRequestFormActions = ({
   const toggleIndicatorMethod = (indicatorId: string, testMethodId: string, specimenTypeId?: string) => {
     const key = createIndicatorMethodKey(indicatorId, testMethodId, specimenTypeId);
     const isCurrentlySelected = tempSelectedIndicatorMethods.includes(key);
+
+    // Không cho bỏ chọn chỉ tiêu đã gửi tới khoa phòng
+    if (isCurrentlySelected && currentSampleKey) {
+      const labMapKey = `${currentSampleKey}_${key}`;
+      const labInfo = indicatorLaboratoryMap[labMapKey];
+      if (isIndicatorLocked(labInfo)) {
+        return; // Chỉ tiêu đã gửi, không cho bỏ chọn
+      }
+    }
 
     // Check if this is a sub-indicator (has parentIndicatorId)
     const isSub = isSubIndicatorForMethod(indicatorId, testMethodId, specimenTypeId);
@@ -807,13 +905,22 @@ export const useTestRequestFormActions = ({
         // Keep existing sampleCode (fixed, not regenerated)
         const sampleCode = sample.sampleCode;
 
-        // Check combo kim loại nặng cho sample này
-        const sampleIndicatorNames = (sample.indicatorMethods || []).map((methodKey) => {
-          const { indicatorId } = parseIndicatorMethodKey(methodKey);
+        // Group indicator names by specimenTypeId để check combo riêng từng loại mẫu
+        const groupedBySpecimenType: Record<string, (string | undefined)[]> = {};
+        for (const mk of (sample.indicatorMethods || [])) {
+          const { indicatorId, specimenTypeId: stId } = parseIndicatorMethodKey(mk);
           const ind = indicators.find((i) => i.id === indicatorId);
-          return ind?.name;
-        });
-        const isSampleComboMet = isHeavyMetalComboMet(sampleIndicatorNames);
+          const key = stId || '_none';
+          if (!groupedBySpecimenType[key]) groupedBySpecimenType[key] = [];
+          groupedBySpecimenType[key].push(ind?.name);
+        }
+        const comboMetBySpecimenType: Record<string, boolean> = {};
+        const ecoliComboMetBySpecimenType: Record<string, boolean> = {};
+        for (const [stId, names] of Object.entries(groupedBySpecimenType)) {
+          const st = stId !== '_none' ? specimenTypes.find((s: any) => s.id === stId) : null;
+          comboMetBySpecimenType[stId] = isHeavyMetalComboMet(names, st?.sampleTypeCategoryName, st?.name);
+          ecoliComboMetBySpecimenType[stId] = isEcoliColiformComboMet(names, st?.sampleTypeCategoryName, st?.name);
+        }
 
         // Prefer indicatorMethods if available, fallback to indicatorIds
         const indicatorsList = sample.indicatorMethods && sample.indicatorMethods.length > 0
@@ -828,23 +935,28 @@ export const useTestRequestFormActions = ({
               const labAssignment = indicatorLaboratoryMap[`${sample.key}_${methodKey}`];
               // Get the TestRequestSampleIndicator.id if this indicator already exists
               const existingIndicatorId = sampleIndicatorIdMap[`${sample.key}_${methodKey}`];
-              // Hg miễn phí khi đủ combo kim loại nặng
+              // Combo miễn phí: Hg (kim loại nặng, per specimen type) hoặc E.Coli (E.Coli + Coliform, per specimen type)
               const ind = indicators.find((i) => i.id === indicatorId);
-              const isHgFree = isSampleComboMet && isHgIndicator(ind?.name);
+              const stComboKey = specimenTypeId || '_none';
+              const isComboFree = (comboMetBySpecimenType[stComboKey] && isHgIndicator(ind?.name)) ||
+                (ecoliComboMetBySpecimenType[stComboKey] && isEcoliIndicator(ind?.name));
+              const customPriceKey = `${sample.key}_${methodKey}`;
+              const masterPrice = method?.unitPrice || 0;
+              const effectivePrice = customPrices[customPriceKey] !== undefined ? customPrices[customPriceKey] : masterPrice;
               return {
                 id: existingIndicatorId || undefined, // Include id for existing indicators
                 indicatorId,
                 testMethodId,
                 specimenTypeId: specimenTypeId || undefined, // Include specimenTypeId to correctly identify price
                 laboratoryId: labAssignment?.laboratoryId || undefined,
-                unitPrice: isHgFree ? 0 : (method?.unitPrice || 0),
-                originalUnitPrice: isHgFree ? (method?.unitPrice || 0) : undefined,
+                unitPrice: isComboFree ? 0 : effectivePrice,
+                originalUnitPrice: isComboFree ? masterPrice : undefined,
                 transferDate: indicatorDates?.transferDate?.format('YYYY-MM-DD') || undefined,
                 requestDate:
                   labAssignment?.requestDate?.format('YYYY-MM-DD') ||
                   indicatorDates?.requestDate?.format('YYYY-MM-DD') ||
                   undefined,
-                sentToDepartment: !!labAssignment || checkedIndicators.includes(methodKey),
+                sentToDepartment: (!!labAssignment && labAssignment.sentToDepartment === true) || checkedIndicators.includes(methodKey),
               };
             })
           : sample.indicatorIds.map((indId) => {
@@ -853,21 +965,25 @@ export const useTestRequestFormActions = ({
               const labAssignment = indicatorLaboratoryMap[`${sample.key}_${indId}`];
               // Get the TestRequestSampleIndicator.id if this indicator already exists
               const existingIndicatorId = sampleIndicatorIdMap[`${sample.key}_${indId}`];
-              // Hg miễn phí khi đủ combo kim loại nặng (fallback logic)
-              const isHgFree = isSampleComboMet && isHgIndicator(indicator?.name);
+              // Combo miễn phí (fallback logic - no specimenTypeId, check _none group)
+              const isComboFree = (comboMetBySpecimenType['_none'] && isHgIndicator(indicator?.name)) ||
+                (ecoliComboMetBySpecimenType['_none'] && isEcoliIndicator(indicator?.name));
+              const fallbackCustomKey = `${sample.key}_${indId}`;
+              const fallbackMasterPrice = indicator?.unitPrice || 0;
+              const fallbackEffectivePrice = customPrices[fallbackCustomKey] !== undefined ? customPrices[fallbackCustomKey] : fallbackMasterPrice;
               return {
                 id: existingIndicatorId || undefined, // Include id for existing indicators
                 indicatorId: indId,
                 testMethodId: undefined,
                 laboratoryId: labAssignment?.laboratoryId || undefined,
-                unitPrice: isHgFree ? 0 : (indicator?.unitPrice || 0),
-                originalUnitPrice: isHgFree ? (indicator?.unitPrice || 0) : undefined,
+                unitPrice: isComboFree ? 0 : fallbackEffectivePrice,
+                originalUnitPrice: isComboFree ? fallbackMasterPrice : undefined,
                 transferDate: indicatorDates?.transferDate?.format('YYYY-MM-DD') || undefined,
                 requestDate:
                   labAssignment?.requestDate?.format('YYYY-MM-DD') ||
                   indicatorDates?.requestDate?.format('YYYY-MM-DD') ||
                   undefined,
-                sentToDepartment: !!labAssignment || checkedIndicators.includes(indId),
+                sentToDepartment: (!!labAssignment && labAssignment.sentToDepartment === true) || checkedIndicators.includes(indId),
               };
             });
 
@@ -933,17 +1049,17 @@ export const useTestRequestFormActions = ({
         deliveryDirectPickup: values.deliveryDirectPickup || false,
         deliveryPostal: values.deliveryPostal || false,
         returnStoredSample: values.returnStoredSample || false,
-        sampleTypeService: values.sampleTypeService || false,
-        sampleTypeContract: values.sampleTypeContract || false,
-        sampleTypeTask: values.sampleTypeTask || false,
-        sampleTypeSubContract: values.sampleTypeSubContract || false,
+        sampleTypeService: values.sampleType === "service",
+        sampleTypeContract: values.sampleType === "contract",
+        sampleTypeTask: values.sampleType === "task",
+        sampleTypeSubContract: values.sampleType === "subContract",
         resultDeliveryDate: values.expectedCompletionDate
           ? values.expectedCompletionDate.format('YYYY-MM-DD')
           : undefined,
         sampleStorage: values.sampleStorageOption ?? SampleStorageOption.No,
-        totalCost: values.sampleTypeTask ? 0 : totalSampleCost,
+        totalCost: values.sampleType === "task" ? 0 : totalSampleCost,
         totalCostInWords:
-          values.sampleTypeTask || totalSampleCost === 0
+          values.sampleType === "task" || totalSampleCost === 0
             ? ""
             : numberToVietnameseWords(totalSampleCost),
         receiptNumber: values.receiptNumber || undefined,
@@ -988,6 +1104,7 @@ export const useTestRequestFormActions = ({
           } else {
             message.success("Cập nhật phiếu yêu cầu thành công!");
           }
+          clearDraft();
           navigate(PATH_ROUTES.testRequests.detail(id));
         }
       } else {
@@ -1000,6 +1117,7 @@ export const useTestRequestFormActions = ({
         } else {
           message.success(`Đã tạo phiếu yêu cầu XN: ${testRequest?.contractNumber}`);
         }
+        clearDraft();
         navigate(PATH_ROUTES.testRequests.detail(testRequest.id));
       }
     } catch (error: any) {
@@ -1086,10 +1204,10 @@ export const useTestRequestFormActions = ({
         deliveryDirectPickup: values.deliveryDirectPickup || false,
         deliveryPostal: values.deliveryPostal || false,
         returnStoredSample: values.returnStoredSample || false,
-        sampleTypeService: values.sampleTypeService || false,
-        sampleTypeContract: values.sampleTypeContract || false,
-        sampleTypeTask: values.sampleTypeTask || false,
-        sampleTypeSubContract: values.sampleTypeSubContract || false,
+        sampleTypeService: values.sampleType === "service",
+        sampleTypeContract: values.sampleType === "contract",
+        sampleTypeTask: values.sampleType === "task",
+        sampleTypeSubContract: values.sampleType === "subContract",
         resultDeliveryDate: values.resultDeliveryDate
           ? values.resultDeliveryDate.toISOString()
           : undefined,
@@ -1103,12 +1221,22 @@ export const useTestRequestFormActions = ({
           : new Date().toISOString(),
         notes: values.notes || undefined,
         samples: samples.map((sample, index) => {
-          // Check combo kim loại nặng cho sample này (preview)
-          const previewSampleNames = (sample.indicatorMethods || []).map((mk) => {
-            const { indicatorId: iId } = parseIndicatorMethodKey(mk);
-            return indicators.find((i) => i.id === iId)?.name;
-          });
-          const isPreviewComboMet = isHeavyMetalComboMet(previewSampleNames);
+          // Group by specimenTypeId để check combo riêng từng loại mẫu
+          const previewGrouped: Record<string, (string | undefined)[]> = {};
+          for (const mk of (sample.indicatorMethods || [])) {
+            const { indicatorId: iId, specimenTypeId: stId } = parseIndicatorMethodKey(mk);
+            const ind = indicators.find((i) => i.id === iId);
+            const gKey = stId || '_none';
+            if (!previewGrouped[gKey]) previewGrouped[gKey] = [];
+            previewGrouped[gKey].push(ind?.name);
+          }
+          const previewComboByType: Record<string, boolean> = {};
+          const previewEcoliComboByType: Record<string, boolean> = {};
+          for (const [stId, names] of Object.entries(previewGrouped)) {
+            const st = stId !== '_none' ? specimenTypes.find((s: any) => s.id === stId) : null;
+            previewComboByType[stId] = isHeavyMetalComboMet(names, st?.sampleTypeCategoryName, st?.name);
+            previewEcoliComboByType[stId] = isEcoliColiformComboMet(names, st?.sampleTypeCategoryName, st?.name);
+          }
           return {
             sortOrder: index + 1,
             sampleCode: sample.sampleCode || "",
@@ -1124,15 +1252,20 @@ export const useTestRequestFormActions = ({
               const method = methods.find(
                 (m: IndicatorMethodInfo) => m.testMethodId === testMethodId && (m.specimenTypeId || null) === specimenTypeId
               );
-              const isHgFree = isPreviewComboMet && isHgIndicator(indicator?.name);
+              const previewStKey = specimenTypeId || '_none';
+              const isComboFree = (previewComboByType[previewStKey] && isHgIndicator(indicator?.name)) ||
+                (previewEcoliComboByType[previewStKey] && isEcoliIndicator(indicator?.name));
+              const previewCustomKey = `${sample.key}_${methodKey}`;
+              const previewMasterPrice = method?.unitPrice || 0;
+              const previewEffectivePrice = customPrices[previewCustomKey] !== undefined ? customPrices[previewCustomKey] : previewMasterPrice;
               return {
                 indicatorId,
                 testMethodId: testMethodId || undefined,
                 specimenTypeId: specimenTypeId || undefined,
                 indicatorName: indicator?.name || "",
                 indicatorFormattedName: indicator?.formattedName || undefined,
-                unitPrice: isHgFree ? 0 : (method?.unitPrice || 0),
-                originalUnitPrice: isHgFree ? (method?.unitPrice || 0) : undefined,
+                unitPrice: isComboFree ? 0 : previewEffectivePrice,
+                originalUnitPrice: isComboFree ? previewMasterPrice : undefined,
               };
             }),
           };
@@ -1157,6 +1290,7 @@ export const useTestRequestFormActions = ({
   return {
     // Sample actions
     addSample,
+    addExistingSample,
     removeSample,
     updateSample,
     duplicateSample,

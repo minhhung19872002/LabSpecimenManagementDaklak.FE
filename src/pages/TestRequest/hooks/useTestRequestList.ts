@@ -111,23 +111,9 @@ export const useTestRequestList = () => {
     []
   );
 
-  const handleDelete = useCallback(
-    async (id: string) => {
-      try {
-        await testRequestService.delete(id);
-        message.success("Xóa yêu cầu thành công!");
-        loadData();
-      } catch (error: unknown) {
-        console.error("Error deleting test request:", error);
-        message.error("Không thể xóa yêu cầu. Vui lòng thử lại.");
-      }
-    },
-    [loadData]
-  );
-
   const handleCreate = useCallback(() => {
-    navigate(PATH_ROUTES.testRequests.create);
-  }, [navigate]);
+    window.open(PATH_ROUTES.testRequests.create, "_blank");
+  }, []);
 
   const handleEdit = useCallback(
     (record: TestRequestDto) => {
@@ -138,9 +124,9 @@ export const useTestRequestList = () => {
 
   const handleRowDoubleClick = useCallback(
     (record: TestRequestDto) => {
-      navigate(PATH_ROUTES.testRequests.detail(record.id));
+      window.open(PATH_ROUTES.testRequests.detail(record.id), "_blank");
     },
-    [navigate]
+    []
   );
 
   const isUrgentRow = useCallback((record: TestRequestDto): boolean => {
@@ -184,10 +170,9 @@ export const useTestRequestList = () => {
   const columns = useMemo(
     () => getTestRequestColumns({
       onEdit: handleEdit,
-      onDelete: handleDelete,
       canEditPermission,
     }),
-    [handleEdit, handleDelete, canEditPermission]
+    [handleEdit, canEditPermission]
   );
 
   return {
@@ -213,7 +198,6 @@ export const useTestRequestList = () => {
     handleSearch,
     handleStatusChange,
     handleDateRangeChange,
-    handleDelete,
     handleCreate,
     handleEdit,
     handleRowDoubleClick,

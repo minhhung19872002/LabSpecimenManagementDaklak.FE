@@ -15,6 +15,7 @@ import {
   ConfirmHandoverInput,
   GetSampleAssignmentLogInput,
   PagedSampleAssignmentLogResult,
+  QLCLSampleAssignmentLogStatisticsDto,
 } from '../types/qualityManagement';
 
 const BASE_URL = '/api/v1/quality-management';
@@ -31,6 +32,9 @@ export const qualityManagementService = {
       TaskType: params.taskType !== undefined ? params.taskType : undefined,
       FromDate: params.fromDate,
       ToDate: params.toDate,
+      IsOverdue: params.isOverdue,
+      RequestCompletionDateFrom: params.requestCompletionDateFrom,
+      RequestCompletionDateTo: params.requestCompletionDateTo,
     };
 
     // Remove undefined values
@@ -40,7 +44,18 @@ export const qualityManagementService = {
       }
     });
 
-    const response = await api.get<PagedQualityManagementResult>(BASE_URL, { params: queryParams });
+    // Handle array params (LaboratoryIds)
+    const arrayParams: Record<string, string[]> = {};
+    if (params.laboratoryIds?.length) {
+      arrayParams.LaboratoryIds = params.laboratoryIds;
+    }
+
+    const response = await api.get<PagedQualityManagementResult>(BASE_URL, {
+      params: { ...queryParams, ...arrayParams },
+      paramsSerializer: {
+        indexes: null,
+      },
+    });
     return response.data;
   },
 
@@ -201,7 +216,6 @@ export const qualityManagementService = {
       TestRequestStatus: params.testRequestStatus !== undefined ? params.testRequestStatus : undefined,
       FromDate: params.fromDate,
       ToDate: params.toDate,
-      LaboratoryId: params.laboratoryId,
     };
 
     // Remove undefined values
@@ -211,7 +225,26 @@ export const qualityManagementService = {
       }
     });
 
-    const response = await api.get<PagedSampleAssignmentLogResult>(`${BASE_URL}/sample-assignment-log`, { params: queryParams });
+    // Handle array params (QlclDisplayStatuses, LaboratoryIds)
+    const arrayParams: Record<string, (number | string)[]> = {};
+    if (params.qlclDisplayStatuses?.length) {
+      arrayParams.QlclDisplayStatuses = params.qlclDisplayStatuses;
+    }
+    if (params.laboratoryIds?.length) {
+      arrayParams.LaboratoryIds = params.laboratoryIds;
+    }
+
+    const response = await api.get<PagedSampleAssignmentLogResult>(`${BASE_URL}/sample-assignment-log`, {
+      params: { ...queryParams, ...arrayParams },
+      paramsSerializer: {
+        indexes: null, // ABP expects repeated param format
+      },
+    });
+    return response.data;
+  },
+
+  getSampleAssignmentLogStatistics: async (): Promise<QLCLSampleAssignmentLogStatisticsDto> => {
+    const response = await api.get<QLCLSampleAssignmentLogStatisticsDto>(`${BASE_URL}/sample-assignment-log/statistics`);
     return response.data;
   },
 };

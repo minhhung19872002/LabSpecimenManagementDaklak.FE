@@ -38,8 +38,27 @@ const normalizeIndicatorName = (name: string | undefined | null): string => {
   return normalized.trim().toLowerCase();
 };
 
+// Helper: Kiểm tra tên có chứa "Nước" không (case-insensitive, NFC normalized)
+const containsNuoc = (name?: string | null): boolean => {
+  if (!name) return false;
+  const normalized = name.normalize('NFC').toLowerCase();
+  const target = 'nước'.normalize('NFC');
+  return normalized.includes(target);
+};
+
 // Helper: Kiểm tra xem một list tên chỉ tiêu có đủ combo kim loại nặng không
-export const isHeavyMetalComboMet = (indicatorNames: (string | undefined | null)[]): boolean => {
+// Nếu nền mẫu là "Nước" (chứa từ "Nước" trong tên loại mẫu hoặc tên danh mục) thì không áp dụng combo
+export const isHeavyMetalComboMet = (
+  indicatorNames: (string | undefined | null)[],
+  sampleTypeCategoryName?: string | null,
+  specimenTypeName?: string | null,
+): boolean => {
+  // Mẫu nước không được khuyến mãi combo kim loại nặng
+  // Check cả tên danh mục loại mẫu (category) và tên loại mẫu (specimen type)
+  if (containsNuoc(sampleTypeCategoryName) || containsNuoc(specimenTypeName)) {
+    return false;
+  }
+
   const normalizedNames = indicatorNames.map(normalizeIndicatorName);
   const normalizedComboNames = HEAVY_METAL_COMBO_INDICATORS.map(normalizeIndicatorName);
 
@@ -51,4 +70,76 @@ export const isHeavyMetalComboMet = (indicatorNames: (string | undefined | null)
 // Helper: Kiểm tra xem một chỉ tiêu có phải là Hg (được miễn phí khi có combo) không
 export const isHgIndicator = (indicatorName: string | undefined | null): boolean => {
   return normalizeIndicatorName(indicatorName) === normalizeIndicatorName(HEAVY_METAL_FREE_INDICATOR);
+};
+
+// ============================================================
+// Combo E.Coli + Coliform: khi cả 2 cùng có trong 1 sample thì E.Coli miễn phí
+// Chỉ áp dụng cho các loại mẫu nước uống/nước khoáng đóng chai
+// ============================================================
+
+// Các tên khác nhau của Coliform (Coliforms = Coliform Tổng số)
+const COLIFORM_NAMES = ["Coliforms", "Coliform Tổng số"];
+// Các tên khác nhau của E.Coli (E.Coli = Escherichia coli)
+const ECOLI_NAMES = ["E.Coli", "Escherichia coli"];
+
+// Từ khóa loại mẫu được áp dụng combo E.Coli + Coliform
+// Match bằng contains, case-insensitive, NFC normalized
+const ECOLI_COMBO_ELIGIBLE_KEYWORDS = [
+  "nước uống đóng chai",
+  "nước khoáng thiên nhiên đóng chai",
+];
+
+// Helper: Kiểm tra tên chỉ tiêu có match với 1 trong các tên cho trước không
+const matchesAnyName = (
+  indicatorName: string | undefined | null,
+  names: string[],
+): boolean => {
+  const normalized = normalizeIndicatorName(indicatorName);
+  return names.some((n) => normalizeIndicatorName(n) === normalized);
+};
+
+// Helper: Kiểm tra xem loại mẫu có được áp dụng combo E.Coli không
+// Check contains (case-insensitive) cả tên specimen type và tên category
+const isEcoliComboEligibleSpecimenType = (
+  sampleTypeCategoryName?: string | null,
+  specimenTypeName?: string | null,
+): boolean => {
+  const normalizedKeywords = ECOLI_COMBO_ELIGIBLE_KEYWORDS.map(
+    (n) => n.normalize('NFC').trim().toLowerCase()
+  );
+  const namesToCheck = [specimenTypeName, sampleTypeCategoryName].filter(Boolean) as string[];
+  for (const name of namesToCheck) {
+    const normalized = name.normalize('NFC').trim().toLowerCase();
+    if (normalizedKeywords.some((keyword) => normalized.includes(keyword))) {
+      return true;
+    }
+  }
+  return false;
+};
+
+// Helper: Kiểm tra xem một chỉ tiêu có phải là Coliform không
+export const isColiformIndicator = (indicatorName: string | undefined | null): boolean => {
+  return matchesAnyName(indicatorName, COLIFORM_NAMES);
+};
+
+// Helper: Kiểm tra xem một chỉ tiêu có phải là E.Coli không
+export const isEcoliIndicator = (indicatorName: string | undefined | null): boolean => {
+  return matchesAnyName(indicatorName, ECOLI_NAMES);
+};
+
+// Helper: Kiểm tra xem sample có đủ combo E.Coli + Coliform không
+// Cần ít nhất 1 chỉ tiêu E.Coli VÀ 1 chỉ tiêu Coliform
+// Chỉ áp dụng cho loại mẫu nước uống/nước khoáng đóng chai
+export const isEcoliColiformComboMet = (
+  indicatorNames: (string | undefined | null)[],
+  sampleTypeCategoryName?: string | null,
+  specimenTypeName?: string | null,
+): boolean => {
+  // Chỉ áp dụng cho loại mẫu eligible
+  if (!isEcoliComboEligibleSpecimenType(sampleTypeCategoryName, specimenTypeName)) {
+    return false;
+  }
+  const hasColiform = indicatorNames.some((name) => isColiformIndicator(name));
+  const hasEcoli = indicatorNames.some((name) => isEcoliIndicator(name));
+  return hasColiform && hasEcoli;
 };

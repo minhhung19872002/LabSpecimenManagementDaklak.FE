@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Table,
-  Input,
   Button,
   Typography,
   Tooltip,
@@ -528,14 +527,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
           return <Text type="secondary">-</Text>;
         }
         const unitValue = record.unit ?? "";
-        return (
-          <Input
-            value={unitValue}
-            disabled
-            style={{ backgroundColor: "#f5f5f5" }}
-            placeholder="-"
-          />
-        );
+        return unitValue ? <IndicatorName name={unitValue} /> : <Text type="secondary">-</Text>;
       },
     },
     {

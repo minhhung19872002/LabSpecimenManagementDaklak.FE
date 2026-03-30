@@ -3,6 +3,7 @@ import { message } from "antd";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import { qualityManagementService } from "../../../services/qualityManagementService";
+import { laboratoryService, LaboratoryDto } from "../../../services/masterDataService";
 import {
   QualityManagementTaskDto,
   QualityManagementStatus,
@@ -23,11 +24,20 @@ export const useQualityManagementList = () => {
   const [statusFilter, setStatusFilter] = useState<
     QualityManagementStatus | undefined
   >(undefined);
+  const [overdueFilter, setOverdueFilter] = useState(false);
+  const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
+  const [laboratoryIds, setLaboratoryIds] = useState<string[]>([]);
+  const [laboratories, setLaboratories] = useState<LaboratoryDto[]>([]);
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 20,
     total: 0,
   });
+
+  // Load master data
+  useEffect(() => {
+    laboratoryService.getActive().then(setLaboratories).catch(console.error);
+  }, []);
 
   // History Modal
   const [historyModalVisible, setHistoryModalVisible] = useState(false);
@@ -50,6 +60,10 @@ export const useQualityManagementList = () => {
           maxResultCount: pagination.pageSize,
           search: searchText || undefined,
           status: statusFilter,
+          isOverdue: overdueFilter || undefined,
+          requestCompletionDateFrom: dateRange?.[0]?.startOf('day').format('YYYY-MM-DD') || undefined,
+          requestCompletionDateTo: dateRange?.[1]?.endOf('day').format('YYYY-MM-DD') || undefined,
+          laboratoryIds: laboratoryIds.length > 0 ? laboratoryIds : undefined,
         }),
         qualityManagementService.getStatistics(),
       ]);
@@ -63,7 +77,7 @@ export const useQualityManagementList = () => {
     } finally {
       setLoading(false);
     }
-  }, [pagination.current, pagination.pageSize, searchText, statusFilter]);
+  }, [pagination.current, pagination.pageSize, searchText, statusFilter, overdueFilter, dateRange, laboratoryIds]);
 
   useEffect(() => {
     loadData();
@@ -78,6 +92,36 @@ export const useQualityManagementList = () => {
   const handleStatusFilter = useCallback(
     (value: QualityManagementStatus | undefined) => {
       setStatusFilter(value);
+      setOverdueFilter(false);
+      setPagination((prev) => ({ ...prev, current: 1 }));
+    },
+    []
+  );
+
+  const handleOverdueFilter = useCallback(
+    (value: boolean) => {
+      setOverdueFilter(value);
+      if (value) setStatusFilter(undefined);
+      setPagination((prev) => ({ ...prev, current: 1 }));
+    },
+    []
+  );
+
+  const handleDateRangeChange = useCallback(
+    (dates: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null) => {
+      if (dates && dates[0] && dates[1]) {
+        setDateRange([dates[0], dates[1]]);
+      } else {
+        setDateRange(null);
+      }
+      setPagination((prev) => ({ ...prev, current: 1 }));
+    },
+    []
+  );
+
+  const handleLaboratoryChange = useCallback(
+    (values: string[]) => {
+      setLaboratoryIds(values);
       setPagination((prev) => ({ ...prev, current: 1 }));
     },
     []
@@ -162,6 +206,10 @@ export const useQualityManagementList = () => {
     statistics,
     searchText,
     statusFilter,
+    overdueFilter,
+    dateRange,
+    laboratoryIds,
+    laboratories,
     pagination,
     historyModalVisible,
     selectedTask,
@@ -173,6 +221,9 @@ export const useQualityManagementList = () => {
     loadData,
     handleSearch,
     handleStatusFilter,
+    handleOverdueFilter,
+    handleDateRangeChange,
+    handleLaboratoryChange,
     handleTableChange,
     handleRowDoubleClick,
     handleViewHistory,

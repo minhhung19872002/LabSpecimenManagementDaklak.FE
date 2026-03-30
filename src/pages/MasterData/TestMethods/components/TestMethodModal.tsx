@@ -1,5 +1,5 @@
 import React from "react";
-import { Modal, Form, Input, Select, Typography, Tooltip } from "antd";
+import { Modal, Form, Select, Typography, Tooltip } from "antd";
 import { Controller, UseFormReturn } from "react-hook-form";
 import Icon from "../../../../components/common/Icon";
 import { RichTextEditor } from "../../../../components/common";
@@ -103,16 +103,43 @@ const TestMethodModal: React.FC<TestMethodModalProps> = ({
         </Form.Item>
 
         <Form.Item
-          label="Đơn vị tính"
+          label={
+            <span>
+              Đơn vị tính{" "}
+              <Tooltip
+                title={
+                  <div>
+                    <div>Phím tắt định dạng:</div>
+                    <div>Ctrl+B: Đậm</div>
+                    <div>Ctrl+I: Nghiêng</div>
+                    <div>Ctrl+U: Gạch chân</div>
+                    <div>Ctrl+,: Chỉ số dưới (x₂)</div>
+                    <div>Ctrl+.: Chỉ số trên (x²)</div>
+                  </div>
+                }
+              >
+                <span style={{ cursor: "help" }}>
+                  <Icon name="info-circle" style={{ color: "#8c8c8c" }} />
+                </span>
+              </Tooltip>
+            </span>
+          }
           required
           validateStatus={errors.unit ? "error" : ""}
           help={errors.unit?.message}
         >
           <Controller
-            name="unit"
+            name="formattedUnit"
             control={control}
             render={({ field }) => (
-              <Input {...field} placeholder="VD: mg/L, %, CFU/g..." />
+              <RichTextEditor
+                value={field.value || ""}
+                onChange={(html, plainText) => {
+                  field.onChange(html);
+                  setValue("unit", plainText);
+                }}
+                placeholder="VD: mg/L, %, CFU/g..."
+              />
             )}
           />
         </Form.Item>

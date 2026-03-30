@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Card,
   Table,
@@ -10,13 +10,18 @@ import {
   Select,
   Radio,
   Typography,
+  DatePicker,
 } from "antd";
+const { RangePicker } = DatePicker;
 import Icon, {
   ExperimentOutlined,
   SearchOutlined,
   ReloadOutlined,
 } from "../../components/common/Icon";
 import { TestingStatus, TestingTabType } from "../../types/testing";
+import { QLKTDisplayStatus } from "../../types/laboratoryTask";
+import { SampleAssignmentLogStatisticsDto } from "../../types/qualityManagement";
+import { testingService } from "../../services/testingService";
 import { useTestingList } from "./hooks";
 import LabSampleAssignmentLogTab from "./components/LabSampleAssignmentLogTab";
 import "../../styles/ListCard.css";
@@ -46,16 +51,53 @@ const TestingList: React.FC = () => {
     stats,
     columns,
     activeTab,
+    dateRange,
+    selectedIndicatorIds,
+    indicators,
     handleSearch,
     handleSearchInputChange,
     handleStatusFilterChange,
     handleTechnicianFilterChange,
+    handleDateRangeChange,
+    handleIndicatorChange,
     handleTabChange,
     handleTableChange,
     handleRefresh,
     handleRowDoubleClick,
     getRowClassName,
   } = useTestingList();
+
+  // Determine if showing testing content or sample assignment log
+  const isShowingSampleAssignmentLog = currentTab === "sample-assignment-log";
+
+  // Sample assignment log stats & filter
+  const [salStats, setSalStats] = useState<SampleAssignmentLogStatisticsDto>({
+    total: 0, underReview: 0, toDo: 0, testing: 0, waitingApproval: 0, resultRejected: 0, completed: 0,
+  });
+  const [salDisplayStatusFilter, setSalDisplayStatusFilter] = useState<
+    QLKTDisplayStatus | undefined
+  >(undefined);
+
+  const loadSalStats = useCallback(async () => {
+    try {
+      const result = await testingService.getSampleAssignmentLogStatistics();
+      setSalStats(result);
+    } catch (error) {
+      console.error("Failed to load SAL statistics:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isShowingSampleAssignmentLog) {
+      loadSalStats();
+    }
+  }, [isShowingSampleAssignmentLog, loadSalStats]);
+
+  const handleSalDisplayStatusFilterChange = useCallback((value: string) => {
+    setSalDisplayStatusFilter(
+      value === "all" ? undefined : (Number(value) as QLKTDisplayStatus)
+    );
+  }, []);
 
   // Handle tab change - sync with useTestingList for testing tabs
   const handleExtendedTabChange = (value: string) => {
@@ -68,58 +110,132 @@ const TestingList: React.FC = () => {
     }
   };
 
-  // Determine if showing testing content or sample assignment log
-  const isShowingSampleAssignmentLog = currentTab === "sample-assignment-log";
+  // Show extra filters only for "Công việc của Lab" tab
+  const isAllTab = activeTab === TestingTabType.All;
 
   return (
     <div>
-      {/* Statistics Cards - only show for testing tabs */}
-      {!isShowingSampleAssignmentLog && (
-        <div className="dashboard-stats-grid testing-stats-grid">
-          {[
-            {
-              title: "Tổng xét nghiệm",
-              value: stats.total,
-              iconBg: "contract",
-              icon: "flask",
-            },
-            {
-              title: "Chưa bắt đầu",
-              value: stats.notStarted,
-              iconBg: "pending",
-              icon: "hourglass",
-              valueColor: "#8C8C8C",
-            },
-            {
-              title: "Đang thử nghiệm",
-              value: stats.inProgress,
-              iconBg: "blue",
-              icon: "arrow-repeat",
-              valueColor: "#1890FF",
-            },
-            {
-              title: "Chờ phê duyệt",
-              value: stats.pendingApproval,
-              iconBg: "late",
-              icon: "clock",
-              valueColor: "#FAAD14",
-            },
-            {
-              title: "Bị từ chối",
-              value: stats.rejected,
-              iconBg: "red",
-              icon: "x-circle",
-              valueColor: "#FF4D4F",
-            },
-            {
-              title: "Hoàn thành",
-              value: stats.completed,
-              iconBg: "green",
-              icon: "check-circle",
-              valueColor: "#52C41A",
-            },
-          ].map((stat, index) => (
-            <Card key={index} className="dashboard-stat-card" bordered={false}>
+      {/* Statistics Cards */}
+      <div className="dashboard-stats-grid testing-stats-grid">
+        {(isShowingSampleAssignmentLog
+          ? [
+              {
+                title: "Tổng chỉ tiêu",
+                value: salStats.total,
+                iconBg: "contract",
+                icon: "flask",
+                filterValue: "all",
+              },
+              {
+                title: "Đang xem xét",
+                value: salStats.underReview,
+                iconBg: "pending",
+                icon: "search",
+                valueColor: "#8C8C8C",
+                filterValue: String(QLKTDisplayStatus.UnderReview),
+              },
+              {
+                title: "Cần làm",
+                value: salStats.toDo,
+                iconBg: "blue",
+                icon: "list-task",
+                valueColor: "#1890FF",
+                filterValue: String(QLKTDisplayStatus.ToDo),
+              },
+              {
+                title: "Đang TN",
+                value: salStats.testing,
+                iconBg: "late",
+                icon: "arrow-repeat",
+                valueColor: "#FAAD14",
+                filterValue: String(QLKTDisplayStatus.Testing),
+              },
+              {
+                title: "Chờ duyệt",
+                value: salStats.waitingApproval,
+                iconBg: "red",
+                icon: "clock",
+                valueColor: "#FA8C16",
+                filterValue: String(QLKTDisplayStatus.WaitingQLKTApproval),
+              },
+              {
+                title: "Hoàn thành",
+                value: salStats.completed,
+                iconBg: "green",
+                icon: "check-circle",
+                valueColor: "#52C41A",
+                filterValue: String(QLKTDisplayStatus.Completed),
+              },
+            ]
+          : [
+              {
+                title: "Tổng xét nghiệm",
+                value: stats.total,
+                iconBg: "contract",
+                icon: "flask",
+                filterValue: "all",
+              },
+              {
+                title: "Chưa bắt đầu",
+                value: stats.notStarted,
+                iconBg: "pending",
+                icon: "hourglass",
+                valueColor: "#8C8C8C",
+                filterValue: String(TestingStatus.NotStarted),
+              },
+              {
+                title: "Đang thử nghiệm",
+                value: stats.inProgress,
+                iconBg: "blue",
+                icon: "arrow-repeat",
+                valueColor: "#1890FF",
+                filterValue: String(TestingStatus.InProgress),
+              },
+              {
+                title: "Chờ phê duyệt",
+                value: stats.pendingApproval,
+                iconBg: "late",
+                icon: "clock",
+                valueColor: "#FAAD14",
+                filterValue: String(TestingStatus.PendingApproval),
+              },
+              {
+                title: "Bị từ chối",
+                value: stats.rejected,
+                iconBg: "red",
+                icon: "x-circle",
+                valueColor: "#FF4D4F",
+                filterValue: String(TestingStatus.Rejected),
+              },
+              {
+                title: "Hoàn thành",
+                value: stats.completed,
+                iconBg: "green",
+                icon: "check-circle",
+                valueColor: "#52C41A",
+                filterValue: String(TestingStatus.Completed),
+              },
+            ]
+        ).map((stat, index) => {
+          const isActive = isShowingSampleAssignmentLog
+            ? stat.filterValue === "all"
+              ? salDisplayStatusFilter === undefined
+              : salDisplayStatusFilter === Number(stat.filterValue)
+            : stat.filterValue === "all"
+              ? statusFilter === undefined
+              : statusFilter === Number(stat.filterValue);
+
+          return (
+            <Card
+              key={index}
+              className={`dashboard-stat-card testing-stat-clickable${isActive ? " testing-stat-active" : ""}`}
+              bordered={false}
+              onClick={() =>
+                isShowingSampleAssignmentLog
+                  ? handleSalDisplayStatusFilterChange(stat.filterValue)
+                  : handleStatusFilterChange(stat.filterValue)
+              }
+            >
               <div className="dashboard-stat-content">
                 <div className="dashboard-stat-info">
                   <Text className="dashboard-stat-title">{stat.title}</Text>
@@ -128,10 +244,11 @@ const TestingList: React.FC = () => {
                     style={
                       stat.valueColor
                         ? {
-                            background: stat.valueColor,
-                            WebkitBackgroundClip: "text",
-                            WebkitTextFillColor: "transparent",
-                            backgroundClip: "text",
+                            background: "none",
+                            WebkitBackgroundClip: "unset",
+                            WebkitTextFillColor: stat.valueColor,
+                            backgroundClip: "unset",
+                            color: stat.valueColor,
                           }
                         : undefined
                     }
@@ -144,9 +261,9 @@ const TestingList: React.FC = () => {
                 </div>
               </div>
             </Card>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
 
       <Card
         className="list-card"
@@ -188,12 +305,12 @@ const TestingList: React.FC = () => {
 
         {/* Content based on selected tab */}
         {isShowingSampleAssignmentLog ? (
-          <LabSampleAssignmentLogTab />
+          <LabSampleAssignmentLogTab displayStatusFilter={salDisplayStatusFilter} />
         ) : (
           <>
             {/* Search & Filter */}
             <Row gutter={[16, 16]} style={{ marginBottom: 0, padding: 16 }}>
-              <Col xs={24} sm={12} md={8}>
+              <Col xs={24} sm={12} md={isAllTab ? 6 : 8}>
                 <Input.Search
                   placeholder="Tìm theo số hợp đồng..."
                   prefix={<SearchOutlined />}
@@ -204,32 +321,41 @@ const TestingList: React.FC = () => {
                   enterButton
                 />
               </Col>
-              <Col xs={24} sm={6} md={4}>
-                <Select
-                  style={{ width: "100%" }}
-                  placeholder="Trạng thái"
-                  value={statusFilter}
-                  onChange={handleStatusFilterChange}
-                  allowClear
-                >
-                  <Select.Option value={TestingStatus.NotStarted}>
-                    Chưa bắt đầu
-                  </Select.Option>
-                  <Select.Option value={TestingStatus.InProgress}>
-                    Đang thử nghiệm
-                  </Select.Option>
-                  <Select.Option value={TestingStatus.PendingApproval}>
-                    Chờ phê duyệt
-                  </Select.Option>
-                  <Select.Option value={TestingStatus.Rejected}>
-                    Bị từ chối
-                  </Select.Option>
-                  <Select.Option value={TestingStatus.Completed}>
-                    Hoàn thành
-                  </Select.Option>
-                </Select>
-              </Col>
-              <Col xs={24} sm={6} md={4}>
+              {isAllTab && (
+                <>
+                  <Col xs={24} sm={12} md={5}>
+                    <RangePicker
+                      value={dateRange}
+                      onChange={handleDateRangeChange}
+                      style={{ width: "100%" }}
+                      format="DD/MM/YY"
+                      allowClear
+                    />
+                  </Col>
+                  <Col xs={24} sm={12} md={7}>
+                    <Select
+                      mode="multiple"
+                      style={{ width: "100%" }}
+                      placeholder="Chọn chỉ tiêu"
+                      value={selectedIndicatorIds}
+                      onChange={handleIndicatorChange}
+                      showSearch
+                      filterOption={(input, option) =>
+                        ((option?.label as string) ?? "")
+                          .toLowerCase()
+                          .includes(input.toLowerCase())
+                      }
+                      options={indicators.map((ind) => ({
+                        value: ind.id,
+                        label: ind.name,
+                      }))}
+                      maxTagCount="responsive"
+                      allowClear
+                    />
+                  </Col>
+                </>
+              )}
+              <Col xs={24} sm={6} md={isAllTab ? 6 : 4}>
                 <Select
                   mode="multiple"
                   style={{ width: "100%" }}
@@ -272,6 +398,7 @@ const TestingList: React.FC = () => {
                 ),
               }}
               onChange={handleTableChange}
+              sticky={{ offsetHeader: 80 }}
               scroll={{ x: 1000 }}
               onRow={(record) => ({
                 onDoubleClick: () => handleRowDoubleClick(record),

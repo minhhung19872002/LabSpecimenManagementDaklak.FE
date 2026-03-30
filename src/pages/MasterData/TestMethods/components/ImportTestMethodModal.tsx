@@ -28,6 +28,7 @@ interface TestMethodImportTableItem {
   isNewTestMethod: boolean;
   description?: string;
   unit?: string;
+  formattedUnit?: string;
   specimenTypeName?: string;
   indicatorName: string;
   unitPrice: number;
@@ -121,6 +122,7 @@ const ImportTestMethodModal: React.FC<ImportTestMethodModalProps> = ({
           isNewTestMethod: group.isNew,
           description: group.description,
           unit: group.unit,
+          formattedUnit: group.formattedUnit,
           specimenTypeName: indicator.specimenTypeName,
           indicatorName: indicator.indicatorName,
           unitPrice: indicator.unitPrice,
@@ -163,7 +165,12 @@ const ImportTestMethodModal: React.FC<ImportTestMethodModalProps> = ({
       dataIndex: "unit",
       key: "unit",
       width: 100,
-      render: (text: string) => text || "-",
+      render: (_: string, record: TestMethodImportTableItem) => {
+        if (record.formattedUnit) {
+          return <span dangerouslySetInnerHTML={{ __html: record.formattedUnit }} />;
+        }
+        return record.unit || "-";
+      },
     },
     {
       title: "Nền mẫu",

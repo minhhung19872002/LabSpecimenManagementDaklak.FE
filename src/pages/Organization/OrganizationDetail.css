@@ -1,0 +1,320 @@
+.org-detail-container {
+  padding: 16px 24px;
+}
+
+.org-detail-layout {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.org-detail-left {
+  width: 360px;
+  min-width: 360px;
+  position: sticky;
+  top: 88px;
+}
+
+.org-detail-right {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.org-info-card .ant-card-body {
+  padding: 16px 20px;
+}
+
+.org-info-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.org-info-row > div {
+  flex: 1;
+}
+
+.org-info-label {
+  font-size: 12px;
+  color: #8c8c8c;
+  margin-bottom: 2px;
+}
+
+.org-info-value {
+  font-size: 13px;
+  color: #262626;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.org-info-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #262626;
+}
+
+.org-info-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1E63F8;
+  margin-bottom: 12px;
+  word-break: break-word;
+}
+
+.org-info-divider {
+  margin: 12px 0;
+  border-top: 1px solid #f0f0f0;
+}
+
+.org-info-edit-btn {
+  margin-top: 12px;
+  text-align: right;
+}
+
+/* Right panel - filter in card header */
+.org-history-filter {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.org-history-card .ant-card-body {
+  padding: 16px;
+}
+
+.org-history-card > .ant-card-head {
+  padding: 12px 16px;
+}
+
+/* Collapse panels - gradient header like testing-detail-collapse */
+.org-history-collapse.ant-collapse {
+  border: none;
+  background: transparent;
+}
+
+.org-history-collapse > .ant-collapse-item {
+  border: none;
+  border-radius: 8px !important;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.org-history-collapse > .ant-collapse-item > .ant-collapse-header {
+  background: var(--gradient-primary);
+  color: #FFFFFF;
+  font-weight: 500;
+  border-radius: 0 !important;
+  padding: 10px 16px !important;
+  align-items: center !important;
+}
+
+.org-history-collapse > .ant-collapse-item > .ant-collapse-header .ant-collapse-expand-icon {
+  color: #FFFFFF;
+}
+
+.org-history-collapse > .ant-collapse-item > .ant-collapse-content {
+  border-top: none;
+}
+
+.org-history-collapse .ant-collapse-content-box {
+  padding: 0 !important;
+}
+
+.org-history-collapse .ant-collapse-content {
+  padding: 0 !important;
+}
+
+.org-history-collapse .ant-collapse-item > .ant-collapse-content > .ant-collapse-content-box {
+  padding: 0 !important;
+}
+
+.org-history-collapse .ant-collapse-body {
+  padding: 0 !important;
+}
+
+.org-collapse-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.org-collapse-header .contract-number {
+  font-size: 13px;
+  color: #FFFFFF;
+}
+
+.org-collapse-header .contract-number-highlight {
+  font-weight: 600;
+  color: #FFFFFF;
+}
+
+.org-collapse-create-btn.ant-btn {
+  margin-left: auto;
+  font-size: 12px;
+  background: #FFFFFF !important;
+  border: 1px solid #FFFFFF !important;
+  border-radius: 6px;
+  padding: 2px 12px;
+  height: 28px;
+  line-height: 1;
+}
+
+.org-collapse-create-btn.ant-btn > span {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.org-collapse-create-btn.ant-btn:hover {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: #FFFFFF !important;
+}
+
+.org-collapse-create-btn.ant-btn .anticon {
+  color: #1E63F8 !important;
+}
+
+.org-collapse-header .request-number {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* Tag inside gradient header */
+.org-history-collapse .ant-collapse-header .ant-tag {
+  border-radius: 20px;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  color: #FFFFFF !important;
+}
+
+/* Sample table inside collapse */
+.org-sample-table {
+  padding: 0;
+}
+
+.org-sample-table .ant-table {
+  margin: 0 !important;
+  border-radius: 0 !important;
+}
+
+.org-sample-table .ant-table-container {
+  border-radius: 0 !important;
+}
+
+.org-sample-table .ant-table-content table {
+  border-radius: 0 !important;
+}
+
+.org-sample-table .ant-table-container table > thead > tr:first-child > *:first-child {
+  border-start-start-radius: 0 !important;
+}
+
+.org-sample-table .ant-table-container table > thead > tr:first-child > *:last-child {
+  border-start-end-radius: 0 !important;
+}
+
+.org-sample-table .ant-table-thead > tr > th {
+  background: #E6F7FF !important;
+  font-weight: 500;
+  font-size: 12px;
+  padding: 6px 8px;
+}
+
+.org-sample-table .ant-table-tbody > tr > td {
+  font-size: 12px;
+  padding: 6px 8px;
+}
+
+/* Pagination */
+.org-history-pagination {
+  padding: 12px 16px;
+  text-align: right;
+}
+
+/* Back button */
+.org-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.org-detail-header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+/* Responsive */
+@media (max-width: 991px) {
+  .org-detail-layout {
+    flex-direction: column;
+    max-width: 100%;
+  }
+
+  .org-detail-left {
+    width: 100%;
+    min-width: unset;
+    position: static;
+  }
+}
+
+@media (max-width: 768px) {
+  .org-detail-container {
+    padding: 12px;
+  }
+
+  /* Card header: stack title and filter vertically */
+  .org-history-card > .ant-card-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .org-history-card > .ant-card-head > .ant-card-head-wrapper {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .org-history-card > .ant-card-head > .ant-card-head-wrapper > .ant-card-extra {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .org-history-filter {
+    width: 100%;
+  }
+
+  .org-history-filter .ant-picker {
+    flex: 1;
+  }
+
+  /* Collapse header: wrap content */
+  .org-collapse-header {
+    gap: 8px;
+  }
+
+  /* Constrain right panel width */
+  .org-detail-right {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .org-history-card {
+    max-width: 100%;
+  }
+
+  .org-history-collapse {
+    max-width: 100%;
+  }
+
+  /* Table: ensure horizontal scroll */
+  .org-sample-table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}

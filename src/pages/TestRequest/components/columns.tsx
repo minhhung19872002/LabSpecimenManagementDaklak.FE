@@ -1,5 +1,5 @@
-import { Button, Space, Popconfirm } from "antd";
-import { EditOutlined, DeleteOutlined } from "../../../components/common/Icon";
+import { Button, Space } from "antd";
+import { EditOutlined } from "../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import {
@@ -8,7 +8,6 @@ import {
   TestRequestStatusLabels,
   TestRequestStatusColors,
   canEditTestRequest,
-  canDeleteTestRequest,
   showActionsForTestRequest,
 } from "../../../types/testRequest";
 import { formatDate } from "../../../utils/formatters";
@@ -16,8 +15,7 @@ import StatusTag from "../../../components/common/StatusTag";
 
 interface GetColumnsOptions {
   onEdit: (record: TestRequestDto) => void;
-  onDelete: (id: string) => void;
-  /** Có quyền chỉnh sửa/xóa theo Permission Matrix (BP Giao nhận, Admin) */
+  /** Có quyền chỉnh sửa theo Permission Matrix (BP Giao nhận, Admin) */
   canEditPermission?: boolean;
 }
 
@@ -110,8 +108,6 @@ export const getTestRequestColumns = (
       const canEditByStatus = canEditTestRequest(record.status);
       const canEditByPermission = options.canEditPermission !== false; // default true for backward compatibility
       const canEdit = canEditByStatus && canEditByPermission;
-      const canDelete =
-        canDeleteTestRequest(record.status) && canEditByPermission;
       const showActions = showActionsForTestRequest(record.status);
 
       // Nếu không có quyền theo Permission Matrix, ẩn luôn cột thao tác
@@ -124,7 +120,7 @@ export const getTestRequestColumns = (
       }
 
       return (
-        <Space size="small">
+        <Space size="small" style={{ display: "flex", justifyContent: "center" }}>
           <Button
             type="link"
             size="small"
@@ -135,22 +131,6 @@ export const getTestRequestColumns = (
               !canEdit ? "Không thể chỉnh sửa ở trạng thái này" : "Chỉnh sửa"
             }
           />
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa?"
-            onConfirm={() => options.onDelete(record.id)}
-            okText="Có"
-            cancelText="Không"
-            disabled={!canDelete}
-          >
-            <Button
-              type="link"
-              size="small"
-              danger
-              icon={<DeleteOutlined />}
-              disabled={!canDelete}
-              title={!canDelete ? "Không thể xóa ở trạng thái này" : "Xóa"}
-            />
-          </Popconfirm>
         </Space>
       );
     },

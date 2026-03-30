@@ -53,6 +53,9 @@ export const initTableGrabScroll = () => {
       target.closest('a') ||
       target.closest('input') ||
       target.closest('textarea') ||
+      target.closest('[contenteditable]') ||
+      target.closest('.tiptap') ||
+      target.closest('.rich-text-editor-wrapper') ||
       target.closest('.ant-checkbox') ||
       target.closest('.ant-switch') ||
       target.closest('.ant-select') ||

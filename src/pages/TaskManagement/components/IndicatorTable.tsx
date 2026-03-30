@@ -13,7 +13,7 @@ import {
 import StatusTag from "../../../components/common/StatusTag";
 import type { TableRowSelection } from "antd/es/table/interface";
 import { CheckOutlined, CloseOutlined } from "../../../components/common/Icon";
-import { formatDate, parseResultToNumber, stripPTags, convertHtmlToMathExpression } from "../../../utils/formatters";
+import { formatDate, stripPTags, evaluatePassFail } from "../../../utils/formatters";
 import {
   LaboratoryTaskIndicatorDto,
   IndicatorApprovalStatus,
@@ -24,7 +24,7 @@ import {
   SampleStatus,
 } from "../../../types/laboratoryTask";
 import IndicatorImageCell from "../../../components/common/IndicatorImageCell";
-import { IndicatorName } from "../../../components/common";
+import { IndicatorName, RichTextEditor } from "../../../components/common";
 import {
   standardService,
   StandardWithIndicatorsDto,
@@ -151,9 +151,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   };
 
   // Get standards that contain a specific indicator AND method AND specimenType (if available)
+  // Fallback: if no standards match all conditions, return full list
   const getStandardsForIndicator = useMemo(() => {
     return (indicatorId: string, methodId?: string, specimenTypeId?: string) => {
-      return standardsWithIndicators.filter((standard) =>
+      const filtered = standardsWithIndicators.filter((standard) =>
         standard.indicators.some(
           (si) =>
             si.indicatorId === indicatorId &&
@@ -161,6 +162,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             (!specimenTypeId || !si.specimenTypeId || si.specimenTypeId === specimenTypeId)
         )
       );
+      return filtered.length > 0 ? filtered : standardsWithIndicators;
     };
   }, [standardsWithIndicators]);
 
@@ -190,97 +192,6 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   };
 
   // Calculate pass/fail status
-  // Text không tính được sẽ được convert sang 0 để vẫn so sánh được
-  // Hỗ trợ cả single limit và range
-  const calculatePassFail = (
-    result: string | undefined,
-    comparisonOperator: string | undefined,
-    allowedLimit: string | undefined,
-    lowerOperator?: string,
-    lowerLimit?: string,
-    upperOperator?: string,
-    upperLimit?: string
-  ): "pass" | "fail" | null => {
-    if (!result) return null;
-
-    // Parse result to number using parseResultToNumber
-    // Supports: scientific notation ("2,0 x 10^2"), math expressions ("10^2*5+4"), plain numbers
-    // Text không tính được (như "Âm tính") sẽ trả về 0
-    const resultValue = parseResultToNumber(result);
-    if (resultValue === null) return null;
-
-    // Check if it's a range comparison (both lowerLimit and upperLimit exist)
-    if (lowerLimit && upperLimit) {
-      // Convert HTML superscript/subscript to math expression before parsing
-      const lowerValue = parseResultToNumber(convertHtmlToMathExpression(lowerLimit));
-      const upperValue = parseResultToNumber(convertHtmlToMathExpression(upperLimit));
-      if (lowerValue === null || upperValue === null) return null;
-
-      // Check lower bound
-      let passLower = false;
-      const lowerOp = lowerOperator || ">";
-      switch (lowerOp) {
-        case ">":
-        case "≥":
-          passLower =
-            lowerOp === ">"
-              ? resultValue > lowerValue
-              : resultValue >= lowerValue;
-          break;
-        case ">=":
-          passLower = resultValue >= lowerValue;
-          break;
-        default:
-          passLower = resultValue > lowerValue;
-      }
-
-      // Check upper bound
-      let passUpper = false;
-      const upperOp = upperOperator || "<";
-      switch (upperOp) {
-        case "<":
-        case "≤":
-          passUpper =
-            upperOp === "<"
-              ? resultValue < upperValue
-              : resultValue <= upperValue;
-          break;
-        case "<=":
-          passUpper = resultValue <= upperValue;
-          break;
-        default:
-          passUpper = resultValue < upperValue;
-      }
-
-      return passLower && passUpper ? "pass" : "fail";
-    }
-
-    // Single limit comparison
-    if (!comparisonOperator || !allowedLimit) return null;
-
-    // Convert HTML superscript/subscript to math expression and parse limit to number
-    const limitValue = parseResultToNumber(convertHtmlToMathExpression(allowedLimit));
-    if (limitValue === null) return null;
-
-    // Compare based on operator (support both <= and ≤ formats)
-    switch (comparisonOperator) {
-      case "<=":
-      case "≤":
-        return resultValue <= limitValue ? "pass" : "fail";
-      case ">=":
-      case "≥":
-        return resultValue >= limitValue ? "pass" : "fail";
-      case "<":
-        return resultValue < limitValue ? "pass" : "fail";
-      case ">":
-        return resultValue > limitValue ? "pass" : "fail";
-      case "=":
-        return resultValue === limitValue ? "pass" : "fail";
-      default:
-        return null;
-    }
-  };
-
   const handleReject = async () => {
     try {
       const values = await rejectForm.validateFields();
@@ -521,46 +432,49 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         // Hide for parent indicators that have sub-indicators
         if (record._isParentWithSubs) return null;
 
-        // Cho phép chỉnh sửa nếu chưa duyệt và chưa bị hủy
+        // Cho phép chỉnh sửa trừ khi bị hủy hoặc forceDisable
         const canEditUnit =
           !forceDisableAll &&
-          record.approvalStatus !== IndicatorApprovalStatus.Approved &&
           record.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled &&
           onUnitChange;
+
+        if (!canEditUnit) {
+          return value ? <IndicatorName name={value} /> : <Text>-</Text>;
+        }
 
         // Lấy giá trị từ local state nếu có, nếu không thì từ server
         const displayValue = unitEdits[record.id] !== undefined ? unitEdits[record.id] : (value || "");
 
-        if (!canEditUnit) {
-          return <Text>{value || "-"}</Text>;
-        }
-
         return (
-          <Input
-            size="small"
-            value={displayValue}
-            placeholder="-"
-            onChange={(e) => {
-              setUnitEdits((prev) => ({
-                ...prev,
-                [record.id]: e.target.value,
-              }));
-            }}
+          <div
             onBlur={(e) => {
-              const newValue = e.target.value.trim();
-              // Chỉ gọi API nếu giá trị thay đổi
-              if (newValue !== (value || "")) {
-                onUnitChange(record.id, newValue || null);
+              // Only trigger save when focus leaves the entire editor
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                const newValue = unitEdits[record.id];
+                if (newValue !== undefined && newValue !== (value || "")) {
+                  onUnitChange(record.id, newValue || null);
+                }
+                // Clear local state sau khi save
+                setUnitEdits((prev) => {
+                  const newState = { ...prev };
+                  delete newState[record.id];
+                  return newState;
+                });
               }
-              // Clear local state sau khi save
-              setUnitEdits((prev) => {
-                const newState = { ...prev };
-                delete newState[record.id];
-                return newState;
-              });
             }}
-            style={{ width: "100%" }}
-          />
+          >
+            <RichTextEditor
+              value={displayValue}
+              onChange={(html) => {
+                setUnitEdits((prev) => ({
+                  ...prev,
+                  [record.id]: html,
+                }));
+              }}
+              placeholder="-"
+              minHeight={24}
+            />
+          </div>
         );
       },
     },
@@ -889,7 +803,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           upperLimit = standardInfo.upperLimit;
         }
 
-        const passFailStatus = calculatePassFail(
+        const passFailStatus = evaluatePassFail(
           record.result,
           comparisonOperator,
           allowedLimit,
@@ -921,30 +835,52 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       key: "technicianId",
       width: 150,
       render: (value: string, record: IndicatorWithPosition) => {
-        // Hide for parent indicators that have sub-indicators
-        if (record._isParentWithSubs) return null;
+        // For parent with subs: show Select at parent level, hide at sub level
+        if (record.parentIndicatorId) return null;
 
-        // Cho phép chỉnh sửa KTV nếu:
-        // 1. Indicator không đang chờ mẫu chung từ Lab Vi Sinh
-        // 2. Indicator đã được chấp nhận TN (AcceptedForTesting) hoặc các trạng thái có thể assign
-        //    (Entered, Rejected - cần giao lại cho KTV khác)
-        // 3. Indicator chưa được duyệt KQ (Approved) và chưa bị hủy (CustomerCancelled)
-        // 4. Có quyền assignTechnician theo Permission Matrix (chỉ QLKT)
-        const isAssignableStatus =
-          record.approvalStatus === IndicatorApprovalStatus.AcceptedForTesting ||
-          record.approvalStatus === IndicatorApprovalStatus.Entered ||
-          record.approvalStatus === IndicatorApprovalStatus.Rejected ||
-          record.approvalStatus === IndicatorApprovalStatus.CannotTest ||
-          record.approvalStatus === IndicatorApprovalStatus.MethodChanged;
+        // For parent with subs: check assignable based on any sub's status
+        let isAssignableStatus = false;
+        if (record._isParentWithSubs) {
+          const subIds = Object.entries(subToParentMapping)
+            .filter(([, parentId]) => parentId === record.id)
+            .map(([subId]) => subId);
+          const subIndicators = indicators.filter((ind) => subIds.includes(ind.id));
+          isAssignableStatus = subIndicators.some(
+            (sub) =>
+              sub.approvalStatus === IndicatorApprovalStatus.AcceptedForTesting ||
+              sub.approvalStatus === IndicatorApprovalStatus.Entered ||
+              sub.approvalStatus === IndicatorApprovalStatus.Rejected ||
+              sub.approvalStatus === IndicatorApprovalStatus.CannotTest ||
+              sub.approvalStatus === IndicatorApprovalStatus.MethodChanged
+          );
+        } else {
+          isAssignableStatus =
+            record.approvalStatus === IndicatorApprovalStatus.AcceptedForTesting ||
+            record.approvalStatus === IndicatorApprovalStatus.Entered ||
+            record.approvalStatus === IndicatorApprovalStatus.Rejected ||
+            record.approvalStatus === IndicatorApprovalStatus.CannotTest ||
+            record.approvalStatus === IndicatorApprovalStatus.MethodChanged;
+        }
 
         const canEditIndicator = !forceDisableAll && isAssignableStatus && canAssignTechnician;
+
+        // For parent with subs: show technician from first sub
+        let displayValue = value;
+        if (record._isParentWithSubs) {
+          const firstSubId = Object.entries(subToParentMapping)
+            .find(([, parentId]) => parentId === record.id)?.[0];
+          if (firstSubId) {
+            const firstSub = indicators.find((ind) => ind.id === firstSubId);
+            displayValue = firstSub?.technicianId || value;
+          }
+        }
 
         return (
           <div style={{ minHeight: 32, display: "flex", alignItems: "center" }}>
             <Select
               style={{ width: "100%" }}
               size="small"
-              value={value}
+              value={displayValue}
               placeholder="Chọn TNV"
               onChange={(val) => onTechnicianChange(record.id, val)}
               options={(technicians || []).map((t) => ({

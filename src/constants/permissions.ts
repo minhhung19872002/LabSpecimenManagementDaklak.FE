@@ -109,7 +109,7 @@ export const ROUTE_PERMISSIONS: Record<string, string[]> = {
   [PATH_ROUTES.masterData]: [ROLES.ADMIN],
 
   // Tổ chức/Doanh nghiệp
-  [PATH_ROUTES.organizations]: [ROLES.ADMIN],
+  [PATH_ROUTES.organizations.index]: [ROLES.ADMIN],
 
   // Audit Log
   [PATH_ROUTES.auditLog]: [ROLES.ADMIN],
@@ -284,7 +284,7 @@ const DEFAULT_ROUTE_PRIORITY = [
   PATH_ROUTES.statistics,
   PATH_ROUTES.subcontractors,
   PATH_ROUTES.masterData,
-  PATH_ROUTES.organizations,
+  PATH_ROUTES.organizations.index,
   PATH_ROUTES.employees.index,
   PATH_ROUTES.roleManagement.index,
   PATH_ROUTES.auditLog,

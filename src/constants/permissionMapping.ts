@@ -26,6 +26,7 @@ export const PERMISSIONS = {
     Create: `${P}.TestRequests.Create`,
     Edit: `${P}.TestRequests.Edit`,
     Delete: `${P}.TestRequests.Delete`,
+    SendSample: `${P}.TestRequests.SendSample`,
   },
 
   // Specimens
@@ -381,7 +382,7 @@ export const ACTION_PERMISSION_MAP = {
     edit: PERMISSIONS.TestRequests.Edit,
     view: PERMISSIONS.TestRequests.Default,
     delete: PERMISSIONS.TestRequests.Delete,
-    sendSample: PERMISSIONS.Specimens.Create,
+    sendSample: PERMISSIONS.TestRequests.SendSample,
     approveChange: PERMISSIONS.TestResults.Approve,
     cancel: PERMISSIONS.TestRequests.Delete,
     sendToAccounting: PERMISSIONS.TestRequests.Edit,

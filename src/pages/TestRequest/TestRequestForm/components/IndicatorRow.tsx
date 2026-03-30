@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useState, useRef, useCallback } from "react";
-import { Button, Checkbox, DatePicker, Tooltip } from "antd";
+import { Button, Checkbox, DatePicker, InputNumber, Tooltip } from "antd";
 import {
   CloseOutlined,
   LockOutlined,
@@ -67,6 +67,8 @@ interface IndicatorRowProps {
   transferDate?: dayjs.Dayjs;
   requestDate?: dayjs.Dayjs;
   approvalStatus?: IndicatorApprovalStatus; // Trạng thái duyệt từ LaboratoryTaskIndicator
+  isSentToQLKT?: boolean; // Đã gửi đến QLKT
+  sentToDepartment?: boolean; // Đã gửi đến khoa phòng
   onCheckChange: (id: string) => void;
   onDateChange: (
     id: string,
@@ -74,6 +76,7 @@ interface IndicatorRowProps {
     value: dayjs.Dayjs | null,
   ) => void;
   onRemove: (id: string) => void;
+  onPriceChange?: (id: string, price: number) => void;
   // Sub-indicator props
   isSubIndicator?: boolean;
   isFirstSub?: boolean;
@@ -95,9 +98,12 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
   transferDate,
   requestDate,
   approvalStatus,
+  isSentToQLKT,
+  sentToDepartment,
   onCheckChange,
   onDateChange,
   onRemove,
+  onPriceChange,
   // Sub-indicator props
   isSubIndicator = false,
   isFirstSub = false,
@@ -108,12 +114,12 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
 }) => {
   if (!indicator) return null;
 
-  // Kiểm tra xem có thể xóa indicator không
-  // Không thể xóa nếu đang thử nghiệm hoặc đã có kết quả (Entered, Approved, Rejected)
+  // Kiểm tra xem có thể xóa/sửa indicator không
+  // Lock nếu đã gửi tới khoa phòng (có approvalStatus hoặc isSentToQLKT)
   const canDelete =
-    approvalStatus === undefined ||
-    approvalStatus === null ||
-    approvalStatus === IndicatorApprovalStatus.Pending;
+    (approvalStatus === undefined || approvalStatus === null) &&
+    !isSentToQLKT &&
+    !sentToDepartment;
   const statusLabel =
     approvalStatus !== undefined && approvalStatus !== null
       ? IndicatorApprovalStatusLabels[approvalStatus]
@@ -151,23 +157,40 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
           disabled={!canDelete}
         />
       )}
-      <TruncateTooltip
-        title={indicator.name}
+      <div
         style={{
           flex: 1,
           minWidth: 80,
-          fontSize: 13,
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
           overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          color: canDelete ? "inherit" : "#666",
         }}
       >
-        <IndicatorName
-          name={indicator.name}
-          formattedName={indicator.formattedName}
-        />
-      </TruncateTooltip>
+        <TruncateTooltip
+          title={indicator.name}
+          style={{
+            fontSize: 13,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            color: canDelete ? "inherit" : "#666",
+          }}
+        >
+          <IndicatorName
+            name={indicator.name}
+            formattedName={indicator.formattedName}
+          />
+        </TruncateTooltip>
+        {statusLabel && (
+          <StatusTag
+            color={statusColor}
+            style={{ fontSize: 11, flexShrink: 0 }}
+          >
+            {statusLabel}
+          </StatusTag>
+        )}
+      </div>
       {/* Method name - hidden for sub-indicators (only show name) */}
       {!isSubIndicator && (
         <TruncateTooltip
@@ -188,44 +211,20 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
       {/* Đơn giá - hidden for sub-indicators (only show name) */}
       {!isSubIndicator && (
         !hidePrice ? (
-          <span
-            style={{
-              fontSize: 12,
-              color: "#888",
-              width: 90,
-              flexShrink: 0,
-              textAlign: "right",
-            }}
-          >
-            {isFree ? (
-              <>
-                <span
-                  style={{
-                    textDecoration: "line-through",
-                    color: "#bbb",
-                    marginRight: 2,
-                    fontSize: 11,
-                  }}
-                >
-                  {unitPrice?.toLocaleString("vi-VN")}đ
-                </span>
-                <span style={{ color: "#52c41a", fontWeight: 600 }}>0đ</span>
-              </>
-            ) : (
-              <>{unitPrice?.toLocaleString("vi-VN")}đ</>
-            )}
-          </span>
+          <div style={{ width: 110, flexShrink: 0 }}>
+            <InputNumber
+              value={unitPrice}
+              min={0}
+              size="small"
+              style={{ width: "100%", height: 32 }}
+              formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+              parser={(value) => Number(value?.replace(/,/g, '') || 0)}
+              onChange={(value) => onPriceChange?.(id, value ?? 0)}
+            />
+          </div>
         ) : (
-          <span style={{ width: 90, flexShrink: 0 }} />
+          <span style={{ width: 110, flexShrink: 0 }} />
         )
-      )}
-      {statusLabel && (
-        <StatusTag
-          color={statusColor}
-          style={{ fontSize: 11, flexShrink: 0, minWidth: 60 }}
-        >
-          {statusLabel}
-        </StatusTag>
       )}
       {/* Ngày CG/YC - hidden for sub-indicators (only show name) */}
       {!isSubIndicator && (
@@ -270,7 +269,7 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
             onClick={() => onRemove(id)}
           />
         ) : (
-          <Tooltip title="Không thể xóa chỉ tiêu đang thử nghiệm hoặc đã có kết quả">
+          <Tooltip title="Không thể xóa chỉ tiêu đã gửi tới khoa phòng">
             <Button
               type="text"
               size="small"

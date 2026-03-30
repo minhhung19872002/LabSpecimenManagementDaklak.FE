@@ -133,7 +133,8 @@ export const canDeleteTestRequest = (status: TestRequestStatus): boolean => {
  * Kiểm tra có hiển thị actions cho phiếu yêu cầu không
  */
 export const showActionsForTestRequest = (status: TestRequestStatus): boolean => {
-  return status !== TestRequestStatus.Completed;
+  return status !== TestRequestStatus.Completed &&
+         status !== TestRequestStatus.Cancelled;
 };
 
 /**

@@ -239,6 +239,10 @@ export interface GetQualityManagementListInput {
   taskType?: QualityTaskType;
   fromDate?: string;
   toDate?: string;
+  isOverdue?: boolean;
+  requestCompletionDateFrom?: string;
+  requestCompletionDateTo?: string;
+  laboratoryIds?: string[];
 }
 
 // Paged result
@@ -426,11 +430,35 @@ export interface GetSampleAssignmentLogInput {
   testRequestStatus?: TestRequestStatus;
   fromDate?: string;
   toDate?: string;
-  laboratoryId?: string;
+  laboratoryIds?: string[];
+  indicatorIds?: string[];
+  technicianIds?: string[];
+  qlclDisplayStatuses?: number[];
 }
 
 // Paged result for Sample Assignment Log
 export interface PagedSampleAssignmentLogResult {
   items: SampleAssignmentLogDto[];
   totalCount: number;
+}
+
+// Statistics for Sample Assignment Log (by QLKTDisplayStatus)
+export interface SampleAssignmentLogStatisticsDto {
+  total: number;
+  underReview: number;
+  toDo: number;
+  testing: number;
+  waitingApproval: number;
+  resultRejected: number;
+  completed: number;
+}
+
+// Statistics for QLCL Sample Assignment Log (by QLCLDisplayStatus)
+export interface QLCLSampleAssignmentLogStatisticsDto {
+  total: number;
+  toDo: number;                // ToDo + Testing
+  waitingQLKTApproval: number;
+  waitingQLCLApproval: number;
+  waitingForPublishing: number;
+  published: number;
 }

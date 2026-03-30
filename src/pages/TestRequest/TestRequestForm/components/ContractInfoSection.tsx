@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React from "react";
-import { Form, Input, DatePicker, Checkbox, Typography, Row, Col } from "antd";
+import { Form, Input, DatePicker, Radio, Typography, Row, Col } from "antd";
 import { TestRequestStatus } from "../../../../types/testRequest";
 
 const { Title, Text } = Typography;
@@ -57,37 +57,17 @@ const ContractInfoSection: React.FC<ContractInfoSectionProps> = ({
         </Col>
       </Row>
       {/* Loại hình mẫu */}
-      <Text strong style={{ display: "block", marginBottom: 8 }}>Loại hình mẫu</Text>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 24px", marginBottom: 12 }}>
-        <Form.Item
-          name="sampleTypeService"
-          valuePropName="checked"
-          style={{ marginBottom: 0 }}
-        >
-          <Checkbox>Dịch vụ</Checkbox>
-        </Form.Item>
-        <Form.Item
-          name="sampleTypeContract"
-          valuePropName="checked"
-          style={{ marginBottom: 0 }}
-        >
-          <Checkbox>Hợp đồng</Checkbox>
-        </Form.Item>
-        <Form.Item
-          name="sampleTypeTask"
-          valuePropName="checked"
-          style={{ marginBottom: 0 }}
-        >
-          <Checkbox>Mẫu nhiệm vụ</Checkbox>
-        </Form.Item>
-        <Form.Item
-          name="sampleTypeSubContract"
-          valuePropName="checked"
-          style={{ marginBottom: 0 }}
-        >
-          <Checkbox>Hợp đồng phụ</Checkbox>
-        </Form.Item>
-      </div>
+      <Text strong style={{ display: "block", marginBottom: 8 }}>
+        Loại hình mẫu
+      </Text>
+      <Form.Item name="sampleType" style={{ marginBottom: 12 }}>
+        <Radio.Group>
+          <Radio value="service">Dịch vụ</Radio>
+          <Radio value="contract">Hợp đồng</Radio>
+          <Radio value="task">Mẫu nhiệm vụ</Radio>
+          <Radio value="subContract">Hợp đồng phụ</Radio>
+        </Radio.Group>
+      </Form.Item>
       {/* Hợp đồng phụ input */}
       <Form.Item
         name="subContract"

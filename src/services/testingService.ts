@@ -18,6 +18,7 @@ import {
 import {
   GetSampleAssignmentLogInput,
   PagedSampleAssignmentLogResult,
+  SampleAssignmentLogStatisticsDto,
 } from '../types/qualityManagement';
 
 const BASE_URL = '/api/v1/testing';
@@ -42,10 +43,36 @@ const toApiParams = (params: GetTestingListInput) => {
     });
   }
   if (params.laboratoryId) apiParams.LaboratoryId = params.laboratoryId;
+  if (params.requestCompletionDateFrom) apiParams.RequestCompletionDateFrom = params.requestCompletionDateFrom;
+  if (params.requestCompletionDateTo) apiParams.RequestCompletionDateTo = params.requestCompletionDateTo;
+  if (params.indicatorIds && params.indicatorIds.length > 0) {
+    params.indicatorIds.forEach((id, index) => {
+      apiParams[`IndicatorIds[${index}]`] = id;
+    });
+  }
   return apiParams;
 };
 
+export interface TestingStatusStatisticsDto {
+  total: number;
+  notStarted: number;
+  inProgress: number;
+  pendingApproval: number;
+  rejected: number;
+  completed: number;
+}
+
 export const testingService = {
+  /**
+   * Get status statistics for testing tasks
+   */
+  getStatusStatistics: async (tab: number): Promise<TestingStatusStatisticsDto> => {
+    const response = await api.get<TestingStatusStatisticsDto>(`${BASE_URL}/statistics`, {
+      params: { Tab: tab }
+    });
+    return response.data;
+  },
+
   /**
    * Get filtered and paged list of testing tasks
    */
@@ -68,8 +95,26 @@ export const testingService = {
     if (input.fromDate) queryParams.FromDate = input.fromDate;
     if (input.toDate) queryParams.ToDate = input.toDate;
     if (input.laboratoryId) queryParams.LaboratoryId = input.laboratoryId;
+    if (input.indicatorIds && input.indicatorIds.length > 0) {
+      input.indicatorIds.forEach((id, index) => {
+        queryParams[`IndicatorIds[${index}]`] = id;
+      });
+    }
+    if (input.technicianIds && input.technicianIds.length > 0) {
+      input.technicianIds.forEach((id, index) => {
+        queryParams[`TechnicianIds[${index}]`] = id;
+      });
+    }
 
     const response = await api.get<PagedSampleAssignmentLogResult>(`${BASE_URL}/sample-assignment-log`, { params: queryParams });
+    return response.data;
+  },
+
+  /**
+   * Get statistics for sample assignment log (by QLKTDisplayStatus)
+   */
+  getSampleAssignmentLogStatistics: async (): Promise<SampleAssignmentLogStatisticsDto> => {
+    const response = await api.get<SampleAssignmentLogStatisticsDto>(`${BASE_URL}/sample-assignment-log/statistics`);
     return response.data;
   },
 

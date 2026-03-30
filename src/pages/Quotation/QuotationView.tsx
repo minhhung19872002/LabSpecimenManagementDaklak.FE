@@ -17,11 +17,14 @@ import {
   ArrowLeftOutlined,
   FileAddOutlined,
   EditOutlined,
+  MailOutlined,
+  DownloadOutlined,
 } from "../../components/common/Icon";
 import { useNavigate, useParams } from "react-router-dom";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { quotationService } from "../../services/quotationService";
+import type { QuotationPdfSampleDto } from "../../services/quotationService";
 import {
   QuotationDto,
   QuotationSampleIndicatorDto,
@@ -31,6 +34,8 @@ import { formatCurrency } from "../../utils/formatters";
 import { IndicatorName } from "../../components/common";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
+import SendQuotationEmailModal from "./components/SendQuotationEmailModal";
+import { getApiErrorMessage } from "../../utils/errorHandler";
 import "../../styles/ListCard.css";
 
 const { Text } = Typography;
@@ -41,6 +46,8 @@ const QuotationView: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [quotation, setQuotation] = useState<QuotationDto | null>(null);
+  const [emailModalVisible, setEmailModalVisible] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -64,6 +71,44 @@ const QuotationView: React.FC = () => {
   const handleCreateTestRequest = () => {
     if (id) {
       navigate(`${PATH_ROUTES.testRequests.create}?quotationId=${id}`);
+    }
+  };
+
+  const getEmailSamples = (): QuotationPdfSampleDto[] => {
+    return (
+      quotation?.samples?.map((sample) => ({
+        sampleName: sample.sampleName,
+        quantity: 1,
+        indicators: sample.indicators.map((ind) => ({
+          indicatorName: ind.indicatorName,
+          quantity: 1,
+          unitPrice: ind.unitPrice,
+        })),
+      })) || []
+    );
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!quotation) return;
+    setDownloadingPdf(true);
+    try {
+      const pdfUrl = await quotationService.generatePdf({
+        customerName: quotation.customerName,
+        samples: getEmailSamples(),
+        totalPrice: quotation.totalCost,
+      });
+      const a = document.createElement("a");
+      a.href = pdfUrl;
+      a.download = "BaoGia.pdf";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(pdfUrl);
+    } catch (error: any) {
+      console.error("Failed to download PDF:", error);
+      message.error(getApiErrorMessage(error, "Tải PDF thất bại. Vui lòng thử lại."));
+    } finally {
+      setDownloadingPdf(false);
     }
   };
 
@@ -108,10 +153,17 @@ const QuotationView: React.FC = () => {
       key: "indicatorName",
       ellipsis: true,
       render: (_, record) => (
-        <IndicatorName
-          name={record.indicatorName}
-          formattedName={record.indicatorFormattedName}
-        />
+        <>
+          <IndicatorName
+            name={record.indicatorName}
+            formattedName={record.indicatorFormattedName}
+          />
+          {record.specimenTypeName && (
+            <div style={{ fontSize: 11, color: "#8c8c8c", marginTop: 2 }}>
+              {record.specimenTypeName}
+            </div>
+          )}
+        </>
       ),
     },
     {
@@ -179,7 +231,7 @@ const QuotationView: React.FC = () => {
             </Tooltip>
           </Col>
           <Col>
-            <Space>
+            <Space wrap>
               {authService.hasPermission(PERMISSIONS.Quotations.Edit) && (
                 <Button
                   icon={<EditOutlined />}
@@ -188,6 +240,27 @@ const QuotationView: React.FC = () => {
                   Chỉnh sửa
                 </Button>
               )}
+              <Button
+                icon={<MailOutlined />}
+                onClick={() => {
+                  if (totalSampleCount === 0 || totalIndicatorCount === 0) {
+                    message.warning(
+                      "Vui lòng thêm ít nhất một mẫu với chỉ tiêu để gửi email"
+                    );
+                    return;
+                  }
+                  setEmailModalVisible(true);
+                }}
+              >
+                Gửi email
+              </Button>
+              <Button
+                icon={<DownloadOutlined />}
+                loading={downloadingPdf}
+                onClick={handleDownloadPdf}
+              >
+                Tải báo giá
+              </Button>
               {authService.hasPermission(PERMISSIONS.TestRequests.Create) && (
                 <Button
                   type="primary"
@@ -356,6 +429,16 @@ const QuotationView: React.FC = () => {
         )}
         </Card>
       </Spin>
+
+      {quotation && (
+        <SendQuotationEmailModal
+          visible={emailModalVisible}
+          onCancel={() => setEmailModalVisible(false)}
+          customerName={quotation.customerName || ""}
+          samples={getEmailSamples()}
+          totalCost={quotation.totalCost}
+        />
+      )}
     </div>
   );
 };

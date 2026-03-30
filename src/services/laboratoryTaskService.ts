@@ -22,8 +22,10 @@ import {
   RequestMethodChangeInput,
   RejectIndicatorsForTestingInput,
   LaboratoryDepartmentSupporterDto,
-  AddDepartmentSupportersInput
+  AddDepartmentSupportersInput,
+  TaskStatusStatisticsDto
 } from '../types/laboratoryTask';
+import { SampleAssignmentLogStatisticsDto } from '../types/qualityManagement';
 
 const BASE_URL = '/api/v1/laboratory-tasks';
 
@@ -48,6 +50,14 @@ export const laboratoryTaskService = {
    */
   getList: async (params: GetLaboratoryTaskListDto = {}): Promise<PagedLaboratoryTaskResult> => {
     const response = await api.get<PagedLaboratoryTaskResult>(BASE_URL, { params: toApiParams(params) });
+    return response.data;
+  },
+
+  /**
+   * Get task status statistics (counts per status, no filter)
+   */
+  getTaskStatusStatistics: async (): Promise<TaskStatusStatisticsDto> => {
+    const response = await api.get<TaskStatusStatisticsDto>(`${BASE_URL}/task-status-statistics`);
     return response.data;
   },
 
@@ -514,24 +524,45 @@ export const laboratoryTaskService = {
     fromDate?: string;
     toDate?: string;
     laboratoryId?: string;
+    indicatorIds?: string[];
+    technicianIds?: string[];
   }): Promise<{ items: any[]; totalCount: number }> => {
+    const params: Record<string, any> = {
+      SkipCount: input.skipCount,
+      MaxResultCount: input.maxResultCount,
+      Sorting: input.sorting,
+      Search: input.search,
+      TestRequestStatus: input.testRequestStatus,
+      FromDate: input.fromDate,
+      ToDate: input.toDate,
+      LaboratoryId: input.laboratoryId,
+    };
+    if (input.indicatorIds && input.indicatorIds.length > 0) {
+      input.indicatorIds.forEach((id, index) => {
+        params[`IndicatorIds[${index}]`] = id;
+      });
+    }
+    if (input.technicianIds && input.technicianIds.length > 0) {
+      input.technicianIds.forEach((id, index) => {
+        params[`TechnicianIds[${index}]`] = id;
+      });
+    }
     const response = await api.get<{ items: any[]; totalCount: number }>(
       `${BASE_URL}/sample-assignment-log`,
-      {
-        params: {
-          SkipCount: input.skipCount,
-          MaxResultCount: input.maxResultCount,
-          Sorting: input.sorting,
-          Search: input.search,
-          TestRequestStatus: input.testRequestStatus,
-          FromDate: input.fromDate,
-          ToDate: input.toDate,
-          LaboratoryId: input.laboratoryId
-        }
-      }
+      { params }
     );
     return response.data;
-  }
+  },
+
+  /**
+   * Thống kê Sổ nhận mẫu giao việc cho QLKT theo QLKTDisplayStatus
+   */
+  getSampleAssignmentLogStatistics: async (): Promise<SampleAssignmentLogStatisticsDto> => {
+    const response = await api.get<SampleAssignmentLogStatisticsDto>(
+      `${BASE_URL}/sample-assignment-log/statistics`
+    );
+    return response.data;
+  },
 };
 
 export default laboratoryTaskService;

@@ -41,6 +41,7 @@ import RejectModal from "./components/RejectModal";
 import { PATH_ROUTES } from "../../constants";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
+import { ROLES } from "../../constants/roles";
 
 import "../../styles/ListCard.css";
 import "./QualityManagement.css";
@@ -58,6 +59,9 @@ const QualityManagementDetail: React.FC = () => {
   // Check permissions
   const canApprove = authService.hasPermission(PERMISSIONS.TestResults.Approve);
   const canReject = authService.hasPermission(PERMISSIONS.TestResults.Reject);
+
+  // QLKT không được xem tên khách hàng (đảm bảo duyệt khách quan)
+  const isQLKT = authService.getUserRoles().includes(ROLES.LAB_TECHNICAL_MANAGER);
 
   // State
   const [loading, setLoading] = useState(false);
@@ -407,6 +411,7 @@ const QualityManagementDetail: React.FC = () => {
               <div
                 style={{ display: "flex", flexDirection: "column", gap: 12 }}
               >
+                {!isQLKT && (
                 <Row>
                   <Col flex="150px">
                     <Text type="secondary">Khách hàng:</Text>
@@ -415,6 +420,7 @@ const QualityManagementDetail: React.FC = () => {
                     <Text>{task.customerName || "-"}</Text>
                   </Col>
                 </Row>
+                )}
                 <Row>
                   <Col flex="150px">
                     <Text type="secondary">Tổng mẫu:</Text>

@@ -4,6 +4,7 @@ export const testMethodSchema = yup.object({
   name: yup.string().required("Vui lòng nhập tên phương pháp"),
   formattedName: yup.string().nullable(),
   unit: yup.string().required("Vui lòng nhập đơn vị tính"),
+  formattedUnit: yup.string().nullable(),
   isActive: yup.boolean().default(true),
 });
 

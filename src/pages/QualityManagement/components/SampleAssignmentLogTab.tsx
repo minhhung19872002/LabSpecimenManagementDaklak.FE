@@ -1,8 +1,10 @@
-import React, { useMemo, useCallback, useState } from "react";
-import { Table, Input, Select, Button, Tag, Row, Col, Pagination } from "antd";
-import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
+import React, { useMemo, useCallback, useState, useEffect } from "react";
+import { Table, Input, Select, Tag, Row, Col, Pagination, DatePicker } from "antd";
+import { SearchOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
+
+const { RangePicker } = DatePicker;
 import { useSampleAssignmentLog } from "../hooks/useSampleAssignmentLog";
 import {
   SampleAssignmentLogDto,
@@ -10,10 +12,7 @@ import {
   QLCLDisplayStatusLabels,
   QLCLDisplayStatusColors,
 } from "../../../types/qualityManagement";
-import {
-  TestRequestStatus,
-  TestRequestStatusLabels,
-} from "../../../types/testRequest";
+
 import { IndicatorApprovalStatus } from "../../../types/laboratoryTask";
 
 import "../../../styles/ListCard.css";
@@ -335,18 +334,55 @@ const getRowColorClass = (record: ProcessedLogItem): string => {
   return "";
 };
 
-const SampleAssignmentLogTab: React.FC = () => {
+export interface AssignmentLogControls {
+  reload: () => void;
+  statistics: import("../../../types/qualityManagement").QLCLSampleAssignmentLogStatisticsDto | null;
+  qlclDisplayStatuses: number[] | undefined;
+  handleQlclStatusFilter: (statuses: number[] | undefined) => void;
+  dateRange: [dayjs.Dayjs, dayjs.Dayjs] | null;
+  laboratoryIds: string[];
+  laboratories: import("../../../services/masterDataService").LaboratoryDto[];
+  handleDateRangeChange: (dates: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null) => void;
+  handleLaboratoryChange: (values: string[]) => void;
+}
+
+interface SampleAssignmentLogTabProps {
+  onRegisterControls?: (controls: AssignmentLogControls) => void;
+}
+
+const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegisterControls }) => {
   const {
     loading,
     data,
-    statusFilter,
+    statistics,
     pagination,
+    qlclDisplayStatuses,
+    dateRange,
+    laboratoryIds,
+    laboratories,
     handleSearch,
-    handleStatusFilter,
+    handleQlclStatusFilter,
+    handleDateRangeChange,
+    handleLaboratoryChange,
     handleTableChange,
     handleRowDoubleClick,
     handleReload,
   } = useSampleAssignmentLog();
+
+  // Register controls to parent
+  useEffect(() => {
+    onRegisterControls?.({
+      reload: handleReload,
+      statistics,
+      qlclDisplayStatuses,
+      handleQlclStatusFilter,
+      dateRange,
+      laboratoryIds,
+      laboratories,
+      handleDateRangeChange,
+      handleLaboratoryChange,
+    });
+  }, [onRegisterControls, handleReload, statistics, qlclDisplayStatuses, handleQlclStatusFilter, dateRange, laboratoryIds, laboratories, handleDateRangeChange, handleLaboratoryChange]);
 
   // Process data for row spanning
   const processedData = useMemo(() => processDataForRowSpan(data), [data]);
@@ -530,7 +566,8 @@ const SampleAssignmentLogTab: React.FC = () => {
         dataIndex: "unit",
         key: "unit",
         width: 80,
-        render: (text: string) => text || "-",
+        render: (text: string) =>
+          text ? <span dangerouslySetInnerHTML={{ __html: text }} /> : "-",
       },
       {
         title: "Kết quả",
@@ -617,30 +654,6 @@ const SampleAssignmentLogTab: React.FC = () => {
     [isCellHovered],
   );
 
-  // Status filter options
-  const statusOptions = useMemo(
-    () => [
-      { value: undefined, label: "Tất cả" },
-      {
-        value: TestRequestStatus.New,
-        label: TestRequestStatusLabels[TestRequestStatus.New],
-      },
-      {
-        value: TestRequestStatus.UnderReview,
-        label: TestRequestStatusLabels[TestRequestStatus.UnderReview],
-      },
-      {
-        value: TestRequestStatus.InProgress,
-        label: TestRequestStatusLabels[TestRequestStatus.InProgress],
-      },
-      {
-        value: TestRequestStatus.Completed,
-        label: TestRequestStatusLabels[TestRequestStatus.Completed],
-      },
-    ],
-    [],
-  );
-
   return (
     <div className="sample-assignment-log-tab">
       {/* Toolbar */}
@@ -654,69 +667,100 @@ const SampleAssignmentLogTab: React.FC = () => {
             enterButton
           />
         </Col>
-        <Col xs={24} sm={8} md={6}>
-          <Select
+        <Col xs={24} sm={12} md={6}>
+          <RangePicker
+            value={dateRange}
+            onChange={handleDateRangeChange}
             style={{ width: "100%" }}
-            placeholder="Lọc trạng thái"
+            format="DD/MM/YY"
+            placeholder={["Ngày YC xong từ", "Đến ngày"]}
             allowClear
-            value={statusFilter}
-            onChange={handleStatusFilter}
-            options={statusOptions}
           />
         </Col>
-        <Col>
-          <Button icon={<ReloadOutlined />} onClick={handleReload} />
+        <Col xs={24} sm={12} md={6}>
+          <Select
+            mode="multiple"
+            style={{ width: "100%" }}
+            placeholder="Chọn phòng lab"
+            value={laboratoryIds}
+            onChange={handleLaboratoryChange}
+            showSearch
+            filterOption={(input, option) =>
+              ((option?.label as string) ?? "")
+                .toLowerCase()
+                .includes(input.toLowerCase())
+            }
+            options={laboratories.map((lab) => ({
+              value: lab.id,
+              label: lab.name,
+            }))}
+            maxTagCount="responsive"
+            allowClear
+          />
         </Col>
       </Row>
 
       {/* Table - pagination disabled because we do server-side contract pagination */}
       <Table<ProcessedLogItem>
-          columns={columns}
-          dataSource={processedData}
-          loading={loading}
-          rowKey="_rowKey"
-          rowClassName={(record) => {
-            const colorClass = getRowColorClass(record);
-            const hoverClass =
-              hoveredRowIndex === record._rowIndex ? "row-hover" : "";
-            // Add row-green class for rows without color (completed/published)
-            const normalClass = !colorClass ? "row-green" : "";
-            // Add row-in-hover-group for rows in same contract group when another row is hovered
-            // This forces base colors to override Ant Design's inherit hover
-            const inHoverGroupClass =
-              hoveredRowIndex !== null &&
-              hoveredRowIndex !== record._rowIndex &&
-              record._contractGroupStart <= hoveredRowIndex &&
-              hoveredRowIndex <= record._contractGroupEnd
-                ? "row-in-hover-group"
-                : "";
-            return `${colorClass} ${normalClass} ${hoverClass} ${inHoverGroupClass}`.trim();
-          }}
-          onRow={(record) => ({
-            onDoubleClick: () => handleRowDoubleClick(record),
-            onMouseEnter: () => handleRowMouseEnter(record),
-            onMouseLeave: handleRowMouseLeave,
-            style: { cursor: "pointer" },
-          })}
-          pagination={false}
-          scroll={{ x: 2200 }}
-          size="small"
-          bordered
+        columns={columns}
+        dataSource={processedData}
+        loading={loading}
+        rowKey="_rowKey"
+        rowClassName={(record) => {
+          const colorClass = getRowColorClass(record);
+          const hoverClass =
+            hoveredRowIndex === record._rowIndex ? "row-hover" : "";
+          // Add row-green class for rows without color (completed/published)
+          const normalClass = !colorClass ? "row-green" : "";
+          // Add row-in-hover-group for rows in same contract group when another row is hovered
+          // This forces base colors to override Ant Design's inherit hover
+          const inHoverGroupClass =
+            hoveredRowIndex !== null &&
+            hoveredRowIndex !== record._rowIndex &&
+            record._contractGroupStart <= hoveredRowIndex &&
+            hoveredRowIndex <= record._contractGroupEnd
+              ? "row-in-hover-group"
+              : "";
+          return `${colorClass} ${normalClass} ${hoverClass} ${inHoverGroupClass}`.trim();
+        }}
+        onRow={(record) => ({
+          onDoubleClick: () => handleRowDoubleClick(record),
+          onMouseEnter: () => handleRowMouseEnter(record),
+          onMouseLeave: handleRowMouseLeave,
+          style: { cursor: "pointer" },
+        })}
+        pagination={false}
+        scroll={{ x: 2200 }}
+        size="small"
+        bordered
       />
 
       {/* Pagination - server-side contract pagination */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "16px 8px",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
           <span>
-            Hiển thị <b>{uniqueContractCount}/{pagination.total}</b> hợp đồng
+            Hiển thị{" "}
+            <b>
+              {uniqueContractCount}/{pagination.total}
+            </b>{" "}
+            hợp đồng
           </span>
           <Select
             value={pagination.pageSize}
-            onChange={(value) => handleTableChange({ current: 1, pageSize: value })}
+            onChange={(value) =>
+              handleTableChange({ current: 1, pageSize: value })
+            }
             options={[
-              { value: 20, label: '20 / trang' },
-              { value: 50, label: '50 / trang' },
-              { value: 100, label: '100 / trang' },
+              { value: 20, label: "20 / trang" },
+              { value: 50, label: "50 / trang" },
+              { value: 100, label: "100 / trang" },
             ]}
             style={{ width: 110 }}
           />
@@ -726,7 +770,9 @@ const SampleAssignmentLogTab: React.FC = () => {
           pageSize={pagination.pageSize}
           total={pagination.total}
           showSizeChanger={false}
-          onChange={(page) => handleTableChange({ current: page, pageSize: pagination.pageSize })}
+          onChange={(page) =>
+            handleTableChange({ current: page, pageSize: pagination.pageSize })
+          }
         />
       </div>
     </div>

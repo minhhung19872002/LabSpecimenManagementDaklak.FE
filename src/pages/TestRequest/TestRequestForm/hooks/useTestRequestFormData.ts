@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Form, message } from "antd";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import dayjs from "dayjs";
@@ -46,7 +46,7 @@ import {
   Province,
   Ward,
 } from "../../../../utils/vietnamLocations";
-import { LOCKED_FIELDS, isHeavyMetalComboMet, isHgIndicator } from "../constants";
+import { LOCKED_FIELDS, isHeavyMetalComboMet, isHgIndicator, isEcoliColiformComboMet, isEcoliIndicator } from "../constants";
 import {
   SampleFormData,
   IndicatorDateInfo,
@@ -67,6 +67,7 @@ export const useTestRequestFormData = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const quotationId = searchParams.get("quotationId");
+  const testRequestId = searchParams.get("testRequestId");
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
@@ -91,7 +92,8 @@ export const useTestRequestFormData = () => {
   }, [isEditMode, navigate]);
 
   // Watch form fields
-  const sampleTypeTask = Form.useWatch("sampleTypeTask", form);
+  const sampleType = Form.useWatch("sampleType", form);
+  const sampleTypeTask = sampleType === "task";
   const methodRequirement = Form.useWatch("methodRequirement", form);
 
   // Contract number for sample codes
@@ -181,6 +183,10 @@ export const useTestRequestFormData = () => {
   const [indicatorLaboratoryMap, setIndicatorLaboratoryMap] = useState<Record<string, LaboratoryAssignment>>({});
   const [expandedLabGroups, setExpandedLabGroups] = useState<string[]>([]);
 
+  // Custom prices per indicator method (overrides master data price, only for this test request)
+  // Key format: "sampleKey_indicatorMethodKey" -> custom price
+  const [customPrices, setCustomPrices] = useState<Record<string, number>>({});
+
   // Store TestRequestSampleIndicator.id for each indicator
   // Key format: "sampleKey_indicatorMethodKey" -> TestRequestSampleIndicator.id
   const [sampleIndicatorIdMap, setSampleIndicatorIdMap] = useState<Record<string, string>>({});
@@ -191,8 +197,9 @@ export const useTestRequestFormData = () => {
   // Store quotationId when creating from quotation
   const [sourceQuotationId, setSourceQuotationId] = useState<string | null>(quotationId);
 
-  // Track if quotation has been loaded (to prevent re-loading)
+  // Track if quotation/testRequest has been loaded (to prevent re-loading)
   const quotationLoadedRef = useRef(false);
+  const testRequestLoadedRef = useRef(false);
 
   // Vietnam location states
   const [provinces, setProvinces] = useState<Province[]>([]);
@@ -571,6 +578,14 @@ export const useTestRequestFormData = () => {
         setSampleCodePrefix(data.contractNumber);
       }
 
+      // Convert 4 boolean sampleType fields to single radio value
+      const sampleType = data.sampleTypeTask ? "task"
+        : data.sampleTypeSubContract ? "subContract"
+        : data.sampleTypeContract ? "contract"
+        : data.sampleTypeService ? "service"
+        : "service"; // default
+      form.setFieldsValue({ sampleType });
+
       if (data.methodCustomer) {
         form.setFieldsValue({ methodRequirement: "customerRequest" });
       } else {
@@ -641,6 +656,7 @@ export const useTestRequestFormData = () => {
         const restoredLabMap: Record<string, LaboratoryAssignment> = {};
         const expandedLabs: string[] = [];
         const restoredIndicatorIds: Record<string, string> = {}; // Store TestRequestSampleIndicator.id
+        const restoredCustomPrices: Record<string, number> = {}; // Store saved unitPrice as custom price
 
         // Parse dates helper - handle both UTC formats
         const parseDate = (dateStr: string | null | undefined): dayjs.Dayjs | undefined => {
@@ -672,6 +688,11 @@ export const useTestRequestFormData = () => {
               restoredIndicatorIds[`${sampleKey}_${methodKey}`] = ind.id;
             }
 
+            // Restore saved unitPrice as custom price
+            if (ind.unitPrice !== undefined && ind.unitPrice !== null) {
+              restoredCustomPrices[`${sampleKey}_${methodKey}`] = ind.unitPrice;
+            }
+
             restoredDates[methodKey] = {
               transferDate: parseDate(ind.transferDate),
               requestDate: parseDate(ind.requestDate),
@@ -685,6 +706,8 @@ export const useTestRequestFormData = () => {
                 laboratoryName: ind.laboratoryName,
                 requestDate: parseDate(ind.requestDate) || dayjs(),
                 approvalStatus: ind.approvalStatus,
+                isSentToQLKT: ind.isSentToQLKT,
+                sentToDepartment: ind.sentToDepartment,
               };
               if (!expandedLabs.includes(ind.laboratoryId)) {
                 expandedLabs.push(ind.laboratoryId);
@@ -698,12 +721,14 @@ export const useTestRequestFormData = () => {
         setIndicatorLaboratoryMap(restoredLabMap);
         setExpandedLabGroups(expandedLabs);
         setSampleIndicatorIdMap(restoredIndicatorIds);
+        setCustomPrices(restoredCustomPrices);
       }
     } catch (error) {
       message.error("Không thể tải dữ liệu yêu cầu");
       console.error("Failed to load test request:", error);
     } finally {
       setLoadingData(false);
+      setEditDataLoaded(true);
     }
   };
 
@@ -757,11 +782,18 @@ export const useTestRequestFormData = () => {
         const sampleCode = generateSampleCode(sampleCodePrefix, sampleIndex + 1);
 
         // Get indicators from quotation sample
-        // Note: Quotation samples don't have specimenTypeId yet, it will be set later
+        // Use specimenTypeId from quotation API if available, fallback to master data resolution
         const indicatorMethodsList: IndicatorMethodKey[] = [];
         quotationSample.indicators.forEach((indicator) => {
           const testMethodId = indicator.testMethodId || "";
-          const methodKey = createIndicatorMethodKey(indicator.indicatorId, testMethodId, undefined);
+          // Prefer specimenTypeId stored in quotation, fallback to master data
+          let resolvedSpecimenTypeId = indicator.specimenTypeId || undefined;
+          if (!resolvedSpecimenTypeId) {
+            const methods = indicatorMethodsMap[indicator.indicatorId] || [];
+            const matchedMethod = methods.find((m) => m.testMethodId === testMethodId);
+            resolvedSpecimenTypeId = matchedMethod?.specimenTypeId || undefined;
+          }
+          const methodKey = createIndicatorMethodKey(indicator.indicatorId, testMethodId, resolvedSpecimenTypeId);
           indicatorMethodsList.push(methodKey);
 
           // Set dates for indicators (requestDate để trống theo yêu cầu KH)
@@ -806,17 +838,121 @@ export const useTestRequestFormData = () => {
     }
   };
 
+  // Load data from existing test request (when creating new from old contract)
+  const loadFromTestRequest = async (sourceTestRequestId: string) => {
+    setLoadingData(true);
+    try {
+      const data = await offlineTestRequestService.get(sourceTestRequestId);
+      if (!data) {
+        message.error("Không thể tải dữ liệu hợp đồng gốc");
+        return;
+      }
+
+      // Fill customer info
+      if (data.provinceCode) {
+        const loadedWards = await getWardsByProvince(data.provinceCode);
+        setWards(loadedWards);
+        setSelectedProvinceCode(data.provinceCode);
+        if (data.wardCode) {
+          setSelectedWardCode(data.wardCode);
+        }
+      }
+
+      const provinceName = provinces.find(p => p.code === data.provinceCode)?.name;
+      const wardName = data.wardCode
+        ? (await getWardsByProvince(data.provinceCode || "")).find(w => w.code === data.wardCode)?.name
+        : undefined;
+
+      form.setFieldsValue({
+        customerName: data.customerName,
+        province: provinceName || data.province || "",
+        ward: wardName || data.ward || "",
+        address: data.address || "",
+        taxCode: data.taxCode || "",
+        contactPerson: data.contactPerson || "",
+        phone: data.phone || "",
+      });
+
+      // Generate samples from test request samples
+      const activeSamples = (data.samples || []).filter(s => !s.isCancelled);
+      const generatedSamples: SampleFormData[] = [];
+      const generatedDates: Record<string, IndicatorDateInfo> = {};
+
+      activeSamples.forEach((sample, sampleIndex) => {
+        const sampleKey = `tr-sample-${Date.now()}-${sampleIndex}`;
+        const sampleCode = generateSampleCode(sampleCodePrefix, sampleIndex + 1);
+
+        const activeIndicators = (sample.indicators || []).filter(
+          (ind) => ind.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled
+        );
+
+        const indicatorMethodsList: IndicatorMethodKey[] = [];
+        activeIndicators.forEach((ind) => {
+          if (ind.indicatorId && ind.testMethodId) {
+            const methodKey = createIndicatorMethodKey(ind.indicatorId, ind.testMethodId, ind.specimenTypeId);
+            indicatorMethodsList.push(methodKey);
+
+            if (!generatedDates[methodKey]) {
+              generatedDates[methodKey] = {
+                transferDate: dayjs(),
+                requestDate: undefined,
+              };
+            }
+          }
+        });
+
+        generatedSamples.push({
+          key: sampleKey,
+          sortOrder: sampleIndex + 1,
+          sampleCode,
+          sampleName: sample.sampleName || "",
+          samplingAddress: sample.samplingAddress || "",
+          sampleQuantity: sample.sampleQuantity || "",
+          status: SampleStatus.Normal,
+          statusText: "",
+          processingStatus: "",
+          notes: "",
+          storageLocation: "",
+          specimenTypeId: sample.specimenTypeId,
+          specimenTypeName: sample.specimenTypeName || "",
+          indicatorIds: indicatorMethodsList.map((k) => parseIndicatorMethodKey(k).indicatorId),
+          indicatorMethods: indicatorMethodsList,
+          attachments: [],
+        });
+      });
+
+      setSamples(generatedSamples);
+      setSelectedIndicatorDates(generatedDates);
+
+      message.success(`Đã tải dữ liệu từ hợp đồng ${data.contractNumber || data.requestNumber}`);
+    } catch (error) {
+      console.error("Failed to load test request:", error);
+      message.error("Không thể tải dữ liệu từ hợp đồng");
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
   // Calculate total cost - now based on indicatorMethods with prices from TestMethodIndicator
   const calculateTotalCost = useCallback(() => {
     let total = 0;
     samples.forEach((sample) => {
-      // Check combo kim loại nặng cho sample này
-      const sampleIndicatorNames = (sample.indicatorMethods || []).map((methodKey) => {
-        const { indicatorId } = parseIndicatorMethodKey(methodKey);
+      // Group indicator names by specimenTypeId để check combo riêng từng loại mẫu
+      const groupedBySpecimenType: Record<string, (string | undefined)[]> = {};
+      for (const mk of (sample.indicatorMethods || [])) {
+        const { indicatorId, specimenTypeId: stId } = parseIndicatorMethodKey(mk);
         const ind = indicators.find((i) => i.id === indicatorId);
-        return ind?.name;
-      });
-      const isSampleComboMet = isHeavyMetalComboMet(sampleIndicatorNames);
+        const gKey = stId || '_none';
+        if (!groupedBySpecimenType[gKey]) groupedBySpecimenType[gKey] = [];
+        groupedBySpecimenType[gKey].push(ind?.name);
+      }
+      const comboMetBySpecimenType: Record<string, boolean> = {};
+      const ecoliComboMetBySpecimenType: Record<string, boolean> = {};
+      for (const [stId, names] of Object.entries(groupedBySpecimenType)) {
+        const st = stId !== '_none' ? specimenTypes.find((s) => s.id === stId) : null;
+        comboMetBySpecimenType[stId] = isHeavyMetalComboMet(names, st?.sampleTypeCategoryName, st?.name);
+        ecoliComboMetBySpecimenType[stId] = isEcoliColiformComboMet(names, st?.sampleTypeCategoryName, st?.name);
+      }
 
       // New logic: use indicatorMethods if available
       if (sample.indicatorMethods && sample.indicatorMethods.length > 0) {
@@ -828,10 +964,14 @@ export const useTestRequestFormData = () => {
             (m) => m.testMethodId === testMethodId && (m.specimenTypeId || null) === specimenTypeId
           );
           if (method) {
-            // Hg miễn phí khi đủ combo kim loại nặng
+            // Combo miễn phí: Hg (kim loại nặng, per specimen type) hoặc E.Coli (E.Coli + Coliform, per specimen type)
             const ind = indicators.find((i) => i.id === indicatorId);
-            const isHgFree = isSampleComboMet && isHgIndicator(ind?.name);
-            total += isHgFree ? 0 : method.unitPrice;
+            const stComboKey = specimenTypeId || '_none';
+            const isComboFree = (comboMetBySpecimenType[stComboKey] && isHgIndicator(ind?.name)) ||
+              (ecoliComboMetBySpecimenType[stComboKey] && isEcoliIndicator(ind?.name));
+            const customPriceKey = `${sample.key}_${key}`;
+            const price = customPrices[customPriceKey] !== undefined ? customPrices[customPriceKey] : method.unitPrice;
+            total += isComboFree ? 0 : price;
           }
         });
       } else {
@@ -840,14 +980,15 @@ export const useTestRequestFormData = () => {
           const methods = indicatorMethodsMap[indId] || [];
           if (methods.length > 0) {
             const ind = indicators.find((i) => i.id === indId);
-            const isHgFree = isSampleComboMet && isHgIndicator(ind?.name);
-            total += isHgFree ? 0 : methods[0].unitPrice;
+            const isComboFree = (comboMetBySpecimenType['_none'] && isHgIndicator(ind?.name)) ||
+              (ecoliComboMetBySpecimenType['_none'] && isEcoliIndicator(ind?.name));
+            total += isComboFree ? 0 : methods[0].unitPrice;
           }
         });
       }
     });
     setTotalSampleCost(total);
-  }, [samples, indicators, indicatorMethodsMap]);
+  }, [samples, indicators, indicatorMethodsMap, customPrices, specimenTypes]);
 
   // Get indicator info by id
   const getIndicatorInfo = (indicatorId: string) => {
@@ -973,6 +1114,22 @@ export const useTestRequestFormData = () => {
     }
   }, [quotationId, organizations, sampleCodePrefix, isEditMode, indicators, indicatorMethodsMap]);
 
+  // Load from test request when testRequestId is present (create from existing contract)
+  useEffect(() => {
+    if (
+      !isEditMode &&
+      testRequestId &&
+      !quotationId &&
+      sampleCodePrefix &&
+      indicators.length > 0 &&
+      Object.keys(indicatorMethodsMap).length > 0 &&
+      !testRequestLoadedRef.current
+    ) {
+      testRequestLoadedRef.current = true;
+      loadFromTestRequest(testRequestId);
+    }
+  }, [testRequestId, sampleCodePrefix, isEditMode, indicators, indicatorMethodsMap]);
+
   useEffect(() => {
     if (indicatorGroups.length > 0 && indicators.length > 0) {
       const treeData = indicatorGroups
@@ -1008,6 +1165,177 @@ export const useTestRequestFormData = () => {
       }
     };
   }, []);
+
+  // ==================== Auto-save Draft (Create + Edit mode) ====================
+  // Key format: "test_request_draft_new" for create, "test_request_draft_{id}" for edit
+  const DRAFT_KEY_PREFIX = "test_request_draft";
+  const draftKey = useMemo(
+    () => isEditMode && id ? `${DRAFT_KEY_PREFIX}_${id}` : `${DRAFT_KEY_PREFIX}_new`,
+    [isEditMode, id]
+  );
+  const draftSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const draftRestoredRef = useRef(false);
+  const [editDataLoaded, setEditDataLoaded] = useState(false);
+
+  // Save draft to localStorage (debounced)
+  const saveDraft = useCallback(() => {
+    const formValues = form.getFieldsValue();
+    // Convert dayjs to ISO string for serialization
+    const serializableValues: Record<string, any> = {};
+    Object.entries(formValues).forEach(([key, value]) => {
+      if (dayjs.isDayjs(value)) {
+        serializableValues[key] = (value as dayjs.Dayjs).toISOString();
+        serializableValues[`__dayjs_${key}`] = true;
+      } else {
+        serializableValues[key] = value;
+      }
+    });
+
+    const draft = {
+      formValues: serializableValues,
+      samples: samples.map(s => ({ ...s, attachments: [] })), // Don't save file blobs
+      selectedIndicatorDates: Object.fromEntries(
+        Object.entries(selectedIndicatorDates).map(([k, v]) => [
+          k,
+          {
+            transferDate: v.transferDate?.toISOString() || null,
+            requestDate: v.requestDate?.toISOString() || null,
+          },
+        ])
+      ),
+      sampleCodePrefix,
+      selectedProvinceCode,
+      selectedWardCode,
+      savedAt: new Date().toISOString(),
+    };
+
+    try {
+      localStorage.setItem(draftKey, JSON.stringify(draft));
+    } catch (e) {
+      // localStorage full or unavailable - silently ignore
+    }
+  }, [form, samples, selectedIndicatorDates, sampleCodePrefix, selectedProvinceCode, selectedWardCode, draftKey]);
+
+  // Auto-save every 3 seconds when form data changes
+  useEffect(() => {
+    // Skip auto-save when loading from quotation/testRequest source (create mode only)
+    if (!isEditMode && (quotationId || testRequestId)) return;
+
+    if (draftSaveTimerRef.current) {
+      clearTimeout(draftSaveTimerRef.current);
+    }
+    draftSaveTimerRef.current = setTimeout(() => {
+      // Only save if there's meaningful data
+      if (samples.length > 0 || form.getFieldValue("customerName")) {
+        saveDraft();
+      }
+    }, 3000);
+
+    return () => {
+      if (draftSaveTimerRef.current) {
+        clearTimeout(draftSaveTimerRef.current);
+      }
+    };
+  }, [samples, selectedIndicatorDates, sampleCodePrefix, isEditMode, quotationId, testRequestId, saveDraft]);
+
+  // Restore draft on mount
+  // - Create mode: restore if no quotation/testRequest source
+  // - Edit mode: restore after loadData completes
+  useEffect(() => {
+    if (draftRestoredRef.current) return;
+    // Create mode: skip if loading from quotation/testRequest
+    if (!isEditMode && (quotationId || testRequestId)) return;
+    // Edit mode: wait until loadData has actually completed
+    if (isEditMode && !editDataLoaded) return;
+
+    draftRestoredRef.current = true;
+
+    try {
+      const saved = localStorage.getItem(draftKey);
+      if (!saved) return;
+
+      const draft = JSON.parse(saved);
+      // Check if draft is less than 24 hours old
+      const savedAt = new Date(draft.savedAt);
+      const hoursDiff = (Date.now() - savedAt.getTime()) / (1000 * 60 * 60);
+      if (hoursDiff > 24) {
+        localStorage.removeItem(draftKey);
+        return;
+      }
+
+      // Ask user if they want to restore
+      const savedTime = dayjs(draft.savedAt).format("HH:mm DD/MM/YYYY");
+      const label = isEditMode ? "chỉnh sửa" : "tạo mới";
+      const shouldRestore = window.confirm(
+        `Có bản nháp ${label} chưa lưu (lúc ${savedTime}). Bạn có muốn khôi phục không?`
+      );
+
+      if (!shouldRestore) {
+        localStorage.removeItem(draftKey);
+        return;
+      }
+
+      // Restore form values
+      const formValues = draft.formValues || {};
+      const restoredValues: Record<string, any> = {};
+      Object.entries(formValues).forEach(([key, value]) => {
+        if (key.startsWith("__dayjs_")) return;
+        if (formValues[`__dayjs_${key}`] && value) {
+          restoredValues[key] = dayjs(value as string);
+        } else {
+          restoredValues[key] = value;
+        }
+      });
+      form.setFieldsValue(restoredValues);
+
+      // Restore sample code prefix (create mode only - edit mode keeps from API)
+      if (!isEditMode && draft.sampleCodePrefix) {
+        setSampleCodePrefix(draft.sampleCodePrefix);
+      }
+
+      // Restore province/ward codes
+      if (draft.selectedProvinceCode) {
+        setSelectedProvinceCode(draft.selectedProvinceCode);
+        getWardsByProvince(draft.selectedProvinceCode).then(loadedWards => {
+          setWards(loadedWards);
+        });
+      }
+      if (draft.selectedWardCode) {
+        setSelectedWardCode(draft.selectedWardCode);
+      }
+
+      // Restore samples
+      if (draft.samples && draft.samples.length > 0) {
+        setSamples(draft.samples);
+      }
+
+      // Restore indicator dates
+      if (draft.selectedIndicatorDates) {
+        const restoredDates: Record<string, IndicatorDateInfo> = {};
+        Object.entries(draft.selectedIndicatorDates).forEach(([key, val]: [string, any]) => {
+          restoredDates[key] = {
+            transferDate: val.transferDate ? dayjs(val.transferDate) : undefined,
+            requestDate: val.requestDate ? dayjs(val.requestDate) : undefined,
+          };
+        });
+        setSelectedIndicatorDates(restoredDates);
+      }
+
+      message.success("Đã khôi phục bản nháp");
+    } catch (e) {
+      console.error("Failed to restore draft:", e);
+      localStorage.removeItem(draftKey);
+    }
+  }, [isEditMode, quotationId, testRequestId, editDataLoaded, draftKey]);
+
+  // Clear draft function (call after successful save)
+  const clearDraft = useCallback(() => {
+    try {
+      localStorage.removeItem(draftKey);
+    } catch (e) {
+      // ignore
+    }
+  }, [draftKey]);
 
   return {
     // Form
@@ -1129,6 +1457,10 @@ export const useTestRequestFormData = () => {
     expandedLabGroups,
     setExpandedLabGroups,
 
+    // Custom prices (per-indicator override, only for this test request)
+    customPrices,
+    setCustomPrices,
+
     // Sample indicator IDs for update
     sampleIndicatorIdMap,
     setSampleIndicatorIdMap,
@@ -1154,6 +1486,9 @@ export const useTestRequestFormData = () => {
     getIndicatorMethodInfo,
     getFilteredIndicators,
     getFilteredGroupsWithIndicators,
+
+    // Draft
+    clearDraft,
 
     // Navigation
     navigate,

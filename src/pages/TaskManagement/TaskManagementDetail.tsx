@@ -331,7 +331,8 @@ const TaskManagementDetail: React.FC = () => {
       // Cũng bao gồm indicators có MethodChanged (PP đã đổi, cần set lại tiêu chuẩn theo PP mới)
       const indicatorsNeedingStandard = task.indicators.filter(
         (ind) =>
-          (!ind.standardId || ind.approvalStatus === IndicatorApprovalStatus.MethodChanged) &&
+          (!ind.standardId ||
+            ind.approvalStatus === IndicatorApprovalStatus.MethodChanged) &&
           !processedIndicatorsRef.current.has(ind.id) &&
           ind.approvalStatus !== IndicatorApprovalStatus.Approved &&
           ind.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled,
@@ -508,6 +509,32 @@ const TaskManagementDetail: React.FC = () => {
 
   // Handlers
   const handleMethodChange = (indicatorId: string, methodId: string) => {
+    // Check if this is a parent with sub-indicators
+    const indicator = task?.indicators?.find((ind) => ind.id === indicatorId);
+    if (indicator && !indicator.parentIndicatorId) {
+      // Find all sub-indicators that belong to this parent
+      const subIndicators =
+        task?.indicators?.filter(
+          (ind) =>
+            ind.parentIndicatorId === indicator.indicatorId &&
+            ind.methodId === indicator.methodId,
+        ) || [];
+      if (subIndicators.length > 0) {
+        // Propagate method to parent AND all sub-indicators
+        setIndicatorChanges((prev) => {
+          const updated = { ...prev };
+          // Set for parent
+          updated[indicatorId] = { ...updated[indicatorId], methodId };
+          // Set for all subs
+          subIndicators.forEach((sub) => {
+            updated[sub.id] = { ...updated[sub.id], methodId };
+          });
+          return updated;
+        });
+        return;
+      }
+    }
+    // Normal indicator (no subs) - set directly
     setIndicatorChanges((prev) => ({
       ...prev,
       [indicatorId]: {
@@ -521,6 +548,32 @@ const TaskManagementDetail: React.FC = () => {
     indicatorId: string,
     technicianId: string,
   ) => {
+    // Check if this is a parent with sub-indicators
+    const indicator = task?.indicators?.find((ind) => ind.id === indicatorId);
+    if (indicator && !indicator.parentIndicatorId) {
+      // Find all sub-indicators that belong to this parent
+      const subIndicators =
+        task?.indicators?.filter(
+          (ind) =>
+            ind.parentIndicatorId === indicator.indicatorId &&
+            ind.methodId === indicator.methodId,
+        ) || [];
+      if (subIndicators.length > 0) {
+        // Propagate technician to parent AND all sub-indicators
+        setIndicatorChanges((prev) => {
+          const updated = { ...prev };
+          // Set for parent
+          updated[indicatorId] = { ...updated[indicatorId], technicianId };
+          // Set for all subs
+          subIndicators.forEach((sub) => {
+            updated[sub.id] = { ...updated[sub.id], technicianId };
+          });
+          return updated;
+        });
+        return;
+      }
+    }
+    // Normal indicator (no subs) - set directly
     setIndicatorChanges((prev) => ({
       ...prev,
       [indicatorId]: {
