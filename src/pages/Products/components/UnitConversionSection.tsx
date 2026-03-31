@@ -10,12 +10,14 @@ interface UnitConversionSectionProps {
   conversions: CreateUpdateProductUnitConversionDto[];
   units: UnitDto[];
   onChange: (conversions: CreateUpdateProductUnitConversionDto[]) => void;
+  onCreateUnit?: () => void;
 }
 
 const UnitConversionSection: React.FC<UnitConversionSectionProps> = ({
   conversions,
   units,
   onChange,
+  onCreateUnit,
 }) => {
   const unitOptions = units.map((u) => ({
     value: u.id,
@@ -52,6 +54,7 @@ const UnitConversionSection: React.FC<UnitConversionSectionProps> = ({
         <Button
           type="primary"
           size="small"
+          onClick={onCreateUnit}
           style={{ borderRadius: 6, fontWeight: 500, fontSize: 13, flexShrink: 0, whiteSpace: "nowrap" }}
         >
           Thêm đơn vị quy đổi

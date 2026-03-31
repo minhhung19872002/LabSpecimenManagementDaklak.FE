@@ -15,6 +15,7 @@ import {
   Button,
   Space,
   Tooltip,
+  message,
 } from "antd";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { useForm, Controller } from "react-hook-form";
@@ -32,6 +33,9 @@ import { UnitDto, unitService } from "../../../services/masterDataService";
 import { PRODUCT_TYPE_OPTIONS } from "../constants";
 import AttachmentSection from "./AttachmentSection";
 import UnitConversionSection from "./UnitConversionSection";
+import UnitModal from "../../MasterData/Units/components/UnitModal";
+import { unitSchema, UnitFormData } from "../../MasterData/Units/schemas";
+import { getApiErrorMessage } from "../../../utils/errorHandler";
 import "../Products.css";
 
 const { Text, Title } = Typography;
@@ -73,6 +77,45 @@ const ProductModal: React.FC<ProductModalProps> = ({
   const [storageTagInput, setStorageTagInput] = useState("");
   const [categoryTagInput, setCategoryTagInput] = useState("");
 
+  // Unit modal state
+  const [unitModalOpen, setUnitModalOpen] = useState(false);
+  const [unitModalLoading, setUnitModalLoading] = useState(false);
+  const unitForm = useForm<UnitFormData>({
+    resolver: yupResolver(unitSchema) as any,
+    defaultValues: { code: "", name: "", isActive: true },
+  });
+
+  const loadUnits = () => {
+    unitService.getActive().then((items) => {
+      const unitList = Array.isArray(items) ? items : (items as any)?.items || [];
+      setUnits(unitList);
+    });
+  };
+
+  const handleCreateUnit = () => {
+    unitForm.reset({ code: "", name: "", isActive: true });
+    setUnitModalOpen(true);
+  };
+
+  const handleUnitModalOk = async (data: UnitFormData) => {
+    setUnitModalLoading(true);
+    try {
+      await unitService.create({
+        code: data.code,
+        name: data.name,
+        isActive: data.isActive ?? true,
+      });
+      message.success("Đã tạo đơn vị hàng hóa mới");
+      setUnitModalOpen(false);
+      unitForm.reset();
+      loadUnits();
+    } catch (error: any) {
+      message.error(getApiErrorMessage(error, "Không thể tạo đơn vị hàng hóa."));
+    } finally {
+      setUnitModalLoading(false);
+    }
+  };
+
   const {
     control,
     handleSubmit,
@@ -108,12 +151,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
 
   useEffect(() => {
     if (open) {
-      unitService.getActive().then((items) => {
-        const unitList = Array.isArray(items)
-          ? items
-          : (items as any)?.items || [];
-        setUnits(unitList);
-      });
+      loadUnits();
     }
   }, [open]);
 
@@ -660,6 +698,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
                 conversions={conversions}
                 units={units}
                 onChange={setConversions}
+                onCreateUnit={handleCreateUnit}
               />
             </div>
           </Form>
@@ -810,6 +849,19 @@ const ProductModal: React.FC<ProductModalProps> = ({
           </Card>
         </div>
       </div>
+
+      {/* Unit create modal */}
+      <UnitModal
+        open={unitModalOpen}
+        loading={unitModalLoading}
+        editingUnit={null}
+        form={unitForm}
+        onOk={(data) => handleUnitModalOk(data)}
+        onCancel={() => {
+          setUnitModalOpen(false);
+          unitForm.reset();
+        }}
+      />
     </Modal>
   );
 };
