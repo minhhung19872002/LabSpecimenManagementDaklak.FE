@@ -134,6 +134,14 @@ export const PERMISSIONS = {
     Import: `${P}.MasterData.Import`,
   },
 
+  // Products (Quản lý vật phẩm)
+  Products: {
+    Default: `${P}.Products`,
+    Create: `${P}.Products.Create`,
+    Edit: `${P}.Products.Edit`,
+    Delete: `${P}.Products.Delete`,
+  },
+
   // Master Data - Individual (DEPRECATED - use MasterData instead)
   Departments: {
     Default: `${P}.Departments`,

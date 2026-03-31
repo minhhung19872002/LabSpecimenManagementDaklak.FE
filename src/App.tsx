@@ -135,6 +135,11 @@ const SubcontractorList = Loadable(
   lazy(() => import("./pages/Subcontractor/SubcontractorList"))
 );
 
+// Products
+const ProductList = Loadable(
+  lazy(() => import("./pages/Products/ProductList"))
+);
+
 // Master Data
 const MasterDataList = Loadable(
   lazy(() => import("./pages/MasterData/MasterDataList"))
@@ -296,6 +301,9 @@ function App() {
 
           {/* Subcontractor Management - Nhà thầu phụ */}
           <Route path="subcontractors" element={<SubcontractorList />} />
+
+          {/* Products - Quản lý vật phẩm */}
+          <Route path="products" element={<ProductList />} />
 
           {/* Master Data - Ngân hàng dữ liệu */}
           <Route path="master-data" element={<MasterDataList />} />

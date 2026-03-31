@@ -99,6 +99,14 @@ code {
   height: 32px !important;
 }
 
+/* Desktop - InputNumber small */
+.ant-input-number-sm {
+  height: 32px !important;
+}
+.ant-input-number-sm .ant-input-number-input {
+  height: 30px !important;
+}
+
 /* Tablet breakpoint */
 @media screen and (max-width: 992px) {
   /* Button */
@@ -273,6 +281,26 @@ code {
   .ant-picker-small {
     height: 28px !important;
   }
+
+  /* InputNumber */
+  .ant-input-number {
+    height: 36px !important;
+  }
+  .ant-input-number .ant-input-number-input {
+    height: 34px !important;
+  }
+  .ant-input-number-lg {
+    height: 44px !important;
+  }
+  .ant-input-number-lg .ant-input-number-input {
+    height: 42px !important;
+  }
+  .ant-input-number-sm {
+    height: 28px !important;
+  }
+  .ant-input-number-sm .ant-input-number-input {
+    height: 26px !important;
+  }
 }
 
 /* Mobile breakpoint */
@@ -440,6 +468,26 @@ code {
   }
   .ant-picker-small {
     height: 24px !important;
+  }
+
+  /* InputNumber */
+  .ant-input-number {
+    height: 32px !important;
+  }
+  .ant-input-number .ant-input-number-input {
+    height: 30px !important;
+  }
+  .ant-input-number-lg {
+    height: 40px !important;
+  }
+  .ant-input-number-lg .ant-input-number-input {
+    height: 38px !important;
+  }
+  .ant-input-number-sm {
+    height: 24px !important;
+  }
+  .ant-input-number-sm .ant-input-number-input {
+    height: 22px !important;
   }
 }
 
