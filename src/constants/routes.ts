@@ -79,6 +79,8 @@ export const PATH_ROUTES = {
 
   products: '/products',
 
+  suppliersManagement: '/suppliers-management',
+
   subcontractors: '/subcontractors',
 
   masterData: '/master-data',

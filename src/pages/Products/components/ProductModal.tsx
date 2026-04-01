@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo, lazy, Suspense } from "react";
 import {
   Modal,
   Form,
@@ -33,7 +33,7 @@ import { UnitDto, unitService } from "../../../services/masterDataService";
 import { PRODUCT_TYPE_OPTIONS } from "../constants";
 import AttachmentSection from "./AttachmentSection";
 import UnitConversionSection from "./UnitConversionSection";
-import UnitModal from "../../MasterData/Units/components/UnitModal";
+const UnitModal = lazy(() => import("../../MasterData/Units/components/UnitModal"));
 import { unitSchema, UnitFormData } from "../../MasterData/Units/schemas";
 import { getApiErrorMessage } from "../../../utils/errorHandler";
 import "../Products.css";
@@ -85,11 +85,12 @@ const ProductModal: React.FC<ProductModalProps> = ({
     defaultValues: { code: "", name: "", isActive: true },
   });
 
-  const loadUnits = () => {
+  const loadUnits = (signal?: AbortSignal) => {
     unitService.getActive().then((items) => {
+      if (signal?.aborted) return;
       const unitList = Array.isArray(items) ? items : (items as any)?.items || [];
       setUnits(unitList);
-    });
+    }).catch(() => {});
   };
 
   const handleCreateUnit = () => {
@@ -142,16 +143,24 @@ const ProductModal: React.FC<ProductModalProps> = ({
     },
   });
 
-  const watchedName = watch("name");
-  const watchedType = watch("productType");
-  const watchedBaseUnitId = watch("baseUnitId");
-  const watchedPackaging = watch("packagingSpec");
-  const watchedStorage = watch("storageConditions");
-  const watchedCategories = watch("categories");
+  const watched = watch();
+  const watchedName = watched.name;
+  const watchedType = watched.productType;
+  const watchedBaseUnitId = watched.baseUnitId;
+  const watchedPackaging = watched.packagingSpec;
+  const watchedStorage = watched.storageConditions;
+  const watchedCategories = watched.categories;
+
+  const unitOptions = useMemo(
+    () => units.map((u) => ({ value: u.id, label: u.name })),
+    [units]
+  );
 
   useEffect(() => {
     if (open) {
-      loadUnits();
+      const controller = new AbortController();
+      loadUnits(controller.signal);
+      return () => controller.abort();
     }
   }, [open]);
 
@@ -419,10 +428,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
                             ?.toLowerCase()
                             .includes(input.toLowerCase())
                         }
-                        options={units.map((u) => ({
-                          value: u.id,
-                          label: u.name,
-                        }))}
+                        options={unitOptions}
                       />
                     )}
                   />
@@ -850,18 +856,22 @@ const ProductModal: React.FC<ProductModalProps> = ({
         </div>
       </div>
 
-      {/* Unit create modal */}
-      <UnitModal
-        open={unitModalOpen}
-        loading={unitModalLoading}
-        editingUnit={null}
-        form={unitForm}
-        onOk={(data) => handleUnitModalOk(data)}
-        onCancel={() => {
-          setUnitModalOpen(false);
-          unitForm.reset();
-        }}
-      />
+      {/* Unit create modal - lazy loaded */}
+      {unitModalOpen && (
+        <Suspense fallback={null}>
+          <UnitModal
+            open={unitModalOpen}
+            loading={unitModalLoading}
+            editingUnit={null}
+            form={unitForm}
+            onOk={(data) => handleUnitModalOk(data)}
+            onCancel={() => {
+              setUnitModalOpen(false);
+              unitForm.reset();
+            }}
+          />
+        </Suspense>
+      )}
     </Modal>
   );
 };

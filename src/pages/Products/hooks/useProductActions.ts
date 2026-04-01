@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { message, Modal } from "antd";
 import { productService, ProductDto, CreateUpdateProductDto } from "../../../services/productService";
 import { getApiErrorMessage } from "../../../utils/errorHandler";
@@ -12,23 +12,22 @@ export const useProductActions = ({ fetchData }: UseProductActionsProps) => {
   const [editingProduct, setEditingProduct] = useState<ProductDto | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
 
-  const handleCreate = () => {
+  const handleCreate = useCallback(() => {
     setEditingProduct(null);
     setModalOpen(true);
-  };
+  }, []);
 
-  const handleEdit = async (product: ProductDto) => {
-    // Load full product with attachments and conversions
+  const handleEdit = useCallback(async (product: ProductDto) => {
     try {
       const fullProduct = await productService.get(product.id);
       setEditingProduct(fullProduct);
       setModalOpen(true);
-    } catch (error: any) {
+    } catch {
       message.error("Không thể tải thông tin sản phẩm");
     }
-  };
+  }, []);
 
-  const handleToggleActive = (product: ProductDto) => {
+  const handleToggleActive = useCallback((product: ProductDto) => {
     const newStatus = !product.isActive;
     const statusText = newStatus ? "kích hoạt" : "ngừng kích hoạt";
 
@@ -48,9 +47,9 @@ export const useProductActions = ({ fetchData }: UseProductActionsProps) => {
         }
       },
     });
-  };
+  }, [fetchData]);
 
-  const handleModalOk = async (data: CreateUpdateProductDto) => {
+  const handleModalOk = useCallback(async (data: CreateUpdateProductDto) => {
     setModalLoading(true);
     try {
       if (editingProduct) {
@@ -68,12 +67,12 @@ export const useProductActions = ({ fetchData }: UseProductActionsProps) => {
     } finally {
       setModalLoading(false);
     }
-  };
+  }, [editingProduct, fetchData]);
 
-  const handleModalCancel = () => {
+  const handleModalCancel = useCallback(() => {
     setModalOpen(false);
     setEditingProduct(null);
-  };
+  }, []);
 
   return {
     modalOpen,

@@ -36,7 +36,7 @@ const UnitList = forwardRef<UnitActions, UnitTabProps>(
       if (refreshKey !== undefined) {
         fetchData();
       }
-    }, [refreshKey]);
+    }, [refreshKey, fetchData]);
 
     const {
       modalOpen,
