@@ -13,7 +13,7 @@ import {
 import StatusTag from "../../../components/common/StatusTag";
 import { CheckOutlined, CloseOutlined } from "../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
-import { formatDate, parseResultToNumber, stripPTags, convertHtmlToMathExpression } from "../../../utils/formatters";
+import { formatDate, stripPTags, evaluatePassFail } from "../../../utils/formatters";
 import {
   QualityManagementIndicatorDto,
   QualityIndicatorApprovalStatus,
@@ -181,95 +181,6 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   onPendingSelectChange,
   forceDisableActions = false,
 }) => {
-  // Calculate pass/fail status based on result and limits
-  // Supports both single limit and range comparisons
-  const calculatePassFail = (
-    result: string | undefined,
-    comparisonOperator: string | undefined,
-    allowedLimit: string | undefined,
-    lowerOperator?: string,
-    lowerLimit?: string,
-    upperOperator?: string,
-    upperLimit?: string
-  ): "pass" | "fail" | null => {
-    if (!result) return null;
-
-    // Parse result to number using parseResultToNumber
-    const resultValue = parseResultToNumber(result);
-    if (resultValue === null) return null;
-
-    // Check if it's a range comparison (both lowerLimit and upperLimit exist)
-    if (lowerLimit && upperLimit) {
-      // Convert HTML superscript/subscript to math expression before parsing
-      const lowerValue = parseResultToNumber(convertHtmlToMathExpression(lowerLimit));
-      const upperValue = parseResultToNumber(convertHtmlToMathExpression(upperLimit));
-      if (lowerValue === null || upperValue === null) return null;
-
-      // Check lower bound
-      let passLower = false;
-      const lowerOp = lowerOperator || ">";
-      switch (lowerOp) {
-        case ">":
-        case "≥":
-          passLower =
-            lowerOp === ">"
-              ? resultValue > lowerValue
-              : resultValue >= lowerValue;
-          break;
-        case ">=":
-          passLower = resultValue >= lowerValue;
-          break;
-        default:
-          passLower = resultValue > lowerValue;
-      }
-
-      // Check upper bound
-      let passUpper = false;
-      const upperOp = upperOperator || "<";
-      switch (upperOp) {
-        case "<":
-        case "≤":
-          passUpper =
-            upperOp === "<"
-              ? resultValue < upperValue
-              : resultValue <= upperValue;
-          break;
-        case "<=":
-          passUpper = resultValue <= upperValue;
-          break;
-        default:
-          passUpper = resultValue < upperValue;
-      }
-
-      return passLower && passUpper ? "pass" : "fail";
-    }
-
-    // Single limit comparison
-    if (!comparisonOperator || !allowedLimit) return null;
-
-    // Convert HTML superscript/subscript to math expression and parse limit to number
-    const limitValue = parseResultToNumber(convertHtmlToMathExpression(allowedLimit));
-    if (limitValue === null) return null;
-
-    // Compare based on operator (support both <= and ≤ formats)
-    switch (comparisonOperator) {
-      case "<=":
-      case "≤":
-        return resultValue <= limitValue ? "pass" : "fail";
-      case ">=":
-      case "≥":
-        return resultValue >= limitValue ? "pass" : "fail";
-      case "<":
-        return resultValue < limitValue ? "pass" : "fail";
-      case ">":
-        return resultValue > limitValue ? "pass" : "fail";
-      case "=":
-        return resultValue === limitValue ? "pass" : "fail";
-      default:
-        return null;
-    }
-  };
-
   const getApprovalStatusTag = (status: QualityIndicatorApprovalStatus) => (
     <StatusTag color={QualityIndicatorApprovalStatusColors[status]}>
       {QualityIndicatorApprovalStatusLabels[status]}
@@ -560,7 +471,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           const hasRangeLimit = record.lowerLimit && record.upperLimit;
           if (!hasSingleLimit && !hasRangeLimit) return null;
 
-          const passFailStatus = calculatePassFail(
+          const passFailStatus = evaluatePassFail(
             record.result,
             record.comparisonOperator,
             record.allowedLimit,
