@@ -1,11 +1,34 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { writeFileSync } from 'fs'
+import { resolve } from 'path'
+import crypto from 'crypto'
+
+// Plugin tạo version.json khi build - dùng để phát hiện phiên bản mới
+function versionPlugin() {
+  return {
+    name: 'version-plugin',
+    writeBundle() {
+      const buildHash = crypto.randomBytes(8).toString('hex');
+      const versionInfo = {
+        buildHash,
+        buildTime: new Date().toISOString(),
+      };
+      writeFileSync(
+        resolve(__dirname, 'dist/version.json'),
+        JSON.stringify(versionInfo)
+      );
+      console.log(`\n✓ Generated version.json (buildHash: ${buildHash})\n`);
+    },
+  };
+}
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
+    versionPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
@@ -54,13 +77,14 @@ export default defineConfig({
         runtimeCaching: [
           {
             // Cache JS chunks that weren't precached (large files like vietnamLocations)
+            // StaleWhileRevalidate: serve cache ngay lập tức, đồng thời fetch bản mới cho lần sau
             urlPattern: /\.js$/,
-            handler: 'CacheFirst',
+            handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'js-chunks-cache',
               expiration: {
                 maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
+                maxAgeSeconds: 60 * 60 * 24 * 7 // 7 days
               },
               cacheableResponse: {
                 statuses: [0, 200]

@@ -23,6 +23,7 @@ import Icon, {
   SafetyOutlined,
   MailOutlined,
   SaveOutlined,
+  ReloadOutlined,
   InboxOutlined,
   FileDoneOutlined,
   ExclamationCircleOutlined,
@@ -562,6 +563,56 @@ const SettingsPage: React.FC = () => {
                 Lưu thay đổi
               </Button>
             </Form>
+          </Card>
+
+          {/* Card 3: Ứng dụng */}
+          <Card
+            className="settings-form-card"
+            style={{ marginTop: 16 }}
+            title={
+              <div>
+                <div className="settings-form-card-title">Ứng dụng</div>
+                <div className="settings-form-card-subtitle">Quản lý phiên bản và bộ nhớ đệm của ứng dụng</div>
+              </div>
+            }
+          >
+            <div className="settings-item">
+              <div className="settings-item-left">
+                <div className="settings-item-icon"><ReloadOutlined /></div>
+                <div>
+                  <div className="settings-item-label">Xóa cache & tải lại</div>
+                  <div className="settings-item-subtitle">Xóa toàn bộ dữ liệu đệm và tải lại ứng dụng phiên bản mới nhất</div>
+                </div>
+              </div>
+              <Button
+                type="primary"
+                danger
+                icon={<ReloadOutlined />}
+                onClick={() => {
+                  Modal.confirm({
+                    title: "Xóa cache & tải lại",
+                    content: "Ứng dụng sẽ xóa toàn bộ bộ nhớ đệm và tải lại trang. Bạn có chắc chắn?",
+                    okText: "Xóa & tải lại",
+                    cancelText: "Hủy",
+                    centered: true,
+                    onOk() {
+                      const reload = () => window.location.reload();
+                      if ("caches" in window) {
+                        caches
+                          .keys()
+                          .then((names) => Promise.all(names.map((name) => caches.delete(name))))
+                          .then(reload)
+                          .catch(reload);
+                      } else {
+                        reload();
+                      }
+                    },
+                  });
+                }}
+              >
+                Xóa cache
+              </Button>
+            </div>
           </Card>
         </Spin>
       ),
