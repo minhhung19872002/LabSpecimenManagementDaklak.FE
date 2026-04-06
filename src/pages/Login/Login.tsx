@@ -65,12 +65,10 @@ const Login: React.FC = () => {
       if (storedUser) {
         try {
           const userInfo: UserInfo = JSON.parse(storedUser);
-          if (userInfo.roles && userInfo.roles.length > 0) {
-            const defaultRoute = getDefaultRouteForUser(userInfo.roles);
-            if (defaultRoute) {
-              navigate(defaultRoute, { replace: true });
-              return;
-            }
+          const defaultRoute = getDefaultRouteForUser(userInfo.roles);
+          if (defaultRoute) {
+            navigate(defaultRoute, { replace: true });
+            return;
           }
         } catch {
           // Ignore parsing errors
@@ -135,11 +133,9 @@ const Login: React.FC = () => {
 
         // Determine redirect path based on user permissions
         let redirectPath = from;
-        if (response.user?.roles && response.user.roles.length > 0) {
-          // If coming from login directly (not redirected), use permission-based route
-          if (from === "/dashboard" || from === "/") {
-            redirectPath = getDefaultRouteForUser(response.user.roles) || "/";
-          }
+        // If coming from login directly (not redirected), use permission-based route
+        if (from === "/dashboard" || from === "/") {
+          redirectPath = getDefaultRouteForUser(response.user?.roles || []) || "/";
         }
 
         // Navigate to the appropriate page based on role

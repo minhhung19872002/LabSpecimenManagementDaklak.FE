@@ -173,12 +173,8 @@ export const SUPPORTER_ALLOWED_ROUTES = [
 // Check if user has permission to access a route
 // Updated: Sử dụng permission-based checking với backward compatibility cho role-based
 export const hasRoutePermission = (pathname: string, userRoles: string[], isSupporter?: boolean): boolean => {
-  if (!userRoles || userRoles.length === 0) {
-    return false;
-  }
-
-  // Admin has access to everything
-  if (userRoles.includes(ROLES.ADMIN)) {
+  // Admin has access to everything (check both role and permission)
+  if (userRoles?.includes(ROLES.ADMIN) || authService.getUserPermissions().includes('Role:admin')) {
     return true;
   }
 
@@ -232,7 +228,7 @@ export const hasRoutePermission = (pathname: string, userRoles: string[], isSupp
   // Check exact match first
   const allowedRoles = ROUTE_PERMISSIONS[pathname];
   if (allowedRoles) {
-    if (userRoles.some(role => allowedRoles.includes(role))) {
+    if (userRoles?.some(role => allowedRoles.includes(role))) {
       return true;
     }
   }
@@ -240,7 +236,7 @@ export const hasRoutePermission = (pathname: string, userRoles: string[], isSupp
   // Check prefix match for nested routes (e.g., /test-requests/123)
   for (const route of Object.keys(ROUTE_PERMISSIONS)) {
     if (pathname.startsWith(route + '/') || pathname.startsWith(route + '?')) {
-      if (userRoles.some(role => ROUTE_PERMISSIONS[route].includes(role))) {
+      if (userRoles?.some(role => ROUTE_PERMISSIONS[route].includes(role))) {
         return true;
       }
     }
@@ -294,17 +290,13 @@ const DEFAULT_ROUTE_PRIORITY = [
 // Get default route for user based on their permissions
 // Updated: Check actual permissions instead of just roles
 export const getDefaultRouteForUser = (userRoles: string[]): string | null => {
-  if (!userRoles || userRoles.length === 0) {
-    return null;
-  }
-
-  // Admin has access to dashboard
-  if (userRoles.includes(ROLES.ADMIN)) {
+  // Admin has access to dashboard (check both role and permission)
+  if (userRoles?.includes(ROLES.ADMIN) || authService.getUserPermissions().includes('Role:admin')) {
     return PATH_ROUTES.dashboard;
   }
 
   // First try the role-based default route and verify permission
-  for (const role of userRoles) {
+  for (const role of (userRoles || [])) {
     const defaultRoute = DEFAULT_ROUTE_BY_ROLE[role];
     if (defaultRoute) {
       // Check if user actually has permission to this route
@@ -314,7 +306,7 @@ export const getDefaultRouteForUser = (userRoles: string[]): string | null => {
       }
       // Also check role-based permission
       const allowedRoles = ROUTE_PERMISSIONS[defaultRoute];
-      if (allowedRoles && userRoles.some(r => allowedRoles.includes(r))) {
+      if (allowedRoles && userRoles?.some(r => allowedRoles.includes(r))) {
         return defaultRoute;
       }
     }
@@ -329,7 +321,7 @@ export const getDefaultRouteForUser = (userRoles: string[]): string | null => {
     }
     // Check role-based access
     const allowedRoles = ROUTE_PERMISSIONS[route];
-    if (allowedRoles && userRoles.some(r => allowedRoles.includes(r))) {
+    if (allowedRoles && userRoles?.some(r => allowedRoles.includes(r))) {
       return route;
     }
   }

@@ -18,10 +18,8 @@ const DefaultRouteRedirect = () => {
   if (storedUser) {
     try {
       const userInfo: UserInfo = JSON.parse(storedUser);
-      if (userInfo.roles && userInfo.roles.length > 0) {
-        defaultRoute =
-          getDefaultRouteForUser(userInfo.roles) || PATH_ROUTES.dashboard;
-      }
+      defaultRoute =
+        getDefaultRouteForUser(userInfo.roles) || PATH_ROUTES.dashboard;
     } catch {
       // Ignore parsing errors
     }
