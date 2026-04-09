@@ -547,19 +547,29 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
               ) : undefined
             }
           >
-            <i
-              className="bi bi-chat-left-text"
+            <div
               style={{
-                fontSize: 16,
-                color: iconColor,
-                cursor: canEditNote ? "pointer" : "default",
+                height: 32,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
-              onClick={
-                canEditNote
-                  ? () => onOpenNoteModal(record.id, displayNoteHtml, sampleId)
-                  : undefined
-              }
-            />
+            >
+              <i
+                className="bi bi-chat-left-text"
+                style={{
+                  fontSize: 14,
+                  color: iconColor,
+                  cursor: canEditNote ? "pointer" : "default",
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (canEditNote) {
+                    onOpenNoteModal(record.id, displayNoteHtml, sampleId);
+                  }
+                }}
+              />
+            </div>
           </Tooltip>
         );
       },
