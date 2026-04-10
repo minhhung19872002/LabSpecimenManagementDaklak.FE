@@ -60,8 +60,8 @@ export const useTestMethodsActions = ({
     form.reset({
       name: record.name,
       formattedName: record.formattedName || record.name,
-      unit: record.unit,
-      formattedUnit: record.formattedUnit || record.unit,
+      unit: null,
+      formattedUnit: null,
       isActive: record.isActive,
     });
     setModalOpen(true);

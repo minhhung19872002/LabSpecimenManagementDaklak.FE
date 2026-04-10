@@ -127,19 +127,13 @@ const TestMethodModal: React.FC<TestMethodModalProps> = ({
           required
           validateStatus={errors.unit ? "error" : ""}
           help={errors.unit?.message}
+          style={{ display: "none" }}
         >
           <Controller
-            name="formattedUnit"
+            name="unit"
             control={control}
             render={({ field }) => (
-              <RichTextEditor
-                value={field.value || ""}
-                onChange={(html, plainText) => {
-                  field.onChange(html);
-                  setValue("unit", plainText);
-                }}
-                placeholder="VD: mg/L, %, CFU/g..."
-              />
+              <input type="hidden" {...field} />
             )}
           />
         </Form.Item>

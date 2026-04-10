@@ -94,7 +94,7 @@ const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
 
   const form = useForm<TestMethodFormData>({
     resolver: yupResolver(testMethodSchema) as any,
-    defaultValues: { name: "", unit: "", isActive: true },
+    defaultValues: { name: "", formattedName: "", unit: null, formattedUnit: null, isActive: true },
   });
 
   // Import state
