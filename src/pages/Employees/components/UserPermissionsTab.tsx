@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Button,
   Checkbox,
@@ -39,11 +39,16 @@ const UserPermissionsTab: React.FC<UserPermissionsTabProps> = ({
   );
   const [hasChanges, setHasChanges] = useState(false);
   const [searchText, setSearchText] = useState("");
+  // Track whether we've ever loaded permissions from props to avoid overwriting user edits
+  const hasLoadedRef = useRef(false);
 
   const canEdit = authService.hasPermission(PERMISSIONS.Users.ManageRoles);
 
-  // Initialize selected permissions from props
+  // Initialize selected permissions from props — only on first load, not on subsequent prop updates
   useEffect(() => {
+    if (hasLoadedRef.current) return;
+    if (!permissionGroups || permissionGroups.length === 0) return;
+
     const initialPermissions = new Set<string>();
     (permissionGroups || []).forEach((group) => {
       group.permissions.forEach((perm) => {
@@ -54,6 +59,7 @@ const UserPermissionsTab: React.FC<UserPermissionsTabProps> = ({
     });
     setSelectedPermissions(initialPermissions);
     setHasChanges(false);
+    hasLoadedRef.current = true;
   }, [permissionGroups]);
 
   // Calculate original permissions for change detection
