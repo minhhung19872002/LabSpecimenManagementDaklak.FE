@@ -1901,7 +1901,7 @@ const TaskManagementDetail: React.FC = () => {
                 <Text type="secondary" style={{ minWidth: 100, flexShrink: 0 }}>
                   Ngày gửi KP:
                 </Text>
-                <Text>{formatDate(task.transferDate)}</Text>
+                <Text>{formatDate(task.sampleSentDate)}</Text>
               </div>
             </Col>
             <Col xs={24} sm={12}>
