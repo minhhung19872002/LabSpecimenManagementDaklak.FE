@@ -6,24 +6,19 @@ import {
   indicatorService,
   specimenTypeService,
 } from "../../../../services/masterDataService";
-import {
-  TestMethodWithIndicatorsDto,
-  GroupedTestMethodData,
-} from "../types";
+import { TestMethodDto } from "../../../../services/masterDataService";
 import { IndicatorDto, IndicatorGroupDto, SpecimenTypeDto, SpecimenTypeWithIndicatorsDto } from "../../../../services/masterDataService";
 
 export const useTestMethodsData = () => {
-  const [testMethods, setTestMethods] = useState<TestMethodWithIndicatorsDto[]>([]);
+  const [allTestMethods, setAllTestMethods] = useState<TestMethodDto[]>([]);
   const [indicatorGroups, setIndicatorGroups] = useState<IndicatorGroupDto[]>([]);
   const [indicators, setIndicators] = useState<IndicatorDto[]>([]);
   const [specimenTypes, setSpecimenTypes] = useState<SpecimenTypeDto[]>([]);
   const [specimenTypesWithIndicators, setSpecimenTypesWithIndicators] = useState<SpecimenTypeWithIndicatorsDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
-  const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
-  // Batch selection for indicators (keyed by testMethodId)
-  const [selectedIndicatorKeys, setSelectedIndicatorKeys] = useState<Record<string, string[]>>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [batchLoading, setBatchLoading] = useState(false);
 
   // Fetch all data
@@ -31,28 +26,22 @@ export const useTestMethodsData = () => {
     setLoading(true);
     try {
       const [methodsData, groupsData, indicatorsData, specimenTypesData, specimenTypesWithIndsData] = await Promise.all([
-        testMethodService.getWithIndicators(),
+        testMethodService.getAll(),
         indicatorGroupService.getActive(),
         indicatorService.getActive(),
         specimenTypeService.getActive(),
         specimenTypeService.getWithIndicators(),
       ]);
 
-      setTestMethods(methodsData || []);
+      setAllTestMethods(methodsData || []);
       setIndicatorGroups(groupsData || []);
       setIndicators(indicatorsData || []);
       setSpecimenTypes(specimenTypesData?.items || []);
       setSpecimenTypesWithIndicators(specimenTypesWithIndsData || []);
-
-      // Only collapse all on initial load
-      if (isInitialLoad) {
-        setExpandedRowKeys([]);
-        setIsInitialLoad(false);
-      }
     } catch (error) {
       console.error("Failed to fetch data:", error);
       message.error("Không thể tải dữ liệu phương pháp thử");
-      setTestMethods([]);
+      setAllTestMethods([]);
     } finally {
       setLoading(false);
     }
@@ -64,65 +53,22 @@ export const useTestMethodsData = () => {
 
   // Filter by search text
   const filteredData = useMemo(() => {
-    if (!searchText) return testMethods;
+    if (!searchText) return allTestMethods;
 
     const lowerSearch = searchText.toLowerCase();
-    return testMethods.filter(
+    return allTestMethods.filter(
       (item) =>
         item.code?.toLowerCase().includes(lowerSearch) ||
         item.name?.toLowerCase().includes(lowerSearch) ||
-        item.unit?.toLowerCase().includes(lowerSearch) ||
-        item.indicators?.some(
-          (ind) =>
-            ind.indicatorCode?.toLowerCase().includes(lowerSearch) ||
-            ind.indicatorName?.toLowerCase().includes(lowerSearch)
-        )
+        item.unit?.toLowerCase().includes(lowerSearch)
     );
-  }, [testMethods, searchText]);
+  }, [allTestMethods, searchText]);
 
-  // Helper function to sort indicators in tree order (parent followed by its children)
-  // Children must match parent's indicatorId AND specimenTypeId
-  const sortIndicatorsInTreeOrder = (indicators: any[]) => {
-    if (!indicators || indicators.length === 0) return indicators;
-
-    const result: any[] = [];
-    const parentIndicators = indicators.filter(ind => !ind.parentIndicatorId);
-    const childIndicators = indicators.filter(ind => ind.parentIndicatorId);
-
-    // For each parent, add it first, then add its children
-    // Children should match both parentIndicatorId and specimenTypeId
-    parentIndicators.forEach(parent => {
-      result.push(parent);
-      const children = childIndicators.filter(child =>
-        child.parentIndicatorId === parent.indicatorId &&
-        (child.specimenTypeId || null) === (parent.specimenTypeId || null)
-      );
-      result.push(...children);
-    });
-
-    // Add any orphan children (children whose parent is not in the list)
-    const addedChildKeys = new Set(
-      result
-        .filter(ind => ind.parentIndicatorId)
-        .map(ind => `${ind.indicatorId}|${ind.specimenTypeId || ''}`)
-    );
-    const orphanChildren = childIndicators.filter(
-      child => !addedChildKeys.has(`${child.indicatorId}|${child.specimenTypeId || ''}`)
-    );
-    result.push(...orphanChildren);
-
-    return result;
-  };
-
-  // Convert to grouped data for table
-  const groupedData: GroupedTestMethodData[] = useMemo(() => {
-    return filteredData.map((method) => ({
-      ...method,
-      key: method.id,
-      // Sort indicators so sub-indicators appear right after their parent
-      indicators: sortIndicatorsInTreeOrder(method.indicators || []),
-    }));
-  }, [filteredData]);
+  // Paginated data
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredData.slice(start, start + pageSize);
+  }, [filteredData, currentPage, pageSize]);
 
   // Options for indicator group select (for AddIndicatorsModal)
   const groupOptions = useMemo(() => {
@@ -149,9 +95,7 @@ export const useTestMethodsData = () => {
   }, [indicators]);
 
   // Get specimen types that have a specific indicator linked
-  // Returns only active specimen types that have this indicator in their SpecimenTypeIndicator list
   const getSpecimenTypesByIndicator = useCallback((indicatorId: string): SpecimenTypeDto[] => {
-    // Find all specimen types that have this indicator linked
     const specimenTypeIds = new Set<string>();
 
     specimenTypesWithIndicators.forEach(st => {
@@ -163,14 +107,11 @@ export const useTestMethodsData = () => {
       }
     });
 
-    // Return active specimen types that are in the set
     return specimenTypes.filter(st => st.isActive && specimenTypeIds.has(st.id));
   }, [specimenTypesWithIndicators, specimenTypes]);
 
   // Get indicators that are linked to a specific specimen type
-  // Returns only active indicators that have this specimen type in their SpecimenTypeIndicator list
   const getIndicatorsBySpecimenType = useCallback((specimenTypeId: string): IndicatorDto[] => {
-    // Find the specimen type with its indicators
     const specimenTypeWithIndicators = specimenTypesWithIndicators.find(
       st => st.id === specimenTypeId && st.isActive
     );
@@ -179,23 +120,27 @@ export const useTestMethodsData = () => {
       return [];
     }
 
-    // Get indicator IDs that are linked to this specimen type
     const indicatorIds = new Set(
       specimenTypeWithIndicators.indicators
         .filter(sti => sti.isActive)
         .map(sti => sti.indicatorId)
     );
 
-    // Return active indicators that are in the set
     return indicators.filter(ind => ind.isActive && indicatorIds.has(ind.id));
   }, [specimenTypesWithIndicators, indicators]);
 
+  const handlePageChange = useCallback((page: number, size: number) => {
+    setCurrentPage(page);
+    setPageSize(size);
+  }, []);
+
   return {
-    testMethods,
+    testMethods: paginatedData,
+    totalCount: filteredData.length,
     loading,
     searchText,
-    groupedData,
-    expandedRowKeys,
+    currentPage,
+    pageSize,
     indicatorGroups,
     indicators,
     specimenTypes,
@@ -205,11 +150,8 @@ export const useTestMethodsData = () => {
     getSpecimenTypesByIndicator,
     getIndicatorsBySpecimenType,
     setSearchText,
-    setExpandedRowKeys,
+    handlePageChange,
     fetchData,
-    // Batch selection for indicators
-    selectedIndicatorKeys,
-    setSelectedIndicatorKeys,
     batchLoading,
     setBatchLoading,
   };

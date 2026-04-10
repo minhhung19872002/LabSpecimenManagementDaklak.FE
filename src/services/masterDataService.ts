@@ -618,6 +618,10 @@ export const testMethodService = {
     const response = await api.get<TestMethodDto[]>(`${TEST_METHOD_URL}/active`);
     return { items: response.data, totalCount: response.data.length };
   },
+  getAll: async (): Promise<TestMethodDto[]> => {
+    const response = await api.get<TestMethodDto[]>(`${TEST_METHOD_URL}/all`);
+    return response.data;
+  },
   // Methods with indicators
   getWithIndicators: async (): Promise<TestMethodWithIndicatorsDto[]> => {
     const response = await api.get<TestMethodWithIndicatorsDto[]>(`${TEST_METHOD_URL}/with-indicators`);
