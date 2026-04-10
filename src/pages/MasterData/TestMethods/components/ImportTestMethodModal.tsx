@@ -2,7 +2,6 @@ import React from "react";
 import {
   Modal,
   Space,
-  Alert,
   Upload,
   Card,
   Statistic,
@@ -18,22 +17,6 @@ import {
 } from "../../../../components/common/Icon";
 import type { UploadFile } from "antd/es/upload/interface";
 import type { TestMethodImportPreviewDto } from "../types";
-
-// Flat item for table display
-interface TestMethodImportTableItem {
-  key: number;
-  rowNumber: number;
-  testMethodName: string;
-  formattedTestMethodName?: string;
-  isNewTestMethod: boolean;
-  description?: string;
-  unit?: string;
-  formattedUnit?: string;
-  specimenTypeName?: string;
-  indicatorName: string;
-  unitPrice: number;
-  isValid: boolean;
-}
 
 interface ImportTestMethodModalProps {
   open: boolean;
@@ -107,52 +90,24 @@ const ImportTestMethodModal: React.FC<ImportTestMethodModalProps> = ({
     }
   };
 
-  // Flatten groups to table items
-  const tableItems = React.useMemo(() => {
-    if (!previewData?.groups) return [];
-    const items: TestMethodImportTableItem[] = [];
-    let keyIndex = 0;
-    previewData.groups.forEach((group) => {
-      group.indicators.forEach((indicator) => {
-        items.push({
-          key: keyIndex++,
-          rowNumber: indicator.rowNumber,
-          testMethodName: group.testMethodName,
-          formattedTestMethodName: group.formattedName,
-          isNewTestMethod: group.isNew,
-          description: group.description,
-          unit: group.unit,
-          formattedUnit: group.formattedUnit,
-          specimenTypeName: indicator.specimenTypeName,
-          indicatorName: indicator.indicatorName,
-          unitPrice: indicator.unitPrice,
-          isValid: indicator.isValid,
-        });
-      });
-    });
-    return items;
-  }, [previewData?.groups]);
-
   const columns = [
     {
       title: "Dòng",
       dataIndex: "rowNumber",
       key: "rowNumber",
-      width: 60,
+      width: 70,
     },
     {
       title: "Tên phương pháp",
-      dataIndex: "testMethodName",
       key: "testMethodName",
-      width: 200,
-      render: (text: string, record: TestMethodImportTableItem) => (
+      render: (_: unknown, record: TestMethodImportPreviewDto["groups"][number] & { rowNumber: number }) => (
         <Space>
-          {record.formattedTestMethodName ? (
-            <span dangerouslySetInnerHTML={{ __html: record.formattedTestMethodName }} />
+          {record.formattedName ? (
+            <span dangerouslySetInnerHTML={{ __html: record.formattedName }} />
           ) : (
-            <span>{text}</span>
+            <span>{record.testMethodName}</span>
           )}
-          {record.isNewTestMethod ? (
+          {record.isNew ? (
             <Tag color="green">Mới</Tag>
           ) : (
             <Tag color="blue">Cập nhật</Tag>
@@ -161,47 +116,10 @@ const ImportTestMethodModal: React.FC<ImportTestMethodModalProps> = ({
       ),
     },
     {
-      title: "Đơn vị",
-      dataIndex: "unit",
-      key: "unit",
-      width: 100,
-      render: (_: string, record: TestMethodImportTableItem) => {
-        if (record.formattedUnit) {
-          return <span dangerouslySetInnerHTML={{ __html: record.formattedUnit }} />;
-        }
-        return record.unit || "-";
-      },
-    },
-    {
-      title: "Nền mẫu",
-      dataIndex: "specimenTypeName",
-      key: "specimenTypeName",
-      width: 150,
+      title: "Mô tả",
+      dataIndex: "description",
+      key: "description",
       render: (text: string) => text || "-",
-    },
-    {
-      title: "Chỉ tiêu",
-      dataIndex: "indicatorName",
-      key: "indicatorName",
-      width: 200,
-    },
-    {
-      title: "Đơn giá",
-      dataIndex: "unitPrice",
-      key: "unitPrice",
-      width: 120,
-      render: (value: number) => value?.toLocaleString("vi-VN") + " đ",
-    },
-    {
-      title: "Trạng thái",
-      key: "status",
-      width: 80,
-      render: (_: unknown, record: TestMethodImportTableItem) =>
-        record.isValid ? (
-          <Tag color="green">OK</Tag>
-        ) : (
-          <Tag color="red">Lỗi</Tag>
-        ),
     },
   ];
 
@@ -210,7 +128,7 @@ const ImportTestMethodModal: React.FC<ImportTestMethodModalProps> = ({
       title="Import Phương pháp thử từ Excel"
       open={open}
       onCancel={onCancel}
-      width={900}
+      width={700}
       centered
       styles={{ body: { maxHeight: "calc(100vh - 200px)", overflowY: "auto" } }}
       footer={[
@@ -243,36 +161,6 @@ const ImportTestMethodModal: React.FC<ImportTestMethodModalProps> = ({
       {/* Step 1: Upload file */}
       {!previewData && (
         <Space direction="vertical" style={{ width: "100%" }} size="middle">
-          {/* <Alert
-            message="Hướng dẫn"
-            description={
-              <ul style={{ marginBottom: 0, paddingLeft: 20 }}>
-                <li>
-                  Tải template Excel mẫu bằng nút "Tải template mẫu" ở trang
-                  trước
-                </li>
-                <li>Điền thông tin phương pháp và chỉ tiêu vào file Excel</li>
-                <li>
-                  Các cột: Tên phương pháp, Mô tả, Đơn vị tính, Chỉ tiêu, Đơn
-                  giá
-                </li>
-                <li>
-                  Cùng tên phương pháp = nhiều dòng sẽ gộp thành 1 phương pháp
-                  với nhiều chỉ tiêu
-                </li>
-                <li>
-                  Chỉ tiêu phải tồn tại trong hệ thống, không được trùng trong
-                  cùng 1 phương pháp
-                </li>
-                <li>
-                  Nếu tên phương pháp đã tồn tại → Cập nhật, ngược lại → Tạo mới
-                </li>
-              </ul>
-            }
-            type="info"
-            showIcon
-          /> */}
-
           <Upload.Dragger
             fileList={fileList}
             onChange={({ fileList }) => onFileListChange(fileList)}
@@ -297,30 +185,24 @@ const ImportTestMethodModal: React.FC<ImportTestMethodModalProps> = ({
           {/* Summary */}
           <Card size="small">
             <Row gutter={16}>
-              <Col span={6}>
+              <Col span={8}>
                 <Statistic
                   title="Tổng phương pháp"
                   value={previewData.totalTestMethods}
                 />
               </Col>
-              <Col span={6}>
+              <Col span={8}>
                 <Statistic
                   title="Mới"
                   value={previewData.newTestMethods}
                   valueStyle={{ color: "#52c41a" }}
                 />
               </Col>
-              <Col span={6}>
+              <Col span={8}>
                 <Statistic
                   title="Cập nhật"
                   value={previewData.updateTestMethods}
                   valueStyle={{ color: "#1890ff" }}
-                />
-              </Col>
-              <Col span={6}>
-                <Statistic
-                  title="Tổng chỉ tiêu"
-                  value={previewData.totalIndicators}
                 />
               </Col>
             </Row>
@@ -328,65 +210,51 @@ const ImportTestMethodModal: React.FC<ImportTestMethodModalProps> = ({
 
           {/* Errors */}
           {hasErrors && (
-            <Alert
-              type="error"
-              message={`Có ${groupedErrors.length} dòng lỗi - Không thể import`}
-              description={
-                <Space direction="vertical" style={{ width: "100%" }}>
-                  <div style={{ maxHeight: 150, overflow: "auto" }}>
-                    {groupedErrors.map((group, idx) => (
-                      <div key={idx} style={{ marginBottom: 8 }}>
-                        <div style={{ color: "#ff4d4f", fontWeight: 500 }}>
-                          Dòng {group.rowNumber}:
-                        </div>
-                        <ul style={{ marginBottom: 0, paddingLeft: 20, marginTop: 4 }}>
-                          {group.messages.map((msg, msgIdx) => (
-                            <li key={msgIdx} style={{ color: "#ff4d4f" }}>
-                              {msg}
-                            </li>
-                          ))}
-                        </ul>
+            <Card size="small" style={{ background: "#fff2f0", border: "1px solid #ffccc7" }}>
+              <Space direction="vertical" style={{ width: "100%" }}>
+                <div style={{ fontWeight: 500, color: "#ff4d4f" }}>
+                  Có {groupedErrors.length} dòng lỗi - Không thể import
+                </div>
+                <div style={{ maxHeight: 150, overflow: "auto" }}>
+                  {groupedErrors.map((group, idx) => (
+                    <div key={idx} style={{ marginBottom: 8 }}>
+                      <div style={{ color: "#ff4d4f", fontWeight: 500 }}>
+                        Dòng {group.rowNumber}:
                       </div>
-                    ))}
-                  </div>
-                  {previewData.errorFileBase64 && (
-                    <Button
-                      type="primary"
-                      danger
-                      icon={<DownloadOutlined />}
-                      onClick={handleDownloadErrorFile}
-                    >
-                      Tải file lỗi để sửa
-                    </Button>
-                  )}
-                </Space>
-              }
-              showIcon
-            />
+                      <ul style={{ marginBottom: 0, paddingLeft: 20, marginTop: 4 }}>
+                        {group.messages.map((msg, msgIdx) => (
+                          <li key={msgIdx} style={{ color: "#ff4d4f" }}>
+                            {msg}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+                {previewData.errorFileBase64 && (
+                  <Button
+                    type="primary"
+                    danger
+                    icon={<DownloadOutlined />}
+                    onClick={handleDownloadErrorFile}
+                  >
+                    Tải file lỗi để sửa
+                  </Button>
+                )}
+              </Space>
+            </Card>
           )}
 
           {/* Preview Table */}
           <div style={{ maxHeight: 400, overflow: "auto" }}>
             <Table
               size="small"
-              dataSource={tableItems}
+              dataSource={previewData.groups.map((g, idx) => ({ ...g, rowNumber: idx + 2 }))}
               columns={columns}
               pagination={false}
-              scroll={{ x: 950 }}
-              rowClassName={(record) =>
-                record.isValid ? "" : "ant-table-row-error"
-              }
+              rowKey="testMethodName"
             />
           </div>
-
-          <style>{`
-            .ant-table-row-error {
-              background-color: #fff2f0 !important;
-            }
-            .ant-table-row-error:hover > td {
-              background-color: #ffebe6 !important;
-            }
-          `}</style>
 
           <Button onClick={onReset}>Chọn file khác</Button>
         </Space>

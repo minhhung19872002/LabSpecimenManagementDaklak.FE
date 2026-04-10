@@ -51,9 +51,15 @@ export const useTestMethodsData = () => {
     fetchData();
   }, []);
 
-  // Filter by search text
+  // Sort by creation time descending (newest first), then filter by search text
   const filteredData = useMemo(() => {
-    if (!searchText) return allTestMethods;
+    const sorted = [...allTestMethods].sort((a, b) => {
+      const timeA = a.creationTime ? new Date(a.creationTime).getTime() : 0;
+      const timeB = b.creationTime ? new Date(b.creationTime).getTime() : 0;
+      return timeB - timeA;
+    });
+
+    if (!searchText) return sorted;
 
     const lowerSearch = searchText.toLowerCase();
     return allTestMethods.filter(

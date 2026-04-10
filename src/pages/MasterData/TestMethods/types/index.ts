@@ -38,26 +38,12 @@ export interface ImportValidationResult {
   errors: ImportRowError[];
 }
 
-export interface TestMethodIndicatorImportItem {
-  rowNumber: number;
-  indicatorName: string;
-  indicatorId?: string;
-  specimenTypeName?: string;
-  specimenTypeId?: string;
-  unitPrice: number;
-  isValid: boolean;
-  errorMessage?: string;
-}
-
 export interface TestMethodImportPreviewGroup {
   testMethodName: string;
   formattedName?: string;
   description?: string;
-  unit: string;
-  formattedUnit?: string;
   isNew: boolean;
   existingId?: string;
-  indicators: TestMethodIndicatorImportItem[];
 }
 
 export interface TestMethodImportPreviewDto {
@@ -66,7 +52,6 @@ export interface TestMethodImportPreviewDto {
   totalTestMethods: number;
   newTestMethods: number;
   updateTestMethods: number;
-  totalIndicators: number;
   errorFileBase64?: string;
   errorFileName?: string;
 }
