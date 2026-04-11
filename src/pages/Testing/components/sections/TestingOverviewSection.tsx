@@ -61,6 +61,20 @@ const TestingOverviewSection: React.FC<TestingOverviewSectionProps> = ({
                 </Text>
               </Col>
             </Row>
+            <Row className="testing-overview-row">
+              <Col flex="150px">
+                <Text type="secondary">Ngày gửi KP:</Text>
+              </Col>
+              <Col flex="auto">
+                <Text>
+                  {detail.sampleSentDate
+                    ? new Date(detail.sampleSentDate).toLocaleDateString(
+                        "vi-VN",
+                      )
+                    : "N/A"}
+                </Text>
+              </Col>
+            </Row>
           </div>
         </Col>
         <Col xs={24} md={12}>
