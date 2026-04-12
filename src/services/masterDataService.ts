@@ -149,6 +149,8 @@ export interface TestMethodIndicatorDto {
   specimenTypeId?: string;     // Nền mẫu (Loại mẫu) - ID
   specimenTypeCode?: string;   // Mã nền mẫu
   specimenTypeName?: string;   // Tên nền mẫu
+  unit?: string;               // Đơn vị tính
+  formattedUnit?: string;      // Đơn vị tính có định dạng HTML
 }
 
 export interface TestMethodWithIndicatorsDto extends TestMethodDto {
@@ -156,7 +158,7 @@ export interface TestMethodWithIndicatorsDto extends TestMethodDto {
 }
 
 export interface AddIndicatorsToTestMethodDto {
-  indicators: { indicatorId: string; specimenTypeId: string; unitPrice: number }[];
+  indicators: { indicatorId: string; specimenTypeId: string; unitPrice: number; unit?: string; formattedUnit?: string }[];
 }
 
 // Standard
@@ -383,6 +385,48 @@ export interface BulkIndicatorItemDto {
 export interface CreateBulkIndicatorsDto {
   indicatorGroupId: string;
   indicators: BulkIndicatorItemDto[];
+}
+
+export interface UpsertSubIndicatorDto {
+  id?: string;
+  name: string;
+  formattedName?: string;
+}
+
+export interface UpdateIndicatorWithSubsDto {
+  name: string;
+  formattedName?: string;
+  isActive: boolean;
+  indicatorGroupId: string;
+  sortOrder?: number;
+  subIndicators: UpsertSubIndicatorDto[];
+}
+
+export interface IndicatorMethodDto {
+  testMethodId: string;
+  testMethodCode: string;
+  testMethodName: string;
+  testMethodFormattedName?: string;
+  unitPrice: number;
+  isActive: boolean;
+  sortOrder: number;
+  specimenTypeId?: string;
+  specimenTypeCode?: string;
+  specimenTypeName?: string;
+  unit?: string;
+  formattedUnit?: string;
+}
+
+export interface IndicatorWithMethodsDto {
+  id: string;
+  code: string;
+  name: string;
+  formattedName?: string;
+  indicatorGroupId: string;
+  indicatorGroupName: string;
+  isActive: boolean;
+  sortOrder: number;
+  methods: IndicatorMethodDto[];
 }
 
 export interface IndicatorFilterDto extends PagedAndSortedResultRequestDto {
@@ -647,7 +691,7 @@ export const testMethodService = {
     testMethodId: string,
     indicatorId: string,
     specimenTypeId: string | undefined,
-    data: { unitPrice: number }
+    data: { unitPrice: number; unit?: string; formattedUnit?: string; newTestMethodId?: string; newSpecimenTypeId?: string }
   ): Promise<TestMethodIndicatorDto> => {
     const params = specimenTypeId ? { specimenTypeId } : {};
     const response = await api.put<TestMethodIndicatorDto>(
@@ -656,6 +700,10 @@ export const testMethodService = {
       { params }
     );
     return response.data;
+  },
+  toggleIndicatorActive: async (testMethodId: string, indicatorId: string, specimenTypeId?: string): Promise<void> => {
+    const params = specimenTypeId ? { specimenTypeId } : {};
+    await api.put(`${TEST_METHOD_URL}/${testMethodId}/indicators/${indicatorId}/toggle-active`, null, { params });
   },
   toggleActive: async (id: string): Promise<TestMethodDto> => {
     const response = await api.post<TestMethodDto>(`${TEST_METHOD_URL}/${id}/toggle-active`);
@@ -938,6 +986,14 @@ export const indicatorService = {
   batchActivate: async (ids: string[]): Promise<BatchOperationResultDto> => {
     const response = await api.post<BatchOperationResultDto>(`${INDICATOR_URL}/batch-activate`, { ids });
     return response.data;
+  },
+  updateWithSubs: async (id: string, data: UpdateIndicatorWithSubsDto): Promise<IndicatorDto> => {
+    const response = await api.put<IndicatorDto>(`${INDICATOR_URL}/${id}/with-subs`, data);
+    return response.data;
+  },
+  getWithMethods: async (): Promise<IndicatorWithMethodsDto[]> => {
+    const response = await api.get<IndicatorWithMethodsDto[]>(`${INDICATOR_URL}/with-methods`);
+    return response.data || [];
   },
 };
 

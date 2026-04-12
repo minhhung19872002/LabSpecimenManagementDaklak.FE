@@ -88,38 +88,16 @@ export const useIndicatorsData = () => {
     : indicators || [];
 
   // Group indicators by group for expandable table
-  // Flatten parent indicators with their sub-indicators for display
+  // Only show parent indicators (sub-indicators shown in edit modal)
   const groupedData: GroupedIndicatorData[] = (groups || []).map((group) => {
-    // Filter only parent indicators (not sub-indicators) for this group
     const parentIndicators = filteredIndicators.filter(
       (ind) => ind.indicatorGroupId === group.id && !ind.parentIndicatorId
     );
 
-    // Flatten: for each parent, add it followed by its sub-indicators
-    const flatIndicators: IndicatorDto[] = [];
-    parentIndicators.forEach((parent) => {
-      flatIndicators.push(parent);
-      // Add sub-indicators if any (null-safe)
-      const subs = parent.subIndicators;
-      if (subs && subs.length > 0) {
-        subs.forEach((sub, index) => {
-          // Add metadata for tree line rendering
-          const enhancedSub = {
-            ...sub,
-            _isFirstSub: index === 0,
-            _isLastSub: index === subs.length - 1,
-            _subIndex: index,
-            _totalSubs: subs.length,
-          };
-          flatIndicators.push(enhancedSub as any);
-        });
-      }
-    });
-
     return {
       ...group,
       key: group.id,
-      indicators: flatIndicators,
+      indicators: parentIndicators,
     };
   });
 

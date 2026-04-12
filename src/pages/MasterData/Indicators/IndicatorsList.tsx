@@ -1,8 +1,8 @@
-import { useMemo, forwardRef, useImperativeHandle } from "react";
+import { useMemo, useRef, forwardRef, useImperativeHandle } from "react";
 import { Form } from "antd";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { useIndicatorsData, useIndicatorsActions } from "./hooks";
+import { useIndicatorsData, useIndicatorsActions, useIndicatorMethodsActions } from "./hooks";
 import { getIndicatorColumns, getGroupColumns } from "./constants";
 import {
   IndicatorsTable,
@@ -12,7 +12,10 @@ import {
   ImportIndicatorModal,
   ImportGroupModal,
   ImportIndicatorGroupModal,
+  AddMethodToIndicatorModal,
+  EditMethodModal,
 } from "./components";
+import type { IndicatorsTableRef } from "./components/IndicatorsTable";
 import { IndicatorsTabProps, IndicatorsActions } from "./types";
 import {
   indicatorSchema,
@@ -22,6 +25,8 @@ import {
 } from "./schemas/indicatorSchema";
 
 const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDataChange }, ref) => {
+  const tableRef = useRef<IndicatorsTableRef>(null);
+
   const {
     indicators,
     loading,
@@ -102,6 +107,31 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
     onDataChange,
   });
 
+  const {
+    specimenTypes,
+    testMethods,
+    addMethodModalOpen,
+    addMethodLoading,
+    addMethodTarget,
+    handleOpenAddMethod,
+    handleAddMethodOk,
+    handleAddMethodCancel,
+    editMethodModalOpen,
+    editMethodLoading,
+    editingMethod,
+    editMethodIndicatorName,
+    editMethodIndicatorFormattedName,
+    editMethodExistingKeys,
+    handleOpenEditMethod,
+    handleEditMethodOk,
+    handleEditMethodCancel,
+    handleToggleMethodActive,
+    handleDeleteMethod,
+  } = useIndicatorMethodsActions({
+    invalidateMethodsMap: () => tableRef.current?.invalidateMethodsCache(),
+    fetchData,
+  });
+
   const groupForm = useForm<IndicatorGroupFormData>({
     resolver: yupResolver(indicatorGroupSchema) as any,
     defaultValues: { name: "", isActive: true, laboratoryId: undefined },
@@ -149,6 +179,7 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
     <>
 
       <IndicatorsTable
+        ref={tableRef}
         loading={loading}
         batchLoading={batchLoading}
         groupedData={groupedData}
@@ -162,6 +193,10 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
         onBatchDelete={handleBatchDelete}
         onBatchDeactivate={handleBatchDeactivate}
         onBatchActivate={handleBatchActivate}
+        onAddMethod={handleOpenAddMethod}
+        onEditMethod={handleOpenEditMethod}
+        onDeleteMethod={handleDeleteMethod}
+        onToggleMethodActive={handleToggleMethodActive}
       />
 
       {/* Group Modal */}
@@ -250,6 +285,36 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
           setImportIndicatorGroupFileList([]);
         }}
         onReset={handleResetIndicatorGroupImport}
+      />
+
+      {/* Add Method to Indicator Modal */}
+      {addMethodTarget && (
+        <AddMethodToIndicatorModal
+          open={addMethodModalOpen}
+          loading={addMethodLoading}
+          indicatorId={addMethodTarget.id}
+          indicatorName={addMethodTarget.name}
+          indicatorFormattedName={addMethodTarget.formattedName}
+          specimenTypes={specimenTypes}
+          testMethods={testMethods}
+          existingMethodKeys={addMethodTarget.existingKeys}
+          onOk={handleAddMethodOk}
+          onCancel={handleAddMethodCancel}
+        />
+      )}
+
+      {/* Edit Method Modal */}
+      <EditMethodModal
+        open={editMethodModalOpen}
+        loading={editMethodLoading}
+        indicatorName={editMethodIndicatorName}
+        indicatorFormattedName={editMethodIndicatorFormattedName}
+        record={editingMethod}
+        specimenTypes={specimenTypes}
+        testMethods={testMethods}
+        existingMethodKeys={editMethodExistingKeys}
+        onOk={handleEditMethodOk}
+        onCancel={handleEditMethodCancel}
       />
     </>
   );

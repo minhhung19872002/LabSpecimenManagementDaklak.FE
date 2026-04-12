@@ -156,7 +156,7 @@ export const useTestMethodsActions = ({
     setEditIndicatorModalOpen(true);
   };
 
-  const handleEditIndicatorOk = async (data: { unitPrice: number }) => {
+  const handleEditIndicatorOk = async (data: { unitPrice: number; unit?: string; formattedUnit?: string }) => {
     if (!editingIndicator) return;
 
     try {

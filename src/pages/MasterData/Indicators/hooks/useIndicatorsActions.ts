@@ -8,8 +8,8 @@ import {
   indicatorService,
   CreateUpdateIndicatorGroupDto,
   CreateIndicatorDto,
-  UpdateIndicatorDto,
   CreateBulkIndicatorsDto,
+  UpdateIndicatorWithSubsDto,
 } from "../../../../services/masterDataService";
 import { importService } from "../../../../services/importService";
 import type { IndicatorGroupImportPreviewDto } from "../../../../services/importService";
@@ -141,11 +141,18 @@ export const useIndicatorsActions = ({
     indicatorForm: UseFormReturn<IndicatorFormData>
   ) => {
     setEditingIndicator(indicator);
+    // Populate sub-indicators for editing
+    const subIndicators = (indicator.subIndicators || []).map((sub) => ({
+      id: sub.id,
+      name: sub.name,
+      formattedName: sub.formattedName || sub.name,
+    }));
     indicatorForm.reset({
       indicatorGroupId: indicator.indicatorGroupId,
       name: indicator.name,
       formattedName: indicator.formattedName || indicator.name,
       isActive: indicator.isActive,
+      subIndicators,
     });
     setIndicatorModalOpen(true);
   };
@@ -288,10 +295,19 @@ export const useIndicatorsActions = ({
       setModalLoading(true);
 
       if (editingIndicator) {
-        await indicatorService.update(
-          editingIndicator.id,
-          data as UpdateIndicatorDto
-        );
+        // Use updateWithSubs to handle parent + sub-indicators together
+        const updateData: UpdateIndicatorWithSubsDto = {
+          name: data.name,
+          formattedName: data.formattedName,
+          isActive: data.isActive,
+          indicatorGroupId: data.indicatorGroupId,
+          subIndicators: (data.subIndicators || []).map((sub) => ({
+            id: sub.id || undefined,
+            name: sub.name,
+            formattedName: sub.formattedName,
+          })),
+        };
+        await indicatorService.updateWithSubs(editingIndicator.id, updateData);
         message.success("Cập nhật chỉ tiêu thành công!");
       } else {
         await indicatorService.create(data as CreateIndicatorDto);
