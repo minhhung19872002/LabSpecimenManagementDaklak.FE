@@ -21,7 +21,7 @@ const TestingDetailHeader: React.FC<TestingDetailHeaderProps> = ({ detail }) => 
               Số hợp đồng: {detail.contractNumber || "N/A"}
             </Title>
             <Space>
-              {getStatusTag(detail.testingStatus)}
+              {getStatusTag(detail.testingStatus, detail.testRequestStatus)}
               <Text type="secondary">
                 KTV: {detail.technicianNames || "Chưa có"}
               </Text>

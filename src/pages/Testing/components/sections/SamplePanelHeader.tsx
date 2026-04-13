@@ -20,7 +20,7 @@ interface SamplePanelHeaderProps {
   onBulkTestDateChange?: (
     sampleId: string,
     indicatorIds: string[],
-    date: string
+    date: string,
   ) => void;
 }
 
@@ -75,7 +75,7 @@ const SamplePanelHeader: React.FC<SamplePanelHeaderProps> = ({
       onBulkTestDateChange(
         sample.sampleId,
         editableSelectedIds,
-        date.format("YYYY-MM-DD")
+        date.format("YYYY-MM-DD"),
       );
     }
   };

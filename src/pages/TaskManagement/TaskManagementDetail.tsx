@@ -1452,6 +1452,10 @@ const TaskManagementDetail: React.FC = () => {
 
   // Get status tag
   const getStatusTag = (status: LaboratoryTaskStatus) => {
+    if (isTestRequestCancelled) {
+      return <StatusTag color="error">Hủy bỏ yêu cầu</StatusTag>;
+    }
+
     return (
       <StatusTag color={LaboratoryTaskStatusColors[status]}>
         {LaboratoryTaskStatusLabels[status]}
