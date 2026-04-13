@@ -18,6 +18,7 @@ import Icon, {
   TeamOutlined,
 } from "../../components/common/Icon";
 import { LaboratoryTaskStatus, QLKTDisplayStatus } from "../../types/laboratoryTask";
+import { TestRequestStatus } from "../../types/testRequest";
 import { SampleAssignmentLogStatisticsDto } from "../../types/qualityManagement";
 import { laboratoryTaskService } from "../../services/laboratoryTaskService";
 import { useTaskManagementList } from "./hooks";
@@ -49,6 +50,7 @@ const TaskManagementList: React.FC = () => {
     loading,
     searchText,
     statusFilter,
+    testRequestStatusFilter,
     pagination,
     stats,
     columns,
@@ -218,7 +220,8 @@ const TaskManagementList: React.FC = () => {
               ? salDisplayStatusFilter === undefined
               : salDisplayStatusFilter === Number(stat.filterValue)
             : stat.filterValue === "all"
-              ? statusFilter === undefined
+              ? statusFilter === undefined &&
+                testRequestStatusFilter === undefined
               : statusFilter === Number(stat.filterValue);
 
           return (
@@ -335,7 +338,11 @@ const TaskManagementList: React.FC = () => {
                   style={{ width: "100%" }}
                   placeholder="Trạng thái"
                   value={
-                    statusFilter !== undefined ? String(statusFilter) : "all"
+                    testRequestStatusFilter === TestRequestStatus.Cancelled
+                      ? "cancelled-request"
+                      : statusFilter !== undefined
+                        ? String(statusFilter)
+                        : "all"
                   }
                   onChange={handleStatusFilterChange}
                 >
@@ -380,6 +387,9 @@ const TaskManagementList: React.FC = () => {
                     value={String(LaboratoryTaskStatus.SentToQuality)}
                   >
                     Đã gửi QLCL
+                  </Select.Option>
+                  <Select.Option value="cancelled-request">
+                    Hủy bỏ yêu cầu
                   </Select.Option>
                 </Select>
               </Col>

@@ -245,6 +245,7 @@ export interface GetLaboratoryTaskListDto {
   search?: string;  // Search by contract number or technical manager name
   laboratoryId?: string;
   status?: LaboratoryTaskStatus;
+  testRequestStatus?: TestRequestStatus;
   technicalManagerId?: string;
   fromDate?: string;
   toDate?: string;

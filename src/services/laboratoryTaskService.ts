@@ -38,6 +38,7 @@ const toApiParams = (params: GetLaboratoryTaskListDto) => {
   if (params.search) apiParams.Search = params.search;
   if (params.laboratoryId) apiParams.LaboratoryId = params.laboratoryId;
   if (params.status !== undefined) apiParams.Status = params.status;
+  if (params.testRequestStatus !== undefined) apiParams.TestRequestStatus = params.testRequestStatus;
   if (params.technicalManagerId) apiParams.TechnicalManagerId = params.technicalManagerId;
   if (params.fromDate) apiParams.FromDate = params.fromDate;
   if (params.toDate) apiParams.ToDate = params.toDate;
