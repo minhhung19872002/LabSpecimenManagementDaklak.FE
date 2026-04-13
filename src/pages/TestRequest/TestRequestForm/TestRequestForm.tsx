@@ -364,7 +364,7 @@ const TestRequestForm: React.FC = () => {
               resultLanguage: ResultLanguage.Vietnamese,
               samplingRequirement: SamplingRequirement.CustomerSampling,
               sampleStorageOption: SampleStorageOption.No,
-              sampleType: "service",
+              sampleType: ["service"],
             }}
           >
             {/* Top sections row: Hợp đồng (bao gồm Loại hình mẫu), Khách hàng */}
@@ -531,7 +531,9 @@ const TestRequestForm: React.FC = () => {
             sampleTypeCategories={sampleTypeCategories}
             setIndicatorSearchText={setIndicatorSearchText}
             customPrices={customPrices}
-            onPriceChange={(key, price) => setCustomPrices(prev => ({ ...prev, [key]: price }))}
+            onPriceChange={(key, price) =>
+              setCustomPrices((prev) => ({ ...prev, [key]: price }))
+            }
           />
 
           {/* Laboratory Selection Modal */}

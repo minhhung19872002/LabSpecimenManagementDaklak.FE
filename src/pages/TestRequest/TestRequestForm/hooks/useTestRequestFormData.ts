@@ -93,7 +93,9 @@ export const useTestRequestFormData = () => {
 
   // Watch form fields
   const sampleType = Form.useWatch("sampleType", form);
-  const sampleTypeTask = sampleType === "task";
+  const sampleTypeTask = Array.isArray(sampleType)
+    ? sampleType.includes("task")
+    : sampleType === "task";
   const methodRequirement = Form.useWatch("methodRequirement", form);
 
   // Contract number for sample codes
@@ -578,13 +580,13 @@ export const useTestRequestFormData = () => {
         setSampleCodePrefix(data.contractNumber);
       }
 
-      // Convert 4 boolean sampleType fields to single radio value
-      const sampleType = data.sampleTypeTask ? "task"
-        : data.sampleTypeSubContract ? "subContract"
-        : data.sampleTypeContract ? "contract"
-        : data.sampleTypeService ? "service"
-        : "service"; // default
-      form.setFieldsValue({ sampleType });
+      // Convert 4 boolean sampleType fields to multi-select values
+      const selectedSampleTypes: string[] = [];
+      if (data.sampleTypeService) selectedSampleTypes.push("service");
+      if (data.sampleTypeContract) selectedSampleTypes.push("contract");
+      if (data.sampleTypeTask) selectedSampleTypes.push("task");
+      if (data.sampleTypeSubContract) selectedSampleTypes.push("subContract");
+      form.setFieldsValue({ sampleType: selectedSampleTypes });
 
       if (data.methodCustomer) {
         form.setFieldsValue({ methodRequirement: "customerRequest" });
@@ -1286,6 +1288,15 @@ export const useTestRequestFormData = () => {
           restoredValues[key] = value;
         }
       });
+
+      // Backward compatibility for old draft format (single radio value)
+      if (
+        restoredValues.sampleType &&
+        !Array.isArray(restoredValues.sampleType)
+      ) {
+        restoredValues.sampleType = [restoredValues.sampleType];
+      }
+
       form.setFieldsValue(restoredValues);
 
       // Restore sample code prefix (create mode only - edit mode keeps from API)
