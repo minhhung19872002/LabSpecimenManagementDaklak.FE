@@ -64,3 +64,26 @@
   vertical-align: middle !important;
   overflow: visible !important;
 }
+
+/* Subcontract modal: keep field layout consistent and equal heights */
+.subcontract-method-modal .ant-input,
+.subcontract-method-modal .ant-input-number,
+.subcontract-method-modal .ant-input-number-group-wrapper,
+.subcontract-method-modal .subcontract-cost-input {
+  width: 100%;
+}
+
+.subcontract-method-modal .ant-input,
+.subcontract-method-modal .ant-input-number,
+.subcontract-method-modal .ant-input-number-group-wrapper .ant-input-number-group-addon {
+  height: 40px;
+}
+
+.subcontract-method-modal .ant-input-number-input {
+  height: 38px;
+}
+
+.subcontract-method-modal .ant-input-number-group-wrapper .ant-input-number-group-addon {
+  display: flex;
+  align-items: center;
+}

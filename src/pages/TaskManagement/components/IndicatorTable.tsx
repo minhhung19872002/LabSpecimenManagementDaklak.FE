@@ -8,6 +8,7 @@ import {
   Form,
   Typography,
   Input,
+  InputNumber,
   Tooltip,
 } from "antd";
 import StatusTag from "../../../components/common/StatusTag";
@@ -26,6 +27,7 @@ import {
   MethodLookupDto,
   UserLookupDto,
   SampleStatus,
+  UpdateSubContractMethodInput,
 } from "../../../types/laboratoryTask";
 import IndicatorImageCell from "../../../components/common/IndicatorImageCell";
 import { IndicatorName, RichTextEditor } from "../../../components/common";
@@ -47,7 +49,6 @@ interface IndicatorWithPosition extends LaboratoryTaskIndicatorDto {
 interface IndicatorTableProps {
   indicators: LaboratoryTaskIndicatorDto[];
   methods: MethodLookupDto[];
-  methodsByIndicator?: Record<string, MethodLookupDto[]>;
   technicians: UserLookupDto[];
   isAssigned: boolean; // true khi đã giao việc (lưu DB thành công)
   canEdit: boolean; // true khi task status cho phép edit (NotAssignedTechnician hoặc AssignedTechnician)
@@ -59,6 +60,10 @@ interface IndicatorTableProps {
   onMethodChange: (
     indicatorId: string,
     methodId: string | null,
+  ) => Promise<void> | void;
+  onUpdateSubContractMethod?: (
+    indicatorId: string,
+    input: UpdateSubContractMethodInput,
   ) => Promise<void> | void;
   onTechnicianChange: (indicatorId: string, technicianId: string) => void;
   onApprove: (
@@ -95,7 +100,6 @@ interface IndicatorTableProps {
 const IndicatorTable: React.FC<IndicatorTableProps> = ({
   indicators,
   methods,
-  methodsByIndicator = {},
   technicians,
   isAssigned: _isAssigned,
   canEdit: _canEdit,
@@ -103,6 +107,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   sampleStatus,
   sampleId = "",
   onMethodChange,
+  onUpdateSubContractMethod,
   onTechnicianChange,
   onApprove,
   onUpdateNote: _onUpdateNote,
@@ -141,6 +146,16 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     visible: false,
   });
   const [rejectForm] = Form.useForm();
+
+  // State for subcontract method modal
+  const [subContractModal, setSubContractModal] = useState<{
+    visible: boolean;
+    indicator?: IndicatorWithPosition;
+  }>({
+    visible: false,
+  });
+  const [subContractSubmitting, setSubContractSubmitting] = useState(false);
+  const [subContractForm] = Form.useForm<UpdateSubContractMethodInput>();
 
   // State for local unit edits (optimistic update before API call)
   const [unitEdits, setUnitEdits] = useState<Record<string, string>>({});
@@ -235,6 +250,32 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       }
     } catch (error) {
       // Validation failed
+    }
+  };
+
+  const handleSubmitSubContractMethod = async () => {
+    if (!subContractModal.indicator || !onUpdateSubContractMethod) {
+      return;
+    }
+
+    try {
+      const values = await subContractForm.validateFields();
+      setSubContractSubmitting(true);
+
+      await onUpdateSubContractMethod(subContractModal.indicator.id, {
+        subContractMethodName: values.subContractMethodName.trim(),
+        subContractNumber: values.subContractNumber.trim(),
+        subContractCost:
+          values.subContractCost === null ||
+          values.subContractCost === undefined
+            ? undefined
+            : Number(values.subContractCost),
+      });
+
+      setSubContractModal({ visible: false });
+      subContractForm.resetFields();
+    } finally {
+      setSubContractSubmitting(false);
     }
   };
 
@@ -409,40 +450,36 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         value: string | undefined,
         record: LaboratoryTaskIndicatorDto,
       ) => {
-        // Luôn hiển thị dropdown phương pháp, chỉ disable theo trạng thái xử lý.
-        // Danh sách phương pháp được lọc theo từng chỉ tiêu.
+        if (record.subContractMethodName?.trim()) {
+          return <IndicatorName name={record.subContractMethodName} />;
+        }
+
         const canEditMethod =
           !forceDisableAll &&
           !savingMethodIndicatorIds.includes(record.id) &&
           record.approvalStatus !== IndicatorApprovalStatus.Approved &&
           record.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled;
 
-        const indicatorMethodOptions =
-          methodsByIndicator[record.indicatorId]?.map((m) => ({
-            value: m.id,
-            label: m.name,
-          })) || [];
-
-        const fallbackMethodOptions = (methods || []).map((m) => ({
+        const methodOptions = (methods || []).map((m) => ({
           value: m.id,
           label: m.name,
         }));
 
-        const options =
-          indicatorMethodOptions.length > 0
-            ? indicatorMethodOptions
-            : fallbackMethodOptions;
+        const currentOption = value
+          ? [
+              {
+                value,
+                label:
+                  record.subContractMethodName ||
+                  record.methodName ||
+                  String(value),
+              },
+            ]
+          : [];
 
-        const hasSelectedInOptions = options.some((opt) => opt.value === value);
-        const currentOption =
-          value && !hasSelectedInOptions
-            ? [
-                {
-                  value,
-                  label: record.methodName || value,
-                },
-              ]
-            : [];
+        const dedupedMethodOptions = methodOptions.filter(
+          (opt) => opt.value !== value,
+        );
 
         return (
           <Select
@@ -451,7 +488,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             value={value}
             placeholder="Chọn PP"
             onChange={(val) => onMethodChange(record.id, val ?? null)}
-            options={[...currentOption, ...options]}
+            options={[...currentOption, ...dedupedMethodOptions]}
             disabled={!canEditMethod}
             allowClear
             showSearch
@@ -929,7 +966,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       title: "Trạng thái",
       dataIndex: "approvalStatus",
       key: "approvalStatus",
-      width: 180,
+      width: 260,
       fixed: "right" as const,
       render: (
         status: IndicatorApprovalStatus,
@@ -938,21 +975,54 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         // Hide for parent indicators that have sub-indicators
         if (record._isParentWithSubs) return null;
 
+        const canShowSubContractAction =
+          !!record.isSubContractMethod && !!onUpdateSubContractMethod;
+
+        const updateSubContractButton = canShowSubContractAction ? (
+          <Button
+            size="small"
+            onClick={() => {
+              setSubContractModal({ visible: true, indicator: record });
+              subContractForm.setFieldsValue({
+                subContractMethodName:
+                  record.subContractMethodName || record.methodName || "",
+                subContractNumber: record.subContractNumber || "",
+                subContractCost: record.subContractCost,
+              });
+            }}
+            disabled={status === IndicatorApprovalStatus.Approved}
+          >
+            Cập nhật PP
+          </Button>
+        ) : null;
+
+        const statusTag = (
+          <StatusTag color={IndicatorApprovalStatusColors[status]}>
+            {IndicatorApprovalStatusLabels[status]}
+          </StatusTag>
+        );
+
         // Ưu tiên hiển thị "KH hủy" trước - bất kể đã giao việc hay chưa
         if (status === IndicatorApprovalStatus.CustomerCancelled) {
-          return (
-            <StatusTag color={IndicatorApprovalStatusColors[status]}>
-              {IndicatorApprovalStatusLabels[status]}
-            </StatusTag>
+          return updateSubContractButton ? (
+            <Space size="small" wrap>
+              {statusTag}
+              {updateSubContractButton}
+            </Space>
+          ) : (
+            statusTag
           );
         }
 
         // Hiển thị "Chờ mẫu chung" nếu chỉ tiêu đang đợi mẫu từ Lab Vi Sinh
         if (record.isWaitingForSharedSample) {
           return (
-            <Tooltip title="Chỉ tiêu này thuộc mẫu chung, đang chờ Lab Vi Sinh hoàn thành">
-              <StatusTag color="gold">Chờ mẫu chung</StatusTag>
-            </Tooltip>
+            <Space size="small" wrap>
+              <Tooltip title="Chỉ tiêu này thuộc mẫu chung, đang chờ Lab Vi Sinh hoàn thành">
+                <StatusTag color="gold">Chờ mẫu chung</StatusTag>
+              </Tooltip>
+              {updateSubContractButton}
+            </Space>
           );
         }
 
@@ -962,24 +1032,35 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
 
         // Chưa giao việc thì hiển thị tag "Chưa giao việc"
         if (!indicatorAssigned) {
-          return <StatusTag color="default">Chưa giao việc</StatusTag>;
+          return (
+            <Space size="small" wrap>
+              <StatusTag color="default">Chưa giao việc</StatusTag>
+              {updateSubContractButton}
+            </Space>
+          );
         }
 
         switch (status) {
           case IndicatorApprovalStatus.Pending:
-            return (
-              <StatusTag color={IndicatorApprovalStatusColors[status]}>
-                {IndicatorApprovalStatusLabels[status]}
-              </StatusTag>
+            return updateSubContractButton ? (
+              <Space size="small" wrap>
+                {statusTag}
+                {updateSubContractButton}
+              </Space>
+            ) : (
+              statusTag
             );
 
           case IndicatorApprovalStatus.Entered: {
             // Khi phiếu yêu cầu bị hủy, chỉ hiển thị status tag
             if (forceDisableAll) {
-              return (
-                <StatusTag color={IndicatorApprovalStatusColors[status]}>
-                  {IndicatorApprovalStatusLabels[status]}
-                </StatusTag>
+              return updateSubContractButton ? (
+                <Space size="small" wrap>
+                  {statusTag}
+                  {updateSubContractButton}
+                </Space>
+              ) : (
+                statusTag
               );
             }
             // Lấy standardId từ local state hoặc DB
@@ -1014,28 +1095,42 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                 >
                   Duyệt
                 </Button>
+                {updateSubContractButton}
               </Space>
             );
           }
 
           case IndicatorApprovalStatus.Approved:
-            return (
-              <StatusTag color={IndicatorApprovalStatusColors[status]}>
-                {IndicatorApprovalStatusLabels[status]}
-              </StatusTag>
+            return updateSubContractButton ? (
+              <Space size="small" wrap>
+                {statusTag}
+                {updateSubContractButton}
+              </Space>
+            ) : (
+              statusTag
             );
 
           case IndicatorApprovalStatus.Rejected:
-            return (
-              <StatusTag color={IndicatorApprovalStatusColors[status]}>
-                {IndicatorApprovalStatusLabels[status]}
-              </StatusTag>
+            return updateSubContractButton ? (
+              <Space size="small" wrap>
+                {statusTag}
+                {updateSubContractButton}
+              </Space>
+            ) : (
+              statusTag
             );
 
           // CustomerCancelled đã xử lý ở đầu function
 
           default:
-            return null;
+            return updateSubContractButton ? (
+              <Space size="small" wrap>
+                {statusTag}
+                {updateSubContractButton}
+              </Space>
+            ) : (
+              statusTag
+            );
         }
       },
     },
@@ -1173,6 +1268,75 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             <Input.TextArea
               rows={3}
               placeholder="Nhập lý do từ chối kết quả..."
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="Cập nhật phương pháp"
+        className="subcontract-method-modal"
+        open={subContractModal.visible}
+        onOk={handleSubmitSubContractMethod}
+        onCancel={() => {
+          setSubContractModal({ visible: false });
+          subContractForm.resetFields();
+        }}
+        okText="Lưu"
+        cancelText="Hủy"
+        width={560}
+        centered
+        getContainer={false}
+        confirmLoading={subContractSubmitting}
+        destroyOnHidden
+      >
+        <Form form={subContractForm} layout="vertical">
+          <Form.Item label="Tên chỉ tiêu">
+            <Input
+              value={subContractModal.indicator?.indicatorName || "-"}
+              readOnly
+              disabled
+            />
+          </Form.Item>
+          <Form.Item
+            name="subContractMethodName"
+            label="Tên phương pháp"
+            rules={[
+              { required: true, message: "Vui lòng nhập tên phương pháp" },
+              { whitespace: true, message: "Vui lòng nhập tên phương pháp" },
+            ]}
+          >
+            <Input placeholder="Nhập tên phương pháp" maxLength={500} />
+          </Form.Item>
+          <Form.Item
+            name="subContractNumber"
+            label="Số HĐ phụ"
+            rules={[
+              { required: true, message: "Vui lòng nhập số HĐ phụ" },
+              { whitespace: true, message: "Vui lòng nhập số HĐ phụ" },
+            ]}
+          >
+            <Input placeholder="Nhập số hợp đồng phụ" maxLength={200} />
+          </Form.Item>
+          <Form.Item name="subContractCost" label="Chi phí">
+            <InputNumber<number>
+              className="subcontract-cost-input"
+              style={{ width: "100%" }}
+              min={0}
+              precision={0}
+              controls={false}
+              formatter={(value) =>
+                `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+              }
+              parser={(value) => {
+                const parsed = parseInt(
+                  value?.replace(/[^\d]/g, "") || "0",
+                  10,
+                );
+                return Math.max(0, parsed);
+              }}
+              placeholder="Nhập chi phí (không bắt buộc)"
+              addonAfter="đ"
             />
           </Form.Item>
         </Form>

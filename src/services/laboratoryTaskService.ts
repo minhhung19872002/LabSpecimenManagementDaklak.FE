@@ -10,6 +10,7 @@ import {
   LaboratoryTaskSupporterDto,
   AssignIndicatorInput,
   UpdateIndicatorResultInput,
+  UpdateSubContractMethodInput,
   ApproveIndicatorInput,
   ManageSupportersInput,
   BulkApproveIndicatorsInput,
@@ -413,6 +414,20 @@ export const laboratoryTaskService = {
       `${BASE_URL}/indicators/${indicatorId}/method`,
       JSON.stringify(methodId),
       { headers: { 'Content-Type': 'application/json' } }
+    );
+    return response.data;
+  },
+
+  /**
+   * Cập nhật thông tin phương pháp phụ cho chỉ tiêu có phương pháp gốc là "-"
+   */
+  updateSubContractMethod: async (
+    indicatorId: string,
+    input: UpdateSubContractMethodInput
+  ): Promise<LaboratoryTaskIndicatorDto> => {
+    const response = await api.put<LaboratoryTaskIndicatorDto>(
+      `${BASE_URL}/indicators/${indicatorId}/subcontract-method`,
+      input
     );
     return response.data;
   },

@@ -112,6 +112,10 @@ export interface LaboratoryTaskIndicatorDto {
   methodId?: string;
   methodName?: string;
   methodFormattedName?: string;  // Tên phương pháp có định dạng HTML
+  isSubContractMethod?: boolean; // Chỉ tiêu thuộc luồng cập nhật PP phụ (PP gốc là '-')
+  subContractMethodName?: string;
+  subContractNumber?: string;
+  subContractCost?: number;
   technicianId?: string;
   technicianName?: string;
   assignedDate?: string;  // Ngày giao việc cho KTV
@@ -289,6 +293,12 @@ export interface AssignIndicatorInput {
 export interface UpdateIndicatorResultInput {
   result: string;
   unit?: string;
+}
+
+export interface UpdateSubContractMethodInput {
+  subContractMethodName: string;
+  subContractNumber: string;
+  subContractCost?: number;
 }
 
 // Approve indicator DTO

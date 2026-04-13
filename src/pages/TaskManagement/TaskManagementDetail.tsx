@@ -50,6 +50,7 @@ import {
   SampleStatusLabels,
   SampleStatusColors,
   AssignIndicatorInput,
+  UpdateSubContractMethodInput,
 } from "../../types/laboratoryTask";
 import { TestRequestStatus } from "../../types/testRequest";
 import {
@@ -111,9 +112,6 @@ const TaskManagementDetail: React.FC = () => {
     [],
   );
   const [methods, setMethods] = useState<MethodLookupDto[]>([]);
-  const [methodsByIndicator, setMethodsByIndicator] = useState<
-    Record<string, MethodLookupDto[]>
-  >({});
   const [technicians, setTechnicians] = useState<UserLookupDto[]>([]);
   const [actionLoading, setActionLoading] = useState(false);
   const [savingMethodIndicatorIds, setSavingMethodIndicatorIds] = useState<
@@ -259,38 +257,6 @@ const TaskManagementDetail: React.FC = () => {
   void _canManageSupporters;
 
   // Load task data
-  const loadMethodsForIndicators = useCallback(
-    async (indicators?: LaboratoryTaskIndicatorDto[]) => {
-      const indicatorIds = Array.from(
-        new Set((indicators || []).map((i) => i.indicatorId).filter(Boolean)),
-      );
-
-      if (indicatorIds.length === 0) {
-        setMethodsByIndicator({});
-        return;
-      }
-
-      const entries = await Promise.all(
-        indicatorIds.map(async (indicatorId) => {
-          try {
-            const list =
-              await laboratoryTaskService.getMethodsByIndicator(indicatorId);
-            return [indicatorId, list || []] as const;
-          } catch (error) {
-            console.error(
-              `Failed to load methods for indicator ${indicatorId}:`,
-              error,
-            );
-            return [indicatorId, []] as const;
-          }
-        }),
-      );
-
-      setMethodsByIndicator(Object.fromEntries(entries));
-    },
-    [],
-  );
-
   const loadTask = useCallback(async () => {
     if (!id) return;
 
@@ -298,9 +264,6 @@ const TaskManagementDetail: React.FC = () => {
     try {
       const data = await laboratoryTaskService.get(id);
       setTask(data);
-
-      // Load method lookup by indicator (for filtered dropdown in Sample tab)
-      await loadMethodsForIndicators(data.indicators);
 
       // Load lookups - API returns array directly (not wrapped in { items: [] })
       if (data.laboratoryId) {
@@ -324,7 +287,7 @@ const TaskManagementDetail: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [id, navigate, loadMethodsForIndicators]);
+  }, [id, navigate]);
 
   // Reload full data from server (preserving UI states like selection, activeKeys)
   const reloadData = useCallback(async () => {
@@ -332,12 +295,11 @@ const TaskManagementDetail: React.FC = () => {
     try {
       const result = await laboratoryTaskService.get(id);
       setTask(result);
-      await loadMethodsForIndicators(result.indicators);
       // Note: selectedIndicators, activeKeys, indicatorChanges are NOT reset
     } catch (error) {
       console.error("Failed to reload data:", error);
     }
-  }, [id, loadMethodsForIndicators]);
+  }, [id]);
 
   useEffect(() => {
     loadTask();
@@ -557,6 +519,11 @@ const TaskManagementDetail: React.FC = () => {
     const indicator = task?.indicators?.find((ind) => ind.id === indicatorId);
     if (!indicator) return;
 
+    const selectedMethodName = methods
+      .find((m) => m.id === methodId)
+      ?.name?.trim();
+    const keepSubContractButton = selectedMethodName === "-";
+
     const affectedIndicatorIds = new Set<string>([indicatorId]);
 
     if (!indicator.parentIndicatorId) {
@@ -590,7 +557,14 @@ const TaskManagementDetail: React.FC = () => {
           const existing = updated[id];
           if (!existing) return;
 
-          const { methodId: _removed, ...rest } = existing;
+          const {
+            methodId: _removed,
+            isSubContractMethod: _removedSubContractFlag,
+            subContractMethodName: _removedSubContractMethodName,
+            subContractNumber: _removedSubContractNumber,
+            subContractCost: _removedSubContractCost,
+            ...rest
+          } = existing;
           if (Object.keys(rest).length === 0) {
             delete updated[id];
           } else {
@@ -648,8 +622,22 @@ const TaskManagementDetail: React.FC = () => {
         ),
       );
 
+      const normalizedUpdatedIndicators = updatedIndicators.map((ind) => ({
+        ...ind,
+        isSubContractMethod: keepSubContractButton,
+        subContractMethodName: keepSubContractButton
+          ? ind.subContractMethodName
+          : undefined,
+        subContractNumber: keepSubContractButton
+          ? ind.subContractNumber
+          : undefined,
+        subContractCost: keepSubContractButton
+          ? ind.subContractCost
+          : undefined,
+      }));
+
       const updatedById = new Map(
-        updatedIndicators.map((ind) => [ind.id, ind]),
+        normalizedUpdatedIndicators.map((ind) => [ind.id, ind]),
       );
       setTask((prev) => {
         if (!prev?.indicators) return prev;
@@ -679,6 +667,65 @@ const TaskManagementDetail: React.FC = () => {
       setSavingMethodIndicatorIds((prev) =>
         prev.filter((id) => !affectedIndicatorIds.has(id)),
       );
+    }
+  };
+
+  const handleUpdateSubContractMethod = async (
+    indicatorId: string,
+    input: UpdateSubContractMethodInput,
+  ) => {
+    try {
+      const updated = await laboratoryTaskService.updateSubContractMethod(
+        indicatorId,
+        input,
+      );
+
+      updateIndicatorsOptimistically([indicatorId], {
+        methodName: updated.methodName,
+        methodFormattedName: updated.methodFormattedName,
+        isSubContractMethod: updated.isSubContractMethod,
+        subContractMethodName: updated.subContractMethodName,
+        subContractNumber: updated.subContractNumber,
+        subContractCost: updated.subContractCost,
+      });
+
+      setIndicatorChanges((prev) => {
+        const updatedChanges = { ...prev };
+        const existing = updatedChanges[indicatorId];
+        if (!existing) {
+          return updatedChanges;
+        }
+
+        const {
+          methodName: _methodName,
+          methodFormattedName: _methodFormattedName,
+          isSubContractMethod: _isSubContractMethod,
+          subContractMethodName: _subContractMethodName,
+          subContractNumber: _subContractNumber,
+          subContractCost: _subContractCost,
+          ...rest
+        } = existing;
+
+        if (Object.keys(rest).length === 0) {
+          delete updatedChanges[indicatorId];
+        } else {
+          updatedChanges[indicatorId] = rest;
+        }
+
+        return updatedChanges;
+      });
+
+      message.open({
+        type: "success",
+        content: "Đã cập nhật phương pháp",
+        duration: 1.2,
+        key: "task-subcontract-method-success",
+      });
+    } catch (error: any) {
+      message.error(
+        getApiErrorMessage(error, "Không thể cập nhật phương pháp"),
+      );
+      throw error;
     }
   };
 
@@ -1837,8 +1884,6 @@ const TaskManagementDetail: React.FC = () => {
           <IndicatorTable
             indicators={sample.indicators}
             methods={methods}
-            methodsByIndicator={methodsByIndicator}
-            savingMethodIndicatorIds={savingMethodIndicatorIds}
             technicians={technicians}
             isAssigned={sample.sampleStatus !== "notStarted"}
             canEdit={canEditTask}
@@ -1846,11 +1891,13 @@ const TaskManagementDetail: React.FC = () => {
             sampleStatus={sample.sampleStatus}
             sampleId={sample.sampleId}
             onMethodChange={handleMethodChange}
+            onUpdateSubContractMethod={handleUpdateSubContractMethod}
             onTechnicianChange={handleTechnicianChange}
             onApprove={handleApprove}
             onUpdateNote={handleUpdateNote}
             onOpenNoteModal={handleOpenNoteModal}
             onUnitChange={handleUnitChange}
+            savingMethodIndicatorIds={savingMethodIndicatorIds}
             loading={actionLoading}
             showCheckbox={true}
             selectedIndicatorIds={selectedIndicators[sample.sampleId] || []}
