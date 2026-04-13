@@ -14,12 +14,24 @@ import {
   TestingStatusLabels,
   TestingStatusColors,
 } from "../../../types/testing";
+import { TestRequestStatus } from "../../../types/testRequest";
 import { formatDate } from "../../../utils/formatters";
 import StatusTag from "../../../components/common/StatusTag";
 
 const { Text } = Typography;
 
-const getStatusTag = (status: TestingStatus) => {
+const getStatusTag = (
+  status: TestingStatus,
+  testRequestStatus?: TestRequestStatus,
+) => {
+  if (testRequestStatus === TestRequestStatus.Cancelled) {
+    return (
+      <StatusTag color="error" icon={<CloseCircleOutlined />}>
+        Hủy bỏ yêu cầu
+      </StatusTag>
+    );
+  }
+
   const label = TestingStatusLabels[status];
   const color = TestingStatusColors[status];
 
@@ -111,6 +123,7 @@ export const getTestingColumns = (): ColumnsType<TestingListDto> => [
     dataIndex: "testingStatus",
     key: "testingStatus",
     width: 150,
-    render: (status: TestingStatus) => getStatusTag(status),
+    render: (status: TestingStatus, record: TestingListDto) =>
+      getStatusTag(status, record.testRequestStatus),
   },
 ];

@@ -16,6 +16,7 @@ import {
   LaboratoryTaskStatusLabels,
   LaboratoryTaskStatusColors,
 } from "../../../types/laboratoryTask";
+import { TestRequestStatus } from "../../../types/testRequest";
 import { formatDate } from "../../../utils/formatters";
 import StatusTag from "../../../components/common/StatusTag";
 
@@ -27,7 +28,18 @@ interface GetColumnsOptions {
   canDeletePermission?: boolean;
 }
 
-const getStatusTag = (status: LaboratoryTaskStatus) => {
+const getStatusTag = (
+  status: LaboratoryTaskStatus,
+  testRequestStatus?: TestRequestStatus,
+) => {
+  if (testRequestStatus === TestRequestStatus.Cancelled) {
+    return (
+      <StatusTag color="error" icon={<CloseCircleOutlined />}>
+        Hủy bỏ yêu cầu
+      </StatusTag>
+    );
+  }
+
   const label = LaboratoryTaskStatusLabels[status];
   const color = LaboratoryTaskStatusColors[status];
 
@@ -155,7 +167,8 @@ export const getTaskManagementColumns = (
     dataIndex: "status",
     key: "status",
     width: 180,
-    render: (status: LaboratoryTaskStatus) => getStatusTag(status),
+    render: (status: LaboratoryTaskStatus, record: LaboratoryTaskDto) =>
+      getStatusTag(status, record.testRequestStatus),
   },
   // {
   //   title: "Thao tác",

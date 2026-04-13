@@ -10,9 +10,18 @@ interface TestingDetailHeaderProps {
   detail: TestingDetailDto;
 }
 
-const TestingDetailHeader: React.FC<TestingDetailHeaderProps> = ({ detail }) => {
+const TestingDetailHeader: React.FC<TestingDetailHeaderProps> = ({
+  detail,
+}) => {
   return (
-    <Card className="testing-detail-header" style={{ marginBottom: 16, background: "#FAFAFA", borderColor: "#D9D9D9" }}>
+    <Card
+      className="testing-detail-header"
+      style={{
+        marginBottom: 16,
+        background: "#FAFAFA",
+        borderColor: "#D9D9D9",
+      }}
+    >
       <Row justify="space-between" align="middle">
         <Col>
           <Space direction="vertical" size={8}>

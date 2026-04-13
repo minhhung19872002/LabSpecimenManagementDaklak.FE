@@ -90,6 +90,7 @@ export interface TestingListDto {
   isUrgent: boolean;
   laboratoryName?: string;
   customerName?: string;
+  testRequestStatus?: TestRequestStatus;
 }
 
 // Get Testing List Input
