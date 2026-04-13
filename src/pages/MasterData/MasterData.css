@@ -92,3 +92,21 @@
 .master-data-page .ant-tabs-content-holder .ant-tabs-tabpane {
   padding: 0 !important;
 }
+
+/* Empty state when user has no tab-level permissions */
+.master-data-empty-state {
+  min-height: 420px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.master-data-empty-state .ant-empty {
+  margin: 0;
+  text-align: center;
+}
+
+.master-data-empty-state .ant-empty-image {
+  margin-bottom: 20px;
+}

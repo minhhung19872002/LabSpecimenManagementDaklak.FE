@@ -17,8 +17,8 @@ import {
 } from "../types";
 import { NO_PAGINATION_CATEGORIES, DEFAULT_PAGE_SIZE } from "../constants";
 
-export const useMasterDataState = () => {
-  const [activeCategory, setActiveCategory] = useState("departments");
+export const useMasterDataState = (initialCategory = "departments") => {
+  const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [data, setData] = useState<Record<string, MasterDataItem[]>>({
     departments: [],
     laboratories: [],
@@ -175,17 +175,15 @@ export const useMasterDataState = () => {
 
   // Handle table pagination change
   const handleTableChange = (page: number, pageSize: number) => {
+    if (!activeCategory) {
+      return;
+    }
     fetchCategoryData(activeCategory, true, page, pageSize);
   };
 
   // Load statistics on mount
   useEffect(() => {
     fetchStatistics();
-  }, []);
-
-  // Load data for the initial active category
-  useEffect(() => {
-    fetchCategoryData(activeCategory);
   }, []);
 
   // Load users for Quản lý kỹ thuật dropdown
@@ -220,6 +218,10 @@ export const useMasterDataState = () => {
 
   // Load data when switching tabs (lazy load)
   useEffect(() => {
+    if (!activeCategory) {
+      return;
+    }
+
     const isPaginated = !NO_PAGINATION_CATEGORIES.includes(activeCategory);
     // For paginated categories, load if no data; for non-paginated, check loadedCategories
     if (isPaginated) {

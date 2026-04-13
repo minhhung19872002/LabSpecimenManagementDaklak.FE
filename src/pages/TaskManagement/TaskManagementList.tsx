@@ -17,7 +17,10 @@ import Icon, {
   ReloadOutlined,
   TeamOutlined,
 } from "../../components/common/Icon";
-import { LaboratoryTaskStatus, QLKTDisplayStatus } from "../../types/laboratoryTask";
+import {
+  LaboratoryTaskStatus,
+  QLKTDisplayStatus,
+} from "../../types/laboratoryTask";
 import { TestRequestStatus } from "../../types/testRequest";
 import { SampleAssignmentLogStatisticsDto } from "../../types/qualityManagement";
 import { laboratoryTaskService } from "../../services/laboratoryTaskService";
@@ -71,7 +74,13 @@ const TaskManagementList: React.FC = () => {
 
   // SAL statistics & display status filter
   const [salStats, setSalStats] = useState<SampleAssignmentLogStatisticsDto>({
-    total: 0, underReview: 0, toDo: 0, testing: 0, waitingApproval: 0, resultRejected: 0, completed: 0,
+    total: 0,
+    underReview: 0,
+    toDo: 0,
+    testing: 0,
+    waitingApproval: 0,
+    resultRejected: 0,
+    completed: 0,
   });
   const [salDisplayStatusFilter, setSalDisplayStatusFilter] = useState<
     QLKTDisplayStatus | undefined
@@ -79,7 +88,8 @@ const TaskManagementList: React.FC = () => {
 
   const loadSalStats = useCallback(async () => {
     try {
-      const result = await laboratoryTaskService.getSampleAssignmentLogStatistics();
+      const result =
+        await laboratoryTaskService.getSampleAssignmentLogStatistics();
       setSalStats(result);
     } catch (error) {
       console.error("Failed to load SAL statistics:", error);
@@ -94,7 +104,7 @@ const TaskManagementList: React.FC = () => {
 
   const handleSalDisplayStatusFilterChange = useCallback((value: string) => {
     setSalDisplayStatusFilter(
-      value === "all" ? undefined : (Number(value) as QLKTDisplayStatus)
+      value === "all" ? undefined : (Number(value) as QLKTDisplayStatus),
     );
   }, []);
 
@@ -317,7 +327,10 @@ const TaskManagementList: React.FC = () => {
 
         {/* Content based on selected tab */}
         {isShowingSampleAssignmentLog ? (
-          <LabSampleAssignmentLogTab displayStatusFilter={salDisplayStatusFilter} onReloadRef={salReloadRef} />
+          <LabSampleAssignmentLogTab
+            displayStatusFilter={salDisplayStatusFilter}
+            onReloadRef={salReloadRef}
+          />
         ) : (
           <>
             {/* Search & Filter */}

@@ -141,6 +141,12 @@ const UserPermissionsTab: React.FC<UserPermissionsTabProps> = ({
     "SampleConditions",
   ];
 
+  const nestedMasterDataGroupNames = [
+    ...deprecatedMasterDataGroupNames,
+    "MasterData",
+    "MasterDataDetail",
+  ];
+
   // Check if using new unified MasterData permission
   const hasUnifiedMasterData = (permissionGroups || []).some(
     (g) => g.name === "MasterData",
@@ -195,7 +201,7 @@ const UserPermissionsTab: React.FC<UserPermissionsTabProps> = ({
         return;
       }
 
-      if (deprecatedMasterDataGroupNames.includes(group.name)) {
+      if (nestedMasterDataGroupNames.includes(group.name)) {
         masterData.push(group);
       } else {
         others.push(group);
@@ -354,7 +360,9 @@ const UserPermissionsTab: React.FC<UserPermissionsTabProps> = ({
                     }}
                   >
                     <Text strong style={{ fontSize: 15 }}>
-                      {group.displayName}
+                      {group.name === "MasterData"
+                        ? "Quyền chung"
+                        : group.displayName}
                     </Text>
                     <Badge
                       count={`${selected}/${total}`}
