@@ -433,6 +433,8 @@ export interface IndicatorFilterDto extends PagedAndSortedResultRequestDto {
   search?: string;
   indicatorGroupId?: string;
   isActive?: boolean;
+  specimenTypeIds?: string[];
+  testMethodIds?: string[];
 }
 
 // MasterData Statistics
@@ -927,6 +929,8 @@ export const indicatorService = {
     if (params.search) apiParams.Search = params.search;
     if (params.indicatorGroupId) apiParams.IndicatorGroupId = params.indicatorGroupId;
     if (params.isActive !== undefined) apiParams.IsActive = params.isActive;
+    if (params.specimenTypeIds?.length) apiParams.SpecimenTypeIds = params.specimenTypeIds;
+    if (params.testMethodIds?.length) apiParams.TestMethodIds = params.testMethodIds;
     const response = await api.get<PagedResultDto<IndicatorDto>>(INDICATOR_URL, { params: apiParams });
     return response.data || { items: [], totalCount: 0 };
   },

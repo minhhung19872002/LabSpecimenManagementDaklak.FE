@@ -30,17 +30,27 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
   const {
     indicators,
     loading,
-    searchText: _searchText,
+    searchText,
     expandedRowKeys,
     selectedRowKeys,
     batchLoading,
     groupOptions,
     laboratoryOptions,
     groupedData,
-    setSearchText: _setSearchText,
+    totalCount,
+    currentPage,
+    pageSize,
+    filterSpecimenTypeIds,
+    filterTestMethodIds,
+    specimenTypeFilterOptions,
+    testMethodFilterOptions,
+    setSearchText,
     setExpandedRowKeys,
     setSelectedRowKeys,
     setBatchLoading,
+    setFilterSpecimenTypeIds,
+    setFilterTestMethodIds,
+    handlePageChange,
     fetchData,
   } = useIndicatorsData();
 
@@ -197,6 +207,18 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
         onEditMethod={handleOpenEditMethod}
         onDeleteMethod={handleDeleteMethod}
         onToggleMethodActive={handleToggleMethodActive}
+        searchText={searchText}
+        filterSpecimenTypeIds={filterSpecimenTypeIds}
+        filterTestMethodIds={filterTestMethodIds}
+        specimenTypeOptions={specimenTypeFilterOptions}
+        testMethodOptions={testMethodFilterOptions}
+        onSearchChange={setSearchText}
+        onFilterSpecimenTypeChange={setFilterSpecimenTypeIds}
+        onFilterTestMethodChange={setFilterTestMethodIds}
+        totalCount={totalCount}
+        currentPage={currentPage}
+        pageSize={pageSize}
+        onPageChange={handlePageChange}
       />
 
       {/* Group Modal */}

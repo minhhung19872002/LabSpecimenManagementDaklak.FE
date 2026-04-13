@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
-import { Table, Button, Space, Checkbox, Spin, Tag, Typography, Tooltip, Popconfirm, Empty } from "antd";
+import React, { useState, useEffect, useCallback, useMemo, forwardRef, useImperativeHandle } from "react";
+import { Table, Button, Space, Checkbox, Spin, Tag, Typography, Tooltip, Popconfirm, Empty, Input, Select, Row, Col } from "antd";
 import {
   DeleteOutlined,
   StopOutlined,
@@ -7,6 +7,7 @@ import {
   CloseOutlined,
   EditOutlined,
   PlusOutlined,
+  SearchOutlined,
 } from "../../../../components/common/Icon";
 import { IndicatorName } from "../../../../components/common";
 import type { ColumnsType } from "antd/es/table";
@@ -54,6 +55,20 @@ interface IndicatorsTableProps {
   ) => void;
   onDeleteMethod?: (record: IndicatorMethodDto, indicatorId: string) => void;
   onToggleMethodActive?: (record: IndicatorMethodDto, indicatorId: string) => void;
+  // Search & Filter
+  searchText?: string;
+  filterSpecimenTypeIds?: string[];
+  filterTestMethodIds?: string[];
+  specimenTypeOptions?: { value: string; label: string }[];
+  testMethodOptions?: { value: string; label: string }[];
+  onSearchChange?: (value: string) => void;
+  onFilterSpecimenTypeChange?: (values: string[]) => void;
+  onFilterTestMethodChange?: (values: string[]) => void;
+  // Pagination
+  totalCount?: number;
+  currentPage?: number;
+  pageSize?: number;
+  onPageChange?: (page: number, pageSize: number) => void;
 }
 
 // Build method columns with action handlers
@@ -173,6 +188,8 @@ const IndicatorMethodsTable: React.FC<{
   indicatorFormattedName?: string;
   methodsMap: Map<string, IndicatorMethodDto[]>;
   methodsLoaded: boolean;
+  filterSpecimenTypeIds?: string[];
+  filterTestMethodIds?: string[];
   onAddMethod?: (
     indicatorId: string,
     indicatorName: string,
@@ -188,12 +205,27 @@ const IndicatorMethodsTable: React.FC<{
   indicatorFormattedName,
   methodsMap,
   methodsLoaded,
+  filterSpecimenTypeIds,
+  filterTestMethodIds,
   onAddMethod,
   onEditMethod,
   onDeleteMethod,
   onToggleActive,
 }) => {
-  const methods = methodsMap.get(indicatorId);
+  const allMethods = methodsMap.get(indicatorId);
+
+  // Filter methods by active filters
+  const methods = useMemo(() => {
+    if (!allMethods) return undefined;
+    let result = allMethods;
+    if (filterSpecimenTypeIds?.length) {
+      result = result.filter((m) => m.specimenTypeId && filterSpecimenTypeIds.includes(m.specimenTypeId));
+    }
+    if (filterTestMethodIds?.length) {
+      result = result.filter((m) => filterTestMethodIds.includes(m.testMethodId));
+    }
+    return result;
+  }, [allMethods, filterSpecimenTypeIds, filterTestMethodIds]);
   const canEdit = authService.hasPermission(PERMISSIONS.MasterData.Edit);
   const columns = getMethodColumns(indicatorId, onEditMethod, onDeleteMethod, onToggleActive);
 
@@ -247,7 +279,7 @@ const IndicatorMethodsTable: React.FC<{
               indicatorId,
               indicatorName,
               indicatorFormattedName,
-              methods
+              allMethods || []
             )
           }
         >
@@ -278,6 +310,18 @@ const IndicatorsTable = forwardRef<IndicatorsTableRef, IndicatorsTableProps>(
       onEditMethod,
       onDeleteMethod,
       onToggleMethodActive,
+      searchText,
+      filterSpecimenTypeIds,
+      filterTestMethodIds,
+      specimenTypeOptions,
+      testMethodOptions,
+      onSearchChange,
+      onFilterSpecimenTypeChange,
+      onFilterTestMethodChange,
+      totalCount,
+      currentPage,
+      pageSize: pageSizeProp,
+      onPageChange,
     },
     ref
   ) => {
@@ -330,6 +374,59 @@ const IndicatorsTable = forwardRef<IndicatorsTableRef, IndicatorsTableProps>(
     }, [expandedIndicatorKeys, methodsLoaded, fetchMethodsData]);
 
     return (
+      <>
+        {onSearchChange && (
+          <Row
+            gutter={[16, 16]}
+            style={{ marginBottom: 16, padding: "16px 16px 0" }}
+          >
+            <Col xs={24} sm={12} md={8}>
+              <Input
+                placeholder="Tìm kiếm theo tên chỉ tiêu..."
+                prefix={<SearchOutlined />}
+                value={searchText}
+                onChange={(e) => onSearchChange(e.target.value)}
+                allowClear
+              />
+            </Col>
+            <Col xs={12} sm={8} md={6}>
+              <Select
+                mode="multiple"
+                placeholder="Nền mẫu"
+                value={filterSpecimenTypeIds}
+                onChange={onFilterSpecimenTypeChange}
+                options={specimenTypeOptions}
+                allowClear
+                showSearch
+                maxTagCount={undefined}
+                filterOption={(input, option) =>
+                  ((option?.label as string) ?? "")
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+                style={{ width: "100%" }}
+              />
+            </Col>
+            <Col xs={12} sm={8} md={6}>
+              <Select
+                mode="multiple"
+                placeholder="Phương pháp"
+                value={filterTestMethodIds}
+                onChange={onFilterTestMethodChange}
+                options={testMethodOptions}
+                allowClear
+                showSearch
+                maxTagCount={undefined}
+                filterOption={(input, option) =>
+                  ((option?.label as string) ?? "")
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+                style={{ width: "100%" }}
+              />
+            </Col>
+          </Row>
+        )}
       <Spin spinning={loading}>
         <Table
           columns={groupColumns}
@@ -469,6 +566,8 @@ const IndicatorsTable = forwardRef<IndicatorsTableRef, IndicatorsTableProps>(
                             }
                             methodsMap={methodsMap}
                             methodsLoaded={methodsLoaded}
+                            filterSpecimenTypeIds={filterSpecimenTypeIds}
+                            filterTestMethodIds={filterTestMethodIds}
                             onAddMethod={onAddMethod}
                             onEditMethod={
                               onEditMethod
@@ -511,21 +610,42 @@ const IndicatorsTable = forwardRef<IndicatorsTableRef, IndicatorsTableProps>(
             onExpandedRowsChange: (keys) =>
               onExpandedRowsChange(keys as string[]),
           }}
-          pagination={{
-            pageSize: 50,
-            showSizeChanger: true,
-            pageSizeOptions: [50, 100, 150],
-            showTotal: (total, range) => (
-              <>
-                Hiển thị{" "}
-                <b>
-                  {range[0]}-{range[1]}/{total}
-                </b>
-              </>
-            ),
-          }}
+          pagination={
+            onPageChange
+              ? {
+                  current: currentPage,
+                  pageSize: pageSizeProp,
+                  total: totalCount,
+                  showSizeChanger: true,
+                  pageSizeOptions: [50, 100, 150],
+                  showTotal: (total, range) => (
+                    <>
+                      Hiển thị{" "}
+                      <b>
+                        {range[0]}-{range[1]}/{total}
+                      </b>
+                    </>
+                  ),
+                  onChange: onPageChange,
+                  onShowSizeChange: onPageChange,
+                }
+              : {
+                  pageSize: 50,
+                  showSizeChanger: true,
+                  pageSizeOptions: [50, 100, 150],
+                  showTotal: (total, range) => (
+                    <>
+                      Hiển thị{" "}
+                      <b>
+                        {range[0]}-{range[1]}/{total}
+                      </b>
+                    </>
+                  ),
+                }
+          }
         />
       </Spin>
+      </>
     );
   }
 );
