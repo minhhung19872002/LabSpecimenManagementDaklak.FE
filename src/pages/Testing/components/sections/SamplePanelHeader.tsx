@@ -80,12 +80,18 @@ const SamplePanelHeader: React.FC<SamplePanelHeaderProps> = ({
     }
   };
 
+  const sampleCodeText = sample.sampleCode || "-";
+  const sampleConditionText = sample.statusText?.trim();
+  const sampleTitle = sampleConditionText
+    ? `${sampleCodeText} - ${sampleConditionText}`
+    : sampleCodeText;
+
   return (
     <div style={{ width: "100%" }}>
       <Row justify="space-between" align="middle" wrap={false}>
         <Col flex="auto">
           <Space wrap size={8}>
-            <Text strong>{sample.sampleCode}</Text>
+            <Text strong>{sampleTitle}</Text>
             <Text type="secondary">({sample.indicators.length} chỉ tiêu)</Text>
           </Space>
         </Col>
