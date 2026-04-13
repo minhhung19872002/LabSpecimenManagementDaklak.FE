@@ -406,6 +406,18 @@ export const laboratoryTaskService = {
   },
 
   /**
+   * Cập nhật phương pháp cho chỉ tiêu
+   */
+  updateIndicatorMethod: async (indicatorId: string, methodId: string | null): Promise<LaboratoryTaskIndicatorDto> => {
+    const response = await api.put<LaboratoryTaskIndicatorDto>(
+      `${BASE_URL}/indicators/${indicatorId}/method`,
+      JSON.stringify(methodId),
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+    return response.data;
+  },
+
+  /**
    * Cập nhật đơn vị tính cho chỉ tiêu (không cập nhật ngược master data)
    */
   updateIndicatorUnit: async (indicatorId: string, unit: string | null): Promise<LaboratoryTaskIndicatorDto> => {

@@ -47,6 +47,7 @@ interface IndicatorWithPosition extends LaboratoryTaskIndicatorDto {
 interface IndicatorTableProps {
   indicators: LaboratoryTaskIndicatorDto[];
   methods: MethodLookupDto[];
+  methodsByIndicator?: Record<string, MethodLookupDto[]>;
   technicians: UserLookupDto[];
   isAssigned: boolean; // true khi đã giao việc (lưu DB thành công)
   canEdit: boolean; // true khi task status cho phép edit (NotAssignedTechnician hoặc AssignedTechnician)
@@ -55,7 +56,10 @@ interface IndicatorTableProps {
   sampleStatus?: SampleStatus; // Sample status to determine selection mode
   /** Sample ID - dùng cho NoteModal callback */
   sampleId?: string;
-  onMethodChange: (indicatorId: string, methodId: string) => void;
+  onMethodChange: (
+    indicatorId: string,
+    methodId: string | null,
+  ) => Promise<void> | void;
   onTechnicianChange: (indicatorId: string, technicianId: string) => void;
   onApprove: (
     indicatorId: string,
@@ -84,11 +88,14 @@ interface IndicatorTableProps {
   onStandardChange?: (indicatorId: string, standardId: string | null) => void;
   // Force disable tất cả input/select (khi phiếu yêu cầu bị hủy)
   forceDisableAll?: boolean;
+  // Danh sách chỉ tiêu đang lưu phương pháp xuống DB
+  savingMethodIndicatorIds?: string[];
 }
 
 const IndicatorTable: React.FC<IndicatorTableProps> = ({
   indicators,
   methods,
+  methodsByIndicator = {},
   technicians,
   isAssigned: _isAssigned,
   canEdit: _canEdit,
@@ -108,6 +115,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   standardSelections = {},
   onStandardChange,
   forceDisableAll = false,
+  savingMethodIndicatorIds = [],
 }) => {
   // Determine selection mode based on sample status
   // notStarted/assigned/pendingApproval → assignment mode (để chọn indicator giao việc)
@@ -397,31 +405,44 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       dataIndex: "methodId",
       key: "methodId",
       width: 200,
-      render: (value: string, record: LaboratoryTaskIndicatorDto) => {
-        // Phương pháp đã được chọn từ TestRequest - hiển thị dạng text, không cho sửa
-        if (record.methodName) {
-          return (
-            <Tooltip title={record.methodName}>
-              <IndicatorName
-                name={record.methodName}
-                formattedName={record.methodFormattedName}
-                style={{
-                  display: "-webkit-box",
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: "vertical",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              />
-            </Tooltip>
-          );
-        }
-        // Chưa có phương pháp - hiển thị dropdown để chọn
-        // Cho phép chỉnh sửa nếu indicator chưa được duyệt hoặc chưa bị hủy
+      render: (
+        value: string | undefined,
+        record: LaboratoryTaskIndicatorDto,
+      ) => {
+        // Luôn hiển thị dropdown phương pháp, chỉ disable theo trạng thái xử lý.
+        // Danh sách phương pháp được lọc theo từng chỉ tiêu.
         const canEditMethod =
           !forceDisableAll &&
+          !savingMethodIndicatorIds.includes(record.id) &&
           record.approvalStatus !== IndicatorApprovalStatus.Approved &&
           record.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled;
+
+        const indicatorMethodOptions =
+          methodsByIndicator[record.indicatorId]?.map((m) => ({
+            value: m.id,
+            label: m.name,
+          })) || [];
+
+        const fallbackMethodOptions = (methods || []).map((m) => ({
+          value: m.id,
+          label: m.name,
+        }));
+
+        const options =
+          indicatorMethodOptions.length > 0
+            ? indicatorMethodOptions
+            : fallbackMethodOptions;
+
+        const hasSelectedInOptions = options.some((opt) => opt.value === value);
+        const currentOption =
+          value && !hasSelectedInOptions
+            ? [
+                {
+                  value,
+                  label: record.methodName || value,
+                },
+              ]
+            : [];
 
         return (
           <Select
@@ -429,13 +450,12 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             size="small"
             value={value}
             placeholder="Chọn PP"
-            onChange={(val) => onMethodChange(record.id, val)}
-            options={(methods || []).map((m) => ({
-              value: m.id,
-              label: m.name,
-            }))}
+            onChange={(val) => onMethodChange(record.id, val ?? null)}
+            options={[...currentOption, ...options]}
             disabled={!canEditMethod}
             allowClear
+            showSearch
+            optionFilterProp="label"
           />
         );
       },
@@ -518,10 +538,11 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         if (record._isParentWithSubs) return null;
 
         const noteParts: string[] = [];
+        const masterDataNoteContents = record.masterDataNoteContents ?? [];
         if (record.freeTextNote)
           noteParts.push(stripPTags(record.freeTextNote));
-        if (record.masterDataNoteContents?.length > 0) {
-          noteParts.push(...record.masterDataNoteContents);
+        if (masterDataNoteContents.length > 0) {
+          noteParts.push(...masterDataNoteContents);
         }
         const displayNoteHtml = noteParts.join("<br/>");
         const displayNotePlain = noteParts

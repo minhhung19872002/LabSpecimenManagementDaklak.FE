@@ -111,8 +111,14 @@ const TaskManagementDetail: React.FC = () => {
     [],
   );
   const [methods, setMethods] = useState<MethodLookupDto[]>([]);
+  const [methodsByIndicator, setMethodsByIndicator] = useState<
+    Record<string, MethodLookupDto[]>
+  >({});
   const [technicians, setTechnicians] = useState<UserLookupDto[]>([]);
   const [actionLoading, setActionLoading] = useState(false);
+  const [savingMethodIndicatorIds, setSavingMethodIndicatorIds] = useState<
+    string[]
+  >([]);
 
   // Local state for indicator changes (before saving)
   const [indicatorChanges, setIndicatorChanges] = useState<
@@ -253,6 +259,38 @@ const TaskManagementDetail: React.FC = () => {
   void _canManageSupporters;
 
   // Load task data
+  const loadMethodsForIndicators = useCallback(
+    async (indicators?: LaboratoryTaskIndicatorDto[]) => {
+      const indicatorIds = Array.from(
+        new Set((indicators || []).map((i) => i.indicatorId).filter(Boolean)),
+      );
+
+      if (indicatorIds.length === 0) {
+        setMethodsByIndicator({});
+        return;
+      }
+
+      const entries = await Promise.all(
+        indicatorIds.map(async (indicatorId) => {
+          try {
+            const list =
+              await laboratoryTaskService.getMethodsByIndicator(indicatorId);
+            return [indicatorId, list || []] as const;
+          } catch (error) {
+            console.error(
+              `Failed to load methods for indicator ${indicatorId}:`,
+              error,
+            );
+            return [indicatorId, []] as const;
+          }
+        }),
+      );
+
+      setMethodsByIndicator(Object.fromEntries(entries));
+    },
+    [],
+  );
+
   const loadTask = useCallback(async () => {
     if (!id) return;
 
@@ -260,6 +298,9 @@ const TaskManagementDetail: React.FC = () => {
     try {
       const data = await laboratoryTaskService.get(id);
       setTask(data);
+
+      // Load method lookup by indicator (for filtered dropdown in Sample tab)
+      await loadMethodsForIndicators(data.indicators);
 
       // Load lookups - API returns array directly (not wrapped in { items: [] })
       if (data.laboratoryId) {
@@ -283,7 +324,7 @@ const TaskManagementDetail: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [id, navigate]);
+  }, [id, navigate, loadMethodsForIndicators]);
 
   // Reload full data from server (preserving UI states like selection, activeKeys)
   const reloadData = useCallback(async () => {
@@ -291,11 +332,12 @@ const TaskManagementDetail: React.FC = () => {
     try {
       const result = await laboratoryTaskService.get(id);
       setTask(result);
+      await loadMethodsForIndicators(result.indicators);
       // Note: selectedIndicators, activeKeys, indicatorChanges are NOT reset
     } catch (error) {
       console.error("Failed to reload data:", error);
     }
-  }, [id]);
+  }, [id, loadMethodsForIndicators]);
 
   useEffect(() => {
     loadTask();
@@ -508,40 +550,136 @@ const TaskManagementDetail: React.FC = () => {
   }, [indicatorsBySample, indicatorChanges]);
 
   // Handlers
-  const handleMethodChange = (indicatorId: string, methodId: string) => {
-    // Check if this is a parent with sub-indicators
+  const handleMethodChange = async (
+    indicatorId: string,
+    methodId: string | null,
+  ) => {
     const indicator = task?.indicators?.find((ind) => ind.id === indicatorId);
-    if (indicator && !indicator.parentIndicatorId) {
-      // Find all sub-indicators that belong to this parent
+    if (!indicator) return;
+
+    const affectedIndicatorIds = new Set<string>([indicatorId]);
+
+    if (!indicator.parentIndicatorId) {
       const subIndicators =
         task?.indicators?.filter(
           (ind) =>
             ind.parentIndicatorId === indicator.indicatorId &&
             ind.methodId === indicator.methodId,
         ) || [];
-      if (subIndicators.length > 0) {
-        // Propagate method to parent AND all sub-indicators
-        setIndicatorChanges((prev) => {
-          const updated = { ...prev };
-          // Set for parent
-          updated[indicatorId] = { ...updated[indicatorId], methodId };
-          // Set for all subs
-          subIndicators.forEach((sub) => {
-            updated[sub.id] = { ...updated[sub.id], methodId };
-          });
-          return updated;
-        });
-        return;
-      }
+
+      subIndicators.forEach((sub) => affectedIndicatorIds.add(sub.id));
     }
-    // Normal indicator (no subs) - set directly
-    setIndicatorChanges((prev) => ({
-      ...prev,
-      [indicatorId]: {
-        ...prev[indicatorId],
-        methodId,
-      },
-    }));
+
+    const idsToUpdate = Array.from(affectedIndicatorIds);
+    const nextMethodId = methodId || undefined;
+    const previousMethodById = new Map<string, string | undefined>(
+      idsToUpdate.map((id) => {
+        const localMethodId = indicatorChanges[id]?.methodId;
+        const taskMethodId = task?.indicators?.find(
+          (ind) => ind.id === id,
+        )?.methodId;
+
+        return [id, localMethodId ?? taskMethodId ?? undefined];
+      }),
+    );
+
+    const clearLocalMethodDrafts = () => {
+      setIndicatorChanges((prev) => {
+        const updated = { ...prev };
+        idsToUpdate.forEach((id) => {
+          const existing = updated[id];
+          if (!existing) return;
+
+          const { methodId: _removed, ...rest } = existing;
+          if (Object.keys(rest).length === 0) {
+            delete updated[id];
+          } else {
+            updated[id] = rest;
+          }
+        });
+        return updated;
+      });
+    };
+
+    const restoreLocalMethodDrafts = () => {
+      setIndicatorChanges((prev) => {
+        const updated = { ...prev };
+
+        idsToUpdate.forEach((id) => {
+          const previousMethodId = previousMethodById.get(id);
+
+          if (previousMethodId === undefined) {
+            const existing = updated[id];
+            if (!existing) return;
+
+            const { methodId: _removed, ...rest } = existing;
+            if (Object.keys(rest).length === 0) {
+              delete updated[id];
+            } else {
+              updated[id] = rest;
+            }
+            return;
+          }
+
+          updated[id] = { ...updated[id], methodId: previousMethodId };
+        });
+
+        return updated;
+      });
+    };
+
+    // Optimistic local update để UI phản hồi ngay
+    setIndicatorChanges((prev) => {
+      const updated = { ...prev };
+      idsToUpdate.forEach((id) => {
+        updated[id] = { ...updated[id], methodId: nextMethodId };
+      });
+      return updated;
+    });
+
+    setSavingMethodIndicatorIds((prev) =>
+      Array.from(new Set([...prev, ...idsToUpdate])),
+    );
+
+    try {
+      const updatedIndicators = await Promise.all(
+        idsToUpdate.map((id) =>
+          laboratoryTaskService.updateIndicatorMethod(id, methodId),
+        ),
+      );
+
+      const updatedById = new Map(
+        updatedIndicators.map((ind) => [ind.id, ind]),
+      );
+      setTask((prev) => {
+        if (!prev?.indicators) return prev;
+        return {
+          ...prev,
+          indicators: prev.indicators.map(
+            (ind) => updatedById.get(ind.id) ?? ind,
+          ),
+        };
+      });
+
+      clearLocalMethodDrafts();
+      message.open({
+        type: "success",
+        content: "Đã lưu phương pháp",
+        duration: 1.2,
+        key: "task-method-autosave-success",
+      });
+    } catch (error: any) {
+      console.error("Failed to update method:", error);
+      message.error(
+        getApiErrorMessage(error, "Không thể cập nhật phương pháp"),
+      );
+      // Revert về giá trị trước khi đổi (snapshot local), không phụ thuộc reload.
+      restoreLocalMethodDrafts();
+    } finally {
+      setSavingMethodIndicatorIds((prev) =>
+        prev.filter((id) => !affectedIndicatorIds.has(id)),
+      );
+    }
   };
 
   const handleTechnicianChange = (
@@ -1699,6 +1837,8 @@ const TaskManagementDetail: React.FC = () => {
           <IndicatorTable
             indicators={sample.indicators}
             methods={methods}
+            methodsByIndicator={methodsByIndicator}
+            savingMethodIndicatorIds={savingMethodIndicatorIds}
             technicians={technicians}
             isAssigned={sample.sampleStatus !== "notStarted"}
             canEdit={canEditTask}
