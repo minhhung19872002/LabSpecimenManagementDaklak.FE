@@ -125,9 +125,19 @@ const ImportIndicatorGroupModal: React.FC<ImportIndicatorGroupModalProps> = ({
       render: (text: string, record: IndicatorGroupImportPreviewItem) => (
         <Space>
           <span>{text || "-"}</span>
-          {record.isDepartmentInvalid && (
-            <Tag color="red">Không tồn tại</Tag>
-          )}
+          {record.isDepartmentInvalid && <Tag color="red">Không tồn tại</Tag>}
+        </Space>
+      ),
+    },
+    {
+      title: "Nền mẫu",
+      dataIndex: "specimenTypeName",
+      key: "specimenTypeName",
+      width: 160,
+      render: (text: string, record: IndicatorGroupImportPreviewItem) => (
+        <Space>
+          <span>{text || "-"}</span>
+          {record.isSpecimenTypeInvalid && <Tag color="red">Không tồn tại</Tag>}
         </Space>
       ),
     },
@@ -135,11 +145,15 @@ const ImportIndicatorGroupModal: React.FC<ImportIndicatorGroupModalProps> = ({
       title: "Tên chỉ tiêu",
       dataIndex: "indicatorName",
       key: "indicatorName",
-      width: 200,
+      width: 180,
       render: (text: string, record: IndicatorGroupImportPreviewItem) => (
         <Space>
           {record.formattedIndicatorName ? (
-            <span dangerouslySetInnerHTML={{ __html: record.formattedIndicatorName }} />
+            <span
+              dangerouslySetInnerHTML={{
+                __html: record.formattedIndicatorName,
+              }}
+            />
           ) : (
             <span>{text}</span>
           )}
@@ -155,7 +169,7 @@ const ImportIndicatorGroupModal: React.FC<ImportIndicatorGroupModalProps> = ({
       title: "Chỉ tiêu phụ",
       dataIndex: "subIndicatorName",
       key: "subIndicatorName",
-      width: 200,
+      width: 180,
       render: (text: string, record: IndicatorGroupImportPreviewItem) => {
         if (!record.hasSubIndicator || !text) {
           return <span style={{ color: "#999" }}>-</span>;
@@ -163,7 +177,11 @@ const ImportIndicatorGroupModal: React.FC<ImportIndicatorGroupModalProps> = ({
         return (
           <Space>
             {record.formattedSubIndicatorName ? (
-              <span dangerouslySetInnerHTML={{ __html: record.formattedSubIndicatorName }} />
+              <span
+                dangerouslySetInnerHTML={{
+                  __html: record.formattedSubIndicatorName,
+                }}
+              />
             ) : (
               <span>{text}</span>
             )}
@@ -175,6 +193,41 @@ const ImportIndicatorGroupModal: React.FC<ImportIndicatorGroupModalProps> = ({
           </Space>
         );
       },
+    },
+    {
+      title: "Tên phương pháp",
+      dataIndex: "testMethodName",
+      key: "testMethodName",
+      width: 200,
+      render: (text: string, record: IndicatorGroupImportPreviewItem) => (
+        <Space>
+          <span>{text || "-"}</span>
+          {record.isTestMethodInvalid && <Tag color="red">Không tồn tại</Tag>}
+          {!record.isTestMethodInvalid &&
+            !record.isSpecimenTypeInvalid &&
+            (record.isNewMethodLink ? (
+              <Tag color="green">Liên kết mới</Tag>
+            ) : (
+              <Tag color="blue">Liên kết cập nhật</Tag>
+            ))}
+        </Space>
+      ),
+    },
+    {
+      title: "Đơn vị tính",
+      dataIndex: "unit",
+      key: "unit",
+      width: 120,
+      render: (text?: string) => <span>{text || "-"}</span>,
+    },
+    {
+      title: "Đơn giá",
+      dataIndex: "unitPrice",
+      key: "unitPrice",
+      width: 120,
+      render: (value: number) => (
+        <span>{Number(value || 0).toLocaleString("vi-VN")}</span>
+      ),
     },
     {
       title: "Trạng thái",
@@ -266,10 +319,7 @@ const ImportIndicatorGroupModal: React.FC<ImportIndicatorGroupModalProps> = ({
           <Card size="small">
             <Row gutter={[16, 8]}>
               <Col span={4}>
-                <Statistic
-                  title="Tổng dòng"
-                  value={previewData.totalRows}
-                />
+                <Statistic title="Tổng dòng" value={previewData.totalRows} />
               </Col>
               <Col span={4}>
                 <Statistic
@@ -303,11 +353,13 @@ const ImportIndicatorGroupModal: React.FC<ImportIndicatorGroupModalProps> = ({
                 <Statistic
                   title="Lỗi"
                   value={previewData.invalidRows}
-                  valueStyle={{ color: previewData.invalidRows > 0 ? "#ff4d4f" : undefined }}
+                  valueStyle={{
+                    color: previewData.invalidRows > 0 ? "#ff4d4f" : undefined,
+                  }}
                 />
               </Col>
-              {/* Sub-indicators row */}
-              {(previewData.newSubIndicators > 0 || previewData.updateSubIndicators > 0) && (
+              {(previewData.newSubIndicators > 0 ||
+                previewData.updateSubIndicators > 0) && (
                 <>
                   <Col span={4} offset={8}>
                     <Statistic
@@ -321,6 +373,25 @@ const ImportIndicatorGroupModal: React.FC<ImportIndicatorGroupModalProps> = ({
                       title="Chỉ tiêu phụ cập nhật"
                       value={previewData.updateSubIndicators}
                       valueStyle={{ color: "#fa8c16" }}
+                    />
+                  </Col>
+                </>
+              )}
+              {(previewData.newMethodLinks > 0 ||
+                previewData.updateMethodLinks > 0) && (
+                <>
+                  <Col span={4}>
+                    <Statistic
+                      title="LK phương pháp mới"
+                      value={previewData.newMethodLinks}
+                      valueStyle={{ color: "#52c41a" }}
+                    />
+                  </Col>
+                  <Col span={4}>
+                    <Statistic
+                      title="LK phương pháp cập nhật"
+                      value={previewData.updateMethodLinks}
+                      valueStyle={{ color: "#1890ff" }}
                     />
                   </Col>
                 </>
@@ -341,7 +412,13 @@ const ImportIndicatorGroupModal: React.FC<ImportIndicatorGroupModalProps> = ({
                         <div style={{ color: "#ff4d4f", fontWeight: 500 }}>
                           Dòng {group.rowNumber}:
                         </div>
-                        <ul style={{ marginBottom: 0, paddingLeft: 20, marginTop: 4 }}>
+                        <ul
+                          style={{
+                            marginBottom: 0,
+                            paddingLeft: 20,
+                            marginTop: 4,
+                          }}
+                        >
                           {group.messages.map((msg, msgIdx) => (
                             <li key={msgIdx} style={{ color: "#ff4d4f" }}>
                               {msg}
@@ -377,7 +454,7 @@ const ImportIndicatorGroupModal: React.FC<ImportIndicatorGroupModalProps> = ({
               }))}
               columns={columns}
               pagination={false}
-              scroll={{ x: 1000 }}
+              scroll={{ x: 1500 }}
               rowClassName={(record) =>
                 record.isValid ? "" : "ant-table-row-error"
               }
