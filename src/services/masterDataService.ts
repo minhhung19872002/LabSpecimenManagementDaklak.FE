@@ -931,7 +931,11 @@ export const indicatorService = {
     if (params.isActive !== undefined) apiParams.IsActive = params.isActive;
     if (params.specimenTypeIds?.length) apiParams.SpecimenTypeIds = params.specimenTypeIds;
     if (params.testMethodIds?.length) apiParams.TestMethodIds = params.testMethodIds;
-    const response = await api.get<PagedResultDto<IndicatorDto>>(INDICATOR_URL, { params: apiParams });
+    const response = await api.get<PagedResultDto<IndicatorDto>>(INDICATOR_URL, {
+      params: apiParams,
+      // ASP.NET model binding expects repeated keys for query array values.
+      paramsSerializer: { indexes: null },
+    });
     return response.data || { items: [], totalCount: 0 };
   },
   get: async (id: string): Promise<IndicatorDto> => {
