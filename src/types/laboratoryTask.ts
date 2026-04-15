@@ -49,7 +49,7 @@ export const LaboratoryTaskStatusLabels: Record<LaboratoryTaskStatus, string> = 
 };
 
 export const LaboratoryTaskStatusColors: Record<LaboratoryTaskStatus, string> = {
-  [LaboratoryTaskStatus.UnderEvaluation]: 'processing',
+  [LaboratoryTaskStatus.UnderEvaluation]: 'geekblue',
   [LaboratoryTaskStatus.WaitingCustomerResponse]: 'warning',
   [LaboratoryTaskStatus.PartialAccepted]: 'cyan',
   [LaboratoryTaskStatus.FullyAccepted]: 'lime',
@@ -87,9 +87,9 @@ export const IndicatorApprovalStatusColors: Record<IndicatorApprovalStatus, stri
   [IndicatorApprovalStatus.MethodChangeRequested]: 'gold',
   [IndicatorApprovalStatus.MethodChanged]: 'cyan',
   [IndicatorApprovalStatus.TestingRejected]: 'red',
-  [IndicatorApprovalStatus.AcceptedForTesting]: 'lime',
+  [IndicatorApprovalStatus.AcceptedForTesting]: 'geekblue',
   [IndicatorApprovalStatus.CannotTest]: 'orange',
-  [IndicatorApprovalStatus.SupplementaryRequested]: 'cyan'
+  [IndicatorApprovalStatus.SupplementaryRequested]: 'purple'
 };
 
 // Laboratory Task Indicator DTO (Phase 6 - Extended + Workflow Redesign)
