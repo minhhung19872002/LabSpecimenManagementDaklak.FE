@@ -378,7 +378,9 @@ const TestRequestForm: React.FC = () => {
                   isEditMode={isEditMode}
                   isFieldLocked={isFieldLocked}
                   updateSampleCodesPrefix={updateSampleCodesPrefix}
-                  validateContractNumberDebounced={validateContractNumberDebounced}
+                  validateContractNumberDebounced={
+                    validateContractNumberDebounced
+                  }
                   currentStatus={currentStatus}
                 />
               </div>
@@ -533,6 +535,7 @@ const TestRequestForm: React.FC = () => {
             sampleTypeCategories={sampleTypeCategories}
             setIndicatorSearchText={setIndicatorSearchText}
             customPrices={customPrices}
+            isRequestCompleted={currentStatus === TestRequestStatus.Completed}
             onPriceChange={(key, price) =>
               setCustomPrices((prev) => ({ ...prev, [key]: price }))
             }

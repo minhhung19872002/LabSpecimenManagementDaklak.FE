@@ -44,7 +44,12 @@ import {
   isIndicatorLocked,
 } from "../types";
 import IndicatorRow from "./IndicatorRow";
-import { isHeavyMetalComboMet, isHgIndicator, isEcoliColiformComboMet, isEcoliIndicator } from "../constants";
+import {
+  isHeavyMetalComboMet,
+  isHgIndicator,
+  isEcoliColiformComboMet,
+  isEcoliIndicator,
+} from "../constants";
 import "./IndicatorSelectionModal.css";
 
 const { Text } = Typography;
@@ -61,7 +66,7 @@ const normalizeForSort = (name: string): string => {
 
 // Sort indicators alphabetically by name with proper Unicode handling
 const sortIndicatorsAlphabetically = (
-  indicators: IndicatorDto[]
+  indicators: IndicatorDto[],
 ): IndicatorDto[] => {
   return [...indicators].sort((a, b) => {
     const nameA = normalizeForSort(a.name);
@@ -186,6 +191,7 @@ interface IndicatorSelectionModalProps {
   // Custom prices
   customPrices: Record<string, number>;
   onPriceChange: (key: string, price: number) => void;
+  isRequestCompleted?: boolean;
 }
 
 const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
@@ -232,11 +238,17 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
   setIndicatorSearchText,
   customPrices,
   onPriceChange,
+  isRequestCompleted = false,
 }) => {
   // Get effective price for a method key (custom price or master data price)
-  const getEffectivePrice = (key: IndicatorMethodKey, masterPrice: number): number => {
+  const getEffectivePrice = (
+    key: IndicatorMethodKey,
+    masterPrice: number,
+  ): number => {
     const customKey = `${currentSampleKey}_${key}`;
-    return customPrices[customKey] !== undefined ? customPrices[customKey] : masterPrice;
+    return customPrices[customKey] !== undefined
+      ? customPrices[customKey]
+      : masterPrice;
   };
 
   // Handle remove indicator method
@@ -541,15 +553,20 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     for (const key of tempSelectedIndicatorMethods) {
       const { specimenTypeId } = parseIndicatorMethodKey(key);
       const { indicator } = getIndicatorMethodInfo(key);
-      const stId = specimenTypeId || '_none';
+      const stId = specimenTypeId || "_none";
       if (!grouped[stId]) grouped[stId] = [];
       grouped[stId].push(indicator?.name);
     }
     // Check combo for each specimen type group
     const result: Record<string, boolean> = {};
     for (const [stId, names] of Object.entries(grouped)) {
-      const st = stId !== '_none' ? specimenTypes.find((s) => s.id === stId) : null;
-      result[stId] = isHeavyMetalComboMet(names, st?.sampleTypeCategoryName, st?.name);
+      const st =
+        stId !== "_none" ? specimenTypes.find((s) => s.id === stId) : null;
+      result[stId] = isHeavyMetalComboMet(
+        names,
+        st?.sampleTypeCategoryName,
+        st?.name,
+      );
     }
     return result;
   }, [tempSelectedIndicatorMethods, getIndicatorMethodInfo, specimenTypes]);
@@ -562,27 +579,37 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     for (const key of tempSelectedIndicatorMethods) {
       const { specimenTypeId } = parseIndicatorMethodKey(key);
       const { indicator } = getIndicatorMethodInfo(key);
-      const stId = specimenTypeId || '_none';
+      const stId = specimenTypeId || "_none";
       if (!grouped[stId]) grouped[stId] = [];
       grouped[stId].push(indicator?.name);
     }
     // Check combo for each specimen type group
     const result: Record<string, boolean> = {};
     for (const [stId, names] of Object.entries(grouped)) {
-      const st = stId !== '_none' ? specimenTypes.find((s) => s.id === stId) : null;
-      result[stId] = isEcoliColiformComboMet(names, st?.sampleTypeCategoryName, st?.name);
+      const st =
+        stId !== "_none" ? specimenTypes.find((s) => s.id === stId) : null;
+      result[stId] = isEcoliColiformComboMet(
+        names,
+        st?.sampleTypeCategoryName,
+        st?.name,
+      );
     }
     return result;
   }, [tempSelectedIndicatorMethods, getIndicatorMethodInfo, specimenTypes]);
 
   // Helper: check if indicator is free by any combo
-  const isIndicatorFree = (indicator: IndicatorDto | undefined, methodKey: IndicatorMethodKey) => {
+  const isIndicatorFree = (
+    indicator: IndicatorDto | undefined,
+    methodKey: IndicatorMethodKey,
+  ) => {
     // Heavy metal combo: check per specimen type
     const { specimenTypeId } = parseIndicatorMethodKey(methodKey);
-    const stId = specimenTypeId || '_none';
-    const isHgFree = comboMetBySpecimenType[stId] && isHgIndicator(indicator?.name);
+    const stId = specimenTypeId || "_none";
+    const isHgFree =
+      comboMetBySpecimenType[stId] && isHgIndicator(indicator?.name);
     // E.Coli combo: check per specimen type
-    const isEcoliFree = ecoliComboMetBySpecimenType[stId] && isEcoliIndicator(indicator?.name);
+    const isEcoliFree =
+      ecoliComboMetBySpecimenType[stId] && isEcoliIndicator(indicator?.name);
     return isHgFree || isEcoliFree;
   };
 
@@ -611,7 +638,10 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
 
     // No longer free indicators: remove custom price to revert to master price
     for (const key of prevFreeKeys) {
-      if (!currentFreeKeys.has(key) && tempSelectedIndicatorMethods.includes(key as IndicatorMethodKey)) {
+      if (
+        !currentFreeKeys.has(key) &&
+        tempSelectedIndicatorMethods.includes(key as IndicatorMethodKey)
+      ) {
         const fullKey = `${currentSampleKey}_${key}`;
         const { method } = getIndicatorMethodInfo(key as IndicatorMethodKey);
         // Revert to master price
@@ -620,7 +650,11 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     }
 
     prevComboFreeKeysRef.current = currentFreeKeys;
-  }, [comboMetBySpecimenType, ecoliComboMetBySpecimenType, tempSelectedIndicatorMethods]);
+  }, [
+    comboMetBySpecimenType,
+    ecoliComboMetBySpecimenType,
+    tempSelectedIndicatorMethods,
+  ]);
 
   // Calculate total cost from selected methods with sub-indicator pricing logic
   // Tổng tiền = sum đơn giá từ textbox (effective price), không tự check combo
@@ -991,8 +1025,13 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                 method.specimenTypeId,
               );
               // Check if this method is sent to department (locked)
-              const methodKey = createIndicatorMethodKey(ind.id, method.testMethodId, method.specimenTypeId);
-              const methodLabInfo = indicatorLaboratoryMap[`${currentSampleKey}_${methodKey}`];
+              const methodKey = createIndicatorMethodKey(
+                ind.id,
+                method.testMethodId,
+                method.specimenTypeId,
+              );
+              const methodLabInfo =
+                indicatorLaboratoryMap[`${currentSampleKey}_${methodKey}`];
               const isMethodLocked = isIndicatorLocked(methodLabInfo);
 
               const isLastMethod = methodIndex === methods.length - 1;
@@ -1002,7 +1041,8 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                   key={methodUniqueKey}
                   className={methodClassName}
                   onClick={() =>
-                    !isMethodLocked && toggleIndicatorMethod(
+                    !isMethodLocked &&
+                    toggleIndicatorMethod(
                       ind.id,
                       method.testMethodId,
                       method.specimenTypeId,
@@ -1014,7 +1054,11 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                     alignItems: "center",
                     gap: 8,
                     cursor: isMethodLocked ? "not-allowed" : "pointer",
-                    background: isSelected ? (isMethodLocked ? "#e6f7e6" : "#bae7ff") : "rgb(250, 250, 250)",
+                    background: isSelected
+                      ? isMethodLocked
+                        ? "#e6f7e6"
+                        : "#bae7ff"
+                      : "rgb(250, 250, 250)",
                     opacity: isMethodLocked ? 0.7 : 1,
                   }}
                   onMouseEnter={(e) => {
@@ -1024,7 +1068,9 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = isSelected
-                      ? (isMethodLocked ? "#e6f7e6" : "#bae7ff")
+                      ? isMethodLocked
+                        ? "#e6f7e6"
+                        : "#bae7ff"
                       : "rgb(250, 250, 250)";
                   }}
                 >
@@ -1102,7 +1148,10 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
 
     // Apply search filter (normalize Unicode to handle different compositions of Vietnamese diacritics)
     if (indicatorSearchText.trim()) {
-      const searchNorm = indicatorSearchText.trim().normalize("NFC").toLowerCase();
+      const searchNorm = indicatorSearchText
+        .trim()
+        .normalize("NFC")
+        .toLowerCase();
       activeIndicators = activeIndicators.filter((ind) => {
         const nameNorm = ind.name.normalize("NFC").toLowerCase();
         const codeNorm = ind.code?.normalize("NFC").toLowerCase();
@@ -1110,7 +1159,8 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
           return true;
         }
         // Search theo tên phương pháp
-        const methods = indicatorMethodsMap[ind.id]?.filter((m) => m.isActive) || [];
+        const methods =
+          indicatorMethodsMap[ind.id]?.filter((m) => m.isActive) || [];
         return methods.some((m) =>
           m.testMethodName?.normalize("NFC").toLowerCase().includes(searchNorm),
         );
@@ -1358,7 +1408,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                     return normalizeForSort(a.name).localeCompare(
                       normalizeForSort(b.name),
                       "vi",
-                      { sensitivity: "base" }
+                      { sensitivity: "base" },
                     );
                   });
                   return specimenTypesArray.map((stData, stIndex) => {
@@ -1454,7 +1504,8 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                         {/* Chỉ tiêu within Loại mẫu (Level 3) - sorted alphabetically */}
                         {isSpecimenTypeExpanded &&
                           (() => {
-                            const sortedIndicators = sortIndicatorsAlphabetically(stData.indicators);
+                            const sortedIndicators =
+                              sortIndicatorsAlphabetically(stData.indicators);
                             return sortedIndicators.map((ind, indIndex) =>
                               // Truyền specimenTypeId của group để chỉ hiển thị methods matching
                               // "others" group không filter theo specimenType
@@ -1831,11 +1882,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                       >
                         Ngày YC
                       </span>
-                      <span
-                        style={{ width: 32, flexShrink: 0 }}
-                      >
-                        Xóa
-                      </span>
+                      <span style={{ width: 32, flexShrink: 0 }}>Xóa</span>
                     </div>
                     {/* Table body */}
                     <div className="indicator-table-body">
@@ -1864,7 +1911,10 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                 methodFormattedName={
                                   method?.testMethodFormattedName
                                 }
-                                unitPrice={getEffectivePrice(parentKey, method?.unitPrice || 0)}
+                                unitPrice={getEffectivePrice(
+                                  parentKey,
+                                  method?.unitPrice || 0,
+                                )}
                                 hidePrice={pricingMode === "subs"}
                                 isFree={isIndicatorFree(indicator, parentKey)}
                                 isChecked={checkedIndicators.includes(
@@ -1877,10 +1927,16 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                 requestDate={
                                   selectedIndicatorDates[parentKey]?.requestDate
                                 }
+                                isRequestCompleted={isRequestCompleted}
                                 onCheckChange={toggleCheckedIndicator}
                                 onDateChange={handleIndicatorDateChange}
                                 onRemove={handleRemoveParentIndicator}
-                                onPriceChange={(id, price) => onPriceChange(`${currentSampleKey}_${id}`, price)}
+                                onPriceChange={(id, price) =>
+                                  onPriceChange(
+                                    `${currentSampleKey}_${id}`,
+                                    price,
+                                  )
+                                }
                               />
 
                               {/* Sub-indicator rows - only show name (no method, price, dates, remove button) */}
@@ -1894,10 +1950,14 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                     isInGroup={false}
                                     indicator={subInd}
                                     methodName={subMethod?.testMethodName || ""}
-                                    unitPrice={getEffectivePrice(subKey, subMethod?.unitPrice || 0)}
+                                    unitPrice={getEffectivePrice(
+                                      subKey,
+                                      subMethod?.unitPrice || 0,
+                                    )}
                                     isSubIndicator={true}
                                     isFirstSub={index === 0}
                                     isLastSub={index === unsentSubs.length - 1}
+                                    isRequestCompleted={isRequestCompleted}
                                     isChecked={false}
                                     onCheckChange={() => {}}
                                     onDateChange={() => {}}
@@ -1925,7 +1985,10 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                               methodFormattedName={
                                 method?.testMethodFormattedName
                               }
-                              unitPrice={getEffectivePrice(key, method?.unitPrice || 0)}
+                              unitPrice={getEffectivePrice(
+                                key,
+                                method?.unitPrice || 0,
+                              )}
                               isFree={isIndicatorFree(indicator, key)}
                               isChecked={checkedIndicators.includes(key)}
                               transferDate={
@@ -1934,10 +1997,16 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                               requestDate={
                                 selectedIndicatorDates[key]?.requestDate
                               }
+                              isRequestCompleted={isRequestCompleted}
                               onCheckChange={toggleCheckedIndicator}
                               onDateChange={handleIndicatorDateChange}
                               onRemove={handleRemoveIndicatorMethod}
-                              onPriceChange={(id, price) => onPriceChange(`${currentSampleKey}_${id}`, price)}
+                              onPriceChange={(id, price) =>
+                                onPriceChange(
+                                  `${currentSampleKey}_${id}`,
+                                  price,
+                                )
+                              }
                             />
                           );
                         })}
@@ -2001,7 +2070,10 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                       methodFormattedName={
                                         method?.testMethodFormattedName
                                       }
-                                      unitPrice={getEffectivePrice(key, method?.unitPrice || 0)}
+                                      unitPrice={getEffectivePrice(
+                                        key,
+                                        method?.unitPrice || 0,
+                                      )}
                                       isFree={isIndicatorFree(indicator, key)}
                                       isChecked={checkedIndicators.includes(
                                         key,
@@ -2013,13 +2085,21 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                                       requestDate={
                                         selectedIndicatorDates[key]?.requestDate
                                       }
+                                      isRequestCompleted={isRequestCompleted}
                                       approvalStatus={labInfo?.approvalStatus}
                                       isSentToQLKT={labInfo?.isSentToQLKT}
-                                      sentToDepartment={labInfo?.sentToDepartment}
+                                      sentToDepartment={
+                                        labInfo?.sentToDepartment
+                                      }
                                       onCheckChange={toggleCheckedIndicator}
                                       onDateChange={handleIndicatorDateChange}
                                       onRemove={handleRemoveIndicatorMethod}
-                                      onPriceChange={(id, price) => onPriceChange(`${currentSampleKey}_${id}`, price)}
+                                      onPriceChange={(id, price) =>
+                                        onPriceChange(
+                                          `${currentSampleKey}_${id}`,
+                                          price,
+                                        )
+                                      }
                                     />
                                   );
                                 })}
