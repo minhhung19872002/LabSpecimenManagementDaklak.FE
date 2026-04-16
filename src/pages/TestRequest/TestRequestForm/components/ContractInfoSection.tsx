@@ -9,6 +9,7 @@ interface ContractInfoSectionProps {
   isEditMode: boolean;
   isFieldLocked: (fieldName: string) => boolean;
   updateSampleCodesPrefix: (prefix: string) => void;
+  validateContractNumberDebounced: (contractNumber: string) => void;
   currentStatus?: TestRequestStatus;
 }
 
@@ -16,6 +17,7 @@ const ContractInfoSection: React.FC<ContractInfoSectionProps> = ({
   isEditMode,
   isFieldLocked,
   updateSampleCodesPrefix,
+  validateContractNumberDebounced,
   currentStatus,
 }) => {
   const form = Form.useFormInstance();
@@ -47,9 +49,18 @@ const ContractInfoSection: React.FC<ContractInfoSectionProps> = ({
             <Input
               placeholder="Số hợp đồng"
               disabled={isFieldLocked("contractNumber")}
-              onBlur={(e) =>
-                updateSampleCodesPrefix(e.target.value?.trim() || "")
-              }
+              onChange={(e) => {
+                validateContractNumberDebounced(e.target.value || "");
+              }}
+              onBlur={(e) => {
+                const normalizedContractNumber = e.target.value?.trim() || "";
+                const currentContractNumber = form.getFieldValue("contractNumber") || "";
+                if (currentContractNumber !== normalizedContractNumber) {
+                  form.setFieldValue("contractNumber", normalizedContractNumber);
+                }
+                updateSampleCodesPrefix(normalizedContractNumber);
+                validateContractNumberDebounced(normalizedContractNumber);
+              }}
             />
           </Form.Item>
         </Col>

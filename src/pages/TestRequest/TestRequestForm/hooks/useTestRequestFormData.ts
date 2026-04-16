@@ -115,6 +115,58 @@ export const useTestRequestFormData = () => {
     );
   }, []);
 
+  const validateContractNumberDebounced = useCallback((rawContractNumber: string) => {
+    const duplicateMessage = "Số hợp đồng đã tồn tại trong hệ thống";
+    const normalizedContractNumber = (rawContractNumber || "").trim();
+
+    if (contractNumberDebounceRef.current) {
+      clearTimeout(contractNumberDebounceRef.current);
+    }
+
+    // Invalidate previous in-flight validation responses.
+    const validationToken = ++contractNumberValidationRef.current;
+
+    const currentErrors = form.getFieldError("contractNumber") || [];
+    const errorsWithoutDuplicate = currentErrors.filter((error: string) => error !== duplicateMessage);
+
+    if (!normalizedContractNumber) {
+      if (errorsWithoutDuplicate.length !== currentErrors.length) {
+        form.setFields([{ name: "contractNumber", errors: errorsWithoutDuplicate }]);
+      }
+      return;
+    }
+
+    if (!navigator.onLine) {
+      return;
+    }
+
+    contractNumberDebounceRef.current = setTimeout(async () => {
+      try {
+        const exists = await testRequestService.checkContractNumberExists(
+          normalizedContractNumber,
+          isEditMode ? id : undefined,
+        );
+
+        if (validationToken !== contractNumberValidationRef.current) {
+          return;
+        }
+
+        const latestErrors = form.getFieldError("contractNumber") || [];
+        const latestErrorsWithoutDuplicate = latestErrors.filter((error: string) => error !== duplicateMessage);
+
+        if (exists) {
+          if (!latestErrors.includes(duplicateMessage)) {
+            form.setFields([{ name: "contractNumber", errors: [...latestErrorsWithoutDuplicate, duplicateMessage] }]);
+          }
+        } else if (latestErrorsWithoutDuplicate.length !== latestErrors.length) {
+          form.setFields([{ name: "contractNumber", errors: latestErrorsWithoutDuplicate }]);
+        }
+      } catch (error) {
+        console.error("Failed to validate contract number:", error);
+      }
+    }, 600);
+  }, [form, id, isEditMode]);
+
   // Current status for field locking
   const [currentStatus, setCurrentStatus] = useState<TestRequestStatus | null>(null);
 
@@ -132,6 +184,8 @@ export const useTestRequestFormData = () => {
   const [organizationSearching, setOrganizationSearching] = useState(false);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const specimenTypeDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const contractNumberDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const contractNumberValidationRef = useRef(0);
   const [laboratories, setLaboratories] = useState<LaboratoryDto[]>([]);
   const [specimenTypes, setSpecimenTypes] = useState<SpecimenTypeDto[]>([]);
   const [specimenTypesWithIndicators, setSpecimenTypesWithIndicators] = useState<SpecimenTypeWithIndicatorsDto[]>([]);
@@ -1165,6 +1219,9 @@ export const useTestRequestFormData = () => {
       if (specimenTypeDebounceRef.current) {
         clearTimeout(specimenTypeDebounceRef.current);
       }
+      if (contractNumberDebounceRef.current) {
+        clearTimeout(contractNumberDebounceRef.current);
+      }
     };
   }, []);
 
@@ -1365,6 +1422,7 @@ export const useTestRequestFormData = () => {
     sampleCodePrefix,
     setSampleCodePrefix,
     updateSampleCodesPrefix,
+    validateContractNumberDebounced,
 
     // Status
     currentStatus,

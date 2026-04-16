@@ -56,6 +56,7 @@ const TestRequestForm: React.FC = () => {
     sampleCodePrefix,
     setSampleCodePrefix,
     updateSampleCodesPrefix,
+    validateContractNumberDebounced,
     currentStatus,
     isFieldLocked,
     isSamplesLocked,
@@ -377,6 +378,7 @@ const TestRequestForm: React.FC = () => {
                   isEditMode={isEditMode}
                   isFieldLocked={isFieldLocked}
                   updateSampleCodesPrefix={updateSampleCodesPrefix}
+                  validateContractNumberDebounced={validateContractNumberDebounced}
                   currentStatus={currentStatus}
                 />
               </div>
