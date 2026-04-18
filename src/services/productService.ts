@@ -97,6 +97,7 @@ export interface ProductFilterDto {
   limit?: number;
   search?: string;
   productType?: ProductType;
+  isDraft?: boolean;
   sorting?: string;
 }
 
@@ -115,6 +116,8 @@ export const productService = {
     if (params.search) apiParams.Search = params.search;
     if (params.productType !== undefined && params.productType !== null)
       apiParams.ProductType = params.productType;
+    if (params.isDraft !== undefined && params.isDraft !== null)
+      apiParams.IsDraft = params.isDraft;
     if (params.sorting) apiParams.Sorting = params.sorting;
 
     const response = await api.get<PagedResult<ProductDto>>(BASE_URL, {

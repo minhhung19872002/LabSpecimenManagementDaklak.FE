@@ -27,6 +27,26 @@ export const useProductActions = ({ fetchData }: UseProductActionsProps) => {
     }
   }, []);
 
+  const handleDelete = useCallback((product: ProductDto) => {
+    Modal.confirm({
+      title: "Xác nhận xóa",
+      content: `Bạn có chắc chắn muốn xóa "${product.name}"? Thao tác này không thể hoàn tác.`,
+      okText: "Xóa",
+      okButtonProps: { danger: true },
+      cancelText: "Hủy",
+      centered: true,
+      onOk: async () => {
+        try {
+          await productService.delete(product.id);
+          message.success("Đã xóa sản phẩm");
+          await fetchData();
+        } catch (error: any) {
+          message.error(getApiErrorMessage(error, "Không thể xóa sản phẩm."));
+        }
+      },
+    });
+  }, [fetchData]);
+
   const handleToggleActive = useCallback((product: ProductDto) => {
     const newStatus = !product.isActive;
     const statusText = newStatus ? "kích hoạt" : "ngừng kích hoạt";
@@ -49,10 +69,18 @@ export const useProductActions = ({ fetchData }: UseProductActionsProps) => {
     });
   }, [fetchData]);
 
-  const handleModalOk = useCallback(async (data: CreateUpdateProductDto) => {
+  const handleModalOk = useCallback(async (data: CreateUpdateProductDto, removedAttachmentIds?: string[]) => {
     setModalLoading(true);
     try {
       if (editingProduct) {
+        // Delete removed attachments from server
+        if (removedAttachmentIds?.length) {
+          await Promise.all(
+            removedAttachmentIds.map((attId) =>
+              productService.deleteAttachment(editingProduct.id, attId).catch(() => {})
+            )
+          );
+        }
         await productService.update(editingProduct.id, data);
         message.success("Đã cập nhật sản phẩm");
       } else {
@@ -80,6 +108,7 @@ export const useProductActions = ({ fetchData }: UseProductActionsProps) => {
     modalLoading,
     handleCreate,
     handleEdit,
+    handleDelete,
     handleToggleActive,
     handleModalOk,
     handleModalCancel,

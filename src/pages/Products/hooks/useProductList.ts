@@ -10,6 +10,8 @@ export const useProductList = () => {
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [productTypeFilter, setProductTypeFilter] = useState<ProductType | undefined>(undefined);
+  const [isDraftFilter, setIsDraftFilter] = useState<boolean | undefined>(undefined);
+  const [sorting, setSorting] = useState<string | undefined>(undefined);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
@@ -21,6 +23,8 @@ export const useProductList = () => {
         limit: pageSize,
         search: searchText || undefined,
         productType: productTypeFilter,
+        isDraft: isDraftFilter,
+        sorting: sorting,
       });
       setProducts(result?.items || []);
       setTotalCount(result?.totalCount || 0);
@@ -32,7 +36,7 @@ export const useProductList = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, searchText, productTypeFilter]);
+  }, [currentPage, pageSize, searchText, productTypeFilter, isDraftFilter, sorting]);
 
   useEffect(() => {
     fetchData();
@@ -45,11 +49,26 @@ export const useProductList = () => {
 
   const handleSearch = (value: string) => {
     setSearchText(value);
-    setCurrentPage(1); // Reset to page 1 on search
+    setCurrentPage(1);
   };
 
   const handleProductTypeChange = (value: ProductType | undefined) => {
     setProductTypeFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handleIsDraftChange = (value: boolean | undefined) => {
+    setIsDraftFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handleSortChange = (field: string, order: "ascend" | "descend" | null) => {
+    if (!order) {
+      setSorting(undefined);
+    } else {
+      const dir = order === "ascend" ? "asc" : "desc";
+      setSorting(`${field} ${dir}`);
+    }
     setCurrentPage(1);
   };
 
@@ -59,10 +78,14 @@ export const useProductList = () => {
     loading,
     searchText,
     productTypeFilter,
+    isDraftFilter,
+    sorting,
     currentPage,
     pageSize,
     setSearchText: handleSearch,
     setProductTypeFilter: handleProductTypeChange,
+    setIsDraftFilter: handleIsDraftChange,
+    handleSortChange,
     fetchData,
     handlePageChange,
   };

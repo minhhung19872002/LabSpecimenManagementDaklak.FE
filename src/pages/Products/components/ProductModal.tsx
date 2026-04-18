@@ -33,10 +33,11 @@ import { UnitDto, unitService } from "../../../services/masterDataService";
 import { PRODUCT_TYPE_OPTIONS } from "../constants";
 import AttachmentSection from "./AttachmentSection";
 import UnitConversionSection from "./UnitConversionSection";
-const UnitModal = lazy(() => import("../../MasterData/Units/components/UnitModal"));
 import { unitSchema, UnitFormData } from "../../MasterData/Units/schemas";
 import { getApiErrorMessage } from "../../../utils/errorHandler";
 import "../Products.css";
+
+const UnitModal = lazy(() => import("../../MasterData/Units/components/UnitModal"));
 
 const { Text, Title } = Typography;
 
@@ -44,7 +45,7 @@ interface ProductModalProps {
   open: boolean;
   loading: boolean;
   editingProduct: ProductDto | null;
-  onOk: (data: CreateUpdateProductDto) => void;
+  onOk: (data: CreateUpdateProductDto, removedAttachmentIds?: string[]) => void;
   onCancel: () => void;
 }
 
@@ -283,11 +284,11 @@ const ProductModal: React.FC<ProductModalProps> = ({
   });
 
   const onSaveDraft = (data: ProductFormData) => {
-    onOk(buildPayload(data, true));
+    onOk(buildPayload(data, true), removedAttachmentIds);
   };
 
   const onSaveAndClose = (data: ProductFormData) => {
-    onOk(buildPayload(data, false));
+    onOk(buildPayload(data, false), removedAttachmentIds);
   };
 
   const selectedUnitName = units.find((u) => u.id === watchedBaseUnitId)?.name;

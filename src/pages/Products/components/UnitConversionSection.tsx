@@ -26,8 +26,8 @@ const UnitConversionSection: React.FC<UnitConversionSectionProps> = ({
 
   const handleAdd = () => {
     onChange([
-      ...conversions,
       { quantity: 1, baseUnitId: "", convertedQuantity: 1, convertedUnitId: "" },
+      ...conversions,
     ]);
   };
 
@@ -65,7 +65,7 @@ const UnitConversionSection: React.FC<UnitConversionSectionProps> = ({
           size="small"
           icon={<PlusOutlined />}
           onClick={handleAdd}
-          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, minWidth: 24, width: 24, height: 24 }}
+          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, minWidth: 24, width: 24, height: 24, padding: 0, fontSize: 12 }}
         />
       </div>
 

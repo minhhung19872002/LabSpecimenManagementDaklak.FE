@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Card, Button, Space } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import { useProductList, useProductActions } from "./hooks";
@@ -24,10 +24,13 @@ const ProductList: React.FC = () => {
     loading,
     searchText,
     productTypeFilter,
+    isDraftFilter,
     currentPage,
     pageSize,
     setSearchText,
     setProductTypeFilter,
+    setIsDraftFilter,
+    handleSortChange,
     fetchData,
     handlePageChange,
   } = useProductList();
@@ -38,6 +41,7 @@ const ProductList: React.FC = () => {
     modalLoading,
     handleCreate,
     handleEdit,
+    handleDelete,
     handleToggleActive,
     handleModalOk,
     handleModalCancel,
@@ -45,6 +49,7 @@ const ProductList: React.FC = () => {
 
   const canCreate = authService.hasPermission(PERMISSIONS.Products.Create);
   const canEdit = authService.hasPermission(PERMISSIONS.Products.Edit);
+  const canDelete = authService.hasPermission(PERMISSIONS.Products.Delete);
 
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(loadVisibleKeys);
 
@@ -59,12 +64,14 @@ const ProductList: React.FC = () => {
       getProductColumns(
         visibleKeys,
         handleEdit,
+        handleDelete,
         handleToggleActive,
         canEdit,
+        canDelete,
         currentPage,
         pageSize
       ),
-    [visibleKeys, handleEdit, handleToggleActive, canEdit, currentPage, pageSize]
+    [visibleKeys, handleEdit, handleDelete, handleToggleActive, canEdit, canDelete, currentPage, pageSize]
   );
 
   return (
@@ -99,8 +106,11 @@ const ProductList: React.FC = () => {
           columns={columns}
           searchText={searchText}
           productTypeFilter={productTypeFilter}
+          isDraftFilter={isDraftFilter}
           onSearchChange={setSearchText}
           onProductTypeChange={setProductTypeFilter}
+          onIsDraftChange={setIsDraftFilter}
+          onSortChange={handleSortChange}
           onPaginationChange={handlePageChange}
         />
       </Card>

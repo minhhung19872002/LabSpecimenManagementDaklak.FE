@@ -1,6 +1,6 @@
 import React from "react";
 import { Tag, Switch, Space, Tooltip, Button, Popover } from "antd";
-import { EditOutlined, PaperClipOutlined, EyeOutlined } from "@ant-design/icons";
+import { EditOutlined, DeleteOutlined, PaperClipOutlined, EyeOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { ProductDto, ProductType, ProductTypeLabels } from "../../../services/productService";
 
@@ -49,8 +49,10 @@ const renderTags = (jsonStr?: string) => {
 export const getProductColumns = (
   visibleKeys: Set<string>,
   handleEdit: (record: ProductDto) => void,
+  handleDelete: (record: ProductDto) => void,
   handleToggleActive: (record: ProductDto) => void,
   canEdit: boolean,
+  canDelete: boolean,
   currentPage: number,
   pageSize: number
 ): ColumnsType<ProductDto> => {
@@ -72,6 +74,7 @@ export const getProductColumns = (
       key: "code",
       width: 160,
       ellipsis: true,
+      sorter: true,
     });
   }
 
@@ -82,6 +85,7 @@ export const getProductColumns = (
       key: "name",
       width: 250,
       ellipsis: true,
+      sorter: true,
       render: (name: string, record: ProductDto) => (
         <Space size={4}>
           <span>{name}</span>
@@ -97,6 +101,7 @@ export const getProductColumns = (
       dataIndex: "productType",
       key: "productType",
       width: 120,
+      sorter: true,
       render: (type: ProductType) => (
         <Tag color={PRODUCT_TYPE_COLORS[type]}>{ProductTypeLabels[type]}</Tag>
       ),
@@ -119,6 +124,7 @@ export const getProductColumns = (
       key: "availableQuantity",
       width: 120,
       align: "right" as const,
+      sorter: true,
     });
   }
 
@@ -273,23 +279,37 @@ export const getProductColumns = (
     });
   }
 
-  // Always show action column if canEdit
-  if (canEdit) {
+  if (canEdit || canDelete) {
     columns.push({
       title: "Thao tác",
       key: "actions",
-      width: 80,
+      width: 100,
       align: "center" as const,
       fixed: "right" as const,
       render: (_: any, record: ProductDto) => (
-        <Tooltip title="Sửa">
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          />
-        </Tooltip>
+        <Space size="small">
+          {canEdit && (
+            <Tooltip title="Sửa">
+              <Button
+                type="link"
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => handleEdit(record)}
+              />
+            </Tooltip>
+          )}
+          {canDelete && (
+            <Tooltip title="Xóa">
+              <Button
+                type="link"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                onClick={() => handleDelete(record)}
+              />
+            </Tooltip>
+          )}
+        </Space>
       ),
     });
   }
