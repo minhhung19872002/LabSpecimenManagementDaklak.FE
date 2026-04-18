@@ -9,6 +9,7 @@ import {
   GetLaboratoryTaskListDto,
   TaskStatusStatisticsDto,
 } from "../../../types/laboratoryTask";
+import { TestRequestStatus } from "../../../types/testRequest";
 import { PATH_ROUTES, STORAGE_KEYS } from "../../../constants";
 import { getTaskManagementColumns } from "../components/columns";
 import { useActionPermission } from "../../../hooks/useActionPermission";
@@ -24,6 +25,9 @@ export const useTaskManagementList = () => {
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<
     LaboratoryTaskStatus | undefined
+  >(undefined);
+  const [testRequestStatusFilter, setTestRequestStatusFilter] = useState<
+    TestRequestStatus | undefined
   >(undefined);
 
   // Pagination state
@@ -51,6 +55,7 @@ export const useTaskManagementList = () => {
         skipCount: (pagination.current - 1) * pagination.pageSize,
         maxResultCount: pagination.pageSize,
         status: statusFilter,
+        testRequestStatus: testRequestStatusFilter,
         search: searchText || undefined,
       };
 
@@ -71,6 +76,7 @@ export const useTaskManagementList = () => {
     pagination.current,
     pagination.pageSize,
     statusFilter,
+    testRequestStatusFilter,
     searchText,
     currentUser,
   ]);
@@ -125,9 +131,17 @@ export const useTaskManagementList = () => {
   }, []);
 
   const handleStatusFilterChange = useCallback((value: string) => {
-    setStatusFilter(
-      value === "all" ? undefined : (Number(value) as LaboratoryTaskStatus)
-    );
+    if (value === "all") {
+      setStatusFilter(undefined);
+      setTestRequestStatusFilter(undefined);
+    } else if (value === "cancelled-request") {
+      setStatusFilter(undefined);
+      setTestRequestStatusFilter(TestRequestStatus.Cancelled);
+    } else {
+      setStatusFilter(Number(value) as LaboratoryTaskStatus);
+      setTestRequestStatusFilter(undefined);
+    }
+
     setPagination((prev) => ({ ...prev, current: 1 }));
   }, []);
 
@@ -145,6 +159,7 @@ export const useTaskManagementList = () => {
   const handleRefresh = useCallback(() => {
     setSearchText("");
     setStatusFilter(undefined);
+    setTestRequestStatusFilter(undefined);
     setPagination((prev) => ({ ...prev, current: 1 }));
     loadData();
     loadStats();
@@ -228,6 +243,7 @@ export const useTaskManagementList = () => {
     loading,
     searchText,
     statusFilter,
+    testRequestStatusFilter,
     pagination,
     stats,
     columns,

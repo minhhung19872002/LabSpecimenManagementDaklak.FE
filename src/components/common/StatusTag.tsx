@@ -36,7 +36,7 @@ const colorMap: Record<string, { bg: string; text: string }> = {
     text: "#FFFFFF",
   },
   gold: {
-    bg: "#FAAD14",
+    bg: "#D48806",
     text: "#FFFFFF",
   },
   orange: {
@@ -78,7 +78,7 @@ const colorMap: Record<string, { bg: string; text: string }> = {
   },
   // Lime
   lime: {
-    bg: "#52C41A",
+    bg: "#A0D911",
     text: "#FFFFFF",
   },
 };

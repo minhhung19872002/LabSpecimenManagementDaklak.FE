@@ -50,6 +50,7 @@ import {
   SampleStatusLabels,
   SampleStatusColors,
   AssignIndicatorInput,
+  UpdateSubContractMethodInput,
 } from "../../types/laboratoryTask";
 import { TestRequestStatus } from "../../types/testRequest";
 import {
@@ -113,6 +114,9 @@ const TaskManagementDetail: React.FC = () => {
   const [methods, setMethods] = useState<MethodLookupDto[]>([]);
   const [technicians, setTechnicians] = useState<UserLookupDto[]>([]);
   const [actionLoading, setActionLoading] = useState(false);
+  const [savingMethodIndicatorIds, setSavingMethodIndicatorIds] = useState<
+    string[]
+  >([]);
 
   // Local state for indicator changes (before saving)
   const [indicatorChanges, setIndicatorChanges] = useState<
@@ -508,40 +512,221 @@ const TaskManagementDetail: React.FC = () => {
   }, [indicatorsBySample, indicatorChanges]);
 
   // Handlers
-  const handleMethodChange = (indicatorId: string, methodId: string) => {
-    // Check if this is a parent with sub-indicators
+  const handleMethodChange = async (
+    indicatorId: string,
+    methodId: string | null,
+  ) => {
     const indicator = task?.indicators?.find((ind) => ind.id === indicatorId);
-    if (indicator && !indicator.parentIndicatorId) {
-      // Find all sub-indicators that belong to this parent
+    if (!indicator) return;
+
+    const selectedMethodName = methods
+      .find((m) => m.id === methodId)
+      ?.name?.trim();
+    const keepSubContractButton = selectedMethodName === "-";
+
+    const affectedIndicatorIds = new Set<string>([indicatorId]);
+
+    if (!indicator.parentIndicatorId) {
       const subIndicators =
         task?.indicators?.filter(
           (ind) =>
             ind.parentIndicatorId === indicator.indicatorId &&
             ind.methodId === indicator.methodId,
         ) || [];
-      if (subIndicators.length > 0) {
-        // Propagate method to parent AND all sub-indicators
-        setIndicatorChanges((prev) => {
-          const updated = { ...prev };
-          // Set for parent
-          updated[indicatorId] = { ...updated[indicatorId], methodId };
-          // Set for all subs
-          subIndicators.forEach((sub) => {
-            updated[sub.id] = { ...updated[sub.id], methodId };
-          });
-          return updated;
-        });
-        return;
-      }
+
+      subIndicators.forEach((sub) => affectedIndicatorIds.add(sub.id));
     }
-    // Normal indicator (no subs) - set directly
-    setIndicatorChanges((prev) => ({
-      ...prev,
-      [indicatorId]: {
-        ...prev[indicatorId],
-        methodId,
-      },
-    }));
+
+    const idsToUpdate = Array.from(affectedIndicatorIds);
+    const nextMethodId = methodId || undefined;
+    const previousMethodById = new Map<string, string | undefined>(
+      idsToUpdate.map((id) => {
+        const localMethodId = indicatorChanges[id]?.methodId;
+        const taskMethodId = task?.indicators?.find(
+          (ind) => ind.id === id,
+        )?.methodId;
+
+        return [id, localMethodId ?? taskMethodId ?? undefined];
+      }),
+    );
+
+    const clearLocalMethodDrafts = () => {
+      setIndicatorChanges((prev) => {
+        const updated = { ...prev };
+        idsToUpdate.forEach((id) => {
+          const existing = updated[id];
+          if (!existing) return;
+
+          const {
+            methodId: _removed,
+            isSubContractMethod: _removedSubContractFlag,
+            subContractMethodName: _removedSubContractMethodName,
+            subContractNumber: _removedSubContractNumber,
+            subContractCost: _removedSubContractCost,
+            ...rest
+          } = existing;
+          if (Object.keys(rest).length === 0) {
+            delete updated[id];
+          } else {
+            updated[id] = rest;
+          }
+        });
+        return updated;
+      });
+    };
+
+    const restoreLocalMethodDrafts = () => {
+      setIndicatorChanges((prev) => {
+        const updated = { ...prev };
+
+        idsToUpdate.forEach((id) => {
+          const previousMethodId = previousMethodById.get(id);
+
+          if (previousMethodId === undefined) {
+            const existing = updated[id];
+            if (!existing) return;
+
+            const { methodId: _removed, ...rest } = existing;
+            if (Object.keys(rest).length === 0) {
+              delete updated[id];
+            } else {
+              updated[id] = rest;
+            }
+            return;
+          }
+
+          updated[id] = { ...updated[id], methodId: previousMethodId };
+        });
+
+        return updated;
+      });
+    };
+
+    // Optimistic local update để UI phản hồi ngay
+    setIndicatorChanges((prev) => {
+      const updated = { ...prev };
+      idsToUpdate.forEach((id) => {
+        updated[id] = { ...updated[id], methodId: nextMethodId };
+      });
+      return updated;
+    });
+
+    setSavingMethodIndicatorIds((prev) =>
+      Array.from(new Set([...prev, ...idsToUpdate])),
+    );
+
+    try {
+      const updatedIndicators = await Promise.all(
+        idsToUpdate.map((id) =>
+          laboratoryTaskService.updateIndicatorMethod(id, methodId),
+        ),
+      );
+
+      const normalizedUpdatedIndicators = updatedIndicators.map((ind) => ({
+        ...ind,
+        isSubContractMethod: keepSubContractButton,
+        subContractMethodName: keepSubContractButton
+          ? ind.subContractMethodName
+          : undefined,
+        subContractNumber: keepSubContractButton
+          ? ind.subContractNumber
+          : undefined,
+        subContractCost: keepSubContractButton
+          ? ind.subContractCost
+          : undefined,
+      }));
+
+      const updatedById = new Map(
+        normalizedUpdatedIndicators.map((ind) => [ind.id, ind]),
+      );
+      setTask((prev) => {
+        if (!prev?.indicators) return prev;
+        return {
+          ...prev,
+          indicators: prev.indicators.map(
+            (ind) => updatedById.get(ind.id) ?? ind,
+          ),
+        };
+      });
+
+      clearLocalMethodDrafts();
+      message.open({
+        type: "success",
+        content: "Đã lưu phương pháp",
+        duration: 1.2,
+        key: "task-method-autosave-success",
+      });
+    } catch (error: any) {
+      console.error("Failed to update method:", error);
+      message.error(
+        getApiErrorMessage(error, "Không thể cập nhật phương pháp"),
+      );
+      // Revert về giá trị trước khi đổi (snapshot local), không phụ thuộc reload.
+      restoreLocalMethodDrafts();
+    } finally {
+      setSavingMethodIndicatorIds((prev) =>
+        prev.filter((id) => !affectedIndicatorIds.has(id)),
+      );
+    }
+  };
+
+  const handleUpdateSubContractMethod = async (
+    indicatorId: string,
+    input: UpdateSubContractMethodInput,
+  ) => {
+    try {
+      const updated = await laboratoryTaskService.updateSubContractMethod(
+        indicatorId,
+        input,
+      );
+
+      updateIndicatorsOptimistically([indicatorId], {
+        methodName: updated.methodName,
+        methodFormattedName: updated.methodFormattedName,
+        isSubContractMethod: updated.isSubContractMethod,
+        subContractMethodName: updated.subContractMethodName,
+        subContractNumber: updated.subContractNumber,
+        subContractCost: updated.subContractCost,
+      });
+
+      setIndicatorChanges((prev) => {
+        const updatedChanges = { ...prev };
+        const existing = updatedChanges[indicatorId];
+        if (!existing) {
+          return updatedChanges;
+        }
+
+        const {
+          methodName: _methodName,
+          methodFormattedName: _methodFormattedName,
+          isSubContractMethod: _isSubContractMethod,
+          subContractMethodName: _subContractMethodName,
+          subContractNumber: _subContractNumber,
+          subContractCost: _subContractCost,
+          ...rest
+        } = existing;
+
+        if (Object.keys(rest).length === 0) {
+          delete updatedChanges[indicatorId];
+        } else {
+          updatedChanges[indicatorId] = rest;
+        }
+
+        return updatedChanges;
+      });
+
+      message.open({
+        type: "success",
+        content: "Đã cập nhật phương pháp",
+        duration: 1.2,
+        key: "task-subcontract-method-success",
+      });
+    } catch (error: any) {
+      message.error(
+        getApiErrorMessage(error, "Không thể cập nhật phương pháp"),
+      );
+      throw error;
+    }
   };
 
   const handleTechnicianChange = (
@@ -1452,6 +1637,10 @@ const TaskManagementDetail: React.FC = () => {
 
   // Get status tag
   const getStatusTag = (status: LaboratoryTaskStatus) => {
+    if (isTestRequestCancelled) {
+      return <StatusTag color="error">Hủy bỏ yêu cầu</StatusTag>;
+    }
+
     return (
       <StatusTag color={LaboratoryTaskStatusColors[status]}>
         {LaboratoryTaskStatusLabels[status]}
@@ -1702,11 +1891,13 @@ const TaskManagementDetail: React.FC = () => {
             sampleStatus={sample.sampleStatus}
             sampleId={sample.sampleId}
             onMethodChange={handleMethodChange}
+            onUpdateSubContractMethod={handleUpdateSubContractMethod}
             onTechnicianChange={handleTechnicianChange}
             onApprove={handleApprove}
             onUpdateNote={handleUpdateNote}
             onOpenNoteModal={handleOpenNoteModal}
             onUnitChange={handleUnitChange}
+            savingMethodIndicatorIds={savingMethodIndicatorIds}
             loading={actionLoading}
             showCheckbox={true}
             selectedIndicatorIds={selectedIndicators[sample.sampleId] || []}
@@ -1901,7 +2092,7 @@ const TaskManagementDetail: React.FC = () => {
                 <Text type="secondary" style={{ minWidth: 100, flexShrink: 0 }}>
                   Ngày gửi KP:
                 </Text>
-                <Text>{formatDate(task.transferDate)}</Text>
+                <Text>{formatDate(task.sampleSentDate)}</Text>
               </div>
             </Col>
             <Col xs={24} sm={12}>

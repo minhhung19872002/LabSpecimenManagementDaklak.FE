@@ -4,3 +4,5 @@ export { default as IndicatorModal } from "./IndicatorModal";
 export { default as BulkCreateModal } from "./BulkCreateModal";
 export { ImportIndicatorModal, ImportGroupModal } from "./ImportModals";
 export { default as ImportIndicatorGroupModal } from "./ImportIndicatorGroupModal";
+export { default as AddMethodToIndicatorModal } from "./AddMethodToIndicatorModal";
+export { default as EditMethodModal } from "./EditMethodModal";

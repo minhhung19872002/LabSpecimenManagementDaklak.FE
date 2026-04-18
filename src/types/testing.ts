@@ -84,11 +84,13 @@ export interface TestingListDto {
   technicianNames?: string;
   transferDate?: string;
   requestCompletionDate?: string;
+  sampleSentDate?: string;
   testDate?: string;
   testingStatus: TestingStatus;
   isUrgent: boolean;
   laboratoryName?: string;
   customerName?: string;
+  testRequestStatus?: TestRequestStatus;
 }
 
 // Get Testing List Input
@@ -144,6 +146,7 @@ export interface TestingDetailDto {
   laboratoryName?: string;
   laboratoryId: string;
   requestCompletionDate?: string;
+  sampleSentDate?: string;
   customerName?: string;
   technicalManagerId?: string;
   technicalManagerName?: string;

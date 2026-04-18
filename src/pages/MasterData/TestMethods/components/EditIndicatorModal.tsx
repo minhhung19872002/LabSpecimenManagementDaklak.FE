@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Modal, Form, InputNumber, Typography } from "antd";
+import { Modal, Form, InputNumber, Input, Typography } from "antd";
 import { TestMethodIndicatorDto } from "../types";
 import { IndicatorName } from "../../../../components/common";
 
@@ -9,7 +9,7 @@ interface EditIndicatorModalProps {
   open: boolean;
   loading: boolean;
   indicator: TestMethodIndicatorDto | null;
-  onOk: (data: { unitPrice: number }) => void;
+  onOk: (data: { unitPrice: number; unit?: string; formattedUnit?: string }) => void;
   onCancel: () => void;
 }
 
@@ -26,6 +26,8 @@ const EditIndicatorModal: React.FC<EditIndicatorModalProps> = ({
     if (open && indicator) {
       form.setFieldsValue({
         unitPrice: indicator.unitPrice,
+        unit: indicator.unit || "",
+        formattedUnit: indicator.formattedUnit || "",
       });
     }
   }, [open, indicator, form]);
@@ -33,7 +35,11 @@ const EditIndicatorModal: React.FC<EditIndicatorModalProps> = ({
   const handleOk = async () => {
     try {
       const values = await form.validateFields();
-      onOk(values);
+      onOk({
+        unitPrice: values.unitPrice,
+        unit: values.unit || undefined,
+        formattedUnit: values.formattedUnit || undefined,
+      });
     } catch {
       // validation failed
     }
@@ -68,6 +74,16 @@ const EditIndicatorModal: React.FC<EditIndicatorModalProps> = ({
             </Text>
           </Form.Item>
         )}
+
+        <Form.Item
+          name="unit"
+          label="Đơn vị tính"
+          rules={[
+            { max: 100, message: "Đơn vị tính không được vượt quá 100 ký tự" },
+          ]}
+        >
+          <Input placeholder="Nhập đơn vị tính (VD: mg/L, CFU/mL)" />
+        </Form.Item>
 
         <Form.Item
           name="unitPrice"

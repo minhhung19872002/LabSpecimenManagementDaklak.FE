@@ -49,7 +49,7 @@ export const LaboratoryTaskStatusLabels: Record<LaboratoryTaskStatus, string> = 
 };
 
 export const LaboratoryTaskStatusColors: Record<LaboratoryTaskStatus, string> = {
-  [LaboratoryTaskStatus.UnderEvaluation]: 'processing',
+  [LaboratoryTaskStatus.UnderEvaluation]: 'geekblue',
   [LaboratoryTaskStatus.WaitingCustomerResponse]: 'warning',
   [LaboratoryTaskStatus.PartialAccepted]: 'cyan',
   [LaboratoryTaskStatus.FullyAccepted]: 'lime',
@@ -87,9 +87,9 @@ export const IndicatorApprovalStatusColors: Record<IndicatorApprovalStatus, stri
   [IndicatorApprovalStatus.MethodChangeRequested]: 'gold',
   [IndicatorApprovalStatus.MethodChanged]: 'cyan',
   [IndicatorApprovalStatus.TestingRejected]: 'red',
-  [IndicatorApprovalStatus.AcceptedForTesting]: 'lime',
+  [IndicatorApprovalStatus.AcceptedForTesting]: 'geekblue',
   [IndicatorApprovalStatus.CannotTest]: 'orange',
-  [IndicatorApprovalStatus.SupplementaryRequested]: 'cyan'
+  [IndicatorApprovalStatus.SupplementaryRequested]: 'purple'
 };
 
 // Laboratory Task Indicator DTO (Phase 6 - Extended + Workflow Redesign)
@@ -112,6 +112,10 @@ export interface LaboratoryTaskIndicatorDto {
   methodId?: string;
   methodName?: string;
   methodFormattedName?: string;  // Tên phương pháp có định dạng HTML
+  isSubContractMethod?: boolean; // Chỉ tiêu thuộc luồng cập nhật PP phụ (PP gốc là '-')
+  subContractMethodName?: string;
+  subContractNumber?: string;
+  subContractCost?: number;
   technicianId?: string;
   technicianName?: string;
   assignedDate?: string;  // Ngày giao việc cho KTV
@@ -245,6 +249,7 @@ export interface GetLaboratoryTaskListDto {
   search?: string;  // Search by contract number or technical manager name
   laboratoryId?: string;
   status?: LaboratoryTaskStatus;
+  testRequestStatus?: TestRequestStatus;
   technicalManagerId?: string;
   fromDate?: string;
   toDate?: string;
@@ -288,6 +293,12 @@ export interface AssignIndicatorInput {
 export interface UpdateIndicatorResultInput {
   result: string;
   unit?: string;
+}
+
+export interface UpdateSubContractMethodInput {
+  subContractMethodName: string;
+  subContractNumber: string;
+  subContractCost?: number;
 }
 
 // Approve indicator DTO

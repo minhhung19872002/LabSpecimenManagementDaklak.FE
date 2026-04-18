@@ -1,6 +1,6 @@
 // @ts-nocheck
-import React, { useMemo, useState, useRef } from "react";
-import { Card, Button, Space, Tag, Alert, Tabs, Form } from "antd";
+import React, { useMemo, useState, useRef, useEffect } from "react";
+import { Card, Button, Space, Tag, Alert, Tabs, Form, Empty } from "antd";
 import {
   PlusOutlined,
   DatabaseOutlined,
@@ -34,6 +34,7 @@ import {
 } from "./components";
 import {
   categoryLabels,
+  categoryPermissionMap,
   importTypeMap,
   getColumns,
   getStatCount,
@@ -45,6 +46,19 @@ import "../../../styles/ListCard.css";
 import "../MasterData.css";
 
 const MasterDataList: React.FC = () => {
+  const visibleCategories = useMemo(
+    () =>
+      Object.entries(categoryLabels).filter(([key]) => {
+        const requiredPermission = categoryPermissionMap[key];
+        return requiredPermission
+          ? authService.hasPermission(requiredPermission)
+          : false;
+      }),
+    [],
+  );
+
+  const firstVisibleCategory = visibleCategories[0]?.[0] ?? "";
+
   const {
     activeCategory,
     data,
@@ -74,7 +88,7 @@ const MasterDataList: React.FC = () => {
     fetchStatistics,
     fetchCategoryData,
     handleTableChange,
-  } = useMasterDataState();
+  } = useMasterDataState(firstVisibleCategory);
 
   const {
     canImport,
@@ -111,6 +125,30 @@ const MasterDataList: React.FC = () => {
     useState(0);
   const [notesRefreshKey, setNotesRefreshKey] = useState(0);
   const [unitsRefreshKey, setUnitsRefreshKey] = useState(0);
+
+  const hasVisibleCategories = visibleCategories.length > 0;
+
+  useEffect(() => {
+    if (!hasVisibleCategories) {
+      return;
+    }
+
+    const activeCategoryVisible = visibleCategories.some(
+      ([key]) => key === activeCategory,
+    );
+
+    if (!activeCategoryVisible) {
+      setActiveCategory(firstVisibleCategory);
+      setSearchText("");
+    }
+  }, [
+    activeCategory,
+    firstVisibleCategory,
+    hasVisibleCategories,
+    setActiveCategory,
+    setSearchText,
+    visibleCategories,
+  ]);
 
   // Refs for tab actions
   const sampleConditionsRef = useRef<SampleConditionActions>(null);
@@ -168,7 +206,8 @@ const MasterDataList: React.FC = () => {
           </Space>
         }
         extra={
-          canCreate && (
+          canCreate &&
+          hasVisibleCategories && (
             <Space>
               {/* Sample Conditions Tab */}
               {activeCategory === "sampleConditions" && (
@@ -412,138 +451,137 @@ const MasterDataList: React.FC = () => {
           )
         }
       >
-        <Tabs
-          activeKey={activeCategory}
-          onChange={(key) => {
-            setActiveCategory(key);
-            setSearchText("");
-            // Trigger refresh when switching to testMethods, standards, or specimenTypes tab
-            if (key === "testMethods") {
-              setTestMethodsRefreshKey((prev) => prev + 1);
-            }
-            if (key === "standards") {
-              setStandardsRefreshKey((prev) => prev + 1);
-            }
-            if (key === "specimenTypes") {
-              setSpecimenTypesRefreshKey((prev) => prev + 1);
-            }
-            if (key === "sampleTypeCategories") {
-              setSampleTypeCategoriesRefreshKey((prev) => prev + 1);
-            }
-            if (key === "sampleConditions") {
-              setSampleConditionsRefreshKey((prev) => prev + 1);
-            }
-            if (key === "testResultValues") {
-              setTestResultValuesRefreshKey((prev) => prev + 1);
-            }
-            if (key === "notes") {
-              setNotesRefreshKey((prev) => prev + 1);
-            }
-            if (key === "units") {
-              setUnitsRefreshKey((prev) => prev + 1);
-            }
-          }}
-          tabPosition="left"
-          style={{ minHeight: 400 }}
-          items={Object.entries(categoryLabels).map(([key, label]) => ({
-            key,
-            label: (
-              <Space>
-                {label}
-                <Tag>{getStatCount(key, statistics)}</Tag>
-              </Space>
-            ),
-            children:
-              key === "indicators" ? (
-                <IndicatorsTab
-                  ref={indicatorsRef}
-                  onDataChange={() => fetchStatistics()}
-                />
-              ) : key === "formTemplates" ? (
-                <FormTemplatesTab />
-              ) : key === "testMethods" ? (
-                <TestMethodsTab
-                  ref={testMethodsRef}
-                  onDataChange={() => fetchStatistics()}
-                  refreshKey={testMethodsRefreshKey}
-                />
-              ) : key === "standards" ? (
-                <StandardsTab
-                  ref={standardsRef}
-                  onDataChange={() => fetchStatistics()}
-                  refreshKey={standardsRefreshKey}
-                />
-              ) : key === "testResultValues" ? (
-                <TestResultValuesTab
-                  ref={testResultValuesRef}
-                  onDataChange={() => fetchStatistics()}
-                  refreshKey={testResultValuesRefreshKey}
-                />
-              ) : key === "notes" ? (
-                <NotesTab
-                  ref={notesRef}
-                  onDataChange={() => fetchStatistics()}
-                  refreshKey={notesRefreshKey}
-                />
-              ) : key === "specimenTypes" ? (
-                <SpecimenTypesTab
-                  ref={specimenTypesRef}
-                  onDataChange={() => fetchStatistics()}
-                  refreshKey={specimenTypesRefreshKey}
-                />
-              ) : key === "sampleTypeCategories" ? (
-                <SampleTypeCategoriesTab
-                  ref={sampleTypeCategoriesRef}
-                  onDataChange={() => fetchStatistics()}
-                  refreshKey={sampleTypeCategoriesRefreshKey}
-                />
-              ) : key === "sampleConditions" ? (
-                <SampleConditionsTab
-                  ref={sampleConditionsRef}
-                  onDataChange={() => fetchStatistics()}
-                  refreshKey={sampleConditionsRefreshKey}
-                />
-              ) : key === "units" ? (
-                <UnitsTab
-                  ref={unitsRef}
-                  onDataChange={() => fetchStatistics()}
-                  refreshKey={unitsRefreshKey}
-                />
-              ) : (
-                <MasterDataTable
-                  activeCategory={activeCategory}
-                  loading={loading[key]}
-                  filteredData={filteredData}
-                  columns={columns}
-                  pagination={pagination}
-                  totalCount={totalCount}
-                  searchText={searchText}
-                  onSearchChange={setSearchText}
-                  onTableChange={handleTableChange}
-                />
+        {hasVisibleCategories ? (
+          <Tabs
+            activeKey={activeCategory}
+            onChange={(key) => {
+              setActiveCategory(key);
+              setSearchText("");
+              // Trigger refresh when switching to testMethods, standards, or specimenTypes tab
+              if (key === "testMethods") {
+                setTestMethodsRefreshKey((prev) => prev + 1);
+              }
+              if (key === "standards") {
+                setStandardsRefreshKey((prev) => prev + 1);
+              }
+              if (key === "specimenTypes") {
+                setSpecimenTypesRefreshKey((prev) => prev + 1);
+              }
+              if (key === "sampleTypeCategories") {
+                setSampleTypeCategoriesRefreshKey((prev) => prev + 1);
+              }
+              if (key === "sampleConditions") {
+                setSampleConditionsRefreshKey((prev) => prev + 1);
+              }
+              if (key === "testResultValues") {
+                setTestResultValuesRefreshKey((prev) => prev + 1);
+              }
+              if (key === "notes") {
+                setNotesRefreshKey((prev) => prev + 1);
+              }
+            }}
+            tabPosition="left"
+            style={{ minHeight: 400 }}
+            items={visibleCategories.map(([key, label]) => ({
+              key,
+              label: (
+                <Space>
+                  {label}
+                  <Tag>{getStatCount(key, statistics)}</Tag>
+                </Space>
               ),
-          }))}
-        />
+              children:
+                key === "indicators" ? (
+                  <IndicatorsTab
+                    ref={indicatorsRef}
+                    onDataChange={() => fetchStatistics()}
+                  />
+                ) : key === "formTemplates" ? (
+                  <FormTemplatesTab />
+                ) : key === "testMethods" ? (
+                  <TestMethodsTab
+                    ref={testMethodsRef}
+                    onDataChange={() => fetchStatistics()}
+                    refreshKey={testMethodsRefreshKey}
+                  />
+                ) : key === "standards" ? (
+                  <StandardsTab
+                    ref={standardsRef}
+                    onDataChange={() => fetchStatistics()}
+                    refreshKey={standardsRefreshKey}
+                  />
+                ) : key === "testResultValues" ? (
+                  <TestResultValuesTab
+                    ref={testResultValuesRef}
+                    onDataChange={() => fetchStatistics()}
+                    refreshKey={testResultValuesRefreshKey}
+                  />
+                ) : key === "notes" ? (
+                  <NotesTab
+                    ref={notesRef}
+                    onDataChange={() => fetchStatistics()}
+                    refreshKey={notesRefreshKey}
+                  />
+                ) : key === "specimenTypes" ? (
+                  <SpecimenTypesTab
+                    ref={specimenTypesRef}
+                    onDataChange={() => fetchStatistics()}
+                    refreshKey={specimenTypesRefreshKey}
+                  />
+                ) : key === "sampleTypeCategories" ? (
+                  <SampleTypeCategoriesTab
+                    ref={sampleTypeCategoriesRef}
+                    onDataChange={() => fetchStatistics()}
+                    refreshKey={sampleTypeCategoriesRefreshKey}
+                  />
+                ) : key === "sampleConditions" ? (
+                  <SampleConditionsTab
+                    ref={sampleConditionsRef}
+                    onDataChange={() => fetchStatistics()}
+                    refreshKey={sampleConditionsRefreshKey}
+                  />
+                ) : (
+                  <MasterDataTable
+                    activeCategory={activeCategory}
+                    loading={loading[key]}
+                    filteredData={filteredData}
+                    columns={columns}
+                    pagination={pagination}
+                    totalCount={totalCount}
+                    searchText={searchText}
+                    onSearchChange={setSearchText}
+                    onTableChange={handleTableChange}
+                  />
+                ),
+            }))}
+          />
+        ) : (
+          <div className="master-data-empty-state">
+            <Empty description="Bạn chưa được cấp quyền truy cập dữ liệu chi tiết." />
+          </div>
+        )}
       </Card>
 
       {/* Create/Edit Modal */}
-      <MasterDataModal
-        open={isModalOpen}
-        loading={modalLoading}
-        activeCategory={activeCategory}
-        editingItem={editingItem}
-        form={form}
-        users={users}
-        departments={data.departments || []}
-        onOk={() => handleModalOk(form)}
-        onCancel={() => {
-          setIsModalOpen(false);
-          form.resetFields();
-        }}
-      />
+      {hasVisibleCategories && (
+        <MasterDataModal
+          open={isModalOpen}
+          loading={modalLoading}
+          activeCategory={activeCategory}
+          editingItem={editingItem}
+          form={form}
+          users={users}
+          departments={data.departments || []}
+          onOk={() => handleModalOk(form)}
+          onCancel={() => {
+            setIsModalOpen(false);
+            form.resetFields();
+          }}
+        />
+      )}
 
       {/* Import Excel Modal */}
-      {canImport && importTypeMap[activeCategory] && (
+      {hasVisibleCategories && canImport && importTypeMap[activeCategory] && (
         <ImportExcelModal
           open={importModalOpen}
           onClose={() => setImportModalOpen(false)}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { message, Modal } from "antd";
+import { message } from "antd";
 import type { UseFormReturn } from "react-hook-form";
 import {
   testMethodService,
@@ -7,33 +7,22 @@ import {
   UpdateTestMethodDto,
   AddIndicatorsToTestMethodDto,
   TestMethodIndicatorDto,
+  TestMethodDto,
 } from "../../../../services/masterDataService";
-import { GroupedTestMethodData } from "../types";
 import { TestMethodFormData } from "../schemas/testMethodSchema";
 import { getApiErrorMessage } from "../../../../utils/errorHandler";
 
 interface UseTestMethodsActionsParams {
   fetchData: () => Promise<void>;
   onDataChange?: () => void;
-  expandedRowKeys: string[];
-  setExpandedRowKeys: React.Dispatch<React.SetStateAction<string[]>>;
-  // Batch selection for indicators
-  selectedIndicatorKeys: Record<string, string[]>;
-  setSelectedIndicatorKeys: (keys: Record<string, string[]>) => void;
-  setBatchLoading: (loading: boolean) => void;
 }
 
 export const useTestMethodsActions = ({
   fetchData,
   onDataChange,
-  expandedRowKeys,
-  setExpandedRowKeys,
-  selectedIndicatorKeys,
-  setSelectedIndicatorKeys,
-  setBatchLoading,
 }: UseTestMethodsActionsParams) => {
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<GroupedTestMethodData | null>(null);
+  const [editingItem, setEditingItem] = useState<TestMethodDto | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
 
   const [addIndicatorsModalOpen, setAddIndicatorsModalOpen] = useState(false);
@@ -48,20 +37,20 @@ export const useTestMethodsActions = ({
   // TestMethod CRUD
   const handleCreate = (form: UseFormReturn<TestMethodFormData>) => {
     setEditingItem(null);
-    form.reset({ name: "", formattedName: "", unit: "", formattedUnit: "", isActive: true });
+    form.reset({ name: "", formattedName: "", unit: null, formattedUnit: null, isActive: true });
     setModalOpen(true);
   };
 
   const handleEdit = (
-    record: GroupedTestMethodData,
+    record: TestMethodDto,
     form: UseFormReturn<TestMethodFormData>
   ) => {
     setEditingItem(record);
     form.reset({
       name: record.name,
       formattedName: record.formattedName || record.name,
-      unit: record.unit,
-      formattedUnit: record.formattedUnit || record.unit,
+      unit: record.unit ?? null,
+      formattedUnit: record.formattedUnit ?? null,
       isActive: record.isActive,
     });
     setModalOpen(true);
@@ -132,11 +121,6 @@ export const useTestMethodsActions = ({
       await testMethodService.addIndicators(selectedTestMethodId, data);
       message.success(`Thêm ${indicators.length} chỉ tiêu thành công!`);
 
-      // Keep the test method expanded after adding indicators
-      if (!expandedRowKeys.includes(selectedTestMethodId)) {
-        setExpandedRowKeys([...expandedRowKeys, selectedTestMethodId]);
-      }
-
       setAddIndicatorsModalOpen(false);
       fetchData();
       onDataChange?.();
@@ -172,7 +156,7 @@ export const useTestMethodsActions = ({
     setEditIndicatorModalOpen(true);
   };
 
-  const handleEditIndicatorOk = async (data: { unitPrice: number }) => {
+  const handleEditIndicatorOk = async (data: { unitPrice: number; unit?: string; formattedUnit?: string }) => {
     if (!editingIndicator) return;
 
     try {
@@ -218,51 +202,6 @@ export const useTestMethodsActions = ({
     }
   };
 
-  // ============= Batch Remove Indicators =============
-  const handleBatchRemoveIndicators = async (testMethodId: string) => {
-    const selectedCompositeKeys = selectedIndicatorKeys[testMethodId] || [];
-    if (selectedCompositeKeys.length === 0) {
-      message.warning("Vui lòng chọn ít nhất một chỉ tiêu");
-      return;
-    }
-
-    // Parse composite keys (format: "indicatorId|specimenTypeId") into objects
-    const indicatorKeys = selectedCompositeKeys.map((compositeKey) => {
-      const [indicatorId, specimenTypeId] = compositeKey.split("|");
-      return {
-        indicatorId,
-        specimenTypeId: specimenTypeId || undefined,
-      };
-    });
-
-    Modal.confirm({
-      title: "Xác nhận xóa",
-      content: `Bạn có chắc chắn muốn xóa ${indicatorKeys.length} chỉ tiêu đã chọn khỏi phương pháp thử này?`,
-      okText: "Xóa",
-      okType: "danger",
-      cancelText: "Hủy",
-      centered: true,
-      onOk: async () => {
-        try {
-          setBatchLoading(true);
-          const count = await testMethodService.batchRemoveIndicators(testMethodId, indicatorKeys);
-          message.success(`Đã xóa ${count} chỉ tiêu thành công!`);
-          // Clear selection for this test method
-          setSelectedIndicatorKeys({
-            ...selectedIndicatorKeys,
-            [testMethodId]: [],
-          });
-          await fetchData();
-          onDataChange?.();
-        } catch (error: unknown) {
-          message.error(getApiErrorMessage(error, "Không thể xóa chỉ tiêu"));
-        } finally {
-          setBatchLoading(false);
-        }
-      },
-    });
-  };
-
   return {
     // TestMethod modal
     modalOpen,
@@ -296,8 +235,5 @@ export const useTestMethodsActions = ({
 
     // Toggle active
     handleToggleActive,
-
-    // Batch remove indicators
-    handleBatchRemoveIndicators,
   };
 };

@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React from "react";
-import { Form, Input, DatePicker, Radio, Typography, Row, Col } from "antd";
+import { Form, Input, DatePicker, Checkbox, Typography, Row, Col } from "antd";
 import { TestRequestStatus } from "../../../../types/testRequest";
 
 const { Title, Text } = Typography;
@@ -9,6 +9,7 @@ interface ContractInfoSectionProps {
   isEditMode: boolean;
   isFieldLocked: (fieldName: string) => boolean;
   updateSampleCodesPrefix: (prefix: string) => void;
+  validateContractNumberDebounced: (contractNumber: string) => void;
   currentStatus?: TestRequestStatus;
 }
 
@@ -16,8 +17,21 @@ const ContractInfoSection: React.FC<ContractInfoSectionProps> = ({
   isEditMode,
   isFieldLocked,
   updateSampleCodesPrefix,
+  validateContractNumberDebounced,
   currentStatus,
 }) => {
+  const form = Form.useFormInstance();
+  const selectedSampleTypes = Form.useWatch("sampleType", form) || [];
+  const isSubContractSelected = Array.isArray(selectedSampleTypes)
+    ? selectedSampleTypes.includes("subContract")
+    : selectedSampleTypes === "subContract";
+
+  React.useEffect(() => {
+    if (!isSubContractSelected) {
+      form.setFieldValue("subContract", undefined);
+    }
+  }, [form, isSubContractSelected]);
+
   const showSentToAccounting = currentStatus === TestRequestStatus.ResultSent;
   return (
     <div className="form-section">
@@ -35,9 +49,18 @@ const ContractInfoSection: React.FC<ContractInfoSectionProps> = ({
             <Input
               placeholder="Số hợp đồng"
               disabled={isFieldLocked("contractNumber")}
-              onBlur={(e) =>
-                updateSampleCodesPrefix(e.target.value?.trim() || "")
-              }
+              onChange={(e) => {
+                validateContractNumberDebounced(e.target.value || "");
+              }}
+              onBlur={(e) => {
+                const normalizedContractNumber = e.target.value?.trim() || "";
+                const currentContractNumber = form.getFieldValue("contractNumber") || "";
+                if (currentContractNumber !== normalizedContractNumber) {
+                  form.setFieldValue("contractNumber", normalizedContractNumber);
+                }
+                updateSampleCodesPrefix(normalizedContractNumber);
+                validateContractNumberDebounced(normalizedContractNumber);
+              }}
             />
           </Form.Item>
         </Col>
@@ -60,21 +83,70 @@ const ContractInfoSection: React.FC<ContractInfoSectionProps> = ({
       <Text strong style={{ display: "block", marginBottom: 8 }}>
         Loại hình mẫu
       </Text>
-      <Form.Item name="sampleType" style={{ marginBottom: 12 }}>
-        <Radio.Group>
-          <Radio value="service">Dịch vụ</Radio>
-          <Radio value="contract">Hợp đồng</Radio>
-          <Radio value="task">Mẫu nhiệm vụ</Radio>
-          <Radio value="subContract">Hợp đồng phụ</Radio>
-        </Radio.Group>
+      <Form.Item
+        name="sampleType"
+        style={{ marginBottom: 12 }}
+        rules={[
+          {
+            validator: (_, value) => {
+              if (Array.isArray(value) && value.length > 0) {
+                return Promise.resolve();
+              }
+              return Promise.reject(
+                new Error("Vui lòng chọn ít nhất một loại hình mẫu"),
+              );
+            },
+          },
+        ]}
+      >
+        <Checkbox.Group disabled={isFieldLocked("sampleType")}>
+          <Row gutter={[16, 8]}>
+            <Col xs={24} sm={12}>
+              <Checkbox value="service">Dịch vụ</Checkbox>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Checkbox value="contract">Hợp đồng</Checkbox>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Checkbox value="task">Mẫu nhiệm vụ</Checkbox>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Checkbox value="subContract">Hợp đồng phụ</Checkbox>
+            </Col>
+          </Row>
+        </Checkbox.Group>
       </Form.Item>
       {/* Hợp đồng phụ input */}
       <Form.Item
         name="subContract"
         label="Hợp đồng phụ"
+        dependencies={["sampleType"]}
+        rules={[
+          ({ getFieldValue }) => ({
+            validator: (_, value) => {
+              const selectedTypes = getFieldValue("sampleType");
+              const selected = Array.isArray(selectedTypes)
+                ? selectedTypes.includes("subContract")
+                : selectedTypes === "subContract";
+
+              if (!selected) {
+                return Promise.resolve();
+              }
+
+              if (value && String(value).trim()) {
+                return Promise.resolve();
+              }
+
+              return Promise.reject(new Error("Vui lòng nhập hợp đồng phụ"));
+            },
+          }),
+        ]}
         style={{ marginBottom: 0 }}
       >
-        <Input placeholder="Nhập hợp đồng phụ" />
+        <Input
+          placeholder="Nhập hợp đồng phụ"
+          disabled={!isSubContractSelected || isFieldLocked("subContract")}
+        />
       </Form.Item>
       {isEditMode && showSentToAccounting && (
         <Form.Item

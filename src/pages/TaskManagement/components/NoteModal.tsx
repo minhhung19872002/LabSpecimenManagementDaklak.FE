@@ -226,7 +226,6 @@ const NoteModal: React.FC<NoteModalProps> = ({
       cancelText="Hủy"
       width={700}
       centered
-      destroyOnClose
       styles={{
         wrapper: {
           overflow: "auto",

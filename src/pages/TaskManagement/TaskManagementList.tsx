@@ -17,7 +17,11 @@ import Icon, {
   ReloadOutlined,
   TeamOutlined,
 } from "../../components/common/Icon";
-import { LaboratoryTaskStatus, QLKTDisplayStatus } from "../../types/laboratoryTask";
+import {
+  LaboratoryTaskStatus,
+  QLKTDisplayStatus,
+} from "../../types/laboratoryTask";
+import { TestRequestStatus } from "../../types/testRequest";
 import { SampleAssignmentLogStatisticsDto } from "../../types/qualityManagement";
 import { laboratoryTaskService } from "../../services/laboratoryTaskService";
 import { useTaskManagementList } from "./hooks";
@@ -49,6 +53,7 @@ const TaskManagementList: React.FC = () => {
     loading,
     searchText,
     statusFilter,
+    testRequestStatusFilter,
     pagination,
     stats,
     columns,
@@ -69,7 +74,13 @@ const TaskManagementList: React.FC = () => {
 
   // SAL statistics & display status filter
   const [salStats, setSalStats] = useState<SampleAssignmentLogStatisticsDto>({
-    total: 0, underReview: 0, toDo: 0, testing: 0, waitingApproval: 0, resultRejected: 0, completed: 0,
+    total: 0,
+    underReview: 0,
+    toDo: 0,
+    testing: 0,
+    waitingApproval: 0,
+    resultRejected: 0,
+    completed: 0,
   });
   const [salDisplayStatusFilter, setSalDisplayStatusFilter] = useState<
     QLKTDisplayStatus | undefined
@@ -77,7 +88,8 @@ const TaskManagementList: React.FC = () => {
 
   const loadSalStats = useCallback(async () => {
     try {
-      const result = await laboratoryTaskService.getSampleAssignmentLogStatistics();
+      const result =
+        await laboratoryTaskService.getSampleAssignmentLogStatistics();
       setSalStats(result);
     } catch (error) {
       console.error("Failed to load SAL statistics:", error);
@@ -92,7 +104,7 @@ const TaskManagementList: React.FC = () => {
 
   const handleSalDisplayStatusFilterChange = useCallback((value: string) => {
     setSalDisplayStatusFilter(
-      value === "all" ? undefined : (Number(value) as QLKTDisplayStatus)
+      value === "all" ? undefined : (Number(value) as QLKTDisplayStatus),
     );
   }, []);
 
@@ -218,7 +230,8 @@ const TaskManagementList: React.FC = () => {
               ? salDisplayStatusFilter === undefined
               : salDisplayStatusFilter === Number(stat.filterValue)
             : stat.filterValue === "all"
-              ? statusFilter === undefined
+              ? statusFilter === undefined &&
+                testRequestStatusFilter === undefined
               : statusFilter === Number(stat.filterValue);
 
           return (
@@ -314,7 +327,10 @@ const TaskManagementList: React.FC = () => {
 
         {/* Content based on selected tab */}
         {isShowingSampleAssignmentLog ? (
-          <LabSampleAssignmentLogTab displayStatusFilter={salDisplayStatusFilter} onReloadRef={salReloadRef} />
+          <LabSampleAssignmentLogTab
+            displayStatusFilter={salDisplayStatusFilter}
+            onReloadRef={salReloadRef}
+          />
         ) : (
           <>
             {/* Search & Filter */}
@@ -335,7 +351,11 @@ const TaskManagementList: React.FC = () => {
                   style={{ width: "100%" }}
                   placeholder="Trạng thái"
                   value={
-                    statusFilter !== undefined ? String(statusFilter) : "all"
+                    testRequestStatusFilter === TestRequestStatus.Cancelled
+                      ? "cancelled-request"
+                      : statusFilter !== undefined
+                        ? String(statusFilter)
+                        : "all"
                   }
                   onChange={handleStatusFilterChange}
                 >
@@ -380,6 +400,9 @@ const TaskManagementList: React.FC = () => {
                     value={String(LaboratoryTaskStatus.SentToQuality)}
                   >
                     Đã gửi QLCL
+                  </Select.Option>
+                  <Select.Option value="cancelled-request">
+                    Hủy bỏ yêu cầu
                   </Select.Option>
                 </Select>
               </Col>

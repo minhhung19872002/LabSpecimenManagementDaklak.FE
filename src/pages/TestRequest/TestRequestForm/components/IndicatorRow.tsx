@@ -84,6 +84,7 @@ interface IndicatorRowProps {
   hidePrice?: boolean;
   hideDates?: boolean;
   onRemoveSub?: (id: string) => void;
+  isRequestCompleted?: boolean;
 }
 
 const IndicatorRow: React.FC<IndicatorRowProps> = ({
@@ -111,6 +112,7 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
   hidePrice = false,
   hideDates = false,
   onRemoveSub,
+  isRequestCompleted = false,
 }) => {
   if (!indicator) return null;
 
@@ -246,7 +248,7 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
               size="small"
               style={{ width: 100, flexShrink: 0 }}
               placeholder="YC"
-              disabled={!canDelete}
+              disabled={isRequestCompleted}
               disabledDate={(current) => {
                 // Không cho chọn ngày quá khứ
                 return current && current.isBefore(dayjs().startOf("day"));

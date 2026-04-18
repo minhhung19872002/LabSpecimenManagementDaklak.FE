@@ -20,7 +20,7 @@ interface StickySummaryBarProps {
   province?: string;
   contractNumber?: string;
   contractDate?: dayjs.Dayjs;
-  sampleType?: string;
+  sampleType?: string | string[];
   subContract?: string;
 }
 
@@ -44,8 +44,14 @@ const StickySummaryBar: React.FC<StickySummaryBarProps> = ({
     task: { label: "Nhiệm vụ", color: "orange" },
     subContract: { label: "HĐ phụ", color: "purple" },
   };
-  const sampleTypeTags =
-    sampleType && sampleTypeMap[sampleType] ? [sampleTypeMap[sampleType]] : [];
+  const sampleTypeValues = Array.isArray(sampleType)
+    ? sampleType
+    : sampleType
+      ? [sampleType]
+      : [];
+  const sampleTypeTags = Array.from(new Set(sampleTypeValues))
+    .map((type) => sampleTypeMap[type])
+    .filter(Boolean);
 
   // Build full address
   const fullAddress = [address, ward, province].filter(Boolean).join(", ");

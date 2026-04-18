@@ -3,7 +3,7 @@ import { Modal, Form, Select, Typography, Tooltip } from "antd";
 import { Controller, UseFormReturn } from "react-hook-form";
 import Icon from "../../../../components/common/Icon";
 import { RichTextEditor } from "../../../../components/common";
-import { GroupedTestMethodData } from "../types";
+import { TestMethodDto } from "../../../../services/masterDataService";
 import { TestMethodFormData } from "../schemas";
 
 const { Text } = Typography;
@@ -11,7 +11,7 @@ const { Text } = Typography;
 interface TestMethodModalProps {
   open: boolean;
   loading: boolean;
-  editingItem: GroupedTestMethodData | null;
+  editingItem: TestMethodDto | null;
   form: UseFormReturn<TestMethodFormData>;
   onOk: (data: TestMethodFormData) => void;
   onCancel: () => void;
@@ -127,19 +127,13 @@ const TestMethodModal: React.FC<TestMethodModalProps> = ({
           required
           validateStatus={errors.unit ? "error" : ""}
           help={errors.unit?.message}
+          style={{ display: "none" }}
         >
           <Controller
-            name="formattedUnit"
+            name="unit"
             control={control}
             render={({ field }) => (
-              <RichTextEditor
-                value={field.value || ""}
-                onChange={(html, plainText) => {
-                  field.onChange(html);
-                  setValue("unit", plainText);
-                }}
-                placeholder="VD: mg/L, %, CFU/g..."
-              />
+              <input type="hidden" {...field} value={field.value ?? ""} />
             )}
           />
         </Form.Item>

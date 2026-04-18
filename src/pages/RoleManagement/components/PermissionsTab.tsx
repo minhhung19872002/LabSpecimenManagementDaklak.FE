@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Button,
   Checkbox,
@@ -41,11 +41,16 @@ const PermissionsTab: React.FC<PermissionsTabProps> = ({
   );
   const [hasChanges, setHasChanges] = useState(false);
   const [searchText, setSearchText] = useState("");
+  // Track whether we've ever loaded permissions from props to avoid overwriting user edits
+  const hasLoadedRef = useRef(false);
 
   const canEdit = authService.hasPermission(PERMISSIONS.RoleManagement.Edit);
 
-  // Initialize selected permissions from props
+  // Initialize selected permissions from props — only on first load, not on subsequent prop updates
   useEffect(() => {
+    if (hasLoadedRef.current) return;
+    if (!permissionGroups || permissionGroups.length === 0) return;
+
     const initialPermissions = new Set<string>();
     (permissionGroups || []).forEach((group) => {
       group.permissions.forEach((perm) => {
@@ -56,6 +61,7 @@ const PermissionsTab: React.FC<PermissionsTabProps> = ({
     });
     setSelectedPermissions(initialPermissions);
     setHasChanges(false);
+    hasLoadedRef.current = true;
   }, [permissionGroups]);
 
   // Calculate original permissions for change detection
@@ -137,6 +143,12 @@ const PermissionsTab: React.FC<PermissionsTabProps> = ({
     "SampleConditions",
   ];
 
+  const nestedMasterDataGroupNames = [
+    ...deprecatedMasterDataGroupNames,
+    "MasterData",
+    "MasterDataDetail",
+  ];
+
   // Check if using new unified MasterData permission
   const hasUnifiedMasterData = (permissionGroups || []).some(
     (g) => g.name === "MasterData",
@@ -192,7 +204,7 @@ const PermissionsTab: React.FC<PermissionsTabProps> = ({
         return;
       }
 
-      if (deprecatedMasterDataGroupNames.includes(group.name)) {
+      if (nestedMasterDataGroupNames.includes(group.name)) {
         masterData.push(group);
       } else {
         others.push(group);
@@ -352,7 +364,9 @@ const PermissionsTab: React.FC<PermissionsTabProps> = ({
                     }}
                   >
                     <Text strong style={{ fontSize: 15 }}>
-                      {group.displayName}
+                      {group.name === "MasterData"
+                        ? "Quyền chung"
+                        : group.displayName}
                     </Text>
                     <Badge
                       count={`${selected}/${total}`}

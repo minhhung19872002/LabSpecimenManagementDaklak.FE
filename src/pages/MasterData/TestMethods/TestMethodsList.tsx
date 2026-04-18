@@ -7,11 +7,10 @@ import { useTestMethodsData, useTestMethodsActions } from "./hooks";
 import {
   TestMethodsTable,
   TestMethodModal,
-  AddIndicatorsModal,
   EditIndicatorModal,
   ImportTestMethodModal,
 } from "./components";
-import { getTestMethodColumns, getIndicatorColumns } from "./constants";
+import { getTestMethodColumns } from "./constants";
 import { TestMethodsTabProps, TestMethodsActions, TestMethodImportPreviewDto } from "./types";
 import {
   testMethodSchema,
@@ -25,23 +24,15 @@ const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
   refreshKey,
 }, ref) => {
   const {
+    testMethods,
+    totalCount,
     loading,
     searchText,
-    groupedData,
-    expandedRowKeys,
-    indicatorGroups,
-    indicatorsByGroup,
-    specimenTypes,
-    getSpecimenTypesByIndicator,
-    getIndicatorsBySpecimenType,
+    currentPage,
+    pageSize,
     setSearchText,
-    setExpandedRowKeys,
+    handlePageChange,
     fetchData,
-    // Batch selection for indicators
-    selectedIndicatorKeys,
-    setSelectedIndicatorKeys,
-    batchLoading,
-    setBatchLoading,
   } = useTestMethodsData();
 
   // Refresh data when refreshKey changes (when switching to this tab)
@@ -60,41 +51,26 @@ const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
     modalOpen,
     editingItem,
     modalLoading,
-    addIndicatorsModalOpen,
-    addIndicatorsLoading,
-    selectedTestMethodId,
     handleCreate,
     handleEdit,
     handleDelete,
     handleModalOk,
     handleModalCancel,
-    handleOpenAddIndicators,
-    handleAddIndicatorsOk,
-    handleAddIndicatorsCancel,
-    handleRemoveIndicator,
     // Edit indicator
     editIndicatorModalOpen,
     editIndicatorLoading,
     editingIndicator,
-    handleOpenEditIndicator,
     handleEditIndicatorOk,
     handleEditIndicatorCancel,
     handleToggleActive,
-    // Batch remove indicators
-    handleBatchRemoveIndicators,
   } = useTestMethodsActions({
     fetchData,
     onDataChange,
-    expandedRowKeys,
-    setExpandedRowKeys,
-    selectedIndicatorKeys,
-    setSelectedIndicatorKeys,
-    setBatchLoading,
   });
 
   const form = useForm<TestMethodFormData>({
     resolver: yupResolver(testMethodSchema) as any,
-    defaultValues: { name: "", unit: "", isActive: true },
+    defaultValues: { name: "", formattedName: "", unit: null, formattedUnit: null, isActive: true },
   });
 
   // Import state
@@ -175,18 +151,6 @@ const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
     setFileList([]);
   };
 
-  // Get existing indicator keys (indicatorId + specimenTypeId) for the selected test method
-  const existingIndicatorKeys = useMemo(() => {
-    if (!selectedTestMethodId) return [];
-    const method = groupedData.find((m) => m.id === selectedTestMethodId);
-    return method?.indicators
-      ?.filter((ind) => !ind.parentIndicatorId) // Only parent indicators
-      ?.map((ind) => ({
-        indicatorId: ind.indicatorId,
-        specimenTypeId: ind.specimenTypeId,
-      })) || [];
-  }, [selectedTestMethodId, groupedData]);
-
   // Memoized columns for test methods
   const methodColumns = useMemo(
     () =>
@@ -198,12 +162,6 @@ const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
     [handleEdit, handleDelete, handleToggleActive, form],
   );
 
-  // Memoized columns for indicators
-  const indicatorColumns = useMemo(
-    () => getIndicatorColumns(handleRemoveIndicator, handleOpenEditIndicator),
-    [handleRemoveIndicator, handleOpenEditIndicator],
-  );
-
   // Expose actions to parent
   useImperativeHandle(ref, () => ({
     handleCreate: () => handleCreate(form),
@@ -213,24 +171,17 @@ const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
 
   return (
     <>
-
-      {/* Expandable Table */}
+      {/* Flat Table */}
       <TestMethodsTable
         loading={loading}
-        batchLoading={batchLoading}
-        groupedData={groupedData}
-        methodColumns={methodColumns}
-        indicatorColumns={indicatorColumns}
-        expandedRowKeys={expandedRowKeys}
+        data={testMethods as any}
+        columns={methodColumns}
         searchText={searchText}
-        // Batch selection for indicators
-        selectedIndicatorKeys={selectedIndicatorKeys}
-        onSelectedIndicatorKeysChange={setSelectedIndicatorKeys}
-        onBatchRemoveIndicators={handleBatchRemoveIndicators}
-        // Handlers
+        totalCount={totalCount}
+        currentPage={currentPage}
+        pageSize={pageSize}
         onSearchChange={setSearchText}
-        onExpandedRowsChange={setExpandedRowKeys}
-        onAddIndicators={handleOpenAddIndicators}
+        onPageChange={handlePageChange}
       />
 
       {/* Create/Edit TestMethod Modal */}
@@ -241,20 +192,6 @@ const TestMethodsList = forwardRef<TestMethodsActions, TestMethodsTabProps>(({
         form={form}
         onOk={(data) => handleModalOk(data, form)}
         onCancel={() => handleModalCancel(form)}
-      />
-
-      {/* Add Indicators Modal */}
-      <AddIndicatorsModal
-        open={addIndicatorsModalOpen}
-        loading={addIndicatorsLoading}
-        indicatorGroups={indicatorGroups}
-        indicatorsByGroup={indicatorsByGroup}
-        specimenTypes={specimenTypes}
-        existingIndicatorKeys={existingIndicatorKeys}
-        getSpecimenTypesByIndicator={getSpecimenTypesByIndicator}
-        getIndicatorsBySpecimenType={getIndicatorsBySpecimenType}
-        onOk={handleAddIndicatorsOk}
-        onCancel={handleAddIndicatorsCancel}
       />
 
       {/* Edit Indicator Modal */}

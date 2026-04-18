@@ -231,6 +231,9 @@ export const PERMISSIONS = {
     Edit: `${P}.TestResultValues.Edit`,
     Delete: `${P}.TestResultValues.Delete`,
   },
+  FormTemplates: {
+    Default: `${P}.FormTemplates`,
+  },
 
   // Users
   Users: {
@@ -316,17 +319,7 @@ export const ROUTE_PERMISSION_MAP: Record<string, string[]> = {
   '/subcontractors': [PERMISSIONS.Subcontractors.Default],
 
   // Master Data
-  '/master-data': [
-    PERMISSIONS.Indicators.Default,
-    PERMISSIONS.SpecimenTypes.Default,
-    PERMISSIONS.Standards.Default,
-    PERMISSIONS.TestMethods.Default,
-    PERMISSIONS.StorageLocations.Default,
-    PERMISSIONS.Customers.Default,
-    PERMISSIONS.Departments.Default,
-    PERMISSIONS.Laboratories.Default,
-    PERMISSIONS.SampleConditions.Default,
-  ],
+  '/master-data': [PERMISSIONS.MasterData.Default],
 
   // Organizations
   '/organizations': [PERMISSIONS.Customers.Default],
@@ -459,11 +452,11 @@ export const ACTION_PERMISSION_MAP = {
     assign: PERMISSIONS.NCRs.Assign,
   },
   masterData: {
-    view: PERMISSIONS.Indicators.Default,
-    create: PERMISSIONS.Indicators.Create,
-    edit: PERMISSIONS.Indicators.Edit,
-    delete: PERMISSIONS.Indicators.Delete,
-    import: PERMISSIONS.Indicators.Import,
+    view: PERMISSIONS.MasterData.Default,
+    create: PERMISSIONS.MasterData.Create,
+    edit: PERMISSIONS.MasterData.Edit,
+    delete: PERMISSIONS.MasterData.Delete,
+    import: PERMISSIONS.MasterData.Import,
   },
   employees: {
     view: PERMISSIONS.Users.Default,
@@ -503,9 +496,7 @@ export const MENU_PERMISSION_MAP = {
   reports: [PERMISSIONS.Reports.Default],
   subcontractors: [PERMISSIONS.Subcontractors.Default],
   masterData: [
-    PERMISSIONS.Indicators.Default,
-    PERMISSIONS.SpecimenTypes.Default,
-    PERMISSIONS.Standards.Default,
+    PERMISSIONS.MasterData.Default,
   ],
   organizations: [PERMISSIONS.Customers.Default],
   auditLog: [PERMISSIONS.AuditLogs.Default],

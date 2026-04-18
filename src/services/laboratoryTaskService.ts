@@ -10,6 +10,7 @@ import {
   LaboratoryTaskSupporterDto,
   AssignIndicatorInput,
   UpdateIndicatorResultInput,
+  UpdateSubContractMethodInput,
   ApproveIndicatorInput,
   ManageSupportersInput,
   BulkApproveIndicatorsInput,
@@ -38,6 +39,7 @@ const toApiParams = (params: GetLaboratoryTaskListDto) => {
   if (params.search) apiParams.Search = params.search;
   if (params.laboratoryId) apiParams.LaboratoryId = params.laboratoryId;
   if (params.status !== undefined) apiParams.Status = params.status;
+  if (params.testRequestStatus !== undefined) apiParams.TestRequestStatus = params.testRequestStatus;
   if (params.technicalManagerId) apiParams.TechnicalManagerId = params.technicalManagerId;
   if (params.fromDate) apiParams.FromDate = params.fromDate;
   if (params.toDate) apiParams.ToDate = params.toDate;
@@ -400,6 +402,32 @@ export const laboratoryTaskService = {
       `${BASE_URL}/indicators/${indicatorId}/standard`,
       JSON.stringify(standardId),
       { headers: { 'Content-Type': 'application/json' } }
+    );
+    return response.data;
+  },
+
+  /**
+   * Cập nhật phương pháp cho chỉ tiêu
+   */
+  updateIndicatorMethod: async (indicatorId: string, methodId: string | null): Promise<LaboratoryTaskIndicatorDto> => {
+    const response = await api.put<LaboratoryTaskIndicatorDto>(
+      `${BASE_URL}/indicators/${indicatorId}/method`,
+      JSON.stringify(methodId),
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+    return response.data;
+  },
+
+  /**
+   * Cập nhật thông tin phương pháp phụ cho chỉ tiêu có phương pháp gốc là "-"
+   */
+  updateSubContractMethod: async (
+    indicatorId: string,
+    input: UpdateSubContractMethodInput
+  ): Promise<LaboratoryTaskIndicatorDto> => {
+    const response = await api.put<LaboratoryTaskIndicatorDto>(
+      `${BASE_URL}/indicators/${indicatorId}/subcontract-method`,
+      input
     );
     return response.data;
   },

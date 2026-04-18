@@ -1,10 +1,28 @@
 import { Button, Space, Tag, Popconfirm } from "antd";
-import { EditOutlined, DeleteOutlined } from "../../../../components/common/Icon";
+import {
+  EditOutlined,
+  DeleteOutlined,
+} from "../../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import { ImportType } from "../../../../components/common/ImportExcelModal";
 import { MasterDataItem, UserLookupDto } from "../types";
 import { authService } from "../../../../services/authService";
 import { PERMISSIONS } from "../../../../constants/permissionMapping";
+
+export const categoryPermissionMap: Record<string, string> = {
+  departments: PERMISSIONS.Departments.Default,
+  laboratories: PERMISSIONS.Laboratories.Default,
+  sampleTypeCategories: PERMISSIONS.SampleTypeCategories.Default,
+  sampleConditions: PERMISSIONS.SampleConditions.Default,
+  specimenTypes: PERMISSIONS.SpecimenTypes.Default,
+  testMethods: PERMISSIONS.TestMethods.Default,
+  standards: PERMISSIONS.Standards.Default,
+  storageLocations: PERMISSIONS.StorageLocations.Default,
+  indicators: PERMISSIONS.Indicators.Default,
+  formTemplates: PERMISSIONS.FormTemplates.Default,
+  testResultValues: PERMISSIONS.TestResultValues.Default,
+  notes: PERMISSIONS.Notes.Default,
+};
 
 export const categoryLabels: Record<string, string> = {
   departments: "Phòng ban",
@@ -47,7 +65,7 @@ export const getColumns = (
   activeCategory: string,
   users: UserLookupDto[],
   handleEdit: (record: MasterDataItem) => void,
-  handleDelete: (id: string) => void
+  handleDelete: (id: string) => void,
 ): ColumnsType<MasterDataItem> => {
   const baseColumns: ColumnsType<MasterDataItem> = [
     {
@@ -92,7 +110,7 @@ export const getColumns = (
         key: "email",
         width: 180,
         ellipsis: true,
-      }
+      },
     );
   } else if (activeCategory === "storageLocations") {
     baseColumns.push(
@@ -107,7 +125,7 @@ export const getColumns = (
         dataIndex: "temperature",
         key: "temperature",
         width: 100,
-      }
+      },
     );
   } else if (activeCategory === "testMethods") {
     baseColumns.push(
@@ -122,7 +140,7 @@ export const getColumns = (
         dataIndex: "standard",
         key: "standard",
         width: 150,
-      }
+      },
     );
   } else if (activeCategory === "laboratories") {
     baseColumns.push({
@@ -210,7 +228,7 @@ export const getColumns = (
 // Get count from statistics for a category
 export const getStatCount = (
   category: string,
-  statistics: any | null
+  statistics: any | null,
 ): number => {
   if (!statistics) return 0;
   switch (category) {

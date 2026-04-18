@@ -20,7 +20,7 @@ interface SamplePanelHeaderProps {
   onBulkTestDateChange?: (
     sampleId: string,
     indicatorIds: string[],
-    date: string
+    date: string,
   ) => void;
 }
 
@@ -75,17 +75,23 @@ const SamplePanelHeader: React.FC<SamplePanelHeaderProps> = ({
       onBulkTestDateChange(
         sample.sampleId,
         editableSelectedIds,
-        date.format("YYYY-MM-DD")
+        date.format("YYYY-MM-DD"),
       );
     }
   };
+
+  const sampleCodeText = sample.sampleCode || "-";
+  const sampleConditionText = sample.statusText?.trim();
+  const sampleTitle = sampleConditionText
+    ? `${sampleCodeText} - ${sampleConditionText}`
+    : sampleCodeText;
 
   return (
     <div style={{ width: "100%" }}>
       <Row justify="space-between" align="middle" wrap={false}>
         <Col flex="auto">
           <Space wrap size={8}>
-            <Text strong>{sample.sampleCode}</Text>
+            <Text strong>{sampleTitle}</Text>
             <Text type="secondary">({sample.indicators.length} chỉ tiêu)</Text>
           </Space>
         </Col>

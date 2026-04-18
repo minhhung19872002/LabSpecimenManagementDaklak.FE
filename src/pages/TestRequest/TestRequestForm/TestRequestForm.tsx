@@ -56,6 +56,7 @@ const TestRequestForm: React.FC = () => {
     sampleCodePrefix,
     setSampleCodePrefix,
     updateSampleCodesPrefix,
+    validateContractNumberDebounced,
     currentStatus,
     isFieldLocked,
     isSamplesLocked,
@@ -364,7 +365,7 @@ const TestRequestForm: React.FC = () => {
               resultLanguage: ResultLanguage.Vietnamese,
               samplingRequirement: SamplingRequirement.CustomerSampling,
               sampleStorageOption: SampleStorageOption.No,
-              sampleType: "service",
+              sampleType: ["service"],
             }}
           >
             {/* Top sections row: Hợp đồng (bao gồm Loại hình mẫu), Khách hàng */}
@@ -377,6 +378,9 @@ const TestRequestForm: React.FC = () => {
                   isEditMode={isEditMode}
                   isFieldLocked={isFieldLocked}
                   updateSampleCodesPrefix={updateSampleCodesPrefix}
+                  validateContractNumberDebounced={
+                    validateContractNumberDebounced
+                  }
                   currentStatus={currentStatus}
                 />
               </div>
@@ -531,7 +535,10 @@ const TestRequestForm: React.FC = () => {
             sampleTypeCategories={sampleTypeCategories}
             setIndicatorSearchText={setIndicatorSearchText}
             customPrices={customPrices}
-            onPriceChange={(key, price) => setCustomPrices(prev => ({ ...prev, [key]: price }))}
+            isRequestCompleted={currentStatus === TestRequestStatus.Completed}
+            onPriceChange={(key, price) =>
+              setCustomPrices((prev) => ({ ...prev, [key]: price }))
+            }
           />
 
           {/* Laboratory Selection Modal */}

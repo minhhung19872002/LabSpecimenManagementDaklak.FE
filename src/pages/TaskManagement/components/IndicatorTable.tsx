@@ -8,12 +8,17 @@ import {
   Form,
   Typography,
   Input,
+  InputNumber,
   Tooltip,
 } from "antd";
 import StatusTag from "../../../components/common/StatusTag";
 import type { TableRowSelection } from "antd/es/table/interface";
 import { CheckOutlined, CloseOutlined } from "../../../components/common/Icon";
-import { formatDate, stripPTags, evaluatePassFail } from "../../../utils/formatters";
+import {
+  formatDate,
+  stripPTags,
+  evaluatePassFail,
+} from "../../../utils/formatters";
 import {
   LaboratoryTaskIndicatorDto,
   IndicatorApprovalStatus,
@@ -22,6 +27,7 @@ import {
   MethodLookupDto,
   UserLookupDto,
   SampleStatus,
+  UpdateSubContractMethodInput,
 } from "../../../types/laboratoryTask";
 import IndicatorImageCell from "../../../components/common/IndicatorImageCell";
 import { IndicatorName, RichTextEditor } from "../../../components/common";
@@ -51,20 +57,27 @@ interface IndicatorTableProps {
   sampleStatus?: SampleStatus; // Sample status to determine selection mode
   /** Sample ID - dùng cho NoteModal callback */
   sampleId?: string;
-  onMethodChange: (indicatorId: string, methodId: string) => void;
+  onMethodChange: (
+    indicatorId: string,
+    methodId: string | null,
+  ) => Promise<void> | void;
+  onUpdateSubContractMethod?: (
+    indicatorId: string,
+    input: UpdateSubContractMethodInput,
+  ) => Promise<void> | void;
   onTechnicianChange: (indicatorId: string, technicianId: string) => void;
   onApprove: (
     indicatorId: string,
     approve: boolean,
     reason?: string,
-    standardId?: string | null
+    standardId?: string | null,
   ) => void;
   onUpdateNote?: (indicatorId: string, note: string | null) => Promise<void>;
   /** Callback để mở NoteModal cho single indicator */
   onOpenNoteModal?: (
     indicatorId: string,
     currentNote: string,
-    sampleId: string
+    sampleId: string,
   ) => void;
   /** Callback để cập nhật đơn vị tính (auto-save on blur) */
   onUnitChange?: (indicatorId: string, unit: string | null) => void;
@@ -80,6 +93,8 @@ interface IndicatorTableProps {
   onStandardChange?: (indicatorId: string, standardId: string | null) => void;
   // Force disable tất cả input/select (khi phiếu yêu cầu bị hủy)
   forceDisableAll?: boolean;
+  // Danh sách chỉ tiêu đang lưu phương pháp xuống DB
+  savingMethodIndicatorIds?: string[];
 }
 
 const IndicatorTable: React.FC<IndicatorTableProps> = ({
@@ -92,6 +107,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   sampleStatus,
   sampleId = "",
   onMethodChange,
+  onUpdateSubContractMethod,
   onTechnicianChange,
   onApprove,
   onUpdateNote: _onUpdateNote,
@@ -104,6 +120,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   standardSelections = {},
   onStandardChange,
   forceDisableAll = false,
+  savingMethodIndicatorIds = [],
 }) => {
   // Determine selection mode based on sample status
   // notStarted/assigned/pendingApproval → assignment mode (để chọn indicator giao việc)
@@ -130,6 +147,16 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   });
   const [rejectForm] = Form.useForm();
 
+  // State for subcontract method modal
+  const [subContractModal, setSubContractModal] = useState<{
+    visible: boolean;
+    indicator?: IndicatorWithPosition;
+  }>({
+    visible: false,
+  });
+  const [subContractSubmitting, setSubContractSubmitting] = useState(false);
+  const [subContractForm] = Form.useForm<UpdateSubContractMethodInput>();
+
   // State for local unit edits (optimistic update before API call)
   const [unitEdits, setUnitEdits] = useState<Record<string, string>>({});
 
@@ -153,14 +180,20 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   // Get standards that contain a specific indicator AND method AND specimenType (if available)
   // Fallback: if no standards match all conditions, return full list
   const getStandardsForIndicator = useMemo(() => {
-    return (indicatorId: string, methodId?: string, specimenTypeId?: string) => {
+    return (
+      indicatorId: string,
+      methodId?: string,
+      specimenTypeId?: string,
+    ) => {
       const filtered = standardsWithIndicators.filter((standard) =>
         standard.indicators.some(
           (si) =>
             si.indicatorId === indicatorId &&
             (!methodId || si.testMethodId === methodId) &&
-            (!specimenTypeId || !si.specimenTypeId || si.specimenTypeId === specimenTypeId)
-        )
+            (!specimenTypeId ||
+              !si.specimenTypeId ||
+              si.specimenTypeId === specimenTypeId),
+        ),
       );
       return filtered.length > 0 ? filtered : standardsWithIndicators;
     };
@@ -171,7 +204,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     standardId: string,
     indicatorId: string,
     methodId?: string,
-    specimenTypeId?: string
+    specimenTypeId?: string,
   ) => {
     const standard = standardsWithIndicators.find((s) => s.id === standardId);
     if (!standard) return null;
@@ -179,14 +212,16 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       (si) =>
         si.indicatorId === indicatorId &&
         (!methodId || si.testMethodId === methodId) &&
-        (!specimenTypeId || !si.specimenTypeId || si.specimenTypeId === specimenTypeId)
+        (!specimenTypeId ||
+          !si.specimenTypeId ||
+          si.specimenTypeId === specimenTypeId),
     );
   };
 
   // Handle standard change - chỉ lưu local state, không gọi API
   const handleStandardChange = (
     indicatorId: string,
-    standardId: string | undefined
+    standardId: string | undefined,
   ) => {
     onStandardChange?.(indicatorId, standardId || null);
   };
@@ -198,7 +233,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       if (rejectModal.indicatorId) {
         // Lấy standardId từ local state hoặc từ indicator
         const indicator = indicators.find(
-          (i) => i.id === rejectModal.indicatorId
+          (i) => i.id === rejectModal.indicatorId,
         );
         const selectedStandardId =
           standardSelections[rejectModal.indicatorId] !== undefined
@@ -208,7 +243,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           rejectModal.indicatorId,
           false,
           values.reason,
-          selectedStandardId
+          selectedStandardId,
         );
         setRejectModal({ visible: false });
         rejectForm.resetFields();
@@ -218,9 +253,37 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     }
   };
 
+  const handleSubmitSubContractMethod = async () => {
+    if (!subContractModal.indicator || !onUpdateSubContractMethod) {
+      return;
+    }
+
+    try {
+      const values = await subContractForm.validateFields();
+      setSubContractSubmitting(true);
+
+      await onUpdateSubContractMethod(subContractModal.indicator.id, {
+        subContractMethodName: values.subContractMethodName.trim(),
+        subContractNumber: values.subContractNumber.trim(),
+        subContractCost:
+          values.subContractCost === null ||
+          values.subContractCost === undefined
+            ? undefined
+            : Number(values.subContractCost),
+      });
+
+      setSubContractModal({ visible: false });
+      subContractForm.resetFields();
+    } finally {
+      setSubContractSubmitting(false);
+    }
+  };
+
   // Helper: tạo composite key từ indicatorId + methodId
-  const makeGroupKey = (indicatorId: string, methodId: string | null | undefined) =>
-    `${indicatorId}_${methodId || 'no-method'}`;
+  const makeGroupKey = (
+    indicatorId: string,
+    methodId: string | null | undefined,
+  ) => `${indicatorId}_${methodId || "no-method"}`;
 
   // Compute sub-to-parent mapping: assigns each sub-indicator to a specific parent's unique id
   // This handles the case where multiple parents have the same indicatorId+methodId
@@ -267,7 +330,9 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       } else {
         // Multiple parents with same indicatorId+methodId - distribute evenly
         // Example: 4 subs, 2 parents -> sub0,sub1 -> parent0; sub2,sub3 -> parent1
-        const subsPerParent = Math.ceil(subList.length / parentUniqueIds.length);
+        const subsPerParent = Math.ceil(
+          subList.length / parentUniqueIds.length,
+        );
         subList.forEach((sub, idx) => {
           const parentIdx = Math.floor(idx / subsPerParent);
           const safeParentIdx = Math.min(parentIdx, parentUniqueIds.length - 1);
@@ -325,7 +390,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       // Find siblings - subs that belong to the same parent (by unique id mapping)
       const myParentUniqueId = subToParentMapping[item.id];
       const siblings = arr.filter(
-        (i) => i.parentIndicatorId && subToParentMapping[i.id] === myParentUniqueId
+        (i) =>
+          i.parentIndicatorId && subToParentMapping[i.id] === myParentUniqueId,
       );
       const siblingIndex = siblings.findIndex((s) => s.id === item.id);
 
@@ -380,31 +446,40 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       dataIndex: "methodId",
       key: "methodId",
       width: 200,
-      render: (value: string, record: LaboratoryTaskIndicatorDto) => {
-        // Phương pháp đã được chọn từ TestRequest - hiển thị dạng text, không cho sửa
-        if (record.methodName) {
-          return (
-            <Tooltip title={record.methodName}>
-              <IndicatorName
-                name={record.methodName}
-                formattedName={record.methodFormattedName}
-                style={{
-                  display: "-webkit-box",
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: "vertical",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              />
-            </Tooltip>
-          );
+      render: (
+        value: string | undefined,
+        record: LaboratoryTaskIndicatorDto,
+      ) => {
+        if (record.subContractMethodName?.trim()) {
+          return <IndicatorName name={record.subContractMethodName} />;
         }
-        // Chưa có phương pháp - hiển thị dropdown để chọn
-        // Cho phép chỉnh sửa nếu indicator chưa được duyệt hoặc chưa bị hủy
+
         const canEditMethod =
           !forceDisableAll &&
+          !savingMethodIndicatorIds.includes(record.id) &&
           record.approvalStatus !== IndicatorApprovalStatus.Approved &&
           record.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled;
+
+        const methodOptions = (methods || []).map((m) => ({
+          value: m.id,
+          label: m.name,
+        }));
+
+        const currentOption = value
+          ? [
+              {
+                value,
+                label:
+                  record.subContractMethodName ||
+                  record.methodName ||
+                  String(value),
+              },
+            ]
+          : [];
+
+        const dedupedMethodOptions = methodOptions.filter(
+          (opt) => opt.value !== value,
+        );
 
         return (
           <Select
@@ -412,13 +487,12 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             size="small"
             value={value}
             placeholder="Chọn PP"
-            onChange={(val) => onMethodChange(record.id, val)}
-            options={(methods || []).map((m) => ({
-              value: m.id,
-              label: m.name,
-            }))}
+            onChange={(val) => onMethodChange(record.id, val ?? null)}
+            options={[...currentOption, ...dedupedMethodOptions]}
             disabled={!canEditMethod}
             allowClear
+            showSearch
+            optionFilterProp="label"
           />
         );
       },
@@ -443,7 +517,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         }
 
         // Lấy giá trị từ local state nếu có, nếu không thì từ server
-        const displayValue = unitEdits[record.id] !== undefined ? unitEdits[record.id] : (value || "");
+        const displayValue =
+          unitEdits[record.id] !== undefined
+            ? unitEdits[record.id]
+            : value || "";
 
         return (
           <div
@@ -493,119 +570,72 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     {
       title: "Ghi chú",
       key: "note",
-      width: 150,
+      width: 40,
       render: (_: unknown, record: IndicatorWithPosition) => {
-        // Hide for parent indicators that have sub-indicators
         if (record._isParentWithSubs) return null;
 
-        // Tổng hợp note từ FreeTextNote và MasterDataNoteContents
-        // FreeTextNote có thể là HTML (rich text)
         const noteParts: string[] = [];
-        if (record.freeTextNote) {
+        const masterDataNoteContents = record.masterDataNoteContents ?? [];
+        if (record.freeTextNote)
           noteParts.push(stripPTags(record.freeTextNote));
-        }
-        if (
-          record.masterDataNoteContents &&
-          record.masterDataNoteContents.length > 0
-        ) {
-          noteParts.push(...record.masterDataNoteContents);
+        if (masterDataNoteContents.length > 0) {
+          noteParts.push(...masterDataNoteContents);
         }
         const displayNoteHtml = noteParts.join("<br/>");
-        // Plain text for tooltip and empty check
-        const displayNotePlain = noteParts.join("").replace(/<[^>]*>/g, "").trim();
+        const displayNotePlain = noteParts
+          .join("")
+          .replace(/<[^>]*>/g, "")
+          .trim();
 
-        // Chỉ không cho edit khi đã duyệt hoặc KH hủy (không phụ thuộc task status)
-        // Nếu chỉ tiêu chưa được QLKT phê duyệt KQ thì vẫn edit ghi chú được
         const isApproved =
           record.approvalStatus === IndicatorApprovalStatus.Approved;
         const isCancelled =
           record.approvalStatus === IndicatorApprovalStatus.CustomerCancelled;
-        const canEditNoteCell = !forceDisableAll && !isApproved && !isCancelled && onOpenNoteModal;
+        const canEditNote =
+          !forceDisableAll && !isApproved && !isCancelled && onOpenNoteModal;
 
-        // Read-only mode - vẫn hiển thị dạng input nhưng disabled
-        if (!canEditNoteCell) {
-          return (
-            <div
-              style={{ minHeight: 32, display: "flex", alignItems: "center" }}
-            >
-              <Tooltip
-                title={
-                  displayNotePlain ? (
-                    <div dangerouslySetInnerHTML={{ __html: displayNoteHtml }} className="note-tooltip-content" />
-                  ) : undefined
-                }
-              >
-                <div
-                  style={{
-                    width: "100%",
-                    height: 24,
-                    padding: "0 7px",
-                    border: "1px solid #d9d9d9",
-                    borderRadius: 4,
-                    backgroundColor: "#f5f5f5",
-                    fontSize: 14,
-                    lineHeight: "22px",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                    color: displayNotePlain
-                      ? "rgba(0, 0, 0, 0.65)"
-                      : "rgba(0, 0, 0, 0.25)",
-                    cursor: "not-allowed",
-                  }}
-                  dangerouslySetInnerHTML={{ __html: displayNotePlain ? displayNoteHtml : "..." }}
-                />
-              </Tooltip>
-            </div>
-          );
-        }
+        const hasNote = displayNotePlain.length > 0;
+        const iconColor = hasNote ? "#1890ff" : "#ccc";
 
-        // Edit mode - click to open modal
         return (
-          <div
-            style={{
-              minHeight: 32,
-              display: "flex",
-              alignItems: "center",
-              cursor: "pointer",
-            }}
-            onClick={() => onOpenNoteModal(record.id, displayNoteHtml, sampleId)}
+          <Tooltip
+            title={
+              hasNote ? (
+                <div dangerouslySetInnerHTML={{ __html: displayNoteHtml }} />
+              ) : undefined
+            }
           >
-            <Tooltip
-              title={
-                displayNotePlain ? (
-                  <div dangerouslySetInnerHTML={{ __html: displayNoteHtml }} className="note-tooltip-content" />
-                ) : undefined
-              }
+            <div
+              style={{
+                height: 32,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
             >
-              <div
+              <i
+                className="bi bi-chat-left-text"
                 style={{
-                  width: "100%",
-                  height: 24,
-                  padding: "0 7px",
-                  border: "1px solid #d9d9d9",
-                  borderRadius: 4,
-                  backgroundColor: "#fff",
                   fontSize: 14,
-                  lineHeight: "22px",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                  color: displayNotePlain
-                    ? "rgba(0, 0, 0, 0.88)"
-                    : "rgba(0, 0, 0, 0.25)",
+                  color: iconColor,
+                  cursor: canEditNote ? "pointer" : "default",
                 }}
-                dangerouslySetInnerHTML={{ __html: displayNotePlain ? displayNoteHtml : "Click để nhập..." }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (canEditNote) {
+                    onOpenNoteModal(record.id, displayNoteHtml, sampleId);
+                  }
+                }}
               />
-            </Tooltip>
-          </div>
+            </div>
+          </Tooltip>
         );
       },
     },
     {
       title: "Hình ảnh",
       key: "images",
-      width: 120,
+      width: 80,
       render: (_: unknown, record: IndicatorWithPosition) => {
         // Hide for parent indicators that have sub-indicators
         if (record._isParentWithSubs) return null;
@@ -638,14 +668,16 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         const availableStandards = getStandardsForIndicator(
           record.indicatorId,
           record.methodId,
-          record.specimenTypeId
+          record.specimenTypeId,
         );
 
         // Nếu standardId hiện tại không nằm trong danh sách options (ví dụ: PP đã đổi), không hiển thị
         const isStandardAvailable = selectedStandardId
           ? availableStandards.some((s) => s.id === selectedStandardId)
           : false;
-        const displayStandardId = isStandardAvailable ? selectedStandardId : undefined;
+        const displayStandardId = isStandardAvailable
+          ? selectedStandardId
+          : undefined;
 
         // Cho phép chọn tiêu chuẩn ở tất cả trạng thái trừ các trạng thái sau
         const canSelectStandard =
@@ -681,7 +713,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     {
       title: "Giới hạn",
       key: "allowedLimit",
-      width: 180,
+      width: 80,
       render: (_: unknown, record: IndicatorWithPosition) => {
         // Hide for parent indicators that have sub-indicators
         if (record._isParentWithSubs) return null;
@@ -698,7 +730,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             selectedStandardId,
             record.indicatorId,
             record.methodId,
-            record.specimenTypeId
+            record.specimenTypeId,
           );
           if (standardInfo) {
             const {
@@ -717,9 +749,11 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
               const upperHtml = stripPTags(upperLimit);
               return (
                 <Text>
-                  {lower} <span dangerouslySetInnerHTML={{ __html: lowerHtml }} />
+                  {lower}{" "}
+                  <span dangerouslySetInnerHTML={{ __html: lowerHtml }} />
                   {" và "}
-                  {upper} <span dangerouslySetInnerHTML={{ __html: upperHtml }} />
+                  {upper}{" "}
+                  <span dangerouslySetInnerHTML={{ __html: upperHtml }} />
                 </Text>
               );
             }
@@ -728,7 +762,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
               const limitHtml = stripPTags(allowedLimit);
               return (
                 <Text>
-                  {comparisonOperator} <span dangerouslySetInnerHTML={{ __html: limitHtml }} />
+                  {comparisonOperator}{" "}
+                  <span dangerouslySetInnerHTML={{ __html: limitHtml }} />
                 </Text>
               );
             }
@@ -743,9 +778,11 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
               const upperHtml = stripPTags(record.upperLimit);
               return (
                 <Text>
-                  {lower} <span dangerouslySetInnerHTML={{ __html: lowerHtml }} />
+                  {lower}{" "}
+                  <span dangerouslySetInnerHTML={{ __html: lowerHtml }} />
                   {" và "}
-                  {upper} <span dangerouslySetInnerHTML={{ __html: upperHtml }} />
+                  {upper}{" "}
+                  <span dangerouslySetInnerHTML={{ __html: upperHtml }} />
                 </Text>
               );
             }
@@ -754,7 +791,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
               const limitHtml = stripPTags(record.allowedLimit);
               return (
                 <Text>
-                  {record.comparisonOperator} <span dangerouslySetInnerHTML={{ __html: limitHtml }} />
+                  {record.comparisonOperator}{" "}
+                  <span dangerouslySetInnerHTML={{ __html: limitHtml }} />
                 </Text>
               );
             }
@@ -766,7 +804,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     {
       title: "Đạt/Không đạt",
       key: "passFailStatus",
-      width: 120,
+      width: 90,
       render: (_: unknown, record: IndicatorWithPosition) => {
         // Hide for parent indicators that have sub-indicators
         if (record._isParentWithSubs) return null;
@@ -792,7 +830,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           selectedStandardId,
           record.indicatorId,
           record.methodId,
-          record.specimenTypeId
+          record.specimenTypeId,
         );
         if (standardInfo) {
           comparisonOperator = standardInfo.comparisonOperator;
@@ -810,7 +848,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           lowerOperator,
           lowerLimit,
           upperOperator,
-          upperLimit
+          upperLimit,
         );
 
         if (passFailStatus === "pass") {
@@ -844,31 +882,37 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           const subIds = Object.entries(subToParentMapping)
             .filter(([, parentId]) => parentId === record.id)
             .map(([subId]) => subId);
-          const subIndicators = indicators.filter((ind) => subIds.includes(ind.id));
+          const subIndicators = indicators.filter((ind) =>
+            subIds.includes(ind.id),
+          );
           isAssignableStatus = subIndicators.some(
             (sub) =>
-              sub.approvalStatus === IndicatorApprovalStatus.AcceptedForTesting ||
+              sub.approvalStatus ===
+                IndicatorApprovalStatus.AcceptedForTesting ||
               sub.approvalStatus === IndicatorApprovalStatus.Entered ||
               sub.approvalStatus === IndicatorApprovalStatus.Rejected ||
               sub.approvalStatus === IndicatorApprovalStatus.CannotTest ||
-              sub.approvalStatus === IndicatorApprovalStatus.MethodChanged
+              sub.approvalStatus === IndicatorApprovalStatus.MethodChanged,
           );
         } else {
           isAssignableStatus =
-            record.approvalStatus === IndicatorApprovalStatus.AcceptedForTesting ||
+            record.approvalStatus ===
+              IndicatorApprovalStatus.AcceptedForTesting ||
             record.approvalStatus === IndicatorApprovalStatus.Entered ||
             record.approvalStatus === IndicatorApprovalStatus.Rejected ||
             record.approvalStatus === IndicatorApprovalStatus.CannotTest ||
             record.approvalStatus === IndicatorApprovalStatus.MethodChanged;
         }
 
-        const canEditIndicator = !forceDisableAll && isAssignableStatus && canAssignTechnician;
+        const canEditIndicator =
+          !forceDisableAll && isAssignableStatus && canAssignTechnician;
 
         // For parent with subs: show technician from first sub
         let displayValue = value;
         if (record._isParentWithSubs) {
-          const firstSubId = Object.entries(subToParentMapping)
-            .find(([, parentId]) => parentId === record.id)?.[0];
+          const firstSubId = Object.entries(subToParentMapping).find(
+            ([, parentId]) => parentId === record.id,
+          )?.[0];
           if (firstSubId) {
             const firstSub = indicators.find((ind) => ind.id === firstSubId);
             displayValue = firstSub?.technicianId || value;
@@ -922,30 +966,63 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       title: "Trạng thái",
       dataIndex: "approvalStatus",
       key: "approvalStatus",
-      width: 180,
+      width: 260,
       fixed: "right" as const,
       render: (
         status: IndicatorApprovalStatus,
-        record: IndicatorWithPosition
+        record: IndicatorWithPosition,
       ) => {
         // Hide for parent indicators that have sub-indicators
         if (record._isParentWithSubs) return null;
 
+        const canShowSubContractAction =
+          !!record.isSubContractMethod && !!onUpdateSubContractMethod;
+
+        const updateSubContractButton = canShowSubContractAction ? (
+          <Button
+            size="small"
+            onClick={() => {
+              setSubContractModal({ visible: true, indicator: record });
+              subContractForm.setFieldsValue({
+                subContractMethodName:
+                  record.subContractMethodName || record.methodName || "",
+                subContractNumber: record.subContractNumber || "",
+                subContractCost: record.subContractCost,
+              });
+            }}
+            disabled={status === IndicatorApprovalStatus.Approved}
+          >
+            Cập nhật PP
+          </Button>
+        ) : null;
+
+        const statusTag = (
+          <StatusTag color={IndicatorApprovalStatusColors[status]}>
+            {IndicatorApprovalStatusLabels[status]}
+          </StatusTag>
+        );
+
         // Ưu tiên hiển thị "KH hủy" trước - bất kể đã giao việc hay chưa
         if (status === IndicatorApprovalStatus.CustomerCancelled) {
-          return (
-            <StatusTag color={IndicatorApprovalStatusColors[status]}>
-              {IndicatorApprovalStatusLabels[status]}
-            </StatusTag>
+          return updateSubContractButton ? (
+            <Space size="small" wrap>
+              {statusTag}
+              {updateSubContractButton}
+            </Space>
+          ) : (
+            statusTag
           );
         }
 
         // Hiển thị "Chờ mẫu chung" nếu chỉ tiêu đang đợi mẫu từ Lab Vi Sinh
         if (record.isWaitingForSharedSample) {
           return (
-            <Tooltip title="Chỉ tiêu này thuộc mẫu chung, đang chờ Lab Vi Sinh hoàn thành">
-              <StatusTag color="gold">Chờ mẫu chung</StatusTag>
-            </Tooltip>
+            <Space size="small" wrap>
+              <Tooltip title="Chỉ tiêu này thuộc mẫu chung, đang chờ Lab Vi Sinh hoàn thành">
+                <StatusTag color="gold">Chờ mẫu chung</StatusTag>
+              </Tooltip>
+              {updateSubContractButton}
+            </Space>
           );
         }
 
@@ -955,24 +1032,35 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
 
         // Chưa giao việc thì hiển thị tag "Chưa giao việc"
         if (!indicatorAssigned) {
-          return <StatusTag color="default">Chưa giao việc</StatusTag>;
+          return (
+            <Space size="small" wrap>
+              <StatusTag color="default">Chưa giao việc</StatusTag>
+              {updateSubContractButton}
+            </Space>
+          );
         }
 
         switch (status) {
           case IndicatorApprovalStatus.Pending:
-            return (
-              <StatusTag color={IndicatorApprovalStatusColors[status]}>
-                {IndicatorApprovalStatusLabels[status]}
-              </StatusTag>
+            return updateSubContractButton ? (
+              <Space size="small" wrap>
+                {statusTag}
+                {updateSubContractButton}
+              </Space>
+            ) : (
+              statusTag
             );
 
           case IndicatorApprovalStatus.Entered: {
             // Khi phiếu yêu cầu bị hủy, chỉ hiển thị status tag
             if (forceDisableAll) {
-              return (
-                <StatusTag color={IndicatorApprovalStatusColors[status]}>
-                  {IndicatorApprovalStatusLabels[status]}
-                </StatusTag>
+              return updateSubContractButton ? (
+                <Space size="small" wrap>
+                  {statusTag}
+                  {updateSubContractButton}
+                </Space>
+              ) : (
+                statusTag
               );
             }
             // Lấy standardId từ local state hoặc DB
@@ -1001,34 +1089,48 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                       record.id,
                       true,
                       undefined,
-                      selectedStandardIdForApprove
+                      selectedStandardIdForApprove,
                     )
                   }
                 >
                   Duyệt
                 </Button>
+                {updateSubContractButton}
               </Space>
             );
           }
 
           case IndicatorApprovalStatus.Approved:
-            return (
-              <StatusTag color={IndicatorApprovalStatusColors[status]}>
-                {IndicatorApprovalStatusLabels[status]}
-              </StatusTag>
+            return updateSubContractButton ? (
+              <Space size="small" wrap>
+                {statusTag}
+                {updateSubContractButton}
+              </Space>
+            ) : (
+              statusTag
             );
 
           case IndicatorApprovalStatus.Rejected:
-            return (
-              <StatusTag color={IndicatorApprovalStatusColors[status]}>
-                {IndicatorApprovalStatusLabels[status]}
-              </StatusTag>
+            return updateSubContractButton ? (
+              <Space size="small" wrap>
+                {statusTag}
+                {updateSubContractButton}
+              </Space>
+            ) : (
+              statusTag
             );
 
           // CustomerCancelled đã xử lý ở đầu function
 
           default:
-            return null;
+            return updateSubContractButton ? (
+              <Space size="small" wrap>
+                {statusTag}
+                {updateSubContractButton}
+              </Space>
+            ) : (
+              statusTag
+            );
         }
       },
     },
@@ -1036,86 +1138,88 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
 
   // Row selection configuration for bulk operations
   // When selecting a parent indicator with subs, auto-select all sub-indicators
-  const rowSelection:
-    | TableRowSelection<IndicatorWithPosition>
-    | undefined = useMemo(() => {
-    if (!showCheckbox || !onSelectionChange) return undefined;
+  const rowSelection: TableRowSelection<IndicatorWithPosition> | undefined =
+    useMemo(() => {
+      if (!showCheckbox || !onSelectionChange) return undefined;
 
-    return {
-      selectedRowKeys: selectedIndicatorIds,
-      onChange: (
-        selectedRowKeys: React.Key[],
-        selectedRows: IndicatorWithPosition[]
-      ) => {
-        let newSelection = [...selectedRowKeys] as string[];
+      return {
+        selectedRowKeys: selectedIndicatorIds,
+        onChange: (
+          selectedRowKeys: React.Key[],
+          selectedRows: IndicatorWithPosition[],
+        ) => {
+          let newSelection = [...selectedRowKeys] as string[];
 
-        // If selecting a parent with subs, auto-select all its sub-indicators
-        // Use subToParentMapping to find subs that belong to this specific parent
-        selectedRows.forEach((row) => {
-          if (row._isParentWithSubs) {
+          // If selecting a parent with subs, auto-select all its sub-indicators
+          // Use subToParentMapping to find subs that belong to this specific parent
+          selectedRows.forEach((row) => {
+            if (row._isParentWithSubs) {
+              const subIds = sortedIndicators
+                .filter(
+                  (ind) =>
+                    ind.parentIndicatorId &&
+                    subToParentMapping[ind.id] === row.id,
+                )
+                .map((ind) => ind.id);
+              subIds.forEach((id) => {
+                if (!newSelection.includes(id)) {
+                  newSelection.push(id);
+                }
+              });
+            }
+          });
+
+          // If deselecting a parent, auto-deselect all its sub-indicators
+          // (Check previously selected parents that are now deselected)
+          const deselectedParents = selectedIndicatorIds.filter(
+            (id) =>
+              !selectedRowKeys.includes(id) &&
+              sortedIndicators.find((i) => i.id === id)?._isParentWithSubs,
+          );
+          deselectedParents.forEach((parentId) => {
             const subIds = sortedIndicators
               .filter(
                 (ind) =>
-                  ind.parentIndicatorId && subToParentMapping[ind.id] === row.id
+                  ind.parentIndicatorId &&
+                  subToParentMapping[ind.id] === parentId,
               )
               .map((ind) => ind.id);
-            subIds.forEach((id) => {
-              if (!newSelection.includes(id)) {
-                newSelection.push(id);
-              }
-            });
+            newSelection = newSelection.filter((id) => !subIds.includes(id));
+          });
+
+          onSelectionChange(newSelection);
+        },
+        getCheckboxProps: (record: IndicatorWithPosition) => {
+          if (selectionMode === "assignment") {
+            // Assignment mode: chỉ enable cho AcceptedForTesting, Entered, MethodChanged (đã đổi PP, cần giao lại KTV)
+            return {
+              disabled:
+                record.approvalStatus !==
+                  IndicatorApprovalStatus.AcceptedForTesting &&
+                record.approvalStatus !== IndicatorApprovalStatus.Entered &&
+                record.approvalStatus !== IndicatorApprovalStatus.MethodChanged,
+              name: record.id,
+            };
           }
-        });
-
-        // If deselecting a parent, auto-deselect all its sub-indicators
-        // (Check previously selected parents that are now deselected)
-        const deselectedParents = selectedIndicatorIds.filter(
-          (id) =>
-            !selectedRowKeys.includes(id) &&
-            sortedIndicators.find((i) => i.id === id)?._isParentWithSubs
-        );
-        deselectedParents.forEach((parentId) => {
-          const subIds = sortedIndicators
-            .filter(
-              (ind) =>
-                ind.parentIndicatorId && subToParentMapping[ind.id] === parentId
-            )
-            .map((ind) => ind.id);
-          newSelection = newSelection.filter((id) => !subIds.includes(id));
-        });
-
-        onSelectionChange(newSelection);
-      },
-      getCheckboxProps: (record: IndicatorWithPosition) => {
-        if (selectionMode === "assignment") {
-          // Assignment mode: chỉ enable cho AcceptedForTesting, Entered, MethodChanged (đã đổi PP, cần giao lại KTV)
+          // Approval mode: chỉ cho phép chọn indicators có trạng thái Entered (Chờ phê duyệt) hoặc Rejected
           return {
             disabled:
-              record.approvalStatus !== IndicatorApprovalStatus.AcceptedForTesting &&
-              record.approvalStatus !== IndicatorApprovalStatus.Entered &&
-              record.approvalStatus !== IndicatorApprovalStatus.MethodChanged,
+              record.approvalStatus === IndicatorApprovalStatus.Approved ||
+              record.approvalStatus ===
+                IndicatorApprovalStatus.CustomerCancelled ||
+              record.approvalStatus === IndicatorApprovalStatus.Pending,
             name: record.id,
           };
-        }
-        // Approval mode: chỉ cho phép chọn indicators có trạng thái Entered (Chờ phê duyệt) hoặc Rejected
-        return {
-          disabled:
-            record.approvalStatus === IndicatorApprovalStatus.Approved ||
-            record.approvalStatus ===
-              IndicatorApprovalStatus.CustomerCancelled ||
-            record.approvalStatus === IndicatorApprovalStatus.Pending,
-          name: record.id,
-        };
-      },
-    };
-  }, [
-    showCheckbox,
-    selectedIndicatorIds,
-    onSelectionChange,
-    selectionMode,
-    sortedIndicators,
-    subToParentMapping,
-  ]);
+        },
+      };
+    }, [
+      showCheckbox,
+      selectedIndicatorIds,
+      onSelectionChange,
+      selectionMode,
+      sortedIndicators,
+      subToParentMapping,
+    ]);
 
   return (
     <>
@@ -1164,6 +1268,75 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             <Input.TextArea
               rows={3}
               placeholder="Nhập lý do từ chối kết quả..."
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="Cập nhật phương pháp"
+        className="subcontract-method-modal"
+        open={subContractModal.visible}
+        onOk={handleSubmitSubContractMethod}
+        onCancel={() => {
+          setSubContractModal({ visible: false });
+          subContractForm.resetFields();
+        }}
+        okText="Lưu"
+        cancelText="Hủy"
+        width={560}
+        centered
+        getContainer={false}
+        confirmLoading={subContractSubmitting}
+        destroyOnHidden
+      >
+        <Form form={subContractForm} layout="vertical">
+          <Form.Item label="Tên chỉ tiêu">
+            <Input
+              value={subContractModal.indicator?.indicatorName || "-"}
+              readOnly
+              disabled
+            />
+          </Form.Item>
+          <Form.Item
+            name="subContractMethodName"
+            label="Tên phương pháp"
+            rules={[
+              { required: true, message: "Vui lòng nhập tên phương pháp" },
+              { whitespace: true, message: "Vui lòng nhập tên phương pháp" },
+            ]}
+          >
+            <Input placeholder="Nhập tên phương pháp" maxLength={500} />
+          </Form.Item>
+          <Form.Item
+            name="subContractNumber"
+            label="Số HĐ phụ"
+            rules={[
+              { required: true, message: "Vui lòng nhập số HĐ phụ" },
+              { whitespace: true, message: "Vui lòng nhập số HĐ phụ" },
+            ]}
+          >
+            <Input placeholder="Nhập số hợp đồng phụ" maxLength={200} />
+          </Form.Item>
+          <Form.Item name="subContractCost" label="Chi phí">
+            <InputNumber<number>
+              className="subcontract-cost-input"
+              style={{ width: "100%" }}
+              min={0}
+              precision={0}
+              controls={false}
+              formatter={(value) =>
+                `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+              }
+              parser={(value) => {
+                const parsed = parseInt(
+                  value?.replace(/[^\d]/g, "") || "0",
+                  10,
+                );
+                return Math.max(0, parsed);
+              }}
+              placeholder="Nhập chi phí (không bắt buộc)"
+              addonAfter="đ"
             />
           </Form.Item>
         </Form>

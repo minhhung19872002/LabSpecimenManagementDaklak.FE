@@ -11,9 +11,25 @@ import {
   TestingStatusLabels,
   TestingStatusColors,
 } from "../../../../types/testing";
+import { TestRequestStatus } from "../../../../types/testRequest";
 import StatusTag from "../../../../components/common/StatusTag";
 
-export const getStatusTag = (status: TestingStatus) => {
+export const getStatusTag = (
+  status: TestingStatus,
+  testRequestStatus?: TestRequestStatus,
+) => {
+  if (testRequestStatus === TestRequestStatus.Cancelled) {
+    return (
+      <StatusTag
+        color="error"
+        icon={<StopOutlined />}
+        style={{ fontSize: 14, padding: "2px 10px" }}
+      >
+        Hủy bỏ yêu cầu
+      </StatusTag>
+    );
+  }
+
   const label = TestingStatusLabels[status];
   const color = TestingStatusColors[status];
 

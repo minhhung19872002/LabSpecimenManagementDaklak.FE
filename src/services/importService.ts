@@ -151,6 +151,16 @@ export interface IndicatorGroupImportPreviewItem {
   isNewSubIndicator: boolean;
   existingSubIndicatorId?: string;
   hasSubIndicator: boolean;
+  // Specimen/TestMethod info
+  specimenTypeName: string;
+  specimenTypeId?: string;
+  isSpecimenTypeInvalid: boolean;
+  testMethodName: string;
+  testMethodId?: string;
+  isTestMethodInvalid: boolean;
+  unit?: string;
+  unitPrice: number;
+  isNewMethodLink: boolean;
   // Validation
   isValid: boolean;
   errors: string[];
@@ -169,6 +179,8 @@ export interface IndicatorGroupImportPreviewDto {
   updateIndicators: number;
   newSubIndicators: number;
   updateSubIndicators: number;
+  newMethodLinks: number;
+  updateMethodLinks: number;
   // Error file
   errorFileBase64?: string;
   errorFileName?: string;

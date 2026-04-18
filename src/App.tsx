@@ -7,6 +7,7 @@ import { initTableGrabScroll } from "./hooks/useTableGrabScroll";
 import { getDefaultRouteForUser, PATH_ROUTES, STORAGE_KEYS } from "./constants";
 import { UserInfo } from "./services/authService";
 import { prefetchMasterData } from "./services/offline/prefetchService";
+import AppUpdateNotification from "./components/common/AppUpdateNotification";
 import "./App.css";
 
 // Helper component to redirect to user's default route based on their role
@@ -17,10 +18,8 @@ const DefaultRouteRedirect = () => {
   if (storedUser) {
     try {
       const userInfo: UserInfo = JSON.parse(storedUser);
-      if (userInfo.roles && userInfo.roles.length > 0) {
-        defaultRoute =
-          getDefaultRouteForUser(userInfo.roles) || PATH_ROUTES.dashboard;
-      }
+      defaultRoute =
+        getDefaultRouteForUser(userInfo.roles) || PATH_ROUTES.dashboard;
     } catch {
       // Ignore parsing errors
     }
@@ -214,6 +213,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <AppUpdateNotification />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/401" element={<Unauthorized />} />

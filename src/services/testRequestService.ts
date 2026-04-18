@@ -433,10 +433,23 @@ export const testRequestService = {
   },
 
   /**
-   * Sinh số hợp đồng tự động với format HDYYYYMMDD###
+   * Sinh số hợp đồng tự động theo dãy tuần tự (bắt đầu từ 26170, tăng 1)
    */
   generateContractNumber: async (): Promise<string> => {
     const response = await api.get<string>(`${BASE_URL}/generate-contract-number`);
+    return response.data;
+  },
+
+  /**
+   * Kiểm tra số hợp đồng đã tồn tại hay chưa
+   */
+  checkContractNumberExists: async (contractNumber: string, excludeId?: string): Promise<boolean> => {
+    const response = await api.get<boolean>(`${BASE_URL}/check-contract-number-exists`, {
+      params: {
+        contractNumber,
+        excludeId,
+      },
+    });
     return response.data;
   },
 

@@ -164,7 +164,8 @@ export const useTestRequestFormActions = ({
       'province', 'ward', 'methodWestHighlandInstitute', 'methodCustomer', 'methodCustomerDetail',
       'resultLanguage', 'resultCopyCount', 'separatePassedResults', 'conformityDeclaration',
       'otherRequirements', 'subContract', 'samplingRequirement', 'deliveryDirectPickup',
-      'deliveryPostal', 'returnStoredSample', 'sampleType', 'sampleStorage', 'totalCost', 'totalCostInWords',
+      'deliveryPostal', 'returnStoredSample', 'sampleTypeService', 'sampleTypeContract', 'sampleTypeTask', 'sampleTypeSubContract',
+      'sampleStorage', 'totalCost', 'totalCostInWords',
       'receiptNumber', 'notes', 'changeRequest', 'agreeTerms', 'sentToAccounting',
       'paymentReceived', 'sentToDepartment', 'resultReturned', 'subcontractor'
     ];
@@ -860,8 +861,31 @@ export const useTestRequestFormActions = ({
 
   // Form submit
   const onFinish = async (values: any) => {
+    const selectedSampleTypes: string[] = Array.isArray(values.sampleType)
+      ? values.sampleType
+      : values.sampleType
+        ? [values.sampleType]
+        : [];
+    const sampleTypeService = selectedSampleTypes.includes("service");
+    const sampleTypeContract = selectedSampleTypes.includes("contract");
+    const sampleTypeTask = selectedSampleTypes.includes("task");
+    const sampleTypeSubContract = selectedSampleTypes.includes("subContract");
+    const normalizedSubContract = sampleTypeSubContract
+      ? values.subContract?.trim()
+      : undefined;
+
     if (samples.length === 0) {
       message.warning("Vui lòng thêm ít nhất một mẫu xét nghiệm");
+      return;
+    }
+
+    if (selectedSampleTypes.length === 0) {
+      message.warning("Vui lòng chọn ít nhất một loại hình mẫu");
+      return;
+    }
+
+    if (sampleTypeSubContract && !normalizedSubContract) {
+      message.warning("Vui lòng nhập hợp đồng phụ");
       return;
     }
 
@@ -1020,7 +1044,7 @@ export const useTestRequestFormActions = ({
       const payload = {
         quotationId: sourceQuotationId || undefined,
         contractNumber: values.contractNumber || undefined,
-        contractDate: values.contractDate ? values.contractDate.format('YYYY-MM-DDTHH:mm:ss') : undefined,
+        contractDate: values.contractDate ? values.contractDate.format('YYYY-MM-DDTHH:mm:ssZZ') : undefined,
         sentToAccounting: values.sentToAccounting || false,
         paymentReceived: values.paymentReceived || false,
         sentToDepartment: values.sentToDepartment || false,
@@ -1044,22 +1068,22 @@ export const useTestRequestFormActions = ({
         separatePassedResults: values.separatePassedResults || false,
         conformityDeclaration: values.conformityDeclaration || undefined,
         otherRequirements: values.otherRequirements || undefined,
-        subContract: values.subContract || undefined,
+        subContract: normalizedSubContract,
         samplingRequirement: values.samplingRequirement ?? SamplingRequirement.CustomerSampling,
         deliveryDirectPickup: values.deliveryDirectPickup || false,
         deliveryPostal: values.deliveryPostal || false,
         returnStoredSample: values.returnStoredSample || false,
-        sampleTypeService: values.sampleType === "service",
-        sampleTypeContract: values.sampleType === "contract",
-        sampleTypeTask: values.sampleType === "task",
-        sampleTypeSubContract: values.sampleType === "subContract",
+        sampleTypeService,
+        sampleTypeContract,
+        sampleTypeTask,
+        sampleTypeSubContract,
         resultDeliveryDate: values.expectedCompletionDate
           ? values.expectedCompletionDate.format('YYYY-MM-DD')
           : undefined,
         sampleStorage: values.sampleStorageOption ?? SampleStorageOption.No,
-        totalCost: values.sampleType === "task" ? 0 : totalSampleCost,
+        totalCost: sampleTypeTask ? 0 : totalSampleCost,
         totalCostInWords:
-          values.sampleType === "task" || totalSampleCost === 0
+          sampleTypeTask || totalSampleCost === 0
             ? ""
             : numberToVietnameseWords(totalSampleCost),
         receiptNumber: values.receiptNumber || undefined,
@@ -1167,11 +1191,23 @@ export const useTestRequestFormActions = ({
     setLoading(true);
     try {
       const values = form.getFieldsValue();
+      const selectedSampleTypes: string[] = Array.isArray(values.sampleType)
+        ? values.sampleType
+        : values.sampleType
+          ? [values.sampleType]
+          : [];
+      const sampleTypeService = selectedSampleTypes.includes("service");
+      const sampleTypeContract = selectedSampleTypes.includes("contract");
+      const sampleTypeTask = selectedSampleTypes.includes("task");
+      const sampleTypeSubContract = selectedSampleTypes.includes("subContract");
+      const normalizedSubContract = sampleTypeSubContract
+        ? values.subContract?.trim()
+        : undefined;
 
       // Build preview input from form data
       const previewInput: PreviewTestRequestFormInput = {
         contractNumber: values.contractNumber || "",
-        contractDate: values.contractDate ? values.contractDate.toISOString() : undefined,
+        contractDate: values.contractDate ? values.contractDate.format('YYYY-MM-DDTHH:mm:ssZZ') : undefined,
         sentToAccounting: values.sentToAccounting || false,
         paymentReceived: values.paymentReceived || false,
         sentToDepartment: values.sentToDepartment || false,
@@ -1199,21 +1235,24 @@ export const useTestRequestFormActions = ({
         separatePassedResults: values.separatePassedResults || false,
         conformityDeclaration: values.conformityDeclaration || undefined,
         otherRequirements: values.otherRequirements || undefined,
-        subContract: values.subContract || undefined,
+        subContract: normalizedSubContract,
         samplingRequirement: values.samplingRequirement ?? SamplingRequirement.CustomerSampling,
         deliveryDirectPickup: values.deliveryDirectPickup || false,
         deliveryPostal: values.deliveryPostal || false,
         returnStoredSample: values.returnStoredSample || false,
-        sampleTypeService: values.sampleType === "service",
-        sampleTypeContract: values.sampleType === "contract",
-        sampleTypeTask: values.sampleType === "task",
-        sampleTypeSubContract: values.sampleType === "subContract",
+        sampleTypeService,
+        sampleTypeContract,
+        sampleTypeTask,
+        sampleTypeSubContract,
         resultDeliveryDate: values.resultDeliveryDate
           ? values.resultDeliveryDate.toISOString()
           : undefined,
         sampleStorage: values.sampleStorageOption ?? SampleStorageOption.No,
-        totalCost: totalSampleCost,
-        totalCostInWords: numberToVietnameseWords(totalSampleCost),
+        totalCost: sampleTypeTask ? 0 : totalSampleCost,
+        totalCostInWords:
+          sampleTypeTask || totalSampleCost === 0
+            ? ""
+            : numberToVietnameseWords(totalSampleCost),
         receiptNumber: values.receiptNumber || undefined,
         agreeTerms: values.agreeTerms || false,
         requestDate: values.requestDate

@@ -1,6 +1,6 @@
-import { Modal, Form, Select, Tooltip } from "antd";
-import { Controller, UseFormReturn } from "react-hook-form";
-import Icon from "../../../../components/common/Icon";
+import { Modal, Form, Select, Tooltip, Button, Divider } from "antd";
+import { Controller, UseFormReturn, useFieldArray } from "react-hook-form";
+import Icon, { DeleteOutlined, PlusOutlined } from "../../../../components/common/Icon";
 import { IndicatorDto } from "../types";
 import { IndicatorFormData } from "../schemas/indicatorSchema";
 import { RichTextEditor } from "../../../../components/common";
@@ -36,6 +36,11 @@ const IndicatorModal: React.FC<IndicatorModalProps> = ({
     formState: { errors },
   } = form;
 
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "subIndicators",
+  });
+
   return (
     <Modal
       title={editingIndicator ? "Sửa chỉ tiêu" : "Thêm chỉ tiêu mới"}
@@ -45,9 +50,9 @@ const IndicatorModal: React.FC<IndicatorModalProps> = ({
       confirmLoading={loading}
       okText={editingIndicator ? "Cập nhật" : "Thêm mới"}
       cancelText="Hủy"
-      width={520}
+      width={680}
       centered
-      styles={{ body: { paddingTop: 16 } }}
+      styles={{ body: { paddingTop: 16, maxHeight: "70vh", overflowY: "auto" } }}
     >
       <Form layout="vertical">
         <Form.Item
@@ -104,7 +109,6 @@ const IndicatorModal: React.FC<IndicatorModalProps> = ({
                 value={field.value || ""}
                 onChange={(html, plainText) => {
                   field.onChange(html);
-                  // Also update plain text name for search/display fallback
                   setValue("name", plainText);
                 }}
                 placeholder="Tên chỉ tiêu"
@@ -112,6 +116,74 @@ const IndicatorModal: React.FC<IndicatorModalProps> = ({
             )}
           />
         </Form.Item>
+
+        {/* Sub-indicators section - only show when editing */}
+        {editingIndicator && (
+          <>
+            <Divider style={{ margin: "12px 0" }} />
+            <div style={{ marginBottom: 8 }}>
+              <span style={{ fontWeight: 500 }}>Chỉ tiêu phụ</span>
+              <span style={{ color: "#8c8c8c", marginLeft: 8, fontSize: 12 }}>
+                (Kế thừa phương pháp thử và ĐVT từ chỉ tiêu cha)
+              </span>
+            </div>
+
+            {fields.map((field, index) => (
+              <div
+                key={field.id}
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 8,
+                  marginBottom: 8,
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <Form.Item
+                    validateStatus={
+                      errors.subIndicators?.[index]?.name ? "error" : ""
+                    }
+                    help={errors.subIndicators?.[index]?.name?.message}
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Controller
+                      name={`subIndicators.${index}.formattedName`}
+                      control={control}
+                      render={({ field: subField }) => (
+                        <RichTextEditor
+                          value={subField.value || ""}
+                          onChange={(html, plainText) => {
+                            subField.onChange(html);
+                            setValue(`subIndicators.${index}.name`, plainText);
+                          }}
+                          placeholder={`Chỉ tiêu phụ ${index + 1}`}
+                        />
+                      )}
+                    />
+                  </Form.Item>
+                </div>
+                <Button
+                  type="text"
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={() => remove(index)}
+                  style={{ marginTop: 4 }}
+                />
+              </div>
+            ))}
+
+            <Button
+              type="dashed"
+              onClick={() => append({ name: "", formattedName: "" })}
+              icon={<PlusOutlined />}
+              block
+              style={{ marginBottom: 12 }}
+            >
+              Thêm chỉ tiêu phụ
+            </Button>
+          </>
+        )}
+
         <Form.Item label="Trạng thái">
           <Controller
             name="isActive"
