@@ -66,7 +66,7 @@ export const useUnitData = () => {
     pageSize,
     filteredUnits,
     setSearchText,
-    fetchData: () => fetchData(),
+    fetchData,
     handlePageChange,
   };
 };

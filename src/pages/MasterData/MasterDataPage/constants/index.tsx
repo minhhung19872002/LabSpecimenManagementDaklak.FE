@@ -22,6 +22,7 @@ export const categoryPermissionMap: Record<string, string> = {
   formTemplates: PERMISSIONS.FormTemplates.Default,
   testResultValues: PERMISSIONS.TestResultValues.Default,
   notes: PERMISSIONS.Notes.Default,
+  units: PERMISSIONS.Units.Default,
 };
 
 export const categoryLabels: Record<string, string> = {
@@ -258,6 +259,8 @@ export const getStatCount = (
       return statistics.testResultValueCount || 0;
     case "notes":
       return statistics.noteCount || 0;
+    case "units":
+      return statistics.unitCount || 0;
     default:
       return 0;
   }

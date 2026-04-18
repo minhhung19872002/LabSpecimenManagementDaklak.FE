@@ -479,6 +479,9 @@ const MasterDataList: React.FC = () => {
               if (key === "notes") {
                 setNotesRefreshKey((prev) => prev + 1);
               }
+              if (key === "units") {
+                setUnitsRefreshKey((prev) => prev + 1);
+              }
             }}
             tabPosition="left"
             style={{ minHeight: 400 }}
@@ -539,6 +542,12 @@ const MasterDataList: React.FC = () => {
                     ref={sampleConditionsRef}
                     onDataChange={() => fetchStatistics()}
                     refreshKey={sampleConditionsRefreshKey}
+                  />
+                ) : key === "units" ? (
+                  <UnitsTab
+                    ref={unitsRef}
+                    onDataChange={() => fetchStatistics()}
+                    refreshKey={unitsRefreshKey}
                   />
                 ) : (
                   <MasterDataTable

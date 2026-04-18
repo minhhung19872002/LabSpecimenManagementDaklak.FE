@@ -449,6 +449,7 @@ export interface MasterDataStatisticsDto {
   indicatorGroupCount: number;
   indicatorCount: number;
   formTemplateCount: number;
+  unitCount: number;
 }
 
 // Service implementations - Using new API v1 endpoints

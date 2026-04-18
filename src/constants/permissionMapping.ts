@@ -231,6 +231,12 @@ export const PERMISSIONS = {
     Edit: `${P}.TestResultValues.Edit`,
     Delete: `${P}.TestResultValues.Delete`,
   },
+  Units: {
+    Default: `${P}.Units`,
+    Create: `${P}.Units.Create`,
+    Edit: `${P}.Units.Edit`,
+    Delete: `${P}.Units.Delete`,
+  },
   FormTemplates: {
     Default: `${P}.FormTemplates`,
   },
