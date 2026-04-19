@@ -135,7 +135,7 @@ const OrganizationTable: React.FC<OrganizationTableProps> = ({
         fixed: "right",
         render: (_, record: OrganizationDto) => {
           const canEdit = authService.hasPermission(
-            PERMISSIONS.MasterData.Edit,
+            PERMISSIONS.Organizations.Edit,
           );
 
           return (

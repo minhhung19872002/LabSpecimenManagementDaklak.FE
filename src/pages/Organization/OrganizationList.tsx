@@ -175,7 +175,7 @@ const OrganizationList: React.FC = () => {
           >
             Tải template
           </Button>
-          {authService.hasPermission(PERMISSIONS.MasterData.Create) && (
+          {authService.hasPermission(PERMISSIONS.Organizations.Create) && (
             <Button
               icon={<UploadOutlined />}
               onClick={() => setImportModalVisible(true)}
@@ -183,7 +183,7 @@ const OrganizationList: React.FC = () => {
               Nhập danh sách
             </Button>
           )}
-          {authService.hasPermission(PERMISSIONS.MasterData.Create) && (
+          {authService.hasPermission(PERMISSIONS.Organizations.Create) && (
             <Button
               type="primary"
               icon={<PlusOutlined />}

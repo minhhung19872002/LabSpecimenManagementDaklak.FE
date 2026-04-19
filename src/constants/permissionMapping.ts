@@ -116,6 +116,14 @@ export const PERMISSIONS = {
     Confirm: `${P}.Receipts.Confirm`,
   },
 
+  // Organizations (Cơ sở/Doanh nghiệp)
+  Organizations: {
+    Default: `${P}.Organizations`,
+    Create: `${P}.Organizations.Create`,
+    Edit: `${P}.Organizations.Edit`,
+    Delete: `${P}.Organizations.Delete`,
+  },
+
   // Subcontractors
   Subcontractors: {
     Default: `${P}.Subcontractors`,
@@ -306,7 +314,7 @@ export const ROUTE_PERMISSION_MAP: Record<string, string[]> = {
   '/master-data': [PERMISSIONS.MasterData.Default],
 
   // Organizations
-  '/organizations': [PERMISSIONS.Customers.Default],
+  '/organizations': [PERMISSIONS.Organizations.Default],
 
   // Audit Log
   '/audit-log': [PERMISSIONS.AuditLogs.Default],
@@ -482,7 +490,7 @@ export const MENU_PERMISSION_MAP = {
   masterData: [
     PERMISSIONS.MasterData.Default,
   ],
-  organizations: [PERMISSIONS.Customers.Default],
+  organizations: [PERMISSIONS.Organizations.Default],
   auditLog: [PERMISSIONS.AuditLogs.Default],
   employees: [PERMISSIONS.Users.Default],
   roleManagement: [PERMISSIONS.RoleManagement.Default],
