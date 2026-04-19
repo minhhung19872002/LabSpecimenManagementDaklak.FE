@@ -1,6 +1,6 @@
 import React from "react";
 import { Tag, Switch, Space, Tooltip, Button, Popover } from "antd";
-import { EditOutlined, DeleteOutlined, PaperClipOutlined, EyeOutlined } from "@ant-design/icons";
+import { EditOutlined, DeleteOutlined, PaperClipOutlined, EyeOutlined, ArrowUpOutlined, ArrowDownOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { ProductDto, ProductType, ProductTypeLabels } from "../../../services/productService";
 
@@ -122,9 +122,37 @@ export const getProductColumns = (
       title: "SL khả dụng",
       dataIndex: "availableQuantity",
       key: "availableQuantity",
-      width: 120,
+      width: 150,
       align: "right" as const,
       sorter: true,
+      render: (qty: number, record: ProductDto) => {
+        const min = record.minStockLevel;
+        const max = record.maxStockLevel;
+        const isBelowMin = min != null && min > 0 && qty <= min;
+        const isAboveMax = max != null && max > 0 && qty >= max;
+
+        if (isBelowMin) {
+          return (
+            <Tooltip title={`Dưới mức tồn tối thiểu (${min})`}>
+              <span style={{ color: "#ff4d4f", fontWeight: 600 }}>
+                <ArrowDownOutlined style={{ marginRight: 4 }} />
+                {qty}
+              </span>
+            </Tooltip>
+          );
+        }
+        if (isAboveMax) {
+          return (
+            <Tooltip title={`Vượt mức tồn tối đa (${max})`}>
+              <span style={{ color: "#faad14", fontWeight: 600 }}>
+                <ArrowUpOutlined style={{ marginRight: 4 }} />
+                {qty}
+              </span>
+            </Tooltip>
+          );
+        }
+        return qty;
+      },
     });
   }
 

@@ -139,6 +139,17 @@ const SupplierList = Loadable(
   lazy(() => import("./pages/Suppliers/SupplierList"))
 );
 
+// Goods Receipts - Phiếu nhập hàng
+const GoodsReceiptList = Loadable(
+  lazy(() => import("./pages/GoodsReceipts/GoodsReceiptList"))
+);
+const GoodsReceiptForm = Loadable(
+  lazy(() => import("./pages/GoodsReceipts/GoodsReceiptForm"))
+);
+const GoodsReceiptDetail = Loadable(
+  lazy(() => import("./pages/GoodsReceipts/GoodsReceiptDetail"))
+);
+
 // Products
 const ProductList = Loadable(
   lazy(() => import("./pages/Products/ProductList"))
@@ -306,6 +317,12 @@ function App() {
 
           {/* Subcontractor Management - Nhà thầu phụ */}
           <Route path="subcontractors" element={<SubcontractorList />} />
+
+          {/* Goods Receipts - Phiếu nhập hàng */}
+          <Route path="goods-receipts" element={<GoodsReceiptList />} />
+          <Route path="goods-receipts/create" element={<GoodsReceiptForm />} />
+          <Route path="goods-receipts/:id" element={<GoodsReceiptDetail />} />
+          <Route path="goods-receipts/edit/:id" element={<GoodsReceiptForm />} />
 
           {/* Suppliers - Quản lý nhà cung cấp */}
           <Route path="suppliers-management" element={<SupplierList />} />

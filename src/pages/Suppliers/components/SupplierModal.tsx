@@ -21,7 +21,7 @@ import {
   CreateUpdateSupplierDto,
   supplierService,
 } from "../../../services/supplierService";
-import type { UploadFile, RcFile } from "antd/es/upload";
+import type { RcFile } from "antd/es/upload";
 
 const { TextArea } = Input;
 

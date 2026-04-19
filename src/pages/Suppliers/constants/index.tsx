@@ -1,6 +1,6 @@
 import React from "react";
-import { Switch, Tag, Tooltip, Button, Space } from "antd";
-import { EditOutlined } from "@ant-design/icons";
+import { Switch, Tooltip, Button, Space } from "antd";
+import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { SupplierDto } from "../../../services/supplierService";
 
@@ -14,10 +14,10 @@ export interface ColumnConfig {
 export const ALL_COLUMNS: ColumnConfig[] = [
   { key: "code", title: "ID nhà cung cấp", defaultVisible: true },
   { key: "name", title: "Tên nhà cung cấp", defaultVisible: true },
-  { key: "taxCode", title: "Mã số thuế", defaultVisible: false },
-  { key: "phone", title: "Số điện thoại", defaultVisible: false },
-  { key: "email", title: "Email", defaultVisible: false },
-  { key: "address", title: "Địa chỉ", defaultVisible: false },
+  { key: "taxCode", title: "Mã số thuế", defaultVisible: true },
+  { key: "phone", title: "Số điện thoại", defaultVisible: true },
+  { key: "email", title: "Email", defaultVisible: true },
+  { key: "address", title: "Địa chỉ", defaultVisible: true },
   { key: "supplierGroup", title: "Nhóm NCC", defaultVisible: false },
   { key: "totalPurchase", title: "Tổng mua", defaultVisible: true },
   { key: "totalPurchaseAfterReturn", title: "Tổng mua trừ hàng trả", defaultVisible: false },
@@ -33,8 +33,10 @@ const formatNumber = (value?: number) => {
 export const getSupplierColumns = (
   visibleKeys: Set<string>,
   handleEdit: (record: SupplierDto) => void,
+  handleDelete: (record: SupplierDto) => void,
   handleToggleActive: (record: SupplierDto) => void,
   canEdit: boolean,
+  canDelete: boolean,
   currentPage: number,
   pageSize: number
 ): ColumnsType<SupplierDto> => {
@@ -56,6 +58,7 @@ export const getSupplierColumns = (
       key: "code",
       width: 160,
       ellipsis: true,
+      sorter: true,
     });
   }
 
@@ -66,6 +69,7 @@ export const getSupplierColumns = (
       key: "name",
       width: 250,
       ellipsis: true,
+      sorter: true,
     });
   }
 
@@ -173,23 +177,36 @@ export const getSupplierColumns = (
     });
   }
 
-  // Always show action column if canEdit
-  if (canEdit) {
+  if (canEdit || canDelete) {
     columns.push({
       title: "Thao tác",
       key: "actions",
-      width: 80,
+      width: 100,
       align: "center" as const,
       fixed: "right" as const,
       render: (_: any, record: SupplierDto) => (
-        <Tooltip title="Sửa">
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          />
-        </Tooltip>
+        <Space size={0}>
+          {canEdit && (
+            <Tooltip title="Sửa">
+              <Button
+                type="link"
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => handleEdit(record)}
+              />
+            </Tooltip>
+          )}
+          {canDelete && (
+            <Tooltip title="Xóa">
+              <Button
+                type="text"
+                size="small"
+                icon={<DeleteOutlined style={{ color: "#ff4d4f" }} />}
+                onClick={() => handleDelete(record)}
+              />
+            </Tooltip>
+          )}
+        </Space>
       ),
     });
   }

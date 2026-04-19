@@ -37,6 +37,7 @@ export interface SupplierFilterDto {
   limit?: number;
   search?: string;
   supplierGroup?: string;
+  sorting?: string;
 }
 
 interface PagedResult<T> {
@@ -53,6 +54,7 @@ export const supplierService = {
     if (params.limit) apiParams.Limit = params.limit;
     if (params.search) apiParams.Search = params.search;
     if (params.supplierGroup) apiParams.SupplierGroup = params.supplierGroup;
+    if (params.sorting) apiParams.Sorting = params.sorting;
     const response = await api.get<PagedResult<SupplierDto>>(BASE_URL, { params: apiParams });
     return response.data;
   },
@@ -74,6 +76,11 @@ export const supplierService = {
 
   delete: async (id: string): Promise<void> => {
     await api.delete(`${BASE_URL}/${id}`);
+  },
+
+  batchDelete: async (ids: string[]): Promise<number> => {
+    const response = await api.post<number>(`${BASE_URL}/batch-delete`, ids);
+    return response.data;
   },
 
   toggleActive: async (id: string): Promise<void> => {

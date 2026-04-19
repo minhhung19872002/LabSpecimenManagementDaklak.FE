@@ -5,7 +5,7 @@ export const supplierSchema = yup.object({
     .string()
     .required("Vui lòng nhập tên nhà cung cấp")
     .max(500, "Tên không được vượt quá 500 ký tự"),
-  phone: yup.string().nullable().max(20, "Số điện thoại không được vượt quá 20 ký tự"),
+  phone: yup.string().required("Vui lòng nhập số điện thoại").max(20, "Số điện thoại không được vượt quá 20 ký tự"),
   email: yup.string().nullable().email("Email không đúng định dạng"),
   code: yup.string().nullable().max(50, "Mã không được vượt quá 50 ký tự"),
   taxCode: yup.string().nullable(),

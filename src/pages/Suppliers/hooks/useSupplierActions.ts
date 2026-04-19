@@ -11,6 +11,7 @@ export const useSupplierActions = ({ fetchData }: UseSupplierActionsProps) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<SupplierDto | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
   const handleCreate = useCallback(() => {
     setEditingSupplier(null);
@@ -26,6 +27,49 @@ export const useSupplierActions = ({ fetchData }: UseSupplierActionsProps) => {
       message.error("Không thể tải thông tin nhà cung cấp");
     }
   }, []);
+
+  const handleDelete = useCallback((supplier: SupplierDto) => {
+    Modal.confirm({
+      title: "Xác nhận xóa",
+      content: `Bạn có chắc chắn muốn xóa "${supplier.name}"? Thao tác này không thể hoàn tác.`,
+      okText: "Xóa",
+      okButtonProps: { danger: true },
+      cancelText: "Hủy",
+      centered: true,
+      onOk: async () => {
+        try {
+          await supplierService.delete(supplier.id);
+          message.success("Đã xóa nhà cung cấp");
+          await fetchData();
+        } catch (error: any) {
+          message.error(getApiErrorMessage(error, "Không thể xóa nhà cung cấp."));
+        }
+      },
+    });
+  }, [fetchData]);
+
+  const handleBatchDelete = useCallback(() => {
+    if (selectedRowKeys.length === 0) return;
+
+    Modal.confirm({
+      title: "Xác nhận xóa hàng loạt",
+      content: `Bạn có chắc chắn muốn xóa ${selectedRowKeys.length} nhà cung cấp đã chọn?`,
+      okText: "Xóa",
+      okButtonProps: { danger: true },
+      cancelText: "Hủy",
+      centered: true,
+      onOk: async () => {
+        try {
+          const count = await supplierService.batchDelete(selectedRowKeys.map(String));
+          message.success(`Đã xóa ${count} nhà cung cấp`);
+          setSelectedRowKeys([]);
+          await fetchData();
+        } catch (error: any) {
+          message.error(getApiErrorMessage(error, "Không thể xóa hàng loạt."));
+        }
+      },
+    });
+  }, [selectedRowKeys, fetchData]);
 
   const handleToggleActive = useCallback((supplier: SupplierDto) => {
     const newStatus = !supplier.isActive;
@@ -78,8 +122,12 @@ export const useSupplierActions = ({ fetchData }: UseSupplierActionsProps) => {
     modalOpen,
     editingSupplier,
     modalLoading,
+    selectedRowKeys,
+    setSelectedRowKeys,
     handleCreate,
     handleEdit,
+    handleDelete,
+    handleBatchDelete,
     handleToggleActive,
     handleModalOk,
     handleModalCancel,

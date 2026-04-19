@@ -1,7 +1,8 @@
 import React from "react";
-import { Row, Col, Input, Spin, Table } from "antd";
+import { Row, Col, Input, Select, Spin, Table } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
+import type { SorterResult } from "antd/es/table/interface";
 import { SupplierDto } from "../../../services/supplierService";
 
 interface SupplierTableProps {
@@ -12,8 +13,15 @@ interface SupplierTableProps {
   pageSize: number;
   columns: ColumnsType<SupplierDto>;
   searchText: string;
+  supplierGroupFilter?: string;
+  supplierGroups: string[];
+  canDelete?: boolean;
+  selectedRowKeys: React.Key[];
   onSearchChange: (value: string) => void;
+  onSupplierGroupChange: (value: string | undefined) => void;
+  onSortChange: (field: string, order: "ascend" | "descend" | null) => void;
   onPaginationChange: (page: number, pageSize: number) => void;
+  onSelectionChange: (keys: React.Key[]) => void;
 }
 
 const SupplierTable: React.FC<SupplierTableProps> = ({
@@ -24,9 +32,18 @@ const SupplierTable: React.FC<SupplierTableProps> = ({
   pageSize,
   columns,
   searchText,
+  supplierGroupFilter,
+  supplierGroups,
+  canDelete,
+  selectedRowKeys,
   onSearchChange,
+  onSupplierGroupChange,
+  onSortChange,
   onPaginationChange,
+  onSelectionChange,
 }) => {
+  const groupOptions = supplierGroups.map((g) => ({ value: g, label: g }));
+
   return (
     <>
       <Row
@@ -43,6 +60,16 @@ const SupplierTable: React.FC<SupplierTableProps> = ({
             allowClear
           />
         </Col>
+        <Col xs={24} sm={8} md={4}>
+          <Select
+            placeholder="Nhóm NCC"
+            value={supplierGroupFilter}
+            onChange={onSupplierGroupChange}
+            allowClear
+            style={{ width: "100%" }}
+            options={groupOptions}
+          />
+        </Col>
       </Row>
 
       <Spin spinning={loading}>
@@ -51,6 +78,17 @@ const SupplierTable: React.FC<SupplierTableProps> = ({
           dataSource={data}
           rowKey="id"
           scroll={{ x: 1200 }}
+          rowSelection={canDelete ? {
+            selectedRowKeys,
+            onChange: onSelectionChange,
+          } : undefined}
+          onChange={(_pagination, _filters, sorter) => {
+            const s = sorter as SorterResult<SupplierDto>;
+            onSortChange(
+              s.field ? String(s.field) : "",
+              s.order || null
+            );
+          }}
           pagination={{
             current: currentPage,
             pageSize: pageSize,

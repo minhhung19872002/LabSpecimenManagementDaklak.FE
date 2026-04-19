@@ -142,6 +142,17 @@ export const PERMISSIONS = {
     Delete: `${P}.Suppliers.Delete`,
   },
 
+  // GoodsReceipts (Phiếu nhập hàng)
+  GoodsReceipts: {
+    Default: `${P}.GoodsReceipts`,
+    Create: `${P}.GoodsReceipts.Create`,
+    Edit: `${P}.GoodsReceipts.Edit`,
+    Delete: `${P}.GoodsReceipts.Delete`,
+    Approve: `${P}.GoodsReceipts.Approve`,
+    ImportToWarehouse: `${P}.GoodsReceipts.ImportToWarehouse`,
+    AddPayment: `${P}.GoodsReceipts.AddPayment`,
+  },
+
   // Products (Quản lý vật phẩm)
   Products: {
     Default: `${P}.Products`,
@@ -320,6 +331,15 @@ export const ROUTE_PERMISSION_MAP: Record<string, string[]> = {
 
   // Quotations
   '/quotations': [PERMISSIONS.Quotations.Default],
+
+  // Products
+  '/products': [PERMISSIONS.Products.Default],
+
+  // Suppliers
+  '/suppliers-management': [PERMISSIONS.Suppliers.Default],
+
+  // GoodsReceipts
+  '/goods-receipts': [PERMISSIONS.GoodsReceipts.Default],
 
   // Subcontractors
   '/subcontractors': [PERMISSIONS.Subcontractors.Default],
@@ -500,6 +520,9 @@ export const MENU_PERMISSION_MAP = {
   specimenHistories: [PERMISSIONS.Specimens.Default],
   ncr: [PERMISSIONS.NCRs.Default],
   reports: [PERMISSIONS.Reports.Default],
+  products: [PERMISSIONS.Products.Default],
+  suppliersManagement: [PERMISSIONS.Suppliers.Default],
+  goodsReceipts: [PERMISSIONS.GoodsReceipts.Default],
   subcontractors: [PERMISSIONS.Subcontractors.Default],
   masterData: [
     PERMISSIONS.MasterData.Default,

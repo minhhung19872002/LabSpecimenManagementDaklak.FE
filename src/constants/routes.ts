@@ -79,6 +79,13 @@ export const PATH_ROUTES = {
 
   products: '/products',
 
+  goodsReceipts: {
+    index: '/goods-receipts',
+    create: '/goods-receipts/create',
+    detail: (id: string) => `/goods-receipts/${id}`,
+    edit: (id: string) => `/goods-receipts/edit/${id}`,
+  },
+
   suppliersManagement: '/suppliers-management',
 
   subcontractors: '/subcontractors',

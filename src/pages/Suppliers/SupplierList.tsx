@@ -1,14 +1,14 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Card, Button, Space } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useSupplierList, useSupplierActions } from "./hooks";
 import { SupplierTable, SupplierModal, ColumnConfigPopover } from "./components";
 import { getSupplierColumns, ALL_COLUMNS, COLUMN_VISIBILITY_KEY } from "./constants";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
+import { supplierService } from "../../services/supplierService";
 import "../../styles/ListCard.css";
 
-// Load visibility from localStorage
 const loadVisibleKeys = (): Set<string> => {
   try {
     const saved = localStorage.getItem(COLUMN_VISIBILITY_KEY);
@@ -23,9 +23,12 @@ const SupplierList: React.FC = () => {
     totalCount,
     loading,
     searchText,
+    supplierGroupFilter,
     currentPage,
     pageSize,
     setSearchText,
+    handleSupplierGroupChange,
+    handleSortChange,
     fetchData,
     handlePageChange,
   } = useSupplierList();
@@ -34,8 +37,12 @@ const SupplierList: React.FC = () => {
     modalOpen,
     editingSupplier,
     modalLoading,
+    selectedRowKeys,
+    setSelectedRowKeys,
     handleCreate,
     handleEdit,
+    handleDelete,
+    handleBatchDelete,
     handleToggleActive,
     handleModalOk,
     handleModalCancel,
@@ -43,10 +50,15 @@ const SupplierList: React.FC = () => {
 
   const canCreate = authService.hasPermission(PERMISSIONS.Suppliers.Create);
   const canEdit = authService.hasPermission(PERMISSIONS.Suppliers.Edit);
+  const canDelete = authService.hasPermission(PERMISSIONS.Suppliers.Delete);
 
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(loadVisibleKeys);
+  const [supplierGroups, setSupplierGroups] = useState<string[]>([]);
 
-  // Save to localStorage when changed
+  useEffect(() => {
+    supplierService.getGroups().then(setSupplierGroups).catch(() => setSupplierGroups([]));
+  }, []);
+
   const handleVisibilityChange = (keys: Set<string>) => {
     setVisibleKeys(keys);
     localStorage.setItem(COLUMN_VISIBILITY_KEY, JSON.stringify([...keys]));
@@ -57,12 +69,14 @@ const SupplierList: React.FC = () => {
       getSupplierColumns(
         visibleKeys,
         handleEdit,
+        handleDelete,
         handleToggleActive,
         canEdit,
+        canDelete,
         currentPage,
         pageSize
       ),
-    [visibleKeys, handleEdit, handleToggleActive, canEdit, currentPage, pageSize]
+    [visibleKeys, handleEdit, handleDelete, handleToggleActive, canEdit, canDelete, currentPage, pageSize]
   );
 
   return (
@@ -72,6 +86,15 @@ const SupplierList: React.FC = () => {
         title="Quản lý danh sách nhà cung cấp"
         extra={
           <Space>
+            {canDelete && selectedRowKeys.length > 0 && (
+              <Button
+                icon={<DeleteOutlined style={{ color: "#fff" }} />}
+                onClick={handleBatchDelete}
+                style={{ backgroundColor: "#ff4d4f", borderColor: "#ff4d4f", color: "#fff" }}
+              >
+                Xóa ({selectedRowKeys.length})
+              </Button>
+            )}
             <ColumnConfigPopover
               visibleKeys={visibleKeys}
               onChange={handleVisibilityChange}
@@ -96,8 +119,15 @@ const SupplierList: React.FC = () => {
           pageSize={pageSize}
           columns={columns}
           searchText={searchText}
+          supplierGroupFilter={supplierGroupFilter}
+          supplierGroups={supplierGroups}
+          canDelete={canDelete}
+          selectedRowKeys={selectedRowKeys}
           onSearchChange={setSearchText}
+          onSupplierGroupChange={handleSupplierGroupChange}
+          onSortChange={handleSortChange}
           onPaginationChange={handlePageChange}
+          onSelectionChange={setSelectedRowKeys}
         />
       </Card>
 
