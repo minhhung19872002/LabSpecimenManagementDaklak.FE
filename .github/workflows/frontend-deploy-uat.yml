@@ -3,83 +3,30 @@ name: Deploy Frontend to UAT
 on:
   push:
     branches:
-      - develop  # UAT branch
+      - develop
     paths:
       - 'src/**'
       - 'public/**'
       - 'Dockerfile'
+      - 'nginx.conf'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/frontend-deploy-uat.yml'
+  workflow_dispatch:
 
-  workflow_dispatch:  # Allow manual trigger
-
-env:
-  # UAT ACR Configuration (separate from production)
-  ACR_SERVER: acrlabspecimenuat.azurecr.io
-  ACR_USERNAME: acrlabspecimenuat
-  IMAGE_NAME: lab-specimen-frontend
-
-  # UAT VM Configuration
-  UAT_VM_HOST: 20.205.154.96
-  UAT_VM_USER: azureuser
-  UAT_VM_PASS: Vn8$$RkM9@aP2!L7Z  # Double $$ to escape in YAML
+concurrency:
+  group: deploy-frontend-uat
+  cancel-in-progress: false
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Log in to Azure Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.ACR_SERVER }}
-        username: ${{ env.ACR_USERNAME }}
-        password: ${{ secrets.UAT_ACR_PASSWORD }}
-
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        push: true
-        tags: |
-          ${{ env.ACR_SERVER }}/${{ env.IMAGE_NAME }}:latest
-          ${{ env.ACR_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-        build-args: |
-          VITE_API_BASE_URL=https://starlab-uat.bluestar.com.vn
-        cache-from: type=registry,ref=${{ env.ACR_SERVER }}/${{ env.IMAGE_NAME }}:latest
-        cache-to: type=inline
-
-    - name: Deploy to UAT VM via SSH
-      uses: appleboy/ssh-action@v1.0.0
-      with:
-        host: ${{ env.UAT_VM_HOST }}
-        username: ${{ env.UAT_VM_USER }}
-        key: ${{ secrets.UAT_SSH_PRIVATE_KEY }}
-        script: |
-          cd /opt/lab-specimen
-
-          # Log in to ACR
-          echo "${{ secrets.UAT_ACR_PASSWORD }}" | docker login ${{ env.ACR_SERVER }} -u ${{ env.ACR_USERNAME }} --password-stdin
-
-          # Update frontend image in docker-compose
-          sed -i 's|image: .*lab-specimen-frontend.*|image: ${{ env.ACR_SERVER }}/${{ env.IMAGE_NAME }}:latest|' docker-compose.yml
-
-          # Pull and restart using UAT environment file
-          docker-compose --env-file .env.uat pull frontend
-          docker-compose --env-file .env.uat up -d frontend
-
-          # Clean up old images
-          docker image prune -f
-
-    - name: Verify deployment
-      uses: appleboy/ssh-action@v1.0.0
-      with:
-        host: ${{ env.UAT_VM_HOST }}
-        username: ${{ env.UAT_VM_USER }}
-        key: ${{ secrets.UAT_SSH_PRIVATE_KEY }}
-        script: |
-          cd /opt/lab-specimen
-          docker-compose --env-file .env.uat ps frontend
-          docker-compose --env-file .env.uat logs --tail=50 frontend
+      - name: Deploy frontend via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          command_timeout: 15m
+          script: frontend
