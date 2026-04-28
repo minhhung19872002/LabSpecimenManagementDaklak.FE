@@ -731,6 +731,14 @@ export const testMethodService = {
       data
     );
   },
+
+  checkConsumptionStatus: async (items: ConsumptionStatusItemInput[]): Promise<ConsumptionStatusDto[]> => {
+    const response = await api.post<ConsumptionStatusDto[]>(
+      `${TEST_METHOD_URL}/indicators/consumption-status`,
+      { items }
+    );
+    return response.data;
+  },
 };
 
 export interface MaterialConsumptionItemDto {
@@ -746,6 +754,20 @@ export interface MaterialConsumptionItemDto {
 
 export interface SaveMaterialConsumptionDto {
   items: { productId: string; unitId: string; quantity: number }[];
+}
+
+export interface ConsumptionStatusItemInput {
+  testMethodId: string;
+  indicatorId: string;
+  specimenTypeId?: string;
+}
+
+export interface ConsumptionStatusDto {
+  testMethodId: string;
+  indicatorId: string;
+  specimenTypeId?: string;
+  testMethodIndicatorId?: string;
+  hasConsumption: boolean;
 }
 
 export const standardService = {

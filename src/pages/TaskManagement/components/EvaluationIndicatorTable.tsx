@@ -28,7 +28,11 @@ import {
   IndicatorEvaluationAction,
 } from "../../../types/laboratoryTask";
 import { laboratoryTaskService } from "../../../services/laboratoryTaskService";
+import { testMethodService } from "../../../services/masterDataService";
 import { IndicatorName } from "../../../components/common";
+import ConsumptionSetupModal, {
+  type ConsumptionSetupIndicator,
+} from "./ConsumptionSetupModal";
 import "./EvaluationIndicatorTable.css";
 
 const { Text } = Typography;
@@ -140,6 +144,13 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
   });
   const [supplementaryForm] = Form.useForm();
 
+  // State for consumption setup modal (intercept accept flow)
+  const [consumptionSetupModal, setConsumptionSetupModal] = useState<{
+    visible: boolean;
+    indicators: ConsumptionSetupIndicator[];
+    pendingAcceptIds: string[];
+  }>({ visible: false, indicators: [], pendingAcceptIds: [] });
+
   // Filter indicators that need evaluation (Pending or CannotTest status)
   // Exclude sub-indicators only - Lab Hóa can work in parallel now
   const pendingIndicators = useMemo(() => {
@@ -155,18 +166,19 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _hasPendingIndicators = pendingIndicators.length > 0; void _hasPendingIndicators;
 
-  // Handle single indicator accept
-  const handleAccept = async (indicatorId: string) => {
-    if (!canEvaluate) return;
-
+  // Perform accept for a list of indicator IDs (shared by all accept paths)
+  const performAccept = async (ids: string[]) => {
     setActionLoading(true);
     try {
-      await laboratoryTaskService.evaluateIndicator(indicatorId, {
-        action: IndicatorEvaluationAction.Accept,
-      });
+      for (const indicatorId of ids) {
+        await laboratoryTaskService.evaluateIndicator(indicatorId, {
+          action: IndicatorEvaluationAction.Accept,
+        });
+      }
+      setSelectedIndicatorIds([]);
       onEvaluationComplete();
     } catch (error: any) {
-      console.error("Failed to accept indicator:", error);
+      console.error("Failed to accept indicators:", error);
       Modal.error({
         title: "Lỗi",
         content: getApiErrorMessage(error, "Không thể chấp nhận chỉ tiêu"),
@@ -174,6 +186,84 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
     } finally {
       setActionLoading(false);
     }
+  };
+
+  // Check consumption status and open setup modal if needed, or accept directly
+  const checkAndAccept = async (indicatorIds: string[]) => {
+    if (!canEvaluate || indicatorIds.length === 0) return;
+
+    const targetIndicators = indicatorIds
+      .map((id) => pendingIndicators.find((ind) => ind.id === id))
+      .filter((ind): ind is LaboratoryTaskIndicatorDto => !!ind && !!ind.methodId);
+
+    if (targetIndicators.length === 0) {
+      await performAccept(indicatorIds);
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      const statusItems = targetIndicators.map((ind) => ({
+        testMethodId: ind.methodId!,
+        indicatorId: ind.indicatorId,
+        specimenTypeId: ind.specimenTypeId,
+      }));
+
+      const statusResults = await testMethodService.checkConsumptionStatus(statusItems);
+
+      const setupIndicators: ConsumptionSetupIndicator[] = targetIndicators.map((ind) => {
+        const status = statusResults.find(
+          (s) =>
+            s.testMethodId === ind.methodId &&
+            s.indicatorId === ind.indicatorId &&
+            (s.specimenTypeId || null) === (ind.specimenTypeId || null)
+        );
+        return {
+          id: ind.id,
+          sampleCode: ind.sampleCode || "",
+          indicatorName: ind.indicatorName || "",
+          indicatorFormattedName: ind.indicatorFormattedName,
+          indicatorGroupName: ind.indicatorGroupName,
+          methodName: ind.methodName || "",
+          methodFormattedName: ind.methodFormattedName,
+          unit: ind.unit,
+          testMethodIndicatorId: status?.testMethodIndicatorId,
+          hasConsumption: status?.hasConsumption ?? false,
+        };
+      });
+
+      setConsumptionSetupModal({
+        visible: true,
+        indicators: setupIndicators,
+        pendingAcceptIds: indicatorIds,
+      });
+    } catch (error) {
+      console.error("Failed to check consumption status:", error);
+      setConsumptionSetupModal({
+        visible: true,
+        indicators: targetIndicators.map((ind) => ({
+          id: ind.id,
+          sampleCode: ind.sampleCode || "",
+          indicatorName: ind.indicatorName || "",
+          indicatorFormattedName: ind.indicatorFormattedName,
+          indicatorGroupName: ind.indicatorGroupName,
+          methodName: ind.methodName || "",
+          methodFormattedName: ind.methodFormattedName,
+          unit: ind.unit,
+          testMethodIndicatorId: undefined,
+          hasConsumption: false,
+        })),
+        pendingAcceptIds: indicatorIds,
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Handle single indicator accept
+  const handleAccept = async (indicatorId: string) => {
+    if (!canEvaluate) return;
+    await checkAndAccept([indicatorId]);
   };
 
   // Handle method change request (single)
@@ -301,7 +391,6 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
 
   // Handle accept selected indicators
   const handleAcceptSelected = async () => {
-    // Filter only pending indicators from selection
     const pendingIds = selectedIndicatorIds.filter((id) =>
       pendingIndicators.some((ind) => ind.id === id)
     );
@@ -314,37 +403,24 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
       return;
     }
 
-    Modal.confirm({
-      title: "Xác nhận chấp nhận",
-      content: `Bạn có chắc muốn chấp nhận thử nghiệm cho ${pendingIds.length} chỉ tiêu đã chọn?`,
-      okText: "Chấp nhận",
-      cancelText: "Hủy",
-      centered: true,
-      onOk: async () => {
-        setActionLoading(true);
-        try {
-          // Accept each indicator sequentially
-          for (const indicatorId of pendingIds) {
-            await laboratoryTaskService.evaluateIndicator(indicatorId, {
-              action: IndicatorEvaluationAction.Accept,
-            });
-          }
-          setSelectedIndicatorIds([]);
-          onEvaluationComplete();
-        } catch (error: any) {
-          console.error("Failed to accept selected indicators:", error);
-          Modal.error({
-            title: "Lỗi",
-            content: getApiErrorMessage(
-              error,
-              "Không thể chấp nhận các chỉ tiêu đã chọn"
-            ),
-          });
-        } finally {
-          setActionLoading(false);
-        }
-      },
-    });
+    await checkAndAccept(pendingIds);
+  };
+
+  // Consumption setup modal handlers
+  const handleConsumptionSkipAndAccept = async () => {
+    const ids = consumptionSetupModal.pendingAcceptIds;
+    setConsumptionSetupModal({ visible: false, indicators: [], pendingAcceptIds: [] });
+    await performAccept(ids);
+  };
+
+  const handleConsumptionAcceptAll = async () => {
+    const ids = consumptionSetupModal.pendingAcceptIds;
+    setConsumptionSetupModal({ visible: false, indicators: [], pendingAcceptIds: [] });
+    await performAccept(ids);
+  };
+
+  const handleConsumptionCancel = () => {
+    setConsumptionSetupModal({ visible: false, indicators: [], pendingAcceptIds: [] });
   };
 
   // Handle supplementary request
@@ -978,6 +1054,16 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* Consumption Setup Modal */}
+      <ConsumptionSetupModal
+        open={consumptionSetupModal.visible}
+        loading={actionLoading}
+        indicators={consumptionSetupModal.indicators}
+        onSkipAndAccept={handleConsumptionSkipAndAccept}
+        onAcceptAll={handleConsumptionAcceptAll}
+        onCancel={handleConsumptionCancel}
+      />
     </>
   );
 };
