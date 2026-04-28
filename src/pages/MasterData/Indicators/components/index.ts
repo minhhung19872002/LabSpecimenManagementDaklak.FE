@@ -6,3 +6,5 @@ export { ImportIndicatorModal, ImportGroupModal } from "./ImportModals";
 export { default as ImportIndicatorGroupModal } from "./ImportIndicatorGroupModal";
 export { default as AddMethodToIndicatorModal } from "./AddMethodToIndicatorModal";
 export { default as EditMethodModal } from "./EditMethodModal";
+export { default as MaterialConsumptionModal } from "./MaterialConsumptionModal";
+export type { PendingConsumptionItem } from "./MaterialConsumptionModal";

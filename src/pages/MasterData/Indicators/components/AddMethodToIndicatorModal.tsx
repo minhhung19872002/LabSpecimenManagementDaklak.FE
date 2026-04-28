@@ -8,14 +8,17 @@ import {
   Col,
   Tooltip,
   Card,
+  Badge,
   message,
 } from "antd";
 import Icon from "../../../../components/common/Icon";
+import { ExperimentOutlined } from "../../../../components/common/Icon";
 import {
   SpecimenTypeDto,
   TestMethodDto,
 } from "../../../../services/masterDataService";
 import { IndicatorName, RichTextEditor } from "../../../../components/common";
+import type { PendingConsumptionItem } from "./MaterialConsumptionModal";
 import "./AddMethodToIndicatorModal.css";
 
 interface AddMethodToIndicatorModalProps {
@@ -24,9 +27,11 @@ interface AddMethodToIndicatorModalProps {
   indicatorId: string;
   indicatorName: string;
   indicatorFormattedName?: string;
+  indicatorGroupName?: string;
   specimenTypes: SpecimenTypeDto[];
   testMethods: TestMethodDto[];
   existingMethodKeys: { testMethodId: string; specimenTypeId?: string }[];
+  pendingConsumptionMap?: Map<string, PendingConsumptionItem[]>;
   onOk: (
     rows: {
       specimenTypeId: string;
@@ -34,9 +39,19 @@ interface AddMethodToIndicatorModalProps {
       unit: string;
       formattedUnit: string;
       unitPrice: number;
+      pendingConsumption: PendingConsumptionItem[];
     }[]
   ) => void;
   onCancel: () => void;
+  onOpenConsumption?: (
+    rowId: string,
+    indicatorGroupName: string,
+    indicatorName: string,
+    indicatorFormattedName: string | undefined,
+    testMethodName: string,
+    unit: string,
+    existingItems: PendingConsumptionItem[]
+  ) => void;
 }
 
 interface MethodRow {
@@ -75,11 +90,14 @@ const AddMethodToIndicatorModal: React.FC<AddMethodToIndicatorModalProps> = ({
   loading,
   indicatorName,
   indicatorFormattedName,
+  indicatorGroupName,
   specimenTypes,
   testMethods,
   existingMethodKeys = [],
+  pendingConsumptionMap,
   onOk,
   onCancel,
+  onOpenConsumption,
 }) => {
   const [rows, setRows] = useState<MethodRow[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -218,6 +236,7 @@ const AddMethodToIndicatorModal: React.FC<AddMethodToIndicatorModalProps> = ({
       unit: string;
       formattedUnit: string;
       unitPrice: number;
+      pendingConsumption: PendingConsumptionItem[];
     }[] = [];
     const addedKeys = new Set<string>();
 
@@ -253,6 +272,7 @@ const AddMethodToIndicatorModal: React.FC<AddMethodToIndicatorModalProps> = ({
         unit: row.unit,
         formattedUnit: row.formattedUnit,
         unitPrice: row.unitPrice,
+        pendingConsumption: pendingConsumptionMap?.get(row.id) || [],
       });
     });
 
@@ -308,7 +328,7 @@ const AddMethodToIndicatorModal: React.FC<AddMethodToIndicatorModalProps> = ({
             key={row.id}
             style={{ marginBottom: rowIndex === rows.length - 1 ? 0 : 16 }}
           >
-            <Row gutter={8} align="top" wrap={false}>
+            <Row gutter={8} align="middle" wrap={false}>
               <Col flex="0 0 180px">
                 <Select
                   value={row.specimenTypeId}
@@ -395,6 +415,37 @@ const AddMethodToIndicatorModal: React.FC<AddMethodToIndicatorModalProps> = ({
                   addonAfter="đ"
                 />
               </Col>
+              {onOpenConsumption && row.testMethodId && (
+                <Col flex="0 0 auto">
+                  {(() => {
+                    const count = pendingConsumptionMap?.get(row.id)?.length || 0;
+                    const tm = testMethods.find((t) => t.id === row.testMethodId);
+                    return (
+                      <Tooltip title="Thiết lập tiêu hao">
+                        <Badge count={count} size="small" offset={[-2, 2]}>
+                          <Button
+                            type="default"
+                            size="small"
+                            danger
+                            icon={<ExperimentOutlined />}
+                            onClick={() =>
+                              onOpenConsumption(
+                                row.id,
+                                indicatorGroupName || "",
+                                indicatorName,
+                                indicatorFormattedName,
+                                tm?.name || "",
+                                row.unit,
+                                pendingConsumptionMap?.get(row.id) || []
+                              )
+                            }
+                          />
+                        </Badge>
+                      </Tooltip>
+                    );
+                  })()}
+                </Col>
+              )}
               <Col flex="32px">
                 {rows.length > 1 && (
                   <Tooltip title="Xóa dòng">

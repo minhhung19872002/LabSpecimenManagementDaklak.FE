@@ -403,6 +403,7 @@ export interface UpdateIndicatorWithSubsDto {
 }
 
 export interface IndicatorMethodDto {
+  testMethodIndicatorId: string;
   testMethodId: string;
   testMethodCode: string;
   testMethodName: string;
@@ -718,7 +719,34 @@ export const testMethodService = {
     const response = await api.post<number>(`${TEST_METHOD_URL}/${testMethodId}/indicators/batch-remove`, { keys });
     return response.data;
   },
+  getConsumption: async (testMethodIndicatorId: string): Promise<MaterialConsumptionItemDto[]> => {
+    const response = await api.get<MaterialConsumptionItemDto[]>(
+      `${TEST_METHOD_URL}/indicators/${testMethodIndicatorId}/consumption`
+    );
+    return response.data || [];
+  },
+  saveConsumption: async (testMethodIndicatorId: string, data: SaveMaterialConsumptionDto): Promise<void> => {
+    await api.put(
+      `${TEST_METHOD_URL}/indicators/${testMethodIndicatorId}/consumption`,
+      data
+    );
+  },
 };
+
+export interface MaterialConsumptionItemDto {
+  id: string;
+  testMethodIndicatorId: string;
+  productId: string;
+  productName: string;
+  productType: number;
+  unitId: string;
+  unitName: string;
+  quantity: number;
+}
+
+export interface SaveMaterialConsumptionDto {
+  items: { productId: string; unitId: string; quantity: number }[];
+}
 
 export const standardService = {
   getList: async (params: PagedAndSortedResultRequestDto): Promise<PagedResultDto<StandardDto>> => {

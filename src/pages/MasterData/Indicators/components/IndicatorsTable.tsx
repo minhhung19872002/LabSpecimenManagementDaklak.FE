@@ -8,6 +8,7 @@ import {
   EditOutlined,
   PlusOutlined,
   SearchOutlined,
+  ExperimentOutlined,
 } from "../../../../components/common/Icon";
 import { IndicatorName } from "../../../../components/common";
 import type { ColumnsType } from "antd/es/table";
@@ -55,6 +56,7 @@ interface IndicatorsTableProps {
   ) => void;
   onDeleteMethod?: (record: IndicatorMethodDto, indicatorId: string) => void;
   onToggleMethodActive?: (record: IndicatorMethodDto, indicatorId: string) => void;
+  onSetupConsumption?: (record: IndicatorMethodDto, indicatorId: string, groupName: string, indicatorName: string, indicatorFormattedName?: string) => void;
   // Search & Filter
   searchText?: string;
   filterSpecimenTypeIds?: string[];
@@ -76,11 +78,12 @@ const getMethodColumns = (
   _indicatorId: string,
   onEdit?: (record: IndicatorMethodDto) => void,
   onDelete?: (record: IndicatorMethodDto) => void,
-  onToggleActive?: (record: IndicatorMethodDto) => void
+  onToggleActive?: (record: IndicatorMethodDto) => void,
+  onSetupConsumption?: (record: IndicatorMethodDto) => void
 ): ColumnsType<IndicatorMethodDto> => {
   const canEdit = authService.hasPermission(PERMISSIONS.MasterData.Edit);
   const canDelete = authService.hasPermission(PERMISSIONS.MasterData.Delete);
-  const showActions = (canEdit || canDelete) && (onEdit || onDelete || onToggleActive);
+  const showActions = (canEdit || canDelete) && (onEdit || onDelete || onToggleActive || onSetupConsumption);
 
   const cols: ColumnsType<IndicatorMethodDto> = [
     {
@@ -158,6 +161,17 @@ const getMethodColumns = (
               />
             </Tooltip>
           )}
+          {canEdit && onSetupConsumption && (
+            <Tooltip title="Thiết lập tiêu hao">
+              <Button
+                type="link"
+                size="small"
+                style={{ color: "#fa541c" }}
+                icon={<ExperimentOutlined />}
+                onClick={() => onSetupConsumption(record)}
+              />
+            </Tooltip>
+          )}
           {canDelete && onDelete && (
             <Popconfirm
               title="Bạn có chắc chắn muốn xóa phương pháp này?"
@@ -186,6 +200,7 @@ const IndicatorMethodsTable: React.FC<{
   indicatorId: string;
   indicatorName: string;
   indicatorFormattedName?: string;
+  indicatorGroupName: string;
   methodsMap: Map<string, IndicatorMethodDto[]>;
   methodsLoaded: boolean;
   filterSpecimenTypeIds?: string[];
@@ -199,10 +214,12 @@ const IndicatorMethodsTable: React.FC<{
   onEditMethod?: (record: IndicatorMethodDto) => void;
   onDeleteMethod?: (record: IndicatorMethodDto) => void;
   onToggleActive?: (record: IndicatorMethodDto) => void;
+  onSetupConsumption?: (record: IndicatorMethodDto) => void;
 }> = ({
   indicatorId,
   indicatorName,
   indicatorFormattedName,
+  indicatorGroupName: _indicatorGroupName,
   methodsMap,
   methodsLoaded,
   filterSpecimenTypeIds,
@@ -211,6 +228,7 @@ const IndicatorMethodsTable: React.FC<{
   onEditMethod,
   onDeleteMethod,
   onToggleActive,
+  onSetupConsumption,
 }) => {
   const allMethods = methodsMap.get(indicatorId);
 
@@ -227,7 +245,7 @@ const IndicatorMethodsTable: React.FC<{
     return result;
   }, [allMethods, filterSpecimenTypeIds, filterTestMethodIds]);
   const canEdit = authService.hasPermission(PERMISSIONS.MasterData.Edit);
-  const columns = getMethodColumns(indicatorId, onEditMethod, onDeleteMethod, onToggleActive);
+  const columns = getMethodColumns(indicatorId, onEditMethod, onDeleteMethod, onToggleActive, onSetupConsumption);
 
   if (!methods || methods.length === 0) {
     return (
@@ -310,6 +328,7 @@ const IndicatorsTable = forwardRef<IndicatorsTableRef, IndicatorsTableProps>(
       onEditMethod,
       onDeleteMethod,
       onToggleMethodActive,
+      onSetupConsumption,
       searchText,
       filterSpecimenTypeIds,
       filterTestMethodIds,
@@ -564,6 +583,7 @@ const IndicatorsTable = forwardRef<IndicatorsTableRef, IndicatorsTableProps>(
                             indicatorFormattedName={
                               indicatorRecord.formattedName
                             }
+                            indicatorGroupName={record.name}
                             methodsMap={methodsMap}
                             methodsLoaded={methodsLoaded}
                             filterSpecimenTypeIds={filterSpecimenTypeIds}
@@ -571,9 +591,9 @@ const IndicatorsTable = forwardRef<IndicatorsTableRef, IndicatorsTableProps>(
                             onAddMethod={onAddMethod}
                             onEditMethod={
                               onEditMethod
-                                ? (record) =>
+                                ? (methodRecord) =>
                                     onEditMethod(
-                                      record,
+                                      methodRecord,
                                       indicatorRecord.id,
                                       indicatorRecord.name,
                                       indicatorRecord.formattedName,
@@ -583,14 +603,20 @@ const IndicatorsTable = forwardRef<IndicatorsTableRef, IndicatorsTableProps>(
                             }
                             onDeleteMethod={
                               onDeleteMethod
-                                ? (record) =>
-                                    onDeleteMethod(record, indicatorRecord.id)
+                                ? (methodRecord) =>
+                                    onDeleteMethod(methodRecord, indicatorRecord.id)
                                 : undefined
                             }
                             onToggleActive={
                               onToggleMethodActive
-                                ? (record) =>
-                                    onToggleMethodActive(record, indicatorRecord.id)
+                                ? (methodRecord) =>
+                                    onToggleMethodActive(methodRecord, indicatorRecord.id)
+                                : undefined
+                            }
+                            onSetupConsumption={
+                              onSetupConsumption
+                                ? (methodRecord) =>
+                                    onSetupConsumption(methodRecord, indicatorRecord.id, record.name, indicatorRecord.name, indicatorRecord.formattedName)
                                 : undefined
                             }
                           />

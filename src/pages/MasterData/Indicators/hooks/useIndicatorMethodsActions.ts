@@ -3,11 +3,13 @@ import { message } from "antd";
 import {
   testMethodService,
   specimenTypeService,
+  indicatorService,
   IndicatorMethodDto,
   SpecimenTypeDto,
   TestMethodDto,
 } from "../../../../services/masterDataService";
 import { getApiErrorMessage } from "../../../../utils/errorHandler";
+import type { PendingConsumptionItem } from "../components/MaterialConsumptionModal";
 
 interface UseIndicatorMethodsActionsParams {
   invalidateMethodsMap: () => void;
@@ -99,6 +101,7 @@ export const useIndicatorMethodsActions = ({
         unit: string;
         formattedUnit: string;
         unitPrice: number;
+        pendingConsumption: PendingConsumptionItem[];
       }[]
     ) => {
       if (!addMethodTarget) return;
@@ -147,8 +150,46 @@ export const useIndicatorMethodsActions = ({
           message.success(`Thêm ${rows.length} phương pháp thành công!`);
         }
 
+        // Save pending consumption items for newly created methods
+        const rowsWithConsumption = rows.filter(
+          (r) => r.pendingConsumption.length > 0
+        );
+        if (rowsWithConsumption.length > 0) {
+          try {
+            const allWithMethods = await indicatorService.getWithMethods();
+            const indicatorData = allWithMethods.find(
+              (iw) => iw.id === addMethodTarget.id
+            );
+            if (indicatorData) {
+              for (const row of rowsWithConsumption) {
+                const method = indicatorData.methods.find(
+                  (m) =>
+                    m.testMethodId === row.testMethodId &&
+                    (m.specimenTypeId || null) === (row.specimenTypeId || null)
+                );
+                if (method?.testMethodIndicatorId) {
+                  await testMethodService.saveConsumption(
+                    method.testMethodIndicatorId,
+                    {
+                      items: row.pendingConsumption.map((c) => ({
+                        productId: c.productId,
+                        unitId: c.unitId,
+                        quantity: c.quantity,
+                      })),
+                    }
+                  );
+                }
+              }
+            }
+          } catch (error) {
+            console.error("Failed to save pending consumption:", error);
+            message.warning("Đã thêm phương pháp nhưng chưa lưu được tiêu hao. Vui lòng thiết lập lại.");
+          }
+        }
+
         setAddMethodModalOpen(false);
         setAddMethodTarget(null);
+        setPendingConsumptionMap(new Map());
         invalidateMethodsMap();
         fetchData();
       } catch (error: unknown) {
@@ -282,6 +323,99 @@ export const useIndicatorMethodsActions = ({
     [invalidateMethodsMap]
   );
 
+  // --- Consumption modal state ---
+
+  const [consumptionModalOpen, setConsumptionModalOpen] = useState(false);
+  const [consumptionContext, setConsumptionContext] = useState<{
+    testMethodIndicatorId: string | undefined;
+    indicatorGroupName: string;
+    indicatorName: string;
+    indicatorFormattedName?: string;
+    testMethodName: string;
+    testMethodFormattedName?: string;
+    unit?: string;
+    formattedUnit?: string;
+    pendingItems?: PendingConsumptionItem[];
+    pendingRowId?: string;
+  } | null>(null);
+
+  // Map to store pending consumption items per AddMethod row
+  const [pendingConsumptionMap, setPendingConsumptionMap] = useState<
+    Map<string, PendingConsumptionItem[]>
+  >(new Map());
+
+  const handleOpenSetupConsumption = useCallback(
+    (
+      record: IndicatorMethodDto,
+      _indicatorId: string,
+      groupName: string,
+      indicatorName: string,
+      indicatorFormattedName?: string
+    ) => {
+      setConsumptionContext({
+        testMethodIndicatorId: record.testMethodIndicatorId,
+        indicatorGroupName: groupName,
+        indicatorName,
+        indicatorFormattedName,
+        testMethodName: record.testMethodName,
+        testMethodFormattedName: record.testMethodFormattedName,
+        unit: record.unit,
+        formattedUnit: record.formattedUnit,
+      });
+      setConsumptionModalOpen(true);
+    },
+    []
+  );
+
+  const handleOpenPendingConsumption = useCallback(
+    (
+      rowId: string,
+      indicatorGroupName: string,
+      indicatorName: string,
+      indicatorFormattedName: string | undefined,
+      testMethodName: string,
+      unit: string,
+      existingItems: PendingConsumptionItem[]
+    ) => {
+      setConsumptionContext({
+        testMethodIndicatorId: undefined,
+        indicatorGroupName,
+        indicatorName,
+        indicatorFormattedName,
+        testMethodName,
+        unit,
+        pendingItems: existingItems,
+        pendingRowId: rowId,
+      });
+      setConsumptionModalOpen(true);
+    },
+    []
+  );
+
+  const handleConsumptionSave = useCallback(
+    (items: PendingConsumptionItem[]) => {
+      if (consumptionContext?.pendingRowId) {
+        setPendingConsumptionMap((prev) => {
+          const next = new Map(prev);
+          next.set(consumptionContext.pendingRowId!, items);
+          return next;
+        });
+      }
+      setConsumptionModalOpen(false);
+      setConsumptionContext(null);
+    },
+    [consumptionContext]
+  );
+
+  const handleConsumptionCancel = useCallback(() => {
+    setConsumptionModalOpen(false);
+    setConsumptionContext(null);
+  }, []);
+
+  const clearPendingConsumption = useCallback(() => {
+    setPendingConsumptionMap(new Map());
+  }, []);
+
   return {
     // Shared data
     specimenTypes,
@@ -311,5 +445,15 @@ export const useIndicatorMethodsActions = ({
 
     // Delete method
     handleDeleteMethod,
+
+    // Consumption
+    consumptionModalOpen,
+    consumptionContext,
+    pendingConsumptionMap,
+    handleOpenSetupConsumption,
+    handleOpenPendingConsumption,
+    handleConsumptionSave,
+    handleConsumptionCancel,
+    clearPendingConsumption,
   };
 };

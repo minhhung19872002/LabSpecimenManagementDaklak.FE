@@ -14,6 +14,7 @@ import {
   ImportIndicatorGroupModal,
   AddMethodToIndicatorModal,
   EditMethodModal,
+  MaterialConsumptionModal,
 } from "./components";
 import type { IndicatorsTableRef } from "./components/IndicatorsTable";
 import { IndicatorsTabProps, IndicatorsActions } from "./types";
@@ -137,6 +138,13 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
     handleEditMethodCancel,
     handleToggleMethodActive,
     handleDeleteMethod,
+    consumptionModalOpen,
+    consumptionContext,
+    pendingConsumptionMap,
+    handleOpenSetupConsumption,
+    handleOpenPendingConsumption,
+    handleConsumptionSave,
+    handleConsumptionCancel,
   } = useIndicatorMethodsActions({
     invalidateMethodsMap: () => tableRef.current?.invalidateMethodsCache(),
     fetchData,
@@ -207,6 +215,7 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
         onEditMethod={handleOpenEditMethod}
         onDeleteMethod={handleDeleteMethod}
         onToggleMethodActive={handleToggleMethodActive}
+        onSetupConsumption={handleOpenSetupConsumption}
         searchText={searchText}
         filterSpecimenTypeIds={filterSpecimenTypeIds}
         filterTestMethodIds={filterTestMethodIds}
@@ -317,11 +326,18 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
           indicatorId={addMethodTarget.id}
           indicatorName={addMethodTarget.name}
           indicatorFormattedName={addMethodTarget.formattedName}
+          indicatorGroupName={
+            groupedData.find((g) =>
+              g.indicators.some((ind: { id: string }) => ind.id === addMethodTarget.id)
+            )?.name || ""
+          }
           specimenTypes={specimenTypes}
           testMethods={testMethods}
           existingMethodKeys={addMethodTarget.existingKeys}
+          pendingConsumptionMap={pendingConsumptionMap}
           onOk={handleAddMethodOk}
           onCancel={handleAddMethodCancel}
+          onOpenConsumption={handleOpenPendingConsumption}
         />
       )}
 
@@ -338,6 +354,24 @@ const IndicatorsList = forwardRef<IndicatorsActions, IndicatorsTabProps>(({ onDa
         onOk={handleEditMethodOk}
         onCancel={handleEditMethodCancel}
       />
+
+      {/* Material Consumption Modal */}
+      {consumptionContext && (
+        <MaterialConsumptionModal
+          open={consumptionModalOpen}
+          indicatorGroupName={consumptionContext.indicatorGroupName}
+          indicatorName={consumptionContext.indicatorName}
+          indicatorFormattedName={consumptionContext.indicatorFormattedName}
+          testMethodName={consumptionContext.testMethodName}
+          testMethodFormattedName={consumptionContext.testMethodFormattedName}
+          unit={consumptionContext.unit}
+          formattedUnit={consumptionContext.formattedUnit}
+          testMethodIndicatorId={consumptionContext.testMethodIndicatorId}
+          pendingItems={consumptionContext.pendingItems}
+          onSave={handleConsumptionSave}
+          onCancel={handleConsumptionCancel}
+        />
+      )}
     </>
   );
 });
