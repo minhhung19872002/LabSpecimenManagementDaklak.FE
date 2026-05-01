@@ -138,6 +138,9 @@ const SubcontractorList = Loadable(
 const SupplierList = Loadable(
   lazy(() => import("./pages/Suppliers/SupplierList"))
 );
+const SupplierDetail = Loadable(
+  lazy(() => import("./pages/Suppliers/SupplierDetail"))
+);
 
 // Goods Receipts - Phiếu nhập hàng
 const GoodsReceiptList = Loadable(
@@ -326,6 +329,7 @@ function App() {
 
           {/* Suppliers - Quản lý nhà cung cấp */}
           <Route path="suppliers-management" element={<SupplierList />} />
+          <Route path="suppliers-management/:id" element={<SupplierDetail />} />
 
           {/* Products - Quản lý vật phẩm */}
           <Route path="products" element={<ProductList />} />

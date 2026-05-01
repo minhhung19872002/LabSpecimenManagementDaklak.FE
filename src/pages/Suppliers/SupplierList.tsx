@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { Card, Button, Space } from "antd";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
 import { useSupplierList, useSupplierActions } from "./hooks";
 import { SupplierTable, SupplierModal, ColumnConfigPopover } from "./components";
 import { getSupplierColumns, ALL_COLUMNS, COLUMN_VISIBILITY_KEY } from "./constants";
@@ -18,6 +19,7 @@ const loadVisibleKeys = (): Set<string> => {
 };
 
 const SupplierList: React.FC = () => {
+  const navigate = useNavigate();
   const {
     suppliers,
     totalCount,
@@ -128,6 +130,7 @@ const SupplierList: React.FC = () => {
           onSortChange={handleSortChange}
           onPaginationChange={handlePageChange}
           onSelectionChange={setSelectedRowKeys}
+          onRowDoubleClick={(record) => navigate(`/suppliers-management/${record.id}`)}
         />
       </Card>
 

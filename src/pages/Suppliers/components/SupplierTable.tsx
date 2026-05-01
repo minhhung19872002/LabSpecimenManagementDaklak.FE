@@ -22,6 +22,7 @@ interface SupplierTableProps {
   onSortChange: (field: string, order: "ascend" | "descend" | null) => void;
   onPaginationChange: (page: number, pageSize: number) => void;
   onSelectionChange: (keys: React.Key[]) => void;
+  onRowDoubleClick?: (record: SupplierDto) => void;
 }
 
 const SupplierTable: React.FC<SupplierTableProps> = ({
@@ -41,6 +42,7 @@ const SupplierTable: React.FC<SupplierTableProps> = ({
   onSortChange,
   onPaginationChange,
   onSelectionChange,
+  onRowDoubleClick,
 }) => {
   const groupOptions = supplierGroups.map((g) => ({ value: g, label: g }));
 
@@ -82,6 +84,10 @@ const SupplierTable: React.FC<SupplierTableProps> = ({
             selectedRowKeys,
             onChange: onSelectionChange,
           } : undefined}
+          onRow={onRowDoubleClick ? (record) => ({
+            onDoubleClick: () => onRowDoubleClick(record),
+            style: { cursor: "pointer" },
+          }) : undefined}
           onChange={(_pagination, _filters, sorter) => {
             const s = sorter as SorterResult<SupplierDto>;
             onSortChange(
