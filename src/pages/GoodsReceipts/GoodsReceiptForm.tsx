@@ -86,6 +86,7 @@ const GoodsReceiptForm: React.FC = () => {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [lotSuggestions, setLotSuggestions] = useState<Record<string, RecentLotDto[]>>({});
   const [productTypeFilter, setProductTypeFilter] = useState<string>("all");
+  const [isCustomVat, setIsCustomVat] = useState(false);
   const [newLotInput, setNewLotInput] = useState<Record<string, string>>({});
 
   // Inline creation modals
@@ -110,6 +111,7 @@ const GoodsReceiptForm: React.FC = () => {
     handleSubmit,
     reset,
     setValue,
+    getValues,
     watch,
     formState: { errors },
   } = useForm<GoodsReceiptFormData>({
@@ -194,6 +196,10 @@ const GoodsReceiptForm: React.FC = () => {
               };
             })
           );
+
+          const vatValues = receiptData.items.map(i => i.vatPercent);
+          const allSameVat = vatValues.length > 0 && vatValues.every(v => v === vatValues[0]);
+          setIsCustomVat(!allSameVat);
         } else {
           // Auto-fill purchaser from current user for new receipts
           const userInfo = authService.getUserInfo();
@@ -278,6 +284,10 @@ const GoodsReceiptForm: React.FC = () => {
   };
 
   const handleLineChange = (key: string, field: keyof LineItem, value: any) => {
+    if (field === "vatPercent") {
+      setIsCustomVat(true);
+    }
+
     setLineItems((prev) =>
       prev.map((item) => {
         if (item.key !== key) return item;
@@ -306,6 +316,18 @@ const GoodsReceiptForm: React.FC = () => {
         return recalculateLine(updated);
       })
     );
+  };
+
+  const handleHeaderVatChange = (value: number | null) => {
+    const vat = value || 0;
+    setValue("vatPercent", vat);
+    setLineItems(prev => prev.map(item => recalculateLine({ ...item, vatPercent: vat })));
+  };
+
+  const handleResetUniformVat = () => {
+    setIsCustomVat(false);
+    const currentVat = getValues("vatPercent") || 8;
+    setLineItems(prev => prev.map(item => recalculateLine({ ...item, vatPercent: currentVat })));
   };
 
   const totalBeforeVat = lineItems.reduce((sum, item) => sum + item.amountBeforeVat, 0);
@@ -809,13 +831,34 @@ const GoodsReceiptForm: React.FC = () => {
             </Col>
             <Col xs={24} sm={12} md={6}>
               <Form.Item label="VAT (%)">
-                <Controller
-                  name="vatPercent"
-                  control={control}
-                  render={({ field }) => (
-                    <InputNumber {...field} style={{ width: "100%" }} min={0} max={100} suffix="%" disabled={isReadonly} />
-                  )}
-                />
+                {isCustomVat ? (
+                  <Space.Compact style={{ width: "100%" }}>
+                    <Input
+                      value="Tùy chọn theo sản phẩm"
+                      disabled
+                      style={{ flex: 1 }}
+                    />
+                    {!isReadonly && (
+                      <Button onClick={handleResetUniformVat}>
+                        Đặt lại
+                      </Button>
+                    )}
+                  </Space.Compact>
+                ) : (
+                  <Controller
+                    name="vatPercent"
+                    control={control}
+                    render={({ field }) => (
+                      <InputNumber
+                        {...field}
+                        onChange={(v) => handleHeaderVatChange(v as number)}
+                        style={{ width: "100%" }}
+                        min={0} max={100} suffix="%"
+                        disabled={isReadonly}
+                      />
+                    )}
+                  />
+                )}
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={6}>
