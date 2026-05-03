@@ -153,6 +153,11 @@ const GoodsReceiptDetail = Loadable(
   lazy(() => import("./pages/GoodsReceipts/GoodsReceiptDetail"))
 );
 
+// Stock Adjustments - Điều chỉnh tồn kho
+const StockAdjustmentList = Loadable(
+  lazy(() => import("./pages/StockAdjustments/StockAdjustmentList"))
+);
+
 // Products
 const ProductList = Loadable(
   lazy(() => import("./pages/Products/ProductList"))
@@ -332,6 +337,9 @@ function App() {
           <Route path="goods-receipts/create" element={<GoodsReceiptForm />} />
           <Route path="goods-receipts/:id" element={<GoodsReceiptDetail />} />
           <Route path="goods-receipts/edit/:id" element={<GoodsReceiptForm />} />
+
+          {/* Stock Adjustments - Điều chỉnh tồn kho */}
+          <Route path="stock-adjustments" element={<StockAdjustmentList />} />
 
           {/* Suppliers - Quản lý nhà cung cấp */}
           <Route path="suppliers-management" element={<SupplierList />} />

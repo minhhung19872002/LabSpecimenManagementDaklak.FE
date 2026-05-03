@@ -86,6 +86,7 @@ const routeToKeyMap: Record<string, string> = {
   "/statistics": "statistics",
   "/subcontractors": "subcontractors",
   "/goods-receipts": "goodsReceipts",
+  "/stock-adjustments": "stockAdjustments",
   "/products": "products",
   "/suppliers-management": "suppliersManagement",
   "/master-data": "masterData",
@@ -420,6 +421,13 @@ const MainLayout: React.FC = () => {
           icon: <DatabaseOutlined />,
           label: menuLabel("Phiếu nhập hàng"),
           onClick: () => navigate(PATH_ROUTES.goodsReceipts.index),
+          roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
+        },
+        {
+          key: "stockAdjustments",
+          icon: <DatabaseOutlined />,
+          label: menuLabel("Điều chỉnh tồn kho"),
+          onClick: () => navigate(PATH_ROUTES.stockAdjustments),
           roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
         },
         {

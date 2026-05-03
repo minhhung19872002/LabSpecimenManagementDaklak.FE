@@ -1,0 +1,109 @@
+import { api } from "./api";
+
+export enum StockAdjustmentStatus {
+  Draft = 0,
+  Confirmed = 1,
+}
+
+export const STOCK_ADJUSTMENT_STATUS_OPTIONS = [
+  { value: StockAdjustmentStatus.Draft, label: "Lưu tạm" },
+  { value: StockAdjustmentStatus.Confirmed, label: "Đã chỉnh tồn kho" },
+];
+
+export const StockAdjustmentStatusLabels: Record<number, string> = {
+  [StockAdjustmentStatus.Draft]: "Lưu tạm",
+  [StockAdjustmentStatus.Confirmed]: "Đã chỉnh tồn kho",
+};
+
+export const StockAdjustmentStatusColors: Record<number, string> = {
+  [StockAdjustmentStatus.Draft]: "default",
+  [StockAdjustmentStatus.Confirmed]: "green",
+};
+
+export interface StockAdjustmentListDto {
+  id: string;
+  code: string;
+  creatorName?: string;
+  status: StockAdjustmentStatus;
+  creationTime: string;
+}
+
+export interface StockAdjustmentItemDto {
+  id: string;
+  productId: string;
+  productName: string;
+  unitId: string;
+  unitName: string;
+  quantityBefore: number;
+  actualQuantity: number;
+  adjustmentQuantity: number;
+}
+
+export interface StockAdjustmentDto extends StockAdjustmentListDto {
+  notes?: string;
+  items: StockAdjustmentItemDto[];
+}
+
+export interface CreateUpdateStockAdjustmentDto {
+  notes?: string;
+  items: CreateUpdateStockAdjustmentItemDto[];
+}
+
+export interface CreateUpdateStockAdjustmentItemDto {
+  productId: string;
+  actualQuantity: number;
+}
+
+export interface GetStockAdjustmentListInput {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: StockAdjustmentStatus;
+  fromDate?: string;
+  toDate?: string;
+}
+
+interface PagedResult<T> {
+  items: T[];
+  totalCount: number;
+}
+
+const BASE_URL = "/api/v1/stock-adjustments";
+
+export const stockAdjustmentService = {
+  getList: async (params: GetStockAdjustmentListInput = {}): Promise<PagedResult<StockAdjustmentListDto>> => {
+    const apiParams: Record<string, any> = {};
+    if (params.page) apiParams.Page = params.page;
+    if (params.limit) apiParams.Limit = params.limit;
+    if (params.search) apiParams.Search = params.search;
+    if (params.status !== undefined) apiParams.Status = params.status;
+    if (params.fromDate) apiParams.FromDate = params.fromDate;
+    if (params.toDate) apiParams.ToDate = params.toDate;
+    const response = await api.get<PagedResult<StockAdjustmentListDto>>(BASE_URL, { params: apiParams });
+    return response.data;
+  },
+
+  get: async (id: string): Promise<StockAdjustmentDto> => {
+    const response = await api.get<StockAdjustmentDto>(`${BASE_URL}/${id}`);
+    return response.data;
+  },
+
+  create: async (data: CreateUpdateStockAdjustmentDto): Promise<StockAdjustmentDto> => {
+    const response = await api.post<StockAdjustmentDto>(BASE_URL, data);
+    return response.data;
+  },
+
+  update: async (id: string, data: CreateUpdateStockAdjustmentDto): Promise<StockAdjustmentDto> => {
+    const response = await api.put<StockAdjustmentDto>(`${BASE_URL}/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`${BASE_URL}/${id}`);
+  },
+
+  confirm: async (id: string): Promise<StockAdjustmentDto> => {
+    const response = await api.post<StockAdjustmentDto>(`${BASE_URL}/${id}/confirm`);
+    return response.data;
+  },
+};

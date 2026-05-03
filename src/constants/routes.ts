@@ -86,6 +86,8 @@ export const PATH_ROUTES = {
     edit: (id: string) => `/goods-receipts/edit/${id}`,
   },
 
+  stockAdjustments: '/stock-adjustments',
+
   suppliersManagement: '/suppliers-management',
 
   subcontractors: '/subcontractors',
