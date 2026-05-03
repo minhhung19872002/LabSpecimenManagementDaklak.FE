@@ -50,7 +50,7 @@ jobs:
 
           echo "Building Docker image..."
           docker build \
-            --build-arg VITE_API_BASE_URL=https://starlab.bluestar.com.vn \
+            --build-arg VITE_API_BASE_URL=https://tihelab.vn \
             --build-arg VITE_APP_NAME="Lab Specimen Management System" \
             --build-arg VITE_NODE_ENV=production \
             -t $IMAGE_TAG_LATEST -t $IMAGE_TAG_SHA .
