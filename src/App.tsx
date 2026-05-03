@@ -157,6 +157,12 @@ const GoodsReceiptDetail = Loadable(
 const ProductList = Loadable(
   lazy(() => import("./pages/Products/ProductList"))
 );
+const ProductSourceList = Loadable(
+  lazy(() => import("./pages/Products/ProductSourceList"))
+);
+const ProductSourceReceiptList = Loadable(
+  lazy(() => import("./pages/Products/ProductSourceReceiptList"))
+);
 
 // Master Data
 const MasterDataList = Loadable(
@@ -333,6 +339,8 @@ function App() {
 
           {/* Products - Quản lý vật phẩm */}
           <Route path="products" element={<ProductList />} />
+          <Route path="products/:id/sources" element={<ProductSourceList />} />
+          <Route path="products/:productId/sources/:supplierId/receipts" element={<ProductSourceReceiptList />} />
 
           {/* Master Data - Ngân hàng dữ liệu */}
           <Route path="master-data" element={<MasterDataList />} />

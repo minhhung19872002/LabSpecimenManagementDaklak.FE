@@ -26,6 +26,7 @@ interface ProductTableProps {
   onIsDraftChange: (value: boolean | undefined) => void;
   onSortChange: (field: string, order: "ascend" | "descend" | null) => void;
   onPaginationChange: (page: number, pageSize: number) => void;
+  onRowDoubleClick?: (record: ProductDto) => void;
 }
 
 const ProductTable: React.FC<ProductTableProps> = ({
@@ -43,6 +44,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
   onIsDraftChange,
   onSortChange,
   onPaginationChange,
+  onRowDoubleClick,
 }) => {
   const handleDraftFilterChange = (value: string | undefined) => {
     if (value === undefined) {
@@ -96,6 +98,10 @@ const ProductTable: React.FC<ProductTableProps> = ({
           dataSource={data}
           rowKey="id"
           scroll={{ x: 1200 }}
+          onRow={onRowDoubleClick ? (record) => ({
+            onDoubleClick: () => onRowDoubleClick(record),
+            style: { cursor: "pointer" },
+          }) : undefined}
           onChange={(_pagination, _filters, sorter) => {
             const s = sorter as SorterResult<ProductDto>;
             onSortChange(

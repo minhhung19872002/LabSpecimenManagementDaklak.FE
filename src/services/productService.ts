@@ -101,6 +101,23 @@ export interface ProductFilterDto {
   sorting?: string;
 }
 
+export interface ProductSourceDto {
+  supplierId: string;
+  supplierCode: string;
+  supplierName: string;
+  productName: string;
+  unitName: string;
+  totalImported: number;
+  availableQuantity: number;
+  latestUnitPrice?: number;
+}
+
+export interface GetProductSourcesInput {
+  page?: number;
+  limit?: number;
+  search?: string;
+}
+
 interface PagedResult<T> {
   items: T[];
   totalCount: number;
@@ -159,6 +176,15 @@ export const productService = {
 
   deleteAttachment: async (productId: string, attachmentId: string): Promise<void> => {
     await api.delete(`${BASE_URL}/${productId}/attachments/${attachmentId}`);
+  },
+
+  getProductSources: async (productId: string, params: GetProductSourcesInput = {}): Promise<PagedResult<ProductSourceDto>> => {
+    const apiParams: Record<string, any> = {};
+    if (params.page) apiParams.Page = params.page;
+    if (params.limit) apiParams.Limit = params.limit;
+    if (params.search) apiParams.Search = params.search;
+    const response = await api.get<PagedResult<ProductSourceDto>>(`${BASE_URL}/${productId}/sources`, { params: apiParams });
+    return response.data;
   },
 
   // File upload via existing file API

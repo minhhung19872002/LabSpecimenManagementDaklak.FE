@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Card, Button, Space } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
 import { useProductList, useProductActions } from "./hooks";
 import { ProductTable, ProductModal, ColumnConfigPopover } from "./components";
 import { getProductColumns, ALL_COLUMNS, COLUMN_VISIBILITY_KEY } from "./constants";
@@ -18,6 +19,7 @@ const loadVisibleKeys = (): Set<string> => {
 };
 
 const ProductList: React.FC = () => {
+  const navigate = useNavigate();
   const {
     products,
     totalCount,
@@ -112,6 +114,7 @@ const ProductList: React.FC = () => {
           onIsDraftChange={setIsDraftFilter}
           onSortChange={handleSortChange}
           onPaginationChange={handlePageChange}
+          onRowDoubleClick={(record) => navigate(`/products/${record.id}/sources`)}
         />
       </Card>
 

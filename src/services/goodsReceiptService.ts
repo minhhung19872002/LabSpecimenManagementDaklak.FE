@@ -165,6 +165,7 @@ export interface GetGoodsReceiptListInput {
   search?: string;
   sorting?: string;
   supplierId?: string;
+  productId?: string;
   warehouseStatus?: GoodsReceiptWarehouseStatus;
   orderStatus?: GoodsReceiptOrderStatus;
   paymentStatus?: GoodsReceiptPaymentStatus;
@@ -206,6 +207,7 @@ export const goodsReceiptService = {
     if (params.fromDate) apiParams.FromDate = params.fromDate;
     if (params.toDate) apiParams.ToDate = params.toDate;
     if (params.supplierId) apiParams.SupplierId = params.supplierId;
+    if (params.productId) apiParams.ProductId = params.productId;
     const response = await api.get<PagedResult<GoodsReceiptListDto>>(BASE_URL, { params: apiParams });
     return response.data;
   },
