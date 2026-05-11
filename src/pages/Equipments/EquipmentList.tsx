@@ -37,7 +37,7 @@ const EquipmentList: React.FC = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<EquipmentStatus | undefined>(undefined);
 
@@ -128,6 +128,7 @@ const EquipmentList: React.FC = () => {
             pageSize,
             total: totalCount,
             showSizeChanger: true,
+            pageSizeOptions: [20, 50, 100],
             showTotal: (total) => `Tổng ${total} thiết bị`,
             onChange: (page, size) => {
               setCurrentPage(page);
