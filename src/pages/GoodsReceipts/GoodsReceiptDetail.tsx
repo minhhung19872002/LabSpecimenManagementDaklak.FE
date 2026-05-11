@@ -121,7 +121,10 @@ const GoodsReceiptDetail: React.FC = () => {
     }
   };
 
-  const itemColumns = [
+  const productItems = receipt?.items?.filter((i) => !i.isEquipment) || [];
+  const equipmentItems = receipt?.items?.filter((i) => i.isEquipment) || [];
+
+  const productColumns = [
     {
       title: "STT",
       key: "index",
@@ -154,6 +157,78 @@ const GoodsReceiptDetail: React.FC = () => {
       width: 130,
       align: "right" as const,
       render: (_: any, r: GoodsReceiptItemDto) => formatCurrency(r.unitPrice),
+    },
+    {
+      title: "Thành tiền chưa VAT",
+      key: "amountBeforeVat",
+      width: 150,
+      align: "right" as const,
+      render: (_: any, r: GoodsReceiptItemDto) => formatCurrency(r.amountBeforeVat),
+    },
+    {
+      title: "VAT %",
+      key: "vatPercent",
+      width: 80,
+      align: "center" as const,
+      render: (_: any, r: GoodsReceiptItemDto) => `${r.vatPercent}%`,
+    },
+    {
+      title: "Thành tiền sau VAT",
+      key: "amountAfterVat",
+      width: 150,
+      align: "right" as const,
+      render: (_: any, r: GoodsReceiptItemDto) => formatCurrency(r.amountAfterVat),
+    },
+    {
+      title: "Số lô",
+      dataIndex: "lotNumber",
+      key: "lotNumber",
+      width: 120,
+      render: (v: string) => v || "-",
+    },
+    {
+      title: "Hạn lô",
+      key: "lotExpiryDate",
+      width: 110,
+      render: (_: any, r: GoodsReceiptItemDto) =>
+        r.lotExpiryDate ? dayjs(r.lotExpiryDate).format("DD/MM/YYYY") : "-",
+    },
+  ];
+
+  const equipmentColumns = [
+    {
+      title: "STT",
+      key: "index",
+      width: 50,
+      align: "center" as const,
+      render: (_: any, __: GoodsReceiptItemDto, index: number) => index + 1,
+    },
+    {
+      title: "Serial Number",
+      dataIndex: "serialNumber",
+      key: "serialNumber",
+      width: 160,
+      render: (v: string) => v || "-",
+    },
+    {
+      title: "Tên thiết bị",
+      dataIndex: "productName",
+      key: "productName",
+      width: 200,
+    },
+    {
+      title: "Model",
+      dataIndex: "model",
+      key: "model",
+      width: 140,
+      render: (v: string) => v || "-",
+    },
+    {
+      title: "Hãng sản xuất",
+      dataIndex: "manufacturer",
+      key: "manufacturer",
+      width: 150,
+      render: (v: string) => v || "-",
     },
     {
       title: "Thành tiền chưa VAT",
@@ -427,19 +502,36 @@ const GoodsReceiptDetail: React.FC = () => {
         {/* Line Items + Payment Summary */}
         <Card
           className="list-card"
-          title={`Thông tin hàng hóa (${receipt.items?.length || 0} sản phẩm)`}
+          title={`Thông tin hàng hóa (${productItems.length} sản phẩm)`}
           style={{ marginBottom: 16 }}
           styles={{ body: { padding: 0 } }}
         >
           <Table
-            columns={itemColumns}
-            dataSource={receipt.items}
+            columns={productColumns}
+            dataSource={productItems}
             rowKey="id"
             pagination={false}
             scroll={{ x: 1200 }}
             size="small"
             bordered
+            locale={{ emptyText: "Không có hàng hóa" }}
           />
+          {equipmentItems.length > 0 && (
+            <>
+              <Divider orientation={"left" as any} style={{ fontSize: 14, margin: "12px 16px" }}>
+                Thiết bị ({equipmentItems.length})
+              </Divider>
+              <Table
+                columns={equipmentColumns}
+                dataSource={equipmentItems}
+                rowKey="id"
+                pagination={false}
+                scroll={{ x: 1200 }}
+                size="small"
+                bordered
+              />
+            </>
+          )}
           <div style={{ display: "flex", justifyContent: "flex-end", padding: 16 }}>
             <div className="payment-summary">
               <div className="payment-summary-row">

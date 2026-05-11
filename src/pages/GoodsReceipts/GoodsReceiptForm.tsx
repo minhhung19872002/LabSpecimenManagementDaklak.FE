@@ -31,6 +31,7 @@ import {
   CreateUpdateProductDto,
 } from "../../services/productService";
 import { unitService, UnitDto } from "../../services/masterDataService";
+import { equipmentService, EquipmentListDto } from "../../services/equipmentService";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
 import { getApiErrorMessage } from "../../utils/errorHandler";
@@ -68,6 +69,10 @@ interface LineItem {
   lotNumber?: string;
   lotExpiryDate?: string;
   availableUnits: { value: string; label: string }[];
+  isEquipment: boolean;
+  serialNumber?: string;
+  model?: string;
+  manufacturer?: string;
 }
 
 const GoodsReceiptForm: React.FC = () => {
@@ -88,6 +93,7 @@ const GoodsReceiptForm: React.FC = () => {
   const [productTypeFilter, setProductTypeFilter] = useState<string>("all");
   const [isCustomVat, setIsCustomVat] = useState(false);
   const [newLotInput, setNewLotInput] = useState<Record<string, string>>({});
+  const [existingEquipments, setExistingEquipments] = useState<EquipmentListDto[]>([]);
 
   // Inline creation modals
   const [supplierModalOpen, setSupplierModalOpen] = useState(false);
@@ -143,8 +149,12 @@ const GoodsReceiptForm: React.FC = () => {
         setSuppliers(suppliersRes.items || []);
         setUnits(unitsRes.items || []);
 
-        const activeProducts = await productService.getActive();
+        const [activeProducts, equipRes] = await Promise.all([
+          productService.getActive(),
+          equipmentService.getList({ limit: 500 }),
+        ]);
         setProducts(activeProducts || []);
+        setExistingEquipments(equipRes.items || []);
 
         if (id) {
           const receiptData = await goodsReceiptService.get(id);
@@ -193,6 +203,10 @@ const GoodsReceiptForm: React.FC = () => {
                 lotNumber: item.lotNumber,
                 lotExpiryDate: item.lotExpiryDate,
                 availableUnits: itemUnits,
+                isEquipment: item.isEquipment || false,
+                serialNumber: item.serialNumber,
+                model: item.model,
+                manufacturer: item.manufacturer,
               };
             })
           );
@@ -270,6 +284,7 @@ const GoodsReceiptForm: React.FC = () => {
       lotNumber: "",
       lotExpiryDate: undefined,
       availableUnits: availUnits,
+      isEquipment: false,
     };
 
     setLineItems((prev) => [...prev, recalculateLine(newItem)]);
@@ -277,6 +292,60 @@ const GoodsReceiptForm: React.FC = () => {
     goodsReceiptService.getRecentLots(product.id).then((lots) => {
       setLotSuggestions((prev) => ({ ...prev, [product.id]: lots }));
     }).catch(() => {});
+  };
+
+  const equipmentOptions = (() => {
+    const seen = new Map<string, EquipmentListDto>();
+    for (const eq of existingEquipments) {
+      if (!seen.has(eq.name)) seen.set(eq.name, eq);
+    }
+    return Array.from(seen.values()).map((eq) => ({
+      value: eq.id,
+      label: eq.model ? `${eq.name} (${eq.model})` : eq.name,
+    }));
+  })();
+
+  const handleSelectEquipment = (equipmentId: string) => {
+    const eq = existingEquipments.find((e) => e.id === equipmentId);
+    if (!eq) return;
+    const newItem: LineItem = {
+      key: `eq-${Date.now()}`,
+      productId: "",
+      productName: eq.name,
+      unitId: "",
+      unitName: "",
+      quantity: 1,
+      unitPrice: 0,
+      vatPercent: defaultVat,
+      amountBeforeVat: 0,
+      vatAmount: 0,
+      amountAfterVat: 0,
+      availableUnits: [],
+      isEquipment: true,
+      serialNumber: undefined,
+      model: eq.model,
+      manufacturer: eq.manufacturer,
+    };
+    setLineItems((prev) => [...prev, recalculateLine(newItem)]);
+  };
+
+  const handleAddEquipmentRow = () => {
+    const newItem: LineItem = {
+      key: `eq-${Date.now()}`,
+      productId: "",
+      productName: "",
+      unitId: "",
+      unitName: "",
+      quantity: 1,
+      unitPrice: 0,
+      vatPercent: defaultVat,
+      amountBeforeVat: 0,
+      vatAmount: 0,
+      amountAfterVat: 0,
+      availableUnits: [],
+      isEquipment: true,
+    };
+    setLineItems((prev) => [...prev, recalculateLine(newItem)]);
   };
 
   const handleRemoveLine = (key: string) => {
@@ -336,7 +405,6 @@ const GoodsReceiptForm: React.FC = () => {
 
   const selectedSupplier = suppliers.find((s) => s.id === selectedSupplierId);
 
-  // Product options filtered by ProductType
   const filteredProductOptions = products
     .filter((p) => productTypeFilter === "all" || p.productType === Number(productTypeFilter))
     .map((p) => ({
@@ -354,25 +422,45 @@ const GoodsReceiptForm: React.FC = () => {
     vatPercent: data.vatPercent ?? 8,
     notes: data.notes || undefined,
     items: lineItems
-      .filter((item) => item.productId)
+      .filter((item) => item.productId || item.isEquipment)
       .map((item): CreateUpdateGoodsReceiptItemDto => ({
         id: item.id,
-        productId: item.productId,
-        unitId: item.unitId,
+        productId: item.productId || undefined,
+        productName: item.isEquipment ? item.productName : undefined,
+        unitId: item.unitId || undefined,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         vatPercent: item.vatPercent,
         lotNumber: item.lotNumber || undefined,
         lotExpiryDate: item.lotExpiryDate || undefined,
+        isEquipment: item.isEquipment || undefined,
+        serialNumber: item.serialNumber || undefined,
+        model: item.model || undefined,
+        manufacturer: item.manufacturer || undefined,
       })),
   });
 
-  const handleSaveDraft = handleSubmit(async (data) => {
-    const validItems = lineItems.filter((item) => item.productId);
+  const validateItems = (): boolean => {
+    const validItems = lineItems.filter((item) => item.productId || item.isEquipment);
     if (validItems.length === 0) {
-      message.warning("Vui lòng thêm ít nhất một hàng hóa.");
-      return;
+      message.warning("Vui lòng thêm ít nhất một hàng hóa hoặc thiết bị.");
+      return false;
     }
+    const missingName = validItems.find((item) => item.isEquipment && !item.productName?.trim());
+    if (missingName) {
+      message.warning("Thiết bị phải có tên.");
+      return false;
+    }
+    const missingSerial = validItems.find((item) => item.isEquipment && !item.serialNumber?.trim());
+    if (missingSerial) {
+      message.warning("Thiết bị phải có serial number.");
+      return false;
+    }
+    return true;
+  };
+
+  const handleSaveDraft = handleSubmit(async (data) => {
+    if (!validateItems()) return;
     setSaving(true);
     try {
       const payload = buildPayload(data);
@@ -394,11 +482,7 @@ const GoodsReceiptForm: React.FC = () => {
   });
 
   const handleApprove = handleSubmit(async (data) => {
-    const validItems = lineItems.filter((item) => item.productId);
-    if (validItems.length === 0) {
-      message.warning("Vui lòng thêm ít nhất một hàng hóa.");
-      return;
-    }
+    if (!validateItems()) return;
     setApproving(true);
     try {
       const payload = buildPayload(data);
@@ -506,7 +590,28 @@ const GoodsReceiptForm: React.FC = () => {
     setNewLotInput((prev) => ({ ...prev, [recordKey]: "" }));
   };
 
-  const lineColumns = [
+  const productItems = lineItems.filter((i) => !i.isEquipment);
+  const equipmentItems = lineItems.filter((i) => i.isEquipment);
+
+  const actionColumn = !isReadonly
+    ? [
+        {
+          title: "",
+          key: "action",
+          width: 40,
+          render: (_: any, record: LineItem) => (
+            <Button
+              type="text"
+              size="small"
+              icon={<DeleteOutlined style={{ color: "#ff4d4f" }} />}
+              onClick={() => handleRemoveLine(record.key)}
+            />
+          ),
+        },
+      ]
+    : [];
+
+  const productColumns = [
     {
       title: "STT",
       key: "index",
@@ -694,23 +799,204 @@ const GoodsReceiptForm: React.FC = () => {
         );
       },
     },
-    ...(!isReadonly
-      ? [
-          {
-            title: "",
-            key: "action",
-            width: 40,
-            render: (_: any, record: LineItem) => (
-              <Button
-                type="text"
-                size="small"
-                icon={<DeleteOutlined style={{ color: "#ff4d4f" }} />}
-                onClick={() => handleRemoveLine(record.key)}
-              />
-            ),
-          },
-        ]
-      : []),
+    ...actionColumn,
+  ];
+
+  const equipmentColumns = [
+    {
+      title: "STT",
+      key: "index",
+      width: 50,
+      align: "center" as const,
+      render: (_: any, __: LineItem, index: number) => index + 1,
+    },
+    {
+      title: "Serial Number",
+      key: "serialNumber",
+      width: 160,
+      render: (_: any, record: LineItem) => {
+        if (isReadonly) return record.serialNumber || "-";
+        return (
+          <Input
+            value={record.serialNumber || ""}
+            placeholder="Nhập serial"
+            onChange={(e) => handleLineChange(record.key, "serialNumber", e.target.value)}
+            size="small"
+          />
+        );
+      },
+    },
+    {
+      title: "Tên thiết bị",
+      key: "productName",
+      width: 200,
+      render: (_: any, record: LineItem) => {
+        if (isReadonly) return record.productName || "-";
+        return (
+          <Input
+            value={record.productName || ""}
+            placeholder="Nhập tên thiết bị"
+            onChange={(e) => handleLineChange(record.key, "productName", e.target.value)}
+            size="small"
+          />
+        );
+      },
+    },
+    {
+      title: "Model",
+      key: "model",
+      width: 140,
+      render: (_: any, record: LineItem) => {
+        if (isReadonly) return record.model || "-";
+        return (
+          <Input
+            value={record.model || ""}
+            placeholder="Nhập model"
+            onChange={(e) => handleLineChange(record.key, "model", e.target.value)}
+            size="small"
+          />
+        );
+      },
+    },
+    {
+      title: "Hãng sản xuất",
+      key: "manufacturer",
+      width: 150,
+      render: (_: any, record: LineItem) => {
+        if (isReadonly) return record.manufacturer || "-";
+        return (
+          <Input
+            value={record.manufacturer || ""}
+            placeholder="Nhập hãng SX"
+            onChange={(e) => handleLineChange(record.key, "manufacturer", e.target.value)}
+            size="small"
+          />
+        );
+      },
+    },
+    {
+      title: "Thành tiền chưa VAT",
+      key: "amountBeforeVat",
+      width: 160,
+      render: (_: any, record: LineItem) =>
+        isReadonly ? `${formatCurrency(record.amountBeforeVat)} VNĐ` : (
+          <InputNumber
+            value={record.unitPrice}
+            min={0}
+            formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+            parser={(v) => Number(v?.replace(/,/g, "") || 0)}
+            onChange={(v) => handleLineChange(record.key, "unitPrice", v || 0)}
+            style={{ width: "100%" }}
+            size="small"
+            addonAfter="VNĐ"
+          />
+        ),
+    },
+    {
+      title: "VAT",
+      key: "vatPercent",
+      width: 65,
+      align: "center" as const,
+      render: (_: any, record: LineItem) =>
+        isReadonly ? `${record.vatPercent}%` : (
+          <InputNumber
+            value={record.vatPercent}
+            min={0}
+            max={100}
+            onChange={(v) => handleLineChange(record.key, "vatPercent", v || 0)}
+            style={{ width: "100%" }}
+            size="small"
+          />
+        ),
+    },
+    {
+      title: "Thành tiền sau VAT",
+      key: "amountAfterVat",
+      width: 150,
+      align: "right" as const,
+      render: (_: any, record: LineItem) => `${formatCurrency(record.amountAfterVat)} VNĐ`,
+    },
+    {
+      title: "Số lô",
+      key: "lotNumber",
+      width: 150,
+      render: (_: any, record: LineItem) => {
+        const lots = (lotSuggestions[record.productId] || []).map((l) => ({
+          value: l.lotNumber,
+          label: l.lotExpiryDate
+            ? `${l.lotNumber} (HSD: ${dayjs(l.lotExpiryDate).format("DD/MM/YYYY")})`
+            : l.lotNumber,
+        }));
+        if (isReadonly) return record.lotNumber || "-";
+        return (
+          <Select
+            value={record.lotNumber || undefined}
+            placeholder="Chọn lô"
+            options={lots}
+            onChange={(v) => {
+              handleLineChange(record.key, "lotNumber", v);
+              const lot = (lotSuggestions[record.productId] || []).find((l) => l.lotNumber === v);
+              if (lot?.lotExpiryDate) {
+                handleLineChange(record.key, "lotExpiryDate", lot.lotExpiryDate);
+              }
+            }}
+            allowClear
+            onClear={() => handleLineChange(record.key, "lotNumber", "")}
+            style={{ width: "100%" }}
+            size="small"
+            notFoundContent={<span style={{ color: "#999", fontSize: 12 }}>Chưa có lô nào</span>}
+            dropdownRender={(menu) => (
+              <>
+                {menu}
+                <Divider style={{ margin: "4px 0" }} />
+                <div style={{ padding: "0 4px 4px" }}>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    <Input
+                      size="small"
+                      placeholder="Nhập số lô mới"
+                      value={newLotInput[record.key] || ""}
+                      onChange={(e) => setNewLotInput((prev) => ({ ...prev, [record.key]: e.target.value }))}
+                      onPressEnter={() => handleAddLot(record.key, record.productId)}
+                    />
+                    <Button
+                      size="small"
+                      type="primary"
+                      icon={<PlusOutlined />}
+                      onClick={() => handleAddLot(record.key, record.productId)}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+          />
+        );
+      },
+    },
+    {
+      title: "Ngày hết hạn",
+      key: "lotExpiryDate",
+      width: 130,
+      render: (_: any, record: LineItem) => {
+        if (isReadonly) return record.lotExpiryDate ? dayjs(record.lotExpiryDate).format("DD/MM/YYYY") : "-";
+        const existingLot = (lotSuggestions[record.productId] || []).find(
+          (l) => l.lotNumber === record.lotNumber && l.lotExpiryDate
+        );
+        return (
+          <DatePicker
+            value={record.lotExpiryDate ? dayjs(record.lotExpiryDate) : null}
+            format="DD/MM/YYYY"
+            onChange={(date) =>
+              handleLineChange(record.key, "lotExpiryDate", date?.format("YYYY-MM-DD") || undefined)
+            }
+            disabledDate={(current) => current && current.isBefore(dayjs(), "day")}
+            style={{ width: "100%" }}
+            size="small"
+            disabled={!!existingLot}
+          />
+        );
+      },
+    },
+    ...actionColumn,
   ];
 
   if (pageLoading) {
@@ -918,7 +1204,7 @@ const GoodsReceiptForm: React.FC = () => {
 
         <Divider style={{ margin: "8px 0 16px" }} />
 
-        {/* Line items */}
+        {/* Product items */}
         <div style={{ padding: "0 16px 16px" }}>
           <div style={{ marginBottom: 12 }}>
             <strong style={{ fontSize: 15, display: "block", marginBottom: 8 }}>THÔNG TIN HÀNG HÓA</strong>
@@ -955,25 +1241,58 @@ const GoodsReceiptForm: React.FC = () => {
           </div>
 
           <Table
-            columns={lineColumns}
-            dataSource={lineItems}
+            columns={productColumns}
+            dataSource={productItems}
             rowKey="key"
             pagination={false}
-            scroll={{ x: 1500 }}
+            scroll={{ x: 1650 }}
             size="small"
             bordered
-            footer={() => (
-              <Row justify="end" style={{ padding: "8px 0" }}>
-                <Col>
-                  <Space size={24}>
-                    <span>Tổng chưa VAT: <strong>{formatCurrency(totalBeforeVat)} VNĐ</strong></span>
-                    <span>Tổng thuế VAT: <strong>{formatCurrency(totalVat)} VNĐ</strong></span>
-                    <span>Tổng tiền: <strong style={{ color: "#1677ff", fontSize: 16 }}>{formatCurrency(totalAfterVat)} VNĐ</strong></span>
-                  </Space>
-                </Col>
-              </Row>
-            )}
+            locale={{ emptyText: "Chưa có hàng hóa" }}
           />
+
+          <Divider orientation={"left" as any} style={{ fontSize: 14, margin: "16px 0 12px" }}>
+            Thiết bị
+          </Divider>
+          {!isReadonly && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <Select
+                key={`eq-select-${equipmentItems.length}`}
+                placeholder="Chọn thiết bị đã có"
+                options={equipmentOptions}
+                onSelect={handleSelectEquipment}
+                style={{ width: 360 }}
+                showSearch
+                filterOption={(input, option) =>
+                  (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
+                }
+                notFoundContent="Chưa có thiết bị nào"
+              />
+              <Button icon={<PlusOutlined />} onClick={handleAddEquipmentRow}>
+                Thêm thiết bị mới
+              </Button>
+            </div>
+          )}
+          <Table
+            columns={equipmentColumns}
+            dataSource={equipmentItems}
+            rowKey="key"
+            pagination={false}
+            scroll={{ x: 1400 }}
+            size="small"
+            bordered
+            locale={{ emptyText: "Chưa có thiết bị" }}
+          />
+
+          <Row justify="end" style={{ padding: "12px 0" }}>
+            <Col>
+              <Space size={24}>
+                <span>Tổng chưa VAT: <strong>{formatCurrency(totalBeforeVat)} VNĐ</strong></span>
+                <span>Tổng thuế VAT: <strong>{formatCurrency(totalVat)} VNĐ</strong></span>
+                <span>Tổng tiền: <strong style={{ color: "#1677ff", fontSize: 16 }}>{formatCurrency(totalAfterVat)} VNĐ</strong></span>
+              </Space>
+            </Col>
+          </Row>
         </div>
       </Card>
 

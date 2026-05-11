@@ -120,6 +120,10 @@ export interface GoodsReceiptItemDto {
   amountAfterVat: number;
   lotNumber?: string;
   lotExpiryDate?: string;
+  isEquipment: boolean;
+  serialNumber?: string;
+  model?: string;
+  manufacturer?: string;
 }
 
 export interface GoodsReceiptPaymentDto {
@@ -150,13 +154,18 @@ export interface CreateUpdateGoodsReceiptDto {
 
 export interface CreateUpdateGoodsReceiptItemDto {
   id?: string;
-  productId: string;
-  unitId: string;
+  productId?: string;
+  productName?: string;
+  unitId?: string;
   quantity: number;
   unitPrice: number;
   vatPercent: number;
   lotNumber?: string;
   lotExpiryDate?: string;
+  isEquipment?: boolean;
+  serialNumber?: string;
+  model?: string;
+  manufacturer?: string;
 }
 
 export interface GetGoodsReceiptListInput {

@@ -162,6 +162,15 @@ export const PERMISSIONS = {
     Confirm: `${P}.StockAdjustments.Confirm`,
   },
 
+  // Equipments (Quản lý thiết bị)
+  Equipments: {
+    Default: `${P}.Equipments`,
+    Create: `${P}.Equipments.Create`,
+    Edit: `${P}.Equipments.Edit`,
+    Delete: `${P}.Equipments.Delete`,
+    UpdateStatus: `${P}.Equipments.UpdateStatus`,
+  },
+
   // Products (Quản lý vật phẩm)
   Products: {
     Default: `${P}.Products`,
@@ -353,6 +362,9 @@ export const ROUTE_PERMISSION_MAP: Record<string, string[]> = {
   // StockAdjustments
   '/stock-adjustments': [PERMISSIONS.StockAdjustments.Default],
 
+  // Equipments
+  '/equipments': [PERMISSIONS.Equipments.Default],
+
   // Subcontractors
   '/subcontractors': [PERMISSIONS.Subcontractors.Default],
 
@@ -496,6 +508,13 @@ export const ACTION_PERMISSION_MAP = {
     delete: PERMISSIONS.StockAdjustments.Delete,
     confirm: PERMISSIONS.StockAdjustments.Confirm,
   },
+  equipments: {
+    view: PERMISSIONS.Equipments.Default,
+    create: PERMISSIONS.Equipments.Create,
+    edit: PERMISSIONS.Equipments.Edit,
+    delete: PERMISSIONS.Equipments.Delete,
+    updateStatus: PERMISSIONS.Equipments.UpdateStatus,
+  },
   masterData: {
     view: PERMISSIONS.MasterData.Default,
     create: PERMISSIONS.MasterData.Create,
@@ -543,6 +562,7 @@ export const MENU_PERMISSION_MAP = {
   suppliersManagement: [PERMISSIONS.Suppliers.Default],
   goodsReceipts: [PERMISSIONS.GoodsReceipts.Default],
   stockAdjustments: [PERMISSIONS.StockAdjustments.Default],
+  equipments: [PERMISSIONS.Equipments.Default],
   subcontractors: [PERMISSIONS.Subcontractors.Default],
   masterData: [
     PERMISSIONS.MasterData.Default,

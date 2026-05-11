@@ -88,6 +88,8 @@ export const PATH_ROUTES = {
 
   stockAdjustments: '/stock-adjustments',
 
+  equipments: '/equipments',
+
   suppliersManagement: '/suppliers-management',
 
   subcontractors: '/subcontractors',

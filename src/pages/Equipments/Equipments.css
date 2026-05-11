@@ -1,0 +1,50 @@
+/* Equipment detail modal responsive */
+@media screen and (max-width: 768px) {
+  .equipment-detail-modal .ant-modal {
+    max-width: calc(100vw - 16px) !important;
+    margin: 8px auto !important;
+  }
+
+  .equipment-detail-modal .ant-modal-body {
+    padding: 0 12px 12px !important;
+    max-height: 82vh !important;
+  }
+
+  .equipment-detail-modal .ant-form-vertical .ant-form-item-label,
+  .equipment-detail-modal .ant-form-item-label {
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+  }
+  .equipment-detail-modal .ant-form-item-row {
+    row-gap: 4px !important;
+  }
+  .equipment-detail-modal .ant-form-item {
+    margin-bottom: 12px !important;
+  }
+
+  .equipment-detail-modal .ant-modal-footer > div {
+    flex-wrap: wrap !important;
+  }
+}
+
+@media screen and (max-width: 992px) and (min-width: 769px) {
+  .equipment-detail-modal .ant-modal {
+    max-width: calc(100vw - 48px) !important;
+  }
+
+  .equipment-detail-modal .ant-modal-body {
+    padding: 0 16px 16px !important;
+  }
+
+  .equipment-detail-modal .ant-form-vertical .ant-form-item-label,
+  .equipment-detail-modal .ant-form-item-label {
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+  }
+  .equipment-detail-modal .ant-form-item-row {
+    row-gap: 4px !important;
+  }
+  .equipment-detail-modal .ant-form-item {
+    margin-bottom: 12px !important;
+  }
+}
