@@ -744,16 +744,28 @@ export const testMethodService = {
 export interface MaterialConsumptionItemDto {
   id: string;
   testMethodIndicatorId: string;
-  productId: string;
-  productName: string;
-  productType: number;
-  unitId: string;
-  unitName: string;
+  productId?: string;
+  productName?: string;
+  productType?: number;
+  equipmentId?: string;
+  equipmentName?: string;
+  equipmentSerialNumber?: string;
+  isEquipment: boolean;
+  unitId?: string;
+  unitName?: string;
+  quantity: number;
+}
+
+export interface SaveMaterialConsumptionItemDto {
+  productId?: string;
+  equipmentId?: string;
+  isEquipment: boolean;
+  unitId?: string;
   quantity: number;
 }
 
 export interface SaveMaterialConsumptionDto {
-  items: { productId: string; unitId: string; quantity: number }[];
+  items: SaveMaterialConsumptionItemDto[];
 }
 
 export interface ConsumptionStatusItemInput {

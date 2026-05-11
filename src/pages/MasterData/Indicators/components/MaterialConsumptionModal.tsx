@@ -15,25 +15,31 @@ import {
 import { NumericFormat } from "react-number-format";
 import { CloseOutlined } from "../../../../components/common/Icon";
 import { IndicatorName } from "../../../../components/common";
-import {
-  testMethodService,
-  MaterialConsumptionItemDto,
-} from "../../../../services/masterDataService";
+import { testMethodService } from "../../../../services/masterDataService";
 import {
   productService,
   ProductDto,
   ProductType,
   ProductTypeLabels,
 } from "../../../../services/productService";
+import {
+  equipmentService,
+  EquipmentListDto,
+  EquipmentStatus,
+} from "../../../../services/equipmentService";
 import { getApiErrorMessage } from "../../../../utils/errorHandler";
 import type { ColumnsType } from "antd/es/table";
 
 export interface PendingConsumptionItem {
-  productId: string;
-  productName: string;
-  productType: ProductType;
-  unitId: string;
-  unitName: string;
+  isEquipment: boolean;
+  productId?: string;
+  productName?: string;
+  productType?: ProductType;
+  equipmentId?: string;
+  equipmentName?: string;
+  equipmentSerialNumber?: string;
+  unitId?: string;
+  unitName?: string;
   quantity: number;
 }
 
@@ -42,7 +48,7 @@ interface UnitOption {
   name: string;
 }
 
-interface ConsumptionRow {
+interface ProductRow {
   key: string;
   productId: string;
   productName: string;
@@ -51,6 +57,17 @@ interface ConsumptionRow {
   availableUnits: UnitOption[];
   quantity: number;
 }
+
+interface EquipmentRow {
+  key: string;
+  equipmentId: string;
+  equipmentName: string;
+  equipmentSerialNumber: string;
+  quantity: number;
+}
+
+const EQUIPMENT_FILTER_VALUE = "__equipment__";
+const EQUIPMENT_PREFIX = "eq__";
 
 interface MaterialConsumptionModalProps {
   open: boolean;
@@ -84,14 +101,28 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [products, setProducts] = useState<ProductDto[]>([]);
+  const [equipments, setEquipments] = useState<EquipmentListDto[]>([]);
   const [productsLoaded, setProductsLoaded] = useState(false);
-  const [rows, setRows] = useState<ConsumptionRow[]>([]);
-  const [productTypeFilter, setProductTypeFilter] = useState<
-    ProductType | undefined
-  >(undefined);
-  const [selectedProductId, setSelectedProductId] = useState<
-    string | undefined
-  >(undefined);
+  const [equipmentsLoaded, setEquipmentsLoaded] = useState(false);
+  const [productRows, setProductRows] = useState<ProductRow[]>([]);
+  const [equipmentRows, setEquipmentRows] = useState<EquipmentRow[]>([]);
+  const [typeFilter, setTypeFilter] = useState<string | undefined>(undefined);
+  const [selectedItemId, setSelectedItemId] = useState<string | undefined>(undefined);
+
+  const isEquipmentMode = typeFilter === EQUIPMENT_FILTER_VALUE;
+  const isAllMode = typeFilter === undefined;
+
+  const selectLabel = isEquipmentMode
+    ? "Tên thiết bị"
+    : isAllMode
+      ? "Tên vật tư / thiết bị"
+      : "Tên sản phẩm";
+
+  const selectPlaceholder = isEquipmentMode
+    ? "Tìm theo serial hoặc tên thiết bị..."
+    : isAllMode
+      ? "Tìm kiếm sản phẩm hoặc thiết bị..."
+      : "Tìm kiếm sản phẩm...";
 
   const getAvailableUnits = useCallback(
     (product: ProductDto): UnitOption[] => {
@@ -116,67 +147,96 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
   useEffect(() => {
     if (!open) return;
 
-    setRows([]);
-    setProductTypeFilter(undefined);
-    setSelectedProductId(undefined);
+    setProductRows([]);
+    setEquipmentRows([]);
+    setTypeFilter(undefined);
+    setSelectedItemId(undefined);
 
     const loadData = async () => {
       setLoading(true);
       try {
+        let allProducts = products;
         if (!productsLoaded) {
-          const activeProducts = await productService.getActive();
-          setProducts(activeProducts);
+          allProducts = await productService.getActive();
+          setProducts(allProducts);
           setProductsLoaded(true);
+        }
+
+        if (!equipmentsLoaded) {
+          const result = await equipmentService.getList({ limit: 1000 });
+          const activeEquipments = result.items.filter(
+            (e) => e.status === EquipmentStatus.InStock || e.status === EquipmentStatus.InUse
+          );
+          setEquipments(activeEquipments);
+          setEquipmentsLoaded(true);
         }
 
         if (testMethodIndicatorId) {
           const existing =
             await testMethodService.getConsumption(testMethodIndicatorId);
           if (existing.length > 0) {
-            const allProducts = productsLoaded
-              ? products
-              : await productService.getActive();
             const productMap = new Map(allProducts.map((p) => [p.id, p]));
+            const pRows: ProductRow[] = [];
+            const eRows: EquipmentRow[] = [];
 
-            setRows(
-              existing.map((item: MaterialConsumptionItemDto) => {
-                const product = productMap.get(item.productId);
-                return {
+            for (const item of existing) {
+              if (item.isEquipment) {
+                eRows.push({
                   key: crypto.randomUUID(),
-                  productId: item.productId,
-                  productName: item.productName,
+                  equipmentId: item.equipmentId!,
+                  equipmentName: item.equipmentName || "",
+                  equipmentSerialNumber: item.equipmentSerialNumber || "",
+                  quantity: item.quantity,
+                });
+              } else {
+                const product = productMap.get(item.productId!);
+                pRows.push({
+                  key: crypto.randomUUID(),
+                  productId: item.productId!,
+                  productName: item.productName || "",
                   productType: item.productType as ProductType,
-                  unitId: item.unitId,
+                  unitId: item.unitId!,
                   availableUnits: product
                     ? getAvailableUnits(product)
-                    : [{ id: item.unitId, name: item.unitName }],
+                    : [{ id: item.unitId!, name: item.unitName || "" }],
                   quantity: item.quantity,
-                };
-              })
-            );
+                });
+              }
+            }
+            setProductRows(pRows);
+            setEquipmentRows(eRows);
           }
         } else if (pendingItems && pendingItems.length > 0) {
-          const allProducts = productsLoaded
-            ? products
-            : await productService.getActive();
           const productMap = new Map(allProducts.map((p) => [p.id, p]));
+          const pRows: ProductRow[] = [];
+          const eRows: EquipmentRow[] = [];
 
-          setRows(
-            pendingItems.map((item) => {
-              const product = productMap.get(item.productId);
-              return {
+          for (const item of pendingItems) {
+            if (item.isEquipment) {
+              eRows.push({
                 key: crypto.randomUUID(),
-                productId: item.productId,
-                productName: item.productName,
-                productType: item.productType,
-                unitId: item.unitId,
+                equipmentId: item.equipmentId!,
+                equipmentName: item.equipmentName || "",
+                equipmentSerialNumber: item.equipmentSerialNumber || "",
+                quantity: item.quantity,
+              });
+            } else {
+              const product = productMap.get(item.productId!);
+              pRows.push({
+                key: crypto.randomUUID(),
+                productId: item.productId!,
+                productName: item.productName || "",
+                productType: item.productType!,
+                unitId: item.unitId!,
                 availableUnits: product
                   ? getAvailableUnits(product)
-                  : [{ id: item.unitId, name: item.unitName }],
+                  : [{ id: item.unitId!, name: item.unitName || "" }],
                 quantity: item.quantity,
-              };
-            })
-          );
+              });
+            }
+          }
+          setProductRows(pRows);
+          setEquipmentRows(eRows);
         }
       } catch (error) {
         console.error("Failed to load consumption data:", error);
@@ -189,65 +249,118 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
   }, [open, testMethodIndicatorId]);
 
   const filteredProducts = useMemo(() => {
+    if (isEquipmentMode) return [];
     let result = products;
-    if (productTypeFilter !== undefined) {
-      result = result.filter((p) => p.productType === productTypeFilter);
+    if (typeFilter !== undefined) {
+      result = result.filter((p) => p.productType === Number(typeFilter));
     }
     return result.sort((a, b) => a.name.localeCompare(b.name, "vi"));
-  }, [products, productTypeFilter]);
+  }, [products, typeFilter, isEquipmentMode]);
 
-  const productOptions = useMemo(() => {
-    const existingProductIds = new Set(rows.map((r) => r.productId));
-    return filteredProducts
-      .filter((p) => !existingProductIds.has(p.id))
-      .map((p) => ({
-        value: p.id,
-        label: p.name,
-      }));
-  }, [filteredProducts, rows]);
+  const selectOptions = useMemo(() => {
+    const existingProductIds = new Set(productRows.map((r) => r.productId));
+    const existingEquipmentIds = new Set(equipmentRows.map((r) => r.equipmentId));
 
-  const handleAddProduct = useCallback(() => {
-    if (!selectedProductId) {
-      message.warning("Vui lòng chọn sản phẩm");
+    const pOpts = isEquipmentMode
+      ? []
+      : filteredProducts
+          .filter((p) => !existingProductIds.has(p.id))
+          .map((p) => ({
+            value: p.id,
+            label: p.name,
+          }));
+
+    const eOpts = (!isAllMode && !isEquipmentMode)
+      ? []
+      : equipments
+          .filter((e) => !existingEquipmentIds.has(e.id))
+          .map((e) => ({
+            value: EQUIPMENT_PREFIX + e.id,
+            label: `[TB] ${e.serialNumber} - ${e.name}`,
+          }));
+
+    return [...pOpts, ...eOpts];
+  }, [filteredProducts, equipments, productRows, equipmentRows, isEquipmentMode, isAllMode]);
+
+  const handleAdd = useCallback(() => {
+    if (!selectedItemId) {
+      message.warning("Vui lòng chọn sản phẩm hoặc thiết bị");
       return;
     }
-    const product = products.find((p) => p.id === selectedProductId);
-    if (!product) return;
 
-    if (rows.some((r) => r.productId === selectedProductId)) {
-      message.warning("Sản phẩm đã được thêm");
-      return;
+    if (selectedItemId.startsWith(EQUIPMENT_PREFIX)) {
+      const eqId = selectedItemId.slice(EQUIPMENT_PREFIX.length);
+      const equipment = equipments.find((e) => e.id === eqId);
+      if (!equipment) return;
+
+      if (equipmentRows.some((r) => r.equipmentId === eqId)) {
+        message.warning("Thiết bị đã được thêm");
+        return;
+      }
+
+      setEquipmentRows((prev) => [
+        ...prev,
+        {
+          key: crypto.randomUUID(),
+          equipmentId: equipment.id,
+          equipmentName: equipment.name,
+          equipmentSerialNumber: equipment.serialNumber,
+          quantity: 1,
+        },
+      ]);
+    } else {
+      const product = products.find((p) => p.id === selectedItemId);
+      if (!product) return;
+
+      if (productRows.some((r) => r.productId === selectedItemId)) {
+        message.warning("Sản phẩm đã được thêm");
+        return;
+      }
+
+      const availableUnits = getAvailableUnits(product);
+      setProductRows((prev) => [
+        ...prev,
+        {
+          key: crypto.randomUUID(),
+          productId: product.id,
+          productName: product.name,
+          productType: product.productType,
+          unitId: product.baseUnitId,
+          availableUnits,
+          quantity: 0,
+        },
+      ]);
     }
 
-    const availableUnits = getAvailableUnits(product);
-    setRows((prev) => [
-      ...prev,
-      {
-        key: crypto.randomUUID(),
-        productId: product.id,
-        productName: product.name,
-        productType: product.productType,
-        unitId: product.baseUnitId,
-        availableUnits,
-        quantity: 0,
-      },
-    ]);
-    setSelectedProductId(undefined);
-  }, [selectedProductId, products, rows, getAvailableUnits]);
+    setSelectedItemId(undefined);
+  }, [selectedItemId, equipments, products, equipmentRows, productRows, getAvailableUnits]);
 
-  const handleRemoveRow = useCallback((key: string) => {
-    setRows((prev) => prev.filter((r) => r.key !== key));
+  const handleRemoveProduct = useCallback((key: string) => {
+    setProductRows((prev) => prev.filter((r) => r.key !== key));
+  }, []);
+
+  const handleRemoveEquipment = useCallback((key: string) => {
+    setEquipmentRows((prev) => prev.filter((r) => r.key !== key));
   }, []);
 
   const handleUnitChange = useCallback((key: string, unitId: string) => {
-    setRows((prev) =>
+    setProductRows((prev) =>
       prev.map((r) => (r.key === key ? { ...r, unitId } : r))
     );
   }, []);
 
-  const handleQuantityChange = useCallback(
+  const handleProductQuantityChange = useCallback(
     (key: string, quantity: number | null) => {
-      setRows((prev) =>
+      setProductRows((prev) =>
+        prev.map((r) => (r.key === key ? { ...r, quantity: quantity ?? 0 } : r))
+      );
+    },
+    []
+  );
+
+  const handleEquipmentQuantityChange = useCallback(
+    (key: string, quantity: number | null) => {
+      setEquipmentRows((prev) =>
         prev.map((r) => (r.key === key ? { ...r, quantity: quantity ?? 0 } : r))
       );
     },
@@ -255,33 +368,45 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
   );
 
   const handleSave = useCallback(async () => {
-    if (rows.length === 0) {
-      message.warning("Vui lòng thêm ít nhất một vật liệu");
+    if (productRows.length === 0 && equipmentRows.length === 0) {
+      message.warning("Vui lòng thêm ít nhất một vật liệu hoặc thiết bị");
       return;
     }
 
-    const invalidRows = rows.filter((r) => r.quantity <= 0);
-    if (invalidRows.length > 0) {
+    const invalidProducts = productRows.filter((r) => r.quantity <= 0);
+    const invalidEquipments = equipmentRows.filter((r) => r.quantity <= 0);
+    if (invalidProducts.length > 0 || invalidEquipments.length > 0) {
       message.error("Số lượng phải lớn hơn 0");
       return;
     }
 
-    const items: PendingConsumptionItem[] = rows.map((r) => ({
-      productId: r.productId,
-      productName: r.productName,
-      productType: r.productType,
-      unitId: r.unitId,
-      unitName:
-        r.availableUnits.find((u) => u.id === r.unitId)?.name || "",
-      quantity: r.quantity,
-    }));
+    const items: PendingConsumptionItem[] = [
+      ...productRows.map((r) => ({
+        isEquipment: false,
+        productId: r.productId,
+        productName: r.productName,
+        productType: r.productType,
+        unitId: r.unitId,
+        unitName: r.availableUnits.find((u) => u.id === r.unitId)?.name,
+        quantity: r.quantity,
+      })),
+      ...equipmentRows.map((r) => ({
+        isEquipment: true,
+        equipmentId: r.equipmentId,
+        equipmentName: r.equipmentName,
+        equipmentSerialNumber: r.equipmentSerialNumber,
+        quantity: r.quantity,
+      })),
+    ];
 
     if (testMethodIndicatorId) {
       try {
         setSaving(true);
         await testMethodService.saveConsumption(testMethodIndicatorId, {
           items: items.map((i) => ({
+            isEquipment: i.isEquipment,
             productId: i.productId,
+            equipmentId: i.equipmentId,
             unitId: i.unitId,
             quantity: i.quantity,
           })),
@@ -298,9 +423,9 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
     } else {
       onSave(items);
     }
-  }, [rows, testMethodIndicatorId, onSave]);
+  }, [productRows, equipmentRows, testMethodIndicatorId, onSave]);
 
-  const columns: ColumnsType<ConsumptionRow> = [
+  const productColumns: ColumnsType<ProductRow> = [
     {
       title: "Tên vật liệu",
       dataIndex: "productName",
@@ -332,7 +457,7 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
         <NumericFormat
           value={record.quantity}
           onValueChange={(values) =>
-            handleQuantityChange(record.key, values.floatValue ?? 0)
+            handleProductQuantityChange(record.key, values.floatValue ?? 0)
           }
           allowNegative={false}
           decimalScale={2}
@@ -352,7 +477,54 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
           size="small"
           danger
           icon={<CloseOutlined />}
-          onClick={() => handleRemoveRow(record.key)}
+          onClick={() => handleRemoveProduct(record.key)}
+        />
+      ),
+    },
+  ];
+
+  const equipmentColumns: ColumnsType<EquipmentRow> = [
+    {
+      title: "Serial number",
+      dataIndex: "equipmentSerialNumber",
+      key: "equipmentSerialNumber",
+      width: 160,
+    },
+    {
+      title: "Tên thiết bị",
+      dataIndex: "equipmentName",
+      key: "equipmentName",
+      ellipsis: true,
+    },
+    {
+      title: "Lượt sử dụng",
+      key: "quantity",
+      width: 120,
+      render: (_, record) => (
+        <NumericFormat
+          value={record.quantity}
+          onValueChange={(values) =>
+            handleEquipmentQuantityChange(record.key, values.floatValue ?? 0)
+          }
+          allowNegative={false}
+          decimalScale={0}
+          customInput={Input}
+          size="small"
+          style={{ width: "100%" }}
+        />
+      ),
+    },
+    {
+      title: "",
+      key: "action",
+      width: 40,
+      render: (_, record) => (
+        <Button
+          type="text"
+          size="small"
+          danger
+          icon={<CloseOutlined />}
+          onClick={() => handleRemoveEquipment(record.key)}
         />
       ),
     },
@@ -378,6 +550,17 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
         body: { paddingTop: 16, maxHeight: "70vh", overflowY: "auto", overflowX: "hidden" },
       }}
     >
+      <style>{`
+        .consumption-table-wrap {
+          border: 1px solid #f0f0f0;
+          border-radius: 8px;
+          overflow: hidden;
+        }
+        .consumption-table-wrap .ant-table-thead > tr > th,
+        .consumption-table-wrap .ant-table-thead > tr > td {
+          border-radius: 0 !important;
+        }
+      `}</style>
       <Spin spinning={loading}>
         <Row gutter={[16, 8]} style={{ marginBottom: 16 }}>
           <Col xs={24} sm={12}>
@@ -414,30 +597,31 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
               Loại sản phẩm
             </div>
             <Select
-              value={productTypeFilter}
+              value={typeFilter}
               onChange={(v) => {
-                setProductTypeFilter(v);
-                setSelectedProductId(undefined);
+                setTypeFilter(v);
+                setSelectedItemId(undefined);
               }}
               allowClear
               placeholder="Tất cả"
               style={{ width: "100%" }}
               options={[
-                { value: ProductType.Chemical, label: ProductTypeLabels[ProductType.Chemical] },
-                { value: ProductType.Biological, label: ProductTypeLabels[ProductType.Biological] },
-                { value: ProductType.Supply, label: ProductTypeLabels[ProductType.Supply] },
+                { value: String(ProductType.Chemical), label: ProductTypeLabels[ProductType.Chemical] },
+                { value: String(ProductType.Biological), label: ProductTypeLabels[ProductType.Biological] },
+                { value: String(ProductType.Supply), label: ProductTypeLabels[ProductType.Supply] },
+                { value: EQUIPMENT_FILTER_VALUE, label: "Thiết bị" },
               ]}
             />
           </Col>
           <Col xs={24} sm={12}>
             <div style={{ fontSize: 13, color: "#8c8c8c", marginBottom: 4 }}>
-              Tên sản phẩm
+              {selectLabel}
             </div>
             <Select
-              value={selectedProductId}
-              onChange={setSelectedProductId}
-              options={productOptions}
-              placeholder="Tìm kiếm sản phẩm..."
+              value={selectedItemId}
+              onChange={setSelectedItemId}
+              options={selectOptions}
+              placeholder={selectPlaceholder}
               showSearch
               filterOption={(input, option) =>
                 ((option?.label as string) ?? "")
@@ -449,21 +633,36 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
             />
           </Col>
           <Col xs={24} sm={6}>
-            <Button type="primary" onClick={handleAddProduct} style={{ width: "100%" }}>
+            <Button type="primary" onClick={handleAdd} style={{ width: "100%" }}>
               Thêm vào
             </Button>
           </Col>
         </Row>
 
-        <Table
-          columns={columns}
-          dataSource={rows}
-          rowKey="key"
-          pagination={false}
-          size="small"
-          scroll={{ x: "100%" }}
-          locale={{ emptyText: "Chưa có vật liệu nào" }}
-        />
+        <div className="consumption-table-wrap">
+          <Table
+            columns={productColumns}
+            dataSource={productRows}
+            rowKey="key"
+            pagination={false}
+            size="small"
+            scroll={{ x: "100%" }}
+            locale={{ emptyText: "Chưa có vật liệu nào" }}
+          />
+        </div>
+
+        {equipmentRows.length > 0 && (
+          <div className="consumption-table-wrap" style={{ marginTop: 16 }}>
+            <Table
+              columns={equipmentColumns}
+              dataSource={equipmentRows}
+              rowKey="key"
+              pagination={false}
+              size="small"
+              scroll={{ x: "100%" }}
+            />
+          </div>
+        )}
       </Spin>
     </Modal>
   );

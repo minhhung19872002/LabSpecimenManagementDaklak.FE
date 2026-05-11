@@ -172,7 +172,9 @@ export const useIndicatorMethodsActions = ({
                     method.testMethodIndicatorId,
                     {
                       items: row.pendingConsumption.map((c) => ({
+                        isEquipment: c.isEquipment ?? false,
                         productId: c.productId,
+                        equipmentId: c.equipmentId,
                         unitId: c.unitId,
                         quantity: c.quantity,
                       })),
