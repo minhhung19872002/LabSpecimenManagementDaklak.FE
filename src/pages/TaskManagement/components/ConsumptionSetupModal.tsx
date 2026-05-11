@@ -67,9 +67,11 @@ const ConsumptionSetupModal: React.FC<ConsumptionSetupModalProps> = ({
   const handleConsumptionSave = useCallback(
     (_items: PendingConsumptionItem[]) => {
       if (consumptionModal.indicator) {
+        const savedTmiId = consumptionModal.indicator!.testMethodIndicatorId;
         setIndicators((prev) =>
           prev.map((ind) =>
-            ind.id === consumptionModal.indicator!.id
+            ind.id === consumptionModal.indicator!.id ||
+            (savedTmiId && ind.testMethodIndicatorId === savedTmiId)
               ? { ...ind, hasConsumption: true }
               : ind
           )
