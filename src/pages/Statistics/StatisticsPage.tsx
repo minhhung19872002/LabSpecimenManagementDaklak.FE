@@ -542,7 +542,15 @@ const StatisticsPage: React.FC = () => {
                     text: "value",
                     position: "outside",
                   }}
-                  legend={{ position: "bottom" }}
+                  legend={{
+                    position: "bottom",
+                    maxItemWidth: 150,
+                    itemLabelText: (datum: { label?: string }) => {
+                      const label = datum.label || "";
+                      return label.length > 18 ? label.slice(0, 18) + "…" : label;
+                    },
+                    itemLabelTooltip: true,
+                  }}
                   tooltip={{
                     title: "type",
                   }}
@@ -636,31 +644,40 @@ const StatisticsPage: React.FC = () => {
                     xField="totalSamples"
                     yField="totalRevenue"
                     sizeField="totalIndicators"
-                    colorField="district"
+                    colorField="ward"
                     height={450}
                     legend={{ position: "top" }}
-                    style={{ fillOpacity: 0.55, lineWidth: 1 }}
                     scale={{
                       color: {
                         range: [
-                          "#7eb8da",
-                          "#a3d9a5",
-                          "#c4a7e7",
-                          "#f2a7b0",
-                          "#f7d794",
-                          "#7ecfc0",
-                          "#b0a4e3",
-                          "#f0b27a",
-                          "#85c1e9",
-                          "#abebc6",
-                          "#d7bde2",
-                          "#f5b7b1",
-                          "#fad7a0",
-                          "#a9cce3",
-                          "#d5f5e3",
+                          "#5B8FF9",
+                          "#5AD8A6",
+                          "#F6903D",
+                          "#6DC8EC",
+                          "#9270CA",
+                          "#FF6B6B",
+                          "#FFCA28",
+                          "#26C6DA",
+                          "#E040FB",
+                          "#FF8A65",
+                          "#66BB6A",
+                          "#42A5F5",
+                          "#AB47BC",
+                          "#EF5350",
+                          "#29B6F6",
                         ],
                       },
-                      size: { range: [8, 50] },
+                      size: { range: [12, 60] },
+                    }}
+                    style={{
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      fill: (d: any) => {
+                        const colors = ["#5B8FF9","#5AD8A6","#F6903D","#6DC8EC","#9270CA","#FF6B6B","#FFCA28","#26C6DA","#E040FB","#FF8A65","#66BB6A","#42A5F5","#AB47BC","#EF5350","#29B6F6"];
+                        const wards = [...new Set(regionalBubbles.map(b => b.ward))];
+                        const idx = wards.indexOf(d.ward);
+                        return colors[idx >= 0 ? idx % colors.length : 0];
+                      },
+                      fillOpacity: 0.75,
                     }}
                     axis={{
                       x: { title: "Số mẫu thử nghiệm" },
@@ -669,7 +686,6 @@ const StatisticsPage: React.FC = () => {
                     tooltip={{
                       title: "ward",
                       items: [
-                        { field: "district", name: "Huyện" },
                         { field: "totalSamples", name: "Số mẫu" },
                         { field: "totalRevenue", name: "Doanh thu (triệu đ)" },
                         { field: "totalIndicators", name: "Số chỉ tiêu" },

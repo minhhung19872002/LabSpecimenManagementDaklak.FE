@@ -76,7 +76,6 @@ export interface DepartmentWorkAssignmentDto {
 
 export interface RegionalBubbleDto {
   ward: string;
-  district: string;
   totalRevenue: number;
   totalSamples: number;
   totalIndicators: number;
