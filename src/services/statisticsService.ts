@@ -74,6 +74,14 @@ export interface DepartmentWorkAssignmentDto {
   technicians: TechnicianWorkDto[];
 }
 
+export interface RegionalBubbleDto {
+  ward: string;
+  district: string;
+  totalRevenue: number;
+  totalSamples: number;
+  totalIndicators: number;
+}
+
 export interface StatisticsDataDto {
   overview: StatisticsOverviewDto;
   sampleMatrix: SampleMatrixDto[];
@@ -83,6 +91,7 @@ export interface StatisticsDataDto {
   labStatistics: LabStatisticsDto[];
   tatStatus: TATStatusDto;
   departmentWorkAssignments: DepartmentWorkAssignmentDto[];
+  regionalBubbles: RegionalBubbleDto[];
 }
 
 export interface StatisticsQueryParams {

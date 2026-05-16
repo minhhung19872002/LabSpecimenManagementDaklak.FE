@@ -29,8 +29,9 @@ import {
   FullscreenOutlined,
   TableOutlined,
   TeamOutlined,
+  EnvironmentOutlined,
 } from "../../components/common/Icon";
-import { Column, Pie } from "@ant-design/charts";
+import { Column, Pie, Scatter } from "@ant-design/charts";
 import dayjs, { Dayjs } from "dayjs";
 import {
   statisticsService,
@@ -203,6 +204,8 @@ const StatisticsPage: React.FC = () => {
   const workloadByDepartment = statisticsData?.workloadByDepartment || [];
   const tatCompliance = statisticsData?.tatCompliance || [];
   const labStatistics: LabStatisticsDto[] = statisticsData?.labStatistics || [];
+  const regionalBubbles = statisticsData?.regionalBubbles || [];
+
   const rawDeptWork: DepartmentWorkAssignmentDto[] =
     statisticsData?.departmentWorkAssignments || [];
 
@@ -553,6 +556,73 @@ const StatisticsPage: React.FC = () => {
                   }}
                 />
               )}
+            </Card>
+          </Col>
+        </Row>
+
+        {/* Bubble Chart: Regional Distribution */}
+        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+          <Col xs={24}>
+            <Card
+              className="list-card"
+              title={
+                <>
+                  <EnvironmentOutlined /> Phân vùng địa lý khách hàng
+                </>
+              }
+              extra={
+                <Text style={{ fontSize: 12, color: "#fff" }}>
+                  X: mẫu &middot; Y: DT &middot; ⊙: số chỉ tiêu
+                </Text>
+              }
+            >
+              <div style={{ padding: "0 16px 16px" }}>
+                {regionalBubbles.length > 0 ? (
+                  <Scatter
+                    data={regionalBubbles}
+                    xField="totalSamples"
+                    yField="totalRevenue"
+                    sizeField="totalIndicators"
+                    colorField="district"
+                    height={450}
+                    legend={{ position: "top" }}
+                    style={{ fillOpacity: 0.55, lineWidth: 1 }}
+                    scale={{
+                      color: {
+                        range: [
+                          "#7eb8da", "#a3d9a5", "#c4a7e7", "#f2a7b0", "#f7d794",
+                          "#7ecfc0", "#b0a4e3", "#f0b27a", "#85c1e9", "#abebc6",
+                          "#d7bde2", "#f5b7b1", "#fad7a0", "#a9cce3", "#d5f5e3",
+                        ],
+                      },
+                      size: { range: [8, 50] },
+                    }}
+                    axis={{
+                      x: { title: "Số mẫu thử nghiệm" },
+                      y: { title: "Doanh thu (triệu đ)" },
+                    }}
+                    tooltip={{
+                      title: "ward",
+                      items: [
+                        { field: "district", name: "Huyện" },
+                        { field: "totalSamples", name: "Số mẫu" },
+                        { field: "totalRevenue", name: "Doanh thu (triệu đ)" },
+                        { field: "totalIndicators", name: "Số chỉ tiêu" },
+                      ],
+                    }}
+                  />
+                ) : (
+                  <Empty
+                    description="Không có dữ liệu"
+                    style={{
+                      height: 300,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  />
+                )}
+              </div>
             </Card>
           </Col>
         </Row>
