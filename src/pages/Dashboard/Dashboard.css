@@ -230,6 +230,16 @@
   gap: 4px;
   max-width: 100%;
   overflow: hidden;
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.2s;
+}
+.pie-legend-item:hover {
+  opacity: 0.8;
+}
+.pie-legend-item--hidden .pie-legend-label {
+  color: rgba(0,0,0,0.25);
+  text-decoration: line-through;
 }
 .pie-legend-dot {
   flex-shrink: 0;

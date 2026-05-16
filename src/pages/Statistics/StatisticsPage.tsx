@@ -157,6 +157,7 @@ const StatisticsPage: React.FC = () => {
   const [showFullscreen, setShowFullscreen] = useState<FullscreenState>(false);
   const [chartReady, setChartReady] = useState(false);
   const [deptWorkView, setDeptWorkView] = useState<"table" | "chart">("table");
+  const [hiddenPieItems, setHiddenPieItems] = useState<Set<string>>(new Set());
 
   const fetchStatistics = useCallback(async () => {
     setLoading(true);
@@ -532,18 +533,38 @@ const StatisticsPage: React.FC = () => {
               {sampleMatrix.length > 0 ? (
                 <>
                   <div className="pie-custom-legend">
-                    {sampleMatrix.map((item, i) => (
-                        <span key={item.specimenType} className="pie-legend-item" title={item.specimenType}>
-                          <span className="pie-legend-dot" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
+                    {sampleMatrix.map((item, i) => {
+                      const hidden = hiddenPieItems.has(item.specimenType);
+                      return (
+                        <span
+                          key={item.specimenType}
+                          className={`pie-legend-item ${hidden ? "pie-legend-item--hidden" : ""}`}
+                          title={item.specimenType}
+                          onClick={() => {
+                            setHiddenPieItems((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(item.specimenType)) next.delete(item.specimenType);
+                              else next.add(item.specimenType);
+                              return next;
+                            });
+                          }}
+                        >
+                          <span
+                            className="pie-legend-dot"
+                            style={{ background: hidden ? "#d9d9d9" : PIE_COLORS[i % PIE_COLORS.length] }}
+                          />
                           <span className="pie-legend-label">{item.specimenType}</span>
                         </span>
-                    ))}
+                      );
+                    })}
                   </div>
                   <Pie
-                    data={sampleMatrix.map((item) => ({
-                      type: item.specimenType,
-                      value: item.totalCount,
-                    }))}
+                    data={sampleMatrix
+                      .filter((item) => !hiddenPieItems.has(item.specimenType))
+                      .map((item) => ({
+                        type: item.specimenType,
+                        value: item.totalCount,
+                      }))}
                     angleField="value"
                     colorField="type"
                     height={280}
@@ -556,7 +577,13 @@ const StatisticsPage: React.FC = () => {
                     legend={false}
                     scale={{
                       color: {
-                        range: PIE_COLORS,
+                        domain: sampleMatrix
+                          .filter((item) => !hiddenPieItems.has(item.specimenType))
+                          .map((item) => item.specimenType),
+                        range: sampleMatrix
+                          .map((item, i) => ({ type: item.specimenType, color: PIE_COLORS[i % PIE_COLORS.length] }))
+                          .filter((item) => !hiddenPieItems.has(item.type))
+                          .map((item) => item.color),
                       },
                     }}
                     tooltip={{
