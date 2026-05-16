@@ -544,11 +544,7 @@ const StatisticsPage: React.FC = () => {
                   }}
                   legend={{
                     position: "bottom",
-                    maxItemWidth: 150,
-                    itemLabelText: (datum: { label?: string }) => {
-                      const label = datum.label || "";
-                      return label.length > 18 ? label.slice(0, 18) + "…" : label;
-                    },
+                    maxItemWidth: 120,
                     itemLabelTooltip: true,
                   }}
                   tooltip={{
