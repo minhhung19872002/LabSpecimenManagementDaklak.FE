@@ -392,9 +392,9 @@ const StatisticsPage: React.FC = () => {
           ))}
         </div>
 
-        {/* Charts Row 1: Monthly Trends & Sample Distribution */}
+        {/* Charts Row 1: Monthly Trends & Sample Distribution & TAT Status */}
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          <Col xs={24} lg={14}>
+          <Col xs={24} lg={12}>
             <Card
               className="list-card"
               title={
@@ -423,7 +423,7 @@ const StatisticsPage: React.FC = () => {
               </div>
             </Card>
           </Col>
-          <Col xs={24} lg={10}>
+          <Col xs={24} lg={6}>
             <Card
               className="list-card"
               title={
@@ -447,7 +447,58 @@ const StatisticsPage: React.FC = () => {
                     text: "value",
                     position: "outside",
                   }}
-                  legend={{ position: "right" }}
+                  legend={{ position: "bottom" }}
+                  tooltip={{
+                    title: "type",
+                  }}
+                />
+              ) : (
+                <Empty
+                  description="Không có dữ liệu"
+                  style={{
+                    height: 300,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                />
+              )}
+            </Card>
+          </Col>
+          <Col xs={24} lg={6}>
+            <Card
+              className="list-card"
+              title={
+                <>
+                  <PieChartOutlined /> Tình trạng TAT
+                </>
+              }
+            >
+              {(statisticsData?.tatStatus?.onTimeCount ?? 0) +
+                (statisticsData?.tatStatus?.lateCount ?? 0) >
+              0 ? (
+                <Pie
+                  data={[
+                    {
+                      type: "Đúng hạn",
+                      value: statisticsData?.tatStatus?.onTimeCount ?? 0,
+                    },
+                    {
+                      type: "Trễ hạn",
+                      value: statisticsData?.tatStatus?.lateCount ?? 0,
+                    },
+                  ]}
+                  angleField="value"
+                  colorField="type"
+                  height={300}
+                  radius={0.8}
+                  innerRadius={0.5}
+                  color={["#1890ff", "#cf1322"]}
+                  label={{
+                    text: "value",
+                    position: "outside",
+                  }}
+                  legend={{ position: "bottom" }}
                   tooltip={{
                     title: "type",
                   }}
