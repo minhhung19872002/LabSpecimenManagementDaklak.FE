@@ -49,16 +49,47 @@ import "../../styles/ListCard.css";
 const { RangePicker } = DatePicker;
 
 const AVATAR_COLORS = [
-  "#1890ff", "#52c41a", "#722ed1", "#eb2f96",
-  "#faad14", "#13c2c2", "#2f54eb", "#fa541c",
+  "#1890ff",
+  "#52c41a",
+  "#722ed1",
+  "#eb2f96",
+  "#faad14",
+  "#13c2c2",
+  "#2f54eb",
+  "#fa541c",
 ];
 
 const STATUS_CONFIG = [
-  { key: "testingCount" as const, label: "Làm", fullLabel: "Đang thử nghiệm", color: "#1890ff" },
-  { key: "notTestedCount" as const, label: "Chờ", fullLabel: "Chưa thử nghiệm", color: "#faad14" },
-  { key: "waitingApprovalCount" as const, label: "Duyệt", fullLabel: "Chờ duyệt KQ", color: "#722ed1" },
-  { key: "rejectedCount" as const, label: "Trễ", fullLabel: "Từ chối", color: "#cf1322" },
-  { key: "approvedCount" as const, label: "Xong", fullLabel: "Đã duyệt", color: "#52c41a" },
+  {
+    key: "testingCount" as const,
+    label: "Làm",
+    fullLabel: "Đang thử nghiệm",
+    color: "#1890ff",
+  },
+  {
+    key: "notTestedCount" as const,
+    label: "Chờ",
+    fullLabel: "Chưa thử nghiệm",
+    color: "#faad14",
+  },
+  {
+    key: "waitingApprovalCount" as const,
+    label: "Duyệt",
+    fullLabel: "Chờ duyệt KQ",
+    color: "#722ed1",
+  },
+  {
+    key: "rejectedCount" as const,
+    label: "Trễ",
+    fullLabel: "Từ chối",
+    color: "#cf1322",
+  },
+  {
+    key: "approvedCount" as const,
+    label: "Xong",
+    fullLabel: "Đã duyệt",
+    color: "#52c41a",
+  },
 ];
 
 const getInitials = (name: string) => {
@@ -417,8 +448,30 @@ const StatisticsPage: React.FC = () => {
               </div>
             </div>
           </Card>
-          {labStatistics.map((lab) => (
-            <Card key={lab.labId} className="dashboard-stat-card" bordered={false}>
+          {(labStatistics.length > 0
+            ? labStatistics
+            : [
+                {
+                  labId: "ph1",
+                  labName: "Lab vi sinh",
+                  inProgressCount: 0,
+                  pendingCount: 0,
+                  technicianCount: 0,
+                },
+                {
+                  labId: "ph2",
+                  labName: "Lab Hóa",
+                  inProgressCount: 0,
+                  pendingCount: 0,
+                  technicianCount: 0,
+                },
+              ]
+          ).map((lab) => (
+            <Card
+              key={lab.labId}
+              className="dashboard-stat-card"
+              bordered={false}
+            >
               <div className="lab-stat-content">
                 <Text className="lab-stat-title">{lab.labName}</Text>
                 <div className="lab-stat-ratio">
@@ -590,9 +643,21 @@ const StatisticsPage: React.FC = () => {
                     scale={{
                       color: {
                         range: [
-                          "#7eb8da", "#a3d9a5", "#c4a7e7", "#f2a7b0", "#f7d794",
-                          "#7ecfc0", "#b0a4e3", "#f0b27a", "#85c1e9", "#abebc6",
-                          "#d7bde2", "#f5b7b1", "#fad7a0", "#a9cce3", "#d5f5e3",
+                          "#7eb8da",
+                          "#a3d9a5",
+                          "#c4a7e7",
+                          "#f2a7b0",
+                          "#f7d794",
+                          "#7ecfc0",
+                          "#b0a4e3",
+                          "#f0b27a",
+                          "#85c1e9",
+                          "#abebc6",
+                          "#d7bde2",
+                          "#f5b7b1",
+                          "#fad7a0",
+                          "#a9cce3",
+                          "#d5f5e3",
                         ],
                       },
                       size: { range: [8, 50] },
@@ -718,145 +783,160 @@ const StatisticsPage: React.FC = () => {
             }
           >
             <div style={{ padding: "0 16px 16px" }}>
-            <div
-              style={{
-                display: "flex",
-                gap: 12,
-                flexWrap: "wrap",
-                marginBottom: 12,
-              }}
-            >
-              <Text style={{ fontSize: 12, color: "#8c8c8c" }}>Trạng thái:</Text>
-              {STATUS_CONFIG.map((s) => (
-                <span
-                  key={s.key}
-                  style={{ display: "flex", alignItems: "center", gap: 4 }}
-                >
+              <div
+                style={{
+                  display: "flex",
+                  gap: 12,
+                  flexWrap: "wrap",
+                  marginBottom: 12,
+                }}
+              >
+                <Text style={{ fontSize: 12, color: "#8c8c8c" }}>
+                  Trạng thái:
+                </Text>
+                {STATUS_CONFIG.map((s) => (
                   <span
-                    style={{
-                      width: 10,
-                      height: 10,
-                      borderRadius: "50%",
-                      background: s.color,
-                      display: "inline-block",
-                    }}
-                  />
-                  <Text style={{ fontSize: 12 }}>{s.fullLabel}</Text>
-                </span>
-              ))}
-            </div>
-            <Row gutter={[16, 16]}>
-              {departmentWorkAssignments.map((dept) => (
-                <Col key={dept.labId} xs={24} lg={12}>
-                  <div className="dept-work-panel">
-                    <div className="dept-work-header">
-                      <Text className="dept-work-header-title">
-                        {dept.labName}
-                      </Text>
-                      <span className="dept-work-header-badge">
-                        {dept.totalIndicators} mẫu
-                      </span>
-                    </div>
-                    {dept.technicians.length === 0 ? (
-                      <Empty
-                        description="Không có dữ liệu"
-                        image={Empty.PRESENTED_IMAGE_SIMPLE}
-                        style={{ margin: "24px 0" }}
-                      />
-                    ) : deptWorkView === "chart" ? (
-                      <div>
-                        {dept.technicians.map((tech, tIdx) => (
-                          <div key={tech.technicianId} className="dept-work-bar-row">
-                            <div className="dept-work-bar-name">
-                              <span
-                                className="dept-work-avatar"
-                                style={{ background: AVATAR_COLORS[tIdx % AVATAR_COLORS.length] }}
-                              >
-                                {getInitials(tech.technicianName)}
-                              </span>
-                              <span className="dept-work-name-text">
-                                {tech.technicianName}
-                              </span>
-                            </div>
-                            <div className="dept-work-bar-container">
-                              {STATUS_CONFIG.map((s) => {
-                                const val = tech[s.key];
-                                if (!val) return null;
-                                const pct = (val / tech.totalCount) * 100;
-                                return (
-                                  <div
-                                    key={s.key}
-                                    className="dept-work-bar-segment"
-                                    style={{
-                                      width: `${pct}%`,
-                                      background: s.color,
-                                    }}
-                                  >
-                                    {pct > 8 ? val : ""}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                            <span className="dept-work-bar-total">
-                              {tech.totalCount} mẫu
-                            </span>
-                          </div>
-                        ))}
+                    key={s.key}
+                    style={{ display: "flex", alignItems: "center", gap: 4 }}
+                  >
+                    <span
+                      style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
+                        background: s.color,
+                        display: "inline-block",
+                      }}
+                    />
+                    <Text style={{ fontSize: 12 }}>{s.fullLabel}</Text>
+                  </span>
+                ))}
+              </div>
+              <Row gutter={[16, 16]}>
+                {departmentWorkAssignments.map((dept) => (
+                  <Col key={dept.labId} xs={24} lg={12}>
+                    <div className="dept-work-panel">
+                      <div className="dept-work-header">
+                        <Text className="dept-work-header-title">
+                          {dept.labName}
+                        </Text>
+                        <span className="dept-work-header-badge">
+                          {dept.totalIndicators} mẫu
+                        </span>
                       </div>
-                    ) : (
-                      <table className="dept-work-table">
-                        <thead>
-                          <tr>
-                            <th style={{ textAlign: "left" }}>Nhân viên</th>
-                            {STATUS_CONFIG.map((s) => (
-                              <th key={s.key} style={{ color: s.color }}>
-                                {s.label}
-                              </th>
-                            ))}
-                            <th>Tổng</th>
-                          </tr>
-                        </thead>
-                        <tbody>
+                      {dept.technicians.length === 0 ? (
+                        <Empty
+                          description="Không có dữ liệu"
+                          image={Empty.PRESENTED_IMAGE_SIMPLE}
+                          style={{ margin: "24px 0" }}
+                        />
+                      ) : deptWorkView === "chart" ? (
+                        <div>
                           {dept.technicians.map((tech, tIdx) => (
-                            <tr key={tech.technicianId}>
-                              <td>
-                                <div className="dept-work-name-cell">
-                                  <span
-                                    className="dept-work-avatar"
-                                    style={{ background: AVATAR_COLORS[tIdx % AVATAR_COLORS.length] }}
-                                  >
-                                    {getInitials(tech.technicianName)}
-                                  </span>
-                                  <span className="dept-work-name-text">
-                                    {tech.technicianName}
-                                  </span>
-                                </div>
-                              </td>
-                              {STATUS_CONFIG.map((s) => (
-                                <td key={s.key}>
-                                  <span
-                                    className="dept-work-badge"
-                                    style={{
-                                      background: `${s.color}18`,
-                                      color: s.color,
-                                    }}
-                                  >
-                                    {tech[s.key]}
-                                  </span>
-                                </td>
-                              ))}
-                              <td className="dept-work-total">
-                                {tech.totalCount}
-                              </td>
-                            </tr>
+                            <div
+                              key={tech.technicianId}
+                              className="dept-work-bar-row"
+                            >
+                              <div className="dept-work-bar-name">
+                                <span
+                                  className="dept-work-avatar"
+                                  style={{
+                                    background:
+                                      AVATAR_COLORS[
+                                        tIdx % AVATAR_COLORS.length
+                                      ],
+                                  }}
+                                >
+                                  {getInitials(tech.technicianName)}
+                                </span>
+                                <span className="dept-work-name-text">
+                                  {tech.technicianName}
+                                </span>
+                              </div>
+                              <div className="dept-work-bar-container">
+                                {STATUS_CONFIG.map((s) => {
+                                  const val = tech[s.key];
+                                  if (!val) return null;
+                                  const pct = (val / tech.totalCount) * 100;
+                                  return (
+                                    <div
+                                      key={s.key}
+                                      className="dept-work-bar-segment"
+                                      style={{
+                                        width: `${pct}%`,
+                                        background: s.color,
+                                      }}
+                                    >
+                                      {pct > 8 ? val : ""}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <span className="dept-work-bar-total">
+                                {tech.totalCount} mẫu
+                              </span>
+                            </div>
                           ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-                </Col>
-              ))}
-            </Row>
+                        </div>
+                      ) : (
+                        <table className="dept-work-table">
+                          <thead>
+                            <tr>
+                              <th style={{ textAlign: "left" }}>Nhân viên</th>
+                              {STATUS_CONFIG.map((s) => (
+                                <th key={s.key} style={{ color: s.color }}>
+                                  {s.label}
+                                </th>
+                              ))}
+                              <th>Tổng</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {dept.technicians.map((tech, tIdx) => (
+                              <tr key={tech.technicianId}>
+                                <td>
+                                  <div className="dept-work-name-cell">
+                                    <span
+                                      className="dept-work-avatar"
+                                      style={{
+                                        background:
+                                          AVATAR_COLORS[
+                                            tIdx % AVATAR_COLORS.length
+                                          ],
+                                      }}
+                                    >
+                                      {getInitials(tech.technicianName)}
+                                    </span>
+                                    <span className="dept-work-name-text">
+                                      {tech.technicianName}
+                                    </span>
+                                  </div>
+                                </td>
+                                {STATUS_CONFIG.map((s) => (
+                                  <td key={s.key}>
+                                    <span
+                                      className="dept-work-badge"
+                                      style={{
+                                        background: `${s.color}18`,
+                                        color: s.color,
+                                      }}
+                                    >
+                                      {tech[s.key]}
+                                    </span>
+                                  </td>
+                                ))}
+                                <td className="dept-work-total">
+                                  {tech.totalCount}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  </Col>
+                ))}
+              </Row>
             </div>
           </Card>
         )}
