@@ -43,12 +43,21 @@ export interface MonthlyTrendDto {
   reports: number;
 }
 
+export interface LabStatisticsDto {
+  labId: string;
+  labName: string;
+  inProgressCount: number;
+  pendingCount: number;
+  technicianCount: number;
+}
+
 export interface StatisticsDataDto {
   overview: StatisticsOverviewDto;
   sampleMatrix: SampleMatrixDto[];
   tatCompliance: TATComplianceDto[];
   workloadByDepartment: WorkloadByDepartmentDto[];
   monthlyTrends: MonthlyTrendDto[];
+  labStatistics: LabStatisticsDto[];
 }
 
 export interface StatisticsQueryParams {

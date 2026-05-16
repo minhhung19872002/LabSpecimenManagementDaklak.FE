@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Card,
   Row,
@@ -14,8 +14,8 @@ import {
   Modal,
   Tooltip,
   Radio,
-  Typography
-} from 'antd';
+  Typography,
+} from "antd";
 
 const { Text } = Typography;
 import {
@@ -26,24 +26,25 @@ import {
   BarChartOutlined,
   PieChartOutlined,
   ReloadOutlined,
-  FullscreenOutlined
-} from '../../components/common/Icon';
-import { Column, Pie } from '@ant-design/charts';
-import dayjs, { Dayjs } from 'dayjs';
+  FullscreenOutlined,
+} from "../../components/common/Icon";
+import { Column, Pie } from "@ant-design/charts";
+import dayjs, { Dayjs } from "dayjs";
 import {
   statisticsService,
   StatisticsDataDto,
   WorkloadByDepartmentDto,
-  TATComplianceDto
-} from '../../services/statisticsService';
-import { authService } from '../../services/authService';
-import { PERMISSIONS } from '../../constants/permissionMapping';
-import '../Dashboard/Dashboard.css';
-import '../../styles/ListCard.css';
+  TATComplianceDto,
+  LabStatisticsDto,
+} from "../../services/statisticsService";
+import { authService } from "../../services/authService";
+import { PERMISSIONS } from "../../constants/permissionMapping";
+import "../Dashboard/Dashboard.css";
+import "../../styles/ListCard.css";
 
 const { RangePicker } = DatePicker;
 
-type FilterPeriod = 'month' | 'quarter' | 'half_year' | 'year';
+type FilterPeriod = "month" | "quarter" | "half_year" | "year";
 
 // Helper function to calculate date range based on period
 const getDateRangeForPeriod = (period: FilterPeriod): [Dayjs, Dayjs] => {
@@ -52,27 +53,31 @@ const getDateRangeForPeriod = (period: FilterPeriod): [Dayjs, Dayjs] => {
   const month = now.month() + 1; // dayjs month is 0-indexed
 
   switch (period) {
-    case 'month':
-      return [now.startOf('month'), now.endOf('month')];
-    case 'quarter': {
+    case "month":
+      return [now.startOf("month"), now.endOf("month")];
+    case "quarter": {
       const quarter = Math.ceil(month / 3);
       const quarterStart = (quarter - 1) * 3 + 1;
       return [
-        dayjs().month(quarterStart - 1).startOf('month'),
-        dayjs().month(quarterStart + 1).endOf('month'),
+        dayjs()
+          .month(quarterStart - 1)
+          .startOf("month"),
+        dayjs()
+          .month(quarterStart + 1)
+          .endOf("month"),
       ];
     }
-    case 'half_year': {
+    case "half_year": {
       if (month <= 6) {
         return [dayjs(`${year}-01-01`), dayjs(`${year}-06-30`)];
       } else {
         return [dayjs(`${year}-07-01`), dayjs(`${year}-12-31`)];
       }
     }
-    case 'year':
-      return [now.startOf('year'), now.endOf('year')];
+    case "year":
+      return [now.startOf("year"), now.endOf("year")];
     default:
-      return [now.startOf('month'), now.endOf('month')];
+      return [now.startOf("month"), now.endOf("month")];
   }
 };
 
@@ -81,14 +86,17 @@ type FullscreenState = boolean;
 
 const StatisticsPage: React.FC = () => {
   // Filter state
-  const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>('month');
-  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>(getDateRangeForPeriod('month'));
+  const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>("month");
+  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>(
+    getDateRangeForPeriod("month"),
+  );
   const [isCustomDateRange, setIsCustomDateRange] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [statisticsData, setStatisticsData] = useState<StatisticsDataDto | null>(null);
-  const [activeTab, setActiveTab] = useState('monthly');
+  const [statisticsData, setStatisticsData] =
+    useState<StatisticsDataDto | null>(null);
+  const [activeTab, setActiveTab] = useState("monthly");
   const [showFullscreen, setShowFullscreen] = useState<FullscreenState>(false);
   const [chartReady, setChartReady] = useState(false);
 
@@ -96,14 +104,14 @@ const StatisticsPage: React.FC = () => {
     setLoading(true);
     try {
       const params: { fromDate?: string; toDate?: string } = {
-        fromDate: dateRange[0].format('YYYY-MM-DD'),
-        toDate: dateRange[1].format('YYYY-MM-DD'),
+        fromDate: dateRange[0].format("YYYY-MM-DD"),
+        toDate: dateRange[1].format("YYYY-MM-DD"),
       };
       const data = await statisticsService.getStatisticsData(params);
       setStatisticsData(data);
     } catch (error) {
-      console.error('Error fetching statistics:', error);
-      message.error('Không thể tải dữ liệu thống kê');
+      console.error("Error fetching statistics:", error);
+      message.error("Không thể tải dữ liệu thống kê");
     } finally {
       setLoading(false);
     }
@@ -117,7 +125,9 @@ const StatisticsPage: React.FC = () => {
   };
 
   // Handle date range change
-  const handleDateRangeChange = (dates: [Dayjs | null, Dayjs | null] | null) => {
+  const handleDateRangeChange = (
+    dates: [Dayjs | null, Dayjs | null] | null,
+  ) => {
     if (dates && dates[0] && dates[1]) {
       setDateRange([dates[0], dates[1]]);
       setIsCustomDateRange(true);
@@ -143,21 +153,21 @@ const StatisticsPage: React.FC = () => {
     setExporting(true);
     try {
       const params: { fromDate?: string; toDate?: string } = {
-        fromDate: dateRange[0].format('YYYY-MM-DD'),
-        toDate: dateRange[1].format('YYYY-MM-DD'),
+        fromDate: dateRange[0].format("YYYY-MM-DD"),
+        toDate: dateRange[1].format("YYYY-MM-DD"),
       };
       const blob = await statisticsService.exportToExcel(params);
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      const fileName = `statistics_${dateRange[0].format('YYYYMMDD')}_${dateRange[1].format('YYYYMMDD')}.xlsx`;
+      const fileName = `statistics_${dateRange[0].format("YYYYMMDD")}_${dateRange[1].format("YYYYMMDD")}.xlsx`;
       a.download = fileName;
       a.click();
       window.URL.revokeObjectURL(url);
-      message.success('Xuất báo cáo thành công');
+      message.success("Xuất báo cáo thành công");
     } catch (error) {
-      console.error('Error exporting statistics:', error);
-      message.error('Không thể xuất báo cáo');
+      console.error("Error exporting statistics:", error);
+      message.error("Không thể xuất báo cáo");
     } finally {
       setExporting(false);
     }
@@ -168,30 +178,38 @@ const StatisticsPage: React.FC = () => {
   const sampleMatrix = statisticsData?.sampleMatrix || [];
   const workloadByDepartment = statisticsData?.workloadByDepartment || [];
   const tatCompliance = statisticsData?.tatCompliance || [];
+  const labStatistics: LabStatisticsDto[] = statisticsData?.labStatistics || [];
 
   // Calculate totals from monthly trends
-  const totalRequests = monthlyTrends.reduce((sum, m) => sum + m.testRequests, 0);
+  const totalRequests = monthlyTrends.reduce(
+    (sum, m) => sum + m.testRequests,
+    0,
+  );
   const totalSpecimens = monthlyTrends.reduce((sum, m) => sum + m.specimens, 0);
   const totalTests = monthlyTrends.reduce((sum, m) => sum + m.tests, 0);
   const totalReports = monthlyTrends.reduce((sum, m) => sum + m.reports, 0);
 
   const monthlyColumns = [
-    { title: 'Tháng', dataIndex: 'month', key: 'month' },
-    { title: 'Yêu cầu', dataIndex: 'testRequests', key: 'testRequests' },
-    { title: 'Mẫu', dataIndex: 'specimens', key: 'specimens' },
-    { title: 'Phép thử', dataIndex: 'tests', key: 'tests' },
-    { title: 'Báo cáo', dataIndex: 'reports', key: 'reports' },
+    { title: "Tháng", dataIndex: "month", key: "month" },
+    { title: "Yêu cầu", dataIndex: "testRequests", key: "testRequests" },
+    { title: "Mẫu", dataIndex: "specimens", key: "specimens" },
+    { title: "Phép thử", dataIndex: "tests", key: "tests" },
+    { title: "Báo cáo", dataIndex: "reports", key: "reports" },
   ];
 
   const departmentColumns = [
-    { title: 'Phòng ban', dataIndex: 'department', key: 'department' },
-    { title: 'Tổng công việc', dataIndex: 'totalTasks', key: 'totalTasks' },
-    { title: 'Chờ xử lý', dataIndex: 'pendingTasks', key: 'pendingTasks' },
-    { title: 'Đang thực hiện', dataIndex: 'inProgressTasks', key: 'inProgressTasks' },
-    { title: 'Hoàn thành', dataIndex: 'completedTasks', key: 'completedTasks' },
+    { title: "Phòng ban", dataIndex: "department", key: "department" },
+    { title: "Tổng công việc", dataIndex: "totalTasks", key: "totalTasks" },
+    { title: "Chờ xử lý", dataIndex: "pendingTasks", key: "pendingTasks" },
     {
-      title: 'Hiệu suất',
-      key: 'completionRate',
+      title: "Đang thực hiện",
+      dataIndex: "inProgressTasks",
+      key: "inProgressTasks",
+    },
+    { title: "Hoàn thành", dataIndex: "completedTasks", key: "completedTasks" },
+    {
+      title: "Hiệu suất",
+      key: "completionRate",
       render: (_: unknown, record: WorkloadByDepartmentDto) => {
         const rate = record.completionRate;
         return (
@@ -199,7 +217,9 @@ const StatisticsPage: React.FC = () => {
             percent={rate}
             size="small"
             style={{ width: 100 }}
-            strokeColor={rate >= 90 ? '#52c41a' : rate >= 70 ? '#faad14' : '#cf1322'}
+            strokeColor={
+              rate >= 90 ? "#52c41a" : rate >= 70 ? "#faad14" : "#cf1322"
+            }
           />
         );
       },
@@ -207,13 +227,13 @@ const StatisticsPage: React.FC = () => {
   ];
 
   const tatColumns = [
-    { title: 'Kỳ', dataIndex: 'period', key: 'period' },
-    { title: 'Tổng yêu cầu', dataIndex: 'totalRequests', key: 'totalRequests' },
-    { title: 'Đúng hạn', dataIndex: 'onTimeRequests', key: 'onTimeRequests' },
-    { title: 'Trễ hạn', dataIndex: 'delayedRequests', key: 'delayedRequests' },
+    { title: "Kỳ", dataIndex: "period", key: "period" },
+    { title: "Tổng yêu cầu", dataIndex: "totalRequests", key: "totalRequests" },
+    { title: "Đúng hạn", dataIndex: "onTimeRequests", key: "onTimeRequests" },
+    { title: "Trễ hạn", dataIndex: "delayedRequests", key: "delayedRequests" },
     {
-      title: 'Tỷ lệ tuân thủ',
-      key: 'complianceRate',
+      title: "Tỷ lệ tuân thủ",
+      key: "complianceRate",
       render: (_: unknown, record: TATComplianceDto) => {
         const rate = record.complianceRate;
         return (
@@ -221,7 +241,9 @@ const StatisticsPage: React.FC = () => {
             percent={rate}
             size="small"
             style={{ width: 100 }}
-            strokeColor={rate >= 95 ? '#52c41a' : rate >= 85 ? '#faad14' : '#cf1322'}
+            strokeColor={
+              rate >= 95 ? "#52c41a" : rate >= 85 ? "#faad14" : "#cf1322"
+            }
           />
         );
       },
@@ -230,14 +252,14 @@ const StatisticsPage: React.FC = () => {
 
   // Render Monthly Trend Chart
   // autoFit = true means chart will fit to container width
-  const renderMonthlyTrendChart = (autoFit: boolean = false) => (
+  const renderMonthlyTrendChart = (autoFit: boolean = false) =>
     monthlyTrends.length > 0 ? (
       <Column
-        data={monthlyTrends.flatMap(item => [
-          { month: item.month, type: 'Yêu cầu', value: item.testRequests },
-          { month: item.month, type: 'Mẫu', value: item.specimens },
-          { month: item.month, type: 'Phép thử', value: item.tests },
-          { month: item.month, type: 'Báo cáo', value: item.reports },
+        data={monthlyTrends.flatMap((item) => [
+          { month: item.month, type: "Yêu cầu", value: item.testRequests },
+          { month: item.month, type: "Mẫu", value: item.specimens },
+          { month: item.month, type: "Phép thử", value: item.tests },
+          { month: item.month, type: "Báo cáo", value: item.reports },
         ])}
         xField="month"
         yField="value"
@@ -245,13 +267,20 @@ const StatisticsPage: React.FC = () => {
         group={true}
         height={autoFit ? undefined : 300}
         autoFit={autoFit}
-        legend={{ position: 'top' }}
-        color={['#1890ff', '#722ed1', '#52c41a', '#faad14']}
+        legend={{ position: "top" }}
+        color={["#1890ff", "#722ed1", "#52c41a", "#faad14"]}
       />
     ) : (
-      <Empty description="Không có dữ liệu" style={{ height: autoFit ? '100%' : 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }} />
-    )
-  );
+      <Empty
+        description="Không có dữ liệu"
+        style={{
+          height: autoFit ? "100%" : 300,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      />
+    );
 
   return (
     <div>
@@ -301,7 +330,10 @@ const StatisticsPage: React.FC = () => {
 
       <Spin spinning={loading}>
         {/* Summary Stats */}
-        <div className="dashboard-stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+        <div
+          className="dashboard-stats-grid"
+          style={{ gridTemplateColumns: `repeat(${3 + labStatistics.length}, 1fr)` }}
+        >
           <Card className="dashboard-stat-card" bordered={false}>
             <div className="dashboard-stat-content">
               <div className="dashboard-stat-info">
@@ -331,7 +363,9 @@ const StatisticsPage: React.FC = () => {
           <Card className="dashboard-stat-card" bordered={false}>
             <div className="dashboard-stat-content">
               <div className="dashboard-stat-info">
-                <Text className="dashboard-stat-title">Tổng phép thử</Text>
+                <Text className="dashboard-stat-title">
+                  Tổng chỉ tiêu thử nghiệm
+                </Text>
                 <div className="dashboard-stat-value">
                   {overview?.totalTests ?? totalTests}
                 </div>
@@ -341,6 +375,21 @@ const StatisticsPage: React.FC = () => {
               </div>
             </div>
           </Card>
+          {labStatistics.map((lab) => (
+            <Card key={lab.labId} className="dashboard-stat-card" bordered={false}>
+              <div className="lab-stat-content">
+                <Text className="lab-stat-title">{lab.labName}</Text>
+                <div className="lab-stat-ratio">
+                  {lab.inProgressCount}
+                  <span className="lab-stat-separator"> / </span>
+                  {lab.pendingCount}
+                </div>
+                <Text className="lab-stat-technician">
+                  {lab.technicianCount} thử nghiệm viên
+                </Text>
+              </div>
+            </Card>
+          ))}
         </div>
 
         {/* Charts Row 1: Monthly Trends & Sample Distribution */}
@@ -348,7 +397,11 @@ const StatisticsPage: React.FC = () => {
           <Col xs={24} lg={14}>
             <Card
               className="list-card"
-              title={<><BarChartOutlined /> Xu hướng theo tháng</>}
+              title={
+                <>
+                  <BarChartOutlined /> Xu hướng theo tháng
+                </>
+              }
               extra={
                 <Tooltip title="Xem toàn màn hình">
                   <Button
@@ -362,21 +415,28 @@ const StatisticsPage: React.FC = () => {
                 </Tooltip>
               }
               hoverable
-              style={{ cursor: 'pointer' }}
+              style={{ cursor: "pointer" }}
               onClick={() => setShowFullscreen(true)}
             >
-              <div style={{ height: 300, width: '100%' }}>
+              <div style={{ height: 300, width: "100%" }}>
                 {renderMonthlyTrendChart(true)}
               </div>
             </Card>
           </Col>
           <Col xs={24} lg={10}>
-            <Card className="list-card" title={<><PieChartOutlined /> Phân bố loại mẫu</>}>
+            <Card
+              className="list-card"
+              title={
+                <>
+                  <PieChartOutlined /> Phân bố loại mẫu
+                </>
+              }
+            >
               {sampleMatrix.length > 0 ? (
                 <Pie
-                  data={sampleMatrix.map(item => ({
+                  data={sampleMatrix.map((item) => ({
                     type: item.specimenType,
-                    value: item.totalCount
+                    value: item.totalCount,
                   }))}
                   angleField="value"
                   colorField="type"
@@ -384,16 +444,24 @@ const StatisticsPage: React.FC = () => {
                   radius={0.8}
                   innerRadius={0.5}
                   label={{
-                    text: 'value',
-                    position: 'outside',
+                    text: "value",
+                    position: "outside",
                   }}
-                  legend={{ position: 'right' }}
+                  legend={{ position: "right" }}
                   tooltip={{
-                    title: 'type',
+                    title: "type",
                   }}
                 />
               ) : (
-                <Empty description="Không có dữ liệu" style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }} />
+                <Empty
+                  description="Không có dữ liệu"
+                  style={{
+                    height: 300,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                />
               )}
             </Card>
           </Col>
@@ -402,29 +470,56 @@ const StatisticsPage: React.FC = () => {
         {/* Charts Row 2: Department Workload */}
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
           <Col xs={24}>
-            <Card className="list-card" title={<><BarChartOutlined /> Khối lượng công việc theo khoa phòng</>}>
+            <Card
+              className="list-card"
+              title={
+                <>
+                  <BarChartOutlined /> Khối lượng công việc theo khoa phòng
+                </>
+              }
+            >
               {workloadByDepartment.length > 0 ? (
                 <Column
-                  data={workloadByDepartment.flatMap(item => [
-                    { department: item.department, type: 'Chờ xử lý', value: item.pendingTasks },
-                    { department: item.department, type: 'Đang thực hiện', value: item.inProgressTasks },
-                    { department: item.department, type: 'Hoàn thành', value: item.completedTasks },
+                  data={workloadByDepartment.flatMap((item) => [
+                    {
+                      department: item.department,
+                      type: "Chờ xử lý",
+                      value: item.pendingTasks,
+                    },
+                    {
+                      department: item.department,
+                      type: "Đang thực hiện",
+                      value: item.inProgressTasks,
+                    },
+                    {
+                      department: item.department,
+                      type: "Hoàn thành",
+                      value: item.completedTasks,
+                    },
                   ])}
                   xField="department"
                   yField="value"
                   colorField="type"
                   isStack={true}
                   height={300}
-                  legend={{ position: 'top' }}
-                  color={['#faad14', '#1890ff', '#52c41a']}
+                  legend={{ position: "top" }}
+                  color={["#faad14", "#1890ff", "#52c41a"]}
                   label={{
-                    text: 'value',
-                    position: 'inside',
-                    textBaseline: 'bottom',
+                    text: "value",
+                    position: "inside",
+                    textBaseline: "bottom",
                   }}
                 />
               ) : (
-                <Empty description="Không có dữ liệu" style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }} />
+                <Empty
+                  description="Không có dữ liệu"
+                  style={{
+                    height: 300,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                />
               )}
             </Card>
           </Col>
@@ -444,8 +539,8 @@ const StatisticsPage: React.FC = () => {
           </Radio.Group>
         </div>
         <Card className="list-card statistics-detail-card">
-          {activeTab === 'monthly' && (
-            monthlyTrends.length > 0 ? (
+          {activeTab === "monthly" &&
+            (monthlyTrends.length > 0 ? (
               <Table
                 dataSource={monthlyTrends}
                 columns={monthlyColumns}
@@ -454,22 +549,33 @@ const StatisticsPage: React.FC = () => {
                 scroll={{ x: 600 }}
                 summary={() => (
                   <Table.Summary fixed>
-                    <Table.Summary.Row style={{ backgroundColor: '#fafafa', fontWeight: 'bold' }}>
-                      <Table.Summary.Cell index={0}>Tổng cộng</Table.Summary.Cell>
-                      <Table.Summary.Cell index={1}>{totalRequests}</Table.Summary.Cell>
-                      <Table.Summary.Cell index={2}>{totalSpecimens}</Table.Summary.Cell>
-                      <Table.Summary.Cell index={3}>{totalTests}</Table.Summary.Cell>
-                      <Table.Summary.Cell index={4}>{totalReports}</Table.Summary.Cell>
+                    <Table.Summary.Row
+                      style={{ backgroundColor: "#fafafa", fontWeight: "bold" }}
+                    >
+                      <Table.Summary.Cell index={0}>
+                        Tổng cộng
+                      </Table.Summary.Cell>
+                      <Table.Summary.Cell index={1}>
+                        {totalRequests}
+                      </Table.Summary.Cell>
+                      <Table.Summary.Cell index={2}>
+                        {totalSpecimens}
+                      </Table.Summary.Cell>
+                      <Table.Summary.Cell index={3}>
+                        {totalTests}
+                      </Table.Summary.Cell>
+                      <Table.Summary.Cell index={4}>
+                        {totalReports}
+                      </Table.Summary.Cell>
                     </Table.Summary.Row>
                   </Table.Summary>
                 )}
               />
             ) : (
               <Empty description="Không có dữ liệu" />
-            )
-          )}
-          {activeTab === 'department' && (
-            workloadByDepartment.length > 0 ? (
+            ))}
+          {activeTab === "department" &&
+            (workloadByDepartment.length > 0 ? (
               <Table
                 dataSource={workloadByDepartment}
                 columns={departmentColumns}
@@ -478,10 +584,9 @@ const StatisticsPage: React.FC = () => {
               />
             ) : (
               <Empty description="Không có dữ liệu" />
-            )
-          )}
-          {activeTab === 'tat' && (
-            tatCompliance.length > 0 ? (
+            ))}
+          {activeTab === "tat" &&
+            (tatCompliance.length > 0 ? (
               <Table
                 dataSource={tatCompliance}
                 columns={tatColumns}
@@ -490,8 +595,7 @@ const StatisticsPage: React.FC = () => {
               />
             ) : (
               <Empty description="Không có dữ liệu" />
-            )
-          )}
+            ))}
         </Card>
       </Spin>
 
@@ -509,13 +613,13 @@ const StatisticsPage: React.FC = () => {
         centered
         styles={{
           body: {
-            padding: '24px 0 0 0',
-            overflow: 'hidden'
-          }
+            padding: "24px 0 0 0",
+            overflow: "hidden",
+          },
         }}
         wrapClassName="chart-fullscreen-modal"
       >
-        <div style={{ width: '100%', height: 'calc(80vh - 100px)' }}>
+        <div style={{ width: "100%", height: "calc(80vh - 100px)" }}>
           {showFullscreen && chartReady && renderMonthlyTrendChart(true)}
         </div>
       </Modal>

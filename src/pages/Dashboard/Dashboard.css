@@ -172,6 +172,46 @@
   font-size: 14px;
 }
 
+/* Lab Statistics Card */
+.lab-stat-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  height: 100%;
+  gap: 12px;
+}
+
+.lab-stat-title {
+  font-family: 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+  color: #595959;
+}
+
+.lab-stat-ratio {
+  font-family: 'Roboto', sans-serif;
+  font-weight: 500;
+  font-size: 30px;
+  line-height: 40px;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.lab-stat-separator {
+  font-weight: 400;
+}
+
+.lab-stat-technician {
+  font-family: 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 20px;
+  color: #8c8c8c;
+}
+
 /* Stat Icon Container */
 .dashboard-stat-icon {
   display: flex;
