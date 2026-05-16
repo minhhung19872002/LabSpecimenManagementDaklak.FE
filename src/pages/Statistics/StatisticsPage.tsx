@@ -27,6 +27,8 @@ import {
   PieChartOutlined,
   ReloadOutlined,
   FullscreenOutlined,
+  TableOutlined,
+  TeamOutlined,
 } from "../../components/common/Icon";
 import { Column, Pie } from "@ant-design/charts";
 import dayjs, { Dayjs } from "dayjs";
@@ -36,6 +38,7 @@ import {
   WorkloadByDepartmentDto,
   TATComplianceDto,
   LabStatisticsDto,
+  DepartmentWorkAssignmentDto,
 } from "../../services/statisticsService";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
@@ -43,6 +46,26 @@ import "../Dashboard/Dashboard.css";
 import "../../styles/ListCard.css";
 
 const { RangePicker } = DatePicker;
+
+const AVATAR_COLORS = [
+  "#1890ff", "#52c41a", "#722ed1", "#eb2f96",
+  "#faad14", "#13c2c2", "#2f54eb", "#fa541c",
+];
+
+const STATUS_CONFIG = [
+  { key: "testingCount" as const, label: "Làm", fullLabel: "Đang thử nghiệm", color: "#1890ff" },
+  { key: "notTestedCount" as const, label: "Chờ", fullLabel: "Chưa thử nghiệm", color: "#faad14" },
+  { key: "waitingApprovalCount" as const, label: "Duyệt", fullLabel: "Chờ duyệt KQ", color: "#722ed1" },
+  { key: "rejectedCount" as const, label: "Trễ", fullLabel: "Từ chối", color: "#cf1322" },
+  { key: "approvedCount" as const, label: "Xong", fullLabel: "Đã duyệt", color: "#52c41a" },
+];
+
+const getInitials = (name: string) => {
+  const parts = name.split(/[\s.]+/).filter(Boolean);
+  return parts.length >= 2
+    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    : name.substring(0, 2).toUpperCase();
+};
 
 type FilterPeriod = "month" | "quarter" | "half_year" | "year";
 
@@ -99,6 +122,7 @@ const StatisticsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState("monthly");
   const [showFullscreen, setShowFullscreen] = useState<FullscreenState>(false);
   const [chartReady, setChartReady] = useState(false);
+  const [deptWorkView, setDeptWorkView] = useState<"table" | "chart">("table");
 
   const fetchStatistics = useCallback(async () => {
     setLoading(true);
@@ -179,6 +203,24 @@ const StatisticsPage: React.FC = () => {
   const workloadByDepartment = statisticsData?.workloadByDepartment || [];
   const tatCompliance = statisticsData?.tatCompliance || [];
   const labStatistics: LabStatisticsDto[] = statisticsData?.labStatistics || [];
+  const rawDeptWork: DepartmentWorkAssignmentDto[] =
+    statisticsData?.departmentWorkAssignments || [];
+
+  const departmentWorkAssignments: DepartmentWorkAssignmentDto[] = (() => {
+    const labIds = new Set(labStatistics.map((l) => l.labId));
+    const filtered = rawDeptWork.filter((d) => labIds.has(d.labId));
+    for (const lab of labStatistics) {
+      if (!filtered.find((d) => d.labId === lab.labId)) {
+        filtered.push({
+          labId: lab.labId,
+          labName: lab.labName,
+          totalIndicators: 0,
+          technicians: [],
+        });
+      }
+    }
+    return filtered.sort((a, b) => b.totalIndicators - a.totalIndicators);
+  })();
 
   // Calculate totals from monthly trends
   const totalRequests = monthlyTrends.reduce(
@@ -577,6 +619,177 @@ const StatisticsPage: React.FC = () => {
             </Card>
           </Col>
         </Row>
+
+        {/* Department Work Assignment */}
+        {departmentWorkAssignments.length > 0 && (
+          <Card
+            className="list-card"
+            style={{ marginBottom: 16 }}
+            title={
+              <>
+                <TeamOutlined /> Phân công công việc theo phòng ban
+              </>
+            }
+            extra={
+              <Radio.Group
+                value={deptWorkView}
+                onChange={(e) => setDeptWorkView(e.target.value)}
+                optionType="button"
+                buttonStyle="solid"
+                size="small"
+              >
+                <Radio.Button value="table">
+                  <TableOutlined /> Bảng
+                </Radio.Button>
+                <Radio.Button value="chart">
+                  <BarChartOutlined /> Biểu đồ
+                </Radio.Button>
+              </Radio.Group>
+            }
+          >
+            <div style={{ padding: "0 16px 16px" }}>
+            <div
+              style={{
+                display: "flex",
+                gap: 12,
+                flexWrap: "wrap",
+                marginBottom: 12,
+              }}
+            >
+              <Text style={{ fontSize: 12, color: "#8c8c8c" }}>Trạng thái:</Text>
+              {STATUS_CONFIG.map((s) => (
+                <span
+                  key={s.key}
+                  style={{ display: "flex", alignItems: "center", gap: 4 }}
+                >
+                  <span
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: "50%",
+                      background: s.color,
+                      display: "inline-block",
+                    }}
+                  />
+                  <Text style={{ fontSize: 12 }}>{s.fullLabel}</Text>
+                </span>
+              ))}
+            </div>
+            <Row gutter={[16, 16]}>
+              {departmentWorkAssignments.map((dept) => (
+                <Col key={dept.labId} xs={24} lg={12}>
+                  <div className="dept-work-panel">
+                    <div className="dept-work-header">
+                      <Text className="dept-work-header-title">
+                        {dept.labName}
+                      </Text>
+                      <span className="dept-work-header-badge">
+                        {dept.totalIndicators} mẫu
+                      </span>
+                    </div>
+                    {dept.technicians.length === 0 ? (
+                      <Empty
+                        description="Không có dữ liệu"
+                        image={Empty.PRESENTED_IMAGE_SIMPLE}
+                        style={{ margin: "24px 0" }}
+                      />
+                    ) : deptWorkView === "chart" ? (
+                      <div>
+                        {dept.technicians.map((tech, tIdx) => (
+                          <div key={tech.technicianId} className="dept-work-bar-row">
+                            <div className="dept-work-bar-name">
+                              <span
+                                className="dept-work-avatar"
+                                style={{ background: AVATAR_COLORS[tIdx % AVATAR_COLORS.length] }}
+                              >
+                                {getInitials(tech.technicianName)}
+                              </span>
+                              <span className="dept-work-name-text">
+                                {tech.technicianName}
+                              </span>
+                            </div>
+                            <div className="dept-work-bar-container">
+                              {STATUS_CONFIG.map((s) => {
+                                const val = tech[s.key];
+                                if (!val) return null;
+                                const pct = (val / tech.totalCount) * 100;
+                                return (
+                                  <div
+                                    key={s.key}
+                                    className="dept-work-bar-segment"
+                                    style={{
+                                      width: `${pct}%`,
+                                      background: s.color,
+                                    }}
+                                  >
+                                    {pct > 8 ? val : ""}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <span className="dept-work-bar-total">
+                              {tech.totalCount} mẫu
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <table className="dept-work-table">
+                        <thead>
+                          <tr>
+                            <th style={{ textAlign: "left" }}>Nhân viên</th>
+                            {STATUS_CONFIG.map((s) => (
+                              <th key={s.key} style={{ color: s.color }}>
+                                {s.label}
+                              </th>
+                            ))}
+                            <th>Tổng</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {dept.technicians.map((tech, tIdx) => (
+                            <tr key={tech.technicianId}>
+                              <td>
+                                <div className="dept-work-name-cell">
+                                  <span
+                                    className="dept-work-avatar"
+                                    style={{ background: AVATAR_COLORS[tIdx % AVATAR_COLORS.length] }}
+                                  >
+                                    {getInitials(tech.technicianName)}
+                                  </span>
+                                  <span className="dept-work-name-text">
+                                    {tech.technicianName}
+                                  </span>
+                                </div>
+                              </td>
+                              {STATUS_CONFIG.map((s) => (
+                                <td key={s.key}>
+                                  <span
+                                    className="dept-work-badge"
+                                    style={{
+                                      background: `${s.color}18`,
+                                      color: s.color,
+                                    }}
+                                  >
+                                    {tech[s.key]}
+                                  </span>
+                                </td>
+                              ))}
+                              <td className="dept-work-total">
+                                {tech.totalCount}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </Col>
+              ))}
+            </Row>
+            </div>
+          </Card>
+        )}
 
         {/* Tabs for detailed stats */}
         <div className="statistics-detail-tabs">

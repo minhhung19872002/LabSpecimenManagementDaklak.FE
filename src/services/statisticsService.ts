@@ -56,6 +56,24 @@ export interface LabStatisticsDto {
   technicianCount: number;
 }
 
+export interface TechnicianWorkDto {
+  technicianId: string;
+  technicianName: string;
+  testingCount: number;
+  notTestedCount: number;
+  waitingApprovalCount: number;
+  rejectedCount: number;
+  approvedCount: number;
+  totalCount: number;
+}
+
+export interface DepartmentWorkAssignmentDto {
+  labId: string;
+  labName: string;
+  totalIndicators: number;
+  technicians: TechnicianWorkDto[];
+}
+
 export interface StatisticsDataDto {
   overview: StatisticsOverviewDto;
   sampleMatrix: SampleMatrixDto[];
@@ -64,6 +82,7 @@ export interface StatisticsDataDto {
   monthlyTrends: MonthlyTrendDto[];
   labStatistics: LabStatisticsDto[];
   tatStatus: TATStatusDto;
+  departmentWorkAssignments: DepartmentWorkAssignmentDto[];
 }
 
 export interface StatisticsQueryParams {

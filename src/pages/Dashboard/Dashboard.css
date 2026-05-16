@@ -216,6 +216,185 @@
   color: #8c8c8c;
 }
 
+/* ==================== Department Work Assignment ==================== */
+
+.dept-work-panel {
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  padding: 16px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.dept-work-panel > .ant-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.dept-work-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.dept-work-header-title {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.dept-work-header-badge {
+  background: #e6f7ff;
+  color: #1890ff;
+  border-radius: 10px;
+  padding: 1px 10px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.dept-work-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+  letter-spacing: 0.5px;
+}
+
+.dept-work-badge {
+  min-width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 6px;
+}
+
+.dept-work-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  table-layout: fixed;
+}
+
+.dept-work-table thead tr {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.dept-work-table th {
+  padding: 6px 4px;
+  text-align: center;
+  font-weight: 500;
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.dept-work-table th:first-child {
+  text-align: left;
+  padding-left: 8px;
+  width: 40%;
+}
+
+.dept-work-table tbody tr {
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.dept-work-table td {
+  padding: 8px 4px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.dept-work-table td:first-child {
+  text-align: left;
+  padding-left: 0;
+}
+
+.dept-work-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dept-work-name-text {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dept-work-total {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* Chart view */
+.dept-work-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+}
+
+.dept-work-bar-row + .dept-work-bar-row {
+  border-top: 1px solid #f5f5f5;
+}
+
+.dept-work-bar-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 130px;
+  flex-shrink: 0;
+}
+
+.dept-work-bar-name .dept-work-name-text {
+  max-width: 90px;
+}
+
+.dept-work-bar-container {
+  flex: 1;
+  display: flex;
+  height: 24px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #f5f5f5;
+}
+
+.dept-work-bar-segment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  min-width: 0;
+  transition: width 0.3s ease;
+}
+
+.dept-work-bar-total {
+  width: 55px;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+  color: #595959;
+  white-space: nowrap;
+}
+
 /* Stat Icon Container */
 .dashboard-stat-icon {
   display: flex;
