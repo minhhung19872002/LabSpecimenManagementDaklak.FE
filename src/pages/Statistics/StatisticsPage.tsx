@@ -548,10 +548,15 @@ const StatisticsPage: React.FC = () => {
                   xField="department"
                   yField="value"
                   colorField="type"
-                  isStack={true}
+                  stack={true}
                   height={300}
                   legend={{ position: "top" }}
-                  color={["#faad14", "#1890ff", "#52c41a"]}
+                  scale={{
+                    color: {
+                      domain: ["Chờ xử lý", "Đang thực hiện", "Hoàn thành"],
+                      range: ["#faad14", "#1890ff", "#52c41a"],
+                    },
+                  }}
                   label={{
                     text: "value",
                     position: "inside",
