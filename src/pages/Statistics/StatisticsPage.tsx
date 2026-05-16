@@ -330,10 +330,7 @@ const StatisticsPage: React.FC = () => {
 
       <Spin spinning={loading}>
         {/* Summary Stats */}
-        <div
-          className="dashboard-stats-grid"
-          style={{ gridTemplateColumns: `repeat(${3 + labStatistics.length}, 1fr)` }}
-        >
+        <div className="dashboard-stats-grid statistics-stats-grid">
           <Card className="dashboard-stat-card" bordered={false}>
             <div className="dashboard-stat-content">
               <div className="dashboard-stat-info">
