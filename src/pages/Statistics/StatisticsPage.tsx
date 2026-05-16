@@ -48,6 +48,8 @@ import "../../styles/ListCard.css";
 
 const { RangePicker } = DatePicker;
 
+const PIE_COLORS = ["#5B8FF9","#5AD8A6","#5D7092","#F6BD16","#6F5EF9","#6DC8EC","#945FB9","#FF9845","#1E9493","#FF99C3","#61DDAA","#7262FD","#78D3F8","#9661BC","#F6903D"];
+
 const AVATAR_COLORS = [
   "#1890ff",
   "#52c41a",
@@ -528,29 +530,40 @@ const StatisticsPage: React.FC = () => {
               }
             >
               {sampleMatrix.length > 0 ? (
-                <Pie
-                  data={sampleMatrix.map((item) => ({
-                    type: item.specimenType,
-                    value: item.totalCount,
-                  }))}
-                  angleField="value"
-                  colorField="type"
-                  height={300}
-                  radius={0.8}
-                  innerRadius={0.5}
-                  label={{
-                    text: "value",
-                    position: "outside",
-                  }}
-                  legend={{
-                    position: "bottom",
-                    maxItemWidth: 120,
-                    itemLabelTooltip: true,
-                  }}
-                  tooltip={{
-                    title: "type",
-                  }}
-                />
+                <>
+                  <div className="pie-custom-legend">
+                    {sampleMatrix.map((item, i) => (
+                        <span key={item.specimenType} className="pie-legend-item" title={item.specimenType}>
+                          <span className="pie-legend-dot" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
+                          <span className="pie-legend-label">{item.specimenType}</span>
+                        </span>
+                    ))}
+                  </div>
+                  <Pie
+                    data={sampleMatrix.map((item) => ({
+                      type: item.specimenType,
+                      value: item.totalCount,
+                    }))}
+                    angleField="value"
+                    colorField="type"
+                    height={280}
+                    radius={0.8}
+                    innerRadius={0.5}
+                    label={{
+                      text: "value",
+                      position: "outside",
+                    }}
+                    legend={false}
+                    scale={{
+                      color: {
+                        range: PIE_COLORS,
+                      },
+                    }}
+                    tooltip={{
+                      title: "type",
+                    }}
+                  />
+                </>
               ) : (
                 <Empty
                   description="Không có dữ liệu"
