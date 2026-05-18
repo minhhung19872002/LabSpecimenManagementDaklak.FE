@@ -187,6 +187,12 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     </StatusTag>
   );
 
+  const getReportStatusTag = (isPrinted: boolean) => (
+    <StatusTag color={isPrinted ? "success" : "default"}>
+      {isPrinted ? "Đã phát hành" : "Chưa phát hành"}
+    </StatusTag>
+  );
+
   // Check permissions
   const canApprove = authService.hasPermission(PERMISSIONS.TestResults.Approve);
   const canReject = authService.hasPermission(PERMISSIONS.TestResults.Reject);
@@ -505,6 +511,16 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         render: (status: QualityIndicatorApprovalStatus, record) => {
           if (record._isParentWithChildren) return "-";
           return getApprovalStatusTag(status);
+        },
+      },
+      {
+        title: "Trạng thái báo cáo",
+        dataIndex: "isPrinted",
+        key: "reportStatus",
+        width: 140,
+        render: (isPrinted: boolean, record) => {
+          if (record._isParentWithChildren) return "-";
+          return getReportStatusTag(!!isPrinted);
         },
       },
     );
