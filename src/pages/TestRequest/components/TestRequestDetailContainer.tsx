@@ -31,6 +31,7 @@ import {
   canCancelRequest,
   isCancelledRequest,
 } from "../../../types/testRequest";
+import { IndicatorApprovalStatus } from "../../../types/laboratoryTask";
 import dayjs from "dayjs";
 import { PATH_ROUTES } from "../../../constants";
 import { getSampleColumns } from "../columns";
@@ -259,7 +260,21 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
     }
 
     // Gửi mẫu - khi status = RequestApproved (Đã duyệt yêu cầu)
-    if (canSendSample(data.status) && canSendSampleAction) {
+    const hasAcceptedForTestingIndicators = data.samples?.some((sample) =>
+      sample.indicators?.some(
+        (ind) =>
+          ind.approvalStatus === IndicatorApprovalStatus.AcceptedForTesting,
+      ),
+    );
+    const shouldShowSendSample =
+      canSendSample(data.status) ||
+      (hasAcceptedForTestingIndicators &&
+        data.status !== TestRequestStatus.SampleSent &&
+        data.status !== TestRequestStatus.InProgress &&
+        data.status !== TestRequestStatus.Completed &&
+        data.status !== TestRequestStatus.Cancelled);
+
+    if (shouldShowSendSample && canSendSampleAction) {
       const sendSampleButton = (
         <Button
           key="send-sample"
@@ -504,7 +519,9 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
               <span>Chi tiết yêu cầu thử nghiệm</span>
               <Tag
                 className={`payment-status-tag ${
-                  data.paymentReceived ? "payment-status-paid" : "payment-status-unpaid"
+                  data.paymentReceived
+                    ? "payment-status-paid"
+                    : "payment-status-unpaid"
                 }`}
               >
                 {data.paymentReceived ? "Đã thanh toán" : "Chưa thanh toán"}
