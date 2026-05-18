@@ -36,7 +36,7 @@ type ExtendedTabType = TestingTabType | "sample-assignment-log";
 const TestingList: React.FC = () => {
   // Tab state - now includes sample-assignment-log
   const [currentTab, setCurrentTab] = useState<ExtendedTabType>(
-    TestingTabType.All,
+    "sample-assignment-log",
   );
 
   const {
@@ -72,7 +72,13 @@ const TestingList: React.FC = () => {
 
   // Sample assignment log stats & filter
   const [salStats, setSalStats] = useState<SampleAssignmentLogStatisticsDto>({
-    total: 0, underReview: 0, toDo: 0, testing: 0, waitingApproval: 0, resultRejected: 0, completed: 0,
+    total: 0,
+    underReview: 0,
+    toDo: 0,
+    testing: 0,
+    waitingApproval: 0,
+    resultRejected: 0,
+    completed: 0,
   });
   const [salDisplayStatusFilter, setSalDisplayStatusFilter] = useState<
     QLKTDisplayStatus | undefined
@@ -95,7 +101,7 @@ const TestingList: React.FC = () => {
 
   const handleSalDisplayStatusFilterChange = useCallback((value: string) => {
     setSalDisplayStatusFilter(
-      value === "all" ? undefined : (Number(value) as QLKTDisplayStatus)
+      value === "all" ? undefined : (Number(value) as QLKTDisplayStatus),
     );
   }, []);
 
@@ -290,11 +296,11 @@ const TestingList: React.FC = () => {
             onChange={(e) => handleExtendedTabChange(e.target.value)}
             optionType="button"
           >
-            <Radio.Button value={String(TestingTabType.All)}>
-              Công việc của Lab
-            </Radio.Button>
             <Radio.Button value="sample-assignment-log">
               Sổ nhận mẫu giao việc
+            </Radio.Button>
+            <Radio.Button value={String(TestingTabType.All)}>
+              Công việc của Lab
             </Radio.Button>
           </Radio.Group>
         </div>
@@ -302,7 +308,9 @@ const TestingList: React.FC = () => {
 
         {/* Content based on selected tab */}
         {isShowingSampleAssignmentLog ? (
-          <LabSampleAssignmentLogTab displayStatusFilter={salDisplayStatusFilter} />
+          <LabSampleAssignmentLogTab
+            displayStatusFilter={salDisplayStatusFilter}
+          />
         ) : (
           <>
             {/* Search & Filter */}
