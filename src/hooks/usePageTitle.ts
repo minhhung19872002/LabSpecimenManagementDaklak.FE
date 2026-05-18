@@ -24,6 +24,7 @@ type PageTitleOverrideContextValue = {
 const ROUTE_TITLES: PageTitleRoute[] = [
   { path: "/dashboard", title: "Tổng quan", end: false },
   { path: "/quotations/create", title: "Tạo báo giá" },
+  { path: "/quotations/duplicate/:id", title: "Nhân bản báo giá" },
   { path: "/quotations/edit/:id", title: "Sửa báo giá" },
   { path: "/quotations/view/:id", title: "Xem báo giá" },
   { path: "/quotations", title: "Báo giá", end: false },

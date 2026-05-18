@@ -226,6 +226,7 @@ function App() {
           {/* Quotation Routes - Báo giá */}
           <Route path="quotations" element={<QuotationList />} />
           <Route path="quotations/create" element={<QuotationForm />} />
+          <Route path="quotations/duplicate/:id" element={<QuotationForm />} />
           <Route path="quotations/view/:id" element={<QuotationView />} />
           <Route path="quotations/edit/:id" element={<QuotationForm />} />
 

@@ -13,6 +13,7 @@ import {
 import {
   PlusOutlined,
   EditOutlined,
+  CopyOutlined,
   DeleteOutlined,
   ReloadOutlined,
 } from "../../components/common/Icon";
@@ -141,15 +142,31 @@ const QuotationList: React.FC = () => {
     {
       title: "Thao tác",
       key: "actions",
-      width: 120,
+      width: 160,
       align: "center",
       fixed: "right",
       render: (_, record) => {
+        const canDuplicate = authService.hasPermission(PERMISSIONS.Quotations.Create);
         const canEdit = authService.hasPermission(PERMISSIONS.Quotations.Edit);
         const canDelete = authService.hasPermission(PERMISSIONS.Quotations.Delete);
 
         return (
           <Space size="small" onClick={(e) => e.stopPropagation()}>
+            {canDuplicate && (
+              <Button
+                type="text"
+                size="small"
+                icon={<CopyOutlined />}
+                onClick={() =>
+                  window.open(
+                    PATH_ROUTES.quotations.duplicate(record.id),
+                    "_blank",
+                    "noopener,noreferrer",
+                  )
+                }
+                title="Nhân bản"
+              />
+            )}
             {canEdit && (
               <Button
                 type="text"

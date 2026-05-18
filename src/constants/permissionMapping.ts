@@ -365,7 +365,7 @@ export const isDetailRoute = (pathname: string): { isDetail: boolean; baseRoute:
     const baseRoute = match[1];
     // Kiểm tra không phải là các sub-routes đặc biệt như /create, /edit
     const idPart = match[2];
-    const specialSubRoutes = ['create', 'edit', 'new', 'add'];
+    const specialSubRoutes = ['create', 'edit', 'new', 'add', 'duplicate'];
     if (!specialSubRoutes.includes(idPart.toLowerCase())) {
       return { isDetail: true, baseRoute };
     }

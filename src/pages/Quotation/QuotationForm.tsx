@@ -27,7 +27,7 @@ import {
   RightOutlined,
   InboxOutlined,
 } from "../../components/common/Icon";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import dayjs from "dayjs";
 import { quotationService } from "../../services/quotationService";
 import { organizationService } from "../../services/organizationService";
@@ -56,10 +56,23 @@ interface OrganizationOption {
   id: string;
 }
 
+interface QuotationSourceData {
+  quotationDate?: string;
+  provinceCode?: string;
+  districtCode?: string;
+  wardCode?: string;
+  address?: string;
+  taxCode?: string;
+  contactPerson?: string;
+  phone?: string;
+}
+
 const QuotationForm: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams<{ id: string }>();
-  const isEdit = Boolean(id);
+  const isDuplicateMode = location.pathname.startsWith("/quotations/duplicate/");
+  const isEdit = Boolean(id) && !isDuplicateMode;
 
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
@@ -75,18 +88,19 @@ const QuotationForm: React.FC = () => {
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<
     string | undefined
   >();
+  const [sourceQuotationData, setSourceQuotationData] = useState<QuotationSourceData>({});
 
   // Load organization options
   useEffect(() => {
     loadOrganizations();
   }, []);
 
-  // Load quotation data if editing
+  // Load quotation data if editing or duplicating
   useEffect(() => {
-    if (isEdit && id) {
-      loadQuotation(id);
+    if (id && (isEdit || isDuplicateMode)) {
+      loadQuotation(id, isDuplicateMode);
     }
-  }, [id, isEdit]);
+  }, [id, isDuplicateMode, isEdit]);
 
   const loadOrganizations = async () => {
     try {
@@ -103,7 +117,7 @@ const QuotationForm: React.FC = () => {
     }
   };
 
-  const loadQuotation = async (quotationId: string) => {
+  const loadQuotation = async (quotationId: string, duplicateMode = false) => {
     setLoading(true);
     try {
       const data = await quotationService.get(quotationId);
@@ -112,17 +126,31 @@ const QuotationForm: React.FC = () => {
         notes: data.notes,
       });
       setSelectedOrganizationId(data.organizationId);
+      setSourceQuotationData({
+        quotationDate: data.quotationDate,
+        provinceCode: data.provinceCode,
+        districtCode: data.districtCode,
+        wardCode: data.wardCode,
+        address: data.address,
+        taxCode: data.taxCode,
+        contactPerson: data.contactPerson,
+        phone: data.phone,
+      });
 
       // Map samples
       const mappedSamples: QuotationSampleFormData[] = data.samples.map(
-        (sample) => ({
-          key: sample.id,
-          id: sample.id,
+        (sample, sampleIndex) => ({
+          key: duplicateMode
+            ? `duplicate-sample-${sampleIndex}-${Date.now()}`
+            : sample.id,
+          id: duplicateMode ? undefined : sample.id,
           sortOrder: sample.sortOrder,
           sampleName: sample.sampleName,
-          indicators: sample.indicators.map((ind) => ({
-            key: `${ind.indicatorId}_${ind.testMethodId}_${ind.specimenTypeId || "null"}`,
-            id: ind.id,
+          indicators: sample.indicators.map((ind, indicatorIndex) => ({
+            key: duplicateMode
+              ? `${ind.indicatorId}_${ind.testMethodId}_${ind.specimenTypeId || "null"}_${sampleIndex}_${indicatorIndex}`
+              : `${ind.indicatorId}_${ind.testMethodId}_${ind.specimenTypeId || "null"}`,
+            id: duplicateMode ? undefined : ind.id,
             indicatorId: ind.indicatorId,
             testMethodId: ind.testMethodId,
             indicatorName: ind.indicatorName,
@@ -349,9 +377,16 @@ const QuotationForm: React.FC = () => {
       setSaving(true);
 
       const data: CreateUpdateQuotationDto = {
-        quotationDate: dayjs().toISOString(),
+        quotationDate: sourceQuotationData.quotationDate || dayjs().toISOString(),
         organizationId: selectedOrganizationId,
         customerName: values.customerName,
+        provinceCode: sourceQuotationData.provinceCode,
+        districtCode: sourceQuotationData.districtCode,
+        wardCode: sourceQuotationData.wardCode,
+        address: sourceQuotationData.address,
+        taxCode: sourceQuotationData.taxCode,
+        contactPerson: sourceQuotationData.contactPerson,
+        phone: sourceQuotationData.phone,
         notes: values.notes,
         status: QuotationStatus.Draft,
         samples: samples.map((sample, sampleIdx) => ({
@@ -377,7 +412,11 @@ const QuotationForm: React.FC = () => {
         message.success("Cập nhật báo giá thành công");
       } else {
         await quotationService.create(data);
-        message.success("Tạo báo giá thành công");
+        message.success(
+          isDuplicateMode
+            ? "Nhân bản báo giá thành công"
+            : "Tạo báo giá thành công"
+        );
       }
 
       navigate(PATH_ROUTES.quotations.index);
@@ -612,7 +651,13 @@ const QuotationForm: React.FC = () => {
         <Card
           className="list-card"
           styles={{ body: { paddingLeft: 0, paddingRight: 0 } }}
-          title={isEdit ? "Chỉnh sửa báo giá" : "Tạo mới báo giá"}
+          title={
+            isEdit
+              ? "Chỉnh sửa báo giá"
+              : isDuplicateMode
+                ? "Nhân bản báo giá"
+                : "Tạo mới báo giá"
+          }
           extra={
             <Button
               type="primary"
