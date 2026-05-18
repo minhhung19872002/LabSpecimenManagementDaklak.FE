@@ -19,7 +19,6 @@ import Icon, {
 } from "../../components/common/Icon";
 import {
   QualityManagementStatus,
-  QualityManagementStatusLabels,
   QLCLDisplayStatus,
   QLCLSampleAssignmentLogStatisticsDto,
 } from "../../types/qualityManagement";

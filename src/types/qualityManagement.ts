@@ -154,6 +154,7 @@ export interface QualityManagementTaskDto {
   changeHistory?: ChangeHistoryDto;
   testRequestStatus?: TestRequestStatus;
   indicators?: QualityManagementIndicatorDto[];
+  allIndicators?: QualityManagementIndicatorDto[];
 
   // Audit fields
   creationTime?: string;
@@ -165,7 +166,10 @@ export interface QualityManagementTaskDto {
 // Quality Management Indicator DTO
 export interface QualityManagementIndicatorDto {
   id: string;
-  laboratoryTaskIndicatorId: string;
+  qualityManagementIndicatorId?: string;
+  testRequestSampleIndicatorId: string;
+  laboratoryTaskIndicatorId?: string;
+  laboratoryTaskId?: string;
   laboratoryId: string;
   laboratoryName?: string;
   sampleId: string;
@@ -192,7 +196,7 @@ export interface QualityManagementIndicatorDto {
   lowerLimit?: string;          // Giá trị cận dưới - cho khoảng
   upperOperator?: string;       // Ký hiệu cận trên (<, <=) - cho khoảng
   upperLimit?: string;          // Giá trị cận trên - cho khoảng
-  approvalStatus: QualityIndicatorApprovalStatus;
+  approvalStatus?: QualityIndicatorApprovalStatus;
   rejectionReason?: string;
   isResultSent: boolean;  // DEPRECATED
   qualityResultSentDate?: string;  // DEPRECATED
@@ -205,6 +209,14 @@ export interface QualityManagementIndicatorDto {
   freeTextNote?: string;  // Ghi chú tự do từ QLKT
   masterDataNotes?: string[];  // Danh sách nội dung Master Data Notes
   parentIndicatorId?: string;  // ID chỉ tiêu cha (null nếu là chỉ tiêu gốc)
+  technicalManagerName?: string;
+  technicianId?: string;
+  technicianName?: string;
+  qlktApprovalDate?: string;
+  indicatorApprovalStatus?: IndicatorApprovalStatus;
+  testingStatus?: TestingStatus;
+  qlclDisplayStatus?: QLCLDisplayStatus;
+  isInQualityScope?: boolean;
 }
 
 // Quality Indicator Status History DTO

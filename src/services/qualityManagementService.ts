@@ -23,7 +23,7 @@ const BASE_URL = '/api/v1/quality-management';
 export const qualityManagementService = {
   // List & Detail
   getList: async (params: GetQualityManagementListInput): Promise<PagedQualityManagementResult> => {
-    const queryParams: Record<string, string | number | undefined> = {
+    const queryParams: Record<string, string | number | boolean | undefined> = {
       SkipCount: params.skipCount,
       MaxResultCount: params.maxResultCount,
       Sorting: params.sorting,
@@ -62,6 +62,19 @@ export const qualityManagementService = {
   get: async (id: string): Promise<QualityManagementTaskDto> => {
     const response = await api.get<QualityManagementTaskDto>(`${BASE_URL}/${id}`);
     return response.data;
+  },
+
+  getFullDetail: async (id: string): Promise<QualityManagementTaskDto> => {
+    try {
+      const response = await api.get<QualityManagementTaskDto>(`${BASE_URL}/${id}/full-detail`);
+      return response.data;
+    } catch (error: any) {
+      if (error?.response?.status === 404) {
+        const fallback = await api.get<QualityManagementTaskDto>(`${BASE_URL}/${id}`);
+        return fallback.data;
+      }
+      throw error;
+    }
   },
 
   getStatistics: async (): Promise<QualityManagementStatisticsDto> => {
