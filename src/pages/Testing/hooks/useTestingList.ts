@@ -31,7 +31,7 @@ export const useTestingList = () => {
 
   // Active tab state
   const [activeTab, setActiveTab] = useState<TestingTabType>(
-    TestingTabType.MyAssignments
+    TestingTabType.All
   );
 
   // Technicians for filter dropdown

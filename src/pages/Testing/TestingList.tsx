@@ -36,7 +36,7 @@ type ExtendedTabType = TestingTabType | "sample-assignment-log";
 const TestingList: React.FC = () => {
   // Tab state - now includes sample-assignment-log
   const [currentTab, setCurrentTab] = useState<ExtendedTabType>(
-    TestingTabType.MyAssignments,
+    TestingTabType.All,
   );
 
   const {
@@ -290,9 +290,6 @@ const TestingList: React.FC = () => {
             onChange={(e) => handleExtendedTabChange(e.target.value)}
             optionType="button"
           >
-            <Radio.Button value={String(TestingTabType.MyAssignments)}>
-              Công việc của tôi
-            </Radio.Button>
             <Radio.Button value={String(TestingTabType.All)}>
               Công việc của Lab
             </Radio.Button>
