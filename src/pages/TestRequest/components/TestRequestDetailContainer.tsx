@@ -155,7 +155,8 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
     // - Hiển thị "Lịch sử thanh toán" khi đã thanh toán đủ (paymentReceived = true) hoặc mẫu nhiệm vụ (chi phí = 0)
     // - Ẩn khi status = Cancelled hoặc NoPaymentRequired
     // - Sử dụng paymentReceived thay vì status vì status có thể đã chuyển sang trạng thái khác sau thanh toán
-    const isPaid = data.paymentReceived === true || data.sampleTypeTask === true;
+    const isPaid =
+      data.paymentReceived === true || data.sampleTypeTask === true;
     const canShowPaymentButton =
       data.status !== TestRequestStatus.Cancelled &&
       data.status !== TestRequestStatus.NoPaymentRequired &&
@@ -501,8 +502,14 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
           <div className="card-header-flex">
             <Space wrap>
               <span>Chi tiết yêu cầu thử nghiệm</span>
-              <Tag className="request-number-tag">{data.requestNumber}</Tag>
-              {getStatusTag(data.status)}
+              <Tag
+                className={`payment-status-tag ${
+                  data.paymentReceived ? "payment-status-paid" : "payment-status-unpaid"
+                }`}
+              >
+                {data.paymentReceived ? "Đã thanh toán" : "Chưa thanh toán"}
+              </Tag>
+              {/* {getStatusTag(data.status)} */}
             </Space>
             <Space wrap>
               {renderActionButtons()}
