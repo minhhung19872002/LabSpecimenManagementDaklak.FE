@@ -199,10 +199,10 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
       ),
     );
     const showSendToQLKT =
-      (canSendToQLKT(data.status) && canSendToAccountingAction) ||
-      (hasUnsentIndicators &&
-        data.status !== TestRequestStatus.Completed &&
-        data.status !== TestRequestStatus.Cancelled);
+      !!hasUnsentIndicators &&
+      ((canSendToQLKT(data.status) && canSendToAccountingAction) ||
+        (data.status !== TestRequestStatus.Completed &&
+          data.status !== TestRequestStatus.Cancelled));
 
     if (showSendToQLKT) {
       const sendToQLKTButton = (
