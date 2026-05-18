@@ -4,6 +4,7 @@ import MainLayout from "./components/layout/MainLayout";
 import Loadable from "./components/common/Loadable";
 import PrivateRoute from "./components/auth/PrivateRoute";
 import { initTableGrabScroll } from "./hooks/useTableGrabScroll";
+import { PageTitleProvider } from "./hooks/usePageTitle";
 import { getDefaultRouteForUser, PATH_ROUTES, STORAGE_KEYS } from "./constants";
 import { UserInfo } from "./services/authService";
 import { prefetchMasterData } from "./services/offline/prefetchService";
@@ -213,7 +214,9 @@ function App() {
           path="/"
           element={
             <PrivateRoute>
-              <MainLayout />
+              <PageTitleProvider>
+                <MainLayout />
+              </PageTitleProvider>
             </PrivateRoute>
           }
         >

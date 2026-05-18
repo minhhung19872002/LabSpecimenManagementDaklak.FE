@@ -41,6 +41,7 @@ import {
 import "../TestRequestForm.css";
 import "../../../styles/ListCard.css";
 import { PATH_ROUTES } from "../../../constants";
+import { usePageTitleOverride } from "../../../hooks/usePageTitle";
 
 const TestRequestForm: React.FC = () => {
   // Data hook
@@ -244,6 +245,12 @@ const TestRequestForm: React.FC = () => {
   const watchedContractDate = Form.useWatch("contractDate", form);
   const watchedSampleType = Form.useWatch("sampleType", form);
   const watchedSubContract = Form.useWatch("subContract", form);
+
+  usePageTitleOverride(
+    isEditMode && watchedContractNumber?.trim()
+      ? `Sửa phiếu - ${watchedContractNumber.trim()}`
+      : undefined,
+  );
 
   useEffect(() => {
     const formSections = formSectionsRef.current;
