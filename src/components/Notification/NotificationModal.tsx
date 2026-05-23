@@ -92,6 +92,7 @@ const getNotificationRoute = (notification: NotificationDto): string | null => {
 // Check if notification is deadline-related
 const isDeadlineNotification = (type: NotificationType): boolean => {
   return [
+    NotificationType.DeadlineReminder,
     NotificationType.PendingWorkAssignment,
   ].includes(type);
 };

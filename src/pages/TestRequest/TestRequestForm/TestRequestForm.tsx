@@ -148,6 +148,7 @@ const TestRequestForm: React.FC = () => {
     getIndicatorMethodInfo,
     getFilteredIndicators,
     getFilteredGroupsWithIndicators,
+    registerQuickCreatedIndicator,
     clearDraft,
     navigate,
   } = useTestRequestFormData();
@@ -543,6 +544,9 @@ const TestRequestForm: React.FC = () => {
             setIndicatorSearchText={setIndicatorSearchText}
             customPrices={customPrices}
             isRequestCompleted={currentStatus === TestRequestStatus.Completed}
+            testRequestId={id}
+            contractNumber={form.getFieldValue("contractNumber")}
+            onQuickIndicatorCreated={registerQuickCreatedIndicator}
             onPriceChange={(key, price) =>
               setCustomPrices((prev) => ({ ...prev, [key]: price }))
             }

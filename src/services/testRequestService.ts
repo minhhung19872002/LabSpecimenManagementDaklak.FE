@@ -22,6 +22,7 @@ import { QualityManagementIndicatorDto } from '../types/qualityManagement';
 import { syncManager } from './offline/syncManager';
 import { isNetworkError } from './offline/createOfflineService';
 import { cacheTestRequest, getCachedTestRequest, getOfflineTestRequests, getCachedEntitiesByType, getCachedEntity } from './offline/db';
+import { IndicatorDto } from './masterDataService';
 
 const BASE_URL = '/api/v1/test-requests';
 
@@ -130,6 +131,35 @@ export interface PreviewTestRequestFormInput {
   requestDate: string;
   notes?: string;
   samples: PreviewTestRequestSampleDto[];
+}
+
+export interface QuickCreateIndicatorItemInput {
+  specimenTypeId: string;
+  name: string;
+  formattedName?: string;
+  unitPrice: number;
+  subIndicators: { name: string; formattedName?: string }[];
+}
+
+export interface QuickCreateIndicatorsFromTestRequestInput {
+  indicatorGroupId: string;
+  testRequestId?: string;
+  contractNumber?: string;
+  indicators: QuickCreateIndicatorItemInput[];
+}
+
+export interface QuickCreateIndicatorResultItem {
+  indicator: IndicatorDto;
+  specimenTypeId: string;
+  specimenTypeName: string;
+  testMethodId?: string;
+  testMethodName?: string;
+  unitPrice: number;
+  subIndicatorResults: QuickCreateIndicatorResultItem[];
+}
+
+export interface QuickCreateIndicatorsFromTestRequestResult {
+  results: QuickCreateIndicatorResultItem[];
 }
 
 // Extended params interface for search and filter
@@ -450,6 +480,16 @@ export const testRequestService = {
         excludeId,
       },
     });
+    return response.data;
+  },
+
+  quickCreateIndicators: async (
+    data: QuickCreateIndicatorsFromTestRequestInput
+  ): Promise<QuickCreateIndicatorsFromTestRequestResult> => {
+    const response = await api.post<QuickCreateIndicatorsFromTestRequestResult>(
+      `${BASE_URL}/quick-create-indicators`,
+      data
+    );
     return response.data;
   },
 

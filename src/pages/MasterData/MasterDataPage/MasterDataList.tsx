@@ -1,5 +1,6 @@
 // @ts-nocheck
 import React, { useMemo, useState, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Card, Button, Space, Tag, Alert, Tabs, Form, Empty } from "antd";
 import {
   PlusOutlined,
@@ -125,6 +126,18 @@ const MasterDataList: React.FC = () => {
   const [notesRefreshKey, setNotesRefreshKey] = useState(0);
 
   const hasVisibleCategories = visibleCategories.length > 0;
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (!hasVisibleCategories) return;
+    const tabParam = searchParams.get('tab');
+    if (tabParam && visibleCategories.some(([key]) => key === tabParam)) {
+      setActiveCategory(tabParam);
+      setSearchText("");
+      searchParams.delete('tab');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, hasVisibleCategories, visibleCategories, setActiveCategory, setSearchText, setSearchParams]);
 
   useEffect(() => {
     if (!hasVisibleCategories) {

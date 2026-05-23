@@ -4,6 +4,7 @@ import { Form, message } from "antd";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import dayjs from "dayjs";
 import { testRequestService, offlineTestRequestService } from "../../../../services/testRequestService";
+import type { QuickCreateIndicatorResultItem } from "../../../../services/testRequestService";
 import {
   specimenTypeService,
   IndicatorDto,
@@ -53,6 +54,8 @@ import {
   LaboratoryAssignment,
   IndicatorMethodInfo,
   IndicatorMethodKey,
+  PENDING_TEST_METHOD_ID,
+  PENDING_TEST_METHOD_NAME,
   createIndicatorMethodKey,
   parseIndicatorMethodKey,
 } from "../types";
@@ -384,6 +387,37 @@ export const useTestRequestFormData = () => {
           }
         });
       });
+
+      // Indicators can exist in metadata + specimen type mapping before a test method is configured.
+      // Synthesize a pseudo "null method" entry so they still appear and can be selected in TestRequestForm.
+      (specimenTypesWithIndsData || []).forEach((specimenType) => {
+        if (!specimenType.isActive) return;
+        (specimenType.indicators || []).forEach((indicatorLink) => {
+          if (!indicatorLink.isActive) return;
+          const existingMethods = methodMap[indicatorLink.indicatorId] || [];
+          const hasMethodForSpecimenType = existingMethods.some(
+            (method) =>
+              method.isActive &&
+              (method.specimenTypeId || null) === specimenType.id
+          );
+
+          if (!hasMethodForSpecimenType) {
+            if (!methodMap[indicatorLink.indicatorId]) {
+              methodMap[indicatorLink.indicatorId] = [];
+            }
+            methodMap[indicatorLink.indicatorId].push({
+              testMethodId: PENDING_TEST_METHOD_ID,
+              testMethodCode: "",
+              testMethodName: PENDING_TEST_METHOD_NAME,
+              unitPrice: 0,
+              isActive: true,
+              specimenTypeId: specimenType.id,
+              specimenTypeCode: specimenType.code,
+              specimenTypeName: specimenType.name,
+            });
+          }
+        });
+      });
       setIndicatorMethodsMap(methodMap);
 
       // Auto-generate contract number for new test request (create mode only)
@@ -669,9 +703,9 @@ export const useTestRequestFormData = () => {
           // Note: specimenTypeId now comes from the indicator itself (stored when user selects from specific specimen type)
           const indicatorMethods: IndicatorMethodKey[] = [];
           activeIndicators.forEach((ind) => {
-            if (ind.indicatorId && ind.testMethodId) {
-              // Use indicator's specimenTypeId for the key (to correctly identify which specimen type price was selected)
-              indicatorMethods.push(createIndicatorMethodKey(ind.indicatorId, ind.testMethodId, ind.specimenTypeId));
+            if (ind.indicatorId) {
+              const methodId = ind.testMethodId || PENDING_TEST_METHOD_ID;
+              indicatorMethods.push(createIndicatorMethodKey(ind.indicatorId, methodId, ind.specimenTypeId));
             }
           });
 
@@ -734,10 +768,8 @@ export const useTestRequestFormData = () => {
           ) || [];
 
           activeIndicators.forEach((ind) => {
-            // Create IndicatorMethodKey for each indicator (include indicator's specimenTypeId)
-            const methodKey = ind.testMethodId
-              ? createIndicatorMethodKey(ind.indicatorId, ind.testMethodId, ind.specimenTypeId)
-              : ind.indicatorId; // Fallback for old data without testMethodId
+            const methodId = ind.testMethodId || PENDING_TEST_METHOD_ID;
+            const methodKey = createIndicatorMethodKey(ind.indicatorId, methodId, ind.specimenTypeId);
 
             // Store the TestRequestSampleIndicator.id for this indicator
             if (ind.id) {
@@ -1062,9 +1094,22 @@ export const useTestRequestFormData = () => {
     let indicator = indicators.find((i) => i.id === indicatorId);
     const methods = indicatorMethodsMap[indicatorId] || [];
     // Must match both testMethodId AND specimenTypeId to get correct price for each specimen type
-    const method = methods.find(
+    const matchedMethod = methods.find(
       (m) => m.testMethodId === testMethodId && (m.specimenTypeId || null) === specimenTypeId
     );
+    const fallbackSpecimenType = specimenTypes.find((specimenType) => specimenType.id === specimenTypeId);
+    const method = matchedMethod || (testMethodId === PENDING_TEST_METHOD_ID
+      ? {
+          testMethodId: PENDING_TEST_METHOD_ID,
+          testMethodCode: "",
+          testMethodName: PENDING_TEST_METHOD_NAME,
+          unitPrice: 0,
+          isActive: true,
+          specimenTypeId: specimenTypeId || undefined,
+          specimenTypeCode: fallbackSpecimenType?.code,
+          specimenTypeName: fallbackSpecimenType?.name,
+        }
+      : undefined);
 
     // Fallback: If indicator not found in indicators list (e.g., sub-indicators),
     // create indicator-like object from testMethods data
@@ -1087,6 +1132,99 @@ export const useTestRequestFormData = () => {
 
     return { indicator, method, indicatorId, testMethodId };
   };
+
+  const registerQuickCreatedIndicator = useCallback(
+    (result: QuickCreateIndicatorResultItem) => {
+      const { indicator, specimenTypeId, specimenTypeName } = result;
+      const methodId = result.testMethodId || PENDING_TEST_METHOD_ID;
+      const methodName = result.testMethodName || PENDING_TEST_METHOD_NAME;
+
+      setIndicators((prev) => {
+        if (prev.some((item) => item.id === indicator.id)) {
+          return prev;
+        }
+        return [...prev, indicator];
+      });
+
+      setIndicatorMethodsMap((prev) => {
+        const existingMethods = prev[indicator.id] || [];
+        const hasEntry = existingMethods.some(
+          (method) =>
+            method.testMethodId === methodId &&
+            (method.specimenTypeId || null) === specimenTypeId
+        );
+
+        if (hasEntry) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          [indicator.id]: [
+            ...existingMethods,
+            {
+              testMethodId: methodId,
+              testMethodCode: "",
+              testMethodName: methodName,
+              unitPrice: result.unitPrice || 0,
+              isActive: true,
+              parentIndicatorId: indicator.parentIndicatorId,
+              specimenTypeId,
+              specimenTypeName,
+            },
+          ],
+        };
+      });
+
+      setIndicatorToSpecimenTypesMap((prev) => {
+        const current = prev[indicator.id] || [];
+        if (current.some((item) => item.id === specimenTypeId)) {
+          return prev;
+        }
+        return {
+          ...prev,
+          [indicator.id]: [...current, { id: specimenTypeId, name: specimenTypeName }],
+        };
+      });
+
+      setSpecimenTypesWithIndicators((prev) =>
+        prev.map((specimenType) => {
+          if (specimenType.id !== specimenTypeId) {
+            return specimenType;
+          }
+
+          if ((specimenType.indicators || []).some((item) => item.indicatorId === indicator.id)) {
+            return specimenType;
+          }
+
+          return {
+            ...specimenType,
+            indicators: [
+              ...(specimenType.indicators || []),
+              {
+                id: `${specimenTypeId}_${indicator.id}`,
+                specimenTypeId,
+                indicatorId: indicator.id,
+                indicatorCode: indicator.code,
+                indicatorName: indicator.name,
+                indicatorFormattedName: indicator.formattedName,
+                indicatorGroupName: indicator.indicatorGroupName,
+                isActive: true,
+                sortOrder: (specimenType.indicators?.length || 0) + 1,
+              },
+            ],
+          };
+        })
+      );
+
+      if (currentSampleSpecimenTypeId === specimenTypeId) {
+        setSpecimenTypeIndicatorIds((prev) =>
+          prev.includes(indicator.id) ? prev : [...prev, indicator.id]
+        );
+      }
+    },
+    [currentSampleSpecimenTypeId]
+  );
 
   // Get filtered indicators for modal
   const getFilteredIndicators = () => {
@@ -1555,6 +1693,7 @@ export const useTestRequestFormData = () => {
     getIndicatorMethodInfo,
     getFilteredIndicators,
     getFilteredGroupsWithIndicators,
+    registerQuickCreatedIndicator,
 
     // Draft
     clearDraft,
