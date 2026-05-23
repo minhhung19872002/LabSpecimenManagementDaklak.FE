@@ -18,7 +18,6 @@ const DEBOUNCE_MS = 400;
 export const useIndicatorsData = () => {
   const [groups, setGroups] = useState<IndicatorGroupDto[]>([]);
   const [indicators, setIndicators] = useState<IndicatorDto[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
   const [laboratories, setLaboratories] = useState<LaboratoryDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
@@ -27,7 +26,7 @@ export const useIndicatorsData = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   const [batchLoading, setBatchLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
+  const [pageSize, setPageSize] = useState(10);
 
   // Filter state (multi-select)
   const [filterSpecimenTypeIds, setFilterSpecimenTypeIds] = useState<string[]>([]);
@@ -120,30 +119,37 @@ export const useIndicatorsData = () => {
     }
   }, []);
 
-  // Fetch indicators (server-side paged + filtered)
+  // Fetch all matching indicators in batches (pagination is at group level)
   const fetchIndicators = useCallback(async (
-    page: number,
-    size: number,
     search: string,
     specimenTypeIds: string[],
     testMethodIds: string[],
   ) => {
     setLoading(true);
     try {
-      const result = await indicatorService.getList({
-        skipCount: (page - 1) * size,
-        maxResultCount: size,
-        search: search || undefined,
-        specimenTypeIds: specimenTypeIds.length ? specimenTypeIds : undefined,
-        testMethodIds: testMethodIds.length ? testMethodIds : undefined,
-      });
-      setIndicators(result.items || []);
-      setTotalCount(result.totalCount || 0);
+      const batchSize = 1000;
+      const allItems: IndicatorDto[] = [];
+      let skip = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const result = await indicatorService.getList({
+          skipCount: skip,
+          maxResultCount: batchSize,
+          search: search || undefined,
+          specimenTypeIds: specimenTypeIds.length ? specimenTypeIds : undefined,
+          testMethodIds: testMethodIds.length ? testMethodIds : undefined,
+        });
+        allItems.push(...(result.items || []));
+        skip += batchSize;
+        hasMore = allItems.length < result.totalCount;
+      }
+
+      setIndicators(allItems);
     } catch (error) {
       console.error("Failed to fetch indicators:", error);
       message.error("Không thể tải dữ liệu chỉ tiêu");
       setIndicators([]);
-      setTotalCount(0);
     } finally {
       setLoading(false);
     }
@@ -153,18 +159,18 @@ export const useIndicatorsData = () => {
   const fetchData = useCallback(async () => {
     refDataLoaded.current = false;
     await fetchRefData();
-    await fetchIndicators(currentPage, pageSize, debouncedSearch, filterSpecimenTypeIds, filterTestMethodIds);
-  }, [fetchRefData, fetchIndicators, currentPage, pageSize, debouncedSearch, filterSpecimenTypeIds, filterTestMethodIds]);
+    await fetchIndicators(debouncedSearch, filterSpecimenTypeIds, filterTestMethodIds);
+  }, [fetchRefData, fetchIndicators, debouncedSearch, filterSpecimenTypeIds, filterTestMethodIds]);
 
   // Initial load
   useEffect(() => {
     fetchRefData();
   }, [fetchRefData]);
 
-  // Fetch indicators when page/filters change (uses debounced search)
+  // Fetch indicators when filters change (uses debounced search)
   useEffect(() => {
-    fetchIndicators(currentPage, pageSize, debouncedSearch, filterSpecimenTypeIds, filterTestMethodIds);
-  }, [fetchIndicators, currentPage, pageSize, debouncedSearch, filterSpecimenTypeIds, filterTestMethodIds]);
+    fetchIndicators(debouncedSearch, filterSpecimenTypeIds, filterTestMethodIds);
+  }, [fetchIndicators, debouncedSearch, filterSpecimenTypeIds, filterTestMethodIds]);
 
   // Filter change handlers (reset to page 1)
   const handleFilterSpecimenTypeChange = useCallback((values: string[]) => {
@@ -182,8 +188,8 @@ export const useIndicatorsData = () => {
     setPageSize(size);
   }, []);
 
-  // Group indicators by group for expandable table
-  const groupedData: GroupedIndicatorData[] = useMemo(() => {
+  // Group indicators by group, then paginate at group level
+  const allGroupedData: GroupedIndicatorData[] = useMemo(() => {
     return (groups || [])
       .map((group) => {
         const parentIndicators = (indicators || []).filter(
@@ -198,6 +204,13 @@ export const useIndicatorsData = () => {
       .filter((group) => group.indicators.length > 0);
   }, [groups, indicators]);
 
+  const groupTotalCount = allGroupedData.length;
+
+  const groupedData: GroupedIndicatorData[] = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return allGroupedData.slice(start, start + pageSize);
+  }, [allGroupedData, currentPage, pageSize]);
+
   return {
     groups,
     indicators,
@@ -210,7 +223,7 @@ export const useIndicatorsData = () => {
     groupOptions,
     laboratoryOptions,
     groupedData,
-    totalCount,
+    totalCount: groupTotalCount,
     currentPage,
     pageSize,
     filterSpecimenTypeIds,
