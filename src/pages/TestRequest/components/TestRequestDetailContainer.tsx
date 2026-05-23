@@ -45,7 +45,7 @@ import {
   MethodRequirementsSection,
   CostInfoSection,
   PostalImagesSection,
-  getStatusTag,
+  getWorkflowStatusTag,
 } from "./sections";
 import "../../../styles/ListCard.css";
 
@@ -517,16 +517,24 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
           <div className="card-header-flex">
             <Space wrap>
               <span>Chi tiết yêu cầu thử nghiệm</span>
+              {getWorkflowStatusTag(data)}
               <Tag
                 className={`payment-status-tag ${
-                  data.paymentReceived
-                    ? "payment-status-paid"
-                    : "payment-status-unpaid"
+                  data.sampleTypeTask ||
+                  data.status === TestRequestStatus.NoPaymentRequired
+                    ? "payment-status-no-payment"
+                    : data.paymentReceived
+                      ? "payment-status-paid"
+                      : "payment-status-unpaid"
                 }`}
               >
-                {data.paymentReceived ? "Đã thanh toán" : "Chưa thanh toán"}
+                {data.sampleTypeTask ||
+                data.status === TestRequestStatus.NoPaymentRequired
+                  ? "Không cần thanh toán"
+                  : data.paymentReceived
+                    ? "Đã thanh toán"
+                    : "Chưa thanh toán"}
               </Tag>
-              {/* {getStatusTag(data.status)} */}
             </Space>
             <Space wrap>
               {renderActionButtons()}

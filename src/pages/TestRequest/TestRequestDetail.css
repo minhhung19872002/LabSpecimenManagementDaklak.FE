@@ -267,6 +267,11 @@
   border-color: #8C8C8C !important;
 }
 
+.test-request-detail .list-card .card-header-flex .ant-tag.payment-status-no-payment {
+  background: #1677FF !important;
+  border-color: #1677FF !important;
+}
+
 @media (max-width: 767px) {
   .test-request-detail .card-header-flex {
     justify-content: flex-start;
