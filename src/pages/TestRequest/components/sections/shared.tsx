@@ -37,6 +37,30 @@ export const getStatusTag = (status: TestRequestStatus) => {
   return <StatusTag color={color}>{label}</StatusTag>;
 };
 
+const PAYMENT_STATUSES = [
+  TestRequestStatus.PendingPayment,
+  TestRequestStatus.Paid,
+  TestRequestStatus.NoPaymentRequired,
+];
+
+export const getWorkflowStatusTag = (data: {
+  status: TestRequestStatus;
+  sentToDepartment: boolean;
+  resultReturned: boolean;
+}) => {
+  if (!PAYMENT_STATUSES.includes(data.status)) {
+    return getStatusTag(data.status);
+  }
+
+  if (data.resultReturned) {
+    return <StatusTag color="success">Hoàn Thành</StatusTag>;
+  }
+  if (data.sentToDepartment) {
+    return <StatusTag color="blue">Đang thử nghiệm</StatusTag>;
+  }
+  return <StatusTag color="default">Mới</StatusTag>;
+};
+
 export const getResultLanguageText = (lang: ResultLanguage) => {
   const langMap = {
     [ResultLanguage.Vietnamese]: "Tiếng Việt",

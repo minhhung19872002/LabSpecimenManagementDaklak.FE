@@ -1,16 +1,48 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { message } from 'antd';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
 import { testingService } from '../../../services/testingService';
 import { laboratoryTaskService } from '../../../services/laboratoryTaskService';
 import { indicatorService, IndicatorDto } from '../../../services/masterDataService';
+import { authService } from '../../../services/authService';
 import {
   SampleAssignmentLogDto,
   GetSampleAssignmentLogInput,
   SampleAssignmentLogStatisticsDto,
 } from '../../../types/qualityManagement';
 import { UserLookupDto, QLKTDisplayStatus } from '../../../types/laboratoryTask';
+
+const findCurrentTechnician = (
+  technicians: UserLookupDto[],
+  currentUser?: {
+    id?: string;
+    userName?: string;
+    email?: string;
+    fullName?: string;
+  } | null,
+): UserLookupDto | undefined => {
+  if (!currentUser) {
+    return undefined;
+  }
+
+  const normalizedUserName = currentUser.userName?.trim().toLowerCase();
+  const normalizedEmail = currentUser.email?.trim().toLowerCase();
+  const normalizedFullName = currentUser.fullName?.trim().toLowerCase();
+
+  return technicians.find((tech) => {
+    const techUserName = tech.userName?.trim().toLowerCase();
+    const techEmail = tech.email?.trim().toLowerCase();
+    const techDisplayName = tech.displayName?.trim().toLowerCase();
+
+    return (
+      (currentUser.id && tech.id === currentUser.id) ||
+      (!!normalizedUserName && techUserName === normalizedUserName) ||
+      (!!normalizedEmail && techEmail === normalizedEmail) ||
+      (!!normalizedFullName && techDisplayName === normalizedFullName)
+    );
+  });
+};
 
 interface UseSampleAssignmentLogForLabOptions {
   displayStatusFilter?: QLKTDisplayStatus;
@@ -61,6 +93,11 @@ export const useSampleAssignmentLogForLab = (
 ): UseSampleAssignmentLogForLabResult => {
   const navigate = useNavigate();
   const displayStatusFilter = options?.displayStatusFilter;
+  const currentUser = authService.getUserInfo();
+  const currentUserId = currentUser?.id;
+  const currentUserName = currentUser?.userName;
+  const currentUserEmail = currentUser?.email;
+  const currentUserFullName = currentUser?.fullName;
 
   // State
   const [loading, setLoading] = useState(false);
@@ -91,6 +128,7 @@ export const useSampleAssignmentLogForLab = (
   const [technicians, setTechnicians] = useState<UserLookupDto[]>([]);
   const [loadingTechnicians, setLoadingTechnicians] = useState(false);
   const [indicators, setIndicators] = useState<IndicatorDto[]>([]);
+  const hasInitializedTechnicianFilter = useRef(false);
 
   // Load technicians
   useEffect(() => {
@@ -98,7 +136,26 @@ export const useSampleAssignmentLogForLab = (
       setLoadingTechnicians(true);
       try {
         const result = await laboratoryTaskService.getTechniciansByLaboratory();
-        setTechnicians(result || []);
+        const technicianList = result || [];
+        setTechnicians(technicianList);
+
+        if (!hasInitializedTechnicianFilter.current) {
+          hasInitializedTechnicianFilter.current = true;
+
+          const currentTechnician = findCurrentTechnician(
+            technicianList,
+            {
+              id: currentUserId,
+              userName: currentUserName,
+              email: currentUserEmail,
+              fullName: currentUserFullName,
+            }
+          );
+
+          if (currentTechnician) {
+            setTechnicianFilter([currentTechnician.id]);
+          }
+        }
       } catch (error) {
         console.error('Failed to load technicians:', error);
       } finally {
@@ -106,7 +163,7 @@ export const useSampleAssignmentLogForLab = (
       }
     };
     loadTechnicians();
-  }, []);
+  }, [currentUserEmail, currentUserFullName, currentUserId, currentUserName]);
 
   // Load indicators
   useEffect(() => {

@@ -44,6 +44,8 @@ import OrganizationFormModal from "./components/OrganizationFormModal";
 import { organizationSchema, OrganizationFormData } from "./schemas";
 import { TestRequestSampleDto } from "../../types/testRequest";
 import { PATH_ROUTES } from "../../constants/routes";
+import { authService } from "../../services/authService";
+import { PERMISSIONS } from "../../constants/permissionMapping";
 import "./OrganizationDetail.css";
 
 const { RangePicker } = DatePicker;
@@ -445,15 +447,17 @@ const OrganizationDetail: React.FC = () => {
               </div>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
-              <Button
-                type="primary"
-                icon={<EditOutlined />}
-                onClick={handleEdit}
-              >
-                Chỉnh sửa
-              </Button>
-            </div>
+            {authService.hasPermission(PERMISSIONS.Organizations.Edit) && (
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
+                <Button
+                  type="primary"
+                  icon={<EditOutlined />}
+                  onClick={handleEdit}
+                >
+                  Chỉnh sửa
+                </Button>
+              </div>
+            )}
           </Card>
         </div>
 

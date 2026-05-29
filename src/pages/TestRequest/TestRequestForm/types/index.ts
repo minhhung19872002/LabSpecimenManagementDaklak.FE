@@ -27,6 +27,12 @@ export interface IndicatorMethodInfo {
   specimenTypeName?: string;
 }
 
+export const PENDING_TEST_METHOD_ID = "null";
+export const PENDING_TEST_METHOD_NAME = "—";
+
+export const isPendingTestMethodId = (testMethodId?: string | null): boolean =>
+  !testMethodId || testMethodId === PENDING_TEST_METHOD_ID;
+
 // Key duy nhất cho mỗi lựa chọn: indicatorId_testMethodId_specimenTypeId
 // specimenTypeId có thể là "null" nếu không có nền mẫu
 export type IndicatorMethodKey = `${string}_${string}_${string}`;

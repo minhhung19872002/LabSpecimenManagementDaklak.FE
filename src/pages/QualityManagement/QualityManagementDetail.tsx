@@ -105,7 +105,7 @@ const QualityManagementDetail: React.FC = () => {
     if (!id) return;
     setLoading(true);
     try {
-      const result = await qualityManagementService.get(id);
+      const result = await qualityManagementService.getFullDetail(id);
       setTask(result);
     } catch (error) {
       console.error("Error loading task:", error);
@@ -119,7 +119,7 @@ const QualityManagementDetail: React.FC = () => {
   const reloadData = useCallback(async () => {
     if (!id) return;
     try {
-      const result = await qualityManagementService.get(id);
+      const result = await qualityManagementService.getFullDetail(id);
       setTask(result);
       // Note: selectedPendingIds is NOT reset
     } catch (error) {
@@ -286,24 +286,28 @@ const QualityManagementDetail: React.FC = () => {
   };
 
   // Computed
-  const indicators = task?.indicators || [];
+  const qualityIndicators = task?.indicators || [];
+  const displayIndicators =
+    task?.allIndicators && task.allIndicators.length > 0
+      ? task.allIndicators
+      : qualityIndicators;
 
   // Helper: check if an indicator is a parent with children in the list
   const isParentWithChildren = useCallback(
     (indicator: QualityManagementIndicatorDto): boolean => {
       if (indicator.parentIndicatorId) return false; // Đây là sub-indicator
       // Kiểm tra xem có sub-indicators nào có parentIndicatorId === indicator.indicatorId AND cùng methodId
-      return indicators.some(
+      return qualityIndicators.some(
         (ind) =>
           ind.parentIndicatorId === indicator.indicatorId &&
           ind.methodId === indicator.methodId
       );
     },
-    [indicators]
+    [qualityIndicators]
   );
 
   // Filter out parent indicators with children for counting
-  const activeIndicators = indicators.filter((ind) => !isParentWithChildren(ind));
+  const activeIndicators = qualityIndicators.filter((ind) => !isParentWithChildren(ind));
 
   const approvedCount = activeIndicators.filter(
     (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Approved,
@@ -603,7 +607,7 @@ const QualityManagementDetail: React.FC = () => {
             title="Danh sách chỉ tiêu"
           >
             <IndicatorTable
-              indicators={indicators}
+              indicators={displayIndicators}
               taskStatus={task.status}
               onApprove={handleApproveIndicator}
               onReject={handleRejectIndicator}
@@ -621,7 +625,7 @@ const QualityManagementDetail: React.FC = () => {
         visible={printModalVisible}
         mode={printMode}
         taskId={id!}
-        indicators={indicators}
+        indicators={qualityIndicators}
         onCancel={() => setPrintModalVisible(false)}
         onSuccess={loadData}
       />

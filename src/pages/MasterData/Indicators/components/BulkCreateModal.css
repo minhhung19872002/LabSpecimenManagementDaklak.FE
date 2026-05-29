@@ -108,3 +108,79 @@
 .bulk-modal-sub-wrapper.is-last::before {
   bottom: calc(100% - 20px);
 }
+
+/* InputNumber height to match Select - Desktop */
+.bulk-create-modal .ant-space-compact {
+  height: 40px !important;
+}
+
+.bulk-create-modal .ant-space-compact .ant-input-number {
+  height: 40px !important;
+}
+
+.bulk-create-modal .ant-space-compact .ant-input-number-input {
+  height: 38px !important;
+}
+
+.bulk-create-modal .ant-space-compact .ant-input-number-addon,
+.bulk-create-modal .ant-space-compact .ant-space-addon {
+  height: 40px !important;
+  line-height: 38px !important;
+}
+
+/* RichTextEditor height to match Select - Desktop */
+.bulk-create-modal .rich-text-editor-wrapper .tiptap.ProseMirror {
+  min-height: 40px !important;
+  padding: 8px 11px !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 1024px) {
+  .bulk-create-modal .rich-text-editor-wrapper .tiptap.ProseMirror {
+    min-height: 36px !important;
+    padding: 6px 11px !important;
+  }
+
+  .bulk-create-modal .ant-space-compact {
+    height: 36px !important;
+  }
+
+  .bulk-create-modal .ant-space-compact .ant-input-number {
+    height: 36px !important;
+  }
+
+  .bulk-create-modal .ant-space-compact .ant-input-number-input {
+    height: 34px !important;
+  }
+
+  .bulk-create-modal .ant-space-compact .ant-input-number-addon,
+  .bulk-create-modal .ant-space-compact .ant-space-addon {
+    height: 36px !important;
+    line-height: 34px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .bulk-create-modal .rich-text-editor-wrapper .tiptap.ProseMirror {
+    min-height: 32px !important;
+    padding: 4px 11px !important;
+  }
+
+  .bulk-create-modal .ant-space-compact {
+    height: 32px !important;
+  }
+
+  .bulk-create-modal .ant-space-compact .ant-input-number {
+    height: 32px !important;
+  }
+
+  .bulk-create-modal .ant-space-compact .ant-input-number-input {
+    height: 30px !important;
+  }
+
+  .bulk-create-modal .ant-space-compact .ant-input-number-addon,
+  .bulk-create-modal .ant-space-compact .ant-space-addon {
+    height: 32px !important;
+    line-height: 30px !important;
+  }
+}

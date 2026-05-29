@@ -460,6 +460,8 @@ export interface LabTechManagerPendingTaskDto {
   requestCompletionDate: string | null;
   status: LaboratoryTaskStatus;
   daysUntilDeadline: number | null;
+  taskType?: string;
+  creationTime?: string;
 }
 
 // ============= Lab Technician (KTV) Pending Task DTO (Work Reminder) =============

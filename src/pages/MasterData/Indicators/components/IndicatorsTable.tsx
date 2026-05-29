@@ -643,28 +643,22 @@ const IndicatorsTable = forwardRef<IndicatorsTableRef, IndicatorsTableProps>(
                   pageSize: pageSizeProp,
                   total: totalCount,
                   showSizeChanger: true,
-                  pageSizeOptions: [50, 100, 150],
-                  showTotal: (total, range) => (
+                  pageSizeOptions: [10, 20, 50],
+                  showTotal: (total) => (
                     <>
-                      Hiển thị{" "}
-                      <b>
-                        {range[0]}-{range[1]}/{total}
-                      </b>
+                      Tổng <b>{total}</b> nhóm
                     </>
                   ),
                   onChange: onPageChange,
                   onShowSizeChange: onPageChange,
                 }
               : {
-                  pageSize: 50,
+                  pageSize: 10,
                   showSizeChanger: true,
-                  pageSizeOptions: [50, 100, 150],
-                  showTotal: (total, range) => (
+                  pageSizeOptions: [10, 20, 50],
+                  showTotal: (total) => (
                     <>
-                      Hiển thị{" "}
-                      <b>
-                        {range[0]}-{range[1]}/{total}
-                      </b>
+                      Tổng <b>{total}</b> nhóm
                     </>
                   ),
                 }

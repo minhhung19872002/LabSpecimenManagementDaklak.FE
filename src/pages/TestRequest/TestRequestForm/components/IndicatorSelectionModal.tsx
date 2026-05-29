@@ -33,17 +33,23 @@ import {
   SpecimenTypeDto,
   SampleTypeCategoryDto,
 } from "../../../../services/masterDataService";
+import type {
+  QuickCreateIndicatorsFromTestRequestResult,
+  QuickCreateIndicatorResultItem,
+} from "../../../../services/testRequestService";
 import IndicatorName from "../../../../components/common/IndicatorName";
 import {
   IndicatorDateInfo,
   LaboratoryAssignment,
   IndicatorMethodKey,
   IndicatorMethodInfo,
+  PENDING_TEST_METHOD_ID,
   parseIndicatorMethodKey,
   createIndicatorMethodKey,
   isIndicatorLocked,
 } from "../types";
 import IndicatorRow from "./IndicatorRow";
+import QuickCreateIndicatorModal from "./QuickCreateIndicatorModal";
 import {
   isHeavyMetalComboMet,
   isHgIndicator,
@@ -192,6 +198,9 @@ interface IndicatorSelectionModalProps {
   customPrices: Record<string, number>;
   onPriceChange: (key: string, price: number) => void;
   isRequestCompleted?: boolean;
+  testRequestId?: string;
+  contractNumber?: string;
+  onQuickIndicatorCreated: (result: QuickCreateIndicatorResultItem) => void;
 }
 
 const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
@@ -239,7 +248,11 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
   customPrices,
   onPriceChange,
   isRequestCompleted = false,
+  testRequestId,
+  contractNumber,
+  onQuickIndicatorCreated,
 }) => {
+  const [quickCreateVisible, setQuickCreateVisible] = useState(false);
   // Get effective price for a method key (custom price or master data price)
   const getEffectivePrice = (
     key: IndicatorMethodKey,
@@ -697,7 +710,9 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
   const indicatorsWithMethods = useMemo(() => {
     let filtered = indicators.filter(
       (ind) =>
-        ind.isActive && indicatorMethodsMap[ind.id]?.some((m) => m.isActive),
+        ind.isActive &&
+        !ind.parentIndicatorId &&
+        indicatorMethodsMap[ind.id]?.some((m) => m.isActive),
     );
     // Apply specimen type filter if active
     // Nếu filter active mà specimenTypeIndicatorIds rỗng -> hiện danh sách rỗng
@@ -1126,10 +1141,12 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
 
   // Render content grouped by: Nhóm CT → Loại mẫu → Chỉ tiêu → Phương pháp
   const renderBySpecimenType = () => {
-    // Get all indicators with active methods
+    // Get all parent indicators with active methods (sub-indicators are auto-selected with parent)
     let activeIndicators = indicators.filter(
       (ind) =>
-        ind.isActive && indicatorMethodsMap[ind.id]?.some((m) => m.isActive),
+        ind.isActive &&
+        !ind.parentIndicatorId &&
+        indicatorMethodsMap[ind.id]?.some((m) => m.isActive),
     );
 
     // Apply specimen type filter if active (from current sample)
@@ -1687,6 +1704,64 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     </>
   );
 
+  const registerSingleResult = useCallback(
+    (item: QuickCreateIndicatorResultItem, price: number) => {
+      onQuickIndicatorCreated(item);
+
+      const methodId = item.testMethodId || PENDING_TEST_METHOD_ID;
+      const methodKey = createIndicatorMethodKey(
+        item.indicator.id,
+        methodId,
+        item.specimenTypeId,
+      );
+
+      setTempSelectedIndicatorMethods((prev) =>
+        prev.includes(methodKey) ? prev : [...prev, methodKey],
+      );
+
+      setSelectedIndicatorDates((prev) => ({
+        ...prev,
+        [methodKey]: prev[methodKey] || {
+          transferDate: dayjs(),
+          requestDate: undefined,
+        },
+      }));
+
+      setExpandedIndicators((prev) =>
+        prev.includes(item.indicator.id) ? prev : [...prev, item.indicator.id],
+      );
+
+      if (price > 0) {
+        onPriceChange(`${currentSampleKey}_${methodKey}`, price);
+      }
+    },
+    [
+      currentSampleKey,
+      onQuickIndicatorCreated,
+      onPriceChange,
+      setExpandedIndicators,
+      setSelectedIndicatorDates,
+      setTempSelectedIndicatorMethods,
+    ],
+  );
+
+  const handleQuickIndicatorCreated = useCallback(
+    (
+      result: QuickCreateIndicatorsFromTestRequestResult,
+      prices: Record<string, number>,
+    ) => {
+      for (const parentItem of result.results) {
+        registerSingleResult(parentItem, prices[parentItem.indicator.id] || 0);
+
+        for (const subItem of parentItem.subIndicatorResults) {
+          registerSingleResult(subItem, 0);
+        }
+      }
+      setQuickCreateVisible(false);
+    },
+    [registerSingleResult],
+  );
+
   return (
     <>
       {/* Drawer for mobile indicator picker */}
@@ -1793,18 +1868,31 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
                 <Text strong style={{ color: "#fff" }}>
                   Danh sách đã chọn
                 </Text>
-                <Button
-                  size="small"
-                  icon={<Icon icon="bi:send" width={14} />}
-                  onClick={handleSendToLaboratory}
-                  style={{
-                    background: "#fff",
-                    color: "#1890ff",
-                    borderColor: "#fff",
-                  }}
-                >
-                  Gửi khoa phòng
-                </Button>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <Button
+                    size="small"
+                    onClick={() => setQuickCreateVisible(true)}
+                    style={{
+                      background: "#fff",
+                      color: "#1890ff",
+                      borderColor: "#fff",
+                    }}
+                  >
+                    Thêm chỉ tiêu mới
+                  </Button>
+                  <Button
+                    size="small"
+                    icon={<Icon icon="bi:send" width={14} />}
+                    onClick={handleSendToLaboratory}
+                    style={{
+                      background: "#fff",
+                      color: "#1890ff",
+                      borderColor: "#fff",
+                    }}
+                  >
+                    Gửi khoa phòng
+                  </Button>
+                </div>
               </div>
               <div className="indicator-table-container">
                 <div className="indicator-table-scroll">
@@ -2147,6 +2235,21 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
           </div>
         </div>
       </Modal>
+      <QuickCreateIndicatorModal
+        open={quickCreateVisible}
+        onCancel={() => setQuickCreateVisible(false)}
+        indicatorGroups={indicatorGroups}
+        specimenTypes={specimenTypes}
+        indicators={indicators}
+        indicatorToSpecimenTypesMap={indicatorToSpecimenTypesMap}
+        testRequestId={testRequestId}
+        contractNumber={contractNumber}
+        defaultIndicatorGroupId={
+          selectedGroupFilter !== "all" ? selectedGroupFilter : undefined
+        }
+        defaultSpecimenTypeId={currentSampleSpecimenTypeId}
+        onCreated={handleQuickIndicatorCreated}
+      />
     </>
   );
 };

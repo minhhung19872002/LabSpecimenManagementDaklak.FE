@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import {
   Table,
   Tag,
@@ -20,6 +20,9 @@ import {
   QualityIndicatorApprovalStatusLabels,
   QualityIndicatorApprovalStatusColors,
   QualityManagementStatus,
+  QLCLDisplayStatus,
+  QLCLDisplayStatusLabels,
+  QLCLDisplayStatusColors,
 } from "../../../types/qualityManagement";
 import IndicatorImageCell from "../../../components/common/IndicatorImageCell";
 import { IndicatorName } from "../../../components/common";
@@ -187,6 +190,18 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     </StatusTag>
   );
 
+  const getReportStatusTag = (isPrinted: boolean) => (
+    <StatusTag color={isPrinted ? "success" : "default"}>
+      {isPrinted ? "Đã phát hành" : "Chưa phát hành"}
+    </StatusTag>
+  );
+
+  const getWorkflowStatusTag = (status: QLCLDisplayStatus) => (
+    <StatusTag color={QLCLDisplayStatusColors[status]}>
+      {QLCLDisplayStatusLabels[status]}
+    </StatusTag>
+  );
+
   // Check permissions
   const canApprove = authService.hasPermission(PERMISSIONS.TestResults.Approve);
   const canReject = authService.hasPermission(PERMISSIONS.TestResults.Reject);
@@ -225,6 +240,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       .filter(
         (ind) =>
           ind.approvalStatus === QualityIndicatorApprovalStatus.PendingApproval &&
+          ind.isInQualityScope &&
           !ind._isParentWithChildren,
       )
       .map((ind) => ind.id);
@@ -247,6 +263,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       .filter(
         (ind) =>
           ind.approvalStatus === QualityIndicatorApprovalStatus.PendingApproval &&
+          ind.isInQualityScope &&
           !ind._isParentWithChildren,
       )
       .map((ind) => ind.id);
@@ -270,7 +287,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         render: (_, record) => {
           const isPending =
             record.approvalStatus ===
-            QualityIndicatorApprovalStatus.PendingApproval;
+              QualityIndicatorApprovalStatus.PendingApproval &&
+            record.isInQualityScope;
           // Don't show checkbox for parent indicators with children
           if (isPending && !record._isParentWithChildren) {
             return (
@@ -375,7 +393,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       {
         title: "Hình ảnh",
         key: "images",
-        width: 120,
+        width: 150,
         render: (_, record) => {
           // Don't show images for parent indicators with children
           if (record._isParentWithChildren) return null;
@@ -499,12 +517,22 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       },
       {
         title: "Trạng thái",
-        dataIndex: "approvalStatus",
-        key: "approvalStatus",
-        width: 120,
-        render: (status: QualityIndicatorApprovalStatus, record) => {
+        dataIndex: "qlclDisplayStatus",
+        key: "qlclDisplayStatus",
+        width: 150,
+        render: (status: QLCLDisplayStatus | undefined, record) => {
+          if (record._isParentWithChildren || status === undefined) return "-";
+          return getWorkflowStatusTag(status);
+        },
+      },
+      {
+        title: "Trạng thái báo cáo",
+        dataIndex: "isPrinted",
+        key: "reportStatus",
+        width: 140,
+        render: (isPrinted: boolean, record) => {
           if (record._isParentWithChildren) return "-";
-          return getApprovalStatusTag(status);
+          return getReportStatusTag(!!isPrinted);
         },
       },
     );
@@ -520,7 +548,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         render: (_, record) => {
           const isPending =
             record.approvalStatus ===
-            QualityIndicatorApprovalStatus.PendingApproval;
+              QualityIndicatorApprovalStatus.PendingApproval &&
+            record.isInQualityScope;
           // Don't show actions for parent indicators with children (they are auto-approved)
           if (!isPending || record._isParentWithChildren) {
             return null;
@@ -664,7 +693,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           const pendingCount = activeIndicators.filter(
             (ind) =>
               ind.approvalStatus ===
-              QualityIndicatorApprovalStatus.PendingApproval,
+                QualityIndicatorApprovalStatus.PendingApproval &&
+              ind.isInQualityScope,
           ).length;
 
           // Build sample display name

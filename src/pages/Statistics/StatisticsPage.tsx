@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Card,
   Row,
@@ -14,8 +14,8 @@ import {
   Modal,
   Tooltip,
   Radio,
-  Typography
-} from 'antd';
+  Typography,
+} from "antd";
 
 const { Text } = Typography;
 import {
@@ -26,24 +26,82 @@ import {
   BarChartOutlined,
   PieChartOutlined,
   ReloadOutlined,
-  FullscreenOutlined
-} from '../../components/common/Icon';
-import { Column, Pie } from '@ant-design/charts';
-import dayjs, { Dayjs } from 'dayjs';
+  FullscreenOutlined,
+  TableOutlined,
+  TeamOutlined,
+  EnvironmentOutlined,
+} from "../../components/common/Icon";
+import { Column, Pie, Scatter } from "@ant-design/charts";
+import dayjs, { Dayjs } from "dayjs";
 import {
   statisticsService,
   StatisticsDataDto,
   WorkloadByDepartmentDto,
-  TATComplianceDto
-} from '../../services/statisticsService';
-import { authService } from '../../services/authService';
-import { PERMISSIONS } from '../../constants/permissionMapping';
-import '../Dashboard/Dashboard.css';
-import '../../styles/ListCard.css';
+  TATComplianceDto,
+  LabStatisticsDto,
+  DepartmentWorkAssignmentDto,
+} from "../../services/statisticsService";
+import { authService } from "../../services/authService";
+import { PERMISSIONS } from "../../constants/permissionMapping";
+import "../Dashboard/Dashboard.css";
+import "../../styles/ListCard.css";
 
 const { RangePicker } = DatePicker;
 
-type FilterPeriod = 'month' | 'quarter' | 'half_year' | 'year';
+const PIE_COLORS = ["#5B8FF9","#5AD8A6","#5D7092","#F6BD16","#6F5EF9","#6DC8EC","#945FB9","#FF9845","#1E9493","#FF99C3","#61DDAA","#7262FD","#78D3F8","#9661BC","#F6903D"];
+
+const AVATAR_COLORS = [
+  "#1890ff",
+  "#52c41a",
+  "#722ed1",
+  "#eb2f96",
+  "#faad14",
+  "#13c2c2",
+  "#2f54eb",
+  "#fa541c",
+];
+
+const STATUS_CONFIG = [
+  {
+    key: "testingCount" as const,
+    label: "Làm",
+    fullLabel: "Đang thử nghiệm",
+    color: "#1890ff",
+  },
+  {
+    key: "notTestedCount" as const,
+    label: "Chờ",
+    fullLabel: "Chưa thử nghiệm",
+    color: "#faad14",
+  },
+  {
+    key: "waitingApprovalCount" as const,
+    label: "Duyệt",
+    fullLabel: "Chờ duyệt KQ",
+    color: "#722ed1",
+  },
+  {
+    key: "rejectedCount" as const,
+    label: "Trễ",
+    fullLabel: "Từ chối",
+    color: "#cf1322",
+  },
+  {
+    key: "approvedCount" as const,
+    label: "Xong",
+    fullLabel: "Đã duyệt",
+    color: "#52c41a",
+  },
+];
+
+const getInitials = (name: string) => {
+  const parts = name.split(/[\s.]+/).filter(Boolean);
+  return parts.length >= 2
+    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    : name.substring(0, 2).toUpperCase();
+};
+
+type FilterPeriod = "month" | "quarter" | "half_year" | "year";
 
 // Helper function to calculate date range based on period
 const getDateRangeForPeriod = (period: FilterPeriod): [Dayjs, Dayjs] => {
@@ -52,27 +110,31 @@ const getDateRangeForPeriod = (period: FilterPeriod): [Dayjs, Dayjs] => {
   const month = now.month() + 1; // dayjs month is 0-indexed
 
   switch (period) {
-    case 'month':
-      return [now.startOf('month'), now.endOf('month')];
-    case 'quarter': {
+    case "month":
+      return [now.startOf("month"), now.endOf("month")];
+    case "quarter": {
       const quarter = Math.ceil(month / 3);
       const quarterStart = (quarter - 1) * 3 + 1;
       return [
-        dayjs().month(quarterStart - 1).startOf('month'),
-        dayjs().month(quarterStart + 1).endOf('month'),
+        dayjs()
+          .month(quarterStart - 1)
+          .startOf("month"),
+        dayjs()
+          .month(quarterStart + 1)
+          .endOf("month"),
       ];
     }
-    case 'half_year': {
+    case "half_year": {
       if (month <= 6) {
         return [dayjs(`${year}-01-01`), dayjs(`${year}-06-30`)];
       } else {
         return [dayjs(`${year}-07-01`), dayjs(`${year}-12-31`)];
       }
     }
-    case 'year':
-      return [now.startOf('year'), now.endOf('year')];
+    case "year":
+      return [now.startOf("year"), now.endOf("year")];
     default:
-      return [now.startOf('month'), now.endOf('month')];
+      return [now.startOf("month"), now.endOf("month")];
   }
 };
 
@@ -81,29 +143,34 @@ type FullscreenState = boolean;
 
 const StatisticsPage: React.FC = () => {
   // Filter state
-  const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>('month');
-  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>(getDateRangeForPeriod('month'));
+  const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>("month");
+  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>(
+    getDateRangeForPeriod("month"),
+  );
   const [isCustomDateRange, setIsCustomDateRange] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [statisticsData, setStatisticsData] = useState<StatisticsDataDto | null>(null);
-  const [activeTab, setActiveTab] = useState('monthly');
+  const [statisticsData, setStatisticsData] =
+    useState<StatisticsDataDto | null>(null);
+  const [activeTab, setActiveTab] = useState("monthly");
   const [showFullscreen, setShowFullscreen] = useState<FullscreenState>(false);
   const [chartReady, setChartReady] = useState(false);
+  const [deptWorkView, setDeptWorkView] = useState<"table" | "chart">("table");
+  const [hiddenPieItems, setHiddenPieItems] = useState<Set<string>>(new Set());
 
   const fetchStatistics = useCallback(async () => {
     setLoading(true);
     try {
       const params: { fromDate?: string; toDate?: string } = {
-        fromDate: dateRange[0].format('YYYY-MM-DD'),
-        toDate: dateRange[1].format('YYYY-MM-DD'),
+        fromDate: dateRange[0].format("YYYY-MM-DD"),
+        toDate: dateRange[1].format("YYYY-MM-DD"),
       };
       const data = await statisticsService.getStatisticsData(params);
       setStatisticsData(data);
     } catch (error) {
-      console.error('Error fetching statistics:', error);
-      message.error('Không thể tải dữ liệu thống kê');
+      console.error("Error fetching statistics:", error);
+      message.error("Không thể tải dữ liệu thống kê");
     } finally {
       setLoading(false);
     }
@@ -117,7 +184,9 @@ const StatisticsPage: React.FC = () => {
   };
 
   // Handle date range change
-  const handleDateRangeChange = (dates: [Dayjs | null, Dayjs | null] | null) => {
+  const handleDateRangeChange = (
+    dates: [Dayjs | null, Dayjs | null] | null,
+  ) => {
     if (dates && dates[0] && dates[1]) {
       setDateRange([dates[0], dates[1]]);
       setIsCustomDateRange(true);
@@ -143,21 +212,21 @@ const StatisticsPage: React.FC = () => {
     setExporting(true);
     try {
       const params: { fromDate?: string; toDate?: string } = {
-        fromDate: dateRange[0].format('YYYY-MM-DD'),
-        toDate: dateRange[1].format('YYYY-MM-DD'),
+        fromDate: dateRange[0].format("YYYY-MM-DD"),
+        toDate: dateRange[1].format("YYYY-MM-DD"),
       };
       const blob = await statisticsService.exportToExcel(params);
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      const fileName = `statistics_${dateRange[0].format('YYYYMMDD')}_${dateRange[1].format('YYYYMMDD')}.xlsx`;
+      const fileName = `statistics_${dateRange[0].format("YYYYMMDD")}_${dateRange[1].format("YYYYMMDD")}.xlsx`;
       a.download = fileName;
       a.click();
       window.URL.revokeObjectURL(url);
-      message.success('Xuất báo cáo thành công');
+      message.success("Xuất báo cáo thành công");
     } catch (error) {
-      console.error('Error exporting statistics:', error);
-      message.error('Không thể xuất báo cáo');
+      console.error("Error exporting statistics:", error);
+      message.error("Không thể xuất báo cáo");
     } finally {
       setExporting(false);
     }
@@ -168,30 +237,58 @@ const StatisticsPage: React.FC = () => {
   const sampleMatrix = statisticsData?.sampleMatrix || [];
   const workloadByDepartment = statisticsData?.workloadByDepartment || [];
   const tatCompliance = statisticsData?.tatCompliance || [];
+  const labStatistics: LabStatisticsDto[] = statisticsData?.labStatistics || [];
+  const regionalBubbles = statisticsData?.regionalBubbles || [];
+
+  const rawDeptWork: DepartmentWorkAssignmentDto[] =
+    statisticsData?.departmentWorkAssignments || [];
+
+  const departmentWorkAssignments: DepartmentWorkAssignmentDto[] = (() => {
+    const labIds = new Set(labStatistics.map((l) => l.labId));
+    const filtered = rawDeptWork.filter((d) => labIds.has(d.labId));
+    for (const lab of labStatistics) {
+      if (!filtered.find((d) => d.labId === lab.labId)) {
+        filtered.push({
+          labId: lab.labId,
+          labName: lab.labName,
+          totalIndicators: 0,
+          technicians: [],
+        });
+      }
+    }
+    return filtered.sort((a, b) => b.totalIndicators - a.totalIndicators);
+  })();
 
   // Calculate totals from monthly trends
-  const totalRequests = monthlyTrends.reduce((sum, m) => sum + m.testRequests, 0);
+  const totalRequests = monthlyTrends.reduce(
+    (sum, m) => sum + m.testRequests,
+    0,
+  );
   const totalSpecimens = monthlyTrends.reduce((sum, m) => sum + m.specimens, 0);
   const totalTests = monthlyTrends.reduce((sum, m) => sum + m.tests, 0);
   const totalReports = monthlyTrends.reduce((sum, m) => sum + m.reports, 0);
 
   const monthlyColumns = [
-    { title: 'Tháng', dataIndex: 'month', key: 'month' },
-    { title: 'Yêu cầu', dataIndex: 'testRequests', key: 'testRequests' },
-    { title: 'Mẫu', dataIndex: 'specimens', key: 'specimens' },
-    { title: 'Phép thử', dataIndex: 'tests', key: 'tests' },
-    { title: 'Báo cáo', dataIndex: 'reports', key: 'reports' },
+    { title: "Tháng", dataIndex: "month", key: "month" },
+    { title: "Yêu cầu", dataIndex: "testRequests", key: "testRequests" },
+    { title: "Mẫu", dataIndex: "specimens", key: "specimens" },
+    { title: "Phép thử", dataIndex: "tests", key: "tests" },
+    { title: "Báo cáo", dataIndex: "reports", key: "reports" },
   ];
 
   const departmentColumns = [
-    { title: 'Phòng ban', dataIndex: 'department', key: 'department' },
-    { title: 'Tổng công việc', dataIndex: 'totalTasks', key: 'totalTasks' },
-    { title: 'Chờ xử lý', dataIndex: 'pendingTasks', key: 'pendingTasks' },
-    { title: 'Đang thực hiện', dataIndex: 'inProgressTasks', key: 'inProgressTasks' },
-    { title: 'Hoàn thành', dataIndex: 'completedTasks', key: 'completedTasks' },
+    { title: "Phòng ban", dataIndex: "department", key: "department" },
+    { title: "Tổng công việc", dataIndex: "totalTasks", key: "totalTasks" },
+    { title: "Chờ xử lý", dataIndex: "pendingTasks", key: "pendingTasks" },
     {
-      title: 'Hiệu suất',
-      key: 'completionRate',
+      title: "Đang thực hiện",
+      dataIndex: "inProgressTasks",
+      key: "inProgressTasks",
+    },
+    { title: "Hoàn thành", dataIndex: "completedTasks", key: "completedTasks" },
+    {
+      title: "Hiệu suất",
+      key: "completionRate",
       render: (_: unknown, record: WorkloadByDepartmentDto) => {
         const rate = record.completionRate;
         return (
@@ -199,7 +296,9 @@ const StatisticsPage: React.FC = () => {
             percent={rate}
             size="small"
             style={{ width: 100 }}
-            strokeColor={rate >= 90 ? '#52c41a' : rate >= 70 ? '#faad14' : '#cf1322'}
+            strokeColor={
+              rate >= 90 ? "#52c41a" : rate >= 70 ? "#faad14" : "#cf1322"
+            }
           />
         );
       },
@@ -207,13 +306,13 @@ const StatisticsPage: React.FC = () => {
   ];
 
   const tatColumns = [
-    { title: 'Kỳ', dataIndex: 'period', key: 'period' },
-    { title: 'Tổng yêu cầu', dataIndex: 'totalRequests', key: 'totalRequests' },
-    { title: 'Đúng hạn', dataIndex: 'onTimeRequests', key: 'onTimeRequests' },
-    { title: 'Trễ hạn', dataIndex: 'delayedRequests', key: 'delayedRequests' },
+    { title: "Kỳ", dataIndex: "period", key: "period" },
+    { title: "Tổng yêu cầu", dataIndex: "totalRequests", key: "totalRequests" },
+    { title: "Đúng hạn", dataIndex: "onTimeRequests", key: "onTimeRequests" },
+    { title: "Trễ hạn", dataIndex: "delayedRequests", key: "delayedRequests" },
     {
-      title: 'Tỷ lệ tuân thủ',
-      key: 'complianceRate',
+      title: "Tỷ lệ tuân thủ",
+      key: "complianceRate",
       render: (_: unknown, record: TATComplianceDto) => {
         const rate = record.complianceRate;
         return (
@@ -221,7 +320,9 @@ const StatisticsPage: React.FC = () => {
             percent={rate}
             size="small"
             style={{ width: 100 }}
-            strokeColor={rate >= 95 ? '#52c41a' : rate >= 85 ? '#faad14' : '#cf1322'}
+            strokeColor={
+              rate >= 95 ? "#52c41a" : rate >= 85 ? "#faad14" : "#cf1322"
+            }
           />
         );
       },
@@ -230,14 +331,14 @@ const StatisticsPage: React.FC = () => {
 
   // Render Monthly Trend Chart
   // autoFit = true means chart will fit to container width
-  const renderMonthlyTrendChart = (autoFit: boolean = false) => (
+  const renderMonthlyTrendChart = (autoFit: boolean = false) =>
     monthlyTrends.length > 0 ? (
       <Column
-        data={monthlyTrends.flatMap(item => [
-          { month: item.month, type: 'Yêu cầu', value: item.testRequests },
-          { month: item.month, type: 'Mẫu', value: item.specimens },
-          { month: item.month, type: 'Phép thử', value: item.tests },
-          { month: item.month, type: 'Báo cáo', value: item.reports },
+        data={monthlyTrends.flatMap((item) => [
+          { month: item.month, type: "Yêu cầu", value: item.testRequests },
+          { month: item.month, type: "Mẫu", value: item.specimens },
+          { month: item.month, type: "Phép thử", value: item.tests },
+          { month: item.month, type: "Báo cáo", value: item.reports },
         ])}
         xField="month"
         yField="value"
@@ -245,13 +346,20 @@ const StatisticsPage: React.FC = () => {
         group={true}
         height={autoFit ? undefined : 300}
         autoFit={autoFit}
-        legend={{ position: 'top' }}
-        color={['#1890ff', '#722ed1', '#52c41a', '#faad14']}
+        legend={{ position: "top" }}
+        color={["#1890ff", "#722ed1", "#52c41a", "#faad14"]}
       />
     ) : (
-      <Empty description="Không có dữ liệu" style={{ height: autoFit ? '100%' : 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }} />
-    )
-  );
+      <Empty
+        description="Không có dữ liệu"
+        style={{
+          height: autoFit ? "100%" : 300,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      />
+    );
 
   return (
     <div>
@@ -301,7 +409,7 @@ const StatisticsPage: React.FC = () => {
 
       <Spin spinning={loading}>
         {/* Summary Stats */}
-        <div className="dashboard-stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+        <div className="dashboard-stats-grid statistics-stats-grid">
           <Card className="dashboard-stat-card" bordered={false}>
             <div className="dashboard-stat-content">
               <div className="dashboard-stat-info">
@@ -331,7 +439,9 @@ const StatisticsPage: React.FC = () => {
           <Card className="dashboard-stat-card" bordered={false}>
             <div className="dashboard-stat-content">
               <div className="dashboard-stat-info">
-                <Text className="dashboard-stat-title">Tổng phép thử</Text>
+                <Text className="dashboard-stat-title">
+                  Tổng chỉ tiêu thử nghiệm
+                </Text>
                 <div className="dashboard-stat-value">
                   {overview?.totalTests ?? totalTests}
                 </div>
@@ -341,14 +451,55 @@ const StatisticsPage: React.FC = () => {
               </div>
             </div>
           </Card>
+          {(labStatistics.length > 0
+            ? labStatistics
+            : [
+                {
+                  labId: "ph1",
+                  labName: "Lab vi sinh",
+                  inProgressCount: 0,
+                  pendingCount: 0,
+                  technicianCount: 0,
+                },
+                {
+                  labId: "ph2",
+                  labName: "Lab Hóa",
+                  inProgressCount: 0,
+                  pendingCount: 0,
+                  technicianCount: 0,
+                },
+              ]
+          ).map((lab) => (
+            <Card
+              key={lab.labId}
+              className="dashboard-stat-card"
+              bordered={false}
+            >
+              <div className="lab-stat-content">
+                <Text className="lab-stat-title">{lab.labName}</Text>
+                <div className="lab-stat-ratio">
+                  {lab.inProgressCount}
+                  <span className="lab-stat-separator"> / </span>
+                  {lab.pendingCount}
+                </div>
+                <Text className="lab-stat-technician">
+                  {lab.technicianCount} thử nghiệm viên
+                </Text>
+              </div>
+            </Card>
+          ))}
         </div>
 
-        {/* Charts Row 1: Monthly Trends & Sample Distribution */}
+        {/* Charts Row 1: Monthly Trends & Sample Distribution & TAT Status */}
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          <Col xs={24} lg={14}>
+          <Col xs={24} lg={12}>
             <Card
               className="list-card"
-              title={<><BarChartOutlined /> Xu hướng theo tháng</>}
+              title={
+                <>
+                  <BarChartOutlined /> Xu hướng theo tháng
+                </>
+              }
               extra={
                 <Tooltip title="Xem toàn màn hình">
                   <Button
@@ -362,39 +513,233 @@ const StatisticsPage: React.FC = () => {
                 </Tooltip>
               }
               hoverable
-              style={{ cursor: 'pointer' }}
+              style={{ cursor: "pointer" }}
               onClick={() => setShowFullscreen(true)}
             >
-              <div style={{ height: 300, width: '100%' }}>
+              <div style={{ height: 300, width: "100%" }}>
                 {renderMonthlyTrendChart(true)}
               </div>
             </Card>
           </Col>
-          <Col xs={24} lg={10}>
-            <Card className="list-card" title={<><PieChartOutlined /> Phân bố loại mẫu</>}>
+          <Col xs={24} lg={6}>
+            <Card
+              className="list-card"
+              title={
+                <>
+                  <PieChartOutlined /> Phân bố loại mẫu
+                </>
+              }
+            >
               {sampleMatrix.length > 0 ? (
+                <>
+                  <div className="pie-custom-legend">
+                    {sampleMatrix.map((item, i) => {
+                      const hidden = hiddenPieItems.has(item.specimenType);
+                      return (
+                        <span
+                          key={item.specimenType}
+                          className={`pie-legend-item ${hidden ? "pie-legend-item--hidden" : ""}`}
+                          title={item.specimenType}
+                          onClick={() => {
+                            setHiddenPieItems((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(item.specimenType)) next.delete(item.specimenType);
+                              else next.add(item.specimenType);
+                              return next;
+                            });
+                          }}
+                        >
+                          <span
+                            className="pie-legend-dot"
+                            style={{ background: hidden ? "#d9d9d9" : PIE_COLORS[i % PIE_COLORS.length] }}
+                          />
+                          <span className="pie-legend-label">{item.specimenType}</span>
+                        </span>
+                      );
+                    })}
+                  </div>
+                  <Pie
+                    data={sampleMatrix
+                      .filter((item) => !hiddenPieItems.has(item.specimenType))
+                      .map((item) => ({
+                        type: item.specimenType,
+                        value: item.totalCount,
+                      }))}
+                    angleField="value"
+                    colorField="type"
+                    height={280}
+                    radius={0.8}
+                    innerRadius={0.5}
+                    label={{
+                      text: "value",
+                      position: "outside",
+                    }}
+                    legend={false}
+                    scale={{
+                      color: {
+                        domain: sampleMatrix
+                          .filter((item) => !hiddenPieItems.has(item.specimenType))
+                          .map((item) => item.specimenType),
+                        range: sampleMatrix
+                          .map((item, i) => ({ type: item.specimenType, color: PIE_COLORS[i % PIE_COLORS.length] }))
+                          .filter((item) => !hiddenPieItems.has(item.type))
+                          .map((item) => item.color),
+                      },
+                    }}
+                    tooltip={{
+                      title: "type",
+                    }}
+                  />
+                </>
+              ) : (
+                <Empty
+                  description="Không có dữ liệu"
+                  style={{
+                    height: 300,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                />
+              )}
+            </Card>
+          </Col>
+          <Col xs={24} lg={6}>
+            <Card
+              className="list-card"
+              title={
+                <>
+                  <PieChartOutlined /> Tình trạng TAT
+                </>
+              }
+            >
+              {(statisticsData?.tatStatus?.onTimeCount ?? 0) +
+                (statisticsData?.tatStatus?.lateCount ?? 0) >
+              0 ? (
                 <Pie
-                  data={sampleMatrix.map(item => ({
-                    type: item.specimenType,
-                    value: item.totalCount
-                  }))}
+                  data={[
+                    {
+                      type: "Đúng hạn",
+                      value: statisticsData?.tatStatus?.onTimeCount ?? 0,
+                    },
+                    {
+                      type: "Trễ hạn",
+                      value: statisticsData?.tatStatus?.lateCount ?? 0,
+                    },
+                  ]}
                   angleField="value"
                   colorField="type"
                   height={300}
                   radius={0.8}
                   innerRadius={0.5}
+                  color={["#1890ff", "#cf1322"]}
                   label={{
-                    text: 'value',
-                    position: 'outside',
+                    text: "value",
+                    position: "outside",
                   }}
-                  legend={{ position: 'right' }}
+                  legend={{ position: "bottom" }}
                   tooltip={{
-                    title: 'type',
+                    title: "type",
                   }}
                 />
               ) : (
-                <Empty description="Không có dữ liệu" style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }} />
+                <Empty
+                  description="Không có dữ liệu"
+                  style={{
+                    height: 300,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                />
               )}
+            </Card>
+          </Col>
+        </Row>
+
+        {/* Bubble Chart: Regional Distribution */}
+        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+          <Col xs={24}>
+            <Card
+              className="list-card"
+              title={
+                <>
+                  <EnvironmentOutlined /> Phân vùng địa lý khách hàng
+                </>
+              }
+              extra={
+                <Text style={{ fontSize: 12, color: "#fff" }}>
+                  X: mẫu &middot; Y: DT &middot; ⊙: số chỉ tiêu
+                </Text>
+              }
+            >
+              <div style={{ padding: "0 16px 16px" }}>
+                {regionalBubbles.length > 0 ? (
+                  <Scatter
+                    data={regionalBubbles}
+                    xField="totalSamples"
+                    yField="totalRevenue"
+                    sizeField="totalIndicators"
+                    colorField="ward"
+                    height={450}
+                    legend={{ position: "top" }}
+                    scale={{
+                      color: {
+                        range: [
+                          "#5B8FF9",
+                          "#5AD8A6",
+                          "#F6903D",
+                          "#6DC8EC",
+                          "#9270CA",
+                          "#FF6B6B",
+                          "#FFCA28",
+                          "#26C6DA",
+                          "#E040FB",
+                          "#FF8A65",
+                          "#66BB6A",
+                          "#42A5F5",
+                          "#AB47BC",
+                          "#EF5350",
+                          "#29B6F6",
+                        ],
+                      },
+                      size: { range: [12, 60] },
+                    }}
+                    style={{
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      fill: (d: any) => {
+                        const colors = ["#5B8FF9","#5AD8A6","#F6903D","#6DC8EC","#9270CA","#FF6B6B","#FFCA28","#26C6DA","#E040FB","#FF8A65","#66BB6A","#42A5F5","#AB47BC","#EF5350","#29B6F6"];
+                        const wards = [...new Set(regionalBubbles.map(b => b.ward))];
+                        const idx = wards.indexOf(d.ward);
+                        return colors[idx >= 0 ? idx % colors.length : 0];
+                      },
+                      fillOpacity: 0.75,
+                    }}
+                    axis={{
+                      x: { title: "Số mẫu thử nghiệm" },
+                      y: { title: "Doanh thu (triệu đ)" },
+                    }}
+                    tooltip={{
+                      title: "ward",
+                      items: [
+                        { field: "totalSamples", name: "Số mẫu" },
+                        { field: "totalRevenue", name: "Doanh thu (triệu đ)" },
+                        { field: "totalIndicators", name: "Số chỉ tiêu" },
+                      ],
+                    }}
+                  />
+                ) : (
+                  <Empty
+                    description="Không có dữ liệu"
+                    style={{
+                      height: 300,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  />
+                )}
+              </div>
             </Card>
           </Col>
         </Row>
@@ -402,33 +747,251 @@ const StatisticsPage: React.FC = () => {
         {/* Charts Row 2: Department Workload */}
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
           <Col xs={24}>
-            <Card className="list-card" title={<><BarChartOutlined /> Khối lượng công việc theo khoa phòng</>}>
+            <Card
+              className="list-card"
+              title={
+                <>
+                  <BarChartOutlined /> Khối lượng công việc theo khoa phòng
+                </>
+              }
+            >
               {workloadByDepartment.length > 0 ? (
                 <Column
-                  data={workloadByDepartment.flatMap(item => [
-                    { department: item.department, type: 'Chờ xử lý', value: item.pendingTasks },
-                    { department: item.department, type: 'Đang thực hiện', value: item.inProgressTasks },
-                    { department: item.department, type: 'Hoàn thành', value: item.completedTasks },
+                  data={workloadByDepartment.flatMap((item) => [
+                    {
+                      department: item.department,
+                      type: "Chờ xử lý",
+                      value: item.pendingTasks,
+                    },
+                    {
+                      department: item.department,
+                      type: "Đang thực hiện",
+                      value: item.inProgressTasks,
+                    },
+                    {
+                      department: item.department,
+                      type: "Hoàn thành",
+                      value: item.completedTasks,
+                    },
                   ])}
                   xField="department"
                   yField="value"
                   colorField="type"
-                  isStack={true}
+                  stack={true}
                   height={300}
-                  legend={{ position: 'top' }}
-                  color={['#faad14', '#1890ff', '#52c41a']}
+                  legend={{ position: "top" }}
+                  scale={{
+                    color: {
+                      domain: ["Chờ xử lý", "Đang thực hiện", "Hoàn thành"],
+                      range: ["#faad14", "#1890ff", "#52c41a"],
+                    },
+                  }}
                   label={{
-                    text: 'value',
-                    position: 'inside',
-                    textBaseline: 'bottom',
+                    text: "value",
+                    position: "inside",
+                    textBaseline: "bottom",
                   }}
                 />
               ) : (
-                <Empty description="Không có dữ liệu" style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }} />
+                <Empty
+                  description="Không có dữ liệu"
+                  style={{
+                    height: 300,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                />
               )}
             </Card>
           </Col>
         </Row>
+
+        {/* Department Work Assignment */}
+        {departmentWorkAssignments.length > 0 && (
+          <Card
+            className="list-card"
+            style={{ marginBottom: 16 }}
+            title={
+              <>
+                <TeamOutlined /> Phân công công việc theo phòng ban
+              </>
+            }
+            extra={
+              <Radio.Group
+                value={deptWorkView}
+                onChange={(e) => setDeptWorkView(e.target.value)}
+                optionType="button"
+                buttonStyle="solid"
+                size="small"
+              >
+                <Radio.Button value="table">
+                  <TableOutlined /> Bảng
+                </Radio.Button>
+                <Radio.Button value="chart">
+                  <BarChartOutlined /> Biểu đồ
+                </Radio.Button>
+              </Radio.Group>
+            }
+          >
+            <div style={{ padding: "0 16px 16px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 12,
+                  flexWrap: "wrap",
+                  marginBottom: 12,
+                }}
+              >
+                <Text style={{ fontSize: 12, color: "#8c8c8c" }}>
+                  Trạng thái:
+                </Text>
+                {STATUS_CONFIG.map((s) => (
+                  <span
+                    key={s.key}
+                    style={{ display: "flex", alignItems: "center", gap: 4 }}
+                  >
+                    <span
+                      style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
+                        background: s.color,
+                        display: "inline-block",
+                      }}
+                    />
+                    <Text style={{ fontSize: 12 }}>{s.fullLabel}</Text>
+                  </span>
+                ))}
+              </div>
+              <Row gutter={[16, 16]}>
+                {departmentWorkAssignments.map((dept) => (
+                  <Col key={dept.labId} xs={24} lg={12}>
+                    <div className="dept-work-panel">
+                      <div className="dept-work-header">
+                        <Text className="dept-work-header-title">
+                          {dept.labName}
+                        </Text>
+                        <span className="dept-work-header-badge">
+                          {dept.totalIndicators} mẫu
+                        </span>
+                      </div>
+                      {dept.technicians.length === 0 ? (
+                        <Empty
+                          description="Không có dữ liệu"
+                          image={Empty.PRESENTED_IMAGE_SIMPLE}
+                          style={{ margin: "24px 0" }}
+                        />
+                      ) : deptWorkView === "chart" ? (
+                        <div>
+                          {dept.technicians.map((tech, tIdx) => (
+                            <div
+                              key={tech.technicianId}
+                              className="dept-work-bar-row"
+                            >
+                              <div className="dept-work-bar-name">
+                                <span
+                                  className="dept-work-avatar"
+                                  style={{
+                                    background:
+                                      AVATAR_COLORS[
+                                        tIdx % AVATAR_COLORS.length
+                                      ],
+                                  }}
+                                >
+                                  {getInitials(tech.technicianName)}
+                                </span>
+                                <span className="dept-work-name-text">
+                                  {tech.technicianName}
+                                </span>
+                              </div>
+                              <div className="dept-work-bar-container">
+                                {STATUS_CONFIG.map((s) => {
+                                  const val = tech[s.key];
+                                  if (!val) return null;
+                                  const pct = (val / tech.totalCount) * 100;
+                                  return (
+                                    <div
+                                      key={s.key}
+                                      className="dept-work-bar-segment"
+                                      style={{
+                                        width: `${pct}%`,
+                                        background: s.color,
+                                      }}
+                                    >
+                                      {pct > 8 ? val : ""}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <span className="dept-work-bar-total">
+                                {tech.totalCount} mẫu
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <table className="dept-work-table">
+                          <thead>
+                            <tr>
+                              <th style={{ textAlign: "left" }}>Nhân viên</th>
+                              {STATUS_CONFIG.map((s) => (
+                                <th key={s.key} style={{ color: s.color }}>
+                                  {s.label}
+                                </th>
+                              ))}
+                              <th>Tổng</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {dept.technicians.map((tech, tIdx) => (
+                              <tr key={tech.technicianId}>
+                                <td>
+                                  <div className="dept-work-name-cell">
+                                    <span
+                                      className="dept-work-avatar"
+                                      style={{
+                                        background:
+                                          AVATAR_COLORS[
+                                            tIdx % AVATAR_COLORS.length
+                                          ],
+                                      }}
+                                    >
+                                      {getInitials(tech.technicianName)}
+                                    </span>
+                                    <span className="dept-work-name-text">
+                                      {tech.technicianName}
+                                    </span>
+                                  </div>
+                                </td>
+                                {STATUS_CONFIG.map((s) => (
+                                  <td key={s.key}>
+                                    <span
+                                      className="dept-work-badge"
+                                      style={{
+                                        background: `${s.color}18`,
+                                        color: s.color,
+                                      }}
+                                    >
+                                      {tech[s.key]}
+                                    </span>
+                                  </td>
+                                ))}
+                                <td className="dept-work-total">
+                                  {tech.totalCount}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  </Col>
+                ))}
+              </Row>
+            </div>
+          </Card>
+        )}
 
         {/* Tabs for detailed stats */}
         <div className="statistics-detail-tabs">
@@ -444,8 +1007,8 @@ const StatisticsPage: React.FC = () => {
           </Radio.Group>
         </div>
         <Card className="list-card statistics-detail-card">
-          {activeTab === 'monthly' && (
-            monthlyTrends.length > 0 ? (
+          {activeTab === "monthly" &&
+            (monthlyTrends.length > 0 ? (
               <Table
                 dataSource={monthlyTrends}
                 columns={monthlyColumns}
@@ -454,22 +1017,33 @@ const StatisticsPage: React.FC = () => {
                 scroll={{ x: 600 }}
                 summary={() => (
                   <Table.Summary fixed>
-                    <Table.Summary.Row style={{ backgroundColor: '#fafafa', fontWeight: 'bold' }}>
-                      <Table.Summary.Cell index={0}>Tổng cộng</Table.Summary.Cell>
-                      <Table.Summary.Cell index={1}>{totalRequests}</Table.Summary.Cell>
-                      <Table.Summary.Cell index={2}>{totalSpecimens}</Table.Summary.Cell>
-                      <Table.Summary.Cell index={3}>{totalTests}</Table.Summary.Cell>
-                      <Table.Summary.Cell index={4}>{totalReports}</Table.Summary.Cell>
+                    <Table.Summary.Row
+                      style={{ backgroundColor: "#fafafa", fontWeight: "bold" }}
+                    >
+                      <Table.Summary.Cell index={0}>
+                        Tổng cộng
+                      </Table.Summary.Cell>
+                      <Table.Summary.Cell index={1}>
+                        {totalRequests}
+                      </Table.Summary.Cell>
+                      <Table.Summary.Cell index={2}>
+                        {totalSpecimens}
+                      </Table.Summary.Cell>
+                      <Table.Summary.Cell index={3}>
+                        {totalTests}
+                      </Table.Summary.Cell>
+                      <Table.Summary.Cell index={4}>
+                        {totalReports}
+                      </Table.Summary.Cell>
                     </Table.Summary.Row>
                   </Table.Summary>
                 )}
               />
             ) : (
               <Empty description="Không có dữ liệu" />
-            )
-          )}
-          {activeTab === 'department' && (
-            workloadByDepartment.length > 0 ? (
+            ))}
+          {activeTab === "department" &&
+            (workloadByDepartment.length > 0 ? (
               <Table
                 dataSource={workloadByDepartment}
                 columns={departmentColumns}
@@ -478,10 +1052,9 @@ const StatisticsPage: React.FC = () => {
               />
             ) : (
               <Empty description="Không có dữ liệu" />
-            )
-          )}
-          {activeTab === 'tat' && (
-            tatCompliance.length > 0 ? (
+            ))}
+          {activeTab === "tat" &&
+            (tatCompliance.length > 0 ? (
               <Table
                 dataSource={tatCompliance}
                 columns={tatColumns}
@@ -490,8 +1063,7 @@ const StatisticsPage: React.FC = () => {
               />
             ) : (
               <Empty description="Không có dữ liệu" />
-            )
-          )}
+            ))}
         </Card>
       </Spin>
 
@@ -509,13 +1081,13 @@ const StatisticsPage: React.FC = () => {
         centered
         styles={{
           body: {
-            padding: '24px 0 0 0',
-            overflow: 'hidden'
-          }
+            padding: "24px 0 0 0",
+            overflow: "hidden",
+          },
         }}
         wrapClassName="chart-fullscreen-modal"
       >
-        <div style={{ width: '100%', height: 'calc(80vh - 100px)' }}>
+        <div style={{ width: "100%", height: "calc(80vh - 100px)" }}>
           {showFullscreen && chartReady && renderMonthlyTrendChart(true)}
         </div>
       </Modal>

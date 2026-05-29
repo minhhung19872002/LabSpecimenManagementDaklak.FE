@@ -16,6 +16,7 @@ import {
   LaboratoryAssignment,
   IndicatorMethodKey,
   IndicatorMethodInfo,
+  PENDING_TEST_METHOD_ID,
   createIndicatorMethodKey,
   parseIndicatorMethodKey,
   isIndicatorLocked,
@@ -970,7 +971,10 @@ export const useTestRequestFormActions = ({
               return {
                 id: existingIndicatorId || undefined, // Include id for existing indicators
                 indicatorId,
-                testMethodId,
+                testMethodId:
+                  testMethodId === PENDING_TEST_METHOD_ID
+                    ? undefined
+                    : testMethodId,
                 specimenTypeId: specimenTypeId || undefined, // Include specimenTypeId to correctly identify price
                 laboratoryId: labAssignment?.laboratoryId || undefined,
                 unitPrice: isComboFree ? 0 : effectivePrice,
@@ -1299,7 +1303,10 @@ export const useTestRequestFormActions = ({
               const previewEffectivePrice = customPrices[previewCustomKey] !== undefined ? customPrices[previewCustomKey] : previewMasterPrice;
               return {
                 indicatorId,
-                testMethodId: testMethodId || undefined,
+                testMethodId:
+                  testMethodId && testMethodId !== PENDING_TEST_METHOD_ID
+                    ? testMethodId
+                    : undefined,
                 specimenTypeId: specimenTypeId || undefined,
                 indicatorName: indicator?.name || "",
                 indicatorFormattedName: indicator?.formattedName || undefined,

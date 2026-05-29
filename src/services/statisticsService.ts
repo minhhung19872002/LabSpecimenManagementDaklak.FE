@@ -43,12 +43,54 @@ export interface MonthlyTrendDto {
   reports: number;
 }
 
+export interface TATStatusDto {
+  onTimeCount: number;
+  lateCount: number;
+}
+
+export interface LabStatisticsDto {
+  labId: string;
+  labName: string;
+  inProgressCount: number;
+  pendingCount: number;
+  technicianCount: number;
+}
+
+export interface TechnicianWorkDto {
+  technicianId: string;
+  technicianName: string;
+  testingCount: number;
+  notTestedCount: number;
+  waitingApprovalCount: number;
+  rejectedCount: number;
+  approvedCount: number;
+  totalCount: number;
+}
+
+export interface DepartmentWorkAssignmentDto {
+  labId: string;
+  labName: string;
+  totalIndicators: number;
+  technicians: TechnicianWorkDto[];
+}
+
+export interface RegionalBubbleDto {
+  ward: string;
+  totalRevenue: number;
+  totalSamples: number;
+  totalIndicators: number;
+}
+
 export interface StatisticsDataDto {
   overview: StatisticsOverviewDto;
   sampleMatrix: SampleMatrixDto[];
   tatCompliance: TATComplianceDto[];
   workloadByDepartment: WorkloadByDepartmentDto[];
   monthlyTrends: MonthlyTrendDto[];
+  labStatistics: LabStatisticsDto[];
+  tatStatus: TATStatusDto;
+  departmentWorkAssignments: DepartmentWorkAssignmentDto[];
+  regionalBubbles: RegionalBubbleDto[];
 }
 
 export interface StatisticsQueryParams {

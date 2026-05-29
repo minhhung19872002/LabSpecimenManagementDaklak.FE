@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 import { Modal, Table, Button } from "antd";
 import { LabTechManagerPendingTaskDto } from "../../types/laboratoryTask";
 import { getLabTechManagerColumns } from "./columns";
@@ -15,14 +15,21 @@ const LabTechManagerReminderModal: React.FC<LabTechManagerReminderModalProps> = 
   onClose,
 }) => {
 
-  const handleOpenInNewTab = (record: LabTechManagerPendingTaskDto, e: React.MouseEvent) => {
-    e.stopPropagation();
-    window.open(`/tasks/${record.id}`, "_blank");
-  };
+  const handleOpenInNewTab = useCallback(
+    (record: LabTechManagerPendingTaskDto, e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (record.taskType === "IndicatorMethodSetup") {
+        window.open("/master-data?tab=indicators", "_blank");
+      } else {
+        window.open(`/tasks/${record.id}`, "_blank");
+      }
+    },
+    []
+  );
 
   const columns = useMemo(
     () => getLabTechManagerColumns({ onOpenInNewTab: handleOpenInNewTab }),
-    []
+    [handleOpenInNewTab]
   );
 
   return (

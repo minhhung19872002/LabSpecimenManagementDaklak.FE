@@ -1,10 +1,7 @@
 import React from "react";
 import { Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import {
-  LabTechManagerPendingTaskDto,
-  LaboratoryTaskStatus,
-} from "../../../types/laboratoryTask";
+import { LabTechManagerPendingTaskDto } from "../../../types/laboratoryTask";
 import { formatDate } from "../../../utils/formatters";
 
 const { Text, Link } = Typography;
@@ -19,11 +16,8 @@ interface LabTechManagerColumnsOptions {
 const getTaskNameType = (
   record: LabTechManagerPendingTaskDto
 ): "warning" | "danger" | "secondary" => {
-  if (record.status === LaboratoryTaskStatus.WaitingApproval) {
-    return "warning";
-  }
-  if (record.status === LaboratoryTaskStatus.UnderEvaluation) {
-    return "warning";
+  if (record.taskType === "IndicatorMethodSetup") {
+    return "secondary";
   }
   if (record.daysUntilDeadline !== null && record.daysUntilDeadline <= 2) {
     return "danger";
@@ -35,7 +29,7 @@ export const getLabTechManagerColumns = (
   options: LabTechManagerColumnsOptions
 ): ColumnsType<LabTechManagerPendingTaskDto> => [
   {
-    title: "Hợp đồng",
+    title: "Hợp đồng / Mã CT",
     dataIndex: "contractNumber",
     key: "contractNumber",
     render: (text: string, record: LabTechManagerPendingTaskDto) => (
@@ -58,13 +52,15 @@ export const getLabTechManagerColumns = (
     title: "Ngày chuyển giao",
     dataIndex: "transferDate",
     key: "transferDate",
-    render: (date: string | null) => formatDate(date),
+    render: (date: string | null, record: LabTechManagerPendingTaskDto) =>
+      record.taskType === "IndicatorMethodSetup" ? "-" : formatDate(date),
   },
   {
     title: "Ngày YC xong",
     dataIndex: "requestCompletionDate",
     key: "requestCompletionDate",
     render: (date: string | null, record: LabTechManagerPendingTaskDto) => {
+      if (record.taskType === "IndicatorMethodSetup") return "-";
       const formatted = formatDate(date);
       if (record.daysUntilDeadline !== null && record.daysUntilDeadline <= 5) {
         return (

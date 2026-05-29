@@ -41,6 +41,7 @@ import {
 import "../TestRequestForm.css";
 import "../../../styles/ListCard.css";
 import { PATH_ROUTES } from "../../../constants";
+import { usePageTitleOverride } from "../../../hooks/usePageTitle";
 
 const TestRequestForm: React.FC = () => {
   // Data hook
@@ -147,6 +148,7 @@ const TestRequestForm: React.FC = () => {
     getIndicatorMethodInfo,
     getFilteredIndicators,
     getFilteredGroupsWithIndicators,
+    registerQuickCreatedIndicator,
     clearDraft,
     navigate,
   } = useTestRequestFormData();
@@ -244,6 +246,12 @@ const TestRequestForm: React.FC = () => {
   const watchedContractDate = Form.useWatch("contractDate", form);
   const watchedSampleType = Form.useWatch("sampleType", form);
   const watchedSubContract = Form.useWatch("subContract", form);
+
+  usePageTitleOverride(
+    isEditMode && watchedContractNumber?.trim()
+      ? `Sửa phiếu - ${watchedContractNumber.trim()}`
+      : undefined,
+  );
 
   useEffect(() => {
     const formSections = formSectionsRef.current;
@@ -536,6 +544,9 @@ const TestRequestForm: React.FC = () => {
             setIndicatorSearchText={setIndicatorSearchText}
             customPrices={customPrices}
             isRequestCompleted={currentStatus === TestRequestStatus.Completed}
+            testRequestId={id}
+            contractNumber={form.getFieldValue("contractNumber")}
+            onQuickIndicatorCreated={registerQuickCreatedIndicator}
             onPriceChange={(key, price) =>
               setCustomPrices((prev) => ({ ...prev, [key]: price }))
             }

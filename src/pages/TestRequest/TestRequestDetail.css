@@ -250,10 +250,26 @@
   border: 1px solid #FFFFFF !important;
 }
 
-.test-request-detail .list-card .card-header-flex .ant-tag.request-number-tag {
-  background: #1890FF !important;
-  border: 1px solid #FFFFFF !important;
+.test-request-detail .list-card .card-header-flex .ant-tag.payment-status-tag {
   color: #FFFFFF;
+  border-width: 1px !important;
+  border-style: solid !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.test-request-detail .list-card .card-header-flex .ant-tag.payment-status-paid {
+  background: #52C41A !important;
+  border-color: #52C41A !important;
+}
+
+.test-request-detail .list-card .card-header-flex .ant-tag.payment-status-unpaid {
+  background: #8C8C8C !important;
+  border-color: #8C8C8C !important;
+}
+
+.test-request-detail .list-card .card-header-flex .ant-tag.payment-status-no-payment {
+  background: #1677FF !important;
+  border-color: #1677FF !important;
 }
 
 @media (max-width: 767px) {

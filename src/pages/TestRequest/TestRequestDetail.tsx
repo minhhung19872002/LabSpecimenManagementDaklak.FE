@@ -22,6 +22,7 @@ import {
 import { IndicatorApprovalStatus } from "../../types/laboratoryTask";
 import "./TestRequestDetail.css";
 import { useMultipleActionPermissions } from "../../hooks/useActionPermission";
+import { usePageTitleOverride } from "../../hooks/usePageTitle";
 
 // Components
 import TestRequestDetailContainer from "./components/TestRequestDetailContainer";
@@ -79,6 +80,8 @@ const TestRequestDetail: React.FC = () => {
 
   // Form for cancel reason
   const [cancelForm] = Form.useForm();
+
+  usePageTitleOverride(data?.contractNumber || undefined);
 
   useEffect(() => {
     if (id) {
