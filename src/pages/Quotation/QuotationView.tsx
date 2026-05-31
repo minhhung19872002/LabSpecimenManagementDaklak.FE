@@ -78,7 +78,7 @@ const QuotationView: React.FC = () => {
     return (
       quotation?.samples?.map((sample) => ({
         sampleName: sample.sampleName,
-        quantity: 1,
+        quantity: sample.quantity || 1,
         indicators: sample.indicators.map((ind) => ({
           indicatorName: ind.indicatorName,
           quantity: 1,
@@ -121,6 +121,7 @@ const QuotationView: React.FC = () => {
   interface FlatIndicatorRow extends QuotationSampleIndicatorDto {
     sampleName: string;
     sampleId: string;
+    sampleQuantity: number;
     rowSpan: number;
     sampleTotalPrice: number;
   }
@@ -130,6 +131,7 @@ const QuotationView: React.FC = () => {
       ...indicator,
       sampleName: sample.sampleName,
       sampleId: sample.id,
+      sampleQuantity: sample.quantity || 1,
       rowSpan: idx === 0 ? sample.indicators.length : 0,
       sampleTotalPrice: sample.totalPrice,
     }))
@@ -146,6 +148,16 @@ const QuotationView: React.FC = () => {
         rowSpan: record.rowSpan,
       }),
       render: (value) => <Text strong>{value}</Text>,
+    },
+    {
+      title: "SL",
+      dataIndex: "sampleQuantity",
+      key: "sampleQuantity",
+      width: 60,
+      align: "center" as const,
+      onCell: (record) => ({
+        rowSpan: record.rowSpan,
+      }),
     },
     {
       title: "Chỉ tiêu",
