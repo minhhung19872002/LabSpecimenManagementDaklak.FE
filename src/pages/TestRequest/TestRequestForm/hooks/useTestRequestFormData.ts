@@ -751,12 +751,10 @@ export const useTestRequestFormData = () => {
         // Parse dates helper - handle both UTC formats
         const parseDate = (dateStr: string | null | undefined): dayjs.Dayjs | undefined => {
           if (!dateStr || typeof dateStr !== 'string') return undefined;
-          // If no Z suffix, append it to treat as UTC
-          const utcDateStr = dateStr.endsWith('Z') ? dateStr : `${dateStr}Z`;
-          // Parse as UTC, then convert to local timezone
-          const parsed = dayjs(utcDateStr);
+          const hasTimezone = dateStr.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(dateStr);
+          const normalizedStr = hasTimezone ? dateStr : `${dateStr}Z`;
+          const parsed = dayjs(normalizedStr);
           if (!parsed.isValid()) return undefined;
-          // Return date at start of day in local timezone
           return parsed.startOf('day');
         };
 
