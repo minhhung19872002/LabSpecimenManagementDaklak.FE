@@ -40,11 +40,11 @@ export const getTestRequestColumns = (
   },
   {
     title: "Ngày HĐ",
-    dataIndex: "requestDate",
-    key: "requestDate",
+    dataIndex: "contractDate",
+    key: "contractDate",
     width: 130,
     render: (date: string) => formatDate(date),
-    sorter: (a, b) => dayjs(a.requestDate).unix() - dayjs(b.requestDate).unix(),
+    sorter: (a, b) => dayjs(a.contractDate).unix() - dayjs(b.contractDate).unix(),
   },
   {
     title: "Ngày hoàn thành dự kiến",

@@ -751,12 +751,10 @@ export const useTestRequestFormData = () => {
         // Parse dates helper - handle both UTC formats
         const parseDate = (dateStr: string | null | undefined): dayjs.Dayjs | undefined => {
           if (!dateStr || typeof dateStr !== 'string') return undefined;
-          // If no Z suffix, append it to treat as UTC
-          const utcDateStr = dateStr.endsWith('Z') ? dateStr : `${dateStr}Z`;
-          // Parse as UTC, then convert to local timezone
-          const parsed = dayjs(utcDateStr);
+          const hasTimezone = dateStr.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(dateStr);
+          const normalizedStr = hasTimezone ? dateStr : `${dateStr}Z`;
+          const parsed = dayjs(normalizedStr);
           if (!parsed.isValid()) return undefined;
-          // Return date at start of day in local timezone
           return parsed.startOf('day');
         };
 
@@ -865,16 +863,14 @@ export const useTestRequestFormData = () => {
       const generatedSamples: SampleFormData[] = [];
       const generatedDates: Record<string, IndicatorDateInfo> = {};
 
-      quotation.samples.forEach((quotationSample, sampleIndex) => {
-        const sampleKey = `quotation-sample-${Date.now()}-${sampleIndex}`;
-        const sampleCode = generateSampleCode(sampleCodePrefix, sampleIndex + 1);
+      let globalIndex = 0;
+      quotation.samples.forEach((quotationSample) => {
+        const qty = quotationSample.quantity || 1;
 
-        // Get indicators from quotation sample
-        // Use specimenTypeId from quotation API if available, fallback to master data resolution
+        // Build indicator methods list once per quotation sample
         const indicatorMethodsList: IndicatorMethodKey[] = [];
         quotationSample.indicators.forEach((indicator) => {
           const testMethodId = indicator.testMethodId || "";
-          // Prefer specimenTypeId stored in quotation, fallback to master data
           let resolvedSpecimenTypeId = indicator.specimenTypeId || undefined;
           if (!resolvedSpecimenTypeId) {
             const methods = indicatorMethodsMap[indicator.indicatorId] || [];
@@ -884,7 +880,6 @@ export const useTestRequestFormData = () => {
           const methodKey = createIndicatorMethodKey(indicator.indicatorId, testMethodId, resolvedSpecimenTypeId);
           indicatorMethodsList.push(methodKey);
 
-          // Set dates for indicators (requestDate để trống theo yêu cầu KH)
           if (!generatedDates[methodKey]) {
             generatedDates[methodKey] = {
               transferDate: dayjs(),
@@ -893,24 +888,31 @@ export const useTestRequestFormData = () => {
           }
         });
 
-        generatedSamples.push({
-          key: sampleKey,
-          sortOrder: sampleIndex + 1,
-          sampleCode,
-          sampleName: quotationSample.sampleName || "",
-          samplingAddress: "",
-          sampleQuantity: "",
-          status: SampleStatus.Normal,
-          statusText: "",
-          processingStatus: "",
-          notes: "",
-          storageLocation: "",
-          specimenTypeId: undefined,
-          specimenTypeName: "",
-          indicatorIds: indicatorMethodsList.map((k) => parseIndicatorMethodKey(k).indicatorId),
-          indicatorMethods: indicatorMethodsList,
-          attachments: [],
-        });
+        for (let q = 0; q < qty; q++) {
+          const sampleKey = `quotation-sample-${Date.now()}-${globalIndex}`;
+          const sampleCode = generateSampleCode(sampleCodePrefix, globalIndex + 1);
+
+          generatedSamples.push({
+            key: sampleKey,
+            sortOrder: globalIndex + 1,
+            sampleCode,
+            sampleName: quotationSample.sampleName || "",
+            samplingAddress: "",
+            sampleQuantity: "",
+            status: SampleStatus.Normal,
+            statusText: "",
+            processingStatus: "",
+            notes: "",
+            storageLocation: "",
+            specimenTypeId: undefined,
+            specimenTypeName: "",
+            indicatorIds: indicatorMethodsList.map((k) => parseIndicatorMethodKey(k).indicatorId),
+            indicatorMethods: [...indicatorMethodsList],
+            attachments: [],
+          });
+
+          globalIndex++;
+        }
       });
 
       setSamples(generatedSamples);

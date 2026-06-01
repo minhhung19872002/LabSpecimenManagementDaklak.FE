@@ -37,6 +37,7 @@ export interface QuotationSampleDto {
   quotationId: string;
   sortOrder: number;
   sampleName: string;
+  quantity: number;
   totalPrice: number;
   indicators: QuotationSampleIndicatorDto[];
 }
@@ -99,6 +100,7 @@ export interface CreateUpdateQuotationSampleDto {
   id?: string;
   sortOrder: number;
   sampleName: string;
+  quantity: number;
   indicators: CreateUpdateQuotationSampleIndicatorDto[];
 }
 
@@ -151,5 +153,6 @@ export interface QuotationSampleFormData {
   id?: string;
   sortOrder: number;
   sampleName: string;
+  quantity: number;
   indicators: QuotationSampleIndicatorFormData[];
 }

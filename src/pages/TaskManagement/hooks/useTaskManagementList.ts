@@ -23,6 +23,7 @@ export const useTaskManagementList = () => {
   const [tasks, setTasks] = useState<LaboratoryTaskDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
+  const [searchFilter, setSearchFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<
     LaboratoryTaskStatus | undefined
   >(undefined);
@@ -56,7 +57,7 @@ export const useTaskManagementList = () => {
         maxResultCount: pagination.pageSize,
         status: statusFilter,
         testRequestStatus: testRequestStatusFilter,
-        search: searchText || undefined,
+        search: searchFilter || undefined,
       };
 
       const result = await laboratoryTaskService.getList(params);
@@ -77,7 +78,7 @@ export const useTaskManagementList = () => {
     pagination.pageSize,
     statusFilter,
     testRequestStatusFilter,
-    searchText,
+    searchFilter,
     currentUser,
   ]);
 
@@ -123,6 +124,7 @@ export const useTaskManagementList = () => {
 
   const handleSearch = useCallback((value: string) => {
     setSearchText(value);
+    setSearchFilter(value);
     setPagination((prev) => ({ ...prev, current: 1 }));
   }, []);
 
@@ -158,6 +160,7 @@ export const useTaskManagementList = () => {
 
   const handleRefresh = useCallback(() => {
     setSearchText("");
+    setSearchFilter("");
     setStatusFilter(undefined);
     setTestRequestStatusFilter(undefined);
     setPagination((prev) => ({ ...prev, current: 1 }));

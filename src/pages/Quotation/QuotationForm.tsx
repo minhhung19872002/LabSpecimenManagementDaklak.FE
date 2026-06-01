@@ -7,6 +7,7 @@ import {
   Space,
   Typography,
   AutoComplete,
+  InputNumber,
   Popconfirm,
   message,
   Spin,
@@ -26,6 +27,7 @@ import {
   DownOutlined,
   RightOutlined,
   InboxOutlined,
+  FileExcelOutlined,
 } from "../../components/common/Icon";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import dayjs from "dayjs";
@@ -45,6 +47,7 @@ import QuotationIndicatorSelectionModal, {
   ExistingMethodInfo,
 } from "./components/QuotationIndicatorSelectionModal";
 import SendQuotationEmailModal from "./components/SendQuotationEmailModal";
+import ImportQuotationSamplesModal from "./components/ImportQuotationSamplesModal";
 import { IndicatorName } from "../../components/common";
 import "../../styles/ListCard.css";
 
@@ -82,6 +85,7 @@ const QuotationForm: React.FC = () => {
   const [emailModalVisible, setEmailModalVisible] = useState(false);
   const [currentSampleKey, setCurrentSampleKey] = useState<string | null>(null);
   const [expandedSamples, setExpandedSamples] = useState<Set<string>>(new Set());
+  const [importModalVisible, setImportModalVisible] = useState(false);
   const [organizationOptions, setOrganizationOptions] = useState<
     OrganizationOption[]
   >([]);
@@ -146,6 +150,7 @@ const QuotationForm: React.FC = () => {
           id: duplicateMode ? undefined : sample.id,
           sortOrder: sample.sortOrder,
           sampleName: sample.sampleName,
+          quantity: sample.quantity || 1,
           indicators: sample.indicators.map((ind, indicatorIndex) => ({
             key: duplicateMode
               ? `${ind.indicatorId}_${ind.testMethodId}_${ind.specimenTypeId || "null"}_${sampleIndex}_${indicatorIndex}`
@@ -209,6 +214,17 @@ const QuotationForm: React.FC = () => {
     });
   };
 
+  // Import samples from Excel
+  const handleImportSamples = (importedSamples: QuotationSampleFormData[]) => {
+    setSamples((prev) => [...prev, ...importedSamples]);
+    setExpandedSamples((prev) => {
+      const newSet = new Set(prev);
+      importedSamples.forEach((s) => newSet.add(s.key));
+      return newSet;
+    });
+    setImportModalVisible(false);
+  };
+
   // Add new sample
   const handleAddSample = () => {
     const nextNum = samples.length + 1;
@@ -217,6 +233,7 @@ const QuotationForm: React.FC = () => {
       key: newSampleKey,
       sortOrder: nextNum,
       sampleName: `Mẫu ${nextNum}`,
+      quantity: 1,
       indicators: [],
     };
     setSamples([...samples, newSample]);
@@ -235,6 +252,7 @@ const QuotationForm: React.FC = () => {
       key: newSampleKey,
       sortOrder: nextNum,
       sampleName: `Mẫu ${nextNum}`,
+      quantity: source.quantity || 1,
       indicators: source.indicators.map((ind) => ({
         ...ind,
         id: undefined,
@@ -260,6 +278,14 @@ const QuotationForm: React.FC = () => {
     setSamples(
       samples.map((s) =>
         s.key === sampleKey ? { ...s, sampleName: newName } : s
+      )
+    );
+  };
+
+  const handleUpdateSampleQuantity = (sampleKey: string, quantity: number | null) => {
+    setSamples(
+      samples.map((s) =>
+        s.key === sampleKey ? { ...s, quantity: quantity || 1 } : s
       )
     );
   };
@@ -322,14 +348,15 @@ const QuotationForm: React.FC = () => {
     );
   };
 
-  // Calculate sample total
-  const calculateSampleTotal = (indicators: QuotationSampleIndicatorFormData[]) => {
-    return indicators.reduce((sum, ind) => sum + ind.unitPrice, 0);
+  // Calculate sample total (đơn giá * số lượng)
+  const calculateSampleTotal = (sample: QuotationSampleFormData) => {
+    const indicatorSum = sample.indicators.reduce((sum, ind) => sum + ind.unitPrice, 0);
+    return indicatorSum * (sample.quantity || 1);
   };
 
   // Calculate grand total
   const totalCost = samples.reduce(
-    (sum, sample) => sum + calculateSampleTotal(sample.indicators),
+    (sum, sample) => sum + calculateSampleTotal(sample),
     0
   );
 
@@ -393,6 +420,7 @@ const QuotationForm: React.FC = () => {
           id: sample.id,
           sortOrder: sampleIdx + 1,
           sampleName: sample.sampleName,
+          quantity: sample.quantity || 1,
           indicators: sample.indicators.map((ind, indIdx) => ({
             id: ind.id,
             indicatorId: ind.indicatorId,
@@ -526,7 +554,7 @@ const QuotationForm: React.FC = () => {
   // Render sample group
   const renderSampleGroup = (sample: QuotationSampleFormData) => {
     const isExpanded = expandedSamples.has(sample.key);
-    const sampleTotal = calculateSampleTotal(sample.indicators);
+    const sampleTotal = calculateSampleTotal(sample);
     const hasIndicators = sample.indicators.length > 0;
 
     return (
@@ -543,7 +571,7 @@ const QuotationForm: React.FC = () => {
             style={{ padding: "10px 12px" }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <Space>
+              <Space align="center">
                 <span
                   onClick={() => toggleSampleExpand(sample.key)}
                   style={{ cursor: "pointer", display: "inline-flex", alignItems: "center" }}
@@ -555,6 +583,15 @@ const QuotationForm: React.FC = () => {
                   onChange={(e) => handleUpdateSampleName(sample.key, e.target.value)}
                   onClick={(e) => e.stopPropagation()}
                   style={{ width: 200 }}
+                />
+                <InputNumber
+                  value={sample.quantity}
+                  onChange={(val) => handleUpdateSampleQuantity(sample.key, val)}
+                  onClick={(e) => e.stopPropagation()}
+                  min={1}
+                  precision={0}
+                  style={{ width: 80 }}
+                  placeholder="SL"
                 />
                 <Text type="secondary" className="sample-group-info">
                   ({sample.indicators.length} chỉ tiêu - {formatCurrency(sampleTotal)})
@@ -659,13 +696,21 @@ const QuotationForm: React.FC = () => {
                 : "Tạo mới báo giá"
           }
           extra={
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={handleAddSample}
-            >
-              Thêm mẫu
-            </Button>
+            <Space>
+              <Button
+                icon={<FileExcelOutlined />}
+                onClick={() => setImportModalVisible(true)}
+              >
+                Thêm danh sách
+              </Button>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleAddSample}
+              >
+                Thêm mẫu
+              </Button>
+            </Space>
           }
         >
 
@@ -842,6 +887,14 @@ const QuotationForm: React.FC = () => {
         existingMethods={getExistingMethods()}
       />
 
+      {/* Import Samples Modal */}
+      <ImportQuotationSamplesModal
+        visible={importModalVisible}
+        onCancel={() => setImportModalVisible(false)}
+        onImport={handleImportSamples}
+        existingSampleCount={samples.length}
+      />
+
       {/* Send Email Modal */}
       <SendQuotationEmailModal
         visible={emailModalVisible}
@@ -849,7 +902,7 @@ const QuotationForm: React.FC = () => {
         customerName={form.getFieldValue("customerName") || ""}
         samples={samples.map((sample) => ({
           sampleName: sample.sampleName,
-          quantity: 1,
+          quantity: sample.quantity || 1,
           indicators: sample.indicators.map((ind) => ({
             indicatorName: ind.indicatorName,
             quantity: 1,

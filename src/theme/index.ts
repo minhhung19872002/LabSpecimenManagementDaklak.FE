@@ -156,6 +156,13 @@ export const theme: ThemeConfig = {
       controlHeightLG: 48,
       controlHeightSM: 32,
     },
+    // InputNumber
+    InputNumber: {
+      borderRadius: radius.input,
+      controlHeight: 40,
+      controlHeightLG: 48,
+      controlHeightSM: 32,
+    },
     // Select
     Select: {
       borderRadius: radius.input,
