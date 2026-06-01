@@ -446,6 +446,7 @@ export interface GetSampleAssignmentLogInput {
   indicatorIds?: string[];
   technicianIds?: string[];
   qlclDisplayStatuses?: number[];
+  qlktDisplayStatuses?: number[];
 }
 
 // Paged result for Sample Assignment Log

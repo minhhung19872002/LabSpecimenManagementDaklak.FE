@@ -105,6 +105,11 @@ export const testingService = {
         queryParams[`TechnicianIds[${index}]`] = id;
       });
     }
+    if (input.qlktDisplayStatuses && input.qlktDisplayStatuses.length > 0) {
+      input.qlktDisplayStatuses.forEach((status, index) => {
+        queryParams[`QlktDisplayStatuses[${index}]`] = status;
+      });
+    }
 
     const response = await api.get<PagedSampleAssignmentLogResult>(`${BASE_URL}/sample-assignment-log`, { params: queryParams });
     return response.data;

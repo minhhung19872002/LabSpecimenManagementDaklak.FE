@@ -206,19 +206,12 @@ export const useSampleAssignmentLogForLab = (
         toDate: dateRange?.[1]?.endOf('day').format('YYYY-MM-DD') || undefined,
         indicatorIds: selectedIndicatorIds.length > 0 ? selectedIndicatorIds : undefined,
         technicianIds: technicianFilter.length > 0 ? technicianFilter : undefined,
+        qlktDisplayStatuses: displayStatusFilter !== undefined ? [displayStatusFilter] : undefined,
       };
 
       const result = await testingService.getSampleAssignmentLog(input);
 
-      // Client-side filter by QLKTDisplayStatus if set
-      if (displayStatusFilter !== undefined) {
-        const filtered = result.items.filter(
-          (item) => item.qlktDisplayStatus === displayStatusFilter
-        );
-        setData(filtered);
-      } else {
-        setData(result.items);
-      }
+      setData(result.items);
       setTotalCount(result.totalCount);
       setPagination(prev => ({ ...prev, total: result.totalCount }));
     } catch (error) {
@@ -232,6 +225,10 @@ export const useSampleAssignmentLogForLab = (
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    setPagination(prev => ({ ...prev, current: 1 }));
+  }, [displayStatusFilter]);
 
   // Handlers
   const handleSearch = useCallback((value: string) => {

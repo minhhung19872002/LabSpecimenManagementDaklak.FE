@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState } from 'react';
+import React, { useMemo, useCallback, useRef } from 'react';
 import { Table, Input, Select, Tag, Row, Col, Pagination, DatePicker } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -309,25 +309,56 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
     return contracts.size;
   }, [data]);
 
-  // State for hover - track which row index is being hovered
-  const [hoveredRowIndex, setHoveredRowIndex] = useState<number | null>(null);
+  const hoveredRowIndexRef = useRef<number | null>(null);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
 
-  // Check if a cell with rowSpan should be highlighted
-  // A cell at rowIndex with rowSpan N covers rows [rowIndex, rowIndex + N - 1]
-  // It should be highlighted if hoveredRowIndex is within that range
-  const isCellHovered = useCallback((cellRowIndex: number, rowSpan: number): boolean => {
-    if (hoveredRowIndex === null) return false;
-    if (rowSpan <= 1) return false;
-    // Cell covers rows from cellRowIndex to cellRowIndex + rowSpan - 1
-    return hoveredRowIndex >= cellRowIndex && hoveredRowIndex < cellRowIndex + rowSpan;
-  }, [hoveredRowIndex]);
-
-  const handleRowMouseEnter = useCallback((record: ProcessedLogItem) => {
-    setHoveredRowIndex(record._rowIndex);
+  const clearHoverClasses = useCallback(() => {
+    const container = tableContainerRef.current;
+    if (!container) return;
+    container.querySelectorAll('.row-hover').forEach(el => el.classList.remove('row-hover'));
+    container.querySelectorAll('.row-in-hover-group').forEach(el => el.classList.remove('row-in-hover-group'));
+    container.querySelectorAll('.cell-hover').forEach(el => el.classList.remove('cell-hover'));
   }, []);
 
-  const handleRowMouseLeave = useCallback(() => {
-    setHoveredRowIndex(null);
+  const applyHoverClasses = useCallback((rowIndex: number) => {
+    const container = tableContainerRef.current;
+    if (!container) return;
+
+    clearHoverClasses();
+
+    const record = processedData[rowIndex];
+    if (!record) return;
+
+    const rows = container.querySelectorAll<HTMLTableRowElement>('tbody tr[data-row-key]');
+    rows.forEach((tr, idx) => {
+      if (idx === rowIndex) {
+        tr.classList.add('row-hover');
+      } else {
+        const rowRecord = processedData[idx];
+        if (rowRecord &&
+            record._contractGroupStart <= rowRecord._rowIndex &&
+            rowRecord._rowIndex <= record._contractGroupEnd) {
+          tr.classList.add('row-in-hover-group');
+        }
+      }
+    });
+
+    container.querySelectorAll<HTMLTableCellElement>('td[data-row-span]').forEach((td) => {
+      const cellIdx = parseInt(td.getAttribute('data-row-idx') || '-1');
+      const span = parseInt(td.getAttribute('data-row-span') || '1');
+      if (rowIndex >= cellIdx && rowIndex < cellIdx + span) {
+        td.classList.add('cell-hover');
+      }
+    });
+  }, [processedData, clearHoverClasses]);
+
+  const mergedCellProps = useCallback((record: ProcessedLogItem, rowSpan: number) => {
+    const props: Record<string, any> = { rowSpan };
+    if (rowSpan > 1) {
+      props['data-row-idx'] = record._rowIndex;
+      props['data-row-span'] = rowSpan;
+    }
+    return props;
   }, []);
 
   // Build columns with rowSpan support
@@ -338,10 +369,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
       key: 'contractNumber',
       width: 130,
       fixed: 'left',
-      onCell: (record) => ({
-        rowSpan: record.contractRowSpan,
-        className: isCellHovered(record._rowIndex, record.contractRowSpan) ? 'cell-hover' : undefined,
-      }),
+      onCell: (record) => mergedCellProps(record, record.contractRowSpan),
       render: (text: string) => text || '-',
     },
     {
@@ -349,10 +377,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
       dataIndex: 'sampleCode',
       key: 'sampleCode',
       width: 120,
-      onCell: (record) => ({
-        rowSpan: record.sampleRowSpan,
-        className: isCellHovered(record._rowIndex, record.sampleRowSpan) ? 'cell-hover' : undefined,
-      }),
+      onCell: (record) => mergedCellProps(record, record.sampleRowSpan),
       render: (text: string) => text || '-',
     },
     {
@@ -360,10 +385,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
       dataIndex: 'sampleName',
       key: 'sampleName',
       width: 150,
-      onCell: (record) => ({
-        rowSpan: record.sampleRowSpan,
-        className: isCellHovered(record._rowIndex, record.sampleRowSpan) ? 'cell-hover' : undefined,
-      }),
+      onCell: (record) => mergedCellProps(record, record.sampleRowSpan),
       render: (text: string) => text || '-',
     },
     {
@@ -371,10 +393,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
       dataIndex: 'sampleQuantity',
       key: 'sampleQuantity',
       width: 100,
-      onCell: (record) => ({
-        rowSpan: record.sampleRowSpan,
-        className: isCellHovered(record._rowIndex, record.sampleRowSpan) ? 'cell-hover' : undefined,
-      }),
+      onCell: (record) => mergedCellProps(record, record.sampleRowSpan),
       render: (text: string) => text || '-',
     },
     {
@@ -382,10 +401,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
       dataIndex: 'sampleStatusText',
       key: 'sampleStatusText',
       width: 120,
-      onCell: (record) => ({
-        rowSpan: record.sampleRowSpan,
-        className: isCellHovered(record._rowIndex, record.sampleRowSpan) ? 'cell-hover' : undefined,
-      }),
+      onCell: (record) => mergedCellProps(record, record.sampleRowSpan),
       render: (text: string) => text || '-',
     },
     {
@@ -393,10 +409,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
       dataIndex: 'transferDate',
       key: 'transferDate',
       width: 100,
-      onCell: (record) => ({
-        rowSpan: record.transferDateRowSpan,
-        className: isCellHovered(record._rowIndex, record.transferDateRowSpan) ? 'cell-hover' : undefined,
-      }),
+      onCell: (record) => mergedCellProps(record, record.transferDateRowSpan),
       render: (date: string) => formatDate(date),
     },
     {
@@ -404,10 +417,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
       dataIndex: 'requestCompletionDate',
       key: 'requestCompletionDate',
       width: 100,
-      onCell: (record) => ({
-        rowSpan: record.requestCompletionDateRowSpan,
-        className: isCellHovered(record._rowIndex, record.requestCompletionDateRowSpan) ? 'cell-hover' : undefined,
-      }),
+      onCell: (record) => mergedCellProps(record, record.requestCompletionDateRowSpan),
       render: (date: string) => formatDate(date),
     },
     {
@@ -415,10 +425,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
       dataIndex: 'testDate',
       key: 'testDate',
       width: 100,
-      onCell: (record) => ({
-        rowSpan: record.testDateRowSpan,
-        className: isCellHovered(record._rowIndex, record.testDateRowSpan) ? 'cell-hover' : undefined,
-      }),
+      onCell: (record) => mergedCellProps(record, record.testDateRowSpan),
       render: (date: string) => formatDate(date),
     },
     {
@@ -463,10 +470,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
       dataIndex: 'technicalManagerName',
       key: 'technicalManagerName',
       width: 130,
-      onCell: (record) => ({
-        rowSpan: record.technicalManagerRowSpan,
-        className: isCellHovered(record._rowIndex, record.technicalManagerRowSpan) ? 'cell-hover' : undefined,
-      }),
+      onCell: (record) => mergedCellProps(record, record.technicalManagerRowSpan),
       render: (text: string) => text || '-',
     },
     {
@@ -474,10 +478,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
       dataIndex: 'technicianName',
       key: 'technicianName',
       width: 130,
-      onCell: (record) => ({
-        rowSpan: record.technicianRowSpan,
-        className: isCellHovered(record._rowIndex, record.technicianRowSpan) ? 'cell-hover' : undefined,
-      }),
+      onCell: (record) => mergedCellProps(record, record.technicianRowSpan),
       render: (text: string) => text || '-',
     },
     {
@@ -485,10 +486,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
       dataIndex: 'entryDate',
       key: 'entryDate',
       width: 100,
-      onCell: (record) => ({
-        rowSpan: record.entryDateRowSpan,
-        className: isCellHovered(record._rowIndex, record.entryDateRowSpan) ? 'cell-hover' : undefined,
-      }),
+      onCell: (record) => mergedCellProps(record, record.entryDateRowSpan),
       render: (date: string) => formatDate(date),
     },
     {
@@ -496,10 +494,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
       dataIndex: 'qlktApprovalDate',
       key: 'qlktApprovalDate',
       width: 100,
-      onCell: (record) => ({
-        rowSpan: record.qlktApprovalDateRowSpan,
-        className: isCellHovered(record._rowIndex, record.qlktApprovalDateRowSpan) ? 'cell-hover' : undefined,
-      }),
+      onCell: (record) => mergedCellProps(record, record.qlktApprovalDateRowSpan),
       render: (date: string) => formatDate(date),
     },
     {
@@ -509,7 +504,6 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
       width: 150,
       fixed: 'right',
       render: (status: QLKTDisplayStatus | null | undefined) => {
-        // Default to ToDo if null/undefined
         const effectiveStatus = status ?? QLKTDisplayStatus.ToDo;
         return (
           <Tag color={QLKTDisplayStatusColors[effectiveStatus] || 'default'}>
@@ -518,7 +512,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
         );
       },
     },
-  ], [isCellHovered]);
+  ], [mergedCellProps]);
 
 
   return (
@@ -589,36 +583,35 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
       </Row>
 
       {/* Table - pagination disabled because we do server-side contract pagination */}
-      <Table<ProcessedLogItem>
-        columns={columns}
-        dataSource={processedData}
-        loading={loading}
-        rowKey="_rowKey"
-        rowClassName={(record) => {
-          const colorClass = getRowColorClass(record);
-          const hoverClass = hoveredRowIndex === record._rowIndex ? 'row-hover' : '';
-          const normalClass = !colorClass ? 'row-green' : '';
-          const inHoverGroupClass =
-            hoveredRowIndex !== null &&
-            hoveredRowIndex !== record._rowIndex &&
-            record._contractGroupStart <= hoveredRowIndex &&
-            hoveredRowIndex <= record._contractGroupEnd
-              ? 'row-in-hover-group'
-              : '';
-          return `${colorClass} ${normalClass} ${hoverClass} ${inHoverGroupClass}`.trim();
-        }}
-        onRow={(record) => ({
-          onDoubleClick: () => handleRowDoubleClick(record),
-          onMouseEnter: () => handleRowMouseEnter(record),
-          onMouseLeave: handleRowMouseLeave,
-          style: { cursor: 'pointer' },
-        })}
-        pagination={false}
-        sticky={{ offsetHeader: 80 }}
-        scroll={{ x: 2200 }}
-        size="small"
-        bordered
-      />
+      <div ref={tableContainerRef}>
+        <Table<ProcessedLogItem>
+          columns={columns}
+          dataSource={processedData}
+          loading={loading}
+          rowKey="_rowKey"
+          rowClassName={(record) => {
+            const colorClass = getRowColorClass(record);
+            return colorClass || 'row-green';
+          }}
+          onRow={(record) => ({
+            onDoubleClick: () => handleRowDoubleClick(record),
+            onMouseEnter: () => {
+              hoveredRowIndexRef.current = record._rowIndex;
+              applyHoverClasses(record._rowIndex);
+            },
+            onMouseLeave: () => {
+              hoveredRowIndexRef.current = null;
+              clearHoverClasses();
+            },
+            style: { cursor: 'pointer' },
+          })}
+          pagination={false}
+          sticky={{ offsetHeader: 80 }}
+          scroll={{ x: 2200 }}
+          size="small"
+          bordered
+        />
+      </div>
 
       {/* Pagination - server-side contract pagination */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 8px' }}>
