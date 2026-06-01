@@ -237,7 +237,9 @@ const StatisticsPage: React.FC = () => {
   const sampleMatrix = statisticsData?.sampleMatrix || [];
   const workloadByDepartment = statisticsData?.workloadByDepartment || [];
   const tatCompliance = statisticsData?.tatCompliance || [];
-  const labStatistics: LabStatisticsDto[] = statisticsData?.labStatistics || [];
+  const VISIBLE_LABS = ["lab vi sinh", "lab hóa"];
+  const labStatistics: LabStatisticsDto[] = (statisticsData?.labStatistics || [])
+    .filter((l) => VISIBLE_LABS.includes(l.labName.toLowerCase()));
   const regionalBubbles = statisticsData?.regionalBubbles || [];
 
   const rawDeptWork: DepartmentWorkAssignmentDto[] =
