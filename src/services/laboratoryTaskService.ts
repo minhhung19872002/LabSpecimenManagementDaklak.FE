@@ -554,6 +554,7 @@ export const laboratoryTaskService = {
     laboratoryId?: string;
     indicatorIds?: string[];
     technicianIds?: string[];
+    qlktDisplayStatuses?: number[];
   }): Promise<{ items: any[]; totalCount: number }> => {
     const params: Record<string, any> = {
       SkipCount: input.skipCount,
@@ -573,6 +574,11 @@ export const laboratoryTaskService = {
     if (input.technicianIds && input.technicianIds.length > 0) {
       input.technicianIds.forEach((id, index) => {
         params[`TechnicianIds[${index}]`] = id;
+      });
+    }
+    if (input.qlktDisplayStatuses && input.qlktDisplayStatuses.length > 0) {
+      input.qlktDisplayStatuses.forEach((status, index) => {
+        params[`QlktDisplayStatuses[${index}]`] = status;
       });
     }
     const response = await api.get<{ items: any[]; totalCount: number }>(
