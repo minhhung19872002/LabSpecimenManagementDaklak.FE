@@ -55,6 +55,7 @@ export const useTaskManagementList = () => {
       const params: GetLaboratoryTaskListDto = {
         skipCount: (pagination.current - 1) * pagination.pageSize,
         maxResultCount: pagination.pageSize,
+        sorting: 'ContractDate desc',
         status: statusFilter,
         testRequestStatus: testRequestStatusFilter,
         search: searchFilter || undefined,

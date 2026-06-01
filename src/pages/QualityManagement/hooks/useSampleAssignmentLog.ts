@@ -75,7 +75,7 @@ export const useSampleAssignmentLog = (): UseSampleAssignmentLogResult => {
       const input: GetSampleAssignmentLogInput = {
         skipCount: (pagination.current - 1) * pagination.pageSize,
         maxResultCount: pagination.pageSize,
-        sorting: 'ContractNumber desc',
+        sorting: 'ContractDate desc',
         search: searchText || undefined,
         testRequestStatus: statusFilter,
         qlclDisplayStatuses,

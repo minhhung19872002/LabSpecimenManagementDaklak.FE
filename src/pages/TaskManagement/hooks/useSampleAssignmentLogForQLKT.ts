@@ -115,7 +115,7 @@ export const useSampleAssignmentLogForQLKT = (
       const input: GetSampleAssignmentLogInput = {
         skipCount: (pagination.current - 1) * pagination.pageSize,
         maxResultCount: pagination.pageSize,
-        sorting: dateRange ? 'RequestCompletionDate asc' : 'ContractNumber desc',
+        sorting: dateRange ? 'RequestCompletionDate asc' : 'ContractDate desc',
         search: debouncedSearchText || undefined,
         fromDate: dateRange?.[0]?.startOf('day').format('YYYY-MM-DD') || undefined,
         toDate: dateRange?.[1]?.endOf('day').format('YYYY-MM-DD') || undefined,

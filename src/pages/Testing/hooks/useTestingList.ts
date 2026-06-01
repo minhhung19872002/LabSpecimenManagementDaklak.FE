@@ -149,7 +149,7 @@ export const useTestingList = () => {
         requestCompletionDateFrom: dateRange?.[0]?.startOf('day').format('YYYY-MM-DD') || undefined,
         requestCompletionDateTo: dateRange?.[1]?.endOf('day').format('YYYY-MM-DD') || undefined,
         indicatorIds: selectedIndicatorIds.length > 0 ? selectedIndicatorIds : undefined,
-        sorting: dateRange ? 'requestcompletiondate' : undefined,
+        sorting: dateRange ? 'requestcompletiondate' : 'ContractDate desc',
       });
 
       setTasks(result.items);
