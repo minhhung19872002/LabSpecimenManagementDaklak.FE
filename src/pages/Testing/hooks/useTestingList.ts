@@ -55,6 +55,7 @@ export const useTestingList = () => {
   const [tasks, setTasks] = useState<TestingListDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
+  const [searchFilter, setSearchFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<TestingStatus | undefined>(
     undefined
   );
@@ -141,7 +142,7 @@ export const useTestingList = () => {
         skipCount: (pagination.current - 1) * pagination.pageSize,
         maxResultCount: pagination.pageSize,
         tab: activeTab,
-        search: searchText || undefined,
+        search: searchFilter || undefined,
         statuses: statusFilter !== undefined ? [statusFilter] : undefined,
         technicianIds:
           technicianFilter.length > 0 ? technicianFilter : undefined,
@@ -163,7 +164,7 @@ export const useTestingList = () => {
     pagination.current,
     pagination.pageSize,
     activeTab,
-    searchText,
+    searchFilter,
     statusFilter,
     technicianFilter,
     dateRange,
@@ -206,6 +207,7 @@ export const useTestingList = () => {
 
   const handleSearch = useCallback((value: string) => {
     setSearchText(value);
+    setSearchFilter(value);
     setPagination((prev) => ({ ...prev, current: 1 }));
   }, []);
 
@@ -260,6 +262,7 @@ export const useTestingList = () => {
 
   const handleRefresh = useCallback(() => {
     setSearchText("");
+    setSearchFilter("");
     setStatusFilter(undefined);
     setTechnicianFilter([]);
     setDateRange(null);

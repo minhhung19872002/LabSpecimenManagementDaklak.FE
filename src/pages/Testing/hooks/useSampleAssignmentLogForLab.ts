@@ -104,6 +104,7 @@ export const useSampleAssignmentLogForLab = (
   const [data, setData] = useState<SampleAssignmentLogDto[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [searchText, setSearchText] = useState('');
+  const [searchFilter, setSearchFilter] = useState('');
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
   const [selectedIndicatorIds, setSelectedIndicatorIds] = useState<string[]>([]);
   const [technicianFilter, setTechnicianFilter] = useState<string[]>([]);
@@ -200,7 +201,7 @@ export const useSampleAssignmentLogForLab = (
         skipCount: (pagination.current - 1) * pagination.pageSize,
         maxResultCount: pagination.pageSize,
         sorting: dateRange ? 'RequestCompletionDate asc' : 'ContractNumber desc',
-        search: searchText || undefined,
+        search: searchFilter || undefined,
         fromDate: dateRange?.[0]?.startOf('day').format('YYYY-MM-DD') || undefined,
         toDate: dateRange?.[1]?.endOf('day').format('YYYY-MM-DD') || undefined,
         indicatorIds: selectedIndicatorIds.length > 0 ? selectedIndicatorIds : undefined,
@@ -226,7 +227,7 @@ export const useSampleAssignmentLogForLab = (
     } finally {
       setLoading(false);
     }
-  }, [pagination.current, pagination.pageSize, searchText, displayStatusFilter, dateRange, selectedIndicatorIds, technicianFilter]);
+  }, [pagination.current, pagination.pageSize, searchFilter, displayStatusFilter, dateRange, selectedIndicatorIds, technicianFilter]);
 
   useEffect(() => {
     loadData();
@@ -235,6 +236,7 @@ export const useSampleAssignmentLogForLab = (
   // Handlers
   const handleSearch = useCallback((value: string) => {
     setSearchText(value);
+    setSearchFilter(value);
     setPagination(prev => ({ ...prev, current: 1 }));
   }, []);
 
@@ -275,6 +277,7 @@ export const useSampleAssignmentLogForLab = (
 
   const handleReload = useCallback(() => {
     setSearchText('');
+    setSearchFilter('');
     setDateRange(null);
     setSelectedIndicatorIds([]);
     setTechnicianFilter([]);
