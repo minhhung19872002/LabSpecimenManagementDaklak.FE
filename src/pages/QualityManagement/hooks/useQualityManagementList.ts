@@ -58,6 +58,7 @@ export const useQualityManagementList = () => {
         qualityManagementService.getList({
           skipCount: (pagination.current - 1) * pagination.pageSize,
           maxResultCount: pagination.pageSize,
+          sorting: 'ContractDate desc',
           search: searchText || undefined,
           status: statusFilter,
           isOverdue: overdueFilter || undefined,
