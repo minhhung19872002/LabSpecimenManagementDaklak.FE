@@ -388,36 +388,8 @@ export const useTestRequestFormData = () => {
         });
       });
 
-      // Indicators can exist in metadata + specimen type mapping before a test method is configured.
-      // Synthesize a pseudo "null method" entry so they still appear and can be selected in TestRequestForm.
-      (specimenTypesWithIndsData || []).forEach((specimenType) => {
-        if (!specimenType.isActive) return;
-        (specimenType.indicators || []).forEach((indicatorLink) => {
-          if (!indicatorLink.isActive) return;
-          const existingMethods = methodMap[indicatorLink.indicatorId] || [];
-          const hasMethodForSpecimenType = existingMethods.some(
-            (method) =>
-              method.isActive &&
-              (method.specimenTypeId || null) === specimenType.id
-          );
-
-          if (!hasMethodForSpecimenType) {
-            if (!methodMap[indicatorLink.indicatorId]) {
-              methodMap[indicatorLink.indicatorId] = [];
-            }
-            methodMap[indicatorLink.indicatorId].push({
-              testMethodId: PENDING_TEST_METHOD_ID,
-              testMethodCode: "",
-              testMethodName: PENDING_TEST_METHOD_NAME,
-              unitPrice: 0,
-              isActive: true,
-              specimenTypeId: specimenType.id,
-              specimenTypeCode: specimenType.code,
-              specimenTypeName: specimenType.name,
-            });
-          }
-        });
-      });
+      // Skip indicators that exist in SpecimenTypeIndicator but have no TestMethodIndicator configured.
+      // They are not ready for use — no method/price to display or update.
       setIndicatorMethodsMap(methodMap);
 
       // Auto-generate contract number for new test request (create mode only)
