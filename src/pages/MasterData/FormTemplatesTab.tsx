@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Table,
   Button,
@@ -9,12 +9,14 @@ import {
   Row,
   Col,
   Modal,
+  Popconfirm,
 } from "antd";
 import {
   DownloadOutlined,
   SearchOutlined,
   FileWordOutlined,
   UploadOutlined,
+  DeleteOutlined,
 } from "../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -28,7 +30,21 @@ const FormTemplatesTab: React.FC = () => {
   const [searchText, setSearchText] = useState("");
   const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [deleteMode, setDeleteMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "d") {
+        e.preventDefault();
+        setDeleteMode((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, []);
 
   const fetchTemplates = async () => {
     try {
@@ -125,6 +141,17 @@ const FormTemplatesTab: React.FC = () => {
     }
   };
 
+  const handleDelete = useCallback(async (template: FormTemplateDto) => {
+    try {
+      await formTemplateService.delete(template.fileName);
+      message.success(`Đã xóa "${template.fileName}"`);
+      fetchTemplates();
+    } catch (err: any) {
+      console.error("Failed to delete template:", err);
+      message.error("Không thể xóa file. Vui lòng thử lại.");
+    }
+  }, []);
+
   const filteredTemplates = searchText
     ? templates.filter((t) =>
         t.name.toLowerCase().includes(searchText.toLowerCase()),
@@ -163,6 +190,18 @@ const FormTemplatesTab: React.FC = () => {
           >
             Tải xuống
           </Button>
+          {deleteMode && (
+            <Popconfirm
+              title="Xóa form mẫu"
+              description={`Xóa "${record.fileName}"?`}
+              onConfirm={() => handleDelete(record)}
+              okText="Xóa"
+              cancelText="Hủy"
+              okButtonProps={{ danger: true }}
+            >
+              <Button danger icon={<DeleteOutlined />} size="small" />
+            </Popconfirm>
+          )}
         </Space>
       ),
     },
