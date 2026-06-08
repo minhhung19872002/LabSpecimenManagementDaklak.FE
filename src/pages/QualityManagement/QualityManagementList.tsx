@@ -29,6 +29,7 @@ import SampleAssignmentLogTab, {
   AssignmentLogControls,
 } from "./components/SampleAssignmentLogTab";
 import { useQualityManagementList } from "./hooks";
+import ResponsiveSelect from "../../components/common/ResponsiveSelect";
 
 import "./components/ReportManagementTab.css";
 import "../../styles/ListCard.css";
@@ -344,7 +345,7 @@ const QualityManagementList: React.FC = () => {
                 />
               </Col>
               <Col xs={24} sm={8} md={6}>
-                <Select
+                <ResponsiveSelect
                   mode="multiple"
                   style={{ width: "100%" }}
                   placeholder="Chọn phòng lab"

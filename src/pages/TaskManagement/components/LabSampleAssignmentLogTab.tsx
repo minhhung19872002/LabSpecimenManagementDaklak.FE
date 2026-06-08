@@ -1,6 +1,7 @@
 import React, { useMemo, useCallback, useState } from "react";
 import { Table, Input, Select, Tag, Row, Col, Pagination, DatePicker } from "antd";
 import { SearchOutlined, SortAscendingOutlined } from "@ant-design/icons";
+import ResponsiveSelect from "../../../components/common/ResponsiveSelect";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { useSampleAssignmentLogForQLKT } from "../hooks/useSampleAssignmentLogForQLKT";
@@ -565,7 +566,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({ d
           />
         </Col>
         <Col xs={24} sm={12} lg={5}>
-          <Select
+          <ResponsiveSelect
             mode="multiple"
             style={{ width: "100%" }}
             placeholder="Chọn chỉ tiêu"
@@ -586,7 +587,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({ d
           />
         </Col>
         <Col xs={24} sm={12} lg={4}>
-          <Select
+          <ResponsiveSelect
             mode="multiple"
             style={{ width: "100%" }}
             placeholder="Thử nghiệm viên"

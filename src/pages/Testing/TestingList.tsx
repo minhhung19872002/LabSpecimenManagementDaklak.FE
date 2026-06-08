@@ -25,6 +25,7 @@ import { SampleAssignmentLogStatisticsDto } from "../../types/qualityManagement"
 import { testingService } from "../../services/testingService";
 import { useTestingList } from "./hooks";
 import LabSampleAssignmentLogTab from "./components/LabSampleAssignmentLogTab";
+import ResponsiveSelect from "../../components/common/ResponsiveSelect";
 import "../../styles/ListCard.css";
 import "../Dashboard/Dashboard.css";
 import "./Testing.css";
@@ -341,7 +342,7 @@ const TestingList: React.FC = () => {
                     />
                   </Col>
                   <Col xs={24} sm={12} md={5}>
-                    <Select
+                    <ResponsiveSelect
                       mode="multiple"
                       style={{ width: "100%" }}
                       placeholder="Chọn chỉ tiêu"

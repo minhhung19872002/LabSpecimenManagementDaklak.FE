@@ -1,6 +1,7 @@
 import React, { useMemo, useCallback, useState, useEffect } from "react";
 import { Table, Input, Select, Tag, Row, Col, Pagination, DatePicker } from "antd";
 import { SearchOutlined, SortAscendingOutlined } from "@ant-design/icons";
+import ResponsiveSelect from "../../../components/common/ResponsiveSelect";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 
@@ -578,7 +579,7 @@ const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegis
           />
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <Select
+          <ResponsiveSelect
             mode="multiple"
             style={{ width: "100%" }}
             placeholder="Chọn phòng lab"

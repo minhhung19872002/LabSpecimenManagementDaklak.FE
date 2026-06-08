@@ -1,6 +1,7 @@
 import React, { useMemo, useCallback, useRef } from 'react';
 import { Table, Input, Select, Tag, Row, Col, Pagination, DatePicker } from 'antd';
 import { SearchOutlined, SortAscendingOutlined } from '@ant-design/icons';
+import ResponsiveSelect from '../../../components/common/ResponsiveSelect';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useSampleAssignmentLogForLab } from '../hooks/useSampleAssignmentLogForLab';
@@ -486,7 +487,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
           />
         </Col>
         <Col xs={24} sm={12} lg={5}>
-          <Select
+          <ResponsiveSelect
             mode="multiple"
             style={{ width: '100%' }}
             placeholder="Chọn chỉ tiêu"
@@ -507,7 +508,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
           />
         </Col>
         <Col xs={24} sm={12} lg={4}>
-          <Select
+          <ResponsiveSelect
             mode="multiple"
             style={{ width: '100%' }}
             placeholder="Thử nghiệm viên"
@@ -524,7 +525,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
                 {tech.displayName || tech.userName}
               </Select.Option>
             ))}
-          </Select>
+          </ResponsiveSelect>
         </Col>
         <Col flex="auto" style={{ display: "flex", justifyContent: "flex-end" }}>
           <Select
