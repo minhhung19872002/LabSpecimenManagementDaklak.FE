@@ -24,6 +24,7 @@ export const useTaskManagementList = () => {
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [searchFilter, setSearchFilter] = useState("");
+  const [sorting, setSorting] = useState("ContractDate desc");
   const [statusFilter, setStatusFilter] = useState<
     LaboratoryTaskStatus | undefined
   >(undefined);
@@ -55,6 +56,7 @@ export const useTaskManagementList = () => {
       const params: GetLaboratoryTaskListDto = {
         skipCount: (pagination.current - 1) * pagination.pageSize,
         maxResultCount: pagination.pageSize,
+        sorting,
         status: statusFilter,
         testRequestStatus: testRequestStatusFilter,
         search: searchFilter || undefined,
@@ -79,6 +81,7 @@ export const useTaskManagementList = () => {
     statusFilter,
     testRequestStatusFilter,
     searchFilter,
+    sorting,
     currentUser,
   ]);
 
@@ -130,6 +133,11 @@ export const useTaskManagementList = () => {
 
   const handleSearchInputChange = useCallback((value: string) => {
     setSearchText(value);
+  }, []);
+
+  const handleSortChange = useCallback((value: string) => {
+    setSorting(value);
+    setPagination((prev) => ({ ...prev, current: 1 }));
   }, []);
 
   const handleStatusFilterChange = useCallback((value: string) => {
@@ -245,6 +253,7 @@ export const useTaskManagementList = () => {
     tasks,
     loading,
     searchText,
+    sorting,
     statusFilter,
     testRequestStatusFilter,
     pagination,
@@ -255,6 +264,7 @@ export const useTaskManagementList = () => {
     loadData,
     handleSearch,
     handleSearchInputChange,
+    handleSortChange,
     handleStatusFilterChange,
     handleTableChange,
     handleRefresh,

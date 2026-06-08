@@ -780,6 +780,7 @@ const TestingDetail: React.FC = () => {
       resultOptions={resultOptions}
       getResultOptionsForIndicator={getResultOptionsForIndicator}
       canPerformActions={canPerformActions}
+      isTestRequestCancelled={isTestRequestCancelled}
       onBack={() => navigate("/testing")}
       onCollapseChange={setActiveKeys}
       onSubmitResults={handleSubmitResults}

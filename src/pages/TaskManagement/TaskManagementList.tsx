@@ -15,6 +15,7 @@ import Icon, {
   ExperimentOutlined,
   SearchOutlined,
   ReloadOutlined,
+  SortAscendingOutlined,
   TeamOutlined,
 } from "../../components/common/Icon";
 import {
@@ -52,6 +53,7 @@ const TaskManagementList: React.FC = () => {
     tasks,
     loading,
     searchText,
+    sorting,
     statusFilter,
     testRequestStatusFilter,
     pagination,
@@ -59,6 +61,7 @@ const TaskManagementList: React.FC = () => {
     columns,
     handleSearch,
     handleSearchInputChange,
+    handleSortChange,
     handleStatusFilterChange,
     handleTableChange,
     handleRefresh,
@@ -404,6 +407,17 @@ const TaskManagementList: React.FC = () => {
                   <Select.Option value="cancelled-request">
                     Hủy bỏ yêu cầu
                   </Select.Option>
+                </Select>
+              </Col>
+              <Col flex="auto" style={{ display: "flex", justifyContent: "flex-end" }}>
+                <Select
+                  value={sorting}
+                  onChange={handleSortChange}
+                  prefix={<SortAscendingOutlined />}
+                >
+                  <Select.Option value="ContractDate desc">Ngày hợp đồng mới nhất</Select.Option>
+                  <Select.Option value="RequestCompletionDate desc">Ngày yêu cầu xong mới nhất</Select.Option>
+                  <Select.Option value="RequestCompletionDate">Ngày yêu cầu xong cũ nhất</Select.Option>
                 </Select>
               </Col>
             </Row>

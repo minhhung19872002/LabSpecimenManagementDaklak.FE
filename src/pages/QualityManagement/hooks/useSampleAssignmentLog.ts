@@ -19,6 +19,7 @@ interface UseSampleAssignmentLogResult {
 
   // Filters
   searchText: string;
+  sorting: string;
   statusFilter: TestRequestStatus | undefined;
   qlclDisplayStatuses: number[] | undefined;
   dateRange: [dayjs.Dayjs, dayjs.Dayjs] | null;
@@ -34,6 +35,7 @@ interface UseSampleAssignmentLogResult {
 
   // Handlers
   handleSearch: (value: string) => void;
+  handleSortChange: (value: string) => void;
   handleStatusFilter: (status: TestRequestStatus | undefined) => void;
   handleQlclStatusFilter: (statuses: number[] | undefined) => void;
   handleDateRangeChange: (dates: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null) => void;
@@ -52,6 +54,7 @@ export const useSampleAssignmentLog = (): UseSampleAssignmentLogResult => {
   const [totalCount, setTotalCount] = useState(0);
   const [statistics, setStatistics] = useState<QLCLSampleAssignmentLogStatisticsDto | null>(null);
   const [searchText, setSearchText] = useState('');
+  const [sorting, setSorting] = useState('ContractDate desc');
   const [statusFilter, setStatusFilter] = useState<TestRequestStatus | undefined>(undefined);
   const [qlclDisplayStatuses, setQlclDisplayStatuses] = useState<number[] | undefined>(undefined);
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
@@ -75,7 +78,7 @@ export const useSampleAssignmentLog = (): UseSampleAssignmentLogResult => {
       const input: GetSampleAssignmentLogInput = {
         skipCount: (pagination.current - 1) * pagination.pageSize,
         maxResultCount: pagination.pageSize,
-        sorting: 'ContractNumber desc',
+        sorting,
         search: searchText || undefined,
         testRequestStatus: statusFilter,
         qlclDisplayStatuses,
@@ -99,7 +102,7 @@ export const useSampleAssignmentLog = (): UseSampleAssignmentLogResult => {
     } finally {
       setLoading(false);
     }
-  }, [pagination.current, pagination.pageSize, searchText, statusFilter, qlclDisplayStatuses, dateRange, laboratoryIds]);
+  }, [pagination.current, pagination.pageSize, searchText, sorting, statusFilter, qlclDisplayStatuses, dateRange, laboratoryIds]);
 
   // Initial load and reload on filter changes
   useEffect(() => {
@@ -109,6 +112,11 @@ export const useSampleAssignmentLog = (): UseSampleAssignmentLogResult => {
   // Handlers
   const handleSearch = useCallback((value: string) => {
     setSearchText(value);
+    setPagination(prev => ({ ...prev, current: 1 }));
+  }, []);
+
+  const handleSortChange = useCallback((value: string) => {
+    setSorting(value);
     setPagination(prev => ({ ...prev, current: 1 }));
   }, []);
 
@@ -168,6 +176,7 @@ export const useSampleAssignmentLog = (): UseSampleAssignmentLogResult => {
     totalCount,
     statistics,
     searchText,
+    sorting,
     statusFilter,
     qlclDisplayStatuses,
     dateRange,
@@ -175,6 +184,7 @@ export const useSampleAssignmentLog = (): UseSampleAssignmentLogResult => {
     laboratories,
     pagination,
     handleSearch,
+    handleSortChange,
     handleStatusFilter,
     handleQlclStatusFilter,
     handleDateRangeChange,

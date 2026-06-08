@@ -17,6 +17,7 @@ import Icon, {
   ExperimentOutlined,
   SearchOutlined,
   ReloadOutlined,
+  SortAscendingOutlined,
 } from "../../components/common/Icon";
 import { TestingStatus, TestingTabType } from "../../types/testing";
 import { QLKTDisplayStatus } from "../../types/laboratoryTask";
@@ -24,6 +25,7 @@ import { SampleAssignmentLogStatisticsDto } from "../../types/qualityManagement"
 import { testingService } from "../../services/testingService";
 import { useTestingList } from "./hooks";
 import LabSampleAssignmentLogTab from "./components/LabSampleAssignmentLogTab";
+import ResponsiveSelect from "../../components/common/ResponsiveSelect";
 import "../../styles/ListCard.css";
 import "../Dashboard/Dashboard.css";
 import "./Testing.css";
@@ -43,6 +45,7 @@ const TestingList: React.FC = () => {
     tasks,
     loading,
     searchText,
+    sorting,
     statusFilter,
     technicianFilter,
     technicians,
@@ -56,6 +59,7 @@ const TestingList: React.FC = () => {
     indicators,
     handleSearch,
     handleSearchInputChange,
+    handleSortChange,
     handleStatusFilterChange,
     handleTechnicianFilterChange,
     handleDateRangeChange,
@@ -315,7 +319,7 @@ const TestingList: React.FC = () => {
           <>
             {/* Search & Filter */}
             <Row gutter={[16, 16]} style={{ marginBottom: 0, padding: 16 }}>
-              <Col xs={24} sm={12} md={isAllTab ? 6 : 8}>
+              <Col xs={24} sm={12} md={isAllTab ? 5 : 8}>
                 <Input.Search
                   placeholder="Tìm theo số hợp đồng..."
                   prefix={<SearchOutlined />}
@@ -328,7 +332,7 @@ const TestingList: React.FC = () => {
               </Col>
               {isAllTab && (
                 <>
-                  <Col xs={24} sm={12} md={5}>
+                  <Col xs={24} sm={12} md={4}>
                     <RangePicker
                       value={dateRange}
                       onChange={handleDateRangeChange}
@@ -337,8 +341,8 @@ const TestingList: React.FC = () => {
                       allowClear
                     />
                   </Col>
-                  <Col xs={24} sm={12} md={7}>
-                    <Select
+                  <Col xs={24} sm={12} md={5}>
+                    <ResponsiveSelect
                       mode="multiple"
                       style={{ width: "100%" }}
                       placeholder="Chọn chỉ tiêu"
@@ -360,7 +364,7 @@ const TestingList: React.FC = () => {
                   </Col>
                 </>
               )}
-              <Col xs={24} sm={6} md={isAllTab ? 6 : 4}>
+              <Col xs={24} sm={6} md={4}>
                 <Select
                   mode="multiple"
                   style={{ width: "100%" }}
@@ -378,6 +382,17 @@ const TestingList: React.FC = () => {
                       {tech.displayName || tech.userName}
                     </Select.Option>
                   ))}
+                </Select>
+              </Col>
+              <Col flex="auto" style={{ display: "flex", justifyContent: "flex-end" }}>
+                <Select
+                  value={sorting}
+                  onChange={handleSortChange}
+                  prefix={<SortAscendingOutlined />}
+                >
+                  <Select.Option value="ContractDate desc">Ngày hợp đồng mới nhất</Select.Option>
+                  <Select.Option value="RequestCompletionDate desc">Ngày yêu cầu xong mới nhất</Select.Option>
+                  <Select.Option value="RequestCompletionDate">Ngày yêu cầu xong cũ nhất</Select.Option>
                 </Select>
               </Col>
             </Row>

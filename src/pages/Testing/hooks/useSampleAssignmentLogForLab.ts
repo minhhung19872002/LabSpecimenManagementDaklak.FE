@@ -58,6 +58,7 @@ interface UseSampleAssignmentLogForLabResult {
 
   // Filters
   searchText: string;
+  sorting: string;
   dateRange: [dayjs.Dayjs, dayjs.Dayjs] | null;
   selectedIndicatorIds: string[];
   indicators: IndicatorDto[];
@@ -75,6 +76,7 @@ interface UseSampleAssignmentLogForLabResult {
   // Handlers
   handleSearch: (value: string) => void;
   handleSearchInputChange: (value: string) => void;
+  handleSortChange: (value: string) => void;
   handleDateRangeChange: (dates: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null) => void;
   handleIndicatorChange: (values: string[]) => void;
   handleTechnicianFilterChange: (values: string[]) => void;
@@ -105,6 +107,7 @@ export const useSampleAssignmentLogForLab = (
   const [totalCount, setTotalCount] = useState(0);
   const [searchText, setSearchText] = useState('');
   const [searchFilter, setSearchFilter] = useState('');
+  const [sorting, setSorting] = useState('ContractDate desc');
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
   const [selectedIndicatorIds, setSelectedIndicatorIds] = useState<string[]>([]);
   const [technicianFilter, setTechnicianFilter] = useState<string[]>([]);
@@ -200,7 +203,7 @@ export const useSampleAssignmentLogForLab = (
       const input: GetSampleAssignmentLogInput = {
         skipCount: (pagination.current - 1) * pagination.pageSize,
         maxResultCount: pagination.pageSize,
-        sorting: dateRange ? 'RequestCompletionDate asc' : 'ContractNumber desc',
+        sorting,
         search: searchFilter || undefined,
         fromDate: dateRange?.[0]?.startOf('day').format('YYYY-MM-DD') || undefined,
         toDate: dateRange?.[1]?.endOf('day').format('YYYY-MM-DD') || undefined,
@@ -220,7 +223,7 @@ export const useSampleAssignmentLogForLab = (
     } finally {
       setLoading(false);
     }
-  }, [pagination.current, pagination.pageSize, searchFilter, displayStatusFilter, dateRange, selectedIndicatorIds, technicianFilter]);
+  }, [pagination.current, pagination.pageSize, searchFilter, displayStatusFilter, dateRange, selectedIndicatorIds, technicianFilter, sorting]);
 
   useEffect(() => {
     loadData();
@@ -239,6 +242,11 @@ export const useSampleAssignmentLogForLab = (
 
   const handleSearchInputChange = useCallback((value: string) => {
     setSearchText(value);
+  }, []);
+
+  const handleSortChange = useCallback((value: string) => {
+    setSorting(value);
+    setPagination(prev => ({ ...prev, current: 1 }));
   }, []);
 
   const handleDateRangeChange = useCallback((dates: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null) => {
@@ -289,6 +297,7 @@ export const useSampleAssignmentLogForLab = (
     totalCount,
     stats,
     searchText,
+    sorting,
     dateRange,
     selectedIndicatorIds,
     indicators,
@@ -298,6 +307,7 @@ export const useSampleAssignmentLogForLab = (
     pagination,
     handleSearch,
     handleSearchInputChange,
+    handleSortChange,
     handleDateRangeChange,
     handleIndicatorChange,
     handleTechnicianFilterChange,

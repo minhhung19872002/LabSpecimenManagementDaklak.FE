@@ -1,6 +1,7 @@
 import React, { useMemo, useCallback, useRef } from 'react';
 import { Table, Input, Select, Tag, Row, Col, Pagination, DatePicker } from 'antd';
-import { SearchOutlined } from '@ant-design/icons';
+import { SearchOutlined, SortAscendingOutlined } from '@ant-design/icons';
+import ResponsiveSelect from '../../../components/common/ResponsiveSelect';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useSampleAssignmentLogForLab } from '../hooks/useSampleAssignmentLogForLab';
@@ -51,17 +52,7 @@ interface ProcessedLogItem extends SampleAssignmentLogDto {
 const processDataForRowSpan = (data: SampleAssignmentLogDto[]): ProcessedLogItem[] => {
   if (data.length === 0) return [];
 
-  const result: ProcessedLogItem[] = [];
-  const seenSamples = new Set<string>();
-
-  // Calculate sample row counts
-  const sampleRowCounts = new Map<string, number>();
-  data.forEach(item => {
-    sampleRowCounts.set(
-      item.sampleId,
-      (sampleRowCounts.get(item.sampleId) || 0) + 1
-    );
-  });
+  const result: ProcessedLogItem[] = new Array(data.length);
 
   // Calculate contract groups (start and end indices for each contract group)
   const contractGroups: { start: number; end: number }[] = [];
@@ -76,54 +67,51 @@ const processDataForRowSpan = (data: SampleAssignmentLogDto[]): ProcessedLogItem
     i = j;
   }
 
-  // Create a map from index to contract group
-  const indexToContractGroup = new Map<number, { start: number; end: number }>();
-  contractGroups.forEach(group => {
-    for (let k = group.start; k <= group.end; k++) {
-      indexToContractGroup.set(k, group);
-    }
-  });
-
-  // Calculate contract row spans
-  const contractSpans: number[] = new Array(data.length).fill(0);
-  contractGroups.forEach(group => {
-    contractSpans[group.start] = group.end - group.start + 1;
-  });
-
-  // Helper function to calculate consecutive row spans within contract for a field
+  // Helper: calculate consecutive spans for a field within contract boundaries
   const calculateFieldSpansWithinContract = (
     fieldGetter: (item: SampleAssignmentLogDto) => string
   ): number[] => {
     const spans: number[] = new Array(data.length).fill(1);
-    let idx = 0;
-
-    while (idx < data.length) {
-      const currentContract = data[idx].contractNumber || '';
-      const currentValue = fieldGetter(data[idx]);
-      let spanCount = 1;
-
-      let j = idx + 1;
-      while (
-        j < data.length &&
-        (data[j].contractNumber || '') === currentContract &&
-        fieldGetter(data[j]) === currentValue
-      ) {
-        spanCount++;
-        j++;
+    for (const group of contractGroups) {
+      let idx = group.start;
+      while (idx <= group.end) {
+        const currentValue = fieldGetter(data[idx]);
+        let spanCount = 1;
+        while (
+          idx + spanCount <= group.end &&
+          fieldGetter(data[idx + spanCount]) === currentValue
+        ) {
+          spanCount++;
+        }
+        spans[idx] = spanCount;
+        for (let k = idx + 1; k < idx + spanCount; k++) {
+          spans[k] = 0;
+        }
+        idx += spanCount;
       }
-
-      spans[idx] = spanCount;
-      for (let k = idx + 1; k < j; k++) {
-        spans[k] = 0;
-      }
-
-      idx = j;
     }
-
     return spans;
   };
 
-  // Calculate technical manager and technician spans within contract
+  // Calculate sample spans within each contract group
+  const sampleSpans: number[] = new Array(data.length).fill(0);
+  for (const group of contractGroups) {
+    let si = group.start;
+    while (si <= group.end) {
+      const currentSampleId = data[si].sampleId;
+      let count = 1;
+      while (
+        si + count <= group.end &&
+        data[si + count].sampleId === currentSampleId
+      ) {
+        count++;
+      }
+      sampleSpans[si] = count;
+      si += count;
+    }
+  }
+
+  // Calculate personnel spans within contract
   const technicalManagerSpans = calculateFieldSpansWithinContract(
     (item) => item.technicalManagerName || ''
   );
@@ -131,115 +119,72 @@ const processDataForRowSpan = (data: SampleAssignmentLogDto[]): ProcessedLogItem
     (item) => item.technicianName || ''
   );
 
-  // Process each row
-  for (let idx = 0; idx < data.length; idx++) {
-    const currentItem = data[idx];
-    const currentSampleId = currentItem.sampleId;
-    const isFirstOfSample = !seenSamples.has(currentSampleId);
-    seenSamples.add(currentSampleId);
+  // Process each row within its contract group
+  for (const group of contractGroups) {
+    const contractSpan = group.end - group.start + 1;
 
-    // Calculate date row spans for this position (within same sample)
-    let transferDateSpan = 1;
-    const currentTransferDate = getDateKey(currentItem.transferDate);
-    for (let k = idx + 1; k < data.length && data[k].sampleId === currentSampleId; k++) {
-      if (getDateKey(data[k].transferDate) === currentTransferDate && currentTransferDate !== '') {
-        transferDateSpan++;
-      } else {
-        break;
+    for (let idx = group.start; idx <= group.end; idx++) {
+      const currentItem = data[idx];
+
+      // Date forward-looking: within same sample AND same contract group
+      const calcDateSpan = (
+        dateGetter: (item: SampleAssignmentLogDto) => string
+      ): number => {
+        const currentDate = dateGetter(currentItem);
+        let span = 1;
+        for (
+          let k = idx + 1;
+          k <= group.end && data[k].sampleId === currentItem.sampleId;
+          k++
+        ) {
+          if (dateGetter(data[k]) === currentDate) span++;
+          else break;
+        }
+        return span;
+      };
+
+      let transferDateSpan = calcDateSpan((d) => getDateKey(d.transferDate));
+      let requestDateSpan = calcDateSpan((d) => getDateKey(d.requestCompletionDate));
+      let testDateSpan = calcDateSpan((d) => getDateKey(d.testDate));
+      let entryDateSpan = calcDateSpan((d) => getDateKey(d.entryDate));
+      let qlktApprovalDateSpan = calcDateSpan((d) => getDateKey(d.qlktApprovalDate));
+
+      // Zero-out if previous row in same sample AND same contract has same date
+      const isPrevSameSample =
+        idx > group.start &&
+        data[idx - 1].sampleId === currentItem.sampleId;
+
+      if (isPrevSameSample) {
+        const prev = data[idx - 1];
+        if (getDateKey(currentItem.transferDate) === getDateKey(prev.transferDate))
+          transferDateSpan = 0;
+        if (getDateKey(currentItem.requestCompletionDate) === getDateKey(prev.requestCompletionDate))
+          requestDateSpan = 0;
+        if (getDateKey(currentItem.testDate) === getDateKey(prev.testDate))
+          testDateSpan = 0;
+        if (getDateKey(currentItem.entryDate) === getDateKey(prev.entryDate))
+          entryDateSpan = 0;
+        if (getDateKey(currentItem.qlktApprovalDate) === getDateKey(prev.qlktApprovalDate))
+          qlktApprovalDateSpan = 0;
       }
+
+      result[idx] = {
+        ...currentItem,
+        contractRowSpan: idx === group.start ? contractSpan : 0,
+        sampleRowSpan: sampleSpans[idx],
+        transferDateRowSpan: transferDateSpan,
+        requestCompletionDateRowSpan: requestDateSpan,
+        testDateRowSpan: testDateSpan,
+        technicalManagerRowSpan: technicalManagerSpans[idx],
+        technicianRowSpan: technicianSpans[idx],
+        entryDateRowSpan: entryDateSpan,
+        qlktApprovalDateRowSpan: qlktApprovalDateSpan,
+        _rowKey: `${currentItem.indicatorId}_${idx}`,
+        _rowIndex: idx,
+        _contractGroupStart: group.start,
+        _contractGroupEnd: group.end,
+      };
     }
-
-    let requestCompletionDateSpan = 1;
-    const currentRequestDate = getDateKey(currentItem.requestCompletionDate);
-    for (let k = idx + 1; k < data.length && data[k].sampleId === currentSampleId; k++) {
-      if (getDateKey(data[k].requestCompletionDate) === currentRequestDate && currentRequestDate !== '') {
-        requestCompletionDateSpan++;
-      } else {
-        break;
-      }
-    }
-
-    let testDateSpan = 1;
-    const currentTestDate = getDateKey(currentItem.testDate);
-    for (let k = idx + 1; k < data.length && data[k].sampleId === currentSampleId; k++) {
-      if (getDateKey(data[k].testDate) === currentTestDate && currentTestDate !== '') {
-        testDateSpan++;
-      } else {
-        break;
-      }
-    }
-
-    let entryDateSpan = 1;
-    const currentEntryDate = getDateKey(currentItem.entryDate);
-    for (let k = idx + 1; k < data.length && data[k].sampleId === currentSampleId; k++) {
-      if (getDateKey(data[k].entryDate) === currentEntryDate && currentEntryDate !== '') {
-        entryDateSpan++;
-      } else {
-        break;
-      }
-    }
-
-    let qlktApprovalDateSpan = 1;
-    const currentQlktApprovalDate = getDateKey(currentItem.qlktApprovalDate);
-    for (let k = idx + 1; k < data.length && data[k].sampleId === currentSampleId; k++) {
-      if (getDateKey(data[k].qlktApprovalDate) === currentQlktApprovalDate && currentQlktApprovalDate !== '') {
-        qlktApprovalDateSpan++;
-      } else {
-        break;
-      }
-    }
-
-    // Check if this row should have rowSpan=0 (merged into previous row) for date columns
-    const isPreviousSameSample = idx > 0 && data[idx - 1].sampleId === currentSampleId;
-
-    let actualTransferDateSpan = transferDateSpan;
-    let actualRequestDateSpan = requestCompletionDateSpan;
-    let actualTestDateSpan = testDateSpan;
-    let actualEntryDateSpan = entryDateSpan;
-    let actualQlktApprovalDateSpan = qlktApprovalDateSpan;
-
-    if (isPreviousSameSample) {
-      const prevTransferDate = getDateKey(data[idx - 1].transferDate);
-      const prevRequestDate = getDateKey(data[idx - 1].requestCompletionDate);
-      const prevTestDate = getDateKey(data[idx - 1].testDate);
-      const prevEntryDate = getDateKey(data[idx - 1].entryDate);
-      const prevQlktApprovalDate = getDateKey(data[idx - 1].qlktApprovalDate);
-
-      if (currentTransferDate === prevTransferDate && currentTransferDate !== '') {
-        actualTransferDateSpan = 0;
-      }
-      if (currentRequestDate === prevRequestDate && currentRequestDate !== '') {
-        actualRequestDateSpan = 0;
-      }
-      if (currentTestDate === prevTestDate && currentTestDate !== '') {
-        actualTestDateSpan = 0;
-      }
-      if (currentEntryDate === prevEntryDate && currentEntryDate !== '') {
-        actualEntryDateSpan = 0;
-      }
-      if (currentQlktApprovalDate === prevQlktApprovalDate && currentQlktApprovalDate !== '') {
-        actualQlktApprovalDateSpan = 0;
-      }
-    }
-
-    const contractGroup = indexToContractGroup.get(idx) || { start: idx, end: idx };
-
-    result.push({
-      ...currentItem,
-      contractRowSpan: contractSpans[idx],
-      sampleRowSpan: isFirstOfSample ? (sampleRowCounts.get(currentSampleId) || 1) : 0,
-      transferDateRowSpan: actualTransferDateSpan,
-      requestCompletionDateRowSpan: actualRequestDateSpan,
-      testDateRowSpan: actualTestDateSpan,
-      technicalManagerRowSpan: technicalManagerSpans[idx],
-      technicianRowSpan: technicianSpans[idx],
-      entryDateRowSpan: actualEntryDateSpan,
-      qlktApprovalDateRowSpan: actualQlktApprovalDateSpan,
-      _rowKey: `${currentItem.indicatorId}_${idx}`,
-      _rowIndex: idx,
-      _contractGroupStart: contractGroup.start,
-      _contractGroupEnd: contractGroup.end,
-    });
   }
 
   return result;
@@ -284,6 +229,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
     loading,
     data,
     searchText,
+    sorting,
     dateRange,
     selectedIndicatorIds,
     indicators,
@@ -293,6 +239,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
     pagination,
     handleSearch,
     handleSearchInputChange,
+    handleSortChange,
     handleDateRangeChange,
     handleIndicatorChange,
     handleTechnicianFilterChange,
@@ -518,8 +465,8 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
   return (
     <div className="sample-assignment-log-tab">
       {/* Toolbar */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 0, padding: 16 }}>
-        <Col xs={24} sm={12} md={6}>
+      <Row gutter={[8, 8]} style={{ marginBottom: 0, padding: 16 }} align="middle">
+        <Col xs={24} sm={12} lg={5}>
           <Input.Search
             placeholder="Tìm theo số HĐ, mã mẫu, tên mẫu, chỉ tiêu..."
             prefix={<SearchOutlined />}
@@ -530,7 +477,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
             enterButton
           />
         </Col>
-        <Col xs={24} sm={12} md={5}>
+        <Col xs={24} sm={12} lg={4}>
           <RangePicker
             value={dateRange}
             onChange={handleDateRangeChange}
@@ -539,8 +486,8 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
             allowClear
           />
         </Col>
-        <Col xs={24} sm={12} md={7}>
-          <Select
+        <Col xs={24} sm={12} lg={5}>
+          <ResponsiveSelect
             mode="multiple"
             style={{ width: '100%' }}
             placeholder="Chọn chỉ tiêu"
@@ -560,8 +507,8 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
             allowClear
           />
         </Col>
-        <Col xs={24} sm={6} md={6}>
-          <Select
+        <Col xs={24} sm={12} lg={4}>
+          <ResponsiveSelect
             mode="multiple"
             style={{ width: '100%' }}
             placeholder="Thử nghiệm viên"
@@ -569,7 +516,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
             onChange={handleTechnicianFilterChange}
             allowClear
             loading={loadingTechnicians}
-            maxTagCount={1}
+            maxTagCount="responsive"
             optionFilterProp="children"
             showSearch
           >
@@ -578,6 +525,17 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
                 {tech.displayName || tech.userName}
               </Select.Option>
             ))}
+          </ResponsiveSelect>
+        </Col>
+        <Col flex="auto" style={{ display: "flex", justifyContent: "flex-end" }}>
+          <Select
+            value={sorting}
+            onChange={handleSortChange}
+            prefix={<SortAscendingOutlined />}
+          >
+            <Select.Option value="ContractDate desc">Ngày hợp đồng mới nhất</Select.Option>
+            <Select.Option value="RequestCompletionDate desc">Ngày yêu cầu xong mới nhất</Select.Option>
+            <Select.Option value="RequestCompletionDate">Ngày yêu cầu xong cũ nhất</Select.Option>
           </Select>
         </Col>
       </Row>

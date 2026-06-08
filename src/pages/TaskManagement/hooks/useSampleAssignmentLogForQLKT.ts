@@ -22,6 +22,7 @@ interface UseSampleAssignmentLogForQLKTResult {
 
   // Filters
   searchText: string;
+  sorting: string;
   dateRange: [dayjs.Dayjs, dayjs.Dayjs] | null;
   selectedIndicatorIds: string[];
   selectedTechnicianIds: string[];
@@ -39,6 +40,7 @@ interface UseSampleAssignmentLogForQLKTResult {
 
   // Handlers
   handleSearchInputChange: (value: string) => void;
+  handleSortChange: (value: string) => void;
   handleDateRangeChange: (dates: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null) => void;
   handleIndicatorChange: (values: string[]) => void;
   handleTechnicianChange: (values: string[]) => void;
@@ -63,6 +65,7 @@ export const useSampleAssignmentLogForQLKT = (
   const [data, setData] = useState<SampleAssignmentLogDto[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [searchText, setSearchText] = useState('');
+  const [sorting, setSorting] = useState('ContractDate desc');
   const [debouncedSearchText, setDebouncedSearchText] = useState('');
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
   const [selectedIndicatorIds, setSelectedIndicatorIds] = useState<string[]>([]);
@@ -115,7 +118,7 @@ export const useSampleAssignmentLogForQLKT = (
       const input: GetSampleAssignmentLogInput = {
         skipCount: (pagination.current - 1) * pagination.pageSize,
         maxResultCount: pagination.pageSize,
-        sorting: dateRange ? 'RequestCompletionDate asc' : 'ContractNumber desc',
+        sorting,
         search: debouncedSearchText || undefined,
         fromDate: dateRange?.[0]?.startOf('day').format('YYYY-MM-DD') || undefined,
         toDate: dateRange?.[1]?.endOf('day').format('YYYY-MM-DD') || undefined,
@@ -135,7 +138,7 @@ export const useSampleAssignmentLogForQLKT = (
     } finally {
       setLoading(false);
     }
-  }, [pagination.current, pagination.pageSize, debouncedSearchText, displayStatusFilter, dateRange, selectedIndicatorIds, selectedTechnicianIds]);
+  }, [pagination.current, pagination.pageSize, debouncedSearchText, displayStatusFilter, dateRange, selectedIndicatorIds, selectedTechnicianIds, sorting]);
 
   // Initial load and reload on filter changes
   useEffect(() => {
@@ -149,6 +152,11 @@ export const useSampleAssignmentLogForQLKT = (
   // Handlers
   const handleSearchInputChange = useCallback((value: string) => {
     setSearchText(value);
+  }, []);
+
+  const handleSortChange = useCallback((value: string) => {
+    setSorting(value);
+    setPagination(prev => ({ ...prev, current: 1 }));
   }, []);
 
   const handleDateRangeChange = useCallback((dates: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null) => {
@@ -197,6 +205,7 @@ export const useSampleAssignmentLogForQLKT = (
     data,
     totalCount,
     searchText,
+    sorting,
     dateRange,
     selectedIndicatorIds,
     selectedTechnicianIds,
@@ -204,6 +213,7 @@ export const useSampleAssignmentLogForQLKT = (
     technicians,
     pagination,
     handleSearchInputChange,
+    handleSortChange,
     handleDateRangeChange,
     handleIndicatorChange,
     handleTechnicianChange,

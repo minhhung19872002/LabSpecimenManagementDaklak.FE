@@ -71,7 +71,7 @@ interface ParsedRow {
   errorMessage?: string;
 }
 
-const TEMPLATE_URL = `${API_BASE_URL}/templates/Meta Data Template/Import bao gia.xlsx`;
+const TEMPLATE_URL = `${API_BASE_URL}/api/v1/form-templates/download/Meta Data Template/Import bao gia.xlsx`;
 
 const ImportQuotationSamplesModal: React.FC<ImportQuotationSamplesModalProps> = ({
   visible,

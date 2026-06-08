@@ -74,6 +74,7 @@ interface EvaluationIndicatorTableProps {
   loading?: boolean;
   onEvaluationComplete: () => void; // Callback to refresh data after evaluation
   isSharedSampleTask?: boolean; // Mẫu chung - cần check ẩn nút từ chối cho Lab Hóa
+  isTestRequestCancelled?: boolean;
 }
 
 const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
@@ -84,6 +85,7 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
   loading = false,
   onEvaluationComplete,
   isSharedSampleTask = false,
+  isTestRequestCancelled = false,
 }) => {
   // State for selected indicators
   const [selectedIndicatorIds, setSelectedIndicatorIds] = useState<string[]>(
@@ -456,6 +458,10 @@ const EvaluationIndicatorTable: React.FC<EvaluationIndicatorTableProps> = ({
 
   // Get status tag for indicator
   const getStatusTag = (record: LaboratoryTaskIndicatorDto) => {
+    if (isTestRequestCancelled) {
+      return <StatusTag color="error">Hủy bỏ</StatusTag>;
+    }
+
     const status = record.approvalStatus;
 
     // Hiển thị "Chờ mẫu chung" nếu chỉ tiêu đang đợi mẫu từ Lab Vi Sinh

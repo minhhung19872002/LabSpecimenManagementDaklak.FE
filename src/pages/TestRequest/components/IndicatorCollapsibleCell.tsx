@@ -16,6 +16,7 @@ const { Text } = Typography;
 
 interface IndicatorCollapsibleCellProps {
   indicators: any[];
+  isTestRequestCancelled?: boolean;
 }
 
 // Cấu trúc để nhóm parent-child
@@ -90,6 +91,7 @@ const groupByParentChild = (indicators: any[]): GroupedIndicator[] => {
 
 const IndicatorCollapsibleCell: React.FC<IndicatorCollapsibleCellProps> = ({
   indicators,
+  isTestRequestCancelled = false,
 }) => {
   // Group indicators by laboratory
   const unsentIndicators = indicators.filter((ind) => !ind.laboratoryId);
@@ -249,14 +251,21 @@ const IndicatorCollapsibleCell: React.FC<IndicatorCollapsibleCellProps> = ({
               - {ind.unitPrice?.toLocaleString("vi-VN")}đ
             </Text>
           ) : null}
-          {hasApprovalStatus && approvalStatusLabel && (
+          {isTestRequestCancelled ? (
+            <StatusTag
+              color="error"
+              style={{ fontSize: 10, minWidth: 55 }}
+            >
+              Hủy bỏ
+            </StatusTag>
+          ) : hasApprovalStatus && approvalStatusLabel ? (
             <StatusTag
               color={approvalStatusColor || "default"}
               style={{ fontSize: 10, minWidth: 55 }}
             >
               {approvalStatusLabel}
             </StatusTag>
-          )}
+          ) : null}
         </div>
         <div style={{ fontSize: 10, color: "#888", marginTop: 2 }}>
           {ind.requestDate && (

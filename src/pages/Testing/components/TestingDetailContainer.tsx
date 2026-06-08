@@ -54,6 +54,7 @@ interface TestingDetailContainerProps {
   getResultOptionsForIndicator?: (indicatorId: string, specimenTypeId?: string) => ResultOption[];
   /** Có quyền thực hiện thao tác (nhập/sửa/gửi kết quả) theo Permission Matrix */
   canPerformActions?: boolean;
+  isTestRequestCancelled?: boolean;
   onBack: () => void;
   onCollapseChange: (keys: string[]) => void;
   onSubmitResults: (sampleId: string) => void;
@@ -104,6 +105,7 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
   resultOptions = [],
   getResultOptionsForIndicator,
   canPerformActions = false,
+  isTestRequestCancelled = false,
   onBack,
   onCollapseChange,
   onSubmitResults,
@@ -229,6 +231,7 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
                 resultOptions={resultOptions}
                 getResultOptionsForIndicator={getResultOptionsForIndicator}
                 canPerformActions={canPerformActions}
+                isTestRequestCancelled={isTestRequestCancelled}
                 onResultsChange={(results) =>
                   onResultsChange(sample.sampleId, results)
                 }

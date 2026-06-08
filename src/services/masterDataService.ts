@@ -1272,4 +1272,7 @@ export const formTemplateService = {
     const response = await api.upload<{ fileName: string; isReplacing: boolean; success: boolean }>(`${FORM_TEMPLATE_URL}/upload`, formData);
     return response.data;
   },
+  delete: async (fileName: string): Promise<void> => {
+    await api.delete(`${FORM_TEMPLATE_URL}/${encodeURIComponent(fileName)}`);
+  },
 };

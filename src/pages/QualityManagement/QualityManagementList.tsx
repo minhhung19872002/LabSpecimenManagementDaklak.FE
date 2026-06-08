@@ -16,6 +16,7 @@ import Icon, {
   SafetyCertificateOutlined,
   SearchOutlined,
   ReloadOutlined,
+  SortAscendingOutlined,
 } from "../../components/common/Icon";
 import {
   QualityManagementStatus,
@@ -28,6 +29,7 @@ import SampleAssignmentLogTab, {
   AssignmentLogControls,
 } from "./components/SampleAssignmentLogTab";
 import { useQualityManagementList } from "./hooks";
+import ResponsiveSelect from "../../components/common/ResponsiveSelect";
 
 import "./components/ReportManagementTab.css";
 import "../../styles/ListCard.css";
@@ -63,6 +65,7 @@ const QualityManagementList: React.FC = () => {
     loading,
     tasks,
     statistics,
+    sorting,
     statusFilter,
     overdueFilter,
     dateRange,
@@ -76,6 +79,7 @@ const QualityManagementList: React.FC = () => {
     columns,
     loadData,
     handleSearch,
+    handleSortChange,
     handleStatusFilter,
     handleOverdueFilter,
     handleDateRangeChange,
@@ -341,7 +345,7 @@ const QualityManagementList: React.FC = () => {
                 />
               </Col>
               <Col xs={24} sm={8} md={6}>
-                <Select
+                <ResponsiveSelect
                   mode="multiple"
                   style={{ width: "100%" }}
                   placeholder="Chọn phòng lab"
@@ -360,6 +364,17 @@ const QualityManagementList: React.FC = () => {
                   maxTagCount="responsive"
                   allowClear
                 />
+              </Col>
+              <Col flex="auto" style={{ display: "flex", justifyContent: "flex-end" }}>
+                <Select
+                  value={sorting}
+                  onChange={handleSortChange}
+                  prefix={<SortAscendingOutlined />}
+                >
+                  <Select.Option value="ContractDate desc">Ngày hợp đồng mới nhất</Select.Option>
+                  <Select.Option value="RequestCompletionDate desc">Ngày yêu cầu xong mới nhất</Select.Option>
+                  <Select.Option value="RequestCompletionDate">Ngày yêu cầu xong cũ nhất</Select.Option>
+                </Select>
               </Col>
             </Row>
 
