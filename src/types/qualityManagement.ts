@@ -82,7 +82,8 @@ export enum QLCLDisplayStatus {
   WaitingQLCLApproval = 9,        // Chờ QLCL Duyệt
   QLCLRejected = 10,              // QLCL từ chối
   WaitingForPublishing = 11,      // Chờ phát hành
-  Published = 12                  // Đã phát hành báo cáo
+  Published = 12,                 // Đã phát hành báo cáo
+  RequestCancelled = 13           // Hủy bỏ yêu cầu
 }
 
 export const QLCLDisplayStatusLabels: Record<QLCLDisplayStatus, string> = {
@@ -98,7 +99,8 @@ export const QLCLDisplayStatusLabels: Record<QLCLDisplayStatus, string> = {
   [QLCLDisplayStatus.WaitingQLCLApproval]: 'Chờ QLCL Duyệt',
   [QLCLDisplayStatus.QLCLRejected]: 'QLCL từ chối',
   [QLCLDisplayStatus.WaitingForPublishing]: 'Chờ phát hành',
-  [QLCLDisplayStatus.Published]: 'Đã phát hành'
+  [QLCLDisplayStatus.Published]: 'Đã phát hành',
+  [QLCLDisplayStatus.RequestCancelled]: 'Hủy bỏ'
 };
 
 export const QLCLDisplayStatusColors: Record<QLCLDisplayStatus, string> = {
@@ -114,7 +116,8 @@ export const QLCLDisplayStatusColors: Record<QLCLDisplayStatus, string> = {
   [QLCLDisplayStatus.WaitingQLCLApproval]: 'purple',     // Tím - chờ QLCL
   [QLCLDisplayStatus.QLCLRejected]: 'error',             // Đỏ - QLCL từ chối
   [QLCLDisplayStatus.WaitingForPublishing]: 'cyan',      // Xanh cyan - chờ phát hành
-  [QLCLDisplayStatus.Published]: 'success'               // Xanh lá - đã phát hành
+  [QLCLDisplayStatus.Published]: 'success',               // Xanh lá - đã phát hành
+  [QLCLDisplayStatus.RequestCancelled]: 'error'           // Đỏ - hủy bỏ yêu cầu
 };
 
 // Change History DTO (for ChangeApproval tasks)

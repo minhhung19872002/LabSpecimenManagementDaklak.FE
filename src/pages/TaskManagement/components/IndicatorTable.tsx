@@ -975,6 +975,12 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         // Hide for parent indicators that have sub-indicators
         if (record._isParentWithSubs) return null;
 
+        if (forceDisableAll) {
+          return (
+            <StatusTag color="error">Hủy bỏ</StatusTag>
+          );
+        }
+
         const canShowSubContractAction =
           !!record.isSubContractMethod && !!onUpdateSubContractMethod;
 

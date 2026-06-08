@@ -7,10 +7,12 @@ import IndicatorCollapsibleCell from "../components/IndicatorCollapsibleCell";
 
 interface SampleColumnsProps {
   onViewImages: (sample: TestRequestSampleDto) => void;
+  isTestRequestCancelled?: boolean;
 }
 
 export const getSampleColumns = ({
   onViewImages,
+  isTestRequestCancelled = false,
 }: SampleColumnsProps): ColumnsType<TestRequestSampleDto> => [
   {
     title: "STT",
@@ -107,7 +109,7 @@ export const getSampleColumns = ({
     width: 350,
     render: (indicators: any[]) => {
       if (!indicators || indicators.length === 0) return "-";
-      return <IndicatorCollapsibleCell indicators={indicators} />;
+      return <IndicatorCollapsibleCell indicators={indicators} isTestRequestCancelled={isTestRequestCancelled} />;
     },
   },
   {

@@ -533,7 +533,8 @@ export enum QLKTDisplayStatus {
   ResultRejected = 11,          // Từ chối KQ
   WaitingQLCLApproval = 12,     // Chờ QLCL Duyệt
   QLCLRejected = 13,            // QLCL từ chối
-  Completed = 14                // Hoàn thành
+  Completed = 14,               // Hoàn thành
+  RequestCancelled = 15         // Hủy bỏ yêu cầu
 }
 
 export const QLKTDisplayStatusLabels: Record<QLKTDisplayStatus, string> = {
@@ -551,7 +552,8 @@ export const QLKTDisplayStatusLabels: Record<QLKTDisplayStatus, string> = {
   [QLKTDisplayStatus.ResultRejected]: 'Từ chối KQ',
   [QLKTDisplayStatus.WaitingQLCLApproval]: 'Chờ QLCL Duyệt',
   [QLKTDisplayStatus.QLCLRejected]: 'QLCL từ chối',
-  [QLKTDisplayStatus.Completed]: 'Hoàn thành'
+  [QLKTDisplayStatus.Completed]: 'Hoàn thành',
+  [QLKTDisplayStatus.RequestCancelled]: 'Hủy bỏ'
 };
 
 export const QLKTDisplayStatusColors: Record<QLKTDisplayStatus, string> = {
@@ -569,5 +571,6 @@ export const QLKTDisplayStatusColors: Record<QLKTDisplayStatus, string> = {
   [QLKTDisplayStatus.ResultRejected]: 'error',         // Đỏ - từ chối KQ
   [QLKTDisplayStatus.WaitingQLCLApproval]: 'purple',   // Tím - chờ QLCL
   [QLKTDisplayStatus.QLCLRejected]: 'error',           // Đỏ - QLCL từ chối
-  [QLKTDisplayStatus.Completed]: 'success'             // Xanh lá - hoàn thành
+  [QLKTDisplayStatus.Completed]: 'success',             // Xanh lá - hoàn thành
+  [QLKTDisplayStatus.RequestCancelled]: 'error'         // Đỏ - hủy bỏ yêu cầu
 };

@@ -487,6 +487,7 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
 
   const sampleColumns: ColumnsType<TestRequestSampleDto> = getSampleColumns({
     onViewImages: onViewSampleImages,
+    isTestRequestCancelled: isCancelledRequest(data.status),
   });
 
   return (

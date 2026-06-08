@@ -50,6 +50,7 @@ interface IndicatorEditTableProps {
   getResultOptionsForIndicator?: (indicatorId: string, specimenTypeId?: string) => ResultOption[];
   /** Có quyền thực hiện thao tác (nhập/sửa/gửi kết quả) theo Permission Matrix */
   canPerformActions?: boolean;
+  isTestRequestCancelled?: boolean;
   onResultsChange: (results: SaveIndicatorResultDto[]) => void;
   onSelectionChange: (indicatorIds: string[]) => void;
   onShowRejectionHistory: (indicatorId: string, indicatorName: string) => void;
@@ -197,6 +198,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
   resultOptions = [],
   getResultOptionsForIndicator,
   canPerformActions = false,
+  isTestRequestCancelled = false,
   onResultsChange,
   onSelectionChange,
   onShowRejectionHistory,
@@ -737,6 +739,11 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
         // Parent có children -> không hiển thị status
         if (record._isParentWithChildren) {
           return <Text type="secondary">-</Text>;
+        }
+        if (isTestRequestCancelled) {
+          return (
+            <StatusTag color="error">Hủy bỏ</StatusTag>
+          );
         }
         return getTestingStatusTag(record.testingStatus);
       },
