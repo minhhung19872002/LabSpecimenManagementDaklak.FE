@@ -2224,6 +2224,7 @@ const TaskManagementDetail: React.FC = () => {
                 loading={loading}
                 onEvaluationComplete={reloadData}
                 isSharedSampleTask={task.isSharedSampleTask}
+                isTestRequestCancelled={isTestRequestCancelled}
               />
             </div>
           )}
