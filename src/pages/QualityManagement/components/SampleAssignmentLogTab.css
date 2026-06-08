@@ -6,6 +6,18 @@
   margin-bottom: 16px;
 }
 
+/* Sort dropdown: align right on desktop, left when wrapped */
+.sample-assignment-log-tab .sal-sort-col {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 1199px) {
+  .sample-assignment-log-tab .sal-sort-col {
+    justify-content: flex-start;
+  }
+}
+
 /* Disable default Ant Design hover - we handle hover manually */
 .sample-assignment-log-tab .ant-table-tbody > tr.ant-table-row:hover > td,
 .sample-assignment-log-tab .ant-table-tbody > tr.ant-table-row-hover > td,

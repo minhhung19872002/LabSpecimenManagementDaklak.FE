@@ -17,6 +17,7 @@ import {
   ImportOutlined,
   DownloadOutlined,
   CloudOutlined,
+  SortAscendingOutlined,
 } from "../../components/common/Icon";
 import {
   TestRequestStatus,
@@ -36,6 +37,7 @@ const TestRequestList: React.FC = () => {
     pageSize,
     searchInput,
     statusFilter,
+    sorting,
     dateRange,
     importModalOpen,
     downloadingTemplate,
@@ -45,6 +47,7 @@ const TestRequestList: React.FC = () => {
     handleDownloadTemplate,
     handleSearch,
     handleStatusChange,
+    handleSortChange,
     handleDateRangeChange,
     handleCreate,
     handleRowDoubleClick,
@@ -192,6 +195,17 @@ const TestRequestList: React.FC = () => {
               allowClear
             />
           </div>
+        </Col>
+        <Col flex="auto" style={{ display: "flex", justifyContent: "flex-end" }}>
+          <Select
+            value={sorting}
+            onChange={handleSortChange}
+            prefix={<SortAscendingOutlined />}
+          >
+            <Select.Option value="contractDate desc">Ngày hợp đồng mới nhất</Select.Option>
+            <Select.Option value="expectedCompletionDate desc">Ngày yêu cầu xong mới nhất</Select.Option>
+            <Select.Option value="expectedCompletionDate asc">Ngày yêu cầu xong cũ nhất</Select.Option>
+          </Select>
         </Col>
       </Row>
 

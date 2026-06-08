@@ -38,6 +38,7 @@ export const useTestRequestList = () => {
   );
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
+  const [sorting, setSorting] = useState("contractDate desc");
   const [dateRange, setDateRange] = useState<
     [Dayjs | null, Dayjs | null] | null
   >(null);
@@ -50,7 +51,7 @@ export const useTestRequestList = () => {
       const response = await offlineTestRequestService.getList({
         skipCount: (currentPage - 1) * pageSize,
         maxResultCount: pageSize,
-        sorting: "creationTime desc",
+        sorting,
         search: searchText || undefined,
         status: statusFilter !== "all" ? statusFilter : undefined,
         expectedCompletionDateFrom:
@@ -73,7 +74,7 @@ export const useTestRequestList = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, searchText, statusFilter, dateRange]);
+  }, [currentPage, pageSize, searchText, statusFilter, dateRange, sorting]);
 
   useEffect(() => {
     loadData();
@@ -100,6 +101,11 @@ export const useTestRequestList = () => {
 
   const handleStatusChange = useCallback((value: TestRequestStatus | "all") => {
     setStatusFilter(value);
+    setCurrentPage(1);
+  }, []);
+
+  const handleSortChange = useCallback((value: string) => {
+    setSorting(value);
     setCurrentPage(1);
   }, []);
 
@@ -184,6 +190,7 @@ export const useTestRequestList = () => {
     pageSize,
     searchInput,
     statusFilter,
+    sorting,
     dateRange,
     importModalOpen,
     downloadingTemplate,
@@ -197,6 +204,7 @@ export const useTestRequestList = () => {
     handleDownloadTemplate,
     handleSearch,
     handleStatusChange,
+    handleSortChange,
     handleDateRangeChange,
     handleCreate,
     handleEdit,
