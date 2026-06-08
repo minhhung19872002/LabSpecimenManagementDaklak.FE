@@ -116,6 +116,9 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
   onImportSamples,
   onAddExistingSample,
 }) => {
+  // Active sample row highlight
+  const [activeSampleKey, setActiveSampleKey] = useState<string | undefined>(undefined);
+
   // Barcode/QR Modal state
   const [barcodeModalVisible, setBarcodeModalVisible] = useState(false);
   const [selectedSampleForBarcode, setSelectedSampleForBarcode] =
@@ -733,7 +736,7 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
                 type="primary"
                 size="small"
                 icon={<PlusOutlined />}
-                onClick={() => openIndicatorModal(record.key)}
+                onClick={() => { setActiveSampleKey(record.key); openIndicatorModal(record.key); }}
                 style={{ flexShrink: 0 }}
               />
             </Tooltip>
@@ -914,6 +917,11 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
         size="small"
         bordered
         className="sample-table-fixed-height"
+        rowClassName={(record) => record.key === activeSampleKey ? "sample-row-active" : ""}
+        onRow={(record) => ({
+          onFocusCapture: () => setActiveSampleKey(record.key),
+          onClick: () => setActiveSampleKey(record.key),
+        })}
         locale={{
           emptyText: (
             <div style={{ padding: "60px 0" }}>
