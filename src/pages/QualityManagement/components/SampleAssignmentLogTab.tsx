@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback, useState, useEffect } from "react";
 import { Table, Input, Select, Tag, Row, Col, Pagination, DatePicker } from "antd";
-import { SearchOutlined } from "@ant-design/icons";
+import { SearchOutlined, SortAscendingOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 
@@ -253,12 +253,14 @@ const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegis
     loading,
     data,
     statistics,
+    sorting,
     pagination,
     qlclDisplayStatuses,
     dateRange,
     laboratoryIds,
     laboratories,
     handleSearch,
+    handleSortChange,
     handleQlclStatusFilter,
     handleDateRangeChange,
     handleLaboratoryChange,
@@ -595,6 +597,17 @@ const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegis
             maxTagCount="responsive"
             allowClear
           />
+        </Col>
+        <Col flex="auto" style={{ display: "flex", justifyContent: "flex-end" }}>
+          <Select
+            value={sorting}
+            onChange={handleSortChange}
+            prefix={<SortAscendingOutlined />}
+          >
+            <Select.Option value="ContractDate desc">Ngày hợp đồng mới nhất</Select.Option>
+            <Select.Option value="RequestCompletionDate desc">Ngày yêu cầu xong mới nhất</Select.Option>
+            <Select.Option value="RequestCompletionDate">Ngày yêu cầu xong cũ nhất</Select.Option>
+          </Select>
         </Col>
       </Row>
 

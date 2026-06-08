@@ -16,6 +16,7 @@ import Icon, {
   SafetyCertificateOutlined,
   SearchOutlined,
   ReloadOutlined,
+  SortAscendingOutlined,
 } from "../../components/common/Icon";
 import {
   QualityManagementStatus,
@@ -63,6 +64,7 @@ const QualityManagementList: React.FC = () => {
     loading,
     tasks,
     statistics,
+    sorting,
     statusFilter,
     overdueFilter,
     dateRange,
@@ -76,6 +78,7 @@ const QualityManagementList: React.FC = () => {
     columns,
     loadData,
     handleSearch,
+    handleSortChange,
     handleStatusFilter,
     handleOverdueFilter,
     handleDateRangeChange,
@@ -360,6 +363,17 @@ const QualityManagementList: React.FC = () => {
                   maxTagCount="responsive"
                   allowClear
                 />
+              </Col>
+              <Col flex="auto" style={{ display: "flex", justifyContent: "flex-end" }}>
+                <Select
+                  value={sorting}
+                  onChange={handleSortChange}
+                  prefix={<SortAscendingOutlined />}
+                >
+                  <Select.Option value="ContractDate desc">Ngày hợp đồng mới nhất</Select.Option>
+                  <Select.Option value="RequestCompletionDate desc">Ngày yêu cầu xong mới nhất</Select.Option>
+                  <Select.Option value="RequestCompletionDate">Ngày yêu cầu xong cũ nhất</Select.Option>
+                </Select>
               </Col>
             </Row>
 

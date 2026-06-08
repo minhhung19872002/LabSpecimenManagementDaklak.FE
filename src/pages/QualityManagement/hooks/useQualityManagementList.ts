@@ -21,6 +21,7 @@ export const useQualityManagementList = () => {
   const [statistics, setStatistics] =
     useState<QualityManagementStatisticsDto | null>(null);
   const [searchText, setSearchText] = useState("");
+  const [sorting, setSorting] = useState("ContractDate desc");
   const [statusFilter, setStatusFilter] = useState<
     QualityManagementStatus | undefined
   >(undefined);
@@ -58,7 +59,7 @@ export const useQualityManagementList = () => {
         qualityManagementService.getList({
           skipCount: (pagination.current - 1) * pagination.pageSize,
           maxResultCount: pagination.pageSize,
-          sorting: 'ContractDate desc',
+          sorting,
           search: searchText || undefined,
           status: statusFilter,
           isOverdue: overdueFilter || undefined,
@@ -78,7 +79,7 @@ export const useQualityManagementList = () => {
     } finally {
       setLoading(false);
     }
-  }, [pagination.current, pagination.pageSize, searchText, statusFilter, overdueFilter, dateRange, laboratoryIds]);
+  }, [pagination.current, pagination.pageSize, searchText, sorting, statusFilter, overdueFilter, dateRange, laboratoryIds]);
 
   useEffect(() => {
     loadData();
@@ -87,6 +88,11 @@ export const useQualityManagementList = () => {
   // Handlers
   const handleSearch = useCallback((value: string) => {
     setSearchText(value);
+    setPagination((prev) => ({ ...prev, current: 1 }));
+  }, []);
+
+  const handleSortChange = useCallback((value: string) => {
+    setSorting(value);
     setPagination((prev) => ({ ...prev, current: 1 }));
   }, []);
 
@@ -206,6 +212,7 @@ export const useQualityManagementList = () => {
     tasks,
     statistics,
     searchText,
+    sorting,
     statusFilter,
     overdueFilter,
     dateRange,
@@ -221,6 +228,7 @@ export const useQualityManagementList = () => {
     // Handlers
     loadData,
     handleSearch,
+    handleSortChange,
     handleStatusFilter,
     handleOverdueFilter,
     handleDateRangeChange,
