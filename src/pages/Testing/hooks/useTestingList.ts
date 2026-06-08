@@ -56,6 +56,7 @@ export const useTestingList = () => {
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [searchFilter, setSearchFilter] = useState("");
+  const [sorting, setSorting] = useState("ContractDate desc");
   const [statusFilter, setStatusFilter] = useState<TestingStatus | undefined>(
     undefined
   );
@@ -149,7 +150,7 @@ export const useTestingList = () => {
         requestCompletionDateFrom: dateRange?.[0]?.startOf('day').format('YYYY-MM-DD') || undefined,
         requestCompletionDateTo: dateRange?.[1]?.endOf('day').format('YYYY-MM-DD') || undefined,
         indicatorIds: selectedIndicatorIds.length > 0 ? selectedIndicatorIds : undefined,
-        sorting: dateRange ? 'requestcompletiondate' : 'ContractDate desc',
+        sorting,
       });
 
       setTasks(result.items);
@@ -169,6 +170,7 @@ export const useTestingList = () => {
     technicianFilter,
     dateRange,
     selectedIndicatorIds,
+    sorting,
   ]);
 
   useEffect(() => {
@@ -213,6 +215,11 @@ export const useTestingList = () => {
 
   const handleSearchInputChange = useCallback((value: string) => {
     setSearchText(value);
+  }, []);
+
+  const handleSortChange = useCallback((value: string) => {
+    setSorting(value);
+    setPagination((prev) => ({ ...prev, current: 1 }));
   }, []);
 
   const handleStatusFilterChange = useCallback(
@@ -301,6 +308,7 @@ export const useTestingList = () => {
     tasks,
     loading,
     searchText,
+    sorting,
     statusFilter,
     technicianFilter,
     technicians,
@@ -317,6 +325,7 @@ export const useTestingList = () => {
     loadData,
     handleSearch,
     handleSearchInputChange,
+    handleSortChange,
     handleStatusFilterChange,
     handleTechnicianFilterChange,
     handleDateRangeChange,

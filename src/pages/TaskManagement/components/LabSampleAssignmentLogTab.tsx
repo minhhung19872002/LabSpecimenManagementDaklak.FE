@@ -606,7 +606,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({ d
             allowClear
           />
         </Col>
-        <Col xs={24} sm={12} lg={6} className="sal-sort-col">
+        <Col flex="auto" style={{ display: "flex", justifyContent: "flex-end" }}>
           <Select
             value={sorting}
             onChange={handleSortChange}
