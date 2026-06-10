@@ -499,6 +499,7 @@ const TaskManagementDetail: React.FC = () => {
           sampleId,
           sampleCode: indicators[0]?.sampleCode,
           sampleName: indicators[0]?.sampleName,
+          specimenTypeName: indicators[0]?.specimenTypeName,
           indicatorCount: indicators.length,
           indicators: mergedIndicators as LaboratoryTaskIndicatorDto[],
           sampleStatus,
@@ -1718,7 +1719,11 @@ const TaskManagementDetail: React.FC = () => {
         <Row justify="space-between" align="middle" style={{ width: "100%" }}>
           <Col>
             <Space>
-              <Tag color="blue">{sample.sampleCode}</Tag>
+              <Tag color="blue">
+                {[sample.sampleCode, sample.sampleName, sample.specimenTypeName]
+                  .filter(Boolean)
+                  .join(" - ")}
+              </Tag>
               <Text type="secondary">({sample.indicatorCount} chỉ tiêu)</Text>
               {getSampleStatusTag(sample.sampleStatus)}
             </Space>
