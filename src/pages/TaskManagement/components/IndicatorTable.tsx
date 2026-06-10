@@ -457,7 +457,6 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         const canEditMethod =
           !forceDisableAll &&
           !savingMethodIndicatorIds.includes(record.id) &&
-          record.approvalStatus !== IndicatorApprovalStatus.Approved &&
           record.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled;
 
         const methodOptions = (methods || []).map((m) => ({
@@ -996,7 +995,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                 subContractCost: record.subContractCost,
               });
             }}
-            disabled={status === IndicatorApprovalStatus.Approved}
+            disabled={status === IndicatorApprovalStatus.CustomerCancelled || forceDisableAll}
           >
             Cập nhật PP
           </Button>
