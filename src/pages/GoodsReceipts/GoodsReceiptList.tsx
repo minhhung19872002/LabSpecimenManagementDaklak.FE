@@ -1,15 +1,17 @@
 import React, { useMemo, useState, useCallback } from "react";
-import { Card, Button, Space, message } from "antd";
-import { PlusOutlined, DeleteOutlined, DownloadOutlined } from "@ant-design/icons";
+import { Card, Button, Space, Dropdown, message } from "antd";
+import { PlusOutlined, DeleteOutlined, DownloadOutlined, DownOutlined } from "@ant-design/icons";
 import * as XLSX from "xlsx";
 import { useGoodsReceiptList, useGoodsReceiptActions } from "./hooks";
 import { GoodsReceiptTable, ColumnConfigPopover } from "./components";
 import { getGoodsReceiptColumns, ALL_COLUMNS, COLUMN_VISIBILITY_KEY } from "./constants";
 import {
   goodsReceiptService,
+  GoodsReceiptType,
   WarehouseStatusLabels,
   OrderStatusLabels,
   PaymentStatusLabels,
+  ReceiptTypeLabels,
 } from "../../services/goodsReceiptService";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
@@ -32,12 +34,14 @@ const GoodsReceiptList: React.FC = () => {
     warehouseStatusFilter,
     orderStatusFilter,
     paymentStatusFilter,
+    receiptTypeFilter,
     currentPage,
     pageSize,
     setSearchText,
     handleWarehouseStatusChange,
     handleOrderStatusChange,
     handlePaymentStatusChange,
+    handleReceiptTypeChange,
     handleDateRangeChange,
     handleSortChange,
     fetchData,
@@ -74,6 +78,7 @@ const GoodsReceiptList: React.FC = () => {
         warehouseStatus: warehouseStatusFilter,
         orderStatus: orderStatusFilter,
         paymentStatus: paymentStatusFilter,
+        receiptType: receiptTypeFilter,
       };
       const PAGE_LIMIT = 200;
       let allItems: typeof data = [];
@@ -95,7 +100,8 @@ const GoodsReceiptList: React.FC = () => {
       const rows = allItems.map((item, idx) => ({
         STT: idx + 1,
         "ID đặt hàng": item.code,
-        "Tên nhà cung cấp": item.supplierName,
+        "Loại phiếu": ReceiptTypeLabels[item.receiptType] || "",
+        "Địa chỉ NCC": item.supplierAddress || "",
         "Ngày cấp chứng từ": item.documentDate
           ? new Date(item.documentDate).toLocaleDateString("vi-VN")
           : "",
@@ -117,7 +123,7 @@ const GoodsReceiptList: React.FC = () => {
     } finally {
       setExporting(false);
     }
-  }, [searchText, warehouseStatusFilter, orderStatusFilter, paymentStatusFilter]);
+  }, [searchText, warehouseStatusFilter, orderStatusFilter, paymentStatusFilter, receiptTypeFilter]);
 
   const columns = useMemo(
     () =>
@@ -162,13 +168,27 @@ const GoodsReceiptList: React.FC = () => {
               onChange={handleVisibilityChange}
             />
             {canCreate && (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={handleCreate}
+              <Dropdown
+                menu={{
+                  items: [
+                    {
+                      key: "goods",
+                      label: "Tạo phiếu nhập vật tư",
+                      onClick: () => handleCreate(GoodsReceiptType.Goods),
+                    },
+                    {
+                      key: "equipment",
+                      label: "Tạo phiếu nhập thiết bị",
+                      onClick: () => handleCreate(GoodsReceiptType.Equipment),
+                    },
+                  ],
+                }}
+                trigger={["click"]}
               >
-                Thêm mới
-              </Button>
+                <Button type="primary" icon={<PlusOutlined />}>
+                  Thêm mới <DownOutlined />
+                </Button>
+              </Dropdown>
             )}
           </Space>
         }
@@ -184,12 +204,14 @@ const GoodsReceiptList: React.FC = () => {
           warehouseStatusFilter={warehouseStatusFilter}
           orderStatusFilter={orderStatusFilter}
           paymentStatusFilter={paymentStatusFilter}
+          receiptTypeFilter={receiptTypeFilter}
           canDelete={canDelete}
           selectedRowKeys={selectedRowKeys}
           onSearchChange={setSearchText}
           onWarehouseStatusChange={handleWarehouseStatusChange}
           onOrderStatusChange={handleOrderStatusChange}
           onPaymentStatusChange={handlePaymentStatusChange}
+          onReceiptTypeChange={handleReceiptTypeChange}
           onDateRangeChange={handleDateRangeChange}
           onSortChange={handleSortChange}
           onPaginationChange={handlePageChange}

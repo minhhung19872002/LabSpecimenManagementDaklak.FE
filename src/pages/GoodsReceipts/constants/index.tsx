@@ -10,6 +10,8 @@ import {
   OrderStatusColors,
   PaymentStatusLabels,
   PaymentStatusColors,
+  ReceiptTypeLabels,
+  ReceiptTypeColors,
 } from "../../../services/goodsReceiptService";
 import dayjs from "dayjs";
 
@@ -21,7 +23,8 @@ export interface ColumnConfig {
 
 export const ALL_COLUMNS: ColumnConfig[] = [
   { key: "code", title: "ID đặt hàng", defaultVisible: true },
-  { key: "supplierName", title: "Tên nhà cung cấp", defaultVisible: true },
+  { key: "receiptType", title: "Loại phiếu", defaultVisible: true },
+  { key: "supplierAddress", title: "Địa chỉ NCC", defaultVisible: true },
   { key: "documentDate", title: "Ngày cấp chứng từ", defaultVisible: true },
   { key: "warehouseStatus", title: "Trạng thái kho", defaultVisible: true },
   { key: "orderStatus", title: "Trạng thái đơn", defaultVisible: true },
@@ -68,11 +71,24 @@ export const getGoodsReceiptColumns = (
     });
   }
 
-  if (visibleKeys.has("supplierName")) {
+  if (visibleKeys.has("receiptType")) {
     columns.push({
-      title: "Tên nhà cung cấp",
-      dataIndex: "supplierName",
-      key: "supplierName",
+      title: "Loại phiếu",
+      dataIndex: "receiptType",
+      key: "receiptType",
+      width: 120,
+      align: "center" as const,
+      render: (v: number) => (
+        <Tag color={ReceiptTypeColors[v]}>{ReceiptTypeLabels[v]}</Tag>
+      ),
+    });
+  }
+
+  if (visibleKeys.has("supplierAddress")) {
+    columns.push({
+      title: "Địa chỉ NCC",
+      dataIndex: "supplierAddress",
+      key: "supplierAddress",
       width: 220,
       ellipsis: true,
       sorter: true,

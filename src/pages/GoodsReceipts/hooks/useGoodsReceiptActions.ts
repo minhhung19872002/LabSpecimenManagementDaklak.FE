@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import {
   goodsReceiptService,
   GoodsReceiptListDto,
+  GoodsReceiptType,
 } from "../../../services/goodsReceiptService";
 import { getApiErrorMessage } from "../../../utils/errorHandler";
 
@@ -15,8 +16,12 @@ export const useGoodsReceiptActions = ({ fetchData }: UseGoodsReceiptActionsProp
   const navigate = useNavigate();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
-  const handleCreate = useCallback(() => {
-    navigate("/goods-receipts/create");
+  const handleCreate = useCallback((type: GoodsReceiptType = GoodsReceiptType.Goods) => {
+    if (type === GoodsReceiptType.Equipment) {
+      navigate("/goods-receipts/create-equipment");
+    } else {
+      navigate("/goods-receipts/create");
+    }
   }, [navigate]);
 
   const handleView = useCallback((record: GoodsReceiptListDto) => {
@@ -24,7 +29,11 @@ export const useGoodsReceiptActions = ({ fetchData }: UseGoodsReceiptActionsProp
   }, [navigate]);
 
   const handleEdit = useCallback((record: GoodsReceiptListDto) => {
-    navigate(`/goods-receipts/edit/${record.id}`);
+    if (record.receiptType === GoodsReceiptType.Equipment) {
+      navigate(`/goods-receipts/edit-equipment/${record.id}`);
+    } else {
+      navigate(`/goods-receipts/edit/${record.id}`);
+    }
   }, [navigate]);
 
   const handleDelete = useCallback((record: GoodsReceiptListDto) => {

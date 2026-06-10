@@ -10,9 +10,11 @@ import {
   WAREHOUSE_STATUS_OPTIONS,
   ORDER_STATUS_OPTIONS,
   PAYMENT_STATUS_OPTIONS,
+  RECEIPT_TYPE_OPTIONS,
   GoodsReceiptWarehouseStatus,
   GoodsReceiptOrderStatus,
   GoodsReceiptPaymentStatus,
+  GoodsReceiptType,
 } from "../../../services/goodsReceiptService";
 
 const { RangePicker } = DatePicker;
@@ -28,12 +30,14 @@ interface GoodsReceiptTableProps {
   warehouseStatusFilter?: GoodsReceiptWarehouseStatus;
   orderStatusFilter?: GoodsReceiptOrderStatus;
   paymentStatusFilter?: GoodsReceiptPaymentStatus;
+  receiptTypeFilter?: GoodsReceiptType;
   canDelete?: boolean;
   selectedRowKeys: React.Key[];
   onSearchChange: (value: string) => void;
   onWarehouseStatusChange: (value: GoodsReceiptWarehouseStatus | undefined) => void;
   onOrderStatusChange: (value: GoodsReceiptOrderStatus | undefined) => void;
   onPaymentStatusChange: (value: GoodsReceiptPaymentStatus | undefined) => void;
+  onReceiptTypeChange: (value: GoodsReceiptType | undefined) => void;
   onDateRangeChange: (range: [string, string] | undefined) => void;
   onSortChange: (field: string, order: "ascend" | "descend" | null) => void;
   onPaginationChange: (page: number, pageSize: number) => void;
@@ -51,12 +55,14 @@ const GoodsReceiptTable: React.FC<GoodsReceiptTableProps> = ({
   warehouseStatusFilter,
   orderStatusFilter,
   paymentStatusFilter,
+  receiptTypeFilter,
   canDelete,
   selectedRowKeys,
   onSearchChange,
   onWarehouseStatusChange,
   onOrderStatusChange,
   onPaymentStatusChange,
+  onReceiptTypeChange,
   onDateRangeChange,
   onSortChange,
   onPaginationChange,
@@ -73,7 +79,7 @@ const GoodsReceiptTable: React.FC<GoodsReceiptTableProps> = ({
       >
         <Col xs={24} sm={12} md={6}>
           <Input
-            placeholder="Tìm kiếm theo ID hoặc tên NCC..."
+            placeholder="Tìm kiếm theo ID..."
             prefix={<SearchOutlined />}
             value={searchText}
             onChange={(e) => onSearchChange(e.target.value)}
@@ -108,6 +114,16 @@ const GoodsReceiptTable: React.FC<GoodsReceiptTableProps> = ({
             allowClear
             style={{ width: "100%" }}
             options={PAYMENT_STATUS_OPTIONS}
+          />
+        </Col>
+        <Col xs={12} sm={6} md={3}>
+          <Select
+            placeholder="Loại phiếu"
+            value={receiptTypeFilter}
+            onChange={onReceiptTypeChange}
+            allowClear
+            style={{ width: "100%" }}
+            options={RECEIPT_TYPE_OPTIONS}
           />
         </Col>
         <Col xs={24} sm={12} md={5}>

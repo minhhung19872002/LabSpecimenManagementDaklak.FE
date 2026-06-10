@@ -13,12 +13,15 @@ import {
   GoodsReceiptWarehouseStatus,
   GoodsReceiptOrderStatus,
   GoodsReceiptPaymentStatus,
+  GoodsReceiptType,
   WarehouseStatusLabels,
   WarehouseStatusColors,
   OrderStatusLabels,
   OrderStatusColors,
   PaymentStatusLabels,
   PaymentStatusColors,
+  ReceiptTypeLabels,
+  ReceiptTypeColors,
   PAYMENT_METHOD_OPTIONS,
 } from "../../services/goodsReceiptService";
 import { authService } from "../../services/authService";
@@ -34,7 +37,7 @@ const formatCurrency = (v: number) => v.toLocaleString("vi-VN");
 const DetailItem: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
   <div className="detail-item">
     <span className="detail-item-label">{label}</span>
-    <span className="detail-item-value">{value || "-"}</span>
+    <span className="detail-item-value">{value != null && value !== "" ? value : "-"}</span>
   </div>
 );
 
@@ -139,6 +142,13 @@ const GoodsReceiptDetail: React.FC = () => {
       width: 200,
     },
     {
+      title: "Hãng sản xuất",
+      dataIndex: "manufacturer",
+      key: "manufacturer",
+      width: 150,
+      render: (v: string) => v || "-",
+    },
+    {
       title: "Đơn vị",
       dataIndex: "unitName",
       key: "unitName",
@@ -224,6 +234,13 @@ const GoodsReceiptDetail: React.FC = () => {
       render: (v: string) => v || "-",
     },
     {
+      title: "Nhà cung cấp",
+      dataIndex: "supplierName",
+      key: "supplierName",
+      width: 180,
+      render: (v: string) => v || "-",
+    },
+    {
       title: "Hãng sản xuất",
       dataIndex: "manufacturer",
       key: "manufacturer",
@@ -250,20 +267,6 @@ const GoodsReceiptDetail: React.FC = () => {
       width: 150,
       align: "right" as const,
       render: (_: any, r: GoodsReceiptItemDto) => formatCurrency(r.amountAfterVat),
-    },
-    {
-      title: "Số lô",
-      dataIndex: "lotNumber",
-      key: "lotNumber",
-      width: 120,
-      render: (v: string) => v || "-",
-    },
-    {
-      title: "Hạn lô",
-      key: "lotExpiryDate",
-      width: 110,
-      render: (_: any, r: GoodsReceiptItemDto) =>
-        r.lotExpiryDate ? dayjs(r.lotExpiryDate).format("DD/MM/YYYY") : "-",
     },
   ];
 
@@ -389,7 +392,17 @@ const GoodsReceiptDetail: React.FC = () => {
         </Button>
       )}
       {canEdit && receipt.orderStatus === GoodsReceiptOrderStatus.Draft && (
-        <Button type="primary" icon={<EditOutlined />} onClick={() => navigate(`/goods-receipts/edit/${id}`)}>
+        <Button
+          type="primary"
+          icon={<EditOutlined />}
+          onClick={() =>
+            navigate(
+              receipt.receiptType === GoodsReceiptType.Equipment
+                ? `/goods-receipts/edit-equipment/${id}`
+                : `/goods-receipts/edit/${id}`
+            )
+          }
+        >
           Chỉnh sửa
         </Button>
       )}
@@ -415,6 +428,9 @@ const GoodsReceiptDetail: React.FC = () => {
             <Space wrap>
               <span>Chi tiết phiếu nhập hàng</span>
               <Tag className="receipt-code-tag">{receipt.code}</Tag>
+              <Tag color={ReceiptTypeColors[receipt.receiptType]}>
+                {ReceiptTypeLabels[receipt.receiptType]}
+              </Tag>
               <Tag color={OrderStatusColors[receipt.orderStatus]}>
                 {OrderStatusLabels[receipt.orderStatus]}
               </Tag>
@@ -435,23 +451,10 @@ const GoodsReceiptDetail: React.FC = () => {
             <div className="detail-section-title">Thông tin nhà cung cấp</div>
             <Row gutter={16}>
               <Col xs={24} sm={12}>
-                <DetailItem
-                label="Nhà cung cấp"
-                value={
-                  <a
-                    onClick={() => navigate(`/suppliers-management?search=${encodeURIComponent(receipt.supplierName)}`)}
-                    style={{ color: "#1677ff", cursor: "pointer" }}
-                  >
-                    {receipt.supplierName}
-                  </a>
-                }
-              />
-              </Col>
-              <Col xs={24} sm={12}>
                 <DetailItem label="Địa chỉ NCC" value={receipt.supplierAddress} />
               </Col>
               <Col xs={24} sm={12}>
-                <DetailItem label="Số điện thoại NCC" value={receipt.supplierPhone} />
+                <DetailItem label="SĐT NCC" value={receipt.supplierPhone} />
               </Col>
               <Col xs={24} sm={12}>
                 <DetailItem label="SĐT đại diện NCC" value={receipt.supplierRepresentativePhone} />
@@ -502,35 +505,36 @@ const GoodsReceiptDetail: React.FC = () => {
         {/* Line Items + Payment Summary */}
         <Card
           className="list-card"
-          title={`Thông tin hàng hóa (${productItems.length} sản phẩm)`}
+          title={
+            receipt.receiptType === GoodsReceiptType.Equipment
+              ? `Thông tin thiết bị (${equipmentItems.length} thiết bị)`
+              : `Thông tin vật tư (${productItems.length} sản phẩm)`
+          }
           style={{ marginBottom: 16 }}
           styles={{ body: { padding: 0 } }}
         >
-          <Table
-            columns={productColumns}
-            dataSource={productItems}
-            rowKey="id"
-            pagination={false}
-            scroll={{ x: 1200 }}
-            size="small"
-            bordered
-            locale={{ emptyText: "Không có hàng hóa" }}
-          />
-          {equipmentItems.length > 0 && (
-            <>
-              <Divider orientation={"left" as any} style={{ fontSize: 14, margin: "12px 16px" }}>
-                Thiết bị ({equipmentItems.length})
-              </Divider>
-              <Table
-                columns={equipmentColumns}
-                dataSource={equipmentItems}
-                rowKey="id"
-                pagination={false}
-                scroll={{ x: 1200 }}
-                size="small"
-                bordered
-              />
-            </>
+          {receipt.receiptType === GoodsReceiptType.Equipment ? (
+            <Table
+              columns={equipmentColumns}
+              dataSource={equipmentItems}
+              rowKey="id"
+              pagination={false}
+              scroll={{ x: 1200 }}
+              size="small"
+              bordered
+              locale={{ emptyText: "Không có thiết bị" }}
+            />
+          ) : (
+            <Table
+              columns={productColumns}
+              dataSource={productItems}
+              rowKey="id"
+              pagination={false}
+              scroll={{ x: 1400 }}
+              size="small"
+              bordered
+              locale={{ emptyText: "Không có hàng hóa" }}
+            />
           )}
           <div style={{ display: "flex", justifyContent: "flex-end", padding: 16 }}>
             <div className="payment-summary">

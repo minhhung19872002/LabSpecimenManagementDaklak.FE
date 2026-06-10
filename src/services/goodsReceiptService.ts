@@ -1,5 +1,25 @@
 import { api } from "./api";
 
+export enum GoodsReceiptType {
+  Goods = 0,
+  Equipment = 1,
+}
+
+export const RECEIPT_TYPE_OPTIONS = [
+  { value: GoodsReceiptType.Goods, label: "Phiếu nhập vật tư" },
+  { value: GoodsReceiptType.Equipment, label: "Phiếu nhập thiết bị" },
+];
+
+export const ReceiptTypeLabels: Record<number, string> = {
+  [GoodsReceiptType.Goods]: "Vật tư",
+  [GoodsReceiptType.Equipment]: "Thiết bị",
+};
+
+export const ReceiptTypeColors: Record<number, string> = {
+  [GoodsReceiptType.Goods]: "blue",
+  [GoodsReceiptType.Equipment]: "purple",
+};
+
 export enum GoodsReceiptWarehouseStatus {
   NotImported = 0,
   Imported = 1,
@@ -77,8 +97,10 @@ export const PaymentStatusColors: Record<number, string> = {
 export interface GoodsReceiptListDto {
   id: string;
   code: string;
-  supplierId: string;
-  supplierName: string;
+  receiptType: GoodsReceiptType;
+  supplierId?: string;
+  supplierName?: string;
+  supplierAddress?: string;
   documentDate?: string;
   warehouseStatus: GoodsReceiptWarehouseStatus;
   orderStatus: GoodsReceiptOrderStatus;
@@ -124,6 +146,9 @@ export interface GoodsReceiptItemDto {
   serialNumber?: string;
   model?: string;
   manufacturer?: string;
+  manufacturerId?: string;
+  supplierId?: string;
+  supplierName?: string;
 }
 
 export interface GoodsReceiptPaymentDto {
@@ -141,7 +166,10 @@ export interface GoodsReceiptPaymentDto {
 }
 
 export interface CreateUpdateGoodsReceiptDto {
-  supplierId: string;
+  receiptType: GoodsReceiptType;
+  supplierId?: string;
+  supplierAddress?: string;
+  supplierPhone?: string;
   purchaserName?: string;
   deliveryNoteNumber?: string;
   documentDate?: string;
@@ -166,6 +194,9 @@ export interface CreateUpdateGoodsReceiptItemDto {
   serialNumber?: string;
   model?: string;
   manufacturer?: string;
+  manufacturerName?: string;
+  manufacturerId?: string;
+  supplierId?: string;
 }
 
 export interface GetGoodsReceiptListInput {
@@ -175,6 +206,7 @@ export interface GetGoodsReceiptListInput {
   sorting?: string;
   supplierId?: string;
   productId?: string;
+  receiptType?: GoodsReceiptType;
   warehouseStatus?: GoodsReceiptWarehouseStatus;
   orderStatus?: GoodsReceiptOrderStatus;
   paymentStatus?: GoodsReceiptPaymentStatus;
@@ -217,6 +249,7 @@ export const goodsReceiptService = {
     if (params.toDate) apiParams.ToDate = params.toDate;
     if (params.supplierId) apiParams.SupplierId = params.supplierId;
     if (params.productId) apiParams.ProductId = params.productId;
+    if (params.receiptType !== undefined) apiParams.ReceiptType = params.receiptType;
     const response = await api.get<PagedResult<GoodsReceiptListDto>>(BASE_URL, { params: apiParams });
     return response.data;
   },

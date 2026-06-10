@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import {
   Card, Form, Input, Select, DatePicker, InputNumber, Button, Space, Row, Col,
-  Table, message, Spin, Divider, Tag, Modal,
+  Table, message, Spin, Divider, Tag, Modal, AutoComplete,
 } from "antd";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
@@ -17,13 +17,10 @@ import {
   GoodsReceiptWarehouseStatus,
   GoodsReceiptOrderStatus,
   GoodsReceiptPaymentStatus,
+  GoodsReceiptType,
   RecentLotDto,
 } from "../../services/goodsReceiptService";
-import {
-  supplierService,
-  SupplierDto,
-  CreateUpdateSupplierDto,
-} from "../../services/supplierService";
+import { manufacturerService, ManufacturerDto } from "../../services/manufacturerService";
 import {
   productService,
   ProductDto,
@@ -31,7 +28,6 @@ import {
   CreateUpdateProductDto,
 } from "../../services/productService";
 import { unitService, UnitDto } from "../../services/masterDataService";
-import { equipmentService, EquipmentListDto } from "../../services/equipmentService";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
 import { getApiErrorMessage } from "../../utils/errorHandler";
@@ -39,9 +35,6 @@ import { PaymentModal } from "./components";
 import { PaymentFormData } from "./schemas";
 import "../../styles/ListCard.css";
 
-const SupplierModal = lazy(
-  () => import("../Suppliers/components/SupplierModal")
-);
 const ProductModal = lazy(
   () => import("../Products/components/ProductModal")
 );
@@ -73,6 +66,9 @@ interface LineItem {
   serialNumber?: string;
   model?: string;
   manufacturer?: string;
+  manufacturerId?: string;
+  supplierId?: string;
+  supplierName?: string;
 }
 
 const GoodsReceiptForm: React.FC = () => {
@@ -83,7 +79,6 @@ const GoodsReceiptForm: React.FC = () => {
   const [pageLoading, setPageLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [receipt, setReceipt] = useState<GoodsReceiptDto | null>(null);
-  const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
   const [products, setProducts] = useState<ProductDto[]>([]);
   const [units, setUnits] = useState<UnitDto[]>([]);
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
@@ -93,11 +88,9 @@ const GoodsReceiptForm: React.FC = () => {
   const [productTypeFilter, setProductTypeFilter] = useState<string>("all");
   const [isCustomVat, setIsCustomVat] = useState(false);
   const [newLotInput, setNewLotInput] = useState<Record<string, string>>({});
-  const [existingEquipments, setExistingEquipments] = useState<EquipmentListDto[]>([]);
+  const [manufacturers, setManufacturers] = useState<ManufacturerDto[]>([]);
 
   // Inline creation modals
-  const [supplierModalOpen, setSupplierModalOpen] = useState(false);
-  const [supplierModalLoading, setSupplierModalLoading] = useState(false);
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [productModalLoading, setProductModalLoading] = useState(false);
   const [approving, setApproving] = useState(false);
@@ -119,11 +112,13 @@ const GoodsReceiptForm: React.FC = () => {
     setValue,
     getValues,
     watch,
-    formState: { errors },
+    formState: {},
   } = useForm<GoodsReceiptFormData>({
     resolver: yupResolver(goodsReceiptSchema) as any,
     defaultValues: {
-      supplierId: "",
+      supplierId: null,
+      supplierAddress: "",
+      supplierPhone: "",
       purchaserName: "",
       deliveryNoteNumber: "",
       documentDate: "",
@@ -134,7 +129,6 @@ const GoodsReceiptForm: React.FC = () => {
     },
   });
 
-  const selectedSupplierId = watch("supplierId");
   const defaultVat = watch("vatPercent") || 8;
 
   // Load initial data
@@ -142,25 +136,29 @@ const GoodsReceiptForm: React.FC = () => {
     const loadData = async () => {
       setPageLoading(true);
       try {
-        const [suppliersRes, unitsRes] = await Promise.all([
-          supplierService.getList({ limit: 1000 }),
+        const [unitsRes] = await Promise.all([
           unitService.getList({ limit: 1000 }),
         ]);
-        setSuppliers(suppliersRes.items || []);
         setUnits(unitsRes.items || []);
 
-        const [activeProducts, equipRes] = await Promise.all([
+        const [activeProducts, manufacturerList] = await Promise.all([
           productService.getActive(),
-          equipmentService.getList({ limit: 500 }),
+          manufacturerService.getActive(),
         ]);
         setProducts(activeProducts || []);
-        setExistingEquipments(equipRes.items || []);
+        setManufacturers(manufacturerList || []);
 
         if (id) {
           const receiptData = await goodsReceiptService.get(id);
+          if (receiptData.receiptType === GoodsReceiptType.Equipment) {
+            navigate(`/goods-receipts/edit-equipment/${id}`, { replace: true });
+            return;
+          }
           setReceipt(receiptData);
           reset({
-            supplierId: receiptData.supplierId,
+            supplierId: null,
+            supplierAddress: receiptData.supplierAddress || "",
+            supplierPhone: receiptData.supplierPhone || "",
             purchaserName: receiptData.purchaserName || "",
             deliveryNoteNumber: receiptData.deliveryNoteNumber || "",
             documentDate: receiptData.documentDate || "",
@@ -207,6 +205,7 @@ const GoodsReceiptForm: React.FC = () => {
                 serialNumber: item.serialNumber,
                 model: item.model,
                 manufacturer: item.manufacturer,
+                manufacturerId: item.manufacturerId,
               };
             })
           );
@@ -294,59 +293,10 @@ const GoodsReceiptForm: React.FC = () => {
     }).catch(() => {});
   };
 
-  const equipmentOptions = (() => {
-    const seen = new Map<string, EquipmentListDto>();
-    for (const eq of existingEquipments) {
-      if (!seen.has(eq.name)) seen.set(eq.name, eq);
-    }
-    return Array.from(seen.values()).map((eq) => ({
-      value: eq.id,
-      label: eq.model ? `${eq.name} (${eq.model})` : eq.name,
-    }));
-  })();
-
-  const handleSelectEquipment = (equipmentId: string) => {
-    const eq = existingEquipments.find((e) => e.id === equipmentId);
-    if (!eq) return;
-    const newItem: LineItem = {
-      key: `eq-${Date.now()}`,
-      productId: "",
-      productName: eq.name,
-      unitId: "",
-      unitName: "",
-      quantity: 1,
-      unitPrice: 0,
-      vatPercent: defaultVat,
-      amountBeforeVat: 0,
-      vatAmount: 0,
-      amountAfterVat: 0,
-      availableUnits: [],
-      isEquipment: true,
-      serialNumber: undefined,
-      model: eq.model,
-      manufacturer: eq.manufacturer,
-    };
-    setLineItems((prev) => [...prev, recalculateLine(newItem)]);
-  };
-
-  const handleAddEquipmentRow = () => {
-    const newItem: LineItem = {
-      key: `eq-${Date.now()}`,
-      productId: "",
-      productName: "",
-      unitId: "",
-      unitName: "",
-      quantity: 1,
-      unitPrice: 0,
-      vatPercent: defaultVat,
-      amountBeforeVat: 0,
-      vatAmount: 0,
-      amountAfterVat: 0,
-      availableUnits: [],
-      isEquipment: true,
-    };
-    setLineItems((prev) => [...prev, recalculateLine(newItem)]);
-  };
+  const manufacturerOptions = manufacturers.map((m) => ({
+    value: m.name,
+    label: m.name,
+  }));
 
   const handleRemoveLine = (key: string) => {
     setLineItems((prev) => prev.filter((item) => item.key !== key));
@@ -403,8 +353,6 @@ const GoodsReceiptForm: React.FC = () => {
   const totalVat = lineItems.reduce((sum, item) => sum + item.vatAmount, 0);
   const totalAfterVat = totalBeforeVat + totalVat;
 
-  const selectedSupplier = suppliers.find((s) => s.id === selectedSupplierId);
-
   const filteredProductOptions = products
     .filter((p) => productTypeFilter === "all" || p.productType === Number(productTypeFilter))
     .map((p) => ({
@@ -413,7 +361,10 @@ const GoodsReceiptForm: React.FC = () => {
     }));
 
   const buildPayload = (data: GoodsReceiptFormData): CreateUpdateGoodsReceiptDto => ({
-    supplierId: data.supplierId,
+    receiptType: GoodsReceiptType.Goods,
+    supplierId: undefined,
+    supplierAddress: data.supplierAddress || undefined,
+    supplierPhone: data.supplierPhone || undefined,
     purchaserName: data.purchaserName || undefined,
     deliveryNoteNumber: data.deliveryNoteNumber || undefined,
     documentDate: data.documentDate || undefined,
@@ -422,38 +373,27 @@ const GoodsReceiptForm: React.FC = () => {
     vatPercent: data.vatPercent ?? 8,
     notes: data.notes || undefined,
     items: lineItems
-      .filter((item) => item.productId || item.isEquipment)
+      .filter((item) => item.productId)
       .map((item): CreateUpdateGoodsReceiptItemDto => ({
         id: item.id,
         productId: item.productId || undefined,
-        productName: item.isEquipment ? item.productName : undefined,
         unitId: item.unitId || undefined,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         vatPercent: item.vatPercent,
         lotNumber: item.lotNumber || undefined,
         lotExpiryDate: item.lotExpiryDate || undefined,
-        isEquipment: item.isEquipment || undefined,
-        serialNumber: item.serialNumber || undefined,
-        model: item.model || undefined,
+        isEquipment: false,
         manufacturer: item.manufacturer || undefined,
+        manufacturerName: item.manufacturer || undefined,
+        manufacturerId: item.manufacturerId || undefined,
       })),
   });
 
   const validateItems = (): boolean => {
-    const validItems = lineItems.filter((item) => item.productId || item.isEquipment);
+    const validItems = lineItems.filter((item) => item.productId);
     if (validItems.length === 0) {
-      message.warning("Vui lòng thêm ít nhất một hàng hóa hoặc thiết bị.");
-      return false;
-    }
-    const missingName = validItems.find((item) => item.isEquipment && !item.productName?.trim());
-    if (missingName) {
-      message.warning("Thiết bị phải có tên.");
-      return false;
-    }
-    const missingSerial = validItems.find((item) => item.isEquipment && !item.serialNumber?.trim());
-    if (missingSerial) {
-      message.warning("Thiết bị phải có serial number.");
+      message.warning("Vui lòng thêm ít nhất một hàng hóa.");
       return false;
     }
     return true;
@@ -541,22 +481,6 @@ const GoodsReceiptForm: React.FC = () => {
     }
   };
 
-  // Inline Supplier creation
-  const handleCreateSupplier = async (data: CreateUpdateSupplierDto) => {
-    setSupplierModalLoading(true);
-    try {
-      const newSupplier = await supplierService.create(data);
-      setSuppliers((prev) => [...prev, newSupplier]);
-      setValue("supplierId", newSupplier.id);
-      message.success("Đã tạo nhà cung cấp mới");
-      setSupplierModalOpen(false);
-    } catch (error: any) {
-      message.error(getApiErrorMessage(error, "Không thể tạo nhà cung cấp."));
-    } finally {
-      setSupplierModalLoading(false);
-    }
-  };
-
   // Inline Product creation
   const handleCreateProduct = async (data: CreateUpdateProductDto) => {
     setProductModalLoading(true);
@@ -572,10 +496,6 @@ const GoodsReceiptForm: React.FC = () => {
     }
   };
 
-  const supplierOptions = suppliers
-    .filter((s) => s.isActive)
-    .map((s) => ({ value: s.id, label: `${s.code} - ${s.name}` }));
-
   const formatCurrency = (v: number) => v.toLocaleString("vi-VN");
 
   const handleAddLot = (recordKey: string, productId: string) => {
@@ -590,8 +510,7 @@ const GoodsReceiptForm: React.FC = () => {
     setNewLotInput((prev) => ({ ...prev, [recordKey]: "" }));
   };
 
-  const productItems = lineItems.filter((i) => !i.isEquipment);
-  const equipmentItems = lineItems.filter((i) => i.isEquipment);
+  const productItems = lineItems;
 
   const actionColumn = !isReadonly
     ? [
@@ -634,6 +553,34 @@ const GoodsReceiptForm: React.FC = () => {
       width: 180,
       ellipsis: true,
       render: (_: any, record: LineItem) => record.productName || "-",
+    },
+    {
+      title: "Hãng sản xuất",
+      key: "manufacturer",
+      width: 160,
+      render: (_: any, record: LineItem) => {
+        if (isReadonly) return record.manufacturer || "-";
+        return (
+          <AutoComplete
+            value={record.manufacturer || ""}
+            options={manufacturerOptions.filter((o) =>
+              o.value.toLowerCase().includes((record.manufacturer || "").toLowerCase())
+            )}
+            onSelect={(value) => {
+              const m = manufacturers.find((x) => x.name === value);
+              handleLineChange(record.key, "manufacturer", value);
+              if (m) handleLineChange(record.key, "manufacturerId", m.id);
+            }}
+            onChange={(value) => {
+              handleLineChange(record.key, "manufacturer", value);
+              handleLineChange(record.key, "manufacturerId", undefined);
+            }}
+            placeholder="Nhập hãng SX"
+            style={{ width: "100%" }}
+            size="small"
+          />
+        );
+      },
     },
     {
       title: "Đơn vị",
@@ -802,203 +749,6 @@ const GoodsReceiptForm: React.FC = () => {
     ...actionColumn,
   ];
 
-  const equipmentColumns = [
-    {
-      title: "STT",
-      key: "index",
-      width: 50,
-      align: "center" as const,
-      render: (_: any, __: LineItem, index: number) => index + 1,
-    },
-    {
-      title: "Serial Number",
-      key: "serialNumber",
-      width: 160,
-      render: (_: any, record: LineItem) => {
-        if (isReadonly) return record.serialNumber || "-";
-        return (
-          <Input
-            value={record.serialNumber || ""}
-            placeholder="Nhập serial"
-            onChange={(e) => handleLineChange(record.key, "serialNumber", e.target.value)}
-            size="small"
-          />
-        );
-      },
-    },
-    {
-      title: "Tên thiết bị",
-      key: "productName",
-      width: 200,
-      render: (_: any, record: LineItem) => {
-        if (isReadonly) return record.productName || "-";
-        return (
-          <Input
-            value={record.productName || ""}
-            placeholder="Nhập tên thiết bị"
-            onChange={(e) => handleLineChange(record.key, "productName", e.target.value)}
-            size="small"
-          />
-        );
-      },
-    },
-    {
-      title: "Model",
-      key: "model",
-      width: 140,
-      render: (_: any, record: LineItem) => {
-        if (isReadonly) return record.model || "-";
-        return (
-          <Input
-            value={record.model || ""}
-            placeholder="Nhập model"
-            onChange={(e) => handleLineChange(record.key, "model", e.target.value)}
-            size="small"
-          />
-        );
-      },
-    },
-    {
-      title: "Hãng sản xuất",
-      key: "manufacturer",
-      width: 150,
-      render: (_: any, record: LineItem) => {
-        if (isReadonly) return record.manufacturer || "-";
-        return (
-          <Input
-            value={record.manufacturer || ""}
-            placeholder="Nhập hãng SX"
-            onChange={(e) => handleLineChange(record.key, "manufacturer", e.target.value)}
-            size="small"
-          />
-        );
-      },
-    },
-    {
-      title: "Thành tiền chưa VAT",
-      key: "amountBeforeVat",
-      width: 160,
-      render: (_: any, record: LineItem) =>
-        isReadonly ? `${formatCurrency(record.amountBeforeVat)} VNĐ` : (
-          <InputNumber
-            value={record.unitPrice}
-            min={0}
-            formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-            parser={(v) => Number(v?.replace(/,/g, "") || 0)}
-            onChange={(v) => handleLineChange(record.key, "unitPrice", v || 0)}
-            style={{ width: "100%" }}
-            size="small"
-            addonAfter="VNĐ"
-          />
-        ),
-    },
-    {
-      title: "VAT",
-      key: "vatPercent",
-      width: 65,
-      align: "center" as const,
-      render: (_: any, record: LineItem) =>
-        isReadonly ? `${record.vatPercent}%` : (
-          <InputNumber
-            value={record.vatPercent}
-            min={0}
-            max={100}
-            onChange={(v) => handleLineChange(record.key, "vatPercent", v || 0)}
-            style={{ width: "100%" }}
-            size="small"
-          />
-        ),
-    },
-    {
-      title: "Thành tiền sau VAT",
-      key: "amountAfterVat",
-      width: 150,
-      align: "right" as const,
-      render: (_: any, record: LineItem) => `${formatCurrency(record.amountAfterVat)} VNĐ`,
-    },
-    {
-      title: "Số lô",
-      key: "lotNumber",
-      width: 150,
-      render: (_: any, record: LineItem) => {
-        const lots = (lotSuggestions[record.productId] || []).map((l) => ({
-          value: l.lotNumber,
-          label: l.lotExpiryDate
-            ? `${l.lotNumber} (HSD: ${dayjs(l.lotExpiryDate).format("DD/MM/YYYY")})`
-            : l.lotNumber,
-        }));
-        if (isReadonly) return record.lotNumber || "-";
-        return (
-          <Select
-            value={record.lotNumber || undefined}
-            placeholder="Chọn lô"
-            options={lots}
-            onChange={(v) => {
-              handleLineChange(record.key, "lotNumber", v);
-              const lot = (lotSuggestions[record.productId] || []).find((l) => l.lotNumber === v);
-              if (lot?.lotExpiryDate) {
-                handleLineChange(record.key, "lotExpiryDate", lot.lotExpiryDate);
-              }
-            }}
-            allowClear
-            onClear={() => handleLineChange(record.key, "lotNumber", "")}
-            style={{ width: "100%" }}
-            size="small"
-            notFoundContent={<span style={{ color: "#999", fontSize: 12 }}>Chưa có lô nào</span>}
-            dropdownRender={(menu) => (
-              <>
-                {menu}
-                <Divider style={{ margin: "4px 0" }} />
-                <div style={{ padding: "0 4px 4px" }}>
-                  <div style={{ display: "flex", gap: 4 }}>
-                    <Input
-                      size="small"
-                      placeholder="Nhập số lô mới"
-                      value={newLotInput[record.key] || ""}
-                      onChange={(e) => setNewLotInput((prev) => ({ ...prev, [record.key]: e.target.value }))}
-                      onPressEnter={() => handleAddLot(record.key, record.productId)}
-                    />
-                    <Button
-                      size="small"
-                      type="primary"
-                      icon={<PlusOutlined />}
-                      onClick={() => handleAddLot(record.key, record.productId)}
-                    />
-                  </div>
-                </div>
-              </>
-            )}
-          />
-        );
-      },
-    },
-    {
-      title: "Ngày hết hạn",
-      key: "lotExpiryDate",
-      width: 130,
-      render: (_: any, record: LineItem) => {
-        if (isReadonly) return record.lotExpiryDate ? dayjs(record.lotExpiryDate).format("DD/MM/YYYY") : "-";
-        const existingLot = (lotSuggestions[record.productId] || []).find(
-          (l) => l.lotNumber === record.lotNumber && l.lotExpiryDate
-        );
-        return (
-          <DatePicker
-            value={record.lotExpiryDate ? dayjs(record.lotExpiryDate) : null}
-            format="DD/MM/YYYY"
-            onChange={(date) =>
-              handleLineChange(record.key, "lotExpiryDate", date?.format("YYYY-MM-DD") || undefined)
-            }
-            disabledDate={(current) => current && current.isBefore(dayjs(), "day")}
-            style={{ width: "100%" }}
-            size="small"
-            disabled={!!existingLot}
-          />
-        );
-      },
-    },
-    ...actionColumn,
-  ];
-
   if (pageLoading) {
     return (
       <div style={{ display: "flex", justifyContent: "center", padding: 100 }}>
@@ -1013,56 +763,13 @@ const GoodsReceiptForm: React.FC = () => {
         className="list-card"
         title={
           <Space>
-            {isEdit ? "Sửa phiếu nhập hàng" : "Tạo phiếu nhập hàng"}
+            {isEdit ? "Sửa phiếu nhập vật tư" : "Tạo phiếu nhập vật tư"}
             {receipt?.code && <Tag>{receipt.code}</Tag>}
           </Space>
         }
       >
         <Form layout="vertical" size="middle" style={{ padding: "0 16px" }}>
           <Row gutter={24}>
-            <Col xs={24} sm={12} md={6}>
-              <Form.Item
-                label={<span>Nhà cung cấp <span style={{ color: "#ff4d4f" }}>*</span></span>}
-                validateStatus={errors.supplierId ? "error" : ""}
-                help={errors.supplierId?.message}
-              >
-                <Controller
-                  name="supplierId"
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      {...field}
-                      value={field.value || undefined}
-                      placeholder="Chọn nhà cung cấp"
-                      options={supplierOptions}
-                      showSearch
-                      filterOption={(input, option) =>
-                        (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
-                      }
-                      disabled={isReadonly}
-                      dropdownRender={(menu) => (
-                        <>
-                          {menu}
-                          {!isReadonly && (
-                            <>
-                              <Divider style={{ margin: "8px 0" }} />
-                              <Button
-                                type="text"
-                                icon={<PlusOutlined />}
-                                onClick={() => setSupplierModalOpen(true)}
-                                style={{ width: "100%", textAlign: "left" }}
-                              >
-                                Tạo nhà cung cấp mới
-                              </Button>
-                            </>
-                          )}
-                        </>
-                      )}
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
             <Col xs={24} sm={12} md={6}>
               <Form.Item label="Nhân viên mua hàng">
                 <Controller
@@ -1090,27 +797,43 @@ const GoodsReceiptForm: React.FC = () => {
                 <Input value={receipt?.preparedByName || authService.getUserInfo()?.fullName || ""} disabled />
               </Form.Item>
             </Col>
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item label="Thời gian tạo phiếu">
+                <Input value={receipt ? dayjs(receipt.creationTime).format("HH:mm DD/MM/YYYY") : dayjs().format("HH:mm DD/MM/YYYY")} disabled style={{ backgroundColor: "#f5f5f5" }} />
+              </Form.Item>
+            </Col>
           </Row>
 
           <Row gutter={24}>
             <Col xs={24} sm={12} md={6}>
               <Form.Item label="Địa chỉ NCC">
-                <Input value={selectedSupplier?.address || receipt?.supplierAddress || ""} disabled style={{ backgroundColor: "#f5f5f5" }} />
+                <Controller
+                  name="supplierAddress"
+                  control={control}
+                  render={({ field }) => (
+                    <Input {...field} value={field.value || ""} placeholder="Địa chỉ nhà cung cấp" disabled={isReadonly} />
+                  )}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={6}>
-              <Form.Item label="Ngày cấp chứng từ">
+              <Form.Item label="SĐT NCC">
                 <Controller
-                  name="documentDate"
+                  name="supplierPhone"
                   control={control}
                   render={({ field }) => (
-                    <DatePicker
-                      style={{ width: "100%" }}
-                      format="DD/MM/YYYY"
-                      value={field.value ? dayjs(field.value) : null}
-                      onChange={(date) => field.onChange(date?.format("YYYY-MM-DD") || "")}
-                      disabled={isReadonly}
-                    />
+                    <Input {...field} value={field.value || ""} placeholder="Số điện thoại NCC" disabled={isReadonly} />
+                  )}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item label="SĐT đại diện NCC">
+                <Controller
+                  name="supplierRepresentativePhone"
+                  control={control}
+                  render={({ field }) => (
+                    <Input {...field} value={field.value || ""} placeholder="SĐT đại diện" disabled={isReadonly} />
                   )}
                 />
               </Form.Item>
@@ -1147,17 +870,24 @@ const GoodsReceiptForm: React.FC = () => {
                 )}
               </Form.Item>
             </Col>
-            <Col xs={24} sm={12} md={6}>
-              <Form.Item label="Thời gian tạo phiếu">
-                <Input value={receipt ? dayjs(receipt.creationTime).format("HH:mm DD/MM/YYYY") : dayjs().format("HH:mm DD/MM/YYYY")} disabled style={{ backgroundColor: "#f5f5f5" }} />
-              </Form.Item>
-            </Col>
           </Row>
 
           <Row gutter={24}>
             <Col xs={24} sm={12} md={6}>
-              <Form.Item label="Số điện thoại NCC">
-                <Input value={selectedSupplier?.phone || receipt?.supplierPhone || ""} disabled style={{ backgroundColor: "#f5f5f5" }} />
+              <Form.Item label="Ngày cấp chứng từ">
+                <Controller
+                  name="documentDate"
+                  control={control}
+                  render={({ field }) => (
+                    <DatePicker
+                      style={{ width: "100%" }}
+                      format="DD/MM/YYYY"
+                      value={field.value ? dayjs(field.value) : null}
+                      onChange={(date) => field.onChange(date?.format("YYYY-MM-DD") || "")}
+                      disabled={isReadonly}
+                    />
+                  )}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={6}>
@@ -1173,17 +903,6 @@ const GoodsReceiptForm: React.FC = () => {
                       onChange={(date) => field.onChange(date?.format("YYYY-MM-DD") || "")}
                       disabled={isReadonly}
                     />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={6}>
-              <Form.Item label="SĐT đại diện NCC">
-                <Controller
-                  name="supplierRepresentativePhone"
-                  control={control}
-                  render={({ field }) => (
-                    <Input {...field} value={field.value || ""} placeholder="SĐT đại diện" disabled={isReadonly} />
                   )}
                 />
               </Form.Item>
@@ -1207,7 +926,7 @@ const GoodsReceiptForm: React.FC = () => {
         {/* Product items */}
         <div style={{ padding: "0 16px 16px" }}>
           <div style={{ marginBottom: 12 }}>
-            <strong style={{ fontSize: 15, display: "block", marginBottom: 8 }}>THÔNG TIN HÀNG HÓA</strong>
+            <strong style={{ fontSize: 15, display: "block", marginBottom: 8 }}>THÔNG TIN VẬT TƯ</strong>
             {!isReadonly && (
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <Select
@@ -1245,43 +964,10 @@ const GoodsReceiptForm: React.FC = () => {
             dataSource={productItems}
             rowKey="key"
             pagination={false}
-            scroll={{ x: 1650 }}
+            scroll={{ x: 1800 }}
             size="small"
             bordered
             locale={{ emptyText: "Chưa có hàng hóa" }}
-          />
-
-          <Divider orientation={"left" as any} style={{ fontSize: 14, margin: "16px 0 12px" }}>
-            Thiết bị
-          </Divider>
-          {!isReadonly && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <Select
-                key={`eq-select-${equipmentItems.length}`}
-                placeholder="Chọn thiết bị đã có"
-                options={equipmentOptions}
-                onSelect={handleSelectEquipment}
-                style={{ width: 360 }}
-                showSearch
-                filterOption={(input, option) =>
-                  (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
-                }
-                notFoundContent="Chưa có thiết bị nào"
-              />
-              <Button icon={<PlusOutlined />} onClick={handleAddEquipmentRow}>
-                Thêm thiết bị mới
-              </Button>
-            </div>
-          )}
-          <Table
-            columns={equipmentColumns}
-            dataSource={equipmentItems}
-            rowKey="key"
-            pagination={false}
-            scroll={{ x: 1400 }}
-            size="small"
-            bordered
-            locale={{ emptyText: "Chưa có thiết bị" }}
           />
 
           <Row justify="end" style={{ padding: "12px 0" }}>
@@ -1363,17 +1049,6 @@ const GoodsReceiptForm: React.FC = () => {
           onCancel={() => setPaymentModalOpen(false)}
         />
       )}
-
-      {/* Inline Supplier Creation Modal */}
-      <Suspense fallback={null}>
-        <SupplierModal
-          open={supplierModalOpen}
-          loading={supplierModalLoading}
-          editingSupplier={null}
-          onOk={handleCreateSupplier}
-          onCancel={() => setSupplierModalOpen(false)}
-        />
-      </Suspense>
 
       {/* Inline Product Creation Modal */}
       <Suspense fallback={null}>
