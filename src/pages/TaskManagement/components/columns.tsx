@@ -155,7 +155,7 @@ export const getTaskManagementColumns = (
     },
   },
   {
-    title: "Ngày thí nghiệm",
+    title: "Ngày thử nghiệm",
     dataIndex: "testDate",
     key: "testDate",
     width: 140,
