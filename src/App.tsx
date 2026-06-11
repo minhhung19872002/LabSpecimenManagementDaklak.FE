@@ -35,35 +35,35 @@ const Dashboard = Loadable(lazy(() => import("./pages/Dashboard/Dashboard")));
 
 // Quotation - Báo giá
 const QuotationList = Loadable(
-  lazy(() => import("./pages/Quotation/QuotationList"))
+  lazy(() => import("./pages/Quotation/QuotationList")),
 );
 const QuotationView = Loadable(
-  lazy(() => import("./pages/Quotation/QuotationView"))
+  lazy(() => import("./pages/Quotation/QuotationView")),
 );
 const QuotationForm = Loadable(
-  lazy(() => import("./pages/Quotation/QuotationForm"))
+  lazy(() => import("./pages/Quotation/QuotationForm")),
 );
 
 // Test Request
 const TestRequestList = Loadable(
-  lazy(() => import("./pages/TestRequest/TestRequestList"))
+  lazy(() => import("./pages/TestRequest/TestRequestList")),
 );
 const TestRequestForm = Loadable(
-  lazy(() => import("./pages/TestRequest/TestRequestForm"))
+  lazy(() => import("./pages/TestRequest/TestRequestForm")),
 );
 const TestRequestDetail = Loadable(
-  lazy(() => import("./pages/TestRequest/TestRequestDetail"))
+  lazy(() => import("./pages/TestRequest/TestRequestDetail")),
 );
 
 // Specimen
 const SpecimenList = Loadable(
-  lazy(() => import("./pages/Specimen/SpecimenList"))
+  lazy(() => import("./pages/Specimen/SpecimenList")),
 );
 const SpecimenForm = Loadable(
-  lazy(() => import("./pages/Specimen/SpecimenForm"))
+  lazy(() => import("./pages/Specimen/SpecimenForm")),
 );
 const SpecimenDetail = Loadable(
-  lazy(() => import("./pages/Specimen/SpecimenDetail"))
+  lazy(() => import("./pages/Specimen/SpecimenDetail")),
 );
 
 // Test
@@ -73,30 +73,30 @@ const TestDetail = Loadable(lazy(() => import("./pages/Test/TestDetail")));
 
 // Test Result
 const TestResultList = Loadable(
-  lazy(() => import("./pages/TestResult/TestResultList"))
+  lazy(() => import("./pages/TestResult/TestResultList")),
 );
 const TestResultForm = Loadable(
-  lazy(() => import("./pages/TestResult/TestResultForm"))
+  lazy(() => import("./pages/TestResult/TestResultForm")),
 );
 const TestResultDetail = Loadable(
-  lazy(() => import("./pages/TestResult/TestResultDetail"))
+  lazy(() => import("./pages/TestResult/TestResultDetail")),
 );
 
 // Specimen History
 const SpecimenHistoryList = Loadable(
-  lazy(() => import("./pages/SpecimenHistory/SpecimenHistoryList"))
+  lazy(() => import("./pages/SpecimenHistory/SpecimenHistoryList")),
 );
 const SpecimenHistoryForm = Loadable(
-  lazy(() => import("./pages/SpecimenHistory/SpecimenHistoryForm"))
+  lazy(() => import("./pages/SpecimenHistory/SpecimenHistoryForm")),
 );
 const SpecimenHistoryDetail = Loadable(
-  lazy(() => import("./pages/SpecimenHistory/SpecimenHistoryDetail"))
+  lazy(() => import("./pages/SpecimenHistory/SpecimenHistoryDetail")),
 );
 
 // Reports & Analytics
 const ReportList = Loadable(lazy(() => import("./pages/Reports/ReportList")));
 const StatisticsPage = Loadable(
-  lazy(() => import("./pages/Statistics/StatisticsPage"))
+  lazy(() => import("./pages/Statistics/StatisticsPage")),
 );
 
 // NCR
@@ -105,112 +105,112 @@ const NCRList = Loadable(lazy(() => import("./pages/NCR/NCRList")));
 // Receipt - Phiếu thu
 const ReceiptList = Loadable(lazy(() => import("./pages/Receipt/ReceiptList")));
 const ReceiptDetail = Loadable(
-  lazy(() => import("./pages/Receipt/ReceiptDetail"))
+  lazy(() => import("./pages/Receipt/ReceiptDetail")),
 );
 
 // Task Management - Quản lý công việc khoa phòng
 const TaskManagementList = Loadable(
-  lazy(() => import("./pages/TaskManagement/TaskManagementList"))
+  lazy(() => import("./pages/TaskManagement/TaskManagementList")),
 );
 const TaskManagementDetail = Loadable(
-  lazy(() => import("./pages/TaskManagement/TaskManagementDetail"))
+  lazy(() => import("./pages/TaskManagement/TaskManagementDetail")),
 );
 
 // Testing - Quản lý thử nghiệm (KTV view)
 const TestingList = Loadable(lazy(() => import("./pages/Testing/TestingList")));
 const TestingDetail = Loadable(
-  lazy(() => import("./pages/Testing/TestingDetail"))
+  lazy(() => import("./pages/Testing/TestingDetail")),
 );
 
 // Quality Management - Quản lý chất lượng (QLCL view)
 const QualityManagementList = Loadable(
-  lazy(() => import("./pages/QualityManagement/QualityManagementList"))
+  lazy(() => import("./pages/QualityManagement/QualityManagementList")),
 );
 const QualityManagementDetail = Loadable(
-  lazy(() => import("./pages/QualityManagement/QualityManagementDetail"))
+  lazy(() => import("./pages/QualityManagement/QualityManagementDetail")),
 );
 
 // Subcontractor
 const SubcontractorList = Loadable(
-  lazy(() => import("./pages/Subcontractor/SubcontractorList"))
+  lazy(() => import("./pages/Subcontractor/SubcontractorList")),
 );
 
 // Suppliers
 const SupplierList = Loadable(
-  lazy(() => import("./pages/Suppliers/SupplierList"))
+  lazy(() => import("./pages/Suppliers/SupplierList")),
 );
 const SupplierDetail = Loadable(
-  lazy(() => import("./pages/Suppliers/SupplierDetail"))
+  lazy(() => import("./pages/Suppliers/SupplierDetail")),
 );
 
 // Goods Receipts - Phiếu nhập hàng
 const GoodsReceiptList = Loadable(
-  lazy(() => import("./pages/GoodsReceipts/GoodsReceiptList"))
+  lazy(() => import("./pages/GoodsReceipts/GoodsReceiptList")),
 );
 const GoodsReceiptForm = Loadable(
-  lazy(() => import("./pages/GoodsReceipts/GoodsReceiptForm"))
+  lazy(() => import("./pages/GoodsReceipts/GoodsReceiptForm")),
 );
 const GoodsReceiptEquipmentForm = Loadable(
-  lazy(() => import("./pages/GoodsReceipts/GoodsReceiptEquipmentForm"))
+  lazy(() => import("./pages/GoodsReceipts/GoodsReceiptEquipmentForm")),
 );
 const GoodsReceiptDetail = Loadable(
-  lazy(() => import("./pages/GoodsReceipts/GoodsReceiptDetail"))
+  lazy(() => import("./pages/GoodsReceipts/GoodsReceiptDetail")),
 );
 
 // Stock Adjustments - Điều chỉnh tồn kho
 const StockAdjustmentList = Loadable(
-  lazy(() => import("./pages/StockAdjustments/StockAdjustmentList"))
+  lazy(() => import("./pages/StockAdjustments/StockAdjustmentList")),
 );
 
 // Equipments - Quản lý thiết bị
 const EquipmentList = Loadable(
-  lazy(() => import("./pages/Equipments/EquipmentList"))
+  lazy(() => import("./pages/Equipments/EquipmentList")),
 );
 
 // Products
 const ProductList = Loadable(
-  lazy(() => import("./pages/Products/ProductList"))
+  lazy(() => import("./pages/Products/ProductList")),
 );
 const ProductSourceList = Loadable(
-  lazy(() => import("./pages/Products/ProductSourceList"))
+  lazy(() => import("./pages/Products/ProductSourceList")),
 );
 const ProductSourceReceiptList = Loadable(
-  lazy(() => import("./pages/Products/ProductSourceReceiptList"))
+  lazy(() => import("./pages/Products/ProductSourceReceiptList")),
 );
 
 // Master Data
 const MasterDataList = Loadable(
-  lazy(() => import("./pages/MasterData/MasterDataList"))
+  lazy(() => import("./pages/MasterData/MasterDataList")),
 );
 
 // Organization
 const OrganizationList = Loadable(
-  lazy(() => import("./pages/Organization/OrganizationList"))
+  lazy(() => import("./pages/Organization/OrganizationList")),
 );
 const OrganizationDetail = Loadable(
-  lazy(() => import("./pages/Organization/OrganizationDetail"))
+  lazy(() => import("./pages/Organization/OrganizationDetail")),
 );
 
 // Audit Log
 const AuditLogList = Loadable(
-  lazy(() => import("./pages/AuditLog/AuditLogList"))
+  lazy(() => import("./pages/AuditLog/AuditLogList")),
 );
 
 // Administration
 const EmployeeList = Loadable(
-  lazy(() => import("./pages/Employees/EmployeeList"))
+  lazy(() => import("./pages/Employees/EmployeeList")),
 );
 const EmployeeDetail = Loadable(
-  lazy(() => import("./pages/Employees/EmployeeDetail"))
+  lazy(() => import("./pages/Employees/EmployeeDetail")),
 );
 const RoleManagementList = Loadable(
-  lazy(() => import("./pages/RoleManagement/RoleManagementList"))
+  lazy(() => import("./pages/RoleManagement/RoleManagementList")),
 );
 const RoleManagementDetail = Loadable(
-  lazy(() => import("./pages/RoleManagement/RoleManagementDetail"))
+  lazy(() => import("./pages/RoleManagement/RoleManagementDetail")),
 );
 const SettingsPage = Loadable(
-  lazy(() => import("./pages/Settings/SettingsPage"))
+  lazy(() => import("./pages/Settings/SettingsPage")),
 );
 
 // 404 Not Found
@@ -220,7 +220,9 @@ const NotFound = Loadable(lazy(() => import("./pages/NotFound/NotFound")));
 const Forbidden = Loadable(lazy(() => import("./pages/Forbidden/Forbidden")));
 
 // 401 Unauthorized
-const Unauthorized = Loadable(lazy(() => import("./pages/Unauthorized/Unauthorized")));
+const Unauthorized = Loadable(
+  lazy(() => import("./pages/Unauthorized/Unauthorized")),
+);
 
 // Document Editor (OnlyOffice)
 const DocumentEditor = Loadable(lazy(() => import("./pages/DocumentEditor")));
@@ -347,10 +349,19 @@ function App() {
           {/* Goods Receipts - Phiếu nhập hàng */}
           <Route path="goods-receipts" element={<GoodsReceiptList />} />
           <Route path="goods-receipts/create" element={<GoodsReceiptForm />} />
-          <Route path="goods-receipts/create-equipment" element={<GoodsReceiptEquipmentForm />} />
+          <Route
+            path="goods-receipts/create-equipment"
+            element={<GoodsReceiptEquipmentForm />}
+          />
           <Route path="goods-receipts/:id" element={<GoodsReceiptDetail />} />
-          <Route path="goods-receipts/edit/:id" element={<GoodsReceiptForm />} />
-          <Route path="goods-receipts/edit-equipment/:id" element={<GoodsReceiptEquipmentForm />} />
+          <Route
+            path="goods-receipts/edit/:id"
+            element={<GoodsReceiptForm />}
+          />
+          <Route
+            path="goods-receipts/edit-equipment/:id"
+            element={<GoodsReceiptEquipmentForm />}
+          />
 
           {/* Stock Adjustments - Điều chỉnh tồn kho */}
           <Route path="stock-adjustments" element={<StockAdjustmentList />} />
@@ -362,10 +373,13 @@ function App() {
           <Route path="suppliers-management" element={<SupplierList />} />
           <Route path="suppliers-management/:id" element={<SupplierDetail />} />
 
-          {/* Products - Quản lý vật phẩm */}
+          {/* Products - Quản lý vật tư */}
           <Route path="products" element={<ProductList />} />
           <Route path="products/:id/sources" element={<ProductSourceList />} />
-          <Route path="products/:productId/sources/:supplierId/receipts" element={<ProductSourceReceiptList />} />
+          <Route
+            path="products/:productId/sources/:supplierId/receipts"
+            element={<ProductSourceReceiptList />}
+          />
 
           {/* Master Data - Ngân hàng dữ liệu */}
           <Route path="master-data" element={<MasterDataList />} />
@@ -381,7 +395,10 @@ function App() {
           <Route path="employees" element={<EmployeeList />} />
           <Route path="employees/:id" element={<EmployeeDetail />} />
           <Route path="role-management" element={<RoleManagementList />} />
-          <Route path="role-management/:id" element={<RoleManagementDetail />} />
+          <Route
+            path="role-management/:id"
+            element={<RoleManagementDetail />}
+          />
           <Route path="settings" element={<SettingsPage />} />
 
           {/* Legacy route - redirect to test-results */}

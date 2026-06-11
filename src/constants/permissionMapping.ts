@@ -179,7 +179,7 @@ export const PERMISSIONS = {
     UpdateStatus: `${P}.Equipments.UpdateStatus`,
   },
 
-  // Products (Quản lý vật phẩm)
+  // Products (Quản lý vật tư)
   Products: {
     Default: `${P}.Products`,
     Create: `${P}.Products.Create`,

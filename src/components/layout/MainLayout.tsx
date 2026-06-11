@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import {
   Menu,
   MenuProps,
@@ -21,6 +21,8 @@ import Icon, {
   LogoutOutlined,
   KeyOutlined,
   DownOutlined,
+  LeftOutlined,
+  RightOutlined,
   MenuOutlined,
   CloseOutlined,
 } from "../common/Icon";
@@ -112,6 +114,40 @@ const MainLayout: React.FC = () => {
 
   // Dynamic page title
   const pageTitle = usePageTitle();
+
+  // Nav horizontal scroll
+  const navRef = useRef<HTMLDivElement>(null);
+  const [navCanScrollLeft, setNavCanScrollLeft] = useState(false);
+  const [navCanScrollRight, setNavCanScrollRight] = useState(false);
+  const [navOverflows, setNavOverflows] = useState(false);
+
+  const updateNavScrollState = useCallback(() => {
+    const el = navRef.current;
+    if (!el) return;
+    setNavCanScrollLeft(el.scrollLeft > 0);
+    setNavCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+    setNavOverflows(el.scrollWidth > el.clientWidth);
+  }, []);
+
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+
+    updateNavScrollState();
+    const observer = new ResizeObserver(updateNavScrollState);
+    observer.observe(nav);
+    nav.addEventListener("scroll", updateNavScrollState);
+    return () => {
+      observer.disconnect();
+      nav.removeEventListener("scroll", updateNavScrollState);
+    };
+  }, [updateNavScrollState]);
+
+  const scrollNav = useCallback((direction: "left" | "right") => {
+    const el = navRef.current;
+    if (!el) return;
+    el.scrollBy({ left: direction === "left" ? -200 : 200, behavior: "smooth" });
+  }, []);
 
   // Work reminder popup for SampleReceiver
   const {
@@ -252,7 +288,7 @@ const MainLayout: React.FC = () => {
     // Check prefix match for nested routes (e.g., /test-request/123)
     // Sort routes by length (longest first) to avoid matching shorter prefixes
     const sortedRoutes = Object.keys(routeToKeyMap).sort(
-      (a, b) => b.length - a.length
+      (a, b) => b.length - a.length,
     );
     for (const route of sortedRoutes) {
       if (pathname.startsWith(route + "/") || pathname === route) {
@@ -265,7 +301,7 @@ const MainLayout: React.FC = () => {
   }, [location.pathname]);
 
   // Default open all groups
-  const defaultOpenKeys = ["overview", "lab", "quality", "management", "admin"];
+  const defaultOpenKeys = ["overview", "lab", "stock", "quality", "management", "admin"];
 
   // Helper to create label with tooltip
   const menuLabel = (text: string) => <span title={text}>{text}</span>;
@@ -391,23 +427,23 @@ const MainLayout: React.FC = () => {
       ],
     },
     {
-      key: "management",
-      icon: <Icon name="ui-checks-grid" />,
-      label: menuLabel(t("menu.management")),
-      roles: [ROLES.ADMIN],
+      key: "stock",
+      icon: <Icon name="box-seam" />,
+      label: menuLabel("Quản lý kho"),
+      roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
       children: [
-        {
-          key: "subcontractors",
-          icon: <TeamOutlined />,
-          label: menuLabel(t("menu.subcontractors")),
-          onClick: () => navigate(PATH_ROUTES.subcontractors),
-          roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
-        },
         {
           key: "products",
           icon: <Icon name="box-seam" />,
-          label: menuLabel("Quản lý vật phẩm"),
+          label: menuLabel("Quản lý vật tư"),
           onClick: () => navigate(PATH_ROUTES.products),
+          roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
+        },
+        {
+          key: "equipments",
+          icon: <Icon name="tools" />,
+          label: menuLabel("Quản lý thiết bị"),
+          onClick: () => navigate(PATH_ROUTES.equipments),
           roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
         },
         {
@@ -420,7 +456,7 @@ const MainLayout: React.FC = () => {
         {
           key: "goodsReceipts",
           icon: <Icon name="clipboard-check" />,
-          label: menuLabel("Phiếu nhập hàng"),
+          label: menuLabel("Quản lý nhập kho"),
           onClick: () => navigate(PATH_ROUTES.goodsReceipts.index),
           roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
         },
@@ -431,11 +467,19 @@ const MainLayout: React.FC = () => {
           onClick: () => navigate(PATH_ROUTES.stockAdjustments),
           roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
         },
+      ],
+    },
+    {
+      key: "management",
+      icon: <Icon name="ui-checks-grid" />,
+      label: menuLabel(t("menu.management")),
+      roles: [ROLES.ADMIN],
+      children: [
         {
-          key: "equipments",
-          icon: <Icon name="tools" />,
-          label: menuLabel("Quản lý thiết bị"),
-          onClick: () => navigate(PATH_ROUTES.equipments),
+          key: "subcontractors",
+          icon: <TeamOutlined />,
+          label: menuLabel(t("menu.subcontractors")),
+          onClick: () => navigate(PATH_ROUTES.subcontractors),
           roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
         },
         {
@@ -503,8 +547,11 @@ const MainLayout: React.FC = () => {
 
       // Check permission-based access (new)
       // Get permissions from item or from MENU_PERMISSION_MAP
-      const menuPermissions = MENU_PERMISSION_MAP[item.key as keyof typeof MENU_PERMISSION_MAP];
-      const itemPermissions = item.permissions || (menuPermissions ? [...menuPermissions] : undefined);
+      const menuPermissions =
+        MENU_PERMISSION_MAP[item.key as keyof typeof MENU_PERMISSION_MAP];
+      const itemPermissions =
+        item.permissions ||
+        (menuPermissions ? [...menuPermissions] : undefined);
       const hasPermissionAccess = itemPermissions
         ? authService.hasAnyPermission(itemPermissions)
         : false;
@@ -548,12 +595,13 @@ const MainLayout: React.FC = () => {
         const filteredChildren = (group.children || []).filter((child) => {
           // Check role-based access
           const hasRoleAccess = child.roles.some((role) =>
-            userRoles.includes(role)
+            userRoles.includes(role),
           );
           // Check supporter access
           const hasSupporterAccess = child.supporterAllowed && isSupporter;
           // Check permission-based access
-          const childPermissions = MENU_PERMISSION_MAP[child.key as keyof typeof MENU_PERMISSION_MAP];
+          const childPermissions =
+            MENU_PERMISSION_MAP[child.key as keyof typeof MENU_PERMISSION_MAP];
           const hasPermissionAccess = childPermissions
             ? authService.hasAnyPermission([...childPermissions])
             : false;
@@ -654,50 +702,68 @@ const MainLayout: React.FC = () => {
           </div>
 
           {/* Header Navigation Menu - Desktop only */}
-          <nav className="header-nav">
-            {headerMenuGroups.map((group) => (
-              <Dropdown
-                key={group.key}
-                open={openMenuKey === group.key}
-                onOpenChange={(open) => {
-                  if (!open) setOpenMenuKey(null);
-                }}
-                dropdownRender={() => (
-                  <div
-                    className="header-menu-dropdown"
-                    onMouseLeave={() => setOpenMenuKey(null)}
-                  >
-                    {group.children?.map((item) => (
-                      <div
-                        key={item.key}
-                        className={`menu-dropdown-item ${
-                          selectedKey === item.key ? "selected" : ""
-                        }`}
-                        onClick={() => {
-                          item.onClick?.();
-                          setOpenMenuKey(null);
-                        }}
-                      >
-                        {item.icon}
-                        <span>{item.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+          <div className="header-nav-wrapper">
+            {navCanScrollLeft && (
+              <button
+                className="header-nav-scroll-btn"
+                onClick={() => scrollNav("left")}
               >
-                <div
-                  className={`header-nav-item ${
-                    isGroupActive(group) ? "active" : ""
-                  }`}
-                  onMouseEnter={() => setOpenMenuKey(group.key)}
+                <LeftOutlined />
+              </button>
+            )}
+            <nav className={`header-nav ${navOverflows ? "nav-overflows" : ""}`} ref={navRef}>
+              {headerMenuGroups.map((group) => (
+                <Dropdown
+                  key={group.key}
+                  open={openMenuKey === group.key}
+                  onOpenChange={(open) => {
+                    if (!open) setOpenMenuKey(null);
+                  }}
+                  dropdownRender={() => (
+                    <div
+                      className="header-menu-dropdown"
+                      onMouseLeave={() => setOpenMenuKey(null)}
+                    >
+                      {group.children?.map((item) => (
+                        <div
+                          key={item.key}
+                          className={`menu-dropdown-item ${
+                            selectedKey === item.key ? "selected" : ""
+                          }`}
+                          onClick={() => {
+                            item.onClick?.();
+                            setOpenMenuKey(null);
+                          }}
+                        >
+                          {item.icon}
+                          <span>{item.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 >
-                  {group.icon}
-                  <span>{group.label}</span>
-                  <DownOutlined className="nav-arrow" />
-                </div>
-              </Dropdown>
-            ))}
-          </nav>
+                  <div
+                    className={`header-nav-item ${
+                      isGroupActive(group) ? "active" : ""
+                    }`}
+                    onMouseEnter={() => setOpenMenuKey(group.key)}
+                  >
+                    {group.icon}
+                    <span>{group.label}</span>
+                    <DownOutlined className="nav-arrow" />
+                  </div>
+                </Dropdown>
+              ))}
+            </nav>
+            {navCanScrollRight && (
+              <button
+                className="header-nav-scroll-btn"
+                onClick={() => scrollNav("right")}
+              >
+                <RightOutlined />
+              </button>
+            )}
+          </div>
 
           <div className="header-right">
             <OfflineIndicator />
@@ -824,7 +890,7 @@ const MainLayout: React.FC = () => {
                       return Promise.resolve();
                     }
                     return Promise.reject(
-                      new Error("Mật khẩu xác nhận không khớp")
+                      new Error("Mật khẩu xác nhận không khớp"),
                     );
                   },
                 }),
