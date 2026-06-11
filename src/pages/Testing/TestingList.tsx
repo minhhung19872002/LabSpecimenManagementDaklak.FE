@@ -26,14 +26,15 @@ import { testingService } from "../../services/testingService";
 import { useTestingList } from "./hooks";
 import LabSampleAssignmentLogTab from "./components/LabSampleAssignmentLogTab";
 import ResponsiveSelect from "../../components/common/ResponsiveSelect";
+import TestBatchTab from "./components/TestBatchTab";
 import "../../styles/ListCard.css";
 import "../Dashboard/Dashboard.css";
 import "./Testing.css";
 
 const { Text } = Typography;
 
-// Extended tab type to include sample assignment log
-type ExtendedTabType = TestingTabType | "sample-assignment-log";
+// Extended tab type to include sample assignment log and test batches
+type ExtendedTabType = TestingTabType | "sample-assignment-log" | "test-batches";
 
 const TestingList: React.FC = () => {
   // Tab state - now includes sample-assignment-log
@@ -73,6 +74,7 @@ const TestingList: React.FC = () => {
 
   // Determine if showing testing content or sample assignment log
   const isShowingSampleAssignmentLog = currentTab === "sample-assignment-log";
+  const isShowingTestBatches = currentTab === "test-batches";
 
   // Sample assignment log stats & filter
   const [salStats, setSalStats] = useState<SampleAssignmentLogStatisticsDto>({
@@ -113,6 +115,8 @@ const TestingList: React.FC = () => {
   const handleExtendedTabChange = (value: string) => {
     if (value === "sample-assignment-log") {
       setCurrentTab("sample-assignment-log");
+    } else if (value === "test-batches") {
+      setCurrentTab("test-batches");
     } else {
       const numericKey = Number(value) as TestingTabType;
       setCurrentTab(numericKey);
@@ -126,7 +130,7 @@ const TestingList: React.FC = () => {
   return (
     <div>
       {/* Statistics Cards */}
-      <div className="dashboard-stats-grid testing-stats-grid">
+      {!isShowingTestBatches && <div className="dashboard-stats-grid testing-stats-grid">
         {(isShowingSampleAssignmentLog
           ? [
               {
@@ -273,7 +277,7 @@ const TestingList: React.FC = () => {
             </Card>
           );
         })}
-      </div>
+      </div>}
 
       <Card
         className="list-card"
@@ -284,7 +288,7 @@ const TestingList: React.FC = () => {
           </Space>
         }
         extra={
-          !isShowingSampleAssignmentLog && (
+          !isShowingSampleAssignmentLog && !isShowingTestBatches && (
             <Button icon={<ReloadOutlined />} onClick={handleRefresh} />
           )
         }
@@ -295,7 +299,9 @@ const TestingList: React.FC = () => {
             value={
               currentTab === "sample-assignment-log"
                 ? "sample-assignment-log"
-                : String(activeTab)
+                : currentTab === "test-batches"
+                  ? "test-batches"
+                  : String(activeTab)
             }
             onChange={(e) => handleExtendedTabChange(e.target.value)}
             optionType="button"
@@ -306,12 +312,17 @@ const TestingList: React.FC = () => {
             <Radio.Button value={String(TestingTabType.All)}>
               Công việc của Lab
             </Radio.Button>
+            <Radio.Button value="test-batches">
+              Mẻ thử nghiệm
+            </Radio.Button>
           </Radio.Group>
         </div>
         <div style={{ borderBottom: "1px solid #f0f0f0" }} />
 
         {/* Content based on selected tab */}
-        {isShowingSampleAssignmentLog ? (
+        {isShowingTestBatches ? (
+          <TestBatchTab />
+        ) : isShowingSampleAssignmentLog ? (
           <LabSampleAssignmentLogTab
             displayStatusFilter={salDisplayStatusFilter}
           />

@@ -245,3 +245,23 @@
   background: #D9D9D9;
   border-color: #D9D9D9;
 }
+
+/* BatchIndicatorTable — no border-radius */
+.batch-indicator-table .ant-table-wrapper,
+.batch-indicator-table .ant-table,
+.batch-indicator-table .ant-table-container,
+.batch-indicator-table .ant-table-container table,
+.batch-indicator-table .ant-table-header,
+.batch-indicator-table .ant-table-body {
+  border-radius: 0 !important;
+}
+
+.batch-indicator-table .ant-table-thead > tr > th:first-child,
+.batch-indicator-table .ant-table-thead > tr > th:last-child {
+  border-radius: 0 !important;
+}
+
+.batch-indicator-table .ant-table-tbody > tr:last-child > td:first-child,
+.batch-indicator-table .ant-table-tbody > tr:last-child > td:last-child {
+  border-radius: 0 !important;
+}
