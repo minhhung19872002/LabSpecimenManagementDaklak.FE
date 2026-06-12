@@ -30,7 +30,7 @@ import {
   UserOutlined,
 } from "../../components/common/Icon";
 import { laboratoryTaskService } from "../../services/laboratoryTaskService";
-import { formatDate } from "../../utils/formatters";
+import { formatDate, formatDateVN } from "../../utils/formatters";
 import { testingService } from "../../services/testingService";
 import {
   standardService,
@@ -2097,7 +2097,7 @@ const TaskManagementDetail: React.FC = () => {
                 <Text type="secondary" style={{ minWidth: 100, flexShrink: 0 }}>
                   Ngày gửi KP:
                 </Text>
-                <Text>{formatDate(task.sampleSentDate)}</Text>
+                <Text>{formatDateVN(task.creationTime)}</Text>
               </div>
             </Col>
             <Col xs={24} sm={12}>
