@@ -187,7 +187,7 @@ const TaskManagementList: React.FC = () => {
                 filterValue: String(LaboratoryTaskStatus.UnderEvaluation),
               },
               {
-                title: "Chấp nhận TN",
+                title: "Cần phân công công việc",
                 value: stats.accepted,
                 iconBg: "green",
                 icon: "check-circle",
@@ -376,12 +376,7 @@ const TaskManagementList: React.FC = () => {
                   <Select.Option
                     value={String(LaboratoryTaskStatus.FullyAccepted)}
                   >
-                    Chấp nhận TN
-                  </Select.Option>
-                  <Select.Option
-                    value={String(LaboratoryTaskStatus.PartialAccepted)}
-                  >
-                    Chấp nhận 1 phần
+                    Cần phân công công việc
                   </Select.Option>
                   <Select.Option value={String(LaboratoryTaskStatus.Assigned)}>
                     Đã phân công
