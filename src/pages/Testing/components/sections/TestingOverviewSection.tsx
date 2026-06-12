@@ -1,6 +1,7 @@
 import React from "react";
 import { Card, Row, Col, Typography, Tooltip } from "antd";
 import { TestingDetailDto, TestingSampleDto } from "../../../../types/testing";
+import { formatDateVN } from "../../../../utils/formatters";
 
 const { Title, Text } = Typography;
 
@@ -66,13 +67,7 @@ const TestingOverviewSection: React.FC<TestingOverviewSectionProps> = ({
                 <Text type="secondary">Ngày gửi KP:</Text>
               </Col>
               <Col flex="auto">
-                <Text>
-                  {detail.sampleSentDate
-                    ? new Date(detail.sampleSentDate).toLocaleDateString(
-                        "vi-VN",
-                      )
-                    : "N/A"}
-                </Text>
+                <Text>{formatDateVN(detail.underReviewDate)}</Text>
               </Col>
             </Row>
           </div>

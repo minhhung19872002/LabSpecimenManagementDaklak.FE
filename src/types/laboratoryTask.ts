@@ -209,6 +209,7 @@ export interface LaboratoryTaskDto {
   isWaitingForPriorLab?: boolean;   // Đang chờ lab trước hoàn thành (Lab Hóa chờ Vi Sinh)
   sampleSentToNextLab?: boolean;    // Đã gửi mẫu cho lab tiếp theo
   sampleSentDate?: string;          // Ngày gửi mẫu
+  underReviewDate?: string;         // Ngày gửi QLKT
   sampleReceivedDate?: string;      // Ngày nhận mẫu từ lab trước
   sampleReceivedNote?: string;      // Ghi chú khi nhận mẫu
   priorLabTaskId?: string;          // ID của Task lab trước (Lab Hóa reference đến Task Vi Sinh)
