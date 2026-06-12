@@ -30,7 +30,7 @@ import {
   UserOutlined,
 } from "../../components/common/Icon";
 import { laboratoryTaskService } from "../../services/laboratoryTaskService";
-import { formatDate } from "../../utils/formatters";
+import { formatDate, formatDateVN } from "../../utils/formatters";
 import { testingService } from "../../services/testingService";
 import {
   standardService,
@@ -499,6 +499,7 @@ const TaskManagementDetail: React.FC = () => {
           sampleId,
           sampleCode: indicators[0]?.sampleCode,
           sampleName: indicators[0]?.sampleName,
+          specimenTypeName: indicators[0]?.specimenTypeName,
           indicatorCount: indicators.length,
           indicators: mergedIndicators as LaboratoryTaskIndicatorDto[],
           sampleStatus,
@@ -1718,7 +1719,11 @@ const TaskManagementDetail: React.FC = () => {
         <Row justify="space-between" align="middle" style={{ width: "100%" }}>
           <Col>
             <Space>
-              <Tag color="blue">{sample.sampleCode}</Tag>
+              <Tag color="blue">
+                {[sample.sampleCode, sample.sampleName, sample.specimenTypeName]
+                  .filter(Boolean)
+                  .join(" - ")}
+              </Tag>
               <Text type="secondary">({sample.indicatorCount} chỉ tiêu)</Text>
               {getSampleStatusTag(sample.sampleStatus)}
             </Space>
@@ -2092,7 +2097,7 @@ const TaskManagementDetail: React.FC = () => {
                 <Text type="secondary" style={{ minWidth: 100, flexShrink: 0 }}>
                   Ngày gửi KP:
                 </Text>
-                <Text>{formatDate(task.sampleSentDate)}</Text>
+                <Text>{formatDateVN(task.underReviewDate)}</Text>
               </div>
             </Col>
             <Col xs={24} sm={12}>

@@ -111,7 +111,7 @@ export const getTestingColumns = (): ColumnsType<TestingListDto> => [
     },
   },
   {
-    title: "Ngày thí nghiệm",
+    title: "Ngày thử nghiệm",
     dataIndex: "testDate",
     key: "testDate",
     width: 140,

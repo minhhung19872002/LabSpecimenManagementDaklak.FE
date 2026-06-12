@@ -1,20 +1,27 @@
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 
-/**
- * Format date to DD/MM/YYYY format
- * @param date - Date string or null/undefined
- * @returns Formatted date string or "-" if no date
- */
+dayjs.extend(utc);
+
+const VIETNAM_OFFSET_HOURS = 7;
+
 export const formatDate = (date: string | null | undefined): string =>
   date ? dayjs(date).format("DD/MM/YYYY") : "-";
 
-/**
- * Format date to DD/MM/YYYY HH:mm format
- * @param date - Date string or null/undefined
- * @returns Formatted datetime string or "-" if no date
- */
 export const formatDateTime = (date: string | null | undefined): string =>
   date ? dayjs(date).format("DD/MM/YYYY HH:mm") : "-";
+
+// Server lưu UTC nhưng không gắn suffix Z — cộng 7h để hiển thị giờ Việt Nam
+const toVietnamTime = (date: string) => {
+  const normalized = date.endsWith("Z") || /[+-]\d{2}:\d{2}$/.test(date) ? date : `${date}Z`;
+  return dayjs.utc(normalized).add(VIETNAM_OFFSET_HOURS, "hour");
+};
+
+export const formatDateVN = (date: string | null | undefined): string =>
+  date ? toVietnamTime(date).format("DD/MM/YYYY") : "-";
+
+export const formatDateTimeVN = (date: string | null | undefined): string =>
+  date ? toVietnamTime(date).format("DD/MM/YYYY HH:mm") : "-";
 
 /**
  * Format currency value to Vietnamese VND format

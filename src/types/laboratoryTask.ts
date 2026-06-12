@@ -36,8 +36,8 @@ export enum IndicatorApprovalStatus {
 export const LaboratoryTaskStatusLabels: Record<LaboratoryTaskStatus, string> = {
   [LaboratoryTaskStatus.UnderEvaluation]: 'Đánh giá thử nghiệm',
   [LaboratoryTaskStatus.WaitingCustomerResponse]: 'Chờ KH phản hồi',
-  [LaboratoryTaskStatus.PartialAccepted]: 'Chấp nhận 1 phần',
-  [LaboratoryTaskStatus.FullyAccepted]: 'Chấp nhận TN',
+  [LaboratoryTaskStatus.PartialAccepted]: 'Cần phân công công việc',
+  [LaboratoryTaskStatus.FullyAccepted]: 'Cần phân công công việc',
   [LaboratoryTaskStatus.TestingRejected]: 'Từ chối TN',
   [LaboratoryTaskStatus.Assigned]: 'Đã phân công',
   [LaboratoryTaskStatus.InProgress]: 'Đang thử nghiệm',
@@ -100,6 +100,7 @@ export interface LaboratoryTaskIndicatorDto {
   sampleCode?: string;
   sampleName?: string;
   specimenTypeId?: string;  // ID nền mẫu (loại mẫu)
+  specimenTypeName?: string;  // Tên nền mẫu
   indicatorId: string;
   indicatorCode?: string;
   indicatorName?: string;
@@ -208,6 +209,7 @@ export interface LaboratoryTaskDto {
   isWaitingForPriorLab?: boolean;   // Đang chờ lab trước hoàn thành (Lab Hóa chờ Vi Sinh)
   sampleSentToNextLab?: boolean;    // Đã gửi mẫu cho lab tiếp theo
   sampleSentDate?: string;          // Ngày gửi mẫu
+  underReviewDate?: string;         // Ngày gửi QLKT
   sampleReceivedDate?: string;      // Ngày nhận mẫu từ lab trước
   sampleReceivedNote?: string;      // Ghi chú khi nhận mẫu
   priorLabTaskId?: string;          // ID của Task lab trước (Lab Hóa reference đến Task Vi Sinh)
@@ -368,6 +370,7 @@ export interface SampleInfo {
   sampleId: string;
   sampleCode?: string;
   sampleName?: string;
+  specimenTypeName?: string;
   indicatorCount: number;
   indicators: LaboratoryTaskIndicatorDto[];
   sampleStatus: SampleStatus;

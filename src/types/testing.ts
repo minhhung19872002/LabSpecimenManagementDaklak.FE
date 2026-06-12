@@ -147,6 +147,7 @@ export interface TestingDetailDto {
   laboratoryId: string;
   requestCompletionDate?: string;
   sampleSentDate?: string;
+  underReviewDate?: string;
   customerName?: string;
   technicalManagerId?: string;
   technicalManagerName?: string;
