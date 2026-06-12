@@ -8,7 +8,11 @@ import {
   message,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { TestBatchItemDto } from "../../../types/testBatch";
+import {
+  TestBatchItemDto,
+  IndicatorApprovalStatusLabels,
+  IndicatorApprovalStatusColors,
+} from "../../../types/testBatch";
 import testBatchService from "../../../services/testBatchService";
 import dayjs from "dayjs";
 
@@ -18,7 +22,6 @@ interface Props {
   batchId: string;
   items: TestBatchItemDto[];
   canEdit: boolean;
-  onSaved: () => void;
   selectedItemIds: string[];
   onSelectionChange: (ids: string[]) => void;
   editedValuesRef?: React.MutableRefObject<EditedValuesMap>;
@@ -26,8 +29,13 @@ interface Props {
 
 const getItemStatus = (item: TestBatchItemDto) => {
   if (item.isExternallyCompleted) return { label: "Ngoài", color: "orange" };
-  if (item.rejectionReason) return { label: "Từ chối", color: "red" };
-  if (item.isSubmitted) return { label: "Đã gửi", color: "green" };
+  if (item.isSubmitted) {
+    return {
+      label: IndicatorApprovalStatusLabels[item.approvalStatus] ?? "Đã gửi",
+      color: IndicatorApprovalStatusColors[item.approvalStatus] ?? "processing",
+    };
+  }
+  if (item.rejectionReason) return { label: "Từ chối", color: "error" };
   if (item.result) return { label: "Chờ gửi", color: "blue" };
   return { label: "Cần làm", color: "default" as const };
 };

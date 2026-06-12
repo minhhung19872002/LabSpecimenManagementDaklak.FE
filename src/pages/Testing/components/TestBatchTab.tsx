@@ -22,7 +22,6 @@ import {
   ReloadOutlined,
   DeleteOutlined,
   SendOutlined,
-  CheckOutlined,
   StopOutlined,
   EditOutlined,
   FileTextOutlined,
@@ -47,7 +46,7 @@ import {
 import type { UserLookupDto } from "../../../types/laboratoryTask";
 import CreateBatchModal from "./CreateBatchModal";
 import EditBatchModal from "./EditBatchModal";
-import ConsumptionModal from "./ConsumptionModal";
+import SubmitConsumptionModal from "./SubmitConsumptionModal";
 import BatchIndicatorTable, { type EditedValuesMap } from "./BatchIndicatorTable";
 import dayjs from "dayjs";
 
@@ -85,7 +84,7 @@ const TestBatchTab: React.FC = () => {
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [consumptionModalOpen, setConsumptionModalOpen] = useState(false);
+  const [submitConsumptionModalOpen, setSubmitConsumptionModalOpen] = useState(false);
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const editedValuesRef = useRef<EditedValuesMap>(new Map());
 
@@ -180,7 +179,7 @@ const TestBatchTab: React.FC = () => {
     setCurrentPage(1);
   };
 
-  const handleSubmit = async () => {
+  const handleOpenSubmitConsumption = () => {
     if (!batchDetail) return;
     if (selectedItemIds.length === 0) {
       message.warning("Vui lòng chọn ít nhất 1 chỉ tiêu để gửi");
@@ -220,33 +219,7 @@ const TestBatchTab: React.FC = () => {
       return;
     }
 
-    try {
-      await testBatchService.submitItems(batchDetail.id, selectedItemIds);
-      message.success(
-        `Gửi kết quả thành công cho ${selectedItems.length} chỉ tiêu`,
-      );
-      setSelectedItemIds([]);
-      editedValuesRef.current.clear();
-      loadDetail(batchDetail.id);
-      loadBatches();
-    } catch (err: any) {
-      message.error(
-        err?.response?.data?.error?.message || "Lỗi gửi kết quả",
-      );
-    }
-  };
-
-  const handleCalculateConsumption = async () => {
-    if (!batchDetail) return;
-    try {
-      await testBatchService.calculateConsumption(batchDetail.id);
-      message.success("Tính tiêu hao thành công");
-      loadDetail(batchDetail.id);
-    } catch (err: any) {
-      message.error(
-        err?.response?.data?.error?.message || "Lỗi tính tiêu hao",
-      );
-    }
+    setSubmitConsumptionModalOpen(true);
   };
 
   const handleCancel = async () => {
@@ -280,13 +253,12 @@ const TestBatchTab: React.FC = () => {
   const canSubmit =
     batchDetail?.status === TestBatchStatus.Draft ||
     batchDetail?.status === TestBatchStatus.Running;
-  // Tạm ẩn — chờ BA confirm flow tiêu hao trong design mới
-  const canCalculateConsumption = false;
-  const canConfirmConsumption = false;
   const canDelete = batchDetail?.status === TestBatchStatus.Draft;
   const canCancel =
-    batchDetail?.status === TestBatchStatus.Draft ||
-    batchDetail?.status === TestBatchStatus.Running;
+    (batchDetail?.status === TestBatchStatus.Draft ||
+    batchDetail?.status === TestBatchStatus.Running ||
+    batchDetail?.status === TestBatchStatus.Completed) &&
+    !batchDetail?.hasApprovedIndicators;
 
   const renderBatchCard = (batch: TestBatchListDto) => {
     const isSelected = batch.id === selectedBatchId;
@@ -622,34 +594,14 @@ const TestBatchTab: React.FC = () => {
                     </Button>
                   )}
                   {canSubmit && (
-                    <Popconfirm
-                      title="Gửi kết quả?"
-                      description={`Gửi ${selectedItemIds.length} chỉ tiêu đã chọn`}
-                      onConfirm={handleSubmit}
-                    >
-                      <Button
-                        size="small"
-                        type="primary"
-                        icon={<SendOutlined />}
-                        disabled={selectedItemIds.length === 0}
-                      >
-                        Gửi ({selectedItemIds.length})
-                      </Button>
-                    </Popconfirm>
-                  )}
-                  {canCalculateConsumption && (
-                    <Button size="small" onClick={handleCalculateConsumption}>
-                      Tính tiêu hao
-                    </Button>
-                  )}
-                  {canConfirmConsumption && (
                     <Button
                       size="small"
                       type="primary"
-                      icon={<CheckOutlined />}
-                      onClick={() => setConsumptionModalOpen(true)}
+                      icon={<SendOutlined />}
+                      disabled={selectedItemIds.length === 0}
+                      onClick={handleOpenSubmitConsumption}
                     >
-                      Xác nhận tiêu hao
+                      Gửi ({selectedItemIds.length})
                     </Button>
                   )}
                   {canCancel && (
@@ -680,7 +632,6 @@ const TestBatchTab: React.FC = () => {
                 batchId={batchDetail.id}
                 items={batchDetail.items}
                 canEdit={canEdit}
-                onSaved={loadBatches}
                 selectedItemIds={selectedItemIds}
                 onSelectionChange={setSelectedItemIds}
                 editedValuesRef={editedValuesRef}
@@ -731,12 +682,20 @@ const TestBatchTab: React.FC = () => {
       />
 
       {batchDetail && (
-        <ConsumptionModal
-          open={consumptionModalOpen}
+        <SubmitConsumptionModal
+          open={submitConsumptionModalOpen}
           batchId={batchDetail.id}
-          consumptions={batchDetail.consumptions}
-          onClose={() => setConsumptionModalOpen(false)}
-          onConfirmed={() => loadDetail(batchDetail.id)}
+          batchCode={batchDetail.code}
+          batchName={batchDetail.name}
+          selectedItemIds={selectedItemIds}
+          onClose={() => setSubmitConsumptionModalOpen(false)}
+          onSubmitted={() => {
+            setSubmitConsumptionModalOpen(false);
+            setSelectedItemIds([]);
+            editedValuesRef.current.clear();
+            loadDetail(batchDetail.id);
+            loadBatches();
+          }}
         />
       )}
     </div>

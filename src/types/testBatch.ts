@@ -58,6 +58,7 @@ export interface TestBatchItemDto {
   testDate?: string;
   isSubmitted: boolean;
   isExternallyCompleted: boolean;
+  approvalStatus: number;
 }
 
 export interface TestBatchConsumptionDto {
@@ -74,10 +75,39 @@ export interface TestBatchConsumptionDto {
   isDeducted: boolean;
 }
 
+export const IndicatorApprovalStatusLabels: Record<number, string> = {
+  0: 'Chờ xử lý',
+  1: 'Đã gửi',
+  2: 'Đã duyệt KQ',
+  3: 'Từ chối',
+  4: 'Hủy bỏ',
+  5: 'YC đổi PP',
+  6: 'Đã đổi PP',
+  7: 'Từ chối TN',
+  8: 'Chấp nhận TN',
+  9: 'Không TN được',
+  10: 'YC bổ sung',
+};
+
+export const IndicatorApprovalStatusColors: Record<number, string> = {
+  0: 'default',
+  1: 'processing',
+  2: 'success',
+  3: 'error',
+  4: 'error',
+  5: 'warning',
+  6: 'warning',
+  7: 'error',
+  8: 'cyan',
+  9: 'error',
+  10: 'warning',
+};
+
 export interface TestBatchDto {
   id: string;
   code: string;
   name: string;
+  hasApprovedIndicators: boolean;
   indicatorId: string;
   indicatorName?: string;
   methodId: string;
@@ -152,6 +182,42 @@ export interface GetAvailableIndicatorsInput {
   technicianId?: string;
   skipCount?: number;
   maxResultCount?: number;
+}
+
+export interface ConsumptionPreviewLineDto {
+  consumptionId?: string;
+  productId?: string;
+  productName?: string;
+  productCode?: string;
+  productType?: number;
+  availableQuantity?: number;
+  equipmentId?: string;
+  equipmentName?: string;
+  unitId?: string;
+  unitName?: string;
+  recommendedQuantity: number;
+  actualQuantity: number;
+  isDeducted: boolean;
+  exceedsStock: boolean;
+}
+
+export interface ConsumptionPreviewDto {
+  isFirstSubmit: boolean;
+  lines: ConsumptionPreviewLineDto[];
+}
+
+export interface ConsumptionLineInputDto {
+  consumptionId?: string;
+  productId?: string;
+  equipmentId?: string;
+  unitId?: string;
+  recommendedQuantity: number;
+  actualQuantity: number;
+}
+
+export interface SubmitWithConsumptionDto {
+  itemIds: string[];
+  consumptionLines: ConsumptionLineInputDto[];
 }
 
 export interface AvailableIndicatorDto {
