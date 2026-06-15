@@ -147,8 +147,8 @@ export const useTestingList = () => {
         statuses: statusFilter !== undefined ? [statusFilter] : undefined,
         technicianIds:
           technicianFilter.length > 0 ? technicianFilter : undefined,
-        requestCompletionDateFrom: dateRange?.[0]?.startOf('day').format('YYYY-MM-DD') || undefined,
-        requestCompletionDateTo: dateRange?.[1]?.endOf('day').format('YYYY-MM-DD') || undefined,
+        transferDateFrom: dateRange?.[0]?.startOf('day').format('YYYY-MM-DD') || undefined,
+        transferDateTo: dateRange?.[1]?.endOf('day').format('YYYY-MM-DD') || undefined,
         indicatorIds: selectedIndicatorIds.length > 0 ? selectedIndicatorIds : undefined,
         sorting,
       });

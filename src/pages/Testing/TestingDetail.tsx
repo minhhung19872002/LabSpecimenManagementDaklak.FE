@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { message } from "antd";
 import { testingService } from "../../services/testingService";
@@ -760,10 +760,12 @@ const TestingDetail: React.FC = () => {
       })()
     : false;
 
-  // Sort samples theo sampleId để cố định vị trí
-  const sortedSamples = detail?.samples
-    ? [...detail.samples].sort((a, b) => a.sampleId.localeCompare(b.sampleId))
-    : [];
+  const sortedSamples = useMemo(
+    () => detail?.samples
+      ? [...detail.samples].sort((a, b) => (a.sampleCode || "").localeCompare(b.sampleCode || ""))
+      : [],
+    [detail?.samples]
+  );
 
   return (
     <TestingDetailContainer
