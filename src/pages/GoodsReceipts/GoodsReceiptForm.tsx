@@ -826,7 +826,7 @@ const GoodsReceiptForm: React.FC = () => {
       >
         <Form layout="vertical" size="middle" style={{ padding: "0 16px" }}>
           <Row gutter={24}>
-            <Col xs={24} sm={12} md={6}>
+            <Col xs={24} sm={12} md={8}>
               <Form.Item label="Nhân viên mua hàng">
                 <Controller
                   name="purchaserName"
@@ -837,23 +837,12 @@ const GoodsReceiptForm: React.FC = () => {
                 />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={12} md={6}>
-              <Form.Item label="Số phiếu giao hàng từ NCC">
-                <Controller
-                  name="deliveryNoteNumber"
-                  control={control}
-                  render={({ field }) => (
-                    <Input {...field} value={field.value || ""} placeholder="Số phiếu giao hàng" disabled={isReadonly} />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={6}>
+            <Col xs={24} sm={12} md={8}>
               <Form.Item label="Người lập phiếu">
                 <Input value={receipt?.preparedByName || authService.getUserInfo()?.fullName || ""} disabled />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={12} md={6}>
+            <Col xs={24} sm={12} md={8}>
               <Form.Item label="Thời gian tạo phiếu">
                 <Input value={receipt ? dayjs(receipt.creationTime).format("HH:mm DD/MM/YYYY") : dayjs().format("HH:mm DD/MM/YYYY")} disabled style={{ backgroundColor: "#f5f5f5" }} />
               </Form.Item>
@@ -861,39 +850,6 @@ const GoodsReceiptForm: React.FC = () => {
           </Row>
 
           <Row gutter={24}>
-            <Col xs={24} sm={12} md={6}>
-              <Form.Item label="Địa chỉ NCC">
-                <Controller
-                  name="supplierAddress"
-                  control={control}
-                  render={({ field }) => (
-                    <Input {...field} value={field.value || ""} placeholder="Địa chỉ nhà cung cấp" disabled={isReadonly} />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={6}>
-              <Form.Item label="SĐT NCC">
-                <Controller
-                  name="supplierPhone"
-                  control={control}
-                  render={({ field }) => (
-                    <Input {...field} value={field.value || ""} placeholder="Số điện thoại NCC" disabled={isReadonly} />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={6}>
-              <Form.Item label="SĐT đại diện NCC">
-                <Controller
-                  name="supplierRepresentativePhone"
-                  control={control}
-                  render={({ field }) => (
-                    <Input {...field} value={field.value || ""} placeholder="SĐT đại diện" disabled={isReadonly} />
-                  )}
-                />
-              </Form.Item>
-            </Col>
             <Col xs={24} sm={12} md={6}>
               <Form.Item label="VAT (%)">
                 {isCustomVat ? (
@@ -926,9 +882,6 @@ const GoodsReceiptForm: React.FC = () => {
                 )}
               </Form.Item>
             </Col>
-          </Row>
-
-          <Row gutter={24}>
             <Col xs={24} sm={12} md={6}>
               <Form.Item label="Ngày cấp chứng từ">
                 <Controller
@@ -1046,20 +999,26 @@ const GoodsReceiptForm: React.FC = () => {
         }}
       >
         <Space>
-          {/* Draft state: Lưu tạm + Duyệt */}
+          {/* Hủy phiếu */}
           {!isReadonly && (
-            <Button onClick={handleSaveDraft} loading={saving}>
-              {isEdit ? "Cập nhật" : "Lưu tạm"}
+            <Button onClick={() => navigate("/goods-receipts")}>
+              Hủy phiếu
             </Button>
           )}
+          {/* Lưu tạm (Draft) */}
+          {!isReadonly && (
+            <Button onClick={handleSaveDraft} loading={saving}>
+              Lưu tạm
+            </Button>
+          )}
+          {/* Lưu (Approve) */}
           {!isReadonly && canApprove && (!isEdit || receipt?.orderStatus === GoodsReceiptOrderStatus.Draft) && (
             <Button
               type="primary"
               onClick={handleApprove}
               loading={approving}
-              style={{ background: "linear-gradient(135deg, #1890ff 0%, #096dd9 100%)", borderColor: "transparent" }}
             >
-              Duyệt
+              Lưu
             </Button>
           )}
 
