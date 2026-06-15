@@ -122,6 +122,13 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
 }) => {
   const navigate = useNavigate();
 
+  const sortedSamples = React.useMemo(
+    () => (data.samples || [])
+      .filter((s) => !s.isCancelled)
+      .sort((a, b) => (a.sampleCode || "").localeCompare(b.sampleCode || "")),
+    [data.samples]
+  );
+
   // Render action buttons based on status
   // Thứ tự ưu tiên: Primary actions > In phiếu > In KQ > Hủy yêu cầu (danger cuối cùng)
   const renderActionButtons = () => {
@@ -625,7 +632,7 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
           styles={{ body: { padding: 0 } }}
         >
           <Table
-            dataSource={(data.samples || []).filter((s) => !s.isCancelled)}
+            dataSource={sortedSamples}
             columns={sampleColumns}
             rowKey="id"
             pagination={false}

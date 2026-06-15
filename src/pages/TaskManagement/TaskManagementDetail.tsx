@@ -508,8 +508,7 @@ const TaskManagementDetail: React.FC = () => {
       },
     );
 
-    // Sort theo sampleId để cố định vị trí
-    return samples.sort((a, b) => a.sampleId.localeCompare(b.sampleId));
+    return samples.sort((a, b) => (a.sampleCode || "").localeCompare(b.sampleCode || ""));
   }, [indicatorsBySample, indicatorChanges]);
 
   // Handlers
