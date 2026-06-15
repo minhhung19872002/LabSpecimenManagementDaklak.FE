@@ -869,12 +869,19 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
         }}
       >
         <Space>
-          {/* Draft state: Lưu tạm + Duyệt */}
+          {/* Hủy phiếu */}
           {!isReadonly && (
-            <Button onClick={handleSaveDraft} loading={saving}>
-              {isEdit ? "Cập nhật" : "Lưu tạm"}
+            <Button onClick={() => navigate("/goods-receipts")}>
+              Hủy phiếu
             </Button>
           )}
+          {/* Lưu tạm (Draft) */}
+          {!isReadonly && (
+            <Button onClick={handleSaveDraft} loading={saving}>
+              Lưu tạm
+            </Button>
+          )}
+          {/* Lưu (Approve) */}
           {!isReadonly &&
             canApprove &&
             (!isEdit || receipt?.orderStatus === GoodsReceiptOrderStatus.Draft) && (
@@ -882,12 +889,8 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
                 type="primary"
                 onClick={handleApprove}
                 loading={approving}
-                style={{
-                  background: "linear-gradient(135deg, #1890ff 0%, #096dd9 100%)",
-                  borderColor: "transparent",
-                }}
               >
-                Duyệt
+                Lưu
               </Button>
             )}
 
