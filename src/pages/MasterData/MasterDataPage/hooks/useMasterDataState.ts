@@ -10,6 +10,7 @@ import {
   masterDataStatisticsService,
   warehouseService,
 } from "../../../../services/masterDataService";
+import { manufacturerService } from "../../../../services/manufacturerService";
 import { userService } from "../../../../services/userService";
 import {
   MasterDataItem,
@@ -29,6 +30,7 @@ export const useMasterDataState = (initialCategory = "departments") => {
     customers: [],
     indicators: [],
     warehouses: [],
+    manufacturers: [],
   });
   const [totalCount, setTotalCount] = useState<Record<string, number>>({
     departments: 0,
@@ -39,6 +41,7 @@ export const useMasterDataState = (initialCategory = "departments") => {
     customers: 0,
     indicators: 0,
     warehouses: 0,
+    manufacturers: 0,
   });
   const [pagination, setPagination] = useState<
     Record<string, { current: number; pageSize: number }>
@@ -48,6 +51,7 @@ export const useMasterDataState = (initialCategory = "departments") => {
     storageLocations: { current: 1, pageSize: DEFAULT_PAGE_SIZE },
     customers: { current: 1, pageSize: DEFAULT_PAGE_SIZE },
     warehouses: { current: 1, pageSize: DEFAULT_PAGE_SIZE },
+    manufacturers: { current: 1, pageSize: DEFAULT_PAGE_SIZE },
   });
   const [loading, setLoading] = useState<Record<string, boolean>>({
     departments: false,
@@ -58,6 +62,7 @@ export const useMasterDataState = (initialCategory = "departments") => {
     customers: false,
     indicators: false,
     warehouses: false,
+    manufacturers: false,
   });
   const [loadedCategories, setLoadedCategories] = useState<Set<string>>(
     new Set()
@@ -154,6 +159,12 @@ export const useMasterDataState = (initialCategory = "departments") => {
           break;
         case "warehouses":
           result = await warehouseService.getList({
+            skipCount,
+            maxResultCount,
+          });
+          break;
+        case "manufacturers":
+          result = await manufacturerService.getList({
             skipCount,
             maxResultCount,
           });

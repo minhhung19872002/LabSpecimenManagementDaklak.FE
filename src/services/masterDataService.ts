@@ -452,6 +452,7 @@ export interface MasterDataStatisticsDto {
   formTemplateCount: number;
   unitCount: number;
   warehouseCount: number;
+  manufacturerCount: number;
 }
 
 // Service implementations - Using new API v1 endpoints

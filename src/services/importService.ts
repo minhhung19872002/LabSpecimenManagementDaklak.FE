@@ -348,6 +348,27 @@ export const importService = {
     return response.data;
   },
 
+  // ==================== Manufacturer Import ====================
+
+  downloadManufacturerTemplate: async (): Promise<Blob> => {
+    const response = await api.download(`${BASE_URL}/manufacturers/template`);
+    return response.data;
+  },
+
+  previewManufacturers: async (file: File): Promise<any> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<any>(`${BASE_URL}/manufacturers/preview`, formData);
+    return response.data;
+  },
+
+  importManufacturers: async (file: File): Promise<ImportResultDto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<ImportResultDto>(`${BASE_URL}/manufacturers`, formData);
+    return response.data;
+  },
+
   // ==================== Organization Import (CS/DN) ====================
 
   /**

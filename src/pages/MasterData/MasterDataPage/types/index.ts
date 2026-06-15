@@ -8,6 +8,7 @@ import {
   WarehouseDto,
   MasterDataStatisticsDto,
 } from "../../../../services/masterDataService";
+import { ManufacturerDto } from "../../../../services/manufacturerService";
 import { UserLookupDto } from "../../../../services/userService";
 
 // Unified type for all master data items
@@ -18,7 +19,8 @@ export type MasterDataItem =
   | StorageLocationDto
   | CustomerDto
   | LaboratoryDto
-  | WarehouseDto;
+  | WarehouseDto
+  | ManufacturerDto;
 
 export interface MasterDataState {
   activeCategory: string;
@@ -47,6 +49,7 @@ export type {
   CustomerDto,
   LaboratoryDto,
   WarehouseDto,
+  ManufacturerDto,
   MasterDataStatisticsDto,
   UserLookupDto,
 };

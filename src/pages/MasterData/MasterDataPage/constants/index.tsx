@@ -13,6 +13,7 @@ import { PERMISSIONS } from "../../../../constants/permissionMapping";
 
 export const categoryPermissionMap: Record<string, string> = {
   warehouses: PERMISSIONS.Warehouses.Default,
+  manufacturers: PERMISSIONS.Manufacturers.Default,
   sampleTypeCategories: PERMISSIONS.SampleTypeCategories.Default,
   units: PERMISSIONS.Units.Default,
   formTemplates: PERMISSIONS.FormTemplates.Default,
@@ -31,6 +32,7 @@ export const categoryPermissionMap: Record<string, string> = {
 // Sorted alphabetically by Vietnamese label (A-Z). Keep this order when adding new entries.
 export const categoryLabels: Record<string, string> = {
   warehouses: "Danh mục kho",
+  manufacturers: "Danh mục hãng sản xuất",
   sampleTypeCategories: "Danh mục loại mẫu",
   units: "Đơn vị hàng hóa",
   formTemplates: "Form mẫu",
@@ -81,12 +83,16 @@ export const getColumns = (
       width: 60,
       render: (_, __, index) => index + 1,
     },
-    {
-      title: "Mã",
-      dataIndex: "code",
-      key: "code",
-      width: 120,
-    },
+    ...(activeCategory !== "manufacturers"
+      ? [
+          {
+            title: "Mã",
+            dataIndex: "code",
+            key: "code",
+            width: 120,
+          },
+        ]
+      : []),
     {
       title: activeCategory === "laboratories" ? "Phòng ban" : "Tên",
       dataIndex: "name",
@@ -204,10 +210,10 @@ export const getColumns = (
     baseColumns.push({
       title: "Thao tác",
       key: "actions",
-      width: activeCategory === "warehouses" ? 150 : 100,
+      width: activeCategory === "warehouses" || activeCategory === "manufacturers" ? 150 : 100,
       render: (_, record) => (
         <Space size="small">
-          {canEdit && activeCategory === "warehouses" && handleToggleActive && (
+          {canEdit && (activeCategory === "warehouses" || activeCategory === "manufacturers") && handleToggleActive && (
             <Tooltip
               title={record.isActive ? "Tắt hoạt động" : "Bật hoạt động"}
             >
@@ -289,6 +295,8 @@ export const getStatCount = (
       return statistics.unitCount || 0;
     case "warehouses":
       return statistics.warehouseCount || 0;
+    case "manufacturers":
+      return statistics.manufacturerCount || 0;
     default:
       return 0;
   }

@@ -44,7 +44,7 @@ const MasterDataModal: React.FC<MasterDataModalProps> = ({
       confirmLoading={loading}
     >
       <Form form={form} layout="vertical">
-        {activeCategory !== "customers" && activeCategory !== "laboratories" && (
+        {activeCategory !== "customers" && activeCategory !== "laboratories" && activeCategory !== "manufacturers" && (
           <Row gutter={16}>
             <Col span={8}>
               <Form.Item
@@ -75,6 +75,33 @@ const MasterDataModal: React.FC<MasterDataModalProps> = ({
               </Form.Item>
             </Col>
           </Row>
+        )}
+        {activeCategory === "manufacturers" && (
+          <>
+            <Form.Item
+              name="name"
+              label="Tên hãng sản xuất"
+              rules={[
+                {
+                  required: true,
+                  message: "Vui lòng nhập tên hãng sản xuất",
+                },
+              ]}
+            >
+              <Input />
+            </Form.Item>
+            <Form.Item name="description" label="Mô tả">
+              <Input.TextArea rows={3} />
+            </Form.Item>
+            {editingItem && (
+              <Form.Item name="isActive" label="Trạng thái">
+                <Select>
+                  <Select.Option value={true}>Hoạt động</Select.Option>
+                  <Select.Option value={false}>Ngừng</Select.Option>
+                </Select>
+              </Form.Item>
+            )}
+          </>
         )}
         {activeCategory === "customers" && (
           <>
@@ -129,7 +156,8 @@ const MasterDataModal: React.FC<MasterDataModalProps> = ({
           </>
         )}
         {activeCategory !== "customers" &&
-          activeCategory !== "laboratories" && (
+          activeCategory !== "laboratories" &&
+          activeCategory !== "manufacturers" && (
             <>
               {activeCategory === "warehouses" ? (
                 <Form.Item name="physicalLocation" label="Vị trí vật lý">

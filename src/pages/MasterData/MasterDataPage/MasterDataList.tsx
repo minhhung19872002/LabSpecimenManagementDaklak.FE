@@ -13,6 +13,9 @@ import ImportExcelModal from "../../../components/common/ImportExcelModal";
 import ImportWarehouseModal, {
   type WarehouseImportPreviewDto,
 } from "./components/ImportWarehouseModal";
+import ImportManufacturerModal, {
+  type ManufacturerImportPreviewDto,
+} from "./components/ImportManufacturerModal";
 import IndicatorsTab, { type IndicatorsActions } from "../Indicators";
 import FormTemplatesTab from "../FormTemplatesTab";
 import TestMethodsTab, { type TestMethodsActions } from "../TestMethods";
@@ -139,6 +142,12 @@ const MasterDataList: React.FC = () => {
   const [warehouseImportFileList, setWarehouseImportFileList] = useState<UploadFile[]>([]);
   const [warehouseImportPreview, setWarehouseImportPreview] = useState<WarehouseImportPreviewDto | null>(null);
 
+  // Manufacturer import state
+  const [manufacturerImportOpen, setManufacturerImportOpen] = useState(false);
+  const [manufacturerImportLoading, setManufacturerImportLoading] = useState(false);
+  const [manufacturerImportFileList, setManufacturerImportFileList] = useState<UploadFile[]>([]);
+  const [manufacturerImportPreview, setManufacturerImportPreview] = useState<ManufacturerImportPreviewDto | null>(null);
+
   const handleWarehouseImportPreview = async () => {
     if (!warehouseImportFileList.length || !warehouseImportFileList[0].originFileObj) {
       return;
@@ -189,6 +198,58 @@ const MasterDataList: React.FC = () => {
   const handleWarehouseImportReset = () => {
     setWarehouseImportFileList([]);
     setWarehouseImportPreview(null);
+  };
+
+  const handleManufacturerImportPreview = async () => {
+    if (!manufacturerImportFileList.length || !manufacturerImportFileList[0].originFileObj) {
+      return;
+    }
+    setManufacturerImportLoading(true);
+    try {
+      const result = await importService.previewManufacturers(manufacturerImportFileList[0].originFileObj);
+      setManufacturerImportPreview(result);
+    } catch (err: unknown) {
+      console.error("Failed to preview manufacturer import:", err);
+      message.error("Không thể xem trước dữ liệu import");
+    } finally {
+      setManufacturerImportLoading(false);
+    }
+  };
+
+  const handleManufacturerImportConfirm = async () => {
+    if (!manufacturerImportFileList.length || !manufacturerImportFileList[0].originFileObj) {
+      return;
+    }
+    setManufacturerImportLoading(true);
+    try {
+      const result = await importService.importManufacturers(manufacturerImportFileList[0].originFileObj);
+      if (result.success) {
+        message.success(result.message || "Import thành công");
+        setManufacturerImportOpen(false);
+        setManufacturerImportFileList([]);
+        setManufacturerImportPreview(null);
+        fetchCategoryData(activeCategory, true);
+        fetchStatistics();
+      } else {
+        message.error(result.message || "Import thất bại");
+      }
+    } catch (err: unknown) {
+      console.error("Failed to import manufacturers:", err);
+      message.error("Không thể import dữ liệu");
+    } finally {
+      setManufacturerImportLoading(false);
+    }
+  };
+
+  const handleManufacturerImportCancel = () => {
+    setManufacturerImportOpen(false);
+    setManufacturerImportFileList([]);
+    setManufacturerImportPreview(null);
+  };
+
+  const handleManufacturerImportReset = () => {
+    setManufacturerImportFileList([]);
+    setManufacturerImportPreview(null);
   };
 
   const hasVisibleCategories = visibleCategories.length > 0;
@@ -532,6 +593,32 @@ const MasterDataList: React.FC = () => {
                 </>
               )}
 
+              {/* Manufacturers Tab */}
+              {activeCategory === "manufacturers" && (
+                <>
+                  <Button
+                    icon={<DownloadOutlined />}
+                    loading={downloadingTemplate}
+                    onClick={handleDownloadTemplate}
+                  >
+                    Tải template
+                  </Button>
+                  <Button
+                    icon={<UploadOutlined />}
+                    onClick={() => setManufacturerImportOpen(true)}
+                  >
+                    Nhập danh sách
+                  </Button>
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => handleCreate(form)}
+                  >
+                    Thêm mới
+                  </Button>
+                </>
+              )}
+
               {/* Other tabs (departments, laboratories, etc.) - use old handleCreate */}
               {activeCategory !== "indicators" &&
                 activeCategory !== "formTemplates" &&
@@ -543,7 +630,8 @@ const MasterDataList: React.FC = () => {
                 activeCategory !== "sampleTypeCategories" &&
                 activeCategory !== "sampleConditions" &&
                 activeCategory !== "units" &&
-                activeCategory !== "warehouses" && (
+                activeCategory !== "warehouses" &&
+                activeCategory !== "manufacturers" && (
                   <Button
                     type="primary"
                     icon={<PlusOutlined />}
@@ -698,7 +786,8 @@ const MasterDataList: React.FC = () => {
       {hasVisibleCategories &&
         canImport &&
         importTypeMap[activeCategory] &&
-        activeCategory !== "warehouses" && (
+        activeCategory !== "warehouses" &&
+        activeCategory !== "manufacturers" && (
           <ImportExcelModal
             open={importModalOpen}
             onClose={() => setImportModalOpen(false)}
@@ -722,6 +811,19 @@ const MasterDataList: React.FC = () => {
         onConfirm={handleWarehouseImportConfirm}
         onCancel={handleWarehouseImportCancel}
         onReset={handleWarehouseImportReset}
+      />
+
+      {/* Import Manufacturer Modal */}
+      <ImportManufacturerModal
+        open={manufacturerImportOpen}
+        loading={manufacturerImportLoading}
+        fileList={manufacturerImportFileList}
+        previewData={manufacturerImportPreview}
+        onFileListChange={setManufacturerImportFileList}
+        onPreview={handleManufacturerImportPreview}
+        onConfirm={handleManufacturerImportConfirm}
+        onCancel={handleManufacturerImportCancel}
+        onReset={handleManufacturerImportReset}
       />
     </div>
   );

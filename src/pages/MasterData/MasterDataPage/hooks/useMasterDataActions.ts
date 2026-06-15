@@ -18,6 +18,10 @@ import {
   CreateUpdateWarehouseDto,
 } from "../../../../services/masterDataService";
 import {
+  manufacturerService,
+  CreateUpdateManufacturerDto,
+} from "../../../../services/manufacturerService";
+import {
   importService,
   downloadBlobAsFile,
 } from "../../../../services/importService";
@@ -104,6 +108,9 @@ export const useMasterDataActions = ({
           break;
         case "warehouses":
           await warehouseService.delete(id);
+          break;
+        case "manufacturers":
+          await manufacturerService.delete(id);
           break;
       }
 
@@ -200,6 +207,12 @@ export const useMasterDataActions = ({
               values as CreateUpdateWarehouseDto
             );
             break;
+          case "manufacturers":
+            await manufacturerService.update(
+              editingItem.id,
+              values as CreateUpdateManufacturerDto
+            );
+            break;
         }
         message.success("Cập nhật thành công!");
       } else {
@@ -230,6 +243,9 @@ export const useMasterDataActions = ({
           case "warehouses":
             await warehouseService.create(values as CreateUpdateWarehouseDto);
             break;
+          case "manufacturers":
+            await manufacturerService.create(values as CreateUpdateManufacturerDto);
+            break;
         }
         message.success("Thêm mới thành công!");
       }
@@ -245,7 +261,7 @@ export const useMasterDataActions = ({
     } catch (err: any) {
       // Ant Design form validation error — inline errors already shown on fields
       if (err?.errorFields) {
-        if (activeCategory === "warehouses") return;
+        if (activeCategory === "warehouses" || activeCategory === "manufacturers") return;
       }
 
       console.error("Failed to save:", err);
@@ -305,7 +321,7 @@ export const useMasterDataActions = ({
         errorMsg = err.message;
       }
 
-      if (activeCategory === "warehouses") {
+      if (activeCategory === "warehouses" || activeCategory === "manufacturers") {
         if (!hasFieldErrors) {
           message.error(errorMsg);
         }
@@ -319,12 +335,17 @@ export const useMasterDataActions = ({
   };
 
   const handleToggleActive = async (record: MasterDataItem) => {
-    if (activeCategory !== "warehouses") return;
+    if (activeCategory !== "warehouses" && activeCategory !== "manufacturers") return;
     try {
-      await warehouseService.toggleActive(record.id);
+      if (activeCategory === "warehouses") {
+        await warehouseService.toggleActive(record.id);
+      } else {
+        await manufacturerService.toggleActive(record.id);
+      }
       const newStatus = !(record as any).isActive;
+      const label = activeCategory === "warehouses" ? "kho" : "hãng sản xuất";
       message.success(
-        newStatus ? "Đã kích hoạt kho!" : "Đã ngừng kích hoạt kho!"
+        newStatus ? `Đã kích hoạt ${label}!` : `Đã ngừng kích hoạt ${label}!`
       );
       await fetchCategoryData(activeCategory, true);
     } catch (err: any) {
@@ -365,6 +386,9 @@ export const useMasterDataActions = ({
       } else if (activeCategory === "warehouses") {
         blob = await importService.downloadWarehouseTemplate();
         filename = "Danh_muc_kho.xlsx";
+      } else if (activeCategory === "manufacturers") {
+        blob = await importService.downloadManufacturerTemplate();
+        filename = "Danh_muc_hang_san_xuat.xlsx";
       } else {
         throw new Error("Unsupported category for template download");
       }
