@@ -1,7 +1,9 @@
-import { Button, Space, Tag, Popconfirm } from "antd";
+import { Button, Space, Tag, Tooltip, Popconfirm } from "antd";
 import {
   EditOutlined,
   DeleteOutlined,
+  StopOutlined,
+  CheckCircleOutlined,
 } from "../../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import { ImportType } from "../../../../components/common/ImportExcelModal";
@@ -10,36 +12,38 @@ import { authService } from "../../../../services/authService";
 import { PERMISSIONS } from "../../../../constants/permissionMapping";
 
 export const categoryPermissionMap: Record<string, string> = {
-  departments: PERMISSIONS.Departments.Default,
-  laboratories: PERMISSIONS.Laboratories.Default,
+  warehouses: PERMISSIONS.Warehouses.Default,
   sampleTypeCategories: PERMISSIONS.SampleTypeCategories.Default,
-  sampleConditions: PERMISSIONS.SampleConditions.Default,
-  specimenTypes: PERMISSIONS.SpecimenTypes.Default,
-  testMethods: PERMISSIONS.TestMethods.Default,
-  standards: PERMISSIONS.Standards.Default,
-  storageLocations: PERMISSIONS.StorageLocations.Default,
-  indicators: PERMISSIONS.Indicators.Default,
-  formTemplates: PERMISSIONS.FormTemplates.Default,
-  testResultValues: PERMISSIONS.TestResultValues.Default,
-  notes: PERMISSIONS.Notes.Default,
   units: PERMISSIONS.Units.Default,
+  formTemplates: PERMISSIONS.FormTemplates.Default,
+  laboratories: PERMISSIONS.Laboratories.Default,
+  specimenTypes: PERMISSIONS.SpecimenTypes.Default,
+  indicators: PERMISSIONS.Indicators.Default,
+  departments: PERMISSIONS.Departments.Default,
+  testMethods: PERMISSIONS.TestMethods.Default,
+  notes: PERMISSIONS.Notes.Default,
+  testResultValues: PERMISSIONS.TestResultValues.Default,
+  standards: PERMISSIONS.Standards.Default,
+  sampleConditions: PERMISSIONS.SampleConditions.Default,
+  storageLocations: PERMISSIONS.StorageLocations.Default,
 };
 
+// Sorted alphabetically by Vietnamese label (A-Z). Keep this order when adding new entries.
 export const categoryLabels: Record<string, string> = {
-  departments: "Phòng ban",
-  laboratories: "Khoa phòng",
+  warehouses: "Danh mục kho",
   sampleTypeCategories: "Danh mục loại mẫu",
-  sampleConditions: "Tình trạng mẫu",
-  specimenTypes: "Loại mẫu",
-  testMethods: "Phương pháp thử",
-  standards: "Tiêu chuẩn",
-  storageLocations: "Vị trí lưu kho",
-  // customers: "Khách hàng",
-  indicators: "Nhóm chỉ tiêu",
-  formTemplates: "Form mẫu",
-  testResultValues: "Quản lý kết quả",
-  notes: "Quản lý ghi chú",
   units: "Đơn vị hàng hóa",
+  formTemplates: "Form mẫu",
+  laboratories: "Khoa phòng",
+  specimenTypes: "Loại mẫu",
+  indicators: "Nhóm chỉ tiêu",
+  departments: "Phòng ban",
+  testMethods: "Phương pháp thử",
+  notes: "Quản lý ghi chú",
+  testResultValues: "Quản lý kết quả",
+  standards: "Tiêu chuẩn",
+  sampleConditions: "Tình trạng mẫu",
+  storageLocations: "Vị trí lưu kho",
 };
 
 // Categories that don't use server-side pagination (load all at once)
@@ -67,6 +71,7 @@ export const getColumns = (
   users: UserLookupDto[],
   handleEdit: (record: MasterDataItem) => void,
   handleDelete: (id: string) => void,
+  handleToggleActive?: (record: MasterDataItem) => void,
 ): ColumnsType<MasterDataItem> => {
   const baseColumns: ColumnsType<MasterDataItem> = [
     {
@@ -113,6 +118,13 @@ export const getColumns = (
         ellipsis: true,
       },
     );
+  } else if (activeCategory === "warehouses") {
+    baseColumns.push({
+      title: "Vị trí vật lý",
+      dataIndex: "physicalLocation",
+      key: "physicalLocation",
+      ellipsis: true,
+    });
   } else if (activeCategory === "storageLocations") {
     baseColumns.push(
       {
@@ -192,9 +204,23 @@ export const getColumns = (
     baseColumns.push({
       title: "Thao tác",
       key: "actions",
-      width: 100,
+      width: activeCategory === "warehouses" ? 150 : 100,
       render: (_, record) => (
         <Space size="small">
+          {canEdit && activeCategory === "warehouses" && handleToggleActive && (
+            <Tooltip
+              title={record.isActive ? "Tắt hoạt động" : "Bật hoạt động"}
+            >
+              <Button
+                type="link"
+                size="small"
+                icon={
+                  record.isActive ? <StopOutlined /> : <CheckCircleOutlined />
+                }
+                onClick={() => handleToggleActive(record)}
+              />
+            </Tooltip>
+          )}
           {canEdit && (
             <Button
               type="link"
@@ -261,6 +287,8 @@ export const getStatCount = (
       return statistics.noteCount || 0;
     case "units":
       return statistics.unitCount || 0;
+    case "warehouses":
+      return statistics.warehouseCount || 0;
     default:
       return 0;
   }

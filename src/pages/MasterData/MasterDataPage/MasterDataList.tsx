@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useMemo, useState, useRef, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Card, Button, Space, Tag, Alert, Tabs, Form, Empty } from "antd";
+import { Card, Button, Space, Tag, Alert, Tabs, Form, Empty, message } from "antd";
 import {
   PlusOutlined,
   DatabaseOutlined,
@@ -10,6 +10,9 @@ import {
   FolderAddOutlined,
 } from "../../../components/common/Icon";
 import ImportExcelModal from "../../../components/common/ImportExcelModal";
+import ImportWarehouseModal, {
+  type WarehouseImportPreviewDto,
+} from "./components/ImportWarehouseModal";
 import IndicatorsTab, { type IndicatorsActions } from "../Indicators";
 import FormTemplatesTab from "../FormTemplatesTab";
 import TestMethodsTab, { type TestMethodsActions } from "../TestMethods";
@@ -41,6 +44,8 @@ import {
   getStatCount,
 } from "./constants";
 import { MasterDataItem } from "./types";
+import { importService } from "../../../services/importService";
+import type { UploadFile } from "antd/es/upload/interface";
 import { authService } from "../../../services/authService";
 import { PERMISSIONS } from "../../../constants/permissionMapping";
 import "../../../styles/ListCard.css";
@@ -97,6 +102,7 @@ const MasterDataList: React.FC = () => {
     handleEdit,
     handleDelete,
     handleModalOk,
+    handleToggleActive,
     handleImportExcel,
     handleDownloadTemplate,
     handleExportExcel,
@@ -126,6 +132,64 @@ const MasterDataList: React.FC = () => {
     useState(0);
   const [notesRefreshKey, setNotesRefreshKey] = useState(0);
   const [unitsRefreshKey, setUnitsRefreshKey] = useState(0);
+
+  // Warehouse import state
+  const [warehouseImportOpen, setWarehouseImportOpen] = useState(false);
+  const [warehouseImportLoading, setWarehouseImportLoading] = useState(false);
+  const [warehouseImportFileList, setWarehouseImportFileList] = useState<UploadFile[]>([]);
+  const [warehouseImportPreview, setWarehouseImportPreview] = useState<WarehouseImportPreviewDto | null>(null);
+
+  const handleWarehouseImportPreview = async () => {
+    if (!warehouseImportFileList.length || !warehouseImportFileList[0].originFileObj) {
+      return;
+    }
+    setWarehouseImportLoading(true);
+    try {
+      const result = await importService.previewWarehouses(warehouseImportFileList[0].originFileObj);
+      setWarehouseImportPreview(result);
+    } catch (err: unknown) {
+      console.error("Failed to preview warehouse import:", err);
+      message.error("Không thể xem trước dữ liệu import");
+    } finally {
+      setWarehouseImportLoading(false);
+    }
+  };
+
+  const handleWarehouseImportConfirm = async () => {
+    if (!warehouseImportFileList.length || !warehouseImportFileList[0].originFileObj) {
+      return;
+    }
+    setWarehouseImportLoading(true);
+    try {
+      const result = await importService.importWarehouses(warehouseImportFileList[0].originFileObj);
+      if (result.success) {
+        message.success(result.message || "Import thành công");
+        setWarehouseImportOpen(false);
+        setWarehouseImportFileList([]);
+        setWarehouseImportPreview(null);
+        fetchCategoryData(activeCategory, true);
+        fetchStatistics();
+      } else {
+        message.error(result.message || "Import thất bại");
+      }
+    } catch (err: unknown) {
+      console.error("Failed to import warehouses:", err);
+      message.error("Không thể import dữ liệu");
+    } finally {
+      setWarehouseImportLoading(false);
+    }
+  };
+
+  const handleWarehouseImportCancel = () => {
+    setWarehouseImportOpen(false);
+    setWarehouseImportFileList([]);
+    setWarehouseImportPreview(null);
+  };
+
+  const handleWarehouseImportReset = () => {
+    setWarehouseImportFileList([]);
+    setWarehouseImportPreview(null);
+  };
 
   const hasVisibleCategories = visibleCategories.length > 0;
   const [searchParams, setSearchParams] = useSearchParams();
@@ -187,8 +251,9 @@ const MasterDataList: React.FC = () => {
         users,
         (record) => handleEdit(record, form),
         handleDelete,
+        handleToggleActive,
       ),
-    [activeCategory, users, handleEdit, handleDelete, form],
+    [activeCategory, users, handleEdit, handleDelete, handleToggleActive, form],
   );
 
   return (
@@ -441,6 +506,32 @@ const MasterDataList: React.FC = () => {
                 </>
               )}
 
+              {/* Warehouses Tab */}
+              {activeCategory === "warehouses" && (
+                <>
+                  <Button
+                    icon={<DownloadOutlined />}
+                    loading={downloadingTemplate}
+                    onClick={handleDownloadTemplate}
+                  >
+                    Tải template
+                  </Button>
+                  <Button
+                    icon={<UploadOutlined />}
+                    onClick={() => setWarehouseImportOpen(true)}
+                  >
+                    Nhập danh sách
+                  </Button>
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => handleCreate(form)}
+                  >
+                    Thêm mới
+                  </Button>
+                </>
+              )}
+
               {/* Other tabs (departments, laboratories, etc.) - use old handleCreate */}
               {activeCategory !== "indicators" &&
                 activeCategory !== "formTemplates" &&
@@ -451,7 +542,8 @@ const MasterDataList: React.FC = () => {
                 activeCategory !== "specimenTypes" &&
                 activeCategory !== "sampleTypeCategories" &&
                 activeCategory !== "sampleConditions" &&
-                activeCategory !== "units" && (
+                activeCategory !== "units" &&
+                activeCategory !== "warehouses" && (
                   <Button
                     type="primary"
                     icon={<PlusOutlined />}
@@ -602,19 +694,35 @@ const MasterDataList: React.FC = () => {
         />
       )}
 
-      {/* Import Excel Modal */}
-      {hasVisibleCategories && canImport && importTypeMap[activeCategory] && (
-        <ImportExcelModal
-          open={importModalOpen}
-          onClose={() => setImportModalOpen(false)}
-          onSuccess={() => {
-            setImportModalOpen(false);
-            fetchCategoryData(activeCategory, true);
-          }}
-          importType={importTypeMap[activeCategory]!}
-          title={`Import ${categoryLabels[activeCategory]}`}
-        />
-      )}
+      {/* Import Excel Modal (for non-warehouse categories) */}
+      {hasVisibleCategories &&
+        canImport &&
+        importTypeMap[activeCategory] &&
+        activeCategory !== "warehouses" && (
+          <ImportExcelModal
+            open={importModalOpen}
+            onClose={() => setImportModalOpen(false)}
+            onSuccess={() => {
+              setImportModalOpen(false);
+              fetchCategoryData(activeCategory, true);
+            }}
+            importType={importTypeMap[activeCategory]!}
+            title={`Import ${categoryLabels[activeCategory]}`}
+          />
+        )}
+
+      {/* Import Warehouse Modal */}
+      <ImportWarehouseModal
+        open={warehouseImportOpen}
+        loading={warehouseImportLoading}
+        fileList={warehouseImportFileList}
+        previewData={warehouseImportPreview}
+        onFileListChange={setWarehouseImportFileList}
+        onPreview={handleWarehouseImportPreview}
+        onConfirm={handleWarehouseImportConfirm}
+        onCancel={handleWarehouseImportCancel}
+        onReset={handleWarehouseImportReset}
+      />
     </div>
   );
 };

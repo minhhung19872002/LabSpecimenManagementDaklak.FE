@@ -327,6 +327,27 @@ export const importService = {
     return response.data;
   },
 
+  // ==================== Warehouse Import ====================
+
+  downloadWarehouseTemplate: async (): Promise<Blob> => {
+    const response = await api.download(`${BASE_URL}/warehouses/template`);
+    return response.data;
+  },
+
+  previewWarehouses: async (file: File): Promise<any> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<any>(`${BASE_URL}/warehouses/preview`, formData);
+    return response.data;
+  },
+
+  importWarehouses: async (file: File): Promise<ImportResultDto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.upload<ImportResultDto>(`${BASE_URL}/warehouses`, formData);
+    return response.data;
+  },
+
   // ==================== Organization Import (CS/DN) ====================
 
   /**

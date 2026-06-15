@@ -131,9 +131,15 @@ const MasterDataModal: React.FC<MasterDataModalProps> = ({
         {activeCategory !== "customers" &&
           activeCategory !== "laboratories" && (
             <>
-              <Form.Item name="description" label="Mô tả">
-                <Input.TextArea rows={3} />
-              </Form.Item>
+              {activeCategory === "warehouses" ? (
+                <Form.Item name="physicalLocation" label="Vị trí vật lý">
+                  <Input.TextArea rows={3} />
+                </Form.Item>
+              ) : (
+                <Form.Item name="description" label="Mô tả">
+                  <Input.TextArea rows={3} />
+                </Form.Item>
+              )}
               {activeCategory === "storageLocations" && (
                 <Row gutter={16}>
                   <Col span={8}>
@@ -158,23 +164,34 @@ const MasterDataModal: React.FC<MasterDataModalProps> = ({
                   <Input placeholder="VD: TCVN 6663-6:2008" />
                 </Form.Item>
               )}
-              <Row gutter={16}>
-                {activeCategory !== "specimenTypes" && (
-                  <Col span={12}>
-                    <Form.Item name="sortOrder" label="Thứ tự sắp xếp">
-                      <Input type="number" />
-                    </Form.Item>
-                  </Col>
-                )}
-                <Col span={activeCategory === "specimenTypes" ? 24 : 12}>
+              {activeCategory === "warehouses" ? (
+                editingItem && (
                   <Form.Item name="isActive" label="Trạng thái">
                     <Select>
                       <Select.Option value={true}>Hoạt động</Select.Option>
                       <Select.Option value={false}>Ngừng</Select.Option>
                     </Select>
                   </Form.Item>
-                </Col>
-              </Row>
+                )
+              ) : (
+                <Row gutter={16}>
+                  {activeCategory !== "specimenTypes" && (
+                    <Col span={12}>
+                      <Form.Item name="sortOrder" label="Thứ tự sắp xếp">
+                        <Input type="number" />
+                      </Form.Item>
+                    </Col>
+                  )}
+                  <Col span={activeCategory === "specimenTypes" ? 24 : 12}>
+                    <Form.Item name="isActive" label="Trạng thái">
+                      <Select>
+                        <Select.Option value={true}>Hoạt động</Select.Option>
+                        <Select.Option value={false}>Ngừng</Select.Option>
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                </Row>
+              )}
             </>
           )}
         {activeCategory === "laboratories" && (

@@ -7,6 +7,7 @@ import {
   storageLocationService,
   customerService,
   laboratoryService,
+  warehouseService,
   CreateUpdateDepartmentDto,
   CreateUpdateSpecimenTypeDto,
   CreateTestMethodDto,
@@ -14,6 +15,7 @@ import {
   CreateUpdateStorageLocationDto,
   CreateUpdateCustomerDto,
   CreateUpdateLaboratoryDto,
+  CreateUpdateWarehouseDto,
 } from "../../../../services/masterDataService";
 import {
   importService,
@@ -51,13 +53,23 @@ export const useMasterDataActions = ({
 }: UseMasterDataActionsParams) => {
   const canImport = importTypeMap[activeCategory] !== null;
 
-  const handleCreate = (form: FormInstance) => {
+  const handleCreate = async (form: FormInstance) => {
     setEditingItem(null);
     form.resetFields();
     form.setFieldsValue({
       isActive: true,
       sortOrder: currentData.length + 1,
     });
+
+    if (activeCategory === "warehouses") {
+      try {
+        const nextCode = await warehouseService.getNextCode();
+        form.setFieldsValue({ code: nextCode });
+      } catch (err) {
+        console.error("Failed to get next warehouse code:", err);
+      }
+    }
+
     setIsModalOpen(true);
   };
 
@@ -89,6 +101,9 @@ export const useMasterDataActions = ({
           break;
         case "customers":
           await customerService.delete(id);
+          break;
+        case "warehouses":
+          await warehouseService.delete(id);
           break;
       }
 
@@ -179,6 +194,12 @@ export const useMasterDataActions = ({
               values as CreateUpdateCustomerDto
             );
             break;
+          case "warehouses":
+            await warehouseService.update(
+              editingItem.id,
+              values as CreateUpdateWarehouseDto
+            );
+            break;
         }
         message.success("Cập nhật thành công!");
       } else {
@@ -206,6 +227,9 @@ export const useMasterDataActions = ({
           case "customers":
             await customerService.create(values as CreateUpdateCustomerDto);
             break;
+          case "warehouses":
+            await warehouseService.create(values as CreateUpdateWarehouseDto);
+            break;
         }
         message.success("Thêm mới thành công!");
       }
@@ -219,6 +243,11 @@ export const useMasterDataActions = ({
         fetchStatistics();
       }
     } catch (err: any) {
+      // Ant Design form validation error — inline errors already shown on fields
+      if (err?.errorFields) {
+        if (activeCategory === "warehouses") return;
+      }
+
       console.error("Failed to save:", err);
       // Handle different error formats from ABP Framework
       let errorMsg = "Lỗi khi lưu dữ liệu";
@@ -276,10 +305,31 @@ export const useMasterDataActions = ({
         errorMsg = err.message;
       }
 
-      setError(errorMsg);
-      message.error(errorMsg);
+      if (activeCategory === "warehouses") {
+        if (!hasFieldErrors) {
+          message.error(errorMsg);
+        }
+      } else {
+        setError(errorMsg);
+        message.error(errorMsg);
+      }
     } finally {
       setModalLoading(false);
+    }
+  };
+
+  const handleToggleActive = async (record: MasterDataItem) => {
+    if (activeCategory !== "warehouses") return;
+    try {
+      await warehouseService.toggleActive(record.id);
+      const newStatus = !(record as any).isActive;
+      message.success(
+        newStatus ? "Đã kích hoạt kho!" : "Đã ngừng kích hoạt kho!"
+      );
+      await fetchCategoryData(activeCategory, true);
+    } catch (err: any) {
+      console.error("Failed to toggle active:", err);
+      message.error("Không thể thay đổi trạng thái");
     }
   };
 
@@ -312,6 +362,9 @@ export const useMasterDataActions = ({
       } else if (activeCategory === "testMethods") {
         blob = await importService.downloadTestMethodsTemplate();
         filename = "test-methods-template.xlsx";
+      } else if (activeCategory === "warehouses") {
+        blob = await importService.downloadWarehouseTemplate();
+        filename = "Danh_muc_kho.xlsx";
       } else {
         throw new Error("Unsupported category for template download");
       }
@@ -344,6 +397,7 @@ export const useMasterDataActions = ({
     handleEdit,
     handleDelete,
     handleModalOk,
+    handleToggleActive,
     handleImportExcel,
     handleDownloadTemplate,
     handleExportExcel,

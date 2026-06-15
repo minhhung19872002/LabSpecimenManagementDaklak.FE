@@ -274,6 +274,12 @@ export const PERMISSIONS = {
     Edit: `${P}.Units.Edit`,
     Delete: `${P}.Units.Delete`,
   },
+  Warehouses: {
+    Default: `${P}.Warehouses`,
+    Create: `${P}.Warehouses.Create`,
+    Edit: `${P}.Warehouses.Edit`,
+    Delete: `${P}.Warehouses.Delete`,
+  },
   FormTemplates: {
     Default: `${P}.FormTemplates`,
   },

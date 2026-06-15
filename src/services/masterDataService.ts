@@ -451,12 +451,14 @@ export interface MasterDataStatisticsDto {
   indicatorCount: number;
   formTemplateCount: number;
   unitCount: number;
+  warehouseCount: number;
 }
 
 // Service implementations - Using new API v1 endpoints
 const DEPARTMENT_URL = '/api/v1/departments';
 const SAMPLE_TYPE_CATEGORY_URL = '/api/v1/sample-type-categories';
 const UNIT_URL = '/api/v1/units';
+const WAREHOUSE_URL = '/api/v1/warehouses';
 const SAMPLE_CONDITION_URL = '/api/v1/sample-conditions';
 const SPECIMEN_TYPE_URL = '/api/v1/specimen-types';
 const TEST_METHOD_URL = '/api/v1/test-methods';
@@ -1120,6 +1122,66 @@ export const unitService = {
   },
   batchToggleActive: async (ids: string[], isActive: boolean): Promise<number> => {
     const response = await api.post<number>(`${UNIT_URL}/batch-toggle-active`, { ids, isActive });
+    return response.data;
+  },
+};
+
+// Warehouse DTOs
+export interface WarehouseDto {
+  id: string;
+  code: string;
+  name: string;
+  physicalLocation?: string;
+  isActive: boolean;
+}
+
+export interface CreateUpdateWarehouseDto {
+  code: string;
+  name: string;
+  physicalLocation?: string;
+  isActive: boolean;
+}
+
+export const warehouseService = {
+  getList: async (params?: PagedAndSortedResultRequestDto): Promise<PagedResultDto<WarehouseDto>> => {
+    const response = await api.get<PagedResultDto<WarehouseDto>>(WAREHOUSE_URL, { params: params ? toApiParams(params) : {} });
+    return response.data;
+  },
+  get: async (id: string): Promise<WarehouseDto> => {
+    const response = await api.get<WarehouseDto>(`${WAREHOUSE_URL}/${id}`);
+    return response.data;
+  },
+  create: async (data: CreateUpdateWarehouseDto): Promise<WarehouseDto> => {
+    const response = await api.post<WarehouseDto>(WAREHOUSE_URL, data);
+    return response.data;
+  },
+  update: async (id: string, data: CreateUpdateWarehouseDto): Promise<WarehouseDto> => {
+    const response = await api.put<WarehouseDto>(`${WAREHOUSE_URL}/${id}`, data);
+    return response.data;
+  },
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`${WAREHOUSE_URL}/${id}`);
+  },
+  getActive: async (): Promise<WarehouseDto[]> => {
+    const response = await api.get<{ items: WarehouseDto[] } | WarehouseDto[]>(`${WAREHOUSE_URL}/active`);
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+    return (response.data as { items: WarehouseDto[] }).items;
+  },
+  getNextCode: async (): Promise<string> => {
+    const response = await api.get<string>(`${WAREHOUSE_URL}/next-code`);
+    return response.data;
+  },
+  toggleActive: async (id: string): Promise<void> => {
+    await api.post(`${WAREHOUSE_URL}/${id}/toggle-active`);
+  },
+  batchDelete: async (ids: string[]): Promise<number> => {
+    const response = await api.post<number>(`${WAREHOUSE_URL}/batch-delete`, { ids });
+    return response.data;
+  },
+  batchToggleActive: async (ids: string[], isActive: boolean): Promise<number> => {
+    const response = await api.post<number>(`${WAREHOUSE_URL}/batch-toggle-active`, { ids, isActive });
     return response.data;
   },
 };

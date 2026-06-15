@@ -5,6 +5,7 @@ import {
   StorageLocationDto,
   CustomerDto,
   LaboratoryDto,
+  WarehouseDto,
   MasterDataStatisticsDto,
 } from "../../../../services/masterDataService";
 import { UserLookupDto } from "../../../../services/userService";
@@ -16,7 +17,8 @@ export type MasterDataItem =
   | TestMethodDto
   | StorageLocationDto
   | CustomerDto
-  | LaboratoryDto;
+  | LaboratoryDto
+  | WarehouseDto;
 
 export interface MasterDataState {
   activeCategory: string;
@@ -44,6 +46,7 @@ export type {
   StorageLocationDto,
   CustomerDto,
   LaboratoryDto,
+  WarehouseDto,
   MasterDataStatisticsDto,
   UserLookupDto,
 };
