@@ -5,12 +5,16 @@ export enum ProductType {
   Chemical = 0,
   Biological = 1,
   Supply = 2,
+  Standard = 3,
+  Solvent = 4,
 }
 
 export const ProductTypeLabels: Record<ProductType, string> = {
   [ProductType.Chemical]: "Hóa chất",
   [ProductType.Biological]: "Sinh phẩm",
-  [ProductType.Supply]: "Vật tư",
+  [ProductType.Supply]: "Vật tư tiêu hao",
+  [ProductType.Standard]: "Chất chuẩn",
+  [ProductType.Solvent]: "Dung môi",
 };
 
 // DTOs

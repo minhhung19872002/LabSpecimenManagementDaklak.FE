@@ -53,6 +53,8 @@ const PRODUCT_TYPE_COLORS: Record<ProductType, string> = {
   [ProductType.Chemical]: "#1677ff",
   [ProductType.Biological]: "#52c41a",
   [ProductType.Supply]: "#fa8c16",
+  [ProductType.Standard]: "#722ed1",
+  [ProductType.Solvent]: "#13c2c2",
 };
 
 const ProductModal: React.FC<ProductModalProps> = ({
@@ -480,47 +482,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
               </Col>
             </Row>
 
-            {/* Row 3: Nhà SX + Xuất xứ */}
-            <Row gutter={16} className="product-form-row">
-              <Col xs={12} md={12}>
-                <Form.Item
-                  label={<Text strong>Nhà sản xuất/Thương hiệu</Text>}
-                  style={{ marginBottom: 16 }}
-                >
-                  <Controller
-                    name="manufacturer"
-                    control={control}
-                    render={({ field }) => (
-                      <Input
-                        {...field}
-                        value={field.value || ""}
-                        placeholder="Nhập nhà SX"
-                      />
-                    )}
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={12} md={12}>
-                <Form.Item
-                  label={<Text strong>Xuất xứ</Text>}
-                  style={{ marginBottom: 16 }}
-                >
-                  <Controller
-                    name="origin"
-                    control={control}
-                    render={({ field }) => (
-                      <Input
-                        {...field}
-                        value={field.value || ""}
-                        placeholder="Nhập xuất xứ"
-                      />
-                    )}
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            {/* Row 4: Nhóm/phân loại + Nồng độ */}
+            {/* Row 3: Nhóm/phân loại + Nồng độ */}
             <Row gutter={16} className="product-form-row">
               <Col xs={24} md={12}>
                 <Form.Item

@@ -33,6 +33,8 @@ const PRODUCT_TYPE_COLORS: Record<ProductType, string> = {
   [ProductType.Chemical]: "blue",
   [ProductType.Biological]: "green",
   [ProductType.Supply]: "orange",
+  [ProductType.Standard]: "purple",
+  [ProductType.Solvent]: "cyan",
 };
 
 // Parse JSON array tags for display
@@ -348,7 +350,9 @@ export const getProductColumns = (
 export const PRODUCT_TYPE_OPTIONS = [
   { value: ProductType.Chemical, label: "Hóa chất" },
   { value: ProductType.Biological, label: "Sinh phẩm" },
-  { value: ProductType.Supply, label: "Vật tư" },
+  { value: ProductType.Supply, label: "Vật tư tiêu hao" },
+  { value: ProductType.Standard, label: "Chất chuẩn" },
+  { value: ProductType.Solvent, label: "Dung môi" },
 ];
 
 // LocalStorage key for column visibility

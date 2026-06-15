@@ -9,7 +9,7 @@ export const productSchema = yup.object({
     .number()
     .required("Vui lòng chọn loại sản phẩm")
     .min(0)
-    .max(2),
+    .max(4),
   baseUnitId: yup
     .string()
     .required("Vui lòng chọn đơn vị tính"),

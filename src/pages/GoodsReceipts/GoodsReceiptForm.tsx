@@ -43,7 +43,9 @@ const PRODUCT_TYPE_OPTIONS = [
   { value: "all", label: "Tất cả" },
   { value: String(ProductType.Chemical), label: "Hóa chất" },
   { value: String(ProductType.Biological), label: "Sinh phẩm" },
-  { value: String(ProductType.Supply), label: "Vật tư" },
+  { value: String(ProductType.Supply), label: "Vật tư tiêu hao" },
+  { value: String(ProductType.Standard), label: "Chất chuẩn" },
+  { value: String(ProductType.Solvent), label: "Dung môi" },
 ];
 
 interface LineItem {
