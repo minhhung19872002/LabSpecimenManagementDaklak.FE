@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import {
   Card, Form, Input, Select, DatePicker, InputNumber, Button, Space, Row, Col,
-  Table, message, Spin, Divider, Tag, Modal, AutoComplete,
+  Table, message, Spin, Divider, Tag, Modal,
 } from "antd";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
@@ -89,6 +89,7 @@ const GoodsReceiptForm: React.FC = () => {
   const [isCustomVat, setIsCustomVat] = useState(false);
   const [newLotInput, setNewLotInput] = useState<Record<string, string>>({});
   const [manufacturers, setManufacturers] = useState<ManufacturerDto[]>([]);
+  const [newManufacturerInput, setNewManufacturerInput] = useState("");
 
   // Inline creation modals
   const [productModalOpen, setProductModalOpen] = useState(false);
@@ -293,10 +294,27 @@ const GoodsReceiptForm: React.FC = () => {
     }).catch(() => {});
   };
 
-  const manufacturerOptions = manufacturers.map((m) => ({
-    value: m.name,
+  const manufacturerSelectOptions = manufacturers.map((m) => ({
+    value: m.id,
     label: m.name,
   }));
+
+  const handleAddManufacturer = (recordKey: string) => {
+    const name = newManufacturerInput.trim();
+    if (!name) return;
+    if (manufacturers.some((m) => m.name.toLowerCase() === name.toLowerCase())) {
+      const existing = manufacturers.find((m) => m.name.toLowerCase() === name.toLowerCase())!;
+      handleLineChange(recordKey, "manufacturerId", existing.id);
+      handleLineChange(recordKey, "manufacturer", existing.name);
+      setNewManufacturerInput("");
+      return;
+    }
+    const tempId = `temp-${Date.now()}`;
+    setManufacturers((prev) => [...prev, { id: tempId, name, isActive: true } as ManufacturerDto]);
+    handleLineChange(recordKey, "manufacturer", name);
+    handleLineChange(recordKey, "manufacturerId", tempId);
+    setNewManufacturerInput("");
+  };
 
   const handleRemoveLine = (key: string) => {
     setLineItems((prev) => prev.filter((item) => item.key !== key));
@@ -386,7 +404,7 @@ const GoodsReceiptForm: React.FC = () => {
         isEquipment: false,
         manufacturer: item.manufacturer || undefined,
         manufacturerName: item.manufacturer || undefined,
-        manufacturerId: item.manufacturerId || undefined,
+        manufacturerId: item.manufacturerId?.startsWith("temp-") ? undefined : item.manufacturerId || undefined,
       })),
   });
 
@@ -394,6 +412,11 @@ const GoodsReceiptForm: React.FC = () => {
     const validItems = lineItems.filter((item) => item.productId);
     if (validItems.length === 0) {
       message.warning("Vui lòng thêm ít nhất một hàng hóa.");
+      return false;
+    }
+    const missingExpiry = validItems.filter((item) => item.lotNumber && !item.lotExpiryDate);
+    if (missingExpiry.length > 0) {
+      message.warning("Vui lòng chọn hạn lô cho các dòng có Code / Lot.");
       return false;
     }
     return true;
@@ -539,7 +562,7 @@ const GoodsReceiptForm: React.FC = () => {
       render: (_: any, __: LineItem, index: number) => index + 1,
     },
     {
-      title: "ID hàng hóa",
+      title: "Mã nhận dạng",
       key: "productCode",
       width: 120,
       render: (_: any, record: LineItem) => {
@@ -557,27 +580,58 @@ const GoodsReceiptForm: React.FC = () => {
     {
       title: "Hãng sản xuất",
       key: "manufacturer",
-      width: 160,
+      width: 180,
       render: (_: any, record: LineItem) => {
         if (isReadonly) return record.manufacturer || "-";
+        const selectedValue = record.manufacturerId && manufacturers.some((m) => m.id === record.manufacturerId)
+          ? record.manufacturerId
+          : undefined;
         return (
-          <AutoComplete
-            value={record.manufacturer || ""}
-            options={manufacturerOptions.filter((o) =>
-              o.value.toLowerCase().includes((record.manufacturer || "").toLowerCase())
-            )}
-            onSelect={(value) => {
-              const m = manufacturers.find((x) => x.name === value);
-              handleLineChange(record.key, "manufacturer", value);
-              if (m) handleLineChange(record.key, "manufacturerId", m.id);
-            }}
+          <Select
+            value={selectedValue}
+            placeholder="Chọn hãng SX"
+            options={manufacturerSelectOptions}
+            showSearch
+            filterOption={(input, option) =>
+              (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
+            }
             onChange={(value) => {
-              handleLineChange(record.key, "manufacturer", value);
+              const m = manufacturers.find((x) => x.id === value);
+              if (m) {
+                handleLineChange(record.key, "manufacturer", m.name);
+                handleLineChange(record.key, "manufacturerId", m.id);
+              }
+            }}
+            allowClear
+            onClear={() => {
+              handleLineChange(record.key, "manufacturer", undefined);
               handleLineChange(record.key, "manufacturerId", undefined);
             }}
-            placeholder="Nhập hãng SX"
             style={{ width: "100%" }}
             size="small"
+            dropdownRender={(menu) => (
+              <>
+                {menu}
+                <Divider style={{ margin: "4px 0" }} />
+                <div style={{ padding: "0 4px 4px" }}>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    <Input
+                      size="small"
+                      placeholder="Thêm hãng SX mới"
+                      value={newManufacturerInput}
+                      onChange={(e) => setNewManufacturerInput(e.target.value)}
+                      onPressEnter={() => handleAddManufacturer(record.key)}
+                    />
+                    <Button
+                      size="small"
+                      type="primary"
+                      icon={<PlusOutlined />}
+                      onClick={() => handleAddManufacturer(record.key)}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
           />
         );
       },
@@ -667,7 +721,7 @@ const GoodsReceiptForm: React.FC = () => {
       render: (_: any, record: LineItem) => `${formatCurrency(record.amountAfterVat)} VNĐ`,
     },
     {
-      title: "Số lô",
+      title: "Code / Lot",
       key: "lotNumber",
       width: 150,
       render: (_: any, record: LineItem) => {
@@ -731,6 +785,7 @@ const GoodsReceiptForm: React.FC = () => {
         const existingLot = (lotSuggestions[record.productId] || []).find(
           (l) => l.lotNumber === record.lotNumber && l.lotExpiryDate
         );
+        const hasLotButNoExpiry = !!record.lotNumber && !record.lotExpiryDate;
         return (
           <DatePicker
             value={record.lotExpiryDate ? dayjs(record.lotExpiryDate) : null}
@@ -742,6 +797,7 @@ const GoodsReceiptForm: React.FC = () => {
             style={{ width: "100%" }}
             size="small"
             disabled={!!existingLot}
+            status={hasLotButNoExpiry ? "error" : undefined}
           />
         );
       },

@@ -190,7 +190,7 @@ const GoodsReceiptDetail: React.FC = () => {
       render: (_: any, r: GoodsReceiptItemDto) => formatCurrency(r.amountAfterVat),
     },
     {
-      title: "Số lô",
+      title: "Code / Lot",
       dataIndex: "lotNumber",
       key: "lotNumber",
       width: 120,
