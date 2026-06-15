@@ -45,6 +45,8 @@ const toApiParams = (params: GetTestingListInput) => {
   if (params.laboratoryId) apiParams.LaboratoryId = params.laboratoryId;
   if (params.requestCompletionDateFrom) apiParams.RequestCompletionDateFrom = params.requestCompletionDateFrom;
   if (params.requestCompletionDateTo) apiParams.RequestCompletionDateTo = params.requestCompletionDateTo;
+  if (params.transferDateFrom) apiParams.TransferDateFrom = params.transferDateFrom;
+  if (params.transferDateTo) apiParams.TransferDateTo = params.transferDateTo;
   if (params.indicatorIds && params.indicatorIds.length > 0) {
     params.indicatorIds.forEach((id, index) => {
       apiParams[`IndicatorIds[${index}]`] = id;

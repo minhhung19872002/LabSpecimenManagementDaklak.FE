@@ -105,6 +105,8 @@ export interface GetTestingListInput {
   laboratoryId?: string;
   requestCompletionDateFrom?: string;
   requestCompletionDateTo?: string;
+  transferDateFrom?: string;
+  transferDateTo?: string;
   indicatorIds?: string[];
 }
 
