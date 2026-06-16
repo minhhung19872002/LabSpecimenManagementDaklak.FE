@@ -869,14 +869,14 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
         }}
       >
         <Space>
-          {/* Hủy phiếu */}
+          {/* Hủy phiếu / Quay lại */}
           {!isReadonly && (
             <Button onClick={() => navigate("/goods-receipts")}>
-              Hủy phiếu
+              {isEdit ? "Quay lại" : "Hủy phiếu"}
             </Button>
           )}
-          {/* Lưu tạm (Draft) */}
-          {!isReadonly && (
+          {/* Lưu tạm (Draft) — ẩn khi edit phiếu đã lưu */}
+          {!isReadonly && (!isEdit || receipt?.orderStatus === GoodsReceiptOrderStatus.Draft) && (
             <Button onClick={handleSaveDraft} loading={saving}>
               Lưu tạm
             </Button>
