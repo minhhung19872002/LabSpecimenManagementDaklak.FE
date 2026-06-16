@@ -113,7 +113,7 @@ export const useSampleAssignmentLogForLab = (
   const [technicianFilter, setTechnicianFilter] = useState<string[]>([]);
   const [pagination, setPagination] = useState({
     current: 1,
-    pageSize: 50,
+    pageSize: 20,
     total: 0,
   });
 
