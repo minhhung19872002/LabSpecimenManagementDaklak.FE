@@ -3,6 +3,7 @@ import { Tag, Switch, Space, Tooltip, Button, Popover } from "antd";
 import { EditOutlined, DeleteOutlined, PaperClipOutlined, EyeOutlined, ArrowUpOutlined, ArrowDownOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { ProductDto, ProductType, ProductTypeLabels } from "../../../services/productService";
+import { IndicatorName } from "../../../components/common";
 
 // All possible columns with their config
 export interface ColumnConfig {
@@ -13,6 +14,7 @@ export interface ColumnConfig {
 
 export const ALL_COLUMNS: ColumnConfig[] = [
   { key: "code", title: "ID", defaultVisible: true },
+  { key: "identificationCode", title: "Mã nhận dạng", defaultVisible: true },
   { key: "name", title: "Tên vật phẩm", defaultVisible: true },
   { key: "productType", title: "Phân loại", defaultVisible: true },
   { key: "baseUnitName", title: "Đơn vị tính", defaultVisible: true },
@@ -80,6 +82,17 @@ export const getProductColumns = (
     });
   }
 
+  if (visibleKeys.has("identificationCode")) {
+    columns.push({
+      title: "Mã nhận dạng",
+      dataIndex: "identificationCode",
+      key: "identificationCode",
+      width: 160,
+      ellipsis: true,
+      render: (v: string) => v || "-",
+    });
+  }
+
   if (visibleKeys.has("name")) {
     columns.push({
       title: "Tên vật phẩm",
@@ -88,9 +101,9 @@ export const getProductColumns = (
       width: 250,
       ellipsis: true,
       sorter: true,
-      render: (name: string, record: ProductDto) => (
+      render: (_: string, record: ProductDto) => (
         <Space size={4}>
-          <span>{name}</span>
+          <IndicatorName name={record.name} formattedName={record.formattedName} />
           {record.isDraft && <Tag color="warning" style={{ fontSize: 11, lineHeight: "18px", padding: "0 4px" }}>Nháp</Tag>}
         </Space>
       ),
@@ -205,7 +218,12 @@ export const getProductColumns = (
       dataIndex: "storageConditions",
       key: "storageConditions",
       width: 200,
-      render: renderTags,
+      render: (_: string, record: ProductDto) => {
+        if (record.formattedStorageConditions) {
+          return <IndicatorName name={record.storageConditions || ""} formattedName={record.formattedStorageConditions} />;
+        }
+        return renderTags(record.storageConditions);
+      },
     });
   }
 

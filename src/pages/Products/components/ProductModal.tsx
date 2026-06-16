@@ -31,6 +31,7 @@ import {
 } from "../../../services/productService";
 import { UnitDto, unitService } from "../../../services/masterDataService";
 import { PRODUCT_TYPE_OPTIONS } from "../constants";
+import { RichTextEditor } from "../../../components/common";
 import AttachmentSection from "./AttachmentSection";
 import UnitConversionSection from "./UnitConversionSection";
 import { unitSchema, UnitFormData } from "../../MasterData/Units/schemas";
@@ -77,7 +78,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
   const [conversions, setConversions] = useState<
     CreateUpdateProductUnitConversionDto[]
   >([]);
-  const [storageTagInput, setStorageTagInput] = useState("");
   const [categoryTagInput, setCategoryTagInput] = useState("");
 
   // Unit modal state
@@ -131,6 +131,8 @@ const ProductModal: React.FC<ProductModalProps> = ({
     resolver: yupResolver(productSchema) as any,
     defaultValues: {
       name: "",
+      formattedName: "",
+      identificationCode: "",
       productType: ProductType.Chemical,
       baseUnitId: "",
       packagingSpec: "",
@@ -139,6 +141,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
       origin: "",
       concentration: "",
       storageConditions: "",
+      formattedStorageConditions: "",
       categories: "",
       minStockLevel: undefined,
       maxStockLevel: undefined,
@@ -153,6 +156,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
   const watchedPackaging = watched.packagingSpec;
   const watchedStorage = watched.storageConditions;
   const watchedCategories = watched.categories;
+  const watchedIdentificationCode = watched.identificationCode;
 
   const unitOptions = useMemo(
     () => units.map((u) => ({ value: u.id, label: u.name })),
@@ -167,11 +171,25 @@ const ProductModal: React.FC<ProductModalProps> = ({
     }
   }, [open]);
 
+  const migrateOldStorageConditions = (jsonStr?: string): string => {
+    if (!jsonStr) return "";
+    try {
+      const tags: string[] = JSON.parse(jsonStr);
+      if (Array.isArray(tags)) return tags.join(", ");
+    } catch {}
+    return jsonStr;
+  };
+
   useEffect(() => {
     if (open) {
       if (editingProduct) {
+        const storageText = editingProduct.formattedStorageConditions
+          ? ""
+          : migrateOldStorageConditions(editingProduct.storageConditions);
         reset({
           name: editingProduct.name,
+          formattedName: editingProduct.formattedName || "",
+          identificationCode: editingProduct.identificationCode || "",
           productType: editingProduct.productType,
           baseUnitId: editingProduct.baseUnitId,
           packagingSpec: editingProduct.packagingSpec || "",
@@ -180,6 +198,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
           origin: editingProduct.origin || "",
           concentration: editingProduct.concentration || "",
           storageConditions: editingProduct.storageConditions || "",
+          formattedStorageConditions: editingProduct.formattedStorageConditions || storageText,
           categories: editingProduct.categories || "",
           minStockLevel: editingProduct.minStockLevel ?? undefined,
           maxStockLevel: editingProduct.maxStockLevel ?? undefined,
@@ -198,6 +217,8 @@ const ProductModal: React.FC<ProductModalProps> = ({
       } else {
         reset({
           name: "",
+          formattedName: "",
+          identificationCode: "",
           productType: ProductType.Chemical,
           baseUnitId: "",
           packagingSpec: "",
@@ -206,6 +227,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
           origin: "",
           concentration: "",
           storageConditions: "",
+          formattedStorageConditions: "",
           categories: "",
           minStockLevel: undefined,
           maxStockLevel: undefined,
@@ -216,7 +238,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
       }
       setNewAttachments([]);
       setRemovedAttachmentIds([]);
-      setStorageTagInput("");
       setCategoryTagInput("");
     }
   }, [open, editingProduct, reset]);
@@ -231,7 +252,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
   };
 
   const handleAddTag = (
-    field: "storageConditions" | "categories",
+    field: "categories",
     value: string,
     setInput: (v: string) => void,
   ) => {
@@ -245,7 +266,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
   };
 
   const handleRemoveTag = (
-    field: "storageConditions" | "categories",
+    field: "categories",
     tag: string,
   ) => {
     const current = parseTags(watch(field) as string);
@@ -258,6 +279,8 @@ const ProductModal: React.FC<ProductModalProps> = ({
     isDraft: boolean,
   ): CreateUpdateProductDto => ({
     name: data.name,
+    formattedName: data.formattedName || undefined,
+    identificationCode: data.identificationCode || undefined,
     productType: data.productType as ProductType,
     baseUnitId: data.baseUnitId!,
     packagingSpec: data.packagingSpec || undefined,
@@ -266,6 +289,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
     origin: data.origin || undefined,
     concentration: data.concentration || undefined,
     storageConditions: data.storageConditions || undefined,
+    formattedStorageConditions: data.formattedStorageConditions || undefined,
     categories: data.categories || undefined,
     minStockLevel: data.minStockLevel ?? undefined,
     maxStockLevel: data.maxStockLevel ?? undefined,
@@ -294,7 +318,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
   };
 
   const selectedUnitName = units.find((u) => u.id === watchedBaseUnitId)?.name;
-  const storageTags = parseTags(watchedStorage as string);
   const categoryTags = parseTags(watchedCategories as string);
 
   const typeColor =
@@ -360,7 +383,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
           <Form layout="vertical" size="middle">
             {/* Row 1: Tên + Loại */}
             <Row gutter={16} className="product-form-row">
-              <Col xs={24} md={14}>
+              <Col xs={24} sm={14} md={14}>
                 <Form.Item
                   label={
                     <Text strong>
@@ -372,18 +395,22 @@ const ProductModal: React.FC<ProductModalProps> = ({
                   style={{ marginBottom: 16 }}
                 >
                   <Controller
-                    name="name"
+                    name="formattedName"
                     control={control}
                     render={({ field }) => (
-                      <Input
-                        {...field}
+                      <RichTextEditor
+                        value={field.value || ""}
+                        onChange={(html, plainText) => {
+                          field.onChange(html);
+                          setValue("name", plainText);
+                        }}
                         placeholder="Nhập tên vật tư/hóa chất"
                       />
                     )}
                   />
                 </Form.Item>
               </Col>
-              <Col xs={12} md={10}>
+              <Col xs={24} sm={10} md={10}>
                 <Form.Item
                   label={
                     <Text strong>
@@ -405,9 +432,36 @@ const ProductModal: React.FC<ProductModalProps> = ({
               </Col>
             </Row>
 
+            {/* Row 1b: Mã nhận dạng */}
+            <Row gutter={16} className="product-form-row">
+              <Col xs={24} md={24}>
+                <Form.Item
+                  label={
+                    <Text strong>
+                      Mã nhận dạng <Text type="danger">*</Text>
+                    </Text>
+                  }
+                  validateStatus={errors.identificationCode ? "error" : ""}
+                  help={errors.identificationCode?.message}
+                  style={{ marginBottom: 16 }}
+                >
+                  <Controller
+                    name="identificationCode"
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        {...field}
+                        placeholder="Nhập mã nhận dạng"
+                      />
+                    )}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+
             {/* Row 2: Đơn vị + Quy cách + CAS */}
             <Row gutter={16} className="product-form-row">
-              <Col xs={12} md={8}>
+              <Col xs={24} sm={12} md={8}>
                 <Form.Item
                   label={
                     <Text strong>
@@ -437,7 +491,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
                   />
                 </Form.Item>
               </Col>
-              <Col xs={12} md={8}>
+              <Col xs={24} sm={12} md={8}>
                 <Form.Item
                   label={<Text strong>Quy cách đóng gói (Size)</Text>}
                   style={{ marginBottom: 16 }}
@@ -455,7 +509,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
                   />
                 </Form.Item>
               </Col>
-              <Col xs={12} md={8}>
+              <Col xs={24} sm={12} md={8}>
                 <Form.Item
                   label={
                     <Space size={4}>
@@ -484,7 +538,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
 
             {/* Row 3: Nhóm/phân loại + Nồng độ */}
             <Row gutter={16} className="product-form-row">
-              <Col xs={24} md={12}>
+              <Col xs={24} sm={12} md={12}>
                 <Form.Item
                   label={<Text strong>Nhóm/Phân loại (Tags)</Text>}
                   style={{ marginBottom: 16 }}
@@ -529,9 +583,9 @@ const ProductModal: React.FC<ProductModalProps> = ({
                   </div>
                 </Form.Item>
               </Col>
-              <Col xs={24} md={12}>
+              <Col xs={24} sm={12} md={12}>
                 <Form.Item
-                  label={<Text strong>Nồng độ/ Hàm lượng</Text>}
+                  label={<Text strong>Nồng độ/Hàm lượng</Text>}
                   style={{ marginBottom: 16 }}
                 >
                   <Controller
@@ -554,49 +608,25 @@ const ProductModal: React.FC<ProductModalProps> = ({
               label={<Text strong>Điều kiện bảo quản</Text>}
               style={{ marginBottom: 16 }}
             >
-              <div
-                style={{
-                  border: "1px solid #d9d9d9",
-                  borderRadius: 6,
-                  padding: "4px 8px",
-                  minHeight: 36,
-                  display: "flex",
-                  flexWrap: "wrap",
-                  alignItems: "center",
-                  gap: 4,
-                }}
-              >
-                {storageTags.map((tag) => (
-                  <Tag
-                    key={tag}
-                    closable
-                    onClose={() => handleRemoveTag("storageConditions", tag)}
-                    color="orange"
-                  >
-                    {tag}
-                  </Tag>
-                ))}
-                <Input
-                  variant="borderless"
-                  size="small"
-                  value={storageTagInput}
-                  onChange={(e) => setStorageTagInput(e.target.value)}
-                  onPressEnter={() =>
-                    handleAddTag(
-                      "storageConditions",
-                      storageTagInput,
-                      setStorageTagInput,
-                    )
-                  }
-                  placeholder="Thêm phân loại..."
-                  style={{ flex: 1, minWidth: 100 }}
-                />
-              </div>
+              <Controller
+                name="formattedStorageConditions"
+                control={control}
+                render={({ field }) => (
+                  <RichTextEditor
+                    value={field.value || ""}
+                    onChange={(html, plainText) => {
+                      field.onChange(html);
+                      setValue("storageConditions", plainText);
+                    }}
+                    placeholder="Nhập điều kiện bảo quản"
+                  />
+                )}
+              />
             </Form.Item>
 
             {/* Row 6: Tồn kho */}
             <Row gutter={16} className="product-form-row">
-              <Col xs={12} md={12}>
+              <Col xs={24} sm={12} md={12}>
                 <Form.Item
                   label={<Text strong>Tồn kho tối thiểu</Text>}
                   style={{ marginBottom: 16 }}
@@ -616,7 +646,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
                   />
                 </Form.Item>
               </Col>
-              <Col xs={12} md={12}>
+              <Col xs={24} sm={12} md={12}>
                 <Form.Item
                   label={<Text strong>Tồn kho tối đa</Text>}
                   style={{ marginBottom: 16 }}
@@ -751,7 +781,8 @@ const ProductModal: React.FC<ProductModalProps> = ({
             {/* Info grid */}
             {(watchedPackaging ||
               selectedUnitName ||
-              storageTags.length > 0) && (
+              watchedIdentificationCode ||
+              watchedStorage) && (
               <div
                 style={{
                   marginTop: 12,
@@ -760,6 +791,19 @@ const ProductModal: React.FC<ProductModalProps> = ({
                   gap: "8px 12px",
                 }}
               >
+                {watchedIdentificationCode && (
+                  <div>
+                    <Text
+                      type="secondary"
+                      style={{ fontSize: 11, display: "block" }}
+                    >
+                      Mã nhận dạng
+                    </Text>
+                    <Text style={{ fontSize: 13, fontWeight: 500 }}>
+                      {watchedIdentificationCode}
+                    </Text>
+                  </div>
+                )}
                 {watchedPackaging && selectedUnitName && (
                   <div>
                     <Text
@@ -773,7 +817,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
                     </Text>
                   </div>
                 )}
-                {storageTags.length > 0 && (
+                {watchedStorage && (
                   <div>
                     <Text
                       type="secondary"
@@ -782,7 +826,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
                       Bảo quản
                     </Text>
                     <Text style={{ fontSize: 13, fontWeight: 500 }}>
-                      {storageTags.join(", ")}
+                      {watchedStorage}
                     </Text>
                   </div>
                 )}

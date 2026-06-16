@@ -5,6 +5,11 @@ export const productSchema = yup.object({
     .string()
     .required("Vui lòng nhập tên vật tư/hóa chất")
     .max(500, "Tên không được vượt quá 500 ký tự"),
+  formattedName: yup.string().optional(),
+  identificationCode: yup
+    .string()
+    .required("Vui lòng nhập mã nhận dạng")
+    .max(256, "Mã nhận dạng không được vượt quá 256 ký tự"),
   productType: yup
     .number()
     .required("Vui lòng chọn loại sản phẩm")
@@ -19,6 +24,7 @@ export const productSchema = yup.object({
   origin: yup.string().nullable().max(256),
   concentration: yup.string().nullable().max(256),
   storageConditions: yup.string().nullable(),
+  formattedStorageConditions: yup.string().nullable(),
   categories: yup.string().nullable(),
   minStockLevel: yup.number().nullable().min(0),
   maxStockLevel: yup.number().nullable().min(0),

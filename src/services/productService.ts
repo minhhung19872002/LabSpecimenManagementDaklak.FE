@@ -22,6 +22,8 @@ export interface ProductDto {
   id: string;
   code: string;
   name: string;
+  formattedName?: string;
+  identificationCode?: string;
   productType: ProductType;
   baseUnitId: string;
   baseUnitName?: string;
@@ -31,6 +33,7 @@ export interface ProductDto {
   origin?: string;
   concentration?: string;
   storageConditions?: string;
+  formattedStorageConditions?: string;
   categories?: string;
   minStockLevel?: number;
   maxStockLevel?: number;
@@ -44,6 +47,8 @@ export interface ProductDto {
 
 export interface CreateUpdateProductDto {
   name: string;
+  formattedName?: string;
+  identificationCode?: string;
   productType: ProductType;
   baseUnitId: string;
   packagingSpec?: string;
@@ -52,6 +57,7 @@ export interface CreateUpdateProductDto {
   origin?: string;
   concentration?: string;
   storageConditions?: string;
+  formattedStorageConditions?: string;
   categories?: string;
   minStockLevel?: number;
   maxStockLevel?: number;
