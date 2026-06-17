@@ -1,4 +1,3 @@
-import React from "react";
 import { Tag, Switch, Space, Tooltip, Button, Popover } from "antd";
 import { EditOutlined, DeleteOutlined, PaperClipOutlined, EyeOutlined, ArrowUpOutlined, ArrowDownOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";

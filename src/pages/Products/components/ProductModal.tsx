@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, lazy, Suspense } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   Modal,
   Form,
@@ -15,7 +15,6 @@ import {
   Button,
   Space,
   Tooltip,
-  message,
 } from "antd";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { useForm, Controller } from "react-hook-form";
@@ -27,18 +26,12 @@ import {
   ProductType,
   ProductTypeLabels,
   CreateProductAttachmentDto,
-  CreateUpdateProductUnitConversionDto,
 } from "../../../services/productService";
-import { UnitDto, unitService } from "../../../services/masterDataService";
+import { UnitDto, UnitCategory, unitService } from "../../../services/masterDataService";
 import { PRODUCT_TYPE_OPTIONS } from "../constants";
 import { RichTextEditor } from "../../../components/common";
 import AttachmentSection from "./AttachmentSection";
-import UnitConversionSection from "./UnitConversionSection";
-import { unitSchema, UnitFormData } from "../../MasterData/Units/schemas";
-import { getApiErrorMessage } from "../../../utils/errorHandler";
 import "../Products.css";
-
-const UnitModal = lazy(() => import("../../MasterData/Units/components/UnitModal"));
 
 const { Text, Title } = Typography;
 
@@ -75,49 +68,17 @@ const ProductModal: React.FC<ProductModalProps> = ({
   const [removedAttachmentIds, setRemovedAttachmentIds] = useState<string[]>(
     [],
   );
-  const [conversions, setConversions] = useState<
-    CreateUpdateProductUnitConversionDto[]
-  >([]);
   const [categoryTagInput, setCategoryTagInput] = useState("");
 
-  // Unit modal state
-  const [unitModalOpen, setUnitModalOpen] = useState(false);
-  const [unitModalLoading, setUnitModalLoading] = useState(false);
-  const unitForm = useForm<UnitFormData>({
-    resolver: yupResolver(unitSchema) as any,
-    defaultValues: { code: "", name: "", isActive: true },
-  });
-
   const loadUnits = (signal?: AbortSignal) => {
-    unitService.getActive().then((items) => {
+    const includeIds = editingProduct
+      ? [editingProduct.baseUnitId, editingProduct.packagingUnitId, editingProduct.volumeUnitId].filter(Boolean) as string[]
+      : undefined;
+    unitService.getActive(includeIds?.length ? includeIds : undefined).then((items) => {
       if (signal?.aborted) return;
       const unitList = Array.isArray(items) ? items : (items as any)?.items || [];
       setUnits(unitList);
     }).catch(() => {});
-  };
-
-  const handleCreateUnit = () => {
-    unitForm.reset({ code: "", name: "", isActive: true });
-    setUnitModalOpen(true);
-  };
-
-  const handleUnitModalOk = async (data: UnitFormData) => {
-    setUnitModalLoading(true);
-    try {
-      await unitService.create({
-        code: data.code,
-        name: data.name,
-        isActive: data.isActive ?? true,
-      });
-      message.success("Đã tạo đơn vị hàng hóa mới");
-      setUnitModalOpen(false);
-      unitForm.reset();
-      loadUnits();
-    } catch (error: any) {
-      message.error(getApiErrorMessage(error, "Không thể tạo đơn vị hàng hóa."));
-    } finally {
-      setUnitModalLoading(false);
-    }
   };
 
   const {
@@ -135,6 +96,10 @@ const ProductModal: React.FC<ProductModalProps> = ({
       identificationCode: "",
       productType: ProductType.Chemical,
       baseUnitId: "",
+      packagingQuantity: undefined,
+      packagingUnitId: "",
+      volumePerUnit: undefined,
+      volumeUnitId: "",
       packagingSpec: "",
       casNumber: "",
       manufacturer: "",
@@ -153,14 +118,34 @@ const ProductModal: React.FC<ProductModalProps> = ({
   const watchedName = watched.name;
   const watchedType = watched.productType;
   const watchedBaseUnitId = watched.baseUnitId;
-  const watchedPackaging = watched.packagingSpec;
+  const watchedPackagingQuantity = watched.packagingQuantity;
+  const watchedPackagingUnitId = watched.packagingUnitId;
+  const watchedVolumePerUnit = watched.volumePerUnit;
+  const watchedVolumeUnitId = watched.volumeUnitId;
   const watchedStorage = watched.storageConditions;
   const watchedCategories = watched.categories;
   const watchedIdentificationCode = watched.identificationCode;
 
-  const unitOptions = useMemo(
-    () => units.map((u) => ({ value: u.id, label: u.name })),
-    [units]
+  const toOptions = (list: UnitDto[]) =>
+    list.map((u) => ({
+      value: u.id,
+      label: u.isActive ? u.name : (
+        <span style={{ color: "#ff4d4f", textDecoration: "line-through" }}>{u.name}</span>
+      ),
+      title: u.name,
+    }));
+
+  const purchaseUnitOptions = useMemo(
+    () => toOptions(units.filter((u) => u.category === UnitCategory.PurchaseUnit)),
+    [units],
+  );
+  const storageUnitOptions = useMemo(
+    () => toOptions(units.filter((u) => u.category === UnitCategory.StorageUnit)),
+    [units],
+  );
+  const consumableUnitOptions = useMemo(
+    () => toOptions(units.filter((u) => u.category === UnitCategory.ConsumableUnit)),
+    [units],
   );
 
   useEffect(() => {
@@ -192,6 +177,10 @@ const ProductModal: React.FC<ProductModalProps> = ({
           identificationCode: editingProduct.identificationCode || "",
           productType: editingProduct.productType,
           baseUnitId: editingProduct.baseUnitId,
+          packagingQuantity: editingProduct.packagingQuantity ?? undefined,
+          packagingUnitId: editingProduct.packagingUnitId || "",
+          volumePerUnit: editingProduct.volumePerUnit ?? undefined,
+          volumeUnitId: editingProduct.volumeUnitId || "",
           packagingSpec: editingProduct.packagingSpec || "",
           casNumber: editingProduct.casNumber || "",
           manufacturer: editingProduct.manufacturer || "",
@@ -205,15 +194,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
           isActive: editingProduct.isActive,
         });
         setExistingAttachments(editingProduct.attachments || []);
-        setConversions(
-          (editingProduct.unitConversions || []).map((c) => ({
-            id: c.id,
-            quantity: c.quantity,
-            baseUnitId: c.baseUnitId,
-            convertedQuantity: c.convertedQuantity,
-            convertedUnitId: c.convertedUnitId,
-          })),
-        );
       } else {
         reset({
           name: "",
@@ -221,6 +201,10 @@ const ProductModal: React.FC<ProductModalProps> = ({
           identificationCode: "",
           productType: ProductType.Chemical,
           baseUnitId: "",
+          packagingQuantity: undefined,
+          packagingUnitId: "",
+          volumePerUnit: undefined,
+          volumeUnitId: "",
           packagingSpec: "",
           casNumber: "",
           manufacturer: "",
@@ -234,7 +218,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
           isActive: true,
         });
         setExistingAttachments([]);
-        setConversions([]);
       }
       setNewAttachments([]);
       setRemovedAttachmentIds([]);
@@ -278,11 +261,15 @@ const ProductModal: React.FC<ProductModalProps> = ({
     data: ProductFormData,
     isDraft: boolean,
   ): CreateUpdateProductDto => ({
-    name: data.name,
+    name: data.name || undefined,
     formattedName: data.formattedName || undefined,
     identificationCode: data.identificationCode || undefined,
     productType: data.productType as ProductType,
-    baseUnitId: data.baseUnitId!,
+    baseUnitId: data.baseUnitId || null,
+    packagingQuantity: data.packagingQuantity ?? null,
+    packagingUnitId: data.packagingUnitId || null,
+    volumePerUnit: data.volumePerUnit ?? null,
+    volumeUnitId: data.volumeUnitId || null,
     packagingSpec: data.packagingSpec || undefined,
     casNumber: data.casNumber || undefined,
     manufacturer: data.manufacturer || undefined,
@@ -304,9 +291,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
       })),
       ...newAttachments,
     ],
-    unitConversions: conversions.filter(
-      (c) => c.baseUnitId && c.convertedUnitId,
-    ),
+    unitConversions: [],
   });
 
   const onSaveDraft = (data: ProductFormData) => {
@@ -317,8 +302,19 @@ const ProductModal: React.FC<ProductModalProps> = ({
     onOk(buildPayload(data, false), removedAttachmentIds);
   };
 
-  const selectedUnitName = units.find((u) => u.id === watchedBaseUnitId)?.name;
+  const selectedPurchaseUnit = units.find((u) => u.id === watchedBaseUnitId)?.name;
+  const selectedPackagingUnit = units.find((u) => u.id === watchedPackagingUnitId)?.name;
+  const selectedVolumeUnit = units.find((u) => u.id === watchedVolumeUnitId)?.name;
   const categoryTags = parseTags(watchedCategories as string);
+
+  const packagingLine1 =
+    selectedPurchaseUnit && watchedPackagingQuantity && selectedPackagingUnit
+      ? `1 ${selectedPurchaseUnit} / ${watchedPackagingQuantity} ${selectedPackagingUnit}`
+      : "";
+  const packagingLine2 =
+    watchedPackagingQuantity && selectedPackagingUnit && watchedVolumePerUnit && selectedVolumeUnit
+      ? `${watchedPackagingQuantity} ${selectedPackagingUnit} / ${watchedVolumePerUnit} ${selectedVolumeUnit}`
+      : "";
 
   const typeColor =
     PRODUCT_TYPE_COLORS[watchedType as ProductType] || "#1677ff";
@@ -387,7 +383,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
                 <Form.Item
                   label={
                     <Text strong>
-                      Tên vật tư/hóa chất <Text type="danger">*</Text>
+                      Tên vật tư/hóa chất
                     </Text>
                   }
                   validateStatus={errors.name ? "error" : ""}
@@ -414,7 +410,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
                 <Form.Item
                   label={
                     <Text strong>
-                      Loại sản phẩm <Text type="danger">*</Text>
+                      Loại sản phẩm
                     </Text>
                   }
                   validateStatus={errors.productType ? "error" : ""}
@@ -438,7 +434,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
                 <Form.Item
                   label={
                     <Text strong>
-                      Mã nhận dạng <Text type="danger">*</Text>
+                      Mã nhận dạng
                     </Text>
                   }
                   validateStatus={errors.identificationCode ? "error" : ""}
@@ -459,15 +455,12 @@ const ProductModal: React.FC<ProductModalProps> = ({
               </Col>
             </Row>
 
-            {/* Row 2: Đơn vị + Quy cách + CAS */}
+            {/* Row 2: Đơn vị mua hàng + Quy cách đóng gói + Dung tích mỗi đơn vị */}
             <Row gutter={16} className="product-form-row">
-              <Col xs={24} sm={12} md={8}>
+              <Col xs={24} sm={8} md={8}>
                 <Form.Item
-                  label={
-                    <Text strong>
-                      Đơn vị tính cơ bản <Text type="danger">*</Text>
-                    </Text>
-                  }
+                  label={<Text strong>Đơn vị mua hàng</Text>}
+                  required
                   validateStatus={errors.baseUnitId ? "error" : ""}
                   help={errors.baseUnitId?.message}
                   style={{ marginBottom: 16 }}
@@ -479,37 +472,100 @@ const ProductModal: React.FC<ProductModalProps> = ({
                       <Select
                         {...field}
                         placeholder="Chọn đơn vị"
+                        allowClear
                         showSearch
-                        filterOption={(input, option) =>
-                          (option?.label as string)
-                            ?.toLowerCase()
-                            .includes(input.toLowerCase())
-                        }
-                        options={unitOptions}
+                        optionFilterProp="title"
+                        options={purchaseUnitOptions}
                       />
                     )}
                   />
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={12} md={8}>
+              <Col xs={24} sm={8} md={8}>
                 <Form.Item
-                  label={<Text strong>Quy cách đóng gói (Size)</Text>}
+                  label={<Text strong>Quy cách đóng gói</Text>}
+                  required
+                  validateStatus={errors.packagingQuantity || errors.packagingUnitId ? "error" : ""}
+                  help={errors.packagingQuantity?.message || errors.packagingUnitId?.message}
                   style={{ marginBottom: 16 }}
                 >
-                  <Controller
-                    name="packagingSpec"
-                    control={control}
-                    render={({ field }) => (
-                      <Input
-                        {...field}
-                        value={field.value || ""}
-                        placeholder="VD: 500ml"
-                      />
-                    )}
-                  />
+                  <div style={{ display: "flex", gap: 4 }}>
+                    <Controller
+                      name="packagingQuantity"
+                      control={control}
+                      render={({ field }) => (
+                        <InputNumber
+                          {...field}
+                          style={{ width: 80, flexShrink: 0 }}
+                          min={1}
+                          precision={0}
+                          placeholder="Số lượng"
+                        />
+                      )}
+                    />
+                    <Controller
+                      name="packagingUnitId"
+                      control={control}
+                      render={({ field }) => (
+                        <Select
+                          {...field}
+                          style={{ flex: 1, minWidth: 0 }}
+                          placeholder="Đơn vị"
+                          allowClear
+                          showSearch
+                          optionFilterProp="title"
+                          options={storageUnitOptions}
+                        />
+                      )}
+                    />
+                  </div>
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={12} md={8}>
+              <Col xs={24} sm={8} md={8}>
+                <Form.Item
+                  label={<Text strong>Dung tích mỗi đơn vị</Text>}
+                  required
+                  validateStatus={errors.volumePerUnit || errors.volumeUnitId ? "error" : ""}
+                  help={errors.volumePerUnit?.message || errors.volumeUnitId?.message}
+                  style={{ marginBottom: 16 }}
+                >
+                  <div style={{ display: "flex", gap: 4 }}>
+                    <Controller
+                      name="volumePerUnit"
+                      control={control}
+                      render={({ field }) => (
+                        <InputNumber
+                          {...field}
+                          style={{ width: 80, flexShrink: 0 }}
+                          min={1}
+                          precision={0}
+                          placeholder="Số lượng"
+                        />
+                      )}
+                    />
+                    <Controller
+                      name="volumeUnitId"
+                      control={control}
+                      render={({ field }) => (
+                        <Select
+                          {...field}
+                          style={{ flex: 1, minWidth: 0 }}
+                          placeholder="Đơn vị"
+                          allowClear
+                          showSearch
+                          optionFilterProp="title"
+                          options={consumableUnitOptions}
+                        />
+                      )}
+                    />
+                  </div>
+                </Form.Item>
+              </Col>
+            </Row>
+
+            {/* Row 3: Số CAS + Nhóm/phân loại + Nồng độ */}
+            <Row gutter={16} className="product-form-row">
+              <Col xs={24} sm={8} md={8}>
                 <Form.Item
                   label={
                     <Space size={4}>
@@ -534,56 +590,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
                   />
                 </Form.Item>
               </Col>
-            </Row>
-
-            {/* Row 3: Nhóm/phân loại + Nồng độ */}
-            <Row gutter={16} className="product-form-row">
-              <Col xs={24} sm={12} md={12}>
-                <Form.Item
-                  label={<Text strong>Nhóm/Phân loại (Tags)</Text>}
-                  style={{ marginBottom: 16 }}
-                >
-                  <div
-                    style={{
-                      border: "1px solid #d9d9d9",
-                      borderRadius: 6,
-                      padding: "4px 8px",
-                      minHeight: 36,
-                      display: "flex",
-                      flexWrap: "wrap",
-                      alignItems: "center",
-                      gap: 4,
-                    }}
-                  >
-                    {categoryTags.map((tag) => (
-                      <Tag
-                        key={tag}
-                        closable
-                        onClose={() => handleRemoveTag("categories", tag)}
-                        color="blue"
-                      >
-                        {tag}
-                      </Tag>
-                    ))}
-                    <Input
-                      variant="borderless"
-                      size="small"
-                      value={categoryTagInput}
-                      onChange={(e) => setCategoryTagInput(e.target.value)}
-                      onPressEnter={() =>
-                        handleAddTag(
-                          "categories",
-                          categoryTagInput,
-                          setCategoryTagInput,
-                        )
-                      }
-                      placeholder="Thêm phân loại..."
-                      style={{ flex: 1, minWidth: 100 }}
-                    />
-                  </div>
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} md={12}>
+              <Col xs={24} sm={8} md={8}>
                 <Form.Item
                   label={<Text strong>Nồng độ/Hàm lượng</Text>}
                   style={{ marginBottom: 16 }}
@@ -602,6 +609,51 @@ const ProductModal: React.FC<ProductModalProps> = ({
                 </Form.Item>
               </Col>
             </Row>
+
+            {/* Nhóm/phân loại */}
+            <Form.Item
+              label={<Text strong>Nhóm/Phân loại (Tags)</Text>}
+              style={{ marginBottom: 16 }}
+            >
+              <div
+                style={{
+                  border: "1px solid #d9d9d9",
+                  borderRadius: 6,
+                  padding: "4px 8px",
+                  minHeight: 36,
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                {categoryTags.map((tag) => (
+                  <Tag
+                    key={tag}
+                    closable
+                    onClose={() => handleRemoveTag("categories", tag)}
+                    color="blue"
+                  >
+                    {tag}
+                  </Tag>
+                ))}
+                <Input
+                  variant="borderless"
+                  size="small"
+                  value={categoryTagInput}
+                  onChange={(e) => setCategoryTagInput(e.target.value)}
+                  onPressEnter={() =>
+                    handleAddTag(
+                      "categories",
+                      categoryTagInput,
+                      setCategoryTagInput,
+                    )
+                  }
+                  placeholder="Thêm phân loại..."
+                  style={{ flex: 1, minWidth: 100 }}
+                />
+              </div>
+            </Form.Item>
 
             {/* Row 5: Điều kiện bảo quản */}
             <Form.Item
@@ -691,15 +743,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
               }
             />
 
-            {/* Đơn vị quy đổi */}
-            <div style={{ marginTop: 20 }}>
-              <UnitConversionSection
-                conversions={conversions}
-                units={units}
-                onChange={setConversions}
-                onCreateUnit={handleCreateUnit}
-              />
-            </div>
           </Form>
         </div>
 
@@ -779,16 +822,15 @@ const ProductModal: React.FC<ProductModalProps> = ({
             )}
 
             {/* Info grid */}
-            {(watchedPackaging ||
-              selectedUnitName ||
+            {(packagingLine1 ||
               watchedIdentificationCode ||
               watchedStorage) && (
               <div
                 style={{
                   marginTop: 12,
                   display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: "8px 12px",
+                  gridTemplateColumns: "1fr",
+                  gap: "8px",
                 }}
               >
                 {watchedIdentificationCode && (
@@ -804,17 +846,22 @@ const ProductModal: React.FC<ProductModalProps> = ({
                     </Text>
                   </div>
                 )}
-                {watchedPackaging && selectedUnitName && (
+                {packagingLine1 && (
                   <div>
                     <Text
                       type="secondary"
                       style={{ fontSize: 11, display: "block" }}
                     >
-                      Đóng gói
+                      Quy cách đóng gói
                     </Text>
-                    <Text style={{ fontSize: 13, fontWeight: 500 }}>
-                      {watchedPackaging}/{selectedUnitName}
+                    <Text style={{ fontSize: 13, fontWeight: 500, display: "block" }}>
+                      {packagingLine1}
                     </Text>
+                    {packagingLine2 && (
+                      <Text style={{ fontSize: 13, fontWeight: 500, display: "block" }}>
+                        {packagingLine2}
+                      </Text>
+                    )}
                   </div>
                 )}
                 {watchedStorage && (
@@ -863,22 +910,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
         </div>
       </div>
 
-      {/* Unit create modal - lazy loaded */}
-      {unitModalOpen && (
-        <Suspense fallback={null}>
-          <UnitModal
-            open={unitModalOpen}
-            loading={unitModalLoading}
-            editingUnit={null}
-            form={unitForm}
-            onOk={(data) => handleUnitModalOk(data)}
-            onCancel={() => {
-              setUnitModalOpen(false);
-              unitForm.reset();
-            }}
-          />
-        </Suspense>
-      )}
     </Modal>
   );
 };

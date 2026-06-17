@@ -1125,8 +1125,13 @@ export const unitService = {
   delete: async (id: string): Promise<void> => {
     await api.delete(`${UNIT_URL}/${id}`);
   },
-  getActive: async (): Promise<UnitDto[]> => {
-    const response = await api.get<{ items: UnitDto[] } | UnitDto[]>(`${UNIT_URL}/active`);
+  getActive: async (includeIds?: string[]): Promise<UnitDto[]> => {
+    let url = `${UNIT_URL}/active`;
+    if (includeIds?.length) {
+      const qs = includeIds.map((id) => `includeIds=${id}`).join("&");
+      url += `?${qs}`;
+    }
+    const response = await api.get<{ items: UnitDto[] } | UnitDto[]>(url);
     if (Array.isArray(response.data)) {
       return response.data;
     }

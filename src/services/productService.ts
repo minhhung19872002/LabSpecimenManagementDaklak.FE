@@ -27,6 +27,12 @@ export interface ProductDto {
   productType: ProductType;
   baseUnitId: string;
   baseUnitName?: string;
+  packagingQuantity?: number;
+  packagingUnitId?: string;
+  packagingUnitName?: string;
+  volumePerUnit?: number;
+  volumeUnitId?: string;
+  volumeUnitName?: string;
   packagingSpec?: string;
   casNumber?: string;
   manufacturer?: string;
@@ -46,11 +52,15 @@ export interface ProductDto {
 }
 
 export interface CreateUpdateProductDto {
-  name: string;
+  name?: string;
   formattedName?: string;
   identificationCode?: string;
   productType: ProductType;
-  baseUnitId: string;
+  baseUnitId?: string | null;
+  packagingQuantity?: number | null;
+  packagingUnitId?: string | null;
+  volumePerUnit?: number | null;
+  volumeUnitId?: string | null;
   packagingSpec?: string;
   casNumber?: string;
   manufacturer?: string;

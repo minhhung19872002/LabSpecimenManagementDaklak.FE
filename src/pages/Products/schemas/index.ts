@@ -1,23 +1,15 @@
 import * as yup from "yup";
 
 export const productSchema = yup.object({
-  name: yup
-    .string()
-    .required("Vui lòng nhập tên vật tư/hóa chất")
-    .max(500, "Tên không được vượt quá 500 ký tự"),
+  name: yup.string().defined().default("").max(500),
   formattedName: yup.string().optional(),
-  identificationCode: yup
-    .string()
-    .required("Vui lòng nhập mã nhận dạng")
-    .max(256, "Mã nhận dạng không được vượt quá 256 ký tự"),
-  productType: yup
-    .number()
-    .required("Vui lòng chọn loại sản phẩm")
-    .min(0)
-    .max(4),
-  baseUnitId: yup
-    .string()
-    .required("Vui lòng chọn đơn vị tính"),
+  identificationCode: yup.string().defined().default("").max(256),
+  productType: yup.number().defined().default(0).min(0).max(4),
+  baseUnitId: yup.string().required("Vui lòng chọn đơn vị mua hàng"),
+  packagingQuantity: yup.number().required("Vui lòng nhập số lượng").integer().min(1, "Tối thiểu 1").typeError("Vui lòng nhập số lượng"),
+  packagingUnitId: yup.string().required("Vui lòng chọn đơn vị"),
+  volumePerUnit: yup.number().required("Vui lòng nhập số lượng").integer().min(1, "Tối thiểu 1").typeError("Vui lòng nhập số lượng"),
+  volumeUnitId: yup.string().required("Vui lòng chọn đơn vị"),
   packagingSpec: yup.string().nullable().max(256),
   casNumber: yup.string().nullable().max(100),
   manufacturer: yup.string().nullable().max(256),

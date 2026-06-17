@@ -23,6 +23,13 @@
   }
 }
 
+/* Select text overflow — truncate with ellipsis */
+.product-modal .ant-select-selection-item {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
 /* Product modal responsive */
 @media screen and (max-width: 768px) {
   .product-modal .ant-modal {
