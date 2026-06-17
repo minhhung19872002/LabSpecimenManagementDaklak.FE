@@ -1073,10 +1073,27 @@ export const indicatorService = {
 };
 
 // Unit DTOs
+export enum UnitCategory {
+  PurchaseUnit = 0,
+  ConsumableUnit = 1,
+  StorageUnit = 2,
+  PreparationUnit = 3,
+  MeasurementUnit = 4,
+}
+
+export const UnitCategoryLabels: Record<UnitCategory, string> = {
+  [UnitCategory.PurchaseUnit]: 'Đơn vị mua hàng',
+  [UnitCategory.ConsumableUnit]: 'Đơn vị tiêu hao',
+  [UnitCategory.StorageUnit]: 'Đơn vị lưu kho',
+  [UnitCategory.PreparationUnit]: 'Đơn vị pha chế',
+  [UnitCategory.MeasurementUnit]: 'Đơn vị đo lường',
+};
+
 export interface UnitDto {
   id: string;
   code: string;
   name: string;
+  category: UnitCategory | null;
   isActive: boolean;
   creationTime: string;
 }
@@ -1084,6 +1101,7 @@ export interface UnitDto {
 export interface CreateUpdateUnitDto {
   code: string;
   name: string;
+  category: UnitCategory | null;
   isActive: boolean;
 }
 

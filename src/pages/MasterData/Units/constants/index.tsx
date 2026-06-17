@@ -1,8 +1,8 @@
 import React from "react";
-import { Space, Switch, Tooltip, Button, Popconfirm } from "antd";
+import { Space, Switch, Tooltip, Button, Popconfirm, Tag } from "antd";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
-import { UnitDto } from "../../../../services/masterDataService";
+import { UnitDto, UnitCategory, UnitCategoryLabels } from "../../../../services/masterDataService";
 import { authService } from "../../../../services/authService";
 import { PERMISSIONS } from "../../../../constants/permissionMapping";
 
@@ -32,6 +32,16 @@ export const getUnitColumns = (
     //   width: 150,
     //   ellipsis: true,
     // },
+    {
+      title: "Phân loại",
+      dataIndex: "category",
+      key: "category",
+      width: 160,
+      render: (category: UnitCategory | null) => {
+        if (category === null || category === undefined) return '-';
+        return <Tag>{UnitCategoryLabels[category]}</Tag>;
+      },
+    },
     {
       title: "Tên đơn vị",
       dataIndex: "name",

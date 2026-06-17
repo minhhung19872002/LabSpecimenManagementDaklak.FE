@@ -22,7 +22,7 @@ export const useUnitActions = ({
 
   const handleCreate = (form: UseFormReturn<UnitFormData>) => {
     setEditingUnit(null);
-    form.reset({ code: "", name: "", isActive: true });
+    form.reset({ code: "", name: "", category: null, isActive: true });
     setModalOpen(true);
   };
 
@@ -34,6 +34,7 @@ export const useUnitActions = ({
     form.reset({
       code: unit.code,
       name: unit.name,
+      category: unit.category,
       isActive: unit.isActive,
     });
     setModalOpen(true);
@@ -153,6 +154,7 @@ export const useUnitActions = ({
         await unitService.update(editingUnit.id, {
           code: data.code,
           name: data.name,
+          category: data.category ?? null,
           isActive: data.isActive ?? true,
         });
         message.success("Đã cập nhật đơn vị hàng hóa");
@@ -160,6 +162,7 @@ export const useUnitActions = ({
         await unitService.create({
           code: data.code,
           name: data.name,
+          category: data.category ?? null,
           isActive: data.isActive ?? true,
         });
         message.success("Đã tạo đơn vị hàng hóa mới");

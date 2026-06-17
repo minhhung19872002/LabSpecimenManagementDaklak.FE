@@ -1,8 +1,8 @@
 import React from "react";
-import { Modal, Form, Input, Switch } from "antd";
+import { Modal, Form, Input, Switch, Select } from "antd";
 import { Controller } from "react-hook-form";
 import { UseFormReturn } from "react-hook-form";
-import { UnitDto } from "../../../../services/masterDataService";
+import { UnitDto, UnitCategoryLabels } from "../../../../services/masterDataService";
 import { UnitFormData } from "../schemas";
 
 interface UnitModalProps {
@@ -75,6 +75,28 @@ const UnitModal: React.FC<UnitModalProps> = ({
                 {...field}
                 placeholder="Nhập tên đơn vị hàng hóa"
                 maxLength={256}
+              />
+            )}
+          />
+        </Form.Item>
+
+        <Form.Item
+          label="Phân loại"
+          required
+          validateStatus={errors.category ? "error" : ""}
+          help={errors.category?.message}
+        >
+          <Controller
+            name="category"
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                placeholder="Chọn phân loại"
+                options={Object.entries(UnitCategoryLabels).map(([value, label]) => ({
+                  value: Number(value),
+                  label,
+                }))}
               />
             )}
           />

@@ -9,6 +9,7 @@ export const unitSchema = yup.object({
     .string()
     .required("Vui lòng nhập tên đơn vị hàng hóa")
     .max(256, "Tên không được vượt quá 256 ký tự"),
+  category: yup.number().required("Vui lòng chọn phân loại đơn vị").nullable(),
   isActive: yup.boolean().default(true),
 });
 
