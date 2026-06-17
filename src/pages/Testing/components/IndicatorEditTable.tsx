@@ -666,19 +666,19 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
         );
       },
     },
-    {
-      title: "Ngày giao việc",
-      dataIndex: "assignedDate",
-      key: "assignedDate",
-      width: 110,
-      render: (date: string, record) => {
-        // Parent có children -> không hiển thị
-        if (record._isParentWithChildren) {
-          return <Text type="secondary">-</Text>;
-        }
-        return formatDate(date);
-      },
-    },
+    // BA yêu cầu ẩn tạm cột Ngày giao việc — không hiển thị trên UI
+    // {
+    //   title: "Ngày giao việc",
+    //   dataIndex: "assignedDate",
+    //   key: "assignedDate",
+    //   width: 110,
+    //   render: (date: string, record) => {
+    //     if (record._isParentWithChildren) {
+    //       return <Text type="secondary">-</Text>;
+    //     }
+    //     return formatDate(date);
+    //   },
+    // },
     {
       title: "Ngày thử nghiệm",
       key: "testDate",
