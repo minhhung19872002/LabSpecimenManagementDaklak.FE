@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useRef } from 'react';
+import React, { useMemo, useCallback, useRef, useEffect } from 'react';
 import { Table, Input, Select, Tag, Row, Col, Pagination, DatePicker } from 'antd';
 import { SearchOutlined, SortAscendingOutlined } from '@ant-design/icons';
 import ResponsiveSelect from '../../../components/common/ResponsiveSelect';
@@ -26,7 +26,6 @@ const formatDate = (date?: string) => {
   return dayjs(date).format('DD/MM/YYYY');
 };
 
-// Helper to get date string for comparison (only date part, not time)
 const getDateKey = (date?: string): string => {
   if (!date) return '';
   return dayjs(date).format('YYYY-MM-DD');
@@ -53,6 +52,15 @@ const processDataForRowSpan = (data: SampleAssignmentLogDto[]): ProcessedLogItem
   if (data.length === 0) return [];
 
   const result: ProcessedLogItem[] = new Array(data.length);
+
+  // Pre-compute date keys once — avoids repeated dayjs() calls during span calculation
+  const dateKeys = data.map(item => ({
+    transferDate: getDateKey(item.transferDate),
+    requestCompletionDate: getDateKey(item.requestCompletionDate),
+    testDate: getDateKey(item.testDate),
+    entryDate: getDateKey(item.entryDate),
+    qlktApprovalDate: getDateKey(item.qlktApprovalDate),
+  }));
 
   // Calculate contract groups (start and end indices for each contract group)
   const contractGroups: { start: number; end: number }[] = [];
@@ -125,29 +133,30 @@ const processDataForRowSpan = (data: SampleAssignmentLogDto[]): ProcessedLogItem
 
     for (let idx = group.start; idx <= group.end; idx++) {
       const currentItem = data[idx];
+      const currentKeys = dateKeys[idx];
 
       // Date forward-looking: within same sample AND same contract group
       const calcDateSpan = (
-        dateGetter: (item: SampleAssignmentLogDto) => string
+        fieldName: keyof typeof currentKeys
       ): number => {
-        const currentDate = dateGetter(currentItem);
+        const currentDate = currentKeys[fieldName];
         let span = 1;
         for (
           let k = idx + 1;
           k <= group.end && data[k].sampleId === currentItem.sampleId;
           k++
         ) {
-          if (dateGetter(data[k]) === currentDate) span++;
+          if (dateKeys[k][fieldName] === currentDate) span++;
           else break;
         }
         return span;
       };
 
-      let transferDateSpan = calcDateSpan((d) => getDateKey(d.transferDate));
-      let requestDateSpan = calcDateSpan((d) => getDateKey(d.requestCompletionDate));
-      let testDateSpan = calcDateSpan((d) => getDateKey(d.testDate));
-      let entryDateSpan = calcDateSpan((d) => getDateKey(d.entryDate));
-      let qlktApprovalDateSpan = calcDateSpan((d) => getDateKey(d.qlktApprovalDate));
+      let transferDateSpan = calcDateSpan('transferDate');
+      let requestDateSpan = calcDateSpan('requestCompletionDate');
+      let testDateSpan = calcDateSpan('testDate');
+      let entryDateSpan = calcDateSpan('entryDate');
+      let qlktApprovalDateSpan = calcDateSpan('qlktApprovalDate');
 
       // Zero-out if previous row in same sample AND same contract has same date
       const isPrevSameSample =
@@ -155,16 +164,16 @@ const processDataForRowSpan = (data: SampleAssignmentLogDto[]): ProcessedLogItem
         data[idx - 1].sampleId === currentItem.sampleId;
 
       if (isPrevSameSample) {
-        const prev = data[idx - 1];
-        if (getDateKey(currentItem.transferDate) === getDateKey(prev.transferDate))
+        const prevKeys = dateKeys[idx - 1];
+        if (currentKeys.transferDate === prevKeys.transferDate)
           transferDateSpan = 0;
-        if (getDateKey(currentItem.requestCompletionDate) === getDateKey(prev.requestCompletionDate))
+        if (currentKeys.requestCompletionDate === prevKeys.requestCompletionDate)
           requestDateSpan = 0;
-        if (getDateKey(currentItem.testDate) === getDateKey(prev.testDate))
+        if (currentKeys.testDate === prevKeys.testDate)
           testDateSpan = 0;
-        if (getDateKey(currentItem.entryDate) === getDateKey(prev.entryDate))
+        if (currentKeys.entryDate === prevKeys.entryDate)
           entryDateSpan = 0;
-        if (getDateKey(currentItem.qlktApprovalDate) === getDateKey(prev.qlktApprovalDate))
+        if (currentKeys.qlktApprovalDate === prevKeys.qlktApprovalDate)
           qlktApprovalDateSpan = 0;
       }
 
@@ -258,43 +267,76 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
 
   const hoveredRowIndexRef = useRef<number | null>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
+  const highlightedRef = useRef<HTMLElement[]>([]);
+  const hoverRafRef = useRef<number>(0);
+  const rowElementsRef = useRef<HTMLTableRowElement[]>([]);
+  const mergedCellIndexRef = useRef<Map<number, HTMLTableCellElement[]>>(new Map());
+
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      const container = tableContainerRef.current;
+      if (!container) return;
+
+      rowElementsRef.current = Array.from(
+        container.querySelectorAll<HTMLTableRowElement>('tbody tr[data-row-key]')
+      );
+
+      const index = new Map<number, HTMLTableCellElement[]>();
+      container.querySelectorAll<HTMLTableCellElement>('td[data-row-span]').forEach((td) => {
+        const cellIdx = parseInt(td.getAttribute('data-row-idx') || '-1');
+        const span = parseInt(td.getAttribute('data-row-span') || '1');
+        for (let i = cellIdx; i < cellIdx + span; i++) {
+          if (!index.has(i)) index.set(i, []);
+          index.get(i)!.push(td);
+        }
+      });
+      mergedCellIndexRef.current = index;
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [processedData]);
 
   const clearHoverClasses = useCallback(() => {
-    const container = tableContainerRef.current;
-    if (!container) return;
-    container.querySelectorAll('.row-hover').forEach(el => el.classList.remove('row-hover'));
-    container.querySelectorAll('.row-in-hover-group').forEach(el => el.classList.remove('row-in-hover-group'));
-    container.querySelectorAll('.cell-hover').forEach(el => el.classList.remove('cell-hover'));
+    cancelAnimationFrame(hoverRafRef.current);
+    for (const el of highlightedRef.current) {
+      el.classList.remove('row-hover', 'row-in-hover-group', 'cell-hover');
+    }
+    highlightedRef.current = [];
   }, []);
 
   const applyHoverClasses = useCallback((rowIndex: number) => {
-    const container = tableContainerRef.current;
-    if (!container) return;
+    cancelAnimationFrame(hoverRafRef.current);
+    hoverRafRef.current = requestAnimationFrame(() => {
+      const container = tableContainerRef.current;
+      if (!container) return;
 
-    clearHoverClasses();
+      clearHoverClasses();
 
-    const record = processedData[rowIndex];
-    if (!record) return;
+      const record = processedData[rowIndex];
+      if (!record) return;
 
-    const rows = container.querySelectorAll<HTMLTableRowElement>('tbody tr[data-row-key]');
-    rows.forEach((tr, idx) => {
-      if (idx === rowIndex) {
-        tr.classList.add('row-hover');
-      } else {
-        const rowRecord = processedData[idx];
-        if (rowRecord &&
-            record._contractGroupStart <= rowRecord._rowIndex &&
-            rowRecord._rowIndex <= record._contractGroupEnd) {
+      const rows = rowElementsRef.current;
+      if (rows.length === 0) return;
+
+      const start = record._contractGroupStart;
+      const end = Math.min(record._contractGroupEnd, rows.length - 1);
+
+      for (let i = start; i <= end; i++) {
+        const tr = rows[i];
+        if (!tr) continue;
+        if (i === rowIndex) {
+          tr.classList.add('row-hover');
+        } else {
           tr.classList.add('row-in-hover-group');
         }
+        highlightedRef.current.push(tr);
       }
-    });
 
-    container.querySelectorAll<HTMLTableCellElement>('td[data-row-span]').forEach((td) => {
-      const cellIdx = parseInt(td.getAttribute('data-row-idx') || '-1');
-      const span = parseInt(td.getAttribute('data-row-span') || '1');
-      if (rowIndex >= cellIdx && rowIndex < cellIdx + span) {
-        td.classList.add('cell-hover');
+      const mergedCells = mergedCellIndexRef.current.get(rowIndex);
+      if (mergedCells) {
+        for (const td of mergedCells) {
+          td.classList.add('cell-hover');
+          highlightedRef.current.push(td);
+        }
       }
     });
   }, [processedData, clearHoverClasses]);
@@ -462,6 +504,23 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
   ], [mergedCellProps]);
 
 
+  const getRowClass = useCallback((record: ProcessedLogItem) => {
+    return getRowColorClass(record) || 'row-green';
+  }, []);
+
+  const handleRowProps = useCallback((record: ProcessedLogItem) => ({
+    onDoubleClick: () => handleRowDoubleClick(record),
+    onMouseEnter: () => {
+      hoveredRowIndexRef.current = record._rowIndex;
+      applyHoverClasses(record._rowIndex);
+    },
+    onMouseLeave: () => {
+      hoveredRowIndexRef.current = null;
+      clearHoverClasses();
+    },
+    style: { cursor: 'pointer' } as React.CSSProperties,
+  }), [handleRowDoubleClick, applyHoverClasses, clearHoverClasses]);
+
   return (
     <div className="sample-assignment-log-tab">
       {/* Toolbar */}
@@ -547,22 +606,8 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
           dataSource={processedData}
           loading={loading}
           rowKey="_rowKey"
-          rowClassName={(record) => {
-            const colorClass = getRowColorClass(record);
-            return colorClass || 'row-green';
-          }}
-          onRow={(record) => ({
-            onDoubleClick: () => handleRowDoubleClick(record),
-            onMouseEnter: () => {
-              hoveredRowIndexRef.current = record._rowIndex;
-              applyHoverClasses(record._rowIndex);
-            },
-            onMouseLeave: () => {
-              hoveredRowIndexRef.current = null;
-              clearHoverClasses();
-            },
-            style: { cursor: 'pointer' },
-          })}
+          rowClassName={getRowClass}
+          onRow={handleRowProps}
           pagination={false}
           sticky={{ offsetHeader: 80 }}
           scroll={{ x: 2200 }}
