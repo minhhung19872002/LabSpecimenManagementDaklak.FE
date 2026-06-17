@@ -11,7 +11,7 @@ export const getUnitColumns = (
   handleDelete: (id: string) => void,
   handleToggleActive: (record: UnitDto) => void,
   pageIndex: number,
-  pageSize: number
+  pageSize: number,
 ): ColumnsType<UnitDto> => {
   const canEdit = authService.hasPermission(PERMISSIONS.MasterData.Edit);
   const canDelete = authService.hasPermission(PERMISSIONS.MasterData.Delete);
@@ -25,13 +25,13 @@ export const getUnitColumns = (
       render: (_: any, __: UnitDto, index: number) =>
         (pageIndex - 1) * pageSize + index + 1,
     },
-    {
-      title: "ID đơn vị",
-      dataIndex: "code",
-      key: "code",
-      width: 150,
-      ellipsis: true,
-    },
+    // {
+    //   title: "ID đơn vị",
+    //   dataIndex: "code",
+    //   key: "code",
+    //   width: 150,
+    //   ellipsis: true,
+    // },
     {
       title: "Tên đơn vị",
       dataIndex: "name",
