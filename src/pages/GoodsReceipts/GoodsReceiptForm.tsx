@@ -377,7 +377,9 @@ const GoodsReceiptForm: React.FC = () => {
     .filter((p) => productTypeFilter === "all" || p.productType === Number(productTypeFilter))
     .map((p) => ({
       value: p.id,
-      label: `${p.code} - ${p.name} (Tồn: ${p.availableQuantity ?? 0})`,
+      label: p.identificationCode
+        ? `${p.identificationCode} - ${p.name} (Tồn: ${p.availableQuantity ?? 0})`
+        : `${p.name} (Tồn: ${p.availableQuantity ?? 0})`,
     }));
 
   const buildPayload = (data: GoodsReceiptFormData): CreateUpdateGoodsReceiptDto => ({
@@ -565,11 +567,11 @@ const GoodsReceiptForm: React.FC = () => {
     },
     {
       title: "Mã nhận dạng",
-      key: "productCode",
+      key: "identificationCode",
       width: 120,
       render: (_: any, record: LineItem) => {
         const product = products.find((p) => p.id === record.productId);
-        return product?.code || "-";
+        return product?.identificationCode || "-";
       },
     },
     {
