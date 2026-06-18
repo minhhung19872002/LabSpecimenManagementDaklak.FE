@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   Menu,
   MenuProps,
@@ -53,6 +53,7 @@ import {
 import { MENU_PERMISSION_MAP } from "../../constants/permissionMapping";
 import { Helmet } from "react-helmet-async";
 import { usePageTitle } from "../../hooks/usePageTitle";
+import { HeaderHeightContext } from "../../hooks/useHeaderHeight";
 
 type MenuItem = Required<MenuProps>["items"][number];
 
@@ -107,6 +108,23 @@ const MainLayout: React.FC = () => {
 
   // Dynamic page title
   const pageTitle = usePageTitle();
+
+  // Header height measurement for scroll background
+  const headerRef = useRef<HTMLElement>(null);
+  const [headerBgHeight, setHeaderBgHeight] = useState(88);
+
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const update = () => {
+      const top = parseFloat(getComputedStyle(el).top) || 0;
+      setHeaderBgHeight(Math.ceil(top + el.offsetHeight));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // Work reminder popup for SampleReceiver
   const {
@@ -587,10 +605,10 @@ const MainLayout: React.FC = () => {
       {/* Main Content Area */}
       <div className="main-content-wrapper">
         {/* Header background strip - full width white when scrolled */}
-        {isScrolled && <div className="header-scroll-bg" />}
+        {isScrolled && <div className="header-scroll-bg" style={{ height: headerBgHeight }} />}
 
         {/* Header */}
-        <header className={`main-header ${isScrolled ? "scrolled" : ""}`}>
+        <header ref={headerRef} className={`main-header ${isScrolled ? "scrolled" : ""}`}>
           <div className="header-left">
             {/* Mobile menu button - visible only on mobile via CSS */}
             <Button
@@ -732,7 +750,9 @@ const MainLayout: React.FC = () => {
 
         {/* Page Content */}
         <main className="main-content">
-          <Outlet />
+          <HeaderHeightContext.Provider value={headerBgHeight}>
+            <Outlet />
+          </HeaderHeightContext.Provider>
         </main>
 
         {/* Change Password Modal */}

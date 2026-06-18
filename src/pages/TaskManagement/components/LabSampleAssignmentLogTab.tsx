@@ -19,9 +19,10 @@ import {
   QLKTDisplayStatusColors,
 } from "../../../types/laboratoryTask";
 
-const { RangePicker } = DatePicker;
-
+import { useHeaderHeight } from "../../../hooks";
 import "../../QualityManagement/components/SampleAssignmentLogTab.css";
+
+const { RangePicker } = DatePicker;
 
 // Helper to format date
 const formatDate = (date?: string) => {
@@ -244,6 +245,7 @@ interface LabSampleAssignmentLogTabProps {
 }
 
 const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({ displayStatusFilter, onReloadRef }) => {
+  const headerHeight = useHeaderHeight();
   const {
     loading,
     data,
@@ -647,7 +649,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({ d
           style: { cursor: "pointer" },
         })}
         pagination={false}
-        sticky={{ offsetHeader: 80 }}
+        sticky={{ offsetHeader: headerHeight }}
         scroll={{ x: 2200 }}
         size="small"
         bordered

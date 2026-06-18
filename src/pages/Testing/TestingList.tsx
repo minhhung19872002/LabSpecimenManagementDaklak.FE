@@ -26,6 +26,7 @@ import { testingService } from "../../services/testingService";
 import { useTestingList } from "./hooks";
 import LabSampleAssignmentLogTab from "./components/LabSampleAssignmentLogTab";
 import ResponsiveSelect from "../../components/common/ResponsiveSelect";
+import { useHeaderHeight } from "../../hooks";
 import "../../styles/ListCard.css";
 import "../Dashboard/Dashboard.css";
 import "./Testing.css";
@@ -36,6 +37,7 @@ const { Text } = Typography;
 type ExtendedTabType = TestingTabType | "sample-assignment-log";
 
 const TestingList: React.FC = () => {
+  const headerHeight = useHeaderHeight();
   // Tab state - now includes sample-assignment-log
   const [currentTab, setCurrentTab] = useState<ExtendedTabType>(
     "sample-assignment-log",
@@ -418,7 +420,7 @@ const TestingList: React.FC = () => {
                 ),
               }}
               onChange={handleTableChange}
-              sticky={{ offsetHeader: 80 }}
+              sticky={{ offsetHeader: headerHeight }}
               scroll={{ x: 1000 }}
               onRow={(record) => ({
                 onDoubleClick: () => handleRowDoubleClick(record),

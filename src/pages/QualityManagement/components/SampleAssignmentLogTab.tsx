@@ -15,6 +15,7 @@ import {
 } from "../../../types/qualityManagement";
 
 import { IndicatorApprovalStatus } from "../../../types/laboratoryTask";
+import { useHeaderHeight } from "../../../hooks";
 
 import "../../../styles/ListCard.css";
 import "./SampleAssignmentLogTab.css";
@@ -250,6 +251,7 @@ interface SampleAssignmentLogTabProps {
 }
 
 const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegisterControls }) => {
+  const headerHeight = useHeaderHeight();
   const {
     loading,
     data,
@@ -642,6 +644,7 @@ const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegis
           style: { cursor: "pointer" },
         })}
         pagination={false}
+        sticky={{ offsetHeader: headerHeight }}
         scroll={{ x: 2200 }}
         size="small"
         bordered
