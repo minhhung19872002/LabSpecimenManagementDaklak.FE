@@ -27,7 +27,7 @@ import {
   ProductType,
   CreateUpdateProductDto,
 } from "../../services/productService";
-import { unitService, UnitDto } from "../../services/masterDataService";
+import { unitService, UnitDto, warehouseService, WarehouseDto } from "../../services/masterDataService";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
 import { getApiErrorMessage } from "../../utils/errorHandler";
@@ -71,6 +71,9 @@ interface LineItem {
   manufacturerId?: string;
   supplierId?: string;
   supplierName?: string;
+  receivedDate?: string;
+  expiryDate?: string;
+  warehouseId?: string;
 }
 
 const GoodsReceiptForm: React.FC = () => {
@@ -91,6 +94,7 @@ const GoodsReceiptForm: React.FC = () => {
   const [isCustomVat, setIsCustomVat] = useState(false);
   const [newLotInput, setNewLotInput] = useState<Record<string, string>>({});
   const [manufacturers, setManufacturers] = useState<ManufacturerDto[]>([]);
+  const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
   const [newManufacturerInput, setNewManufacturerInput] = useState("");
 
   // Inline creation modals
@@ -144,12 +148,14 @@ const GoodsReceiptForm: React.FC = () => {
         ]);
         setUnits(unitsRes.items || []);
 
-        const [activeProducts, manufacturerList] = await Promise.all([
+        const [activeProducts, manufacturerList, warehouseList] = await Promise.all([
           productService.getActive(),
           manufacturerService.getActive(),
+          warehouseService.getActive(),
         ]);
         setProducts(activeProducts || []);
         setManufacturers(manufacturerList || []);
+        setWarehouses(warehouseList || []);
 
         if (id) {
           const receiptData = await goodsReceiptService.get(id);
@@ -209,6 +215,9 @@ const GoodsReceiptForm: React.FC = () => {
                 model: item.model,
                 manufacturer: item.manufacturer,
                 manufacturerId: item.manufacturerId,
+                receivedDate: item.receivedDate,
+                expiryDate: item.expiryDate,
+                warehouseId: item.warehouseId,
               };
             })
           );
@@ -409,6 +418,9 @@ const GoodsReceiptForm: React.FC = () => {
         manufacturer: item.manufacturer || undefined,
         manufacturerName: item.manufacturer || undefined,
         manufacturerId: item.manufacturerId?.startsWith("temp-") ? undefined : item.manufacturerId || undefined,
+        receivedDate: item.receivedDate || undefined,
+        expiryDate: item.expiryDate || undefined,
+        warehouseId: item.warehouseId || undefined,
       })),
   });
 
@@ -545,6 +557,7 @@ const GoodsReceiptForm: React.FC = () => {
           title: "",
           key: "action",
           width: 40,
+          fixed: "right" as const,
           render: (_: any, record: LineItem) => (
             <Button
               type="text"
@@ -676,53 +689,37 @@ const GoodsReceiptForm: React.FC = () => {
         ),
     },
     {
-      title: "Giá nhập",
-      key: "unitPrice",
-      width: 160,
+      title: "Ngày nhận",
+      key: "receivedDate",
+      width: 130,
       render: (_: any, record: LineItem) =>
-        isReadonly ? `${formatCurrency(record.unitPrice)} VNĐ` : (
-          <InputNumber
-            value={record.unitPrice}
-            min={0}
-            formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-            parser={(v) => Number(v?.replace(/,/g, "") || 0)}
-            onChange={(v) => handleLineChange(record.key, "unitPrice", v || 0)}
-            style={{ width: "100%" }}
+        isReadonly ? (record.receivedDate ? dayjs(record.receivedDate).format("DD/MM/YYYY") : "-") : (
+          <DatePicker
+            value={record.receivedDate ? dayjs(record.receivedDate) : null}
+            onChange={(d) => handleLineChange(record.key, "receivedDate", d?.toISOString() || undefined)}
+            format="DD/MM/YYYY"
             size="small"
-            addonAfter="VNĐ"
+            style={{ width: "100%" }}
+            allowClear
           />
         ),
     },
     {
-      title: "Thành tiền chưa VAT",
-      key: "amountBeforeVat",
-      width: 150,
-      align: "right" as const,
-      render: (_: any, record: LineItem) => `${formatCurrency(record.amountBeforeVat)} VNĐ`,
-    },
-    {
-      title: "VAT",
-      key: "vatPercent",
-      width: 65,
-      align: "center" as const,
+      title: "Hạn sử dụng",
+      key: "expiryDate",
+      width: 130,
       render: (_: any, record: LineItem) =>
-        isReadonly ? `${record.vatPercent}%` : (
-          <InputNumber
-            value={record.vatPercent}
-            min={0}
-            max={100}
-            onChange={(v) => handleLineChange(record.key, "vatPercent", v || 0)}
-            style={{ width: "100%" }}
+        isReadonly ? (record.expiryDate ? dayjs(record.expiryDate).format("DD/MM/YYYY") : "-") : (
+          <DatePicker
+            value={record.expiryDate ? dayjs(record.expiryDate) : null}
+            onChange={(d) => handleLineChange(record.key, "expiryDate", d?.toISOString() || undefined)}
+            format="DD/MM/YYYY"
             size="small"
+            style={{ width: "100%" }}
+            allowClear
+            disabledDate={(current) => current && current.isBefore(dayjs().startOf("day"))}
           />
         ),
-    },
-    {
-      title: "Thành tiền sau VAT",
-      key: "amountAfterVat",
-      width: 150,
-      align: "right" as const,
-      render: (_: any, record: LineItem) => `${formatCurrency(record.amountAfterVat)} VNĐ`,
     },
     {
       title: "Code / Lot",
@@ -805,6 +802,79 @@ const GoodsReceiptForm: React.FC = () => {
           />
         );
       },
+    },
+    {
+      title: "Kho bảo quản",
+      key: "warehouseId",
+      width: 150,
+      render: (_: any, record: LineItem) => {
+        if (isReadonly) {
+          const wh = warehouses.find((w) => w.id === record.warehouseId);
+          return wh?.name || "-";
+        }
+        return (
+          <Select
+            value={record.warehouseId || undefined}
+            onChange={(v) => handleLineChange(record.key, "warehouseId", v || undefined)}
+            placeholder="Chọn kho"
+            options={warehouses.map((w) => ({ value: w.id, label: w.name }))}
+            showSearch
+            optionFilterProp="label"
+            allowClear
+            size="small"
+            style={{ width: "100%" }}
+          />
+        );
+      },
+    },
+    {
+      title: "Giá nhập",
+      key: "unitPrice",
+      width: 160,
+      render: (_: any, record: LineItem) =>
+        isReadonly ? `${formatCurrency(record.unitPrice)} VNĐ` : (
+          <InputNumber
+            value={record.unitPrice}
+            min={0}
+            formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+            parser={(v) => Number(v?.replace(/,/g, "") || 0)}
+            onChange={(v) => handleLineChange(record.key, "unitPrice", v || 0)}
+            style={{ width: "100%" }}
+            size="small"
+            addonAfter="VNĐ"
+          />
+        ),
+    },
+    {
+      title: "Thành tiền chưa VAT",
+      key: "amountBeforeVat",
+      width: 150,
+      align: "right" as const,
+      render: (_: any, record: LineItem) => `${formatCurrency(record.amountBeforeVat)} VNĐ`,
+    },
+    {
+      title: "VAT",
+      key: "vatPercent",
+      width: 65,
+      align: "center" as const,
+      render: (_: any, record: LineItem) =>
+        isReadonly ? `${record.vatPercent}%` : (
+          <InputNumber
+            value={record.vatPercent}
+            min={0}
+            max={100}
+            onChange={(v) => handleLineChange(record.key, "vatPercent", v || 0)}
+            style={{ width: "100%" }}
+            size="small"
+          />
+        ),
+    },
+    {
+      title: "Thành tiền sau VAT",
+      key: "amountAfterVat",
+      width: 150,
+      align: "right" as const,
+      render: (_: any, record: LineItem) => `${formatCurrency(record.amountAfterVat)} VNĐ`,
     },
     ...actionColumn,
   ];
@@ -977,7 +1047,7 @@ const GoodsReceiptForm: React.FC = () => {
             dataSource={productItems}
             rowKey="key"
             pagination={false}
-            scroll={{ x: 1800 }}
+            scroll={{ x: 2200 }}
             size="small"
             bordered
             locale={{ emptyText: "Chưa có hàng hóa" }}

@@ -132,6 +132,7 @@ export interface GoodsReceiptItemDto {
   goodsReceiptId: string;
   productId: string;
   productName: string;
+  identificationCode?: string;
   unitId: string;
   unitName: string;
   quantity: number;
@@ -149,6 +150,10 @@ export interface GoodsReceiptItemDto {
   manufacturerId?: string;
   supplierId?: string;
   supplierName?: string;
+  receivedDate?: string;
+  expiryDate?: string;
+  warehouseId?: string;
+  warehouseName?: string;
 }
 
 export interface GoodsReceiptPaymentDto {
@@ -197,6 +202,9 @@ export interface CreateUpdateGoodsReceiptItemDto {
   manufacturerName?: string;
   manufacturerId?: string;
   supplierId?: string;
+  receivedDate?: string;
+  expiryDate?: string;
+  warehouseId?: string;
 }
 
 export interface GetGoodsReceiptListInput {

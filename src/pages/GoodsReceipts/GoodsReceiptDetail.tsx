@@ -136,7 +136,13 @@ const GoodsReceiptDetail: React.FC = () => {
       render: (_: any, __: GoodsReceiptItemDto, index: number) => index + 1,
     },
     {
-      title: "Hàng hóa",
+      title: "Mã nhận dạng",
+      key: "identificationCode",
+      width: 130,
+      render: (_: any, r: GoodsReceiptItemDto) => r.identificationCode || "-",
+    },
+    {
+      title: "Tên hàng hóa",
       dataIndex: "productName",
       key: "productName",
       width: 200,
@@ -160,6 +166,40 @@ const GoodsReceiptDetail: React.FC = () => {
       key: "quantity",
       width: 100,
       align: "right" as const,
+    },
+    {
+      title: "Ngày nhận",
+      key: "receivedDate",
+      width: 110,
+      render: (_: any, r: GoodsReceiptItemDto) =>
+        r.receivedDate ? dayjs(r.receivedDate).format("DD/MM/YYYY") : "-",
+    },
+    {
+      title: "Hạn sử dụng",
+      key: "expiryDate",
+      width: 110,
+      render: (_: any, r: GoodsReceiptItemDto) =>
+        r.expiryDate ? dayjs(r.expiryDate).format("DD/MM/YYYY") : "-",
+    },
+    {
+      title: "Code / Lot",
+      dataIndex: "lotNumber",
+      key: "lotNumber",
+      width: 120,
+      render: (v: string) => v || "-",
+    },
+    {
+      title: "Hạn lô",
+      key: "lotExpiryDate",
+      width: 110,
+      render: (_: any, r: GoodsReceiptItemDto) =>
+        r.lotExpiryDate ? dayjs(r.lotExpiryDate).format("DD/MM/YYYY") : "-",
+    },
+    {
+      title: "Kho bảo quản",
+      key: "warehouseName",
+      width: 150,
+      render: (_: any, r: GoodsReceiptItemDto) => r.warehouseName || "-",
     },
     {
       title: "Giá nhập",
@@ -188,20 +228,6 @@ const GoodsReceiptDetail: React.FC = () => {
       width: 150,
       align: "right" as const,
       render: (_: any, r: GoodsReceiptItemDto) => formatCurrency(r.amountAfterVat),
-    },
-    {
-      title: "Code / Lot",
-      dataIndex: "lotNumber",
-      key: "lotNumber",
-      width: 120,
-      render: (v: string) => v || "-",
-    },
-    {
-      title: "Hạn lô",
-      key: "lotExpiryDate",
-      width: 110,
-      render: (_: any, r: GoodsReceiptItemDto) =>
-        r.lotExpiryDate ? dayjs(r.lotExpiryDate).format("DD/MM/YYYY") : "-",
     },
   ];
 
@@ -530,7 +556,7 @@ const GoodsReceiptDetail: React.FC = () => {
               dataSource={productItems}
               rowKey="id"
               pagination={false}
-              scroll={{ x: 1400 }}
+              scroll={{ x: 1800 }}
               size="small"
               bordered
               locale={{ emptyText: "Không có hàng hóa" }}
