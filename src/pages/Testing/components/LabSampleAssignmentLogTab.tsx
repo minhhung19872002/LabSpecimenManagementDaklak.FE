@@ -1,7 +1,8 @@
-import React, { useMemo, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Table, Input, Select, Tag, Row, Col, Pagination, DatePicker } from 'antd';
 import { SearchOutlined, SortAscendingOutlined } from '@ant-design/icons';
 import ResponsiveSelect from '../../../components/common/ResponsiveSelect';
+import type { ColumnOption } from '../../../components/common';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useSampleAssignmentLogForLab } from '../hooks/useSampleAssignmentLogForLab';
@@ -228,14 +229,122 @@ const getRowColorClass = (record: ProcessedLogItem): string => {
   return '';
 };
 
+export const COLUMN_OPTIONS: ColumnOption[] = [
+  { key: 'contractNumber', label: 'Số hợp đồng', disabled: true },
+  { key: 'sampleCode', label: 'Mã số mẫu', disabled: true },
+  { key: 'sampleName', label: 'Tên mẫu' },
+  { key: 'sampleQuantity', label: 'Lượng mẫu gửi' },
+  { key: 'sampleStatusText', label: 'Tình trạng mẫu' },
+  { key: 'transferDate', label: 'Ngày chuyển' },
+  { key: 'requestCompletionDate', label: 'Ngày YC xong' },
+  { key: 'testDate', label: 'Thời gian TN' },
+  { key: 'indicatorName', label: 'Tên chỉ tiêu' },
+  { key: 'methodName', label: 'Phương pháp' },
+  { key: 'unit', label: 'ĐVT' },
+  { key: 'result', label: 'Kết quả' },
+  { key: 'technicalManagerName', label: 'QL kỹ thuật' },
+  { key: 'technicianName', label: 'Kỹ thuật viên' },
+  { key: 'entryDate', label: 'Ngày nhập' },
+  { key: 'qlktApprovalDate', label: 'Ngày QL duyệt' },
+  { key: 'qlktDisplayStatus', label: 'Tình trạng' },
+];
+export const ALL_COLUMN_KEYS = COLUMN_OPTIONS.map((c) => c.key);
+
 interface LabSampleAssignmentLogTabProps {
   displayStatusFilter?: QLKTDisplayStatus;
+  visibleColumns?: string[];
 }
+
+const DEFAULT_COLUMN_WIDTHS: Record<string, number> = {
+  contractNumber: 130,
+  sampleCode: 120,
+  sampleName: 150,
+  sampleQuantity: 100,
+  sampleStatusText: 120,
+  transferDate: 100,
+  requestCompletionDate: 100,
+  testDate: 100,
+  indicatorName: 180,
+  methodName: 150,
+  unit: 80,
+  result: 100,
+  technicalManagerName: 130,
+  technicianName: 130,
+  entryDate: 100,
+  qlktApprovalDate: 100,
+  qlktDisplayStatus: 150,
+};
 
 const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
   displayStatusFilter,
+  visibleColumns = ALL_COLUMN_KEYS,
 }) => {
   const headerHeight = useHeaderHeight();
+
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(DEFAULT_COLUMN_WIDTHS);
+  const columnWidthsRef = useRef(columnWidths);
+  columnWidthsRef.current = columnWidths;
+
+  const handleResizeStart = useCallback((e: React.MouseEvent, colKey: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startWidth = columnWidthsRef.current[colKey] || 100;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const diff = moveEvent.clientX - startX;
+      const newWidth = Math.max(50, startWidth + diff);
+      setColumnWidths((prev) => ({ ...prev, [colKey]: newWidth }));
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, []);
+
+  const ResizableTitle = useCallback(({ width, columnKey, children, ...restProps }: any) => {
+    if (!width) {
+      return <th {...restProps}>{children}</th>;
+    }
+    return (
+      <th {...restProps} style={{ ...restProps.style, position: 'relative' }}>
+        {children}
+        <div
+          style={{
+            position: 'absolute',
+            right: 0,
+            top: 0,
+            bottom: 0,
+            width: 8,
+            cursor: 'col-resize',
+            zIndex: 1,
+          }}
+          onMouseDown={(e) => handleResizeStart(e, columnKey)}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div
+            style={{
+              position: 'absolute',
+              right: 3,
+              top: '30%',
+              bottom: '30%',
+              width: 2,
+              background: '#d9d9d9',
+              borderRadius: 1,
+            }}
+          />
+        </div>
+      </th>
+    );
+  }, [handleResizeStart]);
   const {
     loading,
     data,
@@ -352,159 +461,165 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
     return props;
   }, []);
 
-  // Build columns with rowSpan support
-  const columns: ColumnsType<ProcessedLogItem> = useMemo(() => [
-    {
-      title: 'Số hợp đồng',
-      dataIndex: 'contractNumber',
-      key: 'contractNumber',
-      width: 130,
-      fixed: 'left',
-      onCell: (record) => mergedCellProps(record, record.contractRowSpan),
-      render: (text: string) => text || '-',
-    },
-    {
-      title: 'Mã số mẫu',
-      dataIndex: 'sampleCode',
-      key: 'sampleCode',
-      width: 120,
-      onCell: (record) => mergedCellProps(record, record.sampleRowSpan),
-      render: (text: string) => text || '-',
-    },
-    {
-      title: 'Tên mẫu',
-      dataIndex: 'sampleName',
-      key: 'sampleName',
-      width: 150,
-      onCell: (record) => mergedCellProps(record, record.sampleRowSpan),
-      render: (text: string) => text || '-',
-    },
-    {
-      title: 'Lượng mẫu gửi',
-      dataIndex: 'sampleQuantity',
-      key: 'sampleQuantity',
-      width: 100,
-      onCell: (record) => mergedCellProps(record, record.sampleRowSpan),
-      render: (text: string) => text || '-',
-    },
-    {
-      title: 'Tình trạng mẫu',
-      dataIndex: 'sampleStatusText',
-      key: 'sampleStatusText',
-      width: 120,
-      onCell: (record) => mergedCellProps(record, record.sampleRowSpan),
-      render: (text: string) => text || '-',
-    },
-    {
-      title: 'Ngày chuyển',
-      dataIndex: 'transferDate',
-      key: 'transferDate',
-      width: 100,
-      onCell: (record) => mergedCellProps(record, record.transferDateRowSpan),
-      render: (date: string) => formatDate(date),
-    },
-    {
-      title: 'Ngày YC xong',
-      dataIndex: 'requestCompletionDate',
-      key: 'requestCompletionDate',
-      width: 100,
-      onCell: (record) => mergedCellProps(record, record.requestCompletionDateRowSpan),
-      render: (date: string) => formatDate(date),
-    },
-    {
-      title: 'Thời gian TN',
-      dataIndex: 'testDate',
-      key: 'testDate',
-      width: 100,
-      onCell: (record) => mergedCellProps(record, record.testDateRowSpan),
-      render: (date: string) => formatDate(date),
-    },
-    {
-      title: 'Tên chỉ tiêu',
-      dataIndex: 'indicatorName',
-      key: 'indicatorName',
-      width: 180,
-      render: (text: string, record) => (
-        record.indicatorFormattedName ? (
-          <span dangerouslySetInnerHTML={{ __html: record.indicatorFormattedName }} />
-        ) : (text || '-')
-      ),
-    },
-    {
-      title: 'Phương pháp',
-      dataIndex: 'methodName',
-      key: 'methodName',
-      width: 150,
-      render: (text: string, record) => (
-        record.methodFormattedName ? (
-          <span dangerouslySetInnerHTML={{ __html: record.methodFormattedName }} />
-        ) : (text || '-')
-      ),
-    },
-    {
-      title: 'ĐVT',
-      dataIndex: 'unit',
-      key: 'unit',
-      width: 80,
-      render: (text: string) =>
-        text ? <span dangerouslySetInnerHTML={{ __html: text }} /> : '-',
-    },
-    {
-      title: 'Kết quả',
-      dataIndex: 'result',
-      key: 'result',
-      width: 100,
-      render: (text: string) => <strong>{text || '-'}</strong>,
-    },
-    {
-      title: 'QL kỹ thuật',
-      dataIndex: 'technicalManagerName',
-      key: 'technicalManagerName',
-      width: 130,
-      onCell: (record) => mergedCellProps(record, record.technicalManagerRowSpan),
-      render: (text: string) => text || '-',
-    },
-    {
-      title: 'Kỹ thuật viên',
-      dataIndex: 'technicianName',
-      key: 'technicianName',
-      width: 130,
-      onCell: (record) => mergedCellProps(record, record.technicianRowSpan),
-      render: (text: string) => text || '-',
-    },
-    {
-      title: 'Ngày nhập',
-      dataIndex: 'entryDate',
-      key: 'entryDate',
-      width: 100,
-      onCell: (record) => mergedCellProps(record, record.entryDateRowSpan),
-      render: (date: string) => formatDate(date),
-    },
-    {
-      title: 'Ngày QL duyệt',
-      dataIndex: 'qlktApprovalDate',
-      key: 'qlktApprovalDate',
-      width: 100,
-      onCell: (record) => mergedCellProps(record, record.qlktApprovalDateRowSpan),
-      render: (date: string) => formatDate(date),
-    },
-    {
-      title: 'Tình trạng',
-      dataIndex: 'qlktDisplayStatus',
-      key: 'qlktDisplayStatus',
-      width: 150,
-      fixed: 'right',
-      render: (status: QLKTDisplayStatus | null | undefined) => {
-        const effectiveStatus = status ?? QLKTDisplayStatus.ToDo;
-        return (
-          <Tag color={QLKTDisplayStatusColors[effectiveStatus] || 'default'}>
-            {QLKTDisplayStatusLabels[effectiveStatus]}
-          </Tag>
-        );
-      },
-    },
-  ], [mergedCellProps]);
+  // Build columns with rowSpan support + dynamic widths from resize
+  const columns: ColumnsType<ProcessedLogItem> = useMemo(() => {
+    const withResize = (key: string, col: any) => ({
+      ...col,
+      width: columnWidths[key] || col.width,
+      onHeaderCell: () => ({ width: columnWidths[key] || col.width, columnKey: key }),
+    });
 
+    return [
+      withResize('contractNumber', {
+        title: 'Số hợp đồng',
+        dataIndex: 'contractNumber',
+        key: 'contractNumber',
+        fixed: 'left',
+        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.contractRowSpan),
+        render: (text: string) => text || '-',
+      }),
+      withResize('sampleCode', {
+        title: 'Mã số mẫu',
+        dataIndex: 'sampleCode',
+        key: 'sampleCode',
+        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.sampleRowSpan),
+        render: (text: string) => text || '-',
+      }),
+      withResize('sampleName', {
+        title: 'Tên mẫu',
+        dataIndex: 'sampleName',
+        key: 'sampleName',
+        ellipsis: true,
+        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.sampleRowSpan),
+        render: (text: string) => text || '-',
+      }),
+      withResize('sampleQuantity', {
+        title: 'Lượng mẫu gửi',
+        dataIndex: 'sampleQuantity',
+        key: 'sampleQuantity',
+        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.sampleRowSpan),
+        render: (text: string) => text || '-',
+      }),
+      withResize('sampleStatusText', {
+        title: 'Tình trạng mẫu',
+        dataIndex: 'sampleStatusText',
+        key: 'sampleStatusText',
+        ellipsis: true,
+        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.sampleRowSpan),
+        render: (text: string) => text || '-',
+      }),
+      withResize('transferDate', {
+        title: 'Ngày chuyển',
+        dataIndex: 'transferDate',
+        key: 'transferDate',
+        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.transferDateRowSpan),
+        render: (date: string) => formatDate(date),
+      }),
+      withResize('requestCompletionDate', {
+        title: 'Ngày YC xong',
+        dataIndex: 'requestCompletionDate',
+        key: 'requestCompletionDate',
+        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.requestCompletionDateRowSpan),
+        render: (date: string) => formatDate(date),
+      }),
+      withResize('testDate', {
+        title: 'Thời gian TN',
+        dataIndex: 'testDate',
+        key: 'testDate',
+        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.testDateRowSpan),
+        render: (date: string) => formatDate(date),
+      }),
+      withResize('indicatorName', {
+        title: 'Tên chỉ tiêu',
+        dataIndex: 'indicatorName',
+        key: 'indicatorName',
+        render: (text: string, record: ProcessedLogItem) => (
+          <span
+            style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}
+            dangerouslySetInnerHTML={{ __html: record.indicatorFormattedName || text || '-' }}
+          />
+        ),
+      }),
+      withResize('methodName', {
+        title: 'Phương pháp',
+        dataIndex: 'methodName',
+        key: 'methodName',
+        render: (text: string, record: ProcessedLogItem) => (
+          <span
+            style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}
+            dangerouslySetInnerHTML={{ __html: record.methodFormattedName || text || '-' }}
+          />
+        ),
+      }),
+      withResize('unit', {
+        title: 'ĐVT',
+        dataIndex: 'unit',
+        key: 'unit',
+        render: (text: string) =>
+          text ? <span dangerouslySetInnerHTML={{ __html: text }} /> : '-',
+      }),
+      withResize('result', {
+        title: 'Kết quả',
+        dataIndex: 'result',
+        key: 'result',
+        render: (text: string) => <strong>{text || '-'}</strong>,
+      }),
+      withResize('technicalManagerName', {
+        title: 'QL kỹ thuật',
+        dataIndex: 'technicalManagerName',
+        key: 'technicalManagerName',
+        ellipsis: true,
+        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.technicalManagerRowSpan),
+        render: (text: string) => text || '-',
+      }),
+      withResize('technicianName', {
+        title: 'Kỹ thuật viên',
+        dataIndex: 'technicianName',
+        key: 'technicianName',
+        ellipsis: true,
+        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.technicianRowSpan),
+        render: (text: string) => text || '-',
+      }),
+      withResize('entryDate', {
+        title: 'Ngày nhập',
+        dataIndex: 'entryDate',
+        key: 'entryDate',
+        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.entryDateRowSpan),
+        render: (date: string) => formatDate(date),
+      }),
+      withResize('qlktApprovalDate', {
+        title: 'Ngày QL duyệt',
+        dataIndex: 'qlktApprovalDate',
+        key: 'qlktApprovalDate',
+        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.qlktApprovalDateRowSpan),
+        render: (date: string) => formatDate(date),
+      }),
+      withResize('qlktDisplayStatus', {
+        title: 'Tình trạng',
+        dataIndex: 'qlktDisplayStatus',
+        key: 'qlktDisplayStatus',
+        fixed: 'right',
+        render: (status: QLKTDisplayStatus | null | undefined) => {
+          const effectiveStatus = status ?? QLKTDisplayStatus.ToDo;
+          return (
+            <Tag color={QLKTDisplayStatusColors[effectiveStatus] || 'default'}>
+              {QLKTDisplayStatusLabels[effectiveStatus]}
+            </Tag>
+          );
+        },
+      }),
+    ];
+  }, [mergedCellProps, columnWidths]);
+
+  const filteredColumns = useMemo(
+    () => columns.filter((col) => visibleColumns.includes(col.key as string)),
+    [columns, visibleColumns]
+  );
+
+  const scrollX = useMemo(
+    () => filteredColumns.reduce((sum, col) => sum + ((col.width as number) || 150), 0),
+    [filteredColumns]
+  );
 
   const getRowClass = useCallback((record: ProcessedLogItem) => {
     return getRowColorClass(record) || 'row-green';
@@ -604,15 +719,16 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
       {/* Table - pagination disabled because we do server-side contract pagination */}
       <div ref={tableContainerRef}>
         <Table<ProcessedLogItem>
-          columns={columns}
+          columns={filteredColumns}
           dataSource={processedData}
           loading={loading}
           rowKey="_rowKey"
           rowClassName={getRowClass}
           onRow={handleRowProps}
+          components={{ header: { cell: ResizableTitle } }}
           pagination={false}
           sticky={{ offsetHeader: headerHeight }}
-          scroll={{ x: 2200 }}
+          scroll={{ x: scrollX }}
           size="small"
           bordered
         />

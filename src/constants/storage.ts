@@ -10,6 +10,7 @@ export const STORAGE_KEYS = {
   QUALITY_MANAGER_REMINDER_LAST_SHOWN: "qualityManagerReminderLastShownTime",
   // Offline authentication keys
   OFFLINE_AUTH_CREDENTIALS: "offline_auth_credentials", // Cached credentials for offline login
+  TESTING_SAL_VISIBLE_COLUMNS: "testing_sal_visible_columns",
 } as const;
 
 export type StorageKeyType = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];

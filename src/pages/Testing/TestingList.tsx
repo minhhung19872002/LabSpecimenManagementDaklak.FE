@@ -24,8 +24,10 @@ import { QLKTDisplayStatus } from "../../types/laboratoryTask";
 import { SampleAssignmentLogStatisticsDto } from "../../types/qualityManagement";
 import { testingService } from "../../services/testingService";
 import { useTestingList } from "./hooks";
-import LabSampleAssignmentLogTab from "./components/LabSampleAssignmentLogTab";
+import LabSampleAssignmentLogTab, { COLUMN_OPTIONS, ALL_COLUMN_KEYS } from "./components/LabSampleAssignmentLogTab";
 import ResponsiveSelect from "../../components/common/ResponsiveSelect";
+import { ColumnVisibilitySelector } from "../../components/common";
+import { STORAGE_KEYS } from "../../constants/storage";
 import { useHeaderHeight } from "../../hooks";
 import "../../styles/ListCard.css";
 import "../Dashboard/Dashboard.css";
@@ -75,6 +77,20 @@ const TestingList: React.FC = () => {
 
   // Determine if showing testing content or sample assignment log
   const isShowingSampleAssignmentLog = currentTab === "sample-assignment-log";
+
+  // Column visibility state for SAL tab (lifted here so gear button lives in Card header)
+  const [salVisibleColumns, setSalVisibleColumns] = useState<string[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.TESTING_SAL_VISIBLE_COLUMNS);
+    if (saved) {
+      try { return JSON.parse(saved); } catch { /* ignore */ }
+    }
+    return ALL_COLUMN_KEYS;
+  });
+
+  const handleSalVisibleColumnsChange = useCallback((keys: string[]) => {
+    setSalVisibleColumns(keys);
+    localStorage.setItem(STORAGE_KEYS.TESTING_SAL_VISIBLE_COLUMNS, JSON.stringify(keys));
+  }, []);
 
   // Sample assignment log stats & filter
   const [salStats, setSalStats] = useState<SampleAssignmentLogStatisticsDto>({
@@ -286,7 +302,13 @@ const TestingList: React.FC = () => {
           </Space>
         }
         extra={
-          !isShowingSampleAssignmentLog && (
+          isShowingSampleAssignmentLog ? (
+            <ColumnVisibilitySelector
+              options={COLUMN_OPTIONS}
+              visibleKeys={salVisibleColumns}
+              onChange={handleSalVisibleColumnsChange}
+            />
+          ) : (
             <Button icon={<ReloadOutlined />} onClick={handleRefresh} />
           )
         }
@@ -316,6 +338,7 @@ const TestingList: React.FC = () => {
         {isShowingSampleAssignmentLog ? (
           <LabSampleAssignmentLogTab
             displayStatusFilter={salDisplayStatusFilter}
+            visibleColumns={salVisibleColumns}
           />
         ) : (
           <>
