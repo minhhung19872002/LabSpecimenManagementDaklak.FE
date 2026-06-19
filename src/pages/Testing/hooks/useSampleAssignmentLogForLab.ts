@@ -87,6 +87,7 @@ interface UseSampleAssignmentLogForLabResult {
   handleTableChange: (pagination: { current?: number; pageSize?: number }) => void;
   handleRowDoubleClick: (record: SampleAssignmentLogDto) => void;
   handleReload: () => void;
+  reloadDistinctResults: () => void;
 }
 
 /**
@@ -357,6 +358,7 @@ export const useSampleAssignmentLogForLab = (
     handleTableChange,
     handleRowDoubleClick,
     handleReload,
+    reloadDistinctResults: loadDistinctResults,
   };
 };
 

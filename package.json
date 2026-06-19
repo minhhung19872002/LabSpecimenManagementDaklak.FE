@@ -15,6 +15,7 @@
     "@hookform/resolvers": "^5.2.2",
     "@iconify/react": "^6.0.2",
     "@microsoft/signalr": "^10.0.0",
+    "@tanstack/react-virtual": "^3.14.3",
     "@tiptap/extension-placeholder": "^3.15.3",
     "@tiptap/extension-subscript": "^3.15.3",
     "@tiptap/extension-superscript": "^3.15.3",
