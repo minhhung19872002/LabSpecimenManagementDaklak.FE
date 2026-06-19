@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
-  Card, Button, Space, Row, Col, Table, Tag, Spin, Divider, Modal, message,
+  Card, Button, Space, Row, Col, Table, Tag, Spin, Divider, message,
 } from "antd";
 import { ArrowLeftOutlined, EditOutlined } from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
@@ -27,7 +27,7 @@ import {
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
 import { getApiErrorMessage } from "../../utils/errorHandler";
-import { PaymentModal } from "./components";
+import { PaymentModal, WarehouseImportModal } from "./components";
 import { PaymentFormData } from "./schemas";
 import "../../styles/ListCard.css";
 import "./GoodsReceiptDetail.css";
@@ -48,9 +48,10 @@ const GoodsReceiptDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [receipt, setReceipt] = useState<GoodsReceiptDto | null>(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [warehouseImportModalOpen, setWarehouseImportModalOpen] = useState(false);
+  const [printBarcodeModalOpen, setPrintBarcodeModalOpen] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [approving, setApproving] = useState(false);
-  const [importing, setImporting] = useState(false);
 
   const canEdit = authService.hasPermission(PERMISSIONS.GoodsReceipts.Edit);
   const canApprove = authService.hasPermission(PERMISSIONS.GoodsReceipts.Approve);
@@ -85,20 +86,6 @@ const GoodsReceiptDetail: React.FC = () => {
       message.error(getApiErrorMessage(error, "Không thể duyệt đơn."));
     } finally {
       setApproving(false);
-    }
-  };
-
-  const handleImportToWarehouse = async () => {
-    if (!id) return;
-    setImporting(true);
-    try {
-      await goodsReceiptService.importToWarehouse(id);
-      message.success("Đã nhập kho thành công");
-      await loadData();
-    } catch (error: any) {
-      message.error(getApiErrorMessage(error, "Không thể nhập kho."));
-    } finally {
-      setImporting(false);
     }
   };
 
@@ -402,19 +389,14 @@ const GoodsReceiptDetail: React.FC = () => {
       {canImport && isApproved && !isImported && (
         <Button
           type="primary"
-          loading={importing}
-          onClick={() => {
-            Modal.confirm({
-              title: "Xác nhận nhập kho",
-              content: "Bạn có chắc chắn muốn nhập kho phiếu này? Sau khi nhập kho sẽ không thể chỉnh sửa.",
-              okText: "Nhập kho",
-              cancelText: "Hủy",
-              centered: true,
-              onOk: handleImportToWarehouse,
-            });
-          }}
+          onClick={() => setWarehouseImportModalOpen(true)}
         >
           Nhập kho
+        </Button>
+      )}
+      {isImported && (
+        <Button onClick={() => setPrintBarcodeModalOpen(true)}>
+          In mã vật tư
         </Button>
       )}
       {canEdit && receipt.orderStatus === GoodsReceiptOrderStatus.Draft && (
@@ -616,6 +598,22 @@ const GoodsReceiptDetail: React.FC = () => {
         totalPaid={receipt.totalPaid}
         onOk={handlePaymentOk}
         onCancel={() => setPaymentModalOpen(false)}
+      />
+      <WarehouseImportModal
+        open={warehouseImportModalOpen}
+        onClose={() => setWarehouseImportModalOpen(false)}
+        receipt={receipt}
+        onImportSuccess={() => {
+          setWarehouseImportModalOpen(false);
+          loadData();
+        }}
+      />
+      <WarehouseImportModal
+        open={printBarcodeModalOpen}
+        onClose={() => setPrintBarcodeModalOpen(false)}
+        receipt={receipt}
+        onImportSuccess={() => setPrintBarcodeModalOpen(false)}
+        printOnly
       />
     </div>
   );
