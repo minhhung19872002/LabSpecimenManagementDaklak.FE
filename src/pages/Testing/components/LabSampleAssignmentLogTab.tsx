@@ -357,6 +357,9 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
     technicianFilter,
     technicians,
     loadingTechnicians,
+    resultFilter,
+    distinctResults,
+    loadingResults,
     pagination,
     handleSearch,
     handleSearchInputChange,
@@ -364,6 +367,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
     handleDateRangeChange,
     handleIndicatorChange,
     handleTechnicianFilterChange,
+    handleResultFilterChange,
     handleTableChange,
     handleRowDoubleClick,
   } = useSampleAssignmentLogForLab({ displayStatusFilter });
@@ -688,7 +692,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
             enterButton
           />
         </Col>
-        <Col xs={24} sm={12} lg={4}>
+        <Col xs={24} sm={12} lg={3}>
           <RangePicker
             value={dateRange}
             onChange={handleDateRangeChange}
@@ -697,7 +701,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
             allowClear
           />
         </Col>
-        <Col xs={24} sm={12} lg={5}>
+        <Col xs={24} sm={12} lg={4}>
           <ResponsiveSelect
             mode="multiple"
             style={{ width: '100%' }}
@@ -737,6 +741,28 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
               </Select.Option>
             ))}
           </ResponsiveSelect>
+        </Col>
+        <Col xs={24} sm={12} lg={4}>
+          <ResponsiveSelect
+            mode="multiple"
+            style={{ width: '100%' }}
+            placeholder="Chọn kết quả"
+            value={resultFilter}
+            onChange={handleResultFilterChange}
+            showSearch
+            filterOption={(input, option) =>
+              ((option?.label as string) ?? '')
+                .toLowerCase()
+                .includes(input.toLowerCase())
+            }
+            options={distinctResults.map((r) => ({
+              value: r,
+              label: r,
+            }))}
+            maxTagCount="responsive"
+            allowClear
+            loading={loadingResults}
+          />
         </Col>
         <Col flex="auto" style={{ display: "flex", justifyContent: "flex-end" }}>
           <Select
