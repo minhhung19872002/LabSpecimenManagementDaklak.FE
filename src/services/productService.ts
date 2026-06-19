@@ -44,6 +44,7 @@ export interface ProductDto {
   minStockLevel?: number;
   maxStockLevel?: number;
   availableQuantity: number;
+  storageAvailableQuantity: number;
   isActive: boolean;
   isDraft: boolean;
   creationTime: string;
