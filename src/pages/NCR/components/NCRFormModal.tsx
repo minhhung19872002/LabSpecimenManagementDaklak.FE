@@ -6,6 +6,7 @@ import { NCRSeverity, NCRStatus } from "../../../services/ncrService";
 import { DepartmentDto } from "../../../services/masterDataService";
 import { NCRFormData } from "../schemas";
 import { NCR_TYPES } from "../hooks";
+import { clearableSelectProps } from "../../../utils/formHelpers";
 
 const { TextArea } = Input;
 
@@ -112,7 +113,7 @@ const NCRFormModal: React.FC<NCRFormModalProps> = ({
                 name="department"
                 control={control}
                 render={({ field }) => (
-                  <Select {...field} placeholder="Chọn phòng ban" allowClear>
+                  <Select {...clearableSelectProps(field)} placeholder="Chọn phòng ban" allowClear>
                     {departments.map((d) => (
                       <Select.Option key={d.id} value={d.name}>
                         {d.name}

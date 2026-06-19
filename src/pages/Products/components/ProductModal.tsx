@@ -31,6 +31,7 @@ import { UnitDto, UnitCategory, unitService } from "../../../services/masterData
 import { PRODUCT_TYPE_OPTIONS } from "../constants";
 import { RichTextEditor } from "../../../components/common";
 import AttachmentSection from "./AttachmentSection";
+import { clearableSelectProps } from "../../../utils/formHelpers";
 import "../Products.css";
 
 const { Text, Title } = Typography;
@@ -469,7 +470,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
                     control={control}
                     render={({ field }) => (
                       <Select
-                        {...field}
+                        {...clearableSelectProps(field)}
                         placeholder="Chọn đơn vị"
                         allowClear
                         showSearch
@@ -510,7 +511,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
                           {...field}
                           style={{ flex: 1, minWidth: 0 }}
                           placeholder="Đơn vị"
-                          allowClear
                           showSearch
                           optionFilterProp="title"
                           options={storageUnitOptions}
@@ -550,7 +550,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
                           {...field}
                           style={{ flex: 1, minWidth: 0 }}
                           placeholder="Đơn vị"
-                          allowClear
                           showSearch
                           optionFilterProp="title"
                           options={consumableUnitOptions}

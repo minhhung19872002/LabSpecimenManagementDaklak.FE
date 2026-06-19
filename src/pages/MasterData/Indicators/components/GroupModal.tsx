@@ -2,6 +2,7 @@ import { Modal, Form, Input, Select } from "antd";
 import { Controller, UseFormReturn } from "react-hook-form";
 import { IndicatorGroupDto } from "../types";
 import { IndicatorGroupFormData } from "../schemas/indicatorSchema";
+import { clearableSelectProps } from "../../../../utils/formHelpers";
 
 interface LaboratoryOption {
   value: string;
@@ -67,7 +68,7 @@ const GroupModal: React.FC<GroupModalProps> = ({
             control={control}
             render={({ field }) => (
               <Select
-                {...field}
+                {...clearableSelectProps(field)}
                 allowClear
                 showSearch
                 placeholder="Chọn khoa phòng (không bắt buộc)"

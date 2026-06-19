@@ -5,6 +5,7 @@ import { ResultApprovalStatus } from "../../../types/testResult";
 import { TestDto } from "../../../types/test";
 import { TestResultFormData } from "../schemas";
 import { UNIT_OPTIONS } from "../hooks";
+import { clearableSelectProps } from "../../../utils/formHelpers";
 
 interface TestResultFormModalProps {
   open: boolean;
@@ -114,7 +115,7 @@ const TestResultFormModal: React.FC<TestResultFormModalProps> = ({
                 name="unit"
                 control={control}
                 render={({ field }) => (
-                  <Select {...field} allowClear>
+                  <Select {...clearableSelectProps(field)} allowClear>
                     {UNIT_OPTIONS.map((opt) => (
                       <Select.Option key={opt.value} value={opt.value}>
                         {opt.label}
