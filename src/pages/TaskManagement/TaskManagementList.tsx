@@ -26,7 +26,7 @@ import { TestRequestStatus } from "../../types/testRequest";
 import { SampleAssignmentLogStatisticsDto } from "../../types/qualityManagement";
 import { laboratoryTaskService } from "../../services/laboratoryTaskService";
 import { useTaskManagementList } from "./hooks";
-import { useActionPermission } from "../../hooks/useActionPermission";
+import { useActionPermission, useHeaderHeight } from "../../hooks";
 import LabSampleAssignmentLogTab from "./components/LabSampleAssignmentLogTab";
 import DepartmentSupporterModal from "./components/DepartmentSupporterModal";
 import "../../styles/ListCard.css";
@@ -39,6 +39,7 @@ const { Text } = Typography;
 type TaskManagementTabType = "tasks" | "sample-assignment-log";
 
 const TaskManagementList: React.FC = () => {
+  const headerHeight = useHeaderHeight();
   // Tab state
   const [currentTab, setCurrentTab] = useState<TaskManagementTabType>("tasks");
   const [deptSupporterModalOpen, setDeptSupporterModalOpen] = useState(false);
@@ -438,7 +439,7 @@ const TaskManagementList: React.FC = () => {
                 ),
               }}
               onChange={handleTableChange}
-              sticky={{ offsetHeader: 80 }}
+              sticky={{ offsetHeader: headerHeight }}
               scroll={{ x: 1100 }}
               onRow={(record) => ({
                 onDoubleClick: () => handleRowDoubleClick(record),

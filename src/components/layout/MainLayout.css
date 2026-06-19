@@ -436,7 +436,7 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 88px; /* Header top (24px) + header height (~64px) */
+  /* height set dynamically via inline style in MainLayout.tsx */
   background: rgba(255, 255, 255, 0.95);
   z-index: 99; /* Below header (100) */
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
@@ -847,10 +847,7 @@
     gap: 4px;
   }
 
-  /* Adjust header background strip on mobile */
-  .header-scroll-bg {
-    height: 60px; /* Mobile: header top (12px) + header height (~48px) */
-  }
+  /* header-scroll-bg height set dynamically via inline style */
 }
 
 /* Tablet adjustments - header 2 rows when narrow */
@@ -922,10 +919,7 @@
     background: rgba(255, 255, 255, 0.35);
   }
 
-  /* Adjust header background strip on tablet */
-  .header-scroll-bg {
-    height: 133px; /* Tablet: header top (20px) + header height (~113px with 2 rows) */
-  }
+  /* header-scroll-bg height set dynamically via inline style */
 
   /* Adjust dropdown width on tablet */
   .header-menu-dropdown {

@@ -29,6 +29,7 @@ import SampleAssignmentLogTab, {
   AssignmentLogControls,
 } from "./components/SampleAssignmentLogTab";
 import { useQualityManagementList } from "./hooks";
+import { useHeaderHeight } from "../../hooks";
 import ResponsiveSelect from "../../components/common/ResponsiveSelect";
 
 import "./components/ReportManagementTab.css";
@@ -40,6 +41,7 @@ const { Text } = Typography;
 const { RangePicker } = DatePicker;
 
 const QualityManagementList: React.FC = () => {
+  const headerHeight = useHeaderHeight();
   const [activeTab, setActiveTab] = useState<string>("reports");
   const assignmentLogControlsRef = useRef<AssignmentLogControls | null>(null);
   const [assignmentLogStats, setAssignmentLogStats] =
@@ -398,6 +400,7 @@ const QualityManagementList: React.FC = () => {
                 pageSizeOptions: [50, 100, 150],
               }}
               onChange={handleTableChange}
+              sticky={{ offsetHeader: headerHeight }}
               scroll={{ x: 1200 }}
               onRow={(record) => ({
                 onDoubleClick: () => handleRowDoubleClick(record),

@@ -24,9 +24,12 @@ import { QLKTDisplayStatus } from "../../types/laboratoryTask";
 import { SampleAssignmentLogStatisticsDto } from "../../types/qualityManagement";
 import { testingService } from "../../services/testingService";
 import { useTestingList } from "./hooks";
-import LabSampleAssignmentLogTab from "./components/LabSampleAssignmentLogTab";
+import LabSampleAssignmentLogTab, { COLUMN_OPTIONS, ALL_COLUMN_KEYS } from "./components/LabSampleAssignmentLogTab";
 import ResponsiveSelect from "../../components/common/ResponsiveSelect";
 import TestBatchTab from "./components/TestBatchTab";
+import { ColumnVisibilitySelector } from "../../components/common";
+import { STORAGE_KEYS } from "../../constants/storage";
+import { useHeaderHeight } from "../../hooks";
 import "../../styles/ListCard.css";
 import "../Dashboard/Dashboard.css";
 import "./Testing.css";
@@ -37,6 +40,7 @@ const { Text } = Typography;
 type ExtendedTabType = TestingTabType | "sample-assignment-log" | "test-batches";
 
 const TestingList: React.FC = () => {
+  const headerHeight = useHeaderHeight();
   // Tab state - now includes sample-assignment-log
   const [currentTab, setCurrentTab] = useState<ExtendedTabType>(
     "sample-assignment-log",
@@ -75,6 +79,20 @@ const TestingList: React.FC = () => {
   // Determine if showing testing content or sample assignment log
   const isShowingSampleAssignmentLog = currentTab === "sample-assignment-log";
   const isShowingTestBatches = currentTab === "test-batches";
+
+  // Column visibility state for SAL tab (lifted here so gear button lives in Card header)
+  const [salVisibleColumns, setSalVisibleColumns] = useState<string[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.TESTING_SAL_VISIBLE_COLUMNS);
+    if (saved) {
+      try { return JSON.parse(saved); } catch { /* ignore */ }
+    }
+    return ALL_COLUMN_KEYS;
+  });
+
+  const handleSalVisibleColumnsChange = useCallback((keys: string[]) => {
+    setSalVisibleColumns(keys);
+    localStorage.setItem(STORAGE_KEYS.TESTING_SAL_VISIBLE_COLUMNS, JSON.stringify(keys));
+  }, []);
 
   // Sample assignment log stats & filter
   const [salStats, setSalStats] = useState<SampleAssignmentLogStatisticsDto>({
@@ -288,9 +306,15 @@ const TestingList: React.FC = () => {
           </Space>
         }
         extra={
-          !isShowingSampleAssignmentLog && !isShowingTestBatches && (
+          isShowingSampleAssignmentLog ? (
+            <ColumnVisibilitySelector
+              options={COLUMN_OPTIONS}
+              visibleKeys={salVisibleColumns}
+              onChange={handleSalVisibleColumnsChange}
+            />
+          ) : !isShowingTestBatches ? (
             <Button icon={<ReloadOutlined />} onClick={handleRefresh} />
-          )
+          ) : null
         }
       >
         {/* Tabs */}
@@ -325,6 +349,7 @@ const TestingList: React.FC = () => {
         ) : isShowingSampleAssignmentLog ? (
           <LabSampleAssignmentLogTab
             displayStatusFilter={salDisplayStatusFilter}
+            visibleColumns={salVisibleColumns}
           />
         ) : (
           <>
@@ -429,7 +454,7 @@ const TestingList: React.FC = () => {
                 ),
               }}
               onChange={handleTableChange}
-              sticky={{ offsetHeader: 80 }}
+              sticky={{ offsetHeader: headerHeight }}
               scroll={{ x: 1000 }}
               onRow={(record) => ({
                 onDoubleClick: () => handleRowDoubleClick(record),

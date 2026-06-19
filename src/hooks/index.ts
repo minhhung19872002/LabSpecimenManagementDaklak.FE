@@ -6,3 +6,4 @@ export * from './useLabTechnicianReminderPopup';
 export * from './useLabTechManagerReminderPopup';
 export * from './useQualityManagerReminderPopup';
 export * from './useNetworkStatus';
+export * from './useHeaderHeight';

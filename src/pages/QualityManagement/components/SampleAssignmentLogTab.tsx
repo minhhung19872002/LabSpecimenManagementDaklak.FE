@@ -2,6 +2,7 @@ import React, { useMemo, useCallback, useState, useEffect } from "react";
 import { Table, Input, Select, Tag, Row, Col, Pagination, DatePicker } from "antd";
 import { SearchOutlined, SortAscendingOutlined } from "@ant-design/icons";
 import ResponsiveSelect from "../../../components/common/ResponsiveSelect";
+import { EllipsisTooltip } from "../../../components/common";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 
@@ -15,6 +16,7 @@ import {
 } from "../../../types/qualityManagement";
 
 import { IndicatorApprovalStatus } from "../../../types/laboratoryTask";
+import { useHeaderHeight } from "../../../hooks";
 
 import "../../../styles/ListCard.css";
 import "./SampleAssignmentLogTab.css";
@@ -250,6 +252,7 @@ interface SampleAssignmentLogTabProps {
 }
 
 const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegisterControls }) => {
+  const headerHeight = useHeaderHeight();
   const {
     loading,
     data,
@@ -336,7 +339,9 @@ const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegis
             ? "cell-hover"
             : undefined,
         }),
-        render: (text: string) => text || "-",
+        render: (text: string) => (
+          <EllipsisTooltip title={text || "-"}>{text || "-"}</EllipsisTooltip>
+        ),
       },
       {
         title: "Mã số mẫu",
@@ -349,7 +354,9 @@ const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegis
             ? "cell-hover"
             : undefined,
         }),
-        render: (text: string) => text || "-",
+        render: (text: string) => (
+          <EllipsisTooltip title={text || "-"}>{text || "-"}</EllipsisTooltip>
+        ),
       },
       {
         title: "Tên mẫu",
@@ -362,7 +369,9 @@ const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegis
             ? "cell-hover"
             : undefined,
         }),
-        render: (text: string) => text || "-",
+        render: (text: string) => (
+          <EllipsisTooltip title={text || "-"}>{text || "-"}</EllipsisTooltip>
+        ),
       },
       {
         title: "Lượng mẫu gửi",
@@ -375,7 +384,9 @@ const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegis
             ? "cell-hover"
             : undefined,
         }),
-        render: (text: string) => text || "-",
+        render: (text: string) => (
+          <EllipsisTooltip title={text || "-"}>{text || "-"}</EllipsisTooltip>
+        ),
       },
       {
         title: "Tình trạng mẫu",
@@ -388,7 +399,9 @@ const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegis
             ? "cell-hover"
             : undefined,
         }),
-        render: (text: string) => text || "-",
+        render: (text: string) => (
+          <EllipsisTooltip title={text || "-"}>{text || "-"}</EllipsisTooltip>
+        ),
       },
       {
         title: "Ngày chuyển",
@@ -401,7 +414,10 @@ const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegis
             ? "cell-hover"
             : undefined,
         }),
-        render: (date: string) => formatDate(date),
+        render: (date: string) => {
+          const formatted = formatDate(date);
+          return <EllipsisTooltip title={formatted}>{formatted}</EllipsisTooltip>;
+        },
       },
       {
         title: "Ngày YC xong",
@@ -417,7 +433,10 @@ const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegis
             ? "cell-hover"
             : undefined,
         }),
-        render: (date: string) => formatDate(date),
+        render: (date: string) => {
+          const formatted = formatDate(date);
+          return <EllipsisTooltip title={formatted}>{formatted}</EllipsisTooltip>;
+        },
       },
       {
         title: "Thời gian TN",
@@ -430,7 +449,10 @@ const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegis
             ? "cell-hover"
             : undefined,
         }),
-        render: (date: string) => formatDate(date),
+        render: (date: string) => {
+          const formatted = formatDate(date);
+          return <EllipsisTooltip title={formatted}>{formatted}</EllipsisTooltip>;
+        },
       },
       {
         title: "Tên chỉ tiêu",
@@ -439,11 +461,7 @@ const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegis
         width: 180,
         render: (text: string, record) =>
           record.indicatorFormattedName ? (
-            <span
-              dangerouslySetInnerHTML={{
-                __html: record.indicatorFormattedName,
-              }}
-            />
+            <EllipsisTooltip title={text || "-"} html={record.indicatorFormattedName} />
           ) : (
             text || "-"
           ),
@@ -455,9 +473,7 @@ const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegis
         width: 150,
         render: (text: string, record) =>
           record.methodFormattedName ? (
-            <span
-              dangerouslySetInnerHTML={{ __html: record.methodFormattedName }}
-            />
+            <EllipsisTooltip title={text || "-"} html={record.methodFormattedName} />
           ) : (
             text || "-"
           ),
@@ -468,14 +484,18 @@ const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegis
         key: "unit",
         width: 80,
         render: (text: string) =>
-          text ? <span dangerouslySetInnerHTML={{ __html: text }} /> : "-",
+          text ? (
+            <EllipsisTooltip title={text} html={text} />
+          ) : "-",
       },
       {
         title: "Kết quả",
         dataIndex: "result",
         key: "result",
-        width: 100,
-        render: (text: string) => <strong>{text || "-"}</strong>,
+        width: 200,
+        render: (text: string) => (
+          <EllipsisTooltip title={text || "-"}><strong>{text || "-"}</strong></EllipsisTooltip>
+        ),
       },
       {
         title: "QL kỹ thuật",
@@ -491,7 +511,9 @@ const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegis
             ? "cell-hover"
             : undefined,
         }),
-        render: (text: string) => text || "-",
+        render: (text: string) => (
+          <EllipsisTooltip title={text || "-"}>{text || "-"}</EllipsisTooltip>
+        ),
       },
       {
         title: "Kỹ thuật viên",
@@ -504,7 +526,9 @@ const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegis
             ? "cell-hover"
             : undefined,
         }),
-        render: (text: string) => text || "-",
+        render: (text: string) => (
+          <EllipsisTooltip title={text || "-"}>{text || "-"}</EllipsisTooltip>
+        ),
       },
       {
         title: "Ngày nhập",
@@ -517,7 +541,10 @@ const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegis
             ? "cell-hover"
             : undefined,
         }),
-        render: (date: string) => formatDate(date),
+        render: (date: string) => {
+          const formatted = formatDate(date);
+          return <EllipsisTooltip title={formatted}>{formatted}</EllipsisTooltip>;
+        },
       },
       {
         title: "Ngày QL duyệt",
@@ -533,7 +560,10 @@ const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegis
             ? "cell-hover"
             : undefined,
         }),
-        render: (date: string) => formatDate(date),
+        render: (date: string) => {
+          const formatted = formatDate(date);
+          return <EllipsisTooltip title={formatted}>{formatted}</EllipsisTooltip>;
+        },
       },
       {
         title: "Tình trạng",
@@ -642,6 +672,7 @@ const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegis
           style: { cursor: "pointer" },
         })}
         pagination={false}
+        sticky={{ offsetHeader: headerHeight }}
         scroll={{ x: 2200 }}
         size="small"
         bordered

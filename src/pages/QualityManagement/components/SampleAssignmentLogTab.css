@@ -120,3 +120,60 @@
 .sample-assignment-log-tab .ant-table-bordered .ant-table-row > td:first-child {
   border-left: 1px solid #f0f0f0 !important;
 }
+
+/* ==================== Compact Row Height ==================== */
+
+/* Fix sub/sup inflating line-box height.
+   Use position:relative trick instead of vertical-align:sub/super. */
+.sample-assignment-log-tab .ant-table sub,
+.sample-assignment-log-tab .ant-table sup {
+  vertical-align: baseline;
+  position: relative;
+  font-size: 0.75em;
+}
+
+.sample-assignment-log-tab .ant-table sub {
+  top: 0.4em;
+}
+
+.sample-assignment-log-tab .ant-table sup {
+  top: -0.5em;
+}
+
+/* Reduce vertical padding for compact rows */
+.sample-assignment-log-tab .ant-table-small .ant-table-tbody > tr > td {
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+}
+
+/* Hide Ant Design internal measure row (used for sticky header column widths) */
+.sample-assignment-log-tab .ant-table-small .ant-table-tbody > tr.ant-table-measure-row > td {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* Pin line-height and prevent wrapping so all rows are equal height */
+.sample-assignment-log-tab .ant-table-tbody > tr > td {
+  line-height: 1.4 !important;
+  white-space: nowrap !important;
+  overflow: hidden;
+}
+
+/* Reset block-level elements inside cells (p tags from HTML content) */
+.sample-assignment-log-tab .ant-table-tbody > tr > td p,
+.sample-assignment-log-tab .ant-table-tbody > tr > td h1,
+.sample-assignment-log-tab .ant-table-tbody > tr > td h2,
+.sample-assignment-log-tab .ant-table-tbody > tr > td h3 {
+  margin: 0 !important;
+  padding: 0 !important;
+  display: inline;
+}
+
+/* Ellipsis container for HTML columns (indicatorName, methodName) */
+.sample-assignment-log-tab .sal-cell-ellipsis {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}

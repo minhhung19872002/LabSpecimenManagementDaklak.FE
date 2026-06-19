@@ -2,6 +2,7 @@ import React, { useMemo, useCallback, useState } from "react";
 import { Table, Input, Select, Tag, Row, Col, Pagination, DatePicker } from "antd";
 import { SearchOutlined, SortAscendingOutlined } from "@ant-design/icons";
 import ResponsiveSelect from "../../../components/common/ResponsiveSelect";
+import { EllipsisTooltip } from "../../../components/common";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { useSampleAssignmentLogForQLKT } from "../hooks/useSampleAssignmentLogForQLKT";
@@ -19,9 +20,10 @@ import {
   QLKTDisplayStatusColors,
 } from "../../../types/laboratoryTask";
 
-const { RangePicker } = DatePicker;
-
+import { useHeaderHeight } from "../../../hooks";
 import "../../QualityManagement/components/SampleAssignmentLogTab.css";
+
+const { RangePicker } = DatePicker;
 
 // Helper to format date
 const formatDate = (date?: string) => {
@@ -244,6 +246,7 @@ interface LabSampleAssignmentLogTabProps {
 }
 
 const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({ displayStatusFilter, onReloadRef }) => {
+  const headerHeight = useHeaderHeight();
   const {
     loading,
     data,
@@ -324,7 +327,9 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({ d
             ? "cell-hover"
             : undefined,
         }),
-        render: (text: string) => text || "-",
+        render: (text: string) => (
+          <EllipsisTooltip title={text || "-"}>{text || "-"}</EllipsisTooltip>
+        ),
       },
       {
         title: "Mã số mẫu",
@@ -337,7 +342,9 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({ d
             ? "cell-hover"
             : undefined,
         }),
-        render: (text: string) => text || "-",
+        render: (text: string) => (
+          <EllipsisTooltip title={text || "-"}>{text || "-"}</EllipsisTooltip>
+        ),
       },
       {
         title: "Tên mẫu",
@@ -350,7 +357,9 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({ d
             ? "cell-hover"
             : undefined,
         }),
-        render: (text: string) => text || "-",
+        render: (text: string) => (
+          <EllipsisTooltip title={text || "-"}>{text || "-"}</EllipsisTooltip>
+        ),
       },
       {
         title: "Lượng mẫu gửi",
@@ -363,7 +372,9 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({ d
             ? "cell-hover"
             : undefined,
         }),
-        render: (text: string) => text || "-",
+        render: (text: string) => (
+          <EllipsisTooltip title={text || "-"}>{text || "-"}</EllipsisTooltip>
+        ),
       },
       {
         title: "Tình trạng mẫu",
@@ -376,7 +387,9 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({ d
             ? "cell-hover"
             : undefined,
         }),
-        render: (text: string) => text || "-",
+        render: (text: string) => (
+          <EllipsisTooltip title={text || "-"}>{text || "-"}</EllipsisTooltip>
+        ),
       },
       {
         title: "Ngày chuyển",
@@ -389,7 +402,12 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({ d
             ? "cell-hover"
             : undefined,
         }),
-        render: (date: string) => formatDate(date),
+        render: (date: string) => {
+          const formatted = formatDate(date);
+          return (
+            <EllipsisTooltip title={formatted}>{formatted}</EllipsisTooltip>
+          );
+        },
       },
       {
         title: "Ngày YC xong",
@@ -405,7 +423,12 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({ d
             ? "cell-hover"
             : undefined,
         }),
-        render: (date: string) => formatDate(date),
+        render: (date: string) => {
+          const formatted = formatDate(date);
+          return (
+            <EllipsisTooltip title={formatted}>{formatted}</EllipsisTooltip>
+          );
+        },
       },
       {
         title: "Thời gian TN",
@@ -418,7 +441,12 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({ d
             ? "cell-hover"
             : undefined,
         }),
-        render: (date: string) => formatDate(date),
+        render: (date: string) => {
+          const formatted = formatDate(date);
+          return (
+            <EllipsisTooltip title={formatted}>{formatted}</EllipsisTooltip>
+          );
+        },
       },
       {
         title: "Tên chỉ tiêu",
@@ -427,11 +455,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({ d
         width: 180,
         render: (text: string, record) =>
           record.indicatorFormattedName ? (
-            <span
-              dangerouslySetInnerHTML={{
-                __html: record.indicatorFormattedName,
-              }}
-            />
+            <EllipsisTooltip title={text || '-'} html={record.indicatorFormattedName} />
           ) : (
             text || "-"
           ),
@@ -443,9 +467,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({ d
         width: 150,
         render: (text: string, record) =>
           record.methodFormattedName ? (
-            <span
-              dangerouslySetInnerHTML={{ __html: record.methodFormattedName }}
-            />
+            <EllipsisTooltip title={text || '-'} html={record.methodFormattedName} />
           ) : (
             text || "-"
           ),
@@ -456,14 +478,18 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({ d
         key: "unit",
         width: 80,
         render: (text: string) =>
-          text ? <span dangerouslySetInnerHTML={{ __html: text }} /> : "-",
+          text ? (
+            <EllipsisTooltip title={text} html={text} />
+          ) : "-",
       },
       {
         title: "Kết quả",
         dataIndex: "result",
         key: "result",
-        width: 100,
-        render: (text: string) => <strong>{text || "-"}</strong>,
+        width: 200,
+        render: (text: string) => (
+          <EllipsisTooltip title={text || "-"}><strong>{text || "-"}</strong></EllipsisTooltip>
+        ),
       },
       {
         title: "QL kỹ thuật",
@@ -479,7 +505,9 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({ d
             ? "cell-hover"
             : undefined,
         }),
-        render: (text: string) => text || "-",
+        render: (text: string) => (
+          <EllipsisTooltip title={text || "-"}>{text || "-"}</EllipsisTooltip>
+        ),
       },
       {
         title: "Kỹ thuật viên",
@@ -492,7 +520,9 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({ d
             ? "cell-hover"
             : undefined,
         }),
-        render: (text: string) => text || "-",
+        render: (text: string) => (
+          <EllipsisTooltip title={text || "-"}>{text || "-"}</EllipsisTooltip>
+        ),
       },
       {
         title: "Ngày nhập",
@@ -505,7 +535,12 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({ d
             ? "cell-hover"
             : undefined,
         }),
-        render: (date: string) => formatDate(date),
+        render: (date: string) => {
+          const formatted = formatDate(date);
+          return (
+            <EllipsisTooltip title={formatted}>{formatted}</EllipsisTooltip>
+          );
+        },
       },
       {
         title: "Ngày QL duyệt",
@@ -521,7 +556,12 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({ d
             ? "cell-hover"
             : undefined,
         }),
-        render: (date: string) => formatDate(date),
+        render: (date: string) => {
+          const formatted = formatDate(date);
+          return (
+            <EllipsisTooltip title={formatted}>{formatted}</EllipsisTooltip>
+          );
+        },
       },
       {
         title: "Tình trạng",
@@ -647,7 +687,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({ d
           style: { cursor: "pointer" },
         })}
         pagination={false}
-        sticky={{ offsetHeader: 80 }}
+        sticky={{ offsetHeader: headerHeight }}
         scroll={{ x: 2200 }}
         size="small"
         bordered

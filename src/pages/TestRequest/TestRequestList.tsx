@@ -25,10 +25,11 @@ import {
 } from "../../types/testRequest";
 import ImportExcelModal from "../../components/common/ImportExcelModal";
 import { useTestRequestList } from "./hooks";
-import { useActionPermission } from "../../hooks/useActionPermission";
+import { useActionPermission, useHeaderHeight } from "../../hooks";
 import "../../styles/ListCard.css";
 
 const TestRequestList: React.FC = () => {
+  const headerHeight = useHeaderHeight();
   const {
     loading,
     data,
@@ -239,6 +240,7 @@ const TestRequestList: React.FC = () => {
           ),
           onChange: handlePageChange,
         }}
+        sticky={{ offsetHeader: headerHeight }}
         scroll={{ x: 1600 }}
       />
 

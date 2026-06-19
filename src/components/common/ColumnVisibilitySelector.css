@@ -1,0 +1,17 @@
+.column-visibility-popover .ant-popover-inner {
+  padding: 12px;
+}
+
+.column-visibility-content {
+  min-width: 320px;
+}
+
+.column-visibility-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 16px;
+}
+
+.column-visibility-item {
+  padding: 3px 0;
+}
