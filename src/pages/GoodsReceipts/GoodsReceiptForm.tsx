@@ -18,7 +18,6 @@ import {
   GoodsReceiptOrderStatus,
   GoodsReceiptPaymentStatus,
   GoodsReceiptType,
-  RecentLotDto,
 } from "../../services/goodsReceiptService";
 import { manufacturerService, ManufacturerDto } from "../../services/manufacturerService";
 import {
@@ -89,10 +88,8 @@ const GoodsReceiptForm: React.FC = () => {
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
-  const [lotSuggestions, setLotSuggestions] = useState<Record<string, RecentLotDto[]>>({});
   const [productTypeFilter, setProductTypeFilter] = useState<string>("all");
   const [isCustomVat, setIsCustomVat] = useState(false);
-  const [newLotInput, setNewLotInput] = useState<Record<string, string>>({});
   const [manufacturers, setManufacturers] = useState<ManufacturerDto[]>([]);
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
   const [newManufacturerInput, setNewManufacturerInput] = useState("");
@@ -246,8 +243,14 @@ const GoodsReceiptForm: React.FC = () => {
     if (!product) return [];
 
     const result: { value: string; label: string }[] = [];
+
+    const packagingUnit = units.find((u) => u.id === product.packagingUnitId);
+    if (packagingUnit) {
+      result.push({ value: packagingUnit.id, label: packagingUnit.name });
+    }
+
     const baseUnit = units.find((u) => u.id === product.baseUnitId);
-    if (baseUnit) {
+    if (baseUnit && !result.find((r) => r.value === baseUnit.id)) {
       result.push({ value: baseUnit.id, label: baseUnit.name });
     }
 
@@ -278,14 +281,15 @@ const GoodsReceiptForm: React.FC = () => {
     if (!product) return;
 
     const availUnits = getUnitsForProduct(product.id);
-    const baseUnit = units.find((u) => u.id === product.baseUnitId);
+    const defaultUnitId = product.baseUnitId || product.packagingUnitId;
+    const defaultUnit = units.find((u) => u.id === defaultUnitId);
 
     const newItem: LineItem = {
       key: `new-${Date.now()}`,
       productId: product.id,
       productName: product.name,
-      unitId: product.baseUnitId,
-      unitName: baseUnit?.name || "",
+      unitId: defaultUnitId || "",
+      unitName: defaultUnit?.name || "",
       quantity: 1,
       unitPrice: 0,
       vatPercent: defaultVat,
@@ -299,10 +303,6 @@ const GoodsReceiptForm: React.FC = () => {
     };
 
     setLineItems((prev) => [...prev, recalculateLine(newItem)]);
-
-    goodsReceiptService.getRecentLots(product.id).then((lots) => {
-      setLotSuggestions((prev) => ({ ...prev, [product.id]: lots }));
-    }).catch(() => {});
   };
 
   const manufacturerSelectOptions = manufacturers.map((m) => ({
@@ -346,13 +346,10 @@ const GoodsReceiptForm: React.FC = () => {
           if (product) {
             updated.productName = product.name;
             updated.availableUnits = getUnitsForProduct(product.id);
-            updated.unitId = product.baseUnitId;
-            const baseUnit = units.find((u) => u.id === product.baseUnitId);
-            updated.unitName = baseUnit?.name || "";
-
-            goodsReceiptService.getRecentLots(product.id).then((lots) => {
-              setLotSuggestions((prev) => ({ ...prev, [product.id]: lots }));
-            }).catch(() => {});
+            const defUnitId = product.baseUnitId || product.packagingUnitId;
+            updated.unitId = defUnitId || "";
+            const defUnit = units.find((u) => u.id === defUnitId);
+            updated.unitName = defUnit?.name || "";
           }
         }
 
@@ -537,18 +534,6 @@ const GoodsReceiptForm: React.FC = () => {
 
   const formatCurrency = (v: number) => v.toLocaleString("vi-VN");
 
-  const handleAddLot = (recordKey: string, productId: string) => {
-    const val = (newLotInput[recordKey] || "").trim();
-    if (!val) return;
-    setLotSuggestions((prev) => {
-      const existing = prev[productId] || [];
-      if (existing.some((l) => l.lotNumber === val)) return prev;
-      return { ...prev, [productId]: [{ lotNumber: val, lotExpiryDate: undefined }, ...existing] };
-    });
-    handleLineChange(recordKey, "lotNumber", val);
-    setNewLotInput((prev) => ({ ...prev, [recordKey]: "" }));
-  };
-
   const productItems = lineItems;
 
   const actionColumn = !isReadonly
@@ -726,53 +711,14 @@ const GoodsReceiptForm: React.FC = () => {
       key: "lotNumber",
       width: 150,
       render: (_: any, record: LineItem) => {
-        const lots = (lotSuggestions[record.productId] || []).map((l) => ({
-          value: l.lotNumber,
-          label: l.lotExpiryDate
-            ? `${l.lotNumber} (HSD: ${dayjs(l.lotExpiryDate).format("DD/MM/YYYY")})`
-            : l.lotNumber,
-        }));
         if (isReadonly) return record.lotNumber || "-";
         return (
-          <Select
-            value={record.lotNumber || undefined}
-            placeholder="Chọn lô"
-            options={lots}
-            onChange={(v) => {
-              handleLineChange(record.key, "lotNumber", v);
-              const lot = (lotSuggestions[record.productId] || []).find((l) => l.lotNumber === v);
-              if (lot?.lotExpiryDate) {
-                handleLineChange(record.key, "lotExpiryDate", lot.lotExpiryDate);
-              }
-            }}
-            allowClear
-            onClear={() => handleLineChange(record.key, "lotNumber", "")}
-            style={{ width: "100%" }}
+          <Input
+            value={record.lotNumber || ""}
+            placeholder="Nhập mã lô"
+            onChange={(e) => handleLineChange(record.key, "lotNumber", e.target.value)}
             size="small"
-            notFoundContent={<span style={{ color: "#999", fontSize: 12 }}>Chưa có lô nào</span>}
-            dropdownRender={(menu) => (
-              <>
-                {menu}
-                <Divider style={{ margin: "4px 0" }} />
-                <div style={{ padding: "0 4px 4px" }}>
-                  <div style={{ display: "flex", gap: 4 }}>
-                    <Input
-                      size="small"
-                      placeholder="Nhập số lô mới"
-                      value={newLotInput[record.key] || ""}
-                      onChange={(e) => setNewLotInput((prev) => ({ ...prev, [record.key]: e.target.value }))}
-                      onPressEnter={() => handleAddLot(record.key, record.productId)}
-                    />
-                    <Button
-                      size="small"
-                      type="primary"
-                      icon={<PlusOutlined />}
-                      onClick={() => handleAddLot(record.key, record.productId)}
-                    />
-                  </div>
-                </div>
-              </>
-            )}
+            allowClear
           />
         );
       },
@@ -783,9 +729,6 @@ const GoodsReceiptForm: React.FC = () => {
       width: 130,
       render: (_: any, record: LineItem) => {
         if (isReadonly) return record.lotExpiryDate ? dayjs(record.lotExpiryDate).format("DD/MM/YYYY") : "-";
-        const existingLot = (lotSuggestions[record.productId] || []).find(
-          (l) => l.lotNumber === record.lotNumber && l.lotExpiryDate
-        );
         const hasLotButNoExpiry = !!record.lotNumber && !record.lotExpiryDate;
         return (
           <DatePicker
@@ -797,7 +740,7 @@ const GoodsReceiptForm: React.FC = () => {
             disabledDate={(current) => current && current.isBefore(dayjs(), "day")}
             style={{ width: "100%" }}
             size="small"
-            disabled={!!existingLot}
+            disabled={!record.lotNumber}
             status={hasLotButNoExpiry ? "error" : undefined}
           />
         );
