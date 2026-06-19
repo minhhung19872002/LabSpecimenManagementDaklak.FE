@@ -312,8 +312,8 @@ const ProductModal: React.FC<ProductModalProps> = ({
       ? `1 ${selectedPurchaseUnit} / ${watchedPackagingQuantity} ${selectedPackagingUnit}`
       : "";
   const packagingLine2 =
-    watchedPackagingQuantity && selectedPackagingUnit && watchedVolumePerUnit && selectedVolumeUnit
-      ? `${watchedPackagingQuantity} ${selectedPackagingUnit} / ${watchedVolumePerUnit} ${selectedVolumeUnit}`
+    selectedPackagingUnit && watchedVolumePerUnit && selectedVolumeUnit
+      ? `1 ${selectedPackagingUnit} / ${watchedVolumePerUnit} ${selectedVolumeUnit}`
       : "";
 
   const typeColor =
@@ -460,7 +460,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
               <Col xs={24} sm={8} md={8}>
                 <Form.Item
                   label={<Text strong>Đơn vị mua hàng</Text>}
-                  required
                   validateStatus={errors.baseUnitId ? "error" : ""}
                   help={errors.baseUnitId?.message}
                   style={{ marginBottom: 16 }}
@@ -822,7 +821,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
             )}
 
             {/* Info grid */}
-            {(packagingLine1 ||
+            {(packagingLine1 || packagingLine2 ||
               watchedIdentificationCode ||
               watchedStorage) && (
               <div
@@ -846,17 +845,21 @@ const ProductModal: React.FC<ProductModalProps> = ({
                     </Text>
                   </div>
                 )}
-                {packagingLine1 && (
+                {(packagingLine1 || packagingLine2) && (
                   <div>
-                    <Text
-                      type="secondary"
-                      style={{ fontSize: 11, display: "block" }}
-                    >
-                      Quy cách đóng gói
-                    </Text>
-                    <Text style={{ fontSize: 13, fontWeight: 500, display: "block" }}>
-                      {packagingLine1}
-                    </Text>
+                    {packagingLine1 && (
+                      <>
+                        <Text
+                          type="secondary"
+                          style={{ fontSize: 11, display: "block" }}
+                        >
+                          Quy cách đóng gói
+                        </Text>
+                        <Text style={{ fontSize: 13, fontWeight: 500, display: "block" }}>
+                          {packagingLine1}
+                        </Text>
+                      </>
+                    )}
                     {packagingLine2 && (
                       <Text style={{ fontSize: 13, fontWeight: 500, display: "block" }}>
                         {packagingLine2}

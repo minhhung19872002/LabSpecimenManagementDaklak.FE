@@ -5,7 +5,7 @@ export const productSchema = yup.object({
   formattedName: yup.string().optional(),
   identificationCode: yup.string().defined().default("").max(256),
   productType: yup.number().defined().default(0).min(0).max(4),
-  baseUnitId: yup.string().required("Vui lòng chọn đơn vị mua hàng"),
+  baseUnitId: yup.string().nullable().optional(),
   packagingQuantity: yup.number().required("Vui lòng nhập số lượng").integer().min(1, "Tối thiểu 1").typeError("Vui lòng nhập số lượng"),
   packagingUnitId: yup.string().required("Vui lòng chọn đơn vị"),
   volumePerUnit: yup.number().required("Vui lòng nhập số lượng").integer().min(1, "Tối thiểu 1").typeError("Vui lòng nhập số lượng"),
