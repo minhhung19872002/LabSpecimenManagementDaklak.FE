@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { Table, Input, Select, Tag, Row, Col, Pagination, DatePicker } from 'antd';
 import { SearchOutlined, SortAscendingOutlined } from '@ant-design/icons';
 import ResponsiveSelect from '../../../components/common/ResponsiveSelect';
+import { EllipsisTooltip } from '../../../components/common';
 import type { ColumnOption } from '../../../components/common';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
@@ -476,68 +477,88 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
         key: 'contractNumber',
         fixed: 'left',
         onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.contractRowSpan),
-        render: (text: string) => text || '-',
+        render: (text: string) => (
+          <EllipsisTooltip title={text || '-'}>{text || '-'}</EllipsisTooltip>
+        ),
       }),
       withResize('sampleCode', {
         title: 'Mã số mẫu',
         dataIndex: 'sampleCode',
         key: 'sampleCode',
         onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.sampleRowSpan),
-        render: (text: string) => text || '-',
+        render: (text: string) => (
+          <EllipsisTooltip title={text || '-'}>{text || '-'}</EllipsisTooltip>
+        ),
       }),
       withResize('sampleName', {
         title: 'Tên mẫu',
         dataIndex: 'sampleName',
         key: 'sampleName',
-        ellipsis: true,
         onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.sampleRowSpan),
-        render: (text: string) => text || '-',
+        render: (text: string) => (
+          <EllipsisTooltip title={text || '-'}>{text || '-'}</EllipsisTooltip>
+        ),
       }),
       withResize('sampleQuantity', {
         title: 'Lượng mẫu gửi',
         dataIndex: 'sampleQuantity',
         key: 'sampleQuantity',
         onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.sampleRowSpan),
-        render: (text: string) => text || '-',
+        render: (text: string) => (
+          <EllipsisTooltip title={text || '-'}>{text || '-'}</EllipsisTooltip>
+        ),
       }),
       withResize('sampleStatusText', {
         title: 'Tình trạng mẫu',
         dataIndex: 'sampleStatusText',
         key: 'sampleStatusText',
-        ellipsis: true,
         onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.sampleRowSpan),
-        render: (text: string) => text || '-',
+        render: (text: string) => (
+          <EllipsisTooltip title={text || '-'}>{text || '-'}</EllipsisTooltip>
+        ),
       }),
       withResize('transferDate', {
         title: 'Ngày chuyển',
         dataIndex: 'transferDate',
         key: 'transferDate',
         onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.transferDateRowSpan),
-        render: (date: string) => formatDate(date),
+        render: (date: string) => {
+          const formatted = formatDate(date);
+          return (
+            <EllipsisTooltip title={formatted}>{formatted}</EllipsisTooltip>
+          );
+        },
       }),
       withResize('requestCompletionDate', {
         title: 'Ngày YC xong',
         dataIndex: 'requestCompletionDate',
         key: 'requestCompletionDate',
         onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.requestCompletionDateRowSpan),
-        render: (date: string) => formatDate(date),
+        render: (date: string) => {
+          const formatted = formatDate(date);
+          return (
+            <EllipsisTooltip title={formatted}>{formatted}</EllipsisTooltip>
+          );
+        },
       }),
       withResize('testDate', {
         title: 'Thời gian TN',
         dataIndex: 'testDate',
         key: 'testDate',
         onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.testDateRowSpan),
-        render: (date: string) => formatDate(date),
+        render: (date: string) => {
+          const formatted = formatDate(date);
+          return (
+            <EllipsisTooltip title={formatted}>{formatted}</EllipsisTooltip>
+          );
+        },
       }),
       withResize('indicatorName', {
         title: 'Tên chỉ tiêu',
         dataIndex: 'indicatorName',
         key: 'indicatorName',
         render: (text: string, record: ProcessedLogItem) => (
-          <span
-            style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}
-            dangerouslySetInnerHTML={{ __html: record.indicatorFormattedName || text || '-' }}
-          />
+          <EllipsisTooltip title={text || '-'} html={record.indicatorFormattedName || text || '-'} />
         ),
       }),
       withResize('methodName', {
@@ -545,10 +566,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
         dataIndex: 'methodName',
         key: 'methodName',
         render: (text: string, record: ProcessedLogItem) => (
-          <span
-            style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}
-            dangerouslySetInnerHTML={{ __html: record.methodFormattedName || text || '-' }}
-          />
+          <EllipsisTooltip title={text || '-'} html={record.methodFormattedName || text || '-'} />
         ),
       }),
       withResize('unit', {
@@ -556,43 +574,60 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
         dataIndex: 'unit',
         key: 'unit',
         render: (text: string) =>
-          text ? <span dangerouslySetInnerHTML={{ __html: text }} /> : '-',
+          text ? (
+            <EllipsisTooltip title={text} html={text} />
+          ) : '-',
       }),
       withResize('result', {
         title: 'Kết quả',
         dataIndex: 'result',
         key: 'result',
-        render: (text: string) => <strong>{text || '-'}</strong>,
+        width: 200,
+        render: (text: string) => (
+          <EllipsisTooltip title={text || '-'}><strong>{text || '-'}</strong></EllipsisTooltip>
+        ),
       }),
       withResize('technicalManagerName', {
         title: 'QL kỹ thuật',
         dataIndex: 'technicalManagerName',
         key: 'technicalManagerName',
-        ellipsis: true,
         onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.technicalManagerRowSpan),
-        render: (text: string) => text || '-',
+        render: (text: string) => (
+          <EllipsisTooltip title={text || '-'}>{text || '-'}</EllipsisTooltip>
+        ),
       }),
       withResize('technicianName', {
         title: 'Kỹ thuật viên',
         dataIndex: 'technicianName',
         key: 'technicianName',
-        ellipsis: true,
         onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.technicianRowSpan),
-        render: (text: string) => text || '-',
+        render: (text: string) => (
+          <EllipsisTooltip title={text || '-'}>{text || '-'}</EllipsisTooltip>
+        ),
       }),
       withResize('entryDate', {
         title: 'Ngày nhập',
         dataIndex: 'entryDate',
         key: 'entryDate',
         onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.entryDateRowSpan),
-        render: (date: string) => formatDate(date),
+        render: (date: string) => {
+          const formatted = formatDate(date);
+          return (
+            <EllipsisTooltip title={formatted}>{formatted}</EllipsisTooltip>
+          );
+        },
       }),
       withResize('qlktApprovalDate', {
         title: 'Ngày QL duyệt',
         dataIndex: 'qlktApprovalDate',
         key: 'qlktApprovalDate',
         onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.qlktApprovalDateRowSpan),
-        render: (date: string) => formatDate(date),
+        render: (date: string) => {
+          const formatted = formatDate(date);
+          return (
+            <EllipsisTooltip title={formatted}>{formatted}</EllipsisTooltip>
+          );
+        },
       }),
       withResize('qlktDisplayStatus', {
         title: 'Tình trạng',
