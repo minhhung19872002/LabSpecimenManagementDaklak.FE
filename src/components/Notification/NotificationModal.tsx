@@ -292,8 +292,14 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
                 {dayjs(notification.creationTime).format('DD/MM/YYYY HH:mm')}
               </Text>
               {daysRemaining !== null && daysRemaining !== undefined && (
-                <span className={`notification-modal-deadline ${daysRemaining <= 0 ? 'overdue' : ''} ${isDeadline ? 'is-deadline-type' : ''}`}>
-                  {daysRemaining > 0
+                <span className={`notification-modal-deadline ${
+                  notification.isTaskCompleted
+                    ? 'completed'
+                    : daysRemaining <= 0 ? 'overdue' : ''
+                } ${isDeadline ? 'is-deadline-type' : ''}`}>
+                  {notification.isTaskCompleted
+                    ? 'Đã xử lý'
+                    : daysRemaining > 0
                     ? `Còn ${daysRemaining} ngày`
                     : daysRemaining === 0
                     ? 'Hôm nay'

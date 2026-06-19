@@ -216,10 +216,14 @@ const NotificationBell: React.FC = () => {
               {daysRemaining !== null && daysRemaining !== undefined && (
                 <span
                   className={`notification-deadline ${
-                    daysRemaining <= 0 ? "overdue" : ""
+                    notification.isTaskCompleted
+                      ? "completed"
+                      : daysRemaining <= 0 ? "overdue" : ""
                   } ${isDeadline ? "is-deadline-type" : ""}`}
                 >
-                  {daysRemaining > 0
+                  {notification.isTaskCompleted
+                    ? "Đã xử lý"
+                    : daysRemaining > 0
                     ? `Còn ${daysRemaining} ngày`
                     : daysRemaining === 0
                     ? "Hôm nay"
