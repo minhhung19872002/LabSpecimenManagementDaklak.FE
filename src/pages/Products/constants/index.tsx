@@ -16,7 +16,7 @@ export const ALL_COLUMNS: ColumnConfig[] = [
   { key: "identificationCode", title: "Mã nhận dạng", defaultVisible: true },
   { key: "name", title: "Tên vật phẩm", defaultVisible: true },
   { key: "productType", title: "Phân loại", defaultVisible: true },
-  { key: "baseUnitName", title: "Đơn vị tính", defaultVisible: true },
+  { key: "packagingUnitName", title: "Đơn vị lưu kho", defaultVisible: true },
   { key: "availableQuantity", title: "Số lượng khả dụng", defaultVisible: true },
   { key: "casNumber", title: "Số CAS", defaultVisible: false },
   { key: "manufacturer", title: "Nhà sản xuất/thương hiệu", defaultVisible: false },
@@ -122,12 +122,12 @@ export const getProductColumns = (
     });
   }
 
-  if (visibleKeys.has("baseUnitName")) {
+  if (visibleKeys.has("packagingUnitName")) {
     columns.push({
-      title: "Đơn vị tính",
-      dataIndex: "baseUnitName",
-      key: "baseUnitName",
-      width: 100,
+      title: "Đơn vị lưu kho",
+      dataIndex: "packagingUnitName",
+      key: "packagingUnitName",
+      width: 120,
     });
   }
 
