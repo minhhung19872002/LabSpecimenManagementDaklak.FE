@@ -7,7 +7,7 @@ export enum TestBatchStatus {
 
 export const TestBatchStatusLabels: Record<TestBatchStatus, string> = {
   [TestBatchStatus.Draft]: 'Cần làm',
-  [TestBatchStatus.Running]: 'Đang thực hiện',
+  [TestBatchStatus.Running]: 'Đang thử nghiệm',
   [TestBatchStatus.Completed]: 'Hoàn thành',
   [TestBatchStatus.Cancelled]: 'Đã hủy',
 };
