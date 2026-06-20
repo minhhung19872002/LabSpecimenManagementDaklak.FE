@@ -31,9 +31,13 @@ interface Props {
   onSelectionChange: (ids: string[]) => void;
   editedValuesRef?: React.MutableRefObject<EditedValuesMap>;
   resultOptions?: ResultOption[];
+  onResultSaved?: () => void;
 }
 
-const getItemStatus = (item: TestBatchItemDto) => {
+const getItemStatus = (item: TestBatchItemDto, overrides?: { result?: string; testDate?: string }) => {
+  const result = overrides?.result ?? item.result;
+  const testDate = overrides?.testDate ?? item.testDate;
+
   if (item.isExternallyCompleted) return { label: "Ngoài", color: "orange" };
   if (item.isSubmitted) {
     return {
@@ -42,10 +46,27 @@ const getItemStatus = (item: TestBatchItemDto) => {
     };
   }
   if (item.rejectionReason) return { label: "Từ chối", color: "error" };
-  if (item.result && item.testDate) return { label: "Đang thử nghiệm", color: "processing" };
-  if (item.result) return { label: "Chờ gửi", color: "blue" };
+  if (result || testDate) return { label: "Đang thử nghiệm", color: "processing" };
   return { label: "Cần làm", color: "default" as const };
 };
+
+type StatusUpdater = (field: "result" | "testDate", value: string | undefined) => void;
+
+const StatusCell = memo<{ item: TestBatchItemDto; registerUpdater: (id: string, fn: StatusUpdater) => void }>(
+  ({ item, registerUpdater }) => {
+    const [overrides, setOverrides] = useState<{ result?: string; testDate?: string }>({});
+
+    useEffect(() => {
+      const updater: StatusUpdater = (field, value) => {
+        setOverrides((prev) => ({ ...prev, [field]: value }));
+      };
+      registerUpdater(item.id, updater);
+    }, [item.id, registerUpdater]);
+
+    const s = getItemStatus(item, overrides);
+    return <Tag color={s.color}>{s.label}</Tag>;
+  },
+);
 
 interface ResultCellProps {
   itemId: string;
@@ -156,24 +177,22 @@ const BatchIndicatorTable: React.FC<Props> = ({
   onSelectionChange,
   editedValuesRef,
   resultOptions,
+  onResultSaved,
 }) => {
   const internalRef = useRef<EditedValuesMap>(new Map());
   const editedRef = editedValuesRef || internalRef;
   const getEditedValues = useCallback(() => editedRef.current, [editedRef]);
 
-  const [savedValues, setSavedValues] = useState<Map<string, { result?: string; testDate?: string }>>(new Map());
+  const statusUpdatersRef = useRef(new Map<string, StatusUpdater>());
 
-  useEffect(() => {
-    setSavedValues(new Map());
-  }, [batchId]);
+  const registerUpdater = useCallback((id: string, fn: StatusUpdater) => {
+    statusUpdatersRef.current.set(id, fn);
+  }, []);
 
   const handleCellSaved = useCallback((itemId: string, field: "result" | "testDate", value: string | undefined) => {
-    setSavedValues((prev) => {
-      const next = new Map(prev);
-      next.set(itemId, { ...next.get(itemId), [field]: value });
-      return next;
-    });
-  }, []);
+    statusUpdatersRef.current.get(itemId)?.(field, value);
+    onResultSaved?.();
+  }, [onResultSaved]);
 
   const columns: ColumnsType<TestBatchItemDto> = useMemo(() => {
     const canSelectItem = (item: TestBatchItemDto) =>
@@ -289,12 +308,9 @@ const BatchIndicatorTable: React.FC<Props> = ({
       key: "status",
       width: 100,
       align: "center" as const,
-      render: (_: unknown, item: TestBatchItemDto) => {
-        const edited = savedValues.get(item.id);
-        const effective = edited ? { ...item, ...edited } : item;
-        const s = getItemStatus(effective as TestBatchItemDto);
-        return <Tag color={s.color}>{s.label}</Tag>;
-      },
+      render: (_: unknown, item: TestBatchItemDto) => (
+        <StatusCell item={item} registerUpdater={registerUpdater} />
+      ),
     },
     {
       title: "Lý do từ chối",
@@ -304,7 +320,7 @@ const BatchIndicatorTable: React.FC<Props> = ({
       render: (val: string) => val || "-",
     },
   ];
-  }, [batchId, canEdit, getEditedValues, selectedItemIds, items, onSelectionChange, resultOptions, savedValues, handleCellSaved]);
+  }, [batchId, canEdit, getEditedValues, selectedItemIds, items, onSelectionChange, resultOptions, handleCellSaved, registerUpdater]);
 
   return (
     <div className="batch-indicator-table" style={{ overflow: "hidden" }}>
@@ -320,4 +336,4 @@ const BatchIndicatorTable: React.FC<Props> = ({
   );
 };
 
-export default BatchIndicatorTable;
+export default React.memo(BatchIndicatorTable);

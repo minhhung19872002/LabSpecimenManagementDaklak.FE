@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Row,
   Col,
-  Card,
   Button,
   Tag,
   Space,
@@ -11,8 +10,6 @@ import {
   Grid,
   message,
   Typography,
-  Popconfirm,
-  Alert,
   Empty,
   Progress,
   DatePicker,
@@ -20,14 +17,9 @@ import {
 import {
   PlusOutlined,
   ReloadOutlined,
-  DeleteOutlined,
-  SendOutlined,
-  StopOutlined,
-  EditOutlined,
   FileTextOutlined,
   UserOutlined,
   SortAscendingOutlined,
-  ArrowLeftOutlined,
 } from "../../../components/common/Icon";
 import ResponsiveSelect from "../../../components/common/ResponsiveSelect";
 import testBatchService from "../../../services/testBatchService";
@@ -36,19 +28,14 @@ import {
   type IndicatorDto,
 } from "../../../services/masterDataService";
 import laboratoryTaskService from "../../../services/laboratoryTaskService";
-import testResultValueService from "../../../services/testResultValueService";
 import {
   TestBatchListDto,
-  TestBatchDto,
-  TestBatchStatus,
   TestBatchStatusLabels,
   TestBatchStatusColors,
 } from "../../../types/testBatch";
 import type { UserLookupDto } from "../../../types/laboratoryTask";
 import CreateBatchModal from "./CreateBatchModal";
-import EditBatchModal from "./EditBatchModal";
-import SubmitConsumptionModal from "./SubmitConsumptionModal";
-import BatchIndicatorTable, { type EditedValuesMap } from "./BatchIndicatorTable";
+import BatchDetailPanel from "./BatchDetailPanel";
 import dayjs from "dayjs";
 
 const { Text } = Typography;
@@ -65,7 +52,6 @@ const TestBatchTab: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(20);
 
-  // Filter states
   const [searchText, setSearchText] = useState("");
   const [searchFilter, setSearchFilter] = useState("");
   const [dateRange, setDateRange] = useState<
@@ -75,20 +61,11 @@ const TestBatchTab: React.FC = () => {
   const [technicianFilter, setTechnicianFilter] = useState<string[]>([]);
   const [sorting, setSorting] = useState<string>("RequestCompletionDate desc");
 
-  // Lookup data
   const [indicators, setIndicators] = useState<IndicatorDto[]>([]);
   const [technicians, setTechnicians] = useState<UserLookupDto[]>([]);
 
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
-  const [batchDetail, setBatchDetail] = useState<TestBatchDto | null>(null);
-  const [loadingDetail, setLoadingDetail] = useState(false);
-
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [submitConsumptionModalOpen, setSubmitConsumptionModalOpen] = useState(false);
-  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
-  const editedValuesRef = useRef<EditedValuesMap>(new Map());
-  const [resultOptions, setResultOptions] = useState<{ value: string; label: string }[]>([]);
 
   useEffect(() => {
     indicatorService.getActive().then(setIndicators).catch(() => {});
@@ -96,39 +73,26 @@ const TestBatchTab: React.FC = () => {
       .getTechniciansByLaboratory()
       .then(setTechnicians)
       .catch(() => {});
-    testResultValueService
-      .getWithIndicators()
-      .then((data) =>
-        setResultOptions(data.map((item) => ({ value: item.name, label: item.name })))
-      )
-      .catch(() => {});
   }, []);
 
-  const loadBatches = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await testBatchService.getList({
-        skipCount: (currentPage - 1) * pageSize,
-        maxResultCount: pageSize,
-        filter: searchFilter || undefined,
-        indicatorIds: indicatorFilter.length > 0 ? indicatorFilter : undefined,
-        technicianIds:
-          technicianFilter.length > 0 ? technicianFilter : undefined,
-        fromDate: dateRange?.[0]
-          ? dateRange[0].startOf("day").toISOString()
-          : undefined,
-        toDate: dateRange?.[1]
-          ? dateRange[1].endOf("day").toISOString()
-          : undefined,
-        sorting: sorting || undefined,
-      });
-      setBatches(res.data?.items || []);
-      setTotalCount(res.data?.totalCount || 0);
-    } catch {
-      message.error("Lỗi tải danh sách mẻ");
-    } finally {
-      setLoading(false);
-    }
+  const fetchBatches = useCallback(async () => {
+    const res = await testBatchService.getList({
+      skipCount: (currentPage - 1) * pageSize,
+      maxResultCount: pageSize,
+      filter: searchFilter || undefined,
+      indicatorIds: indicatorFilter.length > 0 ? indicatorFilter : undefined,
+      technicianIds:
+        technicianFilter.length > 0 ? technicianFilter : undefined,
+      fromDate: dateRange?.[0]
+        ? dateRange[0].startOf("day").toISOString()
+        : undefined,
+      toDate: dateRange?.[1]
+        ? dateRange[1].endOf("day").toISOString()
+        : undefined,
+      sorting: sorting || undefined,
+    });
+    setBatches(res.data?.items || []);
+    setTotalCount(res.data?.totalCount || 0);
   }, [
     currentPage,
     pageSize,
@@ -139,17 +103,22 @@ const TestBatchTab: React.FC = () => {
     sorting,
   ]);
 
-  const loadDetail = useCallback(async (id: string) => {
-    setLoadingDetail(true);
+  const loadBatches = useCallback(async () => {
+    setLoading(true);
     try {
-      const res = await testBatchService.get(id);
-      setBatchDetail(res.data);
+      await fetchBatches();
     } catch {
-      message.error("Lỗi tải chi tiết mẻ");
+      message.error("Lỗi tải danh sách mẻ");
     } finally {
-      setLoadingDetail(false);
+      setLoading(false);
     }
-  }, []);
+  }, [fetchBatches]);
+
+  const refreshBatchesSilently = useCallback(async () => {
+    try {
+      await fetchBatches();
+    } catch {}
+  }, [fetchBatches]);
 
   useEffect(() => {
     loadBatches();
@@ -158,16 +127,8 @@ const TestBatchTab: React.FC = () => {
   useEffect(() => {
     if (selectedBatchId && !batches.some((b) => b.id === selectedBatchId)) {
       setSelectedBatchId(null);
-      setBatchDetail(null);
-      setSelectedItemIds([]);
     }
   }, [batches, selectedBatchId]);
-
-  useEffect(() => {
-    if (selectedBatchId) {
-      loadDetail(selectedBatchId);
-    }
-  }, [selectedBatchId, loadDetail]);
 
   const handleSelectBatch = (batch: TestBatchListDto) => {
     if (isMobile && selectedBatchId === batch.id) {
@@ -175,98 +136,16 @@ const TestBatchTab: React.FC = () => {
       return;
     }
     setSelectedBatchId(batch.id);
-    setSelectedItemIds([]);
   };
 
-  const handleBackToList = () => {
+  const handleBackToList = useCallback(() => {
     setMobileView("list");
-  };
+  }, []);
 
   const handleSearch = () => {
     setSearchFilter(searchText);
     setCurrentPage(1);
   };
-
-  const handleOpenSubmitConsumption = () => {
-    if (!batchDetail) return;
-    if (selectedItemIds.length === 0) {
-      message.warning("Vui lòng chọn ít nhất 1 chỉ tiêu để gửi");
-      return;
-    }
-
-    const selectedItems = batchDetail.items.filter((i) =>
-      selectedItemIds.includes(i.id),
-    );
-    const edited = editedValuesRef.current;
-
-    const missingResult = selectedItems.filter((i) => {
-      const editedVal = edited.get(i.id);
-      const result = editedVal?.result ?? i.result;
-      return !result || result.trim() === "";
-    });
-    if (missingResult.length > 0) {
-      const names = missingResult
-        .map((i) => i.indicatorName)
-        .filter(Boolean)
-        .join(", ");
-      message.warning(`Vui lòng nhập kết quả cho: ${names}`);
-      return;
-    }
-
-    const missingTestDate = selectedItems.filter((i) => {
-      const editedVal = edited.get(i.id);
-      const testDate = editedVal?.testDate ?? i.testDate;
-      return !testDate;
-    });
-    if (missingTestDate.length > 0) {
-      const names = missingTestDate
-        .map((i) => i.indicatorName)
-        .filter(Boolean)
-        .join(", ");
-      message.warning(`Vui lòng chọn ngày thử nghiệm cho: ${names}`);
-      return;
-    }
-
-    setSubmitConsumptionModalOpen(true);
-  };
-
-  const handleCancel = async () => {
-    if (!batchDetail) return;
-    try {
-      await testBatchService.cancel(batchDetail.id);
-      message.success("Hủy mẻ thành công");
-      loadDetail(batchDetail.id);
-      loadBatches();
-    } catch (err: any) {
-      message.error(err?.response?.data?.error?.message || "Lỗi hủy mẻ");
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!batchDetail) return;
-    try {
-      await testBatchService.delete(batchDetail.id);
-      message.success("Xóa mẻ thành công");
-      setSelectedBatchId(null);
-      setBatchDetail(null);
-      loadBatches();
-    } catch (err: any) {
-      message.error(err?.response?.data?.error?.message || "Lỗi xóa mẻ");
-    }
-  };
-
-  const canEdit =
-    batchDetail?.status === TestBatchStatus.Draft ||
-    batchDetail?.status === TestBatchStatus.Running;
-  const canSubmit =
-    batchDetail?.status === TestBatchStatus.Draft ||
-    batchDetail?.status === TestBatchStatus.Running;
-  const canDelete = batchDetail?.status === TestBatchStatus.Draft;
-  const canCancel =
-    (batchDetail?.status === TestBatchStatus.Draft ||
-    batchDetail?.status === TestBatchStatus.Running ||
-    batchDetail?.status === TestBatchStatus.Completed) &&
-    !batchDetail?.hasApprovedIndicators;
 
   const renderBatchCard = (batch: TestBatchListDto) => {
     const isSelected = batch.id === selectedBatchId;
@@ -289,7 +168,6 @@ const TestBatchTab: React.FC = () => {
           transition: "all 0.2s",
         }}
       >
-        {/* Row 1: Code + Status */}
         <div
           style={{
             display: "flex",
@@ -309,14 +187,12 @@ const TestBatchTab: React.FC = () => {
           </Tag>
         </div>
 
-        {/* Row 2: Name */}
         <div style={{ marginBottom: 8 }}>
           <Text strong style={{ fontSize: 14 }}>
             {batch.name}
           </Text>
         </div>
 
-        {/* Row 3: Counts + Creator */}
         <div
           style={{
             display: "flex",
@@ -341,7 +217,6 @@ const TestBatchTab: React.FC = () => {
           </span>
         </div>
 
-        {/* Row 4: Dates */}
         <div
           style={{
             display: "flex",
@@ -362,7 +237,6 @@ const TestBatchTab: React.FC = () => {
           </Text>
         </div>
 
-        {/* Row 5: Progress */}
         <div>
           <Text type="secondary" style={{ fontSize: 11 }}>
             Tiến độ nhập kết quả:
@@ -393,7 +267,6 @@ const TestBatchTab: React.FC = () => {
 
   return (
     <div>
-      {/* Filter bar — same style as TestingList */}
       <Row gutter={[16, 16]} style={{ marginBottom: 0, padding: 16 }} align="middle">
         <Col xs={24} sm={12} md={5}>
           <Input.Search
@@ -564,111 +437,12 @@ const TestBatchTab: React.FC = () => {
           xs={24} md={17} lg={19}
           style={isMobile && mobileView === "list" ? { display: "none" } : undefined}
         >
-          {batchDetail ? (
-            <Card
-              size="small"
-              loading={loadingDetail}
-              style={{ overflow: "hidden" }}
-              title={
-                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  {isMobile && (
-                    <Button
-                      type="text"
-                      size="small"
-                      icon={<ArrowLeftOutlined />}
-                      onClick={handleBackToList}
-                    />
-                  )}
-                  <span>
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                      {batchDetail.code}
-                    </Text>
-                    <br />
-                    <Text strong style={{ fontSize: 16 }}>
-                      {batchDetail.name}
-                    </Text>
-                  </span>
-                </span>
-              }
-              extra={
-                <Space wrap size={4}>
-                  {canEdit && (
-                    <Button
-                      size="small"
-                      icon={<EditOutlined />}
-                      onClick={() => setEditModalOpen(true)}
-                    >
-                      Chỉnh sửa mẻ
-                    </Button>
-                  )}
-                  {canSubmit && (
-                    <Button
-                      size="small"
-                      type="primary"
-                      icon={<SendOutlined />}
-                      disabled={selectedItemIds.length === 0}
-                      onClick={handleOpenSubmitConsumption}
-                    >
-                      Gửi ({selectedItemIds.length})
-                    </Button>
-                  )}
-                  {canCancel && (
-                    <Popconfirm title="Hủy mẻ này?" onConfirm={handleCancel}>
-                      <Button size="small" danger icon={<StopOutlined />}>
-                        Hủy
-                      </Button>
-                    </Popconfirm>
-                  )}
-                  {canDelete && (
-                    <Popconfirm title="Xóa mẻ này?" onConfirm={handleDelete}>
-                      <Button size="small" danger icon={<DeleteOutlined />} />
-                    </Popconfirm>
-                  )}
-                </Space>
-              }
-            >
-              {batchDetail.items.some((i) => i.isExternallyCompleted) && (
-                <Alert
-                  message="Một số chỉ tiêu đã được hoàn thành qua flow cũ"
-                  type="warning"
-                  showIcon
-                  style={{ marginBottom: 12 }}
-                />
-              )}
-
-              <BatchIndicatorTable
-                batchId={batchDetail.id}
-                items={batchDetail.items}
-                canEdit={canEdit}
-                selectedItemIds={selectedItemIds}
-                onSelectionChange={setSelectedItemIds}
-                editedValuesRef={editedValuesRef}
-                resultOptions={resultOptions}
-              />
-
-              {batchDetail.consumptionConfirmed && (
-                <Alert
-                  message={`Tiêu hao đã xác nhận lúc ${dayjs(batchDetail.consumptionConfirmedDate).format("DD/MM/YYYY HH:mm")}`}
-                  type="success"
-                  showIcon
-                  style={{ marginTop: 12 }}
-                />
-              )}
-            </Card>
-          ) : (
-            <Card
-              size="small"
-              style={{
-                height: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                minHeight: 400,
-              }}
-            >
-              <Empty description="Chọn mẻ thử nghiệm để xem chi tiết" />
-            </Card>
-          )}
+          <BatchDetailPanel
+            batchId={selectedBatchId}
+            onBatchesChanged={refreshBatchesSilently}
+            isMobile={isMobile}
+            onBackToList={handleBackToList}
+          />
         </Col>
       </Row>
 
@@ -679,34 +453,6 @@ const TestBatchTab: React.FC = () => {
           loadBatches();
         }}
       />
-
-      <EditBatchModal
-        open={editModalOpen}
-        batch={batchDetail}
-        onClose={() => setEditModalOpen(false)}
-        onSaved={() => {
-          if (batchDetail) loadDetail(batchDetail.id);
-          loadBatches();
-        }}
-      />
-
-      {batchDetail && (
-        <SubmitConsumptionModal
-          open={submitConsumptionModalOpen}
-          batchId={batchDetail.id}
-          batchCode={batchDetail.code}
-          batchName={batchDetail.name}
-          selectedItemIds={selectedItemIds}
-          onClose={() => setSubmitConsumptionModalOpen(false)}
-          onSubmitted={() => {
-            setSubmitConsumptionModalOpen(false);
-            setSelectedItemIds([]);
-            editedValuesRef.current.clear();
-            loadDetail(batchDetail.id);
-            loadBatches();
-          }}
-        />
-      )}
     </div>
   );
 };
