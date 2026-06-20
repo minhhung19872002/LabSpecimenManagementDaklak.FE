@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { forwardRef, useImperativeHandle, useRef } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import Document from "@tiptap/extension-document";
 import Paragraph from "@tiptap/extension-paragraph";
@@ -23,6 +23,10 @@ interface LimitInputProps {
   style?: React.CSSProperties;
 }
 
+export interface LimitInputRef {
+  focus: () => void;
+}
+
 /**
  * Simple rich text input for limit values
  * Only supports subscript and superscript (no bold, italic, etc.)
@@ -40,14 +44,14 @@ interface LimitInputProps {
  *   <LimitInput placeholder="Giới hạn" />
  * </Form.Item>
  */
-const LimitInput: React.FC<LimitInputProps> = ({
+const LimitInput = forwardRef<LimitInputRef, LimitInputProps>(({
   value,
   onChange,
   onPlainTextChange,
   placeholder = "Nhập giới hạn...",
   disabled = false,
   style,
-}) => {
+}, ref) => {
   // Track if we're syncing from prop to avoid triggering onChange
   const isSyncingFromProp = useRef(false);
 
@@ -89,6 +93,12 @@ const LimitInput: React.FC<LimitInputProps> = ({
       });
     }
   }, [value, editor]);
+
+  useImperativeHandle(ref, () => ({
+    focus: () => {
+      editor?.commands.focus("end");
+    },
+  }), [editor]);
 
   if (!editor) {
     return null;
@@ -167,7 +177,9 @@ const LimitInput: React.FC<LimitInputProps> = ({
       `}</style>
     </div>
   );
-};
+});
+
+LimitInput.displayName = "LimitInput";
 
 /**
  * Extract plain text from HTML and convert superscript/subscript to mathematical notation

@@ -65,6 +65,9 @@ interface UseSampleAssignmentLogForLabResult {
   technicianFilter: string[];
   technicians: UserLookupDto[];
   loadingTechnicians: boolean;
+  resultFilter: string[];
+  distinctResults: string[];
+  loadingResults: boolean;
 
   // Pagination
   pagination: {
@@ -80,9 +83,11 @@ interface UseSampleAssignmentLogForLabResult {
   handleDateRangeChange: (dates: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null) => void;
   handleIndicatorChange: (values: string[]) => void;
   handleTechnicianFilterChange: (values: string[]) => void;
+  handleResultFilterChange: (values: string[]) => void;
   handleTableChange: (pagination: { current?: number; pageSize?: number }) => void;
   handleRowDoubleClick: (record: SampleAssignmentLogDto) => void;
   handleReload: () => void;
+  reloadDistinctResults: () => void;
 }
 
 /**
@@ -111,6 +116,9 @@ export const useSampleAssignmentLogForLab = (
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
   const [selectedIndicatorIds, setSelectedIndicatorIds] = useState<string[]>([]);
   const [technicianFilter, setTechnicianFilter] = useState<string[]>([]);
+  const [resultFilter, setResultFilter] = useState<string[]>([]);
+  const [distinctResults, setDistinctResults] = useState<string[]>([]);
+  const [loadingResults, setLoadingResults] = useState(false);
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 20,
@@ -210,6 +218,7 @@ export const useSampleAssignmentLogForLab = (
         indicatorIds: selectedIndicatorIds.length > 0 ? selectedIndicatorIds : undefined,
         technicianIds: technicianFilter.length > 0 ? technicianFilter : undefined,
         qlktDisplayStatuses: displayStatusFilter !== undefined ? [displayStatusFilter] : undefined,
+        results: resultFilter.length > 0 ? resultFilter : undefined,
       };
 
       const result = await testingService.getSampleAssignmentLog(input);
@@ -223,7 +232,7 @@ export const useSampleAssignmentLogForLab = (
     } finally {
       setLoading(false);
     }
-  }, [pagination.current, pagination.pageSize, searchFilter, displayStatusFilter, dateRange, selectedIndicatorIds, technicianFilter, sorting]);
+  }, [pagination.current, pagination.pageSize, searchFilter, displayStatusFilter, dateRange, selectedIndicatorIds, technicianFilter, resultFilter, sorting]);
 
   useEffect(() => {
     loadData();
@@ -232,6 +241,31 @@ export const useSampleAssignmentLogForLab = (
   useEffect(() => {
     setPagination(prev => ({ ...prev, current: 1 }));
   }, [displayStatusFilter]);
+
+  // Load distinct results for dropdown
+  const loadDistinctResults = useCallback(async () => {
+    setLoadingResults(true);
+    try {
+      const input: GetSampleAssignmentLogInput = {
+        search: searchFilter || undefined,
+        fromDate: dateRange?.[0]?.startOf('day').format('YYYY-MM-DD') || undefined,
+        toDate: dateRange?.[1]?.endOf('day').format('YYYY-MM-DD') || undefined,
+        indicatorIds: selectedIndicatorIds.length > 0 ? selectedIndicatorIds : undefined,
+        technicianIds: technicianFilter.length > 0 ? technicianFilter : undefined,
+        qlktDisplayStatuses: displayStatusFilter !== undefined ? [displayStatusFilter] : undefined,
+      };
+      const result = await testingService.getDistinctResults(input);
+      setDistinctResults(Array.isArray(result) ? result : []);
+    } catch (error) {
+      console.error('Failed to load distinct results:', error);
+    } finally {
+      setLoadingResults(false);
+    }
+  }, [searchFilter, dateRange, selectedIndicatorIds, technicianFilter, displayStatusFilter]);
+
+  useEffect(() => {
+    loadDistinctResults();
+  }, [loadDistinctResults]);
 
   // Handlers
   const handleSearch = useCallback((value: string) => {
@@ -268,6 +302,11 @@ export const useSampleAssignmentLogForLab = (
     setPagination(prev => ({ ...prev, current: 1 }));
   }, []);
 
+  const handleResultFilterChange = useCallback((values: string[]) => {
+    setResultFilter(values);
+    setPagination(prev => ({ ...prev, current: 1 }));
+  }, []);
+
   const handleTableChange = useCallback((paginationInfo: { current?: number; pageSize?: number }) => {
     setPagination(prev => ({
       ...prev,
@@ -286,6 +325,7 @@ export const useSampleAssignmentLogForLab = (
     setDateRange(null);
     setSelectedIndicatorIds([]);
     setTechnicianFilter([]);
+    setResultFilter([]);
     setPagination(prev => ({ ...prev, current: 1 }));
     loadData();
     loadStats();
@@ -304,6 +344,9 @@ export const useSampleAssignmentLogForLab = (
     technicianFilter,
     technicians,
     loadingTechnicians,
+    resultFilter,
+    distinctResults,
+    loadingResults,
     pagination,
     handleSearch,
     handleSearchInputChange,
@@ -311,9 +354,11 @@ export const useSampleAssignmentLogForLab = (
     handleDateRangeChange,
     handleIndicatorChange,
     handleTechnicianFilterChange,
+    handleResultFilterChange,
     handleTableChange,
     handleRowDoubleClick,
     handleReload,
+    reloadDistinctResults: loadDistinctResults,
   };
 };
 

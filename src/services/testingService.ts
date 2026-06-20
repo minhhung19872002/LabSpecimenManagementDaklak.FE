@@ -112,8 +112,38 @@ export const testingService = {
         queryParams[`QlktDisplayStatuses[${index}]`] = status;
       });
     }
+    if (input.results && input.results.length > 0) {
+      input.results.forEach((r, index) => {
+        queryParams[`Results[${index}]`] = r;
+      });
+    }
 
     const response = await api.get<PagedSampleAssignmentLogResult>(`${BASE_URL}/sample-assignment-log`, { params: queryParams });
+    return response.data;
+  },
+
+  getDistinctResults: async (input: GetSampleAssignmentLogInput): Promise<string[]> => {
+    const queryParams: Record<string, any> = {};
+    if (input.search) queryParams.Search = input.search;
+    if (input.fromDate) queryParams.FromDate = input.fromDate;
+    if (input.toDate) queryParams.ToDate = input.toDate;
+    if (input.indicatorIds && input.indicatorIds.length > 0) {
+      input.indicatorIds.forEach((id, index) => {
+        queryParams[`IndicatorIds[${index}]`] = id;
+      });
+    }
+    if (input.technicianIds && input.technicianIds.length > 0) {
+      input.technicianIds.forEach((id, index) => {
+        queryParams[`TechnicianIds[${index}]`] = id;
+      });
+    }
+    if (input.qlktDisplayStatuses && input.qlktDisplayStatuses.length > 0) {
+      input.qlktDisplayStatuses.forEach((status, index) => {
+        queryParams[`QlktDisplayStatuses[${index}]`] = status;
+      });
+    }
+
+    const response = await api.get<string[]>(`${BASE_URL}/sample-assignment-log/distinct-results`, { params: queryParams });
     return response.data;
   },
 

@@ -19,6 +19,8 @@ import {
 } from '../../../types/laboratoryTask';
 
 import { useHeaderHeight } from '../../../hooks';
+import ResultFilterControl from './ResultFilterControl';
+import { getResultSearchCandidates } from './resultFilterUtils';
 import '../../QualityManagement/components/SampleAssignmentLogTab.css';
 
 const { RangePicker } = DatePicker;
@@ -56,7 +58,7 @@ const processDataForRowSpan = (data: SampleAssignmentLogDto[]): ProcessedLogItem
 
   const result: ProcessedLogItem[] = new Array(data.length);
 
-  // Pre-compute date keys once — avoids repeated dayjs() calls during span calculation
+  // Pre-compute date keys once to avoid repeated dayjs() calls during span calculation.
   const dateKeys = data.map(item => ({
     transferDate: getDateKey(item.transferDate),
     requestCompletionDate: getDateKey(item.requestCompletionDate),
@@ -65,7 +67,7 @@ const processDataForRowSpan = (data: SampleAssignmentLogDto[]): ProcessedLogItem
     qlktApprovalDate: getDateKey(item.qlktApprovalDate),
   }));
 
-  // Calculate contract groups (start and end indices for each contract group)
+  // Calculate contract groups (start and end indices for each contract group).
   const contractGroups: { start: number; end: number }[] = [];
   let i = 0;
   while (i < data.length) {
@@ -78,7 +80,7 @@ const processDataForRowSpan = (data: SampleAssignmentLogDto[]): ProcessedLogItem
     i = j;
   }
 
-  // Helper: calculate consecutive spans for a field within contract boundaries
+  // Calculate consecutive spans for a field within contract boundaries.
   const calculateFieldSpansWithinContract = (
     fieldGetter: (item: SampleAssignmentLogDto) => string
   ): number[] => {
@@ -104,7 +106,7 @@ const processDataForRowSpan = (data: SampleAssignmentLogDto[]): ProcessedLogItem
     return spans;
   };
 
-  // Calculate sample spans within each contract group
+  // Calculate sample spans within each contract group.
   const sampleSpans: number[] = new Array(data.length).fill(0);
   for (const group of contractGroups) {
     let si = group.start;
@@ -122,13 +124,14 @@ const processDataForRowSpan = (data: SampleAssignmentLogDto[]): ProcessedLogItem
     }
   }
 
-  // Calculate personnel spans within contract
+  // Calculate personnel spans within each contract.
   const technicalManagerSpans = calculateFieldSpansWithinContract(
     (item) => item.technicalManagerName || ''
   );
   const technicianSpans = calculateFieldSpansWithinContract(
     (item) => item.technicianName || ''
   );
+
 
   // Process each row within its contract group
   for (const group of contractGroups) {
@@ -283,6 +286,8 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
   const headerHeight = useHeaderHeight();
 
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(DEFAULT_COLUMN_WIDTHS);
+  const [resultSearchHtml, setResultSearchHtml] = useState('');
+  const [resultFilterOpen, setResultFilterOpen] = useState(false);
   const columnWidthsRef = useRef(columnWidths);
   columnWidthsRef.current = columnWidths;
 
@@ -357,6 +362,9 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
     technicianFilter,
     technicians,
     loadingTechnicians,
+    resultFilter,
+    distinctResults,
+    loadingResults,
     pagination,
     handleSearch,
     handleSearchInputChange,
@@ -364,8 +372,10 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
     handleDateRangeChange,
     handleIndicatorChange,
     handleTechnicianFilterChange,
+    handleResultFilterChange,
     handleTableChange,
     handleRowDoubleClick,
+    reloadDistinctResults,
   } = useSampleAssignmentLogForLab({ displayStatusFilter });
 
   // Process data for row spanning
@@ -376,6 +386,20 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
     const contracts = new Set(data.map((item) => item.contractNumber));
     return contracts.size;
   }, [data]);
+
+  const filteredDistinctResults = useMemo(() => {
+    const searchCandidates = getResultSearchCandidates(resultSearchHtml);
+    if (searchCandidates.length === 0) {
+      return distinctResults;
+    }
+
+    return distinctResults.filter((result) => {
+      const optionCandidates = getResultSearchCandidates(result);
+      return searchCandidates.some((searchCandidate) =>
+        optionCandidates.some((optionCandidate) => optionCandidate.includes(searchCandidate))
+      );
+    });
+  }, [distinctResults, resultSearchHtml]);
 
   const hoveredRowIndexRef = useRef<number | null>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -676,6 +700,135 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
   return (
     <div className="sample-assignment-log-tab">
       {/* Toolbar */}
+      <style>{`
+        .result-filter-trigger:hover,
+        .result-filter-trigger.open,
+        .result-filter-trigger:focus-within {
+          border-color: #4096ff !important;
+        }
+        .result-filter-trigger.open,
+        .result-filter-trigger:focus-within {
+          box-shadow: 0 0 0 2px rgba(5, 145, 255, 0.1);
+        }
+        .result-filter-editor .limit-input-wrapper {
+          display: flex !important;
+          align-items: center !important;
+          flex: 1 1 0% !important;
+          min-width: 0 !important;
+          width: auto !important;
+          min-height: auto !important;
+          height: auto !important;
+          padding: 0 !important;
+          outline: none !important;
+          border: none !important;
+          box-shadow: none !important;
+          background: transparent !important;
+        }
+        .result-filter-editor .limit-input-wrapper:hover,
+        .result-filter-editor .limit-input-wrapper:focus-within {
+          border: none !important;
+          box-shadow: none !important;
+        }
+        .result-filter-editor .limit-input-wrapper:hover .tiptap.ProseMirror,
+        .result-filter-editor .limit-input-wrapper:focus-within .tiptap.ProseMirror {
+          border: none !important;
+          box-shadow: none !important;
+        }
+        .result-filter-editor .limit-input-wrapper .tiptap.ProseMirror,
+        .result-filter-editor .limit-input-wrapper .ProseMirror {
+          border: none !important;
+          box-shadow: none !important;
+          outline: none !important;
+          padding: 0 !important;
+          height: 32px !important;
+          min-height: 32px !important;
+          max-height: 32px !important;
+          line-height: 32px !important;
+          flex: 1 1 auto !important;
+          min-width: 4px !important;
+          width: auto !important;
+          background: transparent !important;
+          cursor: text !important;
+          font-size: 14px !important;
+          caret-color: rgba(0, 0, 0, 0.88) !important;
+        }
+        .result-filter-editor .limit-input-wrapper .ProseMirror p {
+          margin: 0 !important;
+          line-height: 32px !important;
+          min-width: 1px !important;
+        }
+        .result-filter-editor .limit-input-wrapper .tiptap.ProseMirror sub,
+        .result-filter-editor .limit-input-wrapper .tiptap.ProseMirror sup {
+          vertical-align: baseline;
+          position: relative;
+          font-size: 0.75em;
+        }
+        .result-filter-editor .limit-input-wrapper .tiptap.ProseMirror sub {
+          top: 0.4em;
+        }
+        .result-filter-editor .limit-input-wrapper .tiptap.ProseMirror sup {
+          top: -0.5em;
+        }
+        .result-filter-editor .limit-input-wrapper .ProseMirror .is-editor-empty::before {
+          display: none !important;
+        }
+        .result-filter-clear {
+          display: none;
+        }
+        .result-filter-trigger:hover .result-filter-clear {
+          display: flex;
+        }
+        .result-filter-trigger:hover .result-filter-clear ~ .result-filter-search-icon,
+        .result-filter-trigger:hover .result-filter-clear ~ .result-filter-arrow {
+          display: none !important;
+        }
+        .result-filter-selection-item {
+          display: flex;
+          align-items: center;
+          max-width: 100%;
+          height: 32px;
+          padding: 0 4px 0 8px;
+          margin: 2px 0;
+          color: rgba(0, 0, 0, 0.88);
+          font-size: 14px;
+          line-height: 30px;
+          background: rgba(0, 0, 0, 0.06);
+          border: 1px solid transparent;
+          border-radius: 6px;
+          box-sizing: border-box;
+          flex-shrink: 0;
+        }
+        .result-filter-selection-label {
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .result-filter-selection-remove {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 16px;
+          height: 16px;
+          margin-left: 4px;
+          font-size: 10px;
+          line-height: 1;
+          color: rgba(0, 0, 0, 0.45);
+          cursor: pointer;
+          flex-shrink: 0;
+          border-radius: 50%;
+          transition: color 0.2s, background 0.2s;
+        }
+        .result-filter-selection-remove:hover {
+          color: rgba(0, 0, 0, 0.88);
+          background: rgba(0, 0, 0, 0.12);
+        }
+        .result-filter-selection-summary {
+          cursor: default;
+          padding: 0 8px;
+          flex-shrink: 0;
+        }
+      `}</style>
       <Row gutter={[8, 8]} style={{ marginBottom: 0, padding: 16 }} align="middle">
         <Col xs={24} sm={12} lg={5}>
           <Input.Search
@@ -688,7 +841,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
             enterButton
           />
         </Col>
-        <Col xs={24} sm={12} lg={4}>
+        <Col xs={24} sm={12} lg={3}>
           <RangePicker
             value={dateRange}
             onChange={handleDateRangeChange}
@@ -697,7 +850,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
             allowClear
           />
         </Col>
-        <Col xs={24} sm={12} lg={5}>
+        <Col xs={24} sm={12} lg={4}>
           <ResponsiveSelect
             mode="multiple"
             style={{ width: '100%' }}
@@ -737,6 +890,23 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
               </Select.Option>
             ))}
           </ResponsiveSelect>
+        </Col>
+        <Col xs={24} sm={12} lg={4}>
+          <ResultFilterControl
+            open={resultFilterOpen}
+            value={resultFilter}
+            searchHtml={resultSearchHtml}
+            loading={loadingResults}
+            options={filteredDistinctResults}
+            onOpenChange={(open) => {
+              setResultFilterOpen(open);
+              if (open && distinctResults.length === 0 && !loadingResults) {
+                reloadDistinctResults();
+              }
+            }}
+            onSearchChange={setResultSearchHtml}
+            onChange={handleResultFilterChange}
+          />
         </Col>
         <Col flex="auto" style={{ display: "flex", justifyContent: "flex-end" }}>
           <Select

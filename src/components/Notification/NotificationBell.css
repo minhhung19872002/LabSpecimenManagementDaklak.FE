@@ -188,6 +188,11 @@
   font-weight: 600;
 }
 
+.notification-deadline.completed {
+  color: #52c41a;
+  font-weight: 500;
+}
+
 .notification-deadline.is-deadline-type {
   color: #ff4d4f;
 }

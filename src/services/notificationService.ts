@@ -257,6 +257,7 @@ export interface NotificationDto {
   itemCount?: number;
   additionalData?: string;
   daysRemaining?: number;
+  isTaskCompleted?: boolean;
 }
 
 // Paged result DTO
