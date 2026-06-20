@@ -3,7 +3,7 @@ import * as yup from "yup";
 export const productSchema = yup.object({
   name: yup.string().defined().default("").max(500),
   formattedName: yup.string().optional(),
-  identificationCode: yup.string().defined().default("").max(256),
+  identificationCode: yup.string().defined().default("").required("Vui lòng nhập mã nhận dạng").max(256),
   productType: yup.number().defined().default(0).min(0).max(4),
   baseUnitId: yup.string().nullable().optional(),
   packagingQuantity: yup.number().required("Vui lòng nhập số lượng").integer().min(1, "Tối thiểu 1").typeError("Vui lòng nhập số lượng"),

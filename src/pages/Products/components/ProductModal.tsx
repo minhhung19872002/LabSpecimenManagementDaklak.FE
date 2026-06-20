@@ -15,6 +15,7 @@ import {
   Button,
   Space,
   Tooltip,
+  AutoComplete,
 } from "antd";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { useForm, Controller } from "react-hook-form";
@@ -26,6 +27,7 @@ import {
   ProductType,
   ProductTypeLabels,
   CreateProductAttachmentDto,
+  productService,
 } from "../../../services/productService";
 import { UnitDto, UnitCategory, unitService } from "../../../services/masterDataService";
 import { PRODUCT_TYPE_OPTIONS } from "../constants";
@@ -60,6 +62,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
   onCancel,
 }) => {
   const [units, setUnits] = useState<UnitDto[]>([]);
+  const [allProducts, setAllProducts] = useState<ProductDto[]>([]);
   const [newAttachments, setNewAttachments] = useState<
     CreateProductAttachmentDto[]
   >([]);
@@ -149,10 +152,28 @@ const ProductModal: React.FC<ProductModalProps> = ({
     [units],
   );
 
+  const identificationCodeOptions = useMemo(() => {
+    const search = (watchedIdentificationCode || "").trim().toLowerCase();
+    if (!search) return [];
+    return allProducts
+      .filter((p) => p.identificationCode && p.identificationCode.toLowerCase().includes(search))
+      .slice(0, 20)
+      .map((p) => {
+        const label = p.casNumber
+          ? `${p.identificationCode} - ${p.name} - ${p.casNumber}`
+          : `${p.identificationCode} - ${p.name}`;
+        return { value: label, label, disabled: true };
+      });
+  }, [watchedIdentificationCode, allProducts]);
+
   useEffect(() => {
     if (open) {
       const controller = new AbortController();
       loadUnits(controller.signal);
+      productService.getActive().then((items) => {
+        if (controller.signal.aborted) return;
+        setAllProducts(items.filter((p) => p.id !== editingProduct?.id));
+      }).catch(() => {});
       return () => controller.abort();
     }
   }, [open]);
@@ -438,6 +459,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
                       Mã nhận dạng
                     </Text>
                   }
+                  required
                   validateStatus={errors.identificationCode ? "error" : ""}
                   help={errors.identificationCode?.message}
                   style={{ marginBottom: 16 }}
@@ -446,9 +468,13 @@ const ProductModal: React.FC<ProductModalProps> = ({
                     name="identificationCode"
                     control={control}
                     render={({ field }) => (
-                      <Input
+                      <AutoComplete
                         {...field}
+                        value={field.value || ""}
+                        options={identificationCodeOptions}
                         placeholder="Nhập mã nhận dạng"
+                        filterOption={false}
+                        notFoundContent={null}
                       />
                     )}
                   />
