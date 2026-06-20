@@ -225,7 +225,7 @@ const SubmitConsumptionModal: React.FC<Props> = ({
               onChange={(v) => handleSelectProduct(r.key, v)}
               options={availableProducts.map((p) => ({
                 value: p.id,
-                label: `${p.code} - ${p.name}`,
+                label: [p.identificationCode, p.name].filter(Boolean).join(" - ") || " - ",
               }))}
               autoFocus
             />
