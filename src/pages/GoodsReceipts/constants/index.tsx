@@ -1,9 +1,9 @@
 import { Tag, Tooltip, Button, Space } from "antd";
-import { EditOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
+import { EditOutlined, EyeOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import {
   GoodsReceiptListDto,
-  GoodsReceiptOrderStatus,
+  GoodsReceiptWarehouseStatus,
   WarehouseStatusLabels,
   WarehouseStatusColors,
   OrderStatusLabels,
@@ -43,9 +43,9 @@ export const getGoodsReceiptColumns = (
   visibleKeys: Set<string>,
   handleView: (record: GoodsReceiptListDto) => void,
   handleEdit: (record: GoodsReceiptListDto) => void,
-  handleDelete: (record: GoodsReceiptListDto) => void,
+  _handleDelete: (record: GoodsReceiptListDto) => void,
   canEdit: boolean,
-  canDelete: boolean,
+  _canDelete: boolean,
   currentPage: number,
   pageSize: number
 ): ColumnsType<GoodsReceiptListDto> => {
@@ -194,23 +194,13 @@ export const getGoodsReceiptColumns = (
             onClick={() => handleView(record)}
           />
         </Tooltip>
-        {canEdit && record.orderStatus === GoodsReceiptOrderStatus.Draft && (
+        {canEdit && record.warehouseStatus === GoodsReceiptWarehouseStatus.NotImported && (
           <Tooltip title="Sửa">
             <Button
               type="link"
               size="small"
               icon={<EditOutlined />}
               onClick={() => handleEdit(record)}
-            />
-          </Tooltip>
-        )}
-        {canDelete && record.warehouseStatus === 0 && (
-          <Tooltip title="Xóa">
-            <Button
-              type="text"
-              size="small"
-              icon={<DeleteOutlined style={{ color: "#ff4d4f" }} />}
-              onClick={() => handleDelete(record)}
             />
           </Tooltip>
         )}

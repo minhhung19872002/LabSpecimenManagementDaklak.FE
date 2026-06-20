@@ -431,7 +431,7 @@ const GoodsReceiptDetail: React.FC = () => {
           In mã vật tư
         </Button>
       )}
-      {canEdit && receipt.orderStatus === GoodsReceiptOrderStatus.Draft && (
+      {canEdit && receipt.warehouseStatus === GoodsReceiptWarehouseStatus.NotImported && (
         <Button
           type="primary"
           icon={<EditOutlined />}

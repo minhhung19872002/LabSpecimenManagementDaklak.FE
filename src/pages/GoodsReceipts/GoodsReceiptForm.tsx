@@ -105,8 +105,7 @@ const GoodsReceiptForm: React.FC = () => {
   const canPay = authService.hasPermission(PERMISSIONS.GoodsReceipts.AddPayment);
 
   const isReadonly = receipt
-    ? receipt.orderStatus === GoodsReceiptOrderStatus.Approved ||
-      receipt.warehouseStatus === GoodsReceiptWarehouseStatus.Imported
+    ? receipt.warehouseStatus === GoodsReceiptWarehouseStatus.Imported
     : false;
 
   const {
@@ -1036,6 +1035,13 @@ const GoodsReceiptForm: React.FC = () => {
               loading={approving}
             >
               Lưu
+            </Button>
+          )}
+
+          {/* Cập nhật — for Approved receipts not yet imported */}
+          {!isReadonly && isEdit && receipt?.orderStatus === GoodsReceiptOrderStatus.Approved && (
+            <Button type="primary" onClick={handleSaveDraft} loading={saving}>
+              Cập nhật
             </Button>
           )}
 

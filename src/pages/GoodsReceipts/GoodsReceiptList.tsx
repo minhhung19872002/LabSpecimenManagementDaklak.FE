@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useCallback } from "react";
 import { Card, Button, Space, Dropdown, message } from "antd";
-import { PlusOutlined, DeleteOutlined, DownloadOutlined, DownOutlined } from "@ant-design/icons";
+import { PlusOutlined, DownloadOutlined, DownOutlined } from "@ant-design/icons";
 import * as XLSX from "xlsx";
 import { useGoodsReceiptList, useGoodsReceiptActions } from "./hooks";
 import { GoodsReceiptTable, ColumnConfigPopover } from "./components";
@@ -55,7 +55,6 @@ const GoodsReceiptList: React.FC = () => {
     handleView,
     handleEdit,
     handleDelete,
-    handleBatchDelete,
   } = useGoodsReceiptActions({ fetchData });
 
   const canCreate = authService.hasPermission(PERMISSIONS.GoodsReceipts.Create);
@@ -147,15 +146,6 @@ const GoodsReceiptList: React.FC = () => {
         title="Quản lý phiếu nhập hàng"
         extra={
           <Space>
-            {canDelete && selectedRowKeys.length > 0 && (
-              <Button
-                icon={<DeleteOutlined style={{ color: "#fff" }} />}
-                onClick={handleBatchDelete}
-                style={{ backgroundColor: "#ff4d4f", borderColor: "#ff4d4f", color: "#fff" }}
-              >
-                Xóa ({selectedRowKeys.length})
-              </Button>
-            )}
             <Button
               icon={<DownloadOutlined />}
               onClick={handleExportExcel}
@@ -205,7 +195,7 @@ const GoodsReceiptList: React.FC = () => {
           orderStatusFilter={orderStatusFilter}
           paymentStatusFilter={paymentStatusFilter}
           receiptTypeFilter={receiptTypeFilter}
-          canDelete={canDelete}
+          canDelete={false}
           selectedRowKeys={selectedRowKeys}
           onSearchChange={setSearchText}
           onWarehouseStatusChange={handleWarehouseStatusChange}
