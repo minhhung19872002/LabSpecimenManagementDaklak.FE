@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useMemo, memo } from "react";
+import React, { useState, useCallback, useRef, useMemo, useEffect, memo } from "react";
 import {
   Table,
   AutoComplete,
@@ -18,6 +18,11 @@ import dayjs from "dayjs";
 
 export type EditedValuesMap = Map<string, { result?: string; testDate?: string }>;
 
+interface ResultOption {
+  value: string;
+  label: string;
+}
+
 interface Props {
   batchId: string;
   items: TestBatchItemDto[];
@@ -25,6 +30,7 @@ interface Props {
   selectedItemIds: string[];
   onSelectionChange: (ids: string[]) => void;
   editedValuesRef?: React.MutableRefObject<EditedValuesMap>;
+  resultOptions?: ResultOption[];
 }
 
 const getItemStatus = (item: TestBatchItemDto) => {
@@ -36,6 +42,7 @@ const getItemStatus = (item: TestBatchItemDto) => {
     };
   }
   if (item.rejectionReason) return { label: "Từ chối", color: "error" };
+  if (item.result && item.testDate) return { label: "Đang thử nghiệm", color: "processing" };
   if (item.result) return { label: "Chờ gửi", color: "blue" };
   return { label: "Cần làm", color: "default" as const };
 };
@@ -46,9 +53,11 @@ interface ResultCellProps {
   initialValue: string;
   disabled: boolean;
   getEditedValues: () => Map<string, { result?: string; testDate?: string }>;
+  options?: ResultOption[];
+  onCellSaved?: (itemId: string, field: "result" | "testDate", value: string | undefined) => void;
 }
 
-const ResultCell = memo<ResultCellProps>(({ itemId, batchId, initialValue, disabled, getEditedValues }) => {
+const ResultCell = memo<ResultCellProps>(({ itemId, batchId, initialValue, disabled, getEditedValues, options, onCellSaved }) => {
   const [value, setValue] = useState(initialValue);
 
   const handleBlur = useCallback(async () => {
@@ -66,19 +75,27 @@ const ResultCell = memo<ResultCellProps>(({ itemId, batchId, initialValue, disab
           testDate: existing.testDate || undefined,
         }],
       });
+      onCellSaved?.(itemId, "result", value || undefined);
     } catch (err: any) {
       message.error(err?.response?.data?.error?.message || "Lỗi lưu kết quả");
     }
-  }, [itemId, batchId, value, initialValue, getEditedValues]);
+  }, [itemId, batchId, value, initialValue, getEditedValues, onCellSaved]);
 
   return (
     <AutoComplete
       value={value}
+      options={options}
       onChange={setValue}
       onBlur={handleBlur}
       disabled={disabled}
       placeholder={disabled ? "-" : "Nhập KQ"}
-      style={{ width: "100%" }}
+      style={{
+        width: "100%",
+        backgroundColor: disabled ? "#f5f5f5" : undefined,
+      }}
+      filterOption={(inputValue, option) =>
+        option?.value.toUpperCase().includes(inputValue.toUpperCase()) ?? false
+      }
     />
   );
 });
@@ -89,9 +106,10 @@ interface DateCellProps {
   initialValue: string | undefined;
   disabled: boolean;
   getEditedValues: () => Map<string, { result?: string; testDate?: string }>;
+  onCellSaved?: (itemId: string, field: "result" | "testDate", value: string | undefined) => void;
 }
 
-const DateCell = memo<DateCellProps>(({ itemId, batchId, initialValue, disabled, getEditedValues }) => {
+const DateCell = memo<DateCellProps>(({ itemId, batchId, initialValue, disabled, getEditedValues, onCellSaved }) => {
   const [value, setValue] = useState(initialValue);
 
   const handleChange = useCallback(async (date: dayjs.Dayjs | null) => {
@@ -110,10 +128,11 @@ const DateCell = memo<DateCellProps>(({ itemId, batchId, initialValue, disabled,
           testDate: dateStr || undefined,
         }],
       });
+      onCellSaved?.(itemId, "testDate", dateStr);
     } catch (err: any) {
       message.error(err?.response?.data?.error?.message || "Lỗi lưu kết quả");
     }
-  }, [itemId, batchId, getEditedValues]);
+  }, [itemId, batchId, getEditedValues, onCellSaved]);
 
   const dateValue = value ? dayjs(value) : null;
 
@@ -136,10 +155,25 @@ const BatchIndicatorTable: React.FC<Props> = ({
   selectedItemIds,
   onSelectionChange,
   editedValuesRef,
+  resultOptions,
 }) => {
   const internalRef = useRef<EditedValuesMap>(new Map());
   const editedRef = editedValuesRef || internalRef;
   const getEditedValues = useCallback(() => editedRef.current, [editedRef]);
+
+  const [savedValues, setSavedValues] = useState<Map<string, { result?: string; testDate?: string }>>(new Map());
+
+  useEffect(() => {
+    setSavedValues(new Map());
+  }, [batchId]);
+
+  const handleCellSaved = useCallback((itemId: string, field: "result" | "testDate", value: string | undefined) => {
+    setSavedValues((prev) => {
+      const next = new Map(prev);
+      next.set(itemId, { ...next.get(itemId), [field]: value });
+      return next;
+    });
+  }, []);
 
   const columns: ColumnsType<TestBatchItemDto> = useMemo(() => {
     const canSelectItem = (item: TestBatchItemDto) =>
@@ -219,6 +253,8 @@ const BatchIndicatorTable: React.FC<Props> = ({
             initialValue={item.result ?? ""}
             disabled={isDisabled}
             getEditedValues={getEditedValues}
+            options={resultOptions}
+            onCellSaved={handleCellSaved}
           />
         );
       },
@@ -236,6 +272,7 @@ const BatchIndicatorTable: React.FC<Props> = ({
             initialValue={item.testDate}
             disabled={isDisabled}
             getEditedValues={getEditedValues}
+            onCellSaved={handleCellSaved}
           />
         );
       },
@@ -253,7 +290,9 @@ const BatchIndicatorTable: React.FC<Props> = ({
       width: 100,
       align: "center" as const,
       render: (_: unknown, item: TestBatchItemDto) => {
-        const s = getItemStatus(item);
+        const edited = savedValues.get(item.id);
+        const effective = edited ? { ...item, ...edited } : item;
+        const s = getItemStatus(effective as TestBatchItemDto);
         return <Tag color={s.color}>{s.label}</Tag>;
       },
     },
@@ -265,7 +304,7 @@ const BatchIndicatorTable: React.FC<Props> = ({
       render: (val: string) => val || "-",
     },
   ];
-  }, [batchId, canEdit, getEditedValues, selectedItemIds, items, onSelectionChange]);
+  }, [batchId, canEdit, getEditedValues, selectedItemIds, items, onSelectionChange, resultOptions, savedValues, handleCellSaved]);
 
   return (
     <div className="batch-indicator-table" style={{ overflow: "hidden" }}>

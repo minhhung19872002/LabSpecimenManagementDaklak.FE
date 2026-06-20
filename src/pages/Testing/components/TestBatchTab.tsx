@@ -36,6 +36,7 @@ import {
   type IndicatorDto,
 } from "../../../services/masterDataService";
 import laboratoryTaskService from "../../../services/laboratoryTaskService";
+import testResultValueService from "../../../services/testResultValueService";
 import {
   TestBatchListDto,
   TestBatchDto,
@@ -87,12 +88,19 @@ const TestBatchTab: React.FC = () => {
   const [submitConsumptionModalOpen, setSubmitConsumptionModalOpen] = useState(false);
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const editedValuesRef = useRef<EditedValuesMap>(new Map());
+  const [resultOptions, setResultOptions] = useState<{ value: string; label: string }[]>([]);
 
   useEffect(() => {
     indicatorService.getActive().then(setIndicators).catch(() => {});
     laboratoryTaskService
       .getTechniciansByLaboratory()
       .then(setTechnicians)
+      .catch(() => {});
+    testResultValueService
+      .getWithIndicators()
+      .then((data) =>
+        setResultOptions(data.map((item) => ({ value: item.name, label: item.name })))
+      )
       .catch(() => {});
   }, []);
 
@@ -635,6 +643,7 @@ const TestBatchTab: React.FC = () => {
                 selectedItemIds={selectedItemIds}
                 onSelectionChange={setSelectedItemIds}
                 editedValuesRef={editedValuesRef}
+                resultOptions={resultOptions}
               />
 
               {batchDetail.consumptionConfirmed && (
