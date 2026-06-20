@@ -20,6 +20,7 @@ import {
   WarningOutlined,
 } from "../../../components/common/Icon";
 import testBatchService from "../../../services/testBatchService";
+import { authService } from "../../../services/authService";
 import {
   AvailableIndicatorDto,
   CreateTestBatchDto,
@@ -27,6 +28,29 @@ import {
 import dayjs from "dayjs";
 
 const { Text } = Typography;
+
+const sortAvailableIndicators = (
+  items: AvailableIndicatorDto[],
+  currentUserId?: string,
+): AvailableIndicatorDto[] => {
+  return [...items].sort((a, b) => {
+    // 1. Giảm dần theo số hợp đồng
+    const byContract = (b.contractNumber || "").localeCompare(a.contractNumber || "");
+    if (byContract !== 0) return byContract;
+
+    // 2. Chỉ tiêu của user hiện tại lên trước
+    const byCurrentUser =
+      Number(b.technicianId === currentUserId) - Number(a.technicianId === currentUserId);
+    if (byCurrentUser !== 0) return byCurrentUser;
+
+    // 3. Tăng dần theo ngày yêu cầu hoàn thành
+    const byDeadline = (a.requestCompletionDate || "").localeCompare(b.requestCompletionDate || "");
+    if (byDeadline !== 0) return byDeadline;
+
+    // 4. Ưu tiên trạng thái: Cần làm(0) → Đang TN(1) → Hoàn thành(4)
+    return (a.testingStatus ?? 99) - (b.testingStatus ?? 99);
+  });
+};
 
 interface Props {
   open: boolean;
@@ -100,6 +124,8 @@ const CreateBatchModal: React.FC<Props> = ({ open, onClose, onCreated }) => {
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  const currentUserId = useMemo(() => authService.getUserInfo()?.id, []);
+
   const filteredItems = useMemo(() => {
     let items = availableItems;
     if (searchText) {
@@ -114,15 +140,16 @@ const CreateBatchModal: React.FC<Props> = ({ open, onClose, onCreated }) => {
           i.methodName?.toLowerCase().includes(lower),
       );
     }
+    items = sortAvailableIndicators(items, currentUserId);
     if (batchCondition) {
-      items = [...items].sort((a, b) => {
+      items.sort((a, b) => {
         const aOk = isItemCompatible(a) ? 0 : 1;
         const bOk = isItemCompatible(b) ? 0 : 1;
         return aOk - bOk;
       });
     }
     return items;
-  }, [availableItems, searchText, batchCondition, isItemCompatible]);
+  }, [availableItems, searchText, batchCondition, isItemCompatible, currentUserId]);
 
   const rowVirtualizer = useVirtualizer({
     count: filteredItems.length,

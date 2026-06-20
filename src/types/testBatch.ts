@@ -237,4 +237,5 @@ export interface AvailableIndicatorDto {
   requestCompletionDate?: string;
   sampleSentDate?: string;
   isAlreadyInBatch: boolean;
+  testingStatus: number;
 }
