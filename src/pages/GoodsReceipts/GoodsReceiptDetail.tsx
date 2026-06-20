@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from "react";
 import {
-  Card, Button, Space, Row, Col, Table, Tag, Spin, Divider, message,
+  Card,
+  Button,
+  Space,
+  Row,
+  Col,
+  Table,
+  Tag,
+  Spin,
+  Divider,
+  message,
 } from "antd";
 import { ArrowLeftOutlined, EditOutlined } from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
@@ -34,10 +43,15 @@ import "./GoodsReceiptDetail.css";
 
 const formatCurrency = (v: number) => v.toLocaleString("vi-VN");
 
-const DetailItem: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
+const DetailItem: React.FC<{ label: string; value: React.ReactNode }> = ({
+  label,
+  value,
+}) => (
   <div className="detail-item">
     <span className="detail-item-label">{label}</span>
-    <span className="detail-item-value">{value != null && value !== "" ? value : "-"}</span>
+    <span className="detail-item-value">
+      {value != null && value !== "" ? value : "-"}
+    </span>
   </div>
 );
 
@@ -48,15 +62,22 @@ const GoodsReceiptDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [receipt, setReceipt] = useState<GoodsReceiptDto | null>(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-  const [warehouseImportModalOpen, setWarehouseImportModalOpen] = useState(false);
+  const [warehouseImportModalOpen, setWarehouseImportModalOpen] =
+    useState(false);
   const [printBarcodeModalOpen, setPrintBarcodeModalOpen] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [approving, setApproving] = useState(false);
 
   const canEdit = authService.hasPermission(PERMISSIONS.GoodsReceipts.Edit);
-  const canApprove = authService.hasPermission(PERMISSIONS.GoodsReceipts.Approve);
-  const canImport = authService.hasPermission(PERMISSIONS.GoodsReceipts.ImportToWarehouse);
-  const canPay = authService.hasPermission(PERMISSIONS.GoodsReceipts.AddPayment);
+  const canApprove = authService.hasPermission(
+    PERMISSIONS.GoodsReceipts.Approve,
+  );
+  const canImport = authService.hasPermission(
+    PERMISSIONS.GoodsReceipts.ImportToWarehouse,
+  );
+  const canPay = authService.hasPermission(
+    PERMISSIONS.GoodsReceipts.AddPayment,
+  );
 
   const loadData = async () => {
     if (!id) return;
@@ -65,7 +86,9 @@ const GoodsReceiptDetail: React.FC = () => {
       const data = await goodsReceiptService.get(id);
       setReceipt(data);
     } catch (error: any) {
-      message.error(getApiErrorMessage(error, "Không thể tải phiếu nhập hàng."));
+      message.error(
+        getApiErrorMessage(error, "Không thể tải phiếu nhập hàng."),
+      );
     } finally {
       setLoading(false);
     }
@@ -200,7 +223,8 @@ const GoodsReceiptDetail: React.FC = () => {
       key: "amountBeforeVat",
       width: 150,
       align: "right" as const,
-      render: (_: any, r: GoodsReceiptItemDto) => formatCurrency(r.amountBeforeVat),
+      render: (_: any, r: GoodsReceiptItemDto) =>
+        formatCurrency(r.amountBeforeVat),
     },
     {
       title: "VAT %",
@@ -214,7 +238,8 @@ const GoodsReceiptDetail: React.FC = () => {
       key: "amountAfterVat",
       width: 150,
       align: "right" as const,
-      render: (_: any, r: GoodsReceiptItemDto) => formatCurrency(r.amountAfterVat),
+      render: (_: any, r: GoodsReceiptItemDto) =>
+        formatCurrency(r.amountAfterVat),
     },
   ];
 
@@ -265,7 +290,8 @@ const GoodsReceiptDetail: React.FC = () => {
       key: "amountBeforeVat",
       width: 150,
       align: "right" as const,
-      render: (_: any, r: GoodsReceiptItemDto) => formatCurrency(r.amountBeforeVat),
+      render: (_: any, r: GoodsReceiptItemDto) =>
+        formatCurrency(r.amountBeforeVat),
     },
     {
       title: "VAT %",
@@ -279,7 +305,8 @@ const GoodsReceiptDetail: React.FC = () => {
       key: "amountAfterVat",
       width: 150,
       align: "right" as const,
-      render: (_: any, r: GoodsReceiptItemDto) => formatCurrency(r.amountAfterVat),
+      render: (_: any, r: GoodsReceiptItemDto) =>
+        formatCurrency(r.amountAfterVat),
     },
   ];
 
@@ -303,21 +330,24 @@ const GoodsReceiptDetail: React.FC = () => {
       key: "paymentMethod",
       width: 130,
       render: (_: any, r: GoodsReceiptPaymentDto) =>
-        PAYMENT_METHOD_OPTIONS.find((o) => o.value === r.paymentMethod)?.label || "-",
+        PAYMENT_METHOD_OPTIONS.find((o) => o.value === r.paymentMethod)
+          ?.label || "-",
     },
     {
       title: "Số tiền",
       key: "amount",
       width: 150,
       align: "right" as const,
-      render: (_: any, r: GoodsReceiptPaymentDto) => `${formatCurrency(r.amount)} VNĐ`,
+      render: (_: any, r: GoodsReceiptPaymentDto) =>
+        `${formatCurrency(r.amount)} VNĐ`,
     },
     {
       title: "Còn lại trước thanh toán",
       key: "remainingBeforePayment",
       width: 180,
       align: "right" as const,
-      render: (_: any, r: GoodsReceiptPaymentDto) => `${formatCurrency(r.remainingBeforePayment)} VNĐ`,
+      render: (_: any, r: GoodsReceiptPaymentDto) =>
+        `${formatCurrency(r.remainingBeforePayment)} VNĐ`,
     },
     {
       title: "Người đại diện",
@@ -372,7 +402,8 @@ const GoodsReceiptDetail: React.FC = () => {
 
   const remaining = receipt.totalAmountAfterVat - receipt.totalPaid;
   const isApproved = receipt.orderStatus === GoodsReceiptOrderStatus.Approved;
-  const isImported = receipt.warehouseStatus === GoodsReceiptWarehouseStatus.Imported;
+  const isImported =
+    receipt.warehouseStatus === GoodsReceiptWarehouseStatus.Imported;
 
   const renderActionButtons = () => (
     <Space wrap>
@@ -381,11 +412,12 @@ const GoodsReceiptDetail: React.FC = () => {
           Duyệt
         </Button>
       )}
-      {canPay && isApproved && receipt.paymentStatus !== GoodsReceiptPaymentStatus.Paid && remaining > 0 && (
-        <Button onClick={() => setPaymentModalOpen(true)}>
-          Thanh toán
-        </Button>
-      )}
+      {canPay &&
+        isApproved &&
+        receipt.paymentStatus !== GoodsReceiptPaymentStatus.Paid &&
+        remaining > 0 && (
+          <Button onClick={() => setPaymentModalOpen(true)}>Thanh toán</Button>
+        )}
       {canImport && isApproved && !isImported && (
         <Button
           type="primary"
@@ -407,7 +439,7 @@ const GoodsReceiptDetail: React.FC = () => {
             navigate(
               receipt.receiptType === GoodsReceiptType.Equipment
                 ? `/goods-receipts/edit-equipment/${id}`
-                : `/goods-receipts/edit/${id}`
+                : `/goods-receipts/edit/${id}`,
             )
           }
         >
@@ -445,9 +477,10 @@ const GoodsReceiptDetail: React.FC = () => {
               <Tag color={WarehouseStatusColors[receipt.warehouseStatus]}>
                 {WarehouseStatusLabels[receipt.warehouseStatus]}
               </Tag>
-              <Tag color={PaymentStatusColors[receipt.paymentStatus]}>
+              {/* Ẩn theo yêu cầu của BA. Có thể hiển thị tùy theo nhu cầu */}
+              {/* <Tag color={PaymentStatusColors[receipt.paymentStatus]}>
                 {PaymentStatusLabels[receipt.paymentStatus]}
-              </Tag>
+              </Tag> */}
             </Space>
             {renderActionButtons()}
           </div>
@@ -459,13 +492,19 @@ const GoodsReceiptDetail: React.FC = () => {
             <div className="detail-section-title">Thông tin nhà cung cấp</div>
             <Row gutter={16}>
               <Col xs={24} sm={12}>
-                <DetailItem label="Địa chỉ NCC" value={receipt.supplierAddress} />
+                <DetailItem
+                  label="Địa chỉ NCC"
+                  value={receipt.supplierAddress}
+                />
               </Col>
               <Col xs={24} sm={12}>
                 <DetailItem label="SĐT NCC" value={receipt.supplierPhone} />
               </Col>
               <Col xs={24} sm={12}>
-                <DetailItem label="SĐT đại diện NCC" value={receipt.supplierRepresentativePhone} />
+                <DetailItem
+                  label="SĐT đại diện NCC"
+                  value={receipt.supplierRepresentativePhone}
+                />
               </Col>
             </Row>
           </div>
@@ -474,13 +513,22 @@ const GoodsReceiptDetail: React.FC = () => {
             <div className="detail-section-title">Thông tin phiếu</div>
             <Row gutter={16}>
               <Col xs={24} sm={12}>
-                <DetailItem label="Nhân viên mua hàng" value={receipt.purchaserName} />
+                <DetailItem
+                  label="Nhân viên mua hàng"
+                  value={receipt.purchaserName}
+                />
               </Col>
               <Col xs={24} sm={12}>
-                <DetailItem label="Người lập phiếu" value={receipt.preparedByName} />
+                <DetailItem
+                  label="Người lập phiếu"
+                  value={receipt.preparedByName}
+                />
               </Col>
               <Col xs={24} sm={12}>
-                <DetailItem label="Số phiếu giao hàng từ NCC" value={receipt.deliveryNoteNumber} />
+                <DetailItem
+                  label="Số phiếu giao hàng từ NCC"
+                  value={receipt.deliveryNoteNumber}
+                />
               </Col>
               <Col xs={24} sm={12}>
                 <DetailItem label="VAT" value={`${receipt.vatPercent}%`} />
@@ -488,13 +536,21 @@ const GoodsReceiptDetail: React.FC = () => {
               <Col xs={24} sm={12}>
                 <DetailItem
                   label="Ngày cấp chứng từ"
-                  value={receipt.documentDate ? dayjs(receipt.documentDate).format("DD/MM/YYYY") : undefined}
+                  value={
+                    receipt.documentDate
+                      ? dayjs(receipt.documentDate).format("DD/MM/YYYY")
+                      : undefined
+                  }
                 />
               </Col>
               <Col xs={24} sm={12}>
                 <DetailItem
                   label="Ngày hết hạn chứng từ"
-                  value={receipt.documentExpiryDate ? dayjs(receipt.documentExpiryDate).format("DD/MM/YYYY") : undefined}
+                  value={
+                    receipt.documentExpiryDate
+                      ? dayjs(receipt.documentExpiryDate).format("DD/MM/YYYY")
+                      : undefined
+                  }
                 />
               </Col>
               <Col xs={24} sm={12}>
@@ -544,11 +600,15 @@ const GoodsReceiptDetail: React.FC = () => {
               locale={{ emptyText: "Không có hàng hóa" }}
             />
           )}
-          <div style={{ display: "flex", justifyContent: "flex-end", padding: 16 }}>
+          <div
+            style={{ display: "flex", justifyContent: "flex-end", padding: 16 }}
+          >
             <div className="payment-summary">
               <div className="payment-summary-row">
                 <span>Tổng chưa VAT:</span>
-                <strong>{formatCurrency(receipt.totalAmountBeforeVat)} VNĐ</strong>
+                <strong>
+                  {formatCurrency(receipt.totalAmountBeforeVat)} VNĐ
+                </strong>
               </div>
               <div className="payment-summary-row">
                 <span>Tổng thuế VAT:</span>
@@ -557,13 +617,18 @@ const GoodsReceiptDetail: React.FC = () => {
               <Divider style={{ margin: "8px 0" }} />
               <div className="payment-summary-row">
                 <span>Tổng tiền:</span>
-                <strong style={{ color: "#1677ff", fontSize: 16 }}>{formatCurrency(receipt.totalAmountAfterVat)} VNĐ</strong>
+                <strong style={{ color: "#1677ff", fontSize: 16 }}>
+                  {formatCurrency(receipt.totalAmountAfterVat)} VNĐ
+                </strong>
               </div>
               <div className="payment-summary-row">
                 <span>Đã thanh toán:</span>
                 <span>{formatCurrency(receipt.totalPaid)} VNĐ</span>
               </div>
-              <div className="payment-summary-row" style={{ color: remaining > 0 ? "#ff4d4f" : "#52c41a" }}>
+              <div
+                className="payment-summary-row"
+                style={{ color: remaining > 0 ? "#ff4d4f" : "#52c41a" }}
+              >
                 <span>Số tiền còn lại:</span>
                 <strong>{formatCurrency(Math.max(0, remaining))} VNĐ</strong>
               </div>
