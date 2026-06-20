@@ -872,18 +872,16 @@ const ProductModal: React.FC<ProductModalProps> = ({
                 )}
                 {(packagingLine1 || packagingLine2) && (
                   <div>
+                    <Text
+                      type="secondary"
+                      style={{ fontSize: 11, display: "block" }}
+                    >
+                      Quy cách đóng gói
+                    </Text>
                     {packagingLine1 && (
-                      <>
-                        <Text
-                          type="secondary"
-                          style={{ fontSize: 11, display: "block" }}
-                        >
-                          Quy cách đóng gói
-                        </Text>
-                        <Text style={{ fontSize: 13, fontWeight: 500, display: "block" }}>
-                          {packagingLine1}
-                        </Text>
-                      </>
+                      <Text style={{ fontSize: 13, fontWeight: 500, display: "block" }}>
+                        {packagingLine1}
+                      </Text>
                     )}
                     {packagingLine2 && (
                       <Text style={{ fontSize: 13, fontWeight: 500, display: "block" }}>
