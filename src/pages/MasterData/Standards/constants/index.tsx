@@ -224,6 +224,7 @@ export const getIndicatorColumns = (
     dataIndex: "unit",
     key: "unit",
     width: 100,
+    render: (text: string) => text ? <IndicatorName name={text} /> : "-",
   },
   {
     title: "Giới hạn",
