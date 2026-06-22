@@ -99,6 +99,8 @@ export interface LaboratoryTaskIndicatorDto {
   sampleId: string;
   sampleCode?: string;
   sampleName?: string;
+  sampleQuantity?: string;
+  sampleStatusText?: string;
   specimenTypeId?: string;  // ID nền mẫu (loại mẫu)
   specimenTypeName?: string;  // Tên nền mẫu
   indicatorId: string;
@@ -370,6 +372,8 @@ export interface SampleInfo {
   sampleId: string;
   sampleCode?: string;
   sampleName?: string;
+  sampleQuantity?: string;
+  sampleStatusText?: string;
   specimenTypeName?: string;
   indicatorCount: number;
   indicators: LaboratoryTaskIndicatorDto[];

@@ -499,6 +499,8 @@ const TaskManagementDetail: React.FC = () => {
           sampleId,
           sampleCode: indicators[0]?.sampleCode,
           sampleName: indicators[0]?.sampleName,
+          sampleQuantity: indicators[0]?.sampleQuantity,
+          sampleStatusText: indicators[0]?.sampleStatusText,
           specimenTypeName: indicators[0]?.specimenTypeName,
           indicatorCount: indicators.length,
           indicators: mergedIndicators as LaboratoryTaskIndicatorDto[],
@@ -1726,6 +1728,22 @@ const TaskManagementDetail: React.FC = () => {
               <Text type="secondary">({sample.indicatorCount} chỉ tiêu)</Text>
               {getSampleStatusTag(sample.sampleStatus)}
             </Space>
+            {(sample.sampleQuantity || sample.sampleStatusText) && (
+              <div style={{ marginTop: 4, display: "flex", gap: 16, fontSize: 13 }}>
+                {sample.sampleQuantity && (
+                  <Text style={{ fontSize: 13 }}>
+                    <Text type="secondary" style={{ fontSize: 13 }}>Lượng mẫu gửi:</Text>{" "}
+                    {sample.sampleQuantity}
+                  </Text>
+                )}
+                {sample.sampleStatusText && (
+                  <Text style={{ fontSize: 13 }}>
+                    <Text type="secondary" style={{ fontSize: 13 }}>Tình trạng mẫu:</Text>{" "}
+                    {sample.sampleStatusText}
+                  </Text>
+                )}
+              </div>
+            )}
           </Col>
           <Col>
             <Space>
