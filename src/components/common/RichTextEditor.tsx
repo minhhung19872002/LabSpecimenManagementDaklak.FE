@@ -22,6 +22,8 @@ interface RichTextEditorProps {
   showToolbar?: boolean;
   /** Min height of editor content area (default: 32px, or 180px when showToolbar) */
   minHeight?: number;
+  /** Size variant matching Ant Design sizing (default: "default") */
+  size?: "small" | "default";
 }
 
 const ToolbarButton: React.FC<{
@@ -75,6 +77,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   disabled = false,
   showToolbar = false,
   minHeight,
+  size = "default",
 }) => {
   // Track if we're syncing from prop to avoid triggering onChange
   const isSyncingFromProp = useRef(false);
@@ -129,7 +132,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const effectiveMinHeight = minHeight ?? (showToolbar ? 180 : 32);
 
   return (
-    <div className={`rich-text-editor-wrapper ${showToolbar ? "with-toolbar" : ""}`}>
+    <div className={`rich-text-editor-wrapper ${showToolbar ? "with-toolbar" : ""} ${size === "small" ? "rte-small" : ""}`}>
       {showToolbar && (
         <div
           className="rte-toolbar"
@@ -282,6 +285,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         .rich-text-editor-wrapper .ProseMirror {
           outline: none;
           width: 100%;
+        }
+        .rich-text-editor-wrapper.rte-small .tiptap {
+          min-height: 32px;
+          padding: 4px 7px;
+          border-radius: 8px;
         }
       `}</style>
     </div>
