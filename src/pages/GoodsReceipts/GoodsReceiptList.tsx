@@ -163,7 +163,7 @@ const GoodsReceiptList: React.FC = () => {
                   items: [
                     {
                       key: "goods",
-                      label: "Tạo phiếu nhập vật tư",
+                      label: "Tạo yêu cầu mua sắm",
                       onClick: () => handleCreate(GoodsReceiptType.Goods),
                     },
                     {

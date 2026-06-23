@@ -835,7 +835,7 @@ const GoodsReceiptForm: React.FC = () => {
         className="list-card"
         title={
           <Space>
-            {isEdit ? "Sửa phiếu nhập vật tư" : "Tạo phiếu nhập vật tư"}
+            {isEdit ? "Sửa yêu cầu mua sắm" : "Tạo yêu cầu mua sắm"}
             {receipt?.code && <Tag>{receipt.code}</Tag>}
           </Space>
         }

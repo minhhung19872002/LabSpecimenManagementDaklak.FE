@@ -57,7 +57,7 @@ const ROUTE_TITLES: PageTitleRoute[] = [
   { path: "/reports", title: "Báo cáo", end: false },
   { path: "/statistics", title: "Thống kê", end: false },
   { path: "/ncr", title: "Báo cáo NCR", end: false },
-  { path: "/goods-receipts/create", title: "Tạo phiếu nhập vật tư" },
+  { path: "/goods-receipts/create", title: "Tạo yêu cầu mua sắm" },
   { path: "/goods-receipts/create-equipment", title: "Tạo phiếu nhập thiết bị" },
   { path: "/goods-receipts/edit-equipment/:id", title: "Sửa phiếu nhập thiết bị" },
   { path: "/goods-receipts/edit/:id", title: "Sửa phiếu nhập vật tư" },

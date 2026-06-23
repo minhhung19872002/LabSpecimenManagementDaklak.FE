@@ -7,7 +7,7 @@ describe('getTitleForPath - GoodsReceipts routes', () => {
   });
 
   it('should return title for create goods receipt (vật tư)', () => {
-    expect(getTitleForPath('/goods-receipts/create')).toBe('Tạo phiếu nhập vật tư');
+    expect(getTitleForPath('/goods-receipts/create')).toBe('Tạo yêu cầu mua sắm');
   });
 
   it('should return title for create equipment receipt', () => {
