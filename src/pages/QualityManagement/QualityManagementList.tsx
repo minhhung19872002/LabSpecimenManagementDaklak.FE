@@ -376,6 +376,7 @@ const QualityManagementList: React.FC = () => {
                   <Select.Option value="ContractDate desc">Ngày hợp đồng mới nhất</Select.Option>
                   <Select.Option value="RequestCompletionDate desc">Ngày yêu cầu xong mới nhất</Select.Option>
                   <Select.Option value="RequestCompletionDate">Ngày yêu cầu xong cũ nhất</Select.Option>
+                  <Select.Option value="LatestApprovalDate desc">Ngày phát hành mới nhất</Select.Option>
                 </Select>
               </Col>
             </Row>
