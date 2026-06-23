@@ -474,7 +474,7 @@ const MainLayout: React.FC = () => {
         {
           key: "goodsReceipts",
           icon: <Icon name="clipboard-check" />,
-          label: menuLabel("Quản lý nhập kho"),
+          label: menuLabel("Dự trù và đặt hàng"),
           onClick: () => navigate(PATH_ROUTES.goodsReceipts.index),
           roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
         },
