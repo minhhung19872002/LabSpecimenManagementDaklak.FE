@@ -21,6 +21,7 @@ import {
 } from "../../services/goodsReceiptService";
 import { manufacturerService, ManufacturerDto } from "../../services/manufacturerService";
 import { supplierService, SupplierDto, CreateUpdateSupplierDto } from "../../services/supplierService";
+import { employeeService, EmployeeDto } from "../../services/employeeService";
 import { equipmentService, EquipmentListDto } from "../../services/equipmentService";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
@@ -59,13 +60,13 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [receipt, setReceipt] = useState<GoodsReceiptDto | null>(null);
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
+  const [employees, setEmployees] = useState<EmployeeDto[]>([]);
   const [manufacturers, setManufacturers] = useState<ManufacturerDto[]>([]);
   const [existingEquipments, setExistingEquipments] = useState<EquipmentListDto[]>([]);
   const [lineItems, setLineItems] = useState<EquipmentLineItem[]>([]);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [isCustomVat, setIsCustomVat] = useState(false);
-  const [approving, setApproving] = useState(false);
   const [importing, setImporting] = useState(false);
 
   // Inline supplier creation modal
@@ -74,12 +75,12 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
   // Track which line item the supplier is being created for (key), null means creating for a general add
   const [supplierModalTargetKey, setSupplierModalTargetKey] = useState<string | null>(null);
 
-  const canApprove = authService.hasPermission(PERMISSIONS.GoodsReceipts.Approve);
   const canImport = authService.hasPermission(PERMISSIONS.GoodsReceipts.ImportToWarehouse);
   const canPay = authService.hasPermission(PERMISSIONS.GoodsReceipts.AddPayment);
 
   const isReadonly = receipt
-    ? receipt.orderStatus === GoodsReceiptOrderStatus.Approved ||
+    ? (receipt.orderStatus === GoodsReceiptOrderStatus.Ordering ||
+        receipt.orderStatus === GoodsReceiptOrderStatus.WaitingReceipt) ||
       receipt.warehouseStatus === GoodsReceiptWarehouseStatus.Imported
     : false;
 
@@ -97,10 +98,12 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
       supplierId: undefined,
       supplierAddress: "",
       supplierPhone: "",
+      purchaserId: undefined,
       purchaserName: "",
       deliveryNoteNumber: "",
       documentDate: "",
       documentExpiryDate: "",
+      expectedDeliveryDate: "",
       supplierRepresentativePhone: "",
       vatPercent: 8,
       notes: "",
@@ -114,12 +117,14 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
     const loadData = async () => {
       setPageLoading(true);
       try {
-        const [suppliersRes, manufacturerList, equipmentsRes] = await Promise.all([
+        const [suppliersRes, employeesList, manufacturerList, equipmentsRes] = await Promise.all([
           supplierService.getList({ limit: 1000 }),
+          employeeService.getList({ maxResultCount: 1000 }),
           manufacturerService.getActive(),
           equipmentService.getList({ limit: 1000 }),
         ]);
         setSuppliers(suppliersRes.items || []);
+        setEmployees(employeesList.items || []);
         setManufacturers(manufacturerList || []);
         setExistingEquipments(equipmentsRes.items || []);
 
@@ -134,10 +139,12 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
             supplierId: receiptData.supplierId || undefined,
             supplierAddress: receiptData.supplierAddress || "",
             supplierPhone: receiptData.supplierPhone || "",
+            purchaserId: receiptData.purchaserId || undefined,
             purchaserName: receiptData.purchaserName || "",
             deliveryNoteNumber: receiptData.deliveryNoteNumber || "",
             documentDate: receiptData.documentDate || "",
             documentExpiryDate: receiptData.documentExpiryDate || "",
+            expectedDeliveryDate: receiptData.expectedDeliveryDate || "",
             supplierRepresentativePhone: receiptData.supplierRepresentativePhone || "",
             vatPercent: receiptData.vatPercent,
             notes: receiptData.notes || "",
@@ -166,9 +173,15 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
           const allSameVat = vatValues.length > 0 && vatValues.every((v) => v === vatValues[0]);
           setIsCustomVat(!allSameVat);
         } else {
+          // Auto-fill purchaser from current user for new receipts
           const userInfo = authService.getUserInfo();
-          if (userInfo?.fullName) {
-            reset((prev) => ({ ...prev, purchaserName: userInfo.fullName }));
+          if (userInfo) {
+            const currentEmployee = employeesList.items?.find(
+              (e) => e.username === userInfo.userName || e.email === userInfo.email
+            );
+            if (currentEmployee) {
+              reset((prev) => ({ ...prev, purchaserId: currentEmployee.id }));
+            }
           }
         }
       } catch {
@@ -255,6 +268,28 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
     );
   }, [suppliers]);
 
+  const handleSupplierChange = useCallback(async (supplierId: string | null) => {
+    if (!supplierId) {
+      setValue("supplierAddress", "");
+      setValue("supplierPhone", "");
+      setValue("supplierRepresentativePhone", "");
+      return;
+    }
+    const supplier = suppliers.find(s => s.id === supplierId);
+    if (supplier) {
+      setValue("supplierAddress", supplier.address || "");
+      setValue("supplierPhone", supplier.phone || "");
+    }
+    try {
+      const info = await goodsReceiptService.getLatestSupplierInfo(supplierId);
+      if (info.supplierRepresentativePhone) {
+        setValue("supplierRepresentativePhone", info.supplierRepresentativePhone);
+      }
+    } catch {
+      // No previous receipt for this supplier
+    }
+  }, [suppliers, setValue]);
+
   const handleHeaderVatChange = (value: number | null) => {
     const vat = value || 0;
     setValue("vatPercent", vat);
@@ -289,14 +324,16 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
 
   const buildPayload = (data: EquipmentReceiptFormData): CreateUpdateGoodsReceiptDto => ({
     receiptType: GoodsReceiptType.Equipment,
-    supplierId: undefined,
+    supplierId: data.supplierId || undefined,
     supplierAddress: data.supplierAddress || undefined,
     supplierPhone: data.supplierPhone || undefined,
+    purchaserId: data.purchaserId || undefined,
     purchaserName: data.purchaserName || undefined,
     deliveryNoteNumber: data.deliveryNoteNumber || undefined,
     documentDate: data.documentDate || undefined,
     documentExpiryDate: data.documentExpiryDate || undefined,
-    supplierRepresentativePhone: undefined,
+    expectedDeliveryDate: data.expectedDeliveryDate || undefined,
+    supplierRepresentativePhone: data.supplierRepresentativePhone || undefined,
     vatPercent: data.vatPercent ?? 8,
     notes: data.notes || undefined,
     items: lineItems
@@ -355,28 +392,6 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
       message.error(getApiErrorMessage(error, "Không thể lưu phiếu."));
     } finally {
       setSaving(false);
-    }
-  });
-
-  const handleApprove = handleSubmit(async (data) => {
-    if (!validateItems()) return;
-    setApproving(true);
-    try {
-      const payload = buildPayload(data);
-      let receiptId = id;
-      if (isEdit && id) {
-        await goodsReceiptService.update(id, payload);
-      } else {
-        const result = await goodsReceiptService.create(payload);
-        receiptId = result.id;
-      }
-      await goodsReceiptService.approve(receiptId!);
-      message.success("Đã duyệt đơn");
-      navigate(`/goods-receipts/${receiptId}`);
-    } catch (error: any) {
-      message.error(getApiErrorMessage(error, "Không thể duyệt đơn."));
-    } finally {
-      setApproving(false);
     }
   });
 
@@ -650,35 +665,68 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
         <Form layout="vertical" size="middle" style={{ padding: "0 16px" }}>
           <Row gutter={24}>
             <Col xs={24} sm={12} md={6}>
-              <Form.Item label="Nhân viên mua hàng">
-                <Controller
-                  name="purchaserName"
-                  control={control}
-                  render={({ field }) => (
-                    <Input {...field} value={field.value || ""} placeholder="Nhân viên mua hàng" disabled={isReadonly} />
-                  )}
-                />
-              </Form.Item>
+              <Controller
+                name="supplierId"
+                control={control}
+                render={({ field, fieldState }) => (
+                  <Form.Item
+                    label="Nhà cung cấp"
+                    required
+                    validateStatus={fieldState.error ? "error" : undefined}
+                    help={fieldState.error?.message}
+                  >
+                    <Select
+                      {...field}
+                      showSearch
+                      optionFilterProp="label"
+                      placeholder="Chọn nhà cung cấp"
+                      disabled={isReadonly}
+                      status={fieldState.error ? "error" : undefined}
+                      allowClear
+                      onChange={(value) => {
+                        field.onChange(value || null);
+                        handleSupplierChange(value || null);
+                      }}
+                      options={suppliers.map(s => ({ value: s.id, label: s.name }))}
+                    />
+                  </Form.Item>
+                )}
+              />
             </Col>
             <Col xs={24} sm={12} md={6}>
-              <Form.Item label="Số phiếu giao hàng từ NCC">
-                <Controller
-                  name="deliveryNoteNumber"
-                  control={control}
-                  render={({ field }) => (
-                    <Input {...field} value={field.value || ""} placeholder="Số phiếu giao hàng" disabled={isReadonly} />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={6}>
-              <Form.Item label="Người lập phiếu">
-                <Input value={receipt?.preparedByName || authService.getUserInfo()?.fullName || ""} disabled />
-              </Form.Item>
+              <Controller
+                name="purchaserId"
+                control={control}
+                render={({ field, fieldState }) => (
+                  <Form.Item
+                    label="Nhân viên mua hàng"
+                    required
+                    validateStatus={fieldState.error ? "error" : undefined}
+                    help={fieldState.error?.message}
+                  >
+                    <Select
+                      {...field}
+                      showSearch
+                      optionFilterProp="label"
+                      placeholder="Chọn nhân viên"
+                      disabled={isReadonly}
+                      status={fieldState.error ? "error" : undefined}
+                      allowClear
+                      onChange={(value) => field.onChange(value || null)}
+                      options={employees.map(e => ({ value: e.id, label: e.fullName }))}
+                    />
+                  </Form.Item>
+                )}
+              />
             </Col>
             <Col xs={24} sm={12} md={6}>
               <Form.Item label="Thời gian tạo phiếu">
                 <Input value={receipt ? dayjs(receipt.creationTime).format("HH:mm DD/MM/YYYY") : dayjs().format("HH:mm DD/MM/YYYY")} disabled style={{ backgroundColor: "#f5f5f5" }} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item label="Số phiếu giao hàng">
+                <Input value={receipt?.code || ""} placeholder="Tự động sinh khi lưu" disabled style={{ backgroundColor: "#f5f5f5" }} />
               </Form.Item>
             </Col>
           </Row>
@@ -690,7 +738,7 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
                   name="supplierAddress"
                   control={control}
                   render={({ field }) => (
-                    <Input {...field} value={field.value || ""} placeholder="Địa chỉ nhà cung cấp" disabled={isReadonly} />
+                    <Input {...field} value={field.value || ""} disabled />
                   )}
                 />
               </Form.Item>
@@ -701,21 +749,32 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
                   name="supplierPhone"
                   control={control}
                   render={({ field }) => (
-                    <Input {...field} value={field.value || ""} placeholder="Số điện thoại NCC" disabled={isReadonly} />
+                    <Input {...field} value={field.value || ""} disabled />
                   )}
                 />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={6}>
-              <Form.Item label="SĐT đại diện NCC">
-                <Controller
-                  name="supplierRepresentativePhone"
-                  control={control}
-                  render={({ field }) => (
-                    <Input {...field} value={field.value || ""} placeholder="SĐT đại diện" disabled={isReadonly} />
-                  )}
-                />
-              </Form.Item>
+              <Controller
+                name="supplierRepresentativePhone"
+                control={control}
+                render={({ field, fieldState }) => (
+                  <Form.Item
+                    label="SĐT người đại diện NCC"
+                    required
+                    validateStatus={fieldState.error ? "error" : undefined}
+                    help={fieldState.error?.message}
+                  >
+                    <Input
+                      {...field}
+                      value={field.value || ""}
+                      placeholder="SĐT người đại diện"
+                      disabled={isReadonly}
+                      status={fieldState.error ? "error" : undefined}
+                    />
+                  </Form.Item>
+                )}
+              />
             </Col>
             <Col xs={24} sm={12} md={6}>
               <Form.Item label="VAT (%)">
@@ -764,9 +823,38 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={6}>
-              <Form.Item label="Ngày hết hạn chứng từ">
+              <Controller
+                name="documentExpiryDate"
+                control={control}
+                render={({ field, fieldState }) => {
+                  const documentDate = getValues("documentDate");
+                  return (
+                    <Form.Item
+                      label="Ngày hết hạn chứng từ"
+                      validateStatus={fieldState.error ? "error" : undefined}
+                      help={fieldState.error?.message}
+                    >
+                      <DatePicker
+                        style={{ width: "100%" }}
+                        format="DD/MM/YYYY"
+                        value={field.value ? dayjs(field.value) : null}
+                        onChange={(date) => field.onChange(date?.format("YYYY-MM-DD") || "")}
+                        disabled={isReadonly}
+                        status={fieldState.error ? "error" : undefined}
+                        disabledDate={(current) => {
+                          if (!documentDate) return false;
+                          return current && current.isBefore(dayjs(documentDate), "day");
+                        }}
+                      />
+                    </Form.Item>
+                  );
+                }}
+              />
+            </Col>
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item label="Ngày cần hàng dự kiến">
                 <Controller
-                  name="documentExpiryDate"
+                  name="expectedDeliveryDate"
                   control={control}
                   render={({ field }) => (
                     <DatePicker
@@ -775,12 +863,16 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
                       value={field.value ? dayjs(field.value) : null}
                       onChange={(date) => field.onChange(date?.format("YYYY-MM-DD") || "")}
                       disabled={isReadonly}
+                      disabledDate={(current) => current && current.isBefore(dayjs(), "day")}
                     />
                   )}
                 />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={12} md={6}>
+          </Row>
+
+          <Row gutter={24}>
+            <Col xs={24} sm={24} md={24}>
               <Form.Item label="Ghi chú">
                 <Controller
                   name="notes"
@@ -875,30 +967,19 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
               {isEdit ? "Quay lại" : "Hủy phiếu"}
             </Button>
           )}
-          {/* Lưu tạm (Draft) — ẩn khi edit phiếu đã lưu */}
-          {!isReadonly && (!isEdit || receipt?.orderStatus === GoodsReceiptOrderStatus.Draft) && (
-            <Button onClick={handleSaveDraft} loading={saving}>
-              Lưu tạm
+          {/* Lưu */}
+          {!isReadonly && (!isEdit || receipt?.orderStatus === GoodsReceiptOrderStatus.PendingApproval) && (
+            <Button type="primary" onClick={handleSaveDraft} loading={saving}>
+              Lưu
             </Button>
           )}
-          {/* Lưu (Approve) */}
-          {!isReadonly &&
-            canApprove &&
-            (!isEdit || receipt?.orderStatus === GoodsReceiptOrderStatus.Draft) && (
-              <Button
-                type="primary"
-                onClick={handleApprove}
-                loading={approving}
-              >
-                Lưu
-              </Button>
-            )}
 
           {/* Approved state: Thanh toán + Nhập kho */}
           {isEdit &&
             receipt &&
             canPay &&
-            receipt.orderStatus === GoodsReceiptOrderStatus.Approved &&
+            (receipt.orderStatus === GoodsReceiptOrderStatus.Ordering ||
+              receipt.orderStatus === GoodsReceiptOrderStatus.WaitingReceipt) &&
             receipt.paymentStatus !== GoodsReceiptPaymentStatus.Paid &&
             receipt.totalAmountAfterVat - receipt.totalPaid > 0 && (
               <Button
@@ -911,7 +992,8 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
           {isEdit &&
             receipt &&
             canImport &&
-            receipt.orderStatus === GoodsReceiptOrderStatus.Approved &&
+            (receipt.orderStatus === GoodsReceiptOrderStatus.Ordering ||
+              receipt.orderStatus === GoodsReceiptOrderStatus.WaitingReceipt) &&
             receipt.warehouseStatus === GoodsReceiptWarehouseStatus.NotImported && (
               <Button
                 type="primary"

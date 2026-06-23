@@ -3,9 +3,8 @@ import { message } from "antd";
 import {
   goodsReceiptService,
   GoodsReceiptListDto,
-  GoodsReceiptWarehouseStatus,
   GoodsReceiptOrderStatus,
-  GoodsReceiptPaymentStatus,
+  GoodsReceiptStatisticsDto,
   GoodsReceiptType,
 } from "../../../services/goodsReceiptService";
 
@@ -18,15 +17,23 @@ export const useGoodsReceiptList = () => {
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [warehouseStatusFilter, setWarehouseStatusFilter] = useState<GoodsReceiptWarehouseStatus | undefined>();
   const [orderStatusFilter, setOrderStatusFilter] = useState<GoodsReceiptOrderStatus | undefined>();
-  const [paymentStatusFilter, setPaymentStatusFilter] = useState<GoodsReceiptPaymentStatus | undefined>();
   const [receiptTypeFilter, setReceiptTypeFilter] = useState<GoodsReceiptType | undefined>();
   const [dateRange, setDateRange] = useState<[string, string] | undefined>();
   const [sorting, setSorting] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [stats, setStats] = useState<GoodsReceiptStatisticsDto>({ pendingApproval: 0, ordering: 0, waitingReceipt: 0, rejected: 0 });
   const debounceTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  const loadStats = useCallback(async () => {
+    try {
+      const result = await goodsReceiptService.getStatistics();
+      setStats(result);
+    } catch {
+      console.error("Failed to load statistics");
+    }
+  }, []);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -36,9 +43,7 @@ export const useGoodsReceiptList = () => {
         limit: pageSize,
         search: debouncedSearch || undefined,
         sorting: sorting || undefined,
-        warehouseStatus: warehouseStatusFilter,
         orderStatus: orderStatusFilter,
-        paymentStatus: paymentStatusFilter,
         receiptType: receiptTypeFilter,
         fromDate: dateRange?.[0],
         toDate: dateRange?.[1],
@@ -53,7 +58,11 @@ export const useGoodsReceiptList = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, debouncedSearch, sorting, warehouseStatusFilter, orderStatusFilter, paymentStatusFilter, receiptTypeFilter, dateRange]);
+  }, [currentPage, pageSize, debouncedSearch, sorting, orderStatusFilter, receiptTypeFilter, dateRange]);
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
 
   useEffect(() => {
     fetchData();
@@ -88,18 +97,8 @@ export const useGoodsReceiptList = () => {
     setCurrentPage(1);
   };
 
-  const handleWarehouseStatusChange = (value: GoodsReceiptWarehouseStatus | undefined) => {
-    setWarehouseStatusFilter(value);
-    setCurrentPage(1);
-  };
-
   const handleOrderStatusChange = (value: GoodsReceiptOrderStatus | undefined) => {
     setOrderStatusFilter(value);
-    setCurrentPage(1);
-  };
-
-  const handlePaymentStatusChange = (value: GoodsReceiptPaymentStatus | undefined) => {
-    setPaymentStatusFilter(value);
     setCurrentPage(1);
   };
 
@@ -118,21 +117,19 @@ export const useGoodsReceiptList = () => {
     totalCount,
     loading,
     searchText,
-    warehouseStatusFilter,
     orderStatusFilter,
-    paymentStatusFilter,
     receiptTypeFilter,
     dateRange,
     currentPage,
     pageSize,
+    stats,
     setSearchText: handleSearch,
-    handleWarehouseStatusChange,
     handleOrderStatusChange,
-    handlePaymentStatusChange,
     handleReceiptTypeChange,
     handleDateRangeChange,
     handleSortChange,
     fetchData,
+    loadStats,
     handlePageChange,
   };
 };

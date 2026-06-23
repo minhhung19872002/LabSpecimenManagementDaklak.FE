@@ -27,8 +27,6 @@ import {
   WarehouseStatusColors,
   OrderStatusLabels,
   OrderStatusColors,
-  PaymentStatusLabels,
-  PaymentStatusColors,
   ReceiptTypeLabels,
   ReceiptTypeColors,
   PAYMENT_METHOD_OPTIONS,
@@ -67,6 +65,7 @@ const GoodsReceiptDetail: React.FC = () => {
   const [printBarcodeModalOpen, setPrintBarcodeModalOpen] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [approving, setApproving] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
 
   const canEdit = authService.hasPermission(PERMISSIONS.GoodsReceipts.Edit);
   const canApprove = authService.hasPermission(
@@ -109,6 +108,20 @@ const GoodsReceiptDetail: React.FC = () => {
       message.error(getApiErrorMessage(error, "Không thể duyệt đơn."));
     } finally {
       setApproving(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!id) return;
+    setRejecting(true);
+    try {
+      await goodsReceiptService.reject(id);
+      message.success("Đã từ chối phiếu");
+      await loadData();
+    } catch (error: any) {
+      message.error(getApiErrorMessage(error, "Không thể từ chối phiếu."));
+    } finally {
+      setRejecting(false);
     }
   };
 
@@ -401,17 +414,30 @@ const GoodsReceiptDetail: React.FC = () => {
   }
 
   const remaining = receipt.totalAmountAfterVat - receipt.totalPaid;
-  const isApproved = receipt.orderStatus === GoodsReceiptOrderStatus.Approved;
+  const isApproved =
+    receipt.orderStatus === GoodsReceiptOrderStatus.Ordering ||
+    receipt.orderStatus === GoodsReceiptOrderStatus.WaitingReceipt;
   const isImported =
     receipt.warehouseStatus === GoodsReceiptWarehouseStatus.Imported;
 
   const renderActionButtons = () => (
     <Space wrap>
-      {canApprove && receipt.orderStatus === GoodsReceiptOrderStatus.Draft && (
-        <Button type="primary" onClick={handleApprove} loading={approving}>
-          Duyệt
-        </Button>
-      )}
+      {canApprove &&
+        receipt.orderStatus === GoodsReceiptOrderStatus.PendingApproval && (
+          <>
+            <Button type="primary" onClick={handleApprove} loading={approving}>
+              Duyệt
+            </Button>
+            <Button
+              type="default"
+              danger
+              onClick={handleReject}
+              loading={rejecting}
+            >
+              Từ chối
+            </Button>
+          </>
+        )}
       {canPay &&
         isApproved &&
         receipt.paymentStatus !== GoodsReceiptPaymentStatus.Paid &&
@@ -492,19 +518,16 @@ const GoodsReceiptDetail: React.FC = () => {
             <div className="detail-section-title">Thông tin nhà cung cấp</div>
             <Row gutter={16}>
               <Col xs={24} sm={12}>
-                <DetailItem
-                  label="Địa chỉ NCC"
-                  value={receipt.supplierAddress}
-                />
+                <DetailItem label="Nhà cung cấp" value={receipt.supplierName} />
+              </Col>
+              <Col xs={24} sm={12}>
+                <DetailItem label="Địa chỉ NCC" value={receipt.supplierAddress} />
               </Col>
               <Col xs={24} sm={12}>
                 <DetailItem label="SĐT NCC" value={receipt.supplierPhone} />
               </Col>
               <Col xs={24} sm={12}>
-                <DetailItem
-                  label="SĐT đại diện NCC"
-                  value={receipt.supplierRepresentativePhone}
-                />
+                <DetailItem label="SĐT đại diện NCC" value={receipt.supplierRepresentativePhone} />
               </Col>
             </Row>
           </div>
@@ -515,19 +538,13 @@ const GoodsReceiptDetail: React.FC = () => {
               <Col xs={24} sm={12}>
                 <DetailItem
                   label="Nhân viên mua hàng"
-                  value={receipt.purchaserName}
+                  value={receipt.purchaserFullName || receipt.purchaserName}
                 />
               </Col>
               <Col xs={24} sm={12}>
                 <DetailItem
-                  label="Người lập phiếu"
-                  value={receipt.preparedByName}
-                />
-              </Col>
-              <Col xs={24} sm={12}>
-                <DetailItem
-                  label="Số phiếu giao hàng từ NCC"
-                  value={receipt.deliveryNoteNumber}
+                  label="Thời gian tạo phiếu"
+                  value={dayjs(receipt.creationTime).format("HH:mm DD/MM/YYYY")}
                 />
               </Col>
               <Col xs={24} sm={12}>
@@ -555,11 +572,17 @@ const GoodsReceiptDetail: React.FC = () => {
               </Col>
               <Col xs={24} sm={12}>
                 <DetailItem
-                  label="Thời gian tạo phiếu"
-                  value={dayjs(receipt.creationTime).format("HH:mm DD/MM/YYYY")}
+                  label="Ngày cần hàng dự kiến"
+                  value={
+                    receipt.expectedDeliveryDate
+                      ? dayjs(receipt.expectedDeliveryDate).format("DD/MM/YYYY")
+                      : undefined
+                  }
                 />
               </Col>
-              <Col xs={24} sm={12}>
+            </Row>
+            <Row gutter={16}>
+              <Col xs={24}>
                 <DetailItem label="Ghi chú" value={receipt.notes} />
               </Col>
             </Row>

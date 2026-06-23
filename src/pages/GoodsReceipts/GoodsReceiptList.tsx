@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback } from "react";
-import { Card, Button, Space, Dropdown, message } from "antd";
+import { Card, Button, Space, Dropdown, Typography, message } from "antd";
 import { PlusOutlined, DownloadOutlined, DownOutlined } from "@ant-design/icons";
 import * as XLSX from "xlsx";
 import { useGoodsReceiptList, useGoodsReceiptActions } from "./hooks";
@@ -8,14 +8,18 @@ import { getGoodsReceiptColumns, ALL_COLUMNS, COLUMN_VISIBILITY_KEY } from "./co
 import {
   goodsReceiptService,
   GoodsReceiptType,
-  WarehouseStatusLabels,
+  GoodsReceiptOrderStatus,
   OrderStatusLabels,
-  PaymentStatusLabels,
   ReceiptTypeLabels,
 } from "../../services/goodsReceiptService";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
+import Icon from "../../components/common/Icon";
 import "../../styles/ListCard.css";
+import "../Dashboard/Dashboard.css";
+import "./GoodsReceiptList.css";
+
+const { Text } = Typography;
 
 const loadVisibleKeys = (): Set<string> => {
   try {
@@ -25,22 +29,43 @@ const loadVisibleKeys = (): Set<string> => {
   return new Set(ALL_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key));
 };
 
+const STAT_CARDS = [
+  {
+    key: "pendingApproval",
+    title: "Chờ phê duyệt",
+    iconBg: "orange",
+    icon: "hourglass-split",
+    filterValue: GoodsReceiptOrderStatus.PendingApproval,
+  },
+  {
+    key: "ordering",
+    title: "Đang đặt hàng",
+    iconBg: "blue",
+    icon: "cart-check",
+    filterValue: GoodsReceiptOrderStatus.Ordering,
+  },
+  {
+    key: "waitingReceipt",
+    title: "Chờ nhận & Nghiệm thu",
+    iconBg: "green",
+    icon: "box-seam",
+    filterValue: GoodsReceiptOrderStatus.WaitingReceipt,
+  },
+];
+
 const GoodsReceiptList: React.FC = () => {
   const {
     data,
     totalCount,
     loading,
     searchText,
-    warehouseStatusFilter,
     orderStatusFilter,
-    paymentStatusFilter,
     receiptTypeFilter,
     currentPage,
     pageSize,
+    stats,
     setSearchText,
-    handleWarehouseStatusChange,
     handleOrderStatusChange,
-    handlePaymentStatusChange,
     handleReceiptTypeChange,
     handleDateRangeChange,
     handleSortChange,
@@ -69,14 +94,20 @@ const GoodsReceiptList: React.FC = () => {
     localStorage.setItem(COLUMN_VISIBILITY_KEY, JSON.stringify([...keys]));
   };
 
+  const handleStatCardClick = useCallback((filterValue: GoodsReceiptOrderStatus) => {
+    if (orderStatusFilter === filterValue) {
+      handleOrderStatusChange(undefined);
+    } else {
+      handleOrderStatusChange(filterValue);
+    }
+  }, [orderStatusFilter, handleOrderStatusChange]);
+
   const handleExportExcel = useCallback(async () => {
     setExporting(true);
     try {
       const filters = {
         search: searchText || undefined,
-        warehouseStatus: warehouseStatusFilter,
         orderStatus: orderStatusFilter,
-        paymentStatus: paymentStatusFilter,
         receiptType: receiptTypeFilter,
       };
       const PAGE_LIMIT = 200;
@@ -104,9 +135,7 @@ const GoodsReceiptList: React.FC = () => {
         "Ngày cấp chứng từ": item.documentDate
           ? new Date(item.documentDate).toLocaleDateString("vi-VN")
           : "",
-        "Trạng thái kho": WarehouseStatusLabels[item.warehouseStatus] || "",
-        "Trạng thái đơn": OrderStatusLabels[item.orderStatus] || "",
-        "Trạng thái thanh toán": PaymentStatusLabels[item.paymentStatus] || "",
+        "Trạng thái": OrderStatusLabels[item.orderStatus] || "",
         "Tổng tiền sau VAT": item.totalAmountAfterVat,
         "Người tạo": item.creatorName || "",
         "Ghi chú": item.notes || "",
@@ -114,15 +143,15 @@ const GoodsReceiptList: React.FC = () => {
 
       const ws = XLSX.utils.json_to_sheet(rows);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Phiếu nhập hàng");
-      XLSX.writeFile(wb, `phieu-nhap-hang_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      XLSX.utils.book_append_sheet(wb, ws, "Đặt hàng");
+      XLSX.writeFile(wb, `dat-hang_${new Date().toISOString().slice(0, 10)}.xlsx`);
       message.success("Xuất Excel thành công");
     } catch {
       message.error("Không thể xuất Excel");
     } finally {
       setExporting(false);
     }
-  }, [searchText, warehouseStatusFilter, orderStatusFilter, paymentStatusFilter, receiptTypeFilter]);
+  }, [searchText, orderStatusFilter, receiptTypeFilter]);
 
   const columns = useMemo(
     () =>
@@ -141,6 +170,31 @@ const GoodsReceiptList: React.FC = () => {
 
   return (
     <div>
+      <div className="dashboard-stats-grid goods-receipt-stats-grid">
+        {STAT_CARDS.map((stat) => {
+          const value = stats[stat.key as keyof typeof stats];
+          const isActive = orderStatusFilter === stat.filterValue;
+          return (
+            <Card
+              key={stat.key}
+              className={`dashboard-stat-card task-stat-clickable${isActive ? " task-stat-active" : ""}`}
+              bordered={false}
+              onClick={() => handleStatCardClick(stat.filterValue)}
+            >
+              <div className="dashboard-stat-content">
+                <div className="dashboard-stat-info">
+                  <Text className="dashboard-stat-title">{stat.title}</Text>
+                  <div className="dashboard-stat-value">{value}</div>
+                </div>
+                <div className={`dashboard-stat-icon ${stat.iconBg}`}>
+                  <Icon name={stat.icon} />
+                </div>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
       <Card
         className="list-card"
         title="Danh sách đặt hàng"
@@ -191,16 +245,10 @@ const GoodsReceiptList: React.FC = () => {
           pageSize={pageSize}
           columns={columns}
           searchText={searchText}
-          warehouseStatusFilter={warehouseStatusFilter}
-          orderStatusFilter={orderStatusFilter}
-          paymentStatusFilter={paymentStatusFilter}
           receiptTypeFilter={receiptTypeFilter}
           canDelete={false}
           selectedRowKeys={selectedRowKeys}
           onSearchChange={setSearchText}
-          onWarehouseStatusChange={handleWarehouseStatusChange}
-          onOrderStatusChange={handleOrderStatusChange}
-          onPaymentStatusChange={handlePaymentStatusChange}
           onReceiptTypeChange={handleReceiptTypeChange}
           onDateRangeChange={handleDateRangeChange}
           onSortChange={handleSortChange}

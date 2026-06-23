@@ -1,14 +1,24 @@
 import * as yup from "yup";
 
 export const goodsReceiptSchema = yup.object({
-  supplierId: yup.string().nullable(),
+  supplierId: yup.string().nullable().required("Vui lòng chọn nhà cung cấp"),
   supplierAddress: yup.string().nullable().max(500),
   supplierPhone: yup.string().nullable().max(20),
+  purchaserId: yup.string().nullable().required("Vui lòng chọn nhân viên mua hàng"),
   purchaserName: yup.string().nullable().max(200),
   deliveryNoteNumber: yup.string().nullable().max(100),
   documentDate: yup.string().nullable(),
-  documentExpiryDate: yup.string().nullable(),
-  supplierRepresentativePhone: yup.string().nullable().max(20),
+  documentExpiryDate: yup.string().nullable().test(
+    "min-expiry-date",
+    "Ngày hết hạn phải lớn hơn ngày nhận chứng từ",
+    function (value) {
+      const { documentDate } = this.parent;
+      if (!value || !documentDate) return true;
+      return value >= documentDate;
+    }
+  ),
+  expectedDeliveryDate: yup.string().nullable(),
+  supplierRepresentativePhone: yup.string().nullable().required("Vui lòng nhập SĐT người đại diện NCC").max(20),
   vatPercent: yup.number().min(0).max(100).default(8),
   notes: yup.string().nullable().max(2000),
 });
@@ -16,14 +26,24 @@ export const goodsReceiptSchema = yup.object({
 export type GoodsReceiptFormData = yup.InferType<typeof goodsReceiptSchema>;
 
 export const equipmentReceiptSchema = yup.object({
-  supplierId: yup.string().nullable(),
+  supplierId: yup.string().nullable().required("Vui lòng chọn nhà cung cấp"),
   supplierAddress: yup.string().nullable().max(500),
   supplierPhone: yup.string().nullable().max(20),
+  purchaserId: yup.string().nullable().required("Vui lòng chọn nhân viên mua hàng"),
   purchaserName: yup.string().nullable().max(200),
   deliveryNoteNumber: yup.string().nullable().max(100),
   documentDate: yup.string().nullable(),
-  documentExpiryDate: yup.string().nullable(),
-  supplierRepresentativePhone: yup.string().nullable().max(20),
+  documentExpiryDate: yup.string().nullable().test(
+    "min-expiry-date",
+    "Ngày hết hạn phải lớn hơn ngày nhận chứng từ",
+    function (value) {
+      const { documentDate } = this.parent;
+      if (!value || !documentDate) return true;
+      return value >= documentDate;
+    }
+  ),
+  expectedDeliveryDate: yup.string().nullable(),
+  supplierRepresentativePhone: yup.string().nullable().required("Vui lòng nhập SĐT người đại diện NCC").max(20),
   vatPercent: yup.number().min(0).max(100).default(8),
   notes: yup.string().nullable().max(2000),
 });

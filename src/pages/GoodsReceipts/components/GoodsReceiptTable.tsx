@@ -7,13 +7,7 @@ import { useNavigate } from "react-router-dom";
 
 import {
   GoodsReceiptListDto,
-  WAREHOUSE_STATUS_OPTIONS,
-  ORDER_STATUS_OPTIONS,
-  PAYMENT_STATUS_OPTIONS,
   RECEIPT_TYPE_OPTIONS,
-  GoodsReceiptWarehouseStatus,
-  GoodsReceiptOrderStatus,
-  GoodsReceiptPaymentStatus,
   GoodsReceiptType,
 } from "../../../services/goodsReceiptService";
 
@@ -27,16 +21,10 @@ interface GoodsReceiptTableProps {
   pageSize: number;
   columns: ColumnsType<GoodsReceiptListDto>;
   searchText: string;
-  warehouseStatusFilter?: GoodsReceiptWarehouseStatus;
-  orderStatusFilter?: GoodsReceiptOrderStatus;
-  paymentStatusFilter?: GoodsReceiptPaymentStatus;
   receiptTypeFilter?: GoodsReceiptType;
   canDelete?: boolean;
   selectedRowKeys: React.Key[];
   onSearchChange: (value: string) => void;
-  onWarehouseStatusChange: (value: GoodsReceiptWarehouseStatus | undefined) => void;
-  onOrderStatusChange: (value: GoodsReceiptOrderStatus | undefined) => void;
-  onPaymentStatusChange: (value: GoodsReceiptPaymentStatus | undefined) => void;
   onReceiptTypeChange: (value: GoodsReceiptType | undefined) => void;
   onDateRangeChange: (range: [string, string] | undefined) => void;
   onSortChange: (field: string, order: "ascend" | "descend" | null) => void;
@@ -52,16 +40,10 @@ const GoodsReceiptTable: React.FC<GoodsReceiptTableProps> = ({
   pageSize,
   columns,
   searchText,
-  warehouseStatusFilter,
-  orderStatusFilter,
-  paymentStatusFilter,
   receiptTypeFilter,
   canDelete,
   selectedRowKeys,
   onSearchChange,
-  onWarehouseStatusChange,
-  onOrderStatusChange,
-  onPaymentStatusChange,
   onReceiptTypeChange,
   onDateRangeChange,
   onSortChange,
@@ -77,7 +59,7 @@ const GoodsReceiptTable: React.FC<GoodsReceiptTableProps> = ({
         style={{ marginBottom: 16, padding: "16px 16px 0" }}
         align="middle"
       >
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={12} md={8}>
           <Input
             placeholder="Tìm kiếm theo ID..."
             prefix={<SearchOutlined />}
@@ -86,37 +68,7 @@ const GoodsReceiptTable: React.FC<GoodsReceiptTableProps> = ({
             allowClear
           />
         </Col>
-        <Col xs={12} sm={6} md={3}>
-          <Select
-            placeholder="Trạng thái kho"
-            value={warehouseStatusFilter}
-            onChange={onWarehouseStatusChange}
-            allowClear
-            style={{ width: "100%" }}
-            options={WAREHOUSE_STATUS_OPTIONS}
-          />
-        </Col>
-        <Col xs={12} sm={6} md={3}>
-          <Select
-            placeholder="Trạng thái đơn"
-            value={orderStatusFilter}
-            onChange={onOrderStatusChange}
-            allowClear
-            style={{ width: "100%" }}
-            options={ORDER_STATUS_OPTIONS}
-          />
-        </Col>
-        <Col xs={12} sm={6} md={3}>
-          <Select
-            placeholder="Thanh toán"
-            value={paymentStatusFilter}
-            onChange={onPaymentStatusChange}
-            allowClear
-            style={{ width: "100%" }}
-            options={PAYMENT_STATUS_OPTIONS}
-          />
-        </Col>
-        <Col xs={12} sm={6} md={3}>
+        <Col xs={12} sm={6} md={4}>
           <Select
             placeholder="Loại phiếu"
             value={receiptTypeFilter}
@@ -126,7 +78,7 @@ const GoodsReceiptTable: React.FC<GoodsReceiptTableProps> = ({
             options={RECEIPT_TYPE_OPTIONS}
           />
         </Col>
-        <Col xs={24} sm={12} md={5}>
+        <Col xs={24} sm={12} md={6}>
           <RangePicker
             style={{ width: "100%" }}
             format="DD/MM/YYYY"

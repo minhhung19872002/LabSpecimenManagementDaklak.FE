@@ -26,8 +26,10 @@ export enum GoodsReceiptWarehouseStatus {
 }
 
 export enum GoodsReceiptOrderStatus {
-  Draft = 0,
-  Approved = 1,
+  PendingApproval = 0,
+  Ordering = 1,
+  WaitingReceipt = 2,
+  Rejected = 3,
 }
 
 export enum GoodsReceiptPaymentStatus {
@@ -47,8 +49,10 @@ export const WAREHOUSE_STATUS_OPTIONS = [
 ];
 
 export const ORDER_STATUS_OPTIONS = [
-  { value: GoodsReceiptOrderStatus.Draft, label: "Lưu tạm" },
-  { value: GoodsReceiptOrderStatus.Approved, label: "Duyệt đơn" },
+  { value: GoodsReceiptOrderStatus.PendingApproval, label: "Chờ phê duyệt" },
+  { value: GoodsReceiptOrderStatus.Ordering, label: "Đang đặt hàng" },
+  { value: GoodsReceiptOrderStatus.WaitingReceipt, label: "Chờ nhận & Nghiệm thu" },
+  { value: GoodsReceiptOrderStatus.Rejected, label: "Từ chối" },
 ];
 
 export const PAYMENT_STATUS_OPTIONS = [
@@ -68,8 +72,10 @@ export const WarehouseStatusLabels: Record<number, string> = {
 };
 
 export const OrderStatusLabels: Record<number, string> = {
-  [GoodsReceiptOrderStatus.Draft]: "Lưu tạm",
-  [GoodsReceiptOrderStatus.Approved]: "Duyệt đơn",
+  [GoodsReceiptOrderStatus.PendingApproval]: "Chờ phê duyệt",
+  [GoodsReceiptOrderStatus.Ordering]: "Đang đặt hàng",
+  [GoodsReceiptOrderStatus.WaitingReceipt]: "Chờ nhận & Nghiệm thu",
+  [GoodsReceiptOrderStatus.Rejected]: "Từ chối",
 };
 
 export const PaymentStatusLabels: Record<number, string> = {
@@ -84,8 +90,10 @@ export const WarehouseStatusColors: Record<number, string> = {
 };
 
 export const OrderStatusColors: Record<number, string> = {
-  [GoodsReceiptOrderStatus.Draft]: "default",
-  [GoodsReceiptOrderStatus.Approved]: "blue",
+  [GoodsReceiptOrderStatus.PendingApproval]: "orange",
+  [GoodsReceiptOrderStatus.Ordering]: "blue",
+  [GoodsReceiptOrderStatus.WaitingReceipt]: "green",
+  [GoodsReceiptOrderStatus.Rejected]: "red",
 };
 
 export const PaymentStatusColors: Record<number, string> = {
@@ -106,6 +114,7 @@ export interface GoodsReceiptListDto {
   orderStatus: GoodsReceiptOrderStatus;
   paymentStatus: GoodsReceiptPaymentStatus;
   totalAmountAfterVat: number;
+  expectedDeliveryDate?: string;
   creatorName?: string;
   notes?: string;
   creationTime: string;
@@ -119,6 +128,9 @@ export interface GoodsReceiptDto extends GoodsReceiptListDto {
   preparedByName?: string;
   documentExpiryDate?: string;
   supplierRepresentativePhone?: string;
+  expectedDeliveryDate?: string;
+  purchaserId?: string;
+  purchaserFullName?: string;
   vatPercent: number;
   totalAmountBeforeVat: number;
   totalVatAmount: number;
@@ -180,6 +192,8 @@ export interface CreateUpdateGoodsReceiptDto {
   documentDate?: string;
   documentExpiryDate?: string;
   supplierRepresentativePhone?: string;
+  expectedDeliveryDate?: string;
+  purchaserId?: string;
   vatPercent: number;
   notes?: string;
   items: CreateUpdateGoodsReceiptItemDto[];
@@ -234,6 +248,17 @@ export interface CreateGoodsReceiptPaymentDto {
   phone?: string;
   representativeName?: string;
   notes?: string;
+}
+
+export interface GoodsReceiptStatisticsDto {
+  pendingApproval: number;
+  ordering: number;
+  waitingReceipt: number;
+  rejected: number;
+}
+
+export interface LatestSupplierInfoDto {
+  supplierRepresentativePhone?: string;
 }
 
 interface PagedResult<T> {
@@ -298,6 +323,21 @@ export const goodsReceiptService = {
 
   addPayment: async (id: string, data: CreateGoodsReceiptPaymentDto): Promise<GoodsReceiptDto> => {
     const response = await api.post<GoodsReceiptDto>(`${BASE_URL}/${id}/payments`, data);
+    return response.data;
+  },
+
+  reject: async (id: string): Promise<GoodsReceiptDto> => {
+    const response = await api.post<GoodsReceiptDto>(`${BASE_URL}/${id}/reject`);
+    return response.data;
+  },
+
+  getStatistics: async (): Promise<GoodsReceiptStatisticsDto> => {
+    const response = await api.get<GoodsReceiptStatisticsDto>(`${BASE_URL}/statistics`);
+    return response.data;
+  },
+
+  getLatestSupplierInfo: async (supplierId: string): Promise<LatestSupplierInfoDto> => {
+    const response = await api.get<LatestSupplierInfoDto>(`${BASE_URL}/latest-supplier-info/${supplierId}`);
     return response.data;
   },
 

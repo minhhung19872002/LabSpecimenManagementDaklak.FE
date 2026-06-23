@@ -1,0 +1,25 @@
+.goods-receipt-stats-grid {
+  grid-template-columns: repeat(3, 1fr) !important;
+  margin-bottom: 16px;
+}
+
+.goods-receipt-stats-grid .dashboard-stat-card {
+  height: 110px !important;
+}
+
+.goods-receipt-stats-grid .dashboard-stat-value {
+  font-size: 28px !important;
+}
+
+.goods-receipt-stats-grid .dashboard-stat-title {
+  font-size: 14px !important;
+}
+
+.goods-receipt-stats-grid .dashboard-stat-icon {
+  width: 40px !important;
+  height: 40px !important;
+}
+
+.goods-receipt-stats-grid .dashboard-stat-icon i {
+  font-size: 24px !important;
+}

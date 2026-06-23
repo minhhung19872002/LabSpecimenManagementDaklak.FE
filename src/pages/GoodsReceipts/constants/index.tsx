@@ -4,12 +4,8 @@ import type { ColumnsType } from "antd/es/table";
 import {
   GoodsReceiptListDto,
   GoodsReceiptWarehouseStatus,
-  WarehouseStatusLabels,
-  WarehouseStatusColors,
   OrderStatusLabels,
   OrderStatusColors,
-  PaymentStatusLabels,
-  PaymentStatusColors,
   ReceiptTypeLabels,
   ReceiptTypeColors,
 } from "../../../services/goodsReceiptService";
@@ -26,9 +22,7 @@ export const ALL_COLUMNS: ColumnConfig[] = [
   { key: "receiptType", title: "Loại phiếu", defaultVisible: true },
   { key: "supplierAddress", title: "Địa chỉ NCC", defaultVisible: true },
   { key: "documentDate", title: "Ngày cấp chứng từ", defaultVisible: true },
-  { key: "warehouseStatus", title: "Trạng thái kho", defaultVisible: true },
-  { key: "orderStatus", title: "Trạng thái đơn", defaultVisible: true },
-  { key: "paymentStatus", title: "Trạng thái thanh toán", defaultVisible: true },
+  { key: "orderStatus", title: "Trạng thái", defaultVisible: true },
   { key: "totalAmountAfterVat", title: "Tổng tiền sau VAT", defaultVisible: true },
   { key: "creatorName", title: "Người tạo", defaultVisible: true },
   { key: "notes", title: "Ghi chú", defaultVisible: true },
@@ -106,41 +100,15 @@ export const getGoodsReceiptColumns = (
     });
   }
 
-  if (visibleKeys.has("warehouseStatus")) {
-    columns.push({
-      title: "Trạng thái kho",
-      dataIndex: "warehouseStatus",
-      key: "warehouseStatus",
-      width: 140,
-      align: "center" as const,
-      render: (v: number) => (
-        <Tag color={WarehouseStatusColors[v]}>{WarehouseStatusLabels[v]}</Tag>
-      ),
-    });
-  }
-
   if (visibleKeys.has("orderStatus")) {
     columns.push({
-      title: "Trạng thái đơn",
+      title: "Trạng thái",
       dataIndex: "orderStatus",
       key: "orderStatus",
-      width: 130,
+      width: 160,
       align: "center" as const,
       render: (v: number) => (
         <Tag color={OrderStatusColors[v]}>{OrderStatusLabels[v]}</Tag>
-      ),
-    });
-  }
-
-  if (visibleKeys.has("paymentStatus")) {
-    columns.push({
-      title: "Trạng thái thanh toán",
-      dataIndex: "paymentStatus",
-      key: "paymentStatus",
-      width: 170,
-      align: "center" as const,
-      render: (v: number) => (
-        <Tag color={PaymentStatusColors[v]}>{PaymentStatusLabels[v]}</Tag>
       ),
     });
   }
