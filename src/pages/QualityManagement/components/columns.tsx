@@ -112,6 +112,13 @@ export const getQualityManagementColumns = (
     render: (status: QualityManagementStatus) => getStatusTag(status),
   },
   {
+    title: "Ngày phát hành BC",
+    dataIndex: "latestApprovalDate",
+    key: "latestApprovalDate",
+    width: 140,
+    render: (date: string) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
+  },
+  {
     title: "Thao tác",
     key: "actions",
     width: 100,
