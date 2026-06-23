@@ -401,7 +401,7 @@ const QualityManagementList: React.FC = () => {
               }}
               onChange={handleTableChange}
               sticky={{ offsetHeader: headerHeight }}
-              scroll={{ x: 1200 }}
+              scroll={{ x: 1350 }}
               onRow={(record) => ({
                 onDoubleClick: () => handleRowDoubleClick(record),
                 style: { cursor: "pointer" },

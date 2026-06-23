@@ -156,6 +156,7 @@ export interface QualityManagementTaskDto {
   assignedQualityManagerName?: string;
   changeHistory?: ChangeHistoryDto;
   testRequestStatus?: TestRequestStatus;
+  latestApprovalDate?: string;
   indicators?: QualityManagementIndicatorDto[];
   allIndicators?: QualityManagementIndicatorDto[];
 
