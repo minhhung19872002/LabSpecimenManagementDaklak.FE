@@ -135,7 +135,7 @@ const ProductSourceReceiptList: React.FC = () => {
         className="list-card"
         title={
           <span>
-            Quản lý phiếu nhập hàng <b>theo sản phẩm</b>
+            Danh sách đặt hàng <b>theo sản phẩm</b>
           </span>
         }
       >

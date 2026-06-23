@@ -143,7 +143,7 @@ const GoodsReceiptList: React.FC = () => {
     <div>
       <Card
         className="list-card"
-        title="Quản lý phiếu nhập hàng"
+        title="Danh sách đặt hàng"
         extra={
           <Space>
             <Button
