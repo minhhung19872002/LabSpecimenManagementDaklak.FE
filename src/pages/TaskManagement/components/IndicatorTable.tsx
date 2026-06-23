@@ -548,7 +548,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                 }));
               }}
               placeholder="-"
-              minHeight={24}
+              size="small"
             />
           </div>
         );

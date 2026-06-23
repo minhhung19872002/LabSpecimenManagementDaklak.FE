@@ -153,7 +153,7 @@ const EditIndicatorModal: React.FC<EditIndicatorModalProps> = ({
             </div>
             <div style={{ display: "flex" }}>
               <Text type="secondary" style={{ width: 100, flexShrink: 0 }}>Đơn vị:</Text>
-              <Text>{indicator.unit}</Text>
+              <IndicatorName name={indicator.unit} />
             </div>
           </div>
         )}
