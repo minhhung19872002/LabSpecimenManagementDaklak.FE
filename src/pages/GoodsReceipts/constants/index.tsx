@@ -3,6 +3,7 @@ import { EditOutlined, EyeOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import {
   GoodsReceiptListDto,
+  GoodsReceiptOrderStatus,
   GoodsReceiptWarehouseStatus,
   OrderStatusLabels,
   OrderStatusColors,
@@ -108,7 +109,9 @@ export const getGoodsReceiptColumns = (
       width: 160,
       align: "center" as const,
       render: (v: number) => (
-        <Tag color={OrderStatusColors[v]}>{OrderStatusLabels[v]}</Tag>
+        <Tag color={OrderStatusColors[v]} style={{ whiteSpace: "pre-line" }}>
+          {v === GoodsReceiptOrderStatus.WaitingReceipt ? "Chờ nhận\n& Nghiệm thu" : OrderStatusLabels[v]}
+        </Tag>
       ),
     });
   }

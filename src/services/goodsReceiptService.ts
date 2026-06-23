@@ -48,12 +48,6 @@ export const WAREHOUSE_STATUS_OPTIONS = [
   { value: GoodsReceiptWarehouseStatus.Imported, label: "Đã nhập kho" },
 ];
 
-export const ORDER_STATUS_OPTIONS = [
-  { value: GoodsReceiptOrderStatus.PendingApproval, label: "Chờ phê duyệt" },
-  { value: GoodsReceiptOrderStatus.Ordering, label: "Đang đặt hàng" },
-  { value: GoodsReceiptOrderStatus.WaitingReceipt, label: "Chờ nhận & Nghiệm thu" },
-  { value: GoodsReceiptOrderStatus.Rejected, label: "Từ chối" },
-];
 
 export const PAYMENT_STATUS_OPTIONS = [
   { value: GoodsReceiptPaymentStatus.Unpaid, label: "Chưa thanh toán" },
