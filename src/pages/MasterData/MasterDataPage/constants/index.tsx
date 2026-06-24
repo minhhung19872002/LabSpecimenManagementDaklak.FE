@@ -211,47 +211,50 @@ export const getColumns = (
       title: "Thao tác",
       key: "actions",
       width: activeCategory === "warehouses" || activeCategory === "manufacturers" ? 150 : 100,
-      render: (_, record) => (
-        <Space size="small">
-          {canEdit && (activeCategory === "warehouses" || activeCategory === "manufacturers") && handleToggleActive && (
-            <Tooltip
-              title={record.isActive ? "Tắt hoạt động" : "Bật hoạt động"}
-            >
+      render: (_, record) => {
+        const isDefaultWarehouse = activeCategory === "warehouses" && (record as any).isDefault;
+        return (
+          <Space size="small">
+            {canEdit && (activeCategory === "warehouses" || activeCategory === "manufacturers") && handleToggleActive && !isDefaultWarehouse && (
+              <Tooltip
+                title={record.isActive ? "Tắt hoạt động" : "Bật hoạt động"}
+              >
+                <Button
+                  type="link"
+                  size="small"
+                  icon={
+                    record.isActive ? <StopOutlined /> : <CheckCircleOutlined />
+                  }
+                  onClick={() => handleToggleActive(record)}
+                />
+              </Tooltip>
+            )}
+            {canEdit && (
               <Button
                 type="link"
                 size="small"
-                icon={
-                  record.isActive ? <StopOutlined /> : <CheckCircleOutlined />
-                }
-                onClick={() => handleToggleActive(record)}
+                icon={<EditOutlined />}
+                onClick={() => handleEdit(record)}
               />
-            </Tooltip>
-          )}
-          {canEdit && (
-            <Button
-              type="link"
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() => handleEdit(record)}
-            />
-          )}
-          {canDelete && (
-            <Popconfirm
-              title="Bạn có chắc chắn muốn xóa?"
-              onConfirm={() => handleDelete(record.id)}
-              okText="Có"
-              cancelText="Không"
-            >
-              <Button
-                type="link"
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-              />
-            </Popconfirm>
-          )}
-        </Space>
-      ),
+            )}
+            {canDelete && !isDefaultWarehouse && (
+              <Popconfirm
+                title="Bạn có chắc chắn muốn xóa?"
+                onConfirm={() => handleDelete(record.id)}
+                okText="Có"
+                cancelText="Không"
+              >
+                <Button
+                  type="link"
+                  size="small"
+                  danger
+                  icon={<DeleteOutlined />}
+                />
+              </Popconfirm>
+            )}
+          </Space>
+        );
+      },
     });
   }
 

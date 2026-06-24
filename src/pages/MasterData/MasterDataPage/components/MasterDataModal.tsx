@@ -27,6 +27,8 @@ const MasterDataModal: React.FC<MasterDataModalProps> = ({
   onOk,
   onCancel,
 }) => {
+  const isDefaultWarehouse = activeCategory === "warehouses" && editingItem && (editingItem as any).isDefault;
+
   return (
     <Modal
       title={
@@ -57,7 +59,7 @@ const MasterDataModal: React.FC<MasterDataModalProps> = ({
                   },
                 ]}
               >
-                <Input />
+                <Input disabled={!!isDefaultWarehouse} />
               </Form.Item>
             </Col>
             <Col span={16}>
@@ -193,7 +195,7 @@ const MasterDataModal: React.FC<MasterDataModalProps> = ({
                 </Form.Item>
               )}
               {activeCategory === "warehouses" ? (
-                editingItem && (
+                editingItem && !isDefaultWarehouse && (
                   <Form.Item name="isActive" label="Trạng thái">
                     <Select>
                       <Select.Option value={true}>Hoạt động</Select.Option>

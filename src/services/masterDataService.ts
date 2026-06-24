@@ -1157,6 +1157,7 @@ export interface WarehouseDto {
   name: string;
   physicalLocation?: string;
   isActive: boolean;
+  isDefault?: boolean;
 }
 
 export interface CreateUpdateWarehouseDto {
