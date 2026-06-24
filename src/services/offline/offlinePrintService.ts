@@ -21,6 +21,13 @@ import {
   ResultLanguage,
 } from '../../types/testRequest';
 import { numberToVietnameseWords } from '../../utils/numberToWords';
+import { fillDocxTemplate } from './docxFill';
+import { prepareResultTemplate } from './resultTemplatePrep';
+import {
+  buildResultFormData,
+  ResultFormHeader,
+  ResultIndicatorInput,
+} from './resultFormBuilder';
 import dayjs from 'dayjs';
 
 // Template name constants
@@ -119,6 +126,47 @@ export async function generateTestRequestFormOffline(
         error instanceof Error
           ? error.message
           : 'Lỗi không xác định khi tạo tài liệu.',
+    };
+  }
+}
+
+/**
+ * Generate a BM01 result form offline from cached template + provided data.
+ *
+ * `header` carries the scalar fields (sample, customer, dates...) and
+ * `indicators` is the flat list (parent/child) used to build the result table.
+ * The result data itself comes from the offline entry form / cache — this
+ * function only assembles + fills the document.
+ */
+export async function generateResultFormOffline(
+  header: ResultFormHeader,
+  indicators: ResultIndicatorInput[]
+): Promise<OfflinePrintResult> {
+  try {
+    const template = await getCachedDocumentTemplate(TEMPLATE_NAMES.RESULT_FORM_BM01);
+    if (!template) {
+      return {
+        success: false,
+        error:
+          'Template phiếu kết quả chưa được tải về. Vui lòng kết nối mạng để tải template.',
+      };
+    }
+
+    // Canonical template -> loop + raw-xml template, then fill.
+    const prepared = await prepareResultTemplate(template.blob);
+    const data = buildResultFormData(header, indicators);
+    const { blob } = await fillDocxTemplate(prepared.blob, data);
+
+    const fileName = `KetQua_${header.SampleCode || 'OFFLINE'}_${dayjs().format(
+      'YYYYMMDDHHmmss'
+    )}.docx`;
+    return { success: true, fileName, blob };
+  } catch (error) {
+    console.error('[OfflinePrint] Error generating result form:', error);
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : 'Lỗi không xác định khi tạo phiếu kết quả.',
     };
   }
 }
