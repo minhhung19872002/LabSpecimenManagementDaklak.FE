@@ -16,6 +16,41 @@ import {
 import { getTestRequestColumns } from "../components/columns";
 import { useActionPermission } from "../../../hooks/useActionPermission";
 import { useNetworkStatus } from "../../../hooks/useNetworkStatus";
+import { isServerReachable } from "../../../services/offline/connectivity";
+import { cacheApprovedIndicators } from "../../../services/offline/offlineResultService";
+
+// Statuses that have no results yet -> skip caching approved indicators.
+const NO_RESULT_STATUSES = new Set<TestRequestStatus>([
+  TestRequestStatus.New,
+  TestRequestStatus.PendingPayment,
+  TestRequestStatus.Paid,
+  TestRequestStatus.SampleSent,
+  TestRequestStatus.Cancelled,
+]);
+
+/**
+ * Background, best-effort: while online, cache approved indicators for the
+ * printable test requests currently listed, so result/request forms can be
+ * generated OFFLINE later without opening each phiếu first. Throttled (3
+ * concurrent); all failures ignored.
+ */
+async function prefetchApprovedForOffline(items: TestRequestDto[]): Promise<void> {
+  if (!(await isServerReachable())) return;
+  const queue = items.filter((r) => r?.id && !NO_RESULT_STATUSES.has(r.status));
+  const worker = async () => {
+    for (;;) {
+      const it = queue.shift();
+      if (!it) break;
+      try {
+        const inds = await testRequestService.getApprovedIndicators(it.id);
+        if (inds && inds.length) await cacheApprovedIndicators(it.id, inds);
+      } catch {
+        /* best-effort */
+      }
+    }
+  };
+  await Promise.all([worker(), worker(), worker()]);
+}
 
 export const useTestRequestList = () => {
   const navigate = useNavigate();
@@ -63,6 +98,11 @@ export const useTestRequestList = () => {
       setData(items);
       setTotalCount(response.data.totalCount || 0);
       setIsOfflineData(response.isOfflineData);
+      // While online, pre-cache approved indicators for offline printing so the
+      // user doesn't have to open each phiếu first (background, best-effort).
+      if (!response.isOfflineData) {
+        void prefetchApprovedForOffline(items);
+      }
     } catch (error: unknown) {
       console.error("Error loading test requests:", error);
       message.error(
