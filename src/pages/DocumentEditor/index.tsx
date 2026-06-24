@@ -10,6 +10,7 @@ import {
 } from "../../components/OfflineDocxEditor";
 import { getResultDraft, saveResultDraft } from "../../services/offline";
 import { API_BASE_URL } from "../../services/api";
+import { saveAs } from "file-saver";
 
 type EditorProvider = "OnlyOffice" | "Collabora";
 
@@ -91,28 +92,51 @@ const DocumentEditorPage: React.FC = () => {
     setTimeout(() => navigate(-1), 100);
   };
 
+  // Read the current document from the editor as a .docx Blob.
+  const exportBlob = useCallback(async (): Promise<Blob | null> => {
+    if (!offlineRef.current) return null;
+    const buffer = await offlineRef.current.save();
+    if (!buffer) return null;
+    return new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    });
+  }, []);
+
+  // Save a local draft so the technician can reopen and continue editing
+  // (kept on-device only; the official report is produced by the BE from data).
   const handleSaveDraft = useCallback(async () => {
-    if (!offlineDraftId || !offlineRef.current) return;
+    if (!offlineDraftId) return;
     setSaving(true);
     try {
-      const buffer = await offlineRef.current.save();
-      if (!buffer) throw new Error("Không lấy được nội dung tài liệu");
-      const blob = new Blob([buffer], {
-        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      });
+      const blob = await exportBlob();
+      if (!blob) throw new Error("Không lấy được nội dung tài liệu");
       await saveResultDraft({
         id: offlineDraftId,
         fileName: draftFileName,
         blob,
-        status: "pending-sync",
+        status: "draft",
       });
-      message.success("Đã lưu nháp. Sẽ đồng bộ khi có mạng.");
+      message.success("Đã lưu nháp trên máy.");
     } catch (e) {
       message.error(e instanceof Error ? e.message : "Lưu nháp thất bại");
     } finally {
       setSaving(false);
     }
-  }, [offlineDraftId, draftFileName]);
+  }, [offlineDraftId, draftFileName, exportBlob]);
+
+  // Download the edited .docx to print / hand over on the spot.
+  const handleDownload = useCallback(async () => {
+    setSaving(true);
+    try {
+      const blob = await exportBlob();
+      if (!blob) throw new Error("Không lấy được nội dung tài liệu");
+      saveAs(blob, draftFileName || "phieu-ket-qua.docx");
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : "Tải xuống thất bại");
+    } finally {
+      setSaving(false);
+    }
+  }, [draftFileName, exportBlob]);
 
   if (error) {
     return (
@@ -153,8 +177,11 @@ const DocumentEditorPage: React.FC = () => {
           </Button>
           <span style={{ fontWeight: 600 }}>{draftFileName || "Phiếu kết quả (offline)"}</span>
           <span style={{ flex: 1 }} />
-          <Button type="primary" loading={saving} onClick={handleSaveDraft} size="small">
+          <Button loading={saving} onClick={handleSaveDraft} size="small">
             Lưu nháp
+          </Button>
+          <Button type="primary" loading={saving} onClick={handleDownload} size="small">
+            Tải xuống .docx
           </Button>
         </div>
         <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
