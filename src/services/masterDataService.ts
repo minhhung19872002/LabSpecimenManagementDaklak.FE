@@ -1198,6 +1198,10 @@ export const warehouseService = {
     const response = await api.get<string>(`${WAREHOUSE_URL}/next-code`);
     return response.data;
   },
+  getDefault: async (): Promise<WarehouseDto | null> => {
+    const response = await api.get<WarehouseDto | null>(`${WAREHOUSE_URL}/default`);
+    return response.data;
+  },
   toggleActive: async (id: string): Promise<void> => {
     await api.post(`${WAREHOUSE_URL}/${id}/toggle-active`);
   },

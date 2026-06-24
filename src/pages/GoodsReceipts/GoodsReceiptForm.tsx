@@ -99,6 +99,7 @@ const GoodsReceiptForm: React.FC = () => {
   const [employees, setEmployees] = useState<EmployeeDto[]>([]);
 
   const [previewCode, setPreviewCode] = useState<string>("");
+  const [defaultWarehouseId, setDefaultWarehouseId] = useState<string | undefined>();
 
   // Inline creation modals
   const [productModalOpen, setProductModalOpen] = useState(false);
@@ -154,14 +155,16 @@ const GoodsReceiptForm: React.FC = () => {
         setSuppliers(suppliersRes.items || []);
         setEmployees(employeesList.items || []);
 
-        const [activeProducts, manufacturerList, warehouseList] = await Promise.all([
+        const [activeProducts, manufacturerList, warehouseList, defaultWh] = await Promise.all([
           productService.getActive(),
           manufacturerService.getActive(),
           warehouseService.getActive(),
+          warehouseService.getDefault().catch(() => null),
         ]);
         setProducts(activeProducts || []);
         setManufacturers(manufacturerList || []);
         setWarehouses(warehouseList || []);
+        if (defaultWh) setDefaultWarehouseId(defaultWh.id);
 
         if (id) {
           const receiptData = await goodsReceiptService.get(id);
@@ -318,6 +321,7 @@ const GoodsReceiptForm: React.FC = () => {
       lotExpiryDate: undefined,
       availableUnits: availUnits,
       isEquipment: false,
+      warehouseId: defaultWarehouseId,
     };
 
     setLineItems((prev) => [...prev, recalculateLine(newItem)]);
