@@ -31,6 +31,12 @@ import {
   PrintResultItem,
 } from "../../../services/testRequestService";
 import { qualityManagementService } from "../../../services/qualityManagementService";
+import {
+  cacheApprovedIndicators,
+  getCachedApprovedIndicators,
+  generateResultDraft,
+  offlineDraftEditorUrl,
+} from "../../../services/offline/offlineResultService";
 import { API_BASE_URL } from "../../../services/api";
 import userService, { UserLookupDto } from "../../../services/userService";
 import { IndicatorName } from "../../../components/common";
@@ -200,9 +206,22 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
   const loadIndicators = async () => {
     setLoadingIndicators(true);
     try {
-      const result =
-        await testRequestService.getApprovedIndicators(testRequestId);
-      setIndicators(result);
+      if (navigator.onLine) {
+        const result =
+          await testRequestService.getApprovedIndicators(testRequestId);
+        setIndicators(result);
+        // Cache-on-view: keep approved indicators (with results) for offline.
+        cacheApprovedIndicators(testRequestId, result).catch(() => {});
+      } else {
+        const cached = await getCachedApprovedIndicators(testRequestId);
+        if (cached && cached.length > 0) {
+          setIndicators(cached as QualityManagementIndicatorDto[]);
+        } else {
+          message.warning(
+            "Chưa có dữ liệu chỉ tiêu offline. Hãy mở phiếu khi còn mạng để tải về."
+          );
+        }
+      }
     } catch (error) {
       console.error("Error loading indicators:", error);
       message.error("Không thể tải danh sách chỉ tiêu");
@@ -332,6 +351,43 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
   const handlePrint = async () => {
     if (selectedIndicatorIds.length === 0) {
       message.warning("Vui lòng chọn ít nhất một chỉ tiêu để in");
+      return;
+    }
+
+    // ---- Offline fallback: build the result form on-device, open offline editor ----
+    if (!navigator.onLine) {
+      const selected = indicators.filter((ind) =>
+        selectedIndicatorIds.includes(ind.id)
+      );
+      setLoading(true);
+      const offlineTab = window.open("about:blank", "_blank");
+      try {
+        const res = await generateResultDraft(
+          selected,
+          { Note: note || "" },
+          { testRequestId }
+        );
+        if (!res.success || !res.draftId) {
+          if (offlineTab) offlineTab.close();
+          message.error(res.error || "Không thể tạo phiếu kết quả offline.");
+          return;
+        }
+        message.success("Đã tạo phiếu kết quả offline. Mở trình soạn thảo...");
+        const url = offlineDraftEditorUrl(res.draftId);
+        if (offlineTab) offlineTab.location.href = url;
+        else window.open(url, "_blank");
+        setSelectedIndicatorIds([]);
+        setNote("");
+        onCancel();
+        onSuccess?.();
+      } catch (e) {
+        if (offlineTab) offlineTab.close();
+        message.error(
+          e instanceof Error ? e.message : "Lỗi tạo phiếu kết quả offline."
+        );
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 

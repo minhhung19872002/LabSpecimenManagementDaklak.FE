@@ -3,7 +3,6 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { message } from "antd";
 import { testingService } from "../../services/testingService";
 import { testResultValueService } from "../../services/testResultValueService";
-import { cacheSampleResults } from "../../services/offline/offlineResultService";
 import { getApiErrorMessage } from "../../utils/errorHandler";
 import {
   TestingDetailDto,
@@ -189,18 +188,6 @@ const TestingDetail: React.FC = () => {
       // Sử dụng apiViewMode để gọi API với đúng context (my hoặc all)
       const result = await testingService.get(id, apiViewMode);
       setDetail(result);
-
-      // Cache-on-view: persist each sample's indicators+results by sampleCode so
-      // the result form can be generated offline later. Best-effort, online only.
-      if (navigator.onLine) {
-        result.samples.forEach((s) => {
-          if (s.sampleCode) {
-            cacheSampleResults(s.sampleCode, s.indicators).catch(() => {
-              /* non-fatal */
-            });
-          }
-        });
-      }
 
       // Initialize sample results
       const initialResults = new Map<string, SaveIndicatorResultDto[]>();

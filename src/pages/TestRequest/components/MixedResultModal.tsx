@@ -5,12 +5,6 @@ import {
   SampleForSelectionDto,
 } from "../../../services/testRequestService";
 import { getSampleSelectionColumns } from "../columns";
-import {
-  cacheSamplesForResultForm,
-  getCachedSamplesForResultForm,
-  generateMixedResultDraftOffline,
-  offlineDraftEditorUrl,
-} from "../../../services/offline/offlineResultService";
 
 interface MixedResultModalProps {
   open: boolean;
@@ -47,24 +41,8 @@ const MixedResultModal: React.FC<MixedResultModalProps> = ({
     setMixedNote("");
 
     try {
-      if (navigator.onLine) {
-        const samples = await testRequestService.getSamplesForResultForm(testRequestId);
-        setSamplesForSelection(samples);
-        // Cache for offline fallback (best-effort).
-        cacheSamplesForResultForm(testRequestId, samples).catch(() => {});
-      } else {
-        // Offline: use the cached sample list captured while online.
-        const cached =
-          await getCachedSamplesForResultForm<SampleForSelectionDto>(testRequestId);
-        if (cached && cached.length > 0) {
-          setSamplesForSelection(cached);
-        } else {
-          message.warning(
-            "Chưa có dữ liệu mẫu offline. Hãy mở phiếu khi còn mạng để tải về."
-          );
-          onClose();
-        }
-      }
+      const samples = await testRequestService.getSamplesForResultForm(testRequestId);
+      setSamplesForSelection(samples);
     } catch (error: any) {
       console.error("Error loading samples:", error);
       message.error("Không thể tải danh sách mẫu");
@@ -95,41 +73,6 @@ const MixedResultModal: React.FC<MixedResultModalProps> = ({
 
     if (invalidSamples.length > 0) {
       message.error("Có mẫu chưa xét nghiệm xong, không thể xuất báo cáo");
-      return;
-    }
-
-    // Resolve selected sample codes (shared key with cached result data).
-    const selectedSampleCodes = selectedSampleIds
-      .map((sid) => samplesForSelection.find((s) => s.id === sid)?.sampleCode)
-      .filter((c): c is string => !!c);
-
-    // ---- Offline fallback: generate the result form on-device from cache ----
-    if (!navigator.onLine) {
-      setGeneratingMixed(true);
-      const offlineTab = window.open("about:blank", "_blank");
-      try {
-        const res = await generateMixedResultDraftOffline(selectedSampleCodes, {
-          Note: mixedNote || "",
-        });
-        if (!res.success || !res.draftId) {
-          if (offlineTab) offlineTab.close();
-          message.error(res.error || "Không thể tạo phiếu kết quả offline.");
-          return;
-        }
-        message.success("Đã tạo phiếu kết quả offline. Mở trình soạn thảo...");
-        handleClose();
-        const editorUrl = offlineDraftEditorUrl(res.draftId);
-        if (offlineTab) offlineTab.location.href = editorUrl;
-        else window.open(editorUrl, "_blank");
-        onSuccess();
-      } catch (error) {
-        if (offlineTab) offlineTab.close();
-        message.error(
-          error instanceof Error ? error.message : "Lỗi tạo phiếu kết quả offline."
-        );
-      } finally {
-        setGeneratingMixed(false);
-      }
       return;
     }
 
