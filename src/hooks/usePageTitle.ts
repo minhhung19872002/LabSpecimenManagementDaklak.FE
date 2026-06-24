@@ -74,6 +74,7 @@ const ROUTE_TITLES: PageTitleRoute[] = [
   { path: "/employees", title: "Nhân viên", end: false },
   { path: "/role-management/:id", title: "Phân quyền" },
   { path: "/role-management", title: "Phân quyền", end: false },
+  { path: "/approval-process", title: "Quy trình phê duyệt", end: false },
   { path: "/settings", title: "Cài đặt", end: false },
   { path: "/login", title: "Đăng nhập" },
 ];

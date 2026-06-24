@@ -114,6 +114,8 @@ export const PATH_ROUTES = {
     detail: (id: string) => `/role-management/${id}`,
   },
 
+  approvalProcess: '/approval-process',
+
   settings: '/settings',
 
   login: '/login',

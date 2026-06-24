@@ -551,6 +551,13 @@ const MainLayout: React.FC = () => {
           roles: [ROLES.ADMIN],
         },
         {
+          key: "approvalProcess",
+          icon: <AuditOutlined />,
+          label: menuLabel("Quy trình phê duyệt"),
+          onClick: () => navigate(PATH_ROUTES.approvalProcess),
+          roles: [ROLES.ADMIN],
+        },
+        {
           key: "settings",
           icon: <SettingOutlined />,
           label: menuLabel(t("menu.settings")),
