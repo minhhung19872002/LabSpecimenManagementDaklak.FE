@@ -37,6 +37,7 @@ import {
   generateResultDraft,
   offlineDraftEditorUrl,
 } from "../../../services/offline/offlineResultService";
+import { isServerReachable } from "../../../services/offline/connectivity";
 import { API_BASE_URL } from "../../../services/api";
 import userService, { UserLookupDto } from "../../../services/userService";
 import { IndicatorName } from "../../../components/common";
@@ -206,7 +207,7 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
   const loadIndicators = async () => {
     setLoadingIndicators(true);
     try {
-      if (navigator.onLine) {
+      if (await isServerReachable()) {
         const result =
           await testRequestService.getApprovedIndicators(testRequestId);
         setIndicators(result);
@@ -355,7 +356,7 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
     }
 
     // ---- Offline fallback: build the result form on-device, open offline editor ----
-    if (!navigator.onLine) {
+    if (!(await isServerReachable())) {
       const selected = indicators.filter((ind) =>
         selectedIndicatorIds.includes(ind.id)
       );
