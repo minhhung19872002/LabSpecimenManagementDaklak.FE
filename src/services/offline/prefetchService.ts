@@ -260,6 +260,27 @@ async function prefetchDocumentTemplates(): Promise<void> {
     console.error('Failed to prefetch document templates:', error);
     throw error;
   }
+
+  // Result-form templates (BM01-QT13 ...) for offline result generation.
+  // Cached separately so a failure here does not block the request-form template.
+  try {
+    const resultTemplateName = TEMPLATE_NAMES.RESULT_FORM_BM01;
+    const alreadyCached = await hasDocumentTemplate(resultTemplateName);
+    if (!alreadyCached) {
+      const fileName = TEMPLATE_FILE_NAMES[resultTemplateName];
+      const blob = await formTemplateService.download(fileName);
+      await cacheDocumentTemplate(
+        resultTemplateName,
+        fileName,
+        blob,
+        new Date().toISOString()
+      );
+      console.log('Cached BM01 result-form template for offline generation');
+    }
+  } catch (error) {
+    // Non-fatal: result-form offline generation just stays unavailable.
+    console.error('Failed to prefetch result-form template:', error);
+  }
 }
 
 /**

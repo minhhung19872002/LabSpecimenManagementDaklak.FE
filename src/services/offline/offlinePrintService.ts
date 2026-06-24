@@ -25,13 +25,16 @@ import dayjs from 'dayjs';
 
 // Template name constants
 export const TEMPLATE_NAMES = {
-  TEST_REQUEST_FORM: 'test-request-form', // BM05 - Phieu yeu cau
+  TEST_REQUEST_FORM: 'test-request-form', // BM01-QT07 - Phieu yeu cau
+  RESULT_FORM_BM01: 'result-form-bm01', // BM01-QT13 - Phieu tra ket qua (single sample)
 } as const;
 
 // Backend template file name (must match what's downloaded during prefetch)
 export const TEMPLATE_FILE_NAMES = {
   [TEMPLATE_NAMES.TEST_REQUEST_FORM]:
     'BM01-QT07- XXYCĐNHĐ_3.2 phieu yeu cau.template.docx',
+  [TEMPLATE_NAMES.RESULT_FORM_BM01]:
+    'Form trả KQ - BM01-QT13-BCKQ_3.2.template.docx',
 };
 
 // Checkbox characters matching backend TemplateConstants
