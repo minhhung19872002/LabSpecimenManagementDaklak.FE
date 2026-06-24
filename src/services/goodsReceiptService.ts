@@ -320,8 +320,8 @@ export const goodsReceiptService = {
     return response.data;
   },
 
-  reject: async (id: string): Promise<GoodsReceiptDto> => {
-    const response = await api.post<GoodsReceiptDto>(`${BASE_URL}/${id}/reject`);
+  reject: async (id: string, notes?: string): Promise<GoodsReceiptDto> => {
+    const response = await api.post<GoodsReceiptDto>(`${BASE_URL}/${id}/reject`, { notes });
     return response.data;
   },
 

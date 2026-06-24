@@ -37,6 +37,11 @@ export enum NotificationType {
   SingleResultRejectedByTechnicalManager = 33, // QLKT từ chối 1 kết quả
   MultipleResultsRejectedByTechnicalManager = 34, // QLKT từ chối nhiều kết quả
   CannotTest = 35,                  // Báo không thử nghiệm được
+
+  // For GoodsReceipt Approval - type 40-42
+  GoodsReceiptPendingApproval = 40,  // Phiếu đặt hàng cần phê duyệt
+  GoodsReceiptApproved = 41,         // Phiếu đặt hàng đã được duyệt
+  GoodsReceiptRejected = 42,         // Phiếu đặt hàng bị từ chối
 }
 
 // Labels for NotificationType
@@ -74,6 +79,11 @@ export const NotificationTypeLabels: Record<NotificationType, string> = {
   [NotificationType.SingleResultRejectedByTechnicalManager]: 'Kết quả bị từ chối',
   [NotificationType.MultipleResultsRejectedByTechnicalManager]: 'Kết quả bị từ chối',
   [NotificationType.CannotTest]: 'Báo không TN được',
+
+  // GoodsReceipt Approval notifications (40-42)
+  [NotificationType.GoodsReceiptPendingApproval]: 'Cần phê duyệt',
+  [NotificationType.GoodsReceiptApproved]: 'Đã duyệt',
+  [NotificationType.GoodsReceiptRejected]: 'Bị từ chối',
 };
 
 // Icon mapping for NotificationType (Bootstrap Icons)
@@ -115,6 +125,11 @@ export const NotificationTypeIcons: Record<NotificationType, string> = {
   [NotificationType.HandoverReminder]: 'bi-file-text',
   [NotificationType.SampleReturnReminder]: 'bi-file-text',
   [NotificationType.TestRequestChangeRequested]: 'bi-file-text',
+
+  // GoodsReceipt Approval
+  [NotificationType.GoodsReceiptPendingApproval]: 'bi-file-text',
+  [NotificationType.GoodsReceiptApproved]: 'bi-check2',
+  [NotificationType.GoodsReceiptRejected]: 'bi-x-lg',
 };
 
 // Icon colors for NotificationType
@@ -156,6 +171,11 @@ export const NotificationTypeIconColors: Record<NotificationType, string> = {
   [NotificationType.HandoverReminder]: '#8c8c8c',
   [NotificationType.SampleReturnReminder]: '#8c8c8c',
   [NotificationType.TestRequestChangeRequested]: '#8c8c8c',
+
+  // GoodsReceipt Approval
+  [NotificationType.GoodsReceiptPendingApproval]: '#1890ff',
+  [NotificationType.GoodsReceiptApproved]: '#52c41a',
+  [NotificationType.GoodsReceiptRejected]: '#ff4d4f',
 };
 
 // Icon background colors for NotificationType (solid colors)
@@ -197,6 +217,11 @@ export const NotificationTypeIconBgColors: Record<NotificationType, string> = {
   [NotificationType.HandoverReminder]: '#FAFAFA',
   [NotificationType.SampleReturnReminder]: '#FAFAFA',
   [NotificationType.TestRequestChangeRequested]: '#FAFAFA',
+
+  // GoodsReceipt Approval
+  [NotificationType.GoodsReceiptPendingApproval]: '#E6F7FF',
+  [NotificationType.GoodsReceiptApproved]: '#F6FFED',
+  [NotificationType.GoodsReceiptRejected]: '#FFF2F0',
 };
 
 // AdditionalData interface
@@ -213,6 +238,9 @@ export interface NotificationAdditionalData {
   newIndicatorCount?: number;
   cancelledCount?: number;
   sampleCount?: number;
+  goodsReceiptCode?: string;
+  creatorName?: string;
+  status?: string;
 }
 
 // Helper function to parse additionalData JSON

@@ -212,6 +212,9 @@ const RoleManagementDetail = Loadable(
 const SettingsPage = Loadable(
   lazy(() => import("./pages/Settings/SettingsPage")),
 );
+const ApprovalProcessPage = Loadable(
+  lazy(() => import("./pages/ApprovalProcess/ApprovalProcessPage")),
+);
 
 // 404 Not Found
 const NotFound = Loadable(lazy(() => import("./pages/NotFound/NotFound")));
@@ -399,6 +402,7 @@ function App() {
             path="role-management/:id"
             element={<RoleManagementDetail />}
           />
+          <Route path="approval-process" element={<ApprovalProcessPage />} />
           <Route path="settings" element={<SettingsPage />} />
 
           {/* Legacy route - redirect to test-results */}

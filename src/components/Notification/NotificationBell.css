@@ -197,6 +197,29 @@
   color: #ff4d4f;
 }
 
+/* Approval status tag */
+.notification-status {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 1px 8px;
+  border-radius: 4px;
+}
+
+.notification-status.pending {
+  color: #1677ff;
+  background: #e6f4ff;
+}
+
+.notification-status.approved {
+  color: #52c41a;
+  background: #f6ffed;
+}
+
+.notification-status.rejected {
+  color: #ff4d4f;
+  background: #fff2f0;
+}
+
 /* Scrollbar styling */
 .notification-popover-body::-webkit-scrollbar {
   width: 6px;

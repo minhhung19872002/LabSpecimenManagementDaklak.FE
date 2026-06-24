@@ -71,6 +71,8 @@ const getNotificationRoute = (notification: NotificationDto): string | null => {
     case "Testing":
       // KTV notifications (30-35) - navigate to testing detail
       return `/testing/${referenceId}`;
+    case "GoodsReceipt":
+      return `/goods-receipts/${referenceId}`;
     default:
       return null;
   }
@@ -213,6 +215,16 @@ const NotificationBell: React.FC = () => {
               <span className="notification-time">
                 {dayjs(notification.creationTime).format("DD/MM/YYYY HH:mm")}
               </span>
+              {additionalData?.status && (
+                <span
+                  className={`notification-status ${
+                    additionalData.status === "Đã duyệt" ? "approved" :
+                    additionalData.status === "Từ chối" ? "rejected" : "pending"
+                  }`}
+                >
+                  {additionalData.status}
+                </span>
+              )}
               {daysRemaining !== null && daysRemaining !== undefined && (
                 <span
                   className={`notification-deadline ${

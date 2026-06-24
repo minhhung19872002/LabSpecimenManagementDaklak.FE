@@ -165,7 +165,7 @@ export const getGoodsReceiptColumns = (
             onClick={() => handleView(record)}
           />
         </Tooltip>
-        {canEdit && record.warehouseStatus === GoodsReceiptWarehouseStatus.NotImported && (
+        {canEdit && record.warehouseStatus === GoodsReceiptWarehouseStatus.NotImported && record.orderStatus !== GoodsReceiptOrderStatus.PendingApproval && record.orderStatus !== GoodsReceiptOrderStatus.Rejected && (
           <Tooltip title="Sửa">
             <Button
               type="link"

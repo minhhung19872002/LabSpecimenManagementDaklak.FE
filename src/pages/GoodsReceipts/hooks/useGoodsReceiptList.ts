@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { message } from "antd";
+import { getApiErrorMessage } from "../../../utils/errorHandler";
 import {
   goodsReceiptService,
   GoodsReceiptListDto,
@@ -52,7 +53,7 @@ export const useGoodsReceiptList = () => {
       setTotalCount(result?.totalCount || 0);
     } catch (error) {
       console.error("Failed to fetch goods receipts:", error);
-      message.error("Không thể tải danh sách phiếu nhập hàng");
+      message.error(getApiErrorMessage(error, "Không thể tải danh sách phiếu nhập hàng"));
       setData([]);
       setTotalCount(0);
     } finally {

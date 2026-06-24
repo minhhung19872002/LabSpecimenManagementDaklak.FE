@@ -2,6 +2,7 @@ import React, { useMemo, useState, useCallback } from "react";
 import { Card, Button, Space, Dropdown, Typography, message } from "antd";
 import { PlusOutlined, DownloadOutlined, DownOutlined } from "@ant-design/icons";
 import * as XLSX from "xlsx";
+import { getApiErrorMessage } from "../../utils/errorHandler";
 import { useGoodsReceiptList, useGoodsReceiptActions } from "./hooks";
 import { GoodsReceiptTable, ColumnConfigPopover } from "./components";
 import { getGoodsReceiptColumns, ALL_COLUMNS, COLUMN_VISIBILITY_KEY } from "./constants";
@@ -50,6 +51,13 @@ const STAT_CARDS = [
     iconBg: "green",
     icon: "box-seam",
     filterValue: GoodsReceiptOrderStatus.WaitingReceipt,
+  },
+  {
+    key: "rejected",
+    title: "Từ chối",
+    iconBg: "red",
+    icon: "x-circle",
+    filterValue: GoodsReceiptOrderStatus.Rejected,
   },
 ];
 
@@ -146,8 +154,8 @@ const GoodsReceiptList: React.FC = () => {
       XLSX.utils.book_append_sheet(wb, ws, "Đặt hàng");
       XLSX.writeFile(wb, `dat-hang_${new Date().toISOString().slice(0, 10)}.xlsx`);
       message.success("Xuất Excel thành công");
-    } catch {
-      message.error("Không thể xuất Excel");
+    } catch (error) {
+      message.error(getApiErrorMessage(error, "Không thể xuất Excel"));
     } finally {
       setExporting(false);
     }

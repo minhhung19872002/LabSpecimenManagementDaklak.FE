@@ -149,8 +149,8 @@ const WarehouseImportModal: React.FC<WarehouseImportModalProps> = ({
       }
 
       setBarcodeItems(items);
-    } catch {
-      message.error("Không thể tải thông tin sản phẩm");
+    } catch (error) {
+      message.error(getApiErrorMessage(error, "Không thể tải thông tin sản phẩm"));
     } finally {
       setLoading(false);
     }

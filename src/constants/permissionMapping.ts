@@ -161,6 +161,14 @@ export const PERMISSIONS = {
     AddPayment: `${P}.GoodsReceipts.AddPayment`,
   },
 
+  // ApprovalProcesses (Quy trình phê duyệt)
+  ApprovalProcesses: {
+    Default: `${P}.ApprovalProcesses`,
+    Create: `${P}.ApprovalProcesses.Create`,
+    Edit: `${P}.ApprovalProcesses.Edit`,
+    Delete: `${P}.ApprovalProcesses.Delete`,
+  },
+
   // StockAdjustments (Điều chỉnh tồn kho)
   StockAdjustments: {
     Default: `${P}.StockAdjustments`,
@@ -379,6 +387,9 @@ export const ROUTE_PERMISSION_MAP: Record<string, string[]> = {
   // GoodsReceipts
   '/goods-receipts': [PERMISSIONS.GoodsReceipts.Default],
 
+  // ApprovalProcesses
+  '/approval-process': [PERMISSIONS.ApprovalProcesses.Default],
+
   // StockAdjustments
   '/stock-adjustments': [PERMISSIONS.StockAdjustments.Default],
 
@@ -581,6 +592,7 @@ export const MENU_PERMISSION_MAP = {
   products: [PERMISSIONS.Products.Default],
   suppliersManagement: [PERMISSIONS.Suppliers.Default],
   goodsReceipts: [PERMISSIONS.GoodsReceipts.Default],
+  approvalProcess: [PERMISSIONS.ApprovalProcesses.Default],
   stockAdjustments: [PERMISSIONS.StockAdjustments.Default],
   equipments: [PERMISSIONS.Equipments.Default],
   subcontractors: [PERMISSIONS.Subcontractors.Default],

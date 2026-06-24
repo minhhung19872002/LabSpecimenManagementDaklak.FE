@@ -99,6 +99,7 @@ const routeToKeyMap: Record<string, string> = {
   "/settings": "settings",
   "/employees": "employees",
   "/role-management": "roleManagement",
+  "/approval-process": "approvalProcess",
 };
 
 const MainLayout: React.FC = () => {

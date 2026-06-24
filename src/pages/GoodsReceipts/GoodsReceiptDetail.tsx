@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Card,
   Button,
@@ -9,9 +9,18 @@ import {
   Tag,
   Spin,
   Divider,
+  Modal,
+  Input,
+  Steps,
   message,
 } from "antd";
-import { ArrowLeftOutlined, EditOutlined } from "@ant-design/icons";
+import {
+  ArrowLeftOutlined,
+  EditOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  ClockCircleOutlined,
+} from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
 import dayjs from "dayjs";
 import {
@@ -33,6 +42,11 @@ import {
 } from "../../services/goodsReceiptService";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
+import approvalProcessService, {
+  ApprovalSnapshotDto,
+  ApprovalStepStatus,
+  ApprovalSnapshotStatus,
+} from "../../services/approvalProcessService";
 import { getApiErrorMessage } from "../../utils/errorHandler";
 import { PaymentModal, WarehouseImportModal } from "./components";
 import { PaymentFormData } from "./schemas";
@@ -66,6 +80,9 @@ const GoodsReceiptDetail: React.FC = () => {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [approving, setApproving] = useState(false);
   const [rejecting, setRejecting] = useState(false);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectNotes, setRejectNotes] = useState("");
+  const [snapshot, setSnapshot] = useState<ApprovalSnapshotDto | null>(null);
 
   const canEdit = authService.hasPermission(PERMISSIONS.GoodsReceipts.Edit);
   const canApprove = authService.hasPermission(
@@ -78,12 +95,29 @@ const GoodsReceiptDetail: React.FC = () => {
     PERMISSIONS.GoodsReceipts.AddPayment,
   );
 
-  const loadData = async () => {
+  const loadSnapshot = useCallback(async () => {
+    if (!id) return;
+    try {
+      const snap = await approvalProcessService.getSnapshot(id);
+      setSnapshot(snap);
+    } catch (error: any) {
+      setSnapshot(null);
+      if (error?.response?.status && error.response.status !== 404) {
+        console.error("Failed to load approval snapshot:", error);
+      }
+    }
+  }, [id]);
+
+  const loadData = useCallback(async (opts?: { includeSnapshot?: boolean }) => {
     if (!id) return;
     setLoading(true);
     try {
       const data = await goodsReceiptService.get(id);
       setReceipt(data);
+
+      if (opts?.includeSnapshot !== false) {
+        await loadSnapshot();
+      }
     } catch (error: any) {
       message.error(
         getApiErrorMessage(error, "Không thể tải phiếu nhập hàng."),
@@ -91,11 +125,11 @@ const GoodsReceiptDetail: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, loadSnapshot]);
 
   useEffect(() => {
     loadData();
-  }, [id]);
+  }, [loadData]);
 
   const handleApprove = async () => {
     if (!id) return;
@@ -111,12 +145,18 @@ const GoodsReceiptDetail: React.FC = () => {
     }
   };
 
-  const handleReject = async () => {
+  const handleRejectClick = () => {
+    setRejectNotes("");
+    setRejectModalOpen(true);
+  };
+
+  const handleRejectConfirm = async () => {
     if (!id) return;
     setRejecting(true);
     try {
-      await goodsReceiptService.reject(id);
+      await goodsReceiptService.reject(id, rejectNotes || undefined);
       message.success("Đã từ chối phiếu");
+      setRejectModalOpen(false);
       await loadData();
     } catch (error: any) {
       message.error(getApiErrorMessage(error, "Không thể từ chối phiếu."));
@@ -139,7 +179,7 @@ const GoodsReceiptDetail: React.FC = () => {
       });
       message.success("Thanh toán thành công");
       setPaymentModalOpen(false);
-      await loadData();
+      await loadData({ includeSnapshot: false });
     } catch (error: any) {
       message.error(getApiErrorMessage(error, "Không thể thanh toán."));
     } finally {
@@ -420,9 +460,19 @@ const GoodsReceiptDetail: React.FC = () => {
   const isImported =
     receipt.warehouseStatus === GoodsReceiptWarehouseStatus.Imported;
 
+  const currentUserId = authService.getUserInfo()?.id;
+  const currentStepApproverId = snapshot?.steps?.find(
+    (s) => s.stepOrder === snapshot.currentStepOrder,
+  )?.approverId;
+  const isCurrentApprover =
+    !!currentUserId &&
+    currentUserId === currentStepApproverId &&
+    snapshot?.status === ApprovalSnapshotStatus.Pending;
+
   const renderActionButtons = () => (
     <Space wrap>
       {canApprove &&
+        isCurrentApprover &&
         receipt.orderStatus === GoodsReceiptOrderStatus.PendingApproval && (
           <>
             <Button type="primary" onClick={handleApprove} loading={approving}>
@@ -431,7 +481,7 @@ const GoodsReceiptDetail: React.FC = () => {
             <Button
               type="default"
               danger
-              onClick={handleReject}
+              onClick={handleRejectClick}
               loading={rejecting}
             >
               Từ chối
@@ -457,7 +507,7 @@ const GoodsReceiptDetail: React.FC = () => {
           In mã vật tư
         </Button>
       )}
-      {canEdit && receipt.warehouseStatus === GoodsReceiptWarehouseStatus.NotImported && (
+      {canEdit && receipt.warehouseStatus === GoodsReceiptWarehouseStatus.NotImported && receipt.orderStatus !== GoodsReceiptOrderStatus.PendingApproval && receipt.orderStatus !== GoodsReceiptOrderStatus.Rejected && (
         <Button
           type="primary"
           icon={<EditOutlined />}
@@ -589,6 +639,50 @@ const GoodsReceiptDetail: React.FC = () => {
           </div>
         </div>
 
+        {/* Approval Timeline */}
+        {snapshot && snapshot.steps.length > 0 && (
+          <div className="detail-section" style={{ marginBottom: 16 }}>
+            <div className="detail-section-title">Tiến trình phê duyệt</div>
+            <Steps
+              size="small"
+              current={snapshot.status === ApprovalSnapshotStatus.Approved
+                ? snapshot.totalSteps
+                : snapshot.currentStepOrder}
+              status={snapshot.status === ApprovalSnapshotStatus.Rejected ? "error" : "process"}
+              items={snapshot.steps
+                .sort((a, b) => a.stepOrder - b.stepOrder)
+                .map((step) => {
+                  let status: "wait" | "process" | "finish" | "error" = "wait";
+                  let icon: React.ReactNode = undefined;
+                  if (step.status === ApprovalStepStatus.Approved) {
+                    status = "finish";
+                    icon = <CheckCircleOutlined />;
+                  } else if (step.status === ApprovalStepStatus.Rejected) {
+                    status = "error";
+                    icon = <CloseCircleOutlined />;
+                  } else if (step.stepOrder === snapshot.currentStepOrder &&
+                    snapshot.status === ApprovalSnapshotStatus.Pending) {
+                    status = "process";
+                    icon = <ClockCircleOutlined />;
+                  }
+
+                  const desc = step.status === ApprovalStepStatus.Approved
+                    ? `Đã duyệt${step.actionDate ? ` · ${dayjs(step.actionDate).format("HH:mm DD/MM/YYYY")}` : ""}`
+                    : step.status === ApprovalStepStatus.Rejected
+                      ? `Từ chối${step.notes ? ` — ${step.notes}` : ""}${step.actionDate ? ` · ${dayjs(step.actionDate).format("HH:mm DD/MM/YYYY")}` : ""}`
+                      : `Chờ duyệt`;
+
+                  return {
+                    title: `Cấp ${step.stepOrder + 1}: ${step.approverName}`,
+                    description: desc,
+                    status,
+                    icon,
+                  };
+                })}
+            />
+          </div>
+        )}
+
         {/* Line Items + Payment Summary */}
         <Card
           className="list-card"
@@ -693,7 +787,7 @@ const GoodsReceiptDetail: React.FC = () => {
         receipt={receipt}
         onImportSuccess={() => {
           setWarehouseImportModalOpen(false);
-          loadData();
+          loadData({ includeSnapshot: false });
         }}
       />
       <WarehouseImportModal
@@ -703,6 +797,26 @@ const GoodsReceiptDetail: React.FC = () => {
         onImportSuccess={() => setPrintBarcodeModalOpen(false)}
         printOnly
       />
+      <Modal
+        title="Từ chối phiếu đặt hàng"
+        open={rejectModalOpen}
+        onOk={handleRejectConfirm}
+        onCancel={() => setRejectModalOpen(false)}
+        confirmLoading={rejecting}
+        okText="Xác nhận từ chối"
+        okButtonProps={{ danger: true }}
+        cancelText="Hủy"
+        destroyOnClose
+        centered
+      >
+        <p>Bạn có chắc chắn muốn từ chối phiếu <strong>{receipt.code}</strong>?</p>
+        <Input.TextArea
+          rows={3}
+          placeholder="Nhập lý do từ chối (không bắt buộc)"
+          value={rejectNotes}
+          onChange={(e) => setRejectNotes(e.target.value)}
+        />
+      </Modal>
     </div>
   );
 };

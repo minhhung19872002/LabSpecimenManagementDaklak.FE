@@ -58,16 +58,28 @@
 }
 
 /* Buttons in card header */
-.goods-receipt-detail .list-card .card-header-flex .ant-btn-default {
+.goods-receipt-detail .list-card .card-header-flex .ant-btn-default:not(.ant-btn-dangerous) {
   background: #FFFFFF;
   color: rgba(0, 0, 0, 0.85);
   border-color: #FFFFFF;
 }
 
-.goods-receipt-detail .list-card .card-header-flex .ant-btn-default:hover {
+.goods-receipt-detail .list-card .card-header-flex .ant-btn-default:not(.ant-btn-dangerous):hover {
   background: rgba(255, 255, 255, 0.9);
   border-color: #FFFFFF;
   color: rgba(0, 0, 0, 0.85);
+}
+
+.goods-receipt-detail .list-card .card-header-flex .ant-btn-default.ant-btn-dangerous {
+  background: #FFFFFF;
+  color: #ff4d4f;
+  border-color: #FFFFFF;
+}
+
+.goods-receipt-detail .list-card .card-header-flex .ant-btn-default.ant-btn-dangerous:hover {
+  background: rgba(255, 255, 255, 0.9);
+  color: #ff4d4f;
+  border-color: #FFFFFF;
 }
 
 .goods-receipt-detail .list-card .card-header-flex .ant-btn-primary {
@@ -266,6 +278,33 @@
   .goods-receipt-detail .list-card .list-card > .ant-card-head {
     padding: 8px 12px;
   }
+}
+
+/* Approval steps colors */
+.goods-receipt-detail .ant-steps .ant-steps-item-finish .ant-steps-item-icon {
+  border-color: #52c41a;
+  color: #52c41a;
+}
+
+.goods-receipt-detail .ant-steps .ant-steps-item-finish .ant-steps-item-icon .anticon {
+  color: #52c41a;
+}
+
+.goods-receipt-detail .ant-steps .ant-steps-item-finish > .ant-steps-item-container > .ant-steps-item-tail::after {
+  background-color: #52c41a;
+}
+
+.goods-receipt-detail .ant-steps .ant-steps-item-finish .ant-steps-item-title {
+  color: rgba(0, 0, 0, 0.85);
+}
+
+.goods-receipt-detail .ant-steps .ant-steps-item-process .ant-steps-item-icon {
+  border-color: #fa8c16;
+  background-color: #fa8c16;
+}
+
+.goods-receipt-detail .ant-steps .ant-steps-item-process .ant-steps-item-icon .anticon {
+  color: #fff;
 }
 
 /* Print styles */
