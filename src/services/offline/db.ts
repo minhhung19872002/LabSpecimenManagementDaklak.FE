@@ -119,6 +119,23 @@ export interface CachedDocumentTemplate {
 }
 
 /**
+ * Offline-generated result form (.docx) draft.
+ * Created by generateResultFormOffline, edited by OfflineDocxEditor, and
+ * uploaded to the backend by syncManager once back online.
+ */
+export interface ResultDraft {
+  id: string;
+  testRequestId?: string;
+  sampleCode?: string;
+  fileName: string;
+  blob: Blob;
+  status: 'draft' | 'pending-sync' | 'synced' | 'failed';
+  createdAt: Date;
+  updatedAt: Date;
+  lastError?: string;
+}
+
+/**
  * IndexedDB schema definition
  */
 interface OfflineDB extends DBSchema {
@@ -167,10 +184,18 @@ interface OfflineDB extends DBSchema {
       'by-cachedAt': Date;
     };
   };
+  resultDrafts: {
+    key: string;
+    value: ResultDraft;
+    indexes: {
+      'by-status': string;
+      'by-updatedAt': Date;
+    };
+  };
 }
 
 const DB_NAME = 'lab-specimen-offline';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 let dbInstance: IDBPDatabase<OfflineDB> | null = null;
 
@@ -226,6 +251,14 @@ export async function getDB(): Promise<IDBPDatabase<OfflineDB>> {
           keyPath: 'templateName',
         });
         templateStore.createIndex('by-cachedAt', 'cachedAt');
+      }
+
+      if (!db.objectStoreNames.contains('resultDrafts')) {
+        const draftStore = db.createObjectStore('resultDrafts', {
+          keyPath: 'id',
+        });
+        draftStore.createIndex('by-status', 'status');
+        draftStore.createIndex('by-updatedAt', 'updatedAt');
       }
     },
   });
@@ -694,4 +727,73 @@ export async function clearDocumentTemplates(): Promise<void> {
   const tx = db.transaction('documentTemplates', 'readwrite');
   await tx.store.clear();
   await tx.done;
+}
+
+// ============ Result Draft Operations ============
+
+export interface SaveResultDraftInput {
+  id?: string;
+  testRequestId?: string;
+  sampleCode?: string;
+  fileName: string;
+  blob: Blob;
+  status?: ResultDraft['status'];
+}
+
+/**
+ * Create or update an offline result-form draft. Returns the draft id.
+ */
+export async function saveResultDraft(input: SaveResultDraftInput): Promise<string> {
+  const db = await getDB();
+  const now = new Date();
+  const id = input.id ?? generateUUID();
+  const existing = input.id ? await db.get('resultDrafts', input.id) : undefined;
+  const draft: ResultDraft = {
+    id,
+    testRequestId: input.testRequestId ?? existing?.testRequestId,
+    sampleCode: input.sampleCode ?? existing?.sampleCode,
+    fileName: input.fileName,
+    blob: input.blob,
+    status: input.status ?? existing?.status ?? 'draft',
+    createdAt: existing?.createdAt ?? now,
+    updatedAt: now,
+  };
+  await db.put('resultDrafts', draft);
+  return id;
+}
+
+export async function getResultDraft(id: string): Promise<ResultDraft | undefined> {
+  const db = await getDB();
+  return db.get('resultDrafts', id);
+}
+
+export async function getAllResultDrafts(): Promise<ResultDraft[]> {
+  const db = await getDB();
+  return db.getAll('resultDrafts');
+}
+
+export async function getResultDraftsByStatus(
+  status: ResultDraft['status']
+): Promise<ResultDraft[]> {
+  const db = await getDB();
+  return db.getAllFromIndex('resultDrafts', 'by-status', status);
+}
+
+export async function updateResultDraftStatus(
+  id: string,
+  status: ResultDraft['status'],
+  lastError?: string
+): Promise<void> {
+  const db = await getDB();
+  const draft = await db.get('resultDrafts', id);
+  if (!draft) return;
+  draft.status = status;
+  draft.updatedAt = new Date();
+  if (lastError !== undefined) draft.lastError = lastError;
+  await db.put('resultDrafts', draft);
+}
+
+export async function deleteResultDraft(id: string): Promise<void> {
+  const db = await getDB();
+  await db.delete('resultDrafts', id);
 }
