@@ -21,17 +21,27 @@ import {
   ResultLanguage,
 } from '../../types/testRequest';
 import { numberToVietnameseWords } from '../../utils/numberToWords';
+import { fillDocxTemplate } from './docxFill';
+import { prepareResultTemplate } from './resultTemplatePrep';
+import {
+  buildResultFormData,
+  ResultFormHeader,
+  ResultIndicatorInput,
+} from './resultFormBuilder';
 import dayjs from 'dayjs';
 
 // Template name constants
 export const TEMPLATE_NAMES = {
-  TEST_REQUEST_FORM: 'test-request-form', // BM05 - Phieu yeu cau
+  TEST_REQUEST_FORM: 'test-request-form', // BM01-QT07 - Phieu yeu cau
+  RESULT_FORM_BM01: 'result-form-bm01', // BM01-QT13 - Phieu tra ket qua (single sample)
 } as const;
 
 // Backend template file name (must match what's downloaded during prefetch)
 export const TEMPLATE_FILE_NAMES = {
   [TEMPLATE_NAMES.TEST_REQUEST_FORM]:
     'BM01-QT07- XXYCĐNHĐ_3.2 phieu yeu cau.template.docx',
+  [TEMPLATE_NAMES.RESULT_FORM_BM01]:
+    'Form trả KQ - BM01-QT13-BCKQ_3.2.template.docx',
 };
 
 // Checkbox characters matching backend TemplateConstants
@@ -116,6 +126,47 @@ export async function generateTestRequestFormOffline(
         error instanceof Error
           ? error.message
           : 'Lỗi không xác định khi tạo tài liệu.',
+    };
+  }
+}
+
+/**
+ * Generate a BM01 result form offline from cached template + provided data.
+ *
+ * `header` carries the scalar fields (sample, customer, dates...) and
+ * `indicators` is the flat list (parent/child) used to build the result table.
+ * The result data itself comes from the offline entry form / cache — this
+ * function only assembles + fills the document.
+ */
+export async function generateResultFormOffline(
+  header: ResultFormHeader,
+  indicators: ResultIndicatorInput[]
+): Promise<OfflinePrintResult> {
+  try {
+    const template = await getCachedDocumentTemplate(TEMPLATE_NAMES.RESULT_FORM_BM01);
+    if (!template) {
+      return {
+        success: false,
+        error:
+          'Template phiếu kết quả chưa được tải về. Vui lòng kết nối mạng để tải template.',
+      };
+    }
+
+    // Canonical template -> loop + raw-xml template, then fill.
+    const prepared = await prepareResultTemplate(template.blob);
+    const data = buildResultFormData(header, indicators);
+    const { blob } = await fillDocxTemplate(prepared.blob, data);
+
+    const fileName = `KetQua_${header.SampleCode || 'OFFLINE'}_${dayjs().format(
+      'YYYYMMDDHHmmss'
+    )}.docx`;
+    return { success: true, fileName, blob };
+  } catch (error) {
+    console.error('[OfflinePrint] Error generating result form:', error);
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : 'Lỗi không xác định khi tạo phiếu kết quả.',
     };
   }
 }
