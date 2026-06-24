@@ -335,6 +335,16 @@ export const goodsReceiptService = {
     return response.data;
   },
 
+  getNextCode: async (): Promise<string> => {
+    const response = await api.get<string>(`${BASE_URL}/next-code`);
+    return response.data;
+  },
+
+  getNextEquipmentCode: async (): Promise<string> => {
+    const response = await api.get<string>(`${BASE_URL}/next-equipment-code`);
+    return response.data;
+  },
+
   getRecentLots: async (productId: string): Promise<RecentLotDto[]> => {
     const response = await api.get<(RecentLotDto | string)[]>(`${BASE_URL}/recent-lots/${productId}`);
     const data = response.data || [];

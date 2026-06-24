@@ -68,6 +68,7 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [isCustomVat, setIsCustomVat] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [previewCode, setPreviewCode] = useState<string>("");
 
   // Inline supplier creation modal
   const [supplierModalOpen, setSupplierModalOpen] = useState(false);
@@ -183,6 +184,7 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
               reset((prev) => ({ ...prev, purchaserId: currentEmployee.id }));
             }
           }
+          goodsReceiptService.getNextEquipmentCode().then(setPreviewCode).catch(() => {});
         }
       } catch {
         message.error("Không thể tải dữ liệu");
@@ -383,7 +385,11 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
         message.success("Đã cập nhật phiếu nhập thiết bị");
       } else {
         const result = await goodsReceiptService.create(payload);
-        message.success("Đã tạo phiếu nhập thiết bị");
+        if (previewCode && result.code !== previewCode) {
+          message.success(`Đã tạo phiếu nhập thiết bị — Mã phiếu: ${result.code} (đã cập nhật do có phiếu khác được tạo trước)`);
+        } else {
+          message.success("Đã tạo phiếu nhập thiết bị");
+        }
         navigate(`/goods-receipts/${result.id}`);
         return;
       }
@@ -726,7 +732,7 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
             </Col>
             <Col xs={24} sm={12} md={6}>
               <Form.Item label="Số phiếu giao hàng">
-                <Input value={receipt?.code || ""} placeholder="Tự động sinh khi lưu" disabled style={{ backgroundColor: "#f5f5f5" }} />
+                <Input value={receipt?.code || previewCode || ""} placeholder="Tự động sinh khi lưu" disabled style={{ backgroundColor: "#f5f5f5" }} />
               </Form.Item>
             </Col>
           </Row>
