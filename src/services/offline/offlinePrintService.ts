@@ -5,8 +5,6 @@
  * Uses docxtemplater + pizzip to fill templates with TestRequest data.
  */
 
-import Docxtemplater from 'docxtemplater';
-import PizZip from 'pizzip';
 import { saveAs } from 'file-saver';
 import {
   getCachedDocumentTemplate,
@@ -23,6 +21,8 @@ import {
 import { numberToVietnameseWords } from '../../utils/numberToWords';
 import { fillDocxTemplate } from './docxFill';
 import { prepareResultTemplate } from './resultTemplatePrep';
+import { prepareRequestTemplate } from './requestTemplatePrep';
+import { buildRequestSampleRows } from './requestFormBuilder';
 import {
   buildResultFormData,
   ResultFormHeader,
@@ -102,11 +102,16 @@ export async function generateTestRequestFormOffline(
       };
     }
 
-    // 3. Build placeholder data
+    // 3. Build placeholder data (scalars + flat sample-table rows)
     const placeholderData = buildTestRequestPlaceholders(testRequest);
+    const rows = buildRequestSampleRows(testRequest.samples);
 
-    // 4. Generate document
-    const generatedBlob = await generateDocument(template.blob, placeholderData);
+    // 4. Generate document: prepare template (flat loop) then fill
+    const prepared = await prepareRequestTemplate(template.blob);
+    const { blob: generatedBlob } = await fillDocxTemplate(prepared.blob, {
+      ...placeholderData,
+      rows,
+    });
 
     // 5. Build file name
     const fileName = `PhieuYeuCau_${
@@ -223,42 +228,6 @@ export async function getOfflinePrintStatus(
   };
 }
 
-/**
- * Generate document from template and data
- */
-async function generateDocument(
-  templateBlob: Blob,
-  data: Record<string, string>
-): Promise<Blob> {
-  // Read template as ArrayBuffer
-  const templateArrayBuffer = await templateBlob.arrayBuffer();
-
-  // Load template with PizZip
-  const zip = new PizZip(templateArrayBuffer);
-
-  // Create Docxtemplater instance with simple text replacement
-  const doc = new Docxtemplater(zip, {
-    paragraphLoop: true,
-    linebreaks: true,
-    delimiters: { start: '{{', end: '}}' },
-  });
-
-  // Set the template data
-  doc.setData(data);
-
-  // Render the document
-  doc.render();
-
-  // Generate output blob
-  const outputZip = doc.getZip();
-  const outputBlob = outputZip.generate({
-    type: 'blob',
-    mimeType:
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  });
-
-  return outputBlob;
-}
 
 /**
  * Get checkbox character based on boolean value
