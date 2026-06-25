@@ -18,6 +18,7 @@ import { useActionPermission } from "../../../hooks/useActionPermission";
 import { useNetworkStatus } from "../../../hooks/useNetworkStatus";
 import { isServerReachable } from "../../../services/offline/connectivity";
 import { cacheApprovedIndicators } from "../../../services/offline/offlineResultService";
+import { cacheTestRequest } from "../../../services/offline/db";
 
 // Statuses that have no results yet -> skip caching approved indicators.
 const NO_RESULT_STATUSES = new Set<TestRequestStatus>([
@@ -44,6 +45,32 @@ async function prefetchApprovedForOffline(items: TestRequestDto[]): Promise<void
       try {
         const inds = await testRequestService.getApprovedIndicators(it.id);
         if (inds && inds.length) await cacheApprovedIndicators(it.id, inds);
+      } catch {
+        /* best-effort */
+      }
+    }
+  };
+  await Promise.all([worker(), worker(), worker()]);
+}
+
+/**
+ * Background, best-effort: while online, cache the FULL detail (with
+ * Samples + indicators) for the test requests currently listed. The list
+ * endpoint only returns a summary DTO (no Samples — see
+ * GetFilteredListAsync), so caching list items alone overwrites any richer
+ * detail previously cached and leaves "In phiếu TN" with an empty sample
+ * table offline. Throttled (3 concurrent); all failures ignored.
+ */
+async function prefetchFullDetailForOffline(items: TestRequestDto[]): Promise<void> {
+  if (!(await isServerReachable())) return;
+  const queue = items.filter((r) => r?.id);
+  const worker = async () => {
+    for (;;) {
+      const it = queue.shift();
+      if (!it) break;
+      try {
+        const full = await testRequestService.get(it.id);
+        await cacheTestRequest(full.id, full, false);
       } catch {
         /* best-effort */
       }
@@ -102,6 +129,7 @@ export const useTestRequestList = () => {
       // user doesn't have to open each phiếu first (background, best-effort).
       if (!response.isOfflineData) {
         void prefetchApprovedForOffline(items);
+        void prefetchFullDetailForOffline(items);
       }
     } catch (error: unknown) {
       console.error("Error loading test requests:", error);
