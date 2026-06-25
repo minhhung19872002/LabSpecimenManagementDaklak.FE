@@ -52,7 +52,14 @@ export async function prepareRequestTemplate(
   const iNo = xml.indexOf('{{No}}');
   if (iNo === -1) throw new Error('Template BM05 không chứa {{No}} — không nhận diện được dòng mẫu');
 
-  const trOpen = xml.lastIndexOf('<w:tr', iNo);
+  // Plain lastIndexOf('<w:tr', ...) also matches inside "<w:trPr>" (row
+  // properties, immediately follows the real <w:tr> tag) since "<w:tr" is a
+  // prefix of "<w:trPr" — walk backward until the char after "<w:tr" is the
+  // tag's own boundary (space or '>'), i.e. the actual row-open tag.
+  let trOpen = iNo;
+  do {
+    trOpen = xml.lastIndexOf('<w:tr', trOpen - 1);
+  } while (trOpen !== -1 && xml[trOpen + 5] !== ' ' && xml[trOpen + 5] !== '>');
   // Sample row contains a nested table (nested <w:tr>) -> balance to its close.
   let depth = 0;
   let trEnd = -1;
