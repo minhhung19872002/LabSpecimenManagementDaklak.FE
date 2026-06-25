@@ -1184,10 +1184,33 @@ export const useTestRequestFormActions = ({
    * Opens PDF in new tab without saving to DB
    */
   const handlePreviewForm = async () => {
+    // Open the tab synchronously (still inside the click handler) so popup
+    // blockers don't treat it as an unrelated async window.open, and show a
+    // spinner immediately instead of a blank tab while the form generates.
+    const previewTab = window.open("about:blank", "_blank");
+    if (previewTab) {
+      previewTab.document.write(`
+        <html>
+          <head>
+            <title>Đang tạo phiếu...</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
+              .loader { text-align: center; }
+              .spinner { width: 40px; height: 40px; border: 4px solid #e0e0e0; border-top: 4px solid #1890ff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+              @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+              p { color: #666; font-size: 16px; }
+            </style>
+          </head>
+          <body><div class="loader"><div class="spinner"></div><p>Đang tạo phiếu xem trước...</p></div></body>
+        </html>
+      `);
+    }
+
     try {
       // Validate required fields
       await form.validateFields(["customerName"]);
     } catch {
+      if (previewTab) previewTab.close();
       message.warning("Vui lòng nhập tên khách hàng trước khi xem phiếu");
       return;
     }
@@ -1322,11 +1345,16 @@ export const useTestRequestFormActions = ({
 
       // Open Word Editor (BE now returns .docx directly)
       const editorUrl = `/document-editor?file=${encodeURIComponent(result.fileName)}`;
-      window.open(editorUrl, "_blank");
+      if (previewTab) {
+        previewTab.location.href = editorUrl;
+      } else {
+        window.open(editorUrl, "_blank");
+      }
 
       message.success("Đã tạo phiếu xem trước");
     } catch (error: any) {
       console.error("Error previewing form:", error);
+      if (previewTab) previewTab.close();
       message.error(getApiErrorMessage(error, "Không thể tạo phiếu xem trước. Vui lòng thử lại."));
     } finally {
       setLoading(false);
