@@ -76,6 +76,10 @@ const QualityManagementDetail: React.FC = () => {
     string | null
   >(null);
   const [bulkRejectModalVisible, setBulkRejectModalVisible] = useState(false);
+  const [returnModalVisible, setReturnModalVisible] = useState(false);
+  const [returningIndicatorId, setReturningIndicatorId] = useState<
+    string | null
+  >(null);
 
   // Action states
   const [bulkApproving, setBulkApproving] = useState(false);
@@ -186,6 +190,39 @@ const QualityManagementDetail: React.FC = () => {
       setRejectingIndicatorId(null);
     } catch (error) {
       console.error("Error rejecting indicator:", error);
+      // Reload để sync lại với server nếu có lỗi
+      await loadData();
+      throw error;
+    }
+  };
+
+  const handleReturnResult = (indicatorId: string) => {
+    setReturningIndicatorId(indicatorId);
+    setReturnModalVisible(true);
+  };
+
+  const handleReturnConfirm = async (reason: string) => {
+    if (!returningIndicatorId) return;
+    try {
+      await qualityManagementService.rejectIndicator(
+        returningIndicatorId,
+        reason,
+      );
+
+      // Optimistic update: cập nhật approvalStatus thành Rejected
+      updateIndicatorsOptimistically([returningIndicatorId], {
+        approvalStatus: QualityIndicatorApprovalStatus.Rejected,
+        rejectionReason: reason,
+      });
+
+      // Reload full data from server (avoid duplicating BE logic for task status)
+      await reloadData();
+
+      message.success("Đã trả lại kết quả");
+      setReturnModalVisible(false);
+      setReturningIndicatorId(null);
+    } catch (error) {
+      console.error("Error returning indicator result:", error);
       // Reload để sync lại với server nếu có lỗi
       await loadData();
       throw error;
@@ -611,6 +648,7 @@ const QualityManagementDetail: React.FC = () => {
               taskStatus={task.status}
               onApprove={handleApproveIndicator}
               onReject={handleRejectIndicator}
+              onReturnResult={handleReturnResult}
               onIndicatorUpdate={loadData}
               selectedPendingIds={selectedPendingIds}
               onPendingSelectChange={setSelectedPendingIds}
@@ -646,6 +684,21 @@ const QualityManagementDetail: React.FC = () => {
         onCancel={() => setBulkRejectModalVisible(false)}
         onConfirm={handleBulkRejectConfirm}
         title={`Từ chối ${selectedPendingIds.length} chỉ tiêu`}
+      />
+
+      {/* Return Result Modal */}
+      <RejectModal
+        visible={returnModalVisible}
+        onCancel={() => {
+          setReturnModalVisible(false);
+          setReturningIndicatorId(null);
+        }}
+        onConfirm={handleReturnConfirm}
+        title="Trả lại kết quả"
+        label="Lý do trả kết quả"
+        placeholder="Nhập lý do trả kết quả..."
+        okText="Xác nhận trả KQ"
+        errorMessage="Không thể trả lại kết quả. Vui lòng thử lại."
       />
     </div>
   );
