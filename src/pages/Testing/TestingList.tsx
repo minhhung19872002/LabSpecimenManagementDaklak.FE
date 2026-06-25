@@ -24,6 +24,7 @@ import { QLKTDisplayStatus } from "../../types/laboratoryTask";
 import { SampleAssignmentLogStatisticsDto } from "../../types/qualityManagement";
 import { testingService } from "../../services/testingService";
 import { useTestingList } from "./hooks";
+import { useSampleAssignmentLogForLab } from "./hooks/useSampleAssignmentLogForLab";
 import LabSampleAssignmentLogTab, { COLUMN_OPTIONS, ALL_COLUMN_KEYS } from "./components/LabSampleAssignmentLogTab";
 import ResponsiveSelect from "../../components/common/ResponsiveSelect";
 import { ColumnVisibilitySelector } from "../../components/common";
@@ -50,7 +51,7 @@ const TestingList: React.FC = () => {
     loading,
     searchText,
     sorting,
-    statusFilter,
+    selectedStatusCard,
     technicianFilter,
     technicians,
     loadingTechnicians,
@@ -105,6 +106,8 @@ const TestingList: React.FC = () => {
   const [salDisplayStatusFilter, setSalDisplayStatusFilter] = useState<
     QLKTDisplayStatus | undefined
   >(undefined);
+  // null = no stat card selected (default); tracks which card is active so a card can be toggled off
+  const [salSelectedCard, setSalSelectedCard] = useState<string | null>(null);
 
   const loadSalStats = useCallback(async () => {
     try {
@@ -121,11 +124,35 @@ const TestingList: React.FC = () => {
     }
   }, [isShowingSampleAssignmentLog, loadSalStats]);
 
+  // Table data/filters for "Sổ nhận mẫu giao việc" - lifted here so card clicks can
+  // drive the status filter and a "mine only" restriction (table defaults to ALL),
+  // kept independent from the manually-selectable "Thử nghiệm viên" dropdown.
+  const [salFilterMine, setSalFilterMine] = useState(false);
+  const salLogData = useSampleAssignmentLogForLab({
+    displayStatusFilter: salDisplayStatusFilter,
+    restrictToCurrentUser: salFilterMine,
+  });
+  const { handleTechnicianFilterChange: handleSalTechnicianFilterChangeBase } = salLogData;
+
   const handleSalDisplayStatusFilterChange = useCallback((value: string) => {
-    setSalDisplayStatusFilter(
-      value === "all" ? undefined : (Number(value) as QLKTDisplayStatus),
-    );
-  }, []);
+    if (salSelectedCard === value) {
+      setSalSelectedCard(null);
+      setSalDisplayStatusFilter(undefined);
+      setSalFilterMine(false);
+    } else {
+      setSalSelectedCard(value);
+      setSalDisplayStatusFilter(
+        value === "all" ? undefined : (Number(value) as QLKTDisplayStatus),
+      );
+      setSalFilterMine(true);
+    }
+  }, [salSelectedCard]);
+
+  // Manually changing the technician dropdown exits "mine only" mode
+  const handleSalTechnicianFilterChange = useCallback((values: string[]) => {
+    setSalFilterMine(false);
+    handleSalTechnicianFilterChangeBase(values);
+  }, [handleSalTechnicianFilterChangeBase]);
 
   // Handle tab change - sync with useTestingList for testing tabs
   const handleExtendedTabChange = (value: string) => {
@@ -140,6 +167,12 @@ const TestingList: React.FC = () => {
 
   // Show extra filters only for "Công việc của Lab" tab
   const isAllTab = activeTab === TestingTabType.All;
+
+  // Override the dropdown's onChange so it resets "mine only" mode (see handleSalTechnicianFilterChange)
+  const salLogDataForTab = {
+    ...salLogData,
+    handleTechnicianFilterChange: handleSalTechnicianFilterChange,
+  };
 
   return (
     <div>
@@ -246,12 +279,8 @@ const TestingList: React.FC = () => {
             ]
         ).map((stat, index) => {
           const isActive = isShowingSampleAssignmentLog
-            ? stat.filterValue === "all"
-              ? salDisplayStatusFilter === undefined
-              : salDisplayStatusFilter === Number(stat.filterValue)
-            : stat.filterValue === "all"
-              ? statusFilter === undefined
-              : statusFilter === Number(stat.filterValue);
+            ? salSelectedCard === stat.filterValue
+            : selectedStatusCard === stat.filterValue;
 
           return (
             <Card
@@ -337,7 +366,7 @@ const TestingList: React.FC = () => {
         {/* Content based on selected tab */}
         {isShowingSampleAssignmentLog ? (
           <LabSampleAssignmentLogTab
-            displayStatusFilter={salDisplayStatusFilter}
+            logData={salLogDataForTab}
             visibleColumns={salVisibleColumns}
           />
         ) : (
