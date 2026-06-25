@@ -18,7 +18,7 @@ import {
 } from '../masterDataService';
 import { userService } from '../userService';
 import { organizationService } from '../organizationService';
-import { cacheEntity, cacheDocumentTemplate, hasDocumentTemplate, getDB } from './db';
+import { cacheEntity, cacheDocumentTemplate, getDB } from './db';
 import { TEMPLATE_NAMES, TEMPLATE_FILE_NAMES } from './offlinePrintService';
 
 // Track prefetch status
@@ -236,14 +236,9 @@ async function prefetchOrganizations(): Promise<void> {
  */
 async function prefetchDocumentTemplates(): Promise<void> {
   try {
-    // Check if already cached (to avoid re-downloading large files)
-    const alreadyCached = await hasDocumentTemplate(TEMPLATE_NAMES.TEST_REQUEST_FORM);
-    if (alreadyCached) {
-      console.log('Document templates already cached, skipping');
-      return;
-    }
-
-    // Download the test request form template (BM05)
+    // Always re-download (this whole prefetch cycle is already throttled to
+    // once per PREFETCH_INTERVAL) so a template edited on the backend isn't
+    // stuck forever behind a stale IndexedDB copy.
     const templateFileName = TEMPLATE_FILE_NAMES[TEMPLATE_NAMES.TEST_REQUEST_FORM];
     const templateBlob = await formTemplateService.download(templateFileName);
 
@@ -265,18 +260,15 @@ async function prefetchDocumentTemplates(): Promise<void> {
   // Cached separately so a failure here does not block the request-form template.
   try {
     const resultTemplateName = TEMPLATE_NAMES.RESULT_FORM_BM01;
-    const alreadyCached = await hasDocumentTemplate(resultTemplateName);
-    if (!alreadyCached) {
-      const fileName = TEMPLATE_FILE_NAMES[resultTemplateName];
-      const blob = await formTemplateService.download(fileName);
-      await cacheDocumentTemplate(
-        resultTemplateName,
-        fileName,
-        blob,
-        new Date().toISOString()
-      );
-      console.log('Cached BM01 result-form template for offline generation');
-    }
+    const fileName = TEMPLATE_FILE_NAMES[resultTemplateName];
+    const blob = await formTemplateService.download(fileName);
+    await cacheDocumentTemplate(
+      resultTemplateName,
+      fileName,
+      blob,
+      new Date().toISOString()
+    );
+    console.log('Cached BM01 result-form template for offline generation');
   } catch (error) {
     // Non-fatal: result-form offline generation just stays unavailable.
     console.error('Failed to prefetch result-form template:', error);
