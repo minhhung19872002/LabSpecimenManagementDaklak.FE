@@ -11,9 +11,8 @@ import { useNetworkStatus } from "../../hooks/useNetworkStatus";
 import {
   generateTestRequestFormOffline,
   isOfflinePrintAvailable,
+  downloadDocument,
 } from "../../services/offline/offlinePrintService";
-import { saveResultDraft } from "../../services/offline";
-import { offlineDraftEditorUrl } from "../../services/offline/offlineResultService";
 import { isServerReachable } from "../../services/offline/connectivity";
 import {
   TestRequestDto,
@@ -171,51 +170,29 @@ const TestRequestDetail: React.FC = () => {
       return;
     }
 
-    // OFFLINE MODE: Generate document client-side, then open the offline editor
-    // (eigenpal) so the user can adjust layout and download/print on the spot —
-    // consistent with the result-form offline flow.
+    // OFFLINE MODE: Generate document client-side and download it straight to
+    // disk — print/edit with Word/Office locally. No editor round-trip (the
+    // offline editor doesn't preserve every template element, e.g. floating
+    // textboxes), no extra tab.
     setPrintingTestRequest(true);
-    const offlineTab = window.open("about:blank", "_blank");
-    if (offlineTab) {
-      writeLoadingTab(offlineTab, "Đang tạo phiếu yêu cầu (offline)...");
-    }
-    // Offline generation is local (IndexedDB + in-memory render) and can
-    // finish in a few ms — keep the loading tab visible briefly so the
-    // spinner is actually perceptible instead of flashing to blank.
-    const minLoadingDelay = new Promise((resolve) => setTimeout(resolve, 400));
-
     try {
-      // Check if offline printing is available (template cached)
       const canPrintOffline = await isOfflinePrintAvailable();
       if (!canPrintOffline) {
-        if (offlineTab) offlineTab.close();
         message.warning(
           "Template chưa được tải về. Vui lòng kết nối mạng để tải template trước."
         );
         return;
       }
 
-      // Generate document offline
       const result = await generateTestRequestFormOffline(id);
       if (!result.success || !result.blob) {
-        if (offlineTab) offlineTab.close();
         message.error(result.error || "Không thể tạo phiếu. Vui lòng thử lại.");
         return;
       }
 
-      // Persist as an offline draft and open it in the offline editor.
-      const draftId = await saveResultDraft({
-        fileName: result.fileName!,
-        blob: result.blob,
-        status: "draft",
-      });
-      message.success("Đã tạo phiếu yêu cầu (offline). Mở trình soạn thảo...");
-      const url = offlineDraftEditorUrl(draftId);
-      await minLoadingDelay;
-      if (offlineTab) offlineTab.location.href = url;
-      else window.open(url, "_blank");
+      downloadDocument(result.blob, result.fileName!);
+      message.success("Đã tạo phiếu yêu cầu (offline). Đang tải xuống...");
     } catch (error: any) {
-      if (offlineTab) offlineTab.close();
       console.error("Error printing test request offline:", error);
       message.error(
         error?.message || "Không thể tạo phiếu. Vui lòng thử lại."

@@ -303,6 +303,8 @@ function buildTestRequestPlaceholders(
     TotalByText: totalByText,
     ReceiptNumberTTDV: receiptNumber,
     CurrentDate: currentDate,
+    // The "Số HĐ / Ngày" textbox in the canonical template uses this tag.
+    FormPrintedDate: currentDate,
 
     // Checkbox - Test Method
     CB_TestMethod_Center: checkbox(data.methodWestHighlandInstitute),
