@@ -95,19 +95,6 @@ export async function prepareRequestTemplate(
   sampleTr = sampleTr.replace('{{No}}', '{{#rows}}{{No}}');
 
   xml = xml.slice(0, trOpen) + sampleTr + xml.slice(trEnd);
-
-  // The canonical template shows "Số HĐ / Ngày" in a floating textbox
-  // (mc:AlternateContent/txbxContent). The offline editor (@eigenpal/docx-editor)
-  // doesn't round-trip floating shapes — they're silently dropped on save/download
-  // — so duplicate that info as a plain paragraph that survives the editor.
-  const bodyOpenEnd = xml.indexOf('>', xml.indexOf('<w:body')) + 1;
-  if (bodyOpenEnd > 0) {
-    const infoParagraph =
-      '<w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:rPr><w:b/></w:rPr>' +
-      '<w:t xml:space="preserve">Số HĐ: {{ContractNo}}     Ngày: {{CurrentDate}}</w:t></w:r></w:p>';
-    xml = xml.slice(0, bodyOpenEnd) + infoParagraph + xml.slice(bodyOpenEnd);
-  }
-
   zip.file(DOC, xml);
   const blob = zip.generate({
     type: 'blob',
