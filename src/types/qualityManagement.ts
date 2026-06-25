@@ -38,7 +38,7 @@ export const QualityManagementStatusLabels: Record<QualityManagementStatus, stri
 export const QualityManagementStatusColors: Record<QualityManagementStatus, string> = {
   [QualityManagementStatus.PendingApproval]: 'warning',
   [QualityManagementStatus.Rejected]: 'error',
-  [QualityManagementStatus.PendingPublish]: 'processing',
+  [QualityManagementStatus.PendingPublish]: 'warning',
   [QualityManagementStatus.PartialPublished]: 'cyan',
   [QualityManagementStatus.FullyPublished]: 'blue',
   [QualityManagementStatus.HandedOver]: 'success'

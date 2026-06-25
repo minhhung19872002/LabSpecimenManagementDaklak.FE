@@ -255,8 +255,8 @@ export const COLUMN_OPTIONS: ColumnOption[] = [
 export const ALL_COLUMN_KEYS = COLUMN_OPTIONS.map((c) => c.key);
 
 interface LabSampleAssignmentLogTabProps {
-  displayStatusFilter?: QLKTDisplayStatus;
   visibleColumns?: string[];
+  logData: ReturnType<typeof useSampleAssignmentLogForLab>;
 }
 
 const DEFAULT_COLUMN_WIDTHS: Record<string, number> = {
@@ -280,8 +280,8 @@ const DEFAULT_COLUMN_WIDTHS: Record<string, number> = {
 };
 
 const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
-  displayStatusFilter,
   visibleColumns = ALL_COLUMN_KEYS,
+  logData,
 }) => {
   const headerHeight = useHeaderHeight();
 
@@ -376,7 +376,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
     handleTableChange,
     handleRowDoubleClick,
     reloadDistinctResults,
-  } = useSampleAssignmentLogForLab({ displayStatusFilter });
+  } = logData;
 
   // Process data for row spanning
   const processedData = useMemo(() => processDataForRowSpan(data), [data]);

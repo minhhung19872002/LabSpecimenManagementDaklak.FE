@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { message } from 'antd';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
@@ -9,52 +9,19 @@ import { authService } from '../../../services/authService';
 import {
   SampleAssignmentLogDto,
   GetSampleAssignmentLogInput,
-  SampleAssignmentLogStatisticsDto,
 } from '../../../types/qualityManagement';
 import { UserLookupDto, QLKTDisplayStatus } from '../../../types/laboratoryTask';
 
-const findCurrentTechnician = (
-  technicians: UserLookupDto[],
-  currentUser?: {
-    id?: string;
-    userName?: string;
-    email?: string;
-    fullName?: string;
-  } | null,
-): UserLookupDto | undefined => {
-  if (!currentUser) {
-    return undefined;
-  }
-
-  const normalizedUserName = currentUser.userName?.trim().toLowerCase();
-  const normalizedEmail = currentUser.email?.trim().toLowerCase();
-  const normalizedFullName = currentUser.fullName?.trim().toLowerCase();
-
-  return technicians.find((tech) => {
-    const techUserName = tech.userName?.trim().toLowerCase();
-    const techEmail = tech.email?.trim().toLowerCase();
-    const techDisplayName = tech.displayName?.trim().toLowerCase();
-
-    return (
-      (currentUser.id && tech.id === currentUser.id) ||
-      (!!normalizedUserName && techUserName === normalizedUserName) ||
-      (!!normalizedEmail && techEmail === normalizedEmail) ||
-      (!!normalizedFullName && techDisplayName === normalizedFullName)
-    );
-  });
-};
-
 interface UseSampleAssignmentLogForLabOptions {
   displayStatusFilter?: QLKTDisplayStatus;
+  /** When true, table data is scoped to the current user regardless of the "Thử nghiệm viên" dropdown (used by card clicks). */
+  restrictToCurrentUser?: boolean;
 }
 
 interface UseSampleAssignmentLogForLabResult {
   loading: boolean;
   data: SampleAssignmentLogDto[];
   totalCount: number;
-
-  // Statistics
-  stats: SampleAssignmentLogStatisticsDto;
 
   // Filters
   searchText: string;
@@ -65,6 +32,7 @@ interface UseSampleAssignmentLogForLabResult {
   technicianFilter: string[];
   technicians: UserLookupDto[];
   loadingTechnicians: boolean;
+  currentUserId?: string;
   resultFilter: string[];
   distinctResults: string[];
   loadingResults: boolean;
@@ -86,7 +54,6 @@ interface UseSampleAssignmentLogForLabResult {
   handleResultFilterChange: (values: string[]) => void;
   handleTableChange: (pagination: { current?: number; pageSize?: number }) => void;
   handleRowDoubleClick: (record: SampleAssignmentLogDto) => void;
-  handleReload: () => void;
   reloadDistinctResults: () => void;
 }
 
@@ -100,11 +67,9 @@ export const useSampleAssignmentLogForLab = (
 ): UseSampleAssignmentLogForLabResult => {
   const navigate = useNavigate();
   const displayStatusFilter = options?.displayStatusFilter;
+  const restrictToCurrentUser = options?.restrictToCurrentUser;
   const currentUser = authService.getUserInfo();
   const currentUserId = currentUser?.id;
-  const currentUserName = currentUser?.userName;
-  const currentUserEmail = currentUser?.email;
-  const currentUserFullName = currentUser?.fullName;
 
   // State
   const [loading, setLoading] = useState(false);
@@ -125,49 +90,18 @@ export const useSampleAssignmentLogForLab = (
     total: 0,
   });
 
-  // Statistics
-  const [stats, setStats] = useState<SampleAssignmentLogStatisticsDto>({
-    total: 0,
-    underReview: 0,
-    toDo: 0,
-    testing: 0,
-    waitingApproval: 0,
-    resultRejected: 0,
-    completed: 0,
-  });
-
   // Master data
   const [technicians, setTechnicians] = useState<UserLookupDto[]>([]);
   const [loadingTechnicians, setLoadingTechnicians] = useState(false);
   const [indicators, setIndicators] = useState<IndicatorDto[]>([]);
-  const hasInitializedTechnicianFilter = useRef(false);
 
-  // Load technicians
+  // Load technicians (table defaults to showing ALL - no auto technician filter)
   useEffect(() => {
     const loadTechnicians = async () => {
       setLoadingTechnicians(true);
       try {
         const result = await laboratoryTaskService.getTechniciansByLaboratory();
-        const technicianList = result || [];
-        setTechnicians(technicianList);
-
-        if (!hasInitializedTechnicianFilter.current) {
-          hasInitializedTechnicianFilter.current = true;
-
-          const currentTechnician = findCurrentTechnician(
-            technicianList,
-            {
-              id: currentUserId,
-              userName: currentUserName,
-              email: currentUserEmail,
-              fullName: currentUserFullName,
-            }
-          );
-
-          if (currentTechnician) {
-            setTechnicianFilter([currentTechnician.id]);
-          }
-        }
+        setTechnicians(result || []);
       } catch (error) {
         console.error('Failed to load technicians:', error);
       } finally {
@@ -175,7 +109,7 @@ export const useSampleAssignmentLogForLab = (
       }
     };
     loadTechnicians();
-  }, [currentUserEmail, currentUserFullName, currentUserId, currentUserName]);
+  }, []);
 
   // Load indicators
   useEffect(() => {
@@ -190,20 +124,6 @@ export const useSampleAssignmentLogForLab = (
     loadIndicators();
   }, []);
 
-  // Load statistics (independent of filters)
-  const loadStats = useCallback(async () => {
-    try {
-      const result = await testingService.getSampleAssignmentLogStatistics();
-      setStats(result);
-    } catch (error) {
-      console.error('Failed to load sample assignment log statistics:', error);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadStats();
-  }, [loadStats]);
-
   // Load data
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -216,7 +136,9 @@ export const useSampleAssignmentLogForLab = (
         fromDate: dateRange?.[0]?.startOf('day').format('YYYY-MM-DD') || undefined,
         toDate: dateRange?.[1]?.endOf('day').format('YYYY-MM-DD') || undefined,
         indicatorIds: selectedIndicatorIds.length > 0 ? selectedIndicatorIds : undefined,
-        technicianIds: technicianFilter.length > 0 ? technicianFilter : undefined,
+        technicianIds: restrictToCurrentUser
+          ? (currentUserId ? [currentUserId] : undefined)
+          : (technicianFilter.length > 0 ? technicianFilter : undefined),
         qlktDisplayStatuses: displayStatusFilter !== undefined ? [displayStatusFilter] : undefined,
         results: resultFilter.length > 0 ? resultFilter : undefined,
       };
@@ -232,7 +154,7 @@ export const useSampleAssignmentLogForLab = (
     } finally {
       setLoading(false);
     }
-  }, [pagination.current, pagination.pageSize, searchFilter, displayStatusFilter, dateRange, selectedIndicatorIds, technicianFilter, resultFilter, sorting]);
+  }, [pagination.current, pagination.pageSize, searchFilter, displayStatusFilter, dateRange, selectedIndicatorIds, technicianFilter, resultFilter, sorting, restrictToCurrentUser, currentUserId]);
 
   useEffect(() => {
     loadData();
@@ -251,7 +173,9 @@ export const useSampleAssignmentLogForLab = (
         fromDate: dateRange?.[0]?.startOf('day').format('YYYY-MM-DD') || undefined,
         toDate: dateRange?.[1]?.endOf('day').format('YYYY-MM-DD') || undefined,
         indicatorIds: selectedIndicatorIds.length > 0 ? selectedIndicatorIds : undefined,
-        technicianIds: technicianFilter.length > 0 ? technicianFilter : undefined,
+        technicianIds: restrictToCurrentUser
+          ? (currentUserId ? [currentUserId] : undefined)
+          : (technicianFilter.length > 0 ? technicianFilter : undefined),
         qlktDisplayStatuses: displayStatusFilter !== undefined ? [displayStatusFilter] : undefined,
       };
       const result = await testingService.getDistinctResults(input);
@@ -261,7 +185,7 @@ export const useSampleAssignmentLogForLab = (
     } finally {
       setLoadingResults(false);
     }
-  }, [searchFilter, dateRange, selectedIndicatorIds, technicianFilter, displayStatusFilter]);
+  }, [searchFilter, dateRange, selectedIndicatorIds, technicianFilter, displayStatusFilter, restrictToCurrentUser, currentUserId]);
 
   useEffect(() => {
     loadDistinctResults();
@@ -319,23 +243,10 @@ export const useSampleAssignmentLogForLab = (
     navigate(`/testing/${record.laboratoryTaskId}?view=lab`);
   }, [navigate]);
 
-  const handleReload = useCallback(() => {
-    setSearchText('');
-    setSearchFilter('');
-    setDateRange(null);
-    setSelectedIndicatorIds([]);
-    setTechnicianFilter([]);
-    setResultFilter([]);
-    setPagination(prev => ({ ...prev, current: 1 }));
-    loadData();
-    loadStats();
-  }, [loadData, loadStats]);
-
   return {
     loading,
     data,
     totalCount,
-    stats,
     searchText,
     sorting,
     dateRange,
@@ -344,6 +255,7 @@ export const useSampleAssignmentLogForLab = (
     technicianFilter,
     technicians,
     loadingTechnicians,
+    currentUserId,
     resultFilter,
     distinctResults,
     loadingResults,
@@ -357,7 +269,6 @@ export const useSampleAssignmentLogForLab = (
     handleResultFilterChange,
     handleTableChange,
     handleRowDoubleClick,
-    handleReload,
     reloadDistinctResults: loadDistinctResults,
   };
 };

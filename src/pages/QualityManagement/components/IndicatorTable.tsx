@@ -11,7 +11,7 @@ import {
   Card,
 } from "antd";
 import StatusTag from "../../../components/common/StatusTag";
-import { CheckOutlined, CloseOutlined } from "../../../components/common/Icon";
+import { CheckOutlined, CloseOutlined, UndoOutlined } from "../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import { formatDate, stripPTags, evaluatePassFail } from "../../../utils/formatters";
 import {
@@ -37,6 +37,7 @@ interface IndicatorTableProps {
   taskStatus: QualityManagementStatus;
   onApprove: (indicatorId: string) => void;
   onReject: (indicatorId: string) => void;
+  onReturnResult?: (indicatorId: string) => void;
   onIndicatorUpdate: () => void;
   // Bulk action selection props (for pending indicators)
   selectedPendingIds: string[];
@@ -179,6 +180,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   taskStatus: _taskStatus,
   onApprove,
   onReject,
+  onReturnResult,
   onIndicatorUpdate: _onIndicatorUpdate,
   selectedPendingIds,
   onPendingSelectChange,
@@ -271,9 +273,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     return pendingIds.every((id) => selectedPendingIds.includes(id));
   };
 
-  // Generate columns based on whether group has pending indicators
+  // Generate columns based on whether group has pending/approved indicators
   const getColumns = (
     hasPendingIndicators: boolean,
+    hasApprovedIndicators = false,
   ): ColumnsType<ProcessedIndicator> => {
     const cols: ColumnsType<ProcessedIndicator> = [];
 
@@ -537,8 +540,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       },
     );
 
-    // Only show actions column if there are pending indicators
-    if (hasPendingIndicators && !actionsDisabled) {
+    // Show actions column if there are pending or approved (for "Trả lại KQ") indicators
+    if ((hasPendingIndicators || hasApprovedIndicators) && !actionsDisabled) {
       cols.push({
         title: "Thao tác",
         key: "actions",
@@ -546,42 +549,65 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         fixed: "right" as const,
         align: "center" as const,
         render: (_, record) => {
+          if (record._isParentWithChildren) {
+            return null;
+          }
+
           const isPending =
             record.approvalStatus ===
               QualityIndicatorApprovalStatus.PendingApproval &&
             record.isInQualityScope;
-          // Don't show actions for parent indicators with children (they are auto-approved)
-          if (!isPending || record._isParentWithChildren) {
-            return null;
+
+          if (isPending) {
+            return (
+              <Space size="small">
+                {canApprove && (
+                  <Tooltip title="Duyệt">
+                    <Button
+                      type="primary"
+                      size="small"
+                      icon={<CheckOutlined />}
+                      onClick={() => onApprove(record.id)}
+                    >
+                      Duyệt
+                    </Button>
+                  </Tooltip>
+                )}
+                {canReject && (
+                  <Tooltip title="Từ chối">
+                    <Button
+                      danger
+                      size="small"
+                      icon={<CloseOutlined />}
+                      onClick={() => onReject(record.id)}
+                    >
+                      Từ chối
+                    </Button>
+                  </Tooltip>
+                )}
+              </Space>
+            );
           }
-          return (
-            <Space size="small">
-              {canApprove && (
-                <Tooltip title="Duyệt">
-                  <Button
-                    type="primary"
-                    size="small"
-                    icon={<CheckOutlined />}
-                    onClick={() => onApprove(record.id)}
-                  >
-                    Duyệt
-                  </Button>
-                </Tooltip>
-              )}
-              {canReject && (
-                <Tooltip title="Từ chối">
-                  <Button
-                    danger
-                    size="small"
-                    icon={<CloseOutlined />}
-                    onClick={() => onReject(record.id)}
-                  >
-                    Từ chối
-                  </Button>
-                </Tooltip>
-              )}
-            </Space>
-          );
+
+          const isApproved =
+            record.approvalStatus === QualityIndicatorApprovalStatus.Approved &&
+            record.isInQualityScope;
+
+          if (isApproved && canReject && onReturnResult) {
+            return (
+              <Tooltip title="Trả lại KQ">
+                <Button
+                  size="small"
+                  icon={<UndoOutlined />}
+                  onClick={() => onReturnResult(record.id)}
+                >
+                  Trả lại KQ
+                </Button>
+              </Tooltip>
+            );
+          }
+
+          return null;
         },
       });
     }
@@ -741,7 +767,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                 bodyStyle={{ padding: 0 }}
               >
                 <Table
-                  columns={getColumns(pendingCount > 0)}
+                  columns={getColumns(pendingCount > 0, approvedCount > 0)}
                   dataSource={processedIndicators}
                   rowKey="_rowKey"
                   rowClassName={getRowClassName}

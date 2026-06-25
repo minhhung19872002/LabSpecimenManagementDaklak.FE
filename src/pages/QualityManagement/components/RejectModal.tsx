@@ -12,6 +12,10 @@ interface RejectModalProps {
   onCancel: () => void;
   onConfirm: (reason: string) => Promise<void>;
   title?: string;
+  okText?: string;
+  label?: string;
+  placeholder?: string;
+  errorMessage?: string;
 }
 
 const RejectModal: React.FC<RejectModalProps> = ({
@@ -19,6 +23,10 @@ const RejectModal: React.FC<RejectModalProps> = ({
   onCancel,
   onConfirm,
   title = "Từ chối duyệt chỉ tiêu",
+  okText = "Xác nhận từ chối",
+  label = "Lý do từ chối",
+  placeholder = "Nhập lý do từ chối...",
+  errorMessage = "Không thể từ chối. Vui lòng thử lại.",
 }) => {
   const [loading, setLoading] = useState(false);
 
@@ -39,7 +47,7 @@ const RejectModal: React.FC<RejectModalProps> = ({
       reset();
     } catch (error: any) {
       console.error("Error rejecting:", error);
-      message.error("Không thể từ chối. Vui lòng thử lại.");
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -61,7 +69,7 @@ const RejectModal: React.FC<RejectModalProps> = ({
       open={visible}
       onOk={handleSubmit(handleOk)}
       onCancel={handleCancel}
-      okText="Xác nhận từ chối"
+      okText={okText}
       cancelText="Hủy"
       okButtonProps={{ danger: true, loading }}
       destroyOnClose
@@ -83,7 +91,7 @@ const RejectModal: React.FC<RejectModalProps> = ({
     >
       <Form layout="vertical">
         <Form.Item
-          label="Lý do từ chối"
+          label={label}
           required
           validateStatus={errors.reason ? "error" : ""}
           help={errors.reason?.message}
@@ -95,7 +103,7 @@ const RejectModal: React.FC<RejectModalProps> = ({
               <TextArea
                 {...field}
                 rows={4}
-                placeholder="Nhập lý do từ chối..."
+                placeholder={placeholder}
                 maxLength={500}
                 showCount
               />

@@ -60,6 +60,8 @@ export const useTestingList = () => {
   const [statusFilter, setStatusFilter] = useState<TestingStatus | undefined>(
     undefined
   );
+  // null = no stat card selected (default); tracks which card is active so a card can be toggled off
+  const [selectedStatusCard, setSelectedStatusCard] = useState<string | null>(null);
   const [technicianFilter, setTechnicianFilter] = useState<string[]>([]);
 
   // Date range filter (Ngày yêu cầu xong)
@@ -224,12 +226,16 @@ export const useTestingList = () => {
 
   const handleStatusFilterChange = useCallback(
     (value: string) => {
-      setStatusFilter(
-        value === "all" ? undefined : (Number(value) as TestingStatus)
-      );
+      if (selectedStatusCard === value) {
+        setSelectedStatusCard(null);
+        setStatusFilter(undefined);
+      } else {
+        setSelectedStatusCard(value);
+        setStatusFilter(value === "all" ? undefined : (Number(value) as TestingStatus));
+      }
       setPagination((prev) => ({ ...prev, current: 1 }));
     },
-    []
+    [selectedStatusCard]
   );
 
   const handleTechnicianFilterChange = useCallback((values: string[]) => {
@@ -271,6 +277,7 @@ export const useTestingList = () => {
     setSearchText("");
     setSearchFilter("");
     setStatusFilter(undefined);
+    setSelectedStatusCard(null);
     setTechnicianFilter([]);
     setDateRange(null);
     setSelectedIndicatorIds([]);
@@ -310,6 +317,7 @@ export const useTestingList = () => {
     searchText,
     sorting,
     statusFilter,
+    selectedStatusCard,
     technicianFilter,
     technicians,
     loadingTechnicians,
