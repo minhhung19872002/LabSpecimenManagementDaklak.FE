@@ -385,25 +385,15 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
 
     // In phiếu TN - chỉ admin hoặc SampleReceiver mới thấy
     if (canPrintTestRequest) {
-      const printButton = (
+      buttons.push(
         <Button
           key="print"
           icon={<FileTextOutlined />}
           onClick={onPrintTestRequest}
           loading={printingTestRequest}
-          disabled={!isOnline}
         >
           In phiếu TN
-        </Button>
-      );
-      buttons.push(
-        !isOnline ? (
-          <Tooltip key="print-tooltip" title="Không khả dụng khi offline">
-            {printButton}
-          </Tooltip>
-        ) : (
-          printButton
-        ),
+        </Button>,
       );
     }
 
@@ -416,47 +406,26 @@ const TestRequestDetailContainer: React.FC<TestRequestDetailContainerProps> = ({
       data.status === TestRequestStatus.ResultSent ||
       data.status === TestRequestStatus.Completed
     ) {
-      const printSingleButton = (
+      buttons.push(
         <Button
           key="print-single"
           icon={<PrinterOutlined />}
           onClick={onPrintSingle}
-          disabled={!canPrint || !isOnline}
+          disabled={!canPrint}
         >
           In KQ
-        </Button>
-      );
-      buttons.push(
-        !isOnline ? (
-          <Tooltip
-            key="print-single-tooltip"
-            title="Không khả dụng khi offline"
-          >
-            {printSingleButton}
-          </Tooltip>
-        ) : (
-          printSingleButton
-        ),
+        </Button>,
       );
 
-      const printMixedButton = (
+      buttons.push(
         <Button
           key="print-mixed"
           icon={<PrinterOutlined />}
           onClick={onPrintMixed}
-          disabled={!canPrint || !isOnline}
+          disabled={!canPrint}
         >
           In KQ Hỗn hợp
-        </Button>
-      );
-      buttons.push(
-        !isOnline ? (
-          <Tooltip key="print-mixed-tooltip" title="Không khả dụng khi offline">
-            {printMixedButton}
-          </Tooltip>
-        ) : (
-          printMixedButton
-        ),
+        </Button>,
       );
     }
 
