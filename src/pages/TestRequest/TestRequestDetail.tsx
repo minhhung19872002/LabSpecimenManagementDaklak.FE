@@ -108,6 +108,24 @@ const TestRequestDetail: React.FC = () => {
   };
 
   // Handle print test request form
+  const writeLoadingTab = (win: Window, text: string) => {
+    win.document.write(`
+      <html>
+        <head>
+          <title>Đang tạo phiếu...</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
+            .loader { text-align: center; }
+            .spinner { width: 40px; height: 40px; border: 4px solid #e0e0e0; border-top: 4px solid #1890ff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+            p { color: #666; font-size: 16px; }
+          </style>
+        </head>
+        <body><div class="loader"><div class="spinner"></div><p>${text}</p></div></body>
+      </html>
+    `);
+  };
+
   const handlePrintTestRequest = async () => {
     if (!id) return;
 
@@ -122,21 +140,7 @@ const TestRequestDetail: React.FC = () => {
       const newTab = window.open("about:blank", "_blank");
 
       if (newTab) {
-        newTab.document.write(`
-          <html>
-            <head>
-              <title>Đang tạo phiếu...</title>
-              <style>
-                body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
-                .loader { text-align: center; }
-                .spinner { width: 40px; height: 40px; border: 4px solid #e0e0e0; border-top: 4px solid #1890ff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
-                @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-                p { color: #666; font-size: 16px; }
-              </style>
-            </head>
-            <body><div class="loader"><div class="spinner"></div><p>Đang tạo phiếu yêu cầu...</p></div></body>
-          </html>
-        `);
+        writeLoadingTab(newTab, "Đang tạo phiếu yêu cầu...");
       }
 
       try {
@@ -172,6 +176,13 @@ const TestRequestDetail: React.FC = () => {
     // consistent with the result-form offline flow.
     setPrintingTestRequest(true);
     const offlineTab = window.open("about:blank", "_blank");
+    if (offlineTab) {
+      writeLoadingTab(offlineTab, "Đang tạo phiếu yêu cầu (offline)...");
+    }
+    // Offline generation is local (IndexedDB + in-memory render) and can
+    // finish in a few ms — keep the loading tab visible briefly so the
+    // spinner is actually perceptible instead of flashing to blank.
+    const minLoadingDelay = new Promise((resolve) => setTimeout(resolve, 400));
 
     try {
       // Check if offline printing is available (template cached)
@@ -200,6 +211,7 @@ const TestRequestDetail: React.FC = () => {
       });
       message.success("Đã tạo phiếu yêu cầu (offline). Mở trình soạn thảo...");
       const url = offlineDraftEditorUrl(draftId);
+      await minLoadingDelay;
       if (offlineTab) offlineTab.location.href = url;
       else window.open(url, "_blank");
     } catch (error: any) {
