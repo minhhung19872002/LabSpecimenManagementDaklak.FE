@@ -1158,6 +1158,9 @@ export interface WarehouseDto {
   physicalLocation?: string;
   isActive: boolean;
   isDefault?: boolean;
+  parentWarehouseId?: string | null;
+  parentWarehouseName?: string;
+  level: number;
 }
 
 export interface CreateUpdateWarehouseDto {
@@ -1165,6 +1168,7 @@ export interface CreateUpdateWarehouseDto {
   name: string;
   physicalLocation?: string;
   isActive: boolean;
+  parentWarehouseId?: string | null;
 }
 
 export const warehouseService = {

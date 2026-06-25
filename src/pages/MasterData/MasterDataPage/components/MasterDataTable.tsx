@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Table, Input, Row, Col, Spin } from "antd";
-import { SearchOutlined } from "../../../../components/common/Icon";
+import { CaretRightOutlined, SearchOutlined } from "../../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import { MasterDataItem } from "../types";
 import { NO_PAGINATION_CATEGORIES, DEFAULT_PAGE_SIZE } from "../constants";
@@ -9,6 +9,7 @@ interface MasterDataTableProps {
   activeCategory: string;
   loading: boolean;
   filteredData: MasterDataItem[];
+  allWarehouses?: MasterDataItem[];
   columns: ColumnsType<MasterDataItem>;
   pagination: Record<string, { current: number; pageSize: number }>;
   totalCount: Record<string, number>;
@@ -17,10 +18,98 @@ interface MasterDataTableProps {
   onTableChange: (page: number, pageSize: number) => void;
 }
 
+// Nests warehouses into `children` arrays by parentWarehouseId so antd Table renders them as a tree.
+const buildWarehouseTree = (items: any[]): any[] => {
+  const nodes = new Map(items.map((item) => [item.id, { ...item, children: [] as any[] }]));
+  const roots: any[] = [];
+
+  nodes.forEach((node) => {
+    const parent = node.parentWarehouseId ? nodes.get(node.parentWarehouseId) : null;
+    if (parent) {
+      parent.children.push(node);
+    } else {
+      roots.push(node);
+    }
+  });
+
+  const annotate = (siblings: any[]) => {
+    siblings.sort((a, b) => a.name.localeCompare(b.name));
+    siblings.forEach((node) => {
+      if (node.children.length === 0) {
+        delete node.children;
+      } else {
+        annotate(node.children);
+      }
+    });
+  };
+  annotate(roots);
+
+  return roots;
+};
+
+// When searching, keep the full ancestor chain (Level 0 -> matched node) so the tree stays intact.
+const buildWarehouseSearchTree = (matched: any[], all: any[]): any[] => {
+  const byId = new Map(all.map((item) => [item.id, item]));
+  const includedIds = new Set<string>();
+
+  matched.forEach((item) => {
+    let current: any = item;
+    while (current) {
+      includedIds.add(current.id);
+      current = current.parentWarehouseId ? byId.get(current.parentWarehouseId) : null;
+    }
+  });
+
+  return buildWarehouseTree(all.filter((item) => includedIds.has(item.id)));
+};
+
+const renderWarehouseExpandIcon = ({
+  expanded,
+  onExpand,
+  record,
+}: {
+  expanded: boolean;
+  onExpand: (record: MasterDataItem, event: React.MouseEvent<HTMLElement>) => void;
+  record: MasterDataItem;
+}) => {
+  const hasChildren = Array.isArray((record as any).children) && (record as any).children.length > 0;
+
+  if (!hasChildren) {
+    return <span style={{ display: "inline-block", width: 22, marginRight: 4 }} />;
+  }
+
+  return (
+    <span
+      onClick={(event) => onExpand(record, event)}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: 18,
+        height: 18,
+        marginRight: 4,
+        cursor: "pointer",
+        userSelect: "none",
+        color: expanded ? "#1677ff" : "#4b5563",
+      }}
+    >
+      <CaretRightOutlined
+        style={{
+          fontSize: 13,
+          fontWeight: 700,
+          transition: "transform 0.15s ease",
+        }}
+        rotate={expanded ? 90 : 0}
+      />
+    </span>
+  );
+};
+
 const MasterDataTable: React.FC<MasterDataTableProps> = ({
   activeCategory,
   loading,
   filteredData,
+  allWarehouses,
   columns,
   pagination,
   totalCount,
@@ -28,6 +117,26 @@ const MasterDataTable: React.FC<MasterDataTableProps> = ({
   onSearchChange,
   onTableChange,
 }) => {
+  const warehouseTreeData = useMemo(() => {
+    if (activeCategory !== "warehouses") {
+      return null;
+    }
+    return searchText
+      ? buildWarehouseSearchTree(filteredData, allWarehouses || [])
+      : buildWarehouseTree(filteredData);
+  }, [activeCategory, filteredData, allWarehouses, searchText]);
+
+  const dataSource = warehouseTreeData ?? filteredData;
+  const defaultExpandedRowKeys = useMemo(() => {
+    if (activeCategory !== "warehouses") {
+      return undefined;
+    }
+
+    return (warehouseTreeData ?? [])
+      .filter((item: any) => Array.isArray(item.children) && item.children.length > 0)
+      .map((item: any) => item.id);
+  }, [activeCategory, warehouseTreeData]);
+
   return (
     <>
       <Row
@@ -48,8 +157,17 @@ const MasterDataTable: React.FC<MasterDataTableProps> = ({
       <Spin spinning={loading} tip="Loading data...">
         <Table
           columns={columns}
-          dataSource={filteredData}
+          dataSource={dataSource}
           rowKey="id"
+          expandable={
+            activeCategory === "warehouses"
+              ? {
+                  defaultExpandedRowKeys,
+                  indentSize: 20,
+                  expandIcon: renderWarehouseExpandIcon,
+                }
+              : undefined
+          }
           pagination={
             NO_PAGINATION_CATEGORIES.includes(activeCategory)
               ? false

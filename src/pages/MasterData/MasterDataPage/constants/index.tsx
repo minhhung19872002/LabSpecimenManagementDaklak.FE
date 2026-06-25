@@ -11,6 +11,21 @@ import { MasterDataItem, UserLookupDto } from "../types";
 import { authService } from "../../../../services/authService";
 import { PERMISSIONS } from "../../../../constants/permissionMapping";
 
+const renderWarehouseTreeName = (name: string, record: any) => {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        minHeight: 32,
+        fontWeight: record.level === 0 ? 600 : 400,
+      }}
+    >
+      {name}
+    </span>
+  );
+};
+
 export const categoryPermissionMap: Record<string, string> = {
   warehouses: PERMISSIONS.Warehouses.Default,
   manufacturers: PERMISSIONS.Manufacturers.Default,
@@ -49,7 +64,7 @@ export const categoryLabels: Record<string, string> = {
 };
 
 // Categories that don't use server-side pagination (load all at once)
-export const NO_PAGINATION_CATEGORIES = ["departments", "laboratories"];
+export const NO_PAGINATION_CATEGORIES = ["departments", "laboratories", "warehouses"];
 export const DEFAULT_PAGE_SIZE = 50;
 
 // Map category to import type (only customers and testMethods support import)
@@ -75,6 +90,66 @@ export const getColumns = (
   handleDelete: (id: string) => void,
   handleToggleActive?: (record: MasterDataItem) => void,
 ): ColumnsType<MasterDataItem> => {
+  // Warehouses render as a tree (Tên + Thao tác only) — Mã/Vị trí vật lý/Trạng thái are hidden in this view
+  if (activeCategory === "warehouses") {
+    const baseColumns: ColumnsType<MasterDataItem> = [
+      {
+        title: "Tên",
+        dataIndex: "name",
+        key: "name",
+        render: (name: string, record: any) => renderWarehouseTreeName(name, record),
+      },
+    ];
+
+    const canEdit = authService.hasPermission(PERMISSIONS.MasterData.Edit);
+    const canDelete = authService.hasPermission(PERMISSIONS.MasterData.Delete);
+
+    if (canEdit || canDelete) {
+      baseColumns.push({
+        title: "Thao tác",
+        key: "actions",
+        width: 150,
+        render: (_, record) => {
+          const isDefaultWarehouse = (record as any).isDefault;
+          return (
+            <Space size="small">
+              {canEdit && handleToggleActive && !isDefaultWarehouse && (
+                <Tooltip title={record.isActive ? "Tắt hoạt động" : "Bật hoạt động"}>
+                  <Button
+                    type="link"
+                    size="small"
+                    icon={record.isActive ? <StopOutlined /> : <CheckCircleOutlined />}
+                    onClick={() => handleToggleActive(record)}
+                  />
+                </Tooltip>
+              )}
+              {canEdit && (
+                <Button
+                  type="link"
+                  size="small"
+                  icon={<EditOutlined />}
+                  onClick={() => handleEdit(record)}
+                />
+              )}
+              {canDelete && !isDefaultWarehouse && (
+                <Popconfirm
+                  title="Bạn có chắc chắn muốn xóa?"
+                  onConfirm={() => handleDelete(record.id)}
+                  okText="Có"
+                  cancelText="Không"
+                >
+                  <Button type="link" size="small" danger icon={<DeleteOutlined />} />
+                </Popconfirm>
+              )}
+            </Space>
+          );
+        },
+      });
+    }
+
+    return baseColumns;
+  }
+
   const baseColumns: ColumnsType<MasterDataItem> = [
     {
       title: "STT",
@@ -124,13 +199,6 @@ export const getColumns = (
         ellipsis: true,
       },
     );
-  } else if (activeCategory === "warehouses") {
-    baseColumns.push({
-      title: "Vị trí vật lý",
-      dataIndex: "physicalLocation",
-      key: "physicalLocation",
-      ellipsis: true,
-    });
   } else if (activeCategory === "storageLocations") {
     baseColumns.push(
       {
@@ -210,12 +278,11 @@ export const getColumns = (
     baseColumns.push({
       title: "Thao tác",
       key: "actions",
-      width: activeCategory === "warehouses" || activeCategory === "manufacturers" ? 150 : 100,
+      width: activeCategory === "manufacturers" ? 150 : 100,
       render: (_, record) => {
-        const isDefaultWarehouse = activeCategory === "warehouses" && (record as any).isDefault;
         return (
           <Space size="small">
-            {canEdit && (activeCategory === "warehouses" || activeCategory === "manufacturers") && handleToggleActive && !isDefaultWarehouse && (
+            {canEdit && activeCategory === "manufacturers" && handleToggleActive && (
               <Tooltip
                 title={record.isActive ? "Tắt hoạt động" : "Bật hoạt động"}
               >
@@ -237,7 +304,7 @@ export const getColumns = (
                 onClick={() => handleEdit(record)}
               />
             )}
-            {canDelete && !isDefaultWarehouse && (
+            {canDelete && (
               <Popconfirm
                 title="Bạn có chắc chắn muốn xóa?"
                 onConfirm={() => handleDelete(record.id)}

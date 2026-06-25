@@ -12,6 +12,7 @@ interface MasterDataModalProps {
   form: FormInstance;
   users: UserLookupDto[];
   departments: MasterDataItem[];
+  warehouses: MasterDataItem[];
   onOk: () => void;
   onCancel: () => void;
 }
@@ -24,6 +25,7 @@ const MasterDataModal: React.FC<MasterDataModalProps> = ({
   form,
   users,
   departments,
+  warehouses,
   onOk,
   onCancel,
 }) => {
@@ -77,6 +79,23 @@ const MasterDataModal: React.FC<MasterDataModalProps> = ({
               </Form.Item>
             </Col>
           </Row>
+        )}
+        {activeCategory === "warehouses" && (
+          <Form.Item name="parentWarehouseId" label="Chọn kho cha" initialValue={null}>
+            <Select disabled={!!isDefaultWarehouse}>
+              <Select.Option value={null}>Không có kho cha (Level 0)</Select.Option>
+              {warehouses
+                .filter((w) => !editingItem || w.id !== editingItem.id)
+                .slice()
+                .sort((a: any, b: any) => (a.level ?? 0) - (b.level ?? 0) || a.name.localeCompare(b.name))
+                .map((w: any) => (
+                  <Select.Option key={w.id} value={w.id}>
+                    {"— ".repeat(w.level ?? 0)}
+                    {w.name} (Level {w.level ?? 0})
+                  </Select.Option>
+                ))}
+            </Select>
+          </Form.Item>
         )}
         {activeCategory === "manufacturers" && (
           <>

@@ -747,6 +747,7 @@ const MasterDataList: React.FC = () => {
                     activeCategory={activeCategory}
                     loading={loading[key]}
                     filteredData={filteredData}
+                    allWarehouses={data.warehouses}
                     columns={columns}
                     pagination={pagination}
                     totalCount={totalCount}
@@ -774,6 +775,7 @@ const MasterDataList: React.FC = () => {
           form={form}
           users={users}
           departments={data.departments || []}
+          warehouses={data.warehouses || []}
           onOk={() => handleModalOk(form)}
           onCancel={() => {
             setIsModalOpen(false);
