@@ -29,6 +29,7 @@ import {
   ResultIndicatorInput,
 } from './resultFormBuilder';
 import dayjs from 'dayjs';
+import { authService } from '../authService';
 
 // Template name constants
 export const TEMPLATE_NAMES = {
@@ -303,8 +304,8 @@ function buildTestRequestPlaceholders(
     TotalByText: totalByText,
     ReceiptNumberTTDV: receiptNumber,
     CurrentDate: currentDate,
-    // "Ngày:" in the textbox uses the contract date (matches BE: first-print date ≈ contractDate).
-    FormPrintedDate: formatDate(data.contractDate) || currentDate,
+    // "Ngày:" in the textbox: prefer contractDate, then requestDate (≈ first-print date), fallback to today.
+    FormPrintedDate: formatDate(data.contractDate) || formatDate(data.requestDate) || currentDate,
 
     // Checkbox - Test Method
     CB_TestMethod_Center: checkbox(data.methodWestHighlandInstitute),
@@ -354,6 +355,6 @@ function buildTestRequestPlaceholders(
 
     // Người gửi mẫu và người nhận mẫu
     SampleSender: data.contactPerson || '',
-    SampleReceiver: '', // Will be empty in offline mode (no current user context)
+    SampleReceiver: authService.getUserInfo()?.fullName || '',
   };
 }
