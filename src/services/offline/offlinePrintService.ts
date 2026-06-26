@@ -268,7 +268,7 @@ function buildTestRequestPlaceholders(
 
   // Mẫu nhiệm vụ hiển thị 0
   const actualTotalCost = data.sampleTypeTask ? 0 : data.totalCost || 0;
-  const totalAmount = actualTotalCost.toLocaleString('vi-VN');
+  const totalAmount = actualTotalCost.toLocaleString('en-US');
   const totalByText = data.sampleTypeTask
     ? 'Không đồng'
     : data.totalCostInWords || numberToVietnameseWords(data.totalCost || 0);
@@ -303,8 +303,8 @@ function buildTestRequestPlaceholders(
     TotalByText: totalByText,
     ReceiptNumberTTDV: receiptNumber,
     CurrentDate: currentDate,
-    // The "Số HĐ / Ngày" textbox in the canonical template uses this tag.
-    FormPrintedDate: currentDate,
+    // "Ngày:" in the textbox uses the contract date (matches BE: first-print date ≈ contractDate).
+    FormPrintedDate: formatDate(data.contractDate) || currentDate,
 
     // Checkbox - Test Method
     CB_TestMethod_Center: checkbox(data.methodWestHighlandInstitute),
