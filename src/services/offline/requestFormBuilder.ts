@@ -63,7 +63,7 @@ function buildIndicatorsTableXml(
     `<w:jc w:val="center"/>` +
     `<w:tblBorders>` +
     `<w:top w:val="none" w:sz="0" w:space="0" w:color="auto"/>` +
-    `<w:bottom w:val="none" w:sz="0" w:space="0" w:color="auto"/>` +
+    `<w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>` +
     `</w:tblBorders>` +
     `<w:tblLayout w:type="fixed"/>` +
     `</w:tblPr>`;

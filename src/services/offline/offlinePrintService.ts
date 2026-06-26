@@ -355,6 +355,11 @@ function buildTestRequestPlaceholders(
 
     // Người gửi mẫu và người nhận mẫu
     SampleSender: data.contactPerson || '',
-    SampleReceiver: authService.getUserInfo()?.fullName || '',
+    // ABP stores fullName as "Name Surname" (English order); Vietnamese display = "Surname Name".
+    SampleReceiver: (() => {
+      const u = authService.getUserInfo();
+      if (!u) return '';
+      return [u.surname, u.name].filter(Boolean).join(' ').trim() || u.fullName || '';
+    })(),
   };
 }
