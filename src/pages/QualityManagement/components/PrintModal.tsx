@@ -31,10 +31,11 @@ import {
 import { API_BASE_URL } from "../../../services/api";
 import userService, { UserLookupDto } from "../../../services/userService";
 import { isServerReachable } from "../../../services/offline/connectivity";
+import { mapIndicators } from "../../../services/offline/offlineResultService";
 import {
-  generateResultDraft,
-  offlineDraftEditorUrl,
-} from "../../../services/offline/offlineResultService";
+  generateResultFormOffline,
+  downloadDocument,
+} from "../../../services/offline/offlinePrintService";
 import { IndicatorName } from "../../../components/common";
 import RichTextEditor from "../../../components/common/RichTextEditor";
 import { evaluatePassFail, stripHtmlTags } from "../../../utils/formatters";
@@ -565,26 +566,19 @@ const PrintModal: React.FC<PrintModalProps> = ({
       };
 
       setLoading(true);
-      const offlineTab = window.open("about:blank", "_blank");
       try {
-        const res = await generateResultDraft(allForDoc, header, {
-          testRequestId: taskContext?.testRequestId,
-        });
-        if (!res.success || !res.draftId) {
-          if (offlineTab) offlineTab.close();
-          message.error(res.error || "Không thể tạo phiếu kết quả offline.");
+        const gen = await generateResultFormOffline(header, mapIndicators(allForDoc));
+        if (!gen.success || !gen.blob || !gen.fileName) {
+          message.error(gen.error || "Không thể tạo phiếu kết quả offline.");
           return;
         }
-        message.success("Đã tạo phiếu kết quả offline. Mở trình soạn thảo...");
-        const url = offlineDraftEditorUrl(res.draftId);
-        if (offlineTab) offlineTab.location.href = url;
-        else window.open(url, "_blank");
+        downloadDocument(gen.blob, gen.fileName);
+        message.success("Đã tạo phiếu kết quả offline. File đã được tải về.");
         setSelectedIndicatorIds([]);
         setNote("");
         onCancel();
         onSuccess?.();
       } catch (e) {
-        if (offlineTab) offlineTab.close();
         message.error(
           e instanceof Error ? e.message : "Lỗi tạo phiếu kết quả offline.",
         );
