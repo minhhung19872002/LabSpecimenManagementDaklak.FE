@@ -103,3 +103,17 @@ export async function generateResultDraft(
 export function offlineDraftEditorUrl(draftId: string): string {
   return `/document-editor?offlineDraft=${encodeURIComponent(draftId)}`;
 }
+
+// ===== Cache-on-view: quality management task keyed by taskId =====
+
+/** Cache a quality management task (with indicators) while online. */
+export async function cacheQualityTask(taskId: string, task: unknown): Promise<void> {
+  if (!taskId) return;
+  await cacheEntity('QualityManagement', taskId, task, false);
+}
+
+/** Read a cached quality management task (null if not cached). */
+export async function getCachedQualityTask(taskId: string): Promise<unknown | null> {
+  const entity = await getCachedEntity('QualityManagement', taskId);
+  return entity ? entity.data : null;
+}

@@ -30,6 +30,11 @@ import {
 } from "../../../services/qualityManagementService";
 import { API_BASE_URL } from "../../../services/api";
 import userService, { UserLookupDto } from "../../../services/userService";
+import { isServerReachable } from "../../../services/offline/connectivity";
+import {
+  generateResultDraft,
+  offlineDraftEditorUrl,
+} from "../../../services/offline/offlineResultService";
 import { IndicatorName } from "../../../components/common";
 import RichTextEditor from "../../../components/common/RichTextEditor";
 import { evaluatePassFail, stripHtmlTags } from "../../../utils/formatters";
@@ -51,6 +56,11 @@ interface PrintModalProps {
   mode: "single" | "mixed";
   taskId: string;
   indicators: QualityManagementIndicatorDto[];
+  taskContext?: {
+    contractNumber?: string;
+    customerName?: string;
+    testRequestId?: string;
+  };
   onCancel: () => void;
   onSuccess?: () => void;
 }
@@ -184,6 +194,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
   mode,
   taskId,
   indicators,
+  taskContext,
   onCancel,
   onSuccess,
 }) => {
@@ -525,6 +536,61 @@ const PrintModal: React.FC<PrintModalProps> = ({
   const handlePrint = async () => {
     if (selectedIndicatorIds.length === 0) {
       message.warning("Vui lòng chọn ít nhất một chỉ tiêu để in");
+      return;
+    }
+
+    // ---- Offline fallback: generate .docx on-device, open offline editor ----
+    if (!(await isServerReachable())) {
+      // Collect selected leaf indicators + their parent indicators for grouping.
+      const selectedLeaves = approvedIndicatorsWithParents.filter((ind) =>
+        selectedIndicatorIds.includes(ind.id),
+      );
+      const parentIndicatorIds = new Set(
+        selectedLeaves
+          .filter((ind) => ind.parentIndicatorId)
+          .map((ind) => ind.parentIndicatorId!),
+      );
+      const parents = approvedIndicatorsWithParents.filter(
+        (ind) => !ind.parentIndicatorId && parentIndicatorIds.has(ind.indicatorId),
+      );
+      const allForDoc = [...parents, ...selectedLeaves];
+
+      const firstLeaf = selectedLeaves[0];
+      const header = {
+        ContractNo: taskContext?.contractNumber || "",
+        Customer: taskContext?.customerName || "",
+        SampleCode: firstLeaf?.sampleCode || "",
+        NameOfSample: firstLeaf?.sampleName || "",
+        Note: note || "",
+      };
+
+      setLoading(true);
+      const offlineTab = window.open("about:blank", "_blank");
+      try {
+        const res = await generateResultDraft(allForDoc, header, {
+          testRequestId: taskContext?.testRequestId,
+        });
+        if (!res.success || !res.draftId) {
+          if (offlineTab) offlineTab.close();
+          message.error(res.error || "Không thể tạo phiếu kết quả offline.");
+          return;
+        }
+        message.success("Đã tạo phiếu kết quả offline. Mở trình soạn thảo...");
+        const url = offlineDraftEditorUrl(res.draftId);
+        if (offlineTab) offlineTab.location.href = url;
+        else window.open(url, "_blank");
+        setSelectedIndicatorIds([]);
+        setNote("");
+        onCancel();
+        onSuccess?.();
+      } catch (e) {
+        if (offlineTab) offlineTab.close();
+        message.error(
+          e instanceof Error ? e.message : "Lỗi tạo phiếu kết quả offline.",
+        );
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 

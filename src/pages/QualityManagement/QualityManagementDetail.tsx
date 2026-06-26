@@ -42,6 +42,8 @@ import { PATH_ROUTES } from "../../constants";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
 import { ROLES } from "../../constants/roles";
+import { isServerReachable } from "../../services/offline/connectivity";
+import { cacheQualityTask, getCachedQualityTask } from "../../services/offline/offlineResultService";
 
 import "../../styles/ListCard.css";
 import "./QualityManagement.css";
@@ -109,8 +111,20 @@ const QualityManagementDetail: React.FC = () => {
     if (!id) return;
     setLoading(true);
     try {
-      const result = await qualityManagementService.getFullDetail(id);
-      setTask(result);
+      if (await isServerReachable()) {
+        const result = await qualityManagementService.getFullDetail(id);
+        setTask(result);
+        // Cache-on-view for offline use (best-effort).
+        cacheQualityTask(id, result).catch(() => {});
+      } else {
+        const cached = await getCachedQualityTask(id);
+        if (cached) {
+          setTask(cached as QualityManagementTaskDto);
+          message.warning("Đang xem dữ liệu đã lưu (offline). Kết nối mạng để cập nhật.");
+        } else {
+          message.error("Không có kết nối mạng và chưa có dữ liệu lưu cho phiếu này.");
+        }
+      }
     } catch (error) {
       console.error("Error loading task:", error);
       message.error("Không thể tải dữ liệu");
@@ -664,6 +678,11 @@ const QualityManagementDetail: React.FC = () => {
         mode={printMode}
         taskId={id!}
         indicators={qualityIndicators}
+        taskContext={{
+          contractNumber: task?.contractNumber,
+          customerName: task?.customerName,
+          testRequestId: task?.testRequestId,
+        }}
         onCancel={() => setPrintModalVisible(false)}
         onSuccess={loadData}
       />

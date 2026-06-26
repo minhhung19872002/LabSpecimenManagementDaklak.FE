@@ -7,10 +7,9 @@
  * inject rich text (sub/sup). Done at runtime from the canonical template so it
  * never drifts from what the backend ships.
  *
- * KNOWN LIMITATION: the per-row "Test method" cell ({{TestMethod}}) is split
- * across many runs in the source template and its exact in-row position needs
- * structural analysis + comparison against real BE output before wiring. Until
- * then the method column renders blank offline (tracked as a follow-up).
+ * The {{TestMethod}} cell is split-run in the template (Word spell-checker).
+ * Docxtemplater merges split runs automatically, so providing TestMethod: string
+ * in each row populates the column without template surgery.
  */
 
 import PizZip from 'pizzip';

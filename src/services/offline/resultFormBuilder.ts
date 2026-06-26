@@ -37,7 +37,9 @@ export interface ResultTableRow {
   ParametersXml: string;
   Unit: string;
   Result: string;
-  /** Raw OOXML paragraph for the Test method cell (use as {{@TestMethodXml}}). */
+  /** Plain-text method name for {{TestMethod}} split-run cell (docxtemplater merges runs). */
+  TestMethod: string;
+  /** Raw OOXML paragraph for the Test method cell — reserved for future raw-xml use. */
   TestMethodXml: string;
 }
 
@@ -102,6 +104,7 @@ export function buildResultTableRows(
         ParametersXml: htmlToParagraphXml(paramParts.join('<br/>'), base),
         Unit: first.unit ?? '',
         Result: resultParts.join('\n'),
+        TestMethod: first.methodName ?? '',
         TestMethodXml: htmlToParagraphXml(methodHtml(first), base),
       });
     } else {
@@ -110,6 +113,7 @@ export function buildResultTableRows(
         ParametersXml: htmlToParagraphXml(nameHtml(parent), base),
         Unit: parent.unit ?? '',
         Result: parent.result ?? '',
+        TestMethod: parent.methodName ?? '',
         TestMethodXml: htmlToParagraphXml(methodHtml(parent), base),
       });
     }
