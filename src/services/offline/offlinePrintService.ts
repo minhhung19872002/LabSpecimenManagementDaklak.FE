@@ -20,11 +20,12 @@ import {
 } from '../../types/testRequest';
 import { numberToVietnameseWords } from '../../utils/numberToWords';
 import { fillDocxTemplate } from './docxFill';
-import { prepareResultTemplate } from './resultTemplatePrep';
+import { prepareResultTemplate, prepareMixedResultTemplate } from './resultTemplatePrep';
 import { prepareRequestTemplate } from './requestTemplatePrep';
 import { buildRequestSampleRows } from './requestFormBuilder';
 import {
   buildResultFormData,
+  buildMixedResultTableRows,
   ResultFormHeader,
   ResultIndicatorInput,
 } from './resultFormBuilder';
@@ -35,6 +36,7 @@ import { authService } from '../authService';
 export const TEMPLATE_NAMES = {
   TEST_REQUEST_FORM: 'test-request-form', // BM01-QT07 - Phieu yeu cau
   RESULT_FORM_BM01: 'result-form-bm01', // BM01-QT13 - Phieu tra ket qua (single sample)
+  RESULT_FORM_BM02: 'result-form-bm02', // BM02-QT13 - Phieu tra ket qua tong hop (mixed)
 } as const;
 
 // Backend template file name (must match what's downloaded during prefetch)
@@ -43,6 +45,8 @@ export const TEMPLATE_FILE_NAMES = {
     'BM01-QT07- XXYCĐNHĐ_3.2 phieu yeu cau.template.docx',
   [TEMPLATE_NAMES.RESULT_FORM_BM01]:
     'Form trả KQ - BM01-QT13-BCKQ_3.2.template.docx',
+  [TEMPLATE_NAMES.RESULT_FORM_BM02]:
+    'Form trả KQ tổng hợp - BM02-QT13-BCKQ_3.2.template.docx',
 };
 
 // Checkbox characters matching backend TemplateConstants
@@ -173,6 +177,68 @@ export async function generateResultFormOffline(
       success: false,
       error:
         error instanceof Error ? error.message : 'Lỗi không xác định khi tạo phiếu kết quả.',
+    };
+  }
+}
+
+/** Scalar fields for the BM02 mixed result form header. */
+export interface MixedResultFormHeader {
+  ContractNumber?: string;
+  CustomerName?: string;
+  FullAddress?: string;
+  Note?: string;
+}
+
+/**
+ * Generate a BM02 mixed result form offline (one row per indicator, grouped by sample).
+ * Vertical merge is not applied — sample info repeats per row (offline limitation).
+ */
+export async function generateMixedResultFormOffline(
+  header: MixedResultFormHeader,
+  indicators: ResultIndicatorInput[]
+): Promise<OfflinePrintResult> {
+  try {
+    const template = await getCachedDocumentTemplate(TEMPLATE_NAMES.RESULT_FORM_BM02);
+    if (!template) {
+      return {
+        success: false,
+        error:
+          'Template phiếu kết quả hỗn hợp chưa được tải về. Vui lòng kết nối mạng để tải template.',
+      };
+    }
+
+    const prepared = await prepareMixedResultTemplate(template.blob);
+    const rows = buildMixedResultTableRows(indicators);
+    const now = dayjs();
+
+    const data: Record<string, unknown> = {
+      ContractNumber: header.ContractNumber ?? '',
+      CustomerName: header.CustomerName ?? '',
+      FullAddress: header.FullAddress ?? '',
+      Note: header.Note ?? '',
+      Date: now.format('DD'),
+      Month: now.format('MM'),
+      Year: now.format('YYYY'),
+      DateOfIssue: now.format('DD/MM/YYYY'),
+      CurrentDate: now.format('DD/MM/YYYY'),
+      TimeOfTesting: '',
+      OfficerInCharge: '',
+      VicePresident: '',
+      CodeOfNumber: '',
+      rows,
+    };
+
+    const { blob } = await fillDocxTemplate(prepared.blob, data);
+    const fileName = `KetQua_HonHop_${header.ContractNumber || 'OFFLINE'}_${now.format('YYYYMMDDHHmmss')}.docx`;
+    return { success: true, fileName, blob };
+  } catch (error) {
+    console.error('[OfflinePrint] Error generating mixed result form:', error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Lỗi không xác định khi tạo phiếu kết quả hỗn hợp.',
     };
   }
 }

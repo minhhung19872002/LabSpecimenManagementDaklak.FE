@@ -34,6 +34,7 @@ import { isServerReachable } from "../../../services/offline/connectivity";
 import { mapIndicators } from "../../../services/offline/offlineResultService";
 import {
   generateResultFormOffline,
+  generateMixedResultFormOffline,
   downloadDocument,
 } from "../../../services/offline/offlinePrintService";
 import { IndicatorName } from "../../../components/common";
@@ -540,34 +541,48 @@ const PrintModal: React.FC<PrintModalProps> = ({
       return;
     }
 
-    // ---- Offline fallback: generate .docx on-device, open offline editor ----
+    // ---- Offline fallback: generate .docx on-device and download ----
     if (!(await isServerReachable())) {
-      // Collect selected leaf indicators + their parent indicators for grouping.
       const selectedLeaves = approvedIndicatorsWithParents.filter((ind) =>
         selectedIndicatorIds.includes(ind.id),
       );
-      const parentIndicatorIds = new Set(
-        selectedLeaves
-          .filter((ind) => ind.parentIndicatorId)
-          .map((ind) => ind.parentIndicatorId!),
-      );
-      const parents = approvedIndicatorsWithParents.filter(
-        (ind) => !ind.parentIndicatorId && parentIndicatorIds.has(ind.indicatorId),
-      );
-      const allForDoc = [...parents, ...selectedLeaves];
-
-      const firstLeaf = selectedLeaves[0];
-      const header = {
-        ContractNo: taskContext?.contractNumber || "",
-        Customer: taskContext?.customerName || "",
-        SampleCode: firstLeaf?.sampleCode || "",
-        NameOfSample: firstLeaf?.sampleName || "",
-        Note: note || "",
-      };
 
       setLoading(true);
       try {
-        const gen = await generateResultFormOffline(header, mapIndicators(allForDoc));
+        let gen;
+        if (mode === "mixed") {
+          // BM02: flat rows per indicator grouped by sample — no parent grouping needed.
+          gen = await generateMixedResultFormOffline(
+            {
+              ContractNumber: taskContext?.contractNumber || "",
+              CustomerName: taskContext?.customerName || "",
+              Note: note || "",
+            },
+            mapIndicators(selectedLeaves),
+          );
+        } else {
+          // BM01: include parent indicators so parent+child grouping works.
+          const parentIndicatorIds = new Set(
+            selectedLeaves
+              .filter((ind) => ind.parentIndicatorId)
+              .map((ind) => ind.parentIndicatorId!),
+          );
+          const parents = approvedIndicatorsWithParents.filter(
+            (ind) => !ind.parentIndicatorId && parentIndicatorIds.has(ind.indicatorId),
+          );
+          const firstLeaf = selectedLeaves[0];
+          gen = await generateResultFormOffline(
+            {
+              ContractNo: taskContext?.contractNumber || "",
+              Customer: taskContext?.customerName || "",
+              SampleCode: firstLeaf?.sampleCode || "",
+              NameOfSample: firstLeaf?.sampleName || "",
+              Note: note || "",
+            },
+            mapIndicators([...parents, ...selectedLeaves]),
+          );
+        }
+
         if (!gen.success || !gen.blob || !gen.fileName) {
           message.error(gen.error || "Không thể tạo phiếu kết quả offline.");
           return;

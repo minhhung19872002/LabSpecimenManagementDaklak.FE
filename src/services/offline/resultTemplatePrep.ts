@@ -73,3 +73,43 @@ export async function prepareResultTemplate(
   });
   return { blob };
 }
+
+/**
+ * Transform the BM02 mixed-result template for docxtemplater.
+ *
+ * In BM02, {{TestTable}} and {{No}} share one <w:t>, and {{SubTable}} and
+ * {{Parameter}} share another. We strip the marker tokens and wrap the row
+ * in a docxtemplater loop, switching the Parameter cell to raw-xml so
+ * chemical formulas render with sub/superscript.
+ */
+export async function prepareMixedResultTemplate(
+  template: Blob | ArrayBuffer
+): Promise<PreparedTemplate> {
+  const buffer = template instanceof Blob ? await template.arrayBuffer() : template;
+  const zip = new PizZip(buffer);
+  const file = zip.file(DOC_XML);
+  if (!file) {
+    throw new Error('Template BM02 không hợp lệ: thiếu word/document.xml');
+  }
+  let xml = file.asText();
+
+  if (!xml.includes('{{TestTable}}')) {
+    throw new Error('Template BM02 không hợp lệ: thiếu marker {{TestTable}}');
+  }
+
+  // Loop open: drop {{TestTable}} marker, open before {{No}}.
+  xml = xml.replace('{{TestTable}} {{No}}', '{{#rows}}{{No}}');
+  // Parameter cell: drop {{SubTable}} marker, switch to raw-xml.
+  xml = xml.replace('{{SubTable}} {{Parameter}}', '{{@ParameterXml}}');
+  // Loop close: after {{Result}} (last column).
+  xml = xml.replace('{{Result}}', '{{Result}}{{/rows}}');
+
+  zip.file(DOC_XML, xml);
+  const blob = zip.generate({
+    type: 'blob',
+    mimeType:
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    compression: 'DEFLATE',
+  });
+  return { blob };
+}

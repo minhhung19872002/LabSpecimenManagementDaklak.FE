@@ -29,6 +29,8 @@ export interface ResultIndicatorLike {
   result?: string;
   methodName?: string;
   methodFormattedName?: string;
+  sampleCode?: string;
+  sampleName?: string;
 }
 
 /** Map a result-bearing indicator DTO to the table builder's input shape. */
@@ -43,6 +45,8 @@ export function mapIndicators(indicators: ResultIndicatorLike[]): ResultIndicato
     result: i.result,
     methodName: i.methodName,
     methodFormattedName: i.methodFormattedName,
+    sampleCode: i.sampleCode,
+    sampleName: i.sampleName,
   }));
 }
 

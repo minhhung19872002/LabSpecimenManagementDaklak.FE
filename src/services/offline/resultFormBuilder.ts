@@ -28,6 +28,9 @@ export interface ResultIndicatorInput {
   result?: string;
   methodName?: string;
   methodFormattedName?: string;
+  /** Used by BM02 mixed-result grouping. */
+  sampleCode?: string;
+  sampleName?: string;
 }
 
 /** A single rendered table row, ready for docxtemplater. */
@@ -117,6 +120,67 @@ export function buildResultTableRows(
         TestMethodXml: htmlToParagraphXml(methodHtml(parent), base),
       });
     }
+  }
+
+  return rows;
+}
+
+/** A single rendered BM02 mixed-result row (one indicator per row, grouped by sample). */
+export interface MixedResultTableRow {
+  No: string;
+  NameOfSample: string;
+  CodeOfNumber: string;
+  /** Raw OOXML paragraph for the indicator name cell ({{@ParameterXml}}). */
+  ParameterXml: string;
+  Unit: string;
+  TestMethod: string;
+  Result: string;
+  Quantity: string;
+  SampleDescription: string;
+}
+
+/**
+ * Build BM02 mixed-result rows: one row per indicator, grouped by sampleCode.
+ * No vertical merge is applied (offline limitation); sample info repeats per indicator.
+ */
+export function buildMixedResultTableRows(
+  indicators: ResultIndicatorInput[],
+  base: OoxmlBaseStyle = { font: TIMES, sizePt: 11 }
+): MixedResultTableRow[] {
+  const sampleOrder: string[] = [];
+  const sampleMap = new Map<string, { name: string; inds: ResultIndicatorInput[] }>();
+
+  for (const ind of indicators) {
+    const key = ind.sampleCode ?? '';
+    if (!sampleMap.has(key)) {
+      sampleOrder.push(key);
+      sampleMap.set(key, { name: ind.sampleName ?? '', inds: [] });
+    }
+    sampleMap.get(key)!.inds.push(ind);
+  }
+
+  const rows: MixedResultTableRow[] = [];
+  let sampleNo = 1;
+
+  for (const key of sampleOrder) {
+    const sample = sampleMap.get(key)!;
+    for (const ind of [...sample.inds].sort(bySortOrder)) {
+      rows.push({
+        No: String(sampleNo),
+        NameOfSample: sample.name,
+        CodeOfNumber: key,
+        ParameterXml: htmlToParagraphXml(
+          ind.indicatorFormattedName || ind.indicatorName || '',
+          base
+        ),
+        Unit: ind.unit ?? '',
+        TestMethod: ind.methodName ?? '',
+        Result: ind.result ?? '',
+        Quantity: '',
+        SampleDescription: '',
+      });
+    }
+    sampleNo++;
   }
 
   return rows;
