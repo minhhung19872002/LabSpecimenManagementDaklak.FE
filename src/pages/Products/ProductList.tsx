@@ -80,7 +80,7 @@ const ProductList: React.FC = () => {
     <div>
       <Card
         className="list-card"
-        title="Quản lý danh sách sản phẩm"
+        title="Quản lý danh sách vật tư"
         extra={
           <Space>
             <ColumnConfigPopover
