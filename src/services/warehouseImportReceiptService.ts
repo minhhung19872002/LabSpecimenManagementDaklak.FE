@@ -1,10 +1,33 @@
 import { api } from "./api";
 import type { PagedResultDto } from "./masterDataService";
 
+export enum WarehouseImportReceiptDisplayStatusFilter {
+  All = 0,
+  InProgress = 1,
+  Completed = 2,
+  Defective = 3,
+}
+
+export const WarehouseImportReceiptDisplayStatusFilterLabels: Record<number, string> = {
+  [WarehouseImportReceiptDisplayStatusFilter.All]: "Tất cả trạng thái",
+  [WarehouseImportReceiptDisplayStatusFilter.InProgress]: "Đang thực hiện",
+  [WarehouseImportReceiptDisplayStatusFilter.Completed]: "Hoàn thành",
+  [WarehouseImportReceiptDisplayStatusFilter.Defective]: "Hàng lỗi",
+};
+
 export interface GetWarehouseImportReceiptListInput {
   skipCount?: number;
   maxResultCount?: number;
   sorting?: string;
+  search?: string;
+  displayStatus?: WarehouseImportReceiptDisplayStatusFilter;
+  fromDate?: string;
+  toDate?: string;
+}
+
+export interface WarehouseImportReceiptStatisticsDto {
+  totalReceipts: number;
+  defectiveLots: number;
 }
 
 export enum WarehouseImportReceiptStatus {
@@ -50,6 +73,7 @@ export interface WarehouseImportReceiptListDto {
   actualImportDate: string;
   warehouseKeeperName?: string;
   warehouseName?: string;
+  supplierName?: string;
   status: WarehouseImportReceiptStatus;
   hasDefectiveItem: boolean;
   creatorName?: string;
@@ -180,8 +204,19 @@ export const warehouseImportReceiptService = {
     if (params.skipCount !== undefined) apiParams.SkipCount = params.skipCount;
     if (params.maxResultCount !== undefined) apiParams.MaxResultCount = params.maxResultCount;
     if (params.sorting) apiParams.Sorting = params.sorting;
+    if (params.search) apiParams.Search = params.search;
+    if (params.displayStatus !== undefined) apiParams.DisplayStatus = params.displayStatus;
+    if (params.fromDate) apiParams.FromDate = params.fromDate;
+    if (params.toDate) apiParams.ToDate = params.toDate;
     const response = await api.get<PagedResultDto<WarehouseImportReceiptListDto>>(BASE_URL, {
       params: apiParams,
+    });
+    return response.data;
+  },
+
+  getStatistics: async (fromDate?: string, toDate?: string): Promise<WarehouseImportReceiptStatisticsDto> => {
+    const response = await api.get<WarehouseImportReceiptStatisticsDto>(`${BASE_URL}/statistics`, {
+      params: { fromDate, toDate },
     });
     return response.data;
   },
