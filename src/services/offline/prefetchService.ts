@@ -258,7 +258,12 @@ async function prefetchDocumentTemplates(): Promise<void> {
 
   // Result-form templates (BM01-QT13, BM02-QT13) for offline result generation.
   // Each cached separately so a failure in one does not block the other.
-  for (const name of [TEMPLATE_NAMES.RESULT_FORM_BM01, TEMPLATE_NAMES.RESULT_FORM_BM02] as const) {
+  for (const name of [
+    TEMPLATE_NAMES.RESULT_FORM_BM01,
+    TEMPLATE_NAMES.RESULT_FORM_BM02,
+    TEMPLATE_NAMES.RESULT_FORM_BM03,
+    TEMPLATE_NAMES.RESULT_FORM_BM04,
+  ] as const) {
     try {
       const fileName = TEMPLATE_FILE_NAMES[name];
       const blob = await formTemplateService.download(fileName);

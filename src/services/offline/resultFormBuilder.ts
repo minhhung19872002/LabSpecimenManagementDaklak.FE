@@ -31,6 +31,13 @@ export interface ResultIndicatorInput {
   /** Used by BM02 mixed-result grouping. */
   sampleCode?: string;
   sampleName?: string;
+  // Standard limit fields (BM04 "Giới hạn" column = CompareWithStandard).
+  comparisonOperator?: string;
+  allowedLimit?: string;
+  lowerOperator?: string;
+  lowerLimit?: string;
+  upperOperator?: string;
+  upperLimit?: string;
 }
 
 /** A single rendered table row, ready for docxtemplater. */
@@ -44,6 +51,36 @@ export interface ResultTableRow {
   TestMethod: string;
   /** Raw OOXML paragraph for the Test method cell — reserved for future raw-xml use. */
   TestMethodXml: string;
+  /** "Giới hạn" cell (BM04 {{CompareWithStandard}}); blank for templates without it. */
+  CompareWithStandard: string;
+}
+
+/** Normalize a comparison operator to its display symbol (<=, >= -> ≤, ≥). */
+function opSymbol(o?: string): string {
+  const t = (o ?? '').trim();
+  if (t === '<=') return '≤';
+  if (t === '>=') return '≥';
+  return t;
+}
+
+/**
+ * Build the "Giới hạn" / CompareWithStandard text from a single indicator's
+ * limit fields, mirroring the backend BuildCompareWithStandard:
+ *   range  -> "{lowerOp|>} {lowerLimit} và {upperOp|<} {upperLimit}"
+ *   single -> "{op} {allowedLimit}" (or just the limit when no operator).
+ */
+function buildCompareWithStandard(i: ResultIndicatorInput): string {
+  const lower = i.lowerLimit?.trim();
+  const upper = i.upperLimit?.trim();
+  if (lower && upper) {
+    const lo = i.lowerOperator?.trim() ? opSymbol(i.lowerOperator) : '>';
+    const up = i.upperOperator?.trim() ? opSymbol(i.upperOperator) : '<';
+    return `${lo} ${lower} và ${up} ${upper}`;
+  }
+  const limit = i.allowedLimit?.trim();
+  if (!limit) return '';
+  const op = opSymbol(i.comparisonOperator);
+  return op ? `${op} ${limit}` : limit;
 }
 
 const TIMES = 'Times New Roman';
@@ -109,6 +146,10 @@ export function buildResultTableRows(
         Result: resultParts.join('\n'),
         TestMethod: first.methodName ?? '',
         TestMethodXml: htmlToParagraphXml(methodHtml(first), base),
+        // Stack each child's limit, like the backend combined-limit cell.
+        CompareWithStandard: sortedChildren
+          .map((c) => buildCompareWithStandard(c))
+          .join('\n'),
       });
     } else {
       rows.push({
@@ -118,6 +159,7 @@ export function buildResultTableRows(
         Result: parent.result ?? '',
         TestMethod: parent.methodName ?? '',
         TestMethodXml: htmlToParagraphXml(methodHtml(parent), base),
+        CompareWithStandard: buildCompareWithStandard(parent),
       });
     }
   }

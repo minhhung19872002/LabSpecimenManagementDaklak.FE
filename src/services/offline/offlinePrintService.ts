@@ -42,6 +42,8 @@ export const TEMPLATE_NAMES = {
   TEST_REQUEST_FORM: 'test-request-form', // BM01-QT07 - Phieu yeu cau
   RESULT_FORM_BM01: 'result-form-bm01', // BM01-QT13 - Phieu tra ket qua (single sample)
   RESULT_FORM_BM02: 'result-form-bm02', // BM02-QT13 - Phieu tra ket qua tong hop (mixed)
+  RESULT_FORM_BM03: 'result-form-bm03', // BM03-QT13 - Phieu tra KQ (cot phu de trong)
+  RESULT_FORM_BM04: 'result-form-bm04', // BM04-QT13 - Phieu tra KQ + cot Gioi han
 } as const;
 
 // Backend template file name (must match what's downloaded during prefetch)
@@ -52,6 +54,18 @@ export const TEMPLATE_FILE_NAMES = {
     'Form trả KQ - BM01-QT13-BCKQ_3.2.template.docx',
   [TEMPLATE_NAMES.RESULT_FORM_BM02]:
     'Form trả KQ tổng hợp - BM02-QT13-BCKQ_3.2.template.docx',
+  [TEMPLATE_NAMES.RESULT_FORM_BM03]:
+    'Form trả kq BM03-QT13-BCKQ_3.2.template.docx',
+  [TEMPLATE_NAMES.RESULT_FORM_BM04]:
+    'Form thêm cột GH BM04-QT13-BCKQ_3.2.template.docx',
+};
+
+/** Single result-form templates supported offline. */
+export type SingleResultTemplate = 'BM01' | 'BM03' | 'BM04';
+const SINGLE_TEMPLATE_CACHE_KEY: Record<SingleResultTemplate, string> = {
+  BM01: TEMPLATE_NAMES.RESULT_FORM_BM01,
+  BM03: TEMPLATE_NAMES.RESULT_FORM_BM03,
+  BM04: TEMPLATE_NAMES.RESULT_FORM_BM04,
 };
 
 // Checkbox characters matching backend TemplateConstants
@@ -155,10 +169,13 @@ export async function generateTestRequestFormOffline(
  */
 export async function generateResultFormOffline(
   header: ResultFormHeader,
-  indicators: ResultIndicatorInput[]
+  indicators: ResultIndicatorInput[],
+  templateKey: SingleResultTemplate = 'BM01'
 ): Promise<OfflinePrintResult> {
   try {
-    const template = await getCachedDocumentTemplate(TEMPLATE_NAMES.RESULT_FORM_BM01);
+    const template = await getCachedDocumentTemplate(
+      SINGLE_TEMPLATE_CACHE_KEY[templateKey]
+    );
     if (!template) {
       return {
         success: false,

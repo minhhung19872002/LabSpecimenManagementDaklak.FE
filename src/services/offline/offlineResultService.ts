@@ -33,6 +33,12 @@ export interface ResultIndicatorLike {
   methodFormattedName?: string;
   sampleCode?: string;
   sampleName?: string;
+  comparisonOperator?: string;
+  allowedLimit?: string;
+  lowerOperator?: string;
+  lowerLimit?: string;
+  upperOperator?: string;
+  upperLimit?: string;
 }
 
 /** Map a result-bearing indicator DTO to the table builder's input shape. */
@@ -49,6 +55,12 @@ export function mapIndicators(indicators: ResultIndicatorLike[]): ResultIndicato
     methodFormattedName: i.methodFormattedName,
     sampleCode: i.sampleCode,
     sampleName: i.sampleName,
+    comparisonOperator: i.comparisonOperator,
+    allowedLimit: i.allowedLimit,
+    lowerOperator: i.lowerOperator,
+    lowerLimit: i.lowerLimit,
+    upperOperator: i.upperOperator,
+    upperLimit: i.upperLimit,
   }));
 }
 
