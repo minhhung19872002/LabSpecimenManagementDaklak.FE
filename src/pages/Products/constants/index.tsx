@@ -17,6 +17,7 @@ export const ALL_COLUMNS: ColumnConfig[] = [
   { key: "name", title: "Tên vật phẩm", defaultVisible: true },
   { key: "productType", title: "Phân loại", defaultVisible: true },
   { key: "packagingUnitName", title: "Đơn vị lưu kho", defaultVisible: true },
+  { key: "warehouseName", title: "Lưu kho", defaultVisible: true },
   { key: "storageAvailableQuantity", title: "Số lượng khả dụng", defaultVisible: true },
   { key: "casNumber", title: "Số CAS", defaultVisible: false },
   { key: "manufacturer", title: "Nhà sản xuất/thương hiệu", defaultVisible: false },
@@ -128,6 +129,17 @@ export const getProductColumns = (
       dataIndex: "packagingUnitName",
       key: "packagingUnitName",
       width: 120,
+    });
+  }
+
+  if (visibleKeys.has("warehouseName")) {
+    columns.push({
+      title: "Lưu kho",
+      dataIndex: "warehouseName",
+      key: "warehouseName",
+      width: 150,
+      sorter: true,
+      render: (v: string) => v || "-",
     });
   }
 

@@ -47,6 +47,7 @@ export interface ProductDto {
   storageAvailableQuantity: number;
   isActive: boolean;
   isDraft: boolean;
+  warehouseName?: string;
   creationTime: string;
   attachments: ProductAttachmentDto[];
   unitConversions: ProductUnitConversionDto[];
