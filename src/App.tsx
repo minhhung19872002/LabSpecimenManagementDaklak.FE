@@ -169,6 +169,9 @@ const WarehouseImportList = Loadable(
 const WarehouseImportForm = Loadable(
   lazy(() => import("./pages/WarehouseImports/WarehouseImportForm")),
 );
+const WarehouseImportDetail = Loadable(
+  lazy(() => import("./pages/WarehouseImports/WarehouseImportDetail")),
+);
 
 // Equipments - Quản lý thiết bị
 const EquipmentList = Loadable(
@@ -382,6 +385,10 @@ function App() {
           <Route
             path="warehouse-imports/create"
             element={<WarehouseImportForm />}
+          />
+          <Route
+            path="warehouse-imports/:id"
+            element={<WarehouseImportDetail />}
           />
           <Route
             path="warehouse-imports/edit/:id"

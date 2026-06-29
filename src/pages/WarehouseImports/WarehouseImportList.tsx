@@ -2,7 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, Row, Col, Input, Select, DatePicker, Button, Table, Tag, Spin, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { SearchOutlined, PlusOutlined, EyeOutlined } from "@ant-design/icons";
+import { SearchOutlined, PlusOutlined, EyeOutlined, EditOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useWarehouseImportList } from "./hooks/useWarehouseImportList";
 import {
@@ -55,7 +55,7 @@ const WarehouseImportList: React.FC = () => {
       dataIndex: "code",
       key: "code",
       render: (code: string, record) => (
-        <a onClick={() => navigate(`/warehouse-imports/edit/${record.id}`)}>{code}</a>
+        <a onClick={() => navigate(`/warehouse-imports/${record.id}`)}>{code}</a>
       ),
     },
     {
@@ -104,13 +104,24 @@ const WarehouseImportList: React.FC = () => {
       title: "Thao tác",
       key: "actions",
       render: (_, record) => (
-        <Tooltip title="Xem chi tiết">
-          <Button
-            type="text"
-            icon={<EyeOutlined />}
-            onClick={() => navigate(`/warehouse-imports/edit/${record.id}`)}
-          />
-        </Tooltip>
+        <>
+          <Tooltip title="Xem chi tiết">
+            <Button
+              type="text"
+              icon={<EyeOutlined />}
+              onClick={() => navigate(`/warehouse-imports/${record.id}`)}
+            />
+          </Tooltip>
+          {record.status === WarehouseImportReceiptStatus.InProgress && canCreate && (
+            <Tooltip title="Chỉnh sửa">
+              <Button
+                type="text"
+                icon={<EditOutlined />}
+                onClick={() => navigate(`/warehouse-imports/edit/${record.id}`)}
+              />
+            </Tooltip>
+          )}
+        </>
       ),
     },
   ];
@@ -197,7 +208,7 @@ const WarehouseImportList: React.FC = () => {
             rowKey="id"
             scroll={{ x: 1100 }}
             onRow={(record) => ({
-              onDoubleClick: () => navigate(`/warehouse-imports/edit/${record.id}`),
+              onDoubleClick: () => navigate(`/warehouse-imports/${record.id}`),
               style: { cursor: "pointer" },
             })}
             pagination={{

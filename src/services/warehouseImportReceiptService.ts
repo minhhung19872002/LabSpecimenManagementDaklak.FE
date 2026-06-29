@@ -98,6 +98,8 @@ export interface WarehouseImportReceiptDto {
   notes?: string;
   status: WarehouseImportReceiptStatus;
   hasDefectiveItem: boolean;
+  supplierName?: string;
+  contactPersonName?: string;
   creatorName?: string;
   creationTime: string;
   items: WarehouseImportReceiptItemDto[];

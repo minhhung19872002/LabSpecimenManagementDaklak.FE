@@ -92,6 +92,7 @@ export const PATH_ROUTES = {
   warehouseImports: {
     index: '/warehouse-imports',
     create: '/warehouse-imports/create',
+    detail: (id: string) => `/warehouse-imports/${id}`,
     edit: (id: string) => `/warehouse-imports/edit/${id}`,
   },
 

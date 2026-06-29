@@ -413,11 +413,11 @@ const WarehouseImportForm: React.FC = () => {
       if (isEdit && id) {
         await warehouseImportReceiptService.update(id, payload);
         message.success("Đã lưu nháp phiếu nhập kho");
-        navigate(`/warehouse-imports/edit/${id}`, { replace: true });
+        navigate(`/warehouse-imports/${id}`, { replace: true });
       } else {
         const result = await warehouseImportReceiptService.create(payload);
         message.success("Đã tạo phiếu nhập kho");
-        navigate(`/warehouse-imports/edit/${result.id}`, { replace: true });
+        navigate(`/warehouse-imports/${result.id}`, { replace: true });
       }
     } catch (error: any) {
       message.error(getApiErrorMessage(error, "Không thể lưu phiếu."));
@@ -442,7 +442,7 @@ const WarehouseImportForm: React.FC = () => {
       const confirmed = await warehouseImportReceiptService.confirm(receiptId as string);
       setReceipt(confirmed);
       message.success("Đã xác nhận và nhập kho thành công");
-      navigate(`/warehouse-imports`);
+      navigate(`/warehouse-imports/${receiptId}`, { replace: true });
     } catch (error: any) {
       message.error(getApiErrorMessage(error, "Không thể xác nhận nhập kho."));
     } finally {
