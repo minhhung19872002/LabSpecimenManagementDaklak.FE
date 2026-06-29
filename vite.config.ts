@@ -5,27 +5,36 @@ import { writeFileSync } from 'fs'
 import { resolve } from 'path'
 import crypto from 'crypto'
 
+// Build hash sinh MỘT lần khi nạp config — vừa nhúng vào bundle qua __BUILD_HASH__
+// (để client biết phiên bản chính nó đang chạy), vừa ghi ra dist/version.json (server
+// phục vụ tĩnh). Client so hash bundle-đang-chạy với hash-server để phát hiện bản deploy mới.
+const BUILD_HASH = crypto.randomBytes(8).toString('hex');
+
 // Plugin tạo version.json khi build - dùng để phát hiện phiên bản mới
 function versionPlugin() {
   return {
     name: 'version-plugin',
     writeBundle() {
-      const buildHash = crypto.randomBytes(8).toString('hex');
       const versionInfo = {
-        buildHash,
+        buildHash: BUILD_HASH,
         buildTime: new Date().toISOString(),
       };
       writeFileSync(
         resolve(__dirname, 'dist/version.json'),
         JSON.stringify(versionInfo)
       );
-      console.log(`\n✓ Generated version.json (buildHash: ${buildHash})\n`);
+      console.log(`\n✓ Generated version.json (buildHash: ${BUILD_HASH})\n`);
     },
   };
 }
 
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    // Nhúng build hash vào bundle để client biết phiên bản chính nó đang chạy
+    // (đối chiếu với /version.json trên server). Xem AppUpdateNotification.
+    __BUILD_HASH__: JSON.stringify(BUILD_HASH),
+  },
   plugins: [
     react(),
     versionPlugin(),
