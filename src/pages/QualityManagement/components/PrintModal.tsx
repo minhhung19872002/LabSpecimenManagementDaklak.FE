@@ -551,7 +551,15 @@ const PrintModal: React.FC<PrintModalProps> = ({
       try {
         let gen;
         if (mode === "mixed") {
-          // BM02: flat rows per indicator grouped by sample — no parent grouping needed.
+          // BM02: include parent indicators so parent+child grouping matches online.
+          const mixedParentIds = new Set(
+            selectedLeaves
+              .filter((ind) => ind.parentIndicatorId)
+              .map((ind) => ind.parentIndicatorId!),
+          );
+          const mixedParents = approvedIndicatorsWithParents.filter(
+            (ind) => !ind.parentIndicatorId && mixedParentIds.has(ind.indicatorId),
+          );
           gen = await generateMixedResultFormOffline(
             {
               ContractNumber: taskContext?.contractNumber || "",
@@ -559,6 +567,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
               Note: note || "",
             },
             mapIndicators(selectedLeaves),
+            mapIndicators(mixedParents),
           );
         } else {
           // BM01: include parent indicators so parent+child grouping works.

@@ -190,12 +190,17 @@ export interface MixedResultFormHeader {
 }
 
 /**
- * Generate a BM02 mixed result form offline (one row per indicator, grouped by sample).
+ * Generate a BM02 mixed result form offline (grouped by sample, parent+children
+ * collapsed into one row — matching the online backend layout).
  * Vertical merge is not applied — sample info repeats per row (offline limitation).
+ *
+ * `indicators` are the selected leaf/standalone indicators; `parents` carries the
+ * parent indicators (name only) so parent/child grouping can render the header.
  */
 export async function generateMixedResultFormOffline(
   header: MixedResultFormHeader,
-  indicators: ResultIndicatorInput[]
+  indicators: ResultIndicatorInput[],
+  parents: ResultIndicatorInput[] = []
 ): Promise<OfflinePrintResult> {
   try {
     const template = await getCachedDocumentTemplate(TEMPLATE_NAMES.RESULT_FORM_BM02);
@@ -208,7 +213,8 @@ export async function generateMixedResultFormOffline(
     }
 
     const prepared = await prepareMixedResultTemplate(template.blob);
-    const rows = buildMixedResultTableRows(indicators);
+    const parentLookup = new Map(parents.map((p) => [p.indicatorId, p]));
+    const rows = buildMixedResultTableRows(indicators, parentLookup);
     const now = dayjs();
 
     const data: Record<string, unknown> = {
