@@ -268,6 +268,8 @@ export interface ResultFormHeader {
   DateOfIssue?: string;
   CurrentDate?: string;
   OfficerInCharge?: string;
+  /** Phó Giám đốc ký (tên đã chọn). */
+  VicePresident?: string;
   Note?: string;
 }
 

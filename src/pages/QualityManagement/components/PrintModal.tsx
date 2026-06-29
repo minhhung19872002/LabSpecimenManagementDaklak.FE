@@ -583,6 +583,16 @@ const PrintModal: React.FC<PrintModalProps> = ({
           taskContext?.technicalManagerNames ||
           "";
 
+        // Phó Giám đốc ký: selected vice-president name (Surname + Name), matching
+        // the backend's GetVicePresidentFullName.
+        const selectedVp = vicePresidents.find(
+          (v) => v.id === selectedVicePresidentId,
+        );
+        const vicePresidentName = selectedVp
+          ? [selectedVp.surname, selectedVp.name].filter(Boolean).join(" ").trim() ||
+            selectedVp.userName
+          : "";
+
         let gen;
         if (mode === "mixed") {
           // BM02: include parent indicators so parent+child grouping matches online.
@@ -603,6 +613,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
               DateOfIssue: extras.DateOfIssue,
               TimeOfTesting: extras.TimeOfTesting,
               OfficerInCharge: officerInCharge,
+              VicePresident: vicePresidentName,
             },
             mapIndicators(selectedLeaves),
             mapIndicators(mixedParents),
@@ -629,6 +640,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
               DateOfIssue: extras.DateOfIssue,
               TimeOfTesting: extras.TimeOfTesting,
               OfficerInCharge: officerInCharge,
+              VicePresident: vicePresidentName,
             },
             mapIndicators([...parents, ...selectedLeaves]),
           );

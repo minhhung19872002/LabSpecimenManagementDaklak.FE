@@ -207,6 +207,8 @@ export interface MixedResultFormHeader {
   TimeOfTesting?: string;
   /** Phụ trách phòng thử nghiệm (QLKT). */
   OfficerInCharge?: string;
+  /** Phó Giám đốc ký (tên đã chọn). */
+  VicePresident?: string;
 }
 
 /**
@@ -251,7 +253,7 @@ export async function generateMixedResultFormOffline(
       CurrentDate: now.format('DD/MM/YYYY'),
       TimeOfTesting: header.TimeOfTesting ?? '',
       OfficerInCharge: header.OfficerInCharge ?? '',
-      VicePresident: '',
+      VicePresident: header.VicePresident ?? '',
       CodeOfNumber: '',
       rows,
     };
