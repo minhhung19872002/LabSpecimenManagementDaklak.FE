@@ -162,6 +162,11 @@ const StockAdjustmentList = Loadable(
   lazy(() => import("./pages/StockAdjustments/StockAdjustmentList")),
 );
 
+// Warehouse Imports - Quản lý nhập kho
+const WarehouseImportList = Loadable(
+  lazy(() => import("./pages/WarehouseImports/WarehouseImportList")),
+);
+
 // Equipments - Quản lý thiết bị
 const EquipmentList = Loadable(
   lazy(() => import("./pages/Equipments/EquipmentList")),
@@ -368,6 +373,9 @@ function App() {
 
           {/* Stock Adjustments - Điều chỉnh tồn kho */}
           <Route path="stock-adjustments" element={<StockAdjustmentList />} />
+
+          {/* Warehouse Imports - Quản lý nhập kho */}
+          <Route path="warehouse-imports" element={<WarehouseImportList />} />
 
           {/* Equipments - Quản lý thiết bị */}
           <Route path="equipments" element={<EquipmentList />} />
