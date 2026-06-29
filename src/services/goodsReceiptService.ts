@@ -125,6 +125,7 @@ export interface GoodsReceiptDto extends GoodsReceiptListDto {
   preparedByName?: string;
   documentExpiryDate?: string;
   supplierRepresentativePhone?: string;
+  supplierRepresentativeName?: string;
   expectedDeliveryDate?: string;
   purchaserId?: string;
   purchaserFullName?: string;
@@ -189,6 +190,7 @@ export interface CreateUpdateGoodsReceiptDto {
   documentDate?: string;
   documentExpiryDate?: string;
   supplierRepresentativePhone?: string;
+  supplierRepresentativeName?: string;
   expectedDeliveryDate?: string;
   purchaserId?: string;
   vatPercent: number;
@@ -256,6 +258,7 @@ export interface GoodsReceiptStatisticsDto {
 
 export interface LatestSupplierInfoDto {
   supplierRepresentativePhone?: string;
+  supplierRepresentativeName?: string;
 }
 
 interface PagedResult<T> {

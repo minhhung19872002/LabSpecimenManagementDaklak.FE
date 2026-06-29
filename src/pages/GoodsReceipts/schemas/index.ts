@@ -19,6 +19,7 @@ export const goodsReceiptSchema = yup.object({
   ),
   expectedDeliveryDate: yup.string().nullable(),
   supplierRepresentativePhone: yup.string().nullable().required("Vui lòng nhập SĐT người đại diện NCC").max(20),
+  supplierRepresentativeName: yup.string().nullable().required("Vui lòng nhập tên người đại diện NCC").max(200, "Tên người đại diện NCC không quá 200 ký tự"),
   vatPercent: yup.number().min(0).max(100).default(8),
   notes: yup.string().nullable().max(2000),
 });
@@ -44,6 +45,7 @@ export const equipmentReceiptSchema = yup.object({
   ),
   expectedDeliveryDate: yup.string().nullable(),
   supplierRepresentativePhone: yup.string().nullable().required("Vui lòng nhập SĐT người đại diện NCC").max(20),
+  supplierRepresentativeName: yup.string().nullable().required("Vui lòng nhập tên người đại diện NCC").max(200, "Tên người đại diện NCC không quá 200 ký tự"),
   vatPercent: yup.number().min(0).max(100).default(8),
   notes: yup.string().nullable().max(2000),
 });

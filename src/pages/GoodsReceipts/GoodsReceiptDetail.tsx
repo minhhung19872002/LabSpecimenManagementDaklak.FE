@@ -580,6 +580,9 @@ const GoodsReceiptDetail: React.FC = () => {
                 <DetailItem label="SĐT NCC" value={receipt.supplierPhone} />
               </Col>
               <Col xs={24} sm={12}>
+                <DetailItem label="Tên đại diện NCC" value={receipt.supplierRepresentativeName} />
+              </Col>
+              <Col xs={24} sm={12}>
                 <DetailItem label="SĐT đại diện NCC" value={receipt.supplierRepresentativePhone} />
               </Col>
             </Row>

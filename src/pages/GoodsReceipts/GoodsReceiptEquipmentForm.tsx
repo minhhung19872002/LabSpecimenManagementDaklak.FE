@@ -106,6 +106,7 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
       documentExpiryDate: "",
       expectedDeliveryDate: "",
       supplierRepresentativePhone: "",
+      supplierRepresentativeName: "",
       vatPercent: 8,
       notes: "",
     },
@@ -147,6 +148,7 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
             documentExpiryDate: receiptData.documentExpiryDate || "",
             expectedDeliveryDate: receiptData.expectedDeliveryDate || "",
             supplierRepresentativePhone: receiptData.supplierRepresentativePhone || "",
+            supplierRepresentativeName: receiptData.supplierRepresentativeName || "",
             vatPercent: receiptData.vatPercent,
             notes: receiptData.notes || "",
           });
@@ -275,6 +277,7 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
       setValue("supplierAddress", "");
       setValue("supplierPhone", "");
       setValue("supplierRepresentativePhone", "");
+      setValue("supplierRepresentativeName", "");
       return;
     }
     const supplier = suppliers.find(s => s.id === supplierId);
@@ -286,6 +289,9 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
       const info = await goodsReceiptService.getLatestSupplierInfo(supplierId);
       if (info.supplierRepresentativePhone) {
         setValue("supplierRepresentativePhone", info.supplierRepresentativePhone);
+      }
+      if (info.supplierRepresentativeName) {
+        setValue("supplierRepresentativeName", info.supplierRepresentativeName);
       }
     } catch {
       // No previous receipt for this supplier
@@ -336,6 +342,7 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
     documentExpiryDate: data.documentExpiryDate || undefined,
     expectedDeliveryDate: data.expectedDeliveryDate || undefined,
     supplierRepresentativePhone: data.supplierRepresentativePhone || undefined,
+    supplierRepresentativeName: data.supplierRepresentativeName || undefined,
     vatPercent: data.vatPercent ?? 8,
     notes: data.notes || undefined,
     items: lineItems
@@ -762,6 +769,28 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
             </Col>
             <Col xs={24} sm={12} md={6}>
               <Controller
+                name="supplierRepresentativeName"
+                control={control}
+                render={({ field, fieldState }) => (
+                  <Form.Item
+                    label="Tên người đại diện NCC"
+                    required
+                    validateStatus={fieldState.error ? "error" : undefined}
+                    help={fieldState.error?.message}
+                  >
+                    <Input
+                      {...field}
+                      value={field.value || ""}
+                      placeholder="Tên người đại diện"
+                      disabled={isReadonly}
+                      status={fieldState.error ? "error" : undefined}
+                    />
+                  </Form.Item>
+                )}
+              />
+            </Col>
+            <Col xs={24} sm={12} md={6}>
+              <Controller
                 name="supplierRepresentativePhone"
                 control={control}
                 render={({ field, fieldState }) => (
@@ -782,6 +811,9 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
                 )}
               />
             </Col>
+          </Row>
+
+          <Row gutter={24}>
             <Col xs={24} sm={12} md={6}>
               <Form.Item label="VAT (%)">
                 {isCustomVat ? (
@@ -808,9 +840,6 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
                 )}
               </Form.Item>
             </Col>
-          </Row>
-
-          <Row gutter={24}>
             <Col xs={24} sm={12} md={6}>
               <Form.Item label="Ngày cấp chứng từ">
                 <Controller
