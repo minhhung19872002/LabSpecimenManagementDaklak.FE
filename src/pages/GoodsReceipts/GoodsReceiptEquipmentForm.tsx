@@ -66,7 +66,6 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
   const [lineItems, setLineItems] = useState<EquipmentLineItem[]>([]);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
-  const [isCustomVat, setIsCustomVat] = useState(false);
   const [importing, setImporting] = useState(false);
   const [previewCode, setPreviewCode] = useState<string>("");
 
@@ -90,7 +89,6 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
     handleSubmit,
     reset,
     setValue,
-    getValues,
     watch,
     formState: { },
   } = useForm<EquipmentReceiptFormData>({
@@ -172,9 +170,6 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
             }))
           );
 
-          const vatValues = receiptData.items.map((i) => i.vatPercent);
-          const allSameVat = vatValues.length > 0 && vatValues.every((v) => v === vatValues[0]);
-          setIsCustomVat(!allSameVat);
         } else {
           // Auto-fill purchaser from current user for new receipts
           const userInfo = authService.getUserInfo();
@@ -253,10 +248,6 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
   };
 
   const handleLineChange = useCallback((key: string, field: keyof EquipmentLineItem, value: any) => {
-    if (field === "vatPercent") {
-      setIsCustomVat(true);
-    }
-
     setLineItems((prev) =>
       prev.map((item) => {
         if (item.key !== key) return item;
@@ -298,21 +289,7 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
     }
   }, [suppliers, setValue]);
 
-  const handleHeaderVatChange = (value: number | null) => {
-    const vat = value || 0;
-    setValue("vatPercent", vat);
-    setLineItems((prev) => prev.map((item) => recalculateLine({ ...item, vatPercent: vat })));
-  };
-
-  const handleResetUniformVat = () => {
-    setIsCustomVat(false);
-    const currentVat = getValues("vatPercent") || 8;
-    setLineItems((prev) => prev.map((item) => recalculateLine({ ...item, vatPercent: currentVat })));
-  };
-
   const totalBeforeVat = lineItems.reduce((sum, item) => sum + item.amountBeforeVat, 0);
-  const totalVat = lineItems.reduce((sum, item) => sum + item.vatAmount, 0);
-  const totalAfterVat = totalBeforeVat + totalVat;
 
   const manufacturerOptions = manufacturers.map((m) => ({
     value: m.name,
@@ -611,7 +588,7 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
       },
     },
     {
-      title: "Thành tiền chưa VAT",
+      title: "Đơn giá dự kiến",
       key: "unitPrice",
       width: 180,
       render: (_: any, record: EquipmentLineItem) =>
@@ -627,31 +604,6 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
             addonAfter="VNĐ"
           />
         ),
-    },
-    {
-      title: "VAT",
-      key: "vatPercent",
-      width: 75,
-      align: "center" as const,
-      render: (_: any, record: EquipmentLineItem) =>
-        isReadonly ? `${record.vatPercent}%` : (
-          <InputNumber
-            value={record.vatPercent}
-            min={0}
-            max={100}
-            onChange={(v) => handleLineChange(record.key, "vatPercent", v || 0)}
-            style={{ width: "100%" }}
-            size="small"
-            suffix="%"
-          />
-        ),
-    },
-    {
-      title: "Thành tiền sau VAT",
-      key: "amountAfterVat",
-      width: 160,
-      align: "right" as const,
-      render: (_: any, record: EquipmentLineItem) => `${formatCurrency(record.amountAfterVat)} VNĐ`,
     },
     ...actionColumn,
   ];
@@ -815,78 +767,6 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
 
           <Row gutter={24}>
             <Col xs={24} sm={12} md={6}>
-              <Form.Item label="VAT (%)">
-                {isCustomVat ? (
-                  <Space.Compact style={{ width: "100%" }}>
-                    <Input value="Tùy chọn theo thiết bị" disabled style={{ flex: 1 }} />
-                    {!isReadonly && (
-                      <Button onClick={handleResetUniformVat}>Đặt lại</Button>
-                    )}
-                  </Space.Compact>
-                ) : (
-                  <Controller
-                    name="vatPercent"
-                    control={control}
-                    render={({ field }) => (
-                      <InputNumber
-                        {...field}
-                        onChange={(v) => handleHeaderVatChange(v as number)}
-                        style={{ width: "100%" }}
-                        min={0} max={100} suffix="%"
-                        disabled={isReadonly}
-                      />
-                    )}
-                  />
-                )}
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={6}>
-              <Form.Item label="Ngày cấp chứng từ">
-                <Controller
-                  name="documentDate"
-                  control={control}
-                  render={({ field }) => (
-                    <DatePicker
-                      style={{ width: "100%" }}
-                      format="DD/MM/YYYY"
-                      value={field.value ? dayjs(field.value) : null}
-                      onChange={(date) => field.onChange(date?.format("YYYY-MM-DD") || "")}
-                      disabled={isReadonly}
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={6}>
-              <Controller
-                name="documentExpiryDate"
-                control={control}
-                render={({ field, fieldState }) => {
-                  const documentDate = getValues("documentDate");
-                  return (
-                    <Form.Item
-                      label="Ngày hết hạn chứng từ"
-                      validateStatus={fieldState.error ? "error" : undefined}
-                      help={fieldState.error?.message}
-                    >
-                      <DatePicker
-                        style={{ width: "100%" }}
-                        format="DD/MM/YYYY"
-                        value={field.value ? dayjs(field.value) : null}
-                        onChange={(date) => field.onChange(date?.format("YYYY-MM-DD") || "")}
-                        disabled={isReadonly}
-                        status={fieldState.error ? "error" : undefined}
-                        disabledDate={(current) => {
-                          if (!documentDate) return false;
-                          return current && current.isBefore(dayjs(documentDate), "day");
-                        }}
-                      />
-                    </Form.Item>
-                  );
-                }}
-              />
-            </Col>
-            <Col xs={24} sm={12} md={6}>
               <Form.Item label="Ngày cần hàng dự kiến">
                 <Controller
                   name="expectedDeliveryDate"
@@ -904,10 +784,7 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
                 />
               </Form.Item>
             </Col>
-          </Row>
-
-          <Row gutter={24}>
-            <Col xs={24} sm={24} md={24}>
+            <Col xs={24} sm={12} md={18}>
               <Form.Item label="Ghi chú">
                 <Controller
                   name="notes"
@@ -967,22 +844,7 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
 
           <Row justify="end" style={{ padding: "12px 0" }}>
             <Col>
-              <Space size={24}>
-                <span>
-                  Tổng chưa VAT:{" "}
-                  <strong>{formatCurrency(totalBeforeVat)} VNĐ</strong>
-                </span>
-                <span>
-                  Tổng thuế VAT:{" "}
-                  <strong>{formatCurrency(totalVat)} VNĐ</strong>
-                </span>
-                <span>
-                  Tổng tiền:{" "}
-                  <strong style={{ color: "#1677ff", fontSize: 16 }}>
-                    {formatCurrency(totalAfterVat)} VNĐ
-                  </strong>
-                </span>
-              </Space>
+              <span>Tổng dự toán: <strong style={{ color: "#1677ff", fontSize: 16 }}>{formatCurrency(totalBeforeVat)} VNĐ</strong></span>
             </Col>
           </Row>
         </div>

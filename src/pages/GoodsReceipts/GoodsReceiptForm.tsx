@@ -91,7 +91,6 @@ const GoodsReceiptForm: React.FC = () => {
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [productTypeFilter, setProductTypeFilter] = useState<string>("all");
-  const [isCustomVat, setIsCustomVat] = useState(false);
   const [manufacturers, setManufacturers] = useState<ManufacturerDto[]>([]);
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
   const [newManufacturerInput, setNewManufacturerInput] = useState("");
@@ -116,7 +115,6 @@ const GoodsReceiptForm: React.FC = () => {
     handleSubmit,
     reset,
     setValue,
-    getValues,
     watch,
     formState: {},
   } = useForm<GoodsReceiptFormData>({
@@ -233,9 +231,6 @@ const GoodsReceiptForm: React.FC = () => {
             })
           );
 
-          const vatValues = receiptData.items.map(i => i.vatPercent);
-          const allSameVat = vatValues.length > 0 && vatValues.every(v => v === vatValues[0]);
-          setIsCustomVat(!allSameVat);
         } else {
           // Auto-fill purchaser from current user for new receipts
           const userInfo = authService.getUserInfo();
@@ -354,10 +349,6 @@ const GoodsReceiptForm: React.FC = () => {
   };
 
   const handleLineChange = (key: string, field: keyof LineItem, value: any) => {
-    if (field === "vatPercent") {
-      setIsCustomVat(true);
-    }
-
     setLineItems((prev) =>
       prev.map((item) => {
         if (item.key !== key) return item;
@@ -383,18 +374,6 @@ const GoodsReceiptForm: React.FC = () => {
         return recalculateLine(updated);
       })
     );
-  };
-
-  const handleHeaderVatChange = (value: number | null) => {
-    const vat = value || 0;
-    setValue("vatPercent", vat);
-    setLineItems(prev => prev.map(item => recalculateLine({ ...item, vatPercent: vat })));
-  };
-
-  const handleResetUniformVat = () => {
-    setIsCustomVat(false);
-    const currentVat = getValues("vatPercent") || 8;
-    setLineItems(prev => prev.map(item => recalculateLine({ ...item, vatPercent: currentVat })));
   };
 
   const handleSupplierChange = useCallback(async (supplierId: string | null) => {
@@ -424,8 +403,6 @@ const GoodsReceiptForm: React.FC = () => {
   }, [suppliers, setValue]);
 
   const totalBeforeVat = lineItems.reduce((sum, item) => sum + item.amountBeforeVat, 0);
-  const totalVat = lineItems.reduce((sum, item) => sum + item.vatAmount, 0);
-  const totalAfterVat = totalBeforeVat + totalVat;
 
   const filteredProductOptions = products
     .filter((p) => productTypeFilter === "all" || p.productType === Number(productTypeFilter))
@@ -789,7 +766,7 @@ const GoodsReceiptForm: React.FC = () => {
       },
     },
     {
-      title: "Giá nhập",
+      title: "Đơn giá dự kiến",
       key: "unitPrice",
       width: 160,
       render: (_: any, record: LineItem) =>
@@ -807,35 +784,11 @@ const GoodsReceiptForm: React.FC = () => {
         ),
     },
     {
-      title: "Thành tiền chưa VAT",
+      title: "Thành tiền dự kiến",
       key: "amountBeforeVat",
       width: 150,
       align: "right" as const,
       render: (_: any, record: LineItem) => `${formatCurrency(record.amountBeforeVat)} VNĐ`,
-    },
-    {
-      title: "VAT",
-      key: "vatPercent",
-      width: 65,
-      align: "center" as const,
-      render: (_: any, record: LineItem) =>
-        isReadonly ? `${record.vatPercent}%` : (
-          <InputNumber
-            value={record.vatPercent}
-            min={0}
-            max={100}
-            onChange={(v) => handleLineChange(record.key, "vatPercent", v || 0)}
-            style={{ width: "100%" }}
-            size="small"
-          />
-        ),
-    },
-    {
-      title: "Thành tiền sau VAT",
-      key: "amountAfterVat",
-      width: 150,
-      align: "right" as const,
-      render: (_: any, record: LineItem) => `${formatCurrency(record.amountAfterVat)} VNĐ`,
     },
     ...actionColumn,
   ];
@@ -999,84 +952,6 @@ const GoodsReceiptForm: React.FC = () => {
 
           <Row gutter={24}>
             <Col xs={24} sm={12} md={6}>
-              <Form.Item label="VAT (%)">
-                {isCustomVat ? (
-                  <Space.Compact style={{ width: "100%" }}>
-                    <Input
-                      value="Tùy chọn theo sản phẩm"
-                      disabled
-                      style={{ flex: 1 }}
-                    />
-                    {!isReadonly && (
-                      <Button onClick={handleResetUniformVat}>
-                        Đặt lại
-                      </Button>
-                    )}
-                  </Space.Compact>
-                ) : (
-                  <Controller
-                    name="vatPercent"
-                    control={control}
-                    render={({ field }) => (
-                      <InputNumber
-                        {...field}
-                        onChange={(v) => handleHeaderVatChange(v as number)}
-                        style={{ width: "100%" }}
-                        min={0} max={100} suffix="%"
-                        disabled={isReadonly}
-                      />
-                    )}
-                  />
-                )}
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={6}>
-              <Form.Item label="Ngày cấp chứng từ">
-                <Controller
-                  name="documentDate"
-                  control={control}
-                  render={({ field }) => (
-                    <DatePicker
-                      style={{ width: "100%" }}
-                      format="DD/MM/YYYY"
-                      value={field.value ? dayjs(field.value) : null}
-                      onChange={(date) => field.onChange(date?.format("YYYY-MM-DD") || "")}
-                      disabled={isReadonly}
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={6}>
-              <Controller
-                name="documentExpiryDate"
-                control={control}
-                render={({ field, fieldState }) => {
-                  const documentDate = getValues("documentDate");
-                  return (
-                    <Form.Item
-                      label="Ngày hết hạn chứng từ"
-                      validateStatus={fieldState.error ? "error" : undefined}
-                      help={fieldState.error?.message}
-                    >
-                      <DatePicker
-                        style={{ width: "100%" }}
-                        format="DD/MM/YYYY"
-                        value={field.value ? dayjs(field.value) : null}
-                        onChange={(date) => field.onChange(date?.format("YYYY-MM-DD") || "")}
-                        disabled={isReadonly}
-                        status={fieldState.error ? "error" : undefined}
-                        disabledDate={(current) => {
-                          if (!documentDate) return false;
-                          return current && current.isBefore(dayjs(documentDate), "day");
-                        }}
-                      />
-                    </Form.Item>
-                  );
-                }}
-              />
-            </Col>
-            <Col xs={24} sm={12} md={6}>
               <Form.Item label="Ngày cần hàng dự kiến">
                 <Controller
                   name="expectedDeliveryDate"
@@ -1094,10 +969,7 @@ const GoodsReceiptForm: React.FC = () => {
                 />
               </Form.Item>
             </Col>
-          </Row>
-
-          <Row gutter={24}>
-            <Col xs={24} sm={24} md={24}>
+            <Col xs={24} sm={12} md={18}>
               <Form.Item label="Ghi chú">
                 <Controller
                   name="notes"
@@ -1162,11 +1034,7 @@ const GoodsReceiptForm: React.FC = () => {
 
           <Row justify="end" style={{ padding: "12px 0" }}>
             <Col>
-              <Space size={24}>
-                <span>Tổng chưa VAT: <strong>{formatCurrency(totalBeforeVat)} VNĐ</strong></span>
-                <span>Tổng thuế VAT: <strong>{formatCurrency(totalVat)} VNĐ</strong></span>
-                <span>Tổng tiền: <strong style={{ color: "#1677ff", fontSize: 16 }}>{formatCurrency(totalAfterVat)} VNĐ</strong></span>
-              </Space>
+              <span>Tổng dự toán: <strong style={{ color: "#1677ff", fontSize: 16 }}>{formatCurrency(totalBeforeVat)} VNĐ</strong></span>
             </Col>
           </Row>
         </div>

@@ -8,7 +8,6 @@ import {
   Table,
   Tag,
   Spin,
-  Divider,
   Modal,
   Input,
   Steps,
@@ -265,34 +264,19 @@ const GoodsReceiptDetail: React.FC = () => {
       render: (_: any, r: GoodsReceiptItemDto) => r.warehouseName || "-",
     },
     {
-      title: "Giá nhập",
+      title: "Đơn giá dự kiến",
       key: "unitPrice",
       width: 130,
       align: "right" as const,
       render: (_: any, r: GoodsReceiptItemDto) => formatCurrency(r.unitPrice),
     },
     {
-      title: "Thành tiền chưa VAT",
+      title: "Thành tiền dự kiến",
       key: "amountBeforeVat",
       width: 150,
       align: "right" as const,
       render: (_: any, r: GoodsReceiptItemDto) =>
         formatCurrency(r.amountBeforeVat),
-    },
-    {
-      title: "VAT %",
-      key: "vatPercent",
-      width: 80,
-      align: "center" as const,
-      render: (_: any, r: GoodsReceiptItemDto) => `${r.vatPercent}%`,
-    },
-    {
-      title: "Thành tiền sau VAT",
-      key: "amountAfterVat",
-      width: 150,
-      align: "right" as const,
-      render: (_: any, r: GoodsReceiptItemDto) =>
-        formatCurrency(r.amountAfterVat),
     },
   ];
 
@@ -339,27 +323,12 @@ const GoodsReceiptDetail: React.FC = () => {
       render: (v: string) => v || "-",
     },
     {
-      title: "Thành tiền chưa VAT",
+      title: "Đơn giá dự kiến",
       key: "amountBeforeVat",
       width: 150,
       align: "right" as const,
       render: (_: any, r: GoodsReceiptItemDto) =>
         formatCurrency(r.amountBeforeVat),
-    },
-    {
-      title: "VAT %",
-      key: "vatPercent",
-      width: 80,
-      align: "center" as const,
-      render: (_: any, r: GoodsReceiptItemDto) => `${r.vatPercent}%`,
-    },
-    {
-      title: "Thành tiền sau VAT",
-      key: "amountAfterVat",
-      width: 150,
-      align: "right" as const,
-      render: (_: any, r: GoodsReceiptItemDto) =>
-        formatCurrency(r.amountAfterVat),
     },
   ];
 
@@ -604,29 +573,6 @@ const GoodsReceiptDetail: React.FC = () => {
                 />
               </Col>
               <Col xs={24} sm={12}>
-                <DetailItem label="VAT" value={`${receipt.vatPercent}%`} />
-              </Col>
-              <Col xs={24} sm={12}>
-                <DetailItem
-                  label="Ngày cấp chứng từ"
-                  value={
-                    receipt.documentDate
-                      ? dayjs(receipt.documentDate).format("DD/MM/YYYY")
-                      : undefined
-                  }
-                />
-              </Col>
-              <Col xs={24} sm={12}>
-                <DetailItem
-                  label="Ngày hết hạn chứng từ"
-                  value={
-                    receipt.documentExpiryDate
-                      ? dayjs(receipt.documentExpiryDate).format("DD/MM/YYYY")
-                      : undefined
-                  }
-                />
-              </Col>
-              <Col xs={24} sm={12}>
                 <DetailItem
                   label="Ngày cần hàng dự kiến"
                   value={
@@ -728,20 +674,9 @@ const GoodsReceiptDetail: React.FC = () => {
           >
             <div className="payment-summary">
               <div className="payment-summary-row">
-                <span>Tổng chưa VAT:</span>
-                <strong>
-                  {formatCurrency(receipt.totalAmountBeforeVat)} VNĐ
-                </strong>
-              </div>
-              <div className="payment-summary-row">
-                <span>Tổng thuế VAT:</span>
-                <strong>{formatCurrency(receipt.totalVatAmount)} VNĐ</strong>
-              </div>
-              <Divider style={{ margin: "8px 0" }} />
-              <div className="payment-summary-row">
-                <span>Tổng tiền:</span>
+                <span>Tổng dự toán:</span>
                 <strong style={{ color: "#1677ff", fontSize: 16 }}>
-                  {formatCurrency(receipt.totalAmountAfterVat)} VNĐ
+                  {formatCurrency(receipt.totalAmountBeforeVat)} VNĐ
                 </strong>
               </div>
               <div className="payment-summary-row">
