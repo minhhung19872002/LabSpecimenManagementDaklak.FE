@@ -561,28 +561,6 @@ const PrintModal: React.FC<PrintModalProps> = ({
 
       setLoading(true);
       try {
-        // Header fields the backend derives from the TestRequest + lab tasks
-        // (ngày nhận mẫu, ngày hẹn trả KQ, thời gian thử nghiệm).
-        const extras = await buildMixedHeaderExtras(
-          taskContext?.testRequestId,
-          selectedLeaves,
-        );
-        // Phụ trách PTN: scope to the labs of the SELECTED indicators (matches
-        // online) via the lab -> manager map; fall back to task-level names.
-        const labManagerById = taskContext?.labManagerNameById || {};
-        const scopedOfficers = Array.from(
-          new Set(
-            selectedLeaves
-              .map((l) => labManagerById[l.laboratoryId || ""])
-              .filter((n): n is string => !!n),
-          ),
-        );
-        const officerInCharge =
-          scopedOfficers.join(", ") ||
-          extras.OfficerInCharge ||
-          taskContext?.technicalManagerNames ||
-          "";
-
         // Phó Giám đốc ký: selected vice-president name (Surname + Name), matching
         // the backend's GetVicePresidentFullName.
         const selectedVp = vicePresidents.find(
@@ -593,9 +571,33 @@ const PrintModal: React.FC<PrintModalProps> = ({
             selectedVp.userName
           : "";
 
-        let gen;
+        // Phụ trách PTN scoped to a set of leaves' labs (matches online).
+        const labManagerById = taskContext?.labManagerNameById || {};
+        const officerFor = (
+          leaves: QualityManagementIndicatorDto[],
+          fallback?: string,
+        ): string => {
+          const names = Array.from(
+            new Set(
+              leaves
+                .map((l) => labManagerById[l.laboratoryId || ""])
+                .filter((n): n is string => !!n),
+            ),
+          );
+          return (
+            names.join(", ") || fallback || taskContext?.technicalManagerNames || ""
+          );
+        };
+
+        const files: { blob: Blob; fileName: string }[] = [];
+        let genError: string | undefined;
+
         if (mode === "mixed") {
-          // BM02: include parent indicators so parent+child grouping matches online.
+          // BM02: one document, parents included so parent+child grouping matches online.
+          const extras = await buildMixedHeaderExtras(
+            taskContext?.testRequestId,
+            selectedLeaves,
+          );
           const mixedParentIds = new Set(
             selectedLeaves
               .filter((ind) => ind.parentIndicatorId)
@@ -604,7 +606,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
           const mixedParents = approvedIndicatorsWithParents.filter(
             (ind) => !ind.parentIndicatorId && mixedParentIds.has(ind.indicatorId),
           );
-          gen = await generateMixedResultFormOffline(
+          const g = await generateMixedResultFormOffline(
             {
               ContractNumber: taskContext?.contractNumber || "",
               CustomerName: taskContext?.customerName || "",
@@ -612,46 +614,78 @@ const PrintModal: React.FC<PrintModalProps> = ({
               DateOfReceiving: extras.DateOfReceiving,
               DateOfIssue: extras.DateOfIssue,
               TimeOfTesting: extras.TimeOfTesting,
-              OfficerInCharge: officerInCharge,
+              OfficerInCharge: officerFor(selectedLeaves, extras.OfficerInCharge),
               VicePresident: vicePresidentName,
             },
             mapIndicators(selectedLeaves),
             mapIndicators(mixedParents),
           );
+          if (g.success && g.blob && g.fileName)
+            files.push({ blob: g.blob, fileName: g.fileName });
+          else genError = g.error;
         } else {
-          // BM01: include parent indicators so parent+child grouping works.
-          const parentIndicatorIds = new Set(
-            selectedLeaves
-              .filter((ind) => ind.parentIndicatorId)
-              .map((ind) => ind.parentIndicatorId!),
-          );
-          const parents = approvedIndicatorsWithParents.filter(
-            (ind) => !ind.parentIndicatorId && parentIndicatorIds.has(ind.indicatorId),
-          );
-          const firstLeaf = selectedLeaves[0];
-          gen = await generateResultFormOffline(
-            {
-              ContractNo: taskContext?.contractNumber || "",
-              Customer: taskContext?.customerName || "",
-              SampleCode: firstLeaf?.sampleCode || "",
-              NameOfSample: firstLeaf?.sampleName || "",
-              Note: note || "",
-              DateOfReceiving: extras.DateOfReceiving,
-              DateOfIssue: extras.DateOfIssue,
-              TimeOfTesting: extras.TimeOfTesting,
-              OfficerInCharge: officerInCharge,
-              VicePresident: vicePresidentName,
-            },
-            mapIndicators([...parents, ...selectedLeaves]),
-          );
+          // BM01: one file PER SAMPLE, like online printMultiSingleResult.
+          const bySample = new Map<string, QualityManagementIndicatorDto[]>();
+          for (const leaf of selectedLeaves) {
+            const key = leaf.sampleId || leaf.sampleCode || "";
+            const arr = bySample.get(key) || [];
+            arr.push(leaf);
+            bySample.set(key, arr);
+          }
+          for (const sampleLeaves of bySample.values()) {
+            const firstLeaf = sampleLeaves[0];
+            const sampleKey = firstLeaf.sampleId || firstLeaf.sampleCode;
+            const parentIds = new Set(
+              sampleLeaves
+                .filter((i) => i.parentIndicatorId)
+                .map((i) => i.parentIndicatorId!),
+            );
+            const parents = approvedIndicatorsWithParents.filter(
+              (i) =>
+                !i.parentIndicatorId &&
+                parentIds.has(i.indicatorId) &&
+                (i.sampleId || i.sampleCode) === sampleKey,
+            );
+            const extras = await buildMixedHeaderExtras(
+              taskContext?.testRequestId,
+              sampleLeaves,
+            );
+            const g = await generateResultFormOffline(
+              {
+                ContractNo: taskContext?.contractNumber || "",
+                Customer: taskContext?.customerName || "",
+                SampleCode: firstLeaf?.sampleCode || "",
+                NameOfSample: firstLeaf?.sampleName || "",
+                Note: note || "",
+                DateOfReceiving: extras.DateOfReceiving,
+                DateOfIssue: extras.DateOfIssue,
+                TimeOfTesting: extras.TimeOfTesting,
+                OfficerInCharge: officerFor(sampleLeaves, extras.OfficerInCharge),
+                VicePresident: vicePresidentName,
+              },
+              mapIndicators([...parents, ...sampleLeaves]),
+            );
+            if (g.success && g.blob && g.fileName)
+              files.push({ blob: g.blob, fileName: g.fileName });
+            else genError = g.error;
+          }
         }
 
-        if (!gen.success || !gen.blob || !gen.fileName) {
-          message.error(gen.error || "Không thể tạo phiếu kết quả offline.");
+        if (files.length === 0) {
+          message.error(genError || "Không thể tạo phiếu kết quả offline.");
           return;
         }
-        downloadDocument(gen.blob, gen.fileName);
-        message.success("Đã tạo phiếu kết quả offline. File đã được tải về.");
+        // Download sequentially with a small gap so the browser doesn't drop
+        // rapid successive downloads.
+        for (let i = 0; i < files.length; i++) {
+          downloadDocument(files[i].blob, files[i].fileName);
+          if (i < files.length - 1) {
+            await new Promise((r) => setTimeout(r, 350));
+          }
+        }
+        message.success(
+          `Đã tạo ${files.length} phiếu kết quả offline. File đã được tải về.`,
+        );
         setSelectedIndicatorIds([]);
         setNote("");
         onCancel();

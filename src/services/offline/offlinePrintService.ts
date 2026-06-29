@@ -179,9 +179,8 @@ export async function generateResultFormOffline(
     const rowCount = Array.isArray(data.rows) ? data.rows.length : 0;
     const blob = await applyResultTableBorders(filled, rowCount);
 
-    const fileName = `KetQua_${header.SampleCode || 'OFFLINE'}_${dayjs().format(
-      'YYYYMMDDHHmmss'
-    )}.docx`;
+    const safeCode = (header.SampleCode || 'OFFLINE').replace(/[\\/:*?"<>|]/g, '-');
+    const fileName = `KetQua_${safeCode}_${dayjs().format('YYYYMMDDHHmmss')}.docx`;
     return { success: true, fileName, blob };
   } catch (error) {
     console.error('[OfflinePrint] Error generating result form:', error);
