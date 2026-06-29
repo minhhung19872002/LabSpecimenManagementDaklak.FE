@@ -20,7 +20,11 @@ import {
 } from '../../types/testRequest';
 import { numberToVietnameseWords } from '../../utils/numberToWords';
 import { fillDocxTemplate } from './docxFill';
-import { applyMixedTableVerticalMerge, buildMergeFlags } from './mixedTableVMerge';
+import {
+  applyMixedTableVerticalMerge,
+  applyResultTableBorders,
+  buildMergeFlags,
+} from './mixedTableVMerge';
 import { prepareResultTemplate, prepareMixedResultTemplate } from './resultTemplatePrep';
 import { prepareRequestTemplate } from './requestTemplatePrep';
 import { buildRequestSampleRows } from './requestFormBuilder';
@@ -166,7 +170,12 @@ export async function generateResultFormOffline(
     // Canonical template -> loop + raw-xml template, then fill.
     const prepared = await prepareResultTemplate(template.blob);
     const data = buildResultFormData(header, indicators);
-    const { blob } = await fillDocxTemplate(prepared.blob, data);
+    // "Ngày/Date" on the BM01 form is the print date (backend uses now).
+    if (!data.CurrentDate) data.CurrentDate = dayjs().format('DD/MM/YYYY');
+    const { blob: filled } = await fillDocxTemplate(prepared.blob, data);
+    // Match the online dashed gray data-cell borders.
+    const rowCount = Array.isArray(data.rows) ? data.rows.length : 0;
+    const blob = await applyResultTableBorders(filled, rowCount);
 
     const fileName = `KetQua_${header.SampleCode || 'OFFLINE'}_${dayjs().format(
       'YYYYMMDDHHmmss'
