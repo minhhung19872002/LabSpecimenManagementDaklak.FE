@@ -42,6 +42,13 @@ import { PATH_ROUTES } from "../../constants";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
 import { ROLES } from "../../constants/roles";
+import { isServerReachable } from "../../services/offline/connectivity";
+import {
+  cacheQualityTask,
+  getCachedQualityTask,
+  cacheTestRequestForOffline,
+} from "../../services/offline/offlineResultService";
+import { testRequestService } from "../../services/testRequestService";
 
 import "../../styles/ListCard.css";
 import "./QualityManagement.css";
@@ -109,8 +116,28 @@ const QualityManagementDetail: React.FC = () => {
     if (!id) return;
     setLoading(true);
     try {
-      const result = await qualityManagementService.getFullDetail(id);
-      setTask(result);
+      if (await isServerReachable()) {
+        const result = await qualityManagementService.getFullDetail(id);
+        setTask(result);
+        // Cache-on-view for offline use (best-effort).
+        cacheQualityTask(id, result).catch(() => {});
+        // Also cache the TestRequest so offline result forms can fill header
+        // dates (ngày nhận mẫu / hẹn trả KQ / thời gian thử nghiệm).
+        if (result.testRequestId) {
+          testRequestService
+            .get(result.testRequestId)
+            .then((tr) => cacheTestRequestForOffline(result.testRequestId, tr))
+            .catch(() => {});
+        }
+      } else {
+        const cached = await getCachedQualityTask(id);
+        if (cached) {
+          setTask(cached as QualityManagementTaskDto);
+          message.warning("Đang xem dữ liệu đã lưu (offline). Kết nối mạng để cập nhật.");
+        } else {
+          message.error("Không có kết nối mạng và chưa có dữ liệu lưu cho phiếu này.");
+        }
+      }
     } catch (error) {
       console.error("Error loading task:", error);
       message.error("Không thể tải dữ liệu");
@@ -664,6 +691,23 @@ const QualityManagementDetail: React.FC = () => {
         mode={printMode}
         taskId={id!}
         indicators={qualityIndicators}
+        taskContext={{
+          contractNumber: task?.contractNumber,
+          customerName: task?.customerName,
+          testRequestId: task?.testRequestId,
+          technicalManagerNames: task?.technicalManagerNames,
+          // lab -> QLKT map from allIndicators (per-indicator name is populated
+          // there); used to scope OfficerInCharge to the selected labs.
+          labManagerNameById: (task?.allIndicators || []).reduce(
+            (acc, ind) => {
+              if (ind.laboratoryId && ind.technicalManagerName) {
+                acc[ind.laboratoryId] = ind.technicalManagerName;
+              }
+              return acc;
+            },
+            {} as Record<string, string>,
+          ),
+        }}
         onCancel={() => setPrintModalVisible(false)}
         onSuccess={loadData}
       />

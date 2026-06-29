@@ -5,7 +5,12 @@ import { Icon } from "@iconify/react";
 const VERSION_CHECK_INTERVAL = 5 * 60 * 1000; // 5 phút
 const VERSION_URL = "/version.json";
 
-let currentBuildHash: string | null = null;
+// Hash của bundle ĐANG CHẠY, nhúng lúc build (xem vite.config.ts `define`).
+// Chỉ dùng ở bản production; dev dùng version.json tĩnh nên bỏ qua để khỏi bung popup nhầm.
+const RUNNING_BUILD_HASH =
+  import.meta.env.PROD && typeof __BUILD_HASH__ !== "undefined"
+    ? __BUILD_HASH__
+    : null;
 
 /**
  * Component kiểm tra phiên bản mới của ứng dụng.
@@ -56,6 +61,9 @@ const AppUpdateNotification: React.FC = () => {
   }, []);
 
   const checkForUpdate = useCallback(async () => {
+    // Chỉ kiểm tra ở bản build (dev không có version.json khớp với bundle).
+    if (!RUNNING_BUILD_HASH) return;
+
     try {
       const res = await fetch(`${VERSION_URL}?t=${Date.now()}`, {
         cache: "no-store",
@@ -67,14 +75,10 @@ const AppUpdateNotification: React.FC = () => {
 
       if (!remoteBuildHash) return;
 
-      // Lần đầu: lưu hash hiện tại
-      if (currentBuildHash === null) {
-        currentBuildHash = remoteBuildHash;
-        return;
-      }
-
-      // So sánh: nếu khác → có version mới
-      if (currentBuildHash !== remoteBuildHash) {
+      // So hash bundle ĐANG CHẠY với hash trên server. Khác nhau = đã deploy bản mới.
+      // (Trước đây lấy hash server lần đầu làm "hiện tại" nên luôn bằng nhau → không bao
+      //  giờ hiện popup; nay đối chiếu với hash nhúng trong bundle nên phát hiện đúng.)
+      if (remoteBuildHash !== RUNNING_BUILD_HASH) {
         showUpdateModal();
       }
     } catch {

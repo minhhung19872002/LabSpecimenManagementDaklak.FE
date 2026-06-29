@@ -7,10 +7,9 @@
  * inject rich text (sub/sup). Done at runtime from the canonical template so it
  * never drifts from what the backend ships.
  *
- * KNOWN LIMITATION: the per-row "Test method" cell ({{TestMethod}}) is split
- * across many runs in the source template and its exact in-row position needs
- * structural analysis + comparison against real BE output before wiring. Until
- * then the method column renders blank offline (tracked as a follow-up).
+ * The {{TestMethod}} cell is split-run in the template (Word spell-checker).
+ * Docxtemplater merges split runs automatically, so providing TestMethod: string
+ * in each row populates the column without template surgery.
  */
 
 import PizZip from 'pizzip';
@@ -60,10 +59,55 @@ export async function prepareResultTemplate(
     throw new Error('Template không chứa {{Result}}/{{Unit}} — không xác định được cuối dòng bảng');
   }
 
-  // Wrap the data row in a loop and switch Parameters to raw-xml.
-  xml = xml.replace(ROW_FIRST, `{{#rows}}${ROW_FIRST}`);
+  // Wrap the data row in a loop and switch Parameters to raw-xml. BM05 prefixes
+  // the first cell with a {{TestTable}} marker — drop it as we open the loop.
+  if (xml.includes('{{TestTable}} {{No}}')) {
+    xml = xml.replace('{{TestTable}} {{No}}', `{{#rows}}${ROW_FIRST}`);
+  } else {
+    xml = xml.replace(ROW_FIRST, `{{#rows}}${ROW_FIRST}`);
+  }
   xml = xml.replace(tailTag, `${tailTag}{{/rows}}`);
   xml = xml.replace('{{Parameters}}', '{{@ParametersXml}}');
+
+  zip.file(DOC_XML, xml);
+  const blob = zip.generate({
+    type: 'blob',
+    mimeType:
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    compression: 'DEFLATE',
+  });
+  return { blob };
+}
+
+/**
+ * Transform the BM02 mixed-result template for docxtemplater.
+ *
+ * In BM02, {{TestTable}} and {{No}} share one <w:t>, and {{SubTable}} and
+ * {{Parameter}} share another. We strip the marker tokens and wrap the row
+ * in a docxtemplater loop, switching the Parameter cell to raw-xml so
+ * chemical formulas render with sub/superscript.
+ */
+export async function prepareMixedResultTemplate(
+  template: Blob | ArrayBuffer
+): Promise<PreparedTemplate> {
+  const buffer = template instanceof Blob ? await template.arrayBuffer() : template;
+  const zip = new PizZip(buffer);
+  const file = zip.file(DOC_XML);
+  if (!file) {
+    throw new Error('Template BM02 không hợp lệ: thiếu word/document.xml');
+  }
+  let xml = file.asText();
+
+  if (!xml.includes('{{TestTable}}')) {
+    throw new Error('Template BM02 không hợp lệ: thiếu marker {{TestTable}}');
+  }
+
+  // Loop open: drop {{TestTable}} marker, open before {{No}}.
+  xml = xml.replace('{{TestTable}} {{No}}', '{{#rows}}{{No}}');
+  // Parameter cell: drop {{SubTable}} marker, switch to raw-xml.
+  xml = xml.replace('{{SubTable}} {{Parameter}}', '{{@ParameterXml}}');
+  // Loop close: after {{Result}} (last column).
+  xml = xml.replace('{{Result}}', '{{Result}}{{/rows}}');
 
   zip.file(DOC_XML, xml);
   const blob = zip.generate({

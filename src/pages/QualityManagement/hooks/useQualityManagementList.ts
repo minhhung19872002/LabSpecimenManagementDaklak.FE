@@ -11,6 +11,32 @@ import {
   QualityTaskType,
 } from "../../../types/qualityManagement";
 import { getQualityManagementColumns } from "../components/columns";
+import { isServerReachable } from "../../../services/offline/connectivity";
+import { cacheQualityTask } from "../../../services/offline/offlineResultService";
+
+/**
+ * Background, best-effort: while online, cache the full detail (with
+ * indicators + results) for each task currently listed so the detail page
+ * and "In KQ" work offline without opening each phiếu first.
+ * Throttled to 3 concurrent requests; all failures ignored.
+ */
+async function prefetchFullDetailForOffline(items: QualityManagementTaskDto[]): Promise<void> {
+  if (!(await isServerReachable())) return;
+  const queue = [...items.filter((t) => t?.id)];
+  const worker = async () => {
+    for (;;) {
+      const task = queue.shift();
+      if (!task) break;
+      try {
+        const full = await qualityManagementService.getFullDetail(task.id);
+        await cacheQualityTask(full.id, full);
+      } catch {
+        /* best-effort */
+      }
+    }
+  };
+  await Promise.all([worker(), worker(), worker()]);
+}
 
 export const useQualityManagementList = () => {
   const navigate = useNavigate();
@@ -73,6 +99,8 @@ export const useQualityManagementList = () => {
       setTasks(tasksResult.items);
       setPagination((prev) => ({ ...prev, total: tasksResult.totalCount }));
       setStatistics(statsResult);
+      // Background prefetch full detail for each task so offline mode works.
+      void prefetchFullDetailForOffline(tasksResult.items);
     } catch (error) {
       console.error("Error loading data:", error);
       message.error("Không thể tải dữ liệu");

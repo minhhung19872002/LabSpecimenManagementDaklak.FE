@@ -20,20 +20,31 @@ import {
 } from '../../types/testRequest';
 import { numberToVietnameseWords } from '../../utils/numberToWords';
 import { fillDocxTemplate } from './docxFill';
-import { prepareResultTemplate } from './resultTemplatePrep';
+import {
+  applyMixedTableVerticalMerge,
+  applyResultTableBorders,
+  buildMergeFlags,
+} from './mixedTableVMerge';
+import { prepareResultTemplate, prepareMixedResultTemplate } from './resultTemplatePrep';
 import { prepareRequestTemplate } from './requestTemplatePrep';
 import { buildRequestSampleRows } from './requestFormBuilder';
 import {
   buildResultFormData,
+  buildMixedResultTableRows,
   ResultFormHeader,
   ResultIndicatorInput,
 } from './resultFormBuilder';
 import dayjs from 'dayjs';
+import { authService } from '../authService';
 
 // Template name constants
 export const TEMPLATE_NAMES = {
   TEST_REQUEST_FORM: 'test-request-form', // BM01-QT07 - Phieu yeu cau
   RESULT_FORM_BM01: 'result-form-bm01', // BM01-QT13 - Phieu tra ket qua (single sample)
+  RESULT_FORM_BM02: 'result-form-bm02', // BM02-QT13 - Phieu tra ket qua tong hop (mixed)
+  RESULT_FORM_BM03: 'result-form-bm03', // BM03-QT13 - Phieu tra KQ (cot phu de trong)
+  RESULT_FORM_BM04: 'result-form-bm04', // BM04-QT13 - Phieu tra KQ + cot Gioi han
+  RESULT_FORM_BM05: 'result-form-bm05', // BM05-QT13 - Phieu tra KQ QLNN (form nha nuoc)
 } as const;
 
 // Backend template file name (must match what's downloaded during prefetch)
@@ -42,6 +53,23 @@ export const TEMPLATE_FILE_NAMES = {
     'BM01-QT07- XXYCĐNHĐ_3.2 phieu yeu cau.template.docx',
   [TEMPLATE_NAMES.RESULT_FORM_BM01]:
     'Form trả KQ - BM01-QT13-BCKQ_3.2.template.docx',
+  [TEMPLATE_NAMES.RESULT_FORM_BM02]:
+    'Form trả KQ tổng hợp - BM02-QT13-BCKQ_3.2.template.docx',
+  [TEMPLATE_NAMES.RESULT_FORM_BM03]:
+    'Form trả kq BM03-QT13-BCKQ_3.2.template.docx',
+  [TEMPLATE_NAMES.RESULT_FORM_BM04]:
+    'Form thêm cột GH BM04-QT13-BCKQ_3.2.template.docx',
+  [TEMPLATE_NAMES.RESULT_FORM_BM05]:
+    'form mẫu QLNN BM05-QT13-BCKQ_3.2.template.docx',
+};
+
+/** Single result-form templates supported offline. */
+export type SingleResultTemplate = 'BM01' | 'BM03' | 'BM04' | 'BM05';
+const SINGLE_TEMPLATE_CACHE_KEY: Record<SingleResultTemplate, string> = {
+  BM01: TEMPLATE_NAMES.RESULT_FORM_BM01,
+  BM03: TEMPLATE_NAMES.RESULT_FORM_BM03,
+  BM04: TEMPLATE_NAMES.RESULT_FORM_BM04,
+  BM05: TEMPLATE_NAMES.RESULT_FORM_BM05,
 };
 
 // Checkbox characters matching backend TemplateConstants
@@ -145,10 +173,13 @@ export async function generateTestRequestFormOffline(
  */
 export async function generateResultFormOffline(
   header: ResultFormHeader,
-  indicators: ResultIndicatorInput[]
+  indicators: ResultIndicatorInput[],
+  templateKey: SingleResultTemplate = 'BM01'
 ): Promise<OfflinePrintResult> {
   try {
-    const template = await getCachedDocumentTemplate(TEMPLATE_NAMES.RESULT_FORM_BM01);
+    const template = await getCachedDocumentTemplate(
+      SINGLE_TEMPLATE_CACHE_KEY[templateKey]
+    );
     if (!template) {
       return {
         success: false,
@@ -160,11 +191,30 @@ export async function generateResultFormOffline(
     // Canonical template -> loop + raw-xml template, then fill.
     const prepared = await prepareResultTemplate(template.blob);
     const data = buildResultFormData(header, indicators);
-    const { blob } = await fillDocxTemplate(prepared.blob, data);
+    // "Ngày/Date" on the BM01 form is the print date (backend uses now).
+    if (!data.CurrentDate) data.CurrentDate = dayjs().format('DD/MM/YYYY');
+    // Header page label "P{n}/{m} - {{NumberOfSample}}" = the sample code.
+    data.NumberOfSample = header.SampleCode ?? '';
 
-    const fileName = `KetQua_${header.SampleCode || 'OFFLINE'}_${dayjs().format(
-      'YYYYMMDDHHmmss'
-    )}.docx`;
+    if (templateKey === 'BM05') {
+      // QLNN form extras (placeholders ignored by other templates).
+      const now = dayjs();
+      data.Date = now.format('DD');
+      data.Month = now.format('MM');
+      data.Year = now.format('YYYY');
+      data.TimeToSaveSample = '';
+      data.AttachFile = '';
+      data.Conclude = '';
+      // {{Standard}} column header = standard text (fallback like the backend).
+      data.Standard = header.Standard || 'So với QCVN…/ TCVN…./ QĐ…';
+    }
+    const { blob: filled } = await fillDocxTemplate(prepared.blob, data);
+    // Match the online dashed gray data-cell borders.
+    const rowCount = Array.isArray(data.rows) ? data.rows.length : 0;
+    const blob = await applyResultTableBorders(filled, rowCount);
+
+    const safeCode = (header.SampleCode || 'OFFLINE').replace(/[\\/:*?"<>|]/g, '-');
+    const fileName = `KetQua_${safeCode}_${dayjs().format('YYYYMMDDHHmmss')}.docx`;
     return { success: true, fileName, blob };
   } catch (error) {
     console.error('[OfflinePrint] Error generating result form:', error);
@@ -172,6 +222,90 @@ export async function generateResultFormOffline(
       success: false,
       error:
         error instanceof Error ? error.message : 'Lỗi không xác định khi tạo phiếu kết quả.',
+    };
+  }
+}
+
+/** Scalar fields for the BM02 mixed result form header. */
+export interface MixedResultFormHeader {
+  ContractNumber?: string;
+  CustomerName?: string;
+  FullAddress?: string;
+  Note?: string;
+  /** Ngày nhận mẫu (= ContractDate). */
+  DateOfReceiving?: string;
+  /** Ngày hẹn trả kết quả (= ResultDeliveryDate). */
+  DateOfIssue?: string;
+  /** Thời gian thử nghiệm (Min testDate - Max resultSentDate). */
+  TimeOfTesting?: string;
+  /** Phụ trách phòng thử nghiệm (QLKT). */
+  OfficerInCharge?: string;
+  /** Phó Giám đốc ký (tên đã chọn). */
+  VicePresident?: string;
+}
+
+/**
+ * Generate a BM02 mixed result form offline (grouped by sample, parent+children
+ * collapsed into one row — matching the online backend layout).
+ * Vertical merge is not applied — sample info repeats per row (offline limitation).
+ *
+ * `indicators` are the selected leaf/standalone indicators; `parents` carries the
+ * parent indicators (name only) so parent/child grouping can render the header.
+ */
+export async function generateMixedResultFormOffline(
+  header: MixedResultFormHeader,
+  indicators: ResultIndicatorInput[],
+  parents: ResultIndicatorInput[] = []
+): Promise<OfflinePrintResult> {
+  try {
+    const template = await getCachedDocumentTemplate(TEMPLATE_NAMES.RESULT_FORM_BM02);
+    if (!template) {
+      return {
+        success: false,
+        error:
+          'Template phiếu kết quả hỗn hợp chưa được tải về. Vui lòng kết nối mạng để tải template.',
+      };
+    }
+
+    const prepared = await prepareMixedResultTemplate(template.blob);
+    const parentLookup = new Map(parents.map((p) => [p.indicatorId, p]));
+    const rows = buildMixedResultTableRows(indicators, parentLookup);
+    const now = dayjs();
+
+    const data: Record<string, unknown> = {
+      ContractNumber: header.ContractNumber ?? '',
+      CustomerName: header.CustomerName ?? '',
+      FullAddress: header.FullAddress ?? '',
+      Note: header.Note ?? '',
+      Date: now.format('DD'),
+      Month: now.format('MM'),
+      Year: now.format('YYYY'),
+      // Ngày nhận mẫu / Ngày hẹn trả KQ — from the TestRequest, not "today".
+      DateOfReceiving: header.DateOfReceiving ?? '',
+      DateOfIssue: header.DateOfIssue ?? '',
+      CurrentDate: now.format('DD/MM/YYYY'),
+      TimeOfTesting: header.TimeOfTesting ?? '',
+      OfficerInCharge: header.OfficerInCharge ?? '',
+      VicePresident: header.VicePresident ?? '',
+      CodeOfNumber: '',
+      rows,
+    };
+
+    const { blob: filled } = await fillDocxTemplate(prepared.blob, data);
+    // Vertically merge the sample columns across each sample's indicator rows so
+    // the layout matches the online (backend) output instead of repeating the
+    // sample info on every row.
+    const blob = await applyMixedTableVerticalMerge(filled, buildMergeFlags(rows));
+    const fileName = `KetQua_HonHop_${header.ContractNumber || 'OFFLINE'}_${now.format('YYYYMMDDHHmmss')}.docx`;
+    return { success: true, fileName, blob };
+  } catch (error) {
+    console.error('[OfflinePrint] Error generating mixed result form:', error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Lỗi không xác định khi tạo phiếu kết quả hỗn hợp.',
     };
   }
 }
@@ -268,7 +402,7 @@ function buildTestRequestPlaceholders(
 
   // Mẫu nhiệm vụ hiển thị 0
   const actualTotalCost = data.sampleTypeTask ? 0 : data.totalCost || 0;
-  const totalAmount = actualTotalCost.toLocaleString('vi-VN');
+  const totalAmount = actualTotalCost.toLocaleString('en-US');
   const totalByText = data.sampleTypeTask
     ? 'Không đồng'
     : data.totalCostInWords || numberToVietnameseWords(data.totalCost || 0);
@@ -303,8 +437,8 @@ function buildTestRequestPlaceholders(
     TotalByText: totalByText,
     ReceiptNumberTTDV: receiptNumber,
     CurrentDate: currentDate,
-    // The "Số HĐ / Ngày" textbox in the canonical template uses this tag.
-    FormPrintedDate: currentDate,
+    // "Ngày:" in the textbox: prefer contractDate, then requestDate (≈ first-print date), fallback to today.
+    FormPrintedDate: formatDate(data.contractDate) || formatDate(data.requestDate) || currentDate,
 
     // Checkbox - Test Method
     CB_TestMethod_Center: checkbox(data.methodWestHighlandInstitute),
@@ -354,6 +488,11 @@ function buildTestRequestPlaceholders(
 
     // Người gửi mẫu và người nhận mẫu
     SampleSender: data.contactPerson || '',
-    SampleReceiver: '', // Will be empty in offline mode (no current user context)
+    // ABP stores fullName as "Name Surname" (English order); Vietnamese display = "Surname Name".
+    SampleReceiver: (() => {
+      const u = authService.getUserInfo();
+      if (!u) return '';
+      return [u.surname, u.name].filter(Boolean).join(' ').trim() || u.fullName || '';
+    })(),
   };
 }

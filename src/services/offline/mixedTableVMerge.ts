@@ -1,0 +1,285 @@
+/**
+ * Apply vertical-merge to the sample columns of the offline BM02 mixed-result
+ * table, so the output matches the online (backend) layout.
+ *
+ * docxtemplater clones one identical row per indicator, so the sample columns
+ * (Stt / Tên mẫu / Mã số mẫu / Lượng mẫu gửi / Tình trạng mẫu) repeat on every
+ * row. The backend instead vertically merges those columns across a sample's
+ * indicator rows. This helper post-processes the rendered .docx and reproduces
+ * that merge: the first row of each multi-row sample gets
+ * `<w:vMerge w:val="restart"/>` (keeps its text, vertically centered) and the
+ * following rows get `<w:vMerge/>` with their sample cells emptied.
+ *
+ * Mirrors backend `ResultFormAppService.ApplyVerticalMerge` (columns 0,1,2 plus
+ * the Quantity/SampleDescription columns = the first 5 sample columns), and like
+ * the backend only merges samples that span more than one indicator row.
+ */
+
+import PizZip from 'pizzip';
+
+const DOC_XML = 'word/document.xml';
+const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+const DOCX_MIME =
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+/** Per-data-row merge instruction, in the same order as the rendered rows. */
+export type VMergeMode = 'restart' | 'continue' | 'none';
+
+/**
+ * The result table is the one with the most columns — header/info and signature
+ * tables have fewer. Works for both BM01 (5 cols) and BM02 (9 cols).
+ */
+function findResultTable(doc: Document): Element | null {
+  const tables = Array.from(doc.getElementsByTagNameNS(W, 'tbl'));
+  let target: Element | null = null;
+  let best = -1;
+  for (const tbl of tables) {
+    let maxCells = 0;
+    for (const r of children(tbl, 'tr')) maxCells = Math.max(maxCells, children(r, 'tc').length);
+    if (maxCells > best) {
+      best = maxCells;
+      target = tbl;
+    }
+  }
+  return target;
+}
+
+/** Direct child elements with the given local name in the w: namespace. */
+function children(el: Element, localName: string): Element[] {
+  const out: Element[] = [];
+  for (let i = 0; i < el.childNodes.length; i++) {
+    const ch = el.childNodes[i];
+    if (
+      ch.nodeType === 1 &&
+      (ch as Element).localName === localName &&
+      (ch as Element).namespaceURI === W
+    ) {
+      out.push(ch as Element);
+    }
+  }
+  return out;
+}
+
+function getOrCreateTcPr(doc: Document, cell: Element): Element {
+  let tcPr = children(cell, 'tcPr')[0];
+  if (!tcPr) {
+    tcPr = doc.createElementNS(W, 'w:tcPr');
+    cell.insertBefore(tcPr, cell.firstChild);
+  }
+  return tcPr;
+}
+
+/** Insert <w:vMerge .../> in schema order (after tcW, before tcBorders). */
+function applyVMerge(doc: Document, cell: Element, mode: 'restart' | 'continue'): void {
+  const tcPr = getOrCreateTcPr(doc, cell);
+  children(tcPr, 'vMerge').forEach((v) => tcPr.removeChild(v));
+
+  const vm = doc.createElementNS(W, 'w:vMerge');
+  if (mode === 'restart') vm.setAttributeNS(W, 'w:val', 'restart');
+
+  const tcW = children(tcPr, 'tcW')[0];
+  if (tcW) {
+    tcPr.insertBefore(vm, tcW.nextSibling);
+  } else {
+    tcPr.insertBefore(vm, tcPr.firstChild);
+  }
+
+  // Vertically center the merged (restart) cell, like the backend does.
+  if (mode === 'restart') {
+    children(tcPr, 'vAlign').forEach((v) => tcPr.removeChild(v));
+    const vAlign = doc.createElementNS(W, 'w:vAlign');
+    vAlign.setAttributeNS(W, 'w:val', 'center');
+    tcPr.appendChild(vAlign);
+  }
+}
+
+/** Strip runs from a continuation cell so the merged cell shows no text. */
+function clearCellText(cell: Element): void {
+  children(cell, 'p').forEach((p) => {
+    children(p, 'r').forEach((r) => p.removeChild(r));
+  });
+}
+
+/**
+ * Force the dashed gray border style the backend applies to every data cell
+ * (top: solid black; left/bottom/right: dashSmallGap, size 8, color 7F7F7F),
+ * so the offline table matches the online layout instead of the template's
+ * default solid borders.
+ */
+function setDataCellBorders(doc: Document, cell: Element): void {
+  const tcPr = getOrCreateTcPr(doc, cell);
+
+  let borders = children(tcPr, 'tcBorders')[0];
+  if (borders) {
+    while (borders.firstChild) borders.removeChild(borders.firstChild);
+  } else {
+    borders = doc.createElementNS(W, 'w:tcBorders');
+    const vMerge = children(tcPr, 'vMerge')[0];
+    const tcW = children(tcPr, 'tcW')[0];
+    const ref = (vMerge && vMerge.nextSibling) || (tcW && tcW.nextSibling) || null;
+    if (ref) tcPr.insertBefore(borders, ref);
+    else tcPr.appendChild(borders);
+  }
+
+  const edge = (name: string, val: string, sz: string, color: string): Element => {
+    const b = doc.createElementNS(W, 'w:' + name);
+    b.setAttributeNS(W, 'w:val', val);
+    b.setAttributeNS(W, 'w:sz', sz);
+    b.setAttributeNS(W, 'w:space', '0');
+    b.setAttributeNS(W, 'w:color', color);
+    return b;
+  };
+  borders.appendChild(edge('top', 'single', '4', '000000'));
+  borders.appendChild(edge('left', 'dashSmallGap', '8', '7F7F7F'));
+  borders.appendChild(edge('bottom', 'dashSmallGap', '8', '7F7F7F'));
+  borders.appendChild(edge('right', 'dashSmallGap', '8', '7F7F7F'));
+}
+
+/**
+ * Return a new Blob with vertical-merge applied to the sample columns of the
+ * result table. `mergeFlags` must list one entry per rendered data row, in
+ * order. On any failure the original blob is returned unchanged (offline print
+ * must still succeed without the cosmetic merge).
+ */
+export async function applyMixedTableVerticalMerge(
+  docxBlob: Blob,
+  mergeFlags: VMergeMode[],
+  sampleColumnCount = 5
+): Promise<Blob> {
+  if (!mergeFlags.length) return docxBlob;
+
+  try {
+    const buffer = await docxBlob.arrayBuffer();
+    const zip = new PizZip(buffer);
+    const xml = zip.file(DOC_XML)?.asText();
+    if (!xml) return docxBlob;
+
+    const doc = new DOMParser().parseFromString(xml, 'application/xml');
+    if (doc.getElementsByTagName('parsererror').length > 0) return docxBlob;
+
+    const target = findResultTable(doc);
+    if (!target) return docxBlob;
+
+    const rows = children(target, 'tr');
+    const n = mergeFlags.length;
+    if (rows.length < n) return docxBlob;
+
+    // Rendered data rows are the last n rows (header rows precede them).
+    const dataRows = rows.slice(rows.length - n);
+
+    dataRows.forEach((row, i) => {
+      const mode = mergeFlags[i];
+      const cells = children(row, 'tc');
+      cells.forEach((cell, c) => {
+        // Dashed gray borders on every data cell (match the online layout).
+        setDataCellBorders(doc, cell);
+        // Vertical merge on the sample columns of multi-row samples.
+        if (mode !== 'none' && c < sampleColumnCount) {
+          applyVMerge(doc, cell, mode);
+          if (mode === 'continue') clearCellText(cell);
+        }
+      });
+    });
+
+    let out = new XMLSerializer().serializeToString(doc);
+    if (!out.startsWith('<?xml')) {
+      const decl = xml.match(/^<\?xml[^>]*\?>/);
+      out =
+        (decl ? decl[0] : '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>') +
+        '\r\n' +
+        out;
+    }
+
+    zip.file(DOC_XML, out);
+    return zip.generate({
+      type: 'blob',
+      mimeType: DOCX_MIME,
+      compression: 'DEFLATE',
+    });
+  } catch (err) {
+    console.error('[OfflinePrint] vertical-merge post-process failed:', err);
+    return docxBlob;
+  }
+}
+
+/**
+ * Apply the dashed gray data-cell borders to the result table without any
+ * vertical merge — used by the BM01 single result form (no sample columns).
+ * `dataRowCount` is the number of rendered indicator rows (header rows precede).
+ */
+export async function applyResultTableBorders(
+  docxBlob: Blob,
+  dataRowCount: number
+): Promise<Blob> {
+  if (dataRowCount <= 0) return docxBlob;
+
+  try {
+    const buffer = await docxBlob.arrayBuffer();
+    const zip = new PizZip(buffer);
+    const xml = zip.file(DOC_XML)?.asText();
+    if (!xml) return docxBlob;
+
+    const doc = new DOMParser().parseFromString(xml, 'application/xml');
+    if (doc.getElementsByTagName('parsererror').length > 0) return docxBlob;
+
+    const target = findResultTable(doc);
+    if (!target) return docxBlob;
+
+    const rows = children(target, 'tr');
+    if (rows.length < dataRowCount) return docxBlob;
+    const dataRows = rows.slice(rows.length - dataRowCount);
+
+    dataRows.forEach((row) => {
+      children(row, 'tc').forEach((cell) => setDataCellBorders(doc, cell));
+    });
+
+    let out = new XMLSerializer().serializeToString(doc);
+    if (!out.startsWith('<?xml')) {
+      const decl = xml.match(/^<\?xml[^>]*\?>/);
+      out =
+        (decl ? decl[0] : '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>') +
+        '\r\n' +
+        out;
+    }
+
+    zip.file(DOC_XML, out);
+    return zip.generate({
+      type: 'blob',
+      mimeType: DOCX_MIME,
+      compression: 'DEFLATE',
+    });
+  } catch (err) {
+    console.error('[OfflinePrint] border post-process failed:', err);
+    return docxBlob;
+  }
+}
+
+/**
+ * Derive per-row merge flags from the built rows. Rows are grouped by sample
+ * (No + CodeOfNumber, already contiguous). A sample with a single row gets
+ * 'none' (no merge, matching the backend); multi-row samples get one 'restart'
+ * then 'continue'.
+ */
+export function buildMergeFlags(
+  rows: Array<{ No: string; CodeOfNumber: string }>
+): VMergeMode[] {
+  const key = (r: { No: string; CodeOfNumber: string }) => `${r.No} ${r.CodeOfNumber}`;
+  const counts = new Map<string, number>();
+  rows.forEach((r) => counts.set(key(r), (counts.get(key(r)) ?? 0) + 1));
+
+  const flags: VMergeMode[] = [];
+  let prev = '';
+  for (const r of rows) {
+    const k = key(r);
+    const single = (counts.get(k) ?? 0) <= 1;
+    if (single) {
+      flags.push('none');
+    } else if (k !== prev) {
+      flags.push('restart');
+    } else {
+      flags.push('continue');
+    }
+    prev = k;
+  }
+  return flags;
+}
