@@ -20,6 +20,7 @@ import {
 } from '../../types/testRequest';
 import { numberToVietnameseWords } from '../../utils/numberToWords';
 import { fillDocxTemplate } from './docxFill';
+import { applyMixedTableVerticalMerge, buildMergeFlags } from './mixedTableVMerge';
 import { prepareResultTemplate, prepareMixedResultTemplate } from './resultTemplatePrep';
 import { prepareRequestTemplate } from './requestTemplatePrep';
 import { buildRequestSampleRows } from './requestFormBuilder';
@@ -234,7 +235,11 @@ export async function generateMixedResultFormOffline(
       rows,
     };
 
-    const { blob } = await fillDocxTemplate(prepared.blob, data);
+    const { blob: filled } = await fillDocxTemplate(prepared.blob, data);
+    // Vertically merge the sample columns across each sample's indicator rows so
+    // the layout matches the online (backend) output instead of repeating the
+    // sample info on every row.
+    const blob = await applyMixedTableVerticalMerge(filled, buildMergeFlags(rows));
     const fileName = `KetQua_HonHop_${header.ContractNumber || 'OFFLINE'}_${now.format('YYYYMMDDHHmmss')}.docx`;
     return { success: true, fileName, blob };
   } catch (error) {
