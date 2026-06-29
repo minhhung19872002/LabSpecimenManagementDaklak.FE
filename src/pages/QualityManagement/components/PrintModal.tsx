@@ -31,7 +31,10 @@ import {
 import { API_BASE_URL } from "../../../services/api";
 import userService, { UserLookupDto } from "../../../services/userService";
 import { isServerReachable } from "../../../services/offline/connectivity";
-import { mapIndicators } from "../../../services/offline/offlineResultService";
+import {
+  mapIndicators,
+  buildMixedHeaderExtras,
+} from "../../../services/offline/offlineResultService";
 import {
   generateResultFormOffline,
   generateMixedResultFormOffline,
@@ -560,11 +563,21 @@ const PrintModal: React.FC<PrintModalProps> = ({
           const mixedParents = approvedIndicatorsWithParents.filter(
             (ind) => !ind.parentIndicatorId && mixedParentIds.has(ind.indicatorId),
           );
+          // Header fields the backend derives from the TestRequest + lab tasks
+          // (ngày nhận mẫu, ngày hẹn trả KQ, thời gian thử nghiệm, phụ trách PTN).
+          const extras = await buildMixedHeaderExtras(
+            taskContext?.testRequestId,
+            selectedLeaves,
+          );
           gen = await generateMixedResultFormOffline(
             {
               ContractNumber: taskContext?.contractNumber || "",
               CustomerName: taskContext?.customerName || "",
               Note: note || "",
+              DateOfReceiving: extras.DateOfReceiving,
+              DateOfIssue: extras.DateOfIssue,
+              TimeOfTesting: extras.TimeOfTesting,
+              OfficerInCharge: extras.OfficerInCharge,
             },
             mapIndicators(selectedLeaves),
             mapIndicators(mixedParents),

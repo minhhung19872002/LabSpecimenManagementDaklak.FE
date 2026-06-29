@@ -10,9 +10,11 @@
  * is still produced by the backend from DB data when online.
  */
 
+import dayjs from 'dayjs';
 import { generateResultFormOffline } from './offlinePrintService';
 import { saveResultDraft, cacheEntity, getCachedEntity } from './db';
 import { ResultFormHeader, ResultIndicatorInput } from './resultFormBuilder';
+import { TestRequestDto } from '../../types/testRequest';
 
 /**
  * Indicator shape (subset) shared by QualityManagementIndicatorDto /
@@ -48,6 +50,92 @@ export function mapIndicators(indicators: ResultIndicatorLike[]): ResultIndicato
     sampleCode: i.sampleCode,
     sampleName: i.sampleName,
   }));
+}
+
+// ===== Cache the TestRequest so offline result forms can fill header dates =====
+
+/** Cache a TestRequest (with samples) while online, for offline result forms. */
+export async function cacheTestRequestForOffline(
+  testRequestId: string,
+  data: unknown
+): Promise<void> {
+  if (!testRequestId) return;
+  await cacheEntity('TestRequest', testRequestId, data, false);
+}
+
+/** Header fields that the BM02 mixed form needs but aren't in the quality task. */
+export interface MixedHeaderExtras {
+  DateOfReceiving?: string;
+  DateOfIssue?: string;
+  TimeOfTesting?: string;
+  OfficerInCharge?: string;
+}
+
+/** Minimal indicator shape for computing the mixed-form header extras. */
+interface HeaderLeaf {
+  testRequestSampleIndicatorId?: string;
+  resultSentDate?: string;
+  technicalManagerName?: string;
+}
+
+const fmtDate = (d?: string): string => (d ? dayjs(d).format('DD/MM/YYYY') : '');
+
+/**
+ * Build the header fields that the backend derives from the TestRequest and lab
+ * tasks (Ngày nhận mẫu / Ngày hẹn trả KQ / Thời gian thử nghiệm / Phụ trách
+ * phòng thử nghiệm). Reads the cached TestRequest; returns blanks if it isn't
+ * cached. Mirrors the backend: TimeOfTesting = Min(testDate) - Max(resultSentDate).
+ */
+export async function buildMixedHeaderExtras(
+  testRequestId: string | undefined,
+  selectedLeaves: HeaderLeaf[]
+): Promise<MixedHeaderExtras> {
+  // OfficerInCharge comes from the selected indicators' lab technical manager.
+  const officers = Array.from(
+    new Set(
+      selectedLeaves
+        .map((l) => l.technicalManagerName?.trim())
+        .filter((n): n is string => !!n)
+    )
+  );
+  const extras: MixedHeaderExtras = { OfficerInCharge: officers.join(', ') };
+
+  if (!testRequestId) return extras;
+  const cached = await getCachedEntity('TestRequest', testRequestId);
+  const tr = cached?.data as TestRequestDto | undefined;
+  if (!tr) return extras;
+
+  extras.DateOfReceiving = fmtDate(tr.contractDate);
+  extras.DateOfIssue = fmtDate(tr.resultDeliveryDate);
+
+  // Map TestRequestSampleIndicator.id -> testDate (ngày thử nghiệm).
+  const testDateById = new Map<string, string>();
+  for (const sample of tr.samples ?? []) {
+    for (const ind of sample.indicators ?? []) {
+      if (ind.testDate) testDateById.set(ind.id, ind.testDate);
+    }
+  }
+
+  const testDates: string[] = [];
+  const submitDates: string[] = [];
+  for (const leaf of selectedLeaves) {
+    const td = leaf.testRequestSampleIndicatorId
+      ? testDateById.get(leaf.testRequestSampleIndicatorId)
+      : undefined;
+    if (td) testDates.push(td);
+    if (leaf.resultSentDate) submitDates.push(leaf.resultSentDate);
+  }
+
+  // ISO date strings compare lexicographically in chronological order.
+  const minTest = testDates.length ? testDates.reduce((a, b) => (a < b ? a : b)) : undefined;
+  const maxSubmit = submitDates.length ? submitDates.reduce((a, b) => (a > b ? a : b)) : undefined;
+  const start = fmtDate(minTest);
+  const end = fmtDate(maxSubmit);
+  if (start && end) extras.TimeOfTesting = `${start} - ${end}`;
+  else if (start) extras.TimeOfTesting = `${start} - ${start}`;
+  else if (end) extras.TimeOfTesting = `${end} - ${end}`;
+
+  return extras;
 }
 
 // ===== Cache-on-view: approved indicators keyed by testRequestId =====

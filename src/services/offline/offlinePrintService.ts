@@ -188,6 +188,14 @@ export interface MixedResultFormHeader {
   CustomerName?: string;
   FullAddress?: string;
   Note?: string;
+  /** Ngày nhận mẫu (= ContractDate). */
+  DateOfReceiving?: string;
+  /** Ngày hẹn trả kết quả (= ResultDeliveryDate). */
+  DateOfIssue?: string;
+  /** Thời gian thử nghiệm (Min testDate - Max resultSentDate). */
+  TimeOfTesting?: string;
+  /** Phụ trách phòng thử nghiệm (QLKT). */
+  OfficerInCharge?: string;
 }
 
 /**
@@ -226,10 +234,12 @@ export async function generateMixedResultFormOffline(
       Date: now.format('DD'),
       Month: now.format('MM'),
       Year: now.format('YYYY'),
-      DateOfIssue: now.format('DD/MM/YYYY'),
+      // Ngày nhận mẫu / Ngày hẹn trả KQ — from the TestRequest, not "today".
+      DateOfReceiving: header.DateOfReceiving ?? '',
+      DateOfIssue: header.DateOfIssue ?? '',
       CurrentDate: now.format('DD/MM/YYYY'),
-      TimeOfTesting: '',
-      OfficerInCharge: '',
+      TimeOfTesting: header.TimeOfTesting ?? '',
+      OfficerInCharge: header.OfficerInCharge ?? '',
       VicePresident: '',
       CodeOfNumber: '',
       rows,

@@ -43,7 +43,12 @@ import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
 import { ROLES } from "../../constants/roles";
 import { isServerReachable } from "../../services/offline/connectivity";
-import { cacheQualityTask, getCachedQualityTask } from "../../services/offline/offlineResultService";
+import {
+  cacheQualityTask,
+  getCachedQualityTask,
+  cacheTestRequestForOffline,
+} from "../../services/offline/offlineResultService";
+import { testRequestService } from "../../services/testRequestService";
 
 import "../../styles/ListCard.css";
 import "./QualityManagement.css";
@@ -116,6 +121,14 @@ const QualityManagementDetail: React.FC = () => {
         setTask(result);
         // Cache-on-view for offline use (best-effort).
         cacheQualityTask(id, result).catch(() => {});
+        // Also cache the TestRequest so offline result forms can fill header
+        // dates (ngày nhận mẫu / hẹn trả KQ / thời gian thử nghiệm).
+        if (result.testRequestId) {
+          testRequestService
+            .get(result.testRequestId)
+            .then((tr) => cacheTestRequestForOffline(result.testRequestId, tr))
+            .catch(() => {});
+        }
       } else {
         const cached = await getCachedQualityTask(id);
         if (cached) {
