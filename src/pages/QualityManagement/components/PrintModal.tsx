@@ -211,6 +211,9 @@ const PrintModal: React.FC<PrintModalProps> = ({
   const [note, setNote] = useState<string>("");
   const [templates, setTemplates] = useState<TemplateDto[]>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
+  // Offline: server templates can't load, and the offline path uses the cached
+  // BM01 template, so the template requirement must not block the In button.
+  const [isOffline, setIsOffline] = useState(false);
   const [generatedResults, setGeneratedResults] = useState<PrintResultItem[]>(
     [],
   );
@@ -362,6 +365,9 @@ const PrintModal: React.FC<PrintModalProps> = ({
     if (visible) {
       loadTemplates();
       loadVicePresidents();
+      isServerReachable()
+        .then((ok) => setIsOffline(!ok))
+        .catch(() => setIsOffline(true));
     }
   }, [visible]);
 
@@ -940,7 +946,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
             disabled={
               selectedIndicatorIds.length === 0 ||
               loadingTemplates ||
-              (mode === "single" && selectedTemplates.length === 0)
+              (mode === "single" && !isOffline && selectedTemplates.length === 0)
             }
           >
             In ({selectedIndicatorIds.length} chỉ tiêu)
