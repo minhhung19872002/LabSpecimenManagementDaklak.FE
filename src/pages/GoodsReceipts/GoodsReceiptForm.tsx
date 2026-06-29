@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import {
   Card, Form, Input, Select, DatePicker, InputNumber, Button, Space, Row, Col,
-  Table, message, Spin, Divider, Tag, Modal,
+  Table, message, Spin, Divider, Tag,
 } from "antd";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
@@ -104,9 +104,7 @@ const GoodsReceiptForm: React.FC = () => {
   // Inline creation modals
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [productModalLoading, setProductModalLoading] = useState(false);
-  const [importing, setImporting] = useState(false);
 
-  const canImport = authService.hasPermission(PERMISSIONS.GoodsReceipts.ImportToWarehouse);
   const canPay = authService.hasPermission(PERMISSIONS.GoodsReceipts.AddPayment);
 
   const isReadonly = receipt
@@ -506,21 +504,6 @@ const GoodsReceiptForm: React.FC = () => {
       setSaving(false);
     }
   });
-
-  const handleImportToWarehouse = async () => {
-    if (!id) return;
-    setImporting(true);
-    try {
-      await goodsReceiptService.importToWarehouse(id);
-      message.success("Đã nhập kho thành công");
-      const updated = await goodsReceiptService.get(id);
-      setReceipt(updated);
-    } catch (error: any) {
-      message.error(getApiErrorMessage(error, "Không thể nhập kho."));
-    } finally {
-      setImporting(false);
-    }
-  };
 
   const handlePaymentOk = async (data: PaymentFormData) => {
     if (!id) return;
@@ -1194,25 +1177,6 @@ const GoodsReceiptForm: React.FC = () => {
               Thanh toán
             </Button>
           )}
-          {isEdit && receipt && canImport && (receipt.orderStatus === GoodsReceiptOrderStatus.Ordering || receipt.orderStatus === GoodsReceiptOrderStatus.WaitingReceipt) && receipt.warehouseStatus === GoodsReceiptWarehouseStatus.NotImported && (
-            <Button
-              type="primary"
-              loading={importing}
-              onClick={() => {
-                Modal.confirm({
-                  title: "Xác nhận nhập kho",
-                  content: "Bạn có chắc chắn muốn nhập kho phiếu này? Sau khi nhập kho sẽ không thể chỉnh sửa.",
-                  okText: "Nhập kho",
-                  cancelText: "Hủy",
-                  centered: true,
-                  onOk: handleImportToWarehouse,
-                });
-              }}
-            >
-              Nhập kho
-            </Button>
-          )}
-
           {/* Imported state: disabled indicator */}
           {isEdit && receipt && receipt.warehouseStatus === GoodsReceiptWarehouseStatus.Imported && (
             <Button disabled>Đã nhập kho</Button>

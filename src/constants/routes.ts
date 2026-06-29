@@ -89,7 +89,11 @@ export const PATH_ROUTES = {
 
   stockAdjustments: '/stock-adjustments',
 
-  warehouseImports: '/warehouse-imports',
+  warehouseImports: {
+    index: '/warehouse-imports',
+    create: '/warehouse-imports/create',
+    edit: (id: string) => `/warehouse-imports/edit/${id}`,
+  },
 
   equipments: '/equipments',
 

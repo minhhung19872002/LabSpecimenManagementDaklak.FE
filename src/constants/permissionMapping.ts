@@ -169,6 +169,13 @@ export const PERMISSIONS = {
     Delete: `${P}.ApprovalProcesses.Delete`,
   },
 
+  // WarehouseImportReceipts (Phiếu nhập kho)
+  WarehouseImportReceipts: {
+    Default: `${P}.WarehouseImportReceipts`,
+    Create: `${P}.WarehouseImportReceipts.Create`,
+    Confirm: `${P}.WarehouseImportReceipts.Confirm`,
+  },
+
   // StockAdjustments (Điều chỉnh tồn kho)
   StockAdjustments: {
     Default: `${P}.StockAdjustments`,
@@ -393,6 +400,9 @@ export const ROUTE_PERMISSION_MAP: Record<string, string[]> = {
   // StockAdjustments
   '/stock-adjustments': [PERMISSIONS.StockAdjustments.Default],
 
+  // WarehouseImportReceipts
+  '/warehouse-imports': [PERMISSIONS.WarehouseImportReceipts.Default],
+
   // Equipments
   '/equipments': [PERMISSIONS.Equipments.Default],
 
@@ -539,6 +549,11 @@ export const ACTION_PERMISSION_MAP = {
     delete: PERMISSIONS.StockAdjustments.Delete,
     confirm: PERMISSIONS.StockAdjustments.Confirm,
   },
+  warehouseImportReceipts: {
+    view: PERMISSIONS.WarehouseImportReceipts.Default,
+    create: PERMISSIONS.WarehouseImportReceipts.Create,
+    confirm: PERMISSIONS.WarehouseImportReceipts.Confirm,
+  },
   equipments: {
     view: PERMISSIONS.Equipments.Default,
     create: PERMISSIONS.Equipments.Create,
@@ -594,6 +609,7 @@ export const MENU_PERMISSION_MAP = {
   goodsReceipts: [PERMISSIONS.GoodsReceipts.Default],
   approvalProcess: [PERMISSIONS.ApprovalProcesses.Default],
   stockAdjustments: [PERMISSIONS.StockAdjustments.Default],
+  warehouseImports: [PERMISSIONS.WarehouseImportReceipts.Default],
   equipments: [PERMISSIONS.Equipments.Default],
   subcontractors: [PERMISSIONS.Subcontractors.Default],
   masterData: [

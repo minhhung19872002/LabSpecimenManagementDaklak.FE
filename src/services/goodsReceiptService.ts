@@ -30,6 +30,7 @@ export enum GoodsReceiptOrderStatus {
   Ordering = 1,
   WaitingReceipt = 2,
   Rejected = 3,
+  Completed = 4,
 }
 
 export enum GoodsReceiptPaymentStatus {
@@ -70,6 +71,7 @@ export const OrderStatusLabels: Record<number, string> = {
   [GoodsReceiptOrderStatus.Ordering]: "Đang đặt hàng",
   [GoodsReceiptOrderStatus.WaitingReceipt]: "Chờ nhận & Nghiệm thu",
   [GoodsReceiptOrderStatus.Rejected]: "Từ chối",
+  [GoodsReceiptOrderStatus.Completed]: "Hoàn thành",
 };
 
 export const PaymentStatusLabels: Record<number, string> = {
@@ -88,6 +90,7 @@ export const OrderStatusColors: Record<number, string> = {
   [GoodsReceiptOrderStatus.Ordering]: "blue",
   [GoodsReceiptOrderStatus.WaitingReceipt]: "green",
   [GoodsReceiptOrderStatus.Rejected]: "red",
+  [GoodsReceiptOrderStatus.Completed]: "cyan",
 };
 
 export const PaymentStatusColors: Record<number, string> = {

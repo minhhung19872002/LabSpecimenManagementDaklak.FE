@@ -1,0 +1,7 @@
+.wir-row-checked > td {
+  background-color: #f6ffed !important;
+}
+
+.wir-row-defective > td {
+  background-color: #fff1f0 !important;
+}

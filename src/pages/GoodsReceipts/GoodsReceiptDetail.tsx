@@ -494,14 +494,17 @@ const GoodsReceiptDetail: React.FC = () => {
         remaining > 0 && (
           <Button onClick={() => setPaymentModalOpen(true)}>Thanh toán</Button>
         )}
-      {canImport && isApproved && !isImported && (
-        <Button
-          type="primary"
-          onClick={() => setWarehouseImportModalOpen(true)}
-        >
-          Nhập kho
-        </Button>
-      )}
+      {canImport &&
+        isApproved &&
+        !isImported &&
+        receipt.receiptType === GoodsReceiptType.Equipment && (
+          <Button
+            type="primary"
+            onClick={() => setWarehouseImportModalOpen(true)}
+          >
+            Nhập kho
+          </Button>
+        )}
       {isImported && (
         <Button onClick={() => setPrintBarcodeModalOpen(true)}>
           In mã vật tư

@@ -1198,6 +1198,13 @@ export const warehouseService = {
     }
     return (response.data as { items: WarehouseDto[] }).items;
   },
+  getRoot: async (): Promise<WarehouseDto[]> => {
+    const response = await api.get<{ items: WarehouseDto[] } | WarehouseDto[]>(`${WAREHOUSE_URL}/root`);
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+    return (response.data as { items: WarehouseDto[] }).items;
+  },
   getNextCode: async (): Promise<string> => {
     const response = await api.get<string>(`${WAREHOUSE_URL}/next-code`);
     return response.data;

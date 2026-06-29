@@ -498,7 +498,7 @@ const MainLayout: React.FC = () => {
           key: "warehouseImports",
           icon: <Icon name="box-arrow-in-down" />,
           label: menuLabel("Quản lý nhập kho"),
-          onClick: () => navigate(PATH_ROUTES.warehouseImports),
+          onClick: () => navigate(PATH_ROUTES.warehouseImports.index),
           roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
         },
       ],
