@@ -172,6 +172,8 @@ export async function generateResultFormOffline(
     const data = buildResultFormData(header, indicators);
     // "Ngày/Date" on the BM01 form is the print date (backend uses now).
     if (!data.CurrentDate) data.CurrentDate = dayjs().format('DD/MM/YYYY');
+    // Header page label "P{n}/{m} - {{NumberOfSample}}" = the sample code.
+    data.NumberOfSample = header.SampleCode ?? '';
     const { blob: filled } = await fillDocxTemplate(prepared.blob, data);
     // Match the online dashed gray data-cell borders.
     const rowCount = Array.isArray(data.rows) ? data.rows.length : 0;
