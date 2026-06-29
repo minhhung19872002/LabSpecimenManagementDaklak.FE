@@ -313,6 +313,15 @@ export interface ResultFormHeader {
   /** Phó Giám đốc ký (tên đã chọn). */
   VicePresident?: string;
   Note?: string;
+  // BM05-QLNN header fields (ignored by other templates).
+  /** Mô tả mẫu (= tình trạng mẫu). */
+  DescriptionOfSample?: string;
+  /** Ngày gửi mẫu (= ngày yêu cầu). */
+  DateOfSending?: string;
+  /** Nơi gửi mẫu (= tên khách hàng). */
+  PlaceToSendSample?: string;
+  /** Tiêu chuẩn so sánh (header cột cuối BM05). */
+  Standard?: string;
 }
 
 /**

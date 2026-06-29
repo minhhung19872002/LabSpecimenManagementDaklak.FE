@@ -44,6 +44,7 @@ export const TEMPLATE_NAMES = {
   RESULT_FORM_BM02: 'result-form-bm02', // BM02-QT13 - Phieu tra ket qua tong hop (mixed)
   RESULT_FORM_BM03: 'result-form-bm03', // BM03-QT13 - Phieu tra KQ (cot phu de trong)
   RESULT_FORM_BM04: 'result-form-bm04', // BM04-QT13 - Phieu tra KQ + cot Gioi han
+  RESULT_FORM_BM05: 'result-form-bm05', // BM05-QT13 - Phieu tra KQ QLNN (form nha nuoc)
 } as const;
 
 // Backend template file name (must match what's downloaded during prefetch)
@@ -58,14 +59,17 @@ export const TEMPLATE_FILE_NAMES = {
     'Form trả kq BM03-QT13-BCKQ_3.2.template.docx',
   [TEMPLATE_NAMES.RESULT_FORM_BM04]:
     'Form thêm cột GH BM04-QT13-BCKQ_3.2.template.docx',
+  [TEMPLATE_NAMES.RESULT_FORM_BM05]:
+    'form mẫu QLNN BM05-QT13-BCKQ_3.2.template.docx',
 };
 
 /** Single result-form templates supported offline. */
-export type SingleResultTemplate = 'BM01' | 'BM03' | 'BM04';
+export type SingleResultTemplate = 'BM01' | 'BM03' | 'BM04' | 'BM05';
 const SINGLE_TEMPLATE_CACHE_KEY: Record<SingleResultTemplate, string> = {
   BM01: TEMPLATE_NAMES.RESULT_FORM_BM01,
   BM03: TEMPLATE_NAMES.RESULT_FORM_BM03,
   BM04: TEMPLATE_NAMES.RESULT_FORM_BM04,
+  BM05: TEMPLATE_NAMES.RESULT_FORM_BM05,
 };
 
 // Checkbox characters matching backend TemplateConstants
@@ -191,6 +195,19 @@ export async function generateResultFormOffline(
     if (!data.CurrentDate) data.CurrentDate = dayjs().format('DD/MM/YYYY');
     // Header page label "P{n}/{m} - {{NumberOfSample}}" = the sample code.
     data.NumberOfSample = header.SampleCode ?? '';
+
+    if (templateKey === 'BM05') {
+      // QLNN form extras (placeholders ignored by other templates).
+      const now = dayjs();
+      data.Date = now.format('DD');
+      data.Month = now.format('MM');
+      data.Year = now.format('YYYY');
+      data.TimeToSaveSample = '';
+      data.AttachFile = '';
+      data.Conclude = '';
+      // {{Standard}} column header = standard text (fallback like the backend).
+      data.Standard = header.Standard || 'So với QCVN…/ TCVN…./ QĐ…';
+    }
     const { blob: filled } = await fillDocxTemplate(prepared.blob, data);
     // Match the online dashed gray data-cell borders.
     const rowCount = Array.isArray(data.rows) ? data.rows.length : 0;

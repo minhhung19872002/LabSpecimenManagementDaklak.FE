@@ -263,6 +263,7 @@ async function prefetchDocumentTemplates(): Promise<void> {
     TEMPLATE_NAMES.RESULT_FORM_BM02,
     TEMPLATE_NAMES.RESULT_FORM_BM03,
     TEMPLATE_NAMES.RESULT_FORM_BM04,
+    TEMPLATE_NAMES.RESULT_FORM_BM05,
   ] as const) {
     try {
       const fileName = TEMPLATE_FILE_NAMES[name];

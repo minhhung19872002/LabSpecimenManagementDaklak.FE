@@ -75,19 +75,26 @@ export async function cacheTestRequestForOffline(
   await cacheEntity('TestRequest', testRequestId, data, false);
 }
 
-/** Header fields that the BM02 mixed form needs but aren't in the quality task. */
+/** Header fields that the result forms need but aren't in the quality task. */
 export interface MixedHeaderExtras {
   DateOfReceiving?: string;
   DateOfIssue?: string;
   TimeOfTesting?: string;
   OfficerInCharge?: string;
+  // BM05-QLNN extras.
+  DateOfSending?: string;
+  PlaceToSendSample?: string;
+  DescriptionOfSample?: string;
+  Standard?: string;
 }
 
-/** Minimal indicator shape for computing the mixed-form header extras. */
+/** Minimal indicator shape for computing the result-form header extras. */
 interface HeaderLeaf {
   testRequestSampleIndicatorId?: string;
   resultSentDate?: string;
   technicalManagerName?: string;
+  sampleCode?: string;
+  standardName?: string;
 }
 
 const fmtDate = (d?: string): string => (d ? dayjs(d).format('DD/MM/YYYY') : '');
@@ -112,6 +119,16 @@ export async function buildMixedHeaderExtras(
   );
   const extras: MixedHeaderExtras = { OfficerInCharge: officers.join(', ') };
 
+  // BM05: standard text = distinct standard name(s) of the selected indicators.
+  const standards = Array.from(
+    new Set(
+      selectedLeaves
+        .map((l) => l.standardName?.trim())
+        .filter((s): s is string => !!s)
+    )
+  );
+  extras.Standard = standards.join('; ');
+
   if (!testRequestId) return extras;
   const cached = await getCachedEntity('TestRequest', testRequestId);
   const tr = cached?.data as TestRequestDto | undefined;
@@ -119,6 +136,14 @@ export async function buildMixedHeaderExtras(
 
   extras.DateOfReceiving = fmtDate(tr.contractDate);
   extras.DateOfIssue = fmtDate(tr.resultDeliveryDate);
+  // BM05-QLNN header fields.
+  extras.DateOfSending = fmtDate(tr.requestDate);
+  extras.PlaceToSendSample = tr.customerName ?? '';
+  const sampleCode = selectedLeaves.find((l) => l.sampleCode)?.sampleCode;
+  if (sampleCode) {
+    const sample = (tr.samples ?? []).find((s) => s.sampleCode === sampleCode);
+    extras.DescriptionOfSample = sample?.statusText ?? '';
+  }
 
   // Map TestRequestSampleIndicator.id -> testDate (ngày thử nghiệm).
   const testDateById = new Map<string, string>();

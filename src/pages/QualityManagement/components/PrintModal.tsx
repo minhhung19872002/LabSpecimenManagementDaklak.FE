@@ -592,7 +592,6 @@ const PrintModal: React.FC<PrintModalProps> = ({
 
         const files: { blob: Blob; fileName: string }[] = [];
         let genError: string | undefined;
-        let bm05Skipped = false;
 
         if (mode === "mixed") {
           // BM02: one document, parents included so parent+child grouping matches online.
@@ -635,10 +634,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
             bySample.set(key, arr);
           }
           // Map each selected report template name to a SingleResultTemplate key.
-          // BM05-QLNN is not supported offline yet.
-          const templateKeyOf = (
-            name: string,
-          ): SingleResultTemplate | "BM05" => {
+          const templateKeyOf = (name: string): SingleResultTemplate => {
             if (/BM05/i.test(name)) return "BM05";
             if (/BM04/i.test(name)) return "BM04";
             if (/BM03/i.test(name)) return "BM03";
@@ -676,15 +672,16 @@ const PrintModal: React.FC<PrintModalProps> = ({
               TimeOfTesting: extras.TimeOfTesting,
               OfficerInCharge: officerFor(sampleLeaves, extras.OfficerInCharge),
               VicePresident: vicePresidentName,
+              // BM05-QLNN extras (ignored by other templates).
+              DescriptionOfSample: extras.DescriptionOfSample,
+              DateOfSending: extras.DateOfSending,
+              PlaceToSendSample: extras.PlaceToSendSample,
+              Standard: extras.Standard,
             };
             const indicatorInputs = mapIndicators([...parents, ...sampleLeaves]);
             // One file per selected template (× this sample), like online.
             for (const tplName of templatesToUse) {
               const key = templateKeyOf(tplName);
-              if (key === "BM05") {
-                bm05Skipped = true;
-                continue;
-              }
               const g = await generateResultFormOffline(header, indicatorInputs, key);
               if (g.success && g.blob && g.fileName)
                 files.push({ blob: g.blob, fileName: g.fileName });
@@ -694,13 +691,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
         }
 
         if (files.length === 0) {
-          if (bm05Skipped) {
-            message.warning(
-              "Mẫu BM05-QLNN chưa hỗ trợ in offline. Vui lòng dùng mẫu BM01/BM03/BM04.",
-            );
-          } else {
-            message.error(genError || "Không thể tạo phiếu kết quả offline.");
-          }
+          message.error(genError || "Không thể tạo phiếu kết quả offline.");
           return;
         }
         // Download sequentially with a small gap so the browser doesn't drop
@@ -714,11 +705,6 @@ const PrintModal: React.FC<PrintModalProps> = ({
         message.success(
           `Đã tạo ${files.length} phiếu kết quả offline. File đã được tải về.`,
         );
-        if (bm05Skipped) {
-          message.warning(
-            "Mẫu BM05-QLNN chưa hỗ trợ offline nên đã được bỏ qua.",
-          );
-        }
         setSelectedIndicatorIds([]);
         setNote("");
         onCancel();

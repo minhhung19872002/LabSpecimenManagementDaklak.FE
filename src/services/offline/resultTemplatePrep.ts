@@ -59,8 +59,13 @@ export async function prepareResultTemplate(
     throw new Error('Template không chứa {{Result}}/{{Unit}} — không xác định được cuối dòng bảng');
   }
 
-  // Wrap the data row in a loop and switch Parameters to raw-xml.
-  xml = xml.replace(ROW_FIRST, `{{#rows}}${ROW_FIRST}`);
+  // Wrap the data row in a loop and switch Parameters to raw-xml. BM05 prefixes
+  // the first cell with a {{TestTable}} marker — drop it as we open the loop.
+  if (xml.includes('{{TestTable}} {{No}}')) {
+    xml = xml.replace('{{TestTable}} {{No}}', `{{#rows}}${ROW_FIRST}`);
+  } else {
+    xml = xml.replace(ROW_FIRST, `{{#rows}}${ROW_FIRST}`);
+  }
   xml = xml.replace(tailTag, `${tailTag}{{/rows}}`);
   xml = xml.replace('{{Parameters}}', '{{@ParametersXml}}');
 
