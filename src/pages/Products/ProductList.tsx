@@ -1,21 +1,73 @@
-import React, { useMemo, useState } from "react";
-import { Card, Button, Space } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Card, Button, Space, Tree, Spin, Tooltip, Typography } from "antd";
+import type { TreeDataNode } from "antd";
+import { PlusOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useProductList, useProductActions } from "./hooks";
 import { ProductTable, ProductModal, ColumnConfigPopover } from "./components";
 import { getProductColumns, ALL_COLUMNS, COLUMN_VISIBILITY_KEY } from "./constants";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
+import { warehouseService, WarehouseDto } from "../../services/masterDataService";
 import "../../styles/ListCard.css";
+import "./ProductList.css";
 
-// Load visibility from localStorage
+const { Text } = Typography;
+
+const EllipsisTooltip: React.FC<{ text: string }> = ({ text }) => {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [isOverflow, setIsOverflow] = useState(false);
+
+  const handleMouseEnter = () => {
+    if (ref.current) {
+      setIsOverflow(ref.current.scrollWidth > ref.current.clientWidth);
+    }
+  };
+
+  return (
+    <Tooltip title={isOverflow ? text : undefined} mouseEnterDelay={0.3}>
+      <span ref={ref} className="tree-node-title" onMouseEnter={handleMouseEnter}>
+        {text}
+      </span>
+    </Tooltip>
+  );
+};
+
 const loadVisibleKeys = (): Set<string> => {
   try {
     const saved = localStorage.getItem(COLUMN_VISIBILITY_KEY);
     if (saved) return new Set(JSON.parse(saved));
   } catch {}
   return new Set(ALL_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key));
+};
+
+const buildTree = (warehouses: WarehouseDto[]): TreeDataNode[] => {
+  const map = new Map<string, TreeDataNode & { name: string }>();
+  for (const w of warehouses) {
+    map.set(w.id, {
+      key: w.id,
+      title: <EllipsisTooltip text={w.name} />,
+      children: [],
+      name: w.name,
+    });
+  }
+  const roots: (TreeDataNode & { name: string })[] = [];
+  for (const w of warehouses) {
+    const node = map.get(w.id)!;
+    if (w.parentWarehouseId && map.has(w.parentWarehouseId)) {
+      (map.get(w.parentWarehouseId)!.children as any[]).push(node);
+    } else {
+      roots.push(node);
+    }
+  }
+  const sortNodes = (nodes: (TreeDataNode & { name: string })[]) => {
+    nodes.sort((a, b) => a.name.localeCompare(b.name, "vi"));
+    for (const n of nodes) {
+      if (n.children && (n.children as any[]).length > 0) sortNodes(n.children as any[]);
+    }
+  };
+  sortNodes(roots);
+  return roots;
 };
 
 const ProductList: React.FC = () => {
@@ -27,11 +79,13 @@ const ProductList: React.FC = () => {
     searchText,
     productTypeFilter,
     isDraftFilter,
+    warehouseId,
     currentPage,
     pageSize,
     setSearchText,
     setProductTypeFilter,
     setIsDraftFilter,
+    setWarehouseId,
     handleSortChange,
     fetchData,
     handlePageChange,
@@ -54,8 +108,42 @@ const ProductList: React.FC = () => {
   const canDelete = authService.hasPermission(PERMISSIONS.Products.Delete);
 
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(loadVisibleKeys);
+  const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
+  const [warehouseLoading, setWarehouseLoading] = useState(false);
+  const [treeCollapsed, setTreeCollapsed] = useState(false);
 
-  // Save to localStorage when changed
+  useEffect(() => {
+    const loadWarehouses = async () => {
+      setWarehouseLoading(true);
+      try {
+        const list = await warehouseService.getActive();
+        setWarehouses(list);
+        const roots = list.filter((w) => w.level === 0).sort((a, b) => a.name.localeCompare(b.name, "vi"));
+        if (roots.length > 0 && !warehouseId) {
+          setWarehouseId(roots[0].id);
+
+        }
+      } catch {
+        // ignore
+      } finally {
+        setWarehouseLoading(false);
+      }
+    };
+    loadWarehouses();
+  }, []);
+
+  const treeData = useMemo(() => buildTree(warehouses), [warehouses]);
+
+  const handleTreeSelect = useCallback(
+    (selectedKeys: React.Key[]) => {
+      if (selectedKeys.length > 0) {
+        const id = selectedKeys[0] as string;
+        setWarehouseId(id);
+      }
+    },
+    [warehouses, setWarehouseId]
+  );
+
   const handleVisibilityChange = (keys: Set<string>) => {
     setVisibleKeys(keys);
     localStorage.setItem(COLUMN_VISIBILITY_KEY, JSON.stringify([...keys]));
@@ -77,46 +165,86 @@ const ProductList: React.FC = () => {
   );
 
   return (
-    <div>
-      <Card
-        className="list-card"
-        title="Quản lý danh sách vật tư"
-        extra={
-          <Space>
-            <ColumnConfigPopover
-              visibleKeys={visibleKeys}
-              onChange={handleVisibilityChange}
+    <div className="product-list-layout">
+      {!treeCollapsed && (
+        <div className="product-tree-panel">
+          <div className="product-tree-header">
+            <Text strong>Sơ đồ kho</Text>
+            <Button
+              type="text"
+              size="small"
+              icon={<MenuFoldOutlined />}
+              onClick={() => setTreeCollapsed(true)}
             />
-            {canCreate && (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={handleCreate}
-              >
-                Thêm mới
-              </Button>
+          </div>
+          <div className="product-tree-content">
+            {warehouseLoading ? (
+              <div style={{ textAlign: "center", padding: 24 }}><Spin size="small" /></div>
+            ) : (
+              <Tree
+                treeData={treeData}
+                selectedKeys={warehouseId ? [warehouseId] : []}
+                onSelect={handleTreeSelect}
+                defaultExpandAll
+                blockNode
+              />
             )}
-          </Space>
-        }
-      >
-        <ProductTable
-          loading={loading}
-          data={products}
-          totalCount={totalCount}
-          currentPage={currentPage}
-          pageSize={pageSize}
-          columns={columns}
-          searchText={searchText}
-          productTypeFilter={productTypeFilter}
-          isDraftFilter={isDraftFilter}
-          onSearchChange={setSearchText}
-          onProductTypeChange={setProductTypeFilter}
-          onIsDraftChange={setIsDraftFilter}
-          onSortChange={handleSortChange}
-          onPaginationChange={handlePageChange}
-          onRowDoubleClick={(record) => navigate(`/products/${record.id}/sources`)}
-        />
-      </Card>
+          </div>
+        </div>
+      )}
+
+      {treeCollapsed && (
+        <Button
+          className="tree-expand-btn"
+          icon={<MenuUnfoldOutlined />}
+          onClick={() => setTreeCollapsed(false)}
+          size="small"
+        >
+          Sơ đồ kho
+        </Button>
+      )}
+
+      <div className="product-table-panel">
+        <Card
+          className="list-card"
+          title="Quản lý danh sách vật tư"
+          extra={
+            <Space>
+              <ColumnConfigPopover
+                visibleKeys={visibleKeys}
+                onChange={handleVisibilityChange}
+              />
+              {canCreate && (
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={handleCreate}
+                >
+                  Thêm mới
+                </Button>
+              )}
+            </Space>
+          }
+        >
+          <ProductTable
+            loading={loading}
+            data={products}
+            totalCount={totalCount}
+            currentPage={currentPage}
+            pageSize={pageSize}
+            columns={columns}
+            searchText={searchText}
+            productTypeFilter={productTypeFilter}
+            isDraftFilter={isDraftFilter}
+            onSearchChange={setSearchText}
+            onProductTypeChange={setProductTypeFilter}
+            onIsDraftChange={setIsDraftFilter}
+            onSortChange={handleSortChange}
+            onPaginationChange={handlePageChange}
+            onRowDoubleClick={(record) => navigate(`/products/${record.id}/sources`)}
+          />
+        </Card>
+      </div>
 
       <ProductModal
         open={modalOpen}

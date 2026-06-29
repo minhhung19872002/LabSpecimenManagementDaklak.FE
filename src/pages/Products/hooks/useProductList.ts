@@ -12,6 +12,7 @@ export const useProductList = () => {
   const [productTypeFilter, setProductTypeFilter] = useState<ProductType | undefined>(undefined);
   const [isDraftFilter, setIsDraftFilter] = useState<boolean | undefined>(undefined);
   const [sorting, setSorting] = useState<string | undefined>(undefined);
+  const [warehouseId, setWarehouseId] = useState<string | undefined>(undefined);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
@@ -25,6 +26,7 @@ export const useProductList = () => {
         productType: productTypeFilter,
         isDraft: isDraftFilter,
         sorting: sorting,
+        warehouseId: warehouseId,
       });
       setProducts(result?.items || []);
       setTotalCount(result?.totalCount || 0);
@@ -36,7 +38,7 @@ export const useProductList = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, searchText, productTypeFilter, isDraftFilter, sorting]);
+  }, [currentPage, pageSize, searchText, productTypeFilter, isDraftFilter, sorting, warehouseId]);
 
   useEffect(() => {
     fetchData();
@@ -62,6 +64,11 @@ export const useProductList = () => {
     setCurrentPage(1);
   };
 
+  const handleWarehouseChange = (value: string | undefined) => {
+    setWarehouseId(value);
+    setCurrentPage(1);
+  };
+
   const handleSortChange = (field: string, order: "ascend" | "descend" | null) => {
     if (!order) {
       setSorting(undefined);
@@ -80,11 +87,13 @@ export const useProductList = () => {
     productTypeFilter,
     isDraftFilter,
     sorting,
+    warehouseId,
     currentPage,
     pageSize,
     setSearchText: handleSearch,
     setProductTypeFilter: handleProductTypeChange,
     setIsDraftFilter: handleIsDraftChange,
+    setWarehouseId: handleWarehouseChange,
     handleSortChange,
     fetchData,
     handlePageChange,

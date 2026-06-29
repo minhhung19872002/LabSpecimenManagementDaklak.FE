@@ -121,6 +121,7 @@ export interface ProductFilterDto {
   productType?: ProductType;
   isDraft?: boolean;
   sorting?: string;
+  warehouseId?: string;
 }
 
 export interface ProductSourceDto {
@@ -158,6 +159,7 @@ export const productService = {
     if (params.isDraft !== undefined && params.isDraft !== null)
       apiParams.IsDraft = params.isDraft;
     if (params.sorting) apiParams.Sorting = params.sorting;
+    if (params.warehouseId) apiParams.WarehouseId = params.warehouseId;
 
     const response = await api.get<PagedResult<ProductDto>>(BASE_URL, {
       params: apiParams,
