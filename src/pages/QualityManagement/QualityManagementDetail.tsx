@@ -696,6 +696,17 @@ const QualityManagementDetail: React.FC = () => {
           customerName: task?.customerName,
           testRequestId: task?.testRequestId,
           technicalManagerNames: task?.technicalManagerNames,
+          // lab -> QLKT map from allIndicators (per-indicator name is populated
+          // there); used to scope OfficerInCharge to the selected labs.
+          labManagerNameById: (task?.allIndicators || []).reduce(
+            (acc, ind) => {
+              if (ind.laboratoryId && ind.technicalManagerName) {
+                acc[ind.laboratoryId] = ind.technicalManagerName;
+              }
+              return acc;
+            },
+            {} as Record<string, string>,
+          ),
         }}
         onCancel={() => setPrintModalVisible(false)}
         onSuccess={loadData}

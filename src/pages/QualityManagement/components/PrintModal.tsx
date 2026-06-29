@@ -66,6 +66,8 @@ interface PrintModalProps {
     customerName?: string;
     testRequestId?: string;
     technicalManagerNames?: string;
+    /** laboratoryId -> technical manager name (for scoping OfficerInCharge). */
+    labManagerNameById?: Record<string, string>;
   };
   onCancel: () => void;
   onSuccess?: () => void;
@@ -559,6 +561,28 @@ const PrintModal: React.FC<PrintModalProps> = ({
 
       setLoading(true);
       try {
+        // Header fields the backend derives from the TestRequest + lab tasks
+        // (ngày nhận mẫu, ngày hẹn trả KQ, thời gian thử nghiệm).
+        const extras = await buildMixedHeaderExtras(
+          taskContext?.testRequestId,
+          selectedLeaves,
+        );
+        // Phụ trách PTN: scope to the labs of the SELECTED indicators (matches
+        // online) via the lab -> manager map; fall back to task-level names.
+        const labManagerById = taskContext?.labManagerNameById || {};
+        const scopedOfficers = Array.from(
+          new Set(
+            selectedLeaves
+              .map((l) => labManagerById[l.laboratoryId || ""])
+              .filter((n): n is string => !!n),
+          ),
+        );
+        const officerInCharge =
+          scopedOfficers.join(", ") ||
+          extras.OfficerInCharge ||
+          taskContext?.technicalManagerNames ||
+          "";
+
         let gen;
         if (mode === "mixed") {
           // BM02: include parent indicators so parent+child grouping matches online.
@@ -570,12 +594,6 @@ const PrintModal: React.FC<PrintModalProps> = ({
           const mixedParents = approvedIndicatorsWithParents.filter(
             (ind) => !ind.parentIndicatorId && mixedParentIds.has(ind.indicatorId),
           );
-          // Header fields the backend derives from the TestRequest + lab tasks
-          // (ngày nhận mẫu, ngày hẹn trả KQ, thời gian thử nghiệm, phụ trách PTN).
-          const extras = await buildMixedHeaderExtras(
-            taskContext?.testRequestId,
-            selectedLeaves,
-          );
           gen = await generateMixedResultFormOffline(
             {
               ContractNumber: taskContext?.contractNumber || "",
@@ -584,10 +602,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
               DateOfReceiving: extras.DateOfReceiving,
               DateOfIssue: extras.DateOfIssue,
               TimeOfTesting: extras.TimeOfTesting,
-              // Phụ trách PTN: task-level managers (shown in detail UI) are the
-              // reliable source; fall back to the per-indicator manager name.
-              OfficerInCharge:
-                taskContext?.technicalManagerNames || extras.OfficerInCharge,
+              OfficerInCharge: officerInCharge,
             },
             mapIndicators(selectedLeaves),
             mapIndicators(mixedParents),
@@ -610,6 +625,10 @@ const PrintModal: React.FC<PrintModalProps> = ({
               SampleCode: firstLeaf?.sampleCode || "",
               NameOfSample: firstLeaf?.sampleName || "",
               Note: note || "",
+              DateOfReceiving: extras.DateOfReceiving,
+              DateOfIssue: extras.DateOfIssue,
+              TimeOfTesting: extras.TimeOfTesting,
+              OfficerInCharge: officerInCharge,
             },
             mapIndicators([...parents, ...selectedLeaves]),
           );
