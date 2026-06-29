@@ -85,6 +85,12 @@ const WarehouseImportList: React.FC = () => {
       render: (value?: string) => value || "-",
     },
     {
+      title: "Người liên hệ",
+      dataIndex: "contactPersonName",
+      key: "contactPersonName",
+      render: (value?: string) => value || "-",
+    },
+    {
       title: "Trạng thái",
       key: "status",
       render: (_, record) => {

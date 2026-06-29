@@ -74,6 +74,7 @@ export interface WarehouseImportReceiptListDto {
   warehouseKeeperName?: string;
   warehouseName?: string;
   supplierName?: string;
+  contactPersonName?: string;
   status: WarehouseImportReceiptStatus;
   hasDefectiveItem: boolean;
   creatorName?: string;
