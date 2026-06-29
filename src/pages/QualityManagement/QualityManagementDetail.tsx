@@ -695,6 +695,7 @@ const QualityManagementDetail: React.FC = () => {
           contractNumber: task?.contractNumber,
           customerName: task?.customerName,
           testRequestId: task?.testRequestId,
+          technicalManagerNames: task?.technicalManagerNames,
         }}
         onCancel={() => setPrintModalVisible(false)}
         onSuccess={loadData}

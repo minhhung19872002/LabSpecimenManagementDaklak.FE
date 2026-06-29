@@ -65,6 +65,7 @@ interface PrintModalProps {
     contractNumber?: string;
     customerName?: string;
     testRequestId?: string;
+    technicalManagerNames?: string;
   };
   onCancel: () => void;
   onSuccess?: () => void;
@@ -583,7 +584,10 @@ const PrintModal: React.FC<PrintModalProps> = ({
               DateOfReceiving: extras.DateOfReceiving,
               DateOfIssue: extras.DateOfIssue,
               TimeOfTesting: extras.TimeOfTesting,
-              OfficerInCharge: extras.OfficerInCharge,
+              // Phụ trách PTN: task-level managers (shown in detail UI) are the
+              // reliable source; fall back to the per-indicator manager name.
+              OfficerInCharge:
+                taskContext?.technicalManagerNames || extras.OfficerInCharge,
             },
             mapIndicators(selectedLeaves),
             mapIndicators(mixedParents),
