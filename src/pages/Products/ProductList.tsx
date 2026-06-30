@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card, Button, Space, Tree, Spin, Tooltip, Typography } from "antd";
 import type { TreeDataNode } from "antd";
-import { PlusOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from "@ant-design/icons";
+import { MenuFoldOutlined, MenuUnfoldOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useProductList, useProductActions } from "./hooks";
 import { ProductTable, ProductModal, ColumnConfigPopover } from "./components";
@@ -95,7 +95,6 @@ const ProductList: React.FC = () => {
     modalOpen,
     editingProduct,
     modalLoading,
-    handleCreate,
     handleEdit,
     handleDelete,
     handleToggleActive,
@@ -103,7 +102,6 @@ const ProductList: React.FC = () => {
     handleModalCancel,
   } = useProductActions({ fetchData });
 
-  const canCreate = authService.hasPermission(PERMISSIONS.Products.Create);
   const canEdit = authService.hasPermission(PERMISSIONS.Products.Edit);
   const canDelete = authService.hasPermission(PERMISSIONS.Products.Delete);
 
@@ -214,15 +212,6 @@ const ProductList: React.FC = () => {
                 visibleKeys={visibleKeys}
                 onChange={handleVisibilityChange}
               />
-              {canCreate && (
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={handleCreate}
-                >
-                  Thêm mới
-                </Button>
-              )}
             </Space>
           }
         >

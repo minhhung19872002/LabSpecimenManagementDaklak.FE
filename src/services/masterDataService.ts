@@ -453,6 +453,7 @@ export interface MasterDataStatisticsDto {
   unitCount: number;
   warehouseCount: number;
   manufacturerCount: number;
+  productCount: number;
 }
 
 // Service implementations - Using new API v1 endpoints

@@ -32,6 +32,7 @@ import SampleConditionsTab, {
   type SampleConditionActions,
 } from "../SampleStatuses";
 import UnitsTab, { type UnitActions } from "../Units";
+import ProductCatalogTab, { type ProductCatalogActions } from "../ProductCatalog";
 import { useMasterDataState } from "./hooks";
 import { useMasterDataActions } from "./hooks/useMasterDataActions";
 import {
@@ -135,6 +136,7 @@ const MasterDataList: React.FC = () => {
     useState(0);
   const [notesRefreshKey, setNotesRefreshKey] = useState(0);
   const [unitsRefreshKey, setUnitsRefreshKey] = useState(0);
+  const [productsRefreshKey, setProductsRefreshKey] = useState(0);
 
   // Warehouse import state
   const [warehouseImportOpen, setWarehouseImportOpen] = useState(false);
@@ -298,6 +300,7 @@ const MasterDataList: React.FC = () => {
   const testResultValuesRef = useRef<TestResultValuesActions>(null);
   const notesRef = useRef<NotesActions>(null);
   const unitsRef = useRef<UnitActions>(null);
+  const productCatalogRef = useRef<ProductCatalogActions>(null);
 
   // Permission check - All Master Data uses unified permissions now
   const canCreate = authService.hasPermission(PERMISSIONS.MasterData.Create);
@@ -542,6 +545,17 @@ const MasterDataList: React.FC = () => {
                 </Button>
               )}
 
+              {/* Products Tab */}
+              {activeCategory === "products" && (
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => productCatalogRef.current?.handleCreate()}
+                >
+                  Thêm vật tư
+                </Button>
+              )}
+
               {/* Notes Tab */}
               {activeCategory === "notes" && (
                 <>
@@ -630,6 +644,7 @@ const MasterDataList: React.FC = () => {
                 activeCategory !== "sampleTypeCategories" &&
                 activeCategory !== "sampleConditions" &&
                 activeCategory !== "units" &&
+                activeCategory !== "products" &&
                 activeCategory !== "warehouses" &&
                 activeCategory !== "manufacturers" && (
                   <Button
@@ -674,6 +689,9 @@ const MasterDataList: React.FC = () => {
               }
               if (key === "units") {
                 setUnitsRefreshKey((prev) => prev + 1);
+              }
+              if (key === "products") {
+                setProductsRefreshKey((prev) => prev + 1);
               }
             }}
             tabPosition="left"
@@ -741,6 +759,12 @@ const MasterDataList: React.FC = () => {
                     ref={unitsRef}
                     onDataChange={() => fetchStatistics()}
                     refreshKey={unitsRefreshKey}
+                  />
+                ) : key === "products" ? (
+                  <ProductCatalogTab
+                    ref={productCatalogRef}
+                    onDataChange={() => fetchStatistics()}
+                    refreshKey={productsRefreshKey}
                   />
                 ) : (
                   <MasterDataTable

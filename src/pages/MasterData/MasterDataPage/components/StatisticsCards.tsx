@@ -26,7 +26,8 @@ const StatisticsCards: React.FC<StatisticsCardsProps> = ({
       (statistics.indicatorCount || 0) +
       (statistics.formTemplateCount || 0) +
       (statistics.standardCount || 0) +
-      (statistics.indicatorGroupCount || 0)
+      (statistics.indicatorGroupCount || 0) +
+      (statistics.productCount || 0)
     : 0;
 
   const statsData = [
