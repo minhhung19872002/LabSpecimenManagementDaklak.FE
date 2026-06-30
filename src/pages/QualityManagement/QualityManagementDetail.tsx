@@ -548,7 +548,7 @@ const QualityManagementDetail: React.FC = () => {
           />
         )}
 
-        {/* Indicator Statistics */}
+        {/* Bulk actions + alerts */}
         {task.taskType === QualityTaskType.ResultApproval && (
           <div
             style={{
@@ -558,23 +558,9 @@ const QualityManagementDetail: React.FC = () => {
               borderRadius: "12px",
             }}
           >
-            <Row gutter={24} justify="space-between" align="middle">
+            <Row gutter={24} justify="end" align="middle">
               <Col>
                 <Space>
-                  <StatusTag color="warning">
-                    {pendingCount} Chờ duyệt
-                  </StatusTag>
-                  <StatusTag color="success">
-                    {approvedCount} Đã duyệt
-                  </StatusTag>
-                  {rejectedCount > 0 && (
-                    <StatusTag color="error">{rejectedCount} Từ chối</StatusTag>
-                  )}
-                </Space>
-              </Col>
-              <Col>
-                <Space>
-                  {/* Bulk action buttons - only visible if user has permission */}
                   {canReject && !isTestRequestCancelled && (
                     <Button
                       danger
@@ -641,7 +627,20 @@ const QualityManagementDetail: React.FC = () => {
             size="small"
             className="quality-indicator-card"
             style={{ overflow: "hidden" }}
-            title="Danh sách chỉ tiêu"
+            title={
+              <Space>
+                <span>Danh sách chỉ tiêu</span>
+                <StatusTag color="warning">
+                  {pendingCount} Chờ duyệt
+                </StatusTag>
+                <StatusTag color="success">
+                  {approvedCount} Đã duyệt
+                </StatusTag>
+                {rejectedCount > 0 && (
+                  <StatusTag color="error">{rejectedCount} Từ chối</StatusTag>
+                )}
+              </Space>
+            }
           >
             <IndicatorTable
               indicators={displayIndicators}
