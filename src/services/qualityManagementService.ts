@@ -35,6 +35,7 @@ export const qualityManagementService = {
       IsOverdue: params.isOverdue,
       RequestCompletionDateFrom: params.requestCompletionDateFrom,
       RequestCompletionDateTo: params.requestCompletionDateTo,
+      DateFilterField: params.dateFilterField,
     };
 
     // Remove undefined values

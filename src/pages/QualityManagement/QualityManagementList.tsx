@@ -23,6 +23,14 @@ import {
   QLCLDisplayStatus,
   QLCLSampleAssignmentLogStatisticsDto,
 } from "../../types/qualityManagement";
+
+const dateFilterPlaceholders: Record<string, [string, string]> = {
+  "ContractDate desc": ["Ngày HĐ từ", "Đến ngày"],
+  "RequestCompletionDate desc": ["Ngày YC xong từ", "Đến ngày"],
+  "RequestCompletionDate": ["Ngày YC xong từ", "Đến ngày"],
+  "LatestApprovalDate desc": ["Ngày phát hành từ", "Đến ngày"],
+  "LatestIndicatorApprovalDate desc": ["Ngày duyệt CT từ", "Đến ngày"],
+};
 import HistoryModal from "./components/HistoryModal";
 import ChangeApprovalModal from "./components/ChangeApprovalModal";
 import SampleAssignmentLogTab, {
@@ -342,7 +350,7 @@ const QualityManagementList: React.FC = () => {
                   onChange={handleDateRangeChange}
                   style={{ width: "100%" }}
                   format="DD/MM/YY"
-                  placeholder={["Ngày YC xong từ", "Đến ngày"]}
+                  placeholder={dateFilterPlaceholders[sorting] || ["Từ ngày", "Đến ngày"]}
                   allowClear
                 />
               </Col>
@@ -377,6 +385,7 @@ const QualityManagementList: React.FC = () => {
                   <Select.Option value="RequestCompletionDate desc">Ngày yêu cầu xong mới nhất</Select.Option>
                   <Select.Option value="RequestCompletionDate">Ngày yêu cầu xong cũ nhất</Select.Option>
                   <Select.Option value="LatestApprovalDate desc">Ngày phát hành mới nhất</Select.Option>
+                  <Select.Option value="LatestIndicatorApprovalDate desc">Ngày duyệt chỉ tiêu mới nhất</Select.Option>
                 </Select>
               </Col>
             </Row>

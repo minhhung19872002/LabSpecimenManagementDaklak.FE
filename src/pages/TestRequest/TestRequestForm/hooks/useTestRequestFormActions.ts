@@ -840,10 +840,12 @@ export const useTestRequestFormActions = ({
       const updated = { ...prev };
       indicatorsToSend.forEach((id) => {
         const key = `${currentSampleKey}_${id}`;
+        const existing = prev[key];
         updated[key] = {
           laboratoryId: selectedLaboratoryId,
           laboratoryName: labName,
           requestDate: laboratoryRequestDate,
+          sentToDepartment: existing?.sentToDepartment,
         };
       });
       return updated;

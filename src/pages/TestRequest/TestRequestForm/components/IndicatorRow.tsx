@@ -122,6 +122,7 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
     (approvalStatus === undefined || approvalStatus === null) &&
     !isSentToQLKT &&
     !sentToDepartment;
+  const canReassign = approvalStatus === IndicatorApprovalStatus.Pending;
   const statusLabel =
     approvalStatus !== undefined && approvalStatus !== null
       ? IndicatorApprovalStatusLabels[approvalStatus]
@@ -156,7 +157,7 @@ const IndicatorRow: React.FC<IndicatorRowProps> = ({
           checked={isChecked}
           onChange={() => onCheckChange(id)}
           style={{ width: 24, flexShrink: 0 }}
-          disabled={!canDelete}
+          disabled={!canDelete && !canReassign}
         />
       )}
       <div

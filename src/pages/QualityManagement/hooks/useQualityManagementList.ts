@@ -38,6 +38,14 @@ async function prefetchFullDetailForOffline(items: QualityManagementTaskDto[]): 
   await Promise.all([worker(), worker(), worker()]);
 }
 
+const sortToDateField: Record<string, string> = {
+  "ContractDate desc": "ContractDate",
+  "RequestCompletionDate desc": "RequestCompletionDate",
+  "RequestCompletionDate": "RequestCompletionDate",
+  "LatestApprovalDate desc": "LatestApprovalDate",
+  "LatestIndicatorApprovalDate desc": "LatestIndicatorApprovalDate",
+};
+
 export const useQualityManagementList = () => {
   const navigate = useNavigate();
 
@@ -91,6 +99,7 @@ export const useQualityManagementList = () => {
           isOverdue: overdueFilter || undefined,
           fromDate: dateRange?.[0]?.startOf('day').format('YYYY-MM-DD') || undefined,
           toDate: dateRange?.[1]?.endOf('day').format('YYYY-MM-DD') || undefined,
+          dateFilterField: sortToDateField[sorting] || undefined,
           laboratoryIds: laboratoryIds.length > 0 ? laboratoryIds : undefined,
         }),
         qualityManagementService.getStatistics(),
@@ -121,6 +130,7 @@ export const useQualityManagementList = () => {
 
   const handleSortChange = useCallback((value: string) => {
     setSorting(value);
+    setDateRange(null);
     setPagination((prev) => ({ ...prev, current: 1 }));
   }, []);
 

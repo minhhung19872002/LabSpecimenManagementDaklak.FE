@@ -157,6 +157,7 @@ export interface QualityManagementTaskDto {
   changeHistory?: ChangeHistoryDto;
   testRequestStatus?: TestRequestStatus;
   latestApprovalDate?: string;
+  latestIndicatorApprovalDate?: string;
   indicators?: QualityManagementIndicatorDto[];
   allIndicators?: QualityManagementIndicatorDto[];
 
@@ -259,6 +260,7 @@ export interface GetQualityManagementListInput {
   requestCompletionDateFrom?: string;
   requestCompletionDateTo?: string;
   laboratoryIds?: string[];
+  dateFilterField?: string;
 }
 
 // Paged result
