@@ -1,10 +1,10 @@
-import { Tag, Switch, Space, Tooltip, Button, Popover } from "antd";
-import { EditOutlined, DeleteOutlined, PaperClipOutlined, EyeOutlined, ArrowUpOutlined, ArrowDownOutlined } from "@ant-design/icons";
+import { Tag, Space, Tooltip, Button } from "antd";
+import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { ProductDto, ProductType, ProductTypeLabels } from "../../../services/productService";
 import { IndicatorName } from "../../../components/common";
+import dayjs from "dayjs";
 
-// All possible columns with their config
 export interface ColumnConfig {
   key: string;
   title: string;
@@ -12,23 +12,24 @@ export interface ColumnConfig {
 }
 
 export const ALL_COLUMNS: ColumnConfig[] = [
-  { key: "code", title: "ID", defaultVisible: true },
   { key: "identificationCode", title: "Mã nhận dạng", defaultVisible: true },
-  { key: "name", title: "Tên vật phẩm", defaultVisible: true },
+  { key: "name", title: "Tên vật tư", defaultVisible: true },
   { key: "productType", title: "Phân loại", defaultVisible: true },
-  { key: "packagingUnitName", title: "Đơn vị lưu kho", defaultVisible: true },
+  { key: "earliestReceivedDate", title: "Ngày nhận", defaultVisible: true },
+  { key: "storageAvailableQuantity", title: "Số lượng (đơn vị)", defaultVisible: true },
+  { key: "usage", title: "Sử dụng", defaultVisible: true },
+  { key: "earliestLotExpiryDate", title: "Hạn sử dụng", defaultVisible: true },
+  { key: "storageConditions", title: "Điều kiện bảo quản", defaultVisible: true },
+  { key: "availableQuantity", title: "Tồn kho", defaultVisible: true },
+  { key: "earliestLotNumber", title: "Code/Lot", defaultVisible: true },
+  { key: "manufacturer", title: "Nhà sản xuất", defaultVisible: true },
   { key: "warehouseName", title: "Lưu kho", defaultVisible: true },
-  { key: "storageAvailableQuantity", title: "Số lượng khả dụng", defaultVisible: true },
+  { key: "earliestLotNotes", title: "Ghi chú", defaultVisible: true },
   { key: "casNumber", title: "Số CAS", defaultVisible: false },
-  { key: "manufacturer", title: "Nhà sản xuất/thương hiệu", defaultVisible: false },
+  { key: "concentration", title: "Nồng độ / Hàm lượng", defaultVisible: false },
+  { key: "packagingUnitName", title: "Đơn vị lưu kho", defaultVisible: false },
+  { key: "categories", title: "Nhóm / Phân loại", defaultVisible: false },
   { key: "origin", title: "Xuất xứ", defaultVisible: false },
-  { key: "concentration", title: "Nồng độ/Hàm lượng", defaultVisible: false },
-  { key: "storageConditions", title: "Điều kiện bảo quản", defaultVisible: false },
-  { key: "categories", title: "Nhóm/phân loại", defaultVisible: false },
-  { key: "minStockLevel", title: "Mức độ tồn tối thiểu", defaultVisible: false },
-  { key: "maxStockLevel", title: "Mức độ tồn tối đa", defaultVisible: false },
-  { key: "attachments", title: "Tài liệu đính kèm", defaultVisible: false },
-  { key: "isActive", title: "Trạng thái", defaultVisible: true },
 ];
 
 const PRODUCT_TYPE_COLORS: Record<ProductType, string> = {
@@ -39,7 +40,6 @@ const PRODUCT_TYPE_COLORS: Record<ProductType, string> = {
   [ProductType.Solvent]: "cyan",
 };
 
-// Parse JSON array tags for display
 const renderTags = (jsonStr?: string) => {
   if (!jsonStr) return "-";
   try {
@@ -50,11 +50,16 @@ const renderTags = (jsonStr?: string) => {
   }
 };
 
+const formatDate = (dateStr?: string) => {
+  if (!dateStr) return "-";
+  return dayjs(dateStr).format("DD/MM/YYYY");
+};
+
 export const getProductColumns = (
   visibleKeys: Set<string>,
   handleEdit: (record: ProductDto) => void,
   handleDelete: (record: ProductDto) => void,
-  handleToggleActive: (record: ProductDto) => void,
+  _handleToggleActive: (record: ProductDto) => void,
   canEdit: boolean,
   canDelete: boolean,
   currentPage: number,
@@ -71,17 +76,6 @@ export const getProductColumns = (
     },
   ];
 
-  if (visibleKeys.has("code")) {
-    columns.push({
-      title: "ID",
-      dataIndex: "code",
-      key: "code",
-      width: 160,
-      ellipsis: true,
-      sorter: true,
-    });
-  }
-
   if (visibleKeys.has("identificationCode")) {
     columns.push({
       title: "Mã nhận dạng",
@@ -95,7 +89,7 @@ export const getProductColumns = (
 
   if (visibleKeys.has("name")) {
     columns.push({
-      title: "Tên vật phẩm",
+      title: "Tên vật tư",
       dataIndex: "name",
       key: "name",
       width: 250,
@@ -123,103 +117,65 @@ export const getProductColumns = (
     });
   }
 
-  if (visibleKeys.has("packagingUnitName")) {
+  if (visibleKeys.has("earliestReceivedDate")) {
     columns.push({
-      title: "Đơn vị lưu kho",
-      dataIndex: "packagingUnitName",
-      key: "packagingUnitName",
+      title: "Ngày nhận",
+      dataIndex: "earliestReceivedDate",
+      key: "earliestReceivedDate",
       width: 120,
-    });
-  }
-
-  if (visibleKeys.has("warehouseName")) {
-    columns.push({
-      title: "Lưu kho",
-      dataIndex: "warehouseName",
-      key: "warehouseName",
-      width: 150,
-      sorter: true,
-      render: (v: string) => v || "-",
+      render: formatDate,
     });
   }
 
   if (visibleKeys.has("storageAvailableQuantity")) {
     columns.push({
-      title: "SL khả dụng",
+      title: "Số lượng (đơn vị)",
       dataIndex: "storageAvailableQuantity",
       key: "storageAvailableQuantity",
-      width: 150,
+      width: 180,
       align: "right" as const,
       sorter: true,
       render: (qty: number, record: ProductDto) => {
-        const min = record.minStockLevel;
-        const max = record.maxStockLevel;
-        const isBelowMin = min != null && min > 0 && qty <= min;
-        const isAboveMax = max != null && max > 0 && qty >= max;
-
-        if (isBelowMin) {
-          return (
-            <Tooltip title={`Dưới mức tồn tối thiểu (${min})`}>
-              <span style={{ color: "#ff4d4f", fontWeight: 600 }}>
-                <ArrowDownOutlined style={{ marginRight: 4 }} />
-                {qty}
-              </span>
-            </Tooltip>
-          );
-        }
-        if (isAboveMax) {
-          return (
-            <Tooltip title={`Vượt mức tồn tối đa (${max})`}>
-              <span style={{ color: "#faad14", fontWeight: 600 }}>
-                <ArrowUpOutlined style={{ marginRight: 4 }} />
-                {qty}
-              </span>
-            </Tooltip>
-          );
-        }
-        return qty;
+        const unitName = record.baseUnitName || "";
+        return `${qty} ${unitName}`.trim();
       },
     });
   }
 
-  if (visibleKeys.has("casNumber")) {
+  if (visibleKeys.has("usage")) {
     columns.push({
-      title: "Số CAS",
-      dataIndex: "casNumber",
-      key: "casNumber",
-      width: 120,
-      render: (v: string) => v || "-",
-    });
-  }
-
-  if (visibleKeys.has("manufacturer")) {
-    columns.push({
-      title: "Nhà SX/Thương hiệu",
-      dataIndex: "manufacturer",
-      key: "manufacturer",
-      width: 180,
-      ellipsis: true,
-      render: (v: string) => v || "-",
-    });
-  }
-
-  if (visibleKeys.has("origin")) {
-    columns.push({
-      title: "Xuất xứ",
-      dataIndex: "origin",
-      key: "origin",
+      title: "Sử dụng",
+      key: "usage",
       width: 130,
-      render: (v: string) => v || "-",
+      align: "right" as const,
+      render: (_: any, record: ProductDto) => {
+        const qty = record.storageTotalConsumedQuantity || 0;
+        const unitName = record.baseUnitName || "";
+        return qty > 0 ? `${qty} ${unitName}`.trim() : "-";
+      },
     });
   }
 
-  if (visibleKeys.has("concentration")) {
+  if (visibleKeys.has("earliestLotExpiryDate")) {
     columns.push({
-      title: "Nồng độ/Hàm lượng",
-      dataIndex: "concentration",
-      key: "concentration",
-      width: 150,
-      render: (v: string) => v || "-",
+      title: "Hạn sử dụng",
+      dataIndex: "earliestLotExpiryDate",
+      key: "earliestLotExpiryDate",
+      width: 120,
+      render: (dateStr: string) => {
+        if (!dateStr) return "-";
+        const date = dayjs(dateStr);
+        const isExpired = date.isBefore(dayjs());
+        const isNearExpiry = date.isBefore(dayjs().add(30, "day"));
+        const color = isExpired ? "#ff4d4f" : isNearExpiry ? "#faad14" : undefined;
+        return (
+          <Tooltip title={isExpired ? "Đã hết hạn" : isNearExpiry ? "Sắp hết hạn" : undefined}>
+            <span style={color ? { color, fontWeight: 600 } : undefined}>
+              {date.format("DD/MM/YYYY")}
+            </span>
+          </Tooltip>
+        );
+      },
     });
   }
 
@@ -238,9 +194,99 @@ export const getProductColumns = (
     });
   }
 
+  if (visibleKeys.has("availableQuantity")) {
+    columns.push({
+      title: "Tồn kho",
+      dataIndex: "availableQuantity",
+      key: "availableQuantity",
+      width: 130,
+      align: "right" as const,
+      sorter: true,
+      render: (qty: number, record: ProductDto) => {
+        const unitName = record.packagingUnitName || "";
+        return `${qty} ${unitName}`.trim();
+      },
+    });
+  }
+
+  if (visibleKeys.has("earliestLotNumber")) {
+    columns.push({
+      title: "Code/Lot",
+      dataIndex: "earliestLotNumber",
+      key: "earliestLotNumber",
+      width: 140,
+      ellipsis: true,
+      render: (v: string) => v || "-",
+    });
+  }
+
+  if (visibleKeys.has("manufacturer")) {
+    columns.push({
+      title: "Nhà sản xuất",
+      dataIndex: "manufacturer",
+      key: "manufacturer",
+      width: 180,
+      ellipsis: true,
+      render: (v: string) => v || "-",
+    });
+  }
+
+  if (visibleKeys.has("warehouseName")) {
+    columns.push({
+      title: "Lưu kho",
+      dataIndex: "warehouseName",
+      key: "warehouseName",
+      width: 150,
+      sorter: true,
+      render: (v: string) => v || "-",
+    });
+  }
+
+  if (visibleKeys.has("earliestLotNotes")) {
+    columns.push({
+      title: "Ghi chú",
+      dataIndex: "earliestLotNotes",
+      key: "earliestLotNotes",
+      width: 200,
+      ellipsis: true,
+      render: (v: string) => v || "-",
+    });
+  }
+
+  // Hidden columns
+  if (visibleKeys.has("casNumber")) {
+    columns.push({
+      title: "Số CAS",
+      dataIndex: "casNumber",
+      key: "casNumber",
+      width: 120,
+      render: (v: string) => v || "-",
+    });
+  }
+
+  if (visibleKeys.has("concentration")) {
+    columns.push({
+      title: "Nồng độ / Hàm lượng",
+      dataIndex: "concentration",
+      key: "concentration",
+      width: 150,
+      render: (v: string) => v || "-",
+    });
+  }
+
+  if (visibleKeys.has("packagingUnitName")) {
+    columns.push({
+      title: "Đơn vị lưu kho",
+      dataIndex: "packagingUnitName",
+      key: "packagingUnitName",
+      width: 120,
+      render: (v: string) => v || "-",
+    });
+  }
+
   if (visibleKeys.has("categories")) {
     columns.push({
-      title: "Nhóm/phân loại",
+      title: "Nhóm / Phân loại",
       dataIndex: "categories",
       key: "categories",
       width: 200,
@@ -248,93 +294,13 @@ export const getProductColumns = (
     });
   }
 
-  if (visibleKeys.has("minStockLevel")) {
+  if (visibleKeys.has("origin")) {
     columns.push({
-      title: "Tồn tối thiểu",
-      dataIndex: "minStockLevel",
-      key: "minStockLevel",
-      width: 120,
-      align: "right" as const,
-      render: (v: number) => v ?? "-",
-    });
-  }
-
-  if (visibleKeys.has("maxStockLevel")) {
-    columns.push({
-      title: "Tồn tối đa",
-      dataIndex: "maxStockLevel",
-      key: "maxStockLevel",
-      width: 120,
-      align: "right" as const,
-      render: (v: number) => v ?? "-",
-    });
-  }
-
-  if (visibleKeys.has("attachments")) {
-    const baseUrl = (import.meta as any).env?.VITE_API_BASE_URL || "";
-    columns.push({
-      title: "Tài liệu",
-      dataIndex: "attachments",
-      key: "attachments",
-      width: 140,
-      render: (attachments: any[]) => {
-        if (!attachments?.length) return "-";
-        const content = (
-          <div style={{ maxWidth: 300 }}>
-            {attachments.map((att: any) => (
-              <div
-                key={att.id}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "4px 0",
-                  borderBottom: "1px solid #f5f5f5",
-                }}
-              >
-                <span style={{ fontSize: 13, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {att.fileName}
-                </span>
-                <Button
-                  type="link"
-                  size="small"
-                  icon={<EyeOutlined />}
-                  onClick={() => window.open(`${baseUrl}${att.url}`, "_blank")}
-                  style={{ flexShrink: 0, marginLeft: 8 }}
-                >
-                  Xem
-                </Button>
-              </div>
-            ))}
-          </div>
-        );
-        return (
-          <Popover content={content} title="Tài liệu đính kèm" trigger="click">
-            <Button type="link" size="small" icon={<PaperClipOutlined />}>
-              {attachments.length} file
-            </Button>
-          </Popover>
-        );
-      },
-    });
-  }
-
-  if (visibleKeys.has("isActive")) {
-    columns.push({
-      title: "Trạng thái",
-      dataIndex: "isActive",
-      key: "isActive",
+      title: "Xuất xứ",
+      dataIndex: "origin",
+      key: "origin",
       width: 130,
-      align: "center" as const,
-      render: (isActive: boolean, record: ProductDto) => (
-        <Switch
-          checked={isActive}
-          checkedChildren="Hoạt động"
-          unCheckedChildren="Ngừng"
-          onChange={() => handleToggleActive(record)}
-          disabled={!canEdit}
-        />
-      ),
+      render: (v: string) => v || "-",
     });
   }
 
@@ -384,5 +350,4 @@ export const PRODUCT_TYPE_OPTIONS = [
   { value: ProductType.Solvent, label: "Dung môi" },
 ];
 
-// LocalStorage key for column visibility
-export const COLUMN_VISIBILITY_KEY = "product-visible-columns";
+export const COLUMN_VISIBILITY_KEY = "product-visible-columns-v2";

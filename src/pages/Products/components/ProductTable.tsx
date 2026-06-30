@@ -63,7 +63,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
       >
         <Col xs={24} sm={12} md={8}>
           <Input
-            placeholder="Tìm kiếm theo ID hoặc tên vật phẩm..."
+            placeholder="Tìm kiếm theo mã, tên vật tư..."
             prefix={<SearchOutlined />}
             value={searchText}
             onChange={(e) => onSearchChange(e.target.value)}

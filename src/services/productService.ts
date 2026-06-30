@@ -41,13 +41,17 @@ export interface ProductDto {
   storageConditions?: string;
   formattedStorageConditions?: string;
   categories?: string;
-  minStockLevel?: number;
-  maxStockLevel?: number;
   availableQuantity: number;
   storageAvailableQuantity: number;
   isActive: boolean;
   isDraft: boolean;
   warehouseName?: string;
+  earliestReceivedDate?: string;
+  earliestLotNumber?: string;
+  earliestLotExpiryDate?: string;
+  earliestLotNotes?: string;
+  totalConsumedQuantity: number;
+  storageTotalConsumedQuantity: number;
   creationTime: string;
   attachments: ProductAttachmentDto[];
   unitConversions: ProductUnitConversionDto[];
@@ -71,8 +75,6 @@ export interface CreateUpdateProductDto {
   storageConditions?: string;
   formattedStorageConditions?: string;
   categories?: string;
-  minStockLevel?: number;
-  maxStockLevel?: number;
   isActive: boolean;
   isDraft: boolean;
   attachments?: CreateProductAttachmentDto[];

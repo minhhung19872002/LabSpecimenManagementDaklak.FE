@@ -18,8 +18,6 @@ export const productSchema = yup.object({
   storageConditions: yup.string().nullable(),
   formattedStorageConditions: yup.string().nullable(),
   categories: yup.string().nullable(),
-  minStockLevel: yup.number().nullable().min(0),
-  maxStockLevel: yup.number().nullable().min(0),
   isActive: yup.boolean().default(true),
 });
 

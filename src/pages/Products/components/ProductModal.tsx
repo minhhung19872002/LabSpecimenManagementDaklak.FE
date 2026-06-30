@@ -112,8 +112,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
       storageConditions: "",
       formattedStorageConditions: "",
       categories: "",
-      minStockLevel: undefined,
-      maxStockLevel: undefined,
       isActive: true,
     },
   });
@@ -211,8 +209,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
           storageConditions: editingProduct.storageConditions || "",
           formattedStorageConditions: editingProduct.formattedStorageConditions || storageText,
           categories: editingProduct.categories || "",
-          minStockLevel: editingProduct.minStockLevel ?? undefined,
-          maxStockLevel: editingProduct.maxStockLevel ?? undefined,
           isActive: editingProduct.isActive,
         });
         setExistingAttachments(editingProduct.attachments || []);
@@ -235,8 +231,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
           storageConditions: "",
           formattedStorageConditions: "",
           categories: "",
-          minStockLevel: undefined,
-          maxStockLevel: undefined,
           isActive: true,
         });
         setExistingAttachments([]);
@@ -300,8 +294,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
     storageConditions: data.storageConditions || undefined,
     formattedStorageConditions: data.formattedStorageConditions || undefined,
     categories: data.categories || undefined,
-    minStockLevel: data.minStockLevel ?? undefined,
-    maxStockLevel: data.maxStockLevel ?? undefined,
     isActive: data.isActive ?? true,
     isDraft,
     attachments: [
@@ -699,50 +691,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
                 )}
               />
             </Form.Item>
-
-            {/* Row 6: Tồn kho */}
-            <Row gutter={16} className="product-form-row">
-              <Col xs={24} sm={12} md={12}>
-                <Form.Item
-                  label={<Text strong>Tồn kho tối thiểu</Text>}
-                  style={{ marginBottom: 16 }}
-                >
-                  <Controller
-                    name="minStockLevel"
-                    control={control}
-                    render={({ field }) => (
-                      <InputNumber
-                        {...field}
-                        min={0}
-                        placeholder="0"
-                        controls={false}
-                        style={{ width: "100%" }}
-                      />
-                    )}
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} md={12}>
-                <Form.Item
-                  label={<Text strong>Tồn kho tối đa</Text>}
-                  style={{ marginBottom: 16 }}
-                >
-                  <Controller
-                    name="maxStockLevel"
-                    control={control}
-                    render={({ field }) => (
-                      <InputNumber
-                        {...field}
-                        min={0}
-                        placeholder="0"
-                        controls={false}
-                        style={{ width: "100%" }}
-                      />
-                    )}
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
 
             {/* Tài liệu đính kèm */}
             <Text strong style={{ display: "block", marginBottom: 12 }}>
