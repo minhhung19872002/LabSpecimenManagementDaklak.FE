@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Card,
@@ -12,6 +12,7 @@ import {
   Col,
   Alert,
   Tooltip,
+  Checkbox,
 } from "antd";
 
 import StatusTag from "../../components/common/StatusTag";
@@ -357,6 +358,39 @@ const QualityManagementDetail: React.FC = () => {
     (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Rejected,
   ).length;
 
+  const allSelectablePendingIds = useMemo(() =>
+    qualityIndicators
+      .filter(ind =>
+        !isParentWithChildren(ind) &&
+        ind.approvalStatus === QualityIndicatorApprovalStatus.PendingApproval &&
+        ind.isInQualityScope
+      )
+      .map(ind => ind.id),
+    [qualityIndicators, isParentWithChildren]
+  );
+
+  const selectedSampleCount = useMemo(() => {
+    const sampleIds = new Set(
+      qualityIndicators
+        .filter(ind => selectedPendingIds.includes(ind.id))
+        .map(ind => ind.sampleId)
+    );
+    return sampleIds.size;
+  }, [qualityIndicators, selectedPendingIds]);
+
+  const isAllSelected = allSelectablePendingIds.length > 0 &&
+    selectedPendingIds.length === allSelectablePendingIds.length;
+  const isIndeterminate = selectedPendingIds.length > 0 &&
+    selectedPendingIds.length < allSelectablePendingIds.length;
+
+  const handleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedPendingIds([]);
+    } else {
+      setSelectedPendingIds(allSelectablePendingIds);
+    }
+  };
+
   // Check if test request is cancelled - disable all actions (except print)
   const isTestRequestCancelled = task?.testRequestStatus === TestRequestStatus.Cancelled;
 
@@ -558,7 +592,22 @@ const QualityManagementDetail: React.FC = () => {
               borderRadius: "12px",
             }}
           >
-            <Row gutter={24} justify="end" align="middle">
+            <Row gutter={24} justify="space-between" align="middle">
+              {allSelectablePendingIds.length > 0 && !isTestRequestCancelled && (
+                <Col>
+                  <div
+                    onClick={handleSelectAll}
+                    style={{ cursor: "pointer", userSelect: "none" }}
+                  >
+                    <Checkbox
+                      checked={isAllSelected}
+                      indeterminate={isIndeterminate}
+                    >
+                      Chọn tất cả  (Đã chọn {selectedSampleCount} mẫu - {selectedPendingIds.length} chỉ tiêu)
+                    </Checkbox>
+                  </div>
+                </Col>
+              )}
               <Col>
                 <Space>
                   {canReject && !isTestRequestCancelled && (
