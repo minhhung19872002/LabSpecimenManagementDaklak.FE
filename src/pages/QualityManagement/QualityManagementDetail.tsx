@@ -13,6 +13,7 @@ import {
   Alert,
   Tooltip,
   Checkbox,
+  Select,
 } from "antd";
 
 import StatusTag from "../../components/common/StatusTag";
@@ -68,6 +69,7 @@ const QualityManagementDetail: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [task, setTask] = useState<QualityManagementTaskDto | null>(null);
   const [selectedPendingIds, setSelectedPendingIds] = useState<string[]>([]);
+  const [indicatorFilter, setIndicatorFilter] = useState<string[]>([]);
 
   // Modals
   const [printModalVisible, setPrintModalVisible] = useState(false);
@@ -330,6 +332,24 @@ const QualityManagementDetail: React.FC = () => {
       ? task.allIndicators
       : qualityIndicators;
 
+  const indicatorFilterOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    qualityIndicators.forEach(ind => {
+      if (ind.indicatorId && ind.indicatorName && !ind.parentIndicatorId && !seen.has(ind.indicatorId)) {
+        seen.set(ind.indicatorId, ind.indicatorName);
+      }
+    });
+    return Array.from(seen.entries()).map(([id, name]) => ({ value: id, label: name }));
+  }, [qualityIndicators]);
+
+  const filteredDisplayIndicators = useMemo(() => {
+    if (indicatorFilter.length === 0) return displayIndicators;
+    return displayIndicators.filter(ind =>
+      indicatorFilter.includes(ind.indicatorId) ||
+      (ind.parentIndicatorId && indicatorFilter.includes(ind.parentIndicatorId))
+    );
+  }, [displayIndicators, indicatorFilter]);
+
   // Helper: check if an indicator is a parent with children in the list
   const isParentWithChildren = useCallback(
     (indicator: QualityManagementIndicatorDto): boolean => {
@@ -363,10 +383,13 @@ const QualityManagementDetail: React.FC = () => {
       .filter(ind =>
         !isParentWithChildren(ind) &&
         ind.approvalStatus === QualityIndicatorApprovalStatus.PendingApproval &&
-        ind.isInQualityScope
+        ind.isInQualityScope &&
+        (indicatorFilter.length === 0 ||
+         indicatorFilter.includes(ind.indicatorId) ||
+         (ind.parentIndicatorId && indicatorFilter.includes(ind.parentIndicatorId)))
       )
       .map(ind => ind.id),
-    [qualityIndicators, isParentWithChildren]
+    [qualityIndicators, isParentWithChildren, indicatorFilter]
   );
 
   const selectedSampleCount = useMemo(() => {
@@ -592,6 +615,22 @@ const QualityManagementDetail: React.FC = () => {
               borderRadius: "12px",
             }}
           >
+            <div style={{ marginBottom: 8 }}>
+              <Select
+                mode="multiple"
+                allowClear
+                placeholder="Chọn chỉ tiêu"
+                style={{ width: 300 }}
+                options={indicatorFilterOptions}
+                value={indicatorFilter}
+                onChange={(values) => {
+                  setIndicatorFilter(values);
+                  setSelectedPendingIds([]);
+                }}
+                optionFilterProp="label"
+                maxTagCount="responsive"
+              />
+            </div>
             <Row gutter={24} justify="space-between" align="middle">
               {allSelectablePendingIds.length > 0 && !isTestRequestCancelled && (
                 <Col>
@@ -692,7 +731,7 @@ const QualityManagementDetail: React.FC = () => {
             }
           >
             <IndicatorTable
-              indicators={displayIndicators}
+              indicators={filteredDisplayIndicators}
               taskStatus={task.status}
               onApprove={handleApproveIndicator}
               onReject={handleRejectIndicator}
