@@ -209,6 +209,7 @@ export const useTestRequestFormData = () => {
 
   // Costs
   const [totalSampleCost, setTotalSampleCost] = useState(0);
+  const totalSampleCostRef = useRef(0);
 
   // Indicator modal state
   const [indicatorModalVisible, setIndicatorModalVisible] = useState(false);
@@ -283,24 +284,28 @@ export const useTestRequestFormData = () => {
 
   // Helper to check if a field should be disabled based on status
   // [TEMPORARY] Tạm tắt field lock - cho phép edit tất cả fields
-  const isFieldLocked = (_fieldName: string): boolean => {
+  // useCallback để React.memo của các section con có tác dụng.
+  // Deps [isEditMode, currentStatus] theo OLD LOGIC bên dưới: hàm này được gọi
+  // LÚC RENDER trong các section đã memo, nếu bật lại logic cũ mà identity không
+  // đổi theo status thì trạng thái khóa sẽ bị stale — giữ sẵn deps để an toàn
+  const isFieldLocked = useCallback((_fieldName: string): boolean => {
     // [OLD LOGIC]
     // if (!isEditMode || currentStatus === null) return false;
     // if (!canEditFullInfo(currentStatus)) {
     //   return LOCKED_FIELDS.includes(fieldName);
     // }
     return false;
-  };
+  }, [isEditMode, currentStatus]);
 
   // Check if samples section should be locked
   // Note: Samples can still be edited when status is SampleSent or InProgress (requires approval)
   // Only locked when status >= PendingChangeApproval
-  const isSamplesLocked = (): boolean => {
+  const isSamplesLocked = useCallback((): boolean => {
     if (!isEditMode || currentStatus === null) return false;
     // Allow edit samples for New, Pending, SampleSent, InProgress
     // Lock samples for PendingChangeApproval and beyond
     return !canEditTestRequest(currentStatus);
-  };
+  }, [isEditMode, currentStatus]);
 
   // Check if this edit requires QLCL approval (SampleSent/InProgress status)
   // [TEMPORARY] Tạm tắt - không cần approval, edit trực tiếp
@@ -427,7 +432,8 @@ export const useTestRequestFormData = () => {
   };
 
   // Handle organization search for autocomplete with debounce
-  const handleOrganizationSearch = (searchText: string) => {
+  // useCallback (deps: organizations) để CustomerInfoSection memo được
+  const handleOrganizationSearch = useCallback((searchText: string) => {
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
@@ -449,10 +455,10 @@ export const useTestRequestFormData = () => {
       setOrganizationOptions(filtered);
       setOrganizationSearching(false);
     }, 300);
-  };
+  }, [organizations]);
 
   // Handle organization selection - auto fill customer info
-  const handleOrganizationSelect = async (value: string) => {
+  const handleOrganizationSelect = useCallback(async (value: string) => {
     const selectedOrg = organizations.find((org) => org.name === value);
     if (selectedOrg) {
       let wardName: string | undefined = undefined;
@@ -483,10 +489,10 @@ export const useTestRequestFormData = () => {
         phone: selectedOrg.phone,
       });
     }
-  };
+  }, [organizations, provinces, form]);
 
   // Shared function to auto-fill customer info by phone number
-  const autoFillByPhone = async (phoneValue: string) => {
+  const autoFillByPhone = useCallback(async (phoneValue: string) => {
     if (!phoneValue) return;
 
     const foundOrg = organizations.find((org) => org.phone === phoneValue);
@@ -519,19 +525,19 @@ export const useTestRequestFormData = () => {
         phone: foundOrg.phone,
       });
     }
-  };
+  }, [organizations, provinces, form]);
 
   // Handle phone blur - search organization by phone
-  const handlePhoneBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
+  const handlePhoneBlur = useCallback(async (e: React.FocusEvent<HTMLInputElement>) => {
     const phoneValue = e.target.value?.trim();
     await autoFillByPhone(phoneValue);
-  };
+  }, [autoFillByPhone]);
 
   // Handle phone Enter key press - search organization by phone
-  const handlePhoneEnter = async () => {
+  const handlePhoneEnter = useCallback(async () => {
     const phoneValue = form.getFieldValue('phone')?.trim();
     await autoFillByPhone(phoneValue);
-  };
+  }, [autoFillByPhone, form]);
 
   // Handle specimen type search for autocomplete with debounce (case-insensitive)
   const handleSpecimenTypeSearch = (searchText: string) => {
@@ -995,6 +1001,20 @@ export const useTestRequestFormData = () => {
     }
   };
 
+  // Index tra cứu O(1) — dùng trong calculateTotalCost, get*, và render loops
+  const indicatorById = useMemo(
+    () => new Map(indicators.map((ind) => [ind.id, ind])),
+    [indicators],
+  );
+  const specimenTypeById = useMemo(
+    () => new Map(specimenTypes.map((st) => [st.id, st])),
+    [specimenTypes],
+  );
+  const testMethodById = useMemo(
+    () => new Map(testMethods.map((tm) => [tm.id, tm])),
+    [testMethods],
+  );
+
   // Calculate total cost - now based on indicatorMethods with prices from TestMethodIndicator
   const calculateTotalCost = useCallback(() => {
     let total = 0;
@@ -1003,7 +1023,7 @@ export const useTestRequestFormData = () => {
       const groupedBySpecimenType: Record<string, (string | undefined)[]> = {};
       for (const mk of (sample.indicatorMethods || [])) {
         const { indicatorId, specimenTypeId: stId } = parseIndicatorMethodKey(mk);
-        const ind = indicators.find((i) => i.id === indicatorId);
+        const ind = indicatorById.get(indicatorId);
         const gKey = stId || '_none';
         if (!groupedBySpecimenType[gKey]) groupedBySpecimenType[gKey] = [];
         groupedBySpecimenType[gKey].push(ind?.name);
@@ -1011,7 +1031,7 @@ export const useTestRequestFormData = () => {
       const comboMetBySpecimenType: Record<string, boolean> = {};
       const ecoliComboMetBySpecimenType: Record<string, boolean> = {};
       for (const [stId, names] of Object.entries(groupedBySpecimenType)) {
-        const st = stId !== '_none' ? specimenTypes.find((s) => s.id === stId) : null;
+        const st = stId !== '_none' ? specimenTypeById.get(stId) : null;
         comboMetBySpecimenType[stId] = isHeavyMetalComboMet(names, st?.sampleTypeCategoryName, st?.name);
         ecoliComboMetBySpecimenType[stId] = isEcoliColiformComboMet(names, st?.sampleTypeCategoryName, st?.name);
       }
@@ -1026,8 +1046,7 @@ export const useTestRequestFormData = () => {
             (m) => m.testMethodId === testMethodId && (m.specimenTypeId || null) === specimenTypeId
           );
           if (method) {
-            // Combo miễn phí: Hg (kim loại nặng, per specimen type) hoặc E.Coli (E.Coli + Coliform, per specimen type)
-            const ind = indicators.find((i) => i.id === indicatorId);
+            const ind = indicatorById.get(indicatorId);
             const stComboKey = specimenTypeId || '_none';
             const isComboFree = (comboMetBySpecimenType[stComboKey] && isHgIndicator(ind?.name)) ||
               (ecoliComboMetBySpecimenType[stComboKey] && isEcoliIndicator(ind?.name));
@@ -1041,7 +1060,7 @@ export const useTestRequestFormData = () => {
         sample.indicatorIds.forEach((indId) => {
           const methods = indicatorMethodsMap[indId] || [];
           if (methods.length > 0) {
-            const ind = indicators.find((i) => i.id === indId);
+            const ind = indicatorById.get(indId);
             const isComboFree = (comboMetBySpecimenType['_none'] && isHgIndicator(ind?.name)) ||
               (ecoliComboMetBySpecimenType['_none'] && isEcoliIndicator(ind?.name));
             total += isComboFree ? 0 : methods[0].unitPrice;
@@ -1049,29 +1068,39 @@ export const useTestRequestFormData = () => {
         });
       }
     });
-    setTotalSampleCost(total);
-  }, [samples, indicators, indicatorMethodsMap, customPrices, specimenTypes]);
+    if (totalSampleCostRef.current !== total) {
+      totalSampleCostRef.current = total;
+      setTotalSampleCost(total);
+    }
+  }, [samples, indicatorById, specimenTypeById, indicatorMethodsMap, customPrices]);
 
   // Get indicator info by id
-  const getIndicatorInfo = (indicatorId: string) => {
-    return indicators.find((ind) => ind.id === indicatorId);
-  };
+  // useCallback để reference ổn định — không invalidate oan các useMemo phụ thuộc ở component con
+  const getIndicatorInfo = useCallback(
+    (indicatorId: string) => {
+      return indicatorById.get(indicatorId);
+    },
+    [indicatorById],
+  );
 
   // Get methods for an indicator
-  const getMethodsForIndicator = (indicatorId: string): IndicatorMethodInfo[] => {
-    return indicatorMethodsMap[indicatorId]?.filter((m) => m.isActive) || [];
-  };
+  const getMethodsForIndicator = useCallback(
+    (indicatorId: string): IndicatorMethodInfo[] => {
+      return indicatorMethodsMap[indicatorId]?.filter((m) => m.isActive) || [];
+    },
+    [indicatorMethodsMap],
+  );
 
   // Get indicator and method info from IndicatorMethodKey
-  const getIndicatorMethodInfo = (key: IndicatorMethodKey) => {
+  const getIndicatorMethodInfo = useCallback((key: IndicatorMethodKey) => {
     const { indicatorId, testMethodId, specimenTypeId } = parseIndicatorMethodKey(key);
-    let indicator = indicators.find((i) => i.id === indicatorId);
+    let indicator = indicatorById.get(indicatorId);
     const methods = indicatorMethodsMap[indicatorId] || [];
     // Must match both testMethodId AND specimenTypeId to get correct price for each specimen type
     const matchedMethod = methods.find(
       (m) => m.testMethodId === testMethodId && (m.specimenTypeId || null) === specimenTypeId
     );
-    const fallbackSpecimenType = specimenTypes.find((specimenType) => specimenType.id === specimenTypeId);
+    const fallbackSpecimenType = specimenTypeById.get(specimenTypeId);
     const method = matchedMethod || (testMethodId === PENDING_TEST_METHOD_ID
       ? {
           testMethodId: PENDING_TEST_METHOD_ID,
@@ -1088,7 +1117,7 @@ export const useTestRequestFormData = () => {
     // Fallback: If indicator not found in indicators list (e.g., sub-indicators),
     // create indicator-like object from testMethods data
     if (!indicator && testMethodId) {
-      const testMethod = testMethods.find((tm) => tm.id === testMethodId);
+      const testMethod = testMethodById.get(testMethodId);
       const tmIndicator = testMethod?.indicators?.find((ind) => ind.indicatorId === indicatorId);
       if (tmIndicator) {
         indicator = {
@@ -1105,7 +1134,7 @@ export const useTestRequestFormData = () => {
     }
 
     return { indicator, method, indicatorId, testMethodId };
-  };
+  }, [indicatorById, indicatorMethodsMap, specimenTypeById, testMethodById]);
 
   const registerQuickCreatedIndicator = useCallback(
     (result: QuickCreateIndicatorResultItem) => {
@@ -1321,7 +1350,7 @@ export const useTestRequestFormData = () => {
 
   useEffect(() => {
     calculateTotalCost();
-  }, [samples, indicators, calculateTotalCost]);
+  }, [calculateTotalCost]);
 
   useEffect(() => {
     return () => {

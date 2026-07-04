@@ -48,6 +48,52 @@ import {
 
 const { Text } = Typography;
 
+// Resizable header cell — PHẢI ở module scope: nếu định nghĩa trong component body,
+// mỗi render tạo function identity mới khiến antd Table unmount/remount toàn bộ <th>
+// (nguyên nhân chính gây khựng khi gõ trong bảng mẫu trên máy yếu)
+const ResizableTitle = ({
+  onResizeStart,
+  width,
+  columnKey,
+  children,
+  ...restProps
+}: any) => {
+  if (!width || columnKey === "actions") {
+    return <th {...restProps}>{children}</th>;
+  }
+
+  return (
+    <th {...restProps} style={{ ...restProps.style, position: "relative" }}>
+      {children}
+      <div
+        style={{
+          position: "absolute",
+          right: 0,
+          top: 0,
+          bottom: 0,
+          width: 8,
+          cursor: "col-resize",
+          zIndex: 1,
+        }}
+        onMouseDown={(e) => onResizeStart?.(e, columnKey)}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div
+          style={{
+            position: "absolute",
+            right: 3,
+            top: "30%",
+            bottom: "30%",
+            width: 2,
+            background: "#d9d9d9",
+            borderRadius: 1,
+          }}
+        />
+      </div>
+    </th>
+  );
+};
+
 // Default column widths
 const DEFAULT_COLUMN_WIDTHS: Record<string, number> = {
   sortOrder: 60,
@@ -208,49 +254,26 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
     [columnWidths],
   );
 
-  // Resizable header cell component
-  const ResizableTitle = ({
-    onResize,
-    width,
-    columnKey,
-    children,
-    ...restProps
-  }: any) => {
-    if (!width || columnKey === "actions") {
-      return <th {...restProps}>{children}</th>;
-    }
+  // Ref-indirection để tableComponents ổn định vĩnh viễn (tạo đúng 1 lần)
+  // mà resize vẫn luôn dùng handler mới nhất — không đổi hành vi resize
+  const handleResizeStartRef = useRef(handleResizeStart);
+  handleResizeStartRef.current = handleResizeStart;
 
-    return (
-      <th {...restProps} style={{ ...restProps.style, position: "relative" }}>
-        {children}
-        <div
-          style={{
-            position: "absolute",
-            right: 0,
-            top: 0,
-            bottom: 0,
-            width: 8,
-            cursor: "col-resize",
-            zIndex: 1,
-          }}
-          onMouseDown={(e) => handleResizeStart(e, columnKey)}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div
-            style={{
-              position: "absolute",
-              right: 3,
-              top: "30%",
-              bottom: "30%",
-              width: 2,
-              background: "#d9d9d9",
-              borderRadius: 1,
-            }}
+  const tableComponents = React.useMemo(
+    () => ({
+      header: {
+        cell: (props: any) => (
+          <ResizableTitle
+            {...props}
+            onResizeStart={(e: React.MouseEvent, key: string) =>
+              handleResizeStartRef.current(e, key)
+            }
           />
-        </div>
-      </th>
-    );
-  };
+        ),
+      },
+    }),
+    [],
+  );
 
   const openBarcodeModal = (sampleInfo: SampleCodeInfo) => {
     setSelectedSampleForBarcode(sampleInfo);
@@ -266,12 +289,18 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
   const getColumnWidth = (key: string) =>
     columnWidths[key] || DEFAULT_COLUMN_WIDTHS[key] || 100;
 
+  // shouldCellUpdate: skip re-render cho cell thuộc row không đổi.
+  // updateSample dùng .map() nên row không edit giữ nguyên reference →
+  // record !== prevRecord = false → antd Table skip render cell đó.
+  const scuByRef = (record: SampleFormData, prev: SampleFormData) => record !== prev;
+
   const sampleColumns = [
     {
       title: "STT",
       dataIndex: "sortOrder",
       key: "sortOrder",
       width: getColumnWidth("sortOrder"),
+      shouldCellUpdate: scuByRef,
       onHeaderCell: (column: any) => ({
         width: column.width,
         columnKey: "sortOrder",
@@ -283,6 +312,7 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
       dataIndex: "sampleCode",
       key: "sampleCode",
       width: getColumnWidth("sampleCode"),
+      shouldCellUpdate: scuByRef,
       onHeaderCell: (column: any) => ({
         width: column.width,
         columnKey: "sampleCode",
@@ -309,6 +339,7 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
       dataIndex: "sampleName",
       key: "sampleName",
       width: getColumnWidth("sampleName"),
+      shouldCellUpdate: scuByRef,
       onHeaderCell: (column: any) => ({
         width: column.width,
         columnKey: "sampleName",
@@ -331,6 +362,8 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
       dataIndex: "specimenTypeName",
       key: "specimenTypeName",
       width: getColumnWidth("specimenTypeName"),
+      // KHÔNG dùng shouldCellUpdate: AutoComplete cần re-render khi specimenTypeOptions
+      // thay đổi (debounced search), mà prop đó nằm ngoài record
       onHeaderCell: (column: any) => ({
         width: column.width,
         columnKey: "specimenTypeName",
@@ -359,6 +392,7 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
       dataIndex: "attachments",
       key: "attachments",
       width: getColumnWidth("attachments"),
+      shouldCellUpdate: scuByRef,
       onHeaderCell: (column: any) => ({
         width: column.width,
         columnKey: "attachments",
@@ -383,6 +417,7 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
       dataIndex: "isSharedSample",
       key: "isSharedSample",
       width: getColumnWidth("isSharedSample"),
+      shouldCellUpdate: scuByRef,
       onHeaderCell: (column: any) => ({
         width: column.width,
         columnKey: "isSharedSample",
@@ -405,6 +440,7 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
       dataIndex: "samplingAddress",
       key: "samplingAddress",
       width: getColumnWidth("samplingAddress"),
+      shouldCellUpdate: scuByRef,
       onHeaderCell: (column: any) => ({
         width: column.width,
         columnKey: "samplingAddress",
@@ -427,6 +463,7 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
       dataIndex: "sampleQuantity",
       key: "sampleQuantity",
       width: getColumnWidth("sampleQuantity"),
+      shouldCellUpdate: scuByRef,
       onHeaderCell: (column: any) => ({
         width: column.width,
         columnKey: "sampleQuantity",
@@ -449,6 +486,7 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
       dataIndex: "statusText",
       key: "statusText",
       width: getColumnWidth("statusText"),
+      shouldCellUpdate: scuByRef,
       onHeaderCell: (column: any) => ({
         width: column.width,
         columnKey: "statusText",
@@ -749,6 +787,7 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
       dataIndex: "notes",
       key: "notes",
       width: getColumnWidth("notes"),
+      shouldCellUpdate: scuByRef,
       onHeaderCell: (column: any) => ({
         width: column.width,
         columnKey: "notes",
@@ -907,11 +946,7 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
       <Table
         dataSource={samples}
         columns={sampleColumns}
-        components={{
-          header: {
-            cell: ResizableTitle,
-          },
-        }}
+        components={tableComponents}
         pagination={false}
         scroll={{ x: "max-content", y: 220 }}
         size="small"
@@ -963,4 +998,5 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
   );
 };
 
-export default SampleTableSection;
+// memo: chan re-render khi go o cac field Hop dong/Khach hang (handlers da on dinh qua ref-indirection)
+export default React.memo(SampleTableSection);
