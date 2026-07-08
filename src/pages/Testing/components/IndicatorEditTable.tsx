@@ -696,7 +696,6 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
           record.testingStatus === IndicatorTestingStatus.Cancelled;
 
         const disabledDate =
-          record.testingStatus === IndicatorTestingStatus.Rejected ||
           record.testingStatus === IndicatorTestingStatus.PendingApproval
             ? (current: dayjs.Dayjs) =>
                 current && current < dayjs().startOf("day")
