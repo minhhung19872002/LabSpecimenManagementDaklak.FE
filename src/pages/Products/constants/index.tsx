@@ -38,6 +38,7 @@ const PRODUCT_TYPE_COLORS: Record<ProductType, string> = {
   [ProductType.Supply]: "orange",
   [ProductType.Standard]: "purple",
   [ProductType.Solvent]: "cyan",
+  [ProductType.Equipment]: "magenta",
 };
 
 const renderTags = (jsonStr?: string) => {
@@ -348,6 +349,7 @@ export const PRODUCT_TYPE_OPTIONS = [
   { value: ProductType.Supply, label: "Vật tư tiêu hao" },
   { value: ProductType.Standard, label: "Chất chuẩn" },
   { value: ProductType.Solvent, label: "Dung môi" },
+  { value: ProductType.Equipment, label: "Thiết bị phòng Lab" },
 ];
 
 export const COLUMN_VISIBILITY_KEY = "product-visible-columns-v2";

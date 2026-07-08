@@ -3,17 +3,32 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
-import { Row, Col, Input, Select, Spin, Table, Tag, Space, Tooltip, Button, Switch } from "antd";
+import type { FC, ReactNode } from "react";
+import {
+  Row,
+  Col,
+  Input,
+  Select,
+  Spin,
+  Table,
+  Tag,
+  Space,
+  Tooltip,
+  Button,
+  Empty,
+  message,
+} from "antd";
 import { SearchOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
-import { message } from "antd";
 import {
   productService,
   ProductDto,
+  ProductSkuDto,
   ProductType,
   ProductTypeLabels,
 } from "../../../services/productService";
@@ -33,6 +48,7 @@ const PRODUCT_TYPE_COLORS: Record<ProductType, string> = {
   [ProductType.Supply]: "orange",
   [ProductType.Standard]: "purple",
   [ProductType.Solvent]: "cyan",
+  [ProductType.Equipment]: "magenta",
 };
 
 const PRODUCT_TYPE_OPTIONS = [
@@ -41,7 +57,39 @@ const PRODUCT_TYPE_OPTIONS = [
   { value: ProductType.Supply, label: "Vật tư tiêu hao" },
   { value: ProductType.Standard, label: "Chất chuẩn" },
   { value: ProductType.Solvent, label: "Dung môi" },
+  { value: ProductType.Equipment, label: "Thiết bị phòng Lab" },
 ];
+
+const ConversionChain: FC<{ sku: ProductSkuDto }> = ({ sku }) => {
+  if (!sku.packagingQuantity || !sku.packagingUnitName) return <>-</>;
+  const hasVolume = sku.volumePerUnit && sku.volumeUnitName;
+  const arrow = <span style={{ color: "#8c8c8c", margin: "0 4px" }}>→</span>;
+
+  const parts: ReactNode[] = [];
+  if (sku.baseUnitName) {
+    parts.push(<Tag color="blue" key="base">{sku.baseUnitName}</Tag>);
+    parts.push(<span key="a1">{arrow}</span>);
+  }
+  parts.push(<Tag color="orange" key="pkg">{sku.packagingQuantity} {sku.packagingUnitName}</Tag>);
+  if (hasVolume) {
+    const total = (sku.packagingQuantity * sku.volumePerUnit!).toLocaleString();
+    parts.push(<span key="a2">{arrow}</span>);
+    parts.push(<Tag color="green" key="vol">{total} {sku.volumeUnitName}</Tag>);
+  }
+  return <span style={{ display: "inline-flex", alignItems: "center", flexWrap: "wrap", gap: 2 }}>{parts}</span>;
+};
+
+const ConversionRate: FC<{ sku: ProductSkuDto }> = ({ sku }) => {
+  if (!sku.packagingUnitName || !sku.volumePerUnit || !sku.volumeUnitName) return <>-</>;
+  const arrow = <span style={{ color: "#8c8c8c", margin: "0 4px" }}>→</span>;
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", flexWrap: "wrap", gap: 2 }}>
+      <Tag color="orange">1 {sku.packagingUnitName}</Tag>
+      {arrow}
+      <Tag color="green">{sku.volumePerUnit.toLocaleString()} {sku.volumeUnitName}</Tag>
+    </span>
+  );
+};
 
 const ProductCatalogList = forwardRef<ProductCatalogActions, ProductCatalogTabProps>(
   ({ onDataChange, refreshKey }, ref) => {
@@ -53,6 +101,7 @@ const ProductCatalogList = forwardRef<ProductCatalogActions, ProductCatalogTabPr
     const [productTypeFilter, setProductTypeFilter] = useState<ProductType | undefined>(undefined);
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+    const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
     const debounceTimer = useRef<ReturnType<typeof setTimeout>>();
 
     useEffect(() => {
@@ -87,15 +136,18 @@ const ProductCatalogList = forwardRef<ProductCatalogActions, ProductCatalogTabPr
     }, [fetchData]);
 
     const isFirstMount = useRef(true);
+    const fetchDataRef = useRef(fetchData);
+    useLayoutEffect(() => { fetchDataRef.current = fetchData; });
+
     useEffect(() => {
       if (isFirstMount.current) {
         isFirstMount.current = false;
         return;
       }
       if (refreshKey !== undefined) {
-        fetchData();
+        fetchDataRef.current();
       }
-    }, [refreshKey, fetchData]);
+    }, [refreshKey]);
 
     const fetchDataAndNotify = useCallback(async () => {
       await fetchData();
@@ -109,7 +161,7 @@ const ProductCatalogList = forwardRef<ProductCatalogActions, ProductCatalogTabPr
       handleCreate,
       handleEdit,
       handleDelete,
-      handleToggleActive,
+      handleToggleActive: _handleToggleActive,
       handleModalOk,
       handleModalCancel,
     } = useProductActions({ fetchData: fetchDataAndNotify });
@@ -124,26 +176,9 @@ const ProductCatalogList = forwardRef<ProductCatalogActions, ProductCatalogTabPr
     const columns = useMemo((): ColumnsType<ProductDto> => {
       const cols: ColumnsType<ProductDto> = [
         {
-          title: "STT",
-          key: "index",
-          width: 60,
-          align: "center",
-          render: (_: any, __: ProductDto, index: number) =>
-            (currentPage - 1) * pageSize + index + 1,
-        },
-        {
-          title: "Mã nhận dạng",
-          dataIndex: "identificationCode",
-          key: "identificationCode",
-          width: 160,
-          ellipsis: true,
-          render: (v: string) => v || "-",
-        },
-        {
-          title: "Tên vật tư",
+          title: "Tên vật tư / Hóa chất",
           dataIndex: "name",
           key: "name",
-          width: 250,
           ellipsis: true,
           render: (_: string, record: ProductDto) => (
             <Space size={4}>
@@ -157,29 +192,46 @@ const ProductCatalogList = forwardRef<ProductCatalogActions, ProductCatalogTabPr
           ),
         },
         {
-          title: "Phân loại",
+          title: "Mã nhận dạng",
+          dataIndex: "identificationCode",
+          key: "identificationCode",
+          width: 160,
+          ellipsis: true,
+          render: (v: string) => v || "-",
+        },
+        {
+          title: "Loại sản phẩm",
           dataIndex: "productType",
           key: "productType",
-          width: 130,
+          width: 140,
           render: (type: ProductType) => (
             <Tag color={PRODUCT_TYPE_COLORS[type]}>{ProductTypeLabels[type]}</Tag>
           ),
         },
         {
-          title: "Trạng thái",
-          dataIndex: "isActive",
-          key: "isActive",
-          width: 130,
+          title: "Đơn vị tiêu hao",
+          key: "consumableUnit",
+          width: 140,
+          render: (_: any, record: ProductDto) => {
+            const firstSku = record.skus?.[0];
+            return firstSku?.volumeUnitName || "-";
+          },
+        },
+        {
+          title: "Điều kiện bảo quản",
+          dataIndex: "storageConditions",
+          key: "storageConditions",
+          width: 180,
+          ellipsis: true,
+          render: (v: string) => v || "-",
+        },
+        {
+          title: "Số SKU",
+          dataIndex: "skuCount",
+          key: "skuCount",
+          width: 80,
           align: "center",
-          render: (isActive: boolean, record: ProductDto) => (
-            <Switch
-              checked={isActive}
-              checkedChildren="Hoạt động"
-              unCheckedChildren="Ngừng"
-              onChange={() => handleToggleActive(record)}
-              disabled={!canEdit}
-            />
-          ),
+          render: (count: number) => count || 0,
         },
       ];
 
@@ -218,7 +270,41 @@ const ProductCatalogList = forwardRef<ProductCatalogActions, ProductCatalogTabPr
       }
 
       return cols;
-    }, [currentPage, pageSize, canEdit, canDelete, handleEdit, handleDelete, handleToggleActive]);
+    }, [canEdit, canDelete, handleEdit, handleDelete]);
+
+    const skuColumns = useMemo((): ColumnsType<ProductSkuDto> => {
+      const cols: ColumnsType<ProductSkuDto> = [
+        {
+          title: "SKU Hãng sản xuất",
+          dataIndex: "manufacturerCode",
+          key: "manufacturerCode",
+          width: 160,
+          render: (v: string) => v || "-",
+        },
+        {
+          title: "Hãng sản xuất",
+          dataIndex: "manufacturerName",
+          key: "manufacturerName",
+          width: 180,
+          ellipsis: true,
+          render: (v: string) => v || "-",
+        },
+        {
+          title: "Chuỗi quy đổi đơn vị tính",
+          key: "conversionChain",
+          width: 350,
+          render: (_: any, record: ProductSkuDto) => <ConversionChain sku={record} />,
+        },
+        {
+          title: "Định mức quy đổi lẻ",
+          key: "unitConversion",
+          width: 250,
+          render: (_: any, record: ProductSkuDto) => <ConversionRate sku={record} />,
+        },
+      ];
+
+      return cols;
+    }, []);
 
     return (
       <>
@@ -260,9 +346,35 @@ const ProductCatalogList = forwardRef<ProductCatalogActions, ProductCatalogTabPr
             columns={columns}
             dataSource={products}
             rowKey="id"
+            expandable={{
+              expandedRowRender: (record) => {
+                const skus = record.skus || [];
+                return (
+                  <div style={{ padding: "8px 0", marginLeft: 16 }}>
+                    {skus.length > 0 ? (
+                      <Table
+                        columns={skuColumns}
+                        dataSource={skus}
+                        rowKey="id"
+                        pagination={false}
+                        size="small"
+                      />
+                    ) : (
+                      <Empty
+                        image={Empty.PRESENTED_IMAGE_SIMPLE}
+                        description="Chưa có SKU nào"
+                      />
+                    )}
+                  </div>
+                );
+              },
+              rowExpandable: () => true,
+              expandedRowKeys,
+              onExpandedRowsChange: (keys) => setExpandedRowKeys(keys as string[]),
+            }}
             pagination={{
               current: currentPage,
-              pageSize: pageSize,
+              pageSize,
               total: totalCount,
               showSizeChanger: true,
               pageSizeOptions: [50, 100, 150],
@@ -291,7 +403,7 @@ const ProductCatalogList = forwardRef<ProductCatalogActions, ProductCatalogTabPr
         />
       </>
     );
-  }
+  },
 );
 
 ProductCatalogList.displayName = "ProductCatalogList";

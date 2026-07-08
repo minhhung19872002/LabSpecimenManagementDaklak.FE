@@ -31,6 +31,31 @@
 }
 
 /* Product modal responsive */
+
+/* Tablet: constrain width */
+@media screen and (max-width: 1024px) and (min-width: 769px) {
+  .product-modal .ant-modal {
+    max-width: calc(100vw - 48px) !important;
+  }
+
+  .product-modal .ant-modal-body {
+    padding: 0 16px 16px !important;
+  }
+
+  .product-modal .ant-form-vertical .ant-form-item-label,
+  .product-modal .ant-form-item-label {
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+  }
+  .product-modal .ant-form-item-row {
+    row-gap: 4px !important;
+  }
+  .product-modal .ant-form-item {
+    margin-bottom: 12px !important;
+  }
+}
+
+/* Mobile */
 @media screen and (max-width: 768px) {
   .product-modal .ant-modal {
     max-width: calc(100vw - 16px) !important;
@@ -42,20 +67,7 @@
     max-height: 82vh !important;
   }
 
-  /* Stack form + summary vertically on mobile */
-  .product-modal .product-modal-layout {
-    flex-direction: column !important;
-  }
-  .product-modal .product-modal-form {
-    width: 100% !important;
-    flex: none !important;
-    max-width: 100% !important;
-  }
-  .product-modal .product-modal-summary {
-    display: none !important;
-  }
-
-  /* Compact form: reduce gap between label and input */
+  /* Compact form */
   .product-modal .ant-form-vertical .ant-form-item-label,
   .product-modal .ant-form-item-label {
     padding-bottom: 0 !important;
@@ -71,29 +83,5 @@
   /* Footer buttons stack */
   .product-modal .ant-modal-footer > div {
     flex-wrap: wrap !important;
-  }
-}
-
-@media screen and (max-width: 992px) and (min-width: 769px) {
-  .product-modal .ant-form-vertical .ant-form-item-label,
-  .product-modal .ant-form-item-label {
-    padding-bottom: 0 !important;
-    margin-bottom: 0 !important;
-  }
-  .product-modal .ant-form-item-row {
-    row-gap: 4px !important;
-  }
-  .product-modal .ant-form-item {
-    margin-bottom: 12px !important;
-  }
-}
-
-@media screen and (max-width: 992px) and (min-width: 769px) {
-  .product-modal .ant-modal {
-    max-width: calc(100vw - 48px) !important;
-  }
-
-  .product-modal .ant-modal-body {
-    padding: 0 16px 16px !important;
   }
 }

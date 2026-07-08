@@ -7,6 +7,7 @@ export enum ProductType {
   Supply = 2,
   Standard = 3,
   Solvent = 4,
+  Equipment = 5,
 }
 
 export const ProductTypeLabels: Record<ProductType, string> = {
@@ -15,6 +16,7 @@ export const ProductTypeLabels: Record<ProductType, string> = {
   [ProductType.Supply]: "Vật tư tiêu hao",
   [ProductType.Standard]: "Chất chuẩn",
   [ProductType.Solvent]: "Dung môi",
+  [ProductType.Equipment]: "Thiết bị phòng Lab",
 };
 
 // DTOs
@@ -41,10 +43,13 @@ export interface ProductDto {
   storageConditions?: string;
   formattedStorageConditions?: string;
   categories?: string;
+  chemicalFormula?: string;
+  minStockLevel?: number;
   availableQuantity: number;
   storageAvailableQuantity: number;
   isActive: boolean;
   isDraft: boolean;
+  skuCount: number;
   warehouseName?: string;
   earliestReceivedDate?: string;
   earliestLotNumber?: string;
@@ -55,6 +60,33 @@ export interface ProductDto {
   creationTime: string;
   attachments: ProductAttachmentDto[];
   unitConversions: ProductUnitConversionDto[];
+  skus: ProductSkuDto[];
+}
+
+export interface ProductSkuDto {
+  id: string;
+  manufacturerId: string;
+  manufacturerCode?: string;
+  manufacturerName?: string;
+  baseUnitId?: string;
+  baseUnitName?: string;
+  packagingQuantity?: number;
+  packagingUnitId?: string;
+  packagingUnitName?: string;
+  volumePerUnit?: number;
+  volumeUnitId?: string;
+  volumeUnitName?: string;
+  creationTime: string;
+}
+
+export interface CreateUpdateProductSkuDto {
+  id?: string;
+  manufacturerId: string;
+  baseUnitId?: string | null;
+  packagingQuantity?: number | null;
+  packagingUnitId?: string | null;
+  volumePerUnit?: number | null;
+  volumeUnitId?: string | null;
 }
 
 export interface CreateUpdateProductDto {
@@ -75,10 +107,13 @@ export interface CreateUpdateProductDto {
   storageConditions?: string;
   formattedStorageConditions?: string;
   categories?: string;
+  chemicalFormula?: string;
+  minStockLevel?: number | null;
   isActive: boolean;
   isDraft: boolean;
   attachments?: CreateProductAttachmentDto[];
   unitConversions?: CreateUpdateProductUnitConversionDto[];
+  skus?: CreateUpdateProductSkuDto[];
 }
 
 export interface ProductAttachmentDto {
@@ -202,6 +237,10 @@ export const productService = {
 
   deleteAttachment: async (productId: string, attachmentId: string): Promise<void> => {
     await api.delete(`${BASE_URL}/${productId}/attachments/${attachmentId}`);
+  },
+
+  deleteSku: async (productId: string, skuId: string): Promise<void> => {
+    await api.delete(`${BASE_URL}/${productId}/skus/${skuId}`);
   },
 
   getProductSources: async (productId: string, params: GetProductSourcesInput = {}): Promise<PagedResult<ProductSourceDto>> => {
