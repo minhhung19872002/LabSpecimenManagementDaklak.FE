@@ -1,6 +1,14 @@
-import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { Table, Input, Select, Tag, Row, Col, Pagination, DatePicker } from 'antd';
-import { SearchOutlined, SortAscendingOutlined } from '@ant-design/icons';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { Table, AutoComplete, Input, Select, Tag, Row, Col, Pagination, DatePicker, Button, Tooltip, message, Typography } from 'antd';
+import {
+  SearchOutlined,
+  SortAscendingOutlined,
+  CaretRightOutlined,
+  CaretDownOutlined,
+  SendOutlined,
+  StopOutlined,
+} from '@ant-design/icons';
+
 import ResponsiveSelect from '../../../components/common/ResponsiveSelect';
 import { EllipsisTooltip } from '../../../components/common';
 import type { ColumnOption } from '../../../components/common';
@@ -8,352 +16,209 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useSampleAssignmentLogForLab } from '../hooks/useSampleAssignmentLogForLab';
 import { SampleAssignmentLogDto } from '../../../types/qualityManagement';
+import { TestRequestStatus } from '../../../types/testRequest';
 import {
-  TestRequestStatus,
-} from '../../../types/testRequest';
-import {
-  IndicatorApprovalStatus,
   QLKTDisplayStatus,
   QLKTDisplayStatusLabels,
   QLKTDisplayStatusColors,
 } from '../../../types/laboratoryTask';
-
+import { testingService } from '../../../services/testingService';
+import { testResultValueService } from '../../../services/testResultValueService';
+import CannotTestModal from './CannotTestModal';
+import { useMultipleActionPermissions } from '../../../hooks/useActionPermission';
 import { useHeaderHeight } from '../../../hooks';
 import ResultFilterControl from './ResultFilterControl';
 import { getResultSearchCandidates } from './resultFilterUtils';
 import '../../QualityManagement/components/SampleAssignmentLogTab.css';
 
 const { RangePicker } = DatePicker;
+const { Text } = Typography;
 
-// Helper to format date
 const formatDate = (date?: string) => {
   if (!date) return '-';
   return dayjs(date).format('DD/MM/YYYY');
 };
 
-const getDateKey = (date?: string): string => {
-  if (!date) return '';
-  return dayjs(date).format('YYYY-MM-DD');
-};
+// Statuses where KTV can input result + submit
+const ACTIONABLE_STATUSES: QLKTDisplayStatus[] = [
+  QLKTDisplayStatus.ToDo,
+  QLKTDisplayStatus.Testing,
+  QLKTDisplayStatus.WaitingQLKTApproval,
+  QLKTDisplayStatus.ResultRejected,
+];
 
-// Process data to add rowSpan info for contract, sample-level columns, date columns, and personnel columns
-interface ProcessedLogItem extends SampleAssignmentLogDto {
-  contractRowSpan: number;
-  sampleRowSpan: number;
-  transferDateRowSpan: number;
-  requestCompletionDateRowSpan: number;
-  testDateRowSpan: number;
-  technicalManagerRowSpan: number;
-  technicianRowSpan: number;
-  entryDateRowSpan: number;
-  qlktApprovalDateRowSpan: number;
+// ---------- Row types ----------
+
+interface DisplayRow extends Partial<SampleAssignmentLogDto> {
+  _rowType: 'contract' | 'sample' | 'indicator';
   _rowKey: string;
-  _rowIndex: number;
-  _contractGroupStart: number;
-  _contractGroupEnd: number;
+  _stt?: number;
+  _groupContractNumber?: string;
+  _groupCustomerName?: string;
+  _groupSampleCode?: string;
+  _groupSampleName?: string;
+  _groupSampleId?: string;
+  _indicatorCount?: number;
 }
 
-const processDataForRowSpan = (data: SampleAssignmentLogDto[]): ProcessedLogItem[] => {
+// ---------- Data processing ----------
+
+const buildDisplayRows = (
+  data: SampleAssignmentLogDto[],
+  collapsedContracts: Set<string>,
+  collapsedSamples: Set<string>,
+): DisplayRow[] => {
   if (data.length === 0) return [];
 
-  const result: ProcessedLogItem[] = new Array(data.length);
+  const rows: DisplayRow[] = [];
 
-  // Pre-compute date keys once to avoid repeated dayjs() calls during span calculation.
-  const dateKeys = data.map(item => ({
-    transferDate: getDateKey(item.transferDate),
-    requestCompletionDate: getDateKey(item.requestCompletionDate),
-    testDate: getDateKey(item.testDate),
-    entryDate: getDateKey(item.entryDate),
-    qlktApprovalDate: getDateKey(item.qlktApprovalDate),
-  }));
-
-  // Calculate contract groups (start and end indices for each contract group).
-  const contractGroups: { start: number; end: number }[] = [];
-  let i = 0;
-  while (i < data.length) {
-    const currentContract = data[i].contractNumber || '';
-    let j = i + 1;
-    while (j < data.length && (data[j].contractNumber || '') === currentContract) {
-      j++;
-    }
-    contractGroups.push({ start: i, end: j - 1 });
-    i = j;
+  // Group by contract then sample using Map (preserves insertion order, handles non-contiguous rows from any sort)
+  const contractMap = new Map<string, SampleAssignmentLogDto[]>();
+  for (const item of data) {
+    const ck = item.contractNumber || '';
+    if (!contractMap.has(ck)) contractMap.set(ck, []);
+    contractMap.get(ck)!.push(item);
   }
 
-  // Calculate consecutive spans for a field within contract boundaries.
-  const calculateFieldSpansWithinContract = (
-    fieldGetter: (item: SampleAssignmentLogDto) => string
-  ): number[] => {
-    const spans: number[] = new Array(data.length).fill(1);
-    for (const group of contractGroups) {
-      let idx = group.start;
-      while (idx <= group.end) {
-        const currentValue = fieldGetter(data[idx]);
-        let spanCount = 1;
-        while (
-          idx + spanCount <= group.end &&
-          fieldGetter(data[idx + spanCount]) === currentValue
-        ) {
-          spanCount++;
-        }
-        spans[idx] = spanCount;
-        for (let k = idx + 1; k < idx + spanCount; k++) {
-          spans[k] = 0;
-        }
-        idx += spanCount;
-      }
-    }
-    return spans;
-  };
+  for (const [ck, contractItems] of contractMap) {
+    rows.push({
+      _rowType: 'contract',
+      _rowKey: `contract_${ck}`,
+      _groupContractNumber: ck,
+      _groupCustomerName: contractItems[0]?.customerName || '',
+      _indicatorCount: contractItems.length,
+    });
 
-  // Calculate sample spans within each contract group.
-  const sampleSpans: number[] = new Array(data.length).fill(0);
-  for (const group of contractGroups) {
-    let si = group.start;
-    while (si <= group.end) {
-      const currentSampleId = data[si].sampleId;
-      let count = 1;
-      while (
-        si + count <= group.end &&
-        data[si + count].sampleId === currentSampleId
-      ) {
-        count++;
+    if (collapsedContracts.has(ck)) continue;
+
+    // Group by sample within contract
+    const sampleMap = new Map<string, { sampleCode: string; sampleName: string; items: SampleAssignmentLogDto[] }>();
+    for (const item of contractItems) {
+      const sid = String(item.sampleId);
+      if (!sampleMap.has(sid)) {
+        sampleMap.set(sid, { sampleCode: item.sampleCode || '', sampleName: item.sampleName || '', items: [] });
       }
-      sampleSpans[si] = count;
-      si += count;
+      sampleMap.get(sid)!.items.push(item);
+    }
+
+    for (const [sid, sg] of sampleMap) {
+      rows.push({
+        _rowType: 'sample',
+        _rowKey: `sample_${sid}`,
+        _groupSampleCode: sg.sampleCode,
+        _groupSampleName: sg.sampleName,
+        _groupSampleId: sid,
+        _indicatorCount: sg.items.length,
+      });
+
+      if (collapsedSamples.has(sid)) continue;
+
+      sg.items.forEach((item, idx) => {
+        rows.push({
+          _rowType: 'indicator',
+          _rowKey: `ind_${item.laboratoryTaskIndicatorId ?? `${sid}_${String(item.indicatorId)}_${idx}`}`,
+          _stt: idx + 1,
+          ...item,
+        });
+      });
     }
   }
 
-  // Calculate personnel spans within each contract.
-  const technicalManagerSpans = calculateFieldSpansWithinContract(
-    (item) => item.technicalManagerName || ''
-  );
-  const technicianSpans = calculateFieldSpansWithinContract(
-    (item) => item.technicianName || ''
-  );
-
-
-  // Process each row within its contract group
-  for (const group of contractGroups) {
-    const contractSpan = group.end - group.start + 1;
-
-    for (let idx = group.start; idx <= group.end; idx++) {
-      const currentItem = data[idx];
-      const currentKeys = dateKeys[idx];
-
-      // Date forward-looking: within same sample AND same contract group
-      const calcDateSpan = (
-        fieldName: keyof typeof currentKeys
-      ): number => {
-        const currentDate = currentKeys[fieldName];
-        let span = 1;
-        for (
-          let k = idx + 1;
-          k <= group.end && data[k].sampleId === currentItem.sampleId;
-          k++
-        ) {
-          if (dateKeys[k][fieldName] === currentDate) span++;
-          else break;
-        }
-        return span;
-      };
-
-      let transferDateSpan = calcDateSpan('transferDate');
-      let requestDateSpan = calcDateSpan('requestCompletionDate');
-      let testDateSpan = calcDateSpan('testDate');
-      let entryDateSpan = calcDateSpan('entryDate');
-      let qlktApprovalDateSpan = calcDateSpan('qlktApprovalDate');
-
-      // Zero-out if previous row in same sample AND same contract has same date
-      const isPrevSameSample =
-        idx > group.start &&
-        data[idx - 1].sampleId === currentItem.sampleId;
-
-      if (isPrevSameSample) {
-        const prevKeys = dateKeys[idx - 1];
-        if (currentKeys.transferDate === prevKeys.transferDate)
-          transferDateSpan = 0;
-        if (currentKeys.requestCompletionDate === prevKeys.requestCompletionDate)
-          requestDateSpan = 0;
-        if (currentKeys.testDate === prevKeys.testDate)
-          testDateSpan = 0;
-        if (currentKeys.entryDate === prevKeys.entryDate)
-          entryDateSpan = 0;
-        if (currentKeys.qlktApprovalDate === prevKeys.qlktApprovalDate)
-          qlktApprovalDateSpan = 0;
-      }
-
-      result[idx] = {
-        ...currentItem,
-        contractRowSpan: idx === group.start ? contractSpan : 0,
-        sampleRowSpan: sampleSpans[idx],
-        transferDateRowSpan: transferDateSpan,
-        requestCompletionDateRowSpan: requestDateSpan,
-        testDateRowSpan: testDateSpan,
-        technicalManagerRowSpan: technicalManagerSpans[idx],
-        technicianRowSpan: technicianSpans[idx],
-        entryDateRowSpan: entryDateSpan,
-        qlktApprovalDateRowSpan: qlktApprovalDateSpan,
-        _rowKey: `${currentItem.indicatorId}_${idx}`,
-        _rowIndex: idx,
-        _contractGroupStart: group.start,
-        _contractGroupEnd: group.end,
-      };
-    }
-  }
-
-  return result;
+  return rows;
 };
 
-// Determine row color class based on highlighting rules (Testing page - không check QLCL)
-const getRowColorClass = (record: ProcessedLogItem): string => {
-  // Skip if report published or completed
-  if (record.isReportPublished || record.testRequestStatus === TestRequestStatus.Completed) {
-    return '';
-  }
+// ---------- Row color ----------
 
-  // Skip if QLKT đã duyệt (Hoàn thành trên trang Testing)
-  if (record.qlktDisplayStatus === QLKTDisplayStatus.Completed) {
-    return '';
-  }
-
-  // Yellow: Waiting for result approval (Entered - chờ QLKT duyệt)
-  if (record.indicatorApprovalStatus === IndicatorApprovalStatus.Entered) {
-    return 'row-yellow';
-  }
-
-  // Red: Testing in progress (Cần làm hoặc Đang thử nghiệm)
+const getRowColorClass = (record: DisplayRow): string => {
+  if (record._rowType !== 'indicator') return '';
+  if (record.isReportPublished || record.testRequestStatus === TestRequestStatus.Completed) return '';
+  if (record.qlktDisplayStatus === QLKTDisplayStatus.Completed) return '';
+  if (record.qlktDisplayStatus === QLKTDisplayStatus.WaitingQLKTApproval) return 'row-yellow';
   if (
     record.qlktDisplayStatus === QLKTDisplayStatus.ToDo ||
-    record.qlktDisplayStatus === QLKTDisplayStatus.Testing
+    record.qlktDisplayStatus === QLKTDisplayStatus.Testing ||
+    record.qlktDisplayStatus === QLKTDisplayStatus.ResultRejected
   ) {
     return 'row-red';
   }
-
   return '';
 };
 
+// ---------- Column options (exported for visibility selector) ----------
+
 export const COLUMN_OPTIONS: ColumnOption[] = [
-  { key: 'contractNumber', label: 'Số hợp đồng', disabled: true },
-  { key: 'sampleCode', label: 'Mã số mẫu', disabled: true },
-  { key: 'sampleName', label: 'Tên mẫu' },
-  { key: 'sampleQuantity', label: 'Lượng mẫu gửi' },
-  { key: 'sampleStatusText', label: 'Tình trạng mẫu' },
-  { key: 'transferDate', label: 'Ngày chuyển' },
-  { key: 'requestCompletionDate', label: 'Ngày YC xong' },
-  { key: 'testDate', label: 'Thời gian TN' },
-  { key: 'indicatorName', label: 'Tên chỉ tiêu' },
+  { key: 'stt', label: 'STT', disabled: true },
+  { key: 'indicatorName', label: 'Chỉ tiêu TN', disabled: true },
   { key: 'methodName', label: 'Phương pháp' },
-  { key: 'unit', label: 'ĐVT' },
-  { key: 'result', label: 'Kết quả' },
-  { key: 'technicalManagerName', label: 'QL kỹ thuật' },
-  { key: 'technicianName', label: 'Kỹ thuật viên' },
-  { key: 'entryDate', label: 'Ngày nhập' },
-  { key: 'qlktApprovalDate', label: 'Ngày QL duyệt' },
-  { key: 'qlktDisplayStatus', label: 'Tình trạng' },
+  { key: 'technicianName', label: 'Người thực hiện' },
+  { key: 'transferDate', label: 'Ngày giao mẫu' },
+  { key: 'testDate', label: 'Ngày TN', disabled: true },
+  { key: 'requestCompletionDate', label: 'Hạn trả KQ' },
+  { key: 'qlktDisplayStatus', label: 'Trạng thái' },
+  { key: 'result', label: 'Kết quả', disabled: true },
+  { key: 'actions', label: 'Thao tác', disabled: true },
 ];
 export const ALL_COLUMN_KEYS = COLUMN_OPTIONS.map((c) => c.key);
+
+// ---------- Props ----------
 
 interface LabSampleAssignmentLogTabProps {
   visibleColumns?: string[];
   logData: ReturnType<typeof useSampleAssignmentLogForLab>;
 }
 
-const DEFAULT_COLUMN_WIDTHS: Record<string, number> = {
-  contractNumber: 130,
-  sampleCode: 120,
-  sampleName: 150,
-  sampleQuantity: 100,
-  sampleStatusText: 120,
-  transferDate: 100,
-  requestCompletionDate: 100,
-  testDate: 100,
-  indicatorName: 180,
-  methodName: 150,
-  unit: 80,
-  result: 100,
-  technicalManagerName: 130,
-  technicianName: 130,
-  entryDate: 100,
-  qlktApprovalDate: 100,
-  qlktDisplayStatus: 150,
-};
+// ---------- Component ----------
 
 const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
   visibleColumns = ALL_COLUMN_KEYS,
   logData,
 }) => {
   const headerHeight = useHeaderHeight();
+  const permissions = useMultipleActionPermissions('testing', ['inputResult', 'editResult', 'sendResult']);
+  const canInputResult = permissions.inputResult?.canAll || permissions.inputResult?.canEdit;
+  const canSendResult = permissions.sendResult?.canAll || permissions.sendResult?.canEdit;
 
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(DEFAULT_COLUMN_WIDTHS);
-  const [resultSearchHtml, setResultSearchHtml] = useState('');
-  const [resultFilterOpen, setResultFilterOpen] = useState(false);
-  const columnWidthsRef = useRef(columnWidths);
-  columnWidthsRef.current = columnWidths;
+  const [collapsedContracts, setCollapsedContracts] = useState<Set<string>>(new Set());
+  const [collapsedSamples, setCollapsedSamples] = useState<Set<string>>(new Set());
 
-  const handleResizeStart = useCallback((e: React.MouseEvent, colKey: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const startX = e.clientX;
-    const startWidth = columnWidthsRef.current[colKey] || 100;
+  const [editedResults, setEditedResults] = useState<Record<string, string>>({});
+  const [editedTestDates, setEditedTestDates] = useState<Record<string, string>>({});
+  const [submittingIds, setSubmittingIds] = useState<Set<string>>(new Set());
+  // indicatorId → list of result value options (from master data)
+  const [resultValueMap, setResultValueMap] = useState<Map<string, string[]>>(new Map());
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const diff = moveEvent.clientX - startX;
-      const newWidth = Math.max(50, startWidth + diff);
-      setColumnWidths((prev) => ({ ...prev, [colKey]: newWidth }));
-    };
-
-    const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
+  useEffect(() => {
+    testResultValueService.getWithIndicators().then((items) => {
+      const map = new Map<string, string[]>();
+      const allNames = items.map((i) => i.name).filter(Boolean);
+      items.forEach((item) => {
+        (item.indicators ?? []).forEach((pair: { indicatorId?: string }) => {
+          if (!pair.indicatorId) return;
+          const list = map.get(pair.indicatorId) ?? [];
+          if (!list.includes(item.name)) list.push(item.name);
+          map.set(pair.indicatorId, list);
+        });
+      });
+      // fallback: store all names under empty key for indicators with no specific mapping
+      map.set('__all__', allNames);
+      setResultValueMap(map);
+    }).catch((err) => { console.warn('Result value suggestions unavailable:', err); });
   }, []);
 
-  const ResizableTitle = useCallback(({ width, columnKey, children, ...restProps }: any) => {
-    if (!width) {
-      return <th {...restProps}>{children}</th>;
-    }
-    return (
-      <th {...restProps} style={{ ...restProps.style, position: 'relative' }}>
-        {children}
-        <div
-          style={{
-            position: 'absolute',
-            right: 0,
-            top: 0,
-            bottom: 0,
-            width: 8,
-            cursor: 'col-resize',
-            zIndex: 1,
-          }}
-          onMouseDown={(e) => handleResizeStart(e, columnKey)}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div
-            style={{
-              position: 'absolute',
-              right: 3,
-              top: '30%',
-              bottom: '30%',
-              width: 2,
-              background: '#d9d9d9',
-              borderRadius: 1,
-            }}
-          />
-        </div>
-      </th>
-    );
-  }, [handleResizeStart]);
+  const [cannotTestModal, setCannotTestModal] = useState<{
+    visible: boolean;
+    taskId: string;
+    indicatorId: string;
+    indicatorName: string;
+  }>({ visible: false, taskId: '', indicatorId: '', indicatorName: '' });
+
+  const [resultSearchHtml, setResultSearchHtml] = useState('');
+  const [resultFilterOpen, setResultFilterOpen] = useState(false);
+
   const {
     loading,
     data,
+    totalCount,
     searchText,
     sorting,
     dateRange,
@@ -375,13 +240,15 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
     handleResultFilterChange,
     handleTableChange,
     handleRowDoubleClick,
+    reload,
     reloadDistinctResults,
   } = logData;
 
-  // Process data for row spanning
-  const processedData = useMemo(() => processDataForRowSpan(data), [data]);
+  const displayRows = useMemo(
+    () => buildDisplayRows(data, collapsedContracts, collapsedSamples),
+    [data, collapsedContracts, collapsedSamples],
+  );
 
-  // Count unique contracts in current page for display
   const uniqueContractCount = useMemo(() => {
     const contracts = new Set(data.map((item) => item.contractNumber));
     return contracts.size;
@@ -389,276 +256,305 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
 
   const filteredDistinctResults = useMemo(() => {
     const searchCandidates = getResultSearchCandidates(resultSearchHtml);
-    if (searchCandidates.length === 0) {
-      return distinctResults;
-    }
-
+    if (searchCandidates.length === 0) return distinctResults;
     return distinctResults.filter((result) => {
       const optionCandidates = getResultSearchCandidates(result);
-      return searchCandidates.some((searchCandidate) =>
-        optionCandidates.some((optionCandidate) => optionCandidate.includes(searchCandidate))
-      );
+      return searchCandidates.some((sc) => optionCandidates.some((oc) => oc.includes(sc)));
     });
   }, [distinctResults, resultSearchHtml]);
 
-  const hoveredRowIndexRef = useRef<number | null>(null);
-  const tableContainerRef = useRef<HTMLDivElement>(null);
-  const highlightedRef = useRef<HTMLElement[]>([]);
-  const hoverRafRef = useRef<number>(0);
-  const rowElementsRef = useRef<HTMLTableRowElement[]>([]);
-  const mergedCellIndexRef = useRef<Map<number, HTMLTableCellElement[]>>(new Map());
-
-  useEffect(() => {
-    const raf = requestAnimationFrame(() => {
-      const container = tableContainerRef.current;
-      if (!container) return;
-
-      rowElementsRef.current = Array.from(
-        container.querySelectorAll<HTMLTableRowElement>('tbody tr[data-row-key]')
-      );
-
-      const index = new Map<number, HTMLTableCellElement[]>();
-      container.querySelectorAll<HTMLTableCellElement>('td[data-row-span]').forEach((td) => {
-        const cellIdx = parseInt(td.getAttribute('data-row-idx') || '-1');
-        const span = parseInt(td.getAttribute('data-row-span') || '1');
-        for (let i = cellIdx; i < cellIdx + span; i++) {
-          if (!index.has(i)) index.set(i, []);
-          index.get(i)!.push(td);
-        }
-      });
-      mergedCellIndexRef.current = index;
+  const toggleContract = useCallback((contractNumber: string) => {
+    setCollapsedContracts((prev) => {
+      const next = new Set(prev);
+      if (next.has(contractNumber)) next.delete(contractNumber);
+      else next.add(contractNumber);
+      return next;
     });
-    return () => cancelAnimationFrame(raf);
-  }, [processedData]);
-
-  const clearHoverClasses = useCallback(() => {
-    cancelAnimationFrame(hoverRafRef.current);
-    for (const el of highlightedRef.current) {
-      el.classList.remove('row-hover', 'row-in-hover-group', 'cell-hover');
-    }
-    highlightedRef.current = [];
   }, []);
 
-  const applyHoverClasses = useCallback((rowIndex: number) => {
-    cancelAnimationFrame(hoverRafRef.current);
-    hoverRafRef.current = requestAnimationFrame(() => {
-      const container = tableContainerRef.current;
-      if (!container) return;
-
-      clearHoverClasses();
-
-      const record = processedData[rowIndex];
-      if (!record) return;
-
-      const rows = rowElementsRef.current;
-      if (rows.length === 0) return;
-
-      const start = record._contractGroupStart;
-      const end = Math.min(record._contractGroupEnd, rows.length - 1);
-
-      for (let i = start; i <= end; i++) {
-        const tr = rows[i];
-        if (!tr) continue;
-        if (i === rowIndex) {
-          tr.classList.add('row-hover');
-        } else {
-          tr.classList.add('row-in-hover-group');
-        }
-        highlightedRef.current.push(tr);
-      }
-
-      const mergedCells = mergedCellIndexRef.current.get(rowIndex);
-      if (mergedCells) {
-        for (const td of mergedCells) {
-          td.classList.add('cell-hover');
-          highlightedRef.current.push(td);
-        }
-      }
+  const toggleSample = useCallback((sampleId: string) => {
+    setCollapsedSamples((prev) => {
+      const next = new Set(prev);
+      if (next.has(sampleId)) next.delete(sampleId);
+      else next.add(sampleId);
+      return next;
     });
-  }, [processedData, clearHoverClasses]);
-
-  const mergedCellProps = useCallback((record: ProcessedLogItem, rowSpan: number) => {
-    const props: Record<string, any> = { rowSpan };
-    if (rowSpan > 1) {
-      props['data-row-idx'] = record._rowIndex;
-      props['data-row-span'] = rowSpan;
-    }
-    return props;
   }, []);
 
-  // Build columns with rowSpan support + dynamic widths from resize
-  const columns: ColumnsType<ProcessedLogItem> = useMemo(() => {
-    const withResize = (key: string, col: any) => ({
-      ...col,
-      width: columnWidths[key] || col.width,
-      onHeaderCell: () => ({ width: columnWidths[key] || col.width, columnKey: key }),
-    });
+  const handleSubmitResult = useCallback(
+    async (record: DisplayRow) => {
+      const labIndicatorId = record.laboratoryTaskIndicatorId as string;
+      const taskId = record.laboratoryTaskId as string;
+      const sampleId = record.sampleId as unknown as string;
+      const resultValue = editedResults[labIndicatorId] ?? record.result ?? '';
+      const rawTestDate = editedTestDates[labIndicatorId] ?? record.testDate;
+      const testDate = rawTestDate
+        ? dayjs(rawTestDate).format('YYYY-MM-DD')
+        : dayjs().format('YYYY-MM-DD');
 
-    return [
-      withResize('contractNumber', {
-        title: 'Số hợp đồng',
-        dataIndex: 'contractNumber',
-        key: 'contractNumber',
+      if (!resultValue.trim()) {
+        message.warning('Vui lòng nhập kết quả trước khi gửi');
+        return;
+      }
+
+      setSubmittingIds((prev) => new Set(prev).add(labIndicatorId));
+
+      try {
+        await testingService.saveResults(taskId, {
+          results: [{ indicatorId: labIndicatorId, result: resultValue.trim(), testDate }],
+        });
+
+        await testingService.submitResults(taskId, {
+          sampleId,
+          indicators: [{ indicatorId: labIndicatorId, testDate }],
+        });
+
+        message.success('Đã gửi kết quả thành công');
+
+        setEditedResults((prev) => {
+          const next = { ...prev };
+          delete next[labIndicatorId];
+          return next;
+        });
+        setEditedTestDates((prev) => {
+          const next = { ...prev };
+          delete next[labIndicatorId];
+          return next;
+        });
+
+        reload();
+      } catch (error: any) {
+        const msg = error?.response?.data?.error?.message;
+        message.error(msg || 'Có lỗi xảy ra khi gửi kết quả');
+      } finally {
+        setSubmittingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(labIndicatorId);
+          return next;
+        });
+      }
+    },
+    [editedResults, editedTestDates, reload],
+  );
+
+  const handleCannotTest = useCallback((record: DisplayRow) => {
+    setCannotTestModal({
+      visible: true,
+      taskId: record.laboratoryTaskId as string,
+      indicatorId: record.laboratoryTaskIndicatorId as string,
+      indicatorName: record.indicatorName || '',
+    });
+  }, []);
+
+  const handleCannotTestSuccess = useCallback(() => {
+    setCannotTestModal((prev) => ({ ...prev, visible: false }));
+    reload();
+  }, [reload]);
+
+  // Count visible leaf columns for header-row colSpan
+  const visibleLeafCount = visibleColumns.length;
+
+  const columns: ColumnsType<DisplayRow> = useMemo(() => {
+    const isVisible = (key: string) => visibleColumns.includes(key);
+
+    // For contract/sample header rows: first cell spans all cols, rest hidden
+    const headerSpan = (record: DisplayRow) => {
+      if (record._rowType === 'contract' || record._rowType === 'sample') return { colSpan: 0 };
+      return {};
+    };
+    const firstSpan = (record: DisplayRow) => {
+      if (record._rowType === 'contract' || record._rowType === 'sample')
+        return { colSpan: visibleLeafCount };
+      return {};
+    };
+
+    const leafColumns: ColumnsType<DisplayRow> = [];
+
+    if (isVisible('stt')) {
+      leafColumns.push({
+        title: 'STT',
+        key: 'stt',
+        width: 60,
         fixed: 'left',
-        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.contractRowSpan),
-        render: (text: string) => (
-          <EllipsisTooltip title={text || '-'}>{text || '-'}</EllipsisTooltip>
-        ),
-      }),
-      withResize('sampleCode', {
-        title: 'Mã số mẫu',
-        dataIndex: 'sampleCode',
-        key: 'sampleCode',
-        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.sampleRowSpan),
-        render: (text: string) => (
-          <EllipsisTooltip title={text || '-'}>{text || '-'}</EllipsisTooltip>
-        ),
-      }),
-      withResize('sampleName', {
-        title: 'Tên mẫu',
-        dataIndex: 'sampleName',
-        key: 'sampleName',
-        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.sampleRowSpan),
-        render: (text: string) => (
-          <EllipsisTooltip title={text || '-'}>{text || '-'}</EllipsisTooltip>
-        ),
-      }),
-      withResize('sampleQuantity', {
-        title: 'Lượng mẫu gửi',
-        dataIndex: 'sampleQuantity',
-        key: 'sampleQuantity',
-        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.sampleRowSpan),
-        render: (text: string) => (
-          <EllipsisTooltip title={text || '-'}>{text || '-'}</EllipsisTooltip>
-        ),
-      }),
-      withResize('sampleStatusText', {
-        title: 'Tình trạng mẫu',
-        dataIndex: 'sampleStatusText',
-        key: 'sampleStatusText',
-        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.sampleRowSpan),
-        render: (text: string) => (
-          <EllipsisTooltip title={text || '-'}>{text || '-'}</EllipsisTooltip>
-        ),
-      }),
-      withResize('transferDate', {
-        title: 'Ngày chuyển',
-        dataIndex: 'transferDate',
-        key: 'transferDate',
-        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.transferDateRowSpan),
-        render: (date: string) => {
-          const formatted = formatDate(date);
-          return (
-            <EllipsisTooltip title={formatted}>{formatted}</EllipsisTooltip>
-          );
+        align: 'center',
+        onCell: (record) => firstSpan(record),
+        render: (_: any, record: DisplayRow) => {
+          if (record._rowType === 'contract') {
+            const collapsed = collapsedContracts.has(record._groupContractNumber || '');
+            return (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
+                <span
+                  style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}
+                  onClick={() => toggleContract(record._groupContractNumber || '')}
+                >
+                  {collapsed ? <CaretRightOutlined /> : <CaretDownOutlined />}
+                </span>
+                <strong>{record._groupContractNumber || '-'}</strong>
+                {record._groupCustomerName && (
+                  <span style={{ color: '#555', marginLeft: 4 }}>{record._groupCustomerName}</span>
+                )}
+                <span style={{ color: '#999', marginLeft: 8 }}>· {record._indicatorCount} chỉ tiêu</span>
+              </div>
+            );
+          }
+          if (record._rowType === 'sample') {
+            const collapsed = collapsedSamples.has(record._groupSampleId || '');
+            return (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  paddingLeft: 24,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <span
+                  style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}
+                  onClick={() => toggleSample(record._groupSampleId || '')}
+                >
+                  {collapsed ? <CaretRightOutlined /> : <CaretDownOutlined />}
+                </span>
+                <strong>{record._groupSampleCode || '-'}</strong>
+                <span style={{ color: '#555' }}>{record._groupSampleName || ''}</span>
+                <span style={{ color: '#999', marginLeft: 8 }}>· {record._indicatorCount} chỉ tiêu</span>
+              </div>
+            );
+          }
+          return record._stt;
         },
-      }),
-      withResize('requestCompletionDate', {
-        title: 'Ngày YC xong',
-        dataIndex: 'requestCompletionDate',
-        key: 'requestCompletionDate',
-        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.requestCompletionDateRowSpan),
-        render: (date: string) => {
-          const formatted = formatDate(date);
-          return (
-            <EllipsisTooltip title={formatted}>{formatted}</EllipsisTooltip>
-          );
-        },
-      }),
-      withResize('testDate', {
-        title: 'Thời gian TN',
-        dataIndex: 'testDate',
-        key: 'testDate',
-        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.testDateRowSpan),
-        render: (date: string) => {
-          const formatted = formatDate(date);
-          return (
-            <EllipsisTooltip title={formatted}>{formatted}</EllipsisTooltip>
-          );
-        },
-      }),
-      withResize('indicatorName', {
-        title: 'Tên chỉ tiêu',
+      });
+    }
+
+    if (isVisible('indicatorName')) {
+      leafColumns.push({
+        title: 'Chỉ tiêu TN',
         dataIndex: 'indicatorName',
         key: 'indicatorName',
-        render: (text: string, record: ProcessedLogItem) => (
-          <EllipsisTooltip title={text || '-'} html={record.indicatorFormattedName || text || '-'} />
-        ),
-      }),
-      withResize('methodName', {
+        width: 200,
+        onCell: (record) => headerSpan(record),
+        render: (text: string, record: DisplayRow) => {
+          if (record._rowType !== 'indicator') return null;
+          return <EllipsisTooltip title={text || '-'} html={record.indicatorFormattedName || text || '-'} />;
+        },
+      });
+    }
+
+    if (isVisible('methodName')) {
+      leafColumns.push({
         title: 'Phương pháp',
         dataIndex: 'methodName',
         key: 'methodName',
-        render: (text: string, record: ProcessedLogItem) => (
-          <EllipsisTooltip title={text || '-'} html={record.methodFormattedName || text || '-'} />
-        ),
-      }),
-      withResize('unit', {
-        title: 'ĐVT',
-        dataIndex: 'unit',
-        key: 'unit',
-        render: (text: string) =>
-          text ? (
-            <EllipsisTooltip title={text} html={text} />
-          ) : '-',
-      }),
-      withResize('result', {
-        title: 'Kết quả',
-        dataIndex: 'result',
-        key: 'result',
-        width: 200,
-        render: (text: string) => (
-          <EllipsisTooltip title={text || '-'}><strong>{text || '-'}</strong></EllipsisTooltip>
-        ),
-      }),
-      withResize('technicalManagerName', {
-        title: 'QL kỹ thuật',
-        dataIndex: 'technicalManagerName',
-        key: 'technicalManagerName',
-        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.technicalManagerRowSpan),
-        render: (text: string) => (
-          <EllipsisTooltip title={text || '-'}>{text || '-'}</EllipsisTooltip>
-        ),
-      }),
-      withResize('technicianName', {
-        title: 'Kỹ thuật viên',
+        width: 180,
+        onCell: (record) => headerSpan(record),
+        render: (text: string, record: DisplayRow) => {
+          if (record._rowType !== 'indicator') return null;
+          return <EllipsisTooltip title={text || '-'} html={record.methodFormattedName || text || '-'} />;
+        },
+      });
+    }
+
+    if (isVisible('technicianName')) {
+      leafColumns.push({
+        title: 'Người thực hiện',
         dataIndex: 'technicianName',
         key: 'technicianName',
-        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.technicianRowSpan),
-        render: (text: string) => (
-          <EllipsisTooltip title={text || '-'}>{text || '-'}</EllipsisTooltip>
-        ),
-      }),
-      withResize('entryDate', {
-        title: 'Ngày nhập',
-        dataIndex: 'entryDate',
-        key: 'entryDate',
-        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.entryDateRowSpan),
-        render: (date: string) => {
-          const formatted = formatDate(date);
-          return (
-            <EllipsisTooltip title={formatted}>{formatted}</EllipsisTooltip>
-          );
+        width: 130,
+        onCell: (record) => headerSpan(record),
+        render: (text: string, record: DisplayRow) => {
+          if (record._rowType !== 'indicator') return null;
+          return <EllipsisTooltip title={text || '-'}>{text || '-'}</EllipsisTooltip>;
         },
-      }),
-      withResize('qlktApprovalDate', {
-        title: 'Ngày QL duyệt',
-        dataIndex: 'qlktApprovalDate',
-        key: 'qlktApprovalDate',
-        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.qlktApprovalDateRowSpan),
-        render: (date: string) => {
+      });
+    }
+
+    if (isVisible('transferDate')) {
+      leafColumns.push({
+        title: 'Ngày giao mẫu',
+        dataIndex: 'transferDate',
+        key: 'transferDate',
+        width: 110,
+        onCell: (record) => headerSpan(record),
+        render: (date: string, record: DisplayRow) => {
+          if (record._rowType !== 'indicator') return null;
           const formatted = formatDate(date);
-          return (
-            <EllipsisTooltip title={formatted}>{formatted}</EllipsisTooltip>
-          );
+          return <EllipsisTooltip title={formatted}>{formatted}</EllipsisTooltip>;
         },
-      }),
-      withResize('qlktDisplayStatus', {
-        title: 'Tình trạng',
+      });
+    }
+
+    if (isVisible('testDate')) {
+      leafColumns.push({
+        title: 'Ngày TN',
+        dataIndex: 'testDate',
+        key: 'testDate',
+        width: 130,
+        onCell: (record) => headerSpan(record),
+        render: (_: any, record: DisplayRow) => {
+          if (record._rowType !== 'indicator') return null;
+
+          const status = record.qlktDisplayStatus ?? QLKTDisplayStatus.ToDo;
+          const isCancelled = record.testRequestStatus === TestRequestStatus.Cancelled;
+          const isActionable = ACTIONABLE_STATUSES.includes(status) && !isCancelled && canInputResult && record.canEdit !== false;
+          const labIndicatorId = record.laboratoryTaskIndicatorId as string;
+
+          if (isActionable && labIndicatorId) {
+            const rawDate = editedTestDates[labIndicatorId] ?? record.testDate;
+            const dateValue = rawDate ? dayjs(rawDate) : null;
+            const disabledDate =
+              status === QLKTDisplayStatus.ResultRejected ||
+              status === QLKTDisplayStatus.WaitingQLKTApproval
+                ? (current: dayjs.Dayjs) => current && current < dayjs().startOf('day')
+                : undefined;
+            return (
+              <DatePicker
+                size="small"
+                value={dateValue}
+                onChange={(date) =>
+                  setEditedTestDates((prev) => ({
+                    ...prev,
+                    [labIndicatorId]: date ? date.format('YYYY-MM-DD') : '',
+                  }))
+                }
+                disabledDate={disabledDate}
+                format="DD/MM/YYYY"
+                placeholder="Chọn ngày"
+                style={{ width: '100%' }}
+                allowClear={false}
+              />
+            );
+          }
+
+          const formatted = formatDate(record.testDate);
+          return <EllipsisTooltip title={formatted}>{formatted}</EllipsisTooltip>;
+        },
+      });
+    }
+
+    if (isVisible('requestCompletionDate')) {
+      leafColumns.push({
+        title: 'Hạn trả KQ',
+        dataIndex: 'requestCompletionDate',
+        key: 'requestCompletionDate',
+        width: 100,
+        onCell: (record) => headerSpan(record),
+        render: (date: string, record: DisplayRow) => {
+          if (record._rowType !== 'indicator') return null;
+          const formatted = formatDate(date);
+          return <EllipsisTooltip title={formatted}>{formatted}</EllipsisTooltip>;
+        },
+      });
+    }
+
+    if (isVisible('qlktDisplayStatus')) {
+      leafColumns.push({
+        title: 'Trạng thái',
         dataIndex: 'qlktDisplayStatus',
         key: 'qlktDisplayStatus',
-        fixed: 'right',
-        render: (status: QLKTDisplayStatus | null | undefined) => {
+        width: 150,
+        onCell: (record) => headerSpan(record),
+        render: (status: QLKTDisplayStatus | null | undefined, record: DisplayRow) => {
+          if (record._rowType !== 'indicator') return null;
           const effectiveStatus = status ?? QLKTDisplayStatus.ToDo;
           return (
             <Tag color={QLKTDisplayStatusColors[effectiveStatus] || 'default'}>
@@ -666,40 +562,207 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
             </Tag>
           );
         },
-      }),
-    ];
-  }, [mergedCellProps, columnWidths]);
+      });
+    }
 
-  const filteredColumns = useMemo(
-    () => columns.filter((col) => visibleColumns.includes(col.key as string)),
-    [columns, visibleColumns]
-  );
+    if (isVisible('result')) {
+      leafColumns.push({
+        title: 'Kết quả',
+        dataIndex: 'result',
+        key: 'result',
+        width: 200,
+        onCell: (record) => headerSpan(record),
+        render: (text: string, record: DisplayRow) => {
+          if (record._rowType !== 'indicator') return null;
 
-  const scrollX = useMemo(
-    () => filteredColumns.reduce((sum, col) => sum + ((col.width as number) || 150), 0),
-    [filteredColumns]
-  );
+          const status = record.qlktDisplayStatus ?? QLKTDisplayStatus.ToDo;
+          const isCancelled = record.testRequestStatus === TestRequestStatus.Cancelled;
+          const isActionable = ACTIONABLE_STATUSES.includes(status) && !isCancelled && canInputResult && record.canEdit !== false;
+          const labIndicatorId = record.laboratoryTaskIndicatorId as string;
 
-  const getRowClass = useCallback((record: ProcessedLogItem) => {
-    return getRowColorClass(record) || 'row-green';
+          if (isActionable && labIndicatorId) {
+            const value = editedResults[labIndicatorId] ?? record.result ?? '';
+            const specificOptions = resultValueMap.get(record.indicatorId as string);
+            const options = (specificOptions?.length ? specificOptions : (resultValueMap.get('__all__') ?? []))
+              .filter((v) => !value || v.toLowerCase().includes(value.toLowerCase()))
+              .map((v) => ({ value: v, label: v }));
+            return (
+              <AutoComplete
+                size="small"
+                value={value}
+                options={options}
+                onChange={(v) => setEditedResults((prev) => ({ ...prev, [labIndicatorId]: v }))}
+                placeholder="Nhập KQ"
+                style={{ width: '100%' }}
+                filterOption={false}
+              />
+            );
+          }
+
+          return (
+            <EllipsisTooltip title={text || '-'}>
+              <strong>{text || '-'}</strong>
+            </EllipsisTooltip>
+          );
+        },
+      });
+    }
+
+    if (isVisible('actions')) {
+      leafColumns.push({
+        title: '',
+        key: 'actions',
+        width: 180,
+        fixed: 'right',
+        onCell: (record) => headerSpan(record),
+        render: (_: any, record: DisplayRow) => {
+          if (record._rowType !== 'indicator') return null;
+
+          const status = record.qlktDisplayStatus ?? QLKTDisplayStatus.ToDo;
+          const isCancelled = record.testRequestStatus === TestRequestStatus.Cancelled;
+          const isActionable = ACTIONABLE_STATUSES.includes(status) && !isCancelled && record.canEdit !== false && canInputResult;
+          const labIndicatorId = record.laboratoryTaskIndicatorId as string;
+
+          if (!isActionable || !labIndicatorId) return null;
+
+          const isSubmitting = submittingIds.has(labIndicatorId);
+          const buttonLabel =
+            status === QLKTDisplayStatus.WaitingQLKTApproval ? 'Gửi lại' : 'Gửi KQ';
+
+          const currentResult = editedResults[labIndicatorId] ?? record.result ?? '';
+          const hasResult = currentResult.trim() !== '';
+          const rawTestDate = editedTestDates[labIndicatorId] ?? record.testDate;
+          const hasTestDate = !!rawTestDate;
+          const canSubmit = hasResult && hasTestDate;
+
+          return (
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+              {canSendResult && canSubmit && (
+                <Tooltip title={buttonLabel}>
+                  <Button
+                    size="small"
+                    type="primary"
+                    icon={<SendOutlined />}
+                    loading={isSubmitting}
+                    onClick={() => handleSubmitResult(record)}
+                  >
+                    {buttonLabel}
+                  </Button>
+                </Tooltip>
+              )}
+              {canInputResult && (
+                <Tooltip title="Không TN được">
+                  <Button
+                    size="small"
+                    danger
+                    icon={<StopOutlined />}
+                    disabled={isSubmitting}
+                    onClick={() => handleCannotTest(record)}
+                  />
+                </Tooltip>
+              )}
+              {!hasResult && (
+                <Text type="secondary" style={{ fontSize: 11 }}>Nhập KQ để gửi</Text>
+              )}
+              {hasResult && !hasTestDate && (
+                <Text type="secondary" style={{ fontSize: 11 }}>Chọn ngày TN</Text>
+              )}
+            </div>
+          );
+        },
+      });
+    }
+
+    // Wrap leaf columns into 2-row grouped header
+    const grouped: ColumnsType<DisplayRow> = [];
+
+    const sttCol = leafColumns.find((c) => c.key === 'stt');
+    if (sttCol) grouped.push(sttCol);
+
+    const contentChildren = leafColumns.filter(
+      (c) => c.key === 'indicatorName' || c.key === 'methodName',
+    );
+    if (contentChildren.length > 0) {
+      grouped.push({ title: 'Nội dung thử nghiệm', children: contentChildren });
+    }
+
+    const progressChildren = leafColumns.filter(
+      (c) =>
+        c.key === 'technicianName' ||
+        c.key === 'transferDate' ||
+        c.key === 'testDate' ||
+        c.key === 'requestCompletionDate',
+    );
+    if (progressChildren.length > 0) {
+      grouped.push({ title: 'Tiến độ thực hiện', children: progressChildren });
+    }
+
+    const resultChildren = leafColumns.filter(
+      (c) => c.key === 'qlktDisplayStatus' || c.key === 'result',
+    );
+    if (resultChildren.length > 0) {
+      grouped.push({ title: 'Kết quả & Tình trạng', children: resultChildren });
+    }
+
+    const actionsCol = leafColumns.find((c) => c.key === 'actions');
+    if (actionsCol) grouped.push(actionsCol);
+
+    return grouped;
+  }, [
+    visibleColumns,
+    visibleLeafCount,
+    collapsedContracts,
+    collapsedSamples,
+    toggleContract,
+    toggleSample,
+    editedResults,
+    editedTestDates,
+    resultValueMap,
+    submittingIds,
+    canInputResult,
+    canSendResult,
+    handleSubmitResult,
+    handleCannotTest,
+  ]);
+
+  const scrollX = useMemo(() => {
+    const sumLeafWidths = (cols: ColumnsType<DisplayRow>): number => {
+      let total = 0;
+      for (const col of cols) {
+        if ('children' in col && col.children) {
+          total += sumLeafWidths(col.children as ColumnsType<DisplayRow>);
+        } else {
+          total += ((col as any).width as number) || 150;
+        }
+      }
+      return total;
+    };
+    return sumLeafWidths(columns);
+  }, [columns]);
+
+  const getRowClass = useCallback((record: DisplayRow) => {
+    if (record._rowType === 'contract') return 'row-group-header';
+    if (record._rowType === 'sample') return 'row-sample-header';
+    return getRowColorClass(record);
   }, []);
 
-  const handleRowProps = useCallback((record: ProcessedLogItem) => ({
-    onDoubleClick: () => handleRowDoubleClick(record),
-    onMouseEnter: () => {
-      hoveredRowIndexRef.current = record._rowIndex;
-      applyHoverClasses(record._rowIndex);
-    },
-    onMouseLeave: () => {
-      hoveredRowIndexRef.current = null;
-      clearHoverClasses();
-    },
-    style: { cursor: 'pointer' } as React.CSSProperties,
-  }), [handleRowDoubleClick, applyHoverClasses, clearHoverClasses]);
+  const handleRowProps = useCallback(
+    (record: DisplayRow) => ({
+      onDoubleClick: () => {
+        if (record._rowType === 'indicator') {
+          handleRowDoubleClick(record as SampleAssignmentLogDto);
+        }
+      },
+      style: {
+        cursor: record._rowType === 'indicator' ? 'pointer' : 'default',
+      } as React.CSSProperties,
+    }),
+    [handleRowDoubleClick],
+  );
 
   return (
     <div className="sample-assignment-log-tab">
-      {/* Toolbar */}
+      {/* Inline styles for result filter control */}
       <style>{`
         .result-filter-trigger:hover,
         .result-filter-trigger.open,
@@ -726,11 +789,6 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
         }
         .result-filter-editor .limit-input-wrapper:hover,
         .result-filter-editor .limit-input-wrapper:focus-within {
-          border: none !important;
-          box-shadow: none !important;
-        }
-        .result-filter-editor .limit-input-wrapper:hover .tiptap.ProseMirror,
-        .result-filter-editor .limit-input-wrapper:focus-within .tiptap.ProseMirror {
           border: none !important;
           box-shadow: none !important;
         }
@@ -763,21 +821,13 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
           position: relative;
           font-size: 0.75em;
         }
-        .result-filter-editor .limit-input-wrapper .tiptap.ProseMirror sub {
-          top: 0.4em;
-        }
-        .result-filter-editor .limit-input-wrapper .tiptap.ProseMirror sup {
-          top: -0.5em;
-        }
+        .result-filter-editor .limit-input-wrapper .tiptap.ProseMirror sub { top: 0.4em; }
+        .result-filter-editor .limit-input-wrapper .tiptap.ProseMirror sup { top: -0.5em; }
         .result-filter-editor .limit-input-wrapper .ProseMirror .is-editor-empty::before {
           display: none !important;
         }
-        .result-filter-clear {
-          display: none;
-        }
-        .result-filter-trigger:hover .result-filter-clear {
-          display: flex;
-        }
+        .result-filter-clear { display: none; }
+        .result-filter-trigger:hover .result-filter-clear { display: flex; }
         .result-filter-trigger:hover .result-filter-clear ~ .result-filter-search-icon,
         .result-filter-trigger:hover .result-filter-clear ~ .result-filter-arrow {
           display: none !important;
@@ -812,7 +862,6 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
           height: 16px;
           margin-left: 4px;
           font-size: 10px;
-          line-height: 1;
           color: rgba(0, 0, 0, 0.45);
           cursor: pointer;
           flex-shrink: 0;
@@ -823,12 +872,10 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
           color: rgba(0, 0, 0, 0.88);
           background: rgba(0, 0, 0, 0.12);
         }
-        .result-filter-selection-summary {
-          cursor: default;
-          padding: 0 8px;
-          flex-shrink: 0;
-        }
+        .result-filter-selection-summary { cursor: default; padding: 0 8px; flex-shrink: 0; }
       `}</style>
+
+      {/* Toolbar */}
       <Row gutter={[8, 8]} style={{ marginBottom: 0, padding: 16 }} align="middle">
         <Col xs={24} sm={12} lg={5}>
           <Input.Search
@@ -859,14 +906,9 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
             onChange={handleIndicatorChange}
             showSearch
             filterOption={(input, option) =>
-              ((option?.label as string) ?? '')
-                .toLowerCase()
-                .includes(input.toLowerCase())
+              ((option?.label as string) ?? '').toLowerCase().includes(input.toLowerCase())
             }
-            options={indicators.map((ind) => ({
-              value: ind.id,
-              label: ind.name,
-            }))}
+            options={indicators.map((ind) => ({ value: ind.id, label: ind.name }))}
             maxTagCount="responsive"
             allowClear
           />
@@ -908,42 +950,44 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
             onChange={handleResultFilterChange}
           />
         </Col>
-        <Col flex="auto" style={{ display: "flex", justifyContent: "flex-end" }}>
-          <Select
-            value={sorting}
-            onChange={handleSortChange}
-            prefix={<SortAscendingOutlined />}
-          >
+        <Col flex="auto" style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Select value={sorting} onChange={handleSortChange} prefix={<SortAscendingOutlined />}>
             <Select.Option value="ContractDate desc">Ngày hợp đồng mới nhất</Select.Option>
-            <Select.Option value="RequestCompletionDate desc">Ngày yêu cầu xong mới nhất</Select.Option>
+            <Select.Option value="RequestCompletionDate desc">
+              Ngày yêu cầu xong mới nhất
+            </Select.Option>
             <Select.Option value="RequestCompletionDate">Ngày yêu cầu xong cũ nhất</Select.Option>
           </Select>
         </Col>
       </Row>
 
-      {/* Table - pagination disabled because we do server-side contract pagination */}
-      <div ref={tableContainerRef}>
-        <Table<ProcessedLogItem>
-          columns={filteredColumns}
-          dataSource={processedData}
-          loading={loading}
-          rowKey="_rowKey"
-          rowClassName={getRowClass}
-          onRow={handleRowProps}
-          components={{ header: { cell: ResizableTitle } }}
-          pagination={false}
-          sticky={{ offsetHeader: headerHeight }}
-          scroll={{ x: scrollX }}
-          size="small"
-          bordered
-        />
-      </div>
+      {/* Table */}
+      <Table<DisplayRow>
+        columns={columns}
+        dataSource={displayRows}
+        loading={loading}
+        rowKey="_rowKey"
+        rowClassName={getRowClass}
+        onRow={handleRowProps}
+        pagination={false}
+        sticky={{ offsetHeader: headerHeight }}
+        scroll={{ x: scrollX }}
+        size="small"
+        bordered
+      />
 
-      {/* Pagination - server-side contract pagination */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 8px' }}>
+      {/* Pagination */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '16px 8px',
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <span>
-            Hiển thị <b>{uniqueContractCount}/{pagination.total}</b> hợp đồng
+            <b>{data.length}</b>/{totalCount} chỉ tiêu · <b>{uniqueContractCount}</b> hợp đồng
           </span>
           <Select
             value={pagination.pageSize}
@@ -961,9 +1005,21 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
           pageSize={pagination.pageSize}
           total={pagination.total}
           showSizeChanger={false}
-          onChange={(page) => handleTableChange({ current: page, pageSize: pagination.pageSize })}
+          onChange={(page) =>
+            handleTableChange({ current: page, pageSize: pagination.pageSize })
+          }
         />
       </div>
+
+      {/* Cannot Test Modal */}
+      <CannotTestModal
+        visible={cannotTestModal.visible}
+        taskId={cannotTestModal.taskId}
+        indicatorId={cannotTestModal.indicatorId}
+        indicatorName={cannotTestModal.indicatorName}
+        onCancel={() => setCannotTestModal((prev) => ({ ...prev, visible: false }))}
+        onSuccess={handleCannotTestSuccess}
+      />
     </div>
   );
 };

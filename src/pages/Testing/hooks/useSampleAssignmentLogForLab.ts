@@ -54,6 +54,7 @@ interface UseSampleAssignmentLogForLabResult {
   handleResultFilterChange: (values: string[]) => void;
   handleTableChange: (pagination: { current?: number; pageSize?: number }) => void;
   handleRowDoubleClick: (record: SampleAssignmentLogDto) => void;
+  reload: () => void;
   reloadDistinctResults: () => void;
 }
 
@@ -97,6 +98,7 @@ export const useSampleAssignmentLogForLab = (
 
   const [technicianFilterReady, setTechnicianFilterReady] = useState(false);
   const hasInitializedTechnicianFilter = useRef(false);
+  const [reloadTrigger, setReloadTrigger] = useState(0);
 
   useEffect(() => {
     const loadTechnicians = async () => {
@@ -168,7 +170,7 @@ export const useSampleAssignmentLogForLab = (
     } finally {
       setLoading(false);
     }
-  }, [pagination.current, pagination.pageSize, searchFilter, displayStatusFilter, dateRange, selectedIndicatorIds, technicianFilter, resultFilter, sorting, restrictToCurrentUser, currentUserId]);
+  }, [pagination.current, pagination.pageSize, searchFilter, displayStatusFilter, dateRange, selectedIndicatorIds, technicianFilter, resultFilter, sorting, restrictToCurrentUser, currentUserId, reloadTrigger]);
 
   useEffect(() => {
     if (technicianFilterReady) loadData();
@@ -199,11 +201,13 @@ export const useSampleAssignmentLogForLab = (
     } finally {
       setLoadingResults(false);
     }
-  }, [searchFilter, dateRange, selectedIndicatorIds, technicianFilter, displayStatusFilter, restrictToCurrentUser, currentUserId]);
+  }, [searchFilter, dateRange, selectedIndicatorIds, technicianFilter, displayStatusFilter, restrictToCurrentUser, currentUserId, reloadTrigger]);
 
   useEffect(() => {
     if (technicianFilterReady) loadDistinctResults();
   }, [loadDistinctResults, technicianFilterReady]);
+
+  const reload = useCallback(() => setReloadTrigger(v => v + 1), []);
 
   // Handlers
   const handleSearch = useCallback((value: string) => {
@@ -283,6 +287,7 @@ export const useSampleAssignmentLogForLab = (
     handleResultFilterChange,
     handleTableChange,
     handleRowDoubleClick,
+    reload,
     reloadDistinctResults: loadDistinctResults,
   };
 };

@@ -402,6 +402,7 @@ export interface SampleAssignmentLogDto {
   qualityTaskId: string;
   laboratoryTaskId: string;
   contractNumber?: string;
+  customerName?: string;
   testRequestStatus: TestRequestStatus;
   requestCompletionDate?: string;
 
@@ -437,6 +438,7 @@ export interface SampleAssignmentLogDto {
   qlclDisplayStatus?: QLCLDisplayStatus;
   qualityApprovalStatus?: QualityIndicatorApprovalStatus;
   isReportPublished: boolean;
+  canEdit: boolean;
 }
 
 // Input DTO for getting Sample Assignment Log list

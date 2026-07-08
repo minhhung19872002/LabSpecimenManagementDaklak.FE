@@ -107,18 +107,56 @@
   background-color: #f5f5f5 !important;
 }
 
+/* Contract group header row */
+.sample-assignment-log-tab .ant-table-tbody > tr.row-group-header > td {
+  background-color: #f5f7fa !important;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 8px 12px !important;
+  border-bottom: 2px solid #e0e0e0 !important;
+}
+
+.sample-assignment-log-tab .ant-table-tbody > tr.row-group-header:hover > td {
+  background-color: #edf0f5 !important;
+}
+
+/* Sample sub-group header row */
+.sample-assignment-log-tab .ant-table-tbody > tr.row-sample-header > td {
+  background-color: #fafbfc !important;
+  font-weight: 500;
+  font-size: 13px;
+  padding: 6px 12px !important;
+  border-bottom: 1px solid #e8e8e8 !important;
+}
+
+.sample-assignment-log-tab .ant-table-tbody > tr.row-sample-header:hover > td {
+  background-color: #f0f2f5 !important;
+}
+
 /* Fix for merged cells (rowSpan) - ensure vertical alignment */
 .sample-assignment-log-tab .ant-table-tbody > tr > td[rowspan] {
   vertical-align: middle;
 }
 
-/* Ensure proper borders for merged cells */
+/* Ensure proper borders for cells */
 .sample-assignment-log-tab .ant-table-bordered .ant-table-cell {
   border-right: 1px solid #f0f0f0 !important;
 }
 
 .sample-assignment-log-tab .ant-table-bordered .ant-table-row > td:first-child {
   border-left: 1px solid #f0f0f0 !important;
+}
+
+/* Column group headers - 2 row header */
+.sample-assignment-log-tab .ant-table-thead > tr > th {
+  text-align: center !important;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Result input compact style */
+.sample-assignment-log-tab .ant-input.ant-input-sm {
+  font-size: 13px;
 }
 
 /* ==================== Compact Row Height ==================== */

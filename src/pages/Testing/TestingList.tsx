@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Card,
   Table,
@@ -82,17 +82,30 @@ const TestingList: React.FC = () => {
   const isShowingTestBatches = currentTab === "test-batches";
 
   // Column visibility state for SAL tab (lifted here so gear button lives in Card header)
+  const alwaysOnColumns = useMemo(
+    () => COLUMN_OPTIONS.filter((o) => o.disabled).map((o) => o.key),
+    [],
+  );
   const [salVisibleColumns, setSalVisibleColumns] = useState<string[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.TESTING_SAL_VISIBLE_COLUMNS);
     if (saved) {
-      try { return JSON.parse(saved); } catch { /* ignore */ }
+      try {
+        const parsed: string[] = JSON.parse(saved);
+        const filtered = parsed.filter((k) => ALL_COLUMN_KEYS.includes(k));
+        if (filtered.length > 0) {
+          // Always include non-hideable (disabled) columns regardless of saved state
+          const alwaysOn = COLUMN_OPTIONS.filter((o) => o.disabled).map((o) => o.key);
+          return [...new Set([...alwaysOn, ...filtered])];
+        }
+      } catch { /* ignore */ }
     }
     return ALL_COLUMN_KEYS;
   });
 
   const handleSalVisibleColumnsChange = useCallback((keys: string[]) => {
-    setSalVisibleColumns(keys);
-    localStorage.setItem(STORAGE_KEYS.TESTING_SAL_VISIBLE_COLUMNS, JSON.stringify(keys));
+    const merged = [...new Set([...alwaysOnColumns, ...keys])];
+    setSalVisibleColumns(merged);
+    localStorage.setItem(STORAGE_KEYS.TESTING_SAL_VISIBLE_COLUMNS, JSON.stringify(merged));
   }, []);
 
   // Sample assignment log stats & filter
