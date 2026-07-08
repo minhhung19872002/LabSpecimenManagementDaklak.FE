@@ -208,4 +208,5 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
   );
 };
 
-export default CustomerInfoSection;
+// memo: chan re-render lan tu form cha khi go phim o bang mau (handlers da useCallback)
+export default React.memo(CustomerInfoSection);

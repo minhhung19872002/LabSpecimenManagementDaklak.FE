@@ -19,6 +19,7 @@ import {
   Select,
   Popover,
   Tooltip,
+  Checkbox,
 } from "antd";
 import StatusTag from "../../components/common/StatusTag";
 import {
@@ -130,6 +131,9 @@ const TaskManagementDetail: React.FC = () => {
   const [selectedIndicators, setSelectedIndicators] = useState<
     Record<string, string[]>
   >({});
+
+  // Indicator filter state
+  const [indicatorFilter, setIndicatorFilter] = useState<string[]>([]);
 
   // Standard selections state - lưu trữ local standard selections chưa được save
   const [standardSelections, setStandardSelections] = useState<
@@ -512,6 +516,32 @@ const TaskManagementDetail: React.FC = () => {
 
     return samples.sort((a, b) => (a.sampleCode || "").localeCompare(b.sampleCode || ""));
   }, [indicatorsBySample, indicatorChanges]);
+
+  const indicatorFilterOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    sampleList.forEach((sample) => {
+      sample.indicators.forEach((ind) => {
+        if (ind.indicatorId && ind.indicatorName && !ind.parentIndicatorId && !seen.has(ind.indicatorId)) {
+          seen.set(ind.indicatorId, ind.indicatorName);
+        }
+      });
+    });
+    return Array.from(seen.entries()).map(([id, name]) => ({ value: id, label: name }));
+  }, [sampleList]);
+
+  const filteredSampleList = useMemo(() => {
+    if (indicatorFilter.length === 0) return sampleList;
+    return sampleList
+      .map((sample) => ({
+        ...sample,
+        indicators: sample.indicators.filter(
+          (ind) =>
+            indicatorFilter.includes(ind.indicatorId) ||
+            (ind.parentIndicatorId && indicatorFilter.includes(ind.parentIndicatorId))
+        ),
+      }))
+      .filter((sample) => sample.indicators.length > 0);
+  }, [sampleList, indicatorFilter]);
 
   // Handlers
   const handleMethodChange = async (
@@ -1205,6 +1235,7 @@ const TaskManagementDetail: React.FC = () => {
       initialFreeTextNote: "",
       selectedIndicatorsMasterData: [],
     });
+    setSelectedIndicators({});
   };
 
   // Handle selection change for bulk operations
@@ -1331,12 +1362,14 @@ const TaskManagementDetail: React.FC = () => {
 
     try {
       const values = await rejectForm.validateFields();
-      const ids = selectedIndicators[rejectingSampleId] || [];
+      const isGlobal = rejectingSampleId === "__global__";
+      const ids = isGlobal
+        ? Object.values(selectedIndicators).flat()
+        : selectedIndicators[rejectingSampleId] || [];
 
       // Filter only indicators with Entered or Rejected status
-      const sample = sampleList.find((s) => s.sampleId === rejectingSampleId);
       const validIds = ids.filter((id) => {
-        const ind = sample?.indicators.find((i) => i.id === id);
+        const ind = task.indicators?.find((i) => i.id === id);
         return (
           ind?.approvalStatus === IndicatorApprovalStatus.Entered ||
           ind?.approvalStatus === IndicatorApprovalStatus.Rejected
@@ -1349,11 +1382,9 @@ const TaskManagementDetail: React.FC = () => {
       }
 
       setActionLoading(true);
-      // Lấy standardIds cho các indicator được chọn
       const standardIdsMap: Record<string, string | null> = {};
       validIds.forEach((id) => {
-        const indicator = sample?.indicators.find((i) => i.id === id);
-        // Ưu tiên local state, fallback to DB value
+        const indicator = task.indicators?.find((i) => i.id === id);
         standardIdsMap[id] =
           standardSelections[id] !== undefined
             ? standardSelections[id]
@@ -1367,34 +1398,33 @@ const TaskManagementDetail: React.FC = () => {
         standardIds: standardIdsMap,
       });
 
-      // Optimistic update: cập nhật indicators ngay lập tức
       updateIndicatorsOptimistically(validIds, {
         approvalStatus: IndicatorApprovalStatus.Rejected,
         rejectionReason: values.reason,
       });
 
-      // Reload full data from server (avoid duplicating BE logic for task status)
       await reloadData();
 
       message.success(`Đã từ chối ${validIds.length} chỉ tiêu`);
-      // Xóa standard selections cho các indicator đã xử lý
       setStandardSelections((prev) => {
         const newSelections = { ...prev };
         validIds.forEach((id) => delete newSelections[id]);
         return newSelections;
       });
-      setSelectedIndicators((prev) => ({ ...prev, [rejectingSampleId]: [] }));
+      if (isGlobal) {
+        setSelectedIndicators({});
+      } else {
+        setSelectedIndicators((prev) => ({ ...prev, [rejectingSampleId]: [] }));
+      }
       setRejectModalOpen(false);
       setRejectingSampleId(null);
       rejectForm.resetFields();
     } catch (error: any) {
       if (error.errorFields) {
-        // Form validation error
         return;
       }
       console.error("Failed to bulk reject:", error);
       message.error(getApiErrorMessage(error, "Không thể từ chối chỉ tiêu"));
-      // Reload để sync lại với server nếu có lỗi
       await loadTask();
     } finally {
       setActionLoading(false);
@@ -1633,6 +1663,187 @@ const TaskManagementDetail: React.FC = () => {
     !isFullyWaitingSharedSample &&
     canAssignTesting;
 
+  // Global select all - compute selectable IDs across all samples (respects filter)
+  const allGlobalSelectableIds = useMemo(() => {
+    const result: Record<string, string[]> = {};
+    filteredSampleList.forEach((sample) => {
+      const selectionMode =
+        sample.sampleStatus === "notStarted" ||
+        sample.sampleStatus === "assigned" ||
+        sample.sampleStatus === "pendingApproval"
+          ? "assignment"
+          : "approval";
+
+      const selectableIds = sample.indicators
+        .filter((ind) => {
+          if (selectionMode === "assignment") {
+            return (
+              ind.approvalStatus ===
+                IndicatorApprovalStatus.AcceptedForTesting ||
+              ind.approvalStatus === IndicatorApprovalStatus.Entered ||
+              ind.approvalStatus === IndicatorApprovalStatus.MethodChanged
+            );
+          }
+          return (
+            ind.approvalStatus !== IndicatorApprovalStatus.Approved &&
+            ind.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled &&
+            ind.approvalStatus !== IndicatorApprovalStatus.Pending
+          );
+        })
+        .map((ind) => ind.id);
+
+      if (selectableIds.length > 0) {
+        result[sample.sampleId] = selectableIds;
+      }
+    });
+    return result;
+  }, [filteredSampleList]);
+
+  const totalGlobalSelectable = Object.values(allGlobalSelectableIds).flat().length;
+  const totalGlobalSelected = Object.values(selectedIndicators).flat().length;
+  const globalSelectedSampleCount = Object.entries(selectedIndicators).filter(
+    ([, ids]) => ids.length > 0,
+  ).length;
+
+  const isGlobalAllSelected =
+    totalGlobalSelectable > 0 && totalGlobalSelected === totalGlobalSelectable;
+  const isGlobalIndeterminate =
+    totalGlobalSelected > 0 && totalGlobalSelected < totalGlobalSelectable;
+
+  const handleGlobalSelectAll = () => {
+    if (isGlobalAllSelected) {
+      setSelectedIndicators({});
+    } else {
+      setSelectedIndicators(allGlobalSelectableIds);
+    }
+  };
+
+  const handleGlobalQuickAssignTechnician = (technicianId: string) => {
+    const allSelectedIds = Object.values(selectedIndicators).flat();
+    if (allSelectedIds.length === 0) return;
+
+    const newChanges: Record<string, Partial<LaboratoryTaskIndicatorDto>> = {};
+    allSelectedIds.forEach((indicatorId) => {
+      newChanges[indicatorId] = {
+        ...indicatorChanges[indicatorId],
+        technicianId,
+      };
+    });
+    setIndicatorChanges((prev) => ({ ...prev, ...newChanges }));
+  };
+
+  const handleGlobalBulkNoteModal = () => {
+    const allSelectedIds = Object.values(selectedIndicators).flat();
+    if (allSelectedIds.length === 0) {
+      message.warning("Vui lòng chọn ít nhất một chỉ tiêu");
+      return;
+    }
+    const allIds = task?.indicators?.map((i) => i.id) || [];
+    const firstIndicator = task?.indicators?.find((i) =>
+      allSelectedIds.includes(i.id),
+    );
+    const selectedIndicatorsMasterData = allSelectedIds.map((indicatorId) => {
+      const indicator = task?.indicators?.find((i) => i.id === indicatorId);
+      return {
+        indicatorId,
+        masterDataNoteIds: indicator?.masterDataNoteIds || "",
+      };
+    });
+
+    setNoteModal({
+      visible: true,
+      selectedIndicatorIds: allSelectedIds,
+      allIndicatorIds: allIds,
+      sampleId: firstIndicator?.sampleId || "",
+      initialFreeTextNote: firstIndicator?.freeTextNote || "",
+      selectedIndicatorsMasterData,
+    });
+  };
+
+  const handleGlobalAssign = async () => {
+    const samplesWithSelections = Object.entries(selectedIndicators).filter(
+      ([, ids]) => ids.length > 0,
+    );
+
+    if (samplesWithSelections.length === 0) {
+      message.warning("Vui lòng chọn ít nhất một chỉ tiêu để giao việc");
+      return;
+    }
+
+    for (const [sampleId] of samplesWithSelections) {
+      await handleAssignSample(sampleId);
+    }
+    setSelectedIndicators({});
+  };
+
+  const handleGlobalBulkApprove = async () => {
+    if (!task) return;
+
+    const allSelectedIds = Object.values(selectedIndicators).flat();
+    if (allSelectedIds.length === 0) {
+      message.warning("Vui lòng chọn ít nhất một chỉ tiêu");
+      return;
+    }
+
+    const validIds = allSelectedIds.filter((id) => {
+      const ind = task.indicators?.find((i) => i.id === id);
+      return ind?.approvalStatus === IndicatorApprovalStatus.Entered;
+    });
+
+    if (validIds.length === 0) {
+      message.warning("Không có chỉ tiêu nào đủ điều kiện duyệt (Chờ phê duyệt)");
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      const standardIdsMap: Record<string, string | null> = {};
+      validIds.forEach((id) => {
+        const indicator = task.indicators?.find((i) => i.id === id);
+        standardIdsMap[id] =
+          standardSelections[id] !== undefined
+            ? standardSelections[id]
+            : indicator?.standardId || null;
+      });
+
+      await laboratoryTaskService.bulkApproveIndicators(task.id, {
+        indicatorIds: validIds,
+        approve: true,
+        standardIds: standardIdsMap,
+      });
+
+      updateIndicatorsOptimistically(validIds, {
+        approvalStatus: IndicatorApprovalStatus.Approved,
+      });
+
+      await reloadData();
+
+      message.success(`Đã duyệt ${validIds.length} chỉ tiêu`);
+      setStandardSelections((prev) => {
+        const newSelections = { ...prev };
+        validIds.forEach((id) => delete newSelections[id]);
+        return newSelections;
+      });
+      setSelectedIndicators({});
+    } catch (error: any) {
+      console.error("Failed to global bulk approve:", error);
+      message.error(getApiErrorMessage(error, "Không thể duyệt chỉ tiêu"));
+      await loadTask();
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleGlobalReject = () => {
+    const allSelectedIds = Object.values(selectedIndicators).flat();
+    if (allSelectedIds.length === 0) {
+      message.warning("Vui lòng chọn ít nhất một chỉ tiêu");
+      return;
+    }
+    setRejectingSampleId("__global__");
+    setRejectModalOpen(true);
+  };
+
   // Check if can upload images
   // Cho phép QLKT upload ảnh ở mọi giai đoạn trừ khi đã hoàn thành (Approved, Rejected, SentToQuality, TestingRejected)
   const canUploadImages = !isCompletedPhase;
@@ -1709,7 +1920,7 @@ const TaskManagementDetail: React.FC = () => {
   };
 
   // Generate Collapse items
-  const collapseItems = sampleList.map((sample) => {
+  const collapseItems = filteredSampleList.map((sample) => {
     const selectedCount = getSampleSelectedCount(sample.sampleId);
     const approvalCount = getApprovalCount(sample.sampleId); // Chỉ đếm chỉ tiêu cần phê duyệt (Entered)
     const sampleImagesData = sampleImages[sample.sampleId];
@@ -2251,13 +2462,168 @@ const TaskManagementDetail: React.FC = () => {
             </div>
           )}
           {activeTab === "samples" && (
-            <Collapse
-              defaultActiveKey={sampleList.map((s) => s.sampleId)}
-              expandIcon={({ isActive }) => (
-                <CaretRightOutlined rotate={isActive ? 90 : 0} />
+            <>
+              <div style={{ marginBottom: 8 }}>
+                <Select
+                  mode="multiple"
+                  allowClear
+                  placeholder="Chọn chỉ tiêu"
+                  style={{ width: 300 }}
+                  options={indicatorFilterOptions}
+                  value={indicatorFilter}
+                  onChange={(values) => {
+                    setIndicatorFilter(values);
+                    setSelectedIndicators({});
+                  }}
+                  optionFilterProp="label"
+                  maxTagCount="responsive"
+                />
+              </div>
+              {(canAssignToIndicator || canApproveResult) && totalGlobalSelectable > 0 && (
+                <div
+                  style={{
+                    marginBottom: 8,
+                    padding: "10px 16px",
+                    boxShadow: "0px 2px 8px 0px rgba(0, 0, 0, 0.08)",
+                  }}
+                >
+                  <Row justify="space-between" align="middle">
+                    <Col>
+                      <div
+                        onClick={handleGlobalSelectAll}
+                        style={{ cursor: "pointer", userSelect: "none" }}
+                      >
+                        <Checkbox
+                          checked={isGlobalAllSelected}
+                          indeterminate={isGlobalIndeterminate}
+                        >
+                          Chọn tất cả (Đã chọn {globalSelectedSampleCount} mẫu -{" "}
+                          {totalGlobalSelected} chỉ tiêu)
+                        </Checkbox>
+                      </div>
+                    </Col>
+                    <Col>
+                      <Space>
+                        {canAssignToIndicator && (
+                          <Popover
+                            content={
+                              <div
+                                style={{ width: 250 }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <div style={{ marginBottom: 8, fontWeight: 500 }}>
+                                  Chọn TNV cho {totalGlobalSelected} chỉ tiêu
+                                </div>
+                                <Select
+                                  style={{ width: "100%" }}
+                                  placeholder="Chọn thử nghiệm viên..."
+                                  showSearch
+                                  optionFilterProp="label"
+                                  options={technicians.map((t) => ({
+                                    value: t.id,
+                                    label: t.displayName || t.userName,
+                                  }))}
+                                  onChange={(value) => {
+                                    if (value)
+                                      handleGlobalQuickAssignTechnician(value);
+                                  }}
+                                />
+                                <div
+                                  style={{
+                                    marginTop: 8,
+                                    fontSize: 12,
+                                    color: "#888",
+                                  }}
+                                >
+                                  Danh sách KTV thuộc{" "}
+                                  {task?.laboratoryName || "khoa phòng"}
+                                </div>
+                              </div>
+                            }
+                            trigger="click"
+                            placement="bottomRight"
+                          >
+                            <Button
+                              size="small"
+                              icon={<UserOutlined />}
+                              disabled={totalGlobalSelected === 0}
+                            >
+                              Chọn TNV
+                              {totalGlobalSelected > 0
+                                ? ` (${totalGlobalSelected})`
+                                : ""}
+                            </Button>
+                          </Popover>
+                        )}
+                        <Button
+                          size="small"
+                          icon={<EditOutlined />}
+                          disabled={totalGlobalSelected === 0}
+                          loading={actionLoading}
+                          onClick={handleGlobalBulkNoteModal}
+                        >
+                          Ghi chú
+                          {totalGlobalSelected > 0
+                            ? ` (${totalGlobalSelected})`
+                            : ""}
+                        </Button>
+                        {canAssignToIndicator && (
+                          <Button
+                            type="primary"
+                            size="small"
+                            disabled={totalGlobalSelected === 0}
+                            loading={actionLoading}
+                            onClick={handleGlobalAssign}
+                          >
+                            Giao việc
+                            {totalGlobalSelected > 0
+                              ? ` (${totalGlobalSelected})`
+                              : ""}
+                          </Button>
+                        )}
+                        {canApproveResult && (
+                          <>
+                            <Button
+                              danger
+                              size="small"
+                              icon={<CloseOutlined />}
+                              disabled={totalGlobalSelected === 0}
+                              loading={actionLoading}
+                              onClick={handleGlobalReject}
+                            >
+                              Từ chối KQ
+                              {totalGlobalSelected > 0
+                                ? ` (${totalGlobalSelected})`
+                                : ""}
+                            </Button>
+                            <Button
+                              type="primary"
+                              size="small"
+                              icon={<CheckOutlined />}
+                              disabled={totalGlobalSelected === 0}
+                              loading={actionLoading}
+                              onClick={handleGlobalBulkApprove}
+                            >
+                              Duyệt KQ
+                              {totalGlobalSelected > 0
+                                ? ` (${totalGlobalSelected})`
+                                : ""}
+                            </Button>
+                          </>
+                        )}
+                      </Space>
+                    </Col>
+                  </Row>
+                </div>
               )}
-              items={collapseItems}
-            />
+              <Collapse
+                defaultActiveKey={filteredSampleList.map((s) => s.sampleId)}
+                expandIcon={({ isActive }) => (
+                  <CaretRightOutlined rotate={isActive ? 90 : 0} />
+                )}
+                items={collapseItems}
+              />
+            </>
           )}
         </Card>
       </Card>

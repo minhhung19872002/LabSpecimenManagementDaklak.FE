@@ -53,7 +53,7 @@ export const useTestingList = () => {
   const currentUserEmail = currentUser?.email;
   const currentUserFullName = currentUser?.fullName;
   const [tasks, setTasks] = useState<TestingListDto[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState("");
   const [searchFilter, setSearchFilter] = useState("");
   const [sorting, setSorting] = useState("ContractDate desc");
@@ -78,6 +78,7 @@ export const useTestingList = () => {
   // Technicians for filter dropdown
   const [technicians, setTechnicians] = useState<UserLookupDto[]>([]);
   const [loadingTechnicians, setLoadingTechnicians] = useState(false);
+  const [technicianFilterReady, setTechnicianFilterReady] = useState(false);
   const hasInitializedTechnicianFilter = useRef(false);
 
   // Indicators for filter dropdown
@@ -120,6 +121,7 @@ export const useTestingList = () => {
         console.error("Failed to load technicians:", error);
       } finally {
         setLoadingTechnicians(false);
+        setTechnicianFilterReady(true);
       }
     };
     loadTechnicians();
@@ -176,8 +178,8 @@ export const useTestingList = () => {
   ]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (technicianFilterReady) loadData();
+  }, [loadData, technicianFilterReady]);
 
   // Statistics - loaded separately from API (not affected by filters)
   const [stats, setStats] = useState({

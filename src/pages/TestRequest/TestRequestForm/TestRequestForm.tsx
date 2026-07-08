@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useMemo } from "react";
 import {
   Form,
   Input,
@@ -229,6 +229,46 @@ const TestRequestForm: React.FC = () => {
 
   // Ref to form sections to detect when scrolled past
   const formSectionsRef = useRef<HTMLDivElement>(null);
+
+  // Wrapper ổn định (ref-indirection) cho các handler của SampleTableSection:
+  // identity tạo đúng 1 lần nên React.memo của bảng mẫu có tác dụng khi gõ ở
+  // các field Hợp đồng/Khách hàng, nhưng luôn gọi closure MỚI NHẤT nên không
+  // có rủi ro stale — hành vi không đổi
+  const sampleHandlersRef = useRef({});
+  sampleHandlersRef.current = {
+    addSample,
+    removeSample,
+    updateSample,
+    duplicateSample,
+    openIndicatorModal,
+    handleSpecimenTypeSearch,
+    handleSpecimenTypeSelect,
+    addExistingSample,
+    setSamples,
+  };
+  // LƯU Ý: isSamplesLocked KHÔNG đi qua wrapper vĩnh viễn — nó được SampleTableSection
+  // gọi LÚC RENDER (disabled nút, banner khóa) nên phải giữ identity useCallback
+  // [isEditMode, currentStatus] để memo của bảng re-render đúng lúc trạng thái khóa đổi
+  const stableSampleHandlers = useMemo(
+    () => ({
+      addSample: () => sampleHandlersRef.current.addSample(),
+      removeSample: (key) => sampleHandlersRef.current.removeSample(key),
+      updateSample: (key, field, value) =>
+        sampleHandlersRef.current.updateSample(key, field, value),
+      duplicateSample: (key) => sampleHandlersRef.current.duplicateSample(key),
+      openIndicatorModal: (key) =>
+        sampleHandlersRef.current.openIndicatorModal(key),
+      handleSpecimenTypeSearch: (text) =>
+        sampleHandlersRef.current.handleSpecimenTypeSearch(text),
+      handleSpecimenTypeSelect: (key, value) =>
+        sampleHandlersRef.current.handleSpecimenTypeSelect(key, value),
+      onAddExistingSample: (sample, inds) =>
+        sampleHandlersRef.current.addExistingSample(sample, inds),
+      onImportSamples: (newSamples) =>
+        sampleHandlersRef.current.setSamples((prev) => [...prev, ...newSamples]),
+    }),
+    [],
+  );
   const [showSummaryBar, setShowSummaryBar] = useState(false);
   const [summaryBarStyle, setSummaryBarStyle] = useState<React.CSSProperties>(
     {},
@@ -418,25 +458,23 @@ const TestRequestForm: React.FC = () => {
               samples={samples}
               sampleCodePrefix={sampleCodePrefix}
               isSamplesLocked={isSamplesLocked}
-              addSample={addSample}
-              removeSample={removeSample}
-              updateSample={updateSample}
-              duplicateSample={duplicateSample}
-              openIndicatorModal={openIndicatorModal}
+              addSample={stableSampleHandlers.addSample}
+              removeSample={stableSampleHandlers.removeSample}
+              updateSample={stableSampleHandlers.updateSample}
+              duplicateSample={stableSampleHandlers.duplicateSample}
+              openIndicatorModal={stableSampleHandlers.openIndicatorModal}
               getIndicatorInfo={getIndicatorInfo}
               getIndicatorMethodInfo={getIndicatorMethodInfo}
               indicatorLaboratoryMap={indicatorLaboratoryMap}
               specimenTypes={specimenTypes}
               specimenTypeOptions={specimenTypeOptions}
-              handleSpecimenTypeSearch={handleSpecimenTypeSearch}
-              handleSpecimenTypeSelect={handleSpecimenTypeSelect}
+              handleSpecimenTypeSearch={stableSampleHandlers.handleSpecimenTypeSearch}
+              handleSpecimenTypeSelect={stableSampleHandlers.handleSpecimenTypeSelect}
               sampleConditionOptions={sampleConditionOptions}
               indicators={indicators}
               indicatorMethodsMap={indicatorMethodsMap}
-              onImportSamples={(newSamples) =>
-                setSamples((prev) => [...prev, ...newSamples])
-              }
-              onAddExistingSample={addExistingSample}
+              onImportSamples={stableSampleHandlers.onImportSamples}
+              onAddExistingSample={stableSampleHandlers.onAddExistingSample}
             />
 
             <Row gutter={[16, 0]}>

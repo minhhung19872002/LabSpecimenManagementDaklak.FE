@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { message } from 'antd';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
@@ -72,7 +72,7 @@ export const useSampleAssignmentLogForLab = (
   const currentUserId = currentUser?.id;
 
   // State
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [data, setData] = useState<SampleAssignmentLogDto[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [searchText, setSearchText] = useState('');
@@ -95,21 +95,35 @@ export const useSampleAssignmentLogForLab = (
   const [loadingTechnicians, setLoadingTechnicians] = useState(false);
   const [indicators, setIndicators] = useState<IndicatorDto[]>([]);
 
-  // Load technicians (table defaults to showing ALL - no auto technician filter)
+  const [technicianFilterReady, setTechnicianFilterReady] = useState(false);
+  const hasInitializedTechnicianFilter = useRef(false);
+
   useEffect(() => {
     const loadTechnicians = async () => {
       setLoadingTechnicians(true);
       try {
         const result = await laboratoryTaskService.getTechniciansByLaboratory();
-        setTechnicians(result || []);
+        const technicianList = result || [];
+        setTechnicians(technicianList);
+
+        if (!hasInitializedTechnicianFilter.current) {
+          hasInitializedTechnicianFilter.current = true;
+          if (currentUserId) {
+            const match = technicianList.find((t) => t.id === currentUserId);
+            if (match) {
+              setTechnicianFilter([match.id]);
+            }
+          }
+        }
       } catch (error) {
         console.error('Failed to load technicians:', error);
       } finally {
         setLoadingTechnicians(false);
+        setTechnicianFilterReady(true);
       }
     };
     loadTechnicians();
-  }, []);
+  }, [currentUserId]);
 
   // Load indicators
   useEffect(() => {
@@ -157,8 +171,8 @@ export const useSampleAssignmentLogForLab = (
   }, [pagination.current, pagination.pageSize, searchFilter, displayStatusFilter, dateRange, selectedIndicatorIds, technicianFilter, resultFilter, sorting, restrictToCurrentUser, currentUserId]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (technicianFilterReady) loadData();
+  }, [loadData, technicianFilterReady]);
 
   useEffect(() => {
     setPagination(prev => ({ ...prev, current: 1 }));
@@ -188,8 +202,8 @@ export const useSampleAssignmentLogForLab = (
   }, [searchFilter, dateRange, selectedIndicatorIds, technicianFilter, displayStatusFilter, restrictToCurrentUser, currentUserId]);
 
   useEffect(() => {
-    loadDistinctResults();
-  }, [loadDistinctResults]);
+    if (technicianFilterReady) loadDistinctResults();
+  }, [loadDistinctResults, technicianFilterReady]);
 
   // Handlers
   const handleSearch = useCallback((value: string) => {

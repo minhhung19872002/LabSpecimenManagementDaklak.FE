@@ -223,4 +223,5 @@ const SamplingDeliverySection: React.FC = () => {
   );
 };
 
-export default SamplingDeliverySection;
+// memo: chan re-render lan tu form cha khi go phim o bang mau (props khong doi)
+export default React.memo(SamplingDeliverySection);

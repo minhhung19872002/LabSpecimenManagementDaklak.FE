@@ -289,19 +289,29 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     }
   };
 
+  // Set để tra membership O(1) thay vì Array.includes O(n) —
+  // isMethodSelected được gọi trong vòng lặp render cây (hàng nghìn lần/render)
+  const tempSelectedKeySet = useMemo(
+    () => new Set(tempSelectedIndicatorMethods),
+    [tempSelectedIndicatorMethods],
+  );
+
   // Check if a method is selected (now includes specimenTypeId)
-  const isMethodSelected = (
-    indicatorId: string,
-    testMethodId: string,
-    specimenTypeId?: string,
-  ): boolean => {
-    const key = createIndicatorMethodKey(
-      indicatorId,
-      testMethodId,
-      specimenTypeId,
-    );
-    return tempSelectedIndicatorMethods.includes(key);
-  };
+  const isMethodSelected = useCallback(
+    (
+      indicatorId: string,
+      testMethodId: string,
+      specimenTypeId?: string,
+    ): boolean => {
+      const key = createIndicatorMethodKey(
+        indicatorId,
+        testMethodId,
+        specimenTypeId,
+      );
+      return tempSelectedKeySet.has(key);
+    },
+    [tempSelectedKeySet],
+  );
 
   // ==================== Sub-indicator Helper Functions ====================
 
@@ -527,11 +537,19 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
   );
 
   // Separate sent and unsent indicator methods
-  const unsentMethods = tempSelectedIndicatorMethods.filter(
-    (key) => !indicatorLaboratoryMap[`${currentSampleKey}_${key}`],
+  const unsentMethods = useMemo(
+    () =>
+      tempSelectedIndicatorMethods.filter(
+        (key) => !indicatorLaboratoryMap[`${currentSampleKey}_${key}`],
+      ),
+    [tempSelectedIndicatorMethods, indicatorLaboratoryMap, currentSampleKey],
   );
-  const sentMethods = tempSelectedIndicatorMethods.filter(
-    (key) => indicatorLaboratoryMap[`${currentSampleKey}_${key}`],
+  const sentMethods = useMemo(
+    () =>
+      tempSelectedIndicatorMethods.filter(
+        (key) => indicatorLaboratoryMap[`${currentSampleKey}_${key}`],
+      ),
+    [tempSelectedIndicatorMethods, indicatorLaboratoryMap, currentSampleKey],
   );
 
   // Unsent methods excluding sub-indicators (for "Chọn tất cả" checkbox)
@@ -541,21 +559,28 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
   }, [unsentMethods, isSubIndicator]);
 
   // Group sent methods by laboratory
-  const groupedByLab: Record<
-    string,
-    { labName: string; requestDate: dayjs.Dayjs; methods: IndicatorMethodKey[] }
-  > = {};
-  sentMethods.forEach((key) => {
-    const labInfo = indicatorLaboratoryMap[`${currentSampleKey}_${key}`];
-    if (!groupedByLab[labInfo.laboratoryId]) {
-      groupedByLab[labInfo.laboratoryId] = {
-        labName: labInfo.laboratoryName,
-        requestDate: labInfo.requestDate,
-        methods: [],
-      };
-    }
-    groupedByLab[labInfo.laboratoryId].methods.push(key);
-  });
+  const groupedByLab = useMemo(() => {
+    const grouped: Record<
+      string,
+      {
+        labName: string;
+        requestDate: dayjs.Dayjs;
+        methods: IndicatorMethodKey[];
+      }
+    > = {};
+    sentMethods.forEach((key) => {
+      const labInfo = indicatorLaboratoryMap[`${currentSampleKey}_${key}`];
+      if (!grouped[labInfo.laboratoryId]) {
+        grouped[labInfo.laboratoryId] = {
+          labName: labInfo.laboratoryName,
+          requestDate: labInfo.requestDate,
+          methods: [],
+        };
+      }
+      grouped[labInfo.laboratoryId].methods.push(key);
+    });
+    return grouped;
+  }, [sentMethods, indicatorLaboratoryMap, currentSampleKey]);
 
   // Check combo kim loại nặng PER specimen type:
   // 1 sample có thể chứa chỉ tiêu từ nhiều loại mẫu (Nước + Cà phê),
@@ -1546,7 +1571,14 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
   };
 
   // Left panel content - extracted for reuse in drawer
-  const leftPanelContent = (
+  // Chỉ build lại panel trái (cây chỉ tiêu — phần nặng nhất) khi modal/drawer đang MỞ.
+  // Khi đóng, tái dùng JSX của lần render trước (đang vô hình nên không có khác biệt
+  // nhìn thấy được, animation đóng vẫn hiển thị nội dung cũ y như antd giữ content) —
+  // tránh chạy renderBySpecimenType() mỗi khi form cha re-render (VD: đang gõ tên mẫu)
+  const leftPanelContentRef = useRef<React.ReactNode>(null);
+  const modalBodyRef = useRef<React.ReactNode>(null);
+  if (visible || indicatorPickerOpen) {
+    leftPanelContentRef.current = (
     <>
       <div
         style={{
@@ -1702,7 +1734,9 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
         )}
       </div>
     </>
-  );
+    );
+  }
+  const leftPanelContent = leftPanelContentRef.current;
 
   const registerSingleResult = useCallback(
     (item: QuickCreateIndicatorResultItem, price: number) => {
@@ -1828,6 +1862,9 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
         styles={{ body: { padding: 0 } }}
         className="indicator-selection-modal"
       >
+        {/* Gate như leftPanelContent: khi modal đóng, giữ nguyên element cũ để React
+            bail-out reconciliation phần content đang ẩn (antd giữ children mounted sau lần mở đầu) */}
+        {visible ? (modalBodyRef.current = (
         <div className="indicator-modal-body">
           {/* Left panel - 3-level tree: Group > Indicator > Methods (desktop only) */}
           <div className="indicator-modal-left">{leftPanelContent}</div>
@@ -2234,6 +2271,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
             </Card>
           </div>
         </div>
+        )) : modalBodyRef.current}
       </Modal>
       <QuickCreateIndicatorModal
         open={quickCreateVisible}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Card,
@@ -12,6 +12,8 @@ import {
   Col,
   Alert,
   Tooltip,
+  Checkbox,
+  Select,
 } from "antd";
 
 import StatusTag from "../../components/common/StatusTag";
@@ -74,6 +76,7 @@ const QualityManagementDetail: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [task, setTask] = useState<QualityManagementTaskDto | null>(null);
   const [selectedPendingIds, setSelectedPendingIds] = useState<string[]>([]);
+  const [indicatorFilter, setIndicatorFilter] = useState<string[]>([]);
 
   // Modals
   const [printModalVisible, setPrintModalVisible] = useState(false);
@@ -356,6 +359,24 @@ const QualityManagementDetail: React.FC = () => {
       ? task.allIndicators
       : qualityIndicators;
 
+  const indicatorFilterOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    qualityIndicators.forEach(ind => {
+      if (ind.indicatorId && ind.indicatorName && !ind.parentIndicatorId && !seen.has(ind.indicatorId)) {
+        seen.set(ind.indicatorId, ind.indicatorName);
+      }
+    });
+    return Array.from(seen.entries()).map(([id, name]) => ({ value: id, label: name }));
+  }, [qualityIndicators]);
+
+  const filteredDisplayIndicators = useMemo(() => {
+    if (indicatorFilter.length === 0) return displayIndicators;
+    return displayIndicators.filter(ind =>
+      indicatorFilter.includes(ind.indicatorId) ||
+      (ind.parentIndicatorId && indicatorFilter.includes(ind.parentIndicatorId))
+    );
+  }, [displayIndicators, indicatorFilter]);
+
   // Helper: check if an indicator is a parent with children in the list
   const isParentWithChildren = useCallback(
     (indicator: QualityManagementIndicatorDto): boolean => {
@@ -383,6 +404,42 @@ const QualityManagementDetail: React.FC = () => {
   const rejectedCount = activeIndicators.filter(
     (ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Rejected,
   ).length;
+
+  const allSelectablePendingIds = useMemo(() =>
+    qualityIndicators
+      .filter(ind =>
+        !isParentWithChildren(ind) &&
+        ind.approvalStatus === QualityIndicatorApprovalStatus.PendingApproval &&
+        ind.isInQualityScope &&
+        (indicatorFilter.length === 0 ||
+         indicatorFilter.includes(ind.indicatorId) ||
+         (ind.parentIndicatorId && indicatorFilter.includes(ind.parentIndicatorId)))
+      )
+      .map(ind => ind.id),
+    [qualityIndicators, isParentWithChildren, indicatorFilter]
+  );
+
+  const selectedSampleCount = useMemo(() => {
+    const sampleIds = new Set(
+      qualityIndicators
+        .filter(ind => selectedPendingIds.includes(ind.id))
+        .map(ind => ind.sampleId)
+    );
+    return sampleIds.size;
+  }, [qualityIndicators, selectedPendingIds]);
+
+  const isAllSelected = allSelectablePendingIds.length > 0 &&
+    selectedPendingIds.length === allSelectablePendingIds.length;
+  const isIndeterminate = selectedPendingIds.length > 0 &&
+    selectedPendingIds.length < allSelectablePendingIds.length;
+
+  const handleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedPendingIds([]);
+    } else {
+      setSelectedPendingIds(allSelectablePendingIds);
+    }
+  };
 
   // Check if test request is cancelled - disable all actions (except print)
   const isTestRequestCancelled = task?.testRequestStatus === TestRequestStatus.Cancelled;
@@ -575,7 +632,7 @@ const QualityManagementDetail: React.FC = () => {
           />
         )}
 
-        {/* Indicator Statistics */}
+        {/* Bulk actions + alerts */}
         {task.taskType === QualityTaskType.ResultApproval && (
           <div
             style={{
@@ -585,23 +642,40 @@ const QualityManagementDetail: React.FC = () => {
               borderRadius: "12px",
             }}
           >
+            <div style={{ marginBottom: 8 }}>
+              <Select
+                mode="multiple"
+                allowClear
+                placeholder="Chọn chỉ tiêu"
+                style={{ width: 300 }}
+                options={indicatorFilterOptions}
+                value={indicatorFilter}
+                onChange={(values) => {
+                  setIndicatorFilter(values);
+                  setSelectedPendingIds([]);
+                }}
+                optionFilterProp="label"
+                maxTagCount="responsive"
+              />
+            </div>
             <Row gutter={24} justify="space-between" align="middle">
+              {allSelectablePendingIds.length > 0 && !isTestRequestCancelled && (
+                <Col>
+                  <div
+                    onClick={handleSelectAll}
+                    style={{ cursor: "pointer", userSelect: "none" }}
+                  >
+                    <Checkbox
+                      checked={isAllSelected}
+                      indeterminate={isIndeterminate}
+                    >
+                      Chọn tất cả  (Đã chọn {selectedSampleCount} mẫu - {selectedPendingIds.length} chỉ tiêu)
+                    </Checkbox>
+                  </div>
+                </Col>
+              )}
               <Col>
                 <Space>
-                  <StatusTag color="warning">
-                    {pendingCount} Chờ duyệt
-                  </StatusTag>
-                  <StatusTag color="success">
-                    {approvedCount} Đã duyệt
-                  </StatusTag>
-                  {rejectedCount > 0 && (
-                    <StatusTag color="error">{rejectedCount} Từ chối</StatusTag>
-                  )}
-                </Space>
-              </Col>
-              <Col>
-                <Space>
-                  {/* Bulk action buttons - only visible if user has permission */}
                   {canReject && !isTestRequestCancelled && (
                     <Button
                       danger
@@ -668,10 +742,23 @@ const QualityManagementDetail: React.FC = () => {
             size="small"
             className="quality-indicator-card"
             style={{ overflow: "hidden" }}
-            title="Danh sách chỉ tiêu"
+            title={
+              <Space>
+                <span>Danh sách chỉ tiêu</span>
+                <StatusTag color="warning">
+                  {pendingCount} Chờ duyệt
+                </StatusTag>
+                <StatusTag color="success">
+                  {approvedCount} Đã duyệt
+                </StatusTag>
+                {rejectedCount > 0 && (
+                  <StatusTag color="error">{rejectedCount} Từ chối</StatusTag>
+                )}
+              </Space>
+            }
           >
             <IndicatorTable
-              indicators={displayIndicators}
+              indicators={filteredDisplayIndicators}
               taskStatus={task.status}
               onApprove={handleApproveIndicator}
               onReject={handleRejectIndicator}
