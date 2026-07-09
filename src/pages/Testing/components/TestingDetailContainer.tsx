@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { Button, Collapse, Alert, Spin, Card, Tooltip } from "antd";
 import {
   ArrowLeftOutlined,
@@ -24,6 +24,74 @@ import {
 } from "./sections";
 
 const { Panel } = Collapse;
+
+const EMPTY_IDS: string[] = [];
+
+interface SamplePanelContentProps {
+  taskId: string;
+  sample: TestingSampleDto;
+  selectedIndicatorIds: string[];
+  isUrgent: boolean;
+  submitting: boolean;
+  resultOptions: ResultOption[];
+  getResultOptionsForIndicator?: (indicatorId: string, specimenTypeId?: string) => ResultOption[];
+  canPerformActions: boolean;
+  isTestRequestCancelled: boolean;
+  onResultsChange: (sampleId: string, results: SaveIndicatorResultDto[]) => void;
+  onSelectionChange: (sampleId: string, indicatorIds: string[]) => void;
+  onImagesChange: (sampleId: string, imageType: SampleTestingImageType, images: SampleTestingImageDto[]) => void;
+  onShowRejectionHistory: (indicatorId: string, indicatorName: string) => void;
+  onSaveIndicator: (indicatorId: string, result?: SaveIndicatorResultDto) => void;
+  onSubmitIndicator: (indicatorId: string) => void;
+  onUploadIndicatorImages?: (indicatorId: string, files: File[]) => Promise<IndicatorImageDto[]>;
+  onDeleteIndicatorImage?: (imageId: string) => Promise<void>;
+  onShowCannotTestModal: (indicatorId: string, indicatorName: string) => void;
+}
+
+const SamplePanelContent = React.memo<SamplePanelContentProps>(function SamplePanelContent({
+  taskId, sample, selectedIndicatorIds, isUrgent, submitting, resultOptions,
+  getResultOptionsForIndicator, canPerformActions, isTestRequestCancelled,
+  onResultsChange, onSelectionChange, onImagesChange,
+  onShowRejectionHistory, onSaveIndicator, onSubmitIndicator,
+  onUploadIndicatorImages, onDeleteIndicatorImage, onShowCannotTestModal,
+}) {
+  const handleResultsChange = useCallback(
+    (results: SaveIndicatorResultDto[]) => onResultsChange(sample.sampleId, results),
+    [sample.sampleId, onResultsChange],
+  );
+  const handleSelectionChange = useCallback(
+    (ids: string[]) => onSelectionChange(sample.sampleId, ids),
+    [sample.sampleId, onSelectionChange],
+  );
+  return (
+    <>
+      <SampleImagesRow
+        taskId={taskId}
+        sample={sample}
+        onImagesChange={onImagesChange}
+        canUpload={canPerformActions}
+      />
+      <IndicatorEditTable
+        indicators={sample.indicators}
+        selectedIndicatorIds={selectedIndicatorIds}
+        isUrgent={isUrgent}
+        submitting={submitting}
+        resultOptions={resultOptions}
+        getResultOptionsForIndicator={getResultOptionsForIndicator}
+        canPerformActions={canPerformActions}
+        isTestRequestCancelled={isTestRequestCancelled}
+        onResultsChange={handleResultsChange}
+        onSelectionChange={handleSelectionChange}
+        onShowRejectionHistory={onShowRejectionHistory}
+        onSaveIndicator={onSaveIndicator}
+        onSubmitIndicator={onSubmitIndicator}
+        onUploadIndicatorImages={onUploadIndicatorImages}
+        onDeleteIndicatorImage={onDeleteIndicatorImage}
+        onShowCannotTestModal={onShowCannotTestModal}
+      />
+    </>
+  );
+});
 
 interface ResultOption {
   value: string;
@@ -203,7 +271,7 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
                 <SamplePanelHeader
                   sample={sample}
                   selectedIndicatorIds={
-                    selectedIndicators.get(sample.sampleId) || []
+                    selectedIndicators.get(sample.sampleId) ?? EMPTY_IDS
                   }
                   submitting={submitting}
                   canPerformActions={canPerformActions}
@@ -213,18 +281,11 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
               }
               key={sample.sampleId}
             >
-              {/* Images section */}
-              <SampleImagesRow
+              <SamplePanelContent
                 taskId={taskId}
                 sample={sample}
-                onImagesChange={onImagesChange}
-                canUpload={canPerformActions}
-              />
-              {/* Indicators table */}
-              <IndicatorEditTable
-                indicators={sample.indicators}
                 selectedIndicatorIds={
-                  selectedIndicators.get(sample.sampleId) || []
+                  selectedIndicators.get(sample.sampleId) ?? EMPTY_IDS
                 }
                 isUrgent={isUrgent}
                 submitting={submitting}
@@ -232,12 +293,9 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
                 getResultOptionsForIndicator={getResultOptionsForIndicator}
                 canPerformActions={canPerformActions}
                 isTestRequestCancelled={isTestRequestCancelled}
-                onResultsChange={(results) =>
-                  onResultsChange(sample.sampleId, results)
-                }
-                onSelectionChange={(ids) =>
-                  onSelectionChange(sample.sampleId, ids)
-                }
+                onResultsChange={onResultsChange}
+                onSelectionChange={onSelectionChange}
+                onImagesChange={onImagesChange}
                 onShowRejectionHistory={onShowRejectionHistory}
                 onSaveIndicator={onSaveIndicator}
                 onSubmitIndicator={onSubmitIndicator}

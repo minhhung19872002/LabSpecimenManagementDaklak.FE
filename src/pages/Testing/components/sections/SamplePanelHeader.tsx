@@ -132,4 +132,4 @@ const SamplePanelHeader: React.FC<SamplePanelHeaderProps> = ({
   );
 };
 
-export default SamplePanelHeader;
+export default React.memo(SamplePanelHeader);

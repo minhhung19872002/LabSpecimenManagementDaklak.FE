@@ -1100,4 +1100,4 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
   );
 };
 
-export default IndicatorEditTable;
+export default React.memo(IndicatorEditTable);

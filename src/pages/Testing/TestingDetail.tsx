@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useTransition, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { message } from "antd";
 import { testingService } from "../../services/testingService";
@@ -18,6 +18,7 @@ import { useMultipleActionPermissions } from "../../hooks/useActionPermission";
 import { TestRequestStatus } from "../../types/testRequest";
 import { PATH_ROUTES } from "../../constants";
 import "./Testing.css";
+
 
 interface ResultOption {
   value: string;
@@ -158,6 +159,10 @@ const TestingDetail: React.FC = () => {
   const [sampleResults, setSampleResults] = useState<
     Map<string, SaveIndicatorResultDto[]>
   >(new Map());
+  // Ref to read sampleResults in callbacks without adding it to useCallback deps
+  // (prevents all 15 SamplePanelContent memos from failing on every keystroke)
+  const sampleResultsRef = useRef(sampleResults);
+  useEffect(() => { sampleResultsRef.current = sampleResults; }, [sampleResults]);
 
   // Selected indicators per sample (for multiselect)
   const [selectedIndicators, setSelectedIndicators] = useState<
@@ -166,6 +171,11 @@ const TestingDetail: React.FC = () => {
 
   // Active collapse keys (open all panels by default)
   const [activeKeys, setActiveKeys] = useState<string[]>([]);
+  const [, startTransition] = useTransition();
+  const handleCollapseChange = useCallback(
+    (keys: string[]) => startTransition(() => setActiveKeys(keys)),
+    [],
+  );
 
   // Rejection history modal
   const [historyModal, setHistoryModal] = useState({
@@ -185,8 +195,7 @@ const TestingDetail: React.FC = () => {
     if (!id) return;
     setLoading(true);
     try {
-      // Sử dụng apiViewMode để gọi API với đúng context (my hoặc all)
-      const result = await testingService.get(id, apiViewMode);
+      const result: TestingDetailDto = await testingService.get(id, apiViewMode);
       setDetail(result);
 
       // Initialize sample results
@@ -289,33 +298,38 @@ const TestingDetail: React.FC = () => {
     }));
   }, [allResultValues]);
 
-  const handleResultsChange = (
+  const handleResultsChange = useCallback((
     sampleId: string,
     results: SaveIndicatorResultDto[]
   ) => {
-    const newResults = new Map(sampleResults);
-    newResults.set(sampleId, results);
-    setSampleResults(newResults);
-  };
+    setSampleResults((prev) => {
+      const newResults = new Map(prev);
+      newResults.set(sampleId, results);
+      // Update ref synchronously so handleSaveIndicator (called onBlur in the
+      // same event batch) always reads the latest value, before useEffect runs.
+      sampleResultsRef.current = newResults;
+      return newResults;
+    });
+  }, []);
 
-  const handleSelectionChange = (sampleId: string, indicatorIds: string[]) => {
-    const newSelected = new Map(selectedIndicators);
-    newSelected.set(sampleId, indicatorIds);
-    setSelectedIndicators(newSelected);
-  };
+  const handleSelectionChange = useCallback((sampleId: string, indicatorIds: string[]) => {
+    setSelectedIndicators((prev) => {
+      const newSelected = new Map(prev);
+      newSelected.set(sampleId, indicatorIds);
+      return newSelected;
+    });
+  }, []);
 
-  const handleSaveIndicator = async (
+  const handleSaveIndicator = useCallback(async (
     indicatorId: string,
     directResult?: SaveIndicatorResultDto
   ) => {
     if (!id) return;
 
-    // Use directResult if provided (for immediate save like testDate change)
-    // Otherwise, look up from sampleResults state
     let indicatorResult: SaveIndicatorResultDto | undefined = directResult;
 
     if (!indicatorResult) {
-      sampleResults.forEach((results) => {
+      sampleResultsRef.current.forEach((results) => {
         const found = results.find((r) => r.indicatorId === indicatorId);
         if (found) {
           indicatorResult = found;
@@ -329,13 +343,11 @@ const TestingDetail: React.FC = () => {
       await testingService.saveResults(id, { results: [indicatorResult] });
     } catch (error: any) {
       console.error("Failed to save result:", error);
-      message.error(
-        getApiErrorMessage(error, "Không thể lưu kết quả")
-      );
+      message.error(getApiErrorMessage(error, "Không thể lưu kết quả"));
     }
-  };
+  }, [id]);
 
-  const handleSubmitResults = async (sampleId: string) => {
+  const handleSubmitResults = useCallback(async (sampleId: string) => {
     if (!id || !detail) return;
     const selected = selectedIndicators.get(sampleId) || [];
 
@@ -347,7 +359,7 @@ const TestingDetail: React.FC = () => {
     const sample = detail.samples.find((s) => s.sampleId === sampleId);
     if (!sample) return;
 
-    const results = sampleResults.get(sampleId) || [];
+    const results = sampleResultsRef.current.get(sampleId) || [];
     const validIndicators: { indicatorId: string; testDate: string }[] = [];
     const missingResultIds: string[] = [];
     const missingTestDateIds: string[] = [];
@@ -457,60 +469,46 @@ const TestingDetail: React.FC = () => {
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [id, detail, selectedIndicators, updateIndicatorsOptimistically, reloadData, loadDetail]);
 
-  const handleImagesChange = (
+  const handleImagesChange = useCallback((
     sampleId: string,
     imageType: SampleTestingImageType,
     images: SampleTestingImageDto[]
   ) => {
-    if (!detail) return;
-
-    const updatedSamples = detail.samples.map((sample) => {
-      if (sample.sampleId !== sampleId) return sample;
-
-      if (imageType === SampleTestingImageType.BeforeTesting) {
-        return { ...sample, beforeTestingImages: images };
-      } else {
-        return { ...sample, afterTestingImages: images };
-      }
+    setDetail((prev) => {
+      if (!prev) return prev;
+      const updatedSamples = prev.samples.map((sample) => {
+        if (sample.sampleId !== sampleId) return sample;
+        if (imageType === SampleTestingImageType.BeforeTesting) {
+          return { ...sample, beforeTestingImages: images };
+        } else {
+          return { ...sample, afterTestingImages: images };
+        }
+      });
+      return { ...prev, samples: updatedSamples };
     });
+  }, []);
 
-    setDetail({ ...detail, samples: updatedSamples });
-  };
+  const showRejectionHistory = useCallback((indicatorId: string, indicatorName: string) => {
+    setHistoryModal({ visible: true, indicatorId, indicatorName });
+  }, []);
 
-  const showRejectionHistory = (indicatorId: string, indicatorName: string) => {
-    setHistoryModal({
-      visible: true,
-      indicatorId,
-      indicatorName,
-    });
-  };
+  const showCannotTestModal = useCallback((indicatorId: string, indicatorName: string) => {
+    setCannotTestModal({ visible: true, indicatorId, indicatorName });
+  }, []);
 
-  const showCannotTestModal = (indicatorId: string, indicatorName: string) => {
-    setCannotTestModal({
-      visible: true,
-      indicatorId,
-      indicatorName,
-    });
-  };
+  const closeCannotTestModal = useCallback(() => {
+    setCannotTestModal({ visible: false, indicatorId: "", indicatorName: "" });
+  }, []);
 
-  const closeCannotTestModal = () => {
-    setCannotTestModal({
-      visible: false,
-      indicatorId: "",
-      indicatorName: "",
-    });
-  };
-
-  const handleCannotTestSuccess = async () => {
+  const handleCannotTestSuccess = useCallback(async () => {
     closeCannotTestModal();
-    // Reload data to get updated status
     await reloadData();
     message.success("Đã báo không thể thử nghiệm thành công");
-  };
+  }, [closeCannotTestModal, reloadData]);
 
-  const handleSubmitSingleIndicator = async (indicatorId: string) => {
+  const handleSubmitSingleIndicator = useCallback(async (indicatorId: string) => {
     if (!id || !detail) return;
 
     let sampleId: string | null = null;
@@ -537,7 +535,7 @@ const TestingDetail: React.FC = () => {
       return;
     }
 
-    const results = sampleResults.get(sampleId) || [];
+    const results = sampleResultsRef.current.get(sampleId) || [];
     const editedResult = results.find((r) => r.indicatorId === indicatorId);
     const resultValue = editedResult?.result ?? indicator.result;
     const testDate = editedResult?.testDate ?? indicator.testDate;
@@ -588,10 +586,9 @@ const TestingDetail: React.FC = () => {
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [id, detail, updateIndicatorsOptimistically, reloadData, loadDetail]);
 
-  // Handler for uploading indicator images
-  const handleUploadIndicatorImages = async (
+  const handleUploadIndicatorImages = useCallback(async (
     indicatorId: string,
     files: File[]
   ): Promise<IndicatorImageDto[]> => {
@@ -625,14 +622,12 @@ const TestingDetail: React.FC = () => {
       console.error("Failed to upload indicator images:", error);
       throw error;
     }
-  };
+  }, [id]);
 
-  // Handler for deleting indicator image
-  const handleDeleteIndicatorImage = async (imageId: string): Promise<void> => {
+  const handleDeleteIndicatorImage = useCallback(async (imageId: string): Promise<void> => {
     try {
       await testingService.deleteIndicatorImage(imageId);
 
-      // Update local state to remove the deleted image
       setDetail((prev) => {
         if (!prev) return prev;
         return {
@@ -650,10 +645,9 @@ const TestingDetail: React.FC = () => {
       console.error("Failed to delete indicator image:", error);
       throw error;
     }
-  };
+  }, []);
 
-  // Handler for bulk test date change (từ DatePicker trên SamplePanelHeader)
-  const handleBulkTestDateChange = async (
+  const handleBulkTestDateChange = useCallback(async (
     sampleId: string,
     indicatorIds: string[],
     date: string
@@ -664,7 +658,7 @@ const TestingDetail: React.FC = () => {
     if (!sample) return;
 
     // Lấy current sampleResults để giữ lại kết quả đã nhập
-    const currentSampleResults = sampleResults.get(sampleId) || [];
+    const currentSampleResults = sampleResultsRef.current.get(sampleId) || [];
 
     // Tạo resultsToSave TRƯỚC KHI update state để tránh race condition
     // Ưu tiên lấy result từ sampleResults (đã nhập), fallback sang indicator.result
@@ -746,7 +740,7 @@ const TestingDetail: React.FC = () => {
       // Reload lại data nếu có lỗi để sync với server
       await reloadData();
     }
-  };
+  }, [id, detail, reloadData]);
 
   // Check if deadline is urgent (<=3 days)
   const isUrgent = detail?.requestCompletionDate
@@ -767,6 +761,10 @@ const TestingDetail: React.FC = () => {
     [detail?.samples]
   );
 
+  const handleBack = useCallback(() => navigate("/testing"), [navigate]);
+  const handleCloseHistoryModal = useCallback(() =>
+    setHistoryModal({ visible: false, indicatorId: "", indicatorName: "" }), []);
+
   return (
     <TestingDetailContainer
       detail={detail!}
@@ -783,16 +781,14 @@ const TestingDetail: React.FC = () => {
       getResultOptionsForIndicator={getResultOptionsForIndicator}
       canPerformActions={canPerformActions}
       isTestRequestCancelled={isTestRequestCancelled}
-      onBack={() => navigate("/testing")}
-      onCollapseChange={setActiveKeys}
+      onBack={handleBack}
+      onCollapseChange={handleCollapseChange}
       onSubmitResults={handleSubmitResults}
       onResultsChange={handleResultsChange}
       onSelectionChange={handleSelectionChange}
       onImagesChange={handleImagesChange}
       onShowRejectionHistory={showRejectionHistory}
-      onCloseHistoryModal={() =>
-        setHistoryModal({ visible: false, indicatorId: "", indicatorName: "" })
-      }
+      onCloseHistoryModal={handleCloseHistoryModal}
       onShowCannotTestModal={showCannotTestModal}
       onCloseCannotTestModal={closeCannotTestModal}
       onCannotTestSuccess={handleCannotTestSuccess}
