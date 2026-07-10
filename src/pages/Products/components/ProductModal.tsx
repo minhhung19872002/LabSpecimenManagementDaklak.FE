@@ -49,9 +49,11 @@ const isChemicalType = (type: number) => type === ProductType.Chemical;
 const isBiologicalType = (type: number) => type === ProductType.Biological;
 const isStandardType = (type: number) => type === ProductType.Standard;
 const isSupplyType = (type: number) => type === ProductType.Supply;
-const isChemOrBioOrStdOrSupplyType = (type: number) =>
+const isSolventType = (type: number) => type === ProductType.Solvent;
+const isChemOrBioOrStdOrSupplyOrSolventType = (type: number) =>
   type === ProductType.Chemical || type === ProductType.Biological ||
-  type === ProductType.Standard || type === ProductType.Supply;
+  type === ProductType.Standard || type === ProductType.Supply ||
+  type === ProductType.Solvent;
 
 interface ProductModalProps {
   open: boolean;
@@ -382,7 +384,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
     packagingQuantity: data.packagingQuantity ?? null,
     packagingUnitId: data.packagingUnitId || null,
     volumePerUnit: isChemicalType(data.productType) ? data.volumePerUnit ?? null : null,
-    volumeUnitId: isChemOrBioOrStdOrSupplyType(data.productType) ? data.volumeUnitId || null : null,
+    volumeUnitId: isChemOrBioOrStdOrSupplyOrSolventType(data.productType) ? data.volumeUnitId || null : null,
     formattedPackagingSpec: isSupplyType(data.productType) ? data.formattedPackagingSpec || undefined : undefined,
     materialComposition: isSupplyType(data.productType) ? data.materialComposition || undefined : undefined,
     formattedMaterialComposition: undefined,
@@ -390,23 +392,23 @@ const ProductModal: React.FC<ProductModalProps> = ({
     maxReuseCount: (isSupplyType(data.productType) && data.isReusable === true) ? data.maxReuseCount ?? null : null,
     isSterile: isSupplyType(data.productType) ? data.isSterile ?? null : null,
     packagingSpec: data.packagingSpec || undefined,
-    casNumber: isChemOrBioOrStdOrSupplyType(data.productType) ? data.casNumber || undefined : undefined,
+    casNumber: isChemOrBioOrStdOrSupplyOrSolventType(data.productType) ? data.casNumber || undefined : undefined,
     manufacturer: data.manufacturer || undefined,
     origin: (isBiologicalType(data.productType) || isStandardType(data.productType)) ? data.origin || undefined : undefined,
-    concentration: isChemOrBioOrStdOrSupplyType(data.productType) ? data.concentration || undefined : undefined,
-    formattedConcentration: (isBiologicalType(data.productType) || isStandardType(data.productType)) ? data.formattedConcentration || undefined : undefined,
+    concentration: isChemOrBioOrStdOrSupplyOrSolventType(data.productType) ? data.concentration || undefined : undefined,
+    formattedConcentration: (isBiologicalType(data.productType) || isStandardType(data.productType) || isSolventType(data.productType)) ? data.formattedConcentration || undefined : undefined,
     formattedOrigin: (isBiologicalType(data.productType) || isStandardType(data.productType)) ? data.formattedOrigin || undefined : undefined,
-    ghsCode: (isBiologicalType(data.productType) || isStandardType(data.productType) || isSupplyType(data.productType)) ? data.ghsCode || undefined : undefined,
-    chemicalFormula: (isChemicalType(data.productType) || isStandardType(data.productType)) ? data.chemicalFormula || undefined : undefined,
-    minStockLevel: isChemOrBioOrStdOrSupplyType(data.productType) ? data.minStockLevel ?? null : null,
+    ghsCode: (isBiologicalType(data.productType) || isStandardType(data.productType) || isSupplyType(data.productType) || isSolventType(data.productType)) ? data.ghsCode || undefined : undefined,
+    chemicalFormula: (isChemicalType(data.productType) || isStandardType(data.productType) || isSolventType(data.productType)) ? data.chemicalFormula || undefined : undefined,
+    minStockLevel: isChemOrBioOrStdOrSupplyOrSolventType(data.productType) ? data.minStockLevel ?? null : null,
     standardCertificationType: isStandardType(data.productType) ? data.standardCertificationType ?? null : null,
-    formattedChemicalFormula: isStandardType(data.productType) ? data.formattedChemicalFormula || undefined : undefined,
+    formattedChemicalFormula: (isStandardType(data.productType) || isSolventType(data.productType)) ? data.formattedChemicalFormula || undefined : undefined,
     certifiedValue: isStandardType(data.productType) ? data.certifiedValue || undefined : undefined,
     formattedCertifiedValue: isStandardType(data.productType) ? data.formattedCertifiedValue || undefined : undefined,
     measurementUncertainty: isStandardType(data.productType) ? data.measurementUncertainty || undefined : undefined,
     formattedMeasurementUncertainty: isStandardType(data.productType) ? data.formattedMeasurementUncertainty || undefined : undefined,
     standardLink: isStandardType(data.productType) ? data.standardLink || undefined : undefined,
-    analysisGrade: isStandardType(data.productType) ? data.analysisGrade || undefined : undefined,
+    analysisGrade: (isStandardType(data.productType) || isSolventType(data.productType)) ? data.analysisGrade || undefined : undefined,
     storageConditions: data.storageConditions || undefined,
     formattedStorageConditions: data.formattedStorageConditions || undefined,
     categories: data.categories || undefined,
@@ -446,12 +448,13 @@ const ProductModal: React.FC<ProductModalProps> = ({
   const showBiologicalFields = isBiologicalType(watchedType);
   const showStandardFields = isStandardType(watchedType);
   const showSupplyFields = isSupplyType(watchedType);
+  const showSolventFields = isSolventType(watchedType);
   const watchedIsReusable = watched.isReusable;
   const topVolumeUnitId = watched.volumeUnitId;
 
   // Sync top-level volumeUnitId vào tất cả SKU rows khi type là Hóa chất hoặc Sinh phẩm
   useEffect(() => {
-    if (isChemOrBioOrStdOrSupplyType(watchedType) && skuFields.length > 0) {
+    if (isChemOrBioOrStdOrSupplyOrSolventType(watchedType) && skuFields.length > 0) {
       skuFields.forEach((_, i) => {
         setValue(`skus.${i}.volumeUnitId`, topVolumeUnitId || "");
       });
@@ -471,7 +474,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
       packagingQuantity: undefined as any,
       packagingUnitId: undefined as any,
       volumePerUnit: undefined as any,
-      volumeUnitId: isChemOrBioOrStdOrSupplyType(watchedType) ? (topVolumeUnitId || undefined) : undefined as any,
+      volumeUnitId: isChemOrBioOrStdOrSupplyOrSolventType(watchedType) ? (topVolumeUnitId || undefined) : undefined as any,
     });
 
   return (
@@ -536,7 +539,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
         <Divider style={{ margin: "4px 0 16px" }} />
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
           <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "#1677ff", color: "#fff", fontSize: 11, fontWeight: 600, flexShrink: 0 }}>2</span>
-          <span style={{ fontWeight: 600, fontSize: 14 }}>{showStandardFields ? "Thông tin chất chuẩn" : showChemicalFields ? "Thông tin hóa chất" : showBiologicalFields ? "Thông tin sinh phẩm" : showSupplyFields ? "Thông tin vật tư tiêu hao" : "Thông tin vật tư"}</span>
+          <span style={{ fontWeight: 600, fontSize: 14 }}>{showStandardFields ? "Thông tin chất chuẩn" : showChemicalFields ? "Thông tin hóa chất" : showBiologicalFields ? "Thông tin sinh phẩm" : showSupplyFields ? "Thông tin vật tư tiêu hao" : showSolventFields ? "Thông tin dung môi" : "Thông tin vật tư"}</span>
         </div>
 
         {/* Standard: Loại chất chuẩn */}
@@ -566,9 +569,9 @@ const ProductModal: React.FC<ProductModalProps> = ({
 
         {/* Tên + Dung tích mỗi đơn vị / Đơn vị tiêu hao */}
         <Row gutter={16}>
-          <Col xs={24} sm={(showChemicalFields || showBiologicalFields || showStandardFields || showSupplyFields) ? 14 : 24}>
+          <Col xs={24} sm={(showChemicalFields || showBiologicalFields || showStandardFields || showSupplyFields || showSolventFields) ? 14 : 24}>
             <Form.Item
-              label={showBiologicalFields ? "Tên sinh phẩm" : showStandardFields ? "Tên chất chuẩn" : showSupplyFields ? "Tên vật tư tiêu hao" : "Tên vật tư/hóa chất"}
+              label={showBiologicalFields ? "Tên sinh phẩm" : showStandardFields ? "Tên chất chuẩn" : showSupplyFields ? "Tên vật tư tiêu hao" : showSolventFields ? "Tên dung môi" : "Tên vật tư/hóa chất"}
               validateStatus={errors.name ? "error" : ""}
               help={errors.name?.message}
             >
@@ -687,11 +690,32 @@ const ProductModal: React.FC<ProductModalProps> = ({
               </Form.Item>
             </Col>
           )}
+          {showSolventFields && (
+            <Col xs={24} sm={10}>
+              <Form.Item label="Đơn vị tiêu hao">
+                <Controller
+                  name="volumeUnitId"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      {...clearableSelectProps(field)}
+                      style={{ width: "100%" }}
+                      placeholder="Chọn đơn vị"
+                      allowClear
+                      showSearch
+                      optionFilterProp="title"
+                      options={consumableUnitOptions}
+                    />
+                  )}
+                />
+              </Form.Item>
+            </Col>
+          )}
         </Row>
 
         {/* Mã nhận dạng + Công thức hóa học / Nguồn gốc */}
         <Row gutter={16}>
-          <Col xs={24} sm={showSupplyFields ? 8 : (showChemicalFields || showBiologicalFields || showStandardFields) ? 14 : 24}>
+          <Col xs={24} sm={showSupplyFields ? 8 : (showChemicalFields || showBiologicalFields || showStandardFields || showSolventFields) ? 14 : 24}>
             <Form.Item
               label="Mã nhận dạng"
               required
@@ -761,6 +785,26 @@ const ProductModal: React.FC<ProductModalProps> = ({
                         setValue("origin", plainText);
                       }}
                       placeholder="VD: NIST, Merck..."
+                    />
+                  )}
+                />
+              </Form.Item>
+            </Col>
+          )}
+          {showSolventFields && (
+            <Col xs={24} sm={10}>
+              <Form.Item label="Công thức hóa học">
+                <Controller
+                  name="formattedChemicalFormula"
+                  control={control}
+                  render={({ field }) => (
+                    <RichTextEditor
+                      value={field.value || ""}
+                      onChange={(html, plainText) => {
+                        field.onChange(html);
+                        setValue("chemicalFormula", plainText);
+                      }}
+                      placeholder="VD: C₂H₅OH"
                     />
                   )}
                 />
@@ -1070,6 +1114,87 @@ const ProductModal: React.FC<ProductModalProps> = ({
           </Row>
         )}
 
+        {/* Solvent Row 3: Số CAS + Độ tinh khiết/Hàm lượng + Tồn kho tối thiểu */}
+        {showSolventFields && (
+          <Row gutter={16}>
+            <Col xs={24} sm={8}>
+              <Form.Item
+                label={
+                  <Space size={4}>
+                    Số CAS
+                    <Tooltip title="Mã định danh quốc tế cho hóa chất">
+                      <InfoCircleOutlined style={{ color: "#999" }} />
+                    </Tooltip>
+                  </Space>
+                }
+              >
+                <Controller
+                  name="casNumber"
+                  control={control}
+                  render={({ field }) => (
+                    <Input {...field} value={field.value || ""} placeholder="VD: 64-17-5" />
+                  )}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item label="Độ tinh khiết / Hàm lượng">
+                <Controller
+                  name="formattedConcentration"
+                  control={control}
+                  render={({ field }) => (
+                    <RichTextEditor
+                      value={field.value || ""}
+                      onChange={(html, plainText) => {
+                        field.onChange(html);
+                        setValue("concentration", plainText);
+                      }}
+                      placeholder="VD: ≥ 99.5%"
+                    />
+                  )}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item
+                label={
+                  <Space size={4}>
+                    Tồn kho tối thiểu
+                    <Tooltip title="Số lượng tồn kho tính theo đơn vị lưu kho">
+                      <InfoCircleOutlined style={{ color: "#999" }} />
+                    </Tooltip>
+                  </Space>
+                }
+              >
+                <Controller
+                  name="minStockLevel"
+                  control={control}
+                  render={({ field }) => (
+                    <InputNumber {...field} style={{ width: "100%" }} min={0} placeholder="VD: 10" />
+                  )}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+        )}
+
+        {/* Solvent Row 4: Cấp độ phân tích */}
+        {showSolventFields && (
+          <Row gutter={16}>
+            <Col xs={24} sm={10}>
+              <Form.Item label="Cấp độ phân tích">
+                <Controller
+                  name="analysisGrade"
+                  control={control}
+                  render={({ field }) => (
+                    <Input {...field} value={field.value || ""} placeholder="VD: HPLC grade" />
+                  )}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+        )}
+
         {/* Supply: Số CAS + Khả năng tái sử dụng + Số lần tái sử dụng */}
         {showSupplyFields && (
           <Row gutter={16}>
@@ -1132,39 +1257,37 @@ const ProductModal: React.FC<ProductModalProps> = ({
           </Row>
         )}
 
-        {/* Nhóm/phân loại (Tags) — ẩn cho Supply */}
-        {!showSupplyFields && (
-          <Form.Item label="Nhóm/Phân loại (Tags)">
-            <div
-              style={{
-                border: "1px solid #d9d9d9",
-                borderRadius: 6,
-                padding: "4px 8px",
-                minHeight: 36,
-                display: "flex",
-                flexWrap: "wrap",
-                alignItems: "center",
-                gap: 4,
-              }}
-            >
-              {categoryTags.map((tag) => (
-                <Tag key={tag} closable onClose={() => handleRemoveTag("categories", tag)} color="blue">
-                  {tag}
-                </Tag>
-              ))}
-              <Input
-                variant="borderless"
-                size="small"
-                value={categoryTagInput}
-                onChange={(e) => setCategoryTagInput(e.target.value)}
-                onPressEnter={() => handleAddTag("categories", categoryTagInput, setCategoryTagInput)}
-                onBlur={() => handleAddTag("categories", categoryTagInput, setCategoryTagInput)}
-                placeholder="Thêm phân loại..."
-                style={{ flex: 1, minWidth: 100 }}
-              />
-            </div>
-          </Form.Item>
-        )}
+        {/* Nhóm/phân loại (Tags) */}
+        <Form.Item label="Nhóm/Phân loại (Tags)">
+          <div
+            style={{
+              border: "1px solid #d9d9d9",
+              borderRadius: 6,
+              padding: "4px 8px",
+              minHeight: 36,
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: 4,
+            }}
+          >
+            {categoryTags.map((tag) => (
+              <Tag key={tag} closable onClose={() => handleRemoveTag("categories", tag)} color="blue">
+                {tag}
+              </Tag>
+            ))}
+            <Input
+              variant="borderless"
+              size="small"
+              value={categoryTagInput}
+              onChange={(e) => setCategoryTagInput(e.target.value)}
+              onPressEnter={() => handleAddTag("categories", categoryTagInput, setCategoryTagInput)}
+              onBlur={() => handleAddTag("categories", categoryTagInput, setCategoryTagInput)}
+              placeholder="Thêm phân loại..."
+              style={{ flex: 1, minWidth: 100 }}
+            />
+          </div>
+        </Form.Item>
 
         {/* Điều kiện bảo quản */}
         <Form.Item label="Điều kiện bảo quản">
@@ -1203,8 +1326,8 @@ const ProductModal: React.FC<ProductModalProps> = ({
           </Form.Item>
         )}
 
-        {/* Mã nguy hiểm GHS/MSDS — Sinh phẩm, Chất chuẩn, Vật tư tiêu hao */}
-        {(showBiologicalFields || showStandardFields || showSupplyFields) && (
+        {/* Mã nguy hiểm GHS/MSDS — Sinh phẩm, Chất chuẩn, Vật tư tiêu hao, Dung môi */}
+        {(showBiologicalFields || showStandardFields || showSupplyFields || showSolventFields) && (
           <Form.Item label="Mã nguy hiểm GHS/ MSDS">
             <Controller
               name="ghsCode"
@@ -1418,14 +1541,14 @@ const ProductModal: React.FC<ProductModalProps> = ({
                         render={({ field: f }) => (
                           <Select
                             {...clearableSelectProps(f)}
-                            style={{ flex: 1, minWidth: 0, background: isChemOrBioOrStdOrSupplyType(watchedType) ? "#f5f5f5" : undefined }}
+                            style={{ flex: 1, minWidth: 0, background: isChemOrBioOrStdOrSupplyOrSolventType(watchedType) ? "#f5f5f5" : undefined }}
                             placeholder="ĐV tiêu hao"
                             allowClear
                             showSearch
                             optionFilterProp="title"
                             options={consumableUnitOptions}
                             status={errors.skus?.[index]?.volumeUnitId ? "error" : undefined}
-                            disabled={isChemOrBioOrStdOrSupplyType(watchedType)}
+                            disabled={isChemOrBioOrStdOrSupplyOrSolventType(watchedType)}
                           />
                         )}
                       />
