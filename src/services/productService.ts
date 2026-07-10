@@ -8,6 +8,7 @@ export enum ProductType {
   Standard = 3,
   Solvent = 4,
   Equipment = 5,
+  PreparedSolution = 6,
 }
 
 export enum StandardCertificationType {
@@ -29,6 +30,7 @@ export const ProductTypeLabels: Record<ProductType, string> = {
   [ProductType.Standard]: "Chất chuẩn",
   [ProductType.Solvent]: "Dung môi",
   [ProductType.Equipment]: "Thiết bị phòng Lab",
+  [ProductType.PreparedSolution]: "Dung dịch pha",
 };
 
 // DTOs

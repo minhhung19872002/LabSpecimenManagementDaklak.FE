@@ -37,7 +37,7 @@ export const productSchema = yup.object({
     .default("")
     .required("Vui lòng nhập mã nhận dạng")
     .max(256),
-  productType: yup.number().defined().default(0).min(0).max(5),
+  productType: yup.number().defined().default(0).min(0).max(6),
   baseUnitId: yup.string().nullable().optional(),
   packagingQuantity: yup
     .number()

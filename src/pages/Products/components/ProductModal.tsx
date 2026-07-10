@@ -43,6 +43,7 @@ const PRODUCT_TYPE_OPTIONS = [
   { value: ProductType.Standard, label: "Chất chuẩn" },
   { value: ProductType.Solvent, label: "Dung môi" },
   { value: ProductType.Equipment, label: "Thiết bị phòng Lab" },
+  { value: ProductType.PreparedSolution, label: "Dung dịch pha" },
 ];
 
 const isChemicalType = (type: number) => type === ProductType.Chemical;
