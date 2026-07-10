@@ -44,6 +44,9 @@ const PRODUCT_TYPE_OPTIONS = [
 ];
 
 const isChemicalType = (type: number) => type === ProductType.Chemical;
+const isBiologicalType = (type: number) => type === ProductType.Biological;
+const isChemOrBioType = (type: number) =>
+  type === ProductType.Chemical || type === ProductType.Biological;
 
 interface ProductModalProps {
   open: boolean;
@@ -116,6 +119,9 @@ const ProductModal: React.FC<ProductModalProps> = ({
       manufacturer: "",
       origin: "",
       concentration: "",
+      formattedConcentration: "",
+      formattedOrigin: "",
+      ghsCode: "",
       chemicalFormula: "",
       minStockLevel: undefined,
       storageConditions: "",
@@ -232,6 +238,9 @@ const ProductModal: React.FC<ProductModalProps> = ({
           manufacturer: editingProduct.manufacturer || "",
           origin: editingProduct.origin || "",
           concentration: editingProduct.concentration || "",
+          formattedConcentration: editingProduct.formattedConcentration || "",
+          formattedOrigin: editingProduct.formattedOrigin || "",
+          ghsCode: editingProduct.ghsCode || "",
           chemicalFormula: editingProduct.chemicalFormula || "",
           minStockLevel: editingProduct.minStockLevel ?? undefined,
           storageConditions: editingProduct.storageConditions || "",
@@ -266,6 +275,9 @@ const ProductModal: React.FC<ProductModalProps> = ({
           manufacturer: "",
           origin: "",
           concentration: "",
+          formattedConcentration: "",
+          formattedOrigin: "",
+          ghsCode: "",
           chemicalFormula: "",
           minStockLevel: undefined,
           storageConditions: "",
@@ -323,14 +335,17 @@ const ProductModal: React.FC<ProductModalProps> = ({
     packagingQuantity: data.packagingQuantity ?? null,
     packagingUnitId: data.packagingUnitId || null,
     volumePerUnit: isChemicalType(data.productType) ? data.volumePerUnit ?? null : null,
-    volumeUnitId: isChemicalType(data.productType) ? data.volumeUnitId || null : null,
+    volumeUnitId: (isChemicalType(data.productType) || isBiologicalType(data.productType)) ? data.volumeUnitId || null : null,
     packagingSpec: data.packagingSpec || undefined,
-    casNumber: isChemicalType(data.productType) ? data.casNumber || undefined : undefined,
+    casNumber: (isChemicalType(data.productType) || isBiologicalType(data.productType)) ? data.casNumber || undefined : undefined,
     manufacturer: data.manufacturer || undefined,
     origin: data.origin || undefined,
-    concentration: isChemicalType(data.productType) ? data.concentration || undefined : undefined,
+    concentration: (isChemicalType(data.productType) || isBiologicalType(data.productType)) ? data.concentration || undefined : undefined,
+    formattedConcentration: isBiologicalType(data.productType) ? data.formattedConcentration || undefined : undefined,
+    formattedOrigin: isBiologicalType(data.productType) ? data.formattedOrigin || undefined : undefined,
+    ghsCode: isBiologicalType(data.productType) ? data.ghsCode || undefined : undefined,
     chemicalFormula: isChemicalType(data.productType) ? data.chemicalFormula || undefined : undefined,
-    minStockLevel: isChemicalType(data.productType) ? data.minStockLevel ?? null : null,
+    minStockLevel: (isChemicalType(data.productType) || isBiologicalType(data.productType)) ? data.minStockLevel ?? null : null,
     storageConditions: data.storageConditions || undefined,
     formattedStorageConditions: data.formattedStorageConditions || undefined,
     categories: data.categories || undefined,
@@ -367,6 +382,17 @@ const ProductModal: React.FC<ProductModalProps> = ({
 
   const categoryTags = parseTags(watchedCategories as string);
   const showChemicalFields = isChemicalType(watchedType);
+  const showBiologicalFields = isBiologicalType(watchedType);
+  const topVolumeUnitId = watched.volumeUnitId;
+
+  // Sync top-level volumeUnitId vào tất cả SKU rows khi type là Hóa chất hoặc Sinh phẩm
+  useEffect(() => {
+    if (isChemOrBioType(watchedType) && skuFields.length > 0) {
+      skuFields.forEach((_, i) => {
+        setValue(`skus.${i}.volumeUnitId`, topVolumeUnitId || "");
+      });
+    }
+  }, [topVolumeUnitId, watchedType]);
 
   const getUsedManufacturerIds = (excludeIndex: number) =>
     watchedSkus
@@ -381,7 +407,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
       packagingQuantity: undefined as any,
       packagingUnitId: undefined as any,
       volumePerUnit: undefined as any,
-      volumeUnitId: undefined as any,
+      volumeUnitId: isChemOrBioType(watchedType) ? (topVolumeUnitId || undefined) : undefined as any,
     });
 
   return (
@@ -446,14 +472,14 @@ const ProductModal: React.FC<ProductModalProps> = ({
         <Divider style={{ margin: "4px 0 16px" }} />
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
           <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "#1677ff", color: "#fff", fontSize: 11, fontWeight: 600, flexShrink: 0 }}>2</span>
-          <span style={{ fontWeight: 600, fontSize: 14 }}>{showChemicalFields ? "Thông tin hóa chất" : "Thông tin vật tư"}</span>
+          <span style={{ fontWeight: 600, fontSize: 14 }}>{showChemicalFields ? "Thông tin hóa chất" : showBiologicalFields ? "Thông tin sinh phẩm" : "Thông tin vật tư"}</span>
         </div>
 
-        {/* Tên + Dung tích mỗi đơn vị */}
+        {/* Tên + Dung tích mỗi đơn vị / Đơn vị tiêu hao */}
         <Row gutter={16}>
-          <Col xs={24} sm={showChemicalFields ? 14 : 24}>
+          <Col xs={24} sm={(showChemicalFields || showBiologicalFields) ? 14 : 24}>
             <Form.Item
-              label="Tên vật tư/hóa chất"
+              label={showBiologicalFields ? "Tên sinh phẩm" : "Tên vật tư/hóa chất"}
               validateStatus={errors.name ? "error" : ""}
               help={errors.name?.message}
             >
@@ -509,11 +535,32 @@ const ProductModal: React.FC<ProductModalProps> = ({
               </Form.Item>
             </Col>
           )}
+          {showBiologicalFields && (
+            <Col xs={24} sm={10}>
+              <Form.Item label="Đơn vị tiêu hao">
+                <Controller
+                  name="volumeUnitId"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      {...clearableSelectProps(field)}
+                      style={{ width: "100%" }}
+                      placeholder="Chọn đơn vị"
+                      allowClear
+                      showSearch
+                      optionFilterProp="title"
+                      options={consumableUnitOptions}
+                    />
+                  )}
+                />
+              </Form.Item>
+            </Col>
+          )}
         </Row>
 
-        {/* Mã nhận dạng + Công thức hóa học */}
+        {/* Mã nhận dạng + Công thức hóa học / Nguồn gốc */}
         <Row gutter={16}>
-          <Col xs={24} sm={showChemicalFields ? 14 : 24}>
+          <Col xs={24} sm={(showChemicalFields || showBiologicalFields) ? 14 : 24}>
             <Form.Item
               label="Mã nhận dạng"
               required
@@ -544,6 +591,26 @@ const ProductModal: React.FC<ProductModalProps> = ({
                   control={control}
                   render={({ field }) => (
                     <Input {...field} value={field.value || ""} placeholder="VD: C₂H₅OH" />
+                  )}
+                />
+              </Form.Item>
+            </Col>
+          )}
+          {showBiologicalFields && (
+            <Col xs={24} sm={10}>
+              <Form.Item label="Nguồn gốc / Chủng loại">
+                <Controller
+                  name="formattedOrigin"
+                  control={control}
+                  render={({ field }) => (
+                    <RichTextEditor
+                      value={field.value || ""}
+                      onChange={(html, plainText) => {
+                        field.onChange(html);
+                        setValue("origin", plainText);
+                      }}
+                      placeholder="VD: C₄H₇OH"
+                    />
                   )}
                 />
               </Form.Item>
@@ -587,6 +654,70 @@ const ProductModal: React.FC<ProductModalProps> = ({
             </Col>
             <Col xs={24} sm={8}>
               <Form.Item label="Tồn kho tối thiểu">
+                <Controller
+                  name="minStockLevel"
+                  control={control}
+                  render={({ field }) => (
+                    <InputNumber {...field} style={{ width: "100%" }} min={0} placeholder="VD: 10" />
+                  )}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+        )}
+
+        {/* Biological: CAS + Nồng độ/Bản sao/Hoạt tính (rich text) + Tồn kho tối thiểu */}
+        {showBiologicalFields && (
+          <Row gutter={16}>
+            <Col xs={24} sm={8}>
+              <Form.Item
+                label={
+                  <Space size={4}>
+                    Số CAS
+                    <Tooltip title="Mã định danh quốc tế cho hóa chất">
+                      <InfoCircleOutlined style={{ color: "#999" }} />
+                    </Tooltip>
+                  </Space>
+                }
+              >
+                <Controller
+                  name="casNumber"
+                  control={control}
+                  render={({ field }) => (
+                    <Input {...field} value={field.value || ""} placeholder="VD: 64-17-5" />
+                  )}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item label="Nồng độ/Bản sao/Hoạt tính">
+                <Controller
+                  name="formattedConcentration"
+                  control={control}
+                  render={({ field }) => (
+                    <RichTextEditor
+                      value={field.value || ""}
+                      onChange={(html, plainText) => {
+                        field.onChange(html);
+                        setValue("concentration", plainText);
+                      }}
+                      placeholder="VD: ≥ 99.5%"
+                    />
+                  )}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item
+                label={
+                  <Space size={4}>
+                    Tồn kho tối thiểu
+                    <Tooltip title="Số lượng tồn kho tính theo đơn vị lưu kho">
+                      <InfoCircleOutlined style={{ color: "#999" }} />
+                    </Tooltip>
+                  </Space>
+                }
+              >
                 <Controller
                   name="minStockLevel"
                   control={control}
@@ -648,6 +779,19 @@ const ProductModal: React.FC<ProductModalProps> = ({
             )}
           />
         </Form.Item>
+
+        {/* Mã nguy hiểm GHS/MSDS — chỉ Sinh phẩm */}
+        {showBiologicalFields && (
+          <Form.Item label="Mã nguy hiểm GHS/ MSDS">
+            <Controller
+              name="ghsCode"
+              control={control}
+              render={({ field }) => (
+                <Input {...field} value={field.value || ""} placeholder="VD: 64-17-5" />
+              )}
+            />
+          </Form.Item>
+        )}
 
         {/* Tài liệu đính kèm */}
         <Form.Item label="Tài liệu đính kèm (SDS/MSDS)">
@@ -851,13 +995,14 @@ const ProductModal: React.FC<ProductModalProps> = ({
                         render={({ field: f }) => (
                           <Select
                             {...clearableSelectProps(f)}
-                            style={{ flex: 1, minWidth: 0 }}
+                            style={{ flex: 1, minWidth: 0, background: isChemOrBioType(watchedType) ? "#f5f5f5" : undefined }}
                             placeholder="ĐV tiêu hao"
                             allowClear
                             showSearch
                             optionFilterProp="title"
                             options={consumableUnitOptions}
                             status={errors.skus?.[index]?.volumeUnitId ? "error" : undefined}
+                            disabled={isChemOrBioType(watchedType)}
                           />
                         )}
                       />

@@ -60,6 +60,9 @@ export const productSchema = yup.object({
   manufacturer: yup.string().nullable().max(256),
   origin: yup.string().nullable().max(256),
   concentration: yup.string().nullable().max(256),
+  formattedConcentration: yup.string().nullable(),
+  formattedOrigin: yup.string().nullable(),
+  ghsCode: yup.string().nullable().max(128),
   chemicalFormula: yup.string().nullable().max(256),
   minStockLevel: yup
     .number()

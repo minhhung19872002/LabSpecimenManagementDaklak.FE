@@ -40,6 +40,9 @@ export interface ProductDto {
   manufacturer?: string;
   origin?: string;
   concentration?: string;
+  formattedConcentration?: string;
+  formattedOrigin?: string;
+  ghsCode?: string;
   storageConditions?: string;
   formattedStorageConditions?: string;
   categories?: string;
@@ -104,6 +107,9 @@ export interface CreateUpdateProductDto {
   manufacturer?: string;
   origin?: string;
   concentration?: string;
+  formattedConcentration?: string;
+  formattedOrigin?: string;
+  ghsCode?: string;
   storageConditions?: string;
   formattedStorageConditions?: string;
   categories?: string;
