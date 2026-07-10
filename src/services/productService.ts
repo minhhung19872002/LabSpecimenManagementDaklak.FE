@@ -10,6 +10,18 @@ export enum ProductType {
   Equipment = 5,
 }
 
+export enum StandardCertificationType {
+  CertifiedReference = 0,
+  Regular = 1,
+  Working = 2,
+}
+
+export const STANDARD_CERTIFICATION_OPTIONS = [
+  { value: StandardCertificationType.CertifiedReference, label: "Chuẩn chứng nhận" },
+  { value: StandardCertificationType.Regular, label: "Chuẩn thường" },
+  { value: StandardCertificationType.Working, label: "Chuẩn làm việc" },
+];
+
 export const ProductTypeLabels: Record<ProductType, string> = {
   [ProductType.Chemical]: "Hóa chất",
   [ProductType.Biological]: "Sinh phẩm",
@@ -43,6 +55,14 @@ export interface ProductDto {
   formattedConcentration?: string;
   formattedOrigin?: string;
   ghsCode?: string;
+  standardCertificationType?: number | null;
+  formattedChemicalFormula?: string | null;
+  certifiedValue?: string | null;
+  formattedCertifiedValue?: string | null;
+  measurementUncertainty?: string | null;
+  formattedMeasurementUncertainty?: string | null;
+  standardLink?: string | null;
+  analysisGrade?: string | null;
   storageConditions?: string;
   formattedStorageConditions?: string;
   categories?: string;
@@ -110,6 +130,14 @@ export interface CreateUpdateProductDto {
   formattedConcentration?: string;
   formattedOrigin?: string;
   ghsCode?: string;
+  standardCertificationType?: number | null;
+  formattedChemicalFormula?: string | null;
+  certifiedValue?: string | null;
+  formattedCertifiedValue?: string | null;
+  measurementUncertainty?: string | null;
+  formattedMeasurementUncertainty?: string | null;
+  standardLink?: string | null;
+  analysisGrade?: string | null;
   storageConditions?: string;
   formattedStorageConditions?: string;
   categories?: string;

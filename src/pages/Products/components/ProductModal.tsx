@@ -26,6 +26,7 @@ import {
   ProductType,
   CreateProductAttachmentDto,
   productService,
+  STANDARD_CERTIFICATION_OPTIONS,
 } from "../../../services/productService";
 import { UnitDto, UnitCategory, unitService } from "../../../services/masterDataService";
 import { ManufacturerDto, manufacturerService } from "../../../services/manufacturerService";
@@ -45,8 +46,9 @@ const PRODUCT_TYPE_OPTIONS = [
 
 const isChemicalType = (type: number) => type === ProductType.Chemical;
 const isBiologicalType = (type: number) => type === ProductType.Biological;
-const isChemOrBioType = (type: number) =>
-  type === ProductType.Chemical || type === ProductType.Biological;
+const isStandardType = (type: number) => type === ProductType.Standard;
+const isChemOrBioOrStandardType = (type: number) =>
+  type === ProductType.Chemical || type === ProductType.Biological || type === ProductType.Standard;
 
 interface ProductModalProps {
   open: boolean;
@@ -122,6 +124,14 @@ const ProductModal: React.FC<ProductModalProps> = ({
       formattedConcentration: "",
       formattedOrigin: "",
       ghsCode: "",
+      standardCertificationType: undefined,
+      formattedChemicalFormula: "",
+      certifiedValue: "",
+      formattedCertifiedValue: "",
+      measurementUncertainty: "",
+      formattedMeasurementUncertainty: "",
+      standardLink: "",
+      analysisGrade: "",
       chemicalFormula: "",
       minStockLevel: undefined,
       storageConditions: "",
@@ -241,6 +251,14 @@ const ProductModal: React.FC<ProductModalProps> = ({
           formattedConcentration: editingProduct.formattedConcentration || "",
           formattedOrigin: editingProduct.formattedOrigin || "",
           ghsCode: editingProduct.ghsCode || "",
+          standardCertificationType: editingProduct.standardCertificationType ?? undefined,
+          formattedChemicalFormula: editingProduct.formattedChemicalFormula || "",
+          certifiedValue: editingProduct.certifiedValue || "",
+          formattedCertifiedValue: editingProduct.formattedCertifiedValue || "",
+          measurementUncertainty: editingProduct.measurementUncertainty || "",
+          formattedMeasurementUncertainty: editingProduct.formattedMeasurementUncertainty || "",
+          standardLink: editingProduct.standardLink || "",
+          analysisGrade: editingProduct.analysisGrade || "",
           chemicalFormula: editingProduct.chemicalFormula || "",
           minStockLevel: editingProduct.minStockLevel ?? undefined,
           storageConditions: editingProduct.storageConditions || "",
@@ -278,6 +296,14 @@ const ProductModal: React.FC<ProductModalProps> = ({
           formattedConcentration: "",
           formattedOrigin: "",
           ghsCode: "",
+          standardCertificationType: undefined,
+          formattedChemicalFormula: "",
+          certifiedValue: "",
+          formattedCertifiedValue: "",
+          measurementUncertainty: "",
+          formattedMeasurementUncertainty: "",
+          standardLink: "",
+          analysisGrade: "",
           chemicalFormula: "",
           minStockLevel: undefined,
           storageConditions: "",
@@ -335,17 +361,25 @@ const ProductModal: React.FC<ProductModalProps> = ({
     packagingQuantity: data.packagingQuantity ?? null,
     packagingUnitId: data.packagingUnitId || null,
     volumePerUnit: isChemicalType(data.productType) ? data.volumePerUnit ?? null : null,
-    volumeUnitId: (isChemicalType(data.productType) || isBiologicalType(data.productType)) ? data.volumeUnitId || null : null,
+    volumeUnitId: isChemOrBioOrStandardType(data.productType) ? data.volumeUnitId || null : null,
     packagingSpec: data.packagingSpec || undefined,
-    casNumber: (isChemicalType(data.productType) || isBiologicalType(data.productType)) ? data.casNumber || undefined : undefined,
+    casNumber: isChemOrBioOrStandardType(data.productType) ? data.casNumber || undefined : undefined,
     manufacturer: data.manufacturer || undefined,
-    origin: data.origin || undefined,
-    concentration: (isChemicalType(data.productType) || isBiologicalType(data.productType)) ? data.concentration || undefined : undefined,
-    formattedConcentration: isBiologicalType(data.productType) ? data.formattedConcentration || undefined : undefined,
-    formattedOrigin: isBiologicalType(data.productType) ? data.formattedOrigin || undefined : undefined,
-    ghsCode: isBiologicalType(data.productType) ? data.ghsCode || undefined : undefined,
-    chemicalFormula: isChemicalType(data.productType) ? data.chemicalFormula || undefined : undefined,
-    minStockLevel: (isChemicalType(data.productType) || isBiologicalType(data.productType)) ? data.minStockLevel ?? null : null,
+    origin: (isBiologicalType(data.productType) || isStandardType(data.productType)) ? data.origin || undefined : undefined,
+    concentration: isChemOrBioOrStandardType(data.productType) ? data.concentration || undefined : undefined,
+    formattedConcentration: (isBiologicalType(data.productType) || isStandardType(data.productType)) ? data.formattedConcentration || undefined : undefined,
+    formattedOrigin: (isBiologicalType(data.productType) || isStandardType(data.productType)) ? data.formattedOrigin || undefined : undefined,
+    ghsCode: (isBiologicalType(data.productType) || isStandardType(data.productType)) ? data.ghsCode || undefined : undefined,
+    chemicalFormula: (isChemicalType(data.productType) || isStandardType(data.productType)) ? data.chemicalFormula || undefined : undefined,
+    minStockLevel: isChemOrBioOrStandardType(data.productType) ? data.minStockLevel ?? null : null,
+    standardCertificationType: isStandardType(data.productType) ? data.standardCertificationType ?? null : null,
+    formattedChemicalFormula: isStandardType(data.productType) ? data.formattedChemicalFormula || undefined : undefined,
+    certifiedValue: isStandardType(data.productType) ? data.certifiedValue || undefined : undefined,
+    formattedCertifiedValue: isStandardType(data.productType) ? data.formattedCertifiedValue || undefined : undefined,
+    measurementUncertainty: isStandardType(data.productType) ? data.measurementUncertainty || undefined : undefined,
+    formattedMeasurementUncertainty: isStandardType(data.productType) ? data.formattedMeasurementUncertainty || undefined : undefined,
+    standardLink: isStandardType(data.productType) ? data.standardLink || undefined : undefined,
+    analysisGrade: isStandardType(data.productType) ? data.analysisGrade || undefined : undefined,
     storageConditions: data.storageConditions || undefined,
     formattedStorageConditions: data.formattedStorageConditions || undefined,
     categories: data.categories || undefined,
@@ -383,11 +417,12 @@ const ProductModal: React.FC<ProductModalProps> = ({
   const categoryTags = parseTags(watchedCategories as string);
   const showChemicalFields = isChemicalType(watchedType);
   const showBiologicalFields = isBiologicalType(watchedType);
+  const showStandardFields = isStandardType(watchedType);
   const topVolumeUnitId = watched.volumeUnitId;
 
   // Sync top-level volumeUnitId vào tất cả SKU rows khi type là Hóa chất hoặc Sinh phẩm
   useEffect(() => {
-    if (isChemOrBioType(watchedType) && skuFields.length > 0) {
+    if (isChemOrBioOrStandardType(watchedType) && skuFields.length > 0) {
       skuFields.forEach((_, i) => {
         setValue(`skus.${i}.volumeUnitId`, topVolumeUnitId || "");
       });
@@ -407,7 +442,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
       packagingQuantity: undefined as any,
       packagingUnitId: undefined as any,
       volumePerUnit: undefined as any,
-      volumeUnitId: isChemOrBioType(watchedType) ? (topVolumeUnitId || undefined) : undefined as any,
+      volumeUnitId: isChemOrBioOrStandardType(watchedType) ? (topVolumeUnitId || undefined) : undefined as any,
     });
 
   return (
@@ -472,14 +507,39 @@ const ProductModal: React.FC<ProductModalProps> = ({
         <Divider style={{ margin: "4px 0 16px" }} />
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
           <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "#1677ff", color: "#fff", fontSize: 11, fontWeight: 600, flexShrink: 0 }}>2</span>
-          <span style={{ fontWeight: 600, fontSize: 14 }}>{showChemicalFields ? "Thông tin hóa chất" : showBiologicalFields ? "Thông tin sinh phẩm" : "Thông tin vật tư"}</span>
+          <span style={{ fontWeight: 600, fontSize: 14 }}>{showStandardFields ? "Thông tin chất chuẩn" : showChemicalFields ? "Thông tin hóa chất" : showBiologicalFields ? "Thông tin sinh phẩm" : "Thông tin vật tư"}</span>
         </div>
+
+        {/* Standard: Loại chất chuẩn */}
+        {showStandardFields && (
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item label="Loại chất chuẩn">
+                <Controller
+                  name="standardCertificationType"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      value={field.value !== null && field.value !== undefined ? field.value : undefined}
+                      onChange={(v) => field.onChange(v ?? null)}
+                      onBlur={field.onBlur}
+                      style={{ width: "100%" }}
+                      placeholder="Chọn loại chất chuẩn"
+                      allowClear
+                      options={STANDARD_CERTIFICATION_OPTIONS}
+                    />
+                  )}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+        )}
 
         {/* Tên + Dung tích mỗi đơn vị / Đơn vị tiêu hao */}
         <Row gutter={16}>
-          <Col xs={24} sm={(showChemicalFields || showBiologicalFields) ? 14 : 24}>
+          <Col xs={24} sm={(showChemicalFields || showBiologicalFields || showStandardFields) ? 14 : 24}>
             <Form.Item
-              label={showBiologicalFields ? "Tên sinh phẩm" : "Tên vật tư/hóa chất"}
+              label={showBiologicalFields ? "Tên sinh phẩm" : showStandardFields ? "Tên chất chuẩn" : "Tên vật tư/hóa chất"}
               validateStatus={errors.name ? "error" : ""}
               help={errors.name?.message}
             >
@@ -556,11 +616,32 @@ const ProductModal: React.FC<ProductModalProps> = ({
               </Form.Item>
             </Col>
           )}
+          {showStandardFields && (
+            <Col xs={24} sm={10}>
+              <Form.Item label="Đơn vị tiêu hao">
+                <Controller
+                  name="volumeUnitId"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      {...clearableSelectProps(field)}
+                      style={{ width: "100%" }}
+                      placeholder="Chọn đơn vị"
+                      allowClear
+                      showSearch
+                      optionFilterProp="title"
+                      options={consumableUnitOptions}
+                    />
+                  )}
+                />
+              </Form.Item>
+            </Col>
+          )}
         </Row>
 
         {/* Mã nhận dạng + Công thức hóa học / Nguồn gốc */}
         <Row gutter={16}>
-          <Col xs={24} sm={(showChemicalFields || showBiologicalFields) ? 14 : 24}>
+          <Col xs={24} sm={(showChemicalFields || showBiologicalFields || showStandardFields) ? 14 : 24}>
             <Form.Item
               label="Mã nhận dạng"
               required
@@ -610,6 +691,26 @@ const ProductModal: React.FC<ProductModalProps> = ({
                         setValue("origin", plainText);
                       }}
                       placeholder="VD: C₄H₇OH"
+                    />
+                  )}
+                />
+              </Form.Item>
+            </Col>
+          )}
+          {showStandardFields && (
+            <Col xs={24} sm={10}>
+              <Form.Item label="Nguồn gốc / Chủng loại">
+                <Controller
+                  name="formattedOrigin"
+                  control={control}
+                  render={({ field }) => (
+                    <RichTextEditor
+                      value={field.value || ""}
+                      onChange={(html, plainText) => {
+                        field.onChange(html);
+                        setValue("origin", plainText);
+                      }}
+                      placeholder="VD: NIST, Merck..."
                     />
                   )}
                 />
@@ -730,6 +831,158 @@ const ProductModal: React.FC<ProductModalProps> = ({
           </Row>
         )}
 
+        {/* Standard: CAS + Nồng độ/Bản sao/Hoạt tính + Tồn kho tối thiểu */}
+        {showStandardFields && (
+          <Row gutter={16}>
+            <Col xs={24} sm={8}>
+              <Form.Item
+                label={
+                  <Space size={4}>
+                    Số CAS
+                    <Tooltip title="Mã định danh quốc tế cho hóa chất">
+                      <InfoCircleOutlined style={{ color: "#999" }} />
+                    </Tooltip>
+                  </Space>
+                }
+              >
+                <Controller
+                  name="casNumber"
+                  control={control}
+                  render={({ field }) => (
+                    <Input {...field} value={field.value || ""} placeholder="VD: 64-17-5" />
+                  )}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item label="Nồng độ/Bản sao/Hoạt tính">
+                <Controller
+                  name="formattedConcentration"
+                  control={control}
+                  render={({ field }) => (
+                    <RichTextEditor
+                      value={field.value || ""}
+                      onChange={(html, plainText) => {
+                        field.onChange(html);
+                        setValue("concentration", plainText);
+                      }}
+                      placeholder="VD: ≥ 99.5%"
+                    />
+                  )}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item
+                label={
+                  <Space size={4}>
+                    Tồn kho tối thiểu
+                    <Tooltip title="Số lượng tồn kho tính theo đơn vị lưu kho">
+                      <InfoCircleOutlined style={{ color: "#999" }} />
+                    </Tooltip>
+                  </Space>
+                }
+              >
+                <Controller
+                  name="minStockLevel"
+                  control={control}
+                  render={({ field }) => (
+                    <InputNumber {...field} style={{ width: "100%" }} min={0} placeholder="VD: 10" />
+                  )}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+        )}
+
+        {/* Standard: Công thức hóa học + Giá trị chứng nhận + Độ không đảm bảo đo */}
+        {showStandardFields && (
+          <Row gutter={16}>
+            <Col xs={24} sm={8}>
+              <Form.Item label="Công thức hóa học">
+                <Controller
+                  name="formattedChemicalFormula"
+                  control={control}
+                  render={({ field }) => (
+                    <RichTextEditor
+                      value={field.value || ""}
+                      onChange={(html, plainText) => {
+                        field.onChange(html);
+                        setValue("chemicalFormula", plainText);
+                      }}
+                      placeholder="VD: C₂H₅OH"
+                    />
+                  )}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item label="Giá trị chứng nhận">
+                <Controller
+                  name="formattedCertifiedValue"
+                  control={control}
+                  render={({ field }) => (
+                    <RichTextEditor
+                      value={field.value || ""}
+                      onChange={(html, plainText) => {
+                        field.onChange(html);
+                        setValue("certifiedValue", plainText);
+                      }}
+                      placeholder="VD: 1000 mg/L"
+                    />
+                  )}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item label="Độ không đảm bảo đo">
+                <Controller
+                  name="formattedMeasurementUncertainty"
+                  control={control}
+                  render={({ field }) => (
+                    <RichTextEditor
+                      value={field.value || ""}
+                      onChange={(html, plainText) => {
+                        field.onChange(html);
+                        setValue("measurementUncertainty", plainText);
+                      }}
+                      placeholder="VD: ± 2 mg/L (k=2, 0.2%)"
+                    />
+                  )}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+        )}
+
+        {/* Standard: Liên kết chất chuẩn + Cấp độ phân tích */}
+        {showStandardFields && (
+          <Row gutter={16}>
+            <Col xs={24} sm={14}>
+              <Form.Item label="Liên kết chất chuẩn">
+                <Controller
+                  name="standardLink"
+                  control={control}
+                  render={({ field }) => (
+                    <Input {...field} value={field.value || ""} placeholder="VD: https://www.nist.gov/..." />
+                  )}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={10}>
+              <Form.Item label="Cấp độ phân tích">
+                <Controller
+                  name="analysisGrade"
+                  control={control}
+                  render={({ field }) => (
+                    <Input {...field} value={field.value || ""} placeholder="VD: HPLC grade" />
+                  )}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+        )}
+
         {/* Nhóm/phân loại (Tags) */}
         <Form.Item label="Nhóm/Phân loại (Tags)">
           <div
@@ -780,8 +1033,8 @@ const ProductModal: React.FC<ProductModalProps> = ({
           />
         </Form.Item>
 
-        {/* Mã nguy hiểm GHS/MSDS — chỉ Sinh phẩm */}
-        {showBiologicalFields && (
+        {/* Mã nguy hiểm GHS/MSDS — Sinh phẩm và Chất chuẩn */}
+        {(showBiologicalFields || showStandardFields) && (
           <Form.Item label="Mã nguy hiểm GHS/ MSDS">
             <Controller
               name="ghsCode"
@@ -995,14 +1248,14 @@ const ProductModal: React.FC<ProductModalProps> = ({
                         render={({ field: f }) => (
                           <Select
                             {...clearableSelectProps(f)}
-                            style={{ flex: 1, minWidth: 0, background: isChemOrBioType(watchedType) ? "#f5f5f5" : undefined }}
+                            style={{ flex: 1, minWidth: 0, background: isChemOrBioOrStandardType(watchedType) ? "#f5f5f5" : undefined }}
                             placeholder="ĐV tiêu hao"
                             allowClear
                             showSearch
                             optionFilterProp="title"
                             options={consumableUnitOptions}
                             status={errors.skus?.[index]?.volumeUnitId ? "error" : undefined}
-                            disabled={isChemOrBioType(watchedType)}
+                            disabled={isChemOrBioOrStandardType(watchedType)}
                           />
                         )}
                       />

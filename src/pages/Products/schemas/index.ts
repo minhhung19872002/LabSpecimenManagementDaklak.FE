@@ -63,6 +63,14 @@ export const productSchema = yup.object({
   formattedConcentration: yup.string().nullable(),
   formattedOrigin: yup.string().nullable(),
   ghsCode: yup.string().nullable().max(128),
+  standardCertificationType: yup.number().nullable().optional(),
+  formattedChemicalFormula: yup.string().nullable(),
+  certifiedValue: yup.string().nullable(),
+  formattedCertifiedValue: yup.string().nullable(),
+  measurementUncertainty: yup.string().nullable(),
+  formattedMeasurementUncertainty: yup.string().nullable(),
+  standardLink: yup.string().nullable().max(500),
+  analysisGrade: yup.string().nullable().max(256),
   chemicalFormula: yup.string().nullable().max(256),
   minStockLevel: yup
     .number()
