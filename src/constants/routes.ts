@@ -71,6 +71,8 @@ export const PATH_ROUTES = {
 
   statistics: '/statistics',
 
+  labReport: '/lab-report',
+
   ncr: '/ncr',
 
   receipts: {

@@ -98,6 +98,9 @@ const ReportList = Loadable(lazy(() => import("./pages/Reports/ReportList")));
 const StatisticsPage = Loadable(
   lazy(() => import("./pages/Statistics/StatisticsPage"))
 );
+const LabReportPage = Loadable(
+  lazy(() => import("./pages/Statistics/LabReportPage"))
+);
 
 // NCR
 const NCRList = Loadable(lazy(() => import("./pages/NCR/NCRList")));
@@ -272,6 +275,7 @@ function App() {
           {/* Reports & Analytics */}
           <Route path="reports" element={<ReportList />} />
           <Route path="statistics" element={<StatisticsPage />} />
+          <Route path="lab-report" element={<LabReportPage />} />
 
           {/* NCR - Non-Conformance Reports */}
           <Route path="ncr" element={<NCRList />} />
