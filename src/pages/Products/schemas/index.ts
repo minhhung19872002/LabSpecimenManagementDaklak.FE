@@ -55,7 +55,7 @@ export const productSchema = yup.object({
     .min(1, "Tối thiểu 1")
     .transform((v, orig) => (orig === "" || orig === null ? null : v)),
   volumeUnitId: yup.string().nullable().optional(),
-  packagingSpec: yup.string().nullable().max(256),
+  packagingSpec: yup.string().nullable(),
   casNumber: yup.string().nullable().max(100),
   manufacturer: yup.string().nullable().max(256),
   origin: yup.string().nullable().max(256),
@@ -71,6 +71,13 @@ export const productSchema = yup.object({
   formattedMeasurementUncertainty: yup.string().nullable(),
   standardLink: yup.string().nullable().max(500),
   analysisGrade: yup.string().nullable().max(256),
+  formattedPackagingSpec: yup.string().nullable(),
+  materialComposition: yup.string().nullable(),
+  formattedMaterialComposition: yup.string().nullable(),
+  isReusable: yup.boolean().nullable().optional(),
+  maxReuseCount: yup.number().nullable().optional().integer().min(1, "Tối thiểu 1")
+    .transform((v, orig) => (orig === "" || orig === null ? null : v)),
+  isSterile: yup.boolean().nullable().optional(),
   chemicalFormula: yup.string().nullable().max(256),
   minStockLevel: yup
     .number()

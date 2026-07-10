@@ -63,6 +63,12 @@ export interface ProductDto {
   formattedMeasurementUncertainty?: string | null;
   standardLink?: string | null;
   analysisGrade?: string | null;
+  formattedPackagingSpec?: string | null;
+  materialComposition?: string | null;
+  formattedMaterialComposition?: string | null;
+  isReusable?: boolean | null;
+  maxReuseCount?: number | null;
+  isSterile?: boolean | null;
   storageConditions?: string;
   formattedStorageConditions?: string;
   categories?: string;
@@ -138,6 +144,12 @@ export interface CreateUpdateProductDto {
   formattedMeasurementUncertainty?: string | null;
   standardLink?: string | null;
   analysisGrade?: string | null;
+  formattedPackagingSpec?: string | null;
+  materialComposition?: string | null;
+  formattedMaterialComposition?: string | null;
+  isReusable?: boolean | null;
+  maxReuseCount?: number | null;
+  isSterile?: boolean | null;
   storageConditions?: string;
   formattedStorageConditions?: string;
   categories?: string;
