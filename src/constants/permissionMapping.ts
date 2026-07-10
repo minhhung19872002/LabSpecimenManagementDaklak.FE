@@ -20,6 +20,12 @@ export const PERMISSIONS = {
     Export: `${P}.Statistics.Export`,
   },
 
+  // LabReport
+  LabReport: {
+    Default: `${P}.LabReport`,
+    Export: `${P}.LabReport.Export`,
+  },
+
   // Test Requests
   TestRequests: {
     Default: `${P}.TestRequests`,
@@ -354,6 +360,7 @@ export const ROUTE_PERMISSION_MAP: Record<string, string[]> = {
   // Dashboard & Statistics
   '/dashboard': [PERMISSIONS.Dashboard],
   '/statistics': [PERMISSIONS.Statistics.Default],
+  '/lab-report': [PERMISSIONS.LabReport.Default],
 
   // Test Requests
   '/test-requests': [PERMISSIONS.TestRequests.Default],
@@ -591,6 +598,7 @@ export const ACTION_PERMISSION_MAP = {
 export const MENU_PERMISSION_MAP = {
   dashboard: [PERMISSIONS.Dashboard],
   statistics: [PERMISSIONS.Statistics.Default],
+  'lab-report': [PERMISSIONS.LabReport.Default],
   quotations: [PERMISSIONS.Quotations.Default],
   receipts: [PERMISSIONS.Receipts.View, PERMISSIONS.Receipts.Default],
   requests: [PERMISSIONS.TestRequests.Default], // menu key is 'requests'

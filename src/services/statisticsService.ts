@@ -100,6 +100,62 @@ export interface StatisticsQueryParams {
 
 const BASE_URL = '/api/v1/statistics';
 
+// ---- LabReport DTOs ----
+
+export interface LabDailyStatDto {
+  date: string;         // "2026-07-01"
+  sampleCount: number;
+  revenue: number;
+}
+
+export interface ContractMonthlyIndicatorDto {
+  testRequestId: string;
+  requestNumber: string;
+  contractDate?: string;
+  createdAt: string;
+  month: number;
+  year: number;
+  indicatorCount: number;
+}
+
+export interface LabContractSummaryDto {
+  testRequestId: string;
+  requestNumber: string;
+  contractDate?: string;
+  sampleCount: number;
+  indicatorCount: number;
+  totalPrice: number;
+}
+
+export interface LabReportDataDto {
+  dailyStats: LabDailyStatDto[];
+  contractIndicators: ContractMonthlyIndicatorDto[];
+  contracts: LabContractSummaryDto[];
+}
+
+export interface SamplePriceItemDto {
+  sampleCode: string;
+  price: number;
+}
+
+export interface LabContractDetailDto {
+  requestNumber: string;
+  contractDate?: string;
+  totalSamples: number;
+  totalPrice: number;
+  samples: SamplePriceItemDto[];
+}
+
+export interface LabReportQueryParams {
+  labId: string;
+  fromDate: string;
+  toDate: string;
+}
+
+// ---- Services ----
+
+const LAB_REPORT_URL = '/api/v1/lab-report';
+
 export const statisticsService = {
   // Get overview statistics
   getOverview: async (params?: StatisticsQueryParams): Promise<StatisticsOverviewDto> => {
@@ -116,6 +172,26 @@ export const statisticsService = {
   // Export statistics to Excel
   exportToExcel: async (params?: StatisticsQueryParams): Promise<Blob> => {
     const response = await api.download(`${BASE_URL}/export`, { params });
+    return response.data;
+  },
+
+  // Get lab report data (daily stats + contract list)
+  getLabReportData: async (params: LabReportQueryParams): Promise<LabReportDataDto> => {
+    const response = await api.get<LabReportDataDto>(LAB_REPORT_URL, { params });
+    return response.data;
+  },
+
+  // Get contract detail (samples + prices)
+  getLabContractDetail: async (testRequestId: string, labId: string): Promise<LabContractDetailDto> => {
+    const response = await api.get<LabContractDetailDto>(`${LAB_REPORT_URL}/contract/${testRequestId}`, {
+      params: { labId },
+    });
+    return response.data;
+  },
+
+  // Export lab report to Excel
+  exportLabReport: async (params: LabReportQueryParams): Promise<Blob> => {
+    const response = await api.download(`${LAB_REPORT_URL}/export`, { params });
     return response.data;
   },
 };
