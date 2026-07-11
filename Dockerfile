@@ -9,6 +9,8 @@ COPY package*.json ./
 
 # Install dependencies
 RUN npm ci
+# Install rollup native binary for Alpine (musl) - missing when lock file generated on Windows/Mac
+RUN npm install --cpu=x64 --os=linux --libc=musl @rollup/rollup-linux-x64-musl --ignore-scripts
 
 # Copy application source
 COPY . .
