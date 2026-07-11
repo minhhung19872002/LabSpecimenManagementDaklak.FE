@@ -185,6 +185,11 @@ const EquipmentList = Loadable(
 const ProductList = Loadable(
   lazy(() => import("./pages/Products/ProductList")),
 );
+
+// Prepared Solutions
+const PreparedSolutionList = Loadable(
+  lazy(() => import("./pages/PreparedSolutions/PreparedSolutionList")),
+);
 const ProductSourceList = Loadable(
   lazy(() => import("./pages/Products/ProductSourceList")),
 );
@@ -408,6 +413,9 @@ function App() {
 
           {/* Products - Quản lý vật tư */}
           <Route path="products" element={<ProductList />} />
+
+          {/* Prepared Solutions - Pha dung dịch */}
+          <Route path="prepared-solutions" element={<PreparedSolutionList />} />
           <Route path="products/:id/sources" element={<ProductSourceList />} />
           <Route
             path="products/:productId/sources/:supplierId/receipts"
