@@ -78,6 +78,10 @@ export const productSchema = yup.object({
   maxReuseCount: yup.number().nullable().optional().integer().min(1, "Tối thiểu 1")
     .transform((v, orig) => (orig === "" || orig === null ? null : v)),
   isSterile: yup.boolean().nullable().optional(),
+  usagePurpose: yup.string().nullable().optional(),
+  shelfLifeDays: yup.number().nullable().optional().integer().min(1, "Tối thiểu 1")
+    .transform((v, orig) => (orig === "" || orig === null ? null : v)),
+  baseProductId: yup.string().nullable().optional(),
   chemicalFormula: yup.string().nullable().max(256),
   minStockLevel: yup
     .number()

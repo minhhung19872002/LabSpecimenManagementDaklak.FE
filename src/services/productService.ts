@@ -71,6 +71,9 @@ export interface ProductDto {
   isReusable?: boolean | null;
   maxReuseCount?: number | null;
   isSterile?: boolean | null;
+  usagePurpose?: string | null;
+  shelfLifeDays?: number | null;
+  baseProductId?: string | null;
   storageConditions?: string;
   formattedStorageConditions?: string;
   categories?: string;
@@ -152,6 +155,9 @@ export interface CreateUpdateProductDto {
   isReusable?: boolean | null;
   maxReuseCount?: number | null;
   isSterile?: boolean | null;
+  usagePurpose?: string | null;
+  shelfLifeDays?: number | null;
+  baseProductId?: string | null;
   storageConditions?: string;
   formattedStorageConditions?: string;
   categories?: string;

@@ -6,6 +6,7 @@ export interface ManufacturerDto {
   name: string;
   description?: string;
   isActive: boolean;
+  isSystem: boolean;
   creationTime?: string;
 }
 

@@ -282,9 +282,10 @@ export const getColumns = (
       key: "actions",
       width: activeCategory === "manufacturers" ? 150 : 100,
       render: (_, record) => {
+        const isSystemRecord = activeCategory === "manufacturers" && (record as any).isSystem;
         return (
           <Space size="small">
-            {canEdit && activeCategory === "manufacturers" && handleToggleActive && (
+            {canEdit && activeCategory === "manufacturers" && handleToggleActive && !isSystemRecord && (
               <Tooltip
                 title={record.isActive ? "Tắt hoạt động" : "Bật hoạt động"}
               >
@@ -298,7 +299,7 @@ export const getColumns = (
                 />
               </Tooltip>
             )}
-            {canEdit && (
+            {canEdit && !isSystemRecord && (
               <Button
                 type="link"
                 size="small"
@@ -306,7 +307,7 @@ export const getColumns = (
                 onClick={() => handleEdit(record)}
               />
             )}
-            {canDelete && (
+            {canDelete && !isSystemRecord && (
               <Popconfirm
                 title="Bạn có chắc chắn muốn xóa?"
                 onConfirm={() => handleDelete(record.id)}
@@ -320,6 +321,9 @@ export const getColumns = (
                   icon={<DeleteOutlined />}
                 />
               </Popconfirm>
+            )}
+            {isSystemRecord && (
+              <Tag color="gold" style={{ margin: 0 }}>Hệ thống</Tag>
             )}
           </Space>
         );
