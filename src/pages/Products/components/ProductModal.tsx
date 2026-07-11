@@ -2,23 +2,14 @@ import React, { useEffect, useState, useMemo } from "react";
 import {
   Modal,
   Form,
-  Input,
   Select,
-  InputNumber,
   Switch,
   Row,
   Col,
-  Tag,
   Divider,
   Button,
-  Space,
-  Tooltip,
-  AutoComplete,
-  Popconfirm,
-  Radio,
 } from "antd";
-import { InfoCircleOutlined, PlusOutlined, DeleteOutlined } from "@ant-design/icons";
-import { useForm, Controller, useFieldArray } from "react-hook-form";
+import { useForm, FormProvider, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { productSchema, ProductFormData } from "../schemas";
 import {
@@ -27,13 +18,21 @@ import {
   ProductType,
   CreateProductAttachmentDto,
   productService,
-  STANDARD_CERTIFICATION_OPTIONS,
 } from "../../../services/productService";
 import { UnitDto, UnitCategory, unitService } from "../../../services/masterDataService";
 import { ManufacturerDto, manufacturerService } from "../../../services/manufacturerService";
-import { RichTextEditor } from "../../../components/common";
-import AttachmentSection from "./AttachmentSection";
-import { clearableSelectProps } from "../../../utils/formHelpers";
+import {
+  ChemicalFields,
+  BiologicalFields,
+  StandardFields,
+  SupplyFields,
+  SolventFields,
+  PreparedSolutionFields,
+  EquipmentFields,
+  SharedFields,
+  SkuSection,
+} from "./ProductFields";
+import type { BaseProductOption } from "./ProductFields/types";
 import "../Products.css";
 
 const PRODUCT_TYPE_OPTIONS = [
@@ -52,12 +51,23 @@ const isStandardType = (type: number) => type === ProductType.Standard;
 const isSupplyType = (type: number) => type === ProductType.Supply;
 const isSolventType = (type: number) => type === ProductType.Solvent;
 const isPreparedSolutionType = (type: number) => type === ProductType.PreparedSolution;
+const isEquipmentType = (type: number) => type === ProductType.Equipment;
 const isBaseProductType = (type: number) =>
   type === ProductType.Chemical || type === ProductType.Biological || type === ProductType.Solvent;
 const isChemOrBioOrStdOrSupplyOrSolventType = (type: number) =>
   type === ProductType.Chemical || type === ProductType.Biological ||
   type === ProductType.Standard || type === ProductType.Supply ||
   type === ProductType.Solvent;
+
+const SECTION2_TITLE: Record<number, string> = {
+  [ProductType.Standard]: "Thông tin chất chuẩn",
+  [ProductType.Chemical]: "Thông tin hóa chất",
+  [ProductType.Biological]: "Thông tin sinh phẩm",
+  [ProductType.Supply]: "Thông tin vật tư tiêu hao",
+  [ProductType.Solvent]: "Thông tin dung môi",
+  [ProductType.PreparedSolution]: "Thông tin dung dịch pha",
+  [ProductType.Equipment]: "Thông tin vật tư",
+};
 
 interface ProductModalProps {
   open: boolean;
@@ -107,16 +117,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
       .catch(() => {});
   };
 
-  const {
-    control,
-    handleSubmit,
-    reset,
-    watch,
-    setValue,
-    setError,
-    clearErrors,
-    formState: { errors },
-  } = useForm<ProductFormData>({
+  const methods = useForm<ProductFormData>({
     resolver: yupResolver(productSchema) as any,
     defaultValues: {
       name: "",
@@ -163,15 +164,18 @@ const ProductModal: React.FC<ProductModalProps> = ({
     },
   });
 
-  const { fields: skuFields, append: appendSku, remove: removeSku } = useFieldArray({
+  const {
     control,
-    name: "skus",
-  });
+    handleSubmit,
+    reset,
+    watch,
+    setValue,
+    setError,
+  } = methods;
 
   const watched = watch();
   const watchedType = watched.productType;
   const watchedCategories = watched.categories;
-  const watchedSkus = watched.skus || [];
 
   const toOptions = (list: UnitDto[]) =>
     list.map((u) => ({
@@ -207,7 +211,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
     [manufacturers],
   );
 
-  const baseProductOptions = useMemo(
+  const baseProductOptions: BaseProductOption[] = useMemo(
     () =>
       allProducts
         .filter((p) => isBaseProductType(p.productType))
@@ -422,7 +426,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
     volumeUnitId: (isChemOrBioOrStdOrSupplyOrSolventType(data.productType) || isPreparedSolutionType(data.productType)) ? data.volumeUnitId || null : null,
     formattedPackagingSpec: isSupplyType(data.productType) ? data.formattedPackagingSpec || undefined : undefined,
     materialComposition: isSupplyType(data.productType) ? data.materialComposition || undefined : undefined,
-    formattedMaterialComposition: undefined,
+    formattedMaterialComposition: isSupplyType(data.productType) ? data.formattedMaterialComposition || undefined : undefined,
     isReusable: isSupplyType(data.productType) ? data.isReusable ?? null : null,
     maxReuseCount: (isSupplyType(data.productType) && data.isReusable === true) ? data.maxReuseCount ?? null : null,
     isSterile: isSupplyType(data.productType) ? data.isSterile ?? null : null,
@@ -498,1325 +502,146 @@ const ProductModal: React.FC<ProductModalProps> = ({
   const showSupplyFields = isSupplyType(watchedType);
   const showSolventFields = isSolventType(watchedType);
   const showPreparedSolutionFields = isPreparedSolutionType(watchedType);
-  const watchedIsReusable = watched.isReusable;
-  const topVolumeUnitId = watched.volumeUnitId;
-
-  // Sync top-level volumeUnitId vào tất cả SKU rows (trừ PreparedSolution)
-  useEffect(() => {
-    if (isChemOrBioOrStdOrSupplyOrSolventType(watchedType) && skuFields.length > 0) {
-      skuFields.forEach((_, i) => {
-        setValue(`skus.${i}.volumeUnitId`, topVolumeUnitId || "");
-      });
-    }
-  }, [topVolumeUnitId, watchedType]);
-
-
-  const getUsedManufacturerIds = (excludeIndex: number) =>
-    watchedSkus
-      .filter((_, i) => i !== excludeIndex)
-      .map((s) => s?.manufacturerId)
-      .filter(Boolean) as string[];
-
-  const addEmptySku = () => {
-    const isFirstSkuForPrepared = isPreparedSolutionType(watchedType) && skuFields.length === 0;
-    appendSku({
-      manufacturerId: isFirstSkuForPrepared ? (tuphaManufacturerId || "") : "",
-      baseUnitId: undefined,
-      packagingQuantity: undefined as any,
-      packagingUnitId: undefined as any,
-      volumePerUnit: undefined as any,
-      volumeUnitId: isChemOrBioOrStdOrSupplyOrSolventType(watchedType) ? (topVolumeUnitId || undefined) : undefined as any,
-    });
-  };
+  const showEquipmentFields = isEquipmentType(watchedType);
 
   return (
-    <Modal
-      title={editingProduct ? "Sửa vật tư/hóa chất" : "Thêm mới vật tư/hóa chất"}
-      open={open}
-      onCancel={onCancel}
-      width={960}
-      centered
-      destroyOnClose
-      className="product-modal"
-      styles={{ body: { maxHeight: "75vh", overflowY: "auto", overflowX: "hidden" } }}
-      footer={
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-          <Button onClick={onCancel}>Hủy bỏ</Button>
-          <Button onClick={handleSubmit(onSaveDraft)} loading={loading}>
-            Lưu nháp
-          </Button>
-          <Button type="primary" onClick={handleSubmit(onSaveAndClose)} loading={loading}>
-            Lưu &amp; Đóng
-          </Button>
-        </div>
-      }
-    >
-      <Form layout="vertical">
-        {/* Section 1 */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-          <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "#1677ff", color: "#fff", fontSize: 11, fontWeight: 600, flexShrink: 0 }}>1</span>
-          <span style={{ fontWeight: 600, fontSize: 14 }}>Chọn nhóm ngành phân loại vật tư</span>
-        </div>
-        <Row gutter={16}>
-          <Col xs={24} sm={16}>
-            <Form.Item label="Phân loại vật tư">
-              <Controller
-                name="productType"
-                control={control}
-                render={({ field }) => (
-                  <Select {...field} options={PRODUCT_TYPE_OPTIONS} style={{ width: "100%" }} />
-                )}
-              />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={8}>
-            <Form.Item label="Trạng thái">
-              <Controller
-                name="isActive"
-                control={control}
-                render={({ field }) => (
-                  <Switch
-                    checked={field.value}
-                    onChange={field.onChange}
-                    checkedChildren="Hoạt động"
-                    unCheckedChildren="Ngừng"
-                  />
-                )}
-              />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        {/* Section 2 */}
-        <Divider style={{ margin: "4px 0 16px" }} />
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-          <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "#1677ff", color: "#fff", fontSize: 11, fontWeight: 600, flexShrink: 0 }}>2</span>
-          <span style={{ fontWeight: 600, fontSize: 14 }}>{showStandardFields ? "Thông tin chất chuẩn" : showChemicalFields ? "Thông tin hóa chất" : showBiologicalFields ? "Thông tin sinh phẩm" : showSupplyFields ? "Thông tin vật tư tiêu hao" : showSolventFields ? "Thông tin dung môi" : showPreparedSolutionFields ? "Thông tin dung dịch pha" : "Thông tin vật tư"}</span>
-        </div>
-
-        {/* Standard: Loại chất chuẩn */}
-        {showStandardFields && (
-          <Row gutter={16}>
-            <Col xs={24} sm={12}>
-              <Form.Item label="Loại chất chuẩn">
-                <Controller
-                  name="standardCertificationType"
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      value={field.value !== null && field.value !== undefined ? field.value : undefined}
-                      onChange={(v) => field.onChange(v ?? null)}
-                      onBlur={field.onBlur}
-                      style={{ width: "100%" }}
-                      placeholder="Chọn loại chất chuẩn"
-                      allowClear
-                      options={STANDARD_CERTIFICATION_OPTIONS}
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-        )}
-
-        {/* Tên + Dung tích mỗi đơn vị / Đơn vị tiêu hao */}
-        <Row gutter={16}>
-          <Col xs={24} sm={(showChemicalFields || showBiologicalFields || showStandardFields || showSupplyFields || showSolventFields || showPreparedSolutionFields) ? 14 : 24}>
-            <Form.Item
-              label={showBiologicalFields ? "Tên sinh phẩm" : showStandardFields ? "Tên chất chuẩn" : showSupplyFields ? "Tên vật tư tiêu hao" : showSolventFields ? "Tên dung môi" : showPreparedSolutionFields ? "Tên dung dịch pha" : "Tên vật tư/hóa chất"}
-              validateStatus={errors.name ? "error" : ""}
-              help={errors.name?.message}
-            >
-              <Controller
-                name="formattedName"
-                control={control}
-                render={({ field }) => (
-                  <RichTextEditor
-                    value={field.value || ""}
-                    onChange={(html, plainText) => {
-                      field.onChange(html);
-                      setValue("name", plainText);
-                    }}
-                    placeholder="Nhập tên vật tư/hóa chất"
-                  />
-                )}
-              />
-            </Form.Item>
-          </Col>
-          {showChemicalFields && (
-            <Col xs={24} sm={10}>
-              <Form.Item label="Dung tích mỗi đơn vị">
-                <div style={{ display: "flex", gap: 4 }}>
-                  <Controller
-                    name="volumePerUnit"
-                    control={control}
-                    render={({ field }) => (
-                      <InputNumber
-                        {...field}
-                        style={{ width: 80, flexShrink: 0 }}
-                        min={1}
-                        precision={0}
-                        placeholder="Số lượng"
-                      />
-                    )}
-                  />
-                  <Controller
-                    name="volumeUnitId"
-                    control={control}
-                    render={({ field }) => (
-                      <Select
-                        {...clearableSelectProps(field)}
-                        style={{ flex: 1, minWidth: 0 }}
-                        placeholder="Đơn vị"
-                        allowClear
-                        showSearch
-                        optionFilterProp="title"
-                        options={consumableUnitOptions}
-                      />
-                    )}
-                  />
-                </div>
-              </Form.Item>
-            </Col>
-          )}
-          {showBiologicalFields && (
-            <Col xs={24} sm={10}>
-              <Form.Item label="Đơn vị tiêu hao">
-                <Controller
-                  name="volumeUnitId"
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      {...clearableSelectProps(field)}
-                      style={{ width: "100%" }}
-                      placeholder="Chọn đơn vị"
-                      allowClear
-                      showSearch
-                      optionFilterProp="title"
-                      options={consumableUnitOptions}
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-          )}
-          {showStandardFields && (
-            <Col xs={24} sm={10}>
-              <Form.Item label="Đơn vị tiêu hao">
-                <Controller
-                  name="volumeUnitId"
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      {...clearableSelectProps(field)}
-                      style={{ width: "100%" }}
-                      placeholder="Chọn đơn vị"
-                      allowClear
-                      showSearch
-                      optionFilterProp="title"
-                      options={consumableUnitOptions}
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-          )}
-          {showSupplyFields && (
-            <Col xs={24} sm={10}>
-              <Form.Item label="Đơn vị tiêu hao">
-                <Controller
-                  name="volumeUnitId"
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      {...clearableSelectProps(field)}
-                      style={{ width: "100%" }}
-                      placeholder="Chọn đơn vị"
-                      allowClear
-                      showSearch
-                      optionFilterProp="title"
-                      options={consumableUnitOptions}
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-          )}
-          {showSolventFields && (
-            <Col xs={24} sm={10}>
-              <Form.Item label="Đơn vị tiêu hao">
-                <Controller
-                  name="volumeUnitId"
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      {...clearableSelectProps(field)}
-                      style={{ width: "100%" }}
-                      placeholder="Chọn đơn vị"
-                      allowClear
-                      showSearch
-                      optionFilterProp="title"
-                      options={consumableUnitOptions}
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-          )}
-          {showPreparedSolutionFields && (
-            <Col xs={24} sm={10}>
-              <Form.Item label="Đơn vị tiêu hao">
-                <Controller
-                  name="volumeUnitId"
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      {...clearableSelectProps(field)}
-                      style={{ width: "100%" }}
-                      placeholder="Chọn đơn vị"
-                      allowClear
-                      showSearch
-                      optionFilterProp="title"
-                      options={consumableUnitOptions}
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-          )}
-        </Row>
-
-        {/* Mã nhận dạng + Công thức hóa học / Nguồn gốc */}
-        <Row gutter={16}>
-          <Col xs={24} sm={showSupplyFields ? 8 : (showChemicalFields || showBiologicalFields || showStandardFields || showSolventFields || showPreparedSolutionFields) ? 14 : 24}>
-            <Form.Item
-              label="Mã nhận dạng"
-              required
-              validateStatus={errors.identificationCode ? "error" : ""}
-              help={errors.identificationCode?.message}
-            >
-              <Controller
-                name="identificationCode"
-                control={control}
-                render={({ field }) => (
-                  <AutoComplete
-                    {...field}
-                    value={field.value || ""}
-                    options={identificationCodeOptions}
-                    placeholder="Nhập mã nhận dạng"
-                    filterOption={false}
-                    notFoundContent={null}
-                  />
-                )}
-              />
-            </Form.Item>
-          </Col>
-          {showChemicalFields && (
-            <Col xs={24} sm={10}>
-              <Form.Item label="Công thức hóa học">
-                <Controller
-                  name="chemicalFormula"
-                  control={control}
-                  render={({ field }) => (
-                    <Input {...field} value={field.value || ""} placeholder="VD: C₂H₅OH" />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-          )}
-          {showBiologicalFields && (
-            <Col xs={24} sm={10}>
-              <Form.Item label="Nguồn gốc / Chủng loại">
-                <Controller
-                  name="formattedOrigin"
-                  control={control}
-                  render={({ field }) => (
-                    <RichTextEditor
-                      value={field.value || ""}
-                      onChange={(html, plainText) => {
-                        field.onChange(html);
-                        setValue("origin", plainText);
-                      }}
-                      placeholder="VD: C₄H₇OH"
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-          )}
-          {showStandardFields && (
-            <Col xs={24} sm={10}>
-              <Form.Item label="Nguồn gốc / Chủng loại">
-                <Controller
-                  name="formattedOrigin"
-                  control={control}
-                  render={({ field }) => (
-                    <RichTextEditor
-                      value={field.value || ""}
-                      onChange={(html, plainText) => {
-                        field.onChange(html);
-                        setValue("origin", plainText);
-                      }}
-                      placeholder="VD: NIST, Merck..."
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-          )}
-          {showSolventFields && (
-            <Col xs={24} sm={10}>
-              <Form.Item label="Công thức hóa học">
-                <Controller
-                  name="formattedChemicalFormula"
-                  control={control}
-                  render={({ field }) => (
-                    <RichTextEditor
-                      value={field.value || ""}
-                      onChange={(html, plainText) => {
-                        field.onChange(html);
-                        setValue("chemicalFormula", plainText);
-                      }}
-                      placeholder="VD: C₂H₅OH"
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-          )}
-          {showPreparedSolutionFields && (
-            <Col xs={24} sm={10}>
-              <Form.Item label="Công thức hóa học">
-                <Controller
-                  name="formattedChemicalFormula"
-                  control={control}
-                  render={({ field }) => (
-                    <RichTextEditor
-                      value={field.value || ""}
-                      onChange={(html, plainText) => {
-                        field.onChange(html);
-                        setValue("chemicalFormula", plainText);
-                      }}
-                      placeholder="VD: NaOH, H₂SO₄..."
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-          )}
-          {showSupplyFields && (
-            <Col xs={24} sm={8}>
-              <Form.Item label="Thông số kích thước/ Dung tích">
-                <Controller
-                  name="formattedPackagingSpec"
-                  control={control}
-                  render={({ field }) => (
-                    <RichTextEditor
-                      value={field.value || ""}
-                      onChange={(html, plainText) => {
-                        field.onChange(html);
-                        setValue("packagingSpec", plainText);
-                      }}
-                      placeholder="VD: 10mL, φ25mm × 100mm"
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-          )}
-          {showSupplyFields && (
-            <Col xs={24} sm={8}>
-              <Form.Item label="Vật liệu cấu thành">
-                <Controller
-                  name="materialComposition"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      {...field}
-                      value={field.value || ""}
-                      placeholder="VD: Polypropylene, Polyethylene"
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-          )}
-        </Row>
-
-        {/* Chemical: CAS + Concentration + MinStockLevel */}
-        {showChemicalFields && (
-          <Row gutter={16}>
-            <Col xs={24} sm={8}>
-              <Form.Item
-                label={
-                  <Space size={4}>
-                    Số CAS
-                    <Tooltip title="Mã định danh quốc tế cho hóa chất">
-                      <InfoCircleOutlined style={{ color: "#999" }} />
-                    </Tooltip>
-                  </Space>
-                }
-              >
-                <Controller
-                  name="casNumber"
-                  control={control}
-                  render={({ field }) => (
-                    <Input {...field} value={field.value || ""} placeholder="VD: 64-17-5" />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Form.Item label="Nồng độ/Hàm lượng">
-                <Controller
-                  name="concentration"
-                  control={control}
-                  render={({ field }) => (
-                    <Input {...field} value={field.value || ""} placeholder="VD: ≥ 99.5%" />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Form.Item label="Tồn kho tối thiểu">
-                <Controller
-                  name="minStockLevel"
-                  control={control}
-                  render={({ field }) => (
-                    <InputNumber {...field} style={{ width: "100%" }} min={0} placeholder="VD: 10" />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-        )}
-
-        {/* Biological: CAS + Nồng độ/Bản sao/Hoạt tính (rich text) + Tồn kho tối thiểu */}
-        {showBiologicalFields && (
-          <Row gutter={16}>
-            <Col xs={24} sm={8}>
-              <Form.Item
-                label={
-                  <Space size={4}>
-                    Số CAS
-                    <Tooltip title="Mã định danh quốc tế cho hóa chất">
-                      <InfoCircleOutlined style={{ color: "#999" }} />
-                    </Tooltip>
-                  </Space>
-                }
-              >
-                <Controller
-                  name="casNumber"
-                  control={control}
-                  render={({ field }) => (
-                    <Input {...field} value={field.value || ""} placeholder="VD: 64-17-5" />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Form.Item label="Nồng độ/Bản sao/Hoạt tính">
-                <Controller
-                  name="formattedConcentration"
-                  control={control}
-                  render={({ field }) => (
-                    <RichTextEditor
-                      value={field.value || ""}
-                      onChange={(html, plainText) => {
-                        field.onChange(html);
-                        setValue("concentration", plainText);
-                      }}
-                      placeholder="VD: ≥ 99.5%"
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Form.Item
-                label={
-                  <Space size={4}>
-                    Tồn kho tối thiểu
-                    <Tooltip title="Số lượng tồn kho tính theo đơn vị lưu kho">
-                      <InfoCircleOutlined style={{ color: "#999" }} />
-                    </Tooltip>
-                  </Space>
-                }
-              >
-                <Controller
-                  name="minStockLevel"
-                  control={control}
-                  render={({ field }) => (
-                    <InputNumber {...field} style={{ width: "100%" }} min={0} placeholder="VD: 10" />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-        )}
-
-        {/* Standard: CAS + Nồng độ/Bản sao/Hoạt tính + Tồn kho tối thiểu */}
-        {showStandardFields && (
-          <Row gutter={16}>
-            <Col xs={24} sm={8}>
-              <Form.Item
-                label={
-                  <Space size={4}>
-                    Số CAS
-                    <Tooltip title="Mã định danh quốc tế cho hóa chất">
-                      <InfoCircleOutlined style={{ color: "#999" }} />
-                    </Tooltip>
-                  </Space>
-                }
-              >
-                <Controller
-                  name="casNumber"
-                  control={control}
-                  render={({ field }) => (
-                    <Input {...field} value={field.value || ""} placeholder="VD: 64-17-5" />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Form.Item label="Nồng độ/Bản sao/Hoạt tính">
-                <Controller
-                  name="formattedConcentration"
-                  control={control}
-                  render={({ field }) => (
-                    <RichTextEditor
-                      value={field.value || ""}
-                      onChange={(html, plainText) => {
-                        field.onChange(html);
-                        setValue("concentration", plainText);
-                      }}
-                      placeholder="VD: ≥ 99.5%"
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Form.Item
-                label={
-                  <Space size={4}>
-                    Tồn kho tối thiểu
-                    <Tooltip title="Số lượng tồn kho tính theo đơn vị lưu kho">
-                      <InfoCircleOutlined style={{ color: "#999" }} />
-                    </Tooltip>
-                  </Space>
-                }
-              >
-                <Controller
-                  name="minStockLevel"
-                  control={control}
-                  render={({ field }) => (
-                    <InputNumber {...field} style={{ width: "100%" }} min={0} placeholder="VD: 10" />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-        )}
-
-        {/* Standard: Công thức hóa học + Giá trị chứng nhận + Độ không đảm bảo đo */}
-        {showStandardFields && (
-          <Row gutter={16}>
-            <Col xs={24} sm={8}>
-              <Form.Item label="Công thức hóa học">
-                <Controller
-                  name="formattedChemicalFormula"
-                  control={control}
-                  render={({ field }) => (
-                    <RichTextEditor
-                      value={field.value || ""}
-                      onChange={(html, plainText) => {
-                        field.onChange(html);
-                        setValue("chemicalFormula", plainText);
-                      }}
-                      placeholder="VD: C₂H₅OH"
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Form.Item label="Giá trị chứng nhận">
-                <Controller
-                  name="formattedCertifiedValue"
-                  control={control}
-                  render={({ field }) => (
-                    <RichTextEditor
-                      value={field.value || ""}
-                      onChange={(html, plainText) => {
-                        field.onChange(html);
-                        setValue("certifiedValue", plainText);
-                      }}
-                      placeholder="VD: 1000 mg/L"
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Form.Item label="Độ không đảm bảo đo">
-                <Controller
-                  name="formattedMeasurementUncertainty"
-                  control={control}
-                  render={({ field }) => (
-                    <RichTextEditor
-                      value={field.value || ""}
-                      onChange={(html, plainText) => {
-                        field.onChange(html);
-                        setValue("measurementUncertainty", plainText);
-                      }}
-                      placeholder="VD: ± 2 mg/L (k=2, 0.2%)"
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-        )}
-
-        {/* Standard: Liên kết chất chuẩn + Cấp độ phân tích */}
-        {showStandardFields && (
-          <Row gutter={16}>
-            <Col xs={24} sm={14}>
-              <Form.Item label="Liên kết chất chuẩn">
-                <Controller
-                  name="standardLink"
-                  control={control}
-                  render={({ field }) => (
-                    <Input {...field} value={field.value || ""} placeholder="VD: https://www.nist.gov/..." />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={10}>
-              <Form.Item label="Cấp độ phân tích">
-                <Controller
-                  name="analysisGrade"
-                  control={control}
-                  render={({ field }) => (
-                    <Input {...field} value={field.value || ""} placeholder="VD: HPLC grade" />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-        )}
-
-        {/* Solvent Row 3: Số CAS + Độ tinh khiết/Hàm lượng + Tồn kho tối thiểu */}
-        {showSolventFields && (
-          <Row gutter={16}>
-            <Col xs={24} sm={8}>
-              <Form.Item
-                label={
-                  <Space size={4}>
-                    Số CAS
-                    <Tooltip title="Mã định danh quốc tế cho hóa chất">
-                      <InfoCircleOutlined style={{ color: "#999" }} />
-                    </Tooltip>
-                  </Space>
-                }
-              >
-                <Controller
-                  name="casNumber"
-                  control={control}
-                  render={({ field }) => (
-                    <Input {...field} value={field.value || ""} placeholder="VD: 64-17-5" />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Form.Item label="Độ tinh khiết / Hàm lượng">
-                <Controller
-                  name="formattedConcentration"
-                  control={control}
-                  render={({ field }) => (
-                    <RichTextEditor
-                      value={field.value || ""}
-                      onChange={(html, plainText) => {
-                        field.onChange(html);
-                        setValue("concentration", plainText);
-                      }}
-                      placeholder="VD: ≥ 99.5%"
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Form.Item
-                label={
-                  <Space size={4}>
-                    Tồn kho tối thiểu
-                    <Tooltip title="Số lượng tồn kho tính theo đơn vị lưu kho">
-                      <InfoCircleOutlined style={{ color: "#999" }} />
-                    </Tooltip>
-                  </Space>
-                }
-              >
-                <Controller
-                  name="minStockLevel"
-                  control={control}
-                  render={({ field }) => (
-                    <InputNumber {...field} style={{ width: "100%" }} min={0} placeholder="VD: 10" />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-        )}
-
-        {/* Solvent Row 4: Cấp độ phân tích */}
-        {showSolventFields && (
-          <Row gutter={16}>
-            <Col xs={24} sm={10}>
-              <Form.Item label="Cấp độ phân tích">
-                <Controller
-                  name="analysisGrade"
-                  control={control}
-                  render={({ field }) => (
-                    <Input {...field} value={field.value || ""} placeholder="VD: HPLC grade" />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-        )}
-
-        {/* PreparedSolution Row3: Mục đích sử dụng + Nồng độ/Hàm lượng + Tồn kho tối thiểu */}
-        {showPreparedSolutionFields && (
-          <Row gutter={16}>
-            <Col xs={24} sm={8}>
-              <Form.Item label="Mục đích sử dụng">
-                <Controller
-                  name="usagePurpose"
-                  control={control}
-                  render={({ field }) => (
-                    <Input {...field} value={field.value || ""} placeholder="VD: Chuẩn bị dung dịch đệm pH 7.4" />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Form.Item label="Độ tinh khiết / Hàm lượng">
-                <Controller
-                  name="formattedConcentration"
-                  control={control}
-                  render={({ field }) => (
-                    <RichTextEditor
-                      value={field.value || ""}
-                      onChange={(html, plainText) => {
-                        field.onChange(html);
-                        setValue("concentration", plainText);
-                      }}
-                      placeholder="VD: 0.1 mol/L, pH 7.4 ± 0.05"
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Form.Item
-                label={
-                  <Space size={4}>
-                    Tồn kho tối thiểu
-                    <Tooltip title="Số lượng tồn kho tính theo đơn vị lưu kho">
-                      <InfoCircleOutlined style={{ color: "#999" }} />
-                    </Tooltip>
-                  </Space>
-                }
-              >
-                <Controller
-                  name="minStockLevel"
-                  control={control}
-                  render={({ field }) => (
-                    <InputNumber {...field} style={{ width: "100%" }} min={0} placeholder="VD: 5" />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-        )}
-
-        {/* PreparedSolution Row4: Hạn sử dụng + Chất nền + conditional Select */}
-        {showPreparedSolutionFields && (
-          <Row gutter={16}>
-            <Col xs={24} sm={8}>
-              <Form.Item label="Hạn sử dụng">
-                <Controller
-                  name="shelfLifeDays"
-                  control={control}
-                  render={({ field }) => (
-                    <InputNumber
-                      {...field}
-                      style={{ width: "100%" }}
-                      min={1}
-                      precision={0}
-                      addonAfter="ngày"
-                      placeholder="VD: 30"
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Form.Item label="Chất nền (Base substance)">
-                <Radio.Group
-                  value={hasBaseSubstance}
-                  onChange={(e) => {
-                    setHasBaseSubstance(e.target.value);
-                    if (!e.target.value) setValue("baseProductId", undefined);
-                  }}
-                >
-                  <Radio value={true}>Có</Radio>
-                  <Radio value={false}>Không</Radio>
-                </Radio.Group>
-              </Form.Item>
-            </Col>
-            {hasBaseSubstance && (
-              <Col xs={24} sm={8}>
-                <Form.Item
-                  label="Chọn chất nền"
-                  required
-                  validateStatus={errors.baseProductId ? "error" : ""}
-                  help={errors.baseProductId?.message}
-                >
-                  <Controller
-                    name="baseProductId"
-                    control={control}
-                    render={({ field }) => (
-                      <Select
-                        {...clearableSelectProps(field)}
-                        style={{ width: "100%" }}
-                        placeholder="Tìm hóa chất / sinh phẩm / dung môi"
-                        allowClear
-                        showSearch
-                        optionFilterProp="title"
-                        options={baseProductOptions}
-                        onChange={(v) => {
-                          field.onChange(v);
-                          if (v) clearErrors("baseProductId");
-                        }}
-                        optionRender={(option) => {
-                          const typeColors: Record<number, string> = {
-                            [ProductType.Chemical]: "blue",
-                            [ProductType.Biological]: "green",
-                            [ProductType.Solvent]: "orange",
-                          };
-                          const typeLabels: Record<number, string> = {
-                            [ProductType.Chemical]: "Hóa chất",
-                            [ProductType.Biological]: "Sinh phẩm",
-                            [ProductType.Solvent]: "Dung môi",
-                          };
-                          const t = (option.data as any).productType as number;
-                          return (
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{option.label}</span>
-                              <Tag color={typeColors[t]} style={{ marginLeft: 6, flexShrink: 0, marginBottom: 0 }}>
-                                {typeLabels[t]}
-                              </Tag>
-                            </div>
-                          );
-                        }}
-                      />
-                    )}
-                  />
-                </Form.Item>
-              </Col>
-            )}
-          </Row>
-        )}
-
-        {/* Supply: Số CAS + Khả năng tái sử dụng + Số lần tái sử dụng */}
-        {showSupplyFields && (
-          <Row gutter={16}>
-            <Col xs={24} sm={8}>
-              <Form.Item
-                label={
-                  <Space size={4}>
-                    Số CAS
-                    <Tooltip title="Mã định danh quốc tế cho hóa chất">
-                      <InfoCircleOutlined style={{ color: "#999" }} />
-                    </Tooltip>
-                  </Space>
-                }
-              >
-                <Controller
-                  name="casNumber"
-                  control={control}
-                  render={({ field }) => (
-                    <Input {...field} value={field.value || ""} placeholder="VD: 64-17-5" />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Form.Item label="Khả năng tái sử dụng">
-                <Controller
-                  name="isReusable"
-                  control={control}
-                  render={({ field }) => (
-                    <Radio.Group
-                      value={field.value}
-                      onChange={(e) => field.onChange(e.target.value)}
-                    >
-                      <Radio value={true}>Có</Radio>
-                      <Radio value={false}>Không</Radio>
-                    </Radio.Group>
-                  )}
-                />
-              </Form.Item>
-            </Col>
-            {watchedIsReusable === true && (
-              <Col xs={24} sm={8}>
-                <Form.Item label="Số lần tái sử dụng">
-                  <Controller
-                    name="maxReuseCount"
-                    control={control}
-                    render={({ field }) => (
-                      <InputNumber
-                        {...field}
-                        min={1}
-                        precision={0}
-                        style={{ width: "100%" }}
-                        placeholder="VD: 5"
-                      />
-                    )}
-                  />
-                </Form.Item>
-              </Col>
-            )}
-          </Row>
-        )}
-
-        {/* Nhóm/phân loại (Tags) */}
-        <Form.Item label="Nhóm/Phân loại (Tags)">
-          <div
-            style={{
-              border: "1px solid #d9d9d9",
-              borderRadius: 6,
-              padding: "4px 8px",
-              minHeight: 36,
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "center",
-              gap: 4,
-            }}
-          >
-            {categoryTags.map((tag) => (
-              <Tag key={tag} closable onClose={() => handleRemoveTag("categories", tag)} color="blue">
-                {tag}
-              </Tag>
-            ))}
-            <Input
-              variant="borderless"
-              size="small"
-              value={categoryTagInput}
-              onChange={(e) => setCategoryTagInput(e.target.value)}
-              onPressEnter={() => handleAddTag("categories", categoryTagInput, setCategoryTagInput)}
-              onBlur={() => handleAddTag("categories", categoryTagInput, setCategoryTagInput)}
-              placeholder="Thêm phân loại..."
-              style={{ flex: 1, minWidth: 100 }}
-            />
+    <FormProvider {...methods}>
+      <Modal
+        title={editingProduct ? "Sửa vật tư/hóa chất" : "Thêm mới vật tư/hóa chất"}
+        open={open}
+        onCancel={onCancel}
+        width={960}
+        centered
+        destroyOnClose
+        className="product-modal"
+        styles={{ body: { maxHeight: "75vh", overflowY: "auto", overflowX: "hidden" } }}
+        footer={
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+            <Button onClick={onCancel}>Hủy bỏ</Button>
+            <Button onClick={handleSubmit(onSaveDraft)} loading={loading}>
+              Lưu nháp
+            </Button>
+            <Button type="primary" onClick={handleSubmit(onSaveAndClose)} loading={loading}>
+              Lưu &amp; Đóng
+            </Button>
           </div>
-        </Form.Item>
+        }
+      >
+        <Form layout="vertical">
+          {/* Section 1 */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "#1677ff", color: "#fff", fontSize: 11, fontWeight: 600, flexShrink: 0 }}>1</span>
+            <span style={{ fontWeight: 600, fontSize: 14 }}>Chọn nhóm ngành phân loại vật tư</span>
+          </div>
+          <Row gutter={16}>
+            <Col xs={24} sm={16}>
+              <Form.Item label="Phân loại vật tư">
+                <Controller
+                  name="productType"
+                  control={control}
+                  render={({ field }) => (
+                    <Select {...field} options={PRODUCT_TYPE_OPTIONS} style={{ width: "100%" }} />
+                  )}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item label="Trạng thái">
+                <Controller
+                  name="isActive"
+                  control={control}
+                  render={({ field }) => (
+                    <Switch
+                      checked={field.value}
+                      onChange={field.onChange}
+                      checkedChildren="Hoạt động"
+                      unCheckedChildren="Ngừng"
+                    />
+                  )}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
 
-        {/* Điều kiện bảo quản */}
-        <Form.Item label="Điều kiện bảo quản">
-          <Controller
-            name="formattedStorageConditions"
-            control={control}
-            render={({ field }) => (
-              <RichTextEditor
-                value={field.value || ""}
-                onChange={(html, plainText) => {
-                  field.onChange(html);
-                  setValue("storageConditions", plainText);
-                }}
-                placeholder="Nhập điều kiện bảo quản"
-              />
-            )}
-          />
-        </Form.Item>
+          {/* Section 2 */}
+          <Divider style={{ margin: "4px 0 16px" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "#1677ff", color: "#fff", fontSize: 11, fontWeight: 600, flexShrink: 0 }}>2</span>
+            <span style={{ fontWeight: 600, fontSize: 14 }}>{SECTION2_TITLE[watchedType] ?? "Thông tin vật tư"}</span>
+          </div>
 
-        {/* Trạng thái vô trùng — Supply */}
-        {showSupplyFields && (
-          <Form.Item label="Trạng thái vô trùng">
-            <Controller
-              name="isSterile"
-              control={control}
-              render={({ field }) => (
-                <Radio.Group
-                  value={field.value}
-                  onChange={(e) => field.onChange(e.target.value)}
-                >
-                  <Radio value={true}>Đã tiệt trùng</Radio>
-                  <Radio value={false}>Chưa tiệt trùng</Radio>
-                </Radio.Group>
-              )}
+          {showChemicalFields && (
+            <ChemicalFields
+              consumableUnitOptions={consumableUnitOptions}
+              identificationCodeOptions={identificationCodeOptions}
             />
-          </Form.Item>
-        )}
-
-        {/* Mã nguy hiểm GHS/MSDS — Sinh phẩm, Chất chuẩn, Vật tư tiêu hao, Dung môi, Dung dịch pha */}
-        {(showBiologicalFields || showStandardFields || showSupplyFields || showSolventFields || showPreparedSolutionFields) && (
-          <Form.Item label="Mã nguy hiểm GHS/ MSDS">
-            <Controller
-              name="ghsCode"
-              control={control}
-              render={({ field }) => (
-                <Input {...field} value={field.value || ""} placeholder="VD: 64-17-5" />
-              )}
+          )}
+          {showBiologicalFields && (
+            <BiologicalFields
+              consumableUnitOptions={consumableUnitOptions}
+              identificationCodeOptions={identificationCodeOptions}
             />
-          </Form.Item>
-        )}
+          )}
+          {showStandardFields && (
+            <StandardFields
+              consumableUnitOptions={consumableUnitOptions}
+              identificationCodeOptions={identificationCodeOptions}
+            />
+          )}
+          {showSupplyFields && (
+            <SupplyFields
+              consumableUnitOptions={consumableUnitOptions}
+              identificationCodeOptions={identificationCodeOptions}
+            />
+          )}
+          {showSolventFields && (
+            <SolventFields
+              consumableUnitOptions={consumableUnitOptions}
+              identificationCodeOptions={identificationCodeOptions}
+            />
+          )}
+          {showPreparedSolutionFields && (
+            <PreparedSolutionFields
+              consumableUnitOptions={consumableUnitOptions}
+              identificationCodeOptions={identificationCodeOptions}
+              baseProductOptions={baseProductOptions}
+              hasBaseSubstance={hasBaseSubstance}
+              setHasBaseSubstance={setHasBaseSubstance}
+            />
+          )}
+          {showEquipmentFields && (
+            <EquipmentFields
+              consumableUnitOptions={consumableUnitOptions}
+              identificationCodeOptions={identificationCodeOptions}
+            />
+          )}
 
-        {/* Tài liệu đính kèm */}
-        <Form.Item label="Tài liệu đính kèm (SDS/MSDS)">
-          <AttachmentSection
+          <SharedFields
+            categoryTags={categoryTags}
+            categoryTagInput={categoryTagInput}
+            setCategoryTagInput={setCategoryTagInput}
+            handleAddTag={handleAddTag}
+            handleRemoveTag={handleRemoveTag}
             existingAttachments={existingAttachments}
             newAttachments={newAttachments}
-            onAddAttachment={(att) => setNewAttachments((prev) => [...prev, att])}
-            onRemoveExisting={(id) => {
-              setExistingAttachments((prev) => prev.filter((a) => a.id !== id));
-              setRemovedAttachmentIds((prev) => [...prev, id]);
-            }}
-            onRemoveNew={(fileId) =>
-              setNewAttachments((prev) => prev.filter((a) => a.fileId !== fileId))
-            }
+            setNewAttachments={setNewAttachments}
+            setExistingAttachments={setExistingAttachments}
+            setRemovedAttachmentIds={setRemovedAttachmentIds}
           />
-        </Form.Item>
 
-        {/* Section 3 */}
-        <Divider style={{ margin: "4px 0 16px" }} />
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "#1677ff", color: "#fff", fontSize: 11, fontWeight: 600, flexShrink: 0 }}>3</span>
-            <span style={{ fontWeight: 600, fontSize: 14 }}>Cấu hình hãng sản xuất &amp; Đơn vị quy đổi (SKUs)</span>
-          </div>
-          <Button type="primary" size="small" icon={<PlusOutlined />} onClick={addEmptySku}>
-            Thêm Hãng &amp; Quy Cách
-          </Button>
-        </div>
-
-        {/* SKU list */}
-        {skuFields.map((field, index) => {
-          const usedIds = getUsedManufacturerIds(index);
-          const filteredManufacturerOptions = manufacturerOptions.map((opt) => ({
-            ...opt,
-            disabled: usedIds.includes(opt.value),
-          }));
-          const sku = watchedSkus[index];
-          const purchaseUnit = sku ? units.find((u) => u.id === sku.baseUnitId)?.name : undefined;
-          const storageUnit = sku ? units.find((u) => u.id === sku.packagingUnitId)?.name : undefined;
-          const consumableUnit = sku ? units.find((u) => u.id === sku.volumeUnitId)?.name : undefined;
-          const qty = sku?.packagingQuantity;
-          const vol = sku?.volumePerUnit;
-
-          type Seg = { text: string; color: string };
-          let previewSegments: Seg[] = [];
-          if (purchaseUnit && qty && storageUnit && vol && consumableUnit) {
-            const total = (qty * vol).toLocaleString();
-            previewSegments = [
-              { text: purchaseUnit, color: "#1677ff" },
-              { text: " → ", color: "#8c8c8c" },
-              { text: `${qty} ${storageUnit}`, color: "#d4380d" },
-              { text: " → ", color: "#8c8c8c" },
-              { text: `${total} ${consumableUnit}`, color: "#389e0d" },
-            ];
-          } else if (purchaseUnit && qty && storageUnit) {
-            previewSegments = [
-              { text: purchaseUnit, color: "#1677ff" },
-              { text: " → ", color: "#8c8c8c" },
-              { text: `${qty} ${storageUnit}`, color: "#d4380d" },
-            ];
-          } else if (qty && storageUnit && vol && consumableUnit) {
-            const total = (qty * vol).toLocaleString();
-            previewSegments = [
-              { text: `${qty} ${storageUnit}`, color: "#d4380d" },
-              { text: " → ", color: "#8c8c8c" },
-              { text: `${total} ${consumableUnit}`, color: "#389e0d" },
-            ];
-          }
-
-          return (
-            <div
-              key={field.id}
-              style={{ marginBottom: 16, padding: "12px 16px", border: "1px solid #f0f0f0", borderRadius: 8, background: "#fafafa", position: "relative" }}
-            >
-              <Popconfirm
-                title="Xóa quy cách này?"
-                onConfirm={() => removeSku(index)}
-                okText="Xóa"
-                cancelText="Hủy"
-              >
-                <Button
-                  type="text"
-                  danger
-                  size="small"
-                  icon={<DeleteOutlined />}
-                  style={{ position: "absolute", top: 8, right: 8, zIndex: 1 }}
-                />
-              </Popconfirm>
-              <Row gutter={[12, 0]}>
-                <Col xs={24} md={5}>
-                  <Form.Item
-                    label="Hãng sản xuất"
-                    required
-                    validateStatus={errors.skus?.[index]?.manufacturerId ? "error" : ""}
-                    help={errors.skus?.[index]?.manufacturerId?.message}
-                    style={{ marginBottom: 8 }}
-                  >
-                    <Controller
-                      name={`skus.${index}.manufacturerId`}
-                      control={control}
-                      render={({ field: f }) => (
-                        <Select
-                          {...f}
-                          placeholder="Chọn hãng"
-                          showSearch
-                          optionFilterProp="title"
-                          options={filteredManufacturerOptions}
-                        />
-                      )}
-                    />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} md={4}>
-                  <Form.Item label="Đơn vị mua hàng" style={{ marginBottom: 8 }}>
-                    <Controller
-                      name={`skus.${index}.baseUnitId`}
-                      control={control}
-                      render={({ field: f }) => (
-                        <Select
-                          {...clearableSelectProps(f)}
-                          placeholder="Chọn"
-                          allowClear
-                          showSearch
-                          optionFilterProp="title"
-                          options={purchaseUnitOptions}
-                        />
-                      )}
-                    />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} md={8}>
-                  <Form.Item
-                    label="Quy cách đóng gói / Đơn vị lưu kho"
-                    required
-                    validateStatus={errors.skus?.[index]?.packagingQuantity || errors.skus?.[index]?.packagingUnitId ? "error" : ""}
-                    help={errors.skus?.[index]?.packagingQuantity?.message || errors.skus?.[index]?.packagingUnitId?.message}
-                    style={{ marginBottom: 8 }}
-                  >
-                    <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                      <span style={{ flexShrink: 0, color: "#8c8c8c" }}>=</span>
-                      <Controller
-                        name={`skus.${index}.packagingQuantity`}
-                        control={control}
-                        render={({ field: f }) => (
-                          <InputNumber
-                            {...f}
-                            style={{ width: 70, flexShrink: 0 }}
-                            min={1}
-                            precision={0}
-                            placeholder="SL"
-                            status={errors.skus?.[index]?.packagingQuantity ? "error" : undefined}
-                          />
-                        )}
-                      />
-                      <Controller
-                        name={`skus.${index}.packagingUnitId`}
-                        control={control}
-                        render={({ field: f }) => (
-                          <Select
-                            {...clearableSelectProps(f)}
-                            style={{ flex: 1, minWidth: 0 }}
-                            placeholder="ĐV lưu kho"
-                            allowClear
-                            showSearch
-                            optionFilterProp="title"
-                            options={storageUnitOptions}
-                            status={errors.skus?.[index]?.packagingUnitId ? "error" : undefined}
-                          />
-                        )}
-                      />
-                    </div>
-                  </Form.Item>
-                </Col>
-                <Col xs={24} md={7}>
-                  <Form.Item
-                    label="Dung tích mỗi đơn vị"
-                    required
-                    validateStatus={errors.skus?.[index]?.volumePerUnit || errors.skus?.[index]?.volumeUnitId ? "error" : ""}
-                    help={errors.skus?.[index]?.volumePerUnit?.message || errors.skus?.[index]?.volumeUnitId?.message}
-                    style={{ marginBottom: 8 }}
-                  >
-                    <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                      <span style={{ flexShrink: 0, color: "#8c8c8c" }}>=</span>
-                      <Controller
-                        name={`skus.${index}.volumePerUnit`}
-                        control={control}
-                        render={({ field: f }) => (
-                          <InputNumber
-                            {...f}
-                            style={{ width: 60, flexShrink: 0 }}
-                            min={1}
-                            precision={0}
-                            placeholder="SL"
-                            status={errors.skus?.[index]?.volumePerUnit ? "error" : undefined}
-                          />
-                        )}
-                      />
-                      <Controller
-                        name={`skus.${index}.volumeUnitId`}
-                        control={control}
-                        render={({ field: f }) => (
-                          <Select
-                            {...clearableSelectProps(f)}
-                            style={{ flex: 1, minWidth: 0, background: isChemOrBioOrStdOrSupplyOrSolventType(watchedType) ? "#f5f5f5" : undefined }}
-                            placeholder="ĐV tiêu hao"
-                            allowClear
-                            showSearch
-                            optionFilterProp="title"
-                            options={consumableUnitOptions}
-                            status={errors.skus?.[index]?.volumeUnitId ? "error" : undefined}
-                            disabled={isChemOrBioOrStdOrSupplyOrSolventType(watchedType)}
-                          />
-                        )}
-                      />
-                    </div>
-                  </Form.Item>
-                </Col>
-              </Row>
-              {previewSegments.length > 0 && (
-                <>
-                  <div style={{ borderTop: "1px dashed #e8e8e8", margin: "8px 0" }} />
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13 }}>
-                    <span style={{ color: "#8c8c8c", flexShrink: 0 }}>Sơ đồ quy đổi trực quan:</span>
-                    <span style={{ padding: "4px 14px", border: "1px solid #d9d9d9", borderRadius: 4, fontWeight: 600 }}>
-                      {previewSegments.map((s, i) => (
-                        <span key={i} style={{ color: s.color }}>{s.text}</span>
-                      ))}
-                    </span>
-                  </div>
-                </>
-              )}
-            </div>
-          );
-        })}
-
-        {skuFields.length === 0 && (
-          <div style={{ textAlign: "center", padding: "24px 0", color: "#8c8c8c", border: "1px dashed #d9d9d9", borderRadius: 8 }}>
-            Chưa có quy cách đóng gói nào. Bấm <b>+ Thêm Hãng &amp; Quy Cách</b> để thêm.
-          </div>
-        )}
-      </Form>
-    </Modal>
+          {/* Section 3 */}
+          <Divider style={{ margin: "4px 0 16px" }} />
+          <SkuSection
+            units={units}
+            manufacturerOptions={manufacturerOptions}
+            purchaseUnitOptions={purchaseUnitOptions}
+            storageUnitOptions={storageUnitOptions}
+            consumableUnitOptions={consumableUnitOptions}
+            tuphaManufacturerId={tuphaManufacturerId}
+          />
+        </Form>
+      </Modal>
+    </FormProvider>
   );
 };
 
