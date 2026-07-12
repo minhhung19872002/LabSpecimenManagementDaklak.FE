@@ -25,6 +25,8 @@ export interface TemporaryAccessGrantDto {
   selectedModules: string[];
   reason?: string;
   creationTime: string;
+  grantedById?: string;
+  grantedByName?: string;
 }
 
 export interface CreateTemporaryAccessGrantDto {
