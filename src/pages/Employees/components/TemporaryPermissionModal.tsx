@@ -31,6 +31,7 @@ import {
 } from "../../../services/temporaryAccessService";
 import { employeeService, EmployeeDto } from "../../../services/employeeService";
 import { temporaryAccessSchema, updateTemporaryAccessSchema, TemporaryAccessFormData } from "../schemas/temporaryAccessSchema";
+import { getApiErrorMessage } from "../../../utils/errorHandler";
 
 const { Text } = Typography;
 
@@ -199,12 +200,7 @@ const TemporaryPermissionModal: React.FC<TemporaryPermissionModalProps> = ({
       onSuccess();
     } catch (error: unknown) {
       console.error("Error saving temporary access grant:", error);
-      let errorMessage = "Không thể lưu. Vui lòng thử lại.";
-      if (error && typeof error === "object" && "response" in error) {
-        const resp = (error as { response?: { data?: { message?: string } } }).response;
-        if (resp?.data?.message) errorMessage = resp.data.message;
-      }
-      message.error(errorMessage);
+      message.error(getApiErrorMessage(error, "Không thể lưu. Vui lòng thử lại."));
     } finally {
       setSubmitting(false);
     }

@@ -195,6 +195,38 @@ const MainLayout: React.FC = () => {
     };
   }, [userInfo]);
 
+  // Force logout when external temporary account expires mid-session
+  useEffect(() => {
+    const unsubscribe = signalRService.onAccountExpired(() => {
+      let logoutCalled = false;
+      const doLogout = () => {
+        if (logoutCalled) return;
+        logoutCalled = true;
+        authService.logout();
+      };
+      // Auto-logout after 8 seconds if user doesn't click OK
+      const autoTimer = setTimeout(() => {
+        Modal.destroyAll();
+        doLogout();
+      }, 8000);
+      Modal.error({
+        title: "Tài khoản tạm thời hết hiệu lực",
+        content:
+          "Tài khoản tạm thời của bạn đã hết hiệu lực. Bạn sẽ được đăng xuất khỏi hệ thống.",
+        okText: "Đăng xuất",
+        centered: true,
+        onOk: () => {
+          clearTimeout(autoTimer);
+          doLogout();
+        },
+        afterClose: () => clearTimeout(autoTimer),
+      });
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
   // Handle logout
   const handleLogout = () => {
     Modal.confirm({
