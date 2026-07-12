@@ -14,14 +14,13 @@ interface Props {
 const columns = (selectedContractId: string | null) => [
   {
     title: "Số hợp đồng",
-    dataIndex: "requestNumber",
-    key: "requestNumber",
-    render: (val: string, record: LabContractSummaryDto) => (
+    key: "contractNumber",
+    render: (_: unknown, record: LabContractSummaryDto) => (
       <Text
         strong={selectedContractId === record.testRequestId}
         style={{ color: selectedContractId === record.testRequestId ? "#1890FF" : undefined }}
       >
-        {val}
+        {record.contractNumber || record.requestNumber}
       </Text>
     ),
   },

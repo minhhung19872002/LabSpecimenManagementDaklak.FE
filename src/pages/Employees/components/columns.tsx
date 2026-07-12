@@ -26,6 +26,7 @@ interface GetColumnsOptions {
   onToggleActive: (id: string, checked: boolean) => void;
   onResetPassword: (record: EmployeeDto) => void;
   onViewRoles: (record: EmployeeDto) => void;
+  onAddSchedule?: (record: EmployeeDto) => void;
   roles: RoleOption[];
 }
 
@@ -241,14 +242,28 @@ export const getEmployeeColumns = (
     {
       title: "Thao tác",
       key: "actions",
-      width: 150,
+      width: 180,
       fixed: "right",
       render: (_, record) => {
         const canEdit = authService.hasPermission(PERMISSIONS.Users.Edit);
         const canDelete = authService.hasPermission(PERMISSIONS.Users.Delete);
+        const canGrantTemp = authService.hasPermission(PERMISSIONS.TemporaryAccess.Create);
 
         return (
           <Space size="small">
+            {canGrantTemp && options.onAddSchedule && (
+              <Tooltip title="Cấp quyền tạm thời">
+                <Button
+                  type="link"
+                  size="small"
+                  icon={<ClockCircleOutlined />}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    options.onAddSchedule!(record);
+                  }}
+                />
+              </Tooltip>
+            )}
             {canEdit && (
               <Tooltip title="Sửa">
                 <Button

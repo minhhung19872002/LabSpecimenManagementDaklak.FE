@@ -111,6 +111,7 @@ export interface LabDailyStatDto {
 export interface ContractMonthlyIndicatorDto {
   testRequestId: string;
   requestNumber: string;
+  contractNumber?: string | null;
   contractDate?: string;
   createdAt: string;
   month: number;
@@ -121,6 +122,7 @@ export interface ContractMonthlyIndicatorDto {
 export interface LabContractSummaryDto {
   testRequestId: string;
   requestNumber: string;
+  contractNumber?: string | null;
   contractDate?: string;
   sampleCount: number;
   indicatorCount: number;
@@ -140,6 +142,7 @@ export interface SamplePriceItemDto {
 
 export interface LabContractDetailDto {
   requestNumber: string;
+  contractNumber?: string | null;
   contractDate?: string;
   totalSamples: number;
   totalPrice: number;

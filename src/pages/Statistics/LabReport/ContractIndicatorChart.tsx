@@ -47,7 +47,8 @@ const ContractIndicatorChart: React.FC<Props> = ({ indicators, isMultiMonth }) =
   for (const item of sorted) {
     const label = `Tháng ${String(item.month).padStart(2, "0")}/${item.year}`;
     if (!pivotMap.has(item.requestNumber)) {
-      pivotMap.set(item.requestNumber, { requestNumber: item.requestNumber });
+      const displayLabel = item.contractNumber || item.requestNumber;
+      pivotMap.set(item.requestNumber, { requestNumber: item.requestNumber, displayLabel });
     }
     (pivotMap.get(item.requestNumber) as Record<string, number | string>)[label] = item.indicatorCount;
   }
@@ -62,7 +63,7 @@ const ContractIndicatorChart: React.FC<Props> = ({ indicators, isMultiMonth }) =
     )
   );
 
-  const maxLabelLen = Math.max(...chartData.map((d) => String(d.requestNumber).length));
+  const maxLabelLen = Math.max(...chartData.map((d) => String(d.displayLabel).length));
   const yAxisWidth = Math.min(200, Math.max(100, maxLabelLen * 7));
 
   return (
@@ -81,7 +82,7 @@ const ContractIndicatorChart: React.FC<Props> = ({ indicators, isMultiMonth }) =
             <XAxis type="number" domain={[0, maxTotal]} hide />
             <YAxis
               type="category"
-              dataKey="requestNumber"
+              dataKey="displayLabel"
               width={yAxisWidth}
               tick={{ fontSize: 11 }}
               tickLine={false}

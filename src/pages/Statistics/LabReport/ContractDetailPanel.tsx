@@ -49,7 +49,7 @@ const ContractDetailPanel: React.FC<Props> = ({ contractDetail, detailLoading })
       title={
         <Space>
           <ExperimentOutlined />
-          Chi tiết mẫu trong hợp đồng: {contractDetail.requestNumber}
+          Chi tiết mẫu trong hợp đồng: {contractDetail.contractNumber || contractDetail.requestNumber}
         </Space>
       }
       extra={
@@ -64,7 +64,7 @@ const ContractDetailPanel: React.FC<Props> = ({ contractDetail, detailLoading })
     >
       <div style={{ padding: "8px 16px 0" }}>
         <div style={{ fontSize: 13, color: "#595959", marginBottom: 8 }}>
-          Đơn giá từng mẫu trong {contractDetail.requestNumber}
+          Đơn giá từng mẫu trong {contractDetail.contractNumber || contractDetail.requestNumber}
         </div>
         <div style={{ overflowY: "auto", maxHeight: MAX_SCROLL_HEIGHT }}>
           <ResponsiveContainer width="100%" height={chartHeight}>

@@ -33,7 +33,8 @@ export const POSITION_OPTIONS = [
   "Nhân viên",
 ];
 
-export const useEmployeeList = () => {
+export const useEmployeeList = (opts?: { onAddSchedule?: (record: EmployeeDto) => void }) => {
+  const { onAddSchedule } = opts || {};
   const navigate = useNavigate();
 
   // List state
@@ -459,9 +460,10 @@ export const useEmployeeList = () => {
         onToggleActive: handleToggleActive,
         onResetPassword: handleResetPassword,
         onViewRoles: handleViewRoles,
+        onAddSchedule,
         roles: ROLE_OPTIONS,
       }),
-    [handleNavigateToDetail, handleDelete, handleToggleActive, handleResetPassword, handleViewRoles]
+    [handleNavigateToDetail, handleDelete, handleToggleActive, handleResetPassword, handleViewRoles, onAddSchedule]
   );
 
   return {
