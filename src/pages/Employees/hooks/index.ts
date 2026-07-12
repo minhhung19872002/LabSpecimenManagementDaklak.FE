@@ -5,3 +5,4 @@ export {
   type Department,
 } from "./useEmployeeList";
 export { useEmployeeDetail } from "./useEmployeeDetail";
+export { useDutyScheduleList } from "./useDutyScheduleList";

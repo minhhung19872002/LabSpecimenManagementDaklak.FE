@@ -233,6 +233,14 @@ export const PERMISSIONS = {
     Default: `${P}.FormTemplates`,
   },
 
+  // Temporary Access (Cấp quyền tạm thời)
+  TemporaryAccess: {
+    Default: `${P}.TemporaryAccess`,
+    Create: `${P}.TemporaryAccess.Create`,
+    Edit: `${P}.TemporaryAccess.Edit`,
+    Expire: `${P}.TemporaryAccess.Expire`,
+  },
+
   // Users
   Users: {
     Default: `${P}.Users`,
