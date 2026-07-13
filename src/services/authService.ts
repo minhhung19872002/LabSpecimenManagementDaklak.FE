@@ -1,5 +1,6 @@
 import { api } from './api';
 import { STORAGE_KEYS } from '../constants';
+import { VIRTUAL_PERMISSIONS } from '../constants/permissionMapping';
 
 const AUTH_URL = '/api/v1/auth';
 
@@ -406,6 +407,10 @@ export const authService = {
   hasAnyPermission: (permissionNames: string[]): boolean => {
     if (!permissionNames || permissionNames.length === 0) {
       return true;
+    }
+    // Virtual permission: any authenticated user passes (no backend grant needed)
+    if (permissionNames.includes(VIRTUAL_PERMISSIONS.AnyAuthenticated)) {
+      return authService.isAuthenticated();
     }
     const permissions = authService.getUserPermissions();
     // Admin có tất cả quyền

@@ -67,6 +67,7 @@ interface MenuItemWithRoles {
   permissions?: string[]; // NEW: Optional permission-based access
   children?: MenuItemWithRoles[];
   supporterAllowed?: boolean; // If true, supporters can also access this menu item
+  alwaysShow?: boolean; // If true, show to all authenticated users (for [Authorize]-only endpoints)
 }
 
 // Map routes to menu keys
@@ -86,6 +87,7 @@ const routeToKeyMap: Record<string, string> = {
   "/receipts": "receipts",
   "/statistics": "statistics",
   "/lab-report": "lab-report",
+  "/supplementary-tasks": "supplementary-tasks",
   "/subcontractors": "subcontractors",
   "/master-data": "masterData",
   "/organizations": "organizations",
@@ -332,7 +334,7 @@ const MainLayout: React.FC = () => {
       key: "overview",
       icon: <Icon name="layout-wtf" />,
       label: menuLabel(t("menu.overview")),
-      roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER, ROLES.LAB_TECHNICAL_MANAGER],
+      roles: ALL_ROLES,
       children: [
         {
           key: "dashboard",
@@ -358,6 +360,13 @@ const MainLayout: React.FC = () => {
           label: menuLabel("Báo cáo phòng Lab"),
           onClick: () => navigate(PATH_ROUTES.labReport),
           roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER, ROLES.LAB_TECHNICAL_MANAGER],
+        },
+        {
+          key: "supplementary-tasks",
+          icon: <Icon name="check2-square" />,
+          label: menuLabel("Công việc bổ sung"),
+          onClick: () => navigate(PATH_ROUTES.supplementaryTasks),
+          roles: ALL_ROLES,
         },
       ],
     },
@@ -516,6 +525,18 @@ const MainLayout: React.FC = () => {
     const result: MenuItem[] = [];
 
     for (const item of items) {
+      // alwaysShow: visible to all authenticated users (backend uses [Authorize] only)
+      if (item.alwaysShow && userInfo) {
+        const { roles, children, supporterAllowed, permissions, alwaysShow, ...rest } = item;
+        if (children && children.length > 0) {
+          const filteredChildren = filterMenuByRoles(children);
+          if (filteredChildren.length > 0) result.push({ ...rest, children: filteredChildren });
+        } else {
+          result.push(rest);
+        }
+        continue;
+      }
+
       // Check role-based access (legacy)
       const hasRoleAccess = item.roles.some((role) => userRoles.includes(role));
 
@@ -536,7 +557,7 @@ const MainLayout: React.FC = () => {
       }
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { roles, children, supporterAllowed, permissions, ...rest } = item;
+      const { roles, children, supporterAllowed, permissions, alwaysShow, ...rest } = item;
 
       if (children && children.length > 0) {
         const filteredChildren = filterMenuByRoles(children);
@@ -564,6 +585,8 @@ const MainLayout: React.FC = () => {
       .map((group) => {
         // Filter children based on user roles and permissions
         const filteredChildren = (group.children || []).filter((child) => {
+          // alwaysShow: visible to all authenticated users
+          if (child.alwaysShow && userInfo) return true;
           // Check role-based access
           const hasRoleAccess = child.roles.some((role) =>
             userRoles.includes(role)

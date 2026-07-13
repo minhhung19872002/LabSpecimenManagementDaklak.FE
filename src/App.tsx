@@ -138,6 +138,11 @@ const SubcontractorList = Loadable(
   lazy(() => import("./pages/Subcontractor/SubcontractorList"))
 );
 
+// Supplementary Tasks
+const SupplementaryTaskPage = Loadable(
+  lazy(() => import("./pages/SupplementaryTasks/SupplementaryTaskPage")),
+);
+
 // Master Data
 const MasterDataList = Loadable(
   lazy(() => import("./pages/MasterData/MasterDataList"))
@@ -304,6 +309,9 @@ function App() {
 
           {/* Subcontractor Management - Nhà thầu phụ */}
           <Route path="subcontractors" element={<SubcontractorList />} />
+
+          {/* Supplementary Tasks - Công việc bổ sung */}
+          <Route path="supplementary-tasks" element={<SupplementaryTaskPage />} />
 
           {/* Master Data - Ngân hàng dữ liệu */}
           <Route path="master-data" element={<MasterDataList />} />

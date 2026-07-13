@@ -80,6 +80,8 @@ export const PATH_ROUTES = {
     detail: (id: string) => `/receipts/${id}`,
   },
 
+  supplementaryTasks: '/supplementary-tasks',
+
   subcontractors: '/subcontractors',
 
   masterData: '/master-data',
