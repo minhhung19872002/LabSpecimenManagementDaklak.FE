@@ -8,6 +8,14 @@
 const P = 'LabSpecimenManagement';
 
 /**
+ * Virtual permissions — FE-only, không cần backend grant.
+ * Dùng để mark các route/menu chỉ yêu cầu authentication, không cần permission cụ thể.
+ */
+export const VIRTUAL_PERMISSIONS = {
+  AnyAuthenticated: '__any_authenticated__',
+} as const;
+
+/**
  * Permission constants - phải khớp với backend
  */
 export const PERMISSIONS = {
@@ -450,6 +458,9 @@ export const ROUTE_PERMISSION_MAP: Record<string, string[]> = {
   // Role Management
   '/role-management': [PERMISSIONS.RoleManagement.Default],
 
+  // Supplementary Tasks - all authenticated users (backend: [Authorize] only)
+  '/supplementary-tasks': [VIRTUAL_PERMISSIONS.AnyAuthenticated],
+
   // Settings
   '/settings': [PERMISSIONS.Settings.Default],
 };
@@ -635,6 +646,7 @@ export const MENU_PERMISSION_MAP = {
   suppliersManagement: [PERMISSIONS.Suppliers.Default],
   goodsReceipts: [PERMISSIONS.GoodsReceipts.Default],
   approvalProcess: [PERMISSIONS.ApprovalProcesses.Default],
+  'supplementary-tasks': [VIRTUAL_PERMISSIONS.AnyAuthenticated],
   stockAdjustments: [PERMISSIONS.StockAdjustments.Default],
   warehouseImports: [PERMISSIONS.WarehouseImportReceipts.Default],
   equipments: [PERMISSIONS.Equipments.Default],

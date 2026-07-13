@@ -9,6 +9,6 @@ export const clearableSelectProps = <T extends FieldValues>(
   field: ControllerRenderProps<T, Path<T>>
 ) => ({
   ...field,
-  value: field.value || undefined,
+  value: field.value != null && field.value !== "" ? field.value : undefined,
   onChange: (v: any) => field.onChange(v ?? null),
 });

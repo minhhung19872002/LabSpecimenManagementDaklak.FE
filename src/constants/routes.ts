@@ -84,6 +84,8 @@ export const PATH_ROUTES = {
 
   preparedSolutions: '/prepared-solutions',
 
+  supplementaryTasks: '/supplementary-tasks',
+
   goodsReceipts: {
     index: '/goods-receipts',
     create: '/goods-receipts/create',

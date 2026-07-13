@@ -1,6 +1,6 @@
 import { ROLES } from './roles';
 import { PATH_ROUTES } from './routes';
-import { ROUTE_PERMISSION_MAP, ROUTE_DETAIL_PERMISSION_MAP, PERMISSIONS, isDetailRoute } from './permissionMapping';
+import { ROUTE_PERMISSION_MAP, ROUTE_DETAIL_PERMISSION_MAP, PERMISSIONS, VIRTUAL_PERMISSIONS, isDetailRoute } from './permissionMapping';
 import { authService } from '../services/authService';
 
 /**
@@ -98,6 +98,16 @@ export const ROUTE_PERMISSIONS: Record<string, string[]> = {
 
   // Báo cáo
   [PATH_ROUTES.reports]: [ROLES.ADMIN],
+
+  // Công việc bổ sung - tất cả nhân viên
+  [PATH_ROUTES.supplementaryTasks]: [
+    ROLES.ADMIN,
+    ROLES.QUALITY_MANAGER,
+    ROLES.LAB_TECHNICAL_MANAGER,
+    ROLES.LAB_TECHNICIAN,
+    ROLES.SAMPLE_RECEIVER,
+    ROLES.ACCOUNTANT,
+  ],
 
   // NCR - Admin, QLCL
   [PATH_ROUTES.ncr]: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
@@ -213,6 +223,10 @@ export const hasRoutePermission = (pathname: string, userRoles: string[], isSupp
 
     // If route has required permissions, check if user has any of them
     if (requiredPermissions && requiredPermissions.length > 0) {
+      // AnyAuthenticated = FE-only virtual permission, pass if user is logged in
+      if (requiredPermissions.includes(VIRTUAL_PERMISSIONS.AnyAuthenticated)) {
+        return authService.isAuthenticated();
+      }
       return authService.hasAnyPermission(requiredPermissions);
     }
 

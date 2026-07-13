@@ -190,6 +190,11 @@ const ProductList = Loadable(
 const PreparedSolutionList = Loadable(
   lazy(() => import("./pages/PreparedSolutions/PreparedSolutionListPage")),
 );
+
+// Supplementary Tasks
+const SupplementaryTaskPage = Loadable(
+  lazy(() => import("./pages/SupplementaryTasks/SupplementaryTaskPage")),
+);
 const ProductSourceList = Loadable(
   lazy(() => import("./pages/Products/ProductSourceList")),
 );
@@ -416,6 +421,9 @@ function App() {
 
           {/* Prepared Solutions - Pha dung dịch */}
           <Route path="prepared-solutions" element={<PreparedSolutionList />} />
+
+          {/* Supplementary Tasks - Công việc bổ sung */}
+          <Route path="supplementary-tasks" element={<SupplementaryTaskPage />} />
           <Route path="products/:id/sources" element={<ProductSourceList />} />
           <Route
             path="products/:productId/sources/:supplierId/receipts"
