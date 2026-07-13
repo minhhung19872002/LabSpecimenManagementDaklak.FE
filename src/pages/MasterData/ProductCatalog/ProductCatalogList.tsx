@@ -49,6 +49,7 @@ const PRODUCT_TYPE_COLORS: Record<ProductType, string> = {
   [ProductType.Standard]: "purple",
   [ProductType.Solvent]: "cyan",
   [ProductType.Equipment]: "magenta",
+  [ProductType.PreparedSolution]: "geekblue",
 };
 
 const PRODUCT_TYPE_OPTIONS = [

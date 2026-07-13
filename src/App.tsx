@@ -188,7 +188,7 @@ const ProductList = Loadable(
 
 // Prepared Solutions
 const PreparedSolutionList = Loadable(
-  lazy(() => import("./pages/PreparedSolutions/PreparedSolutionList")),
+  lazy(() => import("./pages/PreparedSolutions/PreparedSolutionListPage")),
 );
 const ProductSourceList = Loadable(
   lazy(() => import("./pages/Products/ProductSourceList")),

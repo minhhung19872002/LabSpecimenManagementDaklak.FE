@@ -101,5 +101,10 @@ export { fileService } from './fileService';
 export { default as fileServiceDefault } from './fileService';
 export type { FileUploadResultDto, SampleAttachmentDto } from './fileService';
 
+// Prepared Solution Service
+export { preparedSolutionService } from './preparedSolutionService';
+export type { PreparedSolutionBatchDto, PreparedSolutionIngredientDto, PreparedSolutionWarehouseProductDto, CreateUpdatePreparedSolutionBatchDto, ProcessPreparedSolutionDto, GetPreparedSolutionBatchesInput } from './preparedSolutionService';
+export { PreparedSolutionStatus } from './preparedSolutionService';
+
 // Offline Services
 export * from './offline';

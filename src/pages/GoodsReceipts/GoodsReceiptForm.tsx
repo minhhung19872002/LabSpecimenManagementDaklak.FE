@@ -193,8 +193,16 @@ const GoodsReceiptForm: React.FC = () => {
               const product = loadedProducts.find((p) => p.id === item.productId);
               const itemUnits: { value: string; label: string }[] = [];
               if (product) {
-                const baseUnit = loadedUnits.find((u) => u.id === product.baseUnitId);
-                if (baseUnit) itemUnits.push({ value: baseUnit.id, label: baseUnit.name });
+                const addUnit = (unitId?: string | null) => {
+                  if (!unitId) return;
+                  const unit = loadedUnits.find((u) => u.id === unitId);
+                  if (unit && !itemUnits.find((r) => r.value === unit.id)) {
+                    itemUnits.push({ value: unit.id, label: unit.name });
+                  }
+                };
+                addUnit(product.packagingUnitId);
+                addUnit(product.baseUnitId);
+                addUnit(product.volumeUnitId);
                 if (product.unitConversions) {
                   for (const conv of product.unitConversions) {
                     if (conv.convertedUnitId && !itemUnits.find((r) => r.value === conv.convertedUnitId)) {
@@ -259,16 +267,17 @@ const GoodsReceiptForm: React.FC = () => {
     if (!product) return [];
 
     const result: { value: string; label: string }[] = [];
+    const addUnit = (unitId?: string | null) => {
+      if (!unitId) return;
+      const unit = units.find((u) => u.id === unitId);
+      if (unit && !result.find((r) => r.value === unit.id)) {
+        result.push({ value: unit.id, label: unit.name });
+      }
+    };
 
-    const packagingUnit = units.find((u) => u.id === product.packagingUnitId);
-    if (packagingUnit) {
-      result.push({ value: packagingUnit.id, label: packagingUnit.name });
-    }
-
-    const baseUnit = units.find((u) => u.id === product.baseUnitId);
-    if (baseUnit && !result.find((r) => r.value === baseUnit.id)) {
-      result.push({ value: baseUnit.id, label: baseUnit.name });
-    }
+    addUnit(product.packagingUnitId);
+    addUnit(product.baseUnitId);
+    addUnit(product.volumeUnitId);
 
     if (product.unitConversions) {
       for (const conv of product.unitConversions) {
@@ -297,7 +306,7 @@ const GoodsReceiptForm: React.FC = () => {
     if (!product) return;
 
     const availUnits = getUnitsForProduct(product.id);
-    const defaultUnitId = product.baseUnitId || product.packagingUnitId;
+    const defaultUnitId = product.baseUnitId || product.packagingUnitId || product.volumeUnitId;
     const defaultUnit = units.find((u) => u.id === defaultUnitId);
 
     const newItem: LineItem = {
@@ -359,7 +368,7 @@ const GoodsReceiptForm: React.FC = () => {
           if (product) {
             updated.productName = product.name;
             updated.availableUnits = getUnitsForProduct(product.id);
-            const defUnitId = product.baseUnitId || product.packagingUnitId;
+            const defUnitId = product.baseUnitId || product.packagingUnitId || product.volumeUnitId;
             updated.unitId = defUnitId || "";
             const defUnit = units.find((u) => u.id === defUnitId);
             updated.unitName = defUnit?.name || "";

@@ -1,0 +1,24 @@
+/* RichTextEditor height to match Input (40px desktop, 36px tablet, 32px mobile) */
+.prepared-solution-create-modal .rich-text-editor-wrapper .tiptap.ProseMirror {
+  min-height: 40px !important;
+  height: 40px !important;
+  padding: 8px 11px !important;
+  box-sizing: border-box !important;
+  overflow-y: auto !important;
+}
+
+@media screen and (max-width: 992px) {
+  .prepared-solution-create-modal .rich-text-editor-wrapper .tiptap.ProseMirror {
+    min-height: 36px !important;
+    height: 36px !important;
+    padding: 6px 11px !important;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .prepared-solution-create-modal .rich-text-editor-wrapper .tiptap.ProseMirror {
+    min-height: 32px !important;
+    height: 32px !important;
+    padding: 4px 11px !important;
+  }
+}

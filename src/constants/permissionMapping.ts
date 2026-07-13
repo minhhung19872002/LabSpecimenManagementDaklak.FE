@@ -349,6 +349,14 @@ export const PERMISSIONS = {
     Default: `${P}.AuditLogs`,
   },
 
+  // Prepared Solutions (Dung dịch đã pha)
+  PreparedSolutions: {
+    Default: `${P}.PreparedSolutions`,
+    Create: `${P}.PreparedSolutions.Create`,
+    Edit: `${P}.PreparedSolutions.Edit`,
+    Process: `${P}.PreparedSolutions.Process`,
+  },
+
   // Import
   Import: {
     Default: `${P}.Import`,
@@ -399,6 +407,9 @@ export const ROUTE_PERMISSION_MAP: Record<string, string[]> = {
 
   // Quotations
   '/quotations': [PERMISSIONS.Quotations.Default],
+
+  // Prepared Solutions
+  '/prepared-solutions': [PERMISSIONS.PreparedSolutions.Default],
 
   // Products
   '/products': [PERMISSIONS.Products.Default],
