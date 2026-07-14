@@ -103,6 +103,7 @@ const LabReportView: React.FC<LabReportViewProps> = ({
         <Col xs={24}>
           <ContractIndicatorSection
             indicators={reportData?.contractIndicators ?? []}
+            indicatorContractCounts={reportData?.indicatorContractCounts ?? []}
             dateRange={dateRange}
           />
         </Col>

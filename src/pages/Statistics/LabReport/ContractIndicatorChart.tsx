@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import { Empty } from "antd";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { ContractMonthlyIndicatorDto } from "../../../services/statisticsService";
@@ -19,6 +19,12 @@ const MAX_SCROLL_HEIGHT = 440;
 const X_AXIS_HEIGHT = 36;
 
 const ContractIndicatorChart: React.FC<Props> = ({ indicators, isMultiMonth }) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+  }, [indicators]);
+
   if (indicators.length === 0) {
     return <Empty description="Không có dữ liệu" style={{ padding: 40 }} />;
   }
@@ -69,9 +75,9 @@ const ContractIndicatorChart: React.FC<Props> = ({ indicators, isMultiMonth }) =
   return (
     <div style={{ display: "flex", flexDirection: "column" }}>
       {/* Scrollable area: bars + sticky axis inside */}
-      <div style={{ overflowY: "auto", maxHeight: MAX_SCROLL_HEIGHT }}>
-        {/* Main bars chart — no XAxis */}
-        <ResponsiveContainer width="100%" height={chartBodyHeight}>
+      <div ref={scrollRef} style={{ overflowY: "auto", maxHeight: MAX_SCROLL_HEIGHT }}>
+        {/* key forces remount when row count changes → avoids blank chart on filter switch */}
+        <ResponsiveContainer key={chartData.length} width="100%" height={chartBodyHeight}>
           <BarChart
             layout="vertical"
             data={chartData}
