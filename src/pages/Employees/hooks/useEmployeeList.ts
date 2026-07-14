@@ -258,21 +258,6 @@ export const useEmployeeList = (opts?: { onAddSchedule?: (record: EmployeeDto) =
     [form]
   );
 
-  const handleDelete = useCallback(
-    async (id: string) => {
-      try {
-        await employeeService.delete(id);
-        message.success("Đã xóa nhân viên");
-        loadData();
-        loadStatistics();
-      } catch (error) {
-        console.error("Error deleting employee:", error);
-        message.error("Không thể xóa nhân viên. Vui lòng thử lại.");
-      }
-    },
-    [loadData, loadStatistics]
-  );
-
   const handleToggleActive = useCallback(
     async (id: string, checked: boolean) => {
       try {
@@ -456,14 +441,13 @@ export const useEmployeeList = (opts?: { onAddSchedule?: (record: EmployeeDto) =
     () =>
       getEmployeeColumns({
         onNavigateToDetail: handleNavigateToDetail,
-        onDelete: handleDelete,
         onToggleActive: handleToggleActive,
         onResetPassword: handleResetPassword,
         onViewRoles: handleViewRoles,
         onAddSchedule,
         roles: ROLE_OPTIONS,
       }),
-    [handleNavigateToDetail, handleDelete, handleToggleActive, handleResetPassword, handleViewRoles, onAddSchedule]
+    [handleNavigateToDetail, handleToggleActive, handleResetPassword, handleViewRoles, onAddSchedule]
   );
 
   return {
