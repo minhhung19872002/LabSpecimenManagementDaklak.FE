@@ -2,10 +2,10 @@ import React from "react";
 import { Button, Card, Space, Typography } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import {
+  CompleteSupplementaryTaskDto,
   CreateSupplementaryTaskDto,
   SupplementaryTaskDto,
   SupplementaryTaskPriority,
-  SupplementaryTaskStatus,
   SupplementaryTaskStatsDto,
   UpdateSupplementaryTaskDto,
 } from "../../../services/supplementaryTaskService";
@@ -14,6 +14,7 @@ import SupplementaryTaskToolbar from "./SupplementaryTaskToolbar";
 import SupplementaryTaskTable from "./SupplementaryTaskTable";
 import SupplementaryTaskModal from "./SupplementaryTaskModal";
 import SupplementaryTaskCancelModal from "./SupplementaryTaskCancelModal";
+import SupplementaryTaskCompleteModal from "./SupplementaryTaskCompleteModal";
 import "../../Dashboard/Dashboard.css";
 import "../../../styles/ListCard.css";
 import "../SupplementaryTask.css";
@@ -49,7 +50,15 @@ export interface SupplementaryTaskViewProps {
   onCancelClick: (item: SupplementaryTaskDto) => void;
   onCancelConfirm: () => void;
   onCancelModalClose: () => void;
+  sortField?: "dueDate" | "creationTime";
+  sortDescending?: boolean;
+  onSortChange: (field: "dueDate" | "creationTime", descending: boolean) => void;
   onCompleteClick: (item: SupplementaryTaskDto) => void;
+  completeModalOpen: boolean;
+  completingItem?: SupplementaryTaskDto;
+  completing: boolean;
+  onCompleteConfirm: (id: string, input: CompleteSupplementaryTaskDto) => Promise<void>;
+  onCompleteModalClose: () => void;
   onModalClose: () => void;
   onSaved: () => void;
   onCreate: (input: CreateSupplementaryTaskDto) => Promise<void>;
@@ -176,7 +185,10 @@ const SupplementaryTaskView: React.FC<SupplementaryTaskViewProps> = (props) => {
           page={props.page}
           pageSize={props.pageSize}
           isDirector={stats.isDirector}
+          sortField={props.sortField}
+          sortDescending={props.sortDescending}
           onPageChange={props.onPageChange}
+          onSortChange={props.onSortChange}
           onEdit={props.onEditClick}
           onCancel={props.onCancelClick}
           onComplete={props.onCompleteClick}
@@ -199,6 +211,14 @@ const SupplementaryTaskView: React.FC<SupplementaryTaskViewProps> = (props) => {
         loading={props.cancelling}
         onConfirm={props.onCancelConfirm}
         onClose={props.onCancelModalClose}
+      />
+
+      <SupplementaryTaskCompleteModal
+        open={props.completeModalOpen}
+        item={props.completingItem}
+        completing={props.completing}
+        onConfirm={props.onCompleteConfirm}
+        onClose={props.onCompleteModalClose}
       />
     </div>
   );

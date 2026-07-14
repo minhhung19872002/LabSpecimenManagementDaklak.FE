@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { message } from "antd";
 import {
+  CompleteSupplementaryTaskDto,
   CreateSupplementaryTaskDto,
   SupplementaryTaskDto,
   SupplementaryTaskPriority,
   SupplementaryTaskStatsDto,
-  SupplementaryTaskStatus,
   UpdateSupplementaryTaskDto,
   supplementaryTaskService,
 } from "../../services/supplementaryTaskService";
@@ -32,12 +32,18 @@ const SupplementaryTaskPage: React.FC = () => {
   const [priority, setPriority] = useState<SupplementaryTaskPriority | undefined>();
   const [assignedToId, setAssignedToId] = useState<string | undefined>();
   const [activeTab, setActiveTab] = useState("all");
+  const [sortField, setSortField] = useState<"dueDate" | "creationTime" | undefined>("dueDate");
+  const [sortDescending, setSortDescending] = useState(false);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<SupplementaryTaskDto | undefined>();
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancellingItem, setCancellingItem] = useState<SupplementaryTaskDto | undefined>();
   const [cancelling, setCancelling] = useState(false);
+
+  const [completeModalOpen, setCompleteModalOpen] = useState(false);
+  const [completingItem, setCompletingItem] = useState<SupplementaryTaskDto | undefined>();
+  const [completing, setCompleting] = useState(false);
 
   const activeStatus = useMemo(() => {
     const tab = TAB_STATUS_OPTIONS.find((t) => t.key === activeTab);
@@ -54,6 +60,8 @@ const SupplementaryTaskPage: React.FC = () => {
         status: activeStatus,
         skipCount: (page - 1) * pageSize,
         maxResultCount: pageSize,
+        sortField,
+        sortDescending,
       });
       setItems(res.items);
       setTotalCount(res.totalCount);
@@ -62,7 +70,7 @@ const SupplementaryTaskPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [search, priority, assignedToId, activeStatus, page, pageSize]);
+  }, [search, priority, assignedToId, activeStatus, page, pageSize, sortField, sortDescending]);
 
   const fetchStats = useCallback(async () => {
     setStatsLoading(true);
@@ -180,16 +188,37 @@ const SupplementaryTaskPage: React.FC = () => {
     setCancellingItem(undefined);
   }, []);
 
-  const handleCompleteClick = useCallback(async (item: SupplementaryTaskDto) => {
+  const handleCompleteClick = useCallback((item: SupplementaryTaskDto) => {
+    setCompletingItem(item);
+    setCompleteModalOpen(true);
+  }, []);
+
+  const handleCompleteConfirm = useCallback(async (id: string, input: CompleteSupplementaryTaskDto) => {
+    setCompleting(true);
     try {
-      await supplementaryTaskService.complete(item.id);
+      await supplementaryTaskService.complete(id, input);
       message.success("Đã xác nhận hoàn thành");
+      setCompleteModalOpen(false);
+      setCompletingItem(undefined);
       fetchList();
       fetchStats();
     } catch {
       message.error("Không thể cập nhật trạng thái");
+    } finally {
+      setCompleting(false);
     }
   }, [fetchList, fetchStats]);
+
+  const handleCompleteModalClose = useCallback(() => {
+    setCompleteModalOpen(false);
+    setCompletingItem(undefined);
+  }, []);
+
+  const handleSortChange = useCallback((field: "dueDate" | "creationTime", descending: boolean) => {
+    setSortField(field);
+    setSortDescending(descending);
+    setPage(1);
+  }, []);
 
   return (
     <SupplementaryTaskView
@@ -210,7 +239,10 @@ const SupplementaryTaskPage: React.FC = () => {
       cancelModalOpen={cancelModalOpen}
       cancellingItem={cancellingItem}
       cancelling={cancelling}
+      sortField={sortField}
+      sortDescending={sortDescending}
       onPageChange={handlePageChange}
+      onSortChange={handleSortChange}
       onTabChange={handleTabChange}
       onSearchInputChange={handleSearchInputChange}
       onSearch={handleSearch}
@@ -222,6 +254,11 @@ const SupplementaryTaskPage: React.FC = () => {
       onCancelConfirm={handleCancelConfirm}
       onCancelModalClose={handleCancelModalClose}
       onCompleteClick={handleCompleteClick}
+      completeModalOpen={completeModalOpen}
+      completingItem={completingItem}
+      completing={completing}
+      onCompleteConfirm={handleCompleteConfirm}
+      onCompleteModalClose={handleCompleteModalClose}
       onModalClose={handleModalClose}
       onSaved={handleSaved}
       onCreate={handleCreate}
