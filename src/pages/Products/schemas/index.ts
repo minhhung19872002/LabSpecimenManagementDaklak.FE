@@ -83,6 +83,13 @@ export const productSchema = yup.object({
     .transform((v, orig) => (orig === "" || orig === null ? null : v)),
   baseProductId: yup.string().nullable().optional(),
   chemicalFormula: yup.string().nullable().max(256),
+  formattedIdentificationCode: yup.string().nullable(),
+  equipmentModel: yup.string().nullable().max(256),
+  serialNumber: yup.string().nullable().max(256),
+  manufactureYear: yup.number().nullable().optional().integer().min(1900, "Năm không hợp lệ").max(2100, "Năm không hợp lệ")
+    .transform((v, orig) => (orig === "" || orig === null ? null : v)),
+  mainTechnicalSpecs: yup.string().nullable(),
+  installationLocation: yup.string().nullable().max(256),
   minStockLevel: yup
     .number()
     .nullable()

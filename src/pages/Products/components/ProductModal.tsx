@@ -66,7 +66,7 @@ const SECTION2_TITLE: Record<number, string> = {
   [ProductType.Supply]: "Thông tin vật tư tiêu hao",
   [ProductType.Solvent]: "Thông tin dung môi",
   [ProductType.PreparedSolution]: "Thông tin dung dịch pha",
-  [ProductType.Equipment]: "Thông tin vật tư",
+  [ProductType.Equipment]: "Thông tin thiết bị phòng Lab",
 };
 
 interface ProductModalProps {
@@ -156,6 +156,12 @@ const ProductModal: React.FC<ProductModalProps> = ({
       baseProductId: undefined,
       chemicalFormula: "",
       minStockLevel: undefined,
+      formattedIdentificationCode: "",
+      equipmentModel: "",
+      serialNumber: "",
+      manufactureYear: undefined,
+      mainTechnicalSpecs: "",
+      installationLocation: "",
       storageConditions: "",
       formattedStorageConditions: "",
       categories: "",
@@ -313,6 +319,12 @@ const ProductModal: React.FC<ProductModalProps> = ({
           baseProductId: editingProduct.baseProductId || undefined,
           chemicalFormula: editingProduct.chemicalFormula || "",
           minStockLevel: editingProduct.minStockLevel ?? undefined,
+          formattedIdentificationCode: editingProduct.formattedIdentificationCode || "",
+          equipmentModel: editingProduct.equipmentModel || "",
+          serialNumber: editingProduct.serialNumber || "",
+          manufactureYear: editingProduct.manufactureYear ?? undefined,
+          mainTechnicalSpecs: editingProduct.mainTechnicalSpecs || "",
+          installationLocation: editingProduct.installationLocation || "",
           storageConditions: editingProduct.storageConditions || "",
           formattedStorageConditions:
             editingProduct.formattedStorageConditions || storageText,
@@ -367,6 +379,12 @@ const ProductModal: React.FC<ProductModalProps> = ({
           baseProductId: undefined,
           chemicalFormula: "",
           minStockLevel: undefined,
+          formattedIdentificationCode: "",
+          equipmentModel: "",
+          serialNumber: "",
+          manufactureYear: undefined,
+          mainTechnicalSpecs: "",
+          installationLocation: "",
           storageConditions: "",
           formattedStorageConditions: "",
           categories: "",
@@ -433,7 +451,13 @@ const ProductModal: React.FC<ProductModalProps> = ({
     packagingSpec: data.packagingSpec || undefined,
     casNumber: isChemOrBioOrStdOrSupplyOrSolventType(data.productType) ? data.casNumber || undefined : undefined,
     manufacturer: data.manufacturer || undefined,
-    origin: (isBiologicalType(data.productType) || isStandardType(data.productType)) ? data.origin || undefined : undefined,
+    origin: (isBiologicalType(data.productType) || isStandardType(data.productType) || isEquipmentType(data.productType)) ? data.origin || undefined : undefined,
+    formattedIdentificationCode: isEquipmentType(data.productType) ? data.formattedIdentificationCode || undefined : undefined,
+    equipmentModel: isEquipmentType(data.productType) ? data.equipmentModel || undefined : undefined,
+    serialNumber: isEquipmentType(data.productType) ? data.serialNumber || undefined : undefined,
+    manufactureYear: isEquipmentType(data.productType) ? data.manufactureYear ?? null : null,
+    mainTechnicalSpecs: isEquipmentType(data.productType) ? data.mainTechnicalSpecs || undefined : undefined,
+    installationLocation: isEquipmentType(data.productType) ? data.installationLocation || undefined : undefined,
     concentration: (isChemOrBioOrStdOrSupplyOrSolventType(data.productType) || isPreparedSolutionType(data.productType)) ? data.concentration || undefined : undefined,
     formattedConcentration: (isBiologicalType(data.productType) || isStandardType(data.productType) || isSolventType(data.productType) || isPreparedSolutionType(data.productType)) ? data.formattedConcentration || undefined : undefined,
     formattedOrigin: (isBiologicalType(data.productType) || isStandardType(data.productType)) ? data.formattedOrigin || undefined : undefined,
@@ -613,6 +637,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
             <EquipmentFields
               consumableUnitOptions={consumableUnitOptions}
               identificationCodeOptions={identificationCodeOptions}
+              manufacturerOptions={manufacturerOptions}
             />
           )}
 
@@ -630,15 +655,19 @@ const ProductModal: React.FC<ProductModalProps> = ({
           />
 
           {/* Section 3 */}
-          <Divider style={{ margin: "4px 0 16px" }} />
-          <SkuSection
-            units={units}
-            manufacturerOptions={manufacturerOptions}
-            purchaseUnitOptions={purchaseUnitOptions}
-            storageUnitOptions={storageUnitOptions}
-            consumableUnitOptions={consumableUnitOptions}
-            tuphaManufacturerId={tuphaManufacturerId}
-          />
+          {!showEquipmentFields && (
+            <>
+              <Divider style={{ margin: "4px 0 16px" }} />
+              <SkuSection
+                units={units}
+                manufacturerOptions={manufacturerOptions}
+                purchaseUnitOptions={purchaseUnitOptions}
+                storageUnitOptions={storageUnitOptions}
+                consumableUnitOptions={consumableUnitOptions}
+                tuphaManufacturerId={tuphaManufacturerId}
+              />
+            </>
+          )}
         </Form>
       </Modal>
     </FormProvider>

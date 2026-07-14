@@ -79,6 +79,12 @@ export interface ProductDto {
   categories?: string;
   chemicalFormula?: string;
   minStockLevel?: number;
+  formattedIdentificationCode?: string | null;
+  equipmentModel?: string | null;
+  serialNumber?: string | null;
+  manufactureYear?: number | null;
+  mainTechnicalSpecs?: string | null;
+  installationLocation?: string | null;
   availableQuantity: number;
   storageAvailableQuantity: number;
   isActive: boolean;
@@ -163,6 +169,12 @@ export interface CreateUpdateProductDto {
   categories?: string;
   chemicalFormula?: string;
   minStockLevel?: number | null;
+  formattedIdentificationCode?: string | null;
+  equipmentModel?: string | null;
+  serialNumber?: string | null;
+  manufactureYear?: number | null;
+  mainTechnicalSpecs?: string | null;
+  installationLocation?: string | null;
   isActive: boolean;
   isDraft: boolean;
   attachments?: CreateProductAttachmentDto[];

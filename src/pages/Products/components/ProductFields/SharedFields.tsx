@@ -22,6 +22,7 @@ const SharedFields: React.FC<SharedFieldsProps> = ({
   const { control, setValue, watch } = useFormContext<ProductFormData>();
   const productType = watch("productType");
 
+  const isEquipment = productType === ProductType.Equipment;
   const showSupplyFields = productType === ProductType.Supply;
   const showGhsField =
     productType === ProductType.Biological ||
@@ -32,7 +33,7 @@ const SharedFields: React.FC<SharedFieldsProps> = ({
 
   return (
     <>
-      <Form.Item label="Nhóm/Phân loại (Tags)">
+      {!isEquipment && <Form.Item label="Nhóm/Phân loại (Tags)">
         <div
           style={{
             border: "1px solid #d9d9d9",
@@ -61,24 +62,26 @@ const SharedFields: React.FC<SharedFieldsProps> = ({
             style={{ flex: 1, minWidth: 100 }}
           />
         </div>
-      </Form.Item>
+      </Form.Item>}
 
-      <Form.Item label="Điều kiện bảo quản">
-        <Controller
-          name="formattedStorageConditions"
-          control={control}
-          render={({ field }) => (
-            <RichTextEditor
-              value={field.value || ""}
-              onChange={(html, plainText) => {
-                field.onChange(html);
-                setValue("storageConditions", plainText);
-              }}
-              placeholder="Nhập điều kiện bảo quản"
-            />
-          )}
-        />
-      </Form.Item>
+      {!isEquipment && (
+        <Form.Item label="Điều kiện bảo quản">
+          <Controller
+            name="formattedStorageConditions"
+            control={control}
+            render={({ field }) => (
+              <RichTextEditor
+                value={field.value || ""}
+                onChange={(html, plainText) => {
+                  field.onChange(html);
+                  setValue("storageConditions", plainText);
+                }}
+                placeholder="Nhập điều kiện bảo quản"
+              />
+            )}
+          />
+        </Form.Item>
+      )}
 
       {showSupplyFields && (
         <Form.Item label="Trạng thái vô trùng">
@@ -110,7 +113,7 @@ const SharedFields: React.FC<SharedFieldsProps> = ({
         </Form.Item>
       )}
 
-      <Form.Item label="Tài liệu đính kèm (SDS/MSDS)">
+      <Form.Item label={isEquipment ? "Tài liệu sử dụng" : "Tài liệu đính kèm (SDS/MSDS)"}>
         <AttachmentSection
           existingAttachments={existingAttachments}
           newAttachments={newAttachments}
