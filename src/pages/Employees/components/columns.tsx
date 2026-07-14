@@ -1,7 +1,6 @@
-import { Button, Space, Tag, Switch, Tooltip, Popconfirm, Avatar } from "antd";
+import { Button, Space, Tag, Switch, Tooltip, Avatar } from "antd";
 import {
   EditOutlined,
-  DeleteOutlined,
   UserOutlined,
   MailOutlined,
   PhoneOutlined,
@@ -22,7 +21,6 @@ interface RoleOption {
 
 interface GetColumnsOptions {
   onNavigateToDetail: (id: string) => void;
-  onDelete: (id: string) => void;
   onToggleActive: (id: string, checked: boolean) => void;
   onResetPassword: (record: EmployeeDto) => void;
   onViewRoles: (record: EmployeeDto) => void;
@@ -242,11 +240,10 @@ export const getEmployeeColumns = (
     {
       title: "Thao tác",
       key: "actions",
-      width: 180,
+      width: 140,
       fixed: "right",
       render: (_, record) => {
         const canEdit = authService.hasPermission(PERMISSIONS.Users.Edit);
-        const canDelete = authService.hasPermission(PERMISSIONS.Users.Delete);
         const canGrantTemp = authService.hasPermission(PERMISSIONS.TemporaryAccess.Create);
 
         return (
@@ -283,24 +280,6 @@ export const getEmployeeColumns = (
                   onClick={() => options.onResetPassword(record)}
                 />
               </Tooltip>
-            )}
-            {canDelete && (
-              <Popconfirm
-                title="Xóa nhân viên"
-                description="Bạn có chắc muốn xóa nhân viên này?"
-                onConfirm={() => options.onDelete(record.id)}
-                okText="Xóa"
-                cancelText="Hủy"
-              >
-                <Tooltip title="Xóa">
-                  <Button
-                    type="link"
-                    size="small"
-                    danger
-                    icon={<DeleteOutlined />}
-                  />
-                </Tooltip>
-              </Popconfirm>
             )}
           </Space>
         );

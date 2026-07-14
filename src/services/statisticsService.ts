@@ -129,10 +129,20 @@ export interface LabContractSummaryDto {
   totalPrice: number;
 }
 
+export interface IndicatorContractCountDto {
+  indicatorName: string;
+  month: number;
+  year: number;
+  contractCount: number;
+}
+
 export interface LabReportDataDto {
   dailyStats: LabDailyStatDto[];
   contractIndicators: ContractMonthlyIndicatorDto[];
   contracts: LabContractSummaryDto[];
+  indicatorContractCounts: IndicatorContractCountDto[];
+  passCount: number;
+  failCount: number;
 }
 
 export interface SamplePriceItemDto {
