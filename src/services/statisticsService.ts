@@ -141,6 +141,8 @@ export interface LabReportDataDto {
   contractIndicators: ContractMonthlyIndicatorDto[];
   contracts: LabContractSummaryDto[];
   indicatorContractCounts: IndicatorContractCountDto[];
+  passCount: number;
+  failCount: number;
 }
 
 export interface SamplePriceItemDto {

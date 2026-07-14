@@ -16,6 +16,7 @@ import SampleRevenueChart from "./SampleRevenueChart";
 import ContractIndicatorSection from "./ContractIndicatorSection";
 import ContractTable from "./ContractTable";
 import ContractDetailPanel from "./ContractDetailPanel";
+import TestResultChart from "./TestResultChart";
 
 const { Text } = Typography;
 
@@ -144,6 +145,19 @@ const LabReportView: React.FC<LabReportViewProps> = ({
             />
           </Col>
         )}
+      </Row>
+
+      {/* Kết quả thử nghiệm */}
+      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+        <Col xs={24} md={12} lg={8}>
+          <Card bordered={false} style={{ boxShadow: "0px 2px 8px rgba(0,0,0,0.08)", borderRadius: 16 }}>
+            <TestResultChart
+              passCount={reportData?.passCount ?? 0}
+              failCount={reportData?.failCount ?? 0}
+              dateRange={dateRange}
+            />
+          </Card>
+        </Col>
       </Row>
     </Spin>
   </div>
