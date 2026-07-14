@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback, lazy, Suspense } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
-  Card, Form, Input, Select, DatePicker, InputNumber, Button, Space, Row, Col,
-  Table, message, Spin, Divider, Tag, Modal, AutoComplete,
+  Card, Form, Input, Select, DatePicker, Button, Space, Row, Col,
+  Table, message, Spin, Divider, Modal, Tag, Typography,
 } from "antd";
-import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
+import { DeleteOutlined } from "@ant-design/icons";
+import { NumericFormat } from "react-number-format";
 import { useNavigate, useParams } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -19,31 +20,27 @@ import {
   GoodsReceiptPaymentStatus,
   GoodsReceiptType,
 } from "../../services/goodsReceiptService";
-import { manufacturerService, ManufacturerDto } from "../../services/manufacturerService";
-import { supplierService, SupplierDto, CreateUpdateSupplierDto } from "../../services/supplierService";
+import { supplierService, SupplierDto } from "../../services/supplierService";
 import { employeeService, EmployeeDto } from "../../services/employeeService";
-import { equipmentService, EquipmentListDto } from "../../services/equipmentService";
+import { productService, ProductDto, ProductType } from "../../services/productService";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
 import { getApiErrorMessage } from "../../utils/errorHandler";
 import { PaymentModal } from "./components";
 import { PaymentFormData } from "./schemas";
 import "../../styles/ListCard.css";
+import "./GoodsReceiptEquipmentForm.css";
 
-const SupplierModal = lazy(
-  () => import("../Suppliers/components/SupplierModal")
-);
+const stripParagraphTags = (html: string) => html.replace(/<\/?p>/g, "");
 
 interface EquipmentLineItem {
   key: string;
   id?: string;
-  productName: string;
-  serialNumber: string;
+  productName: string;   // formattedName (HTML)
+  serialNumber: string;  // formattedIdentificationCode (HTML)
   model: string;
   manufacturer: string;
   manufacturerId?: string;
-  supplierId: string;
-  supplierName: string;
   unitPrice: number;
   vatPercent: number;
   amountBeforeVat: number;
@@ -61,19 +58,12 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
   const [receipt, setReceipt] = useState<GoodsReceiptDto | null>(null);
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
   const [employees, setEmployees] = useState<EmployeeDto[]>([]);
-  const [manufacturers, setManufacturers] = useState<ManufacturerDto[]>([]);
-  const [existingEquipments, setExistingEquipments] = useState<EquipmentListDto[]>([]);
+  const [equipmentProducts, setEquipmentProducts] = useState<ProductDto[]>([]);
   const [lineItems, setLineItems] = useState<EquipmentLineItem[]>([]);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [previewCode, setPreviewCode] = useState<string>("");
-
-  // Inline supplier creation modal
-  const [supplierModalOpen, setSupplierModalOpen] = useState(false);
-  const [supplierModalLoading, setSupplierModalLoading] = useState(false);
-  // Track which line item the supplier is being created for (key), null means creating for a general add
-  const [supplierModalTargetKey, setSupplierModalTargetKey] = useState<string | null>(null);
 
   const canImport = authService.hasPermission(PERMISSIONS.GoodsReceipts.ImportToWarehouse);
   const canPay = authService.hasPermission(PERMISSIONS.GoodsReceipts.AddPayment);
@@ -112,21 +102,18 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
 
   const defaultVat = watch("vatPercent") || 8;
 
-  // Load initial data
   useEffect(() => {
     const loadData = async () => {
       setPageLoading(true);
       try {
-        const [suppliersRes, employeesList, manufacturerList, equipmentsRes] = await Promise.all([
+        const [suppliersRes, employeesList, productsRes] = await Promise.all([
           supplierService.getList({ limit: 1000 }),
           employeeService.getList({ maxResultCount: 1000 }),
-          manufacturerService.getActive(),
-          equipmentService.getList({ limit: 1000 }),
+          productService.getList({ productType: ProductType.Equipment, limit: 1000 }),
         ]);
         setSuppliers(suppliersRes.items || []);
         setEmployees(employeesList.items || []);
-        setManufacturers(manufacturerList || []);
-        setExistingEquipments(equipmentsRes.items || []);
+        setEquipmentProducts(productsRes.items || []);
 
         if (id) {
           const receiptData = await goodsReceiptService.get(id);
@@ -155,13 +142,11 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
             receiptData.items.map((item, idx) => ({
               key: `existing-${idx}`,
               id: item.id,
-              productName: item.productName,
-              serialNumber: item.serialNumber || "",
+              productName: stripParagraphTags(item.productName),
+              serialNumber: stripParagraphTags(item.serialNumber || ""),
               model: item.model || "",
               manufacturer: item.manufacturer || "",
               manufacturerId: item.manufacturerId,
-              supplierId: item.supplierId || "",
-              supplierName: item.supplierName || "",
               unitPrice: item.unitPrice,
               vatPercent: item.vatPercent,
               amountBeforeVat: item.amountBeforeVat,
@@ -169,9 +154,7 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
               amountAfterVat: item.amountAfterVat,
             }))
           );
-
         } else {
-          // Auto-fill purchaser from current user for new receipts
           const userInfo = authService.getUserInfo();
           if (userInfo) {
             const currentEmployee = employeesList.items?.find(
@@ -195,45 +178,19 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
   const recalculateLine = (item: EquipmentLineItem): EquipmentLineItem => {
     const amountBeforeVat = item.unitPrice;
     const vatAmount = amountBeforeVat * item.vatPercent / 100;
-    return {
-      ...item,
-      amountBeforeVat,
-      vatAmount,
-      amountAfterVat: amountBeforeVat + vatAmount,
-    };
+    return { ...item, amountBeforeVat, vatAmount, amountAfterVat: amountBeforeVat + vatAmount };
   };
 
-  const handleAddBlankRow = () => {
-    const newItem: EquipmentLineItem = {
-      key: `new-${Date.now()}`,
-      productName: "",
-      serialNumber: "",
-      model: "",
-      manufacturer: "",
-      manufacturerId: undefined,
-      supplierId: "",
-      supplierName: "",
-      unitPrice: 0,
-      vatPercent: defaultVat,
-      amountBeforeVat: 0,
-      vatAmount: 0,
-      amountAfterVat: 0,
-    };
-    setLineItems((prev) => [...prev, newItem]);
-  };
-
-  const handleAddFromExisting = (equipmentId: string) => {
-    const eq = existingEquipments.find((e) => e.id === equipmentId);
-    if (!eq) return;
+  const handleAddFromProduct = (productId: string) => {
+    const p = equipmentProducts.find((x) => x.id === productId);
+    if (!p) return;
     const newItem: EquipmentLineItem = {
       key: `eq-${Date.now()}`,
-      productName: eq.name,
-      serialNumber: eq.serialNumber || "",
-      model: eq.model || "",
-      manufacturer: eq.manufacturer || "",
+      productName: stripParagraphTags(p.formattedName || p.name),
+      serialNumber: stripParagraphTags(p.formattedIdentificationCode || p.identificationCode || ""),
+      model: p.equipmentModel || "",
+      manufacturer: p.manufacturer || "",
       manufacturerId: undefined,
-      supplierId: "",
-      supplierName: eq.supplierName || "",
       unitPrice: 0,
       vatPercent: defaultVat,
       amountBeforeVat: 0,
@@ -251,17 +208,10 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
     setLineItems((prev) =>
       prev.map((item) => {
         if (item.key !== key) return item;
-        const updated = { ...item, [field]: value };
-
-        if (field === "supplierId") {
-          const supplier = suppliers.find((s) => s.id === value);
-          if (supplier) updated.supplierName = supplier.name;
-        }
-
-        return recalculateLine(updated);
+        return recalculateLine({ ...item, [field]: value });
       })
     );
-  }, [suppliers]);
+  }, []);
 
   const handleSupplierChange = useCallback(async (supplierId: string | null) => {
     if (!supplierId) {
@@ -271,19 +221,15 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
       setValue("supplierRepresentativeName", "");
       return;
     }
-    const supplier = suppliers.find(s => s.id === supplierId);
+    const supplier = suppliers.find((s) => s.id === supplierId);
     if (supplier) {
       setValue("supplierAddress", supplier.address || "");
       setValue("supplierPhone", supplier.phone || "");
     }
     try {
       const info = await goodsReceiptService.getLatestSupplierInfo(supplierId);
-      if (info.supplierRepresentativePhone) {
-        setValue("supplierRepresentativePhone", info.supplierRepresentativePhone);
-      }
-      if (info.supplierRepresentativeName) {
-        setValue("supplierRepresentativeName", info.supplierRepresentativeName);
-      }
+      if (info.supplierRepresentativePhone) setValue("supplierRepresentativePhone", info.supplierRepresentativePhone);
+      if (info.supplierRepresentativeName) setValue("supplierRepresentativeName", info.supplierRepresentativeName);
     } catch {
       // No previous receipt for this supplier
     }
@@ -291,18 +237,11 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
 
   const totalBeforeVat = lineItems.reduce((sum, item) => sum + item.amountBeforeVat, 0);
 
-  const manufacturerOptions = manufacturers.map((m) => ({
-    value: m.name,
-    label: m.name,
-  }));
-
-  const supplierOptions = suppliers
-    .filter((s) => s.isActive)
-    .map((s) => ({ value: s.id, label: `${s.code} - ${s.name}` }));
-
-  const existingEquipmentOptions = existingEquipments.map((e) => ({
-    value: e.id,
-    label: `${e.code} - ${e.name}${e.serialNumber ? ` (S/N: ${e.serialNumber})` : ""}`,
+  const productOptions = equipmentProducts.map((p) => ({
+    value: p.id,
+    label: `${p.identificationCode || p.code} - ${p.name}`,
+    htmlSerial: stripParagraphTags(p.formattedIdentificationCode || p.identificationCode || p.code),
+    htmlName: stripParagraphTags(p.formattedName || p.name),
   }));
 
   const formatCurrency = (v: number) => v.toLocaleString("vi-VN");
@@ -336,7 +275,7 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
         manufacturer: item.manufacturer || undefined,
         manufacturerName: item.manufacturer || undefined,
         manufacturerId: item.manufacturerId || undefined,
-        supplierId: item.supplierId || undefined,
+        supplierId: data.supplierId || undefined,
       })),
   });
 
@@ -344,16 +283,6 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
     const validItems = lineItems.filter((item) => item.productName?.trim());
     if (validItems.length === 0) {
       message.warning("Vui lòng thêm ít nhất một thiết bị.");
-      return false;
-    }
-    const missingSerial = validItems.find((item) => !item.serialNumber?.trim());
-    if (missingSerial) {
-      message.warning(`Thiết bị "${missingSerial.productName}" thiếu số serial.`);
-      return false;
-    }
-    const missingSupplier = validItems.find((item) => !item.supplierId?.trim());
-    if (missingSupplier) {
-      message.warning(`Thiết bị "${missingSupplier.productName}" chưa chọn nhà cung cấp.`);
       return false;
     }
     return true;
@@ -423,35 +352,6 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
     }
   };
 
-  const handleCreateSupplier = async (data: CreateUpdateSupplierDto) => {
-    setSupplierModalLoading(true);
-    try {
-      const newSupplier = await supplierService.create(data);
-      setSuppliers((prev) => [...prev, newSupplier]);
-      // If triggered from a specific line item, auto-select the new supplier for that row
-      if (supplierModalTargetKey) {
-        setLineItems((prev) =>
-          prev.map((item) => {
-            if (item.key !== supplierModalTargetKey) return item;
-            return recalculateLine({ ...item, supplierId: newSupplier.id, supplierName: newSupplier.name });
-          })
-        );
-      }
-      message.success("Đã tạo nhà cung cấp mới");
-      setSupplierModalOpen(false);
-      setSupplierModalTargetKey(null);
-    } catch (error: any) {
-      message.error(getApiErrorMessage(error, "Không thể tạo nhà cung cấp."));
-    } finally {
-      setSupplierModalLoading(false);
-    }
-  };
-
-  const openSupplierModal = (lineKey: string) => {
-    setSupplierModalTargetKey(lineKey);
-    setSupplierModalOpen(true);
-  };
-
   const actionColumn = !isReadonly
     ? [
         {
@@ -481,126 +381,53 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
     {
       title: "Serial Number",
       key: "serialNumber",
-      width: 150,
-      render: (_: any, record: EquipmentLineItem) =>
-        isReadonly ? (record.serialNumber || "-") : (
-          <Input
-            value={record.serialNumber}
-            placeholder="Số serial"
-            onChange={(e) => handleLineChange(record.key, "serialNumber", e.target.value)}
-            size="small"
-            status={!record.serialNumber?.trim() ? "warning" : undefined}
-          />
-        ),
+      width: 180,
+      onCell: () => ({ style: { verticalAlign: "middle" } }),
+      render: (_: any, record: EquipmentLineItem) => (
+        <span dangerouslySetInnerHTML={{ __html: record.serialNumber || "-" }} style={{ fontSize: 13 }} />
+      ),
     },
     {
       title: "Tên thiết bị",
       key: "productName",
-      width: 200,
-      render: (_: any, record: EquipmentLineItem) =>
-        isReadonly ? (record.productName || "-") : (
-          <Input
-            value={record.productName}
-            placeholder="Tên thiết bị"
-            onChange={(e) => handleLineChange(record.key, "productName", e.target.value)}
-            size="small"
-          />
-        ),
+      width: 220,
+      onCell: () => ({ style: { verticalAlign: "middle" } }),
+      render: (_: any, record: EquipmentLineItem) => (
+        <span dangerouslySetInnerHTML={{ __html: record.productName || "-" }} style={{ fontSize: 13 }} />
+      ),
     },
     {
       title: "Model",
       key: "model",
       width: 130,
-      render: (_: any, record: EquipmentLineItem) =>
-        isReadonly ? (record.model || "-") : (
-          <Input
-            value={record.model}
-            placeholder="Model"
-            onChange={(e) => handleLineChange(record.key, "model", e.target.value)}
-            size="small"
-          />
-        ),
-    },
-    {
-      title: "Nhà cung cấp",
-      key: "supplierId",
-      width: 200,
-      render: (_: any, record: EquipmentLineItem) => {
-        if (isReadonly) return record.supplierName || "-";
-        return (
-          <Select
-            value={record.supplierId || undefined}
-            placeholder="Chọn NCC"
-            options={supplierOptions}
-            showSearch
-            filterOption={(input, option) =>
-              (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
-            }
-            onChange={(v) => handleLineChange(record.key, "supplierId", v)}
-            style={{ width: "100%" }}
-            size="small"
-            status={!record.supplierId?.trim() ? "warning" : undefined}
-            dropdownRender={(menu) => (
-              <>
-                {menu}
-                <Divider style={{ margin: "4px 0" }} />
-                <Button
-                  type="text"
-                  icon={<PlusOutlined />}
-                  onClick={() => openSupplierModal(record.key)}
-                  style={{ width: "100%", textAlign: "left" }}
-                  size="small"
-                >
-                  Tạo nhà cung cấp mới
-                </Button>
-              </>
-            )}
-          />
-        );
-      },
+      render: (_: any, record: EquipmentLineItem) => (
+        <Typography.Text style={{ fontSize: 13 }}>{record.model || "-"}</Typography.Text>
+      ),
     },
     {
       title: "Hãng sản xuất",
       key: "manufacturer",
       width: 160,
-      render: (_: any, record: EquipmentLineItem) => {
-        if (isReadonly) return record.manufacturer || "-";
-        return (
-          <AutoComplete
-            value={record.manufacturer || ""}
-            options={manufacturerOptions.filter((o) =>
-              o.value.toLowerCase().includes((record.manufacturer || "").toLowerCase())
-            )}
-            onSelect={(value) => {
-              const m = manufacturers.find((x) => x.name === value);
-              handleLineChange(record.key, "manufacturer", value);
-              if (m) handleLineChange(record.key, "manufacturerId", m.id);
-            }}
-            onChange={(value) => {
-              handleLineChange(record.key, "manufacturer", value);
-              handleLineChange(record.key, "manufacturerId", undefined);
-            }}
-            placeholder="Nhập hãng SX"
-            style={{ width: "100%" }}
-            size="small"
-          />
-        );
-      },
+      render: (_: any, record: EquipmentLineItem) => (
+        <Typography.Text style={{ fontSize: 13 }}>{record.manufacturer || "-"}</Typography.Text>
+      ),
     },
     {
       title: "Đơn giá dự kiến",
       key: "unitPrice",
-      width: 180,
+      width: 160,
       render: (_: any, record: EquipmentLineItem) =>
         isReadonly ? `${formatCurrency(record.unitPrice)} VNĐ` : (
-          <InputNumber
+          <NumericFormat
             value={record.unitPrice}
-            min={0}
-            formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-            parser={(v) => Number(v?.replace(/,/g, "") || 0)}
-            onChange={(v) => handleLineChange(record.key, "unitPrice", v || 0)}
-            style={{ width: "100%" }}
+            onValueChange={(values) => handleLineChange(record.key, "unitPrice", values.floatValue ?? 0)}
+            allowNegative={false}
+            thousandSeparator="."
+            decimalSeparator=","
+            decimalScale={3}
+            customInput={Input}
             size="small"
+            style={{ width: "100%" }}
             addonAfter="VNĐ"
           />
         ),
@@ -652,7 +479,7 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
                         field.onChange(value || null);
                         handleSupplierChange(value || null);
                       }}
-                      options={suppliers.map(s => ({ value: s.id, label: s.name }))}
+                      options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
                     />
                   </Form.Item>
                 )}
@@ -678,7 +505,7 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
                       status={fieldState.error ? "error" : undefined}
                       allowClear
                       onChange={(value) => field.onChange(value || null)}
-                      options={employees.map(e => ({ value: e.id, label: e.fullName }))}
+                      options={employees.map((e) => ({ value: e.id, label: e.fullName }))}
                     />
                   </Form.Item>
                 )}
@@ -686,12 +513,21 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
             </Col>
             <Col xs={24} sm={12} md={6}>
               <Form.Item label="Thời gian tạo phiếu">
-                <Input value={receipt ? dayjs(receipt.creationTime).format("HH:mm DD/MM/YYYY") : dayjs().format("HH:mm DD/MM/YYYY")} disabled style={{ backgroundColor: "#f5f5f5" }} />
+                <Input
+                  value={receipt ? dayjs(receipt.creationTime).format("HH:mm DD/MM/YYYY") : dayjs().format("HH:mm DD/MM/YYYY")}
+                  disabled
+                  style={{ backgroundColor: "#f5f5f5" }}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={6}>
               <Form.Item label="Số phiếu giao hàng">
-                <Input value={receipt?.code || previewCode || ""} placeholder="Tự động sinh khi lưu" disabled style={{ backgroundColor: "#f5f5f5" }} />
+                <Input
+                  value={receipt?.code || previewCode || ""}
+                  placeholder="Tự động sinh khi lưu"
+                  disabled
+                  style={{ backgroundColor: "#f5f5f5" }}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -807,27 +643,25 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
               THÔNG TIN THIẾT BỊ
             </strong>
             {!isReadonly && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={handleAddBlankRow}
-                >
-                  Thêm thiết bị
-                </Button>
-                <Select
-                  key={`eq-select-${lineItems.length}`}
-                  placeholder="Chọn thiết bị đã có"
-                  options={existingEquipmentOptions}
-                  onSelect={(v) => handleAddFromExisting(v)}
-                  style={{ width: 320 }}
-                  showSearch
-                  filterOption={(input, option) =>
-                    (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
-                  }
-                  allowClear
-                />
-              </div>
+              <Select
+                key={`eq-select-${lineItems.length}`}
+                placeholder="Chọn thiết bị từ danh mục"
+                options={productOptions}
+                onSelect={(v: any) => handleAddFromProduct(v)}
+                style={{ width: 360 }}
+                showSearch
+                filterOption={(input, option) =>
+                  (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
+                }
+                allowClear
+                optionRender={(option) => (
+                  <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <span dangerouslySetInnerHTML={{ __html: (option.data as any).htmlSerial || "" }} />
+                    <span>—</span>
+                    <span dangerouslySetInnerHTML={{ __html: (option.data as any).htmlName || "" }} />
+                  </span>
+                )}
+              />
             )}
           </div>
 
@@ -836,15 +670,21 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
             dataSource={lineItems}
             rowKey="key"
             pagination={false}
-            scroll={{ x: 1400 }}
+            scroll={{ x: 950 }}
             size="small"
             bordered
+            rootClassName="equipment-receipt-table"
             locale={{ emptyText: "Chưa có thiết bị" }}
           />
 
           <Row justify="end" style={{ padding: "12px 0" }}>
             <Col>
-              <span>Tổng dự toán: <strong style={{ color: "#1677ff", fontSize: 16 }}>{formatCurrency(totalBeforeVat)} VNĐ</strong></span>
+              <span>
+                Tổng dự toán:{" "}
+                <strong style={{ color: "#1677ff", fontSize: 16 }}>
+                  {formatCurrency(totalBeforeVat)} VNĐ
+                </strong>
+              </span>
             </Col>
           </Row>
         </div>
@@ -858,20 +698,17 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
         }}
       >
         <Space>
-          {/* Hủy phiếu / Quay lại */}
           {!isReadonly && (
             <Button onClick={() => navigate("/goods-receipts")}>
               {isEdit ? "Quay lại" : "Hủy phiếu"}
             </Button>
           )}
-          {/* Lưu */}
           {!isReadonly && (!isEdit || receipt?.orderStatus === GoodsReceiptOrderStatus.PendingApproval) && (
             <Button type="primary" onClick={handleSaveDraft} loading={saving}>
               Lưu
             </Button>
           )}
 
-          {/* Approved state: Thanh toán + Nhập kho */}
           {isEdit &&
             receipt &&
             canPay &&
@@ -898,8 +735,7 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
                 onClick={() => {
                   Modal.confirm({
                     title: "Xác nhận nhập kho",
-                    content:
-                      "Bạn có chắc chắn muốn nhập kho phiếu này? Sau khi nhập kho sẽ không thể chỉnh sửa.",
+                    content: "Bạn có chắc chắn muốn nhập kho phiếu này? Sau khi nhập kho sẽ không thể chỉnh sửa.",
                     okText: "Nhập kho",
                     cancelText: "Hủy",
                     centered: true,
@@ -911,7 +747,6 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
               </Button>
             )}
 
-          {/* Imported state: disabled indicator */}
           {isEdit &&
             receipt &&
             receipt.warehouseStatus === GoodsReceiptWarehouseStatus.Imported && (
@@ -930,20 +765,6 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
           onCancel={() => setPaymentModalOpen(false)}
         />
       )}
-
-      {/* Inline Supplier Creation Modal */}
-      <Suspense fallback={null}>
-        <SupplierModal
-          open={supplierModalOpen}
-          loading={supplierModalLoading}
-          editingSupplier={null}
-          onOk={handleCreateSupplier}
-          onCancel={() => {
-            setSupplierModalOpen(false);
-            setSupplierModalTargetKey(null);
-          }}
-        />
-      </Suspense>
     </div>
   );
 };
