@@ -24,6 +24,8 @@ export interface SupplementaryTaskDto {
   priority: SupplementaryTaskPriority;
   status: SupplementaryTaskStatus;
   imageUrls: string[];
+  completionNote?: string;
+  completionImageUrls: string[];
   creationTime: string;
 }
 
@@ -54,6 +56,11 @@ export interface UpdateSupplementaryTaskDto {
   imageUrls: string[];
 }
 
+export interface CompleteSupplementaryTaskDto {
+  note?: string;
+  imageUrls?: string[];
+}
+
 export interface GetSupplementaryTaskListInput {
   search?: string;
   status?: SupplementaryTaskStatus;
@@ -61,6 +68,8 @@ export interface GetSupplementaryTaskListInput {
   assignedToId?: string;
   skipCount?: number;
   maxResultCount?: number;
+  sortField?: "dueDate" | "creationTime";
+  sortDescending?: boolean;
 }
 
 export interface PagedResultDto<T> {
@@ -95,7 +104,7 @@ export const supplementaryTaskService = {
     await api.post(`${BASE_URL}/${id}/cancel`);
   },
 
-  complete: async (id: string): Promise<void> => {
-    await api.post(`${BASE_URL}/${id}/complete`);
+  complete: async (id: string, input: CompleteSupplementaryTaskDto): Promise<void> => {
+    await api.post(`${BASE_URL}/${id}/complete`, input);
   },
 };
