@@ -307,6 +307,11 @@
   color: #fff;
 }
 
+/* Equipment table: strip p margin from RichTextEditor HTML */
+.equipment-receipt-table .ant-table-cell p {
+  margin: 0;
+}
+
 /* Print styles */
 @media print {
   .goods-receipt-detail {

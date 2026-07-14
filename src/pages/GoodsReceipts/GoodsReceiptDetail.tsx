@@ -293,13 +293,20 @@ const GoodsReceiptDetail: React.FC = () => {
       dataIndex: "serialNumber",
       key: "serialNumber",
       width: 160,
-      render: (v: string) => v || "-",
+      onCell: () => ({ style: { verticalAlign: "middle" } }),
+      render: (v: string) => v
+        ? <span dangerouslySetInnerHTML={{ __html: v.replace(/<\/?p>/g, "") }} />
+        : "-",
     },
     {
       title: "Tên thiết bị",
       dataIndex: "productName",
       key: "productName",
       width: 200,
+      onCell: () => ({ style: { verticalAlign: "middle" } }),
+      render: (v: string) => v
+        ? <span dangerouslySetInnerHTML={{ __html: v.replace(/<\/?p>/g, "") }} />
+        : "-",
     },
     {
       title: "Model",
@@ -655,6 +662,7 @@ const GoodsReceiptDetail: React.FC = () => {
               scroll={{ x: 1200 }}
               size="small"
               bordered
+              rootClassName="equipment-receipt-table"
               locale={{ emptyText: "Không có thiết bị" }}
             />
           ) : (
