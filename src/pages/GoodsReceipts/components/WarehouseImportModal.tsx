@@ -21,10 +21,13 @@ interface WarehouseImportModalProps {
 
 interface BarcodeItem {
   item: GoodsReceiptItemDto;
-  product: ProductDto;
+  product?: ProductDto;
+  isEquipment?: boolean;
   barcodeCount: number;
   barcodeContents: string[];
 }
+
+const stripAllHtml = (html: string) => html.replace(/<[^>]*>/g, "").trim();
 
 const formatDateForBarcode = (date?: string): string => {
   if (!date) return "";
@@ -123,29 +126,46 @@ const WarehouseImportModal: React.FC<WarehouseImportModalProps> = ({
 
     setLoading(true);
     try {
-      const nonEquipmentItems = receipt.items.filter((i) => !i.isEquipment);
-      const uniqueProductIds = [...new Set(nonEquipmentItems.map((i) => i.productId))];
-
-      const products = await Promise.all(
-        uniqueProductIds.map((pid) => productService.get(pid).catch(() => null))
-      );
-
-      const productMap = new Map<string, ProductDto>();
-      products.forEach((p) => {
-        if (p) productMap.set(p.id, p);
-      });
-
       const items: BarcodeItem[] = [];
-      for (const item of nonEquipmentItems) {
-        const product = productMap.get(item.productId);
-        if (!product || product.productType !== ProductType.Chemical) continue;
 
-        const count = calculateBarcodeCount(item, product);
-        const contents: string[] = [];
-        for (let i = 1; i <= count; i++) {
-          contents.push(generateBarcodeContent(item, i, receipt.documentDate));
+      // Equipment items — 1 barcode per item, content = "serial-name" (ASCII only)
+      const toAscii = (html: string) =>
+        removeAccents(stripAllHtml(html))
+          .normalize("NFD")
+          .replace(/[̀-ͯ]/g, "")
+          .replace(/[^\x20-\x7E]/g, "")
+          .trim();
+
+      const equipmentItems = receipt.items.filter((i) => i.isEquipment);
+      for (const item of equipmentItems) {
+        const serial = toAscii(item.serialNumber || item.identificationCode || "");
+        if (!serial) continue;
+        const name = toAscii(item.productName);
+        const content = name ? `${serial}-${name}` : serial;
+        items.push({ item, isEquipment: true, barcodeCount: 1, barcodeContents: [content] });
+      }
+
+      // Chemical items — barcode per lot/quantity
+      const nonEquipmentItems = receipt.items.filter((i) => !i.isEquipment);
+      if (nonEquipmentItems.length > 0) {
+        const uniqueProductIds = [...new Set(nonEquipmentItems.map((i) => i.productId))];
+        const products = await Promise.all(
+          uniqueProductIds.map((pid) => productService.get(pid).catch(() => null))
+        );
+        const productMap = new Map<string, ProductDto>();
+        products.forEach((p) => { if (p) productMap.set(p.id, p); });
+
+        for (const item of nonEquipmentItems) {
+          const product = productMap.get(item.productId);
+          if (!product || product.productType !== ProductType.Chemical) continue;
+
+          const count = calculateBarcodeCount(item, product);
+          const contents: string[] = [];
+          for (let i = 1; i <= count; i++) {
+            contents.push(generateBarcodeContent(item, i, receipt.documentDate));
+          }
+          items.push({ item, product, barcodeCount: count, barcodeContents: contents });
         }
-        items.push({ item, product, barcodeCount: count, barcodeContents: contents });
       }
 
       setBarcodeItems(items);
@@ -165,8 +185,13 @@ const WarehouseImportModal: React.FC<WarehouseImportModalProps> = ({
   }, [barcodeItems]);
 
   const getSectionHeader = (bi: BarcodeItem) => {
+    const name = stripAllHtml(bi.item.productName);
+    if (bi.isEquipment) {
+      const serial = bi.barcodeContents[0] || "";
+      return serial ? `${serial} — ${name}` : name;
+    }
     const lot = bi.item.lotNumber;
-    return lot ? `${lot} - ${bi.item.productName}` : bi.item.productName;
+    return lot ? `${lot} - ${name}` : name;
   };
 
   const handlePrint = () => {
@@ -287,7 +312,7 @@ const WarehouseImportModal: React.FC<WarehouseImportModalProps> = ({
             </Button>
           ) : (
             <>
-              <Button onClick={handlePrintAndImport} loading={importing} disabled={loading}>
+              <Button onClick={handlePrintAndImport} loading={importing} disabled={loading || barcodeItems.length === 0}>
                 In và nhập kho
               </Button>
               <Button type="primary" onClick={handleImport} loading={importing} disabled={loading}>
@@ -301,7 +326,7 @@ const WarehouseImportModal: React.FC<WarehouseImportModalProps> = ({
     >
       <Spin spinning={loading}>
         {!loading && barcodeItems.length === 0 ? (
-          <Empty description="Không có hóa chất nào để tạo barcode" />
+          <Empty description="Không có mục nào để tạo barcode" />
         ) : (
           <Collapse
             items={collapseItems}
