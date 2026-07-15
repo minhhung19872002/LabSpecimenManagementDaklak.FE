@@ -324,10 +324,6 @@ const WarehouseImportForm: React.FC = () => {
 
 
   const validateHeader = (): boolean => {
-    if (deliveryFiles.length === 0) {
-      setDeliveryFilesError("Chứng từ không được trống");
-      return false;
-    }
     setDeliveryFilesError(undefined);
     return true;
   };
@@ -752,7 +748,6 @@ const WarehouseImportForm: React.FC = () => {
             <Col xs={24} sm={12} md={8}>
               <Form.Item
                 label="Chứng từ giao hàng"
-                required
                 validateStatus={deliveryFilesError ? "error" : undefined}
                 help={deliveryFilesError}
               >
