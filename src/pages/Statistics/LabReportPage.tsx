@@ -32,28 +32,33 @@ const LabReportPage: React.FC = () => {
     laboratoryService.getActive().then((labs) => {
       setAllLabs(labs);
       const userInfo = authService.getUserInfo();
-      const deptName = (userInfo?.departmentName ?? "").toLowerCase();
       const matchHoa = (name: string) =>
         name.toLowerCase().includes("hóa") || name.toLowerCase().includes("hoa");
-      const matchViSinh = (name: string) => name.toLowerCase().includes("vi sinh");
+      const labHoa = labs.find((l) => matchHoa(l.name));
+      const defaultAllId = labHoa?.id ?? labs[0]?.id ?? "";
 
-      let filtered: LaboratoryDto[];
-      let defaultId = "";
+      // Admin hoặc Ban Giám Đốc → thấy tất cả labs
+      const isAdmin = authService.isAdmin();
+      const deptName = (userInfo?.departmentName ?? "").toLowerCase();
+      const isDirector = deptName.includes("giám đốc") || deptName.includes("giam doc");
 
-      if (matchHoa(deptName)) {
-        filtered = labs.filter((l) => matchHoa(l.name));
-        defaultId = filtered[0]?.id ?? "";
-      } else if (matchViSinh(deptName)) {
-        filtered = labs.filter((l) => matchViSinh(l.name));
-        defaultId = filtered[0]?.id ?? "";
-      } else {
-        filtered = labs;
-        const labHoa = labs.find((l) => matchHoa(l.name));
-        defaultId = labHoa?.id ?? labs[0]?.id ?? "";
+      if (isAdmin || isDirector) {
+        setAllowedLabs(labs);
+        setSelectedLabId(defaultAllId);
+        return;
       }
 
-      setAllowedLabs(filtered);
-      setSelectedLabId(defaultId);
+      // Còn lại: match theo departmentId của lab
+      const userDeptId = userInfo?.departmentId;
+      const userLab = userDeptId ? labs.find((l) => l.departmentId === userDeptId) : null;
+
+      if (userLab) {
+        setAllowedLabs([userLab]);
+        setSelectedLabId(userLab.id);
+      } else {
+        setAllowedLabs(labs);
+        setSelectedLabId(defaultAllId);
+      }
     }).catch(() => {
       message.error("Không thể tải danh sách lab");
     });
