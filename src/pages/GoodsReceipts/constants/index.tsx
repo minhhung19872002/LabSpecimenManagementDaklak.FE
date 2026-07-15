@@ -9,8 +9,6 @@ import {
   OrderStatusColors,
   ReceiptTypeLabels,
   ReceiptTypeColors,
-  PaymentStatusLabels,
-  PaymentStatusColors,
 } from "../../../services/goodsReceiptService";
 import dayjs from "dayjs";
 
@@ -23,19 +21,11 @@ export interface ColumnConfig {
 export const ALL_COLUMNS: ColumnConfig[] = [
   { key: "code", title: "ID đặt hàng", defaultVisible: true },
   { key: "receiptType", title: "Loại phiếu", defaultVisible: true },
-  { key: "supplierAddress", title: "Địa chỉ NCC", defaultVisible: true },
-  { key: "documentDate", title: "Ngày cấp chứng từ", defaultVisible: true },
+  { key: "expectedDeliveryDate", title: "Ngày cần hàng", defaultVisible: true },
   { key: "orderStatus", title: "Trạng thái", defaultVisible: true },
-  { key: "paymentStatus", title: "Trạng thái thanh toán", defaultVisible: true },
-  { key: "totalAmountAfterVat", title: "Tổng tiền sau VAT", defaultVisible: true },
   { key: "creatorName", title: "Người tạo", defaultVisible: true },
   { key: "notes", title: "Ghi chú", defaultVisible: true },
 ];
-
-const formatCurrency = (value?: number) => {
-  if (value == null) return "-";
-  return value.toLocaleString("vi-VN") + " VNĐ";
-};
 
 export const getGoodsReceiptColumns = (
   visibleKeys: Set<string>,
@@ -82,23 +72,12 @@ export const getGoodsReceiptColumns = (
     });
   }
 
-  if (visibleKeys.has("supplierAddress")) {
+  if (visibleKeys.has("expectedDeliveryDate")) {
     columns.push({
-      title: "Địa chỉ NCC",
-      dataIndex: "supplierAddress",
-      key: "supplierAddress",
-      width: 220,
-      ellipsis: true,
-      sorter: true,
-    });
-  }
-
-  if (visibleKeys.has("documentDate")) {
-    columns.push({
-      title: "Ngày cấp chứng từ",
-      dataIndex: "documentDate",
-      key: "documentDate",
-      width: 150,
+      title: "Ngày cần hàng",
+      dataIndex: "expectedDeliveryDate",
+      key: "expectedDeliveryDate",
+      width: 140,
       sorter: true,
       render: (v: string) => (v ? dayjs(v).format("DD/MM/YYYY") : "-"),
     });
@@ -113,34 +92,11 @@ export const getGoodsReceiptColumns = (
       align: "center" as const,
       render: (v: number) => (
         <Tag color={OrderStatusColors[v]} style={{ whiteSpace: "pre-line" }}>
-          {v === GoodsReceiptOrderStatus.WaitingReceipt ? "Chờ nhận\n& Nghiệm thu" : OrderStatusLabels[v]}
+          {v === GoodsReceiptOrderStatus.WaitingReceipt
+            ? "Chờ nhận\n& Nghiệm thu"
+            : OrderStatusLabels[v]}
         </Tag>
       ),
-    });
-  }
-
-  if (visibleKeys.has("paymentStatus")) {
-    columns.push({
-      title: "Trạng thái thanh toán",
-      dataIndex: "paymentStatus",
-      key: "paymentStatus",
-      width: 160,
-      align: "center" as const,
-      render: (v: number) => (
-        <Tag color={PaymentStatusColors[v]}>{PaymentStatusLabels[v]}</Tag>
-      ),
-    });
-  }
-
-  if (visibleKeys.has("totalAmountAfterVat")) {
-    columns.push({
-      title: "Tổng tiền sau VAT",
-      dataIndex: "totalAmountAfterVat",
-      key: "totalAmountAfterVat",
-      width: 170,
-      align: "right" as const,
-      sorter: true,
-      render: (v: number) => formatCurrency(v),
     });
   }
 
@@ -181,16 +137,19 @@ export const getGoodsReceiptColumns = (
             onClick={() => handleView(record)}
           />
         </Tooltip>
-        {canEdit && record.warehouseStatus === GoodsReceiptWarehouseStatus.NotImported && record.orderStatus !== GoodsReceiptOrderStatus.PendingApproval && record.orderStatus !== GoodsReceiptOrderStatus.Rejected && (
-          <Tooltip title="Sửa">
-            <Button
-              type="link"
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() => handleEdit(record)}
-            />
-          </Tooltip>
-        )}
+        {canEdit &&
+          record.warehouseStatus === GoodsReceiptWarehouseStatus.NotImported &&
+          record.orderStatus !== GoodsReceiptOrderStatus.PendingApproval &&
+          record.orderStatus !== GoodsReceiptOrderStatus.Rejected && (
+            <Tooltip title="Sửa">
+              <Button
+                type="link"
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => handleEdit(record)}
+              />
+            </Tooltip>
+          )}
       </Space>
     ),
   });

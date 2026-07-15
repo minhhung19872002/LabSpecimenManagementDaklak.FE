@@ -19,19 +19,15 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   ClockCircleOutlined,
-  EyeOutlined,
 } from "@ant-design/icons";
-import { getFileIcon } from "../../utils/fileUtils";
 import { useNavigate, useParams } from "react-router-dom";
 import dayjs from "dayjs";
 import {
   goodsReceiptService,
   GoodsReceiptDto,
   GoodsReceiptItemDto,
-  GoodsReceiptPaymentDto,
   GoodsReceiptWarehouseStatus,
   GoodsReceiptOrderStatus,
-  GoodsReceiptPaymentStatus,
   GoodsReceiptType,
   WarehouseStatusLabels,
   WarehouseStatusColors,
@@ -39,7 +35,6 @@ import {
   OrderStatusColors,
   ReceiptTypeLabels,
   ReceiptTypeColors,
-  PAYMENT_METHOD_OPTIONS,
 } from "../../services/goodsReceiptService";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
@@ -49,13 +44,9 @@ import approvalProcessService, {
   ApprovalSnapshotStatus,
 } from "../../services/approvalProcessService";
 import { getApiErrorMessage } from "../../utils/errorHandler";
-import { PaymentModal, WarehouseImportModal } from "./components";
-import { PaymentFormData } from "./schemas";
+import { WarehouseImportModal } from "./components";
 import "../../styles/ListCard.css";
 import "./GoodsReceiptDetail.css";
-
-const formatCurrency = (v: number) => v.toLocaleString("vi-VN");
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
 const DetailItem: React.FC<{ label: string; value: React.ReactNode }> = ({
   label,
@@ -75,10 +66,7 @@ const GoodsReceiptDetail: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [receipt, setReceipt] = useState<GoodsReceiptDto | null>(null);
-  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-  const [warehouseImportModalOpen, setWarehouseImportModalOpen] =
-    useState(false);
-  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [warehouseImportModalOpen, setWarehouseImportModalOpen] = useState(false);
   const [approving, setApproving] = useState(false);
   const [rejecting, setRejecting] = useState(false);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
@@ -86,15 +74,8 @@ const GoodsReceiptDetail: React.FC = () => {
   const [snapshot, setSnapshot] = useState<ApprovalSnapshotDto | null>(null);
 
   const canEdit = authService.hasPermission(PERMISSIONS.GoodsReceipts.Edit);
-  const canApprove = authService.hasPermission(
-    PERMISSIONS.GoodsReceipts.Approve,
-  );
-  const canImport = authService.hasPermission(
-    PERMISSIONS.GoodsReceipts.ImportToWarehouse,
-  );
-  const canPay = authService.hasPermission(
-    PERMISSIONS.GoodsReceipts.AddPayment,
-  );
+  const canApprove = authService.hasPermission(PERMISSIONS.GoodsReceipts.Approve);
+  const canImport = authService.hasPermission(PERMISSIONS.GoodsReceipts.ImportToWarehouse);
 
   const loadSnapshot = useCallback(async () => {
     if (!id) return;
@@ -115,14 +96,11 @@ const GoodsReceiptDetail: React.FC = () => {
     try {
       const data = await goodsReceiptService.get(id);
       setReceipt(data);
-
       if (opts?.includeSnapshot !== false) {
         await loadSnapshot();
       }
     } catch (error: any) {
-      message.error(
-        getApiErrorMessage(error, "Không thể tải phiếu nhập hàng."),
-      );
+      message.error(getApiErrorMessage(error, "Không thể tải phiếu nhập hàng."));
     } finally {
       setLoading(false);
     }
@@ -163,29 +141,6 @@ const GoodsReceiptDetail: React.FC = () => {
       message.error(getApiErrorMessage(error, "Không thể từ chối phiếu."));
     } finally {
       setRejecting(false);
-    }
-  };
-
-  const handlePaymentOk = async (data: PaymentFormData) => {
-    if (!id) return;
-    setPaymentLoading(true);
-    try {
-      await goodsReceiptService.addPayment(id, {
-        amount: data.amount,
-        paymentMethod: data.paymentMethod,
-        paymentDate: data.paymentDate,
-        phone: data.phone || undefined,
-        representativeName: data.representativeName || undefined,
-        notes: data.notes || undefined,
-        invoiceFiles: (data.invoiceFiles ?? []).map((f: any) => ({ fileId: f.fileId, fileName: f.fileName, fileSize: f.fileSize })),
-      });
-      message.success("Thanh toán thành công");
-      setPaymentModalOpen(false);
-      await loadData({ includeSnapshot: false });
-    } catch (error: any) {
-      message.error(getApiErrorMessage(error, "Không thể thanh toán."));
-    } finally {
-      setPaymentLoading(false);
     }
   };
 
@@ -232,41 +187,6 @@ const GoodsReceiptDetail: React.FC = () => {
       width: 100,
       align: "right" as const,
     },
-    {
-      title: "Ngày nhận",
-      key: "receivedDate",
-      width: 110,
-      render: (_: any, r: GoodsReceiptItemDto) =>
-        r.receivedDate ? dayjs(r.receivedDate).format("DD/MM/YYYY") : "-",
-    },
-    {
-      title: "Hạn sử dụng",
-      key: "expiryDate",
-      width: 110,
-      render: (_: any, r: GoodsReceiptItemDto) =>
-        r.expiryDate ? dayjs(r.expiryDate).format("DD/MM/YYYY") : "-",
-    },
-    {
-      title: "Kho bảo quản",
-      key: "warehouseName",
-      width: 150,
-      render: (_: any, r: GoodsReceiptItemDto) => r.warehouseName || "-",
-    },
-    {
-      title: "Đơn giá dự kiến",
-      key: "unitPrice",
-      width: 130,
-      align: "right" as const,
-      render: (_: any, r: GoodsReceiptItemDto) => formatCurrency(r.unitPrice),
-    },
-    {
-      title: "Thành tiền dự kiến",
-      key: "amountBeforeVat",
-      width: 150,
-      align: "right" as const,
-      render: (_: any, r: GoodsReceiptItemDto) =>
-        formatCurrency(r.amountBeforeVat),
-    },
   ];
 
   const equipmentColumns = [
@@ -283,9 +203,8 @@ const GoodsReceiptDetail: React.FC = () => {
       key: "serialNumber",
       width: 160,
       onCell: () => ({ style: { verticalAlign: "middle" } }),
-      render: (v: string) => v
-        ? <span dangerouslySetInnerHTML={{ __html: v.replace(/<\/?p>/g, "") }} />
-        : "-",
+      render: (v: string) =>
+        v ? <span dangerouslySetInnerHTML={{ __html: v.replace(/<\/?p>/g, "") }} /> : "-",
     },
     {
       title: "Tên thiết bị",
@@ -293,9 +212,8 @@ const GoodsReceiptDetail: React.FC = () => {
       key: "productName",
       width: 200,
       onCell: () => ({ style: { verticalAlign: "middle" } }),
-      render: (v: string) => v
-        ? <span dangerouslySetInnerHTML={{ __html: v.replace(/<\/?p>/g, "") }} />
-        : "-",
+      render: (v: string) =>
+        v ? <span dangerouslySetInnerHTML={{ __html: v.replace(/<\/?p>/g, "") }} /> : "-",
     },
     {
       title: "Model",
@@ -305,119 +223,11 @@ const GoodsReceiptDetail: React.FC = () => {
       render: (v: string) => v || "-",
     },
     {
-      title: "Nhà cung cấp",
-      dataIndex: "supplierName",
-      key: "supplierName",
-      width: 180,
-      render: (v: string) => v || "-",
-    },
-    {
       title: "Hãng sản xuất",
       dataIndex: "manufacturer",
       key: "manufacturer",
       width: 150,
       render: (v: string) => v || "-",
-    },
-    {
-      title: "Đơn giá dự kiến",
-      key: "amountBeforeVat",
-      width: 150,
-      align: "right" as const,
-      render: (_: any, r: GoodsReceiptItemDto) =>
-        formatCurrency(r.amountBeforeVat),
-    },
-  ];
-
-  const paymentColumns = [
-    {
-      title: "Lần",
-      dataIndex: "paymentNumber",
-      key: "paymentNumber",
-      width: 60,
-      align: "center" as const,
-    },
-    {
-      title: "Ngày thanh toán",
-      key: "paymentDate",
-      width: 130,
-      render: (_: any, r: GoodsReceiptPaymentDto) =>
-        dayjs(r.paymentDate).format("DD/MM/YYYY"),
-    },
-    {
-      title: "Phương thức",
-      key: "paymentMethod",
-      width: 130,
-      render: (_: any, r: GoodsReceiptPaymentDto) =>
-        PAYMENT_METHOD_OPTIONS.find((o) => o.value === r.paymentMethod)
-          ?.label || "-",
-    },
-    {
-      title: "Số tiền",
-      key: "amount",
-      width: 150,
-      align: "right" as const,
-      render: (_: any, r: GoodsReceiptPaymentDto) =>
-        `${formatCurrency(r.amount)} VNĐ`,
-    },
-    {
-      title: "Còn lại trước thanh toán",
-      key: "remainingBeforePayment",
-      width: 180,
-      align: "right" as const,
-      render: (_: any, r: GoodsReceiptPaymentDto) =>
-        `${formatCurrency(r.remainingBeforePayment)} VNĐ`,
-    },
-    {
-      title: "Người đại diện",
-      dataIndex: "representativeName",
-      key: "representativeName",
-      width: 140,
-      render: (v: string) => v || "-",
-    },
-    {
-      title: "Điện thoại",
-      dataIndex: "phone",
-      key: "phone",
-      width: 120,
-      render: (v: string) => v || "-",
-    },
-    {
-      title: "Ghi chú",
-      dataIndex: "notes",
-      key: "notes",
-      render: (v: string) => v || "-",
-    },
-    {
-      title: "Hóa đơn đính kèm",
-      key: "invoiceFiles",
-      width: 200,
-      render: (_: any, r: GoodsReceiptPaymentDto) => {
-        if (!r.invoiceFiles?.length) return "-";
-        return (
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {r.invoiceFiles.map((f) => (
-              <div
-                key={f.fileId}
-                style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}
-                onClick={() => window.open(`${BASE_URL}/api/v1/files/${f.fileId}`, "_blank")}
-              >
-                {getFileIcon(f.fileName, 14)}
-                <span style={{ fontSize: 12, color: "#1677ff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 140 }}>
-                  {f.fileName}
-                </span>
-                <EyeOutlined style={{ fontSize: 11, color: "#8c8c8c", flexShrink: 0 }} />
-              </div>
-            ))}
-          </div>
-        );
-      },
-    },
-    {
-      title: "Thời gian tạo",
-      key: "creationTime",
-      width: 150,
-      render: (_: any, r: GoodsReceiptPaymentDto) =>
-        dayjs(r.creationTime).format("HH:mm DD/MM/YYYY"),
     },
   ];
 
@@ -443,12 +253,10 @@ const GoodsReceiptDetail: React.FC = () => {
     );
   }
 
-  const remaining = receipt.totalAmountAfterVat - receipt.totalPaid;
   const isApproved =
     receipt.orderStatus === GoodsReceiptOrderStatus.Ordering ||
     receipt.orderStatus === GoodsReceiptOrderStatus.WaitingReceipt;
-  const isImported =
-    receipt.warehouseStatus === GoodsReceiptWarehouseStatus.Imported;
+  const isImported = receipt.warehouseStatus === GoodsReceiptWarehouseStatus.Imported;
 
   const currentUserId = authService.getUserInfo()?.id;
   const currentStepApproverId = snapshot?.steps?.find(
@@ -468,60 +276,44 @@ const GoodsReceiptDetail: React.FC = () => {
             <Button type="primary" onClick={handleApprove} loading={approving}>
               Duyệt
             </Button>
-            <Button
-              type="default"
-              danger
-              onClick={handleRejectClick}
-              loading={rejecting}
-            >
+            <Button type="default" danger onClick={handleRejectClick} loading={rejecting}>
               Từ chối
             </Button>
           </>
-        )}
-      {canPay &&
-        receipt.orderStatus !== GoodsReceiptOrderStatus.PendingApproval &&
-        receipt.orderStatus !== GoodsReceiptOrderStatus.Rejected &&
-        receipt.paymentStatus !== GoodsReceiptPaymentStatus.Paid &&
-        (remaining > 0 || receipt.totalAmountAfterVat === 0) && (
-          <Button onClick={() => setPaymentModalOpen(true)}>Thanh toán</Button>
         )}
       {canImport &&
         isApproved &&
         !isImported &&
         receipt.receiptType === GoodsReceiptType.Equipment && (
-          <Button
-            type="primary"
-            onClick={() => setWarehouseImportModalOpen(true)}
-          >
+          <Button type="primary" onClick={() => setWarehouseImportModalOpen(true)}>
             Nhập kho
           </Button>
         )}
-      {canEdit && receipt.warehouseStatus === GoodsReceiptWarehouseStatus.NotImported && receipt.orderStatus !== GoodsReceiptOrderStatus.PendingApproval && receipt.orderStatus !== GoodsReceiptOrderStatus.Rejected && (
-        <Button
-          type="primary"
-          icon={<EditOutlined />}
-          onClick={() =>
-            navigate(
-              receipt.receiptType === GoodsReceiptType.Equipment
-                ? `/goods-receipts/edit-equipment/${id}`
-                : `/goods-receipts/edit/${id}`,
-            )
-          }
-        >
-          Chỉnh sửa
-        </Button>
-      )}
+      {canEdit &&
+        receipt.warehouseStatus === GoodsReceiptWarehouseStatus.NotImported &&
+        receipt.orderStatus !== GoodsReceiptOrderStatus.PendingApproval &&
+        receipt.orderStatus !== GoodsReceiptOrderStatus.Rejected && (
+          <Button
+            type="primary"
+            icon={<EditOutlined />}
+            onClick={() =>
+              navigate(
+                receipt.receiptType === GoodsReceiptType.Equipment
+                  ? `/goods-receipts/edit-equipment/${id}`
+                  : `/goods-receipts/edit/${id}`,
+              )
+            }
+          >
+            Chỉnh sửa
+          </Button>
+        )}
     </Space>
   );
 
   return (
     <div className="goods-receipt-detail">
-      {/* Back button */}
       <div className="back-button-bar">
-        <Button
-          icon={<ArrowLeftOutlined />}
-          onClick={() => navigate("/goods-receipts")}
-        >
+        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate("/goods-receipts")}>
           Quay lại
         </Button>
       </div>
@@ -542,53 +334,15 @@ const GoodsReceiptDetail: React.FC = () => {
               <Tag color={WarehouseStatusColors[receipt.warehouseStatus]}>
                 {WarehouseStatusLabels[receipt.warehouseStatus]}
               </Tag>
-              {/* Ẩn theo yêu cầu của BA. Có thể hiển thị tùy theo nhu cầu */}
-              {/* <Tag color={PaymentStatusColors[receipt.paymentStatus]}>
-                {PaymentStatusLabels[receipt.paymentStatus]}
-              </Tag> */}
             </Space>
             {renderActionButtons()}
           </div>
         }
       >
-        {/* Info Sections */}
         <div className="detail-sections-row">
-          <div className="detail-section">
-            <div className="detail-section-title">Thông tin nhà cung cấp</div>
-            <Row gutter={16}>
-              <Col xs={24} sm={12}>
-                <DetailItem label="Nhà cung cấp" value={receipt.supplierName} />
-              </Col>
-              <Col xs={24} sm={12}>
-                <DetailItem label="Địa chỉ NCC" value={receipt.supplierAddress} />
-              </Col>
-              <Col xs={24} sm={12}>
-                <DetailItem label="SĐT NCC" value={receipt.supplierPhone} />
-              </Col>
-              <Col xs={24} sm={12}>
-                <DetailItem label="Tên đại diện NCC" value={receipt.supplierRepresentativeName} />
-              </Col>
-              <Col xs={24} sm={12}>
-                <DetailItem label="SĐT đại diện NCC" value={receipt.supplierRepresentativePhone} />
-              </Col>
-            </Row>
-          </div>
-
           <div className="detail-section">
             <div className="detail-section-title">Thông tin phiếu</div>
             <Row gutter={16}>
-              <Col xs={24} sm={12}>
-                <DetailItem
-                  label="Nhân viên mua hàng"
-                  value={receipt.purchaserFullName || receipt.purchaserName}
-                />
-              </Col>
-              <Col xs={24} sm={12}>
-                <DetailItem
-                  label="Thời gian tạo phiếu"
-                  value={dayjs(receipt.creationTime).format("HH:mm DD/MM/YYYY")}
-                />
-              </Col>
               <Col xs={24} sm={12}>
                 <DetailItem
                   label="Ngày cần hàng dự kiến"
@@ -599,24 +353,23 @@ const GoodsReceiptDetail: React.FC = () => {
                   }
                 />
               </Col>
-            </Row>
-            <Row gutter={16}>
-              <Col xs={24}>
+              <Col xs={24} sm={12}>
                 <DetailItem label="Ghi chú" value={receipt.notes} />
               </Col>
             </Row>
           </div>
         </div>
 
-        {/* Approval Timeline */}
         {snapshot && snapshot.steps.length > 0 && (
           <div className="detail-section" style={{ marginBottom: 16 }}>
             <div className="detail-section-title">Tiến trình phê duyệt</div>
             <Steps
               size="small"
-              current={snapshot.status === ApprovalSnapshotStatus.Approved
-                ? snapshot.totalSteps
-                : snapshot.currentStepOrder}
+              current={
+                snapshot.status === ApprovalSnapshotStatus.Approved
+                  ? snapshot.totalSteps
+                  : snapshot.currentStepOrder
+              }
               status={snapshot.status === ApprovalSnapshotStatus.Rejected ? "error" : "process"}
               items={snapshot.steps
                 .sort((a, b) => a.stepOrder - b.stepOrder)
@@ -629,17 +382,20 @@ const GoodsReceiptDetail: React.FC = () => {
                   } else if (step.status === ApprovalStepStatus.Rejected) {
                     status = "error";
                     icon = <CloseCircleOutlined />;
-                  } else if (step.stepOrder === snapshot.currentStepOrder &&
-                    snapshot.status === ApprovalSnapshotStatus.Pending) {
+                  } else if (
+                    step.stepOrder === snapshot.currentStepOrder &&
+                    snapshot.status === ApprovalSnapshotStatus.Pending
+                  ) {
                     status = "process";
                     icon = <ClockCircleOutlined />;
                   }
 
-                  const desc = step.status === ApprovalStepStatus.Approved
-                    ? `Đã duyệt${step.actionDate ? ` · ${dayjs(step.actionDate).format("HH:mm DD/MM/YYYY")}` : ""}`
-                    : step.status === ApprovalStepStatus.Rejected
-                      ? `Từ chối${step.notes ? ` — ${step.notes}` : ""}${step.actionDate ? ` · ${dayjs(step.actionDate).format("HH:mm DD/MM/YYYY")}` : ""}`
-                      : `Chờ duyệt`;
+                  const desc =
+                    step.status === ApprovalStepStatus.Approved
+                      ? `Đã duyệt${step.actionDate ? ` · ${dayjs(step.actionDate).format("HH:mm DD/MM/YYYY")}` : ""}`
+                      : step.status === ApprovalStepStatus.Rejected
+                        ? `Từ chối${step.notes ? ` — ${step.notes}` : ""}${step.actionDate ? ` · ${dayjs(step.actionDate).format("HH:mm DD/MM/YYYY")}` : ""}`
+                        : "Chờ duyệt";
 
                   return {
                     title: `Cấp ${step.stepOrder + 1}: ${step.approverName}`,
@@ -652,7 +408,6 @@ const GoodsReceiptDetail: React.FC = () => {
           </div>
         )}
 
-        {/* Line Items + Payment Summary */}
         <Card
           className="list-card"
           title={
@@ -669,7 +424,7 @@ const GoodsReceiptDetail: React.FC = () => {
               dataSource={equipmentItems}
               rowKey="id"
               pagination={false}
-              scroll={{ x: 1200 }}
+              scroll={{ x: 700 }}
               size="small"
               bordered
               rootClassName="equipment-receipt-table"
@@ -681,65 +436,15 @@ const GoodsReceiptDetail: React.FC = () => {
               dataSource={productItems}
               rowKey="id"
               pagination={false}
-              scroll={{ x: 1800 }}
+              scroll={{ x: 730 }}
               size="small"
               bordered
               locale={{ emptyText: "Không có hàng hóa" }}
             />
           )}
-          <div
-            style={{ display: "flex", justifyContent: "flex-end", padding: 16 }}
-          >
-            <div className="payment-summary">
-              <div className="payment-summary-row">
-                <span>Tổng dự toán:</span>
-                <strong style={{ color: "#1677ff", fontSize: 16 }}>
-                  {formatCurrency(receipt.totalAmountBeforeVat)} VNĐ
-                </strong>
-              </div>
-              <div className="payment-summary-row">
-                <span>Đã thanh toán:</span>
-                <span>{formatCurrency(receipt.totalPaid)} VNĐ</span>
-              </div>
-              <div
-                className="payment-summary-row"
-                style={{ color: remaining > 0 ? "#ff4d4f" : "#52c41a" }}
-              >
-                <span>Số tiền còn lại:</span>
-                <strong>{formatCurrency(Math.max(0, remaining))} VNĐ</strong>
-              </div>
-            </div>
-          </div>
         </Card>
-
-        {/* Payment History */}
-        {receipt.payments && receipt.payments.length > 0 && (
-          <Card
-            className="list-card"
-            title="Lịch sử thanh toán"
-            styles={{ body: { padding: 0 } }}
-          >
-            <Table
-              columns={paymentColumns}
-              dataSource={receipt.payments}
-              rowKey="id"
-              pagination={false}
-              scroll={{ x: 1200 }}
-              size="small"
-              bordered
-            />
-          </Card>
-        )}
       </Card>
 
-      <PaymentModal
-        open={paymentModalOpen}
-        loading={paymentLoading}
-        totalAmount={receipt.totalAmountAfterVat}
-        totalPaid={receipt.totalPaid}
-        onOk={handlePaymentOk}
-        onCancel={() => setPaymentModalOpen(false)}
-      />
       <WarehouseImportModal
         open={warehouseImportModalOpen}
         onClose={() => setWarehouseImportModalOpen(false)}
@@ -761,7 +466,9 @@ const GoodsReceiptDetail: React.FC = () => {
         destroyOnClose
         centered
       >
-        <p>Bạn có chắc chắn muốn từ chối phiếu <strong>{receipt.code}</strong>?</p>
+        <p>
+          Bạn có chắc chắn muốn từ chối phiếu <strong>{receipt.code}</strong>?
+        </p>
         <Input.TextArea
           rows={3}
           placeholder="Nhập lý do từ chối (không bắt buộc)"

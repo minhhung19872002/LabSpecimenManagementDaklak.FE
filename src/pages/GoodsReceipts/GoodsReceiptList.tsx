@@ -13,6 +13,7 @@ import {
   OrderStatusLabels,
   ReceiptTypeLabels,
 } from "../../services/goodsReceiptService";
+import dayjs from "dayjs";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
 import Icon from "../../components/common/Icon";
@@ -139,12 +140,10 @@ const GoodsReceiptList: React.FC = () => {
         STT: idx + 1,
         "ID đặt hàng": item.code,
         "Loại phiếu": ReceiptTypeLabels[item.receiptType] || "",
-        "Địa chỉ NCC": item.supplierAddress || "",
-        "Ngày cấp chứng từ": item.documentDate
-          ? new Date(item.documentDate).toLocaleDateString("vi-VN")
+        "Ngày cần hàng": item.expectedDeliveryDate
+          ? dayjs(item.expectedDeliveryDate).format("DD/MM/YYYY")
           : "",
         "Trạng thái": OrderStatusLabels[item.orderStatus] || "",
-        "Tổng tiền sau VAT": item.totalAmountAfterVat,
         "Người tạo": item.creatorName || "",
         "Ghi chú": item.notes || "",
       }));
