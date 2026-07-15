@@ -93,7 +93,6 @@ const GoodsReceiptForm: React.FC = () => {
   const [productTypeFilter, setProductTypeFilter] = useState<string>("all");
   const [manufacturers, setManufacturers] = useState<ManufacturerDto[]>([]);
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
-  const [newManufacturerInput, setNewManufacturerInput] = useState("");
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
   const [employees, setEmployees] = useState<EmployeeDto[]>([]);
 
@@ -336,23 +335,6 @@ const GoodsReceiptForm: React.FC = () => {
     label: m.name,
   }));
 
-  const handleAddManufacturer = (recordKey: string) => {
-    const name = newManufacturerInput.trim();
-    if (!name) return;
-    if (manufacturers.some((m) => m.name.toLowerCase() === name.toLowerCase())) {
-      const existing = manufacturers.find((m) => m.name.toLowerCase() === name.toLowerCase())!;
-      handleLineChange(recordKey, "manufacturerId", existing.id);
-      handleLineChange(recordKey, "manufacturer", existing.name);
-      setNewManufacturerInput("");
-      return;
-    }
-    const tempId = `temp-${Date.now()}`;
-    setManufacturers((prev) => [...prev, { id: tempId, name, isActive: true } as ManufacturerDto]);
-    handleLineChange(recordKey, "manufacturer", name);
-    handleLineChange(recordKey, "manufacturerId", tempId);
-    setNewManufacturerInput("");
-  };
-
   const handleRemoveLine = (key: string) => {
     setLineItems((prev) => prev.filter((item) => item.key !== key));
   };
@@ -451,7 +433,7 @@ const GoodsReceiptForm: React.FC = () => {
         isEquipment: false,
         manufacturer: item.manufacturer || undefined,
         manufacturerName: item.manufacturer || undefined,
-        manufacturerId: item.manufacturerId?.startsWith("temp-") ? undefined : item.manufacturerId || undefined,
+        manufacturerId: item.manufacturerId || undefined,
         receivedDate: item.receivedDate || undefined,
         expiryDate: item.expiryDate || undefined,
         warehouseId: item.warehouseId || undefined,
@@ -611,29 +593,6 @@ const GoodsReceiptForm: React.FC = () => {
             }}
             style={{ width: "100%" }}
             size="small"
-            dropdownRender={(menu) => (
-              <>
-                {menu}
-                <Divider style={{ margin: "4px 0" }} />
-                <div style={{ padding: "0 4px 4px" }}>
-                  <div style={{ display: "flex", gap: 4 }}>
-                    <Input
-                      size="small"
-                      placeholder="Thêm hãng SX mới"
-                      value={newManufacturerInput}
-                      onChange={(e) => setNewManufacturerInput(e.target.value)}
-                      onPressEnter={() => handleAddManufacturer(record.key)}
-                    />
-                    <Button
-                      size="small"
-                      type="primary"
-                      icon={<PlusOutlined />}
-                      onClick={() => handleAddManufacturer(record.key)}
-                    />
-                  </div>
-                </div>
-              </>
-            )}
           />
         );
       },
