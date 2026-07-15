@@ -145,7 +145,7 @@ const StandardFields: React.FC<BaseFieldsProps> = ({ consumableUnitOptions, iden
           </Form.Item>
         </Col>
         <Col xs={24} sm={8}>
-          <Form.Item label="Nồng độ/Bản sao/Hoạt tính">
+          <Form.Item label="Cấu hình kỹ thuật">
             <Controller
               name="formattedConcentration"
               control={control}

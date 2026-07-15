@@ -116,12 +116,19 @@ const ChemicalFields: React.FC<BaseFieldsProps> = ({ consumableUnitOptions, iden
           </Form.Item>
         </Col>
         <Col xs={24} sm={8}>
-          <Form.Item label="Nồng độ/Hàm lượng">
+          <Form.Item label="Cấu hình kỹ thuật">
             <Controller
-              name="concentration"
+              name="formattedConcentration"
               control={control}
               render={({ field }) => (
-                <Input {...field} value={field.value || ""} placeholder="VD: ≥ 99.5%" />
+                <RichTextEditor
+                  value={field.value || ""}
+                  onChange={(html, plainText) => {
+                    field.onChange(html);
+                    setValue("concentration", plainText);
+                  }}
+                  placeholder="VD: ≥ 99.5%"
+                />
               )}
             />
           </Form.Item>

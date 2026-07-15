@@ -122,7 +122,7 @@ const SolventFields: React.FC<BaseFieldsProps> = ({ consumableUnitOptions, ident
           </Form.Item>
         </Col>
         <Col xs={24} sm={8}>
-          <Form.Item label="Độ tinh khiết / Hàm lượng">
+          <Form.Item label="Cấu hình kỹ thuật">
             <Controller
               name="formattedConcentration"
               control={control}

@@ -122,7 +122,7 @@ const BiologicalFields: React.FC<BaseFieldsProps> = ({ consumableUnitOptions, id
           </Form.Item>
         </Col>
         <Col xs={24} sm={8}>
-          <Form.Item label="Nồng độ/Bản sao/Hoạt tính">
+          <Form.Item label="Cấu hình kỹ thuật">
             <Controller
               name="formattedConcentration"
               control={control}
