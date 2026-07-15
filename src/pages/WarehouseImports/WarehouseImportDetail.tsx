@@ -13,6 +13,10 @@ import {
   WarehouseImportLineStatusLabels,
   WarehouseImportLineStatusColors,
 } from "../../services/warehouseImportReceiptService";
+import { goodsReceiptService, GoodsReceiptDto } from "../../services/goodsReceiptService";
+import { authService } from "../../services/authService";
+import { PERMISSIONS } from "../../constants/permissionMapping";
+import { WarehouseImportModal } from "../GoodsReceipts/components";
 import "../../styles/ListCard.css";
 import "./WarehouseImportDetail.css";
 
@@ -24,6 +28,9 @@ const WarehouseImportDetail: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [receipt, setReceipt] = useState<WarehouseImportReceiptDto | null>(null);
+  const [goodsReceipt, setGoodsReceipt] = useState<GoodsReceiptDto | null>(null);
+  const [printBarcodeOpen, setPrintBarcodeOpen] = useState(false);
+  const canPrintBarcode = authService.hasPermission(PERMISSIONS.WarehouseImportReceipts.Confirm);
 
   const loadData = useCallback(async () => {
     if (!id) return;
@@ -31,6 +38,11 @@ const WarehouseImportDetail: React.FC = () => {
       setLoading(true);
       const data = await warehouseImportReceiptService.get(id);
       setReceipt(data);
+      if (data.goodsReceiptId) {
+        goodsReceiptService.get(data.goodsReceiptId)
+          .then(setGoodsReceipt)
+          .catch(() => {});
+      }
     } catch {
       message.error("Không thể tải thông tin phiếu nhập kho");
     } finally {
@@ -168,6 +180,11 @@ const WarehouseImportDetail: React.FC = () => {
               <Tag color={statusColor}>{statusLabel}</Tag>
             </Space>
             <Space wrap>
+              {canPrintBarcode && goodsReceipt && (
+                <Button onClick={() => setPrintBarcodeOpen(true)}>
+                  In mã vật tư
+                </Button>
+              )}
               {!isCompleted && (
                 <Button
                   icon={<EditOutlined />}
@@ -269,6 +286,15 @@ const WarehouseImportDetail: React.FC = () => {
           <Text>{receipt.notes || "-"}</Text>
         </div>
       </Card>
+    {goodsReceipt && (
+      <WarehouseImportModal
+        open={printBarcodeOpen}
+        onClose={() => setPrintBarcodeOpen(false)}
+        receipt={goodsReceipt}
+        onImportSuccess={() => setPrintBarcodeOpen(false)}
+        printOnly
+      />
+    )}
     </div>
   );
 };

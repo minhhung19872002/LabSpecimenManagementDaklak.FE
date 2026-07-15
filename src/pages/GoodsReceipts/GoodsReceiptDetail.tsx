@@ -78,7 +78,6 @@ const GoodsReceiptDetail: React.FC = () => {
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [warehouseImportModalOpen, setWarehouseImportModalOpen] =
     useState(false);
-  const [printBarcodeModalOpen, setPrintBarcodeModalOpen] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [approving, setApproving] = useState(false);
   const [rejecting, setRejecting] = useState(false);
@@ -497,11 +496,6 @@ const GoodsReceiptDetail: React.FC = () => {
             Nhập kho
           </Button>
         )}
-      {isImported && (
-        <Button onClick={() => setPrintBarcodeModalOpen(true)}>
-          In mã vật tư
-        </Button>
-      )}
       {canEdit && receipt.warehouseStatus === GoodsReceiptWarehouseStatus.NotImported && receipt.orderStatus !== GoodsReceiptOrderStatus.PendingApproval && receipt.orderStatus !== GoodsReceiptOrderStatus.Rejected && (
         <Button
           type="primary"
@@ -754,13 +748,6 @@ const GoodsReceiptDetail: React.FC = () => {
           setWarehouseImportModalOpen(false);
           loadData({ includeSnapshot: false });
         }}
-      />
-      <WarehouseImportModal
-        open={printBarcodeModalOpen}
-        onClose={() => setPrintBarcodeModalOpen(false)}
-        receipt={receipt}
-        onImportSuccess={() => setPrintBarcodeModalOpen(false)}
-        printOnly
       />
       <Modal
         title="Từ chối phiếu đặt hàng"

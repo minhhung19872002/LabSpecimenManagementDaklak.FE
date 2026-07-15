@@ -8,7 +8,7 @@ import {
   GoodsReceiptItemDto,
   goodsReceiptService,
 } from "../../../services/goodsReceiptService";
-import { productService, ProductDto, ProductType } from "../../../services/productService";
+import { productService, ProductDto } from "../../../services/productService";
 import { getApiErrorMessage } from "../../../utils/errorHandler";
 
 interface WarehouseImportModalProps {
@@ -145,7 +145,7 @@ const WarehouseImportModal: React.FC<WarehouseImportModalProps> = ({
         items.push({ item, isEquipment: true, barcodeCount: 1, barcodeContents: [content] });
       }
 
-      // Chemical items — barcode per lot/quantity
+      // Non-equipment items — barcode per lot/quantity, all product types
       const nonEquipmentItems = receipt.items.filter((i) => !i.isEquipment);
       if (nonEquipmentItems.length > 0) {
         const uniqueProductIds = [...new Set(nonEquipmentItems.map((i) => i.productId))];
@@ -157,9 +157,9 @@ const WarehouseImportModal: React.FC<WarehouseImportModalProps> = ({
 
         for (const item of nonEquipmentItems) {
           const product = productMap.get(item.productId);
-          if (!product || product.productType !== ProductType.Chemical) continue;
-
-          const count = calculateBarcodeCount(item, product);
+          const count = product
+            ? calculateBarcodeCount(item, product)
+            : Math.max(1, Math.floor(item.quantity));
           const contents: string[] = [];
           for (let i = 1; i <= count; i++) {
             contents.push(generateBarcodeContent(item, i, receipt.documentDate));
