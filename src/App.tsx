@@ -99,7 +99,7 @@ const StatisticsPage = Loadable(
   lazy(() => import("./pages/Statistics/StatisticsPage")),
 );
 const LabReportPage = Loadable(
-  lazy(() => import("./pages/Statistics/LabReportPage"))
+  lazy(() => import("./pages/Statistics/LabReportPage")),
 );
 
 // NCR
@@ -423,7 +423,10 @@ function App() {
           <Route path="prepared-solutions" element={<PreparedSolutionList />} />
 
           {/* Supplementary Tasks - Công việc bổ sung */}
-          <Route path="supplementary-tasks" element={<SupplementaryTaskPage />} />
+          <Route
+            path="supplementary-tasks"
+            element={<SupplementaryTaskPage />}
+          />
           <Route path="products/:id/sources" element={<ProductSourceList />} />
           <Route
             path="products/:productId/sources/:supplierId/receipts"
