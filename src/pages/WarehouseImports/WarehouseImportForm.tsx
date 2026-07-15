@@ -4,6 +4,7 @@ import {
   Table, message, Spin, Divider, Tag, Modal, Badge, Popover,
 } from "antd";
 import { BranchesOutlined, WarningOutlined, EditOutlined, FileTextOutlined } from "@ant-design/icons";
+import { DeliveryDocumentFileDto } from "../../services/warehouseImportReceiptService";
 import { useNavigate, useParams } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -27,8 +28,11 @@ import { authService } from "../../services/authService";
 import { clearableSelectProps } from "../../utils/formHelpers";
 import { getApiErrorMessage } from "../../utils/errorHandler";
 import SingleFileUpload, { SingleFileValue } from "./components/SingleFileUpload";
+import MultiFileUpload from "./components/MultiFileUpload";
 import "../../styles/ListCard.css";
 import "./WarehouseImportForm.css";
+
+const MAX_DELIVERY_FILES = 5;
 
 interface LineItem {
   key: string;
@@ -65,8 +69,8 @@ const WarehouseImportForm: React.FC = () => {
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [previewCode, setPreviewCode] = useState<string>("");
-  const [deliveryDocument, setDeliveryDocument] = useState<SingleFileValue | undefined>();
-  const [deliveryDocumentError, setDeliveryDocumentError] = useState<string>();
+  const [deliveryFiles, setDeliveryFiles] = useState<DeliveryDocumentFileDto[]>([]);
+  const [deliveryFilesError, setDeliveryFilesError] = useState<string>();
   const [itemsLoading, setItemsLoading] = useState(false);
   const [lineItemErrors, setLineItemErrors] = useState<
     Record<string, { actualReceivedQuantity?: string; lotNumber?: string; lotExpiryDate?: string; qualityDocument?: string }>
@@ -178,10 +182,12 @@ const WarehouseImportForm: React.FC = () => {
           setImportableItems(items);
           setLineItems(buildLineItems(items, data.items));
           warehouseImportReceiptService.getDefectiveHistory(data.goodsReceiptId).then(setDefectiveHistory).catch(() => {});
-          setDeliveryDocument(
-            data.deliveryDocumentFileId
-              ? { fileId: data.deliveryDocumentFileId, fileName: data.deliveryDocumentFileName || "", fileSize: data.deliveryDocumentFileSize }
-              : undefined
+          setDeliveryFiles(
+            data.deliveryDocumentFiles && data.deliveryDocumentFiles.length > 0
+              ? data.deliveryDocumentFiles
+              : data.deliveryDocumentFileId
+                ? [{ fileId: data.deliveryDocumentFileId, fileName: data.deliveryDocumentFileName || "", fileSize: data.deliveryDocumentFileSize }]
+                : []
           );
           reset({
             goodsReceiptId: data.goodsReceiptId,
@@ -316,12 +322,13 @@ const WarehouseImportForm: React.FC = () => {
     });
   };
 
+
   const validateHeader = (): boolean => {
-    if (!deliveryDocument) {
-      setDeliveryDocumentError("Chứng từ không được trống");
+    if (deliveryFiles.length === 0) {
+      setDeliveryFilesError("Chứng từ không được trống");
       return false;
     }
-    setDeliveryDocumentError(undefined);
+    setDeliveryFilesError(undefined);
     return true;
   };
 
@@ -384,9 +391,7 @@ const WarehouseImportForm: React.FC = () => {
     warehouseKeeperId: data.warehouseKeeperId || undefined,
     warehouseKeeperName: data.warehouseKeeperName || undefined,
     warehouseId: data.warehouseId || undefined,
-    deliveryDocumentFileId: deliveryDocument?.fileId,
-    deliveryDocumentFileName: deliveryDocument?.fileName,
-    deliveryDocumentFileSize: deliveryDocument?.fileSize,
+    deliveryDocumentFiles: deliveryFiles,
     notes: data.notes || undefined,
     items: lineItems
       .filter((item) => !item.isHistorical && item.actualReceivedQuantity > 0)
@@ -748,16 +753,17 @@ const WarehouseImportForm: React.FC = () => {
               <Form.Item
                 label="Chứng từ giao hàng"
                 required
-                validateStatus={deliveryDocumentError ? "error" : undefined}
-                help={deliveryDocumentError}
+                validateStatus={deliveryFilesError ? "error" : undefined}
+                help={deliveryFilesError}
               >
-                <SingleFileUpload
-                  value={deliveryDocument}
-                  onChange={(value) => {
-                    setDeliveryDocument(value);
-                    if (value) setDeliveryDocumentError(undefined);
+                <MultiFileUpload
+                  value={deliveryFiles}
+                  onChange={(files) => {
+                    setDeliveryFiles(files);
+                    if (files.length > 0) setDeliveryFilesError(undefined);
                   }}
                   disabled={isReadonly}
+                  maxFiles={MAX_DELIVERY_FILES}
                 />
               </Form.Item>
             </Col>

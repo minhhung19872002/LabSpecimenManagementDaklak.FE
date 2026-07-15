@@ -242,23 +242,24 @@ const WarehouseImportDetail: React.FC = () => {
                 <Text strong>{receipt.contactPersonName || "-"}</Text>
               </div>
             </div>
-            {receipt.deliveryDocumentFileId && (
+            {((receipt.deliveryDocumentFiles && receipt.deliveryDocumentFiles.length > 0) || receipt.deliveryDocumentFileId) && (
               <>
-                <Title level={5} style={{ marginBottom: 12, marginTop: 16 }}>Chứng từ giao hàng</Title>
-                <div className="detail-column-list">
-                  <div className="detail-item">
-                    <Text type="secondary">File đính kèm:</Text>
-                    <Button
-                      type="link"
-                      size="small"
-                      icon={<EyeOutlined />}
-                      style={{ padding: 0, height: "auto" }}
-                      onClick={() => window.open(`${baseUrl}/api/v1/files/${receipt.deliveryDocumentFileId}`, "_blank")}
-                    >
-                      {receipt.deliveryDocumentFileName}
-                    </Button>
-                  </div>
-                </div>
+                <Title level={5} style={{ marginBottom: 8, marginTop: 16 }}>Chứng từ giao hàng</Title>
+                {(receipt.deliveryDocumentFiles && receipt.deliveryDocumentFiles.length > 0
+                  ? receipt.deliveryDocumentFiles
+                  : [{ fileId: receipt.deliveryDocumentFileId!, fileName: receipt.deliveryDocumentFileName || "" }]
+                ).map((f) => (
+                  <Button
+                    key={f.fileId}
+                    type="link"
+                    size="small"
+                    icon={<EyeOutlined />}
+                    style={{ padding: 0, height: "auto", display: "block", marginBottom: 4 }}
+                    onClick={() => window.open(`${baseUrl}/api/v1/files/${f.fileId}`, "_blank")}
+                  >
+                    {f.fileName}
+                  </Button>
+                ))}
               </>
             )}
           </div>

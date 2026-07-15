@@ -81,31 +81,35 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   }, [open, remaining, reset]);
 
   const handleUploadFile = async (file: File, allFiles: File[]) => {
-    const remaining = MAX_FILES - fileList.length;
-    const idx = allFiles.indexOf(file);
-    if (idx === 0 && allFiles.length > remaining) {
-      message.warning(remaining <= 0
-        ? `Đã đạt tối đa ${MAX_FILES} file`
-        : `Chỉ có thể thêm ${remaining} file nữa`);
+    if (allFiles.indexOf(file) !== 0) return false;
+
+    const remainingSlots = MAX_FILES - fileList.length;
+    if (remainingSlots <= 0) {
+      message.warning(`Đã đạt tối đa ${MAX_FILES} file`);
+      return false;
     }
-    if (idx >= remaining) return false;
+
+    const filesToUpload = allFiles.slice(0, remainingSlots);
+    if (allFiles.length > remainingSlots) {
+      message.warning(`Chỉ có thể thêm ${remainingSlots} file nữa, đã bỏ qua ${allFiles.length - remainingSlots} file`);
+    }
 
     setUploading(true);
     try {
       const formData = new FormData();
-      formData.append("file", file);
-      const response = await api.upload<{ fileId: string; fileName: string; fileSize: number }>(
-        "/api/v1/files/upload",
+      filesToUpload.forEach((f) => formData.append("files", f));
+      const response = await api.upload<{ fileId: string; fileName: string; fileSize: number }[]>(
+        "/api/v1/files/upload-multiple",
         formData
       );
-      const newFile: UploadedFile = {
-        uid: response.data.fileId,
-        fileId: response.data.fileId,
-        fileName: response.data.fileName,
-        fileSize: response.data.fileSize,
-      };
+      const newFiles: UploadedFile[] = response.data.map((r) => ({
+        uid: r.fileId,
+        fileId: r.fileId,
+        fileName: r.fileName,
+        fileSize: r.fileSize,
+      }));
       setFileList((prev) => {
-        const updated = prev.length >= MAX_FILES ? prev : [...prev, newFile];
+        const updated = [...prev, ...newFiles];
         setValue("invoiceFiles", updated.map((f) => ({ fileId: f.fileId, fileName: f.fileName, fileSize: f.fileSize })), { shouldValidate: true });
         return updated;
       });

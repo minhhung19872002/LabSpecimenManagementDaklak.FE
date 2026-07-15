@@ -1,6 +1,12 @@
 import { api } from "./api";
 import type { PagedResultDto } from "./masterDataService";
 
+export interface DeliveryDocumentFileDto {
+  fileId: string;
+  fileName: string;
+  fileSize?: number | null;
+}
+
 export enum WarehouseImportReceiptDisplayStatusFilter {
   All = 0,
   InProgress = 1,
@@ -95,6 +101,7 @@ export interface WarehouseImportReceiptDto {
   deliveryDocumentFileName?: string;
   deliveryDocumentFilePath?: string;
   deliveryDocumentFileSize?: number;
+  deliveryDocumentFiles?: DeliveryDocumentFileDto[];
   notes?: string;
   status: WarehouseImportReceiptStatus;
   hasDefectiveItem: boolean;
@@ -131,10 +138,7 @@ export interface CreateUpdateWarehouseImportReceiptDto {
   warehouseKeeperId?: string;
   warehouseKeeperName?: string;
   warehouseId?: string;
-  deliveryDocumentFileId?: string;
-  deliveryDocumentFileName?: string;
-  deliveryDocumentFilePath?: string;
-  deliveryDocumentFileSize?: number;
+  deliveryDocumentFiles: DeliveryDocumentFileDto[];
   notes?: string;
   items: CreateUpdateWarehouseImportReceiptItemDto[];
 }
