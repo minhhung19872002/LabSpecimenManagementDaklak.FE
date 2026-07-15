@@ -144,7 +144,7 @@ const GoodsReceiptForm: React.FC = () => {
       setPageLoading(true);
       try {
         const [unitsRes, suppliersRes, employeesList] = await Promise.all([
-          unitService.getList({ limit: 1000 }),
+          unitService.getList({ maxResultCount: 1000 }),
           supplierService.getList({ limit: 1000 }),
           employeeService.getList({ maxResultCount: 1000 }),
         ]);
