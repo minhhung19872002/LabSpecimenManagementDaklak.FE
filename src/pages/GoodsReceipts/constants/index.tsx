@@ -9,6 +9,8 @@ import {
   OrderStatusColors,
   ReceiptTypeLabels,
   ReceiptTypeColors,
+  PaymentStatusLabels,
+  PaymentStatusColors,
 } from "../../../services/goodsReceiptService";
 import dayjs from "dayjs";
 
@@ -24,6 +26,7 @@ export const ALL_COLUMNS: ColumnConfig[] = [
   { key: "supplierAddress", title: "Địa chỉ NCC", defaultVisible: true },
   { key: "documentDate", title: "Ngày cấp chứng từ", defaultVisible: true },
   { key: "orderStatus", title: "Trạng thái", defaultVisible: true },
+  { key: "paymentStatus", title: "Trạng thái thanh toán", defaultVisible: true },
   { key: "totalAmountAfterVat", title: "Tổng tiền sau VAT", defaultVisible: true },
   { key: "creatorName", title: "Người tạo", defaultVisible: true },
   { key: "notes", title: "Ghi chú", defaultVisible: true },
@@ -112,6 +115,19 @@ export const getGoodsReceiptColumns = (
         <Tag color={OrderStatusColors[v]} style={{ whiteSpace: "pre-line" }}>
           {v === GoodsReceiptOrderStatus.WaitingReceipt ? "Chờ nhận\n& Nghiệm thu" : OrderStatusLabels[v]}
         </Tag>
+      ),
+    });
+  }
+
+  if (visibleKeys.has("paymentStatus")) {
+    columns.push({
+      title: "Trạng thái thanh toán",
+      dataIndex: "paymentStatus",
+      key: "paymentStatus",
+      width: 160,
+      align: "center" as const,
+      render: (v: number) => (
+        <Tag color={PaymentStatusColors[v]}>{PaymentStatusLabels[v]}</Tag>
       ),
     });
   }
