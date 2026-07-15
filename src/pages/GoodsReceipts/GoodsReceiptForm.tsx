@@ -464,11 +464,6 @@ const GoodsReceiptForm: React.FC = () => {
       message.warning("Vui lòng thêm ít nhất một hàng hóa.");
       return false;
     }
-    const missingExpiry = validItems.filter((item) => item.lotNumber && !item.lotExpiryDate);
-    if (missingExpiry.length > 0) {
-      message.warning("Vui lòng chọn hạn lô cho các dòng có Code / Lot.");
-      return false;
-    }
     return true;
   };
 
@@ -709,46 +704,6 @@ const GoodsReceiptForm: React.FC = () => {
             disabledDate={(current) => current && current.isBefore(dayjs().startOf("day"))}
           />
         ),
-    },
-    {
-      title: "Code / Lot",
-      key: "lotNumber",
-      width: 150,
-      render: (_: any, record: LineItem) => {
-        if (isReadonly) return record.lotNumber || "-";
-        return (
-          <Input
-            value={record.lotNumber || ""}
-            placeholder="Nhập mã lô"
-            onChange={(e) => handleLineChange(record.key, "lotNumber", e.target.value)}
-            size="small"
-            allowClear
-          />
-        );
-      },
-    },
-    {
-      title: "Hạn lô",
-      key: "lotExpiryDate",
-      width: 130,
-      render: (_: any, record: LineItem) => {
-        if (isReadonly) return record.lotExpiryDate ? dayjs(record.lotExpiryDate).format("DD/MM/YYYY") : "-";
-        const hasLotButNoExpiry = !!record.lotNumber && !record.lotExpiryDate;
-        return (
-          <DatePicker
-            value={record.lotExpiryDate ? dayjs(record.lotExpiryDate) : null}
-            format="DD/MM/YYYY"
-            onChange={(date) =>
-              handleLineChange(record.key, "lotExpiryDate", date?.format("YYYY-MM-DD") || undefined)
-            }
-            disabledDate={(current) => current && current.isBefore(dayjs(), "day")}
-            style={{ width: "100%" }}
-            size="small"
-            disabled={!record.lotNumber}
-            status={hasLotButNoExpiry ? "error" : undefined}
-          />
-        );
-      },
     },
     {
       title: "Kho bảo quản",

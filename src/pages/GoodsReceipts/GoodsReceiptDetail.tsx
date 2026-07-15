@@ -244,20 +244,6 @@ const GoodsReceiptDetail: React.FC = () => {
         r.expiryDate ? dayjs(r.expiryDate).format("DD/MM/YYYY") : "-",
     },
     {
-      title: "Code / Lot",
-      dataIndex: "lotNumber",
-      key: "lotNumber",
-      width: 120,
-      render: (v: string) => v || "-",
-    },
-    {
-      title: "Hạn lô",
-      key: "lotExpiryDate",
-      width: 110,
-      render: (_: any, r: GoodsReceiptItemDto) =>
-        r.lotExpiryDate ? dayjs(r.lotExpiryDate).format("DD/MM/YYYY") : "-",
-    },
-    {
       title: "Kho bảo quản",
       key: "warehouseName",
       width: 150,
