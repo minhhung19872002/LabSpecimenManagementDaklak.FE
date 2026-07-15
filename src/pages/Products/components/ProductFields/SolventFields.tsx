@@ -149,6 +149,9 @@ const SolventFields: React.FC<BaseFieldsProps> = ({ consumableUnitOptions, ident
                 </Tooltip>
               </Space>
             }
+            required
+            validateStatus={errors.minStockLevel ? "error" : ""}
+            help={errors.minStockLevel?.message}
           >
             <Controller
               name="minStockLevel"

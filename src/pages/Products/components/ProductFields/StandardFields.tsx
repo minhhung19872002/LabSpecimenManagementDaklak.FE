@@ -172,6 +172,9 @@ const StandardFields: React.FC<BaseFieldsProps> = ({ consumableUnitOptions, iden
                 </Tooltip>
               </Space>
             }
+            required
+            validateStatus={errors.minStockLevel ? "error" : ""}
+            help={errors.minStockLevel?.message}
           >
             <Controller
               name="minStockLevel"

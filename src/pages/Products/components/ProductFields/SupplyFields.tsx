@@ -124,6 +124,29 @@ const SupplyFields: React.FC<BaseFieldsProps> = ({ consumableUnitOptions, identi
           <Form.Item
             label={
               <Space size={4}>
+                Tồn kho tối thiểu
+                <Tooltip title="Số lượng tồn kho tính theo đơn vị lưu kho">
+                  <InfoCircleOutlined style={{ color: "#999" }} />
+                </Tooltip>
+              </Space>
+            }
+            required
+            validateStatus={errors.minStockLevel ? "error" : ""}
+            help={errors.minStockLevel?.message}
+          >
+            <Controller
+              name="minStockLevel"
+              control={control}
+              render={({ field }) => (
+                <InputNumber {...field} style={{ width: "100%" }} min={0} placeholder="VD: 10" />
+              )}
+            />
+          </Form.Item>
+        </Col>
+        <Col xs={24} sm={8}>
+          <Form.Item
+            label={
+              <Space size={4}>
                 Số CAS
                 <Tooltip title="Mã định danh quốc tế cho hóa chất">
                   <InfoCircleOutlined style={{ color: "#999" }} />
@@ -136,6 +159,34 @@ const SupplyFields: React.FC<BaseFieldsProps> = ({ consumableUnitOptions, identi
               control={control}
               render={({ field }) => (
                 <Input {...field} value={field.value || ""} placeholder="VD: 64-17-5" />
+              )}
+            />
+          </Form.Item>
+        </Col>
+        <Col xs={24} sm={8}>
+          <Form.Item label="Mã nguy hiểm GHS/ MSDS">
+            <Controller
+              name="ghsCode"
+              control={control}
+              render={({ field }) => (
+                <Input {...field} value={field.value || ""} placeholder="VD: GHS02, GHS06" />
+              )}
+            />
+          </Form.Item>
+        </Col>
+      </Row>
+
+      <Row gutter={16}>
+        <Col xs={24} sm={8}>
+          <Form.Item label="Trạng thái vô trùng">
+            <Controller
+              name="isSterile"
+              control={control}
+              render={({ field }) => (
+                <Radio.Group value={field.value} onChange={(e) => field.onChange(e.target.value)}>
+                  <Radio value={true}>Đã tiệt trùng</Radio>
+                  <Radio value={false}>Chưa tiệt trùng</Radio>
+                </Radio.Group>
               )}
             />
           </Form.Item>

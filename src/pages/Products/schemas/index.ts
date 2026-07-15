@@ -1,4 +1,5 @@
 import * as yup from "yup";
+import { ProductType } from "../../../services/productService";
 
 export const skuSchema = yup.object({
   id: yup.string().nullable().optional(),
@@ -93,9 +94,18 @@ export const productSchema = yup.object({
   minStockLevel: yup
     .number()
     .nullable()
-    .optional()
     .min(0, "Không được âm")
-    .transform((v, orig) => (orig === "" || orig === null ? null : v)),
+    .transform((v, orig) => (orig === "" || orig === null ? null : v))
+    .when("productType", {
+      is: (productType: number) => productType !== ProductType.Equipment,
+      then: (schema) =>
+        schema.test(
+          "required-min-stock",
+          "Vui lòng nhập tồn kho tối thiểu",
+          (val) => val !== null && val !== undefined
+        ),
+      otherwise: (schema) => schema.optional(),
+    }),
   storageConditions: yup.string().nullable(),
   formattedStorageConditions: yup.string().nullable(),
   categories: yup.string().nullable(),

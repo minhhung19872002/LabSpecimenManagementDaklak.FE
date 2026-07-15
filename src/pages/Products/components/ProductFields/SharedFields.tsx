@@ -1,5 +1,5 @@
 import React from "react";
-import { Form, Input, Tag, Radio } from "antd";
+import { Form, Input, Tag } from "antd";
 import { Controller, useFormContext } from "react-hook-form";
 import { RichTextEditor } from "../../../../components/common";
 import { ProductType } from "../../../../services/productService";
@@ -23,11 +23,9 @@ const SharedFields: React.FC<SharedFieldsProps> = ({
   const productType = watch("productType");
 
   const isEquipment = productType === ProductType.Equipment;
-  const showSupplyFields = productType === ProductType.Supply;
   const showGhsField =
     productType === ProductType.Biological ||
     productType === ProductType.Standard ||
-    productType === ProductType.Supply ||
     productType === ProductType.Solvent ||
     productType === ProductType.PreparedSolution;
 
@@ -83,25 +81,7 @@ const SharedFields: React.FC<SharedFieldsProps> = ({
         </Form.Item>
       )}
 
-      {showSupplyFields && (
-        <Form.Item label="Trạng thái vô trùng">
-          <Controller
-            name="isSterile"
-            control={control}
-            render={({ field }) => (
-              <Radio.Group
-                value={field.value}
-                onChange={(e) => field.onChange(e.target.value)}
-              >
-                <Radio value={true}>Đã tiệt trùng</Radio>
-                <Radio value={false}>Chưa tiệt trùng</Radio>
-              </Radio.Group>
-            )}
-          />
-        </Form.Item>
-      )}
-
-      {showGhsField && (
+{showGhsField && (
         <Form.Item label="Mã nguy hiểm GHS/ MSDS">
           <Controller
             name="ghsCode"
