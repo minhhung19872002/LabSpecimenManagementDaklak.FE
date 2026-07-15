@@ -1,12 +1,24 @@
-import React, { useEffect } from "react";
-import { Modal, Form, Input, InputNumber, Select, DatePicker, Button, Row, Col } from "antd";
+import React, { useEffect, useState } from "react";
+import { Modal, Form, Input, InputNumber, Select, DatePicker, Button, Row, Col, Upload, message, Typography } from "antd";
+import { UploadOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
+import { getFileIcon, formatFileSize } from "../../../utils/fileUtils";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { paymentSchema, PaymentFormData } from "../schemas";
 import { PAYMENT_METHOD_OPTIONS } from "../../../services/goodsReceiptService";
+import { api } from "../../../services/api";
 import dayjs from "dayjs";
 
 const { TextArea } = Input;
+const { Text } = Typography;
+const { Dragger } = Upload;
+
+interface UploadedFile {
+  uid: string;
+  fileId: string;
+  fileName: string;
+  fileSize?: number;
+}
 
 
 interface PaymentModalProps {
@@ -18,6 +30,9 @@ interface PaymentModalProps {
   onCancel: () => void;
 }
 
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
+const MAX_FILES = 5;
+
 const PaymentModal: React.FC<PaymentModalProps> = ({
   open,
   loading,
@@ -27,12 +42,15 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   onCancel,
 }) => {
   const remaining = totalAmount - totalPaid;
+  const [fileList, setFileList] = useState<UploadedFile[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   const {
     control,
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<PaymentFormData>({
     resolver: yupResolver(paymentSchema) as any,
@@ -43,11 +61,13 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
       phone: "",
       representativeName: "",
       notes: "",
+      invoiceFiles: [],
     },
   });
 
   useEffect(() => {
     if (open) {
+      setFileList([]);
       reset({
         amount: remaining,
         paymentMethod: 0,
@@ -55,9 +75,55 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
         phone: "",
         representativeName: "",
         notes: "",
+        invoiceFiles: [],
       });
     }
   }, [open, remaining, reset]);
+
+  const handleUploadFile = async (file: File, allFiles: File[]) => {
+    const remaining = MAX_FILES - fileList.length;
+    const idx = allFiles.indexOf(file);
+    if (idx === 0 && allFiles.length > remaining) {
+      message.warning(remaining <= 0
+        ? `Đã đạt tối đa ${MAX_FILES} file`
+        : `Chỉ có thể thêm ${remaining} file nữa`);
+    }
+    if (idx >= remaining) return false;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await api.upload<{ fileId: string; fileName: string; fileSize: number }>(
+        "/api/v1/files/upload",
+        formData
+      );
+      const newFile: UploadedFile = {
+        uid: response.data.fileId,
+        fileId: response.data.fileId,
+        fileName: response.data.fileName,
+        fileSize: response.data.fileSize,
+      };
+      setFileList((prev) => {
+        const updated = prev.length >= MAX_FILES ? prev : [...prev, newFile];
+        setValue("invoiceFiles", updated.map((f) => ({ fileId: f.fileId, fileName: f.fileName, fileSize: f.fileSize })), { shouldValidate: true });
+        return updated;
+      });
+    } catch (err: any) {
+      message.error(err?.response?.data?.error?.message || "Tải file thất bại");
+    } finally {
+      setUploading(false);
+    }
+    return false;
+  };
+
+  const handleRemoveFile = (uid: string) => {
+    setFileList((prev) => {
+      const updated = prev.filter((f) => f.uid !== uid);
+      setValue("invoiceFiles", updated.map((f) => ({ fileId: f.fileId, fileName: f.fileName, fileSize: f.fileSize })), { shouldValidate: true });
+      return updated;
+    });
+  };
 
   const currentAmount = watch("amount") || 0;
   const afterPayment = remaining - currentAmount;
@@ -70,6 +136,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
       centered
       destroyOnClose
       width={600}
+      styles={{ body: { maxHeight: "70vh", overflowY: "auto", overflowX: "hidden" } }}
       footer={
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
           <Button onClick={onCancel}>Đóng</Button>
@@ -134,8 +201,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                     {...field}
                     style={{ width: "100%" }}
                     placeholder="Nhập số tiền"
-                    min={1}
-                    max={remaining}
+                    min={remaining > 0 ? 1 : 0}
+                    max={remaining > 0 ? remaining : undefined}
                     formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
                     parser={(value) => Number(value?.replace(/,/g, "") || 0)}
                   />
@@ -199,6 +266,74 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               <TextArea {...field} value={field.value || ""} rows={3} placeholder="Nhập ghi chú (nếu có)" />
             )}
           />
+        </Form.Item>
+
+        {/* Invoice file upload */}
+        <Form.Item
+          label={<span>Hóa đơn đính kèm <span style={{ color: "#ff4d4f" }}>*</span></span>}
+          validateStatus={errors.invoiceFiles ? "error" : ""}
+          help={errors.invoiceFiles?.message as string}
+        >
+          {fileList.length < MAX_FILES && (
+            <Dragger
+              multiple
+              showUploadList={false}
+              beforeUpload={(file, list) => { handleUploadFile(file, list); return false; }}
+              accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.bmp,.docx"
+              disabled={uploading}
+              style={{ marginBottom: fileList.length > 0 ? 8 : 0, borderRadius: 8 }}
+            >
+              <p className="ant-upload-drag-icon" style={{ margin: "8px 0 4px" }}>
+                <UploadOutlined style={{ fontSize: 24, color: "#bbb" }} />
+              </p>
+              <p className="ant-upload-text" style={{ fontSize: 13, margin: 0 }}>
+                Kéo thả hoặc <strong>nhấn để tải lên</strong>
+              </p>
+              <p className="ant-upload-hint" style={{ fontSize: 12, margin: "2px 0 8px", color: "#999" }}>
+                PDF, DOCX, JPG, PNG · Tối đa {MAX_FILES} file · 10MB/file
+              </p>
+            </Dragger>
+          )}
+          {fileList.map((f) => (
+            <div
+              key={f.uid}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: "10px 14px",
+                border: "1px solid #f0f0f0",
+                borderRadius: 10,
+                marginBottom: 8,
+                background: "#fff",
+                boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+              }}
+            >
+              <div style={{
+                width: 36, height: 36, borderRadius: 8, background: "#FEF2F2",
+                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+              }}>
+                {getFileIcon(f.fileName)}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <Text strong style={{ fontSize: 13, display: "block" }} ellipsis={{ tooltip: f.fileName }}>
+                  {f.fileName}
+                </Text>
+                {f.fileSize && (
+                  <Text type="secondary" style={{ fontSize: 11 }}>{formatFileSize(f.fileSize)}</Text>
+                )}
+              </div>
+              <Button
+                type="text" size="small" icon={<EyeOutlined />}
+                onClick={() => window.open(`${BASE_URL}/api/v1/files/${f.fileId}`, "_blank")}
+              />
+              <Button
+                type="text" size="small"
+                icon={<DeleteOutlined style={{ color: "#ff4d4f" }} />}
+                onClick={() => handleRemoveFile(f.uid)}
+              />
+            </div>
+          ))}
         </Form.Item>
       </Form>
     </Modal>

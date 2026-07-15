@@ -56,12 +56,17 @@ export const paymentSchema = yup.object({
   amount: yup
     .number()
     .required("Vui lòng nhập số tiền")
-    .min(1, "Số tiền phải lớn hơn 0"),
+    .min(0, "Số tiền không hợp lệ"),
   paymentMethod: yup.number().required("Vui lòng chọn phương thức"),
   paymentDate: yup.string().required("Vui lòng chọn ngày thanh toán"),
   phone: yup.string().nullable().max(20),
   representativeName: yup.string().nullable().max(200),
   notes: yup.string().nullable().max(1000),
+  invoiceFiles: yup
+    .array()
+    .of(yup.object({ fileId: yup.string().required(), fileName: yup.string().required(), fileSize: yup.number().nullable() }))
+    .min(1, "Vui lòng đính kèm hóa đơn")
+    .required("Vui lòng đính kèm hóa đơn"),
 });
 
 export type PaymentFormData = yup.InferType<typeof paymentSchema>;

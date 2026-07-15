@@ -166,6 +166,12 @@ export interface GoodsReceiptItemDto {
   warehouseName?: string;
 }
 
+export interface InvoiceFileInfoDto {
+  fileId: string;
+  fileName: string;
+  fileSize?: number | null;
+}
+
 export interface GoodsReceiptPaymentDto {
   id: string;
   goodsReceiptId: string;
@@ -177,6 +183,7 @@ export interface GoodsReceiptPaymentDto {
   phone?: string;
   representativeName?: string;
   notes?: string;
+  invoiceFiles?: InvoiceFileInfoDto[];
   creationTime: string;
 }
 
@@ -247,6 +254,7 @@ export interface CreateGoodsReceiptPaymentDto {
   phone?: string;
   representativeName?: string;
   notes?: string;
+  invoiceFiles: InvoiceFileInfoDto[];
 }
 
 export interface GoodsReceiptStatisticsDto {

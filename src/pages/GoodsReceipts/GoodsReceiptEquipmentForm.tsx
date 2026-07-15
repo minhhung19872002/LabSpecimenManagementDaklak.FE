@@ -340,6 +340,7 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
         phone: data.phone || undefined,
         representativeName: data.representativeName || undefined,
         notes: data.notes || undefined,
+        invoiceFiles: data.invoiceFiles ?? [],
       });
       message.success("Thanh toán thành công");
       setPaymentModalOpen(false);

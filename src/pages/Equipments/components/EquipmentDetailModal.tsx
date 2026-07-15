@@ -14,14 +14,8 @@ import {
   Spin,
   message,
 } from "antd";
-import {
-  UploadOutlined,
-  DeleteOutlined,
-  EyeOutlined,
-  FilePdfOutlined,
-  FileWordOutlined,
-  FileImageOutlined,
-} from "@ant-design/icons";
+import { UploadOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
+import { getFileIcon, formatFileSize } from "../../../utils/fileUtils";
 import dayjs from "dayjs";
 import {
   equipmentService,
@@ -47,18 +41,6 @@ interface Props {
   onUpdated: () => void;
 }
 
-const getFileIcon = (fileName: string) => {
-  const ext = fileName.split(".").pop()?.toLowerCase();
-  if (ext === "pdf") return <FilePdfOutlined style={{ fontSize: 20, color: "#e74c3c" }} />;
-  if (ext === "docx" || ext === "doc") return <FileWordOutlined style={{ fontSize: 20, color: "#2b579a" }} />;
-  return <FileImageOutlined style={{ fontSize: 20, color: "#1890ff" }} />;
-};
-
-const formatFileSize = (bytes: number) => {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-};
 
 const FileCard: React.FC<{
   fileName: string;

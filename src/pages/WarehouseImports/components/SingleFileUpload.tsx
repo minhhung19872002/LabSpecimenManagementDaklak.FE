@@ -1,14 +1,8 @@
 import React, { useState } from "react";
 import { Upload, Button, message, Typography, Space } from "antd";
-import {
-  UploadOutlined,
-  DeleteOutlined,
-  EyeOutlined,
-  FilePdfOutlined,
-  FileWordOutlined,
-  FileImageOutlined,
-} from "@ant-design/icons";
+import { UploadOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
 import { api } from "../../../services/api";
+import { getFileIcon, formatFileSize } from "../../../utils/fileUtils";
 
 const { Text } = Typography;
 
@@ -25,19 +19,6 @@ interface SingleFileUploadProps {
   compact?: boolean;
 }
 
-const getFileIcon = (fileName: string) => {
-  const ext = fileName.split(".").pop()?.toLowerCase();
-  if (ext === "pdf") return <FilePdfOutlined style={{ color: "#e74c3c" }} />;
-  if (ext === "docx" || ext === "doc") return <FileWordOutlined style={{ color: "#2b579a" }} />;
-  return <FileImageOutlined style={{ color: "#1890ff" }} />;
-};
-
-const formatFileSize = (bytes?: number) => {
-  if (!bytes) return "";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-};
 
 const SingleFileUpload: React.FC<SingleFileUploadProps> = ({ value, onChange, disabled, compact }) => {
   const [uploading, setUploading] = useState(false);

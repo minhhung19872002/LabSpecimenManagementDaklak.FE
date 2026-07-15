@@ -19,7 +19,9 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   ClockCircleOutlined,
+  EyeOutlined,
 } from "@ant-design/icons";
+import { getFileIcon } from "../../utils/fileUtils";
 import { useNavigate, useParams } from "react-router-dom";
 import dayjs from "dayjs";
 import {
@@ -53,6 +55,7 @@ import "../../styles/ListCard.css";
 import "./GoodsReceiptDetail.css";
 
 const formatCurrency = (v: number) => v.toLocaleString("vi-VN");
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
 const DetailItem: React.FC<{ label: string; value: React.ReactNode }> = ({
   label,
@@ -175,6 +178,7 @@ const GoodsReceiptDetail: React.FC = () => {
         phone: data.phone || undefined,
         representativeName: data.representativeName || undefined,
         notes: data.notes || undefined,
+        invoiceFiles: (data.invoiceFiles ?? []).map((f: any) => ({ fileId: f.fileId, fileName: f.fileName, fileSize: f.fileSize })),
       });
       message.success("Thanh toán thành công");
       setPaymentModalOpen(false);
@@ -385,6 +389,31 @@ const GoodsReceiptDetail: React.FC = () => {
       render: (v: string) => v || "-",
     },
     {
+      title: "Hóa đơn đính kèm",
+      key: "invoiceFiles",
+      width: 200,
+      render: (_: any, r: GoodsReceiptPaymentDto) => {
+        if (!r.invoiceFiles?.length) return "-";
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {r.invoiceFiles.map((f) => (
+              <div
+                key={f.fileId}
+                style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}
+                onClick={() => window.open(`${BASE_URL}/api/v1/files/${f.fileId}`, "_blank")}
+              >
+                {getFileIcon(f.fileName, 14)}
+                <span style={{ fontSize: 12, color: "#1677ff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 140 }}>
+                  {f.fileName}
+                </span>
+                <EyeOutlined style={{ fontSize: 11, color: "#8c8c8c", flexShrink: 0 }} />
+              </div>
+            ))}
+          </div>
+        );
+      },
+    },
+    {
       title: "Thời gian tạo",
       key: "creationTime",
       width: 150,
@@ -451,9 +480,10 @@ const GoodsReceiptDetail: React.FC = () => {
           </>
         )}
       {canPay &&
-        isApproved &&
+        receipt.orderStatus !== GoodsReceiptOrderStatus.PendingApproval &&
+        receipt.orderStatus !== GoodsReceiptOrderStatus.Rejected &&
         receipt.paymentStatus !== GoodsReceiptPaymentStatus.Paid &&
-        remaining > 0 && (
+        (remaining > 0 || receipt.totalAmountAfterVat === 0) && (
           <Button onClick={() => setPaymentModalOpen(true)}>Thanh toán</Button>
         )}
       {canImport &&
