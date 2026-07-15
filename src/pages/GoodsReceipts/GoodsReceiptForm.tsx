@@ -261,29 +261,31 @@ const GoodsReceiptForm: React.FC = () => {
     loadData();
   }, [id, reset]);
 
-  const getUnitsForProduct = useCallback((productId: string): { value: string; label: string }[] => {
+  const getUnitsForProduct = useCallback((productId: string, manufacturerId?: string): { value: string; label: string }[] => {
     const product = products.find((p) => p.id === productId);
     if (!product) return [];
 
     const result: { value: string; label: string }[] = [];
-    const addUnit = (unitId?: string | null) => {
-      if (!unitId) return;
+    const addUnit = (unitId?: string | null, unitName?: string | null) => {
+      if (!unitId || result.find((r) => r.value === unitId)) return;
       const unit = units.find((u) => u.id === unitId);
-      if (unit && !result.find((r) => r.value === unit.id)) {
-        result.push({ value: unit.id, label: unit.name });
-      }
+      result.push({ value: unitId, label: unit?.name || unitName || unitId });
     };
 
-    addUnit(product.packagingUnitId);
-    addUnit(product.baseUnitId);
-    addUnit(product.volumeUnitId);
-
-    if (product.unitConversions) {
-      for (const conv of product.unitConversions) {
-        if (conv.convertedUnitId && !result.find((r) => r.value === conv.convertedUnitId)) {
-          result.push({ value: conv.convertedUnitId, label: conv.convertedUnitName || conv.convertedUnitId });
-        }
+    if (manufacturerId && product.skus?.length) {
+      const sku = product.skus.find((s) => s.manufacturerId === manufacturerId);
+      if (sku) {
+        addUnit(sku.packagingUnitId, sku.packagingUnitName);
+        addUnit(sku.baseUnitId, sku.baseUnitName);
+        addUnit(sku.volumeUnitId, sku.volumeUnitName);
+        return result;
       }
+    }
+
+    for (const sku of product.skus || []) {
+      addUnit(sku.packagingUnitId, sku.packagingUnitName);
+      addUnit(sku.baseUnitId, sku.baseUnitName);
+      addUnit(sku.volumeUnitId, sku.volumeUnitName);
     }
 
     return result;
@@ -305,15 +307,14 @@ const GoodsReceiptForm: React.FC = () => {
     if (!product) return;
 
     const availUnits = getUnitsForProduct(product.id);
-    const defaultUnitId = product.baseUnitId || product.packagingUnitId || product.volumeUnitId;
-    const defaultUnit = units.find((u) => u.id === defaultUnitId);
+    const firstUnit = availUnits[0];
 
     const newItem: LineItem = {
       key: `new-${Date.now()}`,
       productId: product.id,
       productName: product.name,
-      unitId: defaultUnitId || "",
-      unitName: defaultUnit?.name || "",
+      unitId: firstUnit?.value || "",
+      unitName: firstUnit?.label || "",
       quantity: 1,
       unitPrice: 0,
       vatPercent: defaultVat,
@@ -330,12 +331,7 @@ const GoodsReceiptForm: React.FC = () => {
     setLineItems((prev) => [...prev, recalculateLine(newItem)]);
   };
 
-  const manufacturerSelectOptions = manufacturers.map((m) => ({
-    value: m.id,
-    label: m.name,
-  }));
-
-  const handleRemoveLine = (key: string) => {
+const handleRemoveLine = (key: string) => {
     setLineItems((prev) => prev.filter((item) => item.key !== key));
   };
 
@@ -349,12 +345,21 @@ const GoodsReceiptForm: React.FC = () => {
           const product = products.find((p) => p.id === value);
           if (product) {
             updated.productName = product.name;
+            updated.manufacturerId = undefined;
+            updated.manufacturer = undefined;
             updated.availableUnits = getUnitsForProduct(product.id);
-            const defUnitId = product.baseUnitId || product.packagingUnitId || product.volumeUnitId;
-            updated.unitId = defUnitId || "";
-            const defUnit = units.find((u) => u.id === defUnitId);
-            updated.unitName = defUnit?.name || "";
+            const firstUnit = updated.availableUnits[0];
+            updated.unitId = firstUnit?.value || "";
+            updated.unitName = firstUnit?.label || "";
           }
+        }
+
+        if (field === "manufacturerId") {
+          const newUnits = getUnitsForProduct(item.productId, value || undefined);
+          updated.availableUnits = newUnits;
+          const firstUnit = newUnits[0];
+          updated.unitId = firstUnit?.value || "";
+          updated.unitName = firstUnit?.label || "";
         }
 
         if (field === "unitId") {
@@ -567,6 +572,11 @@ const GoodsReceiptForm: React.FC = () => {
       width: 180,
       render: (_: any, record: LineItem) => {
         if (isReadonly) return record.manufacturer || "-";
+        const product = products.find((p) => p.id === record.productId);
+        const skuMfIds = new Set((product?.skus || []).map((s) => s.manufacturerId).filter(Boolean));
+        const mfOptions = manufacturers
+          .filter((m) => skuMfIds.has(m.id))
+          .map((m) => ({ value: m.id, label: m.name }));
         const selectedValue = record.manufacturerId && manufacturers.some((m) => m.id === record.manufacturerId)
           ? record.manufacturerId
           : undefined;
@@ -574,17 +584,13 @@ const GoodsReceiptForm: React.FC = () => {
           <Select
             value={selectedValue}
             placeholder="Chọn hãng SX"
-            options={manufacturerSelectOptions}
+            options={mfOptions}
             showSearch
-            filterOption={(input, option) =>
-              (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
-            }
+            optionFilterProp="label"
             onChange={(value) => {
               const m = manufacturers.find((x) => x.id === value);
-              if (m) {
-                handleLineChange(record.key, "manufacturer", m.name);
-                handleLineChange(record.key, "manufacturerId", m.id);
-              }
+              handleLineChange(record.key, "manufacturer", m?.name);
+              handleLineChange(record.key, "manufacturerId", value);
             }}
             allowClear
             onClear={() => {
