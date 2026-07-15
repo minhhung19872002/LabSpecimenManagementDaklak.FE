@@ -125,7 +125,7 @@ export const getColumns = (
                   />
                 </Tooltip>
               )}
-              {canEdit && (
+              {canEdit && !isDefaultWarehouse && (
                 <Button
                   type="link"
                   size="small"
