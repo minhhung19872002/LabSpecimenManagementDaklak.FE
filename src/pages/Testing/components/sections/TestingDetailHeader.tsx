@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, Row, Col, Space, Typography } from "antd";
+import { Card, Space, Typography } from "antd";
 import { ExperimentOutlined } from "../../../../components/common/Icon";
 import { TestingDetailDto } from "../../../../types/testing";
 import { getStatusTag } from "./shared";
@@ -13,6 +13,10 @@ interface TestingDetailHeaderProps {
 const TestingDetailHeader: React.FC<TestingDetailHeaderProps> = ({
   detail,
 }) => {
+  const technicianList = detail.technicianNames
+    ? detail.technicianNames.split(",").map((n) => n.trim()).filter(Boolean)
+    : [];
+
   return (
     <Card
       className="testing-detail-header"
@@ -20,28 +24,31 @@ const TestingDetailHeader: React.FC<TestingDetailHeaderProps> = ({
         marginBottom: 16,
         background: "#FAFAFA",
         borderColor: "#D9D9D9",
+        flex: 1,
       }}
     >
-      <Row justify="space-between" align="middle">
-        <Col>
-          <Space direction="vertical" size={8}>
-            <Title level={4} style={{ margin: 0 }}>
-              <ExperimentOutlined style={{ marginRight: 8 }} />
-              Số hợp đồng: {detail.contractNumber || "N/A"}
-            </Title>
-            <Space>
-              {getStatusTag(detail.testingStatus, detail.testRequestStatus)}
-              <Text type="secondary">
-                KTV: {detail.technicianNames || "Chưa có"}
-              </Text>
-              <Text type="secondary">|</Text>
-              <Text type="secondary">
-                Khoa phòng: {detail.laboratoryName || "N/A"}
-              </Text>
-            </Space>
-          </Space>
-        </Col>
-      </Row>
+      <Space direction="vertical" size={8}>
+        <Title level={4} style={{ margin: 0 }}>
+          <ExperimentOutlined style={{ marginRight: 8 }} />
+          Số hợp đồng: {detail.contractNumber || "N/A"}
+        </Title>
+        {getStatusTag(detail.testingStatus, detail.testRequestStatus)}
+        <Text type="secondary">
+          Khoa phòng: <Text>{detail.laboratoryName || "N/A"}</Text>
+        </Text>
+        <div style={{ display: "flex", gap: 8 }}>
+          <Text type="secondary" style={{ whiteSpace: "nowrap" }}>Thử nghiệm viên:</Text>
+          <div>
+            {technicianList.length > 0 ? (
+              technicianList.map((name, i) => (
+                <div key={i}><Text>{name}</Text></div>
+              ))
+            ) : (
+              <Text type="secondary">Chưa có</Text>
+            )}
+          </div>
+        </div>
+      </Space>
     </Card>
   );
 };
