@@ -3,6 +3,12 @@
   margin-bottom: 16px;
 }
 
+@media (max-width: 768px) {
+  .goods-receipt-stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
 .goods-receipt-stats-grid .dashboard-stat-card {
   height: 110px !important;
 }

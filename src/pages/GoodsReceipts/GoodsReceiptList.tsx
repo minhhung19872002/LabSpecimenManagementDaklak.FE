@@ -33,13 +33,6 @@ const loadVisibleKeys = (): Set<string> => {
 
 const STAT_CARDS = [
   {
-    key: "pendingApproval",
-    title: "Chờ phê duyệt",
-    iconBg: "orange",
-    icon: "hourglass-split",
-    filterValue: GoodsReceiptOrderStatus.PendingApproval,
-  },
-  {
     key: "ordering",
     title: "Đang đặt hàng",
     iconBg: "blue",
@@ -52,13 +45,6 @@ const STAT_CARDS = [
     iconBg: "green",
     icon: "box-seam",
     filterValue: GoodsReceiptOrderStatus.WaitingReceipt,
-  },
-  {
-    key: "rejected",
-    title: "Từ chối",
-    iconBg: "red",
-    icon: "x-circle",
-    filterValue: GoodsReceiptOrderStatus.Rejected,
   },
 ];
 
