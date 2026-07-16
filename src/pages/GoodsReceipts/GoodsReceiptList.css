@@ -29,3 +29,6 @@
 .goods-receipt-stats-grid .dashboard-stat-icon i {
   font-size: 24px !important;
 }
+
+.gr-concentration-cell p { margin: 0; }
+.gr-concentration-cell ul, .gr-concentration-cell ol { margin: 2px 0; padding-left: 20px; }

@@ -27,6 +27,7 @@ import {
 import { unitService, UnitDto } from "../../services/masterDataService";
 import { getApiErrorMessage } from "../../utils/errorHandler";
 import "../../styles/ListCard.css";
+import "./GoodsReceiptList.css";
 
 const ProductModal = lazy(
   () => import("../Products/components/ProductModal")
@@ -400,6 +401,27 @@ const handleRemoveLine = (key: string) => {
             size="small"
           />
         );
+      },
+    },
+    {
+      title: "Cấu hình kỹ thuật",
+      key: "concentration",
+      width: 160,
+      render: (_: any, record: LineItem) => {
+        const product = products.find((p) => p.id === record.productId);
+        if (product?.formattedConcentration) {
+          return <div className="gr-concentration-cell" style={{ color: "#555", fontSize: 13 }} dangerouslySetInnerHTML={{ __html: product.formattedConcentration }} />;
+        }
+        return <span style={{ color: "#555" }}>{product?.concentration || "-"}</span>;
+      },
+    },
+    {
+      title: "CAS",
+      key: "casNumber",
+      width: 120,
+      render: (_: any, record: LineItem) => {
+        const product = products.find((p) => p.id === record.productId);
+        return <span style={{ color: "#555" }}>{product?.casNumber || "-"}</span>;
       },
     },
     {
