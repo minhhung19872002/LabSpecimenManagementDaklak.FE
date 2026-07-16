@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useCallback } from "react";
-import { Card, Button, Space, Dropdown, Typography, message } from "antd";
-import { PlusOutlined, DownloadOutlined, DownOutlined } from "@ant-design/icons";
+import { Card, Button, Space, Typography, message } from "antd";
+import { PlusOutlined, DownloadOutlined } from "@ant-design/icons";
 import * as XLSX from "xlsx";
 import { getApiErrorMessage } from "../../utils/errorHandler";
 import { useGoodsReceiptList, useGoodsReceiptActions } from "./hooks";
@@ -205,27 +205,13 @@ const GoodsReceiptList: React.FC = () => {
               onChange={handleVisibilityChange}
             />
             {canCreate && (
-              <Dropdown
-                menu={{
-                  items: [
-                    {
-                      key: "goods",
-                      label: "Tạo yêu cầu mua sắm",
-                      onClick: () => handleCreate(GoodsReceiptType.Goods),
-                    },
-                    {
-                      key: "equipment",
-                      label: "Tạo phiếu nhập thiết bị",
-                      onClick: () => handleCreate(GoodsReceiptType.Equipment),
-                    },
-                  ],
-                }}
-                trigger={["click"]}
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => handleCreate(GoodsReceiptType.Goods)}
               >
-                <Button type="primary" icon={<PlusOutlined />}>
-                  Thêm mới <DownOutlined />
-                </Button>
-              </Dropdown>
+                Thêm mới
+              </Button>
             )}
           </Space>
         }
