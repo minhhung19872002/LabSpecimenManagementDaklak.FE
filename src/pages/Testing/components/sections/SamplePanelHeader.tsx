@@ -1,5 +1,5 @@
 import React from "react";
-import { Button, Space, Row, Col, Typography, DatePicker } from "antd";
+import { Button, Space, Row, Col, Typography, DatePicker, Tag } from "antd";
 import { SendOutlined } from "../../../../components/common/Icon";
 import {
   TestingSampleDto,
@@ -13,10 +13,8 @@ interface SamplePanelHeaderProps {
   sample: TestingSampleDto;
   selectedIndicatorIds: string[];
   submitting: boolean;
-  /** Có quyền thực hiện thao tác (nhập/sửa/gửi kết quả) theo Permission Matrix */
   canPerformActions?: boolean;
   onSubmitResults: (sampleId: string) => void;
-  /** Callback khi chọn ngày thử nghiệm cho các chỉ tiêu được select */
   onBulkTestDateChange?: (
     sampleId: string,
     indicatorIds: string[],
@@ -32,10 +30,8 @@ const SamplePanelHeader: React.FC<SamplePanelHeaderProps> = ({
   onSubmitResults,
   onBulkTestDateChange,
 }) => {
-  // Kiểm tra có chỉ tiêu nào được chọn có thể gửi duyệt không
-  // Có thể gửi khi: trạng thái Todo, Testing, Rejected hoặc PendingApproval (gửi lại)
-  const hasSubmittableIndicators = selectedIndicatorIds.some((indicatorId) => {
-    const indicator = sample.indicators.find((i) => i.id === indicatorId);
+  const hasSubmittableIndicators = selectedIndicatorIds.some((id) => {
+    const indicator = sample.indicators.find((i) => i.id === id);
     return (
       indicator &&
       (indicator.testingStatus === IndicatorTestingStatus.Todo ||
@@ -45,10 +41,8 @@ const SamplePanelHeader: React.FC<SamplePanelHeaderProps> = ({
     );
   });
 
-  // Lọc các chỉ tiêu được select có thể thay đổi ngày thử nghiệm
-  // (trạng thái Todo, Testing, Rejected hoặc PendingApproval)
-  const editableSelectedIds = selectedIndicatorIds.filter((indicatorId) => {
-    const indicator = sample.indicators.find((i) => i.id === indicatorId);
+  const editableSelectedIds = selectedIndicatorIds.filter((id) => {
+    const indicator = sample.indicators.find((i) => i.id === id);
     return (
       indicator &&
       indicator.canEdit &&
@@ -59,43 +53,33 @@ const SamplePanelHeader: React.FC<SamplePanelHeaderProps> = ({
     );
   });
 
-  // Kiểm tra nếu có chỉ tiêu bị từ chối trong danh sách được select
-  const hasRejectedIndicator = editableSelectedIds.some((indicatorId) => {
-    const indicator = sample.indicators.find((i) => i.id === indicatorId);
+  const hasRejectedIndicator = editableSelectedIds.some((id) => {
+    const indicator = sample.indicators.find((i) => i.id === id);
     return indicator?.testingStatus === IndicatorTestingStatus.Rejected;
   });
 
-  // Nếu có chỉ tiêu bị từ chối, không cho chọn ngày trước hôm nay
   const disabledDate = hasRejectedIndicator
     ? (current: dayjs.Dayjs) => current && current < dayjs().startOf("day")
     : undefined;
 
   const handleBulkTestDateChange = (date: dayjs.Dayjs | null) => {
     if (date && onBulkTestDateChange && editableSelectedIds.length > 0) {
-      onBulkTestDateChange(
-        sample.sampleId,
-        editableSelectedIds,
-        date.format("YYYY-MM-DD"),
-      );
+      onBulkTestDateChange(sample.sampleId, editableSelectedIds, date.format("YYYY-MM-DD"));
     }
   };
-
-  const sampleCodeText = sample.sampleCode || "-";
-  const sampleConditionText = sample.statusText?.trim();
-  const sampleTitle = sampleConditionText
-    ? `${sampleCodeText} - ${sampleConditionText}`
-    : sampleCodeText;
 
   return (
     <div style={{ width: "100%" }}>
       <Row justify="space-between" align="middle" wrap={false}>
         <Col flex="auto">
           <Space wrap size={8}>
-            <Text strong>{sampleTitle}</Text>
-            <Text type="secondary">({sample.indicators.length} chỉ tiêu)</Text>
+            <Tag style={{ margin: 0, borderRadius: 100, padding: "0 10px", background: "#fff", borderColor: "#d9d9d9", color: "#1677ff" }}>
+              {sample.sampleCode || "-"}
+            </Tag>
+            {sample.sampleName && <Text>{sample.sampleName}</Text>}
+            <Text type="secondary" style={{ fontWeight: 400 }}>({sample.indicators.length} chỉ tiêu)</Text>
           </Space>
         </Col>
-        {/* Chỉ hiển thị DatePicker và button Gửi kết quả khi có quyền thao tác */}
         {canPerformActions && (
           <Col flex="none" onClick={(e) => e.stopPropagation()}>
             <Space size={8} align="center">

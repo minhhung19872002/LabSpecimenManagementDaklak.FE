@@ -166,6 +166,7 @@ export interface TestingSampleDto {
   sampleCode?: string;
   sampleName?: string;
   statusText?: string;
+  sampleQuantity?: string;                       // Lượng mẫu gửi
   sampleImages: SampleAttachmentDto[];           // Hình mẫu từ TestRequest (readonly)
   beforeTestingImages: SampleTestingImageDto[];  // Hình trước TN (max 5)
   afterTestingImages: SampleTestingImageDto[];   // Hình sau TN (max 5)

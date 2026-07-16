@@ -1,5 +1,5 @@
 import React, { useCallback } from "react";
-import { Button, Collapse, Alert, Spin, Card, Tooltip } from "antd";
+import { Button, Collapse, Alert, Spin, Card, Tooltip, Row, Col } from "antd";
 import {
   ArrowLeftOutlined,
   WarningOutlined,
@@ -248,15 +248,19 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
       )}
 
       <Card>
-        {/* Header */}
-        <TestingDetailHeader detail={detail} />
-
-        {/* Overview Info */}
-        <TestingOverviewSection
-          detail={detail}
-          sortedSamples={sortedSamples}
-          isUrgent={isUrgent}
-        />
+        {/* Header + Overview Info — nằm ngang 2 cột */}
+        <Row gutter={16} align="stretch">
+          <Col xs={24} md={8} style={{ display: "flex", flexDirection: "column" }}>
+            <TestingDetailHeader detail={detail} />
+          </Col>
+          <Col xs={24} md={16} style={{ display: "flex", flexDirection: "column" }}>
+            <TestingOverviewSection
+              detail={detail}
+              sortedSamples={sortedSamples}
+              isUrgent={isUrgent}
+            />
+          </Col>
+        </Row>
 
         {/* Sample Panels */}
         <Collapse

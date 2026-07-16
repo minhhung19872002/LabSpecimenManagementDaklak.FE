@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card, Row, Col, Typography, Tooltip } from "antd";
 import { TestingDetailDto, TestingSampleDto } from "../../../../types/testing";
 import { formatDateVN } from "../../../../utils/formatters";
 
 const { Title, Text } = Typography;
+const MAX_SAMPLES_SHOWN = 2;
 
 interface TestingOverviewSectionProps {
   detail: TestingDetailDto;
@@ -16,6 +17,10 @@ const TestingOverviewSection: React.FC<TestingOverviewSectionProps> = ({
   sortedSamples,
   isUrgent,
 }) => {
+  const [samplesExpanded, setSamplesExpanded] = useState(false);
+  const visibleSamples = samplesExpanded ? sortedSamples : sortedSamples.slice(0, MAX_SAMPLES_SHOWN);
+  const hasMore = sortedSamples.length > MAX_SAMPLES_SHOWN;
+
   return (
     <Card
       className="testing-detail-header"
@@ -23,6 +28,7 @@ const TestingOverviewSection: React.FC<TestingOverviewSectionProps> = ({
         marginBottom: 16,
         background: "#FAFAFA",
         borderColor: "#D9D9D9",
+        flex: 1,
       }}
     >
       <Title
@@ -80,7 +86,7 @@ const TestingOverviewSection: React.FC<TestingOverviewSectionProps> = ({
               </Col>
               <Col flex="auto">
                 <ul style={{ paddingLeft: 20, margin: 0 }}>
-                  {sortedSamples.map((sample) => (
+                  {visibleSamples.map((sample) => (
                     <li key={sample.sampleId} style={{ marginBottom: 2 }}>
                       <Text strong>{sample.sampleCode}</Text>
                       <Text type="secondary"> - </Text>
@@ -90,6 +96,15 @@ const TestingOverviewSection: React.FC<TestingOverviewSectionProps> = ({
                     </li>
                   ))}
                 </ul>
+                {hasMore && (
+                  <Text
+                    type="secondary"
+                    style={{ cursor: "pointer", color: "#1677ff", paddingLeft: 20, display: "block", marginTop: 2 }}
+                    onClick={() => setSamplesExpanded((v) => !v)}
+                  >
+                    {samplesExpanded ? "Thu gọn" : `Xem thêm (${sortedSamples.length - MAX_SAMPLES_SHOWN})`}
+                  </Text>
+                )}
               </Col>
             </Row>
             <Row className="testing-overview-row">
