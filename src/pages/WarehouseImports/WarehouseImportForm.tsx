@@ -3,7 +3,7 @@ import {
   Card, Form, Input, Select, DatePicker, InputNumber, Button, Space, Row, Col,
   Table, message, Spin, Divider, Tag, Modal, Badge, Popover, AutoComplete,
 } from "antd";
-import { BranchesOutlined, WarningOutlined, EditOutlined, FileTextOutlined } from "@ant-design/icons";
+import { BranchesOutlined, WarningOutlined, EditOutlined, FileTextOutlined, DeleteOutlined } from "@ant-design/icons";
 import { NumericFormat } from "react-number-format";
 import { DeliveryDocumentFileDto } from "../../services/warehouseImportReceiptService";
 import { useNavigate, useParams } from "react-router-dom";
@@ -24,7 +24,6 @@ import {
   WarehouseImportLineStatusOptions,
 } from "../../services/warehouseImportReceiptService";
 import { employeeService } from "../../services/employeeService";
-import { warehouseService, WarehouseDto } from "../../services/masterDataService";
 import { supplierService } from "../../services/supplierService";
 import { authService } from "../../services/authService";
 import { clearableSelectProps } from "../../utils/formHelpers";
@@ -68,7 +67,6 @@ const WarehouseImportForm: React.FC = () => {
   const [eligibleReceipts, setEligibleReceipts] = useState<EligibleGoodsReceiptForImportDto[]>([]);
   const [importableItems, setImportableItems] = useState<GoodsReceiptItemForImportDto[]>([]);
   const [defectiveHistory, setDefectiveHistory] = useState<DefectiveHistoryItemDto[]>([]);
-  const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [previewCode, setPreviewCode] = useState<string>("");
   const [deliveryFiles, setDeliveryFiles] = useState<DeliveryDocumentFileDto[]>([]);
@@ -180,11 +178,9 @@ const WarehouseImportForm: React.FC = () => {
     const loadData = async () => {
       setPageLoading(true);
       try {
-        const [employeesList, warehouseList] = await Promise.all([
+        const [employeesList] = await Promise.all([
           employeeService.getList({ maxResultCount: 1000 }),
-          warehouseService.getRoot(),
         ]);
-        setWarehouses(warehouseList || []);
 
         if (id) {
           const data = await warehouseImportReceiptService.get(id);
@@ -205,7 +201,6 @@ const WarehouseImportForm: React.FC = () => {
             actualImportDate: data.actualImportDate ? dayjs(data.actualImportDate).format("YYYY-MM-DD") : dayjs().format("YYYY-MM-DD"),
             warehouseKeeperId: data.warehouseKeeperId || undefined,
             warehouseKeeperName: data.warehouseKeeperName || "",
-            warehouseId: data.warehouseId || undefined,
             notes: data.notes || "",
             supplierId: data.supplierId || undefined,
             supplierName: data.supplierName || "",
@@ -349,6 +344,15 @@ const WarehouseImportForm: React.FC = () => {
     };
   };
 
+  const handleDeleteLine = (key: string) => {
+    setLineItems((prev) => prev.filter((it) => it.key !== key));
+    setLineItemErrors((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
   const handleSplitLine = (record: LineItem) => {
     const newRow: LineItem = {
       key: `${record.goodsReceiptItemId}-split-${Date.now()}`,
@@ -434,7 +438,6 @@ const WarehouseImportForm: React.FC = () => {
     actualImportDate: data.actualImportDate as string,
     warehouseKeeperId: data.warehouseKeeperId || undefined,
     warehouseKeeperName: data.warehouseKeeperName || undefined,
-    warehouseId: data.warehouseId || undefined,
     notes: data.notes || undefined,
     supplierId: data.supplierId || supplierId || undefined,
     supplierName: data.supplierName || undefined,
@@ -674,6 +677,28 @@ const WarehouseImportForm: React.FC = () => {
       ? [
           {
             title: "",
+            key: "delete",
+            width: 50,
+            fixed: "right" as const,
+            render: (_: any, record: LineItem) => {
+              if (record.isHistorical) return null;
+              const nonHistGroupItems = lineItems.filter(
+                (it) => it.goodsReceiptItemId === record.goodsReceiptItemId && !it.isHistorical
+              );
+              if (nonHistGroupItems.length < 2) return null;
+              return (
+                <Button
+                  size="small"
+                  type="text"
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={() => handleDeleteLine(record.key)}
+                />
+              );
+            },
+          },
+          {
+            title: "",
             key: "action",
             width: 90,
             fixed: "right" as const,
@@ -828,38 +853,6 @@ const WarehouseImportForm: React.FC = () => {
             </Col>
             <Col xs={24} sm={12} md={8}>
               <Controller
-                name="warehouseId"
-                control={control}
-                render={({ field, fieldState }) => (
-                  <Form.Item
-                    label="Chọn kho"
-                    required
-                    validateStatus={fieldState.error ? "error" : undefined}
-                    help={fieldState.error?.message}
-                  >
-                    <Select
-                      {...clearableSelectProps(field)}
-                      showSearch
-                      optionFilterProp="label"
-                      placeholder="Chọn kho"
-                      disabled={isReadonly}
-                      allowClear
-                      options={warehouses.map((w) => ({ value: w.id, label: w.name }))}
-                    />
-                  </Form.Item>
-                )}
-              />
-            </Col>
-            <Col xs={24} sm={12} md={8}>
-              <Form.Item label="Mã phiếu nhập kho">
-                <Input value={receipt?.code || previewCode || ""} placeholder="Tự động sinh khi lưu" disabled style={{ backgroundColor: "#f5f5f5" }} />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={24}>
-            <Col xs={24} sm={12} md={8}>
-              <Controller
                 name="totalAmount"
                 control={control}
                 render={({ field, fieldState }) => (
@@ -887,6 +880,14 @@ const WarehouseImportForm: React.FC = () => {
                 )}
               />
             </Col>
+            <Col xs={24} sm={12} md={8}>
+              <Form.Item label="Mã phiếu nhập kho">
+                <Input value={receipt?.code || previewCode || ""} placeholder="Tự động sinh khi lưu" disabled style={{ backgroundColor: "#f5f5f5" }} />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={24}>
             <Col xs={24} sm={12} md={8}>
               <Form.Item
                 label="Chứng từ giao hàng"
