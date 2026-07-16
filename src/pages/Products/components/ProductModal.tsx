@@ -459,7 +459,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
     mainTechnicalSpecs: isEquipmentType(data.productType) ? data.mainTechnicalSpecs || undefined : undefined,
     installationLocation: isEquipmentType(data.productType) ? data.installationLocation || undefined : undefined,
     concentration: (isChemOrBioOrStdOrSupplyOrSolventType(data.productType) || isPreparedSolutionType(data.productType)) ? data.concentration || undefined : undefined,
-    formattedConcentration: (isBiologicalType(data.productType) || isStandardType(data.productType) || isSolventType(data.productType) || isPreparedSolutionType(data.productType) || isSupplyType(data.productType)) ? data.formattedConcentration || undefined : undefined,
+    formattedConcentration: (isChemicalType(data.productType) || isBiologicalType(data.productType) || isStandardType(data.productType) || isSolventType(data.productType) || isPreparedSolutionType(data.productType) || isSupplyType(data.productType)) ? data.formattedConcentration || undefined : undefined,
     formattedOrigin: (isBiologicalType(data.productType) || isStandardType(data.productType)) ? data.formattedOrigin || undefined : undefined,
     ghsCode: (isBiologicalType(data.productType) || isStandardType(data.productType) || isSupplyType(data.productType) || isSolventType(data.productType) || isPreparedSolutionType(data.productType)) ? data.ghsCode || undefined : undefined,
     chemicalFormula: (isChemicalType(data.productType) || isStandardType(data.productType) || isSolventType(data.productType) || isPreparedSolutionType(data.productType)) ? data.chemicalFormula || undefined : undefined,

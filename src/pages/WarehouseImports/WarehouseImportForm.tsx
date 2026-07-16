@@ -22,7 +22,9 @@ import {
   WarehouseImportReceiptStatus,
   WarehouseImportLineStatus,
   WarehouseImportLineStatusOptions,
+  ProductSkuForImportDto,
 } from "../../services/warehouseImportReceiptService";
+import { warehouseService, WarehouseDto } from "../../services/masterDataService";
 import { employeeService } from "../../services/employeeService";
 import { supplierService } from "../../services/supplierService";
 import { authService } from "../../services/authService";
@@ -53,6 +55,14 @@ interface LineItem {
   notes?: string;
   /** Dòng đã nhập ở phiếu nhập kho Hoàn thành khác (trước đó) — chỉ xem, không cho chỉnh sửa. */
   isHistorical?: boolean;
+  skuId?: string;
+  selectedUnitId?: string;
+  selectedUnitName?: string;
+  availableSkus?: ProductSkuForImportDto[];
+  casNumber?: string;
+  packagingSpec?: string;
+  storageWarehouseId?: string;
+  storageWarehouseName?: string;
 }
 
 const WarehouseImportForm: React.FC = () => {
@@ -79,8 +89,9 @@ const WarehouseImportForm: React.FC = () => {
   const supplierDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [lineItemErrors, setLineItemErrors] = useState<
-    Record<string, { actualReceivedQuantity?: string; lotNumber?: string; lotExpiryDate?: string; qualityDocument?: string }>
+    Record<string, { actualReceivedQuantity?: string; lotNumber?: string; lotExpiryDate?: string; qualityDocument?: string; skuId?: string; selectedUnitId?: string }>
   >({});
+  const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
 
   const isReadonly = receipt ? receipt.status === WarehouseImportReceiptStatus.Completed : false;
 
@@ -125,6 +136,9 @@ const WarehouseImportForm: React.FC = () => {
           baseUnitName: imp.baseUnitName,
           baseOrderedQuantity: imp.baseOrderedQuantity,
           remainingOrderableQuantity: imp.remainingOrderableQuantity,
+          availableSkus: imp.skus || [],
+          casNumber: imp.casNumber,
+          packagingSpec: imp.packagingSpec,
         };
 
         (imp.previousLots || [])
@@ -146,6 +160,7 @@ const WarehouseImportForm: React.FC = () => {
 
         if (matches.length > 0) {
           matches.forEach((m, idx) => {
+            const matchedSku = m.skuId ? (imp.skus || []).find(s => s.skuId === m.skuId) : undefined;
             rows.push({
               ...base,
               key: `${imp.goodsReceiptItemId}-${idx}-${m.id}`,
@@ -158,6 +173,15 @@ const WarehouseImportForm: React.FC = () => {
                 ? { fileId: m.qualityDocumentFileId, fileName: m.qualityDocumentFileName || "", fileSize: m.qualityDocumentFileSize }
                 : undefined,
               notes: m.notes,
+              skuId: m.skuId,
+              selectedUnitId: m.unitId,
+              selectedUnitName: matchedSku
+                ? (m.unitId === matchedSku.purchaseUnitId ? matchedSku.purchaseUnitName
+                  : m.unitId === matchedSku.storageUnitId ? matchedSku.storageUnitName
+                  : matchedSku.consumableUnitName) ?? m.unitName
+                : m.unitName,
+              storageWarehouseId: m.storageWarehouseId,
+              storageWarehouseName: m.storageWarehouseName,
             });
           });
         } else {
@@ -178,9 +202,11 @@ const WarehouseImportForm: React.FC = () => {
     const loadData = async () => {
       setPageLoading(true);
       try {
-        const [employeesList] = await Promise.all([
+        const [employeesList, warehouseList] = await Promise.all([
           employeeService.getList({ maxResultCount: 1000 }),
+          warehouseService.getList({ maxResultCount: 1000 }),
         ]);
+        setWarehouses(warehouseList.items || []);
 
         if (id) {
           const data = await warehouseImportReceiptService.get(id);
@@ -365,6 +391,14 @@ const WarehouseImportForm: React.FC = () => {
       remainingOrderableQuantity: record.remainingOrderableQuantity,
       actualReceivedQuantity: 0,
       status: WarehouseImportLineStatus.Checked,
+      availableSkus: record.availableSkus,
+      casNumber: record.casNumber,
+      packagingSpec: record.packagingSpec,
+      skuId: record.skuId,
+      selectedUnitId: record.selectedUnitId,
+      selectedUnitName: record.selectedUnitName,
+      storageWarehouseId: record.storageWarehouseId,
+      storageWarehouseName: record.storageWarehouseName,
     };
     setLineItems((prev) => {
       const idx = prev.findIndex((it) => it.key === record.key);
@@ -381,22 +415,20 @@ const WarehouseImportForm: React.FC = () => {
   };
 
   const validateItems = (): boolean => {
-    const startedItems = lineItems.filter(
-      (item) =>
-        !item.isHistorical &&
-        (item.actualReceivedQuantity > 0 || item.lotNumber || item.lotExpiryDate || item.qualityDocument)
-    );
-    if (startedItems.length === 0) {
-      message.warning("Vui lòng nhập số lượng thực nhận cho ít nhất một hàng hóa.");
-      return false;
-    }
+    const editableItems = lineItems.filter(item => !item.isHistorical);
 
     const errors: typeof lineItemErrors = {};
     let hasError = false;
-    startedItems.forEach((item) => {
+    editableItems.forEach((item) => {
       const itemErr: Record<string, string> = {};
       if (!item.actualReceivedQuantity || item.actualReceivedQuantity <= 0) {
         itemErr.actualReceivedQuantity = "Vui lòng nhập số lượng thực nhận";
+      }
+      if ((item.availableSkus || []).length > 0 && !item.skuId) {
+        itemErr.skuId = "Vui lòng chọn hãng sản xuất";
+      }
+      if ((item.availableSkus || []).length > 0 && item.skuId && !item.selectedUnitId) {
+        itemErr.selectedUnitId = "Vui lòng chọn đơn vị tính";
       }
       if (!item.lotNumber) {
         itemErr.lotNumber = "Số lô không được trống";
@@ -414,13 +446,13 @@ const WarehouseImportForm: React.FC = () => {
     });
     setLineItemErrors(errors);
     if (hasError) {
-      message.warning("Vui lòng nhập đầy đủ Thực nhận, Số lô, Hạn sử dụng và Hồ sơ chất lượng cho các dòng đã nhập.");
+      message.warning("Vui lòng điền đầy đủ thông tin bắt buộc cho các dòng đã nhập.");
       return false;
     }
 
     const byLine = new Map<string, number>();
-    for (const item of startedItems) {
-      if (item.status !== WarehouseImportLineStatus.Checked) continue;
+    for (const item of editableItems) {
+      if (item.status !== WarehouseImportLineStatus.Checked || !item.actualReceivedQuantity) continue;
       byLine.set(item.goodsReceiptItemId, (byLine.get(item.goodsReceiptItemId) || 0) + item.actualReceivedQuantity);
     }
     for (const [goodsReceiptItemId, sum] of byLine) {
@@ -456,6 +488,11 @@ const WarehouseImportForm: React.FC = () => {
         qualityDocumentFileName: item.qualityDocument?.fileName,
         qualityDocumentFileSize: item.qualityDocument?.fileSize,
         notes: item.notes || undefined,
+        skuId: item.skuId || undefined,
+        selectedUnitId: item.selectedUnitId || undefined,
+        selectedUnitName: item.selectedUnitName || undefined,
+        storageWarehouseId: item.storageWarehouseId || undefined,
+        storageWarehouseName: item.storageWarehouseName || undefined,
       })),
   });
 
@@ -545,7 +582,12 @@ const WarehouseImportForm: React.FC = () => {
               precision={0}
               step={1}
               max={record.status === WarehouseImportLineStatus.Checked ? getRemainingForRow(record) : undefined}
-              onChange={(v) => handleLineChange(record.key, "actualReceivedQuantity", v || 0)}
+              onChange={(v) => {
+                  handleLineChange(record.key, "actualReceivedQuantity", v || 0);
+                  if (!v || v <= 0) {
+                    setLineItemErrors(prev => { const { [record.key]: _, ...rest } = prev; return rest; });
+                  }
+                }}
               status={lineItemErrors[record.key]?.actualReceivedQuantity ? "error" : undefined}
               style={{ width: "100%" }}
               size="small"
@@ -555,6 +597,87 @@ const WarehouseImportForm: React.FC = () => {
             )}
           </>
         ),
+    },
+    {
+      title: <span>Hãng sản xuất <span style={{ color: "#ff4d4f" }}>*</span></span>,
+      key: "manufacturer",
+      width: 140,
+      render: (_: any, record: LineItem) => {
+        if (isReadonly || record.isHistorical) {
+          const sku = (record.availableSkus || []).find(s => s.skuId === record.skuId);
+          return sku?.manufacturerName || "-";
+        }
+        const hasSkus = (record.availableSkus || []).length > 0;
+        const err = lineItemErrors[record.key]?.skuId;
+        return (
+          <>
+            <Select
+              size="small"
+              style={{ width: "100%" }}
+              placeholder={hasSkus ? "Chọn hãng" : "-"}
+              value={record.skuId || undefined}
+              options={(record.availableSkus || []).map(s => ({ value: s.skuId, label: s.manufacturerName }))}
+              onChange={(skuId) => {
+                setLineItems(prev => prev.map(it =>
+                  it.key === record.key
+                    ? { ...it, skuId, selectedUnitId: undefined, selectedUnitName: undefined }
+                    : it
+                ));
+                setLineItemErrors(prev => {
+                  const { skuId: _s, ...rest } = prev[record.key] || {};
+                  return { ...prev, [record.key]: rest };
+                });
+              }}
+              disabled={!hasSkus}
+              status={err ? "error" : undefined}
+              allowClear
+            />
+            {err && <div style={{ color: "#ff4d4f", fontSize: 11 }}>{err}</div>}
+          </>
+        );
+      },
+    },
+    {
+      title: <span>Đơn vị tính <span style={{ color: "#ff4d4f" }}>*</span></span>,
+      key: "selectedUnit",
+      width: 140,
+      render: (_: any, record: LineItem) => {
+        if (isReadonly || record.isHistorical) return record.selectedUnitName || record.unitName || "-";
+        const selectedSku = (record.availableSkus || []).find(s => s.skuId === record.skuId);
+        const unitOptions = selectedSku
+          ? [
+              ...(selectedSku.purchaseUnitId ? [{ value: selectedSku.purchaseUnitId, label: `${selectedSku.purchaseUnitName} (mua hàng)` }] : []),
+              ...(selectedSku.storageUnitId && selectedSku.storageUnitId !== selectedSku.purchaseUnitId
+                ? [{ value: selectedSku.storageUnitId, label: `${selectedSku.storageUnitName} (lưu kho)` }] : []),
+              ...(selectedSku.consumableUnitId ? [{ value: selectedSku.consumableUnitId, label: `${selectedSku.consumableUnitName} (tiêu hao)` }] : []),
+            ]
+          : [];
+        const err = lineItemErrors[record.key]?.selectedUnitId;
+        return (
+          <>
+            <Select
+              size="small"
+              style={{ width: "100%" }}
+              placeholder="Chọn đơn vị"
+              value={record.selectedUnitId || undefined}
+              options={unitOptions}
+              disabled={!record.skuId}
+              onChange={(unitId) => {
+                const opt = unitOptions.find(o => o.value === unitId);
+                handleLineChange(record.key, "selectedUnitId", unitId);
+                handleLineChange(record.key, "selectedUnitName", opt?.label);
+                setLineItemErrors(prev => {
+                  const { selectedUnitId: _u, ...rest } = prev[record.key] || {};
+                  return { ...prev, [record.key]: rest };
+                });
+              }}
+              status={err ? "error" : undefined}
+              allowClear
+            />
+            {err && <div style={{ color: "#ff4d4f", fontSize: 11 }}>{err}</div>}
+          </>
+        );
+      },
     },
     {
       title: <span>Trạng thái <span style={{ color: "#ff4d4f" }}>*</span></span>,
@@ -656,9 +779,54 @@ const WarehouseImportForm: React.FC = () => {
       },
     },
     {
+      title: "Kho lưu trữ",
+      key: "storageWarehouse",
+      width: 160,
+      render: (_: any, record: LineItem) => {
+        if (isReadonly || record.isHistorical) return record.storageWarehouseName || "-";
+        return (
+          <Select
+            size="small"
+            style={{ width: "100%" }}
+            placeholder="Chọn kho"
+            value={record.storageWarehouseId || undefined}
+            showSearch
+            optionFilterProp="label"
+            options={warehouses.map(w => ({ value: w.id, label: w.name }))}
+            onChange={(warehouseId) => {
+              const wh = warehouses.find(w => w.id === warehouseId);
+              setLineItems(prev => prev.map(it =>
+                it.key === record.key
+                  ? { ...it, storageWarehouseId: warehouseId, storageWarehouseName: wh?.name }
+                  : it
+              ));
+            }}
+            allowClear
+          />
+        );
+      },
+    },
+    {
+      title: "Cấu hình kỹ thuật",
+      key: "packagingSpec",
+      width: 150,
+      render: (_: any, record: LineItem) =>
+        record.packagingSpec
+          ? <div style={{ fontSize: 12, color: "#595959" }} dangerouslySetInnerHTML={{ __html: record.packagingSpec }} />
+          : <span style={{ fontSize: 12, color: "#595959" }}>-</span>,
+    },
+    {
+      title: "CAS",
+      key: "casNumber",
+      width: 110,
+      render: (_: any, record: LineItem) => (
+        <span style={{ fontSize: 12, color: "#595959" }}>{record.casNumber || "-"}</span>
+      ),
+    },
+    {
       title: <span>Hồ sơ chất lượng (COA) <span style={{ color: "#ff4d4f" }}>*</span></span>,
       key: "qualityDocument",
-      width: 170,
+      width: 190,
       render: (_: any, record: LineItem) => (
         <>
           <SingleFileUpload
@@ -992,7 +1160,7 @@ const WarehouseImportForm: React.FC = () => {
             dataSource={lineItems}
             rowKey="key"
             pagination={false}
-            scroll={{ x: 1400 }}
+            scroll={{ x: 2020 }}
             size="small"
             bordered
             loading={itemsLoading}
@@ -1042,7 +1210,7 @@ const WarehouseImportForm: React.FC = () => {
             <Button
               type="primary"
               loading={confirming}
-              onClick={() => {
+              onClick={handleSubmit(() => {
                 if (!validateItems()) return;
                 Modal.confirm({
                   title: "Xác nhận nhập kho",
@@ -1052,7 +1220,7 @@ const WarehouseImportForm: React.FC = () => {
                   centered: true,
                   onOk: handleConfirm,
                 });
-              }}
+              })}
             >
               {confirmButtonLabel}
             </Button>

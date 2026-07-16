@@ -132,6 +132,9 @@ export interface WarehouseImportReceiptItemDto {
   qualityDocumentFilePath?: string;
   qualityDocumentFileSize?: number;
   notes?: string;
+  skuId?: string;
+  storageWarehouseId?: string;
+  storageWarehouseName?: string;
 }
 
 export interface CreateUpdateWarehouseImportReceiptDto {
@@ -160,6 +163,11 @@ export interface CreateUpdateWarehouseImportReceiptItemDto {
   qualityDocumentFilePath?: string;
   qualityDocumentFileSize?: number;
   notes?: string;
+  skuId?: string;
+  selectedUnitId?: string;
+  selectedUnitName?: string;
+  storageWarehouseId?: string;
+  storageWarehouseName?: string;
 }
 
 export interface EligibleGoodsReceiptForImportDto {
@@ -180,6 +188,23 @@ export interface PreviousReceivedLotDto {
   qualityDocumentFileSize?: number;
 }
 
+export interface ProductSkuForImportDto {
+  skuId: string;
+  manufacturerId: string;
+  manufacturerName: string;
+  /** SKU.BaseUnitId = Đơn vị mua hàng */
+  purchaseUnitId?: string;
+  purchaseUnitName?: string;
+  packagingQuantity?: number;
+  /** SKU.PackagingUnitId = Đơn vị lưu kho */
+  storageUnitId?: string;
+  storageUnitName?: string;
+  volumePerUnit?: number;
+  /** SKU.VolumeUnitId = Đơn vị tiêu hao */
+  consumableUnitId?: string;
+  consumableUnitName?: string;
+}
+
 export interface GoodsReceiptItemForImportDto {
   goodsReceiptItemId: string;
   productId: string;
@@ -194,6 +219,9 @@ export interface GoodsReceiptItemForImportDto {
   baseOrderedQuantity?: number;
   /** Các dòng đã nhập ở những phiếu nhập kho Hoàn thành trước đó, hiển thị read-only. */
   previousLots: PreviousReceivedLotDto[];
+  skus: ProductSkuForImportDto[];
+  casNumber?: string;
+  packagingSpec?: string;
 }
 
 export interface DefectiveHistoryItemDto {
