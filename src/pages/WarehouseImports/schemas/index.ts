@@ -7,6 +7,9 @@ export const warehouseImportReceiptSchema = yup.object({
   warehouseKeeperName: yup.string().nullable().max(200),
   warehouseId: yup.string().nullable().required("Phải chọn kho nhập hàng"),
   notes: yup.string().nullable().max(2000),
+  supplierId: yup.string().nullable(),
+  supplierName: yup.string().nullable().required("Vui lòng chọn hoặc nhập tên nhà cung cấp").max(500),
+  totalAmount: yup.number().nullable().required("Vui lòng nhập tổng giá trị đơn hàng").min(0, "Giá trị không hợp lệ"),
 });
 
 export type WarehouseImportReceiptFormData = yup.InferType<typeof warehouseImportReceiptSchema>;

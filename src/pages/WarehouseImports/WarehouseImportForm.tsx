@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Card, Form, Input, Select, DatePicker, InputNumber, Button, Space, Row, Col,
-  Table, message, Spin, Divider, Tag, Modal, Badge, Popover,
+  Table, message, Spin, Divider, Tag, Modal, Badge, Popover, AutoComplete,
 } from "antd";
 import { BranchesOutlined, WarningOutlined, EditOutlined, FileTextOutlined } from "@ant-design/icons";
+import { NumericFormat } from "react-number-format";
 import { DeliveryDocumentFileDto } from "../../services/warehouseImportReceiptService";
 import { useNavigate, useParams } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
@@ -24,6 +25,7 @@ import {
 } from "../../services/warehouseImportReceiptService";
 import { employeeService } from "../../services/employeeService";
 import { warehouseService, WarehouseDto } from "../../services/masterDataService";
+import { supplierService } from "../../services/supplierService";
 import { authService } from "../../services/authService";
 import { clearableSelectProps } from "../../utils/formHelpers";
 import { getApiErrorMessage } from "../../utils/errorHandler";
@@ -72,6 +74,12 @@ const WarehouseImportForm: React.FC = () => {
   const [deliveryFiles, setDeliveryFiles] = useState<DeliveryDocumentFileDto[]>([]);
   const [deliveryFilesError, setDeliveryFilesError] = useState<string>();
   const [itemsLoading, setItemsLoading] = useState(false);
+
+  // Supplier autocomplete state
+  const [supplierId, setSupplierId] = useState<string | undefined>();
+  const [supplierOptions, setSupplierOptions] = useState<{ value: string; label: string; id: string }[]>([]);
+  const supplierDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const [lineItemErrors, setLineItemErrors] = useState<
     Record<string, { actualReceivedQuantity?: string; lotNumber?: string; lotExpiryDate?: string; qualityDocument?: string }>
   >({});
@@ -93,6 +101,9 @@ const WarehouseImportForm: React.FC = () => {
       warehouseKeeperName: "",
       warehouseId: undefined,
       notes: "",
+      supplierId: undefined,
+      supplierName: "",
+      totalAmount: undefined,
     },
   });
 
@@ -196,7 +207,11 @@ const WarehouseImportForm: React.FC = () => {
             warehouseKeeperName: data.warehouseKeeperName || "",
             warehouseId: data.warehouseId || undefined,
             notes: data.notes || "",
+            supplierId: data.supplierId || undefined,
+            supplierName: data.supplierName || "",
+            totalAmount: data.totalAmount ?? undefined,
           });
+          setSupplierId(data.supplierId || undefined);
           const eligible = await warehouseImportReceiptService.getEligibleGoodsReceipts();
           setEligibleReceipts(eligible);
         } else {
@@ -225,6 +240,32 @@ const WarehouseImportForm: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  const handleSupplierSearch = useCallback((text: string) => {
+    if (supplierDebounceRef.current) clearTimeout(supplierDebounceRef.current);
+    supplierDebounceRef.current = setTimeout(async () => {
+      if (!text.trim()) {
+        setSupplierOptions([]);
+        return;
+      }
+      try {
+        const res = await supplierService.getList({ search: text, limit: 10 });
+        setSupplierOptions(
+          (res.items || []).map((s) => ({ value: s.name, label: s.name, id: s.id }))
+        );
+      } catch {
+        setSupplierOptions([]);
+      }
+    }, 350);
+  }, []);
+
+  const handleSupplierSelect = useCallback((selectedName: string, option: any) => {
+    if (option?.id) {
+      setSupplierId(option.id);
+      setValue("supplierId" as any, option.id);
+    }
+    setValue("supplierName", selectedName);
+  }, [setValue]);
+
   const handleGoodsReceiptChange = async (goodsReceiptId: string | null) => {
     setValue("goodsReceiptId", goodsReceiptId as any);
     if (!goodsReceiptId) {
@@ -232,6 +273,13 @@ const WarehouseImportForm: React.FC = () => {
       setLineItems([]);
       setDefectiveHistory([]);
       return;
+    }
+    // Auto-fill supplier from selected GoodsReceipt
+    const selected = eligibleReceipts.find((r) => r.id === goodsReceiptId);
+    if (selected?.supplierName) {
+      setValue("supplierName", selected.supplierName);
+      setValue("supplierId", selected.supplierId || undefined);
+      setSupplierId(selected.supplierId || undefined);
     }
     setItemsLoading(true);
     try {
@@ -387,8 +435,11 @@ const WarehouseImportForm: React.FC = () => {
     warehouseKeeperId: data.warehouseKeeperId || undefined,
     warehouseKeeperName: data.warehouseKeeperName || undefined,
     warehouseId: data.warehouseId || undefined,
-    deliveryDocumentFiles: deliveryFiles,
     notes: data.notes || undefined,
+    supplierId: data.supplierId || supplierId || undefined,
+    supplierName: data.supplierName || undefined,
+    totalAmount: data.totalAmount ?? undefined,
+    deliveryDocumentFiles: deliveryFiles,
     items: lineItems
       .filter((item) => !item.isHistorical && item.actualReceivedQuantity > 0)
       .map((item): CreateUpdateWarehouseImportReceiptItemDto => ({
@@ -746,21 +797,34 @@ const WarehouseImportForm: React.FC = () => {
 
           <Row gutter={24}>
             <Col xs={24} sm={12} md={8}>
-              <Form.Item
-                label="Chứng từ giao hàng"
-                validateStatus={deliveryFilesError ? "error" : undefined}
-                help={deliveryFilesError}
-              >
-                <MultiFileUpload
-                  value={deliveryFiles}
-                  onChange={(files) => {
-                    setDeliveryFiles(files);
-                    if (files.length > 0) setDeliveryFilesError(undefined);
-                  }}
-                  disabled={isReadonly}
-                  maxFiles={MAX_DELIVERY_FILES}
-                />
-              </Form.Item>
+              <Controller
+                name="supplierName"
+                control={control}
+                render={({ field, fieldState }) => (
+                  <Form.Item
+                    label="Nhà cung cấp"
+                    required
+                    validateStatus={fieldState.error ? "error" : undefined}
+                    help={fieldState.error?.message}
+                  >
+                    <AutoComplete
+                      value={field.value || ""}
+                      options={supplierOptions}
+                      disabled={isReadonly}
+                      placeholder="Nhập tên nhà cung cấp"
+                      onSearch={(text) => {
+                        field.onChange(text);
+                        setSupplierId(undefined);
+                        setValue("supplierId" as any, undefined as any);
+                        handleSupplierSearch(text);
+                      }}
+                      onSelect={(val: string, option: any) => handleSupplierSelect(val, option)}
+                      filterOption={false}
+                      status={fieldState.error ? "error" : undefined}
+                    />
+                  </Form.Item>
+                )}
+              />
             </Col>
             <Col xs={24} sm={12} md={8}>
               <Controller
@@ -789,6 +853,55 @@ const WarehouseImportForm: React.FC = () => {
             <Col xs={24} sm={12} md={8}>
               <Form.Item label="Mã phiếu nhập kho">
                 <Input value={receipt?.code || previewCode || ""} placeholder="Tự động sinh khi lưu" disabled style={{ backgroundColor: "#f5f5f5" }} />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={24}>
+            <Col xs={24} sm={12} md={8}>
+              <Controller
+                name="totalAmount"
+                control={control}
+                render={({ field, fieldState }) => (
+                  <Form.Item
+                    label="Tổng giá trị đơn hàng"
+                    required
+                    validateStatus={fieldState.error ? "error" : undefined}
+                    help={fieldState.error?.message}
+                  >
+                    <NumericFormat
+                      value={field.value ?? ""}
+                      onValueChange={(values) => field.onChange(values.floatValue ?? null)}
+                      allowNegative={false}
+                      decimalScale={2}
+                      thousandSeparator="."
+                      decimalSeparator=","
+                      customInput={Input}
+                      addonAfter="đ"
+                      style={{ width: "100%" }}
+                      placeholder="Nhập tổng giá trị"
+                      disabled={isReadonly}
+                      status={fieldState.error ? "error" : undefined}
+                    />
+                  </Form.Item>
+                )}
+              />
+            </Col>
+            <Col xs={24} sm={12} md={8}>
+              <Form.Item
+                label="Chứng từ giao hàng"
+                validateStatus={deliveryFilesError ? "error" : undefined}
+                help={deliveryFilesError}
+              >
+                <MultiFileUpload
+                  value={deliveryFiles}
+                  onChange={(files) => {
+                    setDeliveryFiles(files);
+                    if (files.length > 0) setDeliveryFilesError(undefined);
+                  }}
+                  disabled={isReadonly}
+                  maxFiles={MAX_DELIVERY_FILES}
+                />
               </Form.Item>
             </Col>
           </Row>

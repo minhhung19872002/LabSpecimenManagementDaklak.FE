@@ -105,8 +105,10 @@ export interface WarehouseImportReceiptDto {
   notes?: string;
   status: WarehouseImportReceiptStatus;
   hasDefectiveItem: boolean;
+  supplierId?: string;
   supplierName?: string;
   contactPersonName?: string;
+  totalAmount?: number;
   creatorName?: string;
   creationTime: string;
   items: WarehouseImportReceiptItemDto[];
@@ -138,8 +140,11 @@ export interface CreateUpdateWarehouseImportReceiptDto {
   warehouseKeeperId?: string;
   warehouseKeeperName?: string;
   warehouseId?: string;
-  deliveryDocumentFiles: DeliveryDocumentFileDto[];
   notes?: string;
+  supplierId?: string;
+  supplierName?: string;
+  totalAmount?: number;
+  deliveryDocumentFiles: DeliveryDocumentFileDto[];
   items: CreateUpdateWarehouseImportReceiptItemDto[];
 }
 
@@ -160,6 +165,7 @@ export interface CreateUpdateWarehouseImportReceiptItemDto {
 export interface EligibleGoodsReceiptForImportDto {
   id: string;
   code: string;
+  supplierId?: string;
   supplierName?: string;
   expectedDeliveryDate?: string;
 }

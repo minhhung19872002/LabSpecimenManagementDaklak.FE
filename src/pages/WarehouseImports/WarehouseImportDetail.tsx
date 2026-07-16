@@ -241,6 +241,14 @@ const WarehouseImportDetail: React.FC = () => {
                 <Text type="secondary">Người liên hệ:</Text>
                 <Text strong>{receipt.contactPersonName || "-"}</Text>
               </div>
+              <div className="detail-item">
+                <Text type="secondary">Tổng giá trị đơn hàng:</Text>
+                <Text strong>
+                  {receipt.totalAmount != null
+                    ? receipt.totalAmount.toLocaleString("vi-VN") + " đ"
+                    : "-"}
+                </Text>
+              </div>
             </div>
             {((receipt.deliveryDocumentFiles && receipt.deliveryDocumentFiles.length > 0) || receipt.deliveryDocumentFileId) && (
               <>
