@@ -183,6 +183,9 @@ export interface PreviousReceivedLotDto {
   lotNumber?: string;
   lotExpiryDate?: string;
   actualReceivedQuantity: number;
+  skuId?: string;
+  unitName?: string;
+  storageWarehouseName?: string;
   status: WarehouseImportLineStatus;
   qualityDocumentFileId?: string;
   qualityDocumentFileName?: string;

@@ -151,6 +151,9 @@ const WarehouseImportForm: React.FC = () => {
               lotNumber: lot.lotNumber,
               lotExpiryDate: lot.lotExpiryDate,
               status: lot.status,
+              skuId: lot.skuId,
+              selectedUnitName: lot.unitName,
+              storageWarehouseName: lot.storageWarehouseName,
               qualityDocument: lot.qualityDocumentFileId
                 ? { fileId: lot.qualityDocumentFileId, fileName: lot.qualityDocumentFileName || "", fileSize: lot.qualityDocumentFileSize }
                 : undefined,
