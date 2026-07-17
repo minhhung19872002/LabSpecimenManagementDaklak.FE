@@ -545,13 +545,6 @@ const MainLayout: React.FC = () => {
           roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
         },
         {
-          key: "materialReceipts",
-          icon: <Icon name="receipt" />,
-          label: menuLabel("Phiếu nhận vật tư"),
-          onClick: () => navigate(PATH_ROUTES.goodsReceipts.index),
-          roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
-        },
-        {
           key: "warehouseImports",
           icon: <Icon name="box-arrow-in-down" />,
           label: menuLabel("Quản lý nhập kho"),
