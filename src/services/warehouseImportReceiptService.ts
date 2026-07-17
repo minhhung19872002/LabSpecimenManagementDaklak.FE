@@ -228,6 +228,7 @@ export interface DefectiveHistoryItemDto {
   receiptId: string;
   receiptCode: string;
   productCode?: string;
+  casNumber?: string;
   productName: string;
   actualReceivedQuantity: number;
   notes?: string;

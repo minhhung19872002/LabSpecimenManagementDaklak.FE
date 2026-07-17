@@ -1118,7 +1118,7 @@ const WarehouseImportForm: React.FC = () => {
                     dataIndex: "productName",
                     render: (_: any, r: DefectiveHistoryItemDto) => (
                       <div>
-                        <div style={{ fontWeight: 600 }}>{r.productCode}</div>
+                        <div style={{ fontWeight: 600 }}>{r.casNumber}</div>
                         <div style={{ color: "#8c8c8c", fontSize: 12 }}>{r.productName}</div>
                       </div>
                     ),
