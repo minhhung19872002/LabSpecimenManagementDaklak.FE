@@ -8,6 +8,7 @@ import { ProductTable, ProductModal, ColumnConfigPopover } from "./components";
 import { getProductColumns, ALL_COLUMNS, COLUMN_VISIBILITY_KEY } from "./constants";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
+import { PATH_ROUTES } from "../../constants/routes";
 import { warehouseService, WarehouseDto } from "../../services/masterDataService";
 import "../../styles/ListCard.css";
 import "./ProductList.css";
@@ -104,6 +105,7 @@ const ProductList: React.FC = () => {
 
   const canEdit = authService.hasPermission(PERMISSIONS.Products.Edit);
   const canDelete = authService.hasPermission(PERMISSIONS.Products.Delete);
+  const canCreateGoodsReceipt = authService.hasPermission(PERMISSIONS.GoodsReceipts.Create);
 
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(loadVisibleKeys);
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
@@ -209,14 +211,23 @@ const ProductList: React.FC = () => {
           title="Quản lý danh sách vật tư"
           extra={
             <Space>
-              {selectedRowKeys.length > 0 ? (
-                <Button type="primary" onClick={() => {}}>
-                  Tạo phiếu dự trù
-                </Button>
-              ) : (
-                <Button disabled style={{ backgroundColor: "#d9d9d9", borderColor: "#d9d9d9", color: "rgba(0,0,0,0.45)" }}>
-                  Tạo phiếu dự trù
-                </Button>
+              {canCreateGoodsReceipt && (
+                selectedRowKeys.length > 0 ? (
+                  <Button
+                    type="primary"
+                    onClick={() =>
+                      navigate(PATH_ROUTES.goodsReceipts.create, {
+                        state: { preselectedProductIds: selectedRowKeys.map(String) },
+                      })
+                    }
+                  >
+                    Tạo phiếu dự trù ({selectedRowKeys.length})
+                  </Button>
+                ) : (
+                  <Button disabled style={{ backgroundColor: "#d9d9d9", borderColor: "#d9d9d9", color: "rgba(0,0,0,0.45)" }}>
+                    Tạo phiếu dự trù
+                  </Button>
+                )
               )}
               <ColumnConfigPopover
                 visibleKeys={visibleKeys}

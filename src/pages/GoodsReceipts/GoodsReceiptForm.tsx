@@ -4,7 +4,7 @@ import {
   Table, message, Spin, Divider, Tag,
 } from "antd";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import dayjs from "dayjs";
@@ -59,6 +59,7 @@ interface LineItem {
 
 const GoodsReceiptForm: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams<{ id: string }>();
   const isEdit = !!id;
 
@@ -138,6 +139,36 @@ const GoodsReceiptForm: React.FC = () => {
           );
         } else {
           goodsReceiptService.getNextCode().then(setPreviewCode).catch(() => {});
+          const preselectedIds = (location.state as { preselectedProductIds?: string[] } | null)?.preselectedProductIds;
+          if (preselectedIds?.length) {
+            const preItems: LineItem[] = preselectedIds.flatMap((pid) => {
+              const product = activeProducts.find((p) => p.id === pid);
+              if (!product) return [];
+              const allUnits: { value: string; label: string }[] = [];
+              const addUnit = (unitId?: string | null, unitName?: string | null) => {
+                if (!unitId || allUnits.find((u) => u.value === unitId)) return;
+                const unit = (unitsRes.items || []).find((u) => u.id === unitId);
+                allUnits.push({ value: unitId, label: unit?.name || unitName || unitId });
+              };
+              for (const sku of product.skus || []) {
+                addUnit(sku.packagingUnitId, sku.packagingUnitName);
+                addUnit(sku.baseUnitId, sku.baseUnitName);
+                addUnit(sku.volumeUnitId, sku.volumeUnitName);
+              }
+              const firstUnit = allUnits[0];
+              return [{
+                key: `pre-${pid}`,
+                productId: product.id,
+                productName: product.name,
+                unitId: firstUnit?.value || "",
+                unitName: firstUnit?.label || "",
+                quantity: 1,
+                availableUnits: allUnits,
+                isEquipment: false,
+              }];
+            });
+            setLineItems(preItems);
+          }
         }
       } catch {
         message.error("Không thể tải dữ liệu");

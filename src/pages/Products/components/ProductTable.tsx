@@ -104,6 +104,10 @@ const ProductTable: React.FC<ProductTableProps> = ({
           rowSelection={{
             selectedRowKeys,
             onChange: onSelectionChange,
+            getCheckboxProps: (record) => ({
+              disabled: record.isDraft,
+              title: record.isDraft ? "Vật tư đang ở trạng thái nháp, không thể tạo phiếu dự trù" : undefined,
+            }),
           }}
           scroll={{ x: 1200 }}
           onRow={onRowDoubleClick ? (record) => ({
