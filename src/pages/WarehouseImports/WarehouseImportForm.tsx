@@ -1126,7 +1126,11 @@ const WarehouseImportForm: React.FC = () => {
                   {
                     title: "SL Lỗi",
                     dataIndex: "actualReceivedQuantity",
-                    render: (v: number) => <span style={{ color: "#CF1322", fontWeight: 600 }}>{v}</span>,
+                    render: (_: any, r: DefectiveHistoryItemDto) => (
+                      <span style={{ color: "#CF1322", fontWeight: 600 }}>
+                        {r.actualReceivedQuantity}{r.unitName ? ` ${r.unitName}` : ""}
+                      </span>
+                    ),
                   },
                   {
                     title: "Ghi chú nguyên nhân (Cần đối soát)",
