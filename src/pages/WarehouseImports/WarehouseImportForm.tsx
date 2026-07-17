@@ -1124,6 +1124,11 @@ const WarehouseImportForm: React.FC = () => {
                     ),
                   },
                   {
+                    title: "Hãng sản xuất",
+                    dataIndex: "manufacturer",
+                    render: (v: string) => v || "-",
+                  },
+                  {
                     title: "SL Lỗi",
                     dataIndex: "actualReceivedQuantity",
                     render: (_: any, r: DefectiveHistoryItemDto) => (
