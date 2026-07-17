@@ -358,18 +358,50 @@ const WarehouseImportForm: React.FC = () => {
 
   const getGroupInfo = (record: LineItem) => {
     const groupItems = lineItems.filter((it) => it.goodsReceiptItemId === record.goodsReceiptItemId);
-    const unitFactor =
+    const fallbackUnitFactor =
       record.baseOrderedQuantity && record.orderedQuantity ? record.baseOrderedQuantity / record.orderedQuantity : 1;
+
+    const getItemConvertedQty = (item: LineItem): number => {
+      const qty = item.actualReceivedQuantity || 0;
+      const sku = item.skuId ? (item.availableSkus || []).find(s => s.skuId === item.skuId) : undefined;
+      if (sku?.packagingQuantity) {
+        const isPurchaseUnit = item.selectedUnitId
+          ? item.selectedUnitId === sku.purchaseUnitId
+          : item.selectedUnitName === sku.purchaseUnitName ||
+            item.selectedUnitName === `${sku.purchaseUnitName} (mua hàng)`;
+        if (isPurchaseUnit) return qty * sku.packagingQuantity;
+      }
+      return qty * fallbackUnitFactor;
+    };
+
     const totalCheckedBase = groupItems
-      .filter((it) => it.status === WarehouseImportLineStatus.Checked)
-      .reduce((sum, it) => sum + (it.actualReceivedQuantity || 0) * unitFactor, 0);
-    const targetBase = record.baseOrderedQuantity ?? record.orderedQuantity;
-    const targetUnit = record.baseUnitName ?? record.unitName;
+      .filter((it) => it.status === WarehouseImportLineStatus.Checked && !it.isHistorical)
+      .reduce((sum, it) => sum + getItemConvertedQty(it), 0);
+
+    // Find the SKU with packagingQuantity to compute target in storage units
+    const skuWithPkg = groupItems
+      .map(it => (it.availableSkus || []).find(s => s.skuId === it.skuId))
+      .find(s => s?.packagingQuantity);
+
+    let targetBase: number;
+    let targetUnit: string | undefined;
+    let hasSkuConversion = false;
+
+    if (skuWithPkg?.packagingQuantity) {
+      targetBase = record.orderedQuantity * skuWithPkg.packagingQuantity;
+      targetUnit = skuWithPkg.storageUnitName ?? record.baseUnitName ?? record.unitName;
+      hasSkuConversion = true;
+    } else {
+      targetBase = record.baseOrderedQuantity ?? record.orderedQuantity;
+      targetUnit = record.baseUnitName ?? record.unitName;
+    }
+
     return {
       groupSize: groupItems.length,
       totalCheckedBase: Number(totalCheckedBase.toFixed(2)),
-      targetBase,
+      targetBase: Number(targetBase.toFixed(2)),
       targetUnit,
+      hasSkuConversion,
     };
   };
 
@@ -875,7 +907,7 @@ const WarehouseImportForm: React.FC = () => {
             fixed: "right" as const,
             onCell: (record: LineItem) => ({ rowSpan: groupRowSpans[record.key] }),
             render: (_: any, record: LineItem) => {
-              const { groupSize, totalCheckedBase, targetBase, targetUnit } = getGroupInfo(record);
+              const { groupSize, totalCheckedBase, targetBase, targetUnit, hasSkuConversion } = getGroupInfo(record);
               const groupItems = lineItems.filter((it) => it.goodsReceiptItemId === record.goodsReceiptItemId);
               const lastItem = groupItems[groupItems.length - 1];
               return (
@@ -883,7 +915,7 @@ const WarehouseImportForm: React.FC = () => {
                   <Button size="small" icon={<BranchesOutlined />} onClick={() => handleSplitLine(lastItem)}>
                     Tách Lô
                   </Button>
-                  {groupSize > 1 && (
+                  {(groupSize > 1 || hasSkuConversion) && (
                     <div style={{ fontSize: 11, color: "#52c41a", marginTop: 2 }}>
                       Tổng: {totalCheckedBase}/{targetBase} {targetUnit}
                     </div>
