@@ -21,11 +21,13 @@ interface ProductTableProps {
   searchText: string;
   productTypeFilter?: ProductType;
   isDraftFilter?: boolean;
+  selectedRowKeys: React.Key[];
   onSearchChange: (value: string) => void;
   onProductTypeChange: (value: ProductType | undefined) => void;
   onIsDraftChange: (value: boolean | undefined) => void;
   onSortChange: (field: string, order: "ascend" | "descend" | null) => void;
   onPaginationChange: (page: number, pageSize: number) => void;
+  onSelectionChange: (keys: React.Key[]) => void;
   onRowDoubleClick?: (record: ProductDto) => void;
 }
 
@@ -39,11 +41,13 @@ const ProductTable: React.FC<ProductTableProps> = ({
   searchText,
   productTypeFilter,
   isDraftFilter,
+  selectedRowKeys,
   onSearchChange,
   onProductTypeChange,
   onIsDraftChange,
   onSortChange,
   onPaginationChange,
+  onSelectionChange,
   onRowDoubleClick,
 }) => {
   const handleDraftFilterChange = (value: string | undefined) => {
@@ -97,6 +101,10 @@ const ProductTable: React.FC<ProductTableProps> = ({
           columns={columns}
           dataSource={data}
           rowKey="id"
+          rowSelection={{
+            selectedRowKeys,
+            onChange: onSelectionChange,
+          }}
           scroll={{ x: 1200 }}
           onRow={onRowDoubleClick ? (record) => ({
             onDoubleClick: () => onRowDoubleClick(record),

@@ -109,6 +109,7 @@ const ProductList: React.FC = () => {
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
   const [warehouseLoading, setWarehouseLoading] = useState(false);
   const [treeCollapsed, setTreeCollapsed] = useState(false);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
   useEffect(() => {
     const loadWarehouses = async () => {
@@ -208,6 +209,15 @@ const ProductList: React.FC = () => {
           title="Quản lý danh sách vật tư"
           extra={
             <Space>
+              {selectedRowKeys.length > 0 ? (
+                <Button type="primary" onClick={() => {}}>
+                  Tạo phiếu dự trù
+                </Button>
+              ) : (
+                <Button disabled style={{ backgroundColor: "#d9d9d9", borderColor: "#d9d9d9", color: "rgba(0,0,0,0.45)" }}>
+                  Tạo phiếu dự trù
+                </Button>
+              )}
               <ColumnConfigPopover
                 visibleKeys={visibleKeys}
                 onChange={handleVisibilityChange}
@@ -225,11 +235,13 @@ const ProductList: React.FC = () => {
             searchText={searchText}
             productTypeFilter={productTypeFilter}
             isDraftFilter={isDraftFilter}
+            selectedRowKeys={selectedRowKeys}
             onSearchChange={setSearchText}
             onProductTypeChange={setProductTypeFilter}
             onIsDraftChange={setIsDraftFilter}
             onSortChange={handleSortChange}
             onPaginationChange={handlePageChange}
+            onSelectionChange={setSelectedRowKeys}
             onRowDoubleClick={(record) => navigate(`/products/${record.id}/sources`)}
           />
         </Card>
