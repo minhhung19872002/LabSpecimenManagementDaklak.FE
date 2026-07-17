@@ -100,17 +100,31 @@ const WarehouseImportDetail: React.FC = () => {
     },
     {
       title: "SL đặt",
-      dataIndex: "orderedQuantity",
       key: "orderedQuantity",
       width: 100,
-      align: "right",
+      align: "center",
+      render: (_: any, record: WarehouseImportReceiptItemDto) => (
+        <div>
+          <div>{record.orderedQuantity}</div>
+          {record.purchaseUnitName && (
+            <div style={{ fontSize: 11, color: "#888" }}>{record.purchaseUnitName}</div>
+          )}
+        </div>
+      ),
     },
     {
       title: "SL nhận thực tế",
-      dataIndex: "actualReceivedQuantity",
       key: "actualReceivedQuantity",
       width: 120,
-      align: "right",
+      align: "center",
+      render: (_: any, record: WarehouseImportReceiptItemDto) => (
+        <div>
+          <div>{record.actualReceivedQuantity}</div>
+          {record.unitName && (
+            <div style={{ fontSize: 11, color: "#888" }}>{record.unitName}</div>
+          )}
+        </div>
+      ),
     },
     {
       title: "Số lô",

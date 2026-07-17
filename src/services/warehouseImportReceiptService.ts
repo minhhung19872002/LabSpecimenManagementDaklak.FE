@@ -121,6 +121,7 @@ export interface WarehouseImportReceiptItemDto {
   productId: string;
   productName: string;
   orderedQuantity: number;
+  purchaseUnitName?: string;
   actualReceivedQuantity: number;
   unitId?: string;
   unitName?: string;
