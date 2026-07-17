@@ -314,6 +314,7 @@ const WarehouseImportDetail: React.FC = () => {
         open={printBarcodeOpen}
         onClose={() => setPrintBarcodeOpen(false)}
         receipt={goodsReceipt}
+        importReceipt={receipt}
         onImportSuccess={() => setPrintBarcodeOpen(false)}
         printOnly
       />

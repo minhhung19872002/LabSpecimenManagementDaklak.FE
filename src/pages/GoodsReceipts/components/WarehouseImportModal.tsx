@@ -9,12 +9,14 @@ import {
   goodsReceiptService,
 } from "../../../services/goodsReceiptService";
 import { productService, ProductDto } from "../../../services/productService";
+import { WarehouseImportReceiptDto } from "../../../services/warehouseImportReceiptService";
 import { getApiErrorMessage } from "../../../utils/errorHandler";
 
 interface WarehouseImportModalProps {
   open: boolean;
   onClose: () => void;
   receipt: GoodsReceiptDto;
+  importReceipt?: WarehouseImportReceiptDto;
   onImportSuccess: () => void;
   printOnly?: boolean;
 }
@@ -49,23 +51,38 @@ const generateBarcodeContent = (
   return raw.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^\x20-\x7E]/g, "");
 };
 
+// fallback khi không có importReceipt: dùng ordered qty từ GoodsReceipt
 const calculateBarcodeCount = (
   item: GoodsReceiptItemDto,
-  product: ProductDto
+  product: ProductDto,
+  qty: number
 ): number => {
-  if (!product.baseUnitId) {
-    return Math.max(1, Math.floor(item.quantity));
-  }
-  if (item.unitId === product.baseUnitId) {
-    const factor = product.packagingQuantity && product.packagingQuantity > 0
-      ? product.packagingQuantity
-      : 1;
-    return Math.max(1, Math.floor(item.quantity * factor));
-  }
-  if (item.unitId === product.packagingUnitId) {
-    return Math.max(1, Math.floor(item.quantity));
-  }
-  return Math.max(1, Math.floor(item.quantity));
+  const factor = product.packagingQuantity && product.packagingQuantity > 0
+    ? product.packagingQuantity
+    : 1;
+  if (!product.baseUnitId) return Math.max(1, Math.floor(qty));
+  // baseUnitId = Thùng (đơn vị mua hàng) → nhân để ra Chai
+  if (item.unitId === product.baseUnitId) return Math.max(1, Math.floor(qty * factor));
+  // packagingUnitId = Chai (đơn vị lưu kho) → dùng thẳng
+  if (item.unitId === product.packagingUnitId) return Math.max(1, Math.floor(qty));
+  return Math.max(1, Math.floor(qty));
+};
+
+// Tính số barcode từ đơn vị thực nhận (importItem.unitId)
+const calcBarcodeCountFromImportUnit = (
+  unitId: string | undefined,
+  product: ProductDto,
+  qty: number
+): number => {
+  const factor = product.packagingQuantity && product.packagingQuantity > 0
+    ? product.packagingQuantity
+    : 1;
+  if (!product.baseUnitId) return Math.floor(qty);
+  // baseUnitId = Thùng (đơn vị mua hàng) → nhân để ra Chai
+  if (unitId === product.baseUnitId) return Math.floor(qty * factor);
+  // packagingUnitId = Chai (đơn vị lưu kho) → dùng thẳng
+  if (unitId === product.packagingUnitId) return Math.floor(qty);
+  return Math.floor(qty);
 };
 
 const BARCODE_OPTIONS = {
@@ -113,6 +130,7 @@ const WarehouseImportModal: React.FC<WarehouseImportModalProps> = ({
   open,
   onClose,
   receipt,
+  importReceipt,
   onImportSuccess,
   printOnly = false,
 }) => {
@@ -128,6 +146,17 @@ const WarehouseImportModal: React.FC<WarehouseImportModalProps> = ({
     try {
       const items: BarcodeItem[] = [];
 
+      // Build map: goodsReceiptItemId → danh sách import items (khi có importReceipt)
+      type ImportItem = WarehouseImportReceiptDto["items"][number];
+      const importItemsMap = new Map<string, ImportItem[]>();
+      if (importReceipt?.items?.length) {
+        for (const importItem of importReceipt.items) {
+          const existing = importItemsMap.get(importItem.goodsReceiptItemId) ?? [];
+          existing.push(importItem);
+          importItemsMap.set(importItem.goodsReceiptItemId, existing);
+        }
+      }
+
       // Equipment items — 1 barcode per item, content = "serial-name" (ASCII only)
       const toAscii = (html: string) =>
         removeAccents(stripAllHtml(html))
@@ -136,7 +165,9 @@ const WarehouseImportModal: React.FC<WarehouseImportModalProps> = ({
           .replace(/[^\x20-\x7E]/g, "")
           .trim();
 
-      const equipmentItems = receipt.items.filter((i) => i.isEquipment);
+      const equipmentItems = receipt.items.filter((i) =>
+        i.isEquipment && (!importReceipt || importItemsMap.has(i.id))
+      );
       for (const item of equipmentItems) {
         const serial = toAscii(item.serialNumber || item.identificationCode || "");
         if (!serial) continue;
@@ -146,7 +177,9 @@ const WarehouseImportModal: React.FC<WarehouseImportModalProps> = ({
       }
 
       // Non-equipment items — barcode per lot/quantity, all product types
-      const nonEquipmentItems = receipt.items.filter((i) => !i.isEquipment);
+      const nonEquipmentItems = receipt.items.filter((i) =>
+        !i.isEquipment && (!importReceipt || importItemsMap.has(i.id))
+      );
       if (nonEquipmentItems.length > 0) {
         const uniqueProductIds = [...new Set(nonEquipmentItems.map((i) => i.productId))];
         const products = await Promise.all(
@@ -157,9 +190,17 @@ const WarehouseImportModal: React.FC<WarehouseImportModalProps> = ({
 
         for (const item of nonEquipmentItems) {
           const product = productMap.get(item.productId);
-          const count = product
-            ? calculateBarcodeCount(item, product)
-            : Math.max(1, Math.floor(item.quantity));
+          const matchedImportItems = importItemsMap.get(item.id) ?? [];
+          let count: number;
+          if (matchedImportItems.length > 0 && product) {
+            const total = matchedImportItems.reduce((sum, imp) =>
+              sum + calcBarcodeCountFromImportUnit(imp.unitId, product, imp.actualReceivedQuantity), 0);
+            count = Math.max(1, total);
+          } else {
+            count = product
+              ? calculateBarcodeCount(item, product, item.quantity)
+              : Math.max(1, Math.floor(item.quantity));
+          }
           const contents: string[] = [];
           for (let i = 1; i <= count; i++) {
             contents.push(generateBarcodeContent(item, i, receipt.documentDate));
@@ -174,7 +215,7 @@ const WarehouseImportModal: React.FC<WarehouseImportModalProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [receipt]);
+  }, [receipt, importReceipt]);
 
   useEffect(() => {
     if (open) loadProducts();
