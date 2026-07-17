@@ -12,25 +12,17 @@ import {
   CreateUpdateSupplierDto,
 } from "../../services/supplierService";
 import {
-  goodsReceiptService,
-  GoodsReceiptListDto,
-  WarehouseStatusLabels,
-  WarehouseStatusColors,
-  OrderStatusLabels,
-  OrderStatusColors,
-  PaymentStatusLabels,
-  PaymentStatusColors,
-} from "../../services/goodsReceiptService";
+  warehouseImportReceiptService,
+  WarehouseImportReceiptListDto,
+  WarehouseImportReceiptStatusLabels,
+  WarehouseImportReceiptStatusColors,
+} from "../../services/warehouseImportReceiptService";
 import { getApiErrorMessage } from "../../utils/errorHandler";
 import { SupplierModal } from "./components";
+import { PATH_ROUTES } from "../../constants/routes";
 import "../../styles/ListCard.css";
 
 const { RangePicker } = DatePicker;
-
-const formatCurrency = (value?: number) => {
-  if (value == null) return "-";
-  return value.toLocaleString("vi-VN") + " VNĐ";
-};
 
 const DetailItem: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
   <div style={{ marginBottom: 12 }}>
@@ -45,7 +37,7 @@ const SupplierDetail: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [supplier, setSupplier] = useState<SupplierDto | null>(null);
-  const [receipts, setReceipts] = useState<GoodsReceiptListDto[]>([]);
+  const [receipts, setReceipts] = useState<WarehouseImportReceiptListDto[]>([]);
   const [receiptsTotal, setReceiptsTotal] = useState(0);
   const [receiptsLoading, setReceiptsLoading] = useState(false);
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
@@ -71,13 +63,13 @@ const SupplierDetail: React.FC = () => {
     if (!id) return;
     setReceiptsLoading(true);
     try {
-      const result = await goodsReceiptService.getList({
+      const result = await warehouseImportReceiptService.getList({
         supplierId: id,
-        page,
-        limit: pageSize,
+        skipCount: (page - 1) * pageSize,
+        maxResultCount: pageSize,
         fromDate: dateRange?.[0]?.format("YYYY-MM-DD"),
         toDate: dateRange?.[1]?.format("YYYY-MM-DD"),
-        sorting: "CreationTime desc",
+        sorting: "ActualImportDate desc",
       });
       setReceipts(result.items || []);
       setReceiptsTotal(result.totalCount || 0);
@@ -111,7 +103,7 @@ const SupplierDetail: React.FC = () => {
     }
   };
 
-  const receiptColumns: ColumnsType<GoodsReceiptListDto> = [
+  const receiptColumns: ColumnsType<WarehouseImportReceiptListDto> = [
     {
       title: "STT",
       key: "stt",
@@ -120,60 +112,41 @@ const SupplierDetail: React.FC = () => {
       render: (_, __, index) => (page - 1) * pageSize + index + 1,
     },
     {
-      title: "ID đặt hàng",
+      title: "Mã phiếu nhập kho",
       dataIndex: "code",
       key: "code",
-      width: 160,
+      width: 170,
     },
     {
-      title: "Ngày cấp chứng từ",
-      dataIndex: "documentDate",
-      key: "documentDate",
+      title: "Phiếu mua hàng",
+      dataIndex: "goodsReceiptCode",
+      key: "goodsReceiptCode",
       width: 150,
+    },
+    {
+      title: "Ngày nhập kho",
+      dataIndex: "actualImportDate",
+      key: "actualImportDate",
+      width: 140,
       render: (v: string) => v ? dayjs(v).format("DD/MM/YYYY") : "-",
     },
     {
-      title: "Trạng thái kho",
-      dataIndex: "warehouseStatus",
-      key: "warehouseStatus",
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
       width: 140,
-      render: (v: number) => <Tag color={WarehouseStatusColors[v]}>{WarehouseStatusLabels[v]}</Tag>,
+      render: (v: number) => (
+        <Tag color={WarehouseImportReceiptStatusColors[v]}>
+          {WarehouseImportReceiptStatusLabels[v]}
+        </Tag>
+      ),
     },
     {
-      title: "Trạng thái đơn",
-      dataIndex: "orderStatus",
-      key: "orderStatus",
-      width: 130,
-      render: (v: number) => <Tag color={OrderStatusColors[v]}>{OrderStatusLabels[v]}</Tag>,
-    },
-    {
-      title: "Trạng thái thanh toán",
-      dataIndex: "paymentStatus",
-      key: "paymentStatus",
-      width: 170,
-      render: (v: number) => <Tag color={PaymentStatusColors[v]}>{PaymentStatusLabels[v]}</Tag>,
-    },
-    {
-      title: "Tổng tiền sau VAT",
-      dataIndex: "totalAmountAfterVat",
-      key: "totalAmountAfterVat",
-      width: 170,
-      align: "right",
-      render: (v: number) => formatCurrency(v),
-    },
-    {
-      title: "Người tạo",
-      dataIndex: "creatorName",
-      key: "creatorName",
-      width: 130,
+      title: "Kho",
+      dataIndex: "warehouseName",
+      key: "warehouseName",
+      width: 160,
       render: (v: string) => v || "-",
-    },
-    {
-      title: "Ghi chú",
-      dataIndex: "notes",
-      key: "notes",
-      width: 200,
-      ellipsis: true,
     },
     {
       title: "Thao tác",
@@ -186,7 +159,7 @@ const SupplierDetail: React.FC = () => {
           type="link"
           size="small"
           icon={<EyeOutlined />}
-          onClick={() => navigate(`/goods-receipts/${record.id}`)}
+          onClick={() => navigate(PATH_ROUTES.warehouseImports.detail(record.id))}
         />
       ),
     },
@@ -265,10 +238,10 @@ const SupplierDetail: React.FC = () => {
         <Col xs={24} md={16}>
           <Card
             className="list-card supplier-history-card"
-            title="Lịch sử mua hàng từ NCC"
+            title="Lịch sử nhập kho từ NCC"
             extra={
               <Space wrap>
-                <span style={{ color: "#fff", fontWeight: 500 }}>Ngày hợp đồng:</span>
+                <span style={{ color: "#fff", fontWeight: 500 }}>Ngày nhập kho:</span>
                 <RangePicker
                   format="DD/MM/YYYY"
                   value={dateRange}
@@ -288,7 +261,7 @@ const SupplierDetail: React.FC = () => {
               rowKey="id"
               loading={receiptsLoading}
               size="small"
-              scroll={{ x: 1200 }}
+              scroll={{ x: 1000 }}
               pagination={{
                 current: page,
                 pageSize,
@@ -299,7 +272,7 @@ const SupplierDetail: React.FC = () => {
                 onChange: (p, ps) => { setPage(p); setPageSize(ps); },
               }}
               onRow={(record) => ({
-                onDoubleClick: () => navigate(`/goods-receipts/${record.id}`),
+                onDoubleClick: () => navigate(PATH_ROUTES.warehouseImports.detail(record.id)),
                 style: { cursor: "pointer" },
               })}
             />

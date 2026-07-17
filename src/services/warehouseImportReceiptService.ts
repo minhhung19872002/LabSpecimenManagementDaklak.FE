@@ -29,6 +29,7 @@ export interface GetWarehouseImportReceiptListInput {
   displayStatus?: WarehouseImportReceiptDisplayStatusFilter;
   fromDate?: string;
   toDate?: string;
+  supplierId?: string;
 }
 
 export interface WarehouseImportReceiptStatisticsDto {
@@ -256,6 +257,7 @@ export const warehouseImportReceiptService = {
     if (params.displayStatus !== undefined) apiParams.DisplayStatus = params.displayStatus;
     if (params.fromDate) apiParams.FromDate = params.fromDate;
     if (params.toDate) apiParams.ToDate = params.toDate;
+    if (params.supplierId) apiParams.SupplierId = params.supplierId;
     const response = await api.get<PagedResultDto<WarehouseImportReceiptListDto>>(BASE_URL, {
       params: apiParams,
     });
