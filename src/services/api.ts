@@ -73,6 +73,14 @@ const handleForbidden = () => {
 
 // Try to refresh token and retry the request
 const tryRefreshTokenAndRetry = async (originalConfig: InternalAxiosRequestConfig): Promise<AxiosResponse | null> => {
+  // Check if another tab already refreshed the token
+  const currentToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+  const requestToken = (originalConfig.headers.Authorization as string)?.replace('Bearer ', '');
+  if (currentToken && requestToken && currentToken !== requestToken) {
+    originalConfig.headers.Authorization = `Bearer ${currentToken}`;
+    return apiClient(originalConfig);
+  }
+
   // If we're already refreshing, queue this request
   if (isRefreshing) {
     return new Promise((resolve, reject) => {
