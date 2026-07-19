@@ -87,6 +87,7 @@ export interface ProductDto {
   installationLocation?: string | null;
   availableQuantity: number;
   storageAvailableQuantity: number;
+  consumableImportedQuantity: number;
   isActive: boolean;
   isDraft: boolean;
   skuCount: number;

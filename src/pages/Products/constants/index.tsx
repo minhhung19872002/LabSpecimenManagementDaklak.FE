@@ -137,9 +137,12 @@ export const getProductColumns = (
       width: 180,
       align: "right" as const,
       sorter: true,
-      render: (qty: number, record: ProductDto) => {
+      render: (_qty: number, record: ProductDto) => {
+        if (record.consumableImportedQuantity > 0 && record.volumeUnitName) {
+          return `${record.consumableImportedQuantity.toLocaleString("vi-VN")} ${record.volumeUnitName}`;
+        }
         const unitName = record.baseUnitName || "";
-        return `${qty} ${unitName}`.trim();
+        return `${record.storageAvailableQuantity} ${unitName}`.trim();
       },
     });
   }
