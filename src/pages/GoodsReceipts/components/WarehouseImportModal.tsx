@@ -8,7 +8,7 @@ import {
   GoodsReceiptItemDto,
   goodsReceiptService,
 } from "../../../services/goodsReceiptService";
-import { productService, ProductDto } from "../../../services/productService";
+import { productService, ProductDto, ProductSkuDto } from "../../../services/productService";
 import { WarehouseImportReceiptDto } from "../../../services/warehouseImportReceiptService";
 import { getApiErrorMessage } from "../../../utils/errorHandler";
 
@@ -60,29 +60,43 @@ const calculateBarcodeCount = (
   const factor = product.packagingQuantity && product.packagingQuantity > 0
     ? product.packagingQuantity
     : 1;
-  if (!product.baseUnitId) return Math.max(1, Math.floor(qty));
-  // baseUnitId = Thùng (đơn vị mua hàng) → nhân để ra Chai
-  if (item.unitId === product.baseUnitId) return Math.max(1, Math.floor(qty * factor));
-  // packagingUnitId = Chai (đơn vị lưu kho) → dùng thẳng
-  if (item.unitId === product.packagingUnitId) return Math.max(1, Math.floor(qty));
-  return Math.max(1, Math.floor(qty));
+  if (!product.baseUnitId) return Math.max(1, Math.ceil(qty));
+  if (item.unitId === product.baseUnitId && product.baseUnitId !== product.packagingUnitId)
+    return Math.max(1, Math.ceil(qty * factor));
+  if (item.unitId === product.packagingUnitId) return Math.max(1, Math.ceil(qty));
+  if (item.unitId === product.volumeUnitId && product.volumePerUnit && product.volumePerUnit > 0)
+    return Math.max(1, Math.ceil(qty / product.volumePerUnit));
+  return Math.max(1, Math.ceil(qty));
 };
 
-// Tính số barcode từ đơn vị thực nhận (importItem.unitId)
+// Tính số barcode từ đơn vị thực nhận (importItem.unitId), dùng SKU-level data nếu có
 const calcBarcodeCountFromImportUnit = (
   unitId: string | undefined,
   product: ProductDto,
-  qty: number
+  qty: number,
+  sku?: ProductSkuDto
 ): number => {
+  if (sku) {
+    // Đơn vị mua hàng → nhân packagingQuantity ra đơn vị lưu kho
+    if (unitId === sku.baseUnitId && sku.baseUnitId !== sku.packagingUnitId) {
+      const factor = sku.packagingQuantity && sku.packagingQuantity > 0 ? sku.packagingQuantity : 1;
+      return Math.max(1, Math.ceil(qty * factor));
+    }
+    // Đơn vị tiêu hao → chia volumePerUnit, làm tròn lên
+    if (unitId === sku.volumeUnitId && sku.volumePerUnit && sku.volumePerUnit > 0)
+      return Math.max(1, Math.ceil(qty / sku.volumePerUnit));
+    // Đơn vị lưu kho → dùng thẳng
+    if (unitId === sku.packagingUnitId)
+      return Math.max(1, Math.ceil(qty));
+  }
+  // Fallback: dùng product-level
   const factor = product.packagingQuantity && product.packagingQuantity > 0
-    ? product.packagingQuantity
-    : 1;
-  if (!product.baseUnitId) return Math.floor(qty);
-  // baseUnitId = Thùng (đơn vị mua hàng) → nhân để ra Chai
-  if (unitId === product.baseUnitId) return Math.floor(qty * factor);
-  // packagingUnitId = Chai (đơn vị lưu kho) → dùng thẳng
-  if (unitId === product.packagingUnitId) return Math.floor(qty);
-  return Math.floor(qty);
+    ? product.packagingQuantity : 1;
+  if (unitId === product.baseUnitId && product.baseUnitId !== product.packagingUnitId)
+    return Math.max(1, Math.ceil(qty * factor));
+  if (unitId === product.volumeUnitId && product.volumePerUnit && product.volumePerUnit > 0)
+    return Math.max(1, Math.ceil(qty / product.volumePerUnit));
+  return Math.max(1, Math.ceil(qty));
 };
 
 const BARCODE_OPTIONS = {
@@ -193,8 +207,10 @@ const WarehouseImportModal: React.FC<WarehouseImportModalProps> = ({
           const matchedImportItems = importItemsMap.get(item.id) ?? [];
           let count: number;
           if (matchedImportItems.length > 0 && product) {
-            const total = matchedImportItems.reduce((sum, imp) =>
-              sum + calcBarcodeCountFromImportUnit(imp.unitId, product, imp.actualReceivedQuantity), 0);
+            const total = matchedImportItems.reduce((sum, imp) => {
+              const sku = imp.skuId ? product.skus?.find((s) => s.id === imp.skuId) : undefined;
+              return sum + calcBarcodeCountFromImportUnit(imp.unitId, product, imp.actualReceivedQuantity, sku);
+            }, 0);
             count = Math.max(1, total);
           } else {
             count = product
