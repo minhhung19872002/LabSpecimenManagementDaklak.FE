@@ -134,6 +134,10 @@ const ProductList: React.FC = () => {
   }, []);
 
   const treeData = useMemo(() => buildTree(warehouses), [warehouses]);
+  const selectedWarehouseName = useMemo(
+    () => warehouses.find((w) => w.id === warehouseId)?.name,
+    [warehouses, warehouseId]
+  );
 
   const handleTreeSelect = useCallback(
     (selectedKeys: React.Key[]) => {
@@ -253,7 +257,7 @@ const ProductList: React.FC = () => {
             onSortChange={handleSortChange}
             onPaginationChange={handlePageChange}
             onSelectionChange={setSelectedRowKeys}
-            onRowDoubleClick={(record) => navigate(`/products/${record.id}/sources`)}
+            onRowDoubleClick={(record) => navigate(PATH_ROUTES.products.detail(record.id), { state: { warehouseId, warehouseName: selectedWarehouseName } })}
           />
         </Card>
       </div>

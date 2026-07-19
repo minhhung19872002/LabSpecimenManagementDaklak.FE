@@ -513,7 +513,7 @@ const MainLayout: React.FC = () => {
           key: "products",
           icon: <Icon name="box-seam" />,
           label: menuLabel("Quản lý vật tư"),
-          onClick: () => navigate(PATH_ROUTES.products),
+          onClick: () => navigate(PATH_ROUTES.products.index),
           roles: [ROLES.ADMIN, ROLES.QUALITY_MANAGER],
         },
         {

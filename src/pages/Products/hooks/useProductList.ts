@@ -17,6 +17,7 @@ export const useProductList = () => {
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   const fetchData = useCallback(async () => {
+    if (!warehouseId) return;
     setLoading(true);
     try {
       const result = await productService.getList({

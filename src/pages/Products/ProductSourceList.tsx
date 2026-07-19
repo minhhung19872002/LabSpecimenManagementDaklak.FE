@@ -8,6 +8,7 @@ import {
   ProductSourceDto,
 } from "../../services/productService";
 import { getApiErrorMessage } from "../../utils/errorHandler";
+import { PATH_ROUTES } from "../../constants/routes";
 import { message } from "antd";
 import "../../styles/ListCard.css";
 
@@ -122,7 +123,7 @@ const ProductSourceList: React.FC = () => {
       <div style={{ marginBottom: 16, padding: "0 12px" }}>
         <Button
           icon={<ArrowLeftOutlined />}
-          onClick={() => navigate("/products")}
+          onClick={() => navigate(PATH_ROUTES.products.index)}
           type="link"
           style={{ paddingLeft: 0 }}
         >

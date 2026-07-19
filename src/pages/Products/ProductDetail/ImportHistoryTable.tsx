@@ -1,0 +1,178 @@
+import React from "react";
+import { Table, Typography } from "antd";
+import type { ColumnsType } from "antd/es/table";
+import dayjs from "dayjs";
+import { ProductImportHistoryDto } from "../../../services/productService";
+
+const { Link } = Typography;
+const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
+
+export interface ImportHistoryTableProps {
+  items: ProductImportHistoryDto[];
+  total: number;
+  loading: boolean;
+  page: number;
+  pageSize: number;
+  onPageChange: (page: number, pageSize: number) => void;
+  onReceiptClick: (receiptId: string) => void;
+}
+
+const formatDate = (dateStr?: string) => {
+  if (!dateStr) return "-";
+  return dayjs(dateStr).format("DD/MM/YYYY");
+};
+
+const formatCurrency = (value?: number | null) => {
+  if (value == null) return "-";
+  return value.toLocaleString("vi-VN") + " đ";
+};
+
+const ImportHistoryTable: React.FC<ImportHistoryTableProps> = ({
+  items,
+  total,
+  loading,
+  page,
+  pageSize,
+  onPageChange,
+  onReceiptClick,
+}) => {
+  const columns: ColumnsType<ProductImportHistoryDto> = [
+    {
+      title: "Phiếu nhập kho",
+      dataIndex: "receiptCode",
+      key: "receiptCode",
+      width: 160,
+      render: (code: string, record) => (
+        <Link onClick={() => onReceiptClick(record.warehouseImportReceiptId)}>
+          {code}
+        </Link>
+      ),
+    },
+    {
+      title: "Ngày nhập kho",
+      dataIndex: "actualImportDate",
+      key: "actualImportDate",
+      width: 120,
+      render: formatDate,
+    },
+    {
+      title: "Nhà cung cấp",
+      dataIndex: "supplierName",
+      key: "supplierName",
+      width: 160,
+      ellipsis: true,
+      render: (v: string) => v || "-",
+    },
+    {
+      title: "SL đặt",
+      key: "orderedQuantity",
+      width: 120,
+      align: "right" as const,
+      render: (_: any, record: ProductImportHistoryDto) => {
+        const unit = record.purchaseUnitName || "";
+        return `${record.orderedQuantity} ${unit}`.trim();
+      },
+    },
+    {
+      title: "SL thực nhận",
+      key: "actualReceivedQuantity",
+      width: 130,
+      align: "right" as const,
+      render: (_: any, record: ProductImportHistoryDto) => {
+        const unit = record.unitName || "";
+        return `${record.actualReceivedQuantity} ${unit}`.trim();
+      },
+    },
+    {
+      title: "Hãng sản xuất",
+      dataIndex: "manufacturerName",
+      key: "manufacturerName",
+      width: 150,
+      ellipsis: true,
+      render: (v: string) => v || "-",
+    },
+    {
+      title: "Số lô (Code/Lot)",
+      dataIndex: "lotNumber",
+      key: "lotNumber",
+      width: 140,
+      ellipsis: true,
+      render: (v: string) => v || "-",
+    },
+    {
+      title: "Hạn lô",
+      dataIndex: "lotExpiryDate",
+      key: "lotExpiryDate",
+      width: 110,
+      render: formatDate,
+    },
+    {
+      title: "Tổng giá trị đơn hàng",
+      dataIndex: "totalAmount",
+      key: "totalAmount",
+      width: 170,
+      align: "right" as const,
+      render: formatCurrency,
+    },
+    {
+      title: "Hồ sơ chất lượng",
+      key: "qualityDocument",
+      width: 150,
+      ellipsis: true,
+      render: (_: any, record: ProductImportHistoryDto) => {
+        if (!record.qualityDocumentFileName) return "-";
+        if (record.qualityDocumentFileId) {
+          return (
+            <Link onClick={() => window.open(`${baseUrl}/api/v1/files/${record.qualityDocumentFileId}`, "_blank")}>
+              {record.qualityDocumentFileName}
+            </Link>
+          );
+        }
+        return record.qualityDocumentFileName;
+      },
+    },
+    {
+      title: "Chứng từ giao hàng",
+      key: "deliveryDocuments",
+      width: 150,
+      ellipsis: true,
+      render: (_: any, record: ProductImportHistoryDto) => {
+        if (!record.deliveryDocumentFiles?.length) return "-";
+        return record.deliveryDocumentFiles.map((f, i) => (
+          <span key={f.fileId}>
+            {i > 0 && ", "}
+            <Link onClick={() => window.open(`${baseUrl}/api/v1/files/${f.fileId}`, "_blank")}>
+              {f.fileName}
+            </Link>
+          </span>
+        ));
+      },
+    },
+  ];
+
+  return (
+    <Table<ProductImportHistoryDto>
+      columns={columns}
+      dataSource={items}
+      rowKey={(_record, index) => `${_record.warehouseImportReceiptId}-${index}`}
+      loading={loading}
+      size="small"
+      scroll={{ x: 1400 }}
+      pagination={{
+        current: page,
+        pageSize,
+        total,
+        showSizeChanger: true,
+        pageSizeOptions: ["10", "20", "50"],
+        showTotal: (t, range) => `Hiển thị ${range[0]}-${range[1]}/${t}`,
+        onChange: onPageChange,
+      }}
+      onRow={(record) => ({
+        onDoubleClick: () => onReceiptClick(record.warehouseImportReceiptId),
+        style: { cursor: "pointer" },
+      })}
+    />
+  );
+};
+
+export default ImportHistoryTable;

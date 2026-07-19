@@ -80,7 +80,10 @@ export const PATH_ROUTES = {
     detail: (id: string) => `/receipts/${id}`,
   },
 
-  products: '/products',
+  products: {
+    index: '/products',
+    detail: (id: string) => `/products/${id}`,
+  },
 
   preparedSolutions: '/prepared-solutions',
 

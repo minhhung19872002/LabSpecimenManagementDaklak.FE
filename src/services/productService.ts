@@ -245,6 +245,50 @@ export interface GetProductSourcesInput {
   search?: string;
 }
 
+export interface ProductDetailDto {
+  id: string;
+  name: string;
+  formattedName?: string;
+  identificationCode?: string;
+  casNumber?: string;
+  storageConditions?: string;
+  formattedStorageConditions?: string;
+  mainTechnicalSpecs?: string;
+  productType: ProductType;
+  warehouseAvailableQuantity: number;
+  baseUnitName?: string;
+  packagingUnitName?: string;
+  packagingQuantity?: number;
+}
+
+export interface ProductImportHistoryDto {
+  warehouseImportReceiptId: string;
+  receiptCode: string;
+  actualImportDate?: string;
+  supplierName?: string;
+  orderedQuantity: number;
+  purchaseUnitName?: string;
+  actualReceivedQuantity: number;
+  unitName?: string;
+  manufacturerName?: string;
+  lotNumber?: string;
+  lotExpiryDate?: string;
+  totalAmount?: number;
+  qualityDocumentFileId?: string;
+  qualityDocumentFileName?: string;
+  qualityDocumentFilePath?: string;
+  deliveryDocumentFiles?: { fileId: string; fileName: string }[];
+}
+
+export interface GetProductImportHistoryInput {
+  page?: number;
+  limit?: number;
+  sorting?: string;
+  fromDate?: string;
+  toDate?: string;
+  warehouseId?: string;
+}
+
 interface PagedResult<T> {
   items: T[];
   totalCount: number;
@@ -308,6 +352,25 @@ export const productService = {
 
   deleteSku: async (productId: string, skuId: string): Promise<void> => {
     await api.delete(`${BASE_URL}/${productId}/skus/${skuId}`);
+  },
+
+  getDetail: async (id: string, warehouseId?: string): Promise<ProductDetailDto> => {
+    const params: Record<string, any> = {};
+    if (warehouseId) params.WarehouseId = warehouseId;
+    const response = await api.get<ProductDetailDto>(`${BASE_URL}/${id}/detail`, { params });
+    return response.data;
+  },
+
+  getImportHistory: async (id: string, params: GetProductImportHistoryInput = {}): Promise<PagedResult<ProductImportHistoryDto>> => {
+    const apiParams: Record<string, any> = {};
+    if (params.page) apiParams.Page = params.page;
+    if (params.limit) apiParams.Limit = params.limit;
+    if (params.sorting) apiParams.Sorting = params.sorting;
+    if (params.fromDate) apiParams.FromDate = params.fromDate;
+    if (params.toDate) apiParams.ToDate = params.toDate;
+    if (params.warehouseId) apiParams.WarehouseId = params.warehouseId;
+    const response = await api.get<PagedResult<ProductImportHistoryDto>>(`${BASE_URL}/${id}/import-history`, { params: apiParams });
+    return response.data;
   },
 
   getProductSources: async (productId: string, params: GetProductSourcesInput = {}): Promise<PagedResult<ProductSourceDto>> => {

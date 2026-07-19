@@ -198,6 +198,9 @@ const SupplementaryTaskPage = Loadable(
 const ProductSourceList = Loadable(
   lazy(() => import("./pages/Products/ProductSourceList")),
 );
+const ProductDetailPage = Loadable(
+  lazy(() => import("./pages/Products/ProductDetailPage")),
+);
 
 // Master Data
 const MasterDataList = Loadable(
@@ -424,6 +427,7 @@ function App() {
             path="supplementary-tasks"
             element={<SupplementaryTaskPage />}
           />
+          <Route path="products/:id" element={<ProductDetailPage />} />
           <Route path="products/:id/sources" element={<ProductSourceList />} />
 
           {/* Master Data - Ngân hàng dữ liệu */}

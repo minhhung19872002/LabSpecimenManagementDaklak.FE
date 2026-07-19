@@ -27,8 +27,11 @@ const WarehouseImportDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const fromSupplier = (location.state as any)?.from === "supplier";
-  const supplierId = (location.state as any)?.supplierId as string | undefined;
+  const stateData = location.state as any;
+  const fromSupplier = stateData?.from === "supplier";
+  const supplierId = stateData?.supplierId as string | undefined;
+  const fromProductDetail = stateData?.from === "productDetail";
+  const productDetailPath = stateData?.productDetailPath as string | undefined;
   const [loading, setLoading] = useState(true);
   const [receipt, setReceipt] = useState<WarehouseImportReceiptDto | null>(null);
   const [goodsReceipt, setGoodsReceipt] = useState<GoodsReceiptDto | null>(null);
@@ -70,7 +73,13 @@ const WarehouseImportDetail: React.FC = () => {
       <Card className="list-card">
         <div style={{ textAlign: "center", padding: 40 }}>
           <p>Không tìm thấy phiếu nhập kho</p>
-          <Button type="link" onClick={() => navigate("/warehouse-imports")}>Quay lại danh sách</Button>
+          <Button type="link" onClick={() => {
+            if (fromProductDetail && productDetailPath) {
+              navigate(productDetailPath, { state: stateData?.productDetailState });
+            } else {
+              navigate("/warehouse-imports");
+            }
+          }}>Quay lại</Button>
         </div>
       </Card>
     );
@@ -191,7 +200,15 @@ const WarehouseImportDetail: React.FC = () => {
       <div className="back-button-bar">
         <Button
           icon={<ArrowLeftOutlined />}
-          onClick={() => navigate(fromSupplier && supplierId ? `/suppliers-management/${supplierId}` : "/warehouse-imports")}
+          onClick={() => {
+            if (fromProductDetail && productDetailPath) {
+              navigate(productDetailPath, { state: stateData?.productDetailState });
+            } else if (fromSupplier && supplierId) {
+              navigate(`/suppliers-management/${supplierId}`);
+            } else {
+              navigate("/warehouse-imports");
+            }
+          }}
         >
           Quay lại
         </Button>
