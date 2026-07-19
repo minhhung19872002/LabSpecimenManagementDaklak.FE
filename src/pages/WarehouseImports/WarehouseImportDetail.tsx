@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Card, Button, Space, Table, Tag, Spin, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { ArrowLeftOutlined, EditOutlined, EyeOutlined } from "@ant-design/icons";
@@ -26,6 +26,9 @@ const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
 const WarehouseImportDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromSupplier = (location.state as any)?.from === "supplier";
+  const supplierId = (location.state as any)?.supplierId as string | undefined;
   const [loading, setLoading] = useState(true);
   const [receipt, setReceipt] = useState<WarehouseImportReceiptDto | null>(null);
   const [goodsReceipt, setGoodsReceipt] = useState<GoodsReceiptDto | null>(null);
@@ -186,7 +189,10 @@ const WarehouseImportDetail: React.FC = () => {
   return (
     <div className="warehouse-import-detail">
       <div className="back-button-bar">
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate("/warehouse-imports")}>
+        <Button
+          icon={<ArrowLeftOutlined />}
+          onClick={() => navigate(fromSupplier && supplierId ? `/suppliers-management/${supplierId}` : "/warehouse-imports")}
+        >
           Quay lại
         </Button>
       </div>

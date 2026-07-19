@@ -159,7 +159,7 @@ const SupplierDetail: React.FC = () => {
           type="link"
           size="small"
           icon={<EyeOutlined />}
-          onClick={() => navigate(PATH_ROUTES.warehouseImports.detail(record.id))}
+          onClick={() => navigate(PATH_ROUTES.warehouseImports.detail(record.id), { state: { from: "supplier", supplierId: id } })}
         />
       ),
     },
@@ -272,7 +272,7 @@ const SupplierDetail: React.FC = () => {
                 onChange: (p, ps) => { setPage(p); setPageSize(ps); },
               }}
               onRow={(record) => ({
-                onDoubleClick: () => navigate(PATH_ROUTES.warehouseImports.detail(record.id)),
+                onDoubleClick: () => navigate(PATH_ROUTES.warehouseImports.detail(record.id), { state: { from: "supplier", supplierId: id } }),
                 style: { cursor: "pointer" },
               })}
             />
