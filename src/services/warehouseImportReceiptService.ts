@@ -135,6 +135,7 @@ export interface WarehouseImportReceiptItemDto {
   qualityDocumentFileSize?: number;
   notes?: string;
   skuId?: string;
+  manufacturerName?: string;
   storageWarehouseId?: string;
   storageWarehouseName?: string;
 }

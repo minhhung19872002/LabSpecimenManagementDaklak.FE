@@ -115,7 +115,7 @@ const WarehouseImportDetail: React.FC = () => {
     {
       title: "SL nhận thực tế",
       key: "actualReceivedQuantity",
-      width: 120,
+      width: 150,
       align: "center",
       render: (_: any, record: WarehouseImportReceiptItemDto) => (
         <div>
@@ -125,6 +125,13 @@ const WarehouseImportDetail: React.FC = () => {
           )}
         </div>
       ),
+    },
+    {
+      title: "Hãng sản xuất",
+      dataIndex: "manufacturerName",
+      key: "manufacturerName",
+      width: 140,
+      render: (v?: string) => v || "-",
     },
     {
       title: "Số lô",
