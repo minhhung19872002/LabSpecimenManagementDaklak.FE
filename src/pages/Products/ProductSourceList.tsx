@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Card, Button, Table, Input, Spin, Row, Col } from "antd";
-import { ArrowLeftOutlined, SearchOutlined, EyeOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, SearchOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -115,23 +115,6 @@ const ProductSourceList: React.FC = () => {
       align: "right",
       render: (v: number) => formatCurrency(v),
     },
-    {
-      title: "Thao tác",
-      key: "action",
-      width: 60,
-      align: "center",
-      fixed: "right",
-      render: (_, record) => (
-        <Button
-          type="link"
-          size="small"
-          icon={<EyeOutlined />}
-          onClick={() =>
-            navigate(`/products/${productId}/sources/${record.supplierId}/receipts`)
-          }
-        />
-      ),
-    },
   ];
 
   return (
@@ -169,11 +152,6 @@ const ProductSourceList: React.FC = () => {
             dataSource={data}
             rowKey="supplierId"
             scroll={{ x: 1200 }}
-            onRow={(record) => ({
-              onDoubleClick: () =>
-                navigate(`/products/${productId}/sources/${record.supplierId}/receipts`),
-              style: { cursor: "pointer" },
-            })}
             pagination={{
               current: page,
               pageSize,
