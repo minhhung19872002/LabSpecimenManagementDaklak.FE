@@ -1,13 +1,7 @@
-import { Tag, Tooltip, Button, Popover } from "antd";
-import { EditOutlined, EyeOutlined, PaperClipOutlined } from "@ant-design/icons";
+import { Tooltip, Button } from "antd";
+import { EditOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
-import dayjs from "dayjs";
-import {
-  EquipmentListDto,
-  EquipmentStatus,
-  EquipmentStatusLabels,
-  EquipmentStatusColors,
-} from "../../../services/equipmentService";
+import { EquipmentListDto } from "../../../services/equipmentService";
 
 export interface ColumnConfig {
   key: string;
@@ -16,18 +10,38 @@ export interface ColumnConfig {
 }
 
 export const ALL_COLUMNS: ColumnConfig[] = [
-  { key: "serialNumber", title: "Serial number", defaultVisible: true },
+  { key: "assetCode", title: "Mã tài sản", defaultVisible: true },
   { key: "name", title: "Tên thiết bị", defaultVisible: true },
-  { key: "warrantyExpiryDate", title: "Hạn bảo hành", defaultVisible: true },
-  { key: "model", title: "Model", defaultVisible: true },
-  { key: "usageCount", title: "Số lượt sử dụng", defaultVisible: true },
-  { key: "manufacturer", title: "Hãng sản xuất", defaultVisible: true },
-  { key: "maintenanceCount", title: "Số lượt bảo dưỡng", defaultVisible: true },
-  { key: "supplierName", title: "Nhà cung cấp", defaultVisible: true },
-  { key: "origin", title: "Xuất xứ", defaultVisible: true },
-  { key: "attachments", title: "Tài liệu đính kèm", defaultVisible: true },
-  { key: "status", title: "Trạng thái", defaultVisible: true },
+  { key: "price", title: "Nguyên giá", defaultVisible: true },
+  { key: "powerConsumption", title: "Công suất sử dụng (kW)", defaultVisible: false },
+  { key: "operatingHoursPerYear", title: "Thời gian chạy máy (h/năm)", defaultVisible: true },
+  { key: "electricityPerYear", title: "Lượng điện tiêu thụ (kW/năm)", defaultVisible: false },
+  { key: "averageSamplesPerYear", title: "Số lượng mẫu TB / năm", defaultVisible: false },
+  { key: "electricityPerSample", title: "Lượng điện tiêu thụ / mẫu", defaultVisible: true },
+  { key: "depreciationPeriod", title: "Thời gian khấu hao (năm)", defaultVisible: false },
+  { key: "depreciationPerYear", title: "Khấu hao trung bình / năm", defaultVisible: false },
+  { key: "depreciationPerSample", title: "Khấu hao TS trung bình / mẫu", defaultVisible: false },
+  { key: "maintenanceCostRatio", title: "Tỷ lệ CP duy tu bảo dưỡng", defaultVisible: false },
+  { key: "maintenanceCost", title: "Mức chi phí duy tu bảo dưỡng", defaultVisible: false },
+  { key: "calibrationCostPerYear", title: "Chi phí hiệu chuẩn TB / năm", defaultVisible: false },
+  { key: "depreciationPerHour", title: "Khấu hao TB / giờ", defaultVisible: false },
+  { key: "depreciationPerSampleHC", title: "Khấu hao TB / mẫu", defaultVisible: false },
 ];
+
+const formatNumber = (val: number | null | undefined): string => {
+  if (val == null || isNaN(val)) return "-";
+  return val.toLocaleString("vi-VN", { maximumFractionDigits: 2 });
+};
+
+const formatCurrency = (val: number | null | undefined): string => {
+  if (val == null || isNaN(val)) return "-";
+  return val.toLocaleString("vi-VN", { maximumFractionDigits: 0 });
+};
+
+const safeDiv = (a: number | null | undefined, b: number | null | undefined): number | null => {
+  if (a == null || b == null || b === 0) return null;
+  return a / b;
+};
 
 export const getEquipmentColumns = (
   visibleKeys: Set<string>,
@@ -35,13 +49,14 @@ export const getEquipmentColumns = (
 ): ColumnsType<EquipmentListDto> => {
   const columns: ColumnsType<EquipmentListDto> = [];
 
-  if (visibleKeys.has("serialNumber")) {
+  if (visibleKeys.has("assetCode")) {
     columns.push({
-      title: "Serial Number",
-      dataIndex: "serialNumber",
-      key: "serialNumber",
-      width: 180,
+      title: "Mã tài sản",
+      dataIndex: "assetCode",
+      key: "assetCode",
+      width: 140,
       fixed: "left" as const,
+      render: (v: string) => v || "-",
     });
   }
 
@@ -55,140 +70,177 @@ export const getEquipmentColumns = (
     });
   }
 
-  if (visibleKeys.has("warrantyExpiryDate")) {
+  if (visibleKeys.has("price")) {
     columns.push({
-      title: "Hạn bảo hành",
-      dataIndex: "warrantyExpiryDate",
-      key: "warrantyExpiryDate",
-      width: 130,
-      render: (val: string) => val ? dayjs(val).format("DD/MM/YYYY") : "-",
-    });
-  }
-
-  if (visibleKeys.has("model")) {
-    columns.push({
-      title: "Model",
-      dataIndex: "model",
-      key: "model",
+      title: "Nguyên giá",
+      dataIndex: "price",
+      key: "price",
       width: 150,
-      ellipsis: true,
-      render: (v: string) => v || "-",
-    });
-  }
-
-  if (visibleKeys.has("usageCount")) {
-    columns.push({
-      title: "Số lượt sử dụng",
-      dataIndex: "usageCount",
-      key: "usageCount",
-      width: 145,
       align: "right" as const,
+      render: (v: number) => formatCurrency(v),
     });
   }
 
-  if (visibleKeys.has("manufacturer")) {
+  if (visibleKeys.has("powerConsumption")) {
     columns.push({
-      title: "Hãng sản xuất",
-      dataIndex: "manufacturer",
-      key: "manufacturer",
-      width: 160,
-      ellipsis: true,
-      render: (v: string) => v || "-",
-    });
-  }
-
-  if (visibleKeys.has("maintenanceCount")) {
-    columns.push({
-      title: "Số lượt bảo dưỡng",
-      dataIndex: "maintenanceCount",
-      key: "maintenanceCount",
-      width: 155,
+      title: "Công suất sử dụng (kW)",
+      dataIndex: "powerConsumption",
+      key: "powerConsumption",
+      width: 170,
       align: "right" as const,
+      render: (v: number) => formatNumber(v),
     });
   }
 
-  if (visibleKeys.has("supplierName")) {
+  if (visibleKeys.has("operatingHoursPerYear")) {
     columns.push({
-      title: "Nhà cung cấp",
-      dataIndex: "supplierName",
-      key: "supplierName",
-      width: 160,
-      ellipsis: true,
-      render: (v: string) => v || "-",
+      title: "Thời gian chạy máy (h/năm)",
+      dataIndex: "operatingHoursPerYear",
+      key: "operatingHoursPerYear",
+      width: 190,
+      align: "right" as const,
+      render: (v: number) => formatNumber(v),
     });
   }
 
-  if (visibleKeys.has("origin")) {
+  if (visibleKeys.has("electricityPerYear")) {
     columns.push({
-      title: "Xuất xứ",
-      dataIndex: "origin",
-      key: "origin",
-      width: 130,
-      render: (v: string) => v || "-",
-    });
-  }
-
-  if (visibleKeys.has("attachments")) {
-    const baseUrl = (import.meta as any).env?.VITE_API_BASE_URL || "";
-    columns.push({
-      title: "Tài liệu",
-      dataIndex: "attachments",
-      key: "attachments",
-      width: 140,
-      render: (attachments: any[]) => {
-        if (!attachments?.length) return "-";
-        const content = (
-          <div style={{ maxWidth: 300 }}>
-            {attachments.map((att: any) => (
-              <div
-                key={att.id}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "4px 0",
-                  borderBottom: "1px solid #f5f5f5",
-                }}
-              >
-                <span style={{ fontSize: 13, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {att.fileName}
-                </span>
-                <Button
-                  type="link"
-                  size="small"
-                  icon={<EyeOutlined />}
-                  onClick={() => window.open(`${baseUrl}${att.url}`, "_blank")}
-                  style={{ flexShrink: 0, marginLeft: 8 }}
-                >
-                  Xem
-                </Button>
-              </div>
-            ))}
-          </div>
-        );
-        return (
-          <Popover content={content} title="Tài liệu đính kèm" trigger="click">
-            <Button type="link" size="small" icon={<PaperClipOutlined />}>
-              {attachments.length} file
-            </Button>
-          </Popover>
-        );
+      title: "Lượng điện tiêu thụ (kW/năm)",
+      key: "electricityPerYear",
+      width: 200,
+      align: "right" as const,
+      render: (_: unknown, r: EquipmentListDto) => {
+        const val = r.powerConsumption != null && r.operatingHoursPerYear != null
+          ? r.powerConsumption * r.operatingHoursPerYear
+          : null;
+        return formatNumber(val);
       },
     });
   }
 
-  if (visibleKeys.has("status")) {
+  if (visibleKeys.has("averageSamplesPerYear")) {
     columns.push({
-      title: "Trạng thái",
-      dataIndex: "status",
-      key: "status",
-      width: 130,
-      fixed: "right" as const,
-      render: (status: EquipmentStatus) => (
-        <Tag color={EquipmentStatusColors[status]}>
-          {EquipmentStatusLabels[status]}
-        </Tag>
-      ),
+      title: "Số lượng mẫu TB / năm",
+      dataIndex: "averageSamplesPerYear",
+      key: "averageSamplesPerYear",
+      width: 180,
+      align: "right" as const,
+      render: (v: number) => formatNumber(v),
+    });
+  }
+
+  if (visibleKeys.has("electricityPerSample")) {
+    columns.push({
+      title: "Lượng điện tiêu thụ / mẫu",
+      key: "electricityPerSample",
+      width: 190,
+      align: "right" as const,
+      render: (_: unknown, r: EquipmentListDto) => {
+        const elecPerYear = r.powerConsumption != null && r.operatingHoursPerYear != null
+          ? r.powerConsumption * r.operatingHoursPerYear
+          : null;
+        return formatNumber(safeDiv(elecPerYear, r.averageSamplesPerYear));
+      },
+    });
+  }
+
+  if (visibleKeys.has("depreciationPeriod")) {
+    columns.push({
+      title: "Thời gian khấu hao (năm)",
+      dataIndex: "depreciationPeriod",
+      key: "depreciationPeriod",
+      width: 180,
+      align: "right" as const,
+      render: (v: number) => formatNumber(v),
+    });
+  }
+
+  if (visibleKeys.has("depreciationPerYear")) {
+    columns.push({
+      title: "Khấu hao trung bình / năm",
+      key: "depreciationPerYear",
+      width: 190,
+      align: "right" as const,
+      render: (_: unknown, r: EquipmentListDto) => {
+        const val = safeDiv(r.price, r.depreciationPeriod);
+        return val != null ? formatCurrency(Math.ceil(val)) : "-";
+      },
+    });
+  }
+
+  if (visibleKeys.has("depreciationPerSample")) {
+    columns.push({
+      title: "Khấu hao TS trung bình / mẫu",
+      key: "depreciationPerSample",
+      width: 210,
+      align: "right" as const,
+      render: (_: unknown, r: EquipmentListDto) => {
+        const val = safeDiv(safeDiv(r.price, r.depreciationPeriod), r.averageSamplesPerYear);
+        return val != null ? formatCurrency(Math.ceil(val)) : "-";
+      },
+    });
+  }
+
+  if (visibleKeys.has("maintenanceCostRatio")) {
+    columns.push({
+      title: "Tỷ lệ CP duy tu bảo dưỡng",
+      dataIndex: "maintenanceCostRatio",
+      key: "maintenanceCostRatio",
+      width: 190,
+      align: "right" as const,
+      render: (v: number) => v != null ? `${formatNumber(v)}%` : "-",
+    });
+  }
+
+  if (visibleKeys.has("maintenanceCost")) {
+    columns.push({
+      title: "Mức chi phí duy tu bảo dưỡng",
+      key: "maintenanceCost",
+      width: 200,
+      align: "right" as const,
+      render: (_: unknown, r: EquipmentListDto) => {
+        const val = r.price != null && r.maintenanceCostRatio != null
+          ? r.price * r.maintenanceCostRatio / 100
+          : null;
+        return formatCurrency(val);
+      },
+    });
+  }
+
+  if (visibleKeys.has("calibrationCostPerYear")) {
+    columns.push({
+      title: "Chi phí hiệu chuẩn TB / năm",
+      dataIndex: "calibrationCostPerYear",
+      key: "calibrationCostPerYear",
+      width: 200,
+      align: "right" as const,
+      render: (v: number) => formatCurrency(v),
+    });
+  }
+
+  if (visibleKeys.has("depreciationPerHour")) {
+    columns.push({
+      title: "Khấu hao TB / giờ",
+      key: "depreciationPerHour",
+      width: 160,
+      align: "right" as const,
+      render: (_: unknown, r: EquipmentListDto) => {
+        const val = safeDiv(r.calibrationCostPerYear, 12 * 22 * 8);
+        return val != null ? formatCurrency(Math.ceil(val)) : "-";
+      },
+    });
+  }
+
+  if (visibleKeys.has("depreciationPerSampleHC")) {
+    columns.push({
+      title: "Khấu hao TB / mẫu",
+      key: "depreciationPerSampleHC",
+      width: 170,
+      align: "right" as const,
+      render: (_: unknown, r: EquipmentListDto) => {
+        const val = safeDiv(r.calibrationCostPerYear, r.averageSamplesPerYear);
+        return val != null ? formatCurrency(Math.ceil(val)) : "-";
+      },
     });
   }
 
@@ -198,7 +250,7 @@ export const getEquipmentColumns = (
     width: 50,
     fixed: "right" as const,
     render: (_: unknown, record: EquipmentListDto) => (
-      <Tooltip title="Chỉnh sửa">
+      <Tooltip title="Chi tiết">
         <Button
           type="text"
           size="small"

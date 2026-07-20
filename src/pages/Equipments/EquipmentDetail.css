@@ -1,0 +1,204 @@
+.equipment-detail {
+  padding: 0;
+}
+
+@media (min-width: 992px) {
+  .equipment-detail {
+    padding: 24px;
+  }
+}
+
+@media (max-width: 991px) {
+  .equipment-detail .ant-card {
+    border: none;
+    border-radius: 0;
+  }
+
+  .equipment-detail .ant-card-bordered {
+    border: none;
+  }
+}
+
+/* Card body padding */
+.equipment-detail .list-card > .ant-card-body {
+  padding: 24px;
+}
+
+@media (max-width: 991px) and (min-width: 577px) {
+  .equipment-detail .list-card > .ant-card-body {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 576px) {
+  .equipment-detail .list-card > .ant-card-body {
+    padding: 12px;
+  }
+}
+
+/* Card header flex */
+.equipment-detail .list-card > .ant-card-head {
+  height: auto;
+  min-height: 54px;
+  padding: 12px 16px;
+}
+
+.equipment-detail .ant-card-head-title {
+  white-space: normal;
+  line-height: 1.5;
+}
+
+.equipment-detail .card-header-flex {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Tags in header */
+.equipment-detail .list-card .card-header-flex .ant-tag {
+  border-radius: 18px;
+  padding: 2px 8px;
+  border: 1px solid #FFFFFF !important;
+}
+
+.equipment-detail .list-card .card-header-flex .equipment-code-tag {
+  background: #1890FF !important;
+  border: 1px solid #FFFFFF !important;
+  color: #FFFFFF;
+}
+
+@media (max-width: 767px) {
+  .equipment-detail .card-header-flex {
+    justify-content: flex-start;
+    padding: 8px 0;
+  }
+
+  .equipment-detail .card-header-flex > * {
+    flex: 0 0 100%;
+  }
+}
+
+/* Back button area */
+.equipment-detail .back-button-bar {
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+@media (max-width: 991px) {
+  .equipment-detail .back-button-bar {
+    margin-bottom: 12px;
+    padding: 0 12px;
+  }
+}
+
+/* Detail sections */
+.equipment-detail .detail-section {
+  background: #fafafa;
+  padding: 16px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+}
+
+.equipment-detail .detail-section:last-child {
+  margin-bottom: 0;
+}
+
+.equipment-detail .detail-section-title {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 12px;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+/* Detail items */
+.equipment-detail .detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 10px;
+}
+
+.equipment-detail .detail-item:last-child {
+  margin-bottom: 0;
+}
+
+.equipment-detail .detail-item-label {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.equipment-detail .detail-item-value {
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.85);
+  word-break: break-word;
+}
+
+.equipment-detail .detail-item-value.highlight {
+  font-weight: 500;
+  color: var(--color-primary, #096DD9);
+}
+
+/* Horizontal detail items (label left, value right) */
+.equipment-detail .detail-item-horizontal {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.equipment-detail .detail-item-horizontal:last-child {
+  margin-bottom: 0;
+}
+
+/* Cost config section titles */
+.equipment-detail .config-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #262626;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* Form inside tabs */
+.equipment-detail .cost-config-form .ant-form-item {
+  margin-bottom: 16px;
+}
+
+/* Date range row */
+.equipment-detail .date-range-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.equipment-detail .date-range-row .ant-form-item {
+  margin-bottom: 0;
+}
+
+/* Tabs styling */
+.equipment-detail .ant-tabs-nav {
+  margin-bottom: 16px;
+}
+
+/* Mobile responsive */
+@media (max-width: 576px) {
+  .equipment-detail .detail-section {
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+}
+
+@media (max-width: 991px) {
+  .equipment-detail .detail-left-col {
+    margin-bottom: 16px;
+  }
+}

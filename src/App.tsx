@@ -177,6 +177,9 @@ const WarehouseImportDetail = Loadable(
 const EquipmentList = Loadable(
   lazy(() => import("./pages/Equipments/EquipmentList")),
 );
+const EquipmentDetailPage = Loadable(
+  lazy(() => import("./pages/Equipments/EquipmentDetailPage")),
+);
 
 // Products
 const ProductList = Loadable(
@@ -400,6 +403,7 @@ function App() {
 
           {/* Equipments - Quản lý thiết bị */}
           <Route path="equipments" element={<EquipmentList />} />
+          <Route path="equipments/:id" element={<EquipmentDetailPage />} />
 
           {/* Suppliers - Quản lý nhà cung cấp */}
           <Route path="suppliers-management" element={<SupplierList />} />

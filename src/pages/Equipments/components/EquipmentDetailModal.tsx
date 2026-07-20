@@ -9,11 +9,13 @@ import {
   Row,
   Col,
   Typography,
+  Divider,
   Button,
   Upload,
   Spin,
   message,
 } from "antd";
+import { NumericFormat } from "react-number-format";
 import { UploadOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
 import { getFileIcon, formatFileSize } from "../../../utils/fileUtils";
 import dayjs from "dayjs";
@@ -120,6 +122,15 @@ const EquipmentDetailModal: React.FC<Props> = ({ open, equipmentId, onClose, onU
   const [model, setModel] = useState("");
   const [warrantyExpiryDate, setWarrantyExpiryDate] = useState<dayjs.Dayjs | null>(null);
   const [notes, setNotes] = useState("");
+  const [assetCode, setAssetCode] = useState("");
+  const [price, setPrice] = useState<number | null>(null);
+  const [depreciationPeriod, setDepreciationPeriod] = useState<number | null>(null);
+  const [location, setLocation] = useState("");
+  const [powerConsumption, setPowerConsumption] = useState<number | null>(null);
+  const [operatingHoursPerYear, setOperatingHoursPerYear] = useState<number | null>(null);
+  const [averageSamplesPerYear, setAverageSamplesPerYear] = useState<number | null>(null);
+  const [maintenanceCostRatio, setMaintenanceCostRatio] = useState<number | null>(null);
+  const [calibrationCostPerYear, setCalibrationCostPerYear] = useState<number | null>(null);
 
   const [existingAttachments, setExistingAttachments] = useState<EquipmentAttachmentDto[]>([]);
   const [newAttachments, setNewAttachments] = useState<CreateEquipmentAttachmentDto[]>([]);
@@ -151,6 +162,15 @@ const EquipmentDetailModal: React.FC<Props> = ({ open, equipmentId, onClose, onU
     setModel("");
     setWarrantyExpiryDate(null);
     setNotes("");
+    setAssetCode("");
+    setPrice(null);
+    setDepreciationPeriod(null);
+    setLocation("");
+    setPowerConsumption(null);
+    setOperatingHoursPerYear(null);
+    setAverageSamplesPerYear(null);
+    setMaintenanceCostRatio(null);
+    setCalibrationCostPerYear(null);
     setExistingAttachments([]);
     setNewAttachments([]);
     setRemovedAttachmentIds([]);
@@ -171,6 +191,15 @@ const EquipmentDetailModal: React.FC<Props> = ({ open, equipmentId, onClose, onU
       setModel(data.model || "");
       setWarrantyExpiryDate(data.warrantyExpiryDate ? dayjs(data.warrantyExpiryDate) : null);
       setNotes(data.notes || "");
+      setAssetCode(data.assetCode || "");
+      setPrice(data.price ?? null);
+      setDepreciationPeriod(data.depreciationPeriod ?? null);
+      setLocation(data.location || "");
+      setPowerConsumption(data.powerConsumption ?? null);
+      setOperatingHoursPerYear(data.operatingHoursPerYear ?? null);
+      setAverageSamplesPerYear(data.averageSamplesPerYear ?? null);
+      setMaintenanceCostRatio(data.maintenanceCostRatio ?? null);
+      setCalibrationCostPerYear(data.calibrationCostPerYear ?? null);
       setExistingAttachments(data.attachments || []);
       setNewAttachments([]);
       setRemovedAttachmentIds([]);
@@ -241,8 +270,16 @@ const EquipmentDetailModal: React.FC<Props> = ({ open, equipmentId, onClose, onU
         manufacturer: manufacturer.trim() || undefined,
         origin: origin.trim() || undefined,
         warrantyExpiryDate: warrantyExpiryDate?.format("YYYY-MM-DD") || undefined,
-        price: equipment.price,
+        price: price ?? 0,
         notes: notes.trim() || undefined,
+        assetCode: assetCode.trim() || undefined,
+        depreciationPeriod: depreciationPeriod ?? undefined,
+        location: location.trim() || undefined,
+        powerConsumption: powerConsumption ?? undefined,
+        operatingHoursPerYear: operatingHoursPerYear ?? undefined,
+        averageSamplesPerYear: averageSamplesPerYear ?? undefined,
+        maintenanceCostRatio: maintenanceCostRatio ?? undefined,
+        calibrationCostPerYear: calibrationCostPerYear ?? undefined,
         attachments: [
           ...existingAttachments.map((a) => ({
             fileId: a.fileId,
@@ -371,6 +408,135 @@ const EquipmentDetailModal: React.FC<Props> = ({ open, equipmentId, onClose, onU
               </Col>
             </Row>
 
+            <Divider style={{ margin: "16px 0 12px" }} />
+            <Text strong style={{ display: "block", marginBottom: 12, fontSize: 14 }}>
+              Thông số vận hành &amp; chi phí
+            </Text>
+
+            <Row gutter={16}>
+              <Col xs={12} sm={12} md={6}>
+                <Form.Item label={<Text strong>Mã tài sản</Text>} style={{ marginBottom: 16 }}>
+                  <Input value={assetCode} onChange={(e) => setAssetCode(e.target.value)} disabled={!canEdit} />
+                </Form.Item>
+              </Col>
+              <Col xs={12} sm={12} md={6}>
+                <Form.Item label={<Text strong>Nguyên giá</Text>} style={{ marginBottom: 16 }}>
+                  <NumericFormat
+                    value={price ?? ""}
+                    onValueChange={(v) => setPrice(v.floatValue ?? null)}
+                    allowNegative={false}
+                    thousandSeparator="."
+                    decimalSeparator=","
+                    decimalScale={0}
+                    customInput={Input}
+                    addonAfter="đ"
+                    style={{ width: "100%" }}
+                    disabled={!canEdit}
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={12} sm={12} md={6}>
+                <Form.Item label={<Text strong>Công suất (kW)</Text>} style={{ marginBottom: 16 }}>
+                  <NumericFormat
+                    value={powerConsumption ?? ""}
+                    onValueChange={(v) => setPowerConsumption(v.floatValue ?? null)}
+                    allowNegative={false}
+                    thousandSeparator="."
+                    decimalSeparator=","
+                    decimalScale={2}
+                    customInput={Input}
+                    addonAfter="kW"
+                    style={{ width: "100%" }}
+                    disabled={!canEdit}
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={12} sm={12} md={6}>
+                <Form.Item label={<Text strong>Chạy máy (h/năm)</Text>} style={{ marginBottom: 16 }}>
+                  <NumericFormat
+                    value={operatingHoursPerYear ?? ""}
+                    onValueChange={(v) => setOperatingHoursPerYear(v.floatValue ?? null)}
+                    allowNegative={false}
+                    thousandSeparator="."
+                    decimalSeparator=","
+                    decimalScale={1}
+                    customInput={Input}
+                    addonAfter="h"
+                    style={{ width: "100%" }}
+                    disabled={!canEdit}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Row gutter={16}>
+              <Col xs={12} sm={12} md={6}>
+                <Form.Item label={<Text strong>Mẫu TB / năm</Text>} style={{ marginBottom: 16 }}>
+                  <InputNumber
+                    value={averageSamplesPerYear}
+                    onChange={(v) => setAverageSamplesPerYear(v ?? null)}
+                    min={0}
+                    style={{ width: "100%" }}
+                    controls={false}
+                    disabled={!canEdit}
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={12} sm={12} md={6}>
+                <Form.Item label={<Text strong>Khấu hao (năm)</Text>} style={{ marginBottom: 16 }}>
+                  <InputNumber
+                    value={depreciationPeriod}
+                    onChange={(v) => setDepreciationPeriod(v ?? null)}
+                    min={0}
+                    style={{ width: "100%" }}
+                    controls={false}
+                    disabled={!canEdit}
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={12} sm={12} md={6}>
+                <Form.Item label={<Text strong>Tỷ lệ bảo dưỡng (%)</Text>} style={{ marginBottom: 16 }}>
+                  <NumericFormat
+                    value={maintenanceCostRatio ?? ""}
+                    onValueChange={(v) => setMaintenanceCostRatio(v.floatValue ?? null)}
+                    allowNegative={false}
+                    thousandSeparator="."
+                    decimalSeparator=","
+                    decimalScale={2}
+                    customInput={Input}
+                    addonAfter="%"
+                    style={{ width: "100%" }}
+                    disabled={!canEdit}
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={12} sm={12} md={6}>
+                <Form.Item label={<Text strong>CP hiệu chuẩn / năm</Text>} style={{ marginBottom: 16 }}>
+                  <NumericFormat
+                    value={calibrationCostPerYear ?? ""}
+                    onValueChange={(v) => setCalibrationCostPerYear(v.floatValue ?? null)}
+                    allowNegative={false}
+                    thousandSeparator="."
+                    decimalSeparator=","
+                    decimalScale={0}
+                    customInput={Input}
+                    addonAfter="đ"
+                    style={{ width: "100%" }}
+                    disabled={!canEdit}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Row gutter={16}>
+              <Col xs={24} sm={24} md={12}>
+                <Form.Item label={<Text strong>Vị trí lắp đặt</Text>} style={{ marginBottom: 16 }}>
+                  <Input value={location} onChange={(e) => setLocation(e.target.value)} disabled={!canEdit} />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Divider style={{ margin: "4px 0 12px" }} />
             <Text strong style={{ display: "block", marginBottom: 12 }}>Tài liệu đính kèm</Text>
             {canEdit && (
               <Dragger

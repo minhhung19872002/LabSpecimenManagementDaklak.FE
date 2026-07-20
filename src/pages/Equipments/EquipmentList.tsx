@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Card,
   Table,
@@ -21,7 +22,6 @@ import {
 } from "../../services/equipmentService";
 import { ALL_COLUMNS, COLUMN_VISIBILITY_KEY, getEquipmentColumns } from "./constants";
 import ColumnConfigPopover from "./components/ColumnConfigPopover";
-import EquipmentDetailModal from "./components/EquipmentDetailModal";
 import "../../styles/ListCard.css";
 
 const loadVisibleKeys = (): Set<string> => {
@@ -33,6 +33,7 @@ const loadVisibleKeys = (): Set<string> => {
 };
 
 const EquipmentList: React.FC = () => {
+  const navigate = useNavigate();
   const [data, setData] = useState<EquipmentListDto[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -40,9 +41,6 @@ const EquipmentList: React.FC = () => {
   const [pageSize, setPageSize] = useState(20);
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<EquipmentStatus | undefined>(undefined);
-
-  const [detailModalOpen, setDetailModalOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
 
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(loadVisibleKeys);
 
@@ -68,10 +66,9 @@ const EquipmentList: React.FC = () => {
     fetchData();
   }, [fetchData]);
 
-  const handleView = (id: string) => {
-    setSelectedId(id);
-    setDetailModalOpen(true);
-  };
+  const handleView = useCallback((id: string) => {
+    navigate(`/equipments/${id}`);
+  }, [navigate]);
 
   const handleVisibilityChange = (keys: Set<string>) => {
     setVisibleKeys(keys);
@@ -80,7 +77,7 @@ const EquipmentList: React.FC = () => {
 
   const columns = useMemo(
     () => getEquipmentColumns(visibleKeys, handleView),
-    [visibleKeys]
+    [visibleKeys, handleView]
   );
 
   return (
@@ -122,7 +119,7 @@ const EquipmentList: React.FC = () => {
           dataSource={data}
           rowKey="id"
           loading={loading}
-          scroll={{ x: 1200 }}
+          scroll={{ x: 2200 }}
           pagination={{
             current: currentPage,
             pageSize,
@@ -141,13 +138,6 @@ const EquipmentList: React.FC = () => {
           })}
         />
       </Card>
-
-      <EquipmentDetailModal
-        open={detailModalOpen}
-        equipmentId={selectedId}
-        onClose={() => { setDetailModalOpen(false); setSelectedId(undefined); }}
-        onUpdated={fetchData}
-      />
     </div>
   );
 };

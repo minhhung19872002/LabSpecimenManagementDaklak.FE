@@ -33,8 +33,8 @@ export const EquipmentStatusColors: Record<number, string> = {
 };
 
 export const ALLOWED_STATUS_TRANSITIONS: Record<EquipmentStatus, EquipmentStatus[]> = {
-  [EquipmentStatus.InStock]: [EquipmentStatus.InUse, EquipmentStatus.Broken],
-  [EquipmentStatus.InUse]: [EquipmentStatus.InStock, EquipmentStatus.Broken],
+  [EquipmentStatus.InStock]: [EquipmentStatus.InUse, EquipmentStatus.UnderMaintenance, EquipmentStatus.Broken],
+  [EquipmentStatus.InUse]: [EquipmentStatus.InStock, EquipmentStatus.UnderMaintenance, EquipmentStatus.Broken],
   [EquipmentStatus.UnderMaintenance]: [EquipmentStatus.InStock, EquipmentStatus.Broken],
   [EquipmentStatus.Broken]: [EquipmentStatus.Disposed],
   [EquipmentStatus.Disposed]: [],
@@ -54,6 +54,14 @@ export interface EquipmentListDto {
   warrantyExpiryDate?: string;
   usageCount: number;
   maintenanceCount: number;
+  assetCode?: string;
+  price: number;
+  depreciationPeriod?: number;
+  powerConsumption?: number;
+  operatingHoursPerYear?: number;
+  averageSamplesPerYear?: number;
+  maintenanceCostRatio?: number;
+  calibrationCostPerYear?: number;
   creatorName?: string;
   creationTime: string;
   attachments?: EquipmentAttachmentDto[];
@@ -81,11 +89,35 @@ export interface EquipmentDto extends EquipmentListDto {
   supplierId?: string;
   unitId?: string;
   unitName?: string;
-  price: number;
   lotNumber?: string;
   lotExpiryDate?: string;
   notes?: string;
+  location?: string;
+  importDate?: string;
   attachments: EquipmentAttachmentDto[];
+}
+
+export interface EquipmentCostConfigDto {
+  id: string;
+  equipmentId: string;
+  effectiveFrom: string;
+  effectiveTo: string;
+  operatingHoursPerYear?: number;
+  averageSamplesPerYear?: number;
+  maintenanceCostRatio?: number;
+  calibrationCostPerYear?: number;
+  description?: string;
+  creationTime: string;
+  creatorName?: string;
+}
+
+export interface CreateEquipmentCostConfigDto {
+  effectiveFrom: string;
+  effectiveTo: string;
+  operatingHoursPerYear?: number;
+  averageSamplesPerYear?: number;
+  maintenanceCostRatio?: number;
+  calibrationCostPerYear?: number;
 }
 
 export interface CreateUpdateEquipmentDto {
@@ -98,6 +130,14 @@ export interface CreateUpdateEquipmentDto {
   unitId?: string;
   price: number;
   notes?: string;
+  assetCode?: string;
+  depreciationPeriod?: number;
+  location?: string;
+  powerConsumption?: number;
+  operatingHoursPerYear?: number;
+  averageSamplesPerYear?: number;
+  maintenanceCostRatio?: number;
+  calibrationCostPerYear?: number;
   attachments?: CreateEquipmentAttachmentDto[];
 }
 
@@ -172,6 +212,21 @@ export const equipmentService = {
       "/api/v1/files/upload",
       formData
     );
+    return response.data;
+  },
+
+  getCostConfigs: async (equipmentId: string): Promise<EquipmentCostConfigDto[]> => {
+    const response = await api.get<EquipmentCostConfigDto[]>(`${BASE_URL}/${equipmentId}/cost-configs`);
+    return response.data;
+  },
+
+  getActiveCostConfig: async (equipmentId: string): Promise<EquipmentCostConfigDto | null> => {
+    const response = await api.get<EquipmentCostConfigDto | null>(`${BASE_URL}/${equipmentId}/cost-configs/active`);
+    return response.data;
+  },
+
+  saveCostConfig: async (equipmentId: string, data: CreateEquipmentCostConfigDto): Promise<EquipmentCostConfigDto> => {
+    const response = await api.post<EquipmentCostConfigDto>(`${BASE_URL}/${equipmentId}/cost-configs`, data);
     return response.data;
   },
 };
