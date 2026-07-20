@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { Row, Col, Form, Input, Select } from "antd";
 import { DatePicker } from "antd";
+import { NumericFormat } from "react-number-format";
 import { Controller, useFormContext } from "react-hook-form";
 import dayjs from "dayjs";
 import { RichTextEditor } from "../../../../components/common";
@@ -22,9 +23,9 @@ const EquipmentFields: React.FC<EquipmentFieldsProps> = ({ manufacturerOptions }
 
   return (
     <>
-      {/* Tên thiết bị | Mã thiết bị */}
+      {/* Tên thiết bị */}
       <Row gutter={16}>
-        <Col xs={24} sm={12}>
+        <Col xs={24}>
           <Form.Item
             label="Tên thiết bị"
             validateStatus={errors.name ? "error" : ""}
@@ -41,29 +42,6 @@ const EquipmentFields: React.FC<EquipmentFieldsProps> = ({ manufacturerOptions }
                     setValue("name", plainText);
                   }}
                   placeholder="Nhập tên thiết bị"
-                />
-              )}
-            />
-          </Form.Item>
-        </Col>
-        <Col xs={24} sm={12}>
-          <Form.Item
-            label="Mã thiết bị"
-            required
-            validateStatus={errors.identificationCode ? "error" : ""}
-            help={errors.identificationCode?.message}
-          >
-            <Controller
-              name="formattedIdentificationCode"
-              control={control}
-              render={({ field }) => (
-                <RichTextEditor
-                  value={field.value || ""}
-                  onChange={(html, plainText) => {
-                    field.onChange(html);
-                    setValue("identificationCode", plainText);
-                  }}
-                  placeholder="Nhập mã thiết bị"
                 />
               )}
             />
@@ -104,19 +82,8 @@ const EquipmentFields: React.FC<EquipmentFieldsProps> = ({ manufacturerOptions }
         </Col>
       </Row>
 
-      {/* Số serial | Năm sản xuất */}
+      {/* Năm sản xuất | Công suất sử dụng */}
       <Row gutter={16}>
-        <Col xs={24} sm={12}>
-          <Form.Item label="Số serial">
-            <Controller
-              name="serialNumber"
-              control={control}
-              render={({ field }) => (
-                <Input {...field} value={field.value ?? ""} placeholder="Nhập số serial" />
-              )}
-            />
-          </Form.Item>
-        </Col>
         <Col xs={24} sm={12}>
           <Form.Item label="Năm sản xuất">
             <Controller
@@ -129,6 +96,32 @@ const EquipmentFields: React.FC<EquipmentFieldsProps> = ({ manufacturerOptions }
                   onChange={(d) => field.onChange(d ? d.year() : null)}
                   placeholder="Chọn năm sản xuất"
                   style={{ width: "100%" }}
+                />
+              )}
+            />
+          </Form.Item>
+        </Col>
+        <Col xs={24} sm={12}>
+          <Form.Item
+            label="Công suất sử dụng"
+            validateStatus={errors.powerConsumption ? "error" : ""}
+            help={errors.powerConsumption?.message}
+          >
+            <Controller
+              name="powerConsumption"
+              control={control}
+              render={({ field }) => (
+                <NumericFormat
+                  value={field.value ?? ""}
+                  onValueChange={(values) => field.onChange(values.floatValue ?? null)}
+                  allowNegative={false}
+                  decimalScale={2}
+                  thousandSeparator="."
+                  decimalSeparator=","
+                  customInput={Input}
+                  addonAfter="kW"
+                  style={{ width: "100%" }}
+                  placeholder="Nhập công suất"
                 />
               )}
             />

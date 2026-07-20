@@ -36,8 +36,12 @@ export const productSchema = yup.object({
     .string()
     .defined()
     .default("")
-    .required("Vui lòng nhập mã nhận dạng")
-    .max(256),
+    .max(256)
+    .when("productType", {
+      is: (pt: number) => pt !== ProductType.Equipment,
+      then: (schema) => schema.required("Vui lòng nhập mã nhận dạng"),
+      otherwise: (schema) => schema.optional(),
+    }),
   productType: yup.number().defined().default(0).min(0).max(6),
   baseUnitId: yup.string().nullable().optional(),
   packagingQuantity: yup
@@ -84,9 +88,9 @@ export const productSchema = yup.object({
     .transform((v, orig) => (orig === "" || orig === null ? null : v)),
   baseProductId: yup.string().nullable().optional(),
   chemicalFormula: yup.string().nullable().max(256),
-  formattedIdentificationCode: yup.string().nullable(),
   equipmentModel: yup.string().nullable().max(256),
-  serialNumber: yup.string().nullable().max(256),
+  powerConsumption: yup.number().nullable().optional().min(0, "Không được âm")
+    .transform((v, orig) => (orig === "" || orig === null ? null : v)),
   manufactureYear: yup.number().nullable().optional().integer().min(1900, "Năm không hợp lệ").max(2100, "Năm không hợp lệ")
     .transform((v, orig) => (orig === "" || orig === null ? null : v)),
   mainTechnicalSpecs: yup.string().nullable(),

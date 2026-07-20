@@ -117,7 +117,7 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
       {
         key: `eq-${Date.now()}`,
         productName: stripParagraphTags(p.formattedName || p.name),
-        serialNumber: stripParagraphTags(p.formattedIdentificationCode || p.identificationCode || ""),
+        serialNumber: stripParagraphTags(p.identificationCode || ""),
         model: p.equipmentModel || "",
         manufacturer: p.manufacturer || "",
         manufacturerId: undefined,
@@ -132,7 +132,7 @@ const GoodsReceiptEquipmentForm: React.FC = () => {
   const productOptions = equipmentProducts.map((p) => ({
     value: p.id,
     label: `${p.identificationCode || p.code} - ${p.name}`,
-    htmlSerial: stripParagraphTags(p.formattedIdentificationCode || p.identificationCode || p.code),
+    htmlSerial: stripParagraphTags(p.identificationCode || p.code),
     htmlName: stripParagraphTags(p.formattedName || p.name),
   }));
 
