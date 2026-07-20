@@ -9,7 +9,7 @@ import {
   goodsReceiptService,
 } from "../../../services/goodsReceiptService";
 import { productService, ProductDto, ProductSkuDto } from "../../../services/productService";
-import { WarehouseImportReceiptDto } from "../../../services/warehouseImportReceiptService";
+import { WarehouseImportReceiptDto, EquipmentReceiveStatus } from "../../../services/warehouseImportReceiptService";
 import { getApiErrorMessage } from "../../../utils/errorHandler";
 
 interface WarehouseImportModalProps {
@@ -171,7 +171,7 @@ const WarehouseImportModal: React.FC<WarehouseImportModalProps> = ({
         }
       }
 
-      // Equipment items — 1 barcode per item, content = "serial-name" (ASCII only)
+      // Equipment items — 1 barcode per received item, content = assetCode (mã tài sản)
       const toAscii = (html: string) =>
         removeAccents(stripAllHtml(html))
           .normalize("NFD")
@@ -179,15 +179,21 @@ const WarehouseImportModal: React.FC<WarehouseImportModalProps> = ({
           .replace(/[^\x20-\x7E]/g, "")
           .trim();
 
-      const equipmentItems = receipt.items.filter((i) =>
-        i.isEquipment && (!importReceipt || importItemsMap.has(i.id))
-      );
-      for (const item of equipmentItems) {
-        const serial = toAscii(item.serialNumber || item.identificationCode || "");
-        if (!serial) continue;
-        const name = toAscii(item.productName);
-        const content = name ? `${serial}-${name}` : serial;
-        items.push({ item, isEquipment: true, barcodeCount: 1, barcodeContents: [content] });
+      if (importReceipt?.items?.length) {
+        const receivedEquipment = importReceipt.items.filter(
+          (i) => i.isEquipment && i.equipmentReceiveStatus === EquipmentReceiveStatus.Received && i.assetCode
+        );
+        for (const imp of receivedEquipment) {
+          const grItem = receipt.items.find((ri) => ri.id === imp.goodsReceiptItemId);
+          const fakeItem: GoodsReceiptItemDto = grItem ?? {
+            id: imp.goodsReceiptItemId,
+            productId: imp.productId,
+            productName: imp.productName,
+          } as GoodsReceiptItemDto;
+          const content = toAscii(imp.assetCode!);
+          if (!content) continue;
+          items.push({ item: fakeItem, isEquipment: true, barcodeCount: 1, barcodeContents: [content] });
+        }
       }
 
       // Non-equipment items — barcode per lot/quantity, all product types
@@ -354,7 +360,7 @@ const WarehouseImportModal: React.FC<WarehouseImportModalProps> = ({
 
   return (
     <Modal
-      title={printOnly ? "In mã vật tư" : "In nhãn và nhập kho"}
+      title={printOnly ? "In barcode" : "In nhãn và nhập kho"}
       open={open}
       onCancel={onClose}
       width={650}
@@ -365,7 +371,7 @@ const WarehouseImportModal: React.FC<WarehouseImportModalProps> = ({
           <Button onClick={onClose}>Hủy</Button>
           {printOnly ? (
             <Button type="primary" onClick={() => { handlePrint(); onClose(); }} disabled={loading}>
-              In mã vật tư
+              In barcode
             </Button>
           ) : (
             <>

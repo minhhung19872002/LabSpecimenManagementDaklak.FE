@@ -72,6 +72,26 @@ export const WarehouseImportLineStatusColors: Record<number, string> = {
   [WarehouseImportLineStatus.Defective]: "red",
 };
 
+export enum EquipmentReceiveStatus {
+  NotReceived = 0,
+  Received = 1,
+}
+
+export const EquipmentReceiveStatusOptions = [
+  { value: EquipmentReceiveStatus.NotReceived, label: "Chưa nhận" },
+  { value: EquipmentReceiveStatus.Received, label: "Đã nhận" },
+];
+
+export const EquipmentReceiveStatusLabels: Record<number, string> = {
+  [EquipmentReceiveStatus.NotReceived]: "Chưa nhận",
+  [EquipmentReceiveStatus.Received]: "Đã nhận",
+};
+
+export const EquipmentReceiveStatusColors: Record<number, string> = {
+  [EquipmentReceiveStatus.NotReceived]: "orange",
+  [EquipmentReceiveStatus.Received]: "green",
+};
+
 export interface WarehouseImportReceiptListDto {
   id: string;
   code: string;
@@ -138,6 +158,15 @@ export interface WarehouseImportReceiptItemDto {
   manufacturerName?: string;
   storageWarehouseId?: string;
   storageWarehouseName?: string;
+  isEquipment: boolean;
+  assetCode?: string;
+  serialNumber?: string;
+  manufacturerId?: string;
+  equipmentReceiveStatus: EquipmentReceiveStatus;
+  depreciationPeriod?: number;
+  originalPrice?: number;
+  location?: string;
+  equipmentIndex: number;
 }
 
 export interface CreateUpdateWarehouseImportReceiptDto {
@@ -171,6 +200,16 @@ export interface CreateUpdateWarehouseImportReceiptItemDto {
   selectedUnitName?: string;
   storageWarehouseId?: string;
   storageWarehouseName?: string;
+  isEquipment: boolean;
+  assetCode?: string;
+  serialNumber?: string;
+  manufacturerId?: string;
+  manufacturerName?: string;
+  equipmentReceiveStatus: EquipmentReceiveStatus;
+  depreciationPeriod?: number;
+  originalPrice?: number;
+  location?: string;
+  equipmentIndex: number;
 }
 
 export interface EligibleGoodsReceiptForImportDto {
@@ -228,6 +267,11 @@ export interface GoodsReceiptItemForImportDto {
   skus: ProductSkuForImportDto[];
   casNumber?: string;
   packagingSpec?: string;
+  isEquipment: boolean;
+  installationLocation?: string;
+  productType?: number;
+  manufacturerId?: string;
+  manufacturerName?: string;
 }
 
 export interface DefectiveHistoryItemDto {

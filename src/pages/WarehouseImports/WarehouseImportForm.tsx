@@ -1,11 +1,16 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Card, Form, Input, Select, DatePicker, InputNumber, Button, Space, Row, Col,
-  Table, message, Spin, Divider, Tag, Modal, Badge, Popover, AutoComplete,
+  Table, message, Spin, Tag, Modal, Badge, Popover, AutoComplete, Collapse,
 } from "antd";
 import { BranchesOutlined, WarningOutlined, EditOutlined, FileTextOutlined, DeleteOutlined } from "@ant-design/icons";
 import { NumericFormat } from "react-number-format";
-import { DeliveryDocumentFileDto } from "../../services/warehouseImportReceiptService";
+import {
+  DeliveryDocumentFileDto,
+  EquipmentReceiveStatus,
+  EquipmentReceiveStatusOptions,
+} from "../../services/warehouseImportReceiptService";
+import { manufacturerService, ManufacturerDto } from "../../services/manufacturerService";
 import { useNavigate, useParams } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -65,6 +70,26 @@ interface LineItem {
   storageWarehouseName?: string;
 }
 
+interface EquipmentLineItem {
+  key: string;
+  id?: string;
+  goodsReceiptItemId: string;
+  productId: string;
+  productName: string;
+  orderedQuantity: number;
+  orderedUnitName?: string;
+  equipmentIndex: number;
+  assetCode: string;
+  serialNumber: string;
+  manufacturerId?: string;
+  manufacturerName?: string;
+  equipmentReceiveStatus: EquipmentReceiveStatus;
+  depreciationPeriod?: number;
+  originalPrice?: number;
+  location: string;
+  isHistorical?: boolean;
+}
+
 const WarehouseImportForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -82,6 +107,9 @@ const WarehouseImportForm: React.FC = () => {
   const [deliveryFiles, setDeliveryFiles] = useState<DeliveryDocumentFileDto[]>([]);
   const [deliveryFilesError, setDeliveryFilesError] = useState<string>();
   const [itemsLoading, setItemsLoading] = useState(false);
+  const [equipmentItems, setEquipmentItems] = useState<EquipmentLineItem[]>([]);
+  const [manufacturers, setManufacturers] = useState<ManufacturerDto[]>([]);
+  const [equipmentErrors, setEquipmentErrors] = useState<Record<string, { assetCode?: string }>>({});
 
   // Supplier autocomplete state
   const [supplierId, setSupplierId] = useState<string | undefined>();
@@ -118,10 +146,61 @@ const WarehouseImportForm: React.FC = () => {
 
   const selectedGoodsReceiptId = watch("goodsReceiptId");
 
+  const buildEquipmentItems = useCallback(
+    (items: GoodsReceiptItemForImportDto[], existing: WarehouseImportReceiptDto["items"]): EquipmentLineItem[] => {
+      const rows: EquipmentLineItem[] = [];
+      items.filter(imp => imp.isEquipment).forEach((imp) => {
+        const matches = existing.filter((e) => e.goodsReceiptItemId === imp.goodsReceiptItemId && e.isEquipment);
+        if (matches.length > 0) {
+          matches.forEach((m) => {
+            rows.push({
+              key: `equip-${m.id}`,
+              id: m.id,
+              goodsReceiptItemId: imp.goodsReceiptItemId,
+              productId: imp.productId,
+              productName: imp.productName,
+              orderedQuantity: imp.orderedQuantity,
+              orderedUnitName: imp.unitName,
+              equipmentIndex: m.equipmentIndex,
+              assetCode: m.assetCode || "",
+              serialNumber: m.serialNumber || "",
+              manufacturerId: m.manufacturerId,
+              manufacturerName: m.manufacturerName,
+              equipmentReceiveStatus: m.equipmentReceiveStatus,
+              depreciationPeriod: m.depreciationPeriod,
+              originalPrice: m.originalPrice,
+              location: m.location || "",
+            });
+          });
+        } else {
+          for (let i = 0; i < imp.orderedQuantity; i++) {
+            rows.push({
+              key: `equip-${imp.goodsReceiptItemId}-${i}`,
+              goodsReceiptItemId: imp.goodsReceiptItemId,
+              productId: imp.productId,
+              productName: imp.productName,
+              orderedQuantity: imp.orderedQuantity,
+              orderedUnitName: imp.unitName,
+              equipmentIndex: i,
+              assetCode: "",
+              serialNumber: "",
+              manufacturerId: imp.manufacturerId,
+              manufacturerName: imp.manufacturerName,
+              equipmentReceiveStatus: EquipmentReceiveStatus.NotReceived,
+              location: imp.installationLocation || "",
+            });
+          }
+        }
+      });
+      return rows;
+    },
+    []
+  );
+
   const buildLineItems = useCallback(
     (items: GoodsReceiptItemForImportDto[], existing: WarehouseImportReceiptDto["items"]): LineItem[] => {
       const rows: LineItem[] = [];
-      items.forEach((imp) => {
+      items.filter(imp => !imp.isEquipment).forEach((imp) => {
         const matches = existing.filter((e) => e.goodsReceiptItemId === imp.goodsReceiptItemId);
 
         if (imp.remainingOrderableQuantity <= 0 && matches.length === 0) {
@@ -205,11 +284,13 @@ const WarehouseImportForm: React.FC = () => {
     const loadData = async () => {
       setPageLoading(true);
       try {
-        const [employeesList, warehouseList] = await Promise.all([
+        const [employeesList, warehouseList, manufacturerList] = await Promise.all([
           employeeService.getList({ maxResultCount: 1000 }),
           warehouseService.getList({ maxResultCount: 1000 }),
+          manufacturerService.getActive(),
         ]);
         setWarehouses(warehouseList.items || []);
+        setManufacturers(manufacturerList);
 
         if (id) {
           const data = await warehouseImportReceiptService.get(id);
@@ -217,6 +298,7 @@ const WarehouseImportForm: React.FC = () => {
           const items = await warehouseImportReceiptService.getImportableItems(data.goodsReceiptId);
           setImportableItems(items);
           setLineItems(buildLineItems(items, data.items));
+          setEquipmentItems(buildEquipmentItems(items, data.items));
           warehouseImportReceiptService.getDefectiveHistory(data.goodsReceiptId).then(setDefectiveHistory).catch(() => {});
           setDeliveryFiles(
             data.deliveryDocumentFiles && data.deliveryDocumentFiles.length > 0
@@ -295,6 +377,7 @@ const WarehouseImportForm: React.FC = () => {
     if (!goodsReceiptId) {
       setImportableItems([]);
       setLineItems([]);
+      setEquipmentItems([]);
       setDefectiveHistory([]);
       return;
     }
@@ -310,6 +393,7 @@ const WarehouseImportForm: React.FC = () => {
       const items = await warehouseImportReceiptService.getImportableItems(goodsReceiptId);
       setImportableItems(items);
       setLineItems(buildLineItems(items, []));
+      setEquipmentItems(buildEquipmentItems(items, []));
       warehouseImportReceiptService.getDefectiveHistory(goodsReceiptId).then(setDefectiveHistory).catch(() => {});
     } catch (error: any) {
       message.error(getApiErrorMessage(error, "Không thể tải danh sách hàng hóa của phiếu mua hàng."));
@@ -475,6 +559,45 @@ const WarehouseImportForm: React.FC = () => {
     return true;
   };
 
+  const handleEquipmentChange = (key: string, field: keyof EquipmentLineItem, value: any) => {
+    setEquipmentItems((prev) => prev.map((item) => (item.key === key ? { ...item, [field]: value } : item)));
+    if (field === "assetCode" || field === "equipmentReceiveStatus") {
+      setEquipmentErrors((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }
+  };
+
+  const equipmentGroupRowSpans = useMemo(() => {
+    const spans: Record<string, number> = {};
+    let i = 0;
+    while (i < equipmentItems.length) {
+      const groupId = equipmentItems[i].goodsReceiptItemId;
+      let j = i;
+      while (j < equipmentItems.length && equipmentItems[j].goodsReceiptItemId === groupId) j++;
+      for (let k = i; k < j; k++) {
+        spans[equipmentItems[k].key] = k === i ? j - i : 0;
+      }
+      i = j;
+    }
+    return spans;
+  }, [equipmentItems]);
+
+  const validateEquipmentItems = (): boolean => {
+    const errors: Record<string, { assetCode?: string }> = {};
+    let hasError = false;
+    equipmentItems.filter(item => !item.isHistorical).forEach((item) => {
+      if (item.equipmentReceiveStatus === EquipmentReceiveStatus.Received && !item.assetCode.trim()) {
+        errors[item.key] = { assetCode: "Mã tài sản bắt buộc khi đã nhận" };
+        hasError = true;
+      }
+    });
+    setEquipmentErrors(errors);
+    return !hasError;
+  };
+
   const validateItems = (): boolean => {
     const editableItems = lineItems.filter(item => !item.isHistorical);
 
@@ -506,10 +629,7 @@ const WarehouseImportForm: React.FC = () => {
       }
     });
     setLineItemErrors(errors);
-    if (hasError) {
-      message.warning("Vui lòng điền đầy đủ thông tin bắt buộc cho các dòng đã nhập.");
-      return false;
-    }
+    if (hasError) return false;
 
     const byLine = new Map<string, number>();
     for (const item of editableItems) {
@@ -537,30 +657,58 @@ const WarehouseImportForm: React.FC = () => {
     supplierName: data.supplierName || undefined,
     totalAmount: data.totalAmount ?? undefined,
     deliveryDocumentFiles: deliveryFiles,
-    items: lineItems
-      .filter((item) => !item.isHistorical && item.actualReceivedQuantity > 0)
-      .map((item): CreateUpdateWarehouseImportReceiptItemDto => ({
-        id: item.id,
-        goodsReceiptItemId: item.goodsReceiptItemId,
-        actualReceivedQuantity: item.actualReceivedQuantity,
-        lotNumber: item.lotNumber || undefined,
-        lotExpiryDate: item.lotExpiryDate || undefined,
-        status: item.status,
-        qualityDocumentFileId: item.qualityDocument?.fileId,
-        qualityDocumentFileName: item.qualityDocument?.fileName,
-        qualityDocumentFileSize: item.qualityDocument?.fileSize,
-        notes: item.notes || undefined,
-        skuId: item.skuId || undefined,
-        selectedUnitId: item.selectedUnitId || undefined,
-        selectedUnitName: item.selectedUnitName || undefined,
-        storageWarehouseId: item.storageWarehouseId || undefined,
-        storageWarehouseName: item.storageWarehouseName || undefined,
-      })),
+    items: [
+      ...lineItems
+        .filter((item) => !item.isHistorical && item.actualReceivedQuantity > 0)
+        .map((item): CreateUpdateWarehouseImportReceiptItemDto => ({
+          id: item.id,
+          goodsReceiptItemId: item.goodsReceiptItemId,
+          actualReceivedQuantity: item.actualReceivedQuantity,
+          lotNumber: item.lotNumber || undefined,
+          lotExpiryDate: item.lotExpiryDate || undefined,
+          status: item.status,
+          qualityDocumentFileId: item.qualityDocument?.fileId,
+          qualityDocumentFileName: item.qualityDocument?.fileName,
+          qualityDocumentFileSize: item.qualityDocument?.fileSize,
+          notes: item.notes || undefined,
+          skuId: item.skuId || undefined,
+          selectedUnitId: item.selectedUnitId || undefined,
+          selectedUnitName: item.selectedUnitName || undefined,
+          storageWarehouseId: item.storageWarehouseId || undefined,
+          storageWarehouseName: item.storageWarehouseName || undefined,
+          isEquipment: false,
+          equipmentReceiveStatus: EquipmentReceiveStatus.NotReceived,
+          equipmentIndex: 0,
+        })),
+      ...equipmentItems
+        .filter((item) => !item.isHistorical)
+        .map((item): CreateUpdateWarehouseImportReceiptItemDto => ({
+          id: item.id,
+          goodsReceiptItemId: item.goodsReceiptItemId,
+          actualReceivedQuantity: 1,
+          status: WarehouseImportLineStatus.Checked,
+          isEquipment: true,
+          assetCode: item.assetCode || undefined,
+          serialNumber: item.serialNumber || undefined,
+          manufacturerId: item.manufacturerId || undefined,
+          manufacturerName: item.manufacturerName || undefined,
+          equipmentReceiveStatus: item.equipmentReceiveStatus,
+          depreciationPeriod: item.depreciationPeriod,
+          originalPrice: item.originalPrice,
+          location: item.location || undefined,
+          equipmentIndex: item.equipmentIndex,
+        })),
+    ],
   });
 
   const handleSaveDraft = handleSubmit(async (data: WarehouseImportReceiptFormData) => {
     if (!validateHeader()) return;
-    if (!validateItems()) return;
+    const itemsOk = validateItems();
+    const equipOk = validateEquipmentItems();
+    if (!itemsOk || !equipOk) {
+      message.warning("Vui lòng điền đầy đủ thông tin bắt buộc cho các dòng đã nhập.");
+      return;
+    }
     setSaving(true);
     try {
       const payload = buildPayload(data);
@@ -582,7 +730,12 @@ const WarehouseImportForm: React.FC = () => {
 
   const handleConfirm = handleSubmit(async (data: WarehouseImportReceiptFormData) => {
     if (!validateHeader()) return;
-    if (!validateItems()) return;
+    const itemsOk = validateItems();
+    const equipOk = validateEquipmentItems();
+    if (!itemsOk || !equipOk) {
+      message.warning("Vui lòng điền đầy đủ thông tin bắt buộc cho các dòng đã nhập.");
+      return;
+    }
     setConfirming(true);
     try {
       const payload = buildPayload(data);
@@ -1222,23 +1375,209 @@ const WarehouseImportForm: React.FC = () => {
           </div>
         )}
 
-        <Divider style={{ margin: "8px 0 16px" }} />
-
         <div style={{ padding: "0 16px 16px" }}>
-          <strong style={{ fontSize: 15, display: "block", marginBottom: 8 }}>Chi tiết vật tư</strong>
-          <Table
-            columns={columns}
-            dataSource={lineItems}
-            rowKey="key"
-            pagination={false}
-            scroll={{ x: 2020 }}
-            size="small"
-            bordered
-            loading={itemsLoading}
-            rowClassName={(record) =>
-              record.status === WarehouseImportLineStatus.Defective ? "wir-row-defective" : "wir-row-checked"
-            }
-            locale={{ emptyText: selectedGoodsReceiptId ? "Không có hàng hóa cần nhập" : "Vui lòng chọn phiếu mua hàng" }}
+          <Collapse
+            defaultActiveKey={["materials", "equipment"]}
+            style={{ marginBottom: 16 }}
+            items={[
+              {
+                key: "materials",
+                label: <strong>Nhóm 1 — Vật tư / Hóa chất ({lineItems.length})</strong>,
+                children: (
+                  <Table
+                    columns={columns}
+                    dataSource={lineItems}
+                    rowKey="key"
+                    pagination={false}
+                    scroll={{ x: 2020 }}
+                    size="small"
+                    bordered
+                    loading={itemsLoading}
+                    rowClassName={(record) =>
+                      record.status === WarehouseImportLineStatus.Defective ? "wir-row-defective" : "wir-row-checked"
+                    }
+                    locale={{ emptyText: selectedGoodsReceiptId ? "Không có hàng hóa cần nhập" : "Vui lòng chọn phiếu mua hàng" }}
+                  />
+                ),
+              },
+              ...(equipmentItems.length > 0
+                ? [
+                    {
+                      key: "equipment",
+                      label: <strong>Nhóm 2 — Thiết bị phòng Lab ({equipmentItems.length})</strong>,
+                      children: (
+                        <Table<EquipmentLineItem>
+                          columns={[
+                            {
+                              title: "Tên thiết bị",
+                              key: "productName",
+                              width: 180,
+                              onCell: (record: EquipmentLineItem) => ({ rowSpan: equipmentGroupRowSpans[record.key] }),
+                              render: (_: any, record: EquipmentLineItem) => record.productName,
+                            },
+                            {
+                              title: "SL Đặt",
+                              key: "orderedQuantity",
+                              width: 80,
+                              align: "center" as const,
+                              onCell: (record: EquipmentLineItem) => ({ rowSpan: equipmentGroupRowSpans[record.key] }),
+                              render: (_: any, record: EquipmentLineItem) => `${record.orderedQuantity} ${record.orderedUnitName || ""}`.trim(),
+                            },
+                            {
+                              title: "Mã tài sản",
+                              key: "assetCode",
+                              width: 140,
+                              render: (_: any, record: EquipmentLineItem) => {
+                                const isRequired = record.equipmentReceiveStatus === EquipmentReceiveStatus.Received;
+                                if (isReadonly || record.isHistorical) return record.assetCode || "-";
+                                return (
+                                  <>
+                                    <Input
+                                      value={record.assetCode}
+                                      placeholder="Nhập mã tài sản"
+                                      onChange={(e) => handleEquipmentChange(record.key, "assetCode", e.target.value)}
+                                      status={equipmentErrors[record.key]?.assetCode ? "error" : undefined}
+                                      size="small"
+                                      suffix={isRequired ? <span style={{ color: "#ff4d4f", fontSize: 11 }}>*</span> : <span />}
+                                    />
+                                    {equipmentErrors[record.key]?.assetCode && (
+                                      <div style={{ color: "#ff4d4f", fontSize: 11 }}>{equipmentErrors[record.key]?.assetCode}</div>
+                                    )}
+                                  </>
+                                );
+                              },
+                            },
+                            {
+                              title: "Số Serial NSX",
+                              key: "serialNumber",
+                              width: 140,
+                              render: (_: any, record: EquipmentLineItem) =>
+                                isReadonly || record.isHistorical ? (record.serialNumber || "-") : (
+                                  <Input
+                                    value={record.serialNumber}
+                                    placeholder="Nhập serial"
+                                    onChange={(e) => handleEquipmentChange(record.key, "serialNumber", e.target.value)}
+                                    size="small"
+                                  />
+                                ),
+                            },
+                            {
+                              title: "Hãng sản xuất",
+                              key: "manufacturer",
+                              width: 160,
+                              render: (_: any, record: EquipmentLineItem) => {
+                                if (isReadonly || record.isHistorical) {
+                                  const mfr = manufacturers.find(m => m.id === record.manufacturerId);
+                                  return mfr?.name || record.manufacturerName || "-";
+                                }
+                                return (
+                                  <Select
+                                    size="small"
+                                    style={{ width: "100%" }}
+                                    placeholder="Chọn hãng"
+                                    value={record.manufacturerId || undefined}
+                                    showSearch
+                                    optionFilterProp="label"
+                                    options={manufacturers.map(m => ({ value: m.id, label: m.name }))}
+                                    onChange={(mfrId) => {
+                                      const mfr = manufacturers.find(m => m.id === mfrId);
+                                      setEquipmentItems(prev => prev.map(it =>
+                                        it.key === record.key
+                                          ? { ...it, manufacturerId: mfrId || undefined, manufacturerName: mfr?.name || undefined }
+                                          : it
+                                      ));
+                                    }}
+                                    allowClear
+                                  />
+                                );
+                              },
+                            },
+                            {
+                              title: <span>Trạng thái <span style={{ color: "#ff4d4f" }}>*</span></span>,
+                              key: "equipmentReceiveStatus",
+                              width: 130,
+                              render: (_: any, record: EquipmentLineItem) =>
+                                isReadonly || record.isHistorical ? (
+                                  <Tag color={record.equipmentReceiveStatus === EquipmentReceiveStatus.Received ? "green" : "orange"}>
+                                    {record.equipmentReceiveStatus === EquipmentReceiveStatus.Received ? "Đã nhận" : "Chưa nhận"}
+                                  </Tag>
+                                ) : (
+                                  <Select
+                                    value={record.equipmentReceiveStatus}
+                                    options={EquipmentReceiveStatusOptions}
+                                    onChange={(v) => handleEquipmentChange(record.key, "equipmentReceiveStatus", v)}
+                                    style={{ width: "100%" }}
+                                    size="small"
+                                  />
+                                ),
+                            },
+                            {
+                              title: "TG khấu hao",
+                              key: "depreciationPeriod",
+                              width: 110,
+                              render: (_: any, record: EquipmentLineItem) =>
+                                isReadonly || record.isHistorical ? (
+                                  record.depreciationPeriod != null ? `${record.depreciationPeriod} năm` : "-"
+                                ) : (
+                                  <InputNumber
+                                    value={record.depreciationPeriod}
+                                    min={0}
+                                    precision={0}
+                                    onChange={(v) => handleEquipmentChange(record.key, "depreciationPeriod", v)}
+                                    style={{ width: "100%" }}
+                                    size="small"
+                                    addonAfter="năm"
+                                  />
+                                ),
+                            },
+                            {
+                              title: "Nguyên giá",
+                              key: "originalPrice",
+                              width: 150,
+                              render: (_: any, record: EquipmentLineItem) =>
+                                isReadonly || record.isHistorical ? (
+                                  record.originalPrice != null
+                                    ? new Intl.NumberFormat("vi-VN").format(record.originalPrice) + " đ"
+                                    : "-"
+                                ) : (
+                                  <NumericFormat
+                                    value={record.originalPrice ?? ""}
+                                    onValueChange={(values) => handleEquipmentChange(record.key, "originalPrice", values.floatValue ?? null)}
+                                    allowNegative={false}
+                                    decimalScale={0}
+                                    thousandSeparator="."
+                                    decimalSeparator=","
+                                    customInput={Input}
+                                    addonAfter="đ"
+                                    style={{ width: "100%" }}
+                                    placeholder="Nguyên giá"
+                                    size={"small" as any}
+                                  />
+                                ),
+                            },
+                            {
+                              title: "Vị trí",
+                              key: "location",
+                              width: 150,
+                              render: (_: any, record: EquipmentLineItem) => (
+                                <span style={{ fontSize: 13 }}>{record.location || "-"}</span>
+                              ),
+                            },
+                          ]}
+                          dataSource={equipmentItems}
+                          rowKey="key"
+                          pagination={false}
+                          scroll={{ x: 1400 }}
+                          size="small"
+                          bordered
+                          loading={itemsLoading}
+                          locale={{ emptyText: "Không có thiết bị" }}
+                        />
+                      ),
+                    },
+                  ]
+                : []),
+            ]}
           />
 
           <Form.Item label="Đánh giá nhập hàng" style={{ marginTop: 16 }}>
@@ -1282,7 +1621,12 @@ const WarehouseImportForm: React.FC = () => {
               type="primary"
               loading={confirming}
               onClick={handleSubmit(() => {
-                if (!validateItems()) return;
+                const itemsOk = validateItems();
+                const equipOk = validateEquipmentItems();
+                if (!itemsOk || !equipOk) {
+                  message.warning("Vui lòng điền đầy đủ thông tin bắt buộc cho các dòng đã nhập.");
+                  return;
+                }
                 Modal.confirm({
                   title: "Xác nhận nhập kho",
                   content: "Sau khi xác nhận, phiếu sẽ chuyển sang trạng thái Hoàn thành và không thể chỉnh sửa. Bạn có chắc chắn muốn tiếp tục?",

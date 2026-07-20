@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { Card, Button, Space, Table, Tag, Spin, Typography, message } from "antd";
+import { Card, Button, Space, Table, Tag, Spin, Typography, message, Collapse } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { ArrowLeftOutlined, EditOutlined, EyeOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -12,6 +12,8 @@ import {
   WarehouseImportLineStatus,
   WarehouseImportLineStatusLabels,
   WarehouseImportLineStatusColors,
+  EquipmentReceiveStatusLabels,
+  EquipmentReceiveStatusColors,
 } from "../../services/warehouseImportReceiptService";
 import { goodsReceiptService, GoodsReceiptDto } from "../../services/goodsReceiptService";
 import { authService } from "../../services/authService";
@@ -89,7 +91,26 @@ const WarehouseImportDetail: React.FC = () => {
   const statusColor = isCompleted ? (receipt.hasDefectiveItem ? "red" : "green") : "orange";
   const statusLabel = isCompleted ? (receipt.hasDefectiveItem ? "Hàng lỗi" : "Hoàn thành") : "Đang thực hiện";
 
-  const itemColumns: ColumnsType<WarehouseImportReceiptItemDto> = [
+  const materialItems = receipt.items.filter(i => !i.isEquipment);
+  const equipmentItems = receipt.items
+    .filter(i => i.isEquipment)
+    .sort((a, b) => a.goodsReceiptItemId === b.goodsReceiptItemId ? a.equipmentIndex - b.equipmentIndex : a.goodsReceiptItemId.localeCompare(b.goodsReceiptItemId));
+
+  const equipGroupRowSpans: Record<string, number> = {};
+  {
+    let i = 0;
+    while (i < equipmentItems.length) {
+      const groupId = equipmentItems[i].goodsReceiptItemId;
+      let j = i;
+      while (j < equipmentItems.length && equipmentItems[j].goodsReceiptItemId === groupId) j++;
+      for (let k = i; k < j; k++) {
+        equipGroupRowSpans[equipmentItems[k].id] = k === i ? j - i : 0;
+      }
+      i = j;
+    }
+  }
+
+  const materialColumns: ColumnsType<WarehouseImportReceiptItemDto> = [
     {
       title: "STT",
       key: "stt",
@@ -195,6 +216,79 @@ const WarehouseImportDetail: React.FC = () => {
     },
   ];
 
+  const equipmentColumns: ColumnsType<WarehouseImportReceiptItemDto> = [
+    {
+      title: "Tên thiết bị",
+      dataIndex: "productName",
+      key: "productName",
+      width: 180,
+      onCell: (record) => ({ rowSpan: equipGroupRowSpans[record.id] }),
+    },
+    {
+      title: "SL Đặt",
+      key: "orderedQuantity",
+      width: 100,
+      align: "center",
+      onCell: (record) => ({ rowSpan: equipGroupRowSpans[record.id] }),
+      render: (_, record) => `${record.orderedQuantity} ${record.purchaseUnitName || ""}`.trim(),
+    },
+    {
+      title: "Mã tài sản",
+      dataIndex: "assetCode",
+      key: "assetCode",
+      width: 120,
+      render: (v?: string) => v || "-",
+    },
+    {
+      title: "Số Serial NSX",
+      dataIndex: "serialNumber",
+      key: "serialNumber",
+      width: 140,
+      render: (v?: string) => v || "-",
+    },
+    {
+      title: "Hãng sản xuất",
+      dataIndex: "manufacturerName",
+      key: "manufacturerName",
+      width: 140,
+      render: (v?: string) => v || "-",
+    },
+    {
+      title: "Trạng thái",
+      key: "equipmentReceiveStatus",
+      width: 120,
+      render: (_, record) => (
+        <Tag color={EquipmentReceiveStatusColors[record.equipmentReceiveStatus]}>
+          {EquipmentReceiveStatusLabels[record.equipmentReceiveStatus]}
+        </Tag>
+      ),
+    },
+    {
+      title: "TG khấu hao",
+      key: "depreciationPeriod",
+      width: 110,
+      render: (_, record) =>
+        record.depreciationPeriod != null ? `${record.depreciationPeriod} năm` : "-",
+    },
+    {
+      title: "Nguyên giá",
+      key: "originalPrice",
+      width: 130,
+      align: "right",
+      render: (_, record) =>
+        record.originalPrice != null
+          ? new Intl.NumberFormat("vi-VN").format(record.originalPrice) + " đ"
+          : "-",
+    },
+    {
+      title: "Vị trí",
+      dataIndex: "location",
+      key: "location",
+      width: 150,
+      render: (v?: string) => v || "-",
+    },
+  ];
+
   return (
     <div className="warehouse-import-detail">
       <div className="back-button-bar">
@@ -226,7 +320,7 @@ const WarehouseImportDetail: React.FC = () => {
             <Space wrap>
               {canPrintBarcode && goodsReceipt && (
                 <Button onClick={() => setPrintBarcodeOpen(true)}>
-                  In mã vật tư
+                  In barcode
                 </Button>
               )}
               {!isCompleted && (
@@ -317,22 +411,50 @@ const WarehouseImportDetail: React.FC = () => {
           </div>
         </div>
 
-        <Card
-          className="list-card"
-          title={`Danh sách sản phẩm (${receipt.items.length} sản phẩm)`}
+        <Collapse
+          defaultActiveKey={["materials", "equipment"]}
           style={{ marginBottom: 16 }}
-          styles={{ body: { padding: 0 } }}
-        >
-          <Table
-            columns={itemColumns}
-            dataSource={receipt.items}
-            rowKey="id"
-            pagination={false}
-            scroll={{ x: 1200 }}
-            size="small"
-            bordered
-          />
-        </Card>
+          items={[
+            ...(materialItems.length > 0
+              ? [
+                  {
+                    key: "materials",
+                    label: <strong>Nhóm 1 — Vật tư / Hóa chất ({materialItems.length} dòng)</strong>,
+                    children: (
+                      <Table
+                        columns={materialColumns}
+                        dataSource={materialItems}
+                        rowKey="id"
+                        pagination={false}
+                        scroll={{ x: 1200 }}
+                        size="small"
+                        bordered
+                      />
+                    ),
+                  },
+                ]
+              : []),
+            ...(equipmentItems.length > 0
+              ? [
+                  {
+                    key: "equipment",
+                    label: <strong>Nhóm 2 — Thiết bị phòng Lab ({equipmentItems.length} thiết bị)</strong>,
+                    children: (
+                      <Table
+                        columns={equipmentColumns}
+                        dataSource={equipmentItems}
+                        rowKey="id"
+                        pagination={false}
+                        scroll={{ x: 1100 }}
+                        size="small"
+                        bordered
+                      />
+                    ),
+                  },
+                ]
+              : []),
+          ]}
+        />
 
         <div className="detail-section">
           <Title level={5} style={{ marginBottom: 12 }}>Đánh giá nhập hàng</Title>
