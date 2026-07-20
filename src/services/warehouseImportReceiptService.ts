@@ -231,6 +231,16 @@ export interface PreviousReceivedLotDto {
   qualityDocumentFileId?: string;
   qualityDocumentFileName?: string;
   qualityDocumentFileSize?: number;
+  isEquipment: boolean;
+  equipmentIndex: number;
+  assetCode?: string;
+  serialNumber?: string;
+  manufacturerId?: string;
+  manufacturerName?: string;
+  equipmentReceiveStatus: number;
+  depreciationPeriod?: number;
+  originalPrice?: number;
+  location?: string;
 }
 
 export interface ProductSkuForImportDto {

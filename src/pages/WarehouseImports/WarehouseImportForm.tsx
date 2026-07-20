@@ -150,6 +150,31 @@ const WarehouseImportForm: React.FC = () => {
     (items: GoodsReceiptItemForImportDto[], existing: WarehouseImportReceiptDto["items"]): EquipmentLineItem[] => {
       const rows: EquipmentLineItem[] = [];
       items.filter(imp => imp.isEquipment).forEach((imp) => {
+        // Only "Đã nhận" items from other completed receipts are truly historical (disabled)
+        const receivedHistorical = (imp.previousLots || []).filter(
+          lot => lot.isEquipment && lot.equipmentReceiveStatus === EquipmentReceiveStatus.Received
+        );
+        receivedHistorical.forEach((hist, idx) => {
+          rows.push({
+            key: `equip-hist-${imp.goodsReceiptItemId}-${idx}`,
+            goodsReceiptItemId: imp.goodsReceiptItemId,
+            productId: imp.productId,
+            productName: imp.productName,
+            orderedQuantity: imp.orderedQuantity,
+            orderedUnitName: imp.unitName,
+            equipmentIndex: hist.equipmentIndex,
+            assetCode: hist.assetCode || "",
+            serialNumber: hist.serialNumber || "",
+            manufacturerId: hist.manufacturerId,
+            manufacturerName: hist.manufacturerName,
+            equipmentReceiveStatus: hist.equipmentReceiveStatus,
+            depreciationPeriod: hist.depreciationPeriod,
+            originalPrice: hist.originalPrice,
+            location: hist.location || "",
+            isHistorical: true,
+          });
+        });
+
         const matches = existing.filter((e) => e.goodsReceiptItemId === imp.goodsReceiptItemId && e.isEquipment);
         if (matches.length > 0) {
           matches.forEach((m) => {
@@ -173,7 +198,8 @@ const WarehouseImportForm: React.FC = () => {
             });
           });
         } else {
-          for (let i = 0; i < imp.orderedQuantity; i++) {
+          const remaining = Math.max(0, imp.orderedQuantity - receivedHistorical.length);
+          for (let i = 0; i < remaining; i++) {
             rows.push({
               key: `equip-${imp.goodsReceiptItemId}-${i}`,
               goodsReceiptItemId: imp.goodsReceiptItemId,
@@ -181,7 +207,7 @@ const WarehouseImportForm: React.FC = () => {
               productName: imp.productName,
               orderedQuantity: imp.orderedQuantity,
               orderedUnitName: imp.unitName,
-              equipmentIndex: i,
+              equipmentIndex: receivedHistorical.length + i,
               assetCode: "",
               serialNumber: "",
               manufacturerId: imp.manufacturerId,
@@ -1380,27 +1406,31 @@ const WarehouseImportForm: React.FC = () => {
             defaultActiveKey={["materials", "equipment"]}
             style={{ marginBottom: 16 }}
             items={[
-              {
-                key: "materials",
-                label: <strong>Nhóm 1 — Vật tư / Hóa chất ({lineItems.length})</strong>,
-                children: (
-                  <Table
-                    columns={columns}
-                    dataSource={lineItems}
-                    rowKey="key"
-                    pagination={false}
-                    scroll={{ x: 2020 }}
-                    size="small"
-                    bordered
-                    loading={itemsLoading}
-                    rowClassName={(record) =>
-                      record.status === WarehouseImportLineStatus.Defective ? "wir-row-defective" : "wir-row-checked"
-                    }
-                    locale={{ emptyText: selectedGoodsReceiptId ? "Không có hàng hóa cần nhập" : "Vui lòng chọn phiếu mua hàng" }}
-                  />
-                ),
-              },
-              ...(equipmentItems.length > 0
+              ...(importableItems.some(i => !i.isEquipment) || lineItems.length > 0
+                ? [
+                    {
+                      key: "materials",
+                      label: <strong>Nhóm 1 — Vật tư / Hóa chất ({lineItems.length})</strong>,
+                      children: (
+                        <Table
+                          columns={columns}
+                          dataSource={lineItems}
+                          rowKey="key"
+                          pagination={false}
+                          scroll={{ x: 2020 }}
+                          size="small"
+                          bordered
+                          loading={itemsLoading}
+                          rowClassName={(record) =>
+                            record.status === WarehouseImportLineStatus.Defective ? "wir-row-defective" : "wir-row-checked"
+                          }
+                          locale={{ emptyText: selectedGoodsReceiptId ? "Không có hàng hóa cần nhập" : "Vui lòng chọn phiếu mua hàng" }}
+                        />
+                      ),
+                    },
+                  ]
+                : []),
+              ...(importableItems.some(i => i.isEquipment) || equipmentItems.length > 0
                 ? [
                     {
                       key: "equipment",
