@@ -1,5 +1,5 @@
 import React from "react";
-import { Row, Col, Input, Select, Spin, Table, DatePicker } from "antd";
+import { Row, Col, Input, Spin, Table, DatePicker } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import type { SorterResult } from "antd/es/table/interface";
@@ -7,8 +7,6 @@ import { useNavigate } from "react-router-dom";
 
 import {
   GoodsReceiptListDto,
-  RECEIPT_TYPE_OPTIONS,
-  GoodsReceiptType,
 } from "../../../services/goodsReceiptService";
 
 const { RangePicker } = DatePicker;
@@ -21,11 +19,9 @@ interface GoodsReceiptTableProps {
   pageSize: number;
   columns: ColumnsType<GoodsReceiptListDto>;
   searchText: string;
-  receiptTypeFilter?: GoodsReceiptType;
   canDelete?: boolean;
   selectedRowKeys: React.Key[];
   onSearchChange: (value: string) => void;
-  onReceiptTypeChange: (value: GoodsReceiptType | undefined) => void;
   onDateRangeChange: (range: [string, string] | undefined) => void;
   onSortChange: (field: string, order: "ascend" | "descend" | null) => void;
   onPaginationChange: (page: number, pageSize: number) => void;
@@ -40,11 +36,9 @@ const GoodsReceiptTable: React.FC<GoodsReceiptTableProps> = ({
   pageSize,
   columns,
   searchText,
-  receiptTypeFilter,
   canDelete,
   selectedRowKeys,
   onSearchChange,
-  onReceiptTypeChange,
   onDateRangeChange,
   onSortChange,
   onPaginationChange,
@@ -66,16 +60,6 @@ const GoodsReceiptTable: React.FC<GoodsReceiptTableProps> = ({
             value={searchText}
             onChange={(e) => onSearchChange(e.target.value)}
             allowClear
-          />
-        </Col>
-        <Col xs={12} sm={6} md={4}>
-          <Select
-            placeholder="Loại phiếu"
-            value={receiptTypeFilter}
-            onChange={onReceiptTypeChange}
-            allowClear
-            style={{ width: "100%" }}
-            options={RECEIPT_TYPE_OPTIONS}
           />
         </Col>
         <Col xs={24} sm={12} md={6}>

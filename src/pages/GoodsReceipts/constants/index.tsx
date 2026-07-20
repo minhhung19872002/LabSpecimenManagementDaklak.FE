@@ -7,8 +7,6 @@ import {
   GoodsReceiptWarehouseStatus,
   OrderStatusLabels,
   OrderStatusColors,
-  ReceiptTypeLabels,
-  ReceiptTypeColors,
 } from "../../../services/goodsReceiptService";
 import dayjs from "dayjs";
 
@@ -20,7 +18,6 @@ export interface ColumnConfig {
 
 export const ALL_COLUMNS: ColumnConfig[] = [
   { key: "code", title: "ID đặt hàng", defaultVisible: true },
-  { key: "receiptType", title: "Loại phiếu", defaultVisible: true },
   { key: "expectedDeliveryDate", title: "Ngày cần hàng", defaultVisible: true },
   { key: "orderStatus", title: "Trạng thái", defaultVisible: true },
   { key: "creatorName", title: "Người tạo", defaultVisible: true },
@@ -56,19 +53,6 @@ export const getGoodsReceiptColumns = (
       width: 160,
       ellipsis: true,
       sorter: true,
-    });
-  }
-
-  if (visibleKeys.has("receiptType")) {
-    columns.push({
-      title: "Loại phiếu",
-      dataIndex: "receiptType",
-      key: "receiptType",
-      width: 120,
-      align: "center" as const,
-      render: (v: number) => (
-        <Tag color={ReceiptTypeColors[v]}>{ReceiptTypeLabels[v]}</Tag>
-      ),
     });
   }
 

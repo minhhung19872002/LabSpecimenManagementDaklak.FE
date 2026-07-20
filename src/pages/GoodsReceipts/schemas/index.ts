@@ -8,13 +8,6 @@ export const goodsReceiptSchema = yup.object({
 
 export type GoodsReceiptFormData = yup.InferType<typeof goodsReceiptSchema>;
 
-export const equipmentReceiptSchema = yup.object({
-  deliveryNoteNumber: yup.string().nullable().max(100),
-  expectedDeliveryDate: yup.string().nullable(),
-  notes: yup.string().nullable().max(2000),
-});
-
-export type EquipmentReceiptFormData = yup.InferType<typeof equipmentReceiptSchema>;
 
 export const paymentSchema = yup.object({
   amount: yup

@@ -6,7 +6,6 @@ import {
   GoodsReceiptListDto,
   GoodsReceiptOrderStatus,
   GoodsReceiptStatisticsDto,
-  GoodsReceiptType,
 } from "../../../services/goodsReceiptService";
 
 const DEFAULT_PAGE_SIZE = 50;
@@ -19,7 +18,6 @@ export const useGoodsReceiptList = () => {
   const [searchText, setSearchText] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [orderStatusFilter, setOrderStatusFilter] = useState<GoodsReceiptOrderStatus | undefined>();
-  const [receiptTypeFilter, setReceiptTypeFilter] = useState<GoodsReceiptType | undefined>();
   const [dateRange, setDateRange] = useState<[string, string] | undefined>();
   const [sorting, setSorting] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -45,7 +43,6 @@ export const useGoodsReceiptList = () => {
         search: debouncedSearch || undefined,
         sorting: sorting || undefined,
         orderStatus: orderStatusFilter,
-        receiptType: receiptTypeFilter,
         fromDate: dateRange?.[0],
         toDate: dateRange?.[1],
       });
@@ -59,7 +56,7 @@ export const useGoodsReceiptList = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, debouncedSearch, sorting, orderStatusFilter, receiptTypeFilter, dateRange]);
+  }, [currentPage, pageSize, debouncedSearch, sorting, orderStatusFilter, dateRange]);
 
   useEffect(() => {
     loadStats();
@@ -103,11 +100,6 @@ export const useGoodsReceiptList = () => {
     setCurrentPage(1);
   };
 
-  const handleReceiptTypeChange = (value: GoodsReceiptType | undefined) => {
-    setReceiptTypeFilter(value);
-    setCurrentPage(1);
-  };
-
   const handleDateRangeChange = (range: [string, string] | undefined) => {
     setDateRange(range);
     setCurrentPage(1);
@@ -119,14 +111,12 @@ export const useGoodsReceiptList = () => {
     loading,
     searchText,
     orderStatusFilter,
-    receiptTypeFilter,
     dateRange,
     currentPage,
     pageSize,
     stats,
     setSearchText: handleSearch,
     handleOrderStatusChange,
-    handleReceiptTypeChange,
     handleDateRangeChange,
     handleSortChange,
     fetchData,

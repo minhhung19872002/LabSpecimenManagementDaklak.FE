@@ -15,7 +15,6 @@ import {
   CreateUpdateGoodsReceiptDto,
   CreateUpdateGoodsReceiptItemDto,
   GoodsReceiptWarehouseStatus,
-  GoodsReceiptType,
 } from "../../services/goodsReceiptService";
 import { manufacturerService, ManufacturerDto } from "../../services/manufacturerService";
 import {
@@ -24,7 +23,7 @@ import {
   ProductType,
   CreateUpdateProductDto,
 } from "../../services/productService";
-import { unitService, UnitDto } from "../../services/masterDataService";
+import { unitService, UnitDto, UnitCategory } from "../../services/masterDataService";
 import { getApiErrorMessage } from "../../utils/errorHandler";
 import "../../styles/ListCard.css";
 import "./GoodsReceiptList.css";
@@ -55,6 +54,7 @@ interface LineItem {
   isEquipment: boolean;
   manufacturer?: string;
   manufacturerId?: string;
+  model?: string;
 }
 
 const GoodsReceiptForm: React.FC = () => {
@@ -69,6 +69,7 @@ const GoodsReceiptForm: React.FC = () => {
   const [products, setProducts] = useState<ProductDto[]>([]);
   const [units, setUnits] = useState<UnitDto[]>([]);
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [equipmentItems, setEquipmentItems] = useState<LineItem[]>([]);
   const [productTypeFilter, setProductTypeFilter] = useState<string>("all");
   const [manufacturers, setManufacturers] = useState<ManufacturerDto[]>([]);
 
@@ -112,31 +113,28 @@ const GoodsReceiptForm: React.FC = () => {
 
         if (id) {
           const receiptData = await goodsReceiptService.get(id);
-          if (receiptData.receiptType === GoodsReceiptType.Equipment) {
-            navigate(`/goods-receipts/edit-equipment/${id}`, { replace: true });
-            return;
-          }
           setReceipt(receiptData);
           reset({
             deliveryNoteNumber: receiptData.deliveryNoteNumber || "",
             expectedDeliveryDate: receiptData.expectedDeliveryDate || "",
             notes: receiptData.notes || "",
           });
-          setLineItems(
-            receiptData.items.map((item, idx) => ({
-              key: `existing-${idx}`,
-              id: item.id,
-              productId: item.productId,
-              productName: item.productName,
-              unitId: item.unitId,
-              unitName: item.unitName,
-              quantity: item.quantity,
-              availableUnits: [],
-              isEquipment: item.isEquipment || false,
-              manufacturer: item.manufacturer,
-              manufacturerId: item.manufacturerId,
-            }))
-          );
+          const allItems = receiptData.items.map((item, idx) => ({
+            key: `existing-${idx}`,
+            id: item.id,
+            productId: item.productId,
+            productName: item.productName,
+            unitId: item.unitId,
+            unitName: item.unitName,
+            quantity: item.quantity,
+            availableUnits: [] as { value: string; label: string }[],
+            isEquipment: item.isEquipment || false,
+            manufacturer: item.manufacturer,
+            manufacturerId: item.manufacturerId,
+            model: item.model,
+          }));
+          setLineItems(allItems.filter((i) => !i.isEquipment));
+          setEquipmentItems(allItems.filter((i) => i.isEquipment));
         } else {
           goodsReceiptService.getNextCode().then(setPreviewCode).catch(() => {});
           const preselectedIds = (location.state as { preselectedProductIds?: string[] } | null)?.preselectedProductIds;
@@ -213,6 +211,22 @@ const GoodsReceiptForm: React.FC = () => {
     const product = products.find((p) => p.id === productId);
     if (!product) return;
 
+    if (product.productType === ProductType.Equipment) {
+      const newItem: LineItem = {
+        key: `eq-${Date.now()}`,
+        productId: product.id,
+        productName: product.name,
+        unitId: "",
+        unitName: "",
+        quantity: 1,
+        availableUnits: [],
+        isEquipment: true,
+        model: product.equipmentModel || "",
+      };
+      setEquipmentItems((prev) => [...prev, newItem]);
+      return;
+    }
+
     const availUnits = getUnitsForProduct(product.id);
     const firstUnit = availUnits[0];
 
@@ -271,6 +285,49 @@ const handleRemoveLine = (key: string) => {
     );
   };
 
+  const handleRemoveEquipment = (key: string) => {
+    setEquipmentItems((prev) => prev.filter((item) => item.key !== key));
+  };
+
+  const handleEquipmentChange = (key: string, field: keyof LineItem, value: any) => {
+    setEquipmentItems((prev) =>
+      prev.map((item) => {
+        if (item.key !== key) return item;
+        const updated = { ...item, [field]: value };
+
+        if (field === "productId") {
+          const product = products.find((p) => p.id === value);
+          if (product) {
+            updated.productName = product.name;
+            updated.model = product.equipmentModel || "";
+            updated.manufacturerId = undefined;
+            updated.manufacturer = undefined;
+            updated.unitId = "";
+            updated.unitName = "";
+            updated.availableUnits = [];
+          }
+        }
+
+        if (field === "manufacturerId") {
+          const m = manufacturers.find((x) => x.id === value);
+          updated.manufacturer = m?.name;
+          const newUnits = getUnitsForProduct(item.productId, value || undefined);
+          updated.availableUnits = newUnits;
+          const firstUnit = newUnits[0];
+          updated.unitId = firstUnit?.value || "";
+          updated.unitName = firstUnit?.label || "";
+        }
+
+        if (field === "unitId") {
+          const unit = units.find((u) => u.id === value);
+          if (unit) updated.unitName = unit.name;
+        }
+
+        return updated;
+      })
+    );
+  };
+
   const filteredProductOptions = products
     .filter((p) => productTypeFilter === "all" || p.productType === Number(productTypeFilter))
     .map((p) => ({
@@ -281,31 +338,48 @@ const handleRemoveLine = (key: string) => {
     }));
 
   const buildPayload = (data: GoodsReceiptFormData): CreateUpdateGoodsReceiptDto => ({
-    receiptType: GoodsReceiptType.Goods,
     vatPercent: 0,
     deliveryNoteNumber: data.deliveryNoteNumber || undefined,
     expectedDeliveryDate: data.expectedDeliveryDate || undefined,
     notes: data.notes || undefined,
-    items: lineItems
-      .filter((item) => item.productId)
-      .map((item): CreateUpdateGoodsReceiptItemDto => ({
-        id: item.id,
-        productId: item.productId || undefined,
-        unitId: item.unitId || undefined,
-        quantity: item.quantity,
-        unitPrice: 0,
-        vatPercent: 0,
-        isEquipment: false,
-        manufacturer: item.manufacturer || undefined,
-        manufacturerName: item.manufacturer || undefined,
-        manufacturerId: item.manufacturerId || undefined,
-      })),
+    items: [
+      ...lineItems
+        .filter((item) => item.productId)
+        .map((item): CreateUpdateGoodsReceiptItemDto => ({
+          id: item.id,
+          productId: item.productId || undefined,
+          unitId: item.unitId || undefined,
+          quantity: item.quantity,
+          unitPrice: 0,
+          vatPercent: 0,
+          isEquipment: false,
+          manufacturer: item.manufacturer || undefined,
+          manufacturerName: item.manufacturer || undefined,
+          manufacturerId: item.manufacturerId || undefined,
+        })),
+      ...equipmentItems
+        .filter((item) => item.productId)
+        .map((item): CreateUpdateGoodsReceiptItemDto => ({
+          id: item.id,
+          productId: item.productId || undefined,
+          unitId: item.unitId || undefined,
+          quantity: item.quantity,
+          unitPrice: 0,
+          vatPercent: 0,
+          isEquipment: true,
+          model: item.model || undefined,
+          manufacturer: item.manufacturer || undefined,
+          manufacturerName: item.manufacturer || undefined,
+          manufacturerId: item.manufacturerId || undefined,
+        })),
+    ],
   });
 
   const validateItems = (): boolean => {
-    const validItems = lineItems.filter((item) => item.productId);
-    if (validItems.length === 0) {
-      message.warning("Vui lòng thêm ít nhất một hàng hóa.");
+    const validProducts = lineItems.filter((item) => item.productId);
+    const validEquipment = equipmentItems.filter((item) => item.productId);
+    if (validProducts.length === 0 && validEquipment.length === 0) {
+      message.warning("Vui lòng thêm ít nhất một hàng hóa hoặc thiết bị.");
       return false;
     }
     return true;
@@ -493,6 +567,113 @@ const handleRemoveLine = (key: string) => {
     ...actionColumn,
   ];
 
+  const equipmentActionColumn = !isReadonly
+    ? [
+        {
+          title: "",
+          key: "action",
+          width: 40,
+          fixed: "right" as const,
+          render: (_: any, record: LineItem) => (
+            <Button
+              type="text"
+              size="small"
+              icon={<DeleteOutlined style={{ color: "#ff4d4f" }} />}
+              onClick={() => handleRemoveEquipment(record.key)}
+            />
+          ),
+        },
+      ]
+    : [];
+
+  const equipmentColumns = [
+    {
+      title: "STT",
+      key: "index",
+      width: 50,
+      align: "center" as const,
+      render: (_: any, __: LineItem, index: number) => index + 1,
+    },
+    {
+      title: "Tên thiết bị",
+      key: "productName",
+      width: 220,
+      ellipsis: true,
+      render: (_: any, record: LineItem) => record.productName || "-",
+    },
+    {
+      title: "Hãng sản xuất",
+      key: "manufacturer",
+      width: 180,
+      render: (_: any, record: LineItem) => {
+        if (isReadonly) return record.manufacturer || "-";
+        const allMfOptions = manufacturers.map((m) => ({ value: m.id, label: m.name }));
+        return (
+          <Select
+            value={record.manufacturerId || undefined}
+            placeholder="Chọn hãng SX"
+            options={allMfOptions}
+            showSearch
+            optionFilterProp="label"
+            onChange={(v) => handleEquipmentChange(record.key, "manufacturerId", v)}
+            allowClear
+            onClear={() => {
+              handleEquipmentChange(record.key, "manufacturerId", undefined);
+            }}
+            style={{ width: "100%" }}
+            size="small"
+          />
+        );
+      },
+    },
+    {
+      title: "Model",
+      key: "model",
+      width: 140,
+      render: (_: any, record: LineItem) => record.model || "-",
+    },
+    {
+      title: "Đơn vị tính",
+      key: "unitId",
+      width: 130,
+      render: (_: any, record: LineItem) => {
+        if (isReadonly) return record.unitName || "-";
+        const storageUnits = units
+          .filter((u) => u.category === UnitCategory.StorageUnit && u.isActive)
+          .map((u) => ({ value: u.id, label: u.name }));
+        return (
+          <Select
+            value={record.unitId || undefined}
+            placeholder="Đơn vị"
+            options={storageUnits}
+            showSearch
+            optionFilterProp="label"
+            onChange={(v) => handleEquipmentChange(record.key, "unitId", v)}
+            style={{ width: "100%" }}
+            size="small"
+          />
+        );
+      },
+    },
+    {
+      title: "Số lượng",
+      key: "quantity",
+      width: 90,
+      render: (_: any, record: LineItem) =>
+        isReadonly ? record.quantity : (
+          <InputNumber
+            value={record.quantity}
+            min={1}
+            precision={0}
+            onChange={(v) => handleEquipmentChange(record.key, "quantity", v || 1)}
+            style={{ width: "100%" }}
+            size="small"
+          />
+        ),
+    },
+    ...equipmentActionColumn,
+  ];
+
   if (pageLoading) {
     return (
       <div style={{ display: "flex", justifyContent: "center", padding: 100 }}>
@@ -599,8 +780,28 @@ const handleRemoveLine = (key: string) => {
             bordered
             locale={{ emptyText: "Chưa có hàng hóa" }}
           />
-
         </div>
+
+        {equipmentItems.length > 0 && (
+          <>
+            <Divider style={{ margin: "8px 0 16px" }} />
+            <div style={{ padding: "0 16px 16px" }}>
+              <div style={{ marginBottom: 12 }}>
+                <strong style={{ fontSize: 15, display: "block", marginBottom: 8 }}>THÔNG TIN THIẾT BỊ</strong>
+              </div>
+              <Table
+                columns={equipmentColumns}
+                dataSource={equipmentItems}
+                rowKey="key"
+                pagination={false}
+                scroll={{ x: 800 }}
+                size="small"
+                bordered
+                locale={{ emptyText: "Chưa có thiết bị" }}
+              />
+            </div>
+          </>
+        )}
       </Card>
 
       <Card

@@ -28,13 +28,10 @@ import {
   GoodsReceiptItemDto,
   GoodsReceiptWarehouseStatus,
   GoodsReceiptOrderStatus,
-  GoodsReceiptType,
   WarehouseStatusLabels,
   WarehouseStatusColors,
   OrderStatusLabels,
   OrderStatusColors,
-  ReceiptTypeLabels,
-  ReceiptTypeColors,
 } from "../../services/goodsReceiptService";
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
@@ -44,7 +41,6 @@ import approvalProcessService, {
   ApprovalSnapshotStatus,
 } from "../../services/approvalProcessService";
 import { getApiErrorMessage } from "../../utils/errorHandler";
-import { WarehouseImportModal } from "./components";
 import "../../styles/ListCard.css";
 import "./GoodsReceiptDetail.css";
 
@@ -66,7 +62,6 @@ const GoodsReceiptDetail: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [receipt, setReceipt] = useState<GoodsReceiptDto | null>(null);
-  const [warehouseImportModalOpen, setWarehouseImportModalOpen] = useState(false);
   const [approving, setApproving] = useState(false);
   const [rejecting, setRejecting] = useState(false);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
@@ -75,7 +70,6 @@ const GoodsReceiptDetail: React.FC = () => {
 
   const canEdit = authService.hasPermission(PERMISSIONS.GoodsReceipts.Edit);
   const canApprove = authService.hasPermission(PERMISSIONS.GoodsReceipts.Approve);
-  const canImport = authService.hasPermission(PERMISSIONS.GoodsReceipts.ImportToWarehouse);
 
   const loadSnapshot = useCallback(async () => {
     if (!id) return;
@@ -144,7 +138,7 @@ const GoodsReceiptDetail: React.FC = () => {
     }
   };
 
-  const productItems = receipt?.items?.filter((i) => !i.isEquipment) || [];
+  const materialItems = receipt?.items?.filter((i) => !i.isEquipment) || [];
   const equipmentItems = receipt?.items?.filter((i) => i.isEquipment) || [];
 
   const productColumns = [
@@ -198,22 +192,17 @@ const GoodsReceiptDetail: React.FC = () => {
       render: (_: any, __: GoodsReceiptItemDto, index: number) => index + 1,
     },
     {
-      title: "Serial Number",
-      dataIndex: "serialNumber",
-      key: "serialNumber",
-      width: 160,
-      onCell: () => ({ style: { verticalAlign: "middle" } }),
-      render: (v: string) =>
-        v ? <span dangerouslySetInnerHTML={{ __html: v.replace(/<\/?p>/g, "") }} /> : "-",
-    },
-    {
       title: "Tên thiết bị",
       dataIndex: "productName",
       key: "productName",
       width: 200,
-      onCell: () => ({ style: { verticalAlign: "middle" } }),
-      render: (v: string) =>
-        v ? <span dangerouslySetInnerHTML={{ __html: v.replace(/<\/?p>/g, "") }} /> : "-",
+    },
+    {
+      title: "Hãng sản xuất",
+      dataIndex: "manufacturer",
+      key: "manufacturer",
+      width: 150,
+      render: (v: string) => v || "-",
     },
     {
       title: "Model",
@@ -223,11 +212,18 @@ const GoodsReceiptDetail: React.FC = () => {
       render: (v: string) => v || "-",
     },
     {
-      title: "Hãng sản xuất",
-      dataIndex: "manufacturer",
-      key: "manufacturer",
-      width: 150,
+      title: "Đơn vị tính",
+      dataIndex: "unitName",
+      key: "unitName",
+      width: 100,
       render: (v: string) => v || "-",
+    },
+    {
+      title: "Số lượng",
+      dataIndex: "quantity",
+      key: "quantity",
+      width: 100,
+      align: "right" as const,
     },
   ];
 
@@ -253,11 +249,6 @@ const GoodsReceiptDetail: React.FC = () => {
     );
   }
 
-  const isApproved =
-    receipt.orderStatus === GoodsReceiptOrderStatus.Ordering ||
-    receipt.orderStatus === GoodsReceiptOrderStatus.WaitingReceipt;
-  const isImported = receipt.warehouseStatus === GoodsReceiptWarehouseStatus.Imported;
-
   const currentUserId = authService.getUserInfo()?.id;
   const currentStepApproverId = snapshot?.steps?.find(
     (s) => s.stepOrder === snapshot.currentStepOrder,
@@ -281,14 +272,6 @@ const GoodsReceiptDetail: React.FC = () => {
             </Button>
           </>
         )}
-      {canImport &&
-        isApproved &&
-        !isImported &&
-        receipt.receiptType === GoodsReceiptType.Equipment && (
-          <Button type="primary" onClick={() => setWarehouseImportModalOpen(true)}>
-            Nhập kho
-          </Button>
-        )}
       {canEdit &&
         receipt.warehouseStatus === GoodsReceiptWarehouseStatus.NotImported &&
         receipt.orderStatus !== GoodsReceiptOrderStatus.PendingApproval &&
@@ -296,13 +279,7 @@ const GoodsReceiptDetail: React.FC = () => {
           <Button
             type="primary"
             icon={<EditOutlined />}
-            onClick={() =>
-              navigate(
-                receipt.receiptType === GoodsReceiptType.Equipment
-                  ? `/goods-receipts/edit-equipment/${id}`
-                  : `/goods-receipts/edit/${id}`,
-              )
-            }
+            onClick={() => navigate(`/goods-receipts/edit/${id}`)}
           >
             Chỉnh sửa
           </Button>
@@ -325,9 +302,6 @@ const GoodsReceiptDetail: React.FC = () => {
             <Space wrap>
               <span>Chi tiết phiếu nhập hàng</span>
               <Tag className="receipt-code-tag">{receipt.code}</Tag>
-              <Tag color={ReceiptTypeColors[receipt.receiptType]}>
-                {ReceiptTypeLabels[receipt.receiptType]}
-              </Tag>
               <Tag color={OrderStatusColors[receipt.orderStatus]}>
                 {OrderStatusLabels[receipt.orderStatus]}
               </Tag>
@@ -410,50 +384,41 @@ const GoodsReceiptDetail: React.FC = () => {
 
         <Card
           className="list-card"
-          title={
-            receipt.receiptType === GoodsReceiptType.Equipment
-              ? `Thông tin thiết bị (${equipmentItems.length} thiết bị)`
-              : `Thông tin vật tư (${productItems.length} sản phẩm)`
-          }
+          title={`Thông tin vật tư (${materialItems.length} sản phẩm)`}
           style={{ marginBottom: 16 }}
           styles={{ body: { padding: 0 } }}
         >
-          {receipt.receiptType === GoodsReceiptType.Equipment ? (
-            <Table
-              columns={equipmentColumns}
-              dataSource={equipmentItems}
-              rowKey="id"
-              pagination={false}
-              scroll={{ x: 700 }}
-              size="small"
-              bordered
-              rootClassName="equipment-receipt-table"
-              locale={{ emptyText: "Không có thiết bị" }}
-            />
-          ) : (
-            <Table
-              columns={productColumns}
-              dataSource={productItems}
-              rowKey="id"
-              pagination={false}
-              scroll={{ x: 730 }}
-              size="small"
-              bordered
-              locale={{ emptyText: "Không có hàng hóa" }}
-            />
-          )}
+          <Table
+            columns={productColumns}
+            dataSource={materialItems}
+            rowKey="id"
+            pagination={false}
+            scroll={{ x: 730 }}
+            size="small"
+            bordered
+            locale={{ emptyText: "Không có vật tư" }}
+          />
+        </Card>
+
+        <Card
+          className="list-card"
+          title={`Thông tin thiết bị (${equipmentItems.length} thiết bị)`}
+          style={{ marginBottom: 16 }}
+          styles={{ body: { padding: 0 } }}
+        >
+          <Table
+            columns={equipmentColumns}
+            dataSource={equipmentItems}
+            rowKey="id"
+            pagination={false}
+            scroll={{ x: 740 }}
+            size="small"
+            bordered
+            locale={{ emptyText: "Không có thiết bị" }}
+          />
         </Card>
       </Card>
 
-      <WarehouseImportModal
-        open={warehouseImportModalOpen}
-        onClose={() => setWarehouseImportModalOpen(false)}
-        receipt={receipt}
-        onImportSuccess={() => {
-          setWarehouseImportModalOpen(false);
-          loadData({ includeSnapshot: false });
-        }}
-      />
       <Modal
         title="Từ chối phiếu đặt hàng"
         open={rejectModalOpen}

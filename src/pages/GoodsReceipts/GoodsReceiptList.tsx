@@ -8,10 +8,8 @@ import { GoodsReceiptTable, ColumnConfigPopover } from "./components";
 import { getGoodsReceiptColumns, ALL_COLUMNS, COLUMN_VISIBILITY_KEY } from "./constants";
 import {
   goodsReceiptService,
-  GoodsReceiptType,
   GoodsReceiptOrderStatus,
   OrderStatusLabels,
-  ReceiptTypeLabels,
 } from "../../services/goodsReceiptService";
 import dayjs from "dayjs";
 import { authService } from "../../services/authService";
@@ -55,13 +53,11 @@ const GoodsReceiptList: React.FC = () => {
     loading,
     searchText,
     orderStatusFilter,
-    receiptTypeFilter,
     currentPage,
     pageSize,
     stats,
     setSearchText,
     handleOrderStatusChange,
-    handleReceiptTypeChange,
     handleDateRangeChange,
     handleSortChange,
     fetchData,
@@ -103,7 +99,6 @@ const GoodsReceiptList: React.FC = () => {
       const filters = {
         search: searchText || undefined,
         orderStatus: orderStatusFilter,
-        receiptType: receiptTypeFilter,
       };
       const PAGE_LIMIT = 200;
       let allItems: typeof data = [];
@@ -125,7 +120,6 @@ const GoodsReceiptList: React.FC = () => {
       const rows = allItems.map((item, idx) => ({
         STT: idx + 1,
         "ID đặt hàng": item.code,
-        "Loại phiếu": ReceiptTypeLabels[item.receiptType] || "",
         "Ngày cần hàng": item.expectedDeliveryDate
           ? dayjs(item.expectedDeliveryDate).format("DD/MM/YYYY")
           : "",
@@ -144,7 +138,7 @@ const GoodsReceiptList: React.FC = () => {
     } finally {
       setExporting(false);
     }
-  }, [searchText, orderStatusFilter, receiptTypeFilter]);
+  }, [searchText, orderStatusFilter]);
 
   const columns = useMemo(
     () =>
@@ -208,7 +202,7 @@ const GoodsReceiptList: React.FC = () => {
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
-                onClick={() => handleCreate(GoodsReceiptType.Goods)}
+                onClick={() => handleCreate()}
               >
                 Thêm mới
               </Button>
@@ -224,11 +218,9 @@ const GoodsReceiptList: React.FC = () => {
           pageSize={pageSize}
           columns={columns}
           searchText={searchText}
-          receiptTypeFilter={receiptTypeFilter}
           canDelete={false}
           selectedRowKeys={selectedRowKeys}
           onSearchChange={setSearchText}
-          onReceiptTypeChange={handleReceiptTypeChange}
           onDateRangeChange={handleDateRangeChange}
           onSortChange={handleSortChange}
           onPaginationChange={handlePageChange}

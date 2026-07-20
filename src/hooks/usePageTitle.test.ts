@@ -6,20 +6,12 @@ describe('getTitleForPath - GoodsReceipts routes', () => {
     expect(getTitleForPath('/goods-receipts')).toBe('Phiếu nhập hàng');
   });
 
-  it('should return title for create goods receipt (vật tư)', () => {
+  it('should return title for create goods receipt', () => {
     expect(getTitleForPath('/goods-receipts/create')).toBe('Tạo yêu cầu mua sắm');
   });
 
-  it('should return title for create equipment receipt', () => {
-    expect(getTitleForPath('/goods-receipts/create-equipment')).toBe('Tạo phiếu nhập thiết bị');
-  });
-
-  it('should return title for edit goods receipt (vật tư)', () => {
-    expect(getTitleForPath('/goods-receipts/edit/some-uuid')).toBe('Sửa phiếu nhập vật tư');
-  });
-
-  it('should return title for edit equipment receipt', () => {
-    expect(getTitleForPath('/goods-receipts/edit-equipment/some-uuid')).toBe('Sửa phiếu nhập thiết bị');
+  it('should return title for edit goods receipt', () => {
+    expect(getTitleForPath('/goods-receipts/edit/some-uuid')).toBe('Sửa yêu cầu mua sắm');
   });
 
   it('should return title for goods receipt detail', () => {

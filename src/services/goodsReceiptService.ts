@@ -1,25 +1,5 @@
 import { api } from "./api";
 
-export enum GoodsReceiptType {
-  Goods = 0,
-  Equipment = 1,
-}
-
-export const RECEIPT_TYPE_OPTIONS = [
-  { value: GoodsReceiptType.Goods, label: "Phiếu nhập vật tư" },
-  { value: GoodsReceiptType.Equipment, label: "Phiếu nhập thiết bị" },
-];
-
-export const ReceiptTypeLabels: Record<number, string> = {
-  [GoodsReceiptType.Goods]: "Vật tư",
-  [GoodsReceiptType.Equipment]: "Thiết bị",
-};
-
-export const ReceiptTypeColors: Record<number, string> = {
-  [GoodsReceiptType.Goods]: "blue",
-  [GoodsReceiptType.Equipment]: "purple",
-};
-
 export enum GoodsReceiptWarehouseStatus {
   NotImported = 0,
   Imported = 1,
@@ -102,7 +82,6 @@ export const PaymentStatusColors: Record<number, string> = {
 export interface GoodsReceiptListDto {
   id: string;
   code: string;
-  receiptType: GoodsReceiptType;
   supplierId?: string;
   supplierName?: string;
   supplierAddress?: string;
@@ -188,7 +167,6 @@ export interface GoodsReceiptPaymentDto {
 }
 
 export interface CreateUpdateGoodsReceiptDto {
-  receiptType: GoodsReceiptType;
   supplierId?: string;
   supplierAddress?: string;
   supplierPhone?: string;
@@ -234,7 +212,6 @@ export interface GetGoodsReceiptListInput {
   sorting?: string;
   supplierId?: string;
   productId?: string;
-  receiptType?: GoodsReceiptType;
   warehouseStatus?: GoodsReceiptWarehouseStatus;
   orderStatus?: GoodsReceiptOrderStatus;
   paymentStatus?: GoodsReceiptPaymentStatus;
@@ -290,7 +267,6 @@ export const goodsReceiptService = {
     if (params.toDate) apiParams.ToDate = params.toDate;
     if (params.supplierId) apiParams.SupplierId = params.supplierId;
     if (params.productId) apiParams.ProductId = params.productId;
-    if (params.receiptType !== undefined) apiParams.ReceiptType = params.receiptType;
     const response = await api.get<PagedResult<GoodsReceiptListDto>>(BASE_URL, { params: apiParams });
     return response.data;
   },
@@ -351,11 +327,6 @@ export const goodsReceiptService = {
 
   getNextCode: async (): Promise<string> => {
     const response = await api.get<string>(`${BASE_URL}/next-code`);
-    return response.data;
-  },
-
-  getNextEquipmentCode: async (): Promise<string> => {
-    const response = await api.get<string>(`${BASE_URL}/next-equipment-code`);
     return response.data;
   },
 
