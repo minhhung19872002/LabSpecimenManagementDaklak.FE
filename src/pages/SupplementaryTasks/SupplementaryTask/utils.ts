@@ -6,6 +6,8 @@ export const STATUS_LABEL: Record<SupplementaryTaskStatus, string> = {
   [SupplementaryTaskStatus.Overdue]: "Quá hạn",
   [SupplementaryTaskStatus.Completed]: "Hoàn thành",
   [SupplementaryTaskStatus.Cancelled]: "Đã hủy",
+  [SupplementaryTaskStatus.WaitingForConfirmation]: "Chờ xác nhận",
+  [SupplementaryTaskStatus.Rejected]: "Từ chối",
 };
 
 export const STATUS_COLOR: Record<SupplementaryTaskStatus, string> = {
@@ -13,6 +15,8 @@ export const STATUS_COLOR: Record<SupplementaryTaskStatus, string> = {
   [SupplementaryTaskStatus.Overdue]: "#f5222d",
   [SupplementaryTaskStatus.Completed]: "#52c41a",
   [SupplementaryTaskStatus.Cancelled]: "#8c8c8c",
+  [SupplementaryTaskStatus.WaitingForConfirmation]: "#faad14",
+  [SupplementaryTaskStatus.Rejected]: "#f5222d",
 };
 
 export const PRIORITY_LABEL: Record<SupplementaryTaskPriority, string> = {
@@ -48,8 +52,10 @@ export const TAB_STATUS_OPTIONS: Array<{
 }> = [
   { key: "all", label: "Tất cả" },
   { key: "pending", label: "Chờ xử lý", status: SupplementaryTaskStatus.Pending },
-  { key: "overdue", label: "Quá hạn", status: SupplementaryTaskStatus.Overdue },
+  { key: "waitingForConfirmation", label: "Chờ xác nhận", status: SupplementaryTaskStatus.WaitingForConfirmation },
   { key: "completed", label: "Hoàn thành", status: SupplementaryTaskStatus.Completed },
+  { key: "rejected", label: "Từ chối", status: SupplementaryTaskStatus.Rejected },
+  { key: "overdue", label: "Quá hạn", status: SupplementaryTaskStatus.Overdue },
 ];
 
 export const formatDate = (dateStr?: string): string => {
@@ -60,7 +66,8 @@ export const formatDate = (dateStr?: string): string => {
 
 export const isOverdueDate = (dateStr?: string, status?: SupplementaryTaskStatus): boolean => {
   if (!dateStr) return false;
-  if (status === SupplementaryTaskStatus.Completed || status === SupplementaryTaskStatus.Cancelled) return false;
+  if (status === SupplementaryTaskStatus.Completed || status === SupplementaryTaskStatus.Cancelled
+    || status === SupplementaryTaskStatus.WaitingForConfirmation || status === SupplementaryTaskStatus.Rejected) return false;
   // isBefore(..., 'day') matches backend DueDate.Date < today.Date — tasks due today are NOT overdue
   return dayjs(dateStr).isBefore(dayjs(), "day");
 };

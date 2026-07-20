@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { message } from "antd";
+import { message, Modal } from "antd";
 import {
   CompleteSupplementaryTaskDto,
   CreateSupplementaryTaskDto,
@@ -14,7 +14,7 @@ import { TAB_STATUS_OPTIONS } from "./SupplementaryTask/utils";
 import SupplementaryTaskView from "./SupplementaryTask/SupplementaryTaskView";
 
 const EMPTY_STATS: SupplementaryTaskStatsDto = {
-  total: 0, pending: 0, overdue: 0, completed: 0, isDirector: false,
+  total: 0, pending: 0, overdue: 0, completed: 0, waitingForConfirmation: 0, rejected: 0, cancelled: 0, isDirector: false,
 };
 
 const SupplementaryTaskPage: React.FC = () => {
@@ -44,6 +44,13 @@ const SupplementaryTaskPage: React.FC = () => {
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
   const [completingItem, setCompletingItem] = useState<SupplementaryTaskDto | undefined>();
   const [completing, setCompleting] = useState(false);
+
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectingItem, setRejectingItem] = useState<SupplementaryTaskDto | undefined>();
+  const [rejecting, setRejecting] = useState(false);
+
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [historyItem, setHistoryItem] = useState<SupplementaryTaskDto | undefined>();
 
   const activeStatus = useMemo(() => {
     const tab = TAB_STATUS_OPTIONS.find((t) => t.key === activeTab);
@@ -197,7 +204,7 @@ const SupplementaryTaskPage: React.FC = () => {
     setCompleting(true);
     try {
       await supplementaryTaskService.complete(id, input);
-      message.success("Đã xác nhận hoàn thành");
+      message.success("Đã gửi xác nhận, đang chờ phê duyệt");
       setCompleteModalOpen(false);
       setCompletingItem(undefined);
       fetchList();
@@ -212,6 +219,62 @@ const SupplementaryTaskPage: React.FC = () => {
   const handleCompleteModalClose = useCallback(() => {
     setCompleteModalOpen(false);
     setCompletingItem(undefined);
+  }, []);
+
+  const handleApprove = useCallback((item: SupplementaryTaskDto) => {
+    Modal.confirm({
+      title: "Xác nhận hoàn thành",
+      content: `Bạn có chắc chắn công việc "${item.title}" đã hoàn thành?`,
+      okText: "Xác nhận",
+      cancelText: "Hủy",
+      centered: true,
+      onOk: async () => {
+        try {
+          await supplementaryTaskService.approve(item.id);
+          message.success("Đã xác nhận hoàn thành");
+          fetchList();
+          fetchStats();
+        } catch {
+          message.error("Không thể xác nhận hoàn thành");
+        }
+      },
+    });
+  }, [fetchList, fetchStats]);
+
+  const handleRejectClick = useCallback((item: SupplementaryTaskDto) => {
+    setRejectingItem(item);
+    setRejectModalOpen(true);
+  }, []);
+
+  const handleRejectConfirm = useCallback(async (id: string, reason: string) => {
+    setRejecting(true);
+    try {
+      await supplementaryTaskService.reject(id, { reason });
+      message.success("Đã từ chối");
+      setRejectModalOpen(false);
+      setRejectingItem(undefined);
+      fetchList();
+      fetchStats();
+    } catch {
+      message.error("Không thể từ chối");
+    } finally {
+      setRejecting(false);
+    }
+  }, [fetchList, fetchStats]);
+
+  const handleRejectModalClose = useCallback(() => {
+    setRejectModalOpen(false);
+    setRejectingItem(undefined);
+  }, []);
+
+  const handleViewHistory = useCallback((item: SupplementaryTaskDto) => {
+    setHistoryItem(item);
+    setHistoryModalOpen(true);
+  }, []);
+
+  const handleHistoryModalClose = useCallback(() => {
+    setHistoryModalOpen(false);
+    setHistoryItem(undefined);
   }, []);
 
   const handleSortChange = useCallback((field: "dueDate" | "creationTime", descending: boolean) => {
@@ -259,6 +322,17 @@ const SupplementaryTaskPage: React.FC = () => {
       completing={completing}
       onCompleteConfirm={handleCompleteConfirm}
       onCompleteModalClose={handleCompleteModalClose}
+      onApprove={handleApprove}
+      onRejectClick={handleRejectClick}
+      rejectModalOpen={rejectModalOpen}
+      rejectingItem={rejectingItem}
+      rejecting={rejecting}
+      onRejectConfirm={handleRejectConfirm}
+      onRejectModalClose={handleRejectModalClose}
+      onViewHistory={handleViewHistory}
+      historyModalOpen={historyModalOpen}
+      historyItem={historyItem}
+      onHistoryModalClose={handleHistoryModalClose}
       onModalClose={handleModalClose}
       onSaved={handleSaved}
       onCreate={handleCreate}

@@ -5,6 +5,8 @@ export enum SupplementaryTaskStatus {
   Overdue = 1,
   Completed = 2,
   Cancelled = 3,
+  WaitingForConfirmation = 4,
+  Rejected = 5,
 }
 
 export enum SupplementaryTaskPriority {
@@ -26,6 +28,7 @@ export interface SupplementaryTaskDto {
   imageUrls: string[];
   completionNote?: string;
   completionImageUrls: string[];
+  rejectionReason?: string;
   creationTime: string;
 }
 
@@ -34,6 +37,9 @@ export interface SupplementaryTaskStatsDto {
   pending: number;
   overdue: number;
   completed: number;
+  waitingForConfirmation: number;
+  rejected: number;
+  cancelled: number;
   isDirector: boolean;
 }
 
@@ -59,6 +65,21 @@ export interface UpdateSupplementaryTaskDto {
 export interface CompleteSupplementaryTaskDto {
   note?: string;
   imageUrls?: string[];
+}
+
+export interface RejectSupplementaryTaskDto {
+  reason: string;
+}
+
+export interface SupplementaryTaskLogDto {
+  id: string;
+  oldStatus?: SupplementaryTaskStatus;
+  newStatus: SupplementaryTaskStatus;
+  changedAt: string;
+  changedById: string;
+  changedByName: string;
+  note?: string;
+  imageUrls: string[];
 }
 
 export interface GetSupplementaryTaskListInput {
@@ -106,5 +127,18 @@ export const supplementaryTaskService = {
 
   complete: async (id: string, input: CompleteSupplementaryTaskDto): Promise<void> => {
     await api.post(`${BASE_URL}/${id}/complete`, input);
+  },
+
+  approve: async (id: string): Promise<void> => {
+    await api.post(`${BASE_URL}/${id}/approve`);
+  },
+
+  reject: async (id: string, input: RejectSupplementaryTaskDto): Promise<void> => {
+    await api.post(`${BASE_URL}/${id}/reject`, input);
+  },
+
+  getLogs: async (id: string): Promise<SupplementaryTaskLogDto[]> => {
+    const { data } = await api.get(`${BASE_URL}/${id}/logs`);
+    return data;
   },
 };

@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { Avatar, Button, Image, Modal, Space, Table, Tag, Tooltip, Typography } from "antd";
+import { Button, Dropdown, Image, Space, Table, Tag, Tooltip, Typography } from "antd";
 import type { ColumnsType, TableProps } from "antd/es/table";
-import { EditOutlined, MessageOutlined, PictureOutlined, StopOutlined } from "@ant-design/icons";
+import type { MenuProps } from "antd";
+import { CheckOutlined, CloseOutlined, EditOutlined, MessageOutlined, MoreOutlined, ReloadOutlined, StopOutlined } from "@ant-design/icons";
 import { SupplementaryTaskDto, SupplementaryTaskPriority, SupplementaryTaskStatus } from "../../../services/supplementaryTaskService";
 import { STATUS_COLOR, STATUS_LABEL, PRIORITY_COLOR, PRIORITY_LABEL, formatDate, isOverdueDate } from "./utils";
 
@@ -66,14 +67,16 @@ export interface SupplementaryTaskTableProps {
   onEdit: (item: SupplementaryTaskDto) => void;
   onCancel: (item: SupplementaryTaskDto) => void;
   onComplete: (item: SupplementaryTaskDto) => void;
+  onApprove: (item: SupplementaryTaskDto) => void;
+  onReject: (item: SupplementaryTaskDto) => void;
+  onViewHistory: (item: SupplementaryTaskDto) => void;
 }
 
 const SupplementaryTaskTable: React.FC<SupplementaryTaskTableProps> = ({
   items, loading, totalCount, page, pageSize, isDirector,
   sortField, sortDescending,
-  onPageChange, onSortChange, onEdit, onCancel, onComplete,
+  onPageChange, onSortChange, onEdit, onCancel, onComplete, onApprove, onReject, onViewHistory,
 }) => {
-  const [noteItem, setNoteItem] = useState<SupplementaryTaskDto | null>(null);
 
   const handleTableChange: TableProps<SupplementaryTaskDto>["onChange"] = (_, __, sorter) => {
     const s = Array.isArray(sorter) ? sorter[0] : sorter;
@@ -87,6 +90,8 @@ const SupplementaryTaskTable: React.FC<SupplementaryTaskTableProps> = ({
       title: "Công việc",
       dataIndex: "title",
       key: "title",
+      width: 200,
+      ellipsis: true,
       render: (title, record) => (
         <div>
           <Typography.Text strong style={{ display: "block" }}>{title}</Typography.Text>
@@ -155,57 +160,94 @@ const SupplementaryTaskTable: React.FC<SupplementaryTaskTableProps> = ({
       dataIndex: "status",
       key: "status",
       width: 130,
-      render: (status) => (
-        <Tag color={STATUS_COLOR[status as SupplementaryTaskStatus]} style={{ borderRadius: 12 }}>
-          {STATUS_LABEL[status as SupplementaryTaskStatus]}
-        </Tag>
-      ),
+      render: (status, record) => {
+        const tag = (
+          <Tag color={STATUS_COLOR[status as SupplementaryTaskStatus]} style={{ borderRadius: 12 }}>
+            {STATUS_LABEL[status as SupplementaryTaskStatus]}
+          </Tag>
+        );
+        if (status === SupplementaryTaskStatus.Rejected && record.rejectionReason) {
+          return <Tooltip title={record.rejectionReason}>{tag}</Tooltip>;
+        }
+        return tag;
+      },
     },
     {
       title: "Thao tác",
       key: "actions",
-      width: isDirector ? 130 : 180,
+      width: isDirector ? 150 : 180,
       fixed: "right" as const,
       render: (_, record) => {
         const isDone = record.status === SupplementaryTaskStatus.Completed || record.status === SupplementaryTaskStatus.Cancelled;
-        const hasNote = record.status === SupplementaryTaskStatus.Completed &&
-          (!!record.completionNote || record.completionImageUrls?.length > 0);
+        const isWaiting = record.status === SupplementaryTaskStatus.WaitingForConfirmation;
+        const isRejected = record.status === SupplementaryTaskStatus.Rejected;
+        const hasHistory = isWaiting || isRejected || record.status === SupplementaryTaskStatus.Completed;
+
+        const moreMenuItems: MenuProps["items"] = [];
+        if (hasHistory) {
+          moreMenuItems.push({ key: "note", icon: <MessageOutlined />, label: "Xem ghi chú", onClick: () => onViewHistory(record) });
+        }
+        if (isDirector && !isDone) {
+          moreMenuItems.push({ key: "edit", icon: <EditOutlined />, label: "Chỉnh sửa", onClick: () => onEdit(record) });
+          moreMenuItems.push({ key: "cancel", icon: <StopOutlined />, label: "Hủy công việc", danger: true, onClick: () => onCancel(record) });
+        }
+
         return (
           <Space size="small">
-            {hasNote && (
-              <Tooltip title="Xem ghi chú hoàn thành">
+            {isDirector && isWaiting && (
+              <Tooltip title="Xác nhận hoàn thành">
                 <Button
-                  type="link"
+                  type="primary"
                   size="small"
-                  icon={<MessageOutlined />}
-                  onClick={() => setNoteItem(record)}
+                  icon={<CheckOutlined />}
+                  onClick={() => onApprove(record)}
                 />
               </Tooltip>
             )}
-            {isDirector && !isDone && (
-              <Tooltip title="Chỉnh sửa">
+            {isDirector && isWaiting && (
+              <Tooltip title="Từ chối">
                 <Button
-                  type="link"
-                  size="small"
-                  icon={<EditOutlined />}
-                  onClick={() => onEdit(record)}
-                />
-              </Tooltip>
-            )}
-            {isDirector && !isDone && (
-              <Tooltip title="Hủy công việc">
-                <Button
-                  type="link"
-                  size="small"
+                  type="primary"
                   danger
-                  icon={<StopOutlined />}
-                  onClick={() => onCancel(record)}
+                  size="small"
+                  icon={<CloseOutlined />}
+                  onClick={() => onReject(record)}
                 />
               </Tooltip>
             )}
-            {!isDirector && !isDone && (
+            {isDirector && !isDone && !isWaiting && (
+              <>
+                {hasHistory && (
+                  <Tooltip title="Xem ghi chú hoàn thành">
+                    <Button type="link" size="small" icon={<MessageOutlined />} onClick={() => onViewHistory(record)} />
+                  </Tooltip>
+                )}
+                <Tooltip title="Chỉnh sửa">
+                  <Button type="link" size="small" icon={<EditOutlined />} onClick={() => onEdit(record)} />
+                </Tooltip>
+                <Tooltip title="Hủy công việc">
+                  <Button type="link" size="small" danger icon={<StopOutlined />} onClick={() => onCancel(record)} />
+                </Tooltip>
+              </>
+            )}
+            {isDirector && isWaiting && moreMenuItems.length > 0 && (
+              <Dropdown menu={{ items: moreMenuItems }} trigger={["click"]}>
+                <Button type="text" size="small" icon={<MoreOutlined />} />
+              </Dropdown>
+            )}
+            {(isDirector ? isDone : true) && hasHistory && (
+              <Tooltip title="Xem lịch sử kết quả">
+                <Button type="link" size="small" icon={<MessageOutlined />} onClick={() => onViewHistory(record)} />
+              </Tooltip>
+            )}
+            {!isDirector && !isDone && !isWaiting && !isRejected && (
               <Button type="primary" size="small" onClick={() => onComplete(record)}>
                 Xác nhận hoàn thành
+              </Button>
+            )}
+            {!isDirector && isRejected && (
+              <Button type="primary" size="small" icon={<ReloadOutlined />} onClick={() => onComplete(record)}>
+                Gửi lại
               </Button>
             )}
           </Space>
@@ -215,7 +257,6 @@ const SupplementaryTaskTable: React.FC<SupplementaryTaskTableProps> = ({
   ];
 
   return (
-    <>
       <Table
         dataSource={items}
         columns={columns}
@@ -235,70 +276,6 @@ const SupplementaryTaskTable: React.FC<SupplementaryTaskTableProps> = ({
         }}
         size="middle"
       />
-
-      <Modal
-        open={!!noteItem}
-        title="Ghi chú hoàn thành"
-        footer={<Button onClick={() => setNoteItem(null)}>Đóng</Button>}
-        onCancel={() => setNoteItem(null)}
-        width={600}
-        centered
-      >
-        {noteItem && (
-          <div style={{ padding: "8px 0" }}>
-            <div style={{
-              display: "flex", gap: 12, padding: 16,
-              backgroundColor: "#f6ffed", borderRadius: 8,
-              border: "1px solid #b7eb8f",
-            }}>
-              <Avatar size={40} style={{ backgroundColor: "#52c41a", flexShrink: 0 }}>
-                {noteItem.assignedToName?.[0]?.toUpperCase()}
-              </Avatar>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-                  <Typography.Text strong>{noteItem.assignedToName}</Typography.Text>
-                  <Tag color="success">Hoàn thành</Tag>
-                </div>
-                {noteItem.completionNote && (
-                  <div style={{
-                    padding: "10px 12px", backgroundColor: "#fff",
-                    borderRadius: 6, borderLeft: "3px solid #52c41a",
-                    marginBottom: noteItem.completionImageUrls?.length > 0 ? 12 : 0,
-                  }}>
-                    <Typography.Paragraph style={{ margin: 0, whiteSpace: "pre-wrap" }}>
-                      {noteItem.completionNote}
-                    </Typography.Paragraph>
-                  </div>
-                )}
-                {noteItem.completionImageUrls?.length > 0 && (
-                  <div>
-                    <Space size={4} align="center" style={{ marginBottom: 8 }}>
-                      <PictureOutlined style={{ color: "#8c8c8c" }} />
-                      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                        Hình ảnh đính kèm ({noteItem.completionImageUrls.length})
-                      </Typography.Text>
-                    </Space>
-                    <Image.PreviewGroup>
-                      <Space size={8} wrap>
-                        {noteItem.completionImageUrls.map((url, i) => (
-                          <Image
-                            key={i}
-                            src={url}
-                            width={80}
-                            height={80}
-                            style={{ objectFit: "cover", borderRadius: 4, border: "1px solid #f0f0f0" }}
-                          />
-                        ))}
-                      </Space>
-                    </Image.PreviewGroup>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-      </Modal>
-    </>
   );
 };
 
