@@ -168,11 +168,6 @@ export const theme: ThemeConfig = {
       borderRadius: radius.input,
       controlHeight: 40,
     },
-    // InputNumber
-    InputNumber: {
-      borderRadius: radius.input,
-      controlHeight: 40,
-    },
     // DatePicker
     DatePicker: {
       borderRadius: radius.input,
