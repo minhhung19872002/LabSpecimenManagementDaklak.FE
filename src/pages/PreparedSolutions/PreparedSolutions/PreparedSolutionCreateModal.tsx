@@ -70,6 +70,7 @@ const INGREDIENT_TYPE_OPTIONS = [
   { value: ProductType.Standard, label: ProductTypeLabels[ProductType.Standard] },
   { value: ProductType.Solvent, label: ProductTypeLabels[ProductType.Solvent] },
   { value: ProductType.Equipment, label: ProductTypeLabels[ProductType.Equipment] },
+  { value: ProductType.PreparedSolution, label: ProductTypeLabels[ProductType.PreparedSolution] },
 ];
 
 const BADGE_STYLE: React.CSSProperties = {
@@ -277,15 +278,7 @@ const PreparedSolutionCreateModal: React.FC<PreparedSolutionCreateModalProps> = 
     }
   };
 
-  const availableTypeOptions = useMemo(() => {
-    if (warehouseProducts.length === 0) return INGREDIENT_TYPE_OPTIONS;
-    const types = new Set(warehouseProducts.map((p) => p.productType));
-    // In edit mode, always include types from saved ingredients (product may have been consumed)
-    if (isEdit && editingItem) {
-      editingItem.ingredients.forEach((i) => types.add(i.productType));
-    }
-    return INGREDIENT_TYPE_OPTIONS.filter((o) => types.has(o.value));
-  }, [warehouseProducts, isEdit, editingItem]);
+  const availableTypeOptions = INGREDIENT_TYPE_OPTIONS;
 
   const isKhoTongVatTu = (name: string) => name.toLowerCase().includes("kho tổng vật tư");
 
