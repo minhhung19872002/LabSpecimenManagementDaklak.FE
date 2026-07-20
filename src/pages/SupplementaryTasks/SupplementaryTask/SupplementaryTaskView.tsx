@@ -15,6 +15,8 @@ import SupplementaryTaskTable from "./SupplementaryTaskTable";
 import SupplementaryTaskModal from "./SupplementaryTaskModal";
 import SupplementaryTaskCancelModal from "./SupplementaryTaskCancelModal";
 import SupplementaryTaskCompleteModal from "./SupplementaryTaskCompleteModal";
+import SupplementaryTaskRejectModal from "./SupplementaryTaskRejectModal";
+import SupplementaryTaskHistoryModal from "./SupplementaryTaskHistoryModal";
 import "../../Dashboard/Dashboard.css";
 import "../../../styles/ListCard.css";
 import "../SupplementaryTask.css";
@@ -59,6 +61,17 @@ export interface SupplementaryTaskViewProps {
   completing: boolean;
   onCompleteConfirm: (id: string, input: CompleteSupplementaryTaskDto) => Promise<void>;
   onCompleteModalClose: () => void;
+  onApprove: (item: SupplementaryTaskDto) => void;
+  onRejectClick: (item: SupplementaryTaskDto) => void;
+  rejectModalOpen: boolean;
+  rejectingItem?: SupplementaryTaskDto;
+  rejecting: boolean;
+  onRejectConfirm: (id: string, reason: string) => Promise<void>;
+  onRejectModalClose: () => void;
+  onViewHistory: (item: SupplementaryTaskDto) => void;
+  historyModalOpen: boolean;
+  historyItem?: SupplementaryTaskDto;
+  onHistoryModalClose: () => void;
   onModalClose: () => void;
   onSaved: () => void;
   onCreate: (input: CreateSupplementaryTaskDto) => Promise<void>;
@@ -81,6 +94,14 @@ const STAT_CARDS = [
     icon: "clock",
     valueColor: "#1677ff",
     getValue: (s: SupplementaryTaskStatsDto) => s.pending,
+  },
+  {
+    tabKey: "waitingForConfirmation",
+    title: "Chờ xác nhận",
+    iconBg: "yellow",
+    icon: "hourglass",
+    valueColor: "#faad14",
+    getValue: (s: SupplementaryTaskStatsDto) => s.waitingForConfirmation,
   },
   {
     tabKey: "completed",
@@ -106,7 +127,7 @@ const SupplementaryTaskView: React.FC<SupplementaryTaskViewProps> = (props) => {
   return (
     <div>
       {/* Stat Cards */}
-      <div className="dashboard-stats-grid">
+      <div className="dashboard-stats-grid supplementary-stats-grid">
         {STAT_CARDS.map((card) => {
           const isActive = activeTab === card.tabKey;
           const value = card.getValue(stats);
@@ -192,6 +213,9 @@ const SupplementaryTaskView: React.FC<SupplementaryTaskViewProps> = (props) => {
           onEdit={props.onEditClick}
           onCancel={props.onCancelClick}
           onComplete={props.onCompleteClick}
+          onApprove={props.onApprove}
+          onReject={props.onRejectClick}
+          onViewHistory={props.onViewHistory}
         />
       </Card>
 
@@ -219,6 +243,20 @@ const SupplementaryTaskView: React.FC<SupplementaryTaskViewProps> = (props) => {
         completing={props.completing}
         onConfirm={props.onCompleteConfirm}
         onClose={props.onCompleteModalClose}
+      />
+
+      <SupplementaryTaskRejectModal
+        open={props.rejectModalOpen}
+        item={props.rejectingItem}
+        rejecting={props.rejecting}
+        onConfirm={props.onRejectConfirm}
+        onClose={props.onRejectModalClose}
+      />
+
+      <SupplementaryTaskHistoryModal
+        open={props.historyModalOpen}
+        item={props.historyItem}
+        onClose={props.onHistoryModalClose}
       />
     </div>
   );

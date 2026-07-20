@@ -1,3 +1,40 @@
+.supplementary-stats-grid {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.supplementary-stats-grid .dashboard-stat-card {
+  height: 110px;
+  padding: 12px;
+}
+
+.supplementary-stats-grid .dashboard-stat-value {
+  font-size: 24px;
+  line-height: 32px;
+}
+
+.supplementary-stats-grid .dashboard-stat-icon {
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+}
+
+.supplementary-stats-grid .dashboard-stat-icon i.bi,
+.supplementary-stats-grid .dashboard-stat-icon .anticon {
+  font-size: 20px;
+}
+
+@media (max-width: 991px) {
+  .supplementary-stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 575px) {
+  .supplementary-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 .supplementary-stat-clickable {
   cursor: pointer;
   transition: all 0.2s ease;

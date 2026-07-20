@@ -537,6 +537,11 @@
   color: #13C2C2;
 }
 
+.dashboard-stat-icon.yellow {
+  background: #FFFBE6;
+  color: #D48806;
+}
+
 /* ==================== Two Column Section ==================== */
 .dashboard-two-col {
   display: flex;

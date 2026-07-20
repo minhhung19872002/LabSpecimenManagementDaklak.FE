@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Button, Image, Input, Modal, Space, Upload, message } from "antd";
 import { PlusOutlined, CloseOutlined } from "@ant-design/icons";
-import { CompleteSupplementaryTaskDto, SupplementaryTaskDto } from "../../../services/supplementaryTaskService";
+import { CompleteSupplementaryTaskDto, SupplementaryTaskDto, SupplementaryTaskStatus } from "../../../services/supplementaryTaskService";
 import { fileService } from "../../../services/fileService";
 
 interface UploadedImage {
@@ -28,8 +28,13 @@ const SupplementaryTaskCompleteModal: React.FC<SupplementaryTaskCompleteModalPro
     if (!open) {
       setNote("");
       setImages([]);
+    } else if (item?.status === SupplementaryTaskStatus.Rejected) {
+      setNote(item.completionNote ?? "");
+      setImages(
+        (item.completionImageUrls ?? []).map((url, i) => ({ fileId: `existing-${i}`, url }))
+      );
     }
-  }, [open]);
+  }, [open, item]);
 
   const handleUpload = async (file: File, fileList: File[]) => {
     const remaining = 5 - images.length;
@@ -65,7 +70,7 @@ const SupplementaryTaskCompleteModal: React.FC<SupplementaryTaskCompleteModalPro
   return (
     <Modal
       open={open}
-      title="Xác nhận hoàn thành"
+      title={item?.status === SupplementaryTaskStatus.Rejected ? "Gửi lại xác nhận hoàn thành" : "Xác nhận hoàn thành"}
       width={520}
       centered
       onCancel={onClose}
