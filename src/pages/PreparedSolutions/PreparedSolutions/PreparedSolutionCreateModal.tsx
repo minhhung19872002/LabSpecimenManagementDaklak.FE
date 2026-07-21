@@ -633,10 +633,16 @@ const PreparedSolutionCreateModal: React.FC<PreparedSolutionCreateModalProps> = 
             </Form.Item>
           </Col>
           <Col xs={24} sm={12}>
-            <Form.Item label="Vị trí lưu kho">
+            <Form.Item
+              label="Vị trí lưu kho"
+              required
+              validateStatus={errors.storageWarehouseId ? "error" : ""}
+              help={errors.storageWarehouseId?.message}
+            >
               <Controller
                 name="storageWarehouseId"
                 control={control}
+                rules={{ required: "Vui lòng chọn vị trí lưu kho" }}
                 render={({ field }) => (
                   <Select
                     {...clearableSelectProps(field)}

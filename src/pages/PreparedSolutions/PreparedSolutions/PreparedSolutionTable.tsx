@@ -2,6 +2,7 @@ import React from "react";
 import { Button, Space, Table, Tag, Tooltip, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { EditOutlined, CheckCircleOutlined } from "@ant-design/icons";
+import dayjs from "dayjs";
 import {
   PreparedSolutionBatchDto,
   PreparedSolutionIngredientDto,
@@ -27,10 +28,13 @@ const ROW_BG: Partial<Record<PreparedSolutionStatus, string>> = {
   [PreparedSolutionStatus.Empty]: "#e6f4ff",
 };
 
-const canEdit = (row: PreparedSolutionBatchDto): boolean =>
-  !row.isProcessed &&
-  row.computedStatus !== PreparedSolutionStatus.Expired &&
-  row.computedStatus !== PreparedSolutionStatus.Empty;
+const canEdit = (row: PreparedSolutionBatchDto): boolean => {
+  if (row.isProcessed) return false;
+  if (row.computedStatus === PreparedSolutionStatus.Expired) return false;
+  if (row.computedStatus === PreparedSolutionStatus.Empty) return false;
+  if (dayjs().diff(dayjs(row.preparationDate), "hour") > 24) return false;
+  return true;
+};
 
 const DaysRemainingText: React.FC<{ row: PreparedSolutionBatchDto }> = ({ row }) => {
   if (!row.expiryDate) return null;
