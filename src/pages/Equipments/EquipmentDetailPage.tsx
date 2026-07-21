@@ -20,6 +20,7 @@ const EquipmentDetailPage: React.FC = () => {
   const [equipment, setEquipment] = useState<EquipmentDto | null>(null);
   const [activeCostConfig, setActiveCostConfig] = useState<EquipmentCostConfigDto | null>(null);
   const [savingCostConfig, setSavingCostConfig] = useState(false);
+  const [costConfigRefreshKey, setCostConfigRefreshKey] = useState(0);
 
   const loadData = useCallback(async () => {
     if (!id) return;
@@ -49,6 +50,7 @@ const EquipmentDetailPage: React.FC = () => {
       try {
         await equipmentService.saveCostConfig(id, data);
         message.success("Đã lưu phiên bản cấu hình");
+        setCostConfigRefreshKey((k) => k + 1);
         await loadData();
       } catch {
         message.error("Không thể lưu cấu hình chi phí");
@@ -96,6 +98,7 @@ const EquipmentDetailPage: React.FC = () => {
         activeCostConfig={activeCostConfig}
         onSaveCostConfig={handleSaveCostConfig}
         savingCostConfig={savingCostConfig}
+        costConfigRefreshKey={costConfigRefreshKey}
       />
     </div>
   );

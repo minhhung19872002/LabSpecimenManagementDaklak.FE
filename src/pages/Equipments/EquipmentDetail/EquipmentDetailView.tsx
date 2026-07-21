@@ -10,6 +10,7 @@ import {
 import GeneralInfoPanel from "./GeneralInfoPanel";
 import DepreciationInfoPanel from "./DepreciationInfoPanel";
 import CostConfigTab from "./CostConfigTab";
+import CostConfigHistoryTab from "./CostConfigHistoryTab";
 
 const { Text } = Typography;
 
@@ -18,6 +19,7 @@ export interface EquipmentDetailViewProps {
   activeCostConfig: EquipmentCostConfigDto | null;
   onSaveCostConfig: (data: CreateEquipmentCostConfigDto) => Promise<void>;
   savingCostConfig: boolean;
+  costConfigRefreshKey?: number;
 }
 
 const PlaceholderTab: React.FC<{ label: string }> = ({ label }) => (
@@ -31,6 +33,7 @@ const EquipmentDetailView: React.FC<EquipmentDetailViewProps> = ({
   activeCostConfig,
   onSaveCostConfig,
   savingCostConfig,
+  costConfigRefreshKey,
 }) => {
   const tabItems = [
     {
@@ -58,7 +61,12 @@ const EquipmentDetailView: React.FC<EquipmentDetailViewProps> = ({
     {
       key: "history",
       label: "Lịch sử hoạt động",
-      children: <PlaceholderTab label="Lịch sử hoạt động" />,
+      children: (
+        <CostConfigHistoryTab
+          equipmentId={equipment.id}
+          refreshKey={costConfigRefreshKey}
+        />
+      ),
     },
   ];
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Row, Col, DatePicker, InputNumber, Button, Form, Input, Typography, message } from "antd";
+import { Row, Col, DatePicker, Button, Form, Input, Typography, message } from "antd";
 import { NumericFormat } from "react-number-format";
 import dayjs from "dayjs";
 import {
@@ -130,13 +130,16 @@ const CostConfigTab: React.FC<CostConfigTabProps> = ({
         </Col>
         <Col xs={24} sm={12} md={8}>
           <Form.Item label="Số mẫu trung bình (mẫu/năm)">
-            <InputNumber
-              value={averageSamplesPerYear}
-              onChange={(v) => setAverageSamplesPerYear(v ?? null)}
-              min={1}
-              precision={0}
+            <NumericFormat
+              value={averageSamplesPerYear ?? ""}
+              onValueChange={(v) => setAverageSamplesPerYear(v.floatValue != null ? Math.floor(v.floatValue) : null)}
+              allowNegative={false}
+              decimalScale={0}
+              thousandSeparator="."
+              decimalSeparator=","
+              customInput={Input}
               style={{ width: "100%" }}
-              controls={false}
+              isAllowed={(v) => !v.floatValue || v.floatValue >= 1}
             />
           </Form.Item>
         </Col>

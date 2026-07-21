@@ -107,6 +107,7 @@ export interface EquipmentCostConfigDto {
   maintenanceCostRatio?: number;
   calibrationCostPerYear?: number;
   description?: string;
+  changeLog?: string;
   creationTime: string;
   creatorName?: string;
 }
