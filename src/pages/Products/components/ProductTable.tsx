@@ -3,6 +3,7 @@ import { Row, Col, Input, Select, Spin, Table } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import type { SorterResult } from "antd/es/table/interface";
+import dayjs from "dayjs";
 import { ProductDto, ProductType } from "../../../services/productService";
 import { PRODUCT_TYPE_OPTIONS } from "../constants";
 
@@ -101,6 +102,11 @@ const ProductTable: React.FC<ProductTableProps> = ({
           columns={columns}
           dataSource={data}
           rowKey={(record) => `${record.id}_${record.stockWarehouseId ?? ''}`}
+          rowClassName={(record) =>
+            record.earliestLotExpiryDate && dayjs(record.earliestLotExpiryDate).diff(dayjs(), "day") <= 60
+              ? "row-near-expiry"
+              : ""
+          }
           rowSelection={{
             selectedRowKeys,
             onChange: onSelectionChange,
