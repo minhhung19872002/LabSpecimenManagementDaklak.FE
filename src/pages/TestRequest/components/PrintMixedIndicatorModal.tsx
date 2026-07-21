@@ -84,6 +84,7 @@ const PrintMixedIndicatorModal: React.FC<PrintMixedIndicatorModalProps> = ({
   const [vicePresidents, setVicePresidents] = useState<UserLookupDto[]>([]);
   const [selectedVicePresidentId, setSelectedVicePresidentId] = useState<string | undefined>(undefined);
   const [loadingVicePresidents, setLoadingVicePresidents] = useState(false);
+  const [viewedFiles, setViewedFiles] = useState<Set<string>>(new Set());
 
   const approvedIndicators = useMemo(
     () => indicators.filter((ind) => ind.approvalStatus === QualityIndicatorApprovalStatus.Approved),
@@ -107,6 +108,7 @@ const PrintMixedIndicatorModal: React.FC<PrintMixedIndicatorModalProps> = ({
       setNote("");
       setGeneratedResults([]);
       setShowResults(false);
+      setViewedFiles(new Set());
       setSelectedVicePresidentId(undefined);
       prevSelectedIdsRef.current = [];
     }
@@ -411,28 +413,33 @@ const PrintMixedIndicatorModal: React.FC<PrintMixedIndicatorModalProps> = ({
         <div style={{ maxHeight: "calc(100vh - 350px)", overflowY: "auto" }}>
           <List
             dataSource={generatedResults}
-            renderItem={(item, index) => (
-              <List.Item
-                actions={[
-                  <Button
-                    type="primary"
-                    icon={<FileWordOutlined />}
-                    onClick={() => {
-                      const docxFileName = item.fileName.replace(/\.pdf$/i, ".docx");
-                      window.open(`/document-editor?file=${encodeURIComponent(docxFileName)}`, "_blank");
-                    }}
-                  >
-                    Xem
-                  </Button>,
-                ]}
-              >
-                <List.Item.Meta
-                  avatar={<FileWordOutlined style={{ fontSize: 24, color: "#2b579a" }} />}
-                  title={`File ${index + 1}${item.sampleCode ? `: ${item.sampleCode}` : ""}`}
-                  description={`Template: ${item.templateName || "BM02"}`}
-                />
-              </List.Item>
-            )}
+            renderItem={(item, index) => {
+              const isViewed = viewedFiles.has(item.fileName);
+              return (
+                <List.Item
+                  actions={[
+                    <Button
+                      type={isViewed ? "default" : "primary"}
+                      icon={<FileWordOutlined />}
+                      onClick={() => {
+                        const docxFileName = item.fileName.replace(/\.pdf$/i, ".docx");
+                        window.open(`/document-editor?file=${encodeURIComponent(docxFileName)}`, "_blank");
+                        setViewedFiles((prev) => new Set(prev).add(item.fileName));
+                      }}
+                      style={isViewed ? { color: "#52c41a", borderColor: "#52c41a" } : undefined}
+                    >
+                      {isViewed ? "Đã xem" : "Xem"}
+                    </Button>,
+                  ]}
+                >
+                  <List.Item.Meta
+                    avatar={<FileWordOutlined style={{ fontSize: 24, color: isViewed ? "#52c41a" : "#2b579a" }} />}
+                    title={`File ${index + 1}${item.sampleCode ? `: ${item.sampleCode}` : ""}`}
+                    description={`Template: ${item.templateName || "BM02"}`}
+                  />
+                </List.Item>
+              );
+            }}
           />
         </div>
       </Modal>
@@ -467,7 +474,7 @@ const PrintMixedIndicatorModal: React.FC<PrintMixedIndicatorModalProps> = ({
             icon={<PrinterOutlined />}
             onClick={handlePrint}
             loading={loading}
-            disabled={selectedIndicatorIds.length === 0 || loadingIndicators}
+            disabled={selectedIndicatorIds.length === 0 || loadingIndicators || loadingTemplates || !selectedMixedTemplate}
           >
             In ({selectedIndicatorIds.length} chỉ tiêu)
           </Button>
