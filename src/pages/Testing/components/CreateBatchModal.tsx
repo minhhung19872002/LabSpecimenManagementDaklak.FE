@@ -4,8 +4,6 @@ import {
   Input,
   Button,
   message,
-  Space,
-  Tag,
   Typography,
   Spin,
   Empty,
@@ -17,7 +15,6 @@ import {
   PlusOutlined,
   CloseOutlined,
   SearchOutlined,
-  WarningOutlined,
 } from "../../../components/common/Icon";
 import testBatchService from "../../../services/testBatchService";
 import { authService } from "../../../services/authService";
@@ -77,19 +74,6 @@ const CreateBatchModal: React.FC<Props> = ({ open, onClose, onCreated }) => {
     [selectedItems],
   );
 
-  const batchCondition = useMemo(() => {
-    if (selectedItems.length === 0) return null;
-    const first = selectedItems[0];
-    return {
-      indicatorId: first.indicatorId,
-      indicatorName: first.indicatorName,
-      methodId: first.methodId,
-      methodName: first.methodName,
-      specimenTypeId: first.specimenTypeId,
-      specimenTypeName: first.specimenTypeName,
-    };
-  }, [selectedItems]);
-
   const loadAvailableIndicators = useCallback(async () => {
     setLoadingItems(true);
     try {
@@ -110,18 +94,6 @@ const CreateBatchModal: React.FC<Props> = ({ open, onClose, onCreated }) => {
     }
   }, [open, loadAvailableIndicators]);
 
-  const isItemCompatible = useCallback(
-    (item: AvailableIndicatorDto): boolean => {
-      if (!batchCondition) return true;
-      return (
-        item.indicatorId === batchCondition.indicatorId &&
-        item.methodId === batchCondition.methodId &&
-        item.specimenTypeId === batchCondition.specimenTypeId
-      );
-    },
-    [batchCondition],
-  );
-
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const currentUserId = useMemo(() => authService.getUserInfo()?.id, []);
@@ -141,15 +113,8 @@ const CreateBatchModal: React.FC<Props> = ({ open, onClose, onCreated }) => {
       );
     }
     items = sortAvailableIndicators(items, currentUserId);
-    if (batchCondition) {
-      items.sort((a, b) => {
-        const aOk = isItemCompatible(a) ? 0 : 1;
-        const bOk = isItemCompatible(b) ? 0 : 1;
-        return aOk - bOk;
-      });
-    }
     return items;
-  }, [availableItems, searchText, batchCondition, isItemCompatible, currentUserId]);
+  }, [availableItems, searchText, currentUserId]);
 
   const rowVirtualizer = useVirtualizer({
     count: filteredItems.length,
@@ -289,7 +254,6 @@ const CreateBatchModal: React.FC<Props> = ({ open, onClose, onCreated }) => {
                   const item = filteredItems[virtualRow.index];
                   const isSelected = selectedIds.has(item.id);
                   const isInBatch = item.isAlreadyInBatch;
-                  const compatible = isItemCompatible(item);
 
                   return (
                     <div
@@ -309,14 +273,8 @@ const CreateBatchModal: React.FC<Props> = ({ open, onClose, onCreated }) => {
                           padding: "8px 10px",
                           marginBottom: 6,
                           borderRadius: 6,
-                          border: !compatible
-                            ? "1px solid #ffccc7"
-                            : "1px solid #f0f0f0",
-                          background: !compatible
-                            ? "#fff2f0"
-                            : isSelected
-                              ? "#f6ffed"
-                              : "#fff",
+                          border: "1px solid #f0f0f0",
+                          background: isSelected ? "#f6ffed" : "#fff",
                         }}
                       >
                         <div
@@ -345,14 +303,6 @@ const CreateBatchModal: React.FC<Props> = ({ open, onClose, onCreated }) => {
                                 Ngày YC hoàn thành: {item.requestCompletionDate ? dayjs(item.requestCompletionDate).format("DD/MM/YYYY") : "—"}
                               </Text>
                             </div>
-                            {!compatible && batchCondition && (
-                              <div style={{ marginTop: 4 }}>
-                                <Text type="danger" style={{ fontSize: 11 }}>
-                                  <WarningOutlined style={{ marginRight: 4 }} />
-                                  Khác chỉ tiêu, phương pháp thử
-                                </Text>
-                              </div>
-                            )}
                           </div>
                           <div style={{ marginLeft: 8, flexShrink: 0 }}>
                             {isSelected ? (
@@ -363,20 +313,12 @@ const CreateBatchModal: React.FC<Props> = ({ open, onClose, onCreated }) => {
                                 Hủy
                               </Button>
                             ) : (
-                              <Tooltip
-                                title={
-                                  isInBatch
-                                    ? "Đã thuộc mẻ khác"
-                                    : !compatible
-                                      ? "Khác chỉ tiêu, phương pháp thử"
-                                      : "Thêm vào mẻ"
-                                }
-                              >
+                              <Tooltip title={isInBatch ? "Đã thuộc mẻ khác" : "Thêm vào mẻ"}>
                                 <Button
                                   type="text"
                                   size="small"
                                   icon={<PlusOutlined />}
-                                  disabled={isInBatch || !compatible}
+                                  disabled={isInBatch}
                                   onClick={() => handleAddItem(item)}
                                 />
                               </Tooltip>
@@ -418,21 +360,6 @@ const CreateBatchModal: React.FC<Props> = ({ open, onClose, onCreated }) => {
             >
               <Input placeholder="Nhập tên mẻ thử nghiệm" maxLength={200} />
             </Form.Item>
-
-            {batchCondition && (
-              <div style={{ marginBottom: 12 }}>
-                <Text strong style={{ display: "block", marginBottom: 4 }}>
-                  Điều kiện mẻ:
-                </Text>
-                <Space wrap size={4}>
-                  {batchCondition.specimenTypeName && (
-                    <Tag>{batchCondition.specimenTypeName}</Tag>
-                  )}
-                  <Tag color="blue">{batchCondition.indicatorName}</Tag>
-                  <Tag color="green">{batchCondition.methodName}</Tag>
-                </Space>
-              </div>
-            )}
 
             <div style={{ marginBottom: 8 }}>
               <Text strong style={{ fontSize: 13 }}>
