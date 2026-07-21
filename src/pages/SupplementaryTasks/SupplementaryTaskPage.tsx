@@ -52,6 +52,9 @@ const SupplementaryTaskPage: React.FC = () => {
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [historyItem, setHistoryItem] = useState<SupplementaryTaskDto | undefined>();
 
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [detailItem, setDetailItem] = useState<SupplementaryTaskDto | undefined>();
+
   const activeStatus = useMemo(() => {
     const tab = TAB_STATUS_OPTIONS.find((t) => t.key === activeTab);
     return tab?.status;
@@ -277,6 +280,16 @@ const SupplementaryTaskPage: React.FC = () => {
     setHistoryItem(undefined);
   }, []);
 
+  const handleRowDoubleClick = useCallback((item: SupplementaryTaskDto) => {
+    setDetailItem(item);
+    setDetailModalOpen(true);
+  }, []);
+
+  const handleDetailModalClose = useCallback(() => {
+    setDetailModalOpen(false);
+    setDetailItem(undefined);
+  }, []);
+
   const handleSortChange = useCallback((field: "dueDate" | "creationTime", descending: boolean) => {
     setSortField(field);
     setSortDescending(descending);
@@ -333,6 +346,10 @@ const SupplementaryTaskPage: React.FC = () => {
       historyModalOpen={historyModalOpen}
       historyItem={historyItem}
       onHistoryModalClose={handleHistoryModalClose}
+      onRowDoubleClick={handleRowDoubleClick}
+      detailModalOpen={detailModalOpen}
+      detailItem={detailItem}
+      onDetailModalClose={handleDetailModalClose}
       onModalClose={handleModalClose}
       onSaved={handleSaved}
       onCreate={handleCreate}

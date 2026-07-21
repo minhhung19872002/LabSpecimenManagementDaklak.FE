@@ -37,7 +37,6 @@ import {
 } from "../../../services/offline/offlineResultService";
 import {
   generateResultFormOffline,
-  generateMixedResultFormOffline,
   downloadDocument,
   SingleResultTemplate,
 } from "../../../services/offline/offlinePrintService";
@@ -57,9 +56,8 @@ interface PrintResultItem {
   sampleName?: string;
 }
 
-interface PrintModalProps {
+export interface PrintModalProps {
   visible: boolean;
-  mode: "single" | "mixed";
   taskId: string;
   indicators: QualityManagementIndicatorDto[];
   taskContext?: {
@@ -200,7 +198,6 @@ interface LabGroup {
 
 const PrintModal: React.FC<PrintModalProps> = ({
   visible,
-  mode,
   taskId,
   indicators,
   taskContext,
@@ -562,8 +559,6 @@ const PrintModal: React.FC<PrintModalProps> = ({
 
       setLoading(true);
       try {
-        // Phó Giám đốc ký: selected vice-president name (Surname + Name), matching
-        // the backend's GetVicePresidentFullName.
         const selectedVp = vicePresidents.find(
           (v) => v.id === selectedVicePresidentId,
         );
@@ -572,7 +567,6 @@ const PrintModal: React.FC<PrintModalProps> = ({
             selectedVp.userName
           : "";
 
-        // Phụ trách PTN scoped to a set of leaves' labs (matches online).
         const labManagerById = taskContext?.labManagerNameById || {};
         const officerFor = (
           leaves: QualityManagementIndicatorDto[],
@@ -593,100 +587,64 @@ const PrintModal: React.FC<PrintModalProps> = ({
         const files: { blob: Blob; fileName: string }[] = [];
         let genError: string | undefined;
 
-        if (mode === "mixed") {
-          // BM02: one document, parents included so parent+child grouping matches online.
+        // BM01: one file PER SAMPLE, like online printMultiSingleResult.
+        const bySample = new Map<string, QualityManagementIndicatorDto[]>();
+        for (const leaf of selectedLeaves) {
+          const key = leaf.sampleId || leaf.sampleCode || "";
+          const arr = bySample.get(key) || [];
+          arr.push(leaf);
+          bySample.set(key, arr);
+        }
+        const templateKeyOf = (name: string): SingleResultTemplate => {
+          if (/BM05/i.test(name)) return "BM05";
+          if (/BM04/i.test(name)) return "BM04";
+          if (/BM03/i.test(name)) return "BM03";
+          return "BM01";
+        };
+        const templatesToUse = selectedTemplates.length
+          ? selectedTemplates
+          : ["BM01"];
+        for (const sampleLeaves of bySample.values()) {
+          const firstLeaf = sampleLeaves[0];
+          const sampleKey = firstLeaf.sampleId || firstLeaf.sampleCode;
+          const parentIds = new Set(
+            sampleLeaves
+              .filter((i) => i.parentIndicatorId)
+              .map((i) => i.parentIndicatorId!),
+          );
+          const parents = approvedIndicatorsWithParents.filter(
+            (i) =>
+              !i.parentIndicatorId &&
+              parentIds.has(i.indicatorId) &&
+              (i.sampleId || i.sampleCode) === sampleKey,
+          );
           const extras = await buildMixedHeaderExtras(
             taskContext?.testRequestId,
-            selectedLeaves,
+            sampleLeaves,
           );
-          const mixedParentIds = new Set(
-            selectedLeaves
-              .filter((ind) => ind.parentIndicatorId)
-              .map((ind) => ind.parentIndicatorId!),
-          );
-          const mixedParents = approvedIndicatorsWithParents.filter(
-            (ind) => !ind.parentIndicatorId && mixedParentIds.has(ind.indicatorId),
-          );
-          const g = await generateMixedResultFormOffline(
-            {
-              ContractNumber: taskContext?.contractNumber || "",
-              CustomerName: taskContext?.customerName || "",
-              Note: note || "",
-              DateOfReceiving: extras.DateOfReceiving,
-              DateOfIssue: extras.DateOfIssue,
-              TimeOfTesting: extras.TimeOfTesting,
-              OfficerInCharge: officerFor(selectedLeaves, extras.OfficerInCharge),
-              VicePresident: vicePresidentName,
-            },
-            mapIndicators(selectedLeaves),
-            mapIndicators(mixedParents),
-          );
-          if (g.success && g.blob && g.fileName)
-            files.push({ blob: g.blob, fileName: g.fileName });
-          else genError = g.error;
-        } else {
-          // BM01: one file PER SAMPLE, like online printMultiSingleResult.
-          const bySample = new Map<string, QualityManagementIndicatorDto[]>();
-          for (const leaf of selectedLeaves) {
-            const key = leaf.sampleId || leaf.sampleCode || "";
-            const arr = bySample.get(key) || [];
-            arr.push(leaf);
-            bySample.set(key, arr);
-          }
-          // Map each selected report template name to a SingleResultTemplate key.
-          const templateKeyOf = (name: string): SingleResultTemplate => {
-            if (/BM05/i.test(name)) return "BM05";
-            if (/BM04/i.test(name)) return "BM04";
-            if (/BM03/i.test(name)) return "BM03";
-            return "BM01";
+          const header = {
+            ContractNo: taskContext?.contractNumber || "",
+            Customer: taskContext?.customerName || "",
+            SampleCode: firstLeaf?.sampleCode || "",
+            NameOfSample: firstLeaf?.sampleName || "",
+            Note: note || "",
+            DateOfReceiving: extras.DateOfReceiving,
+            DateOfIssue: extras.DateOfIssue,
+            TimeOfTesting: extras.TimeOfTesting,
+            OfficerInCharge: officerFor(sampleLeaves, extras.OfficerInCharge),
+            VicePresident: vicePresidentName,
+            DescriptionOfSample: extras.DescriptionOfSample,
+            DateOfSending: extras.DateOfSending,
+            PlaceToSendSample: extras.PlaceToSendSample,
+            Standard: extras.Standard,
           };
-          const templatesToUse = selectedTemplates.length
-            ? selectedTemplates
-            : ["BM01"];
-          for (const sampleLeaves of bySample.values()) {
-            const firstLeaf = sampleLeaves[0];
-            const sampleKey = firstLeaf.sampleId || firstLeaf.sampleCode;
-            const parentIds = new Set(
-              sampleLeaves
-                .filter((i) => i.parentIndicatorId)
-                .map((i) => i.parentIndicatorId!),
-            );
-            const parents = approvedIndicatorsWithParents.filter(
-              (i) =>
-                !i.parentIndicatorId &&
-                parentIds.has(i.indicatorId) &&
-                (i.sampleId || i.sampleCode) === sampleKey,
-            );
-            const extras = await buildMixedHeaderExtras(
-              taskContext?.testRequestId,
-              sampleLeaves,
-            );
-            const header = {
-              ContractNo: taskContext?.contractNumber || "",
-              Customer: taskContext?.customerName || "",
-              SampleCode: firstLeaf?.sampleCode || "",
-              NameOfSample: firstLeaf?.sampleName || "",
-              Note: note || "",
-              DateOfReceiving: extras.DateOfReceiving,
-              DateOfIssue: extras.DateOfIssue,
-              TimeOfTesting: extras.TimeOfTesting,
-              OfficerInCharge: officerFor(sampleLeaves, extras.OfficerInCharge),
-              VicePresident: vicePresidentName,
-              // BM05-QLNN extras (ignored by other templates).
-              DescriptionOfSample: extras.DescriptionOfSample,
-              DateOfSending: extras.DateOfSending,
-              PlaceToSendSample: extras.PlaceToSendSample,
-              Standard: extras.Standard,
-            };
-            const indicatorInputs = mapIndicators([...parents, ...sampleLeaves]);
-            // One file per selected template (× this sample), like online.
-            for (const tplName of templatesToUse) {
-              const key = templateKeyOf(tplName);
-              const g = await generateResultFormOffline(header, indicatorInputs, key);
-              if (g.success && g.blob && g.fileName)
-                files.push({ blob: g.blob, fileName: g.fileName });
-              else genError = g.error;
-            }
+          const indicatorInputs = mapIndicators([...parents, ...sampleLeaves]);
+          for (const tplName of templatesToUse) {
+            const key = templateKeyOf(tplName);
+            const g = await generateResultFormOffline(header, indicatorInputs, key);
+            if (g.success && g.blob && g.fileName)
+              files.push({ blob: g.blob, fileName: g.fileName });
+            else genError = g.error;
           }
         }
 
@@ -694,8 +652,6 @@ const PrintModal: React.FC<PrintModalProps> = ({
           message.error(genError || "Không thể tạo phiếu kết quả offline.");
           return;
         }
-        // Download sequentially with a small gap so the browser doesn't drop
-        // rapid successive downloads.
         for (let i = 0; i < files.length; i++) {
           downloadDocument(files[i].blob, files[i].fileName);
           if (i < files.length - 1) {
@@ -719,7 +675,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
       return;
     }
 
-    if (mode === "single" && selectedTemplates.length === 0) {
+    if (selectedTemplates.length === 0) {
       message.warning("Vui lòng chọn ít nhất một biểu mẫu");
       return;
     }
@@ -730,45 +686,20 @@ const PrintModal: React.FC<PrintModalProps> = ({
     const indicatorIdsForPrint = getIndicatorIdsForPrint();
 
     try {
-      if (mode === "single") {
-        // Call API to generate PDFs (batch processing)
-        const result = await qualityManagementService.printMultiSingleResult(
-          taskId,
-          indicatorIdsForPrint,
-          selectedTemplates,
-          note || undefined,
-          selectedVicePresidentId,
-        );
+      // Call API to generate PDFs (batch processing)
+      const result = await qualityManagementService.printMultiSingleResult(
+        taskId,
+        indicatorIdsForPrint,
+        selectedTemplates,
+        note || undefined,
+        selectedVicePresidentId,
+      );
 
-        message.success(`Đã tạo ${result.results.length} phiếu kết quả`);
+      message.success(`Đã tạo ${result.results.length} phiếu kết quả`);
 
-        // Store results and show results view
-        setGeneratedResults(result.results);
-        setShowResults(true);
-      } else {
-        // Mixed mode - single document, open Word Editor
-        const result = await qualityManagementService.printMixedResult(
-          taskId,
-          indicatorIdsForPrint,
-          note || undefined,
-          undefined, // templateName
-          selectedVicePresidentId,
-        );
-
-        message.success("Đã tạo phiếu kết quả");
-
-        // Open Word Editor (BE now returns .docx directly)
-        window.open(
-          `/document-editor?file=${encodeURIComponent(result.fileName)}`,
-          "_blank",
-        );
-
-        // Close modal for mixed mode
-        setSelectedIndicatorIds([]);
-        setNote("");
-        onCancel();
-        onSuccess?.();
-      }
+      // Store results and show results view
+      setGeneratedResults(result.results);
+      setShowResults(true);
     } catch (error: any) {
       console.error("Error printing:", error);
       message.error(
@@ -1009,7 +940,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
       title={
         <span>
           <PrinterOutlined style={{ marginRight: 8 }} />
-          {mode === "single" ? "In kết quả đơn" : "In kết quả hỗn hợp"}
+          In kết quả đơn
         </span>
       }
       open={visible}
@@ -1034,7 +965,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
             disabled={
               selectedIndicatorIds.length === 0 ||
               loadingTemplates ||
-              (mode === "single" && !isOffline && selectedTemplates.length === 0)
+              (!isOffline && selectedTemplates.length === 0)
             }
           >
             In ({selectedIndicatorIds.length} chỉ tiêu)
@@ -1320,28 +1251,25 @@ const PrintModal: React.FC<PrintModalProps> = ({
 
           {/* Right column - Options */}
           <Col span={8}>
-            {/* Template selection - only for single mode */}
-            {mode === "single" && (
-              <div style={{ marginBottom: 24 }}>
-                <Text strong style={{ display: "block", marginBottom: 12 }}>
-                  Chọn biểu mẫu báo cáo:
-                </Text>
-                <Checkbox.Group
-                  value={selectedTemplates}
-                  onChange={(values) =>
-                    setSelectedTemplates(values as string[])
-                  }
-                >
-                  <Space direction="vertical">
-                    {templates.map((template) => (
-                      <Checkbox key={template.name} value={template.name}>
-                        {template.displayName}
-                      </Checkbox>
-                    ))}
-                  </Space>
-                </Checkbox.Group>
-              </div>
-            )}
+            <div style={{ marginBottom: 24 }}>
+              <Text strong style={{ display: "block", marginBottom: 12 }}>
+                Chọn biểu mẫu báo cáo:
+              </Text>
+              <Checkbox.Group
+                value={selectedTemplates}
+                onChange={(values) =>
+                  setSelectedTemplates(values as string[])
+                }
+              >
+                <Space direction="vertical">
+                  {templates.map((template) => (
+                    <Checkbox key={template.name} value={template.name}>
+                      {template.displayName}
+                    </Checkbox>
+                  ))}
+                </Space>
+              </Checkbox.Group>
+            </div>
 
             {/* Vice President selection */}
             <div style={{ marginBottom: 24 }}>

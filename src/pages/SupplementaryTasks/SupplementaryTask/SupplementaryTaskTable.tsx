@@ -70,12 +70,13 @@ export interface SupplementaryTaskTableProps {
   onApprove: (item: SupplementaryTaskDto) => void;
   onReject: (item: SupplementaryTaskDto) => void;
   onViewHistory: (item: SupplementaryTaskDto) => void;
+  onRowDoubleClick: (item: SupplementaryTaskDto) => void;
 }
 
 const SupplementaryTaskTable: React.FC<SupplementaryTaskTableProps> = ({
   items, loading, totalCount, page, pageSize, isDirector,
   sortField, sortDescending,
-  onPageChange, onSortChange, onEdit, onCancel, onComplete, onApprove, onReject, onViewHistory,
+  onPageChange, onSortChange, onEdit, onCancel, onComplete, onApprove, onReject, onViewHistory, onRowDoubleClick,
 }) => {
 
   const handleTableChange: TableProps<SupplementaryTaskDto>["onChange"] = (_, __, sorter) => {
@@ -265,6 +266,10 @@ const SupplementaryTaskTable: React.FC<SupplementaryTaskTableProps> = ({
         scroll={{ x: 950 }}
         style={{ marginTop: 12 }}
         onChange={handleTableChange}
+        onRow={(record) => ({
+          onDoubleClick: () => onRowDoubleClick(record),
+          style: { cursor: "pointer" },
+        })}
         pagination={{
           current: page,
           pageSize,

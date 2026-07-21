@@ -1286,16 +1286,17 @@ const TaskManagementDetail: React.FC = () => {
       return;
     }
 
-    // Filter only indicators with Entered status (Chờ phê duyệt)
+    // Filter indicators eligible for approval (Entered or QLCL-rejected)
     const sample = sampleList.find((s) => s.sampleId === sampleId);
     const validIds = ids.filter((id) => {
       const ind = sample?.indicators.find((i) => i.id === id);
-      return ind?.approvalStatus === IndicatorApprovalStatus.Entered;
+      return ind?.approvalStatus === IndicatorApprovalStatus.Entered ||
+        (ind?.approvalStatus === IndicatorApprovalStatus.Rejected && ind?.isRejectedByQuality);
     });
 
     if (validIds.length === 0) {
       message.warning(
-        "Không có chỉ tiêu nào đủ điều kiện duyệt (Chờ phê duyệt)",
+        "Không có chỉ tiêu nào đủ điều kiện duyệt",
       );
       return;
     }
@@ -1787,11 +1788,12 @@ const TaskManagementDetail: React.FC = () => {
 
     const validIds = allSelectedIds.filter((id) => {
       const ind = task.indicators?.find((i) => i.id === id);
-      return ind?.approvalStatus === IndicatorApprovalStatus.Entered;
+      return ind?.approvalStatus === IndicatorApprovalStatus.Entered ||
+        (ind?.approvalStatus === IndicatorApprovalStatus.Rejected && ind?.isRejectedByQuality);
     });
 
     if (validIds.length === 0) {
-      message.warning("Không có chỉ tiêu nào đủ điều kiện duyệt (Chờ phê duyệt)");
+      message.warning("Không có chỉ tiêu nào đủ điều kiện duyệt");
       return;
     }
 
@@ -1915,7 +1917,8 @@ const TaskManagementDetail: React.FC = () => {
     const sample = sampleList.find((s) => s.sampleId === sampleId);
     return ids.filter((id) => {
       const ind = sample?.indicators.find((i) => i.id === id);
-      return ind?.approvalStatus === IndicatorApprovalStatus.Entered;
+      return ind?.approvalStatus === IndicatorApprovalStatus.Entered ||
+        (ind?.approvalStatus === IndicatorApprovalStatus.Rejected && ind?.isRejectedByQuality);
     }).length;
   };
 
@@ -1963,7 +1966,9 @@ const TaskManagementDetail: React.FC = () => {
               {!isInEvaluationPhase &&
                 (task?.status === LaboratoryTaskStatus.SentToQuality ||
                   !isCompletedPhase) &&
-                sample.sampleStatus === "pendingApproval" &&
+                (sample.sampleStatus === "pendingApproval" ||
+                  (sample.sampleStatus === "rejected" &&
+                    sample.indicators.some((i) => i.isRejectedByQuality))) &&
                 canApproveResult && (
                   <>
                     <Button

@@ -50,3 +50,34 @@
   border-color: #096DD9 !important;
   box-shadow: 0 2px 8px rgba(9, 109, 217, 0.2);
 }
+
+/* Detail Modal */
+.detail-modal-info-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 16px 0;
+}
+
+.detail-modal-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-modal-label {
+  font-size: 13px;
+}
+
+.detail-modal-history-section {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.detail-modal-history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
