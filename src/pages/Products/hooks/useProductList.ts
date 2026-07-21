@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { message } from "antd";
 import { productService, ProductDto, ProductType } from "../../../services/productService";
 
@@ -15,9 +15,11 @@ export const useProductList = () => {
   const [warehouseId, setWarehouseId] = useState<string | undefined>(undefined);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const requestIdRef = useRef(0);
 
   const fetchData = useCallback(async () => {
     if (!warehouseId) return;
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     try {
       const result = await productService.getList({
@@ -29,15 +31,17 @@ export const useProductList = () => {
         sorting: sorting,
         warehouseId: warehouseId,
       });
+      if (requestId !== requestIdRef.current) return;
       setProducts(result?.items || []);
       setTotalCount(result?.totalCount || 0);
     } catch (error) {
+      if (requestId !== requestIdRef.current) return;
       console.error("Failed to fetch products:", error);
       message.error("Không thể tải danh sách sản phẩm");
       setProducts([]);
       setTotalCount(0);
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
   }, [currentPage, pageSize, searchText, productTypeFilter, isDraftFilter, sorting, warehouseId]);
 
