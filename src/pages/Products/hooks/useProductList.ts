@@ -15,11 +15,15 @@ export const useProductList = () => {
   const [warehouseId, setWarehouseId] = useState<string | undefined>(undefined);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
-  const requestIdRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!warehouseId) return;
-    const requestId = ++requestIdRef.current;
+
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+
     setLoading(true);
     try {
       const result = await productService.getList({
@@ -30,18 +34,18 @@ export const useProductList = () => {
         isDraft: isDraftFilter,
         sorting: sorting,
         warehouseId: warehouseId,
-      });
-      if (requestId !== requestIdRef.current) return;
+      }, ctrl.signal);
+      if (ctrl.signal.aborted) return;
       setProducts(result?.items || []);
       setTotalCount(result?.totalCount || 0);
     } catch (error) {
-      if (requestId !== requestIdRef.current) return;
+      if (ctrl.signal.aborted) return;
       console.error("Failed to fetch products:", error);
       message.error("Không thể tải danh sách sản phẩm");
       setProducts([]);
       setTotalCount(0);
     } finally {
-      if (requestId === requestIdRef.current) setLoading(false);
+      if (!ctrl.signal.aborted) setLoading(false);
     }
   }, [currentPage, pageSize, searchText, productTypeFilter, isDraftFilter, sorting, warehouseId]);
 

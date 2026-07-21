@@ -295,7 +295,7 @@ interface PagedResult<T> {
 const BASE_URL = "/api/v1/products";
 
 export const productService = {
-  getList: async (params: ProductFilterDto = {}): Promise<PagedResult<ProductDto>> => {
+  getList: async (params: ProductFilterDto = {}, signal?: AbortSignal): Promise<PagedResult<ProductDto>> => {
     const apiParams: Record<string, any> = {};
     if (params.page) apiParams.Page = params.page;
     if (params.limit) apiParams.Limit = params.limit;
@@ -309,6 +309,7 @@ export const productService = {
 
     const response = await api.get<PagedResult<ProductDto>>(BASE_URL, {
       params: apiParams,
+      signal,
     });
     return response.data;
   },
