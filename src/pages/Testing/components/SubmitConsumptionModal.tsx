@@ -260,27 +260,34 @@ const SubmitConsumptionModal: React.FC<Props> = ({
           );
         }
         return (
-          <Space size={4}>
-            <Tooltip
-              title={
-                r.exceedsStock
-                  ? `Tiêu hao vượt mức tồn kho (tồn: ${r.availableQuantity})`
-                  : undefined
-              }
-            >
-              <InputNumber
-                size="small"
-                min={0}
-                step={0.01}
-                value={r.actualQuantity}
-                onChange={(v) => handleQuantityChange(r.key, v)}
-                style={{ width: 90 }}
-                status={r.exceedsStock ? "error" : undefined}
-              />
-            </Tooltip>
-            <Text type="secondary">{r.unitName || ""}</Text>
-          </Space>
+          <Tooltip
+            title={
+              r.exceedsStock
+                ? `Tiêu hao vượt mức tồn kho (tồn: ${r.availableQuantity})`
+                : undefined
+            }
+          >
+            <InputNumber
+              size="small"
+              min={0}
+              step={0.01}
+              value={r.actualQuantity}
+              onChange={(v) => handleQuantityChange(r.key, v)}
+              style={{ width: "100%" }}
+              status={r.exceedsStock ? "error" : undefined}
+              addonAfter={r.unitName || undefined}
+            />
+          </Tooltip>
         );
+      },
+    },
+    {
+      title: "Tồn kho",
+      key: "stock",
+      width: 120,
+      render: (_, r) => {
+        if (r.needsSelection || r.availableQuantity == null) return "-";
+        return `${r.availableQuantity.toLocaleString("vi-VN")} ${r.unitName || ""}`.trim();
       },
     },
     {
@@ -389,7 +396,7 @@ const SubmitConsumptionModal: React.FC<Props> = ({
             rowKey="key"
             size="small"
             pagination={false}
-            scroll={{ y: 350 }}
+            scroll={{ x: 700, y: 350 }}
           />
 
           {isFirstSubmit && (
