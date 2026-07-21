@@ -64,19 +64,10 @@ export const getProductColumns = (
   _handleToggleActive: (record: ProductDto) => void,
   canEdit: boolean,
   canDelete: boolean,
-  currentPage: number,
-  pageSize: number
+  _currentPage: number,
+  _pageSize: number
 ): ColumnsType<ProductDto> => {
-  const columns: ColumnsType<ProductDto> = [
-    {
-      title: "STT",
-      key: "index",
-      width: 60,
-      align: "center" as const,
-      render: (_: any, __: ProductDto, index: number) =>
-        (currentPage - 1) * pageSize + index + 1,
-    },
-  ];
+  const columns: ColumnsType<ProductDto> = [];
 
   if (visibleKeys.has("identificationCode")) {
     columns.push({
