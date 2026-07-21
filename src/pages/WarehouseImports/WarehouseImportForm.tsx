@@ -1140,11 +1140,13 @@ const WarehouseImportForm: React.FC = () => {
       : []),
   ];
 
-  const collapseDefaultKeys = useMemo(() => {
+  const [collapseKeys, setCollapseKeys] = useState<string[]>(["materials", "equipment"]);
+
+  useEffect(() => {
     const keys: string[] = [];
     if (!(lineItems.length > 0 && lineItems.every((it) => it.isHistorical))) keys.push("materials");
     if (!(equipmentItems.length > 0 && equipmentItems.every((it) => it.isHistorical))) keys.push("equipment");
-    return keys;
+    setCollapseKeys(keys);
   }, [lineItems, equipmentItems]);
 
   const confirmButtonLabel = defectiveHistory.length > 0 ? "Xác nhận Hàng Giao Bù" : "Xác nhận và nhập kho";
@@ -1416,8 +1418,8 @@ const WarehouseImportForm: React.FC = () => {
 
         <div style={{ padding: "0 16px 16px" }}>
           <Collapse
-            key={selectedGoodsReceiptId || 'new'}
-            defaultActiveKey={collapseDefaultKeys}
+            activeKey={collapseKeys}
+            onChange={(keys) => setCollapseKeys(Array.isArray(keys) ? keys : [keys])}
             style={{ marginBottom: 16 }}
             items={[
               ...(importableItems.some(i => !i.isEquipment) || lineItems.length > 0
