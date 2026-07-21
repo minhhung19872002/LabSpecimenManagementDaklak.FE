@@ -137,6 +137,7 @@ export interface LaboratoryTaskIndicatorDto {
   approvedByName?: string;
   rejectionReason?: string;
   isSentToQuality?: boolean;  // Đã gửi cho QLCL chưa
+  isRejectedByQuality?: boolean;  // Bị QLCL từ chối (phân biệt với QLKT từ chối)
   isWaitingForSharedSample?: boolean;  // Chỉ tiêu này đang chờ mẫu chung từ lab khác (Vi Sinh)
 
   // Workflow Redesign - Testing Rejection fields

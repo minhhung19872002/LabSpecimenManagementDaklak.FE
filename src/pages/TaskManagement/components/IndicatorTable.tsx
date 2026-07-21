@@ -1115,7 +1115,34 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
               statusTag
             );
 
-          case IndicatorApprovalStatus.Rejected:
+          case IndicatorApprovalStatus.Rejected: {
+            if (record.isRejectedByQuality && !forceDisableAll) {
+              const selectedStandardIdForReapprove =
+                standardSelections[record.id] !== undefined
+                  ? standardSelections[record.id]
+                  : record.standardId;
+              return (
+                <Space size="small">
+                  {statusTag}
+                  <Button
+                    type="primary"
+                    size="small"
+                    icon={<CheckOutlined />}
+                    onClick={() =>
+                      onApprove(
+                        record.id,
+                        true,
+                        undefined,
+                        selectedStandardIdForReapprove,
+                      )
+                    }
+                  >
+                    Duyệt
+                  </Button>
+                  {updateSubContractButton}
+                </Space>
+              );
+            }
             return updateSubContractButton ? (
               <Space size="small" wrap>
                 {statusTag}
@@ -1124,6 +1151,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             ) : (
               statusTag
             );
+          }
 
           // CustomerCancelled đã xử lý ở đầu function
 
