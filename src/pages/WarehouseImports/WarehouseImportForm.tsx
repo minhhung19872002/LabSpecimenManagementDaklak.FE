@@ -229,10 +229,6 @@ const WarehouseImportForm: React.FC = () => {
       items.filter(imp => !imp.isEquipment).forEach((imp) => {
         const matches = existing.filter((e) => e.goodsReceiptItemId === imp.goodsReceiptItemId);
 
-        if (imp.remainingOrderableQuantity <= 0 && matches.length === 0) {
-          return;
-        }
-
         const base = {
           goodsReceiptItemId: imp.goodsReceiptItemId,
           productName: imp.productName,
@@ -265,6 +261,10 @@ const WarehouseImportForm: React.FC = () => {
               isHistorical: true,
             });
           });
+
+        if (imp.remainingOrderableQuantity <= 0 && matches.length === 0) {
+          return;
+        }
 
         if (matches.length > 0) {
           matches.forEach((m, idx) => {
@@ -822,6 +822,7 @@ const WarehouseImportForm: React.FC = () => {
               min={0}
               precision={0}
               step={1}
+              disabled={(record.availableSkus || []).length > 0 && (!record.skuId || !record.selectedUnitId)}
               max={record.status === WarehouseImportLineStatus.Checked ? getRemainingForRow(record) : undefined}
               onChange={(v) => {
                   handleLineChange(record.key, "actualReceivedQuantity", v || 0);
@@ -1115,12 +1116,17 @@ const WarehouseImportForm: React.FC = () => {
             render: (_: any, record: LineItem) => {
               const { groupSize, totalCheckedBase, targetBase, targetUnit, hasSkuConversion } = getGroupInfo(record);
               const groupItems = lineItems.filter((it) => it.goodsReceiptItemId === record.goodsReceiptItemId);
-              const lastItem = groupItems[groupItems.length - 1];
+              const nonHistGroupItems = groupItems.filter((it) => !it.isHistorical);
+              const lastEditableItem = nonHistGroupItems.length > 0
+                ? nonHistGroupItems[nonHistGroupItems.length - 1]
+                : groupItems[groupItems.length - 1];
               return (
                 <div>
-                  <Button size="small" icon={<BranchesOutlined />} onClick={() => handleSplitLine(lastItem)}>
-                    Tách Lô
-                  </Button>
+                  {nonHistGroupItems.length > 0 && (
+                    <Button size="small" icon={<BranchesOutlined />} onClick={() => handleSplitLine(lastEditableItem)}>
+                      Tách Lô
+                    </Button>
+                  )}
                   {(groupSize > 1 || hasSkuConversion) && (
                     <div style={{ fontSize: 11, color: "#52c41a", marginTop: 2 }}>
                       Tổng: {totalCheckedBase}/{targetBase} {targetUnit}
@@ -1133,6 +1139,13 @@ const WarehouseImportForm: React.FC = () => {
         ]
       : []),
   ];
+
+  const collapseDefaultKeys = useMemo(() => {
+    const keys: string[] = [];
+    if (!(lineItems.length > 0 && lineItems.every((it) => it.isHistorical))) keys.push("materials");
+    if (!(equipmentItems.length > 0 && equipmentItems.every((it) => it.isHistorical))) keys.push("equipment");
+    return keys;
+  }, [lineItems, equipmentItems]);
 
   const confirmButtonLabel = defectiveHistory.length > 0 ? "Xác nhận Hàng Giao Bù" : "Xác nhận và nhập kho";
 
@@ -1403,7 +1416,8 @@ const WarehouseImportForm: React.FC = () => {
 
         <div style={{ padding: "0 16px 16px" }}>
           <Collapse
-            defaultActiveKey={["materials", "equipment"]}
+            key={selectedGoodsReceiptId || 'new'}
+            defaultActiveKey={collapseDefaultKeys}
             style={{ marginBottom: 16 }}
             items={[
               ...(importableItems.some(i => !i.isEquipment) || lineItems.length > 0
