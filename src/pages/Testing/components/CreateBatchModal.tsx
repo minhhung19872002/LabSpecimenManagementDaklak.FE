@@ -9,6 +9,9 @@ import {
   Empty,
   Tooltip,
   Form,
+  Select,
+  Tag,
+  Space,
 } from "antd";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
@@ -59,6 +62,9 @@ const CreateBatchModal: React.FC<Props> = ({ open, onClose, onCreated }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
+  const [filterSpecimenType, setFilterSpecimenType] = useState<string | null>(null);
+  const [filterIndicator, setFilterIndicator] = useState<string | null>(null);
+  const [filterMethod, setFilterMethod] = useState<string | null>(null);
   const [selectedError, setSelectedError] = useState(false);
 
   const [availableItems, setAvailableItems] = useState<AvailableIndicatorDto[]>(
@@ -98,6 +104,43 @@ const CreateBatchModal: React.FC<Props> = ({ open, onClose, onCreated }) => {
 
   const currentUserId = useMemo(() => authService.getUserInfo()?.id, []);
 
+  const specimenTypeOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const i of availableItems) {
+      if (i.specimenTypeId && !seen.has(i.specimenTypeId))
+        seen.set(i.specimenTypeId, i.specimenTypeName || i.specimenTypeId);
+    }
+    return [...seen.entries()].map(([value, label]) => ({ value, label }));
+  }, [availableItems]);
+
+  const indicatorOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const i of availableItems) {
+      if (i.indicatorId && !seen.has(i.indicatorId))
+        seen.set(i.indicatorId, i.indicatorName || i.indicatorId);
+    }
+    return [...seen.entries()].map(([value, label]) => ({ value, label }));
+  }, [availableItems]);
+
+  const methodOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const i of availableItems) {
+      if (i.methodId && !seen.has(i.methodId))
+        seen.set(i.methodId, i.methodName || i.methodId);
+    }
+    return [...seen.entries()].map(([value, label]) => ({ value, label }));
+  }, [availableItems]);
+
+  const selectedGroups = useMemo(() => {
+    const map = new Map<string, { specimenTypeName?: string; indicatorName?: string; methodName?: string }>();
+    for (const item of selectedItems) {
+      const key = `${item.specimenTypeId ?? ""}|${item.indicatorId ?? ""}|${item.methodId ?? ""}`;
+      if (!map.has(key))
+        map.set(key, { specimenTypeName: item.specimenTypeName, indicatorName: item.indicatorName, methodName: item.methodName });
+    }
+    return [...map.values()];
+  }, [selectedItems]);
+
   const filteredItems = useMemo(() => {
     let items = availableItems;
     if (searchText) {
@@ -112,9 +155,12 @@ const CreateBatchModal: React.FC<Props> = ({ open, onClose, onCreated }) => {
           i.methodName?.toLowerCase().includes(lower),
       );
     }
+    if (filterSpecimenType) items = items.filter((i) => i.specimenTypeId === filterSpecimenType);
+    if (filterIndicator) items = items.filter((i) => i.indicatorId === filterIndicator);
+    if (filterMethod) items = items.filter((i) => i.methodId === filterMethod);
     items = sortAvailableIndicators(items, currentUserId);
     return items;
-  }, [availableItems, searchText, currentUserId]);
+  }, [availableItems, searchText, filterSpecimenType, filterIndicator, filterMethod, currentUserId]);
 
   const rowVirtualizer = useVirtualizer({
     count: filteredItems.length,
@@ -167,6 +213,9 @@ const CreateBatchModal: React.FC<Props> = ({ open, onClose, onCreated }) => {
   const handleClose = () => {
     form.resetFields();
     setSearchText("");
+    setFilterSpecimenType(null);
+    setFilterIndicator(null);
+    setFilterMethod(null);
     setAvailableItems([]);
     setSelectedItems([]);
     setSelectedError(false);
@@ -217,6 +266,41 @@ const CreateBatchModal: React.FC<Props> = ({ open, onClose, onCreated }) => {
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               allowClear
+            />
+          </div>
+          <div style={{ paddingLeft: 12, marginBottom: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <Select
+              size="small"
+              allowClear
+              showSearch
+              placeholder="Nền mẫu"
+              style={{ width: "calc(50% - 3px)" }}
+              options={specimenTypeOptions}
+              value={filterSpecimenType}
+              onChange={(v) => setFilterSpecimenType(v ?? null)}
+              optionFilterProp="label"
+            />
+            <Select
+              size="small"
+              allowClear
+              showSearch
+              placeholder="Chỉ tiêu"
+              style={{ width: "calc(50% - 3px)" }}
+              options={indicatorOptions}
+              value={filterIndicator}
+              onChange={(v) => setFilterIndicator(v ?? null)}
+              optionFilterProp="label"
+            />
+            <Select
+              size="small"
+              allowClear
+              showSearch
+              placeholder="Phương pháp thử"
+              style={{ width: "calc(50% - 3px)" }}
+              options={methodOptions}
+              value={filterMethod}
+              onChange={(v) => setFilterMethod(v ?? null)}
+              optionFilterProp="label"
             />
           </div>
           <div
@@ -360,6 +444,23 @@ const CreateBatchModal: React.FC<Props> = ({ open, onClose, onCreated }) => {
             >
               <Input placeholder="Nhập tên mẻ thử nghiệm" maxLength={200} />
             </Form.Item>
+
+            {selectedGroups.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                <Text strong style={{ display: "block", marginBottom: 6 }}>
+                  Điều kiện mẻ:
+                </Text>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  {selectedGroups.map((g, idx) => (
+                    <Space key={idx} wrap size={4}>
+                      {g.specimenTypeName && <Tag>{g.specimenTypeName}</Tag>}
+                      {g.indicatorName && <Tag color="blue">{g.indicatorName}</Tag>}
+                      {g.methodName && <Tag color="green">{g.methodName}</Tag>}
+                    </Space>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div style={{ marginBottom: 8 }}>
               <Text strong style={{ fontSize: 13 }}>
