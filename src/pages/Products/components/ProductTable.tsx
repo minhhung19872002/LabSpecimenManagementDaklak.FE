@@ -100,7 +100,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
         <Table
           columns={columns}
           dataSource={data}
-          rowKey="id"
+          rowKey={(record) => `${record.id}_${record.stockWarehouseId ?? ''}`}
           rowSelection={{
             selectedRowKeys,
             onChange: onSelectionChange,

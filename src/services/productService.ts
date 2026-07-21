@@ -91,6 +91,7 @@ export interface ProductDto {
   isDraft: boolean;
   skuCount: number;
   warehouseName?: string;
+  stockWarehouseId?: string;
   earliestReceivedDate?: string;
   earliestLotNumber?: string;
   earliestLotExpiryDate?: string;
