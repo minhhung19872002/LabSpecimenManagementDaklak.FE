@@ -179,15 +179,20 @@ const CostConfigTab: React.FC<CostConfigTabProps> = ({
 
       <Row gutter={16}>
         <Col xs={24} sm={12} md={8}>
-          <Form.Item label="Tỷ lệ duy tu bảo dưỡng (%/năm)">
-            <InputNumber
-              value={maintenanceCostRatio}
-              onChange={(v) => setMaintenanceCostRatio(v ?? null)}
-              min={0}
-              precision={0}
-              style={{ width: "100%" }}
-              controls={false}
+          <Form.Item
+            label="Tỷ lệ duy tu bảo dưỡng (%/năm)"
+            extra="Theo quy định của Vụ trang TB tính 1 - 5% / năm"
+          >
+            <NumericFormat
+              value={maintenanceCostRatio ?? ""}
+              onValueChange={(values) => setMaintenanceCostRatio(values.floatValue ?? null)}
+              allowNegative={false}
+              decimalScale={0}
+              thousandSeparator="."
+              decimalSeparator=","
+              customInput={Input}
               addonAfter="%"
+              style={{ width: "100%" }}
             />
           </Form.Item>
         </Col>
