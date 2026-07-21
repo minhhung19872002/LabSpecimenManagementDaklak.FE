@@ -163,6 +163,25 @@ export const qualityManagementService = {
     return response.data;
   },
 
+  printMixedPerSampleResult: async (
+    taskId: string,
+    indicatorIds: string[],
+    templateName?: string,
+    note?: string,
+    vicePresidentId?: string
+  ): Promise<{ results: Array<{ fileName: string; sampleCode: string; templateName: string }> }> => {
+    const response = await api.post<{ results: Array<{ fileName: string; sampleCode: string; templateName: string }> }>(
+      `${BASE_URL}/${taskId}/print-mixed-per-sample`,
+      { indicatorIds, note, templateName, vicePresidentId }
+    );
+    return response.data;
+  },
+
+  getMixedTemplates: async (): Promise<TemplateDto[]> => {
+    const response = await api.get<TemplateDto[]>('/api/v1/result-forms/mixed-templates');
+    return response.data;
+  },
+
   /**
    * @deprecated Sử dụng confirmHandover thay thế
    */

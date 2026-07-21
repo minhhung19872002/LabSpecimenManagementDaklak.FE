@@ -39,6 +39,7 @@ import {
 import { TestRequestStatus } from "../../types/testRequest";
 import IndicatorTable from "./components/IndicatorTable";
 import PrintModal from "./components/PrintModal";
+import PrintMixedModal from "./components/PrintMixedModal";
 import RejectModal from "./components/RejectModal";
 import { PATH_ROUTES } from "../../constants";
 import { authService } from "../../services/authService";
@@ -73,7 +74,7 @@ const QualityManagementDetail: React.FC = () => {
 
   // Modals
   const [printModalVisible, setPrintModalVisible] = useState(false);
-  const [printMode, setPrintMode] = useState<"single" | "mixed">("single");
+  const [printMixedModalVisible, setPrintMixedModalVisible] = useState(false);
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [rejectingIndicatorId, setRejectingIndicatorId] = useState<
     string | null
@@ -316,13 +317,11 @@ const QualityManagementDetail: React.FC = () => {
   };
 
   const handlePrintSingle = () => {
-    setPrintMode("single");
     setPrintModalVisible(true);
   };
 
   const handlePrintMixed = () => {
-    setPrintMode("mixed");
-    setPrintModalVisible(true);
+    setPrintMixedModalVisible(true);
   };
 
   // Computed
@@ -745,13 +744,21 @@ const QualityManagementDetail: React.FC = () => {
         )}
       </Card>
 
-      {/* Modals */}
+      {/* In KQ đơn */}
       <PrintModal
         visible={printModalVisible}
-        mode={printMode}
         taskId={id!}
         indicators={qualityIndicators}
         onCancel={() => setPrintModalVisible(false)}
+        onSuccess={loadData}
+      />
+
+      {/* In KQ hỗn hợp */}
+      <PrintMixedModal
+        visible={printMixedModalVisible}
+        taskId={id!}
+        indicators={qualityIndicators}
+        onCancel={() => setPrintMixedModalVisible(false)}
         onSuccess={loadData}
       />
 

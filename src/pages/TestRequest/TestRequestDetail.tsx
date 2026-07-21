@@ -30,6 +30,7 @@ import ProcessTimelineModal from "./components/ProcessTimelineModal";
 import SampleImagesModal from "./components/SampleImagesModal";
 import PostalDeliveryImageModal from "./components/PostalDeliveryImageModal";
 import PrintIndicatorModal from "./components/PrintIndicatorModal";
+import PrintMixedIndicatorModal from "./components/PrintMixedIndicatorModal";
 import RejectResultModal from "./components/RejectResultModal";
 import CustomerConfirmationModal from "./components/CustomerConfirmationModal";
 import CostChangeHistoryModal from "./components/CostChangeHistoryModal";
@@ -50,7 +51,8 @@ const TestRequestDetail: React.FC = () => {
   // Modal states
   const [printIndicatorModalVisible, setPrintIndicatorModalVisible] =
     useState(false);
-  const [printMode, setPrintMode] = useState<"single" | "mixed">("single");
+  const [printMixedIndicatorModalVisible, setPrintMixedIndicatorModalVisible] =
+    useState(false);
   const [rejectResultModalVisible, setRejectResultModalVisible] =
     useState(false);
   const [processTimelineModalVisible, setProcessTimelineModalVisible] =
@@ -431,14 +433,12 @@ const TestRequestDetail: React.FC = () => {
 
   // Handle print single result (In KQ)
   const handlePrintSingle = () => {
-    setPrintMode("single");
     setPrintIndicatorModalVisible(true);
   };
 
   // Handle print mixed result (In KQ hỗn hợp)
   const handlePrintMixed = () => {
-    setPrintMode("mixed");
-    setPrintIndicatorModalVisible(true);
+    setPrintMixedIndicatorModalVisible(true);
   };
 
   // Handle open customer confirmation modal
@@ -542,12 +542,19 @@ const TestRequestDetail: React.FC = () => {
         isOfflineData={isOfflineData}
       />
 
-      {/* Print Indicator Modal (In KQ / In KQ hỗn hợp) */}
+      {/* In KQ đơn */}
       <PrintIndicatorModal
         visible={printIndicatorModalVisible}
-        mode={printMode}
         testRequestId={id!}
         onCancel={() => setPrintIndicatorModalVisible(false)}
+        onSuccess={() => loadData(id!)}
+      />
+
+      {/* In KQ hỗn hợp */}
+      <PrintMixedIndicatorModal
+        visible={printMixedIndicatorModalVisible}
+        testRequestId={id!}
+        onCancel={() => setPrintMixedIndicatorModalVisible(false)}
         onSuccess={() => loadData(id!)}
       />
 

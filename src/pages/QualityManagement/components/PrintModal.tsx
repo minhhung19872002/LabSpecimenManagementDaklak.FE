@@ -46,9 +46,8 @@ interface PrintResultItem {
   sampleName?: string;
 }
 
-interface PrintModalProps {
+export interface PrintModalProps {
   visible: boolean;
-  mode: "single" | "mixed";
   taskId: string;
   indicators: QualityManagementIndicatorDto[];
   onCancel: () => void;
@@ -181,7 +180,6 @@ interface LabGroup {
 
 const PrintModal: React.FC<PrintModalProps> = ({
   visible,
-  mode,
   taskId,
   indicators,
   onCancel,
@@ -528,7 +526,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
       return;
     }
 
-    if (mode === "single" && selectedTemplates.length === 0) {
+    if (selectedTemplates.length === 0) {
       message.warning("Vui lòng chọn ít nhất một biểu mẫu");
       return;
     }
@@ -539,45 +537,20 @@ const PrintModal: React.FC<PrintModalProps> = ({
     const indicatorIdsForPrint = getIndicatorIdsForPrint();
 
     try {
-      if (mode === "single") {
-        // Call API to generate PDFs (batch processing)
-        const result = await qualityManagementService.printMultiSingleResult(
-          taskId,
-          indicatorIdsForPrint,
-          selectedTemplates,
-          note || undefined,
-          selectedVicePresidentId,
-        );
+      // Call API to generate PDFs (batch processing)
+      const result = await qualityManagementService.printMultiSingleResult(
+        taskId,
+        indicatorIdsForPrint,
+        selectedTemplates,
+        note || undefined,
+        selectedVicePresidentId,
+      );
 
-        message.success(`Đã tạo ${result.results.length} phiếu kết quả`);
+      message.success(`Đã tạo ${result.results.length} phiếu kết quả`);
 
-        // Store results and show results view
-        setGeneratedResults(result.results);
-        setShowResults(true);
-      } else {
-        // Mixed mode - single document, open Word Editor
-        const result = await qualityManagementService.printMixedResult(
-          taskId,
-          indicatorIdsForPrint,
-          note || undefined,
-          undefined, // templateName
-          selectedVicePresidentId,
-        );
-
-        message.success("Đã tạo phiếu kết quả");
-
-        // Open Word Editor (BE now returns .docx directly)
-        window.open(
-          `/document-editor?file=${encodeURIComponent(result.fileName)}`,
-          "_blank",
-        );
-
-        // Close modal for mixed mode
-        setSelectedIndicatorIds([]);
-        setNote("");
-        onCancel();
-        onSuccess?.();
-      }
+      // Store results and show results view
+      setGeneratedResults(result.results);
+      setShowResults(true);
     } catch (error: any) {
       console.error("Error printing:", error);
       message.error(
@@ -818,7 +791,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
       title={
         <span>
           <PrinterOutlined style={{ marginRight: 8 }} />
-          {mode === "single" ? "In kết quả đơn" : "In kết quả hỗn hợp"}
+          In kết quả đơn
         </span>
       }
       open={visible}
@@ -843,7 +816,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
             disabled={
               selectedIndicatorIds.length === 0 ||
               loadingTemplates ||
-              (mode === "single" && selectedTemplates.length === 0)
+              selectedTemplates.length === 0
             }
           >
             In ({selectedIndicatorIds.length} chỉ tiêu)
@@ -1129,28 +1102,25 @@ const PrintModal: React.FC<PrintModalProps> = ({
 
           {/* Right column - Options */}
           <Col span={8}>
-            {/* Template selection - only for single mode */}
-            {mode === "single" && (
-              <div style={{ marginBottom: 24 }}>
-                <Text strong style={{ display: "block", marginBottom: 12 }}>
-                  Chọn biểu mẫu báo cáo:
-                </Text>
-                <Checkbox.Group
-                  value={selectedTemplates}
-                  onChange={(values) =>
-                    setSelectedTemplates(values as string[])
-                  }
-                >
-                  <Space direction="vertical">
-                    {templates.map((template) => (
-                      <Checkbox key={template.name} value={template.name}>
-                        {template.displayName}
-                      </Checkbox>
-                    ))}
-                  </Space>
-                </Checkbox.Group>
-              </div>
-            )}
+            <div style={{ marginBottom: 24 }}>
+              <Text strong style={{ display: "block", marginBottom: 12 }}>
+                Chọn biểu mẫu báo cáo:
+              </Text>
+              <Checkbox.Group
+                value={selectedTemplates}
+                onChange={(values) =>
+                  setSelectedTemplates(values as string[])
+                }
+              >
+                <Space direction="vertical">
+                  {templates.map((template) => (
+                    <Checkbox key={template.name} value={template.name}>
+                      {template.displayName}
+                    </Checkbox>
+                  ))}
+                </Space>
+              </Checkbox.Group>
+            </div>
 
             {/* Vice President selection */}
             <div style={{ marginBottom: 24 }}>

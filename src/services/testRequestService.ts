@@ -405,6 +405,33 @@ export const testRequestService = {
   },
 
   /**
+   * In kết quả hỗn hợp theo từng mẫu (mỗi mẫu = 1 file riêng)
+   */
+  printMixedPerSampleResult: async (
+    testRequestId: string,
+    indicatorIds: string[],
+    templateName?: string,
+    note?: string,
+    vicePresidentId?: string
+  ): Promise<PrintMultiResultOutput> => {
+    const response = await api.post<PrintMultiResultOutput>(`${BASE_URL}/${testRequestId}/print-mixed-per-sample`, {
+      indicatorIds,
+      note,
+      templateName,
+      vicePresidentId
+    });
+    return response.data;
+  },
+
+  /**
+   * Get list of templates for mixed result printing (In KQ Hỗn hợp)
+   */
+  getMixedTemplates: async (): Promise<TemplateDto[]> => {
+    const response = await api.get<TemplateDto[]>('/api/v1/result-forms/mixed-templates');
+    return response.data;
+  },
+
+  /**
    * In kết quả đơn với nhiều chỉ tiêu và nhiều templates (batch processing)
    * Generates (labs × templates) PDFs
    */
