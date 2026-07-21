@@ -145,32 +145,23 @@ const CostConfigTab: React.FC<CostConfigTabProps> = ({
       <Row gutter={16}>
         <Col xs={24} sm={12} md={8}>
           <Form.Item label="Lượng điện tiêu thụ / năm">
-            <Input
-              value={electricityPerYear != null ? formatNumber(electricityPerYear) : ""}
-              disabled
-              style={{ width: "100%" }}
-              addonAfter="kWh"
-            />
+            <div style={{ minHeight: 32, display: "flex", alignItems: "center" }}>
+              <Text strong>{electricityPerYear != null ? `${formatNumber(electricityPerYear)} kWh` : "—"}</Text>
+            </div>
           </Form.Item>
         </Col>
         <Col xs={24} sm={12} md={8}>
           <Form.Item label="Lượng điện tiêu thụ / mẫu">
-            <Input
-              value={electricityPerSample != null ? formatNumber(electricityPerSample) : ""}
-              disabled
-              style={{ width: "100%" }}
-              addonAfter="kWh"
-            />
+            <div style={{ minHeight: 32, display: "flex", alignItems: "center" }}>
+              <Text strong>{electricityPerSample != null ? `${formatNumber(electricityPerSample)} kWh` : "—"}</Text>
+            </div>
           </Form.Item>
         </Col>
         <Col xs={24} sm={12} md={8}>
           <Form.Item label="Khấu hao TS trung bình / mẫu">
-            <Input
-              value={depPerSample != null ? formatNumber(depPerSample, 0) : ""}
-              disabled
-              style={{ width: "100%" }}
-              addonAfter="đ"
-            />
+            <div style={{ minHeight: 32, display: "flex", alignItems: "center" }}>
+              <Text strong>{depPerSample != null ? `${formatNumber(depPerSample, 0)} đ` : "—"}</Text>
+            </div>
           </Form.Item>
         </Col>
       </Row>
@@ -198,22 +189,16 @@ const CostConfigTab: React.FC<CostConfigTabProps> = ({
         </Col>
         <Col xs={24} sm={12} md={8}>
           <Form.Item label="Mức phí duy tu bảo dưỡng">
-            <Input
-              value={maintenanceCost != null ? formatNumber(maintenanceCost, 0) : ""}
-              disabled
-              style={{ width: "100%" }}
-              addonAfter="đ"
-            />
+            <div style={{ minHeight: 32, display: "flex", alignItems: "center" }}>
+              <Text strong>{maintenanceCost != null ? `${formatNumber(maintenanceCost, 0)} đ` : "—"}</Text>
+            </div>
           </Form.Item>
         </Col>
         <Col xs={24} sm={12} md={8}>
           <Form.Item label="Chi phí duy tu bảo dưỡng / mẫu">
-            <Input
-              value={maintenanceCostPerSample != null ? formatNumber(Math.ceil(maintenanceCostPerSample), 0) : ""}
-              disabled
-              style={{ width: "100%" }}
-              addonAfter="đ"
-            />
+            <div style={{ minHeight: 32, display: "flex", alignItems: "center" }}>
+              <Text strong>{maintenanceCostPerSample != null ? `${formatNumber(Math.ceil(maintenanceCostPerSample), 0)} đ` : "—"}</Text>
+            </div>
           </Form.Item>
         </Col>
       </Row>
@@ -236,22 +221,16 @@ const CostConfigTab: React.FC<CostConfigTabProps> = ({
         </Col>
         <Col xs={24} sm={12} md={8}>
           <Form.Item label="Khấu hao trung bình giờ (sau HC)">
-            <Input
-              value={depHourAfterHC != null ? formatNumber(depHourAfterHC, 0) : ""}
-              disabled
-              style={{ width: "100%" }}
-              addonAfter="đ"
-            />
+            <div style={{ minHeight: 32, display: "flex", alignItems: "center" }}>
+              <Text strong>{depHourAfterHC != null ? `${formatNumber(depHourAfterHC, 0)} đ` : "—"}</Text>
+            </div>
           </Form.Item>
         </Col>
         <Col xs={24} sm={12} md={8}>
           <Form.Item label="Khấu hao trung bình / mẫu (sau HC)">
-            <Input
-              value={depSampleAfterHC != null ? formatNumber(depSampleAfterHC, 0) : ""}
-              disabled
-              style={{ width: "100%" }}
-              addonAfter="đ"
-            />
+            <div style={{ minHeight: 32, display: "flex", alignItems: "center" }}>
+              <Text strong>{depSampleAfterHC != null ? `${formatNumber(depSampleAfterHC, 0)} đ` : "—"}</Text>
+            </div>
           </Form.Item>
         </Col>
       </Row>
