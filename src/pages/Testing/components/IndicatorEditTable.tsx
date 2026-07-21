@@ -8,6 +8,7 @@ import {
   Checkbox,
   AutoComplete,
   DatePicker,
+  Input,
 } from "antd";
 import StatusTag from "../../../components/common/StatusTag";
 import {
@@ -610,6 +611,16 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
           ? getResultOptionsForIndicator(record.indicatorId, record.specimenTypeId)
           : resultOptions;
 
+        if (isDisabled) {
+          return (
+            <Input
+              value={currentValue || "-"}
+              readOnly
+              style={{ width: "100%" }}
+            />
+          );
+        }
+
         return (
           <AutoComplete
             value={currentValue}
@@ -620,12 +631,8 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
             onBlur={() => {
               onSaveIndicator(record.id);
             }}
-            disabled={isDisabled}
-            placeholder={isDisabled ? "-" : "Nhập KQ"}
-            style={{
-              width: "100%",
-              backgroundColor: isDisabled ? "#f5f5f5" : undefined,
-            }}
+            placeholder="Nhập KQ"
+            style={{ width: "100%" }}
             filterOption={(inputValue, option) =>
               option?.value.toUpperCase().includes(inputValue.toUpperCase()) ??
               false
@@ -704,11 +711,20 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
         const currentTestDate = editedResults.get(record.id)?.testDate;
         const dateValue = currentTestDate ? dayjs(currentTestDate) : null;
 
+        if (isDisabled) {
+          return (
+            <Input
+              value={dateValue ? dateValue.format("DD/MM/YYYY") : "-"}
+              readOnly
+              style={{ width: "100%" }}
+            />
+          );
+        }
+
         return (
           <DatePicker
             value={dateValue}
             onChange={(date) => handleTestDateChange(record.id, date)}
-            disabled={isDisabled}
             disabledDate={disabledDate}
             format="DD/MM/YYYY"
             placeholder="Chọn ngày"
