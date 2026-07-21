@@ -17,6 +17,7 @@ import SupplementaryTaskCancelModal from "./SupplementaryTaskCancelModal";
 import SupplementaryTaskCompleteModal from "./SupplementaryTaskCompleteModal";
 import SupplementaryTaskRejectModal from "./SupplementaryTaskRejectModal";
 import SupplementaryTaskHistoryModal from "./SupplementaryTaskHistoryModal";
+import SupplementaryTaskDetailModal from "./SupplementaryTaskDetailModal";
 import "../../Dashboard/Dashboard.css";
 import "../../../styles/ListCard.css";
 import "../SupplementaryTask.css";
@@ -72,6 +73,10 @@ export interface SupplementaryTaskViewProps {
   historyModalOpen: boolean;
   historyItem?: SupplementaryTaskDto;
   onHistoryModalClose: () => void;
+  onRowDoubleClick: (item: SupplementaryTaskDto) => void;
+  detailModalOpen: boolean;
+  detailItem?: SupplementaryTaskDto;
+  onDetailModalClose: () => void;
   onModalClose: () => void;
   onSaved: () => void;
   onCreate: (input: CreateSupplementaryTaskDto) => Promise<void>;
@@ -216,6 +221,7 @@ const SupplementaryTaskView: React.FC<SupplementaryTaskViewProps> = (props) => {
           onApprove={props.onApprove}
           onReject={props.onRejectClick}
           onViewHistory={props.onViewHistory}
+          onRowDoubleClick={props.onRowDoubleClick}
         />
       </Card>
 
@@ -257,6 +263,16 @@ const SupplementaryTaskView: React.FC<SupplementaryTaskViewProps> = (props) => {
         open={props.historyModalOpen}
         item={props.historyItem}
         onClose={props.onHistoryModalClose}
+      />
+
+      <SupplementaryTaskDetailModal
+        open={props.detailModalOpen}
+        item={props.detailItem}
+        isDirector={stats.isDirector}
+        onClose={props.onDetailModalClose}
+        onComplete={props.onCompleteClick}
+        onApprove={props.onApprove}
+        onReject={props.onRejectClick}
       />
     </div>
   );
