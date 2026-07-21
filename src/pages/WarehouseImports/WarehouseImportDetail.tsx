@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { Card, Button, Space, Table, Tag, Spin, Typography, message, Collapse } from "antd";
+import { Card, Button, Space, Table, Tag, Spin, Typography, message, Collapse, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { ArrowLeftOutlined, EditOutlined, EyeOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -19,6 +19,7 @@ import { goodsReceiptService, GoodsReceiptDto } from "../../services/goodsReceip
 import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
 import { WarehouseImportModal } from "../GoodsReceipts/components";
+import { truncateMiddle } from "../../utils/fileUtils";
 import "../../styles/ListCard.css";
 import "./WarehouseImportDetail.css";
 
@@ -181,6 +182,13 @@ const WarehouseImportDetail: React.FC = () => {
       render: (v?: string) => v ? dayjs(v).format("DD/MM/YYYY") : "-",
     },
     {
+      title: "Kho lưu trữ",
+      dataIndex: "storageWarehouseName",
+      key: "storageWarehouseName",
+      width: 140,
+      render: (v?: string) => v || "-",
+    },
+    {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
@@ -194,17 +202,22 @@ const WarehouseImportDetail: React.FC = () => {
     {
       title: "Chứng từ CL",
       key: "qualityDocument",
-      width: 130,
+      width: 160,
       render: (_, record) =>
         record.qualityDocumentFileId ? (
-          <Button
-            type="link"
-            size="small"
-            icon={<EyeOutlined />}
-            onClick={() => window.open(`${baseUrl}/api/v1/files/${record.qualityDocumentFileId}`, "_blank")}
-          >
-            {record.qualityDocumentFileName}
-          </Button>
+          <Tooltip title={record.qualityDocumentFileName}>
+            <Button
+              type="link"
+              size="small"
+              icon={<EyeOutlined />}
+              style={{ maxWidth: "100%", padding: 0 }}
+              onClick={() => window.open(`${baseUrl}/api/v1/files/${record.qualityDocumentFileId}`, "_blank")}
+            >
+              <span style={{ verticalAlign: "middle" }}>
+                {truncateMiddle(record.qualityDocumentFileName || "")}
+              </span>
+            </Button>
+          </Tooltip>
         ) : "-",
     },
     {
