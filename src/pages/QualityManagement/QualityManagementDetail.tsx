@@ -802,6 +802,21 @@ const QualityManagementDetail: React.FC = () => {
         visible={printMixedModalVisible}
         taskId={id!}
         indicators={qualityIndicators}
+        taskContext={{
+          contractNumber: task?.contractNumber,
+          customerName: task?.customerName,
+          testRequestId: task?.testRequestId,
+          technicalManagerNames: task?.technicalManagerNames,
+          labManagerNameById: (task?.allIndicators || []).reduce(
+            (acc, ind) => {
+              if (ind.laboratoryId && ind.technicalManagerName) {
+                acc[ind.laboratoryId] = ind.technicalManagerName;
+              }
+              return acc;
+            },
+            {} as Record<string, string>,
+          ),
+        }}
         onCancel={() => setPrintMixedModalVisible(false)}
         onSuccess={loadData}
       />

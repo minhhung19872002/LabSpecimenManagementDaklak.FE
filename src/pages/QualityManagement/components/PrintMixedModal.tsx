@@ -31,6 +31,15 @@ import {
   TemplateDto,
 } from "../../../services/qualityManagementService";
 import userService, { UserLookupDto } from "../../../services/userService";
+import { isServerReachable } from "../../../services/offline/connectivity";
+import {
+  mapIndicators,
+  buildMixedHeaderExtras,
+} from "../../../services/offline/offlineResultService";
+import {
+  generateMixedResultFormOffline,
+  downloadDocument,
+} from "../../../services/offline/offlinePrintService";
 import { IndicatorName } from "../../../components/common";
 import RichTextEditor from "../../../components/common/RichTextEditor";
 import { evaluatePassFail, stripHtmlTags } from "../../../utils/formatters";
@@ -50,6 +59,13 @@ export interface PrintMixedModalProps {
   visible: boolean;
   taskId: string;
   indicators: QualityManagementIndicatorDto[];
+  taskContext?: {
+    contractNumber?: string;
+    customerName?: string;
+    testRequestId?: string;
+    technicalManagerNames?: string;
+    labManagerNameById?: Record<string, string>;
+  };
   onCancel: () => void;
   onSuccess?: () => void;
 }
@@ -171,6 +187,7 @@ const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
   visible,
   taskId,
   indicators,
+  taskContext,
   onCancel,
   onSuccess,
 }) => {
@@ -404,6 +421,72 @@ const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
   const handlePrint = async () => {
     if (selectedIndicatorIds.length === 0) {
       message.warning("Vui lòng chọn ít nhất một chỉ tiêu để in");
+      return;
+    }
+
+    // ---- Offline fallback ----
+    if (!(await isServerReachable())) {
+      if (isPerSampleTemplate(selectedMixedTemplate)) {
+        message.warning("Không hỗ trợ in offline cho biểu mẫu QLNN/BM05. Vui lòng kết nối mạng.");
+        return;
+      }
+
+      const selectedLeaves = approvedIndicatorsWithParents.filter((ind) =>
+        selectedIndicatorIds.includes(ind.id),
+      );
+
+      setLoading(true);
+      try {
+        const selectedVp = vicePresidents.find((v) => v.id === selectedVicePresidentId);
+        const vicePresidentName = selectedVp
+          ? [selectedVp.surname, selectedVp.name].filter(Boolean).join(" ").trim() || selectedVp.userName
+          : "";
+
+        const labManagerById = taskContext?.labManagerNameById || {};
+        const officerFor = (leaves: QualityManagementIndicatorDto[], fallback?: string): string => {
+          const names = Array.from(
+            new Set(leaves.map((l) => labManagerById[l.laboratoryId || ""]).filter((n): n is string => !!n)),
+          );
+          return names.join(", ") || fallback || taskContext?.technicalManagerNames || "";
+        };
+
+        const extras = await buildMixedHeaderExtras(taskContext?.testRequestId, selectedLeaves);
+        const mixedParentIds = new Set(
+          selectedLeaves.filter((ind) => ind.parentIndicatorId).map((ind) => ind.parentIndicatorId!),
+        );
+        const mixedParents = approvedIndicatorsWithParents.filter(
+          (ind) => !ind.parentIndicatorId && mixedParentIds.has(ind.indicatorId),
+        );
+        const g = await generateMixedResultFormOffline(
+          {
+            ContractNumber: taskContext?.contractNumber || "",
+            CustomerName: taskContext?.customerName || "",
+            Note: note || "",
+            DateOfReceiving: extras.DateOfReceiving,
+            DateOfIssue: extras.DateOfIssue,
+            TimeOfTesting: extras.TimeOfTesting,
+            OfficerInCharge: officerFor(selectedLeaves, extras.OfficerInCharge),
+            VicePresident: vicePresidentName,
+          },
+          mapIndicators(selectedLeaves),
+          mapIndicators(mixedParents),
+        );
+
+        if (!g.success || !g.blob || !g.fileName) {
+          message.error(g.error || "Không thể tạo phiếu kết quả offline.");
+          return;
+        }
+        downloadDocument(g.blob, g.fileName);
+        message.success("Đã tạo phiếu kết quả offline. File đã được tải về.");
+        setSelectedIndicatorIds([]);
+        setNote("");
+        onCancel();
+        onSuccess?.();
+      } catch (e) {
+        message.error(e instanceof Error ? e.message : "Lỗi tạo phiếu kết quả offline.");
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 
