@@ -86,7 +86,7 @@ const ProductDetailPage: React.FC = () => {
     (receiptId: string) => {
       window.open(PATH_ROUTES.warehouseImports.detail(receiptId), "_blank");
     },
-    [navigate, id, warehouseId, warehouseName]
+    []
   );
 
   const handleBack = useCallback(() => {

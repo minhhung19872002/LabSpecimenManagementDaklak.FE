@@ -50,10 +50,22 @@ const ProductInfoPanel: React.FC<ProductInfoPanelProps> = ({ detail, loading }) 
                 </Col>
               </Row>
 
-              <SectionLabel>Số lượng tồn kho</SectionLabel>
-              <SectionValue>
-                {(detail.warehouseAvailableQuantity ?? 0).toLocaleString("vi-VN")} {qtyUnit ? `(${qtyUnit})` : ""}
-              </SectionValue>
+              <Row gutter={16}>
+                <Col xs={24} sm={12}>
+                  <SectionLabel>Số lượng tồn kho</SectionLabel>
+                  <SectionValue>
+                    {(detail.warehouseAvailableQuantity ?? 0).toLocaleString("vi-VN")} {qtyUnit}
+                  </SectionValue>
+                </Col>
+                {detail.consumableImportedQuantity > 0 && detail.volumeUnitName && (
+                  <Col xs={24} sm={12}>
+                    <SectionLabel>Số lượng tồn kho (Đơn vị)</SectionLabel>
+                    <SectionValue>
+                      {detail.consumableImportedQuantity.toLocaleString("vi-VN")} {detail.volumeUnitName}
+                    </SectionValue>
+                  </Col>
+                )}
+              </Row>
 
               <SectionLabel>Điều kiện bảo quản</SectionLabel>
               <SectionValue>

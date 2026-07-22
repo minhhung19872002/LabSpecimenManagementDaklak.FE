@@ -258,6 +258,8 @@ export interface ProductDetailDto {
   baseUnitName?: string;
   packagingUnitName?: string;
   packagingQuantity?: number;
+  consumableImportedQuantity: number;
+  volumeUnitName?: string;
 }
 
 export interface ProductImportHistoryDto {
