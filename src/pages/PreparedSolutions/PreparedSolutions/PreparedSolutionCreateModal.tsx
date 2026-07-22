@@ -6,6 +6,7 @@ import {
   Form,
   Input,
   InputNumber,
+  message,
   Modal,
   Row,
   Select,
@@ -23,6 +24,7 @@ import dayjs, { Dayjs } from "dayjs";
 import DatePicker from "antd/es/date-picker";
 import { RichTextEditor } from "../../../components/common";
 import { clearableSelectProps } from "../../../utils/formHelpers";
+import { getApiErrorMessage } from "../../../utils/errorHandler";
 import {
   CreateUpdatePreparedSolutionBatchDto,
   PreparedSolutionBatchDto,
@@ -274,6 +276,8 @@ const PreparedSolutionCreateModal: React.FC<PreparedSolutionCreateModalProps> = 
       }
       onSaved();
       onClose();
+    } catch (error) {
+      message.error(getApiErrorMessage(error, "Không thể lưu phiếu pha dung dịch"));
     } finally {
       setSubmitting(false);
     }
