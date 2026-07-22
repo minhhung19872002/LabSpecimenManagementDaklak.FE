@@ -182,26 +182,27 @@ const GoodsReceiptForm: React.FC = () => {
     if (!product) return [];
 
     const result: { value: string; label: string }[] = [];
-    const addUnit = (unitId?: string | null, unitName?: string | null) => {
+    const addUnit = (unitId?: string | null, unitName?: string | null, roleLabel?: string) => {
       if (!unitId || result.find((r) => r.value === unitId)) return;
       const unit = units.find((u) => u.id === unitId);
-      result.push({ value: unitId, label: unit?.name || unitName || unitId });
+      const name = unit?.name || unitName || unitId;
+      result.push({ value: unitId, label: roleLabel ? `${name} (${roleLabel})` : name });
     };
 
     if (manufacturerId && product.skus?.length) {
       const sku = product.skus.find((s) => s.manufacturerId === manufacturerId);
       if (sku) {
-        addUnit(sku.packagingUnitId, sku.packagingUnitName);
-        addUnit(sku.baseUnitId, sku.baseUnitName);
-        addUnit(sku.volumeUnitId, sku.volumeUnitName);
+        addUnit(sku.baseUnitId, sku.baseUnitName, "mua hàng");
+        addUnit(sku.packagingUnitId, sku.packagingUnitName, "lưu kho");
+        addUnit(sku.volumeUnitId, sku.volumeUnitName, "tiêu hao");
         return result;
       }
     }
 
     for (const sku of product.skus || []) {
-      addUnit(sku.packagingUnitId, sku.packagingUnitName);
-      addUnit(sku.baseUnitId, sku.baseUnitName);
-      addUnit(sku.volumeUnitId, sku.volumeUnitName);
+      addUnit(sku.baseUnitId, sku.baseUnitName, "mua hàng");
+      addUnit(sku.packagingUnitId, sku.packagingUnitName, "lưu kho");
+      addUnit(sku.volumeUnitId, sku.volumeUnitName, "tiêu hao");
     }
 
     return result;
