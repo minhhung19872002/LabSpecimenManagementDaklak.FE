@@ -96,15 +96,9 @@ const ProductList: React.FC = () => {
     modalOpen,
     editingProduct,
     modalLoading,
-    handleEdit,
-    handleDelete,
-    handleToggleActive,
     handleModalOk,
     handleModalCancel,
   } = useProductActions({ fetchData });
-
-  const canEdit = authService.hasPermission(PERMISSIONS.Products.Edit);
-  const canDelete = authService.hasPermission(PERMISSIONS.Products.Delete);
   const canCreateGoodsReceipt = authService.hasPermission(PERMISSIONS.GoodsReceipts.Create);
 
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(loadVisibleKeys);
@@ -155,18 +149,8 @@ const ProductList: React.FC = () => {
   };
 
   const columns = useMemo(
-    () =>
-      getProductColumns(
-        visibleKeys,
-        handleEdit,
-        handleDelete,
-        handleToggleActive,
-        canEdit,
-        canDelete,
-        currentPage,
-        pageSize
-      ),
-    [visibleKeys, handleEdit, handleDelete, handleToggleActive, canEdit, canDelete, currentPage, pageSize]
+    () => getProductColumns(visibleKeys),
+    [visibleKeys]
   );
 
   return (

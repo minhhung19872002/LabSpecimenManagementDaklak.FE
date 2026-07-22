@@ -1,5 +1,4 @@
-import { Tag, Space, Tooltip, Button } from "antd";
-import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { Tag, Space, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { ProductDto, ProductType, ProductTypeLabels } from "../../../services/productService";
 import { IndicatorName } from "../../../components/common";
@@ -59,13 +58,6 @@ const formatDate = (dateStr?: string) => {
 
 export const getProductColumns = (
   visibleKeys: Set<string>,
-  handleEdit: (record: ProductDto) => void,
-  handleDelete: (record: ProductDto) => void,
-  _handleToggleActive: (record: ProductDto) => void,
-  canEdit: boolean,
-  canDelete: boolean,
-  _currentPage: number,
-  _pageSize: number
 ): ColumnsType<ProductDto> => {
   const columns: ColumnsType<ProductDto> = [];
 
@@ -297,41 +289,6 @@ export const getProductColumns = (
       key: "origin",
       width: 130,
       render: (v: string) => v || "-",
-    });
-  }
-
-  if (canEdit || canDelete) {
-    columns.push({
-      title: "Thao tác",
-      key: "actions",
-      width: 100,
-      align: "center" as const,
-      fixed: "right" as const,
-      render: (_: any, record: ProductDto) => (
-        <Space size="small">
-          {canEdit && (
-            <Tooltip title="Sửa">
-              <Button
-                type="link"
-                size="small"
-                icon={<EditOutlined />}
-                onClick={() => handleEdit(record)}
-              />
-            </Tooltip>
-          )}
-          {canDelete && (
-            <Tooltip title="Xóa">
-              <Button
-                type="link"
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-                onClick={() => handleDelete(record)}
-              />
-            </Tooltip>
-          )}
-        </Space>
-      ),
     });
   }
 
