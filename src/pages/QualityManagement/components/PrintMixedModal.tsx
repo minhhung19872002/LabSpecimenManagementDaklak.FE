@@ -752,7 +752,18 @@ const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
         <Row gutter={24}>
           {/* Left column - Indicators grouped by Sample (all labs merged) */}
           <Col span={16} style={{ overflow: "hidden" }}>
-            <div style={{ maxHeight: "calc(100vh - 280px)", overflowY: "auto", overflowX: "hidden" }}>
+            <div style={{ marginBottom: 8 }}>
+              <Checkbox
+                checked={approvedIndicatorIds.length > 0 && approvedIndicatorIds.every((id) => selectedIndicatorIds.includes(id))}
+                indeterminate={selectedIndicatorIds.length > 0 && !approvedIndicatorIds.every((id) => selectedIndicatorIds.includes(id))}
+                onChange={(e) => {
+                  setSelectedIndicatorIds(e.target.checked ? [...approvedIndicatorIds] : []);
+                }}
+              >
+                Chọn tất cả ({approvedIndicatorIds.length} chỉ tiêu)
+              </Checkbox>
+            </div>
+            <div style={{ maxHeight: "calc(100vh - 320px)", overflowY: "auto", overflowX: "hidden" }}>
               <Collapse
                 className="quality-print-lab-collapse"
                 defaultActiveKey={sampleGroups.map((sg) => sg.sampleId)}
