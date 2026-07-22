@@ -15,6 +15,7 @@ import {
   Tooltip,
   Typography,
 } from "antd";
+import { NumericFormat } from "react-number-format";
 import type { ColumnsType } from "antd/es/table";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
@@ -293,7 +294,7 @@ const PreparedSolutionCreateModal: React.FC<PreparedSolutionCreateModalProps> = 
     .map((w) => ({ value: w.id, label: w.name }));
 
   const solutionProductOptions = solutionProducts.map((p) => ({ value: p.id, label: p.name }));
-  const volumeLabel = selectedVolumeUnitName ? `Thể tích pha (${selectedVolumeUnitName})` : "Thể tích pha";
+  const volumeAddon = selectedVolumeUnitName || undefined;
 
   // Table data for ingredient section
   const tableData: IngredientRow[] = fields.map((f, i) => ({ key: f.id, index: i }));
@@ -606,7 +607,7 @@ const PreparedSolutionCreateModal: React.FC<PreparedSolutionCreateModalProps> = 
         <Row gutter={16}>
           <Col xs={24} sm={12}>
             <Form.Item
-              label={volumeLabel}
+              label="Thể tích pha"
               required
               validateStatus={errors.totalVolume ? "error" : ""}
               help={errors.totalVolume?.message}
@@ -614,17 +615,22 @@ const PreparedSolutionCreateModal: React.FC<PreparedSolutionCreateModalProps> = 
               <Controller
                 name="totalVolume"
                 control={control}
-                rules={{ required: "Vui lòng nhập thể tích" }}
+                rules={{
+                  required: "Vui lòng nhập thể tích",
+                  min: { value: 0.00000001, message: "Thể tích phải lớn hơn 0" },
+                }}
                 render={({ field }) => (
-                  <InputNumber
-                    value={field.value}
-                    onChange={(v) => field.onChange(v)}
+                  <NumericFormat
+                    value={field.value ?? ""}
+                    onValueChange={(values) => field.onChange(values.floatValue ?? null)}
                     onBlur={() => {
                       const v = getValues("totalVolume");
                       if (v != null) setValue("totalVolume", Math.ceil(v * 1e8) / 1e8);
                       field.onBlur();
                     }}
-                        min={0.00000001}
+                    allowNegative={false}
+                    customInput={Input}
+                    addonAfter={volumeAddon}
                     style={{ width: "100%" }}
                     placeholder="VD: 100"
                   />
