@@ -84,13 +84,7 @@ const ProductDetailPage: React.FC = () => {
 
   const handleReceiptClick = useCallback(
     (receiptId: string) => {
-      navigate(PATH_ROUTES.warehouseImports.detail(receiptId), {
-        state: {
-          from: "productDetail",
-          productDetailPath: `/products/${id}`,
-          productDetailState: { warehouseId, warehouseName },
-        },
-      });
+      window.open(PATH_ROUTES.warehouseImports.detail(receiptId), "_blank");
     },
     [navigate, id, warehouseId, warehouseName]
   );
