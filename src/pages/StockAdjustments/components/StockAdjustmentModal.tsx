@@ -13,7 +13,6 @@ import {
   Col,
   Tag,
   Divider,
-  Popconfirm,
 } from "antd";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import {
@@ -22,6 +21,7 @@ import {
   StockAdjustmentStatusLabels,
   StockAdjustmentStatusColors,
   CreateUpdateStockAdjustmentItemDto,
+  ConfirmPreviewDto,
 } from "../../../services/stockAdjustmentService";
 import {
   productService,
@@ -197,11 +197,7 @@ const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
     }
   };
 
-  const handleConfirm = async () => {
-    if (items.length === 0) {
-      message.warning("Vui lòng thêm ít nhất một sản phẩm.");
-      return;
-    }
+  const doConfirm = async () => {
     setConfirming(true);
     try {
       let id = adjustmentId;
@@ -223,6 +219,87 @@ const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
     } finally {
       setConfirming(false);
     }
+  };
+
+  const handleConfirm = async () => {
+    if (items.length === 0) {
+      message.warning("Vui lòng thêm ít nhất một sản phẩm.");
+      return;
+    }
+
+    if (mode === "edit" && adjustmentId) {
+      setConfirming(true);
+      try {
+        const preview = await stockAdjustmentService.getConfirmPreview(adjustmentId);
+        if (preview.hasChanges) {
+          setConfirming(false);
+          showStockChangeWarning(preview);
+          return;
+        }
+      } catch {
+        // preview fail → fallback to normal confirm
+      } finally {
+        setConfirming(false);
+      }
+    }
+
+    Modal.confirm({
+      title: "Xác nhận điều chỉnh tồn kho?",
+      centered: true,
+      content: "Sau khi xác nhận, số lượng khả dụng của sản phẩm sẽ được cập nhật theo số lượng thực tế.",
+      okText: "Xác nhận",
+      cancelText: "Hủy",
+      onOk: doConfirm,
+    });
+  };
+
+  const showStockChangeWarning = (preview: ConfirmPreviewDto) => {
+    const changedItems = preview.items.filter((i) => i.hasChanged);
+    Modal.confirm({
+      title: "Tồn kho đã thay đổi!",
+      centered: true,
+      width: 600,
+      content: (
+        <div>
+          <p style={{ marginBottom: 12 }}>
+            Tồn kho của {changedItems.length} sản phẩm đã thay đổi kể từ lúc tạo phiếu:
+          </p>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: "#fafafa", textAlign: "left" }}>
+                <th style={{ padding: "6px 8px", border: "1px solid #f0f0f0" }}>Sản phẩm</th>
+                <th style={{ padding: "6px 8px", border: "1px solid #f0f0f0", textAlign: "right" }}>Lúc tạo phiếu</th>
+                <th style={{ padding: "6px 8px", border: "1px solid #f0f0f0", textAlign: "right" }}>Hiện tại</th>
+                <th style={{ padding: "6px 8px", border: "1px solid #f0f0f0", textAlign: "right" }}>Thực tế nhập</th>
+              </tr>
+            </thead>
+            <tbody>
+              {changedItems.map((item) => (
+                <tr key={item.productId}>
+                  <td style={{ padding: "6px 8px", border: "1px solid #f0f0f0" }}>{item.productName}</td>
+                  <td style={{ padding: "6px 8px", border: "1px solid #f0f0f0", textAlign: "right" }}>
+                    {item.snapshotQuantity.toLocaleString("vi-VN")} {item.unitName}
+                  </td>
+                  <td style={{ padding: "6px 8px", border: "1px solid #f0f0f0", textAlign: "right", fontWeight: 600, color: "#faad14" }}>
+                    {item.currentQuantity.toLocaleString("vi-VN")} {item.unitName}
+                  </td>
+                  <td style={{ padding: "6px 8px", border: "1px solid #f0f0f0", textAlign: "right" }}>
+                    {item.actualQuantity.toLocaleString("vi-VN")} {item.unitName}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p style={{ marginTop: 12, color: "#faad14" }}>
+            Bạn có muốn tiếp tục xác nhận? Hệ thống sẽ điều chỉnh theo tồn kho hiện tại.
+          </p>
+        </div>
+      ),
+      okText: "Vẫn xác nhận",
+      okButtonProps: { danger: true },
+      cancelText: "Hủy để xem lại",
+      onOk: doConfirm,
+    });
   };
 
   const columns = [
@@ -314,22 +391,15 @@ const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
               >
                 Lưu tạm phiếu
               </Button>,
-              <Popconfirm
+              <Button
                 key="confirm"
-                title="Xác nhận điều chỉnh tồn kho?"
-                description="Sau khi xác nhận, số lượng khả dụng của sản phẩm sẽ được cập nhật theo số lượng thực tế."
-                onConfirm={handleConfirm}
-                okText="Xác nhận"
-                cancelText="Hủy"
+                type="primary"
+                loading={confirming}
+                disabled={saving}
+                onClick={handleConfirm}
               >
-                <Button
-                  type="primary"
-                  loading={confirming}
-                  disabled={saving}
-                >
-                  Xác nhận điều chỉnh
-                </Button>
-              </Popconfirm>,
+                Xác nhận điều chỉnh
+              </Button>,
             ]
       }
     >

@@ -54,6 +54,21 @@ export interface CreateUpdateStockAdjustmentItemDto {
   actualQuantity: number;
 }
 
+export interface ConfirmPreviewItemDto {
+  productId: string;
+  productName: string;
+  unitName: string;
+  snapshotQuantity: number;
+  currentQuantity: number;
+  actualQuantity: number;
+  hasChanged: boolean;
+}
+
+export interface ConfirmPreviewDto {
+  hasChanges: boolean;
+  items: ConfirmPreviewItemDto[];
+}
+
 export interface GetStockAdjustmentListInput {
   page?: number;
   limit?: number;
@@ -104,6 +119,11 @@ export const stockAdjustmentService = {
 
   confirm: async (id: string): Promise<StockAdjustmentDto> => {
     const response = await api.post<StockAdjustmentDto>(`${BASE_URL}/${id}/confirm`);
+    return response.data;
+  },
+
+  getConfirmPreview: async (id: string): Promise<ConfirmPreviewDto> => {
+    const response = await api.get<ConfirmPreviewDto>(`${BASE_URL}/${id}/confirm-preview`);
     return response.data;
   },
 };
