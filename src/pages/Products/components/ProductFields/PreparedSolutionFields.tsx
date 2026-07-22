@@ -1,5 +1,6 @@
 import React from "react";
 import { Row, Col, Form, Input, InputNumber, Select, Space, Tooltip, AutoComplete, Radio, Tag } from "antd";
+import { NumericFormat } from "react-number-format";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { Controller, useFormContext } from "react-hook-form";
 import { RichTextEditor } from "../../../../components/common";
@@ -15,7 +16,9 @@ const PreparedSolutionFields: React.FC<PreparedSolutionFieldsProps> = ({
   hasBaseSubstance,
   setHasBaseSubstance,
 }) => {
-  const { control, setValue, clearErrors, formState: { errors } } = useFormContext<ProductFormData>();
+  const { control, setValue, watch, clearErrors, formState: { errors } } = useFormContext<ProductFormData>();
+  const watchedVolumeUnitId = watch("volumeUnitId");
+  const consumptionUnitLabel = consumableUnitOptions.find((o) => o.value === watchedVolumeUnitId)?.title;
 
   return (
     <>
@@ -155,7 +158,17 @@ const PreparedSolutionFields: React.FC<PreparedSolutionFieldsProps> = ({
               name="minStockLevel"
               control={control}
               render={({ field }) => (
-                <InputNumber {...field} style={{ width: "100%" }} min={0} placeholder="VD: 5" />
+                <NumericFormat
+                  value={field.value ?? ""}
+                  onValueChange={(values) => field.onChange(values.floatValue ?? null)}
+                  onBlur={field.onBlur}
+                  allowNegative={false}
+                  decimalScale={0}
+                  customInput={Input}
+                  addonAfter={consumptionUnitLabel || undefined}
+                  style={{ width: "100%" }}
+                  placeholder="VD: 5"
+                />
               )}
             />
           </Form.Item>

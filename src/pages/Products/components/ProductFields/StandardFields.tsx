@@ -1,5 +1,6 @@
 import React from "react";
-import { Row, Col, Form, Input, InputNumber, Select, Space, Tooltip, AutoComplete } from "antd";
+import { Row, Col, Form, Input, Select, Space, Tooltip, AutoComplete } from "antd";
+import { NumericFormat } from "react-number-format";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { Controller, useFormContext } from "react-hook-form";
 import { RichTextEditor } from "../../../../components/common";
@@ -9,7 +10,9 @@ import { ProductFormData } from "../../schemas";
 import type { BaseFieldsProps } from "./types";
 
 const StandardFields: React.FC<BaseFieldsProps> = ({ consumableUnitOptions, identificationCodeOptions }) => {
-  const { control, setValue, formState: { errors } } = useFormContext<ProductFormData>();
+  const { control, setValue, watch, formState: { errors } } = useFormContext<ProductFormData>();
+  const watchedVolumeUnitId = watch("volumeUnitId");
+  const consumptionUnitLabel = consumableUnitOptions.find((o) => o.value === watchedVolumeUnitId)?.title;
 
   return (
     <>
@@ -180,7 +183,17 @@ const StandardFields: React.FC<BaseFieldsProps> = ({ consumableUnitOptions, iden
               name="minStockLevel"
               control={control}
               render={({ field }) => (
-                <InputNumber {...field} style={{ width: "100%" }} min={0} placeholder="VD: 10" />
+                <NumericFormat
+                  value={field.value ?? ""}
+                  onValueChange={(values) => field.onChange(values.floatValue ?? null)}
+                  onBlur={field.onBlur}
+                  allowNegative={false}
+                  decimalScale={0}
+                  customInput={Input}
+                  addonAfter={consumptionUnitLabel || undefined}
+                  style={{ width: "100%" }}
+                  placeholder="VD: 10"
+                />
               )}
             />
           </Form.Item>
