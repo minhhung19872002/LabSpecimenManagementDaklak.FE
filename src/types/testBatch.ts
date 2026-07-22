@@ -195,6 +195,8 @@ export interface ConsumptionPreviewLineDto {
   equipmentName?: string;
   unitId?: string;
   unitName?: string;
+  storageAvailableQuantity?: number;
+  storageUnitName?: string;
   recommendedQuantity: number;
   actualQuantity: number;
   isDeducted: boolean;

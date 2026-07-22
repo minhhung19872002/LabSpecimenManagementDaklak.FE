@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useLayoutEffect, useCallback } from "react";
 import {
   Modal,
   Table,
-  InputNumber,
   Select,
+  Input,
   Button,
   message,
   Space,
@@ -11,6 +11,7 @@ import {
   Tooltip,
   Typography,
 } from "antd";
+import { NumericFormat } from "react-number-format";
 import type { ColumnsType } from "antd/es/table";
 import {
   PlusOutlined,
@@ -46,6 +47,42 @@ interface Props {
   onSubmitted: () => void;
 }
 
+function getUnitsForProduct(product: ProductDto) {
+  const units: { value: string; label: string }[] = [];
+  const seen = new Set<string>();
+  const add = (id?: string, name?: string) => {
+    if (id && name && !seen.has(id)) {
+      seen.add(id);
+      units.push({ value: id, label: name });
+    }
+  };
+  add(product.packagingUnitId, product.packagingUnitName);
+  add(product.baseUnitId, product.baseUnitName);
+  add(product.volumeUnitId, product.volumeUnitName);
+  for (const sku of product.skus || []) {
+    add(sku.packagingUnitId, sku.packagingUnitName);
+    add(sku.baseUnitId, sku.baseUnitName);
+    add(sku.volumeUnitId, sku.volumeUnitName);
+  }
+  return units;
+}
+
+function getUnitsPerStorage(product: ProductDto, unitId: string): number {
+  if (unitId === product.packagingUnitId) return 1;
+  if (unitId === product.volumeUnitId && product.volumePerUnit)
+    return product.volumePerUnit;
+  if (unitId === product.baseUnitId && product.packagingQuantity)
+    return 1 / product.packagingQuantity;
+  for (const sku of product.skus || []) {
+    if (unitId === sku.packagingUnitId) return 1;
+    if (unitId === sku.volumeUnitId && sku.volumePerUnit)
+      return sku.volumePerUnit;
+    if (unitId === sku.baseUnitId && sku.packagingQuantity)
+      return 1 / sku.packagingQuantity;
+  }
+  return 1;
+}
+
 const SubmitConsumptionModal: React.FC<Props> = ({
   open,
   batchId,
@@ -60,6 +97,23 @@ const SubmitConsumptionModal: React.FC<Props> = ({
   const [submitting, setSubmitting] = useState(false);
   const [products, setProducts] = useState<ProductDto[]>([]);
   const [isFirstSubmit, setIsFirstSubmit] = useState(true);
+
+  const checkExceedsStock = (line: EditableLine): boolean => {
+    if (!line.productId || !line.actualQuantity || line.storageAvailableQuantity == null)
+      return false;
+    const product = products.find((p) => p.id === line.productId);
+    if (!product) return false;
+
+    let unitId = line.unitId;
+    if (!unitId) {
+      const unitOptions = getUnitsForProduct(product);
+      unitId = unitOptions[0]?.value;
+    }
+    if (!unitId) return false;
+
+    const factor = getUnitsPerStorage(product, unitId);
+    return line.actualQuantity / factor > line.storageAvailableQuantity;
+  };
 
   const loadPreview = useCallback(async () => {
     setLoading(true);
@@ -100,20 +154,45 @@ const SubmitConsumptionModal: React.FC<Props> = ({
     }
   }, [open, loadPreview, loadProducts]);
 
-  const handleQuantityChange = (key: string, value: number | null) => {
-    setLines((prev) =>
-      prev.map((l) => {
-        if (l.key !== key) return l;
-        const newQty = value ?? 0;
+  useLayoutEffect(() => {
+    if (!products.length || loading) return;
+    setLines((prev) => {
+      let changed = false;
+      const next = prev.map((l) => {
+        if (!l.productId || l.needsSelection || l.isDeducted) return l;
+        const product = products.find((p) => p.id === l.productId);
+        if (!product) return l;
+        const unitOptions = getUnitsForProduct(product);
+        if (!unitOptions.length) return l;
+        if (l.unitId && unitOptions.some((u) => u.value === l.unitId)) return l;
+        changed = true;
         return {
           ...l,
-          actualQuantity: newQty,
-          exceedsStock:
-            l.productId != null &&
-            l.availableQuantity != null &&
-            newQty > l.availableQuantity,
+          unitId: unitOptions[0].value,
+          unitName: unitOptions[0].label,
         };
-      }),
+      });
+      return changed ? next : prev;
+    });
+  }, [products, loading]);
+
+  const handleQuantityChange = (key: string, value: number | null) => {
+    setLines((prev) =>
+      prev.map((l) =>
+        l.key === key ? { ...l, actualQuantity: value ?? 0 } : l,
+      ),
+    );
+  };
+
+  const handleUnitChange = (key: string, unitId: string) => {
+    const product = products.find((p) =>
+      lines.some((l) => l.key === key && l.productId === p.id),
+    );
+    const unitName =
+      getUnitsForProduct(product!).find((u) => u.value === unitId)?.label || "";
+
+    setLines((prev) =>
+      prev.map((l) => (l.key === key ? { ...l, unitId, unitName } : l)),
     );
   };
 
@@ -122,6 +201,7 @@ const SubmitConsumptionModal: React.FC<Props> = ({
       key: `new-${Date.now()}`,
       isNew: true,
       needsSelection: true,
+      storageAvailableQuantity: 0,
       recommendedQuantity: 0,
       actualQuantity: 0,
       isDeducted: false,
@@ -142,6 +222,9 @@ const SubmitConsumptionModal: React.FC<Props> = ({
       return;
     }
 
+    const defaultUnitId = product.packagingUnitId || product.baseUnitId;
+    const defaultUnitName = product.packagingUnitName || product.baseUnitName;
+
     setLines((prev) =>
       prev.map((l) => {
         if (l.key !== key) return l;
@@ -152,9 +235,11 @@ const SubmitConsumptionModal: React.FC<Props> = ({
           productName: product.name,
           productCode: product.code,
           productType: product.productType,
+          storageAvailableQuantity: product.availableQuantity,
+          storageUnitName: product.packagingUnitName || product.baseUnitName,
           availableQuantity: product.availableQuantity,
-          unitId: product.baseUnitId,
-          unitName: product.baseUnitName,
+          unitId: defaultUnitId,
+          unitName: defaultUnitName,
         };
       }),
     );
@@ -171,14 +256,21 @@ const SubmitConsumptionModal: React.FC<Props> = ({
       return;
     }
 
-    const consumptionLines = lines.map((l) => ({
-      consumptionId: l.consumptionId,
-      productId: l.productId,
-      equipmentId: l.equipmentId,
-      unitId: l.unitId,
-      recommendedQuantity: l.recommendedQuantity,
-      actualQuantity: l.actualQuantity,
-    }));
+    const consumptionLines = lines.map((l) => {
+      let unitId = l.unitId;
+      if (!unitId && l.productId) {
+        const product = products.find((p) => p.id === l.productId);
+        if (product) unitId = getUnitsForProduct(product)[0]?.value;
+      }
+      return {
+        consumptionId: l.consumptionId,
+        productId: l.productId,
+        equipmentId: l.equipmentId,
+        unitId,
+        recommendedQuantity: l.recommendedQuantity,
+        actualQuantity: l.actualQuantity,
+      };
+    });
 
     const dto: SubmitWithConsumptionDto = {
       itemIds: selectedItemIds,
@@ -210,10 +302,14 @@ const SubmitConsumptionModal: React.FC<Props> = ({
     (p) => !lines.some((l) => l.productId === p.id),
   );
 
+  const hasExceedsStock = lines.some((l) => checkExceedsStock(l));
+
   const columns: ColumnsType<EditableLine> = [
     {
       title: "Tên vật tư / hóa chất",
       key: "name",
+      width: 200,
+      ellipsis: true,
       render: (_, r) => {
         if (r.needsSelection) {
           return (
@@ -239,7 +335,7 @@ const SubmitConsumptionModal: React.FC<Props> = ({
     {
       title: "Loại vật tư",
       key: "type",
-      width: 110,
+      width: 100,
       render: (_, r) => {
         if (r.needsSelection) return "-";
         if (r.equipmentId) return "Thiết bị";
@@ -249,7 +345,7 @@ const SubmitConsumptionModal: React.FC<Props> = ({
     {
       title: "Số lượng",
       key: "quantity",
-      width: 160,
+      width: 100,
       render: (_, r) => {
         if (r.needsSelection) return "-";
         if (r.isDeducted) {
@@ -259,41 +355,76 @@ const SubmitConsumptionModal: React.FC<Props> = ({
             </Text>
           );
         }
+        const exceeds = checkExceedsStock(r);
         return (
           <Tooltip
             title={
-              r.exceedsStock
-                ? `Tiêu hao vượt mức tồn kho (tồn: ${r.availableQuantity})`
+              exceeds
+                ? `Vượt mức tồn kho (${r.storageAvailableQuantity?.toLocaleString("vi-VN")} ${r.storageUnitName || ""})`
                 : undefined
             }
           >
-            <InputNumber
+            <NumericFormat
+              value={r.actualQuantity ?? ""}
+              onValueChange={(values) =>
+                handleQuantityChange(r.key, values.floatValue ?? null)
+              }
+              allowNegative={false}
+              decimalScale={2}
+              thousandSeparator="."
+              decimalSeparator=","
+              customInput={Input}
               size="small"
-              min={0}
-              step={0.01}
-              value={r.actualQuantity}
-              onChange={(v) => handleQuantityChange(r.key, v)}
               style={{ width: "100%" }}
-              status={r.exceedsStock ? "error" : undefined}
-              addonAfter={r.unitName || undefined}
+              status={exceeds ? "error" : undefined}
             />
           </Tooltip>
         );
       },
     },
     {
+      title: "Đơn vị",
+      key: "unit",
+      width: 95,
+      render: (_, r) => {
+        if (r.needsSelection) return "-";
+        if (r.equipmentId) return "-";
+        if (r.isDeducted) return r.unitName || "-";
+
+        const product = products.find((p) => p.id === r.productId);
+        if (!product) return r.unitName || "-";
+
+        const unitOptions = getUnitsForProduct(product);
+        if (r.unitId && !unitOptions.some((u) => u.value === r.unitId)) {
+          unitOptions.push({ value: r.unitId, label: r.unitName || r.unitId });
+        }
+        if (!unitOptions.length) return r.unitName || "-";
+
+        return (
+          <Select
+            size="small"
+            value={r.unitId || unitOptions[0]?.value}
+            onChange={(v) => handleUnitChange(r.key, v)}
+            style={{ width: "100%" }}
+            options={unitOptions}
+          />
+        );
+      },
+    },
+    {
       title: "Tồn kho",
       key: "stock",
-      width: 120,
+      width: 130,
+      align: "right" as const,
       render: (_, r) => {
-        if (r.needsSelection || r.availableQuantity == null) return "-";
-        return `${r.availableQuantity.toLocaleString("vi-VN")} ${r.unitName || ""}`.trim();
+        if (r.needsSelection || r.storageAvailableQuantity == null) return "-";
+        return `${r.storageAvailableQuantity.toLocaleString("vi-VN")} ${r.storageUnitName || ""}`.trim();
       },
     },
     {
       title: "Sử dụng",
       key: "usage",
-      width: 90,
+      width: 80,
       render: (_, r) => {
         if (r.needsSelection) return "-";
         return r.equipmentId ? "sử dụng" : "tiêu hao";
@@ -302,7 +433,8 @@ const SubmitConsumptionModal: React.FC<Props> = ({
     {
       title: "",
       key: "actions",
-      width: 40,
+      width: 50,
+      fixed: "right" as const,
       render: (_, r) => {
         if (r.isDeducted) return null;
         if (r.isNew) {
@@ -321,14 +453,12 @@ const SubmitConsumptionModal: React.FC<Props> = ({
     },
   ];
 
-  const hasExceedsStock = lines.some((l) => l.exceedsStock);
-
   return (
     <Modal
       title="Nguyên liệu tiêu hao"
       open={open}
       onCancel={onClose}
-      width={700}
+      width={900}
       centered
       footer={
         <Space>
@@ -396,7 +526,7 @@ const SubmitConsumptionModal: React.FC<Props> = ({
             rowKey="key"
             size="small"
             pagination={false}
-            scroll={{ x: 700, y: 350 }}
+            scroll={{ x: 900, y: 350 }}
           />
 
           {isFirstSubmit && (
