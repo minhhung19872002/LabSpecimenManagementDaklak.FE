@@ -537,7 +537,7 @@ const handleRemoveLine = (key: string) => {
       render: (_: any, record: LineItem) => {
         const availUnits = record.availableUnits.length > 0
           ? record.availableUnits
-          : getUnitsForProduct(record.productId);
+          : getUnitsForProduct(record.productId, record.manufacturerId);
         return isReadonly ? record.unitName : (
           <Select
             value={record.unitId || undefined}
