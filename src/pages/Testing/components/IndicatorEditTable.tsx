@@ -32,9 +32,30 @@ import {
 } from "../../../types/testing";
 import IndicatorImageCell from "../../../components/common/IndicatorImageCell";
 import { IndicatorName } from "../../../components/common";
+import type { ColumnOption } from "../../../components/common/ColumnVisibilitySelector";
 import dayjs from "dayjs";
 
 const { Text } = Typography;
+
+export const INDICATOR_COLUMN_OPTIONS: ColumnOption[] = [
+  { key: "indicatorName", label: "Tên chỉ tiêu", disabled: true },
+  { key: "method", label: "Phương pháp", disabled: true },
+  { key: "unit", label: "ĐVT", disabled: true },
+  { key: "standardName", label: "So với" },
+  { key: "allowedLimit", label: "Giới hạn" },
+  { key: "result", label: "Kết quả", disabled: true },
+  { key: "images", label: "Hình ảnh", disabled: true },
+  { key: "testDate", label: "Ngày thử nghiệm", disabled: true },
+  { key: "submitDate", label: "Ngày gửi KQ", disabled: true },
+  { key: "testingStatus", label: "Trạng thái", disabled: true },
+  { key: "rejectionReason", label: "Lý do từ chối", disabled: true },
+];
+
+export const ALL_INDICATOR_COLUMN_KEYS = INDICATOR_COLUMN_OPTIONS.map((o) => o.key);
+
+export const DEFAULT_INDICATOR_VISIBLE_COLUMNS = INDICATOR_COLUMN_OPTIONS
+  .filter((o) => o.key !== "standardName" && o.key !== "allowedLimit")
+  .map((o) => o.key);
 
 interface ResultOption {
   value: string;
@@ -67,6 +88,8 @@ interface IndicatorEditTableProps {
   onDeleteIndicatorImage?: (imageId: string) => Promise<void>;
   /** Callback khi click button "Không TN được" */
   onShowCannotTestModal?: (indicatorId: string, indicatorName: string) => void;
+  /** Danh sách key cột được hiển thị (từ ColumnVisibilitySelector) */
+  visibleColumns?: string[];
 }
 
 // Extended indicator with parent-child metadata
@@ -208,6 +231,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
   onUploadIndicatorImages,
   onDeleteIndicatorImage,
   onShowCannotTestModal,
+  visibleColumns,
 }) => {
   const [editedResults, setEditedResults] = useState<
     Map<string, SaveIndicatorResultDto>
@@ -914,6 +938,17 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     },
   ];
 
+  const filteredColumns = useMemo(() => {
+    if (!visibleColumns) return columns;
+    const hiddenKeys = new Set(
+      INDICATOR_COLUMN_OPTIONS
+        .filter((o) => !o.disabled && !visibleColumns.includes(o.key))
+        .map((o) => o.key),
+    );
+    if (hiddenKeys.size === 0) return columns;
+    return columns.filter((col) => !col.key || !hiddenKeys.has(col.key as string));
+  }, [columns, visibleColumns]);
+
   // Check if indicator is overdue
   const isOverdue = (record: ProcessedIndicator): boolean => {
     if (record._isParentWithChildren) return false; // Parent row không check overdue
@@ -1104,7 +1139,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
         `}
       </style>
       <Table
-        columns={columns}
+        columns={filteredColumns}
         dataSource={sortedIndicators}
         rowKey="_rowKey"
         pagination={false}

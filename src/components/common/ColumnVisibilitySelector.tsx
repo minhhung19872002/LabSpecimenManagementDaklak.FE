@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { Popover, Checkbox, Divider, Button } from "antd";
+import { Popover, Checkbox, Divider, Button, type ButtonProps } from "antd";
 import { SettingOutlined } from "./Icon";
 import "./ColumnVisibilitySelector.css";
 
@@ -13,12 +13,14 @@ interface ColumnVisibilitySelectorProps {
   options: ColumnOption[];
   visibleKeys: string[];
   onChange: (keys: string[]) => void;
+  buttonProps?: ButtonProps;
 }
 
 const ColumnVisibilitySelector: React.FC<ColumnVisibilitySelectorProps> = ({
   options,
   visibleKeys,
   onChange,
+  buttonProps,
 }) => {
   const allKeys = useMemo(() => options.map((o) => o.key), [options]);
   const allChecked = visibleKeys.length === options.length;
@@ -89,6 +91,7 @@ const ColumnVisibilitySelector: React.FC<ColumnVisibilitySelectorProps> = ({
         size="small"
         icon={<SettingOutlined />}
         title="Chọn cột hiển thị"
+        {...buttonProps}
       />
     </Popover>
   );

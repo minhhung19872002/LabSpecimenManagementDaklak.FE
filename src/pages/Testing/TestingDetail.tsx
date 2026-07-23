@@ -16,7 +16,8 @@ import {
 import TestingDetailContainer from "./components/TestingDetailContainer";
 import { useMultipleActionPermissions } from "../../hooks/useActionPermission";
 import { TestRequestStatus } from "../../types/testRequest";
-import { PATH_ROUTES } from "../../constants";
+import { PATH_ROUTES, STORAGE_KEYS } from "../../constants";
+import { DEFAULT_INDICATOR_VISIBLE_COLUMNS } from "./components/IndicatorEditTable";
 import "./Testing.css";
 
 
@@ -79,6 +80,20 @@ const TestingDetail: React.FC = () => {
   // Ưu tiên isMy: nếu task là của user hiện tại thì cho phép thao tác bất kể view mode
   // Disable tất cả khi phiếu yêu cầu đã bị hủy
   const canPerformActions = !isTestRequestCancelled && detail?.isMy && (canInputResult || canEditResult || canSendResult);
+
+  // Column visibility state for indicator table
+  const [indicatorVisibleColumns, setIndicatorVisibleColumns] = useState<string[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.TESTING_INDICATOR_VISIBLE_COLUMNS);
+    if (saved) {
+      try { return JSON.parse(saved); } catch { /* ignore */ }
+    }
+    return DEFAULT_INDICATOR_VISIBLE_COLUMNS;
+  });
+
+  const handleIndicatorVisibleColumnsChange = useCallback((keys: string[]) => {
+    setIndicatorVisibleColumns(keys);
+    localStorage.setItem(STORAGE_KEYS.TESTING_INDICATOR_VISIBLE_COLUMNS, JSON.stringify(keys));
+  }, []);
 
   // Kiểm tra quyền xem chi tiết:
   // - Có quyền viewDetail từ Permission Matrix (QLKT, Admin)
@@ -797,6 +812,8 @@ const TestingDetail: React.FC = () => {
       onUploadIndicatorImages={handleUploadIndicatorImages}
       onDeleteIndicatorImage={handleDeleteIndicatorImage}
       onBulkTestDateChange={handleBulkTestDateChange}
+      indicatorVisibleColumns={indicatorVisibleColumns}
+      onIndicatorVisibleColumnsChange={handleIndicatorVisibleColumnsChange}
     />
   );
 };
