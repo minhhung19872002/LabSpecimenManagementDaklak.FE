@@ -140,7 +140,7 @@ const GoodsReceiptForm: React.FC = () => {
           const preselectedIds = (location.state as { preselectedProductIds?: string[] } | null)?.preselectedProductIds;
           if (preselectedIds?.length) {
             const preItems: LineItem[] = preselectedIds.flatMap((pid) => {
-              const product = activeProducts.find((p) => p.id === pid);
+              const product = activeProducts.find((p) => pid === p.id || pid.startsWith(p.id + "_"));
               if (!product) return [];
               const allUnits: { value: string; label: string }[] = [];
               const addUnit = (unitId?: string | null, unitName?: string | null) => {
