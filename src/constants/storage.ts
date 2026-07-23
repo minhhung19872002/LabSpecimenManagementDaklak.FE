@@ -11,6 +11,7 @@ export const STORAGE_KEYS = {
   // Offline authentication keys
   OFFLINE_AUTH_CREDENTIALS: "offline_auth_credentials", // Cached credentials for offline login
   TESTING_SAL_VISIBLE_COLUMNS: "testing_sal_visible_columns",
+  TESTING_INDICATOR_VISIBLE_COLUMNS: "testing_indicator_visible_columns",
 } as const;
 
 export type StorageKeyType = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];

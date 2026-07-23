@@ -153,6 +153,7 @@ export interface TestingDetailDto {
   customerName?: string;
   technicalManagerId?: string;
   technicalManagerName?: string;
+  sampleReceivedDate?: string;
   completedIndicatorCount: number;
   totalIndicatorCount: number;
   samples: TestingSampleDto[];

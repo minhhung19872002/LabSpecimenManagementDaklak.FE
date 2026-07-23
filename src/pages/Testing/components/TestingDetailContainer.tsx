@@ -46,6 +46,7 @@ interface SamplePanelContentProps {
   onUploadIndicatorImages?: (indicatorId: string, files: File[]) => Promise<IndicatorImageDto[]>;
   onDeleteIndicatorImage?: (imageId: string) => Promise<void>;
   onShowCannotTestModal: (indicatorId: string, indicatorName: string) => void;
+  visibleColumns?: string[];
 }
 
 const SamplePanelContent = React.memo<SamplePanelContentProps>(function SamplePanelContent({
@@ -54,6 +55,7 @@ const SamplePanelContent = React.memo<SamplePanelContentProps>(function SamplePa
   onResultsChange, onSelectionChange, onImagesChange,
   onShowRejectionHistory, onSaveIndicator, onSubmitIndicator,
   onUploadIndicatorImages, onDeleteIndicatorImage, onShowCannotTestModal,
+  visibleColumns,
 }) {
   const handleResultsChange = useCallback(
     (results: SaveIndicatorResultDto[]) => onResultsChange(sample.sampleId, results),
@@ -88,6 +90,7 @@ const SamplePanelContent = React.memo<SamplePanelContentProps>(function SamplePa
         onUploadIndicatorImages={onUploadIndicatorImages}
         onDeleteIndicatorImage={onDeleteIndicatorImage}
         onShowCannotTestModal={onShowCannotTestModal}
+        visibleColumns={visibleColumns}
       />
     </>
   );
@@ -157,6 +160,10 @@ interface TestingDetailContainerProps {
     indicatorIds: string[],
     date: string,
   ) => void;
+  /** Danh sách key cột hiển thị cho bảng chỉ tiêu */
+  indicatorVisibleColumns?: string[];
+  /** Callback khi thay đổi cột hiển thị */
+  onIndicatorVisibleColumnsChange?: (keys: string[]) => void;
 }
 
 const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
@@ -190,6 +197,8 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
   onUploadIndicatorImages,
   onDeleteIndicatorImage,
   onBulkTestDateChange,
+  indicatorVisibleColumns,
+  onIndicatorVisibleColumnsChange,
 }) => {
   if (loading) {
     return (
@@ -258,6 +267,8 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
               detail={detail}
               sortedSamples={sortedSamples}
               isUrgent={isUrgent}
+              indicatorVisibleColumns={indicatorVisibleColumns}
+              onIndicatorVisibleColumnsChange={onIndicatorVisibleColumnsChange}
             />
           </Col>
         </Row>
@@ -306,6 +317,7 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
                 onUploadIndicatorImages={onUploadIndicatorImages}
                 onDeleteIndicatorImage={onDeleteIndicatorImage}
                 onShowCannotTestModal={onShowCannotTestModal}
+                visibleColumns={indicatorVisibleColumns}
               />
             </Panel>
           ))}

@@ -29,6 +29,7 @@ export interface QuotationSampleIndicatorDto {
   sortOrder: number;
   specimenTypeId?: string | null;
   specimenTypeName?: string | null;
+  note?: string | null;
 }
 
 // Quotation Sample DTO
@@ -93,6 +94,7 @@ export interface CreateUpdateQuotationSampleIndicatorDto {
   sortOrder: number;
   specimenTypeId?: string | null;
   specimenTypeName?: string | null;
+  note?: string | null;
 }
 
 // Create/Update Quotation Sample DTO
@@ -146,6 +148,7 @@ export interface QuotationSampleIndicatorFormData {
   sortOrder: number;
   specimenTypeId?: string;
   specimenTypeName?: string;
+  note?: string;
 }
 
 export interface QuotationSampleFormData {

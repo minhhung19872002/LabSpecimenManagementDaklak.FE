@@ -396,19 +396,19 @@ const QuotationIndicatorSelectionModal: React.FC<
   }, [selectedKeys, indicators, specimenTypes]);
 
   // Check if an indicator is free due to combo
-  const isIndicatorFree = (
-    indicatorId: string,
-    methodKey: MethodKey,
-  ): boolean => {
-    const indicator = indicators.find((i) => i.id === indicatorId);
-    const { specimenTypeId } = parseMethodKey(methodKey);
-    const stId = specimenTypeId || "_none";
-    const isHgFree =
-      comboMetBySpecimenType[stId] && isHgIndicator(indicator?.name);
-    const isEcoliFree =
-      ecoliComboMetBySpecimenType[stId] && isEcoliIndicator(indicator?.name);
-    return isHgFree || isEcoliFree;
-  };
+  const isIndicatorFree = useCallback(
+    (indicatorId: string, methodKey: MethodKey): boolean => {
+      const indicator = indicators.find((i) => i.id === indicatorId);
+      const { specimenTypeId } = parseMethodKey(methodKey);
+      const stId = specimenTypeId || "_none";
+      const isHgFree =
+        comboMetBySpecimenType[stId] && isHgIndicator(indicator?.name);
+      const isEcoliFree =
+        ecoliComboMetBySpecimenType[stId] && isEcoliIndicator(indicator?.name);
+      return isHgFree || isEcoliFree;
+    },
+    [indicators, comboMetBySpecimenType, ecoliComboMetBySpecimenType],
+  );
 
   // Track previous combo-free keys to detect combo changes
   const prevComboFreeKeysRef = useRef<Set<string>>(new Set());
@@ -447,7 +447,7 @@ const QuotationIndicatorSelectionModal: React.FC<
     }
 
     prevComboFreeKeysRef.current = currentFreeKeys;
-  }, [comboMetBySpecimenType, ecoliComboMetBySpecimenType, selectedKeys]);
+  }, [comboMetBySpecimenType, ecoliComboMetBySpecimenType, selectedKeys, isIndicatorFree]);
 
   // ========== Selection Helpers ==========
 

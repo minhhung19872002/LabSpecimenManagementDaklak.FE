@@ -49,9 +49,90 @@ import QuotationIndicatorSelectionModal, {
 import SendQuotationEmailModal from "./components/SendQuotationEmailModal";
 import ImportQuotationSamplesModal from "./components/ImportQuotationSamplesModal";
 import { IndicatorName } from "../../components/common";
+import {
+  isHeavyMetalComboMet,
+  isHgIndicator,
+  isEcoliColiformComboMet,
+  isEcoliIndicator,
+  isColiformIndicator,
+} from "../TestRequest/TestRequestForm/constants";
 import "../../styles/ListCard.css";
 
 const { Text } = Typography;
+
+interface ComboGroupInfo {
+  comboId: string;
+  rowSpan: number;
+  isFirst: boolean;
+  memberKeys: string[];
+}
+
+const stripHtml = (s: string) => s.replace(/<[^>]*>/g, "");
+
+const getComboGroups = (
+  indicators: QuotationSampleIndicatorFormData[]
+): Record<string, ComboGroupInfo> => {
+  const result: Record<string, ComboGroupInfo> = {};
+  const grouped: Record<string, QuotationSampleIndicatorFormData[]> = {};
+
+  for (const ind of indicators) {
+    const stId = ind.specimenTypeId || "_none";
+    if (!grouped[stId]) grouped[stId] = [];
+    grouped[stId].push(ind);
+  }
+
+  for (const [stId, inds] of Object.entries(grouped)) {
+    const names = inds.map((i) => stripHtml(i.indicatorName));
+    const stName = inds[0]?.specimenTypeName;
+
+    // Heavy metal combo
+    if (isHeavyMetalComboMet(names, undefined, stName)) {
+      const members = inds.filter((i) => {
+        const n = stripHtml(i.indicatorName);
+        return isHgIndicator(n) ||
+          ["hàm lượng chì (pb)", "hàm lượng asen (as)", "hàm lượng cadimi (cd)"].includes(
+            n.normalize("NFC").toLowerCase()
+          );
+      });
+      if (members.length > 1) {
+        const comboId = `hm_${stId}`;
+        const memberKeys = members.map((m) => m.key);
+        members.forEach((m, idx) => {
+          result[m.key] = {
+            comboId,
+            rowSpan: idx === 0 ? members.length : 0,
+            isFirst: idx === 0,
+            memberKeys,
+          };
+        });
+      }
+    }
+
+    // E.coli + Coliform combo
+    if (isEcoliColiformComboMet(names, undefined, stName)) {
+      const members = inds.filter((i) => {
+        const n = stripHtml(i.indicatorName);
+        return isEcoliIndicator(n) || isColiformIndicator(n);
+      });
+      if (members.length > 1) {
+        const comboId = `ec_${stId}`;
+        const memberKeys = members.map((m) => m.key);
+        members.forEach((m, idx) => {
+          if (!result[m.key]) {
+            result[m.key] = {
+              comboId,
+              rowSpan: idx === 0 ? members.length : 0,
+              isFirst: idx === 0,
+              memberKeys,
+            };
+          }
+        });
+      }
+    }
+  }
+
+  return result;
+};
 
 interface OrganizationOption {
   value: string;
@@ -166,6 +247,7 @@ const QuotationForm: React.FC = () => {
             sortOrder: ind.sortOrder,
             specimenTypeId: ind.specimenTypeId || undefined,
             specimenTypeName: ind.specimenTypeName || undefined,
+            note: ind.note || undefined,
           })),
         })
       );
@@ -321,6 +403,7 @@ const QuotationForm: React.FC = () => {
             sortOrder: idx + 1,
             specimenTypeId: method.specimenTypeId,
             specimenTypeName: method.specimenTypeName,
+            note: existing?.note,
           };
         });
 
@@ -333,6 +416,27 @@ const QuotationForm: React.FC = () => {
 
     setModalVisible(false);
     setCurrentSampleKey(null);
+  };
+
+  // Update indicator note (combo-aware: updates all members in same combo group)
+  const handleUpdateIndicatorNote = (
+    sampleKey: string,
+    indicatorKey: string,
+    note: string,
+    comboMemberKeys?: string[]
+  ) => {
+    setSamples(
+      samples.map((sample) => {
+        if (sample.key !== sampleKey) return sample;
+        const keysToUpdate = comboMemberKeys || [indicatorKey];
+        return {
+          ...sample,
+          indicators: sample.indicators.map((ind) =>
+            keysToUpdate.includes(ind.key) ? { ...ind, note } : ind
+          ),
+        };
+      })
+    );
   };
 
   // Remove indicator from sample
@@ -431,6 +535,7 @@ const QuotationForm: React.FC = () => {
             sortOrder: indIdx + 1,
             specimenTypeId: ind.specimenTypeId || null,
             specimenTypeName: ind.specimenTypeName || null,
+            note: ind.note || null,
           })),
         })),
       };
@@ -438,16 +543,16 @@ const QuotationForm: React.FC = () => {
       if (isEdit && id) {
         await quotationService.update(id, data);
         message.success("Cập nhật báo giá thành công");
+        navigate(PATH_ROUTES.quotations.view(id));
       } else {
-        await quotationService.create(data);
+        const created = await quotationService.create(data);
         message.success(
           isDuplicateMode
             ? "Nhân bản báo giá thành công"
             : "Tạo báo giá thành công"
         );
+        navigate(PATH_ROUTES.quotations.view(created.id));
       }
-
-      navigate(PATH_ROUTES.quotations.index);
     } catch (error: any) {
       console.error("Failed to save quotation:", error);
       message.error(getApiErrorMessage(error, "Lưu báo giá thất bại"));
@@ -460,7 +565,8 @@ const QuotationForm: React.FC = () => {
   const renderIndicatorRow = (
     indicator: QuotationSampleIndicatorFormData,
     index: number,
-    sampleKey: string
+    sampleKey: string,
+    comboInfo?: ComboGroupInfo
   ) => (
     <tr key={indicator.key} style={{ borderBottom: "1px solid #f0f0f0" }}>
       <td style={{ padding: "8px 12px", textAlign: "center", width: 50 }}>
@@ -486,6 +592,28 @@ const QuotationForm: React.FC = () => {
       <td style={{ padding: "8px 12px", textAlign: "right", width: 130 }}>
         {formatCurrency(indicator.unitPrice)}
       </td>
+      {comboInfo && comboInfo.rowSpan === 0 ? null : (
+        <td
+          style={{ padding: "4px 8px", width: 200, height: 1 }}
+          rowSpan={comboInfo ? comboInfo.rowSpan : 1}
+        >
+          <Input.TextArea
+            value={indicator.note || ""}
+            onChange={(e) =>
+              handleUpdateIndicatorNote(
+                sampleKey,
+                indicator.key,
+                e.target.value,
+                comboInfo?.memberKeys
+              )
+            }
+            placeholder="Ghi chú..."
+            maxLength={500}
+            className="note-fill-cell"
+            style={{ height: "100%", resize: "none" }}
+          />
+        </td>
+      )}
       <td style={{ padding: "8px 12px", textAlign: "center", width: 50 }}>
         <Popconfirm
           title="Xóa chỉ tiêu này?"
@@ -504,7 +632,7 @@ const QuotationForm: React.FC = () => {
   const renderEmptyIndicators = (sampleKey: string) => (
     <tr>
       <td
-        colSpan={5}
+        colSpan={6}
         style={{
           padding: "24px 12px",
           textAlign: "center",
@@ -533,7 +661,7 @@ const QuotationForm: React.FC = () => {
   const renderAddIndicatorRow = (sampleKey: string) => (
     <tr>
       <td
-        colSpan={5}
+        colSpan={6}
         style={{
           padding: "8px 12px",
           borderBottom: "1px solid #f0f0f0",
@@ -551,11 +679,45 @@ const QuotationForm: React.FC = () => {
     </tr>
   );
 
+  // Sort indicators so combo members are adjacent
+  const sortIndicatorsForCombo = (indicators: QuotationSampleIndicatorFormData[]) => {
+    const comboGroups = getComboGroups(indicators);
+    const sorted: QuotationSampleIndicatorFormData[] = [];
+    const placed = new Set<string>();
+
+    for (const ind of indicators) {
+      if (placed.has(ind.key)) continue;
+      const info = comboGroups[ind.key];
+      if (info && info.isFirst) {
+        for (const mk of info.memberKeys) {
+          const member = indicators.find((i) => i.key === mk);
+          if (member && !placed.has(mk)) {
+            sorted.push(member);
+            placed.add(mk);
+          }
+        }
+      } else if (!info) {
+        sorted.push(ind);
+        placed.add(ind.key);
+      }
+    }
+    // Add any remaining non-first combo members that weren't placed
+    for (const ind of indicators) {
+      if (!placed.has(ind.key)) {
+        sorted.push(ind);
+        placed.add(ind.key);
+      }
+    }
+    return sorted;
+  };
+
   // Render sample group
   const renderSampleGroup = (sample: QuotationSampleFormData) => {
     const isExpanded = expandedSamples.has(sample.key);
     const sampleTotal = calculateSampleTotal(sample);
     const hasIndicators = sample.indicators.length > 0;
+    const sortedIndicators = sortIndicatorsForCombo(sample.indicators);
+    const comboGroups = getComboGroups(sortedIndicators);
 
     return (
       <React.Fragment key={sample.key}>
@@ -567,7 +729,7 @@ const QuotationForm: React.FC = () => {
           }}
         >
           <td
-            colSpan={5}
+            colSpan={6}
             style={{ padding: "10px 12px" }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -630,8 +792,8 @@ const QuotationForm: React.FC = () => {
           <>
             {hasIndicators ? (
               <>
-                {sample.indicators.map((ind, idx) =>
-                  renderIndicatorRow(ind, idx, sample.key)
+                {sortedIndicators.map((ind, idx) =>
+                  renderIndicatorRow(ind, idx, sample.key, comboGroups[ind.key])
                 )}
                 {renderAddIndicatorRow(sample.key)}
               </>
@@ -805,6 +967,17 @@ const QuotationForm: React.FC = () => {
                   <th
                     style={{
                       padding: "12px",
+                      textAlign: "left",
+                      borderBottom: "1px solid #f0f0f0",
+                      fontWeight: 500,
+                      width: 200,
+                    }}
+                  >
+                    Ghi chú
+                  </th>
+                  <th
+                    style={{
+                      padding: "12px",
                       textAlign: "center",
                       borderBottom: "1px solid #f0f0f0",
                       fontWeight: 500,
@@ -818,7 +991,7 @@ const QuotationForm: React.FC = () => {
                 {samples.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={6}
                       style={{
                         padding: 40,
                         textAlign: "center",
@@ -900,15 +1073,21 @@ const QuotationForm: React.FC = () => {
         visible={emailModalVisible}
         onCancel={() => setEmailModalVisible(false)}
         customerName={form.getFieldValue("customerName") || ""}
-        samples={samples.map((sample) => ({
-          sampleName: sample.sampleName,
-          quantity: sample.quantity || 1,
-          indicators: sample.indicators.map((ind) => ({
-            indicatorName: ind.indicatorName,
-            quantity: 1,
-            unitPrice: ind.unitPrice,
-          })),
-        }))}
+        samples={samples.map((sample) => {
+          const sorted = sortIndicatorsForCombo(sample.indicators);
+          const comboGroups = getComboGroups(sorted);
+          return {
+            sampleName: sample.sampleName,
+            quantity: sample.quantity || 1,
+            indicators: sorted.map((ind) => ({
+              indicatorName: ind.indicatorName,
+              quantity: 1,
+              unitPrice: ind.unitPrice,
+              note: ind.note || undefined,
+              comboGroup: comboGroups[ind.key]?.comboId || undefined,
+            })),
+          };
+        })}
         totalCost={totalCost}
       />
     </div>

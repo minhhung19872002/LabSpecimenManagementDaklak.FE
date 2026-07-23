@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { Card, Row, Col, Typography, Tooltip } from "antd";
 import { TestingDetailDto, TestingSampleDto } from "../../../../types/testing";
 import { formatDateVN } from "../../../../utils/formatters";
+import { ColumnVisibilitySelector } from "../../../../components/common";
+import { INDICATOR_COLUMN_OPTIONS } from "../IndicatorEditTable";
 
 const { Title, Text } = Typography;
 const MAX_SAMPLES_SHOWN = 2;
@@ -10,12 +12,16 @@ interface TestingOverviewSectionProps {
   detail: TestingDetailDto;
   sortedSamples: TestingSampleDto[];
   isUrgent: boolean;
+  indicatorVisibleColumns?: string[];
+  onIndicatorVisibleColumnsChange?: (keys: string[]) => void;
 }
 
 const TestingOverviewSection: React.FC<TestingOverviewSectionProps> = ({
   detail,
   sortedSamples,
   isUrgent,
+  indicatorVisibleColumns,
+  onIndicatorVisibleColumnsChange,
 }) => {
   const [samplesExpanded, setSamplesExpanded] = useState(false);
   const visibleSamples = samplesExpanded ? sortedSamples : sortedSamples.slice(0, MAX_SAMPLES_SHOWN);
@@ -31,13 +37,23 @@ const TestingOverviewSection: React.FC<TestingOverviewSectionProps> = ({
         flex: 1,
       }}
     >
-      <Title
-        level={5}
-        className="testing-section-title"
-        style={{ margin: "0 0 16px 0" }}
-      >
-        Thông tin tổng quan
-      </Title>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <Title
+          level={5}
+          className="testing-section-title"
+          style={{ margin: 0 }}
+        >
+          Thông tin tổng quan
+        </Title>
+        {indicatorVisibleColumns && onIndicatorVisibleColumnsChange && (
+          <ColumnVisibilitySelector
+            options={INDICATOR_COLUMN_OPTIONS}
+            visibleKeys={indicatorVisibleColumns}
+            onChange={onIndicatorVisibleColumnsChange}
+            buttonProps={{ type: "primary" }}
+          />
+        )}
+      </div>
       <Row gutter={[48, 16]}>
         <Col xs={24} md={12}>
           <div className="testing-overview-items">
@@ -70,10 +86,10 @@ const TestingOverviewSection: React.FC<TestingOverviewSectionProps> = ({
             </Row>
             <Row className="testing-overview-row">
               <Col flex="150px">
-                <Text type="secondary">Ngày gửi KP:</Text>
+                <Text type="secondary">Ngày nhận mẫu:</Text>
               </Col>
               <Col flex="auto">
-                <Text>{formatDateVN(detail.underReviewDate)}</Text>
+                <Text>{formatDateVN(detail.sampleReceivedDate)}</Text>
               </Col>
             </Row>
           </div>
@@ -119,6 +135,14 @@ const TestingOverviewSection: React.FC<TestingOverviewSectionProps> = ({
                   {" "}
                   / {detail.totalIndicatorCount} đã hoàn thành
                 </Text>
+              </Col>
+            </Row>
+            <Row className="testing-overview-row">
+              <Col flex="150px">
+                <Text type="secondary">Ngày gửi KP:</Text>
+              </Col>
+              <Col flex="auto">
+                <Text>{formatDateVN(detail.underReviewDate)}</Text>
               </Col>
             </Row>
           </div>

@@ -247,3 +247,12 @@
     width: 100%;
   }
 }
+
+/* Quotation note textarea fill cell height */
+.note-fill-cell.ant-input-textarea {
+  height: 100% !important;
+}
+.note-fill-cell.ant-input-textarea textarea {
+  height: 100% !important;
+  resize: none !important;
+}
