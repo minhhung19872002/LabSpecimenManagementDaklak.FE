@@ -6,6 +6,7 @@ import {
   preparedSolutionService,
 } from "../../../services/preparedSolutionService";
 import { fileService } from "../../../services/fileService";
+import { getApiErrorMessage } from "../../../utils/errorHandler";
 
 export interface PreparedSolutionProcessModalProps {
   open: boolean;
@@ -90,6 +91,8 @@ const PreparedSolutionProcessModal: React.FC<PreparedSolutionProcessModalProps> 
       });
       onProcessed();
       onClose();
+    } catch (error) {
+      message.error(getApiErrorMessage(error, "Không thể xử lý dung dịch pha"));
     } finally {
       setSubmitting(false);
     }
