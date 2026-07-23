@@ -36,9 +36,18 @@ import { authService } from "../../services/authService";
 import { PERMISSIONS } from "../../constants/permissionMapping";
 import SendQuotationEmailModal from "./components/SendQuotationEmailModal";
 import { getApiErrorMessage } from "../../utils/errorHandler";
+import {
+  isHeavyMetalComboMet,
+  isHgIndicator,
+  isEcoliColiformComboMet,
+  isEcoliIndicator,
+  isColiformIndicator,
+} from "../TestRequest/TestRequestForm/constants";
 import "../../styles/ListCard.css";
 
 const { Text } = Typography;
+
+const stripHtml = (s: string) => s.replace(/<[^>]*>/g, "");
 
 const QuotationView: React.FC = () => {
   const navigate = useNavigate();
@@ -124,18 +133,133 @@ const QuotationView: React.FC = () => {
     sampleQuantity: number;
     rowSpan: number;
     sampleTotalPrice: number;
+    noteRowSpan: number;
   }
 
-  const flatDataSource: FlatIndicatorRow[] = quotation?.samples?.flatMap((sample) =>
-    sample.indicators.map((indicator, idx) => ({
+  // Sort indicators so combo members are adjacent (required for valid rowSpan)
+  const sortIndicatorsForCombo = (indicators: QuotationSampleIndicatorDto[]): QuotationSampleIndicatorDto[] => {
+    const grouped: Record<string, number[]> = {};
+    indicators.forEach((ind, idx) => {
+      const stId = ind.specimenTypeId || "_none";
+      if (!grouped[stId]) grouped[stId] = [];
+      grouped[stId].push(idx);
+    });
+
+    const comboIndicesSet = new Set<number>();
+    const comboBlocks: { anchor: number; members: number[] }[] = [];
+
+    for (const [, indices] of Object.entries(grouped)) {
+      const names = indices.map((i) => stripHtml(indicators[i].indicatorName));
+      const stName = indicators[indices[0]]?.specimenTypeName;
+
+      if (isHeavyMetalComboMet(names, undefined, stName)) {
+        const members = indices.filter((i) => {
+          const n = stripHtml(indicators[i].indicatorName);
+          return isHgIndicator(n) ||
+            ["hàm lượng chì (pb)", "hàm lượng asen (as)", "hàm lượng cadimi (cd)"].includes(
+              n.normalize("NFC").toLowerCase()
+            );
+        });
+        if (members.length > 1) {
+          comboBlocks.push({ anchor: members[0], members });
+          members.forEach((m) => comboIndicesSet.add(m));
+        }
+      }
+
+      if (isEcoliColiformComboMet(names, undefined, stName)) {
+        const members = indices.filter((i) => {
+          const n = stripHtml(indicators[i].indicatorName);
+          return isEcoliIndicator(n) || isColiformIndicator(n);
+        });
+        const freshMembers = members.filter((m) => !comboIndicesSet.has(m));
+        if (freshMembers.length > 1) {
+          comboBlocks.push({ anchor: freshMembers[0], members: freshMembers });
+          freshMembers.forEach((m) => comboIndicesSet.add(m));
+        }
+      }
+    }
+
+    const sorted: QuotationSampleIndicatorDto[] = [];
+    const placed = new Set<number>();
+    for (let i = 0; i < indicators.length; i++) {
+      if (placed.has(i)) continue;
+      const block = comboBlocks.find((b) => b.anchor === i);
+      if (block) {
+        block.members.forEach((m) => { sorted.push(indicators[m]); placed.add(m); });
+      } else if (!comboIndicesSet.has(i)) {
+        sorted.push(indicators[i]);
+        placed.add(i);
+      }
+    }
+    for (let i = 0; i < indicators.length; i++) {
+      if (!placed.has(i)) { sorted.push(indicators[i]); placed.add(i); }
+    }
+    return sorted;
+  };
+
+  // Compute combo note rowSpan for a sample's indicators
+  const computeNoteRowSpans = (indicators: QuotationSampleIndicatorDto[]): number[] => {
+    const spans = new Array(indicators.length).fill(1);
+    const grouped: Record<string, { indices: number[]; names: string[] }> = {};
+
+    indicators.forEach((ind, idx) => {
+      const stId = ind.specimenTypeId || "_none";
+      if (!grouped[stId]) grouped[stId] = { indices: [], names: [] };
+      grouped[stId].indices.push(idx);
+      grouped[stId].names.push(stripHtml(ind.indicatorName));
+    });
+
+    for (const [, { indices, names }] of Object.entries(grouped)) {
+      const stName = indicators[indices[0]]?.specimenTypeName;
+
+      // Heavy metal combo
+      if (isHeavyMetalComboMet(names, undefined, stName)) {
+        const comboIndices = indices.filter((i) => {
+          const n = stripHtml(indicators[i].indicatorName);
+          return isHgIndicator(n) ||
+            ["hàm lượng chì (pb)", "hàm lượng asen (as)", "hàm lượng cadimi (cd)"].includes(
+              n.normalize("NFC").toLowerCase()
+            );
+        });
+        if (comboIndices.length > 1) {
+          comboIndices.forEach((ci, j) => {
+            spans[ci] = j === 0 ? comboIndices.length : 0;
+          });
+        }
+      }
+
+      // E.coli + Coliform combo
+      if (isEcoliColiformComboMet(names, undefined, stName)) {
+        const comboIndices = indices.filter((i) => {
+          const n = stripHtml(indicators[i].indicatorName);
+          return isEcoliIndicator(n) || isColiformIndicator(n);
+        });
+        if (comboIndices.length > 1) {
+          comboIndices.forEach((ci, j) => {
+            if (spans[ci] === 1) {
+              spans[ci] = j === 0 ? comboIndices.length : 0;
+            }
+          });
+        }
+      }
+    }
+
+    return spans;
+  };
+
+  const flatDataSource: FlatIndicatorRow[] = quotation?.samples?.flatMap((sample) => {
+    const sorted = sortIndicatorsForCombo(sample.indicators);
+    const noteSpans = computeNoteRowSpans(sorted);
+    return sorted.map((indicator, idx) => ({
       ...indicator,
       sampleName: sample.sampleName,
       sampleId: sample.id,
       sampleQuantity: sample.quantity || 1,
       rowSpan: idx === 0 ? sample.indicators.length : 0,
       sampleTotalPrice: sample.totalPrice,
-    }))
-  ) || [];
+      noteRowSpan: noteSpans[idx],
+    }));
+  }) || [];
 
   // Table columns with sample name rowSpan
   const columns: ColumnsType<FlatIndicatorRow> = [
@@ -196,6 +320,17 @@ const QuotationView: React.FC = () => {
       width: 130,
       align: "right",
       render: (value) => formatCurrency(value),
+    },
+    {
+      title: "Ghi chú",
+      dataIndex: "note",
+      key: "note",
+      ellipsis: true,
+      onCell: (record) => ({
+        rowSpan: record.noteRowSpan,
+      }),
+      render: (value: string | null | undefined) =>
+        value ? <Text type="secondary">{value}</Text> : null,
     },
     {
       title: "Thành tiền",

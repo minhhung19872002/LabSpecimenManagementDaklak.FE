@@ -440,15 +440,15 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
       const subs = groupedSelectedMethods.subMethodsMap[parentKey] || [];
       if (subs.length === 0) return "parent";
 
-      // Check if any sub has price > 0
+      // Check if any sub has effective price > 0
       const hasSubWithPrice = subs.some((subKey) => {
         const { method } = getIndicatorMethodInfo(subKey);
-        return (method?.unitPrice || 0) > 0;
+        return getEffectivePrice(subKey, method?.unitPrice || 0) > 0;
       });
 
       return hasSubWithPrice ? "subs" : "parent";
     },
-    [groupedSelectedMethods.subMethodsMap, getIndicatorMethodInfo],
+    [groupedSelectedMethods.subMethodsMap, getIndicatorMethodInfo, customPrices, currentSampleKey],
   );
 
   // Handle remove sub-indicator with validation
@@ -692,6 +692,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
     comboMetBySpecimenType,
     ecoliComboMetBySpecimenType,
     tempSelectedIndicatorMethods,
+    currentSampleKey,
   ]);
 
   // Calculate total cost from selected methods with sub-indicator pricing logic
@@ -1765,9 +1766,7 @@ const IndicatorSelectionModal: React.FC<IndicatorSelectionModalProps> = ({
         prev.includes(item.indicator.id) ? prev : [...prev, item.indicator.id],
       );
 
-      if (price > 0) {
-        onPriceChange(`${currentSampleKey}_${methodKey}`, price);
-      }
+      onPriceChange(`${currentSampleKey}_${methodKey}`, price);
     },
     [
       currentSampleKey,
