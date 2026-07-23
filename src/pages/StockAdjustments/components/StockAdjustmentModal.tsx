@@ -139,7 +139,7 @@ const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
         key: product.id,
         productId: product.id,
         productName: product.name,
-        unitName: product.baseUnitName || "",
+        unitName: product.packagingUnitName || product.baseUnitName || product.volumeUnitName || "",
         quantityBefore: product.availableQuantity,
         actualQuantity: product.availableQuantity,
         adjustmentQuantity: 0,
@@ -458,7 +458,7 @@ const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
               onSearch={setProductSearch}
               options={availableProducts.map((p) => ({
                 value: p.id,
-                label: `${p.name} (${p.baseUnitName || ""}) - SL: ${p.availableQuantity}`,
+                label: (() => { const u = p.packagingUnitName || p.baseUnitName || p.volumeUnitName; return `${p.name}${u ? ` (${u})` : ""} - SL: ${p.availableQuantity}`; })(),
               }))}
             />
             <Button
