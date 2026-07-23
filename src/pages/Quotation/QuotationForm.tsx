@@ -543,16 +543,16 @@ const QuotationForm: React.FC = () => {
       if (isEdit && id) {
         await quotationService.update(id, data);
         message.success("Cập nhật báo giá thành công");
+        navigate(PATH_ROUTES.quotations.view(id));
       } else {
-        await quotationService.create(data);
+        const created = await quotationService.create(data);
         message.success(
           isDuplicateMode
             ? "Nhân bản báo giá thành công"
             : "Tạo báo giá thành công"
         );
+        navigate(PATH_ROUTES.quotations.view(created.id));
       }
-
-      navigate(PATH_ROUTES.quotations.index);
     } catch (error: any) {
       console.error("Failed to save quotation:", error);
       message.error(getApiErrorMessage(error, "Lưu báo giá thất bại"));
@@ -1073,15 +1073,21 @@ const QuotationForm: React.FC = () => {
         visible={emailModalVisible}
         onCancel={() => setEmailModalVisible(false)}
         customerName={form.getFieldValue("customerName") || ""}
-        samples={samples.map((sample) => ({
-          sampleName: sample.sampleName,
-          quantity: sample.quantity || 1,
-          indicators: sample.indicators.map((ind) => ({
-            indicatorName: ind.indicatorName,
-            quantity: 1,
-            unitPrice: ind.unitPrice,
-          })),
-        }))}
+        samples={samples.map((sample) => {
+          const sorted = sortIndicatorsForCombo(sample.indicators);
+          const comboGroups = getComboGroups(sorted);
+          return {
+            sampleName: sample.sampleName,
+            quantity: sample.quantity || 1,
+            indicators: sorted.map((ind) => ({
+              indicatorName: ind.indicatorName,
+              quantity: 1,
+              unitPrice: ind.unitPrice,
+              note: ind.note || undefined,
+              comboGroup: comboGroups[ind.key]?.comboId || undefined,
+            })),
+          };
+        })}
         totalCost={totalCost}
       />
     </div>

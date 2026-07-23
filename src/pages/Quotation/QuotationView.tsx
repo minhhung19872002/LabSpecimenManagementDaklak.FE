@@ -85,15 +85,41 @@ const QuotationView: React.FC = () => {
 
   const getEmailSamples = (): QuotationPdfSampleDto[] => {
     return (
-      quotation?.samples?.map((sample) => ({
-        sampleName: sample.sampleName,
-        quantity: sample.quantity || 1,
-        indicators: sample.indicators.map((ind) => ({
-          indicatorName: ind.indicatorName,
-          quantity: 1,
-          unitPrice: ind.unitPrice,
-        })),
-      })) || []
+      quotation?.samples?.map((sample) => {
+        const sorted = sortIndicatorsForCombo(sample.indicators);
+        const grouped: Record<string, { names: string[]; stName?: string | null }> = {};
+        sorted.forEach((ind) => {
+          const stId = ind.specimenTypeId || "_none";
+          if (!grouped[stId]) grouped[stId] = { names: [], stName: ind.specimenTypeName };
+          grouped[stId].names.push(stripHtml(ind.indicatorName));
+        });
+
+        const comboMap: Record<number, string> = {};
+        sorted.forEach((ind, idx) => {
+          const stId = ind.specimenTypeId || "_none";
+          const { names, stName } = grouped[stId];
+          const n = stripHtml(ind.indicatorName);
+          if (isHeavyMetalComboMet(names, undefined, stName) &&
+            (isHgIndicator(n) || ["hàm lượng chì (pb)", "hàm lượng asen (as)", "hàm lượng cadimi (cd)"].includes(n.normalize("NFC").toLowerCase()))) {
+            comboMap[idx] = `hm_${stId}`;
+          } else if (isEcoliColiformComboMet(names, undefined, stName) &&
+            (isEcoliIndicator(n) || isColiformIndicator(n))) {
+            if (!comboMap[idx]) comboMap[idx] = `ec_${stId}`;
+          }
+        });
+
+        return {
+          sampleName: sample.sampleName,
+          quantity: sample.quantity || 1,
+          indicators: sorted.map((ind, idx) => ({
+            indicatorName: ind.indicatorName,
+            quantity: 1,
+            unitPrice: ind.unitPrice,
+            note: ind.note || undefined,
+            comboGroup: comboMap[idx] || undefined,
+          })),
+        };
+      }) || []
     );
   };
 
@@ -330,7 +356,7 @@ const QuotationView: React.FC = () => {
         rowSpan: record.noteRowSpan,
       }),
       render: (value: string | null | undefined) =>
-        value ? <Text type="secondary">{value}</Text> : null,
+        value ? <Text>{value}</Text> : null,
     },
     {
       title: "Thành tiền",

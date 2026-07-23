@@ -14,6 +14,8 @@ export interface QuotationPdfIndicatorDto {
   indicatorName: string;
   quantity: number;
   unitPrice: number;
+  note?: string;
+  comboGroup?: string;
 }
 
 export interface QuotationPdfSampleDto {
