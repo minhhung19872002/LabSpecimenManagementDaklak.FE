@@ -70,10 +70,10 @@ const TestingOverviewSection: React.FC<TestingOverviewSectionProps> = ({
             </Row>
             <Row className="testing-overview-row">
               <Col flex="150px">
-                <Text type="secondary">Ngày gửi KP:</Text>
+                <Text type="secondary">Ngày nhận mẫu:</Text>
               </Col>
               <Col flex="auto">
-                <Text>{formatDateVN(detail.underReviewDate)}</Text>
+                <Text>{formatDateVN(detail.sampleReceivedDate)}</Text>
               </Col>
             </Row>
           </div>
@@ -119,6 +119,14 @@ const TestingOverviewSection: React.FC<TestingOverviewSectionProps> = ({
                   {" "}
                   / {detail.totalIndicatorCount} đã hoàn thành
                 </Text>
+              </Col>
+            </Row>
+            <Row className="testing-overview-row">
+              <Col flex="150px">
+                <Text type="secondary">Ngày gửi KP:</Text>
+              </Col>
+              <Col flex="auto">
+                <Text>{formatDateVN(detail.underReviewDate)}</Text>
               </Col>
             </Row>
           </div>
