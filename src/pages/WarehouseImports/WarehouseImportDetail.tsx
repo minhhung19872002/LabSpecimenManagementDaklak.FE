@@ -480,7 +480,6 @@ const WarehouseImportDetail: React.FC = () => {
         onClose={() => setPrintBarcodeOpen(false)}
         receipt={goodsReceipt}
         importReceipt={receipt}
-        onImportSuccess={() => setPrintBarcodeOpen(false)}
         printOnly
       />
     )}

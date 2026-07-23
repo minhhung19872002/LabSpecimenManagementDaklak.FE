@@ -6,7 +6,6 @@ import removeAccents from "remove-accents";
 import {
   GoodsReceiptDto,
   GoodsReceiptItemDto,
-  goodsReceiptService,
 } from "../../../services/goodsReceiptService";
 import { productService, ProductDto, ProductSkuDto } from "../../../services/productService";
 import { WarehouseImportReceiptDto, EquipmentReceiveStatus } from "../../../services/warehouseImportReceiptService";
@@ -17,7 +16,6 @@ interface WarehouseImportModalProps {
   onClose: () => void;
   receipt: GoodsReceiptDto;
   importReceipt?: WarehouseImportReceiptDto;
-  onImportSuccess: () => void;
   printOnly?: boolean;
 }
 
@@ -145,11 +143,9 @@ const WarehouseImportModal: React.FC<WarehouseImportModalProps> = ({
   onClose,
   receipt,
   importReceipt,
-  onImportSuccess,
   printOnly = false,
 }) => {
   const [loading, setLoading] = useState(false);
-  const [importing, setImporting] = useState(false);
   const [barcodeItems, setBarcodeItems] = useState<BarcodeItem[]>([]);
   const [activeKeys, setActiveKeys] = useState<string[]>([]);
 
@@ -317,23 +313,6 @@ const WarehouseImportModal: React.FC<WarehouseImportModalProps> = ({
     printWindow.document.close();
   };
 
-  const handleImport = async () => {
-    setImporting(true);
-    try {
-      await goodsReceiptService.importToWarehouse(receipt.id);
-      message.success("Đã nhập kho thành công");
-      onImportSuccess();
-    } catch (error: any) {
-      message.error(getApiErrorMessage(error, "Không thể nhập kho."));
-    } finally {
-      setImporting(false);
-    }
-  };
-
-  const handlePrintAndImport = () => {
-    handlePrint();
-    handleImport();
-  };
 
   const collapseItems = barcodeItems.map((bi, idx) => ({
     key: `item-${idx}`,
@@ -369,20 +348,9 @@ const WarehouseImportModal: React.FC<WarehouseImportModalProps> = ({
       footer={
         <Space>
           <Button onClick={onClose}>Hủy</Button>
-          {printOnly ? (
-            <Button type="primary" onClick={() => { handlePrint(); onClose(); }} disabled={loading}>
-              In barcode
-            </Button>
-          ) : (
-            <>
-              <Button onClick={handlePrintAndImport} loading={importing} disabled={loading || barcodeItems.length === 0}>
-                In và nhập kho
-              </Button>
-              <Button type="primary" onClick={handleImport} loading={importing} disabled={loading}>
-                Xác nhận nhập kho
-              </Button>
-            </>
-          )}
+          <Button type="primary" onClick={() => { handlePrint(); onClose(); }} disabled={loading}>
+            In barcode
+          </Button>
         </Space>
       }
       destroyOnClose
