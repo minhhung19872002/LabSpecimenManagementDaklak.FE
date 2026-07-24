@@ -13,6 +13,7 @@ import {
   IndicatorApprovalStatusLabels,
   IndicatorApprovalStatusColors,
 } from "../../../types/testBatch";
+import { IndicatorApprovalStatus } from "../../../types/laboratoryTask";
 import testBatchService from "../../../services/testBatchService";
 import dayjs from "dayjs";
 
@@ -264,7 +265,12 @@ const BatchIndicatorTable: React.FC<Props> = ({
       key: "result",
       width: 180,
       render: (_: unknown, item: TestBatchItemDto) => {
-        const isDisabled = !canEdit || item.isSubmitted || item.isExternallyCompleted;
+        const isDisabled = !canEdit || item.isSubmitted || item.isExternallyCompleted
+          || item.approvalStatus === IndicatorApprovalStatus.CustomerCancelled
+          || item.approvalStatus === IndicatorApprovalStatus.MethodChangeRequested
+          || item.approvalStatus === IndicatorApprovalStatus.TestingRejected
+          || item.approvalStatus === IndicatorApprovalStatus.CannotTest
+          || item.approvalStatus === IndicatorApprovalStatus.SupplementaryRequested;
         return (
           <ResultCell
             itemId={item.id}
@@ -283,7 +289,12 @@ const BatchIndicatorTable: React.FC<Props> = ({
       key: "testDate",
       width: 150,
       render: (_: unknown, item: TestBatchItemDto) => {
-        const isDisabled = !canEdit || item.isSubmitted || item.isExternallyCompleted;
+        const isDisabled = !canEdit || item.isSubmitted || item.isExternallyCompleted
+          || item.approvalStatus === IndicatorApprovalStatus.CustomerCancelled
+          || item.approvalStatus === IndicatorApprovalStatus.MethodChangeRequested
+          || item.approvalStatus === IndicatorApprovalStatus.TestingRejected
+          || item.approvalStatus === IndicatorApprovalStatus.CannotTest
+          || item.approvalStatus === IndicatorApprovalStatus.SupplementaryRequested;
         return (
           <DateCell
             itemId={item.id}
