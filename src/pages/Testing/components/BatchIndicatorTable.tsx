@@ -197,7 +197,12 @@ const BatchIndicatorTable: React.FC<Props> = ({
 
   const columns: ColumnsType<TestBatchItemDto> = useMemo(() => {
     const canSelectItem = (item: TestBatchItemDto) =>
-      !item.isSubmitted && !item.isExternallyCompleted;
+      !item.isSubmitted && !item.isExternallyCompleted
+      && item.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled
+      && item.approvalStatus !== IndicatorApprovalStatus.MethodChangeRequested
+      && item.approvalStatus !== IndicatorApprovalStatus.TestingRejected
+      && item.approvalStatus !== IndicatorApprovalStatus.CannotTest
+      && item.approvalStatus !== IndicatorApprovalStatus.SupplementaryRequested;
     const selectableItems = items.filter(canSelectItem);
     const allSelected =
       selectableItems.length > 0 &&

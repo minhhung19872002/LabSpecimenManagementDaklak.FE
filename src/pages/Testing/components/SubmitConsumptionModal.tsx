@@ -21,12 +21,14 @@ import {
 import testBatchService from "../../../services/testBatchService";
 import {
   productService,
+  ProductType,
   ProductTypeLabels,
   type ProductDto,
 } from "../../../services/productService";
 import type {
   ConsumptionPreviewLineDto,
   SubmitWithConsumptionDto,
+  SaveConsumptionDraftDto,
 } from "../../../types/testBatch";
 
 const { Text } = Typography;
@@ -35,6 +37,7 @@ interface EditableLine extends ConsumptionPreviewLineDto {
   key: string;
   isNew?: boolean;
   needsSelection?: boolean;
+  selectedProductType?: number;
 }
 
 interface Props {
@@ -46,6 +49,11 @@ interface Props {
   onClose: () => void;
   onSubmitted: () => void;
 }
+
+const productTypeOptions = Object.entries(ProductTypeLabels).map(([k, v]) => ({
+  value: Number(k),
+  label: v,
+}));
 
 function getUnitsForProduct(product: ProductDto) {
   const units: { value: string; label: string }[] = [];
@@ -95,6 +103,7 @@ const SubmitConsumptionModal: React.FC<Props> = ({
   const [lines, setLines] = useState<EditableLine[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
   const [products, setProducts] = useState<ProductDto[]>([]);
   const [isFirstSubmit, setIsFirstSubmit] = useState(true);
 
@@ -125,6 +134,7 @@ const SubmitConsumptionModal: React.FC<Props> = ({
         data.lines.map((l, i) => ({
           ...l,
           key: l.consumptionId || `template-${i}`,
+          selectedProductType: l.productType,
         })),
       );
     } catch {
@@ -196,11 +206,35 @@ const SubmitConsumptionModal: React.FC<Props> = ({
     );
   };
 
+  const handleTypeChange = (key: string, type: number) => {
+    setLines((prev) =>
+      prev.map((l) =>
+        l.key === key
+          ? {
+              ...l,
+              selectedProductType: type,
+              needsSelection: true,
+              productId: undefined,
+              productName: undefined,
+              productCode: undefined,
+              productType: undefined,
+              storageAvailableQuantity: undefined,
+              storageUnitName: undefined,
+              availableQuantity: undefined,
+              unitId: undefined,
+              unitName: undefined,
+            }
+          : l,
+      ),
+    );
+  };
+
   const handleAddEmptyRow = () => {
     const newLine: EditableLine = {
       key: `new-${Date.now()}`,
       isNew: true,
       needsSelection: true,
+      selectedProductType: undefined,
       storageAvailableQuantity: 0,
       recommendedQuantity: 0,
       actualQuantity: 0,
@@ -235,6 +269,7 @@ const SubmitConsumptionModal: React.FC<Props> = ({
           productName: product.name,
           productCode: product.code,
           productType: product.productType,
+          selectedProductType: product.productType,
           storageAvailableQuantity: product.availableQuantity,
           storageUnitName: product.packagingUnitName || product.baseUnitName,
           availableQuantity: product.availableQuantity,
@@ -249,14 +284,8 @@ const SubmitConsumptionModal: React.FC<Props> = ({
     setLines((prev) => prev.filter((l) => l.key !== key));
   };
 
-  const handleSubmit = async () => {
-    const pendingSelection = lines.some((l) => l.needsSelection);
-    if (pendingSelection) {
-      message.warning("Vui lòng chọn vật tư cho dòng mới hoặc xóa dòng trống");
-      return;
-    }
-
-    const consumptionLines = lines.map((l) => {
+  const buildConsumptionLines = () =>
+    lines.map((l) => {
       let unitId = l.unitId;
       if (!unitId && l.productId) {
         const product = products.find((p) => p.id === l.productId);
@@ -272,9 +301,20 @@ const SubmitConsumptionModal: React.FC<Props> = ({
       };
     });
 
+  const validateLines = () => {
+    if (lines.some((l) => l.needsSelection)) {
+      message.warning("Vui lòng chọn vật tư cho dòng mới hoặc xóa dòng trống");
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = async () => {
+    if (!validateLines()) return;
+
     const dto: SubmitWithConsumptionDto = {
       itemIds: selectedItemIds,
-      consumptionLines,
+      consumptionLines: buildConsumptionLines(),
     };
 
     setSubmitting(true);
@@ -293,59 +333,93 @@ const SubmitConsumptionModal: React.FC<Props> = ({
     }
   };
 
-  const productTypeLabel = (type?: number) => {
-    if (type == null) return "-";
-    return ProductTypeLabels[type as keyof typeof ProductTypeLabels] || "-";
-  };
+  const handleSaveDraft = async () => {
+    if (!validateLines()) return;
 
-  const availableProducts = products.filter(
-    (p) => !lines.some((l) => l.productId === p.id),
-  );
+    const dto: SaveConsumptionDraftDto = {
+      consumptionLines: buildConsumptionLines(),
+    };
+
+    setSavingDraft(true);
+    try {
+      await testBatchService.saveConsumptionDraft(batchId, dto);
+      message.success("Đã lưu nháp nguyên vật liệu tiêu hao");
+      onClose();
+    } catch (err: any) {
+      message.error(
+        err?.response?.data?.error?.message || "Lỗi lưu nháp",
+      );
+    } finally {
+      setSavingDraft(false);
+    }
+  };
 
   const hasExceedsStock = lines.some((l) => checkExceedsStock(l));
 
   const columns: ColumnsType<EditableLine> = [
+    {
+      title: "Loại vật tư",
+      key: "type",
+      width: 130,
+      render: (_, r) => {
+        if (r.equipmentId) return <Text>Thiết bị</Text>;
+        if (r.isDeducted) {
+          return (
+            <Text>
+              {r.productType != null
+                ? ProductTypeLabels[r.productType as ProductType] || "-"
+                : "-"}
+            </Text>
+          );
+        }
+        return (
+          <Select
+            size="small"
+            value={r.selectedProductType}
+            placeholder="Chọn loại"
+            style={{ width: "100%" }}
+            options={productTypeOptions}
+            onChange={(v) => handleTypeChange(r.key, v)}
+          />
+        );
+      },
+    },
     {
       title: "Tên vật tư / hóa chất",
       key: "name",
       width: 200,
       ellipsis: true,
       render: (_, r) => {
-        if (r.needsSelection) {
-          return (
-            <Select
-              placeholder="Chọn vật tư..."
-              showSearch
-              optionFilterProp="label"
-              style={{ width: "100%" }}
-              onChange={(v) => handleSelectProduct(r.key, v)}
-              options={availableProducts.map((p) => ({
-                value: p.id,
-                label: [p.identificationCode, p.name].filter(Boolean).join(" - ") || " - ",
-              }))}
-              autoFocus
-            />
-          );
-        }
-        return (
-          <Text strong>{r.productName || r.equipmentName || "-"}</Text>
+        if (r.equipmentId) return <Text strong>{r.equipmentName || "-"}</Text>;
+        if (r.isDeducted) return <Text strong>{r.productName || "-"}</Text>;
+
+        const filtered = products.filter(
+          (p) =>
+            (r.selectedProductType == null || p.productType === r.selectedProductType) &&
+            !lines.some((l) => l.key !== r.key && l.productId === p.id),
         );
-      },
-    },
-    {
-      title: "Loại vật tư",
-      key: "type",
-      width: 100,
-      render: (_, r) => {
-        if (r.needsSelection) return "-";
-        if (r.equipmentId) return "Thiết bị";
-        return productTypeLabel(r.productType);
+
+        return (
+          <Select
+            placeholder="Chọn vật tư..."
+            showSearch
+            optionFilterProp="label"
+            style={{ width: "100%" }}
+            size="small"
+            value={r.productId || undefined}
+            onChange={(v) => handleSelectProduct(r.key, v)}
+            options={filtered.map((p) => ({
+              value: p.id,
+              label: [p.identificationCode, p.name].filter(Boolean).join(" - ") || " - ",
+            }))}
+          />
+        );
       },
     },
     {
       title: "Số lượng",
       key: "quantity",
-      width: 100,
+      width: 110,
       render: (_, r) => {
         if (r.needsSelection) return "-";
         if (r.isDeducted) {
@@ -370,7 +444,6 @@ const SubmitConsumptionModal: React.FC<Props> = ({
                 handleQuantityChange(r.key, values.floatValue ?? null)
               }
               allowNegative={false}
-              decimalScale={2}
               thousandSeparator="."
               decimalSeparator=","
               customInput={Input}
@@ -458,18 +531,27 @@ const SubmitConsumptionModal: React.FC<Props> = ({
       title="Nguyên liệu tiêu hao"
       open={open}
       onCancel={onClose}
-      width={900}
+      width={960}
       centered
       footer={
         <Space>
           <Button onClick={onClose}>Hủy</Button>
+          {isFirstSubmit && (
+            <Button
+              onClick={handleSaveDraft}
+              loading={savingDraft}
+              disabled={loading || submitting}
+            >
+              Lưu nháp
+            </Button>
+          )}
           <Button
             type="primary"
             onClick={handleSubmit}
             loading={submitting}
-            disabled={loading}
+            disabled={loading || savingDraft}
           >
-            Lưu
+            Xác nhận và gửi kết quả
           </Button>
         </Space>
       }
@@ -526,7 +608,7 @@ const SubmitConsumptionModal: React.FC<Props> = ({
             rowKey="key"
             size="small"
             pagination={false}
-            scroll={{ x: 900, y: 350 }}
+            scroll={{ x: 960, y: 350 }}
           />
 
           {isFirstSubmit && (

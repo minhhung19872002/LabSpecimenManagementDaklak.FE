@@ -222,6 +222,10 @@ export interface SubmitWithConsumptionDto {
   consumptionLines: ConsumptionLineInputDto[];
 }
 
+export interface SaveConsumptionDraftDto {
+  consumptionLines: ConsumptionLineInputDto[];
+}
+
 export interface AvailableIndicatorDto {
   id: string;
   laboratoryTaskId: string;
