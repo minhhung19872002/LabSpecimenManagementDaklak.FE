@@ -379,7 +379,7 @@ const CreateBatchModal: React.FC<Props> = ({ open, onClose, onCreated }) => {
                             </div>
                             <div style={{ marginTop: 2 }}>
                               <Text type="secondary" style={{ fontSize: 11 }}>
-                                Ngày gửi KP: {item.sampleSentDate ? dayjs(item.sampleSentDate).format("DD/MM/YYYY") : "—"}
+                                Ngày nhận mẫu: {item.sampleReceivedDate ? dayjs(item.sampleReceivedDate).format("DD/MM/YYYY") : "—"}
                               </Text>
                             </div>
                             <div>
