@@ -207,6 +207,18 @@ export const statisticsService = {
     const response = await api.download(`${LAB_REPORT_URL}/export`, { params });
     return response.data;
   },
+
+  // Export lab report detail — Sheet1/Sheet2 format (Báo cáo phòng Lab)
+  exportLabReportDetail: async (params: LabReportQueryParams): Promise<Blob> => {
+    const response = await api.download(`${LAB_REPORT_URL}/export-detail`, { params });
+    return response.data;
+  },
+
+  // Export Sổ nhận mẫu — template-based, cross-lab (Thống kê tổng)
+  exportSoNhanMau: async (params: { fromDate: string; toDate: string }): Promise<Blob> => {
+    const response = await api.download(`${LAB_REPORT_URL}/export-so-nhan-mau`, { params });
+    return response.data;
+  },
 };
 
 export default statisticsService;

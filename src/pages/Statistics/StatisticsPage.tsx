@@ -211,16 +211,14 @@ const StatisticsPage: React.FC = () => {
   const handleExport = async () => {
     setExporting(true);
     try {
-      const params: { fromDate?: string; toDate?: string } = {
+      const blob = await statisticsService.exportSoNhanMau({
         fromDate: dateRange[0].format("YYYY-MM-DD"),
         toDate: dateRange[1].format("YYYY-MM-DD"),
-      };
-      const blob = await statisticsService.exportToExcel(params);
+      });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      const fileName = `statistics_${dateRange[0].format("YYYYMMDD")}_${dateRange[1].format("YYYYMMDD")}.xlsx`;
-      a.download = fileName;
+      a.download = `BaoCaoChiTiet_${dateRange[0].format("DDMMYYYY")}_${dateRange[1].format("DDMMYYYY")}.xlsx`;
       a.click();
       window.URL.revokeObjectURL(url);
       message.success("Xuất báo cáo thành công");

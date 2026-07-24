@@ -23,6 +23,7 @@ const LabReportPage: React.FC = () => {
   const [isCustomDateRange, setIsCustomDateRange] = useState(false);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exportingDetail, setExportingDetail] = useState(false);
   const [reportData, setReportData] = useState<LabReportDataDto | null>(null);
   const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
   const [contractDetail, setContractDetail] = useState<LabContractDetailDto | null>(null);
@@ -129,6 +130,19 @@ const LabReportPage: React.FC = () => {
     }
   };
 
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    }, 100);
+  };
+
   const handleExport = useCallback(async () => {
     if (!selectedLabId) return;
     setExporting(true);
@@ -138,21 +152,30 @@ const LabReportPage: React.FC = () => {
         fromDate: dateRange[0].format("YYYY-MM-DD"),
         toDate: dateRange[1].format("YYYY-MM-DD"),
       });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `BaoCaoPhongLab_${dateRange[0].format("DDMMYYYY")}_${dateRange[1].format("DDMMYYYY")}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => {
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      }, 100);
+      downloadBlob(blob, `BaoCaoPhongLab_${dateRange[0].format("DDMMYYYY")}_${dateRange[1].format("DDMMYYYY")}.xlsx`);
       message.success("Xuất báo cáo thành công");
     } catch {
       message.error("Không thể xuất báo cáo");
     } finally {
       setExporting(false);
+    }
+  }, [selectedLabId, dateRange]);
+
+  const handleExportDetail = useCallback(async () => {
+    if (!selectedLabId) return;
+    setExportingDetail(true);
+    try {
+      const blob = await statisticsService.exportLabReportDetail({
+        labId: selectedLabId,
+        fromDate: dateRange[0].format("YYYY-MM-DD"),
+        toDate: dateRange[1].format("YYYY-MM-DD"),
+      });
+      downloadBlob(blob, `BaoCaoPhongLab_ChiTiet_${dateRange[0].format("DDMMYYYY")}_${dateRange[1].format("DDMMYYYY")}.xlsx`);
+      message.success("Xuất báo cáo chi tiết thành công");
+    } catch {
+      message.error("Không thể xuất báo cáo chi tiết");
+    } finally {
+      setExportingDetail(false);
     }
   }, [selectedLabId, dateRange]);
 
@@ -166,6 +189,7 @@ const LabReportPage: React.FC = () => {
       isCustomDateRange={isCustomDateRange}
       loading={loading}
       exporting={exporting}
+      exportingDetail={exportingDetail}
       canExport={canExport}
       reportData={reportData}
       selectedContractId={selectedContractId}
@@ -176,6 +200,7 @@ const LabReportPage: React.FC = () => {
       onRangeChange={handleRangeChange}
       onReload={loadReportData}
       onExport={handleExport}
+      onExportDetail={handleExportDetail}
       onContractClick={handleContractClick}
     />
   );
