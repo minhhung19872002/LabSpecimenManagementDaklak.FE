@@ -29,6 +29,7 @@ export interface LabReportViewProps {
   isCustomDateRange: boolean;
   loading: boolean;
   exporting: boolean;
+  exportingDetail: boolean;
   canExport: boolean;
   reportData: LabReportDataDto | null;
   selectedContractId: string | null;
@@ -39,6 +40,7 @@ export interface LabReportViewProps {
   onRangeChange: (dates: [Dayjs | null, Dayjs | null] | null) => void;
   onReload: () => void;
   onExport: () => void;
+  onExportDetail: () => void;
   onContractClick: (record: LabContractSummaryDto) => void;
 }
 
@@ -51,6 +53,7 @@ const LabReportView: React.FC<LabReportViewProps> = ({
   isCustomDateRange,
   loading,
   exporting,
+  exportingDetail,
   canExport,
   reportData,
   selectedContractId,
@@ -61,6 +64,7 @@ const LabReportView: React.FC<LabReportViewProps> = ({
   onRangeChange,
   onReload,
   onExport,
+  onExportDetail,
   onContractClick,
 }) => (
   <div>
@@ -73,6 +77,7 @@ const LabReportView: React.FC<LabReportViewProps> = ({
       isCustomDateRange={isCustomDateRange}
       loading={loading}
       exporting={exporting}
+      exportingDetail={exportingDetail}
       canExport={canExport}
       reportData={reportData}
       onLabChange={onLabChange}
@@ -80,6 +85,7 @@ const LabReportView: React.FC<LabReportViewProps> = ({
       onRangeChange={onRangeChange}
       onReload={onReload}
       onExport={onExport}
+      onExportDetail={onExportDetail}
     />
 
     <Spin spinning={loading}>

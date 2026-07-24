@@ -207,6 +207,12 @@ export const statisticsService = {
     const response = await api.download(`${LAB_REPORT_URL}/export`, { params });
     return response.data;
   },
+
+  // Export lab report detail (2-sheet Excel)
+  exportLabReportDetail: async (params: LabReportQueryParams): Promise<Blob> => {
+    const response = await api.download(`${LAB_REPORT_URL}/export-detail`, { params });
+    return response.data;
+  },
 };
 
 export default statisticsService;
