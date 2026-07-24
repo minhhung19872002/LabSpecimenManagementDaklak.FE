@@ -14,7 +14,11 @@ import {
   SampleTestingImageType,
   IndicatorImageDto,
   CannotTestDto,
+  SubmitIndicatorWithConsumptionDto,
+  SaveIndicatorConsumptionDraftDto,
+  BulkSubmitIndicatorWithConsumptionDto,
 } from '../types/testing';
+import type { ConsumptionPreviewDto } from '../types/testBatch';
 import {
   GetSampleAssignmentLogInput,
   PagedSampleAssignmentLogResult,
@@ -411,7 +415,51 @@ export const testingService = {
    */
   deleteRejectionHistoryImage: async (imageId: string): Promise<void> => {
     await api.delete(`${BASE_URL}/rejection-histories/images/${imageId}`);
-  }
+  },
+
+  /**
+   * Xem trước nguyên liệu tiêu hao cho 1 chỉ tiêu
+   */
+  getIndicatorConsumptionPreview: async (taskId: string, indicatorId: string): Promise<ConsumptionPreviewDto> => {
+    const res = await api.get<ConsumptionPreviewDto>(
+      `${BASE_URL}/${taskId}/indicators/${indicatorId}/consumption-preview`
+    );
+    return res.data;
+  },
+
+  /**
+   * Gửi kết quả 1 chỉ tiêu kèm xác nhận tiêu hao nguyên liệu
+   */
+  submitIndicatorWithConsumption: async (taskId: string, input: SubmitIndicatorWithConsumptionDto): Promise<void> => {
+    await api.post(`${BASE_URL}/${taskId}/submit-indicator-with-consumption`, input);
+  },
+
+  /**
+   * Lưu nháp tiêu hao nguyên liệu cho 1 chỉ tiêu
+   */
+  saveIndicatorConsumptionDraft: async (taskId: string, input: SaveIndicatorConsumptionDraftDto): Promise<void> => {
+    await api.post(`${BASE_URL}/${taskId}/save-indicator-consumption-draft`, input);
+  },
+
+  /**
+   * Xem trước nguyên liệu tiêu hao tổng hợp cho nhiều chỉ tiêu (bulk direct submit)
+   */
+  getBulkIndicatorConsumptionPreview: async (taskId: string, indicatorIds: string[]): Promise<ConsumptionPreviewDto> => {
+    const params: Record<string, any> = {};
+    indicatorIds.forEach((id, index) => { params[`indicatorIds[${index}]`] = id; });
+    const res = await api.get<ConsumptionPreviewDto>(
+      `${BASE_URL}/${taskId}/bulk-indicator-consumption-preview`,
+      { params }
+    );
+    return res.data;
+  },
+
+  /**
+   * Gửi kết quả nhiều chỉ tiêu cùng lúc kèm xác nhận tiêu hao nguyên liệu
+   */
+  submitBulkIndicatorsWithConsumption: async (taskId: string, input: BulkSubmitIndicatorWithConsumptionDto): Promise<void> => {
+    await api.post(`${BASE_URL}/${taskId}/submit-bulk-indicators-with-consumption`, input);
+  },
 };
 
 export default testingService;

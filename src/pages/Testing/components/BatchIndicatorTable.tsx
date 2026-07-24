@@ -5,9 +5,11 @@ import {
   DatePicker,
   Tag,
   Checkbox,
+  Button,
   message,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import { SendOutlined } from "../../../components/common/Icon";
 import {
   TestBatchItemDto,
   IndicatorApprovalStatusLabels,
@@ -33,6 +35,7 @@ interface Props {
   editedValuesRef?: React.MutableRefObject<EditedValuesMap>;
   resultOptions?: ResultOption[];
   onResultSaved?: () => void;
+  onSubmitItem?: (itemId: string) => void;
 }
 
 const getItemStatus = (item: TestBatchItemDto, overrides?: { result?: string; testDate?: string }) => {
@@ -179,6 +182,7 @@ const BatchIndicatorTable: React.FC<Props> = ({
   editedValuesRef,
   resultOptions,
   onResultSaved,
+  onSubmitItem,
 }) => {
   const internalRef = useRef<EditedValuesMap>(new Map());
   const editedRef = editedValuesRef || internalRef;
@@ -335,8 +339,28 @@ const BatchIndicatorTable: React.FC<Props> = ({
       ellipsis: true,
       render: (val: string) => val || "-",
     },
+    {
+      title: "Thao tác",
+      key: "actions",
+      width: 110,
+      fixed: "right" as const,
+      render: (_: unknown, item: TestBatchItemDto) => {
+        if (!canEdit || !onSubmitItem || !canSelectItem(item)) return <span style={{ color: "#bfbfbf" }}>-</span>;
+        const isRejected = !item.isSubmitted && !!item.rejectionReason;
+        return (
+          <Button
+            type="primary"
+            size="small"
+            icon={<SendOutlined />}
+            onClick={(e) => { e.stopPropagation(); onSubmitItem(item.id); }}
+          >
+            {isRejected ? "Gửi lại" : "Gửi duyệt"}
+          </Button>
+        );
+      },
+    },
   ];
-  }, [batchId, canEdit, getEditedValues, selectedItemIds, items, onSelectionChange, resultOptions, handleCellSaved, registerUpdater]);
+  }, [batchId, canEdit, getEditedValues, selectedItemIds, items, onSelectionChange, resultOptions, handleCellSaved, registerUpdater, onSubmitItem]);
 
   return (
     <div className="batch-indicator-table" style={{ overflow: "hidden" }}>
@@ -346,7 +370,7 @@ const BatchIndicatorTable: React.FC<Props> = ({
         rowKey="id"
         size="small"
         pagination={false}
-        scroll={{ x: 1140, y: 450 }}
+        scroll={{ x: 1260, y: 450 }}
       />
     </div>
   );

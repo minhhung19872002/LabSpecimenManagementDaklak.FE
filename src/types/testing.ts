@@ -1,5 +1,6 @@
 import { IndicatorApprovalStatus } from './laboratoryTask';
 import { TestRequestStatus } from './testRequest';
+import type { ConsumptionLineInputDto } from './testBatch';
 
 // Testing Status Enum (Task level - 6 statuses)
 export enum TestingStatus {
@@ -304,4 +305,28 @@ export interface IndicatorImageDto {
   url: string;
   creationTime: string;
   creatorId?: string;
+}
+
+// Indicator Consumption DTOs (direct submit from testing detail)
+export interface SubmitIndicatorWithConsumptionDto {
+  indicatorId: string;
+  testDate: string;
+  consumptionLines: ConsumptionLineInputDto[];
+}
+
+export interface SaveIndicatorConsumptionDraftDto {
+  indicatorId: string;
+  consumptionLines: ConsumptionLineInputDto[];
+}
+
+// Bulk submit DTOs (multiple indicators at once from testing detail)
+export interface SubmitIndicatorItemDto {
+  indicatorId: string;
+  testDate: string;
+}
+
+export interface BulkSubmitIndicatorWithConsumptionDto {
+  sampleId: string;
+  indicators: SubmitIndicatorItemDto[];
+  consumptionLines: ConsumptionLineInputDto[];
 }

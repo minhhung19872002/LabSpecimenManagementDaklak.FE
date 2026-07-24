@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Table, AutoComplete, Input, Select, Tag, Row, Col, Pagination, DatePicker, Button, Tooltip, message, Typography } from 'antd';
 import {
   SearchOutlined,
@@ -25,6 +25,7 @@ import {
 import { testingService } from '../../../services/testingService';
 import { testResultValueService } from '../../../services/testResultValueService';
 import CannotTestModal from './CannotTestModal';
+import SubmitConsumptionModal from './SubmitConsumptionModal';
 import { useMultipleActionPermissions } from '../../../hooks/useActionPermission';
 import { useHeaderHeight } from '../../../hooks';
 import ResultFilterControl from './ResultFilterControl';
@@ -183,7 +184,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
 
   const [editedResults, setEditedResults] = useState<Record<string, string>>({});
   const [editedTestDates, setEditedTestDates] = useState<Record<string, string>>({});
-  const [submittingIds, setSubmittingIds] = useState<Set<string>>(new Set());
+  const submittingIds = new Set<string>();
   // indicatorId → list of result value options (from master data)
   const [resultValueMap, setResultValueMap] = useState<Map<string, string[]>>(new Map());
 
@@ -211,6 +212,20 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
     indicatorId: string;
     indicatorName: string;
   }>({ visible: false, taskId: '', indicatorId: '', indicatorName: '' });
+
+  const [consumptionModal, setConsumptionModal] = useState<{
+    open: boolean;
+    taskId: string;
+    indicatorId: string;
+    indicatorName: string;
+  }>({ open: false, taskId: '', indicatorId: '', indicatorName: '' });
+  const pendingSubmitRef = useRef<{
+    taskId: string;
+    sampleId: string;
+    labIndicatorId: string;
+    resultValue: string;
+    testDate: string;
+  } | null>(null);
 
   const [resultSearchHtml, setResultSearchHtml] = useState('');
   const [resultFilterOpen, setResultFilterOpen] = useState(false);
@@ -282,7 +297,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
   }, []);
 
   const handleSubmitResult = useCallback(
-    async (record: DisplayRow) => {
+    (record: DisplayRow) => {
       const labIndicatorId = record.laboratoryTaskIndicatorId as string;
       const taskId = record.laboratoryTaskId as string;
       const sampleId = record.sampleId as unknown as string;
@@ -297,45 +312,37 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
         return;
       }
 
-      setSubmittingIds((prev) => new Set(prev).add(labIndicatorId));
-
-      try {
-        await testingService.saveResults(taskId, {
-          results: [{ indicatorId: labIndicatorId, result: resultValue.trim(), testDate }],
-        });
-
-        await testingService.submitResults(taskId, {
-          sampleId,
-          indicators: [{ indicatorId: labIndicatorId, testDate }],
-        });
-
-        message.success('Đã gửi kết quả thành công');
-
-        setEditedResults((prev) => {
-          const next = { ...prev };
-          delete next[labIndicatorId];
-          return next;
-        });
-        setEditedTestDates((prev) => {
-          const next = { ...prev };
-          delete next[labIndicatorId];
-          return next;
-        });
-
-        reload();
-      } catch (error: any) {
-        const msg = error?.response?.data?.error?.message;
-        message.error(msg || 'Có lỗi xảy ra khi gửi kết quả');
-      } finally {
-        setSubmittingIds((prev) => {
-          const next = new Set(prev);
-          next.delete(labIndicatorId);
-          return next;
-        });
-      }
+      pendingSubmitRef.current = { taskId, sampleId, labIndicatorId, resultValue, testDate };
+      setConsumptionModal({
+        open: true,
+        taskId,
+        indicatorId: labIndicatorId,
+        indicatorName: record.indicatorName || '',
+      });
     },
-    [editedResults, editedTestDates, reload],
+    [editedResults, editedTestDates],
   );
+
+  const handleConsumptionModalSubmitted = useCallback(() => {
+    const pending = pendingSubmitRef.current;
+    setConsumptionModal({ open: false, taskId: '', indicatorId: '', indicatorName: '' });
+    pendingSubmitRef.current = null;
+
+    if (!pending) return;
+
+    setEditedResults((prev) => {
+      const next = { ...prev };
+      delete next[pending.labIndicatorId];
+      return next;
+    });
+    setEditedTestDates((prev) => {
+      const next = { ...prev };
+      delete next[pending.labIndicatorId];
+      return next;
+    });
+
+    reload();
+  }, [reload]);
 
   const handleCannotTest = useCallback((record: DisplayRow) => {
     setCannotTestModal({
@@ -1010,6 +1017,42 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
           }
         />
       </div>
+
+      {consumptionModal.open && (
+        <SubmitConsumptionModal
+          open={consumptionModal.open}
+          contextLabel={consumptionModal.indicatorName}
+          itemCount={1}
+          onFetchPreview={() =>
+            testingService.getIndicatorConsumptionPreview(consumptionModal.taskId, consumptionModal.indicatorId)
+          }
+          onSubmitWithConsumption={async (lines) => {
+            const pending = pendingSubmitRef.current;
+            if (!pending) return;
+            await testingService.saveResults(pending.taskId, {
+              results: [{ indicatorId: pending.labIndicatorId, result: pending.resultValue.trim(), testDate: pending.testDate }],
+            });
+            await testingService.submitIndicatorWithConsumption(pending.taskId, {
+              indicatorId: pending.labIndicatorId,
+              testDate: pending.testDate,
+              consumptionLines: lines,
+            });
+          }}
+          onSaveDraft={async (lines) => {
+            const pending = pendingSubmitRef.current;
+            if (!pending) return;
+            await testingService.saveIndicatorConsumptionDraft(pending.taskId, {
+              indicatorId: pending.labIndicatorId,
+              consumptionLines: lines,
+            });
+          }}
+          onClose={() => {
+            setConsumptionModal({ open: false, taskId: '', indicatorId: '', indicatorName: '' });
+            pendingSubmitRef.current = null;
+          }}
+          onSubmitted={handleConsumptionModalSubmitted}
+        />
+      )}
 
       {/* Cannot Test Modal */}
       <CannotTestModal

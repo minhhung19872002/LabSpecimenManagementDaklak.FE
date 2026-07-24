@@ -14,6 +14,7 @@ import {
   IndicatorImageDto,
 } from "../../types/testing";
 import TestingDetailContainer from "./components/TestingDetailContainer";
+import SubmitConsumptionModal from "./components/SubmitConsumptionModal";
 import { useMultipleActionPermissions } from "../../hooks/useActionPermission";
 import { TestRequestStatus } from "../../types/testRequest";
 import { PATH_ROUTES, STORAGE_KEYS } from "../../constants";
@@ -43,7 +44,7 @@ const TestingDetail: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const submitting = false;
   const [detail, setDetail] = useState<TestingDetailDto | null>(null);
   const [resultOptions, setResultOptions] = useState<ResultOption[]>([]);
   const [allResultValues, setAllResultValues] = useState<TestResultValueWithIndicator[]>([]);
@@ -205,6 +206,31 @@ const TestingDetail: React.FC = () => {
     indicatorId: "",
     indicatorName: "",
   });
+
+  // Consumption modal for direct single-indicator submit
+  const [consumptionModal, setConsumptionModal] = useState<{
+    open: boolean;
+    indicatorId: string;
+    indicatorName: string;
+  }>({ open: false, indicatorId: "", indicatorName: "" });
+  const pendingSubmitRef = useRef<{
+    sampleId: string;
+    editedResult: SaveIndicatorResultDto | undefined;
+    resultValue: string;
+    testDate: string;
+  } | null>(null);
+
+  // Consumption modal for bulk submit (nhiều chỉ tiêu trong 1 mẫu)
+  const [bulkConsumptionModal, setBulkConsumptionModal] = useState<{
+    open: boolean;
+    sampleId: string;
+    count: number;
+  }>({ open: false, sampleId: "", count: 0 });
+  const bulkPendingRef = useRef<{
+    sampleId: string;
+    validIndicators: { indicatorId: string; testDate: string }[];
+    selectedResults: SaveIndicatorResultDto[];
+  } | null>(null);
 
   const loadDetail = useCallback(async () => {
     if (!id) return;
@@ -438,53 +464,33 @@ const TestingDetail: React.FC = () => {
       validIndicatorIds.includes(r.indicatorId)
     );
 
-    setSubmitting(true);
-    try {
-      // Lưu kết quả trước
-      if (selectedResults.length > 0) {
-        await testingService.saveResults(id, { results: selectedResults });
-      }
+    // Lưu context và mở consumption modal (không submit trực tiếp)
+    bulkPendingRef.current = { sampleId, validIndicators, selectedResults };
+    setBulkConsumptionModal({ open: true, sampleId, count: validIndicators.length });
+  }, [id, detail, selectedIndicators]);
 
-      // Gửi kết quả với testDate
-      await testingService.submitResults(id, {
-        sampleId,
-        indicators: validIndicators.map((v) => ({
-          indicatorId: v.indicatorId,
-          testDate: v.testDate,
-        })),
-      });
+  const handleBulkConsumptionModalSubmitted = useCallback(async () => {
+    const pending = bulkPendingRef.current;
+    setBulkConsumptionModal({ open: false, sampleId: "", count: 0 });
+    bulkPendingRef.current = null;
 
-      // Optimistic update: cập nhật indicator testingStatus thành PendingApproval
-      const now = new Date().toISOString();
-      updateIndicatorsOptimistically(validIndicatorIds, {
-        testingStatus: IndicatorTestingStatus.PendingApproval,
-        submitDate: now,
-        canSubmit: false,
-      });
+    if (!pending) return;
 
-      // Reload full data from server (avoid duplicating BE logic)
-      await reloadData();
+    const submittedIds = pending.validIndicators.map((v) => v.indicatorId);
+    updateIndicatorsOptimistically(submittedIds, {
+      testingStatus: IndicatorTestingStatus.PendingApproval,
+      submitDate: new Date().toISOString(),
+      canSubmit: false,
+    });
 
-      message.success(
-        `Gửi kết quả thành công cho ${validIndicators.length} chỉ tiêu`
-      );
-      // Clear selection sau khi thành công
-      setSelectedIndicators((prev) => {
-        const newSelected = new Map(prev);
-        newSelected.set(sampleId, []);
-        return newSelected;
-      });
-    } catch (error: any) {
-      console.error("Failed to submit results:", error);
-      message.error(
-        getApiErrorMessage(error, "Không thể gửi kết quả")
-      );
-      // Reload để sync lại với server nếu có lỗi
-      await loadDetail();
-    } finally {
-      setSubmitting(false);
-    }
-  }, [id, detail, selectedIndicators, updateIndicatorsOptimistically, reloadData, loadDetail]);
+    setSelectedIndicators((prev) => {
+      const newMap = new Map(prev);
+      newMap.set(pending.sampleId, []);
+      return newMap;
+    });
+
+    await reloadData();
+  }, [updateIndicatorsOptimistically, reloadData]);
 
   const handleImagesChange = useCallback((
     sampleId: string,
@@ -523,11 +529,11 @@ const TestingDetail: React.FC = () => {
     message.success("Đã báo không thể thử nghiệm thành công");
   }, [closeCannotTestModal, reloadData]);
 
-  const handleSubmitSingleIndicator = useCallback(async (indicatorId: string) => {
+  const handleSubmitSingleIndicator = useCallback((indicatorId: string) => {
     if (!id || !detail) return;
 
     let sampleId: string | null = null;
-    let indicator = null;
+    let indicator: TestingIndicatorDto | null = null;
     for (const sample of detail.samples) {
       const found = sample.indicators.find((i) => i.id === indicatorId);
       if (found) {
@@ -539,7 +545,6 @@ const TestingDetail: React.FC = () => {
 
     if (!sampleId || !indicator) return;
 
-    // Cho phép gửi khi trạng thái = Todo, Testing, Rejected hoặc PendingApproval (gửi lại khi QLKT chưa duyệt)
     if (
       indicator.testingStatus !== IndicatorTestingStatus.Todo &&
       indicator.testingStatus !== IndicatorTestingStatus.Testing &&
@@ -565,43 +570,29 @@ const TestingDetail: React.FC = () => {
       return;
     }
 
-    setSubmitting(true);
-    try {
-      // Lưu kết quả trước
-      if (editedResult) {
-        await testingService.saveResults(id, { results: [editedResult] });
-      }
+    // Store context for when modal confirms
+    pendingSubmitRef.current = { sampleId, editedResult, resultValue, testDate };
+    setConsumptionModal({ open: true, indicatorId, indicatorName: indicator.indicatorName || "" });
+  }, [id, detail]);
 
-      // Gửi kết quả với testDate
-      await testingService.submitResults(id, {
-        sampleId,
-        indicators: [{ indicatorId, testDate }],
-      });
+  const handleConsumptionModalSubmitted = useCallback(async () => {
+    const { indicatorId } = consumptionModal;
+    const pending = pendingSubmitRef.current;
+    setConsumptionModal({ open: false, indicatorId: "", indicatorName: "" });
+    pendingSubmitRef.current = null;
 
-      // Optimistic update: cập nhật indicator testingStatus thành PendingApproval
-      const now = new Date().toISOString();
-      updateIndicatorsOptimistically([indicatorId], {
-        testingStatus: IndicatorTestingStatus.PendingApproval,
-        submitDate: now,
-        canSubmit: false,
-        result: resultValue,
-      });
+    if (!pending) return;
+    const { resultValue } = pending;
 
-      // Reload full data from server (avoid duplicating BE logic)
-      await reloadData();
+    updateIndicatorsOptimistically([indicatorId], {
+      testingStatus: IndicatorTestingStatus.PendingApproval,
+      submitDate: new Date().toISOString(),
+      canSubmit: false,
+      result: resultValue,
+    });
 
-      message.success("Gửi kết quả thành công");
-    } catch (error: any) {
-      console.error("Failed to submit indicator result:", error);
-      message.error(
-        getApiErrorMessage(error, "Không thể gửi kết quả")
-      );
-      // Reload để sync lại với server nếu có lỗi
-      await loadDetail();
-    } finally {
-      setSubmitting(false);
-    }
-  }, [id, detail, updateIndicatorsOptimistically, reloadData, loadDetail]);
+    await reloadData();
+  }, [consumptionModal, updateIndicatorsOptimistically, reloadData]);
 
   const handleUploadIndicatorImages = useCallback(async (
     indicatorId: string,
@@ -781,40 +772,106 @@ const TestingDetail: React.FC = () => {
     setHistoryModal({ visible: false, indicatorId: "", indicatorName: "" }), []);
 
   return (
-    <TestingDetailContainer
-      detail={detail!}
-      taskId={id!}
-      loading={loading}
-      submitting={submitting}
-      isUrgent={isUrgent}
-      sortedSamples={sortedSamples}
-      activeKeys={activeKeys}
-      selectedIndicators={selectedIndicators}
-      historyModal={historyModal}
-      cannotTestModal={cannotTestModal}
-      resultOptions={resultOptions}
-      getResultOptionsForIndicator={getResultOptionsForIndicator}
-      canPerformActions={canPerformActions}
-      isTestRequestCancelled={isTestRequestCancelled}
-      onBack={handleBack}
-      onCollapseChange={handleCollapseChange}
-      onSubmitResults={handleSubmitResults}
-      onResultsChange={handleResultsChange}
-      onSelectionChange={handleSelectionChange}
-      onImagesChange={handleImagesChange}
-      onShowRejectionHistory={showRejectionHistory}
-      onCloseHistoryModal={handleCloseHistoryModal}
-      onShowCannotTestModal={showCannotTestModal}
-      onCloseCannotTestModal={closeCannotTestModal}
-      onCannotTestSuccess={handleCannotTestSuccess}
-      onSaveIndicator={handleSaveIndicator}
-      onSubmitIndicator={handleSubmitSingleIndicator}
-      onUploadIndicatorImages={handleUploadIndicatorImages}
-      onDeleteIndicatorImage={handleDeleteIndicatorImage}
-      onBulkTestDateChange={handleBulkTestDateChange}
-      indicatorVisibleColumns={indicatorVisibleColumns}
-      onIndicatorVisibleColumnsChange={handleIndicatorVisibleColumnsChange}
-    />
+    <>
+      <TestingDetailContainer
+        detail={detail!}
+        taskId={id!}
+        loading={loading}
+        submitting={submitting}
+        isUrgent={isUrgent}
+        sortedSamples={sortedSamples}
+        activeKeys={activeKeys}
+        selectedIndicators={selectedIndicators}
+        historyModal={historyModal}
+        cannotTestModal={cannotTestModal}
+        resultOptions={resultOptions}
+        getResultOptionsForIndicator={getResultOptionsForIndicator}
+        canPerformActions={canPerformActions}
+        isTestRequestCancelled={isTestRequestCancelled}
+        onBack={handleBack}
+        onCollapseChange={handleCollapseChange}
+        onSubmitResults={handleSubmitResults}
+        onResultsChange={handleResultsChange}
+        onSelectionChange={handleSelectionChange}
+        onImagesChange={handleImagesChange}
+        onShowRejectionHistory={showRejectionHistory}
+        onCloseHistoryModal={handleCloseHistoryModal}
+        onShowCannotTestModal={showCannotTestModal}
+        onCloseCannotTestModal={closeCannotTestModal}
+        onCannotTestSuccess={handleCannotTestSuccess}
+        onSaveIndicator={handleSaveIndicator}
+        onSubmitIndicator={handleSubmitSingleIndicator}
+        onUploadIndicatorImages={handleUploadIndicatorImages}
+        onDeleteIndicatorImage={handleDeleteIndicatorImage}
+        onBulkTestDateChange={handleBulkTestDateChange}
+        indicatorVisibleColumns={indicatorVisibleColumns}
+        onIndicatorVisibleColumnsChange={handleIndicatorVisibleColumnsChange}
+      />
+
+      {consumptionModal.open && id && (
+        <SubmitConsumptionModal
+          open={consumptionModal.open}
+          contextLabel={consumptionModal.indicatorName}
+          itemCount={1}
+          onFetchPreview={() =>
+            testingService.getIndicatorConsumptionPreview(id, consumptionModal.indicatorId)
+          }
+          onSubmitWithConsumption={async (lines) => {
+            const pending = pendingSubmitRef.current;
+            if (!pending) return;
+            // Save result first if there are unsaved edits
+            if (pending.editedResult) {
+              await testingService.saveResults(id, { results: [pending.editedResult] });
+            }
+            await testingService.submitIndicatorWithConsumption(id, {
+              indicatorId: consumptionModal.indicatorId,
+              testDate: pending.testDate,
+              consumptionLines: lines,
+            });
+          }}
+          onSaveDraft={async (lines) => {
+            await testingService.saveIndicatorConsumptionDraft(id, {
+              indicatorId: consumptionModal.indicatorId,
+              consumptionLines: lines,
+            });
+          }}
+          onClose={() => {
+            setConsumptionModal({ open: false, indicatorId: "", indicatorName: "" });
+            pendingSubmitRef.current = null;
+          }}
+          onSubmitted={handleConsumptionModalSubmitted}
+        />
+      )}
+
+      {bulkConsumptionModal.open && id && (
+        <SubmitConsumptionModal
+          open={bulkConsumptionModal.open}
+          contextLabel={`${bulkConsumptionModal.count} chỉ tiêu`}
+          itemCount={bulkConsumptionModal.count}
+          onFetchPreview={async () => {
+            const indicatorIds = bulkPendingRef.current?.validIndicators.map((v) => v.indicatorId) ?? [];
+            return testingService.getBulkIndicatorConsumptionPreview(id, indicatorIds);
+          }}
+          onSubmitWithConsumption={async (lines) => {
+            const pending = bulkPendingRef.current;
+            if (!pending) return;
+            if (pending.selectedResults.length > 0) {
+              await testingService.saveResults(id, { results: pending.selectedResults });
+            }
+            await testingService.submitBulkIndicatorsWithConsumption(id, {
+              sampleId: pending.sampleId,
+              indicators: pending.validIndicators,
+              consumptionLines: lines,
+            });
+          }}
+          onClose={() => {
+            setBulkConsumptionModal({ open: false, sampleId: "", count: 0 });
+            bulkPendingRef.current = null;
+          }}
+          onSubmitted={handleBulkConsumptionModalSubmitted}
+        />
+      )}
+    </>
   );
 };
 

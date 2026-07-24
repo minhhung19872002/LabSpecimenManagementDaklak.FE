@@ -47,6 +47,7 @@ const BatchDetailPanel = React.memo<Props>(({
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [submitConsumptionModalOpen, setSubmitConsumptionModalOpen] = useState(false);
+  const [singleSubmitItemId, setSingleSubmitItemId] = useState<string | null>(null);
   const editedValuesRef = useRef<EditedValuesMap>(new Map());
   const [resultOptions, setResultOptions] = useState<{ value: string; label: string }[]>([]);
 
@@ -132,6 +133,28 @@ const BatchDetailPanel = React.memo<Props>(({
 
     setSubmitConsumptionModalOpen(true);
   };
+
+  const handleSubmitSingleItem = useCallback((itemId: string) => {
+    if (!batchDetail) return;
+    const item = batchDetail.items.find((i) => i.id === itemId);
+    if (!item) return;
+
+    const editedVal = editedValuesRef.current.get(itemId);
+    const result = editedVal?.result ?? item.result;
+    const testDate = editedVal?.testDate ?? item.testDate;
+
+    if (!result || result.trim() === "") {
+      message.warning(`Vui lòng nhập kết quả cho: ${item.indicatorName || "chỉ tiêu này"}`);
+      return;
+    }
+    if (!testDate) {
+      message.warning(`Vui lòng chọn ngày thử nghiệm cho: ${item.indicatorName || "chỉ tiêu này"}`);
+      return;
+    }
+
+    setSingleSubmitItemId(itemId);
+    setSubmitConsumptionModalOpen(true);
+  }, [batchDetail]);
 
   const handleCancel = async () => {
     if (!batchDetail) return;
@@ -269,6 +292,7 @@ const BatchDetailPanel = React.memo<Props>(({
           editedValuesRef={editedValuesRef}
           resultOptions={resultOptions}
           onResultSaved={handleResultSaved}
+          onSubmitItem={canSubmit ? handleSubmitSingleItem : undefined}
         />
 
         {batchDetail.consumptionConfirmed && (
@@ -293,14 +317,32 @@ const BatchDetailPanel = React.memo<Props>(({
 
       <SubmitConsumptionModal
         open={submitConsumptionModalOpen}
-        batchId={batchDetail.id}
-        batchCode={batchDetail.code}
-        batchName={batchDetail.name}
-        selectedItemIds={selectedItemIds}
-        onClose={() => setSubmitConsumptionModalOpen(false)}
-        onSubmitted={() => {
+        contextLabel={`${batchDetail.code} - ${batchDetail.name}`}
+        itemCount={singleSubmitItemId ? 1 : selectedItemIds.length}
+        onFetchPreview={async () => {
+          const res = await testBatchService.getConsumptionPreview(batchDetail.id);
+          return res.data;
+        }}
+        onSubmitWithConsumption={async (lines) => {
+          await testBatchService.submitWithConsumption(batchDetail.id, {
+            itemIds: singleSubmitItemId ? [singleSubmitItemId] : selectedItemIds,
+            consumptionLines: lines,
+          });
+        }}
+        onSaveDraft={async (lines) => {
+          await testBatchService.saveConsumptionDraft(batchDetail.id, {
+            consumptionLines: lines,
+          });
+        }}
+        onClose={() => {
           setSubmitConsumptionModalOpen(false);
-          setSelectedItemIds([]);
+          setSingleSubmitItemId(null);
+        }}
+        onSubmitted={() => {
+          const wasSingle = !!singleSubmitItemId;
+          setSubmitConsumptionModalOpen(false);
+          setSingleSubmitItemId(null);
+          if (!wasSingle) setSelectedItemIds([]);
           editedValuesRef.current.clear();
           loadDetail(batchDetail.id);
           onBatchesChanged();

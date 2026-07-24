@@ -18,7 +18,6 @@ import {
   DeleteOutlined,
   WarningOutlined,
 } from "../../../components/common/Icon";
-import testBatchService from "../../../services/testBatchService";
 import {
   productService,
   ProductType,
@@ -27,8 +26,8 @@ import {
 } from "../../../services/productService";
 import type {
   ConsumptionPreviewLineDto,
-  SubmitWithConsumptionDto,
-  SaveConsumptionDraftDto,
+  ConsumptionPreviewDto,
+  ConsumptionLineInputDto,
 } from "../../../types/testBatch";
 
 const { Text } = Typography;
@@ -42,10 +41,13 @@ interface EditableLine extends ConsumptionPreviewLineDto {
 
 interface Props {
   open: boolean;
-  batchId: string;
-  batchCode?: string;
-  batchName?: string;
-  selectedItemIds: string[];
+  /** Display text shown in modal subtitle (e.g. batch code or indicator name) */
+  contextLabel?: string;
+  /** Number of items being submitted — used in success message */
+  itemCount?: number;
+  onFetchPreview: () => Promise<ConsumptionPreviewDto>;
+  onSubmitWithConsumption: (consumptionLines: ConsumptionLineInputDto[]) => Promise<void>;
+  onSaveDraft?: (consumptionLines: ConsumptionLineInputDto[]) => Promise<void>;
   onClose: () => void;
   onSubmitted: () => void;
 }
@@ -93,10 +95,11 @@ function getUnitsPerStorage(product: ProductDto, unitId: string): number {
 
 const SubmitConsumptionModal: React.FC<Props> = ({
   open,
-  batchId,
-  batchCode,
-  batchName,
-  selectedItemIds,
+  contextLabel,
+  itemCount,
+  onFetchPreview,
+  onSubmitWithConsumption,
+  onSaveDraft,
   onClose,
   onSubmitted,
 }) => {
@@ -127,8 +130,7 @@ const SubmitConsumptionModal: React.FC<Props> = ({
   const loadPreview = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await testBatchService.getConsumptionPreview(batchId);
-      const data = res.data;
+      const data = await onFetchPreview();
       setIsFirstSubmit(data.isFirstSubmit);
       setLines(
         data.lines.map((l, i) => ({
@@ -142,7 +144,7 @@ const SubmitConsumptionModal: React.FC<Props> = ({
     } finally {
       setLoading(false);
     }
-  }, [batchId]);
+  }, [onFetchPreview]);
 
   const loadProducts = useCallback(async () => {
     try {
@@ -284,7 +286,7 @@ const SubmitConsumptionModal: React.FC<Props> = ({
     setLines((prev) => prev.filter((l) => l.key !== key));
   };
 
-  const buildConsumptionLines = () =>
+  const buildConsumptionLines = (): ConsumptionLineInputDto[] =>
     lines.map((l) => {
       let unitId = l.unitId;
       if (!unitId && l.productId) {
@@ -312,17 +314,11 @@ const SubmitConsumptionModal: React.FC<Props> = ({
   const handleSubmit = async () => {
     if (!validateLines()) return;
 
-    const dto: SubmitWithConsumptionDto = {
-      itemIds: selectedItemIds,
-      consumptionLines: buildConsumptionLines(),
-    };
-
     setSubmitting(true);
     try {
-      await testBatchService.submitWithConsumption(batchId, dto);
-      message.success(
-        `Gửi kết quả và trừ tiêu hao thành công (${selectedItemIds.length} chỉ tiêu)`,
-      );
+      await onSubmitWithConsumption(buildConsumptionLines());
+      const count = itemCount ?? 1;
+      message.success(`Gửi kết quả và trừ tiêu hao thành công (${count} chỉ tiêu)`);
       onSubmitted();
     } catch (err: any) {
       message.error(
@@ -334,15 +330,12 @@ const SubmitConsumptionModal: React.FC<Props> = ({
   };
 
   const handleSaveDraft = async () => {
+    if (!onSaveDraft) return;
     if (!validateLines()) return;
-
-    const dto: SaveConsumptionDraftDto = {
-      consumptionLines: buildConsumptionLines(),
-    };
 
     setSavingDraft(true);
     try {
-      await testBatchService.saveConsumptionDraft(batchId, dto);
+      await onSaveDraft(buildConsumptionLines());
       message.success("Đã lưu nháp nguyên vật liệu tiêu hao");
       onClose();
     } catch (err: any) {
@@ -537,7 +530,7 @@ const SubmitConsumptionModal: React.FC<Props> = ({
       footer={
         <Space>
           <Button onClick={onClose}>Hủy</Button>
-          {isFirstSubmit && (
+          {onSaveDraft && (
             <Button
               onClick={handleSaveDraft}
               loading={savingDraft}
@@ -563,11 +556,11 @@ const SubmitConsumptionModal: React.FC<Props> = ({
         </div>
       ) : (
         <>
-          <div style={{ marginBottom: 8 }}>
-            <Text type="secondary">
-              {batchCode} - {batchName}
-            </Text>
-          </div>
+          {contextLabel && (
+            <div style={{ marginBottom: 8 }}>
+              <Text type="secondary">{contextLabel}</Text>
+            </div>
+          )}
 
           {!isFirstSubmit && (
             <div
@@ -581,7 +574,7 @@ const SubmitConsumptionModal: React.FC<Props> = ({
             >
               <WarningOutlined style={{ color: "#faad14", marginRight: 8 }} />
               <Text type="secondary">
-                Tiêu hao đã được trừ trước đó. Không trừ thêm.
+                Đã có lịch sử tiêu hao từ lần gửi trước. Lần này sẽ trừ thêm (accumulate).
               </Text>
             </div>
           )}
@@ -612,16 +605,14 @@ const SubmitConsumptionModal: React.FC<Props> = ({
             scroll={{ x: 960, y: 350 }}
           />
 
-          {isFirstSubmit && (
-            <Button
-              type="dashed"
-              icon={<PlusOutlined />}
-              onClick={handleAddEmptyRow}
-              style={{ marginTop: 12 }}
-            >
-              Thêm nguyên liệu
-            </Button>
-          )}
+          <Button
+            type="dashed"
+            icon={<PlusOutlined />}
+            onClick={handleAddEmptyRow}
+            style={{ marginTop: 12 }}
+          >
+            Thêm nguyên liệu
+          </Button>
         </>
       )}
     </Modal>
