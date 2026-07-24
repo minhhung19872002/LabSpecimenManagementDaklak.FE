@@ -461,7 +461,7 @@ const SubmitConsumptionModal: React.FC<Props> = ({
       width: 95,
       render: (_, r) => {
         if (r.needsSelection) return "-";
-        if (r.equipmentId) return "-";
+        if (r.equipmentId || r.selectedProductType === ProductType.Equipment) return "lần";
         if (r.isDeducted) return r.unitName || "-";
 
         const product = products.find((p) => p.id === r.productId);
@@ -491,6 +491,7 @@ const SubmitConsumptionModal: React.FC<Props> = ({
       align: "right" as const,
       render: (_, r) => {
         if (r.needsSelection || r.storageAvailableQuantity == null) return "-";
+        if (r.equipmentId || r.selectedProductType === ProductType.Equipment) return "-";
         return `${r.storageAvailableQuantity.toLocaleString("vi-VN")} ${r.storageUnitName || ""}`.trim();
       },
     },
@@ -500,7 +501,7 @@ const SubmitConsumptionModal: React.FC<Props> = ({
       width: 80,
       render: (_, r) => {
         if (r.needsSelection) return "-";
-        return r.equipmentId ? "sử dụng" : "tiêu hao";
+        return (r.equipmentId || r.selectedProductType === ProductType.Equipment) ? "sử dụng" : "tiêu hao";
       },
     },
     {

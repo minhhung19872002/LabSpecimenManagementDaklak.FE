@@ -11,6 +11,7 @@ import GeneralInfoPanel from "./GeneralInfoPanel";
 import DepreciationInfoPanel from "./DepreciationInfoPanel";
 import CostConfigTab from "./CostConfigTab";
 import CostConfigHistoryTab from "./CostConfigHistoryTab";
+import TestLogTab from "./TestLogTab";
 
 const { Text } = Typography;
 
@@ -36,6 +37,11 @@ const EquipmentDetailView: React.FC<EquipmentDetailViewProps> = ({
   costConfigRefreshKey,
 }) => {
   const tabItems = [
+    {
+      key: "test-log",
+      label: "Nhật ký phép thử",
+      children: <TestLogTab equipmentId={equipment.id} />,
+    },
     {
       key: "cost-config",
       label: "Cấu hình chi phí",
@@ -93,7 +99,7 @@ const EquipmentDetailView: React.FC<EquipmentDetailViewProps> = ({
           <DepreciationInfoPanel equipment={equipment} />
         </Col>
         <Col xs={24} md={16} lg={17}>
-          <Tabs defaultActiveKey="cost-config" items={tabItems} />
+          <Tabs defaultActiveKey="test-log" items={tabItems} />
         </Col>
       </Row>
     </Card>

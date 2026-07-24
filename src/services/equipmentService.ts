@@ -94,6 +94,7 @@ export interface EquipmentDto extends EquipmentListDto {
   notes?: string;
   location?: string;
   importDate?: string;
+  productId?: string;
   attachments: EquipmentAttachmentDto[];
 }
 
@@ -139,12 +140,31 @@ export interface CreateUpdateEquipmentDto {
   averageSamplesPerYear?: number;
   maintenanceCostRatio?: number;
   calibrationCostPerYear?: number;
+  productId?: string;
   attachments?: CreateEquipmentAttachmentDto[];
 }
 
 export interface UpdateEquipmentStatusDto {
   status: EquipmentStatus;
   notes?: string;
+}
+
+export interface GetEquipmentTestLogParams {
+  dateFrom?: string;
+  dateTo?: string;
+  skipCount?: number;
+  maxResultCount?: number;
+}
+
+export interface EquipmentTestLogItemDto {
+  sampleCode: string;
+  sampleName: string;
+  indicatorName: string;
+  testMethodName: string;
+  technicianName?: string;
+  result?: string;
+  approvalStatus: number;
+  testTime?: string;
 }
 
 export interface GetEquipmentListInput {
@@ -228,6 +248,17 @@ export const equipmentService = {
 
   saveCostConfig: async (equipmentId: string, data: CreateEquipmentCostConfigDto): Promise<EquipmentCostConfigDto> => {
     const response = await api.post<EquipmentCostConfigDto>(`${BASE_URL}/${equipmentId}/cost-configs`, data);
+    return response.data;
+  },
+
+  getTestLog: async (
+    equipmentId: string,
+    params: GetEquipmentTestLogParams = {}
+  ): Promise<{ items: EquipmentTestLogItemDto[]; totalCount: number }> => {
+    const response = await api.get<{ items: EquipmentTestLogItemDto[]; totalCount: number }>(
+      `${BASE_URL}/${equipmentId}/test-log`,
+      { params }
+    );
     return response.data;
   },
 };
