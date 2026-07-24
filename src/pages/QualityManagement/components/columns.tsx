@@ -1,5 +1,5 @@
 import React from "react";
-import { Button, Space, Tag } from "antd";
+import { Button, Space, Tag, Tooltip } from "antd";
 import { HistoryOutlined, WarningOutlined, AuditOutlined } from "../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
@@ -62,6 +62,19 @@ export const getQualityManagementColumns = (
     key: "totalIndicatorCount",
     width: 120,
     align: "center" as const,
+    render: (total: number, record: QualityManagementTaskDto) => {
+      const pending = record.pendingApprovalIndicatorCount ?? 0;
+      return (
+        <Tooltip title={`${pending} chỉ tiêu chờ duyệt / ${total} tổng`}>
+          <span>
+            <span style={{ color: pending > 0 ? "#faad14" : undefined, fontWeight: pending > 0 ? 600 : undefined }}>
+              {pending}
+            </span>
+            <span style={{ color: "#999" }}> / {total}</span>
+          </span>
+        </Tooltip>
+      );
+    },
   },
   {
     title: "Khoa phòng",
