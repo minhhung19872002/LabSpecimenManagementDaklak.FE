@@ -857,6 +857,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
         const hasTestDate = !!currentTestDate;
 
         const canSubmit =
+          record.canEdit &&
           (status === IndicatorTestingStatus.Todo ||
             status === IndicatorTestingStatus.Testing ||
             status === IndicatorTestingStatus.Rejected ||
@@ -873,10 +874,11 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
         }
 
         const canMarkCannotTest =
-          status === IndicatorTestingStatus.Todo ||
-          status === IndicatorTestingStatus.Testing ||
-          status === IndicatorTestingStatus.Rejected ||
-          status === IndicatorTestingStatus.PendingApproval;
+          record.canEdit &&
+          (status === IndicatorTestingStatus.Todo ||
+            status === IndicatorTestingStatus.Testing ||
+            status === IndicatorTestingStatus.Rejected ||
+            status === IndicatorTestingStatus.PendingApproval);
 
         return (
           <Space size={4}>
