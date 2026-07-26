@@ -1,0 +1,32 @@
+name: Deploy Frontend to PROD
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'Dockerfile'
+      - 'nginx.conf'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/frontend-deploy-prod.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-frontend-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy frontend via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_VM_HOST }}
+          username: ${{ secrets.PROD_VM_USER }}
+          key: ${{ secrets.PROD_VM_SSH_KEY }}
+          command_timeout: 30m
+          script: frontend
