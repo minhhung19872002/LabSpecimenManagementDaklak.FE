@@ -39,6 +39,26 @@ import "./IndicatorTable.css";
 
 const { Text } = Typography;
 
+const renderEllipsizedRichText = (
+  name: string,
+  formattedName?: string | null,
+) => (
+  <Tooltip
+    title={<IndicatorName name={name} formattedName={formattedName} />}
+  >
+    <span
+      style={{
+        display: "block",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
+      }}
+    >
+      <IndicatorName name={name} formattedName={formattedName} />
+    </span>
+  </Tooltip>
+);
+
 // Extended type with position flags for tree line rendering
 interface IndicatorWithPosition extends LaboratoryTaskIndicatorDto {
   _isFirstSub?: boolean;
@@ -451,13 +471,27 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         record: LaboratoryTaskIndicatorDto,
       ) => {
         if (record.subContractMethodName?.trim()) {
-          return <IndicatorName name={record.subContractMethodName} />;
+          return renderEllipsizedRichText(record.subContractMethodName);
         }
 
-        const canEditMethod =
-          !forceDisableAll &&
-          !savingMethodIndicatorIds.includes(record.id) &&
-          record.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled;
+        const isMethodReadOnly =
+          forceDisableAll ||
+          record.approvalStatus === IndicatorApprovalStatus.Approved ||
+          record.isSentToQuality ||
+          record.approvalStatus === IndicatorApprovalStatus.CustomerCancelled;
+
+        if (isMethodReadOnly) {
+          return value || record.methodName || record.methodFormattedName ? (
+            renderEllipsizedRichText(
+              record.methodName || String(value),
+              record.methodFormattedName,
+            )
+          ) : (
+            <Text>-</Text>
+          );
+        }
+
+        const canEditMethod = !savingMethodIndicatorIds.includes(record.id);
 
         const methodOptions = (methods || []).map((m) => ({
           value: m.id,
@@ -505,9 +539,11 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
         // Hide for parent indicators that have sub-indicators
         if (record._isParentWithSubs) return null;
 
-        // Cho phép chỉnh sửa trừ khi bị hủy hoặc forceDisable
+        // Khóa sau khi duyệt/gửi QLCL, khi bị hủy hoặc forceDisable
         const canEditUnit =
           !forceDisableAll &&
+          record.approvalStatus !== IndicatorApprovalStatus.Approved &&
+          !record.isSentToQuality &&
           record.approvalStatus !== IndicatorApprovalStatus.CustomerCancelled &&
           onUnitChange;
 
