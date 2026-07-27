@@ -42,6 +42,9 @@ interface IndicatorTableProps {
   // Bulk action selection props (for pending indicators)
   selectedPendingIds: string[];
   onPendingSelectChange: (ids: string[]) => void;
+  // Bulk action selection props (for approved indicators — "Trả lại KQ" hàng loạt)
+  selectedApprovedIds: string[];
+  onApprovedSelectChange: (ids: string[]) => void;
   // Force disable all actions (e.g., when test request is cancelled)
   forceDisableActions?: boolean;
 }
@@ -184,6 +187,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   onIndicatorUpdate: _onIndicatorUpdate,
   selectedPendingIds,
   onPendingSelectChange,
+  selectedApprovedIds,
+  onApprovedSelectChange,
   forceDisableActions = false,
 }) => {
   const getApprovalStatusTag = (status: QualityIndicatorApprovalStatus) => (
@@ -280,20 +285,24 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   ): ColumnsType<ProcessedIndicator> => {
     const cols: ColumnsType<ProcessedIndicator> = [];
 
-    // Only show checkbox column if there are pending indicators
-    if (hasPendingIndicators && !actionsDisabled) {
+    // Show checkbox column for pending (bulk duyệt/từ chối) AND approved (bulk trả lại KQ)
+    if ((hasPendingIndicators || hasApprovedIndicators) && !actionsDisabled) {
       cols.push({
         title: () => null,
         dataIndex: "checkbox",
         key: "checkbox",
         width: 50,
         render: (_, record) => {
+          if (record._isParentWithChildren) return null;
+
           const isPending =
-            record.approvalStatus ===
-              QualityIndicatorApprovalStatus.PendingApproval &&
+            record.approvalStatus === QualityIndicatorApprovalStatus.PendingApproval &&
             record.isInQualityScope;
-          // Don't show checkbox for parent indicators with children
-          if (isPending && !record._isParentWithChildren) {
+          const isApproved =
+            record.approvalStatus === QualityIndicatorApprovalStatus.Approved &&
+            record.isInQualityScope;
+
+          if (isPending) {
             return (
               <Checkbox
                 checked={selectedPendingIds.includes(record.id)}
@@ -309,6 +318,24 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
               />
             );
           }
+
+          if (isApproved && canReject) {
+            return (
+              <Checkbox
+                checked={selectedApprovedIds.includes(record.id)}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    onApprovedSelectChange([...selectedApprovedIds, record.id]);
+                  } else {
+                    onApprovedSelectChange(
+                      selectedApprovedIds.filter((id) => id !== record.id),
+                    );
+                  }
+                }}
+              />
+            );
+          }
+
           return null;
         },
       });
