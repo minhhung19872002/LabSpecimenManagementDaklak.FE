@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
-  Button, Col, Form, Image, Input, Modal, Row, Select, Space, Upload, message,
+  Button, Checkbox, Col, Form, Image, Input, Modal, Row, Select, Space, Upload, message,
 } from "antd";
 import DatePicker from "antd/es/date-picker";
 import { PlusOutlined, CloseOutlined } from "@ant-design/icons";
@@ -24,6 +24,7 @@ interface FormValues {
   dueDate?: string;
   priority: SupplementaryTaskPriority;
   status: SupplementaryTaskStatus;
+  isPrivate: boolean;
 }
 
 interface UploadedImage {
@@ -63,6 +64,7 @@ const SupplementaryTaskModal: React.FC<SupplementaryTaskModalProps> = ({
       dueDate: undefined,
       priority: SupplementaryTaskPriority.Medium,
       status: SupplementaryTaskStatus.Pending,
+      isPrivate: false,
     },
   });
 
@@ -76,6 +78,7 @@ const SupplementaryTaskModal: React.FC<SupplementaryTaskModalProps> = ({
         dueDate: editingItem.dueDate ?? undefined,
         priority: editingItem.priority,
         status: editingItem.status,
+        isPrivate: editingItem.isPrivate,
       });
       setImages(editingItem.imageUrls.map((url) => ({ fileId: url, url })));
     } else {
@@ -86,6 +89,7 @@ const SupplementaryTaskModal: React.FC<SupplementaryTaskModalProps> = ({
         dueDate: undefined,
         priority: SupplementaryTaskPriority.Medium,
         status: SupplementaryTaskStatus.Pending,
+        isPrivate: false,
       });
       setImages([]);
     }
@@ -127,6 +131,7 @@ const SupplementaryTaskModal: React.FC<SupplementaryTaskModalProps> = ({
           dueDate: data.dueDate || undefined,
           priority: data.priority,
           status: data.status,
+          isPrivate: data.isPrivate,
           imageUrls,
         });
       } else {
@@ -136,6 +141,7 @@ const SupplementaryTaskModal: React.FC<SupplementaryTaskModalProps> = ({
           assignedToId: data.assignedToId,
           dueDate: data.dueDate || undefined,
           priority: data.priority,
+          isPrivate: data.isPrivate,
           imageUrls,
         });
       }
@@ -235,8 +241,28 @@ const SupplementaryTaskModal: React.FC<SupplementaryTaskModalProps> = ({
         </Row>
 
         <Row gutter={16}>
+          {/* Công việc giao riêng */}
+          <Col xs={24} sm={14}>
+            <Form.Item label="Công việc giao riêng">
+              <Controller
+                name="isPrivate"
+                control={control}
+                render={({ field }) => (
+                  <Checkbox
+                    checked={field.value}
+                    onChange={(event) => field.onChange(event.target.checked)}
+                  >
+                    <span style={{ color: "#8c8c8c", fontSize: 13 }}>
+                      Chỉ người được giao và Ban giám đốc có thể xem
+                    </span>
+                  </Checkbox>
+                )}
+              />
+            </Form.Item>
+          </Col>
+
           {/* Hạn hoàn thành */}
-          <Col xs={24} sm={isEdit ? 12 : 24}>
+          <Col xs={24} sm={10}>
             <Form.Item label="Hạn hoàn thành">
               <Controller
                 name="dueDate"
@@ -254,10 +280,12 @@ const SupplementaryTaskModal: React.FC<SupplementaryTaskModalProps> = ({
               />
             </Form.Item>
           </Col>
+        </Row>
 
-          {/* Trạng thái — chỉ hiện khi edit */}
-          {isEdit && (
-            <Col xs={24} sm={12}>
+        {/* Trạng thái — chỉ hiện khi edit */}
+        {isEdit && (
+          <Row>
+            <Col xs={24}>
               <Form.Item label="Trạng thái">
                 <Controller
                   name="status"
@@ -268,8 +296,8 @@ const SupplementaryTaskModal: React.FC<SupplementaryTaskModalProps> = ({
                 />
               </Form.Item>
             </Col>
-          )}
-        </Row>
+          </Row>
+        )}
 
         {/* Hình ảnh */}
         <Form.Item
