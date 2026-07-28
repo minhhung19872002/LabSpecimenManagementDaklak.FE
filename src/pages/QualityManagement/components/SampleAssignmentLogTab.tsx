@@ -404,7 +404,7 @@ const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegis
         ),
       },
       {
-        title: "Ngày chuyển",
+        title: "Ngày nhận mẫu",
         dataIndex: "transferDate",
         key: "transferDate",
         width: 100,
@@ -604,7 +604,7 @@ const SampleAssignmentLogTab: React.FC<SampleAssignmentLogTabProps> = ({ onRegis
             onChange={handleDateRangeChange}
             style={{ width: "100%" }}
             format="DD/MM/YY"
-            placeholder={["Ngày YC xong từ", "Đến ngày"]}
+            placeholder={["Ngày nhận mẫu từ", "Đến ngày"]}
             allowClear
           />
         </Col>

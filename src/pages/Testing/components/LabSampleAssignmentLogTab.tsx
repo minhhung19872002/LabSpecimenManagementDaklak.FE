@@ -239,7 +239,7 @@ export const COLUMN_OPTIONS: ColumnOption[] = [
   { key: 'sampleName', label: 'Tên mẫu' },
   { key: 'sampleQuantity', label: 'Lượng mẫu gửi' },
   { key: 'sampleStatusText', label: 'Tình trạng mẫu' },
-  { key: 'transferDate', label: 'Ngày chuyển' },
+  { key: 'transferDate', label: 'Ngày nhận mẫu' },
   { key: 'requestCompletionDate', label: 'Ngày YC xong' },
   { key: 'testDate', label: 'Thời gian TN' },
   { key: 'indicatorName', label: 'Tên chỉ tiêu' },
@@ -542,7 +542,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
         ),
       }),
       withResize('transferDate', {
-        title: 'Ngày chuyển',
+        title: 'Ngày nhận mẫu',
         dataIndex: 'transferDate',
         key: 'transferDate',
         onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.transferDateRowSpan),
