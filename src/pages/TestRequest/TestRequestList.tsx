@@ -14,8 +14,6 @@ import {
 import {
   PlusOutlined,
   ReloadOutlined,
-  ImportOutlined,
-  DownloadOutlined,
   CloudOutlined,
   SortAscendingOutlined,
 } from "../../components/common/Icon";
@@ -41,11 +39,9 @@ const TestRequestList: React.FC = () => {
     sorting,
     dateRange,
     importModalOpen,
-    downloadingTemplate,
     columns,
     isOfflineData,
     loadData,
-    handleDownloadTemplate,
     handleSearch,
     handleStatusChange,
     handleSortChange,
@@ -56,7 +52,6 @@ const TestRequestList: React.FC = () => {
     handlePageChange,
     handleSearchInputChange,
     handleClearSearch,
-    openImportModal,
     closeImportModal,
     handleImportSuccess,
   } = useTestRequestList();

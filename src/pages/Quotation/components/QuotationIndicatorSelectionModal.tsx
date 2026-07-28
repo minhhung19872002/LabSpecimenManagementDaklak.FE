@@ -1207,7 +1207,6 @@ const QuotationIndicatorSelectionModal: React.FC<
                     (m.specimenTypeId || null) === (specimenTypeId || null),
                 );
                 const masterPrice = method?.unitPrice || 0;
-                const isFree = isIndicatorFree(indicatorId, key);
                 const effectivePrice = getEffectivePrice(key, masterPrice);
 
                 return (

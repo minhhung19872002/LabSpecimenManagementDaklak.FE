@@ -17,8 +17,6 @@ import { formatDate, stripPTags, evaluatePassFail } from "../../../utils/formatt
 import {
   QualityManagementIndicatorDto,
   QualityIndicatorApprovalStatus,
-  QualityIndicatorApprovalStatusLabels,
-  QualityIndicatorApprovalStatusColors,
   QualityManagementStatus,
   QLCLDisplayStatus,
   QLCLDisplayStatusLabels,
@@ -191,12 +189,6 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   onApprovedSelectChange,
   forceDisableActions = false,
 }) => {
-  const getApprovalStatusTag = (status: QualityIndicatorApprovalStatus) => (
-    <StatusTag color={QualityIndicatorApprovalStatusColors[status]}>
-      {QualityIndicatorApprovalStatusLabels[status]}
-    </StatusTag>
-  );
-
   const getReportStatusTag = (isPrinted: boolean) => (
     <StatusTag color={isPrinted ? "success" : "default"}>
       {isPrinted ? "Đã phát hành" : "Chưa phát hành"}

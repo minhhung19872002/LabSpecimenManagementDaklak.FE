@@ -96,7 +96,11 @@ export const testingService = {
     if (input.testRequestStatus !== undefined) queryParams.TestRequestStatus = input.testRequestStatus;
     if (input.fromDate) queryParams.FromDate = input.fromDate;
     if (input.toDate) queryParams.ToDate = input.toDate;
-    if (input.laboratoryId) queryParams.LaboratoryId = input.laboratoryId;
+    if (input.laboratoryIds && input.laboratoryIds.length > 0) {
+      input.laboratoryIds.forEach((id, index) => {
+        queryParams[`LaboratoryIds[${index}]`] = id;
+      });
+    }
     if (input.indicatorIds && input.indicatorIds.length > 0) {
       input.indicatorIds.forEach((id, index) => {
         queryParams[`IndicatorIds[${index}]`] = id;
@@ -127,6 +131,11 @@ export const testingService = {
     if (input.search) queryParams.Search = input.search;
     if (input.fromDate) queryParams.FromDate = input.fromDate;
     if (input.toDate) queryParams.ToDate = input.toDate;
+    if (input.laboratoryIds && input.laboratoryIds.length > 0) {
+      input.laboratoryIds.forEach((id, index) => {
+        queryParams[`LaboratoryIds[${index}]`] = id;
+      });
+    }
     if (input.indicatorIds && input.indicatorIds.length > 0) {
       input.indicatorIds.forEach((id, index) => {
         queryParams[`IndicatorIds[${index}]`] = id;
