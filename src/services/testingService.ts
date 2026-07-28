@@ -184,6 +184,30 @@ export const testingService = {
   },
 
   /**
+   * KTV cập nhật phương pháp cho 1 chỉ tiêu (BE chặn chỉ tiêu đã duyệt/đã hủy)
+   */
+  updateIndicatorMethod: async (indicatorId: string, methodId: string | null): Promise<TestingIndicatorDto> => {
+    const response = await api.put<TestingIndicatorDto>(
+      `${BASE_URL}/indicators/${indicatorId}/method`,
+      JSON.stringify(methodId),
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+    return response.data;
+  },
+
+  /**
+   * KTV cập nhật đơn vị tính cho 1 chỉ tiêu (BE chặn chỉ tiêu đã duyệt/đã hủy)
+   */
+  updateIndicatorUnit: async (indicatorId: string, unit: string | null): Promise<TestingIndicatorDto> => {
+    const response = await api.put<TestingIndicatorDto>(
+      `${BASE_URL}/indicators/${indicatorId}/unit`,
+      JSON.stringify(unit),
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+    return response.data;
+  },
+
+  /**
    * Submit indicators for approval (legacy)
    */
   submitForApproval: async (id: string, input: SubmitForApprovalInput): Promise<void> => {

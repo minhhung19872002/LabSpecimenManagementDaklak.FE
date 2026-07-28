@@ -3,6 +3,8 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { message } from "antd";
 import { testingService } from "../../services/testingService";
 import { testResultValueService } from "../../services/testResultValueService";
+import { laboratoryTaskService } from "../../services/laboratoryTaskService";
+import { MethodLookupDto } from "../../types/laboratoryTask";
 import { getApiErrorMessage } from "../../utils/errorHandler";
 import {
   TestingDetailDto,
@@ -48,6 +50,10 @@ const TestingDetail: React.FC = () => {
   const [detail, setDetail] = useState<TestingDetailDto | null>(null);
   const [resultOptions, setResultOptions] = useState<ResultOption[]>([]);
   const [allResultValues, setAllResultValues] = useState<TestResultValueWithIndicator[]>([]);
+  // Danh sách phương pháp từ master data cho dropdown chọn PP
+  const [methods, setMethods] = useState<MethodLookupDto[]>([]);
+  // Các chỉ tiêu đang lưu PP/ĐVT (disable control trong lúc chờ API)
+  const [savingIndicatorIds, setSavingIndicatorIds] = useState<string[]>([]);
 
   // Check if viewing from "Công việc của Lab" tab (readonly mode)
   // Valid viewMode values: "my" (default), "lab" (readonly)
@@ -158,8 +164,6 @@ const TestingDetail: React.FC = () => {
               );
               return {
                 indicatorId: ind.id,
-                methodId: ind.methodId,
-                unit: ind.unit,
                 result: existingResult?.result ?? ind.result,
                 testDate: existingResult?.testDate ?? ind.testDate, // Quan trọng: cần testDate để batch submit hoạt động
               };
@@ -224,8 +228,6 @@ const TestingDetail: React.FC = () => {
           sample.sampleId,
           sample.indicators.map((ind) => ({
             indicatorId: ind.id,
-            methodId: ind.methodId,
-            unit: ind.unit,
             result: ind.result,
             testDate: ind.testDate, // Quan trọng: cần testDate để batch submit hoạt động
           }))
@@ -288,6 +290,20 @@ const TestingDetail: React.FC = () => {
       }
     };
     loadResultOptions();
+  }, []);
+
+  // Load danh sách phương pháp (tất cả từ master data) cho dropdown chọn PP
+  useEffect(() => {
+    const loadMethods = async () => {
+      try {
+        // Không truyền indicatorId -> trả về toàn bộ method active
+        const result = await laboratoryTaskService.getMethodsByIndicator();
+        setMethods(result || []);
+      } catch (error) {
+        console.error("Failed to load methods:", error);
+      }
+    };
+    loadMethods();
   }, []);
 
   // Function to get result options filtered by (indicatorId + specimenTypeId)
@@ -365,6 +381,63 @@ const TestingDetail: React.FC = () => {
       message.error(getApiErrorMessage(error, "Không thể lưu kết quả"));
     }
   }, [id]);
+
+  // Thay nguyên indicator trong detail bằng DTO server trả về (giống cách QLKT làm) —
+  // KHÔNG spread-merge để case clear PP (field null/bị omit) không giữ lại giá trị cũ
+  const replaceIndicator = useCallback((updated: TestingIndicatorDto) => {
+    setDetail((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        samples: prev.samples.map((sample) => ({
+          ...sample,
+          indicators: sample.indicators.map((ind) =>
+            ind.id === updated.id ? updated : ind
+          ),
+        })),
+      };
+    });
+  }, []);
+
+  // Đổi phương pháp: lưu ngay qua API riêng, thay indicator bằng DTO server trả về
+  // (DTO mang sẵn ĐVT resolved theo PP mới + giới hạn mới + canEdit/testingStatus mới)
+  const handleMethodChange = useCallback(async (
+    indicatorId: string,
+    methodId: string | null
+  ) => {
+    setSavingIndicatorIds((prev) => [...prev, indicatorId]);
+    try {
+      const updated = await testingService.updateIndicatorMethod(indicatorId, methodId);
+      replaceIndicator(updated);
+      message.open({
+        type: "success",
+        content: "Đã lưu phương pháp",
+        duration: 1.2,
+        key: "testing-method-autosave-success",
+      });
+    } catch (error: any) {
+      console.error("Failed to update method:", error);
+      message.error(getApiErrorMessage(error, "Không thể cập nhật phương pháp"));
+    } finally {
+      setSavingIndicatorIds((prev) => prev.filter((i) => i !== indicatorId));
+    }
+  }, [replaceIndicator]);
+
+  // Đổi ĐVT: lưu khi blur qua API riêng.
+  // Không track savingIndicatorIds ở đây: ĐVT không cần disable khi lưu, và
+  // push/filter trùng id với save PP sẽ mở khóa Select PP sớm hơn dự kiến.
+  const handleUnitChange = useCallback(async (
+    indicatorId: string,
+    unit: string | null
+  ) => {
+    try {
+      const updated = await testingService.updateIndicatorUnit(indicatorId, unit);
+      replaceIndicator(updated);
+    } catch (error: any) {
+      console.error("Failed to update unit:", error);
+      message.error(getApiErrorMessage(error, "Không thể cập nhật đơn vị tính"));
+    }
+  }, [replaceIndicator]);
 
   const handleSubmitResults = useCallback(async (sampleId: string) => {
     if (!id || !detail) return;
@@ -689,8 +762,6 @@ const TestingDetail: React.FC = () => {
         );
         return {
           indicatorId,
-          methodId: existingResult?.methodId ?? indicator?.methodId,
-          unit: existingResult?.unit ?? indicator?.unit,
           result: existingResult?.result ?? indicator?.result,
           testDate: date,
         };
@@ -718,8 +789,6 @@ const TestingDetail: React.FC = () => {
           if (indicator) {
             updatedList.push({
               indicatorId,
-              methodId: indicator.methodId,
-              unit: indicator.unit,
               result: indicator.result,
               testDate: date,
             });
@@ -800,6 +869,10 @@ const TestingDetail: React.FC = () => {
       getResultOptionsForIndicator={getResultOptionsForIndicator}
       canPerformActions={canPerformActions}
       isTestRequestCancelled={isTestRequestCancelled}
+      methods={methods}
+      savingIndicatorIds={savingIndicatorIds}
+      onMethodChange={handleMethodChange}
+      onUnitChange={handleUnitChange}
       onBack={handleBack}
       onCollapseChange={handleCollapseChange}
       onSubmitResults={handleSubmitResults}

@@ -13,6 +13,7 @@ import {
   IndicatorImageDto,
 } from "../../../types/testing";
 import { TestRequestStatus } from "../../../types/testRequest";
+import { MethodLookupDto } from "../../../types/laboratoryTask";
 import IndicatorEditTable from "./IndicatorEditTable";
 import RejectionHistoryModal from "./RejectionHistoryModal";
 import CannotTestModal from "./CannotTestModal";
@@ -37,6 +38,10 @@ interface SamplePanelContentProps {
   getResultOptionsForIndicator?: (indicatorId: string, specimenTypeId?: string) => ResultOption[];
   canPerformActions: boolean;
   isTestRequestCancelled: boolean;
+  methods?: MethodLookupDto[];
+  savingIndicatorIds?: string[];
+  onMethodChange?: (indicatorId: string, methodId: string | null) => void;
+  onUnitChange?: (indicatorId: string, unit: string | null) => void;
   onResultsChange: (sampleId: string, results: SaveIndicatorResultDto[]) => void;
   onSelectionChange: (sampleId: string, indicatorIds: string[]) => void;
   onImagesChange: (sampleId: string, imageType: SampleTestingImageType, images: SampleTestingImageDto[]) => void;
@@ -52,6 +57,7 @@ interface SamplePanelContentProps {
 const SamplePanelContent = React.memo<SamplePanelContentProps>(function SamplePanelContent({
   taskId, sample, selectedIndicatorIds, isUrgent, submitting, resultOptions,
   getResultOptionsForIndicator, canPerformActions, isTestRequestCancelled,
+  methods, savingIndicatorIds, onMethodChange, onUnitChange,
   onResultsChange, onSelectionChange, onImagesChange,
   onShowRejectionHistory, onSaveIndicator, onSubmitIndicator,
   onUploadIndicatorImages, onDeleteIndicatorImage, onShowCannotTestModal,
@@ -82,6 +88,10 @@ const SamplePanelContent = React.memo<SamplePanelContentProps>(function SamplePa
         getResultOptionsForIndicator={getResultOptionsForIndicator}
         canPerformActions={canPerformActions}
         isTestRequestCancelled={isTestRequestCancelled}
+        methods={methods}
+        savingIndicatorIds={savingIndicatorIds}
+        onMethodChange={onMethodChange}
+        onUnitChange={onUnitChange}
         onResultsChange={handleResultsChange}
         onSelectionChange={handleSelectionChange}
         onShowRejectionHistory={onShowRejectionHistory}
@@ -126,6 +136,12 @@ interface TestingDetailContainerProps {
   /** Có quyền thực hiện thao tác (nhập/sửa/gửi kết quả) theo Permission Matrix */
   canPerformActions?: boolean;
   isTestRequestCancelled?: boolean;
+  /** Danh sách phương pháp từ master data cho dropdown chọn PP */
+  methods?: MethodLookupDto[];
+  /** Các chỉ tiêu đang lưu PP/ĐVT */
+  savingIndicatorIds?: string[];
+  onMethodChange?: (indicatorId: string, methodId: string | null) => void;
+  onUnitChange?: (indicatorId: string, unit: string | null) => void;
   onBack: () => void;
   onCollapseChange: (keys: string[]) => void;
   onSubmitResults: (sampleId: string) => void;
@@ -181,6 +197,10 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
   getResultOptionsForIndicator,
   canPerformActions = false,
   isTestRequestCancelled = false,
+  methods,
+  savingIndicatorIds,
+  onMethodChange,
+  onUnitChange,
   onBack,
   onCollapseChange,
   onSubmitResults,
@@ -308,6 +328,10 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
                 getResultOptionsForIndicator={getResultOptionsForIndicator}
                 canPerformActions={canPerformActions}
                 isTestRequestCancelled={isTestRequestCancelled}
+                methods={methods}
+                savingIndicatorIds={savingIndicatorIds}
+                onMethodChange={onMethodChange}
+                onUnitChange={onUnitChange}
                 onResultsChange={onResultsChange}
                 onSelectionChange={onSelectionChange}
                 onImagesChange={onImagesChange}
