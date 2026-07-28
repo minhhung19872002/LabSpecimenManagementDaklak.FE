@@ -196,6 +196,22 @@ export const testingService = {
   },
 
   /**
+   * KTV bulk cập nhật phương pháp cho nhiều chỉ tiêu.
+   * BE skip (không throw) chỉ tiêu đã duyệt/đã hủy/không có quyền; trả về list DTO đã thực sự update.
+   */
+  bulkUpdateIndicatorMethod: async (
+    taskId: string,
+    indicatorIds: string[],
+    methodId: string | null
+  ): Promise<TestingIndicatorDto[]> => {
+    const response = await api.put<TestingIndicatorDto[]>(
+      `${BASE_URL}/${taskId}/indicators/bulk-method`,
+      { indicatorIds, methodId }
+    );
+    return response.data;
+  },
+
+  /**
    * KTV cập nhật đơn vị tính cho 1 chỉ tiêu (BE chặn chỉ tiêu đã duyệt/đã hủy)
    */
   updateIndicatorUnit: async (indicatorId: string, unit: string | null): Promise<TestingIndicatorDto> => {

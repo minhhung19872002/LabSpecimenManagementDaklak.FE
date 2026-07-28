@@ -1,5 +1,6 @@
 import React, { useCallback } from "react";
 import { Button, Collapse, Alert, Spin, Card, Tooltip, Row, Col } from "antd";
+import type { FormInstance } from "antd";
 import {
   ArrowLeftOutlined,
   WarningOutlined,
@@ -22,6 +23,7 @@ import {
   TestingOverviewSection,
   SamplePanelHeader,
   SampleImagesRow,
+  TestingBulkMethodBar,
 } from "./sections";
 
 const { Panel } = Collapse;
@@ -180,6 +182,26 @@ interface TestingDetailContainerProps {
   indicatorVisibleColumns?: string[];
   /** Callback khi thay đổi cột hiển thị */
   onIndicatorVisibleColumnsChange?: (keys: string[]) => void;
+  /** Danh sách mẫu sau khi lọc theo "Chọn chỉ tiêu" — dùng cho Collapse (overview vẫn dùng sortedSamples) */
+  filteredSamples?: TestingSampleDto[];
+  /** Bulk chọn phương pháp: filter + chọn tất cả toàn cục + modal */
+  indicatorFilter?: string[];
+  indicatorFilterOptions?: { value: string; label: string }[];
+  totalGlobalSelectable?: number;
+  totalGlobalSelected?: number;
+  /** Số chỉ tiêu gốc trong selection thực sự đổi được PP (canEdit, không Done/Cancelled) */
+  totalMethodEditableSelected?: number;
+  globalSelectedSampleCount?: number;
+  isGlobalAllSelected?: boolean;
+  isGlobalIndeterminate?: boolean;
+  methodSelectModalOpen?: boolean;
+  bulkMethodLoading?: boolean;
+  methodSelectForm?: FormInstance;
+  onIndicatorFilterChange?: (values: string[]) => void;
+  onGlobalSelectAll?: () => void;
+  onOpenMethodModal?: () => void;
+  onCloseMethodModal?: () => void;
+  onBulkMethodConfirm?: () => void;
 }
 
 const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
@@ -219,6 +241,23 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
   onBulkTestDateChange,
   indicatorVisibleColumns,
   onIndicatorVisibleColumnsChange,
+  filteredSamples,
+  indicatorFilter = [],
+  indicatorFilterOptions = [],
+  totalGlobalSelectable = 0,
+  totalGlobalSelected = 0,
+  totalMethodEditableSelected = 0,
+  globalSelectedSampleCount = 0,
+  isGlobalAllSelected = false,
+  isGlobalIndeterminate = false,
+  methodSelectModalOpen = false,
+  bulkMethodLoading = false,
+  methodSelectForm,
+  onIndicatorFilterChange,
+  onGlobalSelectAll,
+  onOpenMethodModal,
+  onCloseMethodModal,
+  onBulkMethodConfirm,
 }) => {
   if (loading) {
     return (
@@ -293,6 +332,35 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
           </Col>
         </Row>
 
+        {/* Bulk chọn phương pháp: filter chỉ tiêu + chọn tất cả + modal chọn PP */}
+        {canPerformActions &&
+          methodSelectForm &&
+          onIndicatorFilterChange &&
+          onGlobalSelectAll &&
+          onOpenMethodModal &&
+          onCloseMethodModal &&
+          onBulkMethodConfirm && (
+            <TestingBulkMethodBar
+              indicatorFilter={indicatorFilter}
+              indicatorFilterOptions={indicatorFilterOptions}
+              onIndicatorFilterChange={onIndicatorFilterChange}
+              totalGlobalSelectable={totalGlobalSelectable}
+              totalGlobalSelected={totalGlobalSelected}
+              totalMethodEditableSelected={totalMethodEditableSelected}
+              globalSelectedSampleCount={globalSelectedSampleCount}
+              isGlobalAllSelected={isGlobalAllSelected}
+              isGlobalIndeterminate={isGlobalIndeterminate}
+              onGlobalSelectAll={onGlobalSelectAll}
+              methods={methods ?? []}
+              methodSelectModalOpen={methodSelectModalOpen}
+              bulkMethodLoading={bulkMethodLoading}
+              methodSelectForm={methodSelectForm}
+              onOpenMethodModal={onOpenMethodModal}
+              onCloseMethodModal={onCloseMethodModal}
+              onConfirmMethod={onBulkMethodConfirm}
+            />
+          )}
+
         {/* Sample Panels */}
         <Collapse
           className="testing-detail-collapse"
@@ -300,7 +368,7 @@ const TestingDetailContainer: React.FC<TestingDetailContainerProps> = ({
           onChange={(keys) => onCollapseChange(keys as string[])}
           expandIconPosition="start"
         >
-          {sortedSamples.map((sample) => (
+          {(filteredSamples ?? sortedSamples).map((sample) => (
             <Panel
               header={
                 <SamplePanelHeader
