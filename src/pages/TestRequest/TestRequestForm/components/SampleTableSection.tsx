@@ -48,6 +48,46 @@ import {
 
 const { Text } = Typography;
 
+// Ô nhập Mã mẫu: state cục bộ khi đang gõ, chỉ commit khi blur/Enter để
+// cascade các dòng sau không chạy theo từng phím. Nếu commit bị từ chối
+// (khác số hợp đồng / phiếu khóa) thì revert về giá trị trong data.
+// PHẢI ở module scope, cùng lý do với ResizableTitle bên dưới.
+const SampleCodeInput = ({
+  value,
+  onCommit,
+}: {
+  value: string;
+  onCommit: (newCode: string) => boolean;
+}) => {
+  const [draft, setDraft] = useState(value);
+
+  useEffect(() => {
+    setDraft(value);
+  }, [value]);
+
+  const commit = () => {
+    const trimmed = draft.trim();
+    if (trimmed === value) {
+      setDraft(value);
+      return;
+    }
+    if (!onCommit(trimmed)) {
+      setDraft(value);
+    }
+  };
+
+  return (
+    <Input
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onPressEnter={(e) => (e.target as HTMLInputElement).blur()}
+      placeholder="Mã mẫu"
+      size="small"
+    />
+  );
+};
+
 // Resizable header cell — PHẢI ở module scope: nếu định nghĩa trong component body,
 // mỗi render tạo function identity mới khiến antd Table unmount/remount toàn bộ <th>
 // (nguyên nhân chính gây khựng khi gõ trong bảng mẫu trên máy yếu)
@@ -117,6 +157,7 @@ interface SampleTableSectionProps {
   addSample: () => void;
   removeSample: (key: string) => void;
   updateSample: (key: string, field: keyof SampleFormData, value: any) => void;
+  commitSampleCode: (key: string, newCode: string) => boolean;
   duplicateSample: (key: string) => void;
   openIndicatorModal: (sampleKey: string) => void;
   getIndicatorInfo: (indicatorId: string) => any;
@@ -147,6 +188,7 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
   addSample,
   removeSample,
   updateSample,
+  commitSampleCode,
   duplicateSample,
   openIndicatorModal,
   getIndicatorInfo,
@@ -317,15 +359,14 @@ const SampleTableSection: React.FC<SampleTableSectionProps> = ({
         width: column.width,
         columnKey: "sampleCode",
       }),
-      render: (value: string, _record: SampleFormData) => {
-        // Hiển thị sampleCode đã lưu trong data (không tính lại từ index)
-        const displayCode = value || "--";
+      render: (value: string, record: SampleFormData) => {
+        // Hiển thị sampleCode đã lưu trong data (không tính lại từ index).
+        // Cho phép sửa tay; validate + cascade thực hiện trong commitSampleCode
+        // (khi phiếu khóa, commitSampleCode từ chối và ô tự revert).
         return (
-          <Input
-            value={displayCode}
-            disabled
-            size="small"
-            style={{ backgroundColor: "#f5f5f5" }}
+          <SampleCodeInput
+            value={value || ""}
+            onCommit={(newCode) => commitSampleCode(record.key, newCode)}
           />
         );
       },

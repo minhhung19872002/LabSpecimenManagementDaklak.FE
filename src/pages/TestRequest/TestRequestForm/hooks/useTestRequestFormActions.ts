@@ -21,7 +21,7 @@ import {
   parseIndicatorMethodKey,
   isIndicatorLocked,
 } from "../types";
-import { generateSampleCode, getNextOrderNum, printBarcode as printBarcodeUtil, SampleBarcodeInfo } from "../utils";
+import { generateSampleCode, getNextOrderNum, splitSampleCode, isNumericSuffix, printBarcode as printBarcodeUtil, SampleBarcodeInfo } from "../utils";
 import { PATH_ROUTES } from "../../../../constants";
 import { getApiErrorMessage } from "../../../../utils/errorHandler";
 import { isHeavyMetalComboMet, isHgIndicator, isEcoliColiformComboMet, isEcoliIndicator } from "../constants";
@@ -432,6 +432,58 @@ export const useTestRequestFormActions = ({
         return s;
       })
     );
+  };
+
+  // Commit mã mẫu người dùng nhập tay (gọi khi blur/Enter khỏi ô Mã mẫu).
+  // Trả về true nếu chấp nhận; false nếu từ chối (ô nhập tự revert về mã cũ).
+  const commitSampleCode = (key: string, newCode: string): boolean => {
+    if (isSamplesLocked()) {
+      return false;
+    }
+
+    const editedIndex = samples.findIndex((s) => s.key === key);
+    if (editedIndex < 0) return false;
+
+    const trimmedCode = (newCode || "").trim();
+    const contractNumber = form.getFieldValue("contractNumber") || "";
+    const expectedPrefix = contractNumber || "--";
+    const { prefix, suffix } = splitSampleCode(trimmedCode);
+
+    if (!trimmedCode || !suffix || prefix !== expectedPrefix) {
+      message.error("Mã mẫu không được khác số hợp đồng");
+      return false;
+    }
+
+    let nextSamples: SampleFormData[];
+    if (isNumericSuffix(suffix)) {
+      // Suffix là số: các dòng SAU dòng đang sửa tăng dần theo số vừa nhập
+      // (sửa 26022/01 -> 26022/05 thì dòng sau thành 26022/06, 26022/07...)
+      const editedNum = parseInt(suffix, 10);
+      const padLength = Math.max(suffix.length, 2);
+      nextSamples = samples.map((s, i) => {
+        if (i === editedIndex) return { ...s, sampleCode: trimmedCode };
+        if (i > editedIndex) {
+          const orderNum = String(editedNum + (i - editedIndex)).padStart(padLength, "0");
+          return { ...s, sampleCode: `${expectedPrefix}/${orderNum}` };
+        }
+        return s;
+      });
+    } else {
+      // Suffix không phải số: chỉ lưu cho dòng này, không tự điều chỉnh các mã khác
+      nextSamples = samples.map((s) =>
+        s.key === key ? { ...s, sampleCode: trimmedCode } : s
+      );
+    }
+
+    const isDuplicate = nextSamples.some(
+      (s, i) => i !== editedIndex && s.sampleCode === trimmedCode
+    );
+    if (isDuplicate) {
+      message.warning(`Mã mẫu ${trimmedCode} đang trùng với mẫu khác trong danh sách`);
+    }
+
+    setSamples(nextSamples);
+    return true;
   };
 
   const duplicateSample = (key: string) => {
@@ -902,6 +954,15 @@ export const useTestRequestFormActions = ({
     // Note: Contract number duplicate validation is now done on the backend
     // Backend will return field-level validation errors if contract number exists
 
+    // Validate: mã mẫu (có thể đã sửa tay) phải theo số hợp đồng
+    const mismatchedSamples = samples.filter(
+      (s) => splitSampleCode(s.sampleCode || "").prefix !== contractNumber
+    );
+    if (mismatchedSamples.length > 0) {
+      message.error("Mã mẫu không được khác số hợp đồng");
+      return;
+    }
+
     // Validate: all samples must have sampleName
     const invalidSamples = samples.filter((s) => !s.sampleName);
     if (invalidSamples.length > 0) {
@@ -1341,6 +1402,7 @@ export const useTestRequestFormActions = ({
     addExistingSample,
     removeSample,
     updateSample,
+    commitSampleCode,
     duplicateSample,
     printBarcode,
 
