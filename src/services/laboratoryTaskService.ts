@@ -419,6 +419,21 @@ export const laboratoryTaskService = {
   },
 
   /**
+   * Cập nhật phương pháp cho nhiều chỉ tiêu cùng lúc
+   */
+  bulkUpdateIndicatorMethod: async (
+    taskId: string,
+    indicatorIds: string[],
+    methodId: string | null
+  ): Promise<LaboratoryTaskIndicatorDto[]> => {
+    const response = await api.put<LaboratoryTaskIndicatorDto[]>(
+      `${BASE_URL}/${taskId}/indicators/bulk-method`,
+      { indicatorIds, methodId }
+    );
+    return response.data;
+  },
+
+  /**
    * Cập nhật thông tin phương pháp phụ cho chỉ tiêu có phương pháp gốc là "-"
    */
   updateSubContractMethod: async (
