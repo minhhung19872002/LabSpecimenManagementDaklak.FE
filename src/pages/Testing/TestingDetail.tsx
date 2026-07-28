@@ -15,6 +15,7 @@ import {
 } from "../../types/testing";
 import TestingDetailContainer from "./components/TestingDetailContainer";
 import { useMultipleActionPermissions } from "../../hooks/useActionPermission";
+import { usePageTitleOverride } from "../../hooks/usePageTitle";
 import { TestRequestStatus } from "../../types/testRequest";
 import { PATH_ROUTES, STORAGE_KEYS } from "../../constants";
 import { DEFAULT_INDICATOR_VISIBLE_COLUMNS } from "./components/IndicatorEditTable";
@@ -55,6 +56,9 @@ const TestingDetail: React.FC = () => {
   const isLabView = viewMode === "lab";
   // Map viewMode for API: "lab" -> "all", "my" -> "my"
   const apiViewMode: "my" | "all" = isLabView ? "all" : "my";
+
+  // Tab header = Mã số mẫu khi mở từ "Sổ nhận mẫu giao việc" (mở tab trình duyệt mới)
+  usePageTitleOverride(searchParams.get("sampleCode") || undefined);
 
   // Sử dụng hook để check permissions cho tất cả actions theo Permission Matrix
   // Testing: KTV (A), QLKT (V), Admin (V)

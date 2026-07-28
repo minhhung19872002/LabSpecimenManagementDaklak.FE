@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { message } from 'antd';
 import dayjs from 'dayjs';
-import { useNavigate } from 'react-router-dom';
 import { testingService } from '../../../services/testingService';
 import { laboratoryTaskService } from '../../../services/laboratoryTaskService';
 import { indicatorService, IndicatorDto } from '../../../services/masterDataService';
@@ -65,7 +64,6 @@ interface UseSampleAssignmentLogForLabResult {
 export const useSampleAssignmentLogForLab = (
   options?: UseSampleAssignmentLogForLabOptions
 ): UseSampleAssignmentLogForLabResult => {
-  const navigate = useNavigate();
   const displayStatusFilter = options?.displayStatusFilter;
   const restrictToCurrentUser = options?.restrictToCurrentUser;
   const currentUser = authService.getUserInfo();
@@ -254,8 +252,12 @@ export const useSampleAssignmentLogForLab = (
   }, []);
 
   const handleRowDoubleClick = useCallback((record: SampleAssignmentLogDto) => {
-    navigate(`/testing/${record.laboratoryTaskId}?view=lab`);
-  }, [navigate]);
+    const params = new URLSearchParams({ view: 'lab' });
+    if (record.sampleCode) {
+      params.set('sampleCode', record.sampleCode);
+    }
+    window.open(`/testing/${record.laboratoryTaskId}?${params.toString()}`, '_blank', 'noopener');
+  }, []);
 
   return {
     loading,
