@@ -749,3 +749,13 @@ export const evaluatePassFail = (
   // Plain value against single limit
   return comparePlainValue(resultValue, comparisonOperator, limitValue) ? "pass" : "fail";
 };
+
+/**
+ * Số bản in cho mỗi phiếu kết quả, tính từ field "Số bản" (free-text) của TestRequest.
+ * "2", "02", "2 bản" → 2; rỗng / "-" / không parse được / < 2 → 1.
+ */
+export const getPrintCopyCount = (resultCopyCount?: string | null): number => {
+  const match = (resultCopyCount || "").match(/\d+/);
+  const n = match ? parseInt(match[0], 10) : NaN;
+  return !isNaN(n) && n >= 2 ? n : 1;
+};

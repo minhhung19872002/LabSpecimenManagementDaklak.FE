@@ -546,6 +546,7 @@ const TestRequestDetail: React.FC = () => {
       <PrintIndicatorModal
         visible={printIndicatorModalVisible}
         testRequestId={id!}
+        resultCopyCount={data?.resultCopyCount}
         onCancel={() => setPrintIndicatorModalVisible(false)}
         onSuccess={() => loadData(id!)}
       />
@@ -554,6 +555,7 @@ const TestRequestDetail: React.FC = () => {
       <PrintMixedIndicatorModal
         visible={printMixedIndicatorModalVisible}
         testRequestId={id!}
+        resultCopyCount={data?.resultCopyCount}
         onCancel={() => setPrintMixedIndicatorModalVisible(false)}
         onSuccess={() => loadData(id!)}
       />

@@ -799,6 +799,7 @@ const QualityManagementDetail: React.FC = () => {
       <PrintModal
         visible={printModalVisible}
         taskId={id!}
+        testRequestId={task?.testRequestId}
         indicators={qualityIndicators}
         onCancel={() => setPrintModalVisible(false)}
         onSuccess={loadData}
@@ -808,6 +809,7 @@ const QualityManagementDetail: React.FC = () => {
       <PrintMixedModal
         visible={printMixedModalVisible}
         taskId={id!}
+        testRequestId={task?.testRequestId}
         indicators={qualityIndicators}
         onCancel={() => setPrintMixedModalVisible(false)}
         onSuccess={loadData}

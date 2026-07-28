@@ -33,7 +33,7 @@ import {
 import { qualityManagementService } from "../../../services/qualityManagementService";
 import { API_BASE_URL } from "../../../services/api";
 import userService, { UserLookupDto } from "../../../services/userService";
-import { IndicatorName } from "../../../components/common";
+import { IndicatorName, PrintCopyCountAlert } from "../../../components/common";
 import RichTextEditor from "../../../components/common/RichTextEditor";
 import { evaluatePassFail, stripHtmlTags } from "../../../utils/formatters";
 
@@ -42,6 +42,8 @@ const { Text } = Typography;
 export interface PrintIndicatorModalProps {
   visible: boolean;
   testRequestId: string;
+  /** Field "Số bản" từ TestRequest - dùng cho cảnh báo số bản in */
+  resultCopyCount?: string;
   onCancel: () => void;
   onSuccess?: () => void;
 }
@@ -65,6 +67,7 @@ interface LabGroup {
 const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
   visible,
   testRequestId,
+  resultCopyCount,
   onCancel,
   onSuccess,
 }) => {
@@ -511,6 +514,7 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
             dưới.
           </Text>
         </div>
+        <PrintCopyCountAlert resultCopyCount={resultCopyCount} />
         <div style={{ maxHeight: "calc(100vh - 350px)", overflowY: "auto" }}>
           <List
             dataSource={generatedResults}

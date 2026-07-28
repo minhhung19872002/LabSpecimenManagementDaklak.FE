@@ -30,8 +30,9 @@ import {
   qualityManagementService,
   TemplateDto,
 } from "../../../services/qualityManagementService";
+import { testRequestService } from "../../../services/testRequestService";
 import userService, { UserLookupDto } from "../../../services/userService";
-import { IndicatorName } from "../../../components/common";
+import { IndicatorName, PrintCopyCountAlert } from "../../../components/common";
 import RichTextEditor from "../../../components/common/RichTextEditor";
 import { evaluatePassFail, stripHtmlTags } from "../../../utils/formatters";
 
@@ -49,6 +50,8 @@ interface PrintResultItem {
 export interface PrintMixedModalProps {
   visible: boolean;
   taskId: string;
+  /** Id TestRequest - dùng để lấy "Số bản" cho cảnh báo số bản in */
+  testRequestId?: string;
   indicators: QualityManagementIndicatorDto[];
   onCancel: () => void;
   onSuccess?: () => void;
@@ -170,6 +173,7 @@ const processIndicatorsWithHierarchy = (
 const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
   visible,
   taskId,
+  testRequestId,
   indicators,
   onCancel,
   onSuccess,
@@ -186,6 +190,7 @@ const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
   const [vicePresidents, setVicePresidents] = useState<UserLookupDto[]>([]);
   const [selectedVicePresidentId, setSelectedVicePresidentId] = useState<string | undefined>(undefined);
   const [loadingVicePresidents, setLoadingVicePresidents] = useState(false);
+  const [resultCopyCount, setResultCopyCount] = useState<string | undefined>(undefined);
 
   const approvedIndicatorsWithParents = useMemo(() => {
     const parents = indicators.filter((ind) => !ind.parentIndicatorId);
@@ -281,6 +286,7 @@ const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
     if (visible) {
       loadTemplates();
       loadVicePresidents();
+      loadResultCopyCount();
     }
   }, [visible]);
 
@@ -374,6 +380,17 @@ const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
       console.error("Error loading vice presidents:", error);
     } finally {
       setLoadingVicePresidents(false);
+    }
+  };
+
+  // Lấy "Số bản" từ TestRequest để hiển thị cảnh báo số bản in
+  const loadResultCopyCount = async () => {
+    if (!testRequestId) return;
+    try {
+      const result = await testRequestService.get(testRequestId);
+      setResultCopyCount(result.resultCopyCount);
+    } catch (error) {
+      console.error("Error loading test request:", error);
     }
   };
 
@@ -588,6 +605,7 @@ const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
         <div style={{ marginBottom: 16 }}>
           <Text type="secondary">Click "Xem" để mở tài liệu trong trình soạn thảo Word.</Text>
         </div>
+        <PrintCopyCountAlert resultCopyCount={resultCopyCount} />
         <div style={{ maxHeight: "calc(100vh - 350px)", overflowY: "auto" }}>
           <List
             dataSource={generatedResults}

@@ -13,3 +13,4 @@ export { default as IndicatorName } from './IndicatorName';
 export { default as ColumnVisibilitySelector } from './ColumnVisibilitySelector';
 export type { ColumnOption } from './ColumnVisibilitySelector';
 export { default as EllipsisTooltip } from './EllipsisTooltip';
+export { default as PrintCopyCountAlert } from './PrintCopyCountAlert';

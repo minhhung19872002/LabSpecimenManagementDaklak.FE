@@ -29,8 +29,9 @@ import {
   TemplateDto,
 } from "../../../services/qualityManagementService";
 import { API_BASE_URL } from "../../../services/api";
+import { testRequestService } from "../../../services/testRequestService";
 import userService, { UserLookupDto } from "../../../services/userService";
-import { IndicatorName } from "../../../components/common";
+import { IndicatorName, PrintCopyCountAlert } from "../../../components/common";
 import RichTextEditor from "../../../components/common/RichTextEditor";
 import { evaluatePassFail, stripHtmlTags } from "../../../utils/formatters";
 
@@ -49,6 +50,8 @@ interface PrintResultItem {
 export interface PrintModalProps {
   visible: boolean;
   taskId: string;
+  /** Id TestRequest - dùng để lấy "Số bản" cho cảnh báo số bản in */
+  testRequestId?: string;
   indicators: QualityManagementIndicatorDto[];
   onCancel: () => void;
   onSuccess?: () => void;
@@ -181,6 +184,7 @@ interface LabGroup {
 const PrintModal: React.FC<PrintModalProps> = ({
   visible,
   taskId,
+  testRequestId,
   indicators,
   onCancel,
   onSuccess,
@@ -203,6 +207,9 @@ const PrintModal: React.FC<PrintModalProps> = ({
     string | undefined
   >(undefined);
   const [loadingVicePresidents, setLoadingVicePresidents] = useState(false);
+  const [resultCopyCount, setResultCopyCount] = useState<string | undefined>(
+    undefined,
+  );
 
   // Get approved indicators AND their parent indicators
   // Parent indicators don't have approvalStatus but need to be shown for hierarchy
@@ -344,6 +351,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
     if (visible) {
       loadTemplates();
       loadVicePresidents();
+      loadResultCopyCount();
     }
   }, [visible]);
 
@@ -461,6 +469,17 @@ const PrintModal: React.FC<PrintModalProps> = ({
       console.error("Error loading vice presidents:", error);
     } finally {
       setLoadingVicePresidents(false);
+    }
+  };
+
+  // Lấy "Số bản" từ TestRequest để hiển thị cảnh báo số bản in
+  const loadResultCopyCount = async () => {
+    if (!testRequestId) return;
+    try {
+      const result = await testRequestService.get(testRequestId);
+      setResultCopyCount(result.resultCopyCount);
+    } catch (error) {
+      console.error("Error loading test request:", error);
     }
   };
 
@@ -740,6 +759,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
             Click "Xem" để mở tài liệu trong trình soạn thảo Word.
           </Text>
         </div>
+        <PrintCopyCountAlert resultCopyCount={resultCopyCount} />
         <div style={{ maxHeight: "calc(100vh - 350px)", overflowY: "auto" }}>
           <List
             dataSource={generatedResults}

@@ -32,7 +32,7 @@ import {
   PrintResultItem,
 } from "../../../services/testRequestService";
 import userService, { UserLookupDto } from "../../../services/userService";
-import { IndicatorName } from "../../../components/common";
+import { IndicatorName, PrintCopyCountAlert } from "../../../components/common";
 import RichTextEditor from "../../../components/common/RichTextEditor";
 import { evaluatePassFail, stripHtmlTags } from "../../../utils/formatters";
 
@@ -41,6 +41,8 @@ const { Text } = Typography;
 export interface PrintMixedIndicatorModalProps {
   visible: boolean;
   testRequestId: string;
+  /** Field "Số bản" từ TestRequest - dùng cho cảnh báo số bản in */
+  resultCopyCount?: string;
   onCancel: () => void;
   onSuccess?: () => void;
 }
@@ -68,6 +70,7 @@ const isPerSampleTemplate = (templateName: string): boolean => {
 const PrintMixedIndicatorModal: React.FC<PrintMixedIndicatorModalProps> = ({
   visible,
   testRequestId,
+  resultCopyCount,
   onCancel,
   onSuccess,
 }) => {
@@ -410,6 +413,7 @@ const PrintMixedIndicatorModal: React.FC<PrintMixedIndicatorModalProps> = ({
         <div style={{ marginBottom: 16 }}>
           <Text type="secondary">Click "Xem" để mở tài liệu trong trình soạn thảo.</Text>
         </div>
+        <PrintCopyCountAlert resultCopyCount={resultCopyCount} />
         <div style={{ maxHeight: "calc(100vh - 350px)", overflowY: "auto" }}>
           <List
             dataSource={generatedResults}
