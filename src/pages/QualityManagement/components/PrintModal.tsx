@@ -31,10 +31,12 @@ import {
 import { API_BASE_URL } from "../../../services/api";
 import { testRequestService } from "../../../services/testRequestService";
 import userService, { UserLookupDto } from "../../../services/userService";
-import { IndicatorName, PrintCopyCountAlert } from "../../../components/common";
+import { IndicatorName, PrintCopyCountAlert, EllipsisTooltip } from "../../../components/common";
 import RichTextEditor from "../../../components/common/RichTextEditor";
 import { evaluatePassFail, stripHtmlTags } from "../../../utils/formatters";
 import { ResultLanguage } from "../../../types/testRequest";
+import { noteService } from "../../../services/noteService";
+import { NoteDto } from "../../../types/note";
 
 const { Text } = Typography;
 
@@ -215,6 +217,8 @@ const PrintModal: React.FC<PrintModalProps> = ({
     otherRequirements?: string;
     separatePassedResults?: boolean;
   }>({});
+  const [masterNotes, setMasterNotes] = useState<NoteDto[]>([]);
+  const [selectedMasterNoteIds, setSelectedMasterNoteIds] = useState<Set<string>>(new Set());
 
   // Get approved indicators AND their parent indicators
   // Parent indicators don't have approvalStatus but need to be shown for hierarchy
@@ -357,6 +361,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
       loadTemplates();
       loadVicePresidents();
       loadResultCopyCount();
+      loadMasterNotes();
     }
   }, [visible]);
 
@@ -373,9 +378,19 @@ const PrintModal: React.FC<PrintModalProps> = ({
       setShowResults(false);
       setViewedFiles(new Set());
       setSelectedVicePresidentId(undefined);
+      setSelectedMasterNoteIds(new Set());
       prevSelectedIdsRef.current = []; // Reset ref
     }
   }, [visible]);
+
+  const handleToggleMasterNote = (noteId: string) => {
+    setSelectedMasterNoteIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(noteId)) next.delete(noteId);
+      else next.add(noteId);
+      return next;
+    });
+  };
 
   // Auto-append notes when new indicators are selected
   useEffect(() => {
@@ -390,32 +405,32 @@ const PrintModal: React.FC<PrintModalProps> = ({
         newlySelectedIds.includes(ind.id),
       );
 
-      // Collect unique master data notes and free text notes
-      // Note content is HTML (rich text) - use plain text for deduplication
+      // Auto-tick master data notes matching the indicator's assigned notes
+      const newMasterNoteIds = new Set<string>();
+      newIndicators.forEach((ind) => {
+        ind.masterDataNotes?.forEach((noteContent) => {
+          if (noteContent) {
+            const plainContent = stripHtmlTags(noteContent);
+            const matched = masterNotes.find(
+              (n) => stripHtmlTags(n.content) === plainContent,
+            );
+            if (matched) newMasterNoteIds.add(matched.id);
+          }
+        });
+      });
+      if (newMasterNoteIds.size > 0) {
+        setSelectedMasterNoteIds((prev) => {
+          const next = new Set(prev);
+          newMasterNoteIds.forEach((id) => next.add(id));
+          return next;
+        });
+      }
+
+      // Collect free text notes
       const existingPlainText = stripHtmlTags(note);
       const newHtmlParts: string[] = [];
 
-      // First, collect all master data notes (deduplicated by plain text)
-      const addedMasterNotes = new Set<string>();
-      newIndicators.forEach((ind) => {
-        if (ind.masterDataNotes && ind.masterDataNotes.length > 0) {
-          ind.masterDataNotes.forEach((masterNote) => {
-            if (masterNote) {
-              const plainNote = stripHtmlTags(masterNote);
-              if (
-                plainNote &&
-                !addedMasterNotes.has(plainNote) &&
-                !existingPlainText.includes(plainNote)
-              ) {
-                addedMasterNotes.add(plainNote);
-                newHtmlParts.push(masterNote);
-              }
-            }
-          });
-        }
-      });
-
-      // Then collect free text notes (deduplicated)
+      // Collect free text notes (deduplicated)
       // Keep original HTML from freeTextNote
       const addedFreeTexts = new Set<string>();
       newIndicators.forEach((ind) => {
@@ -446,7 +461,7 @@ const PrintModal: React.FC<PrintModalProps> = ({
 
     // Update ref for next comparison
     prevSelectedIdsRef.current = selectedIndicatorIds;
-  }, [selectedIndicatorIds, approvedIndicatorsWithParents]);
+  }, [selectedIndicatorIds, approvedIndicatorsWithParents, masterNotes]);
 
   const loadTemplates = async () => {
     setLoadingTemplates(true);
@@ -491,6 +506,16 @@ const PrintModal: React.FC<PrintModalProps> = ({
       });
     } catch (error) {
       console.error("Error loading test request:", error);
+    }
+  };
+
+  const loadMasterNotes = async () => {
+    try {
+      const notes = await noteService.getActiveNotes();
+      setMasterNotes(notes || []);
+    } catch (error) {
+      console.error("Error loading master notes:", error);
+      setMasterNotes([]);
     }
   };
 
@@ -566,13 +591,27 @@ const PrintModal: React.FC<PrintModalProps> = ({
     // Get indicator IDs including parents
     const indicatorIdsForPrint = getIndicatorIdsForPrint();
 
+    // Merge checked master data notes + free text note
+    const checkedNoteHtmls = masterNotes
+      .filter((n) => selectedMasterNoteIds.has(n.id))
+      .map((n) => {
+        const c = n.content?.trim();
+        if (!c) return "";
+        return /<[a-z]/i.test(c) ? c : `<p>${c}</p>`;
+      })
+      .filter(Boolean);
+    const hasEditorText = stripHtmlTags(note).trim().length > 0;
+    const finalNote =
+      [...checkedNoteHtmls, ...(hasEditorText ? [note] : [])].join("") ||
+      undefined;
+
     try {
       // Call API to generate PDFs (batch processing)
       const result = await qualityManagementService.printMultiSingleResult(
         taskId,
         indicatorIdsForPrint,
         selectedTemplates,
-        note || undefined,
+        finalNote,
         selectedVicePresidentId,
       );
 
@@ -1178,6 +1217,79 @@ const PrintModal: React.FC<PrintModalProps> = ({
                 Nếu chọn, tên sẽ được thay thế v...
               </Text>
             </div>
+
+            {/* Master data notes list */}
+            {masterNotes.length > 0 && (
+              <div style={{ marginBottom: 24 }}>
+                <Text strong style={{ display: "block", marginBottom: 8 }}>
+                  Ghi chú từ danh sách
+                </Text>
+                <div
+                  style={{
+                    maxHeight: 200,
+                    overflowY: "auto",
+                    border: "1px solid #d9d9d9",
+                    borderRadius: 6,
+                    padding: 8,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6,
+                  }}
+                >
+                  <style>{`
+                    .print-master-note-item .sal-cell-ellipsis {
+                      display: block;
+                      overflow: hidden;
+                      white-space: nowrap;
+                      text-overflow: ellipsis;
+                      font-size: 13px;
+                    }
+                    .print-master-note-item .sal-cell-ellipsis > * {
+                      display: inline;
+                      margin: 0;
+                    }
+                    .print-master-note-item.is-selected .sal-cell-ellipsis {
+                      color: #1890ff;
+                    }
+                  `}</style>
+                  {masterNotes.map((masterNote) => {
+                    const isSelected = selectedMasterNoteIds.has(masterNote.id);
+                    return (
+                      <div
+                        key={masterNote.id}
+                        className={`print-master-note-item${isSelected ? " is-selected" : ""}`}
+                        onClick={() => handleToggleMasterNote(masterNote.id)}
+                        style={{
+                          cursor: "pointer",
+                          padding: "6px 10px",
+                          borderRadius: 4,
+                          backgroundColor: isSelected
+                            ? "#e6f7ff"
+                            : "transparent",
+                          border: isSelected
+                            ? "1px solid #91d5ff"
+                            : "1px solid #f0f0f0",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          transition: "all 0.2s",
+                        }}
+                      >
+                        <Checkbox checked={isSelected} />
+                        <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+                          <EllipsisTooltip
+                            title={
+                              <div dangerouslySetInnerHTML={{ __html: masterNote.content }} />
+                            }
+                            html={masterNote.content}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Note input field */}
             <div>
