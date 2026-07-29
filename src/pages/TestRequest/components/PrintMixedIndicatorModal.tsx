@@ -26,6 +26,7 @@ import {
   QualityManagementIndicatorDto,
   QualityIndicatorApprovalStatus,
 } from "../../../types/qualityManagement";
+import { ResultLanguage } from "../../../types/testRequest";
 import {
   testRequestService,
   TemplateDto,
@@ -43,6 +44,10 @@ export interface PrintMixedIndicatorModalProps {
   testRequestId: string;
   /** Field "Số bản" từ TestRequest - dùng cho cảnh báo số bản in */
   resultCopyCount?: string;
+  resultLanguage?: ResultLanguage;
+  conformityDeclaration?: string;
+  otherRequirements?: string;
+  separatePassedResults?: boolean;
   onCancel: () => void;
   onSuccess?: () => void;
 }
@@ -71,6 +76,10 @@ const PrintMixedIndicatorModal: React.FC<PrintMixedIndicatorModalProps> = ({
   visible,
   testRequestId,
   resultCopyCount,
+  resultLanguage,
+  conformityDeclaration,
+  otherRequirements,
+  separatePassedResults,
   onCancel,
   onSuccess,
 }) => {
@@ -413,7 +422,13 @@ const PrintMixedIndicatorModal: React.FC<PrintMixedIndicatorModalProps> = ({
         <div style={{ marginBottom: 16 }}>
           <Text type="secondary">Click "Xem" để mở tài liệu trong trình soạn thảo.</Text>
         </div>
-        <PrintCopyCountAlert resultCopyCount={resultCopyCount} />
+        <PrintCopyCountAlert
+          resultCopyCount={resultCopyCount}
+          resultLanguage={resultLanguage}
+          conformityDeclaration={conformityDeclaration}
+          otherRequirements={otherRequirements}
+          separatePassedResults={separatePassedResults}
+        />
         <div style={{ maxHeight: "calc(100vh - 350px)", overflowY: "auto" }}>
           <List
             dataSource={generatedResults}

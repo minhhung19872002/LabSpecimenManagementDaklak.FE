@@ -35,6 +35,7 @@ import userService, { UserLookupDto } from "../../../services/userService";
 import { IndicatorName, PrintCopyCountAlert } from "../../../components/common";
 import RichTextEditor from "../../../components/common/RichTextEditor";
 import { evaluatePassFail, stripHtmlTags } from "../../../utils/formatters";
+import { ResultLanguage } from "../../../types/testRequest";
 
 const { Text } = Typography;
 
@@ -190,7 +191,13 @@ const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
   const [vicePresidents, setVicePresidents] = useState<UserLookupDto[]>([]);
   const [selectedVicePresidentId, setSelectedVicePresidentId] = useState<string | undefined>(undefined);
   const [loadingVicePresidents, setLoadingVicePresidents] = useState(false);
-  const [resultCopyCount, setResultCopyCount] = useState<string | undefined>(undefined);
+  const [resultRequirement, setResultRequirement] = useState<{
+    resultCopyCount?: string;
+    resultLanguage?: ResultLanguage;
+    conformityDeclaration?: string;
+    otherRequirements?: string;
+    separatePassedResults?: boolean;
+  }>({});
 
   const approvedIndicatorsWithParents = useMemo(() => {
     const parents = indicators.filter((ind) => !ind.parentIndicatorId);
@@ -388,7 +395,13 @@ const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
     if (!testRequestId) return;
     try {
       const result = await testRequestService.get(testRequestId);
-      setResultCopyCount(result.resultCopyCount);
+      setResultRequirement({
+        resultCopyCount: result.resultCopyCount,
+        resultLanguage: result.resultLanguage,
+        conformityDeclaration: result.conformityDeclaration,
+        otherRequirements: result.otherRequirements,
+        separatePassedResults: result.separatePassedResults,
+      });
     } catch (error) {
       console.error("Error loading test request:", error);
     }
@@ -605,7 +618,9 @@ const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
         <div style={{ marginBottom: 16 }}>
           <Text type="secondary">Click "Xem" để mở tài liệu trong trình soạn thảo Word.</Text>
         </div>
-        <PrintCopyCountAlert resultCopyCount={resultCopyCount} />
+        <PrintCopyCountAlert
+          {...resultRequirement}
+        />
         <div style={{ maxHeight: "calc(100vh - 350px)", overflowY: "auto" }}>
           <List
             dataSource={generatedResults}

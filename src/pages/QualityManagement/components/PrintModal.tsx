@@ -34,6 +34,7 @@ import userService, { UserLookupDto } from "../../../services/userService";
 import { IndicatorName, PrintCopyCountAlert } from "../../../components/common";
 import RichTextEditor from "../../../components/common/RichTextEditor";
 import { evaluatePassFail, stripHtmlTags } from "../../../utils/formatters";
+import { ResultLanguage } from "../../../types/testRequest";
 
 const { Text } = Typography;
 
@@ -207,9 +208,13 @@ const PrintModal: React.FC<PrintModalProps> = ({
     string | undefined
   >(undefined);
   const [loadingVicePresidents, setLoadingVicePresidents] = useState(false);
-  const [resultCopyCount, setResultCopyCount] = useState<string | undefined>(
-    undefined,
-  );
+  const [resultRequirement, setResultRequirement] = useState<{
+    resultCopyCount?: string;
+    resultLanguage?: ResultLanguage;
+    conformityDeclaration?: string;
+    otherRequirements?: string;
+    separatePassedResults?: boolean;
+  }>({});
 
   // Get approved indicators AND their parent indicators
   // Parent indicators don't have approvalStatus but need to be shown for hierarchy
@@ -477,7 +482,13 @@ const PrintModal: React.FC<PrintModalProps> = ({
     if (!testRequestId) return;
     try {
       const result = await testRequestService.get(testRequestId);
-      setResultCopyCount(result.resultCopyCount);
+      setResultRequirement({
+        resultCopyCount: result.resultCopyCount,
+        resultLanguage: result.resultLanguage,
+        conformityDeclaration: result.conformityDeclaration,
+        otherRequirements: result.otherRequirements,
+        separatePassedResults: result.separatePassedResults,
+      });
     } catch (error) {
       console.error("Error loading test request:", error);
     }
@@ -759,7 +770,9 @@ const PrintModal: React.FC<PrintModalProps> = ({
             Click "Xem" để mở tài liệu trong trình soạn thảo Word.
           </Text>
         </div>
-        <PrintCopyCountAlert resultCopyCount={resultCopyCount} />
+        <PrintCopyCountAlert
+          {...resultRequirement}
+        />
         <div style={{ maxHeight: "calc(100vh - 350px)", overflowY: "auto" }}>
           <List
             dataSource={generatedResults}

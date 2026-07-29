@@ -25,6 +25,7 @@ import {
   QualityManagementIndicatorDto,
   QualityIndicatorApprovalStatus,
 } from "../../../types/qualityManagement";
+import { ResultLanguage } from "../../../types/testRequest";
 import {
   testRequestService,
   TemplateDto,
@@ -44,6 +45,10 @@ export interface PrintIndicatorModalProps {
   testRequestId: string;
   /** Field "Số bản" từ TestRequest - dùng cho cảnh báo số bản in */
   resultCopyCount?: string;
+  resultLanguage?: ResultLanguage;
+  conformityDeclaration?: string;
+  otherRequirements?: string;
+  separatePassedResults?: boolean;
   onCancel: () => void;
   onSuccess?: () => void;
 }
@@ -68,6 +73,10 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
   visible,
   testRequestId,
   resultCopyCount,
+  resultLanguage,
+  conformityDeclaration,
+  otherRequirements,
+  separatePassedResults,
   onCancel,
   onSuccess,
 }) => {
@@ -514,7 +523,13 @@ const PrintIndicatorModal: React.FC<PrintIndicatorModalProps> = ({
             dưới.
           </Text>
         </div>
-        <PrintCopyCountAlert resultCopyCount={resultCopyCount} />
+        <PrintCopyCountAlert
+          resultCopyCount={resultCopyCount}
+          resultLanguage={resultLanguage}
+          conformityDeclaration={conformityDeclaration}
+          otherRequirements={otherRequirements}
+          separatePassedResults={separatePassedResults}
+        />
         <div style={{ maxHeight: "calc(100vh - 350px)", overflowY: "auto" }}>
           <List
             dataSource={generatedResults}

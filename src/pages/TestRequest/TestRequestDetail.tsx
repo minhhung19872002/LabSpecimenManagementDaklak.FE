@@ -547,6 +547,10 @@ const TestRequestDetail: React.FC = () => {
         visible={printIndicatorModalVisible}
         testRequestId={id!}
         resultCopyCount={data?.resultCopyCount}
+        resultLanguage={data?.resultLanguage}
+        conformityDeclaration={data?.conformityDeclaration}
+        otherRequirements={data?.otherRequirements}
+        separatePassedResults={data?.separatePassedResults}
         onCancel={() => setPrintIndicatorModalVisible(false)}
         onSuccess={() => loadData(id!)}
       />
@@ -556,6 +560,10 @@ const TestRequestDetail: React.FC = () => {
         visible={printMixedIndicatorModalVisible}
         testRequestId={id!}
         resultCopyCount={data?.resultCopyCount}
+        resultLanguage={data?.resultLanguage}
+        conformityDeclaration={data?.conformityDeclaration}
+        otherRequirements={data?.otherRequirements}
+        separatePassedResults={data?.separatePassedResults}
         onCancel={() => setPrintMixedIndicatorModalVisible(false)}
         onSuccess={() => loadData(id!)}
       />
