@@ -1,0 +1,16 @@
+export const INDICATOR_TABLE_COLUMN_WIDTHS: Record<string, number> = {
+  checkbox: 50,
+  indicatorName: 200,
+  methodName: 150,
+  unit: 80,
+  result: 100,
+  images: 150,
+  resultSentDate: 110,
+  approvalDate: 110,
+  standardName: 150,
+  limit: 120,
+  passFailStatus: 120,
+  qlclDisplayStatus: 150,
+  reportStatus: 140,
+  actions: 180,
+};
