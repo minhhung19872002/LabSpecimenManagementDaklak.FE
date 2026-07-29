@@ -630,7 +630,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           !forceDisableAll && !isApproved && !isCancelled && onOpenNoteModal;
 
         const hasNote = displayNotePlain.length > 0;
-        const iconColor = hasNote ? "#1890ff" : "#ccc";
+        const iconColor = hasNote ? "#1890ff" : "#555";
 
         return (
           <Tooltip
