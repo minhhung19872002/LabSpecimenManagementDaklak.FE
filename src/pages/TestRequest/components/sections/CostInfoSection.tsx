@@ -2,6 +2,7 @@ import React from "react";
 import { Row, Col, Typography, Button } from "antd";
 import { HistoryOutlined } from "../../../../components/common/Icon";
 import { TestRequestDto } from "../../../../types/testRequest";
+import { numberToVietnameseWords } from "../../../../utils/numberToWords";
 
 const { Title, Text } = Typography;
 
@@ -16,6 +17,7 @@ const CostInfoSection: React.FC<CostInfoSectionProps> = ({
 }) => {
   // Mẫu nhiệm vụ: Không cần thanh toán
   const isTaskSample = data.sampleTypeTask;
+  const displayCost = isTaskSample ? 0 : data.totalCost || 0;
 
   return (
     <>
@@ -60,15 +62,15 @@ const CostInfoSection: React.FC<CostInfoSectionProps> = ({
                 Tổng chi phí:
               </Text>
               <Text strong style={{ fontSize: 24, color: "#1890ff" }}>
-                {(isTaskSample ? 0 : data.totalCost || 0).toLocaleString("vi-VN")} đ
+                {displayCost.toLocaleString("vi-VN")} đ
               </Text>
             </div>
           </Col>
-          {!isTaskSample && data.totalCostInWords && (
+          {!isTaskSample && displayCost > 0 && (
             <Col xs={24}>
               <div className="detail-item">
                 <Text type="secondary">Bằng chữ:</Text>
-                <Text italic>{data.totalCostInWords}</Text>
+                <Text italic>{numberToVietnameseWords(displayCost)}</Text>
               </div>
             </Col>
           )}
