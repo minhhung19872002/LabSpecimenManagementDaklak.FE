@@ -241,7 +241,7 @@ const PrintMixedIndicatorModal: React.FC<PrintMixedIndicatorModalProps> = ({
         indicators: sorted,
         allIndicatorIds: sorted.map((i) => i.id),
       };
-    });
+    }).sort((a, b) => a.sampleCode.localeCompare(b.sampleCode, undefined, { numeric: true }));
   }, [approvedIndicators]);
 
   const handleOpenAllTabs = () => {

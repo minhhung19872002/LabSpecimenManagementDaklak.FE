@@ -290,7 +290,7 @@ const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
         indicators: sorted,
         allIndicatorIds,
       };
-    });
+    }).sort((a, b) => a.sampleCode.localeCompare(b.sampleCode, undefined, { numeric: true }));
   }, [approvedIndicatorsWithParents, approvedIndicatorIds]);
 
   useEffect(() => {
