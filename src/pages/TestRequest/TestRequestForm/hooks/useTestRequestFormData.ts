@@ -1045,13 +1045,14 @@ export const useTestRequestFormData = () => {
           const method = methods.find(
             (m) => m.testMethodId === testMethodId && (m.specimenTypeId || null) === specimenTypeId
           );
-          if (method) {
+          const customPriceKey = `${sample.key}_${key}`;
+          const masterPrice = method?.unitPrice ?? 0;
+          const price = customPrices[customPriceKey] !== undefined ? customPrices[customPriceKey] : masterPrice;
+          if (customPrices[customPriceKey] !== undefined || method) {
             const ind = indicatorById.get(indicatorId);
             const stComboKey = specimenTypeId || '_none';
             const isComboFree = (comboMetBySpecimenType[stComboKey] && isHgIndicator(ind?.name)) ||
               (ecoliComboMetBySpecimenType[stComboKey] && isEcoliIndicator(ind?.name));
-            const customPriceKey = `${sample.key}_${key}`;
-            const price = customPrices[customPriceKey] !== undefined ? customPrices[customPriceKey] : method.unitPrice;
             total += isComboFree ? 0 : price;
           }
         });
