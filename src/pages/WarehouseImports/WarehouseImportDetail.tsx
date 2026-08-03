@@ -221,6 +221,30 @@ const WarehouseImportDetail: React.FC = () => {
         ) : "-",
     },
     {
+      title: "Đơn giá",
+      dataIndex: "unitPrice",
+      key: "unitPrice",
+      width: 130,
+      align: "right",
+      render: (v?: number) => v != null ? `${new Intl.NumberFormat("vi-VN").format(v)} đ` : "-",
+    },
+    {
+      title: "VAT",
+      dataIndex: "vatPercent",
+      key: "vatPercent",
+      width: 70,
+      align: "center",
+      render: (v?: number) => v != null ? `${v}%` : "-",
+    },
+    {
+      title: "Thành tiền",
+      dataIndex: "totalLineAmount",
+      key: "totalLineAmount",
+      width: 150,
+      align: "right",
+      render: (v?: number) => v != null ? `${new Intl.NumberFormat("vi-VN").format(v)} đ` : "-",
+    },
+    {
       title: "Ghi chú",
       dataIndex: "notes",
       key: "notes",
@@ -393,7 +417,7 @@ const WarehouseImportDetail: React.FC = () => {
                 <Text strong>{receipt.contactPersonName || "-"}</Text>
               </div>
               <div className="detail-item">
-                <Text type="secondary">Tổng giá trị đơn hàng:</Text>
+                <Text type="secondary">Tổng giá trị đơn hàng (Đã bao gồm VAT):</Text>
                 <Text strong>
                   {receipt.totalAmount != null
                     ? receipt.totalAmount.toLocaleString("vi-VN") + " đ"

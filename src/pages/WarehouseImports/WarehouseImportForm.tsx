@@ -68,6 +68,9 @@ interface LineItem {
   packagingSpec?: string;
   storageWarehouseId?: string;
   storageWarehouseName?: string;
+  unitPrice?: number;
+  vatPercent?: number;
+  totalLineAmount?: number;
 }
 
 interface EquipmentLineItem {
@@ -117,7 +120,7 @@ const WarehouseImportForm: React.FC = () => {
   const supplierDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [lineItemErrors, setLineItemErrors] = useState<
-    Record<string, { actualReceivedQuantity?: string; lotNumber?: string; lotExpiryDate?: string; qualityDocument?: string; skuId?: string; selectedUnitId?: string }>
+    Record<string, { actualReceivedQuantity?: string; lotNumber?: string; lotExpiryDate?: string; qualityDocument?: string; skuId?: string; selectedUnitId?: string; unitPrice?: string; vatPercent?: string; totalLineAmount?: string }>
   >({});
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
 
@@ -290,6 +293,9 @@ const WarehouseImportForm: React.FC = () => {
                 : m.unitName,
               storageWarehouseId: m.storageWarehouseId,
               storageWarehouseName: m.storageWarehouseName,
+              unitPrice: m.unitPrice,
+              vatPercent: m.vatPercent ?? 8,
+              totalLineAmount: m.totalLineAmount,
             });
           });
         } else {
@@ -298,6 +304,7 @@ const WarehouseImportForm: React.FC = () => {
             key: `${imp.goodsReceiptItemId}-default`,
             actualReceivedQuantity: 0,
             status: WarehouseImportLineStatus.Checked,
+            vatPercent: 8,
           });
         }
       });
@@ -464,12 +471,35 @@ const WarehouseImportForm: React.FC = () => {
     return Math.max(0, convertFromOrderUnit(remainingPurchase, record));
   };
 
+  const calcTotalLineAmount = (unitPrice: number | undefined, qty: number, vatPercent: number | undefined): number | undefined => {
+    if (unitPrice == null || !qty) return undefined;
+    const vat = vatPercent ?? 0;
+    return unitPrice * qty + unitPrice * qty * vat / 100;
+  };
+
   const handleLineChange = (key: string, field: keyof LineItem, value: any) => {
-    setLineItems((prev) => prev.map((item) => (item.key === key ? { ...item, [field]: value } : item)));
+    setLineItems((prev) => prev.map((item) => {
+      if (item.key !== key) return item;
+      const updated = { ...item, [field]: value };
+      if (field === "unitPrice" || field === "vatPercent" || field === "actualReceivedQuantity") {
+        updated.totalLineAmount = calcTotalLineAmount(updated.unitPrice, updated.actualReceivedQuantity, updated.vatPercent);
+      }
+      return updated;
+    }));
     setLineItemErrors((prev) => {
       const itemErrors = prev[key] as Record<string, string> | undefined;
       if (!itemErrors?.[field as string]) return prev;
       const { [field as string]: _omit, ...rest } = itemErrors;
+      return { ...prev, [key]: rest };
+    });
+  };
+
+  const handleLineAmountDirectChange = (key: string, value: number | undefined) => {
+    setLineItems((prev) => prev.map((item) => (item.key === key ? { ...item, totalLineAmount: value } : item)));
+    setLineItemErrors((prev) => {
+      const itemErrors = prev[key] as Record<string, string> | undefined;
+      if (!itemErrors?.totalLineAmount) return prev;
+      const { totalLineAmount: _omit, ...rest } = itemErrors;
       return { ...prev, [key]: rest };
     });
   };
@@ -570,6 +600,7 @@ const WarehouseImportForm: React.FC = () => {
       selectedUnitName: record.selectedUnitName,
       storageWarehouseId: record.storageWarehouseId,
       storageWarehouseName: record.storageWarehouseName,
+      vatPercent: 8,
     };
     setLineItems((prev) => {
       const idx = prev.findIndex((it) => it.key === record.key);
@@ -646,8 +677,11 @@ const WarehouseImportForm: React.FC = () => {
       if (!item.lotExpiryDate) {
         itemErr.lotExpiryDate = "Hạn sử dụng không được trống";
       }
-      if (!item.qualityDocument) {
-        itemErr.qualityDocument = "Hồ sơ chất lượng là bắt buộc";
+      if (item.unitPrice == null) {
+        itemErr.unitPrice = "Vui lòng nhập đơn giá";
+      }
+      if (item.vatPercent == null) {
+        itemErr.vatPercent = "Vui lòng nhập VAT";
       }
       if (Object.keys(itemErr).length > 0) {
         errors[item.key] = itemErr;
@@ -673,6 +707,12 @@ const WarehouseImportForm: React.FC = () => {
     return true;
   };
 
+  const computedTotalAmount = useMemo(() => {
+    return lineItems
+      .filter((it) => !it.isHistorical && it.totalLineAmount != null)
+      .reduce((sum, it) => sum + (it.totalLineAmount || 0), 0);
+  }, [lineItems]);
+
   const buildPayload = (data: WarehouseImportReceiptFormData): CreateUpdateWarehouseImportReceiptDto => ({
     goodsReceiptId: data.goodsReceiptId as string,
     actualImportDate: data.actualImportDate as string,
@@ -681,7 +721,7 @@ const WarehouseImportForm: React.FC = () => {
     notes: data.notes || undefined,
     supplierId: data.supplierId || supplierId || undefined,
     supplierName: data.supplierName || undefined,
-    totalAmount: data.totalAmount ?? undefined,
+    totalAmount: computedTotalAmount || undefined,
     deliveryDocumentFiles: deliveryFiles,
     items: [
       ...lineItems
@@ -702,6 +742,9 @@ const WarehouseImportForm: React.FC = () => {
           selectedUnitName: item.selectedUnitName || undefined,
           storageWarehouseId: item.storageWarehouseId || undefined,
           storageWarehouseName: item.storageWarehouseName || undefined,
+          unitPrice: item.unitPrice,
+          vatPercent: item.vatPercent,
+          totalLineAmount: item.totalLineAmount,
           isEquipment: false,
           equipmentReceiveStatus: EquipmentReceiveStatus.NotReceived,
           equipmentIndex: 0,
@@ -1066,22 +1109,104 @@ const WarehouseImportForm: React.FC = () => {
       ),
     },
     {
-      title: <span>Hồ sơ chất lượng (COA) <span style={{ color: "#ff4d4f" }}>*</span></span>,
+      title: "Hồ sơ chất lượng (COA)",
       key: "qualityDocument",
       width: 190,
       render: (_: any, record: LineItem) => (
-        <>
-          <SingleFileUpload
-            value={record.qualityDocument}
-            onChange={(v) => handleLineChange(record.key, "qualityDocument", v)}
-            disabled={isReadonly || record.isHistorical}
-            compact
-          />
-          {lineItemErrors[record.key]?.qualityDocument && (
-            <div style={{ color: "#ff4d4f", fontSize: 11 }}>{lineItemErrors[record.key]?.qualityDocument}</div>
-          )}
-        </>
+        <SingleFileUpload
+          value={record.qualityDocument}
+          onChange={(v) => handleLineChange(record.key, "qualityDocument", v)}
+          disabled={isReadonly || record.isHistorical}
+          compact
+        />
       ),
+    },
+    {
+      title: <span>Đơn giá <span style={{ color: "#ff4d4f" }}>*</span></span>,
+      key: "unitPrice",
+      width: 150,
+      fixed: "right" as const,
+      render: (_: any, record: LineItem) => {
+        if (isReadonly || record.isHistorical)
+          return record.unitPrice != null ? `${new Intl.NumberFormat("vi-VN").format(record.unitPrice)} đ` : "-";
+        const err = lineItemErrors[record.key]?.unitPrice;
+        return (
+          <>
+            <NumericFormat
+              value={record.unitPrice ?? ""}
+              onValueChange={(values) => handleLineChange(record.key, "unitPrice", values.floatValue ?? undefined)}
+              allowNegative={false}
+              decimalScale={2}
+              thousandSeparator="."
+              decimalSeparator=","
+              customInput={Input}
+              addonAfter="đ"
+              style={{ width: "100%" }}
+              placeholder="Đơn giá"
+              size={"small" as any}
+              status={err ? "error" : undefined}
+            />
+            {err && <div style={{ color: "#ff4d4f", fontSize: 11 }}>{err}</div>}
+          </>
+        );
+      },
+    },
+    {
+      title: <span>VAT <span style={{ color: "#ff4d4f" }}>*</span></span>,
+      key: "vatPercent",
+      width: 90,
+      fixed: "right" as const,
+      render: (_: any, record: LineItem) => {
+        if (isReadonly || record.isHistorical)
+          return record.vatPercent != null ? `${record.vatPercent}%` : "-";
+        const err = lineItemErrors[record.key]?.vatPercent;
+        return (
+          <>
+            <InputNumber
+              value={record.vatPercent}
+              min={0}
+              max={100}
+              precision={0}
+              onChange={(v) => handleLineChange(record.key, "vatPercent", v ?? undefined)}
+              style={{ width: "100%" }}
+              size="small"
+              addonAfter="%"
+              status={err ? "error" : undefined}
+            />
+            {err && <div style={{ color: "#ff4d4f", fontSize: 11 }}>{err}</div>}
+          </>
+        );
+      },
+    },
+    {
+      title: <span>Thành tiền <span style={{ color: "#ff4d4f" }}>*</span></span>,
+      key: "totalLineAmount",
+      width: 160,
+      fixed: "right" as const,
+      render: (_: any, record: LineItem) => {
+        if (isReadonly || record.isHistorical)
+          return record.totalLineAmount != null ? `${new Intl.NumberFormat("vi-VN").format(record.totalLineAmount)} đ` : "-";
+        const err = lineItemErrors[record.key]?.totalLineAmount;
+        return (
+          <>
+            <NumericFormat
+              value={record.totalLineAmount ?? ""}
+              onValueChange={(values) => handleLineAmountDirectChange(record.key, values.floatValue ?? undefined)}
+              allowNegative={false}
+              decimalScale={2}
+              thousandSeparator="."
+              decimalSeparator=","
+              customInput={Input}
+              addonAfter="đ"
+              style={{ width: "100%" }}
+              placeholder="Thành tiền"
+              size={"small" as any}
+              status={err ? "error" : undefined}
+            />
+            {err && <div style={{ color: "#ff4d4f", fontSize: 11 }}>{err}</div>}
+          </>
+        );
+      },
     },
     ...(!isReadonly
       ? [
@@ -1276,33 +1401,16 @@ const WarehouseImportForm: React.FC = () => {
               />
             </Col>
             <Col xs={24} sm={12} md={8}>
-              <Controller
-                name="totalAmount"
-                control={control}
-                render={({ field, fieldState }) => (
-                  <Form.Item
-                    label="Tổng giá trị đơn hàng"
-                    required
-                    validateStatus={fieldState.error ? "error" : undefined}
-                    help={fieldState.error?.message}
-                  >
-                    <NumericFormat
-                      value={field.value ?? ""}
-                      onValueChange={(values) => field.onChange(values.floatValue ?? null)}
-                      allowNegative={false}
-                      decimalScale={2}
-                      thousandSeparator="."
-                      decimalSeparator=","
-                      customInput={Input}
-                      addonAfter="đ"
-                      style={{ width: "100%" }}
-                      placeholder="Nhập tổng giá trị"
-                      disabled={isReadonly}
-                      status={fieldState.error ? "error" : undefined}
-                    />
-                  </Form.Item>
-                )}
-              />
+              <Form.Item label="Tổng giá trị đơn hàng (Đã bao gồm VAT)">
+                <Input
+                  readOnly
+                  variant="borderless"
+                  value={computedTotalAmount > 0
+                    ? `${new Intl.NumberFormat("vi-VN").format(computedTotalAmount)} đ`
+                    : "—"}
+                  style={{ fontWeight: 600, paddingLeft: 0 }}
+                />
+              </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={8}>
               <Form.Item label="Mã phiếu nhập kho">
@@ -1433,7 +1541,7 @@ const WarehouseImportForm: React.FC = () => {
                           dataSource={lineItems}
                           rowKey="key"
                           pagination={false}
-                          scroll={{ x: 2020 }}
+                          scroll={{ x: 2420 }}
                           size="small"
                           bordered
                           loading={itemsLoading}

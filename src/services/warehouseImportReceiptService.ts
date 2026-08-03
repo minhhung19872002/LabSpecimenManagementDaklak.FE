@@ -158,6 +158,9 @@ export interface WarehouseImportReceiptItemDto {
   manufacturerName?: string;
   storageWarehouseId?: string;
   storageWarehouseName?: string;
+  unitPrice?: number;
+  vatPercent?: number;
+  totalLineAmount?: number;
   isEquipment: boolean;
   assetCode?: string;
   serialNumber?: string;
@@ -200,6 +203,9 @@ export interface CreateUpdateWarehouseImportReceiptItemDto {
   selectedUnitName?: string;
   storageWarehouseId?: string;
   storageWarehouseName?: string;
+  unitPrice?: number;
+  vatPercent?: number;
+  totalLineAmount?: number;
   isEquipment: boolean;
   assetCode?: string;
   serialNumber?: string;
