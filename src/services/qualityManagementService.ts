@@ -143,8 +143,18 @@ export const qualityManagementService = {
     return response.data;
   },
 
-  printMixedResult: async (taskId: string, indicatorIds: string[], note?: string, templateName?: string, vicePresidentId?: string): Promise<{ fileName: string }> => {
-    const response = await api.post<{ fileName: string }>(`${BASE_URL}/${taskId}/print-mixed`, { indicatorIds, note, templateName, vicePresidentId });
+  printMixedResult: async (
+    taskId: string,
+    indicatorIds: string[],
+    note?: string,
+    templateName?: string,
+    vicePresidentId?: string,
+    selectedMasterNoteIds?: string[],
+    freeTextNote?: string,
+  ): Promise<{ fileName: string }> => {
+    const response = await api.post<{ fileName: string }>(`${BASE_URL}/${taskId}/print-mixed`, {
+      indicatorIds, note, templateName, vicePresidentId, selectedMasterNoteIds, freeTextNote,
+    });
     return response.data;
   },
 
@@ -168,12 +178,24 @@ export const qualityManagementService = {
     indicatorIds: string[],
     templateName?: string,
     note?: string,
-    vicePresidentId?: string
+    vicePresidentId?: string,
+    selectedMasterNoteIds?: string[],
+    freeTextNote?: string,
   ): Promise<{ results: Array<{ fileName: string; sampleCode: string; templateName: string }> }> => {
     const response = await api.post<{ results: Array<{ fileName: string; sampleCode: string; templateName: string }> }>(
       `${BASE_URL}/${taskId}/print-mixed-per-sample`,
-      { indicatorIds, note, templateName, vicePresidentId }
+      { indicatorIds, note, templateName, vicePresidentId, selectedMasterNoteIds, freeTextNote }
     );
+    return response.data;
+  },
+
+  getLastPrintConfig: async (taskId: string): Promise<{
+    selectedMasterNoteIds: string[];
+    freeTextNote?: string;
+    vicePresidentId?: string;
+    templateName?: string;
+  } | null> => {
+    const response = await api.get(`${BASE_URL}/${taskId}/last-print-config`);
     return response.data;
   },
 

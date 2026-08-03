@@ -299,6 +299,7 @@ const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
       loadVicePresidents();
       loadResultCopyCount();
       loadMasterNotes();
+      loadLastPrintConfig();
     }
   }, [visible]);
 
@@ -422,6 +423,25 @@ const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
     }
   };
 
+  const loadLastPrintConfig = async () => {
+    try {
+      const config = await qualityManagementService.getLastPrintConfig(taskId);
+      if (config) {
+        if (config.selectedMasterNoteIds?.length) {
+          setSelectedMasterNoteIds(new Set(config.selectedMasterNoteIds));
+        }
+        if (config.freeTextNote) {
+          setNote(config.freeTextNote);
+        }
+        if (config.vicePresidentId) {
+          setSelectedVicePresidentId(config.vicePresidentId);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading last print config:", error);
+    }
+  };
+
   // Lấy "Số bản" từ TestRequest để hiển thị cảnh báo số bản in
   const loadResultCopyCount = async () => {
     if (!testRequestId) return;
@@ -483,6 +503,9 @@ const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
       [...checkedNoteHtmls, ...(hasEditorText ? [note] : [])].join("") ||
       undefined;
 
+    const masterNoteIdsArray = [...selectedMasterNoteIds];
+    const freeTextToSave = hasEditorText ? note : undefined;
+
     setLoading(true);
     try {
       if (isPerSampleTemplate(selectedMixedTemplate)) {
@@ -492,6 +515,8 @@ const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
           selectedMixedTemplate || undefined,
           finalNote,
           selectedVicePresidentId,
+          masterNoteIdsArray.length > 0 ? masterNoteIdsArray : undefined,
+          freeTextToSave,
         );
         message.success(`Đã tạo ${result.results.length} phiếu kết quả`);
         setGeneratedResults(result.results);
@@ -503,6 +528,8 @@ const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
           finalNote,
           selectedMixedTemplate || undefined,
           selectedVicePresidentId,
+          masterNoteIdsArray.length > 0 ? masterNoteIdsArray : undefined,
+          freeTextToSave,
         );
         message.success("Đã tạo phiếu kết quả");
         window.open(`/document-editor?file=${encodeURIComponent(result.fileName)}`, "_blank");
