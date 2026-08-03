@@ -609,7 +609,10 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
                 { value: String(ProductType.Chemical), label: ProductTypeLabels[ProductType.Chemical] },
                 { value: String(ProductType.Biological), label: ProductTypeLabels[ProductType.Biological] },
                 { value: String(ProductType.Supply), label: ProductTypeLabels[ProductType.Supply] },
-                { value: EQUIPMENT_FILTER_VALUE, label: "Thiết bị" },
+                { value: String(ProductType.Standard), label: ProductTypeLabels[ProductType.Standard] },
+                { value: String(ProductType.Solvent), label: ProductTypeLabels[ProductType.Solvent] },
+                { value: EQUIPMENT_FILTER_VALUE, label: ProductTypeLabels[ProductType.Equipment] },
+                { value: String(ProductType.PreparedSolution), label: ProductTypeLabels[ProductType.PreparedSolution] },
               ]}
             />
           </Col>
