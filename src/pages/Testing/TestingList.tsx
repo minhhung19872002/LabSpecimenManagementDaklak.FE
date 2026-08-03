@@ -378,9 +378,9 @@ const TestingList: React.FC = () => {
             <Radio.Button value={String(TestingTabType.All)}>
               Công việc của Lab
             </Radio.Button>
-            <Radio.Button value="test-batches">
+            {/* <Radio.Button value="test-batches">
               Mẻ thử nghiệm
-            </Radio.Button>
+            </Radio.Button> */}
           </Radio.Group>
         </div>
         <div style={{ borderBottom: "1px solid #f0f0f0" }} />
