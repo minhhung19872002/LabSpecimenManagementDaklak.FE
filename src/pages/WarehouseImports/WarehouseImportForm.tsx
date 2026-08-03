@@ -29,7 +29,6 @@ import {
   WarehouseImportLineStatusOptions,
   ProductSkuForImportDto,
 } from "../../services/warehouseImportReceiptService";
-import { warehouseService, WarehouseDto } from "../../services/masterDataService";
 import { employeeService } from "../../services/employeeService";
 import { supplierService } from "../../services/supplierService";
 import { authService } from "../../services/authService";
@@ -122,7 +121,6 @@ const WarehouseImportForm: React.FC = () => {
   const [lineItemErrors, setLineItemErrors] = useState<
     Record<string, { actualReceivedQuantity?: string; lotNumber?: string; lotExpiryDate?: string; qualityDocument?: string; skuId?: string; selectedUnitId?: string; unitPrice?: string; vatPercent?: string; totalLineAmount?: string }>
   >({});
-  const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
 
   const isReadonly = receipt ? receipt.status === WarehouseImportReceiptStatus.Completed : false;
 
@@ -317,12 +315,10 @@ const WarehouseImportForm: React.FC = () => {
     const loadData = async () => {
       setPageLoading(true);
       try {
-        const [employeesList, warehouseList, manufacturerList] = await Promise.all([
+        const [employeesList, manufacturerList] = await Promise.all([
           employeeService.getList({ maxResultCount: 1000 }),
-          warehouseService.getList({ maxResultCount: 1000 }),
           manufacturerService.getActive(),
         ]);
-        setWarehouses(warehouseList.items || []);
         setManufacturers(manufacturerList);
 
         if (id) {
@@ -1060,34 +1056,6 @@ const WarehouseImportForm: React.FC = () => {
               <div style={{ color: "#ff4d4f", fontSize: 11 }}>{lineItemErrors[record.key]?.lotExpiryDate}</div>
             )}
           </>
-        );
-      },
-    },
-    {
-      title: "Kho lưu trữ",
-      key: "storageWarehouse",
-      width: 160,
-      render: (_: any, record: LineItem) => {
-        if (isReadonly || record.isHistorical) return record.storageWarehouseName || "-";
-        return (
-          <Select
-            size="small"
-            style={{ width: "100%" }}
-            placeholder="Chọn kho"
-            value={record.storageWarehouseId || undefined}
-            showSearch
-            optionFilterProp="label"
-            options={warehouses.map(w => ({ value: w.id, label: w.name }))}
-            onChange={(warehouseId) => {
-              const wh = warehouses.find(w => w.id === warehouseId);
-              setLineItems(prev => prev.map(it =>
-                it.key === record.key
-                  ? { ...it, storageWarehouseId: warehouseId, storageWarehouseName: wh?.name }
-                  : it
-              ));
-            }}
-            allowClear
-          />
         );
       },
     },
