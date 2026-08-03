@@ -473,7 +473,7 @@ const handleRemoveLine = (key: string) => {
       render: (_: any, record: LineItem) => record.productName || "-",
     },
     {
-      title: "Hãng sản xuất",
+      title: "Hãng tham khảo",
       key: "manufacturer",
       width: 180,
       render: (_: any, record: LineItem) => {
@@ -603,7 +603,7 @@ const handleRemoveLine = (key: string) => {
       render: (_: any, record: LineItem) => record.productName || "-",
     },
     {
-      title: "Hãng sản xuất",
+      title: "Hãng tham khảo",
       key: "manufacturer",
       width: 180,
       render: (_: any, record: LineItem) => {
