@@ -30,6 +30,7 @@ import {
   qualityManagementService,
   TemplateDto,
 } from "../../../services/qualityManagementService";
+import { testRequestService } from "../../../services/testRequestService";
 import userService, { UserLookupDto } from "../../../services/userService";
 import { isServerReachable } from "../../../services/offline/connectivity";
 import {
@@ -40,9 +41,12 @@ import {
   generateMixedResultFormOffline,
   downloadDocument,
 } from "../../../services/offline/offlinePrintService";
-import { IndicatorName } from "../../../components/common";
+import { IndicatorName, PrintCopyCountAlert, EllipsisTooltip } from "../../../components/common";
 import RichTextEditor from "../../../components/common/RichTextEditor";
 import { evaluatePassFail, stripHtmlTags } from "../../../utils/formatters";
+import { ResultLanguage } from "../../../types/testRequest";
+import { noteService } from "../../../services/noteService";
+import { NoteDto } from "../../../types/note";
 
 const { Text } = Typography;
 
@@ -58,6 +62,8 @@ interface PrintResultItem {
 export interface PrintMixedModalProps {
   visible: boolean;
   taskId: string;
+  /** Id TestRequest - dùng để lấy "Số bản" cho cảnh báo số bản in */
+  testRequestId?: string;
   indicators: QualityManagementIndicatorDto[];
   taskContext?: {
     contractNumber?: string;
@@ -186,6 +192,7 @@ const processIndicatorsWithHierarchy = (
 const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
   visible,
   taskId,
+  testRequestId,
   indicators,
   taskContext,
   onCancel,
@@ -203,6 +210,15 @@ const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
   const [vicePresidents, setVicePresidents] = useState<UserLookupDto[]>([]);
   const [selectedVicePresidentId, setSelectedVicePresidentId] = useState<string | undefined>(undefined);
   const [loadingVicePresidents, setLoadingVicePresidents] = useState(false);
+  const [resultRequirement, setResultRequirement] = useState<{
+    resultCopyCount?: string;
+    resultLanguage?: ResultLanguage;
+    conformityDeclaration?: string;
+    otherRequirements?: string;
+    separatePassedResults?: boolean;
+  }>({});
+  const [masterNotes, setMasterNotes] = useState<NoteDto[]>([]);
+  const [selectedMasterNoteIds, setSelectedMasterNoteIds] = useState<Set<string>>(new Set());
 
   const approvedIndicatorsWithParents = useMemo(() => {
     const parents = indicators.filter((ind) => !ind.parentIndicatorId);
@@ -291,13 +307,16 @@ const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
         indicators: sorted,
         allIndicatorIds,
       };
-    });
+    }).sort((a, b) => a.sampleCode.localeCompare(b.sampleCode, undefined, { numeric: true }));
   }, [approvedIndicatorsWithParents, approvedIndicatorIds]);
 
   useEffect(() => {
     if (visible) {
       loadTemplates();
       loadVicePresidents();
+      loadResultCopyCount();
+      loadMasterNotes();
+      loadLastPrintConfig();
     }
   }, [visible]);
 
@@ -312,9 +331,19 @@ const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
       setShowResults(false);
       setViewedFiles(new Set());
       setSelectedVicePresidentId(undefined);
+      setSelectedMasterNoteIds(new Set());
       prevSelectedIdsRef.current = [];
     }
   }, [visible]);
+
+  const handleToggleMasterNote = (noteId: string) => {
+    setSelectedMasterNoteIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(noteId)) next.delete(noteId);
+      else next.add(noteId);
+      return next;
+    });
+  };
 
   useEffect(() => {
     const prevIds = prevSelectedIdsRef.current;
@@ -325,23 +354,30 @@ const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
         newlySelectedIds.includes(ind.id),
       );
 
+      // Auto-tick master data notes matching the indicator's assigned notes
+      const newMasterNoteIds = new Set<string>();
+      newIndicators.forEach((ind) => {
+        ind.masterDataNotes?.forEach((noteContent) => {
+          if (noteContent) {
+            const plainContent = stripHtmlTags(noteContent);
+            const matched = masterNotes.find(
+              (n) => stripHtmlTags(n.content) === plainContent,
+            );
+            if (matched) newMasterNoteIds.add(matched.id);
+          }
+        });
+      });
+      if (newMasterNoteIds.size > 0) {
+        setSelectedMasterNoteIds((prev) => {
+          const next = new Set(prev);
+          newMasterNoteIds.forEach((id) => next.add(id));
+          return next;
+        });
+      }
+
+      // Collect free text notes
       const existingPlainText = stripHtmlTags(note);
       const newHtmlParts: string[] = [];
-
-      const addedMasterNotes = new Set<string>();
-      newIndicators.forEach((ind) => {
-        if (ind.masterDataNotes && ind.masterDataNotes.length > 0) {
-          ind.masterDataNotes.forEach((masterNote) => {
-            if (masterNote) {
-              const plainNote = stripHtmlTags(masterNote);
-              if (plainNote && !addedMasterNotes.has(plainNote) && !existingPlainText.includes(plainNote)) {
-                addedMasterNotes.add(plainNote);
-                newHtmlParts.push(masterNote);
-              }
-            }
-          });
-        }
-      });
 
       const addedFreeTexts = new Set<string>();
       newIndicators.forEach((ind) => {
@@ -364,7 +400,7 @@ const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
     }
 
     prevSelectedIdsRef.current = selectedIndicatorIds;
-  }, [selectedIndicatorIds, approvedIndicatorsWithParents]);
+  }, [selectedIndicatorIds, approvedIndicatorsWithParents, masterNotes]);
 
   const loadTemplates = async () => {
     setLoadingTemplates(true);
@@ -391,6 +427,52 @@ const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
       console.error("Error loading vice presidents:", error);
     } finally {
       setLoadingVicePresidents(false);
+    }
+  };
+
+  const loadMasterNotes = async () => {
+    try {
+      const notes = await noteService.getActiveNotes();
+      setMasterNotes(notes || []);
+    } catch (error) {
+      console.error("Error loading master notes:", error);
+      setMasterNotes([]);
+    }
+  };
+
+  const loadLastPrintConfig = async () => {
+    try {
+      const config = await qualityManagementService.getLastPrintConfig(taskId);
+      if (config) {
+        if (config.selectedMasterNoteIds?.length) {
+          setSelectedMasterNoteIds(new Set(config.selectedMasterNoteIds));
+        }
+        if (config.freeTextNote) {
+          setNote(config.freeTextNote);
+        }
+        if (config.vicePresidentId) {
+          setSelectedVicePresidentId(config.vicePresidentId);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading last print config:", error);
+    }
+  };
+
+  // Lấy "Số bản" từ TestRequest để hiển thị cảnh báo số bản in
+  const loadResultCopyCount = async () => {
+    if (!testRequestId) return;
+    try {
+      const result = await testRequestService.get(testRequestId);
+      setResultRequirement({
+        resultCopyCount: result.resultCopyCount,
+        resultLanguage: result.resultLanguage,
+        conformityDeclaration: result.conformityDeclaration,
+        otherRequirements: result.otherRequirements,
+        separatePassedResults: result.separatePassedResults,
+      });
+    } catch (error) {
+      console.error("Error loading test request:", error);
     }
   };
 
@@ -423,6 +505,23 @@ const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
       message.warning("Vui lòng chọn ít nhất một chỉ tiêu để in");
       return;
     }
+
+    // Merge checked master data notes + free text note
+    const checkedNoteHtmls = masterNotes
+      .filter((n) => selectedMasterNoteIds.has(n.id))
+      .map((n) => {
+        const c = n.content?.trim();
+        if (!c) return "";
+        return /<[a-z]/i.test(c) ? c : `<p>${c}</p>`;
+      })
+      .filter(Boolean);
+    const hasEditorText = stripHtmlTags(note).trim().length > 0;
+    const finalNote =
+      [...checkedNoteHtmls, ...(hasEditorText ? [note] : [])].join("") ||
+      undefined;
+
+    const masterNoteIdsArray = [...selectedMasterNoteIds];
+    const freeTextToSave = hasEditorText ? note : undefined;
 
     // ---- Offline fallback ----
     if (!(await isServerReachable())) {
@@ -461,7 +560,7 @@ const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
           {
             ContractNumber: taskContext?.contractNumber || "",
             CustomerName: taskContext?.customerName || "",
-            Note: note || "",
+            Note: finalNote || "",
             DateOfReceiving: extras.DateOfReceiving,
             DateOfIssue: extras.DateOfIssue,
             TimeOfTesting: extras.TimeOfTesting,
@@ -497,8 +596,10 @@ const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
           taskId,
           [...selectedIndicatorIds],
           selectedMixedTemplate || undefined,
-          note || undefined,
+          finalNote,
           selectedVicePresidentId,
+          masterNoteIdsArray.length > 0 ? masterNoteIdsArray : undefined,
+          freeTextToSave,
         );
         message.success(`Đã tạo ${result.results.length} phiếu kết quả`);
         setGeneratedResults(result.results);
@@ -507,9 +608,11 @@ const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
         const result = await qualityManagementService.printMixedResult(
           taskId,
           [...selectedIndicatorIds],
-          note || undefined,
+          finalNote,
           selectedMixedTemplate || undefined,
           selectedVicePresidentId,
+          masterNoteIdsArray.length > 0 ? masterNoteIdsArray : undefined,
+          freeTextToSave,
         );
         message.success("Đã tạo phiếu kết quả");
         window.open(`/document-editor?file=${encodeURIComponent(result.fileName)}`, "_blank");
@@ -671,6 +774,9 @@ const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
         <div style={{ marginBottom: 16 }}>
           <Text type="secondary">Click "Xem" để mở tài liệu trong trình soạn thảo Word.</Text>
         </div>
+        <PrintCopyCountAlert
+          {...resultRequirement}
+        />
         <div style={{ maxHeight: "calc(100vh - 350px)", overflowY: "auto" }}>
           <List
             dataSource={generatedResults}
@@ -924,6 +1030,79 @@ const PrintMixedModal: React.FC<PrintMixedModalProps> = ({
                 Nếu chọn, tên sẽ được thay thế v...
               </Text>
             </div>
+
+            {/* Master data notes list */}
+            {masterNotes.length > 0 && (
+              <div style={{ marginBottom: 24 }}>
+                <Text strong style={{ display: "block", marginBottom: 8 }}>
+                  Ghi chú từ danh sách
+                </Text>
+                <div
+                  style={{
+                    maxHeight: 200,
+                    overflowY: "auto",
+                    border: "1px solid #d9d9d9",
+                    borderRadius: 6,
+                    padding: 8,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6,
+                  }}
+                >
+                  <style>{`
+                    .print-master-note-item .sal-cell-ellipsis {
+                      display: block;
+                      overflow: hidden;
+                      white-space: nowrap;
+                      text-overflow: ellipsis;
+                      font-size: 13px;
+                    }
+                    .print-master-note-item .sal-cell-ellipsis > * {
+                      display: inline;
+                      margin: 0;
+                    }
+                    .print-master-note-item.is-selected .sal-cell-ellipsis {
+                      color: #1890ff;
+                    }
+                  `}</style>
+                  {masterNotes.map((masterNote) => {
+                    const isSelected = selectedMasterNoteIds.has(masterNote.id);
+                    return (
+                      <div
+                        key={masterNote.id}
+                        className={`print-master-note-item${isSelected ? " is-selected" : ""}`}
+                        onClick={() => handleToggleMasterNote(masterNote.id)}
+                        style={{
+                          cursor: "pointer",
+                          padding: "6px 10px",
+                          borderRadius: 4,
+                          backgroundColor: isSelected
+                            ? "#e6f7ff"
+                            : "transparent",
+                          border: isSelected
+                            ? "1px solid #91d5ff"
+                            : "1px solid #f0f0f0",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          transition: "all 0.2s",
+                        }}
+                      >
+                        <Checkbox checked={isSelected} />
+                        <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+                          <EllipsisTooltip
+                            title={
+                              <div dangerouslySetInnerHTML={{ __html: masterNote.content }} />
+                            }
+                            html={masterNote.content}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             <div>
               <Text strong style={{ display: "block", marginBottom: 8 }}>

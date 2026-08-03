@@ -1,11 +1,10 @@
 import React from "react";
-import { Button, Space, Tooltip, Typography } from "antd";
+import { Typography } from "antd";
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   SyncOutlined,
   SendOutlined,
-  DeleteOutlined,
   CloseCircleOutlined,
 } from "../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
@@ -65,23 +64,8 @@ const getStatusTag = (
   );
 };
 
-const getLockedMessage = (status: LaboratoryTaskStatus) => {
-  switch (status) {
-    case LaboratoryTaskStatus.InProgress:
-      return "Không thể chỉnh sửa khi đang thử nghiệm";
-    case LaboratoryTaskStatus.WaitingApproval:
-      return "Không thể chỉnh sửa khi đang chờ duyệt";
-    case LaboratoryTaskStatus.Approved:
-      return "Không thể chỉnh sửa khi đã duyệt";
-    case LaboratoryTaskStatus.SentToQuality:
-      return "Không thể chỉnh sửa khi đã gửi QLCL";
-    default:
-      return "";
-  }
-};
-
 export const getTaskManagementColumns = (
-  options: GetColumnsOptions,
+  _options: GetColumnsOptions,
 ): ColumnsType<LaboratoryTaskDto> => [
   {
     title: "Số hợp đồng",

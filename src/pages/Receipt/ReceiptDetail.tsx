@@ -37,6 +37,7 @@ import { TestRequestSampleDto } from "../../types/testRequest";
 import { PATH_ROUTES } from "../../constants";
 import StatusTag from "../../components/common/StatusTag";
 import { IndicatorName } from "../../components/common";
+import { numberToVietnameseWords } from "../../utils/numberToWords";
 import "../../styles/ListCard.css";
 import "../TestRequest/TestRequestDetail.css";
 
@@ -693,10 +694,10 @@ const ReceiptDetail: React.FC = () => {
                       {(testRequest.totalCost || 0).toLocaleString("vi-VN")} đ
                     </Text>
                   </div>
-                  {testRequest.totalCostInWords && (
+                  {(testRequest.totalCost || 0) > 0 && (
                     <div className="detail-item">
                       <Text type="secondary">Bằng chữ:</Text>
-                      <Text italic>{testRequest.totalCostInWords}</Text>
+                      <Text italic>{numberToVietnameseWords(testRequest.totalCost || 0)}</Text>
                     </div>
                   )}
                 </div>

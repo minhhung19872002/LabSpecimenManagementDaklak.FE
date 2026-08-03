@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo, useTransition, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { message } from "antd";
+import { message, Form } from "antd";
 import { testingService } from "../../services/testingService";
 import { testResultValueService } from "../../services/testResultValueService";
+import { laboratoryTaskService } from "../../services/laboratoryTaskService";
+import { MethodLookupDto } from "../../types/laboratoryTask";
 import { getApiErrorMessage } from "../../utils/errorHandler";
 import {
   TestingDetailDto,
@@ -16,6 +18,7 @@ import {
 import TestingDetailContainer from "./components/TestingDetailContainer";
 import SubmitConsumptionModal from "./components/SubmitConsumptionModal";
 import { useMultipleActionPermissions } from "../../hooks/useActionPermission";
+import { usePageTitleOverride } from "../../hooks/usePageTitle";
 import { TestRequestStatus } from "../../types/testRequest";
 import { PATH_ROUTES, STORAGE_KEYS } from "../../constants";
 import { DEFAULT_INDICATOR_VISIBLE_COLUMNS } from "./components/IndicatorEditTable";
@@ -31,6 +34,13 @@ interface IndicatorSpecimenTypePair {
   indicatorId: string;
   specimenTypeId: string;
 }
+
+// Chỉ tiêu đổi được phương pháp — khớp điều kiện khóa Select PP từng dòng
+// (IndicatorEditTable.isRowLocked) và guard của BE (Approved/CustomerCancelled)
+const canBulkEditMethod = (ind: TestingIndicatorDto) =>
+  ind.canEdit &&
+  ind.testingStatus !== IndicatorTestingStatus.Done &&
+  ind.testingStatus !== IndicatorTestingStatus.Cancelled;
 
 interface TestResultValueWithIndicator {
   id: string;
@@ -48,6 +58,16 @@ const TestingDetail: React.FC = () => {
   const [detail, setDetail] = useState<TestingDetailDto | null>(null);
   const [resultOptions, setResultOptions] = useState<ResultOption[]>([]);
   const [allResultValues, setAllResultValues] = useState<TestResultValueWithIndicator[]>([]);
+  // Danh sách phương pháp từ master data cho dropdown chọn PP
+  const [methods, setMethods] = useState<MethodLookupDto[]>([]);
+  // Các chỉ tiêu đang lưu PP/ĐVT (disable control trong lúc chờ API)
+  const [savingIndicatorIds, setSavingIndicatorIds] = useState<string[]>([]);
+
+  // Bulk chọn phương pháp: filter hiển thị theo chỉ tiêu + modal chọn PP
+  const [indicatorFilter, setIndicatorFilter] = useState<string[]>([]);
+  const [methodSelectModalOpen, setMethodSelectModalOpen] = useState(false);
+  const [bulkMethodLoading, setBulkMethodLoading] = useState(false);
+  const [methodSelectForm] = Form.useForm();
 
   // Check if viewing from "Công việc của Lab" tab (readonly mode)
   // Valid viewMode values: "my" (default), "lab" (readonly)
@@ -56,6 +76,9 @@ const TestingDetail: React.FC = () => {
   const isLabView = viewMode === "lab";
   // Map viewMode for API: "lab" -> "all", "my" -> "my"
   const apiViewMode: "my" | "all" = isLabView ? "all" : "my";
+
+  // Tab header = Mã số mẫu khi mở từ "Sổ nhận mẫu giao việc" (mở tab trình duyệt mới)
+  usePageTitleOverride(searchParams.get("sampleCode") || undefined);
 
   // Sử dụng hook để check permissions cho tất cả actions theo Permission Matrix
   // Testing: KTV (A), QLKT (V), Admin (V)
@@ -155,8 +178,6 @@ const TestingDetail: React.FC = () => {
               );
               return {
                 indicatorId: ind.id,
-                methodId: ind.methodId,
-                unit: ind.unit,
                 result: existingResult?.result ?? ind.result,
                 testDate: existingResult?.testDate ?? ind.testDate, // Quan trọng: cần testDate để batch submit hoạt động
               };
@@ -246,8 +267,6 @@ const TestingDetail: React.FC = () => {
           sample.sampleId,
           sample.indicators.map((ind) => ({
             indicatorId: ind.id,
-            methodId: ind.methodId,
-            unit: ind.unit,
             result: ind.result,
             testDate: ind.testDate, // Quan trọng: cần testDate để batch submit hoạt động
           }))
@@ -310,6 +329,20 @@ const TestingDetail: React.FC = () => {
       }
     };
     loadResultOptions();
+  }, []);
+
+  // Load danh sách phương pháp (tất cả từ master data) cho dropdown chọn PP
+  useEffect(() => {
+    const loadMethods = async () => {
+      try {
+        // Không truyền indicatorId -> trả về toàn bộ method active
+        const result = await laboratoryTaskService.getMethodsByIndicator();
+        setMethods(result || []);
+      } catch (error) {
+        console.error("Failed to load methods:", error);
+      }
+    };
+    loadMethods();
   }, []);
 
   // Function to get result options filtered by (indicatorId + specimenTypeId)
@@ -387,6 +420,63 @@ const TestingDetail: React.FC = () => {
       message.error(getApiErrorMessage(error, "Không thể lưu kết quả"));
     }
   }, [id]);
+
+  // Thay nguyên indicator trong detail bằng DTO server trả về (giống cách QLKT làm) —
+  // KHÔNG spread-merge để case clear PP (field null/bị omit) không giữ lại giá trị cũ
+  const replaceIndicator = useCallback((updated: TestingIndicatorDto) => {
+    setDetail((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        samples: prev.samples.map((sample) => ({
+          ...sample,
+          indicators: sample.indicators.map((ind) =>
+            ind.id === updated.id ? updated : ind
+          ),
+        })),
+      };
+    });
+  }, []);
+
+  // Đổi phương pháp: lưu ngay qua API riêng, thay indicator bằng DTO server trả về
+  // (DTO mang sẵn ĐVT resolved theo PP mới + giới hạn mới + canEdit/testingStatus mới)
+  const handleMethodChange = useCallback(async (
+    indicatorId: string,
+    methodId: string | null
+  ) => {
+    setSavingIndicatorIds((prev) => [...prev, indicatorId]);
+    try {
+      const updated = await testingService.updateIndicatorMethod(indicatorId, methodId);
+      replaceIndicator(updated);
+      message.open({
+        type: "success",
+        content: "Đã lưu phương pháp",
+        duration: 1.2,
+        key: "testing-method-autosave-success",
+      });
+    } catch (error: any) {
+      console.error("Failed to update method:", error);
+      message.error(getApiErrorMessage(error, "Không thể cập nhật phương pháp"));
+    } finally {
+      setSavingIndicatorIds((prev) => prev.filter((i) => i !== indicatorId));
+    }
+  }, [replaceIndicator]);
+
+  // Đổi ĐVT: lưu khi blur qua API riêng.
+  // Không track savingIndicatorIds ở đây: ĐVT không cần disable khi lưu, và
+  // push/filter trùng id với save PP sẽ mở khóa Select PP sớm hơn dự kiến.
+  const handleUnitChange = useCallback(async (
+    indicatorId: string,
+    unit: string | null
+  ) => {
+    try {
+      const updated = await testingService.updateIndicatorUnit(indicatorId, unit);
+      replaceIndicator(updated);
+    } catch (error: any) {
+      console.error("Failed to update unit:", error);
+      message.error(getApiErrorMessage(error, "Không thể cập nhật đơn vị tính"));
+    }
+  }, [replaceIndicator]);
 
   const handleSubmitResults = useCallback(async (sampleId: string) => {
     if (!id || !detail) return;
@@ -676,8 +766,6 @@ const TestingDetail: React.FC = () => {
         );
         return {
           indicatorId,
-          methodId: existingResult?.methodId ?? indicator?.methodId,
-          unit: existingResult?.unit ?? indicator?.unit,
           result: existingResult?.result ?? indicator?.result,
           testDate: date,
         };
@@ -705,8 +793,6 @@ const TestingDetail: React.FC = () => {
           if (indicator) {
             updatedList.push({
               indicatorId,
-              methodId: indicator.methodId,
-              unit: indicator.unit,
               result: indicator.result,
               testDate: date,
             });
@@ -767,6 +853,192 @@ const TestingDetail: React.FC = () => {
     [detail?.samples]
   );
 
+  // Options cho dropdown "Chọn chỉ tiêu" (chỉ tiêu gốc, dedup theo indicatorId)
+  const indicatorFilterOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    sortedSamples.forEach((sample) => {
+      sample.indicators.forEach((ind) => {
+        if (ind.indicatorId && ind.indicatorName && !ind.parentIndicatorId && !seen.has(ind.indicatorId)) {
+          seen.set(ind.indicatorId, ind.indicatorName);
+        }
+      });
+    });
+    return Array.from(seen.entries()).map(([id, name]) => ({ value: id, label: name }));
+  }, [sortedSamples]);
+
+  // Lọc mẫu theo chỉ tiêu đã chọn (giữ sub-indicator có parent nằm trong filter)
+  const filteredSamples = useMemo(() => {
+    if (indicatorFilter.length === 0) return sortedSamples;
+    return sortedSamples
+      .map((sample) => ({
+        ...sample,
+        indicators: sample.indicators.filter(
+          (ind) =>
+            indicatorFilter.includes(ind.indicatorId) ||
+            (!!ind.parentIndicatorId && indicatorFilter.includes(ind.parentIndicatorId))
+        ),
+      }))
+      .filter((sample) => sample.indicators.length > 0);
+  }, [sortedSamples, indicatorFilter]);
+
+  // Các chỉ tiêu chọn được toàn cục — cùng điều kiện với checkbox trong IndicatorEditTable:
+  // không phải parent có children, trạng thái không phải Done/Cancelled
+  const allGlobalSelectableIds = useMemo(() => {
+    const result = new Map<string, string[]>();
+    filteredSamples.forEach((sample) => {
+      const parentIndicatorIds = new Set(
+        sample.indicators
+          .filter((ind) => !!ind.parentIndicatorId)
+          .map((ind) => ind.parentIndicatorId as string)
+      );
+      const selectableIds = sample.indicators
+        .filter(
+          (ind) =>
+            !parentIndicatorIds.has(ind.indicatorId) &&
+            ind.testingStatus !== IndicatorTestingStatus.Done &&
+            ind.testingStatus !== IndicatorTestingStatus.Cancelled
+        )
+        .map((ind) => ind.id);
+      if (selectableIds.length > 0) {
+        result.set(sample.sampleId, selectableIds);
+      }
+    });
+    return result;
+  }, [filteredSamples]);
+
+  const totalGlobalSelectable = useMemo(
+    () => Array.from(allGlobalSelectableIds.values()).reduce((acc, ids) => acc + ids.length, 0),
+    [allGlobalSelectableIds]
+  );
+  const totalGlobalSelected = useMemo(
+    () => Array.from(selectedIndicators.values()).reduce((acc, ids) => acc + ids.length, 0),
+    [selectedIndicators]
+  );
+  const globalSelectedSampleCount = useMemo(
+    () => Array.from(selectedIndicators.values()).filter((ids) => ids.length > 0).length,
+    [selectedIndicators]
+  );
+  // Trong số đã chọn, số chỉ tiêu gốc thực sự đổi được PP — selection dùng chung với
+  // "Gửi kết quả" nên có thể chứa chỉ tiêu không đổi được PP (canEdit=false, sub-indicator...)
+  const totalMethodEditableSelected = useMemo(() => {
+    const selectedIds = new Set(Array.from(selectedIndicators.values()).flat());
+    return (detail?.samples ?? []).reduce(
+      (acc, sample) =>
+        acc +
+        sample.indicators.filter(
+          (ind) => selectedIds.has(ind.id) && !ind.parentIndicatorId && canBulkEditMethod(ind)
+        ).length,
+      0
+    );
+  }, [selectedIndicators, detail]);
+  const isGlobalAllSelected =
+    totalGlobalSelectable > 0 && totalGlobalSelected === totalGlobalSelectable;
+  const isGlobalIndeterminate =
+    totalGlobalSelected > 0 && totalGlobalSelected < totalGlobalSelectable;
+
+  // Đổi filter -> reset toàn bộ selection (tránh update ngầm chỉ tiêu đang bị ẩn)
+  const handleIndicatorFilterChange = useCallback((values: string[]) => {
+    setIndicatorFilter(values);
+    setSelectedIndicators(new Map());
+  }, []);
+
+  const handleGlobalSelectAll = useCallback(() => {
+    setSelectedIndicators(isGlobalAllSelected ? new Map() : new Map(allGlobalSelectableIds));
+  }, [isGlobalAllSelected, allGlobalSelectableIds]);
+
+  const handleOpenMethodModal = useCallback(() => setMethodSelectModalOpen(true), []);
+  const handleCloseMethodModal = useCallback(() => {
+    setMethodSelectModalOpen(false);
+    methodSelectForm.resetFields();
+  }, [methodSelectForm]);
+
+  // Bulk update PP cho các chỉ tiêu đã chọn: bỏ sub được chọn trực tiếp,
+  // auto-include sub cùng mẫu có cùng PP với parent được chọn (giống QLKT bên TaskManagementDetail)
+  const handleBulkMethodConfirm = useCallback(async () => {
+    if (!id || !detail) return;
+
+    let methodId: string;
+    try {
+      const values = await methodSelectForm.validateFields();
+      methodId = values.methodId;
+    } catch {
+      return; // Form validation error — antd đã hiện lỗi tại field
+    }
+
+    const allSelectedIds = new Set(Array.from(selectedIndicators.values()).flat());
+    if (allSelectedIds.size === 0) return;
+
+    // idsToUpdate gồm cả sub auto-include; rootIds chỉ chỉ tiêu gốc — dùng cho message
+    // để khớp với số hiển thị trên nút/title modal (totalMethodEditableSelected)
+    const idsToUpdate = new Set<string>();
+    const rootIds = new Set<string>();
+    detail.samples.forEach((sample) => {
+      sample.indicators.forEach((ind) => {
+        if (!allSelectedIds.has(ind.id) || ind.parentIndicatorId) return;
+        if (!canBulkEditMethod(ind)) return;
+        idsToUpdate.add(ind.id);
+        rootIds.add(ind.id);
+        sample.indicators
+          .filter(
+            (i) =>
+              i.parentIndicatorId === ind.indicatorId &&
+              i.methodId === ind.methodId &&
+              canBulkEditMethod(i)
+          )
+          .forEach((sub) => idsToUpdate.add(sub.id));
+      });
+    });
+    if (idsToUpdate.size === 0) {
+      message.warning("Không có chỉ tiêu đủ điều kiện để đổi phương pháp");
+      return;
+    }
+
+    setBulkMethodLoading(true);
+    try {
+      const updated = await testingService.bulkUpdateIndicatorMethod(
+        id,
+        Array.from(idsToUpdate),
+        methodId
+      );
+
+      // Thay nguyên DTO server trả về (không spread-merge — cùng lý do với replaceIndicator)
+      if (updated.length > 0) {
+        const updatedById = new Map(updated.map((ind) => [ind.id, ind]));
+        setDetail((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            samples: prev.samples.map((sample) => ({
+              ...sample,
+              indicators: sample.indicators.map((ind) => updatedById.get(ind.id) ?? ind),
+            })),
+          };
+        });
+      }
+
+      await reloadData();
+
+      // Đếm chỉ tiêu gốc theo kết quả BE thực sự update (BE có thể skip thêm) —
+      // khớp với số hiển thị trên nút/title modal
+      const updatedRootCount = updated.filter((u) => !u.parentIndicatorId).length;
+      if (updatedRootCount < rootIds.size) {
+        message.warning(
+          `Đã cập nhật phương pháp cho ${updatedRootCount}/${rootIds.size} chỉ tiêu (bỏ qua chỉ tiêu không đủ điều kiện)`
+        );
+      } else {
+        message.success(`Đã cập nhật phương pháp cho ${updatedRootCount} chỉ tiêu`);
+      }
+      setMethodSelectModalOpen(false);
+      methodSelectForm.resetFields();
+      setSelectedIndicators(new Map());
+    } catch (error: any) {
+      console.error("Failed to bulk update method:", error);
+      message.error(getApiErrorMessage(error, "Không thể cập nhật phương pháp"));
+    } finally {
+      setBulkMethodLoading(false);
+    }
+  }, [methodSelectForm, selectedIndicators, detail, id, reloadData]);
+
   const handleBack = useCallback(() => navigate("/testing"), [navigate]);
   const handleCloseHistoryModal = useCallback(() =>
     setHistoryModal({ visible: false, indicatorId: "", indicatorName: "" }), []);
@@ -788,6 +1060,10 @@ const TestingDetail: React.FC = () => {
         getResultOptionsForIndicator={getResultOptionsForIndicator}
         canPerformActions={canPerformActions}
         isTestRequestCancelled={isTestRequestCancelled}
+        methods={methods}
+        savingIndicatorIds={savingIndicatorIds}
+        onMethodChange={handleMethodChange}
+        onUnitChange={handleUnitChange}
         onBack={handleBack}
         onCollapseChange={handleCollapseChange}
         onSubmitResults={handleSubmitResults}
@@ -806,6 +1082,23 @@ const TestingDetail: React.FC = () => {
         onBulkTestDateChange={handleBulkTestDateChange}
         indicatorVisibleColumns={indicatorVisibleColumns}
         onIndicatorVisibleColumnsChange={handleIndicatorVisibleColumnsChange}
+        filteredSamples={filteredSamples}
+        indicatorFilter={indicatorFilter}
+        indicatorFilterOptions={indicatorFilterOptions}
+        totalGlobalSelectable={totalGlobalSelectable}
+        totalGlobalSelected={totalGlobalSelected}
+        totalMethodEditableSelected={totalMethodEditableSelected}
+        globalSelectedSampleCount={globalSelectedSampleCount}
+        isGlobalAllSelected={isGlobalAllSelected}
+        isGlobalIndeterminate={isGlobalIndeterminate}
+        methodSelectModalOpen={methodSelectModalOpen}
+        bulkMethodLoading={bulkMethodLoading}
+        methodSelectForm={methodSelectForm}
+        onIndicatorFilterChange={handleIndicatorFilterChange}
+        onGlobalSelectAll={handleGlobalSelectAll}
+        onOpenMethodModal={handleOpenMethodModal}
+        onCloseMethodModal={handleCloseMethodModal}
+        onBulkMethodConfirm={handleBulkMethodConfirm}
       />
 
       {consumptionModal.open && id && (
@@ -819,7 +1112,6 @@ const TestingDetail: React.FC = () => {
           onSubmitWithConsumption={async (lines) => {
             const pending = pendingSubmitRef.current;
             if (!pending) return;
-            // Save result first if there are unsaved edits
             if (pending.editedResult) {
               await testingService.saveResults(id, { results: [pending.editedResult] });
             }

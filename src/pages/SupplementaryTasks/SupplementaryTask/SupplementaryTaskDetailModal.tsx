@@ -16,6 +16,7 @@ import {
   SupplementaryTaskStatus,
   supplementaryTaskService,
 } from "../../../services/supplementaryTaskService";
+import { authService } from "../../../services/authService";
 import {
   PRIORITY_COLOR,
   PRIORITY_LABEL,
@@ -91,7 +92,8 @@ const SupplementaryTaskDetailModal: React.FC<SupplementaryTaskDetailModalProps> 
   const isDone = item.status === SupplementaryTaskStatus.Completed || item.status === SupplementaryTaskStatus.Cancelled;
   const isWaiting = item.status === SupplementaryTaskStatus.WaitingForConfirmation;
   const isRejected = item.status === SupplementaryTaskStatus.Rejected;
-  const canComplete = !isDirector && !isDone && !isWaiting;
+  const isAssignee = item.assignedToId === authService.getUserInfo()?.id;
+  const canComplete = !isDirector && isAssignee && !isDone && !isWaiting;
   const canApproveReject = isDirector && isWaiting;
 
   const handleAction = (action: () => void) => {

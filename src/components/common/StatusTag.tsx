@@ -1,87 +1,6 @@
 import React from "react";
 import { Tag } from "antd";
-
-// Define color mappings for status tags - solid background with white text
-const colorMap: Record<string, { bg: string; text: string }> = {
-  // Default/Gray
-  default: {
-    bg: "#8C8C8C",
-    text: "#FFFFFF",
-  },
-  // Blue - Processing
-  processing: {
-    bg: "#1890FF",
-    text: "#FFFFFF",
-  },
-  blue: {
-    bg: "#1890FF",
-    text: "#FFFFFF",
-  },
-  geekblue: {
-    bg: "#2F54EB",
-    text: "#FFFFFF",
-  },
-  // Green - Success
-  success: {
-    bg: "#52C41A",
-    text: "#FFFFFF",
-  },
-  green: {
-    bg: "#52C41A",
-    text: "#FFFFFF",
-  },
-  // Orange/Gold - Warning
-  warning: {
-    bg: "#FAAD14",
-    text: "#FFFFFF",
-  },
-  gold: {
-    bg: "#D48806",
-    text: "#FFFFFF",
-  },
-  orange: {
-    bg: "#FA8C16",
-    text: "#FFFFFF",
-  },
-  // Red - Error
-  error: {
-    bg: "#F5222D",
-    text: "#FFFFFF",
-  },
-  red: {
-    bg: "#F5222D",
-    text: "#FFFFFF",
-  },
-  // Volcano - Warning/Cancel
-  volcano: {
-    bg: "#FA541C",
-    text: "#FFFFFF",
-  },
-  // Purple
-  purple: {
-    bg: "#722ED1",
-    text: "#FFFFFF",
-  },
-  // Cyan
-  cyan: {
-    bg: "#13C2C2",
-    text: "#FFFFFF",
-  },
-  // Magenta/Pink
-  magenta: {
-    bg: "#EB2F96",
-    text: "#FFFFFF",
-  },
-  pink: {
-    bg: "#EB2F96",
-    text: "#FFFFFF",
-  },
-  // Lime
-  lime: {
-    bg: "#A0D911",
-    text: "#FFFFFF",
-  },
-};
+import { getStatusColorConfig } from "./statusColors";
 
 interface StatusTagProps {
   color?: string;
@@ -100,7 +19,7 @@ const StatusTag: React.FC<StatusTagProps> = ({
   icon,
   style,
 }) => {
-  const colorConfig = colorMap[color] || colorMap.default;
+  const colorConfig = getStatusColorConfig(color);
 
   return (
     <Tag

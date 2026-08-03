@@ -25,6 +25,7 @@ export interface SupplementaryTaskDto {
   dueDate?: string;
   priority: SupplementaryTaskPriority;
   status: SupplementaryTaskStatus;
+  isPrivate: boolean;
   imageUrls: string[];
   completionNote?: string;
   completionImageUrls: string[];
@@ -49,6 +50,7 @@ export interface CreateSupplementaryTaskDto {
   assignedToId: string;
   dueDate?: string;
   priority: SupplementaryTaskPriority;
+  isPrivate: boolean;
   imageUrls: string[];
 }
 
@@ -59,6 +61,7 @@ export interface UpdateSupplementaryTaskDto {
   dueDate?: string;
   priority: SupplementaryTaskPriority;
   status: SupplementaryTaskStatus;
+  isPrivate: boolean;
   imageUrls: string[];
 }
 

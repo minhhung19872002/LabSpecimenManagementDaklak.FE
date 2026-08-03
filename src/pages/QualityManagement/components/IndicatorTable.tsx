@@ -11,14 +11,20 @@ import {
   Card,
 } from "antd";
 import StatusTag from "../../../components/common/StatusTag";
-import { CheckOutlined, CloseOutlined, UndoOutlined } from "../../../components/common/Icon";
+import {
+  CheckOutlined,
+  CloseOutlined,
+  UndoOutlined,
+} from "../../../components/common/Icon";
 import type { ColumnsType } from "antd/es/table";
-import { formatDate, stripPTags, evaluatePassFail } from "../../../utils/formatters";
+import {
+  formatDate,
+  stripPTags,
+  evaluatePassFail,
+} from "../../../utils/formatters";
 import {
   QualityManagementIndicatorDto,
   QualityIndicatorApprovalStatus,
-  QualityIndicatorApprovalStatusLabels,
-  QualityIndicatorApprovalStatusColors,
   QualityManagementStatus,
   QLCLDisplayStatus,
   QLCLDisplayStatusLabels,
@@ -28,6 +34,8 @@ import IndicatorImageCell from "../../../components/common/IndicatorImageCell";
 import { IndicatorName } from "../../../components/common";
 import { authService } from "../../../services/authService";
 import { PERMISSIONS } from "../../../constants/permissionMapping";
+import { useColumnResize } from "../../../hooks";
+import { INDICATOR_TABLE_COLUMN_WIDTHS } from "./constants";
 
 const { Panel } = Collapse;
 const { Text } = Typography;
@@ -42,6 +50,9 @@ interface IndicatorTableProps {
   // Bulk action selection props (for pending indicators)
   selectedPendingIds: string[];
   onPendingSelectChange: (ids: string[]) => void;
+  // Bulk action selection props (for approved indicators — "Trả lại KQ" hàng loạt)
+  selectedApprovedIds: string[];
+  onApprovedSelectChange: (ids: string[]) => void;
   // Force disable all actions (e.g., when test request is cancelled)
   forceDisableActions?: boolean;
 }
@@ -57,21 +68,23 @@ interface SampleGroup {
 
 // Extended indicator with parent-child metadata
 interface ProcessedIndicator extends QualityManagementIndicatorDto {
-  _isParentWithChildren: boolean;  // Parent có children -> chỉ hiển thị tên + PP
-  _isSubIndicator: boolean;        // Sub-indicator -> hiển thị đầy đủ với thụt lề
-  _isLastSubIndicator: boolean;    // Last sub-indicator trong group (để vẽ tree line đúng)
-  _isFirstSubIndicator: boolean;   // First sub-indicator trong group
-  _rowKey: string;                 // Unique row key
+  _isParentWithChildren: boolean; // Parent có children -> chỉ hiển thị tên + PP
+  _isSubIndicator: boolean; // Sub-indicator -> hiển thị đầy đủ với thụt lề
+  _isLastSubIndicator: boolean; // Last sub-indicator trong group (để vẽ tree line đúng)
+  _isFirstSubIndicator: boolean; // First sub-indicator trong group
+  _rowKey: string; // Unique row key
 }
 
 // Helper: tạo composite key từ indicatorId + methodId
-const makeGroupKey = (indicatorId: string, methodId: string | null | undefined) =>
-  `${indicatorId}_${methodId || 'no-method'}`;
+const makeGroupKey = (
+  indicatorId: string,
+  methodId: string | null | undefined,
+) => `${indicatorId}_${methodId || "no-method"}`;
 
 // Group và flatten indicators theo quan hệ parent-child
 // FIX: Xử lý trường hợp có nhiều parents cùng indicatorId+methodId
 const processIndicatorsWithHierarchy = (
-  indicators: QualityManagementIndicatorDto[]
+  indicators: QualityManagementIndicatorDto[],
 ): ProcessedIndicator[] => {
   const result: ProcessedIndicator[] = [];
 
@@ -184,14 +197,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   onIndicatorUpdate: _onIndicatorUpdate,
   selectedPendingIds,
   onPendingSelectChange,
+  selectedApprovedIds,
+  onApprovedSelectChange,
   forceDisableActions = false,
 }) => {
-  const getApprovalStatusTag = (status: QualityIndicatorApprovalStatus) => (
-    <StatusTag color={QualityIndicatorApprovalStatusColors[status]}>
-      {QualityIndicatorApprovalStatusLabels[status]}
-    </StatusTag>
-  );
-
   const getReportStatusTag = (isPrinted: boolean) => (
     <StatusTag color={isPrinted ? "success" : "default"}>
       {isPrinted ? "Đã phát hành" : "Chưa phát hành"}
@@ -212,6 +221,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   // Allow approving pending indicators even after ResultSent (for partial send scenarios)
   // Also disable when test request is cancelled (forceDisableActions)
   const actionsDisabled = forceDisableActions || (!canApprove && !canReject);
+
+  const { tableComponents, withResize } = useColumnResize(
+    INDICATOR_TABLE_COLUMN_WIDTHS,
+  );
 
   // Group indicators by sample
   const groupedData: SampleGroup[] = React.useMemo(() => {
@@ -241,7 +254,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     const pendingIds = processedIndicators
       .filter(
         (ind) =>
-          ind.approvalStatus === QualityIndicatorApprovalStatus.PendingApproval &&
+          ind.approvalStatus ===
+            QualityIndicatorApprovalStatus.PendingApproval &&
           ind.isInQualityScope &&
           !ind._isParentWithChildren,
       )
@@ -260,11 +274,14 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
 
   // Check if all pending indicators in group are selected
   // Exclude parent indicators with children
-  const isAllPendingSelectedInGroup = (processedIndicators: ProcessedIndicator[]): boolean => {
+  const isAllPendingSelectedInGroup = (
+    processedIndicators: ProcessedIndicator[],
+  ): boolean => {
     const pendingIds = processedIndicators
       .filter(
         (ind) =>
-          ind.approvalStatus === QualityIndicatorApprovalStatus.PendingApproval &&
+          ind.approvalStatus ===
+            QualityIndicatorApprovalStatus.PendingApproval &&
           ind.isInQualityScope &&
           !ind._isParentWithChildren,
       )
@@ -280,43 +297,72 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   ): ColumnsType<ProcessedIndicator> => {
     const cols: ColumnsType<ProcessedIndicator> = [];
 
-    // Only show checkbox column if there are pending indicators
-    if (hasPendingIndicators && !actionsDisabled) {
-      cols.push({
-        title: () => null,
-        dataIndex: "checkbox",
-        key: "checkbox",
-        width: 50,
-        render: (_, record) => {
-          const isPending =
-            record.approvalStatus ===
-              QualityIndicatorApprovalStatus.PendingApproval &&
-            record.isInQualityScope;
-          // Don't show checkbox for parent indicators with children
-          if (isPending && !record._isParentWithChildren) {
-            return (
-              <Checkbox
-                checked={selectedPendingIds.includes(record.id)}
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    onPendingSelectChange([...selectedPendingIds, record.id]);
-                  } else {
-                    onPendingSelectChange(
-                      selectedPendingIds.filter((id) => id !== record.id),
-                    );
-                  }
-                }}
-              />
-            );
-          }
-          return null;
-        },
-      });
+    // Show checkbox column for pending (bulk duyệt/từ chối) AND approved (bulk trả lại KQ)
+    if ((hasPendingIndicators || hasApprovedIndicators) && !actionsDisabled) {
+      cols.push(
+        withResize("checkbox", {
+          title: () => null,
+          dataIndex: "checkbox",
+          key: "checkbox",
+          width: 50,
+          render: (_, record) => {
+            if (record._isParentWithChildren) return null;
+
+            const isPending =
+              record.approvalStatus ===
+                QualityIndicatorApprovalStatus.PendingApproval &&
+              record.isInQualityScope;
+            const isApproved =
+              record.approvalStatus ===
+                QualityIndicatorApprovalStatus.Approved &&
+              record.isInQualityScope;
+
+            if (isPending) {
+              return (
+                <Checkbox
+                  checked={selectedPendingIds.includes(record.id)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      onPendingSelectChange([...selectedPendingIds, record.id]);
+                    } else {
+                      onPendingSelectChange(
+                        selectedPendingIds.filter((id) => id !== record.id),
+                      );
+                    }
+                  }}
+                />
+              );
+            }
+
+            if (isApproved && canReject) {
+              return (
+                <Checkbox
+                  checked={selectedApprovedIds.includes(record.id)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      onApprovedSelectChange([
+                        ...selectedApprovedIds,
+                        record.id,
+                      ]);
+                    } else {
+                      onApprovedSelectChange(
+                        selectedApprovedIds.filter((id) => id !== record.id),
+                      );
+                    }
+                  }}
+                />
+              );
+            }
+
+            return null;
+          },
+        }),
+      );
     }
 
     // Base columns
     cols.push(
-      {
+      withResize("indicatorName", {
         title: "Tên chỉ tiêu",
         dataIndex: "indicatorName",
         key: "indicatorName",
@@ -332,7 +378,6 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             "-"
           );
 
-          // Tree line for sub-indicators
           const classNames = ["indicator-name-wrapper"];
           if (record._isSubIndicator) {
             classNames.push("has-tree-line");
@@ -352,8 +397,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             </div>
           );
         },
-      },
-      {
+      }),
+      withResize("methodName", {
         title: "Phương pháp",
         dataIndex: "methodName",
         key: "methodName",
@@ -368,37 +413,34 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           ) : (
             "-"
           ),
-      },
-      {
+      }),
+      withResize("unit", {
         title: "ĐVT",
         dataIndex: "unit",
         key: "unit",
         width: 80,
         align: "center" as const,
         render: (text: string, record) => {
-          // Don't show for parent indicators with children
           if (record._isParentWithChildren) return "-";
           return text ? <IndicatorName name={text} /> : "-";
         },
-      },
-      {
+      }),
+      withResize("result", {
         title: "Kết quả",
         dataIndex: "result",
         key: "result",
         width: 100,
         align: "center" as const,
         render: (text: string, record) => {
-          // Don't show result for parent indicators with children
           if (record._isParentWithChildren) return "-";
           return <Text strong>{text || "-"}</Text>;
         },
-      },
-      {
+      }),
+      withResize("images", {
         title: "Hình ảnh",
         key: "images",
         width: 150,
         render: (_, record) => {
-          // Don't show images for parent indicators with children
           if (record._isParentWithChildren) return null;
           return (
             <IndicatorImageCell
@@ -408,8 +450,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             />
           );
         },
-      },
-      {
+      }),
+      withResize("resultSentDate", {
         title: "Ngày gửi KQ",
         dataIndex: "resultSentDate",
         key: "resultSentDate",
@@ -418,8 +460,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           if (record._isParentWithChildren) return "-";
           return formatDate(date);
         },
-      },
-      {
+      }),
+      withResize("approvalDate", {
         title: "Ngày duyệt",
         dataIndex: "approvalDate",
         key: "approvalDate",
@@ -428,8 +470,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           if (record._isParentWithChildren) return "-";
           return formatDate(date);
         },
-      },
-      {
+      }),
+      withResize("standardName", {
         title: "So với",
         dataIndex: "standardName",
         key: "standardName",
@@ -439,14 +481,13 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           if (record._isParentWithChildren) return "-";
           return text || "-";
         },
-      },
-      {
+      }),
+      withResize("limit", {
         title: "Giới hạn",
         key: "limit",
         width: 120,
         render: (_, record) => {
           if (record._isParentWithChildren) return "-";
-          // Range case: both lowerLimit and upperLimit have values
           if (record.lowerLimit && record.upperLimit) {
             const lower = record.lowerOperator || ">";
             const upper = record.upperOperator || "<";
@@ -460,12 +501,12 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
               </span>
             );
           }
-          // Single limit case
           if (record.comparisonOperator && record.allowedLimit) {
             const limitHtml = stripPTags(record.allowedLimit);
             return (
               <span>
-                {record.comparisonOperator} <span dangerouslySetInnerHTML={{ __html: limitHtml }} />
+                {record.comparisonOperator}{" "}
+                <span dangerouslySetInnerHTML={{ __html: limitHtml }} />
               </span>
             );
           }
@@ -475,20 +516,17 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           }
           return "-";
         },
-      },
-      {
+      }),
+      withResize("passFailStatus", {
         title: "Đạt/Không đạt",
         key: "passFailStatus",
         width: 120,
         align: "center" as const,
         render: (_, record) => {
-          // Hide for parent indicators with children
           if (record._isParentWithChildren) return "-";
-
-          // Need result to calculate
           if (!record.result) return null;
-          // Need either single limit or range limits
-          const hasSingleLimit = record.comparisonOperator && record.allowedLimit;
+          const hasSingleLimit =
+            record.comparisonOperator && record.allowedLimit;
           const hasRangeLimit = record.lowerLimit && record.upperLimit;
           if (!hasSingleLimit && !hasRangeLimit) return null;
 
@@ -499,7 +537,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             record.lowerOperator,
             record.lowerLimit,
             record.upperOperator,
-            record.upperLimit
+            record.upperLimit,
           );
 
           if (passFailStatus === "pass") {
@@ -517,8 +555,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           }
           return null;
         },
-      },
-      {
+      }),
+      withResize("qlclDisplayStatus", {
         title: "Trạng thái",
         dataIndex: "qlclDisplayStatus",
         key: "qlclDisplayStatus",
@@ -527,8 +565,8 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           if (record._isParentWithChildren || status === undefined) return "-";
           return getWorkflowStatusTag(status);
         },
-      },
-      {
+      }),
+      withResize("reportStatus", {
         title: "Trạng thái báo cáo",
         dataIndex: "isPrinted",
         key: "reportStatus",
@@ -537,79 +575,82 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           if (record._isParentWithChildren) return "-";
           return getReportStatusTag(!!isPrinted);
         },
-      },
+      }),
     );
 
     // Show actions column if there are pending or approved (for "Trả lại KQ") indicators
     if ((hasPendingIndicators || hasApprovedIndicators) && !actionsDisabled) {
-      cols.push({
-        title: "Thao tác",
-        key: "actions",
-        width: 180,
-        fixed: "right" as const,
-        align: "center" as const,
-        render: (_, record) => {
-          if (record._isParentWithChildren) {
+      cols.push(
+        withResize("actions", {
+          title: "Thao tác",
+          key: "actions",
+          width: 180,
+          fixed: "right" as const,
+          align: "center" as const,
+          render: (_, record) => {
+            if (record._isParentWithChildren) {
+              return null;
+            }
+
+            const isPending =
+              record.approvalStatus ===
+                QualityIndicatorApprovalStatus.PendingApproval &&
+              record.isInQualityScope;
+
+            if (isPending) {
+              return (
+                <Space size="small">
+                  {canApprove && (
+                    <Tooltip title="Duyệt">
+                      <Button
+                        type="primary"
+                        size="small"
+                        icon={<CheckOutlined />}
+                        onClick={() => onApprove(record.id)}
+                      >
+                        Duyệt
+                      </Button>
+                    </Tooltip>
+                  )}
+                  {canReject && (
+                    <Tooltip title="Từ chối">
+                      <Button
+                        danger
+                        size="small"
+                        icon={<CloseOutlined />}
+                        onClick={() => onReject(record.id)}
+                      >
+                        Từ chối
+                      </Button>
+                    </Tooltip>
+                  )}
+                </Space>
+              );
+            }
+
+            const isApproved =
+              record.approvalStatus ===
+                QualityIndicatorApprovalStatus.Approved &&
+              record.isInQualityScope;
+
+            if (isApproved && canReject && onReturnResult) {
+              return (
+                <Tooltip title="Trả lại KQ">
+                  <Button
+                    size="small"
+                    icon={<UndoOutlined />}
+                    onClick={() => onReturnResult(record.id)}
+                  >
+                    Trả lại KQ
+                  </Button>
+                </Tooltip>
+              );
+            }
+
             return null;
-          }
-
-          const isPending =
-            record.approvalStatus ===
-              QualityIndicatorApprovalStatus.PendingApproval &&
-            record.isInQualityScope;
-
-          if (isPending) {
-            return (
-              <Space size="small">
-                {canApprove && (
-                  <Tooltip title="Duyệt">
-                    <Button
-                      type="primary"
-                      size="small"
-                      icon={<CheckOutlined />}
-                      onClick={() => onApprove(record.id)}
-                    >
-                      Duyệt
-                    </Button>
-                  </Tooltip>
-                )}
-                {canReject && (
-                  <Tooltip title="Từ chối">
-                    <Button
-                      danger
-                      size="small"
-                      icon={<CloseOutlined />}
-                      onClick={() => onReject(record.id)}
-                    >
-                      Từ chối
-                    </Button>
-                  </Tooltip>
-                )}
-              </Space>
-            );
-          }
-
-          const isApproved =
-            record.approvalStatus === QualityIndicatorApprovalStatus.Approved &&
-            record.isInQualityScope;
-
-          if (isApproved && canReject && onReturnResult) {
-            return (
-              <Tooltip title="Trả lại KQ">
-                <Button
-                  size="small"
-                  icon={<UndoOutlined />}
-                  onClick={() => onReturnResult(record.id)}
-                >
-                  Trả lại KQ
-                </Button>
-              </Tooltip>
-            );
-          }
-
-          return null;
-        },
-      });
+          },
+        }),
+      );
     }
 
     return cols;
@@ -708,10 +749,14 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       <Collapse defaultActiveKey={groupedData.map((g) => g.sampleId)} ghost>
         {groupedData.map((group) => {
           // Process indicators with hierarchy
-          const processedIndicators = processIndicatorsWithHierarchy(group.indicators);
+          const processedIndicators = processIndicatorsWithHierarchy(
+            group.indicators,
+          );
 
           // Filter out parent indicators with children for counting
-          const activeIndicators = processedIndicators.filter(ind => !ind._isParentWithChildren);
+          const activeIndicators = processedIndicators.filter(
+            (ind) => !ind._isParentWithChildren,
+          );
           const approvedCount = activeIndicators.filter(
             (ind) =>
               ind.approvalStatus === QualityIndicatorApprovalStatus.Approved,
@@ -737,9 +782,14 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                   {pendingCount > 0 && !actionsDisabled && (
                     <Tooltip title="Chọn tất cả chỉ tiêu chờ duyệt">
                       <Checkbox
-                        checked={isAllPendingSelectedInGroup(processedIndicators)}
+                        checked={isAllPendingSelectedInGroup(
+                          processedIndicators,
+                        )}
                         onChange={(e) =>
-                          handleSelectAllPendingInGroup(processedIndicators, e.target.checked)
+                          handleSelectAllPendingInGroup(
+                            processedIndicators,
+                            e.target.checked,
+                          )
                         }
                         onClick={(e) => e.stopPropagation()}
                       />
@@ -774,6 +824,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                   pagination={false}
                   size="small"
                   scroll={{ x: 1440 }}
+                  components={tableComponents}
                 />
               </Card>
             </Panel>

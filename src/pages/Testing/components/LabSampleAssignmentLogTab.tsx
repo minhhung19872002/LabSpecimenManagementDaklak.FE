@@ -148,8 +148,15 @@ const getRowColorClass = (record: DisplayRow): string => {
 // ---------- Column options (exported for visibility selector) ----------
 
 export const COLUMN_OPTIONS: ColumnOption[] = [
-  { key: 'stt', label: 'STT', disabled: true },
-  { key: 'indicatorName', label: 'Chỉ tiêu TN', disabled: true },
+  { key: 'contractNumber', label: 'Số hợp đồng', disabled: true },
+  { key: 'sampleCode', label: 'Mã số mẫu', disabled: true },
+  { key: 'sampleName', label: 'Tên mẫu' },
+  { key: 'sampleQuantity', label: 'Lượng mẫu gửi' },
+  { key: 'sampleStatusText', label: 'Tình trạng mẫu' },
+  { key: 'transferDate', label: 'Ngày nhận mẫu' },
+  { key: 'requestCompletionDate', label: 'Ngày YC xong' },
+  { key: 'testDate', label: 'Thời gian TN' },
+  { key: 'indicatorName', label: 'Tên chỉ tiêu' },
   { key: 'methodName', label: 'Phương pháp' },
   { key: 'technicianName', label: 'Người thực hiện' },
   { key: 'transferDate', label: 'Ngày giao mẫu' },
@@ -383,52 +390,57 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({
         key: 'stt',
         width: 60,
         fixed: 'left',
-        align: 'center',
-        onCell: (record) => firstSpan(record),
-        render: (_: any, record: DisplayRow) => {
-          if (record._rowType === 'contract') {
-            const collapsed = collapsedContracts.has(record._groupContractNumber || '');
-            return (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
-                <span
-                  style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}
-                  onClick={() => toggleContract(record._groupContractNumber || '')}
-                >
-                  {collapsed ? <CaretRightOutlined /> : <CaretDownOutlined />}
-                </span>
-                <strong>{record._groupContractNumber || '-'}</strong>
-                {record._groupCustomerName && (
-                  <span style={{ color: '#555', marginLeft: 4 }}>{record._groupCustomerName}</span>
-                )}
-                <span style={{ color: '#999', marginLeft: 8 }}>· {record._indicatorCount} chỉ tiêu</span>
-              </div>
-            );
-          }
-          if (record._rowType === 'sample') {
-            const collapsed = collapsedSamples.has(record._groupSampleId || '');
-            return (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  paddingLeft: 24,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                <span
-                  style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}
-                  onClick={() => toggleSample(record._groupSampleId || '')}
-                >
-                  {collapsed ? <CaretRightOutlined /> : <CaretDownOutlined />}
-                </span>
-                <strong>{record._groupSampleCode || '-'}</strong>
-                <span style={{ color: '#555' }}>{record._groupSampleName || ''}</span>
-                <span style={{ color: '#999', marginLeft: 8 }}>· {record._indicatorCount} chỉ tiêu</span>
-              </div>
-            );
-          }
-          return record._stt;
+        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.contractRowSpan),
+        render: (text: string) => (
+          <EllipsisTooltip title={text || '-'}>{text || '-'}</EllipsisTooltip>
+        ),
+      }),
+      withResize('sampleCode', {
+        title: 'Mã số mẫu',
+        dataIndex: 'sampleCode',
+        key: 'sampleCode',
+        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.sampleRowSpan),
+        render: (text: string) => (
+          <EllipsisTooltip title={text || '-'}>{text || '-'}</EllipsisTooltip>
+        ),
+      }),
+      withResize('sampleName', {
+        title: 'Tên mẫu',
+        dataIndex: 'sampleName',
+        key: 'sampleName',
+        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.sampleRowSpan),
+        render: (text: string) => (
+          <EllipsisTooltip title={text || '-'}>{text || '-'}</EllipsisTooltip>
+        ),
+      }),
+      withResize('sampleQuantity', {
+        title: 'Lượng mẫu gửi',
+        dataIndex: 'sampleQuantity',
+        key: 'sampleQuantity',
+        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.sampleRowSpan),
+        render: (text: string) => (
+          <EllipsisTooltip title={text || '-'}>{text || '-'}</EllipsisTooltip>
+        ),
+      }),
+      withResize('sampleStatusText', {
+        title: 'Tình trạng mẫu',
+        dataIndex: 'sampleStatusText',
+        key: 'sampleStatusText',
+        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.sampleRowSpan),
+        render: (text: string) => (
+          <EllipsisTooltip title={text || '-'}>{text || '-'}</EllipsisTooltip>
+        ),
+      }),
+      withResize('transferDate', {
+        title: 'Ngày nhận mẫu',
+        dataIndex: 'transferDate',
+        key: 'transferDate',
+        onCell: (record: ProcessedLogItem) => mergedCellProps(record, record.transferDateRowSpan),
+        render: (date: string) => {
+          const formatted = formatDate(date);
+          return (
+            <EllipsisTooltip title={formatted}>{formatted}</EllipsisTooltip>
+          );
         },
       });
     }

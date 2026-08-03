@@ -16,7 +16,7 @@ import { ExclamationCircleFilled } from "@ant-design/icons";
 import { noteService } from "../../../services/noteService";
 import { NoteDto } from "../../../types/note";
 import RichTextEditor from "../../../components/common/RichTextEditor";
-import { stripPTags, stripHtmlTags } from "../../../utils/formatters";
+import { stripPTags } from "../../../utils/formatters";
 
 const { Text } = Typography;
 

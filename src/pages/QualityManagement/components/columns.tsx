@@ -11,6 +11,7 @@ import {
   QualityTaskType,
 } from "../../../types/qualityManagement";
 import StatusTag from "../../../components/common/StatusTag";
+import { getStatusColor } from "../../../components/common/statusColors";
 
 interface GetColumnsOptions {
   onViewHistory: (record: QualityManagementTaskDto, e: React.MouseEvent) => void;
@@ -64,11 +65,37 @@ export const getQualityManagementColumns = (
     align: "center" as const,
     render: (total: number, record: QualityManagementTaskDto) => {
       const pending = record.pendingApprovalIndicatorCount ?? 0;
+      const approved = record.approvedIndicatorCount ?? 0;
+      const showPending =
+        pending > 0 ||
+        record.status === QualityManagementStatus.PendingApproval;
+      const showApproved =
+        record.status === QualityManagementStatus.PendingPublish ||
+        record.status === QualityManagementStatus.PartialPublished ||
+        record.status === QualityManagementStatus.FullyPublished;
+
+      if (!showPending && !showApproved) {
+        return total;
+      }
+
+      const current = showPending ? pending : approved;
+      const colorStatus = showApproved
+        ? QualityManagementStatus.FullyPublished
+        : QualityManagementStatus.PendingApproval;
+      const color = getStatusColor(QualityManagementStatusColors[colorStatus]);
+      const label = showApproved && showPending
+        ? "chỉ tiêu chờ QLCL duyệt"
+        : showPending
+          ? "chỉ tiêu chờ duyệt"
+          : record.status === QualityManagementStatus.PendingPublish
+            ? "chỉ tiêu chờ phát hành"
+            : "chỉ tiêu đã phát hành";
+
       return (
-        <Tooltip title={`${pending} chỉ tiêu chờ duyệt / ${total} tổng`}>
+        <Tooltip title={`${current} ${label} / ${total} tổng`}>
           <span>
-            <span style={{ color: pending > 0 ? "#faad14" : undefined, fontWeight: pending > 0 ? 600 : undefined }}>
-              {pending}
+            <span style={{ color, fontWeight: 600 }}>
+              {current}
             </span>
             <span style={{ color: "#999" }}> / {total}</span>
           </span>

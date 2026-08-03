@@ -9,7 +9,6 @@ import {
   Popconfirm,
   Tag,
   Switch,
-  Tooltip,
 } from "antd";
 import {
   EditOutlined,

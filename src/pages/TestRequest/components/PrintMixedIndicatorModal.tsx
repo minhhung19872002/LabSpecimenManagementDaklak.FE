@@ -26,13 +26,14 @@ import {
   QualityManagementIndicatorDto,
   QualityIndicatorApprovalStatus,
 } from "../../../types/qualityManagement";
+import { ResultLanguage } from "../../../types/testRequest";
 import {
   testRequestService,
   TemplateDto,
   PrintResultItem,
 } from "../../../services/testRequestService";
 import userService, { UserLookupDto } from "../../../services/userService";
-import { IndicatorName } from "../../../components/common";
+import { IndicatorName, PrintCopyCountAlert } from "../../../components/common";
 import RichTextEditor from "../../../components/common/RichTextEditor";
 import { evaluatePassFail, stripHtmlTags } from "../../../utils/formatters";
 
@@ -41,6 +42,12 @@ const { Text } = Typography;
 export interface PrintMixedIndicatorModalProps {
   visible: boolean;
   testRequestId: string;
+  /** Field "Số bản" từ TestRequest - dùng cho cảnh báo số bản in */
+  resultCopyCount?: string;
+  resultLanguage?: ResultLanguage;
+  conformityDeclaration?: string;
+  otherRequirements?: string;
+  separatePassedResults?: boolean;
   onCancel: () => void;
   onSuccess?: () => void;
 }
@@ -68,6 +75,11 @@ const isPerSampleTemplate = (templateName: string): boolean => {
 const PrintMixedIndicatorModal: React.FC<PrintMixedIndicatorModalProps> = ({
   visible,
   testRequestId,
+  resultCopyCount,
+  resultLanguage,
+  conformityDeclaration,
+  otherRequirements,
+  separatePassedResults,
   onCancel,
   onSuccess,
 }) => {
@@ -229,7 +241,7 @@ const PrintMixedIndicatorModal: React.FC<PrintMixedIndicatorModalProps> = ({
         indicators: sorted,
         allIndicatorIds: sorted.map((i) => i.id),
       };
-    });
+    }).sort((a, b) => a.sampleCode.localeCompare(b.sampleCode, undefined, { numeric: true }));
   }, [approvedIndicators]);
 
   const handleOpenAllTabs = () => {
@@ -410,6 +422,13 @@ const PrintMixedIndicatorModal: React.FC<PrintMixedIndicatorModalProps> = ({
         <div style={{ marginBottom: 16 }}>
           <Text type="secondary">Click "Xem" để mở tài liệu trong trình soạn thảo.</Text>
         </div>
+        <PrintCopyCountAlert
+          resultCopyCount={resultCopyCount}
+          resultLanguage={resultLanguage}
+          conformityDeclaration={conformityDeclaration}
+          otherRequirements={otherRequirements}
+          separatePassedResults={separatePassedResults}
+        />
         <div style={{ maxHeight: "calc(100vh - 350px)", overflowY: "auto" }}>
           <List
             dataSource={generatedResults}

@@ -222,10 +222,10 @@ export interface TestingIndicatorDto {
 }
 
 // Save Indicator Result DTO
+// Lưu ý: đổi PP/ĐVT KHÔNG đi qua save-results — dùng
+// testingService.updateIndicatorMethod / updateIndicatorUnit (PUT indicators/{id}/method|unit)
 export interface SaveIndicatorResultDto {
   indicatorId: string;
-  methodId?: string;
-  unit?: string;
   result?: string;
   note?: string;
   testDate?: string;  // Ngày thử nghiệm

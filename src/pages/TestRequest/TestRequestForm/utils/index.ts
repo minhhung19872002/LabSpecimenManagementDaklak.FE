@@ -21,6 +21,19 @@ export const getNextOrderNum = (existingSampleCodes: string[]): number => {
   return maxNum + 1;
 };
 
+// Tách mã mẫu theo dấu "/" CUỐI CÙNG (số hợp đồng có thể chứa "/")
+// "26022/05" -> { prefix: "26022", suffix: "05" }; không có "/" -> suffix rỗng
+export const splitSampleCode = (
+  sampleCode: string
+): { prefix: string; suffix: string } => {
+  const code = sampleCode || "";
+  const idx = code.lastIndexOf("/");
+  if (idx < 0) return { prefix: code, suffix: "" };
+  return { prefix: code.slice(0, idx), suffix: code.slice(idx + 1) };
+};
+
+export const isNumericSuffix = (suffix: string): boolean => /^\d+$/.test(suffix);
+
 // Sample info for barcode printing
 export interface SampleBarcodeInfo {
   sampleCode: string;

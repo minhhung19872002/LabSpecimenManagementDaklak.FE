@@ -24,6 +24,7 @@ import {
   CheckCircleOutlined,
   CheckOutlined,
   CloseOutlined,
+  UndoOutlined,
 } from "../../components/common/Icon";
 import { qualityManagementService } from "../../services/qualityManagementService";
 import { formatDate } from "../../utils/formatters";
@@ -77,6 +78,7 @@ const QualityManagementDetail: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [task, setTask] = useState<QualityManagementTaskDto | null>(null);
   const [selectedPendingIds, setSelectedPendingIds] = useState<string[]>([]);
+  const [selectedApprovedIds, setSelectedApprovedIds] = useState<string[]>([]);
   const [indicatorFilter, setIndicatorFilter] = useState<string[]>([]);
 
   // Modals
@@ -87,6 +89,7 @@ const QualityManagementDetail: React.FC = () => {
     string | null
   >(null);
   const [bulkRejectModalVisible, setBulkRejectModalVisible] = useState(false);
+  const [bulkReturnModalVisible, setBulkReturnModalVisible] = useState(false);
   const [returnModalVisible, setReturnModalVisible] = useState(false);
   const [returningIndicatorId, setReturningIndicatorId] = useState<
     string | null
@@ -95,6 +98,7 @@ const QualityManagementDetail: React.FC = () => {
   // Action states
   const [bulkApproving, setBulkApproving] = useState(false);
   const [bulkRejecting, setBulkRejecting] = useState(false);
+  const [bulkReturning, setBulkReturning] = useState(false);
 
   // Helper function to update indicators optimistically
   const updateIndicatorsOptimistically = useCallback(
@@ -257,6 +261,47 @@ const QualityManagementDetail: React.FC = () => {
       // Reload để sync lại với server nếu có lỗi
       await loadData();
       throw error;
+    }
+  };
+
+  // Bulk return result handlers
+  const handleBulkReturnClick = () => {
+    if (selectedApprovedIds.length === 0) {
+      message.warning("Vui lòng chọn ít nhất một chỉ tiêu để trả lại KQ");
+      return;
+    }
+    setBulkReturnModalVisible(true);
+  };
+
+  const handleBulkReturnConfirm = async (reason: string) => {
+    setBulkReturning(true);
+    try {
+      const result = await qualityManagementService.bulkRejectIndicators(
+        selectedApprovedIds,
+        reason,
+      );
+
+      updateIndicatorsOptimistically(selectedApprovedIds, {
+        approvalStatus: QualityIndicatorApprovalStatus.Rejected,
+        rejectionReason: reason,
+      });
+
+      await reloadData();
+
+      if (result.successCount > 0) {
+        message.success(`Đã trả lại KQ ${result.successCount} chỉ tiêu`);
+      }
+      if (result.failedCount > 0) {
+        message.warning(`${result.failedCount} chỉ tiêu không thể trả lại`);
+      }
+      setBulkReturnModalVisible(false);
+      setSelectedApprovedIds([]);
+    } catch (error) {
+      console.error("Error bulk returning indicators:", error);
+      await loadData();
+      throw error;
+    } finally {
+      setBulkReturning(false);
     }
   };
 
@@ -668,12 +713,12 @@ const QualityManagementDetail: React.FC = () => {
                       checked={isAllSelected}
                       indeterminate={isIndeterminate}
                     >
-                      Chọn tất cả  (Đã chọn {selectedSampleCount} mẫu - {selectedPendingIds.length} chỉ tiêu)
+                      Chọn tất cả (Đã chọn {selectedSampleCount} mẫu - {selectedPendingIds.length} chỉ tiêu)
                     </Checkbox>
                   </div>
                 </Col>
               )}
-              <Col>
+              <Col style={{ marginLeft: "auto" }}>
                 <Space>
                   {canReject && !isTestRequestCancelled && (
                     <Button
@@ -683,10 +728,7 @@ const QualityManagementDetail: React.FC = () => {
                       loading={bulkRejecting}
                       disabled={selectedPendingIds.length === 0}
                     >
-                      Từ chối{" "}
-                      {selectedPendingIds.length > 0
-                        ? `(${selectedPendingIds.length})`
-                        : ""}
+                      Từ chối{selectedPendingIds.length > 0 ? ` (${selectedPendingIds.length})` : ""}
                     </Button>
                   )}
                   {canApprove && !isTestRequestCancelled && (
@@ -697,10 +739,17 @@ const QualityManagementDetail: React.FC = () => {
                       loading={bulkApproving}
                       disabled={selectedPendingIds.length === 0}
                     >
-                      Duyệt{" "}
-                      {selectedPendingIds.length > 0
-                        ? `(${selectedPendingIds.length})`
-                        : ""}
+                      Duyệt{selectedPendingIds.length > 0 ? ` (${selectedPendingIds.length})` : ""}
+                    </Button>
+                  )}
+                  {canReject && !isTestRequestCancelled && (
+                    <Button
+                      icon={<UndoOutlined />}
+                      onClick={handleBulkReturnClick}
+                      loading={bulkReturning}
+                      disabled={selectedApprovedIds.length === 0}
+                    >
+                      Trả lại KQ{selectedApprovedIds.length > 0 && ` (${selectedApprovedIds.length})`}
                     </Button>
                   )}
                 </Space>
@@ -765,6 +814,8 @@ const QualityManagementDetail: React.FC = () => {
               onIndicatorUpdate={loadData}
               selectedPendingIds={selectedPendingIds}
               onPendingSelectChange={setSelectedPendingIds}
+              selectedApprovedIds={selectedApprovedIds}
+              onApprovedSelectChange={setSelectedApprovedIds}
               forceDisableActions={isTestRequestCancelled}
             />
           </Card>
@@ -775,6 +826,7 @@ const QualityManagementDetail: React.FC = () => {
       <PrintModal
         visible={printModalVisible}
         taskId={id!}
+        testRequestId={task?.testRequestId}
         indicators={qualityIndicators}
         taskContext={{
           contractNumber: task?.contractNumber,
@@ -801,6 +853,7 @@ const QualityManagementDetail: React.FC = () => {
       <PrintMixedModal
         visible={printMixedModalVisible}
         taskId={id!}
+        testRequestId={task?.testRequestId}
         indicators={qualityIndicators}
         taskContext={{
           contractNumber: task?.contractNumber,
@@ -837,6 +890,18 @@ const QualityManagementDetail: React.FC = () => {
         onCancel={() => setBulkRejectModalVisible(false)}
         onConfirm={handleBulkRejectConfirm}
         title={`Từ chối ${selectedPendingIds.length} chỉ tiêu`}
+      />
+
+      {/* Bulk Return Result Modal */}
+      <RejectModal
+        visible={bulkReturnModalVisible}
+        onCancel={() => setBulkReturnModalVisible(false)}
+        onConfirm={handleBulkReturnConfirm}
+        title={`Trả lại KQ ${selectedApprovedIds.length} chỉ tiêu`}
+        label="Lý do trả kết quả"
+        placeholder="Nhập lý do trả kết quả..."
+        okText="Xác nhận trả KQ"
+        errorMessage="Không thể trả lại kết quả. Vui lòng thử lại."
       />
 
       {/* Return Result Modal */}

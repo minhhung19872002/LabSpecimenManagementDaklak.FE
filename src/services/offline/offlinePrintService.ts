@@ -405,7 +405,7 @@ function buildTestRequestPlaceholders(
   const totalAmount = actualTotalCost.toLocaleString('en-US');
   const totalByText = data.sampleTypeTask
     ? 'Không đồng'
-    : data.totalCostInWords || numberToVietnameseWords(data.totalCost || 0);
+    : numberToVietnameseWords(actualTotalCost);
   const receiptNumber = data.receiptNumber || '';
 
   // Build sample table string (simplified version)

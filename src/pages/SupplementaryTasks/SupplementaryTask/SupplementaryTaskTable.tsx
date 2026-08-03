@@ -4,6 +4,7 @@ import type { ColumnsType, TableProps } from "antd/es/table";
 import type { MenuProps } from "antd";
 import { CheckOutlined, CloseOutlined, EditOutlined, MessageOutlined, MoreOutlined, ReloadOutlined, StopOutlined } from "@ant-design/icons";
 import { SupplementaryTaskDto, SupplementaryTaskPriority, SupplementaryTaskStatus } from "../../../services/supplementaryTaskService";
+import { authService } from "../../../services/authService";
 import { STATUS_COLOR, STATUS_LABEL, PRIORITY_COLOR, PRIORITY_LABEL, formatDate, isOverdueDate } from "./utils";
 
 const CompletionImagesCell: React.FC<{ urls: string[] }> = ({ urls }) => {
@@ -78,8 +79,11 @@ const SupplementaryTaskTable: React.FC<SupplementaryTaskTableProps> = ({
   sortField, sortDescending,
   onPageChange, onSortChange, onEdit, onCancel, onComplete, onApprove, onReject, onViewHistory, onRowDoubleClick,
 }) => {
+  const currentUserId = authService.getUserInfo()?.id;
 
-  const handleTableChange: TableProps<SupplementaryTaskDto>["onChange"] = (_, __, sorter) => {
+  const handleTableChange: TableProps<SupplementaryTaskDto>["onChange"] = (_, __, sorter, extra) => {
+    if (extra.action !== "sort") return;
+
     const s = Array.isArray(sorter) ? sorter[0] : sorter;
     const key = s?.columnKey as "dueDate" | "creationTime" | undefined;
     if (!key || !s?.order) return;
@@ -182,6 +186,7 @@ const SupplementaryTaskTable: React.FC<SupplementaryTaskTableProps> = ({
         const isDone = record.status === SupplementaryTaskStatus.Completed || record.status === SupplementaryTaskStatus.Cancelled;
         const isWaiting = record.status === SupplementaryTaskStatus.WaitingForConfirmation;
         const isRejected = record.status === SupplementaryTaskStatus.Rejected;
+        const isAssignee = record.assignedToId === currentUserId;
         const hasHistory = isWaiting || isRejected || record.status === SupplementaryTaskStatus.Completed;
 
         const moreMenuItems: MenuProps["items"] = [];
@@ -241,12 +246,12 @@ const SupplementaryTaskTable: React.FC<SupplementaryTaskTableProps> = ({
                 <Button type="link" size="small" icon={<MessageOutlined />} onClick={() => onViewHistory(record)} />
               </Tooltip>
             )}
-            {!isDirector && !isDone && !isWaiting && !isRejected && (
+            {!isDirector && isAssignee && !isDone && !isWaiting && !isRejected && (
               <Button type="primary" size="small" onClick={() => onComplete(record)}>
                 Xác nhận hoàn thành
               </Button>
             )}
-            {!isDirector && isRejected && (
+            {!isDirector && isAssignee && isRejected && (
               <Button type="primary" size="small" icon={<ReloadOutlined />} onClick={() => onComplete(record)}>
                 Gửi lại
               </Button>

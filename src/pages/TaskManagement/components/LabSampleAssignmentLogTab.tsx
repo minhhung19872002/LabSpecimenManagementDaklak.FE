@@ -392,7 +392,7 @@ const LabSampleAssignmentLogTab: React.FC<LabSampleAssignmentLogTabProps> = ({ d
         ),
       },
       {
-        title: "Ngày chuyển",
+        title: "Ngày nhận mẫu",
         dataIndex: "transferDate",
         key: "transferDate",
         width: 100,

@@ -100,7 +100,11 @@ export const testingService = {
     if (input.testRequestStatus !== undefined) queryParams.TestRequestStatus = input.testRequestStatus;
     if (input.fromDate) queryParams.FromDate = input.fromDate;
     if (input.toDate) queryParams.ToDate = input.toDate;
-    if (input.laboratoryId) queryParams.LaboratoryId = input.laboratoryId;
+    if (input.laboratoryIds && input.laboratoryIds.length > 0) {
+      input.laboratoryIds.forEach((id, index) => {
+        queryParams[`LaboratoryIds[${index}]`] = id;
+      });
+    }
     if (input.indicatorIds && input.indicatorIds.length > 0) {
       input.indicatorIds.forEach((id, index) => {
         queryParams[`IndicatorIds[${index}]`] = id;
@@ -131,6 +135,11 @@ export const testingService = {
     if (input.search) queryParams.Search = input.search;
     if (input.fromDate) queryParams.FromDate = input.fromDate;
     if (input.toDate) queryParams.ToDate = input.toDate;
+    if (input.laboratoryIds && input.laboratoryIds.length > 0) {
+      input.laboratoryIds.forEach((id, index) => {
+        queryParams[`LaboratoryIds[${index}]`] = id;
+      });
+    }
     if (input.indicatorIds && input.indicatorIds.length > 0) {
       input.indicatorIds.forEach((id, index) => {
         queryParams[`IndicatorIds[${index}]`] = id;
@@ -176,6 +185,46 @@ export const testingService = {
    */
   saveResults: async (id: string, input: SaveResultsInput): Promise<void> => {
     await api.post(`${BASE_URL}/${id}/save-results`, input);
+  },
+
+  /**
+   * KTV cập nhật phương pháp cho 1 chỉ tiêu (BE chặn chỉ tiêu đã duyệt/đã hủy)
+   */
+  updateIndicatorMethod: async (indicatorId: string, methodId: string | null): Promise<TestingIndicatorDto> => {
+    const response = await api.put<TestingIndicatorDto>(
+      `${BASE_URL}/indicators/${indicatorId}/method`,
+      JSON.stringify(methodId),
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+    return response.data;
+  },
+
+  /**
+   * KTV bulk cập nhật phương pháp cho nhiều chỉ tiêu.
+   * BE skip (không throw) chỉ tiêu đã duyệt/đã hủy/không có quyền; trả về list DTO đã thực sự update.
+   */
+  bulkUpdateIndicatorMethod: async (
+    taskId: string,
+    indicatorIds: string[],
+    methodId: string | null
+  ): Promise<TestingIndicatorDto[]> => {
+    const response = await api.put<TestingIndicatorDto[]>(
+      `${BASE_URL}/${taskId}/indicators/bulk-method`,
+      { indicatorIds, methodId }
+    );
+    return response.data;
+  },
+
+  /**
+   * KTV cập nhật đơn vị tính cho 1 chỉ tiêu (BE chặn chỉ tiêu đã duyệt/đã hủy)
+   */
+  updateIndicatorUnit: async (indicatorId: string, unit: string | null): Promise<TestingIndicatorDto> => {
+    const response = await api.put<TestingIndicatorDto>(
+      `${BASE_URL}/indicators/${indicatorId}/unit`,
+      JSON.stringify(unit),
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+    return response.data;
   },
 
   /**

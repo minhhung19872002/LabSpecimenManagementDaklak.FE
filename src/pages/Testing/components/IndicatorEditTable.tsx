@@ -9,6 +9,7 @@ import {
   AutoComplete,
   DatePicker,
   Input,
+  Select,
 } from "antd";
 import StatusTag from "../../../components/common/StatusTag";
 import {
@@ -32,6 +33,8 @@ import {
 } from "../../../types/testing";
 import IndicatorImageCell from "../../../components/common/IndicatorImageCell";
 import { IndicatorName } from "../../../components/common";
+import RichTextEditor from "../../../components/common/RichTextEditor";
+import { MethodLookupDto } from "../../../types/laboratoryTask";
 import type { ColumnOption } from "../../../components/common/ColumnVisibilitySelector";
 import dayjs from "dayjs";
 
@@ -73,6 +76,14 @@ interface IndicatorEditTableProps {
   /** Có quyền thực hiện thao tác (nhập/sửa/gửi kết quả) theo Permission Matrix */
   canPerformActions?: boolean;
   isTestRequestCancelled?: boolean;
+  /** Danh sách phương pháp từ master data cho dropdown chọn PP */
+  methods?: MethodLookupDto[];
+  /** Các chỉ tiêu đang lưu PP/ĐVT (disable control trong lúc chờ API) */
+  savingIndicatorIds?: string[];
+  /** Đổi phương pháp -> lưu ngay qua API riêng (PUT indicators/{id}/method) */
+  onMethodChange?: (indicatorId: string, methodId: string | null) => void;
+  /** Đổi ĐVT -> lưu khi blur qua API riêng (PUT indicators/{id}/unit) */
+  onUnitChange?: (indicatorId: string, unit: string | null) => void;
   onResultsChange: (results: SaveIndicatorResultDto[]) => void;
   onSelectionChange: (indicatorIds: string[]) => void;
   onShowRejectionHistory: (indicatorId: string, indicatorName: string) => void;
@@ -223,6 +234,10 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
   getResultOptionsForIndicator,
   canPerformActions = false,
   isTestRequestCancelled = false,
+  methods = [],
+  savingIndicatorIds = [],
+  onMethodChange,
+  onUnitChange,
   onResultsChange,
   onSelectionChange,
   onShowRejectionHistory,
@@ -237,6 +252,13 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     Map<string, SaveIndicatorResultDto>
   >(new Map());
 
+  // Buffer sửa ĐVT theo row: baseline = giá trị lúc bắt đầu focus, current = đang gõ.
+  // Blur: chỉ lưu khi current khác baseline (không so record.unit mới nhất, tránh
+  // ghi đè giá trị auto-fill từ đổi PP xảy ra trong lúc đang focus), rồi xóa buffer.
+  const [unitEdits, setUnitEdits] = useState<
+    Record<string, { baseline: string; current: string }>
+  >({});
+
   // Track indicator IDs to detect when indicator list changes (not testDate)
   const indicatorIdsKey = indicators.map((ind) => ind.id).join(",");
 
@@ -249,8 +271,6 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
         const existing = prev.get(ind.id);
         newResults.set(ind.id, {
           indicatorId: ind.id,
-          methodId: ind.methodId,
-          unit: ind.unit,
           // Giữ lại result đã nhập nếu có, nếu không thì lấy từ indicator
           result: existing?.result ?? ind.result,
           note: existing?.note ?? ind.note,
@@ -356,8 +376,6 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     const newResults = new Map(editedResults);
     const current = newResults.get(indicatorId) || {
       indicatorId,
-      methodId: undefined,
-      unit: undefined,
       result: undefined,
       testDate: undefined,
     };
@@ -376,8 +394,6 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
 
     const current = editedResults.get(indicatorId) || {
       indicatorId,
-      methodId: undefined,
-      unit: undefined,
       result: undefined,
       testDate: undefined,
     };
@@ -468,6 +484,19 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
     );
   };
 
+  // Khóa chỉnh sửa: hết quyền thao tác, BE không cho sửa (đã gửi duyệt...),
+  // đã duyệt (Done) hoặc KH hủy -> hiển thị dạng text
+  const isRowLocked = (record: ProcessedIndicator) =>
+    !canPerformActions ||
+    !record.canEdit ||
+    record.testingStatus === IndicatorTestingStatus.Done ||
+    record.testingStatus === IndicatorTestingStatus.Cancelled;
+
+  const methodOptions = useMemo(
+    () => methods.map((m) => ({ value: m.id, label: m.name })),
+    [methods],
+  );
+
   const columns: ColumnsType<ProcessedIndicator> = [
     {
       title: (
@@ -534,15 +563,55 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
       dataIndex: "methodName",
       key: "method",
       width: 180,
-      render: (value: string, record) =>
-        value ? (
-          <IndicatorName
-            name={value}
-            formattedName={record.methodFormattedName}
+      render: (value: string, record) => {
+        // Row cha nhóm / row sub -> chỉ hiển thị text.
+        // Sub bị khóa vì grouping gắn sub vào parent theo key (parentIndicatorId, methodId)
+        // -> đổi PP của sub sẽ tách nó khỏi nhóm thành orphan trên UI.
+        if (
+          record._isParentWithChildren ||
+          record._isSubIndicator ||
+          !onMethodChange ||
+          isRowLocked(record)
+        ) {
+          return value ? (
+            <IndicatorName
+              name={value}
+              formattedName={record.methodFormattedName}
+            />
+          ) : (
+            <Text type="secondary">-</Text>
+          );
+        }
+
+        // Giá trị từ server state; sau khi lưu, indicator được thay bằng DTO response
+        const currentMethodId = record.methodId;
+
+        // Giữ option của PP hiện tại nếu không còn trong danh sách lookup
+        const currentOption =
+          currentMethodId &&
+          !methodOptions.some((opt) => opt.value === currentMethodId)
+            ? [
+                {
+                  value: currentMethodId,
+                  label: value || String(currentMethodId),
+                },
+              ]
+            : [];
+
+        return (
+          <Select
+            style={{ width: "100%" }}
+            value={currentMethodId}
+            placeholder="Chọn PP"
+            onChange={(val) => onMethodChange?.(record.id, val ?? null)}
+            options={[...currentOption, ...methodOptions]}
+            disabled={savingIndicatorIds.includes(record.id)}
+            allowClear
+            showSearch
+            optionFilterProp="label"
           />
-        ) : (
-          <Text type="secondary">-</Text>
-        ),
+        );
+      },
     },
     {
       title: "ĐVT",
@@ -554,7 +623,62 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
           return <Text type="secondary">-</Text>;
         }
         const unitValue = record.unit ?? "";
-        return unitValue ? <IndicatorName name={unitValue} /> : <Text type="secondary">-</Text>;
+        // Chỉ tiêu đã duyệt/hủy -> hiển thị dạng text
+        if (!onUnitChange || isRowLocked(record)) {
+          return unitValue ? <IndicatorName name={unitValue} /> : <Text type="secondary">-</Text>;
+        }
+
+        const unitEdit = unitEdits[record.id];
+        const displayUnit = unitEdit ? unitEdit.current : unitValue;
+
+        return (
+          <div
+            onFocus={() => {
+              // Chốt baseline khi bắt đầu sửa — giữ value prop ổn định trong lúc
+              // focus (tránh TipTap reset cursor nếu response đổi PP về giữa chừng)
+              setUnitEdits((prev) =>
+                prev[record.id]
+                  ? prev
+                  : {
+                      ...prev,
+                      [record.id]: { baseline: unitValue, current: unitValue },
+                    }
+              );
+            }}
+            onBlur={(e) => {
+              // Chỉ lưu khi focus rời hẳn khỏi editor, và chỉ khi user thực sự sửa
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                const edit = unitEdits[record.id];
+                if (edit && edit.current !== edit.baseline) {
+                  onUnitChange(record.id, edit.current || null);
+                }
+                setUnitEdits((prev) => {
+                  const next = { ...prev };
+                  delete next[record.id];
+                  return next;
+                });
+              }
+            }}
+          >
+            <RichTextEditor
+              value={displayUnit}
+              onChange={(html) =>
+                // Lưu html thô kể cả khi xóa trắng ("<p></p>") — giống bên task details.
+                // KHÔNG gửi null khi xóa: null sẽ kích hoạt fallback ĐVT mặc định của PP
+                // phía BE, làm ĐVT "hiện lại" ngay sau khi xóa.
+                setUnitEdits((prev) => ({
+                  ...prev,
+                  [record.id]: {
+                    baseline: prev[record.id]?.baseline ?? unitValue,
+                    current: html,
+                  },
+                }))
+              }
+              placeholder="-"
+              size="small"
+            />
+          </div>
+        );
       },
     },
     {
@@ -624,11 +748,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
         const currentValue =
           editedResults.get(record.id)?.result ?? record.result ?? "";
 
-        const isDisabled =
-          !canPerformActions ||
-          !record.canEdit ||
-          record.testingStatus === IndicatorTestingStatus.Done ||
-          record.testingStatus === IndicatorTestingStatus.Cancelled;
+        const isDisabled = isRowLocked(record);
 
         // Get filtered options for this specific (indicatorId + specimenTypeId) pair
         const filteredOptions = getResultOptionsForIndicator
@@ -720,11 +840,7 @@ const IndicatorEditTable: React.FC<IndicatorEditTableProps> = ({
           return <Text type="secondary">-</Text>;
         }
 
-        const isDisabled =
-          !canPerformActions ||
-          !record.canEdit ||
-          record.testingStatus === IndicatorTestingStatus.Done ||
-          record.testingStatus === IndicatorTestingStatus.Cancelled;
+        const isDisabled = isRowLocked(record);
 
         const disabledDate =
           record.testingStatus === IndicatorTestingStatus.PendingApproval

@@ -137,14 +137,6 @@ const TestingOverviewSection: React.FC<TestingOverviewSectionProps> = ({
                 </Text>
               </Col>
             </Row>
-            <Row className="testing-overview-row">
-              <Col flex="150px">
-                <Text type="secondary">Ngày gửi KP:</Text>
-              </Col>
-              <Col flex="auto">
-                <Text>{formatDateVN(detail.underReviewDate)}</Text>
-              </Col>
-            </Row>
           </div>
         </Col>
       </Row>

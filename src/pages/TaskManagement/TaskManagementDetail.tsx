@@ -28,6 +28,7 @@ import {
   CheckOutlined,
   CloseOutlined,
   EditOutlined,
+  SwapOutlined,
   UserOutlined,
 } from "../../components/common/Icon";
 import { laboratoryTaskService } from "../../services/laboratoryTaskService";
@@ -142,6 +143,10 @@ const TaskManagementDetail: React.FC = () => {
 
   // Standards data for auto-set feature (use ref to avoid re-renders and infinite loops)
   const standardsDataRef = React.useRef<StandardWithIndicatorsDto[]>([]);
+
+  // Bulk method select modal state
+  const [methodSelectModalOpen, setMethodSelectModalOpen] = useState(false);
+  const [methodSelectForm] = Form.useForm();
 
   // Bulk reject modal state
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
@@ -1761,6 +1766,77 @@ const TaskManagementDetail: React.FC = () => {
     });
   };
 
+  const handleGlobalBulkMethodSelect = async () => {
+    try {
+      const values = await methodSelectForm.validateFields();
+      const methodId: string = values.methodId;
+
+      const allSelectedIds = Object.values(selectedIndicators).flat();
+      if (allSelectedIds.length === 0) return;
+
+      // Collect parent IDs + their sub-indicators (same parent + same old method)
+      const idsToUpdate = new Set<string>();
+      for (const id of allSelectedIds) {
+        const ind = task?.indicators?.find((i) => i.id === id);
+        if (!ind || ind.parentIndicatorId) continue; // skip sub-indicators
+        idsToUpdate.add(id);
+        task?.indicators
+          ?.filter(
+            (i) =>
+              i.parentIndicatorId === ind.indicatorId &&
+              i.methodId === ind.methodId,
+          )
+          .forEach((s) => idsToUpdate.add(s.id));
+      }
+
+      if (idsToUpdate.size === 0) return;
+
+      setActionLoading(true);
+      try {
+        const updated = await laboratoryTaskService.bulkUpdateIndicatorMethod(
+          task!.id,
+          Array.from(idsToUpdate),
+          methodId,
+        );
+
+        const method = methods.find((m) => m.id === methodId);
+        updateIndicatorsOptimistically(Array.from(idsToUpdate), {
+          methodId,
+          methodName: method?.name,
+        });
+
+        // Sync returned indicators into task state
+        if (updated.length > 0) {
+          const updatedById = new Map(updated.map((ind) => [ind.id, ind]));
+          setTask((prev) => {
+            if (!prev?.indicators) return prev;
+            return {
+              ...prev,
+              indicators: prev.indicators.map((ind) => updatedById.get(ind.id) ?? ind),
+            };
+          });
+        }
+
+        await reloadData();
+
+        const parentCount = allSelectedIds.filter(
+          (id) => !task?.indicators?.find((i) => i.id === id)?.parentIndicatorId,
+        ).length;
+        message.success(`Đã cập nhật phương pháp cho ${parentCount} chỉ tiêu`);
+        setMethodSelectModalOpen(false);
+        methodSelectForm.resetFields();
+        setSelectedIndicators({});
+      } catch (error: any) {
+        message.error(getApiErrorMessage(error, "Không thể cập nhật phương pháp"));
+        await loadTask();
+      } finally {
+        setActionLoading(false);
+      }
+    } catch {
+      // Form validation error
+    }
+  };
+
   const handleGlobalAssign = async () => {
     const samplesWithSelections = Object.entries(selectedIndicators).filter(
       ([, ids]) => ids.length > 0,
@@ -2510,6 +2586,20 @@ const TaskManagementDetail: React.FC = () => {
                     <Col>
                       <Space>
                         {canAssignToIndicator && (
+                          <Button
+                            size="small"
+                            icon={<SwapOutlined />}
+                            disabled={totalGlobalSelected === 0}
+                            loading={actionLoading}
+                            onClick={() => setMethodSelectModalOpen(true)}
+                          >
+                            Chọn phương pháp
+                            {totalGlobalSelected > 0
+                              ? ` (${totalGlobalSelected})`
+                              : ""}
+                          </Button>
+                        )}
+                        {canAssignToIndicator && (
                           <Popover
                             content={
                               <div
@@ -2714,6 +2804,39 @@ const TaskManagementDetail: React.FC = () => {
             <Input.TextArea
               rows={3}
               placeholder="Nhập lý do từ chối kết quả..."
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Bulk Method Select Modal */}
+      <Modal
+        title={`Chọn phương pháp cho ${totalGlobalSelected} chỉ tiêu`}
+        open={methodSelectModalOpen}
+        onOk={handleGlobalBulkMethodSelect}
+        onCancel={() => {
+          setMethodSelectModalOpen(false);
+          methodSelectForm.resetFields();
+        }}
+        okText="Xác nhận"
+        cancelText="Hủy"
+        okButtonProps={{ loading: actionLoading }}
+        width={500}
+        centered
+      >
+        <Form form={methodSelectForm} layout="vertical">
+          <Form.Item
+            name="methodId"
+            label="Phương pháp"
+            rules={[{ required: true, message: "Vui lòng chọn phương pháp" }]}
+          >
+            <Select
+              placeholder="Chọn phương pháp..."
+              options={methods.map((m) => ({ value: m.id, label: m.name }))}
+              showSearch
+              filterOption={(input, option) =>
+                (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+              }
             />
           </Form.Item>
         </Form>

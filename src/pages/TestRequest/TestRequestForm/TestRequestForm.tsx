@@ -159,6 +159,7 @@ const TestRequestForm: React.FC = () => {
     addExistingSample,
     removeSample,
     updateSample,
+    commitSampleCode,
     duplicateSample,
     openIndicatorModal,
     handleIndicatorModalOk,
@@ -239,6 +240,7 @@ const TestRequestForm: React.FC = () => {
     addSample,
     removeSample,
     updateSample,
+    commitSampleCode,
     duplicateSample,
     openIndicatorModal,
     handleSpecimenTypeSearch,
@@ -255,6 +257,8 @@ const TestRequestForm: React.FC = () => {
       removeSample: (key) => sampleHandlersRef.current.removeSample(key),
       updateSample: (key, field, value) =>
         sampleHandlersRef.current.updateSample(key, field, value),
+      commitSampleCode: (key, newCode) =>
+        sampleHandlersRef.current.commitSampleCode(key, newCode),
       duplicateSample: (key) => sampleHandlersRef.current.duplicateSample(key),
       openIndicatorModal: (key) =>
         sampleHandlersRef.current.openIndicatorModal(key),
@@ -461,6 +465,7 @@ const TestRequestForm: React.FC = () => {
               addSample={stableSampleHandlers.addSample}
               removeSample={stableSampleHandlers.removeSample}
               updateSample={stableSampleHandlers.updateSample}
+              commitSampleCode={stableSampleHandlers.commitSampleCode}
               duplicateSample={stableSampleHandlers.duplicateSample}
               openIndicatorModal={stableSampleHandlers.openIndicatorModal}
               getIndicatorInfo={getIndicatorInfo}

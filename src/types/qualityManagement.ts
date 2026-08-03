@@ -142,6 +142,7 @@ export interface QualityManagementTaskDto {
   totalSampleCount: number;
   totalIndicatorCount: number;
   pendingApprovalIndicatorCount?: number;
+  approvedIndicatorCount?: number;
   laboratoryNames?: string;
   transferDate?: string;
   requestCompletionDate?: string;

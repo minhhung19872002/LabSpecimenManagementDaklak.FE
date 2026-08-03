@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Table,
   Button,
@@ -14,16 +14,16 @@ import {
 import {
   PlusOutlined,
   ReloadOutlined,
-  ImportOutlined,
-  DownloadOutlined,
   CloudOutlined,
   SortAscendingOutlined,
+  DownloadOutlined,
 } from "../../components/common/Icon";
 import {
   TestRequestStatus,
   TestRequestStatusLabels,
 } from "../../types/testRequest";
 import ImportExcelModal from "../../components/common/ImportExcelModal";
+import ExportReceiptModal from "../Receipt/components/ExportReceiptModal";
 import { useTestRequestList } from "./hooks";
 import { useActionPermission, useHeaderHeight } from "../../hooks";
 import "../../styles/ListCard.css";
@@ -41,11 +41,9 @@ const TestRequestList: React.FC = () => {
     sorting,
     dateRange,
     importModalOpen,
-    downloadingTemplate,
     columns,
     isOfflineData,
     loadData,
-    handleDownloadTemplate,
     handleSearch,
     handleStatusChange,
     handleSortChange,
@@ -56,7 +54,6 @@ const TestRequestList: React.FC = () => {
     handlePageChange,
     handleSearchInputChange,
     handleClearSearch,
-    openImportModal,
     closeImportModal,
     handleImportSuccess,
   } = useTestRequestList();
@@ -64,6 +61,7 @@ const TestRequestList: React.FC = () => {
   // Check permission cho action "create" theo Permission Matrix
   // Chỉ BP Giao nhận và Admin có quyền tạo mới, QLCL chỉ có quyền View
   const { canAll: canCreate } = useActionPermission("testRequests", "create");
+  const [exportModalVisible, setExportModalVisible] = useState(false);
 
   return (
     <Card
@@ -71,6 +69,12 @@ const TestRequestList: React.FC = () => {
       title="Danh sách yêu cầu thử nghiệm"
       extra={
         <Space>
+          <Button
+            icon={<DownloadOutlined />}
+            onClick={() => setExportModalVisible(true)}
+          >
+            Xuất phiếu thu
+          </Button>
           <Button icon={<ReloadOutlined />} onClick={loadData} />
           {/* Chỉ hiển thị buttons tạo mới/import khi có quyền create */}
           {canCreate && (
@@ -250,6 +254,11 @@ const TestRequestList: React.FC = () => {
         onClose={closeImportModal}
         onSuccess={handleImportSuccess}
         importType="test-requests"
+      />
+
+      <ExportReceiptModal
+        open={exportModalVisible}
+        onClose={() => setExportModalVisible(false)}
       />
     </Card>
   );

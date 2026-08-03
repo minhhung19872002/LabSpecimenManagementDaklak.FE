@@ -92,13 +92,13 @@ const ContractDetailPanel: React.FC<Props> = ({ contractDetail, detailLoading })
               />
               <Tooltip
                 cursor={{ fill: "rgba(0,0,0,0.04)" }}
-                formatter={(value: number) => [formatCurrencyFull(value), "Đơn giá"]}
+                formatter={(value) => [formatCurrencyFull(Number(value ?? 0)), "Đơn giá"]}
               />
               <Bar dataKey="price" fill="#52C41A" barSize={BAR_SIZE} radius={[0, 3, 3, 0]}>
                 <LabelList
                   dataKey="price"
                   position="right"
-                  formatter={(v: number) => formatCurrency(v)}
+                  formatter={(v) => formatCurrency(Number(v ?? 0))}
                   style={{ fontSize: 11, fill: "#595959" }}
                 />
               </Bar>
