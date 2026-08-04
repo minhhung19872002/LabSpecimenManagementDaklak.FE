@@ -758,6 +758,8 @@ export interface MaterialConsumptionItemDto {
   unitId?: string;
   unitName?: string;
   quantity: number;
+  estimatedSamplesPerYear?: number;
+  avgConsumptionPerSample?: number;
 }
 
 export interface SaveMaterialConsumptionItemDto {
@@ -766,6 +768,8 @@ export interface SaveMaterialConsumptionItemDto {
   isEquipment: boolean;
   unitId?: string;
   quantity: number;
+  estimatedSamplesPerYear?: number;
+  avgConsumptionPerSample?: number;
 }
 
 export interface SaveMaterialConsumptionDto {

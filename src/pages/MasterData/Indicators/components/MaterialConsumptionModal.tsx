@@ -41,6 +41,8 @@ export interface PendingConsumptionItem {
   unitId?: string;
   unitName?: string;
   quantity: number;
+  estimatedSamplesPerYear?: number | null;
+  avgConsumptionPerSample?: number | null;
 }
 
 interface UnitOption {
@@ -56,6 +58,8 @@ interface ProductRow {
   unitId: string;
   unitName: string;
   quantity: number;
+  estimatedSamplesPerYear: number | null;
+  avgConsumptionPerSample: number | null;
 }
 
 interface EquipmentRow {
@@ -191,6 +195,8 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
                   unitId: unit.id,
                   unitName: unit.name,
                   quantity: item.quantity,
+                  estimatedSamplesPerYear: item.estimatedSamplesPerYear ?? null,
+                  avgConsumptionPerSample: item.avgConsumptionPerSample ?? null,
                 });
               }
             }
@@ -224,6 +230,8 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
                 unitId: unit.id,
                 unitName: unit.name,
                 quantity: item.quantity,
+                estimatedSamplesPerYear: item.estimatedSamplesPerYear ?? null,
+                avgConsumptionPerSample: item.avgConsumptionPerSample ?? null,
               });
             }
           }
@@ -320,6 +328,8 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
           unitId: unit.id,
           unitName: unit.name,
           quantity: 0,
+          estimatedSamplesPerYear: null,
+          avgConsumptionPerSample: null,
         },
       ]);
     }
@@ -335,10 +345,20 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
     setEquipmentRows((prev) => prev.filter((r) => r.key !== key));
   }, []);
 
-  const handleProductQuantityChange = useCallback(
-    (key: string, quantity: number | null) => {
+  const handleProductFieldChange = useCallback(
+    (key: string, field: keyof ProductRow, value: number | null) => {
       setProductRows((prev) =>
-        prev.map((r) => (r.key === key ? { ...r, quantity: quantity ?? 0 } : r))
+        prev.map((r) => {
+          if (r.key !== key) return r;
+          const updated = { ...r, [field]: value };
+          if (field === "quantity" || field === "estimatedSamplesPerYear") {
+            const qty = field === "quantity" ? (value ?? 0) : updated.quantity;
+            const samples = field === "estimatedSamplesPerYear" ? value : updated.estimatedSamplesPerYear;
+            updated.avgConsumptionPerSample =
+              samples && samples > 0 ? qty / samples : null;
+          }
+          return updated;
+        })
       );
     },
     []
@@ -362,7 +382,7 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
     const invalidProducts = productRows.filter((r) => r.quantity <= 0);
     const invalidEquipments = equipmentRows.filter((r) => r.quantity <= 0);
     if (invalidProducts.length > 0 || invalidEquipments.length > 0) {
-      message.error("Số lượng phải lớn hơn 0");
+      message.error("Tiêu hao / mẫu phải lớn hơn 0");
       return;
     }
 
@@ -375,6 +395,8 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
         unitId: r.unitId,
         unitName: r.unitName,
         quantity: r.quantity,
+        estimatedSamplesPerYear: r.estimatedSamplesPerYear,
+        avgConsumptionPerSample: r.avgConsumptionPerSample,
       })),
       ...equipmentRows.map((r) => ({
         isEquipment: true,
@@ -395,6 +417,8 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
             equipmentId: i.equipmentId,
             unitId: i.unitId,
             quantity: i.quantity,
+            estimatedSamplesPerYear: i.estimatedSamplesPerYear ?? undefined,
+            avgConsumptionPerSample: i.avgConsumptionPerSample ?? undefined,
           })),
         });
         message.success("Lưu thiết lập tiêu hao thành công!");
@@ -416,6 +440,7 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
       title: "Tên vật liệu",
       dataIndex: "productName",
       key: "productName",
+      width: 180,
       ellipsis: true,
     },
     {
@@ -425,17 +450,53 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
       width: 150,
     },
     {
-      title: "Số lượng",
+      title: "Tiêu hao / mẫu",
       key: "quantity",
-      width: 120,
+      width: 140,
       render: (_, record) => (
         <NumericFormat
-          value={record.quantity}
+          value={record.quantity || ""}
           onValueChange={(values) =>
-            handleProductQuantityChange(record.key, values.floatValue ?? 0)
+            handleProductFieldChange(record.key, "quantity", values.floatValue ?? 0)
           }
           allowNegative={false}
-          decimalScale={2}
+          decimalScale={0}
+          customInput={Input}
+          size="small"
+          style={{ width: "100%" }}
+          addonAfter={record.unitName || undefined}
+        />
+      ),
+    },
+    {
+      title: "Số mẫu dự tính / năm",
+      key: "estimatedSamplesPerYear",
+      width: 180,
+      render: (_, record) => (
+        <NumericFormat
+          value={record.estimatedSamplesPerYear ?? ""}
+          onValueChange={(values) =>
+            handleProductFieldChange(record.key, "estimatedSamplesPerYear", values.floatValue ?? null)
+          }
+          allowNegative={false}
+          decimalScale={0}
+          customInput={Input}
+          size="small"
+          style={{ width: "100%" }}
+        />
+      ),
+    },
+    {
+      title: "Tiêu hao trung bình / mẫu",
+      key: "avgConsumptionPerSample",
+      width: 180,
+      render: (_, record) => (
+        <NumericFormat
+          value={record.avgConsumptionPerSample ?? ""}
+          onValueChange={(values) =>
+            handleProductFieldChange(record.key, "avgConsumptionPerSample", values.floatValue ?? null)
+          }
+          allowNegative={false}
           customInput={Input}
           size="small"
           style={{ width: "100%" }}
@@ -510,7 +571,7 @@ const MaterialConsumptionModal: React.FC<MaterialConsumptionModalProps> = ({
       title="Tiêu hao nguyên vật liệu"
       open={open}
       onCancel={onCancel}
-      width={680}
+      width={1150}
       centered
       destroyOnHidden
       footer={
