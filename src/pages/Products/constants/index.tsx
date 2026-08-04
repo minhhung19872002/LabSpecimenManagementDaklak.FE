@@ -15,11 +15,11 @@ export const ALL_COLUMNS: ColumnConfig[] = [
   { key: "name", title: "Tên vật tư", defaultVisible: true },
   { key: "productType", title: "Phân loại", defaultVisible: true },
   { key: "earliestReceivedDate", title: "Ngày nhận", defaultVisible: true },
+  { key: "availableQuantity", title: "Tồn kho", defaultVisible: true },
   { key: "storageAvailableQuantity", title: "Số lượng (đơn vị)", defaultVisible: true },
   { key: "usage", title: "Sử dụng", defaultVisible: true },
   { key: "earliestLotExpiryDate", title: "Hạn sử dụng", defaultVisible: true },
   { key: "storageConditions", title: "Điều kiện bảo quản", defaultVisible: true },
-  { key: "availableQuantity", title: "Tồn kho", defaultVisible: true },
   { key: "earliestLotNumber", title: "Code/Lot", defaultVisible: true },
   { key: "manufacturer", title: "Nhà sản xuất", defaultVisible: true },
   { key: "warehouseName", title: "Lưu kho", defaultVisible: true },
@@ -112,6 +112,33 @@ export const getProductColumns = (
     });
   }
 
+  if (visibleKeys.has("availableQuantity")) {
+    columns.push({
+      title: "Tồn kho",
+      dataIndex: "availableQuantity",
+      key: "availableQuantity",
+      width: 160,
+      align: "right" as const,
+      sorter: true,
+      render: (qty: number, record: ProductDto) => {
+        // Logic cũ:
+        // const unitName = record.packagingUnitName || "";
+        // return `${qty} ${unitName}`.trim();
+
+        const storageUnit = record.packagingUnitName || "";
+        const intPart = Math.floor(qty);
+        const decPart = qty - intPart;
+
+        if (decPart === 0 || !record.volumePerUnit || !record.volumeUnitName) {
+          return `${qty} ${storageUnit}`.trim();
+        }
+
+        const consumableAmount = Math.round(decPart * record.volumePerUnit);
+        return `${intPart} ${storageUnit} / ${consumableAmount} ${record.volumeUnitName}`;
+      },
+    });
+  }
+
   if (visibleKeys.has("storageAvailableQuantity")) {
     columns.push({
       title: "Số lượng (đơn vị)",
@@ -178,21 +205,6 @@ export const getProductColumns = (
           return <IndicatorName name={record.storageConditions || ""} formattedName={record.formattedStorageConditions} />;
         }
         return renderTags(record.storageConditions);
-      },
-    });
-  }
-
-  if (visibleKeys.has("availableQuantity")) {
-    columns.push({
-      title: "Tồn kho",
-      dataIndex: "availableQuantity",
-      key: "availableQuantity",
-      width: 130,
-      align: "right" as const,
-      sorter: true,
-      render: (qty: number, record: ProductDto) => {
-        const unitName = record.packagingUnitName || "";
-        return `${qty} ${unitName}`.trim();
       },
     });
   }
